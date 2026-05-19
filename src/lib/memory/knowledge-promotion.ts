@@ -1022,7 +1022,10 @@ export async function processApprovedInsights(
     try {
       console.log('[knowledge-promotion] Processing item:', item.notion_page_id);
 
-      // Step 2: Promote to Neo4j
+      // Step 2: Require approval audit before any Neo4j promotion path.
+      await requireApprovalBeforePromotion(item.proposal_id, item.group_id);
+
+      // Step 3: Promote to Neo4j
       const neo4jId = await promoteToNeo4j({
         id: item.postgres_trace_id, // Use trace ID as stable insight ID
         proposal_id: item.proposal_id,
@@ -1172,7 +1175,10 @@ export async function promoteSingleInsight(
   }
 
   try {
-    // Step 2: Promote to Neo4j
+    // Step 2: Require approval audit before any Neo4j promotion path.
+    await requireApprovalBeforePromotion(proposalId, item.group_id);
+
+    // Step 3: Promote to Neo4j
     const neo4jId = await promoteToNeo4j({
       id: item.postgres_trace_id,
       proposal_id: proposalId,
