@@ -5,31 +5,31 @@
 
 export const MEMORY_TYPE_COLORS: Record<string, { ring: string; fill: string; label: string }> = {
   raw: {
-    ring: "#9ca3af",    // gray-400
-    fill: "#f3f4f6",    // gray-100
+    ring: "var(--allura-gray-400)",
+    fill: "var(--allura-gray-100)",
     label: "Raw",
   },
   approved: {
-    ring: "#3b82f6",    // blue-500
-    fill: "#eff6ff",    // blue-50
+    ring: "var(--allura-blue)",
+    fill: "var(--dashboard-surface-muted)",
     label: "Approved",
   },
   promoted: {
-    ring: "#22c55e",    // green-500
-    fill: "#f0fdf4",    // green-50
+    ring: "var(--allura-green)",
+    fill: "var(--dashboard-success-bg)",
     label: "Promoted",
   },
   deprecated: {
-    ring: "#ef4444",    // red-500
-    fill: "#fef2f2",    // red-50
+    ring: "var(--dashboard-danger)",
+    fill: "var(--dashboard-danger-bg)",
     label: "Deprecated",
   },
 }
 
 export const MEMORY_SOURCE_BADGE: Record<string, { color: string; label: string }> = {
-  episodic: { color: "#8b5cf6", label: "EP" },   // violet
-  semantic: { color: "#06b6d4", label: "SM" },   // cyan
-  both:     { color: "#f59e0b", label: "BOTH" },  // amber
+  episodic: { color: "var(--dashboard-evidence)", label: "EP" },
+  semantic: { color: "var(--dashboard-info)", label: "SM" },
+  both:     { color: "var(--dashboard-warning)", label: "BOTH" },
 }
 
 /**
