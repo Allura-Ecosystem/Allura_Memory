@@ -91,7 +91,7 @@ const manifestEntries: Array<AgentManifestEntry> = [
     role: "Recon",
     category: "core",
     ciRoutes: [],
-    primaryModel: "openai/gpt-5.4-mini",
+    primaryModel: "openai/gpt-5.3-codex-spark",
     fallbackModel: "ollama-cloud/nemotron-3-super",
     description:
       "Fast recon and discovery agent. Scans repos, finds paths, patterns, and configs. Produces Scout Report so nobody guesses.",

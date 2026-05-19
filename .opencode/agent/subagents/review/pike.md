@@ -12,18 +12,11 @@ status: active
 model: openai/gpt-5.4-mini
 fallback_model: ollama-cloud/deepseek-v4-pro
 permission:
-  edit: deny
-  bash:
-    "*": ask
-    "bun vitest*": allow
-    "bun run typecheck*": allow
-  webfetch: deny
+  edit: allow
+  bash: allow
+  webfetch: allow
   skill:
     "*": allow
-  MCP_DOCKER_search_nodes: allow
-  MCP_DOCKER_query_database: allow
-  MCP_DOCKER_mcp-find: allow
-  MCP_DOCKER_mcp-add: allow
 ---
 
 # INSTRUCTION BOUNDARY (CRITICAL)

@@ -12,7 +12,8 @@ green() { echo -e "\033[32m✓ $1\033[0m"; PASS=$((PASS+1)); }
 red() { echo -e "\033[31m✗ $1\033[0m"; FAIL=$((FAIL+1)); }
 yellow() { echo -e "\033[33m⚠ $1\033[0m"; WARN=$((WARN+1)); }
 
-REPO="/home/ronin704/Projects/allura memory"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
 OPENSE="$REPO/.opencode"
 CLAUDE="$REPO/.claude"
 
@@ -63,7 +64,7 @@ echo ""
 # R3: ContextScout as First Gate
 echo "--- R3: ContextScout First Gate ---"
 
-if grep -q "ContextScout First Gate" "$OPENSE/agent/scout.md" 2>/dev/null; then
+if grep -q "ContextScout First Gate" "$OPENSE/agent/subagents/core/scout.md" 2>/dev/null; then
   green "Scout agent has ContextScout First Gate enforcement"
 else
   red "Scout agent MISSING ContextScout First Gate"

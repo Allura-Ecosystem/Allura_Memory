@@ -6,7 +6,7 @@ persona: none
 category: Core Subagents
 type: utility
 status: active
-model: ollama-cloud/nemotron-3-super
+model: openai/gpt-5.4-mini
 tools:
   - Read
   - Grep

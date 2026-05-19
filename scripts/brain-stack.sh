@@ -7,7 +7,7 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
 GATEWAY_READY_URL="http://127.0.0.1:5888/ready"
 
-SERVICES=(postgres neo4j mcp http-gateway)
+SERVICES=(postgres neo4j mcp)
 
 compose() {
   docker compose -f "$COMPOSE_FILE" "$@"
@@ -74,11 +74,10 @@ wait_ready() {
   local deadline=$((SECONDS + timeout))
 
   while (( SECONDS < deadline )); do
-    local mcp_state gateway_state
+    local mcp_state
     mcp_state="$(container_health mcp)"
-    gateway_state="$(container_health http-gateway)"
 
-    if [[ "$mcp_state" == *"healthy"* ]] && [[ "$gateway_state" == *"healthy"* ]] && gateway_ready; then
+    if [[ "$mcp_state" == *"healthy"* ]] && gateway_ready; then
       echo "✅ Allura Brain is ready"
       return 0
     fi
@@ -104,7 +103,7 @@ cmd_down() {
 
 cmd_restart() {
   require_docker
-  compose restart postgres neo4j mcp http-gateway
+  compose restart postgres neo4j mcp
   wait_ready 120
 }
 
@@ -116,14 +115,14 @@ cmd_recover() {
     return 0
   fi
 
-  echo "↻ Restarting MCP and HTTP gateway for recovery"
-  compose restart mcp http-gateway
+  echo "↻ Restarting MCP runtime for recovery"
+  compose restart mcp
   wait_ready 120
 }
 
 cmd_logs() {
   require_docker
-  compose logs --tail 100 mcp http-gateway
+  compose logs --tail 100 mcp
 }
 
 show_help() {
@@ -137,9 +136,9 @@ Commands:
   up                  Start the stack and wait for readiness
   down                Stop the stack
   restart             Restart the main stack services and wait
-  recover             Start if needed, then recover MCP/gateway if unready
+  recover             Start if needed, then recover MCP runtime if unready
   wait-ready [secs]   Wait for readiness (default 120s)
-  logs                Show recent MCP and gateway logs
+  logs                Show recent MCP runtime logs
   install-user-service Install the user systemd boot service
   help                Show this message
 HELP

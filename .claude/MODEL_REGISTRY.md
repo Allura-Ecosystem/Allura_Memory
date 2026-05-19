@@ -27,7 +27,7 @@ The four-tier model stack: openai/gpt-5.4 (orchestration) → ollama-cloud/qwen3
 | brooks       | Orchestrator   | openai/gpt-5.4                     | —                                 | ollama-cloud/kimi-k2.5          |
 | hightower    | Infra          | openai/gpt-5.4                     | —                                 | ollama-cloud/kimi-k2.5          |
 | jobs         | Strategy       | ollama-cloud/kimi-k2.5             | —                                 | openai/gpt-5.4                  |
-| scout        | Search/Triage  | ollama-cloud/nemotron-3-super      | gpt-5.4-mini for tiny checks      | openai/gpt-5.4-mini             |
+| scout        | Search/Triage  | openai/gpt-5.4-mini                | —                                 | ollama-cloud/nemotron-3-super   |
 | woz          | Code           | ollama-cloud/qwen3-coder-next      | —                                 | ollama-cloud/kimi-k2.5          |
 | carmack      | Code/Perf      | ollama-cloud/qwen3-coder-next      | —                                 | ollama-cloud/kimi-k2.5          |
 | bellard      | Code/Diag      | ollama-cloud/glm-5.1               | qwen3-coder-next for perf code    | ollama-cloud/qwen3-coder-next   |
@@ -69,13 +69,9 @@ routing:
     fallback: ollama-cloud/kimi-k2.5
 
   # Scout — wide-context recon
-  - if: agent == SCOUT_RECON and task in [tiny_lookup, cheap_prefilter, path_check]
+  - if: agent == SCOUT_RECON
     use: openai/gpt-5.4-mini
     fallback: ollama-cloud/nemotron-3-super
-
-  - if: agent == SCOUT_RECON
-    use: ollama-cloud/nemotron-3-super
-    fallback: openai/gpt-5.4-mini
 
   # Specialist overrides (task-based escalation)
   - if: agent == BELLARD_DIAGNOSTICS_PERF and task in [perf_patch, hotpath_fix, benchmark_refactor]
@@ -103,7 +99,8 @@ model: openai/gpt-5.4
 model: ollama-cloud/kimi-k2.5
 
 # scout.md
-model: ollama-cloud/nemotron-3-super
+model: openai/gpt-5.4-mini
+fallback_model: ollama-cloud/nemotron-3-super
 
 # woz.md / carmack.md
 model: ollama-cloud/qwen3-coder-next
@@ -150,5 +147,5 @@ Before freezing this routing, run per-agent evals with 10–20 tasks and record:
 
 Most likely changes after real evals:
 
-- **SCOUT_RECON** may swap away from Nemotron if discovery accuracy is weaker than speed suggests
+- **SCOUT_RECON** uses openai/gpt-5.4-mini as primary with Nemotron-3-Super as fallback; re-evaluate only if recon quality or availability changes
 - **PIKE/FOWLER** may occasionally need frontier escalation on tricky architectural reviews

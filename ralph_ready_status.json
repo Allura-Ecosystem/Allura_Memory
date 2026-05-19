@@ -1,5 +1,7 @@
 {
   "execution_go": "GO",
+  "non_authoritative_for_phase0": true,
+  "phase0_note": "Historical contract_unblock readiness only. B04/B05 here are not the current Phase 0 B04 cash tracker or B05 Memory Explorer blockers. Current Phase 0 source of truth is blocking_list.md plus docs/goal.md.",
   "scope": {
     "active_notion_contract_scope": "https://www.notion.so/ce13dc069ff347689fcc7cbe188232c8",
     "canonical_plan_id": "ce13dc069ff347689fcc7cbe188232c8",

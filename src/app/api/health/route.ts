@@ -357,5 +357,5 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 /**
  * Export health check status constants
  */
-export const HEALTH_CHECK_INTERVAL_MS = 60000 // 1 minute
-export const HEALTH_CHECK_TIMEOUT_MS = 5000 // 5 seconds
+const HEALTH_CHECK_INTERVAL_MS = 60000 // 1 minute
+const HEALTH_CHECK_TIMEOUT_MS = 5000 // 5 seconds

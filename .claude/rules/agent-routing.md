@@ -57,7 +57,7 @@ We don't hire 10 surgeons. We hire one surgeon and a team of specialists who own
 | **Pike** | Rob Pike | Interface Gate | `openai/gpt-5.4-mini` | — | Read-only architecture consultation |
 | **Bellard** | Fabrice Bellard | Diagnostics + Perf | `openai/gpt-5.4-mini` | — | Performance, measurement, low-level fixes |
 | **Fowler** | Martin Fowler | Refactor Gate | `openai/gpt-5.5` | — | Maintainability, incremental change |
-| **Scout** | (none) | Recon + Discovery | `ollama-cloud/nemotron-3-super` | — | Fast codebase search, pattern discovery |
+| **Scout** | (none) | Recon + Discovery | `openai/gpt-5.4-mini` | `ollama-cloud/nemotron-3-super` | Fast codebase search, pattern discovery |
 | **Carmack** | John Carmack | Performance Specialist | `openai/gpt-5.4-mini` | — | Optimization, API design, latency |
 | **Knuth** | Donald Knuth | Data Architect | `ollama-cloud/qwen3-coder-next` | — | Schema design, query optimization |
 | **Hightower** | Kelsey Hightower | DevOps Specialist | `openai/gpt-5.5` | `ollama-cloud/deepseek-v4-pro` | CI/CD, IaC, deployment, observability |
@@ -131,7 +131,7 @@ The category system reduces this further:
 | Brooks | `openai/gpt-5.5` | `ollama-cloud/deepseek-v4-pro` |
 | Jobs | `ollama-cloud/deepseek-v4-pro` | `ollama-cloud/kimi-k2.6` |
 | Hightower | `openai/gpt-5.5` | `ollama-cloud/deepseek-v4-pro` |
-| Scout | `ollama-cloud/nemotron-3-super` | — |
+| Scout | `openai/gpt-5.4-mini` | `ollama-cloud/nemotron-3-super` |
 | Woz | `ollama-cloud/qwen3-coder-next` | — |
 | Bellard | `openai/gpt-5.4-mini` | — |
 | Carmack | `openai/gpt-5.4-mini` | — |
@@ -162,7 +162,7 @@ routing:
     use: openai/gpt-5.4-mini
 
   - if: agent == scout
-    use: ollama-cloud/nemotron-3-super
+    use: openai/gpt-5.4-mini
 
   # Recovery only uses frontmatter-declared fallbacks
   - if: agent in [brooks, hightower] and primary_unavailable
@@ -172,7 +172,7 @@ routing:
     use: ollama-cloud/kimi-k2.6
 ```
 
-**Key principle:** Brooks, Hightower, and Fowler use GPT-5.5 as their declared primary. Woz and Knuth use Qwen3-Coder-Next. Bellard, Carmack, and Pike use GPT-5.4-Mini. Scout uses Nemotron-3-Super. Only brooks, hightower, and jobs have frontmatter-declared fallbacks.
+**Key principle:** Brooks, Hightower, and Fowler use GPT-5.5 as their declared primary. Woz and Knuth use Qwen3-Coder-Next. Bellard, Carmack, Pike, and Scout use GPT-5.4-Mini. Scout keeps Nemotron-3-Super as fallback. Only brooks, hightower, jobs, and scout have frontmatter-declared fallbacks.
 
 ## The Brooksian Principles
 

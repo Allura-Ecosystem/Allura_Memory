@@ -31,7 +31,7 @@ export function GraphSummary({ nodes, edges, totalEdges, selectedNodeId, onNodeC
                   className={`rounded-xl border px-4 py-3 text-center shadow-xs transition-colors ${
                     selectedNodeId === node.id
                       ? "border-[var(--dashboard-accent)] bg-[var(--dashboard-accent)]/10 ring-2 ring-[var(--dashboard-accent)]/30"
-                      : "bg-card hover:bg-muted/50"
+                      : "bg-[var(--dashboard-surface)] hover:bg-[var(--dashboard-surface-muted)]"
                   }`}
                 >
                   <GitBranch className="mx-auto mb-1 size-4 text-[var(--tone-blue-text)]" />
@@ -43,7 +43,7 @@ export function GraphSummary({ nodes, edges, totalEdges, selectedNodeId, onNodeC
           </div>
         )}
       </div>
-      <aside className="rounded-xl border bg-card p-5">
+      <aside className="rounded-xl border bg-[var(--dashboard-surface)] p-5">
         <h2 className="font-semibold">Graph Truth</h2>
         <p className="mt-1 text-sm text-[var(--dashboard-text-secondary)]">
           {nodes.length} visible nodes &middot; {edges.length} visible edges

@@ -7,7 +7,7 @@ export function EvidenceCard({ evidence }: { evidence: Evidence }) {
   return (
     <Link
       href={`/dashboard/evidence/${encodeURIComponent(evidence.id)}`}
-      className="block rounded-xl border bg-card p-5 transition hover:bg-muted/30"
+      className="block rounded-xl border bg-[var(--dashboard-surface)] p-5 transition hover:bg-[var(--dashboard-surface-muted)]"
     >
       <div className="flex items-start justify-between">
         <h3 className="font-semibold">{evidence.title}</h3>

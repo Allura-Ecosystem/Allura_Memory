@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createHash , randomUUID } from "crypto"
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
 import { Neo4jConnectionError, Neo4jPromotionError } from "@/lib/errors/neo4j-errors"
+import { logApprovalEvent } from "@/lib/memory/approval-audit"
 import { createInsight, InsightConflictError } from "@/lib/neo4j/queries/insert-insight"
 import { captureException } from "@/lib/observability/sentry"
 import { getPool } from "@/lib/postgres/connection"
@@ -107,6 +108,21 @@ export async function POST(request: NextRequest) {
     if (decision === "approve") {
       // Promote to Neo4j via versioned InsightHead + SUPERSEDES system
       const memoryId = randomUUID()
+
+      await logApprovalEvent(
+        {
+          proposal_id,
+          group_id: validatedGroupId,
+          memory_id: memoryId,
+          curator_id,
+          decision: "approved",
+          rationale,
+          score: parseFloat(proposal.score),
+          tier: proposal.tier,
+          approved_at: decidedAt,
+        },
+        pg
+      )
 
       try {
         await createInsight({
@@ -259,6 +275,21 @@ export async function POST(request: NextRequest) {
         notion_sync: "pending",
       })
     } else {
+      await logApprovalEvent(
+        {
+          proposal_id,
+          group_id: validatedGroupId,
+          memory_id: proposal.trace_ref ?? proposal_id,
+          curator_id,
+          decision: "rejected",
+          rationale,
+          score: parseFloat(proposal.score),
+          tier: proposal.tier,
+          approved_at: decidedAt,
+        },
+        pg
+      )
+
       // Reject proposal
       await pg.query(
         `UPDATE canonical_proposals

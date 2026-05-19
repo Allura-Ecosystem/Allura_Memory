@@ -27,13 +27,13 @@ The model stack: openai/gpt-5.5 (orchestration) → ollama-cloud/deepseek-v4-pro
 | brooks       | Orchestrator   | openai/gpt-5.5                     | —                                 | ollama-cloud/deepseek-v4-pro           | Both ✅        |
 | hightower    | Infra          | openai/gpt-5.5                     | —                                 | ollama-cloud/deepseek-v4-pro           | Both ✅        |
 | jobs         | Strategy       | ollama-cloud/deepseek-v4-pro              | —                                 | ollama-cloud/kimi-k2.6                 | Both ✅        |
-| woz          | Code           | ollama-cloud/qwen3-coder-next      | —                                 | —                               | —              |
+| woz          | Code           | openai/gpt-5.4-mini                | ollama-cloud/qwen3-coder-next     | ollama-cloud/qwen3-coder-next   | —              |
 | carmack      | Code/Perf      | openai/gpt-5.4-mini                | —                                 | —                               | —              |
 | bellard      | Code/Diag      | openai/gpt-5.4-mini                | —                                 | —                               | —              |
 | fowler       | Code/Refactor  | openai/gpt-5.5                     | —                                 | —                               | —              |
 | knuth        | Code/Data      | ollama-cloud/qwen3-coder-next      | —                                 | —                               | —              |
 | pike         | Code/Interface | openai/gpt-5.4-mini                | —                                 | —                               | —              |
-| scout        | Search/Triage  | ollama-cloud/nemotron-3-super      | —                                 | —                               | —              |
+| scout        | Search/Triage  | openai/gpt-5.4-mini                | —                                 | ollama-cloud/nemotron-3-super   | —              |
 
 ## Routing Logic
 
@@ -54,8 +54,13 @@ routing:
     use: openai/gpt-5.5
 
   # Tier 2 — Code specialists (coding-native model)
-  - if: agent in [WOZ_BUILDER, KNUTH_DATA_ARCHITECT]
+  - if: agent == KNUTH_DATA_ARCHITECT
     use: ollama-cloud/qwen3-coder-next
+
+  # Tier 2b — Woz temporary fallback route while qwen3-coder-next is unavailable
+  - if: agent == WOZ_BUILDER
+    use: openai/gpt-5.4-mini
+    restore_primary_when_healthy: ollama-cloud/qwen3-coder-next
 
   # Tier 3 — Steady workhorses (mini model, always-on)
   - if: agent in [BELLARD_DIAGNOSTICS_PERF, CARMACK_PERFORMANCE, PIKE_INTERFACE_REVIEW]
@@ -63,7 +68,8 @@ routing:
 
   # Scout — wide-context recon
   - if: agent == SCOUT_RECON
-    use: ollama-cloud/nemotron-3-super
+    use: openai/gpt-5.4-mini
+    fallback: ollama-cloud/nemotron-3-super
 ```
 
 ## Global Default (opencode.json)
@@ -88,9 +94,14 @@ model: ollama-cloud/deepseek-v4-pro
 fallback_model: ollama-cloud/kimi-k2.6
 
 # scout.md
-model: ollama-cloud/nemotron-3-super
+model: openai/gpt-5.4-mini
+fallback_model: ollama-cloud/nemotron-3-super
 
-# woz.md / knuth.md
+# woz.md — temporary fallback route while qwen3-coder-next is unavailable
+model: openai/gpt-5.4-mini
+fallback_model: ollama-cloud/qwen3-coder-next
+
+# knuth.md
 model: ollama-cloud/qwen3-coder-next
 
 # bellard.md / carmack.md / pike.md
@@ -135,5 +146,5 @@ Before freezing this routing, run per-agent evals with 10–20 tasks and record:
 
 Most likely changes after real evals:
 
-- **SCOUT_RECON** may swap away from Nemotron if discovery accuracy is weaker than speed suggests
+- **SCOUT_RECON** uses openai/gpt-5.4-mini as primary with Nemotron-3-Super as fallback; re-evaluate only if recon quality or availability changes
 - **PIKE/FOWLER** may occasionally need frontier escalation on tricky architectural reviews

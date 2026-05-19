@@ -30,7 +30,7 @@ function failure<T>(error: unknown): DashboardResult<T> {
   return {
     data: null,
     error: error instanceof Error ? error.message : "Unknown dashboard data error",
-    degraded: false,
+    degraded: true,
     warnings: [],
   }
 }

@@ -83,6 +83,7 @@ memory-bank/index.meta.json
 .tmp/
 memory-bank/ingestion.meta.json
 package-lock.json
+board-configs/private/
 .claude/worktrees/
 .worktrees/
 ralph/
@@ -97,5 +98,10 @@ brand-audit-results.json
 # Harness runtime directories (installed, not versioned)
 .agents/
 .codex/*
+!.codex/config.toml
 !.codex/agents/
 !.codex/agents/brooks.toml
+!.codex/actions/
+!.codex/actions/*.sh
+!.codex/setup-local-environment.sh
+!.codex/local-environments.md

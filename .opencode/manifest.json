@@ -74,6 +74,7 @@
     ".opencode/context/project-intelligence/system-authority.md",
     ".opencode/context/project-intelligence/v1-blockers.md",
     ".opencode/COWORK.md",
+    "_bmad/ALLURA-NAVIGATOR-WORKFLOW.md",
     "_bmad/TEAM-RAM-INTEGRATION.md",
     "docs/allura/TEAM-RAM-BMAD-INTEGRATION.md",
     ".opencode/contracts/harness-v1.md",
@@ -129,6 +130,7 @@
     ".opencode/AGENTS.md",
     ".opencode/agent/subagents/core/scout.md",
     ".opencode/agent/core/brooks.md",
+    "_bmad/ALLURA-NAVIGATOR-WORKFLOW.md",
     ".opencode/rules/agent-routing.md",
     ".opencode/rules/AI-GUIDELINES.md",
     ".opencode/rules/_bootstrap.md",
@@ -152,6 +154,8 @@
     "Context before code",
     "Skills before Ralph",
     "Validation before done",
+    "Notion Kanban is source of truth; local files are support artifacts",
+    "/allura brand alignment remains In Review until Pike/Fowler and Ralph gates pass",
     "Memory supplements context; it does not replace it",
     "No decorative architecture"
   ]

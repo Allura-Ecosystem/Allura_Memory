@@ -19,7 +19,7 @@
 # To rebuild all containers with current env:
 #   docker compose --env-file .env --env-file .env.local build --no-cache
 # To restart containers and reload env:
-#   docker compose --env-file .env --env-file .env.local restart mcp http-gateway && docker compose --env-file .env --env-file .env.local logs -f mcp
+#   docker compose --env-file .env --env-file .env.local restart mcp && docker compose --env-file .env --env-file .env.local logs -f mcp
 
 # =============================================================================
 # Environment Variable Standardization (v2.2.0)
@@ -204,6 +204,7 @@ services:
       retries: 5
 
   # MCP server (Memory Control Plane)
+  # Single runtime: Streamable HTTP gateway + memory tools in one container.
   mcp:
     build:
       context: .
@@ -233,47 +234,8 @@ services:
       - GRAPH_BACKEND=${GRAPH_BACKEND:-neo4j}
       - DEFAULT_GROUP_ID=${DEFAULT_GROUP_ID:-allura-system}
       - RUVIX_KERNEL_SECRET=${RUVIX_KERNEL_SECRET:-}
-    networks:
-      - knowledge-network
-    healthcheck:
-      test: ["CMD", "bun", "run", "scripts/mcp-container-healthcheck.ts"]
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
-
-  # HTTP Gateway for MCP - provides HTTP access to memory tools
-  http-gateway:
-    build:
-      context: .
-      dockerfile: Dockerfile.mcp
-    container_name: allura-http-gateway
-    restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - "5888:3201"
-    env_file:
-      - .env
-      - .env.local
-    environment:
-      - NODE_ENV=production
-      - POSTGRES_HOST=knowledge-postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - NEO4J_URI=bolt://knowledge-neo4j:7687
-      - NEO4J_USER=${NEO4J_USER}
-      - RUVECTOR_HOST=knowledge-postgres
-      - RUVECTOR_PORT=5432
-      - RUVECTOR_USER=${POSTGRES_USER}
-      - RUVECTOR_DB=${POSTGRES_DB}
       - ALLURA_MCP_HTTP_PORT=3201
       - ALLURA_MCP_HTTP_ENABLED=true
-      - RUVECTOR_EMBEDDING_BASE_URL=http://host.docker.internal:11434
-      - GRAPH_BACKEND=${GRAPH_BACKEND:-neo4j}
-      - DEFAULT_GROUP_ID=${DEFAULT_GROUP_ID:-allura-system}
-      - RUVIX_KERNEL_SECRET=${RUVIX_KERNEL_SECRET:-}
       # Budget circuit breaker tuning for agent memory writes.
       # Prevents long-lived Brooks sessions from halting on timeMs during normal work.
       - BUDGET_MAX_TIME_MS=${BUDGET_MAX_TIME_MS:-604800000}
@@ -281,9 +243,11 @@ services:
       - BUDGET_MAX_RPM=${BUDGET_MAX_RPM:-120}
       - BUDGET_MAX_TOKENS_PER_HOUR=${BUDGET_MAX_TOKENS_PER_HOUR:-500000}
       - BUDGET_MAX_COST_USD=${BUDGET_MAX_COST_USD:-250.0}
+    ports:
+      - "5888:3201"
+    command: ["bun", "run", "src/mcp/canonical-http-gateway.ts"]
     networks:
       - knowledge-network
-    command: ["bun", "run", "src/mcp/canonical-http-gateway.ts"]
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3201/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
       interval: 10s

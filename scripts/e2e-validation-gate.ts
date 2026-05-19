@@ -19,6 +19,7 @@
 
 import { randomUUID } from "crypto";
 import { curatorScore } from "../src/lib/curator/score";
+import { logApprovalEvent } from "../src/lib/memory/approval-audit";
 import { retrieveKnowledge } from "../src/lib/memory/retrieval-layer";
 import { closeDriver, getDriver } from "../src/lib/neo4j/connection";
 import { getDualContextSemanticMemory } from "../src/lib/neo4j/queries/get-dual-context";
@@ -230,30 +231,32 @@ async function gate05_approvalAuditEvent(): Promise<void> {
       [decidedAt, curatorId, proposalId]
     );
 
-    // Log the approval event
-    await pool.query(
-      `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-       VALUES ($1, 'proposal_approved', $2, 'completed', $3, $4)`,
-      [
-        GROUP_ID,
-        curatorId,
-        JSON.stringify({ proposal_id: proposalId, decision: "approve" }),
-        decidedAt,
-      ]
+    await logApprovalEvent(
+      {
+        proposal_id: proposalId,
+        group_id: GROUP_ID,
+        memory_id: proposalId,
+        curator_id: curatorId,
+        decision: "approved",
+        score: 1,
+        tier: "validation",
+        approved_at: decidedAt,
+      },
+      pool
     );
 
     // Verify the audit event exists
     const auditResult = await pool.query(
       `SELECT id, event_type, agent_id, metadata->>'proposal_id' as proposal_id
        FROM events
-       WHERE group_id = $1 AND event_type = 'proposal_approved' AND metadata->>'proposal_id' = $2
+       WHERE group_id = $1 AND event_type = 'memory_promotion_approved' AND metadata->>'proposal_id' = $2
        ORDER BY created_at DESC LIMIT 1`,
       [GROUP_ID, proposalId]
     );
 
     if (auditResult.rows.length > 0) {
       logGate("AC-05", "Approval audit event", true,
-        `Audit event found: type=proposal_approved, curator=${auditResult.rows[0].agent_id}, proposal=${(auditResult.rows[0].proposal_id as string)?.slice(0, 8)}...`);
+        `Audit event found: type=memory_promotion_approved, curator=${auditResult.rows[0].agent_id}, proposal=${(auditResult.rows[0].proposal_id as string)?.slice(0, 8)}...`);
     } else {
       logGate("AC-05", "Approval audit event", false, "Audit event not found after approval");
     }

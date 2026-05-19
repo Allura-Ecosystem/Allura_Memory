@@ -105,8 +105,8 @@
 }
 
 .memory-explorer__node--agent .node-shape {
-  fill: var(--tone-gold-bg);
-  stroke: var(--tone-gold-text);
+  fill: var(--dashboard-evidence);
+  stroke: var(--dashboard-evidence);
 }
 
 .memory-explorer__node--project .node-shape {
@@ -463,8 +463,7 @@
 }
 
 .memory-explorer__legend-dot--agent {
-  background: var(--tone-gold-bg);
-  border: 1px solid var(--tone-gold-text);
+  background: var(--dashboard-evidence);
 }
 
 .memory-explorer__legend-dot--project {

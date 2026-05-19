@@ -6,6 +6,7 @@
     ".opencode/AGENTS.md",
     ".opencode/manifest.json",
     ".opencode/SKILL-OWNERSHIP.md",
+    "_bmad/ALLURA-NAVIGATOR-WORKFLOW.md",
     ".opencode/context/core/context-system.md",
     ".opencode/context/navigation.md",
     ".opencode/agent/core/brooks.md",
@@ -42,10 +43,28 @@
     "active_notion_contract_scope": "https://www.notion.so/ce13dc069ff347689fcc7cbe188232c8",
     "canonical_plan_id": "ce13dc069ff347689fcc7cbe188232c8",
     "canonical_plan_path": "ralph/PROMPT_plan.md",
+    "allura_navigator_workflow": "_bmad/ALLURA-NAVIGATOR-WORKFLOW.md",
+    "current_ui_review_gate": {
+      "card": "/allura brand alignment / 6420 parity cleanup",
+      "status": "In Review",
+      "route": "/allura",
+      "source_of_truth": "Notion Allura stories Work Items",
+      "reviewers": [
+        "pike",
+        "fowler"
+      ],
+      "validator": "ralph",
+      "evidence": [
+        "artifacts/allura-after-3334.png",
+        "browser smoke: title, no page errors, no horizontal overflow"
+      ],
+      "done_rule": "Do not move to Done until Pike/Fowler blockers are resolved, Ralph validation passes, and evidence is attached to the Notion card."
+    },
     "required_context_files": [
       ".opencode/AGENTS.md",
       ".opencode/manifest.json",
       ".opencode/SKILL-OWNERSHIP.md",
+      "_bmad/ALLURA-NAVIGATOR-WORKFLOW.md",
       ".opencode/context/core/context-system.md",
       ".opencode/context/navigation.md",
       ".opencode/agent/core/brooks.md",
@@ -53,10 +72,22 @@
     ],
     "required_skills": [
       "allura-memory-skill",
-      "mcp-docker"
+      "mcp-docker",
+      "team-ram-cowork",
+      "frontend-design",
+      "frontend-craft",
+      "allura-design",
+      "bmad-code-review"
     ],
     "validation_commands": [
-      "bun test src/lib/validation/group-id.test.ts"
+      "bash .opencode/scripts/validate-oac-core.sh",
+      "python3 -m json.tool .opencode/config.json",
+      "python3 -m json.tool .opencode/manifest.json",
+      "bun scripts/validate-codex-governance-gate.ts",
+      "bun test src/lib/validation/group-id.test.ts",
+      "bunx eslint src/app/'(main)'/allura/page.tsx",
+      "bun run typecheck",
+      "bun test src/lib/dashboard/__tests__/allura-route.test.ts src/__tests__/dashboard-schemas.test.ts"
     ],
     "discovery_preference": [
       "notion",
@@ -66,7 +97,7 @@
   "agent": {
     "brooks": {
       "mode": "primary",
-      "path": ".opencode/agents/core/brooks.md",
+      "path": ".opencode/agent/core/brooks.md",
       "permission": {
         "task": "allow",
         "skill": {
@@ -76,7 +107,7 @@
     },
     "jobs": {
       "mode": "primary",
-      "path": ".opencode/agents/core/jobs.md",
+      "path": ".opencode/agent/core/jobs.md",
       "permission": {
         "skill": {
           "*": "allow"
@@ -85,11 +116,12 @@
     },
     "scout": {
       "mode": "subagent",
-      "path": ".opencode/agents/subagents/core/scout.md",
+      "path": ".opencode/agent/subagents/core/scout.md",
+      "model": "openai/gpt-5.4-mini",
       "permission": {
-        "edit": "deny",
-        "write": "deny",
-        "task": "deny",
+        "edit": "allow",
+        "write": "allow",
+        "task": "allow",
         "skill": {
           "*": "allow"
         }
@@ -97,7 +129,7 @@
     },
     "woz": {
       "mode": "subagent",
-      "path": ".opencode/agents/subagents/code/woz.md",
+      "path": ".opencode/agent/subagents/code/woz.md",
       "permission": {
         "task": "allow",
         "skill": {
@@ -107,7 +139,7 @@
     },
     "bellard": {
       "mode": "subagent",
-      "path": ".opencode/agents/subagents/code/bellard.md",
+      "path": ".opencode/agent/subagents/code/bellard.md",
       "permission": {
         "skill": {
           "*": "allow"
@@ -116,7 +148,7 @@
     },
     "carmack": {
       "mode": "subagent",
-      "path": ".opencode/agents/subagents/code/carmack.md",
+      "path": ".opencode/agent/subagents/code/carmack.md",
       "permission": {
         "skill": {
           "*": "allow"
@@ -125,7 +157,7 @@
     },
     "pike": {
       "mode": "subagent",
-      "path": ".opencode/agents/subagents/review/pike.md",
+      "path": ".opencode/agent/subagents/review/pike.md",
       "permission": {
         "skill": {
           "*": "allow"
@@ -134,7 +166,7 @@
     },
     "fowler": {
       "mode": "subagent",
-      "path": ".opencode/agents/subagents/review/fowler.md",
+      "path": ".opencode/agent/subagents/review/fowler.md",
       "permission": {
         "skill": {
           "*": "allow"
@@ -143,7 +175,7 @@
     },
     "knuth": {
       "mode": "subagent",
-      "path": ".opencode/agents/subagents/infrastructure/knuth.md",
+      "path": ".opencode/agent/subagents/infrastructure/knuth.md",
       "permission": {
         "skill": {
           "*": "allow"
@@ -152,7 +184,7 @@
     },
     "hightower": {
       "mode": "subagent",
-      "path": ".opencode/agents/subagents/infrastructure/hightower.md",
+      "path": ".opencode/agent/subagents/infrastructure/hightower.md",
       "permission": {
         "skill": {
           "*": "allow"

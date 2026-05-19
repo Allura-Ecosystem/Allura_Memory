@@ -1,0 +1,113 @@
+# Codex-native Team RAM configuration.
+# Keep this thin: Codex agents inherit most runtime settings from the parent
+# session, and each custom agent file should define only its job-specific shape.
+
+model = "gpt-5.4-mini"
+model_reasoning_effort = "medium"
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+project_doc_max_bytes = 65536
+project_doc_fallback_filenames = ["TEAM-RAM-RUNTIME.md"]
+
+# Repo-local convention for Codex startup. AGENTS.override.md is the enforceable
+# instruction surface; this value documents the intended default orchestrator.
+default_agent = "BROOKS_ARCHITECT"
+startup_hydration_budget_sec = 30
+startup_hydration_minimum = [
+  "git_state",
+  "latest_project_status",
+  "allura_brain_search",
+  "active_system_of_record_scope",
+  "recent_lessons_reflections",
+]
+kanban_source_of_truth = "notion_work_board"
+kanban_workflow_name = "Finish All Epics: Scout-First Kanban Workflow"
+kanban_story_flow = ["Backlog", "Ready", "In Progress", "Review", "Done"]
+kanban_epic_flow = ["Plan epic", "finish every story", "code review gates pass", "retrospective", "next epic"]
+finish_all_epics_workflow = "_bmad/FINISH-ALL-EPICS-WORKFLOW.md"
+allura_navigator_workflow = "_bmad/ALLURA-NAVIGATOR-WORKFLOW.md"
+finish_all_epics_order = [
+  "current_review_debt",
+  "epic_2_frontend_tightening",
+  "e1_host_stability",
+  "e2_dashboard_quality",
+  "e3_e4_hardening_deploy",
+  "e4_kernel_completion",
+  "e5_infrastructure_polish",
+]
+scout_first_real_agent = true
+scout_fallback_phrase = "Scout-style hydration only"
+allura_navigator_loop = [
+  "read_board",
+  "hydrate_context",
+  "route_work",
+  "build_and_review",
+  "attest_and_remember",
+]
+allura_navigator_model = [
+  "notion_kanban_is_map",
+  "allura_brain_is_ship_log",
+  "ruvix_is_governance",
+  "team_ram_is_crew",
+  "skills_are_playbooks",
+  "evidence_proves_done",
+]
+story_2_4_first_card = "CARD-2.4-E"
+story_2_4_first_validation = "bun test src/lib/memory/__tests__/approval-audit.test.ts"
+
+[local_environment]
+setup_script = "bash .codex/setup-local-environment.sh"
+docs = ".codex/local-environments.md"
+
+[[local_environment.actions]]
+name = "Dashboard Dev"
+icon = "monitor"
+script = "bash .codex/actions/dev-dashboard.sh"
+
+[[local_environment.actions]]
+name = "Typecheck"
+icon = "check-circle"
+script = "bash .codex/actions/typecheck.sh"
+
+[[local_environment.actions]]
+name = "Mission Tests"
+icon = "test-tube"
+script = "bash .codex/actions/test-mission-control.sh"
+
+[[local_environment.actions]]
+name = "Build"
+icon = "hammer"
+script = "bash .codex/actions/build.sh"
+
+[[local_environment.actions]]
+name = "Health"
+icon = "activity"
+script = "bash .codex/actions/health.sh"
+
+[features]
+multi_agent = true
+memories = true
+shell_tool = true
+web_search_request = true
+
+[agents]
+max_threads = 6
+max_depth = 1
+job_max_runtime_seconds = 1800
+
+[mcp_servers.allura_brain]
+transport = "http"
+url = "http://localhost:5888/mcp"
+startup_timeout_sec = 20
+tool_timeout_sec = 60
+enabled = true
+
+[mcp_servers.notion]
+transport = "http"
+url = "http://host.docker.internal:3000/mcp"
+startup_timeout_sec = 20
+tool_timeout_sec = 60
+enabled = true
+startup_timeout_sec = 20
+tool_timeout_sec = 60
+enabled = true

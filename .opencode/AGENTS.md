@@ -60,6 +60,36 @@ User task
 **No agent may skip step ①.** Ralph, Woz, and all builders must have Scout context
 loaded before writing implementation code.
 
+## Context7 Gate (MANDATORY)
+
+Before proposing or editing anything involving external tool behavior, runtime
+configuration, provider/model syntax, library APIs, framework behavior, plugin
+hooks, MCP configuration, or CLI semantics, load `context7` and retrieve current
+documentation.
+
+This gate applies to:
+
+- OpenCode config, agents, permissions, plugins, commands, and model syntax
+- MCP server config and tool semantics
+- Provider/model syntax and gateway routing
+- Next.js, React, Tailwind, Bun, Vitest, Playwright, and shadcn
+- Database/client APIs, auth/security/cloud/infra tooling
+
+Required receipt:
+
+```text
+Context7:
+- required: <yes/no>
+- library: <id or n/a>
+- topic: <query or n/a>
+- finding: <one-line evidence or skip reason>
+```
+
+No-skip rule: if touching `.opencode/config.json`, `opencode.json`,
+`.opencode/agent/**`, `.codex/**`, `.claude/**`, MCP config, model routing,
+provider strings, plugins, or command definitions, Context7 is mandatory before
+proposing or editing.
+
 ## Ralph Skill Gate (MANDATORY)
 
 Ralph may not execute unless this gate passes:
@@ -76,6 +106,7 @@ Ralph may not execute unless this gate passes:
 ```
 
 **Failure conditions (Ralph MUST refuse):**
+
 - No Scout context loaded
 - Missing required skill
 - Stale context without acknowledgment
@@ -83,18 +114,18 @@ Ralph may not execute unless this gate passes:
 
 ## Team RAM
 
-| Agent | Persona | Role | Path |
-| --- | --- | --- | --- |
-| Brooks | Frederick P. Brooks Jr. | Architecture and orchestration | `core/` |
-| Jobs | Steve Jobs | Intent gate and scope owner | `core/` |
-| Woz | Steve Wozniak | Primary builder | `subagents/code/` |
-| Bellard | Fabrice Bellard | Deep diagnostics | `subagents/code/` |
-| Carmack | John Carmack | Performance | `subagents/code/` |
-| Scout | Utility role | Discovery and recon (ContextScout) | `subagents/core/` |
-| Pike | Rob Pike | Interface simplicity | `subagents/review/` |
-| Fowler | Martin Fowler | Refactor safety | `subagents/review/` |
-| Knuth | Donald Knuth | Data and schema | `subagents/infrastructure/` |
-| Hightower | Kelsey Hightower | Infra and deployment | `subagents/infrastructure/` |
+| Agent     | Persona                 | Role                               | Path                        |
+| --------- | ----------------------- | ---------------------------------- | --------------------------- |
+| Brooks    | Frederick P. Brooks Jr. | Architecture and orchestration     | `core/`                     |
+| Jobs      | Steve Jobs              | Intent gate and scope owner        | `core/`                     |
+| Woz       | Steve Wozniak           | Primary builder                    | `subagents/code/`           |
+| Bellard   | Fabrice Bellard         | Deep diagnostics                   | `subagents/code/`           |
+| Carmack   | John Carmack            | Performance                        | `subagents/code/`           |
+| Scout     | Utility role            | Discovery and recon (ContextScout) | `subagents/core/`           |
+| Pike      | Rob Pike                | Interface simplicity               | `subagents/review/`         |
+| Fowler    | Martin Fowler           | Refactor safety                    | `subagents/review/`         |
+| Knuth     | Donald Knuth            | Data and schema                    | `subagents/infrastructure/` |
+| Hightower | Kelsey Hightower        | Infra and deployment               | `subagents/infrastructure/` |
 
 ## Team RAM as Overlay
 
@@ -111,14 +142,14 @@ Team RAM personas consume OAC context — they do not replace it.
 
 ## Skill Assignment Matrix
 
-| Owner / Path | Required skills | Optional / routed skills | Notes |
-| --- | --- | --- | --- |
-| All agents | `allura-memory-skill` | `systematic-debugging`, `code-review` | Memory governance is mandatory. |
-| Brooks | `party-mode`, `skill-creator`, `mcp-harness` | `task-creator`, UI/design skills for routing | Brooks orchestrates; he routes, doesn't hoard. |
-| Scout | `allura-memory-skill`, `multi-search`, `perplexica-mcp`, `mcp-docker` | `context7` via MCP Docker | Scout owns Brain/search recon and context discovery. |
-| Woz | `frontend-craft`, `shadcn`, `task-management`, `varlock`, `code-review` | `frontend-design` when implementing approved UI | Woz builds with loaded context. |
-| Design/UI path | `frontend-design`, `frontend-craft`, `allura-design`, `huashu-design`, `shadcn` | `allura-memory-skill` for brand/context | Applies to UI/design agents. |
-| Hightower | `mcp-docker`, `mcp-harness`, `varlock` | `perplexica-mcp` for infra research | Hightower owns deployability and secrets. |
+| Owner / Path   | Required skills                                                                 | Optional / routed skills                        | Notes                                                |
+| -------------- | ------------------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------- |
+| All agents     | `allura-memory-skill`                                                           | `systematic-debugging`, `code-review`           | Memory governance is mandatory.                      |
+| Brooks         | `party-mode`, `skill-creator`, `mcp-harness`                                    | `task-creator`, UI/design skills for routing    | Brooks orchestrates; he routes, doesn't hoard.       |
+| Scout          | `allura-memory-skill`, `multi-search`, `perplexica-mcp`, `mcp-docker`           | `context7` via MCP Docker                       | Scout owns Brain/search recon and context discovery. |
+| Woz            | `frontend-craft`, `shadcn`, `task-management`, `varlock`, `code-review`         | `frontend-design` when implementing approved UI | Woz builds with loaded context.                      |
+| Design/UI path | `frontend-design`, `frontend-craft`, `allura-design`, `huashu-design`, `shadcn` | `allura-memory-skill` for brand/context         | Applies to UI/design agents.                         |
+| Hightower      | `mcp-docker`, `mcp-harness`, `varlock`                                          | `perplexica-mcp` for infra research             | Hightower owns deployability and secrets.            |
 
 ## Execution Rule
 
@@ -151,6 +182,14 @@ RuVix governance receipt
 Brooks route / answer / build plan
 ```
 
+Fast hydration target: first useful answer within 30 seconds.
+
+That target is a budget, not permission to thin the context. Brooks startup must
+still load local status, search Allura Brain with `group_id = allura-system`,
+check active story/task scope when configured, and include recent blockers,
+lessons, or reflections for project-status work. If a source is slow or
+unavailable, say so and keep hydrating in the same turn.
+
 Before Brooks answers, Codex must show this receipt shape:
 
 ```text
@@ -159,6 +198,11 @@ Skills: team-ram-cowork, allura-memory-skill, <task skills>
 Scout hydration:
 - Local context: <files checked>
 - Brain: <query, group_id, status>
+Context7:
+- required: <yes/no>
+- library: <id or n/a>
+- topic: <query or n/a>
+- finding: <one-line evidence or skip reason>
 RuVix:
 - mutate: <intent/no mutation>
 - attest: <evidence>
@@ -189,6 +233,75 @@ If the user invokes Brooks, Scout, Woz, Team RAM, Ralph, or Allura project work:
 ```text
 Scout → Allura Brain → Skills → Brooks route → Build/review → Log outcome
 ```
+
+Kanban team workflow:
+
+```text
+Backlog -> Ready -> In Progress -> Review -> Done
+```
+
+Finish-all-epics order:
+
+```text
+current review debt -> Epic 2 Frontend Tightening -> E1 Host Stability ->
+E2 Dashboard Quality -> E3/E4 Hardening Deploy -> E4 Kernel Completion ->
+E5 Infrastructure Polish
+```
+
+The detailed finish-all-epics workflow lives in
+`_bmad/FINISH-ALL-EPICS-WORKFLOW.md`.
+
+Allura Navigator workflow:
+
+```text
+Read board -> hydrate context -> route work -> build/review -> attest/remember
+```
+
+The detailed Navigator operating loop lives in
+`_bmad/ALLURA-NAVIGATOR-WORKFLOW.md`. Treat that file as required context for
+project work that touches the Kanban board, Allura Brain, RuVix governance,
+Team RAM routing, or review/validation gates.
+
+Use the Notion `Work Board` / `Allura stories Work Items` board as the
+human/team source of truth for story state. Local sprint-status files support
+reconciliation only; they must not replace the board. Each story moves through:
+epic intake, story ready gate, `bmad-dev-story`, `bmad-code-review`, done gate,
+and Allura outcome logging. Run `bmad-retrospective` only after every story in
+the epic is `Done`, unless Ronin explicitly asks for a partial retrospective.
+
+Team RAM board ownership:
+
+- Scout: first real background/recon agent for every epic or story batch. If a
+  real Scout agent is not spawned, say `Scout-style hydration only`.
+- Jobs: intent, scope, acceptance criteria before `Ready`.
+- Brooks: architecture, contracts, and route approval.
+- Woz: implementation through `bmad-dev-story`.
+- Pike + Fowler: review through `bmad-code-review`.
+- Ralph: validation after implementation/review evidence exists.
+- Brooks + team: retrospective after all epic stories are `Done`.
+
+Story 2.4 starts with `CARD-2.4-E — Add targeted role/SoD/audit tests`; Woz owns
+the build, Pike and Fowler review, and the first acceptance target is
+`bun test src/lib/memory/__tests__/approval-audit.test.ts` passing under Bun
+without `vi.mocked`.
+
+Current `/allura` UI review gate:
+
+- Board item: `/allura` brand alignment / 6420 parity cleanup.
+- Status: `In Review`, not `Done`.
+- Source of truth: Notion `Allura stories Work Items`; local files are evidence
+  only.
+- Brand authority: `DESIGN.md`; `dashboard/mission-control.html` and port 6420
+  are structure references only.
+- Reviewers: Pike for interface/keyboard/source-of-truth clarity; Fowler for
+  maintainability, token use, and component boundaries.
+- Validation: `Ralph Loop` only after implementation and review evidence exist.
+- Evidence: title `Governed memory command center`, no runtime page errors, no
+  horizontal overflow at desktop/tablet/mobile widths, refreshed
+  `artifacts/allura-after-3334.png`.
+- Done rule: do not move the card to `Done` until Pike/Fowler blockers are
+   resolved, `Ralph Loop` validation passes, and evidence is attached or logged to the
+   board.
 
 Expected behavior:
 

@@ -27,6 +27,7 @@
 | mcp-docker-ops | Hightower | MCP server lifecycle | ✅ Yes | mcp-docker | **Keep** — skill-embedded MCP operations wrapper |
 | mcp-harness | Hightower | MCP orchestration | ⬜ Overlay | mcp-docker, mcp-docker-ops | **Keep** — MCP server discovery and governance |
 | multi-search | Scout | Web search | ✅ Yes | context7 | **Keep** — search capability |
+| open-ralph-wiggum | Brooks | Ralph Loop execution (`ralph`, `/ulw-loop`) | ⬜ Overlay | none | **Keep** — bounded autonomous execution loop with hard stop criteria |
 | party-mode | Brooks | Parallel dispatch | ⬜ Overlay | roundtable, mcp-harness | **Keep** — Team RAM surgical team coordination |
 | perplexica-search | Scout | External web research | ⬜ Overlay | multi-search | **Keep** — self-hosted Perplexica research path |
 | postgres-best-practices | Knuth | DB patterns | ⬜ Overlay | none | **Keep** — PostgreSQL guidance |
@@ -39,7 +40,7 @@
 | team-ram-cowork | Brooks | Codex/OpenCode/Claude co-work explanation and role routing | ✅ Yes | party-mode, roundtable | **Keep** — explains and enforces Team RAM perspective workflow across tools |
 | varlock | Hightower | Env var security | ⬜ Overlay | bun-security | **Keep** — secrets management and non-exposure guardrails |
 
-**Total: 37 skills** — 7 Required (core gates), 30 Overlay (project-specific)
+**Total: 38 skills** — 7 Required (core gates), 31 Overlay (project-specific)
 
 **Deleted / archived:**
 - `systematic-debugging-memory` — archived to `.opencode/archive/skills-2026-05-07/`
@@ -57,6 +58,7 @@
 
 **Special attention items:**
 - `allura-memory-skill`: Mandatory for all agents. Cannot be removed without breaking Brain integration.
+- `open-ralph-wiggum`: Bounded loop execution tool; does not provide final authority or review.
 - `context7` + `multi-search`: Both serve Scout's discovery role. context7 for library docs, multi-search for web search. Complementary, not overlapping.
 - `figma-*` skills: 6 Figma skills may seem excessive, but each serves a distinct Figma API surface. Keep all.
 - `penpot-design`, `perplexica-search`, and `mcp-docker-ops`: Skill-embedded MCP pattern examples. They may declare/allow tools, but activation still requires mcp-harness governance.

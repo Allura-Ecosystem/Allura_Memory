@@ -9,8 +9,8 @@ path: subagents/code
 scope: harness
 platform: Both
 status: active
-model: ollama-cloud/qwen3-coder-next
-fallback_model: openai/gpt-5.4-mini
+model: openai/gpt-5.4-mini
+fallback_model: ollama-cloud/qwen3-coder-next
 permission:
   skill:
     "*": allow

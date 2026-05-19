@@ -4,6 +4,11 @@
 version: 1
 project: allura-memory
 required_acknowledgement: true
+acknowledgement_source:
+  notion_page: https://www.notion.so/35b1d9be65b381548b26ea19c288f96f
+  acknowledged_by: Sabir Asheed
+  acknowledged_at: "2026-05-11T04:40:00-04:00"
+  note: "Captain owns all lanes personally; agents execute under human accountability."
 roles:
   platform_sre:
     title: Platform / SRE Owner
@@ -12,8 +17,8 @@ roles:
       - deployment health
       - backup and restore drills
       - incident response
-    assignee: TBD
-    acknowledged: false
+    assignee: Sabir Asheed
+    acknowledged: true
   security:
     title: Security / Tenant Isolation Owner
     responsibilities:
@@ -21,8 +26,8 @@ roles:
       - RBAC and policy gates
       - secret and vulnerability scans
       - cross-tenant incident response
-    assignee: TBD
-    acknowledged: false
+    assignee: Sabir Asheed
+    acknowledged: true
   governance_hitl:
     title: Governance / HITL Owner
     responsibilities:
@@ -30,8 +35,8 @@ roles:
       - curator approval and rejection policy
       - promotion SLA
       - auditability gates
-    assignee: TBD
-    acknowledged: false
+    assignee: Sabir Asheed
+    acknowledged: true
   retrieval:
     title: Retrieval Quality Owner
     responsibilities:
@@ -39,8 +44,8 @@ roles:
       - benchmark corpus
       - P@5 and MRR targets
       - degraded retrieval behavior
-    assignee: TBD
-    acknowledged: false
+    assignee: Sabir Asheed
+    acknowledged: true
   canon_sync:
     title: Canon Sync Owner
     responsibilities:
@@ -48,8 +53,8 @@ roles:
       - repo mirror drift checks
       - canon change traceability
       - documentation sync failures
-    assignee: TBD
-    acknowledged: false
+    assignee: Sabir Asheed
+    acknowledged: true
   developer_experience:
     title: Developer Experience Owner
     responsibilities:
@@ -57,5 +62,5 @@ roles:
       - API/MCP examples
       - error documentation
       - clean-clone setup timing
-    assignee: TBD
-    acknowledged: false
+    assignee: Sabir Asheed
+    acknowledged: true

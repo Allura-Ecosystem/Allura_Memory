@@ -32,13 +32,13 @@ opencode run --mode=day --task="test scout"
 **Execution Flow:**
 1. Load AI-GUIDELINES.md as required context
 2. Invoke ContextScout to produce Scout Report
-3. Invoke OpenAgent to produce Intent Brief + Acceptance Criteria
+3. Invoke Jobs to produce scope and acceptance criteria
 4. Request approval from user
-5. If approved, invoke OpenAgent to produce Contracts/ADRs
+5. If approved, invoke Brooks to produce Contracts/ADRs
 6. Request approval from user
-7. If approved, invoke CoderAgent to implement step-by-step
-8. Invoke OpenCoder to validate interfaces
-9. Invoke OpenCoder to prevent debt
+7. If approved, invoke Woz to implement step-by-step
+8. Invoke Pike and Fowler for interface, readability, and refactor safety checks
+9. Invoke Fowler to prevent debt
 10. Validate documentation completeness
 11. Log TASK_COMPLETE
 
@@ -59,18 +59,18 @@ opencode run --mode=day --task="test scout"
 **Validation:**
 ```bash
 opencode run --mode=night --task="fix lint errors"
-# Expected: CoderAgent invoked, fixes applied, validation run, no approval needed
+# Expected: Woz invoked, fixes applied, validation run, no approval needed
 ```
 
 **Execution Flow:**
 1. Load AI-GUIDELINES.md as required context
 2. Invoke ContextScout to produce Scout Report
-3. Invoke OpenAgent to produce Intent Brief + Acceptance Criteria
-4. Invoke OpenAgent to produce Contracts/ADRs + select route
-5. Invoke CoderAgent to implement step-by-step with validations
-6. Invoke OpenCoder to reject unnecessary surface area
-7. Invoke OpenCoder to prevent debt
-8. Invoke OpenCoder (only if perf constraint)
+3. Invoke Jobs to produce scope and acceptance criteria
+4. Invoke Brooks to produce Contracts/ADRs + select route
+5. Invoke Woz to implement step-by-step with validations
+6. Invoke Pike and Fowler to reject unnecessary surface area
+7. Invoke Fowler to prevent debt
+8. Invoke Bellard or Carmack (only if perf constraint)
 9. Validate documentation completeness
 10. Log TASK_COMPLETE
 
@@ -85,12 +85,12 @@ opencode run --mode=night --task="fix lint errors"
 | Task Type | Primary Agent | Fallback Agent | Condition |
 |-----------|---------------|----------------|-----------|
 | Discovery | ContextScout | None | Always |
-| Intent/Scope | OpenAgent | None | Always |
-| Architecture | OpenAgent | None | Always |
-| Implementation | CoderAgent | OpenCoder (if interface added) | Always |
-| Refactor | OpenCoder | None | Always |
-| Performance | OpenCoder | None | Only if perf constraint |
-| Validation | OpenCoder | OpenCoder | Always |
+| Intent/Scope | Jobs | None | Always |
+| Architecture | Brooks | None | Always |
+| Implementation | Woz | Fowler (if interface added) | Always |
+| Refactor | Fowler | Woz | Always |
+| Performance | Bellard | Carmack | Only if perf constraint |
+| Validation | Pike | Fowler | Always |
 
 ### Fallback Logic
 
@@ -100,11 +100,11 @@ function selectFallbackAgent(taskType, primaryAgent, error):
     
     if fallbackAgent is None:
         log BLOCKER_HIT (reason="No fallback agent for task type")
-        return OpenAgent  // Escalate to architect
+        return Brooks  // Escalate to architect
     
     if error is "Agent exceeded authority":
         log BLOCKER_HIT (reason="Authority violation")
-        return OpenAgent  // Escalate to architect
+        return Brooks  // Escalate to architect
     
     if error is "Agent failed validation":
         log FALLBACK_TRIGGERED (from=primaryAgent, to=fallbackAgent)
@@ -115,9 +115,9 @@ function selectFallbackAgent(taskType, primaryAgent, error):
 
 ### Conflict Resolution
 
-- **Performance evidence inconclusive** → OpenAgent decides
-- **Architecture ambiguous** → OpenAgent decides
-- **Destructive decision required** → OpenAgent must approve
+- **Performance evidence inconclusive** → Brooks decides
+- **Architecture ambiguous** → Brooks decides
+- **Destructive decision required** → Brooks must approve
 
 ---
 
@@ -232,13 +232,13 @@ opencode run --mode=day --task="create hello world file"
 
 # Expected flow:
 # 1. ContextScout produces Scout Report
-# 2. OpenAgent produces Intent Brief + Acceptance Criteria
+# 2. Jobs produces scope and acceptance criteria
 # 3. User approves
-# 4. OpenAgent produces Contracts/ADRs
+# 4. Brooks produces Contracts/ADRs
 # 5. User approves
-# 6. CoderAgent implements
-# 7. OpenCoder validates
-# 8. OpenCoder prevents debt
+# 6. Woz implements
+# 7. Pike validates
+# 8. Fowler prevents debt
 # 9. Documentation validated
 # 10. TASK_COMPLETE logged
 ```
@@ -251,11 +251,11 @@ opencode run --mode=night --task="fix lint errors"
 
 # Expected flow:
 # 1. ContextScout produces Scout Report
-# 2. OpenAgent produces Intent Brief + Acceptance Criteria
-# 3. OpenAgent produces Contracts/ADRs + selects route
-# 4. CoderAgent implements
-# 5. OpenCoder validates
-# 6. OpenCoder prevents debt
+# 2. Jobs produces scope and acceptance criteria
+# 3. Brooks produces Contracts/ADRs + selects route
+# 4. Woz implements
+# 5. Pike validates
+# 6. Fowler prevents debt
 # 7. Documentation validated
 # 8. TASK_COMPLETE logged
 # No approvals needed unless destructive change

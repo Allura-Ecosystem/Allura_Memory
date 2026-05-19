@@ -47,14 +47,14 @@ export function RefreshButton() {
 export function HealthTable({ components }: { components: ComponentHealth[] }) {
   if (components.length === 0) {
     return (
-      <div className="rounded-lg border bg-card p-8 text-center text-sm text-[var(--dashboard-text-secondary)]">
+      <div className="rounded-lg border bg-[var(--dashboard-surface)] p-8 text-center text-sm text-[var(--dashboard-text-secondary)]">
         No component data available. The health endpoint may be unreachable.
       </div>
     )
   }
 
   return (
-    <div className="bg-card rounded-lg border">
+    <div className="rounded-lg border bg-[var(--dashboard-surface)]">
       <Table>
         <TableHeader>
           <TableRow>

@@ -44,4 +44,42 @@ describe("HITL Promotion Lock policy", () => {
     expect(processor).not.toMatch(/PROMOTION_MODE=auto.*no HITL|auto-approves \(no HITL\)/i)
     expect(processor).toMatch(/awaiting HITL review|HITL/i)
   })
+
+  it("knowledge promotion must require approval audit before Neo4j writes", () => {
+    const source = readRepoFile("src/lib/memory/knowledge-promotion.ts")
+    const batchPromotion = source.slice(
+      source.indexOf("export async function processApprovedInsights"),
+      source.indexOf("export async function promoteSingleInsight")
+    )
+    const singlePromotion = source.slice(
+      source.indexOf("export async function promoteSingleInsight")
+    )
+
+    expect(source).toContain("import { requireApprovalBeforePromotion }")
+
+    for (const promotionPath of [batchPromotion, singlePromotion]) {
+      const guardIndex = promotionPath.indexOf("requireApprovalBeforePromotion")
+      const neo4jIndex = promotionPath.indexOf("promoteToNeo4j")
+
+      expect(guardIndex).toBeGreaterThanOrEqual(0)
+      expect(neo4jIndex).toBeGreaterThanOrEqual(0)
+      expect(guardIndex).toBeLessThan(neo4jIndex)
+    }
+  })
+
+  it("curator approval entrypoints must log approval audit before graph writes", () => {
+    const route = readRepoFile("src/app/api/curator/approve/route.ts")
+    const batchScript = readRepoFile("scripts/batch-approve-proposals.ts")
+
+    for (const source of [route, batchScript]) {
+      const auditIndex = source.indexOf("await logApprovalEvent")
+      const graphWriteIndex = source.indexOf("await createInsight")
+
+      expect(auditIndex).toBeGreaterThanOrEqual(0)
+      expect(graphWriteIndex).toBeGreaterThanOrEqual(0)
+      expect(auditIndex).toBeLessThan(graphWriteIndex)
+      expect(source).toContain('decision: "approved"')
+      expect(source).toContain("memory_id:")
+    }
+  })
 })

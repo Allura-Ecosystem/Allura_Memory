@@ -12,25 +12,11 @@ status: active
 model: ollama-cloud/qwen3-coder-next
 fallback_model: openai/gpt-5.4-mini
 permission:
-  edit: ask
-  bash:
-    "*": ask
-    "docker exec knowledge-postgres*": allow
-    "bun vitest*": allow
-    "bun run typecheck*": allow
-    "bun run lint*": allow
-  webfetch: deny
+  edit: allow
+  bash: allow
+  webfetch: allow
   skill:
     "*": allow
-  MCP_DOCKER_search_nodes: allow
-  MCP_DOCKER_query_database: allow
-  MCP_DOCKER_execute_sql: allow
-  MCP_DOCKER_insert_data: allow
-  MCP_DOCKER_create_entities: allow
-  MCP_DOCKER_create_relations: allow
-  MCP_DOCKER_describe_table: allow
-  MCP_DOCKER_mcp-find: allow
-  MCP_DOCKER_mcp-add: allow
 ---
 
 # INSTRUCTION BOUNDARY

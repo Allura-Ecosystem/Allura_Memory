@@ -11,6 +11,8 @@
 @import "../styles/brand-tokens.css";
 @import "../styles/agency-dashboard.css";
 
+@source not "../../.opencode";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

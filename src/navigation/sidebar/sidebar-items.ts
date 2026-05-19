@@ -4,9 +4,10 @@ import {
   Brain,
   CheckCircle2,
   Folder,
-  type LucideIcon,
+  Network,
   Settings,
   Users,
+  type LucideIcon,
 } from "lucide-react"
 
 export interface NavSubItem {
@@ -33,7 +34,8 @@ export const sidebarItems: NavGroup[] = [
     id: 1,
     label: "Work",
     items: [
-      { title: "Memory Space", url: "/dashboard/memory-space", icon: Brain },
+      { title: "What We Know", url: "/dashboard/feed", icon: Brain },
+      { title: "Memory Space", url: "/dashboard/memory-space", icon: Network },
       { title: "Decisions", url: "/dashboard/insights", icon: CheckCircle2 },
       { title: "Projects", url: "/dashboard/projects", icon: Folder },
       { title: "Team", url: "/dashboard/agents", icon: Users },

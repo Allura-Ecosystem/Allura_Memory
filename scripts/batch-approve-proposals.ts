@@ -11,6 +11,7 @@
 import { Pool } from "pg";
 import { createHash, randomUUID } from "crypto";
 import { Neo4jConnectionError, Neo4jPromotionError } from "@/lib/errors/neo4j-errors";
+import { logApprovalEvent } from "@/lib/memory/approval-audit";
 import { createInsight } from "@/lib/neo4j/queries/insert-insight";
 
 const isDryRun = process.argv.includes("--dry-run");
@@ -57,6 +58,21 @@ async function main() {
     const memoryId = randomUUID();
     const witnessPayload = `${p.id}|${p.group_id}|${p.content}|${p.score}|${p.tier}|approve|${decidedAt}|${CURATOR_ID}`;
     const witness_hash = createHash("sha256").update(witnessPayload).digest("hex");
+
+    await logApprovalEvent(
+      {
+        proposal_id: p.id,
+        group_id: p.group_id,
+        memory_id: memoryId,
+        curator_id: CURATOR_ID,
+        decision: "approved",
+        rationale: RATIONALE,
+        score: parseFloat(p.score),
+        tier: p.tier,
+        approved_at: decidedAt,
+      },
+      pool
+    );
 
     try {
       await createInsight({

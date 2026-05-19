@@ -25,10 +25,93 @@ Plain English:
 - Pike, Fowler, Knuth, Hightower, Bellard, or Carmack review when their specialty applies.
 - Allura Brain stores the result as governed memory.
 
+## Kanban Team Workflow
+
+The Kanban board is the operating surface for Team RAM + BMAD story execution.
+The Notion `Work Board` / `Allura stories Work Items` board is the human/team
+source of truth for story state. Local sprint-status files are support and
+reconciliation artifacts; they must not replace the board.
+
+Default story flow:
+
+```text
+Backlog -> Ready -> In Progress -> Review -> Done
+```
+
+Epic flow:
+
+```text
+Plan epic -> finish every story -> code review gates pass -> retrospective -> next epic
+```
+
+Finish-all-epics order:
+
+```text
+current review debt -> Epic 2 Frontend Tightening -> E1 Host Stability ->
+E2 Dashboard Quality -> E3/E4 Hardening Deploy -> E4 Kernel Completion ->
+E5 Infrastructure Polish
+```
+
+The canonical finish-all-epics workflow is
+`_bmad/FINISH-ALL-EPICS-WORKFLOW.md`.
+
+Scout is the first real background/recon agent for every epic or story batch. If
+Scout is unavailable or not spawned, the runtime must say
+`Scout-style hydration only` and continue with the safest available local
+hydration path.
+
+### Story Lifecycle
+
+1. **Scout Intake** — Scout produces a read-only report covering the board,
+   repo, Allura Brain memory, evidence, blockers, validation commands, and
+   risks.
+2. **Epic Intake** — Jobs and Brooks confirm the epic goal, story list,
+   acceptance criteria, and board mapping. Stories without clear acceptance
+   criteria stay in `Backlog`.
+3. **Story Ready Gate** — Move one story at a time to `Ready`. Required before
+   `Ready`: clear acceptance criteria, owner, reviewers, validation command,
+   and evidence expectation.
+4. **Dev Story** — Move the selected card to `In Progress`. Woz runs
+   `bmad-dev-story` for that one story only. Scope stays limited to that card
+   unless Brooks explicitly approves a contract dependency.
+5. **Code Review** — Move the card to `Review`. Pike reviews interface/API
+   simplicity. Fowler reviews maintainability and refactor safety. Blocking
+   findings send the card back to `In Progress`.
+6. **Done Gate** — Move the card to `Done` only when tests pass, acceptance
+   criteria are met, review blockers are resolved, and evidence is attached or
+   logged. Scout/Brooks log important outcomes to Allura Brain with
+   `group_id: allura-system`.
+7. **Epic Retrospective** — When every story in the epic is `Done`, run
+   `bmad-retrospective`. Capture lessons, process fixes, missed risks, and
+   next-epic preparation. Do not run an epic retrospective while stories remain
+   in `In Progress` or `Review` unless explicitly marked as a partial retro.
+
+### Story 2.4 Route
+
+Start with `CARD-2.4-E — Add targeted role/SoD/audit tests`.
+
+- Owner: Woz
+- Reviewers: Pike and Fowler
+- First acceptance target: approval-audit tests pass under Bun without
+  `vi.mocked`
+- Next cards after green tests: `CARD-2.4-A`, `CARD-2.4-C`, then `CARD-2.4-D`
+
+### Board/Workflow Mapping
+
+| Board State | Team RAM Owner | BMAD Workflow |
+| --- | --- | --- |
+| Backlog | Jobs + Brooks | Epic/story shaping |
+| Ready | Jobs + Brooks + Scout | `bmad-sprint-status` reconciliation |
+| In Progress | Woz | `bmad-dev-story` |
+| Review | Pike + Fowler | `bmad-code-review` |
+| Done | Brooks + Scout | Evidence log + memory write |
+| Epic complete | Brooks + team | `bmad-retrospective` |
+
 ## Required Gates
 
 | Gate | Owner | Required Output |
 | --- | --- | --- |
+| Scout Intake Gate | Scout | Read-only Scout Report before story/epic routing |
 | Intent Gate | Jobs | Objective, scope, acceptance criteria |
 | Architecture Gate | Brooks | Plan, contracts, invariants, routing |
 | Context Gate | Scout | Scout Report with local context and memory context |
@@ -86,4 +169,3 @@ group_id: allura-system
 ```
 
 Raw task outcomes are logged first. Durable project truth is promoted only through governance.
-

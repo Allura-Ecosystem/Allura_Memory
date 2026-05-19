@@ -5,7 +5,7 @@ import { EmptyState } from "./EmptyState"
 
 export function ActivityPanel({ items }: { items: ActivityItem[] }) {
   return (
-    <section className="rounded-xl border bg-card">
+    <section className="rounded-xl border bg-[var(--dashboard-surface)]">
       <div className="border-b p-5">
         <h2 className="font-semibold">Recent Activity</h2>
       </div>

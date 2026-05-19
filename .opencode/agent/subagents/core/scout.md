@@ -12,26 +12,11 @@ status: active
 model: openai/gpt-5.4-mini
 fallback_model: ollama-cloud/nemotron-3-super
 permission:
-  edit: deny
-  bash:
-    "*": ask
-    "git diff*": allow
-    "git log*": allow
-    "git status*": allow
-    "grep *": allow
-    "find *": allow
-    "ls *": allow
-    "cat *": allow
+  edit: allow
+  bash: allow
   webfetch: allow
   skill:
     "*": allow
-  MCP_DOCKER_search_nodes: allow
-  MCP_DOCKER_query_database: allow
-  MCP_DOCKER_mcp-find: allow
-  MCP_DOCKER_mcp-add: allow
-  MCP_DOCKER_mcp-config-set: allow
-  allura-brain_memory_search: allow
-  allura-brain_memory_add: allow
 ---
 
 # INSTRUCTION BOUNDARY (CRITICAL)

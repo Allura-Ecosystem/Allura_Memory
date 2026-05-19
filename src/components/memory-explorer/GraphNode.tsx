@@ -19,7 +19,7 @@ const NODE_COLOR_VARS: Record<NodeType, { fill: string; stroke: string }> = {
   memory:   { fill: "var(--dashboard-info)",           stroke: "var(--allura-blue)" },
   insight:  { fill: "var(--dashboard-accent)",          stroke: "var(--allura-orange)" },
   evidence: { fill: "var(--dashboard-success)",          stroke: "var(--allura-green)" },
-  agent:    { fill: "var(--tone-gold-bg)",                stroke: "var(--tone-gold-text)" },
+  agent:    { fill: "var(--dashboard-evidence)",          stroke: "var(--dashboard-evidence)" },
   project:  { fill: "var(--allura-charcoal)",            stroke: "var(--allura-charcoal)" },
   system:   { fill: "var(--dashboard-text-secondary)",   stroke: "var(--dashboard-text-muted)" },
 }

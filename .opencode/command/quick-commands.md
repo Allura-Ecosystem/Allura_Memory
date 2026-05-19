@@ -32,7 +32,8 @@ Type these directly in your IDE for fast access to common Team RAM harness workf
 | `/party <task>` | Parallel specialist collaboration | `party-mode` |
 | `/intent-gate <request>` | Classify intent before routing | `intent-gate` |
 | `/ulw <request>` | Governed ultrawork execution | `ulw` |
-| `/ralph <mode>` | Ralph gated loop iteration | `ralph` |
+| `/ulw-loop <request> [--max-iterations N]` | Bounded Ralph Loop execution | `ulw-loop` |
+| `/ralph <mode>` | Legacy `Ralph Wiggum` entrypoint (legacy alias) | `ralph` |
 
 ## Vertical Brooks Menu
 

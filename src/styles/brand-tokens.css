@@ -7,37 +7,37 @@
 
 :root {
   /* ── Canonical Brand Primitives (per tokens.json) ── */
-  --allura-blue:        #1D4ED8;
-  --allura-blue-hover:  #1E40AF;
-  --allura-orange:      #FF5A2E;
-  --allura-orange-hover:#E04D1F;
-  --allura-green:       #157A4A;
+  --allura-blue: #1d4ed8;
+  --allura-blue-hover: #1e40af;
+  --allura-orange: #ff5a2e;
+  --allura-orange-hover: #e04d1f;
+  --allura-green: #157a4a;
   --allura-green-hover: #166534;
-  --allura-gold:        #C89B3C;
-  --allura-gold-hover:  #A87D2B;
-  --allura-charcoal:    #111827;
-  --allura-cream:       #F5F1E6;
-  --allura-white:       #FFFFFF;
+  --allura-gold: #c89b3c;
+  --allura-gold-hover: #a87d2b;
+  --allura-charcoal: #111827;
+  --allura-cream: #f5f1e6;
+  --allura-white: #ffffff;
 
   /* ── Supporting Neutrals ── */
-  --allura-gray-100:    #F3F4F6;
-  --allura-gray-200:    #E5E7EB;
-  --allura-gray-300:    #D1D5DB;
-  --allura-gray-400:    #9CA3AF;
-  --allura-gray-500:    #6B7280;
-  --allura-gray-600:    #4B5563;
-  --allura-gray-700:    #374151;
-  --allura-gray-800:    #1F2937;
+  --allura-gray-100: #f3f4f6;
+  --allura-gray-200: #e5e7eb;
+  --allura-gray-300: #d1d5db;
+  --allura-gray-400: #9ca3af;
+  --allura-gray-500: #6b7280;
+  --allura-gray-600: #4b5563;
+  --allura-gray-700: #374151;
+  --allura-gray-800: #1f2937;
 
   /* ── Backward Compatibility Aliases (deprecated, map to new canonical names) ── */
   /* Legacy color names preserved for existing consumers */
-  --allura-deep-navy:   var(--allura-blue);
-  --allura-coral:       var(--allura-orange);
+  --allura-deep-navy: var(--allura-blue);
+  --allura-coral: var(--allura-orange);
   --allura-trust-green: var(--allura-green);
-  --allura-clarity-blue:var(--allura-blue);
-  --allura-pure-white:  var(--allura-white);
-  --allura-ink-black:   var(--allura-charcoal);
-  --allura-warm-gray:   var(--allura-gray-500);
+  --allura-clarity-blue: var(--allura-blue);
+  --allura-pure-white: var(--allura-white);
+  --allura-ink-black: var(--allura-charcoal);
+  --allura-warm-gray: var(--allura-gray-500);
 }
 
 /*
@@ -48,35 +48,35 @@
  */
 .dark {
   /* ── Dashboard Semantic Aliases (dark mode) ── */
-  --dashboard-text-primary:   #FFFFFF;
-  --dashboard-text-secondary: #A0A0A0;
-  --dashboard-text-muted:     #737373;
-  --dashboard-surface:        #162035;
-  --dashboard-surface-alt:    #0F1A2E;
-  --dashboard-surface-muted:  #1E2D47;
-  --dashboard-border:         rgb(255 255 255 / 0.08);
+  --dashboard-text-primary: #ffffff;
+  --dashboard-text-secondary: #a0a0a0;
+  --dashboard-text-muted: #737373;
+  --dashboard-surface: #162035;
+  --dashboard-surface-alt: #0f1a2e;
+  --dashboard-surface-muted: #1e2d47;
+  --dashboard-border: rgb(255 255 255 / 0.08);
   --dashboard-border-default: rgb(255 255 255 / 0.12);
-  --dashboard-accent:         var(--allura-orange);
+  --dashboard-accent: var(--allura-orange);
   --dashboard-accent-secondary: var(--allura-blue);
-  --dashboard-success:        var(--allura-green);
-  --dashboard-info:           var(--allura-blue);
-  --dashboard-warning:        var(--allura-orange);
-  --dashboard-danger:         #DC2626;
-  --dashboard-evidence:       var(--allura-cream);
+  --dashboard-success: var(--allura-green);
+  --dashboard-info: var(--allura-blue);
+  --dashboard-warning: var(--allura-orange);
+  --dashboard-danger: #dc2626;
+  --dashboard-evidence: var(--allura-cream);
 
   /* ── Evidence Category Mappings (dark mode) ── */
-  --dashboard-evidence-bg:    var(--dashboard-evidence);
-  --dashboard-evidence-text:  var(--allura-charcoal);
+  --dashboard-evidence-bg: var(--dashboard-evidence);
+  --dashboard-evidence-text: var(--allura-charcoal);
 
   /* ── WCAG-compliant text variants (dark mode) ── */
-  --allura-gold-text:        #FBBF24;   /* AA: 4.5:1 on dark bg */
-  --allura-gray-400-text:    #9CA3AF;   /* AA-large: 3.0:1 on dark bg */
-  --allura-orange-on-text:   #1A0A00;   /* AA: 7.4:1 on orange bg — dark text for buttons/badges */
-  --allura-blue-on-text:     #DBEAFE;   /* AA: 4.7:1 on dark bg — light blue for labels */
-  --allura-green-on-text:    #D1FAE5;   /* AA: 4.6:1 on dark bg — light green for success text */
-  --allura-muted-on-text:    #A8A8A8;   /* AA: 4.6:1 on dark bg — bumped from #737373 */
-  --allura-white-on-orange:  #1A0A00;   /* AA: 7.4:1 — dark text on orange, replaces white-on-orange */
+  --allura-gold-text: #fbbf24; /* AA: 4.5:1 on dark bg */
+  --allura-gray-400-text: #9ca3af; /* AA-large: 3.0:1 on dark bg */
+  --allura-orange-on-text: #1a0a00; /* AA: 7.4:1 on orange bg — dark text for buttons/badges */
+  --allura-blue-on-text: #dbeafe; /* AA: 4.7:1 on dark bg — light blue for labels */
+  --allura-green-on-text: #d1fae5; /* AA: 4.6:1 on dark bg — light green for success text */
+  --allura-muted-on-text: #a8a8a8; /* AA: 4.6:1 on dark bg — bumped from #737373 */
+  --allura-white-on-orange: #1a0a00; /* AA: 7.4:1 — dark text on orange, replaces white-on-orange */
 
-  /* ── Montserrat (dark mode) ── */
-  --font-family-display: 'Montserrat', 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  /* ── Display typography (dark mode) ── */
+  --font-family-display: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
 }

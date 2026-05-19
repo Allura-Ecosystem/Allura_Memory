@@ -52,11 +52,11 @@ for entry in "${REQUIRED_VARS[@]}"; do
     
     if [[ -z "$value" ]]; then
         echo "  MISSING: $var"
-        ((missing++))
+        missing=$((missing + 1))
     else
         if [[ "$var" == "RUVIX_KERNEL_SECRET" && ${#value} -lt 32 ]]; then
             echo "  TOO_SHORT: $var (got ${#value}, need 32+)"
-            ((missing++))
+            missing=$((missing + 1))
         else
             echo "  OK: $var"
         fi
@@ -72,5 +72,5 @@ fi
 echo ""
 echo "PASS: All variables present"
 echo ""
-echo "Run: docker compose build --no-cache mcp http-gateway"
+echo "Run: docker compose build --no-cache mcp"
 echo "Then: docker compose up -d"

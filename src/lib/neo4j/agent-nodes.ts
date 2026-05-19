@@ -663,7 +663,7 @@ export async function initializeDefaultAgents(
       agent_id: "scout",
       name: "Scout",
       role: "Recon — fast repo scanning, file path finding, context discovery",
-      model: "ollama-cloud/nemotron-3-super",
+      model: "openai/gpt-5.3-codex-spark",
       fallback_model: "ollama-cloud/nemotron-3-super",
       group_id,
     },

@@ -12,36 +12,11 @@ status: active
 model: openai/gpt-5.5
 fallback_model: ollama-cloud/deepseek-v4-pro
 permission:
+  edit: allow
+  bash: allow
+  webfetch: allow
   skill:
     "*": allow
-  edit: ask
-  bash:
-    "*": ask
-    "git diff*": allow
-    "git log*": allow
-    "git status*": allow
-    "git add*": allow
-    "git commit*": allow
-  MCP_DOCKER_search_nodes: allow
-  MCP_DOCKER_query_database: allow
-  MCP_DOCKER_execute_sql: allow
-  MCP_DOCKER_insert_data: allow
-  MCP_DOCKER_create_entities: allow
-  MCP_DOCKER_create_relations: allow
-  MCP_DOCKER_add_observations: allow
-  MCP_DOCKER_mcp-find: allow
-  MCP_DOCKER_mcp-add: allow
-  MCP_DOCKER_perplexica_search: allow
-  allura-brain_memory_add: allow
-  allura-brain_memory_search: allow
-  allura-brain_memory_get: allow
-  allura-brain_memory_list: allow
-  allura-brain_memory_update: allow
-  allura-brain_memory_delete: allow
-  allura-brain_memory_promote: allow
-  allura-brain_memory_export: allow
-  allura-brain_memory_restore: allow
-  webfetch: allow
 ---
 
 # INSTRUCTION BOUNDARY (CRITICAL)
@@ -250,7 +225,7 @@ When `NX` is invoked — or at the end of any `CA`, `VA`, or `WS` response — p
 
 ━━━ Convert & Execute ━━━
 
-[R] Ralph     →  Convert next steps into a Ralph Loop objective, then run `/ralph` or `ralph/ulw-loop.sh` after the required Scout + skill + validation gate passes
+[R] Ralph     →  Convert next steps into a `Ralph Loop` objective, then run `ralph` or `/ulw-loop` after the required Scout + skill + validation gate passes
 [S] Structure →  /define-goal (Goal/Outcome/Req/Success/DoD from above)
 [G] Go        →  Execute step 1 now
 [P] Party     →  /party (dispatch Team RAM)
@@ -266,13 +241,13 @@ When `NX` is invoked — or at the end of any `CA`, `VA`, or `WS` response — p
 
 ### Step 3: Conversion Exits
 
-**`NX→R` (Ralph Loop):** Convert the action list into a Ralph-ready execution loop:
+**`NX→R` (`Ralph Loop`):** Convert the action list into a bounded execution loop:
 
-1. Convert the action list into a Ralph objective with scoped tasks and explicit validation commands
+1. Convert the action list into a `Ralph Loop` objective with scoped tasks and explicit validation commands
 
 2. Verify the Ralph Skill Gate: Scout context loaded, Brain checked, required skills loaded, validation commands identified
 
-3. Execute `/ralph build`, `/ralph plan-work`, or `ralph/ulw-loop.sh <max-iterations>` as appropriate. If only drafting, label it clearly as **Ralph Preview** rather than Ralph Loop.
+3. Execute `ralph <prompt> --max-iterations <N>` or `/ulw-loop "<prompt>" --max-iterations <N>` as appropriate. If only drafting, label clearly as **Ralph Preview** rather than `Ralph Loop`.
 
 **`NX→S` (Structure Intent):** Run `/define-goal` with the action list as input:
 

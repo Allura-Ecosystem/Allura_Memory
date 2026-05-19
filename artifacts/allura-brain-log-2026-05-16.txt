@@ -1,0 +1,74 @@
+[memory_search] scope: group=allura-system project=none agent=none session=none status=approved
+[memory_search:approved] 3 approved insights for "allura runtime trust verification 2026-05-16 localhost 3334 TALON IRIS timed out" in 38ms
+search {
+  "results": [
+    {
+      "id": "mem-mcp-docker-valid",
+      "content": "MCP connectivity validation test - docker exec approach works for skill server verification.",
+      "score": 0.65,
+      "source": "semantic",
+      "provenance": "conversation",
+      "created_at": "2026-04-13T00:00:00.000Z",
+      "usage_count": 0,
+      "tags": []
+    },
+    {
+      "id": "mem-3401d9be65b38127",
+      "content": "Next.js 16 + React 19 + TypeScript 5.9 (strict). Bun only. Zustand + shadcn/ui + Tailwind v4. Zod. PostgreSQL 16 + Neo4j 5.26. MCP Server. OpenCode. Vitest.",
+      "score": 0.9,
+      "source": "semantic",
+      "provenance": "conversation",
+      "created_at": "2026-04-21T23:39:18.566Z",
+      "usage_count": 0,
+      "tags": "architecture"
+    },
+    {
+      "id": "prop-session-issue7",
+      "content": "Issue #7 closed: enforced allura-* group_id regex on legacy tools (47 tests). E2E fixtures with non-allura group_ids blocked by constraint.",
+      "score": 0.8,
+      "source": "semantic",
+      "provenance": "conversation",
+      "created_at": "2026-04-12T00:00:00.000Z",
+      "usage_count": 0,
+      "tags": []
+    }
+  ],
+  "count": 3,
+  "latency_ms": 38,
+  "meta": {
+    "contract_version": "v1",
+    "degraded": false,
+    "stores_used": [
+      "graph"
+    ],
+    "stores_attempted": [
+      "graph"
+    ],
+    "warnings": []
+  }
+}
+[DEBUG memory_add] AUTO_APPROVAL_THRESHOLD=0.85; HITL promotion enforced
+[memory_add] scope: group=allura-system project=none agent=gilliam session=none trace_type=conversation
+[RuVector Embedding] Failed to generate embedding: The operation was aborted.
+[RuVector Bridge] Embedding generation failed for memory in session episodic-76995 — storing without vector (status: stored_pending_embedding)
+[RuVector] Pool created: localhost:5432/memory
+[memory_add] Projected to RuVector: memory_id=37332cc3-7070-4ff4-b805-3759777f820a event_id=76995
+added {
+  "id": "37332cc3-7070-4ff4-b805-3759777f820a",
+  "stored": "episodic",
+  "score": 0.85,
+  "pending_review": true,
+  "created_at": "2026-05-16T16:55:38.771Z",
+  "meta": {
+    "contract_version": "v1",
+    "degraded": false,
+    "stores_used": [
+      "postgres"
+    ],
+    "stores_attempted": [
+      "postgres",
+      "graph"
+    ],
+    "warnings": []
+  }
+}

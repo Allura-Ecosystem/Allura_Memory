@@ -1,0 +1,209 @@
+{
+  "checkedAt": "2026-05-16T22:18:48.913Z",
+  "results": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "status": 200,
+      "title": "Governed memory command center",
+      "tabs": 6,
+      "selectedAfterArrow": "Insights",
+      "selectedAfterEnd": "Approval Queue",
+      "selectedAfterHome": "Memories",
+      "searchLabel": "Search Allura Brain",
+      "noMatchTextVisible": true,
+      "controlsMissing": [],
+      "tabIndexes": [
+        {
+          "text": "Memories",
+          "tabIndex": "0",
+          "selected": "true"
+        },
+        {
+          "text": "Insights",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Trace Logs",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Provenance",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Extracted Facts",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Approval Queue",
+          "tabIndex": "-1",
+          "selected": "false"
+        }
+      ],
+      "bodyFont": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", system-ui, sans-serif",
+      "overflow": false,
+      "pageErrors": [],
+      "consoleMessages": []
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "status": 200,
+      "title": "Governed memory command center",
+      "tabs": 6,
+      "selectedAfterArrow": "Insights",
+      "selectedAfterEnd": "Approval Queue",
+      "selectedAfterHome": "Memories",
+      "searchLabel": "Search Allura Brain",
+      "noMatchTextVisible": true,
+      "controlsMissing": [],
+      "tabIndexes": [
+        {
+          "text": "Memories",
+          "tabIndex": "0",
+          "selected": "true"
+        },
+        {
+          "text": "Insights",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Trace Logs",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Provenance",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Extracted Facts",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Approval Queue",
+          "tabIndex": "-1",
+          "selected": "false"
+        }
+      ],
+      "bodyFont": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", system-ui, sans-serif",
+      "overflow": false,
+      "pageErrors": [],
+      "consoleMessages": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "status": 200,
+      "title": "Governed memory command center",
+      "tabs": 6,
+      "selectedAfterArrow": "Insights",
+      "selectedAfterEnd": "Approval Queue",
+      "selectedAfterHome": "Memories",
+      "searchLabel": "Search Allura Brain",
+      "noMatchTextVisible": true,
+      "controlsMissing": [],
+      "tabIndexes": [
+        {
+          "text": "Memories",
+          "tabIndex": "0",
+          "selected": "true"
+        },
+        {
+          "text": "Insights",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Trace Logs",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Provenance",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Extracted Facts",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Approval Queue",
+          "tabIndex": "-1",
+          "selected": "false"
+        }
+      ],
+      "bodyFont": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", system-ui, sans-serif",
+      "overflow": false,
+      "pageErrors": [],
+      "consoleMessages": []
+    },
+    {
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "status": 200,
+      "title": "Governed memory command center",
+      "tabs": 6,
+      "selectedAfterArrow": "Insights",
+      "selectedAfterEnd": "Approval Queue",
+      "selectedAfterHome": "Memories",
+      "searchLabel": "Search Allura Brain",
+      "noMatchTextVisible": true,
+      "controlsMissing": [],
+      "tabIndexes": [
+        {
+          "text": "Memories",
+          "tabIndex": "0",
+          "selected": "true"
+        },
+        {
+          "text": "Insights",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Trace Logs",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Provenance",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Extracted Facts",
+          "tabIndex": "-1",
+          "selected": "false"
+        },
+        {
+          "text": "Approval Queue",
+          "tabIndex": "-1",
+          "selected": "false"
+        }
+      ],
+      "bodyFont": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", system-ui, sans-serif",
+      "overflow": false,
+      "pageErrors": [],
+      "consoleMessages": []
+    }
+  ]
+}

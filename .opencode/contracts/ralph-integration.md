@@ -52,7 +52,7 @@ This contract defines how Open Ralph Wiggum integrates with the Allura harness f
 
 **Reason**: DAY_BUILD requires approval gates for every decision. Ralph is designed for autonomous execution.
 
-**Alternative**: Use standard OpenCode workflow with ContextScout → OpenAgent → Approval → Implementation.
+**Alternative**: Use standard OpenCode workflow with ContextScout → Jobs → Brooks + Teams routing → Approval → Implementation.
 
 ### NIGHT_BUILD Mode
 
@@ -77,13 +77,13 @@ This contract defines how Open Ralph Wiggum integrates with the Allura harness f
 | Task Type | Primary Agent | Fallback | Condition |
 |-----------|---------------|-----------|-----------|
 | Discovery | ContextScout | None | Always |
-| Intent/Scope | OpenAgent | None | Always |
-| Architecture | brooks-architect | None | Always |
-| Implementation (DAY) | CoderAgent | OpenCoder | With approval gates |
-| Implementation (NIGHT) | **Ralph tool** | CoderAgent | Autonomous |
-| Refactor | OpenCoder | Ralph tool | If clear criteria |
-| Performance | OpenCoder | None | Only if perf constraint |
-| Validation | OpenCoder | Ralph tool | If automated tests |
+| Intent/Scope | Jobs | None | Always |
+| Architecture | Brooks | None | Always |
+| Implementation (DAY) | Woz | Fowler | With approval gates |
+| Implementation (NIGHT) | **Ralph tool** | Woz | Autonomous |
+| Refactor | Fowler | Woz | If clear criteria |
+| Performance | Bellard | Carmack | Only if perf constraint |
+| Validation | Pike + Fowler | Ralph tool | If automated tests |
 
 ### Fallback Logic
 

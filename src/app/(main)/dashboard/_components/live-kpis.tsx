@@ -207,7 +207,7 @@ export function LiveKPIs({
             <p className="text-sm font-medium">Needs Attention</p>
             <p className="mt-0.5 text-sm text-[var(--dashboard-text-secondary)]">
               {pendingCount} curator proposal{pendingCount > 1 ? "s" : ""} pending human review.{" "}
-              <Link href="/dashboard/curator" className="hover:text-foreground underline underline-offset-2">
+              <Link href="/dashboard/curator" className="underline underline-offset-2 hover:text-[var(--dashboard-text-primary)]">
                 Review now
               </Link>
             </p>

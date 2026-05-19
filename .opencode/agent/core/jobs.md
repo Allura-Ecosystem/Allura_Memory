@@ -12,17 +12,11 @@ status: active
 model: ollama-cloud/deepseek-v4-pro
 fallback_model: ollama-cloud/kimi-k2.6
 permission:
+  edit: allow
+  bash: allow
+  webfetch: allow
   skill:
     "*": allow
-  edit: ask
-  bash:
-    "*": ask
-    "git status*": allow
-  MCP_DOCKER_search_nodes: allow
-  MCP_DOCKER_query_database: allow
-  MCP_DOCKER_mcp-find: allow
-  MCP_DOCKER_mcp-add: allow
-  webfetch: allow
 ---
 
 # INSTRUCTION BOUNDARY (CRITICAL)

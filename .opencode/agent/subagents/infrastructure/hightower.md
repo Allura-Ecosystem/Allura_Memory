@@ -12,27 +12,11 @@ status: active
 model: openai/gpt-5.5
 fallback_model: ollama-cloud/deepseek-v4-pro
 permission:
-  edit: ask
-  bash:
-    "*": ask
-    "git diff*": allow
-    "git log*": allow
-    "terraform*": allow
-    "docker*": allow
-    "kubectl*": allow
-    "bun vitest*": allow
-    "bun run lint*": allow
-    "bun run typecheck*": allow
+  edit: allow
+  bash: allow
   webfetch: allow
   skill:
     "*": allow
-  MCP_DOCKER_search_nodes: allow
-  MCP_DOCKER_query_database: allow
-  MCP_DOCKER_execute_sql: allow
-  MCP_DOCKER_insert_data: allow
-  MCP_DOCKER_mcp-find: allow
-  MCP_DOCKER_mcp-add: allow
-  MCP_DOCKER_perplexica_search: allow
 ---
 
 

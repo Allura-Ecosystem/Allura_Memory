@@ -15,7 +15,7 @@ const toneClasses: Record<Metric["tone"], string> = {
 
 export function MetricCard({ metric, icon: Icon = Database }: { metric: Metric; icon?: LucideIcon }) {
   return (
-    <div className="rounded-xl border bg-card p-5 shadow-xs">
+    <div className="rounded-xl border bg-[var(--dashboard-surface)] p-5 shadow-xs">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-[var(--dashboard-text-secondary)]">{metric.label}</p>

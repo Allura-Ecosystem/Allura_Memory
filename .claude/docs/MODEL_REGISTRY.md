@@ -24,7 +24,7 @@ last_updated: "2026-05-05"
 | fowler       | Code/Refactor  | openai/gpt-5.5                     | —                                 | —                               |
 | knuth        | Code/Data      | ollama-cloud/qwen3-coder-next      | —                                 | —                               |
 | pike         | Code/Interface | openai/gpt-5.4-mini                | —                                 | —                               |
-| scout        | Search/Triage  | ollama-cloud/nemotron-3-super      | —                                 | —                               |
+| scout        | Search/Triage  | openai/gpt-5.4-mini                | —                                 | ollama-cloud/nemotron-3-super   |
 
 ## Global Default (opencode.json)
 
@@ -48,7 +48,8 @@ model: ollama-cloud/deepseek-v4-pro
 fallback_model: ollama-cloud/kimi-k2.6
 
 # scout.md
-model: ollama-cloud/nemotron-3-super
+model: openai/gpt-5.4-mini
+fallback_model: ollama-cloud/nemotron-3-super
 
 # woz.md / knuth.md
 model: ollama-cloud/qwen3-coder-next
@@ -70,7 +71,7 @@ model: openai/gpt-5.4-mini
 | Fowler     | openai/gpt-5.5              | claude-opus-4-6             | Refactor gate; incremental change; maintainability         |
 | Knuth      | ollama-cloud/qwen3-coder-next | claude-sonnet-4-6         | Data architect; schema design; query optimization          |
 | Hightower  | openai/gpt-5.5              | claude-opus-4-6             | CI/CD; IaC; one-command deploy                             |
-| Scout      | ollama-cloud/nemotron-3-super | claude-sonnet-4-6          | Recon + discovery; fast codebase search                    |
+| Scout      | openai/gpt-5.4-mini          | claude-sonnet-4-6          | Recon + discovery; Nemotron-3-Super fallback               |
 
 ## Behavioral Parity Contract
 

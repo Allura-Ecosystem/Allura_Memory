@@ -26,16 +26,30 @@ Allura Brain is the memory.
 | Agent registry | `.opencode/config/agent-metadata.json` | Machine-readable roster |
 | Skill routing | `.opencode/config/agent-skills.json` | Agent-to-skill mapping |
 | BMAD bridge | `_bmad/TEAM-RAM-INTEGRATION.md` | Planning workflow and artifact ownership |
+| Epic finish workflow | `_bmad/FINISH-ALL-EPICS-WORKFLOW.md` | Scout-first Kanban route for finishing all epics |
 | Allura canon | `docs/allura/*.md` | Product and memory architecture truth |
 | Memory | Allura Brain | Raw traces and promoted insights |
 
 ## Workflow
+
+Named workflow:
+
+```text
+Finish All Epics: Scout-First Kanban Workflow
+```
 
 Every implementation task should follow this sequence:
 
 ```text
 Jobs -> Brooks -> Scout -> Woz -> Review Gate -> Allura Memory Log
 ```
+
+For finishing all epics, close existing review debt first, finish Epic 2
+Frontend Tightening, then execute E1 Host Stability, E2 Dashboard Quality,
+E3/E4 Hardening Deploy, E4 Kernel Completion, and E5 Infrastructure Polish.
+Scout must be the first real background/recon agent for every epic or story
+batch. If Scout is not actually spawned, the runtime must say
+`Scout-style hydration only`.
 
 For data work:
 

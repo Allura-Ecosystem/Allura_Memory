@@ -1,9 +1,9 @@
 ---
-description: "Ralph Wiggum loop — single iteration in plan, build, or plan-work mode"
+description: "Ralph Loop command mode — bounded iterations in plan, build, or plan-work"
 allowed-tools: ["Read", "Bash", "Glob", "Grep", "Edit", "Write", "mcp__MCP_DOCKER__*"]
 ---
 
-You are now operating in **Ralph Wiggum mode** — an autonomous coding loop technique where each iteration picks one task, implements it, validates, and commits.
+You are now operating in **Ralph Loop mode** — a bounded execution loop where each task is run through explicit iterations with stop criteria and completion checks.
 
 ## Mode: `$ARGUMENTS`
 
@@ -35,7 +35,7 @@ Parse the arguments. Default mode is **build**.
 5. Before changing anything, search the codebase (don't assume not implemented)
 6. Implement the task completely — no stubs, no placeholders
 7. Run validation: `bun run typecheck && bun test`
-8. If tests pass: update `ralph/IMPLEMENTATION_PLAN.md`, commit with descriptive message
+8. If validations pass: update `ralph/IMPLEMENTATION_PLAN.md` and emit a completion marker when done
 9. If tests fail: fix and retry
 
 ### If Mode is `plan-work`
@@ -87,7 +87,7 @@ These rules apply in ALL modes:
 
 ## Key Principles
 
-- **One task per invocation** — do the most important thing, commit, stop
+- **One task per invocation by default** — run one bounded task cycle and stop unless loop iterations are explicitly allowed
 - **Don't assume missing** — search the codebase first
 - **Update the plan** — keep `ralph/IMPLEMENTATION_PLAN.md` current after every action
 - **Capture the why** — documentation should explain reasoning, not just what
@@ -96,11 +96,11 @@ These rules apply in ALL modes:
 
 ## For Headless Multi-Iteration Runs
 
-This command runs a SINGLE iteration. For autonomous multi-iteration loops, use:
+This command runs one bounded cycle. For bounded multi-iteration loops, use:
 
 ```bash
-./ralph/loop.sh              # build mode, unlimited
-./ralph/loop.sh 20           # build mode, max 20
-./ralph/loop.sh plan         # plan mode, unlimited
-./ralph/loop.sh plan 5       # plan mode, max 5
+ulw-loop                         # build mode, bounded by default
+ulw-loop --max-iterations 20     # build mode, max 20
+ulw-loop --mode plan            # plan mode
+ulw-loop --mode plan --max-iterations 5  # plan mode, max 5
 ```

@@ -4,7 +4,7 @@ import { StatusPill } from "./StatusPill"
 
 export function SystemStatusCard({ status }: { status: SystemStatus }) {
   return (
-    <section className="rounded-xl border bg-card">
+    <section className="rounded-xl border bg-[var(--dashboard-surface)]">
       <div className="flex items-center justify-between border-b p-5">
         <h2 className="font-semibold">System Status</h2>
         <StatusPill value={status.status} />
