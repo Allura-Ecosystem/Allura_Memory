@@ -1,6 +1,6 @@
 "use client"
 
-import { useFrame, useThree } from "@react-three/fiber"
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import * as THREE from "three"
 
@@ -121,7 +121,7 @@ export function MemoryGraphScene({
 
   // Raycasting for click
   const handlePointerDown = useCallback(
-    (e: THREE.Event) => {
+    (e: ThreeEvent<PointerEvent>) => {
       e.stopPropagation()
       const intersects = raycaster.intersectObjects(scene.children, true)
       for (const hit of intersects) {
