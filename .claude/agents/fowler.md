@@ -6,7 +6,7 @@ persona: Fowler
 category: Review Subagents
 type: specialist
 status: active
-model: openai/gpt-5.5
+model: anthropic/claude-opus-4-6
 tools:
   - Read
   - Grep
