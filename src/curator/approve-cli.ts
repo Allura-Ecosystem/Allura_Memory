@@ -178,10 +178,10 @@ async function promoteToNeo4j(
     // Best-effort: failure does not block the approval (matches API route behavior)
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getNeo4jDriver } = require("../lib/neo4j/connection")
+      const { getDriver } = require("../lib/neo4j/connection")
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { Neo4jGraphAdapter } = require("../lib/graph-adapter/neo4j-adapter")
-      const driver = getNeo4jDriver()
+      const driver = getDriver()
       const adapter = new Neo4jGraphAdapter(driver)
       const linkResult = await adapter.linkMemoryContext({
         memory_id: memoryId as any,

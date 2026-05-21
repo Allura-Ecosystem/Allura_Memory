@@ -186,6 +186,24 @@ services:
       retries: 10
       start_period: 45s
 
+  # Allura Brand Dashboard — static nginx SPA (port 6420)
+  brand-dashboard:
+    build:
+      context: ${BRAND_ASSETS_PATH:-./brand-assets}
+      dockerfile: Dockerfile
+    container_name: allura-brand-dashboard
+    restart: unless-stopped
+    ports:
+      - "6420:80"
+    networks:
+      - knowledge-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
   # Dozzle - Docker log aggregation
   dozzle:
     image: amir20/dozzle:latest
