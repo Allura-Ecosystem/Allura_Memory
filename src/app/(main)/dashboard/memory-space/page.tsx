@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import ForceGraph2D from "react-force-graph-2d"
 import { toast } from "sonner"
 
+import { GraphSkeleton } from "@/components/dashboard"
 import { getGraphNodeColor, getResolvedColor } from "@/lib/brand/allura"
 import type { GraphEdge, GraphNode } from "@/lib/dashboard/types"
 import { DEFAULT_GROUP_ID } from "@/lib/defaults/scope"
+import { tokens } from "@/lib/tokens"
 
 interface ForceGraphNode extends GraphNode {
   x?: number
@@ -34,6 +36,15 @@ function formatScore(score: MemoryDetail["score"]) {
   if (typeof score === "number") return score.toFixed(2)
   if (score && typeof score.low === "number") return String(score.low)
   return "—"
+}
+
+function hexToRgba(hexColor: string, alpha: number) {
+  const hex = hexColor.replace("#", "")
+  const r = Number.parseInt(hex.slice(0, 2), 16)
+  const g = Number.parseInt(hex.slice(2, 4), 16)
+  const b = Number.parseInt(hex.slice(4, 6), 16)
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
 export default function MemorySpacePage() {
@@ -172,7 +183,7 @@ export default function MemorySpacePage() {
 
       if (globalScale > 0.8 || isSelected || isHovered) {
         ctx.font = `${fontSize}px sans-serif`
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`
+        ctx.fillStyle = hexToRgba(tokens.color.text.inverse, alpha)
         ctx.textAlign = "center"
         ctx.fillText(node.label, node.x ?? 0, (node.y ?? 0) + radius + fontSize + 2)
       }
@@ -197,7 +208,7 @@ export default function MemorySpacePage() {
 
       <div className="relative min-h-[640px] overflow-hidden rounded-2xl border border-[var(--dashboard-border)] bg-slate-950 shadow-[var(--allura-sh-md)]">
         {isLoading ? (
-          <div className="flex h-[640px] items-center justify-center text-sm text-slate-300">Loading memory graph…</div>
+          <GraphSkeleton />
         ) : graphError ? (
           <div className="flex h-[640px] flex-col items-center justify-center gap-2 px-6 text-center text-sm text-slate-300">
             <p className="text-base font-semibold text-white">Memory graph unavailable</p>
@@ -215,8 +226,8 @@ export default function MemorySpacePage() {
             onNodeClick={setSelectedNode as unknown as (node: object) => void}
             onBackgroundClick={clearSelection}
             onNodeHover={setHoveredNode as unknown as (node: object | null) => void}
-            backgroundColor="#0f172a"
-            linkColor={() => "rgba(148, 163, 184, 0.3)"}
+            backgroundColor={tokens.color.text.primary}
+            linkColor={() => hexToRgba(tokens.color.graph.edge, 0.3)}
             linkWidth={1}
             nodeRelSize={6}
             warmupTicks={100}

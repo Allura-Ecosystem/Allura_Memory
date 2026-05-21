@@ -1,6 +1,6 @@
 export { PageHeader } from "./PageHeader"
 export { LoadingState } from "./LoadingState"
-export { SearchResultsSkeleton, GraphSkeleton, MemoryDetailSkeleton, MetricCardsSkeleton, OverviewSkeleton } from "./SkeletonState"
+export { SearchResultsSkeleton, GraphSkeleton, MemoryDetailSkeleton, MetricCardsSkeleton, OverviewSkeleton, SystemStatusSkeleton } from "./SkeletonState"
 export { ErrorState } from "./ErrorState"
 export { EmptyState } from "./EmptyState"
 export { WarningList } from "./WarningList"
