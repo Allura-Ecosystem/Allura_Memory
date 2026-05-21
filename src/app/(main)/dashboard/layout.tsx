@@ -5,7 +5,7 @@ import { SearchStoreProvider } from "@/stores/search/search-store-provider"
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="min-h-screen bg-[var(--dashboard-bg)]">
+    <div className="flex min-h-screen flex-col bg-[var(--dashboard-bg)]">
       {/* Minimal nav placeholder — will be replaced with thin workflow nav per spec v2 */}
       <nav className="sticky top-0 z-20 flex h-14 items-center border-b border-[var(--dashboard-border)] bg-[var(--dashboard-surface)]/95 px-4 backdrop-blur">
         <span className="text-sm font-semibold text-[var(--dashboard-text-primary)]">Allura</span>
