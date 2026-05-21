@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { proposal_id, group_id, curator_id, rationale } = body
+    const { proposal_id, group_id, rationale } = body
+    const curatorId = roleCheck.user.id
 
     if (!proposal_id) {
       return NextResponse.json({ error: "proposal_id is required" }, { status: 400 })
@@ -34,8 +35,9 @@ export async function POST(request: NextRequest) {
     if (!group_id) {
       return NextResponse.json({ error: "group_id is required" }, { status: 400 })
     }
-    if (!curator_id) {
-      return NextResponse.json({ error: "curator_id is required" }, { status: 400 })
+    const trimmedRationale = typeof rationale === "string" ? rationale.trim() : ""
+    if (!trimmedRationale) {
+      return NextResponse.json({ error: "rationale is required" }, { status: 400 })
     }
 
     let validatedGroupId: string
@@ -68,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     const decidedAt = new Date().toISOString()
-    const witnessPayload = `${proposal_id}|${validatedGroupId}|${proposal.content}|${proposal.score}|${proposal.tier}|reject|${decidedAt}|${curator_id}`
+    const witnessPayload = `${proposal_id}|${validatedGroupId}|${proposal.content}|${proposal.score}|${proposal.tier}|reject|${decidedAt}|${curatorId}`
     const witness_hash = createHash("shake256", { outputLength: 64 }).update(witnessPayload).digest("hex")
 
     await pg.query(
@@ -79,7 +81,7 @@ export async function POST(request: NextRequest) {
            rationale = $3,
            witness_hash = $4
        WHERE id = $5`,
-      [decidedAt, curator_id, rationale || null, witness_hash, proposal_id]
+        [decidedAt, curatorId, trimmedRationale, witness_hash, proposal_id]
     )
 
     await pg.query(
@@ -88,9 +90,9 @@ export async function POST(request: NextRequest) {
       [
         validatedGroupId,
         "proposal_rejected",
-        curator_id,
+        curatorId,
         "completed",
-        JSON.stringify({ proposal_id, score: proposal.score, tier: proposal.tier, rationale }),
+        JSON.stringify({ proposal_id, score: proposal.score, tier: proposal.tier, rationale: trimmedRationale }),
         decidedAt,
       ]
     )
@@ -109,8 +111,8 @@ export async function POST(request: NextRequest) {
           score: parseFloat(proposal.score),
           tier: proposal.tier,
           status: "rejected",
-          curator_id,
-          rationale,
+          curator_id: curatorId,
+          rationale: trimmedRationale,
           decided_at: decidedAt,
           data_source_id: "42894678-aedb-4c90-9371-6494a9fe5270",
         }),

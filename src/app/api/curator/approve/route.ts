@@ -35,7 +35,7 @@ const DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || "allura-system"
  * - proposal_id: Required
  * - group_id: Required tenant identifier
  * - decision: 'approve' | 'reject'
- * - curator_id: Required (person or system making decision)
+ * - curator_id: Ignored if supplied; server derives curator identity from auth
  * - rationale: Optional reasoning
  */
 export async function POST(request: NextRequest) {
@@ -50,7 +50,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { proposal_id, group_id, decision, curator_id, rationale } = body
+    const { proposal_id, group_id, decision, rationale } = body
+    const curatorId = roleCheck.user.id
 
     // Validate required fields
     if (!proposal_id) {
@@ -63,10 +64,6 @@ export async function POST(request: NextRequest) {
 
     if (!decision || !["approve", "reject"].includes(decision)) {
       return NextResponse.json({ error: "decision must be 'approve' or 'reject'" }, { status: 400 })
-    }
-
-    if (!curator_id) {
-      return NextResponse.json({ error: "curator_id is required" }, { status: 400 })
     }
 
     // Validate group_id format (ARCH-001: enforces allura-* pattern)
@@ -101,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     const decidedAt = new Date().toISOString()
-    const witnessPayload = `${proposal_id}|${validatedGroupId}|${proposal.content}|${proposal.score}|${proposal.tier}|${decision}|${decidedAt}|${curator_id}`
+    const witnessPayload = `${proposal_id}|${validatedGroupId}|${proposal.content}|${proposal.score}|${proposal.tier}|${decision}|${decidedAt}|${curatorId}`
     // SHAKE-256 per spec (AD-CURATOR-WITNESS) — 64-byte output matches SHA-256 security level
     const witness_hash = createHash("shake256", { outputLength: 64 }).update(witnessPayload).digest("hex")
 
@@ -114,7 +111,7 @@ export async function POST(request: NextRequest) {
           proposal_id,
           group_id: validatedGroupId,
           memory_id: memoryId,
-          curator_id,
+          curator_id: curatorId,
           decision: "approved",
           rationale,
           score: parseFloat(proposal.score),
@@ -132,7 +129,7 @@ export async function POST(request: NextRequest) {
           confidence: parseFloat(proposal.score),
           topic_key: `curator.${proposal.tier}`,
           source_type: "promotion",
-          created_by: curator_id,
+          created_by: curatorId,
           metadata: {
             trace_ref: proposal.trace_ref,
             tier: proposal.tier,
@@ -158,7 +155,7 @@ export async function POST(request: NextRequest) {
           // Resolve project_id from metadata.project or default to group_id
           const projectId = (body.metadata?.project as string | undefined) ?? validatedGroupId
           // Resolve agent_id from proposal's created_by (who submitted it)
-          const agentId = proposal.created_by ?? curator_id ?? null
+          const agentId = proposal.created_by ?? curatorId ?? null
 
           const linkResult = await adapter.linkMemoryContext({
             memory_id: memoryId as any,
@@ -185,12 +182,12 @@ export async function POST(request: NextRequest) {
             [
               validatedGroupId,
               "sync_contract",
-              curator_id,
+              curatorId,
               "completed",
               JSON.stringify({
                 action: "auto_link",
                 memory_id: memoryId,
-                agent_id: proposal.created_by ?? curator_id ?? null,
+                agent_id: proposal.created_by ?? curatorId ?? null,
                 project_id: (body.metadata?.project as string | undefined) ?? validatedGroupId,
               }),
               decidedAt,
@@ -218,7 +215,7 @@ export async function POST(request: NextRequest) {
              rationale = $3,
              witness_hash = $4
          WHERE id = $5`,
-        [decidedAt, curator_id, rationale || null, witness_hash, proposal_id]
+        [decidedAt, curatorId, rationale || null, witness_hash, proposal_id]
       )
 
       // Log approval event
@@ -229,7 +226,7 @@ export async function POST(request: NextRequest) {
         [
           validatedGroupId,
           "proposal_approved",
-          curator_id,
+          curatorId,
           "completed",
           JSON.stringify({
             proposal_id,
@@ -259,7 +256,7 @@ export async function POST(request: NextRequest) {
             score: parseFloat(proposal.score),
             tier: proposal.tier,
             status: "approved",
-            curator_id,
+            curator_id: curatorId,
             rationale,
             decided_at: decidedAt,
             data_source_id: "42894678-aedb-4c90-9371-6494a9fe5270",
@@ -280,7 +277,7 @@ export async function POST(request: NextRequest) {
           proposal_id,
           group_id: validatedGroupId,
           memory_id: proposal.trace_ref ?? proposal_id,
-          curator_id,
+          curator_id: curatorId,
           decision: "rejected",
           rationale,
           score: parseFloat(proposal.score),
@@ -299,7 +296,7 @@ export async function POST(request: NextRequest) {
              rationale = $3,
              witness_hash = $4
          WHERE id = $5`,
-        [decidedAt, curator_id, rationale || null, witness_hash, proposal_id]
+        [decidedAt, curatorId, rationale || null, witness_hash, proposal_id]
       )
 
       // Log rejection event
@@ -310,7 +307,7 @@ export async function POST(request: NextRequest) {
         [
           validatedGroupId,
           "proposal_rejected",
-          curator_id,
+          curatorId,
           "completed",
           JSON.stringify({
             proposal_id,
@@ -338,7 +335,7 @@ export async function POST(request: NextRequest) {
             score: parseFloat(proposal.score),
             tier: proposal.tier,
             status: "rejected",
-            curator_id,
+            curator_id: curatorId,
             rationale,
             decided_at: decidedAt,
             data_source_id: "42894678-aedb-4c90-9371-6494a9fe5270",
