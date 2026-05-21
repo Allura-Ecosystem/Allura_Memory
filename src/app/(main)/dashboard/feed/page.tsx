@@ -1,137 +1,24 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  MemoryCard,
-  PageHeader,
-  SearchResultsSkeleton,
-  WarningList,
-} from "@/components/dashboard"
-import { Button } from "@/components/ui/button"
-import { Dropdown } from "@/components/ui/dropdown"
-import { Pagination } from "@/components/ui/pagination"
-import { SearchBar } from "@/components/ui/search-bar"
-import { loadMemories } from "@/lib/dashboard/queries"
-import type { DashboardResult, Memory } from "@/lib/dashboard/types"
-import { useSearchStore } from "@/stores/search/search-store-provider"
-
-const PAGE_SIZE = 10
-
-const typeOptions = [
-  { value: "all", label: "All Types" },
-  { value: "event", label: "Event" },
-  { value: "outcome", label: "Outcome" },
-  { value: "insight", label: "Insight" },
-  { value: "memory", label: "Memory" },
-]
-
-const sortOptions = [
-  { value: "newest", label: "Newest first" },
-  { value: "oldest", label: "Oldest first" },
-  { value: "confidence", label: "Highest confidence" },
-]
-
-export default function MemoryFeedPage() {
-  const router = useRouter()
-  const query = useSearchStore((s) => s.query)
-  const typeFilter = useSearchStore((s) => s.activeFilter)
-  const page = useSearchStore((s) => s.page)
-  const setQuery = useSearchStore((s) => s.setQuery)
-  const setTypeFilter = useSearchStore((s) => s.setActiveFilter)
-  const setPage = useSearchStore((s) => s.setPage)
-  const [sort, setSort] = useState("newest")
-  const [state, setState] = useState<DashboardResult<Memory[]> | null>(null)
-
-  useEffect(() => {
-    const handle = window.setTimeout(() => {
-      void loadMemories(query).then(setState)
-    }, 250)
-    return () => window.clearTimeout(handle)
-  }, [query])
-
-  const filtered = useMemo(() => {
-    const items = state?.data ?? []
-    let result = typeFilter === "all" ? items : items.filter((item) => item.type === typeFilter)
-    if (sort === "newest") {
-      result = [...result].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    } else if (sort === "oldest") {
-      result = [...result].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-    } else if (sort === "confidence") {
-      result = [...result].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
-    }
-    return result
-  }, [state?.data, typeFilter, sort])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-
+export default function FeedPage() {
   return (
     <div className="space-y-6">
-      <PageHeader title="What We Know" description="Search the trusted memory layer without exposing the machine room first." />
-
-      <div className={`flex flex-col gap-3 rounded-xl border border-[var(--allura-border-1)] bg-[var(--dashboard-surface)] p-3 shadow-[var(--allura-sh-sm)] lg:flex-row lg:items-center lg:justify-between`}>
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-          <SearchBar
-            placeholder="Search what Allura knows…"
-            value={query}
-            onChange={(v) => {
-              setQuery(v)
-              setPage(1)
-            }}
-            className="w-full sm:w-80"
-          />
-          <Dropdown
-            options={typeOptions}
-            value={typeFilter}
-            onChange={(v) => {
-              setTypeFilter(v as string)
-              setPage(1)
-            }}
-            className="w-full sm:w-44"
-          />
-          <Dropdown
-            options={sortOptions}
-            value={sort}
-            onChange={(v) => setSort(v as string)}
-            className="w-full sm:w-44"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => { setQuery(""); setTypeFilter("all"); setSort("newest"); setPage(1) }}>
-            Clear
-          </Button>
-        </div>
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Feed</h1>
+        <p className="text-sm text-[var(--dashboard-text-secondary)]">Activity feed is planned for Phase 4.</p>
       </div>
-
-      {!state ? (
-        <SearchResultsSkeleton />
-      ) : state.error ? (
-        <ErrorState message={state.error} />
-      ) : (
-        <>
-          <WarningList warnings={state.warnings} />
-          {pageItems.length === 0 ? (
-            <EmptyState
-              title="Nothing matched"
-              description={query ? "No trusted knowledge matches that search. Try different keywords." : "No trusted knowledge is available for the current filter."}
-            />
-          ) : (
-            <div className="space-y-3">
-              {pageItems.map((memory) => (
-                <MemoryCard key={memory.id} memory={memory} />
-              ))}
-            </div>
-          )}
-          <div className="pt-4">
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
-          </div>
-        </>
-      )}
+      <Card className="border-[var(--dashboard-border)] bg-[var(--dashboard-surface)]">
+        <CardHeader>
+          <CardTitle className="text-base text-[var(--dashboard-text-primary)]">Coming Soon</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-[var(--dashboard-text-secondary)]">
+            Recent activity feed will be implemented in a future phase.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }

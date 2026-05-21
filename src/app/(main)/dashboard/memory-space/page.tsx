@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import ForceGraph2D from "react-force-graph-2d"
 import { toast } from "sonner"
 
-import { GraphSkeleton } from "@/components/dashboard"
+import { Skeleton } from "@/components/ui/skeleton"
 import { getGraphNodeColor, getResolvedColor } from "@/lib/brand/allura"
 import type { GraphEdge, GraphNode } from "@/lib/dashboard/types"
 import { DEFAULT_GROUP_ID } from "@/lib/defaults/scope"
@@ -208,7 +208,15 @@ export default function MemorySpacePage() {
 
       <div className="relative min-h-[640px] overflow-hidden rounded-2xl border border-[var(--dashboard-border)] bg-slate-950 shadow-[var(--allura-sh-md)]">
         {isLoading ? (
-          <GraphSkeleton />
+          <div className="flex h-[640px] flex-col items-center justify-center gap-4">
+            <Skeleton className="h-8 w-48 rounded-lg" />
+            <Skeleton className="h-4 w-96 rounded-lg" />
+            <div className="grid grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 w-32 rounded-xl" />
+              ))}
+            </div>
+          </div>
         ) : graphError ? (
           <div className="flex h-[640px] flex-col items-center justify-center gap-2 px-6 text-center text-sm text-slate-300">
             <p className="text-base font-semibold text-white">Memory graph unavailable</p>

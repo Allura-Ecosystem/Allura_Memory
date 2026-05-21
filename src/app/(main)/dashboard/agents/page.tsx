@@ -1,19 +1,11 @@
 "use client"
 
-
-import { Activity, Brain, Lightbulb, MoreHorizontal, Users } from "lucide-react"
-import Link from "next/link"
+import { Activity, Brain, Lightbulb, Users } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  MetricCardsSkeleton,
-  PageHeader,
-  WarningList,
-} from "@/components/dashboard"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { loadGraphNodes } from "@/lib/dashboard/queries"
 import type { DashboardResult, GraphEdge, GraphNode } from "@/lib/dashboard/types"
 import { cn } from "@/lib/utils"
@@ -70,154 +62,152 @@ function AgentCard({
       ? "green"
       : "orange"
   return (
-    <article className="agency-card">
-      <div className="agency-card-header !py-4">
+    <article className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-5">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--allura-charcoal)] text-white">
+          <div className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-lg text-white",
+            tone === "green" ? "bg-[var(--dashboard-cta-approval)]" : "bg-[var(--dashboard-cta-primary)]"
+          )}>
             <span className="text-xs font-bold tracking-tight">
               {(node.label ?? "A").charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-[var(--dashboard-text-primary)]">
-              {node.label}
-            </span>
-            <span className="text-xs text-[var(--dashboard-text-muted)]">{node.type}</span>
+            <span className="text-sm font-semibold text-[var(--dashboard-text-primary)]">{node.label}</span>
+            <span className="text-xs text-[var(--dashboard-text-secondary)]">{node.type}</span>
           </div>
         </div>
-        <button className="rounded-lg p-1.5 text-[var(--dashboard-text-muted)] hover:bg-[var(--dashboard-surface-muted)] hover:text-[var(--dashboard-text-primary)] transition-colors">
-          <MoreHorizontal className="size-4" />
-        </button>
+        <span className={cn(
+          "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+          tone === "green"
+            ? "border-green-500/20 bg-green-500/10 text-green-600"
+            : "border-orange-500/20 bg-orange-500/10 text-orange-600"
+        )}>
+          {String(node.metadata?.status ?? "unknown")}
+        </span>
       </div>
-      <div className="agency-card-body !pt-3">
-        <div className="mb-3 flex items-center gap-2">
-          <span className={cn("agency-badge", tone === "green" ? "outcome" : "insight")}>
-            {String(node.metadata?.status ?? "Unknown")}
-          </span>
-          <span className="agency-badge event">
-            {connectionCount} connection{connectionCount === 1 ? "" : "s"}
-          </span>
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-lg border border-[var(--dashboard-border)] p-3">
+          <span className="text-xs text-[var(--dashboard-text-muted)]">Confidence</span>
+          <p className="mt-1 font-semibold text-[var(--dashboard-text-primary)]">{confidencePercent(node)}</p>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-[var(--dashboard-border)] p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--dashboard-text-muted)]">
-              Role
-            </p>
-            <p className="mt-1 text-sm text-[var(--dashboard-text-primary)]">
-              {String(node.metadata?.role ?? "—")}
-            </p>
-          </div>
-          <div className="rounded-lg border border-[var(--dashboard-border)] p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--dashboard-text-muted)]">
-              Last Seen
-            </p>
-            <p className="mt-1 text-sm text-[var(--dashboard-text-primary)]">
-              {String(node.metadata?.last_seen ?? node.metadata?.last_active ?? "—")}
-            </p>
-          </div>
-          <div className="rounded-lg border border-[var(--dashboard-border)] p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--dashboard-text-muted)]">
-              Memories
-            </p>
-            <p className="mt-1 text-sm text-[var(--dashboard-text-primary)]">
-              {String(node.metadata?.memory_count ?? "—")}
-            </p>
-          </div>
-          <div className="rounded-lg border border-[var(--dashboard-border)] p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--dashboard-text-muted)]">
-              Confidence
-            </p>
-            <p className="mt-1 text-sm text-[var(--dashboard-text-primary)]">
-              {confidencePercent(node)}
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/dashboard/graph">View Graph</Link>
-          </Button>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/dashboard/evidence">View Evidence</Link>
-          </Button>
+        <div className="rounded-lg border border-[var(--dashboard-border)] p-3">
+          <span className="text-xs text-[var(--dashboard-text-muted)]">Connections</span>
+          <p className="mt-1 font-semibold text-[var(--dashboard-text-primary)]">{connectionCount}</p>
         </div>
       </div>
     </article>
   )
 }
 
-function AgentsPageContent({ state }: { state: DashboardResult<{ nodes: GraphNode[]; edges: GraphEdge[] }> }) {
-  const nodes = state.data?.nodes ?? []
-  const edges = state.data?.edges ?? []
-
-  const connectionCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const n of nodes) counts.set(n.id, 0)
-    for (const e of edges) {
-      counts.set(e.source, (counts.get(e.source) ?? 0) + 1)
-      counts.set(e.target, (counts.get(e.target) ?? 0) + 1)
-    }
-    return counts
-  }, [nodes, edges])
-
-  const metrics = useMemo(() => buildMetrics(nodes, edges), [nodes, edges])
-
+function MetricCard({ label, value, tone, icon: Icon }: AgentMetric) {
+  const toneClass =
+    tone === "green"
+      ? "text-green-600"
+      : tone === "orange"
+        ? "text-orange-600"
+        : tone === "blue"
+          ? "text-[var(--allura-blue)]"
+          : "text-[var(--dashboard-text-primary)]"
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Agents"
-        description="Agents observed in real Brain memory provenance and graph relationships."
-      />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((m) => (
-          <div key={m.label} className="metric-card">
-            <div>
-              <p className="metric-label">{m.label}</p>
-              <p className="metric-value">{m.value}</p>
-            </div>
-            <div className={cn("metric-icon", m.tone)}>
-              <m.icon className="size-5" />
-            </div>
-          </div>
-        ))}
-      </div>
-      <WarningList warnings={state.warnings} />
-      {nodes.length === 0 ? (
-        <EmptyState
-          title="No agents found in graph"
-          description="No agent-type nodes were found in the Neo4j graph for this tenant."
-        />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {nodes.map((node) => (
-            <AgentCard
-              key={node.id}
-              node={node}
-              connectionCount={connectionCounts.get(node.id) ?? 0}
-            />
-          ))}
+    <Card className="border-[var(--dashboard-border)] bg-[var(--dashboard-surface)]">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-xs font-medium text-[var(--dashboard-text-muted)]">{label}</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="flex items-center gap-2">
+          <Icon className={cn("size-4", toneClass)} />
+          <span className={cn("text-2xl font-bold", toneClass)}>{value}</span>
         </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
 export default function AgentsPage() {
   const [state, setState] = useState<DashboardResult<{ nodes: GraphNode[]; edges: GraphEdge[] }> | null>(null)
+
   useEffect(() => {
-    void loadGraphNodes("agent").then(setState)
+    loadGraphNodes("agent").then(setState)
   }, [])
 
-  return (
-    <div>
-      {!state ? (
-        <div className="space-y-8">
-          <PageHeader title="Agents" description="Agents observed in real Brain memory provenance and graph relationships." />
-          <MetricCardsSkeleton />
+  const metrics = useMemo(() => {
+    if (!state?.data) return []
+    return buildMetrics(state.data.nodes, state.data.edges)
+  }, [state])
+
+  if (!state) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Agents</h1>
+          <p className="text-sm text-[var(--dashboard-text-secondary)]">Loading...</p>
         </div>
-      ) : state.error ? (
-        <ErrorState message={state.error} />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (state.error) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Agents</h1>
+        </div>
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-sm text-red-600">{state.error}</p>
+          <Button variant="outline" className="mt-4" onClick={() => loadGraphNodes("agent").then(setState)}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const { nodes, edges } = state.data ?? { nodes: [], edges: [] }
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Agents</h1>
+        <p className="text-sm text-[var(--dashboard-text-secondary)]">Active memory agents and their status.</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {metrics.map((m) => (
+          <MetricCard key={m.label} {...m} />
+        ))}
+      </div>
+
+      {state.warnings.length > 0 && (
+        <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+          <ul className="space-y-1">
+            {state.warnings.map((w, i) => (
+              <li key={i} className="text-sm text-yellow-700">{w.message || String(w)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {nodes.length === 0 ? (
+        <div className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-12 text-center">
+          <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">No agents found</p>
+          <p className="mt-2 text-xs text-[var(--dashboard-text-secondary)]">No agents are active in this memory space.</p>
+        </div>
       ) : (
-        <AgentsPageContent state={state} />
+        <div className="grid gap-4 md:grid-cols-2">
+          {nodes.map((node) => {
+            const edgeCount = edges.filter(
+              (e) => e.source === node.id || e.target === node.id
+            ).length
+            return <AgentCard key={node.id} node={node} connectionCount={edgeCount} />
+          })}
+        </div>
       )}
     </div>
   )
