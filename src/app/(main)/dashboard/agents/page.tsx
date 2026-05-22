@@ -1,6 +1,7 @@
 "use client"
 
-import { Activity, Brain, Lightbulb, Users } from "lucide-react"
+import Link from "next/link"
+import { Activity, Brain, Lightbulb, PlusCircle, Router, Users } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -196,8 +197,52 @@ export default function AgentsPage() {
 
       {nodes.length === 0 ? (
         <div className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-12 text-center">
-          <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">No agents found</p>
-          <p className="mt-2 text-xs text-[var(--dashboard-text-secondary)]">No agents are active in this memory space.</p>
+          <div className="mx-auto flex size-14 items-center justify-center rounded-xl bg-[var(--dashboard-surface-muted)] text-[var(--dashboard-text-muted)]">
+            <Users className="size-7" aria-hidden="true" />
+          </div>
+          <h3 className="mt-4 text-sm font-semibold text-[var(--dashboard-text-primary)]">No agents indexed yet</h3>
+          <p className="mt-2 max-w-md mx-auto text-xs text-[var(--dashboard-text-secondary)] leading-5">
+            Agents are discovered from the <strong className="text-[var(--dashboard-text-primary)]">Neo4j semantic graph</strong> when they create memories, perform actions, or are explicitly registered. If this workspace is new, the graph may still be empty.
+          </p>
+
+          <div className="mt-5 grid gap-3 max-w-sm mx-auto text-left">
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-muted)] p-3">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--dashboard-cta-primary)]/10 text-[var(--dashboard-cta-primary)] text-xs font-bold">1</div>
+              <div>
+                <p className="text-xs font-medium text-[var(--dashboard-text-primary)]">Create your first memory</p>
+                <p className="text-[11px] text-[var(--dashboard-text-secondary)] mt-0.5">Use the builder to add a memory with an agent attribution — it auto-registers in the graph.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-muted)] p-3">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--dashboard-cta-primary)]/10 text-[var(--dashboard-cta-primary)] text-xs font-bold">2</div>
+              <div>
+                <p className="text-xs font-medium text-[var(--dashboard-text-primary)]">Run onboarding script</p>
+                <p className="text-[11px] text-[var(--dashboard-text-secondary)] mt-0.5">Execute <code className="rounded bg-[var(--dashboard-surface)] px-1 py-0.5 text-[10px]">scripts/openclaw-onboard.ts</code> to seed agents and connections.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-muted)] p-3">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--dashboard-cta-primary)]/10 text-[var(--dashboard-cta-primary)] text-xs font-bold">3</div>
+              <div>
+                <p className="text-xs font-medium text-[var(--dashboard-text-primary)]">Check graph health</p>
+                <p className="text-[11px] text-[var(--dashboard-text-secondary)] mt-0.5">Verify Neo4j is connected and the <code className="rounded bg-[var(--dashboard-surface)] px-1 py-0.5 text-[10px]">agent</code> node type exists in the semantic store.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard/health" className="inline-flex items-center gap-1.5">
+                <Router className="size-3.5" aria-hidden="true" />
+                Check health
+              </Link>
+            </Button>
+            <Button asChild size="sm" className="bg-[var(--dashboard-cta-primary)] text-white hover:bg-[var(--allura-orange-hover)]">
+              <Link href="/dashboard/builder" className="inline-flex items-center gap-1.5">
+                <PlusCircle className="size-3.5" aria-hidden="true" />
+                Add first agent
+              </Link>
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
