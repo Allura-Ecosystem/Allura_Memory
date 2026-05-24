@@ -179,3 +179,20 @@ export interface DecisionRecord {
   eventType: string
   metadata: Record<string, unknown>
 }
+
+export interface PolicyEnforcementEvent {
+  id: string
+  eventType: "policy_check" | "policy_violation"
+  agentId: string
+  ruleName: string
+  status: "allowed" | "blocked" | "failed"
+  timestamp: string
+  metadata?: Record<string, unknown>
+}
+
+export interface PolicyEnforcementSummary {
+  recentEvents: PolicyEnforcementEvent[]
+  violationCountByRule: Record<string, number>
+  checkCount: number
+  violationCount: number
+}

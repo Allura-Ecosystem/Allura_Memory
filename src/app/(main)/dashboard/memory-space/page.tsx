@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import ForceGraph2D from "react-force-graph-2d"
+import dynamic from "next/dynamic"
 import { toast } from "sonner"
 
 import { Skeleton } from "@/components/ui/skeleton"
@@ -9,6 +9,10 @@ import { getGraphNodeColor, getResolvedColor } from "@/lib/brand/allura"
 import type { GraphEdge, GraphNode } from "@/lib/dashboard/types"
 import { DEFAULT_GROUP_ID } from "@/lib/defaults/scope"
 import { tokens } from "@/lib/tokens"
+
+const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
+  ssr: false,
+})
 
 interface ForceGraphNode extends GraphNode {
   x?: number

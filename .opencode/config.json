@@ -1,7 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "yolo": true,
-  "model": "gpt-5.5",
+  "model": "openai/gpt-5.5",
   "instructions": [
     ".opencode/AGENTS.md",
     ".opencode/manifest.json",
@@ -11,6 +10,7 @@
     ".opencode/context/navigation.md",
     ".opencode/agent/core/brooks.md",
     ".opencode/agent/core/jobs.md",
+    ".opencode/runtime-contract.json",
     ".agents/TEAM-RAM-RUNTIME.md",
     ".opencode/COWORK.md"
   ],
@@ -38,61 +38,6 @@
       "*": "allow"
     },
     "task": "allow"
-  },
-  "runtime_contract": {
-    "active_notion_contract_scope": "https://www.notion.so/ce13dc069ff347689fcc7cbe188232c8",
-    "canonical_plan_id": "ce13dc069ff347689fcc7cbe188232c8",
-    "canonical_plan_path": "ralph/PROMPT_plan.md",
-    "allura_navigator_workflow": "_bmad/ALLURA-NAVIGATOR-WORKFLOW.md",
-    "current_ui_review_gate": {
-      "card": "/allura brand alignment / 6420 parity cleanup",
-      "status": "In Review",
-      "route": "/allura",
-      "source_of_truth": "Notion Allura stories Work Items",
-      "reviewers": [
-        "pike",
-        "fowler"
-      ],
-      "validator": "ralph",
-      "evidence": [
-        "artifacts/allura-after-3334.png",
-        "browser smoke: title, no page errors, no horizontal overflow"
-      ],
-      "done_rule": "Do not move to Done until Pike/Fowler blockers are resolved, Ralph validation passes, and evidence is attached to the Notion card."
-    },
-    "required_context_files": [
-      ".opencode/AGENTS.md",
-      ".opencode/manifest.json",
-      ".opencode/SKILL-OWNERSHIP.md",
-      "_bmad/ALLURA-NAVIGATOR-WORKFLOW.md",
-      ".opencode/context/core/context-system.md",
-      ".opencode/context/navigation.md",
-      ".opencode/agent/core/brooks.md",
-      ".opencode/agent/core/jobs.md"
-    ],
-    "required_skills": [
-      "allura-memory-skill",
-      "mcp-docker",
-      "team-ram-cowork",
-      "frontend-design",
-      "frontend-craft",
-      "allura-design",
-      "bmad-code-review"
-    ],
-    "validation_commands": [
-      "bash .opencode/scripts/validate-oac-core.sh",
-      "python3 -m json.tool .opencode/config.json",
-      "python3 -m json.tool .opencode/manifest.json",
-      "bun scripts/validate-codex-governance-gate.ts",
-      "bun test src/lib/validation/group-id.test.ts",
-      "bunx eslint src/app/'(main)'/allura/page.tsx",
-      "bun run typecheck",
-      "bun test src/lib/dashboard/__tests__/allura-route.test.ts src/__tests__/dashboard-schemas.test.ts"
-    ],
-    "discovery_preference": [
-      "notion",
-      "notion-remote"
-    ]
   },
   "agent": {
     "brooks": {

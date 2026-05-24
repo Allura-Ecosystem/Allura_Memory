@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { approveProposal, getMemoryStats, rejectProposal } from "@/lib/dashboard/api"
+import { loadHonestDashboardPanels } from "@/lib/dashboard/honest-panels"
 import { loadCuratorQueue, loadDashboardOverview, loadMemoryStats } from "@/lib/dashboard/queries"
 
 const fetchMock = vi.fn()
@@ -153,6 +154,25 @@ describe("dashboard api", () => {
     expect(urls.some((url) => url.includes("status=pending") && url.includes("group_id=allura-test"))).toBe(true)
   })
 
+  it("surfaces pending curator queue failures instead of returning an empty success state", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes("status=pending")) {
+        throw new Error("pending queue offline")
+      }
+      if (url.includes("status=approved")) {
+        return jsonResponse({ proposals: [] })
+      }
+      return jsonResponse({})
+    })
+
+    const result = await loadCuratorQueue("pending", "allura-test")
+
+    expect(result.data).toEqual([])
+    expect(result.error).toBe("pending queue offline")
+    expect(result.degraded).toBe(true)
+  })
+
   it("fetches memory stats with tenant scope and 200 OK", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -220,5 +240,175 @@ describe("dashboard api", () => {
     expect(result.data?.last_activity).toBe("2026-05-20T12:00:00.000Z")
     expect(result.error).toBeNull()
     expect(result.degraded).toBe(false)
+  })
+
+  it("renders honest failed/empty/degraded panel states without fabricating healthy counts", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.startsWith("/api/health/metrics")) {
+        expect(url).toContain("group_id=allura-test")
+        throw new Error("health metrics offline")
+      }
+      if (url.startsWith("/api/audit/events") && url.includes("policy_check")) {
+        expect(url).toContain("group_id=allura-test")
+        return jsonResponse({ events: [] })
+      }
+      if (url.startsWith("/api/audit/events") && url.includes("policy_violation")) {
+        expect(url).toContain("group_id=allura-test")
+        return jsonResponse({ events: [] })
+      }
+      if (url.startsWith("/api/curator/proposals") && url.includes("status=pending")) {
+        expect(url).toContain("group_id=allura-test")
+        return jsonResponse({ proposals: [] })
+      }
+      if (url.startsWith("/api/curator/proposals") && url.includes("status=approved")) {
+        expect(url).toContain("group_id=allura-test")
+        return jsonResponse({ proposals: [] })
+      }
+      return jsonResponse({})
+    })
+
+    const result = await loadHonestDashboardPanels("allura-test")
+
+    expect(result.data?.find((panel) => panel.id === "system-truth")?.state).toBe("failed")
+    expect(result.data?.find((panel) => panel.id === "hygiene-actions")?.state).toBe("empty")
+    expect(result.data?.find((panel) => panel.id === "approvals")?.state).toBe("empty")
+    expect(result.data?.every((panel) => panel.usesSampleData === false)).toBe(true)
+    expect(JSON.stringify(result.data)).not.toMatch(/All enforced|Clear|0\/0 active/i)
+  })
+
+  it("marks partial dashboard panel data degraded and keeps every read scoped", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.startsWith("/api/health/metrics")) {
+        expect(url).toContain("group_id=allura-test")
+        return {
+          ok: true,
+          status: 206,
+          headers: { get: (name: string) => (name === "Warning" ? '299 Allura "neo4j_unavailable"' : null) },
+          json: vi.fn().mockResolvedValue({
+            timestamp: "2026-05-19T00:00:00.000Z",
+            queue: { pending_count: 2, oldest_age_hours: 4, approved_24h: 1, rejected_24h: 0 },
+            recall: { search_available: false, last_latency_ms: null },
+            storage: {
+              postgres: { status: "healthy", latency_ms: 8, total_memories: 12 },
+              neo4j: { status: "degraded", latency_ms: null, total_nodes: null },
+            },
+            degraded: { neo4j_unavailable: 1, scope_error: 0, embedding_failures: 0, promotion_failures_24h: 0 },
+            skills: [],
+          }),
+        }
+      }
+      if (url.startsWith("/api/audit/events") && url.includes("policy_check")) {
+        expect(url).toContain("group_id=allura-test")
+        return jsonResponse({ events: [] })
+      }
+      if (url.startsWith("/api/audit/events") && url.includes("policy_violation")) {
+        expect(url).toContain("group_id=allura-test")
+        return jsonResponse({
+          events: [
+            {
+              id: "evt-1",
+              event_type: "policy_violation",
+              agent_id: "woz-builder",
+              status: "blocked",
+              created_at: "2026-05-19T00:00:00.000Z",
+              metadata: { rule: "scope" },
+            },
+          ],
+        })
+      }
+      if (url.startsWith("/api/curator/proposals") && url.includes("status=pending")) {
+        expect(url).toContain("group_id=allura-test")
+        return jsonResponse({
+          proposals: [
+            {
+              id: "proposal-1",
+              content: "Needs review",
+              score: 0.9,
+              status: "pending",
+              created_at: "2026-05-19T00:00:00.000Z",
+              metadata: {},
+            },
+          ],
+        })
+      }
+      if (url.startsWith("/api/curator/proposals") && url.includes("status=approved")) {
+        expect(url).toContain("group_id=allura-test")
+        return jsonResponse({ proposals: [] })
+      }
+      return jsonResponse({})
+    })
+
+    const result = await loadHonestDashboardPanels("allura-test")
+
+    expect(result.error).toBeNull()
+    expect(result.degraded).toBe(true)
+    expect(result.data?.find((panel) => panel.id === "system-truth")?.state).toBe("degraded")
+    expect(result.data?.find((panel) => panel.id === "hygiene-actions")?.state).toBe("degraded")
+    expect(result.data?.find((panel) => panel.id === "approvals")?.state).toBe("degraded")
+    expect(fetchMock.mock.calls.every(([url]) => String(url).includes("group_id=allura-test"))).toBe(true)
+  })
+
+  it("uses the default allura-system scope for honest panels when no group is supplied", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      expect(url).toContain("group_id=allura-system")
+      if (url.startsWith("/api/health/metrics")) {
+        return jsonResponse({
+          timestamp: "2026-05-19T00:00:00.000Z",
+          queue: { pending_count: 0, oldest_age_hours: 0, approved_24h: 0, rejected_24h: 0 },
+          recall: { search_available: true, last_latency_ms: 12 },
+          storage: {
+            postgres: { status: "ready", latency_ms: 3, total_memories: 1 },
+            neo4j: { status: "ready", latency_ms: 4, total_nodes: 2 },
+          },
+          degraded: { neo4j_unavailable: 0, scope_error: 0, embedding_failures: 0, promotion_failures_24h: 0 },
+          skills: [],
+        })
+      }
+      if (url.startsWith("/api/audit/events")) return jsonResponse({ events: [] })
+      if (url.startsWith("/api/curator/proposals")) return jsonResponse({ proposals: [] })
+      return jsonResponse({})
+    })
+
+    const result = await loadHonestDashboardPanels()
+
+    expect(result.error).toBeNull()
+    expect(result.data).toHaveLength(3)
+    expect(result.data?.find((panel) => panel.id === "system-truth")?.state).toBe("ready")
+  })
+
+  it("describes warning-only degraded health without claiming zero degraded signals", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.startsWith("/api/health/metrics")) {
+        return {
+          ok: true,
+          status: 206,
+          headers: { get: (name: string) => (name === "Warning" ? '299 Allura "partial_health"' : null) },
+          json: vi.fn().mockResolvedValue({
+            timestamp: "2026-05-19T00:00:00.000Z",
+            queue: { pending_count: 0, oldest_age_hours: 0, approved_24h: 0, rejected_24h: 0 },
+            recall: { search_available: true, last_latency_ms: 12 },
+            storage: {
+              postgres: { status: "ready", latency_ms: 3, total_memories: 1 },
+              neo4j: { status: "ready", latency_ms: 4, total_nodes: 2 },
+            },
+            degraded: { neo4j_unavailable: 0, scope_error: 0, embedding_failures: 0, promotion_failures_24h: 0 },
+            skills: [],
+          }),
+        }
+      }
+      if (url.startsWith("/api/audit/events")) return jsonResponse({ events: [] })
+      if (url.startsWith("/api/curator/proposals")) return jsonResponse({ proposals: [] })
+      return jsonResponse({})
+    })
+
+    const result = await loadHonestDashboardPanels("allura-test")
+    const systemPanel = result.data?.find((panel) => panel.id === "system-truth")
+
+    expect(systemPanel?.state).toBe("degraded")
+    expect(systemPanel?.summary).not.toContain("0 degraded")
   })
 })

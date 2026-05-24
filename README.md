@@ -74,6 +74,27 @@ Content is scored (0–1 confidence)
 
 Allura embeds every memory at write time using **Qwen3 Matryoshka embeddings** (1024d) via Ollama. Queries use **hybrid ANN + BM25 ranking** through pgvector HNSW indexes for semantic retrieval across both stores.
 
+### Governance & RuVix Kernel
+
+Memory promotions are gated by **RuVix**, a proof-gated mutation kernel inspired by OS design patterns. Every memory write is validated against 13 configurable policies before acceptance:
+
+| Policy | Purpose |
+|--------|---------|
+| **POL-001** | Tenant isolation — enforce `group_id` boundaries |
+| **POL-002** | Budget enforcement — token/compute limits per session |
+| **POL-003** | Permission tier enforcement — viewer/curator/admin gates |
+| **POL-004** | Actor validation — verify agent identity and claims |
+| **POL-005** | Audit trail requirement — all writes logged |
+| **POL-006** | Debug enforcement — disable debug output in production |
+| **POL-007** | Source-of-truth gate — memory promotion requires Neo4j readiness |
+| **POL-008** | Infrastructure target lock — prevent writes to wrong databases |
+| **POL-009** | Project manifest validation — group_id format compliance |
+| **POL-010–013** | Email zero-trust gates — validate sender, domain, headers |
+
+Every policy is **enforcement-gated**: mutations require a cryptographically signed `ProofOfIntent` with a valid nonce, timestamp, and group_id. Policies are evaluated in a proof-gated context, preventing bypasses through direct database access.
+
+**Key mechanism:** The curator pipeline uses `HITL` (Human-in-the-Loop) approval. Memories scoring above threshold enter a review queue. Curator approval creates a promotion proof, which is then validated against all policies before the memory enters Neo4j.
+
 ---
 
 ## Features
@@ -86,13 +107,14 @@ Allura embeds every memory at write time using **Qwen3 Matryoshka embeddings** (
 |---------|-------------|
 | **Dual-layer storage** | PostgreSQL (episodic) + Neo4j (semantic) with clear promotion boundary |
 | **Append-only audit trail** | Every write is an immutable event — reconstruct any point in time |
-| **Human-in-the-loop curation** | Score-gated review queue before knowledge promotion |
-| **Multi-tenant isolation** | `group_id`-based boundaries at the schema level |
-| **MCP protocol native** | Stdio + Streamable HTTP gateway for any MCP-compatible agent |
-| **Vector search** | pgvector HNSW (episodic) + Neo4j (semantic) via hybrid ANN + BM25 ranking |
-| **Plugin harness** | MCP server discovery, approval, and routing |
+| **RuVix kernel governance** | 13-policy proof-gated mutation layer preventing unauthorized writes |
+| **Human-in-the-loop curation** | Score-gated review queue before knowledge promotion to semantic layer |
+| **Multi-tenant isolation** | `group_id`-based boundaries at schema and proof layers |
+| **MCP protocol native** | Stdio + Streamable HTTP (2026 standard) for any MCP-compatible agent |
+| **Vector search** | Hybrid ANN + BM25 ranking with RRF fusion (k=60) across both stores |
+| **Policy enforcement** | Configurable rules: tenant isolation, budget limits, permission tiers, audit trails |
 | **Self-hostable** | Docker Compose or Kubernetes — auth dependency: Clerk |
-| **Versioned knowledge** | `SUPERSEDES` relationships in Neo4j — old facts are deprecated, not erased |
+| **Versioned knowledge** | `SUPERSEDES` relationships in Neo4j — old facts deprecated, not erased |
 
 ---
 
@@ -216,6 +238,26 @@ memory_delete({
 })
 ```
 
+### Optional: Global Claude, Codex, and OpenCode Plugins
+
+Ronin's local development setup can also use global runtime plugins that keep Allura Brain available across agent surfaces.
+
+| Runtime | Plugin | Purpose |
+|---------|--------|---------|
+| **OpenCode** | `~/.config/opencode/plugins/allura-brain.ts` | Ensures the `allura-brain` MCP endpoint, injects memory governance into compaction, and blocks legacy `group_id` tenants. |
+| **Claude Code** | `~/.claude/plugins/allura-brain/` | Adds Allura Brain MCP config, a governance skill, and hooks that block legacy/non-`allura-*` memory tenants. |
+| **Claude + Codex cowork** | `~/.claude/plugins/allura-cowork/` mirrored to `~/.codex/plugins/cache/plugins-cli/allura-cowork/0.1.0/` | Provides a shared handoff protocol so Claude and Codex coordinate through Allura without pretending both runtimes actually executed. |
+
+The cowork rule is simple:
+
+```text
+Intent → Project context → Allura Brain → Required skills → Runtime route → Work → Validate → Handoff / remember
+```
+
+Use the cowork plugin when a task says “cowork,” “Claude and Codex,” or “handoff.” It should produce a short receipt that names the active runtime, memory status, project overlay, route, validation path, and handoff target.
+
+> These global plugin paths are user-machine setup, not required application source. Restart Claude Code, Codex, or OpenCode after changing global plugin/config files.
+
 ---
 
 ## Configuration
@@ -257,6 +299,23 @@ EMBEDDING_MODEL=qwen3-embedding:8b
 | `auto` | Score ≥ threshold → automatic promotion | Development, experimentation |
 
 > **Note:** `soc2` is an internal workflow label for a stricter review path. It does **not** imply current SOC 2 certification.
+
+---
+
+## Dashboard & Governance Visibility
+
+Allura's web dashboard surfaces all governance operations with full transparency:
+
+| Page | Purpose |
+|------|---------|
+| **Memory** | Browse episodic captures, review scores, search by content |
+| **Audit** | Immutable event log — trace every write, curator decision, and promotion |
+| **Policy** | View all 13 RuVix kernel policies, enforcement status, and recent policy violations |
+| **Governance** | Real-time enforcement metrics: policy checks/violations, curator queue depth, promotion decisions |
+
+The **Policy page** displays all kernel policies with their severity, enforcement status, and configurability. Recent enforcement events show which policies were checked on each write and which were violated (with full audit trails).
+
+Access the dashboard at **`http://localhost:3100/dashboard`** after bringing up Docker Compose.
 
 ---
 
@@ -375,32 +434,49 @@ bun run test:all     # Full suite (typecheck + lint + unit + e2e + MCP)
 
 | Layer | Technology |
 |-------|-----------|
-| Runtime | Next.js + Bun + TypeScript |
-| Episodic Store | PostgreSQL 16 + pgvector |
-| Semantic Store | Neo4j 5.26 |
-| Embeddings | Qwen3 Matryoshka 1024d (Ollama) |
-| Auth | Clerk (external SaaS — required for dashboard; optional for MCP-only) |
-| Containerization | Docker + Docker Compose |
-| Protocol | Model Context Protocol (MCP) |
+| **Runtime** | Next.js 15 + Bun 1.0+ + TypeScript (strict mode) |
+| **Episodic Store** | PostgreSQL 16 (append-only, RLS support) |
+| **Semantic Store** | Neo4j 5.26 (SUPERSEDES versioning) |
+| **Vector Search** | pgvector 0.8 + RuVector (hybrid HNSW + BM25 RRF) |
+| **Embeddings** | Qwen3 Matryoshka 1024d via Ollama (nomic v2 migration path available) |
+| **Governance** | RuVix kernel (proof-gated mutations, 13-policy enforcement) |
+| **Auth** | Clerk (dashboard); Proof-of-Intent for MCP operations |
+| **Protocol** | MCP Streamable HTTP (2026 standard) + stdio (local dev) |
+| **Containerization** | Docker Compose (recommended) or Kubernetes |
+| **Curator Pipeline** | Score-gated HITL promotion queue (async with PostgreSQL LISTEN/NOTIFY) |
+
+### Architecture Validation
+
+Allura's architecture has been validated against current 2026 research:
+- **Kernel-gate governance** ✅ (Aegis Architecture, arXiv 2603.16938)
+- **Dual-layer episodic + semantic** ✅ (MemTier, arXiv 2605.03675; CoALA framework)
+- **Proof-of-Intent cryptographic attestation** ✅ (Authenticated Workflows, arXiv 2602.10465)
+- **Hybrid RRF search (k=60)** ✅ (Field consensus, MemRouter benchmarks)
+- **CQRS architecture (PG write / Neo4j read model)** ✅ (Domain-driven design pattern validation)
+- **Multi-tenant isolation via group_id + RLS** ✅ (Production best practice, 2026 CNCF survey)
 
 ---
 
 ## What We Claim — And What We Don't
 
 **We do claim:**
-- Dual-layer memory with traceable capture and promotion
-- Append-only audit trail by design
-- Human-in-the-loop curation as a first-class feature
-- Self-hosted deployment on your infrastructure
-- MCP-native integration
+- ✅ Dual-layer memory architecture (episodic PG + semantic Neo4j) with clear promotion gates
+- ✅ Append-only immutable audit trail by design (tamper-evident with full reconstruction)
+- ✅ Kernel-gated governance with proof-of-intent cryptographic validation
+- ✅ Human-in-the-loop curation as mandatory first-class feature (not optional)
+- ✅ 13 configurable policies with real-time enforcement and audit visibility
+- ✅ Multi-tenant isolation with group_id at schema, proof, and query layers
+- ✅ Self-hosted deployment on your infrastructure (Docker Compose or Kubernetes)
+- ✅ MCP-native integration (2026 Streamable HTTP + stdio) with any MCP client
+- ✅ Architecture validated against 2026 research (Aegis, MemTier, Authenticated Workflows)
 
 **We do not claim:**
-- Current SOC 2 certification or banking-grade approval
-- Zero hallucinations or flawless accuracy
-- Autonomous truth without review
-- Benchmark superiority unless specifically verified
+- Current SOC 2 certification or banking-grade regulatory approval (in progress)
+- Zero hallucinations or autonomous truth (memory reflects, not corrects)
+- Benchmark superiority vs. mem0/Letta/Zep (each excels at different tradeoffs)
+- Perfect accuracy or universal applicability
 
-Where the product is directional, we describe it as **designed to**, **built to support**, or **positioned to help** — never as a verified claim.
+Where the product is directional or in-flight, we explicitly label it as **designed to**, **built to support**, or **positioned to enable** — never as a verified claim. Governance and auditability are present and operational today. Regulatory certification is a downstream artifact.
 
 ---
 
@@ -419,10 +495,28 @@ Allura follows a Brooksian approach to system design:
 
 ---
 
+## Research & References
+
+Allura's design is informed by current academic and production research in AI agent systems:
+
+| Area | Key References |
+|------|-----------------|
+| **Agent OS Architecture** | AIOS (Rutgers, COLM 2025), Aegis Architecture (arXiv 2603.16938), Qualixar OS (arXiv 2604.06392) |
+| **Memory Architecture** | MemTier (arXiv 2605.03675), CoALA Framework, CraniMem (temporal grounding) |
+| **Cryptographic Governance** | Authenticated Workflows (arXiv 2602.10465), PunkGo Kernel (arXiv 2602.20214), ESAA Pattern (arXiv 2603.06365) |
+| **Search & Retrieval** | MemRouter (learned write-side admission, +10.3 F1 improvement), RRF fusion (k=60 consensus) |
+| **Scalability** | Neo4j multi-tenancy, async embedding queues, PostgreSQL RLS, Kubernetes health probes |
+| **Security** | SPIFFE/SVID workload identity, mTLS service mesh, prompt injection defense-in-depth (OWASP) |
+| **Observability** | OpenTelemetry GenAI semantic conventions (stable 2026), `gen_ai.memory.*` spans |
+
+**Full technical audit:** See [`docs/research/technical-allura-memory-ai-governance-stack-research-2026-05-23.md`](docs/research/technical-allura-memory-ai-governance-stack-research-2026-05-23.md) for comprehensive analysis including competitive positioning vs. mem0, Letta, Zep, and emerging patterns in 2025–2026 production deployments.
+
+---
+
 ## License
 
 MIT
 
 ---
 
-Built by [ronin704](https://github.com/ronin704). Allura is a self-hosted, governance-oriented memory system — presented honestly, without unverified compliance claims.
+Built by [ronin704](https://github.com/ronin704). Allura is a self-hosted, governance-oriented memory system — architected for teams that require transparent, auditable, human-in-the-loop knowledge capture and promotion.

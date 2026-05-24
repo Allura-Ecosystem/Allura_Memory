@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronDown, ChevronUp, ShieldCheck, ShieldAlert, ShieldMinus, ShieldQuestion, Wrench } from "lucide-react"
+import { ChevronDown, ChevronUp, ShieldCheck, ShieldAlert, ShieldMinus, ShieldQuestion, Wrench, Info } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -10,58 +10,153 @@ import { loadPolicyEnforcement } from "@/lib/dashboard/queries"
 import type { DashboardResult, PolicyEnforcementSummary } from "@/lib/dashboard/types"
 import { cn } from "@/lib/utils"
 
-type RuleStatus = "Enforced" | "Proposed" | "Drifted" | "Unknown"
+type RuleStatus = "Enforced" | "Advisory" | "Proposed" | "Drifted" | "Unknown"
+type Severity = "critical" | "high" | "medium" | "low"
 
 interface PolicyRule {
+  id: string
   name: string
   status: RuleStatus
+  severity: Severity
   rule: string
   source: string
-  updatedAt: string
+  configurable?: string
 }
 
-const POLICY_RULES: PolicyRule[] = [
+const KERNEL_POLICIES: PolicyRule[] = [
   {
-    name: "Tenant namespace",
+    id: "POL-001",
+    name: "Tenant Isolation",
     status: "Enforced",
-    rule: "Every governed memory and audit request must include a group_id matching allura-*.",
-    source: "src/lib/memory/api-schemas.ts",
-    updatedAt: "2026-05-18T09:30:00.000Z",
+    severity: "critical",
+    rule: "Every governed memory and audit request must include a group_id matching allura-[a-z0-9-]+. Missing group_id causes a CHECK constraint failure.",
+    source: "src/kernel/policy.ts",
   },
   {
-    name: "Agent identity",
+    id: "POL-002",
+    name: "Budget Enforcement",
     status: "Enforced",
-    rule: "Memory writes require user_id so actions can be traced back to a human, service, or agent.",
-    source: "src/lib/memory/api-schemas.ts",
-    updatedAt: "2026-05-18T09:30:00.000Z",
+    severity: "high",
+    rule: "Operations must not exceed the per-call budget limit. Default: 1000 units. Operations without a budget_cost claim are exempt.",
+    source: "src/kernel/policy.ts",
+    configurable: "budgetLimit (context field, default 1000)",
   },
   {
-    name: "Curator tiers",
+    id: "POL-003",
+    name: "Permission Tier Validation",
     status: "Enforced",
-    rule: "Promotion confidence tiers are emerging 0.60, adoption 0.75, and mainstream 0.85.",
-    source: "src/lib/curator/score.ts",
-    updatedAt: "2026-05-20T14:00:00.000Z",
+    severity: "critical",
+    rule: "Kernel operations require kernel tier. Plugin operations require plugin or kernel tier. Skill operations allow any tier. Hierarchy: kernel > plugin > skill.",
+    source: "src/kernel/policy.ts",
+    configurable: "requiredTier (context field)",
   },
   {
-    name: "Approval audit",
-    status: "Proposed",
-    rule: "Approval decisions are written as events with group_id, proposal, score, action, and curator identity.",
-    source: "src/lib/memory/approval-audit.ts",
-    updatedAt: "2026-05-21T08:15:00.000Z",
+    id: "POL-004",
+    name: "Actor Validation",
+    status: "Enforced",
+    severity: "high",
+    rule: "All operations must have a valid actor identifier — a UUID, a user-* prefixed ID, or an agent-* prefixed ID. Anonymous operations are blocked.",
+    source: "src/kernel/policy.ts",
+  },
+  {
+    id: "POL-005",
+    name: "Audit Trail",
+    status: "Enforced",
+    severity: "medium",
+    rule: "All kernel operations must provide audit_context with at least one key. Operations without audit context are rejected.",
+    source: "src/kernel/policy.ts",
+    configurable: "requiresAudit (context field, default true)",
+  },
+  {
+    id: "POL-006",
+    name: "Debug Enforcement (Iron Law)",
+    status: "Advisory",
+    severity: "high",
+    rule: "No fix may be submitted without a prior root cause investigation. Fix/hotfix/bugfix operations require debugRootCauseFound=true in context. In strict mode this blocks; in advisory mode it records a violation but allows.",
+    source: "src/kernel/policy.ts",
+    configurable: "strictDebugEnforcement (context field, default false)",
+  },
+  {
+    id: "POL-007",
+    name: "Source-of-Truth Pre-Flight Gate",
+    status: "Enforced",
+    severity: "critical",
+    rule: "Before any write, the agent must have proven it read from the project's declared canonical source (e.g., Notion). Read operations are exempt to allow the initial pre-flight read.",
+    source: "src/kernel/policy.ts",
+    configurable: "projectManifest.sourcesOfTruth (ProjectManifest)",
+  },
+  {
+    id: "POL-008",
+    name: "Infrastructure Target Lock",
+    status: "Enforced",
+    severity: "critical",
+    rule: "DB/deploy operations must target infrastructure declared in the project manifest. Prevents Docker Postgres when Neon is declared, local dev when Vercel is declared.",
+    source: "src/kernel/policy.ts",
+    configurable: "projectManifest.infrastructureTargets (ProjectManifest)",
+  },
+  {
+    id: "POL-009",
+    name: "Project Manifest Required",
+    status: "Enforced",
+    severity: "critical",
+    rule: "No write operations are allowed on a project without a PROJECT.yaml or ruvix-manifest.yaml declaring sourcesOfTruth and infrastructureTargets. Read operations are exempt.",
+    source: "src/kernel/policy.ts",
+  },
+  {
+    id: "POL-EMAIL-001",
+    name: "Email Instruction Blocker",
+    status: "Enforced",
+    severity: "critical",
+    rule: "Email-derived content cannot issue instructions to agents or tools. Content flagged as containing prompt injection or tool commands is blocked unless handling mode is evidence_only.",
+    source: "src/kernel/policy.ts",
+  },
+  {
+    id: "POL-EMAIL-002",
+    name: "Email Action Approval Gate",
+    status: "Enforced",
+    severity: "critical",
+    rule: "Privileged or destructive actions derived from email require explicit Captain/HITL approval (captainApproval or hitlApproved flag in context).",
+    source: "src/kernel/policy.ts",
+  },
+  {
+    id: "POL-EMAIL-003",
+    name: "High-Risk Email Quarantine",
+    status: "Enforced",
+    severity: "high",
+    rule: "High-risk emails (verdict=high) may only trigger quarantine, log, scan, or audit operations. No links, attachments, replies, promotions, or mutations.",
+    source: "src/kernel/policy.ts",
+  },
+  {
+    id: "POL-EMAIL-004",
+    name: "Email Memory Promotion Gate",
+    status: "Enforced",
+    severity: "high",
+    rule: "Email-derived facts may be stored as raw episodic traces. Promotion to canonical Neo4j memory requires curator/HITL approval (curatorApproval or hitlApproved).",
+    source: "src/kernel/policy.ts",
+  },
+  {
+    id: "POL-EMAIL-005",
+    name: "Attachment Sandbox Requirement",
+    status: "Enforced",
+    severity: "high",
+    rule: "Email attachments may only be inspected in a quarantined and sandboxed context. Both quarantined and sandboxed flags must be true.",
+    source: "src/kernel/policy.ts",
   },
 ]
 
 const GOVERNANCE_SIGNALS = [
   { label: "Tenant", value: DEFAULT_GROUP_ID, tone: "blue" as const },
-  { label: "Promotion", value: process.env.PROMOTION_MODE ?? "soc2", tone: "green" as const },
-  { label: "Auto-approval", value: process.env.AUTO_APPROVAL_THRESHOLD ?? "0.85", tone: "orange" as const },
-  { label: "Audit target", value: "events", tone: "charcoal" as const },
+  { label: "Kernel version", value: "1.0.0-alpha", tone: "charcoal" as const },
+  { label: "Total policies", value: String(KERNEL_POLICIES.length), tone: "green" as const },
+  { label: "POL-006 mode", value: "Advisory", tone: "orange" as const },
 ]
 
 function statusMeta(status: RuleStatus) {
   switch (status) {
     case "Enforced":
       return { tone: "green" as const, icon: ShieldCheck }
+    case "Advisory":
+      return { tone: "orange" as const, icon: ShieldMinus }
     case "Proposed":
       return { tone: "orange" as const, icon: ShieldMinus }
     case "Drifted":
@@ -71,10 +166,13 @@ function statusMeta(status: RuleStatus) {
   }
 }
 
-function formatTimestamp(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return "\u2014"
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })
+function severityBadgeClass(severity: Severity) {
+  switch (severity) {
+    case "critical": return "border-red-500/20 bg-red-500/10 text-red-600"
+    case "high": return "border-orange-500/20 bg-orange-500/10 text-orange-600"
+    case "medium": return "border-yellow-500/20 bg-yellow-500/10 text-yellow-700"
+    case "low": return "border-[var(--dashboard-border)] bg-[var(--dashboard-surface-muted)] text-[var(--dashboard-text-muted)]"
+  }
 }
 
 function EnforcementIcon({ status }: { status: string }) {
@@ -88,7 +186,7 @@ function RuleCard({ policy, index }: { policy: PolicyRule; index: number }) {
   const meta = statusMeta(policy.status)
   const Icon = meta.icon
 
-  const badgeToneClass =
+  const statusBadgeClass =
     meta.tone === "green"
       ? "border-green-500/20 bg-green-500/10 text-green-600"
       : meta.tone === "orange"
@@ -125,7 +223,10 @@ function RuleCard({ policy, index }: { policy: PolicyRule; index: number }) {
               <Icon className="size-4" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-[var(--dashboard-text-primary)]">{policy.name}</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-mono font-semibold text-[var(--dashboard-text-muted)]">{policy.id}</span>
+                <h3 className="text-sm font-semibold text-[var(--dashboard-text-primary)]">{policy.name}</h3>
+              </div>
               <p className="mt-1 text-xs leading-5 text-[var(--dashboard-text-secondary)] line-clamp-2">
                 {policy.rule}
               </p>
@@ -135,7 +236,15 @@ function RuleCard({ policy, index }: { policy: PolicyRule; index: number }) {
             <span
               className={cn(
                 "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase",
-                badgeToneClass
+                severityBadgeClass(policy.severity)
+              )}
+            >
+              {policy.severity}
+            </span>
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase",
+                statusBadgeClass
               )}
             >
               {policy.status}
@@ -158,13 +267,15 @@ function RuleCard({ policy, index }: { policy: PolicyRule; index: number }) {
               {policy.source}
             </code>
           </div>
-          <div className="flex items-center gap-1.5 text-[var(--dashboard-text-secondary)]">
-            <ShieldCheck className="size-3.5" aria-hidden="true" />
-            <span className="font-medium">Last updated:</span>
-            <time className="text-[var(--dashboard-text-primary)]" dateTime={policy.updatedAt}>
-              {formatTimestamp(policy.updatedAt)}
-            </time>
-          </div>
+          {policy.configurable && (
+            <div className="flex items-start gap-1.5 text-[var(--dashboard-text-secondary)]">
+              <Info className="size-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+              <span className="font-medium shrink-0">Configurable via:</span>
+              <code className="rounded bg-[var(--dashboard-surface)] px-1.5 py-0.5 text-[10px] text-[var(--dashboard-text-primary)] break-all">
+                {policy.configurable}
+              </code>
+            </div>
+          )}
           <p className="text-[11px] leading-5 text-[var(--dashboard-text-secondary)] pt-1">
             {policy.rule}
           </p>
@@ -186,7 +297,7 @@ export default function PolicyPage() {
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Rules / Policy</h1>
         <p className="text-sm text-[var(--dashboard-text-secondary)]">
-          Active governance rules that shape memory writes, curator promotion, and audit evidence.
+          RuVix kernel enforcement policies. Every state mutation passes proof verification and all active policies before executing.
         </p>
       </div>
 
@@ -213,12 +324,17 @@ export default function PolicyPage() {
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold tracking-wider text-[var(--dashboard-text-muted)] uppercase">
-          Enforcement Rules
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold tracking-wider text-[var(--dashboard-text-muted)] uppercase">
+            Kernel Enforcement Policies
+          </h2>
+          <span className="text-xs text-[var(--dashboard-text-muted)]">
+            {KERNEL_POLICIES.filter(p => p.status === "Enforced").length} enforced · {KERNEL_POLICIES.filter(p => p.status === "Advisory").length} advisory
+          </span>
+        </div>
         <div className="grid gap-3">
-          {POLICY_RULES.map((policy, idx) => (
-            <RuleCard key={policy.name} policy={policy} index={idx} />
+          {KERNEL_POLICIES.map((policy, idx) => (
+            <RuleCard key={policy.id} policy={policy} index={idx} />
           ))}
         </div>
       </section>
@@ -268,7 +384,7 @@ export default function PolicyPage() {
               <div className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-12 text-center">
                 <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">No enforcement events yet</p>
                 <p className="mt-2 text-xs text-[var(--dashboard-text-secondary)]">
-                  Policy checks and violations will appear here as they occur.
+                  Events appear here when the kernel logs <code className="rounded bg-[var(--dashboard-surface-muted)] px-1 py-0.5 text-[10px]">policy_check</code> or <code className="rounded bg-[var(--dashboard-surface-muted)] px-1 py-0.5 text-[10px]">policy_violation</code> audit events.
                 </p>
               </div>
             ) : (
@@ -282,7 +398,7 @@ export default function PolicyPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">{event.ruleName}</p>
                       <p className="text-xs text-[var(--dashboard-text-secondary)]">
-                        {event.eventType.replace("_", " ")} \u00b7 {event.agentId}
+                        {event.eventType.replace("_", " ")} · {event.agentId}
                       </p>
                     </div>
                     <span className="shrink-0 text-xs text-[var(--dashboard-text-muted)]">

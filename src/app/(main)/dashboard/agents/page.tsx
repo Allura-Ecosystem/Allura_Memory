@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { MetricSummaryCard, type MetricTone } from "../_components/metric-summary-card"
 import { loadGraphNodes } from "@/lib/dashboard/queries"
 import type { DashboardResult, GraphEdge, GraphNode } from "@/lib/dashboard/types"
 import { cn } from "@/lib/utils"
@@ -20,7 +21,7 @@ function confidencePercent(node: GraphNode) {
 interface AgentMetric {
   label: string
   value: string
-  tone: "blue" | "orange" | "green" | "charcoal"
+  tone: MetricTone
   icon: React.ComponentType<{ className?: string }>
 }
 
@@ -102,30 +103,6 @@ function AgentCard({
   )
 }
 
-function MetricCard({ label, value, tone, icon: Icon }: AgentMetric) {
-  const toneClass =
-    tone === "green"
-      ? "text-green-600"
-      : tone === "orange"
-        ? "text-orange-600"
-        : tone === "blue"
-          ? "text-[var(--allura-blue)]"
-          : "text-[var(--dashboard-text-primary)]"
-  return (
-    <Card className="border-[var(--dashboard-border)] bg-[var(--dashboard-surface)]">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-medium text-[var(--dashboard-text-muted)]">{label}</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex items-center gap-2">
-          <Icon className={cn("size-4", toneClass)} />
-          <span className={cn("text-2xl font-bold", toneClass)}>{value}</span>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function AgentsPage() {
   const [state, setState] = useState<DashboardResult<{ nodes: GraphNode[]; edges: GraphEdge[] }> | null>(null)
 
@@ -181,7 +158,7 @@ export default function AgentsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {metrics.map((m) => (
-          <MetricCard key={m.label} {...m} />
+          <MetricSummaryCard key={m.label} {...m} variant="metric" />
         ))}
       </div>
 

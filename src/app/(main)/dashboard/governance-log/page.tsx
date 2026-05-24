@@ -23,6 +23,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { MetricSummaryCard } from "../_components/metric-summary-card"
 import { DEFAULT_GROUP_ID } from "@/lib/defaults/scope"
 import { loadPolicyEnforcement } from "@/lib/dashboard/queries"
 import type { DashboardResult, PolicyEnforcementSummary, PolicyEnforcementEvent } from "@/lib/dashboard/types"
@@ -43,6 +44,7 @@ function statusMeta(status: string) {
       return { tone: "green" as const, icon: ShieldCheck, label: "Allowed" }
     case "blocked":
     case "fail":
+    case "failed":
     case "rejected":
       return { tone: "red" as const, icon: XCircle, label: "Blocked" }
     case "warning":
@@ -143,8 +145,8 @@ export default function GovernanceLogPage() {
 
     const stats = {
       total: allEvents.length,
-      allowed: allEvents.filter((e) => e.status === "allowed").length,
-      blocked: allEvents.filter((e) => e.status === "blocked").length,
+      allowed: allEvents.filter((e) => ["allowed", "pass", "approved"].includes(e.status)).length,
+      blocked: allEvents.filter((e) => ["blocked", "fail", "failed", "rejected"].includes(e.status)).length,
       checks: state.data.checkCount,
       violations: state.data.violationCount,
     }
@@ -191,35 +193,40 @@ export default function GovernanceLogPage() {
 
       {/* Stats cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard
+        <MetricSummaryCard
           label="Total Events"
           value={stats.total}
           icon={Shield}
           tone="charcoal"
+          variant="stat"
         />
-        <StatCard
+        <MetricSummaryCard
           label="Allowed"
           value={stats.allowed}
           icon={CheckCircle2}
           tone="green"
+          variant="stat"
         />
-        <StatCard
+        <MetricSummaryCard
           label="Blocked"
           value={stats.blocked}
           icon={XCircle}
           tone="red"
+          variant="stat"
         />
-        <StatCard
+        <MetricSummaryCard
           label="Checks"
           value={stats.checks}
           icon={ShieldCheck}
           tone="blue"
+          variant="stat"
         />
-        <StatCard
+        <MetricSummaryCard
           label="Violations"
           value={stats.violations}
           icon={ShieldAlert}
           tone="orange"
+          variant="stat"
         />
       </div>
 
@@ -404,52 +411,6 @@ export default function GovernanceLogPage() {
         </div>
       )}
     </div>
-  )
-}
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  tone,
-}: {
-  label: string
-  value: number
-  icon: React.ComponentType<{ className?: string }>
-  tone: "green" | "red" | "orange" | "blue" | "charcoal"
-}) {
-  const iconColor =
-    tone === "green"
-      ? "text-[var(--dashboard-cta-approval)]"
-      : tone === "red"
-        ? "text-red-600"
-        : tone === "orange"
-          ? "text-[var(--dashboard-cta-primary)]"
-          : tone === "blue"
-            ? "text-[var(--dashboard-accent-secondary)]"
-            : "text-[var(--dashboard-text-muted)]"
-
-  const borderColor =
-    tone === "green"
-      ? "border-l-[var(--dashboard-cta-approval)]"
-      : tone === "red"
-        ? "border-l-red-500"
-        : tone === "orange"
-          ? "border-l-[var(--dashboard-cta-primary)]"
-          : tone === "blue"
-            ? "border-l-[var(--dashboard-accent-secondary)]"
-            : "border-l-[var(--dashboard-text-muted)]"
-
-  return (
-    <Card className={cn("border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] border-l-4", borderColor)}>
-      <CardContent className="flex items-center gap-3 p-4">
-        <Icon className={cn("size-5", iconColor)} />
-        <div>
-          <p className="text-xs text-[var(--dashboard-text-muted)]">{label}</p>
-          <p className="text-xl font-bold text-[var(--dashboard-text-primary)]">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
   )
 }
 

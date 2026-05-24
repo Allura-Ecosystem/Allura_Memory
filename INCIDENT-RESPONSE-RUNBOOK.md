@@ -2,7 +2,7 @@
 
 **Version:** 1.0.0  
 **Date:** 2026-05-16  
-**Reference:** SECURITY-BLUEBOOK.md §8  
+**Reference:** docs/archive/allura/security/SECURITY-BLUEBOOK.md §8  
 **Classification:** CONFIDENTIAL
 
 ---

@@ -17,6 +17,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check docs/allura canonical surface
+        run: bash .github/scripts/docs-allura-canonical-guard.sh
+        shell: bash
+
+      - name: Check runtime adapter surfaces
+        run: bash .github/scripts/runtime-adapter-surface-guard.sh
+        shell: bash
+
       - name: Check for AI-Assisted disclosure blocks
         run: |
           echo "🔍 Validating AI-Assisted documentation..."

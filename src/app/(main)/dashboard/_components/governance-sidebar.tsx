@@ -3,53 +3,37 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import type { ComponentType } from "react"
-import { Activity, Blocks, ClipboardCheck, FileCheck2, HeartPulse, Home, ScrollText, ShieldCheck, Users } from "lucide-react"
+import { Bot, ClipboardCheck, FileSearch, Home, ListChecks, ScrollText, Search, Settings, Sparkles } from "lucide-react"
 
 import type { AuthUser } from "@/lib/auth/types"
+import { DASHBOARD_WORKFLOW_NAV_ITEMS } from "@/lib/dashboard/allura-route"
 import { cn } from "@/lib/utils"
 
-type SidebarLink = {
-  label: string
-  href: string
-  icon: ComponentType<{ className?: string }>
-  exact?: boolean
+const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  Dashboard: Home,
+  Memories: Search,
+  Insights: Sparkles,
+  "Trace logs": ScrollText,
+  Provenance: FileSearch,
+  Extracted: ListChecks,
+  Agents: Bot,
+  Approvals: ClipboardCheck,
+  Settings,
 }
 
-type SidebarSection = {
-  label: string
-  links: SidebarLink[]
+function routePath(href: string): string {
+  return href.split(/[?#]/)[0] ?? href
 }
 
-const SECTIONS: SidebarSection[] = [
-  {
-    label: "Dashboard",
-    links: [
-      { label: "Overview", href: "/dashboard", icon: Home, exact: true },
-      { label: "Queue", href: "/dashboard/insights", icon: ClipboardCheck },
-      { label: "Builder", href: "/dashboard/builder", icon: Blocks },
-      { label: "Audit Trail", href: "/dashboard/audit", icon: FileCheck2 },
-    ],
-  },
-  {
-    label: "Memory",
-    links: [{ label: "Memory Space", href: "/dashboard/memory-space", icon: Activity }],
-  },
-  {
-    label: "Governance",
-    links: [
-      { label: "Agents", href: "/dashboard/agents", icon: Users },
-      { label: "Rules / Policy", href: "/dashboard/policy", icon: ShieldCheck },
-      { label: "Governance Log", href: "/dashboard/governance-log", icon: ScrollText },
-      { label: "Health", href: "/dashboard/health", icon: HeartPulse },
-    ],
-  },
-]
-
-function isActive(pathname: string, item: SidebarLink): boolean {
-  if (item.exact) {
+function isActive(pathname: string, item: { href: string; label: string }): boolean {
+  if (item.label === "Dashboard") {
     return pathname === item.href
   }
-  return pathname === item.href || pathname.startsWith(`${item.href}/`)
+  if (["Provenance", "Extracted", "Approvals"].includes(item.label)) {
+    return false
+  }
+  const path = routePath(item.href)
+  return pathname === path || pathname.startsWith(`${path}/`)
 }
 
 function UserInitial({ user }: { user: AuthUser | null }) {
@@ -69,66 +53,47 @@ export function GovernanceSidebar({ user }: { user: AuthUser | null }) {
   const groupId = user?.groupId ?? "allura-system"
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-4 py-5 lg:flex lg:flex-col">
+    <aside className="sticky top-0 hidden h-screen w-20 shrink-0 border-r border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-2 py-4 lg:flex lg:flex-col">
       <Link
         href="/dashboard"
-        className="flex items-center gap-3 rounded-lg px-2 py-2 text-[var(--dashboard-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dashboard-cta-primary)]/30 focus-visible:outline-none"
+        aria-label="Dashboard"
+        className="flex justify-center rounded-lg px-2 py-2 text-[var(--dashboard-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dashboard-cta-primary)]/30 focus-visible:outline-none"
       >
         <span className="flex size-9 items-center justify-center rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-muted)] font-[family-name:var(--font-outfit)] text-sm font-semibold">
           AL
         </span>
-        <span className="text-sm font-semibold">Allura</span>
       </Link>
 
-      <nav className="mt-6 flex-1 space-y-6" aria-label="Dashboard navigation">
-        {SECTIONS.map((section) => (
-          <div key={section.label} className="space-y-2">
-            <p className="px-2 text-[10px] font-semibold tracking-wider text-[var(--dashboard-text-muted)] uppercase">
-              {section.label}
-            </p>
-            <ul className="space-y-1">
-              {section.links.map((item) => {
-                const active = isActive(pathname, item)
-                const Icon = item.icon
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      aria-current={active ? "page" : undefined}
-                      className={cn(
-                        "flex min-h-10 items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-[var(--dashboard-cta-primary)]/30 focus-visible:outline-none",
-                        active
-                          ? "bg-[var(--dashboard-surface-muted)] font-semibold text-[var(--dashboard-text-primary)]"
-                          : "text-[var(--dashboard-text-secondary)] hover:bg-[var(--dashboard-surface-muted)] hover:text-[var(--dashboard-text-primary)]"
-                      )}
-                    >
-                      <Icon className="size-4 shrink-0" aria-hidden="true" />
-                      <span>{item.label}</span>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        ))}
+      <nav className="mt-6 flex-1" aria-label="Thin workflow navigation">
+        <ul className="space-y-1">
+          {DASHBOARD_WORKFLOW_NAV_ITEMS.map((item) => {
+            const active = isActive(pathname, item)
+            const Icon = NAV_ICONS[item.label]
+            return (
+              <li key={item.id}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  aria-label={item.label}
+                  title={item.label}
+                  className={cn(
+                    "flex min-h-11 items-center justify-center rounded-xl text-sm transition-colors focus-visible:ring-2 focus-visible:ring-[var(--dashboard-cta-primary)]/30 focus-visible:outline-none",
+                    active
+                      ? "bg-[var(--dashboard-surface-muted)] font-semibold text-[var(--dashboard-text-primary)]"
+                      : "text-[var(--dashboard-text-secondary)] hover:bg-[var(--dashboard-surface-muted)] hover:text-[var(--dashboard-text-primary)]"
+                  )}
+                >
+                  <Icon className="size-4 shrink-0" aria-hidden="true" />
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
       </nav>
 
-      <div className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-muted)] p-3">
-        <div className="flex items-center gap-3">
-          <UserInitial user={user} />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-[var(--dashboard-text-primary)]">{displayName}</p>
-            <p className="truncate text-xs text-[var(--dashboard-text-muted)]">{email}</p>
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="rounded-full border border-[var(--dashboard-border)] px-2 py-0.5 text-[10px] font-medium text-[var(--dashboard-text-secondary)] uppercase">
-            {role}
-          </span>
-          <span className="rounded-full border border-[var(--dashboard-border)] px-2 py-0.5 text-[10px] font-medium text-[var(--dashboard-text-secondary)]">
-            {groupId}
-          </span>
-        </div>
+      <div className="flex flex-col items-center gap-2 rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-muted)] p-2" title={`${displayName} • ${role} • ${groupId} • ${email}`}>
+        <UserInitial user={user} />
+        <span className="sr-only">{displayName} {role} {groupId}</span>
       </div>
     </aside>
   )
@@ -149,18 +114,18 @@ export function DashboardMobileNav({ user }: { user: AuthUser | null }) {
           <span className="flex size-8 items-center justify-center rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-muted)] text-xs">
             AL
           </span>
-          Allura
+          Dashboard
         </Link>
         <span className="rounded-full border border-[var(--dashboard-border)] px-2 py-1 text-[10px] font-medium text-[var(--dashboard-text-secondary)] uppercase">
           {displayName} · {role}
         </span>
       </div>
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Dashboard navigation">
-        {SECTIONS.flatMap((section) => section.links).map((item) => {
+        {DASHBOARD_WORKFLOW_NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item)
           return (
             <Link
-              key={item.href}
+              key={item.id}
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(

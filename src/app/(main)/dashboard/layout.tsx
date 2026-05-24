@@ -1,18 +1,22 @@
 import type { ReactNode } from "react"
 
+import { getDevUserSync } from "@/lib/auth/dev-auth"
 import { NodeStoreProvider } from "@/stores/node/node-store-provider"
 import { SearchStoreProvider } from "@/stores/search/search-store-provider"
+import { DashboardMobileNav, GovernanceSidebar } from "./_components/governance-sidebar"
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
+  const user = getDevUserSync()
+
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--dashboard-bg)]">
-      {/* Minimal nav placeholder — will be replaced with thin workflow nav per spec v2 */}
-      <nav className="sticky top-0 z-20 flex h-14 items-center border-b border-[var(--dashboard-border)] bg-[var(--dashboard-surface)]/95 px-4 backdrop-blur">
-        <span className="text-sm font-semibold text-[var(--dashboard-text-primary)]">Allura</span>
-      </nav>
+    <div className="flex min-h-screen bg-[var(--dashboard-bg)]">
+      <GovernanceSidebar user={user} />
       <NodeStoreProvider>
         <SearchStoreProvider>
-          <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+          <div className="min-w-0 flex-1">
+            <DashboardMobileNav user={user} />
+            <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+          </div>
         </SearchStoreProvider>
       </NodeStoreProvider>
     </div>

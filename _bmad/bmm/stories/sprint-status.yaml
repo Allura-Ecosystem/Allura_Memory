@@ -1,0 +1,197 @@
+# generated: 2026-05-24
+# last_updated: 2026-05-24
+# project: Allura Memory
+# project_key: NOKEY
+# tracking_system: file-system
+# canonical_tracking_system: Notion Work Board
+# story_location: _bmad/bmm/stories
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review
+#   - done: Story completed after review and evidence
+#
+# Retrospective Status:
+#   - optional: Can be completed after the epic is done
+#   - done: Retrospective completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Notion Work Board remains canonical for human/team status.
+# - This local file supports BMAD reconciliation only.
+# - Allura Brain is audit/context, not proof of Done.
+# - Every Done transition requires implementation evidence, review evidence,
+#   validation evidence, board traceability, and Brain outcome logging.
+
+generated: 2026-05-24
+last_updated: 2026-05-24
+project: Allura Memory
+project_key: NOKEY
+tracking_system: file-system
+canonical_tracking_system: Notion Work Board
+story_location: _bmad/bmm/stories
+
+development_status:
+  epic-1: done
+  1-1-verify-group-scope-enforcement-baseline: done
+  1-2-harden-team-ram-source-of-truth-and-routing-contracts: done
+  1-3-create-bmad-sprint-status-and-story-lifecycle-gate: done
+  1-4-add-allura-drift-gate-to-story-readiness: done
+  1-5-define-review-and-validation-evidence-packets: done
+  epic-1-retrospective: done
+
+  epic-2: in-progress
+  2-1-build-thin-dashboard-shell-and-route-contract: done
+  2-2-add-honest-system-hygiene-and-approval-panels: done
+  2-3-implement-dashboard-empty-and-degraded-states: backlog
+  2-4-preserve-allura-separation-and-cutover-boundaries: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-provide-scoped-memory-search-and-listing: backlog
+  3-2-show-memory-detail-and-evidence-chain: backlog
+  3-3-preserve-provenance-on-copy-and-export: backlog
+  3-4-validate-provenance-drift-against-schema-baseline: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-render-curator-proposal-queue-safely: backlog
+  4-2-implement-hitl-approval-and-rejection-actions: backlog
+  4-3-add-request-evidence-request-changes-flow: backlog
+  4-4-show-curator-decision-receipts: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-verify-runtime-health-and-recovery-baseline: backlog
+  5-2-package-final-regression-and-sprint-evidence: backlog
+  5-3-document-3100-cutover-and-rollback-gate: backlog
+  5-4-complete-final-team-ram-retrospective-and-closeout-decision: backlog
+  epic-5-retrospective: optional
+
+status_evidence:
+  epic-1:
+    drift_gate: "Epic 1 active; Story 1.1-1.3 drift gates run locally. Remaining Story 1.4-1.5 drift gates pending before status changes."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  1-1-verify-group-scope-enforcement-baseline:
+    drift_gate: "Brain searched for Story 1.1 blockers decisions outcomes; no unresolved critical drift blocked local completion."
+    validation: "82 Bun-native tests passed; 3 Vitest scope tests passed; YAML parse and targeted git diff --check passed."
+    review: "Pike/Fowler read-only review blockers resolved; final re-review had no blocking findings."
+    brain_memory_id: "1ffc06a0-4196-4c90-9db1-9dc8a2bd4fd2"
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  1-2-harden-team-ram-source-of-truth-and-routing-contracts:
+    drift_gate: "Brain searched for Story 1.2 blockers decisions outcomes; Team RAM source-of-truth memories considered."
+    validation: "YAML parse, targeted git diff --check, docs/allura canonical guard, runtime adapter guard, and stale-reference grep passed."
+    review: "Pike approved; Fowler re-review reported no blocking findings."
+    brain_memory_id: "bf6d803d-96cc-42e4-a94c-fa8a2995a90a"
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  1-3-create-bmad-sprint-status-and-story-lifecycle-gate:
+    drift_gate: "Brain searched for Story 1.3 blockers decisions outcomes; Notion source-of-truth memory considered."
+    validation: "YAML parse and targeted git diff --check passed."
+    review: "Pike/Fowler review found initial Done evidence gaps; evidence map added before local Done is trusted."
+    brain_memory_id: "e6f51df5-9ad3-42be-827e-257e8087757d"
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  1-4-add-allura-drift-gate-to-story-readiness:
+    drift_gate: "Brain searched for Story 1.4 Allura Drift Gate story readiness blockers decisions outcomes; no critical drift found. Relevant context: Notion board remains canonical, Allura Brain is audit/context, group_id allura-system is mandatory, and no direct Neo4j promotion is allowed."
+    validation: "YAML parse and targeted git diff --check passed for sprint status, lifecycle gate, Story 1.4 artifact, and epics traceability."
+    review: "Pike reported no blocking findings. Fowler reported no blocking findings and one minor template mirroring issue; template now includes explicit board traceability."
+    brain_memory_id: "a435cc6a-f71d-465f-a2d9-966f5be7f967"
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  1-5-define-review-and-validation-evidence-packets:
+    drift_gate: "Brain searched for Story 1.5 review validation evidence packets blockers decisions outcomes; no critical drift found. Relevant context: Notion remains canonical, validation evidence proves Done, and external skill/tooling requires review discipline."
+    validation: "YAML parse and targeted git diff --check passed for sprint status, lifecycle gate, Story 1.5 artifact, evidence packet checklist, and epics traceability; both commands produced no output."
+    review: "Pike/Fowler initially found blockers around exact validation output, Brain outcome receipt, and circular review requirements; fixes resolved all blockers on re-review."
+    brain_memory_id: "a245b248-f82b-4af0-8e0a-f52b7f8e9258"
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  epic-1-retrospective:
+    drift_gate: "Brain searched for Epic 1 retrospective Team RAM Execution Semantic Integrity blockers decisions outcomes; no critical drift found. Retrospective completed locally before Epic 2."
+    validation: "YAML parse and targeted git diff --check passed for sprint status and retrospective artifact."
+    review: "Brooks retrospective synthesis; no code review required for retrospective-only artifact."
+    brain_memory_id: "c4d52220-3c3c-4794-ae7d-cceae85cb82b"
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  epic-2:
+    drift_gate: "Brain searched for Story 2.1 Build Thin Dashboard Shell Route Contract blockers decisions outcomes; no critical drift found. Relevant context: Notion board remains canonical, dashboard visual spec v2 is active, old 6420 evidence is historical only, and dashboard routes must declare source/degraded behavior."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  2-1-build-thin-dashboard-shell-and-route-contract:
+    drift_gate: "Brain searched for Story 2.1 Build Thin Dashboard Shell Route Contract blockers decisions outcomes; no newer design decision superseding Dashboard Visual Spec v2 was found."
+    validation: "RED confirmed missing dashboard shell exports and curator queue failure handling; GREEN passed: bun test api + dashboard-schemas + allura-route (35 pass, 0 fail, 116 expects), bun run typecheck, dashboard guard, YAML parse, and targeted git diff --check."
+    review: "Pike/Fowler review blockers resolved. Remaining nonblocking risk: no browser-level visual screenshot check was run in this runtime."
+    brain_memory_id: "6e33eea5-895c-4cf2-8c31-ab0517e27cb7"
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  2-2-add-honest-system-hygiene-and-approval-panels:
+    drift_gate: "Brain searched for Ultra work Story 2.2 honest system hygiene approval panels blockers decisions outcomes; no critical drift found. Relevant context: Notion board remains canonical, no autonomous promotion, append-only memory traces, and dashboard no-fabrication lessons apply."
+    validation: "RED: bun test api failed on missing honest-panels module. GREEN: bun test api + dashboard-schemas + allura-route (39 pass, 0 fail, 147 expects), bun run typecheck, dashboard guard, YAML parse, targeted git diff --check, and Vitest health scope (3 pass) passed. Bun-native health scope remains incompatible with vi.hoisted and failed with exact known TypeError."
+    review: "Pike/Fowler blockers resolved. Final Pike: no findings. Final Fowler: no blocking findings; low nonblocking note that pending curator queue path still fetches approved proposals too."
+    brain_memory_id: "108e2842-437a-4fa4-a9ae-e7bba23b0a6a"
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  2-3-implement-dashboard-empty-and-degraded-states:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  2-4-preserve-allura-separation-and-cutover-boundaries:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  epic-2-retrospective:
+    drift_gate: "Pending until all Epic 2 stories are done."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  epic-3:
+    drift_gate: "Pending; must run before Epic 3 starts."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  3-1-provide-scoped-memory-search-and-listing:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  3-2-show-memory-detail-and-evidence-chain:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  3-3-preserve-provenance-on-copy-and-export:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  3-4-validate-provenance-drift-against-schema-baseline:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  epic-3-retrospective:
+    drift_gate: "Pending until all Epic 3 stories are done."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  epic-4:
+    drift_gate: "Pending; must run before Epic 4 starts."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  4-1-render-curator-proposal-queue-safely:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  4-2-implement-hitl-approval-and-rejection-actions:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  4-3-add-request-evidence-request-changes-flow:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  4-4-show-curator-decision-receipts:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  epic-4-retrospective:
+    drift_gate: "Pending until all Epic 4 stories are done."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  epic-5:
+    drift_gate: "Pending; must run before Epic 5 starts."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  5-1-verify-runtime-health-and-recovery-baseline:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  5-2-package-final-regression-and-sprint-evidence:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  5-3-document-3100-cutover-and-rollback-gate:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  5-4-complete-final-team-ram-retrospective-and-closeout-decision:
+    drift_gate: "Pending; must run before this story moves out of backlog."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  epic-5-retrospective:
+    drift_gate: "Pending until all Epic 5 stories are done."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."

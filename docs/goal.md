@@ -263,13 +263,13 @@ The Mission Control development surface can safely replace the current Docker da
 - Route parity complete. Status: `PASS`; evidence in `artifacts/mission-control-route-parity-2026-05-17.md`; Notion `3631d9be-65b3-81c0-a052-dc5c4cb458ad`; Brain `6c947189-0ee4-4ff8-9b05-d6c52b5d6552`.
 - Visual parity complete. Status: `PENDING`; screenshot evidence still required.
 - Source-of-truth parity complete. Status: `PARTIAL`; board routes now show source badges/panels, full Mission Control route parity still required.
-- Adapter declarations complete. Status: `PENDING`; gate tracked in `docs/allura/DASHBOARD-CUTOVER-READINESS.md`.
+- Adapter declarations complete. Status: `PENDING`; gate tracked in `docs/allura/SOLUTION-ARCHITECTURE.md` and `docs/allura/RISKS-AND-DECISIONS.md`.
 - No fabricated live data. Status: `PENDING`; audit still required before `3100` cutover.
 - Authenticated validation complete. Status: `PENDING`; auth smoke still required.
 - Unauthenticated validation complete. Status: `PENDING`; public route smoke still required.
 - Smoke tests complete. Status: `PARTIAL`; board route smoke recorded, full cutover smoke still required.
 - Runtime health checks complete. Status: `PARTIAL`; liveness passed, readiness is unhealthy because MCP is false, bounded readiness times out, and container health output is still required. Evidence: `artifacts/runtime-health-partial-2026-05-17.md`; Notion `3631d9be-65b3-8133-b63d-d40473f4f32c`; Brain `d9bbabb7-676a-4eb7-959b-942d07103c5e`.
-- Rollback command documented. Status: `DOCUMENTED`; see `docs/allura/DASHBOARD-CUTOVER-READINESS.md`.
+- Rollback command documented. Status: `DOCUMENTED`; see `docs/allura/SOLUTION-ARCHITECTURE.md` and `docs/allura/RISKS-AND-DECISIONS.md`.
 - Captain approval recorded. Status: `PENDING`; required before replacing `3100`.
 
 ## Phase 5 Goal: Domain Boards

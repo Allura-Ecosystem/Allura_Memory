@@ -20,6 +20,7 @@
 | figma-generate-library | Woz | Library generation | ⬜ Overlay | none | **Keep** — Figma library |
 | figma-implement-design | Woz | Implementation | ⬜ Overlay | figma-code-connect | **Keep** — Figma implementation |
 | figma-use | Woz | Figma inspection | ⬜ Overlay | none | **Keep** — Figma inspection |
+| impeccable | Woz | Frontend polish/design | ⬜ Overlay | frontend-design, frontend-craft | **Keep** — production-grade frontend interface design |
 | frontend-craft | Woz | Frontend engineering | ⬜ Overlay | frontend-design, impeccable | **Keep** — Brooksian frontend workflow, implementation companion |
 | frontend-design | Woz | UI/UX design | ⬜ Overlay | brainstorming, huashu-design, impeccable | **Keep** — production-grade design for Next.js + Tailwind + ForceGraph2D |
 | github | Pike | GitHub integration | ⬜ Overlay | code-review, mcp-docker | **Keep** — GitHub workflows, PRs, issues, secrets scanning |
