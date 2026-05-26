@@ -19,14 +19,14 @@ export interface AlluraRouteSection {
 }
 
 export type DashboardWorkflowNavLabel =
-  | "Dashboard"
-  | "Memories"
+  | "Overview"
+  | "Memory Feed"
+  | "Graph"
   | "Insights"
-  | "Trace logs"
-  | "Provenance"
-  | "Extracted"
+  | "Evidence"
   | "Agents"
-  | "Approvals"
+  | "Projects"
+  | "Skills"
   | "Settings"
 
 export interface DashboardWorkflowNavItem {
@@ -47,15 +47,55 @@ export interface DashboardShellPanelContract {
   usesSampleData: false
 }
 
+export interface DashboardRouteCutoverBoundary {
+  dashboardRoute: "/dashboard"
+  alluraRoute: "/allura"
+  dashboardMayTargetAllura: false
+  protectedPort: "3100"
+  replacementStatus: "blocked"
+  unblockRequirement: string
+  requiredEvidence: string[]
+}
+
+export const DASHBOARD_ROUTE_CUTOVER_BOUNDARY: DashboardRouteCutoverBoundary = {
+  dashboardRoute: "/dashboard",
+  alluraRoute: "/allura",
+  dashboardMayTargetAllura: false,
+  protectedPort: "3100",
+  replacementStatus: "blocked",
+  unblockRequirement: "Epic 5 cutover evidence must pass before replacing 3100.",
+  requiredEvidence: [
+    "route parity",
+    "visual parity",
+    "adapter/source-of-truth declarations",
+    "auth validation",
+    "smoke tests",
+    "no-fabricated-data checks",
+    "rollback documentation",
+  ],
+}
+
+export function assertDashboardNavigationPreservesAlluraSeparation(items: DashboardWorkflowNavItem[]): void {
+  const conflictingItem = items.find((item) => {
+    const [withoutHash] = item.href.split("#")
+    const [pathname] = withoutHash.split("?")
+    return pathname === "/allura" || pathname.startsWith("/allura/")
+  })
+
+  if (conflictingItem) {
+    throw new Error(`/dashboard navigation cannot target /allura without an explicit /allura ownership story: ${conflictingItem.id}`)
+  }
+}
+
 export const DASHBOARD_WORKFLOW_NAV_ITEMS: DashboardWorkflowNavItem[] = [
-  { id: "dashboard", label: "Dashboard", href: "/dashboard", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
-  { id: "memories", label: "Memories", href: "/dashboard/memory-space", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+  { id: "dashboard", label: "Overview", href: "/dashboard", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+  { id: "feed", label: "Memory Feed", href: "/dashboard/feed", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+  { id: "graph", label: "Graph", href: "/dashboard/graph", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
   { id: "insights", label: "Insights", href: "/dashboard/insights", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
-  { id: "trace-logs", label: "Trace logs", href: "/dashboard/audit", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
-  { id: "provenance", label: "Provenance", href: "/dashboard/memory-space?view=provenance", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
-  { id: "extracted", label: "Extracted", href: "/dashboard/insights?tab=extracted", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+  { id: "evidence", label: "Evidence", href: "/dashboard/evidence", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
   { id: "agents", label: "Agents", href: "/dashboard/agents", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
-  { id: "approvals", label: "Approvals", href: "/dashboard/insights?tab=pending", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+  { id: "projects", label: "Projects", href: "/dashboard/projects", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+  { id: "skills", label: "Skills", href: "/dashboard/builder", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
   { id: "settings", label: "Settings", href: "/dashboard/settings", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
 ]
 

@@ -208,8 +208,14 @@ async function fetchWithHeaders<T>(
 
 export async function approveProposal(
   proposalId: string,
-  options?: { groupId?: string },
+  options?: { groupId?: string; rationale?: string },
 ): Promise<void> {
+  const rationale = options?.rationale?.trim()
+
+  if (!rationale) {
+    throw new DashboardApiError("Rationale is required for approval", 400, "/api/curator/approve")
+  }
+
   await readJson<unknown>("/api/curator/approve", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -217,6 +223,7 @@ export async function approveProposal(
       proposal_id: proposalId,
       group_id: resolveDashboardGroupId(options?.groupId),
       decision: "approve",
+      rationale,
     }),
   })
 }
@@ -229,15 +236,16 @@ export async function rejectProposal(
   const groupId = typeof rationaleOrOptions === "string" ? undefined : rationaleOrOptions?.groupId
 
   if (!rationale) {
-    throw new DashboardApiError("Rationale is required for rejection", 400, "/api/curator/reject")
+    throw new DashboardApiError("Rationale is required for rejection", 400, "/api/curator/approve")
   }
 
-  await readJson<unknown>("/api/curator/reject", {
+  await readJson<unknown>("/api/curator/approve", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       proposal_id: proposalId,
       group_id: resolveDashboardGroupId(groupId),
+      decision: "reject",
       rationale,
     }),
   })

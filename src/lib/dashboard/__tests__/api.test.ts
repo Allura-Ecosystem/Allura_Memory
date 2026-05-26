@@ -26,10 +26,10 @@ afterEach(() => {
 })
 
 describe("dashboard api", () => {
-  it("posts tenant provenance on approve without curator identity", async () => {
+  it("posts tenant provenance and human rationale on approve without curator identity", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }))
 
-    await approveProposal("proposal-1", { groupId: "allura-test" })
+    await approveProposal("proposal-1", { groupId: "allura-test", rationale: "Approved from dashboard" })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchMock.mock.calls[0]
@@ -38,10 +38,16 @@ describe("dashboard api", () => {
       proposal_id: "proposal-1",
       group_id: "allura-test",
       decision: "approve",
+      rationale: "Approved from dashboard",
     })
   })
 
-  it("posts tenant provenance on reject and requires rationale", async () => {
+  it("throws before fetch when approve rationale is missing", async () => {
+    await expect(approveProposal("proposal-1", { groupId: "allura-test" })).rejects.toThrow(/rationale/i)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("posts tenant provenance on reject through the governed decision door", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }))
 
     await rejectProposal("proposal-2", {
@@ -51,10 +57,11 @@ describe("dashboard api", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe("/api/curator/reject")
+    expect(url).toBe("/api/curator/approve")
     expect(JSON.parse((init as RequestInit).body as string)).toEqual({
       proposal_id: "proposal-2",
       group_id: "allura-test",
+      decision: "reject",
       rationale: "needs more evidence",
     })
   })

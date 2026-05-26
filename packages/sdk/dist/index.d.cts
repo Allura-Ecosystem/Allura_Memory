@@ -34,6 +34,8 @@ type MemoryProvenance = "conversation" | "manual";
 type MemoryStatus = "active" | "deprecated";
 /** Sort order for memory_list */
 type MemorySortOrder = "created_at_desc" | "created_at_asc" | "score_desc" | "score_asc";
+/** Backing stores that can be reported by canonical memory retrieval metadata. */
+type MemoryRetrievalStore = "postgres" | "neo4j" | "graph" | "ruvector";
 /** Validates group_id format: ^allura-[a-z0-9-]+$ */
 declare const GroupIdSchema: z.ZodString;
 /** Validates UUID v4 format */
@@ -97,8 +99,8 @@ interface MemoryGetParams {
 interface MemoryListParams {
     /** Required: Tenant namespace */
     group_id: GroupId;
-    /** Required: User identifier */
-    user_id: UserId;
+    /** Optional: User identifier. Omit only for tenant-scoped/admin listing. */
+    user_id?: UserId;
     /** Optional: Maximum results (default: 50) */
     limit?: number;
     /** Optional: Pagination offset */
@@ -119,10 +121,14 @@ interface MemoryDeleteParams {
 interface MemoryResponseMeta {
     contract_version: "v1";
     degraded: boolean;
-    degraded_reason?: "neo4j_unavailable";
-    stores_used: Array<"postgres" | "neo4j">;
-    stores_attempted: Array<"postgres" | "neo4j">;
+    degraded_reason?: "neo4j_unavailable" | "graph_unavailable";
+    stores_used: MemoryRetrievalStore[];
+    stores_attempted: MemoryRetrievalStore[];
     warnings?: string[];
+    /** RuVector trajectory ID for evidence-gated feedback, when RuVector was used. */
+    ruvector_trajectory_id?: string;
+    /** Number of results returned from RuVector, when available. */
+    ruvector_count?: number;
 }
 /** Response from memory_add */
 interface MemoryAddResponse {
@@ -161,10 +167,27 @@ interface MemoryGetResponse {
     source: StorageLocation;
     provenance: MemoryProvenance;
     user_id: UserId;
+    actor?: UserId | null;
+    creator?: UserId | null;
+    approver?: UserId | null;
+    /** Tenant namespace associated with the retrieved memory */
+    group_id?: GroupId;
     created_at: string;
+    status?: "approved" | "proposed" | "pending" | "deprecated" | "active" | "deleted";
+    source_event_id?: string | null;
+    proposal_id?: string | null;
+    trace_ref?: string | number | null;
+    evidence?: Array<{
+        id: string | null;
+        type: "event" | "proposal" | "trace" | "version";
+        label: string;
+        status: "available" | "unavailable";
+    }>;
     version?: number;
     superseded_by?: MemoryId;
     usage_count?: number;
+    hash?: string | null;
+    previous_hash?: string | null;
     meta?: MemoryResponseMeta;
 }
 /** Response from memory_list */
@@ -195,509 +218,12 @@ interface HealthResponse {
     warnings?: string[];
     timestamp: string;
 }
-declare const MemoryAddResponseSchema: z.ZodObject<{
-    id: z.ZodString;
-    stored: z.ZodEnum<["episodic", "semantic", "both"]>;
-    score: z.ZodNumber;
-    pending_review: z.ZodOptional<z.ZodBoolean>;
-    created_at: z.ZodString;
-    meta: z.ZodOptional<z.ZodObject<{
-        contract_version: z.ZodLiteral<"v1">;
-        degraded: z.ZodBoolean;
-        degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable"]>>;
-        stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-        warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
-    }, "strip", z.ZodTypeAny, {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    }, {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    }>>;
-    duplicate: z.ZodOptional<z.ZodBoolean>;
-    duplicate_of: z.ZodOptional<z.ZodString>;
-    similarity: z.ZodOptional<z.ZodNumber>;
-}, "strip", z.ZodTypeAny, {
-    id: string;
-    stored: "episodic" | "semantic" | "both";
-    score: number;
-    created_at: string;
-    pending_review?: boolean | undefined;
-    meta?: {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    } | undefined;
-    duplicate?: boolean | undefined;
-    duplicate_of?: string | undefined;
-    similarity?: number | undefined;
-}, {
-    id: string;
-    stored: "episodic" | "semantic" | "both";
-    score: number;
-    created_at: string;
-    pending_review?: boolean | undefined;
-    meta?: {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    } | undefined;
-    duplicate?: boolean | undefined;
-    duplicate_of?: string | undefined;
-    similarity?: number | undefined;
-}>;
-declare const MemorySearchResponseSchema: z.ZodObject<{
-    results: z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
-        content: z.ZodString;
-        score: z.ZodNumber;
-        source: z.ZodEnum<["episodic", "semantic", "both"]>;
-        provenance: z.ZodEnum<["conversation", "manual"]>;
-        created_at: z.ZodString;
-        usage_count: z.ZodOptional<z.ZodNumber>;
-    }, "strip", z.ZodTypeAny, {
-        source: "episodic" | "semantic" | "both";
-        id: string;
-        score: number;
-        created_at: string;
-        content: string;
-        provenance: "conversation" | "manual";
-        usage_count?: number | undefined;
-    }, {
-        source: "episodic" | "semantic" | "both";
-        id: string;
-        score: number;
-        created_at: string;
-        content: string;
-        provenance: "conversation" | "manual";
-        usage_count?: number | undefined;
-    }>, "many">;
-    count: z.ZodNumber;
-    latency_ms: z.ZodNumber;
-    meta: z.ZodOptional<z.ZodObject<{
-        contract_version: z.ZodLiteral<"v1">;
-        degraded: z.ZodBoolean;
-        degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable"]>>;
-        stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-        warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
-    }, "strip", z.ZodTypeAny, {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    }, {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    }>>;
-}, "strip", z.ZodTypeAny, {
-    results: {
-        source: "episodic" | "semantic" | "both";
-        id: string;
-        score: number;
-        created_at: string;
-        content: string;
-        provenance: "conversation" | "manual";
-        usage_count?: number | undefined;
-    }[];
-    count: number;
-    latency_ms: number;
-    meta?: {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    } | undefined;
-}, {
-    results: {
-        source: "episodic" | "semantic" | "both";
-        id: string;
-        score: number;
-        created_at: string;
-        content: string;
-        provenance: "conversation" | "manual";
-        usage_count?: number | undefined;
-    }[];
-    count: number;
-    latency_ms: number;
-    meta?: {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    } | undefined;
-}>;
-declare const MemoryGetResponseSchema: z.ZodObject<{
-    id: z.ZodString;
-    content: z.ZodString;
-    score: z.ZodNumber;
-    source: z.ZodEnum<["episodic", "semantic", "both"]>;
-    provenance: z.ZodEnum<["conversation", "manual"]>;
-    user_id: z.ZodString;
-    created_at: z.ZodString;
-    version: z.ZodOptional<z.ZodNumber>;
-    superseded_by: z.ZodOptional<z.ZodString>;
-    usage_count: z.ZodOptional<z.ZodNumber>;
-    meta: z.ZodOptional<z.ZodObject<{
-        contract_version: z.ZodLiteral<"v1">;
-        degraded: z.ZodBoolean;
-        degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable"]>>;
-        stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-        warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
-    }, "strip", z.ZodTypeAny, {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    }, {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    }>>;
-}, "strip", z.ZodTypeAny, {
-    source: "episodic" | "semantic" | "both";
-    id: string;
-    score: number;
-    created_at: string;
-    content: string;
-    provenance: "conversation" | "manual";
-    user_id: string;
-    meta?: {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    } | undefined;
-    usage_count?: number | undefined;
-    version?: number | undefined;
-    superseded_by?: string | undefined;
-}, {
-    source: "episodic" | "semantic" | "both";
-    id: string;
-    score: number;
-    created_at: string;
-    content: string;
-    provenance: "conversation" | "manual";
-    user_id: string;
-    meta?: {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    } | undefined;
-    usage_count?: number | undefined;
-    version?: number | undefined;
-    superseded_by?: string | undefined;
-}>;
-declare const MemoryListResponseSchema: z.ZodObject<{
-    memories: z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
-        content: z.ZodString;
-        score: z.ZodNumber;
-        source: z.ZodEnum<["episodic", "semantic", "both"]>;
-        provenance: z.ZodEnum<["conversation", "manual"]>;
-        user_id: z.ZodString;
-        created_at: z.ZodString;
-        version: z.ZodOptional<z.ZodNumber>;
-        superseded_by: z.ZodOptional<z.ZodString>;
-        usage_count: z.ZodOptional<z.ZodNumber>;
-        meta: z.ZodOptional<z.ZodObject<{
-            contract_version: z.ZodLiteral<"v1">;
-            degraded: z.ZodBoolean;
-            degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable"]>>;
-            stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-            stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-            warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
-        }, "strip", z.ZodTypeAny, {
-            contract_version: "v1";
-            degraded: boolean;
-            stores_used: ("postgres" | "neo4j")[];
-            stores_attempted: ("postgres" | "neo4j")[];
-            degraded_reason?: "neo4j_unavailable" | undefined;
-            warnings?: string[] | undefined;
-        }, {
-            contract_version: "v1";
-            degraded: boolean;
-            stores_used: ("postgres" | "neo4j")[];
-            stores_attempted: ("postgres" | "neo4j")[];
-            degraded_reason?: "neo4j_unavailable" | undefined;
-            warnings?: string[] | undefined;
-        }>>;
-    }, "strip", z.ZodTypeAny, {
-        source: "episodic" | "semantic" | "both";
-        id: string;
-        score: number;
-        created_at: string;
-        content: string;
-        provenance: "conversation" | "manual";
-        user_id: string;
-        meta?: {
-            contract_version: "v1";
-            degraded: boolean;
-            stores_used: ("postgres" | "neo4j")[];
-            stores_attempted: ("postgres" | "neo4j")[];
-            degraded_reason?: "neo4j_unavailable" | undefined;
-            warnings?: string[] | undefined;
-        } | undefined;
-        usage_count?: number | undefined;
-        version?: number | undefined;
-        superseded_by?: string | undefined;
-    }, {
-        source: "episodic" | "semantic" | "both";
-        id: string;
-        score: number;
-        created_at: string;
-        content: string;
-        provenance: "conversation" | "manual";
-        user_id: string;
-        meta?: {
-            contract_version: "v1";
-            degraded: boolean;
-            stores_used: ("postgres" | "neo4j")[];
-            stores_attempted: ("postgres" | "neo4j")[];
-            degraded_reason?: "neo4j_unavailable" | undefined;
-            warnings?: string[] | undefined;
-        } | undefined;
-        usage_count?: number | undefined;
-        version?: number | undefined;
-        superseded_by?: string | undefined;
-    }>, "many">;
-    total: z.ZodNumber;
-    has_more: z.ZodBoolean;
-    meta: z.ZodOptional<z.ZodObject<{
-        contract_version: z.ZodLiteral<"v1">;
-        degraded: z.ZodBoolean;
-        degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable"]>>;
-        stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-        warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
-    }, "strip", z.ZodTypeAny, {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    }, {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    }>>;
-}, "strip", z.ZodTypeAny, {
-    memories: {
-        source: "episodic" | "semantic" | "both";
-        id: string;
-        score: number;
-        created_at: string;
-        content: string;
-        provenance: "conversation" | "manual";
-        user_id: string;
-        meta?: {
-            contract_version: "v1";
-            degraded: boolean;
-            stores_used: ("postgres" | "neo4j")[];
-            stores_attempted: ("postgres" | "neo4j")[];
-            degraded_reason?: "neo4j_unavailable" | undefined;
-            warnings?: string[] | undefined;
-        } | undefined;
-        usage_count?: number | undefined;
-        version?: number | undefined;
-        superseded_by?: string | undefined;
-    }[];
-    total: number;
-    has_more: boolean;
-    meta?: {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    } | undefined;
-}, {
-    memories: {
-        source: "episodic" | "semantic" | "both";
-        id: string;
-        score: number;
-        created_at: string;
-        content: string;
-        provenance: "conversation" | "manual";
-        user_id: string;
-        meta?: {
-            contract_version: "v1";
-            degraded: boolean;
-            stores_used: ("postgres" | "neo4j")[];
-            stores_attempted: ("postgres" | "neo4j")[];
-            degraded_reason?: "neo4j_unavailable" | undefined;
-            warnings?: string[] | undefined;
-        } | undefined;
-        usage_count?: number | undefined;
-        version?: number | undefined;
-        superseded_by?: string | undefined;
-    }[];
-    total: number;
-    has_more: boolean;
-    meta?: {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    } | undefined;
-}>;
-declare const MemoryDeleteResponseSchema: z.ZodObject<{
-    id: z.ZodString;
-    deleted: z.ZodBoolean;
-    deleted_at: z.ZodString;
-    recovery_days: z.ZodNumber;
-    meta: z.ZodOptional<z.ZodObject<{
-        contract_version: z.ZodLiteral<"v1">;
-        degraded: z.ZodBoolean;
-        degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable"]>>;
-        stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j"]>, "many">;
-        warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
-    }, "strip", z.ZodTypeAny, {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    }, {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    }>>;
-}, "strip", z.ZodTypeAny, {
-    id: string;
-    deleted: boolean;
-    deleted_at: string;
-    recovery_days: number;
-    meta?: {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    } | undefined;
-}, {
-    id: string;
-    deleted: boolean;
-    deleted_at: string;
-    recovery_days: number;
-    meta?: {
-        contract_version: "v1";
-        degraded: boolean;
-        stores_used: ("postgres" | "neo4j")[];
-        stores_attempted: ("postgres" | "neo4j")[];
-        degraded_reason?: "neo4j_unavailable" | undefined;
-        warnings?: string[] | undefined;
-    } | undefined;
-}>;
-declare const HealthResponseSchema: z.ZodObject<{
-    status: z.ZodString;
-    mode: z.ZodString;
-    interface: z.ZodString;
-    transports: z.ZodArray<z.ZodString, "many">;
-    mcp_endpoint: z.ZodString;
-    port: z.ZodNumber;
-    port_source: z.ZodString;
-    auth_enabled: z.ZodBoolean;
-    warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
-    timestamp: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    status: string;
-    mode: string;
-    interface: string;
-    transports: string[];
-    mcp_endpoint: string;
-    port: number;
-    port_source: string;
-    auth_enabled: boolean;
-    timestamp: string;
-    warnings?: string[] | undefined;
-}, {
-    status: string;
-    mode: string;
-    interface: string;
-    transports: string[];
-    mcp_endpoint: string;
-    port: number;
-    port_source: string;
-    auth_enabled: boolean;
-    timestamp: string;
-    warnings?: string[] | undefined;
-}>;
-
-/**
- * @allura/sdk — Memory operations
- *
- * Implements the 5 canonical memory operations:
- * add, search, get, list, delete
- *
- * Each operation:
- * 1. Validates group_id (ARCH-001 tenant isolation)
- * 2. Validates request parameters with Zod
- * 3. Sends request via MCP Streamable HTTP (POST /mcp)
- * 4. Validates response with Zod
- * 5. Returns typed response
- */
-
-/**
- * Internal request function type — injected by AlluraClient.
- */
-type RequestFn = <T>(method: string, params: Record<string, unknown>, responseSchema: {
-    parse: (data: unknown) => T;
-}) => Promise<T>;
-/**
- * Memory operations class — provides the 5 canonical memory operations.
- *
- * This class is not instantiated directly. Use `client.memory` to access it.
- */
+declare const MemoryAddResponseSchema: z.ZodType<MemoryAddResponse>;
+declare const MemorySearchResponseSchema: z.ZodType<MemorySearchResponse>;
+declare const MemoryGetResponseSchema: z.ZodType<MemoryGetResponse>;
+declare const MemoryListResponseSchema: z.ZodType<MemoryListResponse>;
+declare const MemoryDeleteResponseSchema: z.ZodType<MemoryDeleteResponse>;
+declare const HealthResponseSchema: z.ZodType<HealthResponse>;
 declare class MemoryOperations {
     private readonly request;
     constructor(requestFn: RequestFn);
@@ -1016,4 +542,4 @@ declare function buildHeaders(authToken?: string, contentType?: string): Record<
  */
 declare function normalizeBaseUrl(url: string): string;
 
-export { AlluraClient, type AlluraClientConfig, AlluraError, AuthenticationError, type ConfidenceScore, ConfidenceScoreSchema, ConnectionError, DEFAULT_RETRIES, DEFAULT_TIMEOUT, type GroupId, GroupIdSchema, type HealthResponse, HealthResponseSchema, type MemoryAddParams, type MemoryAddResponse, MemoryAddResponseSchema, type MemoryContent, type MemoryDeleteParams, type MemoryDeleteResponse, MemoryDeleteResponseSchema, type MemoryGetParams, type MemoryGetResponse, MemoryGetResponseSchema, type MemoryId, MemoryIdSchema, type MemoryListParams, type MemoryListResponse, MemoryListResponseSchema, MemoryOperations, type MemoryProvenance, type MemoryResponseMeta, type MemorySearchParams, type MemorySearchResponse, MemorySearchResponseSchema, type MemorySearchResult, type MemorySortOrder, type MemoryStatus, NotFoundError, type PromotionMode, RateLimitError, type RequestFn, RetryExhaustedError, ServerError, type StorageLocation, type UserId, ValidationError, buildHeaders, calculateBackoff, createAuthHeader, createErrorFromResponse, isRetryable, normalizeBaseUrl, requireAuthToken, resolveAuthToken, validateGroupId, withRetry };
+export { AlluraClient, type AlluraClientConfig, AlluraError, AuthenticationError, type ConfidenceScore, ConfidenceScoreSchema, ConnectionError, DEFAULT_RETRIES, DEFAULT_TIMEOUT, type GroupId, GroupIdSchema, type HealthResponse, HealthResponseSchema, type MemoryAddParams, type MemoryAddResponse, MemoryAddResponseSchema, type MemoryContent, type MemoryDeleteParams, type MemoryDeleteResponse, MemoryDeleteResponseSchema, type MemoryGetParams, type MemoryGetResponse, MemoryGetResponseSchema, type MemoryId, MemoryIdSchema, type MemoryListParams, type MemoryListResponse, MemoryListResponseSchema, MemoryOperations, type MemoryProvenance, type MemoryResponseMeta, type MemoryRetrievalStore, type MemorySearchParams, type MemorySearchResponse, MemorySearchResponseSchema, type MemorySearchResult, type MemorySortOrder, type MemoryStatus, NotFoundError, type PromotionMode, RateLimitError, type RequestFn, RetryExhaustedError, ServerError, type StorageLocation, type UserId, ValidationError, buildHeaders, calculateBackoff, createAuthHeader, createErrorFromResponse, isRetryable, normalizeBaseUrl, requireAuthToken, resolveAuthToken, validateGroupId, withRetry };

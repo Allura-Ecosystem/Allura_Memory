@@ -1,0 +1,93 @@
+# BMAD Finish-All-Stories Ralph Prompt
+# Allura Memory — Team RAM + BMAD Bounded Execution
+# Created: 2026-05-24 by Brooks
+
+You are operating in a bounded Ralph Loop execution context for the Allura Memory repo.
+
+## Objective
+Run the BMAD Finish-All-Stories workflow using Team RAM operating roles until all Epic 5 stories, reviews, validation, Brain logs, sprint updates, and epic retrospective are complete OR a hard blocker is reached.
+
+## Authority and Roles
+- Brooks owns architecture, route control, conceptual integrity, and final story closure.
+- Jobs sharpens story intent, acceptance criteria, and scope cuts.
+- Scout hydrates context before every story and searches Allura Brain with group_id=allura-system.
+- Woz executes implementation through bmad-dev-story.
+- Pike reviews interface simplicity and blocks confusing or over-complex surfaces.
+- Fowler reviews maintainability, reversibility, debt, and test adequacy.
+- Knuth reviews schema, memory, SQL, Neo4j, provenance, group_id, and data correctness.
+- Hightower reviews deployability, Docker, CI, environment, observability, and secrets.
+- Bellard/Carmack join only for diagnostics, performance, runtime weirdness, or hard failures.
+- Ralph Loop is bounded execution/coordination only. It does not grant final governance approval.
+
+## Current Sprint State (from _bmad/bmm/stories/sprint-status.yaml)
+
+Epic 1: DONE (all stories done, retrospective done)
+Epic 2: DONE (all stories done, retrospective done)
+Epic 3: DONE (all stories done, retrospective done)
+Epic 4: DONE (all stories done, retrospective done)
+Epic 5: IN PROGRESS
+  - 5-1-verify-runtime-health-and-recovery-baseline: DONE
+  - 5-2-package-final-regression-and-sprint-evidence: BACKLOG
+  - 5-3-document-3100-cutover-and-rollback-gate: BACKLOG
+  - 5-4-complete-final-team-ram-retrospective-and-closeout-decision: BACKLOG
+  - epic-5-retrospective: OPTIONAL (pending all stories done)
+
+## Mandatory Workflow Per Story
+
+1. Confirm current lifecycle state: Backlog -> Ready -> In Progress -> Review -> Done.
+2. Run Scout/context hydration before starting.
+3. Search Allura Brain with: group_id=allura-system query="<story topic> blockers decisions outcomes"
+4. Run the Allura drift gate before moving the story to Ready or Done.
+5. If story is Ready, execute implementation through bmad-dev-story.
+6. For behavior changes, use TDD:
+   - RED: write/confirm failing test
+   - GREEN: minimal implementation
+   - REFACTOR: only after tests pass
+7. Keep implementation slices minimal, reversible, and tied to acceptance criteria.
+8. Validate with the lightest meaningful exact test commands.
+9. Record exact validation output.
+10. Run bmad-code-review after implementation.
+11. Resolve Pike/Fowler blockers before marking Done.
+12. Record: changed files, validation output, review results, residual risks.
+13. Log completed story outcome to Allura Brain.
+14. Update local BMAD sprint status after evidence is complete.
+15. Update Notion Work Board when tooling is available; Notion remains canonical.
+16. After every story in an epic is Done, run bmad-retrospective.
+
+## Definition of Done per story
+- All acceptance criteria are satisfied.
+- Tests and validation pass, or blockers are documented with exact output.
+- Code review has no blocking findings.
+- Evidence packet is complete.
+- Brain outcome memory exists.
+- Story status is Done.
+- Notion Work Board updated if tooling is available.
+
+## Epic Definition of Done
+- All stories are Done.
+- All reviews are closed.
+- Validation evidence exists.
+- Brain logs exist.
+- Sprint status is updated.
+- Epic retrospective is complete.
+
+## Stop Conditions
+- Stop if a hard blocker prevents progress.
+- Stop if required context, Brain, repo files, or validation tooling is unavailable.
+- Stop after two repeated failures on the same issue and report the root blocker.
+- Stop if a story lacks acceptance criteria or cannot be mapped to BMAD lifecycle state.
+- Do not guess, invent evidence, or mark Done without proof.
+
+## Next Story Priority
+Start with Story 5.2: package-final-regression-and-sprint-evidence. This story is currently in BACKLOG.
+Workflow per story: Scout hydration, Brain search, drift gate, story file, dev-story, validation, code review, brain logging, sprint status update.
+
+After Story 5.2 and 5.3 are Done, run Story 5.4 (final retrospective and closeout decision).
+Epic 5 retrospective completes after all stories are done.
+Emit <promise>DONE</promise> when ALL Epics 1-5 are complete including the final retrospective.
+
+## Steering Context
+- Prioritize the first ready-for-dev BMAD story and stop on hard blockers.
+- Focus on Epic 5 completion only — Epics 1-4 are already done.
+- Do not commit changes unless explicitly approved.
+- Use --no-commit mode for safety.

@@ -7,6 +7,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { readFileSync } from "node:fs"
 
 // ── Mock env vars ─────────────────────────────────────────────────────────
 
@@ -60,14 +61,6 @@ const MOCK_MEMORY_GET_RESPONSE = {
   created_at: "2025-01-15T10:30:00.000Z",
   version: 2,
   usage_count: 5,
-}
-
-const MOCK_MEMORY_UPDATE_RESPONSE = {
-  id: "new-version-id",
-  previous_id: "test-memory-id",
-  stored: "both" as const,
-  version: 3,
-  updated_at: "2025-01-16T12:00:00.000Z",
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────
@@ -141,33 +134,6 @@ describe("Memory Detail API interaction", () => {
     expect(data).toEqual(MOCK_MEMORY_GET_RESPONSE)
   })
 
-  it("should call PUT /api/memory/[id] for update with correct parameters", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => MOCK_MEMORY_UPDATE_RESPONSE,
-    })
-
-    const memoryId = "test-memory-id"
-    const groupId = "allura-test"
-    const userId = "test-user"
-    const newContent = "Updated content"
-
-    await mockFetch(
-      `/api/memory/${encodeURIComponent(memoryId)}?group_id=${encodeURIComponent(groupId)}&user_id=${encodeURIComponent(userId)}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newContent }),
-      }
-    )
-
-    expect(mockFetch).toHaveBeenCalledWith("/api/memory/test-memory-id?group_id=allura-test&user_id=test-user", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: "Updated content" }),
-    })
-  })
-
   it("should handle 404 response from GET", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
@@ -183,70 +149,54 @@ describe("Memory Detail API interaction", () => {
     expect((response as any).status).toBe(404)
   })
 
-  it("should call DELETE /api/memory/[id] with group_id and user_id", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: "test-memory-id",
-        deleted: true,
-        deleted_at: "2025-01-16T12:00:00.000Z",
-        recovery_days: 30,
-      }),
-    })
-
-    const memoryId = "test-memory-id"
-    const groupId = "allura-test"
-    const userId = "test-user"
-
-    await mockFetch(
-      `/api/memory/${encodeURIComponent(memoryId)}?group_id=${encodeURIComponent(groupId)}&user_id=${encodeURIComponent(userId)}`,
-      { method: "DELETE" }
-    )
-
-    expect(mockFetch).toHaveBeenCalledWith("/api/memory/test-memory-id?group_id=allura-test&user_id=test-user", {
-      method: "DELETE",
-    })
-  })
 })
 
-describe("Memory Detail edit flow logic", () => {
-  it("should detect content change enables save", () => {
-    const originalContent = "I prefer TypeScript over JavaScript"
-    const newContent = "I strongly prefer TypeScript over JavaScript"
-    const trimmed = newContent.trim()
+describe("Memory Detail read-only boundary", () => {
+  const source = readFileSync("src/app/memory/[id]/page.tsx", "utf8")
 
-    // Save should be enabled when:
-    // 1. Content is not empty
-    // 2. Content has changed from original
-    const canSave = trimmed.length > 0 && trimmed !== originalContent.trim()
-    expect(canSave).toBe(true)
+  it("does not keep edit, delete, or restore request methods in the read-only detail page", () => {
+    expect(source).not.toContain('method: "PUT"')
+    expect(source).not.toContain('method: "DELETE"')
+    expect(source).not.toContain('method: "POST"')
   })
 
-  it("should detect identical content disables save", () => {
-    const originalContent = "I prefer TypeScript over JavaScript"
-    const newContent = "I prefer TypeScript over JavaScript"
-    const trimmed = newContent.trim()
-
-    const canSave = trimmed.length > 0 && trimmed !== originalContent.trim()
-    expect(canSave).toBe(false)
+  it("uses provenance-preserving copy and export actions instead of raw ID-only copy", () => {
+    expect(source).toContain("buildProvenanceExportText")
+    expect(source).toContain("evidence: evidenceChain")
+    expect(source).toContain("Copy provenance")
+    expect(source).toContain("Export provenance")
+    expect(source).not.toContain("Copy memory ID")
   })
 
-  it("should detect empty content disables save", () => {
-    const originalContent = "I prefer TypeScript over JavaScript"
-    const newContent = "   "
-    const trimmed = newContent.trim()
-
-    const canSave = trimmed.length > 0 && trimmed !== originalContent.trim()
-    expect(canSave).toBe(false)
+  it("does not label user_id alone as an explicit actor field", () => {
+    expect(source).toContain(">Actor</dt>")
+    expect(source).toContain(">User</dt>")
+    expect(source).toContain('memory.actor || "Unavailable"')
+    expect(source).toContain('memory.user_id || "Unavailable"')
+    expect(source).not.toContain("User / actor")
+    expect(source).not.toContain("memory.actor ?? memory.user_id")
   })
 
-  it("should navigate to new version ID after successful update", () => {
-    const oldId: string = "test-memory-id"
-    const newId: string = "new-version-id"
+  it("shows creator and approver separately from actor", () => {
+    expect(source).toContain("Creator")
+    expect(source).toContain("Approver")
+    expect(source).toContain("User")
+    expect(source).toContain('memory.actor || "Unavailable"')
+  })
 
-    // The page navigates to the new ID when update returns a different ID
-    const shouldNavigate = newId !== oldId
-    expect(shouldNavigate).toBe(true)
-    // Would call: router.replace(`/memory/${newId}`)
+  it("renders explicit degraded copy and export failure messages", () => {
+    expect(source).toContain("Clipboard export failed. Provenance was not copied.")
+    expect(source).toContain("File export failed. Provenance was not downloaded.")
+    expect(source).toContain("exportError")
+  })
+
+  it("marks deleted-list fallback records as deleted and avoids inventing missing tenant scope", () => {
+    expect(source).toContain('status: deleted.status ?? "deleted"')
+    expect(source).toContain('memory.group_id ?? "Unavailable"')
+    expect(source).not.toContain("memory.group_id ?? groupId")
+  })
+
+  it("keys evidence rows by id as well as type and label", () => {
+    expect(source).toContain('`${item.type}:${item.label}:${item.id ?? "unavailable"}`')
   })
 })

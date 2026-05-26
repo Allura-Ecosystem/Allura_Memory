@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { approveProposal, rejectProposal } from "@/lib/dashboard/api"
+import { buildDashboardRouteState } from "@/lib/dashboard/empty-states"
 import { loadCuratorQueue } from "@/lib/dashboard/queries"
 import type { DashboardResult, Insight } from "@/lib/dashboard/types"
 
@@ -249,6 +250,8 @@ export default function BuilderPage() {
   const [queue, setQueue] = useState<DashboardResult<Insight[]> | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [_, startTransition] = useTransition()
+  const emptyState = buildDashboardRouteState("builder")
+  const errorState = buildDashboardRouteState("builder", { kind: "degraded", reason: queue?.error ?? queue?.warnings?.[0]?.message ?? undefined })
 
   const refresh = () => {
     setQueue(null)
@@ -260,7 +263,7 @@ export default function BuilderPage() {
   const approve = async (id: string) => {
     setBusyId(id)
     try {
-      await approveProposal(id)
+      await approveProposal(id, { rationale: "Approved from dashboard builder queue" })
       toast.success("Approved")
       startTransition(() => refresh())
     } catch (error) {
@@ -309,10 +312,14 @@ export default function BuilderPage() {
                 <Skeleton key={i} className="h-24 rounded-xl" />
               ))}
             </div>
-          ) : queue.error ? (
+          ) : queue.error || queue.degraded ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
-              <p className="text-sm text-red-600">{queue.error}</p>
-              <Button variant="outline" className="mt-4" onClick={refresh}>Retry</Button>
+              <p className="text-sm font-medium text-red-700">{errorState.title}</p>
+              <p className="mt-2 text-sm text-red-600">{errorState.description}</p>
+              <Button variant="outline" className="mt-4" onClick={refresh}>{errorState.retryLabel}</Button>
+              <Button asChild variant="outline" className="mt-4 ml-2">
+                <a href={errorState.actionHref}>{errorState.actionLabel}</a>
+              </Button>
             </div>
           ) : (
             <>
@@ -328,8 +335,11 @@ export default function BuilderPage() {
 
               {(queue.data ?? []).length === 0 ? (
                 <div className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-12 text-center">
-                  <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">No pending proposals</p>
-                  <p className="mt-2 text-xs text-[var(--dashboard-text-secondary)]">The curator queue is empty. Submit a new proposal to see it here.</p>
+                  <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">{emptyState.title}</p>
+                  <p className="mt-2 text-xs text-[var(--dashboard-text-secondary)]">{emptyState.description}</p>
+                  <Button variant="outline" size="sm" className="mt-4" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+                    {emptyState.actionLabel}
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-3">

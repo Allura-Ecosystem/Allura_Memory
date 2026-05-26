@@ -25,14 +25,14 @@ let validationPromise: Promise<StartupReport> | null = null;
 
 async function getPgClient(url: string) {
   const { Client } = await import('pg');
-  const client = new Client({ connectionString: url });
+  const client = new Client({ connectionString: url, connectionTimeoutMillis: 5000 });
   await client.connect();
   return client;
 }
 
 async function getNeo4jDriver(url: string) {
   const neo4j = await import('neo4j-driver');
-  const driver = neo4j.default.driver(url);
+  const driver = neo4j.default.driver(url, undefined, { connectionTimeout: 5000 });
   return driver;
 }
 

@@ -119,8 +119,33 @@ export async function loadMemories(query?: string, groupId?: string): Promise<Da
 
 export async function loadInsights(status = "pending", groupId?: string): Promise<DashboardResult<Insight[]>> {
   try {
-    if (status === "pending") {
-      const result = await getCuratorProposals({ status: "pending", limit: 50 }, groupId)
+    if (status === "all") {
+      const [pending, approved, rejected] = await Promise.allSettled([
+        getCuratorProposals({ status: "pending", limit: 50 }, groupId),
+        getInsights({ status: "active", limit: 50 }, groupId),
+        getCuratorProposals({ status: "rejected", limit: 50 }, groupId),
+      ])
+      const warnings: DashboardResult<Insight[]>["warnings"] = []
+      if (pending.status === "fulfilled") warnings.push(...warningFrom("curator-pending", pending.value.warning))
+      else warnings.push({ id: "curator-pending-error", source: "curator-pending", message: pending.reason instanceof Error ? pending.reason.message : "Request failed" })
+      if (approved.status === "fulfilled") warnings.push(...warningFrom("insights-active", approved.value.warning))
+      else warnings.push({ id: "insights-active-error", source: "insights-active", message: approved.reason instanceof Error ? approved.reason.message : "Request failed" })
+      if (rejected.status === "fulfilled") warnings.push(...warningFrom("curator-rejected", rejected.value.warning))
+      else warnings.push({ id: "curator-rejected-error", source: "curator-rejected", message: rejected.reason instanceof Error ? rejected.reason.message : "Request failed" })
+
+      return {
+        data: [
+          ...(pending.status === "fulfilled" ? mapProposalsResponse(pending.value.data) : []),
+          ...(approved.status === "fulfilled" ? mapInsightsResponse(approved.value.data) : []),
+          ...(rejected.status === "fulfilled" ? mapProposalsResponse(rejected.value.data) : []),
+        ],
+        error: null,
+        degraded: [pending, approved, rejected].some((result) => result.status === "rejected" || result.value.degraded),
+        warnings,
+      }
+    }
+    if (status === "pending" || status === "rejected") {
+      const result = await getCuratorProposals({ status, limit: 50 }, groupId)
       return { data: mapProposalsResponse(result.data), error: null, degraded: result.degraded, warnings: warningFrom("curator", result.warning) }
     }
     const result = await getInsights({ status, limit: 50 }, groupId)

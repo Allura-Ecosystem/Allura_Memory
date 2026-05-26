@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MetricSummaryCard, type MetricTone } from "../_components/metric-summary-card"
+import { buildDashboardRouteState } from "@/lib/dashboard/empty-states"
 import { loadGraphNodes } from "@/lib/dashboard/queries"
 import type { DashboardResult, GraphEdge, GraphNode } from "@/lib/dashboard/types"
 import { cn } from "@/lib/utils"
@@ -105,6 +106,8 @@ function AgentCard({
 
 export default function AgentsPage() {
   const [state, setState] = useState<DashboardResult<{ nodes: GraphNode[]; edges: GraphEdge[] }> | null>(null)
+  const emptyState = buildDashboardRouteState("agents")
+  const errorState = buildDashboardRouteState("agents", { kind: "degraded", reason: state?.error ?? state?.warnings?.[0]?.message ?? undefined })
 
   useEffect(() => {
     loadGraphNodes("agent").then(setState)
@@ -131,16 +134,20 @@ export default function AgentsPage() {
     )
   }
 
-  if (state.error) {
+  if (state.error || state.degraded) {
     return (
       <div className="space-y-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Agents</h1>
         </div>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-          <p className="text-sm text-red-600">{state.error}</p>
+          <p className="text-sm font-medium text-red-700">{errorState.title}</p>
+          <p className="mt-2 text-sm text-red-600">{errorState.description}</p>
           <Button variant="outline" className="mt-4" onClick={() => loadGraphNodes("agent").then(setState)}>
             Retry
+          </Button>
+          <Button asChild variant="outline" className="mt-4 ml-2">
+            <Link href={errorState.actionHref ?? "/dashboard/health"}>{errorState.actionLabel}</Link>
           </Button>
         </div>
       </div>
@@ -177,9 +184,9 @@ export default function AgentsPage() {
           <div className="mx-auto flex size-14 items-center justify-center rounded-xl bg-[var(--dashboard-surface-muted)] text-[var(--dashboard-text-muted)]">
             <Users className="size-7" aria-hidden="true" />
           </div>
-          <h3 className="mt-4 text-sm font-semibold text-[var(--dashboard-text-primary)]">No agents indexed yet</h3>
+          <h3 className="mt-4 text-sm font-semibold text-[var(--dashboard-text-primary)]">{emptyState.title}</h3>
           <p className="mt-2 max-w-md mx-auto text-xs text-[var(--dashboard-text-secondary)] leading-5">
-            Agents are discovered from the <strong className="text-[var(--dashboard-text-primary)]">Neo4j semantic graph</strong> when they create memories, perform actions, or are explicitly registered. If this workspace is new, the graph may still be empty.
+            {emptyState.description} Agents are discovered from the <strong className="text-[var(--dashboard-text-primary)]">Neo4j semantic graph</strong> when they create memories, perform actions, or are explicitly registered.
           </p>
 
           <div className="mt-5 grid gap-3 max-w-sm mx-auto text-left">
@@ -216,7 +223,7 @@ export default function AgentsPage() {
             <Button asChild size="sm" className="bg-[var(--dashboard-cta-primary)] text-white hover:bg-[var(--allura-orange-hover)]">
               <Link href="/dashboard/builder" className="inline-flex items-center gap-1.5">
                 <PlusCircle className="size-3.5" aria-hidden="true" />
-                Add first agent
+                {emptyState.actionLabel}
               </Link>
             </Button>
           </div>

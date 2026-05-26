@@ -37,6 +37,7 @@ export type {
   MemoryProvenance,
   MemoryStatus,
   MemorySortOrder,
+  MemoryRetrievalStore,
   // Config
   AlluraClientConfig,
   // Request params

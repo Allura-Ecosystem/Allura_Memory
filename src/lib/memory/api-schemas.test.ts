@@ -239,6 +239,23 @@ describe("MemorySearchOutputSchema", () => {
     })
     expect(result.success).toBe(false)
   })
+
+  it("accepts federated retrieval metadata that includes RuVector stores", () => {
+    const result = MemorySearchOutputSchema.safeParse({
+      results: [],
+      count: 0,
+      latency_ms: 5,
+      meta: {
+        contract_version: "v1",
+        degraded: false,
+        stores_used: ["graph", "ruvector"],
+        stores_attempted: ["postgres", "graph", "ruvector"],
+        warnings: [],
+      },
+    })
+
+    expect(result.success).toBe(true)
+  })
 })
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -249,6 +266,7 @@ describe("MemoryListInputSchema", () => {
   it("accepts valid input with required fields", () => {
     const result = MemoryListInputSchema.safeParse({
       group_id: "allura-system",
+      user_id: "bellard",
     })
     expect(result.success).toBe(true)
   })
@@ -267,6 +285,7 @@ describe("MemoryListInputSchema", () => {
   it("rejects invalid sort order", () => {
     const result = MemoryListInputSchema.safeParse({
       group_id: "allura-system",
+      user_id: "bellard",
       sort: "random",
     })
     expect(result.success).toBe(false)
@@ -275,9 +294,18 @@ describe("MemoryListInputSchema", () => {
   it("rejects negative offset", () => {
     const result = MemoryListInputSchema.safeParse({
       group_id: "allura-system",
+      user_id: "bellard",
       offset: -1,
     })
     expect(result.success).toBe(false)
+  })
+
+  it("accepts tenant-scoped listing without user_id for admin/all-users views", () => {
+    const result = MemoryListInputSchema.safeParse({
+      group_id: "allura-system",
+    })
+
+    expect(result.success).toBe(true)
   })
 })
 
@@ -291,6 +319,8 @@ describe("MemoryListOutputSchema", () => {
           score: 0.8,
           source: "semantic",
           provenance: "manual",
+          user_id: "bellard",
+          group_id: "allura-system",
           created_at: "2026-05-01T10:00:00Z",
         },
       ],
@@ -305,6 +335,42 @@ describe("MemoryListOutputSchema", () => {
       memories: [],
       total: 0,
     })
+    expect(result.success).toBe(false)
+  })
+
+  it("accepts graph-backed federated retrieval metadata", () => {
+    const result = MemoryListOutputSchema.safeParse({
+      memories: [],
+      total: 0,
+      has_more: false,
+      meta: {
+        contract_version: "v1",
+        degraded: false,
+        stores_used: ["postgres", "graph"],
+        stores_attempted: ["postgres", "graph", "ruvector"],
+        warnings: [],
+      },
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("rejects memory list items missing tenant or user provenance", () => {
+    const result = MemoryListOutputSchema.safeParse({
+      memories: [
+        {
+          id: "mem-1",
+          content: "Memory content",
+          score: 0.8,
+          source: "semantic",
+          provenance: "manual",
+          created_at: "2026-05-01T10:00:00Z",
+        },
+      ],
+      total: 1,
+      has_more: false,
+    })
+
     expect(result.success).toBe(false)
   })
 })
@@ -354,6 +420,8 @@ describe("MemoryGetOutputSchema", () => {
       score: 0.9,
       source: "semantic",
       provenance: "conversation",
+      user_id: "bellard",
+      group_id: "allura-system",
       created_at: "2026-05-01T10:00:00Z",
     })
     expect(result.success).toBe(true)
@@ -367,6 +435,7 @@ describe("MemoryGetOutputSchema", () => {
       source: "both",
       provenance: "manual",
       user_id: "bellard",
+      group_id: "allura-system",
       created_at: "2026-05-01T10:00:00Z",
       version: 3,
       superseded_by: "mem-2",
@@ -374,6 +443,62 @@ describe("MemoryGetOutputSchema", () => {
       recent_usage_count: 5,
     })
     expect(result.success).toBe(true)
+  })
+
+  it("preserves read-only provenance and evidence-chain fields for memory detail", () => {
+    const result = MemoryGetOutputSchema.safeParse({
+      id: "mem-1",
+      content: "Memory content",
+      score: 0.9,
+      source: "semantic",
+      provenance: "conversation",
+      user_id: "bellard",
+      group_id: "allura-system",
+      created_at: "2026-05-01T10:00:00Z",
+      status: "approved",
+      source_event_id: "event-1",
+      proposal_id: "proposal-1",
+      trace_ref: "trace-1",
+      actor: "woz-builder",
+      creator: "author-1",
+      approver: "curator-1",
+      hash: "hash-1",
+      previous_hash: "hash-0",
+      evidence: [
+        { id: "event-1", type: "event", label: "Source event", status: "available" },
+        { id: "proposal-1", type: "proposal", label: "Curator proposal", status: "available" },
+      ],
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.success && result.data).toMatchObject({
+      group_id: "allura-system",
+      status: "approved",
+      source_event_id: "event-1",
+      proposal_id: "proposal-1",
+      trace_ref: "trace-1",
+      actor: "woz-builder",
+      creator: "author-1",
+      approver: "curator-1",
+      hash: "hash-1",
+      previous_hash: "hash-0",
+      evidence: expect.arrayContaining([
+        expect.objectContaining({ id: "event-1", type: "event", status: "available" }),
+      ]),
+    })
+  })
+
+  it("rejects detail output missing tenant or user provenance", () => {
+    const result = MemoryGetOutputSchema.safeParse({
+      id: "mem-1",
+      content: "Memory content",
+      score: 0.9,
+      source: "semantic",
+      provenance: "conversation",
+      created_at: "2026-05-01T10:00:00Z",
+    })
+
+    expect(result.success).toBe(false)
   })
 })
 
@@ -679,6 +804,8 @@ describe("MemoryExportOutputSchema", () => {
           score: 0.9,
           source: "semantic",
           provenance: "conversation",
+          user_id: "bellard",
+          group_id: "allura-system",
           created_at: "2026-05-01T10:00:00Z",
         },
       ],
@@ -695,6 +822,27 @@ describe("MemoryExportOutputSchema", () => {
       memories: [],
       exported_at: "2026-05-01T10:00:00Z",
     })
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects exported memory items missing tenant or user provenance", () => {
+    const result = MemoryExportOutputSchema.safeParse({
+      memories: [
+        {
+          id: "mem-1",
+          content: "Content",
+          score: 0.9,
+          source: "semantic",
+          provenance: "conversation",
+          created_at: "2026-05-01T10:00:00Z",
+        },
+      ],
+      count: 1,
+      exported_at: "2026-05-01T10:00:00Z",
+      canonical_count: 1,
+      episodic_count: 0,
+    })
+
     expect(result.success).toBe(false)
   })
 })
@@ -795,6 +943,8 @@ describe("validateOutputArray", () => {
         score: 0.8,
         source: "semantic" as const,
         provenance: "conversation" as const,
+        user_id: "bellard",
+        group_id: "allura-system",
         created_at: "2026-05-01T10:00:00Z",
       },
       {
@@ -803,6 +953,8 @@ describe("validateOutputArray", () => {
         score: 0.8,
         source: "invalid" as any,
         provenance: "conversation" as const,
+        user_id: "bellard",
+        group_id: "allura-system",
         created_at: "2026-05-01T10:00:00Z",
       },
     ]
@@ -825,6 +977,8 @@ describe("validateOutputArray", () => {
         score: 0.8,
         source: "semantic" as const,
         provenance: "conversation" as const,
+        user_id: "bellard",
+        group_id: "allura-system",
         created_at: "2026-05-01T10:00:00Z",
       },
     ]

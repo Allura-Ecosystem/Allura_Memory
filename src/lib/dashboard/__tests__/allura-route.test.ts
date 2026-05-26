@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 
 import {
   ALLURA_ROUTE_SECTIONS,
+  assertDashboardNavigationPreservesAlluraSeparation,
   DASHBOARD_PANEL_CONTRACTS,
+  DASHBOARD_ROUTE_CUTOVER_BOUNDARY,
   DASHBOARD_WORKFLOW_NAV_ITEMS,
   getAlluraRoutePolicy,
 } from "@/lib/dashboard/allura-route"
@@ -40,14 +42,14 @@ describe("/allura route contract", () => {
 describe("/dashboard shell route contract", () => {
   it("declares the approved thin workflow navigation in visual-spec order", () => {
     expect(DASHBOARD_WORKFLOW_NAV_ITEMS.map((item) => item.label)).toEqual([
-      "Dashboard",
-      "Memories",
+      "Overview",
+      "Memory Feed",
+      "Graph",
       "Insights",
-      "Trace logs",
-      "Provenance",
-      "Extracted",
+      "Evidence",
       "Agents",
-      "Approvals",
+      "Projects",
+      "Skills",
       "Settings",
     ])
 
@@ -70,5 +72,44 @@ describe("/dashboard shell route contract", () => {
       expect(panel.degradedBehavior).toMatch(/unknown|empty|unavailable|failed|pending/i)
       expect(panel.usesSampleData).toBe(false)
     }
+  })
+
+  it("keeps /dashboard workflow navigation from taking ownership of /allura", () => {
+    expect(DASHBOARD_ROUTE_CUTOVER_BOUNDARY.dashboardRoute).toBe("/dashboard")
+    expect(DASHBOARD_ROUTE_CUTOVER_BOUNDARY.alluraRoute).toBe("/allura")
+    expect(DASHBOARD_ROUTE_CUTOVER_BOUNDARY.dashboardMayTargetAllura).toBe(false)
+
+    expect(() => assertDashboardNavigationPreservesAlluraSeparation(DASHBOARD_WORKFLOW_NAV_ITEMS)).not.toThrow()
+    expect(() =>
+      assertDashboardNavigationPreservesAlluraSeparation([
+        ...DASHBOARD_WORKFLOW_NAV_ITEMS,
+        { id: "bad-allura", label: "Evidence", href: "/allura", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+      ])
+    ).toThrow("/dashboard navigation cannot target /allura")
+    expect(() =>
+      assertDashboardNavigationPreservesAlluraSeparation([
+        { id: "bad-allura-subpath", label: "Evidence", href: "/allura/mission", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+      ])
+    ).toThrow("/dashboard navigation cannot target /allura")
+    expect(() =>
+      assertDashboardNavigationPreservesAlluraSeparation([
+        { id: "bad-allura-fragment", label: "Evidence", href: "/allura#top", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+      ])
+    ).toThrow("/dashboard navigation cannot target /allura")
+  })
+
+  it("keeps the 3100 replacement blocked until Epic 5 cutover evidence exists", () => {
+    expect(DASHBOARD_ROUTE_CUTOVER_BOUNDARY.protectedPort).toBe("3100")
+    expect(DASHBOARD_ROUTE_CUTOVER_BOUNDARY.replacementStatus).toBe("blocked")
+    expect(DASHBOARD_ROUTE_CUTOVER_BOUNDARY.unblockRequirement).toContain("Epic 5")
+    expect(DASHBOARD_ROUTE_CUTOVER_BOUNDARY.requiredEvidence).toEqual([
+      "route parity",
+      "visual parity",
+      "adapter/source-of-truth declarations",
+      "auth validation",
+      "smoke tests",
+      "no-fabricated-data checks",
+      "rollback documentation",
+    ])
   })
 })

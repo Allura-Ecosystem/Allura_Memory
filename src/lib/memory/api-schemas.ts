@@ -70,7 +70,7 @@ const ResponseMetaSchema = z.object({
   degraded: z.boolean(),
   degraded_reason: z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
   stores_used: z.array(z.enum(["postgres", "neo4j", "ruvector", "graph"])),
-  stores_attempted: z.array(z.enum(["postgres", "neo4j", "graph"])).optional(),
+  stores_attempted: z.array(z.enum(["postgres", "neo4j", "ruvector", "graph"])).optional(),
   warnings: z.array(z.string()).optional(),
   ruvector_trajectory_id: z.string().optional(),
   ruvector_count: z.number().int().min(0).optional(),
@@ -85,6 +85,13 @@ const MemoryMetadataSchema = z.object({
   agent_id: z.string().optional(),
 }).passthrough() // allow extra keys
 
+const EvidenceChainItemSchema = z.object({
+  id: z.string().nullable(),
+  type: z.enum(["event", "proposal", "trace", "version"]),
+  label: z.string(),
+  status: z.enum(["available", "unavailable"]),
+})
+
 // ─── Common Memory Result Shape ───────────────────────────────────────────
 
 /**
@@ -96,12 +103,23 @@ const MemoryItemSchema = z.object({
   score: ConfidenceScoreSchema,
   source: StorageLocationSchema,
   provenance: ProvenanceSchema,
-  user_id: z.string().optional(),
+  user_id: UserIdSchema,
+  actor: z.string().nullable().optional(),
+  creator: z.string().nullable().optional(),
+  approver: z.string().nullable().optional(),
+  group_id: GroupIdSchema,
   created_at: z.string(),
+  status: z.enum(["approved", "proposed", "pending", "deprecated", "active", "deleted"]).optional(),
+  source_event_id: z.string().nullable().optional(),
+  proposal_id: z.string().nullable().optional(),
+  trace_ref: z.union([z.string(), z.number()]).nullable().optional(),
+  evidence: z.array(EvidenceChainItemSchema).optional(),
   version: z.number().int().min(1).optional(),
   superseded_by: z.string().optional(),
   usage_count: z.number().int().min(0).optional(),
   recent_usage_count: z.number().int().min(0).nullable().optional(),
+  hash: z.string().nullable().optional(),
+  previous_hash: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
   schema_version: z.number().int().optional(),
   meta: ResponseMetaSchema.optional(),

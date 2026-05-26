@@ -45,7 +45,13 @@ const MOCK_GET_RESPONSE = {
   source: "semantic" as const,
   provenance: "conversation" as const,
   user_id: "user-123",
+  actor: null,
+  creator: "author-123",
+  approver: "curator-123",
+  group_id: "allura-test",
   created_at: "2026-04-12T10:00:00Z",
+  hash: "hash-1",
+  previous_hash: "hash-0",
 };
 
 const MOCK_LIST_RESPONSE = {
@@ -256,6 +262,11 @@ describe("MemoryOperations", () => {
 
       expect(result.id).toBe("550e8400-e29b-41d4-a716-446655440000");
       expect(result.content).toBe("Test memory content");
+      expect(result.actor).toBeNull();
+      expect(result.creator).toBe("author-123");
+      expect(result.approver).toBe("curator-123");
+      expect(result.hash).toBe("hash-1");
+      expect(result.previous_hash).toBe("hash-0");
     });
 
     it("should validate group_id format", async () => {

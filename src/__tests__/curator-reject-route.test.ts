@@ -2,7 +2,6 @@
  * @vitest-environment node
  */
 import { NextRequest } from "next/server"
-import { createHash } from "crypto"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const queryMock = vi.fn()
@@ -41,11 +40,11 @@ describe("curator reject route", () => {
     const response = await POST(request)
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: "rationale is required" })
+    expect(await response.json()).toEqual({ error: "rationale is required for curator decisions" })
     expect(queryMock).not.toHaveBeenCalled()
   })
 
-  it("uses the authenticated curator id even if the body is spoofed", async () => {
+  it("delegates legacy rejection to the governed decision door", async () => {
     queryMock.mockImplementation(async (sql: string) => {
       if (sql.includes("FROM canonical_proposals")) {
         return {
@@ -82,21 +81,32 @@ describe("curator reject route", () => {
     expect(response.status).toBe(200)
     const body = await response.json()
     const decidedAt = body.decided_at as string
-    const expectedHash = createHash("shake256", { outputLength: 64 })
-      .update(`proposal-1|allura-test|Reject me|0.77|emerging|reject|${decidedAt}|curator-1`)
-      .digest("hex")
+
+    expect(body.receipt).toMatchObject({
+      proposal_id: "proposal-1",
+      group_id: "allura-test",
+      decision: "rejected",
+      resulting_status: "rejected",
+      actor: "curator-1",
+      rationale: "not enough evidence",
+      notion_sync: "pending",
+    })
 
     const updateCall = queryMock.mock.calls.find(([sql]) => String(sql).includes("UPDATE canonical_proposals"))
-    expect(updateCall?.[1]).toEqual([decidedAt, "curator-1", "not enough evidence", expectedHash, "proposal-1"])
+    expect(String(updateCall?.[0])).toContain("group_id = $7")
+    expect(String(updateCall?.[0])).toContain("status = 'pending'")
+    expect(updateCall?.[1]).toEqual(["rejected", decidedAt, "curator-1", "not enough evidence", expect.any(String), "proposal-1", "allura-test"])
 
-    const eventCall = queryMock.mock.calls.find(([, params]) => Array.isArray(params) && params[1] === "proposal_rejected")
-    expect(eventCall?.[1]).toEqual([
-      "allura-test",
-      "proposal_rejected",
-      "curator-1",
-      "completed",
-      JSON.stringify({ proposal_id: "proposal-1", score: "0.77", tier: "emerging", rationale: "not enough evidence" }),
-      decidedAt,
-    ])
+    const eventCall = queryMock.mock.calls.find(
+      ([sql, params]) => String(sql).includes("INSERT INTO events") && Array.isArray(params) && params[1] === "proposal_rejected",
+    )
+    const metadata = JSON.parse(String((eventCall?.[1] as unknown[])[4]))
+    expect(metadata).toMatchObject({
+      proposal_id: "proposal-1",
+      decision: "rejected",
+      resulting_status: "rejected",
+      curator_id: "curator-1",
+      rationale: "not enough evidence",
+    })
   })
 })

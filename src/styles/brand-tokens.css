@@ -42,7 +42,7 @@
 
 /* ── Dashboard semantic aliases (light mode) ── */
 :root {
-  --dashboard-bg: var(--allura-cream);
+  --dashboard-bg: #F0EAD6;
   --dashboard-surface: var(--allura-white);
   --dashboard-surface-alt: var(--allura-cream);
   --dashboard-surface-muted: var(--allura-gray-100);
@@ -57,7 +57,7 @@
   --dashboard-info: var(--allura-blue);
   --dashboard-warning: var(--allura-orange);
   --dashboard-danger: #dc2626;
-  --dashboard-cta-primary: var(--allura-orange);
+  --dashboard-cta-primary: #3B5BDB;
   --dashboard-cta-approval: var(--allura-green);
   --dashboard-evidence: var(--allura-cream);
 }

@@ -38,6 +38,9 @@ import { checkLiveness, checkReadiness, markMcpInitialized } from "@/lib/health/
 import { isDriverHealthy } from "@/lib/neo4j/connection";
 import { isPoolHealthy } from "@/lib/postgres/connection";
 
+const isPoolHealthyMock = isPoolHealthy as unknown as ReturnType<typeof vi.fn>;
+const isDriverHealthyMock = isDriverHealthy as unknown as ReturnType<typeof vi.fn>;
+
 // ── Readiness Probe Tests ─────────────────────────────────────────────────────
 
 describe("Readiness Probe", () => {
@@ -46,8 +49,8 @@ describe("Readiness Probe", () => {
   });
 
   it("should return ready when all required dependencies are healthy", async () => {
-    vi.mocked(isPoolHealthy).mockResolvedValue(true);
-    vi.mocked(isDriverHealthy).mockResolvedValue(true);
+    isPoolHealthyMock.mockResolvedValue(true);
+    isDriverHealthyMock.mockResolvedValue(true);
     markMcpInitialized();
 
     const result = await checkReadiness();
@@ -60,8 +63,8 @@ describe("Readiness Probe", () => {
   });
 
   it("should return not ready when PostgreSQL is unhealthy", async () => {
-    vi.mocked(isPoolHealthy).mockResolvedValue(false);
-    vi.mocked(isDriverHealthy).mockResolvedValue(true);
+    isPoolHealthyMock.mockResolvedValue(false);
+    isDriverHealthyMock.mockResolvedValue(true);
     markMcpInitialized();
 
     const result = await checkReadiness();
@@ -73,8 +76,8 @@ describe("Readiness Probe", () => {
   });
 
   it("should return ready when Neo4j is unhealthy (optional dep)", async () => {
-    vi.mocked(isPoolHealthy).mockResolvedValue(true);
-    vi.mocked(isDriverHealthy).mockResolvedValue(false);
+    isPoolHealthyMock.mockResolvedValue(true);
+    isDriverHealthyMock.mockResolvedValue(false);
     markMcpInitialized();
 
     const result = await checkReadiness();
@@ -87,8 +90,8 @@ describe("Readiness Probe", () => {
   });
 
   it("should return not ready when MCP is not initialized", async () => {
-    vi.mocked(isPoolHealthy).mockResolvedValue(true);
-    vi.mocked(isDriverHealthy).mockResolvedValue(true);
+    isPoolHealthyMock.mockResolvedValue(true);
+    isDriverHealthyMock.mockResolvedValue(true);
     // Don't call markMcpInitialized — MCP should be uninitialized
 
     // Reset the MCP initialized state for this test
@@ -98,8 +101,8 @@ describe("Readiness Probe", () => {
   });
 
   it("should include latency information in dependency checks", async () => {
-    vi.mocked(isPoolHealthy).mockResolvedValue(true);
-    vi.mocked(isDriverHealthy).mockResolvedValue(true);
+    isPoolHealthyMock.mockResolvedValue(true);
+    isDriverHealthyMock.mockResolvedValue(true);
     markMcpInitialized();
 
     const result = await checkReadiness();
@@ -109,8 +112,8 @@ describe("Readiness Probe", () => {
   });
 
   it("should include error message when dependency check fails", async () => {
-    vi.mocked(isPoolHealthy).mockRejectedValue(new Error("Connection refused"));
-    vi.mocked(isDriverHealthy).mockResolvedValue(true);
+    isPoolHealthyMock.mockRejectedValue(new Error("Connection refused"));
+    isDriverHealthyMock.mockResolvedValue(true);
     markMcpInitialized();
 
     const result = await checkReadiness();
@@ -121,10 +124,10 @@ describe("Readiness Probe", () => {
   });
 
   it("should timeout dependency checks that take too long", async () => {
-    vi.mocked(isPoolHealthy).mockImplementation(
+    isPoolHealthyMock.mockImplementation(
       () => new Promise((resolve) => setTimeout(() => resolve(true), 10000)),
     );
-    vi.mocked(isDriverHealthy).mockResolvedValue(true);
+    isDriverHealthyMock.mockResolvedValue(true);
     markMcpInitialized();
 
     const result = await checkReadiness();

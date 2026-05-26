@@ -171,6 +171,7 @@ class AgentMemory implements AgentMemoryAPI {
 
     const response = await canonicalMemoryTools.memory_search({
       group_id: asGroupId(params.group_id),
+      user_id: params.user_id,
       query: params.query,
       limit: params.limit,
       include_global: params.include_global,

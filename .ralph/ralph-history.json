@@ -1,8 +1,45 @@
 {
-  "iterations": [],
-  "totalDurationMs": 0,
+  "iterations": [
+    {
+      "iteration": 1,
+      "startedAt": "2026-05-24T11:49:22.674Z",
+      "endedAt": "2026-05-24T12:01:12.088Z",
+      "durationMs": 622534,
+      "agent": "opencode",
+      "model": "",
+      "toolsUsed": {},
+      "filesModified": [
+        "_bmad/bmm/stories/sprint-status.yaml",
+        "_bmad/bmm/stories/5-2-package-final-regression-and-sprint-evidence.md",
+        "_bmad/bmm/stories/final-regression-evidence-2026-05-24.md",
+        ".opencode/skills/aionui-skills",
+        ".opencode/skills/cron",
+        ".opencode/skills/office-cli"
+      ],
+      "exitCode": 0,
+      "completionDetected": false,
+      "errors": [
+        "[CircuitBreaker] Failed to log trip event: ValidationError: Event validation failed: Invalid group_id: must match pattern allura-* (e.g., allura-myproject). Got: 'test-group'",
+        "[CircuitBreaker] Failed to log state change event: ValidationError: Event validation failed: Invalid group_id: must match pattern allura-* (e.g., allura-myproject). Got: 'test-group'",
+        "[CircuitBreaker] Failed to log reset event: ValidationError: Event validation failed: Invalid group_id: must match pattern allura-* (e.g., allura-myproject). Got: 'test-group'",
+        "[CircuitBreaker] Failed to log event to PostgreSQL: ValidationError: Event validation failed: Invalid group_id: must match pattern allura-* (e.g., allura-myproject). Got: 'group-1'",
+        "[CircuitBreaker] Failed to log event to PostgreSQL: ValidationError: Event validation failed: Invalid group_id: must match pattern allura-* (e.g., allura-myproject). Got: 'group-2'",
+        "[CircuitBreaker] Failed to log trip event: ValidationError: Event validation failed: Invalid group_id: must match pattern allura-* (e.g., allura-myproject). Got: 'group-1'",
+        "[CircuitBreaker] Failed to log state change event: ValidationError: Event validation failed: Invalid group_id: must match pattern allura-* (e.g., allura-myproject). Got: 'group-1'",
+        "[CircuitBreaker] Failed to log trip event: ValidationError: Event validation failed: Invalid group_id: must match pattern allura-* (e.g., allura-myproject). Got: 'group-2'",
+        "[CircuitBreaker] Failed to log state change event: ValidationError: Event validation failed: Invalid group_id: must match pattern allura-* (e.g., allura-myproject). Got: 'group-2'",
+        "[CircuitBreaker] Failed to log reset event: ValidationError: Event validation failed: Invalid group_id: must match pattern allura-* (e.g., allura-myproject). Got: 'group-1'"
+      ]
+    }
+  ],
+  "totalDurationMs": 622534,
   "struggleIndicators": {
-    "repeatedErrors": {},
+    "repeatedErrors": {
+      "[CircuitBreaker] Failed to log trip event: ValidationError: Event validation failed: Invalid group_i": 3,
+      "[CircuitBreaker] Failed to log state change event: ValidationError: Event validation failed: Invalid": 3,
+      "[CircuitBreaker] Failed to log reset event: ValidationError: Event validation failed: Invalid group_": 2,
+      "[CircuitBreaker] Failed to log event to PostgreSQL: ValidationError: Event validation failed: Invali": 2
+    },
     "noProgressIterations": 0,
     "shortIterations": 0
   }

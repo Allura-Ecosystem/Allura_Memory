@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
 const repoRoot = process.cwd()
-const review = readFileSync(join(repoRoot, "docs/allura/INSTALL-DEPLOY-REVIEW.md"), "utf8")
+const review = readFileSync(join(repoRoot, "docs/archive/allura/INSTALL-DEPLOY-REVIEW.md"), "utf8")
 const readme = readFileSync(join(repoRoot, "README.md"), "utf8")
 const compose = readFileSync(join(repoRoot, "docker-compose.yml"), "utf8")
 const envValidator = readFileSync(join(repoRoot, "scripts/validate-env.sh"), "utf8")

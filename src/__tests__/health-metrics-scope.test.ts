@@ -5,11 +5,9 @@ import { NextRequest } from "next/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const { queryMock, getPoolMock } = vi.hoisted(() => {
-  const query = vi.fn()
-  return {
-    queryMock: query,
-    getPoolMock: vi.fn(() => ({ query })),
-  }
+  const queryMock = vi.fn()
+  const getPoolMock = vi.fn(() => ({ query: queryMock }))
+  return { queryMock, getPoolMock }
 })
 
 vi.mock("@/lib/postgres/connection", () => ({

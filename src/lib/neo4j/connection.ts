@@ -1,8 +1,9 @@
-import neo4j, { Driver, ManagedTransaction, Session } from "neo4j-driver";
+import * as neo4j from "neo4j-driver";
+import type { Driver, ManagedTransaction, Session } from "neo4j-driver";
 import { env } from "process";
 import { Neo4jConnectionError, Neo4jQueryError } from "../errors/neo4j-errors";
 
-export { ManagedTransaction };
+export type { ManagedTransaction };
 
 // Server-only guard: throw if imported in browser environment
 if (typeof window !== "undefined") {
@@ -41,6 +42,30 @@ const DEFAULT_POOL_CONFIG: PoolConfig = {
 // Singleton driver instance
 let driverInstance: Driver | null = null;
 
+type Neo4jDriverModule = typeof neo4j & {
+  default?: Pick<typeof neo4j, "driver" | "auth">;
+};
+
+function safeModuleProperty<K extends "driver" | "auth">(
+  module: Neo4jDriverModule,
+  key: K
+): Pick<typeof neo4j, "driver" | "auth">[K] | undefined {
+  try {
+    return module[key];
+  } catch {
+    return undefined;
+  }
+}
+
+function getNeo4jModule(): Pick<typeof neo4j, "driver" | "auth"> {
+  const module = neo4j as Neo4jDriverModule;
+  const defaultModule = module.default;
+  return {
+    driver: safeModuleProperty(module, "driver") ?? defaultModule?.driver,
+    auth: safeModuleProperty(module, "auth") ?? defaultModule?.auth,
+  } as Pick<typeof neo4j, "driver" | "auth">;
+}
+
 /**
  * Get connection configuration from environment variables
  * Uses safe defaults matching docker-compose.yml setup
@@ -70,10 +95,11 @@ export function getConnectionConfig(): Neo4jConnectionConfig {
 export function getDriver(): Driver {
   if (!driverInstance) {
     const config = getConnectionConfig();
+    const driverModule = getNeo4jModule();
 
-    driverInstance = neo4j.driver(
+    driverInstance = driverModule.driver(
       config.uri,
-      neo4j.auth.basic(config.user, config.password),
+      driverModule.auth.basic(config.user, config.password),
       {
         maxConnectionPoolSize: config.maxConnectionPoolSize,
         connectionAcquisitionTimeout: config.connectionAcquisitionTimeout,

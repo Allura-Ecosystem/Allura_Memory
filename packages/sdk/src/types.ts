@@ -50,6 +50,9 @@ export type MemorySortOrder =
   | "score_desc"
   | "score_asc";
 
+/** Backing stores that can be reported by canonical memory retrieval metadata. */
+export type MemoryRetrievalStore = "postgres" | "neo4j" | "graph" | "ruvector";
+
 // ── Zod Schemas ────────────────────────────────────────────────────────────
 
 /** Validates group_id format: ^allura-[a-z0-9-]+$ */
@@ -133,8 +136,8 @@ export interface MemoryGetParams {
 export interface MemoryListParams {
   /** Required: Tenant namespace */
   group_id: GroupId;
-  /** Required: User identifier */
-  user_id: UserId;
+  /** Optional: User identifier. Omit only for tenant-scoped/admin listing. */
+  user_id?: UserId;
   /** Optional: Maximum results (default: 50) */
   limit?: number;
   /** Optional: Pagination offset */
@@ -159,10 +162,14 @@ export interface MemoryDeleteParams {
 export interface MemoryResponseMeta {
   contract_version: "v1";
   degraded: boolean;
-  degraded_reason?: "neo4j_unavailable";
-  stores_used: Array<"postgres" | "neo4j">;
-  stores_attempted: Array<"postgres" | "neo4j">;
+  degraded_reason?: "neo4j_unavailable" | "graph_unavailable";
+  stores_used: MemoryRetrievalStore[];
+  stores_attempted: MemoryRetrievalStore[];
   warnings?: string[];
+  /** RuVector trajectory ID for evidence-gated feedback, when RuVector was used. */
+  ruvector_trajectory_id?: string;
+  /** Number of results returned from RuVector, when available. */
+  ruvector_count?: number;
 }
 
 /** Response from memory_add */
@@ -205,10 +212,26 @@ export interface MemoryGetResponse {
   source: StorageLocation;
   provenance: MemoryProvenance;
   user_id: UserId;
+  actor?: UserId | null;
+  creator?: UserId | null;
+  approver?: UserId | null;
+  group_id?: GroupId;
   created_at: string;
+  status?: "approved" | "proposed" | "pending" | "deprecated" | "active" | "deleted";
+  source_event_id?: string | null;
+  proposal_id?: string | null;
+  trace_ref?: string | number | null;
+  evidence?: Array<{
+    id: string | null;
+    type: "event" | "proposal" | "trace" | "version";
+    label: string;
+    status: "available" | "unavailable";
+  }>;
   version?: number;
   superseded_by?: MemoryId;
   usage_count?: number;
+  hash?: string | null;
+  previous_hash?: string | null;
   meta?: MemoryResponseMeta;
 }
 
@@ -245,22 +268,26 @@ export interface HealthResponse {
 
 // ── Zod Response Schemas ────────────────────────────────────────────────────
 
+const MemoryRetrievalStoreSchema = z.enum(["postgres", "neo4j", "graph", "ruvector"]);
+
+const MemoryResponseMetaSchema = z.object({
+  contract_version: z.literal("v1"),
+  degraded: z.boolean(),
+  degraded_reason: z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+  stores_used: z.array(MemoryRetrievalStoreSchema),
+  stores_attempted: z.array(MemoryRetrievalStoreSchema),
+  warnings: z.array(z.string()).optional(),
+  ruvector_trajectory_id: z.string().optional(),
+  ruvector_count: z.number().int().min(0).optional(),
+});
+
 export const MemoryAddResponseSchema = z.object({
   id: z.string(),
   stored: z.enum(["episodic", "semantic", "both"]),
   score: z.number().min(0).max(1),
   pending_review: z.boolean().optional(),
   created_at: z.string(),
-  meta: z
-    .object({
-      contract_version: z.literal("v1"),
-      degraded: z.boolean(),
-      degraded_reason: z.enum(["neo4j_unavailable"]).optional(),
-      stores_used: z.array(z.enum(["postgres", "neo4j"])),
-      stores_attempted: z.array(z.enum(["postgres", "neo4j"])),
-      warnings: z.array(z.string()).optional(),
-    })
-    .optional(),
+  meta: MemoryResponseMetaSchema.optional(),
   duplicate: z.boolean().optional(),
   duplicate_of: z.string().optional(),
   similarity: z.number().optional(),
@@ -280,16 +307,7 @@ export const MemorySearchResponseSchema = z.object({
   ),
   count: z.number().int().min(0),
   latency_ms: z.number().min(0),
-  meta: z
-    .object({
-      contract_version: z.literal("v1"),
-      degraded: z.boolean(),
-      degraded_reason: z.enum(["neo4j_unavailable"]).optional(),
-      stores_used: z.array(z.enum(["postgres", "neo4j"])),
-      stores_attempted: z.array(z.enum(["postgres", "neo4j"])),
-      warnings: z.array(z.string()).optional(),
-    })
-    .optional(),
+  meta: MemoryResponseMetaSchema.optional(),
 });
 
 export const MemoryGetResponseSchema = z.object({
@@ -299,36 +317,34 @@ export const MemoryGetResponseSchema = z.object({
   source: z.enum(["episodic", "semantic", "both"]),
   provenance: z.enum(["conversation", "manual"]),
   user_id: z.string(),
+  actor: z.string().nullable().optional(),
+  creator: z.string().nullable().optional(),
+  approver: z.string().nullable().optional(),
+  group_id: z.string().regex(/^allura-.+$/).optional(),
   created_at: z.string(),
+  status: z.enum(["approved", "proposed", "pending", "deprecated", "active", "deleted"]).optional(),
+  source_event_id: z.string().nullable().optional(),
+  proposal_id: z.string().nullable().optional(),
+  trace_ref: z.union([z.string(), z.number()]).nullable().optional(),
+  evidence: z.array(z.object({
+    id: z.string().nullable(),
+    type: z.enum(["event", "proposal", "trace", "version"]),
+    label: z.string(),
+    status: z.enum(["available", "unavailable"]),
+  })).optional(),
   version: z.number().int().optional(),
   superseded_by: z.string().optional(),
   usage_count: z.number().optional(),
-  meta: z
-    .object({
-      contract_version: z.literal("v1"),
-      degraded: z.boolean(),
-      degraded_reason: z.enum(["neo4j_unavailable"]).optional(),
-      stores_used: z.array(z.enum(["postgres", "neo4j"])),
-      stores_attempted: z.array(z.enum(["postgres", "neo4j"])),
-      warnings: z.array(z.string()).optional(),
-    })
-    .optional(),
+  hash: z.string().nullable().optional(),
+  previous_hash: z.string().nullable().optional(),
+  meta: MemoryResponseMetaSchema.optional(),
 });
 
 export const MemoryListResponseSchema = z.object({
   memories: z.array(MemoryGetResponseSchema),
   total: z.number().int().min(0),
   has_more: z.boolean(),
-  meta: z
-    .object({
-      contract_version: z.literal("v1"),
-      degraded: z.boolean(),
-      degraded_reason: z.enum(["neo4j_unavailable"]).optional(),
-      stores_used: z.array(z.enum(["postgres", "neo4j"])),
-      stores_attempted: z.array(z.enum(["postgres", "neo4j"])),
-      warnings: z.array(z.string()).optional(),
-    })
-    .optional(),
+  meta: MemoryResponseMetaSchema.optional(),
 });
 
 export const MemoryDeleteResponseSchema = z.object({
@@ -336,16 +352,7 @@ export const MemoryDeleteResponseSchema = z.object({
   deleted: z.boolean(),
   deleted_at: z.string(),
   recovery_days: z.number().int().min(0),
-  meta: z
-    .object({
-      contract_version: z.literal("v1"),
-      degraded: z.boolean(),
-      degraded_reason: z.enum(["neo4j_unavailable"]).optional(),
-      stores_used: z.array(z.enum(["postgres", "neo4j"])),
-      stores_attempted: z.array(z.enum(["postgres", "neo4j"])),
-      warnings: z.array(z.string()).optional(),
-    })
-    .optional(),
+  meta: MemoryResponseMetaSchema.optional(),
 });
 
 export const HealthResponseSchema = z.object({
