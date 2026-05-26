@@ -72,7 +72,7 @@ Content is scored (0–1 confidence)
 
 ### Vector Search
 
-Allura embeds every memory at write time using **Qwen3 Matryoshka embeddings** (1024d) via Ollama. Queries use **hybrid ANN + BM25 ranking** through pgvector HNSW indexes for semantic retrieval across both stores.
+Allura embeds every memory at write time using **nomic-embed-text** (768d) via Ollama. Queries use **hybrid ANN + BM25 ranking** with RRF fusion (k=60) through pgvector HNSW indexes for semantic retrieval across both stores. An alternative path using Qwen3 Matryoshka (1024d) embeddings is available via the `EMBEDDING_MODEL` env var.
 
 ### Governance & RuVix Kernel
 
@@ -124,7 +124,7 @@ Every policy is **enforcement-gated**: mutations require a cryptographically sig
 
 - **Docker** + Docker Compose
 - **Bun** 1.0+
-- **Ollama** (for local embeddings — pull `qwen3-embedding:8b`)
+- **Ollama** (for local embeddings — pull `nomic-embed-text`)
 
 ### 1. Clone & Configure
 
@@ -288,7 +288,7 @@ ENCRYPTION_KEY=$(openssl rand -hex 32)
 # For host execution use http://localhost:11434.
 # For Docker services use http://host.docker.internal:11434 with extra_hosts host-gateway.
 RUVECTOR_EMBEDDING_BASE_URL=http://localhost:11434  # Ollama for host execution
-EMBEDDING_MODEL=qwen3-embedding:8b
+EMBEDDING_MODEL=nomic-embed-text
 ```
 
 ### Promotion Modes
@@ -304,16 +304,26 @@ EMBEDDING_MODEL=qwen3-embedding:8b
 
 ## Dashboard & Governance Visibility
 
-Allura's web dashboard surfaces all governance operations with full transparency:
+Allura ships a full **Mission Control dashboard** — redesigned against the brand Figma spec with a warm cream palette, indigo accent, and a 240px labeled sidebar. Every page reflects live data from PostgreSQL and Neo4j with proper degraded-state handling when a service is unreachable.
 
-| Page | Purpose |
-|------|---------|
-| **Memory** | Browse episodic captures, review scores, search by content |
-| **Audit** | Immutable event log — trace every write, curator decision, and promotion |
-| **Policy** | View all 13 RuVix kernel policies, enforcement status, and recent policy violations |
-| **Governance** | Real-time enforcement metrics: policy checks/violations, curator queue depth, promotion decisions |
+| Page | Route | Purpose |
+|------|-------|---------|
+| **Overview** | `/dashboard` | Stat cards, recent activity feed, quick actions, system status strip |
+| **Memory Feed** | `/dashboard/feed` | Episodic event stream — filterable by kind (decisions, insights, tasks) |
+| **Memory Space** | `/dashboard/memory-space` | Interactive ForceGraph2D knowledge graph (Neo4j nodes + edges) |
+| **Insights** | `/dashboard/insights` | Curator insight cards with All / Pending / Approved / Rejected tabs |
+| **Evidence** | `/dashboard/evidence` | Evidence artifacts with Verified / Locked / Linked status pills |
+| **Agents** | `/dashboard/agents` | Team RAM agent registry with confidence scores and Neo4j node stats |
+| **Projects** | `/dashboard/projects` | Live BMAD sprint board — epics, stories, progress bars |
+| **Skills** | `/dashboard/builder` | Curator proposal queue — compose, approve, and reject promotions |
+| **Settings** | `/dashboard/settings` | Connections, embedding config, governance invariants, agent routing |
+| **Governance Log** | `/dashboard/governance-log` | Append-only governance event log with severity filtering |
+| **Policy** | `/dashboard/policy` | All 13 RuVix kernel policies with enforcement status and recent violations |
+| **Health** | `/dashboard/health` | Live health probes: PostgreSQL, Neo4j, MCP gateway, event queue |
+| **Decisions** | `/dashboard/decisions` | ADR-style decision records with status and rationale |
+| **Curator** | `/curator` | Full HITL proposal review interface (separate curator surface) |
 
-The **Policy page** displays all kernel policies with their severity, enforcement status, and configurability. Recent enforcement events show which policies were checked on each write and which were violated (with full audit trails).
+All pages use governance-safe patterns: no client-side secrets, degraded-state fallbacks, and contract tests that encode the governance invariants so no future change can silently break them.
 
 Access the dashboard at **`http://localhost:3100/dashboard`** after bringing up Docker Compose.
 
@@ -438,7 +448,7 @@ bun run test:all     # Full suite (typecheck + lint + unit + e2e + MCP)
 | **Episodic Store** | PostgreSQL 16 (append-only, RLS support) |
 | **Semantic Store** | Neo4j 5.26 (SUPERSEDES versioning) |
 | **Vector Search** | pgvector 0.8 + RuVector (hybrid HNSW + BM25 RRF) |
-| **Embeddings** | Qwen3 Matryoshka 1024d via Ollama (nomic v2 migration path available) |
+| **Embeddings** | nomic-embed-text 768d via Ollama (default); Qwen3 Matryoshka 1024d available via `EMBEDDING_MODEL` |
 | **Governance** | RuVix kernel (proof-gated mutations, 13-policy enforcement) |
 | **Auth** | Clerk (dashboard); Proof-of-Intent for MCP operations |
 | **Protocol** | MCP Streamable HTTP (2026 standard) + stdio (local dev) |
@@ -477,6 +487,24 @@ Allura's architecture has been validated against current 2026 research:
 - Perfect accuracy or universal applicability
 
 Where the product is directional or in-flight, we explicitly label it as **designed to**, **built to support**, or **positioned to enable** — never as a verified claim. Governance and auditability are present and operational today. Regulatory certification is a downstream artifact.
+
+---
+
+## Build Status
+
+Allura is developed using BMAD (Behaviour-Motivated Agile Development) with a 5-epic sprint structure tracked in `_bmad/bmm/stories/sprint-status.yaml`.
+
+| Epic | Title | Status |
+|------|-------|--------|
+| Epic 1 | Persistent Knowledge Capture | ✅ Done |
+| Epic 2 | Memory Retrieval & Search | ✅ Done |
+| Epic 3 | Memory Space Dashboard | ✅ Done |
+| Epic 4 | Curator & HITL Pipeline | ✅ Done |
+| Epic 5 | Mission Control Cutover | 🔄 In Progress |
+
+**Current:** Epic 5, Story 5-3 — live cutover gate verification (3100→6420). Gates 2, 5, 6 require live services + Captain approval. All other gates verified with test evidence (47 pass, 0 fail on gate tests).
+
+**Test suite:** 1960 pass · 0 fail · 231 skipped (2191 total). Typecheck clean.
 
 ---
 
