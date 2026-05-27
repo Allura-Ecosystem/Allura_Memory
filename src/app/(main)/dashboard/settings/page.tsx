@@ -164,7 +164,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Content card */}
-      <div className="rounded-xl border border-[var(--dashboard-border)] bg-white p-6">
+      <div className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-6">
         {activeTab === "general"       && <GeneralPanel />}
         {activeTab === "agents"        && <PlaceholderPanel label="Agents" />}
         {activeTab === "memory"        && <PlaceholderPanel label="Memory" />}

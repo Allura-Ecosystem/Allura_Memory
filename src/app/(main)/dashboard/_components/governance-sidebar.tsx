@@ -63,7 +63,7 @@ export function GovernanceSidebar({ user }: { user: AuthUser | null }) {
   const groupId = user?.groupId ?? "allura-system"
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-[var(--dashboard-border)] bg-white px-3 py-4 lg:flex">
+    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-3 py-4 lg:flex">
       {/* Logo row */}
       <Link
         href="/dashboard"
@@ -121,7 +121,7 @@ export function DashboardMobileNav({ user }: { user: AuthUser | null }) {
   const role = user?.role ?? "admin"
 
   return (
-    <nav className="sticky top-0 z-20 border-b border-[var(--dashboard-border)] bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
+    <nav className="sticky top-0 z-20 border-b border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-4 py-3 backdrop-blur lg:hidden">
       <div className="flex items-center justify-between gap-3">
         <Link
           href="/dashboard"

@@ -58,7 +58,7 @@ function InsightCard({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-xl border border-[var(--dashboard-border)] bg-white overflow-hidden",
+        "flex flex-col rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] overflow-hidden",
         "border-l-4",
         border,
       )}

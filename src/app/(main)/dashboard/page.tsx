@@ -74,7 +74,7 @@ export default function DashboardPage() {
         </h1>
         <div className="flex items-center gap-3">
           {/* Search bar */}
-          <div className="flex items-center gap-2 rounded-full border border-[var(--dashboard-border)] bg-white px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-[var(--dashboard-cta-primary)]/20 transition-shadow w-64">
+          <div className="flex items-center gap-2 rounded-full border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-[var(--dashboard-cta-primary)]/20 transition-shadow w-64">
             <Search className="size-4 shrink-0 text-[var(--dashboard-text-muted)]" aria-hidden="true" />
             <Input
               type="text"
@@ -88,7 +88,7 @@ export default function DashboardPage() {
           {/* Bell icon */}
           <button
             aria-label="Notifications"
-            className="flex size-9 items-center justify-center rounded-full border border-[var(--dashboard-border)] bg-white text-[var(--dashboard-text-secondary)] hover:bg-[var(--dashboard-surface-muted)] transition-colors"
+            className="flex size-9 items-center justify-center rounded-full border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] text-[var(--dashboard-text-secondary)] hover:bg-[var(--dashboard-surface-muted)] transition-colors"
           >
             <Bell className="size-4" aria-hidden="true" />
           </button>
@@ -102,7 +102,7 @@ export default function DashboardPage() {
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))
         ) : hasError && !overview ? (
-          <div className="col-span-4 rounded-xl border border-dashed border-[var(--dashboard-border)] bg-white p-6 text-center">
+          <div className="col-span-4 rounded-xl border border-dashed border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-6 text-center">
             <AlertTriangle className="mx-auto mb-2 size-6 text-amber-500" aria-hidden="true" />
             <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">{dashboardDegradedState.title}</p>
             <p className="mt-1 text-xs text-[var(--dashboard-text-secondary)]">
@@ -127,7 +127,7 @@ export default function DashboardPage() {
       {/* ── Main 2-column layout ── */}
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         {/* ── Left: Recent Activity ── */}
-        <section className="rounded-xl border border-[var(--dashboard-border)] bg-white shadow-sm">
+        <section className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] shadow-sm">
           <div className="flex items-center justify-between border-b border-[var(--dashboard-border)] px-5 py-4">
             <h2 className="text-sm font-semibold text-[var(--dashboard-text-primary)]">Recent Activity</h2>
             <Link
@@ -209,7 +209,7 @@ export default function DashboardPage() {
         {/* ── Right column ── */}
         <div className="space-y-5">
           {/* Quick Actions */}
-          <section className="rounded-xl border border-[var(--dashboard-border)] bg-white shadow-sm">
+          <section className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] shadow-sm">
             <div className="border-b border-[var(--dashboard-border)] px-5 py-4">
               <h2 className="text-sm font-semibold text-[var(--dashboard-text-primary)]">Quick Actions</h2>
             </div>
@@ -231,7 +231,7 @@ export default function DashboardPage() {
           </section>
 
           {/* System Status */}
-          <section className="rounded-xl border border-[var(--dashboard-border)] bg-white shadow-sm">
+          <section className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] shadow-sm">
             <div className="border-b border-[var(--dashboard-border)] px-5 py-4">
               <h2 className="text-sm font-semibold text-[var(--dashboard-text-primary)]">System Status</h2>
             </div>
@@ -350,7 +350,7 @@ function StatCards({ metrics }: { metrics: Metric[] }) {
         return (
           <div
             key={slot.id}
-            className="rounded-xl border border-[var(--dashboard-border)] bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+            className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-5 shadow-sm transition-shadow hover:shadow-md"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">

@@ -127,7 +127,7 @@ function SearchInput({
         placeholder="Search evidence…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-56 rounded-lg border border-[var(--dashboard-border)] bg-white pl-9 pr-3 text-sm text-[var(--dashboard-text-primary)] placeholder:text-[var(--dashboard-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--dashboard-cta-primary)]"
+        className="h-9 w-56 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] pl-9 pr-3 text-sm text-[var(--dashboard-text-primary)] placeholder:text-[var(--dashboard-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--dashboard-cta-primary)]"
       />
     </div>
   )
@@ -248,14 +248,14 @@ export default function EvidencePage() {
 
       {/* List */}
       {filtered.length === 0 ? (
-        <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-[var(--dashboard-border)] bg-white px-6 py-12 text-center">
+        <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-6 py-12 text-center">
           <p className="text-base font-semibold text-[var(--dashboard-text-primary)]">No evidence found</p>
           <p className="mt-1 max-w-xs text-sm text-[var(--dashboard-text-secondary)]">
             {query ? `No results match "${query}".` : "No evidence items are available yet."}
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[var(--dashboard-border)] bg-white shadow-sm divide-y divide-[var(--dashboard-border)]">
+        <div className="overflow-hidden rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] shadow-sm divide-y divide-[var(--dashboard-border)]">
           {filtered.map((item) => (
             <EvidenceRow key={item.id} item={item} />
           ))}
