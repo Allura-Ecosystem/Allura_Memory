@@ -14,7 +14,9 @@ const ROUTES = [
   { path: "/dashboard/memory-space", name: "memory-space" },
   { path: "/dashboard/agents", name: "agents" },
   { path: "/dashboard/insights", name: "insights" },
-  { path: "/dashboard/builder", name: "builder" },
+  { path: "/dashboard/skills", name: "skills" },
+  { path: "/dashboard/memory", name: "memory" },
+  { path: "/dashboard/review", name: "review" },
   { path: "/dashboard/settings", name: "settings" },
   { path: "/allura", name: "allura" },
 ]

@@ -7,6 +7,7 @@ import {
   Activity,
   Bot,
   CheckSquare,
+  ClipboardCheck,
   FileSearch,
   FolderOpen,
   GitBranch,
@@ -22,10 +23,11 @@ import { cn } from "@/lib/utils"
 
 const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   Overview: Home,
-  "Memory Feed": Activity,
+  Memories: Activity,
   Graph: GitBranch,
   Insights: Sparkles,
   Evidence: FileSearch,
+  Review: ClipboardCheck,
   Agents: Bot,
   Projects: FolderOpen,
   Skills: Wrench,

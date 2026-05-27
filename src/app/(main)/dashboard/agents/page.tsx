@@ -221,7 +221,7 @@ export default function AgentsPage() {
               </Link>
             </Button>
             <Button asChild size="sm" className="bg-[var(--dashboard-cta-primary)] text-white hover:bg-[var(--allura-orange-hover)]">
-              <Link href="/dashboard/builder" className="inline-flex items-center gap-1.5">
+              <Link href="/dashboard/skills" className="inline-flex items-center gap-1.5">
                 <PlusCircle className="size-3.5" aria-hidden="true" />
                 {emptyState.actionLabel}
               </Link>

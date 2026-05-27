@@ -379,7 +379,7 @@ function StatCards({ metrics }: { metrics: Metric[] }) {
 const QUICK_ACTIONS = [
   { id: "new-memory", label: "New Memory", href: "/dashboard/memory-space", Icon: Plus },
   { id: "run-agent", label: "Run Agent", href: "/dashboard/agents", Icon: Bot },
-  { id: "generate-report", label: "Generate Report", href: "/dashboard/builder", Icon: FileText },
+  { id: "generate-report", label: "Generate Report", href: "/dashboard/skills", Icon: FileText },
   { id: "export-data", label: "Export Data", href: "/dashboard/memory-space?view=export", Icon: Download },
 ] as const
 

@@ -103,7 +103,7 @@ describe("sidebarItems", () => {
         (i) => i.title === "Insight Builder"
       );
       expect(insightBuilder).toBeDefined();
-      expect(insightBuilder?.url).toBe("/dashboard/builder");
+      expect(insightBuilder?.url).toBe("/dashboard/skills");
     });
 
     it("Settings subItems should include Preferences", () => {

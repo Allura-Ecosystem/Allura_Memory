@@ -59,7 +59,7 @@ describe("dashboard empty and degraded route states", () => {
 
     expect(state.title).toBe("Workspace is blank")
     expect(state.description).toContain("Add a memory")
-    expect(state.actionHref).toBe("/dashboard/builder")
+    expect(state.actionHref).toBe("/dashboard/skills")
     expect(state.tone).toBe("empty")
   })
 
@@ -95,7 +95,7 @@ describe("dashboard empty and degraded route states", () => {
     )
 
     expect(readRoute("src/app/(main)/dashboard/insights/page.tsx")).toContain("state.error || state.degraded")
-    expect(readRoute("src/app/(main)/dashboard/builder/page.tsx")).toContain("queue.error || queue.degraded")
+    expect(readRoute("src/app/(main)/dashboard/skills/page.tsx")).toContain("queue.error || queue.degraded")
   })
 
   it("keeps insights grid aligned to the Figma v3 spec", () => {

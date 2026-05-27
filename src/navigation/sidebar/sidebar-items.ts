@@ -51,7 +51,7 @@ export const sidebarItems: NavGroup[] = [
         icon: BookOpen,
         subItems: [
           { title: "Decision Records", url: "/dashboard/decisions" },
-          { title: "Insight Builder", url: "/dashboard/builder", icon: Activity },
+          { title: "Insight Builder", url: "/dashboard/skills", icon: Activity },
         ],
       },
     ],

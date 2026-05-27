@@ -20,10 +20,11 @@ export interface AlluraRouteSection {
 
 export type DashboardWorkflowNavLabel =
   | "Overview"
-  | "Memory Feed"
+  | "Memories"
   | "Graph"
   | "Insights"
   | "Evidence"
+  | "Review"
   | "Agents"
   | "Projects"
   | "Skills"
@@ -89,13 +90,14 @@ export function assertDashboardNavigationPreservesAlluraSeparation(items: Dashbo
 
 export const DASHBOARD_WORKFLOW_NAV_ITEMS: DashboardWorkflowNavItem[] = [
   { id: "dashboard", label: "Overview", href: "/dashboard", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
-  { id: "feed", label: "Memory Feed", href: "/dashboard/feed", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+  { id: "memories", label: "Memories", href: "/dashboard/memory", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
   { id: "graph", label: "Graph", href: "/dashboard/graph", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
   { id: "insights", label: "Insights", href: "/dashboard/insights", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
   { id: "evidence", label: "Evidence", href: "/dashboard/evidence", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+  { id: "review", label: "Review", href: "/dashboard/review", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
   { id: "agents", label: "Agents", href: "/dashboard/agents", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
   { id: "projects", label: "Projects", href: "/dashboard/projects", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
-  { id: "skills", label: "Skills", href: "/dashboard/builder", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
+  { id: "skills", label: "Skills", href: "/dashboard/skills", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
   { id: "settings", label: "Settings", href: "/dashboard/settings", sourceOfTruth: "dashboard-visual-spec-v2", shellRole: "thin-workflow-navigation" },
 ]
 

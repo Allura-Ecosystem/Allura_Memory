@@ -43,10 +43,11 @@ describe("/dashboard shell route contract", () => {
   it("declares the approved thin workflow navigation in visual-spec order", () => {
     expect(DASHBOARD_WORKFLOW_NAV_ITEMS.map((item) => item.label)).toEqual([
       "Overview",
-      "Memory Feed",
+      "Memories",
       "Graph",
       "Insights",
       "Evidence",
+      "Review",
       "Agents",
       "Projects",
       "Skills",
