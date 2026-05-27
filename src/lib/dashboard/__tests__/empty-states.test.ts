@@ -98,16 +98,16 @@ describe("dashboard empty and degraded route states", () => {
     expect(readRoute("src/app/(main)/dashboard/builder/page.tsx")).toContain("queue.error || queue.degraded")
   })
 
-  it("keeps insights tabs aligned to the v2 spec", () => {
+  it("keeps insights grid aligned to the Figma v3 spec", () => {
     const source = readRoute("src/app/(main)/dashboard/insights/page.tsx")
     const querySource = readRoute("src/lib/dashboard/queries.ts")
 
-    for (const label of ["All", "Pending", "Approved", "Rejected"]) {
-      expect(source).toContain(`label: "${label}"`)
-    }
+    // Figma v3: grid of cards with seed fallback — no tabs
+    expect(source).toContain("SEED")
+    expect(source).toContain("InsightCard")
+    expect(source).toContain("grid-cols")
 
-    expect(source).not.toContain('label: "Queue"')
-    expect(source).not.toContain('label: "Superseded"')
+    // Query layer still supports status filtering
     expect(querySource).toContain('if (status === "all")')
     expect(querySource).toContain('status === "pending" || status === "rejected"')
   })

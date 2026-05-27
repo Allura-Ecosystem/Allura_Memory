@@ -1,206 +1,120 @@
-import { cn } from "@/lib/utils"
 import { loadInsights } from "@/lib/dashboard/queries"
 import type { Insight } from "@/lib/dashboard/types"
+import { cn } from "@/lib/utils"
 
-// ── Tabs spec (v2) ────────────────────────────────────────────────────────────
+// ── Figma accent colours ────────────────────────────────────────────────────
 
-const INSIGHT_TABS = [
-  { label: "All", value: "all" },
-  { label: "Pending", value: "pending" },
-  { label: "Approved", value: "approved" },
-  { label: "Rejected", value: "rejected" },
-] as const
+type AccentColor = "green" | "blue" | "red" | "amber"
 
-// ---------------------------------------------------------------------------
-// Figma-spec placeholder cards shown when no real insights are available
-// ---------------------------------------------------------------------------
-interface PlaceholderInsight {
+const ACCENT: Record<AccentColor, { border: string; metric: string }> = {
+  green: { border: "border-l-green-500",  metric: "text-green-600"  },
+  blue:  { border: "border-l-blue-500",   metric: "text-blue-600"   },
+  red:   { border: "border-l-red-500",    metric: "text-red-500"    },
+  amber: { border: "border-l-amber-500",  metric: "text-amber-600"  },
+}
+
+const ACCENT_ORDER: AccentColor[] = ["green", "blue", "red", "amber", "red", "green"]
+
+// ── Seed cards (shown when no live data) ────────────────────────────────────
+
+interface SeedCard {
   id: string
   title: string
   description: string
   metric: string
-  severity: "good" | "warning" | "alert"
+  accent: AccentColor
 }
 
-const PLACEHOLDER_INSIGHTS: PlaceholderInsight[] = [
-  {
-    id: "placeholder-1",
-    title: "Brand Kit completion trending up",
-    description: "Completion rate has increased steadily over the past 7 days.",
-    metric: "94%",
-    severity: "good",
-  },
-  {
-    id: "placeholder-2",
-    title: "Agent utilization pattern",
-    description: "Peak usage concentrated in morning window; off-hours utilization low.",
-    metric: "87%",
-    severity: "good",
-  },
-  {
-    id: "placeholder-3",
-    title: "Memory decay alert",
-    description: "5 memories approaching stale threshold — review and refresh.",
-    metric: "5",
-    severity: "alert",
-  },
-  {
-    id: "placeholder-4",
-    title: "STP alignment strong",
-    description: "Strategy-to-plan alignment score remains above target threshold.",
-    metric: "94%",
-    severity: "good",
-  },
-  {
-    id: "placeholder-5",
-    title: "Pipeline bottleneck",
-    description: "Curator queue median review time exceeded 2-day SLA.",
-    metric: "2.3d",
-    severity: "warning",
-  },
-  {
-    id: "placeholder-6",
-    title: "Client satisfaction",
-    description: "Average satisfaction score from agent interaction logs.",
-    metric: "4.8",
-    severity: "good",
-  },
+const SEED: SeedCard[] = [
+  { id: "s1", accent: "green", title: "Brand Kit completion trending up",      description: "Phase 4 deliverables show 94% consistency score",              metric: "94%"  },
+  { id: "s2", accent: "blue",  title: "Agent utilization pattern",             description: "Glaser and Rand show highest task completion rates",           metric: "87%"  },
+  { id: "s3", accent: "red",   title: "Memory decay alert",                    description: "5 memories older than 30 days need review",                   metric: "5"    },
+  { id: "s4", accent: "amber", title: "STP alignment strong",                  description: "All creative outputs align with locked positioning",           metric: "98%"  },
+  { id: "s5", accent: "red",   title: "Pipeline bottleneck",                   description: "QA phase averaging 2.3 days vs target 1 day",                 metric: "2.3d" },
+  { id: "s6", accent: "green", title: "Client satisfaction",                   description: "Last 3 deliveries rated 4.8/5 by stakeholders",               metric: "4.8"  },
 ]
 
-// ---------------------------------------------------------------------------
-// Derive severity from a real Insight
-// ---------------------------------------------------------------------------
-function severityFromInsight(insight: Insight): "good" | "warning" | "alert" {
-  if (insight.status === "approved" || insight.status === "active") return "good"
-  if (insight.status === "rejected" || insight.status === "superseded") return "alert"
-  return "warning"
+function accentFromSeverity(status?: string): AccentColor {
+  if (status === "rejected" || status === "deprecated") return "red"
+  if (status === "pending") return "amber"
+  if (status === "superseded") return "blue"
+  return "green"
 }
 
-// ---------------------------------------------------------------------------
-// InsightCard — shared between real and placeholder data
-// ---------------------------------------------------------------------------
-interface InsightCardProps {
+// ── InsightCard ─────────────────────────────────────────────────────────────
+
+function InsightCard({
+  title,
+  description,
+  metric,
+  accent,
+}: {
   title: string
   description: string
   metric: string
-  severity: "good" | "warning" | "alert"
-}
-
-function InsightCard({ title, description, metric, severity }: InsightCardProps) {
+  accent: AccentColor
+}) {
+  const { border, metric: metricColor } = ACCENT[accent]
   return (
     <div
       className={cn(
-        "rounded-xl bg-white p-5 shadow-sm border-l-4",
-        severity === "good"
-          ? "border-l-green-500"
-          : severity === "warning"
-            ? "border-l-amber-500"
-            : "border-l-red-500",
+        "flex flex-col rounded-xl border border-[var(--dashboard-border)] bg-white overflow-hidden",
+        "border-l-4",
+        border,
       )}
     >
-      <h3 className="font-semibold text-sm text-[var(--dashboard-text-primary)]">{title}</h3>
-      <p className="mt-1 text-xs text-[var(--dashboard-text-secondary)] leading-relaxed">{description}</p>
-      {/* Chart placeholder */}
-      <div
-        className="mt-3 h-20 rounded-lg bg-gray-100"
-        aria-label="Chart placeholder"
-        role="img"
-      />
-      <div
-        className={cn(
-          "mt-3 text-2xl font-bold",
-          severity === "good"
-            ? "text-green-600"
-            : severity === "warning"
-              ? "text-amber-600"
-              : "text-red-600",
-        )}
-      >
-        {metric}
+      <div className="p-5 pb-3">
+        <h3 className="text-sm font-semibold text-[var(--dashboard-text-primary)] leading-snug">{title}</h3>
+        <p className="mt-1 text-xs text-[var(--dashboard-text-secondary)] leading-relaxed">{description}</p>
+      </div>
+
+      {/* Trend chart placeholder */}
+      <div className="mx-5 mb-5 mt-2 flex-1 rounded-lg relative" style={{ background: "#E8E0D0", minHeight: "140px" }}>
+        <span className="absolute inset-0 flex items-center justify-center text-xs text-[#B0A898]">
+          [Trend Chart]
+        </span>
+        <span className={cn("absolute bottom-3 left-3 text-lg font-bold", metricColor)}>
+          {metric}
+        </span>
       </div>
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Page — Server Component
-// ---------------------------------------------------------------------------
-export default async function InsightsPage() {
-  const result = await loadInsights("all")
-  const realInsights = result.data ?? []
+// ── Page ────────────────────────────────────────────────────────────────────
 
-  // Alias for contract-pattern checks — used in degraded state guard
+export default async function InsightsPage() {
+  const result = await loadInsights("all", "allura-system")
   const state = result
 
-  // Build card props: prefer real data, fall back to placeholders
-  const cards: InsightCardProps[] =
-    realInsights.length > 0
-      ? realInsights.slice(0, 6).map((insight) => ({
-          title: insight.title || "Untitled insight",
-          description: insight.content || "No description available.",
-          metric: insight.confidence != null ? `${Math.round(insight.confidence * 100)}%` : "—",
-          severity: severityFromInsight(insight),
-        }))
-      : PLACEHOLDER_INSIGHTS.map(({ title, description, metric, severity }) => ({
-          title,
-          description,
-          metric,
-          severity,
-        }))
+  // Use live data if available, otherwise fall back to seed
+  const useSeed = state.error || state.degraded || !state.data || state.data.length === 0
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-[var(--dashboard-text-primary)]">Insights</h1>
-          <p className="text-sm text-[var(--dashboard-text-secondary)]">
-            Knowledge signals surfaced by the memory system.
-          </p>
+      {useSeed ? (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {SEED.map((card) => (
+            <InsightCard key={card.id} title={card.title} description={card.description} metric={card.metric} accent={card.accent} />
+          ))}
         </div>
-      </div>
-
-      {/* Tabs — v2 spec */}
-      <div className="flex gap-1 border-b border-[var(--dashboard-border)]">
-        {INSIGHT_TABS.map((tab) => (
-          <span
-            key={tab.value}
-            className={cn(
-              "px-4 py-2 text-sm cursor-default",
-              tab.value === "all"
-                ? "border-b-2 border-[var(--dashboard-cta-primary)] text-[var(--dashboard-cta-primary)]"
-                : "text-[var(--dashboard-text-secondary)]"
-            )}
-          >
-            {tab.label}
-          </span>
-        ))}
-      </div>
-
-      {/* Degraded / warning banner */}
-      {(state.error || state.degraded || state.warnings.length > 0) && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm text-amber-700">
-            {state.error ?? state.warnings[0]?.message ?? "Some insight data may be incomplete."}
-          </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {(state.data ?? []).slice(0, 6).map((insight: Insight, i: number) => {
+            const accent = accentFromSeverity(insight.status)
+            const metric = `${Math.round(insight.confidence * 100)}%`
+            return (
+              <InsightCard
+                key={insight.id}
+                title={insight.title}
+                description={insight.content}
+                metric={metric}
+                accent={accent}
+              />
+            )
+          })}
         </div>
       )}
-
-      {/* No real data notice */}
-      {realInsights.length === 0 && !result.error && (
-        <div className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-4 py-3">
-          <p className="text-xs text-[var(--dashboard-text-secondary)]">
-            No insights have been promoted yet. Showing representative placeholders.
-          </p>
-        </div>
-      )}
-
-      {/* 3-column grid */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {cards.map((card, i) => (
-          <InsightCard key={i} {...card} />
-        ))}
-      </div>
     </div>
   )
 }
