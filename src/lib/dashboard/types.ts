@@ -105,7 +105,49 @@ export interface DashboardOverview {
   activity: ActivityItem[]
   pendingInsights: Insight[]
   systemStatus: SystemStatus
+  healthMetrics: DashboardHealthMetrics | null
   warnings: DashboardWarning[]
+}
+
+export interface DashboardHealthMetrics {
+  timestamp: string
+  queue: {
+    pending_count: number
+    oldest_age_hours: number
+    approved_24h: number
+    rejected_24h: number
+  }
+  recall: {
+    search_available: boolean
+    last_latency_ms: number | null
+  }
+  storage: {
+    postgres: {
+      status: string
+      latency_ms: number
+      total_memories: number
+    }
+    neo4j: {
+      status: string
+      latency_ms: number | null
+      total_nodes: number | null
+    }
+  }
+  degraded: {
+    neo4j_unavailable: number
+    scope_error: number
+    embedding_failures: number
+    promotion_failures_24h: number
+  }
+  skills?: Array<{
+    tool_name: string
+    category: string
+    calls_24h: number
+    success_rate: number
+    avg_latency_ms: number
+    last_used: string | null
+    trend: "up" | "down" | "flat"
+  }>
 }
 
 export interface MemoryGraphResponse {
@@ -136,4 +178,21 @@ export interface DecisionRecord {
   createdAt: string
   eventType: string
   metadata: Record<string, unknown>
+}
+
+export interface PolicyEnforcementEvent {
+  id: string
+  eventType: "policy_check" | "policy_violation"
+  agentId: string
+  ruleName: string
+  status: "allowed" | "blocked" | "failed"
+  timestamp: string
+  metadata?: Record<string, unknown>
+}
+
+export interface PolicyEnforcementSummary {
+  recentEvents: PolicyEnforcementEvent[]
+  violationCountByRule: Record<string, number>
+  checkCount: number
+  violationCount: number
 }

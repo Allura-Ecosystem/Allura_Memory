@@ -3,13 +3,14 @@
 import { useMemo } from "react"
 import * as THREE from "three"
 
+import { getResolvedColor } from "@/lib/brand/allura"
 import type { MemoryNode } from "@/lib/memory-graph/types"
 
-const NODE_COLORS: Record<MemoryNode["type"], string> = {
-  raw: "#94a3b8",
-  approved: "#38bdf8",
-  promoted: "#22c55e",
-  deprecated: "#f97316",
+const NODE_COLOR_TOKENS: Record<MemoryNode["type"], string> = {
+  raw: "gray-400",
+  approved: "blue",
+  promoted: "green",
+  deprecated: "orange",
 }
 
 interface MemoryNodeMeshProps {
@@ -20,8 +21,8 @@ interface MemoryNodeMeshProps {
 }
 
 export function MemoryNodeMesh({ node, position, isHovered, isSelected }: MemoryNodeMeshProps) {
-  const color = NODE_COLORS[node.type]
-  const emissive = isSelected ? color : isHovered ? "#0ea5e9" : "#020617"
+  const color = getResolvedColor(NODE_COLOR_TOKENS[node.type])
+  const emissive = isSelected ? color : isHovered ? getResolvedColor("blueHover") : getResolvedColor("charcoal")
   const scale = isSelected ? 1.5 : isHovered ? 1.25 : 1
 
   const userData = useMemo(() => ({ nodeId: node.id }), [node.id])

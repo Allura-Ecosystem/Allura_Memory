@@ -1,0 +1,387 @@
+{
+  "brand": "Allura",
+  "slug": "allura-memory",
+  "group_id": "allura-team-durham",
+  "version": "1.0.0",
+  "created_at": "2026-05-09T00:00:00Z",
+  "updated_at": "2026-05-09T00:00:00Z",
+  "status": "locked",
+  "qa_score": 94,
+  "qa_result": "pass",
+  "qa_reviewer": "munari",
+  "brand_kit_status": "complete",
+  "sources": {
+    "figma_brand_identity_key": "DsCWyaq4W9xHzcFhCQEIPL",
+    "figma_brand_kit_key": "PAQpnxQZENNwbhmk5qxOjR",
+    "figma_pages": 11,
+    "extracted_at": "2026-05-08",
+    "pipeline_phases_completed": 5,
+    "deliverables": [
+      "01_strategist_strategy-pack.md",
+      "02-namer_naming-pack.md",
+      "03_visual-director_logo-pack.md",
+      "03_visual-director_fal-ai-runs.json",
+      "04_brand-kit-builder_brand-kit.md",
+      "05_qa-reviewer_qa-report.md"
+    ]
+  },
+  "identity": {
+    "name": "Allura",
+    "legal_entity": "Allaruma (dba Allura) — pending formal registration",
+    "tagline_primary": "MEMORY THAT SHOWS ITS WORK",
+    "tagline_secondary": "Memory is the foundation. Intelligence is the outcome.",
+    "domain": ["allurama.ai", "allurama.com"],
+    "social_handles": {
+      "instagram": "@allurama.ai",
+      "linkedin": "tbd",
+      "x": "tbd"
+    },
+    "industry": "AI / Memory Technology / Privacy-First SaaS",
+    "category": "Sovereign Memory Layer"
+  },
+  "strategy": {
+    "archetypes": {
+      "primary": { "name": "Caregiver", "weight": 0.50, "attributes": ["warmth", "empathy", "trust", "protection"] },
+      "secondary": { "name": "Creator", "weight": 0.30, "attributes": ["craft", "intentionality", "design_excellence"] },
+      "tertiary": { "name": "Explorer", "weight": 0.20, "attributes": ["curiosity", "forward_motion", "innovation"] }
+    },
+    "personality_dimensions": {
+      "primary": { "dimension": "Sincerity", "score": 4.5, "max": 5 },
+      "secondary": { "dimension": "Competence", "score": 3.5, "max": 5 }
+    },
+    "positioning_statement": "For people and families who want to preserve, connect, and actively use their memories — and for the AI agents that serve them — Allura is a sovereign memory layer that transforms fragmented information into a trusted, verifiable memory graph, because every memory is stored with clarity, traceable provenance, and a deep respect for human values like privacy and connection.",
+    "brand_promise": "A thoughtful balance of heart, mind, and imagination. That's how we make memory matter.",
+    "brand_position": "The sovereign memory layer for AI — private by design, trusted by default.",
+    "brand_essence": "Warm + Connected",
+    "brand_belief": "We believe memories deserve more than storage. They deserve clarity, connection and care — today and for generations to come.",
+    "one_big_idea": "The sovereign memory layer for AI — private by design, trusted by default.",
+    "target_audience": {
+      "primary": {
+        "demographic": "Tech users aged 25–55, often caregivers, parents, or professionals managing family or organizational knowledge.",
+        "psychographic": "Values privacy, simplicity, and human connection. Skeptical of Big Tech surveillance models. Wants technology that feels ethically aligned.",
+        "personas": [
+          { "name": "The Memory Keeper", "description": "A parent or grandparent who digitizes family photos, creates timelines, and wants to share them securely with loved ones." },
+          { "name": "The AI Builder", "description": "A developer or tech lead building agentic AI systems who needs a reliable, contextual memory layer for their bots." },
+          { "name": "The Conscious Consumer", "description": "A user who prioritizes open-source, privacy-respecting software and ethical data practices." }
+        ]
+      },
+      "secondary": {
+        "description": "Small to medium businesses (SMBs) and nonprofits seeking trusted knowledge management."
+      }
+    },
+    "competitive_frame": {
+      "direct": ["Mem.ai", "Rewind.ai", "Notion", "Obsidian"],
+      "indirect": ["Apple Photos", "Google Photos", "Salesforce", "HubSpot"],
+      "aspirational": ["Apple", "Muji", "Patagonia"]
+    },
+    "proof_points": [
+      { "id": 1, "claim": "Privacy by Design", "evidence": "End-to-end encryption; your data, your rules." },
+      { "id": 2, "claim": "Graph-Native Architecture", "evidence": "Neo4j foundation for relationship modeling and insight surfacing." },
+      { "id": 3, "claim": "Verifiable & Trusted", "evidence": "Provenance, confidence scoring, and source transparency for every memory." },
+      { "id": 4, "claim": "Built for Agents", "evidence": "Context-rich memory for smarter, more reliable AI agents." },
+      { "id": 5, "claim": "Proven Scale", "evidence": "10M+ memories preserved; 500K+ families connected." }
+    ],
+    "key_messages": {
+      "headline": "Memory that shows its work.",
+      "sub_headline": "Allura helps you preserve, connect and empower the memories that matter most.",
+      "value_proposition": "The sovereign memory layer for AI — private by design, trusted by default.",
+      "proof": "10M+ memories preserved. 500K+ families connected. 99.9% data protection.",
+      "cta": "Explore Product / Learn More / Start Your Memory Graph"
+    }
+  },
+  "naming": {
+    "locked_name": "Allura",
+    "direction": "Archetype-True",
+    "score": 91,
+    "alternates": ["Memoria", "Cognoira", "Truehold", "Epochica"],
+    "etymology": "Derives from Arabic 'Allure' (to charm, to attract); phonetically echoes 'lure' — suggesting magnetism and beauty.",
+    "phonetics": {
+      "syllables": 3,
+      "stress": "Primary on second syllable (ah-LOO-rah)",
+      "sound_profile": "Soft, aspirated, warm. Open 'ah' sounds invite connection. Smooth 'l' transitions. Soft aspirated 'r'."
+    },
+    "legal": {
+      "uspto_class_9": "clear",
+      "uspto_class_42": "clear",
+      "uspto_class_45": "clear",
+      "watch": "Class 3/35 cosmetics brand 'Allura' exists — monitor for conflict",
+      "domains": ["allurama.ai", "allurama.com"],
+      "trademark_status": "recommended_filing_pending"
+    }
+  },
+  "visual": {
+    "logo": {
+      "primary": {
+        "type": "custom_geometric_wordmark",
+        "orientation": "horizontal",
+        "file": "brand-assets/logos/wordmark.png",
+        "dimensions": "618x400",
+        "format": "png",
+        "minimum_size": { "screen_px": 32, "print_mm": 10 },
+        "clear_space": "X = height of lowercase 'll' pair",
+        "base_color": "#111827",
+        "description": "Custom geometric letterforms built from circles, curves, and organic overlaps. Embedded blue, teal, and orange accent shapes."
+      },
+      "secondary": {
+        "type": "lettermark",
+        "mark": "AL",
+        "file": "brand-assets/logos/lettermark-AL.png",
+        "dimensions": "400x400",
+        "format": "png",
+        "minimum_size": { "screen_px": 24, "print_mm": 8 }
+      },
+      "lockup": {
+        "type": "product_lockup",
+        "text": "Allura memory",
+        "accent": "Gold horizontal bar beneath",
+        "color_context": "Dark backgrounds only"
+      },
+      "shape_language": ["circles", "rounded_rectangles", "organic_overlaps", "12px_border_radius"],
+      "signature_motif": "Overlapping blue circle + orange circle + green shape"
+    },
+    "color": {
+      "primary": [
+        { "name": "Allura Blue", "hex": "#1D4ED8", "rgb": "29, 78, 216", "cmyk": "87%, 64%, 0%, 15%", "pantone": "Pantone 2728 C", "role": "Primary accent, links, logo shapes, UI primary" },
+        { "name": "Allura Orange", "hex": "#FF5A2E", "rgb": "255, 90, 46", "cmyk": "0%, 65%, 82%, 0%", "pantone": "Pantone 172 C", "role": "Secondary accent, warmth, Caregiver expression" },
+        { "name": "Allura Green", "hex": "#157A4A", "rgb": "21, 122, 74", "cmyk": "83%, 0%, 39%, 52%", "pantone": "Pantone 3415 C", "role": "Tertiary accent, growth, Explorer, positive feedback" }
+      ],
+      "core": [
+        { "name": "Allura Charcoal", "hex": "#111827", "rgb": "17, 24, 39", "cmyk": "56%, 38%, 0%, 85%", "pantone": "Pantone Black 7 C", "role": "Primary text, dark backgrounds, logo base, authority" },
+        { "name": "Allura Gold", "hex": "#C89B3C", "rgb": "200, 155, 60", "cmyk": "0%, 22%, 70%, 22%", "pantone": "Pantone 7555 C", "role": "Premium accent, lockup, Empowerment pillar" }
+      ],
+      "background": [
+        { "name": "Allura Cream", "hex": "#F5F1E6", "rgb": "245, 241, 230", "cmyk": "0%, 2%, 6%, 4%", "role": "Page backgrounds, warmth, print base" }
+      ],
+      "neutrals": ["#111827", "#374151", "#6B7280", "#9CA3AF", "#D1D5DB", "#E5E7EB", "#F3F4F6", "#FFFFFF"],
+      "usage_ratios": {
+        "neutral_cream_white": "60-70%",
+        "charcoal": "15-25%",
+        "blue": "5-10%",
+        "orange": "2-5%",
+        "green": "2-5%",
+        "gold": "1-3%"
+      },
+      "off_brand": ["#FF0000", "#00FF00", "#0000FF", "#FF00FF", "#808080"],
+      "accessibility": {
+        "wcag_aa_compliant_pairs": [
+          { "foreground": "#111827", "background": "#F5F1E6", "ratio": "16.2:1", "pass": true },
+          { "foreground": "#111827", "background": "#FFFFFF", "ratio": "17.5:1", "pass": true },
+          { "foreground": "#157A4A", "background": "#FFFFFF", "ratio": "5.8:1", "pass": true },
+          { "foreground": "#157A4A", "background": "#F5F1E6", "ratio": "5.4:1", "pass": true },
+          { "foreground": "#1D4ED8", "background": "#FFFFFF", "ratio": "6.3:1", "pass": true },
+          { "foreground": "#1D4ED8", "background": "#F5F1E6", "ratio": "5.9:1", "pass": true },
+          { "foreground": "#FF5A2E", "background": "#111827", "ratio": "6.8:1", "pass": true },
+          { "foreground": "#C89B3C", "background": "#111827", "ratio": "5.2:1", "pass": true },
+          { "foreground": "#FFFFFF", "background": "#111827", "ratio": "17.5:1", "pass": true }
+        ],
+        "warnings": [
+          { "foreground": "#FF5A2E", "background": "#FFFFFF", "ratio": "3.1:1", "note": "Use only for large text (18px+ bold or 24px+)" }
+        ]
+      }
+    },
+    "typography": {
+      "display": {
+        "typeface": "Custom geometric display face",
+        "weights": [700, 900],
+        "fallback_stack": "system-ui, -apple-system, sans-serif",
+        "use_case": "Hero headlines, section headers, brand overlines"
+      },
+      "body": {
+        "typeface": "Clean sans-serif (Inter or similar humanist/geometric sans)",
+        "weights": [400, 500, 700],
+        "fallback_stack": "system-ui, -apple-system, sans-serif",
+        "use_case": "All body text, descriptions, UI copy"
+      },
+      "labels_caps": {
+        "style": "Spaced uppercase",
+        "tracking": "+100 to +200",
+        "size": "12px–14px",
+        "weight": 500,
+        "use_case": "Section labels, overlines, tags, metadata"
+      },
+      "tagline_display": {
+        "style": "Wide-tracked uppercase sans-serif",
+        "tracking": "+400 to +600",
+        "size": "14px–18px",
+        "weight": 500,
+        "use_case": "Brand tagline display"
+      },
+      "type_scale": {
+        "display_1": { "size": "48px", "line_height": 1.1, "weight": 900 },
+        "display_2": { "size": "36px", "line_height": 1.2, "weight": 700 },
+        "headline": { "size": "28px", "line_height": 1.3, "weight": 700 },
+        "subhead": { "size": "22px", "line_height": 1.4, "weight": 600 },
+        "body_large": { "size": "18px", "line_height": 1.6, "weight": 400 },
+        "body": { "size": "16px", "line_height": 1.6, "weight": 400 },
+        "body_small": { "size": "14px", "line_height": 1.5, "weight": 400 },
+        "caption": { "size": "12px", "line_height": 1.4, "weight": 400 },
+        "overline": { "size": "12px", "line_height": 1.4, "weight": 700, "tracking": "+0.1em" },
+        "tagline": { "size": "14px", "line_height": 1.4, "weight": 500, "tracking": "+0.3em" }
+      },
+      "web_loading": {
+        "strategy": "font-display: swap",
+        "preload": "Hero headlines if possible",
+        "hosting": "Self-hosted preferred; CDN with privacy audit acceptable"
+      }
+    },
+    "iconography": {
+      "style": "Line art in colored circles (value icons); geometric flat icons (UI)",
+      "line_weight": "2px",
+      "grid_sizes": [16, 24, 32, 48, 64],
+      "corner_radius": { "ui_icons": 2, "value_icons": "pill/circle" },
+      "value_icons": [
+        { "name": "Heart", "shape": "heart", "color_circle": "#1D4ED8", "meaning": "Memory — honor what matters" },
+        { "name": "Link", "shape": "chain/link", "color_circle": "#FF5A2E", "meaning": "Connection — bring people closer" },
+        { "name": "Spark", "shape": "starburst/asterisk", "color_circle": "#157A4A", "meaning": "Clarity — make complex simple" },
+        { "name": "Shield", "shape": "shield", "color_circle": "#111827", "meaning": "Trust — protect what matters" },
+        { "name": "Arrow", "shape": "upward_arrow", "color_circle": "#C89B3C", "meaning": "Empowerment — move forward" }
+      ],
+      "ui_icons": ["Secure", "Family", "Memories", "Sharing", "Timeline", "Search", "Privacy", "Backup", "Connected", "Support"],
+      "photography": {
+        "composition": "Natural, candid, human-centered",
+        "color_treatment": "Warm, slightly desaturated. Match brand cream/gold tones.",
+        "subject_matter": "Diverse families, authentic moments, multigenerational connections",
+        "lighting": "Natural light preferred. Soft, golden-hour warmth.",
+        "mood": "Tender, genuine, slightly nostalgic but forward-looking"
+      },
+      "illustration": {
+        "style": "Geometric abstraction with human warmth. Flat vector with subtle texture.",
+        "subjects": ["Memory nodes", "Connection webs", "Family trees", "Secure vaults"],
+        "colors": "Limited to brand palette. Never more than 3 colors per illustration."
+      }
+    },
+    "motion": {
+      "principles": ["Warm Ease", "Gradual Reveal", "Connection Animation", "Subtle Depth"],
+      "easing": {
+        "default": "cubic-bezier(0.25, 0.1, 0.25, 1.0)",
+        "entrance": "cubic-bezier(0.0, 0.0, 0.2, 1)",
+        "exit": "cubic-bezier(0.4, 0.0, 1.0, 1.0)"
+      },
+      "durations": {
+        "micro": "300-500ms",
+        "transition": "800-1200ms"
+      },
+      "stagger": "80-120ms between sequential elements",
+      "hover_scale": "1.02-1.05; never more than 1.1"
+    }
+  },
+  "voice": {
+    "tone": "Warm, thoughtful, empowering — like a trusted librarian who is also a brilliant architect",
+    "language": "Clear and human-first. Avoid jargon unless necessary (with definitions).",
+    "perspective": "First-person plural ('We') for brand values; second-person ('You') for user messaging",
+    "personality": "Curious, calm, quietly confident. Never arrogant or patronizing.",
+    "spectrum": {
+      "formality": 3,
+      "enthusiasm": 3,
+      "complexity": 2,
+      "humor": 2
+    },
+    "must_not_list": [
+      "Data is the new oil",
+      "Overly clinical or dehumanizing language about memory",
+      "Fear-based urgency (e.g., 'Don't lose your memories!')",
+      "Corporate buzzwords (synergy, leverage, optimize, bandwidth, circle back)",
+      "Overpromising (e.g., 'Never forget anything again', '100% perfect memory')",
+      "Surveillance language (track, monitor, capture everything)",
+      "AI hype (Revolutionary AI, World's first, Transformative intelligence)",
+      "Negative framing (defining by competitor weaknesses)",
+      "Unclear acronyms without definitions in user-facing copy"
+    ],
+    "headline_standards": {
+      "ideal_length": "5-8 words",
+      "max_length": "12 words",
+      "structure": "Active voice, verb-led",
+      "cta_style": "Action-oriented, specific, warm (e.g., 'Explore your memory graph' not 'Click here')",
+      "capitalization": "Sentence case for headlines; Title case for overlines",
+      "punctuation": "Periods on complete sentences; fragments may skip punctuation"
+    },
+    "body_copy_standards": {
+      "reading_level": "Grade 8-10 (Flesch-Kincaid) for user-facing; Grade 12+ for technical docs",
+      "evidence_requirement": "Every claim must be provable or clearly hypothetical",
+      "max_paragraph_length": "4-5 sentences",
+      "bullet_list_max": 7,
+      "number_format": "Spell out 1-9; numerals for 10+; use '10M+' not '10,000,000+' in marketing"
+    },
+    "platform_voice": {
+      "website_hero": "Bold, warm, direct. Lead with promise and proof.",
+      "website_body": "Conversational, clear, structured. Use whitespace.",
+      "instagram": "Inspiring, visual-first. Pair with imagery. Use hashtags sparingly (#AlluraAI).",
+      "linkedin": "Thoughtful, industry-aware. Share insights and ideas.",
+      "newsletter": "Warm, informative, conversational.",
+      "product_ui": "Concise, actionable, friendly. Short labels. Clear feedback.",
+      "technical_docs": "Precise, thorough, neutral. Correct terminology (MCP, vector, BM25, Neo4j)."
+    }
+  },
+  "applications": {
+    "templates": [
+      { "name": "Business Card", "size": "85mm x 55mm", "orientation": "horizontal", "front": "Lettermark centered or wordmark left", "back": "Contact info in body text" },
+      { "name": "Letterhead", "size": "A4", "header": "Wordmark left-aligned at 24mm top margin; gold accent line", "footer": "Tagline centered, URL, small lettermark" },
+      { "name": "Email Signature", "logo_width": "120px", "layout": "Left-aligned name + role; contact info; tagline" },
+      { "name": "Instagram Profile", "image": "Lettermark in circle, charcoal or blue background", "bio": "Memory that shows its work. | Sovereign AI memory layer. Preserve. Connect. Empower.", "link": "allurama.ai" },
+      { "name": "LinkedIn Banner", "description": "Geometric motif + wordmark centered" },
+      { "name": "Website Header", "logo_height": "48px", "alignment": "left", "background": "#F5F1E6 or transparent over hero", "cta": "'Explore Product' in green button" },
+      { "name": "Website Footer", "background": "#111827", "logo": "Reversed white wordmark", "trust_bar": "Your memories. Secure. Connected. Always yours." },
+      { "name": "Presentation Title", "background": "#111827", "headline": "Centered, gold bar beneath", "logo": "Top-left wordmark" },
+      { "name": "Newsletter", "title": "The Memory Layer for AI", "sections": ["Product Update", "Insights", "From the Team"], "cta": "Explore what's new" },
+      { "name": "Social Media Post", "styles": ["Quote (dark bg, green text)", "Photo+Text (cream overlay)", "Minimal (solid brand color)", "Circle Motif (overlapping circles)"] },
+      { "name": "Digital Ad", "size": "300x250", "background": "#111827", "headline": "green text", "stat_badge": "Gold, 10M+ Memories Preserved" },
+      { "name": "Billboard", "background": "cream with large wordmark", "text": "Minimal, maximum impact" }
+    ]
+  },
+  "governance": {
+    "steward": "Chief Brand Officer / Head of Design",
+    "brand_manager": "Brand Manager",
+    "visual_director": "Glaser",
+    "copy_lead": "Ogilvy",
+    "qa_reviewer": "Munari",
+    "approval_workflow": {
+      "new_social_template": "Brand Manager",
+      "website_copy_update": "Copy Lead",
+      "color_palette_expansion": "Visual Director + Brand Manager",
+      "logo_modification": "Visual Director + Chief Brand Officer",
+      "tagline_change": "Copy Lead + Chief Brand Officer",
+      "new_application_mockup": "Visual Director",
+      "brand_kit_version_bump": "Chief Brand Officer"
+    },
+    "audit_schedule": {
+      "quarterly": "Brand consistency audit across all touchpoints",
+      "semi_annually": "Competitive brand landscape review",
+      "annually": "Full brand kit review and version update"
+    },
+    "legal_protections": {
+      "trademark": { "status": "recommended_filing", "classes": [9, 42, 45], "watch": "Class 3/35 cosmetics overlap" },
+      "copyright": "Logo vector artwork registration recommended",
+      "trade_dress": "Multi-color logo configuration",
+      "domains_secured": ["allurama.ai", "allurama.com"],
+      "social_handles_pending": ["@allurama.ai", "@allura_memory"]
+    },
+    "version_history": [
+      { "version": "1.0", "date": "2026-05-09", "changes": "Initial assembly from Figma brand kit extraction + Strategy Pack + Naming Pack + Logo Pack", "approved_by": "Rand / Kotler" }
+    ]
+  },
+  "source_files": {
+    "brand_extraction_md": "brand-assets/BRAND-EXTRACTION.md",
+    "strategy_pack": "01_strategist_strategy-pack.md",
+    "naming_pack": "02-namer_naming-pack.md",
+    "logo_pack": "03_visual-director_logo-pack.md",
+    "fal_ai_runs": "03_visual-director_fal-ai-runs.json",
+    "brand_kit": "04_brand-kit-builder_brand-kit.md",
+    "qa_report": "05_qa-reviewer_qa-report.md",
+    "brand_truth_json": "06_allura-memory_brand-truth.json",
+    "logos": {
+      "wordmark": "brand-assets/logos/wordmark.png",
+      "lettermark": "brand-assets/logos/lettermark-AL.png",
+      "logo_system_page": "brand-assets/logos/page15-logo-system.png"
+    },
+    "brand_kit_pages": [
+      "brand-assets/logos/brand-overview.png",
+      "brand-assets/logos/page03-brand-essence.png",
+      "brand-assets/logos/page04-brand-personality.png",
+      "brand-assets/logos/page05-product-mockup.png",
+      "brand-assets/logos/page06-brand-assets.png",
+      "brand-assets/logos/page07-social-post.png",
+      "brand-assets/logos/page08-social-newsletter.png",
+      "brand-assets/logos/page09-wireframes.png"
+    ]
+  }
+}

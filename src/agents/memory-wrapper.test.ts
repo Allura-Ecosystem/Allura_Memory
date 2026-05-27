@@ -121,6 +121,13 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
         ],
         count: 1,
         latency_ms: 42,
+        meta: {
+          contract_version: "v1" as const,
+          degraded: false,
+          stores_used: ["graph", "ruvector"],
+          stores_attempted: ["graph", "ruvector", "postgres"],
+          warnings: [],
+        },
       };
 
       vi.spyOn(canonicalTools.canonicalMemoryTools, "memory_search").mockResolvedValue(
@@ -141,6 +148,28 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
       );
     });
 
+    it("should reject missing group_id before calling canonical search", async () => {
+      await expect(
+        agentMemory.search({
+          group_id: undefined as any,
+          query: "architecture decisions",
+        })
+      ).rejects.toThrow("group_id is required");
+
+      expect(canonicalTools.canonicalMemoryTools.memory_search).not.toHaveBeenCalled();
+    });
+
+    it("should reject invalid group_id before calling canonical search", async () => {
+      await expect(
+        agentMemory.search({
+          group_id: "invalid-group",
+          query: "architecture decisions",
+        })
+      ).rejects.toThrow("Invalid group_id");
+
+      expect(canonicalTools.canonicalMemoryTools.memory_search).not.toHaveBeenCalled();
+    });
+
     it("should reject empty query", async () => {
       await expect(
         agentMemory.search({
@@ -158,6 +187,30 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
           limit: 200,
         })
       ).rejects.toThrow(ValidationError);
+    });
+
+    it("should preserve optional user_id through canonical search routing", async () => {
+      const searchMock = vi
+        .spyOn(canonicalTools.canonicalMemoryTools, "memory_search")
+        .mockResolvedValue({
+          results: [],
+          count: 0,
+          latency_ms: 10,
+        } as any);
+
+      await agentMemory.search({
+        group_id: "allura-system",
+        user_id: "brooks-architect",
+        query: "architecture decisions",
+      });
+
+      expect(searchMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          group_id: "allura-system",
+          user_id: "brooks-architect",
+          query: "architecture decisions",
+        })
+      );
     });
   });
 
@@ -226,6 +279,13 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
         ],
         total: 1,
         has_more: false,
+        meta: {
+          contract_version: "v1" as const,
+          degraded: false,
+          stores_used: ["postgres", "graph"],
+          stores_attempted: ["postgres", "graph"],
+          warnings: [],
+        },
       };
 
       vi.spyOn(canonicalTools.canonicalMemoryTools, "memory_list").mockResolvedValue(
@@ -239,6 +299,35 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
       });
 
       expect(result).toEqual(mockResponse);
+      expect(canonicalTools.canonicalMemoryTools.memory_list).toHaveBeenCalledWith(
+        expect.objectContaining({
+          group_id: "allura-system",
+          user_id: "test-user",
+          limit: 50,
+        })
+      );
+    });
+
+    it("should reject missing group_id before calling canonical list", async () => {
+      await expect(
+        agentMemory.list({
+          group_id: undefined as any,
+          user_id: "test-user",
+        })
+      ).rejects.toThrow("group_id is required");
+
+      expect(canonicalTools.canonicalMemoryTools.memory_list).not.toHaveBeenCalled();
+    });
+
+    it("should reject invalid group_id before calling canonical list", async () => {
+      await expect(
+        agentMemory.list({
+          group_id: "invalid-group",
+          user_id: "test-user",
+        })
+      ).rejects.toThrow("Invalid group_id");
+
+      expect(canonicalTools.canonicalMemoryTools.memory_list).not.toHaveBeenCalled();
     });
 
     it("should reject invalid limit", async () => {

@@ -71,7 +71,7 @@ describe("HITL Promotion Lock policy", () => {
     const route = readRepoFile("src/app/api/curator/approve/route.ts")
     const batchScript = readRepoFile("scripts/batch-approve-proposals.ts")
 
-    for (const source of [route, batchScript]) {
+    for (const source of [batchScript]) {
       const auditIndex = source.indexOf("await logApprovalEvent")
       const graphWriteIndex = source.indexOf("await createInsight")
 
@@ -81,5 +81,15 @@ describe("HITL Promotion Lock policy", () => {
       expect(source).toContain('decision: "approved"')
       expect(source).toContain("memory_id:")
     }
+
+    const routeAuditIndex = route.indexOf("await logApprovalEvent")
+    const routePromotionQueueIndex = route.indexOf("await enqueuePromotionSync")
+
+    expect(route).not.toContain("await createInsight")
+    expect(routeAuditIndex).toBeGreaterThanOrEqual(0)
+    expect(routePromotionQueueIndex).toBeGreaterThanOrEqual(0)
+    expect(routeAuditIndex).toBeLessThan(routePromotionQueueIndex)
+    expect(route).toContain('decision: "approved"')
+    expect(route).toContain("memory_id:")
   })
 })

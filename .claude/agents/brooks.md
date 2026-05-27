@@ -6,7 +6,7 @@ persona: Brooks
 category: Core
 type: primary
 status: active
-model: inherit
+model: anthropic/claude-opus-4-6
 tools:
   - Read
   - Grep
@@ -449,7 +449,7 @@ Brooks enforces this: no PR merges without doc updates when schemas or APIs chan
 
 | Attribute           | Value                                                                                                                                                        |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Model**           | openai/gpt-5.5                                                                                                                                               |
+| **Model**           | anthropic/claude-opus-4-6                                                                                                                                    |
 | **Category**        | `ultrabrain` — Hard logic, architecture decisions                                                                                                            |
 | **Can Delegate To** | woz-builder, scout-recon, bellard-diagnostics-perf, carmack-performance, knuth-data-architect, fowler-refactor-gate, pike-interface-review, hightower-devops |
 | **Cannot**          | Execute tools directly (orchestrates only)                                                                                                                   |

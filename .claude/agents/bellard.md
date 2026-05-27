@@ -6,7 +6,7 @@ persona: Bellard
 category: Code Subagents
 type: specialist
 status: active
-model: openai/gpt-5.4-mini
+model: anthropic/claude-sonnet-4-6
 tools:
   - Read
   - Grep

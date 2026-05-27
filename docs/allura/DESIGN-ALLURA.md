@@ -36,6 +36,35 @@ The Allura Dashboard, Curator, and Settings surfaces provide the human-facing co
 
 The Dashboard is the primary operational surface. It surfaces real data from Allura Brain (PostgreSQL + Neo4j), not mocks. Every component consumes mapped UI contracts from `src/lib/dashboard/`; raw Brain API shapes stay behind `api.ts`, `queries.ts`, and `mappers.ts` (AD-26).
 
+### Dashboard v2 condensed UX contract
+
+Phase 1 `/dashboard` is a vertical three-panel flow:
+
+| Panel | Purpose | Required state |
+| --- | --- | --- |
+| System status | Store availability, queue status, tenant scope, freshness | healthy, degraded, unknown, failed, empty, loading |
+| Hygiene and actions | Operational issues and next actions | failed promotions, schema drift, stale traces, config/source warnings |
+| Approvals queue | Human decision surface for proposals | proposal ID, score, reasoning, evidence, state, allowed actions |
+
+Required action surface:
+
+```ts
+interface DashboardGovernanceActions {
+  refresh(): Promise<void>
+  approveProposal(id: string): Promise<void>
+  requestChanges(id: string, reason?: string): Promise<void>
+  denyProposal(id: string, reason?: string): Promise<void>
+  openEvidence(id: string): void
+  openDetail(id: string): void
+}
+```
+
+`requestChanges` is a UX label in Phase 1. It maps to `POST /api/curator/reject` with a rationale prefix of `Needs evidence: `. Phase 2 may add a real `changes_requested` state.
+
+Truthfulness rules: no fabricated live data, no “healthy” without verification, no “done” without evidence, no “live” without active polling/streaming and visible freshness, unknown is a first-class state, and Brain receipts are audit traces rather than proof of completion.
+
+Brand/accessibility rules: use existing Allura shell, navigation, logo assets, and semantic tokens; do not import Difference Driven tokens, colors, language, or assumptions; avoid marketing hero sections, fake charts, vanity metrics, AI-gradient tropes, and inflated claims; approval actions must be keyboard reachable and confirmation dialogs must trap/restore focus.
+
 ## Mission Control Dashboard Rebuild Addendum
 
 The dashboard rebuild is an integration and cutover program, not a second dashboard product.
@@ -59,7 +88,7 @@ Mission Control combines the operator cockpit with Allura memory governance. The
 | Provenance | `/allura` | Trace → proposal → approval → graph evidence chain |
 | Extracted | `/allura` | Allura extraction/memory APIs |
 | Agents | `/agents` | OpenClaw/Symphony/TALON/IRIS/Team RAM runtime adapters |
-| Approvals | `/allura` or `/work-board` | Curator proposals + Notion work state |
+| Approvals | `/allura` or `/work-board` | Curator proposals + Native Allura Kanban work state; Notion/Linear/GitHub Projects optional adapters |
 | Settings | `/resources` or `/settings` | Resource manifest + dashboard configuration |
 | Search | Global command/search surface | Allura retrieval layer |
 | Add memory | Governed Allura action | Controlled memory write endpoint |
@@ -101,7 +130,7 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 | F19 | System Health Dashboard — view service status, metrics, and degradation warnings | `/dashboard` (overview) · `GET /api/health?detailed=true` · `GET /api/health/metrics` |
 | F41 | Mission Control route shell — `/command`, `/work-board`, `/agents`, `/telemetry`, `/allura`, `/resources` | Mission Control development surface on `3334`; future `3100` replacement after gates pass |
 | F42 | `/allura` preserves `6420` memory dashboard capabilities | Memories, insights, traces, provenance, extracted facts, approvals mapped into `/allura` |
-| F43 | `/work-board` reads planning state from Notion/tracker adapter | Notion Work Board adapter; no competing local planning DB |
+| F43 | `/work-board` uses Native Allura Kanban as the default planning source of truth | Native board model; Notion, Linear, and GitHub Projects are optional sync adapters |
 | F44 | `/resources` reads resource inventory from manifest endpoint or `RESOURCE-MANIFEST.md` | Resource Manifest adapter |
 | F45 | `/agents` distinguishes TALON/IRIS from Team RAM/Durham/external agents | Agent adapter + canonical agent taxonomy |
 | F46 | `/telemetry` reports real/unknown metrics honestly | Telemetry adapter with degraded/unknown state |

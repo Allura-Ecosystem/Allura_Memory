@@ -245,7 +245,7 @@ The Mission Control rebuild combines the existing Allura memory dashboard experi
 ```mermaid
 flowchart LR
     A[6420 Reference<br/>Memory dashboard UX] --> C[3334 Mission Control<br/>Development integration]
-    B[Notion<br/>Planning truth] --> C
+    B[Native Allura Kanban<br/>Planning truth] --> C
     D[Allura Brain APIs<br/>Memory truth] --> C
     E[Resource Manifest<br/>Inventory truth] --> C
     C -->|validated cutover only| F[3100 Docker Dashboard<br/>Replacement target]
@@ -256,7 +256,7 @@ flowchart LR
 | Mission Control Route | Backing Source of Truth | Write Policy |
 |-----------------------|-------------------------|--------------|
 | `/command` | Aggregated adapter summaries | Read-only first version |
-| `/work-board` | Notion / tracker adapter | No write unless Captain approves |
+| `/work-board` | Native Allura Kanban | Governed board writes only; external sync adapters optional |
 | `/agents` | OpenClaw/Symphony/TALON/IRIS/Team RAM runtime adapters | Runtime actions only through approved adapter actions |
 | `/telemetry` | Runtime/tool/model telemetry adapters | No mutation |
 | `/allura` | Allura Brain APIs | Governed memory actions only; no direct substrate writes |
@@ -273,7 +273,8 @@ flowchart LR
 | AI Agent via Brooks / Team RAM | Inbound | Skills + packaged MCP servers | `neo4j-memory` first, `database-server` for evidence, `neo4j-cypher` only when needed | AD-23, AD-03 |
 | Dashboard UI | Inbound | REST HTTP | JSON — memory records | AD-05 |
 | Mission Control UI | Inbound | REST HTTP + adapter contracts | Route-scoped cockpit, work-board, agent, telemetry, Allura, and resource contracts | AD-29, RK-19 |
-| Notion Work Board Adapter | Outbound | Notion API | Planning/work item state; Notion remains source of truth | F43, AD-29 |
+| Native Allura Kanban | Inbound | REST HTTP + PostgreSQL-backed service contract | Default planning/work item source of truth | F43, AD-31 |
+| Board Sync Adapters | Outbound | Provider APIs | Optional Notion, Linear, and GitHub Projects projections of native board state | F43, AD-31 |
 | Resource Manifest Adapter | Outbound | File or generated endpoint | Skills, agents, MCP servers, containers, cron jobs, drift warnings | F44, AD-29 |
 | Curator Approve CLI | Inbound | CLI (`bun run curator:approve`) | Processes pending proposals from PostgreSQL, promotes approved ones to Neo4j via `createInsight()` | F6, B18, B19 |
 | PostgreSQL 16 | Outbound | TCP (pg driver) | SQL — append-only INSERTs + SELECTs | AD-01, RK-02 |
@@ -310,6 +311,34 @@ flowchart LR
 ---
 
 ## 7. References
+
+### Dashboard v2 condensed topology
+
+`/dashboard` consumes existing dashboard API/query/mapper boundaries rather than raw database shapes:
+
+```text
+Next.js route
+  → src/lib/dashboard/query helper
+  → controlled API endpoint
+  → PostgreSQL / Neo4j through application service
+  → mapper + Zod validation
+  → DashboardResult<T>
+  → UI state
+```
+
+Authoritative implementation boundary: `src/lib/dashboard/api.ts`, `src/lib/dashboard/queries.ts`, `src/lib/dashboard/mappers.ts`, `src/lib/dashboard/schemas.ts`, and `src/lib/dashboard/types.ts`.
+
+Curator action topology:
+
+```text
+approveProposal → POST /api/curator/approve
+denyProposal    → POST /api/curator/reject
+needsEvidence   → POST /api/curator/reject with rationale prefix "Needs evidence: "
+```
+
+Native Kanban direction: PostgreSQL owns operational board state; Neo4j may project semantic relationships; Allura Brain stores durable decisions/evidence receipts. Notion, Linear, and GitHub Projects are optional sync adapters; Native Allura Kanban is default upstream.
+
+Cutover topology: `6420` is historical visual/reference only, `3334` is retired development integration evidence, and `3100` is the canonical local dashboard target. Replacing `3100` requires route, visual, adapter/source-of-truth, auth, smoke, no-fabricated-data, review, rollback, and Captain approval evidence.
 
 - [BLUEPRINT.md](./BLUEPRINT.md) — Core data model, API surface, execution rules
 - [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) — Field-level definitions

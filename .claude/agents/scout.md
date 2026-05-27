@@ -6,7 +6,7 @@ persona: none
 category: Core Subagents
 type: utility
 status: active
-model: openai/gpt-5.4-mini
+model: anthropic/claude-haiku-4-5-20251001
 tools:
   - Read
   - Grep

@@ -1,16 +1,19 @@
 # DESIGN-MEMORY-SPACE.md — Memory Graph Dashboard
 
-> **Status:** PROPOSED (ready for implementation)
+> **Status:** RETIRED — dashboard blank-slate reset
 > **Author:** Troy Curator + Team RAM
 > **Date:** 2026-05-18
-> **Scope:** Interactive memory graph dashboard for Allura Memory
+> **Scope:** Historical design notes only; do not implement without a new approved spec
 > **Target:** Port 3100 (canonical)
 
 ---
 
 ## 1. Purpose
 
-Build an interactive **Memory Space** dashboard that visualizes Allura's dual-layer memory (PostgreSQL episodic + Neo4j semantic) as a navigable graph. Users explore relationships, inspect details, and act on memories without leaving the dashboard.
+This document is retained as historical context only. The active dashboard routes
+have been reset to neutral placeholders so the dashboard can be rebuilt from
+scratch. Do not treat this document as an active implementation spec or acceptance
+gate without renewed approval.
 
 This is **not decorative eye candy**. The 3D concept serves information architecture first:
 - **Layers** — episodic vs semantic distinction

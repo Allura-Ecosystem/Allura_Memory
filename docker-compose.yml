@@ -156,6 +156,7 @@ services:
       - .env.local
     environment:
       - PORT=3100
+      - HOSTNAME=0.0.0.0
       - NODE_ENV=production
       - POSTGRES_HOST=knowledge-postgres
       - POSTGRES_PORT=5432
@@ -172,6 +173,7 @@ services:
       - RUVECTOR_DB=${POSTGRES_DB}
       - RUVECTOR_EMBEDDING_BASE_URL=http://host.docker.internal:11434
       - GRAPH_BACKEND=${GRAPH_BACKEND:-neo4j}
+      - ALLURA_MCP_BASE_URL=${ALLURA_MCP_BASE_URL:-http://allura-memory-mcp:3201}
       - RUVIX_KERNEL_SECRET=${RUVIX_KERNEL_SECRET:-}
       - DEFAULT_GROUP_ID=${DEFAULT_GROUP_ID:-allura-system}
       - ALLURA_DEV_AUTH_ENABLED=${ALLURA_DEV_AUTH_ENABLED:-true}
@@ -180,11 +182,31 @@ services:
     networks:
       - knowledge-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://0.0.0.0:3100/api/health/live >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:3100/api/health/live >/dev/null 2>&1 || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 10
       start_period: 45s
+
+  # Allura Brand Dashboard — static nginx SPA (port 6420)
+  brand-dashboard:
+    profiles:
+      - brand-dashboard
+    build:
+      context: ${BRAND_ASSETS_PATH:-./allura-memory/brand-assets}
+      dockerfile: Dockerfile
+    container_name: allura-brand-dashboard
+    restart: unless-stopped
+    ports:
+      - "6420:80"
+    networks:
+      - knowledge-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   # Dozzle - Docker log aggregation
   dozzle:
@@ -289,5 +311,5 @@ volumes:
 # =============================================================================
 networks:
   knowledge-network:
-    driver: bridge
+    external: true
     name: knowledge-network

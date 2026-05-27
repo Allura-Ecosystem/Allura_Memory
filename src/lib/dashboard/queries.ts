@@ -9,6 +9,9 @@ import {
   getMemoryById,
   getMemoryCount,
   getMemoryList,
+  getMemoryStats,
+  getPolicyEnforcementEvents,
+  getPolicyViolationEvents,
   getTraces,
 } from "@/lib/dashboard/api"
 import {
@@ -24,7 +27,8 @@ import {
   mapTraceToEvidence,
   warningFrom,
 } from "@/lib/dashboard/mappers"
-import type { DashboardOverview, DashboardResult, DecisionRecord, Evidence, GraphEdge, GraphNode, Insight, Memory } from "@/lib/dashboard/types"
+import type { DashboardHealthMetrics, DashboardOverview, DashboardResult, DecisionRecord, Evidence, GraphEdge, GraphNode, Insight, Memory, ActivityItem } from "@/lib/dashboard/types"
+import type { MemoryStats } from "@/app/api/memory/stats/route"
 
 function failure<T>(error: unknown): DashboardResult<T> {
   return {
@@ -44,16 +48,16 @@ function extractGraphCounts(raw: unknown): { nodeCount?: number; edgeCount?: num
   }
 }
 
-export async function loadDashboardOverview(): Promise<DashboardResult<DashboardOverview>> {
+export async function loadDashboardOverview(groupId?: string): Promise<DashboardResult<DashboardOverview>> {
   try {
     const [memoryCount, pending, approved, audit, health, healthMetrics, graph] = await Promise.allSettled([
-      getMemoryCount(),
-      getCuratorProposals({ status: "pending", limit: 6 }),
-      getInsights({ status: "active", limit: 6 }),
-      getAuditEvents({ limit: 8 }),
+      getMemoryCount(groupId),
+      getCuratorProposals({ status: "pending", limit: 6 }, groupId),
+      getInsights({ status: "active", limit: 6 }, groupId),
+      getAuditEvents({ limit: 8 }, groupId),
       getHealth(),
-      getHealthMetrics(),
-      getGraph({ stats: true }),
+      getHealthMetrics(groupId),
+      getGraph({ stats: true }, groupId),
     ])
 
     const warnings = []
@@ -77,9 +81,8 @@ export async function loadDashboardOverview(): Promise<DashboardResult<Dashboard
     const pendingInsights = pending.status === "fulfilled" ? mapProposalsResponse(pending.value.data) : []
     const approvedInsights = approved.status === "fulfilled" ? mapInsightsResponse(approved.value.data) : []
     const graphData = graph.status === "fulfilled" ? extractGraphCounts(graph.value.data) : {}
-    const failedPromotions = healthMetrics.status === "fulfilled"
-      ? Number((healthMetrics.value.data as { degraded?: { promotion_failures_24h?: number } })?.degraded?.promotion_failures_24h ?? 0)
-      : 0
+    const healthData = healthMetrics.status === "fulfilled" ? (healthMetrics.value.data as DashboardHealthMetrics) : null
+    const failedPromotions = healthData ? Number(healthData.degraded.promotion_failures_24h ?? 0) : 0
     const totalMemories = memoryCount.status === "fulfilled" ? Number(memoryCount.value.data.count ?? 0) : 0
 
     return {
@@ -88,6 +91,7 @@ export async function loadDashboardOverview(): Promise<DashboardResult<Dashboard
         activity: audit.status === "fulfilled" ? mapAuditResponse(audit.value.data) : [],
         pendingInsights,
         systemStatus: health.status === "fulfilled" ? mapSystemStatus(health.value.data) : { status: "unknown", components: [] },
+        healthMetrics: healthData,
         warnings,
       },
       error: null,
@@ -99,9 +103,9 @@ export async function loadDashboardOverview(): Promise<DashboardResult<Dashboard
   }
 }
 
-export async function loadMemories(query?: string): Promise<DashboardResult<Memory[]>> {
+export async function loadMemories(query?: string, groupId?: string): Promise<DashboardResult<Memory[]>> {
   try {
-    const result = await getMemoryList({ query, limit: 50, include_global: true })
+    const result = await getMemoryList({ query, limit: 50, include_global: true }, groupId)
     return {
       data: mapMemoriesResponse(result.data),
       error: null,
@@ -113,31 +117,56 @@ export async function loadMemories(query?: string): Promise<DashboardResult<Memo
   }
 }
 
-export async function loadInsights(status = "pending"): Promise<DashboardResult<Insight[]>> {
+export async function loadInsights(status = "pending", groupId?: string): Promise<DashboardResult<Insight[]>> {
   try {
-    if (status === "pending") {
-      const result = await getCuratorProposals({ status: "pending", limit: 50 })
+    if (status === "all") {
+      const [pending, approved, rejected] = await Promise.allSettled([
+        getCuratorProposals({ status: "pending", limit: 50 }, groupId),
+        getInsights({ status: "active", limit: 50 }, groupId),
+        getCuratorProposals({ status: "rejected", limit: 50 }, groupId),
+      ])
+      const warnings: DashboardResult<Insight[]>["warnings"] = []
+      if (pending.status === "fulfilled") warnings.push(...warningFrom("curator-pending", pending.value.warning))
+      else warnings.push({ id: "curator-pending-error", source: "curator-pending", message: pending.reason instanceof Error ? pending.reason.message : "Request failed" })
+      if (approved.status === "fulfilled") warnings.push(...warningFrom("insights-active", approved.value.warning))
+      else warnings.push({ id: "insights-active-error", source: "insights-active", message: approved.reason instanceof Error ? approved.reason.message : "Request failed" })
+      if (rejected.status === "fulfilled") warnings.push(...warningFrom("curator-rejected", rejected.value.warning))
+      else warnings.push({ id: "curator-rejected-error", source: "curator-rejected", message: rejected.reason instanceof Error ? rejected.reason.message : "Request failed" })
+
+      return {
+        data: [
+          ...(pending.status === "fulfilled" ? mapProposalsResponse(pending.value.data) : []),
+          ...(approved.status === "fulfilled" ? mapInsightsResponse(approved.value.data) : []),
+          ...(rejected.status === "fulfilled" ? mapProposalsResponse(rejected.value.data) : []),
+        ],
+        error: null,
+        degraded: [pending, approved, rejected].some((result) => result.status === "rejected" || result.value.degraded),
+        warnings,
+      }
+    }
+    if (status === "pending" || status === "rejected") {
+      const result = await getCuratorProposals({ status, limit: 50 }, groupId)
       return { data: mapProposalsResponse(result.data), error: null, degraded: result.degraded, warnings: warningFrom("curator", result.warning) }
     }
-    const result = await getInsights({ status, limit: 50 })
+    const result = await getInsights({ status, limit: 50 }, groupId)
     return { data: mapInsightsResponse(result.data), error: null, degraded: result.degraded, warnings: warningFrom("insights", result.warning) }
   } catch (error) {
     return failure(error)
   }
 }
 
-export async function loadEvidence(): Promise<DashboardResult<Evidence[]>> {
+export async function loadEvidence(groupId?: string): Promise<DashboardResult<Evidence[]>> {
   try {
-    const result = await getTraces({ limit: 50 })
+    const result = await getTraces({ limit: 50 }, groupId)
     return { data: mapTracesResponse(result.data), error: null, degraded: result.degraded, warnings: warningFrom("evidence", result.warning) }
   } catch (error) {
     return failure(error)
   }
 }
 
-export async function loadEvidenceDetail(id: string): Promise<DashboardResult<Evidence>> {
+export async function loadEvidenceDetail(id: string, groupId?: string): Promise<DashboardResult<Evidence>> {
   try {
-    const memory = await getMemoryById(id).catch(() => null)
+    const memory = await getMemoryById(id, groupId).catch(() => null)
     if (memory) {
       const memories = mapMemoriesResponse({ memories: [memory.data] })
       const first = memories[0]
@@ -160,7 +189,7 @@ export async function loadEvidenceDetail(id: string): Promise<DashboardResult<Ev
         warnings: warningFrom("evidence-memory", memory.warning),
       }
     }
-    const traces = await getTraces({ limit: 100 })
+    const traces = await getTraces({ limit: 100 }, groupId)
     const match = (traces.data.traces ?? []).find((trace) => {
       const item = trace as { id?: unknown; trace_id?: unknown; metadata?: { trace_ref?: unknown } }
       return String(item.id ?? item.trace_id ?? item.metadata?.trace_ref ?? "") === id
@@ -172,9 +201,9 @@ export async function loadEvidenceDetail(id: string): Promise<DashboardResult<Ev
   }
 }
 
-export async function loadDecisions(agentId?: string): Promise<DashboardResult<DecisionRecord[]>> {
+export async function loadDecisions(agentId?: string, groupId?: string): Promise<DashboardResult<DecisionRecord[]>> {
   try {
-    const result = await getDecisionEvents(agentId ? { agent_id: agentId } : undefined)
+    const result = await getDecisionEvents(agentId ? { agent_id: agentId } : undefined, groupId)
     return {
       data: mapDecisionsResponse(result.data),
       error: null,
@@ -186,11 +215,11 @@ export async function loadDecisions(agentId?: string): Promise<DashboardResult<D
   }
 }
 
-export async function loadCuratorQueue(status = "pending"): Promise<DashboardResult<Insight[]>> {
+export async function loadCuratorQueue(status = "pending", groupId?: string): Promise<DashboardResult<Insight[]>> {
   try {
     const [proposals, approved] = await Promise.allSettled([
-      getCuratorProposals({ status: "pending", limit: 50 }),
-      getCuratorProposals({ status: "approved", limit: 20 }),
+      getCuratorProposals({ status: "pending", limit: 50 }, groupId),
+      getCuratorProposals({ status: "approved", limit: 20 }, groupId),
     ])
     const warnings: DashboardResult<Insight[]>["warnings"] = []
     if (proposals.status === "fulfilled") warnings.push(...warningFrom("proposals", proposals.value.warning))
@@ -198,17 +227,27 @@ export async function loadCuratorQueue(status = "pending"): Promise<DashboardRes
     if (approved.status === "fulfilled") warnings.push(...warningFrom("approved", approved.value.warning))
 
     if (status === "pending") {
+      const pendingError = proposals.status === "rejected"
+        ? proposals.reason instanceof Error
+          ? proposals.reason.message
+          : "Pending proposal request failed"
+        : null
       return {
         data: proposals.status === "fulfilled" ? mapProposalsResponse(proposals.value.data) : [],
-        error: null,
-        degraded: proposals.status === "fulfilled" ? proposals.value.degraded : false,
+        error: pendingError,
+        degraded: proposals.status === "fulfilled" ? proposals.value.degraded : true,
         warnings,
       }
     }
+    const approvedError = approved.status === "rejected"
+      ? approved.reason instanceof Error
+        ? approved.reason.message
+        : "Approved proposal request failed"
+      : null
     return {
       data: approved.status === "fulfilled" ? mapProposalsResponse(approved.value.data) : [],
-      error: null,
-      degraded: approved.status === "fulfilled" ? approved.value.degraded : false,
+      error: approvedError,
+      degraded: approved.status === "fulfilled" ? approved.value.degraded : true,
       warnings,
     }
   } catch (error) {
@@ -216,23 +255,143 @@ export async function loadCuratorQueue(status = "pending"): Promise<DashboardRes
   }
 }
 
-export async function loadGraph(): Promise<DashboardResult<{ nodes: GraphNode[]; edges: GraphEdge[]; totalEdges?: number }>> {
+export async function loadGraph(groupId?: string): Promise<DashboardResult<{ nodes: GraphNode[]; edges: GraphEdge[]; totalEdges?: number }>> {
   try {
-    const result = await getGraph()
+    const result = await getGraph(undefined, groupId)
     return { data: mapGraph(result.data), error: null, degraded: result.degraded, warnings: warningFrom("graph", result.warning) }
   } catch (error) {
     return failure(error)
   }
 }
 
-export async function loadGraphNodes(nodeType: string): Promise<DashboardResult<{ nodes: GraphNode[]; edges: GraphEdge[] }>> {
+export async function loadGraphNodes(nodeType: string, groupId?: string): Promise<DashboardResult<{ nodes: GraphNode[]; edges: GraphEdge[] }>> {
   try {
-    const result = await getGraph()
+    const result = await getGraph(undefined, groupId)
     const mapped = mapGraph(result.data)
     const nodes = mapped.nodes.filter((n) => n.type === nodeType)
     const nodeIds = new Set(nodes.map((n) => n.id))
     const edges = mapped.edges.filter((e) => nodeIds.has(e.source) || nodeIds.has(e.target))
     return { data: { nodes, edges }, error: null, degraded: result.degraded, warnings: warningFrom("graph", result.warning) }
+  } catch (error) {
+    return failure(error)
+  }
+}
+
+export async function loadMemoryStats(groupId?: string): Promise<DashboardResult<MemoryStats>> {
+  try {
+    const result = await getMemoryStats(groupId)
+    return {
+      data: result.data,
+      error: null,
+      degraded: result.degraded,
+      warnings: warningFrom("memory-stats", result.warning),
+    }
+  } catch (error) {
+    return failure(error)
+  }
+}
+
+function mapAuditToActivity(event: {
+  id: string
+  event_type: string
+  agent_id?: string | null
+  created_at: Date | string
+}): ActivityItem {
+  const kindMap: Record<string, ActivityItem["kind"]> = {
+    memory_add: "memory",
+    memory_search: "memory",
+    memory_promote: "approval",
+    insight_approved: "approval",
+    insight_rejected: "approval",
+    SYNC: "sync",
+  }
+  return {
+    id: event.id,
+    title: event.event_type.replace(/_/g, " "),
+    description: event.agent_id ?? "system",
+    timestamp:
+      event.created_at instanceof Date
+        ? event.created_at.toISOString()
+        : String(event.created_at),
+    kind: kindMap[event.event_type] ?? "system",
+    agent: event.agent_id ?? "system",
+  }
+}
+
+export async function loadRecentActivity(groupId?: string): Promise<DashboardResult<ActivityItem[]>> {
+  try {
+    const result = await getAuditEvents({ limit: 8 }, groupId)
+    const raw = result.data
+    const events = (raw && typeof raw === "object" && "events" in raw && Array.isArray(raw.events))
+      ? (raw.events as Array<{ id: string; event_type: string; agent_id?: string | null; created_at: Date | string }>)
+      : []
+    return {
+      data: events.map(mapAuditToActivity),
+      error: null,
+      degraded: result.degraded,
+      warnings: warningFrom("recent-activity", result.warning),
+    }
+  } catch (error) {
+    return failure(error)
+  }
+}
+
+export async function loadPolicyEnforcement(groupId?: string): Promise<DashboardResult<import("@/lib/dashboard/types").PolicyEnforcementSummary>> {
+  try {
+    const [checks, violations] = await Promise.allSettled([
+      getPolicyEnforcementEvents({ limit: 10 }, groupId),
+      getPolicyViolationEvents({ limit: 10 }, groupId),
+    ])
+
+    const warnings: DashboardResult<unknown>["warnings"] = []
+    if (checks.status === "fulfilled") warnings.push(...warningFrom("policy-checks", checks.value.warning))
+    else warnings.push({ id: "policy-checks-error", source: "policy-checks", message: checks.reason instanceof Error ? checks.reason.message : "Request failed" })
+    if (violations.status === "fulfilled") warnings.push(...warningFrom("policy-violations", violations.value.warning))
+    else warnings.push({ id: "policy-violations-error", source: "policy-violations", message: violations.reason instanceof Error ? violations.reason.message : "Request failed" })
+
+    const checkEvents = checks.status === "fulfilled" ? (checks.value.data.events ?? []) : []
+    const violationEvents = violations.status === "fulfilled" ? (violations.value.data.events ?? []) : []
+
+    const allEvents = [...checkEvents, ...violationEvents]
+      .sort((a: unknown, b: unknown) => {
+        const aTime = (a as { created_at?: string | Date }).created_at ?? ""
+        const bTime = (b as { created_at?: string | Date }).created_at ?? ""
+        return new Date(bTime).getTime() - new Date(aTime).getTime()
+      })
+      .slice(0, 10)
+
+    const recentEvents = allEvents.map((raw: unknown): import("@/lib/dashboard/types").PolicyEnforcementEvent => {
+      const e = raw as Record<string, unknown>
+      const meta = (e.metadata ?? {}) as Record<string, unknown>
+      return {
+        id: String(e.id ?? crypto.randomUUID()),
+        eventType: String(e.event_type ?? "policy_check") as "policy_check" | "policy_violation",
+        agentId: String(e.agent_id ?? "system"),
+        ruleName: String(meta.rule ?? meta.reason ?? "Unknown rule"),
+        status: String(e.status ?? (e.event_type === "policy_violation" ? "blocked" : "allowed")) as "allowed" | "blocked" | "failed",
+        timestamp: e.created_at instanceof Date ? e.created_at.toISOString() : String(e.created_at ?? new Date().toISOString()),
+        metadata: meta,
+      }
+    })
+
+    const violationCountByRule: Record<string, number> = {}
+    for (const e of violationEvents) {
+      const meta = ((e as Record<string, unknown>).metadata ?? {}) as Record<string, unknown>
+      const rule = String(meta.rule ?? meta.reason ?? "Unknown rule")
+      violationCountByRule[rule] = (violationCountByRule[rule] ?? 0) + 1
+    }
+
+    return {
+      data: {
+        recentEvents,
+        violationCountByRule,
+        checkCount: checkEvents.length,
+        violationCount: violationEvents.length,
+      },
+      error: null,
+      degraded: warnings.length > 0,
+      warnings,
+    }
   } catch (error) {
     return failure(error)
   }

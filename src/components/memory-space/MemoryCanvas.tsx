@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { Canvas } from "@react-three/fiber"
 import * as THREE from "three"
 
+import { getResolvedColor } from "@/lib/brand/allura"
 import type { MemoryNode } from "@/lib/memory-graph/types"
 
 import { MemoryGraphScene } from "./MemoryGraphScene"
@@ -110,13 +111,13 @@ export function MemoryCanvas({
         camera={{ position: [0, 0, 40], fov: 60, near: 0.1, far: 1000 }}
         gl={{ antialias: true, alpha: false }}
         onCreated={({ gl }) => {
-          gl.setClearColor(new THREE.Color("#1a1a2e"))
+          gl.setClearColor(new THREE.Color(getResolvedColor("dashboard-surface-alt")))
         }}
       >
         <Suspense fallback={null}>
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 10, 10]} intensity={0.8} />
-          <pointLight position={[-10, -10, -10]} intensity={0.3} color="#6366f1" />
+          <pointLight position={[-10, -10, -10]} intensity={0.3} color={getResolvedColor("blue")} />
 
           <MemoryGraphScene
             nodes={filteredNodes}

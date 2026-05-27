@@ -24,6 +24,7 @@ export function ActionButtons({ proposalId, groupId }: ActionButtonsProps) {
           proposal_id: proposalId,
           group_id: groupId,
           decision,
+          rationale: decision === "approve" ? "Admin UI approved proposal" : "Admin UI rejected proposal",
           curator_id: "admin-ui",
         }),
       });

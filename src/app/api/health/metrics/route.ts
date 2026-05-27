@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { captureException } from "@/lib/observability/sentry"
 import { getPool } from "@/lib/postgres/connection"
+import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 
 export interface SkillMetric {
   tool_name: string
@@ -54,68 +55,136 @@ export interface MetricsResponse {
   skills: SkillMetric[]
 }
 
-export async function GET(request: NextRequest): Promise<NextResponse<MetricsResponse>> {
+type ScopedTables = Record<string, boolean>
+
+async function loadScopedTables(pg: ReturnType<typeof getPool>, tables: string[]): Promise<ScopedTables> {
+  try {
+    const result = await pg.query(
+      `SELECT table_name
+       FROM information_schema.columns
+       WHERE table_schema = current_schema()
+         AND column_name = 'group_id'
+         AND table_name = ANY($1)`,
+      [tables]
+    )
+
+    const scoped = new Set<string>(result.rows.map((row) => String(row.table_name)))
+    return Object.fromEntries(tables.map((table) => [table, scoped.has(table)])) as ScopedTables
+  } catch {
+    return Object.fromEntries(tables.map((table) => [table, false])) as ScopedTables
+  }
+}
+
+function serviceUnavailable(timestamp: string, message: string): NextResponse {
+  return NextResponse.json(
+    {
+      timestamp,
+      error: message,
+      statusCode: 503,
+    },
+    { status: 503 },
+  )
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
   const timestamp = new Date().toISOString()
 
   try {
     const pg = getPool()
+    const rawGroupId = request.nextUrl.searchParams.get("group_id")
+    let groupId: string | null = null
+    if (rawGroupId !== null) {
+      try {
+        groupId = validateGroupId(rawGroupId)
+      } catch (error) {
+        if (error instanceof GroupIdValidationError) {
+          return NextResponse.json({ error: `Invalid group_id: ${error.message}` }, { status: 400 })
+        }
+        throw error
+      }
+    }
+    const scopedTables = groupId
+      ? await loadScopedTables(pg, ["canonical_proposals", "events", "allura_memories"])
+      : { canonical_proposals: false, events: false, allura_memories: false }
+
+    if (groupId && Object.values(scopedTables).some((scoped) => !scoped)) {
+      return serviceUnavailable(
+        timestamp,
+        "Tenant-scoped health metrics unavailable until canonical_proposals, events, and allura_memories expose group_id scoping.",
+      )
+    }
+
+    const queueGroupFilter = groupId ? " AND group_id = $1" : ""
+    const eventGroupFilter = groupId ? " AND group_id = $1" : ""
+    const memoryGroupFilter = groupId ? " WHERE group_id = $1" : ""
+    const queueQueryArgs = groupId ? [groupId] : []
+    const eventQueryArgs = groupId ? [groupId] : []
+    const memoryQueryArgs = groupId ? [groupId] : []
 
     // Queue health metrics
     const queueMetrics = await pg.query(`
       SELECT
-        (SELECT count(*) FROM canonical_proposals WHERE status = 'pending') as pending_count,
+        (SELECT count(*) FROM canonical_proposals WHERE status = 'pending'${queueGroupFilter}) as pending_count,
         (SELECT COALESCE(EXTRACT(EPOCH FROM (now() - min(created_at)))/3600, 0)
-         FROM canonical_proposals WHERE status = 'pending') as oldest_age_hours,
+         FROM canonical_proposals WHERE status = 'pending'${queueGroupFilter}) as oldest_age_hours,
         (SELECT count(*) FROM canonical_proposals
-         WHERE status = 'approved' AND decided_at >= now() - interval '24 hours') as approved_24h,
+         WHERE status = 'approved' AND decided_at >= now() - interval '24 hours'${queueGroupFilter}) as approved_24h,
         (SELECT count(*) FROM canonical_proposals
-         WHERE status = 'rejected' AND decided_at >= now() - interval '24 hours') as rejected_24h
-    `)
+         WHERE status = 'rejected' AND decided_at >= now() - interval '24 hours'${queueGroupFilter}) as rejected_24h
+    `, queueQueryArgs)
 
     const row = queueMetrics.rows[0]
 
     // Storage metrics — PostgreSQL
     const pgStart = Date.now()
-    const pgHealthResult = await pg.query("SELECT count(*) as total FROM allura_memories")
+    const pgHealthResult = await pg.query(
+      `SELECT count(*) as total FROM allura_memories${memoryGroupFilter}`,
+      memoryQueryArgs
+    )
     const pgLatency = Date.now() - pgStart
 
     // Storage metrics — Neo4j (degradable)
-    let neo4jStatus: "healthy" | "degraded" | "unhealthy" = "unhealthy"
+    let neo4jStatus: "healthy" | "degraded" | "unhealthy" = groupId ? "degraded" : "unhealthy"
     let neo4jLatency: number | null = null
     let neo4jNodes: number | null = null
 
-    try {
-      const neo4j = await import("neo4j-driver")
-      const driver = neo4j.driver(
-        process.env.NEO4J_URI || "bolt://localhost:7687",
-        neo4j.auth.basic(process.env.NEO4J_USER || "neo4j", process.env.NEO4J_PASSWORD || "password")
-      )
-      const session = driver.session()
-      const neo4jStart = Date.now()
-      const result = await session.run("MATCH (n:Memory) RETURN count(n) AS total")
-      neo4jLatency = Date.now() - neo4jStart
-      neo4jNodes = result.records[0]?.get("total")?.toNumber() ?? null
-      neo4jStatus = "healthy"
-      await session.close()
-      await driver.close()
-    } catch {
-      neo4jStatus = "unhealthy"
+    if (groupId) {
+      neo4jNodes = null
+      neo4jStatus = "degraded"
+    } else {
+      try {
+        const neo4j = await import("neo4j-driver")
+        const driver = neo4j.driver(
+          process.env.NEO4J_URI || "bolt://localhost:7687",
+          neo4j.auth.basic(process.env.NEO4J_USER || "neo4j", process.env.NEO4J_PASSWORD || "password")
+        )
+        const session = driver.session()
+        const neo4jStart = Date.now()
+        const result = await session.run("MATCH (n:Memory) RETURN count(n) AS total")
+        neo4jLatency = Date.now() - neo4jStart
+        neo4jNodes = result.records[0]?.get("total")?.toNumber() ?? null
+        neo4jStatus = "healthy"
+        await session.close()
+        await driver.close()
+      } catch {
+        neo4jStatus = "unhealthy"
+      }
     }
 
     // Degraded mode counters from events table
     const degradedMetrics = await pg.query(`
       SELECT
         (SELECT count(*) FROM events
-         WHERE event_type = 'neo4j_unavailable' AND created_at >= now() - interval '24 hours') as neo4j_unavailable,
+         WHERE event_type = 'neo4j_unavailable' AND created_at >= now() - interval '24 hours'${eventGroupFilter}) as neo4j_unavailable,
         (SELECT count(*) FROM events
-         WHERE event_type = 'scope_error' AND created_at >= now() - interval '24 hours') as scope_error,
+         WHERE event_type = 'scope_error' AND created_at >= now() - interval '24 hours'${eventGroupFilter}) as scope_error,
         (SELECT count(*) FROM events
-         WHERE event_type = 'embedding_failure' AND created_at >= now() - interval '24 hours') as embedding_failures,
+         WHERE event_type = 'embedding_failure' AND created_at >= now() - interval '24 hours'${eventGroupFilter}) as embedding_failures,
         (SELECT count(*) FROM events
          WHERE event_type = 'proposal_approved'
-         AND metadata::text LIKE '%"neo4j_error"%'
-         AND created_at >= now() - interval '24 hours') as promotion_failures_24h
-    `)
+          AND metadata::text LIKE '%"neo4j_error"%'
+          AND created_at >= now() - interval '24 hours'${eventGroupFilter}) as promotion_failures_24h
+    `, eventQueryArgs)
 
     const degraded = degradedMetrics.rows[0]
 
@@ -130,12 +199,12 @@ export async function GET(request: NextRequest): Promise<NextResponse<MetricsRes
         , 1) as success_rate,
         MAX(created_at)::text as last_used
       FROM events
-      WHERE created_at >= now() - interval '24 hours'
+      WHERE created_at >= now() - interval '24 hours'${eventGroupFilter}
       GROUP BY COALESCE(NULLIF(metadata->>'skill_name', ''), event_type)
       HAVING COUNT(*) > 0
       ORDER BY calls_24h DESC
       LIMIT 50
-    `)
+    `, eventQueryArgs)
 
     const categoryMap: Record<string, string> = {
       memory_search: "memory",
@@ -175,7 +244,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<MetricsRes
     let lastSearchLatency: number | null = null
     try {
       const searchStart = Date.now()
-      await pg.query("SELECT id FROM allura_memories LIMIT 1")
+      await pg.query(`SELECT id FROM allura_memories${memoryGroupFilter} LIMIT 1`, memoryQueryArgs)
       lastSearchLatency = Date.now() - searchStart
     } catch {
       searchAvailable = false
@@ -214,7 +283,11 @@ export async function GET(request: NextRequest): Promise<NextResponse<MetricsRes
       skills,
     }
 
-    return NextResponse.json(metrics)
+    const response = NextResponse.json(metrics)
+    if (groupId) {
+      response.headers.set("Warning", "299 allura \"tenant-scoped Neo4j node count hidden\"")
+    }
+    return response
   } catch (error) {
     captureException(error, { tags: { route: "/api/health/metrics", method: "GET" } })
 

@@ -12,16 +12,11 @@ import {
 import { useEffect, useState, useTransition } from "react"
 import { toast } from "sonner"
 
-import {
-  EmptyState,
-  ErrorState,
-  InsightActions,
-  InsightCard,
-  LoadingState,
-  PageHeader,
-  WarningList,
-} from "@/components/dashboard"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { approveProposal, rejectProposal } from "@/lib/dashboard/api"
+import { buildDashboardRouteState } from "@/lib/dashboard/empty-states"
 import { loadCuratorQueue } from "@/lib/dashboard/queries"
 import type { DashboardResult, Insight } from "@/lib/dashboard/types"
 
@@ -58,8 +53,6 @@ function ComposePanel({ onSubmitSuccess }: { onSubmitSuccess: () => void }) {
     }
     setForm((prev) => ({ ...prev, submitting: true, error: null }))
     try {
-      // Compose → submit via /api/curator/proposals (POST)
-      // This creates a new pending proposal that goes through HITL before Neo4j.
       const res = await fetch("/api/curator/proposals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -67,13 +60,10 @@ function ComposePanel({ onSubmitSuccess }: { onSubmitSuccess: () => void }) {
           content: form.content.trim(),
           rationale: form.rationale.trim() || undefined,
           group_id: "allura-system",
-          agent_id: "dashboard-user",
           source: "manual-compose",
         }),
       })
       if (res.status === 405) {
-        // POST not yet implemented on proposals endpoint — log and degrade gracefully.
-        // The curator pipeline ingests proposals via bun run curator:run, not this endpoint.
         console.warn("[builder] POST /api/curator/proposals returned 405 — endpoint not yet implemented")
         setForm({ ...INITIAL_COMPOSE, submitted: true })
         onSubmitSuccess()
@@ -104,278 +94,269 @@ function ComposePanel({ onSubmitSuccess }: { onSubmitSuccess: () => void }) {
 
   if (form.submitted) {
     return (
-      <div className="agency-card p-6 flex flex-col items-center justify-center gap-3 text-center min-h-[200px]">
-        <CheckCircle2 className="size-8 text-[var(--allura-green)]" />
-        <p className="text-sm font-semibold text-[var(--allura-charcoal)]">Insight submitted</p>
-        <p className="text-xs text-[var(--allura-gray-500)]">
-          It has been queued for curator review. Approve it from the panel below.
-        </p>
-        <button
-          type="button"
-          onClick={handleReset}
-          className="agency-btn mt-2 text-xs"
-        >
-          Compose another
-        </button>
+      <div className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-8 text-center">
+        <CheckCircle2 className="mx-auto size-8 text-[var(--dashboard-cta-approval)]" />
+        <p className="mt-3 text-sm font-medium text-[var(--dashboard-text-primary)]">Proposal submitted!</p>
+        <p className="mt-1 text-xs text-[var(--dashboard-text-secondary)]">It will be reviewed by the curator pipeline.</p>
+        <Button variant="outline" className="mt-4" onClick={handleReset}>Compose another</Button>
       </div>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="agency-card p-6 space-y-4">
-      <div className="flex items-center gap-2 mb-2">
-        <Wand2 className="size-4 text-[var(--dashboard-evidence)]" />
-        <h3 className="text-sm font-semibold text-[var(--allura-charcoal)]">Compose Insight</h3>
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-6 space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold text-[var(--dashboard-text-primary)]">Compose Proposal</h2>
+        <p className="text-sm text-[var(--dashboard-text-secondary)]">Submit a new memory for curation.</p>
       </div>
 
-      <div className="space-y-1">
-        <label
-          htmlFor="insight-content"
-          className="block text-xs font-medium text-[var(--allura-gray-500)]"
-        >
-          Content <span className="text-[var(--allura-orange-on-text)]">*</span>
-        </label>
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-[var(--dashboard-text-primary)]">Content</label>
         <textarea
-          id="insight-content"
-          rows={5}
-          placeholder="Describe the pattern, decision, or insight you want to capture…"
           value={form.content}
           onChange={(e) => handleChange("content", e.target.value)}
-          disabled={form.submitting}
-          className="w-full resize-none rounded-lg border border-[var(--allura-border-1)] bg-[var(--dashboard-bg)] px-3 py-2.5 text-sm text-[var(--allura-charcoal)] placeholder:text-[var(--allura-gray-400-text)] focus:outline-none focus:ring-2 focus:ring-[var(--allura-blue)]/40 disabled:opacity-60"
+          placeholder="What memory do you want to add?"
+          className="min-h-[120px] w-full rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-bg)] px-4 py-3 text-sm text-[var(--dashboard-text-primary)] placeholder:text-[var(--dashboard-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--dashboard-cta-primary)]"
         />
       </div>
 
-      <div className="space-y-1">
-        <label
-          htmlFor="insight-rationale"
-          className="block text-xs font-medium text-[var(--allura-gray-500)]"
-        >
-          Rationale <span className="text-[var(--allura-gray-400-text)]">(optional)</span>
-        </label>
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-[var(--dashboard-text-primary)]">Rationale (optional)</label>
         <textarea
-          id="insight-rationale"
-          rows={3}
-          placeholder="Why is this worth capturing? What evidence supports it?"
           value={form.rationale}
           onChange={(e) => handleChange("rationale", e.target.value)}
-          disabled={form.submitting}
-          className="w-full resize-none rounded-lg border border-[var(--allura-border-1)] bg-[var(--dashboard-bg)] px-3 py-2.5 text-sm text-[var(--allura-charcoal)] placeholder:text-[var(--allura-gray-400-text)] focus:outline-none focus:ring-2 focus:ring-[var(--allura-blue)]/40 disabled:opacity-60"
+          placeholder="Why does this memory matter?"
+          className="min-h-[80px] w-full rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-bg)] px-4 py-3 text-sm text-[var(--dashboard-text-primary)] placeholder:text-[var(--dashboard-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--dashboard-cta-primary)]"
         />
       </div>
 
       {form.error && (
-        <p className="text-xs text-[var(--allura-orange-on-text)]">{form.error}</p>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+          <p className="text-sm text-red-600">{form.error}</p>
+        </div>
       )}
 
-      <div className="flex items-center justify-between pt-1">
-        <p className="text-xs text-[var(--allura-gray-400-text)]">
-          Submitted insights require curator approval before promotion to Neo4j.
-        </p>
-        <button
-          type="submit"
-          disabled={form.submitting || !form.content.trim()}
-          className="agency-btn primary flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+      <div className="flex items-center gap-3">
+        <Button type="submit" disabled={form.submitting} className="bg-[var(--dashboard-cta-primary)] text-white hover:opacity-90">
           {form.submitting ? (
-            <RefreshCw className="size-4 animate-spin" />
+            <>
+              <RefreshCw className="mr-2 size-4 animate-spin" />
+              Submitting...
+            </>
           ) : (
-            <Send className="size-4" />
+            <>
+              <Send className="mr-2 size-4" />
+              Submit
+            </>
           )}
-          Submit
-        </button>
+        </Button>
       </div>
     </form>
   )
 }
 
-// ─── queue panel ──────────────────────────────────────────────────────────────
+// ─── insight card (inline, no old imports) ───────────────────────────────────
 
-function QueueStats({ pending, approved }: { pending: number; approved: number }) {
+function BuilderInsightCard({
+  insight,
+  onApprove,
+  onReject,
+  busy,
+}: {
+  insight: Insight
+  onApprove?: (id: string) => void
+  onReject?: (id: string, rationale: string) => void
+  busy?: boolean
+}) {
+  const [showReject, setShowReject] = useState(false)
+  const [rejectReason, setRejectReason] = useState("")
+
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      <div className="metric-card">
-        <div>
-          <p className="metric-label">Pending Review</p>
-          <p className="metric-value">{pending}</p>
+    <Card className="border-[var(--dashboard-border)] bg-[var(--dashboard-surface)]">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="text-base text-[var(--dashboard-text-primary)]">
+              {insight.title || "Untitled"}
+            </CardTitle>
+            <p className="mt-1 text-xs text-[var(--dashboard-text-secondary)]">
+              {insight.content || "No description"}
+            </p>
+          </div>
+          {onApprove && onReject && (
+            <div className="flex gap-2">
+              {!showReject ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-green-500/20 text-green-600 hover:bg-green-50"
+                    disabled={busy}
+                    onClick={() => onApprove(insight.id)}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-red-500/20 text-red-600 hover:bg-red-50"
+                    disabled={busy}
+                    onClick={() => setShowReject(true)}
+                  >
+                    Reject
+                  </Button>
+                </>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="text"
+                    placeholder="Reason for rejection"
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    className="rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-bg)] px-3 py-2 text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => { setShowReject(false); setRejectReason("") }}>Cancel</Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-red-500/20 text-red-600"
+                      disabled={!rejectReason.trim() || busy}
+                      onClick={() => { onReject(insight.id, rejectReason); setShowReject(false); setRejectReason("") }}
+                    >
+                      Confirm Reject
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        <div className="metric-icon orange">
-          <Clock className="size-5" />
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="flex flex-wrap gap-2 text-xs text-[var(--dashboard-text-muted)]">
+          <span>Score: {insight.confidence ?? "—"}</span>
+          <span>·</span>
+          <span>Status: {insight.status}</span>
         </div>
-      </div>
-      <div className="metric-card">
-        <div>
-          <p className="metric-label">Approved</p>
-          <p className="metric-value">{approved}</p>
-        </div>
-        <div className="metric-icon green">
-          <CheckCircle2 className="size-5" />
-        </div>
-      </div>
-      <div className="metric-card">
-        <div>
-          <p className="metric-label">Total in Queue</p>
-          <p className="metric-value">{pending + approved}</p>
-        </div>
-        <div className="metric-icon blue">
-          <Layers className="size-5" />
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
-// ─── page ─────────────────────────────────────────────────────────────────────
+// ─── main page ────────────────────────────────────────────────────────────────
 
 export default function BuilderPage() {
-  const [pendingResult, setPendingResult] = useState<DashboardResult<Insight[]> | null>(null)
-  const [approvedResult, setApprovedResult] = useState<DashboardResult<Insight[]> | null>(null)
-  const [isPending, startTransition] = useTransition()
-  const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending")
-  const [actionError, setActionError] = useState<string | null>(null)
+  const [queue, setQueue] = useState<DashboardResult<Insight[]> | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [_, startTransition] = useTransition()
+  const emptyState = buildDashboardRouteState("builder")
+  const errorState = buildDashboardRouteState("builder", { kind: "degraded", reason: queue?.error ?? queue?.warnings?.[0]?.message ?? undefined })
 
-  function loadQueue() {
-    startTransition(async () => {
-      const [p, a] = await Promise.allSettled([
-        loadCuratorQueue("pending"),
-        loadCuratorQueue("approved"),
-      ])
-      setPendingResult(p.status === "fulfilled" ? p.value : { data: [], error: null, degraded: false, warnings: [] })
-      setApprovedResult(a.status === "fulfilled" ? a.value : { data: [], error: null, degraded: false, warnings: [] })
-    })
+  const refresh = () => {
+    setQueue(null)
+    loadCuratorQueue().then(setQueue)
   }
 
-  useEffect(() => {
-    loadQueue()
-  }, [])
+  useEffect(() => refresh(), [])
 
-  async function handleApprove(id: string): Promise<void> {
-    setActionError(null)
+  const approve = async (id: string) => {
+    setBusyId(id)
     try {
-      await approveProposal(id)
-      toast.success("Insight approved")
-      loadQueue()
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Approval failed.")
+      await approveProposal(id, { rationale: "Approved from dashboard builder queue" })
+      toast.success("Approved")
+      startTransition(() => refresh())
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Approval failed")
+    } finally {
+      setBusyId(null)
     }
   }
 
-  async function handleReject(id: string): Promise<void> {
-    setActionError(null)
+  const reject = async (id: string, rationale: string) => {
+    setBusyId(id)
     try {
-      await rejectProposal(id)
-      toast.success("Insight rejected")
-      loadQueue()
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Rejection failed.")
+      await rejectProposal(id, rationale)
+      toast.success("Rejected")
+      startTransition(() => refresh())
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Rejection failed")
+    } finally {
+      setBusyId(null)
     }
   }
-
-  const pending = pendingResult?.data ?? []
-  const approved = approvedResult?.data ?? []
-  const activeResult = activeTab === "pending" ? pendingResult : approvedResult
-  const activeItems = activeTab === "pending" ? pending : approved
-
-  const isLoading = pendingResult === null && approvedResult === null
-  const hasError = (pendingResult?.error ?? approvedResult?.error) !== null && (pendingResult?.error ?? approvedResult?.error) !== undefined
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Insight Builder"
-        description="Manually compose and promote insights from raw memories."
-        action={
-          <button
-            type="button"
-            onClick={loadQueue}
-            disabled={isPending}
-            className="flex items-center gap-2 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-3 py-2 text-sm text-[var(--dashboard-text-secondary)] hover:bg-[var(--allura-gray-100)] disabled:opacity-60 transition-colors"
-          >
-            <RefreshCw className={`size-4 text-[var(--dashboard-text-muted)] ${isPending ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-        }
-      />
-
-      {/* Compose section */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-[var(--allura-charcoal)]">New Insight</h2>
-        <ComposePanel onSubmitSuccess={loadQueue} />
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Builder</h1>
+        <p className="text-sm text-[var(--dashboard-text-secondary)]">Compose proposals and review the curator queue.</p>
       </div>
 
-      {/* Queue section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-[var(--allura-charcoal)]">Curator Queue</h2>
-          {(activeResult?.degraded) && (
-            <span className="text-xs text-[var(--allura-orange-on-text)]">Partial data</span>
-          )}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div>
+          <ComposePanel onSubmitSuccess={refresh} />
         </div>
 
-        {isLoading ? (
-          <LoadingState />
-        ) : hasError ? (
-          <ErrorState message={pendingResult?.error ?? approvedResult?.error ?? "Failed to load queue."} />
-        ) : (
-          <>
-            <QueueStats pending={pending.length} approved={approved.length} />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-[var(--dashboard-text-primary)]">Curator Queue</h2>
+            <Button variant="ghost" size="sm" onClick={refresh} disabled={!queue}>
+              <RefreshCw className="mr-1 size-4" /> Refresh
+            </Button>
+          </div>
 
-            <WarningList warnings={activeResult?.warnings ?? []} />
-
-            {actionError && (
-              <div className="flex items-center gap-2 rounded-lg border border-[var(--allura-orange)]/30 bg-[var(--tone-orange-bg)] px-4 py-3">
-                <XCircle className="size-4 shrink-0 text-[var(--allura-orange-on-text)]" />
-                <p className="text-sm text-[var(--tone-orange-text)]">{actionError}</p>
-              </div>
-            )}
-
-            {/* Tab strip */}
-            <div className="flex items-center gap-1 border-b border-[var(--allura-border-1)]">
-              {(["pending", "approved"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === tab
-                      ? "border-[var(--allura-blue)] text-[var(--allura-blue)]"
-                      : "border-transparent text-[var(--allura-gray-500)] hover:text-[var(--allura-charcoal)]"
-                  }`}
-                >
-                  {tab === "pending" ? `Pending (${pending.length})` : `Approved (${approved.length})`}
-                </button>
+          {!queue ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 rounded-xl" />
               ))}
             </div>
+          ) : queue.error || queue.degraded ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+              <p className="text-sm font-medium text-red-700">{errorState.title}</p>
+              <p className="mt-2 text-sm text-red-600">{errorState.description}</p>
+              <Button variant="outline" className="mt-4" onClick={refresh}>{errorState.retryLabel}</Button>
+              <Button asChild variant="outline" className="mt-4 ml-2">
+                <a href={errorState.actionHref}>{errorState.actionLabel}</a>
+              </Button>
+            </div>
+          ) : (
+            <>
+              {queue.warnings.length > 0 && (
+                <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+                  <ul className="space-y-1">
+                    {queue.warnings.map((w, i) => (
+                      <li key={i} className="text-sm text-yellow-700">{w.message || String(w)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-            {activeItems.length === 0 ? (
-              <EmptyState
-                title={activeTab === "pending" ? "No pending insights" : "No approved insights"}
-                description={
-                  activeTab === "pending"
-                    ? "Compose an insight above or wait for agents to surface candidates."
-                    : "Approve pending insights to see them here."
-                }
-              />
-            ) : (
-              <div className="space-y-3">
-                {activeItems.map((insight) => (
-                  <div key={insight.id}>
-                    <InsightCard insight={insight} />
-                    {activeTab === "pending" && (
-                      <div className="mt-2 px-1 flex items-center gap-2 flex-wrap">
-                        <InsightActions
-                          insight={insight}
-                          onApprove={(id) => { void handleApprove(id) }}
-                          onReject={(id) => { void handleReject(id) }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+              {(queue.data ?? []).length === 0 ? (
+                <div className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-12 text-center">
+                  <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">{emptyState.title}</p>
+                  <p className="mt-2 text-xs text-[var(--dashboard-text-secondary)]">{emptyState.description}</p>
+                  <Button variant="outline" size="sm" className="mt-4" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+                    {emptyState.actionLabel}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {queue.data!.map((insight) => (
+                    <BuilderInsightCard
+                      key={insight.id}
+                      insight={insight}
+                      onApprove={approve}
+                      onReject={reject}
+                      busy={busyId === insight.id}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

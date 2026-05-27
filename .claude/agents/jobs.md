@@ -6,7 +6,7 @@ persona: Jobs
 category: Core
 type: primary
 status: active
-model: ollama-cloud/deepseek-v4-pro
+model: anthropic/claude-opus-4-6
 tools:
   - Read
   - Grep

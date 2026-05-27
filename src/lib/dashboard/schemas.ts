@@ -130,6 +130,48 @@ export const DashboardOverviewSchema = z.object({
   activity: z.array(ActivityItemSchema),
   pendingInsights: z.array(InsightSchema),
   systemStatus: SystemStatusSchema,
+  healthMetrics: z
+    .object({
+      timestamp: z.string(),
+      queue: z.object({
+        pending_count: z.number().int().min(0),
+        oldest_age_hours: z.number().min(0),
+        approved_24h: z.number().int().min(0),
+        rejected_24h: z.number().int().min(0),
+      }),
+      recall: z.object({
+        search_available: z.boolean(),
+        last_latency_ms: z.number().int().min(0).nullable(),
+      }),
+      storage: z.object({
+        postgres: z.object({
+          status: z.string(),
+          latency_ms: z.number().int().min(0),
+          total_memories: z.number().int().min(0),
+        }),
+        neo4j: z.object({
+          status: z.string(),
+          latency_ms: z.number().int().min(0).nullable(),
+          total_nodes: z.number().int().min(0).nullable(),
+        }),
+      }),
+      degraded: z.object({
+        neo4j_unavailable: z.number().int().min(0),
+        scope_error: z.number().int().min(0),
+        embedding_failures: z.number().int().min(0),
+        promotion_failures_24h: z.number().int().min(0),
+      }),
+      skills: z.array(z.object({
+        tool_name: z.string(),
+        category: z.string(),
+        calls_24h: z.number().int().min(0),
+        success_rate: z.number().min(0).max(1),
+        avg_latency_ms: z.number().int().min(0),
+        last_used: z.string().nullable(),
+        trend: z.enum(["up", "down", "flat"]),
+      })).optional(),
+    })
+    .nullable(),
   warnings: z.array(DashboardWarningSchema),
 })
 

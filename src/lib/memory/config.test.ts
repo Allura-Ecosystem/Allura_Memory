@@ -10,6 +10,9 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mkdtempSync, rmSync, writeFileSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 
 // Store original env values to restore after tests
 const originalEnv = { ...process.env };
@@ -165,6 +168,7 @@ describe("Allura Memory Configuration", () => {
     it("should use custom provider settings from env", async () => {
       process.env.EMBEDDING_PROVIDER = "openai";
       process.env.EMBEDDING_MODEL = "text-embedding-3-small";
+      delete process.env.RUVECTOR_EMBEDDING_BASE_URL;
       process.env.EMBEDDING_BASE_URL = "https://api.openai.com/v1";
       process.env.OPENCODE_PROVIDER = "anthropic";
       process.env.OPENCODE_MODEL = "claude-3-5-sonnet-20241022";
@@ -228,32 +232,19 @@ describe("Allura Memory Configuration", () => {
     });
 
     it("should read key from file with file:// prefix", async () => {
-      // Mock fs module
-      vi.doMock("fs", () => ({
-        existsSync: vi.fn(),
-        readFileSync: vi.fn().mockReturnValue("  file-key-123  \n"),
-        writeFileSync: vi.fn(),
-        mkdirSync: vi.fn(),
-      }));
+      const tempDir = mkdtempSync(join(tmpdir(), "allura-config-test-"));
+      const keyPath = join(tempDir, "key.txt");
+      writeFileSync(keyPath, "  file-key-123  \n");
       
       const { getApiKey } = await import("./config");
       
-      // file:// with ~ expansion
-      const result = getApiKey("file://~/.config/key.txt", "API_KEY");
+      const result = getApiKey(`file://${keyPath}`, "API_KEY");
       
       expect(result).toBe("file-key-123");
+      rmSync(tempDir, { recursive: true, force: true });
     });
 
     it("should throw error when file:// file does not exist", async () => {
-      vi.doMock("fs", () => ({
-        existsSync: vi.fn(),
-        readFileSync: vi.fn(() => {
-          throw new Error("ENOENT: no such file or directory");
-        }),
-        writeFileSync: vi.fn(),
-        mkdirSync: vi.fn(),
-      }));
-      
       const { getApiKey } = await import("./config");
       
       expect(() => getApiKey("file:///nonexistent/key.txt", "API_KEY")).toThrow();
@@ -511,6 +502,7 @@ describe("Allura Memory Configuration", () => {
       
       process.env.EMBEDDING_PROVIDER = "voyage";
       process.env.EMBEDDING_MODEL = "voyage-large-2";
+      delete process.env.RUVECTOR_EMBEDDING_BASE_URL;
       process.env.EMBEDDING_BASE_URL = "https://api.voyageai.com/v1";
       
       process.env.OPENCODE_PROVIDER = "openai";

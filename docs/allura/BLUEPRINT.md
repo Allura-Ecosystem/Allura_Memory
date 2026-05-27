@@ -128,6 +128,22 @@ The hard isolation boundary. Every read and write MUST include a valid `group_id
 
 ## 2) Requirements
 
+### Dashboard v2 condensed scope
+
+The dashboard rebuild is part of the Allura memory engine, not a separate product surface. Phase 1 `/dashboard` must answer three operator questions: what is true right now, what needs action, and what needs approval.
+
+**Phase 1 goals:**
+
+- Build `/dashboard` from real data and honest degraded states.
+- Show system status, hygiene/actions, and approvals queue.
+- Preserve tenant isolation and governed approval flows.
+- Expose active `group_id` scope.
+- Avoid fabricated live data, broken evidence/detail links, and Difference Driven language/tokens/colors.
+
+**Phase 1 non-goals:** full Mission Control route replacement, native Kanban implementation, direct memory editing, production ops controls, bulk approval, full graph explorer, and advanced analytics.
+
+**Memory/provenance/export requirements:** export/copy surfaces are read-only; preserve source, actor/creator/approver, timestamp, status, confidence, `group_id`, evidence IDs, hash/previous-hash fields when present; degraded export failures must be explicit.
+
 ### Business Requirements
 
 | #   | Requirement                                                                                  |
@@ -244,7 +260,7 @@ The hard isolation boundary. Every read and write MUST include a valid `group_id
 | --- | ----------- |
 | F41 | Mission Control exposes `/command`, `/work-board`, `/agents`, `/telemetry`, `/allura`, and `/resources` as the rebuilt operator surface |
 | F42 | `/allura` preserves the `6420` memory dashboard capabilities: memory search/list, insights, trace logs, provenance, extracted facts, and approval queue |
-| F43 | `/work-board` reads planning state from Notion or a declared tracker adapter; it must not create a competing planning database by default |
+| F43 | `/work-board` uses Native Allura Kanban as the default planning source of truth; Notion, Linear, and GitHub Projects are optional sync adapters |
 | F44 | `/resources` reads skills, agents, MCP servers, containers, cron jobs, and drift warnings from a declared Resource Manifest or generated manifest endpoint |
 | F45 | `/agents` distinguishes TALON/IRIS native subagents from Team RAM/Durham CLI harness agents and external runtime agents |
 | F46 | `/telemetry` surfaces model, prompt, tool, retry, rate-limit, failure, and degraded-state metrics without inventing missing measurements |
@@ -274,7 +290,8 @@ The hard isolation boundary. Every read and write MUST include a valid `group_id
 | Budget Admin API | `POST /api/admin/reset-budget` — reset halted sessions per group or globally | `src/mcp/canonical-http-gateway.ts` |
 | Mission Control Dashboard Shell | Development integration target for the rebuilt dashboard; combines operator cockpit routes with Allura memory governance | `localhost:3334` during development; replaces Docker dashboard on `3100` only after cutover gates pass |
 | Allura Memory Reference Surface | Visual/product reference for the desired memory dashboard experience | `localhost:6420`; preserve capabilities in `/allura` |
-| Notion Work Board Adapter | Planning source-of-truth adapter for work-board state | Notion remains planning truth; no competing local planning DB by default |
+| Native Allura Kanban | Default planning and execution board for Mission Control | Source of truth by default; external boards are adapters unless explicitly configured upstream |
+| Board Sync Adapters | Optional Notion, Linear, and GitHub Projects projections | Mirror native Allura state by default; provider-neutral mapping into the internal card/project/lane model |
 | Resource Manifest Adapter | Resource inventory adapter for skills, agents, MCP servers, containers, cron jobs, and drift warnings | `RESOURCE-MANIFEST.md` or generated manifest endpoint |
 | PostgreSQL 16            | Episodic memory + audit trail + proposals      | Docker service                                    |
 | Neo4j 5.26               | Semantic memory — versioned knowledge graph    | Docker service                                    |
