@@ -1,19 +1,120 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { Sparkles } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { approveProposal, rejectProposal } from "@/lib/dashboard/api"
 import { loadInsights } from "@/lib/dashboard/queries"
 import type { DashboardResult, Insight } from "@/lib/dashboard/types"
 
-type Tab = "pending" | "active" | "rejected" | "superseded"
+type Tab = "active" | "pending" | "rejected"
+
+// Data-vis exception: accent bar colors are index-mapped and not representable
+// via CSS tokens alone. These are the only hardcoded hex values permitted on this page.
+const ACCENT_COLORS = [
+  "#16a34a", // green
+  "#1d4ed8", // blue
+  "#dc2626", // red/orange
+  "#b45309", // gold
+  "#dc2626", // red
+  "#16a34a", // green
+]
+
+function accentColor(index: number): string {
+  return ACCENT_COLORS[index % ACCENT_COLORS.length]!
+}
+
+function InsightCard({
+  insight,
+  index,
+  isPending,
+  busyId,
+  onApprove,
+  onReject,
+}: {
+  insight: Insight
+  index: number
+  isPending: boolean
+  busyId: string | null
+  onApprove: (id: string) => void
+  onReject: (id: string) => void
+}) {
+  const color = accentColor(index)
+  const confidenceLabel =
+    insight.confidence != null ? `${Math.round(insight.confidence)}%` : "—"
+  const description = insight.content || insight.outcome || "No description"
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-4">
+      {/* Header row: accent bar + title */}
+      <div className="flex items-start gap-3">
+        {/* Accent bar — data-vis exception, see file header */}
+        <div
+          className="mt-0.5 shrink-0 rounded-full"
+          style={{ width: 3, height: 32, backgroundColor: color }}
+          aria-hidden="true"
+        />
+        <p className="text-sm font-semibold leading-snug text-[var(--dashboard-text-primary)]">
+          {insight.title || "Untitled"}
+        </p>
+      </div>
+
+      {/* Description — 2-line clamp */}
+      <p className="line-clamp-2 text-xs text-[var(--dashboard-text-muted)]">
+        {description}
+      </p>
+
+      {/* Trend chart placeholder */}
+      <div className="flex h-28 w-full items-center justify-center rounded-lg bg-[var(--allura-cream)] text-xs text-[var(--dashboard-text-muted)]">
+        [Trend Chart]
+      </div>
+
+      {/* Footer row: metric badge + actions */}
+      <div className="flex items-center justify-between">
+        {/* Metric badge — color matches accent bar */}
+        <span
+          className="rounded-full px-2 py-0.5 text-xs font-semibold"
+          style={{
+            color,
+            backgroundColor: `${color}18`,
+          }}
+        >
+          {confidenceLabel}
+        </span>
+
+        {/* Approval actions — Pending tab only */}
+        {isPending && (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-green-500/20 text-green-600 hover:bg-green-50"
+              disabled={busyId === insight.id}
+              onClick={() => onApprove(insight.id)}
+            >
+              Approve
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-red-500/20 text-red-600 hover:bg-red-50"
+              disabled={busyId === insight.id}
+              onClick={() => onReject(insight.id)}
+            >
+              Reject
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function InsightsPage() {
-  const [tab, setTab] = useState<Tab>("pending")
+  const [tab, setTab] = useState<Tab>("active")
   const [state, setState] = useState<DashboardResult<Insight[]> | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -39,11 +140,11 @@ export default function InsightsPage() {
     }
   }
 
-  const reject = async (id: string, rationale: string) => {
+  const reject = async (id: string) => {
     setBusyId(id)
     setActionError(null)
     try {
-      await rejectProposal(id, rationale)
+      await rejectProposal(id, "Rejected from dashboard")
       toast.success("Insight rejected")
       refresh()
     } catch (error) {
@@ -53,29 +154,30 @@ export default function InsightsPage() {
     }
   }
 
-  const tabItems: Array<{ value: Tab; label: string }> = [
-    { value: "pending", label: "Queue" },
-    { value: "active", label: "Approved" },
+  const tabs: Array<{ value: Tab; label: string }> = [
+    { value: "active", label: "Active" },
+    { value: "pending", label: "Pending" },
     { value: "rejected", label: "Rejected" },
-    { value: "superseded", label: "Superseded" },
   ]
+
+  const insights = state?.data ?? []
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Insights</h1>
-        <p className="text-sm text-[var(--dashboard-text-secondary)]">Review, approve, reject, or revise candidate insights.</p>
-      </div>
+      {/* Page title */}
+      <h1 className="text-3xl font-bold text-[var(--dashboard-text-primary)]">
+        Insights
+      </h1>
 
-      {/* Tabs */}
-      <div className="flex gap-1 rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-bg)] p-1">
-        {tabItems.map((t) => (
+      {/* Tab row */}
+      <div className="flex gap-1">
+        {tabs.map((t) => (
           <button
             key={t.value}
             onClick={() => setTab(t.value)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               tab === t.value
-                ? "bg-[var(--dashboard-surface)] text-[var(--dashboard-text-primary)] shadow-sm"
+                ? "bg-[var(--allura-blue)] text-[var(--allura-white)]"
                 : "text-[var(--dashboard-text-secondary)] hover:text-[var(--dashboard-text-primary)]"
             }`}
           >
@@ -84,93 +186,67 @@ export default function InsightsPage() {
         ))}
       </div>
 
+      {/* Action error */}
       {actionError && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-600">{actionError}</p>
         </div>
       )}
 
-      {!state ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-xl" />
-          ))}
-        </div>
-      ) : state.error ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
-          <p className="text-sm text-red-600">{state.error}</p>
-          <Button variant="outline" className="mt-4" onClick={refresh}>Retry</Button>
-        </div>
-      ) : (
-        <>
-          {state.warnings.length > 0 && (
-            <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
-              <ul className="space-y-1">
-                {state.warnings.map((w, i) => (
-                  <li key={i} className="text-sm text-yellow-700">{w.message || String(w)}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+      {/* Outer white card wrapping the grid */}
+      <div className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-6">
+        {!state ? (
+          /* Loading skeletons — 2×3 grid shape */
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-56 rounded-xl" />
+            ))}
+          </div>
+        ) : state.error ? (
+          <div className="flex flex-col items-center gap-4 py-16">
+            <p className="text-sm text-red-600">{state.error}</p>
+            <Button variant="outline" onClick={refresh}>
+              Retry
+            </Button>
+          </div>
+        ) : insights.length === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <Sparkles className="h-8 w-8 text-[var(--dashboard-text-muted)]" />
+            <p className="text-sm text-[var(--dashboard-text-muted)]">
+              No insights yet.
+            </p>
+          </div>
+        ) : (
+          /* 2×3 insight card grid */
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {insights.map((insight, index) => (
+              <InsightCard
+                key={insight.id}
+                insight={insight}
+                index={index}
+                isPending={tab === "pending"}
+                busyId={busyId}
+                onApprove={approve}
+                onReject={reject}
+              />
+            ))}
+          </div>
+        )}
 
-          {(state.data ?? []).length === 0 ? (
-            <div className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-12 text-center">
-              <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">No insights found</p>
-              <p className="mt-2 text-xs text-[var(--dashboard-text-secondary)]">No insights match this status. Try a different tab or wait for the curator pipeline.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {state.data!.map((insight) => (
-                <Card key={insight.id} className="border-[var(--dashboard-border)] bg-[var(--dashboard-surface)]">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-base text-[var(--dashboard-text-primary)]">
-                          {insight.title || "Untitled"}
-                        </CardTitle>
-                        <p className="mt-1 text-xs text-[var(--dashboard-text-secondary)]">
-                          {insight.content || "No description"}
-                        </p>
-                      </div>
-                      {tab === "pending" && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-green-500/20 text-green-600 hover:bg-green-50"
-                            disabled={busyId === insight.id}
-                            onClick={() => approve(insight.id)}
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-red-500/20 text-red-600 hover:bg-red-50"
-                            disabled={busyId === insight.id}
-                            onClick={() => reject(insight.id, "Rejected from dashboard")}
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex flex-wrap gap-2 text-xs text-[var(--dashboard-text-muted)]">
-                      <span>Confidence: {insight.confidence ?? "—"}</span>
-                      <span>·</span>
-                      <span>Status: {insight.status}</span>
-                      <span>·</span>
-                      <span>{insight.createdAt ? new Date(insight.createdAt).toLocaleDateString() : "—"}</span>
-                    </div>
-                  </CardContent>
-                </Card>
+        {/* Warnings */}
+        {state && state.warnings.length > 0 && (
+          <div className="mt-4 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+            <ul className="space-y-1">
+              {state.warnings.map((w, i) => (
+                <li key={i} className="text-sm text-yellow-700">
+                  {w.message || String(w)}
+                </li>
               ))}
-            </div>
-          )}
-        </>
-      )}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
