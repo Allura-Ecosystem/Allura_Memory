@@ -68,7 +68,7 @@ export function GovernanceSidebar({ user }: { user: AuthUser | null }) {
         aria-label="Dashboard home"
         className="flex items-center gap-2.5 rounded-lg px-2 py-2 mb-5 focus-visible:ring-2 focus-visible:ring-[var(--dashboard-cta-primary)]/30 focus-visible:outline-none"
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#1B2A4A] text-xs font-bold text-white">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--allura-charcoal)] text-xs font-bold text-white">
           AL
         </span>
         <span className="font-semibold text-sm text-[var(--dashboard-text-primary)]">Allura</span>
@@ -125,7 +125,7 @@ export function DashboardMobileNav({ user }: { user: AuthUser | null }) {
           href="/dashboard"
           className="flex items-center gap-2 rounded-lg text-sm font-semibold text-[var(--dashboard-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dashboard-cta-primary)]/30 focus-visible:outline-none"
         >
-          <span className="flex size-8 items-center justify-center rounded-lg bg-[#1B2A4A] text-xs font-bold text-white">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-[var(--allura-charcoal)] text-xs font-bold text-white">
             AL
           </span>
           Allura

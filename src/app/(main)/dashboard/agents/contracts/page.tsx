@@ -8,9 +8,9 @@ import { useEffect, useState } from "react"
 type HitlMode = "strict" | "YOLO" | "off"
 
 const HITL_COLOR: Record<HitlMode, string> = {
-  strict: "#16a34a",
-  YOLO:   "#dc2626",
-  off:    "#6b7280",
+  strict: "rgb(22, 163, 74)",
+  YOLO:   "rgb(220, 38, 38)",
+  off:    "rgb(107, 114, 128)",
 }
 
 interface Agent {
@@ -135,8 +135,8 @@ export default function AgentContractsPage() {
                       className="h-2 w-2 rounded-full"
                       style={{
                         backgroundColor:
-                          agent.status === "active" ? "#16a34a" :
-                          agent.status === "idle"   ? "#b45309" : "#6b7280",
+                          agent.status === "active" ? "rgb(22, 163, 74)" :
+                          agent.status === "idle"   ? "rgb(180, 83, 9)" : "rgb(107, 114, 128)",
                       }}
                     />
                     {agent.status}

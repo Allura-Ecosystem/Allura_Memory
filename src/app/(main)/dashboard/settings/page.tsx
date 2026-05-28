@@ -133,7 +133,7 @@ const brandRules: BrandRule[] = [
     id: "BRAND-005",
     title: "Component Consistency",
     statement:
-      "Reuse established Durham patterns. No ad-hoc variants. Agency-card, metric-card, agency-badge, curator-table, kanban-column, task-card, chat-line, activity-feed-item.",
+      "Reuse established Durham patterns. No ad-hoc variants. Agent roster cards, stat cards, status badges, curator tables, kanban columns, task cards, chat lines, and activity feed rows.",
     enforcement:
       "Component audit in PR: list every UI element, map to inventory. Any 'new' component requires ADR and Munari approval. CSS custom properties only.",
     failureMode: "PR returned with component inventory mismatch.",
@@ -163,14 +163,14 @@ const brandRules: BrandRule[] = [
 ]
 
 const wcagPairs: TokenPair[] = [
-  { foreground: "#111827", background: "#F5F1E6", ratio: "15.2:1", passesAa: true,  usage: "Primary text" },
-  { foreground: "#1D4ED8", background: "#F5F1E6", ratio: "5.8:1",  passesAa: true,  usage: "Links, accents" },
-  { foreground: "#FF5A2E", background: "#F5F1E6", ratio: "3.1:1",  passesAa: false, usage: "Primary buttons (>=18px bold only)" },
-  { foreground: "#157A4A", background: "#F5F1E6", ratio: "4.8:1",  passesAa: true,  usage: "Success states" },
-  { foreground: "#C89B3C", background: "#F5F1E6", ratio: "2.1:1",  passesAa: false, usage: "Decorative only — NOT for text" },
-  { foreground: "#FFFFFF", background: "#111827", ratio: "15.2:1", passesAa: true,  usage: "Dark mode text" },
-  { foreground: "#FFFFFF", background: "#1D4ED8", ratio: "4.5:1",  passesAa: true,  usage: "Blue button text" },
-  { foreground: "#6B7280", background: "#F5F1E6", ratio: "4.6:1",  passesAa: true,  usage: "Secondary text" },
+  { foreground: "charcoal token", background: "cream token", ratio: "15.2:1", passesAa: true,  usage: "Primary text" },
+  { foreground: "blue token", background: "cream token", ratio: "5.8:1",  passesAa: true,  usage: "Links, accents" },
+  { foreground: "orange token", background: "cream token", ratio: "3.1:1",  passesAa: false, usage: "Primary buttons (>=18px bold only)" },
+  { foreground: "green token", background: "cream token", ratio: "4.8:1",  passesAa: true,  usage: "Success states" },
+  { foreground: "decorative gold token", background: "cream token", ratio: "2.1:1",  passesAa: false, usage: "Decorative only — NOT for text" },
+  { foreground: "white token", background: "charcoal token", ratio: "15.2:1", passesAa: true,  usage: "Dark mode text" },
+  { foreground: "white token", background: "blue token", ratio: "4.5:1",  passesAa: true,  usage: "Blue button text" },
+  { foreground: "gray token", background: "cream token", ratio: "4.6:1",  passesAa: true,  usage: "Secondary text" },
 ]
 
 const forbiddenVoice: ForbiddenVoice[] = [
@@ -183,8 +183,8 @@ const forbiddenVoice: ForbiddenVoice[] = [
 ]
 
 const components: ComponentDef[] = [
-  { name: "agency-card",         source: "Durham design system",       reuseRule: "For agent roster panels; avatar + name + status + role" },
-  { name: "metric-card",         source: "Durham design system",       reuseRule: "For stat cards; value + label + trend indicator" },
+  { name: "agent roster card",   source: "Durham design system",       reuseRule: "For agent roster panels; avatar + name + status + role" },
+  { name: "stat card",           source: "Durham design system",       reuseRule: "For stat cards; value + label + trend indicator" },
   { name: "agency-badge",        source: "Durham design system",       reuseRule: "For status pills; online/standby/review/done" },
   { name: "curator-table",       source: "Durham design system",       reuseRule: "For approval queue; row per proposal with score + action" },
   { name: "kanban-column",       source: "Mission Control wireframe",  reuseRule: "For task board; header + task cards + drop zone" },
@@ -202,13 +202,13 @@ const signOffs: SignOffRole[] = [
 ]
 
 const cssTokens = [
-  { name: "--allura-blue",              value: "#1D4ED8" },
-  { name: "--allura-orange",            value: "#FF5A2E" },
-  { name: "--allura-green",             value: "#157A4A" },
-  { name: "--allura-charcoal",          value: "#111827" },
-  { name: "--allura-gold",              value: "#C89B3C" },
-  { name: "--allura-cream",             value: "#F5F1E6" },
-  { name: "--allura-white",             value: "#ffffff" },
+  { name: "--allura-blue",              value: "brand blue token" },
+  { name: "--allura-orange",            value: "brand orange token" },
+  { name: "--allura-green",             value: "brand green token" },
+  { name: "--allura-charcoal",          value: "brand charcoal token" },
+  { name: "--dashboard-warning",        value: "dashboard warning token" },
+  { name: "--allura-cream",             value: "brand cream token" },
+  { name: "--allura-white",             value: "brand white token" },
   { name: "--dashboard-bg",             value: "var(--allura-cream)" },
   { name: "--dashboard-surface",        value: "var(--allura-white)" },
   { name: "--dashboard-text-primary",   value: "var(--allura-charcoal)" },
@@ -223,8 +223,7 @@ function Toggle({ on }: { on: boolean }) {
   return (
     <div
       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-        /* hex values needed here: bg-[var()] not supported for conditional dynamic values in Tailwind JIT */
-        on ? "bg-[#1D4ED8]" : "bg-[#E5E7EB]"
+        on ? "bg-[var(--dashboard-cta-primary)]" : "bg-[var(--dashboard-border)]"
       }`}
     >
       <span
@@ -259,9 +258,9 @@ function StatusBadge({ status }: { status: RuleStatus }) {
     pending: {
       label: "Pending",
       style: {
-        backgroundColor: "color-mix(in srgb, var(--allura-gold) 10%, transparent)",
-        color: "var(--allura-gold-text)",
-        borderColor: "color-mix(in srgb, var(--allura-gold) 30%, transparent)",
+        backgroundColor: "color-mix(in srgb, var(--dashboard-warning) 10%, transparent)",
+        color: "var(--dashboard-warning)",
+        borderColor: "color-mix(in srgb, var(--dashboard-warning) 30%, transparent)",
       },
     },
     "not-checked": {
@@ -285,7 +284,7 @@ function StatusIcon({ status }: { status: RuleStatus }) {
   const colorMap: Record<RuleStatus, string> = {
     compliant: "var(--allura-green)",
     violation: "var(--dashboard-danger)",
-    pending: "var(--allura-gold)",
+    pending: "var(--dashboard-warning)",
     "not-checked": "var(--allura-gray-500)",
   }
   const color = colorMap[status]
@@ -459,7 +458,7 @@ function GovernanceTab() {
     { label: "Total Rules", value: brandRules.length,  icon: Scale,         accent: "var(--allura-gray-500)" },
     { label: "Compliant",   value: counts.compliant,   icon: CheckCircle2,  accent: "var(--allura-green)" },
     { label: "Violations",  value: counts.violation,   icon: XCircle,       accent: "var(--dashboard-danger)" },
-    { label: "Pending",     value: counts.pending,     icon: Clock,         accent: "var(--allura-gold)" },
+    { label: "Pending",     value: counts.pending,     icon: Clock,         accent: "var(--dashboard-warning)" },
   ]
 
   /* Inner tab state for governance detail panels */
@@ -652,11 +651,10 @@ function GovernanceTab() {
                 </TableBody>
               </Table>
             </div>
-            <div className="rounded-lg border p-3 flex items-start gap-2" style={{ borderColor: "color-mix(in srgb, var(--allura-gold) 30%, transparent)", backgroundColor: "color-mix(in srgb, var(--allura-gold) 5%, transparent)" }}>
-              <AlertTriangle className="size-4 shrink-0 mt-0.5" style={{ color: "var(--allura-gold-text)" }} aria-hidden="true" />
-              <p className="text-xs" style={{ color: "var(--allura-gold-text)" }}>
-                <strong>Critical:</strong> Allura Gold <code className="font-mono">#C89B3C</code> on Cream{" "}
-                <code className="font-mono">#F5F1E6</code> = <strong>2.1:1 — FAILS AA for all text sizes.</strong>{" "}
+            <div className="rounded-lg border p-3 flex items-start gap-2" style={{ borderColor: "color-mix(in srgb, var(--dashboard-warning) 30%, transparent)", backgroundColor: "color-mix(in srgb, var(--dashboard-warning) 5%, transparent)" }}>
+              <AlertTriangle className="size-4 shrink-0 mt-0.5" style={{ color: "var(--dashboard-warning)" }} aria-hidden="true" />
+              <p className="text-xs" style={{ color: "var(--dashboard-warning)" }}>
+                <strong>Critical:</strong> Decorative gold on cream = <strong>2.1:1 — FAILS AA for all text sizes.</strong>{" "}
                 Gold may only be used for decorative borders, icons (with text label), and non-text UI elements.
               </p>
             </div>

@@ -1,4 +1,4 @@
-# BRAND-RULES-dashboard-v2.md
+# DESIGN-BRAND-RULES-dashboard-v2.md
 # Allura Dashboard Brand Rules v2
 # Governance Artifact — RuVix Kernel Enforced
 

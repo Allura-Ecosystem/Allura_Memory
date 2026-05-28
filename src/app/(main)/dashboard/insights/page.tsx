@@ -69,8 +69,8 @@ function InsightCard({
       </div>
 
       {/* Trend chart placeholder */}
-      <div className="mx-5 mb-5 mt-2 flex-1 rounded-lg relative" style={{ background: "#E8E0D0", minHeight: "140px" }}>
-        <span className="absolute inset-0 flex items-center justify-center text-xs text-[#B0A898]">
+      <div className="mx-5 mb-5 mt-2 flex-1 rounded-lg relative bg-[var(--dashboard-surface-muted)]" style={{ minHeight: "140px" }}>
+        <span className="absolute inset-0 flex items-center justify-center text-xs text-[var(--dashboard-text-muted)]">
           [Trend Chart]
         </span>
         <span className={cn("absolute bottom-3 left-3 text-lg font-bold", metricColor)}>

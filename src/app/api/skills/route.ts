@@ -1,3 +1,9 @@
+/**
+ * AI-Assisted Documentation
+ * Portions of this API surface were drafted with AI assistance and reviewed
+ * against the repository's runtime adapter boundary rules. When in doubt,
+ * defer to code, schemas, and team consensus.
+ */
 import { existsSync } from "fs"
 import { readdir, readFile } from "fs/promises"
 import { join } from "path"

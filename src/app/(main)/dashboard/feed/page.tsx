@@ -19,48 +19,41 @@ type FeedEventType =
 
 interface EventTypeStyle {
   dot: string
-  pillBg: string
-  pillText: string
+  pill: string
   label: string
 }
 
 const EVENT_TYPE_STYLES: Record<string, EventTypeStyle> = {
   DESIGN_DECISION: {
     dot: "bg-blue-500",
-    pillBg: "#DBEAFE",
-    pillText: "#1D4ED8",
+    pill: "bg-blue-100 text-blue-700",
     label: "DESIGN_DECISION",
   },
   TASK_COMPLETE: {
     dot: "bg-green-500",
-    pillBg: "#DCFCE7",
-    pillText: "#166534",
+    pill: "bg-green-100 text-green-700",
     label: "TASK_COMPLETE",
   },
   LESSON_LEARNED: {
     dot: "bg-amber-400",
-    pillBg: "#FEF3C7",
-    pillText: "#92400E",
+    pill: "bg-amber-100 text-amber-800",
     label: "LESSON_LEARNED",
   },
   AGENT_INVOKED: {
     dot: "bg-purple-500",
-    pillBg: "#EDE9FE",
-    pillText: "#5B21B6",
+    pill: "bg-purple-100 text-purple-700",
     label: "AGENT_INVOKED",
   },
   BLOCKED: {
     dot: "bg-red-500",
-    pillBg: "#FEE2E2",
-    pillText: "#991B1B",
+    pill: "bg-red-100 text-red-700",
     label: "BLOCKED",
   },
 }
 
 const DEFAULT_STYLE: EventTypeStyle = {
   dot: "bg-gray-400",
-  pillBg: "#F3F4F6",
-  pillText: "#374151",
+  pill: "bg-gray-100 text-gray-700",
   label: "EVENT",
 }
 
@@ -99,7 +92,7 @@ function FeedRow({ event }: { event: ActivityItem }) {
     .replace(/\b\w/g, (c) => c.toUpperCase())}`
 
   return (
-    <div className="flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-[var(--dashboard-surface-hover,#F9FAFB)]">
+    <div className="flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-[var(--dashboard-surface-hover)]">
       {/* Colored dot */}
       <span className={cn("size-2.5 shrink-0 rounded-full", style.dot)} />
 
@@ -115,8 +108,7 @@ function FeedRow({ event }: { event: ActivityItem }) {
 
       {/* Pill badge */}
       <span
-        className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium"
-        style={{ backgroundColor: style.pillBg, color: style.pillText }}
+        className={cn("shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium", style.pill)}
       >
         {style.label}
       </span>
@@ -178,7 +170,7 @@ export default function MemoryFeedPage() {
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--dashboard-text-secondary)]" />
             <input
               placeholder="Search memories..."
-              className="rounded-full border border-[var(--dashboard-border)] bg-white py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dashboard-cta-primary,#2563EB)] focus:ring-offset-1"
+              className="rounded-full border border-[var(--dashboard-border)] bg-white py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dashboard-cta-primary)] focus:ring-offset-1"
             />
           </div>
           <button
@@ -199,7 +191,7 @@ export default function MemoryFeedPage() {
             className={cn(
               "px-4 py-2 text-sm font-medium transition-colors",
               tab === activeTab
-                ? "border-b-2 border-[var(--dashboard-cta-primary,#2563EB)] text-[var(--dashboard-cta-primary,#2563EB)]"
+                ? "border-b-2 border-[var(--dashboard-cta-primary)] text-[var(--dashboard-cta-primary)]"
                 : "text-[var(--dashboard-text-secondary)] hover:text-[var(--dashboard-text-primary)]"
             )}
           >
