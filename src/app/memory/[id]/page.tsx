@@ -1,23 +1,13 @@
 "use client"
 
-import { ArrowLeft, Clock, History, PencilLine, RotateCcw, Sparkles } from "lucide-react"
+import { ArrowLeft, Clock, Sparkles } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import type { JSX } from "react"
-import { toast } from "sonner"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Spinner } from "@/components/ui/spinner"
-import { Textarea } from "@/components/ui/textarea"
-import { DEFAULT_GROUP_ID, DEFAULT_USER_ID } from "@/lib/defaults/scope"
+import { DEFAULT_GROUP_ID } from "@/lib/defaults/scope"
+import { buildMemoryEvidenceChain, memoryVersionStatus } from "@/lib/memory/detail-view"
+import { buildProvenanceExportText } from "@/lib/memory/provenance-export"
 import { formatRelativeTime, normalizeNeo4jTimestamp } from "@/lib/utils/date"
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -29,11 +19,22 @@ interface MemoryDetail {
   source: "episodic" | "semantic" | "both"
   provenance: "conversation" | "manual"
   user_id: string
+  actor?: string | null
+  creator?: string | null
+  approver?: string | null
+  group_id?: string
   created_at: string
+  status?: "approved" | "proposed" | "pending" | "deprecated" | "active" | "deleted"
+  source_event_id?: string | null
+  proposal_id?: string | null
+  trace_ref?: string | number | null
   version?: number
   superseded_by?: string
   usage_count?: number
   recent_usage_count?: number | null
+  evidence?: Parameters<typeof buildMemoryEvidenceChain>[0]["evidence"]
+  hash?: string | null
+  previous_hash?: string | null
 }
 
 interface DeletedMemoryItem {
@@ -46,6 +47,18 @@ interface DeletedMemoryItem {
   source: "episodic" | "semantic" | "both"
   provenance: "conversation" | "manual"
   user_id: string
+  actor?: string | null
+  creator?: string | null
+  approver?: string | null
+  group_id?: string
+  status?: MemoryDetail["status"]
+  source_event_id?: string | null
+  proposal_id?: string | null
+  trace_ref?: string | number | null
+  superseded_by?: string
+  evidence?: MemoryDetail["evidence"]
+  hash?: string | null
+  previous_hash?: string | null
   version?: number
 }
 
@@ -89,22 +102,12 @@ export default function MemoryDetailPage(): JSX.Element | null {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Edit state
-  const [isEditing, setIsEditing] = useState(false)
-  const [editContent, setEditContent] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
-
   // Delete state
-  const [showForgetConfirm, setShowForgetConfirm] = useState(false)
-  const [isForgetting, setIsForgetting] = useState(false)
   const [isForgotten, setIsForgotten] = useState(false)
   const [forgottenAt, setForgottenAt] = useState<string | null>(null)
-
-  // Restore state
-  const [isRestoring, setIsRestoring] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   const groupId = DEFAULT_GROUP_ID
-  const userId = DEFAULT_USER_ID
 
   const fetchMemory = useCallback(async (): Promise<void> => {
     setIsLoading(true)
@@ -133,7 +136,19 @@ export default function MemoryDetailPage(): JSX.Element | null {
                   source: deleted.source,
                   provenance: deleted.provenance,
                   user_id: deleted.user_id,
+                  actor: deleted.actor,
+                  creator: deleted.creator,
+                  approver: deleted.approver,
+                  group_id: deleted.group_id,
                   created_at: normalizeNeo4jTimestamp(deleted.created_at),
+                  status: deleted.status ?? "deleted",
+                  source_event_id: deleted.source_event_id,
+                  proposal_id: deleted.proposal_id,
+                  trace_ref: deleted.trace_ref,
+                  superseded_by: deleted.superseded_by,
+                  evidence: deleted.evidence,
+                  hash: deleted.hash,
+                  previous_hash: deleted.previous_hash,
                   version: deleted.version,
                   usage_count: 0,
                 })
@@ -164,108 +179,6 @@ export default function MemoryDetailPage(): JSX.Element | null {
   }, [groupId, memoryId])
 
   useEffect(() => { void fetchMemory() }, [fetchMemory])
-
-  // ── Edit ──
-
-  const startEditing = () => {
-    if (!memory) return
-    setEditContent(memory.content)
-    setIsEditing(true)
-  }
-
-  const cancelEditing = () => {
-    setIsEditing(false)
-    setEditContent("")
-  }
-
-  const saveEdit = async () => {
-    if (!memory || !editContent.trim()) return
-    setIsSaving(true)
-
-    try {
-      const resp = await fetch(
-        `/api/memory/${encodeURIComponent(memoryId)}?group_id=${encodeURIComponent(groupId)}&user_id=${encodeURIComponent(userId)}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: editContent.trim() }),
-        }
-      )
-
-      if (!resp.ok) {
-        toast.error("Could not save the change.")
-        return
-      }
-
-      const result = await resp.json()
-      if (result.id !== memoryId) {
-        router.replace(`/memory/${result.id}`)
-        return
-      }
-
-      await fetchMemory()
-      setIsEditing(false)
-      setEditContent("")
-      toast.success("Updated successfully.")
-    } catch {
-      toast.error("Failed to save.")
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  // ── Forget ──
-
-  const forgetMemory = async () => {
-    if (!memory) return
-    setIsForgetting(true)
-
-    try {
-      const resp = await fetch(
-        `/api/memory/${encodeURIComponent(memoryId)}?group_id=${encodeURIComponent(groupId)}&user_id=${encodeURIComponent(userId)}`,
-        { method: "DELETE" }
-      )
-
-      if (resp.ok) {
-        toast.success("Memory forgotten.")
-        router.push("/memory")
-        return
-      }
-
-      toast.error("Could not forget this memory.")
-    } catch {
-      toast.error("Something went wrong.")
-    } finally {
-      setIsForgetting(false)
-      setShowForgetConfirm(false)
-    }
-  }
-
-  // ── Restore ──
-
-  const restoreMemory = async () => {
-    if (!memory) return
-    setIsRestoring(true)
-
-    try {
-      const resp = await fetch(
-        `/api/memory/${encodeURIComponent(memoryId)}/restore?group_id=${encodeURIComponent(groupId)}&user_id=${encodeURIComponent(userId)}`,
-        { method: "POST" }
-      )
-
-      if (resp.ok) {
-        toast.success("Memory restored.")
-        router.push("/memory")
-        return
-      }
-
-      toast.error("Could not restore this memory.")
-    } catch {
-      toast.error("Something went wrong.")
-    } finally {
-      setIsRestoring(false)
-    }
-  }
 
   // ── Loading ──
 
@@ -314,6 +227,34 @@ export default function MemoryDetailPage(): JSX.Element | null {
 
   if (!memory) return null
 
+  const evidenceChain = buildMemoryEvidenceChain(memory)
+  const versionStatus = memoryVersionStatus(memory)
+  const provenanceExportText = buildProvenanceExportText({ ...memory, status: versionStatus, evidence: evidenceChain })
+
+  const copyProvenance = async (): Promise<void> => {
+    setExportError(null)
+    try {
+      await navigator.clipboard.writeText(provenanceExportText)
+    } catch {
+      setExportError("Clipboard export failed. Provenance was not copied.")
+    }
+  }
+
+  const downloadProvenance = (): void => {
+    setExportError(null)
+    try {
+      const blob = new Blob([provenanceExportText], { type: "text/plain;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = `${memory.id}-provenance.txt`
+      anchor.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 0)
+    } catch {
+      setExportError("File export failed. Provenance was not downloaded.")
+    }
+  }
+
   // ── Render ──
 
   return (
@@ -337,30 +278,9 @@ export default function MemoryDetailPage(): JSX.Element | null {
             <ArrowLeft className="size-4" />
             Back to memories
           </button>
-          {isForgotten ? (
-            <button
-              type="button"
-              onClick={restoreMemory}
-              disabled={isRestoring}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-              style={{
-                background: "var(--allura-blue)",
-                color: "var(--allura-white)",
-              }}
-            >
-              <RotateCcw className="size-3.5" />
-              {isRestoring ? "Restoring…" : "Restore"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowForgetConfirm(true)}
-              className="text-sm font-medium underline-offset-2 transition-colors hover:underline"
-              style={{ color: "var(--allura-text-2)" }}
-            >
-              Forget this memory
-            </button>
-          )}
+          <span className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide" style={{ background: "var(--allura-cream)", color: "var(--allura-text-2)" }}>
+            Read-only detail
+          </span>
         </div>
       </div>
 
@@ -382,14 +302,9 @@ export default function MemoryDetailPage(): JSX.Element | null {
                   It&apos;s in the 30-day recovery window and can be restored.
                 </p>
               </div>
-              <button
-                type="button"
-                className="memory-forgotten-undo"
-                onClick={restoreMemory}
-                disabled={isRestoring}
-              >
-                Undo & restore
-              </button>
+              <p className="text-xs" style={{ color: "var(--allura-text-3)" }}>
+                Restore is intentionally not exposed in this read-only provenance view.
+              </p>
             </div>
           </div>
         )}
@@ -404,59 +319,14 @@ export default function MemoryDetailPage(): JSX.Element | null {
             </span>
           </div>
 
-          {isEditing ? (
-            <div className="space-y-4">
-              <Textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="min-h-36 text-base leading-relaxed"
-                autoFocus
-                disabled={isSaving}
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={cancelEditing}
-                  disabled={isSaving}
-                  className="rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--allura-muted)]"
-                  style={{ color: "var(--allura-text-2)" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={saveEdit}
-                  disabled={isSaving || !editContent.trim() || editContent.trim() === memory.content}
-                  className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                  style={{
-                    background: "var(--allura-blue)",
-                    color: "var(--allura-white)",
-                  }}
-                >
-                  {isSaving ? "Saving…" : "Save changes"}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div
-              className="group cursor-pointer rounded-xl p-3 transition-colors hover:bg-[var(--allura-muted)]"
-              onClick={startEditing}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter") startEditing() }}
-            >
-              <p className="text-xl leading-relaxed font-medium" style={{ color: "var(--allura-charcoal)" }}>
-                {memory.content}
-              </p>
-              <p
-                className="mt-3 flex items-center gap-1.5 text-xs opacity-0 transition-opacity group-hover:opacity-100"
-                style={{ color: "var(--allura-text-3)" }}
-              >
-                <PencilLine className="size-3.5" />
-                Click to edit the wording
-              </p>
-            </div>
-          )}
+          <div className="rounded-xl p-3">
+            <p className="text-xl leading-relaxed font-medium" style={{ color: "var(--allura-charcoal)" }}>
+              {memory.content}
+            </p>
+            <p className="mt-3 text-xs" style={{ color: "var(--allura-text-3)" }}>
+              Memory ID: {memory.id}
+            </p>
+          </div>
         </div>
 
         {/* ── Provenance + Confidence ── */}
@@ -489,6 +359,43 @@ export default function MemoryDetailPage(): JSX.Element | null {
           </div>
         </div>
 
+        {/* ── Detail metadata ── */}
+        <div className="memory-card mb-6">
+          <p className="text-xs font-semibold tracking-wider uppercase" style={{ color: "var(--allura-text-2)" }}>
+            Provenance details
+          </p>
+          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt style={{ color: "var(--allura-text-3)" }}>Tenant scope</dt>
+              <dd className="font-medium" style={{ color: "var(--allura-charcoal)" }}>{memory.group_id ?? "Unavailable"}</dd>
+            </div>
+            <div>
+              <dt style={{ color: "var(--allura-text-3)" }}>Actor</dt>
+              <dd className="font-medium" style={{ color: "var(--allura-charcoal)" }}>{memory.actor || "Unavailable"}</dd>
+            </div>
+            <div>
+              <dt style={{ color: "var(--allura-text-3)" }}>User</dt>
+              <dd className="font-medium" style={{ color: "var(--allura-charcoal)" }}>{memory.user_id || "Unavailable"}</dd>
+            </div>
+            <div>
+              <dt style={{ color: "var(--allura-text-3)" }}>Creator</dt>
+              <dd className="font-medium" style={{ color: "var(--allura-charcoal)" }}>{memory.creator || "Unavailable"}</dd>
+            </div>
+            <div>
+              <dt style={{ color: "var(--allura-text-3)" }}>Approver</dt>
+              <dd className="font-medium" style={{ color: "var(--allura-charcoal)" }}>{memory.approver || "Unavailable"}</dd>
+            </div>
+            <div>
+              <dt style={{ color: "var(--allura-text-3)" }}>Status</dt>
+              <dd className="font-medium capitalize" style={{ color: "var(--allura-charcoal)" }}>{versionStatus}</dd>
+            </div>
+            <div>
+              <dt style={{ color: "var(--allura-text-3)" }}>Created</dt>
+              <dd className="font-medium" style={{ color: "var(--allura-charcoal)" }}>{new Date(memory.created_at).toLocaleString()}</dd>
+            </div>
+          </dl>
+        </div>
+
         {/* ── Evidence section ── */}
         <div
           className="mb-6 rounded-xl p-6"
@@ -497,11 +404,21 @@ export default function MemoryDetailPage(): JSX.Element | null {
           <div className="mb-3 flex items-center gap-2">
             <Clock className="size-4" style={{ color: "var(--allura-text-2)" }} />
             <p className="text-sm font-medium" style={{ color: "var(--allura-text-2)" }}>
-              Timeline
+              Evidence chain
             </p>
           </div>
 
           <div className="space-y-3 pl-6 border-l-2" style={{ borderColor: "var(--allura-border-1)" }}>
+            {evidenceChain.map((item) => (
+              <div key={`${item.type}:${item.label}:${item.id ?? "unavailable"}`}>
+                <p className="text-sm font-medium" style={{ color: "var(--allura-charcoal)" }}>
+                  {item.label}
+                </p>
+                <p className="text-xs" style={{ color: "var(--allura-text-3)" }}>
+                  {item.status === "available" ? item.id : "Unavailable — not present in retrieved evidence"}
+                </p>
+              </div>
+            ))}
             {memory.version != null && memory.version > 1 ? (
               <>
                 <div>
@@ -547,68 +464,40 @@ export default function MemoryDetailPage(): JSX.Element | null {
           </div>
         </div>
 
-        {/* ── Actions ── */}
+        {/* ── Read-only actions ── */}
         <div className="flex flex-wrap gap-3">
-          {!isForgotten && (
-            <button
-              type="button"
-              onClick={startEditing}
-              className="rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--allura-muted)]"
-              style={{
-                border: "1px solid var(--allura-border-1)",
-                color: "var(--allura-charcoal)",
-              }}
-            >
-              Edit wording
-            </button>
-          )}
-          {isForgotten ? (
-            <button
-              type="button"
-              onClick={restoreMemory}
-              disabled={isRestoring}
-              className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-              style={{
-                background: "var(--allura-blue)",
-                color: "var(--allura-white)",
-              }}
-            >
-              {isRestoring ? "Restoring…" : "Restore this memory"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowForgetConfirm(true)}
-              className="rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--allura-muted)]"
-              style={{ color: "var(--allura-text-2)" }}
-            >
-              Forget
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => void copyProvenance()}
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--allura-muted)]"
+            style={{ border: "1px solid var(--allura-border-1)", color: "var(--allura-charcoal)" }}
+          >
+            Copy provenance
+          </button>
+          <button
+            type="button"
+            onClick={downloadProvenance}
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--allura-muted)]"
+            style={{ border: "1px solid var(--allura-border-1)", color: "var(--allura-charcoal)" }}
+          >
+            Export provenance
+          </button>
+          <button
+            type="button"
+            onClick={() => void fetchMemory()}
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--allura-muted)]"
+            style={{ color: "var(--allura-text-2)" }}
+          >
+            Retry load
+          </button>
         </div>
+        {exportError && (
+          <p className="mt-3 text-sm" style={{ color: "var(--allura-text-2)" }}>
+            {exportError}
+          </p>
+        )}
       </div>
 
-      {/* ── Forget confirmation dialog ── */}
-      <AlertDialog open={showForgetConfirm} onOpenChange={setShowForgetConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Forget this memory?</AlertDialogTitle>
-            <AlertDialogDescription>
-              It will be hidden from view. You can restore it within 30 days if you change your mind.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isForgetting}>Keep it</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={forgetMemory}
-              disabled={isForgetting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isForgetting ? "Forgetting…" : "Forget it"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

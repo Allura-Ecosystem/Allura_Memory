@@ -1,0 +1,13 @@
+strict-auth	ready
+strict-health-live	200	application/json	0.005734
+strict-protected-memory	401	application/json	0.045482
+strict-protected-admin	307		0.004078
+dev-auth	ready
+dev-health-live	200	application/json	0.008125
+dev-health-detailed	000		15.002559
+route-root	307	text/html; charset=utf-8	11.458921
+route-dashboard	200	text/html; charset=utf-8	0.174391
+route-allura	200	text/html; charset=utf-8	0.106802
+route-memory-space	200	text/html; charset=utf-8	0.089773
+dev-protected-admin	200	text/html; charset=utf-8	0.441007
+dev-memory-api	200	application/json	0.120325

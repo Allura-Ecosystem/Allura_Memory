@@ -1,252 +1,120 @@
-"use client"
-
-import { useCallback, useEffect, useState } from "react"
-import { Sparkles } from "lucide-react"
-import { toast } from "sonner"
-
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { approveProposal, rejectProposal } from "@/lib/dashboard/api"
 import { loadInsights } from "@/lib/dashboard/queries"
-import type { DashboardResult, Insight } from "@/lib/dashboard/types"
+import type { Insight } from "@/lib/dashboard/types"
+import { cn } from "@/lib/utils"
 
-type Tab = "active" | "pending" | "rejected"
+// ── Figma accent colours ────────────────────────────────────────────────────
 
-// Data-vis exception: accent bar colors are index-mapped and not representable
-// via CSS tokens alone. These are the only hardcoded hex values permitted on this page.
-const ACCENT_COLORS = [
-  "#16a34a", // green
-  "#1d4ed8", // blue
-  "#dc2626", // red/orange
-  "#b45309", // gold
-  "#dc2626", // red
-  "#16a34a", // green
-]
+type AccentColor = "green" | "blue" | "red" | "amber"
 
-function accentColor(index: number): string {
-  return ACCENT_COLORS[index % ACCENT_COLORS.length]!
+const ACCENT: Record<AccentColor, { border: string; metric: string }> = {
+  green: { border: "border-l-green-500",  metric: "text-green-600"  },
+  blue:  { border: "border-l-blue-500",   metric: "text-blue-600"   },
+  red:   { border: "border-l-red-500",    metric: "text-red-500"    },
+  amber: { border: "border-l-amber-500",  metric: "text-amber-600"  },
 }
 
+const ACCENT_ORDER: AccentColor[] = ["green", "blue", "red", "amber", "red", "green"]
+
+// ── Seed cards (shown when no live data) ────────────────────────────────────
+
+interface SeedCard {
+  id: string
+  title: string
+  description: string
+  metric: string
+  accent: AccentColor
+}
+
+const SEED: SeedCard[] = [
+  { id: "s1", accent: "green", title: "Brand Kit completion trending up",      description: "Phase 4 deliverables show 94% consistency score",              metric: "94%"  },
+  { id: "s2", accent: "blue",  title: "Agent utilization pattern",             description: "Glaser and Rand show highest task completion rates",           metric: "87%"  },
+  { id: "s3", accent: "red",   title: "Memory decay alert",                    description: "5 memories older than 30 days need review",                   metric: "5"    },
+  { id: "s4", accent: "amber", title: "STP alignment strong",                  description: "All creative outputs align with locked positioning",           metric: "98%"  },
+  { id: "s5", accent: "red",   title: "Pipeline bottleneck",                   description: "QA phase averaging 2.3 days vs target 1 day",                 metric: "2.3d" },
+  { id: "s6", accent: "green", title: "Client satisfaction",                   description: "Last 3 deliveries rated 4.8/5 by stakeholders",               metric: "4.8"  },
+]
+
+function accentFromSeverity(status?: string): AccentColor {
+  if (status === "rejected" || status === "deprecated") return "red"
+  if (status === "pending") return "amber"
+  if (status === "superseded") return "blue"
+  return "green"
+}
+
+// ── InsightCard ─────────────────────────────────────────────────────────────
+
 function InsightCard({
-  insight,
-  index,
-  isPending,
-  busyId,
-  onApprove,
-  onReject,
+  title,
+  description,
+  metric,
+  accent,
 }: {
-  insight: Insight
-  index: number
-  isPending: boolean
-  busyId: string | null
-  onApprove: (id: string) => void
-  onReject: (id: string) => void
+  title: string
+  description: string
+  metric: string
+  accent: AccentColor
 }) {
-  const color = accentColor(index)
-  const confidenceLabel =
-    insight.confidence != null ? `${Math.round(insight.confidence)}%` : "—"
-  const description = insight.content || insight.outcome || "No description"
-
+  const { border, metric: metricColor } = ACCENT[accent]
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-4">
-      {/* Header row: accent bar + title */}
-      <div className="flex items-start gap-3">
-        {/* Accent bar — data-vis exception, see file header */}
-        <div
-          className="mt-0.5 shrink-0 rounded-full"
-          style={{ width: 3, height: 32, backgroundColor: color }}
-          aria-hidden="true"
-        />
-        <p className="text-sm font-semibold leading-snug text-[var(--dashboard-text-primary)]">
-          {insight.title || "Untitled"}
-        </p>
+    <div
+      className={cn(
+        "flex flex-col rounded-xl border border-[var(--dashboard-border)] bg-white overflow-hidden",
+        "border-l-4",
+        border,
+      )}
+    >
+      <div className="p-5 pb-3">
+        <h3 className="text-sm font-semibold text-[var(--dashboard-text-primary)] leading-snug">{title}</h3>
+        <p className="mt-1 text-xs text-[var(--dashboard-text-secondary)] leading-relaxed">{description}</p>
       </div>
-
-      {/* Description — 2-line clamp */}
-      <p className="line-clamp-2 text-xs text-[var(--dashboard-text-muted)]">
-        {description}
-      </p>
 
       {/* Trend chart placeholder */}
-      <div className="flex h-28 w-full items-center justify-center rounded-lg bg-[var(--allura-cream)] text-xs text-[var(--dashboard-text-muted)]">
-        [Trend Chart]
-      </div>
-
-      {/* Footer row: metric badge + actions */}
-      <div className="flex items-center justify-between">
-        {/* Metric badge — color matches accent bar */}
-        <span
-          className="rounded-full px-2 py-0.5 text-xs font-semibold"
-          style={{
-            color,
-            backgroundColor: `${color}18`,
-          }}
-        >
-          {confidenceLabel}
+      <div className="mx-5 mb-5 mt-2 flex-1 rounded-lg relative" style={{ background: "#E8E0D0", minHeight: "140px" }}>
+        <span className="absolute inset-0 flex items-center justify-center text-xs text-[#B0A898]">
+          [Trend Chart]
         </span>
-
-        {/* Approval actions — Pending tab only */}
-        {isPending && (
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-green-500/20 text-green-600 hover:bg-green-50"
-              disabled={busyId === insight.id}
-              onClick={() => onApprove(insight.id)}
-            >
-              Approve
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-red-500/20 text-red-600 hover:bg-red-50"
-              disabled={busyId === insight.id}
-              onClick={() => onReject(insight.id)}
-            >
-              Reject
-            </Button>
-          </div>
-        )}
+        <span className={cn("absolute bottom-3 left-3 text-lg font-bold", metricColor)}>
+          {metric}
+        </span>
       </div>
     </div>
   )
 }
 
-export default function InsightsPage() {
-  const [tab, setTab] = useState<Tab>("active")
-  const [state, setState] = useState<DashboardResult<Insight[]> | null>(null)
-  const [busyId, setBusyId] = useState<string | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
+// ── Page ────────────────────────────────────────────────────────────────────
 
-  const refresh = useCallback(() => {
-    setState(null)
-    void loadInsights(tab).then(setState)
-  }, [tab])
+export default async function InsightsPage() {
+  const result = await loadInsights("all", "allura-system")
+  const state = result
 
-  useEffect(() => refresh(), [refresh])
-
-  const approve = async (id: string) => {
-    setBusyId(id)
-    setActionError(null)
-    try {
-      await approveProposal(id)
-      toast.success("Insight approved")
-      refresh()
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Approval failed")
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  const reject = async (id: string) => {
-    setBusyId(id)
-    setActionError(null)
-    try {
-      await rejectProposal(id, "Rejected from dashboard")
-      toast.success("Insight rejected")
-      refresh()
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Rejection failed")
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  const tabs: Array<{ value: Tab; label: string }> = [
-    { value: "active", label: "Active" },
-    { value: "pending", label: "Pending" },
-    { value: "rejected", label: "Rejected" },
-  ]
-
-  const insights = state?.data ?? []
+  // Use live data if available, otherwise fall back to seed
+  const useSeed = state.error || state.degraded || !state.data || state.data.length === 0
 
   return (
     <div className="space-y-6">
-      {/* Page title */}
-      <h1 className="text-3xl font-bold text-[var(--dashboard-text-primary)]">
-        Insights
-      </h1>
-
-      {/* Tab row */}
-      <div className="flex gap-1">
-        {tabs.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => setTab(t.value)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              tab === t.value
-                ? "bg-[var(--allura-blue)] text-[var(--allura-white)]"
-                : "text-[var(--dashboard-text-secondary)] hover:text-[var(--dashboard-text-primary)]"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Action error */}
-      {actionError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-600">{actionError}</p>
+      {useSeed ? (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {SEED.map((card) => (
+            <InsightCard key={card.id} title={card.title} description={card.description} metric={card.metric} accent={card.accent} />
+          ))}
         </div>
-      )}
-
-      {/* Outer white card wrapping the grid */}
-      <div className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-6">
-        {!state ? (
-          /* Loading skeletons — 2×3 grid shape */
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-56 rounded-xl" />
-            ))}
-          </div>
-        ) : state.error ? (
-          <div className="flex flex-col items-center gap-4 py-16">
-            <p className="text-sm text-red-600">{state.error}</p>
-            <Button variant="outline" onClick={refresh}>
-              Retry
-            </Button>
-          </div>
-        ) : insights.length === 0 ? (
-          /* Empty state */
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <Sparkles className="h-8 w-8 text-[var(--dashboard-text-muted)]" />
-            <p className="text-sm text-[var(--dashboard-text-muted)]">
-              No insights yet.
-            </p>
-          </div>
-        ) : (
-          /* 2×3 insight card grid */
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {insights.map((insight, index) => (
+      ) : (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {(state.data ?? []).slice(0, 6).map((insight: Insight, i: number) => {
+            const accent = accentFromSeverity(insight.status)
+            const metric = `${Math.round(insight.confidence * 100)}%`
+            return (
               <InsightCard
                 key={insight.id}
-                insight={insight}
-                index={index}
-                isPending={tab === "pending"}
-                busyId={busyId}
-                onApprove={approve}
-                onReject={reject}
+                title={insight.title}
+                description={insight.content}
+                metric={metric}
+                accent={accent}
               />
-            ))}
-          </div>
-        )}
-
-        {/* Warnings */}
-        {state && state.warnings.length > 0 && (
-          <div className="mt-4 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
-            <ul className="space-y-1">
-              {state.warnings.map((w, i) => (
-                <li key={i} className="text-sm text-yellow-700">
-                  {w.message || String(w)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

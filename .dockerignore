@@ -39,9 +39,23 @@ dist
 .opencode/skills/superpowers-memory
 .opencode/skills/systematic-debugging-memory
 .opencode/skills/trailofbits-audit
+.agents
+.codex
+.openclaw
+.opencode-router
+.ralph
+.venv
+.worktrees
 _bmad-output
+allura-memory
+archive
+artifacts
+backups
+benchmark
+guidelines
 memory-bank
 docs
+test-results
 tests
 
 # Docker

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Allura Memory · Prototype</title>
+  <link rel="stylesheet" href="tokens.css"/>
+  <style>
+    html, body { margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; color: var(--color-text-primary); background: var(--color-page-bg); min-height: 100vh; }
+    #root { min-height: 100vh; }
+    .hover-lift:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(17,24,39,0.06); border-color: var(--color-border-light) !important; }
+    .hover-row:hover { background: var(--color-panel-subtle); }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+      outline: 2px solid var(--color-blue); outline-offset: 1px; border-radius: 8px;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideUp { from { transform: translate(-50%, 12px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+    @keyframes modalIn { from { transform: translate(-50%, -48%) scale(0.96); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--color-border-light); }
+    
+    /* Responsive: sidebar collapse on small screens */
+    @media (max-width: 1024px) {
+      aside { width: auto !important; min-width: 56px; }
+      aside nav span { display: none; }
+      aside nav div { display: none; }
+      aside .user-info { display: none; }
+    }
+    /* Card grid stacking */
+    @media (max-width: 768px) {
+      .stat-grid { grid-template-columns: 1fr !important; }
+      .card-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="src/data.jsx"></script>
+  <script type="text/babel" src="src/tweaks-panel.jsx"></script>
+  <script type="text/babel" src="src/shell.jsx"></script>
+  <script type="text/babel" src="src/screens-overview.jsx"></script>
+  <script type="text/babel" src="src/screens-data.jsx"></script>
+  <script type="text/babel" src="src/screens-admin.jsx"></script>
+  <script type="text/babel" src="src/overlays.jsx"></script>
+
+  <script type="text/babel" data-presets="react">
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "density": "comfortable",
+      "showSidebarLabels": true,
+      "accent": "#C89B3C"
+    }/*EDITMODE-END*/;
+
+    function App() {
+      const [route, setRoute] = React.useState('dashboard');
+      const [openMemory, setOpenMemory] = React.useState(null);
+      const [drawerMemory, setDrawerMemory] = React.useState(null);
+      const [showAdd, setShowAdd] = React.useState(false);
+      const [undoMemory, setUndoMemory] = React.useState(null);
+      const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+      React.useEffect(() => {
+        if (!undoMemory) return;
+        const t = setTimeout(() => setUndoMemory(null), 6000);
+        return () => clearTimeout(t);
+      }, [undoMemory]);
+
+      const titles = {
+        dashboard:  ['Dashboard',                 ['Allura', 'Workspace']],
+        memory:     ['Memory',                    ['Allura', 'Workspace', 'Memory']],
+        graph:      ['Memory graph',              ['Allura', 'Workspace', 'Graph']],
+        search:     ['Trace logs',                ['Allura', 'Governance', 'Logs']],
+        provenance: ['Provenance',                ['Allura', 'Governance', 'Provenance']],
+        extracted:  ['Extracted memories',        ['Allura', 'Governance', 'Extracted']],
+        agents:     ['Agents',                    ['Allura', 'System', 'Agents']],
+        approvals:  ['Curator approvals',         ['Allura', 'System', 'Approvals']],
+        settings:   ['Workspace settings',        ['Allura', 'System', 'Settings']],
+      };
+      const [title, crumbs] = titles[openMemory ? 'memory' : route] || titles.dashboard;
+
+      let content;
+      if (openMemory) {
+        content = <ScreenMemoryDetail
+          memory={openMemory}
+          onClose={() => setOpenMemory(null)}
+          onForget={(m) => setUndoMemory(m)}
+          onOpenProvenance={() => setDrawerMemory(openMemory)}
+        />;
+      } else {
+        switch (route) {
+          case 'dashboard':  content = <ScreenDashboard go={setRoute} onAddMemory={() => setShowAdd(true)}/>; break;
+          case 'memory':     content = <ScreenMemory go={setRoute} onOpenMemory={setOpenMemory} onAddMemory={() => setShowAdd(true)} density={tweaks.density}/>; break;
+          case 'graph':      content = <ScreenGraph/>; break;
+          case 'search':     content = <ScreenLogs/>; break;
+          case 'provenance': content = <ScreenProvenance/>; break;
+          case 'extracted':  content = <ScreenExtracted/>; break;
+          case 'agents':     content = <ScreenAgents/>; break;
+          case 'approvals':  content = <ScreenApprovals/>; break;
+          case 'settings':   content = <ScreenSettings/>; break;
+          default:           content = <ScreenDashboard go={setRoute} onAddMemory={() => setShowAdd(true)}/>;
+        }
+      }
+
+      return (
+          <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--gradient-page)' }}>
+          <Sidebar current={openMemory ? 'memory' : route} onNav={(r) => { setOpenMemory(null); setRoute(r); }}/>
+          <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            <Topbar title={openMemory ? 'Memory detail' : title} breadcrumbs={crumbs} onAddMemory={() => setShowAdd(true)}/>
+            <div style={{ flex: 1 }}>{content}</div>
+          </main>
+          {drawerMemory && <ProvenanceDrawer memory={drawerMemory} onClose={() => setDrawerMemory(null)}/>}
+          <AddMemoryModal open={showAdd} onClose={() => setShowAdd(false)} onSave={() => setShowAdd(false)}/>
+          <UndoBanner memory={undoMemory} onUndo={() => setUndoMemory(null)}/>
+          <TweaksPanel title="Tweaks">
+            <TweakSection title="Layout">
+              <TweakRadio label="Memory density" value={tweaks.density} options={[
+                { value: 'compact', label: 'Compact' },
+                { value: 'comfortable', label: 'Comfy' },
+                { value: 'spacious', label: 'Roomy' },
+              ]} onChange={(v) => setTweak('density', v)}/>
+              <TweakToggle label="Sidebar labels" value={tweaks.showSidebarLabels} onChange={(v) => setTweak('showSidebarLabels', v)}/>
+            </TweakSection>
+            <TweakSection title="Accent">
+              <TweakColor label="Brand accent" value={tweaks.accent} options={['#C89B3C', '#1D4ED8', '#FF5A2E', '#157A4A']} onChange={(v) => setTweak('accent', v)}/>
+            </TweakSection>
+            <TweakSection title="Quick navigation">
+              {[
+                ['dashboard','Dashboard'],['memory','Memory'],['graph','Graph'],
+                ['search','Logs'],['provenance','Provenance'],['extracted','Extracted'],
+                ['agents','Agents'],['approvals','Approvals'],['settings','Settings'],
+              ].map(([id,label]) => (
+                <TweakButton key={id} label={label} onClick={() => { setOpenMemory(null); setRoute(id); }}/>
+              ))}
+            </TweakSection>
+          </TweaksPanel>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>

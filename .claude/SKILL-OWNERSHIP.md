@@ -18,6 +18,7 @@
 | figma-generate-library | Woz | Library generation | ⬜ Overlay | none | **Keep** — Figma library |
 | figma-implement-design | Woz | Implementation | ⬜ Overlay | figma-code-connect | **Keep** — Figma implementation |
 | figma-use | Woz | Figma inspection | ⬜ Overlay | none | **Keep** — Figma inspection |
+| impeccable | Woz | Frontend polish/design | ⬜ Overlay | frontend-design, frontend-craft | **Keep** — production-grade frontend interface design |
 | mcp-docker | All | MCP tool access | ✅ Yes | none | **Keep** — MCP gateway |
 | multi-search | Scout | Web search | ✅ Yes | context7 | **Keep** — search capability |
 | postgres-best-practices | Knuth | DB patterns | ⬜ Overlay | none | **Keep** — PostgreSQL guidance |

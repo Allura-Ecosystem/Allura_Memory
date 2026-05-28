@@ -370,10 +370,29 @@ No new file may be added to `docs/allura/` unless it is one of the six canonical
 - `REQUIREMENTS-MATRIX.md`
 - `RISKS-AND-DECISIONS.md`
 - `DATA-DICTIONARY.md`
+- `index.md` is allowed only as a navigation index. It must not define requirements, architecture decisions, or acceptance criteria.
 
 All other output — reports, deliverables, ADR standalones, validation snapshots, benchmarks, prompts — goes to `docs/archive/allura/` or Allura Brain.
 
 This rule applies to human contributors and AI agents equally. `docs/allura/` is the only live architecture surface.
+
+Machine check: run [`../../.github/scripts/docs-allura-canonical-guard.sh`](../../.github/scripts/docs-allura-canonical-guard.sh) before claiming the canonical docs surface is clean.
+
+---
+
+## Runtime Adapter Surface Rule
+
+`.opencode/` is canonical for this repository's Team RAM agents, skills, commands, guidelines, and OpenCode configuration.
+
+Runtime-specific folders are adapter surfaces:
+
+- `.claude/` — Claude Code adapter
+- `.codex/` — Codex adapter
+- `.agents/` — cross-runtime bridge and shared skill surface
+
+Adapters may mirror or bridge approved behavior, but they must not introduce conflicting agents, skills, hooks, commands, permissions, routes, memory policies, or governance rules. Hooks and plugins enforce approved rules; they do not author rules.
+
+Hook policy lives in [`HOOKS.md`](./HOOKS.md). Machine check: run [`../../.github/scripts/runtime-adapter-surface-guard.sh`](../../.github/scripts/runtime-adapter-surface-guard.sh) before changing adapter hooks or runtime settings.
 
 ---
 

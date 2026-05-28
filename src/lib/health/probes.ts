@@ -95,6 +95,23 @@ function isMcpInitialized(): boolean {
   return mcpInitialized;
 }
 
+async function isMcpHealthy(): Promise<boolean> {
+  if (isMcpInitialized()) {
+    return true;
+  }
+
+  const baseUrl = process.env.ALLURA_MCP_BASE_URL;
+  if (!baseUrl) {
+    return false;
+  }
+
+  const response = await fetch(new URL("/ready", baseUrl), {
+    signal: AbortSignal.timeout(DEPENDENCY_CHECK_TIMEOUT_MS),
+  });
+
+  return response.ok;
+}
+
 /**
  * Readiness probe — checks all dependencies.
  * Returns 200 if all required deps are healthy, 503 otherwise.
@@ -112,12 +129,8 @@ export async function checkReadiness(): Promise<ReadinessResult> {
   // Check Neo4j (optional — degraded mode if down)
   checks.neo4j = await checkWithTimeout("neo4j", isDriverHealthy);
 
-  // Check MCP server initialization (required)
-  checks.mcp = {
-    name: "mcp",
-    healthy: isMcpInitialized(),
-    latencyMs: 0,
-  };
+  // Check MCP server initialization or configured HTTP gateway (required)
+  checks.mcp = await checkWithTimeout("mcp", isMcpHealthy);
 
   // Ready if PostgreSQL and MCP are healthy (Neo4j is optional)
   const ready = checks.postgres.healthy && checks.mcp.healthy;

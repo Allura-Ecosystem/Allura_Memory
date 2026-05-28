@@ -15,7 +15,7 @@ export class DashboardApiError extends Error {
   }
 }
 
-function resolveGroupId(groupId?: string): string {
+export function resolveDashboardGroupId(groupId?: string): string {
   return groupId ?? getCurrentGroupId()
 }
 
@@ -34,7 +34,7 @@ function getCurrentGroupId(): string {
 
 function withGroupId(params?: Record<string, QueryValue>, groupId?: string): URLSearchParams {
   const search = new URLSearchParams()
-  search.set("group_id", resolveGroupId(groupId))
+  search.set("group_id", resolveDashboardGroupId(groupId))
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value !== undefined && value !== null && value !== "") {
       search.set(key, String(value))
@@ -109,6 +109,18 @@ export function getAuditEvents(params?: Record<string, QueryValue>, groupId?: st
   )
 }
 
+export function getPolicyEnforcementEvents(params?: Record<string, QueryValue>, groupId?: string) {
+  return readJson<{ events?: unknown[]; pagination?: { total?: number; has_more?: boolean } }>(
+    `/api/audit/events?${withGroupId({ event_type: "policy_check", limit: 10, ...params }, groupId).toString()}`
+  )
+}
+
+export function getPolicyViolationEvents(params?: Record<string, QueryValue>, groupId?: string) {
+  return readJson<{ events?: unknown[]; pagination?: { total?: number; has_more?: boolean } }>(
+    `/api/audit/events?${withGroupId({ event_type: "policy_violation", limit: 10, ...params }, groupId).toString()}`
+  )
+}
+
 export function getDecisionEvents(params?: Record<string, QueryValue>, groupId?: string) {
   return readJson<{ events?: unknown[]; pagination?: { total?: number; has_more?: boolean } }>(
     `/api/audit/events?${withGroupId({ event_type: "ARCHITECTURE_DECISION", limit: 50, ...params }, groupId).toString()}`
@@ -120,7 +132,7 @@ export function getHealth() {
 }
 
 export function getHealthMetrics(groupId?: string) {
-  const query = groupId?.trim() ? `?group_id=${encodeURIComponent(groupId.trim())}` : ""
+  const query = `?group_id=${encodeURIComponent(resolveDashboardGroupId(groupId).trim())}`
   return readJson<{
     timestamp: string
     queue: { pending_count: number; oldest_age_hours: number; approved_24h: number; rejected_24h: number }
@@ -150,7 +162,7 @@ export function getHealthMetrics(groupId?: string) {
 export function getGraph(params?: Record<string, QueryValue>, groupId?: string) {
   // Build headers with x-allura-group-id from auth context
   const headers: Record<string, string> = {}
-  const currentGroupId = resolveGroupId(groupId)
+  const currentGroupId = resolveDashboardGroupId(groupId)
   if (currentGroupId) {
     headers["x-allura-group-id"] = currentGroupId
   }
@@ -196,15 +208,22 @@ async function fetchWithHeaders<T>(
 
 export async function approveProposal(
   proposalId: string,
-  options?: { groupId?: string },
+  options?: { groupId?: string; rationale?: string },
 ): Promise<void> {
+  const rationale = options?.rationale?.trim()
+
+  if (!rationale) {
+    throw new DashboardApiError("Rationale is required for approval", 400, "/api/curator/approve")
+  }
+
   await readJson<unknown>("/api/curator/approve", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       proposal_id: proposalId,
-      group_id: resolveGroupId(options?.groupId),
+      group_id: resolveDashboardGroupId(options?.groupId),
       decision: "approve",
+      rationale,
     }),
   })
 }
@@ -217,15 +236,16 @@ export async function rejectProposal(
   const groupId = typeof rationaleOrOptions === "string" ? undefined : rationaleOrOptions?.groupId
 
   if (!rationale) {
-    throw new DashboardApiError("Rationale is required for rejection", 400, "/api/curator/reject")
+    throw new DashboardApiError("Rationale is required for rejection", 400, "/api/curator/approve")
   }
 
-  await readJson<unknown>("/api/curator/reject", {
+  await readJson<unknown>("/api/curator/approve", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       proposal_id: proposalId,
-      group_id: resolveGroupId(groupId),
+      group_id: resolveDashboardGroupId(groupId),
+      decision: "reject",
       rationale,
     }),
   })

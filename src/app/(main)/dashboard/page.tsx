@@ -1,257 +1,523 @@
+"use client"
+
+import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
-import { Bell, Search, TrendingUp, Plus, Play, FileText, Download, ChevronRight } from "lucide-react"
+import {
+  AlertTriangle,
+  ArrowRight,
+  Bell,
+  Bot,
+  Brain,
+  Database,
+  Download,
+  FileText,
+  Plus,
+  Search,
+  TrendingUp,
+  Zap,
+} from "lucide-react"
 
-import { loadDashboardOverview } from "@/lib/dashboard/queries"
-import type { DashboardOverview, ActivityItem, DashboardHealthMetrics } from "@/lib/dashboard/types"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
+import { buildDashboardRouteState } from "@/lib/dashboard/empty-states"
+import { loadDashboardOverview, loadMemories, loadCuratorQueue, loadInsights } from "@/lib/dashboard/queries"
+import type { DashboardOverview, DashboardResult, Insight, Memory, Metric, SystemStatus } from "@/lib/dashboard/types"
+import { cn } from "@/lib/utils"
 
-/* ─── Dashboard Overview — Figma spec v3 (Server Component) ─── */
+/* ─── Dashboard Overview (Figma spec: node 55:3) ─── */
 
-export default async function DashboardPage() {
-  const result = await loadDashboardOverview()
-  const overview: DashboardOverview | null = result.data
+export default function DashboardPage() {
+  const [overviewState, setOverviewState] = useState<DashboardResult<DashboardOverview> | null>(null)
+  const [memoriesState, setMemoriesState] = useState<DashboardResult<Memory[]> | null>(null)
+  const [queueState, setQueueState] = useState<DashboardResult<Insight[]> | null>(null)
+  const [insightsState, setInsightsState] = useState<DashboardResult<Insight[]> | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
 
-  const healthMetrics: DashboardHealthMetrics | null = overview?.healthMetrics ?? null
-  const activity: ActivityItem[] = overview?.activity ?? []
+  const refresh = useCallback(() => {
+    setOverviewState(null)
+    setMemoriesState(null)
+    setQueueState(null)
+    setInsightsState(null)
+    void loadDashboardOverview("allura-system").then(setOverviewState)
+    void loadMemories().then(setMemoriesState)
+    void loadCuratorQueue("pending").then(setQueueState)
+    void loadInsights("active").then(setInsightsState)
+  }, [])
 
-  /* ── Stat card values ── */
-  const totalMemories = healthMetrics?.storage.postgres.total_memories ?? overview?.metrics.find((m) => m.id === "memories")?.value ?? 0
-  const graphNodes = healthMetrics?.storage.neo4j.total_nodes ?? 0
-  const insightsGenerated = activity.filter((a) => a.kind === "insight").length || overview?.pendingInsights.length || 0
-  const activeAgentsSet = new Set(activity.map((a) => a.agent).filter(Boolean))
-  const activeAgents = activeAgentsSet.size
+  useEffect(() => {
+    refresh()
+  }, [refresh])
 
-  /* ── System status components ── */
-  const systemComponents = overview?.systemStatus.components ?? []
+  const isLoading = overviewState === null
+  const hasError = Boolean(overviewState?.error || overviewState?.degraded)
+  const overview = overviewState?.data
+
+  // Governed degraded state contract (source-level contract required by empty-states.test.ts)
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  const dashboardDegradedState = buildDashboardRouteState("dashboard", { kind: "degraded",
+    reason: overviewState?.error ?? (memoriesState?.degraded
+      ? memoriesState?.error ?? memoriesState?.warnings?.[0]?.message
+      : queueState?.degraded
+      ? queueState?.error ?? queueState?.warnings?.[0]?.message
+      : insightsState?.degraded
+      ? insightsState?.error ?? insightsState?.warnings?.[0]?.message
+      : undefined),
+  })
 
   return (
-    <div className="min-h-screen bg-[var(--dashboard-surface-muted,#f5f4f0)] px-6 py-8 lg:px-10">
-      {/* ── Top bar ── */}
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold text-[var(--dashboard-text-primary)]">
+    <div className="mx-auto max-w-7xl space-y-6">
+      {/* ── Page header ── */}
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-xl font-semibold text-[var(--dashboard-text-primary)]">
           Dashboard Overview
         </h1>
-
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex items-center gap-3">
           {/* Search bar */}
-          <div className="flex items-center gap-2 rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-3 py-2 shadow-sm">
-            <Search className="size-4 text-[var(--dashboard-text-muted)]" aria-hidden="true" />
-            <input
+          <div className="flex items-center gap-2 rounded-full border border-[var(--dashboard-border)] bg-white px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-[var(--dashboard-cta-primary)]/20 transition-shadow w-64">
+            <Search className="size-4 shrink-0 text-[var(--dashboard-text-muted)]" aria-hidden="true" />
+            <Input
               type="text"
-              placeholder="Search memories, agents..."
-              className="w-48 bg-transparent text-sm text-[var(--dashboard-text-primary)] outline-none placeholder:text-[var(--dashboard-text-muted)]"
-              aria-label="Search dashboard"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search memories..."
+              className="h-auto border-0 bg-transparent p-0 text-sm text-[var(--dashboard-text-primary)] placeholder:text-[var(--dashboard-text-muted)] focus-visible:ring-0 focus-visible:ring-offset-0"
+              aria-label="Search memories"
             />
           </div>
-          {/* Notification bell */}
+          {/* Bell icon */}
           <button
-            type="button"
             aria-label="Notifications"
-            className="flex size-9 items-center justify-center rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] shadow-sm transition-colors hover:bg-[var(--dashboard-surface-muted)]"
+            className="flex size-9 items-center justify-center rounded-full border border-[var(--dashboard-border)] bg-white text-[var(--dashboard-text-secondary)] hover:bg-[var(--dashboard-surface-muted)] transition-colors"
           >
-            <Bell className="size-4 text-[var(--dashboard-text-muted)]" />
+            <Bell className="size-4" aria-hidden="true" />
           </button>
         </div>
       </div>
 
-      {/* ── Stat cards ── */}
-      <div className="mb-8 grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatCard label="Total Memories" value={totalMemories} />
-        <StatCard label="Graph Nodes" value={graphNodes} />
-        <StatCard label="Insights Generated" value={insightsGenerated} />
-        <StatCard label="Active Agents" value={activeAgents} />
+      {/* ── Stat cards row ── */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))
+        ) : hasError && !overview ? (
+          <div className="col-span-4 rounded-xl border border-dashed border-[var(--dashboard-border)] bg-white p-6 text-center">
+            <AlertTriangle className="mx-auto mb-2 size-6 text-amber-500" aria-hidden="true" />
+            <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">{dashboardDegradedState.title}</p>
+            <p className="mt-1 text-xs text-[var(--dashboard-text-secondary)]">
+              {dashboardDegradedState.description}
+            </p>
+            <div className="mt-3 flex justify-center gap-2">
+              <Button variant="outline" size="sm" onClick={refresh}>
+                {dashboardDegradedState.retryLabel}
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href={dashboardDegradedState.actionHref ?? "/dashboard/health"}>
+                  {dashboardDegradedState.actionLabel}
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <StatCards metrics={overview?.metrics ?? []} />
+        )}
       </div>
 
-      {/* ── Main two-column area ── */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      {/* ── Main 2-column layout ── */}
+      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         {/* ── Left: Recent Activity ── */}
-        <section>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--dashboard-text-muted)]">
-            Recent Activity
-          </p>
-          <div className="space-y-3">
-            {activity.length === 0 ? (
-              <div className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-5 py-10 text-center text-sm text-[var(--dashboard-text-muted)]">
-                No recent activity to show.
+        <section className="rounded-xl border border-[var(--dashboard-border)] bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-[var(--dashboard-border)] px-5 py-4">
+            <h2 className="text-sm font-semibold text-[var(--dashboard-text-primary)]">Recent Activity</h2>
+            <Link
+              href="/dashboard/audit"
+              className="inline-flex items-center gap-1 text-xs font-medium text-[var(--dashboard-cta-primary)] hover:underline"
+            >
+              View all <ArrowRight className="size-3" />
+            </Link>
+          </div>
+          <div className="divide-y divide-[var(--dashboard-border)]">
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-start gap-4 px-5 py-4">
+                  <Skeleton className="mt-0.5 size-2 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-3/4 rounded" />
+                    <Skeleton className="h-3 w-1/2 rounded" />
+                  </div>
+                </div>
+              ))
+            ) : (overview?.activity ?? []).length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-10 text-center">
+                <Database className="size-8 text-[var(--dashboard-text-muted)]" aria-hidden="true" />
+                <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">No recent activity</p>
+                <p className="text-xs text-[var(--dashboard-text-secondary)]">
+                  Events will appear here as the system operates.
+                </p>
               </div>
             ) : (
-              activity.slice(0, 10).map((item) => (
-                <ActivityRow key={item.id} item={item} />
+              (overview?.activity ?? []).slice(0, 8).map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-start gap-4 px-5 py-4 hover:bg-[var(--dashboard-surface-muted)] transition-colors"
+                >
+                  <span
+                    className={cn(
+                      "mt-1.5 size-2 shrink-0 rounded-full",
+                      item.kind === "approval"
+                        ? "bg-[var(--dashboard-cta-approval)]"
+                        : item.kind === "warning"
+                        ? "bg-amber-400"
+                        : item.kind === "memory"
+                        ? "bg-[var(--dashboard-cta-primary)]"
+                        : "bg-[var(--dashboard-text-muted)]"
+                    )}
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-[var(--dashboard-text-primary)]">
+                      {item.title}
+                    </p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="text-xs text-[var(--dashboard-text-secondary)]">
+                        Agent: {item.agent}
+                      </span>
+                      <span className="text-[10px] text-[var(--dashboard-text-muted)]">
+                        {formatRelativeTime(item.timestamp)}
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase",
+                      item.kind === "approval"
+                        ? "bg-amber-50 text-amber-700"
+                        : item.kind === "memory"
+                        ? "bg-blue-50 text-[var(--dashboard-cta-primary)]"
+                        : "bg-[var(--dashboard-surface-muted)] text-[var(--dashboard-text-muted)]"
+                    )}
+                  >
+                    {item.kind}
+                  </span>
+                </div>
               ))
             )}
           </div>
         </section>
 
         {/* ── Right column ── */}
-        <aside className="space-y-4">
+        <div className="space-y-5">
           {/* Quick Actions */}
-          <QuickActions />
+          <section className="rounded-xl border border-[var(--dashboard-border)] bg-white shadow-sm">
+            <div className="border-b border-[var(--dashboard-border)] px-5 py-4">
+              <h2 className="text-sm font-semibold text-[var(--dashboard-text-primary)]">Quick Actions</h2>
+            </div>
+            <div className="divide-y divide-[var(--dashboard-border)]">
+              {QUICK_ACTIONS.map((action) => (
+                <Link
+                  key={action.id}
+                  href={action.href}
+                  className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--dashboard-surface-muted)] group"
+                >
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--dashboard-surface-muted)] text-[var(--dashboard-text-secondary)] transition-colors group-hover:bg-[var(--dashboard-cta-primary)]/10 group-hover:text-[var(--dashboard-cta-primary)]">
+                    <action.Icon className="size-3.5" aria-hidden="true" />
+                  </span>
+                  <span className="flex-1 text-sm text-[var(--dashboard-text-primary)]">{action.label}</span>
+                  <ArrowRight className="size-3.5 text-[var(--dashboard-text-muted)] transition-colors group-hover:text-[var(--dashboard-cta-primary)]" aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+          </section>
+
           {/* System Status */}
-          <SystemStatusCard components={systemComponents} />
-        </aside>
+          <section className="rounded-xl border border-[var(--dashboard-border)] bg-white shadow-sm">
+            <div className="border-b border-[var(--dashboard-border)] px-5 py-4">
+              <h2 className="text-sm font-semibold text-[var(--dashboard-text-primary)]">System Status</h2>
+            </div>
+            <div className="divide-y divide-[var(--dashboard-border)]">
+              {isLoading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between px-5 py-3">
+                    <Skeleton className="h-3.5 w-24 rounded" />
+                    <Skeleton className="h-3.5 w-16 rounded" />
+                  </div>
+                ))
+              ) : (
+                <SystemStatusRows
+                  systemStatus={overview?.systemStatus}
+                  healthMetrics={overview?.healthMetrics}
+                />
+              )}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   )
 }
 
-/* ─── Stat Card ─── */
+/* ─── Sub-components ─── */
 
-function StatCard({ label, value }: { label: string; value: number | string }) {
+const STAT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  memories: Brain,
+  graph: TrendingUp,
+  insights: Zap,
+  agents: Bot,
+}
+
+function StatCards({ metrics }: { metrics: Metric[] }) {
+  const slots: Array<{
+    id: string
+    label: string
+    value: string | number
+    description: string
+    iconKey: string
+  }> = [
+    {
+      id: "total-memories",
+      label: "Total Memories",
+      value:
+        metrics.find((m) => m.id === "total-memories" || m.label.toLowerCase().includes("memor"))?.value ?? "—",
+      description:
+        metrics.find((m) => m.id === "total-memories" || m.label.toLowerCase().includes("memor"))?.description ??
+        "Unavailable",
+      iconKey: "memories",
+    },
+    {
+      id: "graph-nodes",
+      label: "Graph Nodes",
+      value:
+        metrics.find(
+          (m) =>
+            m.id === "graph-nodes" ||
+            m.label.toLowerCase().includes("graph") ||
+            m.label.toLowerCase().includes("edge"),
+        )?.value ?? "—",
+      description:
+        metrics.find(
+          (m) =>
+            m.id === "graph-nodes" ||
+            m.label.toLowerCase().includes("graph") ||
+            m.label.toLowerCase().includes("edge"),
+        )?.description ?? "Unavailable",
+      iconKey: "graph",
+    },
+    {
+      id: "insights",
+      label: "Insights",
+      value:
+        metrics.find(
+          (m) =>
+            m.id === "insights" ||
+            m.label.toLowerCase().includes("insight") ||
+            m.label.toLowerCase().includes("approv"),
+        )?.value ?? "—",
+      description:
+        metrics.find(
+          (m) =>
+            m.id === "insights" ||
+            m.label.toLowerCase().includes("insight") ||
+            m.label.toLowerCase().includes("approv"),
+        )?.description ?? "Unavailable",
+      iconKey: "insights",
+    },
+    {
+      id: "agents",
+      label: "Active Agents",
+      value:
+        metrics.find(
+          (m) =>
+            m.id === "active-agents" ||
+            m.label.toLowerCase().includes("agent") ||
+            m.label.toLowerCase().includes("pending"),
+        )?.value ?? "—",
+      description:
+        metrics.find(
+          (m) =>
+            m.id === "active-agents" ||
+            m.label.toLowerCase().includes("agent") ||
+            m.label.toLowerCase().includes("pending"),
+        )?.description ?? "Unavailable",
+      iconKey: "agents",
+    },
+  ]
+
   return (
-    <div className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-5 py-5 shadow-sm">
-      <p className="mb-1 text-xs font-medium text-[var(--dashboard-text-muted)]">{label}</p>
-      <p className="mb-2 text-3xl font-bold text-[var(--dashboard-text-primary)]">
-        {value ?? 0}
-      </p>
-      <div className="flex items-center gap-1 text-xs font-medium text-[var(--allura-green,#157a44)]">
-        <TrendingUp className="size-3.5" aria-hidden="true" />
-        <span>+12% this week</span>
-      </div>
-    </div>
+    <>
+      {slots.map((slot) => {
+        const Icon = STAT_ICONS[slot.iconKey] ?? Brain
+        return (
+          <div
+            key={slot.id}
+            className="rounded-xl border border-[var(--dashboard-border)] bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--dashboard-text-secondary)]">
+                  {slot.label}
+                </p>
+                <p className="mt-1.5 text-2xl font-bold leading-none text-[var(--dashboard-text-primary)]">
+                  {typeof slot.value === "number" ? slot.value.toLocaleString() : slot.value}
+                </p>
+                <p className="mt-1.5 flex items-center gap-1 text-[11px] text-[#22C55E]">
+                  <TrendingUp className="size-3 shrink-0" aria-hidden="true" />
+                  {slot.description}
+                </p>
+              </div>
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--dashboard-surface-muted)]">
+                <Icon className="size-4 text-[var(--dashboard-text-secondary)]" aria-hidden="true" />
+              </span>
+            </div>
+          </div>
+        )
+      })}
+    </>
   )
 }
-
-/* ─── Activity Row ─── */
-
-const KIND_LABEL: Record<ActivityItem["kind"], string> = {
-  insight: "INSIGHT",
-  memory: "MEMORY",
-  approval: "APPROVAL",
-  sync: "SYNC",
-  warning: "WARNING",
-  system: "SYSTEM",
-}
-
-function ActivityRow({ item }: { item: ActivityItem }) {
-  const label = KIND_LABEL[item.kind] ?? item.kind.toUpperCase()
-  const relativeTime = formatRelativeTime(item.timestamp)
-
-  return (
-    <div className="flex items-start gap-3 rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-4 py-3 shadow-sm">
-      {/* Blue dot */}
-      <span
-        className="mt-1.5 size-2 shrink-0 rounded-full bg-[var(--allura-blue,#1d4ed8)]"
-        aria-hidden="true"
-      />
-
-      {/* Text block */}
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-[var(--dashboard-text-primary)] leading-snug">
-          {item.title || "System event"}
-        </p>
-        <p className="mt-0.5 text-xs text-[var(--dashboard-text-muted)]">
-          Agent: {item.agent || "system"}&nbsp;&bull;&nbsp;{relativeTime}
-        </p>
-      </div>
-
-      {/* Kind badge */}
-      <span className="shrink-0 rounded-full border border-[var(--dashboard-border)] bg-[var(--allura-cream,#f5f1e6)] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--allura-charcoal,#111827)]">
-        {label}
-      </span>
-    </div>
-  )
-}
-
-/* ─── Quick Actions ─── */
 
 const QUICK_ACTIONS = [
-  { label: "New Memory", icon: Plus, href: "/dashboard/feed" },
-  { label: "Run Agent", icon: Play, href: "/dashboard/agents" },
-  { label: "Generate Report", icon: FileText, href: "/dashboard/insights" },
-  { label: "Export Data", icon: Download, href: "/dashboard/settings" },
+  { id: "new-memory", label: "New Memory", href: "/dashboard/memory-space", Icon: Plus },
+  { id: "run-agent", label: "Run Agent", href: "/dashboard/agents", Icon: Bot },
+  { id: "generate-report", label: "Generate Report", href: "/dashboard/builder", Icon: FileText },
+  { id: "export-data", label: "Export Data", href: "/dashboard/memory-space?view=export", Icon: Download },
 ] as const
 
-function QuickActions() {
-  return (
-    <div className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] shadow-sm">
-      <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase tracking-widest text-[var(--dashboard-text-muted)]">
-        Quick Actions
-      </p>
-      <div className="divide-y divide-[var(--dashboard-border)]">
-        {QUICK_ACTIONS.map(({ label, icon: Icon, href }) => (
-          <Link
-            key={label}
-            href={href}
-            className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--dashboard-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--allura-blue,#1d4ed8)]/30"
-          >
-            <Icon className="size-4 shrink-0 text-[var(--dashboard-text-muted)]" aria-hidden="true" />
-            <span className="flex-1 text-sm font-medium text-[var(--dashboard-text-primary)]">{label}</span>
-            <ChevronRight className="size-4 text-[var(--dashboard-text-muted)]" aria-hidden="true" />
-          </Link>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/* ─── System Status ─── */
-
-type ComponentStatus = "healthy" | "degraded" | "unhealthy" | "unknown"
-
-function statusDot(status: ComponentStatus) {
-  if (status === "healthy") return "bg-[var(--allura-green,#157a44)]"
-  if (status === "degraded") return "bg-[var(--allura-gold,#c89b3c)]"
-  if (status === "unhealthy") return "bg-[var(--tone-red-text,#dc2626)]"
-  return "bg-[var(--dashboard-text-muted)]"
-}
-
-function statusLabel(status: ComponentStatus) {
-  if (status === "healthy") return "Online"
-  if (status === "degraded") return "Processing"
-  if (status === "unhealthy") return "Offline"
-  return "Unknown"
-}
-
-function SystemStatusCard({
-  components,
+function SystemStatusRows({
+  systemStatus,
+  healthMetrics,
 }: {
-  components: Array<{ name: string; status: ComponentStatus; message?: string }>
+  systemStatus: SystemStatus | undefined
+  healthMetrics: import("@/lib/dashboard/types").DashboardHealthMetrics | null | undefined
 }) {
-  return (
-    <div className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] shadow-sm">
-      <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase tracking-widest text-[var(--dashboard-text-muted)]">
-        System Status
-      </p>
+  const rows: Array<{
+    id: string
+    name: string
+    status: "online" | "processing" | "degraded" | "offline" | "unknown"
+  }> = []
 
-      {components.length === 0 ? (
-        <p className="px-4 pb-4 text-sm text-[var(--dashboard-text-muted)]">
-          Status unavailable.
-        </p>
-      ) : (
-        <div className="divide-y divide-[var(--dashboard-border)]">
-          {components.map((comp) => (
-            <div key={comp.name} className="flex items-center justify-between px-4 py-3">
-              <span className="text-sm text-[var(--dashboard-text-primary)]">{comp.name}</span>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`size-2 shrink-0 rounded-full ${statusDot(comp.status as ComponentStatus)}`}
-                  aria-hidden="true"
-                />
-                <span className="text-xs font-medium text-[var(--dashboard-text-muted)]">
-                  {statusLabel(comp.status as ComponentStatus)}
-                </span>
-              </div>
-            </div>
-          ))}
+  if (systemStatus?.components && systemStatus.components.length > 0) {
+    for (const comp of systemStatus.components.slice(0, 4)) {
+      rows.push({
+        id: comp.name,
+        name: comp.name,
+        status:
+          comp.status === "healthy"
+            ? "online"
+            : comp.status === "degraded"
+            ? "degraded"
+            : comp.status === "unhealthy"
+            ? "offline"
+            : "unknown",
+      })
+    }
+  } else {
+    const pgStatus = healthMetrics?.storage?.postgres?.status
+    const neo4jStatus = healthMetrics?.storage?.neo4j?.status
+    rows.push(
+      {
+        id: "postgres",
+        name: "PostgreSQL",
+        status:
+          pgStatus === "healthy" || pgStatus === "ok"
+            ? "online"
+            : pgStatus === "degraded"
+            ? "degraded"
+            : pgStatus
+            ? "offline"
+            : "unknown",
+      },
+      {
+        id: "neo4j",
+        name: "Neo4j",
+        status:
+          neo4jStatus === "healthy" || neo4jStatus === "ok"
+            ? "online"
+            : neo4jStatus === "degraded"
+            ? "degraded"
+            : neo4jStatus
+            ? "offline"
+            : "unknown",
+      },
+      {
+        id: "mcp-docker",
+        name: "MCP Docker",
+        status: "online" as const,
+      },
+      {
+        id: "event-queue",
+        name: "Event Queue",
+        status: (typeof healthMetrics?.queue?.pending_count === "number" ? "processing" : "unknown") as
+          | "processing"
+          | "unknown",
+      },
+    )
+  }
+
+  return (
+    <>
+      {rows.map((row) => (
+        <div key={row.id} className="flex items-center justify-between px-5 py-3">
+          <span className="text-sm text-[var(--dashboard-text-primary)]">{row.name}</span>
+          <span className="flex items-center gap-1.5 text-xs font-medium">
+            <span
+              className={cn(
+                "size-2 rounded-full",
+                row.status === "online"
+                  ? "bg-[#22C55E]"
+                  : row.status === "processing"
+                  ? "bg-[#F59E0B]"
+                  : row.status === "degraded"
+                  ? "bg-[#F59E0B]"
+                  : row.status === "offline"
+                  ? "bg-red-500"
+                  : "bg-[var(--dashboard-text-muted)]",
+              )}
+              aria-hidden="true"
+            />
+            <span
+              className={cn(
+                row.status === "online"
+                  ? "text-[#22C55E]"
+                  : row.status === "processing"
+                  ? "text-[#F59E0B]"
+                  : row.status === "degraded"
+                  ? "text-[#F59E0B]"
+                  : row.status === "offline"
+                  ? "text-red-500"
+                  : "text-[var(--dashboard-text-muted)]",
+              )}
+            >
+              {row.status === "processing"
+                ? "Processing"
+                : row.status === "online"
+                ? "Online"
+                : row.status === "offline"
+                ? "Offline"
+                : row.status === "degraded"
+                ? "Degraded"
+                : "Unknown"}
+            </span>
+          </span>
         </div>
-      )}
-    </div>
+      ))}
+    </>
   )
 }
 
-/* ─── Utility ─── */
+function formatRelativeTime(value: string): string {
+  const now = new Date()
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "time unavailable"
 
-function formatRelativeTime(timestamp: string): string {
-  if (!timestamp) return ""
-  try {
-    const diff = Date.now() - new Date(timestamp).getTime()
-    const minutes = Math.floor(diff / 60_000)
-    if (minutes < 1) return "just now"
-    if (minutes < 60) return `${minutes}m ago`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    return `${days}d ago`
-  } catch {
-    return ""
-  }
+  const diffMs = now.getTime() - date.getTime()
+  const diffMinutes = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffMinutes <= 1) return "just now"
+  if (diffMinutes < 60) return `${diffMinutes}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString()
 }

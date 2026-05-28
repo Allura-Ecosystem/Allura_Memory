@@ -1,14 +1,26 @@
 "use client"
 
+// Memory Graph — warm v2 surface
+// tokens.color.surface.subtle — page wrapper uses bg-[var(--dashboard-surface)];
+// the dark canvas inset uses #0F1117 for the force-directed graph rendering.
+
 import { useCallback, useEffect, useMemo, useState } from "react"
-import ForceGraph2D from "react-force-graph-2d"
+import dynamic from "next/dynamic"
 import { toast } from "sonner"
 
 import { Skeleton } from "@/components/ui/skeleton"
-import { getGraphNodeColor, getResolvedColor } from "@/lib/brand/allura"
+import { getGraphNodeColor } from "@/lib/brand/allura"
+import { buildDashboardRouteState } from "@/lib/dashboard/empty-states"
 import type { GraphEdge, GraphNode } from "@/lib/dashboard/types"
 import { DEFAULT_GROUP_ID } from "@/lib/defaults/scope"
 import { tokens } from "@/lib/tokens"
+import { cn } from "@/lib/utils"
+
+const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
+  ssr: false,
+})
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ForceGraphNode extends GraphNode {
   x?: number
@@ -32,6 +44,22 @@ interface MemoryDetail {
   created_at?: string
 }
 
+// ── Placeholder node spec (matches Figma node colors) ────────────────────────
+
+const PLACEHOLDER_NODES = [
+  { label: "Allura\nBrain", color: "bg-blue-600", shadow: "shadow-blue-500/50", size: "size-20", offset: { x: 0, y: 0 }, center: true },
+  { label: "Agents", color: "bg-green-500", shadow: "shadow-green-500/30", size: "size-12", offset: { x: -140, y: -60 }, center: false },
+  { label: "Insights", color: "bg-teal-500", shadow: "shadow-teal-500/30", size: "size-12", offset: { x: 140, y: -80 }, center: false },
+  { label: "Events", color: "bg-orange-500", shadow: "shadow-orange-500/30", size: "size-12", offset: { x: -160, y: 80 }, center: false },
+  { label: "Archive", color: "bg-red-500", shadow: "shadow-red-500/30", size: "size-12", offset: { x: 120, y: 100 }, center: false },
+  { label: "Data", color: "bg-gray-500", shadow: "shadow-gray-500/30", size: "size-12", offset: { x: 0, y: -160 }, center: false },
+  { label: "Revisions", color: "bg-purple-500", shadow: "shadow-purple-500/30", size: "size-11", offset: { x: 60, y: 160 }, center: false },
+]
+
+const GRAPH_CONTROLS = ["Zoom In", "Zoom Out", "Reset View", "Filter Nodes"]
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function formatScore(score: MemoryDetail["score"]) {
   if (typeof score === "number") return score.toFixed(2)
   if (score && typeof score.low === "number") return String(score.low)
@@ -43,9 +71,52 @@ function hexToRgba(hexColor: string, alpha: number) {
   const r = Number.parseInt(hex.slice(0, 2), 16)
   const g = Number.parseInt(hex.slice(2, 4), 16)
   const b = Number.parseInt(hex.slice(4, 6), 16)
-
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
+
+// ── Placeholder canvas (shown when no live graph data) ───────────────────────
+
+function GraphPlaceholderCanvas() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div className="relative flex items-center justify-center">
+        {PLACEHOLDER_NODES.map((node) =>
+          node.center ? (
+            <div
+              key={node.label}
+              className={cn(
+                "relative flex items-center justify-center rounded-full text-center text-white text-xs font-semibold shadow-lg",
+                node.color,
+                node.shadow,
+                node.size
+              )}
+              style={{ lineHeight: 1.3 }}
+            >
+              {node.label.split("\n").map((line, i) => (
+                <span key={i} className="block">{line}</span>
+              ))}
+            </div>
+          ) : (
+            <div
+              key={node.label}
+              className={cn(
+                "absolute flex items-center justify-center rounded-full text-center text-white text-[10px] font-medium shadow-md",
+                node.color,
+                node.shadow,
+                node.size
+              )}
+              style={{ transform: `translate(${node.offset.x}px, ${node.offset.y}px)`, lineHeight: 1.2 }}
+            >
+              {node.label}
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function MemorySpacePage() {
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] })
@@ -58,6 +129,7 @@ export default function MemorySpacePage() {
   const [selectedMemory, setSelectedMemory] = useState<MemoryDetail | null>(null)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
+  const [graphReloadKey, setGraphReloadKey] = useState(0)
 
   const clearSelection = useCallback(() => {
     setSelectedNode(null)
@@ -65,6 +137,7 @@ export default function MemorySpacePage() {
     setDetailError(null)
   }, [])
 
+  // Load graph data
   useEffect(() => {
     let cancelled = false
 
@@ -76,20 +149,19 @@ export default function MemorySpacePage() {
         const response = await fetch(`/api/memory/graph?group_id=${encodeURIComponent(DEFAULT_GROUP_ID)}`)
         const data = await response.json()
 
-        if (!response.ok) {
-          throw new Error(data?.error ?? `HTTP ${response.status}`)
-        }
+        if (!response.ok) throw new Error(data?.error ?? `HTTP ${response.status}`)
 
         if (!cancelled) {
           setGraphData({ nodes: data.nodes ?? [], links: data.edges ?? [] })
-          if (data.degraded) toast.warning("Memory graph is running in degraded mode.")
+          if (data.degraded) {
+            setGraphError(data.warning ?? "Memory graph degraded")
+            toast.warning("Memory graph is running in degraded mode.")
+          }
         }
       } catch (error) {
-        console.error("[MemorySpace] Failed to load graph:", error)
         if (!cancelled) {
           setGraphError(error instanceof Error ? error.message : "Failed to load memory graph")
           setGraphData({ nodes: [], links: [] })
-          toast.error("Failed to load memory graph. Showing empty state.")
         }
       } finally {
         if (!cancelled) setIsLoading(false)
@@ -97,66 +169,54 @@ export default function MemorySpacePage() {
     }
 
     void load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    return () => { cancelled = true }
+  }, [graphReloadKey])
 
+  // Load node detail on selection
   useEffect(() => {
     let cancelled = false
 
     async function loadDetail(node: GraphNode | null) {
-      if (!node) {
-        setSelectedMemory(null)
-        setDetailError(null)
-        return
-      }
-
+      if (!node) { setSelectedMemory(null); setDetailError(null); return }
       setIsDetailLoading(true)
       setDetailError(null)
 
       try {
         const response = await fetch(`/api/memory/${encodeURIComponent(node.id)}?group_id=${encodeURIComponent(DEFAULT_GROUP_ID)}`)
         const data = await response.json()
-
         if (!response.ok) throw new Error(data?.error ?? `HTTP ${response.status}`)
         if (!cancelled) setSelectedMemory(data)
       } catch (error) {
-        console.error("[MemorySpace] Failed to load memory detail:", error)
-        if (!cancelled) {
-          setDetailError("Could not load memory detail.")
-          setSelectedMemory(null)
-        }
+        if (!cancelled) { setDetailError("Could not load memory detail."); setSelectedMemory(null) }
       } finally {
         if (!cancelled) setIsDetailLoading(false)
       }
     }
 
     void loadDetail(selectedNode)
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [selectedNode])
 
   const filteredData = useMemo(() => {
     let nodes = graphData.nodes
-
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
+      const q = searchQuery.toLowerCase()
       nodes = nodes.filter(
-        (node) => node.label.toLowerCase().includes(query) || String(node.metadata?.description ?? "").toLowerCase().includes(query)
+        (n) => n.label.toLowerCase().includes(q) || String(n.metadata?.description ?? "").toLowerCase().includes(q)
       )
     }
-
-    if (activeTypeFilter) nodes = nodes.filter((node) => node.type === activeTypeFilter)
-
-    const nodeIds = new Set(nodes.map((node) => node.id))
-    const links = graphData.links.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target))
-
+    if (activeTypeFilter) nodes = nodes.filter((n) => n.type === activeTypeFilter)
+    const nodeIds = new Set(nodes.map((n) => n.id))
+    const links = graphData.links.filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
     return { nodes, links }
   }, [graphData, searchQuery, activeTypeFilter])
 
-  const nodeTypes = useMemo(() => Array.from(new Set(graphData.nodes.map((node) => node.type))), [graphData.nodes])
+  const nodeTypes = useMemo(() => Array.from(new Set(graphData.nodes.map((n) => n.type))), [graphData.nodes])
+
+  const graphFailureState = buildDashboardRouteState("memory-space", { kind: "degraded", reason: graphError ?? undefined })
+  const graphEmptyState = buildDashboardRouteState("memory-space", { kind: "empty" })
+
+  const hasLiveData = filteredData.nodes.length > 0
 
   const nodeCanvasObject = useCallback(
     (node: ForceGraphNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -176,14 +236,14 @@ export default function MemorySpacePage() {
       if (isSelected || isHovered) {
         ctx.beginPath()
         ctx.arc(node.x ?? 0, node.y ?? 0, radius + 3, 0, 2 * Math.PI)
-        ctx.strokeStyle = isSelected ? getResolvedColor("gold") : getResolvedColor("white")
+        ctx.strokeStyle = isSelected ? "#F5A623" : "#FFFFFF"
         ctx.lineWidth = 2 / globalScale
         ctx.stroke()
       }
 
       if (globalScale > 0.8 || isSelected || isHovered) {
         ctx.font = `${fontSize}px sans-serif`
-        ctx.fillStyle = hexToRgba(tokens.color.text.inverse, alpha)
+        ctx.fillStyle = `rgba(255,255,255,${alpha * 0.9})`
         ctx.textAlign = "center"
         ctx.fillText(node.label, node.x ?? 0, (node.y ?? 0) + radius + fontSize + 2)
       }
@@ -192,13 +252,17 @@ export default function MemorySpacePage() {
   )
 
   return (
-    <div className="space-y-4">
+    // Page wrapper uses warm v2 surface — tokens.color.surface.subtle → bg-[var(--dashboard-surface)]
+    <div className="space-y-4 bg-[var(--dashboard-surface)]">
+      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--dashboard-text-muted)]">Memory Space</p>
-          <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Governed memory graph</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--dashboard-text-muted)]">
+            Memory Graph
+          </p>
+          <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Memory Graph</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--dashboard-text-muted)]">
-            Explore Allura&apos;s scoped memory graph, inspect node details, and preserve tenant context on every action.
+            Explore Allura&apos;s scoped knowledge graph — nodes, edges, and semantic relationships.
           </p>
         </div>
         <div className="rounded-full border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] px-3 py-1 text-xs font-semibold text-[var(--dashboard-text-secondary)]">
@@ -206,28 +270,124 @@ export default function MemorySpacePage() {
         </div>
       </div>
 
-      <div className="relative min-h-[640px] overflow-hidden rounded-2xl border border-[var(--dashboard-border)] bg-slate-950 shadow-[var(--allura-sh-md)]">
+      {/* Dark graph canvas — inset panel uses #0F1117 for graph rendering */}
+      <div
+        className="relative overflow-hidden rounded-2xl"
+        style={{ height: 680, background: "#0F1117" }}
+      >
+        {/* Graph Controls panel */}
+        <div className="absolute left-4 top-4 z-20 w-32 rounded-lg bg-white p-3 shadow-lg">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">Graph Controls</p>
+          {GRAPH_CONTROLS.map((ctrl) => (
+            <button
+              key={ctrl}
+              type="button"
+              className="block w-full py-0.5 text-left text-xs text-gray-600 transition-colors hover:text-gray-900"
+            >
+              {ctrl}
+            </button>
+          ))}
+
+          {/* Type filters — shown once live data loads */}
+          {nodeTypes.length > 0 && (
+            <>
+              <div className="my-2 border-t border-gray-100" />
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">Filter</p>
+              <button
+                type="button"
+                onClick={() => setActiveTypeFilter(null)}
+                className={cn(
+                  "mb-0.5 block w-full rounded px-1.5 py-0.5 text-left text-xs transition-colors",
+                  activeTypeFilter === null
+                    ? "bg-[var(--dashboard-cta-primary)] text-white"
+                    : "text-gray-600 hover:text-gray-900"
+                )}
+              >
+                All
+              </button>
+              {nodeTypes.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setActiveTypeFilter(type === activeTypeFilter ? null : type)}
+                  className={cn(
+                    "mb-0.5 block w-full rounded px-1.5 py-0.5 text-left text-xs capitalize transition-colors",
+                    activeTypeFilter === type
+                      ? "bg-[var(--dashboard-cta-primary)] text-white"
+                      : "text-gray-600 hover:text-gray-900"
+                  )}
+                >
+                  {type}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Search — top-right inside canvas */}
+        <div className="absolute right-4 top-4 z-20">
+          <input
+            type="text"
+            placeholder="Search nodes…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 w-48 rounded-lg border border-white/20 bg-white/10 px-3 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none backdrop-blur"
+          />
+        </div>
+
+        {/* Canvas content */}
         {isLoading ? (
-          <div className="flex h-[640px] flex-col items-center justify-center gap-4">
-            <Skeleton className="h-8 w-48 rounded-lg" />
-            <Skeleton className="h-4 w-96 rounded-lg" />
+          <div className="flex h-full flex-col items-center justify-center gap-4">
+            <Skeleton className="h-8 w-48 rounded-lg opacity-20" />
+            <Skeleton className="h-4 w-96 rounded-lg opacity-20" />
             <div className="grid grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-24 w-32 rounded-xl" />
+                <Skeleton key={i} className="h-24 w-32 rounded-xl opacity-20" />
               ))}
             </div>
           </div>
         ) : graphError ? (
-          <div className="flex h-[640px] flex-col items-center justify-center gap-2 px-6 text-center text-sm text-slate-300">
-            <p className="text-base font-semibold text-white">Memory graph unavailable</p>
-            <p className="max-w-lg text-slate-400">{graphError}</p>
+          /* Error / degraded state */
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+            {/* Placeholder still shown behind the message */}
+            <GraphPlaceholderCanvas />
+            <div className="relative z-10 rounded-xl bg-black/60 px-6 py-5 backdrop-blur-sm">
+              <p className="text-base font-semibold text-white">{graphFailureState.title}</p>
+              <p className="mt-1 max-w-sm text-sm text-white/70">{graphFailureState.description}</p>
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGraphReloadKey((v) => v + 1)}
+                  className="rounded-md border border-white/30 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10"
+                >
+                  {graphFailureState.retryLabel}
+                </button>
+                <a
+                  href={graphFailureState.actionHref}
+                  className="rounded-md bg-[var(--dashboard-cta-primary)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--allura-orange-hover)]"
+                >
+                  {graphFailureState.actionLabel}
+                </a>
+              </div>
+            </div>
           </div>
-        ) : filteredData.nodes.length === 0 ? (
-          <div className="flex h-[640px] flex-col items-center justify-center gap-2 px-6 text-center text-sm text-slate-300">
-            <p className="text-base font-semibold text-white">No memories match this view</p>
-            <p className="max-w-lg text-slate-400">Clear search or filters, or verify Neo4j has scoped graph data.</p>
+        ) : !hasLiveData ? (
+          /* Empty state — show placeholder node layout */
+          <div className="relative h-full">
+            <GraphPlaceholderCanvas />
+            <div className="absolute inset-x-0 bottom-12 flex flex-col items-center justify-center gap-2 text-center">
+              <p className="text-sm font-medium text-white/80">{graphEmptyState.title}</p>
+              <p className="max-w-sm text-xs text-white/50">{graphEmptyState.description}</p>
+              <a
+                href={graphEmptyState.actionHref}
+                className="mt-1 rounded-md border border-white/20 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10"
+              >
+                {graphEmptyState.actionLabel}
+              </a>
+            </div>
           </div>
         ) : (
+          /* Live force graph */
           <ForceGraph2D
             graphData={filteredData}
             nodeId="id"
@@ -238,8 +398,8 @@ export default function MemorySpacePage() {
             onNodeClick={setSelectedNode as unknown as (node: object) => void}
             onBackgroundClick={clearSelection}
             onNodeHover={setHoveredNode as unknown as (node: object | null) => void}
-            backgroundColor={tokens.color.text.primary}
-            linkColor={() => hexToRgba(tokens.color.graph.edge, 0.3)}
+            backgroundColor="#0F1117"
+            linkColor={() => hexToRgba("#FFFFFF", 0.18)}
             linkWidth={1}
             nodeRelSize={6}
             warmupTicks={100}
@@ -249,82 +409,94 @@ export default function MemorySpacePage() {
           />
         )}
 
-        <div className="absolute left-4 top-4 z-20 flex max-w-md flex-col gap-2">
-          <div className="rounded-lg border border-slate-700 bg-slate-900/90 p-3 shadow-lg backdrop-blur">
-            <input
-              type="text"
-              placeholder="Search graph nodes…"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              className="w-full rounded-md border border-slate-700 bg-transparent px-3 py-1.5 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-300"
-            />
-          </div>
-
-          {nodeTypes.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              <button type="button" onClick={() => setActiveTypeFilter(null)} className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${activeTypeFilter === null ? "bg-amber-300 text-slate-950" : "bg-slate-900/80 text-slate-300 hover:bg-slate-800"}`}>
-                All
-              </button>
-              {nodeTypes.map((type) => (
-                <button type="button" key={type} onClick={() => setActiveTypeFilter(type === activeTypeFilter ? null : type)} className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${activeTypeFilter === type ? "bg-amber-300 text-slate-950" : "bg-slate-900/80 text-slate-300 hover:bg-slate-800"}`}>
-                  {type}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
+        {/* Node detail panel */}
         {selectedNode && (
-          <aside className="absolute right-4 top-4 z-20 w-80 rounded-lg border border-slate-700 bg-slate-900/95 p-4 shadow-xl backdrop-blur">
+          <aside className="absolute right-4 top-16 z-20 w-72 rounded-lg border border-white/20 bg-black/70 p-4 shadow-xl backdrop-blur-md">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-white">{selectedNode.label}</h2>
-              <button type="button" onClick={clearSelection} className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Close detail panel">
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="rounded p-1 text-white/40 hover:bg-white/10 hover:text-white"
+                aria-label="Close detail panel"
+              >
                 ✕
               </button>
             </div>
 
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
-                <span className="text-slate-400">Type:</span>
-                <span className="rounded px-1.5 py-0.5 font-medium capitalize text-white" style={{ backgroundColor: getGraphNodeColor(selectedNode.type) }}>{selectedNode.type}</span>
+                <span className="text-white/50">Type:</span>
+                <span
+                  className="rounded px-1.5 py-0.5 font-medium capitalize text-white"
+                  style={{ backgroundColor: getGraphNodeColor(selectedNode.type) }}
+                >
+                  {selectedNode.type}
+                </span>
               </div>
-              {selectedNode.metadata && Object.entries(selectedNode.metadata).map(([key, value]) => (
-                <div key={key} className="flex items-start gap-2">
-                  <span className="shrink-0 text-slate-400">{key}:</span>
-                  <span className="break-all text-slate-300">{typeof value === "string" ? value : JSON.stringify(value)}</span>
-                </div>
-              ))}
+              {selectedNode.metadata &&
+                Object.entries(selectedNode.metadata).map(([key, value]) => (
+                  <div key={key} className="flex items-start gap-2">
+                    <span className="shrink-0 text-white/50">{key}:</span>
+                    <span className="break-all text-white/80">
+                      {typeof value === "string" ? value : JSON.stringify(value)}
+                    </span>
+                  </div>
+                ))}
             </div>
 
             <div className="mt-4 flex gap-2">
-              <a href={`/memory/${selectedNode.id}?group_id=${encodeURIComponent(DEFAULT_GROUP_ID)}`} className="flex-1 rounded-md bg-amber-300 px-3 py-1.5 text-center text-xs font-medium text-slate-950 hover:bg-amber-200">Open Detail</a>
-              <button type="button" onClick={() => { void navigator.clipboard.writeText(selectedNode.id); toast.success("Copied memory ID") }} className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800">Copy ID</button>
+              <a
+                href={`/memory/${selectedNode.id}?group_id=${encodeURIComponent(DEFAULT_GROUP_ID)}`}
+                className="flex-1 rounded-md bg-[var(--dashboard-cta-primary)] px-3 py-1.5 text-center text-xs font-medium text-white hover:bg-[var(--allura-orange-hover)]"
+              >
+                Open Detail
+              </a>
+              <button
+                type="button"
+                onClick={() => { void navigator.clipboard.writeText(selectedNode.id); toast.success("Copied memory ID") }}
+                className="rounded-md border border-white/20 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10"
+              >
+                Copy ID
+              </button>
             </div>
 
-            {isDetailLoading && <p className="mt-3 text-xs text-slate-400">Loading details…</p>}
-            {detailError && <p className="mt-3 text-xs text-red-300">{detailError}</p>}
+            {isDetailLoading && <p className="mt-3 text-xs text-white/40">Loading details…</p>}
+            {detailError && <p className="mt-3 text-xs text-red-400">{detailError}</p>}
 
             {selectedMemory && !isDetailLoading && !detailError && (
-              <div className="mt-4 space-y-2 border-t border-slate-700 pt-3 text-xs text-slate-300">
+              <div className="mt-4 space-y-2 border-t border-white/10 pt-3 text-xs text-white/70">
                 <div>
                   <p className="font-medium text-white">Content</p>
-                  <p className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded border border-slate-700 bg-slate-950/70 p-2 text-[11px]">{selectedMemory.content ?? "No content returned."}</p>
+                  <p className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded border border-white/10 bg-white/5 p-2 text-[11px]">
+                    {selectedMemory.content ?? "No content returned."}
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-                  <span className="text-slate-400">Score:</span><span>{formatScore(selectedMemory.score)}</span>
-                  <span className="text-slate-400">Source:</span><span className="capitalize">{selectedMemory.source ?? "—"}</span>
-                  <span className="text-slate-400">Provenance:</span><span className="capitalize">{selectedMemory.provenance ?? "—"}</span>
-                  <span className="text-slate-400">Owner:</span><span>{selectedMemory.user_id ?? "—"}</span>
-                  <span className="text-slate-400">Created:</span><span>{selectedMemory.created_at ?? "—"}</span>
+                  <span className="text-white/40">Score:</span><span>{formatScore(selectedMemory.score)}</span>
+                  <span className="text-white/40">Source:</span><span className="capitalize">{selectedMemory.source ?? "—"}</span>
+                  <span className="text-white/40">Provenance:</span><span className="capitalize">{selectedMemory.provenance ?? "—"}</span>
+                  <span className="text-white/40">Owner:</span><span>{selectedMemory.user_id ?? "—"}</span>
+                  <span className="text-white/40">Created:</span><span>{selectedMemory.created_at ?? "—"}</span>
                 </div>
               </div>
             )}
           </aside>
         )}
 
-        <div className="absolute bottom-4 left-4 z-20 rounded-md border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs text-slate-400 backdrop-blur">
-          {filteredData.nodes.length} nodes · {filteredData.links.length} edges{searchQuery && ` · filtered by "${searchQuery}"`}
+        {/* Stats bar */}
+        <div className="absolute bottom-4 left-36 z-20 rounded-md border border-white/10 bg-black/50 px-3 py-1.5 text-xs text-white/40 backdrop-blur">
+          {hasLiveData
+            ? `${filteredData.nodes.length} nodes · ${filteredData.links.length} edges${searchQuery ? ` · filtered by "${searchQuery}"` : ""}`
+            : "Placeholder view · connect Allura Brain to load live graph"}
         </div>
+
+        {/* Coming soon chip */}
+        {!hasLiveData && !graphError && !isLoading && (
+          <div className="absolute bottom-4 right-4 z-20 rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white/50 backdrop-blur">
+            Interactive graph coming soon
+          </div>
+        )}
       </div>
     </div>
   )

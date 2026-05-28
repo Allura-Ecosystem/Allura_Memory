@@ -20,8 +20,12 @@
 import { beforeEach, describe, expect, it, type MockInstance, vi } from "vitest"
 import {
   type ApprovalAuditEvent,
+  ApprovalAuditAuthorizationError,
   ApprovalRequiredError,
+  buildCuratorDecisionReceipt,
+  SegregationOfDutiesError,
   hasApprovalEvent,
+  logProposalNeedsEvidenceEvent,
   logApprovalEvent,
   requireApprovalBeforePromotion,
 } from "@/lib/memory/approval-audit"
@@ -62,7 +66,9 @@ const VALID_APPROVAL_EVENT: ApprovalAuditEvent = {
   proposal_id: "prop-001",
   group_id: VALID_GROUP_ID,
   memory_id: "mem-001",
+  requested_by: "agent-woz",
   curator_id: "curator-alice",
+  decision_actor_role: "curator",
   decision: "approved",
   rationale: "High-confidence insight, meets promotion criteria",
   score: 0.92,
@@ -77,6 +83,17 @@ const VALID_REJECTION_EVENT: ApprovalAuditEvent = {
   rationale: "Insufficient specificity for knowledge graph",
   score: 0.45,
   tier: "emerging",
+}
+
+const VALID_NEEDS_EVIDENCE_EVENT = {
+  ...VALID_APPROVAL_EVENT,
+  proposal_id: "prop-003",
+  memory_id: "trace-003",
+  decision: "needs_evidence" as const,
+  resulting_status: "pending" as const,
+  rationale: "Please attach source trace and requester provenance before approval",
+  score: 0.71,
+  tier: "adoption",
 }
 
 /**
@@ -151,8 +168,11 @@ describe("Approval Audit Logger", () => {
       const metadata = JSON.parse(insertQuery.params[4] as string)
       expect(metadata.proposal_id).toBe("prop-001")
       expect(metadata.memory_id).toBe("mem-001")
+      expect(metadata.requested_by).toBe("agent-woz")
       expect(metadata.curator_id).toBe("curator-alice")
+      expect(metadata.decision_actor_role).toBe("curator")
       expect(metadata.decision).toBe("approved")
+      expect(metadata.resulting_status).toBe("approved")
       expect(metadata.rationale).toBe("High-confidence insight, meets promotion criteria")
       expect(metadata.score).toBe(0.92)
       expect(metadata.tier).toBe("mainstream")
@@ -175,6 +195,7 @@ describe("Approval Audit Logger", () => {
 
       const metadata = JSON.parse(insertQuery.params[4] as string)
       expect(metadata.decision).toBe("rejected")
+      expect(metadata.resulting_status).toBe("rejected")
       expect(metadata.score).toBe(0.45)
       expect(metadata.tier).toBe("emerging")
     })
@@ -235,6 +256,98 @@ describe("Approval Audit Logger", () => {
       await expect(logApprovalEvent(invalidEvent, pool)).rejects.toThrow(
         "Invalid group_id"
       )
+    })
+
+    it("should reject approvals where requester and approver are the same actor", async () => {
+      const { pool } = createMockPool()
+      mockGetPool.mockReturnValue(pool)
+
+      const selfApprovedEvent: ApprovalAuditEvent = {
+        ...VALID_APPROVAL_EVENT,
+        requested_by: "curator-alice",
+        curator_id: "curator-alice",
+      }
+
+      await expect(logApprovalEvent(selfApprovedEvent, pool)).rejects.toThrow(SegregationOfDutiesError)
+    })
+
+    it("should reject decision actors below curator role", async () => {
+      const { pool } = createMockPool()
+      mockGetPool.mockReturnValue(pool)
+
+      const viewerApprovedEvent: ApprovalAuditEvent = {
+        ...VALID_APPROVAL_EVENT,
+        decision_actor_role: "viewer",
+      }
+
+      await expect(logApprovalEvent(viewerApprovedEvent, pool)).rejects.toThrow(ApprovalAuditAuthorizationError)
+    })
+
+    it("should allow admin decision actors for curator audit decisions", async () => {
+      const { pool, queryCalls } = createMockPool()
+      mockGetPool.mockReturnValue(pool)
+
+      await logApprovalEvent(
+        {
+          ...VALID_APPROVAL_EVENT,
+          decision_actor_role: "admin",
+          curator_id: "admin-riley",
+        },
+        pool
+      )
+
+      const insertQuery = queryCalls[1]
+      const metadata = JSON.parse(insertQuery.params[4] as string)
+      expect(metadata.decision_actor_role).toBe("admin")
+      expect(metadata.curator_id).toBe("admin-riley")
+    })
+
+    it("should log request-evidence as append-only audit without changing proposal semantic status", async () => {
+      const { pool, queryCalls } = createMockPool()
+      mockGetPool.mockReturnValue(pool)
+
+      await logProposalNeedsEvidenceEvent(VALID_NEEDS_EVIDENCE_EVENT, pool)
+
+      expect(queryCalls).toHaveLength(1)
+      const insertQuery = queryCalls[0]
+      expect(insertQuery.params[0]).toBe(VALID_GROUP_ID)
+      expect(insertQuery.params[1]).toBe("proposal_evidence_requested")
+      expect(insertQuery.params[2]).toBe("curator-alice")
+      expect(insertQuery.params[3]).toBe("completed")
+
+      const metadata = JSON.parse(insertQuery.params[4] as string)
+      expect(metadata).toMatchObject({
+        proposal_id: "prop-003",
+        memory_id: "trace-003",
+        requested_by: "agent-woz",
+        curator_id: "curator-alice",
+        decision_actor_role: "curator",
+        decision: "needs_evidence",
+        resulting_status: "pending",
+        rationale: "Please attach source trace and requester provenance before approval",
+        score: 0.71,
+        tier: "adoption",
+      })
+    })
+
+    it("should append repeated request-evidence events even when prior evidence requests exist", async () => {
+      const { pool, queryCalls } = createMockPool({
+        "proposal_evidence_requested:prop-003": [{ id: 44 }],
+      })
+      mockGetPool.mockReturnValue(pool)
+
+      await logProposalNeedsEvidenceEvent(VALID_NEEDS_EVIDENCE_EVENT, pool)
+
+      expect(queryCalls).toHaveLength(1)
+      const insertQuery = queryCalls[0]
+      expect(insertQuery.text).toContain("INSERT INTO events")
+      expect(insertQuery.params[1]).toBe("proposal_evidence_requested")
+      expect(JSON.parse(insertQuery.params[4] as string)).toMatchObject({
+        proposal_id: "prop-003",
+        decision: "needs_evidence",
+        resulting_status: "pending",
+        rationale: "Please attach source trace and requester provenance before approval",
+      })
     })
 
     it("should handle missing optional rationale field", async () => {
@@ -370,6 +483,70 @@ describe("Approval Audit Logger", () => {
       await expect(
         hasApprovalEvent("prop-001", VALID_GROUP_ID, pool)
       ).rejects.toThrow("Connection refused")
+    })
+  })
+
+  describe("buildCuratorDecisionReceipt", () => {
+    it("maps append-only approval audit metadata into an inspectable decision receipt", () => {
+      const receipt = buildCuratorDecisionReceipt({
+        proposal: {
+          id: "prop-001",
+          group_id: VALID_GROUP_ID,
+          status: "approved",
+          trace_ref: "trace-001",
+          memory_id: "mem-001",
+        },
+        event: {
+          event_type: "proposal_approved",
+          agent_id: "curator-alice",
+          created_at: "2026-05-24T09:00:00.000Z",
+          metadata: {
+            proposal_id: "prop-001",
+            decision: "approved",
+            resulting_status: "approved",
+            rationale: "Evidence is sufficient",
+            memory_id: "mem-001",
+            requested_by: "agent-woz",
+          },
+        },
+      })
+
+      expect(receipt).toMatchObject({
+        proposal_id: "prop-001",
+        group_id: VALID_GROUP_ID,
+        decision: "approved",
+        actor: "curator-alice",
+        rationale: "Evidence is sufficient",
+        previous_status: "pending",
+        resulting_status: "approved",
+        trace_reference: "trace-001",
+        promoted_memory_id: "mem-001",
+        source_event_type: "proposal_approved",
+        receipt_status: "available",
+      })
+    })
+
+    it("returns a degraded blocker receipt when a decided proposal has no audit event", () => {
+      const receipt = buildCuratorDecisionReceipt({
+        proposal: {
+          id: "prop-004",
+          group_id: VALID_GROUP_ID,
+          status: "rejected",
+          trace_ref: "trace-004",
+        },
+        event: null,
+      })
+
+      expect(receipt).toMatchObject({
+        proposal_id: "prop-004",
+        group_id: VALID_GROUP_ID,
+        decision: "missing_receipt",
+        resulting_status: "rejected",
+        trace_reference: "trace-004",
+        promoted_memory_id: null,
+        receipt_status: "missing_receipt_blocker",
+      })
+      expect(receipt.degraded_reason).toMatch(/Missing append-only curator decision receipt/i)
     })
   })
 })

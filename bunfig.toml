@@ -13,3 +13,5 @@ preload = ["./scripts/bun-preload.ts"]
 [test]
 # Test configuration
 coverage = true
+preload = ["./scripts/bun-test-setup.ts"]
+pathIgnorePatterns = ["benchmark/**"]

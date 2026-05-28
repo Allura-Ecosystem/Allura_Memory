@@ -1,0 +1,265 @@
+/**
+ * Allura Memory — Design System Tokens
+ * Theme: Allura Brand Kit v2.0 (LOCKED)
+ * Source: clients/allura-memory/06_allura-memory_brand-truth.json
+ *
+ * Verified against brand-kit pages:
+ *   - page03-brand-essence.png
+ *   - page04-brand-personality.png
+ *   - page15-logo-system.png
+ *   - brand-overview.png
+ *
+ * Brand primitives are immutable. Semantic tokens resolve to primitives.
+ * NO DURHAM COLORS — Durham aliases were DELETED in this rewrite.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+/* ─────────────────────────────────────────
+   BRAND PRIMITIVES — Allura Brand Kit v2.0
+   NEVER change these hex values.
+   ───────────────────────────────────────── */
+:root {
+  --color-blue:        #1D4ED8;   /* Allura Blue — primary, trust, clarity */
+  --color-orange:      #FF5A2E;   /* Allura Orange — energy, warmth, Caregiver */
+  --color-green:       #157A4A;   /* Allura Green — growth, Explorer, success */
+  --color-charcoal:    #111827;   /* Allura Charcoal — authority, text */
+  --color-gold:        #C89B3C;   /* Allura Gold — premium, Empowerment */
+  --color-cream:       #F5F1E6;   /* Allura Cream — warmth, page backgrounds */
+  --color-white:       #FFFFFF;   /* white */
+
+  /* ─────────────────────────────────────────
+     SEMANTIC COLOR TOKENS
+     All resolve to brand primitives or
+     brand-neutrals derived from neutrals[]
+     ───────────────────────────────────────── */
+
+  /* Text colors (derived from brand charcoal + neutrals) */
+  --color-text-primary:    var(--color-charcoal);       /* #111827 */
+  --color-text-secondary:  #374151;                     /* neutral-700 */
+  --color-text-muted:      #6B7280;                     /* neutral-500 */
+  --color-text-caption:    #9CA3AF;                     /* neutral-400 */
+  --color-text-placeholder:#D1D5DB;                    /* neutral-300 */
+
+  /* Surface colors */
+  --color-page-bg:         var(--color-cream);          /* #F5F1E6 */
+  --color-surface:         #FFFFFF;                     /* white cards */
+  --color-card-bg:         #FFFFFF;
+  --color-panel-subtle:    #FAF9F6;                     /* slightly warm white */
+
+  /* Border colors (derived from neutrals) */
+  --color-border:          #E5E7EB;                     /* neutral-200 */
+  --color-border-light:    #F3F4F6;                     /* neutral-100 */
+  --color-border-input:    #D1D5DB;                     /* neutral-300 */
+  --color-border-inner:    #D6DDE5;                     /* subtle inner borders */
+
+  /* ─────────────────────────────────────────
+     STATUS SEMANTIC COLORS
+     All derived from brand primitives
+     ───────────────────────────────────────── */
+
+  /* Success / Active — derived from brand green */
+  --color-status-success-bg:     rgba(21, 122, 74, 0.08); /* #157A4A at 8% */
+  --color-status-success-text:   var(--color-green);
+  --color-status-success-border: rgba(21, 122, 74, 0.25);
+
+  /* Warning / Pending — derived from brand gold */
+  --color-status-warning-bg:     rgba(200, 155, 60, 0.08);
+  --color-status-warning-text:   var(--color-gold);
+  --color-status-warning-border: rgba(200, 155, 60, 0.30);
+
+  /* Danger / Forgotten — derived from brand orange (NOT random red) */
+  --color-status-danger-bg:      rgba(255, 90, 46, 0.08);
+  --color-status-danger-text:    var(--color-orange);
+  --color-status-danger-border:  rgba(255, 90, 46, 0.25);
+
+  /* Neutral / Default — from neutral palette */
+  --color-status-default-bg:     #F3F4F6;
+  --color-status-default-text:   #6B7280;
+  --color-status-default-border: #E5E7EB;
+
+  /* Confidence — brand gold tint */
+  --color-confidence-bg:       rgba(200, 155, 60, 0.06);
+  --color-confidence-text:       #A67D2E;              /* darker gold for AA */
+  --color-confidence-border:     rgba(200, 155, 60, 0.20);
+
+  /* Undo banner — warm gold */
+  --color-undo-bg:              #FFF8EA;
+  --color-undo-border:          #E3D1AA;
+  --color-undo-text:            #8B7340;
+
+  /* ─────────────────────────────────────────
+     ACCENT TOKENS
+     Use these for interactive emphasis
+     ───────────────────────────────────────── */
+  --color-accent-primary:   var(--color-blue);
+  --color-accent-warm:      var(--color-orange);
+  --color-accent-success:   var(--color-green);
+  --color-accent-premium:   var(--color-gold);
+
+  /* ─────────────────────────────────────────
+     GRADIENTS (derived from brand primitives)
+     ───────────────────────────────────────── */
+  --gradient-page:    linear-gradient(180deg, #F5F1E6 0%, #FFFFFF 34%, #F5F1E6 100%);
+  --gradient-panel:   linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(245,241,230,0.88) 100%);
+  --gradient-ink:     linear-gradient(135deg, #111827 0%, #374151 100%);
+
+  /* ─────────────────────────────────────────
+     SHADOWS (brand-tinted, NOT Durham gray)
+     ───────────────────────────────────────── */
+  --shadow-2xs:  0px 1px 2px 0px rgb(17 24 39 / 0.04);
+  --shadow-xs:   0px 1px 2px 0px rgb(17 24 39 / 0.05);
+  --shadow-sm:   0px 4px 16px -10px rgb(17 24 39 / 0.12);
+  --shadow-md:   0px 14px 36px -18px rgb(17 24 39 / 0.14);
+  --shadow-lg:   0px 22px 48px -24px rgb(17 24 39 / 0.16);
+  --shadow-xl:   0px 28px 60px -28px rgb(17 24 39 / 0.20);
+  --shadow-card: 0px 4px 20px -4px rgba(17,24,39,0.06), 0px 8px 16px -4px rgba(17,24,39,0.08);
+
+  /* ─────────────────────────────────────────
+     BORDER RADIUS
+     ───────────────────────────────────────── */
+  --radius-base:   0.875rem;   /* 14px */
+  --radius-sm:     0.5rem;     /* 8px */
+  --radius-badge:  0.25rem;    /* 4px */
+  --radius-input:  1rem;       /* 16px */
+  --radius-card:   1.5rem;     /* 24px */
+  --radius-page:   1.75rem;    /* 28px */
+  --radius-tag:    9999px;     /* full */
+
+  /* ─────────────────────────────────────────
+     SPACING SCALE
+     ───────────────────────────────────────── */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+
+  /* Semantic spacing */
+  --space-page-gutter:   24px;
+  --space-card-gap:      12px;
+  --space-card-padding:  20px;
+
+  /* ─────────────────────────────────────────
+     TYPOGRAPHY
+     ───────────────────────────────────────── */
+  --font-sans:    'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-mono:    'IBM Plex Mono', 'Geist Mono', monospace;
+
+  /* Font sizes */
+  --text-xs:   0.75rem;    /* 12px */
+  --text-sm:   0.875rem;   /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg:   1.125rem;   /* 18px */
+  --text-xl:   1.25rem;    /* 20px */
+  --text-2xl:  1.5rem;     /* 24px */
+  --text-3xl:  1.875rem;   /* 30px */
+  --text-4xl:  2.25rem;    /* 36px */
+
+  /* Line heights */
+  --leading-tight:   1.25;
+  --leading-snug:    1.375;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose:   1.75;
+
+  /* Letter spacing */
+  --tracking-tight:  -0.01em;
+  --tracking-normal: 0em;
+  --tracking-wide:   0.05em;
+  --tracking-wider:  0.1em;
+  --tracking-widest: 0.28em;
+}
+
+/* ─────────────────────────────────────────
+   SEMANTIC TYPE ROLES
+   ───────────────────────────────────────── */
+
+.t-page-title,
+h1.t {
+  font-family: var(--font-sans);
+  font-size: var(--text-4xl);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  color: var(--color-text-primary);
+  letter-spacing: var(--tracking-tight);
+}
+
+.t-card-title,
+h2.t {
+  font-family: var(--font-sans);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  color: var(--color-text-primary);
+}
+
+.t-body,
+p.t {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 400;
+  line-height: var(--leading-loose);
+  color: var(--color-text-primary);
+}
+
+.t-body-secondary {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 400;
+  line-height: var(--leading-loose);
+  color: var(--color-text-secondary);
+}
+
+.t-overline,
+.t-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-accent-premium);  /* Gold overlines per brand kit */
+}
+
+.t-caption {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: var(--leading-normal);
+  color: var(--color-text-caption);
+}
+
+.t-code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: var(--leading-relaxed);
+  color: var(--color-border-light);
+  background: var(--color-charcoal);
+}
+
+.t-muted {
+  color: var(--color-text-muted);
+}
+
+/* ─────────────────────────────────────────
+   BASE RESETS
+   ───────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-page-bg);
+  background-image: var(--gradient-page);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

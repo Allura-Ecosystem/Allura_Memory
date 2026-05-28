@@ -18,6 +18,50 @@ This document describes every table and node type in Allura's dual-database data
 
 ---
 
+## Dashboard v2 condensed data contracts
+
+### `DashboardResult<T>`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `data` | `T \| null` | Yes | Mapped dashboard data or null when unavailable. |
+| `error` | `string \| null` | Yes | Human-readable error, null when absent. |
+| `degraded` | `boolean` | Yes | True when partial data is rendered. |
+| `warnings` | `DashboardWarning[]` | Yes | Non-fatal warnings from adapters, validators, or backends. |
+
+### `DashboardWarning`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Stable warning identifier. |
+| `code` | `string` | No | Optional machine code. |
+| `message` | `string` | Yes | Operator-facing warning text. |
+| `source` | `string` | Yes | Source subsystem. |
+| `severity` | `info \| warning \| critical` | No | Warning severity. |
+
+### `AuditEvent` export shape
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Audit event identifier. |
+| `group_id` | `string` | Yes | Tenant boundary; must be preserved in export headers/metadata. |
+| `actor_id` | `string` | Yes | Human, agent, or service actor. |
+| `actor_type` | `human \| agent \| service` | Yes | Actor class. |
+| `resource` | `string` | Yes | Resource acted on. |
+| `action` | `string` | Yes | Action performed. |
+| `before` | `unknown` | No | Previous value when captured. |
+| `after` | `unknown` | No | Resulting value when captured. |
+| `evidence_ids` | `string[]` | Yes | Evidence chain. |
+| `policy_decision_id` | `string` | No | Policy decision reference. |
+| `approval_decision_id` | `string` | No | Approval decision reference. |
+| `timestamp` | `string` | Yes | Event timestamp. |
+| `hash` | `string` | Yes | Chain hash when available. |
+| `prev_hash` | `string` | Yes | Previous chain hash when available. |
+
+Dashboard data rules: every record includes `group_id`; unknown source state renders as unknown, not zero; no fabricated counts; export/copy actions are read-only formatting operations over existing records and must not mutate PostgreSQL or Neo4j.
+
+---
+
 ## Dashboard Adapter Contracts
 
 These are logical UI/adapter contracts for the Mission Control dashboard rebuild. They do not create new persistence stores. They define the fields the dashboard must display or consume so the rebuilt development surface on `3334` can safely replace the current Docker dashboard on `3100` after validation.

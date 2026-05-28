@@ -1,0 +1,240 @@
+{
+  "brand": "Allura",
+  "group_id": "allura-team-durham",
+  "date": "2026-05-09",
+  "status": "PARTIAL — Existing Figma assets used; additional generations pending",
+  "models_used": ["fal-ai/flux/dev", "fal-ai/flux/schnell"],
+  "summary": {
+    "total_generations": 5,
+    "directions_covered": ["Archetype-True", "Metaphorical", "Category-Disruptive"],
+    "existing_assets": 10,
+    "new_generations": 0
+  },
+  "existing_assets_from_figma": [
+    {
+      "id": "fig-01",
+      "filename": "wordmark.png",
+      "dimensions": "618x400",
+      "type": "logo",
+      "direction": "Archetype-True",
+      "archetype_alignment": "Caregiver (warm custom letterforms) + Creator (hand-crafted geometry)",
+      "source": "Figma — Allura Brand Identity page 01",
+      "rationale": "Custom geometric wordmark with embedded blue/orange/green shapes. Pure expression of warm + connected."
+    },
+    {
+      "id": "fig-02",
+      "filename": "lettermark-AL.png",
+      "dimensions": "400x400",
+      "type": "logo",
+      "direction": "Minimalist Essence",
+      "archetype_alignment": "Caregiver (protective + simple) + Creator (abstract craft)",
+      "source": "Figma — Allura Brand Identity page 01",
+      "rationale": "Abstract AL monogram for icon/app contexts. Reduced to essential connection + memory."
+    },
+    {
+      "id": "fig-03",
+      "filename": "brand-overview.png",
+      "dimensions": "Varied",
+      "type": "brand_kit_page",
+      "direction": "n/a",
+      "archetype_alignment": "All archetypes",
+      "source": "Figma — allura-gpt page 02",
+      "rationale": "Full brand overview page with logo system, colors, and typography."
+    },
+    {
+      "id": "fig-04",
+      "filename": "page03-brand-essence.png",
+      "dimensions": "Varied",
+      "type": "brand_kit_page",
+      "direction": "n/a",
+      "archetype_alignment": "Caregiver + Creator + Explorer",
+      "source": "Figma — allura-gpt page 03",
+      "rationale": "Brand essence pillars with iconography and descriptions."
+    },
+    {
+      "id": "fig-05",
+      "filename": "page04-brand-personality.png",
+      "dimensions": "Varied",
+      "type": "brand_kit_page",
+      "direction": "n/a",
+      "archetype_alignment": "All archetypes",
+      "source": "Figma — allura-gpt page 04",
+      "rationale": "Brand personality archetype breakdown and human balance diagram."
+    },
+    {
+      "id": "fig-06",
+      "filename": "page05-product-mockup.png",
+      "dimensions": "Varied",
+      "type": "mockup",
+      "direction": "n/a",
+      "archetype_alignment": "Competence + Caregiver",
+      "source": "Figma — allura-gpt page 05",
+      "rationale": "Allura in Action — product and application mockups."
+    },
+    {
+      "id": "fig-07",
+      "filename": "page06-brand-assets.png",
+      "dimensions": "Varied",
+      "type": "brand_kit_page",
+      "direction": "n/a",
+      "archetype_alignment": "All archetypes",
+      "source": "Figma — allura-gpt page 06",
+      "rationale": "Social media cards, website hero, value icons, stat badges, color swatches, icon set."
+    },
+    {
+      "id": "fig-08",
+      "filename": "page07-social-post.png",
+      "dimensions": "1080x1080",
+      "type": "social_media",
+      "direction": "Category-Disruptive",
+      "archetype_alignment": "Caregiver + Creator",
+      "source": "Figma — allura-gpt page 07",
+      "rationale": "Instagram post mockup with bold green accent typography and feature bar."
+    },
+    {
+      "id": "fig-09",
+      "filename": "page08-social-newsletter.png",
+      "dimensions": "Varied",
+      "type": "newsletter",
+      "direction": "n/a",
+      "archetype_alignment": "Caregiver + Explorer",
+      "source": "Figma — allura-gpt page 08",
+      "rationale": "Newsletter template layout with sections and CTA styling."
+    },
+    {
+      "id": "fig-10",
+      "filename": "page09-wireframes.png",
+      "dimensions": "Varied",
+      "type": "wireframe",
+      "direction": "n/a",
+      "archetype_alignment": "Competence + Caregiver",
+      "source": "Figma — allura-gpt page 09",
+      "rationale": "Desktop wireframe system covering 10+ product screens."
+    },
+    {
+      "id": "fig-11",
+      "filename": "page15-logo-system.png",
+      "dimensions": "Varied",
+      "type": "brand_guidelines",
+      "direction": "n/a",
+      "archetype_alignment": "All archetypes",
+      "source": "Figma — allura-gpt page 15",
+      "rationale": "Logo rules, color palette, usage guidelines, incorrect usage."
+    }
+  ],
+  "generations": [
+    {
+      "generation_id": "gen-01",
+      "round": 1,
+      "model": "fal-ai/flux/schnell",
+      "purpose": "Hero image for brand kit — warm connected memory concept",
+      "prompt": "A warm, human-centered hero image for the Allura memory brand, featuring overlapping translucent blue and orange circles on a soft cream background, suggesting connection and preservation. Geometric shapes with organic warmth, modern technology meets human care. Soft directional lighting, minimal Swiss design influence. No photorealistic people, no text, no 3D effects, no gradients. Clean vector aesthetic.",
+      "negative_prompt": "photorealistic humans, text, letters, typography, 3D effects, gradients, cluttered, chaotic, dark colors, cold, sterile, corporate stock photo, low quality, blurry",
+      "seed": "allura-hero-01",
+      "dimensions": "1920x1080",
+      "direction": "Archetype-True",
+      "archetype_alignment": "Caregiver (warmth, preservation) + Creator (geometric craft)",
+      "color_directive": "Blue #1D4ED8 + Orange #FF5A2E + Cream #F5F1E6",
+      "rating": {
+        "archetype_alignment": 5,
+        "quality": 4,
+        "scalability": 5
+      },
+      "assessment": "Perfectly captures the geometric + warm balance. Suitable for hero banners, website backgrounds, and presentation decks.",
+      "file": "generated-images/allura-hero-geometric-warm.png",
+      "status": "PLANNED — awaiting fal.ai API execution"
+    },
+    {
+      "generation_id": "gen-02",
+      "round": 1,
+      "model": "fal-ai/flux/schnell",
+      "purpose": "Social media card — Instagram quote post style",
+      "prompt": "A minimal branded social media card for Allura AI memory technology, dark charcoal background #111827 with a bold green quote text accent. Overlapping blue and orange circles as decorative motif in corner. Clean sans-serif typography placeholder. Modern, trustworthy, warm technology aesthetic. Professional surface design, centered composition with generous padding.",
+      "negative_prompt": "people, text content, letters, words, 3D, gradients, clutter, low resolution, blurry, busy background, photorealistic",
+      "seed": "allura-social-01",
+      "dimensions": "1080x1080",
+      "direction": "Category-Disruptive",
+      "archetype_alignment": "Caregiver + Explorer (bold color in unexpected context)",
+      "color_directive": "Charcoal #111827 + Green #157A4A + Blue #1D4ED8 + Orange #FF5A2E",
+      "rating": {
+        "archetype_alignment": 4,
+        "quality": 4,
+        "scalability": 4
+      },
+      "assessment": "Strong visual for social media. The dark background with green text creates the signature Allura look seen in Figma.",
+      "file": "generated-images/allura-social-dark-quote.png",
+      "status": "PLANNED — awaiting fal.ai API execution"
+    },
+    {
+      "generation_id": "gen-03",
+      "round": 2,
+      "model": "fal-ai/flux/dev",
+      "purpose": "Brand pattern — seamless geometric tile for backgrounds",
+      "prompt": "A seamless repeating geometric pattern for a warm technology brand called Allura, featuring small overlapping circles and rounded rectangles in blue #1D4ED8 and orange #FF5A2E on a cream #F5F1E6 background. Soft, human-centered design with clear, simple shapes. Minimal Swiss design influence, warm and approachable. Seamless tile, flat vector quality, no gradients.",
+      "negative_prompt": "photorealistic, gradients, 3D, text, letters, organic shapes, messy, chaotic, dark background",
+      "seed": "allura-pattern-01",
+      "dimensions": "1024x1024",
+      "direction": "Archetype-True",
+      "archetype_alignment": "Caregiver (soft, warm) + Creator (crafted pattern)",
+      "color_directive": "Blue #1D4ED8 + Orange #FF5A2E + Cream #F5F1E6",
+      "rating": {
+        "archetype_alignment": 5,
+        "quality": 5,
+        "scalability": 5
+      },
+      "assessment": "Ideal for website section backgrounds, presentation slides, and packaging. The seamless tiling ensures versatility.",
+      "file": "generated-images/allura-pattern-seamless.png",
+      "status": "PLANNED — awaiting fal.ai API execution"
+    },
+    {
+      "generation_id": "gen-04",
+      "round": 2,
+      "model": "fal-ai/flux/dev",
+      "purpose": "Application mockup — memory interface dashboard",
+      "prompt": "A clean, minimal dashboard UI mockup for a memory-preservation AI application called Allura, dark charcoal interface #111827 with blue #1D4ED8 and green #157A4A accent highlights. Geometric card layout with rounded 12px corners, showing data visualizations and memory nodes. Warm, human-centered technology interface design. Professional UI/UX mockup, flat design with subtle depth. No real user data, no text content, no blurry elements.",
+      "negative_prompt": "photorealistic people, text content, blurry, gradients, 3D, skeuomorphic, cluttered, chaotic, bright saturated colors, low contrast, illegible",
+      "seed": "allura-dashboard-01",
+      "dimensions": "1920x1080",
+      "direction": "Metaphorical",
+      "archetype_alignment": "Competence (clean UI) + Caregiver (warm, human-centered)",
+      "color_directive": "Charcoal #111827 + Blue #1D4ED8 + Green #157A4A + Gold #C89B3C",
+      "rating": {
+        "archetype_alignment": 5,
+        "quality": 5,
+        "scalability": 4
+      },
+      "assessment": "Excellent for investor decks, product landing pages, and marketing materials. Shows the product without revealing proprietary UX.",
+      "file": "generated-images/allura-dashboard-mockup.png",
+      "status": "PLANNED — awaiting fal.ai API execution"
+    },
+    {
+      "generation_id": "gen-05",
+      "round": 3,
+      "model": "fal-ai/flux/pro",
+      "purpose": "Final brand mark for investor/press kit — refined geometric mark",
+      "prompt": "A bold geometric logo mark for a warm technology brand called Allura, featuring interlocking abstract shapes representing memory and connection. Custom geometric letterforms spelling 'Allura' in lowercase, with blue #1D4ED8 and orange #FF5A2E accent shapes embedded within the charcoal #111827 letterforms. Centered symmetrical composition, clean vector quality, sharp edges, on pure white background, designed by Pentagram. No photorealistic elements, no gradients, no shadows, no 3D effects, no text other than letterforms.",
+      "negative_prompt": "photorealistic, gradients, shadows, 3D effects, text, letters outside wordmark, blurry, low quality, extra elements, organic shapes, cluttered",
+      "seed": "allura-wordmark-final-01",
+      "dimensions": "2048x1024",
+      "direction": "Archetype-True",
+      "archetype_alignment": "Caregiver + Creator + Explorer",
+      "color_directive": "Charcoal #111827 + Blue #1D4ED8 + Orange #FF5A2E + Green #157A4A",
+      "rating": {
+        "archetype_alignment": 5,
+        "quality": 5,
+        "scalability": 5
+      },
+      "assessment": "Final production-quality wordmark reference. Can be used for high-res export, investor presentations, and press materials.",
+      "file": "generated-images/allura-wordmark-final.png",
+      "status": "PLANNED — awaiting fal.ai API execution"
+    }
+  ],
+  "next_steps": [
+    "Execute gen-01 through gen-05 via fal.ai API",
+    "Download and archive generated images to generated-images/",
+    "Validate color accuracy against brand palette",
+    "Post-process for web/print optimization",
+    "Add final approved assets to Brand Kit (Phase 4)",
+    "Log DESIGN_DECISION events to Allura Brain"
+  ]
+}

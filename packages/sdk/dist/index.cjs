@@ -75,10 +75,12 @@ var MemoryAddResponseSchema = import_zod.z.object({
   meta: import_zod.z.object({
     contract_version: import_zod.z.literal("v1"),
     degraded: import_zod.z.boolean(),
-    degraded_reason: import_zod.z.enum(["neo4j_unavailable"]).optional(),
-    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j"])),
-    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j"])),
-    warnings: import_zod.z.array(import_zod.z.string()).optional()
+    degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
+    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
+    warnings: import_zod.z.array(import_zod.z.string()).optional(),
+    ruvector_trajectory_id: import_zod.z.string().optional(),
+    ruvector_count: import_zod.z.number().int().min(0).optional()
   }).optional(),
   duplicate: import_zod.z.boolean().optional(),
   duplicate_of: import_zod.z.string().optional(),
@@ -101,10 +103,12 @@ var MemorySearchResponseSchema = import_zod.z.object({
   meta: import_zod.z.object({
     contract_version: import_zod.z.literal("v1"),
     degraded: import_zod.z.boolean(),
-    degraded_reason: import_zod.z.enum(["neo4j_unavailable"]).optional(),
-    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j"])),
-    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j"])),
-    warnings: import_zod.z.array(import_zod.z.string()).optional()
+    degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
+    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
+    warnings: import_zod.z.array(import_zod.z.string()).optional(),
+    ruvector_trajectory_id: import_zod.z.string().optional(),
+    ruvector_count: import_zod.z.number().int().min(0).optional()
   }).optional()
 });
 var MemoryGetResponseSchema = import_zod.z.object({
@@ -114,17 +118,35 @@ var MemoryGetResponseSchema = import_zod.z.object({
   source: import_zod.z.enum(["episodic", "semantic", "both"]),
   provenance: import_zod.z.enum(["conversation", "manual"]),
   user_id: import_zod.z.string(),
+  actor: import_zod.z.string().nullable().optional(),
+  creator: import_zod.z.string().nullable().optional(),
+  approver: import_zod.z.string().nullable().optional(),
+  group_id: import_zod.z.string().regex(/^allura-.+$/).optional(),
   created_at: import_zod.z.string(),
+  status: import_zod.z.enum(["approved", "proposed", "pending", "deprecated", "active", "deleted"]).optional(),
+  source_event_id: import_zod.z.string().nullable().optional(),
+  proposal_id: import_zod.z.string().nullable().optional(),
+  trace_ref: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).nullable().optional(),
+  evidence: import_zod.z.array(import_zod.z.object({
+    id: import_zod.z.string().nullable(),
+    type: import_zod.z.enum(["event", "proposal", "trace", "version"]),
+    label: import_zod.z.string(),
+    status: import_zod.z.enum(["available", "unavailable"])
+  })).optional(),
   version: import_zod.z.number().int().optional(),
   superseded_by: import_zod.z.string().optional(),
   usage_count: import_zod.z.number().optional(),
+  hash: import_zod.z.string().nullable().optional(),
+  previous_hash: import_zod.z.string().nullable().optional(),
   meta: import_zod.z.object({
     contract_version: import_zod.z.literal("v1"),
     degraded: import_zod.z.boolean(),
-    degraded_reason: import_zod.z.enum(["neo4j_unavailable"]).optional(),
-    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j"])),
-    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j"])),
-    warnings: import_zod.z.array(import_zod.z.string()).optional()
+    degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
+    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
+    warnings: import_zod.z.array(import_zod.z.string()).optional(),
+    ruvector_trajectory_id: import_zod.z.string().optional(),
+    ruvector_count: import_zod.z.number().int().min(0).optional()
   }).optional()
 });
 var MemoryListResponseSchema = import_zod.z.object({
@@ -134,10 +156,12 @@ var MemoryListResponseSchema = import_zod.z.object({
   meta: import_zod.z.object({
     contract_version: import_zod.z.literal("v1"),
     degraded: import_zod.z.boolean(),
-    degraded_reason: import_zod.z.enum(["neo4j_unavailable"]).optional(),
-    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j"])),
-    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j"])),
-    warnings: import_zod.z.array(import_zod.z.string()).optional()
+    degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
+    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
+    warnings: import_zod.z.array(import_zod.z.string()).optional(),
+    ruvector_trajectory_id: import_zod.z.string().optional(),
+    ruvector_count: import_zod.z.number().int().min(0).optional()
   }).optional()
 });
 var MemoryDeleteResponseSchema = import_zod.z.object({
@@ -148,10 +172,12 @@ var MemoryDeleteResponseSchema = import_zod.z.object({
   meta: import_zod.z.object({
     contract_version: import_zod.z.literal("v1"),
     degraded: import_zod.z.boolean(),
-    degraded_reason: import_zod.z.enum(["neo4j_unavailable"]).optional(),
-    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j"])),
-    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j"])),
-    warnings: import_zod.z.array(import_zod.z.string()).optional()
+    degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
+    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
+    warnings: import_zod.z.array(import_zod.z.string()).optional(),
+    ruvector_trajectory_id: import_zod.z.string().optional(),
+    ruvector_count: import_zod.z.number().int().min(0).optional()
   }).optional()
 });
 var HealthResponseSchema = import_zod.z.object({
@@ -713,4 +739,3 @@ var AlluraClient = class {
     }
   }
 };
-//# sourceMappingURL=index.cjs.map

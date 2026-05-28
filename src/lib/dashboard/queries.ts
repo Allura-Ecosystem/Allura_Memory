@@ -10,6 +10,8 @@ import {
   getMemoryCount,
   getMemoryList,
   getMemoryStats,
+  getPolicyEnforcementEvents,
+  getPolicyViolationEvents,
   getTraces,
 } from "@/lib/dashboard/api"
 import {
@@ -117,8 +119,33 @@ export async function loadMemories(query?: string, groupId?: string): Promise<Da
 
 export async function loadInsights(status = "pending", groupId?: string): Promise<DashboardResult<Insight[]>> {
   try {
-    if (status === "pending") {
-      const result = await getCuratorProposals({ status: "pending", limit: 50 }, groupId)
+    if (status === "all") {
+      const [pending, approved, rejected] = await Promise.allSettled([
+        getCuratorProposals({ status: "pending", limit: 50 }, groupId),
+        getInsights({ status: "active", limit: 50 }, groupId),
+        getCuratorProposals({ status: "rejected", limit: 50 }, groupId),
+      ])
+      const warnings: DashboardResult<Insight[]>["warnings"] = []
+      if (pending.status === "fulfilled") warnings.push(...warningFrom("curator-pending", pending.value.warning))
+      else warnings.push({ id: "curator-pending-error", source: "curator-pending", message: pending.reason instanceof Error ? pending.reason.message : "Request failed" })
+      if (approved.status === "fulfilled") warnings.push(...warningFrom("insights-active", approved.value.warning))
+      else warnings.push({ id: "insights-active-error", source: "insights-active", message: approved.reason instanceof Error ? approved.reason.message : "Request failed" })
+      if (rejected.status === "fulfilled") warnings.push(...warningFrom("curator-rejected", rejected.value.warning))
+      else warnings.push({ id: "curator-rejected-error", source: "curator-rejected", message: rejected.reason instanceof Error ? rejected.reason.message : "Request failed" })
+
+      return {
+        data: [
+          ...(pending.status === "fulfilled" ? mapProposalsResponse(pending.value.data) : []),
+          ...(approved.status === "fulfilled" ? mapInsightsResponse(approved.value.data) : []),
+          ...(rejected.status === "fulfilled" ? mapProposalsResponse(rejected.value.data) : []),
+        ],
+        error: null,
+        degraded: [pending, approved, rejected].some((result) => result.status === "rejected" || result.value.degraded),
+        warnings,
+      }
+    }
+    if (status === "pending" || status === "rejected") {
+      const result = await getCuratorProposals({ status, limit: 50 }, groupId)
       return { data: mapProposalsResponse(result.data), error: null, degraded: result.degraded, warnings: warningFrom("curator", result.warning) }
     }
     const result = await getInsights({ status, limit: 50 }, groupId)
@@ -200,17 +227,27 @@ export async function loadCuratorQueue(status = "pending", groupId?: string): Pr
     if (approved.status === "fulfilled") warnings.push(...warningFrom("approved", approved.value.warning))
 
     if (status === "pending") {
+      const pendingError = proposals.status === "rejected"
+        ? proposals.reason instanceof Error
+          ? proposals.reason.message
+          : "Pending proposal request failed"
+        : null
       return {
         data: proposals.status === "fulfilled" ? mapProposalsResponse(proposals.value.data) : [],
-        error: null,
-        degraded: proposals.status === "fulfilled" ? proposals.value.degraded : false,
+        error: pendingError,
+        degraded: proposals.status === "fulfilled" ? proposals.value.degraded : true,
         warnings,
       }
     }
+    const approvedError = approved.status === "rejected"
+      ? approved.reason instanceof Error
+        ? approved.reason.message
+        : "Approved proposal request failed"
+      : null
     return {
       data: approved.status === "fulfilled" ? mapProposalsResponse(approved.value.data) : [],
-      error: null,
-      degraded: approved.status === "fulfilled" ? approved.value.degraded : false,
+      error: approvedError,
+      degraded: approved.status === "fulfilled" ? approved.value.degraded : true,
       warnings,
     }
   } catch (error) {
@@ -293,6 +330,67 @@ export async function loadRecentActivity(groupId?: string): Promise<DashboardRes
       error: null,
       degraded: result.degraded,
       warnings: warningFrom("recent-activity", result.warning),
+    }
+  } catch (error) {
+    return failure(error)
+  }
+}
+
+export async function loadPolicyEnforcement(groupId?: string): Promise<DashboardResult<import("@/lib/dashboard/types").PolicyEnforcementSummary>> {
+  try {
+    const [checks, violations] = await Promise.allSettled([
+      getPolicyEnforcementEvents({ limit: 10 }, groupId),
+      getPolicyViolationEvents({ limit: 10 }, groupId),
+    ])
+
+    const warnings: DashboardResult<unknown>["warnings"] = []
+    if (checks.status === "fulfilled") warnings.push(...warningFrom("policy-checks", checks.value.warning))
+    else warnings.push({ id: "policy-checks-error", source: "policy-checks", message: checks.reason instanceof Error ? checks.reason.message : "Request failed" })
+    if (violations.status === "fulfilled") warnings.push(...warningFrom("policy-violations", violations.value.warning))
+    else warnings.push({ id: "policy-violations-error", source: "policy-violations", message: violations.reason instanceof Error ? violations.reason.message : "Request failed" })
+
+    const checkEvents = checks.status === "fulfilled" ? (checks.value.data.events ?? []) : []
+    const violationEvents = violations.status === "fulfilled" ? (violations.value.data.events ?? []) : []
+
+    const allEvents = [...checkEvents, ...violationEvents]
+      .sort((a: unknown, b: unknown) => {
+        const aTime = (a as { created_at?: string | Date }).created_at ?? ""
+        const bTime = (b as { created_at?: string | Date }).created_at ?? ""
+        return new Date(bTime).getTime() - new Date(aTime).getTime()
+      })
+      .slice(0, 10)
+
+    const recentEvents = allEvents.map((raw: unknown): import("@/lib/dashboard/types").PolicyEnforcementEvent => {
+      const e = raw as Record<string, unknown>
+      const meta = (e.metadata ?? {}) as Record<string, unknown>
+      return {
+        id: String(e.id ?? crypto.randomUUID()),
+        eventType: String(e.event_type ?? "policy_check") as "policy_check" | "policy_violation",
+        agentId: String(e.agent_id ?? "system"),
+        ruleName: String(meta.rule ?? meta.reason ?? "Unknown rule"),
+        status: String(e.status ?? (e.event_type === "policy_violation" ? "blocked" : "allowed")) as "allowed" | "blocked" | "failed",
+        timestamp: e.created_at instanceof Date ? e.created_at.toISOString() : String(e.created_at ?? new Date().toISOString()),
+        metadata: meta,
+      }
+    })
+
+    const violationCountByRule: Record<string, number> = {}
+    for (const e of violationEvents) {
+      const meta = ((e as Record<string, unknown>).metadata ?? {}) as Record<string, unknown>
+      const rule = String(meta.rule ?? meta.reason ?? "Unknown rule")
+      violationCountByRule[rule] = (violationCountByRule[rule] ?? 0) + 1
+    }
+
+    return {
+      data: {
+        recentEvents,
+        violationCountByRule,
+        checkCount: checkEvents.length,
+        violationCount: violationEvents.length,
+      },
+      error: null,
+      degraded: warnings.length > 0,
+      warnings,
     }
   } catch (error) {
     return failure(error)

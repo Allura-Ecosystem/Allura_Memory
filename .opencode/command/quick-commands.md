@@ -31,6 +31,7 @@ Type these directly in your IDE for fast access to common Team RAM harness workf
 | `/update <target>` | Log a short update | `quick-update` |
 | `/party <task>` | Parallel specialist collaboration | `party-mode` |
 | `/intent-gate <request>` | Classify intent before routing | `intent-gate` |
+| `/ultra <request>` | Bounded work-until-done execution | `ultra` |
 | `/ulw <request>` | Governed ultrawork execution | `ulw` |
 | `/ulw-loop <request> [--max-iterations N]` | Bounded Ralph Loop execution | `ulw-loop` |
 | `/ralph <mode>` | Legacy `Ralph Wiggum` entrypoint (legacy alias) | `ralph` |

@@ -9,8 +9,8 @@ path: subagents/code
 scope: harness
 platform: Both
 status: active
-model: openai/gpt-5.4-mini
-fallback_model: ollama-cloud/deepseek-v4-pro
+model: ollama-cloud/deepseek-v4-pro
+fallback_model: openai/gpt-5.4-mini
 permission:
   edit: allow
   bash: allow

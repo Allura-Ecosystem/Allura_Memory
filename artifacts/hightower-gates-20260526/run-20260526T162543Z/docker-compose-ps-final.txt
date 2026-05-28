@@ -1,0 +1,7 @@
+NAME                     IMAGE                           COMMAND                  SERVICE           CREATED         STATUS                     PORTS
+allura-brand-dashboard   allura-memory-brand-dashboard   "/docker-entrypoint.…"   brand-dashboard   3 minutes ago   Up 3 minutes (unhealthy)   0.0.0.0:6420->80/tcp, [::]:6420->80/tcp
+allura-memory-mcp        allura-memory-mcp               "/usr/local/bin/dock…"   mcp               7 days ago      Up 8 hours (healthy)       0.0.0.0:5888->3201/tcp, [::]:5888->3201/tcp
+allura-web               allura-memory-web               "docker-entrypoint.s…"   web               4 days ago      Up 8 hours (healthy)       0.0.0.0:3100->3100/tcp, [::]:3100->3100/tcp
+knowledge-dozzle         amir20/dozzle:latest            "/dozzle"                dozzle            4 days ago      Up 8 hours (healthy)       0.0.0.0:8088->8080/tcp, [::]:8088->8080/tcp
+knowledge-neo4j          neo4j:5.26.0-community          "tini -g -- /startup…"   neo4j             4 days ago      Up 8 hours (healthy)       0.0.0.0:7474->7474/tcp, [::]:7474->7474/tcp, 0.0.0.0:7687->7687/tcp, [::]:7687->7687/tcp
+knowledge-postgres       pgvector/pgvector:pg16          "docker-entrypoint.s…"   postgres          4 days ago      Up 8 hours (healthy)       0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp

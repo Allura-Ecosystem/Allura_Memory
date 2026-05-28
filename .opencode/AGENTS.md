@@ -285,23 +285,18 @@ the build, Pike and Fowler review, and the first acceptance target is
 `bun test src/lib/memory/__tests__/approval-audit.test.ts` passing under Bun
 without `vi.mocked`.
 
-Current `/allura` UI review gate:
+Current dashboard UI state:
 
-- Board item: `/allura` brand alignment / 6420 parity cleanup.
-- Status: `In Review`, not `Done`.
-- Source of truth: Notion `Allura stories Work Items`; local files are evidence
-  only.
-- Brand authority: `DESIGN.md`; `dashboard/mission-control.html` and port 6420
-  are structure references only.
-- Reviewers: Pike for interface/keyboard/source-of-truth clarity; Fowler for
-  maintainability, token use, and component boundaries.
-- Validation: `Ralph Loop` only after implementation and review evidence exist.
-- Evidence: title `Governed memory command center`, no runtime page errors, no
-  horizontal overflow at desktop/tablet/mobile widths, refreshed
-  `artifacts/allura-after-3334.png`.
-- Done rule: do not move the card to `Done` until Pike/Fowler blockers are
-   resolved, `Ralph Loop` validation passes, and evidence is attached or logged to the
-   board.
+- Status: **Blank slate reset**. The prior `/allura` and `/dashboard/memory-space`
+  implementations were cleared so the dashboard can be rebuilt from scratch.
+- Routes: `/dashboard`, `/dashboard/memory-space`, and `/allura` intentionally render
+  neutral placeholders only.
+- Prior evidence such as `artifacts/allura-after-3334.png`, 6420 parity claims, and
+  `Governed memory command center` acceptance language is historical evidence only;
+  do not use it as an active acceptance gate.
+- Source of truth for future dashboard scope remains Notion `Allura stories Work Items`.
+- Do not move any dashboard card to `Done` until a new approved design/spec,
+  implementation evidence, review evidence, and validation evidence are attached.
 
 Expected behavior:
 

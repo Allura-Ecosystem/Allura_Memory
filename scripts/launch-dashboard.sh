@@ -1,8 +1,13 @@
 #!/bin/bash
 # Allura Dashboard Launcher
-cd "/home/ronin704/Projects/allura memory" || exit 1
-export ALLURA_DASHBOARD_PORT=3100
-echo "🖥️ Starting Allura Dashboard on port $ALLURA_DASHBOARD_PORT"
-echo "📍 URL: http://localhost:$ALLURA_DASHBOARD_PORT/dashboard"
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+export ALLURA_DASHBOARD_PORT="${ALLURA_DASHBOARD_PORT:-3100}"
+
+echo "Starting Allura Dashboard compose service on port ${ALLURA_DASHBOARD_PORT}"
+echo "URL: http://localhost:${ALLURA_DASHBOARD_PORT}/dashboard"
 echo ""
-bun run dev
+
+docker compose --env-file .env --env-file .env.local up -d web

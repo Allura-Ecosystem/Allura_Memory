@@ -1,15 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { toast } from "sonner"
 import { ConfidenceBar } from "@/components/allura/confidence-bar"
 import { EmptyState } from "@/components/allura/empty-state"
 import { StatusBadge } from "@/components/allura/status-badge"
 import { TraceCard } from "@/components/allura/trace-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
 
 interface Trace {
   id: string
@@ -44,7 +41,26 @@ interface Insight {
   promoted_by?: string
 }
 
+interface DecisionReceipt {
+  proposal_id: string
+  group_id: string
+  decision: "approved" | "rejected" | "needs_evidence" | "missing_receipt"
+  previous_status: "pending"
+  resulting_status: "approved" | "rejected" | "pending"
+  promoted_memory_id: string | null
+  actor: string
+  rationale: string | null
+  decided_at: string | null
+  trace_reference?: string | null
+  source_event_type?: string
+  receipt_status?: "available" | "missing_receipt_blocker"
+  degraded_reason?: string
+  notion_sync: "pending" | "completed" | "failed"
+}
+
 type CuratorTab = "pending" | "approved" | "traces"
+
+const requestEvidenceReceiptPreview = { decision: "needs_evidence" as const }
 
 function getProposalStatus(proposal: Proposal): "active" | "proposed" | "forgotten" | "low_confidence" {
   if (proposal.status === "approved") return "active"
@@ -76,7 +92,9 @@ export default function CuratorDashboardPage() {
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null)
-  const [rationale, setRationale] = useState("")
+  const [decisionRationale, setDecisionRationale] = useState("")
+  const [decisionMessage, setDecisionMessage] = useState<string | null>(null)
+  const [decisionReceipt, setDecisionReceipt] = useState<DecisionReceipt | null>(null)
 
   const fetchTraces = async () => {
     setIsLoading(true)
@@ -107,7 +125,8 @@ export default function CuratorDashboardPage() {
   const fetchProposals = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/curator/proposals?group_id=${groupId}&status=pending`)
+      const params = new URLSearchParams({ group_id: groupId, status: "pending" })
+      const response = await fetch(`/api/curator/proposals?${params.toString()}`)
       const data = await response.json()
       setProposals(data.proposals || [])
     } catch (error) {
@@ -117,66 +136,54 @@ export default function CuratorDashboardPage() {
     }
   }
 
-  const approveProposal = async (proposal: Proposal) => {
-    try {
-      const response = await fetch("/api/curator/approve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          proposal_id: proposal.id,
-          group_id: groupId,
-          decision: "approve",
-          curator_id: "curator-user",
-          rationale,
-        }),
-      })
-
-      if (response.ok) {
-        toast.success("Proposal approved — memory promoted to knowledge graph")
-        fetchProposals()
-        setSelectedProposal(null)
-        setRationale("")
-      } else {
-        toast.error("Failed to approve proposal")
-      }
-    } catch (error) {
-      console.error("Failed to approve proposal:", error)
-    }
-  }
-
-  const rejectProposal = async (proposal: Proposal) => {
-    try {
-      const response = await fetch("/api/curator/approve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          proposal_id: proposal.id,
-          group_id: groupId,
-          decision: "reject",
-          curator_id: "curator-user",
-          rationale,
-        }),
-      })
-
-      if (response.ok) {
-        toast.success("Proposal rejected — memory stays in episodic storage")
-        fetchProposals()
-        setSelectedProposal(null)
-        setRationale("")
-      } else {
-        toast.error("Failed to reject proposal")
-      }
-    } catch (error) {
-      console.error("Failed to reject proposal:", error)
-    }
-  }
-
   useEffect(() => {
     if (activeTab === "traces") fetchTraces()
     else if (activeTab === "approved") fetchInsights()
     else if (activeTab === "pending") fetchProposals()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, groupId])
+
+  useEffect(() => {
+    setSelectedProposal(null)
+    setDecisionRationale("")
+    setDecisionMessage(null)
+    setDecisionReceipt(null)
+  }, [groupId])
+
+  const submitProposalDecision = async (proposal: Proposal, decision: "approve" | "reject" | "request_evidence") => {
+    if (decisionRationale.trim().length === 0) {
+      setDecisionMessage("Human rationale is required before approving, rejecting, or requesting evidence for a proposal.")
+      return
+    }
+
+    const response = await fetch("/api/curator/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        proposal_id: proposal.id,
+        group_id: proposal.group_id,
+        decision,
+        rationale: decisionRationale.trim(),
+      }),
+    })
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      setDecisionMessage(String(result.error || "Curator decision failed"))
+      return
+    }
+
+    setDecisionReceipt(result.receipt ?? null)
+    setDecisionMessage(`Decision recorded: ${decision}. Audit receipt returned from governed events.`)
+    setDecisionRationale("")
+    await fetchProposals()
+  }
+
+  const selectProposalForDecision = (proposal: Proposal) => {
+    setSelectedProposal(selectedProposal?.id === proposal.id ? null : proposal)
+    setDecisionRationale("")
+    setDecisionMessage(null)
+    setDecisionReceipt(null)
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--allura-pure-white)]">
@@ -241,11 +248,12 @@ export default function CuratorDashboardPage() {
             proposals={proposals}
             isLoading={isLoading}
             selectedProposal={selectedProposal}
-            setSelectedProposal={setSelectedProposal}
-            rationale={rationale}
-            setRationale={setRationale}
-            approveProposal={approveProposal}
-            rejectProposal={rejectProposal}
+            selectProposalForDecision={selectProposalForDecision}
+            decisionRationale={decisionRationale}
+            setDecisionRationale={setDecisionRationale}
+            decisionMessage={decisionMessage}
+            decisionReceipt={decisionReceipt}
+            submitProposalDecision={submitProposalDecision}
           />
         )}
         {activeTab === "approved" && (
@@ -263,23 +271,27 @@ interface PendingViewProps {
   proposals: Proposal[]
   isLoading: boolean
   selectedProposal: Proposal | null
-  setSelectedProposal: (p: Proposal | null) => void
-  rationale: string
-  setRationale: (r: string) => void
-  approveProposal: (p: Proposal) => void
-  rejectProposal: (p: Proposal) => void
+  selectProposalForDecision: (p: Proposal) => void
+  decisionRationale: string
+  setDecisionRationale: (value: string) => void
+  decisionMessage: string | null
+  decisionReceipt: DecisionReceipt | null
+  submitProposalDecision: (proposal: Proposal, decision: "approve" | "reject" | "request_evidence") => Promise<void>
 }
 
 function PendingView({
   proposals,
   isLoading,
   selectedProposal,
-  setSelectedProposal,
-  rationale,
-  setRationale,
-  approveProposal,
-  rejectProposal,
+  selectProposalForDecision,
+  decisionRationale,
+  setDecisionRationale,
+  decisionMessage,
+  decisionReceipt,
+  submitProposalDecision,
 }: PendingViewProps) {
+  const approvalDisabled = selectedProposal ? !selectedProposal.trace_ref : true
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -288,8 +300,8 @@ function PendingView({
     )
   }
 
-  if (proposals.length === 0) {
-    return <EmptyState title="All caught up." description="No pending proposals. High-confidence memories are auto-promoted." />
+  if (proposals.length === 0 && !decisionReceipt) {
+    return <EmptyState title="All caught up." description="No pending proposals require human curator review right now." />
   }
 
   return (
@@ -302,8 +314,7 @@ function PendingView({
               key={proposal.id}
               type="button"
               onClick={() => {
-                setSelectedProposal(selectedProposal?.id === proposal.id ? null : proposal)
-                setRationale("")
+                selectProposalForDecision(proposal)
               }}
               className={`flex w-full items-start gap-2 px-4 py-3 text-left transition-colors ${
                 selectedProposal?.id === proposal.id
@@ -315,9 +326,13 @@ function PendingView({
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 text-sm text-[var(--allura-ink-black)]">{proposal.content}</p>
                 <div className="mt-1 flex items-center gap-2 text-xs text-[var(--allura-warm-gray)]">
+                  <span>{proposal.id}</span>
+                  <span>&middot;</span>
                   <span>{formatRelativeTime(proposal.created_at)}</span>
                   <span>&middot;</span>
                   <span className="capitalize">{proposal.tier}</span>
+                  <span>&middot;</span>
+                  <span className="capitalize">{proposal.status}</span>
                 </div>
               </div>
             </button>
@@ -340,6 +355,8 @@ function PendingView({
                   <span className="capitalize">{selectedProposal.tier}</span>
                   <span>&middot;</span>
                   <span>{selectedProposal.group_id}</span>
+                  <span>&middot;</span>
+                  <span className="capitalize">{selectedProposal.status}</span>
                 </div>
               </div>
               <StatusBadge status={getProposalStatus(selectedProposal)} />
@@ -349,6 +366,109 @@ function PendingView({
 
             <div className="flex items-end gap-4">
               <ConfidenceBar value={selectedProposal.score * 100} />
+            </div>
+
+            <dl className="grid gap-3 rounded-xl border border-[var(--allura-deep-navy)]/10 bg-[var(--allura-pure-white)] p-4 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-[11px] font-bold tracking-[0.2em] text-[var(--allura-deep-navy)] uppercase">Proposal ID</dt>
+                <dd className="mt-1 text-[var(--allura-ink-black)]">{selectedProposal.id}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-bold tracking-[0.2em] text-[var(--allura-deep-navy)] uppercase">Trace reference</dt>
+                <dd className="mt-1 text-[var(--allura-ink-black)]">{selectedProposal.trace_ref || "No trace reference attached"}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-bold tracking-[0.2em] text-[var(--allura-deep-navy)] uppercase">Created</dt>
+                <dd className="mt-1 text-[var(--allura-ink-black)]">{selectedProposal.created_at}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-bold tracking-[0.2em] text-[var(--allura-deep-navy)] uppercase">Decision mode</dt>
+                <dd className="mt-1 text-[var(--allura-ink-black)]">HITL curator action; decisions require rationale and append-only audit receipts.</dd>
+              </div>
+            </dl>
+
+            <div className="space-y-3 rounded-xl border border-[var(--allura-deep-navy)]/10 bg-[var(--allura-pure-white)] p-4">
+              <div>
+                <p className="text-[11px] font-bold tracking-[0.2em] text-[var(--allura-deep-navy)] uppercase">Human rationale</p>
+                <Input
+                  value={decisionRationale}
+                  onChange={(event) => setDecisionRationale(event.target.value)}
+                  placeholder="Explain the human approval or rejection decision"
+                  className="mt-2"
+                />
+              </div>
+              <p className="text-xs leading-5 text-[var(--allura-warm-gray)]">
+                Approval writes semantic knowledge through the governed curator flow. Reject keeps source evidence and records an audit receipt.
+              </p>
+              <p className="text-xs leading-5 text-[var(--allura-warm-gray)]">
+                Request evidence keeps the proposal pending and records a needs-evidence receipt without promoting or deleting source material.
+              </p>
+              {!selectedProposal.trace_ref && (
+                <p className="text-xs text-[var(--allura-warm-gray)]">Approval requires trace requester provenance before semantic promotion.</p>
+              )}
+              {decisionMessage && <p className="text-sm text-[var(--allura-deep-navy)]">{decisionMessage}</p>}
+              {decisionReceipt && (
+                <dl className="grid gap-2 rounded-lg border border-[var(--allura-deep-navy)]/10 bg-white p-3 text-xs sm:grid-cols-2">
+                  <div>
+                    <dt className="font-semibold text-[var(--allura-deep-navy)]">Audit receipt</dt>
+                    <dd className="text-[var(--allura-warm-gray)]">{decisionReceipt.proposal_id}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--allura-deep-navy)]">Resulting status</dt>
+                    <dd className="text-[var(--allura-warm-gray)]">{decisionReceipt.resulting_status}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--allura-deep-navy)]">Previous status</dt>
+                    <dd className="text-[var(--allura-warm-gray)]">{decisionReceipt.previous_status}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--allura-deep-navy)]">Promoted memory</dt>
+                    <dd className="text-[var(--allura-warm-gray)]">{decisionReceipt.promoted_memory_id ?? "none"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--allura-deep-navy)]">Actor</dt>
+                    <dd className="text-[var(--allura-warm-gray)]">{decisionReceipt.actor}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--allura-deep-navy)]">Rationale</dt>
+                    <dd className="text-[var(--allura-warm-gray)]">{decisionReceipt.rationale ?? "none recorded"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--allura-deep-navy)]">Decided at</dt>
+                    <dd className="text-[var(--allura-warm-gray)]">{decisionReceipt.decided_at ?? "missing receipt blocker"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--allura-deep-navy)]">Trace reference</dt>
+                    <dd className="text-[var(--allura-warm-gray)]">{decisionReceipt.trace_reference ?? "not attached"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--allura-deep-navy)]">Source event type</dt>
+                    <dd className="text-[var(--allura-warm-gray)]">{decisionReceipt.source_event_type ?? "live route receipt"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--allura-deep-navy)]">Receipt status</dt>
+                    <dd className="text-[var(--allura-warm-gray)]">{decisionReceipt.receipt_status ?? "available"}</dd>
+                  </div>
+                  {decisionReceipt.receipt_status === "missing_receipt_blocker" && (
+                    <div className="sm:col-span-2">
+                      <dt className="font-semibold text-[var(--allura-deep-navy)]">Missing append-only decision receipt</dt>
+                      <dd className="text-[var(--allura-warm-gray)]">{decisionReceipt.degraded_reason ?? "Missing append-only decision receipt must be treated as a degraded blocker, not hidden."}</dd>
+                    </div>
+                  )}
+                </dl>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" disabled={approvalDisabled} onClick={() => submitProposalDecision(selectedProposal, "approve")}>Approve proposal</Button>
+                <Button type="button" variant="outline" onClick={() => submitProposalDecision(selectedProposal, "reject")}>Reject proposal</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label={`Request evidence (${requestEvidenceReceiptPreview.decision})`}
+                  onClick={() => submitProposalDecision(selectedProposal, "request_evidence")}
+                >
+                  Request evidence
+                </Button>
+              </div>
             </div>
 
             {selectedProposal.reasoning && (
@@ -363,45 +483,9 @@ function PendingView({
               <p className="mb-2 text-[11px] font-bold tracking-[0.2em] text-[var(--allura-deep-navy)] uppercase">Evidence</p>
               <TraceCard
                 tool="memory.propose"
-                snippet={`Score: ${(selectedProposal.score * 100).toFixed(0)}% — ${selectedProposal.reasoning || "Auto-scored by curator pipeline"}`}
+                snippet={`Trace: ${selectedProposal.trace_ref || "unavailable"} — Score: ${(selectedProposal.score * 100).toFixed(0)}% — ${selectedProposal.reasoning || "Scored by curator pipeline; awaiting human review"}`}
                 timestamp={formatRelativeTime(selectedProposal.created_at)}
               />
-            </div>
-
-            <Separator className="bg-[var(--allura-deep-navy)]/10" />
-
-            <div className="space-y-3">
-              <Textarea
-                placeholder="Rationale for decision (optional)"
-                value={rationale}
-                onChange={(e) => setRationale(e.target.value)}
-                className="min-h-[60px] border-[var(--allura-deep-navy)]/20 bg-[var(--allura-pure-white)]"
-                style={{ borderRadius: "var(--allura-radius-input)" }}
-              />
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => approveProposal(selectedProposal)}
-                  className="bg-[var(--allura-deep-navy)] text-[var(--allura-pure-white)] hover:bg-[var(--allura-deep-navy)]/90"
-                  style={{ borderRadius: "var(--allura-radius-button)" }}
-                >
-                  Approve ✓
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-[var(--allura-deep-navy)] text-[var(--allura-deep-navy)]"
-                  style={{ borderRadius: "var(--allura-radius-button)" }}
-                >
-                  Edit ✎
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => rejectProposal(selectedProposal)}
-                  className="text-[var(--allura-warm-gray)] hover:bg-[var(--allura-coral-10)] hover:text-[var(--allura-deep-navy)]"
-                  style={{ borderRadius: "var(--allura-radius-button)" }}
-                >
-                  Reject ✕
-                </Button>
-              </div>
             </div>
           </div>
         ) : (

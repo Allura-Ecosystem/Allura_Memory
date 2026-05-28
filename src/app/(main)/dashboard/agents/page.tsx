@@ -1,189 +1,241 @@
 "use client"
 
-import { Bot, ChevronRight } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { Activity, Brain, Lightbulb, PlusCircle, Router, Users } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
 
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Agent } from "@/app/api/agents/route"
+import { MetricSummaryCard, type MetricTone } from "../_components/metric-summary-card"
+import { buildDashboardRouteState } from "@/lib/dashboard/empty-states"
+import { loadGraphNodes } from "@/lib/dashboard/queries"
+import type { DashboardResult, GraphEdge, GraphNode } from "@/lib/dashboard/types"
+import { cn } from "@/lib/utils"
 
-// ── Status helpers ──────────────────────────────────────────────────────────
-
-// Data-vis exception: status dot colors are semantic indicators, not brand tokens.
-const STATUS_COLOR: Record<Agent["status"], string> = {
-  active: "#16a34a",
-  idle: "#b45309",
-  offline: "#6b7280",
+function confidencePercent(node: GraphNode) {
+  const c = Number(node.metadata?.confidence ?? node.metadata?.score ?? 0)
+  if (!Number.isFinite(c)) return "—"
+  return `${Math.round(c * 100)}%`
 }
 
-const STATUS_LABEL: Record<Agent["status"], string> = {
-  active: "Active",
-  idle: "Idle",
-  offline: "Offline",
+interface AgentMetric {
+  label: string
+  value: string
+  tone: MetricTone
+  icon: React.ComponentType<{ className?: string }>
 }
 
-function formatLastActive(iso: string | null): string {
-  if (!iso) return "Never"
-  const diff = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diff / 60_000)
-  if (mins < 1) return "Just now"
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  const days = Math.floor(hrs / 24)
-  return `${days}d ago`
+function buildMetrics(nodes: GraphNode[], _edges: GraphEdge[]): AgentMetric[] {
+  const total = nodes.length
+  const active = nodes.filter((n) => {
+    const s = String(n.metadata?.status ?? "").toLowerCase()
+    return s === "active" || s === "online"
+  }).length
+  const pending = nodes.filter((n) => {
+    const s = String(n.metadata?.status ?? "").toLowerCase()
+    return s === "pending" || s === "proposed"
+  }).length
+  const avgConfidence =
+    total > 0
+      ? (
+          nodes.reduce((sum, n) => {
+            const c = Number(n.metadata?.confidence ?? n.metadata?.score ?? 0)
+            return sum + (Number.isFinite(c) ? c : 0)
+          }, 0) / total
+        ).toFixed(0)
+      : "0"
+  return [
+    { label: "Total Agents", value: String(total), tone: "blue", icon: Users },
+    { label: "Active", value: String(active), tone: "green", icon: Activity },
+    { label: "Pending", value: String(pending), tone: "orange", icon: Lightbulb },
+    { label: "Avg Confidence", value: `${avgConfidence}%`, tone: "charcoal", icon: Brain },
+  ]
 }
 
-function initials(name: string): string {
-  const words = name.trim().split(/\s+/)
-  if (words.length >= 2) return (words[0]![0]! + words[1]![0]!).toUpperCase()
-  return name.slice(0, 2).toUpperCase()
-}
-
-// ── Agent Card ───────────────────────────────────────────────────────────────
-
-function AgentCard({ agent }: { agent: Agent }) {
-  const dotColor = STATUS_COLOR[agent.status]
-
+function AgentCard({
+  node,
+  connectionCount,
+}: {
+  node: GraphNode
+  connectionCount: number
+}) {
+  const tone =
+    (node.metadata?.status as string | undefined)?.toLowerCase() === "active"
+      ? "green"
+      : "orange"
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-[var(--allura-gray-200)] bg-[var(--allura-cream)] p-4">
-      {/* Header: avatar + name + model */}
-      <div className="flex items-start gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--allura-blue)] text-sm font-bold text-white"
-          aria-hidden="true"
-        >
-          {initials(agent.name)}
+    <article className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-lg text-white",
+            tone === "green" ? "bg-[var(--dashboard-cta-approval)]" : "bg-[var(--dashboard-cta-primary)]"
+          )}>
+            <span className="text-xs font-bold tracking-tight">
+              {(node.label ?? "A").charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-[var(--dashboard-text-primary)]">{node.label}</span>
+            <span className="text-xs text-[var(--dashboard-text-secondary)]">{node.type}</span>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-[var(--dashboard-text-primary)]">
-            {agent.name}
-          </p>
-          <p className="truncate text-xs text-[var(--dashboard-text-secondary)]">
-            {agent.model || "—"}
-          </p>
+        <span className={cn(
+          "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+          tone === "green"
+            ? "border-green-500/20 bg-green-500/10 text-green-600"
+            : "border-orange-500/20 bg-orange-500/10 text-orange-600"
+        )}>
+          {String(node.metadata?.status ?? "unknown")}
+        </span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-lg border border-[var(--dashboard-border)] p-3">
+          <span className="text-xs text-[var(--dashboard-text-muted)]">Confidence</span>
+          <p className="mt-1 font-semibold text-[var(--dashboard-text-primary)]">{confidencePercent(node)}</p>
+        </div>
+        <div className="rounded-lg border border-[var(--dashboard-border)] p-3">
+          <span className="text-xs text-[var(--dashboard-text-muted)]">Connections</span>
+          <p className="mt-1 font-semibold text-[var(--dashboard-text-primary)]">{connectionCount}</p>
         </div>
       </div>
-
-      {/* Status dot + description */}
-      <div className="flex items-start gap-2">
-        <span
-          className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full"
-          style={{ backgroundColor: dotColor }}
-          aria-label={STATUS_LABEL[agent.status]}
-        />
-        <p className="line-clamp-2 text-xs text-[var(--dashboard-text-secondary)]">
-          {agent.description || "No description available."}
-        </p>
-      </div>
-
-      {/* Last active */}
-      <p className="text-xs text-[var(--allura-gray-500)]">
-        Last active: {formatLastActive(agent.lastActive)}
-      </p>
-
-      {/* Configure link */}
-      <Link
-        href={`/dashboard/agents/${agent.id}`}
-        className="mt-auto inline-flex items-center gap-1 self-start rounded-md border border-[var(--allura-gray-200)] bg-[var(--allura-gray-100)] px-3 py-1.5 text-xs font-medium text-[var(--dashboard-text-primary)] transition-colors hover:bg-[var(--allura-gray-200)]"
-      >
-        Configure
-        <ChevronRight className="h-3 w-3" aria-hidden="true" />
-      </Link>
     </article>
   )
 }
 
-// ── Skeleton Cards ───────────────────────────────────────────────────────────
-
-function SkeletonCards() {
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div
-          key={i}
-          className="flex flex-col gap-3 rounded-xl border border-[var(--allura-gray-200)] p-4"
-        >
-          <div className="flex items-start gap-3">
-            <Skeleton className="h-10 w-10 rounded-md" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-3/4 rounded" />
-              <Skeleton className="h-3 w-1/2 rounded" />
-            </div>
-          </div>
-          <Skeleton className="h-8 w-full rounded" />
-          <Skeleton className="h-3 w-1/3 rounded" />
-          <Skeleton className="h-7 w-24 rounded-md" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── Page ─────────────────────────────────────────────────────────────────────
-
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<Agent[] | null>(null)
-  const [search, setSearch] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [state, setState] = useState<DashboardResult<{ nodes: GraphNode[]; edges: GraphEdge[] }> | null>(null)
+  const emptyState = buildDashboardRouteState("agents")
+  const errorState = buildDashboardRouteState("agents", { kind: "degraded", reason: state?.error ?? state?.warnings?.[0]?.message ?? undefined })
 
   useEffect(() => {
-    fetch("/api/agents")
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json() as Promise<Agent[]>
-      })
-      .then(setAgents)
-      .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Failed to load agents")
-        setAgents([])
-      })
+    loadGraphNodes("agent").then(setState)
   }, [])
 
-  const filtered =
-    agents?.filter((a) =>
-      a.name.toLowerCase().includes(search.toLowerCase())
-    ) ?? []
+  const metrics = useMemo(() => {
+    if (!state?.data) return []
+    return buildMetrics(state.data.nodes, state.data.edges)
+  }, [state])
+
+  if (!state) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Agents</h1>
+          <p className="text-sm text-[var(--dashboard-text-secondary)]">Loading...</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (state.error || state.degraded) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Agents</h1>
+        </div>
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-sm font-medium text-red-700">{errorState.title}</p>
+          <p className="mt-2 text-sm text-red-600">{errorState.description}</p>
+          <Button variant="outline" className="mt-4" onClick={() => loadGraphNodes("agent").then(setState)}>
+            Retry
+          </Button>
+          <Button asChild variant="outline" className="mt-4 ml-2">
+            <Link href={errorState.actionHref ?? "/dashboard/health"}>{errorState.actionLabel}</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const { nodes, edges } = state.data ?? { nodes: [], edges: [] }
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Agents</h1>
-        <p className="text-sm text-[var(--dashboard-text-secondary)]">
-          Configure and manage your AI agents
-        </p>
+        <p className="text-sm text-[var(--dashboard-text-secondary)]">Active memory agents and their status.</p>
       </div>
 
-      {/* Search */}
-      <input
-        type="search"
-        placeholder="Search agents..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full max-w-sm rounded-lg border border-[var(--allura-gray-200)] bg-[var(--allura-cream)] px-3 py-2 text-sm text-[var(--dashboard-text-primary)] placeholder:text-[var(--allura-gray-500)] focus:outline-none focus:ring-2 focus:ring-[var(--allura-blue)]"
-      />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {metrics.map((m) => (
+          <MetricSummaryCard key={m.label} {...m} variant="metric" />
+        ))}
+      </div>
 
-      {/* Error banner */}
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-600">{error}</p>
+      {state.warnings.length > 0 && (
+        <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+          <ul className="space-y-1">
+            {state.warnings.map((w, i) => (
+              <li key={i} className="text-sm text-yellow-700">{w.message || String(w)}</li>
+            ))}
+          </ul>
         </div>
       )}
 
-      {/* Grid */}
-      {agents === null ? (
-        <SkeletonCards />
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-16 text-center">
-          <Bot className="h-8 w-8 text-[var(--allura-gray-500)]" aria-hidden="true" />
-          <p className="text-sm text-[var(--dashboard-text-secondary)]">No agents found</p>
+      {nodes.length === 0 ? (
+        <div className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-12 text-center">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-xl bg-[var(--dashboard-surface-muted)] text-[var(--dashboard-text-muted)]">
+            <Users className="size-7" aria-hidden="true" />
+          </div>
+          <h3 className="mt-4 text-sm font-semibold text-[var(--dashboard-text-primary)]">{emptyState.title}</h3>
+          <p className="mt-2 max-w-md mx-auto text-xs text-[var(--dashboard-text-secondary)] leading-5">
+            {emptyState.description} Agents are discovered from the <strong className="text-[var(--dashboard-text-primary)]">Neo4j semantic graph</strong> when they create memories, perform actions, or are explicitly registered.
+          </p>
+
+          <div className="mt-5 grid gap-3 max-w-sm mx-auto text-left">
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-muted)] p-3">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--dashboard-cta-primary)]/10 text-[var(--dashboard-cta-primary)] text-xs font-bold">1</div>
+              <div>
+                <p className="text-xs font-medium text-[var(--dashboard-text-primary)]">Create your first memory</p>
+                <p className="text-[11px] text-[var(--dashboard-text-secondary)] mt-0.5">Use the builder to add a memory with an agent attribution — it auto-registers in the graph.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-muted)] p-3">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--dashboard-cta-primary)]/10 text-[var(--dashboard-cta-primary)] text-xs font-bold">2</div>
+              <div>
+                <p className="text-xs font-medium text-[var(--dashboard-text-primary)]">Run onboarding script</p>
+                <p className="text-[11px] text-[var(--dashboard-text-secondary)] mt-0.5">Execute <code className="rounded bg-[var(--dashboard-surface)] px-1 py-0.5 text-[10px]">scripts/openclaw-onboard.ts</code> to seed agents and connections.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--dashboard-border)] bg-[var(--dashboard-surface-muted)] p-3">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--dashboard-cta-primary)]/10 text-[var(--dashboard-cta-primary)] text-xs font-bold">3</div>
+              <div>
+                <p className="text-xs font-medium text-[var(--dashboard-text-primary)]">Check graph health</p>
+                <p className="text-[11px] text-[var(--dashboard-text-secondary)] mt-0.5">Verify Neo4j is connected and the <code className="rounded bg-[var(--dashboard-surface)] px-1 py-0.5 text-[10px]">agent</code> node type exists in the semantic store.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard/health" className="inline-flex items-center gap-1.5">
+                <Router className="size-3.5" aria-hidden="true" />
+                Check health
+              </Link>
+            </Button>
+            <Button asChild size="sm" className="bg-[var(--dashboard-cta-primary)] text-white hover:bg-[var(--allura-orange-hover)]">
+              <Link href="/dashboard/builder" className="inline-flex items-center gap-1.5">
+                <PlusCircle className="size-3.5" aria-hidden="true" />
+                {emptyState.actionLabel}
+              </Link>
+            </Button>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
-          ))}
+        <div className="grid gap-4 md:grid-cols-2">
+          {nodes.map((node) => {
+            const edgeCount = edges.filter(
+              (e) => e.source === node.id || e.target === node.id
+            ).length
+            return <AgentCard key={node.id} node={node} connectionCount={edgeCount} />
+          })}
         </div>
       )}
     </div>
