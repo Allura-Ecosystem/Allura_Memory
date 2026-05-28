@@ -109,6 +109,11 @@ export interface DashboardOverview {
   warnings: DashboardWarning[]
 }
 
+export interface DashboardProjectSummary {
+  project: string
+  eventCount: number
+}
+
 export interface DashboardHealthMetrics {
   timestamp: string
   queue: {

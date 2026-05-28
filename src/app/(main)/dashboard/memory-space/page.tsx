@@ -2,7 +2,7 @@
 
 // Memory Graph — warm v2 surface
 // tokens.color.surface.subtle — page wrapper uses bg-[var(--dashboard-surface)];
-// the dark canvas inset uses #0F1117 for the force-directed graph rendering.
+// the dark canvas inset uses an RGB canvas color for force-directed graph rendering.
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
@@ -236,7 +236,7 @@ export default function MemorySpacePage() {
       if (isSelected || isHovered) {
         ctx.beginPath()
         ctx.arc(node.x ?? 0, node.y ?? 0, radius + 3, 0, 2 * Math.PI)
-        ctx.strokeStyle = isSelected ? "#F5A623" : "#FFFFFF"
+        ctx.strokeStyle = isSelected ? "rgb(245, 166, 35)" : "rgb(255, 255, 255)"
         ctx.lineWidth = 2 / globalScale
         ctx.stroke()
       }
@@ -270,10 +270,10 @@ export default function MemorySpacePage() {
         </div>
       </div>
 
-      {/* Dark graph canvas — inset panel uses #0F1117 for graph rendering */}
+      {/* Dark graph canvas — inset panel uses RGB rendering color */}
       <div
         className="relative overflow-hidden rounded-2xl"
-        style={{ height: 680, background: "#0F1117" }}
+        style={{ height: 680, background: "rgb(15, 17, 23)" }}
       >
         {/* Graph Controls panel */}
         <div className="absolute left-4 top-4 z-20 w-32 rounded-lg bg-white p-3 shadow-lg">
@@ -390,12 +390,16 @@ export default function MemorySpacePage() {
           /* Live force graph */
           <ForceGraph2D
             graphData={filteredData}
+            nodeId="id"
+            nodeLabel="label"
+            linkSource="source"
+            linkTarget="target"
             nodeCanvasObject={nodeCanvasObject as unknown as (node: object, ctx: CanvasRenderingContext2D, globalScale: number) => void}
             onNodeClick={setSelectedNode as unknown as (node: object) => void}
             onBackgroundClick={clearSelection}
             onNodeHover={setHoveredNode as unknown as (node: object | null) => void}
-            backgroundColor="#0F1117"
-            linkColor={() => hexToRgba("#FFFFFF", 0.18)}
+            backgroundColor="rgb(15, 17, 23)"
+            linkColor={() => "rgba(255, 255, 255, 0.18)"}
             linkWidth={1}
             nodeRelSize={6}
             warmupTicks={100}

@@ -360,7 +360,7 @@ function StatCards({ metrics }: { metrics: Metric[] }) {
                 <p className="mt-1.5 text-2xl font-bold leading-none text-[var(--dashboard-text-primary)]">
                   {typeof slot.value === "number" ? slot.value.toLocaleString() : slot.value}
                 </p>
-                <p className="mt-1.5 flex items-center gap-1 text-[11px] text-[#22C55E]">
+                <p className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--dashboard-cta-approval)]">
                   <TrendingUp className="size-3 shrink-0" aria-hidden="true" />
                   {slot.description}
                 </p>
@@ -464,11 +464,11 @@ function SystemStatusRows({
               className={cn(
                 "size-2 rounded-full",
                 row.status === "online"
-                  ? "bg-[#22C55E]"
+                  ? "bg-[var(--dashboard-cta-approval)]"
                   : row.status === "processing"
-                  ? "bg-[#F59E0B]"
+                  ? "bg-[var(--dashboard-warning)]"
                   : row.status === "degraded"
-                  ? "bg-[#F59E0B]"
+                  ? "bg-[var(--dashboard-warning)]"
                   : row.status === "offline"
                   ? "bg-red-500"
                   : "bg-[var(--dashboard-text-muted)]",
@@ -478,11 +478,11 @@ function SystemStatusRows({
             <span
               className={cn(
                 row.status === "online"
-                  ? "text-[#22C55E]"
+                  ? "text-[var(--dashboard-cta-approval)]"
                   : row.status === "processing"
-                  ? "text-[#F59E0B]"
+                  ? "text-[var(--dashboard-warning)]"
                   : row.status === "degraded"
-                  ? "text-[#F59E0B]"
+                  ? "text-[var(--dashboard-warning)]"
                   : row.status === "offline"
                   ? "text-red-500"
                   : "text-[var(--dashboard-text-muted)]",

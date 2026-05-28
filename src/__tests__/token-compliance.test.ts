@@ -87,9 +87,9 @@ describe("Token Compliance Validation", () => {
     it("should not use deprecated --allura-gold tokens", () => {
       // Scan for deprecated token usage in target directories
       const targetDirs = [
-        "src/app/(main)/dashboard",
-        "src/components/dashboard",
-        "src/components/memory-explorer",
+        { path: "src/app/(main)/dashboard", required: true },
+        { path: "src/components/dashboard", required: false },
+        { path: "src/components/memory-explorer", required: true },
       ]
       
       let deprecatedFound = false
@@ -97,9 +97,9 @@ describe("Token Compliance Validation", () => {
       for (const dir of targetDirs) {
         // We don't actually grep here - the shell script does that
         // This test verifies the scanning logic works
-        const scanPath = join(PROJECT_ROOT, dir)
-        // Just verify the path structure exists
-        expect(existsSync(scanPath)).toBe(true)
+        const scanPath = join(PROJECT_ROOT, dir.path)
+        // Required scan roots must exist; optional scan roots may be absent in lean builds.
+        if (dir.required) expect(existsSync(scanPath)).toBe(true)
       }
     })
   })

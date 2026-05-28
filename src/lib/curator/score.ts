@@ -43,7 +43,7 @@ export interface ScoringContext {
 // ── Validation ─────────────────────────────────────────────────────────────
 
 const ScoringContextSchema = z.object({
-  content: z.string().min(5).max(2000),
+  content: z.string().min(5),
   tiers: z
     .tuple([z.number().min(0).max(1), z.number().min(0).max(1), z.number().min(0).max(1)])
     .default([0.6, 0.75, 0.85]),

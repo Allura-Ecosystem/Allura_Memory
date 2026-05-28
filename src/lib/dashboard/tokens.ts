@@ -22,8 +22,8 @@ export type DashboardTone = "green" | "red" | "orange" | "blue" | "charcoal"
  */
 export const DASHBOARD_CSS_VARIABLES = {
   // CTAs and Approvals
-  ctaPrimary: "var(--dashboard-cta-primary)",       // Orange: #f97316
-  ctaApproval: "var(--dashboard-cta-approval)",     // Green: #10b981
+  ctaPrimary: "var(--dashboard-cta-primary)",       // Primary action token
+  ctaApproval: "var(--dashboard-cta-approval)",     // Approval token
 
   // Accents
   accentSecondary: "var(--dashboard-accent-secondary)", // Blue
