@@ -11,6 +11,8 @@ import {
   Bot,
   FolderOpen,
   Zap,
+  ClipboardList,
+  GitFork,
   Settings2,
 } from "lucide-react"
 
@@ -28,8 +30,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Evidence",     href: "/dashboard/evidence",  icon: FileSearch },
   { label: "Agents",       href: "/dashboard/agents",    icon: Bot },
   { label: "Projects",     href: "/dashboard/projects",  icon: FolderOpen },
-  { label: "Skills",       href: "/dashboard/skills",    icon: Zap },
-  { label: "Settings",     href: "/dashboard/settings",  icon: Settings2 },
+  { label: "Skills",        href: "/dashboard/skills",        icon: Zap },
+  { label: "Logs",          href: "/dashboard/audit",         icon: ClipboardList },
+  { label: "Memory Space",  href: "/dashboard/memory-space",  icon: GitFork },
+  { label: "Settings",      href: "/dashboard/settings",      icon: Settings2 },
 ]
 
 export function Sidebar(): React.ReactElement {
