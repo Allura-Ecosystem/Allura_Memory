@@ -1,212 +1,189 @@
 "use client"
 
-import { Activity, Brain, Lightbulb, Users } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { Bot, ChevronRight } from "lucide-react"
+import Link from "next/link"
+import { useEffect, useState } from "react"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { loadGraphNodes } from "@/lib/dashboard/queries"
-import type { DashboardResult, GraphEdge, GraphNode } from "@/lib/dashboard/types"
-import { cn } from "@/lib/utils"
+import type { Agent } from "@/app/api/agents/route"
 
-function confidencePercent(node: GraphNode) {
-  const c = Number(node.metadata?.confidence ?? node.metadata?.score ?? 0)
-  if (!Number.isFinite(c)) return "—"
-  return `${Math.round(c * 100)}%`
+// ── Status helpers ──────────────────────────────────────────────────────────
+
+// Data-vis exception: status dot colors are semantic indicators, not brand tokens.
+const STATUS_COLOR: Record<Agent["status"], string> = {
+  active: "#16a34a",
+  idle: "#b45309",
+  offline: "#6b7280",
 }
 
-interface AgentMetric {
-  label: string
-  value: string
-  tone: "blue" | "orange" | "green" | "charcoal"
-  icon: React.ComponentType<{ className?: string }>
+const STATUS_LABEL: Record<Agent["status"], string> = {
+  active: "Active",
+  idle: "Idle",
+  offline: "Offline",
 }
 
-function buildMetrics(nodes: GraphNode[], _edges: GraphEdge[]): AgentMetric[] {
-  const total = nodes.length
-  const active = nodes.filter((n) => {
-    const s = String(n.metadata?.status ?? "").toLowerCase()
-    return s === "active" || s === "online"
-  }).length
-  const pending = nodes.filter((n) => {
-    const s = String(n.metadata?.status ?? "").toLowerCase()
-    return s === "pending" || s === "proposed"
-  }).length
-  const avgConfidence =
-    total > 0
-      ? (
-          nodes.reduce((sum, n) => {
-            const c = Number(n.metadata?.confidence ?? n.metadata?.score ?? 0)
-            return sum + (Number.isFinite(c) ? c : 0)
-          }, 0) / total
-        ).toFixed(0)
-      : "0"
-  return [
-    { label: "Total Agents", value: String(total), tone: "blue", icon: Users },
-    { label: "Active", value: String(active), tone: "green", icon: Activity },
-    { label: "Pending", value: String(pending), tone: "orange", icon: Lightbulb },
-    { label: "Avg Confidence", value: `${avgConfidence}%`, tone: "charcoal", icon: Brain },
-  ]
+function formatLastActive(iso: string | null): string {
+  if (!iso) return "Never"
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 1) return "Just now"
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  return `${days}d ago`
 }
 
-function AgentCard({
-  node,
-  connectionCount,
-}: {
-  node: GraphNode
-  connectionCount: number
-}) {
-  const tone =
-    (node.metadata?.status as string | undefined)?.toLowerCase() === "active"
-      ? "green"
-      : "orange"
+function initials(name: string): string {
+  const words = name.trim().split(/\s+/)
+  if (words.length >= 2) return (words[0]![0]! + words[1]![0]!).toUpperCase()
+  return name.slice(0, 2).toUpperCase()
+}
+
+// ── Agent Card ───────────────────────────────────────────────────────────────
+
+function AgentCard({ agent }: { agent: Agent }) {
+  const dotColor = STATUS_COLOR[agent.status]
+
   return (
-    <article className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-lg text-white",
-            tone === "green" ? "bg-[var(--dashboard-cta-approval)]" : "bg-[var(--dashboard-cta-primary)]"
-          )}>
-            <span className="text-xs font-bold tracking-tight">
-              {(node.label ?? "A").charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-[var(--dashboard-text-primary)]">{node.label}</span>
-            <span className="text-xs text-[var(--dashboard-text-secondary)]">{node.type}</span>
-          </div>
+    <article className="flex flex-col gap-3 rounded-xl border border-[var(--allura-gray-200)] bg-[var(--allura-cream)] p-4">
+      {/* Header: avatar + name + model */}
+      <div className="flex items-start gap-3">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--allura-blue)] text-sm font-bold text-white"
+          aria-hidden="true"
+        >
+          {initials(agent.name)}
         </div>
-        <span className={cn(
-          "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
-          tone === "green"
-            ? "border-green-500/20 bg-green-500/10 text-green-600"
-            : "border-orange-500/20 bg-orange-500/10 text-orange-600"
-        )}>
-          {String(node.metadata?.status ?? "unknown")}
-        </span>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-lg border border-[var(--dashboard-border)] p-3">
-          <span className="text-xs text-[var(--dashboard-text-muted)]">Confidence</span>
-          <p className="mt-1 font-semibold text-[var(--dashboard-text-primary)]">{confidencePercent(node)}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--dashboard-border)] p-3">
-          <span className="text-xs text-[var(--dashboard-text-muted)]">Connections</span>
-          <p className="mt-1 font-semibold text-[var(--dashboard-text-primary)]">{connectionCount}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-[var(--dashboard-text-primary)]">
+            {agent.name}
+          </p>
+          <p className="truncate text-xs text-[var(--dashboard-text-secondary)]">
+            {agent.model || "—"}
+          </p>
         </div>
       </div>
+
+      {/* Status dot + description */}
+      <div className="flex items-start gap-2">
+        <span
+          className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full"
+          style={{ backgroundColor: dotColor }}
+          aria-label={STATUS_LABEL[agent.status]}
+        />
+        <p className="line-clamp-2 text-xs text-[var(--dashboard-text-secondary)]">
+          {agent.description || "No description available."}
+        </p>
+      </div>
+
+      {/* Last active */}
+      <p className="text-xs text-[var(--allura-gray-500)]">
+        Last active: {formatLastActive(agent.lastActive)}
+      </p>
+
+      {/* Configure link */}
+      <Link
+        href={`/dashboard/agents/${agent.id}`}
+        className="mt-auto inline-flex items-center gap-1 self-start rounded-md border border-[var(--allura-gray-200)] bg-[var(--allura-gray-100)] px-3 py-1.5 text-xs font-medium text-[var(--dashboard-text-primary)] transition-colors hover:bg-[var(--allura-gray-200)]"
+      >
+        Configure
+        <ChevronRight className="h-3 w-3" aria-hidden="true" />
+      </Link>
     </article>
   )
 }
 
-function MetricCard({ label, value, tone, icon: Icon }: AgentMetric) {
-  const toneClass =
-    tone === "green"
-      ? "text-green-600"
-      : tone === "orange"
-        ? "text-orange-600"
-        : tone === "blue"
-          ? "text-[var(--allura-blue)]"
-          : "text-[var(--dashboard-text-primary)]"
+// ── Skeleton Cards ───────────────────────────────────────────────────────────
+
+function SkeletonCards() {
   return (
-    <Card className="border-[var(--dashboard-border)] bg-[var(--dashboard-surface)]">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-medium text-[var(--dashboard-text-muted)]">{label}</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex items-center gap-2">
-          <Icon className={cn("size-4", toneClass)} />
-          <span className={cn("text-2xl font-bold", toneClass)}>{value}</span>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex flex-col gap-3 rounded-xl border border-[var(--allura-gray-200)] p-4"
+        >
+          <div className="flex items-start gap-3">
+            <Skeleton className="h-10 w-10 rounded-md" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-3/4 rounded" />
+              <Skeleton className="h-3 w-1/2 rounded" />
+            </div>
+          </div>
+          <Skeleton className="h-8 w-full rounded" />
+          <Skeleton className="h-3 w-1/3 rounded" />
+          <Skeleton className="h-7 w-24 rounded-md" />
         </div>
-      </CardContent>
-    </Card>
+      ))}
+    </div>
   )
 }
 
+// ── Page ─────────────────────────────────────────────────────────────────────
+
 export default function AgentsPage() {
-  const [state, setState] = useState<DashboardResult<{ nodes: GraphNode[]; edges: GraphEdge[] }> | null>(null)
+  const [agents, setAgents] = useState<Agent[] | null>(null)
+  const [search, setSearch] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadGraphNodes("agent").then(setState)
+    fetch("/api/agents")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json() as Promise<Agent[]>
+      })
+      .then(setAgents)
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Failed to load agents")
+        setAgents([])
+      })
   }, [])
 
-  const metrics = useMemo(() => {
-    if (!state?.data) return []
-    return buildMetrics(state.data.nodes, state.data.edges)
-  }, [state])
-
-  if (!state) {
-    return (
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Agents</h1>
-          <p className="text-sm text-[var(--dashboard-text-secondary)]">Loading...</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-xl" />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (state.error) {
-    return (
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Agents</h1>
-        </div>
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-          <p className="text-sm text-red-600">{state.error}</p>
-          <Button variant="outline" className="mt-4" onClick={() => loadGraphNodes("agent").then(setState)}>
-            Retry
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  const { nodes, edges } = state.data ?? { nodes: [], edges: [] }
+  const filtered =
+    agents?.filter((a) =>
+      a.name.toLowerCase().includes(search.toLowerCase())
+    ) ?? []
 
   return (
     <div className="space-y-6">
+      {/* Page header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold text-[var(--dashboard-text-primary)]">Agents</h1>
-        <p className="text-sm text-[var(--dashboard-text-secondary)]">Active memory agents and their status.</p>
+        <p className="text-sm text-[var(--dashboard-text-secondary)]">
+          Configure and manage your AI agents
+        </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((m) => (
-          <MetricCard key={m.label} {...m} />
-        ))}
-      </div>
+      {/* Search */}
+      <input
+        type="search"
+        placeholder="Search agents..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full max-w-sm rounded-lg border border-[var(--allura-gray-200)] bg-[var(--allura-cream)] px-3 py-2 text-sm text-[var(--dashboard-text-primary)] placeholder:text-[var(--allura-gray-500)] focus:outline-none focus:ring-2 focus:ring-[var(--allura-blue)]"
+      />
 
-      {state.warnings.length > 0 && (
-        <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
-          <ul className="space-y-1">
-            {state.warnings.map((w, i) => (
-              <li key={i} className="text-sm text-yellow-700">{w.message || String(w)}</li>
-            ))}
-          </ul>
+      {/* Error banner */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
 
-      {nodes.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-12 text-center">
-          <p className="text-sm font-medium text-[var(--dashboard-text-primary)]">No agents found</p>
-          <p className="mt-2 text-xs text-[var(--dashboard-text-secondary)]">No agents are active in this memory space.</p>
+      {/* Grid */}
+      {agents === null ? (
+        <SkeletonCards />
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <Bot className="h-8 w-8 text-[var(--allura-gray-500)]" aria-hidden="true" />
+          <p className="text-sm text-[var(--dashboard-text-secondary)]">No agents found</p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {nodes.map((node) => {
-            const edgeCount = edges.filter(
-              (e) => e.source === node.id || e.target === node.id
-            ).length
-            return <AgentCard key={node.id} node={node} connectionCount={edgeCount} />
-          })}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((agent) => (
+            <AgentCard key={agent.id} agent={agent} />
+          ))}
         </div>
       )}
     </div>
