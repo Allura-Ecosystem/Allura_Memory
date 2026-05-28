@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Folder,
   Network,
+  Scale,
   Settings,
   Users,
   type LucideIcon,
@@ -68,6 +69,14 @@ export const sidebarItems: NavGroup[] = [
           { title: "Settings", url: "/dashboard/settings" },
           { title: "Health", url: "/dashboard/health", icon: Activity },
           { title: "Audit", url: "/dashboard/audit", icon: BookOpen },
+        ],
+      },
+      {
+        title: "Governance",
+        url: "/dashboard/governance",
+        icon: Scale,
+        subItems: [
+          { title: "Brand Rules", url: "/dashboard/governance" },
         ],
       },
     ],
