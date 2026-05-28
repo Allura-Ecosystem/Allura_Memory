@@ -5,7 +5,7 @@
  * Supports both JSON and CSV response formats.
  *
  * Query Parameters:
- * - group_id (required): Tenant isolation identifier (format: allura-*)
+ * - group_id: Tenant isolation identifier (format: allura-*); defaults to canonical dashboard scope
  * - format: Response format — "json" (default) or "csv"
  * - from: ISO 8601 start date filter (optional)
  * - to: ISO 8601 end date filter (optional)
@@ -21,6 +21,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { type AuditEventRecord, auditQuerySchema, queryAuditEvents, streamAuditEvents } from "@/lib/audit/query-builder"
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
 import { createCsvReadableStream, createCsvStream, type CsvRow, escapeCsvValue } from "@/lib/csv/serialize"
+import { DEFAULT_GROUP_ID } from "@/lib/defaults/scope"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -124,16 +125,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url)
 
-    // ── Validate group_id (required, tenant isolation) ──
-    const groupIdParam = searchParams.get("group_id")
-    if (!groupIdParam) {
-      return NextResponse.json(
-        {
-          error: "group_id is required. Provide a valid tenant identifier (format: allura-*)",
-        },
-        { status: 400 }
-      )
-    }
+    // ── Validate group_id (tenant isolation) ──
+    const groupIdParam = searchParams.get("group_id") ?? DEFAULT_GROUP_ID
 
     let group_id: string
     try {

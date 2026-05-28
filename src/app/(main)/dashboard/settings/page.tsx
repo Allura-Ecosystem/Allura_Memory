@@ -442,7 +442,9 @@ function GeneralTab() {
 function PlaceholderTab({ name }: { name: string }) {
   return (
     <div className="rounded-xl border border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] p-6">
-      <p className="text-sm text-[var(--dashboard-text-secondary)]">{name} settings — coming soon.</p>
+      <p className="text-sm text-[var(--dashboard-text-secondary)]">
+        {name} settings are governed by the current Allura policy baseline and will be exposed here after the controls are approved.
+      </p>
     </div>
   )
 }

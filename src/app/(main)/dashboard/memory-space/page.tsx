@@ -230,6 +230,10 @@ export default function MemorySpacePage() {
         ) : (
           <ForceGraph2D
             graphData={filteredData}
+            nodeId="id"
+            nodeLabel="label"
+            linkSource="source"
+            linkTarget="target"
             nodeCanvasObject={nodeCanvasObject as unknown as (node: object, ctx: CanvasRenderingContext2D, globalScale: number) => void}
             onNodeClick={setSelectedNode as unknown as (node: object) => void}
             onBackgroundClick={clearSelection}

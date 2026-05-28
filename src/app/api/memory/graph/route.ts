@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { forbiddenResponse, getAuthUser, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
 import { readTransaction } from "@/lib/neo4j/connection"
+import { getPool } from "@/lib/postgres/connection"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 
 /**
@@ -27,6 +28,91 @@ import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-
  */
 
 const EDGE_LABELS = new Set(["performed", "resulted_in", "generated", "applies_to", "connected_to", "caused_by"])
+
+type FallbackEventRow = {
+  id: string | number
+  event_type: string
+  agent_id: string
+  status: string
+  created_at: Date | string
+  project: string | null
+}
+
+async function loadPostgresEventGraph(groupId: string, statsOnly: boolean) {
+  const pool = getPool()
+  const result = await pool.query<FallbackEventRow>(
+    `SELECT id,
+            event_type,
+            agent_id,
+            status,
+            created_at,
+            COALESCE(NULLIF(btrim(metadata->>'project'), ''), NULLIF(btrim(metadata->>'project_id'), '')) AS project
+     FROM events
+     WHERE group_id = $1
+     ORDER BY created_at DESC
+     LIMIT 60`,
+    [groupId]
+  )
+
+  const agentIds = Array.from(new Set(result.rows.map((row) => row.agent_id).filter(Boolean)))
+  const projectIds = Array.from(new Set(result.rows.map((row) => row.project).filter((project): project is string => Boolean(project))))
+
+  const nodes = statsOnly ? [] : [
+    ...agentIds.map((agentId) => ({
+      id: `agent:${agentId}`,
+      label: agentId,
+      type: "agent",
+      metadata: { group_id: groupId },
+    })),
+    ...projectIds.map((project) => ({
+      id: `project:${project}`,
+      label: project,
+      type: "project",
+      metadata: { group_id: groupId },
+    })),
+    ...result.rows.map((row) => ({
+      id: `event:${row.id}`,
+      label: row.event_type,
+      type: "event",
+      metadata: {
+        group_id: groupId,
+        status: row.status,
+        agent_id: row.agent_id,
+        project: row.project,
+        created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
+      },
+    })),
+  ]
+
+  const eventEdges = result.rows.flatMap((row) => {
+    const edges: Array<{ id: string; source: string; target: string; label: ReturnType<typeof edgeLabel>; metadata: Record<string, unknown> }> = [{
+      id: `agent:${row.agent_id}->event:${row.id}`,
+      source: `agent:${row.agent_id}`,
+      target: `event:${row.id}`,
+      label: "performed" as const,
+      metadata: { source: "postgres_events" },
+    }]
+
+    if (row.project) {
+      edges.push({
+        id: `event:${row.id}->project:${row.project}`,
+        source: `event:${row.id}`,
+        target: `project:${row.project}`,
+        label: "applies_to" as const,
+        metadata: { source: "postgres_events" },
+      })
+    }
+
+    return edges
+  })
+
+  return {
+    nodes,
+    edges: statsOnly ? [] : eventEdges,
+    node_count: agentIds.length + projectIds.length + result.rows.length,
+    total_edges: eventEdges.length,
+  }
+}
 
 function nodeType(labels: string[]): string {
   const joined = labels.join(" ").toLowerCase()
@@ -174,6 +260,23 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     // Log the error for debugging
     console.error("Failed to fetch memory graph:", error)
+
+    try {
+      const fallback = await loadPostgresEventGraph(groupId, statsOnly)
+      const response = NextResponse.json({
+        ...fallback,
+        degraded: true,
+        source: "postgres_events",
+        warning: "Neo4j graph is unavailable; returning scoped PostgreSQL event graph fallback.",
+      })
+      const warningMsg = error instanceof Error
+        ? `299 Allura "${error.message.replace(/"/g, "'")}; postgres_event_graph_fallback"`
+        : '299 Allura "neo4j_unavailable; postgres_event_graph_fallback"'
+      response.headers.set("Warning", warningMsg)
+      return response
+    } catch (fallbackError) {
+      console.error("Failed to fetch PostgreSQL event graph fallback:", fallbackError)
+    }
 
     // Return 200 with degraded=true and empty data instead of 500
     // This is the key change: degraded response instead of server error
