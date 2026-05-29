@@ -322,7 +322,7 @@ export default function MemoryLineagePage() {
             size="sm"
             onClick={loadTraces}
             disabled={loading}
-            className="border-[--durham-border-light] bg-white/90 text-[--durham-rich-navy] hover:bg-[--durham-hover-amber-bg]"
+            className="min-h-[44px] border-[--durham-border-light] bg-white/90 text-[--durham-rich-navy] hover:bg-[--durham-hover-amber-bg]"
           >
             <RefreshCw className={`mr-1 size-3 ${loading ? "animate-spin" : ""}`} />
             Refresh

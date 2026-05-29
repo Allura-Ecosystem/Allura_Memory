@@ -74,7 +74,7 @@ export function Sidebar(): React.ReactElement {
               key={item.href}
               href={item.href}
               className={[
-                "flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors",
+                "flex min-h-[44px] w-full items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors",
                 active
                   ? "bg-[var(--allura-blue)] text-white"
                   : "text-[var(--allura-gray-500)] hover:bg-[var(--allura-gray-100)] hover:text-[var(--dashboard-text-primary)]",
