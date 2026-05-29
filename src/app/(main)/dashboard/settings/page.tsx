@@ -259,9 +259,9 @@ function StatusBadge({ status }: { status: RuleStatus }) {
     pending: {
       label: "Pending",
       style: {
-        backgroundColor: "color-mix(in srgb, var(--allura-gold) 10%, transparent)",
-        color: "var(--allura-gold-text)",
-        borderColor: "color-mix(in srgb, var(--allura-gold) 30%, transparent)",
+        backgroundColor: "var(--tone-gold-bg)",
+        color: "var(--tone-gold-text)",
+        borderColor: "color-mix(in srgb, var(--tone-gold-text) 30%, transparent)",
       },
     },
     "not-checked": {
@@ -285,7 +285,7 @@ function StatusIcon({ status }: { status: RuleStatus }) {
   const colorMap: Record<RuleStatus, string> = {
     compliant: "var(--allura-green)",
     violation: "var(--dashboard-danger)",
-    pending: "var(--allura-gold)",
+    pending: "var(--tone-gold-text)",
     "not-checked": "var(--allura-gray-500)",
   }
   const color = colorMap[status]
@@ -457,7 +457,7 @@ function GovernanceTab() {
     { label: "Total Rules", value: brandRules.length,  icon: Scale,         accent: "var(--allura-gray-500)" },
     { label: "Compliant",   value: counts.compliant,   icon: CheckCircle2,  accent: "var(--allura-green)" },
     { label: "Violations",  value: counts.violation,   icon: XCircle,       accent: "var(--dashboard-danger)" },
-    { label: "Pending",     value: counts.pending,     icon: Clock,         accent: "var(--allura-gold)" },
+    { label: "Pending",     value: counts.pending,     icon: Clock,         accent: "var(--tone-gold-text)" },
   ]
 
   /* Inner tab state for governance detail panels */
@@ -650,9 +650,9 @@ function GovernanceTab() {
                 </TableBody>
               </Table>
             </div>
-            <div className="rounded-lg border p-3 flex items-start gap-2" style={{ borderColor: "color-mix(in srgb, var(--allura-gold) 30%, transparent)", backgroundColor: "color-mix(in srgb, var(--allura-gold) 5%, transparent)" }}>
-              <AlertTriangle className="size-4 shrink-0 mt-0.5" style={{ color: "var(--allura-gold-text)" }} aria-hidden="true" />
-              <p className="text-xs" style={{ color: "var(--allura-gold-text)" }}>
+            <div className="rounded-lg border p-3 flex items-start gap-2" style={{ borderColor: "color-mix(in srgb, var(--tone-gold-text) 30%, transparent)", backgroundColor: "var(--tone-gold-bg)" }}>
+              <AlertTriangle className="size-4 shrink-0 mt-0.5" style={{ color: "var(--tone-gold-text)" }} aria-hidden="true" />
+              <p className="text-xs" style={{ color: "var(--tone-gold-text)" }}>
                 <strong>Critical:</strong> Allura Gold <code className="font-mono">#C89B3C</code> on Cream{" "}
                 <code className="font-mono">#F5F1E6</code> = <strong>2.1:1 — FAILS AA for all text sizes.</strong>{" "}
                 Gold may only be used for decorative borders, icons (with text label), and non-text UI elements.
