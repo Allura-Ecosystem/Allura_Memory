@@ -4,9 +4,11 @@ import {
   Brain,
   CheckCircle2,
   Folder,
+  GitBranch,
   Network,
   Scale,
   Settings,
+  Sparkles,
   Users,
   type LucideIcon,
 } from "lucide-react"
@@ -40,6 +42,7 @@ export const sidebarItems: NavGroup[] = [
       { title: "Decisions", url: "/dashboard/insights", icon: CheckCircle2 },
       { title: "Projects", url: "/dashboard/projects", icon: Folder },
       { title: "Team", url: "/dashboard/agents", icon: Users },
+      { title: "Team Showcase", url: "/dashboard/showcase", icon: Sparkles },
     ],
   },
   {
@@ -69,6 +72,7 @@ export const sidebarItems: NavGroup[] = [
           { title: "Settings", url: "/dashboard/settings" },
           { title: "Health", url: "/dashboard/health", icon: Activity },
           { title: "Audit", url: "/dashboard/audit", icon: BookOpen },
+          { title: "Memory Lineage", url: "/dashboard/lineage", icon: GitBranch },
         ],
       },
       {

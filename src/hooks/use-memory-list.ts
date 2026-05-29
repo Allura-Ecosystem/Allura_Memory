@@ -149,6 +149,10 @@ export function useMemoryList({
   const PAGE_LIMIT = limit
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
+  // Story 2.6: prevent duplicate fetch on mount — the view-change effect owns the
+  // initial load; the search-debounce effect must not fire a redundant fetchMemories()
+  // when searchQuery is still empty on first render.
+  const searchInitializedRef = useRef(false)
 
   // Cleanup on unmount
   useEffect(() => {
@@ -246,7 +250,13 @@ export function useMemoryList({
   }, [searchQuery, groupId, userId, allUsers, fetchMemories])
 
   // FIX BUG-004: debounced real-time search — no Enter key required
+  // Story 2.6: skip the first render when query is empty to avoid a duplicate
+  // fetch — the mount/view-change effect below already handles initial data load.
   useEffect(() => {
+    if (!searchInitializedRef.current) {
+      searchInitializedRef.current = true
+      if (!searchQuery.trim()) return // initial load handled by the view-change effect
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       if (viewStatus !== "active") return // No search in deleted view
