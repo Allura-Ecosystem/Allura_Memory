@@ -1,6 +1,6 @@
 ---
 name: bmad-retrospective
-description: 'Post-epic review to extract lessons and assess success. Use when the user says "run a retrospective" or "lets retro the epic [epic]"'
+description: 'Post-epic review to extract lessons and assess success. Use when the user says "run a retrospective" or "lets retro the epic [epic]". ⚠️ Allura override: For Allura Memory repo work, prefer allura-retrospective which adds Brooks gate, Brain outcome logging, and Notion board update.'
 ---
 
 # Retrospective Workflow

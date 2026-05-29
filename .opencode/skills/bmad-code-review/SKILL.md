@@ -1,6 +1,6 @@
 ---
 name: bmad-code-review
-description: 'Review code changes adversarially using parallel review layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) with structured triage into actionable categories. Use when the user says "run code review" or "review this code"'
+description: 'Review code changes adversarially using parallel review layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) with structured triage into actionable categories. Use when the user says "run code review" or "review this code". ⚠️ Allura override: For Allura Memory repo work, prefer allura-code-review which adds Pike/Fowler review gates, Brain outcome logging, and doc impact checks.'
 ---
 
 # Code Review Workflow

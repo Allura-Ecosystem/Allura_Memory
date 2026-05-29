@@ -1,6 +1,6 @@
 ---
 name: bmad-create-prd
-description: 'Create a PRD from scratch. Use when the user says "lets create a product requirements document" or "I want to create a new PRD"'
+description: 'Create a PRD from scratch. Use when the user says "lets create a product requirements document" or "I want to create a new PRD". ⚠️ Allura override: For Allura Memory repo work, prefer allura-product-intake which adds Jobs intent gate, Brain search, and doc impact check.'
 ---
 
 # PRD Create Workflow

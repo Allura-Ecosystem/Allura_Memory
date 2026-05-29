@@ -41,7 +41,14 @@
 | team-ram-cowork | Brooks | Codex/OpenCode/Claude co-work explanation and role routing | ✅ Yes | party-mode, roundtable | **Keep** — explains and enforces Team RAM perspective workflow across tools |
 | varlock | Hightower | Env var security | ⬜ Overlay | bun-security | **Keep** — secrets management and non-exposure guardrails |
 
-**Total: 38 skills** — 7 Required (core gates), 31 Overlay (project-specific)
+| allura-team-ram | Brooks | Allura workflow governance core | ✅ Yes | allura-memory-skill, team-ram-cowork | **Keep** — mandatory governance layer for all allura-* wrappers |
+| allura-dev-story | Woz | Governed story implementation | ✅ Yes | bmad-dev-story, allura-team-ram | **Keep** — pilot Allura wrapper, gates before bmad-dev-story |
+| allura-code-review | Pike | Governed code review | ⬜ Overlay | bmad-code-review, allura-team-ram | **Keep** — Allura-gated code review |
+| allura-architecture | Brooks | Governed architecture creation | ⬜ Overlay | bmad-create-architecture, allura-team-ram | **Keep** — Allura-gated architecture |
+| allura-product-intake | Jobs | Governed PRD creation | ⬜ Overlay | bmad-create-prd, allura-team-ram | **Keep** — Allura-gated product intake |
+| allura-retrospective | Brooks | Governed retrospective | ⬜ Overlay | bmad-retrospective, allura-team-ram | **Keep** — Allura-gated retrospective |
+
+**Total: 44 skills** — 9 Required (core gates), 35 Overlay (project-specific)
 
 **Deleted / archived:**
 - `systematic-debugging-memory` — archived to `.opencode/archive/skills-2026-05-07/`

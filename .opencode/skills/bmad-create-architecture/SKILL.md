@@ -1,6 +1,6 @@
 ---
 name: bmad-create-architecture
-description: 'Create architecture solution design decisions for AI agent consistency. Use when the user says "lets create architecture" or "create technical architecture" or "create a solution design"'
+description: 'Create architecture solution design decisions for AI agent consistency. Use when the user says "lets create architecture" or "create technical architecture" or "create a solution design". ⚠️ Allura override: For Allura Memory repo work, prefer allura-architecture which adds Brooks gate, Brain search, doc impact check, and ADR logging.'
 ---
 
 # Architecture Workflow

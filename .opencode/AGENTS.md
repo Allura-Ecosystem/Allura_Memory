@@ -144,16 +144,35 @@ Team RAM personas consume OAC context — they do not replace it.
 
 | Owner / Path   | Required skills                                                                 | Optional / routed skills                        | Notes                                                |
 | -------------- | ------------------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------- |
-| All agents     | `allura-memory-skill`                                                           | `systematic-debugging`, `code-review`           | Memory governance is mandatory.                      |
-| Brooks         | `party-mode`, `skill-creator`, `mcp-harness`                                    | `task-creator`, UI/design skills for routing    | Brooks orchestrates; he routes, doesn't hoard.       |
-| Scout          | `allura-memory-skill`, `multi-search`, `perplexica-mcp`, `mcp-docker`           | `context7` via MCP Docker                       | Scout owns Brain/search recon and context discovery. |
-| Woz            | `frontend-craft`, `shadcn`, `task-management`, `varlock`, `code-review`         | `frontend-design` when implementing approved UI | Woz builds with loaded context.                      |
+| All agents     | `allura-memory-skill`, `allura-team-ram`                                        | `systematic-debugging`, `code-review`           | Memory governance and Allura workflow core are mandatory. |
+| Brooks         | `party-mode`, `skill-creator`, `mcp-harness`, `allura-architecture`             | `task-creator`, UI/design skills for routing    | Brooks orchestrates; he routes, doesn't hoard.       |
+| Scout          | `allura-memory-skill`, `allura-team-ram`, `multi-search`, `perplexica-mcp`, `mcp-docker` | `context7` via MCP Docker                       | Scout owns Brain/search recon and context discovery. |
+| Woz            | `allura-dev-story`, `frontend-craft`, `shadcn`, `task-management`, `varlock`, `code-review` | `frontend-design` when implementing approved UI | Woz builds with Allura governance gates.              |
+| Pike           | `allura-code-review`, `code-review`                                              | `allura-team-ram`                               | Pike reviews through Allura-gated review.             |
+| Fowler         | `allura-code-review`, `code-review`                                              | `allura-team-ram`                               | Fowler reviews through Allura-gated review.           |
 | Design/UI path | `frontend-design`, `frontend-craft`, `allura-design`, `huashu-design`, `shadcn` | `allura-memory-skill` for brand/context         | Applies to UI/design agents.                         |
 | Hightower      | `mcp-docker`, `mcp-harness`, `varlock`                                          | `perplexica-mcp` for infra research             | Hightower owns deployability and secrets.            |
 
 ## Execution Rule
 
-**Scout before build. Skills before Ralph. Validate before done.**
+**Scout before build. Skills before Ralph. Validate before done. Allura wrappers before BMad primitives.**
+
+## Allura Wrapper Routing (BMad Demotion)
+
+For Allura Memory repo work, **always route through the `allura-*` wrapper** before invoking the raw `bmad-*` skill. The wrapper enforces governance gates (Scout hydration, doc impact check, Team RAM owner, Brain outcome log).
+
+| BMad Primitive | Allura Wrapper | Preference |
+|----------------|---------------|------------|
+| `bmad-dev-story` | `allura-dev-story` | Allura wrapper preferred |
+| `bmad-code-review` | `allura-code-review` | Allura wrapper preferred |
+| `bmad-create-architecture` | `allura-architecture` | Allura wrapper preferred |
+| `bmad-create-prd` | `allura-product-intake` | Allura wrapper preferred |
+| `bmad-retrospective` | `allura-retrospective` | Allura wrapper preferred |
+| `bmad-party-mode` | `party-mode` / `team-ram-cowork` | Allura-native preferred |
+| `bmad-sprint-status` | `allura-kanban-board` / Notion | Notion source of truth |
+| `bmad-quick-dev` | `allura-dev-story` or direct Woz route | Allura wrapper preferred |
+
+BMad skills are **not deleted**. They remain as generic workflow engines for non-Allura projects. The demotion is project-scoped.
 
 ## Codex Invocation Gate (MANDATORY)
 

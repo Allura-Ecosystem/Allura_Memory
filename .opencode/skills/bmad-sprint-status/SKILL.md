@@ -1,6 +1,6 @@
 ---
 name: bmad-sprint-status
-description: 'Summarize sprint status and surface risks. Use when the user says "check sprint status" or "show sprint status"'
+description: 'Summarize sprint status and surface risks. Use when the user says "check sprint status" or "show sprint status". ⚠️ Allura override: For Allura Memory repo work, prefer allura-kanban-board or Notion as the source of truth for sprint status.'
 ---
 
 # Sprint Status Workflow

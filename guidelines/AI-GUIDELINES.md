@@ -31,6 +31,7 @@
 - [7. Extra Document Prevention Rules](#7-extra-document-prevention-rules)
 - [8. Templates](#8-templates)
 - [9. Review & Maintenance](#9-review--maintenance)
+- [10. Skill & Workflow Integration (BMad / Allura / Team RAM)](#10-skill--workflow-integration-bmad--allura--team-ram)
 
 ---
 
@@ -407,3 +408,65 @@ To start a new document, copy the relevant template and replace all `<!-- placeh
 - AI-disclosure notices are only removed after a full human review sign-off noted in the PR description.
 - Stale documents (last updated > 90 days ago with active code changes) should be flagged in the next team retrospective.
 - Documentation PRs that create extra canonical Markdown documents are rejected unless the seventh-doc gate in [§7](#7-extra-document-prevention-rules) is satisfied.
+
+---
+
+## 10. Skill & Workflow Integration (BMad / Allura / Team RAM)
+
+### Architecture Principle
+
+**Allura decides. Team RAM owns. BMad provides methods. AI-GUIDELINES constrains docs. RuVix validates. Brain remembers.**
+
+BMad skills are **workflow primitives** — reusable method engines for PRD creation, story development, code review, and retrospectives. They are not the operating system. Allura wrapper skills govern *when and how* BMad workflows run for this project.
+
+### Skill Layering
+
+| Layer | Purpose | Examples |
+|-------|---------|----------|
+| **Allura Core** | Governance, memory, routing, validation | `allura-team-ram`, `allura-memory-skill`, `allura-kanban-board` |
+| **Allura Wrappers** | Project-specific gates around BMad methods | `allura-dev-story`, `allura-code-review`, `allura-architecture`, `allura-product-intake`, `allura-retrospective` |
+| **BMad Primitives** | Reusable workflow engines | `bmad-dev-story`, `bmad-code-review`, `bmad-create-prd`, `bmad-create-architecture`, `bmad-retrospective` |
+| **Domain Skills** | Specialized tools | `frontend-craft`, `allura-graph-debug`, `allura-health-observability`, `varlock`, `context7` |
+
+### Routing Rule
+
+For Allura Memory repo work, **always route through the `allura-*` wrapper** before invoking the raw `bmad-*` skill. The wrapper enforces:
+
+1. **Scout hydration** — load local context and search Allura Brain with `group_id=allura-system`
+2. **Documentation impact check** — verify whether the change touches any of the six canonical docs
+3. **Team RAM owner assignment** — assign the correct role (Brooks, Woz, Pike, Fowler, etc.)
+4. **BMad workflow execution** — invoke the underlying method skill
+5. **Notion board update** — update the work item status when relevant
+6. **Validation evidence** — collect test results, review approvals, and proof receipts
+7. **Brain outcome log** — write the result to Allura Brain with `group_id=allura-system`
+
+### BMad Skill Demotion
+
+The following BMad skills are **demoted to generic fallback** for this repo. For Allura Memory work, prefer the matching `allura-*` wrapper:
+
+| BMad Skill | Allura Wrapper | Status |
+|------------|---------------|--------|
+| `bmad-dev-story` | `allura-dev-story` | Preferred: Allura wrapper |
+| `bmad-code-review` | `allura-code-review` | Preferred: Allura wrapper |
+| `bmad-create-architecture` | `allura-architecture` | Preferred: Allura wrapper |
+| `bmad-create-prd` | `allura-product-intake` | Preferred: Allura wrapper |
+| `bmad-retrospective` | `allura-retrospective` | Preferred: Allura wrapper |
+| `bmad-party-mode` | `party-mode` / `team-ram-cowork` | Preferred: Allura-native |
+| `bmad-sprint-status` | `allura-kanban-board` / Notion | Preferred: Notion source of truth |
+| `bmad-sprint-planning` | `allura-kanban-board` / Notion | Preferred: Notion source of truth |
+| `bmad-quick-dev` | `allura-dev-story` or direct Woz route | Preferred: Allura wrapper |
+| `bmad-document-project` | `carloss-guidelines` + Allura docs gate | Preferred: Allura-native |
+
+BMad skills are **not deleted**. They remain available as generic workflow engines for non-Allura projects. The demotion is project-scoped, not global.
+
+### Validation Checklist (per story)
+
+Before marking any story `Done`:
+
+- [ ] Scout context loaded (local files + Allura Brain search)
+- [ ] Documentation impact checked (does this touch any of the six canonical docs?)
+- [ ] Team RAM owner assigned (who reviews? who builds? who validates?)
+- [ ] BMad workflow executed (story spec → implementation → review)
+- [ ] Notion work item updated (status, decision log, evidence links)
+- [ ] Validation evidence collected (tests pass, typecheck clean, review approved)
+- [ ] Brain outcome logged (`allura-brain_memory_add` with `group_id=allura-system`)
