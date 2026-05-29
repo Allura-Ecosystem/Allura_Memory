@@ -43,6 +43,7 @@
     "brooks": {
       "mode": "primary",
       "path": ".opencode/agent/core/brooks.md",
+      "model": "openai/gpt-5.5",
       "permission": {
         "task": "allow",
         "skill": {
@@ -53,6 +54,7 @@
     "jobs": {
       "mode": "primary",
       "path": ".opencode/agent/core/jobs.md",
+      "model": "ollama-cloud/deepseek-v4-pro",
       "permission": {
         "skill": {
           "*": "allow"
@@ -75,6 +77,7 @@
     "woz": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/code/woz.md",
+      "model": "ollama-cloud/qwen3-coder-next",
       "permission": {
         "task": "allow",
         "skill": {
@@ -85,6 +88,7 @@
     "bellard": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/code/bellard.md",
+      "model": "openai/gpt-5.4-mini",
       "permission": {
         "skill": {
           "*": "allow"
@@ -94,6 +98,7 @@
     "carmack": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/code/carmack.md",
+      "model": "openai/gpt-5.4-mini",
       "permission": {
         "skill": {
           "*": "allow"
@@ -103,6 +108,7 @@
     "pike": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/review/pike.md",
+      "model": "openai/gpt-5.4-mini",
       "permission": {
         "skill": {
           "*": "allow"
@@ -112,6 +118,7 @@
     "fowler": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/review/fowler.md",
+      "model": "openai/gpt-5.5",
       "permission": {
         "skill": {
           "*": "allow"
@@ -121,6 +128,7 @@
     "knuth": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/infrastructure/knuth.md",
+      "model": "ollama-cloud/qwen3-coder-next",
       "permission": {
         "skill": {
           "*": "allow"
@@ -130,6 +138,7 @@
     "hightower": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/infrastructure/hightower.md",
+      "model": "openai/gpt-5.5",
       "permission": {
         "skill": {
           "*": "allow"

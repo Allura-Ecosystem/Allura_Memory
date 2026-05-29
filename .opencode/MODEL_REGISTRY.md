@@ -6,8 +6,8 @@ Update this file whenever a model is changed in either runtime
 
 This is the authoritative contract between OpenCode and Claude Code agent equivalents
 
-version: "5.0.0"
-last_updated: "2026-05-05"
+version: "5.1.0"
+last_updated: "2026-05-29"
 
 ## Routing Philosophy
 
@@ -24,15 +24,15 @@ The model stack: openai/gpt-5.5 (orchestration) → ollama-cloud/deepseek-v4-pro
 
 | Agent        | Role           | Primary Model                      | Specialist Override               | Fallback Model                  | Vision         |
 | ------------ | -------------- | ---------------------------------- | --------------------------------- | ------------------------------- | -------------- |
-| brooks       | Orchestrator   | openai/gpt-5.5                     | —                                 | ollama-cloud/deepseek-v4-pro           | Both ✅        |
-| hightower    | Infra          | openai/gpt-5.5                     | —                                 | ollama-cloud/deepseek-v4-pro           | Both ✅        |
-| jobs         | Strategy       | ollama-cloud/deepseek-v4-pro              | —                                 | ollama-cloud/kimi-k2.6                 | Both ✅        |
-| woz          | Code           | openai/gpt-5.4-mini                | ollama-cloud/qwen3-coder-next     | ollama-cloud/qwen3-coder-next   | —              |
+| brooks       | Orchestrator   | openai/gpt-5.5                     | —                                 | ollama-cloud/deepseek-v4-pro    | Both ✅        |
+| hightower    | Infra          | openai/gpt-5.5                     | —                                 | ollama-cloud/deepseek-v4-pro    | Both ✅        |
+| jobs         | Strategy       | ollama-cloud/deepseek-v4-pro       | —                                 | ollama-cloud/kimi-k2.6          | Both ✅        |
+| woz          | Code           | ollama-cloud/qwen3-coder-next      | —                                 | openai/gpt-5.4-mini             | —              |
 | carmack      | Code/Perf      | openai/gpt-5.4-mini                | —                                 | —                               | —              |
 | bellard      | Code/Diag      | openai/gpt-5.4-mini                | —                                 | —                               | —              |
 | fowler       | Code/Refactor  | openai/gpt-5.5                     | —                                 | —                               | —              |
-| knuth        | Code/Data      | ollama-cloud/qwen3-coder-next      | —                                 | —                               | —              |
-| pike         | Code/Interface | openai/gpt-5.4-mini                | —                                 | —                               | —              |
+| knuth        | Code/Data      | ollama-cloud/qwen3-coder-next      | —                                 | openai/gpt-5.4-mini             | —              |
+| pike         | Code/Interface | openai/gpt-5.4-mini                | —                                 | ollama-cloud/deepseek-v4-pro    | —              |
 | scout        | Search/Triage  | openai/gpt-5.4-mini                | —                                 | ollama-cloud/nemotron-3-super   | —              |
 
 ## Routing Logic
@@ -57,10 +57,9 @@ routing:
   - if: agent == KNUTH_DATA_ARCHITECT
     use: ollama-cloud/qwen3-coder-next
 
-  # Tier 2b — Woz temporary fallback route while qwen3-coder-next is unavailable
+  # Tier 2b — Woz builder (coding-native model, restored 2026-05-29)
   - if: agent == WOZ_BUILDER
-    use: openai/gpt-5.4-mini
-    restore_primary_when_healthy: ollama-cloud/qwen3-coder-next
+    use: ollama-cloud/qwen3-coder-next
 
   # Tier 3 — Steady workhorses (mini model, always-on)
   - if: agent in [BELLARD_DIAGNOSTICS_PERF, CARMACK_PERFORMANCE, PIKE_INTERFACE_REVIEW]
@@ -76,18 +75,26 @@ routing:
 
 ```json
 {
-  "model": "ollama-cloud/glm-5.1"
+  "model": "openai/gpt-5.5"
 }
 ```
 
-> All agents without an explicit `model:` field inherit this. Fallback activates on credit exhaustion or API error.
+> All agents without an explicit `model:` field inherit this. Fallback activates on credit exhaustion or API error. NOTE: Previous registry listed `ollama-cloud/glm-5.1` as global default — this was incorrect. The actual opencode.json global default is `openai/gpt-5.5`.
 
-## Agent Frontmatter (per .md file)
+## Agent Frontmatter (per .md file) — Updated 2026-05-29
 
 ```yaml
-# brooks.md / hightower.md / fowler.md
+# brooks.md
 model: openai/gpt-5.5
-fallback_model: ollama-cloud/deepseek-v4-pro   # brooks + hightower only
+fallback_model: ollama-cloud/deepseek-v4-pro
+
+# hightower.md
+model: openai/gpt-5.5
+fallback_model: ollama-cloud/deepseek-v4-pro
+
+# fowler.md
+model: openai/gpt-5.5
+# no fallback (status: active, was previously failed — fixed 2026-05-29)
 
 # jobs.md
 model: ollama-cloud/deepseek-v4-pro
@@ -97,15 +104,21 @@ fallback_model: ollama-cloud/kimi-k2.6
 model: openai/gpt-5.4-mini
 fallback_model: ollama-cloud/nemotron-3-super
 
-# woz.md — temporary fallback route while qwen3-coder-next is unavailable
-model: openai/gpt-5.4-mini
-fallback_model: ollama-cloud/qwen3-coder-next
+# woz.md — restored to qwen3-coder-next (2026-05-29)
+model: ollama-cloud/qwen3-coder-next
+fallback_model: openai/gpt-5.4-mini
 
 # knuth.md
 model: ollama-cloud/qwen3-coder-next
+fallback_model: openai/gpt-5.4-mini
 
-# bellard.md / carmack.md / pike.md
+# bellard.md / carmack.md — aligned to registry (2026-05-29)
 model: openai/gpt-5.4-mini
+# no fallback
+
+# pike.md
+model: openai/gpt-5.4-mini
+fallback_model: ollama-cloud/deepseek-v4-pro
 ```
 
 ## Model Rationale

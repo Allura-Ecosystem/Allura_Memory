@@ -8,7 +8,7 @@ type: specialist
 path: subagents/review
 scope: harness
 platform: Both
-status: failed
+status: active
 model: openai/gpt-5.5
 fallback_model: ollama-cloud/deepseek-v4-pro
 permission:

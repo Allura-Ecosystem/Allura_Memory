@@ -58,7 +58,13 @@ vi.mock("../lib/validation/group-id", () => ({
 }));
 
 vi.mock("../lib/neo4j/connection", () => ({
-  getNeo4jDriver: vi.fn(),
+  getDriver: vi.fn().mockReturnValue({
+    session: vi.fn().mockReturnValue({
+      run: vi.fn().mockResolvedValue({ records: [] }),
+      close: vi.fn(),
+    }),
+    close: vi.fn(),
+  }),
 }));
 
 vi.mock("../lib/graph-adapter/neo4j-adapter", () => ({

@@ -1,6 +1,6 @@
 ---
-description: "Long-horizon autonomous goal. /goal <objective> starts execution. /goal status | pause | resume | clear manage lifecycle."
-argument-hint: "<objective> | status | pause | resume | clear [goal-id]"
+description: "Long-horizon autonomous goal. /goal <objective> defines a goal. /goal run [goal-id] executes one bounded Ralph iteration. status | pause | resume | clear manage lifecycle."
+argument-hint: "<objective> | run [goal-id] | status | pause | resume | clear [goal-id]"
 allowed-tools: ["Read", "Write", "Bash", "Glob", "Grep", "mcp__allura-brain__memory_add", "mcp__allura-brain__memory_search", "mcp__allura-brain__memory_list"]
 ---
 
@@ -12,6 +12,7 @@ You are operating in **Goal Mode** — a long-horizon execution loop that persis
 
 `$ARGUMENTS` is one of:
 - `status` — show active goal from Brain
+- `run [goal-id]` — execute one bounded Ralph iteration for the active goal
 - `pause` — suspend current goal
 - `resume [goal-id]` — resume a paused goal
 - `clear [goal-id]` — abandon a goal
@@ -22,7 +23,7 @@ You are operating in **Goal Mode** — a long-horizon execution loop that persis
 ## Subcommand: `status`
 
 1. List recent Brain entries: `allura-brain__memory_list({ group_id: "allura-system", user_id: "brooks-architect", limit: 50, sort: "created_at_desc" })`
-2. Filter results where `content` starts with `GOAL:` — memory_search only hits the semantic store; newly created goals are episodic and only appear via memory_list
+2. Filter results where `content` starts with `GOAL_` — memory_search only hits the semantic store; newly created goals are episodic and only appear via memory_list
 3. Display:
 
 ```
@@ -40,14 +41,14 @@ You are operating in **Goal Mode** — a long-horizon execution loop that persis
 
 ## Subcommand: `pause`
 
-1. Search Brain for active goal (query: "GOAL state:active")
+1. List recent Brain entries with `memory_list`, fold entries by `goal_id`, and find the latest goal with `state: active`
 2. Add a new Brain entry superseding the active one:
 
 ```
 allura-brain__memory_add({
   group_id: "allura-system",
   user_id: "brooks-architect",
-  content: "GOAL:[original objective]",
+  content: "GOAL_PAUSED [original goal_id] state:paused objective: [original objective]",
   metadata: {
     source: "conversation",
     agent_id: "brooks-architect",
@@ -66,7 +67,7 @@ allura-brain__memory_add({
 ## Subcommand: `resume [goal-id]`
 
 1. Search Brain for paused goal matching goal-id (or most recent paused)
-2. Read `ralph/IMPLEMENTATION_PLAN.md` to find last completed task
+2. Read `ralph/goals/[goal-id].md` to find last completed task
 3. Add Brain entry:
 
 ```
@@ -76,11 +77,20 @@ allura-brain__memory_add({
 })
 ```
 
-4. Run Ralph loop from current plan state:
+4. Do not auto-run. Print: `Goal resumed. Run /goal run [goal-id] to execute one bounded Ralph iteration.`
+
+---
+
+## Subcommand: `run [goal-id]`
+
+1. Resolve the active goal with `memory_list` state folding. If `[goal-id]` is supplied, require that goal.
+2. Refuse if `.ralph/ralph-loop.state.json` has `active: true` and `startedAt` is non-empty. Tell the user to inspect or clear stale Ralph state before launching another loop.
+3. Read `ralph/PROMPT_plan.md` and the goal plan at `ralph/goals/[goal-id].md`.
+4. Launch exactly one bounded iteration:
    ```bash
-   ./ralph/loop.sh build 50
+   ralph --prompt-file ralph/goals/[goal-id].md --max-iterations 1 --completion-promise TASK_COMPLETE
    ```
-   (or if loop.sh absent: invoke /ralph build)
+5. If `ralph` is unavailable, do not fall back to an unbounded loop. Print the command the user should run manually.
 
 ---
 
@@ -95,9 +105,9 @@ allura-brain__memory_add({
 ## New Objective (default path)
 
 ### Step 1 — Conflict Check
-Search Brain for existing active goals:
+List recent Brain entries and fold by goal ID. Do not use semantic search for active-goal detection because newly created goals are episodic:
 ```
-allura-brain__memory_search({ query: "GOAL state active", group_id: "allura-system", limit: 3 })
+allura-brain__memory_list({ group_id: "allura-system", user_id: "brooks-architect", limit: 50, sort: "created_at_desc" })
 ```
 If one exists, warn the user:
 > "Active goal already running: [objective]. Pause it first with `/goal pause` or provide a different scope."
@@ -121,7 +131,7 @@ GOAL
 Objective:          [one sentence, imperative mood]
 Stopping condition: [verifiable — binary check or test command]
 Guardrails:         [what must NOT change]
-Ralph plan:         ralph/IMPLEMENTATION_PLAN.md
+Ralph plan:         ralph/goals/[goal-id].md
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -135,7 +145,7 @@ Generate a goal ID: `goal-[YYYYMMDD-HHMM]`
 allura-brain__memory_add({
   group_id: "allura-system",
   user_id: "brooks-architect",
-  content: "GOAL: [objective]",
+  content: "GOAL_SET [goal-id] state:active objective: [objective]",
   metadata: {
     source: "conversation",
     agent_id: "brooks-architect",
@@ -144,7 +154,7 @@ allura-brain__memory_add({
     state: "active",
     stopping_condition: "[stopping condition]",
     guardrails: ["[guardrail 1]", "..."],
-    ralph_plan: "ralph/IMPLEMENTATION_PLAN.md",
+    ralph_plan: "ralph/goals/[goal-id].md",
     created_at: "[ISO timestamp]"
   }
 })
@@ -152,7 +162,7 @@ allura-brain__memory_add({
 
 ### Step 5 — Generate Ralph Plan
 
-Write (or update) `ralph/IMPLEMENTATION_PLAN.md`:
+Write (or update) `ralph/goals/[goal-id].md`:
 
 ```markdown
 # Goal: [objective]
@@ -178,31 +188,20 @@ Decompose the objective into 3–10 concrete tasks. Each task must be:
 - Completable with `bun run typecheck && bun test` as verification
 - Scoped within the guardrails
 
-### Step 6 — Launch Ralph Loop
-
-Check if `ralph/loop.sh` exists:
-```bash
-test -f ralph/loop.sh && echo "exists"
-```
-
-If exists:
-```bash
-./ralph/loop.sh build 50
-```
-
-If not exists, invoke the `/ralph build` command instead (single iteration — user will need to run repeatedly, or set up the loop script).
+### Step 6 — Stop Before Execution
 
 Print:
 ```
-Goal [goal-id] active. Ralph is running.
+Goal [goal-id] active. Plan written to ralph/goals/[goal-id].md.
 
   Manage:
+    /goal run [goal-id] — execute one bounded Ralph iteration
     /goal status      — check progress
     /goal pause       — suspend
     /goal resume      — continue after pause
     /goal clear       — abandon
 
-  Inject hints mid-run:
+  Inject hints before a run:
     ralph --add-context "hint here"
 ```
 
@@ -215,6 +214,6 @@ These apply regardless of subcommand:
 1. `group_id = "allura-system"` on every Brain operation
 2. `user_id = "brooks-architect"` for goal entries
 3. Never mutate Brain entries — always add superseding entries for state transitions
-4. Ralph never modifies `ralph/IMPLEMENTATION_PLAN.md` task descriptions — only marks tasks `[x]`
+4. Ralph never modifies goal task descriptions — only marks tasks `[x]` in `ralph/goals/[goal-id].md`
 5. Stopping condition must be verifiable — binary yes/no, not "looks good"
 6. Guardrails are enforced by Ralph — scope violations halt the loop
