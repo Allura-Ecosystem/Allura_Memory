@@ -15,6 +15,15 @@ const config: NextConfig = {
     },
   },
 
+  outputFileTracingExcludes: {
+    "/api/skills": [
+      ".opencode/skills/aionui-skills/**/*",
+      ".opencode/skills/cron/**/*",
+      ".opencode/skills/office-cli/**/*",
+      ".opencode/skills/templates/**/*",
+    ],
+  },
+
   // Health check aliases
   rewrites: async () => [
     { source: "/healthz", destination: "/api/health/live" },

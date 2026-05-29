@@ -9,6 +9,7 @@ import { parse } from "dotenv"
 import neo4j, { Driver } from "neo4j-driver"
 import { Pool } from "pg"
 import { existsSync, readFileSync } from "fs"
+import { join } from "path"
 import { resetBudgetState } from "./budget-circuit"
 
 // Load base config plus local overrides without clobbering already-injected
@@ -17,9 +18,10 @@ import { resetBudgetState } from "./budget-circuit"
 function loadEnvFiles(): void {
   const merged: Record<string, string> = {}
 
-  for (const path of [".env", ".env.local"]) {
-    if (!existsSync(path)) continue
-    Object.assign(merged, parse(readFileSync(path)))
+  for (const file of [".env", ".env.local"]) {
+    const envPath = join(/* turbopackIgnore: true */ process.cwd(), file)
+    if (!existsSync(envPath)) continue
+    Object.assign(merged, parse(readFileSync(envPath)))
   }
 
   for (const [key, value] of Object.entries(merged)) {
