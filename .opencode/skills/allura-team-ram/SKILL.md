@@ -6,7 +6,7 @@ globs: ["src/**", ".opencode/**", "docs/allura/**", "guidelines/**"]
 
 # Allura Team RAM — Shared Operating Core
 
-> **Allura decides. Team RAM owns. BMad provides methods. Guidelines constrain docs. RuVix validates. Brain remembers.**
+> **Allura decides. Team RAM owns. Guidelines constrain docs. RuVix validates. Brain remembers.**
 
 This skill is the shared foundation for all `allura-*` wrapper skills. It defines the gates, routing, memory, and validation rules that every Allura workflow must follow.
 
@@ -19,22 +19,15 @@ Trigger phrases: `allura dev story`, `allura code review`, `allura architecture`
 ## Architecture
 
 ```
-Allura Wrapper Layer (project-specific gates)
-  ├── allura-dev-story       → bmad-dev-story + Scout + Brain + Notion + validation
-  ├── allura-code-review     → bmad-code-review + Pike/Fowler gates + Brain
-  ├── allura-architecture    → bmad-create-architecture + Brooks gate + Brain
-  ├── allura-product-intake  → bmad-create-prd + Jobs gate + Brain
-  └── allura-retrospective   → bmad-retrospective + Brooks + Brain
+Allura Skill Layer (project-specific governance gates)
+  ├── allura-dev-story       → Scout + Brain + Notion + validation
+  ├── allura-code-review     → Pike/Fowler gates + Brain
+  ├── allura-architecture    → Brooks gate + Brain
+  ├── allura-product-intake  → Jobs gate + Brain
+  └── allura-retrospective   → Brooks + Brain
 
 Allura Core Layer (shared governance)
   └── allura-team-ram (THIS SKILL)
-
-BMad Primitive Layer (workflow engines)
-  ├── bmad-dev-story
-  ├── bmad-code-review
-  ├── bmad-create-architecture
-  ├── bmad-create-prd
-  └── bmad-retrospective
 ```
 
 ## Mandatory Gates (Every Allura Workflow)
@@ -79,15 +72,15 @@ If the change touches any canonical doc, update it in the same PR.
 | Infra/Deploy | Hightower | CI/CD, deployment, observability |
 | Discovery | Scout | Recon, pattern discovery, Brain search |
 
-### Gate 4: BMad Workflow Execution
+### Gate 4: Workflow Execution
 
-Invoke the underlying BMad skill with Allura context loaded:
+Execute the Allura skill workflow with loaded context:
 
-- `allura-dev-story` → loads this skill, then `bmad-dev-story`
-- `allura-code-review` → loads this skill, then `bmad-code-review`
-- `allura-architecture` → loads this skill, then `bmad-create-architecture`
-- `allura-product-intake` → loads this skill, then `bmad-create-prd`
-- `allura-retrospective` → loads this skill, then `bmad-retrospective`
+- `allura-dev-story` → loads this skill, then executes story implementation
+- `allura-code-review` → loads this skill, then executes code review
+- `allura-architecture` → loads this skill, then executes architecture creation
+- `allura-product-intake` → loads this skill, then executes PRD creation
+- `allura-retrospective` → loads this skill, then executes retrospective
 
 ### Gate 5: Notion Board Update
 
@@ -141,20 +134,19 @@ Event types: `ADR_CREATED`, `INTERFACE_DEFINED`, `TECH_STACK_DECISION`, `TASK_CO
 | E5.1–E5.5 Infra | `allura-dev-story` | — |
 | CARD-SHOWCASE-A | `figma-generate-design` → `allura-dev-story` | — |
 
-## BMad Demotion Rule
+## Allura Skill Routing
 
-For Allura Memory repo work, prefer `allura-*` wrappers over raw `bmad-*` skills. BMad skills are not deleted — they remain as generic workflow engines for non-Allura projects.
+For Allura Memory repo work, use the `allura-*` skills — they are the canonical workflow skills for this repo.
 
-| BMad Skill | Allura Wrapper | Preference |
-|------------|---------------|------------|
-| `bmad-dev-story` | `allura-dev-story` | Allura wrapper preferred |
-| `bmad-code-review` | `allura-code-review` | Allura wrapper preferred |
-| `bmad-create-architecture` | `allura-architecture` | Allura wrapper preferred |
-| `bmad-create-prd` | `allura-product-intake` | Allura wrapper preferred |
-| `bmad-retrospective` | `allura-retrospective` | Allura wrapper preferred |
-| `bmad-party-mode` | `party-mode` / `team-ram-cowork` | Allura-native preferred |
-| `bmad-sprint-status` | `allura-kanban-board` / Notion | Notion source of truth |
-| `bmad-quick-dev` | `allura-dev-story` or Woz route | Allura wrapper preferred |
+| Task | Allura Skill | Notes |
+|------|-------------|-------|
+| Story implementation | `allura-dev-story` | Full governance gates |
+| Code review | `allura-code-review` | Pike/Fowler review gates |
+| Architecture decisions | `allura-architecture` | Brooks gate + ADR logging |
+| PRD creation | `allura-product-intake` | Jobs intent gate |
+| Retrospective | `allura-retrospective` | Brooks facilitation |
+| Party/parallel work | `party-mode` / `team-ram-cowork` | Allura-native |
+| Sprint status | Notion board | Notion source of truth |
 
 ## Canonical Documentation Rule
 

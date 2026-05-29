@@ -155,24 +155,22 @@ Team RAM personas consume OAC context — they do not replace it.
 
 ## Execution Rule
 
-**Scout before build. Skills before Ralph. Validate before done. Allura wrappers before BMad primitives.**
+**Scout before build. Skills before Ralph. Validate before done.**
 
-## Allura Wrapper Routing (BMad Demotion)
+## Allura Skill Routing
 
-For Allura Memory repo work, **always route through the `allura-*` wrapper** before invoking the raw `bmad-*` skill. The wrapper enforces governance gates (Scout hydration, doc impact check, Team RAM owner, Brain outcome log).
+For Allura Memory repo work, use the `allura-*` skills — they enforce governance gates (Scout hydration, doc impact check, Team RAM owner, Brain outcome log).
 
-| BMad Primitive | Allura Wrapper | Preference |
-|----------------|---------------|------------|
-| `bmad-dev-story` | `allura-dev-story` | Allura wrapper preferred |
-| `bmad-code-review` | `allura-code-review` | Allura wrapper preferred |
-| `bmad-create-architecture` | `allura-architecture` | Allura wrapper preferred |
-| `bmad-create-prd` | `allura-product-intake` | Allura wrapper preferred |
-| `bmad-retrospective` | `allura-retrospective` | Allura wrapper preferred |
-| `bmad-party-mode` | `party-mode` / `team-ram-cowork` | Allura-native preferred |
-| `bmad-sprint-status` | `allura-kanban-board` / Notion | Notion source of truth |
-| `bmad-quick-dev` | `allura-dev-story` or direct Woz route | Allura wrapper preferred |
-
-BMad skills are **not deleted**. They remain as generic workflow engines for non-Allura projects. The demotion is project-scoped.
+| Task | Allura Skill | Notes |
+|------|-------------|-------|
+| Story implementation | `allura-dev-story` | Full governance gates |
+| Code review | `allura-code-review` | Pike/Fowler review gates |
+| Architecture decisions | `allura-architecture` | Brooks gate + ADR logging |
+| PRD creation | `allura-product-intake` | Jobs intent gate |
+| Retrospective | `allura-retrospective` | Brooks facilitation |
+| Party/parallel work | `party-mode` / `team-ram-cowork` | Allura-native |
+| Sprint status | Notion board | Notion source of truth |
+| Quick dev | `allura-dev-story` or direct Woz route | Allura skill preferred |
 
 ## Codex Invocation Gate (MANDATORY)
 
@@ -267,25 +265,17 @@ E2 Dashboard Quality -> E3/E4 Hardening Deploy -> E4 Kernel Completion ->
 E5 Infrastructure Polish
 ```
 
-The detailed finish-all-epics workflow lives in
-`_bmad/FINISH-ALL-EPICS-WORKFLOW.md`.
-
 Allura Navigator workflow:
 
 ```text
 Read board -> hydrate context -> route work -> build/review -> attest/remember
 ```
 
-The detailed Navigator operating loop lives in
-`_bmad/ALLURA-NAVIGATOR-WORKFLOW.md`. Treat that file as required context for
-project work that touches the Kanban board, Allura Brain, RuVix governance,
-Team RAM routing, or review/validation gates.
-
 Use the Notion `Work Board` / `Allura stories Work Items` board as the
 human/team source of truth for story state. Local sprint-status files support
 reconciliation only; they must not replace the board. Each story moves through:
-epic intake, story ready gate, `bmad-dev-story`, `bmad-code-review`, done gate,
-and Allura outcome logging. Run `bmad-retrospective` only after every story in
+epic intake, story ready gate, `allura-dev-story`, `allura-code-review`, done gate,
+and Allura outcome logging. Run `allura-retrospective` only after every story in
 the epic is `Done`, unless Ronin explicitly asks for a partial retrospective.
 
 Team RAM board ownership:
@@ -294,8 +284,8 @@ Team RAM board ownership:
   real Scout agent is not spawned, say `Scout-style hydration only`.
 - Jobs: intent, scope, acceptance criteria before `Ready`.
 - Brooks: architecture, contracts, and route approval.
-- Woz: implementation through `bmad-dev-story`.
-- Pike + Fowler: review through `bmad-code-review`.
+- Woz: implementation through `allura-dev-story`.
+- Pike + Fowler: review through `allura-code-review`.
 - Ralph: validation after implementation/review evidence exists.
 - Brooks + team: retrospective after all epic stories are `Done`.
 

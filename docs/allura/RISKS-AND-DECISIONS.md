@@ -37,11 +37,12 @@
 | AD-23 | Skills-first packaged MCP architecture for memory access          | Decided  | Brooks / Team RAM orchestrates skills first. Skills encode routing and guardrails, then call focused packaged MCP servers: `neo4j-memory` for approved-memory recall, `database-server` for trace/audit evidence, and `neo4j-cypher` only for read-only graph inspection when memory recall is insufficient. No custom all-in-one MCP runtime is canonical. Skills enforce read-only + tenant-scope guardrails for inspection flows, while governed write paths remain controlled by application services and approval policy. See [MIGRATION-TRACKER.md](../archive/allura/MIGRATION-TRACKER.md). |
 | AD-24 | Agent/Project/Team graph model as structural context layer          | Decided  | A graph without structure is just a list. Agent, Team, and Project nodes provide the structural context that makes Memory nodes retrievable by ownership, project, and delegation path. Eliminates the shadow Memory Framework agent hierarchy in favor of the existing surgical team pattern. Alternatives: (1) Memory-only graph with metadata properties — rejected because flat metadata doesn't support traversal queries across team structure. (2) Separate knowledge base for agents — rejected because it creates sync burden between two surfaces. |
 | AD-25 | Phase 6 Closure — all deliverables shipped | Decided  | See Phase 6 Closure Decision Detail section below. |
-| AD-26 | Real-data dashboard uses query/mapper boundary and read-only graph endpoint | Decided | Issue #25 makes `/dashboard` a trust surface over real Allura Brain data, not a mock UI. Dashboard components consume mapped UI contracts from `src/lib/dashboard/`; raw Brain API shapes stay behind `api.ts`, `queries.ts`, and `mappers.ts`. `/api/memory/graph` is read-only, tenant-scoped by `group_id`, returns a capped display sample plus `total_edges`, and performs no Neo4j mutations. Alternatives rejected: mock data, frontend-inferred relationships, and raw API responses in components. |
+| AD-26 | Real-data API uses query/mapper boundary and read-only graph endpoint | Decided | Issue #25 makes `/api/memory` a trust surface over real Allura Brain data, not a mock endpoint. API consumers use mapped contracts from `src/lib/api/`; raw Brain API shapes stay behind `api.ts`, `queries.ts`, and `mappers.ts`. `/api/memory/graph` is read-only, tenant-scoped by `group_id`, returns a capped display sample plus `total_edges`, and performs no Neo4j mutations. Alternatives rejected: mock data, client-inferred relationships, and raw API responses in consumers. |
 | AD-27 | Budget enforcer TTL auto-expiry for halted sessions | Decided | Halted budget sessions auto-expire after `haltTtlMs` (default: 1 hour). `DEFAULT_HALT_TTL_MS = 60 * 60 * 1000` in `src/lib/budget/enforcer.ts`. Admin can reset manually via `POST /api/admin/reset-budget`. Auto-expiry prevents indefinite lockout of agents after a budget breach. Alternatives: (1) No auto-expiry — rejected because agents would require manual reset after every breach. (2) Immediate reset — rejected because it defeats the purpose of budget enforcement. |
 | AD-28 | Sync contract mapping table for relationship wiring | Decided | `src/lib/graph-adapter/sync-contract-mappings.ts` provides deterministic user_id→Agent and group_id→Project mappings. Used by curator approve and auto-promote paths to wire AUTHORED_BY and CONTRIBUTES_TO relationships on promoted memories. Alternatives: (1) Dynamic agent/project discovery from Neo4j — rejected because it adds latency and requires graph queries during promotion. (2) Convention-based naming (user_id = agent name) — rejected because it's fragile and breaks when names diverge. |
-| DDR-004 | Token Authority — Two-path design system | Enforced | CSS custom properties (`var(--allura-*)`, `var(--dashboard-*)`) for Tailwind/HTML contexts; `tokens.ts` for Canvas/JS runtime. Raw hex and generic shadcn utilities (`text-muted-foreground`, `bg-muted`) are prohibited in active dashboard scope. `button.tsx` shadow rgba documented as DD-004 build-tool exception. Committed 2026-04-30. |
-| AD-29 | Mission Control dashboard rebuild cutover strategy | Decided | `localhost:6420` is the visual/reference memory dashboard, `localhost:3334` is the Mission Control development integration target, and `localhost:3100` is the current Docker dashboard replacement target. The rebuild combines the memory dashboard and Mission Control cockpit; it must not create a separate product or replace `3100` before route parity, visual parity, source-of-truth declarations, auth validation, smoke tests, and rollback plan pass. Alternatives rejected: (1) ship 3334 as a separate dashboard — rejected because it creates duplicate surfaces; (2) overwrite 3100 directly — rejected because it removes rollback and hides parity gaps. |
+| DDR-004 | Token Authority — Two-path design system | Enforced | CSS custom properties (`var(--allura-*)`) for Tailwind/HTML contexts; `tokens.ts` for Canvas/JS runtime. Raw hex and generic shadcn utilities (`text-muted-foreground`, `bg-muted`) are prohibited in active CLI scope. Committed 2026-04-30. |
+| AD-29 | API-first architecture — MCP/API remains primary engine path | Superseded by AD-31 | Earlier terminal-only language correctly protected the MCP-native engine from dashboard drift, but it over-constrained the approved operator experience. MCP, API, and CLI remain canonical engine paths; the Memory Command Center is an optional governed operator surface. |
+| AD-31 | RuVix-governed Memory Command Center operator surface | Accepted | 2026-05-29: Ronin approved a branded Memory Command Center to manage memories, RuVix governance, curator decisions, audit/evidence, graph exploration, and settings. It is not a decorative dashboard and not a bypass around MCP/API governance. Every page exposes `group_id`, source, freshness, degraded state, and evidence. Every mutation requires a governance receipt. Alternatives rejected: (1) terminal/API-only surface — rejected because memory governance needs human inspection and curation; (2) decorative dashboard — rejected because it creates trust theater; (3) direct substrate admin UI — rejected because it bypasses RuVix policy. |
 | AD-30 | Email-derived content is external untrusted evidence | Decided | Email/Gmail/IMAP content may enter Allura only as raw episodic evidence with `trust_zone=external_untrusted`. It cannot issue agent instructions, trigger privileged actions, or auto-promote to canonical Neo4j memory. RuVix policies POL-EMAIL-001 through POL-EMAIL-005 enforce instruction blocking, action approval, high-risk quarantine, HITL promotion, and attachment sandboxing. See [EMAIL-ALLURA-ENFORCEMENT.md](./EMAIL-ALLURA-ENFORCEMENT.md). |
 | AD-XX | RuVix Kernel Contract | Accepted | The 12 RuVix rules are the kernel invariants governing Allura Brain. Every existing gap — HITL approval, append-only history, tenant isolation, fail-closed tool use, and evidence-backed completion — is formalized as a testable boundary rule. Canonical contract: `RUVIX_KERNEL_CONTRACT_v1`. |
 | AD-XX+1 | RuVix Brand Governance Rules | Accepted | The 6 RuVix brand rules are enforceable kernel invariants for Allura Dashboard surfaces. Durham token exclusivity, mission-control voice, evidence-gated completion, accessibility, component consistency, and the Durham gate before ship are treated as release boundaries — not style suggestions. Canonical artifact: [BRAND-RULES-dashboard-v2.md](./BRAND-RULES-dashboard-v2.md). |
@@ -90,9 +91,9 @@
 | RK-14 | E2E validation gap — pipeline not proven | High | Active |
 | RK-15 | Approve route connection leak | Medium | Active |
 | RK-16 | Graph-Notion sync drift | Medium | ✅ Resolved — 2026-04-30 |
-| RK-17 | Dashboard API shape drift hides Brain data gaps | Medium | ✅ Resolved — 2026-04-30 |
-| RK-18 | WCAG contrast failures in token system | Medium | 🔴 Open |
-| RK-19 | Mission Control route/source-of-truth drift before `3100` cutover | High | Active |
+| RK-17 | Dashboard API shape drift hides Brain data gaps | Medium | Active |
+| RK-18 | WCAG contrast failures in token system | Medium | Active |
+| RK-19 | Memory Command Center route/source-of-truth drift before launch | High | Active |
 | RK-20 | Email prompt injection/phishing drives agent actions | High | Mitigated |
 
 ### Risk Detail
@@ -115,9 +116,9 @@
 | RK-14 | E2E validation gap — pipeline not proven       | High | VALIDATION-GATE.md defines 12 acceptance checks with hard gates. E2E validation script (`scripts/e2e-validation-gate.ts`) runs all checks. | Active |
 | RK-15 | Approve route connection leak                  | Medium | Route creates its own `Pool` instead of using `getPool()` singleton. Fix: replace with shared pool from `src/lib/postgres/connection.ts`. | Active |
 | RK-16 | Graph-Notion sync drift | Medium | Sync contract mapping table (`src/lib/graph-adapter/sync-contract-mappings.ts`) now resolves user_id→Agent and group_id→Project relationships automatically. Notion sync worker uses mappings on approve/promote. | ✅ Resolved — 2026-04-30 |
-| RK-17 | Dashboard API shape drift hides Brain data gaps | Medium | `src/lib/dashboard/mappers.ts` now maps all Brain responses through typed UI contracts. Zod validation added. Mapper tests cover dashboard responses. DDR-004 token authority eliminates shadow utility classes. | ✅ Resolved — 2026-04-30 |
-| RK-18 | WCAG contrast failures in token system | Medium | 5 token pairings fail WCAG AA contrast ratio (4.5:1) — primarily light-background/low-contrast text combinations in `var(--allura-*)` and `var(--dashboard-*)` tokens. Audit needed across both token namespaces. | 🔴 Open |
-| RK-19 | Mission Control route/source-of-truth drift before `3100` cutover | High | Require route parity map, AdapterDeclaration for every route, explicit degraded behavior, no fabricated data, auth validation, smoke tests, and rollback plan before replacing the current Docker dashboard. | Active |
+| RK-17 | Dashboard API shape drift hides Brain data gaps | Medium | Use `DashboardResult<T>` and mapped contracts from `src/lib/dashboard/`; every panel must expose source, freshness, degraded state, and `group_id`. | Active |
+| RK-18 | WCAG contrast failures in token system | Medium | Brand gate requires approved Allura/Durham tokens, keyboard checks, screen-reader labels, and high-contrast review before dashboard launch. | Active |
+| RK-19 | Memory Command Center route/source-of-truth drift before launch | High | AD-31 requires route/source declarations, no-fabricated-data checks, auth validation, smoke tests, screenshots, and rollback docs before launch. | Active |
 | RK-20 | Email prompt injection/phishing drives agent actions | High | AD-30 + RuVix POL-EMAIL-001..005: email is external_untrusted evidence only; privileged actions require approval; high-risk mail quarantined; canonical memory promotion requires HITL; attachments require sandbox/quarantine. | Mitigated |
 
 | AD-25 | Phase 6 Closure — all deliverables shipped | Decided | DLQ shipped (curator watchdog). Knowledge Hub Bridge shipped (Notion sync worker). Auth layer shipped (dev-auth + config). CSV Export shipped (/admin/approvals CSV download). SDK not separately shipped — MCP tools are the SDK. CORS shipped (next.config). Sentry shipped (captureException in curator approve). Phase 6 scope is complete. Decision: close Phase 6 and record it. Alternatives rejected: (1) Continue tracking as open — rejected because all deliverables exist in code and pass tests. (2) Extend Phase 6 for k6 load testing — rejected because load testing is a separate concern (tracked as RK-14). Consequences: Phase 6 ADR is now closed. Next phases focus on Curator pipeline E2E (Sprint 1), Skills layer (Sprint 2), and MCP Catalog governance (Sprint 3). |
@@ -188,6 +189,43 @@
 
 ---
 
+### AD-31: RuVix-Governed Memory Command Center Operator Surface
+
+**Decision:** Build the branded Memory Command Center as an optional human control plane over the MCP/API-first Allura engine.
+
+**Rationale:** Memory governance requires a place for people to inspect memories, understand source evidence, review proposed knowledge, see RuVix policy status, export audit packets, and verify graph relationships. CLI and MCP remain essential, but they do not provide enough spatial context for high-confidence review and compliance work.
+
+**Scope:**
+
+- Memories: search, inspect, filter, provenance, relationship context.
+- RuVix Governance: policy mode, thresholds, role separation, tenant isolation, promotion locks, drift warnings, mutation receipts.
+- Curator: pending proposals, approve, reject, request evidence, request changes, rationale capture.
+- Audit/Evidence: event log, receipt detail, export packet, source lineage.
+- Governance receipt drawer: every mutation and approval shows intent, actor, source, policy, validation, and audit trail.
+- Graph: real Neo4j data only, source receipts, fallback list when degraded.
+- Settings: read-mostly tenant and policy visibility unless governed write endpoints exist.
+
+**Non-negotiables:**
+
+- No fake healthy state.
+- No fake live data.
+- Every page shows active `group_id`.
+- Every mutation creates an audit receipt.
+- Every approval shows source evidence first.
+- Every graph node links back to provenance.
+- Every degraded state is visible.
+- Real Allura branding only; no generated logos.
+
+**Tradeoffs:**
+
+- Adds UI maintenance cost, but keeps dashboard logic behind typed adapters.
+- Slows feature shipping with brand, accessibility, and governance gates.
+- Improves review quality and reduces policy blind spots.
+
+**Status:** accepted, documented 2026-05-29.
+
+---
+
 | Signal                      | Source                       | Alert Threshold       |
 | --------------------------- | ---------------------------- | --------------------- |
 | Neo4j promotion failures    | `src/lib/neo4j/promotion.ts` | > 5 failures in 5 min |
@@ -205,6 +243,6 @@
 - **Memory System Design**: `docs/allura/SOLUTION-ARCHITECTURE.md`
 - **Validation Gate**: `docs/archive/allura/VALIDATION-GATE.md`
 - **Validation Guide**: merged into `docs/allura/SOLUTION-ARCHITECTURE.md` §9 (Validation Topology)
-- **Dashboard Rebuild Cutover**: AD-29 and RK-19 in this document; route/data contracts in `DATA-DICTIONARY.md`; implementation topology in `SOLUTION-ARCHITECTURE.md`
+- **Memory Command Center Launch Gate**: AD-31 and RK-19 in this document; route/data contracts in `DATA-DICTIONARY.md`; implementation topology in `SOLUTION-ARCHITECTURE.md`
 - **Operational Agent Access**: Packaged MCP servers (`neo4j-memory`, `database-server`) activated via `MCP_DOCKER`
 - **Durable Stores**: PostgreSQL (events/traces) + Neo4j (semantic graph) accessed through controlled services

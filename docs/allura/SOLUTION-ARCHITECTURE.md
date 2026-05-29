@@ -30,7 +30,6 @@ Allura is a **memory data plane** — it holds no business logic about what an a
 |---|---|---|
 | AI Agents (Claude, GPT, etc.) | Brooks / Team RAM + skills | Skills enforce memory-first routing to packaged MCP servers |
 | BMAD / Team RAM Planning | `_bmad/` + `_bmad-output/` | BMAD artifacts map intent, PRDs, architecture, epics, and stories to Team RAM owners |
-| Dashboard UI | Sync REST | Next.js server actions → `/api/memory/` routes |
 | DevOps / Admin | Docker Compose + MCP_DOCKER config | Deployment, configuration, and packaged MCP server activation |
 
 Allura does **not** orchestrate agents, run workflows, or make decisions. It stores and retrieves memory. Period.
@@ -46,8 +45,9 @@ graph TD
         A2[GPT / Any MCP Client]
     end
 
-    subgraph Dashboard["Dashboard"]
-        B1[Memory Viewer UI<br/>/memory]
+    subgraph Clients["API Clients"]
+        B1[MCP HTTP Gateway<br/>/mcp]
+        B2[CLI / Scripts]
     end
 
     subgraph Orchestration["Brooks / Team RAM"]
@@ -62,7 +62,7 @@ graph TD
     end
 
     subgraph Allura["Allura"]
-        C6[Next.js API<br/>api/memory/]
+        C6[API Routes<br/>api/memory/]
         C7[Memory Engine<br/>lib/memory/]
         C8[(PostgreSQL 16<br/>Episodic)]
         C9[(Neo4j 5.26<br/>Semantic)]
@@ -74,7 +74,8 @@ graph TD
     C2 --> C3
     C2 --> C4
     C2 --> C5
-    B1 -->|REST| C6
+    B1 -->|HTTP| C6
+    B2 -->|CLI| C6
     C6 --> C7
     C7 --> C8
     C7 --> C9
@@ -246,16 +247,16 @@ The canonical kernel contract is stored as `RUVIX_KERNEL_CONTRACT_v1` in Neo4j, 
 
 ### 3.4.2 Brand Governance Layer
 
-The dashboard brand layer is a RuVix-enforced contract, not a design preference. It governs Allura Dashboard surfaces only.
+The brand layer is a RuVix-enforced contract, not a design preference. It governs Allura terminal output, API documentation, and the optional Memory Command Center.
 
 | Brand Rule | Invariant |
 |---|---|
-| BRAND-001 | Durham token exclusivity: dashboard CSS may use only `--durham-*` custom properties; DD tokens (`dark-green`, `brand-gold`, `Poppins`, `Inter`, `Montserrat`) are forbidden. |
-| BRAND-002 | Dashboard voice stays mission-control: no fake certainty, no marketing fluff, no DD voice patterns. |
-| BRAND-003 | Claims are evidence-gated: no dashboard work is marked done until the screenshot packet, mobile pass, accessibility pass, and anti-drift audit exist. |
-| BRAND-004 | Accessibility is mandatory: AA contrast, visible focus rings, and keyboard-operable flows are required with Durham tokens. |
-| BRAND-005 | Component consistency is required: reuse `agency-card`, `metric-card`, `agency-badge`, and curator table patterns with Durham spacing rhythm. |
-| BRAND-006 | Durham gate before ship: Aaker + Glaser + Munari must pass before the dashboard is released. |
+| BRAND-001 | Token exclusivity: terminal output and dashboard surfaces may use only approved Allura/Durham tokens; Difference Driven tokens and generated logo-like marks are forbidden. |
+| BRAND-002 | Voice stays mission-control: no fake certainty, no marketing fluff, no unsupported claims. |
+| BRAND-003 | Claims are evidence-gated: no CLI or dashboard feature is marked done until test coverage, documentation, source receipts, and anti-drift audit exist. |
+| BRAND-004 | Accessibility is mandatory: terminal output and dashboard controls are readable, keyboard reachable, and high-contrast safe. |
+| BRAND-005 | Component consistency is required: reuse established Allura/Durham patterns over ad hoc variants. |
+| BRAND-006 | Durham gate before ship: Aaker + Glaser + Munari must pass before branded operator surfaces are released. |
 
 **Enforcement pipeline:**
 
@@ -263,75 +264,65 @@ The dashboard brand layer is a RuVix-enforced contract, not a design preference.
 
 **Enforcement details:**
 
-- Token enforcement rejects any dashboard style rule that is not expressed through the Durham token set.
+- Token enforcement rejects any terminal or dashboard style rule that is not expressed through the approved token set.
 - Voice enforcement rejects copy that reads like advertising, certainty theater, or unsupported claims.
-- Completion enforcement requires evidence artifacts before any dashboard claim is promoted to done.
-- Accessibility enforcement checks contrast, focus visibility, and keyboard navigation before merge.
+- Completion enforcement requires evidence artifacts before any CLI or dashboard claim is promoted to done.
+- Accessibility enforcement checks screen reader compatibility and high contrast mode before merge.
 - Component enforcement prefers the established Durham patterns over ad hoc variants.
 
-Canonical brand policy artifact: [BRAND-RULES-dashboard-v2.md](./BRAND-RULES-dashboard-v2.md)
+Canonical brand policy artifacts: [BRAND-RULES-cli-v1.md](./BRAND-RULES-cli-v1.md) for terminal/API surfaces and [BRAND-RULES-dashboard-v2.md](./BRAND-RULES-dashboard-v2.md) for Memory Command Center surfaces.
 
-### 3.5 Dashboard Memory Viewer
+### 3.5 Memory API
 
-Human operator uses the `/memory` page to inspect, search, and delete memories.
+Human operator or agent uses the `/api/memory` endpoints to inspect, search, and delete memories.
 
 ```mermaid
 sequenceDiagram
-    actor Human
-    participant UI as Memory Viewer (/memory)
-    participant API as Next.js API
+    actor Operator
+    participant CLI as API Client (/api/memory)
+    participant API as API Routes
     participant Engine as Memory Engine
     participant PG as PostgreSQL
     participant N4J as Neo4j
 
-    Human->>UI: load /memory
-    UI->>API: GET /api/memory?userId=&groupId=
+    Operator->>CLI: GET /api/memory?userId=&groupId=
+    CLI->>API: HTTP request
     API->>Engine: list(userId, groupId)
     Engine->>PG: SELECT recent events
     Engine->>N4J: MATCH Memory nodes
-    API-->>UI: merged memory list
+    API-->>CLI: merged memory list
 
-    Human->>UI: delete memory
-    UI->>API: DELETE /api/memory/[id]
+    Operator->>CLI: DELETE /api/memory/[id]
+    CLI->>API: HTTP request
     API->>Engine: delete(id, groupId)
     Engine->>PG: INSERT event (memory_delete)
     Engine->>N4J: SET deprecated = true
-    API-->>UI: 200 OK
+    API-->>CLI: 200 OK
     ```
 
 ---
 
-### 3.6 Mission Control Dashboard Rebuild and Cutover
+### 3.6 API-First Architecture and Memory Command Center
 
-The Mission Control rebuild combines the existing Allura memory dashboard experience with a cockpit-style operator shell before replacing the current Docker dashboard.
+Allura is MCP/API-first. The MCP HTTP gateway (port 3201), API routes, and CLI scripts remain the primary engine path. The optional Memory Command Center is a RuVix-governed operator surface over those same contracts; it may not bypass API governance or write directly to substrates.
 
 | Surface | Architectural Role | Constraint |
 |---------|--------------------|------------|
-| `localhost:6420` | Visual/reference memory dashboard | Preserve memory search, insights, traces, provenance, extracted facts, agents, approvals, and settings behavior |
-| `localhost:3334` | Mission Control development integration target | Build and validate combined cockpit + memory surface here first |
-| `localhost:3100` | Current Docker dashboard | Do not replace until cutover gates pass |
+| `localhost:3201` | MCP HTTP gateway | Primary operator surface for MCP clients |
+| `/api/memory` | REST API | Memory search, insights, traces, provenance, extracted facts, agents, approvals |
+| `bun run curator:approve` | CLI approval | Curator approves pending proposals from terminal |
+| `/dashboard/*` | Optional Memory Command Center | Human control plane for memories, governance, curator, graph, audit, and settings |
 
-```mermaid
-flowchart LR
-    A[6420 Reference<br/>Memory dashboard UX] --> C[3334 Mission Control<br/>Development integration]
-    B[Native Allura Kanban<br/>Planning truth] --> C
-    D[Allura Brain APIs<br/>Memory truth] --> C
-    E[Resource Manifest<br/>Inventory truth] --> C
-    C -->|validated cutover only| F[3100 Docker Dashboard<br/>Replacement target]
-```
+**Operator paths:**
 
-**Route ownership:**
-
-| Mission Control Route | Backing Source of Truth | Write Policy |
+| Route | Backing Source of Truth | Write Policy |
 |-----------------------|-------------------------|--------------|
-| `/command` | Aggregated adapter summaries | Read-only first version |
-| `/work-board` | Native Allura Kanban | Governed board writes only; external sync adapters optional |
-| `/agents` | OpenClaw/Symphony/TALON/IRIS/Team RAM runtime adapters | Runtime actions only through approved adapter actions |
-| `/telemetry` | Runtime/tool/model telemetry adapters | No mutation |
-| `/allura` | Allura Brain APIs | Governed memory actions only; no direct substrate writes |
-| `/resources` | `RESOURCE-MANIFEST.md` or generated manifest endpoint | Read-only inventory and drift warnings |
+| `/api/memory` | Allura Brain APIs | Governed memory actions only; no direct substrate writes |
+| `/api/curator/approve` | PostgreSQL proposals | Curator approval required; auto-promote >85% configurable |
+| `/api/audit/events` | PostgreSQL events | Read-only audit trail |
+| `/dashboard/governance` | RuVix kernel and policy APIs | Governed settings only; all mutations require receipt |
 
-**Cutover gates for replacing `3100`:** route parity, visual parity, source-of-truth parity, adapter declarations, no fabricated live data, authenticated/unauthenticated validation, smoke tests, and rollback command documentation.
+**Architecture note:** Previous dashboard ports (3100, 3334, 6420) are reference/cutover history. New dashboard work is scoped to the approved RuVix-governed Memory Command Center plan and must pass source-of-truth, no-fabricated-data, auth, accessibility, and rollback gates before launch.
 
 ---
 
@@ -341,10 +332,10 @@ flowchart LR
 |---|---|---|---|---|
 | AI Agent via Brooks / Team RAM | Inbound | Skills + packaged MCP servers | `neo4j-memory` first, `database-server` for evidence, `neo4j-cypher` only when needed | AD-23, AD-03 |
 | Dashboard UI | Inbound | REST HTTP | JSON — memory records | AD-05 |
-| Mission Control UI | Inbound | REST HTTP + adapter contracts | Route-scoped cockpit, work-board, agent, telemetry, Allura, and resource contracts | AD-29, RK-19 |
+| Memory Command Center | Inbound | REST HTTP + adapter contracts | Memories, RuVix governance, curator, graph, audit/evidence, settings | AD-31, RK-19 |
 | Native Allura Kanban | Inbound | REST HTTP + PostgreSQL-backed service contract | Default planning/work item source of truth | F43, AD-31 |
 | Board Sync Adapters | Outbound | Provider APIs | Optional Notion, Linear, and GitHub Projects projections of native board state | F43, AD-31 |
-| Resource Manifest Adapter | Outbound | File or generated endpoint | Skills, agents, MCP servers, containers, cron jobs, drift warnings | F44, AD-29 |
+| Resource Manifest Adapter | Outbound | File or generated endpoint | Skills, agents, MCP servers, containers, cron jobs, drift warnings | F44, AD-31 |
 | Curator Approve CLI | Inbound | CLI (`bun run curator:approve`) | Processes pending proposals from PostgreSQL, promotes approved ones to Neo4j via `createInsight()` | F6, B18, B19 |
 | PostgreSQL 16 | Outbound | TCP (pg driver) | SQL — append-only INSERTs + SELECTs | AD-01, RK-02 |
 | Neo4j 5.26 | Outbound | Bolt (neo4j driver) | Approved memory recall + read-only Cypher fallback + governed writes | AD-02, RK-01, AD-23 |
@@ -359,8 +350,8 @@ flowchart LR
 | §3.2 Evidence Escalation | AD-01 (Postgres for episodic), RK-02 (tenant isolation in queries) |
 | §3.3 Graph Escalation | AD-02 (Neo4j for semantic), AD-23 (read-only graph fallback) |
 | §3.4 Governed Memory Write Path | AD-04 (promotion mode), RK-01 (dedup), RK-03 (low-quality promotion) |
-| §3.5 Dashboard Viewer | AD-05 (5-tool surface) |
-| §3.6 Mission Control Dashboard Rebuild and Cutover | AD-29 (dashboard rebuild cutover), RK-19 (route/source-of-truth drift) |
+| §3.5 Memory API | AD-05 (5-tool surface) |
+| §3.6 API-First Architecture and Memory Command Center | AD-31 (Memory Command Center), AD-29 (superseded), RK-19 |
 
 ---
 
@@ -374,28 +365,27 @@ flowchart LR
 | Neo4j writes MUST be preceded by a dedup check | Prevents knowledge graph bloat — RK-01 |
 | `PROMOTION_MODE=soc2` MUST prevent all autonomous Neo4j writes | Regulatory compliance gate — AD-04 |
 | Circuit breaker MUST trip before budget exhaustion | Prevents agent runaway — kernel/circuit-breaker |
-| Mission Control MUST NOT replace `3100` until cutover gates pass | Prevents production dashboard regression and preserves rollback path — AD-29 |
-| Mission Control routes MUST declare source of truth and degraded behavior | Prevents silent drift, fabricated data, and competing planning/memory surfaces — RK-19 |
+| Memory Command Center MUST use API/MCP contracts and never write directly to substrates | Prevents governance bypass and UI drift — AD-31 |
 
 ---
 
 ## 7. References
 
-### Dashboard v2 condensed topology
+### API v2 condensed topology
 
-`/dashboard` consumes existing dashboard API/query/mapper boundaries rather than raw database shapes:
+`/api/memory` consumes existing API/query/mapper boundaries rather than raw database shapes:
 
 ```text
-Next.js route
-  → src/lib/dashboard/query helper
+API route
+  → src/lib/api/query helper
   → controlled API endpoint
   → PostgreSQL / Neo4j through application service
   → mapper + Zod validation
-  → DashboardResult<T>
-  → UI state
+  → ApiResult<T>
+  → CLI / MCP client state
 ```
 
-Authoritative implementation boundary: `src/lib/dashboard/api.ts`, `src/lib/dashboard/queries.ts`, `src/lib/dashboard/mappers.ts`, `src/lib/dashboard/schemas.ts`, and `src/lib/dashboard/types.ts`.
+Authoritative implementation boundary: `src/lib/api/api.ts`, `src/lib/api/queries.ts`, `src/lib/api/mappers.ts`, `src/lib/api/schemas.ts`, and `src/lib/api/types.ts`.
 
 Curator action topology:
 
@@ -407,7 +397,7 @@ needsEvidence   → POST /api/curator/reject with rationale prefix "Needs eviden
 
 Native Kanban direction: PostgreSQL owns operational board state; Neo4j may project semantic relationships; Allura Brain stores durable decisions/evidence receipts. Notion, Linear, and GitHub Projects are optional sync adapters; Native Allura Kanban is default upstream.
 
-Cutover topology: `6420` is historical visual/reference only, `3334` is retired development integration evidence, and `3100` is the canonical local dashboard target. Replacing `3100` requires route, visual, adapter/source-of-truth, auth, smoke, no-fabricated-data, review, rollback, and Captain approval evidence.
+Architecture note: Previous dashboard surfaces (ports 3100, 3334, 6420) are reference/cutover history. MCP/API remains canonical for engine access; the Memory Command Center is an optional governed operator surface.
 
 - [BLUEPRINT.md](./BLUEPRINT.md) — Core data model, API surface, execution rules
 - [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) — Field-level definitions
@@ -484,7 +474,7 @@ Brooks / Team RAM
 | 6 | Phase 6 deliverables (DLQ, Notion sync, auth, CSV, Sentry, CORS) | ✅ Complete (AD-25) |
 | 7 | Curator pipeline E2E validation | Planned (RK-14) |
 | 8 | Graph-Notion sync hardening | Planned (RK-16) |
-| 9 | Dashboard API shape validation (Zod + mapper tests) | Planned (RK-17) |
+| 9 | API shape validation (Zod + mapper tests) | Planned (RK-17, archived) |
 
 ### 8.4 Success Metrics
 

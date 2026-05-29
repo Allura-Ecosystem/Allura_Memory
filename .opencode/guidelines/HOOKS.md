@@ -17,7 +17,7 @@ The canonical rules live in:
 - [Team RAM agents](../agent/)
 - [OpenCode config](../config.json)
 - [Allura canonical docs](../../docs/allura/)
-- Active BMAD planning artifacts under [`_bmad/`](../../_bmad/)
+- Planning artifacts under [`docs/archive/`](../../docs/archive/)
 
 ## Runtime Surface Model
 

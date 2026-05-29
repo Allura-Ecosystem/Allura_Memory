@@ -6,7 +6,7 @@ persona: Bellard
 category: Code Subagents
 type: specialist
 status: active
-model: anthropic/claude-sonnet-4-6
+model: sonnet
 tools:
   - Read
   - Grep

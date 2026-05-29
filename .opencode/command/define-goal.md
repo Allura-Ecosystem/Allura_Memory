@@ -59,4 +59,4 @@ DEFINITION OF DONE
 - Use numbers, percentages, or clear yes/no checks
 - Write in imperative mood
 - If the input is too vague, ask one clarifying question before generating
-- Offer to save the output to `_bmad-output/planning-artifacts/goals/` if the user wants to reference it later
+- Offer to save the output to `docs/archive/planning-artifacts/goals/` if the user wants to reference it later

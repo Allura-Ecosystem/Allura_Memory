@@ -1,20 +1,18 @@
 ---
 name: allura-architecture
-description: "Allura-governed architecture creation wrapper. Loads allura-team-ram gates, then routes to bmad-create-architecture with Brooks gate, Brain search, doc impact check, and ADR logging. Use when creating architecture decisions in the Allura Memory repo."
+description: "Allura-governed architecture creation. Loads allura-team-ram gates with Brooks gate, Brain search, doc impact check, and ADR logging. Use when creating architecture decisions in the Allura Memory repo."
 globs: ["src/**", "docs/allura/**", "guidelines/**"]
 ---
 
 # Allura Architecture — Governed Architecture Creation
 
-> **Allura wrapper for architecture decisions.** Enforces Brooks gate, Brain search for prior decisions, canonical doc impact checks, and ADR logging to Allura Brain.
+> **Allura-governed architecture decisions.** Enforces Brooks gate, Brain search for prior decisions, canonical doc impact checks, and ADR logging to Allura Brain.
 
 ## When to Use
 
-Use this skill when creating architecture decisions in the Allura Memory repo. It wraps `bmad-create-architecture` with Allura-specific governance gates.
+Use this skill when creating architecture decisions in the Allura Memory repo.
 
 Trigger phrases: `allura architecture`, `create architecture`, `architecture decision`, `ADR`, `design decision`.
-
-**Do NOT use** for non-Allura projects — use `bmad-create-architecture` directly for those.
 
 ## Prerequisites
 
@@ -81,9 +79,9 @@ Assign architecture roles:
 | Data Architect | Knuth | Schema correctness (if data model changes) |
 | Interface Review | Pike | API surface (if interface changes) |
 
-### Step 5: Invoke BMad Create Architecture (Gate 4)
+### Step 5: Execute (Gate 4)
 
-Execute `bmad-create-architecture` with Allura context loaded:
+Execute architecture creation with Allura context loaded:
 
 1. **Init**: Gather context, define scope, identify stakeholders
 2. **Discovery**: Collaborative step-by-step exploration of the problem space

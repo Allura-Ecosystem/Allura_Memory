@@ -1,0 +1,46 @@
+{
+  "name": "allura",
+  "version": "0.1.0",
+  "description": "Allura README asset and guidance pack for presenting Allura Brain and governed memory.",
+  "author": {
+    "name": "Ronin",
+    "email": "[TODO: author@example.com]",
+    "url": "[TODO: https://github.com/author]"
+  },
+  "homepage": "[TODO: Allura README or docs URL]",
+  "repository": "[TODO: repository URL]",
+  "license": "[TODO: MIT]",
+  "keywords": [
+    "allura",
+    "memory",
+    "readme"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Allura",
+    "shortDescription": "README visuals and guidance for Allura Brain.",
+    "longDescription": "A local Allura plugin that packages the README image assets and a lightweight guidance skill for explaining Allura Brain, governed memory, and the RuVix proof loop.",
+    "developerName": "Ronin",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "[TODO: Allura website URL]",
+    "privacyPolicyURL": "[TODO: https://openai.com/policies/row-privacy-policy/]",
+    "termsOfServiceURL": "[TODO: https://openai.com/policies/row-terms-of-use/]",
+    "defaultPrompt": [
+      "Create an Allura README section.",
+      "Explain Allura Brain with the plugin assets.",
+      "Draft a governed memory overview."
+    ],
+    "brandColor": "#111827",
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo.png",
+    "screenshots": [
+      "./assets/readme-hero.png",
+      "./assets/readme-allura-brain.png",
+      "./assets/readme-memory-flow.png"
+    ]
+  }
+}

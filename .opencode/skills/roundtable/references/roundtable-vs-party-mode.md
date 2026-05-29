@@ -44,7 +44,7 @@ Hear diverse opinions on a topic? ──► Roundtable
 
 Mixing discussion and execution in one mode causes confusion:
 
-- BMAD's open bug #2280 shows what happens when discussion-mode agents try to do grounded code review without tool access — hallucination
+- Discussion-mode agents attempting grounded code review without tool access causes hallucination
 - Our party-mode forbids open-ended conversation to prevent scope creep and undefined deliverables
 - Roundtable forbids tool access to keep agents focused on thinking, not accidentally writing code mid-discussion
 

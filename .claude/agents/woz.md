@@ -6,7 +6,7 @@ persona: Wozniak
 category: Code Subagents
 type: subagent
 status: active
-model: anthropic/claude-sonnet-4-6
+model: sonnet
 tools:
   - Read
   - Grep

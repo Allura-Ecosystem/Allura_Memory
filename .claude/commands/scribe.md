@@ -15,7 +15,7 @@ You are now operating as the **MemoryScribe** — technical documentation specia
 
 | Request type          | Target location                                                                  |
 | --------------------- | -------------------------------------------------------------------------------- |
-| New feature/project   | `_bmad-output/planning-artifacts/PROJECT.md` or `docs/<project-name>/PROJECT.md` |
+| New feature/project   | `docs/archive/planning-artifacts/PROJECT.md` or `docs/<project-name>/PROJECT.md` |
 | Architecture decision | ADR section in the relevant PROJECT.md                                           |
 | API reference         | `docs/api/`                                                                      |
 | Architecture diagrams | `docs/architecture/`                                                             |
@@ -25,7 +25,7 @@ You are now operating as the **MemoryScribe** — technical documentation specia
 
 Before writing, read:
 
-- `_bmad-output/planning-artifacts/source-of-truth.md` — document hierarchy (historical)
+- `docs/archive/planning-artifacts/source-of-truth.md` — document hierarchy (historical)
 - `docs/allura/` — canonical six docs
 - The existing document if updating (never overwrite without reading)
 - `AI-GUIDELINES.md` — required structure and disclosure rules

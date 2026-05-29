@@ -2,7 +2,6 @@
   "active_notion_contract_scope": "https://www.notion.so/ce13dc069ff347689fcc7cbe188232c8",
   "canonical_plan_id": "ce13dc069ff347689fcc7cbe188232c8",
   "canonical_plan_path": "ralph/PROMPT_plan.md",
-  "allura_navigator_workflow": "_bmad/ALLURA-NAVIGATOR-WORKFLOW.md",
   "current_ui_review_gate": {
     "card": "dashboard blank slate reset",
     "status": "Reset - rebuild from scratch",
@@ -22,7 +21,6 @@
     ".opencode/AGENTS.md",
     ".opencode/manifest.json",
     ".opencode/SKILL-OWNERSHIP.md",
-    "_bmad/ALLURA-NAVIGATOR-WORKFLOW.md",
     ".opencode/context/core/context-system.md",
     ".opencode/context/navigation.md",
     ".opencode/agent/core/brooks.md",
@@ -35,7 +33,7 @@
     "frontend-design",
     "frontend-craft",
     "allura-design",
-    "bmad-code-review"
+    "allura-code-review"
   ],
   "validation_commands": [
     "bash .opencode/scripts/validate-oac-core.sh",

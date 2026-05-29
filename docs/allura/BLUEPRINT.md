@@ -68,7 +68,7 @@ Caregiver 50% · Creator 30% · Explorer 20%
 
 ### Source of Truth
 
-[`DESIGN-ALLURA.md`](./DESIGN-ALLURA.md) — brand canon and visual identity source, including Mission Control guidance
+[`DESIGN-ALLURA.md`](./DESIGN-ALLURA.md) — brand canon and visual identity source, including Memory Command Center guidance
 Full system: [`DESIGN-ALLURA.md`](./DESIGN-ALLURA.md)
 
 ---
@@ -128,19 +128,40 @@ The hard isolation boundary. Every read and write MUST include a valid `group_id
 
 ## 2) Requirements
 
-### Dashboard v2 condensed scope
+### API-First Scope and Optional Memory Command Center
 
-The dashboard rebuild is part of the Allura memory engine, not a separate product surface. Phase 1 `/dashboard` must answer three operator questions: what is true right now, what needs action, and what needs approval.
+Allura is an MCP/API-first memory engine with an optional RuVix-governed Memory Command Center for human operators. The engine remains usable through protocol and service interfaces without a browser, while the dashboard is the branded control plane for memory inspection, governance, curator decisions, audit evidence, graph exploration, and settings.
 
-**Phase 1 goals:**
+- **MCP tools** — `memory_add`, `memory_search`, `memory_get`, `memory_list`, `memory_delete`
+- **API routes** — `/api/health/*`, `/api/memory/*`, `/api/curator/*`
+- **CLI scripts** — `bun run curator:run`, `bun run curator:approve`, `bun run mcp:http`
+- **Memory Command Center** — `/dashboard`, `/dashboard/memories`, `/dashboard/curator`, `/dashboard/governance`, `/dashboard/graph`, `/dashboard/audit`, `/dashboard/settings`
 
-- Build `/dashboard` from real data and honest degraded states.
-- Show system status, hygiene/actions, and approvals queue.
-- Preserve tenant isolation and governed approval flows.
-- Expose active `group_id` scope.
-- Avoid fabricated live data, broken evidence/detail links, and Difference Driven language/tokens/colors.
+**Core goals:**
+- Provide real-time system status and health via API endpoints
+- Show memory search, insights, and audit trails through MCP tools and the optional Memory Command Center
+- Preserve tenant isolation and governed approval flows
+- Expose active `group_id` scope in all responses and dashboard pages
+- Avoid fabricated data; degraded states must be explicit
+- Require governance receipts for every dashboard mutation
 
-**Phase 1 non-goals:** full Mission Control route replacement, native Kanban implementation, direct memory editing, production ops controls, bulk approval, full graph explorer, and advanced analytics.
+**Non-goals:** ungated direct database editing, fabricated live metrics, decorative dashboard charts without source evidence, bulk approval without rationale, generated logo marks, or any dashboard action that bypasses MCP/API governance.
+
+### RuVix-Governed Memory Command Center
+
+The approved dashboard direction is a Memory Command Center, not a decorative product dashboard. It manages what the system remembers, why it remembers it, who approved it, what it can affect, and whether governance is holding.
+
+| Area | Purpose | First-release requirements |
+|------|---------|----------------------------|
+| Overview | System health, queue status, freshness, degraded state | PostgreSQL, Neo4j, MCP gateway, curator, embeddings, active `group_id` |
+| Memories | Search, inspect, filter, and understand memory records | State, source, confidence, actor, evidence ID, graph relationship, provenance drawer |
+| Curator | Human decision surface for proposals | Approve, reject, request evidence, request changes, required rationale |
+| Governance | RuVix policy control and status | Promotion mode, thresholds, role separation, tenant isolation, locks, drift warnings |
+| Graph | Semantic relationship exploration | Real Neo4j data only, source receipts, fallback list when degraded |
+| Audit | Compliance and evidence surface | Full event log, filters, CSV/export packet, receipt details |
+| Settings | Read-mostly tenant and policy visibility | Tenant config, promotion mode, role matrix, endpoint health |
+
+Every page must show active `group_id`, source of truth, freshness, degraded state, and a path to evidence. Every mutation must produce a governance receipt with intent, actor, source, policy, validation, and audit trail.
 
 **Memory/provenance/export requirements:** export/copy surfaces are read-only; preserve source, actor/creator/approver, timestamp, status, confidence, `group_id`, evidence IDs, hash/previous-hash fields when present; degraded export failures must be explicit.
 
@@ -159,31 +180,25 @@ The dashboard rebuild is part of the Allura memory engine, not a separate produc
 | B9  | Every memory shows provenance: "from conversation" or "added manually"                       |
 | B10 | Memory usage indicator: "used N times this week" on expand                                   |
 | B11 | Undo: recently forgotten memories recoverable within 30 days                                 |
-| B12 | Enterprise admin view: tenant overview, SOC2 pending queue, audit log                        |
-| B13 | Audit log exportable as CSV for compliance                                                   |
-| B14 | TypeScript SDK (`@allura/sdk`)                                                               |
-| B15 | BYOK encryption                                                                              |
-| B16 | Curator dashboard: three-tab approval workflow (Traces, Approved, Pending)                   |
+| B12 | Enterprise admin view: tenant overview, SOC2 pending queue, audit log via API |
+| B13 | Audit log exportable as CSV for compliance |
+| B14 | TypeScript SDK (`@allura/sdk`) |
+| B15 | BYOK encryption |
+| B16 | Curator CLI: three-state approval workflow (Traces, Approved, Pending) |
 | B17 | Curator sees confidence scores (60-100%) with one-sentence reasoning for uncertain proposals |
-| B18 | Approve/reject decisions logged to audit trail with curator ID and timestamp                 |
-| B19 | Auto-promote proposals >85% confidence without curator review (configurable)                 |
-| B20 | Dashboard deployable on Vercel with backend engine in user's VPC/cloud                       |
-| B21 | Curator authentication via Clerk (SSO, RBAC)                                                 |
-| B22 | Error tracking via Sentry; curator alerted on engine failures                                |
-| B23 | Agents must persist all task activity as append-only raw traces for auditability             |
+| B18 | Approve/reject decisions logged to audit trail with curator ID and timestamp |
+| B19 | Auto-promote proposals >85% confidence without curator review (configurable) |
+| B20 | MCP HTTP gateway deployable via Docker; backend engine in user's VPC/cloud |
+| B21 | Authentication via API keys and RBAC (curator, admin, viewer roles) |
+| B22 | Error tracking via Sentry; alerts on engine failures |
+| B23 | Agents must persist all task activity as append-only raw traces for auditability |
 | B24 | A curator process must turn raw traces into proposed insights without promoting them directly |
-| B25 | No insight may become active knowledge until approved by a human or policy-controlled flow    |
-| B26 | Approved insights must be stored in Neo4j as immutable, versioned knowledge records          |
-| B27 | Agents must retrieve approved knowledge through a controlled retrieval layer                 |
-| B28 | All reads/writes must pass through controlled APIs with project-level access and audit        |
-| B29 | The full loop from agent execution to knowledge reuse must be demonstrably end-to-end        |
-| B30 | The rebuilt dashboard must replace the current Docker dashboard on port `3100` only after route, visual, adapter, auth, and rollback validation passes |
-| B31 | `localhost:6420` is the visual/reference memory-dashboard experience to preserve during the rebuild |
-| B32 | `localhost:3334` is the Mission Control development integration target for the rebuilt dashboard |
-| B33 | Mission Control must combine operator cockpit workflows with Allura memory governance rather than becoming a separate product surface |
-| B34 | Every Mission Control route must declare its backing source of truth, read/write policy, degraded behavior, and evidence policy |
-| B35 | The rebuilt dashboard must not fabricate live data; placeholders/sample data must be labeled or replaced before `3100` cutover |
-| B36 | Team RAM agents must integrate with BMAD planning and Allura Brain memory through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth |
+| B25 | No insight may become active knowledge until approved by a human or policy-controlled flow |
+| B26 | Approved insights must be stored in Neo4j as immutable, versioned knowledge records |
+| B27 | Agents must retrieve approved knowledge through a controlled retrieval layer |
+| B28 | All reads/writes must pass through controlled APIs with project-level access and audit |
+| B29 | The full loop from agent execution to knowledge reuse must be demonstrably end-to-end |
+| B30 | Team RAM agents must integrate with BMAD planning and Allura Brain memory through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth |
 
 ---
 
@@ -254,18 +269,18 @@ The dashboard rebuild is part of the Allura memory engine, not a separate produc
 | F39 | A second agent can retrieve approved knowledge and use it correctly in a later task                                |
 | F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible                   |
 
-#### Mission Control Dashboard Rebuild
+#### Memory Command Center
 
 | #   | Requirement |
 | --- | ----------- |
-| F41 | Mission Control exposes `/command`, `/work-board`, `/agents`, `/telemetry`, `/allura`, and `/resources` as the rebuilt operator surface |
-| F42 | `/allura` preserves the `6420` memory dashboard capabilities: memory search/list, insights, trace logs, provenance, extracted facts, and approval queue |
+| F41 | Memory Command Center exposes `/dashboard`, `/dashboard/memories`, `/dashboard/curator`, `/dashboard/governance`, `/dashboard/graph`, `/dashboard/audit`, and `/dashboard/settings` as the governed operator surface |
+| F42 | `/dashboard/memories` preserves useful reference memory capabilities: memory search/list, insights, trace logs, provenance, extracted facts, and approval queue |
 | F43 | `/work-board` uses Native Allura Kanban as the default planning source of truth; Notion, Linear, and GitHub Projects are optional sync adapters |
 | F44 | `/resources` reads skills, agents, MCP servers, containers, cron jobs, and drift warnings from a declared Resource Manifest or generated manifest endpoint |
 | F45 | `/agents` distinguishes TALON/IRIS native subagents from Team RAM/Durham CLI harness agents and external runtime agents |
 | F46 | `/telemetry` surfaces model, prompt, tool, retry, rate-limit, failure, and degraded-state metrics without inventing missing measurements |
-| F47 | Every Mission Control route displays its source-of-truth declaration and degraded-state behavior |
-| F48 | The `3100` cutover requires documented route parity, visual parity, source-of-truth parity, smoke tests, auth validation, and rollback plan |
+| F47 | Every Memory Command Center route displays its source-of-truth declaration and degraded-state behavior |
+| F48 | Dashboard launch requires documented route parity, visual parity, source-of-truth parity, smoke tests, auth validation, and rollback plan |
 
 ---
 
@@ -288,9 +303,9 @@ The dashboard rebuild is part of the Allura memory engine, not a separate produc
 | Retrieval Gateway | Typed contract enforcement at the retrieval boundary — all agent reads pass through `SearchRequest`/`MemoryResult` typed contract | `src/lib/retrieval/contract.ts`, `src/lib/retrieval/policy.ts`, `src/lib/retrieval/startup-validator.ts` |
 | Sync Contract Mappings | Resolves user_id→Agent and group_id→Project for relationship wiring on promoted memories | `src/lib/graph-adapter/sync-contract-mappings.ts` |
 | Budget Admin API | `POST /api/admin/reset-budget` — reset halted sessions per group or globally | `src/mcp/canonical-http-gateway.ts` |
-| Mission Control Dashboard Shell | Development integration target for the rebuilt dashboard; combines operator cockpit routes with Allura memory governance | `localhost:3334` during development; replaces Docker dashboard on `3100` only after cutover gates pass |
+| Memory Command Center Shell | Approved governed dashboard for memories, curator work, RuVix governance, graph exploration, audit evidence, and settings | Launches only after source-of-truth, no-fabricated-data, auth, accessibility, route-smoke, and rollback gates pass |
 | Allura Memory Reference Surface | Visual/product reference for the desired memory dashboard experience | `localhost:6420`; preserve capabilities in `/allura` |
-| Native Allura Kanban | Default planning and execution board for Mission Control | Source of truth by default; external boards are adapters unless explicitly configured upstream |
+| Native Allura Kanban | Default planning and execution board surfaced near the Memory Command Center when needed | Source of truth by default; external boards are adapters unless explicitly configured upstream |
 | Board Sync Adapters | Optional Notion, Linear, and GitHub Projects projections | Mirror native Allura state by default; provider-neutral mapping into the internal card/project/lane model |
 | Resource Manifest Adapter | Resource inventory adapter for skills, agents, MCP servers, containers, cron jobs, and drift warnings | `RESOURCE-MANIFEST.md` or generated manifest endpoint |
 | PostgreSQL 16            | Episodic memory + audit trail + proposals      | Docker service                                    |
@@ -774,7 +789,7 @@ graph LR
 3. Configure Team RAM skills to use packaged MCP servers such as `neo4j-memory` and `database-server`; add `neo4j-cypher` only for targeted graph inspection
 4. Set `group_id` to your tenant namespace (e.g. `allura-myproject`)
 5. Agents call `memory_add` / `memory_search` — memories flow automatically
-6. Open `/memory` in the dashboard to inspect and manage memories
+6. Open the optional Memory Command Center at `/dashboard/memories` to inspect and manage memories through governed UI contracts
 
 ---
 
@@ -833,16 +848,15 @@ neo4j-memory database-server neo4j-cypher
              │
     ┌────────┴────────┐
     ↓                 ↓
-Allura Dashboard    Memory Dashboard
-(Approval)      (Browse + Search)
-(Optional)      (Always)
+Memory Command Center  MCP/API Clients
+(Optional operator UI) (Primary engine path)
 ```
 
 **Three Layers:**
 
 1. **Agent Layer:** OpenClaw, Claude Code, Cursor — any MCP-compatible agent
 2. **Memory Layer:** PostgreSQL (episodic) + Neo4j (semantic)
-3. **Governance Layer:** Optional curator dashboard for human approval
+3. **Governance Layer:** RuVix rules, curator approval, audit receipts, and optional Memory Command Center controls
 
 **Core Workflows:**
 

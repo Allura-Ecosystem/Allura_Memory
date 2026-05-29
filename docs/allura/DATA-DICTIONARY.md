@@ -14,23 +14,23 @@ This document describes every table and node type in Allura's dual-database data
 - [Neo4j: Team](#neo4j-team)
 - [Neo4j: Project](#neo4j-project)
 - [Neo4j: Relationships](#neo4j-relationships)
-- [Dashboard Adapter Contracts](#dashboard-adapter-contracts)
+- [Memory Command Center Adapter Contracts](#memory-command-center-adapter-contracts)
 - [Metadata Payloads](#metadata-payloads)
 
 ---
 
-## Dashboard v2 condensed data contracts
+## API Response Contracts
 
-### `DashboardResult<T>`
+### `ApiResult<T>`
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `data` | `T \| null` | Yes | Mapped dashboard data or null when unavailable. |
+| `data` | `T \| null` | Yes | Mapped response data or null when unavailable. |
 | `error` | `string \| null` | Yes | Human-readable error, null when absent. |
-| `degraded` | `boolean` | Yes | True when partial data is rendered. |
-| `warnings` | `DashboardWarning[]` | Yes | Non-fatal warnings from adapters, validators, or backends. |
+| `degraded` | `boolean` | Yes | True when partial data is returned. |
+| `warnings` | `ApiWarning[]` | Yes | Non-fatal warnings from adapters, validators, or backends. |
 
-### `DashboardWarning`
+### `ApiWarning`
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -59,60 +59,7 @@ This document describes every table and node type in Allura's dual-database data
 | `hash` | `string` | Yes | Chain hash when available. |
 | `prev_hash` | `string` | Yes | Previous chain hash when available. |
 
-Dashboard data rules: every record includes `group_id`; unknown source state renders as unknown, not zero; no fabricated counts; export/copy actions are read-only formatting operations over existing records and must not mutate PostgreSQL or Neo4j.
-
----
-
-## Dashboard Adapter Contracts
-
-These are logical UI/adapter contracts for the Mission Control dashboard rebuild. They do not create new persistence stores. They define the fields the dashboard must display or consume so the rebuilt development surface on `3334` can safely replace the current Docker dashboard on `3100` after validation.
-
-### `DashboardRouteParityItem`
-
-Maps the `6420` visual/reference memory dashboard capability into the Mission Control route that must preserve it.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `source_surface` | string | Yes | Reference surface, e.g. `localhost:6420` |
-| `source_capability` | string | Yes | Capability observed on the reference surface, e.g. `Memories`, `Insights`, `Approval Queue` |
-| `target_surface` | string | Yes | Development integration target, e.g. `localhost:3334` |
-| `target_route` | string | Yes | Mission Control route, e.g. `/allura`, `/telemetry`, `/agents` |
-| `parity_status` | enum | Yes | `missing`, `partial`, `complete`, `intentionally_changed` |
-| `evidence_ref` | string | No | Screenshot, test, Notion page, or validation artifact proving parity status |
-| `notes` | string | No | Explanation of gaps or intentional differences |
-
-### `AdapterDeclaration`
-
-Declares each Mission Control route's source of truth and allowed behavior. Every route must expose this declaration in UI or validation evidence before `3100` cutover.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `adapter_id` | string | Yes | Stable identifier, e.g. `allura-brain`, `notion-work-board`, `resource-manifest` |
-| `display_name` | string | Yes | Human-readable name |
-| `route` | string | Yes | Mission Control route using the adapter |
-| `system_of_record` | string | Yes | Authoritative source, e.g. Notion, Allura Brain APIs, Resource Manifest |
-| `read_policy` | string | Yes | What the adapter may read |
-| `write_policy` | string | Yes | What writes are allowed, if any |
-| `memory_scope` | string | Yes | What memory/context may be persisted to Allura Brain |
-| `evidence_policy` | string | Yes | Required proof before status changes or cutover |
-| `retention_policy` | string | No | How long operational/evidence data is retained |
-| `degradation_behavior` | string | Yes | What UI shows when the adapter is unavailable or unknown |
-| `approved_actions` | list<string> | No | Explicit allowed actions |
-| `prohibited_actions` | list<string> | Yes | Actions that must never be performed by this adapter |
-
-### `CutoverGate`
-
-Defines the required validation gates before Mission Control replaces the current Docker dashboard on `3100`.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `gate_id` | string | Yes | Stable gate ID, e.g. `route-parity`, `auth-validation`, `rollback-ready` |
-| `description` | string | Yes | What must be proven |
-| `status` | enum | Yes | `pending`, `passed`, `failed`, `waived` |
-| `owner` | string | Yes | Responsible person or agent/team |
-| `evidence_ref` | string | No | Link to test output, screenshot, Notion validation page, or commit |
-| `decided_by` | string | No | Captain/human approver for pass/waive decisions |
-| `decided_at` | datetime | No | Decision timestamp |
+API data rules: every record includes `group_id`; unknown source state renders as unknown, not zero; no fabricated counts; export/copy actions are read-only formatting operations over existing records and must not mutate PostgreSQL or Neo4j.
 
 ---
 
@@ -286,7 +233,7 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `claim_id` | string | Yes | Stable claim identifier for a dashboard assertion |
+| `claim_id` | string | Yes | Stable claim identifier for a Memory Command Center assertion |
 | `states_covered` | list<string> | Yes | UI states covered by the claim (empty, loading, error, success, mobile, keyboard, etc.) |
 | `evidence_attached` | list<string> | Yes | Evidence bundle types attached to the claim (`screenshot`, `audit`, `anti-drift`) |
 | `approval_status` | enum | Yes | Claim status (`pending`, `approved`, `rejected`) |
@@ -295,9 +242,9 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `allowed_prefix` | string | Yes | Only `--durham-*` CSS custom properties are allowed in dashboard scope |
-| `forbidden_patterns` | list<string> | Yes | Disallowed tokens and styles: `dark-green`, `brand-gold`, `Poppins`, `Inter`, `Montserrat` |
-| `scope` | string | Yes | Dashboard surface or component under review |
+| `allowed_prefix` | string | Yes | Approved Allura/Durham token prefixes for terminal/API docs and Memory Command Center surfaces |
+| `forbidden_patterns` | list<string> | Yes | Disallowed tokens, unrelated project styles, generated logo-like marks, and unsupported brand treatments |
+| `scope` | string | Yes | Terminal/API documentation, dashboard surface, or component under review |
 | `status` | enum | Yes | Audit state (`pending`, `passed`, `failed`) |
 
 ### `DurhamGateEvent`
@@ -306,8 +253,54 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 |-------|------|----------|-------------|
 | `gate_id` | string | Yes | Stable gate identifier for a Durham ship review |
 | `reviewers` | list<string> | Yes | Required reviewers: `Aaker`, `Glaser`, `Munari` |
-| `artifact_ref` | string | Yes | Evidence artifact reference, including `docs/allura/BRAND-RULES-dashboard-v2.md` |
+| `artifact_ref` | string | Yes | Evidence artifact reference, including `docs/allura/BRAND-RULES-dashboard-v2.md` for Memory Command Center surfaces |
 | `status` | enum | Yes | Gate state (`pending`, `passed`, `blocked`) |
+
+## Memory Command Center Adapter Contracts
+
+Production dashboard components consume these mapped contracts, never raw database or substrate payloads.
+
+### `DashboardResult<T>`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `data` | `T \| null` | Yes | Mapped data or null when unavailable |
+| `error` | `string \| null` | Yes | Human-readable error when the panel cannot show complete data |
+| `degraded` | boolean | Yes | True when returned data is partial, stale, or missing a backing service |
+| `warnings` | `DashboardWarning[]` | Yes | Non-fatal warnings from adapters, validators, or backends |
+| `source` | `DashboardSource` | Yes | Source-of-truth descriptor for the panel |
+| `freshness` | `DashboardFreshness` | Yes | Timestamp and freshness state for the panel |
+| `group_id` | string | Yes | Active tenant scope; required on every dashboard page and operation |
+
+### `GovernanceReceipt`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `receipt_id` | string | Yes | Stable receipt identifier |
+| `intent` | string | Yes | Human-readable reason for the mutation or decision |
+| `actor_id` | string | Yes | Person, agent, or service requesting the action |
+| `group_id` | string | Yes | Tenant scope for the action |
+| `source_refs` | list<string> | Yes | Memory, trace, proposal, or evidence IDs used before action |
+| `policy_refs` | list<string> | Yes | RuVix rules, promotion mode, threshold, or role checks evaluated |
+| `validation` | list<string> | Yes | Validation checks performed before completion |
+| `audit_event_id` | string | Yes | Append-only PostgreSQL event that records the action |
+| `result` | enum | Yes | `approved`, `rejected`, `requested_evidence`, `requested_changes`, `soft_deleted`, `recovered`, `blocked` |
+
+### `DashboardSource`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `label` | string | Yes | Human-readable source label, e.g. `PostgreSQL events`, `Neo4j graph`, `Curator proposals` |
+| `endpoint` | string | Yes | API route or MCP tool that supplied data |
+| `trust_level` | enum | Yes | `verified`, `degraded`, `unknown`, `external_untrusted` |
+
+### `DashboardFreshness`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `observed_at` | ISO timestamp | Yes | When the data was observed |
+| `status` | enum | Yes | `fresh`, `stale`, `unknown`, `not_live` |
+| `message` | string | Yes | Plain-language freshness explanation |
 
 ## Neo4j: `Memory`
 

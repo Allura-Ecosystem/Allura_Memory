@@ -42,6 +42,6 @@
 
 1. **Scout before build** — always hydrate context before implementation
 2. **Skills before Ralph** — load required skills before validation
-3. **Allura wrappers before BMad primitives** — use `allura-*` wrappers for Allura repo work
+3. **Allura skills for Allura work** — use `allura-*` skills for Allura repo work
 4. **Validate before done** — no story marked Done without validation evidence
 5. **Brain remembers** — log all significant outcomes to Allura Brain

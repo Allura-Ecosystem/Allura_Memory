@@ -44,7 +44,7 @@ grep -r "roninclaw-\|npx\|npm run" src/ --include="*.ts" -l
 ```
 
 ### Pattern Coverage
-Check which epics/stories have test coverage in `src/__tests__/` vs what's defined in `_bmad-output/planning-artifacts/`.
+Check which epics/stories have test coverage in `src/__tests__/` vs what's defined in `docs/archive/planning-artifacts/`.
 
 ---
 

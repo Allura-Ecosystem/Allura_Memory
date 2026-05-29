@@ -1,2 +1,0 @@
-port_3334_after	free
-port_6420_after	State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess LISTEN 0      4096               *:6420            *:*           

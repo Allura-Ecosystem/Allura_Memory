@@ -219,12 +219,7 @@ This section traces the governed memory pipeline requirements from business goal
 | B27 | Agents must retrieve approved knowledge through a controlled retrieval layer | F10, F11, F35, F36 | MEM-UC6 |
 | B28 | All reads/writes must pass through controlled APIs with project-level access and audit | F12, F13, F37, F38 | MEM-UC7 |
 | B29 | The full loop from agent execution to knowledge reuse must be demonstrably end-to-end | F14, F15, F39, F40 | MEM-UC8 |
-| B30 | The rebuilt dashboard must replace the current Docker dashboard on port `3100` only after route, visual, adapter, auth, and rollback validation passes | F41, F48 | DASH-UC1, DASH-UC8 |
-| B31 | `localhost:6420` is the visual/reference memory-dashboard experience to preserve during the rebuild | F42, F48 | DASH-UC2 |
-| B32 | `localhost:3334` is the Mission Control development integration target for the rebuilt dashboard | F41, F48 | DASH-UC1 |
-| B33 | Mission Control must combine operator cockpit workflows with Allura memory governance rather than becoming a separate product surface | F41, F42, F47 | DASH-UC3 |
-| B34 | Every Mission Control route must declare its backing source of truth, read/write policy, degraded behavior, and evidence policy | F43, F44, F45, F46, F47 | DASH-UC4, DASH-UC5 |
-| B35 | The rebuilt dashboard must not fabricate live data; placeholders/sample data must be labeled or replaced before `3100` cutover | F46, F47, F48 | DASH-UC6, DASH-UC8 |
+| B30 | Team RAM agents must integrate with BMAD planning and Allura Brain memory through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth | F41, F42 | MEM-UC10 |
 
 ### Section 2: Functional Requirements Detail
 
@@ -279,13 +274,13 @@ This section traces the governed memory pipeline requirements from business goal
 | <a name="f15"></a>F15 | The full lifecycle from trace capture to knowledge reuse must be traceable, auditable, and reversible. | Evidence chain: trace → proposal → approval → Neo4j → retrieval · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 | <a name="f16"></a>F16 | The graph must include Agent, Team, and Project structural context nodes with relationships enabling traversal queries by ownership, project scope, and delegation path. | `scripts/neo4j-seed-agents.cypher` · [BLUEPRINT.md](./BLUEPRINT.md#5-data-model) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-agent) |
 
-### Section 3: Curator Dashboard (F17–F19)
+### Section 3: Curator API/CLI (F17–F19)
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f17"></a>F17 | Tab 1 restricted to authenticated users with `admin` role (engineers only) | `src/app/api/curator/` · Clerk RBAC middleware · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
+| <a name="f17"></a>F17 | Curator API restricted to authenticated users with `admin` role (engineers only) | `src/app/api/curator/` · RBAC middleware · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) |
 | <a name="f18"></a>F18 | Audit log endpoint: `GET /api/audit/events` — returns curator decisions with timestamps | `src/app/api/audit/events/` · [BLUEPRINT.md](./BLUEPRINT.md) |
-| <a name="f19"></a>F19 | Dashboard integrates Clerk for authentication and RBAC (curator, admin, viewer roles) | Clerk auth provider · `src/lib/auth/` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
+| <a name="f19"></a>F19 | API integrates RBAC (curator, admin, viewer roles) | Auth provider · `src/lib/auth/` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) |
 
 ### Section 4: Infrastructure (F20–F25)
 
@@ -293,10 +288,10 @@ This section traces the governed memory pipeline requirements from business goal
 |----|-------------|--------------|
 | <a name="f20"></a>F20 | Skills route agent work to packaged MCP servers (`neo4j-memory`, `database-server`, optional `neo4j-cypher`) rather than a custom all-in-one MCP runtime | `.opencode/skills/allura-memory-skill/` · `.opencode/skills/mcp-docker-memory-system/` · AD-23 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-1-agent-memory-recall-primary-path) |
 | <a name="f21"></a>F21 | `docker compose up` starts core infra and app services; packaged MCP servers are attached as focused external capabilities | `docker-compose.yml` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#81-deployment-scenarios) |
-| <a name="f22"></a>F22 | Memory viewer UI at `/memory` lists, searches, and deletes memories | `src/app/memory/page.tsx` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#ux-philosophy) |
-| <a name="f23"></a>F23 | Curator dashboard deployed on Vercel; calls backend engine via `CURATOR_ENGINE_URL` env var | `src/app/curator/page.tsx` · Vercel deployment config · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
-| <a name="f24"></a>F24 | Vercel Functions (`/api/curator/*`) call Docker engine in VPC/cloud via HTTPS | `src/app/api/curator/` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#4-interface-catalogue) |
-| <a name="f25"></a>F25 | Error tracking: unhandled exceptions sent to Sentry; curator notified via email/Slack | `src/lib/observability/sentry.ts` · [BLUEPRINT.md](./BLUEPRINT.md#3-architecture) |
+| <a name="f22"></a>F22 | Memory API at `/api/memory` lists, searches, and retrieves memories | `src/app/api/memory/` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#api-philosophy) |
+| <a name="f23"></a>F23 | MCP HTTP gateway exposes backend engine via `CURATOR_ENGINE_URL` env var | `src/mcp/http-gateway.ts` · Docker deployment config · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#4-interface-catalogue) |
+| <a name="f24"></a>F24 | API routes call Docker engine in VPC/cloud via HTTPS | `src/app/api/` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#4-interface-catalogue) |
+| <a name="f25"></a>F25 | Error tracking: unhandled exceptions sent to Sentry; operator notified via email/Slack | `src/lib/observability/sentry.ts` · [BLUEPRINT.md](./BLUEPRINT.md#3-architecture) |
 
 ### Section 5: Governed Memory Pipeline (F26–F40)
 
@@ -318,65 +313,54 @@ This section traces the governed memory pipeline requirements from business goal
 | <a name="f39"></a>F39 | A second agent can retrieve approved knowledge and use it correctly in a later task | Retrieval endpoint · validation gate scenario MEM-UC8 · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) |
 | <a name="f40"></a>F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible | Evidence chain: trace → proposal → approval → Neo4j → retrieval · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 
-#### Mission Control Dashboard Rebuild (F41–F48)
-
-| ID | Requirement | Satisfied by |
-|----|-------------|--------------|
-| <a name="f41"></a>F41 | Mission Control exposes `/command`, `/work-board`, `/agents`, `/telemetry`, `/allura`, and `/resources` as the rebuilt operator surface. | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#mission-control-dashboard-rebuild-addendum) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) |
-| <a name="f42"></a>F42 | `/allura` preserves the `6420` memory dashboard capabilities: memory search/list, insights, trace logs, provenance, extracted facts, and approval queue. | Route parity map · Dashboard validation artifact · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#mission-control-route-parity) |
-| <a name="f43"></a>F43 | `/work-board` uses Native Allura Kanban as the default planning source of truth; Notion, Linear, and GitHub Projects are optional sync adapters. | Native Kanban strategy · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) AD-31 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) |
-| <a name="f44"></a>F44 | `/resources` reads skills, agents, MCP servers, containers, cron jobs, and drift warnings from a declared Resource Manifest or generated manifest endpoint. | Resource Manifest adapter declaration · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#dashboard-adapter-contracts) |
-| <a name="f45"></a>F45 | `/agents` distinguishes TALON/IRIS native subagents from Team RAM/Durham CLI harness agents and external runtime agents. | Agent adapter declaration · Team taxonomy in `AGENT_MANIFEST` |
-| <a name="f46"></a>F46 | `/telemetry` surfaces model, prompt, tool, retry, rate-limit, failure, and degraded-state metrics without inventing missing measurements. | Telemetry adapter declaration · degraded/unknown metric state |
-| <a name="f47"></a>F47 | Every Mission Control route displays its source-of-truth declaration and degraded-state behavior. | Adapter registry UI contract · route shell acceptance tests |
-| <a name="f48"></a>F48 | The `3100` cutover requires documented route parity, visual parity, source-of-truth parity, smoke tests, auth validation, and rollback plan. | Cutover gate checklist · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) |
-
-### Section 3: Dashboard Rebuild Use Cases
-
-| ID | Use Case | Trace |
-|----|----------|-------|
-| DASH-UC1 | Operator opens Mission Control dev build on `3334` to validate the future `3100` replacement. | B30, B32, F41, F48 |
-| DASH-UC2 | Operator compares `6420` memory dashboard reference against `/allura` in Mission Control. | B31, F42 |
-| DASH-UC3 | Operator uses one cockpit for work, agents, telemetry, resources, and Allura memory. | B33, F41, F42 |
-| DASH-UC4 | Developer verifies each route declares source of truth before wiring live data. | B34, F47 |
-| DASH-UC5 | `/resources` reports inventory and drift from a manifest instead of hardcoded cards. | B34, F44 |
-| DASH-UC6 | A degraded adapter shows honest unavailable/unknown state instead of fabricated data. | B35, F46, F47 |
-| DASH-UC7 | Human reviewer validates TALON/IRIS reports with evidence before status advances. | F45, F47 |
-| DASH-UC8 | Captain approves cutover to replace `3100`, with rollback ready. | B30, F48 |
-
 ### Section 6: Admin Requirements (B12–B23)
 
 | ID | Business Requirement | Functional Requirements | Use Cases | Satisfied by |
 |----|----------------------|------------------------|-----------|--------------|
-| B12 | Enterprise admin view: tenant overview, SOC2 pending queue, audit log | F17, F18, F19 | MEM-UC7 | `src/app/api/curator/` · `src/app/api/audit/events/` · Clerk RBAC · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
-| B13 | Audit log exportable as CSV for compliance | F18 | MEM-UC7 | `/admin/approvals` CSV download · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
+| B12 | Enterprise admin view: tenant overview, SOC2 pending queue, audit log via API | F17, F18, F19 | MEM-UC7 | `src/app/api/curator/` · `src/app/api/audit/events/` · RBAC · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) |
+| B13 | Audit log exportable as CSV for compliance | F18 | MEM-UC7 | `/api/audit/events` CSV download · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) |
 | B14 | TypeScript SDK (`@allura/sdk`) | F1–F5 | — | MCP tools are the SDK · AD-05 · 5-tool API surface |
 | B15 | BYOK encryption | — | — | Planned · RK-04 |
-| B16 | Curator dashboard: three-tab approval workflow (Traces, Approved, Pending) | F14, F17, F19 | MEM-UC4 | `src/app/curator/page.tsx` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
+| B16 | Curator CLI: three-state approval workflow (Traces, Approved, Pending) | F14, F17, F19 | MEM-UC4 | `src/app/api/curator/` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) |
 | B17 | Curator sees confidence scores (60-100%) with one-sentence reasoning for uncertain proposals | F10 | MEM-UC3 | `curatorScore()` · `canonical_proposals.tier` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | B18 | Approve/reject decisions logged to audit trail with curator ID and timestamp | F7, F32 | MEM-UC4 | `src/lib/memory/approval-audit.ts` · witness hash · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#postgresql-canonical_proposals) |
 | B19 | Auto-promote proposals >85% confidence without curator review (configurable) | F6, F7 | MEM-UC4 | `AUTO_APPROVAL_THRESHOLD` env var · `PROMOTION_MODE=auto` · [BLUEPRINT.md](./BLUEPRINT.md#6-execution-rules) |
-| B20 | Dashboard deployable on Vercel with backend engine in user's VPC/cloud | F23, F24 | — | Vercel deployment config · `CURATOR_ENGINE_URL` env var · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#81-deployment-scenarios) |
-| B21 | Curator authentication via Clerk (SSO, RBAC) | F19 | MEM-UC7 | Clerk auth provider · `src/lib/auth/` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
-| B22 | Error tracking via Sentry; curator alerted on engine failures | F25 | — | `src/lib/observability/sentry.ts` · `captureException` in curator approve route |
+| B20 | MCP HTTP gateway deployable via Docker; backend engine in user's VPC/cloud | F23, F24 | — | Docker deployment config · `CURATOR_ENGINE_URL` env var · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#81-deployment-scenarios) |
+| B21 | Authentication via API keys and RBAC (curator, admin, viewer roles) | F19 | MEM-UC7 | Auth provider · `src/lib/auth/` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) |
+| B22 | Error tracking via Sentry; operator alerted on engine failures | F25 | — | `src/lib/observability/sentry.ts` · `captureException` in curator approve route |
 | B23 | Agents must persist all task activity as append-only raw traces for auditability | F1, F2, F3, F26, F27 | MEM-UC1, MEM-UC2 | `insertEvent()` · `events` table · [BLUEPRINT.md](./BLUEPRINT.md) |
 
 ### Section 6A: RuVix Governance Requirements (REQ-GOV-001–REQ-GOV-002)
 
 | ID | Requirement | Trace | Satisfied by |
 |----|-------------|-------|--------------|
-| REQ-GOV-001 | Admin rule visibility — display active kernel rules with status, threshold, and audit trail | `RUVIX_KERNEL_CONTRACT_v1`, AD-XX, B12 / F17–F19 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx-ruvix-kernel-contract) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
-| REQ-GOV-002 | Admin rule configuration — toggle promotion mode, set threshold, view audit log | `PROMOTION_MODE`, `AUTO_APPROVAL_THRESHOLD`, audit events, B12 / F17–F19 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
+| REQ-GOV-001 | Admin rule visibility — display active kernel rules with status, threshold, and audit trail | `RUVIX_KERNEL_CONTRACT_v1`, AD-XX, B12 / F17–F19 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx-ruvix-kernel-contract) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) |
+| REQ-GOV-002 | Admin rule configuration — toggle promotion mode, set threshold, view audit log | `PROMOTION_MODE`, `AUTO_APPROVAL_THRESHOLD`, audit events, B12 / F17–F19 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) |
 
 ### Section 6B: RuVix Brand Governance Requirements (REQ-DURHAM-001–REQ-DURHAM-005)
 
+> **Note:** These requirements are active for the optional Memory Command Center and supporting terminal/API documentation. The engine remains MCP/API-first; the dashboard is a governed operator surface, not a bypass around policy.
+
 | ID | Requirement | Trace | Satisfied by |
 |----|-------------|-------|--------------|
-| REQ-DURHAM-001 | Durham token exclusivity — dashboard components use only `--durham-*` CSS custom properties | BRAND-001 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#durhamtokenaudit) |
-| REQ-DURHAM-002 | Mission-control voice — all dashboard copy is audited against forbidden DD voice patterns and marketing fluff | BRAND-002 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
-| REQ-DURHAM-003 | Evidence-gated completion — every dashboard PR includes a screenshot packet covering all states, mobile, accessibility, and anti-drift audit | BRAND-003 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#dashboardclaim) |
-| REQ-DURHAM-004 | Accessibility AA compliance — keyboard operable, visible focus rings, and AA contrast using Durham tokens | BRAND-004 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-2-brand-governance-layer) |
-| REQ-DURHAM-005 | Component consistency — reuse `agency-card`, `metric-card`, `agency-badge`, and curator table patterns with Durham spacing rhythm; ship only after Durham gate passes | BRAND-005, BRAND-006 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#durhamgateevent) · [docs/allura/BRAND-RULES-dashboard-v2.md](./BRAND-RULES-dashboard-v2.md) |
+| REQ-DURHAM-001 | Token exclusivity — dashboard and terminal output use approved Allura/Durham tokens and real logo assets only; generated logo-like marks are forbidden | BRAND-001 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#durhamtokenaudit) |
+| REQ-DURHAM-002 | Mission-control voice — dashboard and CLI copy are audited against unsupported certainty, marketing fluff, and unrelated project voice patterns | BRAND-002 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) |
+| REQ-DURHAM-003 | Evidence-gated completion — every dashboard or CLI feature PR includes tests, documentation, source receipts, and anti-drift audit | BRAND-003 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#dashboardclaim) |
+| REQ-DURHAM-004 | Accessibility AA compliance — dashboard controls and terminal output are keyboard reachable, screen-reader readable, and high-contrast safe | BRAND-004 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-2-brand-governance-layer) |
+| REQ-DURHAM-005 | Component consistency — reuse approved Allura/Durham UI and output patterns; ship only after Durham gate passes | BRAND-005, BRAND-006 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#durhamgateevent) |
+
+### Section 6C: Memory Command Center Requirements (REQ-DASH-001–REQ-DASH-008)
+
+| ID | Requirement | Trace | Satisfied by |
+|----|-------------|-------|--------------|
+| REQ-DASH-001 | Active `group_id` is visible on every dashboard page and included in every memory, curator, governance, graph, audit, and settings request | B2, F12, REQ-GOV-001 | [BLUEPRINT.md](./BLUEPRINT.md#ruvix-governed-memory-command-center) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-v2-condensed-ux-contract) |
+| REQ-DASH-002 | Memories page supports search, filtering, detail inspection, provenance drawer, source, confidence, state, actor, and relationship context | B8-B13, F10-F15 | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-architecture) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memory-command-center-adapter-contracts) |
+| REQ-DASH-003 | Curator page supports approve, reject, request evidence, request changes, and rationale capture through governed endpoints only | F6, F7, F31, F32 | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx-ruvix-kernel-contract) |
+| REQ-DASH-004 | Governance page surfaces RuVix policy mode, thresholds, role separation, tenant isolation, promotion locks, drift warnings, and mutation receipts | REQ-GOV-001, REQ-GOV-002 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) |
+| REQ-DASH-005 | Audit page provides event filtering, receipt detail, CSV/export packet, and source lineage for compliance review | B13, F18, F32 | [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#postgresql-events) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#audit--health-requirements) |
+| REQ-DASH-006 | Graph page renders real Neo4j data only, with source receipts and a fallback list when graph data is degraded or unavailable | F8, F9, F16 | [BLUEPRINT.md](./BLUEPRINT.md#5-data-model) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-architecture) |
+| REQ-DASH-007 | Every dashboard panel shows source of truth, freshness, degraded state, and no fabricated healthy/live claims | AD-14, AD-26 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-31-memory-command-center-operator-surface) |
+| REQ-DASH-008 | Every mutation shows a governance receipt containing intent, actor, source, policy, validation, and audit trail before completion | AD-XX, REQ-GOV-001 | [BLUEPRINT.md](./BLUEPRINT.md#ruvix-governed-memory-command-center) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memory-command-center-adapter-contracts) |
 
 ### Section 7: Use Case Index
 
@@ -391,7 +375,7 @@ This section traces the governed memory pipeline requirements from business goal
 | MEM-UC7 | Access Control | Enforce access and audit on all reads/writes | F12, F13 |
 | MEM-UC8 | E2E Validation | Reuse approved knowledge in a later agent run | F14, F15 |
 | MEM-UC9 | Graph Context | Agent context retrieval (traverse from Agent through AUTHORED_BY to Memory) | F16 |
-| MEM-UC10 | Curator Dashboard | Admin user authenticates, reviews pending proposals, approves or rejects | F10, F11, F12, F13, F14, F17, F19 |
+| MEM-UC10 | Curator CLI/API | Admin user authenticates via API key, reviews pending proposals, approves or rejects | F10, F11, F12, F13, F14, F17, F19 |
 | MEM-UC11 | Audit Export | Operator exports curator decisions as CSV for compliance | F18 |
 | MEM-UC12 | Infrastructure Deploy | Operator runs `docker compose up` and configures packaged MCP servers | F20, F21 |
 

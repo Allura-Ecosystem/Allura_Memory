@@ -1,20 +1,18 @@
 ---
 name: allura-retrospective
-description: "Allura-governed retrospective wrapper. Loads allura-team-ram gates, then routes to bmad-retrospective with Brooks gate, Brain outcome logging, and Notion board update. Use when running retrospectives in the Allura Memory repo."
+description: "Allura-governed retrospective. Loads allura-team-ram gates with Brooks gate, Brain outcome logging, and Notion board update. Use when running retrospectives in the Allura Memory repo."
 globs: ["src/**", "docs/allura/**", "guidelines/**"]
 ---
 
 # Allura Retrospective — Governed Retrospective
 
-> **Allura wrapper for retrospectives.** Enforces Brooks gate, Brain outcome logging, Notion board update, and canonical doc impact checks.
+> **Allura-governed retrospectives.** Enforces Brooks gate, Brain outcome logging, Notion board update, and canonical doc impact checks.
 
 ## When to Use
 
-Use this skill when running retrospectives in the Allura Memory repo. It wraps `bmad-retrospective` with Allura-specific governance gates.
+Use this skill when running retrospectives in the Allura Memory repo.
 
 Trigger phrases: `allura retrospective`, `run retrospective`, `retro the epic`, `allura retro`.
-
-**Do NOT use** for non-Allura projects — use `bmad-retrospective` directly for those.
 
 **Important:** Run retrospective only after every story in the epic is `Done`, unless Ronin explicitly asks for a partial retrospective.
 
@@ -82,9 +80,9 @@ Assign retrospective roles:
 | Builder | Woz | Implementation lessons |
 | Reviewer | Pike/Fowler | Review process lessons |
 
-### Step 5: Invoke BMad Retrospective (Gate 4)
+### Step 5: Execute (Gate 4)
 
-Execute `bmad-retrospective` with Allura context loaded:
+Execute retrospective with Allura context loaded:
 
 1. **Epic Review**: What was accomplished, what was blocked, what was learned
 2. **Lessons Extracted**: What went well, what didn't, what to change

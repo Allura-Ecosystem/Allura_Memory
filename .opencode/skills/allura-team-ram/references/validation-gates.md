@@ -39,9 +39,9 @@
 - [ ] Review owner assigned (Pike/Fowler)
 - [ ] Validation owner assigned (Ralph)
 
-### Gate 4: BMad Workflow Execution
+### Gate 4: Workflow Execution
 
-**Purpose:** Execute the underlying workflow method with Allura context.
+**Purpose:** Execute the Allura skill workflow with loaded context.
 
 **Checklist:**
 - [ ] Story spec read and understood
@@ -86,7 +86,7 @@
 | Gate 1 (Scout) | Warn and continue with local context. Never pretend hydration happened. |
 | Gate 2 (Doc Impact) | Plan doc update in same PR. Do not skip. |
 | Gate 3 (Owner) | Assign owner before proceeding. Do not self-review. |
-| Gate 4 (Workflow) | Follow the BMad method. Do not improvise. |
+| Gate 4 (Workflow) | Follow the Allura skill workflow. Do not improvise. |
 | Gate 5 (Notion) | Log warning. Continue with local status. Flag for manual update. |
 | Gate 6 (Validation) | Do not mark story Done. Log blocker to Brain. |
 | Gate 7 (Brain) | Log warning. Continue. Flag for manual Brain update. |

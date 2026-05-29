@@ -1,20 +1,18 @@
 ---
 name: allura-code-review
-description: "Allura-governed code review wrapper. Loads allura-team-ram gates, then routes to bmad-code-review with Pike/Fowler review authority, Brain outcome logging, and doc impact checks. Use when reviewing code in the Allura Memory repo."
+description: "Allura-governed code review. Loads allura-team-ram gates with Pike/Fowler review authority, Brain outcome logging, and doc impact checks. Use when reviewing code in the Allura Memory repo."
 globs: ["src/**", "docs/allura/**", "guidelines/**"]
 ---
 
 # Allura Code Review — Governed Code Review
 
-> **Allura wrapper for code review.** Enforces Pike/Fowler review gates, Brain outcome logging, and canonical doc impact checks before and after review.
+> **Allura-governed code review.** Enforces Pike/Fowler review gates, Brain outcome logging, and canonical doc impact checks before and after review.
 
 ## When to Use
 
-Use this skill when reviewing code changes in the Allura Memory repo. It wraps `bmad-code-review` with Allura-specific governance gates.
+Use this skill when reviewing code changes in the Allura Memory repo.
 
 Trigger phrases: `allura code review`, `review code`, `allura review`, `code review`.
-
-**Do NOT use** for non-Allura projects — use `bmad-code-review` directly for those.
 
 ## Prerequisites
 
@@ -76,9 +74,9 @@ Assign review roles:
 | Refactor Review | Fowler | Maintainability, token use, component boundaries |
 | Architecture Review | Brooks | Conceptual integrity (if architectural change) |
 
-### Step 5: Invoke BMad Code Review (Gate 4)
+### Step 5: Execute (Gate 4)
 
-Execute `bmad-code-review` with Allura context loaded:
+Execute code review with Allura context loaded:
 
 1. Gather context (files changed, diff, related tests)
 2. Launch parallel review layers:

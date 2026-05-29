@@ -18,7 +18,7 @@ User: Sabir Asheed | Domain: Allura Agent-OS
 |----------------|---------------------------------------------|
 | WS / OW        | memory-bank/progress.md                     |
 | CA / VA        | memory-bank/systemPatterns.md               |
-| BP / CR        | _bmad/bmm/config.yaml                       |
+| BP / CR        | Allura Brain events + Notion when needed    |
 | allura:brief   | memory-bank/activeContext.md                |
 | PM             | all                                         |
 

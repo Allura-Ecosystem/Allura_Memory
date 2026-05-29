@@ -20,11 +20,17 @@ import {
   updatePermissionProfile,
   validatePermissionProfile,
 } from "@/lib/auth";
-import type { DashboardResult, DashboardWarning } from "@/lib/dashboard/types";
+const SOURCE = "permission-profiles-api";
 
-const SOURCE = "dashboard-v2-api-permission-profiles";
+type ApiWarning = {
+  id: string;
+  code: string;
+  message: string;
+  source: string;
+  severity: "info" | "warning" | "critical";
+};
 
-type PermissionProfileWarning = Omit<DashboardWarning, "id" | "source"> & {
+type PermissionProfileWarning = Omit<ApiWarning, "id" | "source"> & {
   id?: string;
   source?: string;
 };
@@ -94,13 +100,14 @@ const seededProfiles: PermissionProfile[] = [
 ];
 
 function response<T>(data: T | null, error: string | null, warnings: PermissionProfileWarning[] = [], status = 200) {
-  const normalizedWarnings: DashboardWarning[] = warnings.map((warning) => ({
+  const normalizedWarnings: ApiWarning[] = warnings.map((warning) => ({
     ...warning,
     id: warning.id ?? warning.code ?? "permission-profile-warning",
     source: warning.source ?? SOURCE,
+    severity: warning.severity ?? "info",
   }));
 
-  const body: DashboardResult<T> = {
+  const body = {
     data,
     error,
     degraded: false,

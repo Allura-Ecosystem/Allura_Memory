@@ -1,4 +1,4 @@
-# Design Specification: Allura Dashboard, Curator & Settings
+# Design Specification: Allura Memory Command Center
 
 > [!NOTE]
 > **AI-Assisted Documentation**
@@ -6,7 +6,7 @@
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
 > When in doubt, defer to the source code, schemas, and team consensus.
 
-> **Visual identity** (colors, typography, shadows, spacing, iconography) lives in [BLUEPRINT.md](./BLUEPRINT.md#0-brand-identity). Consumer/admin wireframes live in the Mission Control parity and dashboard requirements sections in this document.
+> **Visual identity** (colors, typography, shadows, spacing, iconography) lives in [BLUEPRINT.md](./BLUEPRINT.md#0-brand-identity). The Memory Command Center must use real Allura brand assets and tokens only; generated logos and unrelated project tokens are forbidden.
 
 ---
 
@@ -24,27 +24,33 @@
 
 ## Overview
 
-The Allura Dashboard, Curator, and Settings surfaces provide the human-facing control plane for the Allura Memory Engine. They are not the memory system itself — they are the window into it.
+The Allura Memory Command Center provides the human-facing control plane for the Allura Memory Engine. It is not the memory system itself; it is the governed window into memory, RuVix policy, curator decisions, provenance, audit evidence, and tenant settings.
 
-**Three roles, three surfaces:**
+**Core surfaces:**
 
 | Surface | Role | Purpose |
 |---------|------|---------|
-| **Dashboard** (`/dashboard`) | Operator / Admin | Observe system health, browse memories, inspect audit trails, visualize the knowledge graph |
+| **Overview** (`/dashboard`) | Operator / Admin | Observe system health, queue status, freshness, degraded state, and active tenant scope |
+| **Memories** (`/dashboard/memories`) | Operator / Curator | Search, filter, inspect, export, and trace memory records |
 | **Curator** (`/dashboard/curator`) | Curator / Reviewer | Review, approve, or reject proposed insights before they become active knowledge |
-| **Settings** (`/dashboard/settings`) | Admin | Configure tenant, manage users, set promotion mode |
+| **Governance** (`/dashboard/governance`) | Admin / RuVix owner | Manage policy mode, thresholds, role separation, tenant isolation checks, and drift warnings |
+| **Graph** (`/dashboard/graph`) | Operator / Admin | Explore promoted semantic memory with source receipts |
+| **Audit** (`/dashboard/audit`) | Admin / Compliance | Filter event logs, inspect receipts, and export evidence packets |
+| **Settings** (`/dashboard/settings`) | Admin | View tenant config, roles, endpoint health, and promotion settings |
 
-The Dashboard is the primary operational surface. It surfaces real data from Allura Brain (PostgreSQL + Neo4j), not mocks. Every component consumes mapped UI contracts from `src/lib/dashboard/`; raw Brain API shapes stay behind `api.ts`, `queries.ts`, and `mappers.ts` (AD-26).
+The Command Center is optional: MCP tools, API routes, and CLI scripts remain the primary engine path. The UI surfaces real data from Allura Brain (PostgreSQL + Neo4j), not mocks. Every component consumes mapped UI contracts from `src/lib/dashboard/`; raw Brain API shapes stay behind `api.ts`, `queries.ts`, and `mappers.ts` (AD-26).
 
 ### Dashboard v2 condensed UX contract
 
-Phase 1 `/dashboard` is a vertical three-panel flow:
+Phase 1 is a vertical flow with five operating areas:
 
 | Panel | Purpose | Required state |
 | --- | --- | --- |
 | System status | Store availability, queue status, tenant scope, freshness | healthy, degraded, unknown, failed, empty, loading |
-| Hygiene and actions | Operational issues and next actions | failed promotions, schema drift, stale traces, config/source warnings |
+| Memories | Search, inspect, filter, and open provenance | episodic, semantic, pending, rejected, deleted, degraded |
 | Approvals queue | Human decision surface for proposals | proposal ID, score, reasoning, evidence, state, allowed actions |
+| RuVix governance | Policy mode, thresholds, role separation, tenant isolation, locks, drift warnings | enforced, blocked, degraded, unknown |
+| Audit/evidence | Receipts, source lineage, export packets | append-only, filterable, exportable, degraded |
 
 Required action surface:
 
@@ -53,9 +59,13 @@ interface DashboardGovernanceActions {
   refresh(): Promise<void>
   approveProposal(id: string): Promise<void>
   requestChanges(id: string, reason?: string): Promise<void>
+  requestEvidence(id: string, reason?: string): Promise<void>
   denyProposal(id: string, reason?: string): Promise<void>
+  softDeleteMemory(id: string, reason: string): Promise<void>
+  recoverMemory(id: string, reason: string): Promise<void>
   openEvidence(id: string): void
   openDetail(id: string): void
+  openGovernanceReceipt(id: string): void
 }
 ```
 
@@ -63,36 +73,38 @@ interface DashboardGovernanceActions {
 
 Truthfulness rules: no fabricated live data, no “healthy” without verification, no “done” without evidence, no “live” without active polling/streaming and visible freshness, unknown is a first-class state, and Brain receipts are audit traces rather than proof of completion.
 
-Brand/accessibility rules: use existing Allura shell, navigation, logo assets, and semantic tokens; do not import Difference Driven tokens, colors, language, or assumptions; avoid marketing hero sections, fake charts, vanity metrics, AI-gradient tropes, and inflated claims; approval actions must be keyboard reachable and confirmation dialogs must trap/restore focus.
+Governance receipt rule: every mutation and approval must show intent, actor, source, policy, validation, and audit trail before completion.
 
-## Mission Control Dashboard Rebuild Addendum
+Brand/accessibility rules: use existing Allura shell, navigation, logo assets, and semantic tokens; do not import Difference Driven tokens, colors, language, or assumptions; avoid marketing hero sections, fake charts, vanity metrics, AI-gradient tropes, inflated claims, or generated logo marks; approval actions must be keyboard reachable and confirmation dialogs must trap/restore focus.
 
-The dashboard rebuild is an integration and cutover program, not a second dashboard product.
+## Memory Command Center Addendum
+
+The Memory Command Center is an integration program over the MCP/API-first engine, not a second product or a bypass around governance.
 
 | Surface | Role | Status |
 |---------|------|--------|
-| `localhost:6420` | Visual/reference memory dashboard experience to preserve | Reference/mockup input |
-| `localhost:3334` | Mission Control development integration target | Development/test surface |
-| `localhost:3100` | Current Docker dashboard to replace | Protected until cutover gates pass |
+| `localhost:6420` | Historical visual/reference memory dashboard experience | Reference/cutover history |
+| `localhost:3334` | Historical development integration target | Reference/cutover history |
+| `localhost:3100` | Historical Docker dashboard target | Protected until new launch gates pass |
 
-Mission Control combines the operator cockpit with Allura memory governance. The rebuilt surface must preserve the memory capabilities already represented in the `6420` reference while adding cockpit routes for work, agents, telemetry, resources, and command overview.
+The Memory Command Center is the approved operator surface for Allura memory governance. It preserves the useful memory capabilities from earlier references while narrowing the first launch around memories, curator work, RuVix governance, graph exploration, audit evidence, and settings.
 
-### Mission Control Route Parity
+### Command Center Route Parity
 
-| `6420` reference capability | Mission Control target | Source of truth |
-|-----------------------------|------------------------|-----------------|
-| Dashboard | `/command` | Aggregated adapter summaries |
-| Memories | `/allura` | Allura Brain APIs |
-| Insights | `/allura` | Allura Brain / Neo4j semantic layer through controlled API |
-| Trace logs | `/telemetry` or `/allura` | PostgreSQL append-only events through controlled API |
-| Provenance | `/allura` | Trace → proposal → approval → graph evidence chain |
-| Extracted | `/allura` | Allura extraction/memory APIs |
-| Agents | `/agents` | OpenClaw/Symphony/TALON/IRIS/Team RAM runtime adapters |
-| Approvals | `/allura` or `/work-board` | Curator proposals + Native Allura Kanban work state; Notion/Linear/GitHub Projects optional adapters |
-| Settings | `/resources` or `/settings` | Resource manifest + dashboard configuration |
-| Search | Global command/search surface | Allura retrieval layer |
+| Reference capability | Command Center target | Source of truth |
+|----------------------|------------------------|-----------------|
+| Dashboard | `/dashboard` | Aggregated adapter summaries |
+| Memories | `/dashboard/memories` | Allura Brain APIs |
+| Insights | `/dashboard/memories` or `/dashboard/graph` | Allura Brain / Neo4j semantic layer through controlled API |
+| Trace logs | `/dashboard/audit` | PostgreSQL append-only events through controlled API |
+| Provenance | `/dashboard/audit` and evidence drawer | Trace → proposal → approval → graph evidence chain |
+| Extracted | `/dashboard/memories` | Allura extraction/memory APIs |
+| Approvals | `/dashboard/curator` | Curator proposals + Native Allura Kanban work state; Notion/Linear/GitHub Projects optional adapters |
+| Governance | `/dashboard/governance` | RuVix kernel rules, policy mode, thresholds, isolation, drift |
+| Settings | `/dashboard/settings` | Resource manifest + dashboard configuration |
+| Search | Memory search surface | Allura retrieval layer |
 | Add memory | Governed Allura action | Controlled memory write endpoint |
-| Approval Queue | `/allura` promotion/approval panel | `canonical_proposals` + audit events |
+| Approval Queue | `/dashboard/curator` promotion/approval panel | `canonical_proposals` + audit events |
 
 ### Cutover Rule
 
@@ -106,7 +118,7 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 
 **What this document is not:**
 - A UI style guide (see [BLUEPRINT.md](./BLUEPRINT.md#0-brand-identity))
-- Component-level wireframes (see [Mission Control route parity](#mission-control-route-parity) and [Dashboard Requirements](#dashboard-requirements))
+- Component-level wireframes (see [Command Center route parity](#command-center-route-parity) and [Dashboard Requirements](#dashboard-requirements))
 - An implementation roadmap (see [`SOLUTION-ARCHITECTURE.md`](./SOLUTION-ARCHITECTURE.md))
 
 ### UX Philosophy
@@ -128,8 +140,8 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 | F17 | Curator Dashboard — view pending proposals, approve/reject with rationale | `/dashboard/curator` · `GET /api/curator/proposals` · `POST /api/curator/approve` · `POST /api/curator/reject` |
 | F18 | Audit Log — view all memory events with filtering and CSV export | `/dashboard/audit` · `GET /api/audit/events` |
 | F19 | System Health Dashboard — view service status, metrics, and degradation warnings | `/dashboard` (overview) · `GET /api/health?detailed=true` · `GET /api/health/metrics` |
-| F41 | Mission Control route shell — `/command`, `/work-board`, `/agents`, `/telemetry`, `/allura`, `/resources` | Mission Control development surface on `3334`; future `3100` replacement after gates pass |
-| F42 | `/allura` preserves `6420` memory dashboard capabilities | Memories, insights, traces, provenance, extracted facts, approvals mapped into `/allura` |
+| F41 | Memory Command Center route shell — `/dashboard`, `/dashboard/memories`, `/dashboard/curator`, `/dashboard/governance`, `/dashboard/graph`, `/dashboard/audit`, `/dashboard/settings` | Governed operator surface over MCP/API contracts; launch only after gates pass |
+| F42 | `/dashboard/memories` preserves useful reference memory capabilities | Memories, insights, traces, provenance, extracted facts, and approvals mapped into governed dashboard routes |
 | F43 | `/work-board` uses Native Allura Kanban as the default planning source of truth | Native board model; Notion, Linear, and GitHub Projects are optional sync adapters |
 | F44 | `/resources` reads resource inventory from manifest endpoint or `RESOURCE-MANIFEST.md` | Resource Manifest adapter |
 | F45 | `/agents` distinguishes TALON/IRIS from Team RAM/Durham/external agents | Agent adapter + canonical agent taxonomy |
@@ -784,18 +796,16 @@ stateDiagram-v2
 | Path | Purpose |
 |------|---------|
 | `/dashboard` | Overview — system health, metrics, recent activity |
-| `/dashboard/insights` | Approved insights list with pagination |
 | `/dashboard/memories` | Memory browser with search and filtering |
 | `/dashboard/curator` | Three-tab curator: Traces, Approved, Pending |
+| `/dashboard/governance` | RuVix policy mode, thresholds, role separation, tenant isolation, locks, drift warnings |
 | `/dashboard/audit` | Full audit trail with filtering and CSV export |
-| `/dashboard/traces` | Raw trace viewer (admin-only) |
 | `/dashboard/graph` | Knowledge graph visualization |
 | `/dashboard/agents` | Agent roster and activity |
 | `/dashboard/projects` | Project list and status |
 | `/dashboard/skills` | MCP skill catalog and status |
 | `/dashboard/settings` | Tenant configuration, promotion mode, user management |
 | `/dashboard/evidence/[id]` | Evidence detail for a specific trace |
-| `/dashboard/feed` | Live activity feed |
 
 ### Components
 

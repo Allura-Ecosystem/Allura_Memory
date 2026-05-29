@@ -64,14 +64,14 @@ Links to relevant insights from Allura Brain.
 mcp__MCP_DOCKER__search_memories({ query: "<task topic>" })
 
 // Find related tasks
-Grep({ pattern: "TASK-", path: "_bmad-output/planning-artifacts/" })
+Grep({ pattern: "TASK-", path: "docs/archive/planning-artifacts/" })
 ```
 
 ### Phase 2: Generate Task ID
 
 ```javascript
 // Get next task ID
-const lastTask = await Grep({ pattern: "TASK-\\d+", path: "_bmad-output/" })
+const lastTask = await Grep({ pattern: "TASK-\\d+", path: "docs/archive/" })
 const nextId = parseInt(lastTask.match(/\d+/)[0]) + 1
 const taskId = `TASK-${String(nextId).padStart(3, '0')}`
 ```
@@ -81,7 +81,7 @@ const taskId = `TASK-${String(nextId).padStart(3, '0')}`
 ```javascript
 // Write task file
 Write({
-  path: `_bmad-output/planning-artifacts/tasks/${taskId}.md`,
+  path: `docs/archive/planning-artifacts/tasks/${taskId}.md`,
   content: taskContent
 })
 ```

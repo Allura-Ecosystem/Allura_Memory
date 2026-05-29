@@ -1,20 +1,18 @@
 ---
 name: allura-dev-story
-description: "Allura-governed story implementation wrapper. Loads allura-team-ram gates, then routes to bmad-dev-story with Allura context, Brain search, doc impact check, and outcome logging. Use when implementing stories in the Allura Memory repo."
+description: "Allura-governed story implementation. Loads allura-team-ram gates with Allura context, Brain search, doc impact check, and outcome logging. Use when implementing stories in the Allura Memory repo."
 globs: ["src/**", "docs/allura/**", "guidelines/**"]
 ---
 
 # Allura Dev Story — Governed Story Implementation
 
-> **Pilot Allura wrapper.** This is the first `allura-*` wrapper skill, demonstrating the governance pattern defined in `allura-team-ram`.
+> **Allura-governed story implementation.** This skill enforces the governance pattern defined in `allura-team-ram`.
 
 ## When to Use
 
-Use this skill when implementing a story in the Allura Memory repo. It wraps `bmad-dev-story` with Allura-specific governance gates.
+Use this skill when implementing a story in the Allura Memory repo.
 
 Trigger phrases: `allura dev story`, `implement story`, `dev story`, `allura implement`, `story implementation`.
-
-**Do NOT use** for non-Allura projects — use `bmad-dev-story` directly for those.
 
 ## Prerequisites
 
@@ -73,9 +71,9 @@ Assign roles for this story:
 | Refactor Review | Fowler | Maintainability |
 | Validation Execution | Ralph Loop | Bounded execution evidence; not final authority |
 
-### Step 5: Invoke BMad Dev Story (Gate 4)
+### Step 5: Execute (Gate 4)
 
-Execute `bmad-dev-story` with Allura context loaded:
+Execute story implementation with Allura context loaded:
 
 1. Read the story spec file (from Notion or local)
 2. Load all context identified by Scout

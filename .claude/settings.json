@@ -40,6 +40,13 @@
     "allura-brain": {
       "type": "http",
       "url": "http://localhost:5888/mcp"
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://context7.com/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ctx7sk-bbafee83-9f7a-4be1-9bdf-aba3f0359e02"
+      }
     }
   },
   "commands": {

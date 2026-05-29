@@ -13,35 +13,16 @@ parallel planning docs.
 
 | Canonical doc | Role |
 | --- | --- |
-| [`BLUEPRINT.md`](./BLUEPRINT.md) | Product intent, business requirements, functional requirements, dashboard phase scope |
+| [`BLUEPRINT.md`](./BLUEPRINT.md) | Product intent, business requirements, functional requirements |
 | [`SOLUTION-ARCHITECTURE.md`](./SOLUTION-ARCHITECTURE.md) | System topology, route/data flow, integration boundaries, cutover topology |
-| [`DESIGN-ALLURA.md`](./DESIGN-ALLURA.md) and [`DESIGN-MEMORY-SYSTEM.md`](./DESIGN-MEMORY-SYSTEM.md) | Functional design, UI contracts, governed memory behavior |
+| [`DESIGN-ALLURA.md`](./DESIGN-ALLURA.md) | Functional design, API contracts, governed memory behavior |
 | [`REQUIREMENTS-MATRIX.md`](./REQUIREMENTS-MATRIX.md) | B#/F# traceability, coverage map, validation references |
 | [`RISKS-AND-DECISIONS.md`](./RISKS-AND-DECISIONS.md) | ADRs, risks, cutover decisions, rejected alternatives |
 | [`DATA-DICTIONARY.md`](./DATA-DICTIONARY.md) | Entity, field, enum, event, and export data definitions |
 
 ## Execution artifacts are separate
 
-Epics and stories are execution artifacts, not planning canon.
-
-| Execution artifact | Role |
-| --- | --- |
-| [`EPICS-dashboard-v2.md`](./EPICS-dashboard-v2.md) | Dashboard epic breakdown and sequencing |
-| [`stories/`](./stories/) | Story-level implementation context and acceptance evidence |
-
-## Condensed dashboard-v2 source docs
-
-The following draft dashboard-v2 source documents were condensed into the canon:
-
-| Former source doc | Canonical destination |
-| --- | --- |
-| `PRD-dashboard-v2.md` | `BLUEPRINT.md` |
-| `UX-dashboard-v2.md` | `DESIGN-ALLURA.md` |
-| `ARCHITECTURE-dashboard-v2.md` | `SOLUTION-ARCHITECTURE.md` |
-| `CONTRACTS-dashboard-v2.md` | `DESIGN-ALLURA.md` and `DATA-DICTIONARY.md` |
-| `DATA-SUPPORT-dashboard-v2.md` | `DATA-DICTIONARY.md` |
-| `KANBAN-dashboard-v2.md` | `RISKS-AND-DECISIONS.md`, `SOLUTION-ARCHITECTURE.md`, and epics/stories |
-| `DASHBOARD-CUTOVER-READINESS.md` | `RISKS-AND-DECISIONS.md` and `SOLUTION-ARCHITECTURE.md` |
+Epics and stories are execution artifacts, not planning canon. They live in `_bmad/bmm/planning/` and `_bmad/bmm/stories/`.
 
 ## Governance rule
 

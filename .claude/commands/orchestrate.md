@@ -46,7 +46,7 @@ Delegate to specialists in sequence. Use the Agent tool for each:
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Code implementation | "You are MemoryArchitect/MemoryBuilder. Task: [bounded objective]. Constraints: [invariants]. Context: [files]."                 |
 | Tests               | "You are MemoryTester. Write Vitest tests for: [component]. Pattern: Arrange-Act-Assert, positive + negative cases."             |
-| Documentation       | "You are MemoryScribe. Document: [component]. Write to \_bmad-output/planning-artifacts/ or update relevant PROJECT.md section." |
+| Documentation       | "You are MemoryScribe. Document: [component]. Write to docs/archive/planning-artifacts/ or update relevant PROJECT.md section." |
 | Infrastructure      | "You are MemoryBuilder. Build/configure: [infra task]. Enforce group_id on all DB paths."                                        |
 
 ## Phase 4: Validate

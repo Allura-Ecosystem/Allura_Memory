@@ -9,7 +9,7 @@
 | allura-memory-skill | Scout | Any Brain operation | ✅ Yes | none | **Keep** — mandatory Brain governance |
 | allura-menu | All | Navigation | ⬜ Overlay | none | **Keep** — Brain menu system |
 | allura-propose-promotion | Brooks | Memory promotion | ✅ Yes | allura-approve-promotion | **Keep** — promotion pipeline |
-| bmad-agent-builder | Brooks | Agent skill build/edit/analyze | ⬜ Overlay | skill-creator, bmad-module-builder | **Keep** — BMAD-native agent construction for Team RAM |
+| agent-builder | Brooks | Agent skill build/edit/analyze | ⬜ Overlay | skill-creator | **Keep** — agent construction for Team RAM |
 | brainstorming | Woz | Design exploration | ⬜ Overlay | frontend-design, allura-design | **Keep** — ideation and concept development before design |
 | bun-security | Hightower | Security audit | ⬜ Overlay | none | **Keep** — Bun security checks |
 | code-review | Pike | Code review | ✅ Yes | none | **Keep** — review gate |
@@ -41,12 +41,12 @@
 | team-ram-cowork | Brooks | Codex/OpenCode/Claude co-work explanation and role routing | ✅ Yes | party-mode, roundtable | **Keep** — explains and enforces Team RAM perspective workflow across tools |
 | varlock | Hightower | Env var security | ⬜ Overlay | bun-security | **Keep** — secrets management and non-exposure guardrails |
 
-| allura-team-ram | Brooks | Allura workflow governance core | ✅ Yes | allura-memory-skill, team-ram-cowork | **Keep** — mandatory governance layer for all allura-* wrappers |
-| allura-dev-story | Woz | Governed story implementation | ✅ Yes | bmad-dev-story, allura-team-ram | **Keep** — pilot Allura wrapper, gates before bmad-dev-story |
-| allura-code-review | Pike | Governed code review | ⬜ Overlay | bmad-code-review, allura-team-ram | **Keep** — Allura-gated code review |
-| allura-architecture | Brooks | Governed architecture creation | ⬜ Overlay | bmad-create-architecture, allura-team-ram | **Keep** — Allura-gated architecture |
-| allura-product-intake | Jobs | Governed PRD creation | ⬜ Overlay | bmad-create-prd, allura-team-ram | **Keep** — Allura-gated product intake |
-| allura-retrospective | Brooks | Governed retrospective | ⬜ Overlay | bmad-retrospective, allura-team-ram | **Keep** — Allura-gated retrospective |
+| allura-team-ram | Brooks | Allura workflow governance core | ✅ Yes | allura-memory-skill, team-ram-cowork | **Keep** — mandatory governance layer for all allura-* skills |
+| allura-dev-story | Woz | Governed story implementation | ✅ Yes | allura-team-ram | **Keep** — Allura-governed story implementation |
+| allura-code-review | Pike | Governed code review | ⬜ Overlay | allura-team-ram | **Keep** — Allura-governed code review |
+| allura-architecture | Brooks | Governed architecture creation | ⬜ Overlay | allura-team-ram | **Keep** — Allura-governed architecture |
+| allura-product-intake | Jobs | Governed PRD creation | ⬜ Overlay | allura-team-ram | **Keep** — Allura-governed product intake |
+| allura-retrospective | Brooks | Governed retrospective | ⬜ Overlay | allura-team-ram | **Keep** — Allura-governed retrospective |
 
 **Total: 44 skills** — 9 Required (core gates), 35 Overlay (project-specific)
 

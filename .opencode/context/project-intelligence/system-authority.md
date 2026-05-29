@@ -11,7 +11,7 @@ This repo uses OAC Core plus the Allura Overlay.
 3. `.opencode/AGENTS.md`, `.opencode/manifest.json`, and `.opencode/SKILL-OWNERSHIP.md`.
 4. `.opencode/context/` files for local project context.
 5. Allura Brain memories retrieved through governed MCP tools.
-6. Documentation mirrors in `docs/allura/` and `_bmad/`.
+6. Documentation mirrors in `docs/allura/` and `docs/archive/`.
 
 ## Memory Rule
 

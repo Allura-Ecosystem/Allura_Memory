@@ -28,7 +28,7 @@ Create tasks with proper structure, metadata, and memory integration.
 mcp__MCP_DOCKER__search_memories({ query: "<task topic>" })
 
 // Find related tasks
-Grep({ pattern: "TASK-", path: "_bmad-output/planning-artifacts/" })
+Grep({ pattern: "TASK-", path: "docs/archive/planning-artifacts/" })
 ```
 
 ### Phase 2: Generate Task
@@ -36,7 +36,7 @@ Grep({ pattern: "TASK-", path: "_bmad-output/planning-artifacts/" })
 ```javascript
 // Create task file
 Write({
-  path: `_bmad-output/planning-artifacts/tasks/TASK-XXX.md`,
+  path: `docs/archive/planning-artifacts/tasks/TASK-XXX.md`,
   content: taskContent
 })
 ```

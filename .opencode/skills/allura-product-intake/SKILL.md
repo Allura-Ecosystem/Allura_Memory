@@ -1,20 +1,18 @@
 ---
 name: allura-product-intake
-description: "Allura-governed product intake wrapper. Loads allura-team-ram gates, then routes to bmad-create-prd with Jobs intent gate, Brain search, and doc impact check. Use when creating PRDs or product requirements in the Allura Memory repo."
+description: "Allura-governed product intake. Loads allura-team-ram gates with Jobs intent gate, Brain search, and doc impact check. Use when creating PRDs or product requirements in the Allura Memory repo."
 globs: ["src/**", "docs/allura/**", "guidelines/**"]
 ---
 
 # Allura Product Intake — Governed PRD Creation
 
-> **Allura wrapper for product requirements.** Enforces Jobs intent gate, Brain search for prior decisions, canonical doc impact checks, and outcome logging to Allura Brain.
+> **Allura-governed product requirements.** Enforces Jobs intent gate, Brain search for prior decisions, canonical doc impact checks, and outcome logging to Allura Brain.
 
 ## When to Use
 
-Use this skill when creating product requirements or PRDs in the Allura Memory repo. It wraps `bmad-create-prd` with Allura-specific governance gates.
+Use this skill when creating product requirements or PRDs in the Allura Memory repo.
 
 Trigger phrases: `allura product intake`, `create PRD`, `product requirements`, `allura PRD`, `intake`.
-
-**Do NOT use** for non-Allura projects — use `bmad-create-prd` directly for those.
 
 ## Prerequisites
 
@@ -79,9 +77,9 @@ Assign product roles:
 | Architect | Brooks | Architecture feasibility |
 | Builder | Woz | Implementation feasibility |
 
-### Step 5: Invoke BMad Create PRD (Gate 4)
+### Step 5: Execute (Gate 4)
 
-Execute `bmad-create-prd` with Allura context loaded:
+Execute PRD creation with Allura context loaded:
 
 1. **Init**: Define product vision, target users, problem statement
 2. **Discovery**: Gather requirements through structured conversation

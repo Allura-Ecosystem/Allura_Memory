@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="public/readme/logo-v2.png" alt="Allura Memory" width="120" />
+  <img src="public/readme/allura-wordmark.png" alt="Allura Memory" width="180" />
 </p>
 
-<h1 align="center">Allura Memory</h1>
+<h1 align="center">Memory That Shows Its Work</h1>
 
 <p align="center">
-  <strong>Memory That Shows Its Work</strong><br/>
-  A self-hosted, governed AI memory system with traceable capture, human-in-the-loop curation, and dual-layer storage.
+  <strong>Self-hosted, governed AI memory</strong><br/>
+  Traceable capture, human-in-the-loop curation, and dual-layer storage for agents that need context they can explain.
 </p>
 
 <p align="center">
@@ -16,7 +16,7 @@
 ---
 
 <p align="center">
-  <img src="public/readme/readme-hero.png" alt="Allura Memory Dashboard" width="720" />
+  <img src="public/readme/readme-hero.png" alt="Governed AI memory system overview" width="720" />
 </p>
 
 ## Why Allura?
@@ -30,13 +30,14 @@ Allura gives your agents **persistent, inspectable memory** — not a black box 
 - 🏛️ **Governance** — approval gates between raw capture and long-term knowledge
 - 🔒 **Self-hosting** — your data, your infrastructure, your rules
 - 🧩 **MCP-native** — plug into Claude, Cursor, OpenCode, or any MCP-compatible agent
+- 💻 **API-first operations** — MCP, CLI, and service endpoints with inspectable receipts
 
 ---
 
 ## Architecture
 
 <p align="center">
-  <img src="public/readme/readme-allura-brain.png" alt="Allura Brain Architecture" width="720" />
+  <img src="public/readme/readme-allura-brain.png" alt="Dual-layer governed memory architecture" width="720" />
 </p>
 
 Allura uses a **dual-layer memory architecture** — two purpose-built stores, each doing what it does best:
@@ -79,7 +80,7 @@ Allura embeds every memory at write time using **Qwen3 Matryoshka embeddings** (
 ## Features
 
 <p align="center">
-  <img src="public/readme/infographic.png" alt="Feature Overview" width="640" />
+  <img src="public/readme/infographic.png" alt="Governed memory feature overview" width="640" />
 </p>
 
 | Feature | Description |
@@ -91,8 +92,9 @@ Allura embeds every memory at write time using **Qwen3 Matryoshka embeddings** (
 | **MCP protocol native** | Stdio + Streamable HTTP gateway for any MCP-compatible agent |
 | **Vector search** | pgvector HNSW (episodic) + Neo4j (semantic) via hybrid ANN + BM25 ranking |
 | **Plugin harness** | MCP server discovery, approval, and routing |
-| **Self-hostable** | Docker Compose or Kubernetes — auth dependency: Clerk |
+| **Self-hostable** | Docker Compose — no external auth dependencies |
 | **Versioned knowledge** | `SUPERSEDES` relationships in Neo4j — old facts are deprecated, not erased |
+| **API-first operations** | MCP, CLI, and HTTP endpoints with inspectable receipts |
 
 ---
 
@@ -260,41 +262,20 @@ EMBEDDING_MODEL=qwen3-embedding:8b
 
 ---
 
-## Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/01-memory-page-desktop.png" alt="Memory Page — Desktop" width="360" />
-  <img src="docs/screenshots/02-memory-page-mobile.png" alt="Memory Page — Mobile" width="180" />
-  <img src="docs/screenshots/03-audit-page-desktop.png" alt="Audit Page — Desktop" width="360" />
-</p>
-
----
-
-## Brand & Visual Direction
-
-<p align="center">
-  <img src="public/readme/readme-brand-system.png" alt="Brand System" width="640" />
-</p>
-
-Allura's visual language is **warm, magnetic, and clear** — designed to reward a closer look.
-
-- **Warmth over cold utility** — softer palettes, rounded corners, breathing room
-- **Magnetic clarity** — information hierarchy that draws the eye without shouting
-- **Considered restraint** — every element earns its place
-- **Grounded sophistication** — professional without being sterile
-
-This isn't "magic AI." It's a more legible memory system with a more considered interface.
-
----
-
 ## Deployment
 
 ### Docker Compose (recommended for most teams)
 
 ```bash
 docker compose up -d
-curl http://localhost:3100/api/health/live
+curl http://localhost:3201/health
 ```
+
+Services started:
+- `postgres` — PostgreSQL 16 + pgvector (port 5432)
+- `neo4j` — Neo4j 5.26 knowledge graph (ports 7474, 7687)
+- `neo4j-init` — Schema initializer (runs once)
+- `mcp` — MCP HTTP gateway (port 3201 mapped to 5888)
 
 ### Pull from GHCR
 
@@ -336,8 +317,6 @@ Full API documentation lives in [`.github/API-REFERENCE.md`](.github/API-REFEREN
 
 ```bash
 bun install
-bun run dev          # Start Next.js dev server (Turbo)
-bun run build        # Production build
 bun run typecheck    # TypeScript check
 bun test             # Unit tests
 bun run test:e2e     # Integration tests
@@ -364,7 +343,7 @@ bun run test:all     # Full suite (typecheck + lint + unit + e2e + MCP)
 |----------|-------------|
 | [`docs/allura/BLUEPRINT.md`](docs/allura/BLUEPRINT.md) | Core design reference and requirements |
 | [`docs/allura/SOLUTION-ARCHITECTURE.md`](docs/allura/SOLUTION-ARCHITECTURE.md) | System topology, actors, and integration boundaries |
-| [`docs/allura/DESIGN-ALLURA.md`](docs/allura/DESIGN-ALLURA.md) | UI, API, workflow, and implementation design decisions |
+| [`docs/allura/DESIGN-ALLURA.md`](docs/allura/DESIGN-ALLURA.md) | API, workflow, and implementation design decisions |
 | [`docs/allura/REQUIREMENTS-MATRIX.md`](docs/allura/REQUIREMENTS-MATRIX.md) | Requirements traceability and coverage |
 | [`docs/allura/RISKS-AND-DECISIONS.md`](docs/allura/RISKS-AND-DECISIONS.md) | Architectural decisions, risks, and accepted tradeoffs |
 | [`docs/allura/DATA-DICTIONARY.md`](docs/allura/DATA-DICTIONARY.md) | Schema and field reference |
@@ -375,11 +354,10 @@ bun run test:all     # Full suite (typecheck + lint + unit + e2e + MCP)
 
 | Layer | Technology |
 |-------|-----------|
-| Runtime | Next.js + Bun + TypeScript |
+| Runtime | Bun + TypeScript |
 | Episodic Store | PostgreSQL 16 + pgvector |
 | Semantic Store | Neo4j 5.26 |
 | Embeddings | Qwen3 Matryoshka 1024d (Ollama) |
-| Auth | Clerk (external SaaS — required for dashboard; optional for MCP-only) |
 | Containerization | Docker + Docker Compose |
 | Protocol | Model Context Protocol (MCP) |
 
@@ -393,11 +371,13 @@ bun run test:all     # Full suite (typecheck + lint + unit + e2e + MCP)
 - Human-in-the-loop curation as a first-class feature
 - Self-hosted deployment on your infrastructure
 - MCP-native integration
+- API-first operations with an optional RuVix-governed Memory Command Center
 
 **We do not claim:**
 - Current SOC 2 certification or banking-grade approval
 - Zero hallucinations or flawless accuracy
 - Autonomous truth without review
+- A launched production dashboard until the Memory Command Center passes source-of-truth, no-fabricated-data, auth, accessibility, route-smoke, and rollback gates
 - Benchmark superiority unless specifically verified
 
 Where the product is directional, we describe it as **designed to**, **built to support**, or **positioned to help** — never as a verified claim.
@@ -414,6 +394,7 @@ Allura follows a Brooksian approach to system design:
 4. **Separation of concerns** — episodic and semantic are architecturally distinct
 5. **Append-only audit** — history is preserved, never overwritten
 6. **No silver bullet** — essential complexity can't be wished away
+7. **Terminal-first** — APIs and CLI over UI; automation over manual interaction
 
 > **Allura governs. Runtimes execute. Curators promote.**
 

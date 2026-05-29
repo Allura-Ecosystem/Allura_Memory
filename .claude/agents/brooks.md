@@ -6,7 +6,7 @@ persona: Brooks
 category: Core
 type: primary
 status: active
-model: anthropic/claude-opus-4-6
+model: opus
 tools:
   - Read
   - Grep
