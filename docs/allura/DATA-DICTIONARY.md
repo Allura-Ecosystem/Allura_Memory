@@ -8,6 +8,7 @@ This document describes every table and node type in Allura's dual-database data
 
 - [PostgreSQL: events](#postgresql-events)
 - [PostgreSQL: canonical_proposals](#postgresql-canonical_proposals)
+- [RuVix Governance Artifacts](#ruvix-governance-artifacts)
 - [Neo4j: Memory](#neo4j-memory)
 - [Neo4j: Agent](#neo4j-agent)
 - [Neo4j: Team](#neo4j-team)
@@ -119,7 +120,7 @@ Defines the required validation gates before Mission Control replaces the curren
 
 **JSON Schema:** [`json-schema/event.schema.json`](../../json-schema/event.schema.json)
 
-The primary and only append-only log. Every memory operation — add, search, get, list, delete, promotion — produces one row. Rows are permanent. No UPDATE or DELETE, ever.
+The primary and only append-only log. Every memory operation — add, search, get, list, delete, promotion — produces one row. Rows are permanent. No UPDATE or DELETE, ever. Every operation carries the RuVix identity envelope: `group_id`, `agent_id`, and `session_id`.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -128,6 +129,7 @@ The primary and only append-only log. Every memory operation — add, search, ge
 | `event_type` | varchar(100) | Yes | Operation type — see values below |
 | `agent_id` | varchar(255) | Yes | Identifier of the agent or user who triggered the event |
 | `workflow_id` | varchar(255) | No | Optional grouping for multi-step workflows |
+| `session_id` | varchar(255) | Yes | Session identifier for identity scoping and audit correlation |
 | `status` | varchar(50) | Yes | Default: `completed`. See values below |
 | `metadata` | jsonb | No | Event-specific payload — see Metadata Payloads section |
 | `created_at` | timestamptz | Yes | Write timestamp. DEFAULT NOW(). Immutable. |
@@ -162,6 +164,7 @@ The primary and only append-only log. Every memory operation — add, search, ge
 | `memory_update` | Append-only versioned update (SUPERSEDES chain created) |
 | `memory_promote` | Request promotion to Neo4j (creates proposal) |
 | `sync_contract` | Sync contract mapping applied on curator approve or auto-promote — user_id→Agent, group_id→Project relationships wired |
+| `kernel_rule` | RuVix kernel rule evaluation or rule-anchored audit event |
 
 **`status` values**
 
@@ -239,6 +242,72 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 - Referenced by: `notion_sync_dlq.proposal_id` → `canonical_proposals(id)` ON DELETE SET NULL
 
 ---
+
+## RuVix Governance Artifacts
+
+### `PROMOTION_MODE` / `AUTO_APPROVAL_THRESHOLD`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `PROMOTION_MODE` | enum | Yes | Governs semantic promotion behavior: `soc2` or `auto` |
+| `AUTO_APPROVAL_THRESHOLD` | float | Yes | Auto-promotion cutoff from `0.0` to `1.0`; default `0.85` |
+
+### `Rule`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `RULE_id` | string | Yes | Stable RuVix rule identifier, e.g. `RULE-001` |
+| `content` | text | Yes | Human-readable rule text |
+| `confidence` | float | Yes | Confidence or enforcement score from `0.0` to `1.0` |
+| `status` | enum | Yes | Rule lifecycle state (e.g. `active`, `deprecated`, `pending`) |
+
+### `KernelRuleEvent`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `rule_id` | string | Yes | RuVix rule that was evaluated |
+| `event_type` | string | Yes | Must be `kernel_rule` |
+| `group_id` | string | Yes | Tenant namespace for the event |
+| `agent_id` | string | Yes | Agent identity for the event |
+| `session_id` | string | Yes | Session identity for the event |
+| `score` | float | Yes | Rule evaluation score |
+| `metadata` | jsonb | No | Evidence payload, decision rationale, and audit context |
+
+### `RuVixBrandRule`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `rule_id` | string | Yes | Brand rule identifier, one of `BRAND-001` through `BRAND-006` |
+| `content` | text | Yes | Enforceable brand rule text |
+| `score` | float | Yes | Enforcement confidence or compliance score from `0.0` to `1.0` |
+| `status` | enum | Yes | Rule lifecycle state (`active`, `deprecated`, `pending`) |
+
+### `DashboardClaim`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `claim_id` | string | Yes | Stable claim identifier for a dashboard assertion |
+| `states_covered` | list<string> | Yes | UI states covered by the claim (empty, loading, error, success, mobile, keyboard, etc.) |
+| `evidence_attached` | list<string> | Yes | Evidence bundle types attached to the claim (`screenshot`, `audit`, `anti-drift`) |
+| `approval_status` | enum | Yes | Claim status (`pending`, `approved`, `rejected`) |
+
+### `DurhamTokenAudit`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `allowed_prefix` | string | Yes | Only `--durham-*` CSS custom properties are allowed in dashboard scope |
+| `forbidden_patterns` | list<string> | Yes | Disallowed tokens and styles: `dark-green`, `brand-gold`, `Poppins`, `Inter`, `Montserrat` |
+| `scope` | string | Yes | Dashboard surface or component under review |
+| `status` | enum | Yes | Audit state (`pending`, `passed`, `failed`) |
+
+### `DurhamGateEvent`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `gate_id` | string | Yes | Stable gate identifier for a Durham ship review |
+| `reviewers` | list<string> | Yes | Required reviewers: `Aaker`, `Glaser`, `Munari` |
+| `artifact_ref` | string | Yes | Evidence artifact reference, including `docs/allura/BRAND-RULES-dashboard-v2.md` |
+| `status` | enum | Yes | Gate state (`pending`, `passed`, `blocked`) |
 
 ## Neo4j: `Memory`
 
@@ -654,5 +723,18 @@ When the sync contract applies mappings, an event with `event_type = 'sync_contr
   "agent_name": "Fowler",
   "project_name": "Allura Memory",
   "relationships_wired": ["AUTHORED_BY", "CONTRIBUTES_TO"]
+}
+```
+
+### `kernel_rule`
+
+```jsonc
+{
+  "rule_id": "RULE-004",
+  "event_type": "kernel_rule",
+  "score": 0.91,
+  "status": "active",
+  "evidence": "proposal_created",
+  "audit_ref": "events.id"
 }
 ```

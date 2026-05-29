@@ -30,9 +30,9 @@
 | AD-16 | Ralph is an installed tool, not a built component                 | Decided  | Ralph (`@th0rgal/ralph-wiggum`) is a CLI tool that wraps any AI coding agent in a self-correcting loop. We install it; we do not implement it. Our `ralph-loop.ts` is a thin harness: resolves the binary, constructs the command with Allura defaults, logs start/end to PostgreSQL, and passes through to the real `ralph` CLI. Previous `github-models` / `GITHUB_TOKEN` references were incorrect and have been removed. What model Ralph's agent uses (OpenCode default, Claude Code, Codex, Copilot) is configured via `--agent` and `--model` flags — not hardcoded. |
 | AD-17 | 13-16-18 youth culture UX validation framework                    | Decided  | Marketing principle: 13-year-olds spot emerging trends, 16-year-olds identify popularity gaps, 18-year-olds confirm mainstream readiness. Applied to Allura consumer UI review. Target score: 0.85+. Framework validates emotional resonance, not just functional correctness.                                                                                                                                                                                                                                                                                              |
 | AD-18 | Merge `/dashboard/traces` into `/dashboard/audit`                 | Decided  | Traces merged into audit page in codebase. Doc now matches reality. See `docs/allura/AD-18-traces-vs-audit.md`.                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| AD-19 | Controlled retrieval layer as sole agent read path                | Decided  | Agents MUST NOT query PostgreSQL or Neo4j directly. All reads go through `POST /api/memory/retrieval`. This enforces scoping, audit logging, and policy at the service boundary rather than relying on agent compliance. See [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#retrieval-layer).                                                                                                                                                                                                                                                                          |
-| AD-20 | Curator marks events as promoted after proposal creation          | Decided  | Without marking events as promoted, the curator re-scores the same traces on every run, creating duplicate proposals. Events with `status = 'promoted'` are excluded from future curator queries. See [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#insight-curation-and-approval).                                                                                                                                                                                                                                                                                |
-| AD-21 | Single consolidated DESIGN-MEMORY-SYSTEM.md                       | Decided  | One design doc covers the full governed pipeline (F1–F15). Splitting into five thin design docs too early creates maintenance overhead without ownership clarity. Split later only if subsystem complexity forces it. See [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md).                                                                                                                                                                                                                                                                                           |
+| AD-19 | Controlled retrieval layer as sole agent read path                | Decided  | Agents MUST NOT query PostgreSQL or Neo4j directly. All reads go through `POST /api/memory/retrieval`. This enforces scoping, audit logging, and policy at the service boundary rather than relying on agent compliance. See [BLUEPRINT.md](./BLUEPRINT.md).                                                                                                                                                                                                                                                                          |
+| AD-20 | Curator marks events as promoted after proposal creation          | Decided  | Without marking events as promoted, the curator re-scores the same traces on every run, creating duplicate proposals. Events with `status = 'promoted'` are excluded from future curator queries. See [BLUEPRINT.md](./BLUEPRINT.md).                                                                                                                                                                                                                                                                                |
+| AD-21 | Single consolidated governed memory design surface                 | Decided  | One design doc covers the full governed pipeline (F1–F15). Splitting into five thin design docs too early creates maintenance overhead without ownership clarity. Split later only if subsystem complexity forces it. See [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md).                                                                                                                                                                                                                                                                                           |
 | AD-22 | VALIDATION-GATE.md in docs/archive/allura/, not docs/allura/       | Decided  | The validation gate is an operational artifact, not one of the six canonical architecture documents. Per the canonical surface rule, it belongs in `docs/archive/allura/`. Cross-linked from BLUEPRINT.md, REQUIREMENTS-MATRIX.md, and RISKS-AND-DECISIONS.md. See [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md).                                                                                                                                                                                                                                           |
 | AD-23 | Skills-first packaged MCP architecture for memory access          | Decided  | Brooks / Team RAM orchestrates skills first. Skills encode routing and guardrails, then call focused packaged MCP servers: `neo4j-memory` for approved-memory recall, `database-server` for trace/audit evidence, and `neo4j-cypher` only for read-only graph inspection when memory recall is insufficient. No custom all-in-one MCP runtime is canonical. Skills enforce read-only + tenant-scope guardrails for inspection flows, while governed write paths remain controlled by application services and approval policy. See [MIGRATION-TRACKER.md](../archive/allura/MIGRATION-TRACKER.md). |
 | AD-24 | Agent/Project/Team graph model as structural context layer          | Decided  | A graph without structure is just a list. Agent, Team, and Project nodes provide the structural context that makes Memory nodes retrievable by ownership, project, and delegation path. Eliminates the shadow Memory Framework agent hierarchy in favor of the existing surgical team pattern. Alternatives: (1) Memory-only graph with metadata properties — rejected because flat metadata doesn't support traversal queries across team structure. (2) Separate knowledge base for agents — rejected because it creates sync burden between two surfaces. |
@@ -43,8 +43,8 @@
 | DDR-004 | Token Authority — Two-path design system | Enforced | CSS custom properties (`var(--allura-*)`, `var(--dashboard-*)`) for Tailwind/HTML contexts; `tokens.ts` for Canvas/JS runtime. Raw hex and generic shadcn utilities (`text-muted-foreground`, `bg-muted`) are prohibited in active dashboard scope. `button.tsx` shadow rgba documented as DD-004 build-tool exception. Committed 2026-04-30. |
 | AD-29 | Mission Control dashboard rebuild cutover strategy | Decided | `localhost:6420` is the visual/reference memory dashboard, `localhost:3334` is the Mission Control development integration target, and `localhost:3100` is the current Docker dashboard replacement target. The rebuild combines the memory dashboard and Mission Control cockpit; it must not create a separate product or replace `3100` before route parity, visual parity, source-of-truth declarations, auth validation, smoke tests, and rollback plan pass. Alternatives rejected: (1) ship 3334 as a separate dashboard — rejected because it creates duplicate surfaces; (2) overwrite 3100 directly — rejected because it removes rollback and hides parity gaps. |
 | AD-30 | Email-derived content is external untrusted evidence | Decided | Email/Gmail/IMAP content may enter Allura only as raw episodic evidence with `trust_zone=external_untrusted`. It cannot issue agent instructions, trigger privileged actions, or auto-promote to canonical Neo4j memory. RuVix policies POL-EMAIL-001 through POL-EMAIL-005 enforce instruction blocking, action approval, high-risk quarantine, HITL promotion, and attachment sandboxing. See [EMAIL-ALLURA-ENFORCEMENT.md](./EMAIL-ALLURA-ENFORCEMENT.md). |
-| AD-31 | Native Allura Kanban as default planning source of truth | Decided | Native Allura Kanban supersedes the Notion-only planning assumption in F43. Allura must work as OSS without requiring Notion, Linear, or GitHub Projects. External boards are optional sync adapters and mirror Allura state by default unless explicitly configured as upstream. Alternatives rejected: (1) Notion-only planning — rejected because every user should not need the Captain's cockpit; (2) Linear-first Symphony clone — rejected because Allura needs a provider-neutral control plane. |
-| AD-32 | Dashboard planning docs condensed into canonical six-doc set | Decided | Dashboard v2 PRD, UX, contracts, data support, Kanban strategy, and cutover readiness were condensed into the canonical planning files to preserve conceptual integrity. Epics and stories remain separate execution artifacts. Alternatives rejected: (1) keep all draft dashboard docs active — rejected because parallel planning surfaces create drift; (2) merge epics/stories into planning canon — rejected because execution artifacts have different lifecycle and ownership. |
+| AD-XX | RuVix Kernel Contract | Accepted | The 12 RuVix rules are the kernel invariants governing Allura Brain. Every existing gap — HITL approval, append-only history, tenant isolation, fail-closed tool use, and evidence-backed completion — is formalized as a testable boundary rule. Canonical contract: `RUVIX_KERNEL_CONTRACT_v1`. |
+| AD-XX+1 | RuVix Brand Governance Rules | Accepted | The 6 RuVix brand rules are enforceable kernel invariants for Allura Dashboard surfaces. Durham token exclusivity, mission-control voice, evidence-gated completion, accessibility, component consistency, and the Durham gate before ship are treated as release boundaries — not style suggestions. Canonical artifact: [BRAND-RULES-dashboard-v2.md](./BRAND-RULES-dashboard-v2.md). |
 
 ---
 
@@ -94,8 +94,6 @@
 | RK-18 | WCAG contrast failures in token system | Medium | 🔴 Open |
 | RK-19 | Mission Control route/source-of-truth drift before `3100` cutover | High | Active |
 | RK-20 | Email prompt injection/phishing drives agent actions | High | Mitigated |
-| RK-21 | Native Kanban scope expansion delays Phase 1 dashboard rebuild | Medium | Active |
-| RK-22 | Parallel planning documents hide the canonical source of truth | Medium | Active |
 
 ### Risk Detail
 
@@ -121,8 +119,6 @@
 | RK-18 | WCAG contrast failures in token system | Medium | 5 token pairings fail WCAG AA contrast ratio (4.5:1) — primarily light-background/low-contrast text combinations in `var(--allura-*)` and `var(--dashboard-*)` tokens. Audit needed across both token namespaces. | 🔴 Open |
 | RK-19 | Mission Control route/source-of-truth drift before `3100` cutover | High | Require route parity map, AdapterDeclaration for every route, explicit degraded behavior, no fabricated data, auth validation, smoke tests, and rollback plan before replacing the current Docker dashboard. | Active |
 | RK-20 | Email prompt injection/phishing drives agent actions | High | AD-30 + RuVix POL-EMAIL-001..005: email is external_untrusted evidence only; privileged actions require approval; high-risk mail quarantined; canonical memory promotion requires HITL; attachments require sandbox/quarantine. | Mitigated |
-| RK-21 | Native Kanban scope expansion delays Phase 1 dashboard rebuild | Medium | Keep Dashboard UX v0.2 Phase 1 scoped to `/dashboard`; run SYM-KAN as a separate Phase 2/3 architecture workstream. | Active |
-| RK-22 | Parallel planning documents hide the canonical source of truth | Medium | Use `docs/allura/index.md` and the six canonical planning docs as the active surface; keep epics/stories as execution artifacts and archive evidence reports outside planning canon. | Active |
 
 | AD-25 | Phase 6 Closure — all deliverables shipped | Decided | DLQ shipped (curator watchdog). Knowledge Hub Bridge shipped (Notion sync worker). Auth layer shipped (dev-auth + config). CSV Export shipped (/admin/approvals CSV download). SDK not separately shipped — MCP tools are the SDK. CORS shipped (next.config). Sentry shipped (captureException in curator approve). Phase 6 scope is complete. Decision: close Phase 6 and record it. Alternatives rejected: (1) Continue tracking as open — rejected because all deliverables exist in code and pass tests. (2) Extend Phase 6 for k6 load testing — rejected because load testing is a separate concern (tracked as RK-14). Consequences: Phase 6 ADR is now closed. Next phases focus on Curator pipeline E2E (Sprint 1), Skills layer (Sprint 2), and MCP Catalog governance (Sprint 3). |
 
@@ -151,6 +147,45 @@
 
 **Decision:** Close Phase 6. All deliverables exist, pass tests, and are deployed in the Docker stack.
 
+### AD-XX: RuVix Kernel Contract
+
+**Decision:** The 12 RuVix rules are the kernel invariants governing Allura Brain.
+
+**Rationale:** The architecture already enforces the core behaviors — HITL promotion, append-only episodic storage, tenant isolation, fail-closed boundaries, and evidence-first completion. RuVix codifies those behaviors as one explicit kernel contract instead of scattering them across module-local policies.
+
+**Alternatives considered:**
+
+- **Per-module policies**: easier to localize, but too easy to drift and miss a boundary.
+- **Monolithic engine**: simpler to name, but harder to test and too much blast radius.
+
+**Tradeoffs:**
+
+- Twelve discrete rules are individually testable.
+- Enforcement must remain consistent at every boundary.
+- Rule drift becomes a release blocker, not a background concern.
+
+**Status:** accepted, documented 2026-05-28, auto-promotion threshold 0.85.
+
+### AD-XX+1: RuVix Brand Governance Rules
+
+**Decision:** The 6 brand rules are enforceable kernel invariants for Allura Dashboard surfaces.
+
+**Rationale:** Allura Dashboard is mission-control software, not a marketing site. Brand coherence depends on Durham token exclusivity and a governed release gate. Difference Driven contamination is a real risk at the kernel boundary, so brand drift must fail closed before ship.
+
+**Alternatives considered:**
+
+- **Post-hoc brand audits**: useful for cleanup, but too late to prevent drift from reaching review.
+- **Code-review-only enforcement**: insufficient because brand violations can be subtle and repeated across components.
+- **Free theme switching**: rejected because it fragments the governed dashboard surface.
+
+**Tradeoffs:**
+
+- Locks dashboard surfaces to the Durham preset.
+- Slows velocity with a pre-build gate.
+- Appropriate for a governed operator tool where trust beats novelty.
+
+**Status:** accepted, documented 2026-05-28.
+
 ---
 
 | Signal                      | Source                       | Alert Threshold       |
@@ -167,7 +202,7 @@
 ## References
 
 - **Architecture Canon**: `docs/allura/BLUEPRINT.md`
-- **Memory System Design**: `docs/allura/DESIGN-MEMORY-SYSTEM.md`
+- **Memory System Design**: `docs/allura/SOLUTION-ARCHITECTURE.md`
 - **Validation Gate**: `docs/archive/allura/VALIDATION-GATE.md`
 - **Validation Guide**: merged into `docs/allura/SOLUTION-ARCHITECTURE.md` §9 (Validation Topology)
 - **Dashboard Rebuild Cutover**: AD-29 and RK-19 in this document; route/data contracts in `DATA-DICTIONARY.md`; implementation topology in `SOLUTION-ARCHITECTURE.md`

@@ -68,8 +68,8 @@ Caregiver 50% · Creator 30% · Explorer 20%
 
 ### Source of Truth
 
-`docs/branding/deliverables/06_allura-memory_brand-truth.json` — machine-readable brand canon, synced to Figma (`PAQpnxQZENNwbhmk5qxOjR`)  
-Full system: [`docs/branding/deliverables/README.md`](../branding/deliverables/README.md)
+[`DESIGN-ALLURA.md`](./DESIGN-ALLURA.md) — brand canon and visual identity source, including Mission Control guidance
+Full system: [`DESIGN-ALLURA.md`](./DESIGN-ALLURA.md)
 
 ---
 
@@ -784,8 +784,8 @@ graph LR
 - [DATA-DICTIONARY.md](./DATA-DICTIONARY.md)
 - [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md)
 - [DESIGN-ALLURA.md](./DESIGN-ALLURA.md) — UI/UX wireframes and design rules
-- [Brand System](../branding/deliverables/README.md) — allura brand identity (colors, typography, voice, logos)
-- [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md) — Governed memory pipeline design
+- [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#0-brand-identity) — allura brand identity (colors, typography, voice, logos)
+- [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) — Governed memory pipeline design
 - [TEAM-RAM-BMAD-INTEGRATION.md](./TEAM-RAM-BMAD-INTEGRATION.md) — Team RAM, BMAD, and Allura Brain operating contract
 - [REQUIREMENTS-MATRIX.md](./REQUIREMENTS-MATRIX.md) — Competitive analysis and use case fit
 - [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) — Acceptance checklist and benchmark matrix
@@ -872,7 +872,7 @@ This section defines the single authority map between Notion templates/policy an
 | Solution Architecture: Allura             | `docs/allura/SOLUTION-ARCHITECTURE.md`                 | Notion → repo                   | Edit Notion, sync to repo               |
 | ✨ AI Guidelines: Documentation Standards | `docs/AI-GUIDELINES.md` + `.opencode/AI-GUIDELINES.md` | Notion → repo                   | Edit Notion, patch both repo files      |
 | Design                                    | `docs/allura/DESIGN-ALLURA.md`                         | Repo canonical (no Notion twin) | Edit repo directly                      |
-| Memory System Design                      | `docs/allura/DESIGN-MEMORY-SYSTEM.md`                  | Repo canonical (no Notion twin) | Edit repo directly                      |
+| Memory System Design                      | `docs/allura/SOLUTION-ARCHITECTURE.md`                 | Repo canonical (no Notion twin) | Edit repo directly                      |
 | Requirements Matrix                       | `docs/allura/REQUIREMENTS-MATRIX.md`                   | Repo canonical (no Notion twin) | Edit repo directly                      |
 | Risks & Decisions                         | `docs/allura/RISKS-AND-DECISIONS.md`                   | Repo canonical (no Notion twin) | Edit repo directly                      |
 | Data Dictionary                           | `docs/allura/DATA-DICTIONARY.md`                       | Repo canonical (no Notion twin) | Edit repo directly                      |

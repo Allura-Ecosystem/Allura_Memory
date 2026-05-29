@@ -9,9 +9,10 @@
 
 - [1. Purpose](#1-purpose)
 - [2. Required Documentation Artifacts](#2-required-documentation-artifacts)
+  - [Closed Documentation Set](#closed-documentation-set)
   - [Blueprint](#blueprint)
   - [Solution Architecture](#solution-architecture)
-  - [Design Documents (DESIGN-\*)](#design-documents-design-)
+  - [Design Document](#design-document)
   - [Requirements Traceability Matrix](#requirements-traceability-matrix)
   - [Risks & Decisions Matrix](#risks--decisions-matrix)
   - [Data Dictionary](#data-dictionary)
@@ -27,8 +28,9 @@
   - [When Diagrams Are Required](#when-diagrams-are-required)
   - [Diagram Types & Tools](#diagram-types--tools)
 - [6. Naming & File Conventions](#6-naming--file-conventions)
-- [7. Templates](#7-templates)
-- [8. Review & Maintenance](#8-review--maintenance)
+- [7. Extra Document Prevention Rules](#7-extra-document-prevention-rules)
+- [8. Templates](#8-templates)
+- [9. Review & Maintenance](#9-review--maintenance)
 
 ---
 
@@ -46,6 +48,23 @@ AI assistance (GitHub Copilot, LLMs, etc.) is encouraged for drafting these docu
 ---
 
 ## 2. Required Documentation Artifacts
+
+### Closed Documentation Set
+
+The canonical project documentation set is **closed**. For this repository, the canonical project documentation directory is `docs/allura/`. That directory must contain only these six Markdown artifacts:
+
+1. `BLUEPRINT.md`
+2. `SOLUTION-ARCHITECTURE.md`
+3. `DESIGN-ALLURA.md`
+4. `REQUIREMENTS-MATRIX.md`
+5. `RISKS-AND-DECISIONS.md`
+6. `DATA-DICTIONARY.md`
+
+No additional Markdown documents may be added to the canonical documentation directory without first replacing or merging into one of the six artifacts above. Research notes, evidence packets, screenshots, temporary plans, board exports, retrospectives, generated reports, and implementation scratchpads must live outside the canonical documentation directory.
+
+If a contributor believes a seventh document is required, the default answer is **no**. The proposer must instead identify which of the six documents owns the information and add it there. A new document requires an explicit `AD-##` decision in `RISKS-AND-DECISIONS.md` before creation.
+
+---
 
 ### Blueprint
 
@@ -93,16 +112,18 @@ A complete Solution Architecture document must include:
 | **Interface Catalogue** | Table of all integration points: direction, channel, payload, and references to governing AD/RK entries |
 | **Risk-Architecture Traceability** | Mapping of each topology section to the AD/RK entries in `RISKS-AND-DECISIONS.md` that it addresses |
 | **Key Architectural Constraints** | Cross-cutting `MUST`/`MUST NOT` constraints that apply to all integrations |
-| **References** | Links to Blueprint, RISKS-AND-DECISIONS.md, Requirements Matrix, and applicable DESIGN-*.md documents |
+| **References** | Links to Blueprint, RISKS-AND-DECISIONS.md, Requirements Matrix, and `DESIGN-ALLURA.md` |
 
 > **Why this matters for AI:** Without a topology document, AI will flatten all interactions into a single synchronous request model and miss async, caching, and federation patterns entirely. The topology sections give the AI the interaction boundaries it needs to generate correct integration code and avoid putting the service on the hot path.
 
 ---
 
-**Files:** `DESIGN-<AREA>.md` (e.g., `DESIGN-SERVICE.md`, `DESIGN-EXECUTE.md`)  
+### Design Document
+
+**File:** `DESIGN-ALLURA.md`
 **Template:** [`guidelines/templates/DESIGN.template.md`](templates/DESIGN.template.md)
 
-Each Design document **deep-dives on one functional area**. It translates Blueprint requirements into precise API contracts, state machines, validation rules, and operational constraints.
+The Design document **deep-dives on functional areas inside one file**. It translates Blueprint requirements into precise API contracts, state machines, validation rules, and operational constraints. Do not create additional `DESIGN-*.md` files for new areas; add a section to `DESIGN-ALLURA.md` unless an approved architectural decision explicitly changes the closed set.
 
 A complete Design document must include:
 
@@ -247,22 +268,23 @@ Remove this notice only after a full human review has been completed and signed 
 |-------------------------------|-----------|
 | A document and the JSON schema | JSON schema |
 | A document and the Go model | Go model |
-| Two documents | The Blueprint, then team consensus |
+| Two canonical documents | The Blueprint, then team consensus |
+| A canonical document and a non-canonical note | The canonical document |
 | An AI suggestion and any of the above | The source of truth |
 
 ### Cross-Referencing
 
-Every document must link to related documents using relative Markdown links. Do not use bare file names — always use `[link text](path/to/file.md#anchor)` syntax.
+Every canonical document must link to related canonical documents using relative Markdown links. Do not use bare file names — always use `[link text](path/to/file.md#anchor)` syntax.
 
 Required links per document type:
 
 | Document | Must link to |
 |----------|--------------|
-| Blueprint | All DESIGN-*.md files, `SOLUTION-ARCHITECTURE.md`, `RISKS-AND-DECISIONS.md`, all JSON schemas |
-| SOLUTION-ARCHITECTURE.md | `BLUEPRINT.md`, `RISKS-AND-DECISIONS.md`, `REQUIREMENTS-MATRIX.md`, applicable DESIGN-*.md |
-| DESIGN-*.md | `BLUEPRINT.md` (requirement IDs), related DESIGN-*.md, JSON schemas |
-| REQUIREMENTS-MATRIX.md | `BLUEPRINT.md`, all DESIGN-*.md files, `RISKS-AND-DECISIONS.md` (for F# entries that reference AD/RK entries) |
-| RISKS-AND-DECISIONS.md | `BLUEPRINT.md`, applicable DESIGN-*.md, `REQUIREMENTS-MATRIX.md` |
+| Blueprint | `DESIGN-ALLURA.md`, `SOLUTION-ARCHITECTURE.md`, `RISKS-AND-DECISIONS.md`, all JSON schemas |
+| SOLUTION-ARCHITECTURE.md | `BLUEPRINT.md`, `RISKS-AND-DECISIONS.md`, `REQUIREMENTS-MATRIX.md`, `DESIGN-ALLURA.md` |
+| DESIGN-ALLURA.md | `BLUEPRINT.md` (requirement IDs), `REQUIREMENTS-MATRIX.md`, JSON schemas |
+| REQUIREMENTS-MATRIX.md | `BLUEPRINT.md`, `DESIGN-ALLURA.md`, `RISKS-AND-DECISIONS.md` (for F# entries that reference AD/RK entries) |
+| RISKS-AND-DECISIONS.md | `BLUEPRINT.md`, `DESIGN-ALLURA.md`, `REQUIREMENTS-MATRIX.md` |
 | DATA-DICTIONARY.md | All JSON schema files |
 
 ---
@@ -272,7 +294,8 @@ Required links per document type:
 Before merging a documentation PR, verify:
 
 - [ ] All `B#` IDs in the Blueprint appear in the Requirements Matrix
-- [ ] All `F#` IDs in the Blueprint appear in the Requirements Matrix and at least one Design doc
+- [ ] All `F#` IDs in the Blueprint appear in the Requirements Matrix and `DESIGN-ALLURA.md`
+- [ ] The canonical documentation directory contains exactly the six approved Markdown files and no extra Markdown documents or subdirectories
 - [ ] All entities in the Data Dictionary have a corresponding JSON schema file
 - [ ] All JSON schema fields are represented in the Data Dictionary
 - [ ] All diagrams render correctly (Mermaid syntax validated)
@@ -327,19 +350,39 @@ erDiagram
 
 | Artifact | File Name Pattern | Location |
 |---|---|---|
-| Blueprint | `BLUEPRINT.md` | Repository root |
-| Solution Architecture | `SOLUTION-ARCHITECTURE.md` | Repository root |
-| Design document | `DESIGN-<AREA>.md` (uppercase, hyphenated) | Repository root |
-| Requirements Matrix | `REQUIREMENTS-MATRIX.md` | Repository root |
-| Risks & Decisions Matrix | `RISKS-AND-DECISIONS.md` | Repository root |
-| Data Dictionary | `DATA-DICTIONARY.md` | Repository root |
+| Blueprint | `BLUEPRINT.md` | Canonical project documentation directory |
+| Solution Architecture | `SOLUTION-ARCHITECTURE.md` | Canonical project documentation directory |
+| Design document | `DESIGN-ALLURA.md` | Canonical project documentation directory |
+| Requirements Matrix | `REQUIREMENTS-MATRIX.md` | Canonical project documentation directory |
+| Risks & Decisions Matrix | `RISKS-AND-DECISIONS.md` | Canonical project documentation directory |
+| Data Dictionary | `DATA-DICTIONARY.md` | Canonical project documentation directory |
 | JSON Schema | `<entity>.schema.json` (lowercase, hyphenated) | `json-schema/` |
 | AI Guidelines | `guidelines/AI-GUIDELINES.md` | `guidelines/` |
 | Document templates | `guidelines/templates/*.template.md` | `guidelines/templates/` |
 
 ---
 
-## 7. Templates
+## 7. Extra Document Prevention Rules
+
+These rules prevent documentation sprawl and preserve conceptual integrity:
+
+1. **Six-file maximum:** The canonical project documentation directory must contain exactly the six approved Markdown files listed in [Closed Documentation Set](#closed-documentation-set).
+2. **No sidecar notes:** Do not create `NOTES.md`, `PLAN.md`, `AUDIT.md`, `REVIEW.md`, `GOVERNANCE.md`, `RELEASE.md`, `INSTALL.md`, `MIGRATION.md`, or similarly named documents in the canonical documentation directory.
+3. **Merge, do not multiply:** If new information is needed, merge it into the owning canonical document:
+   - Intent, scope, business rules → `BLUEPRINT.md`
+   - Topology, actors, interfaces → `SOLUTION-ARCHITECTURE.md`
+   - UI/API/workflow details → `DESIGN-ALLURA.md`
+   - Requirement coverage → `REQUIREMENTS-MATRIX.md`
+   - Risks, decisions, exceptions → `RISKS-AND-DECISIONS.md`
+   - Fields, entities, events, enums → `DATA-DICTIONARY.md`
+4. **Evidence is not documentation:** Test logs, screenshots, generated reports, and review packets must go to an evidence/artifacts location, not the canonical documentation directory.
+5. **Temporary work expires:** Drafts and scratchpads must live in a temporary workspace and must not be linked as canonical references.
+6. **Seventh-doc gate:** Any proposed new canonical document requires a prior `AD-##` entry in `RISKS-AND-DECISIONS.md` with owner, rationale, rejected alternatives, and a statement explaining why the six-file set cannot absorb it.
+7. **Review blocker:** A PR that adds any non-approved Markdown file or subdirectory to the canonical documentation directory is blocked until the content is merged into the six-file set or an approved `AD-##` exception exists.
+
+---
+
+## 8. Templates
 
 Ready-to-use document templates are provided in [`guidelines/templates/`](templates/):
 
@@ -356,10 +399,11 @@ To start a new document, copy the relevant template and replace all `<!-- placeh
 
 ---
 
-## 8. Review & Maintenance
+## 9. Review & Maintenance
 
 - Documentation PRs require at least one reviewer outside of the original author.
 - Requirements Matrix and Data Dictionary must be updated in the **same PR** as any schema or API change.
 - The Blueprint is the most stable document — changes to it require a separate, focused PR with explicit rationale.
 - AI-disclosure notices are only removed after a full human review sign-off noted in the PR description.
 - Stale documents (last updated > 90 days ago with active code changes) should be flagged in the next team retrospective.
+- Documentation PRs that create extra canonical Markdown documents are rejected unless the seventh-doc gate in [§7](#7-extra-document-prevention-rules) is satisfied.

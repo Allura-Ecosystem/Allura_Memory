@@ -196,7 +196,7 @@ Curator approves → Neo4j write
 
 ## Governed Memory Pipeline — Business → Functional Traceability
 
-This section traces the governed memory pipeline requirements from business goals through functional behaviors to concrete satisfaction evidence. See [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md) for the full implementation design and [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) for the acceptance checklist.
+This section traces the governed memory pipeline requirements from business goals through functional behaviors to concrete satisfaction evidence. See [BLUEPRINT.md](./BLUEPRINT.md) and [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) for the full implementation design and [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) for the acceptance checklist.
 
 ### Section 1: Business Requirements → Functional Requirements
 
@@ -232,7 +232,7 @@ This section traces the governed memory pipeline requirements from business goal
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f1"></a>F1 | The system must persist agent task lifecycle events, tool calls, outputs, retries, and terminal status into a raw trace store. | `insertEvent()` · `src/lib/postgres/queries/insert-trace.ts` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#trace-ingestion) |
+| <a name="f1"></a>F1 | The system must persist agent task lifecycle events, tool calls, outputs, retries, and terminal status into a raw trace store. | `insertEvent()` · `src/lib/postgres/queries/insert-trace.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f2"></a>F2 | Raw trace storage must be append-only and must not overwrite prior events in place. | Append-only write policy · `events` table schema · `00-traces.sql` · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 | <a name="f3"></a>F3 | Raw traces must preserve provenance sufficient to link downstream insights back to source evidence. | `trace_ref` field on proposals · `evidence_refs` in promotion metadata · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) |
 
@@ -240,29 +240,29 @@ This section traces the governed memory pipeline requirements from business goal
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f4"></a>F4 | A curator service must read raw traces and generate proposed insights rather than active insights. | `src/curator/index.ts` · `curatorScore()` · `canonical_proposals` table · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#insight-curation-and-approval) |
+| <a name="f4"></a>F4 | A curator service must read raw traces and generate proposed insights rather than active insights. | `src/curator/index.ts` · `curatorScore()` · `canonical_proposals` table · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f5"></a>F5 | Each proposed insight must include summary, evidence links, confidence score, timestamp, and status. | Proposal schema · `score`, `reasoning`, `tier`, `trace_ref` fields · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) |
 
 #### Approval and Governance (F6–F7)
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f6"></a>F6 | Proposed insights must enter an approval flow before they can become active. | `POST /api/curator/approve` · `status: pending` gate · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#insight-curation-and-approval) |
-| <a name="f7"></a>F7 | Every approval, rejection, or policy-based decision must be recorded as an audit event. | `proposal_approved` / `proposal_rejected` event types · witness hash · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#insight-curation-and-approval) |
+| <a name="f6"></a>F6 | Proposed insights must enter an approval flow before they can become active. | `POST /api/curator/approve` · `status: pending` gate · [BLUEPRINT.md](./BLUEPRINT.md) |
+| <a name="f7"></a>F7 | Every approval, rejection, or policy-based decision must be recorded as an audit event. | `proposal_approved` / `proposal_rejected` event types · witness hash · [BLUEPRINT.md](./BLUEPRINT.md) |
 
 #### Knowledge Graph Versioning (F8–F9)
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f8"></a>F8 | Approved insights must be written to Neo4j as immutable nodes and must never be updated in place. | `createInsight()` · `src/lib/neo4j/queries/insert-insight.ts` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#knowledge-graph-versioning) |
+| <a name="f8"></a>F8 | Approved insights must be written to Neo4j as immutable nodes and must never be updated in place. | `createInsight()` · `src/lib/neo4j/queries/insert-insight.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f9"></a>F9 | When an insight changes, the system must create a new insight node linked with `SUPERSEDES`, `DEPRECATED`, or `REVERTED`. | `createInsightVersion()` · `deprecateInsight()` · `revertInsightVersion()` · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 
 #### Retrieval Layer (F10–F11)
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f10"></a>F10 | Agents must retrieve knowledge through a retrieval service rather than by directly querying PostgreSQL or Neo4j. | `POST /api/memory/retrieval` · `src/lib/memory/retrieval-layer.ts` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#retrieval-layer) |
-| <a name="f11"></a>F11 | The retrieval service must support semantic and structured queries and return scoped context from approved insights, with optional raw-trace access. | `searchInsights()` · `getDualContextSemanticMemory()` · `queryTraces()` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#retrieval-layer) |
+| <a name="f10"></a>F10 | Agents must retrieve knowledge through a retrieval service rather than by directly querying PostgreSQL or Neo4j. | `POST /api/memory/retrieval` · `src/lib/memory/retrieval-layer.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
+| <a name="f11"></a>F11 | The retrieval service must support semantic and structured queries and return scoped context from approved insights, with optional raw-trace access. | `searchInsights()` · `getDualContextSemanticMemory()` · `queryTraces()` · [BLUEPRINT.md](./BLUEPRINT.md) |
 
 #### Policy and Access Control (F12–F13)
 
@@ -284,7 +284,7 @@ This section traces the governed memory pipeline requirements from business goal
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
 | <a name="f17"></a>F17 | Tab 1 restricted to authenticated users with `admin` role (engineers only) | `src/app/api/curator/` · Clerk RBAC middleware · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
-| <a name="f18"></a>F18 | Audit log endpoint: `GET /api/audit/events` — returns curator decisions with timestamps | `src/app/api/audit/events/` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#insight-curation-and-approval) |
+| <a name="f18"></a>F18 | Audit log endpoint: `GET /api/audit/events` — returns curator decisions with timestamps | `src/app/api/audit/events/` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f19"></a>F19 | Dashboard integrates Clerk for authentication and RBAC (curator, admin, viewer roles) | Clerk auth provider · `src/lib/auth/` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
 
 ### Section 4: Infrastructure (F20–F25)
@@ -292,7 +292,7 @@ This section traces the governed memory pipeline requirements from business goal
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
 | <a name="f20"></a>F20 | Skills route agent work to packaged MCP servers (`neo4j-memory`, `database-server`, optional `neo4j-cypher`) rather than a custom all-in-one MCP runtime | `.opencode/skills/allura-memory-skill/` · `.opencode/skills/mcp-docker-memory-system/` · AD-23 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-1-agent-memory-recall-primary-path) |
-| <a name="f21"></a>F21 | `docker compose up` starts core infra and app services; packaged MCP servers are attached as focused external capabilities | `docker-compose.yml` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#8-1-deployment-scenarios) |
+| <a name="f21"></a>F21 | `docker compose up` starts core infra and app services; packaged MCP servers are attached as focused external capabilities | `docker-compose.yml` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#81-deployment-scenarios) |
 | <a name="f22"></a>F22 | Memory viewer UI at `/memory` lists, searches, and deletes memories | `src/app/memory/page.tsx` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#ux-philosophy) |
 | <a name="f23"></a>F23 | Curator dashboard deployed on Vercel; calls backend engine via `CURATOR_ENGINE_URL` env var | `src/app/curator/page.tsx` · Vercel deployment config · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
 | <a name="f24"></a>F24 | Vercel Functions (`/api/curator/*`) call Docker engine in VPC/cloud via HTTPS | `src/app/api/curator/` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#4-interface-catalogue) |
@@ -302,17 +302,17 @@ This section traces the governed memory pipeline requirements from business goal
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f26"></a>F26 | Agent task lifecycle events, tool calls, outputs, retries, and terminal status are persisted as append-only traces | `insertEvent()` · `src/lib/postgres/queries/insert-trace.ts` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#trace-ingestion) |
-| <a name="f27"></a>F27 | Raw trace storage is append-only; no UPDATE or DELETE on the `events` table | Append-only write policy · `events` table schema · `00-traces.sql` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#trace-ingestion) |
+| <a name="f26"></a>F26 | Agent task lifecycle events, tool calls, outputs, retries, and terminal status are persisted as append-only traces | `insertEvent()` · `src/lib/postgres/queries/insert-trace.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
+| <a name="f27"></a>F27 | Raw trace storage is append-only; no UPDATE or DELETE on the `events` table | Append-only write policy · `events` table schema · `00-traces.sql` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f28"></a>F28 | Raw traces preserve provenance linking downstream insights back to source evidence | `trace_ref` field on proposals · `evidence_refs` in promotion metadata · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#postgresql-canonical_proposals) |
-| <a name="f29"></a>F29 | Curator reads raw traces and generates proposed insights (not active insights) | `src/curator/index.ts` · `curatorScore()` · `canonical_proposals` table · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#insight-curation-and-approval) |
+| <a name="f29"></a>F29 | Curator reads raw traces and generates proposed insights (not active insights) | `src/curator/index.ts` · `curatorScore()` · `canonical_proposals` table · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f30"></a>F30 | Each proposed insight includes summary, evidence links, confidence score, timestamp, and status | Proposal schema · `score`, `reasoning`, `tier`, `trace_ref` fields · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#postgresql-canonical_proposals) |
-| <a name="f31"></a>F31 | Proposed insights enter an approval flow before becoming active knowledge | `POST /api/curator/approve` · `status: pending` gate · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#insight-curation-and-approval) |
-| <a name="f32"></a>F32 | Every approval, rejection, or policy decision is recorded as an audit event with actor and timestamp | `proposal_approved` / `proposal_rejected` event types · witness hash · `src/lib/memory/approval-audit.ts` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#insight-curation-and-approval) |
-| <a name="f33"></a>F33 | Approved insights are written to Neo4j as immutable nodes; no in-place updates | `createInsight()` · `src/lib/neo4j/queries/insert-insight.ts` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#knowledge-graph-versioning) |
-| <a name="f34"></a>F34 | Changed insights create new nodes linked with `SUPERSEDES`, `DEPRECATED`, or `REVERTED` relationships | `createInsightVersion()` · `deprecateInsight()` · `revertInsightVersion()` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#knowledge-graph-versioning) |
-| <a name="f35"></a>F35 | Agents retrieve knowledge through a controlled retrieval service, not by querying databases directly | `POST /api/memory/retrieval` · `src/lib/memory/retrieval-layer.ts` · AD-19 · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#retrieval-layer) |
-| <a name="f36"></a>F36 | Retrieval supports semantic and structured queries with project and global scope | `searchInsights()` · `getDualContextSemanticMemory()` · `queryTraces()` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#retrieval-layer) |
+| <a name="f31"></a>F31 | Proposed insights enter an approval flow before becoming active knowledge | `POST /api/curator/approve` · `status: pending` gate · [BLUEPRINT.md](./BLUEPRINT.md) |
+| <a name="f32"></a>F32 | Every approval, rejection, or policy decision is recorded as an audit event with actor and timestamp | `proposal_approved` / `proposal_rejected` event types · witness hash · `src/lib/memory/approval-audit.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
+| <a name="f33"></a>F33 | Approved insights are written to Neo4j as immutable nodes; no in-place updates | `createInsight()` · `src/lib/neo4j/queries/insert-insight.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
+| <a name="f34"></a>F34 | Changed insights create new nodes linked with `SUPERSEDES`, `DEPRECATED`, or `REVERTED` relationships | `createInsightVersion()` · `deprecateInsight()` · `revertInsightVersion()` · [BLUEPRINT.md](./BLUEPRINT.md) |
+| <a name="f35"></a>F35 | Agents retrieve knowledge through a controlled retrieval service, not by querying databases directly | `POST /api/memory/retrieval` · `src/lib/memory/retrieval-layer.ts` · AD-19 · [BLUEPRINT.md](./BLUEPRINT.md) |
+| <a name="f36"></a>F36 | Retrieval supports semantic and structured queries with project and global scope | `searchInsights()` · `getDualContextSemanticMemory()` · `queryTraces()` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f37"></a>F37 | All knowledge-system reads/writes pass through controlled endpoints enforcing project-level access | `requireRole()` · `validateGroupId()` · RBAC middleware · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#6-key-architectural-constraints) |
 | <a name="f38"></a>F38 | Agent permissions enforced and all access to trace/knowledge resources is audited | Auth middleware · audit event logging · [BLUEPRINT.md](./BLUEPRINT.md#9-logging--audit) |
 | <a name="f39"></a>F39 | A second agent can retrieve approved knowledge and use it correctly in a later task | Retrieval endpoint · validation gate scenario MEM-UC8 · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) |
@@ -353,13 +353,30 @@ This section traces the governed memory pipeline requirements from business goal
 | B14 | TypeScript SDK (`@allura/sdk`) | F1–F5 | — | MCP tools are the SDK · AD-05 · 5-tool API surface |
 | B15 | BYOK encryption | — | — | Planned · RK-04 |
 | B16 | Curator dashboard: three-tab approval workflow (Traces, Approved, Pending) | F14, F17, F19 | MEM-UC4 | `src/app/curator/page.tsx` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
-| B17 | Curator sees confidence scores (60-100%) with one-sentence reasoning for uncertain proposals | F10 | MEM-UC3 | `curatorScore()` · `canonical_proposals.tier` · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#insight-curation-and-approval) |
+| B17 | Curator sees confidence scores (60-100%) with one-sentence reasoning for uncertain proposals | F10 | MEM-UC3 | `curatorScore()` · `canonical_proposals.tier` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | B18 | Approve/reject decisions logged to audit trail with curator ID and timestamp | F7, F32 | MEM-UC4 | `src/lib/memory/approval-audit.ts` · witness hash · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#postgresql-canonical_proposals) |
 | B19 | Auto-promote proposals >85% confidence without curator review (configurable) | F6, F7 | MEM-UC4 | `AUTO_APPROVAL_THRESHOLD` env var · `PROMOTION_MODE=auto` · [BLUEPRINT.md](./BLUEPRINT.md#6-execution-rules) |
-| B20 | Dashboard deployable on Vercel with backend engine in user's VPC/cloud | F23, F24 | — | Vercel deployment config · `CURATOR_ENGINE_URL` env var · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#8-1-deployment-scenarios) |
+| B20 | Dashboard deployable on Vercel with backend engine in user's VPC/cloud | F23, F24 | — | Vercel deployment config · `CURATOR_ENGINE_URL` env var · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#81-deployment-scenarios) |
 | B21 | Curator authentication via Clerk (SSO, RBAC) | F19 | MEM-UC7 | Clerk auth provider · `src/lib/auth/` · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
 | B22 | Error tracking via Sentry; curator alerted on engine failures | F25 | — | `src/lib/observability/sentry.ts` · `captureException` in curator approve route |
-| B23 | Agents must persist all task activity as append-only raw traces for auditability | F1, F2, F3, F26, F27 | MEM-UC1, MEM-UC2 | `insertEvent()` · `events` table · [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md#trace-ingestion) |
+| B23 | Agents must persist all task activity as append-only raw traces for auditability | F1, F2, F3, F26, F27 | MEM-UC1, MEM-UC2 | `insertEvent()` · `events` table · [BLUEPRINT.md](./BLUEPRINT.md) |
+
+### Section 6A: RuVix Governance Requirements (REQ-GOV-001–REQ-GOV-002)
+
+| ID | Requirement | Trace | Satisfied by |
+|----|-------------|-------|--------------|
+| REQ-GOV-001 | Admin rule visibility — display active kernel rules with status, threshold, and audit trail | `RUVIX_KERNEL_CONTRACT_v1`, AD-XX, B12 / F17–F19 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx-ruvix-kernel-contract) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
+| REQ-GOV-002 | Admin rule configuration — toggle promotion mode, set threshold, view audit log | `PROMOTION_MODE`, `AUTO_APPROVAL_THRESHOLD`, audit events, B12 / F17–F19 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
+
+### Section 6B: RuVix Brand Governance Requirements (REQ-DURHAM-001–REQ-DURHAM-005)
+
+| ID | Requirement | Trace | Satisfied by |
+|----|-------------|-------|--------------|
+| REQ-DURHAM-001 | Durham token exclusivity — dashboard components use only `--durham-*` CSS custom properties | BRAND-001 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#durhamtokenaudit) |
+| REQ-DURHAM-002 | Mission-control voice — all dashboard copy is audited against forbidden DD voice patterns and marketing fluff | BRAND-002 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-requirements) |
+| REQ-DURHAM-003 | Evidence-gated completion — every dashboard PR includes a screenshot packet covering all states, mobile, accessibility, and anti-drift audit | BRAND-003 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#dashboardclaim) |
+| REQ-DURHAM-004 | Accessibility AA compliance — keyboard operable, visible focus rings, and AA contrast using Durham tokens | BRAND-004 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-2-brand-governance-layer) |
+| REQ-DURHAM-005 | Component consistency — reuse `agency-card`, `metric-card`, `agency-badge`, and curator table patterns with Durham spacing rhythm; ship only after Durham gate passes | BRAND-005, BRAND-006 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#durhamgateevent) · [docs/allura/BRAND-RULES-dashboard-v2.md](./BRAND-RULES-dashboard-v2.md) |
 
 ### Section 7: Use Case Index
 

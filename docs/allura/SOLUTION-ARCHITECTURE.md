@@ -197,10 +197,79 @@ sequenceDiagram
 **Key constraints:**
 - Agents do not write through packaged MCP inspection servers
 - Controlled service endpoints remain the only write path for governed memory changes
-- Neo4j writes preserve immutable lineage and approval policy
-- The Curator Approve CLI (`src/curator/approve-cli.ts`) is an alternative entry point to the same governed write path — it uses the same `createInsight()` code path as the API route, enforces the same invariants (group_id validation, SHAKE-256 witness hash, append-only events), and emits `notion_sync_pending` events for async Notion sync
+    - Neo4j writes preserve immutable lineage and approval policy
+    - The Curator Approve CLI (`src/curator/approve-cli.ts`) is an alternative entry point to the same governed write path — it uses the same `createInsight()` code path as the API route, enforces the same invariants (group_id validation, SHAKE-256 witness hash, append-only events), and emits `notion_sync_pending` events for async Notion sync
 
 ---
+
+### 3.4.1 RuVix Kernel Governance Contract
+
+The RuVix kernel is the governance contract for Allura Brain. Every operation carries identity, scope, authority, evidence, and audit.
+
+**Kernel invariant:** Every operation carries identity, scope, authority, evidence, and audit.
+
+**The five questions:**
+
+| Question | Required answer |
+|---|---|
+| who | `agent_id` + `session_id` |
+| what scope | `group_id` + operation scope |
+| what authority | mode, role, and approval state |
+| what evidence | trace row, proposal, witness hash, or source event |
+| what audit trail | append-only event record + lineage edge |
+
+**12-rule summary**
+
+| Rule | Invariant |
+|---|---|
+| RULE-001 Identity Scoping | Every operation is bound to `group_id`, `agent_id`, and `session_id`. |
+| RULE-002 Mutation Provenance | Every mutation records who initiated it and why. |
+| RULE-003 Append-Only Episodic | Raw traces are append-only; no in-place overwrite. |
+| RULE-004 Semantic Promotion Gate | Semantic writes require promotion policy evaluation. |
+| RULE-005 SUPERSEDES Versioning | Changed knowledge creates a new node linked by `SUPERSEDES`. |
+| RULE-006 Root Cause Before Fix | Debugging must identify root cause before any fix is written. |
+| RULE-007 Evidence Before Completion | Completion requires evidence, not assertion. |
+| RULE-008 Secret Isolation | Secrets never leak into logs, traces, or semantic memory. |
+| RULE-009 Governed Tool Surface | Only approved tools and routes may mutate governed state. |
+| RULE-010 Fail Closed | Unknown, unsafe, or degraded states block mutation. |
+| RULE-011 Tenant Isolation | `group_id` remains the hard namespace boundary. |
+| RULE-012 HITL Gate | Human-in-the-loop approval is required where policy demands it. |
+
+**Promotion mode architecture**
+
+| Mode | Behavior | Threshold |
+|---|---|---|
+| `soc2` | Queue eligible memories for human approval; never auto-promote. | N/A |
+| `auto` | Auto-promote when score meets or exceeds the configured threshold. | `AUTO_APPROVAL_THRESHOLD` (default `0.85`) |
+
+The canonical kernel contract is stored as `RUVIX_KERNEL_CONTRACT_v1` in Neo4j, with 12 individual rule entries plus one anchor ADR in PostgreSQL.
+
+### 3.4.2 Brand Governance Layer
+
+The dashboard brand layer is a RuVix-enforced contract, not a design preference. It governs Allura Dashboard surfaces only.
+
+| Brand Rule | Invariant |
+|---|---|
+| BRAND-001 | Durham token exclusivity: dashboard CSS may use only `--durham-*` custom properties; DD tokens (`dark-green`, `brand-gold`, `Poppins`, `Inter`, `Montserrat`) are forbidden. |
+| BRAND-002 | Dashboard voice stays mission-control: no fake certainty, no marketing fluff, no DD voice patterns. |
+| BRAND-003 | Claims are evidence-gated: no dashboard work is marked done until the screenshot packet, mobile pass, accessibility pass, and anti-drift audit exist. |
+| BRAND-004 | Accessibility is mandatory: AA contrast, visible focus rings, and keyboard-operable flows are required with Durham tokens. |
+| BRAND-005 | Component consistency is required: reuse `agency-card`, `metric-card`, `agency-badge`, and curator table patterns with Durham spacing rhythm. |
+| BRAND-006 | Durham gate before ship: Aaker + Glaser + Munari must pass before the dashboard is released. |
+
+**Enforcement pipeline:**
+
+`Aaker review → Glaser review → Munari review → evidence collector → ship decision`
+
+**Enforcement details:**
+
+- Token enforcement rejects any dashboard style rule that is not expressed through the Durham token set.
+- Voice enforcement rejects copy that reads like advertising, certainty theater, or unsupported claims.
+- Completion enforcement requires evidence artifacts before any dashboard claim is promoted to done.
+- Accessibility enforcement checks contrast, focus visibility, and keyboard navigation before merge.
+- Component enforcement prefers the established Durham patterns over ad hoc variants.
+
+Canonical brand policy artifact: [BRAND-RULES-dashboard-v2.md](./BRAND-RULES-dashboard-v2.md)
 
 ### 3.5 Dashboard Memory Viewer
 

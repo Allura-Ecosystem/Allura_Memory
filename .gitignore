@@ -50,6 +50,9 @@ tsconfig.tsbuildinfo
 # Legacy / retired artifacts (never re-add)
 _bmad-output/
 workspaces/
+artifacts/
+.impeccable/
+.sisyphus/
 skills-lock.json
 INSTALLATION-REPORT.md
 UNIVERSAL_MCP_RULE.md

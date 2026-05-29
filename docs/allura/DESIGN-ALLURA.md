@@ -6,7 +6,7 @@
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
 > When in doubt, defer to the source code, schemas, and team consensus.
 
-> **Visual identity** (colors, typography, shadows, spacing, iconography) and consumer/admin wireframes live in [`docs/design/DESIGN-UI.md`](../design/DESIGN-UI.md). This document covers functional design only.
+> **Visual identity** (colors, typography, shadows, spacing, iconography) lives in [BLUEPRINT.md](./BLUEPRINT.md#0-brand-identity). Consumer/admin wireframes live in the Mission Control parity and dashboard requirements sections in this document.
 
 ---
 
@@ -105,8 +105,8 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 - Business rules derived from architectural decisions
 
 **What this document is not:**
-- A UI style guide (see [`DESIGN-UI.md`](../design/DESIGN-UI.md))
-- Component-level wireframes (see [`DESIGN-UI.md`](../design/DESIGN-UI.md))
+- A UI style guide (see [BLUEPRINT.md](./BLUEPRINT.md#0-brand-identity))
+- Component-level wireframes (see [Mission Control route parity](#mission-control-route-parity) and [Dashboard Requirements](#dashboard-requirements))
 - An implementation roadmap (see [`SOLUTION-ARCHITECTURE.md`](./SOLUTION-ARCHITECTURE.md))
 
 ### UX Philosophy
@@ -856,8 +856,8 @@ async function readJson<T>(path: string, init?: RequestInit): Promise<{ data: T;
 ## References
 
 - [BLUEPRINT.md](./BLUEPRINT.md) — requirements this design satisfies
-- [DESIGN-MEMORY-SYSTEM.md](./DESIGN-MEMORY-SYSTEM.md) — governed memory pipeline design
+- [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) — governed memory pipeline design
 - [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) — architectural decisions and risk register
 - [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) — system topology and deployment
 - [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) — canonical field and entity definitions
-- [DESIGN-UI.md](../design/DESIGN-UI.md) — visual identity, wireframes, and design rules
+- [BLUEPRINT.md](./BLUEPRINT.md#0-brand-identity) — visual identity, wireframes, and design rules
