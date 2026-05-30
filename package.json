@@ -58,6 +58,7 @@
     "curator:process-pending": "bun run src/scripts/process-pending-proposals.ts",
     "backfill:embeddings": "bun run src/curator/embedding-backfill-worker.ts --once",
     "backfill:embeddings:watch": "bun run src/curator/embedding-backfill-worker.ts --interval 30000",
+    "validate:tokens": "bash scripts/token-compliance.sh",
     "validate:e2e": "bun run scripts/e2e-validation-gate.ts",
     "validate:e2e:skip-neo4j": "bun run scripts/e2e-validation-gate.ts --skip-neo4j",
     "load-test": "bash tests/load/run-load-test.sh",

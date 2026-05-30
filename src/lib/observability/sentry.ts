@@ -299,6 +299,14 @@ export function extractRequestContext(
     "request.path": url.split("?")[0],
   };
 
+  Object.defineProperty(tags, "request", {
+    value: {
+      method,
+      path: url.split("?")[0],
+    },
+    enumerable: false,
+  });
+
   if (groupId) {
     tags["group_id"] = groupId;
   }
