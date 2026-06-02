@@ -73,6 +73,12 @@ export interface PolicyContext {
   
   /** Declared infrastructure targets for POL-008 verification */
   declaredInfrastructureTargets?: InfrastructureTarget[];
+
+  /** Changed file paths for release/artifact validation enforcement */
+  changedFiles?: string[];
+
+  /** Validation receipts collected before handoff, Done, commit, push, deploy, or release */
+  validationReceipts?: ValidationReceipt[];
   
   /** Additional runtime context */
   [key: string]: unknown;
@@ -183,6 +189,32 @@ export interface SourceOfTruthRead {
   timestamp: number;
   
   /** What was read (for audit) */
+  summary?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VALIDATION / DONE-GATE TYPES (POL-010)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ValidationStatus = "passed" | "failed" | "not_run" | "warning";
+
+export interface ValidationReceipt {
+  /** Stable check name, e.g. "mac-packaging" */
+  name: string;
+
+  /** Exact validation command that was run */
+  command?: string;
+
+  /** Check result */
+  status: ValidationStatus;
+
+  /** Whether this check is required for the changed surface */
+  required?: boolean;
+
+  /** Artifact path or changed surface this receipt validates */
+  artifactPath?: string;
+
+  /** Optional summary for audit reports */
   summary?: string;
 }
 
@@ -726,6 +758,83 @@ export const POLICY_PROJECT_MANIFEST_REQUIRED: Policy = {
 policyRegistry.register(POLICY_PROJECT_MANIFEST_REQUIRED);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POL-010: VALIDATION BEFORE DONE / RELEASE ARTIFACT GATE
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DONE_OR_RELEASE_OPERATION =
+  /(?:done|handoff|commit|push|deploy|release|package|publish|merge|implement)/i;
+
+const RELEASE_ARTIFACT_FILE =
+  /(^|\/)(package\.json|pnpm-lock\.yaml|bun\.lock|yarn\.lock|package-lock\.json|electron-builder\.ya?ml|electron\.vite\.config\.[jt]s|vite\.config\.[jt]s|rollup\.config\.[jt]s|webpack\.config\.[jt]s)$|(^|\/)(scripts|\.github\/workflows|\.specify\/extensions|\.specify\/scripts)\/|(^|\/)(dist|build|release|installer|resources|entitlements|assets)\//i;
+
+const RELEASE_VALIDATION_COMMAND =
+  /(?:electron-builder|pnpm\s+(?:build|package)|bunx\s+electron-builder|npm\s+run\s+(?:build|package)|yarn\s+(?:build|package)|build|package|release)/i;
+
+function changedReleaseArtifactPath(context: PolicyContext): boolean {
+  const changedFiles = context.changedFiles as string[] | undefined;
+
+  if (changedFiles?.some(file => RELEASE_ARTIFACT_FILE.test(file))) {
+    return true;
+  }
+
+  const resource = String(context.resource ?? "");
+  return RELEASE_ARTIFACT_FILE.test(resource) ||
+    /electron|installer|package|release|build|lockfile/i.test(resource);
+}
+
+function hasPassedRequiredArtifactValidation(context: PolicyContext): boolean {
+  const receipts = context.validationReceipts as ValidationReceipt[] | undefined;
+
+  if (!Array.isArray(receipts) || receipts.length === 0) {
+    return false;
+  }
+
+  return receipts.some(receipt => {
+    if (receipt.status !== "passed") {
+      return false;
+    }
+
+    const command = receipt.command ?? "";
+    const name = receipt.name ?? "";
+    const artifactPath = receipt.artifactPath ?? "";
+
+    return RELEASE_VALIDATION_COMMAND.test(command) ||
+      /build|package|release|artifact|electron|installer/i.test(name) ||
+      /build|package|release|artifact|electron|installer/i.test(artifactPath);
+  });
+}
+
+/**
+ * POL-010: Validation Before Done / Release Artifact Gate
+ *
+ * Done, handoff, commit, push, deploy, release, and package operations are
+ * blocked when release/package/build surfaces changed but no passed artifact
+ * validation receipt exists. This closes the gap where lint passed but Electron
+ * mac packaging failed because `dmg-license` was not resolvable.
+ */
+export const POLICY_VALIDATION_BEFORE_DONE: Policy = {
+  id: "POL-010",
+  description: "Changed release artifact paths require passed artifact validation before Done/commit/release",
+  condition: (_claims, context) => {
+    const operation = String(context.operation ?? "");
+
+    if (!DONE_OR_RELEASE_OPERATION.test(operation)) {
+      return true;
+    }
+
+    if (!changedReleaseArtifactPath(context)) {
+      return true;
+    }
+
+    return hasPassedRequiredArtifactValidation(context);
+  },
+  violation: "Release/package/build path changed without a passed required artifact validation receipt. Lint alone cannot satisfy Done.",
+  severity: "critical",
+};
+
+policyRegistry.register(POLICY_VALIDATION_BEFORE_DONE);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // POL-EMAIL-001..005: EXTERNAL EMAIL ZERO-TRUST GATES
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -910,6 +1019,7 @@ export const DEFAULT_POLICIES: Policy[] = [
   POLICY_SOURCE_OF_TRUTH_GATE,
   POLICY_INFRASTRUCTURE_TARGET_LOCK,
   POLICY_PROJECT_MANIFEST_REQUIRED,
+  POLICY_VALIDATION_BEFORE_DONE,
   POLICY_EMAIL_INSTRUCTION_BLOCKER,
   POLICY_EMAIL_ACTION_APPROVAL_GATE,
   POLICY_HIGH_RISK_EMAIL_QUARANTINE,
