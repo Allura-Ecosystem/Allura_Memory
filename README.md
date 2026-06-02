@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> · <a href="#architecture">Architecture</a> · <a href="#features">Features</a> · <a href="#deployment">Deployment</a> · <a href="docs/allura/BLUEPRINT.md">Blueprint</a>
+  <a href="#quick-start">Quick Start</a> · <a href="#architecture">Architecture</a> · <a href="#features">Features</a> · <a href="#allura-cowork-plugin">Cowork Plugin</a> · <a href="#deployment">Deployment</a> · <a href="docs/allura/BLUEPRINT.md">Blueprint</a>
 </p>
 
 ---
@@ -92,9 +92,50 @@ Allura embeds every memory at write time using **Qwen3 Matryoshka embeddings** (
 | **MCP protocol native** | Stdio + Streamable HTTP gateway for any MCP-compatible agent |
 | **Vector search** | pgvector HNSW (episodic) + Neo4j (semantic) via hybrid ANN + BM25 ranking |
 | **Plugin harness** | MCP server discovery, approval, and routing |
+| **Claude/Codex cowork plugin** | Shared handoff protocol, runtime honesty rules, validation reminders, and receipt-first collaboration |
 | **Self-hostable** | Docker Compose — no external auth dependencies |
 | **Versioned knowledge** | `SUPERSEDES` relationships in Neo4j — old facts are deprecated, not erased |
 | **API-first operations** | MCP, CLI, and HTTP endpoints with inspectable receipts |
+
+---
+
+## Allura Cowork Plugin
+
+Allura includes a local plugin package for teams pairing Claude Code and Codex:
+[`plugins/allura-cowork/`](plugins/allura-cowork/).
+
+The plugin gives new users a governed workflow before they know every Allura
+rule. It helps agents:
+
+- identify the active runtime instead of blurring Claude, Codex, OpenCode, and
+  OpenClaw together;
+- search Allura Brain before planning when prior decisions or preferences
+  matter;
+- create structured handoff packets between Claude and Codex;
+- validate claims before calling work done;
+- write receipts after substantive work;
+- keep approval-required actions separate from completed work.
+
+It does **not** claim to prevent hallucinations. It reduces unsupported claims by
+making missing memory search, missing validation, and unexecuted handoffs visible
+before they become Done claims.
+
+Included surfaces:
+
+| Path | Purpose |
+|------|---------|
+| [`plugins/allura-cowork/.codex-plugin/plugin.json`](plugins/allura-cowork/.codex-plugin/plugin.json) | Codex plugin manifest |
+| [`plugins/allura-cowork/.claude-plugin/plugin.json`](plugins/allura-cowork/.claude-plugin/plugin.json) | Claude plugin manifest |
+| [`plugins/allura-cowork/skills/allura-cowork/SKILL.md`](plugins/allura-cowork/skills/allura-cowork/SKILL.md) | Shared cowork rules and handoff format |
+| [`plugins/allura-cowork/commands/`](plugins/allura-cowork/commands/) | `cowork-start`, `cowork-handoff`, `cowork-validate`, and `cowork-close` command docs |
+| [`plugins/allura-cowork/schemas/handoff.schema.json`](plugins/allura-cowork/schemas/handoff.schema.json) | Machine-readable handoff packet schema |
+| [`plugins/allura-cowork/scripts/validate_plugin.py`](plugins/allura-cowork/scripts/validate_plugin.py) | Local package validator |
+
+Validate the package from the repo root:
+
+```bash
+python3 plugins/allura-cowork/scripts/validate_plugin.py plugins/allura-cowork
+```
 
 ---
 
