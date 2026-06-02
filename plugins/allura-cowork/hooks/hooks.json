@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT:-/home/ronin704/plugins/allura-cowork}\"/hooks/cowork-context.py"
+          }
+        ]
+      }
+    ]
+  }
+}
