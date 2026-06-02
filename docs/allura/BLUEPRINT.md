@@ -128,6 +128,14 @@ The hard isolation boundary. Every read and write MUST include a valid `group_id
 
 ## 2) Requirements
 
+### Engine Boundary and RuVector/RuVix Posture
+
+Allura is the governed memory engine: PostgreSQL append-only episodic traces, Neo4j semantic promotion, MCP/API access, curator approval, and RuVix policy receipts. Dashboard and operator surfaces visualize and request governed actions; they are not core engine components and must not own canonical engine state.
+
+Current runtime label: **pgvector bridge**. TALON readiness evidence on 2026-06-02 observed PostgreSQL `vector` extension `0.8.2`, `ruvector_function_count=0`, and `allura_memories_count` around `3392`. Until the `ruvector` extension/functions and feedback/search health are proven by runtime checks, docs and UI must not claim full RuVector.
+
+RuVix governs action disposition with `Permit`, `Defer`, and `Deny` decisions. Any runtime/database, MCP configuration, cron, live RAM/Durham hook, RuVix enforcement, semantic promotion, Notion sync, or Done/Approved status change requires explicit approval and a receipt carrying `approval_required` when gated.
+
 ### API-First Scope and Optional Memory Command Center
 
 Allura is an MCP/API-first memory engine with an optional RuVix-governed Memory Command Center for human operators. The engine remains usable through protocol and service interfaces without a browser, while the dashboard is the branded control plane for memory inspection, governance, curator decisions, audit evidence, graph exploration, and settings.

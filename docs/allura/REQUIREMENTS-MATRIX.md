@@ -337,6 +337,18 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-GOV-001 | Admin rule visibility — display active kernel rules with status, threshold, and audit trail | `RUVIX_KERNEL_CONTRACT_v1`, AD-XX, B12 / F17–F19 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx-ruvix-kernel-contract) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) |
 | REQ-GOV-002 | Admin rule configuration — toggle promotion mode, set threshold, view audit log | `PROMOTION_MODE`, `AUTO_APPROVAL_THRESHOLD`, audit events, B12 / F17–F19 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) |
 
+### Section 6A.1: Carlos/RuVector/RuVix Readiness Requirements (REQ-GOV-003–REQ-GOV-009)
+
+| ID | Requirement | Trace | Satisfied by |
+|----|-------------|-------|--------------|
+| REQ-GOV-003 | Team RAM lanes must perform Brain pre-search before implementation or documentation mutation. | B23, F26-F40 | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#memory-lifecycle-and-done-gate) · [BLUEPRINT.md](./BLUEPRINT.md#engine-boundary-and-ruvectorruvix-posture) |
+| REQ-GOV-004 | Substantive work must write a raw receipt with actor, evidence, validation, and audit reference. | B3, B18, F32 | [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memory-command-center-adapter-contracts) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#memory-lifecycle-and-done-gate) |
+| REQ-GOV-005 | RuVix gates must return `Permit`, `Defer`, or `Deny` and include `gate_reason`. | AD-XX, RULE-010 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) |
+| REQ-GOV-006 | Runtime readiness labeling must say `pgvector bridge` until RuVector extension/functions and search/feedback health are proven. | AD-32, RK-21 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-0-current-ruvector-readiness-boundary) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-32-current-runtime-label-is-pgvector-bridge) |
+| REQ-GOV-007 | Dashboard and operator surfaces must consume API/MCP contracts only and must not write directly to PostgreSQL, Neo4j, or vector substrate. | AD-31, F37, F38 | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#important-constraints) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) |
+| REQ-GOV-008 | Runtime/database/MCP/cron/live hook/RuVix enforcement/semantic promotion/Notion sync/Done status changes require explicit approval and `approval_required=true`. | AD-33 | [BLUEPRINT.md](./BLUEPRINT.md#engine-boundary-and-ruvectorruvix-posture) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-33-approval-boundaries-for-engine-mutations) |
+| REQ-GOV-009 | Planned RAM/Durham hook wrappers are governed support surfaces, not live enforcement until separately approved. | AD-33, RK-24 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#risk-detail) |
+
 ### Section 6B: RuVix Brand Governance Requirements (REQ-DURHAM-001–REQ-DURHAM-005)
 
 > **Note:** These requirements are active for the optional Memory Command Center and supporting terminal/API documentation. The engine remains MCP/API-first; the dashboard is a governed operator surface, not a bypass around policy.

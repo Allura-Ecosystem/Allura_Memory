@@ -24,7 +24,7 @@ This document covers Allura's deployment topologies, integration interfaces, and
 
 ## 1. Architectural Positioning
 
-Allura is a **memory data plane** — it holds no business logic about what an agent does, only what an agent remembers. It is the authoritative source of truth for all agent memory within a tenant namespace.
+Allura is a **memory data plane** — it holds no business logic about what an agent does, only what an agent remembers. It is the authoritative source of truth for all agent memory within a tenant namespace. Its current retrieval substrate is a **pgvector bridge**, not full RuVector: TALON observed PostgreSQL `vector` extension `0.8.2`, `ruvector_function_count=0`, and `allura_memories_count` around `3392` on 2026-06-02.
 
 | Consumer Class | Interaction Mode | Notes |
 |---|---|---|
@@ -203,9 +203,20 @@ sequenceDiagram
 
 ---
 
+### 3.4.0 Current RuVector Readiness Boundary
+
+The runtime currently uses PostgreSQL with pgvector-compatible memory data as the bridge substrate. Full RuVector-Postgres remains a planned migration target and requires separate approval before database migration, extension installation, function creation, or feedback-loop activation.
+
+| Readiness signal | Current evidence | Required for full RuVector claim |
+|---|---|---|
+| `vector` extension | `0.8.2` observed by TALON | Present and healthy |
+| `ruvector_function_count` | `0` | Required RuVector SQL functions present |
+| `allura_memories_count` | Around `3392` observed by TALON | Search/feedback health validated against current count |
+| Runtime label | `pgvector bridge` | May change only after approved readiness evidence |
+
 ### 3.4.1 RuVix Kernel Governance Contract
 
-The RuVix kernel is the governance contract for Allura Brain. Every operation carries identity, scope, authority, evidence, and audit.
+The RuVix kernel is the governance contract for Allura Brain. Every operation carries identity, scope, authority, evidence, audit, and a disposition: `Permit`, `Defer`, or `Deny`. Gated operations carry `approval_required=true` until the approved owner clears them.
 
 **Kernel invariant:** Every operation carries identity, scope, authority, evidence, and audit.
 

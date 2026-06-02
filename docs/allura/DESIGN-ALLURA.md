@@ -40,6 +40,18 @@ The Allura Memory Command Center provides the human-facing control plane for the
 
 The Command Center is optional: MCP tools, API routes, and CLI scripts remain the primary engine path. The UI surfaces real data from Allura Brain (PostgreSQL + Neo4j), not mocks. Every component consumes mapped UI contracts from `src/lib/dashboard/`; raw Brain API shapes stay behind `api.ts`, `queries.ts`, and `mappers.ts` (AD-26).
 
+### Memory Lifecycle and Done Gate
+
+Agents and Team RAM lanes must read before work, write receipts after substantive action, and keep dashboard/operator views behind MCP/API contracts. The required flow is:
+
+1. **Brain pre-search** — retrieve relevant approved context and recent traces for the active `group_id`.
+2. **Governed action** — perform only the approved documentation, API, or workflow mutation.
+3. **RuVix disposition** — classify the result as `Permit`, `Defer`, or `Deny` with `gate_reason`.
+4. **Receipt write-back** — record `receipt_id`, actor, source evidence, validation, and audit event.
+5. **Done gate** — completion is evidence-backed only; Brain receipts support audit but do not prove Done by themselves.
+
+Current runtime evidence must be displayed as **pgvector bridge** until readiness checks prove full RuVector (`vector` extension 0.8.2 is present; `ruvector_function_count` was 0 in TALON evidence; memory count was around 3392). Operator surfaces may show readiness fields, but may not upgrade the label without approval.
+
 ### Dashboard v2 condensed UX contract
 
 Phase 1 is a vertical flow with five operating areas:
@@ -73,7 +85,7 @@ interface DashboardGovernanceActions {
 
 Truthfulness rules: no fabricated live data, no “healthy” without verification, no “done” without evidence, no “live” without active polling/streaming and visible freshness, unknown is a first-class state, and Brain receipts are audit traces rather than proof of completion.
 
-Governance receipt rule: every mutation and approval must show intent, actor, source, policy, validation, and audit trail before completion.
+Governance receipt rule: every mutation and approval must show intent, actor, source, policy, validation, audit trail, `gate_decision` (`Permit | Defer | Deny`), and `approval_required` before completion.
 
 Brand/accessibility rules: use existing Allura shell, navigation, logo assets, and semantic tokens; do not import Difference Driven tokens, colors, language, or assumptions; avoid marketing hero sections, fake charts, vanity metrics, AI-gradient tropes, inflated claims, or generated logo marks; approval actions must be keyboard reachable and confirmation dialogs must trap/restore focus.
 

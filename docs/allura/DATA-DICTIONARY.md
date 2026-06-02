@@ -1,5 +1,12 @@
 # Data Dictionary: Allura Data Models
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model (GitHub Copilot).
+> Content has not yet been fully reviewed - this is a working design reference, not a final specification.
+> AI-generated content may contain inaccuracies or omissions.
+> When in doubt, defer to the source code, JSON schemas, and team consensus.
+
 This document describes every table and node type in Allura's dual-database data model. PostgreSQL holds episodic memory (append-only event log). Neo4j holds semantic memory (versioned knowledge graph).
 
 ---
@@ -220,6 +227,20 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 | `score` | float | Yes | Rule evaluation score |
 | `metadata` | jsonb | No | Evidence payload, decision rationale, and audit context |
 
+### `RuVixGateReceipt`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `gate_decision` | enum | Yes | RuVix disposition: `Permit`, `Defer`, or `Deny`. |
+| `gate_reason` | string | Yes | Human-readable reason for the gate decision, including missing evidence when deferred or denied. |
+| `receipt_id` | string | Yes | Stable governance receipt identifier linking action, evidence, and audit event. |
+| `runtime_readiness` | enum | Yes | Runtime readiness label, currently `pgvector_bridge`; may become `full_ruvector` only after approved readiness evidence. |
+| `ruvector_status` | object | Yes | Current readiness evidence such as `vector_extension_version`, `ruvector_function_count`, `allura_memories_count`, and observed timestamp. |
+| `harness_hook_status` | enum | Yes | Hook lifecycle: `not_installed`, `proposed`, `approval_required`, `enabled`, `disabled`, or `blocked`. |
+| `approval_required` | boolean | Yes | True when runtime/database/MCP/cron/hook/RuVix enforcement/semantic promotion/Notion sync/Done status approval is required before mutation. |
+
+**Current readiness baseline (TALON, 2026-06-02):** `vector_extension_version=0.8.2`, `ruvector_function_count=0`, `allura_memories_count≈3392`, `runtime_readiness=pgvector_bridge`.
+
 ### `RuVixBrandRule`
 
 | Field | Type | Required | Description |
@@ -285,6 +306,9 @@ Production dashboard components consume these mapped contracts, never raw databa
 | `validation` | list<string> | Yes | Validation checks performed before completion |
 | `audit_event_id` | string | Yes | Append-only PostgreSQL event that records the action |
 | `result` | enum | Yes | `approved`, `rejected`, `requested_evidence`, `requested_changes`, `soft_deleted`, `recovered`, `blocked` |
+| `gate_decision` | enum | Yes | RuVix disposition: `Permit`, `Defer`, or `Deny` |
+| `gate_reason` | string | Yes | Reason for the gate decision |
+| `approval_required` | boolean | Yes | True when the action cannot proceed without explicit approval |
 
 ### `DashboardSource`
 
