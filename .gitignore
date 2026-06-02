@@ -108,3 +108,4 @@ brand-audit-results.json
 !.codex/actions/*.sh
 !.codex/setup-local-environment.sh
 !.codex/local-environments.md
+.openclaw/
