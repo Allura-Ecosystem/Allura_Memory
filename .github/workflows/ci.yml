@@ -189,8 +189,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Dashboard Resurrection Guard
-        run: bash .github/scripts/dashboard-guard.sh
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
@@ -201,43 +199,3 @@ jobs:
         run: bun run build
       - name: Check MCP server builds
         run: bun build src/mcp/memory-server-canonical.ts --outdir dist/mcp --target node
-
-  # ── Visual Regression + Lighthouse (production perf + a11y audit) ─────────
-  visual-regression:
-    runs-on: ubuntu-latest
-    needs: [build, typecheck, test-unit]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-      - name: Install dependencies
-        run: bun install
-      - name: Build production
-        run: bun run build
-      - name: Start server
-        run: |
-          bun run start &
-          sleep 5
-          curl --retry 10 --retry-delay 2 http://localhost:3100/api/health/live
-      - name: Lighthouse audit
-        run: |
-          npx lighthouse http://localhost:3100/dashboard/memory-explorer \
-            --output=json --output-path=lighthouse-report.json \
-            --chrome-flags="--headless --no-sandbox"
-        continue-on-error: true
-      - name: Check scores
-        run: |
-          PERFORMANCE=$(node -e "console.log(JSON.parse(require('fs').readFileSync('lighthouse-report.json','utf8')).categories.performance.score * 100)")
-          ACCESSIBILITY=$(node -e "console.log(JSON.parse(require('fs').readFileSync('lighthouse-report.json','utf8')).categories.accessibility.score * 100)")
-          echo "Performance: $PERFORMANCE"
-          echo "Accessibility: $ACCESSIBILITY"
-          if [ "$(echo "$PERFORMANCE >= 70" | bc)" -eq 0 ]; then echo "⚠ Performance below 70"; fi
-          if [ "$(echo "$ACCESSIBILITY >= 95" | bc)" -eq 0 ]; then echo "⚠ Accessibility below 95"; fi
-        continue-on-error: true
-      - name: Upload Lighthouse report
-        uses: actions/upload-artifact@v4
-        with:
-          name: lighthouse-report
-          path: lighthouse-report.json

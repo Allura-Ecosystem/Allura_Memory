@@ -101,10 +101,3 @@ url = "http://localhost:5888/mcp"
 startup_timeout_sec = 20
 tool_timeout_sec = 60
 enabled = true
-
-[mcp_servers.notion]
-transport = "http"
-url = "http://host.docker.internal:3000/mcp"
-startup_timeout_sec = 20
-tool_timeout_sec = 60
-enabled = true

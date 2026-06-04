@@ -220,6 +220,7 @@ This section traces the governed memory pipeline requirements from business goal
 | B28 | All reads/writes must pass through controlled APIs with project-level access and audit | F12, F13, F37, F38 | MEM-UC7 |
 | B29 | The full loop from agent execution to knowledge reuse must be demonstrably end-to-end | F14, F15, F39, F40 | MEM-UC8 |
 | B30 | Team RAM agents must integrate with BMAD planning and Allura Brain memory through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth | F41, F42 | MEM-UC10 |
+| B31 | Teams must define evidence-gated orchestration runs without exposing internal agent-routing details. | F49, F50, F51, F52 | MEM-UC13 |
 
 ### Section 2: Functional Requirements Detail
 
@@ -313,6 +314,15 @@ This section traces the governed memory pipeline requirements from business goal
 | <a name="f39"></a>F39 | A second agent can retrieve approved knowledge and use it correctly in a later task | Retrieval endpoint · validation gate scenario MEM-UC8 · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) |
 | <a name="f40"></a>F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible | Evidence chain: trace → proposal → approval → Neo4j → retrieval · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 
+### Section 5A: Evidence-Gated Run Records (F49–F52)
+
+| ID | Requirement | Satisfied by |
+|----|-------------|--------------|
+| <a name="f49"></a>F49 | A governed run template must capture a neutral `RunRecord` with owner, reviewer, goal, status, journal path, timestamps, and tenant scope. | AD-35 · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#runrecord-ad-35) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-35-runrecord-template-before-methodology-runtime) |
+| <a name="f50"></a>F50 | Run policy must declare allowed actions, approval breakpoints, quality gates, and evidence required before Done. | AD-35 · RuVix receipt rules · [BLUEPRINT.md](./BLUEPRINT.md#evidence-gated-orchestration-positioning) |
+| <a name="f51"></a>F51 | Run journals must record prompt, plan, tasks, checks, approvals, failures, final evidence, and memory writeback candidates. | AD-35 · append-only Brain receipts · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#runrecord-ad-35) |
+| <a name="f52"></a>F52 | A doctor check must be able to report failed, stale, incomplete, or approval-blocked runs before work is marked complete. | AD-35 · future RunRuntimeState/doctor checks · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-7-optional-runrecord-orchestration-wrapper) |
+
 ### Section 6: Admin Requirements (B12–B23)
 
 | ID | Business Requirement | Functional Requirements | Use Cases | Satisfied by |
@@ -390,6 +400,7 @@ This section traces the governed memory pipeline requirements from business goal
 | MEM-UC10 | Curator CLI/API | Admin user authenticates via API key, reviews pending proposals, approves or rejects | F10, F11, F12, F13, F14, F17, F19 |
 | MEM-UC11 | Audit Export | Operator exports curator decisions as CSV for compliance | F18 |
 | MEM-UC12 | Infrastructure Deploy | Operator runs `docker compose up` and configures packaged MCP servers | F20, F21 |
+| MEM-UC13 | Evidence-Gated Run | Team defines a run record, executes through governed skills, reviews evidence, and writes approved outcomes to Brain/Notion | F49, F50, F51, F52 |
 
 ---
 

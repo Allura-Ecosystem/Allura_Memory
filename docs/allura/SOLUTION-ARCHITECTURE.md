@@ -32,7 +32,7 @@ Allura is a **memory data plane** — it holds no business logic about what an a
 | BMAD / Team RAM Planning | `_bmad/` + `_bmad-output/` | BMAD artifacts map intent, PRDs, architecture, epics, and stories to Team RAM owners |
 | DevOps / Admin | Docker Compose + MCP_DOCKER config | Deployment, configuration, and packaged MCP server activation |
 
-Allura does **not** orchestrate agents, run workflows, or make decisions. It stores and retrieves memory. Period.
+Allura Brain does **not** orchestrate agents, run workflows, or make decisions. It stores and retrieves memory. Period. Optional orchestration wrappers may compose Team RAM skills into governed runs, but those wrappers remain outside the memory data plane and may only write receipts, proposals, and evidence through approved API/MCP paths.
 
 ---
 
@@ -335,6 +335,36 @@ Allura is MCP/API-first. The MCP HTTP gateway (port 3201), API routes, and CLI s
 
 **Architecture note:** Previous dashboard ports (3100, 3334, 6420) are reference/cutover history. New dashboard work is scoped to the approved RuVix-governed Memory Command Center plan and must pass source-of-truth, no-fabricated-data, auth, accessibility, and rollback gates before launch.
 
+### 3.7 Optional RunRecord Orchestration Wrapper
+
+AD-35 introduces a proposed `RunRecord` template as a thin orchestration wrapper over existing Team RAM skills. It translates familiar work ceremonies into evidence-gated runs without changing the Allura Brain engine boundary.
+
+```mermaid
+sequenceDiagram
+    actor PM as PM / Operator
+    participant Notion as Notion / Board
+    participant Run as RunRecord Template
+    participant RAM as Team RAM Skills
+    participant Gates as Quality Gates
+    participant Journal as Run Journal
+    participant Brain as Allura Brain
+
+    PM->>Notion: mark work ready / request run
+    Notion->>Run: create scoped run record
+    Run->>RAM: dispatch approved skill sequence
+    RAM->>Gates: execute checks and breakpoints
+    Gates-->>Run: Permit / Defer / Deny with evidence
+    Run->>Journal: append prompt, plan, tasks, checks, approvals, failures
+    Journal->>Brain: propose memory writeback candidate
+```
+
+**Key constraints:**
+
+- `RunRecord` is neutral durable state; policy and runtime state remain separate.
+- Corporate-facing surfaces use run/story/review/evidence language and do not expose Team RAM internals unless requested.
+- No yolo/forever modes, hallucination-free claims, foreign process libraries, or unapproved runtime installs are canonical.
+- Notion remains the planning/decision source of truth when reachable; Brain stores append-only receipts and outcomes.
+
 ---
 
 ## 4. Interface Catalogue
@@ -346,6 +376,7 @@ Allura is MCP/API-first. The MCP HTTP gateway (port 3201), API routes, and CLI s
 | Memory Command Center | Inbound | REST HTTP + adapter contracts | Memories, RuVix governance, curator, graph, audit/evidence, settings | AD-31, RK-19 |
 | Native Allura Kanban | Inbound | REST HTTP + PostgreSQL-backed service contract | Default planning/work item source of truth | F43, AD-31 |
 | Board Sync Adapters | Outbound | Provider APIs | Optional Notion, Linear, and GitHub Projects projections of native board state | F43, AD-31 |
+| RunRecord Template | Inbound | Notion/Board + Brain receipts | Evidence-gated run record, policy block, runtime state, journal path | AD-35, RK-25–RK-28 |
 | Resource Manifest Adapter | Outbound | File or generated endpoint | Skills, agents, MCP servers, containers, cron jobs, drift warnings | F44, AD-31 |
 | Curator Approve CLI | Inbound | CLI (`bun run curator:approve`) | Processes pending proposals from PostgreSQL, promotes approved ones to Neo4j via `createInsight()` | F6, B18, B19 |
 | PostgreSQL 16 | Outbound | TCP (pg driver) | SQL — append-only INSERTs + SELECTs | AD-01, RK-02 |
@@ -363,6 +394,7 @@ Allura is MCP/API-first. The MCP HTTP gateway (port 3201), API routes, and CLI s
 | §3.4 Governed Memory Write Path | AD-04 (promotion mode), RK-01 (dedup), RK-03 (low-quality promotion) |
 | §3.5 Memory API | AD-05 (5-tool surface) |
 | §3.6 API-First Architecture and Memory Command Center | AD-31 (Memory Command Center), AD-29 (superseded), RK-19 |
+| §3.7 Optional RunRecord Orchestration Wrapper | AD-35 (RunRecord template), RK-25–RK-28 |
 
 ---
 
@@ -377,6 +409,8 @@ Allura is MCP/API-first. The MCP HTTP gateway (port 3201), API routes, and CLI s
 | `PROMOTION_MODE=soc2` MUST prevent all autonomous Neo4j writes | Regulatory compliance gate — AD-04 |
 | Circuit breaker MUST trip before budget exhaustion | Prevents agent runaway — kernel/circuit-breaker |
 | Memory Command Center MUST use API/MCP contracts and never write directly to substrates | Prevents governance bypass and UI drift — AD-31 |
+| RunRecord wrappers MUST remain outside the memory data plane | Preserves Allura Brain's memory-only boundary — AD-35 |
+| Done MUST require declared evidence gates | Prevents assertion-only completion — AD-35 / RK-27 |
 
 ---
 
@@ -457,6 +491,8 @@ services:
       - POSTGRES_DB=...
       - NEO4J_URI=...
 ```
+
+**Current Docker caveat:** the primary local `docker-compose.yml` is a development stack with pre-existing external volumes/network and a compose-level command override for the `mcp` service. It is not yet the stranger-friendly public Docker story. Public Docker onboarding should add a separate OSS compose profile, `.env.example`, and an image-first `allura-brain` service before claiming one-command setup.
 
 ### 8.2 Runtime Layers
 

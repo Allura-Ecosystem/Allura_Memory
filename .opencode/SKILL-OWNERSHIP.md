@@ -1,5 +1,11 @@
 # Skill Ownership Matrix
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 | Skill | Owner | Trigger | Required? | Overlaps With | Decision |
 |-------|-------|---------|-----------|---------------|----------|
 | allura-approve-promotion | Brooks | HITL approval | ✅ Yes | allura-propose-promotion | **Keep** — promotion pipeline |
@@ -30,7 +36,6 @@
 | multi-search | Scout | Web search | ✅ Yes | context7 | **Keep** — search capability |
 | open-ralph-wiggum | Brooks | Ralph Loop execution (`ralph`, `/ulw-loop`) | ⬜ Overlay | none | **Keep** — bounded autonomous execution loop with hard stop criteria |
 | party-mode | Brooks | Parallel dispatch | ⬜ Overlay | roundtable, mcp-harness | **Keep** — Team RAM surgical team coordination |
-| perplexica-search | Scout | External web research | ⬜ Overlay | multi-search | **Keep** — self-hosted Perplexica research path |
 | postgres-best-practices | Knuth | DB patterns | ⬜ Overlay | none | **Keep** — PostgreSQL guidance |
 | quick-update | Scout | Doc sync | ⬜ Overlay | allura-memory-skill | **Keep** — quick documentation updates from memory context |
 | roundtable | Brooks | Multi-agent discussion | ⬜ Overlay | party-mode | **Keep** — conversational multi-agent panel, complements execution-focused party-mode |
@@ -69,7 +74,7 @@
 - `open-ralph-wiggum`: Bounded loop execution tool; does not provide final authority or review.
 - `context7` + `multi-search`: Both serve Scout's discovery role. context7 for library docs, multi-search for web search. Complementary, not overlapping.
 - `figma-*` skills: 6 Figma skills may seem excessive, but each serves a distinct Figma API surface. Keep all.
-- `penpot-design`, `perplexica-search`, and `mcp-docker-ops`: Skill-embedded MCP pattern examples. They may declare/allow tools, but activation still requires mcp-harness governance.
+- `penpot-design` and `mcp-docker-ops`: Skill-embedded MCP pattern examples. They may declare/allow tools, but activation still requires mcp-harness governance.
 - Ralph-related: `ralph.md` is a command, not a skill. Ralph's execution is gated by the ContextScout + skill gate (R5).
 
 ---

@@ -16,6 +16,7 @@ This document describes every table and node type in Allura's dual-database data
 - [PostgreSQL: events](#postgresql-events)
 - [PostgreSQL: canonical_proposals](#postgresql-canonical_proposals)
 - [RuVix Governance Artifacts](#ruvix-governance-artifacts)
+- [RunRecord (AD-35)](#runrecord-ad-35)
 - [Neo4j: Memory](#neo4j-memory)
 - [Neo4j: Agent](#neo4j-agent)
 - [Neo4j: Team](#neo4j-team)
@@ -249,6 +250,43 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 | `content` | text | Yes | Enforceable brand rule text |
 | `score` | float | Yes | Enforcement confidence or compliance score from `0.0` to `1.0` |
 | `status` | enum | Yes | Rule lifecycle state (`active`, `deprecated`, `pending`) |
+
+## RunRecord (AD-35)
+
+`RunRecord` is a proposed documentation/data contract for evidence-gated orchestration runs. It is not yet an implemented table and must not make Allura Brain an orchestrator. The record is neutral durable state; policy and runtime state remain separated so the memory engine can store receipts without owning execution.
+
+### `RunRecord`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `run_id` | string | Yes | Stable run identifier. Recommended format: UUID or `run-{timestamp}-{slug}`. |
+| `group_id` | string | Yes | Tenant namespace; must match `^allura-`. |
+| `owner_team` | enum/string | Yes | Team accountable for execution, e.g. `RAM`, `TALON`, `Durham`, `IRIS`, `Troy`. |
+| `reviewer_team` | enum/string | Yes | Team accountable for review or approval. |
+| `goal` | string | Yes | One-sentence run objective in imperative form. |
+| `journal_path` | string | No | Path or URI for the structured run receipt trail. |
+| `status` | enum | Yes | `pending`, `running`, `paused`, `completed`, `failed`, or `cancelled`. |
+| `created_at` | ISO timestamp | Yes | Run creation timestamp. |
+| `completed_at` | ISO timestamp | No | Completion timestamp when status is `completed`. |
+
+### `RunPolicy`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `allowed_actions` | list<string> | Yes | Bounded action classes allowed during the run. |
+| `approval_breakpoints` | list<object> | Yes | Human approval stops for risky transitions such as destructive actions, data-bearing changes, deploys, public sends, semantic promotion, or Done/Approved status moves. |
+| `quality_gates` | list<object> | Yes | Required checks before completion, such as tests, lint, typecheck, smoke tests, screenshots, API checks, or repo-specific gates. |
+| `evidence_required` | list<string> | Yes | Evidence artifacts that must exist before Done. |
+
+### `RunRuntimeState`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `resume_state` | object | No | Minimal state needed to resume/replay an interrupted run. |
+| `doctor_checks` | list<string> | No | Checks a doctor command should run to find stale, failed, incomplete, or approval-blocked work. |
+| `memory_writeback_candidate` | boolean | No | Runtime flag that a run outcome may be proposed for Brain writeback; actual writeback still follows Allura memory governance. |
+
+**Deferred implementation:** If persisted as PostgreSQL later, prefer append-only run events or an `orchestration_runs` table with tenant-scoped indexes. Do not double-write RunRecord nodes to Neo4j in v0; wait for stable relationship queries.
 
 ### `DashboardClaim`
 

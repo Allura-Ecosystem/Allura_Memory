@@ -14,10 +14,6 @@
     ".opencode/COWORK.md"
   ],
   "mcp": {
-    "notion": {
-      "type": "remote",
-      "url": "http://host.docker.internal:3000/mcp"
-    },
     "allura-brain": {
       "type": "remote",
       "url": "http://localhost:5888/mcp"

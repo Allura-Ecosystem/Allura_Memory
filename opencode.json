@@ -24,21 +24,14 @@
       "enabled": true,
       "timeout": 60000
     },
-    "notion": {
-      "type": "remote",
-      "url": "http://host.docker.internal:3000/mcp",
-      "enabled": true
-    },
     "MCP_DOCKER": {
-      "type": "local",
-      "command": ["docker", "mcp", "gateway", "run", "--profile", "default"],
-      "enabled": true
-    },
-    "perplexica-mcp": {
-      "type": "local",
-      "command": ["docker", "exec", "-i", "perplexica-mcp", "perplexica-mcp", "stdio"],
+      "type": "remote",
+      "url": "http://localhost:8484/sse",
       "enabled": true,
-      "timeout": 60000
+      "timeout": 60000,
+      "headers": {
+        "Authorization": "${MCP_DOCKER_TOKEN}"
+      }
     }
   },
   "provider": {

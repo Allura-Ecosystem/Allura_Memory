@@ -26,6 +26,8 @@
 
 The Allura Memory Command Center provides the human-facing control plane for the Allura Memory Engine. It is not the memory system itself; it is the governed window into memory, RuVix policy, curator decisions, provenance, audit evidence, and tenant settings.
 
+AD-35 adds a proposed run-inspection responsibility for future operator surfaces: show evidence-gated `RunRecord` receipts without making the dashboard or Brain the orchestrator. Runs are reviewable audit objects that connect Notion/board work to Team RAM skill execution, approval breakpoints, quality gates, and memory writeback candidates.
+
 **Core surfaces:**
 
 | Surface | Role | Purpose |
@@ -37,6 +39,7 @@ The Allura Memory Command Center provides the human-facing control plane for the
 | **Graph** (`/dashboard/graph`) | Operator / Admin | Explore promoted semantic memory with source receipts |
 | **Audit** (`/dashboard/audit`) | Admin / Compliance | Filter event logs, inspect receipts, and export evidence packets |
 | **Settings** (`/dashboard/settings`) | Admin | View tenant config, roles, endpoint health, and promotion settings |
+| **Runs** (future `/dashboard/runs` or Audit extension) | PM / Reviewer / Compliance | Inspect RunRecord state, approval breakpoints, quality gates, run journals, doctor findings, and evidence packets |
 
 The Command Center is optional: MCP tools, API routes, and CLI scripts remain the primary engine path. The UI surfaces real data from Allura Brain (PostgreSQL + Neo4j), not mocks. Every component consumes mapped UI contracts from `src/lib/dashboard/`; raw Brain API shapes stay behind `api.ts`, `queries.ts`, and `mappers.ts` (AD-26).
 
@@ -84,6 +87,8 @@ interface DashboardGovernanceActions {
 `requestChanges` is a UX label in Phase 1. It maps to `POST /api/curator/reject` with a rationale prefix of `Needs evidence: `. Phase 2 may add a real `changes_requested` state.
 
 Truthfulness rules: no fabricated live data, no “healthy” without verification, no “done” without evidence, no “live” without active polling/streaming and visible freshness, unknown is a first-class state, and Brain receipts are audit traces rather than proof of completion.
+
+Run truthfulness rules: no “hallucination-free” claims, no yolo/forever autonomous modes, no foreign process library as canon, and no Done state unless declared quality gates and evidence requirements pass. Interrupted work must show resumable or stale state rather than restarting from vibes.
 
 Governance receipt rule: every mutation and approval must show intent, actor, source, policy, validation, audit trail, `gate_decision` (`Permit | Defer | Deny`), and `approval_required` before completion.
 
@@ -160,6 +165,10 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 | F46 | `/telemetry` reports real/unknown metrics honestly | Telemetry adapter with degraded/unknown state |
 | F47 | Every route displays source-of-truth and degraded behavior | Adapter registry UI contract |
 | F48 | `3100` cutover has parity, smoke, auth, and rollback gates | Cutover validation checklist |
+| F49 | Governed RunRecord template captures owner, reviewer, goal, status, journal path, timestamps, and tenant scope | AD-35 · `RunRecord` in `DATA-DICTIONARY.md` |
+| F50 | Run policy declares allowed actions, approval breakpoints, quality gates, and required evidence | AD-35 · RuVix receipt rules |
+| F51 | Run journal records prompt, plan, tasks, checks, approvals, failures, and final evidence | AD-35 · Audit/evidence surface |
+| F52 | Doctor checks report stale, failed, incomplete, or approval-blocked runs before Done | AD-35 · future `/dashboard/runs` or `/dashboard/audit` extension |
 
 ### Curator Requirements
 

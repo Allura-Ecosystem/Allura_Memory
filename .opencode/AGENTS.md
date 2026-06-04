@@ -1,5 +1,11 @@
 # Agent Directory
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 This file defines the **live agent surface** for the Team RAM OpenCode Harness,
 restored on the **OAC Core + Allura Overlay** architecture.
 
@@ -146,12 +152,12 @@ Team RAM personas consume OAC context — they do not replace it.
 | -------------- | ------------------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------- |
 | All agents     | `allura-memory-skill`, `allura-team-ram`                                        | `systematic-debugging`, `code-review`           | Memory governance and Allura workflow core are mandatory. |
 | Brooks         | `party-mode`, `skill-creator`, `mcp-harness`, `allura-architecture`             | `task-creator`, UI/design skills for routing    | Brooks orchestrates; he routes, doesn't hoard.       |
-| Scout          | `allura-memory-skill`, `allura-team-ram`, `multi-search`, `perplexica-mcp`, `mcp-docker` | `context7` via MCP Docker                       | Scout owns Brain/search recon and context discovery. |
+| Scout          | `allura-memory-skill`, `allura-team-ram`, `multi-search`, `mcp-docker` | `context7` via MCP Docker                       | Scout owns Brain/search recon and context discovery. |
 | Woz            | `allura-dev-story`, `frontend-craft`, `shadcn`, `task-management`, `varlock`, `code-review` | `frontend-design` when implementing approved UI | Woz builds with Allura governance gates.              |
 | Pike           | `allura-code-review`, `code-review`                                              | `allura-team-ram`                               | Pike reviews through Allura-gated review.             |
 | Fowler         | `allura-code-review`, `code-review`                                              | `allura-team-ram`                               | Fowler reviews through Allura-gated review.           |
 | Design/UI path | `frontend-design`, `frontend-craft`, `allura-design`, `huashu-design`, `shadcn` | `allura-memory-skill` for brand/context         | Applies to UI/design agents.                         |
-| Hightower      | `mcp-docker`, `mcp-harness`, `varlock`                                          | `perplexica-mcp` for infra research             | Hightower owns deployability and secrets.            |
+| Hightower      | `mcp-docker`, `mcp-harness`, `varlock`                                          | —             | Hightower owns deployability and secrets.            |
 
 ## Execution Rule
 

@@ -45,8 +45,5 @@
     "bun run typecheck",
     "bun test src/lib/dashboard/__tests__/allura-route.test.ts src/__tests__/dashboard-schemas.test.ts"
   ],
-  "discovery_preference": [
-    "notion",
-    "notion-remote"
-  ]
+  "discovery_preference": []
 }

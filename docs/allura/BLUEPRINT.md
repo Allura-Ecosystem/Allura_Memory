@@ -140,6 +140,12 @@ RuVix governs action disposition with `Permit`, `Defer`, and `Deny` decisions. A
 
 Allura is an MCP/API-first memory engine with an optional RuVix-governed Memory Command Center for human operators. The engine remains usable through protocol and service interfaces without a browser, while the dashboard is the branded control plane for memory inspection, governance, curator decisions, audit evidence, graph exploration, and settings.
 
+### Evidence-Gated Orchestration Positioning
+
+Allura may expose governed orchestration records for teams, but this does not change the engine boundary. The memory engine stores run receipts, evidence, decisions, and reusable knowledge; it does not become an autonomous project manager. Corporate-facing language should say **evidence-gated, auditable, resumable runs** — never “hallucination-free.”
+
+The first orchestration artifact is the AD-35 `RunRecord` template: a neutral record plus separated policy/runtime state that captures owner, reviewer, goal, allowed actions, approval breakpoints, quality gates, required evidence, journal path, resume state, doctor checks, and memory writeback candidacy. A full methodology runtime is deferred until the template proves useful.
+
 - **MCP tools** — `memory_add`, `memory_search`, `memory_get`, `memory_list`, `memory_delete`
 - **API routes** — `/api/health/*`, `/api/memory/*`, `/api/curator/*`
 - **CLI scripts** — `bun run curator:run`, `bun run curator:approve`, `bun run mcp:http`
@@ -207,6 +213,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | B28 | All reads/writes must pass through controlled APIs with project-level access and audit |
 | B29 | The full loop from agent execution to knowledge reuse must be demonstrably end-to-end |
 | B30 | Team RAM agents must integrate with BMAD planning and Allura Brain memory through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth |
+| B31 | Teams must be able to define evidence-gated orchestration runs that map familiar work ceremonies to governed Allura receipts without exposing internal agent-routing details |
 
 ---
 

@@ -36,8 +36,7 @@
       "allura-memory-skill",
       "next-best-practices",
       "mcp-harness",
-      "varlock",
-      "perplexica-mcp"
+      "varlock"
     ],
     "carmack-performance": [
       "mcp-docker",
@@ -61,8 +60,7 @@
     "scout-recon": [
       "mcp-docker",
       "allura-memory-skill",
-      "multi-search",
-      "perplexica-mcp"
+      "multi-search"
     ],
     "mizko-ui": [
       "mcp-docker",
