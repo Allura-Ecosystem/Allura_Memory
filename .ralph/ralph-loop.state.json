@@ -1,0 +1,13 @@
+{
+  "active": true,
+  "iteration": 1,
+  "minIterations": 1,
+  "maxIterations": 1,
+  "completionPromise": "TASK_COMPLETE",
+  "tasksMode": false,
+  "taskPromise": "READY_FOR_NEXT_TASK",
+  "prompt": "# Goal: Run a five-pass Team RAM/BMAD advanced elicitation loop to refine the Allura methodology/corporate workflow architecture.\n\n**Goal ID:** goal-20260604-0851\n**Stopping condition:** Exactly 5 advanced elicitation passes completed, each producing a saved insight, followed by a final recommendation for whether/how to adopt the process-library methodology layer.\n**Guardrails:**\n- Do not edit code yet.\n- Do not run Ralph automatically.\n- Use Allura Brain for state and outcomes.\n- Keep Allura-native architecture: Bun, Brain, Team RAM; do not adopt foreign runtimes blindly.\n- Treat Babysitter/BMAD as inspiration, not authority.\n**Created:** 2026-06-04T08:51:24Z\n\n## Tasks\n\n- [ ] Pass 1 — Stakeholder Round Table: evaluate the methodology/corporate workflow layer from corporate PM, developer, architect, open-source user, and governance/compliance viewpoints.\n- [ ] Pass 2 — Architecture Decision Records: define the proposed decision boundary for an Allura methodology layer, including what composes skills, what remains a skill, and what belongs in Notion/Brain.\n- [ ] Pass 3 — Comparative Analysis Matrix: compare Babysitter process library, BMAD workflow builder, and Allura-native methodology runtime against corporate adoption, OSS simplicity, runtime purity, governance, and maintainability.\n- [ ] Pass 4 — Pre-mortem Analysis: imagine the methodology layer fails in corporate adoption and identify likely causes, mitigations, and launch constraints.\n- [ ] Pass 5 — Critique and Refine: synthesize the prior passes into a final recommendation with adopt/skip/defer decisions and a prioritized implementation path.\n- [ ] Persist final insights to Allura Brain with `group_id=allura-system` and `user_id=brooks-architect`.\n\n## Completion Check\n\nVerify that exactly 5 elicitation passes are documented in the conversation and/or Brain, each with a concrete insight, then produce a final recommendation for the Allura methodology/corporate workflow layer. No code changes should be made during this goal.\n",
+  "startedAt": "2026-06-04T08:54:20.412Z",
+  "model": "",
+  "agent": "opencode"
+}
