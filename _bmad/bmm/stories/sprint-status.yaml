@@ -33,7 +33,7 @@
 #   validation evidence, board traceability, and Brain outcome logging.
 
 generated: 2026-05-24
-last_updated: 2026-05-24-brooks-epic5
+last_updated: 2026-06-04-brooks-epic5-sunset-closeout
 project: Allura Memory
 project_key: NOKEY
 tracking_system: file-system
@@ -70,17 +70,18 @@ development_status:
   4-4-show-curator-decision-receipts: done
   epic-4-retrospective: done
 
-  epic-5: in-progress
+  epic-5: done
   5-1-verify-runtime-health-and-recovery-baseline: done
   5-2-package-final-regression-and-sprint-evidence: done
-  5-3-document-3100-cutover-and-rollback-gate: in-progress
+  5-3-document-3100-cutover-and-rollback-gate: done
   5-4-complete-final-team-ram-retrospective-and-closeout-decision: done
-  epic-5-retrospective: in-progress
+  epic-5-retrospective: done
 
 status_evidence:
   epic-1:
     drift_gate: "Epic 1 active; Story 1.1-1.3 drift gates run locally. Remaining Story 1.4-1.5 drift gates pending before status changes."
-    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+    board_traceability: "Notion updated 2026-06-04 with dashboard sunset decision. Ronin stated the dashboard attempts from this path are sunset and the preferred dashboard was built elsewhere on another branch. 3100 cutover is no longer an Epic 5 closeout blocker unless Ronin explicitly reopens dashboard cutover scope."
+    closeout_disposition: "Done by Ronin sunset/deferral decision for dashboard/cutover scope; Engine closeout remains the Epic 5 boundary."
   1-1-verify-group-scope-enforcement-baseline:
     drift_gate: "Brain searched for Story 1.1 blockers decisions outcomes; no unresolved critical drift blocked local completion."
     validation: "82 Bun-native tests passed; 3 Vitest scope tests passed; YAML parse and targeted git diff --check passed."
@@ -245,6 +246,9 @@ status_evidence:
     brain_memory_id: "c4d90f85-381e-4241-88e6-376a187450af"
     board_traceability: "Notion board update pending; no Notion tool available in this runtime."
   epic-5-retrospective:
-    drift_gate: "Brain searched for Epic 5 retrospective runtime reliability cutover final evidence blockers decisions outcomes; draft produced pending all stories Done."
+    drift_gate: "Brain searched for Epic 5 retrospective runtime reliability cutover final evidence blockers decisions outcomes. Dashboard sunset decision resolved the remaining cutover-scope conflict for Engine closeout."
+    validation: "YAML parse passed and targeted git diff --check produced no output for sprint status and Epic 5 retrospective artifacts after the 2026-06-04 closeout update."
+    review: "Brooks retrospective synthesis with Ronin approval; no code review required for retrospective/status artifact."
     artifact: "_bmad/bmm/stories/epic-5-retrospective.md"
-    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+    board_traceability: "Notion Engine and Dashboard Fork Strategy pages updated 2026-06-04 with dashboard sunset decision."
+    closeout_disposition: "Done by Ronin approval; dashboard branch reconciliation is separate future work, not Epic 5 Engine scope."
