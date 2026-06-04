@@ -30,7 +30,7 @@
       "enabled": true,
       "timeout": 60000,
       "headers": {
-        "Authorization": "Bearer 3cxpt920u60nn3sc89dwviay8lxsmpfc2u33o2wsdt1c9kljv4"
+        "Authorization": "${MCP_DOCKER_TOKEN}"
       }
     }
   },
