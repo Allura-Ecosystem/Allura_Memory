@@ -1,5 +1,11 @@
 # allura-governance
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 Hard enforcement of Allura's 6 non-negotiable invariants. Runs on every tool call in both Claude Code and Codex.
 
 ## What it blocks
