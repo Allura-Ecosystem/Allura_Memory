@@ -48,6 +48,7 @@
 | AD-32 | Current runtime label is pgvector bridge | Decided | TALON evidence on 2026-06-02 observed PostgreSQL `vector` extension `0.8.2`, `ruvector_function_count=0`, and `allura_memories_count` around `3392`. Therefore canon must say `pgvector bridge`, not full RuVector, until extension/function and search/feedback health checks prove otherwise. |
 | AD-33 | Approval boundaries for engine mutations | Decided | Runtime/database changes, MCP config mutation, cron mutation, live RAM/Durham hook installation, RuVix enforcement changes, canonical semantic promotion, Notion sync, and Done/Approved status moves require explicit Captain or lane-owner approval and receipt fields including `approval_required`. |
 | AD-34 | RVF MCP and Cognitum Gate parked pending approval | Deferred | RVF MCP, Cognitum Gate adapters, SONA feedback loops, and full RuVector-Postgres migration are valid research directions but remain parked until separate approval and validation packets exist. |
+| AD-35 | RunRecord template before methodology runtime | Proposed | Allura should add a governed orchestration run record/template before building a full methodology runtime. The durable contract is a neutral `RunRecord` plus separated policy and runtime-state blocks, not a new memory engine role. Babysitter/BMAD patterns are inspiration only: copy process-as-code, quality gates, approval breakpoints, run journals, resume/replay, doctor checks, short user/project profiles, and lane routing; reject yolo/forever modes, hallucination-free claims, foreign runtimes, marketplace assumptions, and external process libraries as canon. |
 | AD-XX+1 | RuVix Brand Governance Rules | Accepted | The 6 RuVix brand rules are enforceable kernel invariants for Allura Dashboard surfaces. Durham token exclusivity, mission-control voice, evidence-gated completion, accessibility, component consistency, and the Durham gate before ship are treated as release boundaries — not style suggestions. Canonical artifact: [BRAND-RULES-dashboard-v2.md](./BRAND-RULES-dashboard-v2.md). |
 
 ---
@@ -102,6 +103,10 @@
 | RK-22 | SONA feedback before clean receipts creates false learning | High | Active |
 | RK-23 | Duplicate MCP configs create harness drift | Medium | Active |
 | RK-24 | Live hook enforcement without approval mutates governance unexpectedly | High | Active |
+| RK-25 | Methodology layer becomes a second orchestration religion | High | Active |
+| RK-26 | Corporate users see Team RAM internals and bounce | Medium | Active |
+| RK-27 | Agents claim Done without evidence gates | High | Active |
+| RK-28 | Run journals drift from Brain/Notion state | Medium | Active |
 
 ### Risk Detail
 
@@ -131,6 +136,10 @@
 | RK-22 | SONA feedback before clean receipts creates false learning | High | SONA feedback remains parked until receipts are clean, traceable, and approved. Feedback-generated learning cannot promote without HITL/policy path. | Active |
 | RK-23 | Duplicate MCP configs create harness drift | Medium | MCP config mutation is approval-required; use a single governed catalog path and record receipts for additions. | Active |
 | RK-24 | Live hook enforcement without approval mutates governance unexpectedly | High | RAM/Durham hook wrappers remain proposed support. Do not enable live hooks or RuVix enforcement changes without separate approval. | Active |
+| RK-25 | Methodology layer becomes a second orchestration religion | High | Keep AD-35 as a thin RunRecord/template contract over existing Team RAM skills. Do not introduce a foreign runtime or second agent taxonomy. | Active |
+| RK-26 | Corporate users see Team RAM internals and bounce | Medium | Corporate-facing surfaces use familiar terms — run, story, approval, evidence, review, retrospective — while Team RAM remains an internal routing implementation detail. | Active |
+| RK-27 | Agents claim Done without evidence gates | High | RunRecord policy requires explicit quality gates and evidence before Done. Brain receipts are audit context, not proof by themselves. | Active |
+| RK-28 | Run journals drift from Brain/Notion state | Medium | Run journals are receipt trails; Notion remains planning/decision source of truth when reachable, and Brain stores append-only run outcomes and blockers. | Active |
 
 | AD-25 | Phase 6 Closure — all deliverables shipped | Decided | DLQ shipped (curator watchdog). Knowledge Hub Bridge shipped (Notion sync worker). Auth layer shipped (dev-auth + config). CSV Export shipped (/admin/approvals CSV download). SDK not separately shipped — MCP tools are the SDK. CORS shipped (next.config). Sentry shipped (captureException in curator approve). Phase 6 scope is complete. Decision: close Phase 6 and record it. Alternatives rejected: (1) Continue tracking as open — rejected because all deliverables exist in code and pass tests. (2) Extend Phase 6 for k6 load testing — rejected because load testing is a separate concern (tracked as RK-14). Consequences: Phase 6 ADR is now closed. Next phases focus on Curator pipeline E2E (Sprint 1), Skills layer (Sprint 2), and MCP Catalog governance (Sprint 3). |
 
@@ -234,6 +243,32 @@
 - Improves review quality and reduces policy blind spots.
 
 **Status:** accepted, documented 2026-05-29.
+
+### AD-35: RunRecord Template Before Methodology Runtime
+
+**Decision:** Add a governed `RunRecord` template before building a full Allura methodology runtime.
+
+**Rationale:** Babysitter's process library and BMAD workflow builder expose a useful missing layer: repeatable, evidence-gated runs that compose smaller skills into recognizable workflows. Allura should adopt the pattern without importing the runtime. A neutral `RunRecord` preserves the engine boundary: Allura Brain remains the memory data plane; methodology runs are optional governed orchestration records over Team RAM skills and Notion/Brain receipts.
+
+**Contract boundary:**
+
+- **RunRecord:** durable identifiers, goal, teams, status, journal path, timestamps.
+- **RunPolicy:** allowed actions, approval breakpoints, quality gates, evidence required.
+- **RunRuntimeState:** resume state, doctor checks, and writeback candidacy; runtime-only until implementation proves stable.
+
+**Alternatives considered:**
+
+- **Adopt Babysitter process library directly:** rejected because it makes an external process library canonical and brings runtime/security/licensing uncertainty.
+- **Adopt BMAD workflow builder as the workflow layer:** rejected because it creates a parallel ecosystem and Python/uv dependency that conflicts with the one-runtime direction.
+- **Build full methodology runtime immediately:** deferred because templates and receipt discipline must prove value before execution machinery is added.
+
+**Consequences:**
+
+- Corporate teams can consume familiar run/story/review/evidence language without seeing Team RAM internals.
+- Every run can specify approval breakpoints, quality gates, and evidence before Done.
+- Docker and public onboarding must truthfully state current local-dev limits until a stranger-friendly compose profile exists.
+
+**Status:** proposed, documented 2026-06-04. Notion source-of-truth update is pending because the current runtime could not reach the Notion MCP write surface; Brain fallback receipt `facaab4c-bb60-48f3-a97d-d17340976c11` records the AD-35 card.
 
 ---
 
