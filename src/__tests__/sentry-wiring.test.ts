@@ -350,9 +350,9 @@ describe("Sentry Wiring", () => {
 
       const context = extractRequestContext(mockReq);
 
-      expect(context.tags).toHaveProperty("request.method", "POST");
-      expect(context.tags).toHaveProperty("request.path", "/api/memory");
-      expect(context.tags).toHaveProperty("group_id", "allura-test");
+      expect(context.tags?.["request.method"]).toBe("POST");
+      expect(context.tags?.["request.path"]).toBe("/api/memory");
+      expect(context.tags?.["group_id"]).toBe("allura-test");
     });
   });
 });

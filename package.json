@@ -3,6 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
+    "build": "next build",
     "typecheck": "tsc --noEmit",
     "lint:eslint": "eslint .",
     "lint:eslint:fix": "eslint . --fix",
@@ -64,7 +65,8 @@
     "test:curator": "vitest run --config vitest.config.curator.ts",
     "test:unit": "vitest run --config vitest.config.unit.ts",
     "test:integration": "vitest run --config vitest.config.integration.ts",
-    "test:mcp": "bun scripts/test-mcp-browser.ts"
+    "test:mcp": "bun scripts/test-mcp-browser.ts",
+    "validate:tokens": "bash scripts/token-compliance.sh"
   },
   "repository": {
     "type": "git",
