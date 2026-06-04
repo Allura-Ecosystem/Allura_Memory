@@ -23,15 +23,6 @@
       "url": "http://localhost:5888/mcp",
       "enabled": true,
       "timeout": 60000
-    },
-    "MCP_DOCKER": {
-      "type": "remote",
-      "url": "http://localhost:8484/sse",
-      "enabled": true,
-      "timeout": 60000,
-      "headers": {
-        "Authorization": "${MCP_DOCKER_TOKEN}"
-      }
     }
   },
   "provider": {
