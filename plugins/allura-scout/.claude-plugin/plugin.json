@@ -1,0 +1,37 @@
+{
+  "name": "allura-scout",
+  "displayName": "Allura Scout",
+  "version": "0.1.0",
+  "description": "Low-token context discovery for Allura workflows. Produces compact evidence-backed ContextPackets before agents plan, build, or review.",
+  "author": {
+    "name": "Ronin / Allura"
+  },
+  "keywords": [
+    "allura",
+    "scout",
+    "context",
+    "token-cost",
+    "memory",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "interface": {
+    "displayName": "Allura Scout",
+    "shortDescription": "Produce compact context packets before agent work.",
+    "longDescription": "Use Allura Scout before planning, building, reviewing, or handing off work when prior context matters. It searches only relevant files and Allura memory, avoids large dumps, and returns a compact ContextPacket for the next agent.",
+    "developerName": "Ronin / Allura",
+    "category": "Productivity",
+    "capabilities": [
+      "Context Discovery",
+      "Memory Search",
+      "Token Reduction",
+      "Evidence Routing"
+    ],
+    "defaultPrompt": [
+      "Create a Scout context packet.",
+      "Scout this task before planning.",
+      "Find the smallest useful context for this work."
+    ]
+  }
+}
