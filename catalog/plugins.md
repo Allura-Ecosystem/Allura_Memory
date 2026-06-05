@@ -98,6 +98,39 @@ codex plugin install ./plugins/allura-governance
 
 ---
 
+### team-durham
+
+**Runtime:** Claude Code
+**Purpose:** Multi-agent brand production system — 8-phase pipeline from client brief to delivered brand identity, backed by Allura Brain.
+
+**Agents:** 11 specialists (Kotler chair, Aaker strategy, Glaser visual, Ogilvy copy, Rand kit, Munari QA, Tufte data, plus recon/workflow/fallback)
+
+**Pipeline:**
+```
+Phase 0  Intent Gate        Kotler       Validated brief
+Phase 1  Strategy           Aaker        Strategy Pack
+Phase 2  Naming             Aaker+Ogilvy Naming Pack (5 names)
+Phase 3  Visual Direction   Glaser       Logo Pack + fal.ai prompts
+Phase 4  Brand Kit          Rand         10-Section Brand Kit
+Phase 5  QA                 Munari       QA Report (85%+ to pass)
+Phase 6  Allura Memory      Kotler       brand-truth.json → Neo4j
+Phase 7  Report             Kotler       Pipeline Summary
+```
+
+**Skills:** `/orchestrate` · `/status` · `/validate`
+
+**Install:**
+```bash
+claude plugin install /path/to/team-durham.plugin
+```
+
+**Requires:** Allura Brain (PostgreSQL + Neo4j)
+**Group ID:** `allura-team-durham`
+
+**Docs:** [`team-durham/README.md`](https://github.com/Charitablebusinessronin/Allura_Memory) (brand-maker repo)
+
+---
+
 ### allura (core plugin)
 
 **Runtime:** Codex
@@ -141,6 +174,7 @@ codex plugin install ./plugins/superpowers
 | Low-token context packets before work | `allura-scout` |
 | Claude ↔ Codex handoff with validation | `allura-cowork` |
 | Hard invariant enforcement on every tool call | `allura-governance` |
+| Brand identity pipeline with multi-agent QA | `team-durham` |
 | Core memory skills for Codex | `allura` |
 | Extended Codex capabilities | `superpowers` |
 
