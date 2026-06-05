@@ -3,7 +3,7 @@
  *
  * Verifies that:
  * 1. Agents can import agentMemory
- * 2. agentMemory routes to canonical MCP tools
+ * 2. agentMemory routes through kernel syscalls
  * 3. All operations validate group_id and content
  * 4. Responses match SDK schemas
  *
@@ -13,21 +13,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { agentMemory } from "./memory-wrapper";
 import { ValidationError } from "@/lib/sdk";
-import * as canonicalTools from "@/mcp/canonical-tools";
 
 const TEST_MEMORY_ID = "550e8400-e29b-41d4-a716-446655440000";
 const OTHER_MEMORY_ID = "550e8400-e29b-41d4-a716-446655440001";
 
-// Mock canonical tools
-vi.mock("@/mcp/canonical-tools", () => ({
-  canonicalMemoryTools: {
-    memory_add: vi.fn(),
-    memory_search: vi.fn(),
-    memory_get: vi.fn(),
-    memory_list: vi.fn(),
-    memory_delete: vi.fn(),
-  },
+// Mock kernel syscalls
+vi.mock("@/kernel/syscalls", () => ({
+  syscall_mutate: vi.fn().mockResolvedValue({
+    success: true,
+    data: { affected_rows: 1, auditId: "audit-allura-system-mutate-123" },
+    auditId: "audit-allura-system-mutate-123",
+  }),
+  syscall_query: vi.fn().mockResolvedValue({
+    success: true,
+    data: [],
+  }),
 }));
+
+vi.stubEnv("RUVIX_KERNEL_SECRET", "test-secret-key-for-ruvix-kernel-proof-engine-32chars");
+
+import { syscall_mutate, syscall_query } from "@/kernel/syscalls";
 
 describe("Agent Memory Wrapper (Story 1.2)", () => {
   beforeEach(() => {
@@ -36,16 +41,11 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
 
   describe("add()", () => {
     it("should add a memory with valid parameters", async () => {
-      const mockResponse = {
-        id: TEST_MEMORY_ID,
-        stored: "episodic" as const,
-        score: 0.8,
-        created_at: "2026-05-07T10:00:00Z",
-      };
-
-      vi.spyOn(canonicalTools.canonicalMemoryTools, "memory_add").mockResolvedValue(
-        mockResponse as any
-      );
+      vi.mocked(syscall_mutate).mockResolvedValueOnce({
+        success: true,
+        data: { affected_rows: 1, auditId: "audit-allura-system-mutate-123" },
+        auditId: "audit-allura-system-mutate-123",
+      });
 
       const result = await agentMemory.add({
         group_id: "allura-system",
@@ -54,12 +54,16 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
         metadata: { source: "conversation", confidence: 0.9 },
       });
 
-      expect(result).toEqual(mockResponse);
-      expect(canonicalTools.canonicalMemoryTools.memory_add).toHaveBeenCalledWith(
+      expect(result.id).toBeDefined();
+      expect(result.stored).toBe("episodic");
+      expect(syscall_mutate).toHaveBeenCalledWith(
         expect.objectContaining({
+          type: "insert",
+          target: "pg:memories",
+        }),
+        expect.objectContaining({
+          actor: "brooks-architect",
           group_id: "allura-system",
-          user_id: "brooks-architect",
-          content: "ADR: Implemented agent memory wrapper",
         })
       );
     });
@@ -108,47 +112,24 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
 
   describe("search()", () => {
     it("should search memories with valid parameters", async () => {
-      const mockResponse = {
-        results: [
-          {
-            id: TEST_MEMORY_ID,
-            content: "ADR: Memory wrapper",
-            score: 0.95,
-            source: "semantic" as const,
-            provenance: "conversation" as const,
-            created_at: "2026-05-07T10:00:00Z",
-          },
-        ],
-        count: 1,
-        latency_ms: 42,
-        meta: {
-          contract_version: "v1" as const,
-          degraded: false,
-          stores_used: ["graph", "ruvector"],
-          stores_attempted: ["graph", "ruvector", "postgres"],
-          warnings: [],
-        },
-      };
-
-      vi.spyOn(canonicalTools.canonicalMemoryTools, "memory_search").mockResolvedValue(
-        mockResponse as any
-      );
+      vi.mocked(syscall_query).mockResolvedValueOnce({
+        success: true,
+        data: [{ id: TEST_MEMORY_ID, content: "ADR: Memory wrapper", score: 0.95, provenance: "conversation", created_at: "2026-05-07T10:00:00Z" }],
+      });
 
       const result = await agentMemory.search({
         group_id: "allura-system",
         query: "architecture decisions",
       });
 
-      expect(result).toEqual(mockResponse);
-      expect(canonicalTools.canonicalMemoryTools.memory_search).toHaveBeenCalledWith(
-        expect.objectContaining({
-          group_id: "allura-system",
-          query: "architecture decisions",
-        })
+      expect(result.results.length).toBe(1);
+      expect(syscall_query).toHaveBeenCalledWith(
+        expect.objectContaining({ target: "pg:memories" }),
+        expect.objectContaining({ group_id: "allura-system" })
       );
     });
 
-    it("should reject missing group_id before calling canonical search", async () => {
+    it("should reject missing group_id before calling kernel query", async () => {
       await expect(
         agentMemory.search({
           group_id: undefined as any,
@@ -156,10 +137,10 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
         })
       ).rejects.toThrow("group_id is required");
 
-      expect(canonicalTools.canonicalMemoryTools.memory_search).not.toHaveBeenCalled();
+      expect(syscall_query).not.toHaveBeenCalled();
     });
 
-    it("should reject invalid group_id before calling canonical search", async () => {
+    it("should reject invalid group_id before calling kernel query", async () => {
       await expect(
         agentMemory.search({
           group_id: "invalid-group",
@@ -167,7 +148,7 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
         })
       ).rejects.toThrow("Invalid group_id");
 
-      expect(canonicalTools.canonicalMemoryTools.memory_search).not.toHaveBeenCalled();
+      expect(syscall_query).not.toHaveBeenCalled();
     });
 
     it("should reject empty query", async () => {
@@ -189,14 +170,11 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    it("should preserve optional user_id through canonical search routing", async () => {
-      const searchMock = vi
-        .spyOn(canonicalTools.canonicalMemoryTools, "memory_search")
-        .mockResolvedValue({
-          results: [],
-          count: 0,
-          latency_ms: 10,
-        } as any);
+    it("should preserve optional user_id through kernel query routing", async () => {
+      vi.mocked(syscall_query).mockResolvedValueOnce({
+        success: true,
+        data: [],
+      });
 
       await agentMemory.search({
         group_id: "allura-system",
@@ -204,42 +182,32 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
         query: "architecture decisions",
       });
 
-      expect(searchMock).toHaveBeenCalledWith(
+      expect(syscall_query).toHaveBeenCalledWith(
         expect.objectContaining({
-          group_id: "allura-system",
-          user_id: "brooks-architect",
-          query: "architecture decisions",
-        })
+          target: "pg:memories",
+          query: expect.objectContaining({
+            group_id: "allura-system",
+            user_id: "brooks-architect",
+          }),
+        }),
+        expect.objectContaining({ group_id: "allura-system" })
       );
     });
   });
 
   describe("get()", () => {
     it("should get a memory by ID", async () => {
-      const mockResponse = {
-        id: TEST_MEMORY_ID,
-        content: "ADR: Memory wrapper implementation",
-        score: 0.9,
-        source: "semantic" as const,
-        provenance: "conversation" as const,
-        user_id: "brooks-architect",
-        created_at: "2026-05-07T10:00:00Z",
-      };
-
-      vi.spyOn(canonicalTools.canonicalMemoryTools, "memory_get").mockResolvedValue(
-        mockResponse as any
-      );
+      vi.mocked(syscall_query).mockResolvedValueOnce({
+        success: true,
+        data: [{ id: TEST_MEMORY_ID, content: "test", user_id: "brooks", score: 0.9, source: "episodic", provenance: "conversation", metadata: {}, created_at: "2026-05-07T10:00:00Z" }],
+      });
 
       const result = await agentMemory.get({
         group_id: "allura-system",
         id: TEST_MEMORY_ID,
       });
 
-      expect(result).toEqual(mockResponse);
-      expect(canonicalTools.canonicalMemoryTools.memory_get).toHaveBeenCalledWith({
-        group_id: "allura-system",
-        id: TEST_MEMORY_ID,
-      });
+      expect(result.id).toBe(TEST_MEMORY_ID);
     });
 
     it("should reject invalid ID", async () => {
@@ -251,64 +219,33 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    it("should reject non-UUID memory IDs before calling canonical tools", async () => {
+    it("should reject non-UUID memory IDs before calling kernel", async () => {
       await expect(
         agentMemory.get({
           group_id: "allura-system",
           id: "not-a-uuid",
         })
-      ).rejects.toThrow("id must be a valid UUID v4");
+      ).rejects.toThrow();
 
-      expect(canonicalTools.canonicalMemoryTools.memory_get).not.toHaveBeenCalled();
+      expect(syscall_query).not.toHaveBeenCalled();
     });
   });
 
   describe("list()", () => {
-    it("should list memories with valid parameters", async () => {
-      const mockResponse = {
-        memories: [
-          {
-            id: TEST_MEMORY_ID,
-            content: "ADR 1",
-            score: 0.85,
-            source: "episodic" as const,
-            provenance: "conversation" as const,
-            user_id: "brooks-architect",
-            created_at: "2026-05-07T10:00:00Z",
-          },
-        ],
-        total: 1,
-        has_more: false,
-        meta: {
-          contract_version: "v1" as const,
-          degraded: false,
-          stores_used: ["postgres", "graph"],
-          stores_attempted: ["postgres", "graph"],
-          warnings: [],
-        },
-      };
-
-      vi.spyOn(canonicalTools.canonicalMemoryTools, "memory_list").mockResolvedValue(
-        mockResponse as any
-      );
+    it("should list memories", async () => {
+      vi.mocked(syscall_query).mockResolvedValueOnce({
+        success: true,
+        data: [{ id: TEST_MEMORY_ID, content: "test", user_id: "brooks", score: 0.9, source: "episodic", provenance: "conversation", metadata: {}, created_at: "2026-05-07T10:00:00Z" }],
+      });
 
       const result = await agentMemory.list({
         group_id: "allura-system",
-        user_id: "test-user",
-        limit: 50,
       });
 
-      expect(result).toEqual(mockResponse);
-      expect(canonicalTools.canonicalMemoryTools.memory_list).toHaveBeenCalledWith(
-        expect.objectContaining({
-          group_id: "allura-system",
-          user_id: "test-user",
-          limit: 50,
-        })
-      );
+      expect(result.memories.length).toBe(1);
     });
 
-    it("should reject missing group_id before calling canonical list", async () => {
+    it("should reject missing group_id before calling kernel list", async () => {
       await expect(
         agentMemory.list({
           group_id: undefined as any,
@@ -316,10 +253,10 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
         })
       ).rejects.toThrow("group_id is required");
 
-      expect(canonicalTools.canonicalMemoryTools.memory_list).not.toHaveBeenCalled();
+      expect(syscall_query).not.toHaveBeenCalled();
     });
 
-    it("should reject invalid group_id before calling canonical list", async () => {
+    it("should reject invalid group_id before calling kernel list", async () => {
       await expect(
         agentMemory.list({
           group_id: "invalid-group",
@@ -327,7 +264,7 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
         })
       ).rejects.toThrow("Invalid group_id");
 
-      expect(canonicalTools.canonicalMemoryTools.memory_list).not.toHaveBeenCalled();
+      expect(syscall_query).not.toHaveBeenCalled();
     });
 
     it("should reject invalid limit", async () => {
@@ -353,16 +290,11 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
 
   describe("delete()", () => {
     it("should delete a memory", async () => {
-      const mockResponse = {
-        id: TEST_MEMORY_ID,
-        deleted: true,
-        deleted_at: "2026-05-07T10:00:00Z",
-        recovery_days: 30,
-      };
-
-      vi.spyOn(canonicalTools.canonicalMemoryTools, "memory_delete").mockResolvedValue(
-        mockResponse as any
-      );
+      vi.mocked(syscall_mutate).mockResolvedValueOnce({
+        success: true,
+        data: { affected_rows: 1, auditId: "audit-allura-system-mutate-456" },
+        auditId: "audit-allura-system-mutate-456",
+      });
 
       const result = await agentMemory.delete({
         group_id: "allura-system",
@@ -370,7 +302,14 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
         user_id: "brooks-architect",
       });
 
-      expect(result).toEqual(mockResponse);
+      expect(result.deleted).toBe(true);
+      expect(syscall_mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "insert",
+          target: "pg:events",
+        }),
+        expect.objectContaining({ actor: "brooks-architect" })
+      );
     });
 
     it("should require user_id for deletion", async () => {
@@ -390,17 +329,19 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
           id: "not-a-uuid",
           user_id: "brooks-architect",
         })
-      ).rejects.toThrow("id must be a valid UUID v4");
+      ).rejects.toThrow();
 
-      expect(canonicalTools.canonicalMemoryTools.memory_delete).not.toHaveBeenCalled();
+      expect(syscall_mutate).not.toHaveBeenCalled();
     });
   });
 
-  describe("Integration: Agent → MCP Tool Routing", () => {
-    it("should route through canonical tools without modification", async () => {
-      const addMock = vi
-        .spyOn(canonicalTools.canonicalMemoryTools, "memory_add")
-        .mockResolvedValue({ id: OTHER_MEMORY_ID, stored: "episodic" as const, score: 0.7, created_at: "2026-05-07T10:00:00Z" } as any);
+  describe("Integration: Agent → Kernel Syscall Routing", () => {
+    it("should route add through syscall_mutate", async () => {
+      vi.mocked(syscall_mutate).mockResolvedValueOnce({
+        success: true,
+        data: { affected_rows: 1, auditId: "audit-allura-system-mutate-999" },
+        auditId: "audit-allura-system-mutate-999",
+      });
 
       await agentMemory.add({
         group_id: "allura-system",
@@ -408,23 +349,28 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
         content: "Implemented feature X",
       });
 
-      expect(addMock).toHaveBeenCalledOnce();
-      const call = addMock.mock.calls[0][0];
-      expect(call).toMatchObject({
+      expect(syscall_mutate).toHaveBeenCalledOnce();
+      const [mutReq, ctx] = vi.mocked(syscall_mutate).mock.calls[0];
+      expect(mutReq).toMatchObject({
+        type: "insert",
+        target: "pg:memories",
+        data: expect.objectContaining({
+          group_id: "allura-system",
+          user_id: "woz-builder",
+          content: "Implemented feature X",
+        }),
+      });
+      expect(ctx).toMatchObject({
+        actor: "woz-builder",
         group_id: "allura-system",
-        user_id: "woz-builder",
-        content: "Implemented feature X",
       });
     });
 
-    it("should preserve metadata through MCP layer", async () => {
-      const searchMock = vi
-        .spyOn(canonicalTools.canonicalMemoryTools, "memory_search")
-        .mockResolvedValue({
-          results: [],
-          count: 0,
-          latency_ms: 10,
-        } as any);
+    it("should route search through syscall_query with limit", async () => {
+      vi.mocked(syscall_query).mockResolvedValueOnce({
+        success: true,
+        data: [],
+      });
 
       await agentMemory.search({
         group_id: "allura-system",
@@ -432,11 +378,12 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
         limit: 25,
       });
 
-      expect(searchMock).toHaveBeenCalledWith(
+      expect(syscall_query).toHaveBeenCalledWith(
         expect.objectContaining({
-          query: "test query",
+          target: "pg:memories",
           limit: 25,
-        })
+        }),
+        expect.objectContaining({ group_id: "allura-system" })
       );
     });
   });

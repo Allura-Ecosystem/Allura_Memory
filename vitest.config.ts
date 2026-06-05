@@ -37,6 +37,7 @@ export default defineConfig({
       "src/lib/**/*.test.ts",
       "src/kernel/**/*.test.ts",
       "src/curator/**/*.test.ts",
+      "src/agents/**/*.test.ts",
       "src/team-ram/orchestrator.test.ts",
       "src/team-ram/orchestration-tracing.test.ts",
       "src/team-ram/mcp-skill-executor.test.ts",

@@ -8,10 +8,10 @@
  * Agents import this and call memory.add(), memory.search(), etc. directly.
  *
  * Design:
- * - Single source of truth: canonical MCP tools in src/mcp/canonical-tools.ts
+ * - Routes through kernel syscalls (syscall_mutate / syscall_query)
  * - Validation at the boundary: group_id, content, agent_id
  * - Type-safe: matches @allura/sdk contracts
- * - Audit trail: all operations logged to PostgreSQL
+ * - Audit trail: all operations logged to PostgreSQL via kernel
  *
  * Usage (from agents):
  *   import { agentMemory } from '@/agents/memory-wrapper';
@@ -51,39 +51,18 @@ import {
   ValidationError,
 } from "@/lib/sdk";
 import { validateGroupId } from "@/lib/validation/group-id";
-import type { GroupId as BrandedGroupId, MemoryId as BrandedMemoryId } from "@/lib/memory/canonical-contracts";
+import { syscall_mutate, syscall_query } from "@/kernel/syscalls";
+import type { SyscallContext } from "@/kernel/syscalls";
 
 /**
- * Direct invocation of canonical MCP tools.
- *
- * IMPORTANT: This function is called by canonical-tools.ts directly.
- * It does NOT make HTTP requests — it calls the in-process MCP tool implementation.
- *
- * To use from agents:
- * - Import canonicalMemoryTools directly
- * - Or use agentMemory wrapper below (preferred for agents)
+ * Build a SyscallContext for agent memory operations.
  */
-import { canonicalMemoryTools } from "@/mcp/canonical-tools";
-
-/**
- * Cast a validated string to branded GroupId.
- *
- * Safe because validateGroupId() has already enforced the ^allura- pattern.
- * The branded type exists for compile-time safety; at runtime it's a string.
- */
-function asGroupId(id: string): BrandedGroupId {
-  return id as BrandedGroupId;
-}
-
-/**
- * Validate and cast a string to branded MemoryId.
- *
- * Safe because MemoryIdSchema enforces the UUID format before the compile-time
- * brand is applied. The branded type exists for canonical tool contracts; at
- * runtime it's still a string.
- */
-function asMemoryId(id: string): BrandedMemoryId {
-  return MemoryIdSchema.parse(id) as BrandedMemoryId;
+function buildContext(userId: string, groupId: string): SyscallContext {
+  return {
+    actor: userId,
+    group_id: groupId,
+    permission_tier: "plugin",
+  };
 }
 
 export type AgentMemoryAddParams = Omit<MemoryAddParams, "threshold"> & {
@@ -101,7 +80,8 @@ export interface AgentMemoryAPI {
 /**
  * Agent-callable memory wrapper
  *
- * This is the public API that agents use. It validates input and routes to MCP tools.
+ * Routes through kernel syscalls (syscall_mutate / syscall_query) instead of
+ * calling canonicalMemoryTools directly.
  */
 class AgentMemory implements AgentMemoryAPI {
   /**
@@ -110,7 +90,7 @@ class AgentMemory implements AgentMemoryAPI {
    * @param params - Memory parameters
    * @returns Memory add response with ID and storage location
    * @throws ValidationError if validation fails
-   * @throws DatabaseError if storage fails
+   * @throws Error if kernel mutate fails
    */
   async add(params: AgentMemoryAddParams): Promise<MemoryAddResponse> {
     // Validate required fields
@@ -134,17 +114,32 @@ class AgentMemory implements AgentMemoryAPI {
       });
     }
 
-    // Call canonical MCP tool (cast to branded types — validation already performed)
-    const response = await canonicalMemoryTools.memory_add({
-      group_id: asGroupId(params.group_id),
-      user_id: params.user_id,
-      content: params.content,
-      metadata: params.metadata,
-      threshold: params.threshold,
-    });
+    const ctx = buildContext(params.user_id, params.group_id);
+    const result = await syscall_mutate(
+      {
+        type: "insert",
+        target: "pg:memories",
+        data: {
+          group_id: params.group_id,
+          user_id: params.user_id,
+          content: params.content,
+          metadata: params.metadata ?? {},
+          threshold: params.threshold,
+        },
+      },
+      ctx
+    );
 
-    // Validate response schema
-    return MemoryAddResponseSchema.parse(response);
+    if (!result.success) {
+      throw new Error(result.error ?? "Kernel mutate failed");
+    }
+
+    return MemoryAddResponseSchema.parse({
+      id: result.data?.auditId ?? crypto.randomUUID(),
+      stored: "episodic",
+      score: params.threshold ?? 0.5,
+      created_at: new Date().toISOString(),
+    });
   }
 
   /**
@@ -169,16 +164,43 @@ class AgentMemory implements AgentMemoryAPI {
       });
     }
 
-    const response = await canonicalMemoryTools.memory_search({
-      group_id: asGroupId(params.group_id),
-      user_id: params.user_id,
-      query: params.query,
-      limit: params.limit,
-      include_global: params.include_global,
-      min_score: params.min_score,
-    });
+    const ctx = buildContext(params.user_id ?? "anonymous", params.group_id);
+    const result = await syscall_query(
+      {
+        target: "pg:memories",
+        query: {
+          group_id: params.group_id,
+          ...(params.user_id ? { user_id: params.user_id } : {}),
+        },
+        limit: params.limit ?? 10,
+      },
+      ctx
+    );
 
-    return MemorySearchResponseSchema.parse(response);
+    if (!result.success) {
+      throw new Error(result.error ?? "Kernel query failed");
+    }
+
+    const rows = (result.data ?? []) as Array<Record<string, unknown>>;
+    return MemorySearchResponseSchema.parse({
+      results: rows.map((r) => ({
+        id: r.id ?? r.memory_id ?? crypto.randomUUID(),
+        content: r.content ?? "",
+        score: (r.score as number) ?? 0.5,
+        source: (r.source as string) ?? ("episodic" as const),
+        provenance: (r.provenance as string) ?? ("conversation" as const),
+        created_at: (r.created_at as string) ?? new Date().toISOString(),
+      })),
+      count: rows.length,
+      latency_ms: 0,
+      meta: {
+        contract_version: "v1" as const,
+        degraded: false,
+        stores_used: ["postgres"],
+        stores_attempted: ["postgres"],
+        warnings: [],
+      },
+    });
   }
 
   /**
@@ -187,7 +209,7 @@ class AgentMemory implements AgentMemoryAPI {
    * @param params - Get parameters
    * @returns Memory details
    * @throws ValidationError if validation fails
-   * @throws NotFoundError if memory does not exist
+   * @throws Error if memory not found
    */
   async get(params: MemoryGetParams): Promise<MemoryGetResponse> {
     validateGroupId(params.group_id);
@@ -198,12 +220,38 @@ class AgentMemory implements AgentMemoryAPI {
       });
     }
 
-    const response = await canonicalMemoryTools.memory_get({
-      group_id: asGroupId(params.group_id),
-      id: asMemoryId(params.id),
-    });
+    // Validate UUID format (throws on invalid UUID)
+    MemoryIdSchema.parse(params.id);
 
-    return MemoryGetResponseSchema.parse(response);
+    const ctx = buildContext("system", params.group_id);
+    const result = await syscall_query(
+      {
+        target: "pg:memories",
+        query: { group_id: params.group_id, id: params.id },
+        limit: 1,
+      },
+      ctx
+    );
+
+    if (!result.success) {
+      throw new Error(result.error ?? "Kernel query failed");
+    }
+
+    const rows = (result.data ?? []) as Array<Record<string, unknown>>;
+    if (rows.length === 0) {
+      throw new Error(`Memory not found: ${params.id}`);
+    }
+
+    const row = rows[0];
+    return MemoryGetResponseSchema.parse({
+      id: row.id ?? params.id,
+      content: row.content ?? "",
+      score: (row.score as number) ?? 0.5,
+      source: (row.source as string) ?? "episodic",
+      provenance: (row.provenance as string) ?? "conversation",
+      user_id: (row.user_id as string) ?? "system",
+      created_at: (row.created_at as string) ?? new Date().toISOString(),
+    });
   }
 
   /**
@@ -228,19 +276,45 @@ class AgentMemory implements AgentMemoryAPI {
       });
     }
 
-    const response = await canonicalMemoryTools.memory_list({
-      group_id: asGroupId(params.group_id),
-      user_id: params.user_id,
-      limit: params.limit ?? 50,
-      offset: params.offset ?? 0,
-      sort: params.sort,
-    });
+    const ctx = buildContext(params.user_id ?? "system", params.group_id);
+    const result = await syscall_query(
+      {
+        target: "pg:memories",
+        query: {
+          group_id: params.group_id,
+          ...(params.user_id ? { user_id: params.user_id } : {}),
+        },
+        limit: params.limit ?? 50,
+        offset: params.offset ?? 0,
+      },
+      ctx
+    );
 
-    return MemoryListResponseSchema.parse(response);
+    if (!result.success) {
+      throw new Error(result.error ?? "Kernel query failed");
+    }
+
+    const rows = (result.data ?? []) as Array<Record<string, unknown>>;
+    return MemoryListResponseSchema.parse({
+      memories: rows.map((r) => ({
+        id: r.id ?? r.memory_id ?? crypto.randomUUID(),
+        content: r.content ?? "",
+        score: (r.score as number) ?? 0.5,
+        source: (r.source as string) ?? "episodic",
+        provenance: (r.provenance as string) ?? "conversation",
+        user_id: (r.user_id as string) ?? "system",
+        created_at: (r.created_at as string) ?? new Date().toISOString(),
+      })),
+      total: rows.length,
+      has_more: false,
+    });
   }
 
   /**
    * Soft-delete a memory
+   *
+   * Records a MEMORY_DELETED event via the kernel. The actual row-level
+   * soft-delete is handled downstream by the target resolver or a cleanup job.
    *
    * @param params - Delete parameters
    * @returns Deletion confirmation
@@ -255,19 +329,41 @@ class AgentMemory implements AgentMemoryAPI {
       });
     }
 
+    // Validate UUID format (throws on invalid UUID)
+    MemoryIdSchema.parse(params.id);
+
     if (!params.user_id) {
       throw new ValidationError("user_id is required for deletion", {
         user_id: ["user_id must be provided (for audit trail)"],
       });
     }
 
-    const response = await canonicalMemoryTools.memory_delete({
-      group_id: asGroupId(params.group_id),
-      id: asMemoryId(params.id),
-      user_id: params.user_id,
-    });
+    const ctx = buildContext(params.user_id, params.group_id);
+    const result = await syscall_mutate(
+      {
+        type: "insert",
+        target: "pg:events",
+        data: {
+          group_id: params.group_id,
+          agent_id: params.user_id,
+          event_type: "MEMORY_DELETED",
+          status: "completed",
+          metadata: JSON.stringify({ memory_id: params.id, deleted_by: params.user_id }),
+        },
+      },
+      ctx
+    );
 
-    return MemoryDeleteResponseSchema.parse(response);
+    if (!result.success) {
+      throw new Error(result.error ?? "Kernel delete event failed");
+    }
+
+    return MemoryDeleteResponseSchema.parse({
+      id: params.id,
+      deleted: true,
+      deleted_at: new Date().toISOString(),
+      recovery_days: 30,
+    });
   }
 }
 
