@@ -6,29 +6,29 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT:-$(realpath \"$(dirname \"$0\")/..")}\"/hooks/governance-context.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/governance-context.py\""
           }
         ]
       }
     ],
-    "PreToolCall": [
+    "PreToolUse": [
       {
         "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT:-$(realpath \"$(dirname \"$0\")/..")}\"/hooks/governance-preflight.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/governance-preflight.py\""
           }
         ]
       }
     ],
-    "PostToolCall": [
+    "PostToolUse": [
       {
         "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT:-$(realpath \"$(dirname \"$0\")/..")}\"/hooks/write-receipt.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/write-receipt.py\""
           }
         ]
       }
