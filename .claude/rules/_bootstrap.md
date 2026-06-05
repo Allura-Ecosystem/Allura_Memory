@@ -9,11 +9,11 @@ User: Sabir Asheed | Domain: Allura Agent-OS
 
 ## System State
 - Epic: 1 — Persistent Knowledge Capture
-- Active Story: 1.2 — TraceMiddleware Integration [IN PROGRESS]
-- Last Completed: Story 1.1 ✅ | RuVix Security Hardening ✅ (28/28 tests)
+- Active Story: 1.2 — TraceMiddleware Integration [COMPLETE]
+- Last Completed: Story 1.2 ✅ | Kernel Write Gate (1975 tests passing)
 - Blockers: none
-- Agent Primitives: 4/12 green | 5/12 in-progress | 3/12 red
-- memory() wrapper: PENDING — primary write-back blocker
+- Agent Primitives: 6/12 green | 3/12 in-progress | 3/12 red
+- memory() wrapper: COMPLETE — kernel write gate shipped
 
 ## Core Principles (from Context System)
 
@@ -51,5 +51,5 @@ User: Sabir Asheed | Domain: Allura Agent-OS
 **Brooks | Commands:** `OW` Orchestrate · `CA` Create Arch · `VA` Validate · `WS` Status · `CH` Chat · `BP` Brief · `PM` Party · `DA` Exit
 
 ## Next Recommended
-1. OW — Resume Story 1.2 (memory() wrapper implementation)
-2. WS — Sprint status before deciding
+1. NX — Phase 7 continues: syscall_trace, syscall_isolate, session persistence
+2. WS — Sprint status check

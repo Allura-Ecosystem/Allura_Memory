@@ -54,6 +54,7 @@
 | AD-37 | Public workflow library chooser (`library/`) | Decided | The `library/` surface is for external builders choosing workflows, adapters, and governance levels for their own Allura-based systems. It must not be framed primarily as an internal Team RAM skill catalog. |
 | AD-38 | Allura public positioning as governed memory + evidence kernel | Decided | Public README positioning targets builders creating their own governed AI memory/workflow systems. Archon is treated as a workflow-runner reference, Babysitter as a process-enforcement reference, and Allura as the governed memory, evidence, approval, and receipt layer. |
 | AD-39 | Allura Scout context-packet plugin before vertical workflow templates | Decided | Add Allura Scout as a public read-only context discovery plugin before building mortgage/HACCP/medical billing workflow templates. Scout reduces token cost and context drift by returning a compact `ContextPacket` with goal, summary, relevant files, relevant memories, risks, token budget, and recommended route. Mortgage remains paused by Ronin direction. |
+| AD-40 | Kernel as single write gate for all DB operations | Decided | syscall_mutate and syscall_query are now the only path to PostgreSQL and Neo4j. agentMemory (MCP) and memory() (internal graph) both route through the kernel's proof→policy→audit pipeline. Direct DB backends available via MEMORY_BYPASS_KERNEL=true for migration. Target resolver enforces append-only on pg:events, group_id on all ops, label allowlist on Neo4j. Satisfies F1, F8, F26, F27, F33, F35, F37, F38. |
 
 ---
 
@@ -97,7 +98,7 @@
 | RK-12 | Retrieval layer bypass — agents query DBs directly | High | Active |
 | RK-13 | Curator re-scores already-promoted traces | Medium | Mitigated |
 | RK-14 | E2E validation gap — pipeline not proven | High | Active |
-| RK-15 | Approve route connection leak | Medium | Active |
+| RK-15 | Approve route connection leak | Medium | ✅ Resolved |
 | RK-16 | Graph-Notion sync drift | Medium | ✅ Resolved — 2026-04-30 |
 | RK-17 | Dashboard API shape drift hides Brain data gaps | Medium | Active |
 | RK-18 | WCAG contrast failures in token system | Medium | Active |
@@ -130,7 +131,7 @@
 | RK-12 | Retrieval layer bypass — agents query DBs directly | High | AD-19: Controlled retrieval layer enforced as sole read path. Code review gate checks for direct PG/Neo4j imports in agent-facing code. Kernel `direct-access-blocker.ts` detects violations. | Active |
 | RK-13 | Curator re-scores already-promoted traces      | Medium | AD-20: Events marked as `status = 'promoted'` after proposal creation. Curator query excludes promoted events. | Mitigated |
 | RK-14 | E2E validation gap — pipeline not proven       | High | VALIDATION-GATE.md defines 12 acceptance checks with hard gates. E2E validation script (`scripts/e2e-validation-gate.ts`) runs all checks. | Active |
-| RK-15 | Approve route connection leak                  | Medium | Route creates its own `Pool` instead of using `getPool()` singleton. Fix: replace with shared pool from `src/lib/postgres/connection.ts`. | Active |
+| RK-15 | Approve route connection leak                  | Medium | Route uses `getPool()` singleton from `src/lib/postgres/connection.ts` (line 246 of `approve/route.ts`). No per-request Pool instantiation. | ✅ Resolved |
 | RK-16 | Graph-Notion sync drift | Medium | Sync contract mapping table (`src/lib/graph-adapter/sync-contract-mappings.ts`) now resolves user_id→Agent and group_id→Project relationships automatically. Notion sync worker uses mappings on approve/promote. | ✅ Resolved — 2026-04-30 |
 | RK-17 | Dashboard API shape drift hides Brain data gaps | Medium | Use `DashboardResult<T>` and mapped contracts from `src/lib/dashboard/`; every panel must expose source, freshness, degraded state, and `group_id`. | Active |
 | RK-18 | WCAG contrast failures in token system | Medium | Brand gate requires approved Allura/Durham tokens, keyboard checks, screen-reader labels, and high-contrast review before dashboard launch. | Active |
