@@ -4,6 +4,36 @@
 
 ## Available Plugins
 
+### allura-scout
+
+**Runtime:** Claude Code + Codex (dual-runtime)
+**Purpose:** Low-token context discovery before planning, building, reviewing, or handing off work.
+
+**What it gives you:**
+- `scout-context` — produce a compact ContextPacket from relevant files and Allura memory
+- Token budget defaults: 5,000 target / 8,000 hard limit
+- Read-only-by-default protocol
+- ContextPacket schema for goal, summary, files, memories, risks, and route
+- Public-safe language: Allura Scout / Context Scout, not internal Team RAM
+
+**Install:**
+```bash
+# Claude Code
+claude plugin install ./plugins/allura-scout
+
+# Codex
+codex plugin install ./plugins/allura-scout
+```
+
+**Validate:**
+```bash
+python3 plugins/allura-scout/scripts/validate_plugin.py plugins/allura-scout
+```
+
+**Docs:** [`plugins/allura-scout/README.md`](../plugins/allura-scout/README.md) · [`docs/plugins/allura-scout.md`](../docs/plugins/allura-scout.md)
+
+---
+
 ### allura-cowork
 
 **Runtime:** Claude Code + Codex (dual-runtime)
@@ -108,6 +138,7 @@ codex plugin install ./plugins/superpowers
 
 | You need… | Install |
 |-----------|---------|
+| Low-token context packets before work | `allura-scout` |
 | Claude ↔ Codex handoff with validation | `allura-cowork` |
 | Hard invariant enforcement on every tool call | `allura-governance` |
 | Core memory skills for Codex | `allura` |

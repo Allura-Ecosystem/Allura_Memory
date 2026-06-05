@@ -12,6 +12,7 @@ Use it when raw `memory_add` / `memory_search` calls are not enough and you need
 
 | I want to build… | Start with | Output |
 |---|---|---|
+| **A low-token context packet** | [Allura Scout](../plugins/allura-scout/README.md) | Relevant files, memories, risks, and route under a token budget |
 | **A memory-enabled agent** | [Memory Operations](#memory-operations) | Searchable episodic memories with tenant isolation |
 | **A feature/story workflow** | [Governed Story](#governed-story) | Story evidence packet, review notes, validation receipt |
 | **An architecture decision process** | [Governed Architecture](#governed-architecture) | ADR, rationale, alternatives, Brain trace |
@@ -37,6 +38,8 @@ Every Allura workflow follows the same small shape:
 ### 1. Pick a workflow
 
 Choose from the methodology list below. Each workflow says what it is for, what evidence it produces, and which internal Allura skill can power it if you are using this repo's Team RAM setup.
+
+If you are unsure what context matters, run **Allura Scout** first. Scout creates a small `ContextPacket` so the next agent does not waste tokens reading the whole repo.
 
 ### 2. Pick an adapter/runtime
 

@@ -155,10 +155,27 @@ Allura embeds every memory at write time using **Qwen3 Matryoshka embeddings** (
 | **MCP protocol native** | Stdio + Streamable HTTP gateway for any MCP-compatible agent |
 | **Vector search** | pgvector HNSW (episodic) + Neo4j (semantic) via hybrid ANN + BM25 ranking |
 | **Plugin harness** | MCP server discovery, approval, and routing |
+| **Allura Scout plugin** | Low-token context packets before planning, building, reviewing, or handoff |
 | **Claude/Codex cowork plugin** | Shared handoff protocol, runtime honesty rules, validation reminders, and receipt-first collaboration |
 | **Self-hostable** | Docker Compose — no external auth dependencies |
 | **Versioned knowledge** | `SUPERSEDES` relationships in Neo4j — old facts are deprecated, not erased |
 | **API-first operations** | MCP, CLI, and HTTP endpoints with inspectable receipts |
+
+---
+
+## Allura Scout Plugin
+
+Allura includes [`Allura Scout`](plugins/allura-scout/README.md), a read-only
+context plugin that reduces token cost by producing compact ContextPackets
+before expensive agent work starts. Scout is the front desk: it finds relevant
+files, memories, risks, and the recommended route without implementing or
+approving anything.
+
+Validate Scout from the repo root:
+
+```bash
+python3 plugins/allura-scout/scripts/validate_plugin.py plugins/allura-scout
+```
 
 ---
 
