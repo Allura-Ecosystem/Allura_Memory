@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/Charitablebusinessronin/Allura_Memory/discussions
+    about: Ask questions and share ideas
+  - name: Security Vulnerability
+    url: https://github.com/Charitablebusinessronin/Allura_Memory/security/advisories/new
+    about: Report security issues privately
