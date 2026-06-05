@@ -15,6 +15,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Neo4jConnectionError, Neo4jQueryError } from "@/lib/errors/neo4j-errors";
 
+// Bypass kernel to test direct Neo4j error handling
+vi.stubEnv("MEMORY_BYPASS_KERNEL", "true");
+
 // Mock the neo4j connection module to simulate driver failures
 vi.mock("@/lib/neo4j/connection", () => {
   const ServiceUnavailableError = class extends Error {
