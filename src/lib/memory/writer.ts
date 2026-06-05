@@ -34,6 +34,8 @@ import {
   writeTransaction,
 } from "@/lib/neo4j/connection";
 import { validateGroupId } from "@/lib/validation/group-id";
+import { syscall_mutate, syscall_query } from "@/kernel/syscalls";
+import type { SyscallContext } from "@/kernel/syscalls";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -472,6 +474,128 @@ function buildAdapterBackend(): MemoryAPI {
   };
 }
 
+// ── Kernel Backend (default, MEMORY_BYPASS_KERNEL != "true") ─────────────────
+
+function buildKernelBackend(): MemoryAPI {
+  function ctx(groupId: string, actor = "system"): SyscallContext {
+    return { actor, group_id: groupId, permission_tier: "plugin" };
+  }
+
+  return {
+    async createEntity({ label, props, group_id, relationships }: CreateEntityInput): Promise<CreateEntityResult> {
+      const validatedGroupId = validateGroupId(group_id);
+      const node_id = resolveNodeId(props);
+
+      const result = await syscall_mutate(
+        {
+          type: "insert",
+          target: "neo4j:Entity",
+          data: {
+            label,
+            node_id,
+            group_id: validatedGroupId,
+            ...props,
+            created_at: props.created_at ?? new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        },
+        ctx(validatedGroupId)
+      );
+
+      if (!result.success) {
+        throw new Error(result.error ?? "Kernel mutate failed for createEntity");
+      }
+
+      for (const rel of relationships ?? []) {
+        const fromId = rel.direction === "in" ? rel.targetId : node_id;
+        const toId = rel.direction === "in" ? node_id : rel.targetId;
+
+        await syscall_mutate(
+          {
+            type: "insert",
+            target: "neo4j:Relationship",
+            data: {
+              label: rel.targetLabel,
+              group_id: validatedGroupId,
+              from_id: fromId,
+              to_id: toId,
+              type: rel.type,
+              node_id: fromId,
+              ...(rel.props ?? {}),
+            },
+          },
+          ctx(validatedGroupId)
+        );
+      }
+
+      return { node_id };
+    },
+
+    async createRelationship({ fromId, fromLabel, toId, toLabel, type, props }: CreateRelationshipCallInput): Promise<void> {
+      const groupId = (props?.group_id as string) ?? process.env.DEFAULT_GROUP_ID ?? "allura-system";
+      const validatedGroupId = validateGroupId(groupId);
+
+      const result = await syscall_mutate(
+        {
+          type: "insert",
+          target: "neo4j:Relationship",
+          data: {
+            label: fromLabel,
+            group_id: validatedGroupId,
+            from_id: fromId,
+            to_id: toId,
+            from_label: fromLabel,
+            to_label: toLabel,
+            type,
+            node_id: fromId,
+            ...(props ?? {}),
+          },
+        },
+        ctx(validatedGroupId)
+      );
+
+      if (!result.success) {
+        throw new Error(result.error ?? "Kernel mutate failed for createRelationship");
+      }
+    },
+
+    async query<T = Record<string, unknown>>(cypher: string, params?: Record<string, unknown>): Promise<T[]> {
+      const groupId = (params?.group_id as string) ?? process.env.DEFAULT_GROUP_ID ?? "allura-system";
+
+      const result = await syscall_query(
+        {
+          target: "neo4j:Query",
+          query: { group_id: groupId, label: "Memory", cypher, ...params },
+          limit: (params?.limit as number) ?? 100,
+        },
+        ctx(groupId)
+      );
+
+      return (result.data ?? []) as T[];
+    },
+
+    async search<T = Record<string, unknown>>({ label, group_id, props, textMatch, limit = 10 }: SearchInput): Promise<T[]> {
+      const validatedGroupId = validateGroupId(group_id);
+
+      const result = await syscall_query(
+        {
+          target: "neo4j:Query",
+          query: {
+            group_id: validatedGroupId,
+            label,
+            ...(props ?? {}),
+            ...(textMatch ? { textMatch } : {}),
+          },
+          limit,
+        },
+        ctx(validatedGroupId)
+      );
+
+      return (result.data ?? []) as T[];
+    },
+  };
+}
+
 // ── Public export ──────────────────────────────────────────────────────────
 
 /**
@@ -505,6 +629,13 @@ function buildAdapterBackend(): MemoryAPI {
  * });
  */
 export function memory(): MemoryAPI {
+  const useKernel = process.env.MEMORY_BYPASS_KERNEL !== "true";
+
+  if (useKernel) {
+    return buildKernelBackend();
+  }
+
+  // Fallback: direct DB access (for migration/testing only)
   const backend = getGraphBackend();
   if (backend === "ruvector") {
     return buildAdapterBackend();
