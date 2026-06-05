@@ -36,6 +36,15 @@ MISSING_GROUP_ID = re.compile(
 )
 
 BASH_TOOLS = {"Bash", "bash", "shell", "run_command", "computer"}
+SQL_TOOL_HINTS = {
+    "execute_sql",
+    "query_database",
+    "insert_data",
+    "MCP_DOCKER_execute_sql",
+    "MCP_DOCKER_query_database",
+    "mcp__MCP_DOCKER__execute_sql",
+    "mcp__MCP_DOCKER__query_database",
+}
 NEO4J_WRITE_TOOLS = {
     "create_entities", "create_relations", "add_observations",
     "mcp__MCP_DOCKER__create_entities", "mcp__MCP_DOCKER__add_observations",
@@ -89,6 +98,27 @@ def check_sql(tool_input: dict) -> tuple[bool, str]:
         )
 
     return False, ""
+
+
+def is_sql_tool(tool_name: str, tool_input: dict) -> bool:
+    """Return true only for actual SQL/DB tools or SQL-looking payloads.
+
+    Claude Code discovery tools such as ToolSearch can carry a `query` field,
+    but that query is natural-language tool discovery, not a database read.
+    Blocking those calls prevents agents from discovering the very tools needed
+    to form valid scoped DB calls.
+    """
+    lowered = tool_name.lower()
+    if tool_name in SQL_TOOL_HINTS:
+        return True
+    if any(hint.lower() in lowered for hint in SQL_TOOL_HINTS):
+        return True
+
+    query = str(
+        tool_input.get("query") or tool_input.get("sql") or
+        tool_input.get("statement") or ""
+    ).lstrip()
+    return bool(re.match(r"^(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b", query, re.IGNORECASE))
 
 
 def check_neo4j_write(tool_name: str, tool_input: dict) -> tuple[bool, str]:
@@ -155,7 +185,8 @@ def main() -> int:
     if tool_name in BASH_TOOLS:
         checks.append(check_bash(tool_input))
 
-    checks.append(check_sql(tool_input))
+    if is_sql_tool(tool_name, tool_input):
+        checks.append(check_sql(tool_input))
     checks.append(check_neo4j_write(tool_name, tool_input))
     checks.append(check_promote(tool_name, tool_input))
     checks.append(check_group_id_drift(tool_name, tool_input))
