@@ -365,8 +365,23 @@ export async function syscall_trace(
     "audit:trace",
     context,
     async (claims) => {
-      // TODO: Actual trace logging implementation
-      return { trace_id: generateAuditId("trace", "audit", claims.group_id) };
+      const result = await resolveTarget({
+        intent: "mutate",
+        target: "pg:events",
+        type: "insert",
+        data: {
+          ...traceData,
+          group_id: claims.group_id,
+        },
+      });
+
+      if (!result.success) {
+        throw new Error("Target resolver trace failed");
+      }
+
+      return {
+        trace_id: generateAuditId("trace", "audit", claims.group_id),
+      };
     }
   );
 }

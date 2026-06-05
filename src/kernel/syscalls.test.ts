@@ -166,3 +166,70 @@ describe("syscall_query", () => {
     expect(result.data).toEqual([]);
   });
 });
+
+describe("syscall_trace", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should route trace through target resolver as pg:events insert", async () => {
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce(
+      { success: true, affected_rows: 1 }
+    );
+
+    const { syscall_trace } = await import("./syscalls");
+    const { resolveTarget } = await import("./target-resolver");
+
+    const result = await syscall_trace(
+      {
+        group_id: "allura-system",
+        agent_id: "brooks",
+        trace_type: "contribution",
+        content: "test",
+      },
+      ctx
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data?.trace_id).toBeDefined();
+    expect(resolveTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        intent: "mutate",
+        target: "pg:events",
+        type: "insert",
+      })
+    );
+  });
+
+  it("returns success:false when resolveTarget reports failure for trace", async () => {
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce(
+      { success: false }
+    );
+
+    const { syscall_trace } = await import("./syscalls");
+
+    const result = await syscall_trace(
+      { group_id: "allura-system", agent_id: "brooks", content: "test" },
+      ctx
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBeDefined();
+  });
+
+  it("injects group_id from claims into the trace data payload", async () => {
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce(
+      { success: true, affected_rows: 1 }
+    );
+
+    const { syscall_trace } = await import("./syscalls");
+    const { resolveTarget } = await import("./target-resolver");
+
+    await syscall_trace({ content: "test" }, ctx);
+
+    const callArg = vi.mocked(resolveTarget).mock.calls[0]![0];
+    expect((callArg.data as Record<string, unknown>)["group_id"]).toBe(
+      "allura-system"
+    );
+  });
+});
