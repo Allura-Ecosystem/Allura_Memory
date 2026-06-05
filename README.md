@@ -2,15 +2,15 @@
   <img src="public/readme/allura-wordmark.png" alt="Allura Memory" width="180" />
 </p>
 
-<h1 align="center">Memory That Shows Its Work</h1>
+<h1 align="center">Build AI Agents With Memory That Shows Its Work</h1>
 
 <p align="center">
-  <strong>Self-hosted, governed AI memory</strong><br/>
-  Traceable capture, human-in-the-loop curation, and dual-layer storage for agents that need context they can explain.
+  <strong>Open-source governed memory and workflow receipts for AI builders</strong><br/>
+  Capture what agents did, decide what becomes knowledge, and run repeatable workflows with evidence instead of vibes.
 </p>
 
 <p align="center">
-  <a href="#start-here">Start Here</a> · <a href="#quick-start">Quick Start</a> · <a href="#architecture">Architecture</a> · <a href="#features">Features</a> · <a href="#allura-cowork-plugin">Cowork Plugin</a> · <a href="#deployment">Deployment</a> · <a href="catalog/README.md">Catalog</a> · <a href="docs/allura/BLUEPRINT.md">Blueprint</a>
+  <a href="#start-here">Start Here</a> · <a href="#quick-start">Quick Start</a> · <a href="#what-can-you-build">What Can You Build?</a> · <a href="#architecture">Architecture</a> · <a href="#workflow-library">Workflow Library</a> · <a href="#deployment">Deployment</a> · <a href="library/README.md">Library</a> · <a href="catalog/README.md">Catalog</a>
 </p>
 
 ---
@@ -23,14 +23,22 @@
 
 AI agents forget. Sessions end, context evaporates, and your team's hard-won knowledge disappears into the void.
 
-Allura gives your agents **persistent, inspectable memory** — not a black box that silently decides what matters. Every memory is captured, scored, and routed through a clear pipeline where human judgment stays in the loop.
+Allura gives builders a **self-hosted memory and governance kernel** for agent systems. It is not a black box that silently decides what matters. Every memory starts as traceable evidence, then moves through scoring, review, and promotion before it becomes long-term knowledge.
 
-**Allura is for teams that want:**
+Use Allura when you are building agents that need to:
+
+- remember decisions across sessions;
+- show where an answer or decision came from;
+- separate raw traces from approved knowledge;
+- route work through repeatable story, review, architecture, or run workflows;
+- produce receipts before claiming work is Done.
+
+**Allura is for builders who want:**
 - 🔍 **Inspectability** — trace what was recorded, when, and why it was promoted
 - 🏛️ **Governance** — approval gates between raw capture and long-term knowledge
 - 🔒 **Self-hosting** — your data, your infrastructure, your rules
 - 🧩 **MCP-native** — plug into Claude, Cursor, OpenCode, or any MCP-compatible agent
-- 💻 **API-first operations** — MCP, CLI, and service endpoints with inspectable receipts
+- 🧭 **Workflow receipts** — story, review, architecture, and run records with evidence gates
 
 ---
 ## Start Here
@@ -39,11 +47,12 @@ New to Allura? Pick your path:
 
 | I want to… | Start with |
 |------------|-----------|
-| **Understand what Allura does** | Read [Why Allura?](#why-allura) above, then [Architecture](#architecture) |
+| **Understand what Allura does** | Read [Why Allura?](#why-allura), then [What Can You Build?](#what-can-you-build) |
 | **Install and connect my agent** | [`docs/user-guide/getting-started.md`](docs/user-guide/getting-started.md) |
 | **Use Claude Code with Allura** | [`docs/user-guide/claude.md`](docs/user-guide/claude.md) |
 | **Use Codex with Allura** | [`docs/user-guide/codex.md`](docs/user-guide/codex.md) |
 | **Use Claude + Codex together** | [`docs/user-guide/cowork.md`](docs/user-guide/cowork.md) |
+| **Choose a governed workflow** | [`library/README.md`](library/README.md) |
 | **Browse plugins** | [`catalog/plugins.md`](catalog/plugins.md) |
 | **See integration examples** | [`catalog/examples.md`](catalog/examples.md) |
 | **Understand governance rules** | [`catalog/gates.md`](catalog/gates.md) |
@@ -54,6 +63,38 @@ New to Allura? Pick your path:
 docker compose up -d
 curl http://localhost:3201/health
 ```
+
+---
+
+## What Can You Build?
+
+Allura is a foundation for builders making their own governed agent systems.
+
+| Builder goal | Allura gives you |
+|--------------|------------------|
+| **Persistent agent memory** | MCP tools for add/search/get/list/delete with tenant isolation |
+| **Approved knowledge base** | Raw PostgreSQL traces plus promotion-gated Neo4j knowledge |
+| **Agent cowork handoffs** | Shared handoff packets and validation receipts for Claude, Codex, OpenCode, Cursor, and other runtimes |
+| **Evidence-gated workflows** | Story, review, architecture, product-intake, retrospective, and RunRecord templates |
+| **Audit-friendly automation** | Append-only events, actor identity, source metadata, and explicit approval points |
+| **Your own methodology library** | A public `library/` pattern you can copy, adapt, and extend |
+
+If Archon is primarily a workflow runner, and Babysitter is primarily process enforcement, Allura is the governed memory and evidence layer that lets your workflows remember and justify themselves.
+
+---
+
+## Workflow Library
+
+The [`library/`](library/README.md) directory is the public chooser for builders. Start there when you want a repeatable process rather than only raw memory calls.
+
+```text
+Choose a workflow       → story, review, architecture, product intake, RunRecord
+Choose an adapter       → Claude, Codex, OpenCode, Cursor, or MCP HTTP
+Choose governance level → local receipts, review-gated promotion, or full evidence packet
+Run it                  → produce memory writes, validation evidence, and a closeout receipt
+```
+
+The first durable orchestration pattern is [`RunRecord`](library/methodologies/runrecord.md): a neutral template for recording goal, policy, evidence, validation, and outcome before Allura grows a full methodology runtime.
 
 ---
 ## Architecture
