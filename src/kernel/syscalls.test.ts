@@ -233,3 +233,137 @@ describe("syscall_trace", () => {
     );
   });
 });
+
+describe("syscall_audit", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should query events through target resolver", async () => {
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce({
+      success: true,
+      rows: [
+        { id: "1", agent_id: "brooks", event_type: "ADR_CREATED", created_at: "2026-06-05T10:00:00Z" },
+      ],
+    });
+
+    const { syscall_audit } = await import("./syscalls");
+    const { resolveTarget } = await import("./target-resolver");
+
+    const result = await syscall_audit({}, ctx);
+
+    expect(result.success).toBe(true);
+    expect(result.data).toHaveLength(1);
+    expect(resolveTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ intent: "query", target: "pg:events" })
+    );
+  });
+
+  it("should filter by actor", async () => {
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce({
+      success: true,
+      rows: [],
+    });
+
+    const { syscall_audit } = await import("./syscalls");
+    const { resolveTarget } = await import("./target-resolver");
+
+    await syscall_audit({ actor: "brooks" }, ctx);
+
+    expect(resolveTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: expect.objectContaining({ agent_id: "brooks" }),
+      })
+    );
+  });
+
+  it("should filter by intent (event_type)", async () => {
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce({
+      success: true,
+      rows: [],
+    });
+
+    const { syscall_audit } = await import("./syscalls");
+    const { resolveTarget } = await import("./target-resolver");
+
+    await syscall_audit({ intent: "ADR_CREATED" }, ctx);
+
+    expect(resolveTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: expect.objectContaining({ event_type: "ADR_CREATED" }),
+      })
+    );
+  });
+
+  it("should apply startTime filter in-memory", async () => {
+    const earlyRow = { id: "1", agent_id: "woz", created_at: "2026-06-01T00:00:00Z" };
+    const lateRow  = { id: "2", agent_id: "woz", created_at: "2026-06-05T12:00:00Z" };
+
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce({
+      success: true,
+      rows: [earlyRow, lateRow],
+    });
+
+    const { syscall_audit } = await import("./syscalls");
+
+    const cutoff = new Date("2026-06-03T00:00:00Z").getTime();
+    const result = await syscall_audit({ startTime: cutoff }, ctx);
+
+    expect(result.success).toBe(true);
+    expect(result.data).toHaveLength(1);
+    expect((result.data as typeof lateRow[])[0].id).toBe("2");
+  });
+
+  it("should apply endTime filter in-memory", async () => {
+    const earlyRow = { id: "1", agent_id: "woz", created_at: "2026-06-01T00:00:00Z" };
+    const lateRow  = { id: "2", agent_id: "woz", created_at: "2026-06-05T12:00:00Z" };
+
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce({
+      success: true,
+      rows: [earlyRow, lateRow],
+    });
+
+    const { syscall_audit } = await import("./syscalls");
+
+    const cutoff = new Date("2026-06-03T00:00:00Z").getTime();
+    const result = await syscall_audit({ endTime: cutoff }, ctx);
+
+    expect(result.success).toBe(true);
+    expect(result.data).toHaveLength(1);
+    expect((result.data as typeof earlyRow[])[0].id).toBe("1");
+  });
+
+  it("should inject group_id from claims into query filter", async () => {
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce({
+      success: true,
+      rows: [],
+    });
+
+    const { syscall_audit } = await import("./syscalls");
+    const { resolveTarget } = await import("./target-resolver");
+
+    await syscall_audit({}, ctx);
+
+    expect(resolveTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: expect.objectContaining({ group_id: "allura-system" }),
+      })
+    );
+  });
+
+  it("should limit results to 100", async () => {
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce({
+      success: true,
+      rows: [],
+    });
+
+    const { syscall_audit } = await import("./syscalls");
+    const { resolveTarget } = await import("./target-resolver");
+
+    await syscall_audit({}, ctx);
+
+    expect(resolveTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 100 })
+    );
+  });
+});

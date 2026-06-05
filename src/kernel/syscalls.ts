@@ -551,9 +551,38 @@ export async function syscall_audit(
     "audit",
     "audit:query",
     context,
-    async () => {
-      // TODO: Actual audit query implementation
-      return [];
+    async (claims) => {
+      const queryFilter: Record<string, unknown> = {
+        group_id: claims.group_id,
+      };
+
+      if (query.actor) queryFilter.agent_id = query.actor;
+      if (query.intent) queryFilter.event_type = query.intent;
+
+      const result = await resolveTarget({
+        intent: "query",
+        target: "pg:events",
+        query: queryFilter,
+        limit: 100,
+      });
+
+      let rows = (result.rows ?? []) as Array<Record<string, unknown>>;
+
+      // Apply time filters in-memory (pg query handler doesn't support range filters yet)
+      if (query.startTime) {
+        rows = rows.filter((r) => {
+          const ts = new Date(r.created_at as string).getTime();
+          return ts >= query.startTime!;
+        });
+      }
+      if (query.endTime) {
+        rows = rows.filter((r) => {
+          const ts = new Date(r.created_at as string).getTime();
+          return ts <= query.endTime!;
+        });
+      }
+
+      return rows;
     }
   );
 }
