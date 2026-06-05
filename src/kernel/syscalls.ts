@@ -24,6 +24,7 @@ import {
   ProofOfIntent,
   verifyProofOrThrow,
 } from "./proof";
+import { resolveTarget } from "./target-resolver";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -222,87 +223,11 @@ function generateAuditId(intent: string, subject: string, groupId: string): stri
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * C-003: Transaction context for atomic mutations
- * 
- * Provides transaction boundary for proof-gated mutations.
- * Ensures atomicity: mutation + audit trail are committed together.
- */
-interface TransactionContext {
-  txId: string;
-  status: "pending" | "committed" | "rolled_back";
-  operations: Array<{ type: string; target: string; data: unknown }>;
-  startTime: number;
-}
-
-// Simple in-memory transaction storage (will be replaced with DB transaction manager)
-const activeTransactions = new Map<string, TransactionContext>();
-
-/**
- * Begin a transaction for atomic mutations
- * 
- * @returns Transaction context
- */
-function beginTransaction(): TransactionContext {
-  const txId = `tx-${Date.now()}-${randomBytes(4).toString("hex")}`;
-  const tx: TransactionContext = {
-    txId,
-    status: "pending",
-    operations: [],
-    startTime: Date.now(),
-  };
-  activeTransactions.set(txId, tx);
-  return tx;
-}
-
-/**
- * Commit transaction and log audit trail
- * 
- * @param tx - Transaction to commit
- * @param groupId - Group ID for audit
- */
-async function commitTransaction(
-  tx: TransactionContext,
-  groupId: string
-): Promise<{ success: boolean; auditId?: string; error?: string }> {
-  try {
-    // TODO: Actual database transaction commit
-    // This is where the kernel would:
-    // 1. Commit all operations to database
-    // 2. Log audit trail within transaction
-    // 3. Commit transaction
-    
-    tx.status = "committed";
-    const auditId = generateAuditId("mutate", `tx:${tx.txId}`, groupId);
-    
-    return { success: true, auditId };
-  } catch (error) {
-    tx.status = "rolled_back";
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  } finally {
-    // Cleanup
-    activeTransactions.delete(tx.txId);
-  }
-}
-
-/**
- * Rollback transaction on failure
- * 
- * @param tx - Transaction to rollback
- */
-function rollbackTransaction(tx: TransactionContext): void {
-  tx.status = "rolled_back";
-  activeTransactions.delete(tx.txId);
-}
-
-/**
  * SYSCALL 1: mutate
- * 
+ *
  * The LINCHPIN syscall. Every state change flows through here.
- * C-003 FIX: Added transaction support for atomic mutations.
- * 
+ * Routes through resolveTarget which owns actual DB transaction semantics.
+ *
  * @param request - Mutation request
  * @param context - Syscall context
  * @returns Mutation result
@@ -316,37 +241,24 @@ export async function syscall_mutate(
     `database:${request.target}`,
     context,
     async (claims) => {
-      // C-003 FIX: Transaction support
-      const tx = beginTransaction();
-      
-      try {
-        // Add operation to transaction
-        tx.operations.push({
-          type: request.type,
-          target: request.target,
-          data: request.data,
-        });
-        
-        // TODO: Execute actual mutation (will be implemented with DB integration)
-        // For now, simulate successful mutation
-        const affected_rows = 0;
-        
-        // Commit transaction and get audit ID
-        const commitResult = await commitTransaction(tx, claims.group_id);
-        
-        if (!commitResult.success) {
-          throw new Error(commitResult.error || "Transaction commit failed");
-        }
-        
-        return {
-          affected_rows,
-          auditId: commitResult.auditId!,
-        };
-      } catch (error) {
-        // Rollback on any error
-        rollbackTransaction(tx);
-        throw error;
+      const result = await resolveTarget({
+        intent: "mutate",
+        target: request.target,
+        type: request.type,
+        data: {
+          ...(request.data as Record<string, unknown>),
+          group_id: claims.group_id,
+        },
+      });
+
+      if (!result.success) {
+        throw new Error("Target resolver mutation failed");
       }
+
+      return {
+        affected_rows: result.affected_rows ?? 0,
+        auditId: generateAuditId("mutate", request.target, claims.group_id),
+      };
     }
   );
 }
@@ -369,8 +281,18 @@ export async function syscall_query(
     `database:${request.target}`,
     context,
     async (claims) => {
-      // TODO: Actual query implementation
-      return [];
+      const result = await resolveTarget({
+        intent: "query",
+        target: request.target,
+        query: {
+          ...(request.query ?? {}),
+          group_id: claims.group_id,
+        },
+        limit: request.limit,
+        offset: request.offset,
+      });
+
+      return result.rows ?? [];
     }
   );
 }
