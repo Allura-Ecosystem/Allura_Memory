@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> · <a href="#architecture">Architecture</a> · <a href="#features">Features</a> · <a href="#allura-cowork-plugin">Cowork Plugin</a> · <a href="#deployment">Deployment</a> · <a href="docs/allura/BLUEPRINT.md">Blueprint</a>
+  <a href="#start-here">Start Here</a> · <a href="#quick-start">Quick Start</a> · <a href="#architecture">Architecture</a> · <a href="#features">Features</a> · <a href="#allura-cowork-plugin">Cowork Plugin</a> · <a href="#deployment">Deployment</a> · <a href="catalog/README.md">Catalog</a> · <a href="docs/allura/BLUEPRINT.md">Blueprint</a>
 </p>
 
 ---
@@ -33,7 +33,29 @@ Allura gives your agents **persistent, inspectable memory** — not a black box 
 - 💻 **API-first operations** — MCP, CLI, and service endpoints with inspectable receipts
 
 ---
+## Start Here
 
+New to Allura? Pick your path:
+
+| I want to… | Start with |
+|------------|-----------|
+| **Understand what Allura does** | Read [Why Allura?](#why-allura) above, then [Architecture](#architecture) |
+| **Install and connect my agent** | [`docs/user-guide/getting-started.md`](docs/user-guide/getting-started.md) |
+| **Use Claude Code with Allura** | [`docs/user-guide/claude.md`](docs/user-guide/claude.md) |
+| **Use Codex with Allura** | [`docs/user-guide/codex.md`](docs/user-guide/codex.md) |
+| **Use Claude + Codex together** | [`docs/user-guide/cowork.md`](docs/user-guide/cowork.md) |
+| **Browse plugins** | [`catalog/plugins.md`](catalog/plugins.md) |
+| **See integration examples** | [`catalog/examples.md`](catalog/examples.md) |
+| **Understand governance rules** | [`catalog/gates.md`](catalog/gates.md) |
+| **Read the canonical architecture** | [`docs/allura/BLUEPRINT.md`](docs/allura/BLUEPRINT.md) |
+
+**Quick verification after install:**
+```bash
+docker compose up -d
+curl http://localhost:3201/health
+```
+
+---
 ## Architecture
 
 <p align="center">
@@ -380,6 +402,22 @@ bun run test:all     # Full suite (typecheck + lint + unit + e2e + MCP)
 
 ## Documentation
 
+### Public Surface (Start Here)
+
+| Document | Description |
+|----------|-------------|
+| [`catalog/README.md`](catalog/README.md) | Public index — plugins, adapters, workflows, gates, examples |
+| [`catalog/plugins.md`](catalog/plugins.md) | Plugin catalog with install and validation steps |
+| [`catalog/adapters.md`](catalog/adapters.md) | MCP client configurations for Claude, Codex, Cursor, OpenCode |
+| [`catalog/workflows.md`](catalog/workflows.md) | End-to-end memory pipeline from capture to promotion |
+| [`catalog/gates.md`](catalog/gates.md) | Governance invariants, approval boundaries, and risk register |
+| [`catalog/examples.md`](catalog/examples.md) | Integration examples and verification snippets |
+| [`docs/user-guide/`](docs/user-guide/) | Getting started guides for each runtime |
+| [`docs/plugins/`](docs/plugins/) | Plugin system documentation and authoring guide |
+| [`docs/reference/`](docs/reference/) | MCP tools, API reference, and glossary |
+
+### Canonical Architecture (Source of Truth)
+
 | Document | Description |
 |----------|-------------|
 | [`docs/allura/BLUEPRINT.md`](docs/allura/BLUEPRINT.md) | Core design reference and requirements |
@@ -388,6 +426,8 @@ bun run test:all     # Full suite (typecheck + lint + unit + e2e + MCP)
 | [`docs/allura/REQUIREMENTS-MATRIX.md`](docs/allura/REQUIREMENTS-MATRIX.md) | Requirements traceability and coverage |
 | [`docs/allura/RISKS-AND-DECISIONS.md`](docs/allura/RISKS-AND-DECISIONS.md) | Architectural decisions, risks, and accepted tradeoffs |
 | [`docs/allura/DATA-DICTIONARY.md`](docs/allura/DATA-DICTIONARY.md) | Schema and field reference |
+
+> **Governance note:** The public surface is a navigation layer. If any public doc conflicts with `docs/allura/`, the canonical architecture docs win.
 
 ---
 

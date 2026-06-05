@@ -384,6 +384,21 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-DASH-007 | Every dashboard panel shows source of truth, freshness, degraded state, and no fabricated healthy/live claims | AD-14, AD-26 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-31-memory-command-center-operator-surface) |
 | REQ-DASH-008 | Every mutation shows a governance receipt containing intent, actor, source, policy, validation, and audit trail before completion | AD-XX, REQ-GOV-001 | [BLUEPRINT.md](./BLUEPRINT.md#ruvix-governed-memory-command-center) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memory-command-center-adapter-contracts) |
 
+### Section 6D: Public Surface / Onboarding Requirements (REQ-PUB-001–REQ-PUB-008)
+
+> **Note:** These requirements govern the public-facing documentation and catalog surface that helps newcomers understand Allura without reading internal architecture docs first. Canonical governance truth remains in `docs/allura/`; the public surface is a navigation layer only. See AD-36.
+
+| ID | Requirement | Trace | Satisfied by |
+|----|-------------|-------|--------------|
+| REQ-PUB-001 | A public `catalog/` directory exists as the first-read index, linking to plugins, adapters, workflows, gates, and examples | AD-36 | [`catalog/README.md`](../catalog/README.md) |
+| REQ-PUB-002 | Plugin catalog documents each plugin's purpose, runtime support, install commands, and validation steps | AD-36 | [`catalog/plugins.md`](../catalog/plugins.md) · [`docs/plugins/index.md`](../plugins/index.md) |
+| REQ-PUB-003 | Adapter catalog documents MCP transport options (stdio, HTTP) and client configurations for Claude, Codex, Cursor, and OpenCode | AD-36 | [`catalog/adapters.md`](../catalog/adapters.md) |
+| REQ-PUB-004 | Workflow catalog documents the governed memory pipeline (capture → score → queue → curate → promote) with diagrams | AD-36 | [`catalog/workflows.md`](../catalog/workflows.md) |
+| REQ-PUB-005 | Gates catalog documents the 6 non-negotiable invariants, approval boundaries, and risk register | AD-36 | [`catalog/gates.md`](../catalog/gates.md) |
+| REQ-PUB-006 | User guide exists for each supported runtime (Claude Code, Codex, Claude+Codex cowork) with install, verify, and troubleshoot steps | AD-36 | [`docs/user-guide/index.md`](../user-guide/index.md) · [`docs/user-guide/claude.md`](../user-guide/claude.md) · [`docs/user-guide/codex.md`](../user-guide/codex.md) · [`docs/user-guide/cowork.md`](../user-guide/cowork.md) |
+| REQ-PUB-007 | Reference docs exist for MCP tools, HTTP API, and glossary of terms | AD-36 | [`docs/reference/index.md`](../reference/index.md) · [`docs/reference/mcp-tools.md`](../reference/mcp-tools.md) · [`docs/reference/api.md`](../reference/api.md) · [`docs/reference/glossary.md`](../reference/glossary.md) |
+| REQ-PUB-008 | Root README links to the public surface and includes a clear "Start here" path without duplicating canonical docs | AD-36 | [`README.md`](../README.md) |
+
 ### Section 7: Use Case Index
 
 | Use Case | Domain Area | Requirements |
