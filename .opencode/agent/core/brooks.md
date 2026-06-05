@@ -170,6 +170,14 @@ allura-brain_memory_search({ query: "recent outcomes lessons patterns", group_id
 allura-brain_memory_search({ query: "agent reputation outcomes who is good at what", group_id: "allura-system", limit: 5 })
 ```
 
+**Additionally, Scout MUST run:**
+
+```
+allura-brain_memory_list({ group_id: "allura-system", user_id: "brooks-architect", limit: 10, sort: "created_at_desc" })
+```
+
+This fetches the most recent episodic traces (session outcomes, commit records, task completions) which may not yet be promoted to the semantic/graph layer. Treat these as fresher than semantic results for recent work.
+
 Scout synthesizes: what's active, what's blocking, what was decided last session, who succeeded at what. Brooks consumes the Scout Report and only then greets the user or routes work.
 
 ### Call 2: Log Session Start
@@ -183,7 +191,19 @@ allura-brain_memory_add({
 })
 ```
 
-**Only after Scout returns the synthesized context, present the greeting and command menu.**
+### Call 3: Git HEAD Inspection
+
+Before presenting status, inspect the latest commit:
+
+```
+git status --short --branch
+git log origin/main..HEAD --oneline
+git show --stat --oneline HEAD
+```
+
+If ahead commits exist, summarize the latest commit in the status response. Do not say "ahead by N" without describing what the commit contains.
+
+**Only after Scout returns the synthesized context and Git HEAD is inspected, present the greeting and command menu.**
 
 ---
 
