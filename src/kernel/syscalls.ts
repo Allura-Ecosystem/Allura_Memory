@@ -25,6 +25,7 @@ import {
   verifyProofOrThrow,
 } from "./proof";
 import { resolveTarget } from "./target-resolver";
+import { validateGroupId } from "@/lib/validation/group-id";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -503,8 +504,36 @@ export async function syscall_isolate(
     "isolate",
     `tenant:${groupId}`,
     context,
-    async () => {
-      // TODO: Actual isolation implementation
+    async (claims) => {
+      // 1. Validate the requested group_id matches the caller's group_id
+      if (groupId !== claims.group_id) {
+        throw new Error(
+          `Tenant isolation violation: caller group_id "${claims.group_id}" ` +
+          `cannot access tenant "${groupId}"`
+        );
+      }
+
+      // 2. Validate group_id format
+      validateGroupId(groupId);
+
+      // 3. Log the isolation check to audit trail
+      await resolveTarget({
+        intent: "mutate",
+        target: "pg:events",
+        type: "insert",
+        data: {
+          group_id: claims.group_id,
+          agent_id: claims.actor ?? context.actor,
+          event_type: "ISOLATION_CHECK",
+          status: "completed",
+          metadata: JSON.stringify({
+            requested_group_id: groupId,
+            caller_group_id: claims.group_id,
+            isolated: true,
+          }),
+        },
+      });
+
       return { isolated: true };
     }
   );

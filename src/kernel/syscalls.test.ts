@@ -367,3 +367,64 @@ describe("syscall_audit", () => {
     );
   });
 });
+
+describe("syscall_isolate", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should pass when group_id matches caller context", async () => {
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce({
+      success: true,
+      affected_rows: 1,
+    });
+
+    const { syscall_isolate } = await import("./syscalls");
+
+    const result = await syscall_isolate("allura-system", ctx);
+
+    expect(result.success).toBe(true);
+    expect(result.data?.isolated).toBe(true);
+  });
+
+  it("should fail when group_id doesn't match caller context", async () => {
+    const { syscall_isolate } = await import("./syscalls");
+
+    const result = await syscall_isolate("allura-other-tenant", ctx);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("isolation violation");
+  });
+
+  it("should log isolation check to pg:events", async () => {
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce({
+      success: true,
+      affected_rows: 1,
+    });
+
+    const { syscall_isolate } = await import("./syscalls");
+    const { resolveTarget } = await import("./target-resolver");
+
+    await syscall_isolate("allura-system", ctx);
+
+    expect(resolveTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        intent: "mutate",
+        target: "pg:events",
+        type: "insert",
+        data: expect.objectContaining({
+          event_type: "ISOLATION_CHECK",
+        }),
+      })
+    );
+  });
+
+  it("should reject invalid group_id format", async () => {
+    const badCtx: SyscallContext = { ...ctx, group_id: "bad-format" };
+    const { syscall_isolate } = await import("./syscalls");
+
+    const result = await syscall_isolate("bad-format", badCtx);
+
+    expect(result.success).toBe(false);
+  });
+});
