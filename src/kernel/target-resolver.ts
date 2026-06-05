@@ -18,6 +18,7 @@ if (typeof window !== "undefined") {
   throw new Error("server-side only");
 }
 
+import { randomUUID } from "crypto";
 import { getPool } from "@/lib/postgres/connection";
 import {
   readTransaction,
@@ -43,6 +44,33 @@ export interface ResolveResult {
   success: boolean;
   affected_rows?: number;
   rows?: unknown[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECURITY: IDENTIFIER AND LABEL VALIDATORS
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SAFE_IDENTIFIER = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+function validateIdentifier(name: string): string {
+  if (!SAFE_IDENTIFIER.test(name)) {
+    throw new Error(`Invalid SQL identifier: "${name}"`);
+  }
+  return name;
+}
+
+const VALID_LABELS = new Set([
+  "Task", "Decision", "Lesson", "Person", "Project", "Tool",
+  "Context", "Agent", "AgentGroup", "Insight", "Event", "Session", "Memory",
+]);
+
+function validateLabel(label: unknown): string {
+  if (typeof label !== "string" || !VALID_LABELS.has(label)) {
+    throw new Error(
+      `Invalid node label: "${String(label)}" — must be one of: ${[...VALID_LABELS].join(", ")}`
+    );
+  }
+  return label;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,8 +118,8 @@ async function pgMutate(
   const data = op.data ?? {};
   requireGroupId(data);
 
-  // Build a parameterized INSERT from data keys
-  const keys = Object.keys(data);
+  // Build a parameterized INSERT from data keys — validate all column names
+  const keys = Object.keys(data).map(validateIdentifier);
   const columns = keys.join(", ");
   const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
   const values = keys.map((k) => serializeValue(data[k]));
@@ -114,17 +142,27 @@ async function pgQuery(
   const queryBag = op.query ?? {};
   requireGroupId(queryBag);
 
-  const keys = Object.keys(queryBag);
+  const keys = Object.keys(queryBag).map(validateIdentifier);
   const whereClause =
     keys.length > 0
       ? "WHERE " + keys.map((k, i) => `${k} = $${i + 1}`).join(" AND ")
       : "";
-  const values = keys.map((k) => queryBag[k]);
+  const values: unknown[] = keys.map((k) => queryBag[k]);
 
-  const limit = op.limit != null ? ` LIMIT ${op.limit}` : "";
-  const offset = op.offset != null ? ` OFFSET ${op.offset}` : "";
+  let paramIdx = keys.length + 1;
+  let limitClause = "";
+  let offsetClause = "";
 
-  const sql = `SELECT * FROM ${table} ${whereClause} ORDER BY created_at DESC${limit}${offset}`.trim();
+  if (op.limit != null) {
+    limitClause = ` LIMIT $${paramIdx++}`;
+    values.push(op.limit);
+  }
+  if (op.offset != null) {
+    offsetClause = ` OFFSET $${paramIdx++}`;
+    values.push(op.offset);
+  }
+
+  const sql = `SELECT * FROM ${table} ${whereClause} ORDER BY created_at DESC${limitClause}${offsetClause}`.trim();
 
   const pool = getPool();
   const result = await pool.query(sql, values);
@@ -147,9 +185,10 @@ async function neo4jMutate(
   const groupId = requireGroupId(data);
 
   if (resource === "Entity" || resource === "Relationship") {
-    const label = typeof data["label"] === "string" ? data["label"] : resource;
-    const nodeId =
-      typeof data["node_id"] === "string" ? data["node_id"] : `node-${Date.now()}`;
+    const label = validateLabel(
+      typeof data["label"] === "string" ? data["label"] : resource
+    );
+    const nodeId = (data["node_id"] as string) ?? randomUUID();
 
     // Build props bag — exclude synthetic fields consumed above
     const exclude = new Set(["label", "node_id", "group_id"]);
@@ -175,8 +214,9 @@ async function neo4jQuery(op: TargetOperation): Promise<ResolveResult> {
   const queryBag = op.query ?? {};
   requireGroupId(queryBag);
 
-  const label =
-    typeof queryBag["label"] === "string" ? queryBag["label"] : "Memory";
+  const label = validateLabel(
+    typeof queryBag["label"] === "string" ? queryBag["label"] : "Memory"
+  );
   const limit = op.limit ?? 25;
 
   // Build WHERE conditions from query bag keys (excluding label)

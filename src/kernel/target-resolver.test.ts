@@ -161,7 +161,23 @@ describe("resolveTarget", () => {
     expect(Array.isArray(result.rows)).toBe(true);
   });
 
-  // ── 7. Unknown target prefix rejected ────────────────────────────────────
+  // ── 7. neo4j:Query read resolves successfully ─────────────────────────────
+  it("should resolve neo4j:Query", async () => {
+    const resolveTarget = await getResolver();
+
+    const op: TargetOperation = {
+      intent: "query",
+      target: "neo4j:Query",
+      query: { group_id: "allura-system", label: "Insight" },
+      limit: 5,
+    };
+
+    const result = await resolveTarget(op);
+    expect(result.success).toBe(true);
+    expect(Array.isArray(result.rows)).toBe(true);
+  });
+
+  // ── 8. Unknown target prefix rejected ────────────────────────────────────
   it("unknown target prefix throws an error containing 'Unknown target'", async () => {
     const resolveTarget = await getResolver();
 
