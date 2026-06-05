@@ -66,6 +66,16 @@
         "name": "Sabir Asheed"
       },
       "category": "Productivity"
+    },
+    {
+      "name": "team-ram",
+      "source": "./plugins/team-ram",
+      "description": "10 AI agents modeled after computing pioneers — a Brooksian surgical team for architecture, implementation, review, and infrastructure.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Sabir Asheed"
+      },
+      "category": "Coding"
     }
   ]
 }
