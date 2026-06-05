@@ -51,6 +51,13 @@ NEO4J_WRITE_TOOLS = {
 }
 PROMOTE_TOOLS = {"memory_promote", "allura-brain__memory_promote"}
 
+# Claude Code discovery/meta tools — never DB operations, even if their
+# arguments superficially resemble SQL (e.g. ToolSearch's `select:Name` syntax).
+NON_DB_TOOLS = {
+    "ToolSearch", "Task", "TaskCreate", "TaskUpdate", "TaskList",
+    "TaskGet", "TaskStop", "Glob", "Grep", "Read", "Edit", "Write",
+}
+
 
 # ── Checkers ───────────────────────────────────────────────────────────────────
 
@@ -108,6 +115,9 @@ def is_sql_tool(tool_name: str, tool_input: dict) -> bool:
     Blocking those calls prevents agents from discovering the very tools needed
     to form valid scoped DB calls.
     """
+    if tool_name in NON_DB_TOOLS:
+        return False
+
     lowered = tool_name.lower()
     if tool_name in SQL_TOOL_HINTS:
         return True
@@ -118,7 +128,9 @@ def is_sql_tool(tool_name: str, tool_input: dict) -> bool:
         tool_input.get("query") or tool_input.get("sql") or
         tool_input.get("statement") or ""
     ).lstrip()
-    return bool(re.match(r"^(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b", query, re.IGNORECASE))
+    # Require whitespace after the SQL keyword so tool-discovery syntax like
+    # `select:ToolName` is not misread as a SQL `SELECT` statement.
+    return bool(re.match(r"^(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s", query, re.IGNORECASE))
 
 
 def check_neo4j_write(tool_name: str, tool_input: dict) -> tuple[bool, str]:

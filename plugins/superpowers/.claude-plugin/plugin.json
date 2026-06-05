@@ -1,5 +1,6 @@
 {
   "name": "superpowers",
+  "displayName": "Superpowers",
   "version": "0.1.0",
   "description": "Extended capability plugin — reserved for future Allura integrations and advanced memory workflows.",
   "author": {

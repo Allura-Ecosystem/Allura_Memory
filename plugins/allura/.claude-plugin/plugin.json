@@ -1,7 +1,8 @@
 {
   "name": "allura",
+  "displayName": "Allura",
   "version": "0.1.0",
-  "description": "Allura README asset and guidance pack for presenting Allura Brain and governed memory.",
+  "description": "README visuals and guidance for presenting Allura Brain and governed memory.",
   "author": {
     "name": "Sabir Asheed"
   },
@@ -25,14 +26,6 @@
       "Create an Allura README section.",
       "Explain Allura Brain with the plugin assets.",
       "Draft a governed memory overview."
-    ],
-    "brandColor": "#111827",
-    "composerIcon": "./assets/logo.png",
-    "logo": "./assets/logo.png",
-    "screenshots": [
-      "./assets/readme-hero.png",
-      "./assets/readme-allura-brain.png",
-      "./assets/readme-memory-flow.png"
     ]
   }
 }
