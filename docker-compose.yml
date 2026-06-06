@@ -191,6 +191,49 @@ services:
       retries: 5
       start_period: 10s
 
+  # =============================================================================
+  # Allura Memory Dashboard — Next.js dev server (Epic 8 / AionUI fork)
+  # Hot-reload: source is mounted as a volume so edits reflect immediately.
+  # Visit: http://localhost:3100/dashboard
+  # =============================================================================
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: allura-dashboard-dev
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      # Mount source for hot reload — node_modules stays in the image layer
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    env_file:
+      - .env
+      - .env.local
+    environment:
+      - NODE_ENV=development
+      - ALLURA_DASHBOARD_PORT=3100
+      - NEXT_TELEMETRY_DISABLED=1
+      - POSTGRES_HOST=knowledge-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - NEO4J_URI=bolt://knowledge-neo4j:7687
+      - NEO4J_USER=${NEO4J_USER}
+      - DEFAULT_GROUP_ID=${DEFAULT_GROUP_ID:-allura-system}
+      - NEXT_PUBLIC_API_BASE=http://localhost:3100
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - knowledge-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+
   # Notion: remote MCP only (mcp__claude_ai_Notion__*). No local service needed.
 
 # =============================================================================

@@ -1,112 +1,390 @@
+"use client"
+
 import {
-  CheckCircle2,
-  FileSearch,
-  GitBranch,
-  ShieldAlert,
-  ShieldCheck,
+  Globe,
+  LayoutGrid,
+  MessageCircle,
+  Moon,
+  Network,
+  Plus,
   Send,
+  Shield,
+  Sparkles,
+  Star,
+  Users,
 } from "lucide-react"
+import Link from "next/link"
+import type { ComponentType, CSSProperties } from "react"
 
-import { DashboardShell } from "@/components/dashboard/shell"
-import { getDashboardRouteContract, probeDashboardEndpoint } from "@/lib/dashboard"
+interface AgentCardData {
+  title: string
+  description: string
+  href: string
+  iconBg: string
+  icon: ComponentType<{ size?: number; style?: CSSProperties }>
+}
 
-export const dynamic = "force-dynamic"
+const agentCards: AgentCardData[] = [
+  {
+    title: "Memory Curator",
+    description: "Promote episodic notes into semantic memory.",
+    href: "/dashboard/curator",
+    iconBg: "#2563eb",
+    icon: Network,
+  },
+  {
+    title: "Dream Runner",
+    description: "Run consolidation, duplicate detection, and contradiction scans.",
+    href: "/dashboard/dreams",
+    iconBg: "#ea580c",
+    icon: Moon,
+  },
+  {
+    title: "Governance Auditor",
+    description: "Check lineage, policy gates, and evidence chains.",
+    href: "/dashboard/governance",
+    iconBg: "#2563eb",
+    icon: Shield,
+  },
+  {
+    title: "Agent Contracts",
+    description: "Review agent permissions and boundaries.",
+    href: "/dashboard/agents",
+    iconBg: "#16a34a",
+    icon: Users,
+  },
+  {
+    title: "Kanban Planner",
+    description: "Plan and track work across your projects.",
+    href: "/dashboard/kanban",
+    iconBg: "#d97706",
+    icon: LayoutGrid,
+  },
+  {
+    title: "Insight Finder",
+    description: "Surface patterns and recommend next steps.",
+    href: "/dashboard/insights",
+    iconBg: "#16a34a",
+    icon: Sparkles,
+  },
+]
 
-export default async function DashboardPage() {
-  const route = getDashboardRouteContract("overview")
-  const probes = await Promise.all([
-    probeDashboardEndpoint({
-      endpoint: "/api/health",
-      label: "System Health",
-      source: route.source,
-    }),
-    probeDashboardEndpoint({
-      endpoint: "/api/memory?group_id=allura-system&limit=5",
-      label: "Memory API",
-      source: getDashboardRouteContract("memories").source,
-    }),
-    probeDashboardEndpoint({
-      endpoint: "/api/kanban",
-      label: "Kanban Board",
-      source: {
-        label: "kanban-api",
-        endpoint: "/api/kanban",
-        trustLevel: "authoritative",
-      },
-    }),
-  ])
+const agentPills = [
+  { label: "Aion CLI", active: true },
+  { label: "MC", color: "#2563eb" },
+  { label: "DR", color: "#ea580c" },
+  { label: "GA", color: "#16a34a" },
+  { label: "AC", color: "#d97706" },
+  { label: "KP", color: "#7c3aed" },
+  { label: "IF", color: "#0891b2" },
+]
 
+export default function DashboardHomePage() {
   return (
-    <DashboardShell activeRoute={route}>
-      <section className="dashboard-command-bar" aria-label="Command input">
-        <p>Trace memory, policy, lineage, and evidence for the active allura-system scope.</p>
-        <button type="button" aria-label="Run governed inspection">
-          <Send aria-hidden="true" size={18} />
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "48px 24px 32px",
+        background: "#f5f1e6",
+      }}
+    >
+      {/* Header */}
+      <h1
+        style={{
+          fontSize: 28,
+          fontWeight: 700,
+          color: "#1a1a1a",
+          margin: "0 0 8px",
+          textAlign: "center",
+          letterSpacing: "-0.02em",
+        }}
+      >
+        Hi, what&apos;s your plan for today?
+      </h1>
+
+      {/* Agent picker */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 24,
+          flexWrap: "wrap",
+          justifyContent: "center",
+        }}
+      >
+        {agentPills.map((pill) => {
+          if (pill.active) {
+            return (
+              <button
+                key={pill.label}
+                type="button"
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#1a1a1a",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {pill.label}
+              </button>
+            )
+          }
+          return (
+            <button
+              key={pill.label}
+              type="button"
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                border: "none",
+                background: pill.color ?? "#6b7280",
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              {pill.label}
+            </button>
+          )
+        })}
+        <button
+          type="button"
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            border: "1.5px dashed #d1d5db",
+            background: "transparent",
+            color: "#9ca3af",
+            fontSize: 18,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+          aria-label="Add agent"
+        >
+          <Plus size={14} />
         </button>
-      </section>
+      </div>
 
-      <section className="dashboard-agent-grid" aria-label="Primary memory and governance surfaces">
-        <a className="dashboard-agent-card" data-signal="memory" href="/dashboard/memories">
-          <FileSearch aria-hidden="true" size={24} />
-          <strong>Memory Curator</strong>
-          <small>Search memory records, source receipts, confidence, and provenance.</small>
-        </a>
-        <a className="dashboard-agent-card" data-signal="approval" href="/dashboard/curator">
-          <CheckCircle2 aria-hidden="true" size={24} />
-          <strong>Promotion Review</strong>
-          <small>Review proposed knowledge, approvals, and required audit receipts.</small>
-        </a>
-        <a className="dashboard-agent-card" data-signal="governance" href="/dashboard/governance">
-          <ShieldCheck aria-hidden="true" size={24} />
-          <strong>Governance Auditor</strong>
-          <small>Check policy gates, degraded contracts, evidence chains, and role boundaries.</small>
-        </a>
-        <a className="dashboard-agent-card" data-signal="lineage" href="/dashboard/graph">
-          <GitBranch aria-hidden="true" size={24} />
-          <strong>Lineage Graph</strong>
-          <small>Follow promoted semantic memory relationships back to evidence.</small>
-        </a>
-        <a className="dashboard-agent-card" data-signal="attention" href="/dashboard/policy-center">
-          <ShieldAlert aria-hidden="true" size={24} />
-          <strong>Policy Center</strong>
-          <small>Expose missing Captain policies as degraded contracts until APIs exist.</small>
-        </a>
-        <a className="dashboard-agent-card" data-signal="system" href="/dashboard/api-health">
-          <ShieldCheck aria-hidden="true" size={24} />
-          <strong>Runtime Evidence</strong>
-          <small>Check live health probes without turning reachability into false approval.</small>
-        </a>
-      </section>
+      {/* Chat textarea card */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 680,
+          background: "#fff",
+          borderRadius: 16,
+          boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+          border: "1px solid #e8e3d8",
+          marginBottom: 32,
+          overflow: "hidden",
+        }}
+      >
+        <textarea
+          placeholder="Send a message, upload files, open a folder, or create a scheduled task..."
+          style={{
+            width: "100%",
+            minHeight: 96,
+            padding: "16px 16px 0",
+            border: "none",
+            outline: "none",
+            resize: "none",
+            fontSize: 14,
+            color: "#374151",
+            background: "transparent",
+            fontFamily: "inherit",
+          }}
+          aria-label="Message input"
+        />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "10px 12px",
+            borderTop: "1px solid #f3f4f6",
+          }}
+        >
+          <button
+            type="button"
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: "#2563eb",
+              border: "none",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+            aria-label="Attach"
+          >
+            <Plus size={14} />
+          </button>
 
-      <section className="dashboard-live-grid" aria-label="Live API connection probes">
-        {probes.map((probe) => (
-          <article className="dashboard-live-card" data-degraded={probe.degraded} key={probe.endpoint}>
-            <div>
-              <p className="dashboard-kicker">{probe.source.label}</p>
-              <h3>{probe.label}</h3>
-            </div>
-            <dl>
-              <div>
-                <dt>endpoint</dt>
-                <dd>{probe.endpoint}</dd>
+          {[
+            { label: "Scope: Allura Memory" },
+            { label: "Default Model" },
+            { label: "Full Access" },
+          ].map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "4px 10px",
+                borderRadius: 6,
+                border: "1px solid #e5e7eb",
+                background: "#f9fafb",
+                fontSize: 12,
+                color: "#374151",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {item.label}
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <path d="M2.5 3.75L5 6.25L7.5 3.75" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ))}
+
+          <div style={{ flex: 1 }} />
+
+          <button
+            type="button"
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: "50%",
+              background: "#2563eb",
+              border: "none",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+            aria-label="Send"
+          >
+            <Send size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* Subtitle */}
+      <p
+        style={{
+          fontSize: 13,
+          color: "#6b7280",
+          margin: "0 0 20px",
+          textAlign: "center",
+        }}
+      >
+        Select an assistant to start a task
+      </p>
+
+      {/* Agent cards grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 12,
+          width: "100%",
+          maxWidth: 680,
+          marginBottom: 40,
+        }}
+      >
+        {agentCards.map((card) => {
+          const Icon = card.icon
+          return (
+            <Link
+              key={card.href}
+              href={card.href}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+                padding: 16,
+                background: "#fff",
+                borderRadius: 12,
+                border: "1px solid #e8e3d8",
+                textDecoration: "none",
+                transition: "box-shadow 0.15s",
+              }}
+            >
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: card.iconBg,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Icon size={18} style={{ color: "#fff" }} />
               </div>
               <div>
-                <dt>status</dt>
-                <dd>{probe.statusCode ?? "unreachable"}</dd>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 3, lineHeight: 1.2 }}>
+                  {card.title}
+                </div>
+                <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
+                  {card.description}
+                </div>
               </div>
-              <div>
-                <dt>freshness</dt>
-                <dd>{probe.freshness}</dd>
-              </div>
-              <div>
-                <dt>state</dt>
-                <dd>{probe.degraded ? "degraded" : "connected"}</dd>
-              </div>
-            </dl>
-            <p>{probe.message}</p>
-          </article>
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Bottom secondary nav */}
+      <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+        {[MessageCircle, Star, Globe].map((Icon, i) => (
+          <button
+            key={i}
+            type="button"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              border: "1px solid #e8e3d8",
+              background: "#fff",
+              color: "#9ca3af",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >
+            <Icon size={16} />
+          </button>
         ))}
-      </section>
-    </DashboardShell>
+      </div>
+    </div>
   )
 }
