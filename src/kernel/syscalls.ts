@@ -523,7 +523,7 @@ export async function syscall_isolate(
         type: "insert",
         data: {
           group_id: claims.group_id,
-          agent_id: claims.actor ?? context.actor,
+          agent_id: context.actor,
           event_type: "ISOLATION_CHECK",
           status: "completed",
           metadata: JSON.stringify({

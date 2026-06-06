@@ -5,8 +5,8 @@
  * Verifies that syscall_mutate and syscall_query route through resolveTarget.
  */
 
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { SyscallContext, MutationRequest, QueryRequest } from "./syscalls";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MutationRequest, QueryRequest, SyscallContext } from "./syscalls";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MOCKS
@@ -24,10 +24,8 @@ vi.mock("./policy", () => ({
   evaluatePoliciesOrThrow: vi.fn(), // no-op
 }));
 
-vi.stubEnv(
-  "RUVIX_KERNEL_SECRET",
-  "test-secret-key-for-ruvix-kernel-proof-engine-32chars"
-);
+process.env.RUVIX_KERNEL_SECRET =
+  "test-secret-key-for-ruvix-kernel-proof-engine-32chars";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIXTURES
