@@ -112,6 +112,7 @@
 | RK-26 | Corporate users see Team RAM internals and bounce | Medium | Active |
 | RK-27 | Agents claim Done without evidence gates | High | Active |
 | RK-28 | Run journals drift from Brain/Notion state | Medium | Active |
+| RK-29 | BMAD/Notion/story status drift causes false Done or false backlog | Medium | Active |
 
 ### Risk Detail
 
@@ -145,6 +146,7 @@
 | RK-26 | Corporate users see Team RAM internals and bounce | Medium | Corporate-facing surfaces use familiar terms — run, story, approval, evidence, review, retrospective — while Team RAM remains an internal routing implementation detail. | Active |
 | RK-27 | Agents claim Done without evidence gates | High | RunRecord policy requires explicit quality gates and evidence before Done. Brain receipts are audit context, not proof by themselves. | Active |
 | RK-28 | Run journals drift from Brain/Notion state | Medium | Run journals are receipt trails; Notion remains planning/decision source of truth when reachable, and Brain stores append-only run outcomes and blockers. | Active |
+| RK-29 | BMAD/Notion/story status drift causes false Done or false backlog | Medium | Epic 7 retrospective found local BMAD story files still marked `backlog` after prior completion evidence, while Notion remains the canonical board but was unavailable in the runtime. Require Scout reconciliation before dev/review/retro: check Notion when available, Brain outcome memories, local story artifacts, and validation evidence; record any source mismatch as a blocker or explicit caveat before marking Done. | Active |
 
 | AD-25 | Phase 6 Closure — all deliverables shipped | Decided | DLQ shipped (curator watchdog). Knowledge Hub Bridge shipped (Notion sync worker). Auth layer shipped (dev-auth + config). CSV Export shipped (/admin/approvals CSV download). SDK not separately shipped — MCP tools are the SDK. CORS shipped (next.config). Sentry shipped (captureException in curator approve). Phase 6 scope is complete. Decision: close Phase 6 and record it. Alternatives rejected: (1) Continue tracking as open — rejected because all deliverables exist in code and pass tests. (2) Extend Phase 6 for k6 load testing — rejected because load testing is a separate concern (tracked as RK-14). Consequences: Phase 6 ADR is now closed. Next phases focus on Curator pipeline E2E (Sprint 1), Skills layer (Sprint 2), and MCP Catalog governance (Sprint 3). |
 
