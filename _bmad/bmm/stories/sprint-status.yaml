@@ -33,7 +33,7 @@
 #   validation evidence, board traceability, and Brain outcome logging.
 
 generated: 2026-05-24
-last_updated: 2026-06-04-brooks-epic5-sunset-closeout
+last_updated: 2026-06-06-brooks-epic-9-10-11-registered
 project: Allura Memory
 project_key: NOKEY
 tracking_system: file-system
@@ -86,7 +86,35 @@ development_status:
   8-6-wire-approvals-tab-to-live-curator-queue: done
   epic-8-retrospective: done
 
+  epic-9: in-progress
+  9-1-governance-mcp-api-surface: ready-for-dev
+  9-2-audit-mcp-api-surface: ready-for-dev
+  9-3-integration-test-harness-dod-enforcement: ready-for-dev
+  9-4-wire-memory-add-modal: ready-for-dev
+  9-5-wire-settings-capabilities: ready-for-dev
+  epic-9-retrospective: optional
+
+  epic-10: backlog
+  10-1-notion-symphony-adapter: backlog
+  10-2-kanban-surface: backlog
+  10-3-dreams-scheduled-tasks-backend: backlog
+  10-4-chat-runtime: backlog
+  epic-10-retrospective: optional
+
+  epic-11: backlog
+  11-1-command-palette: backlog
+  11-2-toast-notification-system: backlog
+  11-3-dark-mode: backlog
+  11-4-kanban-drag-drop-polish: backlog
+  11-5-ux-motion-and-transitions: backlog
+  11-6-mobile-polish: backlog
+  epic-11-retrospective: optional
+
 status_evidence:
+  epic-9:
+    drift_gate: "Brain searched 2026-06-06 (group_id: allura-system) for epic 9/10 truthfulness/governance/audit MCP build order; no unresolved blocker. Relevant context: append-only traces, group_id ^allura- enforcement, HITL promotion, no docker exec. Epic opened for truthfulness infrastructure."
+    board_traceability: "Planning relocated from docs/archive/allura/ to _bmad/bmm/planning/ (epic-9/10/11). UX Polish renumbered 8->11 to avoid collision with completed Epic 8. Notion board update pending (no Notion tool in this runtime)."
+    closeout_disposition: "Epic 9 stories materialized as ready-for-dev; Epics 10 and 11 registered as backlog (story files created when pulled, per BMAD status model)."
   epic-1:
     drift_gate: "Epic 1 active; Story 1.1-1.3 drift gates run locally. Remaining Story 1.4-1.5 drift gates pending before status changes."
     board_traceability: "Notion updated 2026-06-04 with dashboard sunset decision. Ronin stated the dashboard attempts from this path are sunset and the preferred dashboard was built elsewhere on another branch. 3100 cutover is no longer an Epic 5 closeout blocker unless Ronin explicitly reopens dashboard cutover scope."
