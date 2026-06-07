@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import {
   Activity,
   AlertCircle,
@@ -190,7 +191,7 @@ const STATUS_FILTERS: { value: FilterStatus; label: string }[] = [
 
 // ── Component ────────────────────────────────────────────────────────────
 
-export default function MemoriesWorkspacePage() {
+function MemoriesWorkspacePageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -1224,5 +1225,13 @@ export default function MemoriesWorkspacePage() {
         }
       `}</style>
     </div>
+  )
+}
+
+export default function MemoriesWorkspacePage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "64px 24px", textAlign: "center", color: "#6b7280", fontSize: 13 }}>Loading memories workspace…</div>}>
+      <MemoriesWorkspacePageInner />
+    </Suspense>
   )
 }

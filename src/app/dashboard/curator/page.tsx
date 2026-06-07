@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import {
   Activity,
   AlertCircle,
@@ -549,7 +550,7 @@ function DetailField({
 
 // ── Main page component ───────────────────────────────────────────────
 
-export default function CuratorProposalQueuePage() {
+function CuratorPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlStatus = normalizeFilterStatus(searchParams.get("status"))
@@ -909,6 +910,14 @@ export default function CuratorProposalQueuePage() {
         group_id: <code>{groupId}</code>
       </div>
     </div>
+  )
+}
+
+export default function CuratorProposalQueuePage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "64px 24px", textAlign: "center", color: "#6b7280", fontSize: 13 }}>Loading curator queue…</div>}>
+      <CuratorPageInner />
+    </Suspense>
   )
 }
 
