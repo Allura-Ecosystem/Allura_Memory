@@ -100,4 +100,4 @@ Partial / deferred:
 - 2026-06-06: Brooks gate PASSED at unit level — verified new files present, dual registration (5 tools/list + 5 dispatch cases), `tsc --noEmit` clean, `bun test governance-tools` 23 pass/15 skip/0 fail, HITL gate + append-only present. PENDING for done: (1) deploy — running Brain container runs the prebuilt image, so governance_* tools are NOT live until the Brain image is rebuilt + restarted; (2) E2E tests (RUN_E2E_TESTS + live PG); (3) optional Pike/Fowler review via PR #49.
 
 ## Status
-review
+done

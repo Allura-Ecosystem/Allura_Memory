@@ -5,7 +5,7 @@
  * 1. governance_list_policies
  * 2. governance_get_policy
  * 3. governance_check_gate
- * 4. governance_update_policy
+ * 4. governance_apply_policy_override
  * 5. governance_audit_log
  *
  * Pattern mirrors canonical-memory.test.ts:
@@ -29,7 +29,7 @@ import {
   governance_check_gate,
   governance_get_policy,
   governance_list_policies,
-  governance_update_policy,
+  governance_apply_policy_override,
 } from "../mcp/governance-tools"
 import { CANONICAL_POLICIES } from "../lib/governance/policies"
 
@@ -267,7 +267,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
 
   // ── 4. governance_update_policy ────────────────────────────────────────
 
-  describe("governance_update_policy", () => {
+  describe("governance_apply_policy_override", () => {
     it("should reject missing group_id", async () => {
       const req = {
         group_id: undefined,
@@ -276,7 +276,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
         description: "Updated description",
         updated_by: "test-curator",
       } as unknown as GovernanceUpdatePolicyRequest
-      await expect(governance_update_policy(req)).rejects.toThrow()
+      await expect(governance_apply_policy_override(req)).rejects.toThrow()
     })
 
     it("should reject invalid group_id", async () => {
@@ -287,7 +287,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
         description: "Updated description",
         updated_by: "test-curator",
       }
-      await expect(governance_update_policy(req)).rejects.toThrow("Invalid group_id")
+      await expect(governance_apply_policy_override(req)).rejects.toThrow("Invalid group_id")
     })
 
     it("should reject missing approval_ref", async () => {
@@ -298,7 +298,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
         description: "Updated description",
         updated_by: "test-curator",
       } as unknown as GovernanceUpdatePolicyRequest
-      await expect(governance_update_policy(req)).rejects.toThrow("approval_ref is required")
+      await expect(governance_apply_policy_override(req)).rejects.toThrow("approval_ref is required")
     })
 
     it("should reject missing description", async () => {
@@ -309,7 +309,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
         description: "",
         updated_by: "test-curator",
       } as unknown as GovernanceUpdatePolicyRequest
-      await expect(governance_update_policy(req)).rejects.toThrow("description is required")
+      await expect(governance_apply_policy_override(req)).rejects.toThrow("description is required")
     })
 
     it("should reject unknown policy_id", async () => {
@@ -320,7 +320,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
         description: "Some description",
         updated_by: "curator",
       }
-      await expect(governance_update_policy(req)).rejects.toThrow("Policy not found: pol-999")
+      await expect(governance_apply_policy_override(req)).rejects.toThrow("Policy not found: pol-999")
     })
 
     it("should reject missing updated_by", async () => {
@@ -331,7 +331,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
         description: "Updated description",
         updated_by: "",
       } as unknown as GovernanceUpdatePolicyRequest
-      await expect(governance_update_policy(req)).rejects.toThrow("updated_by is required")
+      await expect(governance_apply_policy_override(req)).rejects.toThrow("updated_by is required")
     })
 
     itIfE2E("should reject a non-existent approval_ref (HITL gate)", async () => {
@@ -342,7 +342,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
         description: "Updated description for pol-005",
         updated_by: "test-curator",
       }
-      await expect(governance_update_policy(req)).rejects.toThrow("HITL gate rejected")
+      await expect(governance_apply_policy_override(req)).rejects.toThrow("HITL gate rejected")
     })
 
     itIfE2E("should reject a pending (not yet approved) proposal ref", async () => {
@@ -363,7 +363,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
         updated_by: "test-curator",
       }
 
-      await expect(governance_update_policy(req)).rejects.toThrow("status 'pending'")
+      await expect(governance_apply_policy_override(req)).rejects.toThrow("status 'pending'")
     })
 
     itIfE2E("should succeed and prevent approval replay when given an approved proposal", async () => {
@@ -385,7 +385,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
         rationale: "Test override for Story 9.1 verification",
       }
 
-      const response = await governance_update_policy(req)
+      const response = await governance_apply_policy_override(req)
       expect(response.updated).toBe(true)
       expect(response.policy_id).toBe("pol-005")
       expect(response.version).toBeGreaterThan(1)
@@ -400,7 +400,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
         description: "Replay attempt",
         updated_by: "malicious-agent",
       }
-      await expect(governance_update_policy(replayReq)).rejects.toThrow("already been consumed")
+      await expect(governance_apply_policy_override(replayReq)).rejects.toThrow("already been consumed")
     })
   })
 

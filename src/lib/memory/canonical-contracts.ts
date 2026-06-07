@@ -765,6 +765,8 @@ export interface GovernanceCheckGateResponse {
   action: string
   checks: GovernanceGateCheck[]
   checked_at: string
+  /** Whether the gate-checked event was successfully written to the audit log */
+  audit_logged: boolean
   meta?: MemoryResponseMeta
 }
 
@@ -793,7 +795,7 @@ export interface GovernanceUpdatePolicyResponse {
   policy_id: string
   updated: boolean
   version: number
-  event_id?: string
+  event_id: string
   updated_at: string
   meta?: MemoryResponseMeta
 }
@@ -894,5 +896,126 @@ export interface MemoryListDeletedResponse {
   has_more: boolean
 
   /** Execution metadata */
+  meta?: MemoryResponseMeta
+}
+
+// ── Audit Tool Contracts (Story 9.2) ─────────────────────────────────────────
+
+/**
+ * audit_query_events — query events table with filters and pagination
+ */
+export interface AuditQueryEventsRequest {
+  /** Required: Tenant namespace (format: allura-*) */
+  group_id: GroupId
+  /** Optional: Filter by agent_id */
+  agent_id?: string
+  /** Optional: Filter by event_type */
+  event_type?: string
+  /** Optional: Date range filter (ISO 8601 strings) */
+  date_range?: {
+    from?: string
+    to?: string
+  }
+  /** Optional: Filter by metadata->>'source' */
+  source?: string
+  /** Optional: Maximum results (default: 50, max: 200) */
+  limit?: number
+  /** Optional: Pagination offset (default: 0) */
+  offset?: number
+}
+
+export interface AuditEventRow {
+  id: string
+  event_type: string
+  agent_id: string | null
+  status: string
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface AuditQueryEventsResponse {
+  events: AuditEventRow[]
+  total: number
+  limit: number
+  offset: number
+  meta?: MemoryResponseMeta
+}
+
+/**
+ * audit_health_report — check subsystem health and return per-subsystem status
+ */
+export interface AuditHealthReportRequest {
+  /** Required: Tenant namespace (format: allura-*) */
+  group_id: GroupId
+}
+
+export interface AuditSubsystemStatus {
+  status: "healthy" | "degraded" | "unavailable"
+  latency_ms: number
+  detail?: string
+}
+
+export interface AuditHealthReportResponse {
+  subsystems: {
+    postgres: AuditSubsystemStatus
+    neo4j: AuditSubsystemStatus
+    embedding_backfill: AuditSubsystemStatus
+    curator_queue: AuditSubsystemStatus & { pending_count?: number }
+    mcp_tools: AuditSubsystemStatus & { tool_count?: number }
+  }
+  overall_status: "healthy" | "degraded" | "unavailable"
+  checked_at: string
+  meta?: MemoryResponseMeta
+}
+
+/**
+ * audit_agent_activity — query agent activity by agent_id with time range
+ */
+export interface AuditAgentActivityRequest {
+  /** Required: Tenant namespace (format: allura-*) */
+  group_id: GroupId
+  /** Required: Agent identifier to query */
+  agent_id: string
+  /** Optional: Time range filter */
+  time_range?: {
+    from?: string
+    to?: string
+  }
+  /** Optional: Maximum results (default: 50, max: 200) */
+  limit?: number
+  /** Optional: Pagination offset (default: 0) */
+  offset?: number
+}
+
+export interface AuditAgentActivityResponse {
+  events: AuditEventRow[]
+  event_count: number
+  agent_id: string
+  limit: number
+  offset: number
+  has_more: boolean
+  meta?: MemoryResponseMeta
+}
+
+/**
+ * audit_invariant_check — validate 6 governance invariants against live data
+ */
+export interface AuditInvariantCheckRequest {
+  /** Required: Tenant namespace (format: allura-*) */
+  group_id: GroupId
+}
+
+export interface AuditInvariantResult {
+  key: string
+  name: string
+  passed: boolean
+  violation_count: number
+  detail: string
+}
+
+export interface AuditInvariantCheckResponse {
+  invariants: AuditInvariantResult[]
+  overall_passed: boolean
+  checked_at: string
   meta?: MemoryResponseMeta
 }

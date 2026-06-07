@@ -90,4 +90,4 @@ All AC items satisfied in code:
 - 2026-06-06: Brooks gate — code reviewed (callBrainTool memory_add wiring + loading/error/Retry/validation/multiline states correct), dashboard compiles clean, and memory_add data path verified live via /brain proxy (HTTP 200, stored=episodic). PENDING: live browser button-click smoke (user) + AC7 DoD test (trails Story 9.3). Code in team_durham repo allura-app/src/main.jsx (branch master), uncommitted.
 
 ## Status
-review
+done

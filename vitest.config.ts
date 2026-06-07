@@ -73,6 +73,8 @@ export default defineConfig({
       "src/__tests__/retrieval-gateway.test.ts",
       "src/__tests__/workspace-isolation.test.ts",
       "src/__tests__/memory-api-schemas.test.ts",
+      "src/__tests__/governance-tools.test.ts",
+      "src/__tests__/audit-tools.test.ts",
       "src/integrations/mcp.client.test.ts",
       "src/lib/ruvector/bridge.test.ts",
       "src/lib/ruvector/retrieval-adapter.test.ts",

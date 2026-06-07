@@ -5,14 +5,14 @@
  * 1. governance_list_policies   — list all 6 invariant policies
  * 2. governance_get_policy      — retrieve a single policy by ID
  * 3. governance_check_gate      — evaluate 6 invariants for a proposed action
- * 4. governance_update_policy   — HITL-gated policy override
+ * 4. governance_apply_policy_override — HITL-gated policy override
  * 5. governance_audit_log       — paginated read of governance audit events
  *
  * Architecture decisions (Brooks, 2026-06-06):
  * - SCHEMA: append-only events table (no new mutable governance_policies table)
  * - REGISTRY: 6 invariants are static in src/lib/governance/policies.ts
  * - UPDATES: governance_policy_updated events record HITL-approved overrides
- * - HITL gate: governance_update_policy verifies an approved + unconsumed
+ * - HITL gate: governance_apply_policy_override verifies an approved + unconsumed
  *   canonical_proposals entry, then appends governance_approval_consumed so
  *   the same approval cannot be replayed
  *
@@ -267,6 +267,8 @@ export async function governance_check_gate(
   const checks = evaluateInvariants(groupId, request.action, ctx)
   const overallPass = checks.every((c) => c.pass)
 
+  let auditLogged = false
+
   try {
     const { pg } = await getConnections()
 
@@ -290,6 +292,7 @@ export async function governance_check_gate(
         ]
       )
     )
+    auditLogged = true
   } catch (error) {
     // Gate check result is still returned even if event logging fails
     // This prevents a PG issue from blocking governance evaluation
@@ -302,6 +305,7 @@ export async function governance_check_gate(
     action: request.action,
     checks,
     checked_at: checkedAt,
+    audit_logged: auditLogged,
     meta: baseMeta(["postgres"]),
   }
 }
@@ -330,8 +334,8 @@ function evaluateInvariants(
     {
       invariant: "Append-Only Events (No UPDATE/DELETE)",
       invariant_key: "append_only_events",
-      pass: !/(update|delete|mutate|overwrite)/i.test(action) || action.startsWith("governance_update_policy"),
-      reason: !/(update|delete|mutate|overwrite)/i.test(action) || action.startsWith("governance_update_policy")
+      pass: !/(update|delete|mutate|overwrite)/i.test(action) || action.startsWith("governance_apply_policy_override"),
+      reason: !/(update|delete|mutate|overwrite)/i.test(action) || action.startsWith("governance_apply_policy_override")
         ? "Action does not attempt direct mutation of event rows"
         : `Action '${action}' contains a mutation keyword; must use append-only INSERT instead`,
     },
@@ -386,7 +390,7 @@ function evaluateInvariants(
   ]
 }
 
-// ── 4. governance_update_policy ──────────────────────────────────────────
+// ── 4. governance_apply_policy_override ──────────────────────────────────
 
 /**
  * HITL-gated policy override.
@@ -402,7 +406,7 @@ function evaluateInvariants(
  * If no valid unconsumed approval is found, the call is rejected.
  * Never mutates any existing row — both writes are INSERTs.
  */
-export async function governance_update_policy(
+export async function governance_apply_policy_override(
   request: GovernanceUpdatePolicyRequest
 ): Promise<GovernanceUpdatePolicyResponse> {
   const groupId = validateGroupId(request.group_id)
@@ -413,7 +417,7 @@ export async function governance_update_policy(
   }
   if (!request.approval_ref || typeof request.approval_ref !== "string") {
     throw new Error(
-      "approval_ref is required — governance_update_policy is HITL-gated. " +
+      "approval_ref is required — governance_apply_policy_override is HITL-gated." +
         "Provide the UUID of an approved canonical_proposals entry."
     )
   }
@@ -434,130 +438,150 @@ export async function governance_update_policy(
   try {
     const { pg } = await getConnections()
 
-    // Step 1: Verify approval_ref exists and is 'approved'
-    const approvalResult = await withCircuitBreaker(
+    // All HITL gate checks + both INSERTs run inside a single transaction.
+    // SELECT ... FOR UPDATE on the canonical_proposals row prevents two concurrent
+    // callers from both passing the consumed-check before either writes the
+    // governance_approval_consumed event (TOCTOU fix — Finding 1).
+    const result = await withCircuitBreaker(
       "postgres",
       groupId,
-      "governance_update_policy:verify_approval",
-      async () =>
-        pg.query<{ id: string; status: string; group_id: string }>(
-          `SELECT id, status, group_id
-           FROM canonical_proposals
-           WHERE id = $1
-           LIMIT 1`,
-          [request.approval_ref]
-        )
-    )
+      "governance_apply_policy_override:transaction",
+      async () => {
+        const client = await pg.connect()
+        try {
+          await client.query("BEGIN")
 
-    if (approvalResult.rows.length === 0) {
-      throw new Error(
-        `HITL gate rejected: approval_ref '${request.approval_ref}' not found in canonical_proposals. ` +
-          "Obtain a valid approved proposal before calling governance_update_policy."
-      )
-    }
+          // Step 1: Lock the proposal row and verify it is approved.
+          // FOR UPDATE prevents a concurrent transaction from consuming the same ref
+          // until we COMMIT or ROLLBACK.
+          const approvalResult = await client.query<{ id: string; status: string; group_id: string }>(
+            `SELECT id, status, group_id
+             FROM canonical_proposals
+             WHERE id = $1
+             FOR UPDATE`,
+            [request.approval_ref]
+          )
 
-    const approval = approvalResult.rows[0]
-    if (approval.status !== "approved") {
-      throw new Error(
-        `HITL gate rejected: proposal '${request.approval_ref}' has status '${approval.status}' (must be 'approved'). ` +
-          "Only approved proposals can authorize a policy update."
-      )
-    }
+          if (approvalResult.rows.length === 0) {
+            await client.query("ROLLBACK")
+            throw new Error(
+              `HITL gate rejected: approval_ref '${request.approval_ref}' not found in canonical_proposals. ` +
+                "Obtain a valid approved proposal before calling governance_apply_policy_override."
+            )
+          }
 
-    // Verify the proposal belongs to the same group (cross-tenant protection)
-    if (approval.group_id !== groupId) {
-      throw new Error(
-        `HITL gate rejected: proposal '${request.approval_ref}' belongs to a different tenant. ` +
-          "Cannot use approvals from other tenants."
-      )
-    }
+          const approval = approvalResult.rows[0]
+          if (approval.status !== "approved") {
+            await client.query("ROLLBACK")
+            throw new Error(
+              `HITL gate rejected: proposal '${request.approval_ref}' has status '${approval.status}' (must be 'approved'). ` +
+                "Only approved proposals can authorize a policy update."
+            )
+          }
 
-    // Step 2: Verify approval_ref has not already been consumed
-    const consumedResult = await withCircuitBreaker(
-      "postgres",
-      groupId,
-      "governance_update_policy:check_consumed",
-      async () =>
-        pg.query<{ id: string }>(
-          `SELECT id
-           FROM events
-           WHERE group_id = $1
-             AND event_type = 'governance_approval_consumed'
-             AND metadata->>'approval_ref' = $2
-           LIMIT 1`,
-          [groupId, request.approval_ref]
-        )
-    )
+          // Cross-tenant protection
+          if (approval.group_id !== groupId) {
+            await client.query("ROLLBACK")
+            throw new Error(
+              `HITL gate rejected: proposal '${request.approval_ref}' belongs to a different tenant. ` +
+                "Cannot use approvals from other tenants."
+            )
+          }
 
-    if (consumedResult.rows.length > 0) {
-      throw new Error(
-        `HITL gate rejected: approval_ref '${request.approval_ref}' has already been consumed. ` +
-          "Each approval can only be used once. Obtain a new approved proposal."
-      )
-    }
+          // Step 2: Verify the ref has not already been consumed — inside the same
+          // transaction so no other writer can sneak in a consumed event between
+          // our check and our write.
+          const consumedResult = await client.query<{ id: string }>(
+            `SELECT id
+             FROM events
+             WHERE group_id = $1
+               AND event_type = 'governance_approval_consumed'
+               AND metadata->>'approval_ref' = $2
+             LIMIT 1`,
+            [groupId, request.approval_ref]
+          )
 
-    // Step 3: Compute new version
-    const newVersion = base.version + 1
+          if (consumedResult.rows.length > 0) {
+            await client.query("ROLLBACK")
+            throw new Error(
+              `HITL gate rejected: approval_ref '${request.approval_ref}' has already been consumed. ` +
+                "Each approval can only be used once. Obtain a new approved proposal."
+            )
+          }
 
-    // Step 4: Append governance_policy_updated event (append-only)
-    const updateEventResult = await withCircuitBreaker(
-      "postgres",
-      groupId,
-      "governance_update_policy:insert_update_event",
-      async () =>
-        pg.query<{ id: string }>(
-          `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6)
-           RETURNING id`,
-          [
-            groupId,
-            "governance_policy_updated",
-            request.updated_by,
-            "completed",
-            JSON.stringify({
-              policy_id: request.policy_id,
-              description: request.description,
-              version: newVersion,
-              rationale: request.rationale,
-              approval_ref: request.approval_ref,
-              updated_by: request.updated_by,
-            }),
-            updatedAt,
-          ]
-        )
-    )
+          // Step 3: Derive version from the DB — count prior updates for this
+          // policy so that sequential updates cannot both produce version 2
+          // (Finding 2: stale version from static registry).
+          const versionResult = await client.query<{ next_version: string }>(
+            `SELECT COALESCE(MAX((metadata->>'version')::int), $3) + 1 AS next_version
+             FROM events
+             WHERE group_id = $1
+               AND event_type = 'governance_policy_updated'
+               AND metadata->>'policy_id' = $2
+               AND status = 'completed'`,
+            [groupId, request.policy_id, base.version]
+          )
+          const newVersion = parseInt(versionResult.rows[0]?.next_version ?? String(base.version + 1), 10)
 
-    const updateEventId = String(updateEventResult.rows[0].id)
+          // Step 4: Append governance_policy_updated event (append-only)
+          const updateEventResult = await client.query<{ id: string }>(
+            `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id`,
+            [
+              groupId,
+              "governance_policy_updated",
+              request.updated_by,
+              "completed",
+              JSON.stringify({
+                policy_id: request.policy_id,
+                description: request.description,
+                version: newVersion,
+                rationale: request.rationale,
+                approval_ref: request.approval_ref,
+                updated_by: request.updated_by,
+              }),
+              updatedAt,
+            ]
+          )
 
-    // Step 5: Append governance_approval_consumed event (idempotency lock — append-only)
-    await withCircuitBreaker(
-      "postgres",
-      groupId,
-      "governance_update_policy:insert_consumed_event",
-      async () =>
-        pg.query(
-          `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            groupId,
-            "governance_approval_consumed",
-            request.updated_by,
-            "completed",
-            JSON.stringify({
-              approval_ref: request.approval_ref,
-              policy_id: request.policy_id,
-              update_event_id: updateEventId,
-            }),
-            updatedAt,
-          ]
-        )
+          const updateEventId = String(updateEventResult.rows[0].id)
+
+          // Step 5: Append governance_approval_consumed event (idempotency lock — append-only)
+          await client.query(
+            `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [
+              groupId,
+              "governance_approval_consumed",
+              request.updated_by,
+              "completed",
+              JSON.stringify({
+                approval_ref: request.approval_ref,
+                policy_id: request.policy_id,
+                update_event_id: updateEventId,
+              }),
+              updatedAt,
+            ]
+          )
+
+          await client.query("COMMIT")
+          return { newVersion, updateEventId }
+        } catch (txError) {
+          // Only attempt rollback if the error was not from our own ROLLBACK above
+          try { await client.query("ROLLBACK") } catch (_) { /* ignore rollback error */ }
+          throw txError
+        } finally {
+          client.release()
+        }
+      }
     )
 
     return {
       policy_id: request.policy_id,
       updated: true,
-      version: newVersion,
-      event_id: updateEventId,
+      version: result.newVersion,
+      event_id: result.updateEventId,
       updated_at: updatedAt,
       meta: baseMeta(["postgres"]),
     }
@@ -566,7 +590,7 @@ export async function governance_update_policy(
       throw error
     }
     if (error instanceof Error && (error as Error & { code?: string }).code) {
-      throw classifyPostgresError(error, "governance_update_policy", "SELECT/INSERT events")
+      throw classifyPostgresError(error, "governance_apply_policy_override", "SELECT/INSERT events")
     }
     throw error
   }

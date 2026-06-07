@@ -121,9 +121,16 @@ import {
   governance_list_policies,
   governance_get_policy,
   governance_check_gate,
-  governance_update_policy,
+  governance_apply_policy_override,
   governance_audit_log,
 } from "./governance-tools.js";
+
+import {
+  audit_query_events,
+  audit_health_report,
+  audit_agent_activity,
+  audit_invariant_check,
+} from "./audit-tools.js";
 
 import type {
   MemoryAddRequest,
@@ -136,6 +143,10 @@ import type {
   GovernanceCheckGateRequest,
   GovernanceUpdatePolicyRequest,
   GovernanceAuditLogRequest,
+  AuditQueryEventsRequest,
+  AuditHealthReportRequest,
+  AuditAgentActivityRequest,
+  AuditInvariantCheckRequest,
 } from "@/lib/memory/canonical-contracts.js";
 
 // ── MCP Server Setup (Streamable HTTP) ───────────────────────────────────────
@@ -342,6 +353,87 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["group_id"],
         },
       },
+      // ── Audit Tools (Story 9.2) ───────────────────────────────────────────
+      {
+        name: "audit_query_events",
+        description:
+          "Query the Allura Brain events table with optional filters and pagination. " +
+          "Supports filtering by agent_id, event_type, date_range, and metadata source. " +
+          "Returns events ordered by created_at DESC. Read-only — no DB writes.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+            agent_id: { type: "string", description: "Optional: Filter by agent_id" },
+            event_type: { type: "string", description: "Optional: Filter by event_type" },
+            date_range: {
+              type: "object",
+              description: "Optional: Date range filter (ISO 8601 strings)",
+              properties: {
+                from: { type: "string", description: "Optional: Start date (ISO 8601)" },
+                to: { type: "string", description: "Optional: End date (ISO 8601)" },
+              },
+            },
+            source: { type: "string", description: "Optional: Filter by metadata source field" },
+            limit: { type: "number", description: "Optional: Maximum results (default: 50, max: 200)" },
+            offset: { type: "number", description: "Optional: Pagination offset (default: 0)" },
+          },
+          required: ["group_id"],
+        },
+      },
+      {
+        name: "audit_health_report",
+        description:
+          "Check all Allura Brain subsystem health statuses and return a structured per-subsystem report. " +
+          "Checks: PostgreSQL, Neo4j, embedding backfill, curator queue depth, and MCP tool availability. " +
+          "Read-only — no DB writes.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+          },
+          required: ["group_id"],
+        },
+      },
+      {
+        name: "audit_agent_activity",
+        description:
+          "Query event activity for a specific agent, with optional time range filtering and pagination. " +
+          "Returns all events attributed to the given agent_id, ordered by created_at DESC. " +
+          "Read-only — no DB writes.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+            agent_id: { type: "string", description: "Required: Agent identifier to query" },
+            time_range: {
+              type: "object",
+              description: "Optional: Time range filter",
+              properties: {
+                from: { type: "string", description: "Optional: Start time (ISO 8601)" },
+                to: { type: "string", description: "Optional: End time (ISO 8601)" },
+              },
+            },
+            limit: { type: "number", description: "Optional: Maximum results (default: 50, max: 200)" },
+            offset: { type: "number", description: "Optional: Pagination offset (default: 0)" },
+          },
+          required: ["group_id", "agent_id"],
+        },
+      },
+      {
+        name: "audit_invariant_check",
+        description:
+          "Validate all 6 Allura governance invariants against live data and report per-check pass/fail " +
+          "with violation counts. Checks: group_id constraint, no invalid group_ids, append-only structure, " +
+          "Neo4j SUPERSEDES, HITL promotion compliance, and allura-* namespace. Read-only — no DB writes.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+          },
+          required: ["group_id"],
+        },
+      },
     ],
   };
 });
@@ -379,10 +471,23 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         result = await governance_check_gate(args as unknown as GovernanceCheckGateRequest);
         break;
       case "governance_update_policy":
-        result = await governance_update_policy(args as unknown as GovernanceUpdatePolicyRequest);
+        result = await governance_apply_policy_override(args as unknown as GovernanceUpdatePolicyRequest);
         break;
       case "governance_audit_log":
         result = await governance_audit_log(args as unknown as GovernanceAuditLogRequest);
+        break;
+      // ── Audit Tools (Story 9.2) ────────────────────────────────────────
+      case "audit_query_events":
+        result = await audit_query_events(args as unknown as AuditQueryEventsRequest);
+        break;
+      case "audit_health_report":
+        result = await audit_health_report(args as unknown as AuditHealthReportRequest);
+        break;
+      case "audit_agent_activity":
+        result = await audit_agent_activity(args as unknown as AuditAgentActivityRequest);
+        break;
+      case "audit_invariant_check":
+        result = await audit_invariant_check(args as unknown as AuditInvariantCheckRequest);
         break;
       default:
         return {
@@ -695,7 +800,8 @@ server.listen(PORT, () => {
   console.log("");
   console.log("Available tools: memory_add, memory_search, memory_get, memory_list, memory_delete,");
   console.log("                 governance_list_policies, governance_get_policy, governance_check_gate,");
-  console.log("                 governance_update_policy, governance_audit_log");
+  console.log("                 governance_apply_policy_override, governance_audit_log,");
+  console.log("                 audit_query_events, audit_health_report, audit_agent_activity, audit_invariant_check");
 });
 
 // Graceful shutdown

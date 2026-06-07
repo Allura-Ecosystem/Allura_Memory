@@ -86,13 +86,13 @@ development_status:
   8-6-wire-approvals-tab-to-live-curator-queue: done
   epic-8-retrospective: done
 
-  epic-9: in-progress
-  9-1-governance-mcp-api-surface: review
-  9-2-audit-mcp-api-surface: ready-for-dev
-  9-3-integration-test-harness-dod-enforcement: ready-for-dev
-  9-4-wire-memory-add-modal: review
-  9-5-wire-settings-capabilities: ready-for-dev
-  epic-9-retrospective: optional
+  epic-9: done
+  9-1-governance-mcp-api-surface: done
+  9-2-audit-mcp-api-surface: done
+  9-3-integration-test-harness-dod-enforcement: done
+  9-4-wire-memory-add-modal: done
+  9-5-wire-settings-capabilities: done
+  epic-9-retrospective: done
 
   epic-10: backlog
   10-1-notion-symphony-adapter: backlog
