@@ -117,12 +117,25 @@ import {
   memory_search,
 } from "./canonical-tools.js";
 
+import {
+  governance_list_policies,
+  governance_get_policy,
+  governance_check_gate,
+  governance_update_policy,
+  governance_audit_log,
+} from "./governance-tools.js";
+
 import type {
   MemoryAddRequest,
   MemoryDeleteRequest,
   MemoryGetRequest,
   MemoryListRequest,
   MemorySearchRequest,
+  GovernanceListPoliciesRequest,
+  GovernanceGetPolicyRequest,
+  GovernanceCheckGateRequest,
+  GovernanceUpdatePolicyRequest,
+  GovernanceAuditLogRequest,
 } from "@/lib/memory/canonical-contracts.js";
 
 // ── MCP Server Setup (Streamable HTTP) ───────────────────────────────────────
@@ -231,6 +244,104 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["id", "group_id", "user_id"],
         },
       },
+      // ── Governance Tools (Story 9.1) ──────────────────────────────────────
+      {
+        name: "governance_list_policies",
+        description:
+          "List all 6 canonical Allura invariant policies. Returns the static policy registry merged with any " +
+          "HITL-approved overrides from the audit log. Read-only — no DB writes.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+          },
+          required: ["group_id"],
+        },
+      },
+      {
+        name: "governance_get_policy",
+        description:
+          "Retrieve a single governance policy by ID (pol-001 through pol-006). " +
+          "Returns the canonical policy merged with any approved HITL overrides.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+            policy_id: {
+              type: "string",
+              description: "Required: Policy identifier (e.g., pol-001, pol-002, ... pol-006)",
+            },
+          },
+          required: ["group_id", "policy_id"],
+        },
+      },
+      {
+        name: "governance_check_gate",
+        description:
+          "Evaluate all 6 Allura invariants for a proposed action. Returns pass/fail per invariant with reasons. " +
+          "Appends a governance_gate_checked event to the audit log.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+            action: {
+              type: "string",
+              description: "Required: Action being requested (e.g., 'memory_promote', 'policy_update')",
+            },
+            context: {
+              type: "object",
+              description:
+                "Optional: Additional context for evaluation (e.g., { agent_id, bypass_hitl, via_docker_exec })",
+            },
+          },
+          required: ["group_id", "action"],
+        },
+      },
+      {
+        name: "governance_update_policy",
+        description:
+          "HITL-gated policy override. Requires an explicit approval_ref pointing to an approved, unconsumed " +
+          "canonical_proposals entry. Appends governance_policy_updated and governance_approval_consumed events. " +
+          "Rejects the call if no valid approval is found or the approval was already consumed.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+            policy_id: { type: "string", description: "Required: Policy identifier to override (e.g., pol-005)" },
+            approval_ref: {
+              type: "string",
+              description: "Required: UUID of an approved canonical_proposals entry authorizing this change",
+            },
+            description: { type: "string", description: "Required: New description override for the policy" },
+            updated_by: { type: "string", description: "Required: Identifier of the human/curator making this change" },
+            rationale: { type: "string", description: "Optional: Rationale for the policy override" },
+          },
+          required: ["group_id", "policy_id", "approval_ref", "description", "updated_by"],
+        },
+      },
+      {
+        name: "governance_audit_log",
+        description:
+          "Paginated read of governance audit events (governance_policy_updated, governance_gate_checked, " +
+          "governance_approval_consumed, proposal_created/approved/rejected, memory_promote_requested). " +
+          "Read-only — no DB writes.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+            event_type: {
+              type: "string",
+              description:
+                "Optional: Filter by event type (governance_policy_updated | governance_gate_checked | " +
+                "governance_approval_consumed | proposal_created | proposal_approved | proposal_rejected | " +
+                "memory_promote_requested)",
+            },
+            limit: { type: "number", description: "Optional: Maximum results (default: 50, max: 500)" },
+            offset: { type: "number", description: "Optional: Pagination offset (default: 0)" },
+          },
+          required: ["group_id"],
+        },
+      },
     ],
   };
 });
@@ -256,6 +367,22 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case "memory_delete":
         result = await memory_delete(args as unknown as MemoryDeleteRequest);
+        break;
+      // ── Governance Tools (Story 9.1) ────────────────────────────────────
+      case "governance_list_policies":
+        result = await governance_list_policies(args as unknown as GovernanceListPoliciesRequest);
+        break;
+      case "governance_get_policy":
+        result = await governance_get_policy(args as unknown as GovernanceGetPolicyRequest);
+        break;
+      case "governance_check_gate":
+        result = await governance_check_gate(args as unknown as GovernanceCheckGateRequest);
+        break;
+      case "governance_update_policy":
+        result = await governance_update_policy(args as unknown as GovernanceUpdatePolicyRequest);
+        break;
+      case "governance_audit_log":
+        result = await governance_audit_log(args as unknown as GovernanceAuditLogRequest);
         break;
       default:
         return {
@@ -566,7 +693,9 @@ server.listen(PORT, () => {
   console.log("");
   console.log(`Auth: ${AUTH_TOKEN ? "Bearer token required" : "No auth token set (development mode)"}`);
   console.log("");
-  console.log("Available tools: memory_add, memory_search, memory_get, memory_list, memory_delete");
+  console.log("Available tools: memory_add, memory_search, memory_get, memory_list, memory_delete,");
+  console.log("                 governance_list_policies, governance_get_policy, governance_check_gate,");
+  console.log("                 governance_update_policy, governance_audit_log");
 });
 
 // Graceful shutdown
