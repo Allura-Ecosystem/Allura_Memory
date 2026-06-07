@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth";
+import { buildCuratorDecisionReceipt } from "@/lib/memory/approval-audit";
 import { captureException } from "@/lib/observability/sentry";
 import { getPool } from "@/lib/postgres/connection";
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
@@ -84,6 +85,22 @@ export async function GET(request: NextRequest) {
     }
 
     const result = await pool.query(query, params);
+    const proposalIds = result.rows.map((row) => row.id).filter((id): id is string => typeof id === "string");
+    const decisionEvents = proposalIds.length > 0
+      ? await pool.query(
+        `SELECT DISTINCT ON (metadata->>'proposal_id')
+            event_type, agent_id, created_at, metadata
+         FROM events
+         WHERE group_id = $1
+           AND event_type IN ('proposal_approved', 'proposal_rejected', 'proposal_evidence_requested')
+           AND metadata->>'proposal_id' = ANY($2::text[])
+         ORDER BY metadata->>'proposal_id', created_at DESC`,
+        [validatedGroupId, proposalIds]
+      )
+      : { rows: [] };
+    const decisionEventsByProposalId = new Map(
+      decisionEvents.rows.map((event) => [event.metadata?.proposal_id, event])
+    );
 
     return NextResponse.json({
       proposals: result.rows.map((row) => ({
@@ -96,6 +113,17 @@ export async function GET(request: NextRequest) {
         status: row.status,
         trace_ref: row.trace_ref,
         created_at: row.created_at,
+        decision_receipt: decisionEventsByProposalId.has(row.id) || row.status !== "pending"
+          ? buildCuratorDecisionReceipt({
+            proposal: {
+              id: row.id,
+              group_id: row.group_id,
+              status: row.status,
+              trace_ref: row.trace_ref === null || row.trace_ref === undefined ? null : String(row.trace_ref),
+            },
+            event: decisionEventsByProposalId.get(row.id) ?? null,
+          })
+          : null,
       })),
     });
   } catch (error) {

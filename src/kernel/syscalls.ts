@@ -350,15 +350,24 @@ export async function syscall_kill(
 
 /**
  * SYSCALL 5: trace
- * 
+ *
  * Log an execution trace to the audit trail.
- * 
- * @param traceData - Trace data to log
+ *
+ * Audit-only syscall: runs the full proof → policy → audit gate via
+ * executeSyscall, but does NOT issue a database write. The canonical
+ * event row is written by the caller (e.g. logTrace() in
+ * src/lib/postgres/trace-logger.ts) via insertEvent(). This avoids the
+ * double-write bug where the kernel's resolveTarget would INSERT into
+ * events using the outer traceData wrapper as columns (e.g. `table`,
+ * `data`), which produces a Postgres syntax error.
+ *
+ * @param _traceData - Trace data to log (kept for API compatibility;
+ *                     not persisted by this syscall)
  * @param context - Syscall context
  * @returns Trace result
  */
 export async function syscall_trace(
-  traceData: Record<string, unknown>,
+  _traceData: Record<string, unknown>,
   context: SyscallContext
 ): Promise<SyscallResult<{ trace_id: string }>> {
   return executeSyscall(
@@ -366,20 +375,9 @@ export async function syscall_trace(
     "audit:trace",
     context,
     async (claims) => {
-      const result = await resolveTarget({
-        intent: "mutate",
-        target: "pg:events",
-        type: "insert",
-        data: {
-          ...traceData,
-          group_id: claims.group_id,
-        },
-      });
-
-      if (!result.success) {
-        throw new Error("Target resolver trace failed");
-      }
-
+      // Intentionally no resolveTarget() call here. The kernel's audit
+      // gate has already validated proof, policy, and actor identity.
+      // The canonical event row is the caller's responsibility.
       return {
         trace_id: generateAuditId("trace", "audit", claims.group_id),
       };
@@ -523,7 +521,7 @@ export async function syscall_isolate(
         type: "insert",
         data: {
           group_id: claims.group_id,
-          agent_id: claims.actor ?? context.actor,
+          agent_id: context.actor,
           event_type: "ISOLATION_CHECK",
           status: "completed",
           metadata: JSON.stringify({

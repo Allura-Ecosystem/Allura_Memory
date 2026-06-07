@@ -120,6 +120,14 @@ async function pgMutate(
 
   // Build a parameterized INSERT from data keys — validate all column names
   const keys = Object.keys(data).map(validateIdentifier);
+
+  // Guard: refuse to emit malformed SQL when there are no columns to insert
+  if (keys.length === 0) {
+    throw new Error(
+      `refusing to build INSERT with no columns — target table: ${table}. Ensure data payload carries at least group_id.`
+    );
+  }
+
   const columns = keys.join(", ");
   const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
   const values = keys.map((k) => serializeValue(data[k]));

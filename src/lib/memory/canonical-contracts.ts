@@ -698,6 +698,137 @@ export interface MemoryRestoreResponse {
   meta?: MemoryResponseMeta
 }
 
+// ── Governance Contracts (Story 9.1) ─────────────────────────────────────────
+
+/**
+ * governance_list_policies — list all 6 canonical invariant policies
+ */
+export interface GovernanceListPoliciesRequest {
+  /** Required: Tenant namespace (format: allura-*) */
+  group_id: GroupId
+}
+
+export interface GovernancePolicyRecord {
+  id: string
+  name: string
+  description: string
+  severity: "critical" | "high" | "medium" | "low"
+  invariant_key: string
+  overridable: boolean
+  version: number
+  updated_at: string
+}
+
+export interface GovernanceListPoliciesResponse {
+  policies: GovernancePolicyRecord[]
+  count: number
+  meta?: MemoryResponseMeta
+}
+
+/**
+ * governance_get_policy — retrieve a single policy by ID
+ */
+export interface GovernanceGetPolicyRequest {
+  /** Required: Tenant namespace (format: allura-*) */
+  group_id: GroupId
+  /** Required: Policy identifier (e.g., pol-001) */
+  policy_id: string
+}
+
+export interface GovernanceGetPolicyResponse {
+  policy: GovernancePolicyRecord
+  override_event_id?: string | null
+  meta?: MemoryResponseMeta
+}
+
+/**
+ * governance_check_gate — evaluate the 6 invariants for a proposed action
+ */
+export interface GovernanceCheckGateRequest {
+  /** Required: Tenant namespace (format: allura-*) */
+  group_id: GroupId
+  /** Required: Action being requested (e.g., "memory_promote", "policy_update") */
+  action: string
+  /** Optional: Additional context for evaluation */
+  context?: Record<string, unknown>
+}
+
+export interface GovernanceGateCheck {
+  invariant: string
+  invariant_key: string
+  pass: boolean
+  reason: string
+}
+
+export interface GovernanceCheckGateResponse {
+  pass: boolean
+  action: string
+  checks: GovernanceGateCheck[]
+  checked_at: string
+  meta?: MemoryResponseMeta
+}
+
+/**
+ * governance_update_policy — HITL-gated policy override
+ * Requires an explicit approval_ref pointing to an approved + unconsumed
+ * canonical_proposals entry. Appends governance_policy_updated and
+ * governance_approval_consumed events; never mutates policy in-place.
+ */
+export interface GovernanceUpdatePolicyRequest {
+  /** Required: Tenant namespace (format: allura-*) */
+  group_id: GroupId
+  /** Required: Policy identifier to override (e.g., pol-001) */
+  policy_id: string
+  /** Required: Explicit HITL approval reference (canonical_proposals UUID) */
+  approval_ref: string
+  /** Required: New description override */
+  description: string
+  /** Required: Who is making this change */
+  updated_by: string
+  /** Optional: Rationale for the update */
+  rationale?: string
+}
+
+export interface GovernanceUpdatePolicyResponse {
+  policy_id: string
+  updated: boolean
+  version: number
+  event_id?: string
+  updated_at: string
+  meta?: MemoryResponseMeta
+}
+
+/**
+ * governance_audit_log — paginated read of governance events
+ */
+export interface GovernanceAuditLogRequest {
+  /** Required: Tenant namespace (format: allura-*) */
+  group_id: GroupId
+  /** Optional: Filter by event type */
+  event_type?: string
+  /** Optional: Maximum results (default: 50, max: 500) */
+  limit?: number
+  /** Optional: Pagination offset */
+  offset?: number
+}
+
+export interface GovernanceAuditEntry {
+  id: string
+  event_type: string
+  agent_id: string
+  status: string
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface GovernanceAuditLogResponse {
+  entries: GovernanceAuditEntry[]
+  count: number
+  total: number
+  has_more: boolean
+  meta?: MemoryResponseMeta
+}
+
 // ── Memory List Deleted ──────────────────────────────────────────────────────
 
 /**
