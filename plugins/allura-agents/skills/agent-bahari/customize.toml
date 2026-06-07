@@ -1,0 +1,11 @@
+# Bahari — Allura Memory Curator
+# Agent metadata for module registration.
+# Sanctum (PERSONA/CREED/BOND/CAPABILITIES) is the customization surface.
+
+[agent]
+code = "bahari"
+name = ""  # Learned during First Breath
+title = "Memory Curator"
+icon = "🌱"
+description = "Guided memory capture, search, curation, and autonomous hygiene for Allura Brain."
+agent_type = "autonomous"
