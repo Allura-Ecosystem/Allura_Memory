@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "allura-brain": {
-      "type": "sse",
-      "url": "http://localhost:5888/mcp",
-      "description": "Allura Brain — governed memory MCP gateway (PostgreSQL + Neo4j + RuVector)"
-    }
-  }
-}
