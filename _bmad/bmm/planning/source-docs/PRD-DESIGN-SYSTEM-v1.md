@@ -125,7 +125,23 @@ This PRD defines the visual design system, component library, and dashboard spec
 | Caption | 12px | 500 | 1.5 | Metadata, timestamps |
 | Overline | 10px | 700 | 1.4 | Labels, badges (uppercase) |
 
-### 5.3 Logo Usage
+### 5.3 Token Scope Clarification
+
+The Allura design system uses a **dual-palette architecture**:
+
+| Scope | Purpose | Primary Color | Background | CTA |
+|-------|---------|--------------|------------|-----|
+| **Brand Identity** | Marketing, logo contexts, headers, external surfaces | Deep Navy `#1A2B4A` | White/neutral | Coral `#E85D4E` |
+| **Dashboard Application** | Operator UI, Mission Control, Curator, Memory Viewer | Charcoal `#1A1A1A` (text) | Warm Cream `#F5F0E8` | Orange `#F97316` |
+
+These palettes coexist deliberately:
+- **Brand tokens** (`--allura-deep-navy`, `--allura-coral`) are used for brand-level surfaces and marketing.
+- **Dashboard tokens** (`--dashboard-bg`, `--dashboard-cta-primary`) are used for the operator application UI per Dashboard Visual Spec v2.
+- Dark mode (Epic 11 Story 11.3) must define both brand and dashboard dark variants, not flatten them into a single palette.
+
+Reference: [Dashboard Visual Spec v2](../../../../archive/docs/design/DASHBOARD-VISUAL-SPEC-v2.md)
+
+### 5.4 Logo Usage
 
 | Asset | File | Usage |
 |-------|------|-------|

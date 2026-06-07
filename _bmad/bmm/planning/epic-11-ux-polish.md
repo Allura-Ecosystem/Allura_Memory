@@ -5,6 +5,7 @@
 > **Roadmap Step:** 8 (final polish)
 > **Renumber note:** This epic was originally drafted as a "revised Epic 8." Epic 8 is already complete (the six live-Brain-wiring stories, 8-1…8-6). To preserve shipped history, UX Polish is renumbered to **Epic 11** (Brooks, 2026-06-06).
 > **Prerequisite:** Epics 9 and 10 complete — all surfaces truthful and functional before they are polished.
+> **FRs covered:** FR35, FR36, FR37, FR38
 
 ---
 
@@ -12,6 +13,7 @@
 
 **Title:** Implement Cmd+K command palette with global search and action dispatch
 **Priority:** P3-Low | **Complexity:** Medium | **Agent:** Woz
+**Traceability:** Epic 11 → FR35
 
 **Description:**
 Add a keyboard-triggered command palette (Cmd+K / Ctrl+K) that provides fuzzy search across pages, Brain memories, actions, and settings. Should feel instant — no server round-trip for navigation actions.
@@ -30,6 +32,7 @@ Add a keyboard-triggered command palette (Cmd+K / Ctrl+K) that provides fuzzy se
 
 **Title:** Build non-blocking toast system with auto-dismiss and action support
 **Priority:** P3-Low | **Complexity:** Small | **Agent:** Woz
+**Traceability:** Epic 11 → FR36
 
 **Description:**
 Replace `alert()` calls and missing feedback with a toast notification system. Toasts stack bottom-right, auto-dismiss after 5s (configurable), support undo actions.
@@ -51,6 +54,7 @@ Replace `alert()` calls and missing feedback with a toast notification system. T
 
 **Title:** Implement dark mode with CSS custom properties and system preference detection
 **Priority:** P3-Low | **Complexity:** Medium | **Agent:** Woz
+**Traceability:** Epic 11 → FR37
 
 **Description:**
 Add dark mode support using CSS custom properties. Detect system preference via `prefers-color-scheme`, allow manual override in Settings, persist choice to localStorage.
@@ -72,6 +76,7 @@ Add dark mode support using CSS custom properties. Detect system preference via 
 
 **Title:** Add drag-drop visual feedback and interaction polish to the Kanban surface
 **Priority:** P3-Low | **Complexity:** Medium | **Agent:** Woz
+**Traceability:** Epic 11 → (polish layer for FR32, no new FR)
 
 **Description:**
 Builds on the wired Kanban surface from Story 10.2. Adds the visual/interaction layer: ghost card, drop-zone highlighting, smooth reordering, and touch support.
@@ -93,6 +98,7 @@ Builds on the wired Kanban surface from Story 10.2. Adds the visual/interaction 
 
 **Title:** Add page transitions, modal animations, and skeleton shimmer loading states
 **Priority:** P3-Low | **Complexity:** Medium | **Agent:** Woz
+**Traceability:** Epic 11 → (UX polish, no dedicated FR)
 
 **Description:**
 Currently `setPage()` swaps instantly with no animation. Add subtle transitions that make navigation feel intentional without adding latency.
@@ -112,6 +118,7 @@ Currently `setPage()` swaps instantly with no animation. Add subtle transitions 
 
 **Title:** Improve touch targets, swipe navigation, and responsive breakpoints
 **Priority:** P3-Low | **Complexity:** Medium | **Agent:** Woz
+**Traceability:** Epic 11 → FR38
 
 **Description:**
 Mobile nav works at 390px but interactions aren't touch-optimized. Fix touch target sizes, add swipe gestures for sidebar, and audit all breakpoints.

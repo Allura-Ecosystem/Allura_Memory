@@ -23,7 +23,7 @@ project_knowledge:
   - docs/allura/BLUEPRINT.md
   - docs/allura/SOLUTION-ARCHITECTURE.md
   - docs/allura/DESIGN-ALLURA.md
-  - docs/design/DASHBOARD-VISUAL-SPEC-v2.md
+  - archive/docs/design/DASHBOARD-VISUAL-SPEC-v2.md
   - _bmad/bmm/planning/source-docs/EPICS-dashboard-v2.md
   - _bmad/bmm/planning/source-docs/PRD-DESIGN-SYSTEM-v1.md
   - _bmad/bmm/planning/source-docs/PRD-TEAM-RAM-v1.md

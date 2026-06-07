@@ -5,6 +5,7 @@
 > **Roadmap Steps:** 1–3 (+ quick wins)
 > **Goal:** Make every existing surface tell the truth — real APIs, real status, enforced by automated tests
 > **Principle:** One backend capability (Governance MCP) unlocks three surfaces. Build the foundation before adding features.
+> **FRs covered:** FR26, FR27, FR28, FR29, FR30
 
 ---
 
@@ -12,6 +13,7 @@
 
 **Title:** Build governance MCP tools for policy enforcement, gate checks, and config management
 **Priority:** P0-Critical | **Complexity:** Large | **Agent:** Knuth (schema) → Woz (implementation)
+**Traceability:** Epic 9 → FR26
 **Roadmap Step:** 1
 
 **Description:**
@@ -47,6 +49,7 @@ The Governance surface in the Allura app currently shows hardcoded example polic
 
 **Title:** Build audit MCP tools for compliance trails, event queries, and health reporting
 **Priority:** P0-Critical | **Complexity:** Medium | **Agent:** Knuth (schema) → Woz (implementation)
+**Traceability:** Epic 9 → FR27
 **Roadmap Step:** 2
 
 **Description:**
@@ -80,6 +83,7 @@ Mission Control needs audit trail data to show real system health. Currently it 
 
 **Title:** Build automated test harness that validates every surface against the 7-point Definition of Done
 **Priority:** P1-High | **Complexity:** Large | **Agent:** Woz
+**Traceability:** Epic 9 → FR28
 **Roadmap Step:** 3
 
 **Description:**
@@ -130,6 +134,7 @@ src/tests/dod/
 
 **Title:** Connect Memory Add modal Save button to `memory_add` MCP tool
 **Priority:** P1-High | **Complexity:** Small | **Agent:** Woz
+**Traceability:** Epic 9 → FR29
 **Roadmap Step:** Quick win (unblocked now)
 
 **Description:**
@@ -150,6 +155,7 @@ The Add Memory modal exists in the Memory surface but the Save handler is not co
 
 **Title:** Connect Settings capabilities and remote config to real config store
 **Priority:** P1-High | **Complexity:** Small | **Agent:** Woz
+**Traceability:** Epic 9 → FR30
 **Roadmap Step:** Quick win (unblocked now)
 
 **Description:**

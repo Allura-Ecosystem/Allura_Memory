@@ -95,6 +95,32 @@ FR24: PRD-TEAM-RAM-v1 is treated as draft input until its path, authority, event
 
 FR25: Export/copy surfaces preserve provenance in human-readable form, including source, actor/creator/approver, timestamp, tenant scope, status, confidence, evidence IDs, and hash fields when present.
 
+FR26: Governance MCP tools enforce policy gates, config management, and audit trail queries through 5 registered tools with group_id enforcement.
+
+FR27: Audit MCP tools report system health, agent activity, and invariant compliance through 4 registered tools with append-only query behavior.
+
+FR28: Every dashboard surface passes a 7-point Definition of Done gate: loading state, empty state, error state, ready state, real API usage, correct next action, and no fake status indicators.
+
+FR29: Memory Add modal saves new memories to Brain through the governed memory_add MCP path with group_id, user_id, and content validation.
+
+FR30: Settings surface shows real runtime capabilities (available MCP tools) and connected MCP server status rather than placeholder text.
+
+FR31: Symphony orchestrator polls Notion board for Ready tasks, claims them with agent assignment, and routes work through Brooks-based intent classification.
+
+FR32: Kanban surface displays real task status from Notion Symphony adapter with drag-drop state transitions that persist through updateStatus.
+
+FR33: Scheduled tasks persist in Brain, execute on cron via Anthropic API, store results as Brain traces, and support pause/resume/run-now controls.
+
+FR34: Chat supports multi-turn streaming conversations via Anthropic API proxy with Brain context augmentation, persistent history, and source attribution.
+
+FR35: Command palette (Cmd+K) provides keyboard-first fuzzy search across pages, Brain memories, actions, and settings with ARIA accessibility.
+
+FR36: Toast notification system provides non-blocking success/error/warning/info feedback with auto-dismiss, replacing all alert() calls.
+
+FR37: Dark mode uses CSS custom properties with system preference detection, manual override persisted to localStorage, and WCAG 4.5:1 contrast compliance.
+
+FR38: Mobile surfaces have minimum 44x44px touch targets, swipe navigation for sidebar, bottom nav at ≤720px, and no horizontal scroll at 320px.
+
 ### NonFunctional Requirements
 
 NFR1: Tenant isolation is mandatory and enforced at schema/API boundaries; cross-tenant leakage is a P0 failure.
@@ -191,6 +217,19 @@ FR22: Epic 5 - finish-all-epics order and final closeout
 FR23: Epic 1 - `.opencode/agent/` live source-of-truth preservation
 FR24: Epic 1 - draft PRD hardening before acceptance use
 FR25: Epic 3 - provenance-preserving export/copy surfaces
+FR26: Epic 9 - governance MCP tools (Story 9.1)
+FR27: Epic 9 - audit MCP tools (Story 9.2)
+FR28: Epic 9 - 7-point DoD test harness (Story 9.3)
+FR29: Epic 9 - memory add modal wiring (Story 9.4)
+FR30: Epic 9 - settings capabilities wiring (Story 9.5)
+FR31: Epic 10 - Symphony orchestrator and Notion adapter (Story 10.1)
+FR32: Epic 10 - Kanban surface with live status (Story 10.2)
+FR33: Epic 10 - scheduled tasks with cron and Brain persistence (Stories 10.3a/b/c)
+FR34: Epic 10 - multi-turn streaming chat with Brain context (Stories 10.4a/b/c)
+FR35: Epic 11 - command palette (Story 11.1)
+FR36: Epic 11 - toast notification system (Story 11.2)
+FR37: Epic 11 - dark mode (Story 11.3)
+FR38: Epic 11 - mobile polish (Story 11.6)
 
 ## Epic List
 
