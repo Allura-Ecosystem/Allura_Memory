@@ -10,9 +10,9 @@ This command runs the complete testing pipeline for the project.
 
 To run the complete testing pipeline, just type:
 
-1. Run pnpm type:check
-2. Run pnpm lint
-3. Run pnpm test
+1. Run bun run typecheck
+2. Run bun run lint
+3. Run bun test
 4. Report any failures
 5. Fix any failures
 6. Repeat until all tests pass
@@ -20,7 +20,7 @@ To run the complete testing pipeline, just type:
 
 ## What This Command Does
 
-1. Runs `pnpm type:check` to check for type errors
-2. Runs `pnpm lint` to check for linting errors
-3. Runs `pnpm test` to run the tests
+1. Runs `bun run typecheck` to check for type errors
+2. Runs `bun run lint` to check for linting errors
+3. Runs `bun test` to run the tests
 4. Reports any failures

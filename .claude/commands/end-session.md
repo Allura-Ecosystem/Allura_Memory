@@ -21,7 +21,7 @@ This command persists a durable session reflection and verifies write success us
 ## Required Steps
 
 1. Ensure Allura Brain memory access is configured and reachable
-2. Create a Reflection entity scoped to `group_id='roninmemory'`
+2. Create a Reflection entity scoped to `group_id='allura-system'`
 3. Read back to prove durability
 
 ## Canonical Write Template (Using Allura Brain Tools)
@@ -33,7 +33,7 @@ MCP_DOCKER_create_entities({
     name: "Session Reflection " + new Date().toISOString(),
     type: "Reflection",
     observations: [
-      "group_id: roninmemory",
+      "group_id: allura-system",
       "agent_id: openagent",
       "event_type: session_complete",
       "status: completed",

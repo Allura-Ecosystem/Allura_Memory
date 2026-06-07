@@ -1,6 +1,6 @@
 ---
 name: allura-code-review
-description: "Allura-governed code review. Loads allura-team-ram gates with Pike/Fowler review authority, Brain outcome logging, and doc impact checks. Use when reviewing code in the Allura Memory repo."
+description: "Allura-governed code review with Pike/Fowler gates, Brain outcome logging, and doc impact checks. Use for governed review, allura code review, or review with gates — not generic code review."
 globs: ["src/**", "docs/allura/**", "guidelines/**"]
 ---
 
@@ -12,7 +12,7 @@ globs: ["src/**", "docs/allura/**", "guidelines/**"]
 
 Use this skill when reviewing code changes in the Allura Memory repo.
 
-Trigger phrases: `allura code review`, `review code`, `allura review`, `code review`.
+Trigger phrases: `allura code review`, `governed review`, `review with gates`, `allura review`.
 
 ## Prerequisites
 
