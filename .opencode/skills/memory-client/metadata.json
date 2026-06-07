@@ -1,1 +1,0 @@
-{"name":"memory-client","description":"Compatibility alias for allura-memory-skill. Prefer allura-memory-skill for Allura Brain governance, group_id discipline, and promotion policy.","version":"2.0.1","triggers":["memory-client","allura-memory-skill","allura-brain","brain","memory","remember","recall","search brain"]}
