@@ -170,11 +170,7 @@ describe("syscall_trace", () => {
     vi.clearAllMocks();
   });
 
-  it("should route trace through target resolver as pg:events insert", async () => {
-    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce(
-      { success: true, affected_rows: 1 }
-    );
-
+  it("returns success and a trace_id without calling resolveTarget (audit-only)", async () => {
     const { syscall_trace } = await import("./syscalls");
     const { resolveTarget } = await import("./target-resolver");
 
@@ -188,47 +184,32 @@ describe("syscall_trace", () => {
       ctx
     );
 
+    // syscall_trace is audit-only: it runs the kernel's proof/policy/audit
+    // gate via executeSyscall, but does NOT issue a database write.
+    // The canonical event row is the caller's responsibility (e.g.
+    // logTrace() in src/lib/postgres/trace-logger.ts). This avoids the
+    // double-write bug where resolveTarget was producing an
+    // INSERT INTO events (table, data, group_id) — a Postgres
+    // reserved-word syntax error.
     expect(result.success).toBe(true);
     expect(result.data?.trace_id).toBeDefined();
-    expect(resolveTarget).toHaveBeenCalledWith(
-      expect.objectContaining({
-        intent: "mutate",
-        target: "pg:events",
-        type: "insert",
-      })
-    );
+    expect(result.data?.trace_id).toMatch(/^audit-allura-system-trace-/);
+    expect(resolveTarget).not.toHaveBeenCalled();
   });
 
-  it("returns success:false when resolveTarget reports failure for trace", async () => {
-    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce(
-      { success: false }
-    );
-
-    const { syscall_trace } = await import("./syscalls");
-
-    const result = await syscall_trace(
-      { group_id: "allura-system", agent_id: "brooks", content: "test" },
-      ctx
-    );
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBeDefined();
-  });
-
-  it("injects group_id from claims into the trace data payload", async () => {
-    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValueOnce(
-      { success: true, affected_rows: 1 }
-    );
-
+  it("accepts arbitrary trace data without requiring schema match", async () => {
     const { syscall_trace } = await import("./syscalls");
     const { resolveTarget } = await import("./target-resolver");
 
-    await syscall_trace({ content: "test" }, ctx);
-
-    const callArg = vi.mocked(resolveTarget).mock.calls[0]![0];
-    expect((callArg.data as Record<string, unknown>)["group_id"]).toBe(
-      "allura-system"
+    // Caller can pass any shape — syscall_trace no longer introspects it
+    // or maps it to columns.
+    const result = await syscall_trace(
+      { content: "test", metadata: { foo: "bar" } },
+      ctx
     );
+
+    expect(result.success).toBe(true);
+    expect(resolveTarget).not.toHaveBeenCalled();
   });
 });
 
