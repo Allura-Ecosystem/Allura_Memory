@@ -217,3 +217,11 @@ Move "Build governance MCP API surface" to Ready. Verify the orchestrator picks 
 ---
 
 > **Provenance:** Relocated from `docs/archive/allura/symphony-notion-adapter-spec.md` into `_bmad/bmm/planning/` on 2026-06-06; UX Polish renumbered Epic 8 → Epic 11.
+
+---
+
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.

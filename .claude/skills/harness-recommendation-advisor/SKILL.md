@@ -54,3 +54,11 @@ Run harness-recommendation-advisor on /home/ronin704/Projects/ai-agents/allura-m
 - skill-roster-sync-audit
 - ruvix-preflight-certifier
 - Four-team harness model (memory/2026-05-16.md)
+
+---
+
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.

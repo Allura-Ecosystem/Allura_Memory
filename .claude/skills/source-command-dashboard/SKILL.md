@@ -138,3 +138,11 @@ mcp__claude_ai_Notion__notion-search({
 - Do not edit dashboard structure (columns, nav) without user confirmation
 - Do not delete entries — mark as archived/done instead
 - Do not create duplicate skill or project entries — search first
+
+---
+
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.

@@ -183,3 +183,11 @@ Stories 10.1, 10.3, and 10.4 can run in parallel after Epic 9. Story 10.2 depend
 ---
 
 > **Provenance:** Relocated from `docs/archive/allura/epic-10-orchestration-runtime.md` into `_bmad/bmm/planning/` on 2026-06-06.
+
+---
+
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
