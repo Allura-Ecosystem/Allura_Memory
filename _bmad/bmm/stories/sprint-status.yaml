@@ -94,11 +94,11 @@ development_status:
   9-5-wire-settings-capabilities: done
   epic-9-retrospective: done
 
-  epic-10: backlog
-  10-1-notion-symphony-adapter: backlog
-  10-2-kanban-surface: backlog
-  10-3-dreams-scheduled-tasks-backend: backlog
-  10-4-chat-runtime: backlog
+  epic-10: in-progress
+  10-1-notion-symphony-adapter: ready-for-dev
+  10-2-kanban-surface: ready-for-dev
+  10-3-dreams-scheduled-tasks-backend: ready-for-dev
+  10-4-chat-runtime: ready-for-dev
   epic-10-retrospective: optional
 
   epic-11: backlog
