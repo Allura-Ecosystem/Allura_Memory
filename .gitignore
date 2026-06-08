@@ -109,3 +109,6 @@ brand-audit-results.json
 !.codex/setup-local-environment.sh
 !.codex/local-environments.md
 .openclaw/
+
+# Build artifacts
+allura-app/dist/

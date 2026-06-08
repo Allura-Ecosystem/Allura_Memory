@@ -1,6 +1,11 @@
 # =============================================================================
 # Dockerfile.dashboard — Allura Memory Dashboard (Next.js dev server)
 # Runs hot-reload dev server with source mounted via docker-compose volume.
+#
+# CRITICAL: Uses Webpack (--webpack) instead of Turbopack (--turbopack).
+# Turbopack (Next.js 16 + Bun + Docker) corrupts native module resolution
+# hashes, causing fatal "Cannot find package 'pg-<hash>" errors that
+# survive even full .next/ cache nukes. See memory/2026-06-07.md.
 # =============================================================================
 FROM oven/bun:1.3.11-alpine
 

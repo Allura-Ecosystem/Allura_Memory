@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p ${ALLURA_DASHBOARD_PORT:-3100}",
+    "dev": "next dev --webpack -p ${ALLURA_DASHBOARD_PORT:-3100}",
     "start": "next start -p ${ALLURA_DASHBOARD_PORT:-3100}",
     "build": "next build",
     "typecheck": "tsc --noEmit",
