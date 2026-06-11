@@ -33,7 +33,7 @@
 #   validation evidence, board traceability, and Brain outcome logging.
 
 generated: 2026-05-24
-last_updated: 2026-06-11-brooks-epic-11-complete-epic-12-registered
+last_updated: 2026-06-11-brooks-story-12-1-process-engine-shipped
 project: Allura Memory
 project_key: NOKEY
 tracking_system: file-system
@@ -113,8 +113,8 @@ development_status:
   11-9-soc2-technical-readiness: done
   epic-11-retrospective: optional
 
-  epic-12: backlog
-  12-1-process-as-code-engine: backlog
+  epic-12: in-progress
+  12-1-process-as-code-engine: done
   12-2-event-sourced-replay: backlog
   12-3-allura-sdk-package: backlog
   12-4-token-compression: backlog
