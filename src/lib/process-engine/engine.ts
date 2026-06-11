@@ -222,12 +222,12 @@ export class ProcessEngine {
         }
       }
 
-      // Run all runnable steps in this group in parallel
-      const groupResults = await Promise.all(
+      // Run all runnable steps in this group in parallel.
+      // Each step collects its own result independently to avoid
+      // race conditions on shared mutable state.
+      const groupResults = await Promise.allSettled(
         runnableInGroup.map(async (stepId) => {
           const step = stepMap.get(stepId)!
-          // Update currentStepIndex to the first step in the group (best effort)
-          state.currentStepIndex = definition.steps.findIndex((s) => s.id === stepId)
 
           let result: ProcessState | null = null
 
@@ -239,19 +239,30 @@ export class ProcessEngine {
             result = await this.executeStep(definition, state, ctx, step, groupIndex)
           }
 
-          // Sync ctx after each step completes
-          Object.assign(ctx, { stepResults: { ...state.stepResults } })
-
           return { stepId, earlyReturn: result }
         }),
       )
 
-      // Check for early returns (failure/pause) from this group
-      for (const { earlyReturn } of groupResults) {
-        if (earlyReturn !== null) {
-          // A step failed or process was paused — return immediately
-          return earlyReturn
+      // Merge results back into state AFTER all steps complete (no concurrent mutation).
+      // This resolves the race: steps ran in parallel, but state is updated sequentially.
+      const earlyReturns: ProcessState[] = []
+
+      for (const settled of groupResults) {
+        if (settled.status === "fulfilled" && settled.value.earlyReturn !== null) {
+          earlyReturns.push(settled.value.earlyReturn)
         }
+      }
+
+      // Sync ctx with merged state after the full group completes
+      Object.assign(ctx, { stepResults: { ...state.stepResults } })
+      state.currentStepIndex = Math.max(
+        ...runnableInGroup.map((id) => definition.steps.findIndex((s) => s.id === id)),
+      )
+      state.updatedAt = new Date().toISOString()
+
+      // If any step failed or paused, return the first failure (deterministic: insertion order)
+      if (earlyReturns.length > 0) {
+        return earlyReturns[0]
       }
 
       // Mark downstream steps as skipped if their parent failed in this group

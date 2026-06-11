@@ -25,7 +25,7 @@ import type { HarnessDetectionResult } from "./types"
  */
 export function detectHarness(): HarnessDetectionResult {
   // Claude Code — env set by `claude` launcher or .claude/ settings dir present
-  if (process.env.CLAUDE_CODE ?? existsSync(".claude/settings.json")) {
+  if (process.env.CLAUDE_CODE || existsSync(".claude/settings.json")) {
     return {
       detected: "claude-code",
       confidence: 0.95,
@@ -34,7 +34,7 @@ export function detectHarness(): HarnessDetectionResult {
   }
 
   // Codex CLI — env set by `codex` launcher or .codex/ directory present
-  if (process.env.CODEX_CLI ?? existsSync(".codex/")) {
+  if (process.env.CODEX_CLI || existsSync(".codex/")) {
     return {
       detected: "codex",
       confidence: 0.9,
@@ -43,7 +43,7 @@ export function detectHarness(): HarnessDetectionResult {
   }
 
   // Cursor — env set by Cursor editor or .cursor/ directory present
-  if (process.env.CURSOR_SESSION ?? existsSync(".cursor/")) {
+  if (process.env.CURSOR_SESSION || existsSync(".cursor/")) {
     return {
       detected: "cursor",
       confidence: 0.9,

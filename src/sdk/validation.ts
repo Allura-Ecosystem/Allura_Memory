@@ -22,7 +22,7 @@ import { AlluraSDKError } from "./types"
 export function validateGroupId(groupId: string): void {
   if (!/^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(groupId)) {
     throw new AlluraSDKError(
-      `Invalid group_id: "${groupId}". Must match ^allura-[a-z0-9-]+$ (e.g. "allura-system", "allura-my-project")`,
+      `Invalid group_id: "${groupId}". Must match ^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$ — no trailing hyphens (e.g. "allura-system", "allura-my-project")`,
       400,
       "INVALID_GROUP_ID",
     )
