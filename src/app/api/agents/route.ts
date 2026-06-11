@@ -8,8 +8,9 @@
  * with eventCount=0 and status="offline".
  */
 
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import path from "path"
+import { withPermission } from "@/lib/auth/api-auth"
 import { getPool } from "@/lib/postgres/connection"
 
 // Server-only guard
@@ -115,7 +116,10 @@ async function readAgentFiles(): Promise<
   return agents
 }
 
-export async function GET(): Promise<NextResponse<Agent[]>> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const auth = await withPermission(request, "memory:read", "viewer")
+  if (auth instanceof NextResponse) return auth
+
   // Step 1: load agent files
   const fileAgents = await readAgentFiles()
 

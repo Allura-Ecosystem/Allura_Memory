@@ -6,10 +6,14 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { withPermission } from "@/lib/auth/api-auth"
 import { importCandidate } from "@/lib/mcp-catalog/registry"
 import { captureException } from "@/lib/observability/sentry"
 
 export async function POST(request: NextRequest) {
+  const auth = await withPermission(request, "memory:write", "admin")
+  if (auth instanceof NextResponse) return auth
+
   try {
     const body = await request.json()
     const { tools } = body

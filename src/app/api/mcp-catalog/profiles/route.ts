@@ -4,11 +4,15 @@
  * List all active tool profiles.
  */
 
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
+import { withPermission } from "@/lib/auth/api-auth"
 import { listProfiles } from "@/lib/mcp-catalog/registry"
 import { captureException } from "@/lib/observability/sentry"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await withPermission(request, "memory:read", "viewer")
+  if (auth instanceof NextResponse) return auth
+
   try {
     const profiles = await listProfiles()
     return NextResponse.json({ profiles, count: profiles.length })

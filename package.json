@@ -68,7 +68,8 @@
     "test:unit": "vitest run --config vitest.config.unit.ts",
     "test:integration": "vitest run --config vitest.config.integration.ts",
     "test:mcp": "bun scripts/test-mcp-browser.ts",
-    "validate:tokens": "bash scripts/token-compliance.sh"
+    "validate:tokens": "bash scripts/token-compliance.sh",
+    "soc2:evidence": "bun run scripts/soc2-evidence.ts"
   },
   "repository": {
     "type": "git",

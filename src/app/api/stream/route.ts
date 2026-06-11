@@ -1,10 +1,12 @@
 /**
  * GET /api/stream?group_id=...
  * Server-Sent Events endpoint for live dashboard updates.
- * No auth required — data is health + counts only, not sensitive.
+ * Requires viewer role — exposes tenant event counts and system health.
  */
 
+import { type NextRequest } from "next/server"
 import type { HealthResponse } from "@/app/api/health/route"
+import { withPermission } from "@/lib/auth/api-auth"
 import { getBreakerManager } from "@/lib/circuit-breaker/index"
 import { getPool } from "@/lib/postgres/connection"
 
@@ -69,9 +71,12 @@ async function collectSnapshot(groupId: string): Promise<SnapshotPayload> {
   return { type: "snapshot", health, totalMemories, pendingCount, breakerStates }
 }
 
-export async function GET(request: Request): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
+  const auth = await withPermission(request, "memory:read", "viewer")
+  if (auth instanceof Response) return auth
+
   const { searchParams } = new URL(request.url)
-  const groupId = searchParams.get("group_id") || "allura-system"
+  const groupId = auth.groupId || searchParams.get("group_id") || "allura-system"
 
   const stream = new ReadableStream({
     async start(controller) {

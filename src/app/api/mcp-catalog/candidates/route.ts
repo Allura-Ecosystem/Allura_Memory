@@ -5,10 +5,14 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { withPermission } from "@/lib/auth/api-auth"
 import { listCandidates } from "@/lib/mcp-catalog/registry"
 import { captureException } from "@/lib/observability/sentry"
 
 export async function GET(request: NextRequest) {
+  const auth = await withPermission(request, "memory:read", "viewer")
+  if (auth instanceof NextResponse) return auth
+
   try {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status") as "candidate" | "approved" | "denied" | "deprecated" | null

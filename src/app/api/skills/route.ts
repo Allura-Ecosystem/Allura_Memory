@@ -7,7 +7,8 @@
 import { existsSync } from "fs"
 import { readdir, readFile } from "fs/promises"
 import { join } from "path"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
+import { withPermission } from "@/lib/auth/api-auth"
 
 export interface Skill {
   id: string
@@ -112,7 +113,10 @@ async function scanSkillDirectory(dir: string, source: "opencode" | "claude"): P
   return skills
 }
 
-export async function GET(): Promise<NextResponse<Skill[]>> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const auth = await withPermission(request, "memory:read", "viewer")
+  if (auth instanceof NextResponse) return auth
+
   const base = process.cwd()
 
   const [opencodeSkills, claudeSkills] = await Promise.all([

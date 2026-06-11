@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
+import { withPermission } from "@/lib/auth/api-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -8,6 +9,9 @@ export const dynamic = "force-dynamic"
  * Will be reimplemented with new dashboard design.
  */
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await withPermission(request, "memory:read", "viewer")
+  if (auth instanceof NextResponse) return auth
+
   return NextResponse.json({ projects: [] })
 }
