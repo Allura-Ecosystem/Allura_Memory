@@ -7,11 +7,15 @@ import { type EventInsert, insertEvent } from "@/lib/postgres/queries/insert-tra
  * Accepts trace payloads from the Next.js middleware (Edge Runtime)
  * and writes them to PostgreSQL via the Node.js runtime connection pool.
  *
- * This endpoint is NOT a public API. It exists solely so the Edge Runtime
- * middleware can fire-and-forget trace writes without importing pg directly.
+ * INTENTIONALLY INTERNAL-ONLY — NOT a public API.
+ * This route exists solely so the Edge Runtime middleware can fire-and-forget
+ * trace writes without importing pg directly. It is NOT protected by Clerk/RBAC
+ * because the Edge middleware cannot attach auth headers to its own internal
+ * calls. Instead, it is protected by the x-internal-trace: allura-trace-middleware
+ * shared secret header. Any request missing that header receives 403.
  *
- * Security: Only accepts requests with x-internal-trace header to prevent
- * external abuse. Rate-limited by design (one write per request).
+ * DO NOT add withPermission() or requireRole() guards here — doing so would
+ * break the TraceMiddleware which has no mechanism to obtain a Clerk session token.
  */
 
 interface TracePayload {

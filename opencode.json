@@ -1,7 +1,123 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "bellard": {
+      "fallback_model": "ollama/glm-5.1:cloud",
+      "mode": "subagent",
+      "model": "openai/gpt-5.4-mini",
+      "path": ".opencode/agent/subagents/code/bellard.md",
+      "permission": {
+        "skill": {
+          "*": "allow"
+        }
+      }
+    },
+    "brooks": {
+      "fallback_model": "ollama/deepseek-v4-pro:cloud",
+      "mode": "primary",
+      "model": "openai/gpt-5.5",
+      "path": ".opencode/agent/core/brooks.md",
+      "permission": {
+        "skill": {
+          "*": "allow"
+        },
+        "task": "allow"
+      }
+    },
+    "carmack": {
+      "fallback_model": "ollama/qwen3-coder-next:cloud",
+      "mode": "subagent",
+      "model": "openai/gpt-5.4-mini",
+      "path": ".opencode/agent/subagents/code/carmack.md",
+      "permission": {
+        "skill": {
+          "*": "allow"
+        }
+      }
+    },
+    "fowler": {
+      "fallback_model": "ollama/glm-5.1:cloud",
+      "mode": "subagent",
+      "model": "openai/gpt-5.5",
+      "path": ".opencode/agent/subagents/review/fowler.md",
+      "permission": {
+        "skill": {
+          "*": "allow"
+        }
+      }
+    },
+    "hightower": {
+      "fallback_model": "ollama/deepseek-v4-pro:cloud",
+      "mode": "subagent",
+      "model": "openai/gpt-5.5",
+      "path": ".opencode/agent/subagents/infrastructure/hightower.md",
+      "permission": {
+        "skill": {
+          "*": "allow"
+        }
+      }
+    },
+    "jobs": {
+      "fallback_model": "ollama/kimi-k2.6:cloud",
+      "mode": "primary",
+      "model": "ollama/deepseek-v4-pro:cloud",
+      "path": ".opencode/agent/core/jobs.md",
+      "permission": {
+        "skill": {
+          "*": "allow"
+        }
+      }
+    },
+    "knuth": {
+      "fallback_model": "openai/gpt-5.4-mini",
+      "mode": "subagent",
+      "model": "ollama/qwen3-coder-next:cloud",
+      "path": ".opencode/agent/subagents/infrastructure/knuth.md",
+      "permission": {
+        "skill": {
+          "*": "allow"
+        }
+      }
+    },
+    "pike": {
+      "fallback_model": "ollama/deepseek-v4-pro:cloud",
+      "mode": "subagent",
+      "model": "openai/gpt-5.4-mini",
+      "path": ".opencode/agent/subagents/review/pike.md",
+      "permission": {
+        "skill": {
+          "*": "allow"
+        }
+      }
+    },
+    "scout": {
+      "fallback_model": "ollama/nemotron-3-super:cloud",
+      "mode": "subagent",
+      "model": "openai/gpt-5.4-mini",
+      "path": ".opencode/agent/subagents/core/scout.md",
+      "permission": {
+        "edit": "allow",
+        "skill": {
+          "*": "allow"
+        },
+        "task": "allow",
+        "write": "allow"
+      }
+    },
+    "woz": {
+      "fallback_model": "openai/gpt-5.4-mini",
+      "mode": "subagent",
+      "model": "ollama/qwen3-coder-next:cloud",
+      "path": ".opencode/agent/subagents/code/woz.md",
+      "permission": {
+        "skill": {
+          "*": "allow"
+        },
+        "task": "allow"
+      }
+    }
+  },
   "default_agent": "brooks",
-  "model": "openai/gpt-5.5",
   "instructions": [
     ".opencode/AGENTS.md",
     ".opencode/manifest.json",
@@ -14,172 +130,129 @@
     ".agents/TEAM-RAM-RUNTIME.md",
     ".opencode/COWORK.md"
   ],
-  "skills": {
-    "paths": [".opencode/skills", ".claude/skills"]
-  },
   "mcp": {
     "allura-brain": {
-      "type": "remote",
-      "url": "http://localhost:5888/mcp",
       "enabled": true,
-      "timeout": 60000
+      "timeout": 60000,
+      "type": "remote",
+      "url": "http://localhost:5888/mcp"
+    },
+    "chrome-devtools": {
+      "command": [
+        "npx",
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ],
+      "type": "local"
     }
   },
-  "provider": {
-    "openai": {
-      "options": {
-        "timeout": 600000,
-        "chunkTimeout": 60000
-      }
+  "model": "ollama-cloud/kimi-k2.6",
+  "permission": {
+    "bash": "allow",
+    "edit": "allow",
+    "external_directory": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "question": "deny",
+    "read": "allow",
+    "skill": {
+      "*": "allow",
+      "allura-memory-skill": "allow",
+      "mcp-docker": "allow",
+      "team-ram-cowork": "allow"
     },
+    "task": "allow",
+    "todowrite": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "write": "allow"
+  },
+  "plugin": [
+    "opencode-scheduler"
+  ],
+  "provider": {
     "ollama": {
+      "models": {
+        "deepseek-v3.2:cloud": {
+          "name": "deepseek-v3.2:cloud"
+        },
+        "deepseek-v4-flash:cloud": {
+          "name": "deepseek-v4-flash:cloud"
+        },
+        "deepseek-v4-pro:cloud": {
+          "name": "deepseek-v4-pro:cloud"
+        },
+        "gemma4:31b-cloud": {
+          "name": "gemma4:31b-cloud"
+        },
+        "glm-5.1:cloud": {
+          "name": "glm-5.1:cloud"
+        },
+        "glm-5:cloud": {
+          "name": "glm-5:cloud"
+        },
+        "gpt-oss:120b-cloud": {
+          "name": "gpt-oss:120b-cloud"
+        },
+        "kimi-k2.5:cloud": {
+          "name": "kimi-k2.5:cloud"
+        },
+        "kimi-k2.6:cloud": {
+          "name": "kimi-k2.6:cloud"
+        },
+        "minimax-m2.5:cloud": {
+          "name": "minimax-m2.5:cloud"
+        },
+        "minimax-m2.7:cloud": {
+          "name": "minimax-m2.7:cloud"
+        },
+        "ministral-3:8b-cloud": {
+          "name": "ministral-3:8b-cloud"
+        },
+        "nemotron-3-super:cloud": {
+          "name": "nemotron-3-super:cloud"
+        },
+        "nomic-embed-text:latest": {
+          "name": "nomic-embed-text:latest"
+        },
+        "qwen3-coder-next:cloud": {
+          "name": "qwen3-coder-next:cloud"
+        },
+        "qwen3-coder:480b-cloud": {
+          "name": "qwen3-coder:480b-cloud"
+        },
+        "qwen3-embedding:8b": {
+          "name": "qwen3-embedding:8b"
+        },
+        "qwen3-vl:235b-cloud": {
+          "name": "qwen3-vl:235b-cloud"
+        },
+        "qwen3.5:397b-cloud": {
+          "name": "qwen3.5:397b-cloud"
+        },
+        "qwen3:0.6b": {
+          "name": "qwen3:0.6b"
+        }
+      },
       "name": "Ollama",
       "npm": "@ai-sdk/openai-compatible",
       "options": {
         "baseURL": "http://127.0.0.1:11434/v1",
-        "timeout": 600000,
-        "chunkTimeout": 60000
-      },
-      "models": {
-        "deepseek-v4-pro:cloud": {"name": "deepseek-v4-pro:cloud"},
-        "deepseek-v4-flash:cloud": {"name": "deepseek-v4-flash:cloud"},
-        "glm-5.1:cloud": {"name": "glm-5.1:cloud"},
-        "kimi-k2.6:cloud": {"name": "kimi-k2.6:cloud"},
-        "nemotron-3-super:cloud": {"name": "nemotron-3-super:cloud"},
-        "qwen3-coder-next:cloud": {"name": "qwen3-coder-next:cloud"},
-        "qwen3-coder:480b-cloud": {"name": "qwen3-coder:480b-cloud"},
-        "qwen3.5:397b-cloud": {"name": "qwen3.5:397b-cloud"},
-        "gemma4:31b-cloud": {"name": "gemma4:31b-cloud"},
-        "gpt-oss:120b-cloud": {"name": "gpt-oss:120b-cloud"},
-        "deepseek-v3.2:cloud": {"name": "deepseek-v3.2:cloud"},
-        "kimi-k2.5:cloud": {"name": "kimi-k2.5:cloud"},
-        "qwen3-vl:235b-cloud": {"name": "qwen3-vl:235b-cloud"},
-        "ministral-3:8b-cloud": {"name": "ministral-3:8b-cloud"},
-        "minimax-m2.7:cloud": {"name": "minimax-m2.7:cloud"},
-        "minimax-m2.5:cloud": {"name": "minimax-m2.5:cloud"},
-        "glm-5:cloud": {"name": "glm-5:cloud"},
-        "qwen3:0.6b": {"name": "qwen3:0.6b"},
-        "qwen3-embedding:8b": {"name": "qwen3-embedding:8b"},
-        "nomic-embed-text:latest": {"name": "nomic-embed-text:latest"}
+        "chunkTimeout": 60000,
+        "timeout": 600000
+      }
+    },
+    "openai": {
+      "options": {
+        "chunkTimeout": 60000,
+        "timeout": 600000
       }
     }
   },
-  "plugin": ["opencode-scheduler"],
-  "permission": {
-    "read": "allow",
-    "glob": "allow",
-    "grep": "allow",
-    "bash": "allow",
-    "edit": "allow",
-    "write": "allow",
-    "skill": {
-      "allura-memory-skill": "allow",
-      "mcp-docker": "allow",
-      "team-ram-cowork": "allow",
-      "*": "allow"
-    },
-    "task": "allow",
-    "webfetch": "allow",
-    "websearch": "allow",
-    "external_directory": "allow",
-    "todowrite": "allow",
-    "question": "deny"
-  },
-  "agent": {
-    "brooks": {
-      "mode": "primary",
-      "path": ".opencode/agent/core/brooks.md",
-      "model": "openai/gpt-5.5",
-      "fallback_model": "ollama/deepseek-v4-pro:cloud",
-      "permission": {
-        "task": "allow",
-        "skill": {"*": "allow"}
-      }
-    },
-    "jobs": {
-      "mode": "primary",
-      "path": ".opencode/agent/core/jobs.md",
-      "model": "ollama/deepseek-v4-pro:cloud",
-      "fallback_model": "ollama/kimi-k2.6:cloud",
-      "permission": {
-        "skill": {"*": "allow"}
-      }
-    },
-    "scout": {
-      "mode": "subagent",
-      "path": ".opencode/agent/subagents/core/scout.md",
-      "model": "openai/gpt-5.4-mini",
-      "fallback_model": "ollama/nemotron-3-super:cloud",
-      "permission": {
-        "edit": "allow",
-        "write": "allow",
-        "task": "allow",
-        "skill": {"*": "allow"}
-      }
-    },
-    "woz": {
-      "mode": "subagent",
-      "path": ".opencode/agent/subagents/code/woz.md",
-      "model": "ollama/qwen3-coder-next:cloud",
-      "fallback_model": "openai/gpt-5.4-mini",
-      "permission": {
-        "task": "allow",
-        "skill": {"*": "allow"}
-      }
-    },
-    "bellard": {
-      "mode": "subagent",
-      "path": ".opencode/agent/subagents/code/bellard.md",
-      "model": "openai/gpt-5.4-mini",
-      "fallback_model": "ollama/glm-5.1:cloud",
-      "permission": {
-        "skill": {"*": "allow"}
-      }
-    },
-    "carmack": {
-      "mode": "subagent",
-      "path": ".opencode/agent/subagents/code/carmack.md",
-      "model": "openai/gpt-5.4-mini",
-      "fallback_model": "ollama/qwen3-coder-next:cloud",
-      "permission": {
-        "skill": {"*": "allow"}
-      }
-    },
-    "pike": {
-      "mode": "subagent",
-      "path": ".opencode/agent/subagents/review/pike.md",
-      "model": "openai/gpt-5.4-mini",
-      "fallback_model": "ollama/deepseek-v4-pro:cloud",
-      "permission": {
-        "skill": {"*": "allow"}
-      }
-    },
-    "fowler": {
-      "mode": "subagent",
-      "path": ".opencode/agent/subagents/review/fowler.md",
-      "model": "openai/gpt-5.5",
-      "fallback_model": "ollama/glm-5.1:cloud",
-      "permission": {
-        "skill": {"*": "allow"}
-      }
-    },
-    "knuth": {
-      "mode": "subagent",
-      "path": ".opencode/agent/subagents/infrastructure/knuth.md",
-      "model": "ollama/qwen3-coder-next:cloud",
-      "fallback_model": "openai/gpt-5.4-mini",
-      "permission": {
-        "skill": {"*": "allow"}
-      }
-    },
-    "hightower": {
-      "mode": "subagent",
-      "path": ".opencode/agent/subagents/infrastructure/hightower.md",
-      "model": "openai/gpt-5.5",
-      "fallback_model": "ollama/deepseek-v4-pro:cloud",
-      "permission": {
-        "skill": {"*": "allow"}
-      }
-    }
+  "skills": {
+    "paths": [
+      ".opencode/skills",
+      ".claude/skills"
+    ]
   }
 }
