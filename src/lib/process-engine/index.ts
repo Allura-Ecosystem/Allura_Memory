@@ -1,9 +1,9 @@
 /**
  * Process Engine — Public API
- * Story 12.1: Process-as-Code Engine for Allura Memory
+ * Story 12.1 / 12.2: Process-as-Code Engine + Event-Sourced Replay
  *
  * Re-exports the full public surface: engine class, state manager,
- * DSL helpers, and all types.
+ * replay engine, DSL helpers, and all types.
  */
 
 // Server-only guard
@@ -17,6 +17,9 @@ export { ProcessEngine } from "./engine"
 // State manager (for direct access when needed)
 export { ProcessStateManager } from "./state-manager"
 
+// Replay engine (Story 12.2)
+export { ReplayEngine } from "./replay"
+
 // DSL helpers
 export { defineProcess, step, checkpoint, gate } from "./helpers"
 
@@ -29,6 +32,14 @@ export type {
   ProcessDefinition,
   ProcessState,
 } from "./types"
+
+// Replay types (Story 12.2)
+export type {
+  ReplayOptions,
+  ReplayTimeline,
+  ReplayTimelineStep,
+  ReplayDiff,
+} from "./replay"
 
 // Error classes
 export {

@@ -69,7 +69,10 @@
     "test:integration": "vitest run --config vitest.config.integration.ts",
     "test:mcp": "bun scripts/test-mcp-browser.ts",
     "validate:tokens": "bash scripts/token-compliance.sh",
-    "soc2:evidence": "bun run scripts/soc2-evidence.ts"
+    "soc2:evidence": "bun run scripts/soc2-evidence.ts",
+    "process:run": "bun run scripts/process-run.ts",
+    "process:resume": "bun run scripts/process-run.ts resume",
+    "process:replay": "bun run scripts/process-run.ts replay"
   },
   "repository": {
     "type": "git",

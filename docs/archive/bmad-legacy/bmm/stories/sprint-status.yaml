@@ -33,7 +33,7 @@
 #   validation evidence, board traceability, and Brain outcome logging.
 
 generated: 2026-05-24
-last_updated: 2026-06-11-brooks-story-12-1-process-engine-shipped
+last_updated: 2026-06-11-woz-story-12-2-event-sourced-replay-shipped
 project: Allura Memory
 project_key: NOKEY
 tracking_system: file-system
@@ -115,10 +115,10 @@ development_status:
 
   epic-12: in-progress
   12-1-process-as-code-engine: done
-  12-2-event-sourced-replay: backlog
+  12-2-event-sourced-replay: done
   12-3-allura-sdk-package: backlog
   12-4-token-compression: backlog
-  12-5-headless-process-runner: backlog
+  12-5-headless-process-runner: done
   12-6-dag-dependency-resolver: backlog
   12-7-multi-harness-adapters: backlog
   epic-12-retrospective: optional
@@ -303,3 +303,8 @@ status_evidence:
     artifact: "_bmad/bmm/stories/epic-5-retrospective.md"
     board_traceability: "Notion Engine and Dashboard Fork Strategy pages updated 2026-06-04 with dashboard sunset decision."
     closeout_disposition: "Done by Ronin approval; dashboard branch reconciliation is separate future work, not Epic 5 Engine scope."
+  12-2-event-sourced-replay:
+    drift_gate: "Story 12.2 implements the replay engine extending Story 12.1 (Process Engine). No blockers found; existing event schema (process_step_started, process_step_completed, process_step_failed, process_checkpoint_blocked, process_gate_failed, process_resumed, process_completed, process_failed) fully covers the timeline reconstruction contract."
+    validation: "bun vitest run src/lib/process-engine/replay.test.ts — 20 pass, 0 fail [354ms]. bun run typecheck — clean (no TypeScript errors)."
+    review: "Woz implementation; server-only guard present, group_id on every DB query, dryRun mode writes nothing, resumeFromCheckpoint delegates to ProcessEngine.resume(). All ReplayDiff, ReplayTimeline, ReplayTimelineStep types exported from index.ts."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
