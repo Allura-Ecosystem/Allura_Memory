@@ -121,7 +121,7 @@ development_status:
   12-5-headless-process-runner: done
   12-6-dag-dependency-resolver: done
   12-7-multi-harness-adapters: done
-  epic-12-retrospective: optional
+  epic-12-retrospective: done
 
 status_evidence:
   epic-9:
