@@ -33,7 +33,7 @@
 #   validation evidence, board traceability, and Brain outcome logging.
 
 generated: 2026-05-24
-last_updated: 2026-06-11-woz-story-12-3-allura-sdk-package-shipped
+last_updated: 2026-06-11-woz-story-12-7-multi-harness-adapter-shipped
 project: Allura Memory
 project_key: NOKEY
 tracking_system: file-system
@@ -113,14 +113,14 @@ development_status:
   11-9-soc2-technical-readiness: done
   epic-11-retrospective: optional
 
-  epic-12: in-progress
+  epic-12: done
   12-1-process-as-code-engine: done
   12-2-event-sourced-replay: done
   12-3-allura-sdk-package: done
-  12-4-token-compression: backlog
+  12-4-token-compression: done
   12-5-headless-process-runner: done
   12-6-dag-dependency-resolver: done
-  12-7-multi-harness-adapters: backlog
+  12-7-multi-harness-adapters: done
   epic-12-retrospective: optional
 
 status_evidence:
@@ -317,4 +317,9 @@ status_evidence:
     drift_gate: "Story 12.6 extends Story 12.1 (Process Engine). DAGResolver validates dependency graphs before execution; runParallel() uses Promise.all per group. No architecture blockers; existing StepDefinition.dependsOn contract already supported the field."
     validation: "bun vitest run src/lib/process-engine/dag.test.ts — 21 pass, 0 fail [6ms]. bun run typecheck — clean (no TypeScript errors)."
     review: "Woz implementation; server-only guard present on dag.ts; engine.ts server-only guard inherited. group_id on every insertEvent call in runParallel(). DAGResolver exported from index.ts with DAGNode and DAGValidationResult types. Cast at DAGResolver.validate() call site is safe — DAG only reads id and dependsOn structural fields."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  12-7-multi-harness-adapters:
+    drift_gate: "Story 12.7 introduces src/lib/harness-adapter/. No architecture blockers; adapter interface is lightweight and carries no database dependencies. fs detection uses node:fs existsSync; server-only guards on all adapter and detection files."
+    validation: "bun vitest run src/lib/harness-adapter/harness.test.ts — 30 pass, 0 fail [28ms]. bun run typecheck — clean (no TypeScript errors)."
+    review: "Woz implementation. Server-only guard on index.ts, detect.ts, and all four adapter files. HarnessAdapter interface exported from types.ts for SDK consumers. ClaudeCodeAdapter maps 1:1 to MCP; CodexAdapter and CursorAdapter are stubs returning not_implemented sentinels; GenericAdapter is always-available fallback with conservative capabilities. vi.mock('node:fs') used in tests because Bun marks existsSync as non-configurable — vi.spyOn cannot redefine it."
     board_traceability: "Notion board update pending; no Notion tool available in this runtime."
