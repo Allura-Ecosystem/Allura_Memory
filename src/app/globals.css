@@ -518,3 +518,124 @@ textarea {
     margin-left: 0;
   }
 }
+
+/* ============================================================
+   DARK MODE TOKENS
+   Applied via data-theme="dark" on <html> element.
+   FOCT prevention inline script in app/layout.tsx.
+   ============================================================ */
+
+[data-theme="dark"] {
+  --allura-cream: #1a1a2e;
+  --allura-paper: #16213e;
+  --allura-charcoal: #e8e8e8;
+  --allura-gray-500: #9ca3af;
+  --dashboard-bg: #0f0f23;
+  --dashboard-surface: #1a1a2e;
+  --dashboard-border: #2a2a4a;
+  --dashboard-text-primary: #e8e8e8;
+  --dashboard-text-secondary: #9ca3af;
+}
+
+[data-theme="dark"] html {
+  background: #0f0f23;
+}
+
+[data-theme="dark"] body {
+  background: #0f0f23;
+  color: var(--allura-charcoal);
+}
+
+[data-theme="dark"] .dashboard-sidebar {
+  background: rgba(22, 33, 62, 0.9);
+  border-right-color: #2a2a4a;
+}
+
+[data-theme="dark"] .dashboard-scope div,
+[data-theme="dark"] .dashboard-contract-grid div,
+[data-theme="dark"] .dashboard-live-card {
+  background: rgba(26, 26, 46, 0.9);
+}
+
+[data-theme="dark"] .dashboard-command-bar {
+  background: rgba(22, 33, 62, 0.8);
+}
+
+[data-theme="dark"] .dashboard-agent-card {
+  background: rgba(22, 33, 62, 0.9);
+  border-color: #2a2a4a;
+}
+
+/* ============================================================
+   MOBILE POLISH (≤720px)
+   Sidebar collapses; mobile nav bar takes over.
+   ============================================================ */
+
+@media (max-width: 720px) {
+  .dashboard-shell .dashboard-sidebar {
+    display: none;
+  }
+
+  .dashboard-shell {
+    grid-template-columns: 1fr;
+  }
+
+  body {
+    /* Prevents iOS auto-zoom on input focus */
+    font-size: 16px;
+  }
+
+  .dashboard-main {
+    /* Reserve space for fixed 56px mobile nav bar */
+    padding-bottom: 72px;
+  }
+}
+
+/* Mobile nav bar */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--allura-paper, #fffdf8);
+  border-top: 1px solid var(--dashboard-border, rgba(17, 24, 39, 0.14));
+  z-index: 100;
+}
+
+@media (max-width: 720px) {
+  .mobile-nav {
+    display: flex;
+    align-items: stretch;
+  }
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 44px;
+  padding: 6px 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--allura-gray-500);
+  font-size: 10px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.mobile-nav-item[aria-current="page"],
+.mobile-nav-item.active {
+  color: var(--allura-blue);
+}
+
+.mobile-nav-item span {
+  line-height: 1;
+}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 
 import { APP_CONFIG } from "@/config/app-config"
+import { SettingsResources, SettingsTelemetry } from "@/components/dashboard/settings-resources"
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -74,6 +75,7 @@ export default function SettingsPage() {
           width: "min(100%, 640px)",
         }}
       >
+        {/* Static runtime config sections */}
         {sections.map((section) => (
           <div
             key={section.heading}
@@ -137,6 +139,42 @@ export default function SettingsPage() {
             </div>
           </div>
         ))}
+
+        {/* Resources — live data from /api/health and /api/agents */}
+        <div>
+          <p
+            style={{
+              fontSize: "11px",
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--allura-blue)",
+              margin: "0 0 12px",
+            }}
+          >
+            Resources
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <SettingsResources />
+          </div>
+        </div>
+
+        {/* Telemetry stub */}
+        <div>
+          <p
+            style={{
+              fontSize: "11px",
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--allura-blue)",
+              margin: "0 0 12px",
+            }}
+          >
+            Observability
+          </p>
+          <SettingsTelemetry />
+        </div>
       </div>
 
       <p
