@@ -37,7 +37,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Initialize from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
+    let stored: string | null = null
+    try { stored = localStorage.getItem(STORAGE_KEY) } catch { /* restricted context */ }
     const initial: Theme = stored === "light" || stored === "dark" || stored === "system" ? stored : "system"
     const resolved = resolveTheme(initial)
     setThemeState(initial)
@@ -62,7 +63,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme])
 
   const setTheme = useCallback((next: Theme) => {
-    localStorage.setItem(STORAGE_KEY, next)
+    try { localStorage.setItem(STORAGE_KEY, next) } catch { /* restricted context */ }
     const resolved = resolveTheme(next)
     setThemeState(next)
     setResolvedTheme(resolved)

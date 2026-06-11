@@ -1,6 +1,7 @@
 "use client"
 
 import { Command } from "cmdk"
+import { useTheme } from "@/components/dashboard/theme-provider"
 import {
   Brain,
   Clock,
@@ -87,7 +88,7 @@ export function CommandPalette() {
   const [memories, setMemories] = useState<MemoryResult[]>([])
   const [memoriesLoading, setMemoriesLoading] = useState(false)
   const [recentActions, setRecentActions] = useState<RecentAction[]>([])
-  const [darkMode, setDarkMode] = useState(false)
+  const { resolvedTheme, setTheme } = useTheme()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const resultCountRef = useRef<HTMLSpanElement | null>(null)
@@ -404,12 +405,11 @@ export function CommandPalette() {
               />
               <PaletteItem
                 value="action-toggle-dark"
-                label={darkMode ? "Switch to Light Mode" : "Toggle Dark Mode"}
-                icon={darkMode ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}
+                label={resolvedTheme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                icon={resolvedTheme === "dark" ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}
                 onSelect={() =>
                   runAction("action-toggle-dark", "Toggle Dark Mode", () => {
-                    setDarkMode((prev) => !prev)
-                    document.documentElement.classList.toggle("dark")
+                    setTheme(resolvedTheme === "dark" ? "light" : "dark")
                   })
                 }
               />

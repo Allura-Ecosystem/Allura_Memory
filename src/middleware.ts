@@ -180,6 +180,14 @@ export function middleware(request: NextRequest): NextResponse {
     return NextResponse.next();
   }
 
+  // Skip internal trace requests BEFORE stripping headers.
+  // Only trust this header when it matches our exact middleware token.
+  // External callers sending arbitrary values are rejected (header is stripped below).
+  const internalTrace = request.headers.get("x-internal-trace");
+  if (internalTrace === "allura-auth-middleware") {
+    return NextResponse.next();
+  }
+
   // SECURITY: Strip all trusted auth headers from inbound requests.
   // Without this, an external caller could set x-allura-user-id and
   // x-allura-role to impersonate any user/role/tenant.
@@ -188,19 +196,9 @@ export function middleware(request: NextRequest): NextResponse {
     cleanHeaders.delete(h);
   }
 
-  const cleanRequest = new NextRequest(request.url, {
-    method: request.method,
-    headers: cleanHeaders,
-    body: request.body,
-  });
-
-  // Skip requests that originated from our own trace middleware to prevent loops.
-  // (checked AFTER stripping — external callers can no longer spoof this)
-  if (request.headers.get("x-internal-trace")) {
-    return NextResponse.next();
-  }
-
-  const authContext = resolveEdgeAuth(cleanRequest);
+  // resolveEdgeAuth reads env vars and cookies, not injected headers.
+  // Pass original request — cleanHeaders are used only for downstream injection.
+  const authContext = resolveEdgeAuth(request);
 
   if (!authContext) {
     // No identity resolved — pass through with cleaned headers.

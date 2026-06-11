@@ -62,10 +62,19 @@ export function containsSensitiveData(
       fields.push(path)
     }
 
-    // Recurse into nested objects (not arrays — key names in arrays are indices)
-    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-      const nested = containsSensitiveData(value, path)
-      fields.push(...nested.fields)
+    // Recurse into nested objects and array elements
+    if (value !== null && typeof value === "object") {
+      if (Array.isArray(value)) {
+        for (let i = 0; i < value.length; i++) {
+          if (value[i] !== null && typeof value[i] === "object") {
+            const nested = containsSensitiveData(value[i], `${path}[${i}]`)
+            fields.push(...nested.fields)
+          }
+        }
+      } else {
+        const nested = containsSensitiveData(value, path)
+        fields.push(...nested.fields)
+      }
     }
   }
 
