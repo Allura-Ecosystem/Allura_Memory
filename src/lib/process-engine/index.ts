@@ -48,3 +48,7 @@ export {
   CheckpointBlockedError,
   GateFailedError,
 } from "./types"
+
+// DAG resolver (Story 12.6)
+export { DAGResolver } from "./dag"
+export type { DAGNode, DAGValidationResult } from "./dag"

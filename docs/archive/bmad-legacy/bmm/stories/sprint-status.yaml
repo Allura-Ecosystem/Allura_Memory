@@ -33,7 +33,7 @@
 #   validation evidence, board traceability, and Brain outcome logging.
 
 generated: 2026-05-24
-last_updated: 2026-06-11-woz-story-12-2-event-sourced-replay-shipped
+last_updated: 2026-06-11-woz-story-12-3-allura-sdk-package-shipped
 project: Allura Memory
 project_key: NOKEY
 tracking_system: file-system
@@ -116,10 +116,10 @@ development_status:
   epic-12: in-progress
   12-1-process-as-code-engine: done
   12-2-event-sourced-replay: done
-  12-3-allura-sdk-package: backlog
+  12-3-allura-sdk-package: done
   12-4-token-compression: backlog
   12-5-headless-process-runner: done
-  12-6-dag-dependency-resolver: backlog
+  12-6-dag-dependency-resolver: done
   12-7-multi-harness-adapters: backlog
   epic-12-retrospective: optional
 
@@ -307,4 +307,14 @@ status_evidence:
     drift_gate: "Story 12.2 implements the replay engine extending Story 12.1 (Process Engine). No blockers found; existing event schema (process_step_started, process_step_completed, process_step_failed, process_checkpoint_blocked, process_gate_failed, process_resumed, process_completed, process_failed) fully covers the timeline reconstruction contract."
     validation: "bun vitest run src/lib/process-engine/replay.test.ts — 20 pass, 0 fail [354ms]. bun run typecheck — clean (no TypeScript errors)."
     review: "Woz implementation; server-only guard present, group_id on every DB query, dryRun mode writes nothing, resumeFromCheckpoint delegates to ProcessEngine.resume(). All ReplayDiff, ReplayTimeline, ReplayTimelineStep types exported from index.ts."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  12-3-allura-sdk-package:
+    drift_gate: "Story 12.3 extracts the governed memory + process DSL surface into src/sdk/. No blockers found; REST API shape from /api/memory/route.ts and process-engine types from src/lib/process-engine/ fully cover the SDK contract. ProcessClient uses dynamic import for server-only DSL helpers to avoid browser guard violations."
+    validation: "bun vitest run src/sdk/sdk.test.ts — 33 pass, 0 fail [14ms]. bun run typecheck — clean (no TypeScript errors)."
+    review: "Woz implementation. group_id validated client-side before every network call. No server-only guards on sdk/*.ts (environment-agnostic). AlluraSDKError thrown on all failure paths. MemoryClient timeout uses AbortController. ProcessClient uses async helpers() accessor for lazy loading of server-only DSL. vitest.config.ts updated to include src/sdk/**/*.test.ts."
+    board_traceability: "Notion board update pending; no Notion tool available in this runtime."
+  12-6-dag-dependency-resolver:
+    drift_gate: "Story 12.6 extends Story 12.1 (Process Engine). DAGResolver validates dependency graphs before execution; runParallel() uses Promise.all per group. No architecture blockers; existing StepDefinition.dependsOn contract already supported the field."
+    validation: "bun vitest run src/lib/process-engine/dag.test.ts — 21 pass, 0 fail [6ms]. bun run typecheck — clean (no TypeScript errors)."
+    review: "Woz implementation; server-only guard present on dag.ts; engine.ts server-only guard inherited. group_id on every insertEvent call in runParallel(). DAGResolver exported from index.ts with DAGNode and DAGValidationResult types. Cast at DAGResolver.validate() call site is safe — DAG only reads id and dependsOn structural fields."
     board_traceability: "Notion board update pending; no Notion tool available in this runtime."

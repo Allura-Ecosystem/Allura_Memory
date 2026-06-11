@@ -47,6 +47,7 @@ import type {
   StepDefinition,
   StepStatus,
 } from "./types"
+import { DAGResolver } from "./dag"
 
 // ── Internal Helpers ──────────────────────────────────────────────────────────
 
@@ -131,6 +132,194 @@ export class ProcessEngine {
     const ctx = buildContext(definition, state, partialCtx)
 
     return this.executeFrom(definition, state, ctx, 0)
+  }
+
+  /**
+   * Execute a process with DAG-aware parallel step execution.
+   *
+   * Steps without unmet dependencies run in parallel (Promise.all).
+   * Steps with dependencies wait for all parents in prior groups to complete.
+   *
+   * If a step in a group fails and is required, later groups that contain
+   * steps depending on the failed step are marked as "skipped" with a reason.
+   * Non-required step failures continue as in the sequential engine.
+   *
+   * Checkpoints and gates within a parallel group still block/fail as normal —
+   * they are run sequentially within their Promise.all settlement.
+   *
+   * All events go through insertEvent() with group_id and workflow_id populated.
+   */
+  async runParallel<TCtx>(
+    definition: ProcessDefinition<TCtx>,
+    partialCtx: Partial<ProcessContext<TCtx>> = {},
+  ): Promise<ProcessState> {
+    // ── Validate DAG before starting ─────────────────────────────────────────
+    // Cast to base StepDefinition[] — DAGResolver only reads id and dependsOn
+    const dagResult = DAGResolver.validate(
+      definition.steps as StepDefinition[],
+    )
+    if (!dagResult.valid) {
+      throw new ProcessEngineError(
+        `DAG validation failed: ${dagResult.errors.join("; ")}`,
+        "unstarted",
+      )
+    }
+
+    const processId = randomUUID()
+
+    const state: ProcessState = {
+      processId,
+      definitionId: definition.id,
+      groupId: definition.group_id,
+      status: "pending",
+      currentStepIndex: 0,
+      stepStates: {},
+      stepResults: {},
+      startedAt: now(),
+      updatedAt: now(),
+    }
+
+    // Initialise all steps as pending
+    for (const step of definition.steps) {
+      state.stepStates[step.id] = "pending"
+    }
+
+    await this.stateManager.saveInitialState(state, {
+      id: definition.id,
+      name: definition.name,
+      group_id: definition.group_id,
+      stepCount: definition.steps.length,
+      stepIds: definition.steps.map((s) => s.id),
+    })
+
+    state.status = "running"
+    state.updatedAt = now()
+
+    const ctx = buildContext(definition, state, partialCtx)
+
+    // Build step lookup map
+    const stepMap = new Map<string, StepDefinition<TCtx>>()
+    for (const step of definition.steps) {
+      stepMap.set(step.id, step)
+    }
+
+    // ── Execute group-by-group ────────────────────────────────────────────────
+    const { executionOrder } = dagResult
+
+    for (let groupIndex = 0; groupIndex < executionOrder.length; groupIndex++) {
+      const group = executionOrder[groupIndex]
+
+      // Check if any step in this group was skipped due to a failed parent.
+      // We do this before running the group so we can skip the whole batch.
+      const skippedInGroup: string[] = []
+      const runnableInGroup: string[] = []
+
+      for (const stepId of group) {
+        if (state.stepStates[stepId] === "skipped") {
+          skippedInGroup.push(stepId)
+        } else {
+          runnableInGroup.push(stepId)
+        }
+      }
+
+      // Run all runnable steps in this group in parallel
+      const groupResults = await Promise.all(
+        runnableInGroup.map(async (stepId) => {
+          const step = stepMap.get(stepId)!
+          // Update currentStepIndex to the first step in the group (best effort)
+          state.currentStepIndex = definition.steps.findIndex((s) => s.id === stepId)
+
+          let result: ProcessState | null = null
+
+          if (step.type === "checkpoint") {
+            result = await this.executeCheckpoint(definition, state, ctx, step, groupIndex)
+          } else if (step.type === "gate") {
+            result = await this.executeGate(definition, state, ctx, step, groupIndex)
+          } else {
+            result = await this.executeStep(definition, state, ctx, step, groupIndex)
+          }
+
+          // Sync ctx after each step completes
+          Object.assign(ctx, { stepResults: { ...state.stepResults } })
+
+          return { stepId, earlyReturn: result }
+        }),
+      )
+
+      // Check for early returns (failure/pause) from this group
+      for (const { earlyReturn } of groupResults) {
+        if (earlyReturn !== null) {
+          // A step failed or process was paused — return immediately
+          return earlyReturn
+        }
+      }
+
+      // Mark downstream steps as skipped if their parent failed in this group
+      const failedInGroup = runnableInGroup.filter(
+        (id) => state.stepStates[id] === "failed",
+      )
+
+      if (failedInGroup.length > 0) {
+        // Propagate skipped status to all future groups whose steps depend on failed ones
+        const failedSet = new Set(failedInGroup)
+
+        for (let futureGroup = groupIndex + 1; futureGroup < executionOrder.length; futureGroup++) {
+          for (const futureStepId of executionOrder[futureGroup]) {
+            const futureStep = stepMap.get(futureStepId)!
+            const hasFailedDep = (futureStep.dependsOn ?? []).some((dep) => failedSet.has(dep))
+            if (hasFailedDep) {
+              state.stepStates[futureStepId] = "skipped"
+              failedSet.add(futureStepId) // propagate transitively
+
+              await insertEvent({
+                group_id: state.groupId,
+                event_type: "process_step_skipped",
+                agent_id: ctx.agentId,
+                workflow_id: state.processId,
+                step_id: futureStepId,
+                metadata: {
+                  stepName: futureStep.name,
+                  reason: "parent_failed",
+                  failedDeps: (futureStep.dependsOn ?? []).filter((d) => failedSet.has(d)),
+                },
+                status: "completed",
+              })
+            }
+          }
+        }
+      }
+    }
+
+    // ── All groups complete ───────────────────────────────────────────────────
+    state.status = "completed"
+    state.updatedAt = now()
+    state.completedAt = now()
+
+    await insertEvent({
+      group_id: state.groupId,
+      event_type: "process_completed",
+      agent_id: ctx.agentId,
+      workflow_id: state.processId,
+      metadata: {
+        definitionId: state.definitionId,
+        stepCount: definition.steps.length,
+        completedAt: state.completedAt,
+        mode: "parallel",
+      },
+      status: "completed",
+    })
+
+    await this.stateManager.saveState(state)
+
+    if (definition.onComplete) {
+      try {
+        await definition.onComplete({ ...ctx, stepResults: { ...state.stepResults } })
+      } catch {
+        // onComplete errors are non-fatal
+      }
+    }
+
+    return state
   }
 
   /**

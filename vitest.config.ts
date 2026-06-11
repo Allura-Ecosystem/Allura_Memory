@@ -81,6 +81,8 @@ export default defineConfig({
       "src/lib/ruvector/embedding-service.test.ts",
       "src/lib/neo4j/connection.test.ts",
       "src/lib/postgres/connection.test.ts",
+      // SDK unit tests (Story 12.3)
+      "src/sdk/**/*.test.ts",
     ],
     exclude: [
       // E2E tests — require live stack
