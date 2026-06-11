@@ -23,8 +23,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isClerkEnabled } from "./config";
 import { getDevUserSync } from "./dev-auth";
-import { checkPermission, hasPermission, parseRole } from "./roles";
-import type { AlluraRole, AuthUser, PermissionCheckResult } from "./types";
+import { checkPermission, parseRole } from "./roles";
+import type { AlluraRole, AuthUser, PermissionAction, PermissionCheckResult } from "./types";
+
+// ── Discriminated Union for requireRole ──────────────────────────────────────
+
+/**
+ * Discriminated union return type for requireRole.
+ *
+ * When allowed is true, user is guaranteed non-null.
+ * When allowed is false, user is null and reason is always present.
+ */
+export type RoleCheckResult =
+  | { allowed: true; user: AuthUser; requiredRole: AlluraRole; actualRole: AlluraRole }
+  | { allowed: false; reason: string; user: null; requiredRole: AlluraRole; actualRole: AlluraRole };
 
 // ── Auth Resolution ─────────────────────────────────────────────────────────
 
@@ -76,15 +88,18 @@ export function requireAuth(request: NextRequest): AuthUser | null {
 }
 
 /**
- * Require a minimum role — returns a permission check result.
+ * Require a minimum role — returns a discriminated union result.
  *
  * Use this when the route requires a specific role level.
  * If `allowed` is false, respond with `forbiddenResponse(result)`.
+ *
+ * When `result.allowed` is true, TypeScript narrows `result.user` to AuthUser (non-null).
+ * When `result.allowed` is false, `result.user` is null and `result.reason` is always present.
  */
 export function requireRole(
   request: NextRequest,
   requiredRole: AlluraRole,
-): PermissionCheckResult & { user: AuthUser | null } {
+): RoleCheckResult {
   const user = getAuthUser(request);
 
   if (!user) {
@@ -98,7 +113,23 @@ export function requireRole(
   }
 
   const result = checkPermission(user.role, requiredRole);
-  return { ...result, user };
+
+  if (result.allowed) {
+    return {
+      allowed: true,
+      user,
+      requiredRole: result.requiredRole,
+      actualRole: result.actualRole,
+    };
+  }
+
+  return {
+    allowed: false,
+    reason: result.reason ?? `Role '${user.role}' insufficient for '${requiredRole}'`,
+    user: null,
+    requiredRole: result.requiredRole,
+    actualRole: result.actualRole,
+  };
 }
 
 // ── Response Helpers ─────────────────────────────────────────────────────────
@@ -137,11 +168,16 @@ export function forbiddenResponse(
 /**
  * Extract group_id from auth context.
  *
- * If the request has an authenticated user, uses their group_id.
- * Falls back to the query parameter or body parameter.
- * Falls back to "allura-system" if nothing is available.
+ * Resolution order (highest precedence first):
+ * 1. AuthUser.groupId — from Clerk or dev-auth (always trusted)
+ * 2. fallbackGroupId parameter — caller-supplied explicit override
+ * 3. "allura-system" — hard-coded safe default
  *
- * This replaces hardcoded tenant defaults in UI components.
+ * SECURITY: Caller-supplied query parameters are intentionally excluded.
+ * Accepting group_id from unauthenticated request query strings allows
+ * tenant injection — an unauthenticated caller could supply any tenant
+ * and read cross-tenant data. Only authenticated identity determines
+ * the effective tenant.
  */
 export function getGroupIdFromAuth(
   request: NextRequest,
@@ -152,12 +188,49 @@ export function getGroupIdFromAuth(
     return user.groupId;
   }
 
-  // Try query parameter for GET requests
-  const urlGroupId = new URL(request.url).searchParams.get("group_id");
-  if (urlGroupId) {
-    return urlGroupId;
+  // Use provided fallback or default — never caller-supplied query params
+  return fallbackGroupId ?? "allura-system";
+}
+
+// ── withPermission Helper ────────────────────────────────────────────────────
+
+/**
+ * Resolve auth, check role, and return the user + groupId in one call.
+ *
+ * Returns the resolved user and groupId when the check passes.
+ * Returns a NextResponse (401 or 403) when the check fails.
+ *
+ * Usage:
+ *   const result = await withPermission(request, "memory:read");
+ *   if (result instanceof NextResponse) return result;
+ *   const { user, groupId } = result;
+ *
+ * @param request - Incoming Next.js request
+ * @param action - PermissionAction being requested (for future policy checks)
+ * @param requiredRole - Minimum AlluraRole required (defaults to "viewer")
+ */
+export async function withPermission(
+  request: NextRequest,
+  action: PermissionAction,
+  requiredRole: AlluraRole = "viewer",
+): Promise<{ user: AuthUser; groupId: string } | NextResponse> {
+  // Suppress unused-variable warning for action — reserved for future
+  // PermissionProfile.allowed_actions checks without breaking the signature.
+  void action;
+
+  const roleCheck = requireRole(request, requiredRole);
+
+  if (!roleCheck.allowed) {
+    // roleCheck.user is null when unauthenticated → 401
+    // roleCheck.user would be non-null if role was insufficient → 403
+    // Since the discriminated union sets user: null for unauth, use that directly.
+    if (roleCheck.user === null && roleCheck.reason?.includes("Authentication required")) {
+      return unauthorizedResponse();
+    }
+    return forbiddenResponse(roleCheck);
   }
 
-  // Use provided fallback or default
-  return fallbackGroupId ?? "allura-system";
+  const groupId = getGroupIdFromAuth(request);
+
+  return { user: roleCheck.user, groupId };
 }

@@ -288,7 +288,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 
 | #   | Requirement |
 | --- | ----------- |
-| F41 | Memory Command Center exposes `/dashboard`, `/dashboard/memories`, `/dashboard/curator`, `/dashboard/governance`, `/dashboard/graph`, `/dashboard/audit`, and `/dashboard/settings` as the governed operator surface |
+| F41 | Memory Command Center exposes `/dashboard` (new chat), `/dashboard/search` (memory search), `/dashboard/scheduled-tasks` (dreams), `/dashboard/governance` (policy gates), `/dashboard/kanban` (work board), `/dashboard/graph` (knowledge graph), `/dashboard/mission-control` (ops console), and `/dashboard/settings` as the governed operator surface |
 | F42 | `/dashboard/memories` preserves useful reference memory capabilities: memory search/list, insights, trace logs, provenance, extracted facts, and approval queue |
 | F43 | `/work-board` uses Native Allura Kanban as the default planning source of truth; Notion, Linear, and GitHub Projects are optional sync adapters |
 | F44 | `/resources` reads skills, agents, MCP servers, containers, cron jobs, and drift warnings from a declared Resource Manifest or generated manifest endpoint |
@@ -296,6 +296,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | F46 | `/telemetry` surfaces model, prompt, tool, retry, rate-limit, failure, and degraded-state metrics without inventing missing measurements |
 | F47 | Every Memory Command Center route displays its source-of-truth declaration and degraded-state behavior |
 | F48 | Dashboard launch requires documented route parity, visual parity, source-of-truth parity, smoke tests, auth validation, and rollback plan |
+| F49 | `/dashboard/graph` renders Neo4j entities as interactive node cards showing name, email/identifier, role, type badge (People/Organization/Memory/Agent/Project), connection count, and relationship lines; clicking a node highlights connections and shows a detail panel with contact info, relationship labels, and related memories |
 
 ---
 

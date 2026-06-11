@@ -121,6 +121,20 @@ FR37: Dark mode uses CSS custom properties with system preference detection, man
 
 FR38: Mobile surfaces have minimum 44x44px touch targets, swipe navigation for sidebar, bottom nav at ≤720px, and no horizontal scroll at 320px.
 
+FR42: Process Engine executes TypeScript workflow definitions with mandatory checkpoints, quality gates, budget enforcement, and append-only event journaling. All steps carry group_id, agent_id, process_id.
+
+FR43: Replay Engine reconstructs process state from PostgreSQL event journal and resumes from the last incomplete step. Supports dry-run audit replay.
+
+FR44: @allura/sdk TypeScript package published to npm providing governed memory CRUD, search, process execution, and type-safe contracts over HTTP.
+
+FR45: Token compression layer reduces agent context by ≥40% through structural pruning, Brain-backed summarization, and semantic deduplication.
+
+FR46: Headless process runner executes governed workflows via CLI without interactive agents, supporting CI/CD pipelines and scheduled automation.
+
+FR47: DAG dependency resolver enables parallel step execution with declarative dependency declarations and cycle detection.
+
+FR48: Harness adapter interface enables SDK and process engine to work across Claude Code, Codex, and Cursor with auto-detection.
+
 ### NonFunctional Requirements
 
 NFR1: Tenant isolation is mandatory and enforced at schema/API boundaries; cross-tenant leakage is a P0 failure.
@@ -164,7 +178,7 @@ NFR12: The dashboard rebuild must preserve approved Allura brand/tokens and avoi
 
 UX-DR1: `/dashboard` uses warm cream background `#F5F0E8`, white surfaces, charcoal primary text, orange primary CTA, and green approval CTA through semantic tokens.
 
-UX-DR2: Dashboard heading typography uses Outfit; interface/body typography uses Inter.
+UX-DR2: Dashboard typography uses IBM Plex Sans exclusively (Regular, Medium, SemiBold, Bold). Overrides prior Outfit/Inter references per 2026-06-11 readiness review — aligns with Figma Brand Identity and allura-app approved direction.
 
 UX-DR3: `/dashboard` must be search-first: the center memory search and recent memory cards are the primary action, not health metrics or generic cards.
 
@@ -189,6 +203,14 @@ UX-DR12: Forbidden dashboard regressions include dark sidebar shell, generic car
 UX-DR13: Visual completion requires screenshot comparison against `localhost:6420` or the approved spec, confirming warm cream, search-first flow, no dark shell, no old branding, and IRIS sign-off.
 
 UX-DR14: Curator actions must be keyboard reachable, confirmation dialogs must trap/restore focus, and degraded states must be visible rather than hidden.
+
+UX-DR15: `/dashboard/graph` renders a knowledge graph canvas with node cards positioned in a force-directed or manual layout. Each card shows avatar (color-coded by type), entity name, role/description, email or identifier, type badge, and connection count. Cards have warm cream canvas background, white card surfaces, 12px corner radius, and subtle shadow on hover.
+
+UX-DR16: Knowledge Graph node types are color-coded: People (blue `#1D4ED8`), Organizations (orange `#FF5A2E`), Memories (green `#157A44`), Agents (purple `#7C3AED`), Projects (gold `#C89B3C`). Type badges use the overline pattern (uppercase, wide-tracked, small SemiBold) on tinted backgrounds matching the type color.
+
+UX-DR17: Clicking a node card highlights its connections (blue lines), dims unrelated nodes, and opens a right-side detail panel showing full contact info, all connections with relationship labels (WORKS_AT, COLLABORATES_WITH, REVIEWED_BY, DECIDED, APPROVED, etc.), and related memory cards with overline tags (INSIGHT · PROMOTED, RAW MEMORY · EPISODIC).
+
+UX-DR18: Knowledge Graph provides filter pills (All, People, Orgs, Memories, Agents, Projects), a search bar, view tabs (Graph, Table, Timeline, Clusters), stats bar (entity count, connection count, cluster count), and zoom controls. Node cards are draggable. SVG curved connection lines follow card positions.
 
 ### FR Coverage Map
 
@@ -230,6 +252,16 @@ FR35: Epic 11 - command palette (Story 11.1)
 FR36: Epic 11 - toast notification system (Story 11.2)
 FR37: Epic 11 - dark mode (Story 11.3)
 FR38: Epic 11 - mobile polish (Story 11.6)
+FR39: Epic 11 - knowledge graph interactive node cards with vendor details and connections (Story 11.4, Blueprint F49)
+FR40: Epic 11 - dashboard route parity — restore all pages in Next.js App Router (Story 11.5)
+FR41: Epic 11 - resources manifest and telemetry surfaces (Story 11.7, Blueprint F44+F46)
+FR42: Epic 12 - Process-as-Code engine with checkpoints, gates, and event journaling (Story 12.1)
+FR43: Epic 12 - event-sourced replay and resumption from PostgreSQL journal (Story 12.2)
+FR44: Epic 12 - @allura/sdk npm package with governed memory + process engine (Story 12.3)
+FR45: Epic 12 - token compression layer with Brain-backed summarization (Story 12.4)
+FR46: Epic 12 - headless process runner for CI/CD (Story 12.5)
+FR47: Epic 12 - DAG dependency resolver for parallel step execution (Story 12.6)
+FR48: Epic 12 - multi-harness adapter interface (Story 12.7)
 
 ## Epic List
 
