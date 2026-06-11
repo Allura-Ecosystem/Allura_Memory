@@ -16,6 +16,12 @@
   --allura-red: #f04438;
   --dashboard-border: rgba(17, 24, 39, 0.14);
   --dashboard-shadow: 0 18px 40px rgba(17, 24, 39, 0.07);
+  /* Semantic dashboard tokens */
+  --dashboard-text-primary: var(--allura-charcoal);
+  --dashboard-text-secondary: var(--allura-gray-500);
+  --dashboard-success: var(--allura-green);
+  --dashboard-accent: var(--allura-orange);
+  --tone-red-text: var(--allura-red);
 }
 
 * {

@@ -78,6 +78,8 @@ export default defineConfig({
       "src/curator/embedding-backfill-worker.test.ts",
       "src/curator/notion-sync.test.ts",
       "src/curator/approve-cli.test.ts",
+      // UI unit tests (Story 11.2 — toast system)
+      "src/__tests__/toast.test.tsx",
     ],
     exclude: [
       // ── Integration tests (mocked DB/services) — use test:integration ──
@@ -111,6 +113,10 @@ export default defineConfig({
       "src/team-ram/e2e-smoke.test.ts",
     ],
     testTimeout: 10_000,
+    // Enable per-file environment override (e.g. @vitest-environment jsdom in toast.test.tsx)
+    environmentMatchGlobs: [
+      ["src/__tests__/toast.test.tsx", "jsdom"],
+    ],
   },
   resolve: {
     alias: [
