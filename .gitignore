@@ -53,6 +53,7 @@ workspaces/
 artifacts/
 .impeccable/
 .sisyphus/
+skills/
 skills-lock.json
 INSTALLATION-REPORT.md
 UNIVERSAL_MCP_RULE.md
