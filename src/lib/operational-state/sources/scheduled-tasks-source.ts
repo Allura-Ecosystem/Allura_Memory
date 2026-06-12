@@ -19,6 +19,7 @@ if (typeof window !== "undefined") {
 }
 
 import { getPool } from "@/lib/postgres/connection"
+import { isConnectionError } from "../utils/error-classifier"
 import type { SourceOutcome } from "../index"
 
 export interface ScheduledTasksSnapshot {
@@ -34,8 +35,6 @@ export interface ScheduledTasksSnapshot {
   /** Curator proposals created in the last 24 hours (pipeline throughput). */
   proposals24h: number
 }
-
-const UNREACHABLE = /ECONNREFUSED|password|authentication|getaddrinfo|ENOTFOUND|ETIMEDOUT|connection|terminated|pool/i
 
 export async function readScheduledTasks(
   groupId: string,
@@ -95,8 +94,7 @@ export async function readScheduledTasks(
       fetchedAt: new Date().toISOString(),
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    if (UNREACHABLE.test(message)) {
+    if (isConnectionError(err)) {
       // Source could not be reached: degraded (not a query-level failure).
       return null
     }

@@ -14,6 +14,7 @@ if (typeof window !== "undefined") {
 }
 
 import { getPool } from "@/lib/postgres/connection"
+import { isConnectionError } from "../utils/error-classifier"
 import type { SourceOutcome } from "../index"
 
 export interface CuratorQueueSnapshot {
@@ -22,8 +23,6 @@ export interface CuratorQueueSnapshot {
   approved7d: number
   rejected7d: number
 }
-
-const UNREACHABLE = /ECONNREFUSED|password|authentication|getaddrinfo|ENOTFOUND|ETIMEDOUT|connection|terminated|pool/i
 
 export async function readCuratorQueue(
   groupId: string,
@@ -64,8 +63,7 @@ export async function readCuratorQueue(
       fetchedAt: new Date().toISOString(),
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    if (UNREACHABLE.test(message)) {
+    if (isConnectionError(err)) {
       // Source could not be reached: degraded (not a query-level failure).
       return null
     }

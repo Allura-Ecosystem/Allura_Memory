@@ -25,6 +25,7 @@ if (typeof window !== "undefined") {
 
 import { AGENT_MANIFEST, AGENTS_BY_CATEGORY, type AgentManifestEntry } from "@/lib/agents/agent-manifest"
 import { getPool } from "@/lib/postgres/connection"
+import { isConnectionError } from "../utils/error-classifier"
 import type { SourceOutcome } from "../index"
 
 export interface TeamEntry {
@@ -104,8 +105,6 @@ function buildTeamRoster(): TeamEntry[] {
   ]
 }
 
-const UNREACHABLE = /ECONNREFUSED|password|authentication|getaddrinfo|ENOTFOUND|ETIMEDOUT|connection|terminated|pool/i
-
 /**
  * Read live teams data — canonical manifest roster + Postgres activity.
  */
@@ -166,8 +165,7 @@ export async function readTeams(
       fetchedAt: new Date().toISOString(),
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    if (UNREACHABLE.test(message)) {
+    if (isConnectionError(err)) {
       return null
     }
     return { ok: false, error: "Teams query failed" }

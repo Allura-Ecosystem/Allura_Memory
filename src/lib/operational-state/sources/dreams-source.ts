@@ -19,6 +19,7 @@ if (typeof window !== "undefined") {
 }
 
 import { getPool } from "@/lib/postgres/connection"
+import { isConnectionError } from "../utils/error-classifier"
 import type { SourceOutcome } from "../index"
 
 export interface DreamsSnapshot {
@@ -38,8 +39,6 @@ export interface DreamsSnapshot {
   /** Current promotion mode (from PROMOTION_MODE env, sanitized) */
   promotionMode: "auto" | "soc2" | "unknown"
 }
-
-const UNREACHABLE = /ECONNREFUSED|password|authentication|getaddrinfo|ENOTFOUND|ETIMEDOUT|connection|terminated|pool/i
 
 /**
  * Read live dreams data — curator pipeline + background activity from Postgres.
@@ -113,8 +112,7 @@ export async function readDreams(
       fetchedAt: new Date().toISOString(),
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    if (UNREACHABLE.test(message)) {
+    if (isConnectionError(err)) {
       return null
     }
     return { ok: false, error: "Dreams query failed" }

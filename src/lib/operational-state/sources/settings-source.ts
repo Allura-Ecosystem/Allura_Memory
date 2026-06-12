@@ -21,6 +21,7 @@ if (typeof window !== "undefined") {
 import { getPool } from "@/lib/postgres/connection"
 import { audit_health_report } from "@/mcp/audit-tools"
 import { validateGroupId } from "@/mcp/canonical-tools/validation-utils"
+import { isConnectionError } from "../utils/error-classifier"
 import type { SourceOutcome } from "../index"
 
 export type SubsystemHealth = "healthy" | "unhealthy" | "unknown"
@@ -44,8 +45,6 @@ export interface SettingsSnapshot {
   /** Current promotion mode from env, sanitized (never leak the raw env value) */
   promotionMode: "auto" | "soc2" | "unknown"
 }
-
-const UNREACHABLE = /ECONNREFUSED|password|authentication|getaddrinfo|ENOTFOUND|ETIMEDOUT|connection|terminated|pool/i
 
 /**
  * Map audit_health_report subsystem status to our simplified 3-state model.
@@ -155,8 +154,7 @@ export async function readSettings(
       fetchedAt: new Date().toISOString(),
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    if (UNREACHABLE.test(message)) {
+    if (isConnectionError(err)) {
       // Source could not be reached: degraded (not a query-level failure).
       return null
     }
