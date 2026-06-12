@@ -51,7 +51,7 @@ export type DegradationBehavior = "error" | "warn" | "graceful" | "fallback"
 /**
  * System of record type
  */
-export type SystemOfRecord = "notion" | "allura-brain" | "resource-manifest" | "agent-runs" | "telemetry" | "command"
+export type SystemOfRecord = "notion" | "allura-brain" | "resource-manifest" | "agent-runs" | "telemetry" | "command" | "governance" | "scheduled-tasks"
 
 // ── Adapter Declaration ──────────────────────────────────────────────────────
 

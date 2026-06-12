@@ -218,7 +218,7 @@ export function validateRegistry(registry: AdapterRegistry): RegistryValidationR
     }
 
     // Validate system_of_record
-    if (!["notion", "allura-brain", "resource-manifest", "agent-runs", "telemetry", "command"].includes(adapter.system_of_record)) {
+    if (!["notion", "allura-brain", "resource-manifest", "agent-runs", "telemetry", "command", "governance", "scheduled-tasks"].includes(adapter.system_of_record)) {
       errors.push(`Invalid system_of_record in ${adapter.adapter_id}: ${adapter.system_of_record}`)
     }
   }
@@ -258,6 +258,8 @@ export function validateAdapter(adapter: AdapterDeclaration): boolean {
  * - Agent Runs (/agents)
  * - Telemetry (/telemetry)
  * - Command Overview (/command)
+ * - Governance (/dashboard/governance)
+ * - Scheduled Tasks (/dashboard/scheduled-tasks)
  */
 export function seedDefaultAdapters(): AdapterDeclaration[] {
   return [
@@ -391,6 +393,50 @@ export function seedDefaultAdapters(): AdapterDeclaration[] {
       degradation_behavior: "fallback",
       approved_actions: ["read", "aggregate"],
       prohibited_actions: ["raw_write", "unfiltered_export"],
+    },
+
+    // Governance
+    {
+      adapter_id: "governance",
+      display_name: "Governance",
+      route: "/dashboard/governance",
+      system_of_record: "governance",
+      read_policy: {
+        type: "authenticated",
+        min_role: "viewer",
+      },
+      write_policy: {
+        type: "authenticated",
+        min_role: "admin",
+        audit: true,
+      },
+      memory_scope: "group",
+      evidence_policy: "full",
+      degradation_behavior: "warn",
+      approved_actions: ["read", "approve", "reject"],
+      prohibited_actions: ["bulk_delete", "unfiltered_export"],
+    },
+
+    // Scheduled Tasks
+    {
+      adapter_id: "scheduled-tasks",
+      display_name: "Scheduled Tasks",
+      route: "/dashboard/scheduled-tasks",
+      system_of_record: "scheduled-tasks",
+      read_policy: {
+        type: "authenticated",
+        min_role: "viewer",
+      },
+      write_policy: {
+        type: "authenticated",
+        min_role: "admin",
+        audit: true,
+      },
+      memory_scope: "global",
+      evidence_policy: "full",
+      degradation_behavior: "warn",
+      approved_actions: ["read", "metrics"],
+      prohibited_actions: ["write", "configure"],
     },
   ]
 }

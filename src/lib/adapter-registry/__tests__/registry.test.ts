@@ -139,7 +139,7 @@ describe("Adapter Registry - Story 0", () => {
       adapters.forEach((adapter) => {
         addAdapter(registry, adapter)
       })
-      expect(registry.adapters).toHaveLength(6) // Default adapters
+      expect(registry.adapters).toHaveLength(8) // Default adapters
     })
 
     it("retrieves adapter by ID", () => {
@@ -351,13 +351,15 @@ describe("Adapter Registry - Story 0", () => {
     it("creates registry with all default adapters", () => {
       const registry = createDefaultRegistry()
       
-      expect(registry.adapters).toHaveLength(6)
+      expect(registry.adapters).toHaveLength(8)
       expect(registry.byId["notion-work-board"]).toBeDefined()
       expect(registry.byId["allura-brain"]).toBeDefined()
       expect(registry.byId["resource-manifest"]).toBeDefined()
       expect(registry.byId["agent-runs"]).toBeDefined()
       expect(registry.byId["telemetry"]).toBeDefined()
       expect(registry.byId["command-overview"]).toBeDefined()
+      expect(registry.byId["governance"]).toBeDefined()
+      expect(registry.byId["scheduled-tasks"]).toBeDefined()
 
       const validation = validateRegistry(registry)
       expect(validation.valid).toBe(true)
