@@ -20,6 +20,20 @@ export { ProcessStateManager } from "./state-manager"
 // Replay engine (Story 12.2)
 export { ReplayEngine } from "./replay"
 
+// Run manager (Phase 1 / AD-P1-02)
+export { createRun, getRun, listRuns, updateRunSnapshot } from "./run-manager"
+export type { CreateRunParams, GetRunParams, ListRunsParams, UpdateRunSnapshotParams } from "./run-manager"
+
+// Definition registry (Phase 1 / AD-P1-01)
+export { createDefinition, getDefinition, getLatestDefinition, listDefinitions, softDeleteDefinition } from "./definition-registry"
+
+// Quality gate (Phase 1 / AD-P1-03)
+export { evaluateGate, extractGateConfig } from "./quality-gate"
+export type { GateConfig } from "./quality-gate"
+
+// Doctor (Phase 1 / AD-P1-04)
+export { diagnoseRun, runDoctorCycle } from "./doctor"
+
 // DSL helpers
 export { defineProcess, step, checkpoint, gate } from "./helpers"
 
@@ -31,6 +45,11 @@ export type {
   StepDefinition,
   ProcessDefinition,
   ProcessState,
+  GateResult,
+  DoctorFinding,
+  DoctorCondition,
+  StoredDefinition,
+  StoredRun,
 } from "./types"
 
 // Replay types (Story 12.2)
@@ -47,6 +66,7 @@ export {
   CircuitBreakerTripError,
   CheckpointBlockedError,
   GateFailedError,
+  DefinitionRevisionError,
 } from "./types"
 
 // DAG resolver (Story 12.6)

@@ -80,6 +80,21 @@ export interface StepDefinition<TCtx = Record<string, unknown>> {
   required?: boolean | ((ctx: ProcessContext<TCtx>) => boolean)
   /** Step IDs that must complete successfully before this step runs */
   dependsOn?: string[]
+  /**
+   * Optional scored quality-gate configuration (AD-P1-03).
+   *
+   * When present on a gate-type step, the engine delegates to
+   * quality-gate.evaluateGate() instead of the boolean `condition` path.
+   * The `evaluate` function returns a numeric score (0-1) with evidence.
+   * Gates below threshold retry up to `maxAttempts` times.
+   *
+   * Omit to use the standard boolean `condition` gate behaviour.
+   */
+  gateConfig?: {
+    threshold: number
+    maxAttempts: number
+    evaluate: (ctx: ProcessContext<TCtx>) => Promise<{ score: number; evidenceId: string; reasoning: string }>
+  }
 }
 
 // ── Process Definition ────────────────────────────────────────────────────────

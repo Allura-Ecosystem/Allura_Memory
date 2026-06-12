@@ -42,6 +42,8 @@ import {
   ProcessEngineError,
 } from "./types"
 import type {
+  DoctorFinding,
+  GateResult,
   ProcessContext,
   ProcessDefinition,
   ProcessState,
@@ -49,6 +51,13 @@ import type {
   StepStatus,
 } from "./types"
 import { DAGResolver } from "./dag"
+import { createRun, updateRunSnapshot } from "./run-manager"
+import type { CreateRunParams } from "./run-manager"
+import { evaluateGate } from "./quality-gate"
+import type { GateConfig } from "./quality-gate"
+import { diagnoseRun } from "./doctor"
+import { ReplayEngine } from "./replay"
+import type { ReplayOptions, ReplayTimeline } from "./replay"
 
 // ── Internal Helpers ──────────────────────────────────────────────────────────
 
@@ -84,6 +93,12 @@ function buildContext<TCtx>(
 
 export class ProcessEngine {
   private stateManager: ProcessStateManager
+  /**
+   * Tracks the most recent DB `updated_at` for active runs so that
+   * updateRunSnapshot can use it for optimistic-concurrency checks.
+   * Keyed by processId. Entries are removed when the run reaches a terminal state.
+   */
+  private _runUpdatedAt: Map<string, string> = new Map()
 
   constructor(private pool: Pool) {
     this.stateManager = new ProcessStateManager(pool)
@@ -119,7 +134,7 @@ export class ProcessEngine {
       state.stepStates[step.id] = "pending"
     }
 
-    // Persist initial snapshot
+    // Persist initial snapshot (append-only event)
     await this.stateManager.saveInitialState(state, {
       id: definition.id,
       revision: definition.revision ?? "1",
@@ -128,6 +143,18 @@ export class ProcessEngine {
       stepCount: definition.steps.length,
       stepIds: definition.steps.map((s) => s.id),
     })
+
+    // Create run snapshot row in process_runs (lifecycle tracking via run-manager)
+    const createRunParams: CreateRunParams = {
+      id: processId,
+      definitionId: definition.id,
+      definitionRevision: parseInt(definition.revision ?? "1", 10),
+      groupId: definition.group_id,
+      actorId: partialCtx.agentId ?? "process-engine",
+      initialState: state,
+    }
+    const storedRun = await createRun(this.pool, createRunParams)
+    this._runUpdatedAt.set(processId, storedRun.updated_at)
 
     state.status = "running"
     state.updatedAt = now()
@@ -196,6 +223,18 @@ export class ProcessEngine {
       stepCount: definition.steps.length,
       stepIds: definition.steps.map((s) => s.id),
     })
+
+    // Create run snapshot row in process_runs (lifecycle tracking via run-manager)
+    const parallelRunParams: CreateRunParams = {
+      id: processId,
+      definitionId: definition.id,
+      definitionRevision: parseInt(definition.revision ?? "1", 10),
+      groupId: definition.group_id,
+      actorId: partialCtx.agentId ?? "process-engine",
+      initialState: state,
+    }
+    const parallelStoredRun = await createRun(this.pool, parallelRunParams)
+    this._runUpdatedAt.set(processId, parallelStoredRun.updated_at)
 
     state.status = "running"
     state.updatedAt = now()
@@ -326,6 +365,8 @@ export class ProcessEngine {
     })
 
     await this.stateManager.saveState(state)
+    // event-first: event was inserted above; snapshot update comes after
+    await this._persistRunSnapshot(state)
 
     if (definition.onComplete) {
       try {
@@ -501,6 +542,40 @@ export class ProcessEngine {
     state.completedAt = now()
 
     await this.stateManager.saveState(state)
+    // event-first: event was inserted above; snapshot update comes after
+    await this._persistRunSnapshot(state)
+  }
+
+  /**
+   * Diagnose health conditions for a single process run.
+   *
+   * Delegates to doctor.diagnoseRun() — READ-ONLY; never writes events.
+   * Returns an empty array when the run is healthy or not found.
+   */
+  async diagnose(
+    processId: string,
+    groupId: string,
+    options: { staleThresholdMinutes?: number } = {},
+  ): Promise<DoctorFinding[]> {
+    return diagnoseRun(this.pool, {
+      runId: processId,
+      groupId,
+      staleThresholdMinutes: options.staleThresholdMinutes,
+    })
+  }
+
+  /**
+   * Reconstruct the full execution timeline for a process by walking its
+   * append-only event history.
+   *
+   * Delegates to ReplayEngine.replay() — READ-ONLY; does not re-execute steps.
+   */
+  async getTimeline(
+    processId: string,
+    options: ReplayOptions = {},
+  ): Promise<ReplayTimeline> {
+    const replayEngine = new ReplayEngine(this.pool)
+    return replayEngine.replay(processId, options)
   }
 
   // ── Internal Execution Loop ─────────────────────────────────────────────────
@@ -551,6 +626,7 @@ export class ProcessEngine {
         })
 
         await this.stateManager.saveState(state)
+        await this._persistRunSnapshot(state)
         return state
       }
 
@@ -606,6 +682,8 @@ export class ProcessEngine {
     })
 
     await this.stateManager.saveState(state)
+    // event-first: event was inserted above; snapshot update comes after
+    await this._persistRunSnapshot(state)
 
     // Lifecycle hook
     if (definition.onComplete) {
@@ -755,6 +833,8 @@ export class ProcessEngine {
     })
 
     await this.stateManager.saveState(state)
+    // Persist paused snapshot — the run is now in "paused" status
+    await this._persistRunSnapshot(state)
 
     // Return the paused state — caller must call resume()
     return state
@@ -780,6 +860,129 @@ export class ProcessEngine {
       status: "pending",
     })
 
+    // ── Scored gate path (AD-P1-03) ──────────────────────────────────────────
+    // When a step carries a gateConfig, delegate to quality-gate.evaluateGate()
+    // for scored evaluation with bounded retries and mandatory evidence.
+    if (step.gateConfig) {
+      const gateConfig: GateConfig = {
+        threshold: step.gateConfig.threshold,
+        maxAttempts: step.gateConfig.maxAttempts,
+        evaluate: step.gateConfig.evaluate as GateConfig["evaluate"],
+      }
+
+      let gateAttemptResults: GateResult[]
+      let finalGateResult: GateResult
+
+      try {
+        const outcome = await evaluateGate(
+          gateConfig,
+          ctx as unknown as ProcessContext,
+        )
+        gateAttemptResults = outcome.results
+        finalGateResult = outcome.finalResult
+      } catch (err) {
+        // validateGateConfig threw — config is invalid
+        const error = err instanceof Error ? err : new Error(String(err))
+        state.stepStates[step.id] = "failed"
+        state.updatedAt = now()
+
+        await insertEvent({
+          group_id: state.groupId,
+          event_type: "process_gate_failed",
+          agent_id: ctx.agentId,
+          workflow_id: state.processId,
+          step_id: step.id,
+          metadata: { stepName: step.name, reason: "gate_config_invalid" },
+          status: "failed",
+          error_message: error.message,
+        })
+
+        return this.failProcess(state, ctx, step.id, error, definition)
+      }
+
+      const isRequired = resolveRequired(step.required, ctx)
+
+      if (finalGateResult.passed) {
+        state.stepStates[step.id] = "completed"
+        state.stepResults[step.id] = { passed: true, gateResult: finalGateResult, allAttempts: gateAttemptResults }
+        state.updatedAt = now()
+
+        await insertEvent({
+          group_id: state.groupId,
+          event_type: "process_step_completed",
+          agent_id: ctx.agentId,
+          workflow_id: state.processId,
+          step_id: step.id,
+          metadata: {
+            stepName: step.name,
+            stepType: "gate",
+            passed: true,
+            score: finalGateResult.score,
+            evidenceId: finalGateResult.evidenceId,
+            attempts: gateAttemptResults.length,
+          },
+          status: "completed",
+        })
+
+        return null
+      }
+
+      // Scored gate failed (exhausted attempts or gate_error)
+      if (isRequired) {
+        state.stepStates[step.id] = "failed"
+        state.updatedAt = now()
+
+        await insertEvent({
+          group_id: state.groupId,
+          event_type: "process_gate_failed",
+          agent_id: ctx.agentId,
+          workflow_id: state.processId,
+          step_id: step.id,
+          metadata: {
+            stepName: step.name,
+            required: true,
+            score: finalGateResult.score,
+            threshold: finalGateResult.threshold,
+            attempts: gateAttemptResults.length,
+            reasoning: finalGateResult.reasoning,
+          },
+          status: "failed",
+          error_message: `Scored gate failed: score ${finalGateResult.score} < threshold ${finalGateResult.threshold} after ${gateAttemptResults.length} attempt(s)`,
+        })
+
+        return this.failProcess(
+          state,
+          ctx,
+          step.id,
+          new GateFailedError(state.processId, step.id),
+          definition,
+        )
+      }
+
+      // Non-required scored gate that failed — skip
+      state.stepStates[step.id] = "skipped"
+      state.stepResults[step.id] = {
+        passed: false,
+        skipped: true,
+        gateResult: finalGateResult,
+        allAttempts: gateAttemptResults,
+      }
+      state.updatedAt = now()
+
+      await insertEvent({
+        group_id: state.groupId,
+        event_type: "process_step_skipped",
+        agent_id: ctx.agentId,
+        workflow_id: state.processId,
+        step_id: step.id,
+        metadata: { stepName: step.name, stepType: "gate", passed: false, scored: true },
+        status: "completed",
+      })
+
+      return null
+    }
+
+    // ── Boolean gate path (existing behaviour) ────────────────────────────────
     let passed: boolean
     try {
       if (!step.condition) {
@@ -869,6 +1072,45 @@ export class ProcessEngine {
     return null
   }
 
+  // ── Run Snapshot Helper ─────────────────────────────────────────────────────
+
+  /**
+   * Persist updated state to process_runs snapshot (optimistic concurrency).
+   *
+   * Uses the tracked `updated_at` for the run. Silently no-ops if:
+   *   - No entry exists in `_runUpdatedAt` (run was not created via run()) — this
+   *     handles resume() paths where we didn't call createRun().
+   *   - The optimistic lock misses (stale updatedAt) — non-fatal; the event trail
+   *     is the source of truth.
+   *
+   * INVARIANT: The caller must emit the corresponding event BEFORE calling this.
+   */
+  private async _persistRunSnapshot(state: ProcessState): Promise<void> {
+    const expectedUpdatedAt = this._runUpdatedAt.get(state.processId)
+    if (!expectedUpdatedAt) return // run not tracked — no-op
+
+    const isTerminal =
+      state.status === "completed" ||
+      state.status === "failed"
+
+    const updated = await updateRunSnapshot(this.pool, {
+      id: state.processId,
+      groupId: state.groupId,
+      status: state.status,
+      stateJson: state as unknown as Record<string, unknown>,
+      expectedUpdatedAt,
+      completedAt: isTerminal ? (state.completedAt ?? state.updatedAt) : undefined,
+    })
+
+    if (updated) {
+      this._runUpdatedAt.set(state.processId, updated.updated_at)
+    }
+
+    if (isTerminal) {
+      this._runUpdatedAt.delete(state.processId)
+    }
+  }
+
   // ── Failure Helper ──────────────────────────────────────────────────────────
 
   private async failProcess<TCtx>(
@@ -899,6 +1141,8 @@ export class ProcessEngine {
     })
 
     await this.stateManager.saveState(state)
+    // event-first: event was inserted above; snapshot update comes after
+    await this._persistRunSnapshot(state)
 
     // Lifecycle hook
     if (definition?.onError) {

@@ -1,7 +1,10 @@
 "use client"
 
 import {
+  Activity,
+  ArrowRightLeft,
   Clock,
+  FileText,
   GitBranch,
   LayoutDashboard,
   LayoutGrid,
@@ -53,7 +56,10 @@ const navGroups: NavGroup[] = [
       { href: "/dashboard/projects", label: "Projects", icon: FolderKanban },
       { href: "/dashboard/work-board", label: "Work Board", icon: LayoutGrid },
       { href: "/dashboard/runs", label: "Runs", icon: Play },
-      { href: "/dashboard/governance", label: "Approvals", icon: ShieldCheck },
+      { href: "/dashboard/execution", label: "Execution", icon: Activity },
+      { href: "/dashboard/approvals", label: "Approvals", icon: ShieldCheck },
+      { href: "/dashboard/handoffs", label: "Handoffs", icon: ArrowRightLeft },
+      { href: "/dashboard/evidence", label: "Evidence", icon: FileText },
     ],
   },
   {

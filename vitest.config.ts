@@ -85,6 +85,10 @@ export default defineConfig({
       "src/lib/postgres/connection.test.ts",
       // SDK unit tests (Story 12.3)
       "src/sdk/**/*.test.ts",
+      // Server actions (Stories 16.5, 16.6)
+      "src/server/**/*.test.ts",
+      // Dashboard pages (Story 16.4)
+      "src/__tests__/dashboard-approvals.test.ts",
     ],
     exclude: [
       // E2E tests — require live stack

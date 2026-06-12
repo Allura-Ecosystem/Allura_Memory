@@ -80,6 +80,12 @@ export default defineConfig({
       "src/curator/approve-cli.test.ts",
       // UI unit tests (Story 11.2 — toast system)
       "src/__tests__/toast.test.tsx",
+      // UI unit tests (Story 16.3 — 3-pane inspector)
+      "src/__tests__/inspector-panel.test.tsx",
+      // Dashboard pages (Story 16.4 — approvals/handoffs/evidence)
+      "src/__tests__/dashboard-approvals.test.ts",
+      // Server actions (Stories 16.5, 16.6)
+      "src/server/**/*.test.ts",
     ],
     exclude: [
       // ── Integration tests (mocked DB/services) — use test:integration ──
@@ -116,6 +122,7 @@ export default defineConfig({
     // Enable per-file environment override (e.g. @vitest-environment jsdom in toast.test.tsx)
     environmentMatchGlobs: [
       ["src/__tests__/toast.test.tsx", "jsdom"],
+      ["src/__tests__/inspector-panel.test.tsx", "jsdom"],
     ],
   },
   resolve: {
