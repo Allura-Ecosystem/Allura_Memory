@@ -24,8 +24,10 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { AUTH_ROUTES, isClerkEnabled, PROTECTED_ROUTES, PUBLIC_ROUTES } from "@/lib/auth/config"
 import { getDevUserSync } from "@/lib/auth/dev-auth"
+import { getScopeName, getRequiredRole as getManifestRequiredRole } from "@/lib/auth/route-scope-manifest"
 import { hasPermission } from "@/lib/auth/roles"
 import type { AlluraRole } from "@/lib/auth/types"
+import { emitGatedAudit } from "@/lib/auth/edge-audit"
 
 const AUTH_HEADER_NAMES = [
   "x-allura-user-id",
@@ -55,6 +57,12 @@ function isPublicRoute(pathname: string): boolean {
 }
 
 function getRequiredRole(pathname: string): AlluraRole | null {
+  // Canonical source: route-scope-manifest (AD-42)
+  // Declared separately so CI can validate independently without importing Edge runtime.
+  const manifestRole = getManifestRequiredRole(pathname)
+  if (manifestRole) return manifestRole
+
+  // Fallback: legacy PROTECTED_ROUTES from config (migration path)
   for (const route of PROTECTED_ROUTES) {
     if (matchesRoute(pathname, route.pattern)) {
       return route.requiredRole
@@ -127,8 +135,12 @@ function handleDevAuth(request: NextRequest): NextResponse {
     return nextWithoutAuthHeaders(request)
   }
 
+  // ── Resolve scope name for audit —──────────────────────────────────────────
+  const scopeName = getScopeName(pathname) ?? null
+
   // No dev user and route is protected — 401
   if (!devUser) {
+    emitGatedAudit(request, scopeName, "unauthorized", "unauthenticated", "none")
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Authentication required", statusCode: 401 }, { status: 401 })
     }
@@ -139,6 +151,7 @@ function handleDevAuth(request: NextRequest): NextResponse {
 
   // RBAC check
   if (!hasPermission(devUser.role, requiredRole)) {
+    emitGatedAudit(request, scopeName, "forbidden", "authenticated", devUser.role)
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         {
@@ -157,6 +170,7 @@ function handleDevAuth(request: NextRequest): NextResponse {
   }
 
   // Authenticated and authorized — forward auth context to route handlers.
+  emitGatedAudit(request, scopeName, "authorized", "authenticated", devUser.role)
   return nextWithAuthHeaders(request, {
     userId: devUser.id,
     role: devUser.role,
@@ -235,10 +249,14 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
           return nextWithoutAuthHeaders(req)
         }
 
+        // Resolve scope name for audit
+        const clerkScopeName = getScopeName(pathname) ?? null
+
         // Require auth
         const { userId, sessionClaims } = await auth()
 
         if (!userId) {
+          emitGatedAudit(req, clerkScopeName, "unauthorized", "unauthenticated", "none")
           if (pathname.startsWith("/api/")) {
             return NextResponse.json({ error: "Authentication required", statusCode: 401 }, { status: 401 })
           }
@@ -253,6 +271,7 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
         )
 
         if (!hasPermission(role, requiredRole)) {
+          emitGatedAudit(req, clerkScopeName, "forbidden", "authenticated", role)
           if (pathname.startsWith("/api/")) {
             return NextResponse.json(
               {
@@ -271,6 +290,7 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
         }
 
         // Authenticated and authorized — forward auth context to route handlers.
+        emitGatedAudit(req, clerkScopeName, "authorized", "authenticated", role)
         return nextWithAuthHeaders(req, {
           userId,
           role,
