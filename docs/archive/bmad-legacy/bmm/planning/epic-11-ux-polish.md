@@ -1,5 +1,11 @@
 # Epic 11 — UX Polish Layer
 
+> **Superseded inventory notice (2026-06-12):** This historical six-story
+> summary does not match the nine individual Epic 11 story files. Use
+> `docs/archive/bmad-legacy/bmm/stories/sprint-status.yaml` and the Phase 0
+> correction artifacts under `docs/allura/stories/` for
+> active status. Stories 11.5 and 11.8 are reopened.
+
 > **Status:** Backlog
 > **Date:** 2026-06-06
 > **Roadmap Step:** 8 (final polish)

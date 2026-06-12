@@ -1,5 +1,10 @@
 # Epic 12 — Process Engine & SDK
 
+> **Correction notice (2026-06-12):** Working primitives exist, but this epic
+> is not complete. Story 12.2 is reopened because checkpoint approval does not
+> yet continue remaining execution. Active correction artifacts live under
+> `docs/allura/stories/`.
+
 > **Status:** Backlog
 > **Date:** 2026-06-11
 > **Roadmap Step:** 9 (Babysitter parity + beyond)

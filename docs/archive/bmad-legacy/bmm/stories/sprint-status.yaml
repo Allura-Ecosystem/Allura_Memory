@@ -33,7 +33,7 @@
 #   validation evidence, board traceability, and Brain outcome logging.
 
 generated: 2026-05-24
-last_updated: 2026-06-11-woz-story-12-7-multi-harness-adapter-shipped
+last_updated: 2026-06-12-phase-0-readiness-correction
 project: Allura Memory
 project_key: NOKEY
 tracking_system: file-system
@@ -101,21 +101,21 @@ development_status:
   10-4-chat-runtime: done
   epic-10-retrospective: done
 
-  epic-11: done
+  epic-11: in-progress
   11-1-command-palette: done
   11-2-toast-notification-system: done
   11-3-dark-mode: done
   11-4-knowledge-graph-view: done
-  11-5-dashboard-route-parity: done
+  11-5-dashboard-route-parity: ready-for-dev
   11-6-mobile-polish: done
   11-7-resources-telemetry: done
-  11-8-permission-enforcement: done
+  11-8-permission-enforcement: ready-for-dev
   11-9-soc2-technical-readiness: done
   epic-11-retrospective: optional
 
-  epic-12: done
+  epic-12: in-progress
   12-1-process-as-code-engine: done
-  12-2-event-sourced-replay: done
+  12-2-event-sourced-replay: ready-for-dev
   12-3-allura-sdk-package: done
   12-4-token-compression: done
   12-5-headless-process-runner: done
@@ -123,7 +123,25 @@ development_status:
   12-7-multi-harness-adapters: done
   epic-12-retrospective: done
 
+  epic-13: backlog
+  13-1-route-and-authorization-contract-reconciliation: ready-for-dev
+  13-2-live-operational-state-and-freshness-contracts: ready-for-dev
+  13-3-approved-brand-assets-and-canonical-navigation: backlog
+  13-4-dashboard-runtime-and-tenant-propagation-proof: ready-for-dev
+  epic-13-retrospective: optional
+
+  epic-14: backlog
+  epic-15: backlog
+  epic-16: backlog
+  epic-17: backlog
+
 status_evidence:
+  phase-0-readiness-correction:
+    trigger: "The 2026-06-12 Babysitter/Hermes/AionUi product audit superseded the 2026-06-11 implementation-readiness green light."
+    findings: "Epic 11 inventory drift; route parity test failure; permission mutation 401/403 mismatch; Epic 12 marked done without individual stories; resume records approval without executing remaining steps; dashboard runtime unavailable."
+    disposition: "Reopened 11-5, 11-8, and 12-2. Added Epics 13-17 in dependency order. Broad implementation remains blocked until Epic 13 exit evidence and true checkpoint continuation are verified."
+    artifacts: "docs/allura/SPRINT-CHANGE-PROPOSAL-2026-06-12.md; docs/allura/EPICS-13-17-GOVERNED-AI-OFFICE.md; docs/allura/stories/"
+    board_traceability: "Audit spike 37d1d9be-65b3-81e0-a7cf-f4d7f93f973e is Done. Phase 0 epic: https://app.notion.com/p/37d1d9be65b381739711d424db2d3e20. Child stories: route/auth 37d1d9be-65b3-8190-ae17-dd131be172e0; live truth 37d1d9be-65b3-812b-8ed2-d47ddc5fdfdd; checkpoint continuation 37d1d9be-65b3-817e-91c6-cfe20d8a4151; runtime proof 37d1d9be-65b3-816e-87b0-f89c416219b0."
   epic-9:
     drift_gate: "Brain searched 2026-06-06 (group_id: allura-system) for epic 9/10 truthfulness/governance/audit MCP build order; no unresolved blocker. Relevant context: append-only traces, group_id ^allura- enforcement, HITL promotion, no docker exec. Epic opened for truthfulness infrastructure."
     board_traceability: "Planning relocated from docs/archive/allura/ to _bmad/bmm/planning/ (epic-9/10/11). UX Polish renumbered 8->11 to avoid collision with completed Epic 8. Notion board update pending (no Notion tool in this runtime)."
