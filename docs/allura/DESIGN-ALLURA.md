@@ -165,10 +165,13 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 | F46 | `/telemetry` reports real/unknown metrics honestly | Telemetry adapter with degraded/unknown state |
 | F47 | Every route displays source-of-truth and degraded behavior | Adapter registry UI contract |
 | F48 | `3100` cutover has parity, smoke, auth, and rollback gates | Cutover validation checklist |
-| F49 | Governed RunRecord template captures owner, reviewer, goal, status, journal path, timestamps, and tenant scope | AD-35 · `RunRecord` in `DATA-DICTIONARY.md` |
-| F50 | Run policy declares allowed actions, approval breakpoints, quality gates, and required evidence | AD-35 · RuVix receipt rules |
-| F51 | Run journal records prompt, plan, tasks, checks, approvals, failures, and final evidence | AD-35 · Audit/evidence surface |
-| F52 | Doctor checks report stale, failed, incomplete, or approval-blocked runs before Done | AD-35 · future `/dashboard/runs` or `/dashboard/audit` extension |
+| F49 | Governed RunRecord captures tenant, owner, reviewer, goal, status, pinned definition revision, journal path, and timestamps | Partial implementation · AD-35 · `RunRecord` in `DATA-DICTIONARY.md` |
+| F50 | Run policy declares allowed actions, approval breakpoints, measured quality gates, bounded attempts, and required evidence | Partial implementation · Epic 14 |
+| F51 | Run journal records plan, steps, checks, approvals, failures, continuation state, and final evidence | Partial implementation · Story 12.2 correction |
+| F52 | Doctor checks report stale, failed, incomplete, definition-drifted, unrecoverable, or approval-blocked runs before Done | Planned · Epic 14.3 · `/dashboard/runs` |
+| F53 | PostgreSQL-backed projects and work items link operational work to runs, handoffs, evidence, and memory receipts | Planned · Epic 15 |
+| F54 | Operator workspace uses mission-first navigation, Command Center, central work surface, and right evidence inspector | Planned · Epic 16 |
+| F55 | One governed desktop shell provides secure connections, runtime supervision, deep links, updates, and reconnect behavior | Planned · Epic 17 |
 
 ### Curator Requirements
 

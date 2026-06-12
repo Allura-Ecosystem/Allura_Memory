@@ -318,10 +318,18 @@ This section traces the governed memory pipeline requirements from business goal
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f49"></a>F49 | A governed run template must capture a neutral `RunRecord` with owner, reviewer, goal, status, journal path, timestamps, and tenant scope. | AD-35 · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#runrecord-ad-35) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-35-runrecord-template-before-methodology-runtime) |
-| <a name="f50"></a>F50 | Run policy must declare allowed actions, approval breakpoints, quality gates, and evidence required before Done. | AD-35 · RuVix receipt rules · [BLUEPRINT.md](./BLUEPRINT.md#evidence-gated-orchestration-positioning) |
-| <a name="f51"></a>F51 | Run journals must record prompt, plan, tasks, checks, approvals, failures, final evidence, and memory writeback candidates. | AD-35 · append-only Brain receipts · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#runrecord-ad-35) |
-| <a name="f52"></a>F52 | A doctor check must be able to report failed, stale, incomplete, or approval-blocked runs before work is marked complete. | AD-35 · future RunRuntimeState/doctor checks · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-7-optional-runrecord-orchestration-wrapper) |
+| <a name="f49"></a>F49 | A governed run must capture a neutral `RunRecord` with tenant scope, owner, reviewer, goal, status, pinned definition ID/revision, journal path, and timestamps. | Partial: `src/lib/process-engine/` · AD-35 · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#runrecord-ad-35) |
+| <a name="f50"></a>F50 | Run policy must declare allowed actions, approval breakpoints, measured quality gates, bounded attempts, and evidence required before Done. | Partial: gates/checkpoints exist; bounded quality convergence remains Epic 14 · AD-35/AD-41 |
+| <a name="f51"></a>F51 | Run journals must record plan, steps, checks, approvals, failures, final evidence, memory writeback candidates, and enough state to continue without repeating completed side effects. | Partial: append-only events and replay exist; true continuation remains Story 12.2 correction |
+| <a name="f52"></a>F52 | Doctor checks must report failed, stale, incomplete, definition-drifted, unrecoverable, or approval-blocked runs before work is marked complete. | Not implemented: Epic 14.3 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-7-governed-run-layer) |
+
+### Section 5B: Governed AI Office (F53-F55)
+
+| ID | Requirement | Satisfied by |
+|----|-------------|--------------|
+| <a name="f53"></a>F53 | Native projects and work items must use PostgreSQL operational state, audited transitions, dependencies, and links to runs, handoffs, evidence packets, and memory receipts. | Planned: Epic 15 · AD-41 |
+| <a name="f54"></a>F54 | The operator workspace must provide mission-first navigation, Command Center behavior, a central work surface, and a right evidence/context inspector backed by live contracts. | Planned: Epic 16 · AD-31/AD-41 |
+| <a name="f55"></a>F55 | Allura must ship one governed desktop shell with secure connection profiles, runtime supervision, updates, deep links, offline/read-only behavior, and reconnect recovery. | Planned: Epic 17 · AD-41 |
 
 ### Section 6: Admin Requirements (B12–B23)
 

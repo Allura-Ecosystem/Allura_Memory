@@ -55,6 +55,8 @@
 | AD-38 | Allura public positioning as governed memory + evidence kernel | Decided | Public README positioning targets builders creating their own governed AI memory/workflow systems. Archon is treated as a workflow-runner reference, Babysitter as a process-enforcement reference, and Allura as the governed memory, evidence, approval, and receipt layer. |
 | AD-39 | Allura Scout context-packet plugin before vertical workflow templates | Decided | Add Allura Scout as a public read-only context discovery plugin before building mortgage/HACCP/medical billing workflow templates. Scout reduces token cost and context drift by returning a compact `ContextPacket` with goal, summary, relevant files, relevant memories, risks, token budget, and recommended route. Mortgage remains paused by Ronin direction. |
 | AD-40 | Kernel as single write gate for all DB operations | Decided | syscall_mutate and syscall_query are now the only path to PostgreSQL and Neo4j. agentMemory (MCP) and memory() (internal graph) both route through the kernel's proof→policy→audit pipeline. Direct DB backends available via MEMORY_BYPASS_KERNEL=true for migration. Target resolver enforces append-only on pg:events, group_id on all ops, label allowlist on Neo4j. Satisfies F1, F8, F26, F27, F33, F35, F37, F38. |
+| AD-41 | Governed AI office delivery sequence | Accepted | Deliver product truth, production run kernel, PostgreSQL work plane, operator workspace, then one desktop shell. This keeps Allura Brain as the memory/evidence layer and prevents packaging placeholder state or unstable contracts. |
+| AD-42 | Governed API middleware — identity, scope, per-request audit | Decided | HTTP-plane counterpart of AD-40's kernel write gate: every dashboard/API route passes governed middleware. Contract: (1) no identity → 401; (2) insufficient role/scope → 403 (admin > curator > viewer via Clerk RBAC, DevAuthProvider in dev); (3) exactly one append-only `api_request_gated` audit event per gated request (group_id stamped and allura-* validated; no payload bodies logged); (4) every route declares its required scope in a static route-scope manifest — CI fails any route missing a declaration, so an unguarded route is a build error, not a runtime discovery. Alternatives rejected: per-route ad-hoc checks (drift-prone, unauditable); gateway-only enforcement (bypassable in dev, no per-request evidence). Consequence: blocks Phase 0 surfaces (Scheduled Tasks, Settings, Teams, Dreams) until implemented; satisfies release criterion 2. Owner: Sabir (sign-off), Woz (implement), Pike (review). |
 
 ---
 
@@ -113,6 +115,7 @@
 | RK-27 | Agents claim Done without evidence gates | High | Active |
 | RK-28 | Run journals drift from Brain/Notion state | Medium | Active |
 | RK-29 | BMAD/Notion/story status drift causes false Done or false backlog | Medium | Active |
+| RK-30 | Resume against changed definitions repeats or corrupts work | High | Active |
 
 ### Risk Detail
 
@@ -147,6 +150,7 @@
 | RK-27 | Agents claim Done without evidence gates | High | RunRecord policy requires explicit quality gates and evidence before Done. Brain receipts are audit context, not proof by themselves. | Active |
 | RK-28 | Run journals drift from Brain/Notion state | Medium | Run journals are receipt trails; Notion remains planning/decision source of truth when reachable, and Brain stores append-only run outcomes and blockers. | Active |
 | RK-29 | BMAD/Notion/story status drift causes false Done or false backlog | Medium | Epic 7 retrospective found local BMAD story files still marked `backlog` after prior completion evidence, while Notion remains the canonical board but was unavailable in the runtime. Require Scout reconciliation before dev/review/retro: check Notion when available, Brain outcome memories, local story artifacts, and validation evidence; record any source mismatch as a blocker or explicit caveat before marking Done. | Active |
+| RK-30 | Resume against changed definitions repeats or corrupts work | High | Pin an immutable process-definition revision at run start; refuse continuation when the revision is unavailable or mismatched; report a doctor finding instead of guessing. | Active |
 
 | AD-25 | Phase 6 Closure — all deliverables shipped | Decided | DLQ shipped (curator watchdog). Knowledge Hub Bridge shipped (Notion sync worker). Auth layer shipped (dev-auth + config). CSV Export shipped (/admin/approvals CSV download). SDK not separately shipped — MCP tools are the SDK. CORS shipped (next.config). Sentry shipped (captureException in curator approve). Phase 6 scope is complete. Decision: close Phase 6 and record it. Alternatives rejected: (1) Continue tracking as open — rejected because all deliverables exist in code and pass tests. (2) Extend Phase 6 for k6 load testing — rejected because load testing is a separate concern (tracked as RK-14). Consequences: Phase 6 ADR is now closed. Next phases focus on Curator pipeline E2E (Sprint 1), Skills layer (Sprint 2), and MCP Catalog governance (Sprint 3). |
 
@@ -275,7 +279,36 @@
 - Every run can specify approval breakpoints, quality gates, and evidence before Done.
 - Docker and public onboarding must truthfully state current local-dev limits until a stranger-friendly compose profile exists.
 
-**Status:** accepted, documented 2026-06-04, closed 2026-06-04. Notion source-of-truth update is pending because the current runtime could not reach the Notion MCP write surface; Brain fallback receipt `facaab4c-bb60-48f3-a97d-d17340976c11` records the AD-35 card. Decision to implement deferred until a concrete RunRecord use case emerges that cannot be served by the existing Team RAM + Notion/Brain workflow.
+**Status:** accepted and implementation started. As of 2026-06-12 the repository
+contains process-engine, replay, DAG, runner, and SDK primitives. The contract is
+not complete until definitions are version-pinned, checkpoint resume continues
+execution, doctor checks exist, and the full lifecycle passes integration proof.
+
+### AD-41: Governed AI Office Delivery Sequence
+
+**Decision:** Deliver Allura's operator product in one dependency chain:
+product truth, production run kernel, PostgreSQL work plane, operator workspace,
+then one desktop shell.
+
+**Rationale:** The June 12 product audit found strong memory/governance
+foundations but weak workflow product behavior, absent operational project
+state, placeholder command-center surfaces, and no governed desktop product.
+Packaging the current UI first would harden contract drift and static claims
+into a desktop application.
+
+**Boundaries:**
+
+- PostgreSQL owns project, work-item, transition, run, breakpoint, handoff, and
+  evidence-packet operational state.
+- Allura Brain owns governed memory, receipts, decisions, and approved
+  writeback candidates.
+- Neo4j owns semantic relationships and approved projections, not board state.
+- Allura is the visible product identity. AionUi may be credited only as
+  framework attribution.
+- One desktop shell is selected and governed; parallel product shells are
+  prohibited.
+
+**Status:** accepted 2026-06-12 through the approved Phase 0 correction package.
 
 ---
 

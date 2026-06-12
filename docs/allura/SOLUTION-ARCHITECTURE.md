@@ -335,9 +335,14 @@ Allura is MCP/API-first. The MCP HTTP gateway (port 3201), API routes, and CLI s
 
 **Architecture note:** Previous dashboard ports (3100, 3334, 6420) are reference/cutover history. New dashboard work is scoped to the approved RuVix-governed Memory Command Center plan and must pass source-of-truth, no-fabricated-data, auth, accessibility, and rollback gates before launch.
 
-### 3.7 Optional RunRecord Orchestration Wrapper
+### 3.7 Governed Run Layer
 
-AD-35 introduces a proposed `RunRecord` template as a thin orchestration wrapper over existing Team RAM skills. It translates familiar work ceremonies into evidence-gated runs without changing the Allura Brain engine boundary.
+AD-35 defines `RunRecord` as a thin orchestration contract outside the memory
+data plane. The repository now contains a partial process engine, event/replay
+layer, headless runner, SDK primitives, DAG validation, gates, and checkpoints.
+This foundation does not yet satisfy the production run contract because
+definitions are not durably versioned, resume does not continue remaining
+steps, doctor checks are absent, and product APIs are missing.
 
 ```mermaid
 sequenceDiagram
@@ -376,7 +381,7 @@ sequenceDiagram
 | Memory Command Center | Inbound | REST HTTP + adapter contracts | Memories, RuVix governance, curator, graph, audit/evidence, settings | AD-31, RK-19 |
 | Native Allura Kanban | Inbound | REST HTTP + PostgreSQL-backed service contract | Default planning/work item source of truth | F43, AD-31 |
 | Board Sync Adapters | Outbound | Provider APIs | Optional Notion, Linear, and GitHub Projects projections of native board state | F43, AD-31 |
-| RunRecord Template | Inbound | Notion/Board + Brain receipts | Evidence-gated run record, policy block, runtime state, journal path | AD-35, RK-25–RK-28 |
+| Governed Run Layer | Inbound | REST + CLI + Board + Brain receipts | Version-pinned run record, policy, runtime state, append-only events, breakpoints, evidence, doctor findings | AD-35, AD-41, RK-25–RK-30 |
 | Resource Manifest Adapter | Outbound | File or generated endpoint | Skills, agents, MCP servers, containers, cron jobs, drift warnings | F44, AD-31 |
 | Curator Approve CLI | Inbound | CLI (`bun run curator:approve`) | Processes pending proposals from PostgreSQL, promotes approved ones to Neo4j via `createInsight()` | F6, B18, B19 |
 | PostgreSQL 16 | Outbound | TCP (pg driver) | SQL — append-only INSERTs + SELECTs | AD-01, RK-02 |
@@ -394,7 +399,7 @@ sequenceDiagram
 | §3.4 Governed Memory Write Path | AD-04 (promotion mode), RK-01 (dedup), RK-03 (low-quality promotion) |
 | §3.5 Memory API | AD-05 (5-tool surface) |
 | §3.6 API-First Architecture and Memory Command Center | AD-31 (Memory Command Center), AD-29 (superseded), RK-19 |
-| §3.7 Optional RunRecord Orchestration Wrapper | AD-35 (RunRecord template), RK-25–RK-28 |
+| §3.7 Governed Run Layer | AD-35 (RunRecord contract), AD-41 (governed AI office sequence), RK-25–RK-30 |
 
 ---
 
@@ -411,6 +416,8 @@ sequenceDiagram
 | Memory Command Center MUST use API/MCP contracts and never write directly to substrates | Prevents governance bypass and UI drift — AD-31 |
 | RunRecord wrappers MUST remain outside the memory data plane | Preserves Allura Brain's memory-only boundary — AD-35 |
 | Done MUST require declared evidence gates | Prevents assertion-only completion — AD-35 / RK-27 |
+| PostgreSQL MUST own operational project, work-item, and run state | Prevents Kanban/runtime state from drifting into the semantic memory graph — AD-41 |
+| A run MUST pin a process definition revision before execution | Makes resume and replay deterministic — AD-41 / RK-30 |
 
 ---
 
@@ -441,6 +448,11 @@ needsEvidence   → POST /api/curator/reject with rationale prefix "Needs eviden
 ```
 
 Native Kanban direction: PostgreSQL owns operational board state; Neo4j may project semantic relationships; Allura Brain stores durable decisions/evidence receipts. Notion, Linear, and GitHub Projects are optional sync adapters; Native Allura Kanban is default upstream.
+
+Governed AI office delivery order: reconcile product truth, finish the run
+kernel, build the PostgreSQL work plane, build the operator workspace, then
+package one desktop shell. This order prevents the desktop from packaging
+placeholder state or unstable contracts.
 
 Architecture note: Previous dashboard surfaces (ports 3100, 3334, 6420) are reference/cutover history. MCP/API remains canonical for engine access; the Memory Command Center is an optional governed operator surface.
 

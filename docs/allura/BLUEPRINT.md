@@ -144,7 +144,14 @@ Allura is an MCP/API-first memory engine with an optional RuVix-governed Memory 
 
 Allura may expose governed orchestration records for teams, but this does not change the engine boundary. The memory engine stores run receipts, evidence, decisions, and reusable knowledge; it does not become an autonomous project manager. Corporate-facing language should say **evidence-gated, auditable, resumable runs** — never “hallucination-free.”
 
-The first orchestration artifact is the AD-35 `RunRecord` template: a neutral record plus separated policy/runtime state that captures owner, reviewer, goal, allowed actions, approval breakpoints, quality gates, required evidence, journal path, resume state, doctor checks, and memory writeback candidacy. A full methodology runtime is deferred until the template proves useful.
+AD-35 now has an implemented process-engine foundation under
+`src/lib/process-engine/` plus a headless runner in `scripts/process-run.ts`.
+The canonical product contract remains a neutral `RunRecord` with separated
+policy and runtime state. The current implementation is partial: event
+persistence, gates, checkpoints, replay, DAG validation, and SDK primitives
+exist, but process definitions are not durably versioned, checkpoint approval
+does not yet continue remaining execution, doctor checks are absent, and no
+first-class run API/product surface exists.
 
 - **MCP tools** — `memory_add`, `memory_search`, `memory_get`, `memory_list`, `memory_delete`
 - **API routes** — `/api/health/*`, `/api/memory/*`, `/api/curator/*`
@@ -296,7 +303,13 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | F46 | `/telemetry` surfaces model, prompt, tool, retry, rate-limit, failure, and degraded-state metrics without inventing missing measurements |
 | F47 | Every Memory Command Center route displays its source-of-truth declaration and degraded-state behavior |
 | F48 | Dashboard launch requires documented route parity, visual parity, source-of-truth parity, smoke tests, auth validation, and rollback plan |
-| F49 | `/dashboard/graph` renders Neo4j entities as interactive node cards showing name, email/identifier, role, type badge (People/Organization/Memory/Agent/Project), connection count, and relationship lines; clicking a node highlights connections and shows a detail panel with contact info, relationship labels, and related memories |
+| F49 | Governed runs capture a neutral tenant-scoped `RunRecord` and pin a process definition ID and immutable revision |
+| F50 | Run policy declares allowed actions, approval breakpoints, measured quality gates, bounded attempts, and evidence required before Done |
+| F51 | Run journals persist append-only execution evidence and continue from the first incomplete eligible step after approval without repeating completed side effects |
+| F52 | Run doctor checks report stale, failed, incomplete, definition-drifted, unrecoverable, or approval-blocked runs before Done |
+| F53 | Native projects and work items use PostgreSQL as operational state, link to runs, handoffs, evidence packets, and memory receipts, and move through audited transitions |
+| F54 | The operator workspace provides mission-first navigation, Command Center behavior, a central work surface, and a right evidence/context inspector |
+| F55 | Allura ships one governed desktop shell with secure connections, runtime supervision, updates, deep links, offline/read-only behavior, and reconnect recovery |
 
 ---
 

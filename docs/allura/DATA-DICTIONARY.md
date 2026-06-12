@@ -253,7 +253,16 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 
 ## RunRecord (AD-35)
 
-`RunRecord` is a proposed documentation/data contract for evidence-gated orchestration runs. It is not yet an implemented table and must not make Allura Brain an orchestrator. The record is neutral durable state; policy and runtime state remain separated so the memory engine can store receipts without owning execution.
+`RunRecord` is the canonical product contract for evidence-gated orchestration
+runs. Process-engine primitives currently persist `ProcessState` and append-only
+events, but the canonical persistence contract is not complete. `RunRecord`
+remains neutral durable state; policy and runtime state remain separated so
+Allura Brain can store receipts without owning execution.
+
+**Implementation status:** partial. Gates, checkpoints, event persistence,
+replay, DAG validation, a headless runner, and SDK primitives exist. Durable
+definition versioning, true post-checkpoint continuation, doctor findings,
+idempotency guarantees, and product APIs remain required.
 
 ### `RunRecord`
 
@@ -261,6 +270,8 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 |-------|------|----------|-------------|
 | `run_id` | string | Yes | Stable run identifier. Recommended format: UUID or `run-{timestamp}-{slug}`. |
 | `group_id` | string | Yes | Tenant namespace; must match `^allura-`. |
+| `definition_id` | string | Yes | Stable process-definition identifier used to reload a run. |
+| `definition_revision` | string | Yes | Immutable definition revision pinned when the run starts. |
 | `owner_team` | enum/string | Yes | Team accountable for execution, e.g. `RAM`, `TALON`, `Durham`, `IRIS`, `Troy`. |
 | `reviewer_team` | enum/string | Yes | Team accountable for review or approval. |
 | `goal` | string | Yes | One-sentence run objective in imperative form. |
@@ -283,10 +294,15 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `resume_state` | object | No | Minimal state needed to resume/replay an interrupted run. |
-| `doctor_checks` | list<string> | No | Checks a doctor command should run to find stale, failed, incomplete, or approval-blocked work. |
+| `current_step_id` | string | No | First incomplete or currently executing step. |
+| `attempt` | integer | Yes | Current bounded attempt number for the active step or quality loop. |
+| `doctor_findings` | list<object> | No | Structured stale, failed, incomplete, revision-drifted, or approval-blocked findings. |
 | `memory_writeback_candidate` | boolean | No | Runtime flag that a run outcome may be proposed for Brain writeback; actual writeback still follows Allura memory governance. |
 
-**Deferred implementation:** If persisted as PostgreSQL later, prefer append-only run events or an `orchestration_runs` table with tenant-scoped indexes. Do not double-write RunRecord nodes to Neo4j in v0; wait for stable relationship queries.
+**Persistence direction:** PostgreSQL owns run records, pinned definitions,
+runtime state, and append-only run events. Do not double-write operational run
+state to Neo4j. Neo4j may receive approved semantic relationships after the
+operational contracts stabilize.
 
 ### `DashboardClaim`
 
