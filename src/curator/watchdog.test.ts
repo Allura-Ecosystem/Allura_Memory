@@ -78,9 +78,10 @@ describe("runWatchdogCycle", () => {
     // Should have made exactly 2 queries on outerPool
     expect(outerPool.query).toHaveBeenCalledTimes(2);
 
-    // First call must be the heartbeat INSERT
-    const [firstSql] = outerPool.query.mock.calls[0] as [string, unknown[]];
-    expect(firstSql).toContain("WATCHDOG_HEARTBEAT");
+    // First call must be the heartbeat INSERT (event type in params, not SQL)
+    const [firstSql, firstParams] = outerPool.query.mock.calls[0] as [string, unknown[]];
+    expect(firstSql).toContain("INSERT INTO events");
+    expect(firstParams[0]).toBe("WATCHDOG_HEARTBEAT");
 
     // Second call must be the COUNT SELECT with group_id
     const [secondSql, secondParams] = outerPool.query.mock.calls[1] as [string, unknown[]];
@@ -88,9 +89,9 @@ describe("runWatchdogCycle", () => {
     expect(secondSql).toContain("group_id = $1");
     expect(secondParams).toEqual([config.groupId]);
 
-    // No BLOCKER INSERT
-    const allSqls = outerPool.query.mock.calls.map((c: unknown[]) => c[0] as string);
-    expect(allSqls.some((s) => s.includes("BLOCKER"))).toBe(false);
+    // No BLOCKER INSERT (check params, not SQL — parameterized queries)
+    const allCalls = outerPool.query.mock.calls as [string, unknown[]][];
+    expect(allCalls.some(([, params]) => params?.[0] === "BLOCKER")).toBe(false);
   });
 
   it("inserts BLOCKER event when queue depth exceeds threshold", async () => {
@@ -114,7 +115,7 @@ describe("runWatchdogCycle", () => {
     expect(outerPool.query).toHaveBeenCalledTimes(3);
 
     const allCalls = outerPool.query.mock.calls as [string, unknown[]][];
-    const blockerCall = allCalls.find(([sql]) => sql.includes("BLOCKER"));
+    const blockerCall = allCalls.find(([, params]) => params?.[0] === "BLOCKER");
     expect(blockerCall).toBeDefined();
 
     // BLOCKER INSERT must carry correct params
@@ -149,7 +150,7 @@ describe("runWatchdogCycle", () => {
     await runWatchdogCycle(outerPool, config, 1);
 
     const allCalls = outerPool.query.mock.calls as [string, unknown[]][];
-    const blockerCall = allCalls.find(([sql]) => sql.includes("BLOCKER"));
+    const blockerCall = allCalls.find(([, params]) => params?.[0] === "BLOCKER");
     expect(blockerCall).toBeDefined();
 
     // Restore env
