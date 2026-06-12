@@ -31,9 +31,9 @@ import { createInsight, InsightConflictError } from "../src/lib/neo4j/queries/in
 import { closePool, getPool } from "../src/lib/postgres/connection"
 import { GroupIdValidationError, validateGroupId } from "../src/lib/validation/group-id"
 
-const CURATOR_ID = "sabir-hitl-batch-2026-06-10"
+const CURATOR_ID = "sabir-hitl-batch-2026-06-12"
 
-type Batch = "A" | "B" | "C" | "D" | "E"
+type Batch = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O"
 
 interface PendingProposal {
   id: string
@@ -52,14 +52,48 @@ const BATCH_RATIONALE: Record<Batch, string> = {
   C: "Batch C reject — session lifecycle log, episodic by nature",
   D: "Batch D hold — case-by-case HITL review",
   E: "Batch E reject — kanban/tracker operational state, belongs in tracker",
+  F: "Batch F reject — task completion trace, work is in code/commits",
+  G: "Batch G reject — git/status state, git log is authoritative",
+  H: "Batch H reject — session lifecycle (extended), episodic by nature",
+  I: "Batch I reject — diagnostic/verification trace, fix is in code",
+  J: "Batch J reject — planning ephemera, superseded by execution",
+  K: "Batch K approve — architecture/interface review, durable canonical knowledge",
+  L: "Batch L approve — strategic insight/lesson, durable canonical knowledge",
+  M: "Batch M reject — infrastructure/config ops, ephemeral operational action",
+  N: "Batch N reject — date-prefixed session note or debug trace, episodic",
+  O: "Batch O reject — operational trace (outcome/phase/goal/canonical/receipt), episodic state",
 }
 
 function classify(content: string): Batch {
   const c = content.trimStart()
+  // A — raw JSON echo noise
   if (c.startsWith("{\"type\":") || c.startsWith("{'type':")) return "A"
+  // B — architecture decisions (original)
   if (/^ARCHITECTURE_DECISION/i.test(c)) return "B"
+  // C — session lifecycle (original narrow)
   if (/^(SESSION[ _](END|COMPLETE|CLOSE|STARTED)|Session (started|complete|close)|EVENT_TYPE:\s*SESSION)/i.test(c)) return "C"
+  // E — kanban cards
   if (/^KANBAN CARD/i.test(c)) return "E"
+  // K — architecture/interface reviews → APPROVE
+  if (/^(INTERFACE_REVIEW|REFACTOR_REVIEW|ARCHITECTURE_(DIRECTION|AUDIT)|ADR_CREATED|ADR\b|DECISIONS?\b|DESIGN_CORRECTION|DASHBOARD_SUNSET_DECISION)/i.test(c)) return "K"
+  // L — strategic insights/lessons → APPROVE
+  if (/^(LESSON_LEARNED|COMPETITIVE_ANALYSIS|PRODUCT_INTENT_CORRECTION|STRATEGIC_QUESTION)/i.test(c)) return "L"
+  // F — task completion/progress traces
+  if (/^TASK_(COMPLETE|PROGRESS|UPDATE|COMPLETE_CORRECTION)/i.test(c)) return "F"
+  // G — git/status state
+  if (/^(COMMIT_CREATED|CURRENT_GIT_STATE|STATUS_(CHECK|OUTCOME|CORRECTION))/i.test(c)) return "G"
+  // H — session lifecycle (extended)
+  if (/^(SESSION_(START|OUTCOME|REFLECTION|WORK)|SESSION\b)/i.test(c)) return "H"
+  // I — diagnostic/verification traces
+  if (/^(VERIFICATION_RESULT|CLEANUP_RESULT|DEBUG_(OUTCOME|FINDING)|ROOT_CAUSE_ANALYSIS|FIX\b)/i.test(c)) return "I"
+  // J — planning ephemera
+  if (/^(NX_STEPS|NX\b|NEXT_(STEPS_REVIEW|ACTION)|PLAN\b|FINISH_PLAN|FOLLOWUP_STATUS)/i.test(c)) return "J"
+  // M — infra/config ops
+  if (/^(MCP_(DOCKER|LOADED)|MCP\b|HARNESS_CONFIG|SKILLS?_CREATED|BMAD|REPO_CREATED|ORG_PROVISIONED)/i.test(c)) return "M"
+  // N — date-prefixed session notes, debug: traces
+  if (/^(2026-\d{2}|debug:)/i.test(c)) return "N"
+  // O — operational traces (outcomes, phases, goals, canonical, receipts, corrections, etc.)
+  if (/^(OUTCOME|CANONICAL|POST\b|PHASE|GOAL_(STRUCTURED|SET|RUN_ATTEMPT)|EPIC_|RECEIPT|DOCS_UPDATED|DEBT_FIX|CORRECTION\b)/i.test(c)) return "O"
   return "D"
 }
 
@@ -90,7 +124,7 @@ async function main(): Promise<void> {
   }
 
   const pool = getPool()
-  const counts: Record<Batch, number> = { A: 0, B: 0, C: 0, D: 0, E: 0 }
+  const counts: Record<Batch, number> = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0, I: 0, J: 0, K: 0, L: 0, M: 0, N: 0, O: 0 }
   let approved = 0
   let rejected = 0
   let failed = 0
@@ -122,7 +156,8 @@ async function main(): Promise<void> {
 
       const decidedAt = new Date().toISOString()
 
-      if (batch === "B") {
+      const APPROVE_BATCHES: ReadonlySet<Batch> = new Set(["B", "K", "L"])
+      if (APPROVE_BATCHES.has(batch)) {
         // Approve → promote to Neo4j (SUPERSEDES handled inside createInsight path)
         const memoryId = randomUUID()
         try {
@@ -204,11 +239,21 @@ async function main(): Promise<void> {
     }
 
     console.log(`\n[Triage] Classification:`)
-    console.log(`  A (echo noise → reject):     ${counts.A}`)
-    console.log(`  B (arch decision → approve): ${counts.B}`)
-    console.log(`  C (session log → reject):    ${counts.C}`)
-    console.log(`  D (hold for review):         ${counts.D}`)
-    console.log(`  E (kanban card → reject):    ${counts.E}`)
+    console.log(`  A (echo noise → reject):       ${counts.A}`)
+    console.log(`  B (arch decision → approve):   ${counts.B}`)
+    console.log(`  C (session log → reject):      ${counts.C}`)
+    console.log(`  D (hold for review):           ${counts.D}`)
+    console.log(`  E (kanban card → reject):      ${counts.E}`)
+    console.log(`  F (task trace → reject):       ${counts.F}`)
+    console.log(`  G (git/status → reject):       ${counts.G}`)
+    console.log(`  H (session ext → reject):      ${counts.H}`)
+    console.log(`  I (diagnostic → reject):       ${counts.I}`)
+    console.log(`  J (planning → reject):         ${counts.J}`)
+    console.log(`  K (arch review → approve):     ${counts.K}`)
+    console.log(`  L (strategic → approve):       ${counts.L}`)
+    console.log(`  M (infra/config → reject):     ${counts.M}`)
+    console.log(`  N (date/debug → reject):       ${counts.N}`)
+    console.log(`  O (ops trace → reject):        ${counts.O}`)
     if (execute) {
       console.log(`\n[Triage] Executed: ${approved} approved, ${rejected} rejected, ${failed} failed, ${counts.D} held`)
     } else {
