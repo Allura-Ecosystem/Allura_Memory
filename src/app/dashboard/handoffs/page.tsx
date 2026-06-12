@@ -234,7 +234,7 @@ export default async function HandoffsPage({
                     whiteSpace: "nowrap",
                   }}
                 >
-                  <span style={{ color: "#1d4ed8" }}>{handoff.from_actor_id}</span>
+                  <span style={{ color: "var(--allura-blue)" }}>{handoff.from_actor_id}</span>
                   {" → "}
                   <span style={{ color: "#0f766e" }}>{handoff.to_actor_id}</span>
                 </div>

@@ -175,7 +175,7 @@ const monoStyle: React.CSSProperties = {
 
 const typePillStyle = (type: string): React.CSSProperties => {
   const map: Record<string, { bg: string; color: string }> = {
-    test_result: { bg: "#dbeafe", color: "#1d4ed8" },
+    test_result: { bg: "#dbeafe", color: "var(--allura-blue)" },
     gate_result: { bg: "#fef3c7", color: "#92400e" },
     approval: { bg: "#d1fae5", color: "#065f46" },
     review: { bg: "#ede9fe", color: "#5b21b6" },
@@ -263,7 +263,7 @@ export default async function EvidencePage({
             fontSize: 12,
           }}
         >
-          <span style={{ color: "#1d4ed8", fontWeight: 600 }}>Filters:</span>
+          <span style={{ color: "var(--allura-blue)", fontWeight: 600 }}>Filters:</span>
           {workItemId && (
             <span style={monoStyle}>work_item: {workItemId.slice(0, 16)}</span>
           )}
