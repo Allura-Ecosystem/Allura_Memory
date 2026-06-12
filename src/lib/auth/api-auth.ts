@@ -32,11 +32,26 @@ import type { AlluraRole, AuthUser, PermissionAction, PermissionCheckResult } fr
  * Discriminated union return type for requireRole.
  *
  * When allowed is true, user is guaranteed non-null.
- * When allowed is false, user is null and reason is always present.
+ * When allowed is false, reason is always present. Authenticated callers retain
+ * their user so route handlers can distinguish forbidden (403) from
+ * unauthenticated (401) requests.
  */
 export type RoleCheckResult =
-  | { allowed: true; user: AuthUser; requiredRole: AlluraRole; actualRole: AlluraRole }
-  | { allowed: false; reason: string; user: null; requiredRole: AlluraRole; actualRole: AlluraRole };
+  | { allowed: true; authenticated: true; user: AuthUser; requiredRole: AlluraRole; actualRole: AlluraRole }
+  | {
+      allowed: false;
+      // `authenticated` distinguishes the two failure modes that route handlers
+      // must map to different HTTP statuses:
+      //   authenticated === false → no identity → 401 Unauthorized
+      //   authenticated === true  → identity present, role insufficient → 403 Forbidden
+      // `user` is populated when authenticated so the canonical guard
+      // `if (!roleCheck.user) return unauthorizedResponse()` means *only* "no identity".
+      authenticated: boolean;
+      reason: string;
+      user: AuthUser | null;
+      requiredRole: AlluraRole;
+      actualRole: AlluraRole;
+    };
 
 // ── Auth Resolution ─────────────────────────────────────────────────────────
 
@@ -105,6 +120,7 @@ export function requireRole(
   if (!user) {
     return {
       allowed: false,
+      authenticated: false,
       reason: "Authentication required",
       requiredRole,
       actualRole: "viewer" as AlluraRole,
@@ -117,16 +133,22 @@ export function requireRole(
   if (result.allowed) {
     return {
       allowed: true,
+      authenticated: true,
       user,
       requiredRole: result.requiredRole,
       actualRole: result.actualRole,
     };
   }
 
+  // Authenticated but role insufficient → keep the user so handlers map this
+  // to 403 Forbidden (not 401). This is the root-cause fix for the permission
+  // contract: previously `user` was nulled here, making forbidden requests
+  // indistinguishable from unauthenticated ones.
   return {
     allowed: false,
+    authenticated: true,
     reason: result.reason ?? `Role '${user.role}' insufficient for '${requiredRole}'`,
-    user: null,
+    user,
     requiredRole: result.requiredRole,
     actualRole: result.actualRole,
   };
@@ -221,10 +243,9 @@ export async function withPermission(
   const roleCheck = requireRole(request, requiredRole);
 
   if (!roleCheck.allowed) {
-    // roleCheck.user is null when unauthenticated → 401
-    // roleCheck.user would be non-null if role was insufficient → 403
-    // Since the discriminated union sets user: null for unauth, use that directly.
-    if (roleCheck.user === null && roleCheck.reason?.includes("Authentication required")) {
+    // authenticated === false → no identity → 401
+    // authenticated === true  → identity present, role insufficient → 403
+    if (!roleCheck.authenticated) {
       return unauthorizedResponse();
     }
     return forbiddenResponse(roleCheck);

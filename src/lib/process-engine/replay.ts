@@ -20,7 +20,7 @@ if (typeof window !== "undefined") {
 
 import type { Pool } from "pg"
 import { ProcessEngine } from "./engine"
-import type { ProcessState, ProcessStatus, StepStatus } from "./types"
+import type { ProcessDefinition, ProcessState, ProcessStatus, StepStatus } from "./types"
 import { ProcessEngineError } from "./types"
 
 // ── Public Types ──────────────────────────────────────────────────────────────
@@ -267,9 +267,14 @@ export class ReplayEngine {
    * Then delegates to ProcessEngine.resume() which emits process_resumed
    * and advances state. Returns the updated ProcessState.
    */
-  async resumeFromCheckpoint(
+  async resumeFromCheckpoint<TCtx = Record<string, unknown>>(
     processId: string,
     approvalData: Record<string, unknown> = {},
+    options: {
+      definition?: ProcessDefinition<TCtx>
+      agentId?: string
+      promotionMode?: "soc2" | "auto"
+    } = {},
   ): Promise<ProcessState> {
     // Use replay() to get current state (read-only; dryRun implicit)
     const timeline = await this.replay(processId)
@@ -292,9 +297,10 @@ export class ReplayEngine {
       )
     }
 
-    // Delegate to existing ProcessEngine.resume() which handles event emission
-    // and state advancement
-    return this.processEngine.resume(processId, approvalData)
+    // Delegate to ProcessEngine.resume(). When a pinned definition is supplied
+    // this performs true continuation to a terminal state; otherwise it records
+    // the approval (legacy audit-only advance).
+    return this.processEngine.resume(processId, approvalData, options)
   }
 
   /**

@@ -85,6 +85,38 @@ describe("permission profile helpers", () => {
     expect(body.warnings[0].code).toBe("invalid-json");
   });
 
+  it("returns 401 for an unauthenticated mutation (no identity)", async () => {
+    const prevDevAuth = process.env.ALLURA_DEV_AUTH_ENABLED;
+    const prevClerkPub = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    const prevClerkSecret = process.env.CLERK_SECRET_KEY;
+    // Disable dev-auth fallback and Clerk so a header-less request resolves to
+    // no identity → 401 (distinct from authenticated-but-forbidden → 403).
+    process.env.ALLURA_DEV_AUTH_ENABLED = "false";
+    delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    delete process.env.CLERK_SECRET_KEY;
+    clearAuthConfig();
+
+    try {
+      const request = new Request("http://localhost/api/permission-profiles/profile_admin", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Anonymous Should Not Mutate" }),
+      });
+
+      const response = await PATCH(request as never, {
+        params: Promise.resolve({ id: "profile_admin" }),
+      });
+
+      expect(response.status).toBe(401);
+    } finally {
+      if (prevDevAuth === undefined) delete process.env.ALLURA_DEV_AUTH_ENABLED;
+      else process.env.ALLURA_DEV_AUTH_ENABLED = prevDevAuth;
+      if (prevClerkPub !== undefined) process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = prevClerkPub;
+      if (prevClerkSecret !== undefined) process.env.CLERK_SECRET_KEY = prevClerkSecret;
+      clearAuthConfig();
+    }
+  });
+
   it("requires admin role before mutating a permission profile", async () => {
     const request = new Request("http://localhost/api/permission-profiles/profile_admin", {
       method: "PATCH",

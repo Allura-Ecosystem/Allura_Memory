@@ -67,6 +67,20 @@ const ScoringContextSchema = z.object({
 function scoreMemory(context: ScoringContext): CuratorScore {
   const { content, tiers = [0.6, 0.75, 0.85], usageCount = 0, daysSinceCreated = 0, source = "conversation" } = context;
 
+  // Signal 0: Machine echo guard — raw tool-call JSON must never reach the HITL queue
+  const trimmed = content.trimStart();
+  const isMachineEcho =
+    /^[{\[]\s*"?type"?\s*:/.test(trimmed) ||
+    trimmed.startsWith(`{"type":`) ||
+    trimmed.startsWith(`{'type':`);
+  if (isMachineEcho) {
+    return {
+      confidence: 0.3,
+      reasoning: "machine echo (raw tool-call JSON) — suppressed from promotion",
+      tier: "emerging",
+    };
+  }
+
   let confidence = 0.5; // Base confidence
 
   // Signal 1: Specificity markers

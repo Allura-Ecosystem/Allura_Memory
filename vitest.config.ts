@@ -51,6 +51,8 @@ export default defineConfig({
       "src/__tests__/api-degradation.test.ts",
       "src/__tests__/auth-middleware.test.ts",
       "src/__tests__/auth-roles.test.ts",
+      "src/__tests__/permission-profile.test.ts",
+      "src/__tests__/mission-control-route-parity.test.ts",
       "src/__tests__/cors-middleware.test.ts",
       "src/__tests__/health-metrics.test.ts",
       "src/__tests__/health-metrics-scope.test.ts",
@@ -96,6 +98,8 @@ export default defineConfig({
       "src/lib/neo4j/queries/*.test.ts",
       "src/lib/postgres/queries/*.test.ts",
       "src/lib/postgres/trace-logger.test.ts",
+      // DB-backed checkpoint continuation proof — e2e lane only (Story 12.2)
+      "src/lib/process-engine/checkpoint-continuation.integration.test.ts",
       // group-governance tests are E2E-gated (RUN_E2E_TESTS=true). Keep excluded from default lane.
       // They are included in the e2e lane via vitest.config.e2e.ts.
       "src/lib/validation/group-governance.test.ts",

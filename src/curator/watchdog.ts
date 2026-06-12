@@ -17,6 +17,8 @@ import { closePool, getPool } from "../lib/postgres/connection";
 export interface WatchdogConfig {
   groupId: string;
   scoreThreshold: number;
+  /** Alert threshold for pending canonical_proposals. Default: 100. Override via WATCHDOG_QUEUE_DEPTH_THRESHOLD. */
+  queueDepthThreshold?: number;
 }
 
 /**
@@ -89,6 +91,66 @@ export async function scanAndPropose(config: WatchdogConfig): Promise<number> {
   return proposalsCreated;
 }
 
+// ── Exported cycle function (also used by CLI) ───────────────────────────────
+
+/**
+ * Run one watchdog cycle: scan + propose, emit heartbeat, check queue depth.
+ * Exported for unit-testing without starting the interval loop.
+ *
+ * @param pool   - Active pg Pool
+ * @param config - Watchdog configuration
+ * @param cycleCount - Current cycle index (1-based)
+ */
+export async function runWatchdogCycle(
+  pool: { query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }> },
+  config: WatchdogConfig,
+  cycleCount: number
+): Promise<void> {
+  const threshold =
+    config.queueDepthThreshold ??
+    (process.env.WATCHDOG_QUEUE_DEPTH_THRESHOLD
+      ? parseInt(process.env.WATCHDOG_QUEUE_DEPTH_THRESHOLD, 10)
+      : 100);
+
+  const newProposals = await scanAndPropose(config);
+
+  await pool.query(
+    `INSERT INTO events (event_type, agent_id, group_id, metadata, created_at)
+     VALUES ($1, $2, $3, $4, NOW())`,
+    [
+      'WATCHDOG_HEARTBEAT',
+      'watchdog',
+      config.groupId,
+      JSON.stringify({ proposals_created: newProposals, scan_cycle: cycleCount }),
+    ]
+  );
+
+  // Queue-depth check — emit BLOCKER at most once per cycle if pending > threshold
+  const depthResult = await pool.query(
+    `SELECT COUNT(*)::int AS pending FROM canonical_proposals WHERE group_id = $1 AND status = 'pending'`,
+    [config.groupId]
+  );
+  const pending = (depthResult.rows[0] as { pending: number }).pending;
+
+  if (pending > threshold) {
+    await pool.query(
+      `INSERT INTO events (event_type, agent_id, group_id, metadata, created_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [
+        'BLOCKER',
+        'watchdog',
+        config.groupId,
+        JSON.stringify({ kind: 'curator_queue_depth', pending, threshold, hint: 'run curator batch triage' }),
+      ]
+    );
+    console.warn(`[Watchdog] BLOCKER: curator queue depth ${pending} exceeds threshold ${threshold}`);
+  }
+
+  if (newProposals > 0) {
+    console.log(`[Watchdog] Scan complete: ${newProposals} new proposals`);
+  }
+}
+
 // ── CLI Mode ────────────────────────────────────────────────────────────────
 
 // Only run CLI when executed directly (not when imported)
@@ -126,20 +188,7 @@ if (isMainModule) {
 
     async function runCycle(): Promise<void> {
       cycleCount++;
-      const newProposals = await scanAndPropose(watchdogConfig);
-      await pool.query(
-        `INSERT INTO events (event_type, agent_id, group_id, metadata, created_at)
-         VALUES ($1, $2, $3, $4, NOW())`,
-        [
-          'WATCHDOG_HEARTBEAT',
-          'watchdog',
-          watchdogConfig.groupId,
-          JSON.stringify({ proposals_created: newProposals, scan_cycle: cycleCount }),
-        ]
-      );
-      return newProposals > 0
-        ? void console.log(`[Watchdog] Scan complete: ${newProposals} new proposals`)
-        : undefined;
+      await runWatchdogCycle(pool, watchdogConfig, cycleCount);
     }
 
     // Run first scan immediately

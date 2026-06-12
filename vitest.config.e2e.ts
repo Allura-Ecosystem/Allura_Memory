@@ -27,6 +27,8 @@ export default defineConfig({
       // Validation tests that need live DB for trace-ref verification
       "src/lib/validation/group-governance.test.ts",
       "src/lib/validation/trace-ref.test.ts",
+      // Story 12.2 — true checkpoint continuation against live PostgreSQL
+      "src/lib/process-engine/checkpoint-continuation.integration.test.ts",
     ],
     testTimeout: 60_000,
     hookTimeout: 30_000,

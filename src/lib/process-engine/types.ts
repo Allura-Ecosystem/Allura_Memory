@@ -90,6 +90,12 @@ export interface StepDefinition<TCtx = Record<string, unknown>> {
 export interface ProcessDefinition<TCtx = Record<string, unknown>> {
   /** Stable identifier for this process type */
   id: string
+  /**
+   * Immutable revision of this definition. A run pins the revision it started
+   * with; resume must be handed the exact same id + revision to continue
+   * (Story 12.2, AD-35). Defaults to "1" when omitted.
+   */
+  revision?: string
   /** Human-readable name */
   name: string
   /** Tenant isolation key — must match ^allura-[a-z0-9-]+ */
@@ -113,6 +119,11 @@ export interface ProcessState {
   processId: string
   /** ID of the ProcessDefinition this run is based on */
   definitionId: string
+  /**
+   * Immutable revision of the ProcessDefinition pinned at run start.
+   * Resume validates the supplied definition against this value.
+   */
+  definitionRevision?: string
   /** Tenant isolation key */
   groupId: string
   /** Current overall status */
@@ -164,5 +175,26 @@ export class GateFailedError extends ProcessEngineError {
   constructor(processId: string, stepId: string) {
     super(`Gate condition failed for step ${stepId}`, processId, stepId)
     this.name = "GateFailedError"
+  }
+}
+
+/**
+ * Raised when resume() is handed a definition whose id/revision does not match
+ * the one the run was pinned to (or no definition at all). This is the explicit
+ * "doctor finding" required by Story 12.2 — resume must never silently continue
+ * against a definition that has drifted.
+ */
+export class DefinitionRevisionError extends ProcessEngineError {
+  constructor(
+    processId: string,
+    public readonly expected: { id: string; revision: string },
+    public readonly actual: { id: string; revision: string },
+  ) {
+    super(
+      `Definition mismatch for process ${processId}: pinned ${expected.id}@${expected.revision} ` +
+        `but resume was given ${actual.id}@${actual.revision}`,
+      processId,
+    )
+    this.name = "DefinitionRevisionError"
   }
 }

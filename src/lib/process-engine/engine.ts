@@ -37,6 +37,7 @@ import { ProcessStateManager } from "./state-manager"
 import {
   CheckpointBlockedError,
   CircuitBreakerTripError,
+  DefinitionRevisionError,
   GateFailedError,
   ProcessEngineError,
 } from "./types"
@@ -103,6 +104,7 @@ export class ProcessEngine {
     const state: ProcessState = {
       processId,
       definitionId: definition.id,
+      definitionRevision: definition.revision ?? "1",
       groupId: definition.group_id,
       status: "pending",
       currentStepIndex: 0,
@@ -120,6 +122,7 @@ export class ProcessEngine {
     // Persist initial snapshot
     await this.stateManager.saveInitialState(state, {
       id: definition.id,
+      revision: definition.revision ?? "1",
       name: definition.name,
       group_id: definition.group_id,
       stepCount: definition.steps.length,
@@ -170,6 +173,7 @@ export class ProcessEngine {
     const state: ProcessState = {
       processId,
       definitionId: definition.id,
+      definitionRevision: definition.revision ?? "1",
       groupId: definition.group_id,
       status: "pending",
       currentStepIndex: 0,
@@ -186,6 +190,7 @@ export class ProcessEngine {
 
     await this.stateManager.saveInitialState(state, {
       id: definition.id,
+      revision: definition.revision ?? "1",
       name: definition.name,
       group_id: definition.group_id,
       stepCount: definition.steps.length,
@@ -334,12 +339,30 @@ export class ProcessEngine {
   }
 
   /**
-   * Resume a paused process (e.g., after a checkpoint is approved).
-   * Loads state from PostgreSQL, then continues from the blocked step.
+   * Resume a paused process after a checkpoint is approved.
+   *
+   * Story 12.2 / AD-35 — true continuation:
+   *   - When `options.definition` is supplied, the run is continued from the
+   *     first incomplete eligible step against the *pinned* definition revision.
+   *     Already-completed steps (including side-effecting ones) are NOT
+   *     re-executed (idempotent replay — see executeFrom's idempotency guard).
+   *     A mismatched id/revision raises a DefinitionRevisionError doctor finding.
+   *   - When no definition is supplied, resume falls back to the legacy
+   *     audit-only behaviour: it records the approval and advances the index,
+   *     leaving the caller to re-invoke run(). This preserves backward
+   *     compatibility but cannot itself reach a terminal state.
+   *
+   * The approved checkpoint is persisted as `completed`, so approval survives a
+   * restart and a subsequent resume/replay will not re-block it.
    */
-  async resume(
+  async resume<TCtx = Record<string, unknown>>(
     processId: string,
     approvalData: Record<string, unknown> = {},
+    options: {
+      definition?: ProcessDefinition<TCtx>
+      agentId?: string
+      promotionMode?: "soc2" | "auto"
+    } = {},
   ): Promise<ProcessState> {
     const state = await this.stateManager.loadState(processId)
     if (!state) {
@@ -353,11 +376,39 @@ export class ProcessEngine {
       )
     }
 
-    // Emit resume event
+    const { definition } = options
+
+    // ── Doctor finding: pinned definition must match before continuation ───────
+    if (definition) {
+      const pinnedRevision = state.definitionRevision ?? "1"
+      const suppliedRevision = definition.revision ?? "1"
+      if (definition.id !== state.definitionId || suppliedRevision !== pinnedRevision) {
+        // Emit an append-only doctor finding, then refuse to continue.
+        await insertEvent({
+          group_id: state.groupId,
+          event_type: "process_resume_rejected",
+          agent_id: options.agentId ?? "process-engine",
+          workflow_id: processId,
+          metadata: {
+            reason: "definition_revision_mismatch",
+            pinned: { id: state.definitionId, revision: pinnedRevision },
+            supplied: { id: definition.id, revision: suppliedRevision },
+          },
+          status: "failed",
+        })
+        throw new DefinitionRevisionError(
+          processId,
+          { id: state.definitionId, revision: pinnedRevision },
+          { id: definition.id, revision: suppliedRevision },
+        )
+      }
+    }
+
+    // Emit resume event (append-only, tenant + actor scoped)
     await insertEvent({
       group_id: state.groupId,
       event_type: "process_resumed",
-      agent_id: "process-engine",
+      agent_id: options.agentId ?? "process-engine",
       workflow_id: processId,
       metadata: { approvalData, resumedAt: now() },
       status: "completed",
@@ -366,27 +417,57 @@ export class ProcessEngine {
     state.status = "running"
     state.updatedAt = now()
 
-    // We need to reconstruct the definition to continue — callers must supply
-    // it by passing back through run() with a pre-built state. For the resume
-    // path, we use a minimal synthetic definition derived from stored metadata.
-    // Full replay-from-events (Story 12.2) will improve this.
-    //
-    // For now: resume is a no-op pass-through that marks the paused step as
-    // completed and advances from the next step. The caller is responsible for
-    // re-invoking run() after receiving a CheckpointBlockedError.
-    //
-    // Mark the currently blocked step as completed
-    const blockedStep = Object.entries(state.stepStates).find(
+    // Mark the currently blocked checkpoint as approved/completed. This is
+    // idempotent: if it is somehow already completed we leave it untouched.
+    const blockedEntry = Object.entries(state.stepStates).find(
       ([, s]) => s === "blocked",
     )
-    if (blockedStep) {
-      state.stepStates[blockedStep[0]] = "completed"
-      state.stepResults[blockedStep[0]] = { approved: true, approvalData }
-      state.currentStepIndex += 1
+    const blockedStepId = blockedEntry?.[0]
+    if (blockedStepId) {
+      state.stepStates[blockedStepId] = "completed"
+      state.stepResults[blockedStepId] = { approved: true, approvalData }
+
+      await insertEvent({
+        group_id: state.groupId,
+        event_type: "process_step_completed",
+        agent_id: options.agentId ?? "process-engine",
+        workflow_id: processId,
+        step_id: blockedStepId,
+        metadata: { stepType: "checkpoint", approved: true, resumed: true },
+        status: "completed",
+      })
     }
 
-    await this.stateManager.saveState(state)
-    return state
+    // ── Legacy path: no definition → audit-only advance, caller re-runs ────────
+    if (!definition) {
+      if (blockedStepId) {
+        state.currentStepIndex += 1
+      }
+      await this.stateManager.saveState(state)
+      return state
+    }
+
+    // ── True continuation: execute remaining steps from the pinned definition ──
+    // Ensure every declared step has a state entry (handles definitions whose
+    // step set was reconciled). Steps already completed/skipped are preserved
+    // and will be skipped by executeFrom's idempotency guard.
+    for (const step of definition.steps) {
+      if (state.stepStates[step.id] === undefined) {
+        state.stepStates[step.id] = "pending"
+      }
+    }
+
+    const ctx = buildContext(definition, state, {
+      agentId: options.agentId,
+      promotionMode: options.promotionMode ?? "soc2",
+    })
+
+    const blockedIndex = blockedStepId
+      ? definition.steps.findIndex((s) => s.id === blockedStepId)
+      : state.currentStepIndex - 1
+
+    // Continue from the step immediately after the approved checkpoint.
+    return this.executeFrom(definition, state, ctx, blockedIndex + 1)
   }
 
   /**
@@ -433,6 +514,16 @@ export class ProcessEngine {
     for (let i = startIndex; i < definition.steps.length; i++) {
       const step = definition.steps[i]
       state.currentStepIndex = i
+
+      // ── Idempotency Guard (Story 12.2 / AD-35) ───────────────────────────
+      // Never re-execute a step that already reached a terminal non-failure
+      // state. On resume/replay this guarantees completed side effects do not
+      // run twice; we only sync ctx forward and move on.
+      const persisted = state.stepStates[step.id]
+      if (persisted === "completed" || persisted === "skipped") {
+        ctx = { ...ctx, stepResults: { ...state.stepResults } }
+        continue
+      }
 
       // ── Circuit Breaker Check ────────────────────────────────────────────
       const manager = getBreakerManager()
