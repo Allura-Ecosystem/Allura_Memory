@@ -232,6 +232,11 @@ function neo4jToAgentNode(record: Record<string, unknown>): AgentNode {
 
   const convertMetadata = (val: unknown): Record<string, unknown> => {
     if (val === null || val === undefined) return {};
+    // Neo4j 5.x rejects nested maps as node property values — only
+    // primitives and arrays of primitives are valid (verified 2026-06-12
+    // against Neo4j 5.26 community). The Agent writer JSON.stringifies
+    // metadata, so we JSON.parse back on read. See insert-insight.ts for
+    // the full investigation.
     if (typeof val === "string") {
       try {
         return JSON.parse(val);
@@ -239,7 +244,8 @@ function neo4jToAgentNode(record: Record<string, unknown>): AgentNode {
         return {};
       }
     }
-    // Neo4j stores maps as objects
+    // Defensive: if a future writer stores a real map, walk it the same
+    // way insert-insight does.
     if (typeof val === "object") {
       const result: Record<string, unknown> = {};
       const obj = val as Record<string, unknown>;
@@ -345,6 +351,9 @@ export async function createAgentNode(agent: AgentInsert): Promise<AgentNode> {
       group_id: agent.group_id,
       confidence: agent.confidence ?? 0.0,
       status: agent.status ?? "active",
+      // Neo4j 5.x constraint: nested Cypher maps cannot be stored as node
+      // property values. JSON.stringify is the deliberate adaptation.
+      // See insert-insight.ts for the 2026-06-12 investigation.
       metadata: JSON.stringify(agent.metadata || {}),
     };
 
@@ -506,6 +515,7 @@ export async function updateAgentNode(
 
     if (updates.metadata !== undefined) {
       setStatements.push("a.metadata = $metadata");
+      // JSON.stringify for the same Neo4j 5.x reason as createAgentNode.
       params.metadata = JSON.stringify(updates.metadata);
     }
 

@@ -181,6 +181,48 @@ describe.skipIf(!shouldRunE2E)("Agent Nodes CRUD", () => {
     expect(created.metadata).toEqual({ department: "engineering" });
   });
 
+  it("should store agent metadata on disk as a JSON string (Neo4j 5.x constraint)", async () => {
+    // Lock-in test for the 2026-06-12 carry-forward. Neo4j 5.26 community
+    // rejects nested Cypher maps as node property values; the deliberate
+    // adaptation is JSON.stringify on write + JSON.parse on read. See
+    // insert-insight.test.ts for the full investigation.
+    const agent: AgentInsert = {
+      agent_id: "metadata-disk-agent-1",
+      name: "DiskShapeAgent",
+      role: "disk shape",
+      model: "shape-model",
+      group_id: TEST_GROUP_ID,
+      metadata: {
+        department: "engineering",
+        team: "platform",
+        nested: { seniority: 3 },
+      },
+    };
+
+    const created = await createAgentNode(agent);
+
+    // Round-trip via the returned value.
+    expect(created.metadata).toEqual(agent.metadata);
+
+    // On-disk shape: STRING (not MAP, which 5.x rejects). The driver
+    // hands a JS string for a STRING value and a JS object for a MAP
+    // value — we check at the JS layer (Neo4j 5.x removed `typeof()`).
+    const driver = getDriver();
+    const session = driver.session();
+    try {
+      const r = await session.run(
+        "MATCH (a:Agent {agent_id: $id}) RETURN a.metadata AS m",
+        { id: created.agent_id }
+      );
+      expect(r.records.length).toBe(1);
+      const m = r.records[0].get("m");
+      expect(typeof m).toBe("string");
+      expect(JSON.parse(m as string)).toEqual(agent.metadata);
+    } finally {
+      await session.close();
+    }
+  });
+
   it("should throw conflict error for duplicate agent_id", async () => {
     const agent: AgentInsert = {
       agent_id: "duplicate-test",

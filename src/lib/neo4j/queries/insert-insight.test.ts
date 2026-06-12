@@ -226,6 +226,115 @@ describe("insert-insight", () => {
 
       expect(result.metadata).toEqual({ key: "value", nested: { foo: "bar" } });
     });
+
+    it("should store metadata on disk as a JSON string (Neo4j 5.x constraint)", async () => {
+      // Lock-in test for the 2026-06-12 carry-forward: Neo4j 5.26 community
+      // REJECTS nested Cypher maps as node property values via
+      //   CREATE (n:Label { prop: $map })
+      // It only accepts primitives and arrays of primitives. Verified
+      // directly: Try 1 (empty map) → FAIL, Try 2 (filled map) → FAIL,
+      // Try 3 (string) → OK.
+      //
+      // The deliberate adaptation: JSON.stringify on write, JSON.parse
+      // on read. This is the right contract for 5.x. The previous "fix"
+      // attempt to bind metadata as a real Cypher map was a regression
+      // that broke `createInsight` on every call. The real bug was that
+      // no test ever queried the on-disk shape — the existing
+      // `should store metadata as JSON` test only checked the round-trip
+      // through `convertMetadata`, which masked the constraint.
+      //
+      // This test makes the on-disk contract explicit so a future reader
+      // can't accidentally "simplify" the JSON.stringify away and break
+      // the world.
+      const insight: InsightInsert = {
+        insight_id: "metadata-disk-shape-1",
+        group_id: testGroupId,
+        content: "Test disk shape",
+        confidence: 0.8,
+        topic_key: "test.insight",
+        metadata: {
+          proposal_id: "abc-123",
+          tier: "mainstream",
+          trace_ref: "86559",
+          nested: { foo: "bar" },
+        },
+      };
+
+      const result = await createInsight(insight);
+      createdInsightIds.push(result.id);
+
+      // The returned value must deep-equal the input (round-trip works).
+      expect(result.metadata).toEqual(insight.metadata);
+
+      // The on-disk shape must be a STRING. If a future change makes this
+      // an object, this assertion will catch it and force the developer
+      // to either fix Neo4j or document why they are violating the 5.x
+      // contract. (Neo4j 5.x removed the `typeof()` Cypher function, so
+      // we check the value type at the JS layer using what the driver
+      // hands back: a string for STRING values, an object for MAP values.)
+      const driver = getDriver();
+      const session = driver.session();
+      try {
+        const r = await session.run(
+          "MATCH (i:Insight {insight_id: $id}) RETURN i.metadata AS m",
+          { id: result.insight_id }
+        );
+        expect(r.records.length).toBe(1);
+        const m = r.records[0].get("m");
+        // STRING round-trip: the driver returns a JS string. MAP would
+        // return a JS object — assert we got a string.
+        expect(typeof m).toBe("string");
+        // The string must be a valid JSON of the original metadata.
+        expect(JSON.parse(m as string)).toEqual(insight.metadata);
+      } finally {
+        await session.close();
+      }
+    });
+
+    it("should round-trip nested metadata through createInsightVersion", async () => {
+      // createInsightVersion had the same JSON.stringify contract; this
+      // test pins it for the version writer.
+      const base: InsightInsert = {
+        insight_id: "metadata-version-shape-1",
+        group_id: testGroupId,
+        content: "v1",
+        confidence: 0.7,
+        topic_key: "test.insight",
+        metadata: { proposal_id: "v1-prop", tier: "mainstream" },
+      };
+      const v1 = await createInsight(base);
+      createdInsightIds.push(v1.id);
+
+      const v2 = await createInsightVersion(
+        "metadata-version-shape-1",
+        "v2",
+        0.8,
+        testGroupId,
+        { proposal_id: "v2-prop", tier: "adoption", extra: "field" }
+      );
+
+      // Round-trip via the returned value.
+      expect(v2.metadata).toEqual({
+        proposal_id: "v2-prop",
+        tier: "adoption",
+        extra: "field",
+      });
+
+      // On-disk shape: string.
+      const driver = getDriver();
+      const session = driver.session();
+      try {
+        const r = await session.run(
+          "MATCH (i:Insight {id: $id}) RETURN i.metadata AS m",
+          { id: v2.id }
+        );
+        const m = r.records[0].get("m");
+        expect(typeof m).toBe("string");
+        expect(JSON.parse(m as string)).toEqual(v2.metadata);
+      } finally {
+        await session.close();
+      }
+    });
   });
 
   // =========================================================================

@@ -165,6 +165,12 @@ function neo4jToRecord(record: Record<string, unknown>): InsightRecord {
 
   const convertMetadata = (val: unknown): Record<string, unknown> => {
     if (val === null || val === undefined) return {};
+    // Neo4j 5.x rejects nested maps as node property values — only primitives
+    // and arrays of primitives are valid (verified 2026-06-12 against
+    // Neo4j 5.26 community). `createInsight` and `createInsightVersion`
+    // JSON.stringify the metadata before passing it as a Cypher parameter,
+    // so we JSON.parse the value back on read. This is a deliberate
+    // adaptation to the 5.x storage constraint, not a workaround.
     if (typeof val === "string") {
       try {
         return JSON.parse(val);
@@ -172,9 +178,9 @@ function neo4jToRecord(record: Record<string, unknown>): InsightRecord {
         return {};
       }
     }
-    // Neo4j stores maps as objects
+    // Defensive: if a future writer stores a real map (e.g. via SET n +=
+    // $map rather than CREATE), we walk the object the same way.
     if (typeof val === "object") {
-      // Convert any Neo4j integers in the object
       const result: Record<string, unknown> = {};
       const obj = val as Record<string, unknown>;
       for (const key of Object.keys(obj)) {
@@ -290,6 +296,14 @@ export async function createInsight(insight: InsightInsert): Promise<InsightReco
         source_type: insight.source_type || "manual",
         source_ref: insight.source_ref || null,
         created_by: insight.created_by || null,
+        // Neo4j 5.x rejects nested Cypher maps as node property values via
+        // `CREATE (n:Label { prop: $map })` — only primitives and arrays
+        // of primitives are valid. JSON.stringify is the deliberate
+        // adaptation; the read path (convertMetadata) JSON.parses back
+        // to a JS object. Verified 2026-06-12 against Neo4j 5.26 community:
+        //   Try 1 (empty map):  FAIL — "Encountered: Map{}"
+        //   Try 2 (filled map): FAIL — "Encountered: Map{foo -> String("bar")}"
+        //   Try 3 (string):     OK
         metadata: JSON.stringify(insight.metadata || {}),
         schema_version: CURRENT_SCHEMA_VERSION,
       };
@@ -395,6 +409,7 @@ export async function createInsightVersion(
         content,
         confidence,
         topic_key: topicKey,
+        // Mirror the createInsight JSON.stringify for the same 5.x reason.
         metadata: JSON.stringify(metadata || {}),
         schema_version: CURRENT_SCHEMA_VERSION,
       });
@@ -559,7 +574,11 @@ export async function revertInsightVersion(
         content,
         confidence,
         topic_key: topicKey,
-        metadata,
+        // JSON.stringify for the same Neo4j 5.x reason as createInsight.
+        // The metadata value was just read from a previous version's node,
+        // so it may already be a string (from a JSON.stringify'd writer)
+        // or, if it was an object on read, we re-stringify here.
+        metadata: typeof metadata === "string" ? metadata : JSON.stringify(metadata || {}),
         schema_version: CURRENT_SCHEMA_VERSION,
       });
 
