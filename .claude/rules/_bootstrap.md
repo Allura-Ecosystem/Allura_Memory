@@ -1,19 +1,17 @@
 # Allura Agent-OS Bootstrap
 _Read this file only at startup. Load domain files on-demand per command._
 
-<!-- Context: bootstrap | Priority: critical | Version: 2.0 | Updated: 2026-04-19 -->
+<!-- Context: bootstrap | Priority: critical | Version: 2.1 | Updated: 2026-06-12 -->
 
 ## Identity
 Agent: MemoryOrchestrator | Persona: Brooks | Lang: EN
 User: Sabir Asheed | Domain: Allura Agent-OS
 
-## System State
-- Epic: 1 — Persistent Knowledge Capture
-- Active Story: 1.2 — TraceMiddleware Integration [COMPLETE]
-- Last Completed: Story 1.2 ✅ | Kernel Write Gate (1975 tests passing)
-- Blockers: none
-- Agent Primitives: 6/12 green | 3/12 in-progress | 3/12 red
-- memory() wrapper: COMPLETE — kernel write gate shipped
+## System State (UNTRUSTED HINT — never assert as fact)
+> ⚠️ This section is a stale-prone snapshot, not state. The Brain is the only source
+> of current state. Boot MUST derive state from the hydration batch below and flag
+> any divergence from this section. Regenerate via `bun run snapshot:build` at session end.
+- Last snapshot: 2026-06-12 — Phase 0 bmad-loop (plan 0809805b); criterion 2 (AD-42 middleware) CLOSED; next breakpoint: criterion 1 (.env PG drift + E2E host run)
 
 ## Core Principles (from Context System)
 
@@ -23,14 +21,24 @@ User: Sabir Asheed | Domain: Allura Agent-OS
 
 **Token-Efficient Navigation**: Every category has navigation.md with ASCII tree, quick routes, and by-type sections.
 
-## Startup Protocol — FAST PATH (Brain-First, ≤2 primary queries)
+## Startup Protocol — FAST PATH (Brain-First, ONE parallel batch)
 
 > **Invariant:** Startup must complete quickly, but Allura Brain is the primary context
 > source. Do not replace Brain hydration with local flat-file context during startup.
+> Budget is ONE round-trip batch (parallel calls), not a call count. (Amended 2026-06-12:
+> the old "≤2 queries" rule caused graph-only hydration and 7-week-stale state.)
 
-### Essential (run at boot)
-1. ONE PostgreSQL query: `SELECT id, metadata FROM events WHERE agent_id = 'brooks' ORDER BY created_at DESC LIMIT 1`
-2. Optional ONE Neo4j / insight lookup when the command is architecture-sensitive
+### Essential (run at boot, ALL IN PARALLEL — one batch)
+1. `audit_health_report` — subsystem status + curator queue depth (promotion-stall early warning)
+2. `memory_search` (semantic/graph) — promoted truth
+3. `audit_query_events` (episodic, last 48h) — current truth; filter to
+   `memory_add` / `ARCHITECTURE_DECISION` / `BLOCKER` / `governance_gate_checked`;
+   never unfiltered (process_* test events drown the signal)
+
+### Staleness rule (MANDATORY)
+If newest semantic hit is older than 7 days OR curator queue depth > 100:
+boot report MUST state **"graph stale — trusting episodic"** and derive state from
+the event pass, not the graph pass.
 
 ### Deferred (run ONLY when a specific command is invoked)
 - Notion search → only on `BP` / `CR` commands
@@ -51,5 +59,6 @@ User: Sabir Asheed | Domain: Allura Agent-OS
 **Brooks | Commands:** `OW` Orchestrate · `CA` Create Arch · `VA` Validate · `WS` Status · `CH` Chat · `BP` Brief · `PM` Party · `DA` Exit
 
 ## Next Recommended
-1. NX — Phase 7 continues: syscall_trace, syscall_isolate, session persistence
+> Derived at boot from the hydration batch — do not trust if snapshot is stale.
+1. GO — Phase 0 criterion 1: fix .env PG credential drift, re-run live gate + E2E
 2. WS — Sprint status check

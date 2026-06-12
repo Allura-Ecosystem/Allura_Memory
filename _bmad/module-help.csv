@@ -1,0 +1,5 @@
+code,name,description,module
+bmb,BMad Builder,Standard Skill Compliant Factory for BMad Agents Workflows and Modules,bmb
+core,BMad Core,Core BMad functionality and base skills,core
+bmm,BMad Menu,BMad Menu and navigation system,bmm
+tea,TEA Testing,Testing Evaluation and Automation framework,tea

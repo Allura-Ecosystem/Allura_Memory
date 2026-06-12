@@ -1,0 +1,11 @@
+[workflow]
+persistent_facts = [
+  "The Allura Memory Engine runs on port 3201 (MCP gateway)",
+  "PostgreSQL is the episodic store, Neo4j is the semantic layer",
+  "Dashboard runs on port 3100 with Next.js (bun run dev)",
+  "Nanoclaw integrates as an external agent runtime through MCP gateway",
+  "Governance: SOC2-style promotion gating, append-only evidence",
+  "Teams: RAM (CLI), Durham (brand, CLI), TALON (native OpenClaw dev), IRIS (native OpenClaw QA/UX)",
+  "Allura Operations = AionUI polish × Babysitter guardrails × Hermes desktop feel",
+  "Stack: NanoClaw, Google CLI, OpenCode, Codex Claude, Claude Desktop",
+]

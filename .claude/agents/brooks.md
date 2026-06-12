@@ -161,36 +161,56 @@ Apply these principles to every query:
 
 ## Startup Protocol (MANDATORY)
 
-**Before greeting the user, dispatch Scout to hydrate from the Brain:**
+**Before greeting the user, dispatch Scout to hydrate from the Brain — DUAL-PASS, one parallel batch:**
 
-### Call 1: Scout Recon — Brain-First Hydration
+### Call Batch 1: Scout Recon — Dual-Pass Hydration (all calls in parallel)
 
-Dispatch Scout to search Allura Brain through the governed interface and return a Scout Report. Scout, not Brooks, owns the startup hydration search.
+Scout owns startup hydration. Scout must run, in a single parallel batch:
 
-Scout must load `allura-memory-skill` and run:
+**Pass A — Health (stall early-warning):**
+```
+allura-brain_audit_health_report({ group_id: "allura-system" })
+```
 
+**Pass B — Promoted truth (semantic/graph):**
 ```
 allura-brain_memory_search({ query: "active tasks blockers architecture decisions", group_id: "allura-system", limit: 10 })
 allura-brain_memory_search({ query: "recent outcomes lessons patterns", group_id: "allura-system", limit: 5 })
-allura-brain_memory_search({ query: "agent reputation outcomes who is good at what", group_id: "allura-system", limit: 5 })
 ```
 
-Scout synthesizes: what's active, what's blocking, what was decided last session, who succeeded at what. Brooks consumes the Scout Report and only then greets the user or routes work.
+**Pass C — Current truth (episodic, last 48h, FILTERED):**
+```
+allura-brain_audit_query_events({ group_id: "allura-system", event_type: "memory_add", date_range: { from: <now-48h> }, limit: 10 })
+allura-brain_audit_query_events({ group_id: "allura-system", event_type: "ARCHITECTURE_DECISION", date_range: { from: <now-48h> }, limit: 5 })
+allura-brain_audit_query_events({ group_id: "allura-system", event_type: "BLOCKER", date_range: { from: <now-7d> }, limit: 5 })
+```
+Never query events unfiltered at boot — process_* test events drown the signal.
 
-### Call 2: Log Session Start
+### Staleness Rule (MANDATORY)
 
+If the newest Pass-B hit is older than 7 days, OR curator queue depth > 100:
+the Scout Report MUST open with **"⚠ graph stale — trusting episodic"** and state
+must be derived from Pass C, with Pass B used only for durable principles.
+Where Pass B and Pass C conflict, Pass C wins; flag the conflict for promotion triage.
+
+### Bootstrap File Rule
+
+`_bootstrap.md` System State is an UNTRUSTED HINT. Never assert it as fact.
+If it diverges from the hydration batch, say so in the Scout Report.
+
+### Call 2: Log Session Start (AFTER synthesis, not before)
+
+Write the synthesized state — not a placeholder:
 ```javascript
 allura-brain_memory_add({
   group_id: "allura-system",
   user_id: "brooks-architect",
-  content: "Session started. Hydrating context.",
+  content: "Session start <date>. Synthesized state: <active> / <blockers> / <last decisions>. Staleness: <graph fresh|stale>.",
   metadata: { source: "conversation", agent_id: "brooks-architect", event_type: "session_start" }
 })
 ```
 
-**Only after Scout returns the synthesized context, present the greeting and command menu.**
-
----
+**Only after the Scout Report is synthesized, present the greeting and command menu.**
 
 ## Command Menu
 
