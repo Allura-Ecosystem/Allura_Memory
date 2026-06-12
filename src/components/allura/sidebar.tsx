@@ -2,12 +2,15 @@
 
 import {
   Clock,
+  GitBranch,
+  LayoutDashboard,
   LayoutGrid,
-  MessageSquarePlus,
-  Moon,
+  FolderKanban,
+  Play,
   Search,
   Settings,
-  Shield,
+  ShieldCheck,
+  Sparkles,
   Users,
 } from "lucide-react"
 import Image from "next/image"
@@ -37,26 +40,44 @@ interface NavItem {
   icon: ComponentType<{ size?: number; className?: string; style?: CSSProperties }>
 }
 
-const topNavItems: NavItem[] = [
-  { href: "/dashboard", label: "New Chat", icon: MessageSquarePlus },
-  { href: "/dashboard/search", label: "Search", icon: Search },
-  { href: "/dashboard/teams", label: "Teams", icon: Users },
-  { href: "/dashboard/scheduled-tasks", label: "Scheduled Tasks", icon: Clock },
-]
+interface NavGroup {
+  label: string
+  items: NavItem[]
+}
 
-const mainNavItems: NavItem[] = [
-  { href: "/dashboard/governance", label: "Governance", icon: Shield },
-  { href: "/dashboard/dreams", label: "Dreams", icon: Moon },
-  { href: "/dashboard/kanban", label: "Kanban Board", icon: LayoutGrid },
+const navGroups: NavGroup[] = [
+  {
+    label: "Work",
+    items: [
+      { href: "/dashboard/mission-control", label: "Command Center", icon: LayoutDashboard },
+      { href: "/dashboard/projects", label: "Projects", icon: FolderKanban },
+      { href: "/dashboard/work-board", label: "Work Board", icon: LayoutGrid },
+      { href: "/dashboard/runs", label: "Runs", icon: Play },
+      { href: "/dashboard/governance", label: "Approvals", icon: ShieldCheck },
+    ],
+  },
+  {
+    label: "Knowledge",
+    items: [
+      { href: "/dashboard/search", label: "Search", icon: Search },
+      { href: "/dashboard/dreams", label: "Dreams", icon: Sparkles },
+      { href: "/dashboard/graph", label: "Knowledge Graph", icon: GitBranch },
+    ],
+  },
+  {
+    label: "Crew",
+    items: [{ href: "/dashboard/teams", label: "Teams", icon: Users }],
+  },
+  {
+    label: "Operations",
+    items: [{ href: "/dashboard/scheduled-tasks", label: "Schedules", icon: Clock }],
+  },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
 
   function isActive(href: string): boolean {
-    if (href === "/dashboard") {
-      return pathname === "/dashboard"
-    }
     return pathname.startsWith(href)
   }
 
@@ -93,92 +114,58 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Top nav section */}
-      <nav style={{ padding: "12px 8px 8px" }} aria-label="Primary navigation">
-        {topNavItems.map((item) => {
-          const Icon = item.icon
-          const active = isActive(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
+      {/* Grouped nav */}
+      <nav style={{ flex: 1, overflowY: "auto", padding: "8px 0" }} aria-label="Primary navigation">
+        {navGroups.map((group, groupIndex) => (
+          <div key={group.label}>
+            {groupIndex > 0 && (
+              <div style={{ height: 1, background: "#f0ece0", margin: "4px 16px" }} />
+            )}
+            <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "8px 10px",
-                borderRadius: 8,
-                textDecoration: "none",
-                fontSize: 14,
-                fontWeight: active ? 600 : 400,
-                color: active ? "#2563eb" : "#374151",
-                background: active ? "#eff6ff" : "transparent",
-                marginBottom: 2,
-                transition: "background 0.15s, color 0.15s",
+                fontSize: 11,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                color: "#9ca3af",
+                padding: "16px 10px 4px",
               }}
-              aria-current={active ? "page" : undefined}
             >
-              {item.href === "/dashboard" ? (
-                <span
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: "50%",
-                    background: "#2563eb",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Icon size={13} className="text-white" style={{ color: "#fff" }} />
-                </span>
-              ) : (
-                <Icon size={16} style={{ flexShrink: 0 }} />
-              )}
-              {item.label}
-            </Link>
-          )
-        })}
+              {group.label}
+            </div>
+            <div style={{ padding: "0 8px" }}>
+              {group.items.map((item) => {
+                const Icon = item.icon
+                const active = isActive(item.href)
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      textDecoration: "none",
+                      fontSize: 14,
+                      fontWeight: active ? 600 : 400,
+                      color: active ? "#2563eb" : "#374151",
+                      background: active ? "#eff6ff" : "transparent",
+                      marginBottom: 2,
+                      transition: "background 0.15s, color 0.15s",
+                    }}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <Icon size={16} style={{ flexShrink: 0 }} />
+                    {item.label}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
-
-      {/* Divider */}
-      <div style={{ height: 1, background: "#f0ece0", margin: "4px 16px" }} />
-
-      {/* Main nav section */}
-      <nav style={{ padding: "8px 8px" }} aria-label="Features navigation">
-        {mainNavItems.map((item) => {
-          const Icon = item.icon
-          const active = isActive(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "8px 10px",
-                borderRadius: 8,
-                textDecoration: "none",
-                fontSize: 14,
-                fontWeight: active ? 600 : 400,
-                color: active ? "#2563eb" : "#374151",
-                background: active ? "#eff6ff" : "transparent",
-                marginBottom: 2,
-                transition: "background 0.15s, color 0.15s",
-              }}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon size={16} style={{ flexShrink: 0 }} />
-              {item.label}
-            </Link>
-          )
-        })}
-      </nav>
-
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
 
       {/* Bottom section */}
       <div style={{ padding: "8px 8px", borderTop: "1px solid #f0ece0" }}>
