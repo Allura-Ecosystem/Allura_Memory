@@ -8,18 +8,26 @@ import {
   Search,
   Settings,
   Shield,
+  Users,
 } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import type { ComponentType, CSSProperties } from "react"
 
+// Canon (Phase 0, AD): the visible product identity must use the approved
+// Allura brand asset from public/brand/ — never a drawn or generated
+// replacement logo. This restores the approved lettermark.
 function AlluraLogoIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect x="2" y="10" width="14" height="18" rx="4" fill="#ef4444" opacity="0.9" />
-      <rect x="9" y="5" width="14" height="18" rx="4" fill="#f97316" opacity="0.85" />
-      <rect x="16" y="10" width="14" height="18" rx="4" fill="#3b82f6" opacity="0.9" />
-    </svg>
+    <Image
+      src="/brand/allura-lettermark-al-figma.png"
+      alt="Allura"
+      width={32}
+      height={32}
+      priority
+      style={{ borderRadius: 6 }}
+    />
   )
 }
 
@@ -32,6 +40,7 @@ interface NavItem {
 const topNavItems: NavItem[] = [
   { href: "/dashboard", label: "New Chat", icon: MessageSquarePlus },
   { href: "/dashboard/search", label: "Search", icon: Search },
+  { href: "/dashboard/teams", label: "Teams", icon: Users },
   { href: "/dashboard/scheduled-tasks", label: "Scheduled Tasks", icon: Clock },
 ]
 
