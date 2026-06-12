@@ -144,6 +144,120 @@ export interface ProcessState {
   error?: string
 }
 
+// ── Step Result ──────────────────────────────────────────────────────────────
+
+/**
+ * Result returned by a step's execute() function.
+ * Engine stores this in ProcessState.stepResults[stepId].
+ */
+export interface StepResult {
+  /** Step-specific return value */
+  output: unknown
+  /** Optional evidence artifacts produced by this step */
+  artifactRefs?: string[]
+}
+
+// ── Quality Gate Result ─────────────────────────────────────────────────────
+
+/**
+ * Result returned by a scored quality gate (AD-P1-03).
+ * Gates return a score (0-1) with evidence. Low scores retry; errors terminate.
+ */
+export interface GateResult {
+  /** Quality score (0-1) */
+  score: number
+  /** Minimum score to pass */
+  threshold: number
+  /** Whether the gate passed (score >= threshold) */
+  passed: boolean
+  /** 1-based attempt number */
+  attempt: number
+  /** Maximum allowed attempts */
+  maxAttempts: number
+  /** Link to evidence packet — MANDATORY for passing gates */
+  evidenceId: string
+  /** Human-readable explanation of the score */
+  reasoning: string
+}
+
+// ── Doctor Finding ──────────────────────────────────────────────────────────
+
+/**
+ * A health finding from the doctor module (AD-P1-04).
+ * Phase 1 ships with 3 conditions; 5 more deferred to Phase 2-3.
+ */
+export type DoctorCondition =
+  | "stale"
+  | "revision_drifted"
+  | "partially_persisted"
+
+export interface DoctorFinding {
+  /** Run that the finding applies to */
+  runId: string
+  /** Which condition was detected */
+  condition: DoctorCondition
+  /** Finding severity */
+  severity: "info" | "warning" | "critical"
+  /** Human-readable description */
+  detail: string
+  /** Recommended next action — repair_with_approval never auto-downgrades status */
+  recommendedAction: "flag" | "escalate" | "repair_with_approval"
+  /** When the condition was detected (ISO-8601) */
+  detectedAt: string
+}
+
+// ── Stored Definition Record ────────────────────────────────────────────────
+
+/**
+ * A process definition record as stored in PostgreSQL (AD-P1-01).
+ * Definitions are tenant-scoped, versioned, and soft-deletable.
+ */
+export interface StoredDefinition {
+  /** Stable identifier for this process type */
+  id: string
+  /** Immutable revision number (auto-incremented within tenant) */
+  revision: number
+  /** Tenant isolation key */
+  group_id: string
+  /** Human-readable name */
+  name: string
+  /** Full definition as JSON (ProcessDefinition shape) */
+  definition_json: Record<string, unknown>
+  /** When this revision was created */
+  created_at: string
+  /** Soft-delete timestamp (null = active) */
+  deleted_at: string | null
+}
+
+// ── Stored Run Record ───────────────────────────────────────────────────────
+
+/**
+ * A process run snapshot as stored in PostgreSQL (AD-P1-02).
+ * Read optimization — events are the source of truth.
+ */
+export interface StoredRun {
+  /** Unique run identifier */
+  id: string
+  /** Definition this run is pinned to */
+  definition_id: string
+  /** Definition revision pinned at run start */
+  definition_revision: number
+  /** Tenant isolation key */
+  group_id: string
+  /** Current run status */
+  status: ProcessStatus
+  /** Serialized ProcessState */
+  state_json: Record<string, unknown>
+  /** Actor who started the run */
+  actor_id: string | null
+  /** When the run started */
+  started_at: string
+  /** Last snapshot update (used for optimistic concurrency) */
+  updated_at: string
+  /** When the run completed (null if still active) */
+  completed_at: string | null
+}
+
 // ── Errors ────────────────────────────────────────────────────────────────────
 
 export class ProcessEngineError extends Error {
