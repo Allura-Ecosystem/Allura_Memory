@@ -1,20 +1,21 @@
 /**
- * Work Plane — Projects API
+ * Work Plane — Handoffs API
  *
- * GET  /api/projects?group_id=X — list active projects. Role: viewer.
- * POST /api/projects             — create project. Role: admin.
+ * GET  /api/handoffs?group_id=X&to_actor_id=X — list pending handoffs. Role: viewer.
+ * POST /api/handoffs                           — create handoff. Role: curator.
  *
  * Feature flag: PROCESS_ENGINE_ENABLED must be "true" or both methods return 404.
  *
  * Query params (GET):
- * - group_id: Required tenant identifier
+ * - group_id:    Required tenant identifier
+ * - to_actor_id: Optional filter — only return handoffs for this recipient actor
  *
  * Body params (POST):
- * - group_id:     Required tenant identifier
- * - name:         Required project name
- * - description:  Optional description
- * - owner_id:     Optional owner actor ID
- * - team_id:      Optional team ID
+ * - group_id:      Required tenant identifier
+ * - from_actor_id: Required originating actor
+ * - to_actor_id:   Required recipient actor
+ * - message:       Optional handoff message
+ * - work_item_id:  Optional work item association
  */
 
 import { NextRequest, NextResponse } from "next/server"
@@ -22,7 +23,7 @@ import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth
 import { captureException } from "@/lib/observability/sentry"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import { getPool } from "@/lib/postgres/connection"
-import { createProject, listProjects } from "@/lib/work-plane/project-manager"
+import { createHandoff, listPendingHandoffs } from "@/lib/work-plane/handoff-manager"
 
 // ── Feature flag guard ────────────────────────────────────────────────────────
 
@@ -30,7 +31,7 @@ function isEnabled(): boolean {
   return process.env.PROCESS_ENGINE_ENABLED === "true"
 }
 
-// ── GET /api/projects ─────────────────────────────────────────────────────────
+// ── GET /api/handoffs ─────────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
   if (!isEnabled()) {
@@ -63,25 +64,30 @@ export async function GET(request: NextRequest) {
       throw error
     }
 
-    const pool = getPool()
-    const projects = await listProjects(pool, { groupId: validatedGroupId, status: "active" })
+    const toActorId = searchParams.get("to_actor_id") ?? undefined
 
-    return NextResponse.json({ projects }, { status: 200 })
+    const pool = getPool()
+    const handoffs = await listPendingHandoffs(pool, {
+      groupId: validatedGroupId,
+      toActorId,
+    })
+
+    return NextResponse.json({ handoffs }, { status: 200 })
   } catch (error) {
-    captureException(error, { tags: { route: "/api/projects", method: "GET" } })
-    console.error("Failed to list projects:", error)
-    return NextResponse.json({ error: "Failed to list projects" }, { status: 500 })
+    captureException(error, { tags: { route: "/api/handoffs", method: "GET" } })
+    console.error("Failed to list handoffs:", error)
+    return NextResponse.json({ error: "Failed to list handoffs" }, { status: 500 })
   }
 }
 
-// ── POST /api/projects ────────────────────────────────────────────────────────
+// ── POST /api/handoffs ────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   if (!isEnabled()) {
     return NextResponse.json({ error: "Process engine is not enabled" }, { status: 404 })
   }
 
-  const roleCheck = requireRole(request, "admin")
+  const roleCheck = requireRole(request, "curator")
   if (!roleCheck.user) {
     return unauthorizedResponse()
   }
@@ -92,19 +98,22 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as {
       group_id?: unknown
-      name?: unknown
-      description?: unknown
-      owner_id?: unknown
-      team_id?: unknown
+      from_actor_id?: unknown
+      to_actor_id?: unknown
+      message?: unknown
+      work_item_id?: unknown
     }
 
-    const { group_id, name, description, owner_id, team_id } = body
+    const { group_id, from_actor_id, to_actor_id, message, work_item_id } = body
 
     if (!group_id || typeof group_id !== "string") {
       return NextResponse.json({ error: "group_id is required" }, { status: 400 })
     }
-    if (!name || typeof name !== "string") {
-      return NextResponse.json({ error: "name is required" }, { status: 400 })
+    if (!from_actor_id || typeof from_actor_id !== "string") {
+      return NextResponse.json({ error: "from_actor_id is required" }, { status: 400 })
+    }
+    if (!to_actor_id || typeof to_actor_id !== "string") {
+      return NextResponse.json({ error: "to_actor_id is required" }, { status: 400 })
     }
 
     let validatedGroupId: string
@@ -118,19 +127,19 @@ export async function POST(request: NextRequest) {
     }
 
     const pool = getPool()
-    const project = await createProject(pool, {
+    const handoff = await createHandoff(pool, {
       id: crypto.randomUUID(),
       groupId: validatedGroupId,
-      name,
-      description: typeof description === "string" ? description : undefined,
-      ownerId: typeof owner_id === "string" ? owner_id : undefined,
-      teamId: typeof team_id === "string" ? team_id : undefined,
+      fromActorId: from_actor_id,
+      toActorId: to_actor_id,
+      message: typeof message === "string" ? message : undefined,
+      workItemId: typeof work_item_id === "string" ? work_item_id : undefined,
     })
 
-    return NextResponse.json({ project }, { status: 201 })
+    return NextResponse.json({ handoff }, { status: 201 })
   } catch (error) {
-    captureException(error, { tags: { route: "/api/projects", method: "POST" } })
-    console.error("Failed to create project:", error)
-    return NextResponse.json({ error: "Failed to create project" }, { status: 500 })
+    captureException(error, { tags: { route: "/api/handoffs", method: "POST" } })
+    console.error("Failed to create handoff:", error)
+    return NextResponse.json({ error: "Failed to create handoff" }, { status: 500 })
   }
 }
