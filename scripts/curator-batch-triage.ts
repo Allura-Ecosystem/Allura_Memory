@@ -172,9 +172,9 @@ async function main(): Promise<void> {
             metadata: {
               trace_ref: p.trace_ref,
               tier: p.tier,
-              rationale: BATCH_RATIONALE.B,
+              rationale: BATCH_RATIONALE[batch],
               proposal_id: p.id,
-              batch: "B",
+              batch,
             },
           })
         } catch (err) {
@@ -189,23 +189,12 @@ async function main(): Promise<void> {
           `UPDATE canonical_proposals
            SET status='approved', decided_at=$1, decided_by=$2, rationale=$3, witness_hash=$4
            WHERE id=$5 AND group_id=$6 AND status='pending'`,
-          [decidedAt, CURATOR_ID, BATCH_RATIONALE.B, wh, p.id, groupId]
+          [decidedAt, CURATOR_ID, BATCH_RATIONALE[batch], wh, p.id, groupId]
         )
-        await pool.query(
-          `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          [
-            groupId,
-            "proposal_approved",
-            CURATOR_ID,
-            "completed",
-            JSON.stringify({ proposal_id: p.id, memory_id: memoryId, score: p.score, tier: p.tier, batch: "B", rationale: BATCH_RATIONALE.B }),
-            decidedAt,
-          ]
-        )
+        // DB trigger on canonical_proposals INSERT fires proposal_approved event — no manual INSERT needed
         approved++
       } else {
-        // Reject (A, C, E) — stays episodic, fully searchable
+        // Reject (A, C, E, F, G, H, I, J, M, N, O) — stays episodic, fully searchable
         const wh = witnessHash(p, groupId, "reject", decidedAt)
         await pool.query(
           `UPDATE canonical_proposals
@@ -213,18 +202,7 @@ async function main(): Promise<void> {
            WHERE id=$5 AND group_id=$6 AND status='pending'`,
           [decidedAt, CURATOR_ID, BATCH_RATIONALE[batch], wh, p.id, groupId]
         )
-        await pool.query(
-          `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          [
-            groupId,
-            "proposal_rejected",
-            CURATOR_ID,
-            "completed",
-            JSON.stringify({ proposal_id: p.id, score: p.score, tier: p.tier, batch, rationale: BATCH_RATIONALE[batch] }),
-            decidedAt,
-          ]
-        )
+        // DB trigger on canonical_proposals fires proposal_rejected event — no manual INSERT needed
         rejected++
       }
     }
