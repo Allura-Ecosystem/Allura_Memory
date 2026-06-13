@@ -2,9 +2,9 @@
   "iterations": [
     {
       "iteration": 1,
-      "startedAt": "2026-06-12T19:16:41.034Z",
-      "endedAt": "2026-06-12T19:17:09.816Z",
-      "durationMs": 23933,
+      "startedAt": "2026-06-13T04:33:39.656Z",
+      "endedAt": "2026-06-13T04:33:55.583Z",
+      "durationMs": 13097,
       "agent": "opencode",
       "model": "",
       "toolsUsed": {},
@@ -14,14 +14,14 @@
       "exitCode": 1,
       "completionDetected": false,
       "errors": [
-        "\u001b[91m\u001b[1mError: \u001b[0minvalid x-api-key"
+        "\u001b[91m\u001b[1mError: \u001b[0m{"
       ]
     }
   ],
-  "totalDurationMs": 23933,
+  "totalDurationMs": 13097,
   "struggleIndicators": {
     "repeatedErrors": {
-      "\u001b[91m\u001b[1mError: \u001b[0minvalid x-api-key": 1
+      "\u001b[91m\u001b[1mError: \u001b[0m{": 1
     },
     "noProgressIterations": 0,
     "shortIterations": 1
