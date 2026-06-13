@@ -89,6 +89,8 @@ export default defineConfig({
       "src/server/**/*.test.ts",
       // Dashboard pages (Story 16.4)
       "src/__tests__/dashboard-approvals.test.ts",
+      // Inspector entity views
+      "src/__tests__/inspector-views.test.tsx",
     ],
     exclude: [
       // E2E tests — require live stack

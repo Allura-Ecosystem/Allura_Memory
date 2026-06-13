@@ -1,31 +1,77 @@
 "use client"
 
+import { lazy, Suspense } from "react"
 import { X } from "lucide-react"
 
 import { useInspector } from "./inspector-context"
 import type { InspectorView } from "./inspector-context"
 
-// ─── Entity-type metadata ────────────────────────────────────────────────────
+// ── Lazy-loaded entity views ──────────────────────────────────────────────────
+
+const RunView       = lazy(() => import("./inspector-views/run-view").then((m) => ({ default: m.RunView })))
+const WorkItemView  = lazy(() => import("./inspector-views/work-item-view").then((m) => ({ default: m.WorkItemView })))
+const ProjectView   = lazy(() => import("./inspector-views/project-view").then((m) => ({ default: m.ProjectView })))
+const EvidenceView  = lazy(() => import("./inspector-views/evidence-view").then((m) => ({ default: m.EvidenceView })))
+const HandoffView   = lazy(() => import("./inspector-views/handoff-view").then((m) => ({ default: m.HandoffView })))
+const MemoryView    = lazy(() => import("./inspector-views/memory-view").then((m) => ({ default: m.MemoryView })))
+
+// ── Entity-type metadata ──────────────────────────────────────────────────────
 
 const ENTITY_LABELS: Record<InspectorView, string> = {
-  run: "Run",
+  run:         "Run",
   "work-item": "Work Item",
-  project: "Project",
-  evidence: "Evidence",
-  handoff: "Handoff",
-  memory: "Memory",
+  project:     "Project",
+  evidence:    "Evidence",
+  handoff:     "Handoff",
+  memory:      "Memory",
 }
 
 const ENTITY_COLORS: Record<InspectorView, string> = {
-  run: "var(--allura-blue)",
+  run:         "var(--allura-blue)",
   "work-item": "var(--allura-orange)",
-  project: "var(--allura-green)",
-  evidence: "var(--allura-gold)",
-  handoff: "var(--allura-gray-500)",
-  memory: "var(--allura-blue)",
+  project:     "var(--allura-green)",
+  evidence:    "var(--allura-gold)",
+  handoff:     "var(--allura-gray-500)",
+  memory:      "var(--allura-blue)",
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ── Fallback skeleton shown while the view chunk loads ────────────────────────
+
+function ViewLoadingSkeleton() {
+  return (
+    <div style={{ padding: "var(--allura-lg)" }} aria-busy="true" aria-label="Loading">
+      {[80, 60, 100, 70, 90].map((w, i) => (
+        <div
+          key={i}
+          style={{
+            height: "14px",
+            width: `${w}%`,
+            borderRadius: "var(--allura-r-sm)",
+            background: "var(--allura-gray-100, #f3f4f6)",
+            marginBottom: "var(--allura-md)",
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// ── Entity view router ────────────────────────────────────────────────────────
+
+function EntityView({ type, id }: { type: InspectorView; id: string }) {
+  return (
+    <Suspense fallback={<ViewLoadingSkeleton />}>
+      {type === "run"       && <RunView       entityId={id} />}
+      {type === "work-item" && <WorkItemView  entityId={id} />}
+      {type === "project"   && <ProjectView   entityId={id} />}
+      {type === "evidence"  && <EvidenceView  entityId={id} />}
+      {type === "handoff"   && <HandoffView   entityId={id} />}
+      {type === "memory"    && <MemoryView    entityId={id} />}
+    </Suspense>
+  )
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function InspectorPanel() {
   const { isOpen, entity, close } = useInspector()
@@ -80,7 +126,7 @@ export function InspectorPanel() {
         {/* Body */}
         <div className="inspector-panel__body">
           {entity ? (
-            <EntityPlaceholder type={entity.type} id={entity.id} />
+            <EntityView type={entity.type} id={entity.id} />
           ) : (
             <EmptyState />
           )}
@@ -90,29 +136,7 @@ export function InspectorPanel() {
   )
 }
 
-// ─── Placeholder content (replaced by entity-specific views in later stories) ─
-
-function EntityPlaceholder({ type, id }: { type: InspectorView; id: string }) {
-  const color = ENTITY_COLORS[type]
-  const label = ENTITY_LABELS[type]
-
-  return (
-    <div className="inspector-placeholder">
-      <div
-        className="inspector-placeholder__icon"
-        style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}
-        aria-hidden="true"
-      >
-        {label[0].toUpperCase()}
-      </div>
-      <p className="inspector-placeholder__type">{label}</p>
-      <code className="inspector-placeholder__id">{id}</code>
-      <p className="inspector-placeholder__hint">
-        Detailed view for this {label.toLowerCase()} will be available in a future release.
-      </p>
-    </div>
-  )
-}
+// ── Empty state ───────────────────────────────────────────────────────────────
 
 function EmptyState() {
   return (

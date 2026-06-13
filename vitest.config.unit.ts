@@ -82,6 +82,8 @@ export default defineConfig({
       "src/__tests__/toast.test.tsx",
       // UI unit tests (Story 16.3 — 3-pane inspector)
       "src/__tests__/inspector-panel.test.tsx",
+      // UI unit tests — inspector entity views (6 view components)
+      "src/__tests__/inspector-views.test.tsx",
       // Dashboard pages (Story 16.4 — approvals/handoffs/evidence)
       "src/__tests__/dashboard-approvals.test.ts",
       // Server actions (Stories 16.5, 16.6)
@@ -123,6 +125,7 @@ export default defineConfig({
     environmentMatchGlobs: [
       ["src/__tests__/toast.test.tsx", "jsdom"],
       ["src/__tests__/inspector-panel.test.tsx", "jsdom"],
+      ["src/__tests__/inspector-views.test.tsx", "jsdom"],
     ],
   },
   resolve: {
