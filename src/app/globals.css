@@ -101,6 +101,21 @@
   --allura-type-evidence: #B45309;
   --allura-type-handoff: #BE185D;
 
+  /* Spacing scale */
+  --allura-xs: 4px;
+  --allura-sm: 8px;
+  --allura-md: 12px;
+  --allura-lg: 16px;
+  --allura-xl: 24px;
+  --allura-xxl: 32px;
+  --allura-xxxl: 48px;
+
+  /* Border radius scale */
+  --allura-r-sm: 4px;
+  --allura-r-md: 8px;
+  --allura-r-lg: 12px;
+  --allura-r-full: 999px;
+
   /* Agent accent colors (execution timeline — unique per agent, no reuse) */
   --allura-agent-knuth: #8b5cf6;
   --allura-agent-bellard: #ef4444;

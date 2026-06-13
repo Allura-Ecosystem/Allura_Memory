@@ -6,6 +6,7 @@ if (typeof window !== "undefined") {
 }
 
 import { getPool } from "@/lib/postgres/connection"
+import { validateGroupId } from "@/lib/validation/group-id"
 import { retrieveMemories } from "@/lib/ruvector/bridge"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -51,9 +52,8 @@ async function searchRuns(
      FROM process_runs
      WHERE group_id = $1
        AND (
-         definition_id ILIKE $2
+         definition_id::text ILIKE $2
          OR status ILIKE $2
-         OR state_json::text ILIKE $2
        )
      ORDER BY started_at DESC
      LIMIT $3`,
@@ -318,6 +318,9 @@ export async function unifiedSearch(
 ): Promise<SearchResult[]> {
   const { group_id, types, limit = DEFAULT_LIMIT } = options
 
+  // Validate group_id early — throws GroupIdValidationError on invalid input
+  const validatedGroupId = validateGroupId(group_id)
+
   // Empty query → return nothing (not everything)
   const trimmed = query.trim()
   if (trimmed.length === 0) return []
@@ -334,26 +337,26 @@ export async function unifiedSearch(
   const structuredPromises: Array<Promise<SearchResult[]>> = []
 
   if (structuredTypes.includes("run")) {
-    structuredPromises.push(searchRuns(trimmed, group_id, PER_TYPE_LIMIT))
+    structuredPromises.push(searchRuns(trimmed, validatedGroupId, PER_TYPE_LIMIT))
   }
   if (structuredTypes.includes("definition")) {
-    structuredPromises.push(searchDefinitions(trimmed, group_id, PER_TYPE_LIMIT))
+    structuredPromises.push(searchDefinitions(trimmed, validatedGroupId, PER_TYPE_LIMIT))
   }
   if (structuredTypes.includes("work-item")) {
-    structuredPromises.push(searchWorkItems(trimmed, group_id, PER_TYPE_LIMIT))
+    structuredPromises.push(searchWorkItems(trimmed, validatedGroupId, PER_TYPE_LIMIT))
   }
   if (structuredTypes.includes("project")) {
-    structuredPromises.push(searchProjects(trimmed, group_id, PER_TYPE_LIMIT))
+    structuredPromises.push(searchProjects(trimmed, validatedGroupId, PER_TYPE_LIMIT))
   }
   if (structuredTypes.includes("evidence")) {
-    structuredPromises.push(searchEvidence(trimmed, group_id, PER_TYPE_LIMIT))
+    structuredPromises.push(searchEvidence(trimmed, validatedGroupId, PER_TYPE_LIMIT))
   }
   if (structuredTypes.includes("handoff")) {
-    structuredPromises.push(searchHandoffs(trimmed, group_id, PER_TYPE_LIMIT))
+    structuredPromises.push(searchHandoffs(trimmed, validatedGroupId, PER_TYPE_LIMIT))
   }
 
   const [memoryResults, ...structuredChunks] = await Promise.all([
-    includeMemory ? searchMemories(trimmed, group_id, PER_TYPE_LIMIT) : Promise.resolve([] as SearchResult[]),
+    includeMemory ? searchMemories(trimmed, validatedGroupId, PER_TYPE_LIMIT) : Promise.resolve([] as SearchResult[]),
     ...structuredPromises,
   ])
 
