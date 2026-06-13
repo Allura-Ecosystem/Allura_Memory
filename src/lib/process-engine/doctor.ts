@@ -77,7 +77,7 @@ async function checkStale(
     `SELECT MAX(created_at) AS last_event
      FROM events
      WHERE group_id = $1
-       AND metadata->>'process_id' = $2`,
+       AND workflow_id = $2`,
     [run.group_id, run.id],
   )
 
@@ -174,7 +174,7 @@ async function checkPartiallyPersisted(
     `SELECT event_type
      FROM events
      WHERE group_id = $1
-       AND metadata->>'process_id' = $2
+       AND workflow_id = $2
      ORDER BY created_at DESC
      LIMIT 1`,
     [run.group_id, run.id],
