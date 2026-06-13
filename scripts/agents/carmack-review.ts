@@ -23,9 +23,9 @@
  * When no DB, produces real analysis — the analysis is the value, DB is just logging.
  */
 
-import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, extname, join, relative } from "node:path";
+import { gitExec } from "../../src/lib/git/exec";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -563,11 +563,7 @@ function getBaseBranch(): string {
   // Try common base branches
   for (const branch of ["main", "new-main", "master"]) {
     try {
-      execSync(`git rev-parse --verify ${branch}`, {
-        encoding: "utf-8",
-        cwd: ROOT_DIR,
-        stdio: "pipe",
-      });
+      gitExec(["rev-parse", "--verify", branch], { cwd: ROOT_DIR });
       return branch;
     } catch {
       continue;
@@ -580,16 +576,16 @@ function getPrDiff(prRef: string): DiffFileChange[] {
   const baseBranch = getBaseBranch();
   let diffOutput: string;
   try {
-    diffOutput = execSync(
-      `git diff ${baseBranch}...HEAD --src-prefix= --dst-prefix=`,
-      { encoding: "utf-8", cwd: ROOT_DIR, maxBuffer: 50 * 1024 * 1024 },
+    diffOutput = gitExec(
+      ["diff", `${baseBranch}...HEAD`, "--src-prefix=", "--dst-prefix="],
+      { cwd: ROOT_DIR, maxBuffer: 50 * 1024 * 1024 },
     );
   } catch {
     // Fallback: try diff against HEAD~1 or just staged changes
     try {
-      diffOutput = execSync(
-        `git diff HEAD~1...HEAD --src-prefix= --dst-prefix=`,
-        { encoding: "utf-8", cwd: ROOT_DIR, maxBuffer: 50 * 1024 * 1024 },
+      diffOutput = gitExec(
+        ["diff", "HEAD~1...HEAD", "--src-prefix=", "--dst-prefix="],
+        { cwd: ROOT_DIR, maxBuffer: 50 * 1024 * 1024 },
       );
     } catch {
       console.error(`[carmack] Cannot get diff for PR ref ${prRef}`);

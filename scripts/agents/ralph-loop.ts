@@ -27,8 +27,36 @@
  * Gracefully handles missing DB connections (for CI environments).
  */
 
+import path from "node:path";
+
 const TASK_DESCRIPTION = process.argv[2];
 const ARGS = process.argv.slice(3);
+
+// ── Git-exec safety guard ───────────────────────────────────────────────────
+//
+// Incident containment: the external `ralph` CLI must NEVER be spawned with a
+// working directory that resolves inside a `.git/` directory. When git sees
+// bare=false + no core.worktree there, it dumps the working tree into the
+// gitdir and corrupts the (sub)module. We can't fix the external binary, so we
+// refuse to launch it from an unsafe cwd at the boundary we control.
+//
+// A passing call emits a stderr line stamped with GIT_EXEC_WRAPPER so a bypass
+// is detectable by token-absence in logs.
+export function assertSafeGitCwd(cwd: string): string {
+  const abs = path.resolve(cwd);
+  const gitSegment = `${path.sep}.git`;
+  const insideGitDir =
+    abs.includes(`${gitSegment}${path.sep}`) || abs.endsWith(gitSegment);
+
+  if (insideGitDir) {
+    throw new Error(
+      `[GIT_EXEC_WRAPPER] REFUSING to spawn ralph: cwd resolves inside a .git directory: ${abs}`,
+    );
+  }
+
+  console.error(`[GIT_EXEC_WRAPPER] ralph cwd ok: ${abs}`);
+  return abs;
+}
 
 // ── Defaults ──────────────────────────────────────────────────────────────
 
@@ -237,9 +265,15 @@ async function ralphLoop() {
   console.log("[ralph-harness] ═══════════════════════════════════════════════════════");
   console.log("");
 
+  // Guard: refuse to launch the external ralph CLI from inside a .git dir.
+  // No cwd is passed to spawnSync, so the spawned process inherits process.cwd().
+  const ralphCwd = process.cwd();
+  assertSafeGitCwd(ralphCwd);
+
   const result = spawnSync(ralphCmd[0], ralphCmd.slice(1), {
     stdio: "inherit",
     shell: true,
+    cwd: ralphCwd,
     env: {
       ...process.env,
       RALPH_AGENT: config.agent,
@@ -310,4 +344,7 @@ async function ralphLoop() {
   process.exit(exitCode);
 }
 
-ralphLoop();
+// Only run the loop when invoked directly as a CLI, not when imported (e.g. by tests).
+if (import.meta.url === `file://${process.argv[1]}`) {
+  ralphLoop();
+}

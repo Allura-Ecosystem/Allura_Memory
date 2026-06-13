@@ -25,6 +25,7 @@ export default defineConfig({
       "src/lib/budget/**/*.test.ts",
       "src/lib/circuit-breaker/**/*.test.ts",
       "src/lib/dedup/**/*.test.ts",
+      "src/lib/git/**/*.test.ts",
       "src/lib/memory/config.test.ts",
       "src/lib/memory/embeddings.test.ts",
       "src/lib/memory/types.test.ts",
