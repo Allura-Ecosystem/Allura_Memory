@@ -22,24 +22,24 @@ const btnBase: React.CSSProperties = {
 
 const acknowledgeBtn: React.CSSProperties = {
   ...btnBase,
-  background: "#d1fae5",
-  color: "#065f46",
-  borderColor: "#a7f3d0",
+  background: "var(--allura-success-light)",
+  color: "var(--allura-success-text)",
+  borderColor: "var(--allura-success-border)",
 }
 
 const rejectBtn: React.CSSProperties = {
   ...btnBase,
-  background: "#fee2e2",
-  color: "#991b1b",
-  borderColor: "#fecaca",
+  background: "var(--allura-error-light)",
+  color: "var(--allura-error-text)",
+  borderColor: "var(--allura-error-border)",
 }
 
 const disabledBtn: React.CSSProperties = {
   ...btnBase,
-  background: "#f3f4f6",
-  color: "#9ca3af",
+  background: "var(--allura-disabled-bg)",
+  color: "var(--allura-text-faint)",
   cursor: "not-allowed",
-  borderColor: "#e5e7eb",
+  borderColor: "var(--allura-disabled-border)",
 }
 
 export default function HandoffActions({ id }: HandoffActionsProps) {
@@ -80,9 +80,9 @@ export default function HandoffActions({ id }: HandoffActionsProps) {
       <span
         style={{
           ...btnBase,
-          background: done === "acknowledged" ? "#d1fae5" : "#fee2e2",
-          color: done === "acknowledged" ? "#065f46" : "#991b1b",
-          borderColor: done === "acknowledged" ? "#a7f3d0" : "#fecaca",
+          background: done === "acknowledged" ? "var(--allura-success-light)" : "var(--allura-error-light)",
+          color: done === "acknowledged" ? "var(--allura-success-text)" : "var(--allura-error-text)",
+          borderColor: done === "acknowledged" ? "var(--allura-success-border)" : "var(--allura-error-border)",
           cursor: "default",
         }}
       >
@@ -97,7 +97,7 @@ export default function HandoffActions({ id }: HandoffActionsProps) {
         <span
           style={{
             fontSize: 11,
-            color: "#dc2626",
+            color: "var(--allura-error-inline)",
             fontFamily: '"IBM Plex Mono", monospace',
             maxWidth: 120,
             overflow: "hidden",

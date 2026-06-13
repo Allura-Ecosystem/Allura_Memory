@@ -65,7 +65,7 @@ function Skeleton() {
             height: "14px",
             width: `${w}%`,
             borderRadius: "var(--allura-r-sm)",
-            background: "var(--allura-gray-100, #f3f4f6)",
+            background: "var(--allura-gray-100)",
             marginBottom: "var(--allura-md)",
           }}
         />
@@ -84,7 +84,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
         gridTemplateColumns: "100px 1fr",
         gap: "var(--allura-sm)",
         padding: "var(--allura-sm) 0",
-        borderBottom: "1px solid var(--allura-gray-100, #f3f4f6)",
+        borderBottom: "1px solid var(--allura-gray-100)",
         alignItems: "start",
       }}
     >
@@ -151,7 +151,7 @@ export function ProjectView({ entityId }: ProjectViewProps) {
   if (error) {
     return (
       <div
-        style={{ padding: "var(--allura-lg)", color: "var(--dashboard-error, #c0392b)", fontSize: "13px" }}
+        style={{ padding: "var(--allura-lg)", color: "var(--dashboard-error)", fontSize: "13px" }}
         role="alert"
       >
         {error}

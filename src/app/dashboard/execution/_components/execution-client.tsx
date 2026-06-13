@@ -41,13 +41,13 @@ const AGENT_COLORS: Record<string, string> = {
   brooks: "var(--allura-blue)",
   woz: "var(--allura-green)",
   scout: "var(--allura-gold)",
-  knuth: "#8b5cf6",
-  bellard: "#ef4444",
-  carmack: "#f97316",
-  fowler: "#06b6d4",
-  pike: "#ec4899",
-  hightower: "#84cc16",
-  jobs: "#a855f7",
+  knuth: "var(--allura-agent-knuth)",
+  bellard: "var(--allura-agent-bellard)",
+  carmack: "var(--allura-agent-carmack)",
+  fowler: "var(--allura-agent-fowler)",
+  pike: "var(--allura-agent-pike)",
+  hightower: "var(--allura-agent-hightower)",
+  jobs: "var(--allura-agent-jobs)",
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

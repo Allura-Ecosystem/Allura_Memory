@@ -45,7 +45,7 @@ const STATUS_COLORS: Record<WorkItemStatus, string> = {
   ready:       "var(--allura-blue)",
   in_progress: "var(--allura-blue)",
   in_review:   "var(--allura-gold)",
-  blocked:     "var(--dashboard-error, #c0392b)",
+  blocked:     "var(--dashboard-error)",
   done:        "var(--allura-green)",
   cancelled:   "var(--allura-gray-500)",
 }
@@ -61,7 +61,7 @@ const STATUS_LABELS: Record<WorkItemStatus, string> = {
 }
 
 const PRIORITY_COLORS: Record<WorkItemPriority, string> = {
-  critical: "var(--dashboard-error, #c0392b)",
+  critical: "var(--dashboard-error)",
   high:     "var(--allura-orange)",
   medium:   "var(--allura-gold)",
   low:      "var(--allura-gray-500)",
@@ -121,7 +121,7 @@ function Skeleton() {
             height: "14px",
             width: `${w}%`,
             borderRadius: "var(--allura-r-sm)",
-            background: "var(--allura-gray-100, #f3f4f6)",
+            background: "var(--allura-gray-100)",
             marginBottom: "var(--allura-md)",
           }}
         />
@@ -140,7 +140,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
         gridTemplateColumns: "100px 1fr",
         gap: "var(--allura-sm)",
         padding: "var(--allura-sm) 0",
-        borderBottom: "1px solid var(--allura-gray-100, #f3f4f6)",
+        borderBottom: "1px solid var(--allura-gray-100)",
         alignItems: "start",
       }}
     >
@@ -207,7 +207,7 @@ export function WorkItemView({ entityId }: WorkItemViewProps) {
   if (error) {
     return (
       <div
-        style={{ padding: "var(--allura-lg)", color: "var(--dashboard-error, #c0392b)", fontSize: "13px" }}
+        style={{ padding: "var(--allura-lg)", color: "var(--dashboard-error)", fontSize: "13px" }}
         role="alert"
       >
         {error}
@@ -263,7 +263,7 @@ export function WorkItemView({ entityId }: WorkItemViewProps) {
       )}
       {item.blocker && (
         <Row label="Blocker">
-          <span style={{ color: "var(--dashboard-error, #c0392b)" }}>{item.blocker}</span>
+          <span style={{ color: "var(--dashboard-error)" }}>{item.blocker}</span>
         </Row>
       )}
       {item.acceptance_criteria.length > 0 && (

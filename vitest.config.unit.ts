@@ -86,6 +86,8 @@ export default defineConfig({
       "src/__tests__/inspector-views.test.tsx",
       // Dashboard pages (Story 16.4 — approvals/handoffs/evidence)
       "src/__tests__/dashboard-approvals.test.ts",
+      // Dashboard operational state tests (Tasks 5-8)
+      "src/__tests__/dashboard-pages-5-8.test.ts",
       // Server actions (Stories 16.5, 16.6)
       "src/server/**/*.test.ts",
     ],

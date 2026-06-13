@@ -114,9 +114,9 @@ function formatRelativeTime(date: Date): string {
 }
 
 const sectionStyle: React.CSSProperties = {
-  border: "1px solid #e8e3d8",
+  border: "1px solid var(--allura-border-default)",
   borderRadius: 10,
-  background: "#fff",
+  background: "var(--allura-surface-white)",
   overflow: "hidden",
 }
 
@@ -125,13 +125,13 @@ const sectionHeadStyle: React.CSSProperties = {
   alignItems: "center",
   gap: 8,
   padding: "14px 20px",
-  borderBottom: "1px solid #f0ece0",
+  borderBottom: "1px solid var(--allura-border-section)",
 }
 
 const sectionTitleStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 700,
-  color: "#1a1a1a",
+  color: "var(--allura-text-primary)",
   letterSpacing: "-0.01em",
   margin: 0,
 }
@@ -143,8 +143,8 @@ const countBadgeStyle = (count: number): React.CSSProperties => ({
   minWidth: 20,
   height: 20,
   borderRadius: 999,
-  background: count > 0 ? "#2563eb" : "#f3f4f6",
-  color: count > 0 ? "#fff" : "#6b7280",
+  background: count > 0 ? "var(--allura-badge-active-bg)" : "var(--allura-disabled-bg)",
+  color: count > 0 ? "var(--allura-white)" : "var(--allura-text-muted)",
   fontSize: 11,
   fontWeight: 700,
   padding: "0 6px",
@@ -153,7 +153,7 @@ const countBadgeStyle = (count: number): React.CSSProperties => ({
 const emptyStyle: React.CSSProperties = {
   padding: "16px 20px",
   fontSize: 13,
-  color: "#9ca3af",
+  color: "var(--allura-text-faint)",
   fontStyle: "italic",
 }
 
@@ -162,27 +162,27 @@ const rowStyle: React.CSSProperties = {
   alignItems: "flex-start",
   gap: 12,
   padding: "12px 20px",
-  borderBottom: "1px solid #f9f8f5",
+  borderBottom: "1px solid var(--allura-border-row)",
   fontSize: 13,
-  color: "#374151",
+  color: "var(--allura-text-secondary)",
 }
 
 const monoStyle: React.CSSProperties = {
   fontFamily: '"IBM Plex Mono", monospace',
   fontSize: 11,
-  color: "#6b7280",
+  color: "var(--allura-text-muted)",
 }
 
 const typePillStyle = (type: string): React.CSSProperties => {
   const map: Record<string, { bg: string; color: string }> = {
-    test_result: { bg: "#dbeafe", color: "var(--allura-blue)" },
-    gate_result: { bg: "#fef3c7", color: "#92400e" },
-    approval: { bg: "#d1fae5", color: "#065f46" },
-    review: { bg: "#ede9fe", color: "#5b21b6" },
-    audit: { bg: "#f3f4f6", color: "#374151" },
-    general: { bg: "#f9f8f5", color: "#6b7280" },
+    test_result: { bg: "var(--allura-blue-light)", color: "var(--allura-blue)" },
+    gate_result: { bg: "var(--allura-warning-light)", color: "var(--allura-warning-text)" },
+    approval: { bg: "var(--allura-success-light)", color: "var(--allura-success-text)" },
+    review: { bg: "var(--allura-purple-bg)", color: "var(--allura-purple-text)" },
+    audit: { bg: "var(--allura-disabled-bg)", color: "var(--allura-text-secondary)" },
+    general: { bg: "var(--allura-surface-tabs)", color: "var(--allura-text-muted)" },
   }
-  const style = map[type] ?? { bg: "#f3f4f6", color: "#6b7280" }
+  const style = map[type] ?? { bg: "var(--allura-disabled-bg)", color: "var(--allura-text-muted)" }
   return {
     display: "inline-flex",
     alignItems: "center",
@@ -226,10 +226,10 @@ export default async function EvidencePage({
         <div
           style={{
             padding: "24px 20px",
-            border: "1px solid #fecaca",
+            border: "1px solid var(--allura-error-border)",
             borderRadius: 10,
-            background: "#fff",
-            color: "#991b1b",
+            background: "var(--allura-surface-white)",
+            color: "var(--allura-error-text)",
             fontSize: 14,
           }}
         >
@@ -257,9 +257,9 @@ export default async function EvidencePage({
             alignItems: "center",
             marginBottom: 12,
             padding: "8px 12px",
-            background: "#eff6ff",
+            background: "var(--allura-info-bg)",
             borderRadius: 8,
-            border: "1px solid #bfdbfe",
+            border: "1px solid var(--allura-info-border)",
             fontSize: 12,
           }}
         >
@@ -275,7 +275,7 @@ export default async function EvidencePage({
             style={{
               marginLeft: "auto",
               fontSize: 11,
-              color: "#2563eb",
+              color: "var(--allura-link)",
               textDecoration: "none",
               fontWeight: 600,
             }}
@@ -303,7 +303,7 @@ export default async function EvidencePage({
                 {/* Header row */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <span style={typePillStyle(packet.packet_type)}>{packet.packet_type.replace("_", " ")}</span>
-                  <span style={{ ...monoStyle, color: "#374151" }}>{packet.actor_id}</span>
+                  <span style={{ ...monoStyle, color: "var(--allura-text-secondary)" }}>{packet.actor_id}</span>
                   <span style={{ ...monoStyle, marginLeft: "auto" }}>
                     {formatRelativeTime(packet.created_at)}
                   </span>
@@ -314,7 +314,7 @@ export default async function EvidencePage({
                   {packet.work_item_id && (
                     <a
                       href={`/dashboard/evidence?type=all&work_item_id=${packet.work_item_id}`}
-                      style={{ ...monoStyle, color: "#2563eb", textDecoration: "none" }}
+                      style={{ ...monoStyle, color: "var(--allura-link)", textDecoration: "none" }}
                     >
                       work item: {packet.work_item_id.slice(0, 12)}
                     </a>
@@ -322,7 +322,7 @@ export default async function EvidencePage({
                   {packet.run_id && (
                     <a
                       href={`/dashboard/evidence?type=all&run_id=${packet.run_id}`}
-                      style={{ ...monoStyle, color: "#0f766e", textDecoration: "none" }}
+                      style={{ ...monoStyle, color: "var(--allura-teal-link)", textDecoration: "none" }}
                     >
                       run: {packet.run_id.slice(0, 12)}
                     </a>
@@ -341,7 +341,7 @@ export default async function EvidencePage({
                     style={{
                       marginTop: 4,
                       fontSize: 11,
-                      color: "#6b7280",
+                      color: "var(--allura-text-muted)",
                       fontFamily: '"IBM Plex Mono", monospace',
                     }}
                   >
@@ -375,7 +375,7 @@ function ContentPreview({ content }: { content: Record<string, unknown> }) {
       <div
         style={{
           fontSize: 12,
-          color: "#374151",
+          color: "var(--allura-text-secondary)",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -394,7 +394,7 @@ function ContentPreview({ content }: { content: Record<string, unknown> }) {
       style={{
         fontFamily: '"IBM Plex Mono", monospace',
         fontSize: 11,
-        color: "#9ca3af",
+        color: "var(--allura-text-faint)",
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
@@ -460,11 +460,11 @@ function TypeFilterTabs({
         flexWrap: "wrap",
         gap: 4,
         marginBottom: 16,
-        background: "#f9f8f5",
+        background: "var(--allura-surface-tabs)",
         borderRadius: 8,
         padding: 4,
         width: "fit-content",
-        border: "1px solid #e8e3d8",
+        border: "1px solid var(--allura-border-default)",
       }}
     >
       {EVIDENCE_TYPES.map((type) => {
@@ -480,8 +480,8 @@ function TypeFilterTabs({
               borderRadius: 6,
               fontSize: 12,
               fontWeight: active === type ? 600 : 400,
-              color: active === type ? "#2563eb" : "#6b7280",
-              background: active === type ? "#fff" : "transparent",
+              color: active === type ? "var(--allura-link)" : "var(--allura-text-muted)",
+              background: active === type ? "var(--allura-surface-white)" : "transparent",
               textDecoration: "none",
               boxShadow: active === type ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
               transition: "background 0.15s, color 0.15s",

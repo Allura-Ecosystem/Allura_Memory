@@ -23,10 +23,10 @@ const TYPE_COLORS: Record<SearchResultType, string> = {
   memory: "var(--allura-blue)",
   run: "var(--allura-green)",
   "work-item": "var(--allura-orange)",
-  project: "#7C3AED",
-  definition: "#0891B2",
-  evidence: "#B45309",
-  handoff: "#BE185D",
+  project: "var(--allura-type-project)",
+  definition: "var(--allura-type-definition)",
+  evidence: "var(--allura-type-evidence)",
+  handoff: "var(--allura-type-handoff)",
 }
 
 // ── Route map ─────────────────────────────────────────────────────────────────
@@ -492,7 +492,7 @@ export default function SearchPageClient(): React.ReactElement {
             border: "1px solid",
             borderColor: selectedTypes.length === 0 ? "var(--allura-blue)" : "var(--dashboard-border)",
             background: selectedTypes.length === 0 ? "var(--allura-blue)" : "transparent",
-            color: selectedTypes.length === 0 ? "#fff" : "var(--allura-gray-500)",
+            color: selectedTypes.length === 0 ? "var(--allura-white)" : "var(--allura-gray-500)",
             transition: "all 0.12s ease",
             fontFamily: '"IBM Plex Sans", sans-serif',
           }}
@@ -540,7 +540,7 @@ export default function SearchPageClient(): React.ReactElement {
             borderRadius: "var(--allura-r-md, 8px)",
             marginBottom: "16px",
             fontSize: "13px",
-            color: "#DC2626",
+            color: "var(--allura-error-inline)",
           }}
         >
           {error}

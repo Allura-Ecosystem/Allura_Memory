@@ -22,6 +22,93 @@
   --dashboard-success: var(--allura-green);
   --dashboard-accent: var(--allura-orange);
   --tone-red-text: var(--allura-red);
+
+  /* ── Allura semantic tokens (dashboard pages) ───────────────────────────── */
+
+  /* Text */
+  --allura-text-primary: #1a1a1a;
+  --allura-text-secondary: #374151;
+  --allura-text-muted: #6b7280;
+  --allura-text-faint: #9ca3af;
+  --allura-text-amber: #f59e0b;
+
+  /* Borders */
+  --allura-border-default: #e8e3d8;
+  --allura-border-section: #f0ece0;
+  --allura-border-row: #f9f8f5;
+
+  /* Surface */
+  --allura-surface-white: #fff;
+  --allura-surface-tabs: #f9f8f5;
+
+  /* Interactive badge (count badge active) */
+  --allura-badge-active-bg: #2563eb;
+
+  /* Disabled state */
+  --allura-disabled-bg: #f3f4f6;
+  --allura-disabled-border: #e5e7eb;
+
+  /* Success palette */
+  --allura-success-light: #d1fae5;
+  --allura-success-text: #065f46;
+  --allura-success-border: #a7f3d0;
+
+  /* Error / destructive palette */
+  --allura-error-light: #fee2e2;
+  --allura-error-text: #991b1b;
+  --allura-error-border: #fecaca;
+  --allura-error-inline: #dc2626;
+
+  /* Warning palette */
+  --allura-warning-light: #fef3c7;
+  --allura-warning-text: #92400e;
+
+  /* Teal link (handoff actor → destination, evidence run links) */
+  --allura-teal-link: #0f766e;
+
+  /* Info surface (evidence active-filter bar) */
+  --allura-info-bg: #eff6ff;
+  --allura-info-border: #bfdbfe;
+
+  /* Link blue (same hue as badge-active but named for link contexts) */
+  --allura-link: #2563eb;
+
+  /* Purple (evidence review type pill) */
+  --allura-purple-bg: #ede9fe;
+  --allura-purple-text: #5b21b6;
+
+  /* Notification dot (alert badge on pending counts) */
+  --allura-notify-red: #ef4444;
+
+  /* Pure white (button label on colored bg, badge count) */
+  --allura-white: #fff;
+
+  /* Light blue (test_result pill bg) */
+  --allura-blue-light: #dbeafe;
+
+  /* Gray scale (skeleton / row divider / code surface) */
+  --allura-gray-50: #f9fafb;
+  --allura-gray-100: #f3f4f6;
+  --allura-gray-200: #e5e7eb;
+  --allura-gray-400: #9ca3af;
+
+  /* Error token for inspector views (distinct from --allura-red which is F04438) */
+  --dashboard-error: #c0392b;
+
+  /* Search result type-label badge colors */
+  --allura-type-project: #7C3AED;
+  --allura-type-definition: #0891B2;
+  --allura-type-evidence: #B45309;
+  --allura-type-handoff: #BE185D;
+
+  /* Agent accent colors (execution timeline — unique per agent, no reuse) */
+  --allura-agent-knuth: #8b5cf6;
+  --allura-agent-bellard: #ef4444;
+  --allura-agent-carmack: #f97316;
+  --allura-agent-fowler: #06b6d4;
+  --allura-agent-pike: #ec4899;
+  --allura-agent-hightower: #84cc16;
+  --allura-agent-jobs: #a855f7;
 }
 
 * {

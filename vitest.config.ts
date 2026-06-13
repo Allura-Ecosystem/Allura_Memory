@@ -91,6 +91,8 @@ export default defineConfig({
       "src/__tests__/dashboard-approvals.test.ts",
       // Inspector entity views
       "src/__tests__/inspector-views.test.tsx",
+      // Dashboard operational state tests (Tasks 5-8)
+      "src/__tests__/dashboard-pages-5-8.test.ts",
     ],
     exclude: [
       // E2E tests — require live stack

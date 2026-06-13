@@ -29,7 +29,7 @@ const STATUS_COLORS: Record<ProcessStatus, string> = {
   pending:   "var(--allura-gray-500)",
   running:   "var(--allura-blue)",
   completed: "var(--allura-green)",
-  failed:    "var(--dashboard-error, #c0392b)",
+  failed:    "var(--dashboard-error)",
   paused:    "var(--allura-gold)",
 }
 
@@ -83,7 +83,7 @@ function Skeleton() {
             height: "14px",
             width: `${w}%`,
             borderRadius: "var(--allura-r-sm)",
-            background: "var(--allura-gray-100, #f3f4f6)",
+            background: "var(--allura-gray-100)",
             marginBottom: "var(--allura-md)",
             animation: "pulse 1.5s ease-in-out infinite",
           }}
@@ -103,7 +103,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
         gridTemplateColumns: "100px 1fr",
         gap: "var(--allura-sm)",
         padding: "var(--allura-sm) 0",
-        borderBottom: "1px solid var(--allura-gray-100, #f3f4f6)",
+        borderBottom: "1px solid var(--allura-gray-100)",
         alignItems: "start",
       }}
     >
@@ -168,7 +168,7 @@ export function RunView({ entityId }: RunViewProps) {
       <div
         style={{
           padding: "var(--allura-lg)",
-          color: "var(--dashboard-error, #c0392b)",
+          color: "var(--dashboard-error)",
           fontSize: "13px",
         }}
         role="alert"
@@ -202,7 +202,7 @@ export function RunView({ entityId }: RunViewProps) {
               marginTop: "4px",
               height: "4px",
               borderRadius: "var(--allura-r-full)",
-              background: "var(--allura-gray-100, #f3f4f6)",
+              background: "var(--allura-gray-100)",
               overflow: "hidden",
             }}
           >
@@ -223,7 +223,7 @@ export function RunView({ entityId }: RunViewProps) {
       {run.completed_at && <Row label="Completed">{fmt(run.completed_at)}</Row>}
       {run.status === "failed" && run.state_json?.error != null && (
         <Row label="Error">
-          <span style={{ color: "var(--dashboard-error, #c0392b)", fontFamily: "var(--font-mono)" }}>
+          <span style={{ color: "var(--dashboard-error)", fontFamily: "var(--font-mono)" }}>
             {String(run.state_json.error)}
           </span>
         </Row>

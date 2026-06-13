@@ -85,9 +85,9 @@ function formatRelativeTime(date: Date): string {
 }
 
 const sectionStyle: React.CSSProperties = {
-  border: "1px solid #e8e3d8",
+  border: "1px solid var(--allura-border-default)",
   borderRadius: 10,
-  background: "#fff",
+  background: "var(--allura-surface-white)",
   overflow: "hidden",
 }
 
@@ -96,13 +96,13 @@ const sectionHeadStyle: React.CSSProperties = {
   alignItems: "center",
   gap: 8,
   padding: "14px 20px",
-  borderBottom: "1px solid #f0ece0",
+  borderBottom: "1px solid var(--allura-border-section)",
 }
 
 const sectionTitleStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 700,
-  color: "#1a1a1a",
+  color: "var(--allura-text-primary)",
   letterSpacing: "-0.01em",
   margin: 0,
 }
@@ -114,8 +114,8 @@ const countBadgeStyle = (count: number): React.CSSProperties => ({
   minWidth: 20,
   height: 20,
   borderRadius: 999,
-  background: count > 0 ? "#2563eb" : "#f3f4f6",
-  color: count > 0 ? "#fff" : "#6b7280",
+  background: count > 0 ? "var(--allura-badge-active-bg)" : "var(--allura-disabled-bg)",
+  color: count > 0 ? "var(--allura-white)" : "var(--allura-text-muted)",
   fontSize: 11,
   fontWeight: 700,
   padding: "0 6px",
@@ -124,7 +124,7 @@ const countBadgeStyle = (count: number): React.CSSProperties => ({
 const emptyStyle: React.CSSProperties = {
   padding: "16px 20px",
   fontSize: 13,
-  color: "#9ca3af",
+  color: "var(--allura-text-faint)",
   fontStyle: "italic",
 }
 
@@ -133,24 +133,24 @@ const rowStyle: React.CSSProperties = {
   alignItems: "center",
   gap: 12,
   padding: "12px 20px",
-  borderBottom: "1px solid #f9f8f5",
+  borderBottom: "1px solid var(--allura-border-row)",
   fontSize: 13,
-  color: "#374151",
+  color: "var(--allura-text-secondary)",
 }
 
 const monoStyle: React.CSSProperties = {
   fontFamily: '"IBM Plex Mono", monospace',
   fontSize: 11,
-  color: "#6b7280",
+  color: "var(--allura-text-muted)",
 }
 
 const statusPillStyle = (status: string): React.CSSProperties => {
   const map: Record<string, { bg: string; color: string }> = {
-    pending: { bg: "#fef3c7", color: "#92400e" },
-    acknowledged: { bg: "#d1fae5", color: "#065f46" },
-    rejected: { bg: "#fee2e2", color: "#991b1b" },
+    pending: { bg: "var(--allura-warning-light)", color: "var(--allura-warning-text)" },
+    acknowledged: { bg: "var(--allura-success-light)", color: "var(--allura-success-text)" },
+    rejected: { bg: "var(--allura-error-light)", color: "var(--allura-error-text)" },
   }
-  const style = map[status] ?? { bg: "#f3f4f6", color: "#6b7280" }
+  const style = map[status] ?? { bg: "var(--allura-disabled-bg)", color: "var(--allura-text-muted)" }
   return {
     display: "inline-flex",
     alignItems: "center",
@@ -189,10 +189,10 @@ export default async function HandoffsPage({
         <div
           style={{
             padding: "24px 20px",
-            border: "1px solid #fecaca",
+            border: "1px solid var(--allura-error-border)",
             borderRadius: 10,
-            background: "#fff",
-            color: "#991b1b",
+            background: "var(--allura-surface-white)",
+            color: "var(--allura-error-text)",
             fontSize: 14,
           }}
         >
@@ -228,7 +228,7 @@ export default async function HandoffsPage({
                 <div
                   style={{
                     fontWeight: 500,
-                    color: "#374151",
+                    color: "var(--allura-text-secondary)",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -236,7 +236,7 @@ export default async function HandoffsPage({
                 >
                   <span style={{ color: "var(--allura-blue)" }}>{handoff.from_actor_id}</span>
                   {" → "}
-                  <span style={{ color: "#0f766e" }}>{handoff.to_actor_id}</span>
+                  <span style={{ color: "var(--allura-teal-link)" }}>{handoff.to_actor_id}</span>
                 </div>
                 {handoff.work_item_id && (
                   <div style={{ ...monoStyle, marginTop: 2 }}>
@@ -247,7 +247,7 @@ export default async function HandoffsPage({
                   <div
                     style={{
                       fontSize: 12,
-                      color: "#6b7280",
+                      color: "var(--allura-text-muted)",
                       marginTop: 2,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -322,11 +322,11 @@ function FilterTabs({ active }: { active: FilterStatus }) {
         display: "flex",
         gap: 4,
         marginBottom: 16,
-        background: "#f9f8f5",
+        background: "var(--allura-surface-tabs)",
         borderRadius: 8,
         padding: 4,
         width: "fit-content",
-        border: "1px solid #e8e3d8",
+        border: "1px solid var(--allura-border-default)",
       }}
     >
       {tabs.map((tab) => (
@@ -340,8 +340,8 @@ function FilterTabs({ active }: { active: FilterStatus }) {
             borderRadius: 6,
             fontSize: 13,
             fontWeight: active === tab.value ? 600 : 400,
-            color: active === tab.value ? "#2563eb" : "#6b7280",
-            background: active === tab.value ? "#fff" : "transparent",
+            color: active === tab.value ? "var(--allura-link)" : "var(--allura-text-muted)",
+            background: active === tab.value ? "var(--allura-surface-white)" : "transparent",
             textDecoration: "none",
             boxShadow: active === tab.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
             transition: "background 0.15s, color 0.15s",

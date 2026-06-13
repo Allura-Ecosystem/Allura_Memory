@@ -27,7 +27,7 @@ interface HandoffViewProps {
 const STATUS_COLORS: Record<HandoffStatus, string> = {
   pending:      "var(--allura-gold)",
   acknowledged: "var(--allura-green)",
-  rejected:     "var(--dashboard-error, #c0392b)",
+  rejected:     "var(--dashboard-error)",
 }
 
 function StatusBadge({ status }: { status: HandoffStatus }) {
@@ -64,7 +64,7 @@ function Skeleton() {
             height: "14px",
             width: `${w}%`,
             borderRadius: "var(--allura-r-sm)",
-            background: "var(--allura-gray-100, #f3f4f6)",
+            background: "var(--allura-gray-100)",
             marginBottom: "var(--allura-md)",
           }}
         />
@@ -83,7 +83,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
         gridTemplateColumns: "100px 1fr",
         gap: "var(--allura-sm)",
         padding: "var(--allura-sm) 0",
-        borderBottom: "1px solid var(--allura-gray-100, #f3f4f6)",
+        borderBottom: "1px solid var(--allura-gray-100)",
         alignItems: "start",
       }}
     >
@@ -150,7 +150,7 @@ export function HandoffView({ entityId }: HandoffViewProps) {
   if (error) {
     return (
       <div
-        style={{ padding: "var(--allura-lg)", color: "var(--dashboard-error, #c0392b)", fontSize: "13px" }}
+        style={{ padding: "var(--allura-lg)", color: "var(--dashboard-error)", fontSize: "13px" }}
         role="alert"
       >
         {error}
@@ -173,14 +173,14 @@ export function HandoffView({ entityId }: HandoffViewProps) {
           alignItems: "center",
           gap: "var(--allura-sm)",
           padding: "var(--allura-sm) 0",
-          borderBottom: "1px solid var(--allura-gray-100, #f3f4f6)",
+          borderBottom: "1px solid var(--allura-gray-100)",
           marginBottom: "var(--allura-sm)",
           fontSize: "13px",
           color: "var(--dashboard-text-primary)",
         }}
       >
         <span style={{ fontWeight: 500 }}>{handoff.from_actor_id}</span>
-        <span style={{ color: "var(--allura-gray-400, #9ca3af)" }}>→</span>
+        <span style={{ color: "var(--allura-gray-400)" }}>→</span>
         <span style={{ fontWeight: 500 }}>{handoff.to_actor_id}</span>
       </div>
 
@@ -189,8 +189,8 @@ export function HandoffView({ entityId }: HandoffViewProps) {
           style={{
             padding: "var(--allura-sm)",
             borderRadius: "var(--allura-r-sm)",
-            background: "var(--allura-gray-50, #f9fafb)",
-            border: "1px solid var(--allura-gray-100, #f3f4f6)",
+            background: "var(--allura-gray-50)",
+            border: "1px solid var(--allura-gray-100)",
             fontSize: "13px",
             color: "var(--dashboard-text-secondary)",
             lineHeight: 1.5,

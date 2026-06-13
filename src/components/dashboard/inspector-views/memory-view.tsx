@@ -93,7 +93,7 @@ function Skeleton() {
             height: "14px",
             width: `${w}%`,
             borderRadius: "var(--allura-r-sm)",
-            background: "var(--allura-gray-100, #f3f4f6)",
+            background: "var(--allura-gray-100)",
             marginBottom: "var(--allura-md)",
           }}
         />
@@ -112,7 +112,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
         gridTemplateColumns: "100px 1fr",
         gap: "var(--allura-sm)",
         padding: "var(--allura-sm) 0",
-        borderBottom: "1px solid var(--allura-gray-100, #f3f4f6)",
+        borderBottom: "1px solid var(--allura-gray-100)",
         alignItems: "start",
       }}
     >
@@ -186,7 +186,7 @@ export function MemoryView({ entityId }: MemoryViewProps) {
   if (error) {
     return (
       <div
-        style={{ padding: "var(--allura-lg)", color: "var(--dashboard-error, #c0392b)", fontSize: "13px" }}
+        style={{ padding: "var(--allura-lg)", color: "var(--dashboard-error)", fontSize: "13px" }}
         role="alert"
       >
         {error}
@@ -216,8 +216,8 @@ export function MemoryView({ entityId }: MemoryViewProps) {
               fontSize: "11px",
               fontWeight: 500,
               color: "var(--allura-gray-500)",
-              background: "var(--allura-gray-50, #f9fafb)",
-              border: "1px solid var(--allura-gray-200, #e5e7eb)",
+              background: "var(--allura-gray-50)",
+              border: "1px solid var(--allura-gray-200)",
             }}
           >
             {String(status)}
@@ -230,8 +230,8 @@ export function MemoryView({ entityId }: MemoryViewProps) {
         style={{
           padding: "var(--allura-sm)",
           borderRadius: "var(--allura-r-sm)",
-          background: "var(--allura-gray-50, #f9fafb)",
-          border: "1px solid var(--allura-gray-100, #f3f4f6)",
+          background: "var(--allura-gray-50)",
+          border: "1px solid var(--allura-gray-100)",
           fontSize: "13px",
           color: "var(--dashboard-text-primary)",
           lineHeight: 1.6,
