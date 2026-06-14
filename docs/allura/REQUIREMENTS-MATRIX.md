@@ -363,6 +363,16 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-GOV-004 | Substantive work must write a raw receipt with actor, evidence, validation, and audit reference. | B3, B18, F32 | [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memory-command-center-adapter-contracts) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#memory-lifecycle-and-done-gate) |
 | REQ-GOV-005 | RuVix gates must return `Permit`, `Defer`, or `Deny` and include `gate_reason`. | AD-XX, RULE-010 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) |
 | REQ-GOV-006 | Runtime readiness labeling must say `pgvector bridge` until RuVector extension/functions and search/feedback health are proven. | AD-32, RK-21 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-0-current-ruvector-readiness-boundary) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-32-current-runtime-label-is-pgvector-bridge) |
+
+### Section 6A.2: Agent Factory CI Requirements
+
+| ID | Requirement | Satisfied by |
+| --- | --- | --- |
+| REQ-AF-CI-001 | Factory modules and workflows must be tracked in the canonical `Allura_Memory` repository. | `factory/` · `.github/workflows/factory-ci.yml` · AD-43 |
+| REQ-AF-CI-002 | Every module must pass YAML, roster, tenant, BMad dependency, and Allura governance validation. | `factory/validate.sh` · `.github/workflows/factory-ci.yml` |
+| REQ-AF-CI-003 | CI must prove PostgreSQL-first writes, own-tenant retrieval, and cross-tenant isolation against live PostgreSQL and Neo4j. | `scripts/factory-cross-team-smoke.ts` · `.github/workflows/factory-cross-team-smoke.yml` · RK-31 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3401-agent-factory-ci-topology) |
+| REQ-AF-CI-004 | CI must preserve the `pgvector bridge` label and block native/upstream claims while required artifacts are absent. | `scripts/check-ruvector-readiness.ts` · `.github/workflows/ruvector-readiness.yml` · AD-32 · RK-21 |
+| REQ-AF-CI-005 | Packaging must require an explicit validated team and produce a commit-addressed artifact. | `.github/workflows/factory-ci.yml` |
 | REQ-GOV-007 | Dashboard and operator surfaces must consume API/MCP contracts only and must not write directly to PostgreSQL, Neo4j, or vector substrate. | AD-31, F37, F38 | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#important-constraints) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) |
 | REQ-GOV-008 | Runtime/database/MCP/cron/live hook/RuVix enforcement/semantic promotion/Notion sync/Done status changes require explicit approval and `approval_required=true`. | AD-33 | [BLUEPRINT.md](./BLUEPRINT.md#engine-boundary-and-ruvectorruvix-posture) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-33-approval-boundaries-for-engine-mutations) |
 | REQ-GOV-009 | Planned RAM/Durham hook wrappers are governed support surfaces, not live enforcement until separately approved. | AD-33, RK-24 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#risk-detail) |

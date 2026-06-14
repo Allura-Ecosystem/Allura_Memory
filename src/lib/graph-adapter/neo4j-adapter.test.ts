@@ -25,11 +25,92 @@ describe("Neo4jGraphAdapter", () => {
       limit: 5,
     })
 
-    expect(run).toHaveBeenCalledTimes(1)
-    const [cypher] = run.mock.calls[0]
-    expect(cypher).toContain("coalesce(m.deprecated, false) = false")
-    expect(cypher).toContain("NOT (m)<-[:SUPERSEDES]-()")
+    expect(run).toHaveBeenCalledTimes(2)
+    expect(run.mock.calls[0][0]).toContain("insight_search_index")
+    expect(run.mock.calls[0][0]).toContain("m.id = h.current_id")
+    expect(run.mock.calls[1][0]).toContain("coalesce(m.deprecated, false) = false")
+    expect(run.mock.calls[1][0]).toContain("NOT (m)<-[:SUPERSEDES]-()")
     expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  it("prefers current Insight results while retaining legacy Memory search", async () => {
+    const close = vi.fn()
+    const run = vi
+      .fn()
+      .mockResolvedValueOnce({
+        records: [
+          makeRecord({
+            id: "insight-001",
+            content: "current promoted doctrine",
+            score: 0.9,
+            provenance: "promotion",
+            created_at: "2026-06-13T23:29:35.000Z",
+            usage_count: 0,
+            tags: [],
+            schema_version: 1,
+            relevance: 4.2,
+          }),
+        ],
+      })
+      .mockResolvedValueOnce({
+        records: [
+          makeRecord({
+            id: "mem-legacy",
+            content: "legacy doctrine",
+            score: 0.8,
+            provenance: "conversation",
+            created_at: "2026-04-21T00:00:00.000Z",
+            usage_count: 0,
+            tags: [],
+            schema_version: 1,
+            relevance: 2.1,
+          }),
+        ],
+      })
+    const adapter = new Neo4jGraphAdapter({ session: vi.fn(() => ({ run, close })) } as never)
+
+    const result = await adapter.searchMemories({
+      query: "doctrine",
+      group_id: "allura-system" as never,
+      limit: 10,
+    })
+
+    expect(result.map((item) => item.id)).toEqual(["insight-001", "mem-legacy"])
+    expect(result[0]?.created_at).toBe("2026-06-13T23:29:35.000Z")
+  })
+
+  it("gets a current Insight by stable insight_id before legacy Memory", async () => {
+    const close = vi.fn()
+    const run = vi.fn().mockResolvedValue({
+      records: [
+        makeRecord({
+          id: "insight-stable-id",
+          content: "promoted insight",
+          score: 0.88,
+          provenance: "promotion",
+          user_id: "ronin704",
+          created_at: "2026-06-13T23:29:35.000Z",
+          version: { toNumber: () => 1 },
+          tags: [],
+          deprecated: false,
+          schema_version: { toNumber: () => 1 },
+        }),
+      ],
+    })
+    const adapter = new Neo4jGraphAdapter({ session: vi.fn(() => ({ run, close })) } as never)
+
+    const result = await adapter.getMemory({
+      id: "insight-stable-id" as never,
+      group_id: "allura-system" as never,
+    })
+
+    expect(result.node).toMatchObject({
+      id: "insight-stable-id",
+      content: "promoted insight",
+      score: 0.88,
+      user_id: "ronin704",
+    })
+    expect(run.mock.calls[0][0]).toContain("m.id = $id OR m.insight_id = $id")
   })
 
   it("maps list records with Neo4j temporal values without throwing", async () => {

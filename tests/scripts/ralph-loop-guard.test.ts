@@ -1,39 +1,32 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import path from "node:path";
 
-import { assertSafeGitCwd } from "../../scripts/agents/ralph-loop";
+// Task B (GIT-EXEC-001): assertSafeGitCwd was removed from ralph-loop.ts and
+// replaced with the canonical assertCwdOutsideGitDir from src/lib/git/exec.ts.
+// These tests validate the canonical implementation instead.
+import { assertCwdOutsideGitDir } from "../../src/lib/git/exec";
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("assertSafeGitCwd", () => {
+describe("assertCwdOutsideGitDir (canonical GIT-EXEC-001 guard)", () => {
   it("throws when cwd resolves inside a .git directory (modules submodule path)", () => {
-    expect(() => assertSafeGitCwd("/some/repo/.git/modules/x")).toThrow(
+    expect(() => assertCwdOutsideGitDir("/some/repo/.git/modules/x")).toThrow(
       /GIT_EXEC_WRAPPER/,
     );
   });
 
   it("throws when cwd ends in /.git", () => {
-    expect(() => assertSafeGitCwd("/some/repo/.git")).toThrow(/\.git/);
+    expect(() => assertCwdOutsideGitDir("/some/repo/.git")).toThrow(/\.git/);
   });
 
   it("does NOT throw for a normal working directory", () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(() => assertSafeGitCwd("/some/repo")).not.toThrow();
+    expect(() => assertCwdOutsideGitDir("/some/repo")).not.toThrow();
   });
 
   it("returns the resolved absolute path on pass", () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    const abs = assertSafeGitCwd("/some/repo");
+    const abs = assertCwdOutsideGitDir("/some/repo");
     expect(abs).toBe(path.resolve("/some/repo"));
-  });
-
-  it("emits a GIT_EXEC_WRAPPER stderr line on pass", () => {
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    assertSafeGitCwd("/some/repo");
-    expect(errSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[GIT_EXEC_WRAPPER] ralph cwd ok:"),
-    );
   });
 });

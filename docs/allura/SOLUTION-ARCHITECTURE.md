@@ -207,6 +207,33 @@ sequenceDiagram
 
 The runtime currently uses PostgreSQL with pgvector-compatible memory data as the bridge substrate. Full RuVector-Postgres remains a planned migration target and requires separate approval before database migration, extension installation, function creation, or feedback-loop activation.
 
+### 3.4.0.1 Agent Factory CI Topology
+
+```mermaid
+sequenceDiagram
+    participant Author as Team Module Author
+    participant CI as GitHub Actions
+    participant Validator as Factory Validator
+    participant PG as PostgreSQL
+    participant Neo4j as Neo4j
+    participant Artifact as Package Artifact
+
+    Author->>CI: Push module or workflow change
+    CI->>Validator: Validate YAML, roster, tenant, dependencies, governance
+    Validator-->>CI: Pass or fail closed
+    CI->>PG: Write tenant-scoped smoke memories
+    CI->>Neo4j: Exercise semantic fallback boundary
+    CI->>PG: Verify own-tenant retrieval and foreign-tenant absence
+    CI->>Artifact: Package only an explicitly selected validated team
+```
+
+Key constraints:
+
+- Factory workflows must be tracked by the canonical `Allura_Memory` repository; an ecosystem-local untracked workflow is not executable evidence.
+- Smoke writes use isolated `allura-factory-smoke-*-loadtest` groups so proposal creation remains disabled.
+- The RuVector readiness lane reports the current `pgvector bridge` state and fails a forced native claim unless native extension, native smoke, and governance package artifacts all exist.
+- CI may validate and package, but it does not publish or promote canonical knowledge without separate approval.
+
 | Readiness signal | Current evidence | Required for full RuVector claim |
 |---|---|---|
 | `vector` extension | `0.8.2` observed by TALON | Present and healthy |

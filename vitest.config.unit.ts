@@ -91,6 +91,8 @@ export default defineConfig({
       "src/__tests__/dashboard-pages-5-8.test.ts",
       // Server actions (Stories 16.5, 16.6)
       "src/server/**/*.test.ts",
+      // Script-level guardrail tests (GIT-EXEC-001)
+      "tests/scripts/**/*.test.ts",
     ],
     exclude: [
       // ── Integration tests (mocked DB/services) — use test:integration ──

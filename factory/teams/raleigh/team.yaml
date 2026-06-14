@@ -1,0 +1,50 @@
+name: "Team Raleigh"
+description: "Faith Meats — halal beef jerky operations, sales, and marketing"
+version: "0.1.0"
+author: "Allura Factory"
+
+group_id: "allura-raleigh"
+
+agents:
+  # Operations
+  - haccp-specialist
+  - packaging-engineer
+  - flavor-r-and-d
+  - logistics-coordinator
+  - certification-liaison
+  # Sales
+  - sales-pipeline-analyst
+  - account-strategist
+  - sales-outreach-specialist
+  # Marketing
+  - seo-specialist
+  - tiktok-strategist
+  - instagram-curator
+  - content-creator
+  - email-marketer
+  - aeo-specialist
+  - multi-platform-publisher
+
+bmad:
+  module_version: 1
+  tags: ["cpg", "halal", "food-manufacturing", "jerky", "marketing"]
+  dependencies:
+    - allura-memory-skill@>=0.1.0
+    - bmad-core@>=0.5.0
+
+install:
+  - platform: "opencode"
+    config_path: ".opencode/agent/"
+  - platform: "claude-code"
+    config_path: ".claude/agents/"
+
+variables:
+  client_name:
+    description: "Client business name"
+    default: "Faith Meats"
+  tenant_id:
+    description: "Allura tenant identifier"
+    required: true
+  brain_endpoint:
+    description: "Allura Brain MCP endpoint"
+    default: "http://localhost:5888/mcp"

@@ -21,7 +21,20 @@ import type { ProcessState, ProcessStatus, StoredRun } from "./types"
 const NOW_ISO = "2026-01-01T00:00:00.000Z"
 const NOW_DATE = new Date(NOW_ISO)
 
+/**
+ * Produce a µs-precise token string (matching PG to_char format) from a Date.
+ * In real PG queries this is returned by:
+ *   to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+ * Mocked rows must include this field so rowToStoredRun can read it.
+ */
+function toUpdatedAtToken(date: Date): string {
+  // toISOString() gives ms precision; pad with 000 to simulate µs precision.
+  // e.g. "2026-01-01T00:00:00.000Z" → "2026-01-01T00:00:00.000000Z"
+  return date.toISOString().replace(/\.(\d{3})Z$/, ".$1000Z")
+}
+
 function makeRunRow(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
+  const updatedAt = (overrides.updated_at as Date | undefined) ?? NOW_DATE
   return {
     id: "run-001",
     definition_id: "def-001",
@@ -32,6 +45,8 @@ function makeRunRow(overrides: Partial<Record<string, unknown>> = {}): Record<st
     actor_id: "woz-builder",
     started_at: NOW_DATE,
     updated_at: NOW_DATE,
+    // µs-precise token — mirrors what PG returns via to_char(updated_at ...) AS updated_at_token
+    updated_at_token: toUpdatedAtToken(updatedAt),
     completed_at: null,
     ...overrides,
   }
@@ -375,7 +390,10 @@ describe("date serialisation", () => {
 
     expect(result).not.toBeNull()
     expect((result as StoredRun).started_at).toBe(started.toISOString())
-    expect((result as StoredRun).updated_at).toBe(updated.toISOString())
+    // updated_at is now the µs-precise token (from PG to_char), not a JS toISOString() string.
+    // The mock's toUpdatedAtToken() pads ms to µs, so "2026-01-01T10:05:00.000Z" becomes
+    // "2026-01-01T10:05:00.000000Z". This is the value that round-trips through the optimistic lock.
+    expect((result as StoredRun).updated_at).toBe(toUpdatedAtToken(updated))
     expect((result as StoredRun).completed_at).toBe(completed.toISOString())
   })
 })

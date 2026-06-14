@@ -1,0 +1,38 @@
+name: "Team Charlotte"
+description: "Difference Driven — nonprofit operations, fundraising, impact measurement"
+version: "0.1.0"
+author: "Allura Factory"
+
+group_id: "allura-charlotte"
+
+agents:
+  - donor-stewardship-manager
+  - impact-measurement-analyst
+  - volunteer-coordinator
+  - board-governance-specialist
+  - grassroots-campaign-organizer
+  - grant-compliance-manager
+
+bmad:
+  module_version: 1
+  tags: ["nonprofit", "fundraising", "impact", "governance", "grants"]
+  dependencies:
+    - allura-memory-skill@>=0.1.0
+    - bmad-core@>=0.5.0
+
+install:
+  - platform: "opencode"
+    config_path: ".opencode/agent/"
+  - platform: "claude-code"
+    config_path: ".claude/agents/"
+
+variables:
+  client_name:
+    description: "Nonprofit organization name"
+    default: "Difference Driven"
+  tenant_id:
+    description: "Allura tenant identifier"
+    required: true
+  brain_endpoint:
+    description: "Allura Brain MCP endpoint"
+    default: "http://localhost:5888/mcp"

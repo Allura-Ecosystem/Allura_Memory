@@ -28,6 +28,7 @@
  */
 
 import path from "node:path";
+import { assertCwdOutsideGitDir } from "../../src/lib/git/exec";
 
 const TASK_DESCRIPTION = process.argv[2];
 const ARGS = process.argv.slice(3);
@@ -40,23 +41,9 @@ const ARGS = process.argv.slice(3);
 // gitdir and corrupts the (sub)module. We can't fix the external binary, so we
 // refuse to launch it from an unsafe cwd at the boundary we control.
 //
-// A passing call emits a stderr line stamped with GIT_EXEC_WRAPPER so a bypass
-// is detectable by token-absence in logs.
-export function assertSafeGitCwd(cwd: string): string {
-  const abs = path.resolve(cwd);
-  const gitSegment = `${path.sep}.git`;
-  const insideGitDir =
-    abs.includes(`${gitSegment}${path.sep}`) || abs.endsWith(gitSegment);
-
-  if (insideGitDir) {
-    throw new Error(
-      `[GIT_EXEC_WRAPPER] REFUSING to spawn ralph: cwd resolves inside a .git directory: ${abs}`,
-    );
-  }
-
-  console.error(`[GIT_EXEC_WRAPPER] ralph cwd ok: ${abs}`);
-  return abs;
-}
+// assertCwdOutsideGitDir is the canonical single-source-of-truth implementation
+// in src/lib/git/exec.ts (GIT-EXEC-001). The local reimplementation has been
+// removed — one source of truth, no drift.
 
 // ── Defaults ──────────────────────────────────────────────────────────────
 
@@ -267,8 +254,8 @@ async function ralphLoop() {
 
   // Guard: refuse to launch the external ralph CLI from inside a .git dir.
   // No cwd is passed to spawnSync, so the spawned process inherits process.cwd().
-  const ralphCwd = process.cwd();
-  assertSafeGitCwd(ralphCwd);
+  // assertCwdOutsideGitDir is the canonical GIT-EXEC-001 choke point.
+  const ralphCwd = assertCwdOutsideGitDir(process.cwd());
 
   const result = spawnSync(ralphCmd[0], ralphCmd.slice(1), {
     stdio: "inherit",

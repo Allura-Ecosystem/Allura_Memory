@@ -1,0 +1,37 @@
+# =============================================================================
+# docker-compose.prod.yml — production overlay for the Allura Memory dashboard
+# =============================================================================
+# Usage (overlay on top of the base compose):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#     --env-file .env --env-file .env.local up -d --build
+#
+# What this overlay changes vs. the base `dashboard` service:
+#   - Builds Dockerfile.dashboard.prod (compiled `next start`) instead of the
+#     hot-reload dev server (Dockerfile.dashboard / `bun run dev`).
+#   - Drops the source bind-mounts (`.:/app`, anonymous node_modules/.next) so
+#     the container runs the immutable production build, not host source.
+#   - Sets NODE_ENV=production.
+#
+# postgres, neo4j, neo4j-init, and mcp are inherited unchanged from the base.
+# =============================================================================
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard.prod
+    # Replace the dev bind-mounts with no mounts. Verified via `docker compose
+    # -f docker-compose.yml -f docker-compose.prod.yml config`.
+    volumes: !reset []
+    environment:
+      - NODE_ENV=production
+      - ALLURA_DASHBOARD_PORT=3100
+      - NEXT_TELEMETRY_DISABLED=1
+      - POSTGRES_HOST=knowledge-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - NEO4J_URI=bolt://knowledge-neo4j:7687
+      - NEO4J_USER=${NEO4J_USER}
+      - DEFAULT_GROUP_ID=${DEFAULT_GROUP_ID:-allura-system}
+      - NEXT_PUBLIC_API_BASE=http://localhost:3100

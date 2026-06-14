@@ -1,0 +1,67 @@
+name: Agent Factory CI
+
+on:
+  push:
+    paths:
+      - "factory/**"
+      - "scripts/factory-cross-team-smoke.ts"
+      - ".github/workflows/factory-ci.yml"
+  pull_request:
+    paths:
+      - "factory/**"
+      - "scripts/factory-cross-team-smoke.ts"
+      - ".github/workflows/factory-ci.yml"
+  workflow_dispatch:
+    inputs:
+      team:
+        description: "Optional team slug to validate and package"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Validate factory modules
+        env:
+          TEAM: ${{ inputs.team }}
+        run: |
+          set -euo pipefail
+          if [ -n "${TEAM:-}" ]; then
+            test -d "factory/teams/$TEAM"
+            bash factory/validate.sh "factory/teams/$TEAM"
+          else
+            while IFS= read -r -d '' manifest; do
+              bash factory/validate.sh "$(dirname "$manifest")"
+            done < <(find factory/teams -mindepth 2 -maxdepth 2 -name team.yaml -print0 | sort -z)
+          fi
+
+  package:
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' && inputs.team != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package validated module
+        env:
+          TEAM: ${{ inputs.team }}
+        run: |
+          set -euo pipefail
+          test -d "factory/teams/$TEAM"
+          mkdir -p dist/teams
+          tar -czf "dist/teams/${TEAM}-${GITHUB_SHA::12}.tar.gz" -C "factory/teams/$TEAM" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: factory-team-${{ inputs.team }}
+          path: dist/teams/*.tar.gz
+          if-no-files-found: error

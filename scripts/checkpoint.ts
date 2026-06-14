@@ -15,6 +15,7 @@
 import { z } from 'zod';
 import fs from 'fs/promises';
 import path from 'path';
+import { gitExec } from '../src/lib/git/exec';
 
 // Simple checkpoint schema - no external dependencies
 const CheckpointSchema = z.object({
@@ -78,7 +79,7 @@ async function createCheckpoint(
 
   // Get recently modified files (last 5 minutes)
   try {
-    const gitStatus = await Bun.$`git diff --name-only`.text();
+    const gitStatus = gitExec(["diff", "--name-only"]);
     checkpoint.files = gitStatus.split('\n').filter(f => f.trim());
   } catch {
     // Git not available or not a repo

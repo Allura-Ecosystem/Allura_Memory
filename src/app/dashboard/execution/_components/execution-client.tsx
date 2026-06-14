@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import type { AgentStatus, ExecutionOverview, TimelineBucket } from "@/server/actions/execution-view"
-import { TEAM_RAM_AGENTS } from "@/server/actions/execution-view"
+import type { AgentStatus, ExecutionOverview, TimelineBucket } from "@/server/actions/execution-view.types"
+import { TEAM_RAM_AGENTS } from "@/server/actions/execution-view.types"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

@@ -200,7 +200,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dashboard
-    container_name: allura-dash-v2
     restart: unless-stopped
     ports:
       - "3100:3100"

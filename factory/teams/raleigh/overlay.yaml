@@ -1,0 +1,52 @@
+# Governance Overlay — Team Raleigh (Faith Meats)
+# Allura Agent Factory ADR v0.1
+
+group_id: "allura-raleigh"
+
+activation_steps_prepend:
+  step_0_brain_hydration: |
+    Scout hydration via allura-brain_memory_search
+    with group_id='allura-raleigh'
+    and user_id='${AGENT_ID}'
+
+  step_1_session_start: |
+    allura-brain_memory_add(
+      group_id="allura-raleigh",
+      user_id="${AGENT_ID}",
+      content="session_start: ${AGENT_NAME}"
+    )
+
+persistent_facts:
+  group_id_enforcement: |
+    Every operation MUST include group_id matching "allura-raleigh".
+    No cross-tenant data access.
+
+  append_only: |
+    PostgreSQL events are append-only. No UPDATE/DELETE.
+
+  supersedes_versioning: |
+    Neo4j nodes versioned via SUPERSEDES.
+    Never mutate in-place — create new version, link.
+
+  hitl_required: |
+    Promotion to semantic requires human curator approval.
+
+  brain_contract: |
+    All memory operations through canonical MCP interface only.
+    No direct database writes.
+
+  evidence_before_promotion: |
+    No promotion without supporting evidence.
+    Low-signal entries rejected at curator gate.
+
+activation_steps_append:
+  on_complete_writeback: |
+    TASK_COMPLETE logged to Brain on session end.
+    Includes: product SKUs updated, campaigns launched, findings.
+
+  reflection: |
+    Session end reflection:
+    - Operations completed
+    - Marketing campaigns launched
+    - Sales pipeline changes
+    - Decisions made

@@ -1,0 +1,87 @@
+name: Factory Cross-Team Brain Smoke
+
+on:
+  pull_request:
+    paths:
+      - "factory/**"
+      - "scripts/factory-cross-team-smoke.ts"
+      - "src/mcp/**"
+      - "src/lib/ruvector/**"
+      - "docker/postgres-init/**"
+      - ".github/workflows/factory-cross-team-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "factory/**"
+      - "scripts/factory-cross-team-smoke.ts"
+      - "src/mcp/**"
+      - "src/lib/ruvector/**"
+      - "docker/postgres-init/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tenant-isolation-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: allura
+          POSTGRES_DB: memory
+          POSTGRES_USER: allura
+        options: >-
+          --health-cmd "pg_isready -U allura -d memory"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+      neo4j:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/password
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p password 'RETURN 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+        ports:
+          - 7474:7474
+          - 7687:7687
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply database schema
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGDATABASE: memory
+          PGUSER: allura
+          PGPASSWORD: allura
+        run: |
+          set -euo pipefail
+          for sql_file in $(ls -1v docker/postgres-init/*.sql); do
+            psql -v ON_ERROR_STOP=1 -f "$sql_file"
+          done
+      - name: Run cross-team tenant-isolation smoke
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: memory
+          POSTGRES_USER: allura
+          POSTGRES_PASSWORD: allura
+          NEO4J_URI: bolt://localhost:7687
+          NEO4J_USER: neo4j
+          NEO4J_PASSWORD: password
+          EMBEDDING_BASE_URL: http://127.0.0.1:9
+          RUVIX_KERNEL_SECRET: factory-ci-test-secret-at-least-32-characters
+        run: bun scripts/factory-cross-team-smoke.ts

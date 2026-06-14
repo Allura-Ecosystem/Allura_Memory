@@ -51,6 +51,8 @@ jobs:
         run: bun install
       - name: Lint
         run: bun run lint
+      - name: Git-exec choke point (GIT-EXEC-001)
+        run: bun run validate:git-exec
 
   # ── Unit Tests ────────────────────────────────────────────────────────────
   # Pure logic only. NO database. NO Ollama. NO Notion. NO MCP browser.

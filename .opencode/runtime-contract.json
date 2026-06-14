@@ -28,6 +28,9 @@
   ],
   "required_skills": [
     "allura-memory-skill",
+    "allura-hydration-integrity",
+    "allura-promotion-roundtrip",
+    "allura-retrieval-drift-audit",
     "mcp-docker",
     "team-ram-cowork",
     "frontend-design",

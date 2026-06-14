@@ -20,7 +20,6 @@
  * When no DB, produces real analysis — the analysis is the value, DB is just logging.
  */
 
-import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, extname, join, relative } from "node:path";
 import { gitExec } from "../../src/lib/git/exec";
@@ -976,9 +975,9 @@ function extractApiSurface(gitRef: string): ApiExport[] {
   // Get list of TypeScript files at this ref
   let fileList: string;
   try {
-    fileList = execSync(
-      `git ls-tree -r --name-only ${gitRef}`,
-      { encoding: "utf-8", cwd: ROOT_DIR, maxBuffer: 50 * 1024 * 1024 },
+    fileList = gitExec(
+      ["ls-tree", "-r", "--name-only", gitRef],
+      { cwd: ROOT_DIR, maxBuffer: 50 * 1024 * 1024 },
     );
   } catch {
     console.error(`[pike] Cannot list files at ref ${gitRef}`);

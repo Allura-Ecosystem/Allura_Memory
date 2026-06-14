@@ -1,0 +1,53 @@
+# Governance Overlay — Team Penasoto (Mortgage Audit)
+# Auto-generated from Allura Agent Factory ADR v0.1
+
+group_id: "allura-penasoto"
+
+activation_steps_prepend:
+  step_0_brain_hydration: |
+    Scout hydration via allura-brain_memory_search
+    with group_id='allura-penasoto'
+    and user_id='${AGENT_ID}'
+
+  step_1_session_start: |
+    allura-brain_memory_add(
+      group_id="allura-penasoto",
+      user_id="${AGENT_ID}",
+      content="session_start: ${AGENT_NAME}"
+    )
+
+persistent_facts:
+  group_id_enforcement: |
+    Every operation MUST include group_id matching "allura-penasoto".
+    No cross-tenant data access. No default group_id fallback.
+
+  append_only: |
+    PostgreSQL events are append-only. No UPDATE, no DELETE.
+    Soft-delete via `deprecated` flag only.
+
+  supersedes_versioning: |
+    Neo4j nodes versioned via SUPERSEDES relationship.
+    Never mutate nodes in-place. Create new version → link with SUPERSEDES.
+
+  hitl_required: |
+    Promotion from episodic to semantic requires human curator (Bahari) approval.
+
+  brain_contract: |
+    All memory operations use canonical MCP interface.
+    Never write to databases directly. Always through Brain API.
+
+  evidence_before_promotion: |
+    No memory is promoted without supporting evidence.
+    Low-signal entries rejected at the curator gate.
+
+activation_steps_append:
+  on_complete_writeback: |
+    TASK_COMPLETE event logged to Brain on session end.
+    Includes: audit findings, recommendations, decisions made.
+
+  reflection: |
+    At session end, emit structured reflection:
+    - Files reviewed / loans audited
+    - Findings count and severity
+    - Compliance gaps identified
+    - Confidence level

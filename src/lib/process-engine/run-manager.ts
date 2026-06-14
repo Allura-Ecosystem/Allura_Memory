@@ -34,6 +34,17 @@ interface RunRow {
   started_at: Date
   updated_at: Date
   completed_at: Date | null
+  /**
+   * Microsecond-precise ISO-8601 token produced by:
+   *   to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+   *
+   * PG timestamptz has microsecond resolution; JS Date.toISOString() truncates
+   * to milliseconds, causing the optimistic-lock WHERE to match 0 rows. The
+   * `updated_at_token` column carries µs precision so the token round-trips
+   * exactly through the WHERE clause. Stored as the `updated_at` field in
+   * StoredRun to keep the public API stable.
+   */
+  updated_at_token: string
 }
 
 function rowToStoredRun(row: RunRow): StoredRun {
@@ -46,7 +57,8 @@ function rowToStoredRun(row: RunRow): StoredRun {
     state_json: row.state_json,
     actor_id: row.actor_id,
     started_at: row.started_at instanceof Date ? row.started_at.toISOString() : String(row.started_at),
-    updated_at: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+    // Use the µs-precise token so the optimistic-lock WHERE round-trips exactly.
+    updated_at: row.updated_at_token,
     completed_at:
       row.completed_at == null
         ? null
@@ -78,7 +90,8 @@ export async function createRun(pool: Pool, params: CreateRunParams): Promise<St
     `INSERT INTO process_runs
        (id, definition_id, definition_revision, group_id, status, state_json, actor_id)
      VALUES ($1, $2, $3, $4, 'pending', $5, $6)
-     RETURNING *`,
+     RETURNING *,
+       to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at_token`,
     [id, definitionId, definitionRevision, groupId, JSON.stringify(initialState), actorId],
   )
 
@@ -99,7 +112,9 @@ export async function getRun(pool: Pool, params: GetRunParams): Promise<StoredRu
   const { id, groupId } = params
 
   const result = await pool.query<RunRow>(
-    `SELECT * FROM process_runs
+    `SELECT *,
+       to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at_token
+     FROM process_runs
      WHERE id = $1 AND group_id = $2
      LIMIT 1`,
     [id, groupId],
@@ -131,13 +146,17 @@ export async function listRuns(pool: Pool, params: ListRunsParams): Promise<Stor
   let queryParams: unknown[]
 
   if (status !== undefined) {
-    query = `SELECT * FROM process_runs
+    query = `SELECT *,
+               to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at_token
+             FROM process_runs
              WHERE group_id = $1 AND status = $2
              ORDER BY started_at DESC
              LIMIT $3`
     queryParams = [groupId, status, limit]
   } else {
-    query = `SELECT * FROM process_runs
+    query = `SELECT *,
+               to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at_token
+             FROM process_runs
              WHERE group_id = $1
              ORDER BY started_at DESC
              LIMIT $2`
@@ -188,8 +207,9 @@ export async function updateRunSnapshot(
                  completed_at = $3
              WHERE id         = $4
                AND group_id   = $5
-               AND updated_at = $6
-             RETURNING *`
+               AND to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') = $6
+             RETURNING *,
+               to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at_token`
     queryParams = [status, JSON.stringify(stateJson), completedAt, id, groupId, expectedUpdatedAt]
   } else {
     query = `UPDATE process_runs
@@ -198,15 +218,34 @@ export async function updateRunSnapshot(
                  updated_at = NOW()
              WHERE id         = $3
                AND group_id   = $4
-               AND updated_at = $5
-             RETURNING *`
+               AND to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') = $5
+             RETURNING *,
+               to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at_token`
     queryParams = [status, JSON.stringify(stateJson), id, groupId, expectedUpdatedAt]
   }
 
   const result = await pool.query<RunRow>(query, queryParams)
 
   if (result.rowCount === 0) {
-    // Stale — another writer updated the row; caller handles 409
+    // Stale token or genuine concurrent write — determine which for observability.
+    // Check whether the row exists with a different token (real lost-update conflict)
+    // vs. not existing at all (delete or wrong id/group_id).
+    const check = await pool.query<{ exists: boolean }>(
+      `SELECT EXISTS(
+         SELECT 1 FROM process_runs
+         WHERE id = $1 AND group_id = $2
+       ) AS exists`,
+      [id, groupId],
+    )
+    if (check.rows[0]?.exists) {
+      // Row exists but token didn't match → genuine optimistic-lock conflict.
+      console.warn(
+        `[run-manager] updateRunSnapshot: optimistic-lock conflict on run ${id} ` +
+          `(group ${groupId}). Expected token ${expectedUpdatedAt} did not match ` +
+          `stored updated_at. This indicates a concurrent write.`,
+      )
+    }
+    // Return null in both cases — caller handles 409 / retry logic.
     return null
   }
 
