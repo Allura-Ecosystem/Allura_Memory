@@ -12,12 +12,12 @@ vi.mock("@/lib/operational-state/utils/error-classifier", () => ({
 }))
 
 import { getPool } from "@/lib/postgres/connection"
+import { getExecutionOverview } from "./execution-view"
 import {
-  getExecutionOverview,
   TEAM_RAM_AGENTS,
   type AgentStatus,
   type ExecutionOverview,
-} from "./execution-view"
+} from "./execution-view.types"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
