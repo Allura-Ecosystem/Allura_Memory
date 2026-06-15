@@ -24,6 +24,8 @@ export default defineConfig({
       "src/__tests__/ruvector-e2e.test.ts",
       "src/__tests__/canonical-memory.test.ts",
       "src/team-ram/e2e-smoke.test.ts",
+      // Brain contract — shape stability against live PG/Neo4j
+      "tests/integration/brain-contract.test.ts",
       // Validation tests that need live DB for trace-ref verification
       "src/lib/validation/group-governance.test.ts",
       "src/lib/validation/trace-ref.test.ts",
