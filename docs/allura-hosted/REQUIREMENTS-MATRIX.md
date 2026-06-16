@@ -32,7 +32,7 @@ Coverage map for [BLUEPRINT.md](./BLUEPRINT.md). Traces Business → Functional 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
 | F1 | Create organization | `POST /orgs` · [DESIGN-AUTH.md](./DESIGN-AUTH.md) |
-| F2 | Create workspace + group_id | `POST /workspaces` · [DESIGN-AUTH.md](./DESIGN-AUTH.md) · [AD-01](./RISKS-AND-DECISIONS.md) |
+| F2 | Create workspace + group_id | `POST/GET /api/workspaces` (`src/app/api/workspaces/route.ts`) · [DESIGN-AUTH.md](./DESIGN-AUTH.md) · [AD-01](./RISKS-AND-DECISIONS.md) |
 | F3 | Invite + role assignment | `POST /invites` · [DESIGN-AUTH.md](./DESIGN-AUTH.md) |
 | F4 | Scope access to assigned workspaces | session resolution · [DESIGN-AUTH.md](./DESIGN-AUTH.md) |
 | F5 | MFA for admins | `POST /sessions` · [DESIGN-AUTH.md](./DESIGN-AUTH.md) |
@@ -42,7 +42,7 @@ Coverage map for [BLUEPRINT.md](./BLUEPRINT.md). Traces Business → Functional 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
 | F6 | Server-side group_id injection | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [AD-01](./RISKS-AND-DECISIONS.md) |
-| F7 | Token/API-key validation | `POST /tokens*` · [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [AD-03](./RISKS-AND-DECISIONS.md) |
+| F7 | Token/API-key validation | `POST/GET /api/tokens` + `POST /api/tokens/:id/revoke` (`src/app/api/tokens/`) · validate via `src/lib/bumblebee/validate-token.ts` · [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [AD-03](./RISKS-AND-DECISIONS.md) |
 | F8 | Scope checks | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) |
 | F9 | Rate limits | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [RK-04](./RISKS-AND-DECISIONS.md) |
 | F10 | Secret scanning | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [RK-08](./RISKS-AND-DECISIONS.md) |

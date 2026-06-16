@@ -6,6 +6,7 @@ import {
   Clock,
   FileText,
   GitBranch,
+  KeyRound,
   LayoutDashboard,
   LayoutGrid,
   FolderKanban,
@@ -77,6 +78,10 @@ const navGroups: NavGroup[] = [
   {
     label: "Operations",
     items: [{ href: "/dashboard/scheduled-tasks", label: "Schedules", icon: Clock }],
+  },
+  {
+    label: "Hosted",
+    items: [{ href: "/dashboard/bumblebee", label: "Bumblebee", icon: KeyRound }],
   },
 ]
 

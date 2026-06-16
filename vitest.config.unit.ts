@@ -96,6 +96,8 @@ export default defineConfig({
       // Allura Hosted — Bumblebee gateway + MCP token (pure logic, no DB)
       "src/lib/bumblebee/**/*.test.ts",
       "src/lib/mcp-token/**/*.test.ts",
+      // Allura Hosted — admin route auth/shape tests (mocked repos)
+      "src/__tests__/hosted-admin-routes.test.ts",
     ],
     exclude: [
       // ── Integration tests (mocked DB/services) — use test:integration ──

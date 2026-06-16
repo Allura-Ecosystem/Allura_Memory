@@ -31,12 +31,17 @@ export default defineConfig({
       "src/lib/validation/trace-ref.test.ts",
       // Story 12.2 — true checkpoint continuation against live PostgreSQL
       "src/lib/process-engine/checkpoint-continuation.integration.test.ts",
+      // Allura Hosted — MCP gateway full round-trip (live PG/Neo4j/ruvector)
+      "src/__tests__/hosted-mcp.e2e.test.ts",
     ],
     testTimeout: 60_000,
     hookTimeout: 30_000,
   },
   resolve: {
     alias: [
+      { find: "@allura/types", replacement: path.resolve(__dirname, "./packages/types/src/index.ts") },
+      { find: "@allura/rbac", replacement: path.resolve(__dirname, "./packages/rbac/src/index.ts") },
+      { find: "@allura/mcp-server", replacement: path.resolve(__dirname, "./packages/mcp-server/src/index.ts") },
       { find: "@", replacement: path.resolve(__dirname, "./src") },
     ],
   },

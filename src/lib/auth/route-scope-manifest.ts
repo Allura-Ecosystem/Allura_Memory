@@ -159,6 +159,32 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     description: "Audit event logs",
   },
 
+  // ── Hosted Platform (Bumblebee) ───────────────────────────────────────────
+  {
+    pattern: "/api/tokens",
+    requiredRole: "admin",
+    scopeName: "tokens:admin",
+    description: "MCP token mint/list (admin)",
+  },
+  {
+    pattern: "/api/tokens/:path*",
+    requiredRole: "admin",
+    scopeName: "tokens:admin:routes",
+    description: "MCP token revoke/rotate by id (admin)",
+  },
+  {
+    pattern: "/api/workspaces",
+    requiredRole: "viewer",
+    scopeName: "workspaces:api",
+    description: "Workspace list (viewer) / create (admin — enforced in handler)",
+  },
+  {
+    pattern: "/api/workspaces/:path*",
+    requiredRole: "viewer",
+    scopeName: "workspaces:api:routes",
+    description: "Workspace sub-routes (write enforced in handler)",
+  },
+
   // ── Agents & Projects ─────────────────────────────────────────────────────
   {
     pattern: "/api/agents",

@@ -12,11 +12,19 @@ on:
     paths:
       - "docs/allura-hosted/**"
       - "packages/**"
+      - "src/app/mcp/**"
+      - "src/lib/bumblebee/**"
+      - "src/lib/mcp-token/**"
+      - "src/lib/workspace/**"
       - ".github/workflows/allura-hosted-ci.yml"
   pull_request:
     paths:
       - "docs/allura-hosted/**"
       - "packages/**"
+      - "src/app/mcp/**"
+      - "src/lib/bumblebee/**"
+      - "src/lib/mcp-token/**"
+      - "src/lib/workspace/**"
       - ".github/workflows/allura-hosted-ci.yml"
   workflow_dispatch: {}
 
@@ -265,6 +273,29 @@ jobs:
           fi
 
   # ---------------------------------------------------------------------------
+  # Gate 2b — MCP gateway tenancy boundary (ADR-001)
+  # ---------------------------------------------------------------------------
+  mcp-gateway-boundary:
+    name: mcp-gateway-boundary
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile || bun install
+      - name: Assert /mcp + Bumblebee derive tenant only from the token
+        run: |
+          if grep -RnE "body\.(group_id|workspace_id)" src/app/mcp src/lib/bumblebee; then
+            echo "::error::/mcp or Bumblebee reads client-supplied group_id/workspace_id (ADR-001 violation)"
+            exit 1
+          fi
+          echo "OK: tenant scope derived only from the validated token."
+      - name: Bumblebee + token unit tests
+        run: bun run test:unit src/lib/bumblebee/ src/lib/mcp-token/ || echo "::warning::gateway unit tests reported issues (report-only)"
+
+  # ---------------------------------------------------------------------------
   # Summary
   # ---------------------------------------------------------------------------
   ci-summary:
@@ -284,6 +315,7 @@ jobs:
       - governance-receipt-test
       - checkpoint-restore-test
       - search-benchmark
+      - mcp-gateway-boundary
     steps:
       - name: Report
         run: |
@@ -296,7 +328,7 @@ jobs:
             echo "|------|------|"
             echo "| Quality | lint, typecheck, unit-tests, integration-tests |"
             echo "| Gate 1 — License | license-check, dependency-review, sbom |"
-            echo "| Gate 2 — Security | secret-scan, security-gate |"
+            echo "| Gate 2 — Security | secret-scan, security-gate, mcp-gateway-boundary |"
             echo "| Gate 3 — Governance | ruvector-adapter-tests, governance-receipt-test, checkpoint-restore-test |"
             echo "| Gate 4 — Performance | search-benchmark |"
             echo ""

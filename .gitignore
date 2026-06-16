@@ -50,7 +50,7 @@ tsconfig.tsbuildinfo
 
 # Legacy / retired artifacts (never re-add)
 _bmad-output/
-workspaces/
+/workspaces/
 artifacts/
 .impeccable/
 .sisyphus/
