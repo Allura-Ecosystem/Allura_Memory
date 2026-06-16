@@ -1,29 +1,9 @@
 {
-  "iterations": [
-    {
-      "iteration": 1,
-      "startedAt": "2026-06-13T04:33:39.656Z",
-      "endedAt": "2026-06-13T04:33:55.583Z",
-      "durationMs": 13097,
-      "agent": "opencode",
-      "model": "",
-      "toolsUsed": {},
-      "filesModified": [
-        "skills"
-      ],
-      "exitCode": 1,
-      "completionDetected": false,
-      "errors": [
-        "\u001b[91m\u001b[1mError: \u001b[0m{"
-      ]
-    }
-  ],
-  "totalDurationMs": 13097,
+  "iterations": [],
+  "totalDurationMs": 0,
   "struggleIndicators": {
-    "repeatedErrors": {
-      "\u001b[91m\u001b[1mError: \u001b[0m{": 1
-    },
+    "repeatedErrors": {},
     "noProgressIterations": 0,
-    "shortIterations": 1
+    "shortIterations": 0
   }
 }
