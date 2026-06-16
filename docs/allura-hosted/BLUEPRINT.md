@@ -25,9 +25,10 @@ This Blueprint is the single source of design intent. All `DESIGN-*`, `SOLUTION-
 
 | Concept | Definition |
 |---------|-----------|
-| **Organization** | Top-level tenant. Owns billing, users, and one or more workspaces. |
-| **Workspace** | Isolation unit. Maps 1:1 to a `group_id`. Holds users, roles, agents, tokens, memories, and audit events. |
-| **group_id** | Server-generated tenant scope key (pattern `^allura-[a-z0-9-]+$`). Enforced on every read/write. Never client-supplied. |
+| **Organization** | The **only** tenant boundary (ADR-001). Owns billing, users, workspaces — and the `group_id`. |
+| **Workspace** | A sub-scope *within* an organization (its own `workspace_id` + optional `metadata.team`). Shares the org `group_id`; **not** a separate tenant boundary. Holds users, roles, agents, tokens, memories, audit events. |
+| **group_id** | Server-generated **organization** scope key (pattern `^allura-[a-z0-9-]+$`, e.g. `allura-faithmeats`). Enforced on every read/write; never client-supplied. `allura-system` is platform-tier only. |
+| **workspace_id** | Sub-tenant scope inside a `group_id`. Workspace isolation is enforced at the API/CHECK layer, not by minting a new `group_id` per workspace. |
 | **Memory** | A governed unit of knowledge. Episodic (raw trace, PostgreSQL) or semantic (approved knowledge, Neo4j). |
 | **Curator** | The review queue where proposed memories await human approval before promotion. |
 | **Bumblebee** | The policy gate in front of all MCP/API actions: auth, RBAC, scope, rate limits, group_id injection, audit. |
@@ -61,7 +62,7 @@ Grouped by domain area. Each maps to one or more `B#`.
 | ID | Requirement |
 |----|-------------|
 | **F1** | Users can create an organization. |
-| **F2** | Users can create a workspace; the system generates a valid `group_id`. |
+| **F2** | Creating an organization generates its `group_id`; creating a workspace generates a `workspace_id` sub-scope under that org's `group_id`. |
 | **F3** | Admins can invite employees and assign roles. |
 | **F4** | Employees access only assigned workspaces. |
 | **F5** | MFA is required for admin-level roles. |
@@ -210,8 +211,8 @@ Full field-level reference lives in [DATA-DICTIONARY.md](./DATA-DICTIONARY.md). 
 
 | Entity | Purpose |
 |--------|---------|
-| Organization | Top-level tenant; billing + user root. |
-| Workspace | Isolation unit; 1:1 with `group_id`. |
+| Organization | Tenant boundary; owns billing, users, and the `group_id`. |
+| Workspace | Sub-scope within an org (`workspace_id`); shares the org `group_id`. |
 | User / UserMembership | A person and their role within a workspace. |
 | MCPToken | Scoped agent credential (hash + prefix + scopes + expiry). |
 | Agent | Registered MCP client metadata. |

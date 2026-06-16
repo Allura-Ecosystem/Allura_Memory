@@ -89,13 +89,13 @@ sequenceDiagram
   participant H as Owner/Admin
   participant API
   participant BB as Bumblebee
-  H->>API: create org → create workspace
-  API->>BB: generate group_id (server-side)
+  H->>API: create org (→ group_id) → create workspace (→ workspace_id)
+  API->>BB: generate org group_id; workspace_id sub-scope (server-side)
   H->>API: invite employee / create MCP token
   API->>BB: hash token, store prefix + scopes + expiry
   BB-->>H: raw token shown once
 ```
-Constraints: `group_id` server-generated (AD-01); raw token shown once, stored as hash (AD-03).
+Constraints: org `group_id` server-generated at org creation; workspaces get a `workspace_id` sub-scope sharing it (AD-01, ADR-001); raw token shown once, stored as hash (AD-03).
 
 ### 3. Runtime request path (agent)
 

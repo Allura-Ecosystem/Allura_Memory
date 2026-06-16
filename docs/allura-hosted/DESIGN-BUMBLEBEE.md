@@ -16,7 +16,7 @@ Bumblebee is the **single policy gate** (AD-07) in front of all MCP and API acti
 
 | ID | Implementation detail |
 |----|-----------------------|
-| F6 | Inject `group_id` from authenticated principal; reject any client-supplied `group_id`. |
+| F6 | Inject org `group_id` + `workspace_id` from the authenticated principal; reject any client-supplied scope. Workspace isolation is enforced at the API/CHECK layer (ADR-001). |
 | F7 | Validate MCP tokens / API keys: hash compare, expiry, revoked flag; update `last_used_at`. |
 | F8 | Enforce scope check against the action's required scope. |
 | F9 | Apply rate limits per token/user/workspace/agent. |
@@ -56,7 +56,7 @@ flowchart TD
 
 ## Business Rules / Constraints
 
-- `group_id` is **always** injected server-side; a request carrying its own `group_id` is rejected (RK-01).
+- `group_id` (org) and `workspace_id` are **always** injected server-side; a request carrying its own scope is rejected (RK-01). Cross-workspace reads within the same org are blocked at the API/CHECK layer.
 - Token comparison is hash-based; raw tokens never logged (AD-03, RK-03).
 - A `deny` is as auditable as a `permit` (F12, RK-06).
 - Lock mode `no_agent_writes` denies agent writes while permitting human writes.

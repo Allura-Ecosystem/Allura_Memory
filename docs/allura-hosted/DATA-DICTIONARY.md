@@ -11,6 +11,8 @@ Canonical field-level reference. No field name or enum value should appear in co
 
 > JSON schemas (to be added): `json-schema/hosted/*.schema.json`. Each entity section will link to its schema file once authored.
 
+> **Tenancy (ADR-001):** `group_id` identifies the **organization** — the only tenant boundary. `workspace_id` is a sub-scope *within* a `group_id`; workspace isolation is enforced at the API/CHECK layer. All `group_id` fields below carry the org scope (shared across the org's workspaces), never a per-workspace value. `allura-system` is platform-tier only.
+
 ---
 
 ## Organization
@@ -21,18 +23,20 @@ Canonical field-level reference. No field name or enum value should appear in co
 | `name` | string | Yes | Display name. |
 | `created_by` | uuid (User) | Yes | Founding user. |
 | `created_at` | timestamptz | Yes | Creation time. |
+| `group_id` | string | Yes | **Tenant boundary.** Server-generated org scope key, pattern `^allura-[a-z0-9-]+$` (e.g. `allura-faithmeats`). Immutable. (ADR-001) |
 | `plan` | enum(`free`,`team`,`enterprise`) | Yes | Billing tier (billing deferred). |
 
-Relationships: `Organization 1—N Workspace`.
+Relationships: `Organization 1—1 group_id`; `Organization 1—N Workspace`. The `group_id` lives here, not on Workspace.
 
 ## Workspace
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `id` | uuid | Yes | Primary key. |
-| `org_id` | uuid (Organization) | Yes | Parent tenant. |
+| `id` (workspace_id) | uuid | Yes | Primary key / sub-scope identifier within the org. |
+| `org_id` | uuid (Organization) | Yes | Parent tenant (owns the `group_id`). |
 | `name` | string | Yes | Display name. |
-| `group_id` | string | Yes | Server-generated scope key, pattern `^allura-[a-z0-9-]+$`. Immutable. |
+| `group_id` | string | Yes | Inherited from the parent org; **shared** by all workspaces in the org, not unique per workspace. (ADR-001) |
+| `team` | string | No | `metadata.team` label for role-within-tenant scoping. |
 | `lock_mode` | enum (see below) | Yes | Current workspace lock state. |
 | `created_at` | timestamptz | Yes | Creation time. |
 
@@ -46,7 +50,7 @@ Relationships: `Organization 1—N Workspace`.
 | `no_promotions` | Writes allowed; curator promotion disabled. |
 | `full_lockdown` | All actions denied except admin unlock. |
 
-Relationships: `Workspace 1—1 group_id`; `Workspace 1—N {UserMembership, MCPToken, Agent, Memory, AuditEvent}`.
+Relationships: `Workspace N—1 group_id` (shared via parent org); `Workspace 1—N {UserMembership, MCPToken, Agent, Memory, AuditEvent}` scoped by `workspace_id`.
 
 ## User
 
@@ -89,7 +93,7 @@ Relationships: `Workspace 1—1 group_id`; `Workspace 1—N {UserMembership, MCP
 | `agent_name` | string | Yes | Logical agent name. |
 | `org_id` | uuid (Organization) | Yes | Owning org. |
 | `workspace_id` | uuid (Workspace) | Yes | Bound workspace. |
-| `group_id` | string | Yes | Server-injected scope. |
+| `group_id` | string | Yes | Server-injected **org** scope (inherited from the parent org; never client-supplied). |
 | `scopes` | string[] | Yes | Granted scopes (see below). |
 | `expires_at` | timestamptz | Yes | Expiry. |
 | `revoked` | boolean | Yes | Revocation flag. |
@@ -135,7 +139,8 @@ Relationships: `Workspace 1—1 group_id`; `Workspace 1—N {UserMembership, MCP
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `id` | uuid | Yes | Primary key. |
-| `group_id` | string | Yes | Tenant scope. |
+| `group_id` | string | Yes | Org tenant scope (shared across the org). |
+| `workspace_id` | uuid | Yes | Workspace sub-scope within the org. |
 | `layer` | enum(`episodic`,`semantic`) | Yes | Storage layer. |
 | `content` | text | Yes | Memory body. |
 | `source` | string | Yes | Origin (agent, human, dream, import). |
