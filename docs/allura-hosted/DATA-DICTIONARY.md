@@ -1,0 +1,223 @@
+# Allura Hosted Platform — Data Dictionary
+
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has not yet been fully reviewed — this is a working design reference, not a final specification.
+> AI-generated content may contain inaccuracies or omissions.
+> When in doubt, defer to the source code, JSON schemas, and team consensus.
+
+Canonical field-level reference. No field name or enum value should appear in code/schema before it appears here. Anchor: [BLUEPRINT.md](./BLUEPRINT.md).
+
+> JSON schemas (to be added): `json-schema/hosted/*.schema.json`. Each entity section will link to its schema file once authored.
+
+---
+
+## Organization
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | uuid | Yes | Primary key. |
+| `name` | string | Yes | Display name. |
+| `created_by` | uuid (User) | Yes | Founding user. |
+| `created_at` | timestamptz | Yes | Creation time. |
+| `plan` | enum(`free`,`team`,`enterprise`) | Yes | Billing tier (billing deferred). |
+
+Relationships: `Organization 1—N Workspace`.
+
+## Workspace
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | uuid | Yes | Primary key. |
+| `org_id` | uuid (Organization) | Yes | Parent tenant. |
+| `name` | string | Yes | Display name. |
+| `group_id` | string | Yes | Server-generated scope key, pattern `^allura-[a-z0-9-]+$`. Immutable. |
+| `lock_mode` | enum (see below) | Yes | Current workspace lock state. |
+| `created_at` | timestamptz | Yes | Creation time. |
+
+### `lock_mode` values
+
+| Value | Meaning |
+|-------|---------|
+| `normal` | All actions permitted (subject to RBAC). |
+| `read_only` | No writes by anyone. |
+| `no_agent_writes` | Humans may write; agents may not. |
+| `no_promotions` | Writes allowed; curator promotion disabled. |
+| `full_lockdown` | All actions denied except admin unlock. |
+
+Relationships: `Workspace 1—1 group_id`; `Workspace 1—N {UserMembership, MCPToken, Agent, Memory, AuditEvent}`.
+
+## User
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | uuid | Yes | Primary key. |
+| `email` | string | Yes | Login identifier. |
+| `mfa_enabled` | boolean | Yes | Required true for admin-level memberships. |
+| `created_at` | timestamptz | Yes | Creation time. |
+
+## UserMembership
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | uuid | Yes | Primary key. |
+| `user_id` | uuid (User) | Yes | Member. |
+| `workspace_id` | uuid (Workspace) | Yes | Scope. |
+| `role` | enum (see Roles) | Yes | Assigned role. |
+| `created_at` | timestamptz | Yes | Grant time. |
+
+### Role values
+
+| Value | Purpose |
+|-------|---------|
+| `owner` | Full control, billing, users, security, delete workspace. |
+| `admin` | Manage users, roles, agents, tokens, governance settings. |
+| `reviewer` | Approve, reject, promote, supersede, deprecate memory. |
+| `employee` | Add/search memory, run assigned workflows, submit evidence. |
+| `viewer` | Read-only. |
+| `auditor` | Audit/export access, no mutation. |
+| `agent` | MCP-only access through scoped token. |
+
+## MCPToken
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | uuid | Yes | Primary key. |
+| `token_hash` | string | Yes | Hash of the raw token. Raw token is never stored. |
+| `token_prefix` | string | Yes | Short display prefix (e.g., `allura_mcp_ab12…`). |
+| `agent_name` | string | Yes | Logical agent name. |
+| `org_id` | uuid (Organization) | Yes | Owning org. |
+| `workspace_id` | uuid (Workspace) | Yes | Bound workspace. |
+| `group_id` | string | Yes | Server-injected scope. |
+| `scopes` | string[] | Yes | Granted scopes (see below). |
+| `expires_at` | timestamptz | Yes | Expiry. |
+| `revoked` | boolean | Yes | Revocation flag. |
+| `last_used_at` | timestamptz | No | Last successful use. |
+| `created_by` | uuid (User) | Yes | Issuing user. |
+
+### Scope values
+
+| Value | Grants |
+|-------|--------|
+| `memory:read` | Search/get/list memory. |
+| `memory:write` | Add memory. |
+| `memory:delete` | Soft-delete memory. |
+| `memory:forget` | Forget (redaction) memory. |
+| `memory:promote` | Promote to trusted knowledge (reviewer-only). |
+| `review:read` | View curator queue. |
+| `review:approve` | Approve proposals. |
+| `review:reject` | Reject proposals. |
+| `receipt:create` | Write audit receipts. |
+| `audit:read` | Read audit log. |
+| `audit:export` | Export audit log. |
+| `agents:create` / `agents:revoke` | Manage agents. |
+| `tokens:create` / `tokens:rotate` | Manage tokens. |
+| `workspace:lock` | Change lock mode. |
+| `admin:users` / `admin:roles` | Admin management. |
+
+**Default agent scopes:** `memory:read`, `memory:write`, `receipt:create`.
+**Reviewer scopes:** `memory:read`, `review:read`, `review:approve`, `review:reject`, `memory:promote`.
+
+## Agent
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | uuid | Yes | Primary key. |
+| `workspace_id` | uuid (Workspace) | Yes | Scope. |
+| `name` | string | Yes | Agent name. |
+| `type` | enum(`claude`,`codex`,`opencode`,`cursor`,`custom`) | Yes | Agent runtime. |
+| `token_id` | uuid (MCPToken) | No | Active token. |
+| `last_seen_at` | timestamptz | No | Last activity. |
+
+## Memory
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | uuid | Yes | Primary key. |
+| `group_id` | string | Yes | Tenant scope. |
+| `layer` | enum(`episodic`,`semantic`) | Yes | Storage layer. |
+| `content` | text | Yes | Memory body. |
+| `source` | string | Yes | Origin (agent, human, dream, import). |
+| `actor_id` | string | Yes | Who created it. |
+| `confidence` | float | No | 0–1 confidence. |
+| `status` | enum(`raw`,`proposed`,`approved`,`superseded`,`deprecated`,`deleted`) | Yes | Review/lifecycle state. |
+| `provenance_ids` | string[] | Yes | Evidence/trace references. |
+| `created_at` | timestamptz | Yes | Creation time. |
+
+Notes: episodic rows are append-only; semantic versions link via `SUPERSEDES`.
+
+## CuratorProposal
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | uuid | Yes | Primary key. |
+| `group_id` | string | Yes | Tenant scope. |
+| `memory_id` | uuid (Memory) | Yes | Candidate memory. |
+| `confidence` | float | No | Score. |
+| `evidence_ids` | string[] | Yes | Linked evidence. |
+| `status` | enum(`pending`,`approved`,`rejected`,`needs_evidence`) | Yes | Review state. |
+| `rationale` | text | Conditional | Required on approve/reject. |
+| `decided_by` | uuid (User) | Conditional | Reviewer. |
+| `decided_at` | timestamptz | Conditional | Decision time. |
+
+## AuditEvent
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | uuid | Yes | Primary key. |
+| `group_id` | string | Yes | Tenant scope. |
+| `actor_id` | string | Yes | User or agent. |
+| `role` | string | Yes | Actor role at decision time. |
+| `token_prefix` | string | No | If token-authenticated. |
+| `workspace_id` | uuid (Workspace) | Yes | Scope. |
+| `action` | string | Yes | Tool/endpoint invoked. |
+| `decision` | enum(`permit`,`deny`,`defer`) | Yes | Policy outcome. |
+| `evidence_ids` | string[] | No | Linked evidence. |
+| `prev_hash` | string | Yes | Previous event hash (chain). |
+| `hash` | string | Yes | This event hash. |
+| `created_at` | timestamptz | Yes | Append time. |
+
+## DreamRun
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Primary key. |
+| `workspace_id` | string | Yes | Scope. |
+| `group_id` | string | Yes | Tenant scope. |
+| `provider` | enum(`claude`,`openai`,`gemini`,`local`,`ruvector`,`screenpipe`,`github`,`notion`,`teams`,`slack`,`cursor`,`codex`,`opencode`) | Yes | Dream provider. |
+| `input_sources` | string[] | Yes | Source IDs. |
+| `status` | enum(`queued`,`running`,`completed`,`failed`,`canceled`) | Yes | Run state. |
+| `created_by` | string | Yes | Initiator. |
+| `created_at` | string | Yes | Creation time. |
+
+## DreamCandidate
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Primary key. |
+| `dream_run_id` | string | Yes | Parent run. |
+| `type` | enum(`new_memory`,`merge_duplicate`,`supersede_old`,`contradiction`,`pattern`,`risk`) | Yes | Candidate kind. |
+| `summary` | string | Yes | Human-readable summary. |
+| `evidence_ids` | string[] | Yes | Required evidence. |
+| `confidence` | number | Yes | 0–1 score. |
+| `requires_human_approval` | boolean (always true) | Yes | HITL invariant. |
+
+---
+
+## Events
+
+| Event | Producer | Consumer | Key payload fields |
+|-------|----------|----------|--------------------|
+| `memory.added` | Memory Engine | Curator, Audit | `group_id`, `memory_id`, `actor_id` |
+| `curator.proposed` | Curator | Command Center, Audit | `proposal_id`, `confidence` |
+| `curator.approved` / `curator.rejected` | Reviewer (HITL) | Memory Engine, Audit | `proposal_id`, `rationale`, `decided_by` |
+| `token.revoked` / `token.rotated` | Bumblebee | MCP Gateway, Audit | `token_prefix`, `workspace_id` |
+| `dream.completed` | Dream Engine | Curator, Audit | `dream_run_id`, candidate count |
+
+---
+
+## References
+
+- [BLUEPRINT.md](./BLUEPRINT.md)
+- [DESIGN-AUTH.md](./DESIGN-AUTH.md) · [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [DESIGN-MCP-GATEWAY.md](./DESIGN-MCP-GATEWAY.md) · [DESIGN-CURATOR.md](./DESIGN-CURATOR.md) · [DESIGN-AUDIT.md](./DESIGN-AUDIT.md)
