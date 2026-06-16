@@ -19,7 +19,7 @@ Anchor: [BLUEPRINT.md](./BLUEPRINT.md) · Coverage: [REQUIREMENTS-MATRIX.md](./R
 - **Decision:** All tenant isolation is enforced by server-side scope injection. The **organization is the only tenant boundary** (`group_id`, e.g. `allura-faithmeats`); a **workspace** is a `workspace_id` sub-scope *inside* that `group_id`, isolated at the API/CHECK layer. Clients (humans and agents) never supply `group_id` or `workspace_id`. `allura-system` is platform-tier only.
 - **Rationale:** Client-supplied scope keys are the single largest cross-tenant leak vector. Injecting server-side from the authenticated session/token removes the class of bug entirely. Modeling the org (not the workspace) as the `group_id` matches existing governed canon (ADR-001: team/workspace = role within a tenant, not its own `group_id`) and avoids `group_id` proliferation.
 - **Alternatives considered:** Workspace = its own `group_id` per the original Notion plan (rejected — conflicts with ADR-001, mints a `group_id` per workspace); client-supplied `group_id` with validation (rejected — validation gaps leak); row-level security only (kept as defense-in-depth, not sole control).
-- **Consequences:** Every code path that reaches storage must run behind Bumblebee with org `group_id` + `workspace_id`. Direct DB writes that bypass injection are forbidden. Cross-workspace reads within an org are blocked at the API/CHECK layer.
+- **Consequences:** Every code path that reaches storage must run behind Allura Guard with org `group_id` + `workspace_id`. Direct DB writes that bypass injection are forbidden. Cross-workspace reads within an org are blocked at the API/CHECK layer.
 - **References:** F6, F15, RK-01; governed canon ADR-001.
 
 ### AD-02 — Agents authenticate with scoped MCP tokens
@@ -58,10 +58,10 @@ Anchor: [BLUEPRINT.md](./BLUEPRINT.md) · Coverage: [REQUIREMENTS-MATRIX.md](./R
 - **Rationale:** Immutable history enables audit and rollback.
 - **References:** F18.
 
-### AD-07 — Bumblebee is the single policy gate
+### AD-07 — Allura Guard is the single policy gate
 
 - **Status:** Decided
-- **Decision:** Bumblebee sits in front of all MCP and API actions as the policy gate.
+- **Decision:** Allura Guard sits in front of all MCP and API actions as the policy gate.
 - **Rationale:** One controlled door enforces auth, scope, rate limits, injection, and audit consistently.
 - **References:** F6–F12, RK-10.
 

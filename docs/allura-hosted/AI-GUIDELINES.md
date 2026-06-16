@@ -22,7 +22,7 @@ This document scopes documentation standards for the **Allura Hosted Platform** 
 | Risks & Decisions | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 | Data Dictionary | [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) |
 | Design — Auth | [DESIGN-AUTH.md](./DESIGN-AUTH.md) |
-| Design — Bumblebee | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) |
+| Design — Allura Guard | [DESIGN-GUARD.md](./DESIGN-GUARD.md) |
 | Design — MCP Gateway | [DESIGN-MCP-GATEWAY.md](./DESIGN-MCP-GATEWAY.md) |
 | Design — Memory Command Center | [DESIGN-MEMORY-COMMAND-CENTER.md](./DESIGN-MEMORY-COMMAND-CENTER.md) |
 | Design — Curator | [DESIGN-CURATOR.md](./DESIGN-CURATOR.md) |
@@ -34,7 +34,7 @@ This document scopes documentation standards for the **Allura Hosted Platform** 
 
 ## Authoring Order
 
-1. BLUEPRINT → 2. RISKS-AND-DECISIONS → 3. SOLUTION-ARCHITECTURE → 4. DATA-DICTIONARY → 5. DESIGN-AUTH → 6. DESIGN-BUMBLEBEE → 7. DESIGN-MCP-GATEWAY → 8. DESIGN-MEMORY-COMMAND-CENTER → 9. REQUIREMENTS-MATRIX → (security/ops docs alongside).
+1. BLUEPRINT → 2. RISKS-AND-DECISIONS → 3. SOLUTION-ARCHITECTURE → 4. DATA-DICTIONARY → 5. DESIGN-AUTH → 6. DESIGN-GUARD → 7. DESIGN-MCP-GATEWAY → 8. DESIGN-MEMORY-COMMAND-CENTER → 9. REQUIREMENTS-MATRIX → (security/ops docs alongside).
 
 ## Rules (delta)
 

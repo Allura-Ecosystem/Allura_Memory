@@ -6,17 +6,17 @@
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
 > When in doubt, defer to the source code, JSON schemas, and team consensus.
 
-Anchor: [BLUEPRINT.md](./BLUEPRINT.md) (F13–F15). Related: [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md).
+Anchor: [BLUEPRINT.md](./BLUEPRINT.md) (F13–F15). Related: [DESIGN-GUARD.md](./DESIGN-GUARD.md).
 
 ## Overview
 
-The MCP Gateway lets agents (Claude, Codex, OpenCode, Cursor, custom) connect to Allura over **Streamable HTTP** (SSE + JSON-RPC) at `/mcp`. Every call is validated and scoped by Bumblebee before any memory tool runs.
+The MCP Gateway lets agents (Claude, Codex, OpenCode, Cursor, custom) connect to Allura over **Streamable HTTP** (SSE + JSON-RPC) at `/mcp`. Every call is validated and scoped by Allura Guard before any memory tool runs.
 
 ## Functional Requirements
 
 | ID | Implementation detail |
 |----|-----------------------|
-| F13 | `/mcp` accepts a bearer MCP token; Bumblebee validates it per request. |
+| F13 | `/mcp` accepts a bearer MCP token; Allura Guard validates it per request. |
 | F14 | Gateway resolves workspace + `group_id` and checks scopes before tool execution. |
 | F15 | The `group_id` is server-injected; an agent-supplied `group_id` is ignored/rejected. |
 
@@ -34,7 +34,7 @@ Exposed MCP tools (scoped): `memory_add`, `memory_search`, `memory_get`, `memory
 sequenceDiagram
   participant Agent
   participant GW as MCP Gateway
-  participant BB as Bumblebee
+  participant BB as Allura Guard
   participant ME as Memory Engine
   participant AUD as Audit
   Agent->>GW: POST /mcp (Bearer token, tool call)
@@ -65,4 +65,4 @@ sequenceDiagram
 ## Important Constraints
 
 - Transport must support SSE; clients must send the documented `Accept` header.
-- No gateway path bypasses Bumblebee.
+- No gateway path bypasses Allura Guard.

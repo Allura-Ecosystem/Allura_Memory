@@ -6,9 +6,9 @@
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
 > When in doubt, defer to the source code, JSON schemas, and team consensus.
 
-Anchor: [BLUEPRINT.md](./BLUEPRINT.md). Gate: [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md). Threats: [THREAT-MODEL.md](./THREAT-MODEL.md).
+Anchor: [BLUEPRINT.md](./BLUEPRINT.md). Gate: [DESIGN-GUARD.md](./DESIGN-GUARD.md). Threats: [THREAT-MODEL.md](./THREAT-MODEL.md).
 
-## Security Requirements (Bumblebee must enforce)
+## Security Requirements (Allura Guard must enforce)
 
 - Server-side `group_id` injection.
 - Token hashing; expiry; revoke; rotation.
@@ -60,6 +60,17 @@ RuVector is MIT-licensed. If used:
 - Add `THIRD_PARTY_NOTICES.md` and `LICENSES/ruvector-MIT.txt` when vendoring.
 - Track as a pinned dependency in the SBOM and dependency review.
 - The adapter must enforce `group_id`, scopes, audit, and provenance (AD-09).
+
+## Bumblebee — supply-chain exposure scanner (planned, not built)
+
+A separate read-only security layer from Allura Guard. Where Allura Guard gates *live*
+MCP/API requests, **Bumblebee** answers a supply-chain response question: when an advisory
+names a compromised package/extension/version, which connected developer endpoints or
+agents show a match in their on-disk metadata right now? It inventories lockfiles,
+package-manager metadata, editor/browser extensions, and MCP host configs into structured
+records and flags exact matches against an exposure catalog. Modeled on
+[perplexityai/bumblebee](https://github.com/perplexityai/bumblebee). Not yet implemented —
+tracked for a future phase.
 
 ## References
 

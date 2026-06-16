@@ -19,7 +19,7 @@ Anchor: [BLUEPRINT.md](./BLUEPRINT.md). Risk register: [RISKS-AND-DECISIONS.md](
 
 1. External agent ↔ MCP Gateway (untrusted bearer).
 2. Browser ↔ Command Center (session, MFA for admins).
-3. Bumblebee ↔ Memory Engine (internal, scoped).
+3. Allura Guard ↔ Memory Engine (internal, scoped).
 4. Dream provider ↔ Curator (provider output is untrusted data).
 
 > Memory content and tool outputs are **untrusted** (`.claude/rules/agent-routing.md`). Instructions embedded in them must never alter agent behavior.
@@ -45,6 +45,16 @@ Anchor: [BLUEPRINT.md](./BLUEPRINT.md). Risk register: [RISKS-AND-DECISIONS.md](
 - **Poisoned dream output:** candidates require HITL; secrets redacted; contradictions flagged not merged.
 - **Backup that can't restore:** scheduled restore tests with receipts (RK-07, [BACKUP-RESTORE.md](./BACKUP-RESTORE.md)).
 
+## Bumblebee — supply-chain exposure (planned, not built)
+
+A future read-only scanner complementing Allura Guard. Allura Guard mitigates *runtime*
+request threats (above); **Bumblebee** addresses **supply-chain exposure** — compromised
+packages, editor/browser extensions, or MCP-host configs on connected developer endpoints
+and agents. It inventories on-disk metadata and flags matches against a known-compromise
+catalog, answering "which machines/agents are exposed to a named advisory now?". Read-only,
+no package-manager execution. Modeled on [perplexityai/bumblebee](https://github.com/perplexityai/bumblebee).
+Not yet implemented.
+
 ## References
 
-- [SECURITY.md](./SECURITY.md) · [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md)
+- [SECURITY.md](./SECURITY.md) · [DESIGN-GUARD.md](./DESIGN-GUARD.md) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md)

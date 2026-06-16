@@ -235,7 +235,7 @@ Notes: episodic rows are append-only; semantic versions link via `SUPERSEDES`.
 | `memory.added` | Memory Engine | Curator, Audit | `group_id`, `memory_id`, `actor_id` |
 | `curator.proposed` | Curator | Command Center, Audit | `proposal_id`, `confidence` |
 | `curator.approved` / `curator.rejected` | Reviewer (HITL) | Memory Engine, Audit | `proposal_id`, `rationale`, `decided_by` |
-| `token.revoked` / `token.rotated` | Bumblebee | MCP Gateway, Audit | `token_prefix`, `workspace_id` |
+| `token.revoked` / `token.rotated` | Allura Guard | MCP Gateway, Audit | `token_prefix`, `workspace_id` |
 | `dream.completed` | Dream Engine | Curator, Audit | `dream_run_id`, candidate count |
 
 ---
@@ -243,4 +243,4 @@ Notes: episodic rows are append-only; semantic versions link via `SUPERSEDES`.
 ## References
 
 - [BLUEPRINT.md](./BLUEPRINT.md)
-- [DESIGN-AUTH.md](./DESIGN-AUTH.md) · [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [DESIGN-MCP-GATEWAY.md](./DESIGN-MCP-GATEWAY.md) · [DESIGN-CURATOR.md](./DESIGN-CURATOR.md) · [DESIGN-AUDIT.md](./DESIGN-AUDIT.md)
+- [DESIGN-AUTH.md](./DESIGN-AUTH.md) · [DESIGN-GUARD.md](./DESIGN-GUARD.md) · [DESIGN-MCP-GATEWAY.md](./DESIGN-MCP-GATEWAY.md) · [DESIGN-CURATOR.md](./DESIGN-CURATOR.md) · [DESIGN-AUDIT.md](./DESIGN-AUDIT.md)

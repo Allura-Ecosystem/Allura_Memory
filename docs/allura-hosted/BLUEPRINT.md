@@ -13,9 +13,9 @@
 
 ## Summary
 
-Allura Hosted Platform is a **multi-tenant governed AI memory system** for people, teams, and AI agents. It provides a **Memory Command Center** for humans, **Bumblebee** as the security gateway, and an **MCP Gateway** for agents (Claude, Codex, OpenCode, Cursor, and custom tools).
+Allura Hosted Platform is a **multi-tenant governed AI memory system** for people, teams, and AI agents. It provides a **Memory Command Center** for humans, **Allura Guard** as the security gateway, and an **MCP Gateway** for agents (Claude, Codex, OpenCode, Cursor, and custom tools).
 
-**Core product sentence:** Allura remembers. Bumblebee guards the hive. Agents connect through MCP. Humans approve what becomes trusted knowledge.
+**Core product sentence:** Allura remembers. Allura Guard guards the hive. Agents connect through MCP. Humans approve what becomes trusted knowledge.
 
 This Blueprint is the single source of design intent. All `DESIGN-*`, `SOLUTION-ARCHITECTURE`, `REQUIREMENTS-MATRIX`, `DATA-DICTIONARY`, and `RISKS-AND-DECISIONS` documents trace back to it.
 
@@ -31,7 +31,8 @@ This Blueprint is the single source of design intent. All `DESIGN-*`, `SOLUTION-
 | **workspace_id** | Sub-tenant scope inside a `group_id`. Workspace isolation is enforced at the API/CHECK layer, not by minting a new `group_id` per workspace. |
 | **Memory** | A governed unit of knowledge. Episodic (raw trace, PostgreSQL) or semantic (approved knowledge, Neo4j). |
 | **Curator** | The review queue where proposed memories await human approval before promotion. |
-| **Bumblebee** | The policy gate in front of all MCP/API actions: auth, RBAC, scope, rate limits, group_id injection, audit. |
+| **Allura Guard** | The policy gate in front of all MCP/API actions: auth, RBAC, scope, rate limits, group_id injection, audit. |
+| **Bumblebee** *(planned — not built)* | A read-only **supply-chain exposure scanner** for connected developer endpoints/agents. Inventories on-disk package, extension, and MCP-config metadata and flags matches against a known-compromise catalog. Distinct from Allura Guard (which gates live requests); Bumblebee answers "which machines/agents are exposed to a named advisory right now?". Modeled on [perplexityai/bumblebee](https://github.com/perplexityai/bumblebee). |
 | **MCP Token** | A scoped bearer credential for agents. Stored as a hash, never raw. |
 | **Receipt** | An append-only audit artifact proving an action happened (actor, scope, decision, evidence). |
 | **Dream Run** | A platform-agnostic memory-refinement job that produces approval candidates, never trusted memory directly. |
@@ -67,23 +68,23 @@ Grouped by domain area. Each maps to one or more `B#`.
 | **F4** | Employees access only assigned workspaces. |
 | **F5** | MFA is required for admin-level roles. |
 
-### Bumblebee Security Gateway (→ B1, B3, B6)
+### Allura Guard Security Gateway (→ B1, B3, B6)
 
 | ID | Requirement |
 |----|-------------|
-| **F6** | Bumblebee injects `group_id` server-side on every action. |
-| **F7** | Bumblebee validates MCP tokens and API keys (hash compare, expiry, revoke). |
-| **F8** | Bumblebee enforces RBAC scope checks before any tool executes. |
-| **F9** | Bumblebee applies rate limits per token/user/workspace/agent. |
-| **F10** | Bumblebee scans for secrets before memory storage. |
-| **F11** | Bumblebee supports workspace lock modes (normal, read-only, no-agent-writes, no-promotions, full lockdown). |
-| **F12** | Bumblebee writes a security audit event for every permit and deny. |
+| **F6** | Allura Guard injects `group_id` server-side on every action. |
+| **F7** | Allura Guard validates MCP tokens and API keys (hash compare, expiry, revoke). |
+| **F8** | Allura Guard enforces RBAC scope checks before any tool executes. |
+| **F9** | Allura Guard applies rate limits per token/user/workspace/agent. |
+| **F10** | Allura Guard scans for secrets before memory storage. |
+| **F11** | Allura Guard supports workspace lock modes (normal, read-only, no-agent-writes, no-promotions, full lockdown). |
+| **F12** | Allura Guard writes a security audit event for every permit and deny. |
 
 ### MCP Gateway (→ B3)
 
 | ID | Requirement |
 |----|-------------|
-| **F13** | Agents connect to `/mcp` with a bearer token validated by Bumblebee. |
+| **F13** | Agents connect to `/mcp` with a bearer token validated by Allura Guard. |
 | **F14** | The gateway injects workspace + `group_id` and checks scopes before executing a memory tool. |
 | **F15** | The agent cannot override `group_id`. |
 
@@ -141,9 +142,9 @@ Grouped by domain area. Each maps to one or more `B#`.
 ```
 Allura Platform
 ├── Allura Memory Engine      — PostgreSQL episodic · Neo4j semantic · Curator queue · Audit receipts
-├── Bumblebee Security Gateway — login · RBAC · MCP/API auth · group_id enforcement · rate limits · secret scan · audit
+├── Allura Guard Security Gateway — login · RBAC · MCP/API auth · group_id enforcement · rate limits · secret scan · audit
 ├── MCP Gateway               — Claude · Codex · OpenCode · Cursor · custom agents
-├── Memory Command Center      — Overview · Memories · Curator · Agents · Bumblebee · Audit · Workflows · SDK/MCP · Settings
+├── Memory Command Center      — Overview · Memories · Curator · Agents · Allura Guard · Audit · Workflows · SDK/MCP · Settings
 ├── Developer Platform         — @allura/sdk · allura CLI · OpenAPI · MCP templates · workspace templates
 └── Ops Layer                 — Docker Compose · backups · restore testing · observability · quotas · billing later
 ```
@@ -160,7 +161,7 @@ Named components and their responsibilities are detailed in [SOLUTION-ARCHITECTU
 graph TD
   H[Human Operator] -->|browser| CC[Memory Command Center]
   A[AI Agent] -->|MCP bearer token| GW[MCP Gateway]
-  CC --> BB[Bumblebee Security Gateway]
+  CC --> BB[Allura Guard Security Gateway]
   GW --> BB
   BB --> ME[Allura Memory Engine]
   ME --> PG[(PostgreSQL — episodic)]
@@ -176,7 +177,7 @@ graph TD
 sequenceDiagram
   participant Agent
   participant GW as MCP Gateway
-  participant BB as Bumblebee
+  participant BB as Allura Guard
   participant ME as Memory Engine
   participant AUD as Audit
   Agent->>GW: connect /mcp (bearer token)
@@ -231,7 +232,7 @@ Full field-level reference lives in [DATA-DICTIONARY.md](./DATA-DICTIONARY.md). 
 - Agents cannot approve their own memory promotions (AD-04).
 - All memory writes produce append-only audit records (AD-05).
 - Semantic memory is versioned through supersession, not mutation (AD-06).
-- Bumblebee is the policy gate in front of all MCP/API actions (AD-07).
+- Allura Guard is the policy gate in front of all MCP/API actions (AD-07).
 - The dashboard is a control plane, not the source of memory truth (AD-08).
 
 Decision records: [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md).
@@ -251,7 +252,7 @@ Decision records: [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md).
 High-level grouping (full contracts in the `DESIGN-*` docs):
 
 - **Auth/Tenancy:** `POST /orgs`, `POST /workspaces`, `POST /invites`, `POST /sessions`
-- **Bumblebee:** `POST /tokens`, `POST /tokens/:id/rotate`, `POST /tokens/:id/revoke`, `POST /workspaces/:id/lock`
+- **Allura Guard:** `POST /tokens`, `POST /tokens/:id/rotate`, `POST /tokens/:id/revoke`, `POST /workspaces/:id/lock`
 - **MCP Gateway:** `POST /mcp` (Streamable HTTP, SSE + JSON-RPC)
 - **Memory:** `memory_add`, `memory_search`, `memory_get`, `memory_list`, `memory_delete`
 - **Curator:** `GET /curator/pending`, `POST /curator/:id/approve`, `POST /curator/:id/reject`
@@ -275,7 +276,7 @@ High-level grouping (full contracts in the `DESIGN-*` docs):
 | `memory.added` | Memory Engine | Curator, Audit |
 | `curator.proposed` | Curator | Command Center, Audit |
 | `curator.approved` / `curator.rejected` | Reviewer (HITL) | Memory Engine (Neo4j promote), Audit |
-| `token.revoked` / `token.rotated` | Bumblebee | MCP Gateway, Audit |
+| `token.revoked` / `token.rotated` | Allura Guard | MCP Gateway, Audit |
 | `dream.completed` | Dream Engine | Curator, Audit |
 
 ---
@@ -286,7 +287,7 @@ High-level grouping (full contracts in the `DESIGN-*` docs):
 - [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md)
 - [DATA-DICTIONARY.md](./DATA-DICTIONARY.md)
 - [REQUIREMENTS-MATRIX.md](./REQUIREMENTS-MATRIX.md)
-- Design docs: [AUTH](./DESIGN-AUTH.md) · [BUMBLEBEE](./DESIGN-BUMBLEBEE.md) · [MCP-GATEWAY](./DESIGN-MCP-GATEWAY.md) · [MEMORY-COMMAND-CENTER](./DESIGN-MEMORY-COMMAND-CENTER.md) · [CURATOR](./DESIGN-CURATOR.md) · [AUDIT](./DESIGN-AUDIT.md)
+- Design docs: [AUTH](./DESIGN-AUTH.md) · [ALLURA GUARD](./DESIGN-GUARD.md) · [MCP-GATEWAY](./DESIGN-MCP-GATEWAY.md) · [MEMORY-COMMAND-CENTER](./DESIGN-MEMORY-COMMAND-CENTER.md) · [CURATOR](./DESIGN-CURATOR.md) · [AUDIT](./DESIGN-AUDIT.md)
 - Security: [SECURITY.md](./SECURITY.md) · [THREAT-MODEL.md](./THREAT-MODEL.md)
 - Ops: [DEPLOYMENT.md](./DEPLOYMENT.md) · [BACKUP-RESTORE.md](./BACKUP-RESTORE.md)
 - Standards: [AI-GUIDELINES.md](./AI-GUIDELINES.md)

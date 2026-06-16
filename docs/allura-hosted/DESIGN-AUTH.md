@@ -6,11 +6,11 @@
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
 > When in doubt, defer to the source code, JSON schemas, and team consensus.
 
-Anchor: [BLUEPRINT.md](./BLUEPRINT.md) (F1–F5). Related: [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md).
+Anchor: [BLUEPRINT.md](./BLUEPRINT.md) (F1–F5). Related: [DESIGN-GUARD.md](./DESIGN-GUARD.md).
 
 ## Overview
 
-Covers human login, organizations, workspaces, membership, roles, and `group_id` generation. This area establishes identity and tenant scope; Bumblebee then enforces it on every request.
+Covers human login, organizations, workspaces, membership, roles, and `group_id` generation. This area establishes identity and tenant scope; Allura Guard then enforces it on every request.
 
 ## Functional Requirements
 
@@ -63,4 +63,4 @@ stateDiagram-v2
 ## Important Constraints
 
 - Passwords/credentials never logged. Sessions are short-lived; refresh is server-validated.
-- All tenancy decisions defer to Bumblebee at request time ([DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md)).
+- All tenancy decisions defer to Allura Guard at request time ([DESIGN-GUARD.md](./DESIGN-GUARD.md)).

@@ -1,7 +1,7 @@
 // @allura/mcp-server — MCP Gateway tool registry (scaffold stub).
 //
 // The real gateway (DESIGN-MCP-GATEWAY) validates a bearer MCP token via
-// Bumblebee, injects the org `group_id` + `workspace_id` (never client-supplied,
+// Allura Guard, injects the org `group_id` + `workspace_id` (never client-supplied,
 // ADR-001), checks scopes, then executes the memory tool and writes an audit event.
 // This stub only declares the tool registry and scope gating.
 

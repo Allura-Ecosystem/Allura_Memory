@@ -14,12 +14,12 @@ Coverage map for [BLUEPRINT.md](./BLUEPRINT.md). Traces Business → Functional 
 
 | Business Req | Functional Reqs | Use Cases |
 |--------------|-----------------|-----------|
-| B1 Multi-tenant w/ isolation | F1, F2, F6, F15 | AUTH-UC1, BB-UC1, MCP-UC3 |
+| B1 Multi-tenant w/ isolation | F1, F2, F6, F15 | AUTH-UC1, AG-UC1, MCP-UC3 |
 | B2 Humans manage agent memory | F16, F19, F20, F31 | CC-UC1, CUR-UC1 |
-| B3 Agents via scoped MCP tokens | F7, F13, F14, F15 | MCP-UC1, BB-UC2 |
+| B3 Agents via scoped MCP tokens | F7, F13, F14, F15 | MCP-UC1, AG-UC2 |
 | B4 Only humans promote | F20, F21, F22 | CUR-UC1, CUR-UC2, MCP-UC2 |
 | B5 Evidence/approval/audit visible | F19, F23, F24, F25 | CC-UC1, AUD-UC1, AUD-UC3 |
-| B6 Revoke/rotate/lock/offboard | F3, F5, F8, F9, F11 | BB-UC2, BB-UC4, CC-UC2 |
+| B6 Revoke/rotate/lock/offboard | F3, F5, F8, F9, F11 | AG-UC2, AG-UC4, CC-UC2 |
 | B7 Backups + provable restore | F29, F25 | AUD-UC2 |
 | B8 Developer integration | F26, F27, F28 | CC-UC3 (SDK/MCP) |
 
@@ -37,16 +37,16 @@ Coverage map for [BLUEPRINT.md](./BLUEPRINT.md). Traces Business → Functional 
 | F4 | Scope access to assigned workspaces | session resolution · [DESIGN-AUTH.md](./DESIGN-AUTH.md) |
 | F5 | MFA for admins | `POST /sessions` · [DESIGN-AUTH.md](./DESIGN-AUTH.md) |
 
-### Bumblebee
+### Allura Guard
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| F6 | Server-side group_id injection | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [AD-01](./RISKS-AND-DECISIONS.md) |
-| F7 | Token/API-key validation | `POST/GET /api/tokens` + `POST /api/tokens/:id/revoke` (`src/app/api/tokens/`) · validate via `src/lib/guard/validate-token.ts` · [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [AD-03](./RISKS-AND-DECISIONS.md) |
-| F8 | Scope checks | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) |
-| F9 | Rate limits | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [RK-04](./RISKS-AND-DECISIONS.md) |
-| F10 | Secret scanning | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [RK-08](./RISKS-AND-DECISIONS.md) |
-| F11 | Workspace lock modes | `POST /workspaces/:id/lock` · [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) |
+| F6 | Server-side group_id injection | [DESIGN-GUARD.md](./DESIGN-GUARD.md) · [AD-01](./RISKS-AND-DECISIONS.md) |
+| F7 | Token/API-key validation | `POST/GET /api/tokens` + `POST /api/tokens/:id/revoke` (`src/app/api/tokens/`) · validate via `src/lib/guard/validate-token.ts` · [DESIGN-GUARD.md](./DESIGN-GUARD.md) · [AD-03](./RISKS-AND-DECISIONS.md) |
+| F8 | Scope checks | [DESIGN-GUARD.md](./DESIGN-GUARD.md) |
+| F9 | Rate limits | [DESIGN-GUARD.md](./DESIGN-GUARD.md) · [RK-04](./RISKS-AND-DECISIONS.md) |
+| F10 | Secret scanning | [DESIGN-GUARD.md](./DESIGN-GUARD.md) · [RK-08](./RISKS-AND-DECISIONS.md) |
+| F11 | Workspace lock modes | `POST /workspaces/:id/lock` · [DESIGN-GUARD.md](./DESIGN-GUARD.md) |
 | F12 | Audit permit/deny | [DESIGN-AUDIT.md](./DESIGN-AUDIT.md) · [AD-05](./RISKS-AND-DECISIONS.md) |
 
 ### MCP Gateway
@@ -59,7 +59,7 @@ Coverage map for [BLUEPRINT.md](./BLUEPRINT.md). Traces Business → Functional 
 
 #### Phase 1 slice — implemented (verified)
 
-The end-to-end Bumblebee spine is implemented and verified (unit lane + live-DB smoke
+The end-to-end Allura Guard spine is implemented and verified (unit lane + live-DB smoke
 `scripts/verify-hosted-slice.ts`). Implementing files:
 
 | Req | Implemented by |
@@ -130,7 +130,7 @@ lock-mode enforcement (F11), admin token/workspace HTTP routes, Command Center U
 | Area | Use Cases |
 |------|-----------|
 | Auth | AUTH-UC1, AUTH-UC2, AUTH-UC3 |
-| Bumblebee | BB-UC1, BB-UC2, BB-UC3, BB-UC4 |
+| Allura Guard | AG-UC1, AG-UC2, AG-UC3, AG-UC4 |
 | MCP Gateway | MCP-UC1, MCP-UC2, MCP-UC3 |
 | Command Center | CC-UC1, CC-UC2, CC-UC3 |
 | Curator | CUR-UC1, CUR-UC2, CUR-UC3 |

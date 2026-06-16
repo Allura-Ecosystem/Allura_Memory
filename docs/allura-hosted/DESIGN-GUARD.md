@@ -1,4 +1,4 @@
-# DESIGN-BUMBLEBEE — Security Gateway
+# DESIGN-GUARD — Security Gateway
 
 > [!NOTE]
 > **AI-Assisted Documentation**
@@ -10,7 +10,7 @@ Anchor: [BLUEPRINT.md](./BLUEPRINT.md) (F6–F12). Related: [DESIGN-MCP-GATEWAY.
 
 ## Overview
 
-Bumblebee is the **single policy gate** (AD-07) in front of all MCP and API actions. It authenticates, injects `group_id`, checks scopes and rate limits, enforces lock modes, scans for secrets, and audits every decision.
+Allura Guard is the **single policy gate** (AD-07) in front of all MCP and API actions. It authenticates, injects `group_id`, checks scopes and rate limits, enforces lock modes, scans for secrets, and audits every decision.
 
 ## Functional Requirements
 
@@ -64,12 +64,12 @@ flowchart TD
 
 ## Use Cases
 
-- **BB-UC1:** Agent calls `memory_add`; Bumblebee injects `group_id`, checks `memory:write`, permits, audits.
-- **BB-UC2:** Revoked token used → deny + audit.
-- **BB-UC3:** Memory content with an API key triggers secret scan → write denied (RK-08).
-- **BB-UC4:** Workspace in `full_lockdown` → all non-admin actions denied.
+- **AG-UC1:** Agent calls `memory_add`; Allura Guard injects `group_id`, checks `memory:write`, permits, audits.
+- **AG-UC2:** Revoked token used → deny + audit.
+- **AG-UC3:** Memory content with an API key triggers secret scan → write denied (RK-08).
+- **AG-UC4:** Workspace in `full_lockdown` → all non-admin actions denied.
 
 ## Important Constraints
 
-- Bumblebee is on the request hot path; checks must be O(1)/indexed lookups.
+- Allura Guard is on the request hot path; checks must be O(1)/indexed lookups.
 - Fail closed: any uncertainty resolves to deny + audit.

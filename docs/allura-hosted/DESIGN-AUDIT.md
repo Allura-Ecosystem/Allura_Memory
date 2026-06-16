@@ -6,7 +6,7 @@
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
 > When in doubt, defer to the source code, JSON schemas, and team consensus.
 
-Anchor: [BLUEPRINT.md](./BLUEPRINT.md) (F24–F25). Related: [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md), [BACKUP-RESTORE.md](./BACKUP-RESTORE.md).
+Anchor: [BLUEPRINT.md](./BLUEPRINT.md) (F24–F25). Related: [DESIGN-GUARD.md](./DESIGN-GUARD.md), [BACKUP-RESTORE.md](./BACKUP-RESTORE.md).
 
 ## Overview
 

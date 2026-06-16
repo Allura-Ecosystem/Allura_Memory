@@ -13,7 +13,7 @@ Topological view — who calls what. Complements the data-and-API view in [BLUEP
 
 ## Architectural Positioning
 
-Allura Hosted is a **governed control plane + data plane**: the Memory Command Center and MCP Gateway are entry points; **Bumblebee** is the single policy gate; the **Memory Engine** is the data plane. The dashboard never touches storage directly (AD-08).
+Allura Hosted is a **governed control plane + data plane**: the Memory Command Center and MCP Gateway are entry points; **Allura Guard** is the single policy gate; the **Memory Engine** is the data plane. The dashboard never touches storage directly (AD-08).
 
 ### Consumer classes
 
@@ -41,7 +41,7 @@ graph LR
     CC[Memory Command Center]
     GW[MCP Gateway /mcp]
     API[REST API]
-    BB[Bumblebee Policy Gate]
+    BB[Allura Guard Policy Gate]
     ME[Memory Engine]
     CUR[Curator]
     DRE[Dream Engine]
@@ -71,7 +71,7 @@ graph LR
 sequenceDiagram
   participant H as Operator
   participant CC as Command Center
-  participant BB as Bumblebee
+  participant BB as Allura Guard
   participant ME as Memory Engine
   H->>CC: action (e.g., approve proposal)
   CC->>BB: API call (session)
@@ -88,7 +88,7 @@ Constraints: session + MFA for admin actions; all writes audited; UI cannot bypa
 sequenceDiagram
   participant H as Owner/Admin
   participant API
-  participant BB as Bumblebee
+  participant BB as Allura Guard
   H->>API: create org (→ group_id) → create workspace (→ workspace_id)
   API->>BB: generate org group_id; workspace_id sub-scope (server-side)
   H->>API: invite employee / create MCP token
@@ -101,7 +101,7 @@ Constraints: org `group_id` server-generated at org creation; workspaces get a `
 
 See [BLUEPRINT.md](./BLUEPRINT.md#agent-request-flow). Constraints: bearer token validated each request; scope + rate limit + lock-mode checked; `group_id` injected, never client-supplied (AD-01, AD-02, F15).
 
-### 4. Enforcement (Bumblebee decision chain)
+### 4. Enforcement (Allura Guard decision chain)
 
 ```mermaid
 flowchart TD
@@ -148,7 +148,7 @@ Constraints: agents cannot approve (AD-04); promotion serialized; supersession o
 | I1 | Operator → Command Center | HTTPS | UI actions | AD-08 |
 | I2 | Agent → MCP Gateway | Streamable HTTP (SSE+JSON-RPC) | MCP tool calls | AD-02, AD-07, RK-03 |
 | I3 | SDK/CLI → REST API | HTTPS+OpenAPI | typed requests | AD-07 |
-| I4 | Bumblebee → Memory Engine | internal | scoped queries | AD-01, RK-01 |
+| I4 | Allura Guard → Memory Engine | internal | scoped queries | AD-01, RK-01 |
 | I5 | Curator → Neo4j | internal | versioned writes | AD-06 |
 | I6 | Any → Audit | internal | append-only events | AD-05, RK-06 |
 | I7 | Dream Engine → Curator | internal queue | candidates | AD-10, RK-02 |
@@ -168,7 +168,7 @@ Constraints: agents cannot approve (AD-04); promotion serialized; supersession o
 
 ## Key Architectural Constraints
 
-- **MUST** route every read/write through Bumblebee; **MUST NOT** allow direct DB access from UI/SDK.
+- **MUST** route every read/write through Allura Guard; **MUST NOT** allow direct DB access from UI/SDK.
 - **MUST** inject `group_id` server-side; **MUST NOT** accept a client-supplied `group_id`.
 - **MUST** store token hashes only; **MUST NOT** log raw tokens or secrets.
 - **MUST** append an audit event for every permit and deny.
@@ -181,4 +181,4 @@ Constraints: agents cannot approve (AD-04); promotion serialized; supersession o
 - [BLUEPRINT.md](./BLUEPRINT.md)
 - [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md)
 - [REQUIREMENTS-MATRIX.md](./REQUIREMENTS-MATRIX.md)
-- Design docs: [AUTH](./DESIGN-AUTH.md) · [BUMBLEBEE](./DESIGN-BUMBLEBEE.md) · [MCP-GATEWAY](./DESIGN-MCP-GATEWAY.md) · [MEMORY-COMMAND-CENTER](./DESIGN-MEMORY-COMMAND-CENTER.md) · [CURATOR](./DESIGN-CURATOR.md) · [AUDIT](./DESIGN-AUDIT.md)
+- Design docs: [AUTH](./DESIGN-AUTH.md) · [ALLURA GUARD](./DESIGN-GUARD.md) · [MCP-GATEWAY](./DESIGN-MCP-GATEWAY.md) · [MEMORY-COMMAND-CENTER](./DESIGN-MEMORY-COMMAND-CENTER.md) · [CURATOR](./DESIGN-CURATOR.md) · [AUDIT](./DESIGN-AUDIT.md)

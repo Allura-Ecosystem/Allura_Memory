@@ -67,7 +67,7 @@ export type MemoryStatus =
 /**
  * Scope context carried by every governed operation.
  * `group_id` = org (the tenant boundary); `workspace_id` = sub-scope (ADR-001).
- * Both are server-injected by Bumblebee, never client-supplied.
+ * Both are server-injected by Allura Guard, never client-supplied.
  */
 export interface AlluraScope {
   group_id: GroupId;

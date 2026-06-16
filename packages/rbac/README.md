@@ -8,7 +8,7 @@ Shared role → scope mapping and permission checks for the Allura Hosted Platfo
 
 Status: **scaffold stub.** Pure logic, no I/O. Consumes types from
 [`@allura/types`](../types) (type-only import). See
-[`docs/allura-hosted/DESIGN-BUMBLEBEE.md`](../../docs/allura-hosted/DESIGN-BUMBLEBEE.md).
+[`docs/allura-hosted/DESIGN-GUARD.md`](../../docs/allura-hosted/DESIGN-GUARD.md).
 
 ```bash
 bun test

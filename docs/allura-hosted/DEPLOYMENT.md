@@ -39,7 +39,7 @@ Validates a local agent's MCP connection: token validity, `/mcp` reachability, r
 
 ## Observability (F30)
 
-- Sentry for error tracking; OpenTelemetry traces across Gateway → Bumblebee → Engine.
+- Sentry for error tracking; OpenTelemetry traces across Gateway → Allura Guard → Engine.
 - Quotas per workspace; billing deferred.
 
 ## Environment & Secrets

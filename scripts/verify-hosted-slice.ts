@@ -1,7 +1,7 @@
 /**
  * verify-hosted-slice.ts — live-DB smoke for the Allura Hosted Platform Phase 1 slice.
  *
- * Proves the Bumblebee spine against the real Postgres: create workspace → mint
+ * Proves the Allura Guard spine against the real Postgres: create workspace → mint
  * scoped token → authorize tool calls (permit + scope-deny + bad-token-deny) →
  * confirm append-only audit rows. Does NOT execute memory tools (those hit the
  * full memory stack and are covered elsewhere); it verifies the gateway + data layer.

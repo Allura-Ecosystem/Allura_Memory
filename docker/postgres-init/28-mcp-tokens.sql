@@ -1,13 +1,13 @@
 -- 28-mcp-tokens.sql
--- Allura Hosted Platform — Bumblebee MCP bearer tokens
+-- Allura Hosted Platform — Allura Guard MCP bearer tokens
 -- Additive only — no DROP, no ALTER on existing tables.
 --
--- SECURITY (DESIGN-BUMBLEBEE, AD-03): the raw token is NEVER stored. We store an
+-- SECURITY (DESIGN-GUARD, AD-03): the raw token is NEVER stored. We store an
 -- HMAC-SHA256 hash + a short display prefix. Lookup is by prefix, then a
 -- constant-time hash compare (see src/lib/mcp-token/hash.ts).
 --
 -- TENANCY (ADR-001): group_id (org tenant boundary) + workspace_id (sub-scope) are
--- bound to the token at mint time and injected server-side by Bumblebee; the agent
+-- bound to the token at mint time and injected server-side by Allura Guard; the agent
 -- can never override them. Scopes are least-privilege (@allura/rbac).
 
 CREATE TABLE IF NOT EXISTS mcp_tokens (

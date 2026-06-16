@@ -6,7 +6,7 @@
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
 > When in doubt, defer to the source code, JSON schemas, and team consensus.
 
-Anchor: [BLUEPRINT.md](./BLUEPRINT.md) (F16–F28). Related: [DESIGN-CURATOR.md](./DESIGN-CURATOR.md), [DESIGN-AUDIT.md](./DESIGN-AUDIT.md), [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md).
+Anchor: [BLUEPRINT.md](./BLUEPRINT.md) (F16–F28). Related: [DESIGN-CURATOR.md](./DESIGN-CURATOR.md), [DESIGN-AUDIT.md](./DESIGN-AUDIT.md), [DESIGN-GUARD.md](./DESIGN-GUARD.md).
 
 ## Overview
 
@@ -23,7 +23,7 @@ The Memory Command Center is the human control plane (AD-08) for memory, agents,
 
 ## Navigation & Screens
 
-Primary nav: **Overview · Memories · Curator · Agents · Bumblebee · Audit · Workflows · Dream Cycles · SDK/MCP · Settings**.
+Primary nav: **Overview · Memories · Curator · Agents · Allura Guard · Audit · Workflows · Dream Cycles · SDK/MCP · Settings**.
 
 | Screen | Shows |
 |--------|-------|
@@ -31,7 +31,7 @@ Primary nav: **Overview · Memories · Curator · Agents · Bumblebee · Audit �
 | **Memories** | Search-first; filters by layer/status/source/actor/score/workspace; provenance + evidence + audit-trail drawers; forget/recover. |
 | **Curator** | Pending proposals; confidence; evidence preview; approve/reject/request-evidence; required rationale; promotion history. |
 | **Agents** | Registry; type; token status; scopes; workspace; last seen; recent + denied actions; revoke/rotate. |
-| **Bumblebee** | Users; roles; permissions; MCP tokens; API keys; denied actions; policies; rate limits; workspace locks. |
+| **Allura Guard** | Users; roles; permissions; MCP tokens; API keys; denied actions; policies; rate limits; workspace locks. |
 | **Audit** | Full event log; permit/deny/defer; actor/role/token/workspace/group_id; CSV + receipt export. |
 | **Dream Cycles** | Dream runs; provider; sources; status; candidate breakdown; approval status; receipt link. |
 | **SDK/MCP** | Create MCP token; copy config; test connection; SDK install; `allura doctor`. |

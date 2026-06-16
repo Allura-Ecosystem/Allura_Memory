@@ -2,7 +2,7 @@
  * hosted-mcp.e2e.test.ts — full MCP gateway round-trip against the live stack.
  *
  * Proves the demoable MVP spine end to end: mint a scoped token → POST /mcp →
- * Bumblebee authorizes → REAL memory_add/memory_search execute → append-only audit.
+ * Allura Guard authorizes → REAL memory_add/memory_search execute → append-only audit.
  * Gated by RUN_E2E_TESTS (live PG + Neo4j + ruvector).
  */
 process.env.ALLURA_MCP_TOKEN_SECRET ??= "hosted-e2e-secret-key-0001";
