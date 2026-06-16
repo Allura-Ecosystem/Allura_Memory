@@ -1,0 +1,16 @@
+{
+  "name": "@allura/ruvector-adapter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Optional, governed RuVector search adapter. RuVector accelerates; Allura Guard owns tenancy, scope, and audit.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  }
+}

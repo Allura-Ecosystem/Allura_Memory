@@ -1,0 +1,16 @@
+{
+  "name": "@allura/rbac",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared role/scope permission logic for the Allura Hosted Platform.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  }
+}
