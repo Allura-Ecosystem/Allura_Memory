@@ -197,6 +197,7 @@ services:
   # Visit: http://localhost:3100/dashboard
   # =============================================================================
   dashboard:
+    container_name: allura-dashboard
     build:
       context: .
       dockerfile: Dockerfile.dashboard

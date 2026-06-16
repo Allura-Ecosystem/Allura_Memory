@@ -308,7 +308,7 @@ The brand layer is a RuVix-enforced contract, not a design preference. It govern
 - Accessibility enforcement checks screen reader compatibility and high contrast mode before merge.
 - Component enforcement prefers the established Durham patterns over ad hoc variants.
 
-Canonical brand policy artifacts: [BRAND-RULES-cli-v1.md](./BRAND-RULES-cli-v1.md) for terminal/API surfaces and [BRAND-RULES-dashboard-v2.md](./BRAND-RULES-dashboard-v2.md) for Memory Command Center surfaces.
+Canonical brand policy artifacts: BRAND-RULES-cli-v1.md for terminal/API surfaces and BRAND-RULES-dashboard-v2.md for Memory Command Center surfaces. (Both files are pending creation; route to `docs/archive/allura/governance/` when authored. Until then, brand rules are defined in [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules).)
 
 ### 3.5 Memory API
 
@@ -486,7 +486,7 @@ Architecture note: Previous dashboard surfaces (ports 3100, 3334, 6420) are refe
 - [BLUEPRINT.md](./BLUEPRINT.md) — Core data model, API surface, execution rules
 - [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) — Field-level definitions
 - [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) — AD-## and RK-## entries
-- [TEAM-RAM-BMAD-INTEGRATION.md](./TEAM-RAM-BMAD-INTEGRATION.md) — Team RAM, BMAD, and Allura Brain operating contract
+- [TEAM-RAM-INTEGRATION.md](../archive/bmad-legacy/TEAM-RAM-INTEGRATION.md) — Team RAM, BMAD, and Allura Brain operating contract (archived)
 - `.opencode/skills/allura-memory-skill/` — memory workflow rules
 - `.opencode/skills/memory-client/` — default retrieval behavior
 - `.opencode/skills/mcp-docker-memory-system/` — packaged MCP server discovery/configuration guidance

@@ -190,13 +190,27 @@ Curator approves → Neo4j write
   https://arxiv.org/abs/2407.02490
 
 - **Allura Architecture**  
-  See [.github/ARCHITECTURE.md](./.github/ARCHITECTURE.md)
+  See [.github/ARCHITECTURE.md](../../.github/ARCHITECTURE.md)
 
 ---
 
 ## Governed Memory Pipeline — Business → Functional Traceability
 
-This section traces the governed memory pipeline requirements from business goals through functional behaviors to concrete satisfaction evidence. See [BLUEPRINT.md](./BLUEPRINT.md) and [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) for the full implementation design and [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) for the acceptance checklist.
+This section traces the governed memory pipeline requirements from business goals through functional behaviors to concrete satisfaction evidence. See [BLUEPRINT.md](./BLUEPRINT.md) and [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) for the full implementation design and the E2E readiness table in [BLUEPRINT.md §2](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) for the acceptance gate status.
+
+> **Note on B# numbering:** Section 0 below maps the BLUEPRINT's original B1–B7 (core API/infra requirements). Section 1 uses a legacy pipeline-level B1–B7 inherited from the pre-2026-04-19 matrix; these correspond to BLUEPRINT B23–B29. Both numbering systems are preserved for traceability; when a B# appears in both sections, the BLUEPRINT canonical definition takes precedence.
+
+### Section 0: Core API and Infrastructure Requirements (BLUEPRINT B1–B7)
+
+| ID | Business Requirement (BLUEPRINT) | Functional Requirements | Satisfied by |
+|----|----------------------------------|------------------------|--------------|
+| B1 | Developers integrate Allura with a 5-tool API matching mem0's UX | F1–F5 | `memory_add`, `memory_search`, `memory_get`, `memory_list`, `memory_delete` via MCP tools · AD-05 |
+| B2 | All memory is isolated by tenant (`group_id`) at the schema level | F8 | PostgreSQL CHECK constraint `group_id ~ '^allura-'` · AD-06 · [BLUEPRINT.md](./BLUEPRINT.md#7-global-constraints) |
+| B3 | Every write produces an immutable audit record in PostgreSQL | F1, F26, F27 | Append-only `events` table · `insertEvent()` · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#postgresql-events) |
+| B4 | Promoted knowledge is versioned and never mutated in Neo4j | F9, F33, F34 | `SUPERSEDES` relationship pattern · AD-02 · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-relationships) |
+| B5 | The system is deployable via a single `docker compose up` command for core infra and app services | F21, F56 | `docker-compose.yml` · AD-45 (Port Allocation Policy) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#81-deployment-scenarios) |
+| B6 | Agents connect via MCP (Model Context Protocol) through Team RAM-selected packaged MCP servers | F20 | `neo4j-memory`, `database-server`, `neo4j-cypher` packaged MCP servers · AD-23 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-1-agent-memory-recall-primary-path) |
+| B7 | Operators choose between human-gated (SOC2) and auto-promotion modes | F6, F7 | `PROMOTION_MODE` env var · AD-04 · [BLUEPRINT.md](./BLUEPRINT.md#6-execution-rules) |
 
 ### Section 1: Business Requirements → Functional Requirements
 
@@ -271,8 +285,8 @@ This section traces the governed memory pipeline requirements from business goal
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f14"></a>F14 | A second agent must be able to retrieve approved knowledge as context and use it in a later task correctly. | Retrieval endpoint · validation gate scenario MEM-UC8 · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) |
-| <a name="f15"></a>F15 | The full lifecycle from trace capture to knowledge reuse must be traceable, auditable, and reversible. | Evidence chain: trace → proposal → approval → Neo4j → retrieval · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
+| <a name="f14"></a>F14 | A second agent must be able to retrieve approved knowledge as context and use it in a later task correctly. | Retrieval endpoint · validation gate scenario MEM-UC8 · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) |
+| <a name="f15"></a>F15 | The full lifecycle from trace capture to knowledge reuse must be traceable, auditable, and reversible. | Evidence chain: trace → proposal → approval → Neo4j → retrieval · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 | <a name="f16"></a>F16 | The graph must include Agent, Team, and Project structural context nodes with relationships enabling traversal queries by ownership, project scope, and delegation path. | `scripts/neo4j-seed-agents.cypher` · [BLUEPRINT.md](./BLUEPRINT.md#5-data-model) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-agent) |
 
 ### Section 3: Curator API/CLI (F17–F19)
@@ -293,6 +307,7 @@ This section traces the governed memory pipeline requirements from business goal
 | <a name="f23"></a>F23 | MCP HTTP gateway exposes backend engine via `CURATOR_ENGINE_URL` env var | `src/mcp/http-gateway.ts` · Docker deployment config · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#4-interface-catalogue) |
 | <a name="f24"></a>F24 | API routes call Docker engine in VPC/cloud via HTTPS | `src/app/api/` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#4-interface-catalogue) |
 | <a name="f25"></a>F25 | Error tracking: unhandled exceptions sent to Sentry; operator notified via email/Slack | `src/lib/observability/sentry.ts` · [BLUEPRINT.md](./BLUEPRINT.md#3-architecture) |
+| <a name="f56"></a>F56 | Git-safety guardrail (GIT-EXEC-001): all `git` subprocesses spawned by the harness or Ralph must have `GIT_DIR` constrained to the project root; Ralph refuses to run if `cwd` is not under the expected project root | `scripts/git-exec-guard.ts` · `.ralph/ralph-loop.state.json` cwd check · AD-44 · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 
 ### Section 5: Governed Memory Pipeline (F26–F40)
 
@@ -311,8 +326,8 @@ This section traces the governed memory pipeline requirements from business goal
 | <a name="f36"></a>F36 | Retrieval supports semantic and structured queries with project and global scope | `searchInsights()` · `getDualContextSemanticMemory()` · `queryTraces()` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f37"></a>F37 | All knowledge-system reads/writes pass through controlled endpoints enforcing project-level access | `requireRole()` · `validateGroupId()` · RBAC middleware · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#6-key-architectural-constraints) |
 | <a name="f38"></a>F38 | Agent permissions enforced and all access to trace/knowledge resources is audited | Auth middleware · audit event logging · [BLUEPRINT.md](./BLUEPRINT.md#9-logging--audit) |
-| <a name="f39"></a>F39 | A second agent can retrieve approved knowledge and use it correctly in a later task | Retrieval endpoint · validation gate scenario MEM-UC8 · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) |
-| <a name="f40"></a>F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible | Evidence chain: trace → proposal → approval → Neo4j → retrieval · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
+| <a name="f39"></a>F39 | A second agent can retrieve approved knowledge and use it correctly in a later task | Retrieval endpoint · validation gate scenario MEM-UC8 · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) |
+| <a name="f40"></a>F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible | Evidence chain: trace → proposal → approval → Neo4j → retrieval · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 
 ### Section 5A: Evidence-Gated Run Records (F49–F52)
 

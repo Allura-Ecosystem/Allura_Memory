@@ -15,27 +15,31 @@ bun install
 ```bash
 # Dev / build
 bun run dev               # Next.js dev server (port $ALLURA_DASHBOARD_PORT, default 3100)
-bun run build
-bun run start
+bun run build             # production build
+bun run start             # production server
 
-# Type checking & lint (lint IS typecheck here)
+# Type checking & lint
 bun run typecheck         # tsc --noEmit
 bun run lint              # alias for typecheck
 
-# Tests
+# Tests (6 lane configs)
 bun test                          # all unit tests (vitest run)
-bun run test:watch                # watch mode
-bun run test:e2e                  # RUN_E2E_TESTS=true, postgres + neo4j required
+bun run test:unit                 # unit lane only (no DB)
+bun run test:integration          # mocked services + contracts
+bun run test:curator              # curator pipeline tests
+bun run test:e2e                  # RUN_E2E_TESTS=true, requires live PG + Neo4j
 bun run test:all                  # typecheck + lint + unit + e2e + mcp browser
+bun run test:watch                # watch mode
 
 # Single test
 bun vitest run src/lib/postgres/connection.test.ts
 bun vitest run -t "should build connection config"
 
-# MCP server
-bun run mcp               # MCP server (legacy only)
-bun run mcp:dev           # watch mode (legacy only)
-bun run mcp:http          # HTTP gateway (legacy only)
+# Brain stack (Docker)
+bun run brain:up          # start PG + Neo4j + MCP containers
+bun run brain:down        # stop stack
+bun run brain:status      # health check
+bun run brain:recover     # restart in dependency order
 
 # Curator pipeline (HITL promotion)
 bun run curator:run       # score and queue proposals
@@ -44,31 +48,20 @@ bun run curator:reject    # reject pending proposals
 bun run curator:watchdog  # continuous watchdog
 
 # Embedding backfill
-bun run backfill:embeddings        # one-shot: embed all NULL rows via Ollama
-bun run backfill:embeddings:watch  # continuous polling (30s interval)
+bun run backfill:embeddings        # one-shot via Ollama
+bun run backfill:embeddings:watch  # continuous polling (30s)
 
 # Session bootstrap
 bun run session:start     # brooks-session-start.ts (preferred)
-bun run session:bootstrap # full hydrate cycle
-bun run session:hydrate   # hydrate from snapshot
-bun run snapshot:build    # build snapshot from docs
 
 # Brooks CLI
 bun run brooks:start / brooks:status / brooks:end
 
-# DB health — use MCP_DOCKER tools only, never docker exec (see .opencode/rules/mcp-integration.md)
+# Validation
+bun run validate:e2e              # full E2E validation gate
+bun run validate:git-exec         # GIT-EXEC-001 choke point check
+bun run validate:tokens           # token compliance
 ```
-
-## Session Start Protocol
-
-At the start of each session, dispatch Scout to hydrate from Allura Brain:
-
-1. **Scout Recon** — Search PostgreSQL events for recent activity (agent_id='brooks', ORDER BY created_at DESC LIMIT 5)
-2. **Blocker Query** — Search events WHERE event_type IN ('BLOCKER', 'ARCHITECTURE_DECISION')
-3. **Insight Search** — Query Neo4j for recent insights matching `allura-system`
-4. **Synthesize** — Scout returns: what's active, what's blocking, what was decided last session
-
-Use MCP_DOCKER tools for Brain connectivity and governed writes. Do not rely on a local allura-memory MCP server.
 
 ## Architecture
 
@@ -76,35 +69,38 @@ Allura is a **dual-database AI memory engine** exposed via MCP — a self-hosted
 
 ### Data Layers
 
-| Layer    | Store                                                 | Role                                                                                 |
-| -------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Episodic | PostgreSQL 16 (`src/integrations/postgres.client.ts`) | Append-only raw execution traces. **Never mutate historical rows.**                  |
-| Semantic | Neo4j 5.26 (`src/integrations/neo4j.client.ts`)       | Versioned knowledge graph. All updates use `SUPERSEDES` — never edit nodes.          |
-| Vector   | RuVector PG (port 5433) (`src/lib/ruvector/`)         | 768d embeddings via Ollama (nomic-embed-text). Hybrid search: vector ANN + BM25 RRF. |
+| Layer    | Store          | Port | Role |
+|----------|----------------|------|------|
+| Episodic | PostgreSQL 16  | 5432 | Append-only execution traces. **Never mutate historical rows.** |
+| Semantic | Neo4j 5.26     | 7687 | Versioned knowledge graph. Updates via `SUPERSEDES` — never edit nodes. |
+| Vector   | RuVector (PG)  | 5433 | 768d embeddings (nomic-embed-text). Hybrid search: vector ANN + BM25 RRF. |
+| MCP      | Allura Brain   | 5888 | Streamable HTTP (SSE + JSON-RPC). `memory_search`, `memory_add`, `audit_*`, `governance_*`. |
+
+### Dashboard (Next.js 16)
+
+22 pages under `src/app/dashboard/`: search, governance, mission-control, graph, dreams, scheduled-tasks, kanban, work-board, approvals, execution, evidence, handoffs, projects, runs, settings, teams.
+
+API routes under `src/app/api/`: agents, audit, curator, dreams, evidence, execution-overview, groups, handoffs, health, live.
 
 ### Key Subsystems
 
 - **Curator** (`src/curator/`): HITL promotion pipeline — scores traces, queues proposals, requires human approval before Neo4j writes.
-- **Embedding Backfill** (`src/curator/embedding-backfill-worker.ts`): standalone worker that populates NULL embeddings via Ollama in batches of 10.
 - **Kernel** (`src/kernel/`): RuVix proof-gated mutation layer.
-- **Budget / Circuit Breaker** (`src/lib/budget/`, `src/lib/circuit-breaker/`): hard limits and automatic shutdown for agent runaway prevention.
-- **ADR** (`src/lib/adr/`): 5-layer architectural decision records.
+- **Process Engine** (`src/lib/process-engine/`): Workflow execution with checkpoint resume, revision pinning.
+- **Budget / Circuit Breaker** (`src/lib/budget/`, `src/lib/circuit-breaker/`): Hard limits and automatic shutdown for agent runaway prevention.
+- **Operational State** (`src/lib/operational-state/`): Ready/empty/stale/error/degraded contract for live surfaces.
 - **Auth** (`src/lib/auth/`, `src/middleware.ts`): Clerk RBAC in production; `DevAuthProvider` fallback in dev. Role hierarchy: `admin > curator > viewer`.
-
-### MCP Tools (canonical)
-
-Use `MCP_DOCKER` tools as the canonical MCP surface for database and graph operations.
 
 ### Hybrid Search (RuVector)
 
 `retrieveMemories()` in `src/lib/ruvector/bridge.ts` runs two-pass RRF fusion:
 
-- Vector pass: `ruvector_cosine_distance()` ANN
-- Text pass: `ts_rank` on `content_tsv` generated column
+- Vector: `ruvector_cosine_distance()` ANN
+- Text: `ts_rank` on `content_tsv` generated column
 - Fusion: `score = 1/(60+rank_v) + 1/(60+rank_t)`
 - Modes: `"hybrid"` (default), `"vector"`, `"text"`
 
-`ruvector_hybrid_search()` and other learning/agent functions in the extension are **stubs** — do not call them. See `docs/RUVECTOR_INTEGRATION.md` for the full audit.
+`ruvector_hybrid_search()` and other extension functions are **stubs** — do not call them.
 
 ## Non-Negotiable Invariants
 
@@ -113,17 +109,14 @@ Use `MCP_DOCKER` tools as the canonical MCP surface for database and graph opera
 - **Neo4j versioning via `SUPERSEDES`** — `(v2)-[:SUPERSEDES]->(v1:deprecated)`, never edit existing nodes.
 - **HITL required for promotion** — agents cannot autonomously promote to Neo4j; route through `curator:approve`.
 - **`allura-*` tenant namespace** — `roninclaw-*` group_ids are deprecated; flag any occurrence as drift.
+- **Allura Brain is the memory surface** — all memories go to Brain (`allura-brain__memory_*`), never to local file banks.
+- **Verify before presenting** — never claim code works without testing the endpoint and confirming real data returns.
 
 ## Code Conventions
 
-**TypeScript:**
+**TypeScript:** `strict: true`; explicit return types on exported functions; `unknown` over `any`; `import type` for type-only imports; Zod validation at external boundaries.
 
-- `strict: true`; explicit return types on exported functions; `unknown` over `any`
-- `import type` for type-only imports
-- Zod validation at external boundaries (env vars, user input, API responses)
-- Server-only modules must include: `if (typeof window !== "undefined") throw new Error("server-side only")`
-
-**Import order:** external packages → `@/` aliases → relative imports. Use `@/*` for cross-feature; relative for siblings.
+**Import order:** external packages → `@/` aliases → relative imports.
 
 **Naming:** files `kebab-case` · React components `PascalCase` · hooks `useCamelCase` · DB identifiers `snake_case` · constants `SCREAMING_SNAKE_CASE`
 
@@ -131,46 +124,34 @@ Use `MCP_DOCKER` tools as the canonical MCP surface for database and graph opera
 
 ## Debugging Protocol
 
-**Before proposing any fix, invoke the `systematic-debugging-memory` skill.** Enforces 5-phase process: Memory Hydration → Root Cause → Pattern Analysis → Hypothesis → Implementation. If 3+ fixes have failed, question the architecture.
+**Before proposing any fix, invoke the `systematic-debugging-memory` skill.** 5-phase process: Memory Hydration → Root Cause → Pattern Analysis → Hypothesis → Implementation. If 3+ fixes have failed, question the architecture.
 
-## Documentation Hierarchy (highest wins on conflict)
+## Documentation
 
-1. Notion — Allura Memory Control Center
-2. `docs/allura/` — canonical six: BLUEPRINT, SOLUTION-ARCHITECTURE, DESIGN, REQUIREMENTS-MATRIX, RISKS-AND-DECISIONS, DATA-DICTIONARY
-3. `docs/` — project-specific docs (one `PROJECT.md` per initiative)
-4. `docs/archive/` — session context and historical reference
+**Canonical six** in `docs/allura/`: BLUEPRINT, SOLUTION-ARCHITECTURE, DESIGN-ALLURA, REQUIREMENTS-MATRIX, RISKS-AND-DECISIONS, DATA-DICTIONARY. Do not create net-new files there.
 
-Do not create net-new files in `docs/allura/` beyond the canonical six. Route reports, benchmarks, and snapshots to `docs/archive/` or Allura Brain.
+**Reference docs** in `docs/reference/`, `docs/user-guide/`, `docs/plugins/`.
 
-## Slash Commands (`.opencode/command/`)
+**AI-GUIDELINES** in `guidelines/AI-GUIDELINES.md` — full documentation standards.
 
-| Command                  | Purpose                                     |
-| ------------------------ | ------------------------------------------- |
-| `/start-session`         | Health check + memory hydration             |
-| `/end-session <summary>` | Persist session reflection to Neo4j         |
-| `/validate-repo`         | Typecheck + lint + tests + invariant checks |
-| `/commit`                | Conventional commit with emoji, auto-push   |
-| `/define-goal <idea>`    | Turn idea into goal + success criteria      |
-| `/debug <issue>`         | 5-phase systematic debugging                |
-| `/orchestrate <task>`    | Brooks Architect persona — plan + delegate  |
-| `/architect <task>`      | MemoryArchitect persona — design + ADR      |
+## Port Allocation (AD-45)
 
-## Team RAM — Agent Routing
-
-| Agent         | Persona          | Use When                                |
-| ------------- | ---------------- | --------------------------------------- |
-| **Brooks**    | Frederick Brooks | Task planning, architecture, delegation |
-| **Jobs**      | Steve Jobs       | Scope control, acceptance criteria      |
-| **Woz**       | Steve Wozniak    | Autonomous implementation               |
-| **Pike**      | Rob Pike         | Read-only architecture consultation     |
-| **Scout**     | —                | Fast codebase search                    |
-| **Bellard**   | Fabrice Bellard  | Performance, measurement                |
-| **Fowler**    | Martin Fowler    | Refactoring, maintainability            |
-| **Knuth**     | Donald Knuth     | Schema design, query optimization       |
-| **Hightower** | Kelsey Hightower | CI/CD, infrastructure                   |
-
-Full routing rules: `.opencode/rules/agent-routing.md`
+3000–3999 band is **banned**. UI: 4000+ · API: 6000+ · Tools: 7000+. Infra exempt (PG 5432, Neo4j 7687, Brain MCP 5888).
 
 ## MCP Integration
 
-**DB operations via MCP_DOCKER tools only** — never `docker exec`. See `.opencode/rules/mcp-integration.md`.
+**DB operations via MCP_DOCKER tools only** — never `docker exec`. Brain MCP uses Streamable HTTP transport (SSE): requires `Accept: application/json, text/event-stream` header and `mcp-session-id` for session continuity.
+
+## Team RAM — Agent Routing
+
+| Agent | Persona | Use When |
+|-------|---------|----------|
+| **Brooks** | Frederick Brooks | Architecture, delegation |
+| **Jobs** | Steve Jobs | Scope control, acceptance criteria |
+| **Woz** | Steve Wozniak | Autonomous implementation |
+| **Pike** | Rob Pike | Read-only architecture consultation |
+| **Scout** | — | Fast codebase search |
+| **Bellard** | Fabrice Bellard | Performance, measurement |
+| **Fowler** | Martin Fowler | Refactoring, maintainability |
+| **Knuth** | Donald Knuth | Schema design, query optimization |
+| **Hightower** | Kelsey Hightower | CI/CD, infrastructure |
