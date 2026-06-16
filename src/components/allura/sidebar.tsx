@@ -53,12 +53,31 @@ interface NavItem {
   href: string
   label: string
   icon: ComponentType<{ size?: number; className?: string; style?: CSSProperties }>
+  soon?: boolean
 }
 
 interface NavGroup {
   label: string
   items: NavItem[]
 }
+
+// Routes that are not yet built (hit the [...planned] catch-all)
+const SOON_ROUTES = new Set([
+  "/dashboard/memory-inbox",
+  "/dashboard/episodic",
+  "/dashboard/semantic",
+  "/dashboard/analytics",
+  "/dashboard/agent-contracts",
+  "/dashboard/agent-skills",
+  "/dashboard/audit-log",
+  "/dashboard/lineage",
+  "/dashboard/gate-violations",
+  "/dashboard/policy-center",
+  "/dashboard/mcp-services",
+  "/dashboard/model-routing",
+  "/dashboard/health",
+  "/dashboard/logs",
+])
 
 // BRIEF taxonomy: Mission Control / Memory / Agents / Governance / Operations / Settings
 const navGroups: NavGroup[] = [
@@ -179,6 +198,7 @@ export default function Sidebar() {
               {group.items.map((item) => {
                 const Icon = item.icon
                 const active = isActive(item.href)
+                const soon = SOON_ROUTES.has(item.href)
                 return (
                   <Link
                     key={item.href}
@@ -192,15 +212,34 @@ export default function Sidebar() {
                       textDecoration: "none",
                       fontSize: 13.5,
                       fontWeight: active ? 600 : 400,
-                      color: active ? "#2563eb" : "#374151",
+                      color: active ? "#2563eb" : soon ? "#9ca3af" : "#374151",
                       background: active ? "#eff6ff" : "transparent",
                       marginBottom: 1,
                       transition: "background 0.12s, color 0.12s",
+                      opacity: soon ? 0.7 : 1,
                     }}
                     aria-current={active ? "page" : undefined}
                   >
-                    <Icon size={15} style={{ flexShrink: 0, opacity: active ? 1 : 0.65 }} />
-                    {item.label}
+                    <Icon size={15} style={{ flexShrink: 0, opacity: active ? 1 : soon ? 0.45 : 0.65 }} />
+                    <span style={{ flex: 1 }}>{item.label}</span>
+                    {soon && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                          color: "#9ca3af",
+                          background: "#f0ece0",
+                          borderRadius: 999,
+                          padding: "2px 6px",
+                          lineHeight: 1.4,
+                          flexShrink: 0,
+                        }}
+                      >
+                        soon
+                      </span>
+                    )}
                   </Link>
                 )
               })}

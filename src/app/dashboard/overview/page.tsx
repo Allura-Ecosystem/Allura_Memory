@@ -158,7 +158,8 @@ function KpiCard({
             flexShrink: 0,
           }}
         />
-        {isDegraded ? "Degraded" : isEmpty ? "Empty" : "Live"} · {kpi.source}
+        {isDegraded ? "Degraded" : isEmpty ? "Empty" : "Live"}
+        <span title={kpi.source} style={{ color: "#c4bfb5", fontSize: 9 }}>· {kpi.source}</span>
       </div>
     </div>
   )
@@ -221,6 +222,53 @@ export default async function OverviewPage() {
         minHeight: "100%",
       }}
     >
+      {/* Start-here onboarding card (Fix 3) */}
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #e8e3d8",
+          borderLeft: "4px solid #2563eb",
+          borderRadius: 12,
+          padding: "16px 20px",
+          marginBottom: 24,
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 14,
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            background: "rgba(37,99,235,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            marginTop: 2,
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+          </svg>
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a", marginBottom: 4 }}>
+            Welcome to Allura Memory
+          </div>
+          <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 10px", lineHeight: 1.6 }}>
+            Allura Memory stores, organises, and surfaces your AI agents&apos; memories — so they remember what matters across every session.
+          </p>
+          <a
+            href="/dashboard/guard"
+            style={{ fontSize: 13, fontWeight: 600, color: "#2563eb", textDecoration: "none" }}
+          >
+            Create a workspace and set up an agent key in Allura Guard →
+          </a>
+        </div>
+      </div>
+
       {/* Page header */}
       <div style={{ marginBottom: 28 }}>
         <p
@@ -247,14 +295,14 @@ export default async function OverviewPage() {
           Overview
         </h1>
         <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
-          Live snapshot for <strong style={{ color: "#374151" }}>{groupId}</strong> · fetched {freshnessText}
+          Live snapshot for <strong style={{ color: "#374151" }}>Organization: {groupId}</strong> · fetched {freshnessText}
         </p>
       </div>
 
       {/* System health row */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 28 }}>
-        <HealthBadge label="PostgreSQL" ok={data.pgHealthy} />
-        <HealthBadge label="Neo4j" ok={false} />
+        <HealthBadge label="Memory store" ok={data.pgHealthy} />
+        <HealthBadge label="Knowledge graph" ok={false} />
         <HealthBadge label="MCP Brain" ok={false} />
       </div>
 
@@ -271,19 +319,19 @@ export default async function OverviewPage() {
           label="Memories"
           kpi={data.memories}
           accent="#2563eb"
-          description="Total memories in allura_memories"
+          description="Total memories stored"
         />
         <KpiCard
-          label="Curator Queue"
+          label="Review queue"
           kpi={data.curatorQueue}
           accent="#ea580c"
-          description="Pending proposals awaiting approval"
+          description="Memories waiting for human approval"
         />
         <KpiCard
-          label="Connected Agents"
+          label="Connected agents"
           kpi={data.connectedAgents}
           accent="#16a34a"
-          description="Active MCP tokens"
+          description="Active agent keys"
         />
         <KpiCard
           label="Workspaces"
@@ -302,7 +350,7 @@ export default async function OverviewPage() {
           fontFamily: '"IBM Plex Mono", monospace',
         }}
       >
-        group_id: {groupId} · fetched: {data.fetchedAt}
+        Organization: {groupId} · fetched: {data.fetchedAt}
       </p>
     </div>
   )

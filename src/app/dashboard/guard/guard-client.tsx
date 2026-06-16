@@ -40,26 +40,47 @@ export default function GuardClient({ groupId, activeWorkspaceId }: { groupId: s
   const [mintedRaw, setMintedRaw] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Loading states — show skeleton until first fetch resolves; only render
+  // "empty" messages after a confirmed successful (but empty) response.
+  const [wsLoading, setWsLoading] = useState(true);
+  const [tokensLoading, setTokensLoading] = useState(false);
+  const [auditLoading, setAuditLoading] = useState(true);
+
   const loadWorkspaces = useCallback(async () => {
-    const r = await fetch("/api/workspaces");
-    const d = await r.json();
-    const ws: Workspace[] = d.workspaces ?? [];
-    setWorkspaces(ws);
-    if (!selected && ws.length > 0) setSelected(ws[0].workspace_id);
+    setWsLoading(true);
+    try {
+      const r = await fetch("/api/workspaces");
+      const d = await r.json();
+      const ws: Workspace[] = d.workspaces ?? [];
+      setWorkspaces(ws);
+      if (!selected && ws.length > 0) setSelected(ws[0].workspace_id);
+    } finally {
+      setWsLoading(false);
+    }
   }, [selected]);
 
   const loadTokens = useCallback(async (wsId: string) => {
-    const r = await fetch(`/api/tokens?workspace_id=${encodeURIComponent(wsId)}`);
-    const d = await r.json();
-    setTokens(d.tokens ?? []);
+    setTokensLoading(true);
+    try {
+      const r = await fetch(`/api/tokens?workspace_id=${encodeURIComponent(wsId)}`);
+      const d = await r.json();
+      setTokens(d.tokens ?? []);
+    } finally {
+      setTokensLoading(false);
+    }
   }, []);
 
   const loadAudit = useCallback(async () => {
-    const r = await fetch("/api/audit/events?limit=50");
-    if (!r.ok) return;
-    const d = await r.json();
-    const rows: AuditRow[] = (d.events ?? d.rows ?? []).filter((e: AuditRow) => e.event_type?.startsWith("mcp_gateway_"));
-    setAudit(rows.slice(0, 15));
+    setAuditLoading(true);
+    try {
+      const r = await fetch("/api/audit/events?limit=50");
+      if (!r.ok) return;
+      const d = await r.json();
+      const rows: AuditRow[] = (d.events ?? d.rows ?? []).filter((e: AuditRow) => e.event_type?.startsWith("mcp_gateway_"));
+      setAudit(rows.slice(0, 15));
+    } finally {
+      setAuditLoading(false);
+    }
   }, []);
 
   useEffect(() => { void loadWorkspaces(); void loadAudit(); }, [loadWorkspaces, loadAudit]);
@@ -97,7 +118,7 @@ export default function GuardClient({ groupId, activeWorkspaceId }: { groupId: s
         <span style={{ fontSize: 12, color: "#6b7280" }}>MCP auth &amp; policy gateway</span>
       </div>
       <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px" }}>
-        Active org: <code style={{ background: "#f0ece0", padding: "2px 6px", borderRadius: 4 }}>{groupId}</code>
+        Organization: <code style={{ background: "#f0ece0", padding: "2px 6px", borderRadius: 4 }}>{groupId}</code>
       </p>
 
       {error && <div style={{ ...card, borderColor: "#fca5a5", background: "#fef2f2", color: "#b91c1c" }}>{error}</div>}
@@ -106,13 +127,16 @@ export default function GuardClient({ groupId, activeWorkspaceId }: { groupId: s
       <div style={card}>
         <h2 style={h2}>Workspaces</h2>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-          {workspaces.map((w) => (
+          {wsLoading ? (
+            <span style={{ color: "#9ca3af", fontSize: 13 }}>Loading…</span>
+          ) : workspaces.length === 0 ? (
+            <span style={{ color: "#9ca3af", fontSize: 13 }}>No workspaces yet. Create one below.</span>
+          ) : workspaces.map((w) => (
             <button key={w.workspace_id} onClick={() => setSelected(w.workspace_id)}
               style={{ border: selected === w.workspace_id ? "2px solid #ea580c" : "1px solid #e8e3d8", background: selected === w.workspace_id ? "#fff7ed" : "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 13, cursor: "pointer" }}>
               {w.name} <span style={{ color: "#9ca3af", fontSize: 11 }}>· {w.lock_mode}</span>
             </button>
           ))}
-          {workspaces.length === 0 && <span style={{ color: "#9ca3af", fontSize: 13 }}>No workspaces yet.</span>}
         </div>
         <input style={input} placeholder="New workspace name" value={newWsName} onChange={(e) => setNewWsName(e.target.value)} />
         <button style={btn("#1a1a1a")} onClick={createWorkspace} disabled={!newWsName}>Create workspace</button>
@@ -120,7 +144,8 @@ export default function GuardClient({ groupId, activeWorkspaceId }: { groupId: s
 
       {/* Mint token */}
       <div style={card}>
-        <h2 style={h2}>Mint MCP token</h2>
+        <h2 style={h2}>Create an agent key</h2>
+        <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 10px" }}>An agent key (MCP token) lets an AI agent securely connect to Allura.</p>
         <div style={{ marginBottom: 10 }}>
           <input style={input} placeholder="Agent name (e.g. claude)" value={agentName} onChange={(e) => setAgentName(e.target.value)} />
           <button style={btn("#ea580c")} onClick={mintToken} disabled={!agentName || !selected}>Mint</button>
@@ -143,8 +168,13 @@ export default function GuardClient({ groupId, activeWorkspaceId }: { groupId: s
 
       {/* Tokens */}
       <div style={card}>
-        <h2 style={h2}>Tokens {selected && <span style={{ fontWeight: 400, color: "#9ca3af", fontSize: 12 }}>in selected workspace</span>}</h2>
-        {tokens.length === 0 && <div style={{ color: "#9ca3af", fontSize: 13 }}>No tokens.</div>}
+        <h2 style={h2}>Agent keys {selected && <span style={{ fontWeight: 400, color: "#9ca3af", fontSize: 12 }}>in selected workspace</span>}</h2>
+        <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 10px" }}>A key lets an AI agent connect to Allura and read or write memories.</p>
+        {tokensLoading ? (
+          <div style={{ color: "#9ca3af", fontSize: 13 }}>Loading…</div>
+        ) : tokens.length === 0 ? (
+          <div style={{ color: "#9ca3af", fontSize: 13 }}>No agent keys yet. Mint one above.</div>
+        ) : null}
         {tokens.map((t) => (
           <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #f0ece0", fontSize: 13 }}>
             <code style={{ background: "#f0ece0", padding: "2px 6px", borderRadius: 4 }}>{t.token_prefix}</code>
@@ -159,7 +189,11 @@ export default function GuardClient({ groupId, activeWorkspaceId }: { groupId: s
       {/* Recent gateway audit */}
       <div style={card}>
         <h2 style={h2}>Recent gateway activity</h2>
-        {audit.length === 0 && <div style={{ color: "#9ca3af", fontSize: 13 }}>No gateway events yet.</div>}
+        {auditLoading ? (
+          <div style={{ color: "#9ca3af", fontSize: 13 }}>Loading…</div>
+        ) : audit.length === 0 ? (
+          <div style={{ color: "#9ca3af", fontSize: 13 }}>No gateway events yet.</div>
+        ) : null}
         {audit.map((e, i) => {
           const permit = e.event_type === "mcp_gateway_permit";
           return (

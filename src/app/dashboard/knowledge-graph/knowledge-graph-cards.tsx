@@ -235,6 +235,7 @@ export default function KnowledgeGraphCards({ groupId }: { groupId: string }) {
   const [nodeCount, setNodeCount] = useState(0)
   const [edgeCount, setEdgeCount] = useState(0)
   const [source, setSource] = useState<string>("neo4j")
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -242,9 +243,12 @@ export default function KnowledgeGraphCards({ groupId }: { groupId: string }) {
     async function load() {
       setLoading(true)
       setError(null)
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 10_000)
       try {
         const res = await fetch(`/api/memory/graph?group_id=${encodeURIComponent(groupId)}`, {
           headers: { "x-allura-group-id": groupId },
+          signal: controller.signal,
         })
         if (!res.ok) throw new Error(`API returned ${res.status}`)
         const data = (await res.json()) as GraphApiResponse
@@ -257,17 +261,19 @@ export default function KnowledgeGraphCards({ groupId }: { groupId: string }) {
         setEdgeCount(data.total_edges ?? (data.edges ?? []).length)
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load graph")
+          const isTimeout = err instanceof Error && err.name === "AbortError"
+          setError(isTimeout ? "Couldn't reach the graph — retry" : (err instanceof Error ? err.message : "Failed to load graph"))
           setDegraded(true)
         }
       } finally {
+        clearTimeout(timeout)
         if (!cancelled) setLoading(false)
       }
     }
 
     void load()
     return () => { cancelled = true }
-  }, [groupId])
+  }, [groupId, retryKey])
 
   if (loading) {
     return (
@@ -288,7 +294,37 @@ export default function KnowledgeGraphCards({ groupId }: { groupId: string }) {
           <circle cx="4" cy="18" r="2" /><circle cx="20" cy="18" r="2" />
           <path d="M9.5 10.5 5.5 7.5M14.5 10.5l4-3M9.5 13.5 5.5 16.5M14.5 13.5l4 3" />
         </svg>
-        Loading graph from Neo4j...
+        Loading knowledge graph…
+      </div>
+    )
+  }
+
+  // Error state with retry — never leave the user on a permanent loading screen
+  if (error && nodes.length === 0) {
+    return (
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #fca5a5",
+          borderRadius: 12,
+          padding: "40px 32px",
+          textAlign: "center",
+          maxWidth: 480,
+          margin: "0 auto",
+        }}
+      >
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#b91c1c", marginBottom: 8 }}>
+          Couldn&apos;t reach the graph
+        </div>
+        <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px" }}>
+          {error}
+        </p>
+        <button
+          onClick={() => { setError(null); setDegraded(false); setRetryKey((k) => k + 1); }}
+          style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+        >
+          Retry
+        </button>
       </div>
     )
   }

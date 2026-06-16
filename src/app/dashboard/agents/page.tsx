@@ -221,7 +221,7 @@ export default async function AgentsPage() {
           fontFamily: '"IBM Plex Mono", monospace',
         }}
       >
-        group_id: {groupId} · source: {source} · fetched: {new Date().toISOString()}
+        Organization: {groupId} · source: {source} · fetched: {new Date().toISOString()}
       </div>
     </div>
   )

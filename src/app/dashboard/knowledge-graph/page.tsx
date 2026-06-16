@@ -55,9 +55,11 @@ export default async function KnowledgeGraphPage() {
         >
           Knowledge Graph
         </h1>
-        <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
-          Entities and relationships from Neo4j for <strong style={{ color: "#374151" }}>{groupId}</strong>.
-          Each card is a real graph node — no fabricated data.
+        <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 4px", lineHeight: 1.6 }}>
+          How your memories connect — a visual map of the people, projects, and ideas your agents have learned about.
+        </p>
+        <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>
+          Organization: <strong style={{ color: "#374151" }}>{groupId}</strong> · each card is a real graph node
         </p>
       </div>
 

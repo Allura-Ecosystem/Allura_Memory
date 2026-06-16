@@ -564,7 +564,10 @@ function PageHeader({ totalPending }: { totalPending?: number }) {
           </span>
         )}
       </div>
-      <p style={{ fontSize: 14, color: "var(--allura-gray-500)", margin: 0 }}>
+      <p style={{ fontSize: 14, color: "var(--allura-gray-500)", margin: "0 0 4px" }}>
+        Memories waiting for human approval before they become permanent knowledge.
+      </p>
+      <p style={{ fontSize: 12, color: "var(--allura-gray-400, #9ca3af)", margin: 0 }}>
         Pending checkpoint approvals and curator proposals. Oldest items first.
       </p>
     </div>

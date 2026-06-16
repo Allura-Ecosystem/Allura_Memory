@@ -860,11 +860,11 @@ textarea {
 }
 
 /* ============================================================
-   MOBILE POLISH (≤720px)
+   MOBILE POLISH (≤767px)
    Sidebar collapses; mobile nav bar takes over.
    ============================================================ */
 
-@media (max-width: 720px) {
+@media (max-width: 767px) {
   .dashboard-shell .dashboard-sidebar {
     display: none;
   }
@@ -884,7 +884,7 @@ textarea {
   }
 }
 
-/* Mobile nav bar */
+/* Mobile nav bar — hidden at ≥768px (standard tablet/desktop breakpoint) */
 .mobile-nav {
   display: none;
   position: fixed;
@@ -897,7 +897,7 @@ textarea {
   z-index: 100;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767px) {
   .mobile-nav {
     display: flex;
     align-items: stretch;
