@@ -29,7 +29,7 @@ const h2: React.CSSProperties = { fontSize: 15, fontWeight: 700, color: "#1a1a1a
 const btn = (bg: string): React.CSSProperties => ({ background: bg, color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" });
 const input: React.CSSProperties = { border: "1px solid #d6cfc0", borderRadius: 8, padding: "8px 10px", fontSize: 13, marginRight: 8 };
 
-export default function BumblebeeClient({ groupId, activeWorkspaceId }: { groupId: string; activeWorkspaceId: string | null }) {
+export default function GuardClient({ groupId, activeWorkspaceId }: { groupId: string; activeWorkspaceId: string | null }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selected, setSelected] = useState<string | null>(activeWorkspaceId);
   const [tokens, setTokens] = useState<TokenRow[]>([]);
@@ -93,8 +93,8 @@ export default function BumblebeeClient({ groupId, activeWorkspaceId }: { groupI
   return (
     <div style={{ padding: 24, maxWidth: 920 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 4 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1a1a1a", margin: 0 }}>Bumblebee</h1>
-        <span style={{ fontSize: 12, color: "#6b7280" }}>guards the hive</span>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1a1a1a", margin: 0 }}>Allura Guard</h1>
+        <span style={{ fontSize: 12, color: "#6b7280" }}>MCP auth &amp; policy gateway</span>
       </div>
       <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px" }}>
         Active org: <code style={{ background: "#f0ece0", padding: "2px 6px", borderRadius: 4 }}>{groupId}</code>

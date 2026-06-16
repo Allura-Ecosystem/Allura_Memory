@@ -81,7 +81,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Hosted",
-    items: [{ href: "/dashboard/bumblebee", label: "Bumblebee", icon: KeyRound }],
+    items: [{ href: "/dashboard/guard", label: "Allura Guard", icon: KeyRound }],
   },
 ]
 

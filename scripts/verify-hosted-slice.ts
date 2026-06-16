@@ -11,7 +11,7 @@
 process.env.ALLURA_MCP_TOKEN_SECRET ??= "hosted-slice-smoke-secret-key-001";
 
 import { closePool, getPool } from "../src/lib/postgres/connection";
-import { authorizeToolCall } from "../src/lib/bumblebee/gateway";
+import { authorizeToolCall } from "../src/lib/guard/gateway";
 import { createToken } from "../src/lib/mcp-token/repository";
 import { createWorkspace } from "../src/lib/workspace/repository";
 

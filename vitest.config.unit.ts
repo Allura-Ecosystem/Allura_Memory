@@ -93,8 +93,8 @@ export default defineConfig({
       "src/server/**/*.test.ts",
       // Script-level guardrail tests (GIT-EXEC-001)
       "tests/scripts/**/*.test.ts",
-      // Allura Hosted — Bumblebee gateway + MCP token (pure logic, no DB)
-      "src/lib/bumblebee/**/*.test.ts",
+      // Allura Hosted — Guard gateway + MCP token (pure logic, no DB)
+      "src/lib/guard/**/*.test.ts",
       "src/lib/mcp-token/**/*.test.ts",
       // Allura Hosted — admin route auth/shape tests (mocked repos)
       "src/__tests__/hosted-admin-routes.test.ts",

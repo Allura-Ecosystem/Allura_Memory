@@ -42,7 +42,7 @@ Coverage map for [BLUEPRINT.md](./BLUEPRINT.md). Traces Business → Functional 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
 | F6 | Server-side group_id injection | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [AD-01](./RISKS-AND-DECISIONS.md) |
-| F7 | Token/API-key validation | `POST/GET /api/tokens` + `POST /api/tokens/:id/revoke` (`src/app/api/tokens/`) · validate via `src/lib/bumblebee/validate-token.ts` · [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [AD-03](./RISKS-AND-DECISIONS.md) |
+| F7 | Token/API-key validation | `POST/GET /api/tokens` + `POST /api/tokens/:id/revoke` (`src/app/api/tokens/`) · validate via `src/lib/guard/validate-token.ts` · [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [AD-03](./RISKS-AND-DECISIONS.md) |
 | F8 | Scope checks | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) |
 | F9 | Rate limits | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [RK-04](./RISKS-AND-DECISIONS.md) |
 | F10 | Secret scanning | [DESIGN-BUMBLEBEE.md](./DESIGN-BUMBLEBEE.md) · [RK-08](./RISKS-AND-DECISIONS.md) |
@@ -65,13 +65,13 @@ The end-to-end Bumblebee spine is implemented and verified (unit lane + live-DB 
 | Req | Implemented by |
 |-----|----------------|
 | F2 (partial) | `docker/postgres-init/27-workspaces.sql` · `src/lib/workspace/repository.ts` |
-| F6 | `src/lib/bumblebee/inject-context.ts` · `src/middleware.ts` (anti-spoof) |
+| F6 | `src/lib/guard/inject-context.ts` · `src/proxy.ts` (anti-spoof) |
 | F7 (partial) | `docker/postgres-init/28-mcp-tokens.sql` · `src/lib/mcp-token/{hash,repository}.ts` (HMAC-SHA256, raw never stored) |
-| F8 | `src/lib/bumblebee/check-scope.ts` (+ `@allura/rbac`, `@allura/mcp-server`) |
-| F12 (permit+deny) | `src/lib/bumblebee/audit.ts` → append-only `events` via `insertEvent` |
+| F8 | `src/lib/guard/check-scope.ts` (+ `@allura/rbac`, `@allura/mcp-server`) |
+| F12 (permit+deny) | `src/lib/guard/audit.ts` → append-only `events` via `insertEvent` |
 | F13 | `src/app/mcp/route.ts` (POST; SSE deferred) |
-| F14 | `src/lib/bumblebee/gateway.ts` (validate → inject → scope → audit) |
-| F15 | `src/lib/bumblebee/gateway.ts` — scope derived only from token; no client group_id path |
+| F14 | `src/lib/guard/gateway.ts` (validate → inject → scope → audit) |
+| F15 | `src/lib/guard/gateway.ts` — scope derived only from token; no client group_id path |
 
 Deferred to later phases: rotate (F-part of 7), rate limits (F9), secret scan (F10),
 lock-mode enforcement (F11), admin token/workspace HTTP routes, Command Center UI.

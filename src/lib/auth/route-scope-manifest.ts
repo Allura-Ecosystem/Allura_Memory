@@ -159,7 +159,7 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     description: "Audit event logs",
   },
 
-  // ── Hosted Platform (Bumblebee) ───────────────────────────────────────────
+  // ── Hosted Platform (Allura Guard) ────────────────────────────────────────
   {
     pattern: "/api/tokens",
     requiredRole: "admin",

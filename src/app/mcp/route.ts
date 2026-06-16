@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { toolsForScopes } from "@allura/mcp-server";
 import type { AlluraScope, GroupId } from "@allura/types";
-import { auditGateway } from "@/lib/bumblebee/audit";
-import { authorizeToolCall } from "@/lib/bumblebee/gateway";
-import { injectContext } from "@/lib/bumblebee/inject-context";
-import { extractBearer, validateToken } from "@/lib/bumblebee/validate-token";
+import { auditGateway } from "@/lib/guard/audit";
+import { authorizeToolCall } from "@/lib/guard/gateway";
+import { injectContext } from "@/lib/guard/inject-context";
+import { extractBearer, validateToken } from "@/lib/guard/validate-token";
 import type { GroupId as MemGroupId, MemoryAddRequest, MemorySearchRequest } from "@/lib/memory/canonical-contracts";
 import { memory_add, memory_search } from "@/mcp/canonical-tools";
 
