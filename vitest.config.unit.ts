@@ -93,6 +93,9 @@ export default defineConfig({
       "src/server/**/*.test.ts",
       // Script-level guardrail tests (GIT-EXEC-001)
       "tests/scripts/**/*.test.ts",
+      // Allura Hosted — Bumblebee gateway + MCP token (pure logic, no DB)
+      "src/lib/bumblebee/**/*.test.ts",
+      "src/lib/mcp-token/**/*.test.ts",
     ],
     exclude: [
       // ── Integration tests (mocked DB/services) — use test:integration ──
@@ -135,6 +138,9 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      { find: "@allura/types", replacement: path.resolve(__dirname, "./packages/types/src/index.ts") },
+      { find: "@allura/rbac", replacement: path.resolve(__dirname, "./packages/rbac/src/index.ts") },
+      { find: "@allura/mcp-server", replacement: path.resolve(__dirname, "./packages/mcp-server/src/index.ts") },
       { find: "@", replacement: path.resolve(__dirname, "./src") },
     ],
   },

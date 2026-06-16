@@ -25,6 +25,15 @@
       "@/*": [
         "./src/*"
       ],
+      "@allura/types": [
+        "./packages/types/src/index.ts"
+      ],
+      "@allura/rbac": [
+        "./packages/rbac/src/index.ts"
+      ],
+      "@allura/mcp-server": [
+        "./packages/mcp-server/src/index.ts"
+      ],
       "@mcp-docker/playwright": [
         "./tests/mcp/browser/__mocks__/@mcp-docker/playwright.ts"
       ],

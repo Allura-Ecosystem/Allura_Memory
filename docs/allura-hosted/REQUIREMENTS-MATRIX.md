@@ -57,6 +57,25 @@ Coverage map for [BLUEPRINT.md](./BLUEPRINT.md). Traces Business → Functional 
 | F14 | Inject workspace + scope check | [DESIGN-MCP-GATEWAY.md](./DESIGN-MCP-GATEWAY.md) |
 | F15 | Cannot override group_id | [DESIGN-MCP-GATEWAY.md](./DESIGN-MCP-GATEWAY.md) · [RK-01](./RISKS-AND-DECISIONS.md) |
 
+#### Phase 1 slice — implemented (verified)
+
+The end-to-end Bumblebee spine is implemented and verified (unit lane + live-DB smoke
+`scripts/verify-hosted-slice.ts`). Implementing files:
+
+| Req | Implemented by |
+|-----|----------------|
+| F2 (partial) | `docker/postgres-init/27-workspaces.sql` · `src/lib/workspace/repository.ts` |
+| F6 | `src/lib/bumblebee/inject-context.ts` · `src/middleware.ts` (anti-spoof) |
+| F7 (partial) | `docker/postgres-init/28-mcp-tokens.sql` · `src/lib/mcp-token/{hash,repository}.ts` (HMAC-SHA256, raw never stored) |
+| F8 | `src/lib/bumblebee/check-scope.ts` (+ `@allura/rbac`, `@allura/mcp-server`) |
+| F12 (permit+deny) | `src/lib/bumblebee/audit.ts` → append-only `events` via `insertEvent` |
+| F13 | `src/app/mcp/route.ts` (POST; SSE deferred) |
+| F14 | `src/lib/bumblebee/gateway.ts` (validate → inject → scope → audit) |
+| F15 | `src/lib/bumblebee/gateway.ts` — scope derived only from token; no client group_id path |
+
+Deferred to later phases: rotate (F-part of 7), rate limits (F9), secret scan (F10),
+lock-mode enforcement (F11), admin token/workspace HTTP routes, Command Center UI.
+
 ### Memory Engine
 
 | ID | Requirement | Satisfied by |

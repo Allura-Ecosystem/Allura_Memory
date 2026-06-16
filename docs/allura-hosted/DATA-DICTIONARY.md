@@ -123,6 +123,24 @@ Relationships: `Workspace N—1 group_id` (shared via parent org); `Workspace 1�
 **Default agent scopes:** `memory:read`, `memory:write`, `receipt:create`.
 **Reviewer scopes:** `memory:read`, `review:read`, `review:approve`, `review:reject`, `memory:promote`.
 
+### Physical tables (Phase 1 slice — source of truth)
+
+The conceptual `Organization` lives in **Clerk**, not Postgres, so the physical schema
+has no `organizations` table; the org `group_id` is carried directly on the workspace row.
+Primary keys are `TEXT` (app-generated), not `uuid`. Migrations:
+[`27-workspaces.sql`](../../docker/postgres-init/27-workspaces.sql),
+[`28-mcp-tokens.sql`](../../docker/postgres-init/28-mcp-tokens.sql).
+
+**`workspaces`** — `workspace_id` (PK, TEXT) · `group_id` (TEXT, NOT NULL, strict CHECK
+`^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$`) · `name` · `lock_mode` (DEFAULT `normal`, CHECK
+in the five `lock_mode` values above) · `created_by` · `created_at` · `updated_at`.
+
+**`mcp_tokens`** — `id` (PK, TEXT) · `group_id` (TEXT, NOT NULL, strict CHECK) ·
+`workspace_id` (TEXT, NOT NULL, FK → `workspaces.workspace_id`) · `agent_name` ·
+`token_prefix` (UNIQUE index — the lookup key) · `token_hash` (HMAC-SHA256; raw token
+never stored) · `scopes` (TEXT[]) · `expires_at` · `revoked_at` · `last_used_at` ·
+`created_by` · `created_at`. The logical `revoked` flag = `revoked_at IS NOT NULL`.
+
 ## Agent
 
 | Field | Type | Required | Description |
