@@ -11,7 +11,13 @@ vi.mock("@/lib/operational-state/utils/error-classifier", () => ({
   },
 }))
 
+// Mock tenant-roster so tests control the DB-derived agent list
+vi.mock("@/lib/agents/tenant-roster", () => ({
+  listTenantAgents: vi.fn(),
+}))
+
 import { getPool } from "@/lib/postgres/connection"
+import { listTenantAgents } from "@/lib/agents/tenant-roster"
 import { getExecutionOverview } from "./execution-view"
 import {
   TEAM_RAM_AGENTS,
@@ -20,6 +26,15 @@ import {
 } from "./execution-view.types"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+const MOCK_TENANT_AGENTS = TEAM_RAM_AGENTS.map((name) => ({
+  id: `tok_${name}`,
+  name,
+  scopes: "memory:read",
+  workspaceId: "ws-default",
+  lastUsed: null,
+  active: true,
+}))
 
 function makePool(overrides: {
   processRunsRows?: unknown[]
@@ -57,6 +72,8 @@ describe("TEAM_RAM_AGENTS", () => {
 describe("getExecutionOverview", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default: return 10-agent roster from DB
+    vi.mocked(listTenantAgents).mockResolvedValue(MOCK_TENANT_AGENTS)
   })
 
   it("returns offline state when getPool throws", async () => {
@@ -67,22 +84,20 @@ describe("getExecutionOverview", () => {
     const result = await getExecutionOverview("allura-system")
 
     expect(result.online).toBe(false)
-    expect(result.agents).toHaveLength(10)
+    // DB-derived: empty roster when pool unavailable
+    expect(result.agents).toHaveLength(0)
     expect(result.activeRuns).toHaveLength(0)
     expect(result.timeline).toHaveLength(0)
-    // All agents should be idle when offline
-    for (const agent of result.agents) {
-      expect(agent.state).toBe("idle")
-    }
   })
 
-  it("returns online state with empty data when queries succeed with no rows", async () => {
+  it("returns online state with agents from DB when queries succeed with no rows", async () => {
     const pool = makePool({})
     vi.mocked(getPool).mockReturnValue(pool as unknown as ReturnType<typeof getPool>)
 
     const result = await getExecutionOverview("allura-system")
 
     expect(result.online).toBe(true)
+    // All 10 agents from mock tenant roster
     expect(result.agents).toHaveLength(10)
     expect(result.activeRuns).toHaveLength(0)
     expect(result.timeline).toHaveLength(0)
@@ -248,7 +263,7 @@ describe("getExecutionOverview", () => {
     expect(result.online).toBe(false)
   })
 
-  it("all agents are present in the result regardless of activity", async () => {
+  it("all DB agents are present in the result", async () => {
     const pool = makePool({})
     vi.mocked(getPool).mockReturnValue(pool as unknown as ReturnType<typeof getPool>)
 

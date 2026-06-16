@@ -2,6 +2,10 @@
 // This module is intentionally plain (no "use server") so it can be imported
 // by both server components/actions AND client components without violating the
 // Next.js rule that "use server" files may only export async functions.
+//
+// NOTE: TEAM_RAM_AGENTS is kept for backward-compat (used by existing tests and
+// components). The live execution roster now comes from mcp_tokens (DB). Do not
+// add new usages of TEAM_RAM_AGENTS for roster purposes — use listTenantAgents.
 
 export const TEAM_RAM_AGENTS = [
   "brooks",
@@ -23,7 +27,8 @@ export type TeamRamAgent = (typeof TEAM_RAM_AGENTS)[number]
 export type AgentState = "active" | "idle" | "blocked"
 
 export interface AgentStatus {
-  agentId: TeamRamAgent
+  /** Agent id — widened to string so DB-derived agents are supported */
+  agentId: string
   state: AgentState
   /** run ID if currently active */
   activeRunId: string | null
