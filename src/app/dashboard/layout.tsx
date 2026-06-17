@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import type { ReactNode } from "react"
 
 import Sidebar from "@/components/allura/sidebar"
+import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { CommandPalette } from "@/components/dashboard/command-palette"
 import { InspectorPanel } from "@/components/dashboard/inspector-panel"
 import { InspectorProvider } from "@/components/dashboard/inspector-context"
@@ -20,9 +21,32 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
       <InspectorProvider>
+        {/* Full-height flex shell: sidebar left, content right */}
         <div className="dashboard-shell">
           <Sidebar />
-          <main className="dashboard-main">{children}</main>
+          {/* Main column: header + scrollable content */}
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <DashboardHeader />
+            <main
+              className="scry"
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: "auto",
+              }}
+            >
+              {children}
+            </main>
+          </div>
           <ToastContainer />
           <CommandPalette />
         </div>

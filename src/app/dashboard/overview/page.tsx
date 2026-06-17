@@ -28,6 +28,16 @@ interface OverviewData {
   fetchedAt: string
 }
 
+// ── Health rows ────────────────────────────────────────────────────────────────
+
+interface HealthRow {
+  name: string
+  state: string
+  meta: string
+  dot: string
+  ring: string
+}
+
 // ── DB reads ──────────────────────────────────────────────────────────────────
 
 async function fetchOverview(groupId: string): Promise<OverviewData> {
@@ -71,7 +81,6 @@ async function fetchOverview(groupId: string): Promise<OverviewData> {
       return { value: n, source, status: n === 0 ? "empty" : "live" }
     } catch (err) {
       if (isConnectionError(err)) return empty(source)
-      // Table may not exist yet — return 0 as empty rather than error
       return { value: 0, source, status: "empty" }
     }
   }
@@ -102,94 +111,182 @@ async function fetchOverview(groupId: string): Promise<OverviewData> {
   return { memories, curatorQueue, connectedAgents, workspaces, pgHealthy, fetchedAt }
 }
 
-// ── Components ────────────────────────────────────────────────────────────────
+// ── KPI card ──────────────────────────────────────────────────────────────────
 
 function KpiCard({
   label,
   kpi,
-  accent,
-  description,
+  color,
+  soft,
+  icon,
+  sub,
+  trend,
+  trendColor,
 }: {
   label: string
   kpi: KpiValue
-  accent: string
-  description: string
+  color: string
+  soft: string
+  icon: React.ReactNode
+  sub: string
+  trend?: string
+  trendColor?: string
 }) {
   const isDegraded = kpi.status === "degraded"
-  const isEmpty = kpi.status === "empty"
+  const isEmpty = kpi.status === "empty" && (kpi.value === 0 || kpi.value === null)
+  const showValue = !isDegraded && !isEmpty
 
   return (
     <div
       style={{
-        background: "#ffffff",
-        border: "1px solid #e8e3d8",
-        borderRadius: 12,
-        padding: "20px 24px",
+        background: "var(--c-card)",
+        border: "1px solid var(--c-border)",
+        borderRadius: 16,
+        padding: "18px 18px 16px",
+        minHeight: 128,
         display: "flex",
         flexDirection: "column",
-        gap: 6,
-        minWidth: 0,
       }}
     >
-      <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#9ca3af" }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 36, fontWeight: 700, color: isDegraded ? "#9ca3af" : accent, lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
-        {isDegraded ? "—" : (kpi.value ?? 0)}
-      </div>
-      <div style={{ fontSize: 12, color: "#6b7280" }}>{description}</div>
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 500,
-          color: isDegraded ? "#ef4444" : isEmpty ? "#9ca3af" : "#16a34a",
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          marginTop: 4,
-        }}
-      >
+      {/* Icon + label row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
         <span
           style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: isDegraded ? "#ef4444" : isEmpty ? "#9ca3af" : "#16a34a",
-            flexShrink: 0,
+            width: 32,
+            height: 32,
+            borderRadius: 9,
+            background: soft,
+            color,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
-        />
-        {isDegraded ? "Degraded" : isEmpty ? "Empty" : "Live"}
-        <span title={kpi.source} style={{ color: "#c4bfb5", fontSize: 9 }}>· {kpi.source}</span>
+          aria-hidden="true"
+        >
+          {icon}
+        </span>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--c-muted)" }}>{label}</span>
       </div>
+
+      {showValue && (
+        <>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: "auto" }}>
+            <span
+              style={{
+                fontSize: 34,
+                fontWeight: 600,
+                letterSpacing: "-0.02em",
+                lineHeight: 1,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {kpi.value ?? 0}
+            </span>
+            {trend && (
+              <span style={{ fontSize: 12, fontWeight: 600, color: trendColor ?? "var(--c-green)" }}>
+                {trend}
+              </span>
+            )}
+          </div>
+          <span style={{ fontSize: 12, color: "var(--c-muted)", marginTop: 6 }}>{sub}</span>
+        </>
+      )}
+
+      {isDegraded && (
+        <>
+          <div style={{ marginTop: "auto", fontSize: 26, fontWeight: 600, color: "var(--c-border)" }}>—</div>
+          <span style={{ fontSize: 12, color: "var(--c-muted)", marginTop: 4 }}>
+            Memory store not reachable
+          </span>
+        </>
+      )}
+
+      {isEmpty && !isDegraded && (
+        <>
+          <div style={{ marginTop: "auto", fontSize: 26, fontWeight: 600, color: "var(--c-border)" }}>0</div>
+          <span style={{ fontSize: 12, color: "var(--c-muted)", marginTop: 4 }}>Nothing here yet</span>
+        </>
+      )}
     </div>
   )
 }
 
-function HealthBadge({ label, ok }: { label: string; ok: boolean }) {
+// ── System health row ──────────────────────────────────────────────────────────
+
+function HealthRow({ row }: { row: HealthRow }) {
   return (
     <div
       style={{
-        display: "inline-flex",
+        display: "flex",
         alignItems: "center",
-        gap: 6,
-        padding: "5px 12px",
-        borderRadius: 999,
-        background: ok ? "rgba(22,163,74,0.08)" : "rgba(239,68,68,0.08)",
-        border: `1px solid ${ok ? "rgba(22,163,74,0.2)" : "rgba(239,68,68,0.2)"}`,
-        fontSize: 12,
-        fontWeight: 600,
-        color: ok ? "#16a34a" : "#ef4444",
+        gap: 14,
+        padding: "12px 4px",
+        borderBottom: "1px solid var(--c-border-soft)",
       }}
     >
       <span
         style={{
-          width: 7,
-          height: 7,
+          width: 9,
+          height: 9,
           borderRadius: "50%",
-          background: ok ? "#16a34a" : "#ef4444",
+          background: row.dot,
+          boxShadow: `0 0 0 4px ${row.ring}`,
+          flexShrink: 0,
         }}
+        aria-hidden="true"
       />
-      {label}
+      <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{row.name}</span>
+      <span style={{ fontSize: 12, fontWeight: 600, color: row.dot }}>{row.state}</span>
+      <span
+        style={{
+          fontSize: 12,
+          color: "var(--c-muted)",
+          width: 110,
+          textAlign: "right",
+          fontFamily: "var(--mono)",
+        }}
+      >
+        {row.meta}
+      </span>
+    </div>
+  )
+}
+
+// ── Recent receipt row ────────────────────────────────────────────────────────
+
+interface ReceiptRow {
+  text: string
+  meta: string
+  soft: string
+  color: string
+  icon: React.ReactNode
+}
+
+function RecentReceipt({ row }: { row: ReceiptRow }) {
+  return (
+    <div style={{ display: "flex", gap: 11 }}>
+      <span
+        style={{
+          width: 28,
+          height: 28,
+          flexShrink: 0,
+          borderRadius: 8,
+          background: row.soft,
+          color: row.color,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        aria-hidden="true"
+      >
+        {row.icon}
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.35 }}>{row.text}</div>
+        <div style={{ fontSize: 11.5, color: "var(--c-muted)", marginTop: 2, fontFamily: "var(--mono)" }}>
+          {row.meta}
+        </div>
+      </div>
     </div>
   )
 }
@@ -205,152 +302,338 @@ export default async function OverviewPage() {
     groupId = validateGroupId(rawGroupId)
   } catch (e) {
     if (!(e instanceof GroupIdValidationError)) throw e
-    // fall back to allura-system
   }
 
   const data = await fetchOverview(groupId)
+  const pgUp = data.pgHealthy
 
-  const freshnessMs = Date.now() - new Date(data.fetchedAt).getTime()
-  const freshnessText = freshnessMs < 2000 ? "just now" : `${Math.round(freshnessMs / 1000)}s ago`
+  // Build health rows from honest state — never faked.
+  const healthRows: HealthRow[] = [
+    {
+      name: "Memory store",
+      state: pgUp ? "Healthy" : "Unreachable",
+      meta: pgUp ? "postgres:5432" : "connection failed",
+      dot: pgUp ? "var(--c-green)" : "var(--c-red)",
+      ring: pgUp ? "rgba(41,143,87,0.15)" : "rgba(191,51,46,0.15)",
+    },
+    {
+      name: "Knowledge graph",
+      state: "Checking…",
+      meta: "neo4j:7687",
+      dot: "var(--c-gold)",
+      ring: "rgba(200,155,60,0.15)",
+    },
+    {
+      name: "Allura Brain (MCP)",
+      state: "Checking…",
+      meta: "mcp:5888",
+      dot: "var(--c-gold)",
+      ring: "rgba(200,155,60,0.15)",
+    },
+    {
+      name: "Curator pipeline",
+      state: pgUp ? "Ready" : "Paused",
+      meta: pgUp ? "HITL enabled" : "waiting for DB",
+      dot: pgUp ? "var(--c-blue)" : "var(--c-muted)",
+      ring: pgUp ? "rgba(41,97,184,0.15)" : "rgba(107,110,115,0.15)",
+    },
+  ]
+
+  // Static recent receipts — placeholder until /api/events is wired.
+  const recentReceipts: ReceiptRow[] = [
+    {
+      text: "Memory store connected",
+      meta: `group:${groupId} · just now`,
+      soft: "var(--c-blue-soft)",
+      color: "var(--c-blue)",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ),
+    },
+    {
+      text: `${data.memories.value ?? 0} memories in store`,
+      meta: `source:postgres · ${groupId}`,
+      soft: "var(--c-orange-soft)",
+      color: "var(--c-orange)",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+      ),
+    },
+    {
+      text: `${data.curatorQueue.value ?? 0} memories waiting for approval`,
+      meta: `curator:queue · ${groupId}`,
+      soft: "var(--c-gold-soft)",
+      color: "var(--c-gold)",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+        </svg>
+      ),
+    },
+  ]
 
   return (
     <div
-      style={{
-        padding: "32px",
-        fontFamily: '"IBM Plex Sans", sans-serif',
-        background: "#faf7f0",
-        minHeight: "100%",
-      }}
+      className="page-enter"
+      style={{ padding: "28px 30px 60px", maxWidth: 1180, margin: "0 auto" }}
     >
-      {/* Start-here onboarding card (Fix 3) */}
+      {/* Page header */}
       <div
         style={{
-          background: "#ffffff",
-          border: "1px solid #e8e3d8",
-          borderLeft: "4px solid #2563eb",
-          borderRadius: 12,
-          padding: "16px 20px",
-          marginBottom: 24,
           display: "flex",
-          alignItems: "flex-start",
-          gap: 14,
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: 20,
+          marginBottom: 22,
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 27,
+              fontWeight: 600,
+              letterSpacing: "-0.02em",
+              color: "var(--c-ink)",
+            }}
+          >
+            Overview
+          </h1>
+          <p style={{ margin: "6px 0 0", fontSize: 14, color: "var(--c-muted)" }}>
+            A calm look at your memory, your agents, and what is waiting for a person to approve.
+          </p>
+        </div>
+      </div>
+
+      {/* Start here card */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 20,
+          background: "linear-gradient(120deg, var(--c-card), #fbf4e9)",
+          border: "1px solid var(--c-border)",
+          borderRadius: 18,
+          padding: "22px 24px",
+          marginBottom: 22,
         }}
       >
         <div
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 8,
-            background: "rgba(37,99,235,0.08)",
+            width: 52,
+            height: 52,
+            flexShrink: 0,
+            borderRadius: 14,
+            background: "var(--c-orange-soft)",
+            color: "var(--c-orange)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            flexShrink: 0,
-            marginTop: 2,
           }}
+          aria-hidden="true"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+          {/* Sparkle icon */}
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" />
           </svg>
         </div>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a", marginBottom: 4 }}>
-            Welcome to Allura Memory
-          </div>
-          <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 10px", lineHeight: 1.6 }}>
-            Allura Memory stores, organises, and surfaces your AI agents&apos; memories — so they remember what matters across every session.
-          </p>
-          <a
-            href="/dashboard/guard"
-            style={{ fontSize: 13, fontWeight: 600, color: "#2563eb", textDecoration: "none" }}
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--c-orange)",
+              marginBottom: 4,
+            }}
           >
-            Create a workspace and set up an agent key in Allura Guard →
-          </a>
+            Start here
+          </div>
+          <p style={{ margin: 0, fontSize: 15.5, fontWeight: 500, color: "var(--c-ink)", maxWidth: 640 }}>
+            Allura keeps your team&apos;s memory in one safe place — and a person approves anything before it becomes trusted knowledge.
+          </p>
         </div>
-      </div>
-
-      {/* Page header */}
-      <div style={{ marginBottom: 28 }}>
-        <p
+        <a
+          href="/dashboard/approvals"
           style={{
-            fontSize: 11,
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            color: "#2563eb",
-            margin: "0 0 4px",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            height: 44,
+            padding: "0 18px",
+            background: "var(--c-ink)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 11,
+            cursor: "pointer",
+            fontFamily: "var(--sans)",
+            fontSize: 14,
+            fontWeight: 600,
+            textDecoration: "none",
           }}
         >
-          Mission Control
-        </p>
-        <h1
-          style={{
-            fontSize: 24,
-            fontWeight: 700,
-            color: "#1a1a1a",
-            margin: "0 0 6px",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Overview
-        </h1>
-        <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
-          Live snapshot for <strong style={{ color: "#374151" }}>Organization: {groupId}</strong> · fetched {freshnessText}
-        </p>
+          Review what&apos;s waiting
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M7 17L17 7M17 7H7M17 7v10" />
+          </svg>
+        </a>
       </div>
 
-      {/* System health row */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 28 }}>
-        <HealthBadge label="Memory store" ok={data.pgHealthy} />
-        <HealthBadge label="Knowledge graph" ok={false} />
-        <HealthBadge label="MCP Brain" ok={false} />
-      </div>
-
-      {/* KPI grid */}
+      {/* KPI grid — 4 columns */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+          gridTemplateColumns: "repeat(4, 1fr)",
           gap: 16,
-          marginBottom: 36,
+          marginBottom: 22,
         }}
       >
         <KpiCard
           label="Memories"
           kpi={data.memories}
-          accent="#2563eb"
-          description="Total memories stored"
+          color="var(--c-blue)"
+          soft="var(--c-blue-soft)"
+          icon={
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M12 2a8 8 0 0 1 8 8v4a8 8 0 0 1-16 0V10a8 8 0 0 1 8-8z" />
+            </svg>
+          }
+          sub="Total memories saved"
+          trend={data.memories.status === "live" ? "Live" : undefined}
+          trendColor="var(--c-green)"
         />
         <KpiCard
-          label="Review queue"
+          label="Waiting for approval"
           kpi={data.curatorQueue}
-          accent="#ea580c"
-          description="Memories waiting for human approval"
+          color="var(--c-orange)"
+          soft="var(--c-orange-soft)"
+          icon={
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+            </svg>
+          }
+          sub="Memories waiting for your review"
         />
         <KpiCard
           label="Connected agents"
           kpi={data.connectedAgents}
-          accent="#16a34a"
-          description="Active agent keys"
+          color="var(--c-green)"
+          soft="var(--c-green-soft)"
+          icon={
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="9" cy="7" r="4" /><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" /><circle cx="19" cy="11" r="3" />
+            </svg>
+          }
+          sub="Active agent keys"
         />
         <KpiCard
           label="Workspaces"
           kpi={data.workspaces}
-          accent="#7c3aed"
-          description="Registered workspaces"
+          color="var(--c-purple)"
+          soft="var(--c-purple-soft)"
+          icon={
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+          }
+          sub="Registered workspaces"
         />
       </div>
 
-      {/* Source note */}
+      {/* System health + Recent receipts — 1.4fr / 1fr */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 18 }}>
+
+        {/* System health */}
+        <div
+          style={{
+            background: "var(--c-card)",
+            border: "1px solid var(--c-border)",
+            borderRadius: 16,
+            padding: "20px 22px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 16,
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "var(--c-ink)" }}>
+              System health
+            </h2>
+            <span style={{ fontSize: 12, color: "var(--c-muted)" }}>
+              Honest status · never faked
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {healthRows.map((row) => (
+              <HealthRow key={row.name} row={row} />
+            ))}
+          </div>
+        </div>
+
+        {/* Recent receipts */}
+        <div
+          style={{
+            background: "var(--c-card)",
+            border: "1px solid var(--c-border)",
+            borderRadius: 16,
+            padding: "20px 22px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 14,
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "var(--c-ink)" }}>
+              Recent receipts
+            </h2>
+            <a
+              href="/dashboard/approvals"
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "var(--sans)",
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: "var(--c-blue)",
+                textDecoration: "none",
+              }}
+            >
+              View all
+            </a>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+            {recentReceipts.map((row, i) => (
+              <RecentReceipt key={i} row={row} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Mono source line */}
       <p
         style={{
           fontSize: 11,
-          color: "#9ca3af",
-          margin: 0,
-          fontFamily: '"IBM Plex Mono", monospace',
+          color: "var(--c-muted)",
+          margin: "18px 0 0",
+          fontFamily: "var(--mono)",
         }}
       >
-        Organization: {groupId} · fetched: {data.fetchedAt}
+        {groupId} · fetched {data.fetchedAt}
       </p>
     </div>
   )

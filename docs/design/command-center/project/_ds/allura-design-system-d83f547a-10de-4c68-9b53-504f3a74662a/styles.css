@@ -1,0 +1,17 @@
+/* ============================================================
+   ALLURA DESIGN SYSTEM — global stylesheet entry point.
+   Consumers link this one file. Keep it to @import lines only.
+   ============================================================ */
+
+/* Webfonts */
+@import './tokens/fonts.css';
+
+/* Figma-materialized tokens (color primitives + raw spacing/radii floats) */
+@import './tokens/figma/fig-tokens.css';
+@import './tokens/figma/fig-typography.css';
+
+/* Brand token layer (named colors, semantic aliases, scales) */
+@import './tokens/colors.css';
+@import './tokens/typography.css';
+@import './tokens/spacing.css';
+@import './tokens/animations.css';

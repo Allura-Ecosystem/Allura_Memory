@@ -1,401 +1,559 @@
 "use client"
 
-import { useEffect, useState } from "react"
+/**
+ * KnowledgeGraphCards — the full interactive Knowledge Hive client component.
+ *
+ * Three-column layout:
+ *   [Filters] [React Flow Canvas] [Inspector]
+ *
+ * Two modes:
+ *   Platform Hive — always-available seed data showing Allura architecture
+ *   Live Memory   — live Neo4j data from /api/memory/graph
+ */
 
-// ── API response shape (mirrors /api/memory/graph) ────────────────────────────
+import type { ReactElement } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
-interface ApiNode {
-  id: string
-  label: string
-  type: string
-  metadata?: Record<string, unknown>
+import { GraphCanvas } from "@/components/graph/graph-canvas"
+import { GraphFiltersPanel, defaultFilters } from "@/components/graph/graph-filters"
+import type { GraphFilters } from "@/components/graph/graph-filters"
+import { GraphInspector } from "@/components/graph/graph-inspector"
+import { GraphLegend } from "@/components/graph/graph-legend"
+import { PLATFORM_NODES, PLATFORM_EDGES } from "@/lib/graph/platform-seed"
+import { mapApiResponse } from "@/lib/graph/map-neo4j"
+import type { GraphNode, GraphEdge, NodeCategory } from "@/lib/graph/types"
+
+type HiveMode = "platform" | "live"
+
+// ── Fetch live data ────────────────────────────────────────────────────────
+
+interface LiveState {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+  loading: boolean
+  error: string | null
+  degraded: boolean
 }
 
-interface ApiEdge {
-  id: string
-  source: string
-  target: string
-  label: string
-  metadata?: Record<string, unknown>
-}
-
-interface GraphApiResponse {
-  nodes: ApiNode[]
-  edges: ApiEdge[]
-  total_edges: number
-  node_count?: number
-  degraded?: boolean
-  source?: string
-  warning?: string
-}
-
-// ── Node type colors (warm wire-frame palette) ────────────────────────────────
-
-function typeAccent(type: string): { bg: string; border: string; label: string } {
-  switch (type.toLowerCase()) {
-    case "agent":   return { bg: "rgba(37,99,235,0.07)", border: "#2563eb", label: "#2563eb" }
-    case "project": return { bg: "rgba(124,58,237,0.07)", border: "#7c3aed", label: "#7c3aed" }
-    case "insight": return { bg: "rgba(22,163,74,0.07)", border: "#16a34a", label: "#16a34a" }
-    case "event":   return { bg: "rgba(234,88,12,0.07)", border: "#ea580c", label: "#ea580c" }
-    case "system":  return { bg: "rgba(15,23,42,0.05)", border: "#374151", label: "#374151" }
-    default:        return { bg: "rgba(124,58,237,0.05)", border: "#9ca3af", label: "#6b7280" }
-  }
-}
-
-// ── Node card ─────────────────────────────────────────────────────────────────
-
-function NodeCard({
-  node,
-  edges,
-}: {
-  node: ApiNode
-  edges: ApiEdge[]
-}) {
-  const accent = typeAccent(node.type)
-  const connections = edges.filter((e) => e.source === node.id || e.target === node.id)
-  const createdAt = node.metadata?.created_at
-    ? String(node.metadata.created_at).slice(0, 10)
-    : null
-  const confidence =
-    typeof node.metadata?.confidence === "number"
-      ? (node.metadata.confidence as number).toFixed(2)
-      : null
-
-  return (
-    <div
-      style={{
-        background: "#ffffff",
-        border: `1px solid ${accent.border}`,
-        borderRadius: 12,
-        padding: "16px 20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        borderLeft: `4px solid ${accent.border}`,
-        position: "relative",
-      }}
-    >
-      {/* Type badge */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            color: accent.label,
-            background: accent.bg,
-            padding: "2px 8px",
-            borderRadius: 999,
-          }}
-        >
-          {node.type}
-        </span>
-        <span style={{ fontSize: 10, color: "#9ca3af", fontFamily: '"IBM Plex Mono", monospace' }}>
-          {String(node.id).slice(0, 12)}
-        </span>
-      </div>
-
-      {/* Label */}
-      <div
-        style={{
-          fontSize: 15,
-          fontWeight: 700,
-          color: "#1a1a1a",
-          lineHeight: 1.3,
-          wordBreak: "break-word",
-        }}
-      >
-        {node.label}
-      </div>
-
-      {/* Metadata row */}
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 2 }}>
-        {confidence !== null && (
-          <MetaChip label="confidence" value={confidence} color="#16a34a" />
-        )}
-        {createdAt && (
-          <MetaChip label="date" value={createdAt} color="#6b7280" />
-        )}
-        <MetaChip label="connections" value={String(connections.length)} color="#6b7280" />
-      </div>
-
-      {/* Edge list */}
-      {connections.length > 0 && (
-        <div style={{ marginTop: 4, borderTop: "1px solid #f0ece0", paddingTop: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
-            Relationships
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            {connections.slice(0, 4).map((e) => {
-              const isSource = e.source === node.id
-              const otherId = isSource ? e.target : e.source
-              return (
-                <div key={e.id} style={{ fontSize: 11, color: "#6b7280", display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ color: accent.label, fontWeight: 600, fontSize: 10 }}>
-                    {isSource ? "→" : "←"}
-                  </span>
-                  <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: 10, color: "#9ca3af" }}>
-                    {e.label}
-                  </span>
-                  <span style={{ color: "#374151", fontSize: 11 }}>
-                    {String(otherId).slice(0, 20)}
-                  </span>
-                </div>
-              )
-            })}
-            {connections.length > 4 && (
-              <div style={{ fontSize: 10, color: "#9ca3af" }}>
-                +{connections.length - 4} more
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function MetaChip({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <div style={{ display: "flex", gap: 4, alignItems: "baseline" }}>
-      <span style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</span>
-      <span style={{ fontSize: 12, fontWeight: 600, color, fontFamily: '"IBM Plex Mono", monospace' }}>{value}</span>
-    </div>
-  )
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-
-function EmptyState({ degraded, groupId }: { degraded: boolean; groupId: string }) {
-  return (
-    <div
-      style={{
-        background: "#ffffff",
-        border: "1px solid #e8e3d8",
-        borderRadius: 12,
-        padding: "48px 32px",
-        textAlign: "center",
-        maxWidth: 480,
-        margin: "0 auto",
-      }}
-    >
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 12,
-          background: "rgba(124,58,237,0.08)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          margin: "0 auto 16px",
-        }}
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round">
-          <circle cx="12" cy="12" r="3" />
-          <circle cx="4" cy="6" r="2" /><circle cx="20" cy="6" r="2" />
-          <circle cx="4" cy="18" r="2" /><circle cx="20" cy="18" r="2" />
-          <path d="M9.5 10.5 5.5 7.5M14.5 10.5l4-3M9.5 13.5 5.5 16.5M14.5 13.5l4 3" />
-        </svg>
-      </div>
-      <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1a1a1a", margin: "0 0 8px" }}>
-        {degraded ? "Graph unavailable" : "No nodes yet"}
-      </h3>
-      <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px", lineHeight: 1.6 }}>
-        {degraded
-          ? "Neo4j could not be reached. The graph is shown when the Allura Brain stack is running."
-          : `No Knowledge Graph nodes exist for ${groupId} yet. Promote episodic memories to canonical to populate the graph.`}
-      </p>
-      <div
-        style={{
-          fontSize: 11,
-          color: "#9ca3af",
-          fontFamily: '"IBM Plex Mono", monospace',
-          padding: "6px 12px",
-          background: "#faf7f0",
-          borderRadius: 6,
-          display: "inline-block",
-        }}
-      >
-        group_id: {groupId}
-      </div>
-    </div>
-  )
-}
-
-// ── Main client component ─────────────────────────────────────────────────────
-
-export default function KnowledgeGraphCards({ groupId }: { groupId: string }) {
-  const [nodes, setNodes] = useState<ApiNode[]>([])
-  const [edges, setEdges] = useState<ApiEdge[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [degraded, setDegraded] = useState(false)
-  const [nodeCount, setNodeCount] = useState(0)
-  const [edgeCount, setEdgeCount] = useState(0)
-  const [source, setSource] = useState<string>("neo4j")
-  const [retryKey, setRetryKey] = useState(0)
+function useLiveGraph(groupId: string, retryKey: number): LiveState {
+  const [state, setState] = useState<LiveState>({
+    nodes: [],
+    edges: [],
+    loading: false,
+    error: null,
+    degraded: false,
+  })
 
   useEffect(() => {
     let cancelled = false
+    setState((s) => ({ ...s, loading: true, error: null }))
 
-    async function load() {
-      setLoading(true)
-      setError(null)
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 10_000)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10_000)
+
+    async function load(): Promise<void> {
       try {
-        const res = await fetch(`/api/memory/graph?group_id=${encodeURIComponent(groupId)}`, {
-          headers: { "x-allura-group-id": groupId },
-          signal: controller.signal,
-        })
+        const res = await fetch(
+          `/api/memory/graph?group_id=${encodeURIComponent(groupId)}`,
+          {
+            headers: { "x-allura-group-id": groupId },
+            signal: controller.signal,
+          }
+        )
         if (!res.ok) throw new Error(`API returned ${res.status}`)
-        const data = (await res.json()) as GraphApiResponse
+        const data = await res.json() as Parameters<typeof mapApiResponse>[0]
         if (cancelled) return
-        if (data.degraded) setDegraded(true)
-        if (data.source) setSource(data.source)
-        setNodes(data.nodes ?? [])
-        setEdges(data.edges ?? [])
-        setNodeCount(data.node_count ?? (data.nodes ?? []).length)
-        setEdgeCount(data.total_edges ?? (data.edges ?? []).length)
+        const mapped = mapApiResponse(data)
+        setState({
+          nodes: mapped.nodes,
+          edges: mapped.edges,
+          loading: false,
+          error: null,
+          degraded: Boolean(data.degraded),
+        })
       } catch (err) {
-        if (!cancelled) {
-          const isTimeout = err instanceof Error && err.name === "AbortError"
-          setError(isTimeout ? "Couldn't reach the graph — retry" : (err instanceof Error ? err.message : "Failed to load graph"))
-          setDegraded(true)
-        }
+        if (cancelled) return
+        const isAbort = err instanceof Error && err.name === "AbortError"
+        setState({
+          nodes: [],
+          edges: [],
+          loading: false,
+          error: isAbort
+            ? "Request timed out — retry"
+            : err instanceof Error
+            ? err.message
+            : "Failed to load graph",
+          degraded: true,
+        })
       } finally {
         clearTimeout(timeout)
-        if (!cancelled) setLoading(false)
       }
     }
 
     void load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [groupId, retryKey])
 
-  if (loading) {
+  return state
+}
+
+// ── Mode toggle ────────────────────────────────────────────────────────────
+
+type GraphModeLabel = "Platform Hive" | "Live Memory" | "Catalog"
+const GRAPH_MODES: { label: GraphModeLabel; value: HiveMode; icon: string }[] = [
+  { label: "Platform Hive", value: "platform", icon: "⬡" },
+  { label: "Live Memory", value: "live", icon: "◎" },
+]
+
+function ModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: HiveMode
+  onChange: (m: HiveMode) => void
+}): ReactElement {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 4,
+        background: "var(--c-card)",
+        border: "1px solid var(--c-border)",
+        borderRadius: 12,
+        padding: 4,
+      }}
+    >
+      {GRAPH_MODES.map(({ label, value, icon }) => {
+        const active = mode === value
+        return (
+          <button
+            key={value}
+            onClick={() => onChange(value)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              height: 34,
+              padding: "0 14px",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+              fontFamily: "var(--sans)",
+              fontSize: 13,
+              fontWeight: 600,
+              background: active ? "var(--c-ink)" : "transparent",
+              color: active ? "#fff" : "var(--c-muted)",
+              transition: "background 0.12s, color 0.12s",
+            }}
+          >
+            <span aria-hidden="true">{icon}</span>
+            {label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Empty / error states ───────────────────────────────────────────────────
+
+function LiveEmptyState({
+  degraded,
+  groupId,
+  onRetry,
+}: {
+  degraded: boolean
+  groupId: string
+  onRetry: () => void
+}): ReactElement {
+  if (degraded) {
     return (
       <div
         style={{
+          position: "absolute",
+          inset: 0,
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "64px 32px",
-          color: "#6b7280",
-          fontSize: 14,
-          gap: 10,
-        }}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" style={{ opacity: 0.6 }}>
-          <circle cx="12" cy="12" r="3" />
-          <circle cx="4" cy="6" r="2" /><circle cx="20" cy="6" r="2" />
-          <circle cx="4" cy="18" r="2" /><circle cx="20" cy="18" r="2" />
-          <path d="M9.5 10.5 5.5 7.5M14.5 10.5l4-3M9.5 13.5 5.5 16.5M14.5 13.5l4 3" />
-        </svg>
-        Loading knowledge graph…
-      </div>
-    )
-  }
-
-  // Error state with retry — never leave the user on a permanent loading screen
-  if (error && nodes.length === 0) {
-    return (
-      <div
-        style={{
-          background: "#ffffff",
-          border: "1px solid #fca5a5",
-          borderRadius: 12,
-          padding: "40px 32px",
+          gap: 14,
           textAlign: "center",
-          maxWidth: 480,
-          margin: "0 auto",
+          padding: 30,
         }}
       >
-        <div style={{ fontSize: 15, fontWeight: 700, color: "#b91c1c", marginBottom: 8 }}>
-          Couldn&apos;t reach the graph
-        </div>
-        <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px" }}>
-          {error}
-        </p>
-        <button
-          onClick={() => { setError(null); setDegraded(false); setRetryKey((k) => k + 1); }}
-          style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+        <span
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 18,
+            background: "var(--c-red-soft)",
+            color: "var(--c-red)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          Retry
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+        </span>
+        <div style={{ fontSize: 18, fontWeight: 600, color: "var(--c-ink)" }}>Couldn&apos;t draw the graph</div>
+        <div style={{ fontSize: 14, color: "var(--c-muted)", maxWidth: 340 }}>
+          Neo4j did not respond. We won&apos;t show a guessed layout. Switch to Platform Hive to see the architecture.
+        </div>
+        <button
+          onClick={onRetry}
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            padding: "0 18px",
+            height: 40,
+            borderRadius: 10,
+            border: "1px solid var(--c-border)",
+            background: "var(--c-card)",
+            color: "var(--c-ink)",
+            cursor: "pointer",
+            fontFamily: "var(--sans)",
+          }}
+        >
+          Try again
         </button>
       </div>
     )
   }
 
-  const isEmpty = nodes.length === 0
-
   return (
-    <div>
-      {/* Stats bar */}
-      {!isEmpty && (
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20, alignItems: "center" }}>
-          <StatPill label="nodes" value={nodeCount} />
-          <StatPill label="edges" value={edgeCount} />
-          {degraded && (
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: "#ea580c",
-                background: "rgba(234,88,12,0.08)",
-                padding: "4px 10px",
-                borderRadius: 999,
-              }}
-            >
-              Degraded ({source})
-            </span>
-          )}
-          {error && (
-            <span style={{ fontSize: 12, color: "#ef4444" }}>{error}</span>
-          )}
-        </div>
-      )}
-
-      {isEmpty ? (
-        <EmptyState degraded={degraded || !!error} groupId={groupId} />
-      ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: 14,
-          }}
-        >
-          {nodes.map((node) => (
-            <NodeCard key={node.id} node={node} edges={edges} />
-          ))}
-        </div>
-      )}
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 14,
+        textAlign: "center",
+        padding: 30,
+      }}
+    >
+      <span
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: 18,
+          background: "var(--c-blue-soft)",
+          color: "var(--c-blue)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <circle cx="12" cy="12" r="3" />
+          <circle cx="4" cy="6" r="2" /><circle cx="20" cy="6" r="2" />
+          <circle cx="4" cy="18" r="2" /><circle cx="20" cy="18" r="2" />
+          <path d="M9.5 10.5 5.5 7.5M14.5 10.5l4-3M9.5 13.5 5.5 16.5M14.5 13.5l4 3" />
+        </svg>
+      </span>
+      <div style={{ fontSize: 18, fontWeight: 600, color: "var(--c-ink)" }}>The hive is empty</div>
+      <div style={{ fontSize: 14, color: "var(--c-muted)", maxWidth: 340 }}>
+        No canonical nodes for <strong>{groupId}</strong> yet. As memories are approved and agents connect, they appear here.
+      </div>
     </div>
   )
 }
 
-function StatPill({ label, value }: { label: string; value: number }) {
+// ── Main component ─────────────────────────────────────────────────────────
+
+export default function KnowledgeGraphCards({ groupId }: { groupId: string }): ReactElement {
+  const [mode, setMode] = useState<HiveMode>("platform")
+  const [retryKey, setRetryKey] = useState(0)
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
+  const [filters, setFilters] = useState<GraphFilters>(defaultFilters())
+
+  const liveState = useLiveGraph(groupId, retryKey)
+
+  // Pick data source
+  const rawNodes: GraphNode[] = mode === "platform" ? PLATFORM_NODES : liveState.nodes
+  const rawEdges: GraphEdge[] = mode === "platform" ? PLATFORM_EDGES : liveState.edges
+
+  // Apply filters
+  const filteredNodes = useMemo<GraphNode[]>(() => {
+    return rawNodes.filter((n) => {
+      if (filters.categories.size > 0 && !filters.categories.has(n.type)) return false
+      if (filters.statuses.size > 0 && n.status && !filters.statuses.has(n.status)) return false
+      if (filters.riskLevels.size > 0 && n.riskLevel && !filters.riskLevels.has(n.riskLevel)) return false
+      return true
+    })
+  }, [rawNodes, filters])
+
+  const filteredNodeIds = useMemo(
+    () => new Set(filteredNodes.map((n) => n.id)),
+    [filteredNodes]
+  )
+
+  const filteredEdges = useMemo<GraphEdge[]>(
+    () => rawEdges.filter((e) => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target)),
+    [rawEdges, filteredNodeIds]
+  )
+
+  const availableCategories = useMemo<Set<NodeCategory>>(
+    () => new Set(rawNodes.map((n) => n.type)),
+    [rawNodes]
+  )
+
+  const handleNodeSelect = useCallback((node: GraphNode | null) => {
+    setSelectedNode(node)
+  }, [])
+
+  const isLiveLoading = mode === "live" && liveState.loading
+  const isLiveEmpty = mode === "live" && !liveState.loading && liveState.nodes.length === 0
+  const showCanvas = !isLiveLoading && !isLiveEmpty
+
   return (
     <div
       style={{
-        background: "#ffffff",
-        border: "1px solid #e8e3d8",
-        borderRadius: 8,
-        padding: "5px 12px",
         display: "flex",
-        gap: 6,
-        alignItems: "baseline",
+        flexDirection: "column",
+        gap: 16,
+        flex: 1,
+        minHeight: 0,
+        fontFamily: "var(--sans)",
       }}
     >
-      <strong style={{ fontSize: 15, fontWeight: 700, color: "#1a1a1a", fontVariantNumeric: "tabular-nums" }}>
-        {value}
-      </strong>
-      <span style={{ fontSize: 11, color: "#9ca3af" }}>{label}</span>
+      {/* Top bar: mode toggle + status */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <ModeToggle
+          mode={mode}
+          onChange={(m) => {
+            setMode(m)
+            setSelectedNode(null)
+            setFilters(defaultFilters())
+          }}
+        />
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {mode === "live" && liveState.degraded && (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                padding: "3px 10px",
+                borderRadius: 999,
+                background: "var(--c-red-soft)",
+                color: "var(--c-red)",
+              }}
+            >
+              Neo4j degraded
+            </span>
+          )}
+          <span style={{ fontSize: 11, color: "var(--c-muted)", fontFamily: "var(--mono)" }}>
+            {filteredNodes.length} nodes · {filteredEdges.length} connections
+          </span>
+        </div>
+      </div>
+
+      {/* Three-column layout: 204px | 1fr | 320px */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "204px 1fr 320px",
+          gap: 14,
+          flex: 1,
+          minHeight: 0,
+          alignItems: "start",
+        }}
+      >
+        {/* LEFT: filters + legend */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+            overflowY: "auto",
+            maxHeight: "100%",
+          }}
+          className="scry"
+        >
+          <div
+            style={{
+              background: "var(--c-card)",
+              border: "1px solid var(--c-border)",
+              borderRadius: 14,
+              padding: "15px 15px 17px",
+            }}
+          >
+            <GraphFiltersPanel
+              filters={filters}
+              onChange={setFilters}
+              availableCategories={availableCategories}
+            />
+          </div>
+          <div
+            style={{
+              background: "var(--c-card)",
+              border: "1px solid var(--c-border)",
+              borderRadius: 14,
+              padding: 15,
+            }}
+          >
+            <GraphLegend />
+          </div>
+        </div>
+
+        {/* CENTER: canvas hero — dot grid background */}
+        <div
+          style={{
+            position: "relative",
+            background: "#fcf9f1",
+            backgroundImage: "radial-gradient(#e7dfcd 1px, transparent 1px)",
+            backgroundSize: "22px 22px",
+            border: "1px solid var(--c-border)",
+            borderRadius: 16,
+            overflow: "hidden",
+            minHeight: 660,
+          }}
+        >
+          {/* Mode label chip */}
+          <div
+            style={{
+              position: "absolute",
+              top: 14,
+              left: 14,
+              zIndex: 5,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              background: "rgba(255,253,248,0.93)",
+              border: "1px solid var(--c-border)",
+              borderRadius: 20,
+              padding: "6px 12px",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <span
+              style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--c-orange)" }}
+              aria-hidden="true"
+            />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--c-ink)" }}>
+              {mode === "platform" ? "Platform Hive" : "Live Memory"}
+            </span>
+          </div>
+
+          {/* Loading spinner */}
+          {isLiveLoading && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 14,
+                zIndex: 10,
+              }}
+            >
+              <span
+                style={{
+                  width: 34,
+                  height: 34,
+                  border: "3px solid var(--c-border)",
+                  borderTopColor: "var(--c-blue)",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                  display: "inline-block",
+                }}
+              />
+              <div style={{ fontSize: 14, color: "var(--c-muted)" }}>Building the hive…</div>
+            </div>
+          )}
+
+          {/* Empty / error overlay */}
+          {isLiveEmpty && (
+            <LiveEmptyState
+              degraded={liveState.degraded}
+              groupId={groupId}
+              onRetry={() => setRetryKey((k) => k + 1)}
+            />
+          )}
+
+          {/* React Flow canvas */}
+          {showCanvas && (
+            <GraphCanvas
+              nodes={filteredNodes}
+              edges={filteredEdges}
+              onNodeSelect={handleNodeSelect}
+            />
+          )}
+        </div>
+
+        {/* RIGHT: inspector */}
+        <div
+          style={{
+            background: "var(--c-card)",
+            border: "1px solid var(--c-border)",
+            borderRadius: 16,
+            overflow: "hidden",
+            position: "sticky",
+            top: 0,
+          }}
+        >
+          {selectedNode ? (
+            <GraphInspector
+              node={selectedNode}
+              edges={filteredEdges}
+              nodes={filteredNodes}
+              onClose={() => setSelectedNode(null)}
+            />
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                padding: "60px 26px",
+                textAlign: "center",
+                minHeight: 400,
+              }}
+            >
+              <span
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 13,
+                  background: "#f1ece0",
+                  color: "var(--c-muted)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                aria-hidden="true"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                </svg>
+              </span>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--c-ink)" }}>Pick a card</div>
+              <div style={{ fontSize: 12.5, color: "var(--c-muted)", lineHeight: 1.5 }}>
+                Click any card in the hive to see its owner, risk, connections, and evidence here.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
