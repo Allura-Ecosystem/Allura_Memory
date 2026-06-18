@@ -1,5 +1,10 @@
 # CODING AGENTS: READ THIS FIRST
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> This handoff bundle was produced with an AI design tool (Claude Design) and drafted with AI assistance.
+> Content may contain inaccuracies or omissions; defer to the implemented source code and design tokens when in doubt.
+
 This is a **handoff bundle** from Claude Design (claude.ai/design).
 
 A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.

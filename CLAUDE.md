@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+> [!NOTE]
+> **AI-Assisted Documentation** — this guidance file is maintained with AI assistance (Claude Code).
+> Where it conflicts with the source code, schemas, or tests, defer to those.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Runtime & Package Manager
