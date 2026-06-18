@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Settings,
   ShieldCheck,
+  UserCog,
   Users,
 } from "lucide-react"
 import Image from "next/image"
@@ -48,6 +49,7 @@ const NAV: NavItem[] = [
 
 // Footer nav — admin items.
 const FOOTER: NavItem[] = [
+  { href: "/dashboard/members",    label: "Members",      icon: UserCog },
   { href: "/dashboard/governance", label: "Governance",   icon: ShieldCheck },
   { href: "/dashboard/guard",      label: "Allura Guard", icon: KeyRound },
   { href: "/dashboard/settings",   label: "Settings",     icon: Settings },
