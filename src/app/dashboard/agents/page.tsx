@@ -146,13 +146,33 @@ export default async function AgentsPage() {
           Agent Registry
         </h1>
         <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
-          Live roster from <span style={{ fontFamily: '"IBM Plex Mono", monospace' }}>mcp_tokens</span> for{" "}
+          The assistants connected to{" "}
           <strong style={{ color: "#374151" }}>{groupId}</strong> ·{" "}
           <span style={{ color: source === "degraded" ? "#ef4444" : "#16a34a" }}>
             {source === "degraded" ? "Degraded" : "Live"}
           </span>
         </p>
       </div>
+
+      <a
+        href="/dashboard/guard"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          height: 38,
+          padding: "0 16px",
+          background: "#1a1a1a",
+          color: "#ffffff",
+          borderRadius: 10,
+          textDecoration: "none",
+          fontSize: 13,
+          fontWeight: 600,
+          marginBottom: 20,
+        }}
+      >
+        + Connect an assistant
+      </a>
 
       {error && (
         <div
@@ -182,12 +202,29 @@ export default async function AgentsPage() {
           }}
         >
           <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>
-            No agents registered
+            No assistants connected yet
           </div>
-          <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
-            Register an MCP token via the Allura Guard console to add agents to{" "}
-            <span style={{ fontFamily: '"IBM Plex Mono", monospace' }}>{groupId}</span>.
+          <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px" }}>
+            Connect an assistant so it can read and add to your memory — safely, with limits you set.
           </p>
+          <a
+            href="/dashboard/guard"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              height: 38,
+              padding: "0 18px",
+              background: "#1a1a1a",
+              color: "#ffffff",
+              borderRadius: 10,
+              textDecoration: "none",
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            Connect your first assistant
+          </a>
         </div>
       )}
 
