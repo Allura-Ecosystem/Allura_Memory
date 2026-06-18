@@ -7,6 +7,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Settings,
+  ShieldCheck,
   Users,
 } from "lucide-react"
 import Image from "next/image"
@@ -47,8 +48,9 @@ const NAV: NavItem[] = [
 
 // Footer nav — admin items.
 const FOOTER: NavItem[] = [
-  { href: "/dashboard/guard",    label: "Allura Guard", icon: KeyRound },
-  { href: "/dashboard/settings", label: "Settings",     icon: Settings },
+  { href: "/dashboard/governance", label: "Governance",   icon: ShieldCheck },
+  { href: "/dashboard/guard",      label: "Allura Guard", icon: KeyRound },
+  { href: "/dashboard/settings",   label: "Settings",     icon: Settings },
 ]
 
 export default function Sidebar() {

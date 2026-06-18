@@ -54,6 +54,7 @@ export default defineConfig({
       "tests/integration/dreams-page-contract.test.ts",
       "tests/integration/approvals-page-contract.test.ts",
       "tests/integration/overview-page-contract.test.ts",
+      "tests/integration/governance-page-contract.test.ts",
     ],
     exclude: [
       // canonical-memory needs live DB — E2E lane
