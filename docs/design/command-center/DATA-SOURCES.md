@@ -50,6 +50,23 @@
 4. **Old graph page** (Task 5): remove `PLACEHOLDER_NODES`/`PLACEHOLDER_EDGES`; show honest
    empty/degraded state instead of fabricated nodes.
 
+## Validation (tests)
+
+| Surface | Test | Lane |
+|---------|------|------|
+| Header live state | `src/lib/operational-state/sources/header-source.test.ts` (5 tests: unreachable / no-activity / recent / stale / group_id-bound) | unit |
+| Overview receipts + freshness + KPIs | `tests/integration/overview-page-contract.test.ts` (events shape, receipts query, MAX+24h freshness, group-scoped KPI counts) | integration (DB-gated) |
+| Memory / search | `tests/integration/search-page-contract.test.ts` | integration (DB-gated) |
+| Approvals | `tests/integration/approvals-page-contract.test.ts` | integration (DB-gated) |
+| Graph route | `src/__tests__/graph-route.test.ts` | unit |
+
+`bun run typecheck` clean · `bun run test:unit` green (1411 passed) · overview + header
+contract tests verified against the live Brain stack on 2026-06-18.
+
 ## Honest-state contract reference
 `src/lib/operational-state/` — ready / empty / stale / error / degraded. Every wired surface
 must surface one of these, never a fabricated value.
+
+## Goal trace
+`goal-20260617-2205` (Brain GOAL_SET `56ab21fd`). Iterations: task 1 `58b5db58`,
+tasks 2+6 `a75c02fb`, task 3 `1dfc43f5`, task 5 `9a1603c5`, task 4 `1629cb91`.
