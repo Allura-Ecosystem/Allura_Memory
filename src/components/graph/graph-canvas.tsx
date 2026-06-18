@@ -197,7 +197,7 @@ export function GraphCanvas({ nodes, edges, onNodeSelect }: GraphCanvasProps): R
   }, [onNodeSelect])
 
   return (
-    <div style={{ width: "100%", height: "100%", background: "#f6f3ec", borderRadius: 12 }}>
+    <div style={{ position: "absolute", inset: 0, background: "#f6f3ec", borderRadius: 12 }}>
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
