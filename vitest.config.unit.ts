@@ -20,6 +20,8 @@ export default defineConfig({
     passWithNoTests: true,
     include: [
       // ── Pure unit tests (no DB, no external services) ──────────────────
+      // Benchmark harness metric math (Precision@K, Recall@K, MRR, percentiles)
+      "src/__benchmarks__/**/*.test.ts",
       // Scoring, dedup, similarity, budget, circuit breaker
       "src/lib/curator/**/*.test.ts",
       "src/lib/budget/**/*.test.ts",
@@ -98,6 +100,8 @@ export default defineConfig({
       "src/lib/mcp-token/**/*.test.ts",
       // Allura Hosted — admin route auth/shape tests (mocked repos)
       "src/__tests__/hosted-admin-routes.test.ts",
+      // Benchmark harness — pure IR-metric math (no live stack)
+      "src/__benchmarks__/lib/metrics.test.ts",
     ],
     exclude: [
       // ── Integration tests (mocked DB/services) — use test:integration ──

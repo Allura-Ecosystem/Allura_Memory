@@ -1,0 +1,225 @@
+{
+  "generated_at": "2026-06-18T01:30:02.219Z",
+  "endpoint": "http://localhost:5888/mcp",
+  "run_id": "70a08066",
+  "results": [
+    {
+      "id": "retrieval-quality",
+      "title": "Retrieval Quality (P@K, R@K, MRR)",
+      "status": "fail",
+      "durationMs": 1708.965172,
+      "metrics": [
+        {
+          "name": "Precision@5",
+          "value": 0.3333333333333333,
+          "unit": "",
+          "threshold": 0.85,
+          "comparator": "gte",
+          "passed": false
+        },
+        {
+          "name": "Recall@5",
+          "value": 0.9166666666666666,
+          "unit": "",
+          "threshold": 0.7,
+          "comparator": "gte",
+          "passed": true
+        },
+        {
+          "name": "MRR",
+          "value": 1,
+          "unit": "",
+          "threshold": 0.75,
+          "comparator": "gte",
+          "passed": true
+        }
+      ],
+      "notes": [
+        "seeded 10 documents into allura-bench-70a08066-retrieval-quality-loadtest"
+      ]
+    },
+    {
+      "id": "curation-accuracy",
+      "title": "Curation Accuracy (FP/FN rates)",
+      "status": "fail",
+      "durationMs": 963.875057,
+      "metrics": [
+        {
+          "name": "False positive rate",
+          "value": 0,
+          "unit": "",
+          "threshold": 0.2,
+          "comparator": "lte",
+          "passed": true
+        },
+        {
+          "name": "False negative rate",
+          "value": 1,
+          "unit": "",
+          "threshold": 0.3,
+          "comparator": "lte",
+          "passed": false
+        },
+        {
+          "name": "Accuracy",
+          "value": 0.5,
+          "unit": ""
+        },
+        {
+          "name": "Examples scored",
+          "value": 8,
+          "unit": ""
+        }
+      ],
+      "notes": [
+        "TP=0 FP=0 TN=4 FN=4 (threshold 0.85)"
+      ]
+    },
+    {
+      "id": "governance-integrity",
+      "title": "Governance Integrity (isolation, injection, invariants)",
+      "status": "pass",
+      "durationMs": 749.4706419999998,
+      "metrics": [
+        {
+          "name": "Cross-namespace leaks",
+          "value": 0,
+          "unit": "",
+          "threshold": 0,
+          "comparator": "lte",
+          "passed": true
+        },
+        {
+          "name": "Malicious input reject rate",
+          "value": 1,
+          "unit": "",
+          "threshold": 1,
+          "comparator": "gte",
+          "passed": true
+        },
+        {
+          "name": "Gate blocked bypass",
+          "value": 1,
+          "unit": "",
+          "threshold": 1,
+          "comparator": "gte",
+          "passed": true
+        },
+        {
+          "name": "Live invariants passing",
+          "value": 6,
+          "unit": " / 6",
+          "threshold": 6,
+          "comparator": "gte",
+          "passed": true
+        }
+      ],
+      "notes": [
+        "cross-namespace: tenant-A secret leaked into tenant-B 0 time(s)",
+        "gate on bypass_hitl+docker_exec: blocked (correct)"
+      ]
+    },
+    {
+      "id": "latency-profile",
+      "title": "Latency Profile (P50/P95/P99)",
+      "status": "fail",
+      "durationMs": 10494.693972000001,
+      "metrics": [
+        {
+          "name": "search success rate",
+          "value": 1,
+          "unit": "",
+          "threshold": 0.95,
+          "comparator": "gte",
+          "passed": true
+        },
+        {
+          "name": "search mean",
+          "value": 406.2169877499998,
+          "unit": "ms"
+        },
+        {
+          "name": "search P50",
+          "value": 234.7455119999995,
+          "unit": "ms"
+        },
+        {
+          "name": "search P95",
+          "value": 936.9891509999998,
+          "unit": "ms",
+          "threshold": 2500,
+          "comparator": "lte",
+          "passed": true
+        },
+        {
+          "name": "search P99",
+          "value": 975.324756,
+          "unit": "ms"
+        },
+        {
+          "name": "add success rate",
+          "value": 0.15,
+          "unit": "",
+          "threshold": 0.95,
+          "comparator": "gte",
+          "passed": false
+        },
+        {
+          "name": "add mean",
+          "value": 117.76820266666618,
+          "unit": "ms"
+        },
+        {
+          "name": "add P50",
+          "value": 100.06179100000008,
+          "unit": "ms"
+        },
+        {
+          "name": "add P95",
+          "value": 153.25587599999926,
+          "unit": "ms",
+          "threshold": 2500,
+          "comparator": "lte",
+          "passed": true
+        },
+        {
+          "name": "add P99",
+          "value": 153.25587599999926,
+          "unit": "ms"
+        }
+      ],
+      "notes": [
+        "iterations: 20 per op (after 5 warmup searches)",
+        "memory_add failed 17/20 calls (excluded from latency) — likely a write-budget / circuit-breaker fast-fail"
+      ]
+    },
+    {
+      "id": "audit-completeness",
+      "title": "Audit Completeness (trace full lifecycle)",
+      "status": "fail",
+      "durationMs": 2.287773999998535,
+      "metrics": [
+        {
+          "name": "Lifecycle stages traced",
+          "value": 0,
+          "unit": " / 3",
+          "threshold": 3,
+          "comparator": "gte",
+          "passed": false
+        },
+        {
+          "name": "Memory retrievable",
+          "value": 0,
+          "unit": ""
+        }
+      ],
+      "notes": [
+        "memory_add for lifecycle probe failed: unknown error",
+        "missing lifecycle trace: memory_add traced",
+        "missing lifecycle trace: gate_checked traced",
+        "missing lifecycle trace: agent activity aggregated",
+        "gate audit_logged=false; memory retrievable=false"
+      ]
+    }
+  ]
+}
