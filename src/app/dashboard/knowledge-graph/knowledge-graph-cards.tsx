@@ -22,6 +22,7 @@ import { GraphLegend } from "@/components/graph/graph-legend"
 import { PLATFORM_NODES, PLATFORM_EDGES } from "@/lib/graph/platform-seed"
 import { mapApiResponse } from "@/lib/graph/map-neo4j"
 import type { GraphNode, GraphEdge, NodeCategory } from "@/lib/graph/types"
+import { CATEGORY_STYLES } from "@/lib/graph/types"
 
 type HiveMode = "platform" | "live"
 
@@ -266,6 +267,78 @@ function LiveEmptyState({
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
+
+// Inspector default — informative summary so the panel does work on arrival
+// (instead of an empty "pick a card"). Plain language: "things" and "links".
+function InspectorSummary({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }): ReactElement {
+  const total = nodes.length
+  const links = edges.length
+
+  const byCat = new Map<NodeCategory, number>()
+  for (const n of nodes) byCat.set(n.type, (byCat.get(n.type) ?? 0) + 1)
+  const cats = [...byCat.entries()].sort((a, b) => b[1] - a[1])
+
+  const degree = new Map<string, number>()
+  for (const e of edges) {
+    degree.set(e.source, (degree.get(e.source) ?? 0) + 1)
+    degree.set(e.target, (degree.get(e.target) ?? 0) + 1)
+  }
+  let hub: GraphNode | null = null
+  let hubDeg = -1
+  for (const n of nodes) {
+    const d = degree.get(n.id) ?? 0
+    if (d > hubDeg) {
+      hubDeg = d
+      hub = n
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "22px 22px 26px", minHeight: 400 }}>
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--c-muted)" }}>
+          In this hive
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
+          <span style={{ fontSize: 30, fontWeight: 600, color: "var(--c-ink)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+            {total}
+          </span>
+          <span style={{ fontSize: 14, color: "var(--c-muted)" }}>things · {links} links</span>
+        </div>
+      </div>
+
+      {hub && hubDeg > 0 && (
+        <div style={{ background: "var(--c-bg)", border: "1px solid var(--c-border)", borderRadius: 12, padding: "12px 14px" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--c-muted)", marginBottom: 4 }}>Most connected</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--c-ink)" }}>{hub.label}</div>
+          <div style={{ fontSize: 12, color: "var(--c-muted)", marginTop: 2 }}>
+            {hubDeg} link{hubDeg !== 1 ? "s" : ""}
+          </div>
+        </div>
+      )}
+
+      {cats.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--c-muted)" }}>What kind of things</div>
+          {cats.map(([cat, n]) => {
+            const s = CATEGORY_STYLES[cat] ?? CATEGORY_STYLES.ops
+            return (
+              <div key={cat} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                <span style={{ width: 9, height: 9, borderRadius: 3, background: s.accent, flexShrink: 0 }} aria-hidden="true" />
+                <span style={{ flex: 1, color: "var(--c-ink)" }}>{s.label}</span>
+                <span style={{ color: "var(--c-muted)", fontVariantNumeric: "tabular-nums" }}>{n}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <div style={{ fontSize: 12.5, color: "var(--c-muted)", lineHeight: 1.5, marginTop: "auto" }}>
+        Click any card to open it — you&apos;ll see who owns it, how risky it is, what it connects to, and the proof behind it.
+      </div>
+    </div>
+  )
+}
 
 export default function KnowledgeGraphCards({ groupId }: { groupId: string }): ReactElement {
   const [mode, setMode] = useState<HiveMode>("platform")
@@ -517,40 +590,7 @@ export default function KnowledgeGraphCards({ groupId }: { groupId: string }): R
               onClose={() => setSelectedNode(null)}
             />
           ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 12,
-                padding: "60px 26px",
-                textAlign: "center",
-                minHeight: 400,
-              }}
-            >
-              <span
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 13,
-                  background: "#f1ece0",
-                  color: "var(--c-muted)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                aria-hidden="true"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-                </svg>
-              </span>
-              <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--c-ink)" }}>Pick a card</div>
-              <div style={{ fontSize: 12.5, color: "var(--c-muted)", lineHeight: 1.5 }}>
-                Click any card in the hive to see its owner, risk, connections, and evidence here.
-              </div>
-            </div>
+            <InspectorSummary nodes={filteredNodes} edges={filteredEdges} />
           )}
         </div>
       </div>
