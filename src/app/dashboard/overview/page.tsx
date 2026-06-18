@@ -420,7 +420,7 @@ export default async function OverviewPage() {
       ring: pgUp ? "rgba(41,143,87,0.15)" : "rgba(191,51,46,0.15)",
     },
     probeRow("Knowledge graph", "neo4j:7687", neo4jState),
-    probeRow("Allura Brain (MCP)", "mcp:5888", brainState),
+    probeRow("Memory service", "allura brain", brainState),
     {
       name: "Curator pipeline",
       state: pgUp ? "Ready" : "Paused",

@@ -431,7 +431,7 @@ export default function KnowledgeGraphCards({ groupId }: { groupId: string }): R
             </span>
           )}
           <span style={{ fontSize: 11, color: "var(--c-muted)", fontFamily: "var(--mono)" }}>
-            {filteredNodes.length} nodes · {filteredEdges.length} connections
+            {filteredNodes.length} things · {filteredEdges.length} links
           </span>
         </div>
       </div>

@@ -239,7 +239,7 @@ function EmptyState({ query }: { query: string }): React.ReactElement {
       </p>
       {!hasQuery && (
         <p style={{ fontSize: "12px", color: "var(--allura-gray-500)", margin: "0", fontFamily: '"IBM Plex Mono", monospace' }}>
-          hybrid search: vector ANN + BM25 RRF · scope: allura-system
+          Searches everything you&apos;ve saved · allura-system
         </p>
       )}
     </div>
@@ -610,7 +610,7 @@ export default function SearchPageClient(): React.ReactElement {
               flexShrink: 0,
             }}
           >
-            hybrid
+            smart
           </span>
         </div>
       </div>
