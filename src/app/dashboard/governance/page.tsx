@@ -72,7 +72,6 @@ export default async function GovernancePage(): Promise<React.ReactElement> {
   }
 
   const events = await fetchGovernanceEvents(groupId)
-  const fetchedAt = new Date().toISOString()
 
   return (
     <div className="page-enter" style={{ padding: "28px 30px 60px", maxWidth: 1100, margin: "0 auto", fontFamily: "var(--sans)" }}>
@@ -202,8 +201,8 @@ export default async function GovernancePage(): Promise<React.ReactElement> {
         )}
       </div>
 
-      <p style={{ fontSize: 11, color: "var(--c-muted)", margin: "18px 0 0", fontFamily: "var(--mono)" }}>
-        {groupId} · {CANONICAL_POLICIES.length} rules · fetched {fetchedAt}
+      <p style={{ fontSize: 11, color: "var(--c-muted)", margin: "18px 0 0" }}>
+        {groupId} · {CANONICAL_POLICIES.length} rules · live
       </p>
     </div>
   )

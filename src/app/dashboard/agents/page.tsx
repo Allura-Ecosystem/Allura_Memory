@@ -250,15 +250,8 @@ export default async function AgentsPage() {
         </section>
       )}
 
-      <div
-        style={{
-          marginTop: 28,
-          fontSize: 11,
-          color: "#9ca3af",
-          fontFamily: '"IBM Plex Mono", monospace',
-        }}
-      >
-        Organization: {groupId} · source: {source} · fetched: {new Date().toISOString()}
+      <div style={{ marginTop: 28, fontSize: 11, color: "#9ca3af" }}>
+        {groupId} · {source === "degraded" ? "data may be unavailable" : "live data"} · updated just now
       </div>
     </div>
   )

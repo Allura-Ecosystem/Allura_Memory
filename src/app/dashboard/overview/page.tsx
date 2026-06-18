@@ -713,15 +713,8 @@ export default async function OverviewPage() {
       </div>
 
       {/* Mono source line */}
-      <p
-        style={{
-          fontSize: 11,
-          color: "var(--c-muted)",
-          margin: "18px 0 0",
-          fontFamily: "var(--mono)",
-        }}
-      >
-        {groupId} · fetched {data.fetchedAt}
+      <p style={{ fontSize: 11, color: "var(--c-muted)", margin: "18px 0 0" }}>
+        {groupId} · {pgUp ? "live data" : "data may be unavailable"} · updated just now
       </p>
     </div>
   )
