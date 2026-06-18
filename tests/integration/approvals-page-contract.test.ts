@@ -284,4 +284,49 @@ describe("Approvals Page Contract — canonical_proposals table shape", () => {
 
     expect(parseInt(result.rows[0]?.out_of_range_count ?? "0", 10)).toBe(0)
   })
+
+  // ── Checkpoint approvals query (events table) ──────────────────────────────────
+  // Regression guard: the page selected e.event_id, but the events PK is e.id.
+  // That bad column threw and the page's shared catch silently zeroed the whole
+  // Approvals view (132 pending rendered as 0). This pins the working query.
+
+  it("checkpoint-approvals query runs against events (uses e.id, not e.event_id)", async () => {
+    if (!dbAvailable) return
+
+    const pool = getPool()
+
+    // The exact query the Approvals page runs — must not throw.
+    const result = await pool.query<{ event_id: string | number; metadata: unknown; created_at: string | Date }>(
+      `SELECT e.id AS event_id, e.metadata, e.created_at
+       FROM events e
+       WHERE e.group_id = $1
+         AND e.event_type = 'checkpoint_blocked'
+         AND NOT EXISTS (
+           SELECT 1 FROM events r
+           WHERE r.group_id = $1
+             AND r.event_type = 'checkpoint_resumed'
+             AND r.metadata->>'checkpoint_id' = e.metadata->>'checkpoint_id'
+         )
+       ORDER BY e.created_at ASC
+       LIMIT 50`,
+      [GROUP_ID]
+    )
+
+    expect(Array.isArray(result.rows)).toBe(true)
+    for (const row of result.rows) {
+      expect(row.event_id === null || row.event_id !== undefined).toBe(true)
+    }
+  })
+
+  it("events table has 'id' (the checkpoint query depends on it) and not a required 'event_id'", async () => {
+    if (!dbAvailable) return
+
+    const pool = getPool()
+    const result = await pool.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'events' AND table_schema = 'public'`
+    )
+    const columns = result.rows.map((r) => r.column_name)
+    expect(columns, "events must have an 'id' primary key column").toContain("id")
+  })
 })

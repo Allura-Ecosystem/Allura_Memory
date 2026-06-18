@@ -52,7 +52,7 @@ async function loadApprovalsData(): Promise<ApprovalsData | null> {
   try {
     // 1. Pending checkpoint approvals — oldest first (longest waiting)
     const checkpointsResult = await pool.query<CheckpointApproval>(
-      `SELECT e.event_id, e.metadata, e.created_at
+      `SELECT e.id AS event_id, e.metadata, e.created_at
        FROM events e
        WHERE e.group_id = $1
          AND e.event_type = 'checkpoint_blocked'
@@ -115,6 +115,9 @@ async function loadApprovalsData(): Promise<ApprovalsData | null> {
       kpi,
     }
   } catch (err: unknown) {
+    // Never swallow silently — a bad query here used to zero the whole page
+    // (group_id 132 pending vs rendered 0). Log so failures are visible.
+    console.error("[approvals] loadApprovalsData query failed:", err)
     if (isConnectionError(err)) {
       return null
     }
