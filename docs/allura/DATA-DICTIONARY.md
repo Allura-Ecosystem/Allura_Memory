@@ -344,6 +344,34 @@ operational contracts stabilize.
 | `artifact_ref` | string | Yes | Evidence artifact reference, including `docs/allura/BRAND-RULES-dashboard-v2.md` for Memory Command Center surfaces |
 | `status` | enum | Yes | Gate state (`pending`, `passed`, `blocked`) |
 
+### `memberships`
+
+Human team membership + role per org (`group_id`). One row per (group_id, user_id). A
+user may belong to multiple orgs (one row each). Current-state table; role changes UPDATE
+`role`, removal is a soft-delete (`removed_at`). Every change is mirrored as an append-only
+audit event (`membership_added` / `membership_role_changed` / `membership_removed`) so the
+events append-only invariant (POL-002) holds as the trail. Migration: `docker/postgres-init/29-memberships.sql`.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string (uuid) | Yes | Surrogate key |
+| `group_id` | string | Yes | Org tenant boundary; `^allura-[a-z0-9-]+$` (POL-001) |
+| `user_id` | string | Yes | Stable identity (Clerk user id or email) |
+| `email` | string | No | Display email |
+| `role` | enum | Yes | `admin` \| `curator` \| `viewer` |
+| `invited_by` | string | No | user_id of the admin who added them |
+| `created_at` | timestamptz | Yes | Row creation |
+| `updated_at` | timestamptz | Yes | Last role/state change |
+| `removed_at` | timestamptz | No | Soft-delete marker; NULL = active member |
+
+#### `role` enum
+
+| Value | Meaning |
+|-------|---------|
+| `admin` | Full control: manage members/roles, integrations, governance overrides, approvals |
+| `curator` | Approve/reject curator proposals; no member management |
+| `viewer` | Read-only |
+
 ## Memory Command Center Adapter Contracts
 
 Production dashboard components consume these mapped contracts, never raw database or substrate payloads.

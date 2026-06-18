@@ -55,6 +55,7 @@ export default defineConfig({
       "tests/integration/approvals-page-contract.test.ts",
       "tests/integration/overview-page-contract.test.ts",
       "tests/integration/governance-page-contract.test.ts",
+      "tests/integration/members-page-contract.test.ts",
     ],
     exclude: [
       // canonical-memory needs live DB — E2E lane

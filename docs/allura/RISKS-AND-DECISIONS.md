@@ -393,6 +393,30 @@ into a desktop application.
 
 ---
 
+### AD-48: Human Membership as a Postgres Table (admin-managed from UI)
+
+- **Status**: Decided
+- **Decision**: Model human team membership in a Postgres `memberships` table
+  (`group_id` + `user_id` + `role` ∈ admin/curator/viewer), one row per (org, user), as a
+  current-state table: role changes UPDATE, removal is a soft-delete (`removed_at`). Every
+  change is mirrored as an append-only audit event (`membership_added` /
+  `membership_role_changed` / `membership_removed`). The admin manages members and roles
+  entirely from the dashboard UI (`/api/members`), never via code/CLI.
+- **Rationale**: Consistent with the existing Postgres-native, group_id-scoped Hosted tables
+  (`workspaces`, `mcp_tokens`); works in dev (DevAuthProvider) and prod (Clerk); keeps the
+  tenant boundary on `group_id` rather than coupling membership to a Clerk org. Satisfies the
+  non-coder-admin requirement (Gabe) without weakening governance: the events audit trail
+  preserves the append-only invariant (POL-002).
+- **Alternatives considered**: Clerk Organizations (rejected — couples membership to the auth
+  provider, no dev-fallback parity, and splits the tenant boundary from `group_id`).
+- **Consequences**: Authoring NEW enforced kernel policies still stays a reviewed code path;
+  the admin proposes/approves via UI. Migration `docker/postgres-init/29-memberships.sql`
+  (additive, idempotent). Requirement REQ-DASH-009.
+- **Owner**: Brooks (architecture), Woz (implementation)
+- **References**: REQ-DASH-009, DATA-DICTIONARY `memberships`, ARCHITECTURE_DECISION Brain trace ab8cdd06
+
+---
+
 | Signal                      | Source                       | Alert Threshold       |
 | --------------------------- | ---------------------------- | --------------------- |
 | Neo4j promotion failures    | `src/lib/neo4j/promotion.ts` | > 5 failures in 5 min |

@@ -173,6 +173,18 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     description: "MCP token revoke/rotate by id (admin)",
   },
   {
+    pattern: "/api/members",
+    requiredRole: "admin",
+    scopeName: "members:admin",
+    description: "Team membership list/add (admin)",
+  },
+  {
+    pattern: "/api/members/:path*",
+    requiredRole: "admin",
+    scopeName: "members:admin:routes",
+    description: "Member role change / removal by id (admin)",
+  },
+  {
     pattern: "/api/workspaces",
     requiredRole: "viewer",
     scopeName: "workspaces:api",
