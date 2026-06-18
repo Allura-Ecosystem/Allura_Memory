@@ -134,6 +134,12 @@ Allura is the governed memory engine: PostgreSQL append-only episodic traces, Ne
 
 Current runtime label: **pgvector bridge**. TALON readiness evidence on 2026-06-02 observed PostgreSQL `vector` extension `0.8.2`, `ruvector_function_count=0`, and `allura_memories_count` around `3392`. Until the `ruvector` extension/functions and feedback/search health are proven by runtime checks, docs and UI must not claim full RuVector.
 
+### Agent Factory Delivery Boundary
+
+The Allura Agent Factory uses BMad Builder as an authoring and packaging layer while Allura remains the governance and memory authority. Factory modules, validators, and CI workflows live in this canonical repository so GitHub can execute the gates that protect them. A module is shippable only after structural validation, roster and tenant consistency checks, live tenant-isolation smoke evidence, and explicit packaging of a named team.
+
+Factory CI does not imply native RuVector or an upstream governance package exists. Those claims remain blocked until native extension, smoke-test, and package source artifacts are present and independently verified.
+
 RuVix governs action disposition with `Permit`, `Defer`, and `Deny` decisions. Any runtime/database, MCP configuration, cron, live RAM/Durham hook, RuVix enforcement, semantic promotion, Notion sync, or Done/Approved status change requires explicit approval and a receipt carrying `approval_required` when gated.
 
 ### API-First Scope and Optional Memory Command Center
@@ -152,6 +158,16 @@ persistence, gates, checkpoints, replay, DAG validation, and SDK primitives
 exist, but process definitions are not durably versioned, checkpoint approval
 does not yet continue remaining execution, doctor checks are absent, and no
 first-class run API/product surface exists.
+
+### E2E Readiness Status (as of 2026-06-14)
+
+| Gate | Status | Notes |
+|------|--------|-------|
+| Live-DB 10-point engine acceptance gate | **PASSED** | All 10 engine unit/integration tests pass against real PostgreSQL and Neo4j (commit `f518b1eb`). Evidence in `bun run test:e2e` output. |
+| Docker fresh-deploy (stranger-on-new-machine) | **UNVERIFIED** | `docker compose up` on a fresh machine has not been end-to-end smoke-tested. External volumes and network marked `external: true` will fail first `up` without prior manual setup. See AD-41 for the approved delivery sequence and INSTALL-DEPLOY-REVIEW.md in `docs/archive/allura/` for the outstanding checklist. |
+| RuVector / full native extension | **NOT READY** | `ruvector_function_count=0` on 2026-06-02 (TALON). Label remains `pgvector bridge` until extension functions and feedback/search health checks pass. |
+
+No doc or UI surface may claim "production-ready" or "fresh-deploy verified" until the Docker fresh-deploy gate is independently executed and recorded in INSTALL-DEPLOY-REVIEW.md.
 
 - **MCP tools** — `memory_add`, `memory_search`, `memory_get`, `memory_list`, `memory_delete`
 - **API routes** — `/api/health/*`, `/api/memory/*`, `/api/curator/*`
@@ -689,6 +705,21 @@ Before any Neo4j write, search for an existing node with matching `content` + `g
 | `POST`   | `/api/admin/reset-budget`       | Reset halted budget sessions (auth required; body: `{group_id?}`) |
 | `POST`   | `/api/memory/retrieval`         | Governed retrieval gateway — sole agent read path (AD-19) |
 
+### Port Registry
+
+Canonical service ports. **The 3000–3999 band is banned** (Next.js/React default — caused repeated collisions and orphaned containers). New services allocate by tier, incrementing +1 each: UI/frontends 4000+, APIs/backends 6000+, tools/workers/aux 7000+. Policy: [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) AD-45. Claim a port via a PR that updates this table and `docker-compose.yml`.
+
+| Service | Port | Tier |
+| ------- | ---- | ---- |
+| Allura Control Center UI (Next.js) | 4001 | UI (4000+) |
+| Allura Control Center API (FastAPI) | 6001 | API (6000+) |
+| MCP HTTP gateway | 5888 | infra (exempt) |
+| PostgreSQL | 5432 | infra (exempt) |
+| RuVector PG | 5433 | infra (exempt) |
+| Neo4j bolt | 7687 | infra (exempt) |
+| Neo4j HTTP | 7474 | infra (exempt) |
+| legacy dashboard (sunset) | ~~3100~~ | retired with 3000-band ban |
+
 ---
 
 ## 9) Logging & Audit
@@ -830,9 +861,9 @@ graph LR
 - [DESIGN-ALLURA.md](./DESIGN-ALLURA.md) — UI/UX wireframes and design rules
 - [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#0-brand-identity) — allura brand identity (colors, typography, voice, logos)
 - [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) — Governed memory pipeline design
-- [TEAM-RAM-BMAD-INTEGRATION.md](./TEAM-RAM-BMAD-INTEGRATION.md) — Team RAM, BMAD, and Allura Brain operating contract
+- [TEAM-RAM-INTEGRATION.md](../archive/bmad-legacy/TEAM-RAM-INTEGRATION.md) — Team RAM, BMAD, and Allura Brain operating contract (archived)
 - [REQUIREMENTS-MATRIX.md](./REQUIREMENTS-MATRIX.md) — Competitive analysis and use case fit
-- [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) — Acceptance checklist and benchmark matrix
+- VALIDATION-GATE.md — Acceptance checklist and benchmark matrix (see E2E Readiness Status table above; gate file pending creation in `docs/archive/allura/`)
 - `.opencode/skills/allura-memory-skill/` — memory workflow behavior and guardrails
 - `.opencode/skills/memory-client/` — default search → work → log behavior
 - `.opencode/skills/mcp-docker-memory-system/` — packaged MCP server discovery and configuration guidance

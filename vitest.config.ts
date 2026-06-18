@@ -37,6 +37,8 @@ export default defineConfig({
       "src/lib/**/*.test.ts",
       "src/kernel/**/*.test.ts",
       "src/curator/**/*.test.ts",
+      // Benchmark harness — pure metric math (no live stack)
+      "src/__benchmarks__/**/*.test.ts",
       "src/agents/**/*.test.ts",
       "src/team-ram/orchestrator.test.ts",
       "src/team-ram/orchestration-tracing.test.ts",

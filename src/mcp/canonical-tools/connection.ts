@@ -85,3 +85,17 @@ export function resetConnections(): void {
   }
   resetBudgetState()
 }
+
+/**
+ * Close cached connections and wait for their resources to terminate.
+ * Intended for scripts and graceful process shutdown.
+ */
+export async function closeConnections(): Promise<void> {
+  const pg = pgPool
+  const graph = neo4jDriver
+  pgPool = null
+  neo4jDriver = null
+
+  await Promise.allSettled([pg?.end(), graph?.close()])
+  resetBudgetState()
+}

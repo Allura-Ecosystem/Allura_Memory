@@ -24,11 +24,15 @@ export default defineConfig({
       "src/__tests__/ruvector-e2e.test.ts",
       "src/__tests__/canonical-memory.test.ts",
       "src/team-ram/e2e-smoke.test.ts",
+      // Brain contract — shape stability against live PG/Neo4j
+      "tests/integration/brain-contract.test.ts",
       // Validation tests that need live DB for trace-ref verification
       "src/lib/validation/group-governance.test.ts",
       "src/lib/validation/trace-ref.test.ts",
       // Story 12.2 — true checkpoint continuation against live PostgreSQL
       "src/lib/process-engine/checkpoint-continuation.integration.test.ts",
+      // Allura Hosted — MCP gateway full round-trip (live PG/Neo4j/ruvector)
+      "src/__tests__/hosted-mcp.e2e.test.ts",
       // Task B1 — 10-point acceptance gate against live PG+Neo4j (no mocks)
       "src/__tests__/acceptance-gate.e2e.test.ts",
     ],
@@ -37,6 +41,9 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      { find: "@allura/types", replacement: path.resolve(__dirname, "./packages/types/src/index.ts") },
+      { find: "@allura/rbac", replacement: path.resolve(__dirname, "./packages/rbac/src/index.ts") },
+      { find: "@allura/mcp-server", replacement: path.resolve(__dirname, "./packages/mcp-server/src/index.ts") },
       { find: "@", replacement: path.resolve(__dirname, "./src") },
     ],
   },

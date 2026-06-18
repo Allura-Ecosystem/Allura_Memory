@@ -1,7 +1,0 @@
-          t          | total | active | soft_deleted 
----------------------+-------+--------+--------------
- allura_memories     |   527 |    527 |            0
- events              | 51551 |        |             
- canonical_proposals |   409 |        |             
-(3 rows)
-

@@ -75,21 +75,29 @@ API data rules: every record includes `group_id`; unknown source state renders a
 
 **JSON Schema:** [`json-schema/event.schema.json`](../../json-schema/event.schema.json)
 
-The primary and only append-only log. Every memory operation — add, search, get, list, delete, promotion — produces one row. Rows are permanent. No UPDATE or DELETE, ever. Every operation carries the RuVix identity envelope: `group_id`, `agent_id`, and `session_id`.
+The primary and only append-only log. Every memory operation — add, search, get, list, delete, promotion — produces one row. Rows are permanent. No UPDATE or DELETE, ever. Every operation carries the RuVix identity envelope: `group_id`, `agent_id`, and (when available) `session_id`.
+
+Columns below match `json-schema/event.schema.json` and the migrations in `docker/postgres-init/` (`00-traces.sql`, `10-brooks-tracking.sql`, `17-schema-version.sql`, `19-group-id-check-constraints.sql`). `halted_at` / `halt_ttl_ms` are NOT event columns — they belong to the budget enforcer entity (see Budget Enforcer section).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `id` | bigserial | Yes | Auto-increment primary key |
-| `group_id` | varchar(255) | Yes | Tenant namespace. CHECK constraint: must match `^allura-` |
+| `group_id` | varchar(255) | Yes | Tenant namespace. CHECK constraint: `^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$` (migration 19) |
 | `event_type` | varchar(100) | Yes | Operation type — see values below |
 | `agent_id` | varchar(255) | Yes | Identifier of the agent or user who triggered the event |
-| `workflow_id` | varchar(255) | No | Optional grouping for multi-step workflows |
-| `session_id` | varchar(255) | Yes | Session identifier for identity scoping and audit correlation |
-| `status` | varchar(50) | Yes | Default: `completed`. See values below |
+| `workflow_id` | varchar(255) | No | Optional grouping for multi-step workflows (run/process id) |
+| `step_id` | varchar(255) | No | Step identifier within a multi-step workflow |
+| `parent_event_id` | bigint | No | FK to a parent event row, for causal chaining |
+| `session_id` | varchar(255) | No | Session identifier for identity scoping and audit correlation (nullable; added in migration 10) |
+| `runtime` | varchar(50) | No | Originating runtime. Default `unknown` |
+| `status` | varchar(50) | Yes | One of `pending` / `completed` / `failed` / `cancelled`. Default `completed` |
 | `metadata` | jsonb | No | Event-specific payload — see Metadata Payloads section |
-| `created_at` | timestamptz | Yes | Write timestamp. DEFAULT NOW(). Immutable. |
-| `halted_at` | timestamptz | No | When a budget session was halted. Present only when `event_type` relates to budget enforcement. |
-| `halt_ttl_ms` | integer | No | Budget enforcer auto-expiry TTL in milliseconds. Default: 3600000 (1 hour). See AD-27. |
+| `outcome` | jsonb | No | Structured result/outcome of the operation |
+| `error_message` | text | No | Error detail when `status = failed` |
+| `error_code` | varchar(50) | No | Machine-readable error code when `status = failed` |
+| `schema_version` | integer | Yes | Event schema version. Default 1 (migration 17) |
+| `created_at` | timestamptz | Yes | Logical event timestamp. DEFAULT NOW(). Immutable. |
+| `inserted_at` | timestamptz | Yes | Physical insert timestamp. DEFAULT NOW(). Immutable. |
 
 **`event_type` values**
 
@@ -120,6 +128,11 @@ The primary and only append-only log. Every memory operation — add, search, ge
 | `memory_promote` | Request promotion to Neo4j (creates proposal) |
 | `sync_contract` | Sync contract mapping applied on curator approve or auto-promote — user_id→Agent, group_id→Project relationships wired |
 | `kernel_rule` | RuVix kernel rule evaluation or rule-anchored audit event |
+| `proposal_decided` | A curator proposal received a decision (approve or reject) |
+| `proposal_rejected` | A curator proposal was rejected during HITL review |
+| `auto_curated` | A memory was scored/curated by the auto-curator pipeline |
+| `governance_gate_checked` | A governance gate was evaluated (permit / defer / deny) |
+| `session_end` | An agent session ended |
 
 **`status` values**
 
@@ -330,6 +343,34 @@ operational contracts stabilize.
 | `reviewers` | list<string> | Yes | Required reviewers: `Aaker`, `Glaser`, `Munari` |
 | `artifact_ref` | string | Yes | Evidence artifact reference, including `docs/allura/BRAND-RULES-dashboard-v2.md` for Memory Command Center surfaces |
 | `status` | enum | Yes | Gate state (`pending`, `passed`, `blocked`) |
+
+### `memberships`
+
+Human team membership + role per org (`group_id`). One row per (group_id, user_id). A
+user may belong to multiple orgs (one row each). Current-state table; role changes UPDATE
+`role`, removal is a soft-delete (`removed_at`). Every change is mirrored as an append-only
+audit event (`membership_added` / `membership_role_changed` / `membership_removed`) so the
+events append-only invariant (POL-002) holds as the trail. Migration: `docker/postgres-init/29-memberships.sql`.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string (uuid) | Yes | Surrogate key |
+| `group_id` | string | Yes | Org tenant boundary; `^allura-[a-z0-9-]+$` (POL-001) |
+| `user_id` | string | Yes | Stable identity (Clerk user id or email) |
+| `email` | string | No | Display email |
+| `role` | enum | Yes | `admin` \| `curator` \| `viewer` |
+| `invited_by` | string | No | user_id of the admin who added them |
+| `created_at` | timestamptz | Yes | Row creation |
+| `updated_at` | timestamptz | Yes | Last role/state change |
+| `removed_at` | timestamptz | No | Soft-delete marker; NULL = active member |
+
+#### `role` enum
+
+| Value | Meaning |
+|-------|---------|
+| `admin` | Full control: manage members/roles, integrations, governance overrides, approvals |
+| `curator` | Approve/reject curator proposals; no member management |
+| `viewer` | Read-only |
 
 ## Memory Command Center Adapter Contracts
 

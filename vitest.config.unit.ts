@@ -20,11 +20,14 @@ export default defineConfig({
     passWithNoTests: true,
     include: [
       // ── Pure unit tests (no DB, no external services) ──────────────────
+      // Benchmark harness metric math (Precision@K, Recall@K, MRR, percentiles)
+      "src/__benchmarks__/**/*.test.ts",
       // Scoring, dedup, similarity, budget, circuit breaker
       "src/lib/curator/**/*.test.ts",
       "src/lib/budget/**/*.test.ts",
       "src/lib/circuit-breaker/**/*.test.ts",
       "src/lib/dedup/**/*.test.ts",
+      "src/lib/git/**/*.test.ts",
       "src/lib/memory/config.test.ts",
       "src/lib/memory/embeddings.test.ts",
       "src/lib/memory/types.test.ts",
@@ -33,6 +36,8 @@ export default defineConfig({
       "src/lib/memory/__tests__/approval-audit.test.ts",
       "src/lib/memory/traceable-memory.test.ts",
       "src/lib/session/**/*.test.ts",
+      // Command Center header live-state source (mocked pool — pure logic)
+      "src/lib/operational-state/sources/header-source.test.ts",
       "src/lib/validation/encoding-validator.test.ts",
       "src/lib/validation/group-id.test.ts",
       "src/lib/mcp/enforced-client.test.ts",
@@ -90,6 +95,15 @@ export default defineConfig({
       "src/__tests__/dashboard-pages-5-8.test.ts",
       // Server actions (Stories 16.5, 16.6)
       "src/server/**/*.test.ts",
+      // Script-level guardrail tests (GIT-EXEC-001)
+      "tests/scripts/**/*.test.ts",
+      // Allura Hosted — Guard gateway + MCP token (pure logic, no DB)
+      "src/lib/guard/**/*.test.ts",
+      "src/lib/mcp-token/**/*.test.ts",
+      // Allura Hosted — admin route auth/shape tests (mocked repos)
+      "src/__tests__/hosted-admin-routes.test.ts",
+      // Benchmark harness — pure IR-metric math (no live stack)
+      "src/__benchmarks__/lib/metrics.test.ts",
     ],
     exclude: [
       // ── Integration tests (mocked DB/services) — use test:integration ──
@@ -132,6 +146,9 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      { find: "@allura/types", replacement: path.resolve(__dirname, "./packages/types/src/index.ts") },
+      { find: "@allura/rbac", replacement: path.resolve(__dirname, "./packages/rbac/src/index.ts") },
+      { find: "@allura/mcp-server", replacement: path.resolve(__dirname, "./packages/mcp-server/src/index.ts") },
       { find: "@", replacement: path.resolve(__dirname, "./src") },
     ],
   },

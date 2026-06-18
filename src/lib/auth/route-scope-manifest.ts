@@ -159,6 +159,44 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     description: "Audit event logs",
   },
 
+  // ── Hosted Platform (Allura Guard) ────────────────────────────────────────
+  {
+    pattern: "/api/tokens",
+    requiredRole: "admin",
+    scopeName: "tokens:admin",
+    description: "MCP token mint/list (admin)",
+  },
+  {
+    pattern: "/api/tokens/:path*",
+    requiredRole: "admin",
+    scopeName: "tokens:admin:routes",
+    description: "MCP token revoke/rotate by id (admin)",
+  },
+  {
+    pattern: "/api/members",
+    requiredRole: "admin",
+    scopeName: "members:admin",
+    description: "Team membership list/add (admin)",
+  },
+  {
+    pattern: "/api/members/:path*",
+    requiredRole: "admin",
+    scopeName: "members:admin:routes",
+    description: "Member role change / removal by id (admin)",
+  },
+  {
+    pattern: "/api/workspaces",
+    requiredRole: "viewer",
+    scopeName: "workspaces:api",
+    description: "Workspace list (viewer) / create (admin — enforced in handler)",
+  },
+  {
+    pattern: "/api/workspaces/:path*",
+    requiredRole: "viewer",
+    scopeName: "workspaces:api:routes",
+    description: "Workspace sub-routes (write enforced in handler)",
+  },
+
   // ── Agents & Projects ─────────────────────────────────────────────────────
   {
     pattern: "/api/agents",

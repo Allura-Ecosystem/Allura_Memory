@@ -41,7 +41,7 @@ export default async function TeamsPage() {
   const outcome = await readTeams(GROUP_ID)
   const now = Date.now()
   const surface = resolveOperationalSurface({
-    source: { id: "teams", systemOfRecord: "manifest+postgres:events" },
+    source: { id: "teams", systemOfRecord: "postgres:workspaces+mcp_tokens+events" },
     outcome,
     isEmpty: isTeamsEmpty,
     freshnessMs: 30_000,
@@ -78,7 +78,7 @@ export default async function TeamsPage() {
           Teams
         </h1>
         <p style={{ fontSize: "14px", color: "var(--allura-gray-500)", margin: "0" }}>
-          Agent teams across the Allura fleet. Live rosters from the agent manifest, activity from event history.
+          Workspaces in this org and the MCP agents registered in each. Live from the workspaces + tokens tables, activity from event history.
         </p>
       </div>
 
@@ -135,11 +135,11 @@ export default async function TeamsPage() {
               ? "Teams source is unreachable"
               : surface.status === "error"
                 ? "Teams source reported an error"
-                : "No agent activity recorded yet"}
+                : "No workspaces yet"}
           </p>
           {surface.status === "empty" ? (
             <p style={{ fontSize: "12px", color: "var(--allura-gray-500)", margin: "0 0 4px" }}>
-              Agent teams exist but have no events in the last 24 hours. Activity will appear here once agents begin operating.
+              This org has no workspaces. Create one in Allura Guard to register agents and mint MCP tokens.
             </p>
           ) : null}
           {surface.error ? (

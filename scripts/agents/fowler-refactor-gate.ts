@@ -19,9 +19,9 @@
  * When no DB, produces real analysis — the analysis is the value, DB is just logging.
  */
 
-import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, extname, join, relative } from "node:path";
+import { gitExec } from "../../src/lib/git/exec";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -700,16 +700,16 @@ function getDiffStats(commitSha: string): DiffStats {
   // Get the commit's diff against its parent
   let diffOutput: string;
   try {
-    diffOutput = execSync(
-      `git diff ${sha}^..${sha} --numstat --format=""`,
-      { encoding: "utf-8", cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
+    diffOutput = gitExec(
+      ["diff", `${sha}^..${sha}`, "--numstat", '--format='],
+      { cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
     );
   } catch {
     // Could be a shallow clone or initial commit — try diff against empty tree
     try {
-      diffOutput = execSync(
-        `git diff 4b825dc642cb6eb9a060e54bf899d15363ef012b..${sha} --numstat --format=""`,
-        { encoding: "utf-8", cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
+      diffOutput = gitExec(
+        ["diff", `4b825dc642cb6eb9a060e54bf899d15363ef012b..${sha}`, "--numstat", '--format='],
+        { cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
       );
     } catch {
       console.error(`[fowler] Cannot get diff for ${sha}. Is it a valid commit?`);
@@ -1004,15 +1004,15 @@ function cmdGate(commitSha: string): GateVerdict {
   // 2. Debt introduced by this commit
   let diffContent: string;
   try {
-    diffContent = execSync(
-      `git diff ${commitSha}^..${commitSha} --diff-filter=ACMR -- "src/"`,
-      { encoding: "utf-8", cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
+    diffContent = gitExec(
+      ["diff", `${commitSha}^..${commitSha}`, "--diff-filter=ACMR", "--", "src/"],
+      { cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
     );
   } catch {
     try {
-      diffContent = execSync(
-        `git diff 4b825dc642cb6eb9a060e54bf899d15363ef012b..${commitSha} --diff-filter=ACMR -- "src/"`,
-        { encoding: "utf-8", cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
+      diffContent = gitExec(
+        ["diff", `4b825dc642cb6eb9a060e54bf899d15363ef012b..${commitSha}`, "--diff-filter=ACMR", "--", "src/"],
+        { cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
       );
     } catch {
       diffContent = "";

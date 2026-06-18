@@ -1,0 +1,62 @@
+/* ============================================================
+   ALLURA — TYPOGRAPHY
+   IBM Plex Sans for everything in the UI and display.
+   IBM Plex Mono for data, IDs, timestamps, code.
+   Type scale: Hero (64) → Overline (10). Tight line-height on
+   display, comfortable on body. SemiBold (600) is the workhorse.
+   ============================================================ */
+:root {
+  /* Families */
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: var(--font-sans);
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Type scale (font-size) */
+  --text-hero: 64px;
+  --text-h1: 48px;
+  --text-h2: 36px;
+  --text-h3: 28px;
+  --text-h4: 22px;
+  --text-title: 18px;
+  --text-body-lg: 16px;
+  --text-body: 14px;
+  --text-small: 13px;
+  --text-caption: 12px;
+  --text-micro: 11px;
+  --text-overline: 10px;
+
+  /* Line heights */
+  --leading-tight: 1.05;
+  --leading-snug: 1.2;
+  --leading-normal: 1.45;
+  --leading-relaxed: 1.6;
+
+  /* Letter spacing */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-overline: 0.12em;  /* uppercase labels */
+}
+
+/* ---- Optional utility classes (handy for specimens & docs) ---- */
+.t-hero { font: var(--weight-bold) var(--text-hero)/var(--leading-tight) var(--font-display); letter-spacing: var(--tracking-tight); }
+.t-h1 { font: var(--weight-bold) var(--text-h1)/var(--leading-tight) var(--font-display); letter-spacing: var(--tracking-tight); }
+.t-h2 { font: var(--weight-semibold) var(--text-h2)/var(--leading-snug) var(--font-display); letter-spacing: var(--tracking-tight); }
+.t-h3 { font: var(--weight-semibold) var(--text-h3)/var(--leading-snug) var(--font-display); }
+.t-h4 { font: var(--weight-semibold) var(--text-h4)/var(--leading-snug) var(--font-sans); }
+.t-title { font: var(--weight-semibold) var(--text-title)/var(--leading-snug) var(--font-sans); }
+.t-body-lg { font: var(--weight-regular) var(--text-body-lg)/var(--leading-relaxed) var(--font-sans); }
+.t-body { font: var(--weight-regular) var(--text-body)/var(--leading-normal) var(--font-sans); }
+.t-caption { font: var(--weight-regular) var(--text-caption)/var(--leading-normal) var(--font-sans); }
+.t-overline {
+  font: var(--weight-semibold) var(--text-overline)/1.2 var(--font-sans);
+  letter-spacing: var(--tracking-overline);
+  text-transform: uppercase;
+}
+.t-mono { font-family: var(--font-mono); }

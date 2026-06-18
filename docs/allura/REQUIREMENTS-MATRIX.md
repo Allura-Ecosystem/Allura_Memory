@@ -190,13 +190,27 @@ Curator approves → Neo4j write
   https://arxiv.org/abs/2407.02490
 
 - **Allura Architecture**  
-  See [.github/ARCHITECTURE.md](./.github/ARCHITECTURE.md)
+  See [.github/ARCHITECTURE.md](../../.github/ARCHITECTURE.md)
 
 ---
 
 ## Governed Memory Pipeline — Business → Functional Traceability
 
-This section traces the governed memory pipeline requirements from business goals through functional behaviors to concrete satisfaction evidence. See [BLUEPRINT.md](./BLUEPRINT.md) and [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) for the full implementation design and [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) for the acceptance checklist.
+This section traces the governed memory pipeline requirements from business goals through functional behaviors to concrete satisfaction evidence. See [BLUEPRINT.md](./BLUEPRINT.md) and [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) for the full implementation design and the E2E readiness table in [BLUEPRINT.md §2](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) for the acceptance gate status.
+
+> **Note on B# numbering:** Section 0 below maps the BLUEPRINT's original B1–B7 (core API/infra requirements). Section 1 uses a legacy pipeline-level B1–B7 inherited from the pre-2026-04-19 matrix; these correspond to BLUEPRINT B23–B29. Both numbering systems are preserved for traceability; when a B# appears in both sections, the BLUEPRINT canonical definition takes precedence.
+
+### Section 0: Core API and Infrastructure Requirements (BLUEPRINT B1–B7)
+
+| ID | Business Requirement (BLUEPRINT) | Functional Requirements | Satisfied by |
+|----|----------------------------------|------------------------|--------------|
+| B1 | Developers integrate Allura with a 5-tool API matching mem0's UX | F1–F5 | `memory_add`, `memory_search`, `memory_get`, `memory_list`, `memory_delete` via MCP tools · AD-05 |
+| B2 | All memory is isolated by tenant (`group_id`) at the schema level | F8 | PostgreSQL CHECK constraint `group_id ~ '^allura-'` · AD-06 · [BLUEPRINT.md](./BLUEPRINT.md#7-global-constraints) |
+| B3 | Every write produces an immutable audit record in PostgreSQL | F1, F26, F27 | Append-only `events` table · `insertEvent()` · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#postgresql-events) |
+| B4 | Promoted knowledge is versioned and never mutated in Neo4j | F9, F33, F34 | `SUPERSEDES` relationship pattern · AD-02 · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-relationships) |
+| B5 | The system is deployable via a single `docker compose up` command for core infra and app services | F21, F56 | `docker-compose.yml` · AD-45 (Port Allocation Policy) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#81-deployment-scenarios) |
+| B6 | Agents connect via MCP (Model Context Protocol) through Team RAM-selected packaged MCP servers | F20 | `neo4j-memory`, `database-server`, `neo4j-cypher` packaged MCP servers · AD-23 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-1-agent-memory-recall-primary-path) |
+| B7 | Operators choose between human-gated (SOC2) and auto-promotion modes | F6, F7 | `PROMOTION_MODE` env var · AD-04 · [BLUEPRINT.md](./BLUEPRINT.md#6-execution-rules) |
 
 ### Section 1: Business Requirements → Functional Requirements
 
@@ -271,8 +285,8 @@ This section traces the governed memory pipeline requirements from business goal
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f14"></a>F14 | A second agent must be able to retrieve approved knowledge as context and use it in a later task correctly. | Retrieval endpoint · validation gate scenario MEM-UC8 · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) |
-| <a name="f15"></a>F15 | The full lifecycle from trace capture to knowledge reuse must be traceable, auditable, and reversible. | Evidence chain: trace → proposal → approval → Neo4j → retrieval · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
+| <a name="f14"></a>F14 | A second agent must be able to retrieve approved knowledge as context and use it in a later task correctly. | Retrieval endpoint · validation gate scenario MEM-UC8 · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) |
+| <a name="f15"></a>F15 | The full lifecycle from trace capture to knowledge reuse must be traceable, auditable, and reversible. | Evidence chain: trace → proposal → approval → Neo4j → retrieval · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 | <a name="f16"></a>F16 | The graph must include Agent, Team, and Project structural context nodes with relationships enabling traversal queries by ownership, project scope, and delegation path. | `scripts/neo4j-seed-agents.cypher` · [BLUEPRINT.md](./BLUEPRINT.md#5-data-model) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-agent) |
 
 ### Section 3: Curator API/CLI (F17–F19)
@@ -293,6 +307,7 @@ This section traces the governed memory pipeline requirements from business goal
 | <a name="f23"></a>F23 | MCP HTTP gateway exposes backend engine via `CURATOR_ENGINE_URL` env var | `src/mcp/http-gateway.ts` · Docker deployment config · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#4-interface-catalogue) |
 | <a name="f24"></a>F24 | API routes call Docker engine in VPC/cloud via HTTPS | `src/app/api/` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#4-interface-catalogue) |
 | <a name="f25"></a>F25 | Error tracking: unhandled exceptions sent to Sentry; operator notified via email/Slack | `src/lib/observability/sentry.ts` · [BLUEPRINT.md](./BLUEPRINT.md#3-architecture) |
+| <a name="f56"></a>F56 | Git-safety guardrail (GIT-EXEC-001): all `git` subprocesses spawned by the harness or Ralph must have `GIT_DIR` constrained to the project root; Ralph refuses to run if `cwd` is not under the expected project root | `scripts/git-exec-guard.ts` · `.ralph/ralph-loop.state.json` cwd check · AD-44 · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 
 ### Section 5: Governed Memory Pipeline (F26–F40)
 
@@ -311,8 +326,8 @@ This section traces the governed memory pipeline requirements from business goal
 | <a name="f36"></a>F36 | Retrieval supports semantic and structured queries with project and global scope | `searchInsights()` · `getDualContextSemanticMemory()` · `queryTraces()` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f37"></a>F37 | All knowledge-system reads/writes pass through controlled endpoints enforcing project-level access | `requireRole()` · `validateGroupId()` · RBAC middleware · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#6-key-architectural-constraints) |
 | <a name="f38"></a>F38 | Agent permissions enforced and all access to trace/knowledge resources is audited | Auth middleware · audit event logging · [BLUEPRINT.md](./BLUEPRINT.md#9-logging--audit) |
-| <a name="f39"></a>F39 | A second agent can retrieve approved knowledge and use it correctly in a later task | Retrieval endpoint · validation gate scenario MEM-UC8 · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) |
-| <a name="f40"></a>F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible | Evidence chain: trace → proposal → approval → Neo4j → retrieval · [VALIDATION-GATE.md](../archive/allura/VALIDATION-GATE.md) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
+| <a name="f39"></a>F39 | A second agent can retrieve approved knowledge and use it correctly in a later task | Retrieval endpoint · validation gate scenario MEM-UC8 · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) |
+| <a name="f40"></a>F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible | Evidence chain: trace → proposal → approval → Neo4j → retrieval · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 
 ### Section 5A: Evidence-Gated Run Records (F49–F52)
 
@@ -363,6 +378,16 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-GOV-004 | Substantive work must write a raw receipt with actor, evidence, validation, and audit reference. | B3, B18, F32 | [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memory-command-center-adapter-contracts) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#memory-lifecycle-and-done-gate) |
 | REQ-GOV-005 | RuVix gates must return `Permit`, `Defer`, or `Deny` and include `gate_reason`. | AD-XX, RULE-010 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) |
 | REQ-GOV-006 | Runtime readiness labeling must say `pgvector bridge` until RuVector extension/functions and search/feedback health are proven. | AD-32, RK-21 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-0-current-ruvector-readiness-boundary) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-32-current-runtime-label-is-pgvector-bridge) |
+
+### Section 6A.2: Agent Factory CI Requirements
+
+| ID | Requirement | Satisfied by |
+| --- | --- | --- |
+| REQ-AF-CI-001 | Factory modules and workflows must be tracked in the canonical `Allura_Memory` repository. | `factory/` · `.github/workflows/factory-ci.yml` · AD-43 |
+| REQ-AF-CI-002 | Every module must pass YAML, roster, tenant, BMad dependency, and Allura governance validation. | `factory/validate.sh` · `.github/workflows/factory-ci.yml` |
+| REQ-AF-CI-003 | CI must prove PostgreSQL-first writes, own-tenant retrieval, and cross-tenant isolation against live PostgreSQL and Neo4j. | `scripts/factory-cross-team-smoke.ts` · `.github/workflows/factory-cross-team-smoke.yml` · RK-31 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3401-agent-factory-ci-topology) |
+| REQ-AF-CI-004 | CI must preserve the `pgvector bridge` label and block native/upstream claims while required artifacts are absent. | `scripts/check-ruvector-readiness.ts` · `.github/workflows/ruvector-readiness.yml` · AD-32 · RK-21 |
+| REQ-AF-CI-005 | Packaging must require an explicit validated team and produce a commit-addressed artifact. | `.github/workflows/factory-ci.yml` |
 | REQ-GOV-007 | Dashboard and operator surfaces must consume API/MCP contracts only and must not write directly to PostgreSQL, Neo4j, or vector substrate. | AD-31, F37, F38 | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#important-constraints) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) |
 | REQ-GOV-008 | Runtime/database/MCP/cron/live hook/RuVix enforcement/semantic promotion/Notion sync/Done status changes require explicit approval and `approval_required=true`. | AD-33 | [BLUEPRINT.md](./BLUEPRINT.md#engine-boundary-and-ruvectorruvix-posture) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-33-approval-boundaries-for-engine-mutations) |
 | REQ-GOV-009 | Planned RAM/Durham hook wrappers are governed support surfaces, not live enforcement until separately approved. | AD-33, RK-24 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#risk-detail) |
@@ -379,18 +404,19 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-DURHAM-004 | Accessibility AA compliance — dashboard controls and terminal output are keyboard reachable, screen-reader readable, and high-contrast safe | BRAND-004 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-2-brand-governance-layer) |
 | REQ-DURHAM-005 | Component consistency — reuse approved Allura/Durham UI and output patterns; ship only after Durham gate passes | BRAND-005, BRAND-006 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#durhamgateevent) |
 
-### Section 6C: Memory Command Center Requirements (REQ-DASH-001–REQ-DASH-008)
+### Section 6C: Memory Command Center Requirements (REQ-DASH-001–REQ-DASH-009)
 
 | ID | Requirement | Trace | Satisfied by |
 |----|-------------|-------|--------------|
 | REQ-DASH-001 | Active `group_id` is visible on every dashboard page and included in every memory, curator, governance, graph, audit, and settings request | B2, F12, REQ-GOV-001 | [BLUEPRINT.md](./BLUEPRINT.md#ruvix-governed-memory-command-center) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-v2-condensed-ux-contract) |
 | REQ-DASH-002 | Memories page supports search, filtering, detail inspection, provenance drawer, source, confidence, state, actor, and relationship context | B8-B13, F10-F15 | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-architecture) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memory-command-center-adapter-contracts) |
 | REQ-DASH-003 | Curator page supports approve, reject, request evidence, request changes, and rationale capture through governed endpoints only | F6, F7, F31, F32 | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx-ruvix-kernel-contract) |
-| REQ-DASH-004 | Governance page surfaces RuVix policy mode, thresholds, role separation, tenant isolation, promotion locks, drift warnings, and mutation receipts | REQ-GOV-001, REQ-GOV-002 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) |
+| REQ-DASH-004 | Governance page surfaces RuVix policy mode, thresholds, role separation, tenant isolation, promotion locks, drift warnings, and mutation receipts | REQ-GOV-001, REQ-GOV-002 | `src/app/dashboard/governance/page.tsx` (lists the 6 canonical policies + severity/invariant + governance audit trail; read-only, overrides HITL-gated) · `src/lib/governance/policies.ts` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-kernel-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) |
 | REQ-DASH-005 | Audit page provides event filtering, receipt detail, CSV/export packet, and source lineage for compliance review | B13, F18, F32 | [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#postgresql-events) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#audit--health-requirements) |
-| REQ-DASH-006 | Graph page renders real Neo4j data only, with source receipts and a fallback list when graph data is degraded or unavailable | F8, F9, F16 | [BLUEPRINT.md](./BLUEPRINT.md#5-data-model) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-architecture) |
-| REQ-DASH-007 | Every dashboard panel shows source of truth, freshness, degraded state, and no fabricated healthy/live claims | AD-14, AD-26 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-31-memory-command-center-operator-surface) |
+| REQ-DASH-006 | Graph page renders real Neo4j data only, with source receipts and a fallback list when graph data is degraded or unavailable | F8, F9, F16 | `src/app/dashboard/graph/page.tsx` (placeholder nodes removed; honest empty state) · `src/app/dashboard/knowledge-graph/` · [BLUEPRINT.md](./BLUEPRINT.md#5-data-model) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-architecture) |
+| REQ-DASH-007 | Every dashboard panel shows source of truth, freshness, degraded state, and no fabricated healthy/live claims | AD-14, AD-26 | `src/lib/operational-state/sources/header-source.ts` · `src/app/dashboard/overview/page.tsx` (live receipts + bounded Neo4j/Brain health probes) · [docs/design/command-center/DATA-SOURCES.md](../design/command-center/DATA-SOURCES.md) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) |
 | REQ-DASH-008 | Every mutation shows a governance receipt containing intent, actor, source, policy, validation, and audit trail before completion | AD-XX, REQ-GOV-001 | [BLUEPRINT.md](./BLUEPRINT.md#ruvix-governed-memory-command-center) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memory-command-center-adapter-contracts) |
+| REQ-DASH-009 | A non-coder admin manages team members and roles (admin/curator/viewer) entirely from the dashboard UI; group_id-scoped, soft-remove, append-only audit | AD-48, REQ-GOV-001 | `src/app/dashboard/members/page.tsx` + `members-client.tsx` (add/role/remove UI) · `docker/postgres-init/29-memberships.sql` · `src/lib/membership/repository.ts` · `src/app/api/members/route.ts` · `src/app/api/members/[userId]/route.ts` · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memberships) |
 
 ### Section 7: Use Case Index
 

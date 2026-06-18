@@ -19,9 +19,9 @@
  * When no DB, produces real analysis — the analysis is the value, DB is just logging.
  */
 
-import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, extname, join, relative } from "node:path";
+import { gitExec } from "../../src/lib/git/exec";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -612,21 +612,21 @@ function getChangedFiles(commitSha: string): string[] {
   let output: string;
   try {
     // Resolve HEAD to actual SHA if needed
-    const resolvedSha = execSync(
-      `git rev-parse ${commitSha}`,
-      { encoding: "utf-8", cwd: ROOT_DIR },
+    const resolvedSha = gitExec(
+      ["rev-parse", commitSha],
+      { cwd: ROOT_DIR },
     ).trim();
 
-    output = execSync(
-      `git diff-tree --no-commit-id -r ${resolvedSha}`,
-      { encoding: "utf-8", cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
+    output = gitExec(
+      ["diff-tree", "--no-commit-id", "-r", resolvedSha],
+      { cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
     );
   } catch {
     // Try alternative: for initial commits or shallow clones
     try {
-      output = execSync(
-        `git diff-tree --no-commit-id -r ${commitSha}`,
-        { encoding: "utf-8", cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
+      output = gitExec(
+        ["diff-tree", "--no-commit-id", "-r", commitSha],
+        { cwd: ROOT_DIR, maxBuffer: 10 * 1024 * 1024 },
       );
     } catch {
       console.error(`[knuth] Cannot get changed files for ${commitSha}. Is it a valid commit?`);

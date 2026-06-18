@@ -8,12 +8,12 @@
   "properties": {
     "id": {
       "type": "integer",
-      "description": "Auto-increment primary key"
+      "description": "Auto-increment primary key (BIGSERIAL)"
     },
     "group_id": {
       "type": "string",
-      "pattern": "^allura-[a-z0-9-]+$",
-      "description": "Tenant namespace"
+      "pattern": "^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+      "description": "Tenant namespace. Migration 19 enforces strict CHECK: ^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
     },
     "event_type": {
       "type": "string",
@@ -24,12 +24,37 @@
         "memory_list",
         "memory_delete",
         "memory_promoted",
+        "memory_restore",
+        "memory_update",
+        "memory_promote",
         "promotion_failed",
         "promotion_queued",
+        "proposal_created",
+        "proposal_decided",
+        "proposal_approved",
+        "proposal_rejected",
+        "notion_sync_pending",
+        "debug:root_cause_found",
+        "debug:hypothesis_tested",
+        "debug:fix_implemented",
+        "neo4j_unavailable",
+        "tool_approved",
+        "tool_denied",
+        "request_trace",
         "session_start",
-        "health_check"
+        "session_end",
+        "health_check",
+        "auto_curated",
+        "sync_contract",
+        "kernel_rule",
+        "governance_gate_checked",
+        "WATCHDOG_HEARTBEAT",
+        "BLOCKER",
+        "ARCHITECTURE_DECISION",
+        "TASK_COMPLETE",
+        "BUILD_COMPLETE"
       ],
-      "description": "Operation type"
+      "description": "Operation type. No DB-level enum constraint (VARCHAR(100) + non-empty CHECK only) — this enum reflects actual emitted values in src/lib/events/event-types.ts and all call sites."
     },
     "agent_id": {
       "type": "string",
@@ -39,19 +64,56 @@
       "type": "string",
       "description": "Optional grouping for multi-step workflows"
     },
+    "session_id": {
+      "type": "string",
+      "description": "Session identifier for identity scoping and audit correlation. Added by migration 10 (brooks-tracking). NULL allowed (nullable column)."
+    },
+    "step_id": {
+      "type": "string",
+      "description": "Optional step identifier within a workflow"
+    },
+    "parent_event_id": {
+      "type": "integer",
+      "description": "FK to events.id for parent-child execution chain linking"
+    },
+    "runtime": {
+      "type": "string",
+      "description": "Runtime platform: claude-code, copilot, openclaw, opencode. Added by migration 10 (brooks-tracking). Default: 'unknown'."
+    },
+    "schema_version": {
+      "type": "integer",
+      "description": "Schema version for the event record. Added by migration 17. Default: 1."
+    },
     "status": {
       "type": "string",
-      "enum": ["completed", "failed", "pending"],
-      "description": "Operation status"
+      "enum": ["completed", "failed", "pending", "cancelled"],
+      "description": "Operation status. DB CHECK constraint (chk_events_valid_status) enforces exactly these four values."
     },
     "metadata": {
       "type": "object",
-      "description": "Event-specific payload"
+      "description": "Event-specific payload (JSONB). Default: '{}'."
+    },
+    "outcome": {
+      "type": "object",
+      "description": "Structured outcome payload (JSONB). Default: '{}'."
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error description. Populated only on failure."
+    },
+    "error_code": {
+      "type": "string",
+      "description": "Error code. Populated only on failure."
     },
     "created_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Write timestamp. Immutable."
+      "description": "Write timestamp (TIMESTAMPTZ). DEFAULT NOW(). Immutable — append-only invariant."
+    },
+    "inserted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Audit insertion timestamp (TIMESTAMPTZ). DEFAULT NOW()."
     }
   },
   "additionalProperties": false

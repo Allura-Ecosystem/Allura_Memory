@@ -1,0 +1,336 @@
+name: Allura Hosted CI
+
+# Foundation CI/CD for the Allura Hosted Platform.
+# Implements the plan's 12 jobs + 4 gates (License / Security / Governance / Performance).
+# REPORT-ONLY: every job is non-blocking (continue-on-error) until the hosted-platform
+# code lands. Flip `continue-on-error` to false (and remove the soft guards) to enforce.
+# Plan: https://app.notion.com/p/3811d9be65b380b1a74ac388695a6f88
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "docs/allura-hosted/**"
+      - "packages/**"
+      - "src/app/mcp/**"
+      - "src/lib/guard/**"
+      - "src/lib/mcp-token/**"
+      - "src/lib/workspace/**"
+      - ".github/workflows/allura-hosted-ci.yml"
+  pull_request:
+    paths:
+      - "docs/allura-hosted/**"
+      - "packages/**"
+      - "src/app/mcp/**"
+      - "src/lib/guard/**"
+      - "src/lib/mcp-token/**"
+      - "src/lib/workspace/**"
+      - ".github/workflows/allura-hosted-ci.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: allura-hosted-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Bun only — npm/npx are banned by repo supply-chain policy.
+  BUN_VERSION: "1.2.0"
+  REPORT_ONLY: "true"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Quality jobs
+  # ---------------------------------------------------------------------------
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile || bun install
+      - name: Lint
+        run: bun run lint || echo "::warning::lint reported issues (report-only)"
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile || bun install
+      - name: Typecheck
+        run: bun run typecheck || echo "::warning::typecheck reported issues (report-only)"
+
+  unit-tests:
+    name: unit-tests
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile || bun install
+      - name: Unit tests
+        run: bun run test:unit || echo "::warning::unit tests reported issues (report-only)"
+
+  integration-tests:
+    name: integration-tests
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile || bun install
+      - name: Integration tests
+        run: bun run test:integration || echo "::warning::integration tests reported issues (report-only)"
+
+  # ---------------------------------------------------------------------------
+  # License gate (Gate 1)
+  # ---------------------------------------------------------------------------
+  license-check:
+    name: license-check
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: RuVector MIT notice present when RuVector is used
+        run: |
+          set -u
+          USES_RUVECTOR=false
+          if [ -d packages/ruvector-adapter ] || grep -rqi "ruvector" packages 2>/dev/null; then
+            USES_RUVECTOR=true
+          fi
+          echo "uses_ruvector=$USES_RUVECTOR"
+          if [ "$USES_RUVECTOR" = "true" ]; then
+            MISSING=""
+            [ -f THIRD_PARTY_NOTICES.md ] || MISSING="$MISSING THIRD_PARTY_NOTICES.md"
+            [ -f LICENSES/ruvector-MIT.txt ] || MISSING="$MISSING LICENSES/ruvector-MIT.txt"
+            if [ -n "$MISSING" ]; then
+              echo "::warning title=License Gate::RuVector in use but missing:$MISSING (report-only)"
+            else
+              echo "License Gate OK: RuVector notices present."
+            fi
+          else
+            echo "License Gate: RuVector not in use — skipping notice check."
+          fi
+
+  dependency-review:
+    name: dependency-review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+        continue-on-error: true
+
+  sbom:
+    name: sbom
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate SBOM (CycloneDX via anchore/syft)
+        uses: anchore/sbom-action@v0
+        with:
+          format: cyclonedx-json
+          output-file: sbom.cyclonedx.json
+        continue-on-error: true
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.cyclonedx.json
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # Security gate (Gate 2)
+  # ---------------------------------------------------------------------------
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+  security-gate:
+    name: security-gate
+    runs-on: ubuntu-latest
+    needs: [secret-scan]
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Adapter must enforce group_id + scope (static check)
+        run: |
+          set -u
+          if [ -d packages/ruvector-adapter ]; then
+            FILE_GLOB="packages/ruvector-adapter/src"
+            for needle in group_id workspace_id scope audit; do
+              if grep -rqi "$needle" "$FILE_GLOB" 2>/dev/null; then
+                echo "Security Gate: found '$needle' reference in adapter."
+              else
+                echo "::warning title=Security Gate::adapter missing '$needle' enforcement reference (report-only)"
+              fi
+            done
+          else
+            echo "Security Gate: ruvector-adapter not present — boundary tests will run once it exists."
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Governance gate (Gate 3)
+  # ---------------------------------------------------------------------------
+  ruvector-adapter-tests:
+    name: ruvector-adapter-tests
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - name: Adapter boundary + provenance tests
+        run: |
+          if [ -d packages/ruvector-adapter/tests ]; then
+            bun install --frozen-lockfile || bun install
+            bun test packages/ruvector-adapter || echo "::warning::adapter tests reported issues (report-only)"
+          else
+            echo "Skipping: packages/ruvector-adapter/tests not present yet."
+          fi
+
+  governance-receipt-test:
+    name: governance-receipt-test
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Governance invariants documented
+        run: |
+          set -u
+          DOCS=docs/allura-hosted
+          ok=true
+          for f in BLUEPRINT.md RISKS-AND-DECISIONS.md DESIGN-CURATOR.md DESIGN-AUDIT.md SECURITY.md; do
+            if [ ! -f "$DOCS/$f" ]; then echo "::warning title=Governance Gate::missing $DOCS/$f"; ok=false; fi
+          done
+          grep -q "append-only" "$DOCS/DESIGN-AUDIT.md" 2>/dev/null || echo "::warning::audit append-only rule not documented"
+          grep -q "cannot approve" "$DOCS/RISKS-AND-DECISIONS.md" 2>/dev/null || echo "::warning::HITL self-approval rule not documented"
+          $ok && echo "Governance Gate: core governance docs present."
+
+  checkpoint-restore-test:
+    name: checkpoint-restore-test
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore proof documented / scripted
+        run: |
+          if [ -f docs/allura-hosted/BACKUP-RESTORE.md ]; then
+            echo "Restore procedure documented."
+          else
+            echo "::warning title=Governance Gate::BACKUP-RESTORE.md missing"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Performance gate (Gate 4)
+  # ---------------------------------------------------------------------------
+  search-benchmark:
+    name: search-benchmark
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - name: RuVector vs pgvector baseline benchmark
+        run: |
+          if [ -f scripts/bench/search-benchmark.ts ]; then
+            bun install --frozen-lockfile || bun install
+            bun run scripts/bench/search-benchmark.ts || echo "::warning::benchmark reported issues (report-only)"
+          else
+            echo "Skipping: scripts/bench/search-benchmark.ts not present yet."
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Gate 2b — MCP gateway tenancy boundary (ADR-001)
+  # ---------------------------------------------------------------------------
+  mcp-gateway-boundary:
+    name: mcp-gateway-boundary
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile || bun install
+      - name: Assert /mcp + Bumblebee derive tenant only from the token
+        run: |
+          if grep -RnE "body\.(group_id|workspace_id)" src/app/mcp src/lib/guard; then
+            echo "::error::/mcp or Bumblebee reads client-supplied group_id/workspace_id (ADR-001 violation)"
+            exit 1
+          fi
+          echo "OK: tenant scope derived only from the validated token."
+      - name: Bumblebee + token unit tests
+        run: bun run test:unit src/lib/guard/ src/lib/mcp-token/ || echo "::warning::gateway unit tests reported issues (report-only)"
+
+  # ---------------------------------------------------------------------------
+  # Summary
+  # ---------------------------------------------------------------------------
+  ci-summary:
+    name: ci-summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - lint
+      - typecheck
+      - unit-tests
+      - integration-tests
+      - license-check
+      - sbom
+      - secret-scan
+      - security-gate
+      - ruvector-adapter-tests
+      - governance-receipt-test
+      - checkpoint-restore-test
+      - search-benchmark
+      - mcp-gateway-boundary
+    steps:
+      - name: Report
+        run: |
+          {
+            echo "## Allura Hosted CI — report-only"
+            echo ""
+            echo "All gates run in **report-only** mode; warnings do not block merges yet."
+            echo ""
+            echo "| Gate | Jobs |"
+            echo "|------|------|"
+            echo "| Quality | lint, typecheck, unit-tests, integration-tests |"
+            echo "| Gate 1 — License | license-check, dependency-review, sbom |"
+            echo "| Gate 2 — Security | secret-scan, security-gate, mcp-gateway-boundary |"
+            echo "| Gate 3 — Governance | ruvector-adapter-tests, governance-receipt-test, checkpoint-restore-test |"
+            echo "| Gate 4 — Performance | search-benchmark |"
+            echo ""
+            echo "Flip \`continue-on-error\` to \`false\` per job to enforce."
+          } >> "$GITHUB_STEP_SUMMARY"

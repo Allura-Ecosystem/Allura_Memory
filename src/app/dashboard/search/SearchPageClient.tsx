@@ -19,6 +19,27 @@ const ALL_TYPES: { type: SearchResultType; label: string }[] = [
   { type: "handoff", label: "Handoffs" },
 ]
 
+type SubView = "memories" | "graph" | "processes" | "extracted" | "approvals" | "agents"
+
+const SUB_VIEWS: { id: SubView; label: string }[] = [
+  { id: "memories", label: "Memories" },
+  { id: "graph", label: "Graph" },
+  { id: "processes", label: "Processes" },
+  { id: "extracted", label: "Extracted" },
+  { id: "approvals", label: "Approvals" },
+  { id: "agents", label: "Agents" },
+]
+
+// Sub-view → which SearchResultTypes to show (empty = show all from current filter)
+const SUB_VIEW_TYPE_MAP: Record<SubView, SearchResultType[] | null> = {
+  memories: ["memory"],
+  graph: null,
+  processes: ["run", "definition"],
+  extracted: ["evidence"],
+  approvals: ["handoff"],
+  agents: null,
+}
+
 const TYPE_COLORS: Record<SearchResultType, string> = {
   memory: "var(--allura-blue)",
   run: "var(--allura-green)",
@@ -74,20 +95,65 @@ function TypeBadge({ type }: { type: SearchResultType }): React.ReactElement {
   )
 }
 
-function ScoreDot({ score }: { score: number }): React.ReactElement {
+function ConfidenceDots({ score }: { score: number }): React.ReactElement {
   const pct = Math.round(score * 100)
-  const color = pct >= 70 ? "var(--allura-green)" : pct >= 40 ? "var(--allura-orange)" : "var(--allura-gray-500)"
+  // Five dots: filled based on score quintile
+  const filled = Math.round(score * 5)
+  const dotColor =
+    pct >= 70 ? "var(--allura-green)" : pct >= 40 ? "var(--allura-orange)" : "var(--allura-gray-400)"
+  return (
+    <span
+      style={{ display: "inline-flex", alignItems: "center", gap: "3px", flexShrink: 0 }}
+      title={`Confidence: ${pct}%`}
+      aria-label={`Confidence ${pct}%`}
+    >
+      {Array.from({ length: 5 }, (_, i) => (
+        <span
+          key={i}
+          style={{
+            display: "inline-block",
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            background: i < filled ? dotColor : "var(--allura-gray-200)",
+          }}
+        />
+      ))}
+      <span
+        style={{
+          fontSize: "10px",
+          color: dotColor,
+          fontFamily: '"IBM Plex Mono", monospace',
+          marginLeft: "4px",
+        }}
+      >
+        {pct}%
+      </span>
+    </span>
+  )
+}
+
+function SourceBadge({ type }: { type: SearchResultType }): React.ReactElement {
+  const isEpisodic = type === "memory" || type === "run" || type === "evidence"
+  const label = isEpisodic ? "episodic" : "semantic"
   return (
     <span
       style={{
-        fontSize: "11px",
-        color,
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "1px 6px",
+        borderRadius: "var(--allura-r-sm, 4px)",
+        fontSize: "10px",
+        fontWeight: 500,
         fontFamily: '"IBM Plex Mono", monospace',
+        background: isEpisodic ? "var(--allura-info-bg)" : "var(--allura-purple-bg)",
+        color: isEpisodic ? "var(--allura-link)" : "var(--allura-purple-text)",
+        border: `1px solid ${isEpisodic ? "var(--allura-info-border)" : "var(--allura-purple-bg)"}`,
         flexShrink: 0,
+        letterSpacing: "0.03em",
       }}
-      title={`Relevance score: ${pct}%`}
     >
-      {pct}%
+      {label}
     </span>
   )
 }
@@ -173,7 +239,7 @@ function EmptyState({ query }: { query: string }): React.ReactElement {
       </p>
       {!hasQuery && (
         <p style={{ fontSize: "12px", color: "var(--allura-gray-500)", margin: "0", fontFamily: '"IBM Plex Mono", monospace' }}>
-          hybrid search: vector ANN + BM25 RRF · scope: allura-system
+          Searches everything you&apos;ve saved · allura-system
         </p>
       )}
     </div>
@@ -187,6 +253,10 @@ function ResultItem({ result }: { result: SearchResult }): React.ReactElement {
     day: "numeric",
     year: "numeric",
   })
+  // Extract agent_id from metadata when available (evidence, handoff, run types)
+  const meta = result.metadata as Record<string, unknown> | undefined
+  const agentIdRaw = meta?.actor_id ?? meta?.from_actor_id
+  const agentId: string | null = typeof agentIdRaw === "string" ? agentIdRaw : null
 
   const inner = (
     <div
@@ -199,6 +269,7 @@ function ResultItem({ result }: { result: SearchResult }): React.ReactElement {
         transition: "background 0.12s ease",
       }}
     >
+      {/* Row 1: type badge, title, score dots, date */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
         <TypeBadge type={result.type} />
         <span
@@ -216,7 +287,7 @@ function ResultItem({ result }: { result: SearchResult }): React.ReactElement {
           {result.title}
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-          {result.score !== undefined && <ScoreDot score={result.score} />}
+          {result.score !== undefined && <ConfidenceDots score={result.score} />}
           <span
             style={{
               fontSize: "11px",
@@ -228,6 +299,7 @@ function ResultItem({ result }: { result: SearchResult }): React.ReactElement {
           </span>
         </div>
       </div>
+      {/* Row 2: content preview */}
       <p
         style={{
           fontSize: "13px",
@@ -242,6 +314,21 @@ function ResultItem({ result }: { result: SearchResult }): React.ReactElement {
       >
         {result.summary}
       </p>
+      {/* Row 3: source badge + agent_id */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <SourceBadge type={result.type} />
+        {agentId !== null && (
+          <span
+            style={{
+              fontSize: "11px",
+              color: "var(--allura-gray-500)",
+              fontFamily: '"IBM Plex Mono", monospace',
+            }}
+          >
+            {agentId}
+          </span>
+        )}
+      </div>
     </div>
   )
 
@@ -279,6 +366,7 @@ export default function SearchPageClient(): React.ReactElement {
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [results, setResults] = useState<SearchResult[]>([])
   const [selectedTypes, setSelectedTypes] = useState<SearchResultType[]>([])
+  const [activeSubView, setActiveSubView] = useState<SubView>("memories")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -293,6 +381,14 @@ export default function SearchPageClient(): React.ReactElement {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
   }, [query])
+
+  // Compute effective types: sub-view narrows the manual type filter
+  function effectiveTypes(manualTypes: SearchResultType[], subView: SubView): SearchResultType[] {
+    const subViewTypes = SUB_VIEW_TYPE_MAP[subView]
+    if (subViewTypes === null) return manualTypes
+    if (manualTypes.length === 0) return subViewTypes
+    return manualTypes.filter((t) => subViewTypes.includes(t))
+  }
 
   // Run search when debounced query or type filter changes
   const runSearch = useCallback(
@@ -321,13 +417,21 @@ export default function SearchPageClient(): React.ReactElement {
   )
 
   useEffect(() => {
-    runSearch(debouncedQuery, selectedTypes)
-  }, [debouncedQuery, selectedTypes, runSearch])
+    runSearch(debouncedQuery, effectiveTypes(selectedTypes, activeSubView))
+    // effectiveTypes is a stable pure fn derived from args — no dep needed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, selectedTypes, activeSubView, runSearch])
 
   function toggleType(type: SearchResultType): void {
     setSelectedTypes((prev) =>
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
     )
+  }
+
+  function handleSubViewChange(view: SubView): void {
+    setActiveSubView(view)
+    // Reset manual type filter when switching sub-views to avoid empty intersection
+    setSelectedTypes([])
   }
 
   const showResults = debouncedQuery.trim().length > 0
@@ -336,7 +440,7 @@ export default function SearchPageClient(): React.ReactElement {
   return (
     <div style={{ padding: "32px", maxWidth: "860px" }}>
       {/* Header */}
-      <div style={{ marginBottom: "24px" }}>
+      <div style={{ marginBottom: "20px" }}>
         <p
           style={{
             fontSize: "11px",
@@ -363,6 +467,48 @@ export default function SearchPageClient(): React.ReactElement {
         <p style={{ fontSize: "14px", color: "var(--allura-gray-500)", margin: "0" }}>
           Search memories, runs, work items, projects, evidence, and handoffs.
         </p>
+      </div>
+
+      {/* Sub-view tab bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: "0",
+          marginBottom: "20px",
+          borderBottom: "2px solid var(--allura-border-row)",
+          overflowX: "auto",
+        }}
+        role="tablist"
+        aria-label="Search view"
+      >
+        {SUB_VIEWS.map(({ id, label }) => {
+          const active = activeSubView === id
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => handleSubViewChange(id)}
+              style={{
+                padding: "8px 16px",
+                fontSize: "13px",
+                fontWeight: active ? 600 : 400,
+                fontFamily: '"IBM Plex Sans", sans-serif',
+                color: active ? "var(--allura-blue)" : "var(--allura-gray-500)",
+                background: "transparent",
+                border: "none",
+                borderBottom: active ? "2px solid var(--allura-blue)" : "2px solid transparent",
+                marginBottom: "-2px",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "color 0.12s ease, border-color 0.12s ease",
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
       </div>
 
       {/* Search input */}
@@ -464,70 +610,98 @@ export default function SearchPageClient(): React.ReactElement {
               flexShrink: 0,
             }}
           >
-            hybrid
+            smart
           </span>
         </div>
       </div>
 
-      {/* Type filter chips */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "6px",
-          marginBottom: "24px",
-        }}
-        role="group"
-        aria-label="Filter by entity type"
-      >
-        <button
-          type="button"
-          onClick={() => setSelectedTypes([])}
+      {/* Type filter pills — only shown for sub-views that allow free filtering */}
+      {SUB_VIEW_TYPE_MAP[activeSubView] === null && (
+        <div
           style={{
-            padding: "4px 12px",
-            borderRadius: "var(--allura-r-full, 999px)",
-            fontSize: "12px",
-            fontWeight: selectedTypes.length === 0 ? 700 : 500,
-            cursor: "pointer",
-            border: "1px solid",
-            borderColor: selectedTypes.length === 0 ? "var(--allura-blue)" : "var(--dashboard-border)",
-            background: selectedTypes.length === 0 ? "var(--allura-blue)" : "transparent",
-            color: selectedTypes.length === 0 ? "var(--allura-white)" : "var(--allura-gray-500)",
-            transition: "all 0.12s ease",
-            fontFamily: '"IBM Plex Sans", sans-serif',
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "6px",
+            marginBottom: "20px",
           }}
-          aria-pressed={selectedTypes.length === 0}
+          role="group"
+          aria-label="Filter by entity type"
         >
-          All
-        </button>
-        {ALL_TYPES.map(({ type, label }) => {
-          const active = selectedTypes.includes(type)
-          const color = TYPE_COLORS[type]
-          return (
-            <button
-              key={type}
-              type="button"
-              onClick={() => toggleType(type)}
-              style={{
-                padding: "4px 12px",
-                borderRadius: "var(--allura-r-full, 999px)",
-                fontSize: "12px",
-                fontWeight: active ? 700 : 500,
-                cursor: "pointer",
-                border: "1px solid",
-                borderColor: active ? color : "var(--dashboard-border)",
-                background: active ? `${color}18` : "transparent",
-                color: active ? color : "var(--allura-gray-500)",
-                transition: "all 0.12s ease",
-                fontFamily: '"IBM Plex Sans", sans-serif',
-              }}
-              aria-pressed={active}
-            >
-              {label}
-            </button>
-          )
-        })}
-      </div>
+          <button
+            type="button"
+            onClick={() => setSelectedTypes([])}
+            style={{
+              padding: "4px 12px",
+              borderRadius: "var(--allura-r-full, 999px)",
+              fontSize: "12px",
+              fontWeight: selectedTypes.length === 0 ? 700 : 500,
+              cursor: "pointer",
+              border: "1px solid",
+              borderColor: selectedTypes.length === 0 ? "var(--allura-blue)" : "var(--dashboard-border)",
+              background: selectedTypes.length === 0 ? "var(--allura-blue)" : "transparent",
+              color: selectedTypes.length === 0 ? "var(--allura-white)" : "var(--allura-gray-500)",
+              transition: "all 0.12s ease",
+              fontFamily: '"IBM Plex Sans", sans-serif',
+            }}
+            aria-pressed={selectedTypes.length === 0}
+          >
+            All
+          </button>
+          {ALL_TYPES.map(({ type, label }) => {
+            const active = selectedTypes.includes(type)
+            const color = TYPE_COLORS[type]
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => toggleType(type)}
+                style={{
+                  padding: "4px 12px",
+                  borderRadius: "var(--allura-r-full, 999px)",
+                  fontSize: "12px",
+                  fontWeight: active ? 700 : 500,
+                  cursor: "pointer",
+                  border: "1px solid",
+                  borderColor: active ? color : "var(--dashboard-border)",
+                  background: active ? `${color}18` : "transparent",
+                  color: active ? color : "var(--allura-gray-500)",
+                  transition: "all 0.12s ease",
+                  fontFamily: '"IBM Plex Sans", sans-serif',
+                }}
+                aria-pressed={active}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {/* For fixed sub-views (memories, processes, etc.) show the active scope pill */}
+      {SUB_VIEW_TYPE_MAP[activeSubView] !== null && (
+        <div style={{ marginBottom: "20px", display: "flex", gap: "6px", flexWrap: "wrap" }}>
+          {(SUB_VIEW_TYPE_MAP[activeSubView] as SearchResultType[]).map((type) => {
+            const color = TYPE_COLORS[type]
+            const label = ALL_TYPES.find((t) => t.type === type)?.label ?? type
+            return (
+              <span
+                key={type}
+                style={{
+                  padding: "4px 12px",
+                  borderRadius: "var(--allura-r-full, 999px)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  border: `1px solid ${color}30`,
+                  background: `${color}18`,
+                  color,
+                  fontFamily: '"IBM Plex Sans", sans-serif',
+                }}
+              >
+                {label}
+              </span>
+            )
+          })}
+        </div>
+      )}
 
       {/* Results area */}
       {error && (

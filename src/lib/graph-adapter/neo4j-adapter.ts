@@ -128,6 +128,20 @@ function recordToNode(record: Record<string, unknown> | Neo4jRecordLike): GraphM
   }
 }
 
+function graphSearchRecord(record: Neo4jRecordLike): GraphSearchResult {
+  return {
+    id: recordValue(record, "id") as MemoryId,
+    content: recordValue(record, "content") as string,
+    score: ((recordValue(record, "score") as number) ?? 0.5) as ConfidenceScore,
+    provenance: toProvenance(recordValue(record, "provenance") as string | null),
+    created_at: neo4jDateToISO(recordValue(record, "created_at")),
+    usage_count: toNumber(recordValue(record, "usage_count")),
+    tags: (recordValue(record, "tags") as string[]) || [],
+    relevance: (recordValue(record, "relevance") as number) ?? 0,
+    schema_version: toNumber(recordValue(record, "schema_version"), CURRENT_SCHEMA_VERSION),
+  }
+}
+
 // ── Neo4jGraphAdapter ────────────────────────────────────────────────────────
 
 export class Neo4jGraphAdapter implements IGraphAdapter {
@@ -314,11 +328,27 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
     const session = this.driver.session()
     try {
       const result = await session.run(
-        `MATCH (m:Memory)
-         WHERE m.id = $id
-           AND m.group_id = $groupId
-           AND NOT (m)<-[:SUPERSEDES]-()
-         RETURN m.id AS id,
+        `CALL {
+           MATCH (h:InsightHead {group_id: $groupId})
+           MATCH (m:Insight {id: h.current_id})
+           WHERE m.id = $id OR m.insight_id = $id
+           RETURN m.insight_id AS id,
+                  m.content AS content,
+                  m.confidence AS score,
+                  m.source_type AS provenance,
+                  m.created_by AS user_id,
+                  m.created_at AS created_at,
+                  m.version AS version,
+                  [] AS tags,
+                  false AS deprecated,
+                  m.schema_version AS schema_version,
+                  0 AS priority
+           UNION ALL
+           MATCH (m:Memory)
+           WHERE m.id = $id
+             AND m.group_id = $groupId
+             AND NOT (m)<-[:SUPERSEDES]-()
+           RETURN m.id AS id,
                 m.content AS content,
                 m.score AS score,
                 m.provenance AS provenance,
@@ -327,7 +357,13 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
                 m.version AS version,
                 m.tags AS tags,
                 m.deprecated AS deprecated,
-                m.schema_version AS schema_version`,
+                m.schema_version AS schema_version,
+                1 AS priority
+         }
+         RETURN id, content, score, provenance, user_id, created_at, version,
+                tags, deprecated, schema_version
+         ORDER BY priority
+         LIMIT 1`,
         { id: params.id, groupId: params.group_id }
       )
       if (result.records.length === 0) {
@@ -348,7 +384,26 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
   }): Promise<GraphSearchResult[]> {
     const session = this.driver.session()
     try {
-      const result = await session.run(
+      const insightResult = await session.run(
+          `CALL db.index.fulltext.queryNodes('insight_search_index', $query)
+           YIELD node AS m, score
+           MATCH (h:InsightHead {insight_id: m.insight_id, group_id: $groupId})
+           WHERE m.id = h.current_id
+             AND m.status = 'active'
+           RETURN m.insight_id AS id,
+                  m.content AS content,
+                  m.confidence AS score,
+                  m.source_type AS provenance,
+                  m.created_at AS created_at,
+                  0 AS usage_count,
+                  [] AS tags,
+                  m.schema_version AS schema_version,
+                  score AS relevance
+          ORDER BY relevance DESC, m.confidence DESC
+           LIMIT $limit`,
+          { query: params.query, groupId: params.group_id, limit: neo4j.int(params.limit) }
+        )
+      const memoryResult = await session.run(
         `CALL db.index.fulltext.queryNodes('memory_search_index', $query)
          YIELD node AS m, score
          WHERE m.group_id = $groupId
@@ -367,17 +422,17 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
          LIMIT $limit`,
         { query: params.query, groupId: params.group_id, limit: neo4j.int(params.limit) }
       )
-      return result.records.map((record) => ({
-        id: record.get("id") as MemoryId,
-        content: record.get("content") as string,
-        score: record.get("score") as ConfidenceScore,
-        provenance: toProvenance(record.get("provenance") as string | null),
-        created_at: neo4jDateToISO(record.get("created_at")),
-        usage_count: (record.get("usage_count") as { toNumber?: () => number })?.toNumber?.() ?? 0,
-        tags: (record.get("tags") as string[]) || [],
-        relevance: record.get("relevance") as number,
-        schema_version: (record.get("schema_version") as { toNumber?: () => number })?.toNumber?.() ?? CURRENT_SCHEMA_VERSION,
-      }))
+
+      const seen = new Set<string>()
+      return [...insightResult.records, ...memoryResult.records]
+        .map((record) => graphSearchRecord(record))
+        .sort((a, b) => b.relevance - a.relevance || b.score - a.score)
+        .filter((record) => {
+          if (seen.has(record.id)) return false
+          seen.add(record.id)
+          return true
+        })
+        .slice(0, params.limit)
     } catch (error) {
       throw new GraphAdapterError("neo4j", "searchMemories", "Full-text search failed", error instanceof Error ? error : undefined)
     } finally {
@@ -393,22 +448,52 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
     try {
       // Count
       const countResult = await session.run(
-        `MATCH (m:Memory)
-         WHERE m.group_id = $groupId
-           AND ($userId IS NULL OR m.user_id = $userId)
-           AND NOT (m)<-[:SUPERSEDES]-()
-         RETURN count(m) AS total`,
+        `CALL {
+           MATCH (h:InsightHead {group_id: $groupId})
+           MATCH (i:Insight {id: h.current_id, status: 'active'})
+           WHERE i.insight_id IS NOT NULL
+             AND ($userId IS NULL OR i.created_by = $userId)
+           RETURN count(i) AS count
+           UNION ALL
+           MATCH (m:Memory)
+           WHERE m.group_id = $groupId
+             AND m.id IS NOT NULL
+             AND ($userId IS NULL OR m.user_id = $userId)
+             AND NOT (m)<-[:SUPERSEDES]-()
+           RETURN count(m) AS count
+         }
+         RETURN sum(count) AS total`,
         { groupId: params.group_id, userId: params.user_id ?? null }
       )
       const total = countResult.records[0]?.get("total")?.toNumber?.() ?? 0
 
       // Data
       const result = await session.run(
-        `MATCH (m:Memory)
-         WHERE m.group_id = $groupId
-           AND ($userId IS NULL OR m.user_id = $userId)
-           AND NOT (m)<-[:SUPERSEDES]-()
-         RETURN m.id AS id,
+        `CALL {
+           MATCH (h:InsightHead {group_id: $groupId})
+           MATCH (m:Insight {id: h.current_id, status: 'active'})
+           WHERE m.insight_id IS NOT NULL
+             AND ($userId IS NULL OR m.created_by = $userId)
+           RETURN m.insight_id AS id,
+                  m.content AS content,
+                  m.confidence AS score,
+                  m.source_type AS provenance,
+                  m.created_by AS user_id,
+                  m.created_at AS created_at,
+                  m.version AS version,
+                  [] AS tags,
+                  false AS deprecated,
+                  null AS deleted_at,
+                  null AS restored_at,
+                  m.group_id AS group_id,
+                  m.schema_version AS schema_version
+           UNION ALL
+           MATCH (m:Memory)
+           WHERE m.group_id = $groupId
+             AND m.id IS NOT NULL
+             AND ($userId IS NULL OR m.user_id = $userId)
+             AND NOT (m)<-[:SUPERSEDES]-()
+           RETURN m.id AS id,
                 m.content AS content,
                 m.score AS score,
                 m.provenance AS provenance,
@@ -421,7 +506,10 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
                 m.restored_at AS restored_at,
                 m.group_id AS group_id,
                 m.schema_version AS schema_version
-         ORDER BY m.created_at DESC`,
+         }
+         RETURN id, content, score, provenance, user_id, created_at, version,
+                tags, deprecated, deleted_at, restored_at, group_id, schema_version
+         ORDER BY created_at DESC`,
         { groupId: params.group_id, userId: params.user_id ?? null }
       )
 
@@ -441,11 +529,21 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
     const session = this.driver.session()
     try {
       const result = await session.run(
-        `MATCH (m:Memory)
-         WHERE m.group_id = $groupId
-           AND ($userId IS NULL OR m.user_id = $userId)
-           AND NOT (m)<-[:SUPERSEDES]-()
-         RETURN count(m) AS total`,
+        `CALL {
+           MATCH (h:InsightHead {group_id: $groupId})
+           MATCH (i:Insight {id: h.current_id, status: 'active'})
+           WHERE i.insight_id IS NOT NULL
+             AND ($userId IS NULL OR i.created_by = $userId)
+           RETURN count(i) AS count
+           UNION ALL
+           MATCH (m:Memory)
+           WHERE m.group_id = $groupId
+             AND m.id IS NOT NULL
+             AND ($userId IS NULL OR m.user_id = $userId)
+             AND NOT (m)<-[:SUPERSEDES]-()
+           RETURN count(m) AS count
+         }
+         RETURN sum(count) AS total`,
         { groupId: params.group_id, userId: params.user_id ?? null }
       )
       return { total: result.records[0]?.get("total")?.toNumber?.() ?? 0 }
@@ -460,12 +558,20 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
     const session = this.driver.session()
     try {
       const result = await session.run(
-        `MATCH (m:Memory)
-         WHERE m.id = $id
-           AND m.group_id = $groupId
-           AND NOT (m)<-[:SUPERSEDES]-()
-           AND m.deprecated = false
-         RETURN m.id AS id LIMIT 1`,
+        `CALL {
+           MATCH (h:InsightHead {group_id: $groupId})
+           MATCH (i:Insight {id: h.current_id, status: 'active'})
+           WHERE i.id = $id OR i.insight_id = $id
+           RETURN i.insight_id AS id
+           UNION ALL
+           MATCH (m:Memory)
+           WHERE m.id = $id
+             AND m.group_id = $groupId
+             AND NOT (m)<-[:SUPERSEDES]-()
+             AND m.deprecated = false
+           RETURN m.id AS id
+         }
+         RETURN id LIMIT 1`,
         { id: params.id, groupId: params.group_id }
       )
       return { isCanonical: result.records.length > 0 }
@@ -480,11 +586,19 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
     const session = this.driver.session()
     try {
       const result = await session.run(
-        `MATCH (v1:Memory)
-         WHERE v1.id = $id
-           AND v1.group_id = $groupId
-           AND NOT (v1)<-[:SUPERSEDES]-()
-         RETURN v1.version AS version`,
+        `CALL {
+           MATCH (h:InsightHead {group_id: $groupId})
+           MATCH (i:Insight {id: h.current_id, status: 'active'})
+           WHERE i.id = $id OR i.insight_id = $id
+           RETURN coalesce(i.version, 1) AS version
+           UNION ALL
+           MATCH (v1:Memory)
+           WHERE v1.id = $id
+             AND v1.group_id = $groupId
+             AND NOT (v1)<-[:SUPERSEDES]-()
+           RETURN coalesce(v1.version, 1) AS version
+         }
+         RETURN version LIMIT 1`,
         { id: params.id, groupId: params.group_id }
       )
       if (result.records.length === 0) {
@@ -510,21 +624,39 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
     const session = this.driver.session()
     try {
       const result = await session.run(
-        `MATCH (m:Memory)
-         WHERE m.group_id = $groupId
-           AND NOT (m)<-[:SUPERSEDES]-()
-           AND m.deprecated = false
-           AND ($userId IS NULL OR m.user_id = $userId)
-         RETURN m.id AS id,
-                m.content AS content,
-                m.score AS score,
-                m.provenance AS provenance,
-                m.user_id AS user_id,
-                m.created_at AS created_at,
-                m.version AS version,
-                m.tags AS tags,
-                m.schema_version AS schema_version
-         ORDER BY m.created_at DESC
+        `CALL {
+           MATCH (h:InsightHead {group_id: $groupId})
+           MATCH (i:Insight {id: h.current_id, status: 'active'})
+           WHERE i.insight_id IS NOT NULL
+             AND ($userId IS NULL OR i.created_by = $userId)
+           RETURN i.insight_id AS id,
+                  i.content AS content,
+                  i.confidence AS score,
+                  i.provenance AS provenance,
+                  i.created_by AS user_id,
+                  i.created_at AS created_at,
+                  coalesce(i.version, 1) AS version,
+                  i.tags AS tags,
+                  i.schema_version AS schema_version
+           UNION ALL
+           MATCH (m:Memory)
+           WHERE m.group_id = $groupId
+             AND m.id IS NOT NULL
+             AND NOT (m)<-[:SUPERSEDES]-()
+             AND m.deprecated = false
+             AND ($userId IS NULL OR m.user_id = $userId)
+           RETURN m.id AS id,
+                  m.content AS content,
+                  m.score AS score,
+                  m.provenance AS provenance,
+                  m.user_id AS user_id,
+                  m.created_at AS created_at,
+                  coalesce(m.version, 1) AS version,
+                  m.tags AS tags,
+                  m.schema_version AS schema_version
+         }
+         RETURN id, content, score, provenance, user_id, created_at, version, tags, schema_version
+         ORDER BY created_at DESC
          SKIP $offset
          LIMIT $limit`,
         {

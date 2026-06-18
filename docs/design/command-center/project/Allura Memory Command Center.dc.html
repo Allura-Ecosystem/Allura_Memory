@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/allura-design-system-d83f547a-10de-4c68-9b53-504f3a74662a/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/allura-design-system-d83f547a-10de-4c68-9b53-504f3a74662a/tokens/colors.css">
+<link rel="stylesheet" href="_ds/allura-design-system-d83f547a-10de-4c68-9b53-504f3a74662a/tokens/typography.css">
+<link rel="stylesheet" href="_ds/allura-design-system-d83f547a-10de-4c68-9b53-504f3a74662a/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/allura-design-system-d83f547a-10de-4c68-9b53-504f3a74662a/styles.css">
+<script src="_ds/allura-design-system-d83f547a-10de-4c68-9b53-504f3a74662a/_ds_bundle.js"></script>
+<style>
+  :root{
+    --c-bg:#f6f3ec; --c-card:#fffdf8; --c-border:#d1c7b2; --c-border-soft:#e4dccb;
+    --c-ink:#1b1d21; --c-muted:#6b6e73;
+    --c-blue:#2961b8; --c-green:#298f57; --c-orange:#f2752e; --c-red:#bf332e; --c-purple:#7347bf; --c-gold:#c89b3c; --c-slate:#6b7378;
+    --c-blue-soft:#e7eefa; --c-green-soft:#e3f1ea; --c-orange-soft:#fdeadd; --c-red-soft:#f7e3e2; --c-purple-soft:#ece4f8; --c-gold-soft:#f4ecd6;
+    --sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+    /* override DS aliases so DS components match the warm brand */
+    --allura-blue:#2961b8; --allura-green:#298f57; --allura-orange:#f2752e; --allura-cream:#f6f3ec; --allura-charcoal:#1b1d21;
+    --white:#fffdf8; --cream:#f6f3ec; --color-bg-surface:#fffdf8; --color-bg-canvas:#f6f3ec;
+    --color-border:#d1c7b2; --color-text-primary:#1b1d21; --color-text-secondary:#6b6e73;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--c-bg);font-family:var(--sans);color:var(--c-ink);-webkit-font-smoothing:antialiased;}
+  ::selection{background:#2961b833;}
+  .scry::-webkit-scrollbar{width:10px;height:10px;}
+  .scry::-webkit-scrollbar-thumb{background:#d8cfbb;border-radius:8px;border:2px solid var(--c-bg);}
+  .scry::-webkit-scrollbar-track{background:transparent;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @keyframes shimmer{0%{background-position:-400px 0;}100%{background-position:400px 0;}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  @keyframes drawerIn{from{transform:translateX(24px);opacity:0;}to{transform:none;opacity:1;}}
+  .shim{background:linear-gradient(90deg,#efe9dc 25%,#f6f1e6 37%,#efe9dc 63%);background-size:800px 100%;animation:shimmer 1.4s infinite linear;}
+</style>
+</helmet>
+
+<div style="display:flex; height:100vh; width:100%; overflow:hidden; background:var(--c-bg);">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="width:248px; flex-shrink:0; height:100%; display:flex; flex-direction:column; background:#fffdf8; border-right:1px solid var(--c-border);">
+    <div style="display:flex; align-items:center; gap:11px; padding:20px 18px 18px;">
+      <img src="_ds/allura-design-system-d83f547a-10de-4c68-9b53-504f3a74662a/assets/logos/allura-monogram.png" alt="Allura" style="width:38px; height:38px; border-radius:9px;" />
+      <div style="display:flex; flex-direction:column; line-height:1.1;">
+        <span style="font-size:15px; font-weight:600; letter-spacing:-0.01em;">Allura Memory</span>
+        <span style="font-size:11px; color:var(--c-muted); font-weight:500;">Command Center</span>
+      </div>
+    </div>
+
+    <nav style="display:flex; flex-direction:column; gap:3px; padding:6px 12px;">
+      <sc-for list="{{ primaryNav }}" as="item" hint-placeholder-count="5">
+        <button onClick="{{ item.go }}" style="position:relative; display:flex; align-items:center; gap:12px; width:100%; height:42px; padding:0 12px; border:none; border-radius:10px; cursor:pointer; text-align:left; font-family:var(--sans); transition:background .15s;" style-hover="background:#f1ece0;" data-active="{{ item.active }}">
+          <span style="position:absolute; left:0; top:9px; bottom:9px; width:3px; border-radius:3px; background:var(--c-orange); opacity:{{ item.activeBar }};"></span>
+          <span style="display:inline-flex; color:{{ item.color }};">{{ item.icon }}</span>
+          <span style="flex:1; font-size:14px; font-weight:{{ item.weight }}; color:{{ item.color }};">{{ item.label }}</span>
+          <span style="display:{{ item.countShow }}; font-size:11px; font-weight:600; color:var(--c-orange); background:var(--c-orange-soft); border-radius:20px; padding:1px 8px;">{{ item.count }}</span>
+        </button>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top:auto; padding:12px; border-top:1px solid var(--c-border-soft); display:flex; flex-direction:column; gap:3px;">
+      <sc-for list="{{ footerNav }}" as="item" hint-placeholder-count="2">
+        <button onClick="{{ item.go }}" style="position:relative; display:flex; align-items:center; gap:12px; width:100%; height:40px; padding:0 12px; border:none; border-radius:10px; cursor:pointer; text-align:left; font-family:var(--sans); transition:background .15s;" style-hover="background:#f1ece0;">
+          <span style="display:inline-flex; color:{{ item.color }};">{{ item.icon }}</span>
+          <span style="flex:1; font-size:14px; font-weight:{{ item.weight }}; color:{{ item.color }};">{{ item.label }}</span>
+        </button>
+      </sc-for>
+      <div style="display:flex; align-items:center; gap:10px; padding:10px 8px 4px;">
+        <div style="width:30px; height:30px; border-radius:50%; background:var(--c-blue); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600;">RM</div>
+        <div style="display:flex; flex-direction:column; line-height:1.2;">
+          <span style="font-size:12.5px; font-weight:600;">Rosa Marín</span>
+          <span style="font-size:11px; color:var(--c-muted);">Curator · Admin</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN COLUMN ============ -->
+  <div style="flex:1; min-width:0; height:100%; display:flex; flex-direction:column;">
+
+    <!-- HEADER -->
+    <header style="flex-shrink:0; display:flex; align-items:center; gap:18px; height:64px; padding:0 26px; background:#fffdf8; border-bottom:1px solid var(--c-border);">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--c-muted);">Organization</span>
+        <button style="display:flex; align-items:center; gap:8px; height:34px; padding:0 12px; background:#f6f3ec; border:1px solid var(--c-border); border-radius:9px; cursor:pointer; font-family:var(--sans); font-size:13px; font-weight:600; color:var(--c-ink);" style-hover="background:#f1ece0;">
+          <span style="width:8px; height:8px; border-radius:50%; background:var(--c-green);"></span>
+          Northwind Robotics
+          <span style="color:var(--c-muted);">{{ ICN.chevronDown }}</span>
+        </button>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:8px; padding-left:16px; border-left:1px solid var(--c-border-soft);">
+        <span style="display:inline-flex; color:var(--c-muted);">{{ ICN.document }}</span>
+        <div style="display:flex; flex-direction:column; line-height:1.15;">
+          <span style="font-size:12.5px; font-weight:600;">Source · {{ source.name }}</span>
+          <span style="font-size:11px; color:{{ source.freshColor }};">{{ source.fresh }}</span>
+        </div>
+      </div>
+
+      <div style="flex:1;"></div>
+
+      <!-- honest-state demo switch -->
+      <div style="display:flex; align-items:center; gap:6px; background:#f6f3ec; border:1px solid var(--c-border); border-radius:10px; padding:3px;">
+        <span style="font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); padding:0 6px 0 8px;">Data</span>
+        <sc-for list="{{ dataStates }}" as="ds" hint-placeholder-count="4">
+          <button onClick="{{ ds.go }}" title="{{ ds.tip }}" style="height:26px; padding:0 10px; border:none; border-radius:7px; cursor:pointer; font-family:var(--sans); font-size:12px; font-weight:600; background:{{ ds.bg }}; color:{{ ds.fg }};">{{ ds.label }}</button>
+        </sc-for>
+      </div>
+
+      <button onClick="{{ toggleActivity }}" title="Activity & receipts" style="position:relative; display:flex; align-items:center; gap:8px; height:38px; padding:0 13px; background:#fffdf8; border:1px solid var(--c-border); border-radius:10px; cursor:pointer; font-family:var(--sans); font-size:13px; font-weight:600; color:var(--c-ink);" style-hover="background:#f6f3ec;">
+        <span style="display:inline-flex; color:var(--c-muted);">{{ ICN.clock }}</span>
+        Activity
+        <span style="min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--c-blue); color:#fff; font-size:11px; font-weight:600; display:inline-flex; align-items:center; justify-content:center;">{{ receiptCount }}</span>
+      </button>
+    </header>
+
+    <!-- CONTENT -->
+    <main class="scry" style="flex:1; min-height:0; overflow-y:auto; padding:28px 30px 60px;">
+      <div style="max-width:1180px; margin:0 auto;">
+
+      <!-- ===== OVERVIEW ===== -->
+      <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+        <div style="animation:fadeUp .3s ease both;">
+          <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:22px;">
+            <div>
+              <h1 style="margin:0; font-size:27px; font-weight:600; letter-spacing:-0.02em;">Overview</h1>
+              <p style="margin:6px 0 0; font-size:14px; color:var(--c-muted);">A calm look at your memory, your agents, and what is waiting for a person to approve.</p>
+            </div>
+          </div>
+
+          <!-- Start here card -->
+          <div style="display:flex; align-items:center; gap:20px; background:linear-gradient(120deg,#fffdf8,#fbf4e9); border:1px solid var(--c-border); border-radius:18px; padding:22px 24px; margin-bottom:22px;">
+            <div style="width:52px; height:52px; flex-shrink:0; border-radius:14px; background:var(--c-orange-soft); color:var(--c-orange); display:flex; align-items:center; justify-content:center;">{{ ICN.sparkle }}</div>
+            <div style="flex:1;">
+              <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--c-orange); margin-bottom:4px;">Start here</div>
+              <p style="margin:0; font-size:15.5px; font-weight:500; color:var(--c-ink); max-width:640px;">Allura keeps your team's memory in one safe place — and a person approves anything before it becomes trusted knowledge.</p>
+            </div>
+            <button onClick="{{ goApprovals }}" style="flex-shrink:0; display:flex; align-items:center; gap:8px; height:44px; padding:0 18px; background:var(--c-ink); color:#fff; border:none; border-radius:11px; cursor:pointer; font-family:var(--sans); font-size:14px; font-weight:600;" style-hover="filter:brightness(1.12);">
+              Review what's waiting <span style="display:inline-flex;">{{ ICN.arrowUpRight }}</span>
+            </button>
+          </div>
+
+          <!-- KPI grid -->
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:22px;">
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+              <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:18px 18px 16px; min-height:128px; display:flex; flex-direction:column;">
+                <div style="display:flex; align-items:center; gap:9px; margin-bottom:14px;">
+                  <span style="width:32px; height:32px; border-radius:9px; background:{{ k.soft }}; color:{{ k.color }}; display:flex; align-items:center; justify-content:center;">{{ k.icon }}</span>
+                  <span style="font-size:12.5px; font-weight:600; color:var(--c-muted);">{{ k.label }}</span>
+                </div>
+                <sc-if value="{{ k.show }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex; align-items:baseline; gap:8px; margin-top:auto;">
+                    <span style="font-size:34px; font-weight:600; letter-spacing:-0.02em; line-height:1;">{{ k.value }}</span>
+                    <span style="font-size:12px; font-weight:600; color:{{ k.trendColor }};">{{ k.trend }}</span>
+                  </div>
+                  <span style="font-size:12px; color:var(--c-muted); margin-top:6px;">{{ k.sub }}</span>
+                </sc-if>
+                <sc-if value="{{ k.skel }}" hint-placeholder-val="{{ false }}">
+                  <div class="shim" style="height:34px; width:70%; border-radius:8px; margin-top:auto;"></div>
+                  <div class="shim" style="height:12px; width:50%; border-radius:6px; margin-top:10px;"></div>
+                </sc-if>
+                <sc-if value="{{ k.dash }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:auto; font-size:26px; font-weight:600; color:var(--c-border);">—</div>
+                  <span style="font-size:12px; color:var(--c-muted); margin-top:4px;">{{ k.dashMsg }}</span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:18px;">
+            <!-- System health -->
+            <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:20px 22px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <h2 style="margin:0; font-size:16px; font-weight:600;">System health</h2>
+                <span style="font-size:12px; color:var(--c-muted);">Honest status · never faked</span>
+              </div>
+              <sc-if value="{{ healthShow }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                  <sc-for list="{{ health }}" as="h" hint-placeholder-count="4">
+                    <div style="display:flex; align-items:center; gap:14px; padding:12px 4px; border-bottom:1px solid var(--c-border-soft);">
+                      <span style="width:9px; height:9px; border-radius:50%; background:{{ h.dot }}; box-shadow:0 0 0 4px {{ h.ring }};"></span>
+                      <span style="flex:1; font-size:14px; font-weight:500;">{{ h.name }}</span>
+                      <span style="font-size:12px; font-weight:600; color:{{ h.dot }};">{{ h.state }}</span>
+                      <span style="font-size:12px; color:var(--c-muted); width:110px; text-align:right;">{{ h.meta }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ healthError }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:10px; padding:30px 0; text-align:center;">
+                  <span style="width:44px; height:44px; border-radius:50%; background:var(--c-red-soft); color:var(--c-red); display:flex; align-items:center; justify-content:center;">{{ ICN.bolt }}</span>
+                  <div style="font-size:14px; font-weight:600;">Couldn't reach the status service</div>
+                  <div style="font-size:13px; color:var(--c-muted);">We won't show health we can't confirm. Last check 6 min ago.</div>
+                </div>
+              </sc-if>
+            </div>
+
+            <!-- Recent receipts preview -->
+            <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:20px 22px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                <h2 style="margin:0; font-size:16px; font-weight:600;">Recent receipts</h2>
+                <button onClick="{{ toggleActivity }}" style="background:none; border:none; cursor:pointer; font-family:var(--sans); font-size:12.5px; font-weight:600; color:var(--c-blue);">View all</button>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:13px;">
+                <sc-for list="{{ recentReceipts }}" as="r" hint-placeholder-count="4">
+                  <div style="display:flex; gap:11px;">
+                    <span style="width:28px; height:28px; flex-shrink:0; border-radius:8px; background:{{ r.soft }}; color:{{ r.color }}; display:flex; align-items:center; justify-content:center;">{{ r.icon }}</span>
+                    <div style="min-width:0;">
+                      <div style="font-size:13px; font-weight:500; line-height:1.35;">{{ r.text }}</div>
+                      <div style="font-size:11.5px; color:var(--c-muted); margin-top:2px; font-family:var(--mono);">{{ r.meta }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+      <!-- ===== MEMORY ===== -->
+      <sc-if value="{{ isMemory }}" hint-placeholder-val="{{ false }}">
+        <div style="animation:fadeUp .3s ease both;">
+          <div style="margin-bottom:18px;">
+            <h1 style="margin:0; font-size:27px; font-weight:600; letter-spacing:-0.02em;">Memory</h1>
+            <p style="margin:6px 0 0; font-size:14px; color:var(--c-muted);">Search everything your team and agents remember. Open a memory to see exactly where it came from.</p>
+          </div>
+
+          <!-- search + filters -->
+          <div style="display:flex; align-items:center; gap:12px; background:#fffdf8; border:1px solid var(--c-border); border-radius:13px; padding:10px 12px; margin-bottom:14px;">
+            <span style="display:inline-flex; color:var(--c-muted); padding-left:4px;">{{ ICN.search }}</span>
+            <input value="{{ memQuery }}" onInput="{{ onMemQuery }}" placeholder="Search memories, people, decisions…" style="flex:1; border:none; outline:none; background:transparent; font-family:var(--sans); font-size:15px; color:var(--c-ink);" />
+            <span style="font-size:12px; color:var(--c-muted); font-family:var(--mono);">{{ memResultLabel }}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+            <sc-for list="{{ memFilters }}" as="f" hint-placeholder-count="5">
+              <button onClick="{{ f.go }}" style="display:flex; align-items:center; gap:7px; height:34px; padding:0 13px; border:1px solid {{ f.border }}; background:{{ f.bg }}; color:{{ f.fg }}; border-radius:20px; cursor:pointer; font-family:var(--sans); font-size:13px; font-weight:600;">
+                {{ f.label }}<span style="display:{{ f.countShow }}; opacity:.7; font-weight:500;">{{ f.count }}</span>
+              </button>
+            </sc-for>
+            <div style="flex:1;"></div>
+            <button style="display:flex; align-items:center; gap:7px; height:34px; padding:0 13px; border:1px solid var(--c-border); background:#fffdf8; color:var(--c-muted); border-radius:9px; cursor:pointer; font-family:var(--sans); font-size:13px; font-weight:600;">{{ ICN.filter }} Date · Any time</button>
+          </div>
+
+          <!-- list / states -->
+          <sc-if value="{{ memListShow }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <sc-for list="{{ memList }}" as="m" hint-placeholder-count="4">
+                <button onClick="{{ m.open }}" style="text-align:left; width:100%; display:flex; gap:16px; background:#fffdf8; border:1px solid var(--c-border); border-left:3px solid {{ m.accent }}; border-radius:14px; padding:16px 18px; cursor:pointer; font-family:var(--sans); transition:box-shadow .15s, transform .1s;" style-hover="box-shadow:0 8px 24px -16px #1b1d2155; transform:translateY(-1px);">
+                  <span style="width:36px; height:36px; flex-shrink:0; border-radius:10px; background:{{ m.soft }}; color:{{ m.color }}; display:flex; align-items:center; justify-content:center;">{{ m.icon }}</span>
+                  <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:9px; margin-bottom:5px;">
+                      <span style="font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--c-muted);">{{ m.kind }}</span>
+                      <span style="font-size:11px; font-weight:600; color:{{ m.statusColor }}; background:{{ m.statusSoft }}; padding:1px 8px; border-radius:20px;">{{ m.status }}</span>
+                    </div>
+                    <div style="font-size:14.5px; font-weight:500; color:var(--c-ink); line-height:1.4;">{{ m.text }}</div>
+                    <div style="font-size:12px; color:var(--c-muted); margin-top:7px; font-family:var(--mono);">{{ m.meta }}</div>
+                  </div>
+                  <span style="align-self:center; color:var(--c-border);">{{ ICN.chevronRight }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ memLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <sc-for list="{{ skel4 }}" as="s" hint-placeholder-count="4">
+                <div style="display:flex; gap:16px; background:#fffdf8; border:1px solid var(--c-border); border-radius:14px; padding:16px 18px;">
+                  <div class="shim" style="width:36px; height:36px; border-radius:10px; flex-shrink:0;"></div>
+                  <div style="flex:1;"><div class="shim" style="height:13px; width:30%; border-radius:6px;"></div><div class="shim" style="height:15px; width:80%; border-radius:6px; margin-top:10px;"></div><div class="shim" style="height:11px; width:40%; border-radius:6px; margin-top:10px;"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ memEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:14px; padding:64px 0; text-align:center; background:#fffdf8; border:1px dashed var(--c-border); border-radius:18px;">
+              <span style="width:64px; height:64px; border-radius:18px; background:var(--c-green-soft); color:var(--c-green); display:flex; align-items:center; justify-content:center;">{{ ICN.memory }}</span>
+              <div style="font-size:18px; font-weight:600;">No memories yet</div>
+              <div style="font-size:14px; color:var(--c-muted); max-width:380px;">When your team or a connected agent saves a note, it shows up here for a person to review.</div>
+              <button style="margin-top:4px; display:flex; align-items:center; gap:8px; height:42px; padding:0 18px; background:var(--c-ink); color:#fff; border:none; border-radius:11px; cursor:pointer; font-family:var(--sans); font-size:14px; font-weight:600;">{{ ICN.plus }} Add the first memory</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ memError }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:14px; padding:64px 0; text-align:center; background:#fffdf8; border:1px solid var(--c-red); border-radius:18px;">
+              <span style="width:64px; height:64px; border-radius:18px; background:var(--c-red-soft); color:var(--c-red); display:flex; align-items:center; justify-content:center;">{{ ICN.bolt }}</span>
+              <div style="font-size:18px; font-weight:600;">Couldn't load memories</div>
+              <div style="font-size:14px; color:var(--c-muted); max-width:380px;">We won't show stale or guessed results. The memory store didn't answer in time.</div>
+              <button style="margin-top:4px; display:flex; align-items:center; gap:8px; height:42px; padding:0 18px; background:#fffdf8; color:var(--c-ink); border:1px solid var(--c-border); border-radius:11px; cursor:pointer; font-family:var(--sans); font-size:14px; font-weight:600;">{{ ICN.refresh }} Try again</button>
+            </div>
+          </sc-if>
+        </div>
+
+        <!-- provenance drawer -->
+        <sc-if value="{{ memDrawerOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeMemDrawer }}" style="position:fixed; inset:0; background:#1b1d2130; z-index:30;"></div>
+          <aside class="scry" style="position:fixed; top:0; right:0; bottom:0; width:436px; background:#fffdf8; border-left:1px solid var(--c-border); z-index:31; display:flex; flex-direction:column; overflow-y:auto; animation:drawerIn .22s ease both; box-shadow:-18px 0 50px -28px #1b1d2140;">
+            <div style="padding:22px 24px 18px; border-bottom:1px solid var(--c-border-soft);">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <span style="font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--c-muted);">{{ memDrawer.kind }}</span>
+                <button onClick="{{ closeMemDrawer }}" style="width:30px; height:30px; border:1px solid var(--c-border); background:#f6f3ec; border-radius:8px; cursor:pointer; color:var(--c-muted); display:flex; align-items:center; justify-content:center;">{{ ICN.x }}</button>
+              </div>
+              <h2 style="margin:12px 0 0; font-size:18px; font-weight:600; line-height:1.35;">{{ memDrawer.text }}</h2>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:12px;">
+                <span style="font-size:11px; font-weight:600; color:{{ memDrawer.statusColor }}; background:{{ memDrawer.statusSoft }}; padding:3px 10px; border-radius:20px;">{{ memDrawer.status }}</span>
+                <span style="font-size:12px; color:var(--c-muted); font-family:var(--mono);">{{ memDrawer.meta }}</span>
+              </div>
+            </div>
+            <div style="padding:20px 24px;">
+              <div style="font-size:12px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:6px;">Where this came from</div>
+              <p style="margin:0 0 18px; font-size:13.5px; color:var(--c-ink); line-height:1.5;">{{ memDrawer.provenance }}</p>
+              <div style="font-size:12px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:10px;">Evidence</div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <sc-for list="{{ memDrawer.evidence }}" as="e" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:12px; border:1px solid var(--c-border-soft); border-radius:11px; padding:11px 13px; background:#fffefb;">
+                    <span style="width:32px; height:32px; border-radius:8px; background:{{ e.soft }}; color:{{ e.color }}; display:flex; align-items:center; justify-content:center;">{{ e.icon }}</span>
+                    <div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">{{ e.title }}</div><div style="font-size:11.5px; color:var(--c-muted);">{{ e.meta }}</div></div>
+                    <span style="color:var(--c-border);">{{ ICN.arrowUpRight }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex; gap:10px; margin-top:24px;">
+                <button onClick="{{ goGraphFromMem }}" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; height:42px; background:var(--c-ink); color:#fff; border:none; border-radius:11px; cursor:pointer; font-family:var(--sans); font-size:13.5px; font-weight:600;">{{ ICN.graph }} See in graph</button>
+                <button style="display:flex; align-items:center; justify-content:center; gap:8px; height:42px; padding:0 16px; background:#fffdf8; color:var(--c-ink); border:1px solid var(--c-border); border-radius:11px; cursor:pointer; font-family:var(--sans); font-size:13.5px; font-weight:600;">{{ ICN.clock }} History</button>
+              </div>
+            </div>
+          </aside>
+        </sc-if>
+      </sc-if>
+      <!-- ===== KNOWLEDGE GRAPH (hero) ===== -->
+      <sc-if value="{{ isGraph }}" hint-placeholder-val="{{ false }}">
+        <div style="animation:fadeUp .3s ease both; max-width:none;">
+          <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:16px;">
+            <div>
+              <h1 style="margin:0; font-size:27px; font-weight:600; letter-spacing:-0.02em;">Knowledge Graph</h1>
+              <p style="margin:6px 0 0; font-size:14px; color:var(--c-muted);">The Knowledge Hive. Every card is a thing Allura knows about. Lines show how they are connected and governed.</p>
+            </div>
+            <!-- mode switch -->
+            <div style="display:flex; gap:4px; background:#fffdf8; border:1px solid var(--c-border); border-radius:12px; padding:4px;">
+              <sc-for list="{{ graphModes }}" as="gm" hint-placeholder-count="3">
+                <button onClick="{{ gm.go }}" style="display:flex; align-items:center; gap:7px; height:34px; padding:0 14px; border:none; border-radius:8px; cursor:pointer; font-family:var(--sans); font-size:13px; font-weight:600; background:{{ gm.bg }}; color:{{ gm.fg }};">{{ gm.icon }} {{ gm.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:204px 1fr 320px; gap:14px; align-items:start;">
+
+            <!-- LEFT: filters + legend -->
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:14px; padding:15px 15px 17px;">
+                <div style="font-size:12px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:11px;">Show categories</div>
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                  <sc-for list="{{ legend }}" as="l" hint-placeholder-count="6">
+                    <button onClick="{{ l.go }}" style="display:flex; align-items:center; gap:10px; padding:6px 6px; border:none; background:transparent; border-radius:8px; cursor:pointer; font-family:var(--sans); text-align:left; opacity:{{ l.opacity }};" style-hover="background:#f6f3ec;">
+                      <span style="width:11px; height:11px; border-radius:3px; background:{{ l.color }}; flex-shrink:0;"></span>
+                      <span style="flex:1; font-size:13px; font-weight:500; color:var(--c-ink);">{{ l.label }}</span>
+                      <span style="font-size:11px; color:var(--c-muted); font-family:var(--mono);">{{ l.count }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:14px; padding:15px;">
+                <div style="font-size:12px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:10px;">Relationships</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  <sc-for list="{{ edgeLegend }}" as="e" hint-placeholder-count="6">
+                    <div style="display:flex; align-items:center; gap:9px;">
+                      <svg width="22" height="8" style="flex-shrink:0;"><line x1="1" y1="4" x2="21" y2="4" stroke="{{ e.color }}" stroke-width="2.5" stroke-dasharray="{{ e.dash }}" stroke-linecap="round"></line></svg>
+                      <span style="font-size:11.5px; font-weight:600; color:var(--c-ink); font-family:var(--mono); letter-spacing:-0.01em;">{{ e.label }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <!-- CENTER: canvas (hero) -->
+            <div style="position:relative; background:#fcf9f1; border:1px solid var(--c-border); border-radius:16px; overflow:hidden; min-height:660px; background-image:radial-gradient(#e7dfcd 1px, transparent 1px); background-size:22px 22px;">
+              <!-- mode label chip -->
+              <div style="position:absolute; top:14px; left:14px; z-index:5; display:flex; align-items:center; gap:8px; background:#fffdf8ee; border:1px solid var(--c-border); border-radius:20px; padding:6px 12px; backdrop-filter:blur(4px);">
+                <span style="width:8px; height:8px; border-radius:50%; background:var(--c-orange);"></span>
+                <span style="font-size:12px; font-weight:600;">{{ graphModeLabel }}</span>
+              </div>
+
+              <sc-if value="{{ graphShow }}" hint-placeholder-val="{{ true }}">
+                <!-- canvas inner sized area -->
+                <sc-if value="{{ isCatalog }}" hint-placeholder-val="{{ false }}">
+                  <div class="scry" style="padding:62px 22px 22px; height:660px; overflow-y:auto;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                      <sc-for list="{{ catalogCards }}" as="c" hint-placeholder-count="4">
+                        <button onClick="{{ c.go }}" style="text-align:left; background:#fffdf8; border:1px solid var(--c-border); border-left:4px solid {{ c.color }}; border-radius:13px; padding:15px 16px; cursor:pointer; font-family:var(--sans);" style-hover="box-shadow:0 8px 22px -16px #1b1d2155;">
+                          <div style="display:flex; align-items:center; gap:9px; margin-bottom:8px;"><span style="width:30px; height:30px; border-radius:8px; background:{{ c.soft }}; color:{{ c.color }}; display:flex; align-items:center; justify-content:center;">{{ c.icon }}</span><span style="font-size:14.5px; font-weight:600;">{{ c.name }}</span></div>
+                          <p style="margin:0; font-size:12.5px; color:var(--c-muted); line-height:1.45;">{{ c.summary }}</p>
+                          <div style="font-size:11px; color:var(--c-muted); margin-top:9px; font-family:var(--mono);">Connected: {{ c.connected }}</div>
+                        </button>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ isCanvasMode }}" hint-placeholder-val="{{ true }}">
+                  <div class="scry" style="position:absolute; inset:0; overflow:auto;">
+                    <div style="position:relative; width:1080px; height:660px;">
+                      {{ edgesSvg }}
+                      <sc-for list="{{ graphNodes }}" as="n" hint-placeholder-count="8">
+                        <button onClick="{{ n.go }}" style="position:absolute; left:{{ n.x }}; top:{{ n.y }}; width:190px; text-align:left; background:#fffdf8; border:1px solid {{ n.borderColor }}; border-left:4px solid {{ n.color }}; border-radius:13px; padding:11px 12px; cursor:pointer; font-family:var(--sans); z-index:{{ n.z }}; box-shadow:{{ n.shadow }}; transition:box-shadow .15s, transform .1s; opacity:{{ n.opacity }};" style-hover="transform:translateY(-1px);">
+                          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                            <span style="width:26px; height:26px; flex-shrink:0; border-radius:7px; background:{{ n.soft }}; color:{{ n.color }}; display:flex; align-items:center; justify-content:center;">{{ n.icon }}</span>
+                            <span style="font-size:13px; font-weight:600; line-height:1.2; color:var(--c-ink);">{{ n.name }}</span>
+                          </div>
+                          <div style="display:flex; align-items:center; gap:5px; margin-bottom:7px;">
+                            <span style="font-size:10px; font-weight:600; color:{{ n.color }}; background:{{ n.soft }}; padding:1px 7px; border-radius:20px;">{{ n.catLabel }}</span>
+                            <span style="font-size:10px; font-weight:600; color:{{ n.riskColor }}; background:{{ n.riskSoft }}; padding:1px 7px; border-radius:20px;">{{ n.riskLabel }}</span>
+                          </div>
+                          <div style="font-size:11.5px; color:var(--c-muted); line-height:1.4;">{{ n.summary }}</div>
+                          <div style="font-size:10.5px; color:var(--c-muted); margin-top:8px; padding-top:7px; border-top:1px solid var(--c-border-soft); font-family:var(--mono);">Connected: {{ n.connected }}</div>
+                        </button>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <!-- minimap -->
+                  <div style="position:absolute; bottom:14px; right:14px; z-index:5; width:148px; height:92px; background:#fffdf8cc; border:1px solid var(--c-border); border-radius:10px; backdrop-filter:blur(4px); overflow:hidden;">
+                    <div style="position:absolute; top:5px; left:8px; font-size:9px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--c-muted);">Map</div>
+                    {{ minimap }}
+                  </div>
+                </sc-if>
+              </sc-if>
+
+              <sc-if value="{{ graphEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; padding:30px;">
+                  <span style="width:64px; height:64px; border-radius:18px; background:var(--c-blue-soft); color:var(--c-blue); display:flex; align-items:center; justify-content:center;">{{ ICN.graph }}</span>
+                  <div style="font-size:18px; font-weight:600;">The hive is empty</div>
+                  <div style="font-size:14px; color:var(--c-muted); max-width:340px;">As memories are approved and agents connect, they appear here as connected cards. Nothing is drawn until it's real.</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ graphLoading }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;">
+                  <span style="width:34px; height:34px; border:3px solid var(--c-border); border-top-color:var(--c-blue); border-radius:50%; animation:spin .8s linear infinite;"></span>
+                  <div style="font-size:14px; color:var(--c-muted);">Building the hive…</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ graphError }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; padding:30px;">
+                  <span style="width:64px; height:64px; border-radius:18px; background:var(--c-red-soft); color:var(--c-red); display:flex; align-items:center; justify-content:center;">{{ ICN.bolt }}</span>
+                  <div style="font-size:18px; font-weight:600;">Couldn't draw the graph</div>
+                  <div style="font-size:14px; color:var(--c-muted); max-width:340px;">The graph service didn't respond. We won't show a guessed layout.</div>
+                </div>
+              </sc-if>
+            </div>
+
+            <!-- RIGHT: inspector -->
+            <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; overflow:hidden; position:sticky; top:0;">
+              <sc-if value="{{ inspectorShow }}" hint-placeholder-val="{{ true }}">
+                <div style="height:7px; background:{{ insp.color }};"></div>
+                <div class="scry" style="padding:18px 18px 20px; max-height:653px; overflow-y:auto;">
+                  <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                    <span style="width:40px; height:40px; border-radius:11px; background:{{ insp.soft }}; color:{{ insp.color }}; display:flex; align-items:center; justify-content:center;">{{ insp.icon }}</span>
+                    <div><div style="font-size:15.5px; font-weight:600; line-height:1.2;">{{ insp.name }}</div><div style="font-size:11.5px; color:var(--c-muted); margin-top:2px;">{{ insp.catLabel }}</div></div>
+                  </div>
+                  <div style="display:flex; gap:7px; flex-wrap:wrap; margin-bottom:16px;">
+                    <span style="font-size:11px; font-weight:600; color:{{ insp.color }}; background:{{ insp.soft }}; padding:3px 10px; border-radius:20px;">{{ insp.status }}</span>
+                    <span style="font-size:11px; font-weight:600; color:{{ insp.riskColor }}; background:{{ insp.riskSoft }}; padding:3px 10px; border-radius:20px;">{{ insp.riskLabel }}</span>
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:11px 10px; margin-bottom:16px;">
+                    <div><div style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted);">Owner</div><div style="font-size:13px; font-weight:500; margin-top:3px;">{{ insp.owner }}</div></div>
+                    <div><div style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted);">Quality</div><div style="font-size:13px; font-weight:600; margin-top:3px; color:{{ insp.qColor }};">{{ insp.quality }}/100</div></div>
+                  </div>
+                  <div style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:5px;">Purpose</div>
+                  <p style="margin:0 0 16px; font-size:13px; color:var(--c-ink); line-height:1.5;">{{ insp.purpose }}</p>
+
+                  <div style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:8px;">Connections</div>
+                  <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:16px;">
+                    <sc-for list="{{ insp.rels }}" as="r" hint-placeholder-count="3">
+                      <button onClick="{{ r.go }}" style="display:flex; align-items:center; gap:8px; padding:7px 8px; border:1px solid var(--c-border-soft); border-radius:9px; background:#fffefb; cursor:pointer; font-family:var(--sans); text-align:left;" style-hover="background:#f6f3ec;">
+                        <span style="font-size:9.5px; font-weight:700; color:#fff; background:{{ r.color }}; padding:2px 6px; border-radius:5px; font-family:var(--mono); flex-shrink:0;">{{ r.type }}</span>
+                        <span style="font-size:9px; color:var(--c-muted); flex-shrink:0;">{{ r.dir }}</span>
+                        <span style="flex:1; font-size:12.5px; font-weight:500; line-height:1.2;">{{ r.name }}</span>
+                      </button>
+                    </sc-for>
+                  </div>
+
+                  <div style="font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:8px;">Evidence & docs</div>
+                  <div style="display:flex; flex-direction:column; gap:7px; margin-bottom:18px;">
+                    <sc-for list="{{ insp.evidence }}" as="e" hint-placeholder-count="2">
+                      <div style="display:flex; align-items:center; gap:9px; border:1px solid var(--c-border-soft); border-radius:9px; padding:8px 10px; background:#fffefb;">
+                        <span style="width:26px; height:26px; border-radius:7px; background:{{ e.soft }}; color:{{ e.color }}; display:flex; align-items:center; justify-content:center;">{{ e.icon }}</span>
+                        <div style="flex:1; min-width:0;"><div style="font-size:12.5px; font-weight:600;">{{ e.title }}</div><div style="font-size:10.5px; color:var(--c-muted);">{{ e.meta }}</div></div>
+                      </div>
+                    </sc-for>
+                  </div>
+
+                  <div style="display:flex; flex-direction:column; gap:8px;">
+                    <button style="display:flex; align-items:center; justify-content:center; gap:8px; height:40px; background:var(--c-ink); color:#fff; border:none; border-radius:10px; cursor:pointer; font-family:var(--sans); font-size:13px; font-weight:600;">{{ insp.actionIcon }} {{ insp.action }}</button>
+                    <button style="display:flex; align-items:center; justify-content:center; gap:8px; height:38px; background:#fffdf8; color:var(--c-ink); border:1px solid var(--c-border); border-radius:10px; cursor:pointer; font-family:var(--sans); font-size:13px; font-weight:600;">{{ ICN.eye }} View full history</button>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ inspectorEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:60px 26px; text-align:center; min-height:400px;">
+                  <span style="width:48px; height:48px; border-radius:13px; background:#f1ece0; color:var(--c-muted); display:flex; align-items:center; justify-content:center;">{{ ICN.eye }}</span>
+                  <div style="font-size:14.5px; font-weight:600;">Pick a card</div>
+                  <div style="font-size:12.5px; color:var(--c-muted);">Click any card in the hive to see its owner, risk, connections, and evidence here.</div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+      <!-- ===== AGENTS ===== -->
+      <sc-if value="{{ isAgents }}" hint-placeholder-val="{{ false }}">
+        <div style="animation:fadeUp .3s ease both;">
+          <div style="margin-bottom:18px;">
+            <h1 style="margin:0; font-size:27px; font-weight:600; letter-spacing:-0.02em;">Agents</h1>
+            <p style="margin:6px 0 0; font-size:14px; color:var(--c-muted);">Every AI helper connected to your memory. You can see what each one may do, and shut any of them off.</p>
+          </div>
+
+          <sc-if value="{{ agentsShow }}" hint-placeholder-val="{{ true }}">
+          <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; overflow:hidden;">
+            <div style="display:grid; grid-template-columns:1.6fr 1fr 1fr 1.1fr 0.9fr; gap:14px; padding:13px 20px; background:#faf6ee; border-bottom:1px solid var(--c-border); font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted);">
+              <span>Agent</span><span>Workspace</span><span>Key status</span><span>What it may do</span><span style="text-align:right;">Last seen</span>
+            </div>
+            <sc-for list="{{ agents }}" as="a" hint-placeholder-count="5">
+              <div style="display:grid; grid-template-columns:1.6fr 1fr 1fr 1.1fr 0.9fr; gap:14px; padding:15px 20px; border-bottom:1px solid var(--c-border-soft); align-items:center;">
+                <div style="display:flex; align-items:center; gap:11px; min-width:0;">
+                  <span style="width:36px; height:36px; flex-shrink:0; border-radius:10px; background:{{ a.soft }}; color:{{ a.color }}; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;">{{ a.badge }}</span>
+                  <div style="min-width:0;"><div style="font-size:14px; font-weight:600;">{{ a.name }}</div><div style="font-size:11.5px; color:var(--c-muted);">{{ a.type }}</div></div>
+                </div>
+                <span style="font-size:13px; color:var(--c-ink);">{{ a.workspace }}</span>
+                <span style="font-size:11.5px; font-weight:600; color:{{ a.keyColor }}; background:{{ a.keySoft }}; padding:3px 10px; border-radius:20px; justify-self:start;">{{ a.keyStatus }}</span>
+                <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                  <sc-for list="{{ a.scopes }}" as="s" hint-placeholder-count="2">
+                    <span style="font-size:10.5px; font-weight:600; color:var(--c-muted); background:#f1ece0; padding:2px 8px; border-radius:6px;">{{ s }}</span>
+                  </sc-for>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px;">
+                  <span style="font-size:12px; color:var(--c-muted);">{{ a.lastSeen }}</span>
+                  <button onClick="{{ a.revoke }}" title="Revoke key" style="width:30px; height:30px; border:1px solid var(--c-border); background:#fffdf8; border-radius:8px; cursor:pointer; color:var(--c-red); display:flex; align-items:center; justify-content:center;" style-hover="background:var(--c-red-soft);">{{ ICN.trash }}</button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+          <sc-if value="{{ stateLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:20px;"><sc-for list="{{ skel4 }}" as="s" hint-placeholder-count="4"><div class="shim" style="height:42px; border-radius:10px; margin-bottom:12px;"></div></sc-for></div>
+          </sc-if>
+          <sc-if value="{{ stateEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:14px; padding:64px 0; text-align:center; background:#fffdf8; border:1px dashed var(--c-border); border-radius:18px;">
+              <span style="width:64px; height:64px; border-radius:18px; background:var(--c-blue-soft); color:var(--c-blue); display:flex; align-items:center; justify-content:center;">{{ ICN.agent }}</span>
+              <div style="font-size:18px; font-weight:600;">No agents connected</div>
+              <div style="font-size:14px; color:var(--c-muted); max-width:380px;">Create an agent key in Allura Guard to let an AI helper read or add memories — within limits you set.</div>
+              <button onClick="{{ goGuard }}" style="margin-top:4px; display:flex; align-items:center; gap:8px; height:42px; padding:0 18px; background:var(--c-ink); color:#fff; border:none; border-radius:11px; cursor:pointer; font-family:var(--sans); font-size:14px; font-weight:600;">{{ ICN.plus }} Create an agent key</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ stateError }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:14px; padding:64px 0; text-align:center; background:#fffdf8; border:1px solid var(--c-red); border-radius:18px;">
+              <span style="width:64px; height:64px; border-radius:18px; background:var(--c-red-soft); color:var(--c-red); display:flex; align-items:center; justify-content:center;">{{ ICN.bolt }}</span>
+              <div style="font-size:18px; font-weight:600;">Couldn't load agents</div>
+              <div style="font-size:14px; color:var(--c-muted); max-width:380px;">The registry didn't answer. We won't guess which agents are connected.</div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ===== APPROVALS ===== -->
+      <sc-if value="{{ isApprovals }}" hint-placeholder-val="{{ false }}">
+        <div style="animation:fadeUp .3s ease both;">
+          <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:18px;">
+            <div>
+              <h1 style="margin:0; font-size:27px; font-weight:600; letter-spacing:-0.02em;">Approvals</h1>
+              <p style="margin:6px 0 0; font-size:14px; color:var(--c-muted);">Notes waiting to become trusted knowledge. A person decides — and every choice leaves a receipt.</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--c-orange); background:var(--c-orange-soft); padding:8px 14px; border-radius:20px;">{{ ICN.clock }} {{ pendingLabel }} waiting</div>
+          </div>
+
+          <sc-if value="{{ approvalsShow }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:18px; align-items:start;">
+            <!-- queue -->
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <sc-for list="{{ approvalCards }}" as="a" hint-placeholder-count="3">
+                <div style="background:#fffdf8; border:1px solid var(--c-border); border-left:4px solid {{ a.accent }}; border-radius:15px; padding:18px 20px;">
+                  <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                    <span style="font-size:11px; font-weight:600; color:{{ a.stateColor }}; background:{{ a.stateSoft }}; padding:3px 10px; border-radius:20px;">{{ a.stateLabel }}</span>
+                    <div style="flex:1;"></div>
+                    <div style="display:flex; align-items:center; gap:7px;" title="How sure the agent is">
+                      <span style="font-size:11px; color:var(--c-muted);">Confidence</span>
+                      <span style="width:52px; height:6px; background:#efe9dc; border-radius:4px; overflow:hidden;"><span style="display:block; height:100%; width:{{ a.confPct }}; background:{{ a.confColor }};"></span></span>
+                      <span style="font-size:12px; font-weight:600; color:{{ a.confColor }};">{{ a.confLabel }}</span>
+                    </div>
+                  </div>
+                  <p style="margin:0 0 12px; font-size:15.5px; font-weight:500; line-height:1.45;">{{ a.text }}</p>
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:12px; color:var(--c-muted); font-family:var(--mono);">{{ a.source }} · {{ a.when }}</div>
+
+                  <div style="font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:7px;">Evidence preview</div>
+                  <sc-if value="{{ a.hasEvidence }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+                      <sc-for list="{{ a.evidence }}" as="e" hint-placeholder-count="2">
+                        <div style="display:flex; align-items:center; gap:8px; border:1px solid var(--c-border-soft); border-radius:9px; padding:7px 11px; background:#fffefb;">
+                          <span style="width:24px; height:24px; border-radius:6px; background:{{ e.soft }}; color:{{ e.color }}; display:flex; align-items:center; justify-content:center;">{{ e.icon }}</span>
+                          <div><div style="font-size:12px; font-weight:600;">{{ e.title }}</div><div style="font-size:10.5px; color:var(--c-muted);">{{ e.meta }}</div></div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ a.noEvidence }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; align-items:center; gap:9px; margin-bottom:14px; padding:10px 12px; background:var(--c-red-soft); border-radius:10px; font-size:12.5px; color:var(--c-red); font-weight:500;">{{ ICN.bolt }} No evidence attached. This can't be promoted as-is.</div>
+                  </sc-if>
+
+                  <sc-if value="{{ a.isPending }}" hint-placeholder-val="{{ true }}">
+                    <textarea value="{{ a.rationale }}" onInput="{{ a.onRationale }}" placeholder="Why are you approving or rejecting? (required — saved to the receipt)" style="width:100%; box-sizing:border-box; min-height:54px; resize:vertical; border:1px solid var(--c-border); border-radius:10px; padding:10px 12px; font-family:var(--sans); font-size:13px; color:var(--c-ink); background:#fffefb; margin-bottom:12px; outline:none;" style-focus="border-color:var(--c-blue);"></textarea>
+                    <div style="display:flex; gap:9px;">
+                      <button onClick="{{ a.approve }}" disabled="{{ a.cantApprove }}" style="flex:1; display:flex; align-items:center; justify-content:center; gap:7px; height:40px; border:none; border-radius:10px; cursor:{{ a.approveCursor }}; font-family:var(--sans); font-size:13.5px; font-weight:600; background:{{ a.approveBg }}; color:#fff; opacity:{{ a.approveOpacity }};">{{ ICN.check }} Approve</button>
+                      <button onClick="{{ a.reject }}" disabled="{{ a.cantAct }}" style="flex:1; display:flex; align-items:center; justify-content:center; gap:7px; height:40px; border:1px solid var(--c-border); border-radius:10px; cursor:{{ a.actCursor }}; font-family:var(--sans); font-size:13.5px; font-weight:600; background:#fffdf8; color:var(--c-red); opacity:{{ a.actOpacity }};">{{ ICN.x }} Reject</button>
+                      <button onClick="{{ a.requestEv }}" disabled="{{ a.cantAct }}" style="display:flex; align-items:center; justify-content:center; gap:7px; height:40px; padding:0 14px; border:1px solid var(--c-border); border-radius:10px; cursor:{{ a.actCursor }}; font-family:var(--sans); font-size:13.5px; font-weight:600; background:#fffdf8; color:var(--c-ink); opacity:{{ a.actOpacity }};">{{ ICN.message }} Ask for evidence</button>
+                    </div>
+                    <div style="display:{{ a.needRationale }}; margin-top:8px; font-size:11.5px; color:var(--c-orange);">A short reason is required before you approve.</div>
+                  </sc-if>
+                  <sc-if value="{{ a.isDecided }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; align-items:center; gap:10px; padding:11px 13px; background:{{ a.decidedSoft }}; border-radius:11px;">
+                      <span style="width:28px; height:28px; border-radius:8px; background:#fffdf8; color:{{ a.decidedColor }}; display:flex; align-items:center; justify-content:center;">{{ a.decidedIcon }}</span>
+                      <div style="font-size:12.5px; color:var(--c-ink);"><strong>{{ a.decidedLabel }}</strong> · {{ a.decidedNote }}</div>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+
+            <!-- decision history sidebar -->
+            <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:18px 20px; position:sticky; top:0;">
+              <h2 style="margin:0 0 4px; font-size:16px; font-weight:600;">Decision history</h2>
+              <p style="margin:0 0 16px; font-size:12.5px; color:var(--c-muted);">Receipts from this queue. Nothing is trusted without one.</p>
+              <div style="display:flex; flex-direction:column; gap:13px;">
+                <sc-for list="{{ decisionHistory }}" as="d" hint-placeholder-count="3">
+                  <div style="display:flex; gap:11px; padding-bottom:13px; border-bottom:1px solid var(--c-border-soft);">
+                    <span style="width:28px; height:28px; flex-shrink:0; border-radius:8px; background:{{ d.soft }}; color:{{ d.color }}; display:flex; align-items:center; justify-content:center;">{{ d.icon }}</span>
+                    <div style="min-width:0;">
+                      <div style="font-size:12.5px; font-weight:600;">{{ d.decision }} <span style="font-weight:500; color:var(--c-muted);">— {{ d.who }}</span></div>
+                      <div style="font-size:11.5px; color:var(--c-muted); margin-top:2px; line-height:1.4;">{{ d.note }}</div>
+                      <div style="font-size:10.5px; color:var(--c-muted); margin-top:3px; font-family:var(--mono);">{{ d.when }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+          <sc-if value="{{ approvalsEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:14px; padding:64px 0; text-align:center; background:#fffdf8; border:1px dashed var(--c-border); border-radius:18px;">
+              <span style="width:64px; height:64px; border-radius:18px; background:var(--c-green-soft); color:var(--c-green); display:flex; align-items:center; justify-content:center;">{{ ICN.check }}</span>
+              <div style="font-size:18px; font-weight:600;">You're all caught up</div>
+              <div style="font-size:14px; color:var(--c-muted); max-width:380px;">Nothing is waiting for approval. New notes from agents will appear here.</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ stateLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:14px;"><sc-for list="{{ skel4 }}" as="s" hint-placeholder-count="3"><div class="shim" style="height:160px; border-radius:15px;"></div></sc-for></div>
+          </sc-if>
+          <sc-if value="{{ stateError }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:14px; padding:64px 0; text-align:center; background:#fffdf8; border:1px solid var(--c-red); border-radius:18px;">
+              <span style="width:64px; height:64px; border-radius:18px; background:var(--c-red-soft); color:var(--c-red); display:flex; align-items:center; justify-content:center;">{{ ICN.bolt }}</span>
+              <div style="font-size:18px; font-weight:600;">Couldn't load the queue</div>
+              <div style="font-size:14px; color:var(--c-muted); max-width:380px;">We won't show approvals we can't confirm are current.</div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+      <!-- ===== ALLURA GUARD ===== -->
+      <sc-if value="{{ isGuard }}" hint-placeholder-val="{{ false }}">
+        <div style="animation:fadeUp .3s ease both;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
+            <span style="width:42px; height:42px; border-radius:12px; background:var(--c-red-soft); color:var(--c-red); display:flex; align-items:center; justify-content:center;">{{ ICN.shield }}</span>
+            <div>
+              <h1 style="margin:0; font-size:27px; font-weight:600; letter-spacing:-0.02em;">Allura Guard</h1>
+              <p style="margin:4px 0 0; font-size:14px; color:var(--c-muted);">The gate. Nothing reads or writes memory without passing through here.</p>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start;">
+            <!-- create key -->
+            <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:20px 22px;">
+              <h2 style="margin:0 0 4px; font-size:16px; font-weight:600;">Create an agent key</h2>
+              <p style="margin:0 0 16px; font-size:12.5px; color:var(--c-muted);">A key lets one AI helper in. Pick exactly what it's allowed to do.</p>
+              <label style="display:block; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:6px;">Key name</label>
+              <input value="{{ newKeyName }}" onInput="{{ onKeyName }}" placeholder="e.g. Sales research agent" style="width:100%; box-sizing:border-box; height:42px; border:1px solid var(--c-border); border-radius:10px; padding:0 13px; font-family:var(--sans); font-size:14px; background:#fffefb; outline:none; margin-bottom:18px;" style-focus="border-color:var(--c-blue);" />
+              <div style="font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:10px;">What it may do</div>
+              <div style="display:flex; flex-direction:column; gap:9px; margin-bottom:20px;">
+                <sc-for list="{{ scopeChoices }}" as="s" hint-placeholder-count="3">
+                  <button onClick="{{ s.go }}" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid {{ s.border }}; background:{{ s.bg }}; border-radius:12px; cursor:pointer; font-family:var(--sans); text-align:left;">
+                    <span style="width:22px; height:22px; flex-shrink:0; border-radius:6px; border:2px solid {{ s.checkBorder }}; background:{{ s.checkBg }}; color:#fff; display:flex; align-items:center; justify-content:center;">{{ s.check }}</span>
+                    <div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">{{ s.label }}</div><div style="font-size:11.5px; color:var(--c-muted);">{{ s.desc }}</div></div>
+                    <span style="display:{{ s.warnShow }}; font-size:10.5px; font-weight:600; color:var(--c-orange); background:var(--c-orange-soft); padding:2px 8px; border-radius:20px;">needs care</span>
+                  </button>
+                </sc-for>
+              </div>
+              <button onClick="{{ createKey }}" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; height:44px; background:var(--c-ink); color:#fff; border:none; border-radius:11px; cursor:pointer; font-family:var(--sans); font-size:14px; font-weight:600;">{{ ICN.lock }} Create key</button>
+              <p style="margin:11px 0 0; font-size:11.5px; color:var(--c-muted); text-align:center;">The secret is shown once and recorded as a receipt.</p>
+            </div>
+
+            <!-- workspaces -->
+            <div style="display:flex; flex-direction:column; gap:18px;">
+              <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:20px 22px;">
+                <h2 style="margin:0 0 14px; font-size:16px; font-weight:600;">Workspaces & lock modes</h2>
+                <div style="display:flex; flex-direction:column; gap:11px;">
+                  <sc-for list="{{ workspaces }}" as="w" hint-placeholder-count="4">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <span style="width:32px; height:32px; flex-shrink:0; border-radius:9px; background:{{ w.soft }}; color:{{ w.color }}; display:flex; align-items:center; justify-content:center;">{{ w.icon }}</span>
+                      <div style="flex:1; min-width:0;"><div style="font-size:13.5px; font-weight:600;">{{ w.name }}</div><div style="font-size:11px; color:var(--c-muted);">{{ w.agents }} agents · {{ w.memories }} memories</div></div>
+                      <span style="font-size:11px; font-weight:600; color:{{ w.lockColor }}; background:{{ w.lockSoft }}; padding:4px 11px; border-radius:20px;">{{ w.lock }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:16px; padding-top:14px; border-top:1px solid var(--c-border-soft);">
+                  <span style="font-size:10.5px; color:var(--c-muted); align-self:center;">Modes:</span>
+                  <sc-for list="{{ lockModes }}" as="l" hint-placeholder-count="5">
+                    <span style="font-size:10.5px; font-weight:600; color:{{ l.color }}; background:{{ l.soft }}; padding:2px 9px; border-radius:20px;">{{ l.label }}</span>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:20px 22px;">
+                <h2 style="margin:0 0 14px; font-size:16px; font-weight:600;">Active keys</h2>
+                <div style="display:flex; flex-direction:column; gap:11px;">
+                  <sc-for list="{{ activeKeys }}" as="k" hint-placeholder-count="3">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="flex:1; min-width:0;"><div style="font-size:13px; font-weight:600;">{{ k.name }}</div><div style="font-size:11px; color:var(--c-muted); font-family:var(--mono);">{{ k.token }} · {{ k.scopes }}</div></div>
+                      <button onClick="{{ k.revoke }}" style="display:flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:1px solid var(--c-border); background:#fffdf8; border-radius:8px; cursor:pointer; font-family:var(--sans); font-size:12px; font-weight:600; color:var(--c-red);" style-hover="background:var(--c-red-soft);">Revoke</button>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- access activity -->
+          <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:20px 22px; margin-top:18px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+              <h2 style="margin:0; font-size:16px; font-weight:600;">Recent access activity</h2>
+              <span style="font-size:12px; color:var(--c-muted);">Every allow and every deny is logged</span>
+            </div>
+            <div style="display:flex; flex-direction:column;">
+              <sc-for list="{{ accessLog }}" as="x" hint-placeholder-count="4">
+                <div style="display:flex; align-items:center; gap:13px; padding:11px 4px; border-bottom:1px solid var(--c-border-soft);">
+                  <span style="width:28px; height:28px; flex-shrink:0; border-radius:8px; background:{{ x.soft }}; color:{{ x.color }}; display:flex; align-items:center; justify-content:center;">{{ x.icon }}</span>
+                  <span style="flex:1; font-size:13px;">{{ x.text }}</span>
+                  <span style="font-size:11px; font-weight:600; color:{{ x.color }}; background:{{ x.soft }}; padding:2px 9px; border-radius:20px;">{{ x.verdict }}</span>
+                  <span style="font-size:11px; color:var(--c-muted); font-family:var(--mono); width:90px; text-align:right;">{{ x.when }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== SETTINGS ===== -->
+      <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+        <div style="animation:fadeUp .3s ease both;">
+          <div style="margin-bottom:18px;">
+            <h1 style="margin:0; font-size:27px; font-weight:600; letter-spacing:-0.02em;">Settings</h1>
+            <p style="margin:6px 0 0; font-size:14px; color:var(--c-muted);">How this organization runs its memory, agents, and people.</p>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:16px; max-width:760px;">
+            <!-- org -->
+            <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:20px 22px;">
+              <h2 style="margin:0 0 14px; font-size:16px; font-weight:600;">Organization</h2>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                <div><label style="display:block; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:6px;">Name</label><input value="Northwind Robotics" style="width:100%; box-sizing:border-box; height:40px; border:1px solid var(--c-border); border-radius:10px; padding:0 12px; font-family:var(--sans); font-size:14px; background:#fffefb; outline:none;" /></div>
+                <div><label style="display:block; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--c-muted); margin-bottom:6px;">Region</label><input value="US · East" style="width:100%; box-sizing:border-box; height:40px; border:1px solid var(--c-border); border-radius:10px; padding:0 12px; font-family:var(--sans); font-size:14px; background:#fffefb; outline:none;" /></div>
+              </div>
+            </div>
+
+            <!-- promotion mode -->
+            <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:20px 22px;">
+              <h2 style="margin:0 0 4px; font-size:16px; font-weight:600;">Promotion mode</h2>
+              <p style="margin:0 0 14px; font-size:12.5px; color:var(--c-muted);">When does a raw note become trusted knowledge?</p>
+              <div style="display:flex; flex-direction:column; gap:9px;">
+                <sc-for list="{{ promoModes }}" as="p" hint-placeholder-count="3">
+                  <button onClick="{{ p.go }}" style="display:flex; align-items:center; gap:12px; padding:13px 15px; border:1px solid {{ p.border }}; background:{{ p.bg }}; border-radius:12px; cursor:pointer; font-family:var(--sans); text-align:left;">
+                    <span style="width:18px; height:18px; flex-shrink:0; border-radius:50%; border:2px solid {{ p.dotBorder }}; background:{{ p.dotBg }};"></span>
+                    <div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">{{ p.label }}</div><div style="font-size:11.5px; color:var(--c-muted);">{{ p.desc }}</div></div>
+                    <span style="display:{{ p.recShow }}; font-size:10.5px; font-weight:600; color:var(--c-green); background:var(--c-green-soft); padding:2px 9px; border-radius:20px;">recommended</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- model endpoints -->
+            <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:20px 22px;">
+              <h2 style="margin:0 0 14px; font-size:16px; font-weight:600;">Model endpoints</h2>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <sc-for list="{{ endpoints }}" as="e" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:12px; border:1px solid var(--c-border-soft); border-radius:11px; padding:12px 14px; background:#fffefb;">
+                    <span style="width:9px; height:9px; border-radius:50%; background:{{ e.dot }};"></span>
+                    <div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">{{ e.name }}</div><div style="font-size:11px; color:var(--c-muted); font-family:var(--mono);">{{ e.url }}</div></div>
+                    <span style="font-size:11px; font-weight:600; color:{{ e.color }};">{{ e.status }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- users & roles -->
+            <div style="background:#fffdf8; border:1px solid var(--c-border); border-radius:16px; padding:20px 22px;">
+              <h2 style="margin:0 0 14px; font-size:16px; font-weight:600;">Users & roles</h2>
+              <div style="display:flex; flex-direction:column;">
+                <sc-for list="{{ users }}" as="u" hint-placeholder-count="3">
+                  <div style="display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--c-border-soft);">
+                    <span style="width:34px; height:34px; flex-shrink:0; border-radius:50%; background:{{ u.bg }}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600;">{{ u.initials }}</span>
+                    <div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">{{ u.name }}</div><div style="font-size:11.5px; color:var(--c-muted);">{{ u.email }}</div></div>
+                    <span style="font-size:11.5px; font-weight:600; color:{{ u.roleColor }}; background:{{ u.roleSoft }}; padding:3px 11px; border-radius:20px;">{{ u.role }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ ACTIVITY / RECEIPTS DRAWER ============ -->
+  <sc-if value="{{ activityOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ toggleActivity }}" style="position:fixed; inset:0; background:#1b1d2130; z-index:40;"></div>
+    <aside style="position:fixed; top:0; right:0; bottom:0; width:404px; background:#fffdf8; border-left:1px solid var(--c-border); z-index:41; display:flex; flex-direction:column; animation:drawerIn .22s ease both; box-shadow:-18px 0 50px -28px #1b1d2140;">
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 22px 16px; border-bottom:1px solid var(--c-border-soft);">
+        <div>
+          <h2 style="margin:0; font-size:17px; font-weight:600;">Activity & receipts</h2>
+          <p style="margin:4px 0 0; font-size:12.5px; color:var(--c-muted);">Every change leaves a receipt. Who, what, when.</p>
+        </div>
+        <button onClick="{{ toggleActivity }}" style="width:32px; height:32px; border:1px solid var(--c-border); background:#f6f3ec; border-radius:9px; cursor:pointer; color:var(--c-muted); display:flex; align-items:center; justify-content:center;">{{ ICN.x }}</button>
+      </div>
+      <div class="scry" style="flex:1; overflow-y:auto; padding:16px 22px 30px;">
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <sc-for list="{{ receipts }}" as="r" hint-placeholder-count="5">
+            <div style="border:1px solid var(--c-border-soft); border-radius:13px; padding:13px 14px; background:#fffefb;">
+              <div style="display:flex; align-items:center; gap:9px; margin-bottom:8px;">
+                <span style="width:26px; height:26px; border-radius:7px; background:{{ r.soft }}; color:{{ r.color }}; display:flex; align-items:center; justify-content:center;">{{ r.icon }}</span>
+                <span style="font-size:13px; font-weight:600;">{{ r.title }}</span>
+                <span style="margin-left:auto; font-size:11px; font-weight:600; color:{{ r.color }}; background:{{ r.soft }}; padding:2px 8px; border-radius:20px;">{{ r.decision }}</span>
+              </div>
+              <div style="font-size:12.5px; color:var(--c-ink); line-height:1.4;">{{ r.text }}</div>
+              <div style="display:flex; gap:12px; margin-top:9px; font-family:var(--mono); font-size:11px; color:var(--c-muted);">
+                <span>{{ r.who }}</span><span>·</span><span>{{ r.when }}</span>
+              </div>
+              <div style="display:{{ r.evShow }}; margin-top:8px; padding-top:8px; border-top:1px dashed var(--c-border); font-size:11.5px; color:var(--c-muted);">Evidence: {{ r.evidence }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </aside>
+  </sc-if>
+
+  <!-- ============ TOAST ============ -->
+  <sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:60; display:flex; align-items:center; gap:13px; background:#1b1d21; color:#fff; padding:13px 18px; border-radius:13px; box-shadow:0 18px 40px -18px #1b1d2188; animation:fadeUp .25s ease both; max-width:520px;">
+      <span style="width:26px; height:26px; border-radius:7px; background:{{ toastSoft }}; color:{{ toastColor }}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">{{ toastIcon }}</span>
+      <div style="min-width:0;">
+        <div style="font-size:13.5px; font-weight:600;">{{ toastTitle }}</div>
+        <div style="font-size:12px; color:#cdccc9; margin-top:1px;">{{ toastBody }}</div>
+      </div>
+      <button onClick="{{ openActivityFromToast }}" style="margin-left:6px; background:#ffffff1a; border:none; color:#fff; font-family:var(--sans); font-size:12px; font-weight:600; padding:7px 11px; border-radius:8px; cursor:pointer; white-space:nowrap;">See receipt</button>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    screen: 'overview',
+    dataState: 'live',      // live | loading | empty | error
+    graphMode: 'hive',
+    selectedNode: 'mem',
+    memoryDrawer: null,
+    memoryQuery: '',
+    memoryFilter: 'all',
+    activityOpen: false,
+    toast: null,
+    approvals: null,        // set on first render
+    rationale: {},          // id -> draft text
+    hiddenCats: {},
+    promoMode: 'human',
+    keyScopes: { read: true, add: true, promote: false },
+    newKeyName: '',
+    receipts: null,
+  };
+
+  // ---------- icon helper ----------
+  PATHS = {
+    home:'M3 9.5 12 3l9 6.5M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10',
+    memory:'M12 5a3 3 0 0 0-3 3 3 3 0 0 0-2 5.2A3 3 0 0 0 9 19a3 3 0 0 0 3-1m0-13a3 3 0 0 1 3 3 3 3 0 0 1 2 5.2A3 3 0 0 1 15 19a3 3 0 0 1-3-1m0-13v14',
+    graph:'M18 6a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm12 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM8.6 10.6l6.8-3.2M8.6 13.4l6.8 3.2',
+    agent:'M12 8V4H8M4 8h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Zm3 8h.01M15 16h.01M9 12h6',
+    check:'M20 6 9 17l-5-5',
+    shield:'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z',
+    settings:'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z',
+    document:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
+    network:'M12 2v6m0 8v6M5.6 5.6l4.2 4.2m4.4 4.4 4.2 4.2M2 12h6m8 0h6M5.6 18.4l4.2-4.2m4.4-4.4 4.2-4.2',
+    clock:'M12 6v6l4 2M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z',
+    search:'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm10 3-4.3-4.3',
+    sparkle:'M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3Z',
+    x:'M18 6 6 18M6 6l12 12',
+    plus:'M5 12h14M12 5v14',
+    arrowUpRight:'M7 17 17 7M7 7h10v10',
+    chevronDown:'m6 9 6 6 6-6',
+    chevronRight:'m9 18 6-6-6-6',
+    lock:'M5 11h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Zm2 0V7a5 5 0 0 1 10 0v4',
+    bolt:'M13 2 3 14h9l-1 8 10-12h-9l1-8Z',
+    eye:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+    trash:'M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6',
+    link:'M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5',
+    filter:'M22 3H2l8 9.46V19l4 2v-8.54L22 3Z',
+    user:'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
+    clockArrow:'M12 6v6l4 2M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z',
+    refresh:'M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5',
+    message:'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z',
+    star:'M11.5 2.8a.6.6 0 0 1 1 0l2.4 5a.6.6 0 0 0 .5.3l5.4.5a.6.6 0 0 1 .3 1l-4 3.6a.6.6 0 0 0-.2.6l1.2 5.3a.6.6 0 0 1-.9.6l-4.6-2.8a.6.6 0 0 0-.6 0L7.1 22.6a.6.6 0 0 1-.9-.6l1.2-5.3a.6.6 0 0 0-.2-.6l-4-3.6a.6.6 0 0 1 .3-1l5.4-.5a.6.6 0 0 0 .5-.3l2.4-5Z',
+  };
+  icon(name, size, color) {
+    const d = this.PATHS[name] || this.PATHS.document;
+    return React.createElement('svg', { width: size||20, height: size||20, viewBox:'0 0 24 24', fill:'none', stroke: color||'currentColor', strokeWidth:2, strokeLinecap:'round', strokeLinejoin:'round', style:{ display:'block' } }, React.createElement('path', { d }));
+  }
+  get ICN() {
+    const names = Object.keys(this.PATHS);
+    const o = {};
+    names.forEach(n => o[n] = this.icon(n, 18));
+    o.chevronDown = this.icon('chevronDown', 16);
+    return o;
+  }
+
+  // ---------- categories & data ----------
+  CATS = {
+    platform:{label:'Platform',color:'#f2752e',soft:'#fdeadd',icon:'network'},
+    security:{label:'Security',color:'#d9482a',soft:'#fbe3da',icon:'shield'},
+    memory:{label:'Memory',color:'#298f57',soft:'#e3f1ea',icon:'memory'},
+    agent:{label:'Agent',color:'#2961b8',soft:'#e7eefa',icon:'agent'},
+    methodology:{label:'Methodology',color:'#7347bf',soft:'#ece4f8',icon:'graph'},
+    datastore:{label:'Data store',color:'#1b1d21',soft:'#e7e4dd',icon:'document'},
+    audit:{label:'Audit',color:'#c89b3c',soft:'#f4ecd6',icon:'eye'},
+    risk:{label:'Risk',color:'#bf332e',soft:'#f7e3e2',icon:'bolt'},
+    doc:{label:'Doc',color:'#a8935f',soft:'#f1ebdb',icon:'document'},
+    ops:{label:'Ops',color:'#6b7378',soft:'#ebeae6',icon:'settings'},
+    policy:{label:'Policy',color:'#7347bf',soft:'#ece4f8',icon:'lock'},
+  };
+
+  NODES = [
+    { id:'platform', cat:'platform', name:'Allura Platform', status:'Active', risk:'low', summary:'The home base that runs memory, agents, and approvals.', owner:'Platform team', quality:98, purpose:'Runs every workspace and connects all the pieces together.' },
+    { id:'guard', cat:'security', name:'Allura Guard', status:'Active', risk:'low', summary:'Checks every agent key and decides what each one may do.', owner:'Security team', quality:99, purpose:'Guards access. No agent reads or writes memory without passing Guard.' },
+    { id:'agent', cat:'agent', name:'Claude Research Agent', status:'Connected', risk:'medium', summary:'An AI helper that adds raw notes and reads saved knowledge.', owner:'Rosa Marín', quality:91, purpose:'Drafts memories from research calls. Output is untrusted until a person approves.' },
+    { id:'mem', cat:'memory', name:'Saved knowledge: Pricing', status:'Trusted', risk:'low', summary:'Our agreed pricing for the Q3 robotics line.', owner:'Rosa Marín', quality:95, purpose:'A trusted fact a person approved from raw notes and a source doc.' },
+    { id:'memStore', cat:'datastore', name:'Memory Store', status:'Healthy', risk:'low', summary:'The safe database where every memory is kept.', owner:'Platform team', quality:97, purpose:'Stores raw notes and saved knowledge with full history.' },
+    { id:'policy', cat:'policy', name:'Promotion Policy', status:'Enforced', risk:'low', summary:'The rule for when a note can become trusted knowledge.', owner:'Rosa Marín', quality:100, purpose:'Needs one human approval and at least one piece of evidence before promotion.' },
+    { id:'method', cat:'methodology', name:'Memory Promotion Method', status:'Active', risk:'low', summary:'The step-by-step way notes turn into trusted knowledge.', owner:'Knowledge team', quality:94, purpose:'Collect notes, find evidence, ask a person, record the receipt.' },
+    { id:'audit', cat:'audit', name:'Audit Log', status:'Recording', risk:'low', summary:'A written record of every action and who did it.', owner:'Security team', quality:100, purpose:'Cannot be edited. Proves what happened and when.' },
+    { id:'risk', cat:'risk', name:'Unverified claim', status:'Blocked', risk:'high', summary:'A note with no evidence. Guard kept it out of trusted knowledge.', owner:'—', quality:32, purpose:'Shows the system refusing to trust something it cannot prove.' },
+    { id:'doc', cat:'doc', name:'Pricing doc v3', status:'Source', risk:'low', summary:'The original document the pricing memory came from.', owner:'Finance', quality:88, purpose:'Evidence that backs the saved pricing knowledge.' },
+    { id:'ops', cat:'ops', name:'Ingest Worker', status:'Running', risk:'low', summary:'The quiet worker that brings new notes into the store.', owner:'Platform team', quality:96, purpose:'Moves incoming notes into the Memory Store for review.' },
+  ];
+
+  EDGES = [
+    { from:'platform', to:'guard', type:'OWNS' },
+    { from:'platform', to:'memStore', type:'OWNS' },
+    { from:'guard', to:'memStore', type:'GUARDS' },
+    { from:'guard', to:'policy', type:'GOVERNED_BY' },
+    { from:'agent', to:'platform', type:'CONNECTS' },
+    { from:'agent', to:'mem', type:'WRITES' },
+    { from:'agent', to:'mem', type:'READS' },
+    { from:'guard', to:'mem', type:'APPROVES' },
+    { from:'guard', to:'risk', type:'DENIES' },
+    { from:'mem', to:'doc', type:'DEPENDS_ON' },
+    { from:'method', to:'mem', type:'GENERATES' },
+    { from:'memStore', to:'mem', type:'STORES' },
+    { from:'mem', to:'policy', type:'GOVERNED_BY' },
+    { from:'ops', to:'mem', type:'WRITES' },
+    { from:'guard', to:'audit', type:'GENERATES' },
+  ];
+
+  EDGE_META = {
+    OWNS:{color:'#1b1d21'}, GUARDS:{color:'#d9482a'}, CONNECTS:{color:'#2961b8'},
+    WRITES:{color:'#f2752e'}, READS:{color:'#6b7378'}, APPROVES:{color:'#298f57'},
+    DENIES:{color:'#bf332e',dash:true}, DEPENDS_ON:{color:'#9a958a',dash:true},
+    GENERATES:{color:'#7347bf'}, STORES:{color:'#1b1d21'}, GOVERNED_BY:{color:'#7347bf'},
+  };
+
+  LAYOUTS = {
+    hive: { platform:[470,18], agent:[760,70], guard:[250,150], memStore:[210,400], mem:[500,300], policy:[790,300], method:[520,540], audit:[60,300], risk:[800,540], doc:[300,560], ops:[940,420] },
+    security: { platform:[40,40], method:[40,470], agent:[40,250], guard:[300,250], policy:[300,60], mem:[560,250], memStore:[820,140], audit:[820,380], risk:[560,490], doc:[560,60], ops:[820,560] },
+  };
+
+  // ---------- approvals seed ----------
+  seedApprovals() {
+    return [
+      { id:'ap1', state:'pending', confidence:0.86, text:'Northwind agreed to a 12% volume discount above 500 units for the Q3 robotics order.', source:'Claude Research Agent', when:'18 min ago', evidence:[{type:'message',title:'Call notes — Aug 4',meta:'Conversation'},{type:'document',title:'Pricing doc v3',meta:'Document · p.4'}], history:[] },
+      { id:'ap2', state:'pending', confidence:0.61, text:'The customer prefers email over Slack for contract updates.', source:'Cursor Agent', when:'42 min ago', evidence:[{type:'message',title:'Thread — #northwind',meta:'Conversation'}], history:[] },
+      { id:'ap3', state:'pending', confidence:0.38, text:'Northwind plans to double headcount next year.', source:'Codex Agent', when:'1 hr ago', evidence:[], history:[] },
+      { id:'ap4', state:'approved', confidence:0.93, text:'Primary contact for the account is Dana Okoye, VP Operations.', source:'Claude Research Agent', when:'Yesterday', evidence:[{type:'document',title:'Org chart.pdf',meta:'Document'}], history:[{who:'Rosa Marín',decision:'Approved',when:'Yesterday 4:12pm',note:'Confirmed against the signed org chart.'}] },
+    ];
+  }
+
+  seedReceipts() {
+    return [
+      { id:'r1', icon:'check', color:'#298f57', soft:'#e3f1ea', title:'Memory promoted', decision:'Approved', text:'"Primary contact is Dana Okoye, VP Operations" became trusted knowledge.', who:'Rosa Marín', when:'Yesterday 4:12pm', evidence:'Org chart.pdf' },
+      { id:'r2', icon:'shield', color:'#d9482a', soft:'#fbe3da', title:'Write blocked', decision:'Denied', text:'Guard blocked an unverified claim with no evidence from Codex Agent.', who:'Allura Guard', when:'Yesterday 2:48pm', evidence:'none provided' },
+      { id:'r3', icon:'link', color:'#2961b8', soft:'#e7eefa', title:'Agent connected', decision:'Scoped', text:'Cursor Agent connected to workspace "Sales" with read + add scopes.', who:'Rosa Marín', when:'Mon 9:30am', evidence:'agent key ak_7f…2c' },
+      { id:'r4', icon:'lock', color:'#7347bf', soft:'#ece4f8', title:'Workspace locked', decision:'Read only', text:'Workspace "Legal" set to read only — no agent writes allowed.', who:'Marcus Lee', when:'Mon 8:05am', evidence:'policy change' },
+    ];
+  }
+
+  componentDidMount() {
+    if (!this.state.approvals) this.setState({ approvals: this.seedApprovals(), receipts: this.seedReceipts() });
+  }
+
+  // ---------- actions ----------
+  setScreen(s){ this.setState({ screen:s, selectedNode: s==='graph'? (this.state.selectedNode||'mem') : this.state.selectedNode }); }
+  setData(d){ this.setState({ dataState:d, memoryDrawer:null }); }
+  toggleActivity(){ this.setState({ activityOpen: !this.state.activityOpen }); }
+  setMode(m){ this.setState({ graphMode:m }); }
+  nodeCat(id){ const n=this.NODES.find(x=>x.id===id); return n?n.cat:null; }
+  selectNode(id){ this.setState({ selectedNode:id }); }
+
+  pushReceipt(r){
+    const list = (this.state.receipts || this.seedReceipts()).slice();
+    list.unshift(Object.assign({ id:'r'+Date.now(), when:'just now', who:'Rosa Marín' }, r));
+    this.setState({ receipts:list });
+  }
+  showToast(t){
+    this.setState({ toast:t });
+    clearTimeout(this._tt); this._tt = setTimeout(()=>{ this.setState({ toast:null }); }, 4200);
+  }
+
+  decide(id, decision){
+    const list = (this.state.approvals||[]).map(a=>{
+      if(a.id!==id) return a;
+      const note = (this.state.rationale[id]||'').trim();
+      const hist = a.history.concat([{ who:'Rosa Marín', decision, when:'just now', note: note || (decision==='Approved'?'Met the promotion policy.':'Did not meet the policy.') }]);
+      return Object.assign({}, a, { state: decision==='Approved'?'approved': decision==='Rejected'?'rejected':a.state, history:hist });
+    });
+    this.setState({ approvals:list });
+    const meta = decision==='Approved' ? {icon:'check',color:'#298f57',soft:'#e3f1ea'} : decision==='Rejected' ? {icon:'x',color:'#bf332e',soft:'#f7e3e2'} : {icon:'message',color:'#2961b8',soft:'#e7eefa'};
+    this.pushReceipt({ icon:meta.icon, color:meta.color, soft:meta.soft, title: decision==='Approved'?'Memory promoted':decision==='Rejected'?'Memory rejected':'Evidence requested', decision, text:`"${(list.find(a=>a.id===id)||{}).text||''}"`, evidence: (this.state.rationale[id]||'').trim()||'rationale recorded' });
+    this.showToast({ icon:meta.icon, color:meta.color, soft:meta.soft, title:`Receipt created — ${decision}`, body:'Saved to the audit log with your rationale.' });
+  }
+  setRationale(id, v){ this.setState({ rationale: Object.assign({}, this.state.rationale, { [id]:v }) }); }
+
+  toggleScope(k){ this.setState({ keyScopes: Object.assign({}, this.state.keyScopes, { [k]: !this.state.keyScopes[k] }) }); }
+  createKey(){
+    const name = (this.state.newKeyName||'').trim() || 'New agent key';
+    const s = this.state.keyScopes; const scopes=[]; if(s.read)scopes.push('Read'); if(s.add)scopes.push('Add'); if(s.promote)scopes.push('Promote');
+    this.pushReceipt({ icon:'link', color:'#2961b8', soft:'#e7eefa', title:'Agent key created', decision:'Scoped', text:`Key "${name}" created with ${scopes.join(' + ')||'no'} scopes.`, evidence:'ak_'+Math.random().toString(16).slice(2,6)+'…'+Math.random().toString(16).slice(2,4) });
+    this.showToast({ icon:'link', color:'#2961b8', soft:'#e7eefa', title:'Agent key created', body:`Scopes: ${scopes.join(', ')||'none'}. The secret is shown once.` });
+    this.setState({ newKeyName:'' });
+  }
+  revokeKey(name){
+    this.pushReceipt({ icon:'trash', color:'#bf332e', soft:'#f7e3e2', title:'Agent key revoked', decision:'Revoked', text:`Key "${name}" can no longer reach memory.`, evidence:'immediate' });
+    this.showToast({ icon:'trash', color:'#bf332e', soft:'#f7e3e2', title:'Key revoked', body:`"${name}" lost all access right away.` });
+  }
+
+  // ---------- derived ----------
+  navItem(id, label, icon, count){
+    const active = this.state.screen===id;
+    return { label, icon:this.icon(icon,18, active?'#2961b8':'#6b6e73'), color: active?'#2961b8':'#3c3e42', weight: active?600:500,
+      active, activeBar: active?1:0, count, countShow: (count!=null && count>0)?'inline-flex':'none', go:()=>this.setScreen(id) };
+  }
+
+  renderVals(){
+    const st = this.state;
+    const ds = st.dataState;
+    const live = ds==='live', loading = ds==='loading', empty = ds==='empty', error = ds==='error';
+    const approvals = st.approvals || this.seedApprovals();
+    const receipts = st.receipts || this.seedReceipts();
+    const pendingCount = approvals.filter(a=>a.state==='pending').length;
+
+    const src = live ? { name:'Production · live', fresh:'Updated 2 min ago', freshColor:'#298f57' }
+      : loading ? { name:'Production · live', fresh:'Loading…', freshColor:'#6b6e73' }
+      : empty ? { name:'Production · live', fresh:'No data yet', freshColor:'#6b6e73' }
+      : { name:'Production · live', fresh:"Couldn't reach source · retry", freshColor:'#bf332e' };
+
+    const dataBtns = ['live','loading','empty','error'].map(d=>({
+      label: d==='live'?'Live':d[0].toUpperCase()+d.slice(1), tip:'Show the '+d+' state',
+      bg: ds===d ? (d==='error'?'#bf332e':d==='empty'?'#6b7378':'#1b1d21') : 'transparent',
+      fg: ds===d ? '#fff' : '#6b6e73', go:()=>this.setData(d),
+    }));
+
+    // KPIs
+    const kpiDefs = [
+      { label:'Memories', value:'12,480', trend:'+182 / wk', trendColor:'#298f57', sub:'8,201 trusted · 4,279 raw', icon:'memory', color:'#298f57', soft:'#e3f1ea' },
+      { label:'Waiting for approval', value:String(pendingCount), trend:'needs a person', trendColor:'#f2752e', sub:'Oldest waiting 1 hr', icon:'clock', color:'#f2752e', soft:'#fdeadd' },
+      { label:'Connected agents', value:'6', trend:'1 medium risk', trendColor:'#bf332e', sub:'4 Claude · 1 Codex · 1 Cursor', icon:'agent', color:'#2961b8', soft:'#e7eefa' },
+      { label:'Workspaces', value:'9', trend:'2 read only', trendColor:'#6b6e73', sub:'1 locked · 6 open', icon:'lock', color:'#7347bf', soft:'#ece4f8' },
+    ];
+    const kpis = kpiDefs.map(k=>Object.assign({}, k, {
+      icon:this.icon(k.icon,17,k.color), show:live, skel:loading,
+      dash: empty||error, dashMsg: empty?'No memories yet':"Couldn't load",
+    }));
+
+    const healthRows = [
+      { name:'Memory Store', state:'Healthy', dot:'#298f57', ring:'#e3f1ea', meta:'Read/write OK' },
+      { name:'Allura Guard', state:'Enforcing', dot:'#298f57', ring:'#e3f1ea', meta:'0 bypasses' },
+      { name:'Ingest Worker', state:'Degraded', dot:'#f2752e', ring:'#fdeadd', meta:'Queue 1,204' },
+      { name:'Audit Log', state:'Recording', dot:'#298f57', ring:'#e3f1ea', meta:'Append-only' },
+    ];
+
+    const recColor = { check:{color:'#298f57',soft:'#e3f1ea'}, shield:{color:'#d9482a',soft:'#fbe3da'}, link:{color:'#2961b8',soft:'#e7eefa'}, lock:{color:'#7347bf',soft:'#ece4f8'}, x:{color:'#bf332e',soft:'#f7e3e2'}, message:{color:'#2961b8',soft:'#e7eefa'}, trash:{color:'#bf332e',soft:'#f7e3e2'} };
+    const recentReceipts = receipts.slice(0,4).map(r=>({ text:r.text, meta:`${r.who} · ${r.when}`, icon:this.icon(r.icon,15,r.color), color:r.color, soft:r.soft }));
+    const receiptCards = receipts.map(r=>({ title:r.title, decision:r.decision, text:r.text, who:r.who, when:r.when, evidence:r.evidence, evShow: r.evidence?'block':'none', icon:this.icon(r.icon,15,r.color), color:r.color, soft:r.soft }));
+
+    const toast = st.toast;
+
+    // ---- KNOWLEDGE GRAPH ----
+    const mode = st.graphMode;
+    const isCatalog = mode==='catalog';
+    const layoutKey = mode==='security' ? 'security' : 'hive';
+    const layout = this.LAYOUTS[layoutKey];
+    const NW=190, NH=92, CW=1080;
+    const hidden = st.hiddenCats;
+    const catCount = {}; this.NODES.forEach(n=>{ catCount[n.cat]=(catCount[n.cat]||0)+1; });
+    const degree = {}; this.EDGES.forEach(e=>{ degree[e.from]=(degree[e.from]||0)+1; degree[e.to]=(degree[e.to]||0)+1; });
+    const riskMeta = { low:{label:'Low risk',color:'#298f57',soft:'#e3f1ea'}, medium:{label:'Medium risk',color:'#f2752e',soft:'#fdeadd'}, high:{label:'High risk',color:'#bf332e',soft:'#f7e3e2'} };
+    const sel = st.selectedNode;
+    const selEdges = this.EDGES.filter(e=>e.from===sel||e.to===sel);
+    const selNeighbors = new Set(); selEdges.forEach(e=>{ selNeighbors.add(e.from); selNeighbors.add(e.to); });
+
+    const graphNodes = this.NODES.filter(n=>!hidden[n.cat] && layout[n.id]).map(n=>{
+      const c = this.CATS[n.cat]; const rk = riskMeta[n.risk]||riskMeta.low;
+      const isSel = n.id===sel; const conn = selNeighbors.has(n.id);
+      const dim = sel && !isSel && !conn;
+      return { name:n.name, summary:n.summary, x:layout[n.id][0]+'px', y:layout[n.id][1]+'px',
+        color:c.color, soft:c.soft, catLabel:c.label, icon:this.icon(c.icon,15,c.color),
+        riskLabel:rk.label, riskColor:rk.color, riskSoft:rk.soft, connected:String(degree[n.id]||0),
+        borderColor: isSel? c.color : 'var(--c-border)', shadow: isSel?'0 0 0 2px '+c.color+', 0 12px 30px -16px #1b1d2155':'0 4px 14px -10px #1b1d2133',
+        z: isSel?3:(conn?2:1), opacity: dim?0.4:1, go:()=>this.selectNode(n.id) };
+    });
+
+    const center = id => { const p=layout[id]; return p? [p[0]+NW/2, p[1]+NH/2] : null; };
+    const edgeEls = []; const labelEls=[];
+    this.EDGES.forEach((e,i)=>{
+      if(hidden[this.nodeCat(e.from)]||hidden[this.nodeCat(e.to)]) return;
+      const a=center(e.from), b=center(e.to); if(!a||!b) return;
+      const m=this.EDGE_META[e.type]||{color:'#9a958a'};
+      const onSel = e.from===sel||e.to===sel;
+      const faded = sel && !onSel;
+      edgeEls.push(React.createElement('path',{ key:'e'+i, d:`M${a[0]},${a[1]} L${b[0]},${b[1]}`, stroke:m.color, strokeWidth:onSel?2.6:1.8, strokeDasharray:m.dash?'6 5':'0', strokeLinecap:'round', opacity: faded?0.16:(onSel?0.95:0.5) }));
+      if(onSel){
+        const mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2;
+        const w = e.type.length*6.6+14;
+        labelEls.push(React.createElement('g',{key:'l'+i},
+          React.createElement('rect',{x:mx-w/2,y:my-9,width:w,height:18,rx:5,fill:'#fffdf8',stroke:m.color,strokeWidth:1}),
+          React.createElement('text',{x:mx,y:my+3.5,textAnchor:'middle',fontSize:9.5,fontWeight:700,fill:m.color,fontFamily:'IBM Plex Mono, monospace'},e.type)
+        ));
+      }
+    });
+    const edgesSvg = React.createElement('svg',{ width:CW, height:660, style:{position:'absolute',top:0,left:0,zIndex:0,pointerEvents:'none'} }, edgeEls, labelEls);
+
+    const miniEls = this.NODES.filter(n=>!hidden[n.cat]&&layout[n.id]).map(n=>{
+      const c=this.CATS[n.cat]; const p=layout[n.id];
+      return React.createElement('rect',{key:n.id, x:(p[0]/CW)*148, y:(p[1]/660)*92, width:10, height:5, rx:1.5, fill:c.color, opacity: n.id===sel?1:0.55 });
+    });
+    const minimap = React.createElement('svg',{width:148,height:92,style:{position:'absolute',inset:0}}, miniEls);
+
+    const selNode = this.NODES.find(n=>n.id===sel);
+    let insp = { evidence:[], rels:[] };
+    if(selNode){
+      const c=this.CATS[selNode.cat]; const rk=riskMeta[selNode.risk]||riskMeta.low;
+      const rels = selEdges.map(e=>{ const other = e.from===sel? e.to : e.from; const on=this.NODES.find(x=>x.id===other); const m=this.EDGE_META[e.type]||{color:'#9a958a'};
+        return { type:e.type, color:m.color, dir: e.from===sel?'\u2192':'\u2190', name: on?on.name:other, go:()=>this.selectNode(other) }; });
+      const evMap={memory:[{t:'Pricing doc v3',m:'Document \u00b7 page 4',k:'document'},{t:'Call notes \u2014 Aug 4',m:'Conversation',k:'message'}], doc:[{t:'Original upload',m:'Finance \u00b7 PDF',k:'document'}], agent:[{t:'agent key ak_7f\u20262c',m:'Allura Guard',k:'document'}], policy:[{t:'Promotion rule v2',m:'Policy doc',k:'document'}]};
+      const ev = evMap[selNode.cat]||[{t:'Audit entry',m:'Append-only log',k:'document'}];
+      const evIc = { message:{color:'#2961b8',soft:'#e7eefa',icon:'message'}, document:{color:'#c89b3c',soft:'#f4ecd6',icon:'document'} };
+      const action = selNode.cat==='memory'?'Open memory': selNode.cat==='policy'?'Edit policy': selNode.cat==='agent'?'Manage agent':'Open details';
+      insp = { name:selNode.name, catLabel:c.label, color:c.color, soft:c.soft, icon:this.icon(c.icon,20,c.color),
+        status:selNode.status, riskLabel:rk.label, riskColor:rk.color, riskSoft:rk.soft, owner:selNode.owner,
+        quality:selNode.quality, qColor: selNode.quality>=80?'#298f57':selNode.quality>=50?'#f2752e':'#bf332e',
+        purpose:selNode.purpose, rels,
+        evidence: ev.map(x=>({ title:x.t, meta:x.m, color:(evIc[x.k]||evIc.document).color, soft:(evIc[x.k]||evIc.document).soft, icon:this.icon((evIc[x.k]||evIc.document).icon,14,(evIc[x.k]||evIc.document).color) })),
+        action, actionIcon:this.icon(selNode.cat==='memory'?'memory':selNode.cat==='policy'?'lock':'arrowUpRight',15,'#fff') };
+    }
+
+    const legend = Object.keys(this.CATS).map(k=>{ const c=this.CATS[k]; return { label:c.label, color:c.color, count: catCount[k]||0, opacity: hidden[k]?0.4:1, go:()=>this.setState({ hiddenCats: Object.assign({}, hidden, {[k]: !hidden[k]}) }) }; });
+    const edgeLegendKeys = ['OWNS','GUARDS','CONNECTS','WRITES','READS','APPROVES','DENIES','DEPENDS_ON','GENERATES','STORES','GOVERNED_BY'];
+    const edgeLegend = edgeLegendKeys.map(k=>{ const m=this.EDGE_META[k]; return { label:k, color:m.color, dash: m.dash?'5 4':'0' }; });
+    const modeDefs=[{id:'hive',label:'Hive Map',icon:'graph'},{id:'security',label:'Security Path',icon:'shield'},{id:'catalog',label:'Methodology',icon:'star'}];
+    const graphModes = modeDefs.map(m=>({ label:m.label, icon:this.icon(m.icon,15, mode===m.id?'#fff':'#6b6e73'), bg: mode===m.id?'#1b1d21':'transparent', fg: mode===m.id?'#fff':'#3c3e42', go:()=>this.setMode(m.id) }));
+    const catalogCards = this.NODES.filter(n=>['methodology','policy','memory','agent'].includes(n.cat)).map(n=>{ const c=this.CATS[n.cat]; return { name:n.name, summary:n.summary, color:c.color, soft:c.soft, icon:this.icon(c.icon,16,c.color), connected:String(degree[n.id]||0), go:()=>this.selectNode(n.id) }; });
+
+    const GRAPH = {
+      isGraph: st.screen==='graph',
+      graphModes, graphModeLabel: (modeDefs.find(m=>m.id===mode)||{}).label,
+      isCatalog, isCanvasMode: !isCatalog,
+      graphShow: live, graphEmpty: empty, graphLoading: loading, graphError: error,
+      graphNodes, edgesSvg, minimap, catalogCards,
+      legend, edgeLegend,
+      inspectorShow: !!selNode && live, inspectorEmpty: !selNode && live, insp,
+    };
+
+    // ---- MEMORY ----
+    const MEM = [
+      { id:'m1', kind:'Saved knowledge', accent:'#298f57', soft:'#e3f1ea', color:'#298f57', icon:'memory', status:'Trusted', statusColor:'#298f57', statusSoft:'#e3f1ea', text:'Northwind agreed to a 12% volume discount above 500 units for the Q3 robotics order.', meta:'Approved by Rosa Marín · 2 days ago', cat:'memory',
+        provenance:'A person approved this from raw notes taken by the Claude Research Agent during the Aug 4 pricing call, checked against the source pricing document.', evidence:[{type:'message',title:'Call notes — Aug 4',meta:'Conversation'},{type:'document',title:'Pricing doc v3',meta:'Document · page 4'}] },
+      { id:'m2', kind:'Raw note', accent:'#f2752e', soft:'#fdeadd', color:'#f2752e', icon:'agent', status:'Waiting for approval', statusColor:'#f2752e', statusSoft:'#fdeadd', text:'The customer prefers email over Slack for contract updates.', meta:'Added by Cursor Agent · 42 min ago', cat:'raw',
+        provenance:'A connected agent wrote this from a Slack thread. It is untrusted until a person reviews the evidence and approves it.', evidence:[{type:'message',title:'Thread — #northwind',meta:'Conversation'}] },
+      { id:'m3', kind:'Saved knowledge', accent:'#298f57', soft:'#e3f1ea', color:'#298f57', icon:'user', status:'Trusted', statusColor:'#298f57', statusSoft:'#e3f1ea', text:'Primary contact for the account is Dana Okoye, VP Operations.', meta:'Approved by Rosa Marín · yesterday', cat:'memory',
+        provenance:'Approved from an agent note and confirmed against the signed org chart document.', evidence:[{type:'document',title:'Org chart.pdf',meta:'Document'}] },
+      { id:'m4', kind:'Blocked claim', accent:'#bf332e', soft:'#f7e3e2', color:'#bf332e', icon:'bolt', status:'Blocked', statusColor:'#bf332e', statusSoft:'#f7e3e2', text:'Northwind plans to double headcount next year.', meta:'Guard blocked · no evidence · 1 hr ago', cat:'raw',
+        provenance:'A connected agent tried to save this with no supporting evidence. Allura Guard kept it out of trusted knowledge.', evidence:[] },
+    ];
+    const q = (st.memoryQuery||'').toLowerCase();
+    const filt = st.memoryFilter;
+    const memMatched = MEM.filter(m=> (filt==='all'||m.cat===filt||(filt==='blocked'&&m.status==='Blocked')) && (!q || m.text.toLowerCase().includes(q) || m.meta.toLowerCase().includes(q)));
+    const memList = memMatched.map(m=>Object.assign({}, m, { icon:this.icon(m.icon,18,m.color), open:()=>this.setState({ memoryDrawer:m.id }) }));
+    const memFilterDefs = [ {id:'all',label:'All',count:MEM.length},{id:'memory',label:'Saved knowledge',count:MEM.filter(m=>m.cat==='memory').length},{id:'raw',label:'Raw notes',count:MEM.filter(m=>m.cat==='raw').length},{id:'blocked',label:'Blocked',count:MEM.filter(m=>m.status==='Blocked').length} ];
+    const memFilters = memFilterDefs.map(f=>({ label:f.label, count:f.count, countShow: f.count!=null?'inline':'none',
+      bg: filt===f.id?'#1b1d21':'#fffdf8', fg: filt===f.id?'#fff':'#3c3e42', border: filt===f.id?'#1b1d21':'var(--c-border)', go:()=>this.setState({ memoryFilter:f.id }) }));
+    const memDrawerObj = MEM.find(m=>m.id===st.memoryDrawer);
+    const evIcon = { message:{icon:'message',color:'#2961b8',soft:'#e7eefa'}, document:{icon:'document',color:'#c89b3c',soft:'#f4ecd6'}, file:{icon:'document',color:'#298f57',soft:'#e3f1ea'} };
+
+    // ---- AGENTS ----
+    const AGENTS = [
+      { name:'Atlas Research', type:'Claude', badge:'CL', color:'#2961b8', soft:'#e7eefa', workspace:'Sales', keyStatus:'Active', keyColor:'#298f57', keySoft:'#e3f1ea', scopes:['Read','Add'], lastSeen:'2 min ago' },
+      { name:'Codex Builder', type:'Codex', badge:'CX', color:'#7347bf', soft:'#ece4f8', workspace:'Engineering', keyStatus:'Active', keyColor:'#298f57', keySoft:'#e3f1ea', scopes:['Read'], lastSeen:'18 min ago' },
+      { name:'Cursor Pair', type:'Cursor', badge:'CU', color:'#f2752e', soft:'#fdeadd', workspace:'Engineering', keyStatus:'Expiring', keyColor:'#f2752e', keySoft:'#fdeadd', scopes:['Read','Add'], lastSeen:'1 hr ago' },
+      { name:'Northwind Bot', type:'Custom', badge:'NB', color:'#298f57', soft:'#e3f1ea', workspace:'Support', keyStatus:'Active', keyColor:'#298f57', keySoft:'#e3f1ea', scopes:['Read'], lastSeen:'3 hr ago' },
+      { name:'Legacy Importer', type:'Custom', badge:'LI', color:'#6b7378', soft:'#ebeae6', workspace:'Legal', keyStatus:'Revoked', keyColor:'#bf332e', keySoft:'#f7e3e2', scopes:['—'], lastSeen:'2 days ago' },
+    ];
+    const agents = AGENTS.map(a=>Object.assign({}, a, { revoke:()=>this.revokeKey(a.name) }));
+
+    // ---- APPROVALS ----
+    const evIc2 = { message:{color:'#2961b8',soft:'#e7eefa',icon:'message'}, document:{color:'#c89b3c',soft:'#f4ecd6',icon:'document'} };
+    const stateMeta = { pending:{label:'Waiting for approval',color:'#f2752e',soft:'#fdeadd',accent:'#f2752e'}, approved:{label:'Promoted to trusted',color:'#298f57',soft:'#e3f1ea',accent:'#298f57'}, rejected:{label:'Rejected',color:'#bf332e',soft:'#f7e3e2',accent:'#bf332e'} };
+    const approvalCards = approvals.map(a=>{
+      const sm = stateMeta[a.state]||stateMeta.pending;
+      const conf = a.confidence; const confColor = conf>=0.8?'#298f57':conf>=0.5?'#f2752e':'#bf332e';
+      const rat = (st.rationale[a.id]||'');
+      const cantApprove = a.evidence.length===0 || rat.trim().length===0;
+      const lastDec = a.history[a.history.length-1];
+      return { text:a.text, source:a.source, when:a.when,
+        stateLabel:sm.label, stateColor:sm.color, stateSoft:sm.soft, accent:sm.accent,
+        confPct: Math.round(conf*100)+'%', confLabel: Math.round(conf*100)+'%', confColor,
+        hasEvidence: a.evidence.length>0, noEvidence: a.evidence.length===0,
+        evidence: a.evidence.map(e=>({ title:e.title, meta:e.meta, color:(evIc2[e.type]||evIc2.document).color, soft:(evIc2[e.type]||evIc2.document).soft, icon:this.icon((evIc2[e.type]||evIc2.document).icon,13,(evIc2[e.type]||evIc2.document).color) })),
+        isPending: a.state==='pending', isDecided: a.state!=='pending',
+        rationale: rat, onRationale:(e)=>this.setRationale(a.id, e.target.value),
+        cantApprove, approveBg: cantApprove?'#9a958a':'#298f57', approveOpacity: cantApprove?0.6:1, approveCursor: cantApprove?'not-allowed':'pointer',
+        cantAct:false, actCursor:'pointer', actOpacity:1,
+        needRationale: (a.evidence.length>0 && rat.trim().length===0)?'block':'none',
+        approve:()=>{ if(!cantApprove) this.decide(a.id,'Approved'); else this.showToast({icon:'bolt',color:'#f2752e',soft:'#fdeadd',title:'Add a reason first',body:'Approvals need a short rationale and evidence.'}); },
+        reject:()=>this.decide(a.id,'Rejected'),
+        requestEv:()=>this.decide(a.id,'Evidence requested'),
+        decidedSoft: sm.soft, decidedColor: sm.color, decidedLabel: lastDec?lastDec.decision:sm.label, decidedNote: lastDec?lastDec.note:'', decidedIcon:this.icon(a.state==='approved'?'check':'x',16,sm.color) };
+    });
+    const allHist = []; approvals.forEach(a=>a.history.forEach(h=>allHist.push(Object.assign({text:a.text},h))));
+    const histMeta = d=> d.decision==='Approved'?{color:'#298f57',soft:'#e3f1ea',icon:'check'}: d.decision==='Rejected'?{color:'#bf332e',soft:'#f7e3e2',icon:'x'}:{color:'#2961b8',soft:'#e7eefa',icon:'message'};
+    const decisionHistory = allHist.slice().reverse().map(d=>{ const m=histMeta(d); return { decision:d.decision, who:d.who, note:d.note, when:d.when, color:m.color, soft:m.soft, icon:this.icon(m.icon,14,m.color) }; });
+
+    // ---- GUARD ----
+    const scopeDefs = [
+      { k:'read', label:'Read memories', desc:'See saved knowledge and raw notes.', warn:false },
+      { k:'add', label:'Add memories', desc:'Write new raw notes for review.', warn:false },
+      { k:'promote', label:'Approve to trusted', desc:'Promote notes without a human. Rarely needed.', warn:true },
+    ];
+    const scopeChoices = scopeDefs.map(s=>{ const on=st.keyScopes[s.k]; return { label:s.label, desc:s.desc, warnShow: s.warn?'inline':'none',
+      border: on?(s.warn?'var(--c-orange)':'var(--c-blue)'):'var(--c-border)', bg: on?(s.warn?'var(--c-orange-soft)':'var(--c-blue-soft)'):'#fffefb',
+      checkBorder: on?(s.warn?'var(--c-orange)':'var(--c-blue)'):'var(--c-border)', checkBg: on?(s.warn?'var(--c-orange)':'var(--c-blue)'):'transparent',
+      check: on?this.icon('check',13,'#fff'):null, go:()=>this.toggleScope(s.k) }; });
+    const workspaces = [
+      { name:'Sales', agents:2, memories:'3,204', lock:'Open', lockColor:'#298f57', lockSoft:'#e3f1ea', color:'#298f57', soft:'#e3f1ea', icon:this.icon('memory',16,'#298f57') },
+      { name:'Engineering', agents:2, memories:'5,118', lock:'No agent writes', lockColor:'#f2752e', lockSoft:'#fdeadd', color:'#f2752e', soft:'#fdeadd', icon:this.icon('agent',16,'#f2752e') },
+      { name:'Support', agents:1, memories:'1,902', lock:'Read only', lockColor:'#2961b8', lockSoft:'#e7eefa', color:'#2961b8', soft:'#e7eefa', icon:this.icon('message',16,'#2961b8') },
+      { name:'Legal', agents:0, memories:'412', lock:'Locked', lockColor:'#bf332e', lockSoft:'#f7e3e2', color:'#bf332e', soft:'#f7e3e2', icon:this.icon('lock',16,'#bf332e') },
+    ];
+    const lockModes = [
+      { label:'Open', color:'#298f57', soft:'#e3f1ea' },{ label:'Read only', color:'#2961b8', soft:'#e7eefa' },
+      { label:'No agent writes', color:'#f2752e', soft:'#fdeadd' },{ label:'No approvals', color:'#7347bf', soft:'#ece4f8' },{ label:'Locked', color:'#bf332e', soft:'#f7e3e2' },
+    ];
+    const activeKeys = [
+      { name:'Atlas Research', token:'ak_7f2c…d91', scopes:'Read + Add' },
+      { name:'Codex Builder', token:'ak_3b8a…44e', scopes:'Read' },
+      { name:'Northwind Bot', token:'ak_9c1d…7f2', scopes:'Read' },
+    ].map(k=>Object.assign({}, k, { revoke:()=>this.revokeKey(k.name) }));
+    const accessLog = [
+      { text:'Atlas Research read “Pricing” saved knowledge', verdict:'Allowed', color:'#298f57', soft:'#e3f1ea', icon:this.icon('check',14,'#298f57'), when:'2 min ago' },
+      { text:'Cursor Pair tried to write to Legal workspace', verdict:'Denied', color:'#bf332e', soft:'#f7e3e2', icon:this.icon('x',14,'#bf332e'), when:'26 min ago' },
+      { text:'Codex Builder read 12 memories in Engineering', verdict:'Allowed', color:'#298f57', soft:'#e3f1ea', icon:this.icon('check',14,'#298f57'), when:'1 hr ago' },
+      { text:'Legacy Importer used a revoked key', verdict:'Denied', color:'#bf332e', soft:'#f7e3e2', icon:this.icon('x',14,'#bf332e'), when:'2 days ago' },
+    ];
+
+    // ---- SETTINGS ----
+    const promoModes = [
+      { id:'human', label:'Always ask a person', desc:'Every note needs human approval and evidence.', rec:true },
+      { id:'trusted', label:'Auto-approve trusted agents', desc:'Skip review for agents you mark as trusted.', rec:false },
+      { id:'off', label:'Manual only', desc:'Nothing is promoted automatically.', rec:false },
+    ];
+    const pm = st.promoMode || 'human';
+    const promoModesV = promoModes.map(p=>{ const on=p.id===pm; return { label:p.label, desc:p.desc, recShow: p.rec?'inline':'none',
+      border: on?'var(--c-blue)':'var(--c-border)', bg: on?'var(--c-blue-soft)':'#fffefb', dotBorder: on?'var(--c-blue)':'var(--c-border)', dotBg: on?'var(--c-blue)':'transparent',
+      go:()=>this.setState({ promoMode:p.id }) }; });
+    const endpoints = [
+      { name:'Claude (Anthropic)', url:'api.anthropic.com/v1', status:'Connected', color:'#298f57', dot:'#298f57' },
+      { name:'Embeddings', url:'internal://embed-v3', status:'Connected', color:'#298f57', dot:'#298f57' },
+    ];
+    const users = [
+      { name:'Rosa Marín', email:'rosa@northwind.co', initials:'RM', bg:'#2961b8', role:'Admin · Curator', roleColor:'#7347bf', roleSoft:'#ece4f8' },
+      { name:'Marcus Lee', email:'marcus@northwind.co', initials:'ML', bg:'#298f57', role:'Curator', roleColor:'#298f57', roleSoft:'#e3f1ea' },
+      { name:'Dana Okoye', email:'dana@northwind.co', initials:'DO', bg:'#f2752e', role:'Viewer', roleColor:'#6b6e73', roleSoft:'#ebeae6' },
+    ];
+
+    const SCREENS = {
+      isAgents: st.screen==='agents', agents, agentsShow: live, goGuard:()=>this.setScreen('guard'),
+      stateLoading: loading, stateEmpty: empty, stateError: error,
+      isApprovals: st.screen==='approvals', approvalsShow: live, approvalsEmpty: empty,
+      approvalCards, decisionHistory, pendingLabel: String(pendingCount),
+      isGuard: st.screen==='guard', newKeyName: st.newKeyName, onKeyName:(e)=>this.setState({ newKeyName:e.target.value }),
+      scopeChoices, createKey:()=>this.createKey(), workspaces, lockModes, activeKeys, accessLog,
+      isSettings: st.screen==='settings', promoModes: promoModesV, endpoints, users,
+    };
+
+    return Object.assign({}, GRAPH, SCREENS, {
+      ICN: this.ICN,
+      isMemory: st.screen==='memory',
+      memQuery: st.memoryQuery,
+      onMemQuery: (e)=>this.setState({ memoryQuery:e.target.value }),
+      memResultLabel: live? `${memMatched.length} of ${MEM.length}` : '',
+      memFilters,
+      memListShow: live, memLoading:loading, memEmpty:empty, memError:error,
+      memList,
+      skel4:[1,2,3,4],
+      memDrawerOpen: !!memDrawerObj && live,
+      memDrawer: memDrawerObj ? Object.assign({}, memDrawerObj, { evidence: memDrawerObj.evidence.map(e=>({ title:e.title, meta:e.meta, icon:this.icon((evIcon[e.type]||evIcon.document).icon,16,(evIcon[e.type]||evIcon.document).color), color:(evIcon[e.type]||evIcon.document).color, soft:(evIcon[e.type]||evIcon.document).soft })) }) : { evidence:[] },
+      closeMemDrawer: ()=>this.setState({ memoryDrawer:null }),
+      goGraphFromMem: ()=>this.setState({ memoryDrawer:null, screen:'graph', selectedNode:'mem' }),
+
+      primaryNav: [
+        this.navItem('overview','Overview','home'),
+        this.navItem('memory','Memory','memory'),
+        this.navItem('graph','Knowledge Graph','graph'),
+        this.navItem('agents','Agents','agent'),
+        this.navItem('approvals','Approvals','check', pendingCount),
+      ],
+      footerNav: [ this.navItem('guard','Allura Guard','shield'), this.navItem('settings','Settings','settings') ],
+      source: src,
+      dataStates: dataBtns,
+      receiptCount: receipts.length,
+      toggleActivity: ()=>this.toggleActivity(),
+      activityOpen: st.activityOpen,
+      receipts: receiptCards,
+
+      isOverview: st.screen==='overview',
+      goApprovals: ()=>this.setScreen('approvals'),
+      kpis,
+      healthShow: live||loading, healthError: error||empty,
+      health: loading ? healthRows.map(h=>Object.assign({},h,{state:'…',dot:'#cabfa6',ring:'#efe9dc',meta:'checking'})) : healthRows,
+      recentReceipts,
+
+      // toast
+      toastShow: !!toast, toastTitle: toast&&toast.title, toastBody: toast&&toast.body,
+      toastIcon: toast?this.icon(toast.icon,15,toast.color):null, toastColor: toast&&toast.color, toastSoft: toast&&toast.soft,
+      openActivityFromToast: ()=>this.setState({ activityOpen:true, toast:null }),
+    });
+  }
+}
+</script>
+</body>
+</html>

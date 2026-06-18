@@ -1,0 +1,42 @@
+# =============================================================================
+# Dockerfile.dashboard.prod — Allura Memory Dashboard (production build)
+# Runs a compiled Next.js production server (`next build` -> `next start`),
+# NOT the hot-reload dev server. Use via docker-compose.prod.yml.
+#
+# Dev counterpart: Dockerfile.dashboard (bun run dev, source bind-mounted).
+# Keep both explicit so dev hot-reload and audit-grade prod stay separate.
+#
+# next.config.ts has no `output: 'standalone'`, so the runtime stage needs
+# node_modules + .next + public + package.json + next.config.ts.
+# =============================================================================
+
+# ---- Builder: install all deps and compile the production bundle -----------
+FROM oven/bun:1.3.11-alpine AS builder
+WORKDIR /app
+
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile
+
+COPY . .
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN bun run build
+
+# ---- Runner: copy only what `next start` needs at runtime ------------------
+FROM oven/bun:1.3.11-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV ALLURA_DASHBOARD_PORT=3100
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/next.config.ts ./next.config.ts
+
+EXPOSE 3100
+
+CMD ["bun", "run", "start"]

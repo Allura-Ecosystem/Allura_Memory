@@ -27,8 +27,23 @@
  * Gracefully handles missing DB connections (for CI environments).
  */
 
+import path from "node:path";
+import { assertCwdOutsideGitDir } from "../../src/lib/git/exec";
+
 const TASK_DESCRIPTION = process.argv[2];
 const ARGS = process.argv.slice(3);
+
+// ── Git-exec safety guard ───────────────────────────────────────────────────
+//
+// Incident containment: the external `ralph` CLI must NEVER be spawned with a
+// working directory that resolves inside a `.git/` directory. When git sees
+// bare=false + no core.worktree there, it dumps the working tree into the
+// gitdir and corrupts the (sub)module. We can't fix the external binary, so we
+// refuse to launch it from an unsafe cwd at the boundary we control.
+//
+// assertCwdOutsideGitDir is the canonical single-source-of-truth implementation
+// in src/lib/git/exec.ts (GIT-EXEC-001). The local reimplementation has been
+// removed — one source of truth, no drift.
 
 // ── Defaults ──────────────────────────────────────────────────────────────
 
@@ -237,9 +252,15 @@ async function ralphLoop() {
   console.log("[ralph-harness] ═══════════════════════════════════════════════════════");
   console.log("");
 
+  // Guard: refuse to launch the external ralph CLI from inside a .git dir.
+  // No cwd is passed to spawnSync, so the spawned process inherits process.cwd().
+  // assertCwdOutsideGitDir is the canonical GIT-EXEC-001 choke point.
+  const ralphCwd = assertCwdOutsideGitDir(process.cwd());
+
   const result = spawnSync(ralphCmd[0], ralphCmd.slice(1), {
     stdio: "inherit",
     shell: true,
+    cwd: ralphCwd,
     env: {
       ...process.env,
       RALPH_AGENT: config.agent,
@@ -310,4 +331,7 @@ async function ralphLoop() {
   process.exit(exitCode);
 }
 
-ralphLoop();
+// Only run the loop when invoked directly as a CLI, not when imported (e.g. by tests).
+if (import.meta.url === `file://${process.argv[1]}`) {
+  ralphLoop();
+}

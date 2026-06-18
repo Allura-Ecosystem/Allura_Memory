@@ -1,19 +1,14 @@
 "use client"
 
 import {
-  Activity,
-  ArrowRightLeft,
-  Clock,
-  FileText,
+  BookOpen,
+  CheckCircle,
   GitBranch,
+  KeyRound,
   LayoutDashboard,
-  LayoutGrid,
-  FolderKanban,
-  Play,
-  Search,
   Settings,
   ShieldCheck,
-  Sparkles,
+  UserCog,
   Users,
 } from "lucide-react"
 import Image from "next/image"
@@ -21,18 +16,16 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import type { ComponentType, CSSProperties } from "react"
 
-// Canon (Phase 0, AD): the visible product identity must use the approved
-// Allura brand asset from public/brand/ — never a drawn or generated
-// replacement logo. This restores the approved lettermark.
-function AlluraLogoIcon() {
+// Canon: use the approved Allura brand asset — never a drawn replacement.
+function AlluraMonogram() {
   return (
     <Image
       src="/brand/allura-lettermark-al-figma.png"
       alt="Allura"
-      width={32}
-      height={32}
+      width={38}
+      height={38}
       priority
-      style={{ borderRadius: 6 }}
+      style={{ borderRadius: 9, flexShrink: 0 }}
     />
   )
 }
@@ -41,160 +34,203 @@ interface NavItem {
   href: string
   label: string
   icon: ComponentType<{ size?: number; className?: string; style?: CSSProperties }>
+  /** Badge count — shown in orange when > 0 */
+  count?: number
 }
 
-interface NavGroup {
-  label: string
-  items: NavItem[]
-}
+// Primary nav — 5 items matching the design.
+const NAV: NavItem[] = [
+  { href: "/dashboard/overview",        label: "Overview",        icon: LayoutDashboard },
+  { href: "/dashboard/search",          label: "Memory",          icon: BookOpen },
+  { href: "/dashboard/knowledge-graph", label: "Knowledge Graph", icon: GitBranch },
+  { href: "/dashboard/agents",          label: "Agents",          icon: Users },
+  { href: "/dashboard/approvals",       label: "Approvals",       icon: CheckCircle },
+]
 
-const navGroups: NavGroup[] = [
-  {
-    label: "Work",
-    items: [
-      { href: "/dashboard/mission-control", label: "Command Center", icon: LayoutDashboard },
-      { href: "/dashboard/projects", label: "Projects", icon: FolderKanban },
-      { href: "/dashboard/work-board", label: "Work Board", icon: LayoutGrid },
-      { href: "/dashboard/runs", label: "Runs", icon: Play },
-      { href: "/dashboard/execution", label: "Execution", icon: Activity },
-      { href: "/dashboard/approvals", label: "Approvals", icon: ShieldCheck },
-      { href: "/dashboard/handoffs", label: "Handoffs", icon: ArrowRightLeft },
-      { href: "/dashboard/evidence", label: "Evidence", icon: FileText },
-    ],
-  },
-  {
-    label: "Knowledge",
-    items: [
-      { href: "/dashboard/search", label: "Search", icon: Search },
-      { href: "/dashboard/dreams", label: "Dreams", icon: Sparkles },
-      { href: "/dashboard/graph", label: "Knowledge Graph", icon: GitBranch },
-    ],
-  },
-  {
-    label: "Crew",
-    items: [{ href: "/dashboard/teams", label: "Teams", icon: Users }],
-  },
-  {
-    label: "Operations",
-    items: [{ href: "/dashboard/scheduled-tasks", label: "Schedules", icon: Clock }],
-  },
+// Footer nav — admin items.
+const FOOTER: NavItem[] = [
+  { href: "/dashboard/members",    label: "Members",      icon: UserCog },
+  { href: "/dashboard/governance", label: "Governance",   icon: ShieldCheck },
+  { href: "/dashboard/guard",      label: "Allura Guard", icon: KeyRound },
+  { href: "/dashboard/settings",   label: "Settings",     icon: Settings },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
 
   function isActive(href: string): boolean {
-    return pathname.startsWith(href)
+    return pathname === href || pathname.startsWith(href + "/")
+  }
+
+  function navRow(item: NavItem) {
+    const Icon = item.icon
+    const active = isActive(item.href)
+    const hasCount = typeof item.count === "number" && item.count > 0
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        style={{
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          width: "100%",
+          height: 42,
+          padding: "0 12px",
+          borderRadius: 10,
+          textDecoration: "none",
+          fontSize: 14,
+          fontWeight: active ? 600 : 400,
+          color: active ? "var(--c-blue)" : "var(--c-ink)",
+          background: active ? "#f1ece0" : "transparent",
+          transition: "background 0.15s",
+          boxSizing: "border-box",
+          fontFamily: "var(--sans)",
+        }}
+        onMouseEnter={(e) => {
+          if (!active) (e.currentTarget as HTMLElement).style.background = "#f1ece0"
+        }}
+        onMouseLeave={(e) => {
+          if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"
+        }}
+      >
+        {/* Orange left accent bar when active */}
+        {active && (
+          <span
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 9,
+              bottom: 9,
+              width: 3,
+              borderRadius: 3,
+              background: "var(--c-orange)",
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        <Icon
+          size={16}
+          style={{
+            flexShrink: 0,
+            color: active ? "var(--c-blue)" : "var(--c-muted)",
+          }}
+        />
+        <span style={{ flex: 1 }}>{item.label}</span>
+
+        {hasCount && (
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: "var(--c-orange)",
+              background: "var(--c-orange-soft)",
+              borderRadius: 20,
+              padding: "1px 8px",
+            }}
+          >
+            {item.count}
+          </span>
+        )}
+      </Link>
+    )
+  }
+
+  function footerRow(item: NavItem) {
+    const Icon = item.icon
+    const active = isActive(item.href)
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          width: "100%",
+          height: 40,
+          padding: "0 12px",
+          borderRadius: 10,
+          textDecoration: "none",
+          fontSize: 14,
+          fontWeight: active ? 600 : 400,
+          color: active ? "var(--c-blue)" : "var(--c-muted)",
+          background: active ? "#f1ece0" : "transparent",
+          transition: "background 0.15s",
+          boxSizing: "border-box",
+          fontFamily: "var(--sans)",
+        }}
+        onMouseEnter={(e) => {
+          if (!active) (e.currentTarget as HTMLElement).style.background = "#f1ece0"
+        }}
+        onMouseLeave={(e) => {
+          if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"
+        }}
+      >
+        <Icon size={16} style={{ flexShrink: 0, color: active ? "var(--c-blue)" : "var(--c-muted)" }} />
+        <span>{item.label}</span>
+      </Link>
+    )
   }
 
   return (
     <aside
       style={{
-        width: 240,
-        minHeight: "100vh",
+        width: 248,
+        flexShrink: 0,
         height: "100%",
-        background: "#ffffff",
-        borderRight: "1px solid #e8e3d8",
         display: "flex",
         flexDirection: "column",
-        flexShrink: 0,
-        position: "sticky",
-        top: 0,
+        background: "var(--c-card)",
+        borderRight: "1px solid var(--c-border)",
       }}
       aria-label="Main navigation"
     >
-      {/* Logo */}
+      {/* Brand header */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
-          padding: "20px 16px 16px",
-          borderBottom: "1px solid #f0ece0",
+          gap: 11,
+          padding: "20px 18px 18px",
         }}
       >
-        <AlluraLogoIcon />
+        <AlluraMonogram />
         <div style={{ lineHeight: 1.1 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: "#1a1a1a", letterSpacing: "-0.01em" }}>Allura</div>
-          <div style={{ fontWeight: 400, fontSize: 12, color: "#6b7280" }}>Memory</div>
+          <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", display: "block", color: "var(--c-ink)" }}>
+            Allura Memory
+          </span>
+          <span style={{ fontSize: 11, color: "var(--c-muted)", fontWeight: 500 }}>
+            Command Center
+          </span>
         </div>
       </div>
 
-      {/* Grouped nav */}
-      <nav style={{ flex: 1, overflowY: "auto", padding: "8px 0" }} aria-label="Primary navigation">
-        {navGroups.map((group, groupIndex) => (
-          <div key={group.label}>
-            {groupIndex > 0 && (
-              <div style={{ height: 1, background: "#f0ece0", margin: "4px 16px" }} />
-            )}
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                color: "#9ca3af",
-                padding: "16px 10px 4px",
-              }}
-            >
-              {group.label}
-            </div>
-            <div style={{ padding: "0 8px" }}>
-              {group.items.map((item) => {
-                const Icon = item.icon
-                const active = isActive(item.href)
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      textDecoration: "none",
-                      fontSize: 14,
-                      fontWeight: active ? 600 : 400,
-                      color: active ? "#2563eb" : "#374151",
-                      background: active ? "#eff6ff" : "transparent",
-                      marginBottom: 2,
-                      transition: "background 0.15s, color 0.15s",
-                    }}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <Icon size={16} style={{ flexShrink: 0 }} />
-                    {item.label}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        ))}
+      {/* Primary nav */}
+      <nav
+        style={{ display: "flex", flexDirection: "column", gap: 3, padding: "6px 12px" }}
+        aria-label="Primary navigation"
+      >
+        {NAV.map(navRow)}
       </nav>
 
-      {/* Bottom section */}
-      <div style={{ padding: "8px 8px", borderTop: "1px solid #f0ece0" }}>
-        <Link
-          href="/dashboard/settings"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "8px 10px",
-            borderRadius: 8,
-            textDecoration: "none",
-            fontSize: 14,
-            fontWeight: isActive("/dashboard/settings") ? 600 : 400,
-            color: isActive("/dashboard/settings") ? "#2563eb" : "#374151",
-            background: isActive("/dashboard/settings") ? "#eff6ff" : "transparent",
-            marginBottom: 4,
-          }}
-          aria-current={isActive("/dashboard/settings") ? "page" : undefined}
-        >
-          <Settings size={16} style={{ flexShrink: 0 }} />
-          Settings
-        </Link>
+      {/* Footer nav + user row */}
+      <div
+        style={{
+          marginTop: "auto",
+          padding: 12,
+          borderTop: "1px solid var(--c-border-soft)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+        }}
+      >
+        {FOOTER.map(footerRow)}
 
         {/* User row */}
         <div
@@ -202,38 +238,31 @@ export default function Sidebar() {
             display: "flex",
             alignItems: "center",
             gap: 10,
-            padding: "8px 10px",
-            borderRadius: 8,
-            cursor: "pointer",
+            padding: "10px 8px 4px",
           }}
         >
           <div
             style={{
               width: 30,
               height: 30,
-              borderRadius: 8,
-              background: "#1a1a1a",
+              borderRadius: "50%",
+              background: "var(--c-blue)",
               color: "#fff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 11,
-              fontWeight: 700,
+              fontSize: 12,
+              fontWeight: 600,
               flexShrink: 0,
             }}
             aria-hidden="true"
           >
-            AL
+            RM
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", lineHeight: 1.2 }}>Allura Admin</div>
-            <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              admin@allura.ai
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--c-ink)" }}>Rosa Marín</span>
+            <span style={{ fontSize: 11, color: "var(--c-muted)" }}>Curator · Admin</span>
           </div>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path d="M3 4.5L6 7.5L9 4.5" stroke="#6b7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
         </div>
       </div>
     </aside>

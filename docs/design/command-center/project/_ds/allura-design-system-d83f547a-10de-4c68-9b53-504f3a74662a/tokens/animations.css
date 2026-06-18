@@ -1,0 +1,12 @@
+/* Allura — keyframes used by feedback components (skeleton shimmer, spinner). */
+@keyframes allura-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes allura-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes allura-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}

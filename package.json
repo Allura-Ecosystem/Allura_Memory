@@ -19,7 +19,10 @@
     "test:mcp:browser:update": "bun scripts/test-mcp-browser.ts --update",
     "test:mcp:browser:verbose": "bun scripts/test-mcp-browser.ts --verbose",
     "test:all": "bun run typecheck && bun run lint && bun run test:unit && bun run test:curator && bun run test:integration && bun run test:e2e && bun run test:mcp",
-    "benchmark": "bun scripts/benchmark.js --events=1000 --batch=100",
+    "benchmark": "bun src/__benchmarks__/run.ts --json",
+    "benchmark:only": "bun src/__benchmarks__/run.ts --json --only",
+    "benchmark:metrics": "vitest run src/__benchmarks__/lib/metrics.test.ts",
+    "benchmark:db": "bun scripts/benchmark.js --events=1000 --batch=100",
     "docs": "bun scripts/generate-docs.js",
     "lint": "bun run typecheck",
     "mcp": "bun src/mcp/memory-server-canonical.ts",
@@ -72,7 +75,11 @@
     "soc2:evidence": "bun run scripts/soc2-evidence.ts",
     "process:run": "bun run scripts/process-run.ts",
     "process:resume": "bun run scripts/process-run.ts resume",
-    "process:replay": "bun run scripts/process-run.ts replay"
+    "process:replay": "bun run scripts/process-run.ts replay",
+    "factory:validate": "find factory/teams -mindepth 2 -maxdepth 2 -name team.yaml -print0 | sort -z | while IFS= read -r -d '' manifest; do bash factory/validate.sh \"$(dirname \"$manifest\")\" || exit 1; done",
+    "factory:smoke": "bun scripts/factory-cross-team-smoke.ts",
+    "ruvector:readiness": "bun scripts/check-ruvector-readiness.ts",
+    "validate:git-exec": "bun scripts/validate-git-exec-choke-point.ts"
   },
   "repository": {
     "type": "git",
@@ -98,7 +105,7 @@
     "@tanstack/react-table": "^8.20.5",
     "@types/three": "0.184.1",
     "@vercel/otel": "^1.12.0",
-    "@xyflow/react": "12.10.2",
+    "@xyflow/react": "12.11.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

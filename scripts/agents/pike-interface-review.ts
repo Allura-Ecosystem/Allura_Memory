@@ -20,9 +20,9 @@
  * When no DB, produces real analysis — the analysis is the value, DB is just logging.
  */
 
-import { execFileSync, execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, extname, join, relative } from "node:path";
+import { gitExec } from "../../src/lib/git/exec";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -975,9 +975,9 @@ function extractApiSurface(gitRef: string): ApiExport[] {
   // Get list of TypeScript files at this ref
   let fileList: string;
   try {
-    fileList = execSync(
-      `git ls-tree -r --name-only ${gitRef}`,
-      { encoding: "utf-8", cwd: ROOT_DIR, maxBuffer: 50 * 1024 * 1024 },
+    fileList = gitExec(
+      ["ls-tree", "-r", "--name-only", gitRef],
+      { cwd: ROOT_DIR, maxBuffer: 50 * 1024 * 1024 },
     );
   } catch {
     console.error(`[pike] Cannot list files at ref ${gitRef}`);
@@ -998,13 +998,12 @@ function extractApiSurface(gitRef: string): ApiExport[] {
   for (const file of files) {
     let content: string;
     try {
-      // Use execFileSync to avoid shell escaping issues with paths containing spaces/parens
-      const buf = execFileSync(
-        "git",
+      // gitExec routes through the GIT-EXEC-001 choke point and uses
+      // execFileSync internally (no shell escaping issues with paths).
+      content = gitExec(
         ["show", `${gitRef}:${file}`],
-        { cwd: ROOT_DIR, maxBuffer: 50 * 1024 * 1024, encoding: "utf-8" },
+        { cwd: ROOT_DIR, maxBuffer: 50 * 1024 * 1024 },
       );
-      content = buf;
     } catch {
       continue; // file might not exist at this ref
     }

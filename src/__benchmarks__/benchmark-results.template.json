@@ -1,0 +1,67 @@
+{
+  "__comment": "TEMPLATE — illustrates the shape `bun run benchmark` writes to benchmark-results.json. Values are placeholders. `status` is one of pass|fail|skip|error. Each metric is informational unless it carries `threshold`+`comparator`, in which case `passed` is computed. See BENCHMARK-README.md for metric definitions and pass bars.",
+  "generated_at": "2026-06-17T00:00:00.000Z",
+  "endpoint": "http://localhost:5888/mcp",
+  "run_id": "0a1b2c3d",
+  "results": [
+    {
+      "id": "retrieval-quality",
+      "title": "Retrieval Quality — federated memory_search relevance",
+      "status": "pass",
+      "durationMs": 0,
+      "metrics": [
+        { "name": "Precision@5", "value": 0.0, "unit": "", "threshold": 0.85, "comparator": "gte", "passed": false },
+        { "name": "Recall@5", "value": 0.0, "unit": "", "threshold": 0.7, "comparator": "gte", "passed": false },
+        { "name": "MRR", "value": 0.0, "unit": "", "threshold": 0.75, "comparator": "gte", "passed": false }
+      ],
+      "notes": ["seeded 10 documents into allura-bench-<runId>-loadtest"]
+    },
+    {
+      "id": "curation-accuracy",
+      "title": "Curation Accuracy — curator scoring vs. ground truth",
+      "status": "pass",
+      "durationMs": 0,
+      "metrics": [
+        { "name": "False-positive rate", "value": 0.0, "unit": "", "threshold": 0.2, "comparator": "lte", "passed": true },
+        { "name": "False-negative rate", "value": 0.0, "unit": "", "threshold": 0.3, "comparator": "lte", "passed": true },
+        { "name": "Accuracy", "value": 0.0, "unit": "" }
+      ],
+      "notes": []
+    },
+    {
+      "id": "governance-integrity",
+      "title": "Governance Integrity — isolation, injection, gates, invariants",
+      "status": "pass",
+      "durationMs": 0,
+      "metrics": [
+        { "name": "Cross-namespace leaks", "value": 0, "unit": "", "threshold": 0, "comparator": "lte", "passed": true },
+        { "name": "Malicious-input reject rate", "value": 100, "unit": "%", "threshold": 100, "comparator": "gte", "passed": true },
+        { "name": "Invariants passing", "value": 6, "unit": "", "threshold": 6, "comparator": "gte", "passed": true }
+      ],
+      "notes": []
+    },
+    {
+      "id": "latency-profile",
+      "title": "Latency Profile — hot-path round-trip latency",
+      "status": "pass",
+      "durationMs": 0,
+      "metrics": [
+        { "name": "search P50", "value": 0.0, "unit": "ms" },
+        { "name": "search P95", "value": 0.0, "unit": "ms", "threshold": 2500, "comparator": "lte", "passed": true },
+        { "name": "search P99", "value": 0.0, "unit": "ms" },
+        { "name": "add P95", "value": 0.0, "unit": "ms", "threshold": 2500, "comparator": "lte", "passed": true }
+      ],
+      "notes": ["iters=20"]
+    },
+    {
+      "id": "audit-completeness",
+      "title": "Audit Completeness — lifecycle traceability",
+      "status": "pass",
+      "durationMs": 0,
+      "metrics": [
+        { "name": "Lifecycle stages traced", "value": 3, "unit": "", "threshold": 3, "comparator": "gte", "passed": true }
+      ],
+      "notes": []
+    }
+  ]
+}

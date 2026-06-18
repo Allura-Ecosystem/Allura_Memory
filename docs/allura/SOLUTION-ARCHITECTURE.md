@@ -207,6 +207,33 @@ sequenceDiagram
 
 The runtime currently uses PostgreSQL with pgvector-compatible memory data as the bridge substrate. Full RuVector-Postgres remains a planned migration target and requires separate approval before database migration, extension installation, function creation, or feedback-loop activation.
 
+### 3.4.0.1 Agent Factory CI Topology
+
+```mermaid
+sequenceDiagram
+    participant Author as Team Module Author
+    participant CI as GitHub Actions
+    participant Validator as Factory Validator
+    participant PG as PostgreSQL
+    participant Neo4j as Neo4j
+    participant Artifact as Package Artifact
+
+    Author->>CI: Push module or workflow change
+    CI->>Validator: Validate YAML, roster, tenant, dependencies, governance
+    Validator-->>CI: Pass or fail closed
+    CI->>PG: Write tenant-scoped smoke memories
+    CI->>Neo4j: Exercise semantic fallback boundary
+    CI->>PG: Verify own-tenant retrieval and foreign-tenant absence
+    CI->>Artifact: Package only an explicitly selected validated team
+```
+
+Key constraints:
+
+- Factory workflows must be tracked by the canonical `Allura_Memory` repository; an ecosystem-local untracked workflow is not executable evidence.
+- Smoke writes use isolated `allura-factory-smoke-*-loadtest` groups so proposal creation remains disabled.
+- The RuVector readiness lane reports the current `pgvector bridge` state and fails a forced native claim unless native extension, native smoke, and governance package artifacts all exist.
+- CI may validate and package, but it does not publish or promote canonical knowledge without separate approval.
+
 | Readiness signal | Current evidence | Required for full RuVector claim |
 |---|---|---|
 | `vector` extension | `0.8.2` observed by TALON | Present and healthy |
@@ -281,7 +308,7 @@ The brand layer is a RuVix-enforced contract, not a design preference. It govern
 - Accessibility enforcement checks screen reader compatibility and high contrast mode before merge.
 - Component enforcement prefers the established Durham patterns over ad hoc variants.
 
-Canonical brand policy artifacts: [BRAND-RULES-cli-v1.md](./BRAND-RULES-cli-v1.md) for terminal/API surfaces and [BRAND-RULES-dashboard-v2.md](./BRAND-RULES-dashboard-v2.md) for Memory Command Center surfaces.
+Canonical brand policy artifacts: BRAND-RULES-cli-v1.md for terminal/API surfaces and BRAND-RULES-dashboard-v2.md for Memory Command Center surfaces. (Both files are pending creation; route to `docs/archive/allura/governance/` when authored. Until then, brand rules are defined in [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules).)
 
 ### 3.5 Memory API
 
@@ -459,7 +486,7 @@ Architecture note: Previous dashboard surfaces (ports 3100, 3334, 6420) are refe
 - [BLUEPRINT.md](./BLUEPRINT.md) — Core data model, API surface, execution rules
 - [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) — Field-level definitions
 - [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) — AD-## and RK-## entries
-- [TEAM-RAM-BMAD-INTEGRATION.md](./TEAM-RAM-BMAD-INTEGRATION.md) — Team RAM, BMAD, and Allura Brain operating contract
+- [TEAM-RAM-INTEGRATION.md](../archive/bmad-legacy/TEAM-RAM-INTEGRATION.md) — Team RAM, BMAD, and Allura Brain operating contract (archived)
 - `.opencode/skills/allura-memory-skill/` — memory workflow rules
 - `.opencode/skills/memory-client/` — default retrieval behavior
 - `.opencode/skills/mcp-docker-memory-system/` — packaged MCP server discovery/configuration guidance

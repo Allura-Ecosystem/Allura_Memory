@@ -79,6 +79,27 @@ export interface PolicyContext {
 
   /** Validation receipts collected before handoff, Done, commit, push, deploy, or release */
   validationReceipts?: ValidationReceipt[];
+
+  /** Retrieval-layer health evidence used by POL-RET-001 */
+  retrievalIntegrity?: {
+    graphHealthy: boolean;
+    graphFresh: boolean;
+    episodicFresh: boolean;
+    claim?: "healthy" | "stale" | "unknown";
+  };
+
+  /** Promotion read-after-write evidence used by POL-RET-002 */
+  promotionRoundtrip?: {
+    memoryGetPassed: boolean;
+    memorySearchPassed: boolean;
+  };
+
+  /** Writer/reader schema parity evidence used by POL-RET-003 */
+  schemaParity?: {
+    writerSchemaChanged: boolean;
+    readerCoveragePassed: boolean;
+    liveRoundtripPassed: boolean;
+  };
   
   /** Additional runtime context */
   [key: string]: unknown;
@@ -835,6 +856,58 @@ export const POLICY_VALIDATION_BEFORE_DONE: Policy = {
 policyRegistry.register(POLICY_VALIDATION_BEFORE_DONE);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POL-RET-001..003: RETRIEVAL INTEGRITY GATES
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const POLICY_RETRIEVAL_CLAIM_PRECISION: Policy = {
+  id: "POL-RET-001",
+  description: "Graph freshness claims must match retrieval-layer evidence",
+  condition: (_claims, context) => {
+    const evidence = context.retrievalIntegrity;
+    if (!evidence || !evidence.claim || evidence.claim === "unknown") {
+      return true;
+    }
+    return evidence.claim === "healthy"
+      ? evidence.graphHealthy && evidence.graphFresh
+      : !evidence.graphFresh;
+  },
+  violation: "Retrieval freshness claim contradicts graph health or freshness evidence.",
+  severity: "high",
+};
+
+export const POLICY_PROMOTION_ROUNDTRIP: Policy = {
+  id: "POL-RET-002",
+  description: "Semantic promotion requires successful get and search read-after-write checks before Done",
+  condition: (_claims, context) => {
+    const evidence = context.promotionRoundtrip;
+    if (!evidence) {
+      return true;
+    }
+    return evidence.memoryGetPassed && evidence.memorySearchPassed;
+  },
+  violation: "Semantic promotion lacks a successful memory_get and memory_search round-trip.",
+  severity: "critical",
+};
+
+export const POLICY_READER_WRITER_SCHEMA_PARITY: Policy = {
+  id: "POL-RET-003",
+  description: "Writer schema changes require reader coverage and a live retrieval round-trip",
+  condition: (_claims, context) => {
+    const evidence = context.schemaParity;
+    if (!evidence || !evidence.writerSchemaChanged) {
+      return true;
+    }
+    return evidence.readerCoveragePassed && evidence.liveRoundtripPassed;
+  },
+  violation: "Writer schema changed without reader coverage and a live retrieval round-trip.",
+  severity: "critical",
+};
+
+policyRegistry.register(POLICY_RETRIEVAL_CLAIM_PRECISION);
+policyRegistry.register(POLICY_PROMOTION_ROUNDTRIP);
+policyRegistry.register(POLICY_READER_WRITER_SCHEMA_PARITY);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // POL-EMAIL-001..005: EXTERNAL EMAIL ZERO-TRUST GATES
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1020,6 +1093,9 @@ export const DEFAULT_POLICIES: Policy[] = [
   POLICY_INFRASTRUCTURE_TARGET_LOCK,
   POLICY_PROJECT_MANIFEST_REQUIRED,
   POLICY_VALIDATION_BEFORE_DONE,
+  POLICY_RETRIEVAL_CLAIM_PRECISION,
+  POLICY_PROMOTION_ROUNDTRIP,
+  POLICY_READER_WRITER_SCHEMA_PARITY,
   POLICY_EMAIL_INSTRUCTION_BLOCKER,
   POLICY_EMAIL_ACTION_APPROVAL_GATE,
   POLICY_HIGH_RISK_EMAIL_QUARANTINE,

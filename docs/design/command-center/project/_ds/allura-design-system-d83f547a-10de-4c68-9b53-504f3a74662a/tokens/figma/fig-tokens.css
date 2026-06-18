@@ -1,0 +1,47 @@
+/* Generated from Figma Variables. First mode = :root default.
+   FLOAT tokens are unitless — multiply by 1px in calc() where a length is needed. */
+
+:root {
+  --accent-blue: rgb(29,78,216); /* @kind color */
+  --accent-gold: rgb(200,155,60); /* @kind color */
+  --accent-green: rgb(21,122,68); /* @kind color */
+  --accent-orange: rgb(255,90,46); /* @kind color */
+  --bg-active-nav: rgb(234,228,217); /* @kind color */
+  --bg-canvas: rgb(245,241,230); /* @kind color */
+  --bg-surface-raised: rgb(240,235,225); /* @kind color */
+  --bg-surface: rgb(255,255,255); /* @kind color */
+  --border-default: rgb(229,224,213); /* @kind color */
+  --color-blue: rgb(29,78,216); /* @kind color */
+  --color-charcoal: rgb(17,24,39); /* @kind color */
+  --color-cream: rgb(245,241,230); /* @kind color */
+  --color-gold: rgb(200,155,60); /* @kind color */
+  --color-green: rgb(21,122,68); /* @kind color */
+  --color-grey100: rgb(240,235,225); /* @kind color */
+  --color-grey200: rgb(229,224,213); /* @kind color */
+  --color-grey400: rgb(156,163,175); /* @kind color */
+  --color-grey500: rgb(107,114,128); /* @kind color */
+  --color-orange: rgb(255,90,46); /* @kind color */
+  --color-white: rgb(255,255,255); /* @kind color */
+  --icon-active: rgb(29,78,216); /* @kind color */
+  --icon-inactive: rgb(156,163,175); /* @kind color */
+  --radius-full: 999;
+  --radius-lg: 12;
+  --radius-md: 8;
+  --radius-sm: 4;
+  --radius-xl: 16;
+  --spacing-0: 0;
+  --spacing-10: 40;
+  --spacing-12: 48;
+  --spacing-16: 64;
+  --spacing-1: 4;
+  --spacing-2: 8;
+  --spacing-3: 12;
+  --spacing-4: 16;
+  --spacing-5: 20;
+  --spacing-6: 24;
+  --spacing-8: 32;
+  --text-brand-blue: rgb(29,78,216); /* @kind color */
+  --text-inverse: rgb(255,255,255); /* @kind color */
+  --text-primary: rgb(17,24,39); /* @kind color */
+  --text-secondary: rgb(107,114,128); /* @kind color */
+}

@@ -555,11 +555,13 @@ describe("Teams page — operational state mapping (Task 8)", () => {
     expect(surface.data?.totalAgents).toBe(2)
   })
 
-  it("maps a zero-events snapshot to empty", () => {
-    const noActivity: TeamsSnapshot = { ...MOCK_TEAMS, totalEvents24h: 0 }
+  it("maps a no-workspaces snapshot to empty", () => {
+    // New contract: a team surface is empty when the org has no workspaces yet
+    // (not merely when there is no 24h activity).
+    const noWorkspaces: TeamsSnapshot = { groupId: GROUP_ID, teams: [], totalAgents: 0, totalEvents24h: 0 }
     const outcome: SourceOutcome<TeamsSnapshot> = {
       ok: true,
-      data: noActivity,
+      data: noWorkspaces,
       fetchedAt: new Date().toISOString(),
     }
     const surface = resolveOperationalSurface({

@@ -7,12 +7,24 @@ if (typeof window !== "undefined") {
 
 import { getPool } from "@/lib/postgres/connection"
 import { isConnectionError } from "@/lib/operational-state/utils/error-classifier"
-import { TEAM_RAM_AGENTS } from "./execution-view.types"
+import { listTenantAgents } from "@/lib/agents/tenant-roster"
 import type {
   AgentState,
   AgentStatus,
   ExecutionOverview,
   RunSummary,
+  TimelineBucket,
+} from "./execution-view.types"
+
+// Re-export types so existing server-side importers keep working.
+// NOTE: "use server" modules may NOT export non-async values directly.
+// Server-side callers that need TEAM_RAM_AGENTS should import from "./execution-view.types".
+export type {
+  AgentState,
+  AgentStatus,
+  ExecutionOverview,
+  RunSummary,
+  TeamRamAgent,
   TimelineBucket,
 } from "./execution-view.types"
 
@@ -30,24 +42,14 @@ function safeIso(value: Date | string | null | undefined): string | null {
  * getExecutionOverview
  *
  * Fetches the live multi-agent execution state for the given group_id.
- * Returns all Team RAM agents with their current status, the 30-minute
- * activity timeline, and the set of active runs.
+ * Agent roster is derived from mcp_tokens (DB-backed) — no hardcoded list.
+ * Falls back to empty roster when DB is unreachable (honest empty, not fabricated).
  */
 export async function getExecutionOverview(group_id: string): Promise<ExecutionOverview> {
   const fetchedAt = new Date().toISOString()
 
-  const offline: ExecutionOverview = {
-    agents: TEAM_RAM_AGENTS.map((agentId) => ({
-      agentId,
-      state: "idle",
-      activeRunId: null,
-      activeRunName: null,
-      currentStep: null,
-      totalSteps: null,
-      elapsedMs: null,
-      lastEventType: null,
-      lastEventAt: null,
-    })),
+  const emptyOffline: ExecutionOverview = {
+    agents: [],
     timeline: [],
     activeRuns: [],
     fetchedAt,
@@ -58,11 +60,21 @@ export async function getExecutionOverview(group_id: string): Promise<ExecutionO
   try {
     pool = getPool()
   } catch {
-    return offline
+    return emptyOffline
   }
 
   try {
     const now = new Date()
+
+    // ── 0. Load live agent roster from mcp_tokens ───────────────────────────
+    let tenantAgents: Awaited<ReturnType<typeof listTenantAgents>> = []
+    try {
+      tenantAgents = await listTenantAgents(pool, group_id)
+    } catch {
+      // If mcp_tokens table doesn't exist yet, proceed with empty roster
+    }
+
+    const agentIds = tenantAgents.map((a) => a.name.toLowerCase())
 
     // ── 1. Active runs (running | paused | blocked status) ─────────────────
     const activeRunsResult = await pool.query<{
@@ -109,7 +121,6 @@ export async function getExecutionOverview(group_id: string): Promise<ExecutionO
     >()
     for (const row of activeRunsResult.rows) {
       if (row.actor_id) {
-        // actor_id may be the full agent name — normalize to lowercase
         runByActor.set(row.actor_id.toLowerCase(), row)
       }
     }
@@ -144,15 +155,21 @@ export async function getExecutionOverview(group_id: string): Promise<ExecutionO
       }
     }
 
-    // Build timeline buckets: 30 per agent (one per minute)
+    // Build timeline buckets: 30 per agent (one per minute) — only for known agents
     const timelineMap = new Map<string, number[]>()
-    for (const agentId of TEAM_RAM_AGENTS) {
+    for (const agentId of agentIds) {
       timelineMap.set(agentId, new Array<number>(30).fill(0))
+    }
+    // Also include any agent that had recent events (even if not in mcp_tokens yet)
+    for (const row of recentEventsResult.rows) {
+      const key = row.agent_id.toLowerCase()
+      if (!timelineMap.has(key)) {
+        timelineMap.set(key, new Array<number>(30).fill(0))
+      }
     }
 
     for (const row of recentEventsResult.rows) {
       const key = row.agent_id.toLowerCase()
-      if (!timelineMap.has(key)) continue
       const eventTime = new Date(row.created_at).getTime()
       const offsetMs = eventTime - windowStart.getTime()
       const minuteOffset = Math.min(29, Math.floor(offsetMs / 60000))
@@ -171,8 +188,15 @@ export async function getExecutionOverview(group_id: string): Promise<ExecutionO
       }
     }
 
-    // ── 3. Build AgentStatus for each Team RAM agent ────────────────────────
-    const agents: AgentStatus[] = TEAM_RAM_AGENTS.map((agentId) => {
+    // ── 3. Build AgentStatus for each agent in roster ──────────────────────
+    // Include agents from mcp_tokens + any that have recent events
+    const allAgentIds = new Set([
+      ...agentIds,
+      ...Array.from(latestByAgent.keys()),
+      ...Array.from(runByActor.keys()),
+    ])
+
+    const agents: AgentStatus[] = Array.from(allAgentIds).map((agentId) => {
       const run = runByActor.get(agentId) ?? null
       const latest = latestByAgent.get(agentId) ?? null
 
@@ -180,7 +204,6 @@ export async function getExecutionOverview(group_id: string): Promise<ExecutionO
       if (run) {
         state = run.status === "blocked" ? "blocked" : "active"
       } else if (latest) {
-        // If they had events in the last 5 min, consider active
         const lastEventMs = new Date(latest.createdAt).getTime()
         const fiveMinAgo = now.getTime() - 5 * 60 * 1000
         if (lastEventMs > fiveMinAgo) {
@@ -188,9 +211,7 @@ export async function getExecutionOverview(group_id: string): Promise<ExecutionO
         }
       }
 
-      // Extract step progress from state_json
       let currentStep: number | null = null
-      let totalSteps: number | null = null
       let elapsedMs: number | null = null
 
       if (run) {
@@ -198,17 +219,16 @@ export async function getExecutionOverview(group_id: string): Promise<ExecutionO
         if (typeof stateJson?.currentStepIndex === "number") {
           currentStep = stateJson.currentStepIndex
         }
-        // Total steps not stored in state_json directly; leave null
         elapsedMs = now.getTime() - new Date(run.started_at).getTime()
       }
 
       return {
-        agentId,
+        agentId: agentId as AgentStatus["agentId"],
         state,
         activeRunId: run?.id ?? null,
         activeRunName: run?.definition_name ?? null,
         currentStep,
-        totalSteps,
+        totalSteps: null,
         elapsedMs,
         lastEventType: latest?.eventType ?? null,
         lastEventAt: latest?.createdAt ?? null,
@@ -224,11 +244,11 @@ export async function getExecutionOverview(group_id: string): Promise<ExecutionO
     }
   } catch (err: unknown) {
     if (isConnectionError(err)) {
-      return { ...offline, fetchedAt }
+      return { ...emptyOffline, fetchedAt }
     }
     // Schema not yet migrated — return empty live state
     return {
-      agents: offline.agents,
+      agents: [],
       timeline: [],
       activeRuns: [],
       fetchedAt,

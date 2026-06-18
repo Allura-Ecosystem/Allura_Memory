@@ -1,0 +1,80 @@
+name: RuVector Readiness
+
+on:
+  push:
+    paths:
+      - "src/lib/ruvector/**"
+      - "packages/ruvector-governance/**"
+      - "docker/ruvector/**"
+      - "scripts/check-ruvector-readiness.ts"
+      - "scripts/ruvector-native-smoke.ts"
+      - "docs/allura/**"
+      - ".github/workflows/ruvector-readiness.yml"
+  pull_request:
+    paths:
+      - "src/lib/ruvector/**"
+      - "packages/ruvector-governance/**"
+      - "docker/ruvector/**"
+      - "scripts/check-ruvector-readiness.ts"
+      - "scripts/ruvector-native-smoke.ts"
+      - "docs/allura/**"
+      - ".github/workflows/ruvector-readiness.yml"
+  workflow_dispatch:
+    inputs:
+      require_native:
+        description: "Fail unless native RuVector and governance package artifacts exist"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  bridge-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Verify readiness claims and artifacts
+        env:
+          REQUIRE_RUVECTOR_NATIVE: ${{ inputs.require_native || 'false' }}
+        run: bun scripts/check-ruvector-readiness.ts
+      - name: Typecheck RuVector bridge contracts
+        run: bun run typecheck
+      - name: Run RuVector-focused tests
+        run: |
+          mapfile -t tests < <(find src/lib/ruvector -type f \( -name '*.test.ts' -o -name '*.test.tsx' \) | sort)
+          if [ "${#tests[@]}" -eq 0 ]; then
+            echo "No RuVector-focused tests found" >&2
+            exit 1
+          fi
+          bunx vitest run "${tests[@]}"
+
+  governance-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Build upstream package when present
+        env:
+          REQUIRE_RUVECTOR_NATIVE: ${{ inputs.require_native || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ ! -f packages/ruvector-governance/package.json ]; then
+            if [ "$REQUIRE_RUVECTOR_NATIVE" = "true" ]; then
+              echo "packages/ruvector-governance does not exist; upstream build claim blocked" >&2
+              exit 1
+            fi
+            echo "Upstream governance package is not implemented; build correctly remains parked."
+            exit 0
+          fi
+          cd packages/ruvector-governance
+          bun install --frozen-lockfile
+          bun test
+          bun run build
