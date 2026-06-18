@@ -1,11 +1,18 @@
+/**
+ * Execution view — shared constants and types.
+ *
+ * This module is intentionally NOT a "use server" file. Next.js only allows
+ * async functions to be exported from a "use server" module, so the runtime
+ * constant (TEAM_RAM_AGENTS) and the type definitions live here and are
+ * imported by both the server action (execution-view.ts) and the client
+ * component (execution-client.tsx).
+ *
+ * NOTE: TEAM_RAM_AGENTS is kept for backward-compat (used by existing tests and
+ * components). The live execution roster now comes from mcp_tokens (DB) via
+ * listTenantAgents — do not add new usages of TEAM_RAM_AGENTS for roster purposes.
+ */
+
 // ── Team RAM agent roster ────────────────────────────────────────────────────
-// This module is intentionally plain (no "use server") so it can be imported
-// by both server components/actions AND client components without violating the
-// Next.js rule that "use server" files may only export async functions.
-//
-// NOTE: TEAM_RAM_AGENTS is kept for backward-compat (used by existing tests and
-// components). The live execution roster now comes from mcp_tokens (DB). Do not
-// add new usages of TEAM_RAM_AGENTS for roster purposes — use listTenantAgents.
 
 export const TEAM_RAM_AGENTS = [
   "brooks",
@@ -27,7 +34,7 @@ export type TeamRamAgent = (typeof TEAM_RAM_AGENTS)[number]
 export type AgentState = "active" | "idle" | "blocked"
 
 export interface AgentStatus {
-  /** Agent id — widened to string so DB-derived agents are supported */
+  /** Agent id — widened to string so DB-derived (mcp_tokens) agents are supported */
   agentId: string
   state: AgentState
   /** run ID if currently active */

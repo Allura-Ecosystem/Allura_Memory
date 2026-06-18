@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
         }),
         readTransaction(async (tx) => {
           return await tx.run(
-            `MATCH (source)-[relationship]-(target)
+            `MATCH (source)-[relationship]->(target)
              WHERE source.group_id = $groupId AND target.group_id = $groupId
              RETURN count(relationship) AS total`,
             { groupId }
@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
     const [countResult, result] = await Promise.all([
       readTransaction(async (tx) => {
         return await tx.run(
-          `MATCH (source)-[relationship]-(target)
+          `MATCH (source)-[relationship]->(target)
            WHERE source.group_id = $groupId AND target.group_id = $groupId
            RETURN count(relationship) AS total`,
           { groupId }
@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
       }),
       readTransaction(async (tx) => {
         return await tx.run(
-          `MATCH (source)-[relationship]-(target)
+          `MATCH (source)-[relationship]->(target)
            WHERE source.group_id = $groupId AND target.group_id = $groupId
            RETURN source, relationship, target
            LIMIT 150`,

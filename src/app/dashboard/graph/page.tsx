@@ -47,13 +47,25 @@ interface GraphApiResponse {
 
 // ─── Layout helpers ───────────────────────────────────────────────────────────
 
+/** Drop any nodes/edges sharing an id so React Flow keys stay unique. */
+function dedupeById<T extends { id: string }>(items: T[]): T[] {
+  const seen = new Set<string>()
+  const out: T[] = []
+  for (const item of items) {
+    if (seen.has(item.id)) continue
+    seen.add(item.id)
+    out.push(item)
+  }
+  return out
+}
+
 /** Arrange nodes in a simple grid so they're spaced out by default. */
 function layoutNodes(apiNodes: ApiNode[]): Node<EntityNodeData>[] {
   const COLS = 4
   const COL_W = 300
   const ROW_H = 220
 
-  return apiNodes.map((n, i) => {
+  return dedupeById(apiNodes).map((n, i) => {
     const col = i % COLS
     const row = Math.floor(i / COLS)
     return {
@@ -86,7 +98,7 @@ function normalizeType(raw: string): EntityType {
 }
 
 function buildEdges(apiEdges: ApiEdge[]): Edge[] {
-  return apiEdges.map((e) => ({
+  return dedupeById(apiEdges).map((e) => ({
     id: e.id,
     source: e.source,
     target: e.target,
@@ -331,7 +343,7 @@ function KnowledgeGraphPage() {
   const showEmpty = !loading && !error && nodes.length === 0
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", fontFamily: '"IBM Plex Sans", sans-serif' }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100dvh - 88px)", minHeight: "480px", fontFamily: '"IBM Plex Sans", sans-serif' }}>
 
       {/* Page header */}
       <div style={{
@@ -420,10 +432,10 @@ function KnowledgeGraphPage() {
       </div>
 
       {/* Graph canvas + detail panel */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
+      <div style={{ flex: 1, minHeight: 0, display: "flex", overflow: "hidden", position: "relative" }}>
 
         {/* React Flow canvas */}
-        <div style={{ flex: 1, position: "relative" }}>
+        <div style={{ flex: 1, minWidth: 0, minHeight: 0, height: "100%", position: "relative" }}>
           {(showLoading || showError || showEmpty) ? (
             <GraphCanvas
               loading={showLoading}

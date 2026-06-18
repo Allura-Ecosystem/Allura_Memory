@@ -522,7 +522,7 @@ export default function SearchPageClient(): React.ReactElement {
             alignItems: "center",
             gap: "12px",
             padding: "14px 18px",
-            background: "rgba(255, 255, 255, 0.72)",
+            background: "var(--allura-surface-white)",
             border: `1px solid ${query ? "var(--allura-blue)" : "var(--dashboard-border)"}`,
             borderRadius: "var(--allura-r-lg, 12px)",
             boxShadow: query

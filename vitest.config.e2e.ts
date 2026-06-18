@@ -33,6 +33,8 @@ export default defineConfig({
       "src/lib/process-engine/checkpoint-continuation.integration.test.ts",
       // Allura Hosted — MCP gateway full round-trip (live PG/Neo4j/ruvector)
       "src/__tests__/hosted-mcp.e2e.test.ts",
+      // Task B1 — 10-point acceptance gate against live PG+Neo4j (no mocks)
+      "src/__tests__/acceptance-gate.e2e.test.ts",
     ],
     testTimeout: 60_000,
     hookTimeout: 30_000,
