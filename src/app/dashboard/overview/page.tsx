@@ -3,6 +3,8 @@ import { headers } from "next/headers"
 import { getPool } from "@/lib/postgres/connection"
 import { isConnectionError } from "@/lib/operational-state/utils/error-classifier"
 import { isPoolHealthy } from "@/lib/postgres/connection"
+import { isDriverHealthy } from "@/lib/neo4j/connection"
+import { brainClient } from "@/lib/brain-client"
 import { validateGroupId, GroupIdValidationError } from "@/lib/validation/group-id"
 
 export const metadata: Metadata = {
@@ -109,6 +111,90 @@ async function fetchOverview(groupId: string): Promise<OverviewData> {
   ])
 
   return { memories, curatorQueue, connectedAgents, workspaces, pgHealthy, fetchedAt }
+}
+
+// ── Recent receipts (live events) ───────────────────────────────────────────────
+
+interface ReceiptEvent {
+  id: string
+  eventType: string
+  agentId: string
+  status: string
+  createdAt: string
+}
+
+function relativeTime(iso: string): string {
+  const sec = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000))
+  if (sec < 60) return `${sec}s ago`
+  const min = Math.round(sec / 60)
+  if (min < 60) return `${min}m ago`
+  const hr = Math.round(min / 60)
+  if (hr < 24) return `${hr}h ago`
+  return `${Math.round(hr / 24)}d ago`
+}
+
+async function fetchRecentReceipts(groupId: string, pgHealthy: boolean): Promise<ReceiptEvent[] | null> {
+  if (!pgHealthy) return null
+  let pool: ReturnType<typeof getPool>
+  try {
+    pool = getPool()
+  } catch {
+    return null
+  }
+  try {
+    const res = await pool.query<{
+      id: string
+      event_type: string
+      agent_id: string
+      status: string
+      created_at: string
+    }>(
+      `SELECT id::text, event_type, agent_id, status, created_at
+       FROM events WHERE group_id = $1 ORDER BY created_at DESC LIMIT 5`,
+      [groupId],
+    )
+    return res.rows.map((r) => ({
+      id: r.id,
+      eventType: r.event_type,
+      agentId: r.agent_id,
+      status: r.status,
+      createdAt: r.created_at,
+    }))
+  } catch (err) {
+    if (isConnectionError(err)) return null
+    return []
+  }
+}
+
+// ── Subsystem probes (bounded; honest "unknown" on timeout/error) ───────────────
+
+type ProbeState = "up" | "down" | "unknown"
+
+async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | "timeout"> {
+  return Promise.race([
+    p,
+    new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), ms)),
+  ])
+}
+
+async function probeNeo4j(): Promise<ProbeState> {
+  try {
+    const r = await withTimeout(isDriverHealthy(), 2500)
+    if (r === "timeout") return "unknown"
+    return r ? "up" : "down"
+  } catch {
+    return "unknown"
+  }
+}
+
+async function probeBrain(groupId: string): Promise<ProbeState> {
+  try {
+    const r = await withTimeout(brainClient.healthReport(groupId), 2500)
+    if (r === "timeout") return "unknown"
+    return r.overall_status === "unhealthy" ? "down" : "up"
+  } catch {
+    return "unknown"
+  }
 }
 
 // ── KPI card ──────────────────────────────────────────────────────────────────
@@ -307,6 +393,23 @@ export default async function OverviewPage() {
   const data = await fetchOverview(groupId)
   const pgUp = data.pgHealthy
 
+  // Live subsystem probes + recent receipts (all honest — never faked).
+  const [neo4jState, brainState, receiptEvents] = await Promise.all([
+    probeNeo4j(),
+    probeBrain(groupId),
+    fetchRecentReceipts(groupId, pgUp),
+  ])
+
+  function probeRow(name: string, meta: string, state: ProbeState): HealthRow {
+    if (state === "up") {
+      return { name, state: "Healthy", meta, dot: "var(--c-green)", ring: "rgba(41,143,87,0.15)" }
+    }
+    if (state === "down") {
+      return { name, state: "Unreachable", meta: "connection failed", dot: "var(--c-red)", ring: "rgba(191,51,46,0.15)" }
+    }
+    return { name, state: "Unknown", meta, dot: "var(--c-muted)", ring: "rgba(107,110,115,0.15)" }
+  }
+
   // Build health rows from honest state — never faked.
   const healthRows: HealthRow[] = [
     {
@@ -316,20 +419,8 @@ export default async function OverviewPage() {
       dot: pgUp ? "var(--c-green)" : "var(--c-red)",
       ring: pgUp ? "rgba(41,143,87,0.15)" : "rgba(191,51,46,0.15)",
     },
-    {
-      name: "Knowledge graph",
-      state: "Checking…",
-      meta: "neo4j:7687",
-      dot: "var(--c-gold)",
-      ring: "rgba(200,155,60,0.15)",
-    },
-    {
-      name: "Allura Brain (MCP)",
-      state: "Checking…",
-      meta: "mcp:5888",
-      dot: "var(--c-gold)",
-      ring: "rgba(200,155,60,0.15)",
-    },
+    probeRow("Knowledge graph", "neo4j:7687", neo4jState),
+    probeRow("Allura Brain (MCP)", "mcp:5888", brainState),
     {
       name: "Curator pipeline",
       state: pgUp ? "Ready" : "Paused",
@@ -339,42 +430,31 @@ export default async function OverviewPage() {
     },
   ]
 
-  // Static recent receipts — placeholder until /api/events is wired.
-  const recentReceipts: ReceiptRow[] = [
-    {
-      text: "Memory store connected",
-      meta: `group:${groupId} · just now`,
-      soft: "var(--c-blue-soft)",
-      color: "var(--c-blue)",
-      icon: (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
-      ),
-    },
-    {
-      text: `${data.memories.value ?? 0} memories in store`,
-      meta: `source:postgres · ${groupId}`,
-      soft: "var(--c-orange-soft)",
-      color: "var(--c-orange)",
-      icon: (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
-      ),
-    },
-    {
-      text: `${data.curatorQueue.value ?? 0} memories waiting for approval`,
-      meta: `curator:queue · ${groupId}`,
-      soft: "var(--c-gold-soft)",
-      color: "var(--c-gold)",
-      icon: (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-        </svg>
-      ),
-    },
-  ]
+  // Recent receipts — live events for this group (honest empty / degraded states).
+  const receiptIcon = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+    </svg>
+  )
+  function receiptTone(status: string): { soft: string; color: string } {
+    if (status === "failed") return { soft: "var(--c-red-soft)", color: "var(--c-red)" }
+    if (status === "completed") return { soft: "var(--c-green-soft)", color: "var(--c-green)" }
+    return { soft: "var(--c-blue-soft)", color: "var(--c-blue)" }
+  }
+  const recentReceipts: ReceiptRow[] =
+    receiptEvents === null
+      ? []
+      : receiptEvents.map((e) => {
+          const tone = receiptTone(e.status)
+          return {
+            text: `${e.eventType} · ${e.status}`,
+            meta: `${e.agentId} · ${relativeTime(e.createdAt)}`,
+            soft: tone.soft,
+            color: tone.color,
+            icon: receiptIcon,
+          }
+        })
+  const receiptsDegraded = receiptEvents === null
 
   return (
     <div
@@ -617,9 +697,17 @@ export default async function OverviewPage() {
             </a>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
-            {recentReceipts.map((row, i) => (
-              <RecentReceipt key={i} row={row} />
-            ))}
+            {receiptsDegraded ? (
+              <p style={{ fontSize: 13, color: "var(--c-muted)", margin: 0 }}>
+                Memory store not reachable — receipts unavailable.
+              </p>
+            ) : recentReceipts.length === 0 ? (
+              <p style={{ fontSize: 13, color: "var(--c-muted)", margin: 0 }}>
+                No activity yet. Receipts appear here as your agents work.
+              </p>
+            ) : (
+              recentReceipts.map((row, i) => <RecentReceipt key={i} row={row} />)
+            )}
           </div>
         </div>
       </div>

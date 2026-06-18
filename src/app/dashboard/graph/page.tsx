@@ -45,30 +45,6 @@ interface GraphApiResponse {
   node_count?: number
 }
 
-// ─── Placeholder data (shown when API returns empty graph) ────────────────────
-// Marked clearly as placeholder. Matches the wireframe layout.
-
-const PLACEHOLDER_NODES: ApiNode[] = [
-  { id: "p-sarah",    label: "Sarah Mitchell",   type: "person",  metadata: { description: "VP of Engineering",               email: "sarah.m@meridian.io",      org: "Meridian Systems" } },
-  { id: "p-james",    label: "James Chen",       type: "person",  metadata: { description: "Solutions Architect",              email: "j.chen@meridian.io",       org: "Meridian Systems" } },
-  { id: "p-aisha",    label: "Aisha Rahman",     type: "person",  metadata: { description: "Data Privacy Officer",             email: "a.rahman@vaultkeep.com",   org: "VaultKeep Security" } },
-  { id: "o-meridian", label: "Meridian Systems", type: "org",     metadata: { description: "Cloud Infrastructure Vendor",      email: "contracts@meridian.io" } },
-  { id: "o-vault",    label: "VaultKeep Security", type: "org",   metadata: { description: "Compliance & Audit Partner",       email: "partnerships@vaultkeep.com" } },
-  { id: "m-contract", label: "Contract Renewal", type: "memory",  metadata: { description: "Annual renewal discussions noted" } },
-  { id: "a-brooks",   label: "brooks",           type: "agent",   metadata: { description: "Architect + Orchestrator" } },
-  { id: "proj-allura", label: "allura-memory",   type: "project", metadata: { description: "Dual-DB memory engine" } },
-]
-
-const PLACEHOLDER_EDGES: ApiEdge[] = [
-  { id: "e1", source: "p-sarah",    target: "o-meridian",  label: "WORKS_AT" },
-  { id: "e2", source: "p-james",    target: "o-meridian",  label: "WORKS_AT" },
-  { id: "e3", source: "p-aisha",    target: "o-vault",     label: "WORKS_AT" },
-  { id: "e4", source: "o-meridian", target: "m-contract",  label: "REFERENCED_IN" },
-  { id: "e5", source: "p-sarah",    target: "m-contract",  label: "AUTHORED" },
-  { id: "e6", source: "a-brooks",   target: "proj-allura", label: "OWNS" },
-  { id: "e7", source: "o-vault",    target: "proj-allura", label: "AUDITS" },
-]
-
 // ─── Layout helpers ───────────────────────────────────────────────────────────
 
 /** Arrange nodes in a simple grid so they're spaced out by default. */
@@ -147,13 +123,11 @@ const NODE_TYPES = { entity: NodeCard }
 function GraphCanvas({
   loading,
   error,
-  degraded,
-  isPlaceholder,
+  empty,
 }: {
   loading: boolean
   error: string | null
-  degraded: boolean
-  isPlaceholder: boolean
+  empty: boolean
 }) {
   if (loading) {
     return (
@@ -206,6 +180,38 @@ function GraphCanvas({
     )
   }
 
+  if (empty) {
+    return (
+      <div style={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        gap: "12px",
+        color: "var(--allura-gray-500)",
+        fontFamily: '"IBM Plex Sans", sans-serif',
+        padding: "32px",
+        textAlign: "center",
+      }}>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--allura-blue)" strokeWidth="2" strokeLinecap="round" style={{ opacity: .5 }}>
+          <circle cx="12" cy="12" r="3" />
+          <circle cx="4" cy="6" r="2" /><circle cx="20" cy="6" r="2" />
+          <circle cx="4" cy="18" r="2" /><circle cx="20" cy="18" r="2" />
+          <path d="M9.5 10.5 5.5 7.5M14.5 10.5l4-3M9.5 13.5 5.5 16.5M14.5 13.5l4 3" />
+        </svg>
+        <div>
+          <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--allura-charcoal)", margin: "0 0 4px" }}>
+            No graph yet
+          </p>
+          <p style={{ fontSize: "13px", margin: "0", maxWidth: "360px" }}>
+            Nothing is in the knowledge graph for this group yet. Approved memories show up here as connected nodes.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return null
 }
 
@@ -218,7 +224,6 @@ function KnowledgeGraphPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [degraded, setDegraded] = useState(false)
-  const [isPlaceholder, setIsPlaceholder] = useState(false)
   const [nodeCount, setNodeCount] = useState(0)
   const [edgeCount, setEdgeCount] = useState(0)
 
@@ -250,30 +255,21 @@ function KnowledgeGraphPage() {
         const rawNodes: ApiNode[] = data.nodes ?? []
         const rawEdges: ApiEdge[] = data.edges ?? []
 
-        // Use placeholder when graph is truly empty (Neo4j not seeded yet)
-        const usePlaceholder = rawNodes.length === 0
-        const sourceNodes = usePlaceholder ? PLACEHOLDER_NODES : rawNodes
-        const sourceEdges = usePlaceholder ? PLACEHOLDER_EDGES : rawEdges
-
-        if (usePlaceholder) setIsPlaceholder(true)
-
-        const flowNodes = layoutNodes(sourceNodes)
-        const flowEdges = buildEdges(sourceEdges)
+        // Honest empty state when Neo4j has nothing for this group — never fabricate.
+        const flowNodes = layoutNodes(rawNodes)
+        const flowEdges = buildEdges(rawEdges)
         const nodesWithCounts = countConnections(flowNodes, flowEdges)
 
         setNodes(nodesWithCounts)
         setEdges(flowEdges)
-        setNodeCount(data.node_count ?? sourceNodes.length)
-        setEdgeCount(data.total_edges ?? sourceEdges.length)
+        setNodeCount(data.node_count ?? rawNodes.length)
+        setEdgeCount(data.total_edges ?? rawEdges.length)
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load graph")
-          // Still show placeholder on error so the page isn't blank
-          const flowNodes = layoutNodes(PLACEHOLDER_NODES)
-          const flowEdges = buildEdges(PLACEHOLDER_EDGES)
-          setNodes(countConnections(flowNodes, flowEdges))
-          setEdges(flowEdges)
-          setIsPlaceholder(true)
+          // Honest empty canvas on error — do not fabricate nodes.
+          setNodes([])
+          setEdges([])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -332,6 +328,7 @@ function KnowledgeGraphPage() {
 
   const showLoading = loading
   const showError = !loading && !!error && nodes.length === 0
+  const showEmpty = !loading && !error && nodes.length === 0
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", fontFamily: '"IBM Plex Sans", sans-serif' }}>
@@ -396,24 +393,7 @@ function KnowledgeGraphPage() {
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
             <StatChip label="Nodes" value={nodeCount} />
             <StatChip label="Edges" value={edgeCount} />
-            {isPlaceholder && (
-              <span style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                fontSize: "11px",
-                fontWeight: 600,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: "var(--allura-gold)",
-                background: "rgba(217,154,23,.1)",
-                padding: "4px 10px",
-                borderRadius: "999px",
-              }}>
-                Placeholder data
-              </span>
-            )}
-            {degraded && !isPlaceholder && (
+            {degraded && (
               <span style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -444,12 +424,11 @@ function KnowledgeGraphPage() {
 
         {/* React Flow canvas */}
         <div style={{ flex: 1, position: "relative" }}>
-          {(showLoading || showError) ? (
+          {(showLoading || showError || showEmpty) ? (
             <GraphCanvas
               loading={showLoading}
               error={showError ? error : null}
-              degraded={degraded}
-              isPlaceholder={isPlaceholder}
+              empty={showEmpty}
             />
           ) : (
             <ReactFlow

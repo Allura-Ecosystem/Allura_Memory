@@ -36,6 +36,8 @@ export default defineConfig({
       "src/lib/memory/__tests__/approval-audit.test.ts",
       "src/lib/memory/traceable-memory.test.ts",
       "src/lib/session/**/*.test.ts",
+      // Command Center header live-state source (mocked pool — pure logic)
+      "src/lib/operational-state/sources/header-source.test.ts",
       "src/lib/validation/encoding-validator.test.ts",
       "src/lib/validation/group-id.test.ts",
       "src/lib/mcp/enforced-client.test.ts",

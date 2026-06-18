@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronDown, Clock, FileText } from "lucide-react"
+import { Clock, FileText } from "lucide-react"
 import { useState } from "react"
 
 interface DashboardHeaderProps {
@@ -8,7 +8,7 @@ interface DashboardHeaderProps {
   orgName?: string
   /** Name of the live data source (e.g. "allura-system") */
   sourceName?: string
-  /** Freshness label (e.g. "just now" or "12s ago") */
+  /** Freshness label (e.g. "last write 12s ago") */
   sourceFresh?: string
   /** How fresh the source is: "live" | "stale" | "unknown" */
   sourceFreshness?: "live" | "stale" | "unknown"
@@ -16,18 +16,13 @@ interface DashboardHeaderProps {
   receiptCount?: number
 }
 
-type DataState = "Live" | "Loading" | "Empty" | "Error"
-
-const DATA_STATES: DataState[] = ["Live", "Loading", "Empty", "Error"]
-
 export function DashboardHeader({
   orgName = "allura-system",
   sourceName = "allura-system",
-  sourceFresh = "just now",
-  sourceFreshness = "live",
+  sourceFresh = "no data yet",
+  sourceFreshness = "unknown",
   receiptCount = 0,
 }: DashboardHeaderProps): React.ReactElement {
-  const [activeDataState, setActiveDataState] = useState<DataState>("Live")
   const [activityOpen, setActivityOpen] = useState(false)
 
   const freshColor =
@@ -36,6 +31,8 @@ export function DashboardHeader({
       : sourceFreshness === "stale"
       ? "var(--c-orange)"
       : "var(--c-muted)"
+
+  const orgDotColor = sourceFreshness === "unknown" ? "var(--c-muted)" : "var(--c-green)"
 
   return (
     <header
@@ -51,7 +48,7 @@ export function DashboardHeader({
         fontFamily: "var(--sans)",
       }}
     >
-      {/* Organization switcher */}
+      {/* Active organization (tenant group_id — server-injected, not user-switchable) */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span
           style={{
@@ -64,7 +61,7 @@ export function DashboardHeader({
         >
           Organization
         </span>
-        <button
+        <div
           style={{
             display: "flex",
             alignItems: "center",
@@ -74,29 +71,25 @@ export function DashboardHeader({
             background: "var(--c-bg)",
             border: "1px solid var(--c-border)",
             borderRadius: 9,
-            cursor: "pointer",
             fontFamily: "var(--sans)",
             fontSize: 13,
             fontWeight: 600,
             color: "var(--c-ink)",
           }}
-          aria-label={`Switch organization — current: ${orgName}`}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f1ece0")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "var(--c-bg)")}
+          title={`Active organization: ${orgName}`}
         >
           <span
             style={{
               width: 8,
               height: 8,
               borderRadius: "50%",
-              background: "var(--c-green)",
+              background: orgDotColor,
               flexShrink: 0,
             }}
             aria-hidden="true"
           />
           {orgName}
-          <ChevronDown size={13} style={{ color: "var(--c-muted)" }} aria-hidden="true" />
-        </button>
+        </div>
       </div>
 
       {/* Source + freshness */}
@@ -120,59 +113,6 @@ export function DashboardHeader({
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />
-
-      {/* Data state switch */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          background: "var(--c-bg)",
-          border: "1px solid var(--c-border)",
-          borderRadius: 10,
-          padding: 3,
-        }}
-        role="group"
-        aria-label="Data state selector"
-      >
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-            color: "var(--c-muted)",
-            padding: "0 6px 0 8px",
-          }}
-        >
-          Data
-        </span>
-        {DATA_STATES.map((ds) => {
-          const active = activeDataState === ds
-          return (
-            <button
-              key={ds}
-              onClick={() => setActiveDataState(ds)}
-              title={`Switch to ${ds} state`}
-              style={{
-                height: 26,
-                padding: "0 10px",
-                border: "none",
-                borderRadius: 7,
-                cursor: "pointer",
-                fontFamily: "var(--sans)",
-                fontSize: 12,
-                fontWeight: 600,
-                background: active ? "var(--c-ink)" : "transparent",
-                color: active ? "#fff" : "var(--c-muted)",
-                transition: "background 0.12s, color 0.12s",
-              }}
-            >
-              {ds}
-            </button>
-          )
-        })}
-      </div>
 
       {/* Activity button */}
       <button
