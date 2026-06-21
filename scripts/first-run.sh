@@ -14,8 +14,7 @@
 # `docker ... create` is guarded so an already-existing resource is a no-op.
 #
 # Usage:
-#   bash scripts/first-run.sh            # dev stack (Dockerfile.dashboard, hot reload)
-#   PROD=1 bash scripts/first-run.sh     # prod stack (docker-compose.prod.yml overlay)
+#   bash scripts/first-run.sh            # brings up the Brain stack (postgres, neo4j, mcp)
 #
 # This script NEVER destroys data. It only CREATES network/volumes and runs
 # `up -d`. It does not call `down`, `rm`, `prune`, or any `-v` teardown.
@@ -74,24 +73,20 @@ for VOL in memory_postgres_data neo4j_data neo4j_logs; do
 done
 
 # ---- Step 3: bring the stack up --------------------------------------------
+# Base stack only (postgres, neo4j, neo4j-init, mcp). The web dashboard was
+# sunset 2026-06-20 (decision trace 279eaff2); the human surface is now the
+# curator CLI + Allura Brain MCP tools. --remove-orphans clears the old
+# dashboard container if it is still running from a previous boot.
 COMPOSE_FILES=(-f docker-compose.yml)
-if [[ "${PROD:-0}" == "1" ]]; then
-  echo "==> PROD mode: overlaying docker-compose.prod.yml (compiled dashboard)"
-  COMPOSE_FILES+=(-f docker-compose.prod.yml)
-  BUILD_FLAG=(--build)
-else
-  echo "==> DEV mode: hot-reload dashboard (set PROD=1 for compiled build)"
-  BUILD_FLAG=()
-fi
 
-echo "==> Starting stack: docker compose ${COMPOSE_FILES[*]} ${ENV_ARGS[*]} up -d --remove-orphans ${BUILD_FLAG[*]:-}"
-docker compose "${COMPOSE_FILES[@]}" "${ENV_ARGS[@]}" up -d --remove-orphans "${BUILD_FLAG[@]}"
+echo "==> Starting Brain stack: docker compose ${COMPOSE_FILES[*]} ${ENV_ARGS[*]} up -d --remove-orphans"
+docker compose "${COMPOSE_FILES[@]}" "${ENV_ARGS[@]}" up -d --remove-orphans
 
 # ---- Step 4: report ---------------------------------------------------------
 echo "==> Stack status:"
 docker compose "${COMPOSE_FILES[@]}" "${ENV_ARGS[@]}" ps
 
 echo ""
-echo "Done. Verify the dashboard once containers are healthy:"
-echo "    curl -f http://localhost:3100/api/health/live"
-echo "    open http://localhost:3100/dashboard"
+echo "Done. Verify the Brain stack once containers are healthy:"
+echo "    bun run brain:status"
+echo "    Allura Brain MCP listens on http://localhost:5888/mcp"
