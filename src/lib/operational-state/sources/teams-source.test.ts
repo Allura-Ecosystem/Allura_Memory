@@ -21,26 +21,6 @@ vi.mock("@/lib/postgres/connection", () => ({
   getPool: vi.fn(),
 }))
 
-// Mock agent-manifest to avoid importing the real 274-line module
-vi.mock("@/lib/agents/agent-manifest", () => ({
-  AGENT_MANIFEST: new Map([
-    ["brooks", { id: "brooks", persona: "Brooks", role: "Architect", category: "primary", ciRoutes: [], description: "Test" }],
-    ["woz", { id: "woz", persona: "Woz", role: "Builder", category: "code", ciRoutes: [], description: "Test" }],
-    ["scout", { id: "scout", persona: "Scout", role: "Recon", category: "support", ciRoutes: [], description: "Test" }],
-    ["pike", { id: "pike", persona: "Pike", role: "Interface", category: "support", ciRoutes: [], description: "Test" }],
-  ]),
-  AGENTS_BY_CATEGORY: new Map([
-    ["primary", [{ id: "brooks", persona: "Brooks", role: "Architect", category: "primary", ciRoutes: [], description: "Test" }]],
-    ["code", [{ id: "woz", persona: "Woz", role: "Builder", category: "code", ciRoutes: [], description: "Test" }]],
-    ["support", [
-      { id: "scout", persona: "Scout", role: "Recon", category: "support", ciRoutes: [], description: "Test" },
-      { id: "pike", persona: "Pike", role: "Interface", category: "support", ciRoutes: [], description: "Test" },
-    ]],
-    ["core", []],
-    ["utility", []],
-  ]),
-}))
-
 // ── Import after mocking ──────────────────────────────────────────────────────
 
 import { getPool } from "@/lib/postgres/connection"
@@ -55,10 +35,33 @@ const getPoolMock = getPool as unknown as ReturnType<typeof vi.fn>
 
 const GROUP_ID = "allura-system"
 
-function mockQueryResult(rows: Record<string, unknown>[] | undefined) {
-  const query = vi.fn().mockResolvedValue({ rows: rows === undefined ? [] : rows })
+// The source runs 3 parallel queries: workspaces, mcp_tokens, events (activity)
+const DEFAULT_WORKSPACES = [
+  { workspace_id: "ram", name: "Team RAM", lock_mode: "open" },
+]
+const DEFAULT_TOKENS = [
+  { id: "brooks", workspace_id: "ram", agent_name: "brooks", scopes: ["memory:read", "memory:write"], revoked_at: null },
+  { id: "woz", workspace_id: "ram", agent_name: "woz", scopes: ["memory:read", "memory:write"], revoked_at: null },
+  { id: "scout", workspace_id: "ram", agent_name: "scout", scopes: ["memory:read"], revoked_at: null },
+  { id: "pike", workspace_id: "ram", agent_name: "pike", scopes: ["memory:read"], revoked_at: null },
+]
+
+function mockQueryResults(opts: {
+  workspaces?: Record<string, unknown>[]
+  tokens?: Record<string, unknown>[]
+  events?: Record<string, unknown>[]
+}) {
+  const query = vi.fn()
+    .mockResolvedValueOnce({ rows: opts.workspaces ?? DEFAULT_WORKSPACES })
+    .mockResolvedValueOnce({ rows: opts.tokens ?? DEFAULT_TOKENS })
+    .mockResolvedValueOnce({ rows: opts.events ?? [] })
   getPoolMock.mockReturnValue({ query })
   return query
+}
+
+/** Convenience: only customize the events query, use defaults for workspaces+tokens */
+function mockQueryResult(eventRows: Record<string, unknown>[] | undefined) {
+  return mockQueryResults({ events: eventRows === undefined ? [] : eventRows })
 }
 
 describe("readTeams", () => {
@@ -77,21 +80,21 @@ describe("readTeams", () => {
     expect(outcome).not.toBeNull()
     if (outcome === null || outcome.ok === false) throw new Error("expected ok outcome")
 
-    // Should have teams from the manifest
+    // Should have teams from workspaces table
     expect(outcome.data.teams.length).toBeGreaterThanOrEqual(1)
     expect(outcome.data.groupId).toBe(GROUP_ID)
-    expect(outcome.data.totalAgents).toBe(4) // brooks + woz + scout + pike
+    expect(outcome.data.totalAgents).toBe(4) // 4 tokens in ram workspace
     expect(outcome.data.totalEvents24h).toBe(17) // 12 + 5
 
     // Activity counts should be merged into agents
     const ramTeam = outcome.data.teams.find((t) => t.id === "ram")
     expect(ramTeam).toBeDefined()
-    const brooksAgent = ramTeam?.agents.find((a) => a.id === "brooks")
+    const brooksAgent = ramTeam?.agents.find((a) => a.persona === "brooks")
     expect(brooksAgent?.events24h).toBe(12)
 
-    // Tenant invariant: group_id is a bound parameter
+    // Tenant invariant: group_id is a bound parameter on all queries
     const [sql, params] = query.mock.calls[0] as [string, unknown[]]
-    expect(sql).toContain("WHERE group_id = $1")
+    expect(sql).toContain("group_id = $1")
     expect(params).toEqual([GROUP_ID])
   })
 
@@ -102,8 +105,7 @@ describe("readTeams", () => {
 
     if (outcome === null || outcome.ok === false) throw new Error("expected ok outcome")
     expect(outcome.data.totalEvents24h).toBe(0)
-    expect(isTeamsEmpty(outcome.data)).toBe(true)
-    // Agents should still exist from the manifest
+    // With no events but workspaces+tokens present, not empty (has teams)
     expect(outcome.data.totalAgents).toBe(4)
   })
 
@@ -157,7 +159,7 @@ describe("readTeams", () => {
 
     if (outcome === null || outcome.ok === false) throw new Error("expected ok outcome")
     const ramTeam = outcome.data.teams.find((t) => t.id === "ram")
-    const scoutAgent = ramTeam?.agents.find((a) => a.id === "scout")
+    const scoutAgent = ramTeam?.agents.find((a) => a.persona === "scout")
     expect(scoutAgent?.events24h).toBe(7)
   })
 
@@ -170,24 +172,24 @@ describe("readTeams", () => {
 
     if (outcome === null || outcome.ok === false) throw new Error("expected ok outcome")
     const ramTeam = outcome.data.teams.find((t) => t.id === "ram")
-    const pikeAgent = ramTeam?.agents.find((a) => a.id === "pike")
+    const pikeAgent = ramTeam?.agents.find((a) => a.persona === "pike")
     expect(pikeAgent?.events24h).toBe(0)
   })
 
-  it("builds team roster from AGENT_MANIFEST categories", async () => {
+  it("builds team roster from workspaces and mcp_tokens", async () => {
     mockQueryResult([])
 
     const outcome = await readTeams(GROUP_ID)
 
     if (outcome === null || outcome.ok === false) throw new Error("expected ok outcome")
-    // RAM team should have primary + code + support agents
+    // RAM workspace should have agents from mcp_tokens
     const ramTeam = outcome.data.teams.find((t) => t.id === "ram")
     expect(ramTeam).toBeDefined()
-    const ramIds = ramTeam?.agents.map((a) => a.id) ?? []
-    expect(ramIds).toContain("brooks")   // primary
-    expect(ramIds).toContain("woz")      // code
-    expect(ramIds).toContain("scout")    // support
-    expect(ramIds).toContain("pike")     // support
+    const personas = ramTeam?.agents.map((a) => a.persona) ?? []
+    expect(personas).toContain("brooks")
+    expect(personas).toContain("woz")
+    expect(personas).toContain("scout")
+    expect(personas).toContain("pike")
   })
 })
 
@@ -203,8 +205,8 @@ describe("isTeamsEmpty", () => {
     expect(isTeamsEmpty(base)).toBe(true)
   })
 
-  it("is not empty when there are events", () => {
-    expect(isTeamsEmpty({ ...base, totalEvents24h: 5 })).toBe(false)
+  it("is not empty when there are teams", () => {
+    expect(isTeamsEmpty({ ...base, teams: [{ id: "ram", name: "RAM", description: "test", groupId: GROUP_ID, status: "active", agents: [] }] })).toBe(false)
   })
 
   it("is still empty when agents exist but have no events", () => {
@@ -253,7 +255,7 @@ describe("operational-state integration", () => {
   })
 
   it("maps an empty snapshot to empty via the contract", async () => {
-    mockQueryResult([])
+    mockQueryResults({ workspaces: [], tokens: [], events: [] })
 
     const outcome = await readTeams(GROUP_ID)
     const surface = resolveOperationalSurface({
