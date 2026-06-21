@@ -72,6 +72,7 @@ export default defineConfig({
       "src/__tests__/generate-agent.test.ts",
       "src/__tests__/knowledge-hub-bridge.test.ts",
       "src/__tests__/parity-test.test.ts",
+      "src/__tests__/gateway-stdio-parity.test.ts",
       "src/__tests__/schema-versioning.test.ts",
       "src/__tests__/backup-automation.test.ts",
       "src/__tests__/retrieval-gateway.test.ts",
@@ -136,6 +137,18 @@ export default defineConfig({
       {
         find: "@",
         replacement: path.resolve(__dirname, "./src"),
+      },
+      {
+        find: "@allura/rbac",
+        replacement: path.resolve(__dirname, "./packages/rbac/src/index.ts"),
+      },
+      {
+        find: "@allura/mcp-server",
+        replacement: path.resolve(__dirname, "./packages/mcp-server/src/index.ts"),
+      },
+      {
+        find: "@allura/types",
+        replacement: path.resolve(__dirname, "./packages/types/src/index.ts"),
       },
       {
         find: "@mcp-docker/playwright",
