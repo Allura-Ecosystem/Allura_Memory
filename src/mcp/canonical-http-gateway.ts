@@ -122,6 +122,10 @@ import {
   memory_update,
 } from "./canonical-tools.js";
 
+// Runtime state janitor (clears halted budget sessions). Not a canonical
+// memory write — no contract type; operates on in-process circuit state.
+import { cleanupMemoryState } from "./cleanup.js";
+
 import {
   governance_list_policies,
   governance_get_policy,
@@ -351,6 +355,18 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["group_id"],
         },
       },
+      {
+        name: "memory_cleanup",
+        description:
+          "Reset halted budget sessions for a group (or all groups if omitted). Useful for clearing stale boot state without touching stored memories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Optional: Tenant namespace to clear (format: allura-*); omit to clear all groups" },
+          },
+          required: [],
+        },
+      },
       // ── Governance Tools (Story 9.1) ──────────────────────────────────────
       {
         name: "governance_list_policies",
@@ -570,6 +586,13 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case "memory_list_deleted":
         result = await memory_list_deleted(args as unknown as MemoryListDeletedRequest);
+        break;
+      case "memory_cleanup":
+        result = {
+          data: cleanupMemoryState((args as { group_id?: string } | undefined)?.group_id),
+          meta: { contract_version: "v1", degraded: false, stores_used: [], stores_attempted: [], warnings: [] },
+          error: null,
+        };
         break;
       // ── Governance Tools (Story 9.1) ────────────────────────────────────
       case "governance_list_policies":
