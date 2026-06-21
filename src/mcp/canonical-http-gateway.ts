@@ -112,10 +112,14 @@ function validateBearerAuth(req: IncomingMessage): boolean {
 import {
   memory_add,
   memory_delete,
+  memory_export,
   memory_get,
   memory_list,
+  memory_list_deleted,
   memory_promote,
+  memory_restore,
   memory_search,
+  memory_update,
 } from "./canonical-tools.js";
 
 import {
@@ -136,10 +140,14 @@ import {
 import type {
   MemoryAddRequest,
   MemoryDeleteRequest,
+  MemoryExportRequest,
   MemoryGetRequest,
+  MemoryListDeletedRequest,
   MemoryListRequest,
   MemoryPromoteRequest,
+  MemoryRestoreRequest,
   MemorySearchRequest,
+  MemoryUpdateRequest,
   GovernanceListPoliciesRequest,
   GovernanceGetPolicyRequest,
   GovernanceCheckGateRequest,
@@ -271,6 +279,76 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
             rationale: { type: "string", description: "Optional: Reason for promotion" },
           },
           required: ["id", "group_id", "user_id"],
+        },
+      },
+      {
+        name: "memory_update",
+        description:
+          "Append-only versioned update. Creates new version in Neo4j with SUPERSEDES relationship, marks old version deprecated. Audit event always written to PostgreSQL.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            id: { type: "string", description: "Required: Memory identifier to update" },
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+            user_id: { type: "string", description: "Required: User identifier" },
+            content: { type: "string", description: "Required: Updated memory content" },
+            reason: { type: "string", description: "Optional: Reason for update" },
+            metadata: {
+              type: "object",
+              description: "Optional: Additional metadata",
+              properties: {
+                agent_id: { type: "string" },
+                conversation_id: { type: "string" },
+                source: { type: "string", enum: ["conversation", "manual"] },
+              },
+            },
+          },
+          required: ["id", "group_id", "user_id", "content"],
+        },
+      },
+      {
+        name: "memory_export",
+        description:
+          "Export memories filtered by group_id and optional canonical status. canonical_only=true returns only Neo4j (semantic) memories; canonical_only=false returns both stores merged and deduplicated.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+            user_id: { type: "string", description: "Optional: User identifier filter" },
+            canonical_only: { type: "boolean", description: "Optional: Export only canonical (Neo4j) memories (default: false)" },
+            limit: { type: "number", description: "Optional: Maximum memories to export (default: 1000, max: 10000)" },
+            offset: { type: "number", description: "Optional: Pagination offset" },
+          },
+          required: ["group_id"],
+        },
+      },
+      {
+        name: "memory_restore",
+        description:
+          "Restore a soft-deleted memory within the 30-day recovery window. Removes deprecated flag in Neo4j and cleans up SUPERSEDES relationships. Appends restore event to PostgreSQL (append-only).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            id: { type: "string", description: "Required: Memory identifier to restore" },
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+            user_id: { type: "string", description: "Required: User identifier (for audit trail)" },
+          },
+          required: ["id", "group_id", "user_id"],
+        },
+      },
+      {
+        name: "memory_list_deleted",
+        description:
+          "List soft-deleted memories within the 30-day recovery window. Returns deleted memories with their pre-deletion content and recovery_days_remaining.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+            user_id: { type: "string", description: "Optional: User identifier (scope to user)" },
+            limit: { type: "number", description: "Optional: Maximum results (default: 50)" },
+            offset: { type: "number", description: "Optional: Pagination offset" },
+          },
+          required: ["group_id"],
         },
       },
       // ── Governance Tools (Story 9.1) ──────────────────────────────────────
@@ -480,6 +558,18 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case "memory_promote":
         result = await memory_promote(args as unknown as MemoryPromoteRequest);
+        break;
+      case "memory_update":
+        result = await memory_update(args as unknown as MemoryUpdateRequest);
+        break;
+      case "memory_export":
+        result = await memory_export(args as unknown as MemoryExportRequest);
+        break;
+      case "memory_restore":
+        result = await memory_restore(args as unknown as MemoryRestoreRequest);
+        break;
+      case "memory_list_deleted":
+        result = await memory_list_deleted(args as unknown as MemoryListDeletedRequest);
         break;
       // ── Governance Tools (Story 9.1) ────────────────────────────────────
       case "governance_list_policies":
