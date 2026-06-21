@@ -100,7 +100,37 @@ export interface PolicyContext {
     readerCoveragePassed: boolean;
     liveRoundtripPassed: boolean;
   };
-  
+
+  /** Brand source-of-truth read events used by POL-BRAND-001 */
+  brandSourceReads?: BrandSourceRead[];
+
+  /** Brand release approvals used by POL-BRAND-002 */
+  brandApprovals?: BrandApproval[];
+
+  /** Whether the operation is brand/public-facing UI work */
+  isBrandSurface?: boolean;
+
+  /** Trust zone for external email/content gates */
+  trust_zone?: string;
+  trustZone?: string;
+
+  /** Email context flags used by POL-EMAIL-* */
+  emailFlags?: string[];
+  emailContainsInstruction?: boolean;
+  emailHandlingMode?: "evidence_only" | "actionable";
+  emailVerdict?: string;
+  verdict?: string;
+  emailHasAttachment?: boolean;
+  attachmentPresent?: boolean;
+  quarantined?: boolean;
+  sandboxed?: boolean;
+  captainApproval?: boolean;
+  humanApproval?: boolean;
+  hitlApproved?: boolean;
+  curatorApproval?: boolean;
+  debugRootCauseFound?: boolean;
+  strictDebugEnforcement?: boolean;
+
   /** Additional runtime context */
   [key: string]: unknown;
 }
@@ -211,6 +241,44 @@ export interface SourceOfTruthRead {
   
   /** What was read (for audit) */
   summary?: string;
+}
+
+/**
+ * Record of a brand source-of-truth read event
+ * 
+ * Used by POL-BRAND-001 to verify the agent read the canonical brand guide.
+ */
+export interface BrandSourceRead {
+  /** Company/project brand belongs to */
+  company: string;
+  
+  /** Notion page ID or database ID that was read */
+  notionId: string;
+  
+  /** Timestamp of the read */
+  timestamp: number;
+  
+  /** What was read (for audit) */
+  summary?: string;
+}
+
+/**
+ * Brand release approval record
+ * 
+ * Used by POL-BRAND-002 to verify UI/showcase work was approved.
+ */
+export interface BrandApproval {
+  /** Approver role or identifier */
+  role: "captain" | "steve" | "iris-ceo" | "durham-lead" | string;
+  
+  /** Whether approval was granted */
+  approved: boolean;
+  
+  /** Timestamp of approval */
+  timestamp: number;
+  
+  /** Optional rationale */
+  rationale?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1074,6 +1142,97 @@ policyRegistry.register(POLICY_EMAIL_MEMORY_PROMOTION_REQUIRES_HITL);
 policyRegistry.register(POLICY_EMAIL_ATTACHMENT_SANDBOX_REQUIREMENT);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POL-BRAND-001..002: BRAND GOVERNANCE GATES
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * POL-BRAND-001: Brand Source-of-Truth Gate
+ *
+ * Before any brand-affecting or public-facing UI mutation, the agent must have
+ * read the canonical Notion brand guide for the target company/project.
+ *
+ * Enforcement:
+ * - If context.isBrandSurface is true (or the resource/operation looks brand/UI-related)
+ * - AND brandSourceReads is missing a read for the matching company
+ * - THEN the mutation is BLOCKED
+ *
+ * Canonical brand guides live in Notion. Figma may still be referenced as a
+ * historical artifact, but Notion is the decision source.
+ */
+export const POLICY_BRAND_SOURCE_OF_TRUTH: Policy = {
+  id: "POL-BRAND-001",
+  description: "Brand-affecting work requires prior read from canonical Notion brand guide",
+  condition: (_claims, context) => {
+    const operation = String(context.operation ?? "");
+    const resource = String(context.resource ?? "");
+
+    const isBrandOperation =
+      context.isBrandSurface === true ||
+      /brand|logo|color|typography|palette|style|css|ui|ux|design|public|showcase|demo|website|frontend/i.test(operation) ||
+      /brand|logo|\.css|\.scss|design-system|tokens|public\/|assets\/(logo|brand)/i.test(resource);
+
+    if (!isBrandOperation) {
+      return true;
+    }
+
+    const reads = context.brandSourceReads ?? [];
+    if (reads.length === 0) {
+      return false;
+    }
+
+    // Require at least one brand guide read within the last 30 days
+    const now = context.timestamp;
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    return reads.some(
+      (r) => r.notionId && r.company && typeof r.timestamp === "number" && now - r.timestamp <= thirtyDaysMs
+    );
+  },
+  violation: "Brand-affecting work attempted without a recent read from the canonical Notion brand guide. Read the guide first.",
+  severity: "critical",
+};
+
+/**
+ * POL-BRAND-002: Public Release Approval Gate
+ *
+ * Public-facing, UI, showcase, or brand-canon-affecting work cannot be marked
+ * Done, released, deployed, or merged without Captain + Steve/IRIS CEO approval.
+ *
+ * Mirrors the crewmate/approval protocol in AGENTS.md/SOUL.md.
+ */
+export const POLICY_BRAND_RELEASE_APPROVAL: Policy = {
+  id: "POL-BRAND-002",
+  description: "Public-facing brand/UI work requires Captain and product-feel approval before Done/release",
+  condition: (_claims, context) => {
+    const operation = String(context.operation ?? "");
+    const resource = String(context.resource ?? "");
+
+    const isReleaseOperation = /^(done|handoff|commit|push|deploy|release|publish|merge)/i.test(operation);
+    const isBrandSurface =
+      context.isBrandSurface === true ||
+      /brand|logo|color|typography|palette|style|css|ui|ux|design|public|showcase|demo|website|frontend/i.test(operation) ||
+      /brand|logo|\.css|\.scss|design-system|tokens|public\/|assets\/(logo|brand)/i.test(resource);
+
+    if (!isReleaseOperation || !isBrandSurface) {
+      return true;
+    }
+
+    const approvals = context.brandApprovals ?? [];
+
+    const hasCaptain = approvals.some((a) => a.approved && (a.role === "captain" || a.role === "ronin"));
+    const hasProductFeel = approvals.some(
+      (a) => a.approved && (a.role === "steve" || a.role === "iris-ceo" || a.role === "product-feel")
+    );
+
+    return hasCaptain && hasProductFeel;
+  },
+  violation: "Public-facing brand/UI work requires Captain + Steve/IRIS CEO (product-feel) approval before Done/release.",
+  severity: "critical",
+};
+
+policyRegistry.register(POLICY_BRAND_SOURCE_OF_TRUTH);
+policyRegistry.register(POLICY_BRAND_RELEASE_APPROVAL);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // DEFAULT POLICY SET (post all policy definitions)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1101,6 +1260,8 @@ export const DEFAULT_POLICIES: Policy[] = [
   POLICY_HIGH_RISK_EMAIL_QUARANTINE,
   POLICY_EMAIL_MEMORY_PROMOTION_REQUIRES_HITL,
   POLICY_EMAIL_ATTACHMENT_SANDBOX_REQUIREMENT,
+  POLICY_BRAND_SOURCE_OF_TRUTH,
+  POLICY_BRAND_RELEASE_APPROVAL,
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
