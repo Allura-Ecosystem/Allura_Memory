@@ -114,6 +114,7 @@ import {
   memory_delete,
   memory_get,
   memory_list,
+  memory_promote,
   memory_search,
 } from "./canonical-tools.js";
 
@@ -137,6 +138,7 @@ import type {
   MemoryDeleteRequest,
   MemoryGetRequest,
   MemoryListRequest,
+  MemoryPromoteRequest,
   MemorySearchRequest,
   GovernanceListPoliciesRequest,
   GovernanceGetPolicyRequest,
@@ -251,6 +253,22 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
             id: { type: "string", description: "Required: Memory identifier" },
             group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
             user_id: { type: "string", description: "Required: User identifier (for authorization)" },
+          },
+          required: ["id", "group_id", "user_id"],
+        },
+      },
+      {
+        name: "memory_promote",
+        description:
+          "Request curator promotion for an episodic memory. Never auto-promotes — always routes through canonical_proposals for HITL approval. Idempotent: returns existing proposal_id if already queued.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            id: { type: "string", description: "Required: Episodic memory identifier to promote" },
+            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+            user_id: { type: "string", description: "Required: User identifier" },
+            curator_id: { type: "string", description: "Optional: Curator identifier for HITL" },
+            rationale: { type: "string", description: "Optional: Reason for promotion" },
           },
           required: ["id", "group_id", "user_id"],
         },
@@ -459,6 +477,9 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case "memory_delete":
         result = await memory_delete(args as unknown as MemoryDeleteRequest);
+        break;
+      case "memory_promote":
+        result = await memory_promote(args as unknown as MemoryPromoteRequest);
         break;
       // ── Governance Tools (Story 9.1) ────────────────────────────────────
       case "governance_list_policies":
