@@ -33,7 +33,7 @@ auditable, and reproducible rather than letting a mystery blob appear in a commi
 
 | Field | Value |
 |-------|-------|
-| **Status** | Proposed — **all four commit-conditions now met** (provenance filled, checksum matches the vendored `.node`, SHA pinned, Bun-load + subset parity verified); awaiting AD-33 promotion sign-off (Sabir) |
+| **Status** | Proposed — **all four commit-conditions met AND reproducibility proven** (provenance filled; checksum matches the vendored `.node`; SHA pinned; Bun-load + subset parity verified; clean-checkout rebuild reproduces a **byte-identical** artifact, 2026-06-24); only remaining step is AD-33 promotion sign-off (Sabir) into canonical `RISKS-AND-DECISIONS.md` |
 | **Owner** | Hightower (build/vendor) · Sabir (approval) · Brooks (architecture) |
 | **Related** | AD-49 (Path B graph cutover — the consumer) · G4 constraint · RK-16 (below) |
 
@@ -77,8 +77,9 @@ a pinned source commit with a recorded checksum, and is never a hand-dropped unt
 > [!IMPORTANT]
 > **The checksum above is from a *manifest-patched* build** (see recipe below — raft/cluster/replication
 > path-deps stripped from `crates/ruvector-graph/Cargo.toml`). It will only reproduce byte/checksum-equivalent
-> if the same patch is applied. The patch is part of the reproducible recipe, not an ad-hoc edit. Re-capture
-> the SHA and re-pin on the workstation rebuild before committing.
+> if the same patch is applied. The patch is part of the reproducible recipe, not an ad-hoc edit.
+> **Resolved 2026-06-24:** a clean-checkout rebuild reproduced this exact SHA byte-for-byte with the patch
+> applied (see the clean-checkout note below the recipe) — the manifest patch is deterministic.
 
 ### Reproducible rebuild (manifest-patched — required)
 
@@ -87,7 +88,12 @@ git clone --filter=blob:none --no-checkout https://github.com/ruvnet/RuVector
 cd RuVector
 git checkout <PINNED_SHA>
 git rev-parse HEAD            # capture for the provenance table
-git sparse-checkout set crates/ruvector-core crates/ruvector-graph crates/ruvector-graph-node
+# NOTE the trailing `patches` path — the root Cargo.toml has a
+#   [patch.crates-io] hnsw_rs = { path = "./patches/hnsw_rs" }
+# entry, so the patches/ dir MUST be materialized or resolve fails (rc=101,
+# "unable to update .../patches/hnsw_rs"). Omitting it was the gap in the
+# first recipe; the clean-checkout rebuild on 2026-06-24 caught it.
+git sparse-checkout set crates/ruvector-core crates/ruvector-graph crates/ruvector-graph-node patches
 
 # Patch 1 — root Cargo.toml: pin members to the 3 crates we build
 #   members = ["crates/ruvector-core","crates/ruvector-graph","crates/ruvector-graph-node"]
@@ -105,6 +111,15 @@ cargo build --release -p ruvector-graph-node
 sha256sum target/release/libruvector_graph_node.so   # must match the checksum recorded above
 ```
 
+> [!NOTE]
+> **Clean-checkout reproduction — 2026-06-24 (byte-identical).** Ran the full recipe above from a
+> fresh `--no-checkout` clone at the pinned SHA `85d2314…` in an isolated dir (`/tmp/RV-clean`), no
+> shared cargo/target cache. Result: `BUILD_RC=0`, `Finished release in 1m 38s`, artifact
+> **5,113,328 bytes**, sha256 **`21a07d72a0b7a4f1741d063d7a028318d640ca3551264c7a06590c18408638a8`**
+> — **byte-identical** to the vendored `.node` (not merely checksum-equivalent). The only delta from
+> the original recipe was the `patches` sparse-checkout path (now folded in above). This is the
+> reproducibility proof for promotion-checklist item 2.
+
 ---
 
 ## RK-16 — Vendored native addon supply-chain risk
@@ -113,14 +128,14 @@ sha256sum target/release/libruvector_graph_node.so   # must match the checksum r
 |-------|-------|
 | **Severity** | Medium |
 | **Likelihood** | Low |
-| **Status** | 🟡 Open — gated on AD-50 conditions |
+| **Status** | 🟡 Open — all technical mitigations in place (reproducible rebuild proven byte-identical; CI checksum gate live); residual "Open" only until AD-33 promotion into canonical `RISKS-AND-DECISIONS.md` (Sabir) |
 | **Owner** | Hightower |
 | **Related decision** | AD-50 · AD-49 |
 
 | # | Risk | Mitigation |
 |---|------|------------|
-| R1 | Opaque binary enters the supply chain | Pinned SHA + recorded checksum + reproducible rebuild; review the provenance table before merge. |
-| R2 | Drift between committed `.node` and source | Checksum recorded here; CI (or a pre-commit check) re-verifies the checksum against the committed artifact. |
+| R1 | Opaque binary enters the supply chain | Pinned SHA + recorded checksum + reproducible rebuild — **verified byte-identical on a clean checkout 2026-06-24**; review the provenance table before merge. |
+| R2 | Drift between committed `.node` and source | Checksum recorded here; CI re-verifies via `bun run validate:vendor` against `vendor/ruvector-graph/CHECKSUMS.sha256` (wired into the lint job; passes on the committed `.node`, rejects a tampered copy). |
 | R3 | Platform lock-in (built for one arch) | Document the target arch; the addon loads only behind `GRAPH_BACKEND=ruvector-crate`, never on the default path, so other hosts are unaffected. |
 | R4 | Upstream `v0.1.x` churn breaks the ABI | Pinned SHA insulates against drift; rebuild is an explicit, reviewed step, never automatic. |
 
@@ -133,7 +148,7 @@ backend carry no native artifact and are unaffected.
 ## Promotion checklist (AD-33-gated — Sabir)
 
 - [x] Provenance table fully filled; checksum matches the committed `.node`. *(2026-06-24 — SHA pinned `85d2314…`, vendored `.node` sha `21a07d72…`, 5,113,328 B.)*
-- [ ] Rebuild reproduces an equivalent artifact on a clean checkout. *(Two existing clones agree on SHA; a from-scratch clean-checkout rebuild has not been re-run.)*
+- [x] Rebuild reproduces an equivalent artifact on a clean checkout. *(2026-06-24 — from-scratch `--no-checkout` clone at `85d2314…` in isolated `/tmp/RV-clean`, no shared cache: `BUILD_RC=0`, 1m38s, sha `21a07d72…`, 5,113,328 B — **byte-identical** to the vendored `.node`. Recipe corrected: `patches/` sparse-checkout path added for the `[patch.crates-io] hnsw_rs` dep.)*
 - [x] Bun load smoke test passed on the target host. *(Subset parity 20/20 green on the real `.node`, 3072ms native; see section above.)*
 - [ ] AD-50 + RK-16 promoted into canonical `RISKS-AND-DECISIONS.md` (same PR as the vendored artifact). *(AD-33-gated — Sabir.)*
 - [x] Checksum-verification step added to CI or pre-commit. *(2026-06-24 — `bun run validate:vendor` → `scripts/verify-vendor-checksums.ts`, manifest `vendor/ruvector-graph/CHECKSUMS.sha256`; wired into `.github/workflows/ci.yml` lint job. Verified: passes on the committed `.node`, rejects a tampered copy. `.git/hooks` is a worktree file, so CI — not a local git hook — is the enforcement point.)*
