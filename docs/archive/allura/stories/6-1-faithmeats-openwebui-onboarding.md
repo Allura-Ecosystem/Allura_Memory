@@ -96,3 +96,55 @@ Brooks (Team RAM) — Claude Code session.
 ### File List
 
 - `docs/archive/allura/stories/6-1-faithmeats-openwebui-onboarding.md` (this file)
+
+## Gateway hardening (per-coworker tokens)
+
+**Decision:** A Caddy reverse proxy on `:8000` validates per-coworker Bearer tokens
+before forwarding to mcpo (moved to loopback `127.0.0.1:8001`). This replaces
+the previous single shared API key arrangement for LAN callers.
+
+**Architecture:**
+
+```
+OpenWebUI (192.168.1.18)
+    |
+    | Bearer <coworker-token>
+    v
+Caddy gateway :8000   (allura-mcpo-gateway.service)
+    |  - map Authorization → coworker_id
+    |  - 401 if no valid token (Pike #3)
+    |  - path allow-list /docs*, /openapi.json*, /memory_* (Pike #4)
+    |  - strip Authorization; inject Bearer <MCPO_API_KEY> + X-Allura-Coworker-Id
+    |  - log redacts Authorization header (Pike #5)
+    v
+mcpo bridge 127.0.0.1:8001   (allura-mcpo-bridge.service)
+    v
+Allura canonical MCP 127.0.0.1:5888
+```
+
+**Artifacts (all under `scripts/openwebui-bridge/`):**
+
+- `allura-mcpo-gateway.Caddyfile.template` — Caddy config with COWORKER_TOKENS markers
+- `allura-mcpo-gateway.service.template` — systemd --user unit (`Requires=allura-mcpo-bridge.service`)
+- `install-token-gateway.sh` — installs the Caddy gateway; validate-before-reload (Pike #1)
+- `mint-coworker-token.sh` — mint / revoke / rotate / list; flock-guarded (Pike #2), validate-before-reload (Pike #1), rotate subcommand (Pike #7)
+- `coworker-tokens.example` — format documentation with Pike #8 note
+
+**Explicit deferred limitation (ADR-001 / Pike #8):**
+`user_id` in the tool payload (`memory_add`, `memory_list`, etc.) is **self-reported**
+by the coworker; it is not cryptographically bound to the Bearer token at this stage.
+`group_id` (`allura-faithmeats`) is the only hard tenant isolation boundary enforced
+server-side. Binding `user_id` in the payload to the authenticated coworker token is
+deferred to the hardened gateway phase (Story 6.1 AC6-AC7).
+
+**Hardening conditions applied (Pike review):**
+
+| # | Condition | Where enforced |
+|---|-----------|----------------|
+| 1 | validate-before-reload atomic swap | `install-token-gateway.sh` + `mint-coworker-token.sh` `render_and_reload()` |
+| 2 | flock on `.coworker-tokens.lock` | `mint-coworker-token.sh` all mutating subcommands |
+| 3 | 401 gate for absent/unrecognised token | `allura-mcpo-gateway.Caddyfile.template` `@unauthorized` handler |
+| 4 | path allow-list (`/docs*`, `/openapi.json*`, `/memory_*`) | `allura-mcpo-gateway.Caddyfile.template` `@allowed` + 404 fallback |
+| 5 | Authorization header redacted from access log | `allura-mcpo-gateway.Caddyfile.template` `format filter` |
+| 7 | `--rotate` (revoke-all + mint-one, same flock) | `mint-coworker-token.sh` `do_rotate()` |
+| 8 | user_id self-reported limitation documented at mint surface | `mint-coworker-token.sh` header + `coworker-tokens.example` |

@@ -16,21 +16,21 @@
 #
 # Env overrides:
 #   MCP_URL     upstream MCP endpoint   (default: http://127.0.0.1:5888/mcp)
-#   BRIDGE_HOST bind address            (default: 0.0.0.0)
-#   BRIDGE_PORT bind port               (default: 8000)
+#   BRIDGE_HOST bind address            (default: 127.0.0.1)
+#   BRIDGE_PORT bind port               (default: 8001)
 #   MCPO_API_KEY  reuse an explicit key (default: existing key or generated)
 #
-# SECURITY NOTE: in this mode mcpo authenticates callers with a single shared
-# API key and the upstream MCP is param-based (group_id supplied by the client).
-# This is acceptable for a trusted LAN. The hardened path (per-user bearer tokens
-# + server-injected group_id via the Command Center /mcp gateway) is tracked in
-# docs/archive/allura/stories/6-1-faithmeats-openwebui-onboarding.md (AC6-AC7).
+# SECURITY NOTE: mcpo now binds loopback only (127.0.0.1:8001). The LAN entry
+# point is the Caddy per-coworker token gateway on :8000 (install-token-gateway.sh),
+# which validates per-coworker Bearer tokens and forwards to mcpo with the single
+# internal key. The hardened path (Caddy gateway + per-coworker tokens) is tracked
+# in docs/archive/allura/stories/6-1-faithmeats-openwebui-onboarding.md (AC6-AC8).
 
 set -euo pipefail
 
 MCP_URL="${MCP_URL:-http://127.0.0.1:5888/mcp}"
-BRIDGE_HOST="${BRIDGE_HOST:-0.0.0.0}"
-BRIDGE_PORT="${BRIDGE_PORT:-8000}"
+BRIDGE_HOST="${BRIDGE_HOST:-127.0.0.1}"
+BRIDGE_PORT="${BRIDGE_PORT:-8001}"
 
 SERVICE_NAME="allura-mcpo-bridge.service"
 CONFIG_DIR="${HOME}/.config/allura"

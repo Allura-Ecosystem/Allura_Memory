@@ -1,0 +1,32 @@
+# allura-mcpo-gateway.service.template — systemd --user unit for the Caddy
+# per-coworker token gateway that fronts the mcpo bridge.
+#
+# DO NOT install this file verbatim. Run install-token-gateway.sh, which
+# substitutes __CADDY_BIN__ with the resolved caddy binary path and writes
+# the rendered unit to ~/.config/systemd/user/allura-mcpo-gateway.service.
+#
+# Dependency: requires allura-mcpo-bridge.service (mcpo on loopback :8001).
+
+[Unit]
+Description=Allura Brain MCP Gateway (Caddy per-coworker Bearer auth)
+After=network.target allura-mcpo-bridge.service
+Requires=allura-mcpo-bridge.service
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/allura/mcpo.env
+ExecStart=__CADDY_BIN__ run --config %h/.config/allura/allura-mcpo-gateway.Caddyfile --adapter caddyfile
+ExecReload=__CADDY_BIN__ reload --address localhost:2020 --config %h/.config/allura/allura-mcpo-gateway.Caddyfile --adapter caddyfile
+Restart=on-failure
+RestartSec=5
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+TimeoutStartSec=15
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
