@@ -1,0 +1,24 @@
+# Reference template for the Allura mcpo OpenAPI bridge (systemd --user unit).
+# Do NOT install this file verbatim — run install-openwebui-bridge.sh, which
+# resolves @UVX@ to the real uvx path on the target machine and writes the final
+# unit to ~/.config/systemd/user/allura-mcpo-bridge.service.
+#
+# What it does: runs `mcpo` (MCP -> OpenAPI proxy) so an OpenWebUI instance on
+# the LAN can call the canonical Allura MCP (Streamable HTTP on :5888) as REST.
+
+[Unit]
+Description=Allura mcpo OpenAPI bridge (Brain MCP -> OpenAPI for OpenWebUI)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/allura/mcpo.env
+ExecStart=@UVX@ mcpo --host 0.0.0.0 --port 8000 --api-key ${MCPO_API_KEY} --server-type streamable_http -- http://127.0.0.1:5888/mcp
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=120
+StartLimitBurst=10
+
+[Install]
+WantedBy=default.target
