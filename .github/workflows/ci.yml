@@ -53,6 +53,8 @@ jobs:
         run: bun run lint
       - name: Git-exec choke point (GIT-EXEC-001)
         run: bun run validate:git-exec
+      - name: Vendored native addon checksum gate (AD-50 / RK-16)
+        run: bun run validate:vendor
 
   # ── Unit Tests ────────────────────────────────────────────────────────────
   # Pure logic only. NO database. NO Ollama. NO Notion. NO MCP browser.

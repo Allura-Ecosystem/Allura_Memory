@@ -1,17 +1,21 @@
 /**
  * RuVector Embedding Service
  *
- * Generates 1024-dim vectors via Ollama's /v1/embeddings endpoint (OpenAI-compatible).
- * Uses qwen3-embedding:8b with Matryoshka dimension reduction (dimensions: 1024).
+ * Generates 1024-dim vectors via an OpenAI-compatible /v1/embeddings endpoint.
  *
- * 1024d enables HNSW indexing in pgvector (2000d limit), with minimal quality loss
- * compared to the full 4096d output (MRL preserves 95%+ quality).
+ * Supports two backends:
+ *   1. Ollama (local) — qwen3-embedding:8b/0.6b with MRL dimension reduction
+ *   2. HuggingFace Inference Providers (serverless) — BAAI/bge-m3 or similar
+ *      (native 1024-dim, no MRL needed, zero local RAM)
  *
  * Environment variables:
  * - RUVECTOR_EMBEDDING_MODEL: model name (default: qwen3-embedding:8b)
- * - RUVECTOR_EMBEDDING_BASE_URL: Ollama URL (default: http://localhost:11434)
+ * - RUVECTOR_EMBEDDING_BASE_URL: endpoint base URL (default: http://localhost:11434)
+ * - RUVECTOR_EMBEDDING_API_KEY: bearer token for hosted providers (optional, local Ollama doesn't need this)
+ * - RUVECTOR_EMBEDDING_SEND_DIMENSIONS: set to "false" to skip the dimensions parameter
+ *   (needed for HuggingFace models that output native dims and don't support MRL truncation)
  *
- * Graceful degradation: if Ollama is unreachable or returns an error,
+ * Graceful degradation: if the embedding provider is unreachable or returns an error,
  * the calling code should still store the memory — just without an
  * embedding vector (NULL). Status becomes "stored_pending_embedding".
  */
@@ -81,10 +85,25 @@ export async function generateEmbedding(text: string, timeoutMs: number = REQUES
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+    // Build headers — add Authorization bearer if API key is configured
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const apiKey = process.env.RUVECTOR_EMBEDDING_API_KEY;
+    if (apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
+
+    // Build request body — include dimensions param only for MRL-capable models (Ollama qwen3)
+    // HuggingFace models output native dims and may reject the dimensions parameter
+    const sendDimensions = process.env.RUVECTOR_EMBEDDING_SEND_DIMENSIONS !== "false";
+    const body: Record<string, unknown> = { model, input: text };
+    if (sendDimensions) {
+      body.dimensions = EMBEDDING_DIMENSIONS;
+    }
+
     const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, input: text, dimensions: 1024 }),
+      headers,
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
 
@@ -93,7 +112,7 @@ export async function generateEmbedding(text: string, timeoutMs: number = REQUES
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
       console.warn(
-        `[RuVector Embedding] Ollama returned ${response.status}: ${errorBody.slice(0, 200)}`
+        `[RuVector Embedding] Provider returned ${response.status}: ${errorBody.slice(0, 200)}`
       );
       return null;
     }

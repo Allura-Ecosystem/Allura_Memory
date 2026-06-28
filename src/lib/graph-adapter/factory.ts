@@ -16,16 +16,21 @@ import type { Driver } from "neo4j-driver"
 import type { Pool } from "pg"
 import { Neo4jGraphAdapter } from "./neo4j-adapter"
 import { RuVectorGraphAdapter } from "./ruvector-adapter"
+import { RuvectorCrateGraphAdapter, type Embedder } from "./ruvector-crate-adapter"
 import type { IGraphAdapter } from "./types"
 
-export type GraphBackend = "neo4j" | "ruvector"
+export type GraphBackend = "neo4j" | "ruvector" | "ruvector-crate"
 
 /**
  * Get the configured graph backend from environment.
  * Defaults to "neo4j" for backward compatibility during migration.
+ *
+ * "ruvector-crate" (Path B) wraps the native ruvector-graph engine and is
+ * opt-in only — never the default. See docs/archive/allura/AD-49-ruvector-graph-cutover.md.
  */
 export function getGraphBackend(): GraphBackend {
   const value = process.env.GRAPH_BACKEND?.toLowerCase()
+  if (value === "ruvector-crate") return "ruvector-crate"
   if (value === "ruvector") return "ruvector"
   if (value === "neo4j") return "neo4j"
   // Default: neo4j during migration, ruvector after Slice E
@@ -53,8 +58,27 @@ export function getGraphBackend(): GraphBackend {
 export function createGraphAdapter(connections: {
   pg?: Pool
   neo4j?: Driver
+  /** Path B (ruvector-crate): embedder for the vector-first native engine (G5). */
+  crate?: { embed: Embedder }
 }): IGraphAdapter {
   const backend = getGraphBackend()
+
+  if (backend === "ruvector-crate") {
+    const modulePath = process.env.RUVECTOR_GRAPH_NODE_PATH
+    const storagePath = process.env.RUVECTOR_GRAPH_STORAGE_PATH
+    if (!modulePath || !storagePath || !connections.crate?.embed) {
+      throw new Error(
+        "GRAPH_BACKEND=ruvector-crate requires RUVECTOR_GRAPH_NODE_PATH, " +
+        "RUVECTOR_GRAPH_STORAGE_PATH, and a crate.embed function. " +
+        "The native addon is not on npm (G4) — vendor the built .node and set the path."
+      )
+    }
+    return new RuvectorCrateGraphAdapter({
+      modulePath,
+      storagePath,
+      embed: connections.crate.embed,
+    })
+  }
 
   if (backend === "ruvector") {
     if (!connections.pg) {
@@ -83,8 +107,16 @@ export function createGraphAdapter(connections: {
 export function isGraphAdapterAvailable(connections: {
   pg?: Pool
   neo4j?: Driver
+  crate?: { embed: Embedder }
 }): boolean {
   const backend = getGraphBackend()
+  if (backend === "ruvector-crate") {
+    return (
+      connections.crate?.embed != null &&
+      process.env.RUVECTOR_GRAPH_NODE_PATH != null &&
+      process.env.RUVECTOR_GRAPH_STORAGE_PATH != null
+    )
+  }
   if (backend === "ruvector") {
     return connections.pg != null
   }

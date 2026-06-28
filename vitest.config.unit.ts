@@ -104,6 +104,9 @@ export default defineConfig({
       "src/__tests__/hosted-admin-routes.test.ts",
       // Benchmark harness — pure IR-metric math (no live stack)
       "src/__benchmarks__/lib/metrics.test.ts",
+      // Graph adapter — ruvector-crate subset parity (fake fixture by default;
+      // real binding opt-in via RUVECTOR_TEST_BINDING_PATH — no DB either way)
+      "src/lib/graph-adapter/__tests__/ruvector-crate-adapter.subset.test.ts",
     ],
     exclude: [
       // ── Integration tests (mocked DB/services) — use test:integration ──

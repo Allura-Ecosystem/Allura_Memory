@@ -1,0 +1,4 @@
+# Vendored native addon checksums — verified by `bun run validate:vendor`.
+# See docs/archive/allura/AD-50-vendor-native-addon-provenance.md (AD-50 / RK-16 R2).
+# Format: <sha256>  <path-relative-to-this-file>
+21a07d72a0b7a4f1741d063d7a028318d640ca3551264c7a06590c18408638a8  ruvector_graph_node.node
