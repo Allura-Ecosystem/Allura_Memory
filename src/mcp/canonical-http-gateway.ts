@@ -37,6 +37,33 @@ import { getHaltedSessions, resetHaltedGroup } from "@/mcp/canonical-tools/budge
 
 config();
 
+// ── AC6 Startup Validation (ADR §8.3) ────────────────────────────────────────
+// ALLURA_MCP_AUTH_TOKEN is a dev-only bypass and must never reach production.
+// Inverted guard: treat missing/unrecognised NODE_ENV as non-dev (fail-closed).
+// Only an explicit "development", "test", or "local" value permits the bypass.
+{
+  const NODE_ENV = process.env.NODE_ENV ?? "";
+  const isDev = ["development", "test", "local"].includes(NODE_ENV);
+  if (!isDev && process.env.ALLURA_MCP_AUTH_TOKEN) {
+    console.error(
+      "[AC6] FATAL: ALLURA_MCP_AUTH_TOKEN must not be set in non-dev environments. " +
+        `NODE_ENV="${NODE_ENV}" is not in the allowed dev set (development, test, local). ` +
+        "This variable bypasses Cloudflare Access JWT enforcement (ADR §8.3). " +
+        "Remove it from your environment and restart."
+    );
+    process.exit(1);
+  }
+}
+
+import {
+  AC6Error,
+  type AC6SessionCtx,
+  buildAC6McpError,
+  extractClientGroupId,
+  resolveAc6SessionCtx,
+  resolveAndInjectGroupId,
+} from "@/mcp/ac6-auth-guard.js";
+
 // ── Port Resolution ─────────────────────────────────────────────────────────
 
 function resolveHttpPort(): { port: number; source: string; warnings: string[] } {
@@ -165,7 +192,7 @@ import type {
 
 // ── MCP Server Setup (Streamable HTTP) ───────────────────────────────────────
 
-function createMcpServer(): Server {
+function createMcpServer(sessionCtx: AC6SessionCtx): Server {
   const mcpServer = new Server(
     {
       name: "allura-memory-canonical",
@@ -552,7 +579,29 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
 
 // Tool execution handler
 mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+  const { name, arguments: rawArgs } = request.params;
+
+  // ── AC6: server-side group_id injection (ADR §4.1.2 / §4.1.3 / §4.2.1) ──
+  // Resolve and inject the authoritative group_id before dispatching to any
+  // tool. The client's group_id in rawArgs is validated but never trusted
+  // as-is. On violation, return a well-formed MCP error without throwing.
+  // Initialized to a safe default; overwritten by resolveAndInjectGroupId or an early return.
+  let args: Record<string, unknown> = (rawArgs as Record<string, unknown> | null) ?? {};
+  try {
+    args = await resolveAndInjectGroupId(args, sessionCtx);
+  } catch (err) {
+    if (err instanceof AC6Error) {
+      const clientGroupId = extractClientGroupId(rawArgs as Record<string, unknown> | null ?? {});
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify(buildAC6McpError(err, sessionCtx.email, clientGroupId)),
+        }],
+        isError: true,
+      };
+    }
+    throw err;
+  }
 
   try {
     let result: unknown;
@@ -646,7 +695,7 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 const mcpTransports = new Map<string, StreamableHTTPServerTransport>();
 
-async function createMcpTransport(): Promise<StreamableHTTPServerTransport> {
+async function createMcpTransport(sessionCtx: AC6SessionCtx): Promise<StreamableHTTPServerTransport> {
   let initializedSessionId: string | undefined;
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
@@ -662,7 +711,9 @@ async function createMcpTransport(): Promise<StreamableHTTPServerTransport> {
     }
   };
 
-  await createMcpServer().connect(transport);
+  // AC6: session auth context is baked into the server closure.
+  // All tool calls on this session use sessionCtx for group_id enforcement.
+  await createMcpServer(sessionCtx).connect(transport);
   return transport;
 }
 
@@ -754,7 +805,25 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
           transaction.finish();
           return;
         }
-        transport = await createMcpTransport();
+        // AC6: establish session auth context before creating the transport.
+        // JWT is verified here; the resolved email+path are baked into the
+        // MCP server closure for all subsequent tool calls in this session.
+        let sessionCtx: AC6SessionCtx;
+        try {
+          sessionCtx = await resolveAc6SessionCtx(req);
+        } catch (err) {
+          if (err instanceof AC6Error) {
+            res.writeHead(err.httpStatus, {
+              ...corsHeaders(req.headers["origin"]),
+              "Content-Type": "application/json",
+            });
+            res.end(JSON.stringify(buildAC6McpError(err, "unknown", null, "Verify your Cloudflare Access JWT")));
+            transaction.finish();
+            return;
+          }
+          throw err;
+        }
+        transport = await createMcpTransport(sessionCtx);
       } else {
         res.writeHead(400, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "MCP session required" }));
@@ -914,8 +983,11 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   transaction.finish();
 });
 
-server.listen(PORT, () => {
-  console.log(`Allura Memory Canonical HTTP Gateway listening on port ${PORT}`);
+// AC6 🔴2(a): Bind explicitly to loopback — never 0.0.0.0.
+// The gateway is reverse-proxied by Cloudflare Access; binding to all interfaces
+// would expose it directly to the network, bypassing CF Access JWT enforcement.
+server.listen(PORT, "127.0.0.1", () => {
+  console.log(`Allura Memory Canonical HTTP Gateway listening on 127.0.0.1:${PORT}`);
   console.log(`Port source: ${HTTP_PORT.source}`);
   for (const warning of HTTP_PORT.warnings) {
     console.warn(`[deprecated-port-contract] ${warning}`);

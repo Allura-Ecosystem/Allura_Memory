@@ -50,3 +50,28 @@ ON (m.usage_count);
 CREATE INDEX memory_version_idx IF NOT EXISTS
 FOR (m:Memory)
 ON (m.version);
+
+// ── AC6: Tenant isolation constraints for Insight nodes ──────────────────────
+// Added on feat/faithmeats-onboarding (Knuth, 2026-06-28).
+//
+// NOTE: This file is applied by the neo4j-init container on FIRST startup only.
+// It does NOT apply to an already-running Neo4j instance automatically. To apply
+// this constraint on a live database, run the Cypher statement manually via
+// Neo4j Browser or cypher-shell:
+//
+//   CREATE CONSTRAINT unique_insight_per_tenant IF NOT EXISTS
+//   FOR (n:Insight) REQUIRE (n.group_id, n.insight_id) IS UNIQUE;
+//
+// Also enforce that group_id is always present on Insight nodes (no orphan nodes):
+//
+//   CREATE CONSTRAINT insight_group_id_exists IF NOT EXISTS
+//   FOR (n:Insight) REQUIRE n.group_id IS NOT NULL;
+//
+// Matching ADR §7.4 — every node must carry group_id; SUPERSEDES relationships
+// must not cross tenants (both old and new node must share the same group_id).
+
+CREATE CONSTRAINT unique_insight_per_tenant IF NOT EXISTS
+FOR (n:Insight) REQUIRE (n.group_id, n.insight_id) IS UNIQUE;
+
+CREATE CONSTRAINT insight_group_id_exists IF NOT EXISTS
+FOR (n:Insight) REQUIRE n.group_id IS NOT NULL;
