@@ -1,0 +1,30 @@
+# allura-cloudflared-config.yml.template
+# Cloudflare named-tunnel ingress for the Allura Brain MCP gateway.
+#
+# Path of a request:
+#   Cloudflare edge (mcp.faithmeats.org)
+#     -> cloudflared (this tunnel, laptop)
+#       -> Caddy token gateway (localhost:8000) — Bearer auth + path allow-list
+#         -> mcpo bridge (localhost:8001)
+#           -> Allura Brain MCP (localhost:5888)
+#
+# DO NOT use this file directly. Render it via install-cloudflared-tunnel.sh,
+# which substitutes __TUNNEL_ID__ and __CREDENTIALS_FILE__ and writes the result
+# to ~/.config/allura/allura-cloudflared-config.yml.
+#
+# The Caddy gateway already enforces per-coworker Bearer auth and the
+# /docs* /openapi.json* /memory_* allow-list, so cloudflared just forwards to it.
+
+tunnel: __TUNNEL_ID__
+credentials-file: __CREDENTIALS_FILE__
+
+# Keep the origin request simple: HTTP/1.1 to a loopback service.
+originRequest:
+  connectTimeout: 30s
+  noTLSVerify: true
+
+ingress:
+  - hostname: __HOSTNAME__
+    service: __GATEWAY_URL__
+  # Catch-all: anything not matched above is refused at the tunnel.
+  - service: http_status:404

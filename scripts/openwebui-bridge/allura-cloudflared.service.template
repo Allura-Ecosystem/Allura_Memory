@@ -1,0 +1,33 @@
+# allura-cloudflared.service.template — systemd --user unit for the cloudflared
+# named tunnel that publishes the Allura Brain MCP gateway under
+# mcp.faithmeats.org.
+#
+# DO NOT install this file verbatim. Run install-cloudflared-tunnel.sh, which
+# substitutes __CLOUDFLARED_BIN__ with the resolved cloudflared binary path and
+# writes the rendered unit to ~/.config/systemd/user/allura-cloudflared.service.
+#
+# Dependency: the Caddy gateway (allura-mcpo-gateway.service, localhost:8000)
+# should be running so the tunnel has a live origin. We use Wants (not Requires)
+# so the tunnel still comes up and retries if the gateway restarts.
+
+[Unit]
+Description=Allura Brain MCP Cloudflare Tunnel (cloudflared)
+After=network.target allura-mcpo-gateway.service
+Wants=allura-mcpo-gateway.service
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+ExecStart=__CLOUDFLARED_BIN__ tunnel --config %h/.config/allura/allura-cloudflared-config.yml run
+Restart=on-failure
+RestartSec=5
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+TimeoutStartSec=15
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
