@@ -9,8 +9,54 @@ GATEWAY_READY_URL="http://127.0.0.1:5888/ready"
 
 SERVICES=(postgres neo4j mcp)
 
+# External resources declared in docker-compose.yml as `external: true`.
+# These names MUST match the compose `name:` fields exactly — see the
+# WHY-external comment block in docker-compose.yml. On THIS machine they already
+# exist (the live stack binds them); pre-creating them is a no-op that preserves
+# data. On a FRESH machine they do not exist, so `compose up` fails before any
+# container starts — bootstrap_external_resources() fixes that (G1 + G2).
+EXTERNAL_NETWORK="knowledge-network"
+EXTERNAL_VOLUMES=(memory_postgres_data neo4j_data neo4j_logs)
+
+# --env-file args (G4): the stack needs BOTH .env (base) and .env.local (secrets)
+# for YAML ${VAR} substitution. Passing them here means every `compose` call is
+# correct — no more relying on the caller to remember the double --env-file flag.
+# Built once so it is applied uniformly to up/ps/logs/restart.
+ENV_ARGS=()
+if [[ -f "$REPO_ROOT/.env" ]]; then
+  ENV_ARGS+=(--env-file "$REPO_ROOT/.env")
+fi
+if [[ -f "$REPO_ROOT/.env.local" ]]; then
+  ENV_ARGS+=(--env-file "$REPO_ROOT/.env.local")
+fi
+
 compose() {
-  docker compose -f "$COMPOSE_FILE" "$@"
+  docker compose -f "$COMPOSE_FILE" "${ENV_ARGS[@]}" "$@"
+}
+
+# Idempotently pre-create the external network + volumes BEFORE `compose up`.
+# Guarded by `inspect`: an existing resource is left untouched (data preserved),
+# a missing one is created. Safe to re-run; never destroys data. Fixes G1 (network)
+# and G2 (volumes) for fresh machines without changing how the live stack binds.
+bootstrap_external_resources() {
+  echo "==> Ensuring external network '${EXTERNAL_NETWORK}' exists"
+  if docker network inspect "${EXTERNAL_NETWORK}" >/dev/null 2>&1; then
+    echo "    network '${EXTERNAL_NETWORK}' already exists — skipping"
+  else
+    docker network create "${EXTERNAL_NETWORK}" >/dev/null
+    echo "    network '${EXTERNAL_NETWORK}' created"
+  fi
+
+  local vol
+  for vol in "${EXTERNAL_VOLUMES[@]}"; do
+    echo "==> Ensuring external volume '${vol}' exists"
+    if docker volume inspect "${vol}" >/dev/null 2>&1; then
+      echo "    volume '${vol}' already exists — skipping (data preserved)"
+    else
+      docker volume create "${vol}" >/dev/null
+      echo "    volume '${vol}' created"
+    fi
+  done
 }
 
 require_docker() {
@@ -92,6 +138,7 @@ wait_ready() {
 
 cmd_up() {
   require_docker
+  bootstrap_external_resources
   compose up -d
   wait_ready 120
 }
@@ -109,6 +156,7 @@ cmd_restart() {
 
 cmd_recover() {
   require_docker
+  bootstrap_external_resources
   compose up -d
 
   if wait_ready 90; then
