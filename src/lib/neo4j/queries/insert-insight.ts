@@ -1,6 +1,6 @@
 import { Neo4jPromotionError, Neo4jQueryError } from "../../errors/neo4j-errors";
 import { CURRENT_SCHEMA_VERSION } from "../../schema-version";
-import { type ManagedTransaction, readTransaction, writeTransaction } from "../connection";
+import { type ManagedTransaction, getSession, readTransaction, writeTransaction } from "../connection";
 
 /**
  * Insight status values
@@ -315,7 +315,28 @@ export async function createInsight(insight: InsightInsert): Promise<InsightReco
     // Extract the node from the result
     const record = result.records[0];
     const node = record.get("i");
-    return neo4jToRecord(node.properties);
+    const insightRecord = neo4jToRecord(node.properties);
+
+    // Best-effort: narrow the promote-then-search race window by requesting a
+    // fulltext index refresh before returning. Matches the linkMemoryContext
+    // best-effort pattern in src/curator/approve-cli.ts:199 — failure logs a
+    // warning but does NOT fail the promotion.
+    const refreshSession = getSession();
+    try {
+      await refreshSession.run(
+        "CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh()"
+      );
+    } catch (refreshErr) {
+      console.warn(
+        "[createInsight] fulltext index refresh failed (best-effort); " +
+          "search results may lag briefly after this promotion.",
+        refreshErr instanceof Error ? refreshErr.message : String(refreshErr)
+      );
+    } finally {
+      await refreshSession.close();
+    }
+
+    return insightRecord;
   } catch (err) {
     if (err instanceof InsightConflictError || err instanceof InsightValidationError) throw err;
     throw new Neo4jPromotionError(insight.insight_id, err instanceof Error ? err : new Error(String(err)));

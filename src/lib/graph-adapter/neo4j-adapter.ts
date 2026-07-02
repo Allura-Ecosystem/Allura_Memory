@@ -384,25 +384,40 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
   }): Promise<GraphSearchResult[]> {
     const session = this.driver.session()
     try {
-      const insightResult = await session.run(
-          `CALL db.index.fulltext.queryNodes('insight_search_index', $query)
-           YIELD node AS m, score
-           MATCH (h:InsightHead {insight_id: m.insight_id, group_id: $groupId})
-           WHERE m.id = h.current_id
-             AND m.status = 'active'
-           RETURN m.insight_id AS id,
-                  m.content AS content,
-                  m.confidence AS score,
-                  m.source_type AS provenance,
-                  m.created_at AS created_at,
-                  0 AS usage_count,
-                  [] AS tags,
-                  m.schema_version AS schema_version,
-                  score AS relevance
-          ORDER BY relevance DESC, m.confidence DESC
-           LIMIT $limit`,
-          { query: params.query, groupId: params.group_id, limit: neo4j.int(params.limit) }
+      // Defensive: insight_search_index may be absent on a fresh deploy that
+      // hasn't yet applied 00-schema.cypher. Isolate so a missing index degrades
+      // to an empty set rather than throwing GraphAdapterError for the whole search.
+      let insightRecords: Neo4jRecordLike[] = []
+      try {
+        const insightResult = await session.run(
+            `CALL db.index.fulltext.queryNodes('insight_search_index', $query)
+             YIELD node AS m, score
+             MATCH (h:InsightHead {insight_id: m.insight_id, group_id: $groupId})
+             WHERE m.id = h.current_id
+               AND m.status = 'active'
+             RETURN m.insight_id AS id,
+                    m.content AS content,
+                    m.confidence AS score,
+                    m.source_type AS provenance,
+                    m.created_at AS created_at,
+                    0 AS usage_count,
+                    [] AS tags,
+                    m.schema_version AS schema_version,
+                    score AS relevance
+            ORDER BY relevance DESC, m.confidence DESC
+             LIMIT $limit`,
+            { query: params.query, groupId: params.group_id, limit: neo4j.int(params.limit) }
+          )
+        insightRecords = insightResult.records as unknown as Neo4jRecordLike[]
+      } catch (insightErr) {
+        // Log and continue — memory_search_index results will still be returned.
+        // This path is hit on fresh deploys before 00-schema.cypher has run.
+        console.warn(
+          "[searchMemories] insight_search_index query failed (index may not exist on this instance); " +
+          "falling back to memory_search_index only.",
+          insightErr instanceof Error ? insightErr.message : String(insightErr)
         )
+      }
       const memoryResult = await session.run(
         `CALL db.index.fulltext.queryNodes('memory_search_index', $query)
          YIELD node AS m, score
@@ -424,7 +439,7 @@ export class Neo4jGraphAdapter implements IGraphAdapter {
       )
 
       const seen = new Set<string>()
-      return [...insightResult.records, ...memoryResult.records]
+      return [...insightRecords, ...memoryResult.records as unknown as Neo4jRecordLike[]]
         .map((record) => graphSearchRecord(record))
         .sort((a, b) => b.relevance - a.relevance || b.score - a.score)
         .filter((record) => {
