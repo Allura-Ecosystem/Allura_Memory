@@ -118,6 +118,8 @@ async function enqueueNotionSync(
     decidedAt: string
   }
 ): Promise<void> {
+  // Notion sync sunset ADR 2026-07-02 — emission disabled unless NOTION_SYNC_ENABLED=true
+  if (process.env.NOTION_SYNC_ENABLED !== "true") return
   await queryable.query(
     `INSERT INTO events (
       group_id, event_type, agent_id, status, metadata, created_at
