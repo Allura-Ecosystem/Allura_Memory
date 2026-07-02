@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createMcpSkillExecutor,
+  InProcessSkillExecutor,
   McpClientPool,
   McpSkillExecutor,
   type SkillServerConfig,
@@ -85,7 +86,7 @@ describe("McpSkillExecutor", () => {
       skillName: "skill-neo4j-memory",
       toolName: "recall_insight",
       assignedAgent: "scout",
-      input: { query: "architecture decisions", groupId: "allura-roninmemory", limit: 10 },
+      input: { query: "architecture decisions", groupId: "allura-test-teamram", limit: 10 },
     }
 
     const result = await executor.execute(call)
@@ -95,7 +96,7 @@ describe("McpSkillExecutor", () => {
     expect(callLog[0].name).toBe("recall_insight")
     expect(callLog[0].args).toEqual({
       query: "architecture decisions",
-      groupId: "allura-roninmemory",
+      groupId: "allura-test-teamram",
       limit: 10,
     })
     expect(result).toEqual([{ id: "insight-1", content: "test" }])
@@ -114,7 +115,7 @@ describe("McpSkillExecutor", () => {
       skillName: "skill-neo4j-memory",
       toolName: "list_insights",
       assignedAgent: "scout",
-      input: { groupId: "allura-roninmemory" },
+      input: { groupId: "allura-test-teamram" },
     })
 
     expect(result).toEqual({ items: ["a", "b"], total: 2 })
@@ -134,7 +135,7 @@ describe("McpSkillExecutor", () => {
       skillName: "skill-cypher-query",
       toolName: "execute_cypher",
       assignedAgent: "knuth",
-      input: { cypher: "MATCH (n) RETURN n LIMIT 1", groupId: "allura-roninmemory" },
+      input: { cypher: "MATCH (n) RETURN n LIMIT 1", groupId: "allura-test-teamram" },
     })
 
     expect(result).toEqual({ records: [{ n: 1 }], fields: ["n"], success: true })
@@ -154,7 +155,7 @@ describe("McpSkillExecutor", () => {
         skillName: "skill-neo4j-memory",
         toolName: "recall_insight",
         assignedAgent: "scout",
-        input: { query: "test", groupId: "allura-roninmemory" },
+        input: { query: "test", groupId: "allura-test-teamram" },
       }),
     ).rejects.toThrow("Neo4j connection refused")
   })
@@ -191,7 +192,7 @@ describe("McpSkillExecutor", () => {
         skillName: "skill-database",
         toolName: "query_traces",
         assignedAgent: "hightower",
-        input: { group_id: "allura-roninmemory" },
+        input: { group_id: "allura-test-teamram" },
       }),
     ).rejects.toThrow("db unavailable")
   })
@@ -206,7 +207,7 @@ describe("McpSkillExecutor", () => {
       skillName: "skill-neo4j-memory",
       toolName: "recall_insight",
       assignedAgent: "scout",
-      input: { query: "test", groupId: "allura-roninmemory" },
+      input: { query: "test", groupId: "allura-test-teamram" },
     }
 
     await executor.execute(call)
@@ -226,7 +227,7 @@ describe("McpSkillExecutor", () => {
       skillName: "skill-neo4j-memory",
       toolName: "recall_insight",
       assignedAgent: "scout",
-      input: { query: "test", groupId: "allura-roninmemory" },
+      input: { query: "test", groupId: "allura-test-teamram" },
     })
 
     await executor.destroy()
@@ -247,7 +248,7 @@ describe("McpSkillExecutor", () => {
         skillName: "skill-neo4j-memory",
         toolName: "recall_insight",
         assignedAgent: "scout",
-        input: { query: "test", groupId: "allura-roninmemory" },
+        input: { query: "test", groupId: "allura-test-teamram" },
       }),
     ).rejects.toThrow("has been destroyed")
   })
@@ -267,33 +268,20 @@ describe("McpClientPool", () => {
 })
 
 describe("createMcpSkillExecutor", () => {
-  it("passes through database env vars", () => {
-    const originalNeo4j = process.env.NEO4J_URI
-    process.env.NEO4J_URI = "bolt://test:7687"
-
+  it("returns an InProcessSkillExecutor instance", () => {
     const executor = createMcpSkillExecutor()
-    const pool = (executor as any).pool as McpClientPool
-    const env = (pool as any).baseEnv as Record<string, string>
-
-    expect(env.NEO4J_URI).toBe("bolt://test:7687")
-
-    // Restore
-    if (originalNeo4j !== undefined) {
-      process.env.NEO4J_URI = originalNeo4j
-    } else {
-      delete process.env.NEO4J_URI
-    }
+    expect(executor).toBeInstanceOf(InProcessSkillExecutor)
   })
 
-  it("merges extraEnv over pass-through vars", () => {
+  it("accepts options without error (options are API-compat; no child processes spawned)", () => {
+    // createMcpSkillExecutor no longer spawns child processes. Options accepted
+    // for backward-compatible call sites but are not forwarded to a pool.
     const executor = createMcpSkillExecutor({
       extraEnv: { NEO4J_URI: "bolt://custom:7687", CUSTOM_VAR: "yes" },
+      cwd: process.cwd(),
+      poolConnections: true,
     })
-    const pool = (executor as any).pool as McpClientPool
-    const env = (pool as any).baseEnv as Record<string, string>
-
-    expect(env.NEO4J_URI).toBe("bolt://custom:7687")
-    expect(env.CUSTOM_VAR).toBe("yes")
+    expect(executor).toBeInstanceOf(InProcessSkillExecutor)
   })
 })
 
@@ -324,7 +312,7 @@ describe("McpSkillExecutor + orchestrator integration", () => {
     const result = await orchestrateTeamRamTask(
       {
         goal: "Investigate architecture decisions and recent trace events",
-        groupId: "allura-roninmemory",
+        groupId: "allura-test-teamram",
         cypher: "MATCH (n {group_id: $groupId}) RETURN n LIMIT 5",
         needs: { traces: true },
       },
