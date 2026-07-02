@@ -60,6 +60,16 @@ interface WorkItemRow {
   blocker: string | null
   created_at: Date
   updated_at: Date
+  /**
+   * Microsecond-precise ISO-8601 token produced by:
+   *   to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+   *
+   * PG timestamptz has microsecond resolution; JS Date.toISOString() truncates to
+   * milliseconds, so `AND updated_at = $token` matches 0 rows on real PG. The
+   * `updated_at_token` carries µs precision so the token round-trips exactly through
+   * the optimistic-lock WHERE clause.
+   */
+  updated_at_token: string
   completed_at: Date | null
 }
 
@@ -80,7 +90,8 @@ function rowToStored(row: WorkItemRow): StoredWorkItem {
     latest_receipt_id: row.latest_receipt_id,
     blocker: row.blocker,
     created_at: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
-    updated_at: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+    // Use the µs-precise token so the optimistic-lock WHERE round-trips exactly.
+    updated_at: row.updated_at_token,
     completed_at:
       row.completed_at == null
         ? null
@@ -94,6 +105,11 @@ const WORK_ITEM_COLUMNS = `
   id, project_id, lane_id, group_id, title, description, status, priority,
   owner_id, team_id, acceptance_criteria, linked_run_id, latest_receipt_id,
   blocker, created_at, updated_at, completed_at
+`
+
+// Append to every SELECT/RETURNING to capture the µs-precise optimistic-lock token.
+const WORK_ITEM_SELECT = `${WORK_ITEM_COLUMNS.trimEnd()},
+  to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at_token
 `
 
 // ── createWorkItem ────────────────────────────────────────────────────────────
@@ -137,7 +153,7 @@ export async function createWorkItem(
        (id, project_id, lane_id, group_id, title, description, priority, owner_id, acceptance_criteria)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT (id) DO NOTHING
-     RETURNING ${WORK_ITEM_COLUMNS}`,
+     RETURNING ${WORK_ITEM_SELECT}`,
     [
       id,
       projectId,
@@ -157,7 +173,7 @@ export async function createWorkItem(
 
   // ON CONFLICT DO NOTHING — row already exists; fetch and return it
   const existing = await pool.query<WorkItemRow>(
-    `SELECT ${WORK_ITEM_COLUMNS}
+    `SELECT ${WORK_ITEM_SELECT}
      FROM work_items
      WHERE id = $1 AND group_id = $2`,
     [id, groupId],
@@ -183,7 +199,7 @@ export async function getWorkItem(
   const { id, groupId } = params
 
   const result = await pool.query<WorkItemRow>(
-    `SELECT ${WORK_ITEM_COLUMNS}
+    `SELECT ${WORK_ITEM_SELECT}
      FROM work_items
      WHERE id = $1 AND group_id = $2
      LIMIT 1`,
@@ -229,7 +245,7 @@ export async function listWorkItems(
 
   queryParams.push(limit)
 
-  const query = `SELECT ${WORK_ITEM_COLUMNS}
+  const query = `SELECT ${WORK_ITEM_SELECT}
                  FROM work_items
                  WHERE ${conditions.join(" AND ")}
                  ORDER BY created_at DESC
@@ -293,8 +309,8 @@ export async function transitionWorkItem(
                  completed_at = NOW()
              WHERE id         = $2
                AND group_id   = $3
-               AND updated_at = $4
-             RETURNING ${WORK_ITEM_COLUMNS}`
+               AND to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') = $4
+             RETURNING ${WORK_ITEM_SELECT}`
     queryParams = [toStatus, id, groupId, expectedUpdatedAt]
   } else {
     query = `UPDATE work_items
@@ -302,8 +318,8 @@ export async function transitionWorkItem(
                  updated_at = NOW()
              WHERE id         = $2
                AND group_id   = $3
-               AND updated_at = $4
-             RETURNING ${WORK_ITEM_COLUMNS}`
+               AND to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') = $4
+             RETURNING ${WORK_ITEM_SELECT}`
     queryParams = [toStatus, id, groupId, expectedUpdatedAt]
   }
 
@@ -339,8 +355,8 @@ export async function linkRunToWorkItem(
          updated_at    = NOW()
      WHERE id         = $2
        AND group_id   = $3
-       AND updated_at = $4
-     RETURNING ${WORK_ITEM_COLUMNS}`,
+       AND to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') = $4
+     RETURNING ${WORK_ITEM_SELECT}`,
     [runId, id, groupId, expectedUpdatedAt],
   )
 

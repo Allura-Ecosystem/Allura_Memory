@@ -40,6 +40,20 @@ vi.mock("./run-manager", () => ({
     updated_at: "2026-01-01T00:00:00.000Z",
     completed_at: null,
   }),
+  // getRun is called by _persistRunSnapshot() when the engine is a fresh instance
+  // (cross-instance resume/cancel path) and _runUpdatedAt has no entry.
+  getRun: vi.fn().mockResolvedValue({
+    id: "test-run-id",
+    definition_id: "def-accept",
+    definition_revision: 1,
+    group_id: "allura-system",
+    status: "paused",
+    state_json: {},
+    actor_id: "woz-builder",
+    started_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    completed_at: null,
+  }),
   updateRunSnapshot: vi.fn().mockResolvedValue({
     id: "test-run-id",
     definition_id: "def-accept",
