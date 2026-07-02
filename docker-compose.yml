@@ -204,15 +204,43 @@ services:
   # Notion: remote MCP only (mcp__claude_ai_Notion__*). No local service needed.
 
 # =============================================================================
-# Volume Definitions
+# Volume + Network Definitions — WHY external:true, and WHERE bootstrap happens
 # =============================================================================
-# All volumes are now explicitly declared with external: true since they are
-# pre-existing (created by docker-compose v1.x or manual docker volume create).
+# The network (knowledge-network) and volumes (memory_postgres_data, neo4j_data,
+# neo4j_logs) are declared `external: true` on purpose. This pins them to fixed,
+# unprefixed names so the LIVE stack on the primary machine keeps binding the
+# exact same data no matter which compose project name is used. If these were
+# compose-managed, `docker compose -p <anything> up` would create fresh empty
+# `<project>_postgres_data` volumes and silently abandon the real data. DO NOT
+# change these to compose-managed volumes — that would orphan production data.
 #
-# Pre-existing volumes:
-#   - memory_postgres_data    (name: postgres_data)
-#   - neo4j_data              (name: neo4j_data)
-#   - neo4j_logs              (name: neo4j_logs)
+# TRADE-OFF: on a FRESH machine these externals do not exist yet, so a naive
+# `docker compose up` fails before any container starts:
+#     network knowledge-network declared as external, but could not be found
+#     volume memory_postgres_data declared as external, but could not be found
+#
+# WHERE THE FIX LIVES: bootstrap is centralized in scripts/brain-stack.sh
+# (bootstrap_external_resources), invoked by `bun run brain:up` and
+# `bun run brain:recover`. It idempotently `docker network create` /
+# `docker volume create`s these exact names BEFORE `compose up`, and always
+# passes `--env-file .env --env-file .env.local`. On this machine every create
+# is a no-op (they exist); on a fresh machine it makes `brain:up` truly
+# one-command. Ref: 2026-07-02 fresh-deploy verdict, G1/G2/G4 —
+# docs/archive/allura/INSTALL-DEPLOY-REVIEW.md. (scripts/first-run.sh does the
+# same and remains as a standalone entrypoint.)
+#
+# KNOWN LIMITATION (G3, deferred): each service pins a hardcoded container_name
+# (knowledge-postgres, knowledge-neo4j, allura-neo4j-init, allura-memory-mcp).
+# The live stack and scripts/brain-stack.sh reference these names, so
+# side-by-side / project-prefixed isolated deploys collide on them. Removing
+# container_name is a breaking change (out of scope 2026-07-02); a future
+# fresh-deploy isolation test needs an override that drops container_name and
+# sets volumes to `!reset []` with project-prefixed names + remapped ports.
+#
+# Volume name mapping (compose key -> external name):
+#   - postgres_data -> memory_postgres_data
+#   - neo4j_data     -> neo4j_data
+#   - neo4j_logs     -> neo4j_logs
 # =============================================================================
 volumes:
   # PostgreSQL data volume - pinned to existing database

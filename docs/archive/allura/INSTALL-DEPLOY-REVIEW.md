@@ -1,5 +1,26 @@
 # Install & Deploy Review
 
+> **2026-07-02 — `brain:up` NOW SELF-BOOTSTRAPS (G1/G2/G4 closed for the Brain stack).**
+> Verified by Hightower. Previously the documented one-command entrypoint
+> `bun run brain:up` (→ `scripts/brain-stack.sh up`) did NOT pre-create the
+> external network/volumes — only the separate `scripts/first-run.sh` did, so a
+> fresh-machine user following `brain:up` still hit
+> `network knowledge-network declared as external, but could not be found`.
+> `scripts/brain-stack.sh` now runs `bootstrap_external_resources()` before every
+> `compose up` (in both `up` and `recover`): it idempotently
+> `docker network create knowledge-network` + `docker volume create`
+> {memory_postgres_data, neo4j_data, neo4j_logs} (guarded by `inspect`, no-op if
+> present, never destroys data) and always passes `--env-file .env --env-file
+> .env.local`. `first-run.sh` remains as a standalone entrypoint.
+> **Evidence:** (a) `bash -n scripts/brain-stack.sh` exit 0; (b) `docker compose
+> --env-file .env --env-file .env.local config` exit 0 (externals resolve); (c)
+> isolated causality smoke (project `allura-fresh-smoke2`, throwaway alpine +
+> named externals): missing-external `up` fails before any container →
+> `network create`+`volume create` → same `up` succeeds → re-run is a no-op;
+> resources cleaned up afterward; (d) live stack uptimes unchanged (pg/neo4j
+> ~36h, mcp ~8h) — no live `up`/`down` was run. **G3 (hardcoded container_name)
+> is still deferred** — documented as a known limitation in `docker-compose.yml`.
+
 > **2026-06-13 — FRESH-DEPLOY PARTIALLY VERIFIED (config valid; prod image BLOCKED by code bug).**
 > Verified by Hightower this session. What is proven, what is documented-only, and the
 > remaining blocker are stated precisely below. A full clean-machine boot was NOT performed
