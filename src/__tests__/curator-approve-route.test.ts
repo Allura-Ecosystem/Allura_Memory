@@ -575,6 +575,8 @@ describe("curator approve route", () => {
   })
 
   it("rolls back request-evidence audit when the durable Notion outbox cannot be written", async () => {
+    // NOTION_SYNC_ENABLED=true: testing flag-on behavior (sunset ADR 2026-07-02)
+    process.env.NOTION_SYNC_ENABLED = "true"
     const clientQueryMock = vi.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes("INSERT INTO events") && params?.[1] === "notion_sync_pending") throw new Error("notion outbox unavailable")
       if (sql.includes("INSERT INTO events")) return { rows: [{ id: 999 }], rowCount: 1 }
@@ -628,5 +630,62 @@ describe("curator approve route", () => {
     expect(clientQueryMock.mock.calls.some(([sql]) => String(sql) === "ROLLBACK")).toBe(true)
     expect(clientQueryMock.mock.calls.some(([sql]) => String(sql) === "COMMIT")).toBe(false)
     expect(releaseMock).toHaveBeenCalled()
+
+    delete process.env.NOTION_SYNC_ENABLED
+  })
+
+  it("does not emit notion_sync_pending when NOTION_SYNC_ENABLED is unset (sunset ADR 2026-07-02)", async () => {
+    delete process.env.NOTION_SYNC_ENABLED
+    const clientQueryMock = vi.fn(async (sql: string, _params?: unknown[]) => {
+      if (sql.includes("UPDATE canonical_proposals")) return { rows: [], rowCount: 1 }
+      if (sql.includes("INSERT INTO events")) return { rows: [{ id: 999 }], rowCount: 1 }
+      return { rows: [], rowCount: 0 }
+    })
+    const releaseMock = vi.fn()
+    ;(getPool as any).mockReturnValueOnce({
+      query: queryMock,
+      connect: vi.fn(async () => ({ query: clientQueryMock, release: releaseMock })),
+    })
+    queryMock.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM canonical_proposals")) {
+        return {
+          rows: [
+            {
+              id: "proposal-nosync",
+              group_id: "allura-test",
+              content: "No notion sync",
+              score: "0.72",
+              reasoning: "Flag off",
+              tier: "adoption",
+              status: "pending",
+              trace_ref: "trace-nosync",
+            },
+          ],
+        }
+      }
+      if (sql.includes("FROM events") && sql.includes("agent_id")) {
+        return { rows: [{ agent_id: "agent-woz" }] }
+      }
+      return { rows: [] }
+    })
+
+    const request = new NextRequest("http://localhost:4748/api/curator/approve", {
+      method: "POST",
+      body: JSON.stringify({
+        proposal_id: "proposal-nosync",
+        group_id: "allura-test",
+        decision: "request_evidence",
+        rationale: "Notion sync disabled",
+      }),
+    })
+
+    const response = await POST(request)
+
+    expect(response.status).toBe(200)
+    expect(
+      clientQueryMock.mock.calls.some(
+        ([sql, params]) => String(sql).includes("INSERT INTO events") && Array.isArray(params) && params[1] === "notion_sync_pending",
+      ),
+    ).toBe(false)
   })
 })

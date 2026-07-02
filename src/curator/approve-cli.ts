@@ -261,33 +261,36 @@ async function finalizeApproval(
   // Emit notion_sync_pending event for async MCP Docker processing
   // The notion-sync-worker will pick this up and call MCP_DOCKER_notion-create-pages
   // DRIFT-1 fix: matches API route behavior (route.ts line ~230)
-  try {
-    await pool.query(
-      `INSERT INTO events (
-        group_id, event_type, agent_id, status, metadata, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        groupId,
-        "notion_sync_pending",
-        "curator-approve",
-        "pending",
-        JSON.stringify({
-          proposal_id: proposal.id,
-          content: proposal.content,
-          score: parseFloat(proposal.score),
-          tier: proposal.tier,
-          status: "approved",
-          curator_id: curatorId,
-          rationale: proposal.reasoning,
-          decided_at: decidedAt,
-          data_source_id: "42894678-aedb-4c90-9371-6494a9fe5270",
-        }),
-        decidedAt,
-      ]
-    )
-  } catch (notionErr) {
-    // Non-blocking: Notion sync failure must not block approval
-    console.warn(`[notion-sync] Failed to emit notion_sync_pending event:`, notionErr)
+  // Notion sync sunset ADR 2026-07-02 — emission disabled unless NOTION_SYNC_ENABLED=true
+  if (process.env.NOTION_SYNC_ENABLED === "true") {
+    try {
+      await pool.query(
+        `INSERT INTO events (
+          group_id, event_type, agent_id, status, metadata, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          groupId,
+          "notion_sync_pending",
+          "curator-approve",
+          "pending",
+          JSON.stringify({
+            proposal_id: proposal.id,
+            content: proposal.content,
+            score: parseFloat(proposal.score),
+            tier: proposal.tier,
+            status: "approved",
+            curator_id: curatorId,
+            rationale: proposal.reasoning,
+            decided_at: decidedAt,
+            data_source_id: "42894678-aedb-4c90-9371-6494a9fe5270",
+          }),
+          decidedAt,
+        ]
+      )
+    } catch (notionErr) {
+      // Non-blocking: Notion sync failure must not block approval
+      console.warn(`[notion-sync] Failed to emit notion_sync_pending event:`, notionErr)
+    }
   }
 }
 
