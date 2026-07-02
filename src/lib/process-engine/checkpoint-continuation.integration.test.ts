@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { ProcessEngine } from "./engine"
 import { ReplayEngine } from "./replay"
+import { createDefinition } from "./definition-registry"
 import type { ProcessDefinition } from "./types"
 import { DefinitionRevisionError } from "./types"
 
@@ -75,6 +76,14 @@ describe.skipIf(!runLive)("Story 12.2 checkpoint continuation (live PG)", () => 
         },
       ],
     }
+
+    // Seed the definition row so process_runs FK is satisfied.
+    await createDefinition(getPool(), {
+      id: definition.id,
+      name: definition.name,
+      groupId: definition.group_id,
+      definition,
+    })
 
     // Start -> block.
     const engine = new ProcessEngine(getPool())
@@ -139,6 +148,14 @@ describe.skipIf(!runLive)("Story 12.2 checkpoint continuation (live PG)", () => 
         { id: "s2", name: "Step 2", type: "step", execute: async () => ({ ok: true }) },
       ],
     }
+
+    // Seed the definition row so process_runs FK is satisfied.
+    await createDefinition(getPool(), {
+      id: base.id,
+      name: base.name,
+      groupId: base.group_id,
+      definition: base,
+    })
 
     const engine = new ProcessEngine(getPool())
     const paused = await engine.run(base, { promotionMode: "soc2", agentId: "test-actor" })

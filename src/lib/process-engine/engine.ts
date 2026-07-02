@@ -51,7 +51,7 @@ import type {
   StepStatus,
 } from "./types"
 import { DAGResolver } from "./dag"
-import { createRun, updateRunSnapshot } from "./run-manager"
+import { createRun, getRun, updateRunSnapshot } from "./run-manager"
 import type { CreateRunParams } from "./run-manager"
 import { evaluateGate } from "./quality-gate"
 import type { GateConfig } from "./quality-gate"
@@ -1086,8 +1086,21 @@ export class ProcessEngine {
    * INVARIANT: The caller must emit the corresponding event BEFORE calling this.
    */
   private async _persistRunSnapshot(state: ProcessState): Promise<void> {
-    const expectedUpdatedAt = this._runUpdatedAt.get(state.processId)
-    if (!expectedUpdatedAt) return // run not tracked — no-op
+    let expectedUpdatedAt = this._runUpdatedAt.get(state.processId)
+    if (!expectedUpdatedAt) {
+      // Cross-instance path (fresh engine post-restart — normal production pattern):
+      // _runUpdatedAt is only populated by createRun() on this instance. Fetch the
+      // current µs-precise token from process_runs so the optimistic-lock WHERE can fire.
+      const existing = await getRun(this.pool, { id: state.processId, groupId: state.groupId })
+      if (!existing) {
+        console.warn(
+          `[process-engine] _persistRunSnapshot: run ${state.processId} not found ` +
+            `in process_runs — skipping snapshot`,
+        )
+        return
+      }
+      expectedUpdatedAt = existing.updated_at
+    }
 
     const isTerminal =
       state.status === "completed" ||

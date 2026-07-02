@@ -22,7 +22,19 @@ import type { StoredWorkItem } from "./types"
 const NOW_ISO = "2026-01-01T00:00:00.000Z"
 const NOW_DATE = new Date(NOW_ISO)
 
+/**
+ * Produce a µs-precise token string (matching PG to_char format) from a Date.
+ * In real PG queries this is returned by:
+ *   to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+ * Mocked rows must include this field so rowToStored() can read it.
+ */
+function toUpdatedAtToken(date: Date): string {
+  // toISOString() gives ms precision; pad with 000 to simulate µs precision.
+  return date.toISOString().replace(/\.(\d{3})Z$/, ".$1000Z")
+}
+
 function makeWorkItemRow(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
+  const updatedAt = (overrides.updated_at as Date | undefined) ?? NOW_DATE
   return {
     id: "wi-001",
     project_id: "proj-001",
@@ -40,6 +52,8 @@ function makeWorkItemRow(overrides: Partial<Record<string, unknown>> = {}): Reco
     blocker: null,
     created_at: NOW_DATE,
     updated_at: NOW_DATE,
+    // µs-precise token — mirrors what PG returns via to_char(updated_at ...) AS updated_at_token
+    updated_at_token: toUpdatedAtToken(updatedAt),
     completed_at: null,
     ...overrides,
   }
@@ -547,7 +561,8 @@ describe("date serialisation", () => {
 
     expect(result).not.toBeNull()
     expect((result as StoredWorkItem).created_at).toBe(created.toISOString())
-    expect((result as StoredWorkItem).updated_at).toBe(updated.toISOString())
+    // updated_at carries the µs-precise token (not ms-truncated Date.toISOString())
+    expect((result as StoredWorkItem).updated_at).toBe(toUpdatedAtToken(updated))
     expect((result as StoredWorkItem).completed_at).toBe(completed.toISOString())
   })
 

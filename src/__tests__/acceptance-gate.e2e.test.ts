@@ -853,14 +853,17 @@ describe.skipIf(!runLive)("10-point acceptance gate (live PG+Neo4j)", () => {
     // Transition path: backlog → ready → in_progress → done
     // (VALID_TRANSITIONS: backlog → ready, ready → in_progress, in_progress → done)
 
-    // Fetch current to get updated_at for optimistic lock
+    // Fetch the µs-precise token so the first optimistic-lock WHERE round-trips.
+    // JS Date.toISOString() truncates to ms; to_char() returns µs — they don't match.
     const wiFetch = await pool.query(
-      `SELECT id, status, updated_at FROM work_items WHERE id = $1 AND group_id = $2`,
+      `SELECT id, status,
+              to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at_token
+       FROM work_items WHERE id = $1 AND group_id = $2`,
       [ctx.workItemId, E2E_GROUP],
     )
     expect(wiFetch.rows.length).toBe(1)
 
-    let current = wiFetch.rows[0] as { id: string; status: string; updated_at: Date }
+    let current = wiFetch.rows[0] as { id: string; status: string; updated_at_token: string }
 
     // backlog → ready
     let transitioned = await transitionWorkItem(pool, {
@@ -869,9 +872,7 @@ describe.skipIf(!runLive)("10-point acceptance gate (live PG+Neo4j)", () => {
       toStatus: "ready",
       actorId: "woz-e2e",
       reason: "e2e test: moving to ready",
-      expectedUpdatedAt: current.updated_at instanceof Date
-        ? current.updated_at.toISOString()
-        : String(current.updated_at),
+      expectedUpdatedAt: current.updated_at_token,
     })
     expect(transitioned).not.toBeNull()
     expect(transitioned!.status).toBe("ready")
