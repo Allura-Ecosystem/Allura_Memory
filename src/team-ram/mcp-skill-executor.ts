@@ -17,6 +17,10 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type { SkillCall, SkillExecutor } from "./orchestrator"
+import { InProcessSkillExecutor } from "./in-process-executor"
+
+// Re-export so callers can import from a single module.
+export { InProcessSkillExecutor } from "./in-process-executor"
 
 // ── Skill Server Registry ──────────────────────────────────────────────
 
@@ -308,40 +312,20 @@ export class McpSkillExecutor implements SkillExecutor {
 // ── Convenience Factory ─────────────────────────────────────────────────
 
 /**
- * Create a configured MCP skill executor.
+ * Create a configured skill executor for Team RAM orchestration.
  *
- * Resolves environment variables for Neo4j and Postgres
- * from the process environment, passing them through
- * to the spawned skill servers.
+ * Returns an InProcessSkillExecutor that satisfies the SkillExecutor
+ * contract using the repo's own connection layers (PG + Neo4j) instead
+ * of spawning stdio child processes.
+ *
+ * The connection layers read credentials directly from process.env, so
+ * options.cwd and options.extraEnv are accepted for API compatibility
+ * but are not forwarded (no child processes are spawned).
  */
-export function createMcpSkillExecutor(options?: {
+export function createMcpSkillExecutor(_options?: {
   cwd?: string
   extraEnv?: Record<string, string>
   poolConnections?: boolean
-}): McpSkillExecutor {
-  const env: Record<string, string> = {}
-
-  // Pass through database connection env vars to skill servers
-  const passThrough = [
-    "NEO4J_URI",
-    "NEO4J_USER",
-    "NEO4J_PASSWORD",
-    "POSTGRES_URL",
-    "POSTGRES_HOST",
-    "POSTGRES_PORT",
-    "POSTGRES_DB",
-    "POSTGRES_USER",
-    "POSTGRES_PASSWORD",
-  ]
-
-  for (const key of passThrough) {
-    const value = process.env[key]
-    if (value) env[key] = value
-  }
-
-  return new McpSkillExecutor({
-    env: { ...env, ...options?.extraEnv },
-    cwd: options?.cwd,
-    poolConnections: options?.poolConnections,
-  })
+}): InProcessSkillExecutor {
+  return new InProcessSkillExecutor()
 }

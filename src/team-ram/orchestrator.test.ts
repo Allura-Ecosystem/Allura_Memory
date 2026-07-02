@@ -12,7 +12,7 @@ describe("team-ram orchestrator", () => {
   it("selects memory, graph, and trace skills for mixed tasks", () => {
     const plan = selectSkills({
       goal: "Investigate architecture decisions and recent trace events",
-      groupId: "allura-roninmemory",
+      groupId: "allura-test-teamram",
       cypher: "MATCH (n {group_id: $groupId}) RETURN n LIMIT 5",
       needs: { traces: true },
     })
@@ -28,7 +28,7 @@ describe("team-ram orchestrator", () => {
   it("defaults to memory retrieval when no special routing hints exist", () => {
     const plan = selectSkills({
       goal: "Gather context for this task",
-      groupId: "allura-roninmemory",
+      groupId: "allura-test-teamram",
     })
 
     expect(plan).toHaveLength(1)
@@ -47,7 +47,7 @@ describe("team-ram orchestrator", () => {
     const result = await orchestrateTeamRamTask(
       {
         goal: "Search decisions and traces",
-        groupId: "allura-roninmemory",
+        groupId: "allura-test-teamram",
         needs: { memory: true, traces: true },
       },
       executor,
@@ -66,7 +66,7 @@ describe("team-ram orchestrator", () => {
   it("prefers skill-neo4j-memory first when no special hints exist", () => {
     const plan = selectSkills({
       goal: "Search for context about a topic",
-      groupId: "allura-roninmemory",
+      groupId: "allura-test-teamram",
     })
     expect(plan).toHaveLength(1)
     expect(plan[0]?.skillName).toBe("skill-neo4j-memory")
@@ -75,7 +75,7 @@ describe("team-ram orchestrator", () => {
   it("adds skill-database only when evidence/traces/audit details are needed", () => {
     const plan = selectSkills({
       goal: "Investigate architecture decisions and recent trace events",
-      groupId: "allura-roninmemory",
+      groupId: "allura-test-teamram",
       needs: { traces: true },
     })
     const skillNames = plan.map((entry) => entry.skillName)
@@ -86,7 +86,7 @@ describe("team-ram orchestrator", () => {
   it("adds skill-cypher-query only when explicit graph traversal is needed", () => {
     const plan = selectSkills({
       goal: "Find all relationships between nodes",
-      groupId: "allura-roninmemory",
+      groupId: "allura-test-teamram",
       cypher: "MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 10",
     })
     // When cypher is provided but no memory keywords, cypher is selected first
@@ -98,7 +98,7 @@ describe("team-ram orchestrator", () => {
   it("always prefers memory-first when memory is selected alongside other skills", () => {
     const plan = selectSkills({
       goal: "Investigate architecture decisions and node relationships",
-      groupId: "allura-roninmemory",
+      groupId: "allura-test-teamram",
       cypher: "MATCH (n {group_id: $groupId}) RETURN n LIMIT 5",
       needs: { memory: true },
     })
@@ -123,7 +123,7 @@ describe("team-ram orchestrator", () => {
     const result = await orchestrateTeamRamTask(
       {
         goal: "Recall memory context",
-        groupId: "allura-roninmemory",
+        groupId: "allura-test-teamram",
         maxRetriesPerSkill: 1,
       },
       executor,
@@ -157,7 +157,7 @@ describe("team-ram orchestrator", () => {
     const result = await orchestrateTeamRamTask(
       {
         goal: "Investigate architecture decisions, traces, and graph relationships",
-        groupId: "allura-roninmemory",
+        groupId: "allura-test-teamram",
         cypher: "MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 5",
         needs: { memory: true, traces: true },
       },
@@ -197,7 +197,7 @@ describe("team-ram orchestrator", () => {
     const result = await orchestrateTeamRamTask(
       {
         goal: "Test staged execution with retries for memory, database, and cypher",
-        groupId: "allura-roninmemory",
+        groupId: "allura-test-teamram",
         // Use "context" keyword to trigger memory skill, cypher to trigger cypher skill, and needs.traces for database
         cypher: "MATCH (n) RETURN n LIMIT 1",
         needs: { traces: true },

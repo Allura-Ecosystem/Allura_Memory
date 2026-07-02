@@ -12,7 +12,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createMcpSkillExecutor, McpSkillExecutor } from "./mcp-skill-executor"
+import { createMcpSkillExecutor, InProcessSkillExecutor } from "./mcp-skill-executor"
 import {
   type OrchestrationTraceConfig,
   traceOrchestrationEnd,
@@ -22,13 +22,19 @@ import {
 import { orchestrateTeamRamTask, selectSkills } from "./orchestrator"
 
 const E2E = process.env.RUN_E2E_TESTS === "true"
-const GROUP_ID = "allura-roninmemory"
+
+/**
+ * Canonical test tenant for Team RAM e2e tests.
+ * Must match group_id pattern ^allura-[a-z0-9-]+$.
+ * Replaces the retired roninmemory tenant (banned — use allura-* namespace).
+ */
+const GROUP_ID = "allura-test-teamram"
 
 // Skip entire suite when not running e2e
 const describeE2E = E2E ? describe : describe.skip
 
 describeE2E("Team RAM e2e smoke", () => {
-  let executor: McpSkillExecutor
+  let executor: InProcessSkillExecutor
 
   beforeAll(() => {
     executor = createMcpSkillExecutor({
@@ -40,6 +46,16 @@ describeE2E("Team RAM e2e smoke", () => {
   afterAll(async () => {
     if (executor) {
       await executor.destroy()
+    }
+
+    // Clean up mutable canonical_proposals rows written during tests.
+    // Events rows are NOT deleted — the events table is append-only.
+    try {
+      const { getPool } = await import("@/lib/postgres/connection")
+      const pool = getPool()
+      await pool.query("DELETE FROM canonical_proposals WHERE group_id = $1", [GROUP_ID])
+    } catch {
+      // Best effort — do not fail the afterAll if PG is unreachable.
     }
   })
 
@@ -82,10 +98,11 @@ describeE2E("Team RAM e2e smoke", () => {
         cypher: "MATCH (n) RETURN n LIMIT 1",
         needs: { memory: true, traces: true },
       })
+      // Documented stage order: memory (1) → traces/database (2) → graph/cypher (3)
       expect(plan.map((c) => c.skillName)).toEqual([
         "skill-neo4j-memory",
-        "skill-cypher-query",
         "skill-database",
+        "skill-cypher-query",
       ])
     })
   })
