@@ -36,6 +36,14 @@ ON (m.group_id, m.user_id, m.deprecated);
 CREATE FULLTEXT INDEX memory_search_index IF NOT EXISTS
 FOR (m:Memory) ON EACH [m.content, m.summary, m.title];
 
+// Full-text search on promoted Insight nodes (content and name)
+// Required by Neo4jGraphAdapter.searchMemories() — without this index a fresh
+// deploy throws "Index not found" and searchApprovedOnly returns empty results.
+// Property list matches the live instance (SHOW INDEXES WHERE name='insight_search_index').
+// Usage: CALL db.index.fulltext.queryNodes('insight_search_index', 'query')
+CREATE FULLTEXT INDEX insight_search_index IF NOT EXISTS
+FOR (i:Insight) ON EACH [i.content, i.name];
+
 // Index for SUPERSEDES relationships
 CREATE INDEX relationship_supersedes_idx IF NOT EXISTS
 FOR ()-[r:SUPERSEDES]-()
