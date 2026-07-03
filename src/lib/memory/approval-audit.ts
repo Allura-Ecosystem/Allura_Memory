@@ -194,7 +194,11 @@ export async function logApprovalEvent(
 
   const eventType = getAuditEventType(event.decision)
 
-  if ("connect" in pg && typeof pg.connect === "function") {
+  // A Pool has connect() but no release(); a checked-out PoolClient has both.
+  // When the caller passes its transaction client, fall through to the
+  // queryable path — re-connecting a live client throws "Client has already
+  // been connected", and the caller's transaction already provides atomicity.
+  if ("connect" in pg && typeof pg.connect === "function" && !("release" in pg)) {
     const client = await pg.connect()
     try {
       await client.query("BEGIN")
