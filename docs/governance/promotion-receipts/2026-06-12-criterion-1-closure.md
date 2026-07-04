@@ -25,8 +25,8 @@ connections were fast and conclusive).
 
 | Service | `.env` says | Container accepts | Drift? |
 | --- | --- | --- | --- |
-| PostgreSQL 16 | `POSTGRES_PASSWORD=changeme` (user `ronin4life`, db `memory`) | ✅ accepts `changeme` | No |
-| Neo4j 5.26.0 | `NEO4J_PASSWORD=Kamina2026*` (user `neo4j`, db `neo4j`) | ✅ accepts `Kamina2026*` | No |
+| PostgreSQL 16 | `POSTGRES_PASSWORD=[REDACTED — rotated 2026-07-03]` (user `ronin4life`, db `memory`) | ✅ accepts `.env` value | No |
+| Neo4j 5.26.0 | `NEO4J_PASSWORD=[REDACTED — rotated 2026-07-03]` (user `neo4j`, db `neo4j`) | ✅ accepts `.env` value | No |
 
 Live readouts (witness hashes below):
 
@@ -37,7 +37,7 @@ Neo4j: version=5.26.0                          hash=da5b339d0f3411da8f280c89f85f
 
 ### Secret hygiene
 
-`Kamina2026*` is in `.env` (gitignored per `.gitignore:34`), not in the
+The Neo4j password is in `.env` (gitignored per `.gitignore:34`), not in the
 committed tree. Confirmed by `git log --all --oneline -- .env` → empty
 output. The system design *recommends* moving real secrets to `.env.local`,
 but `.env.local` is currently empty (2 lines of comments only). The

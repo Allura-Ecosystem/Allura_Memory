@@ -54,7 +54,7 @@ docker compose ps
 docker exec knowledge-postgres psql -U ronin4life -d memory -c "SELECT count(*) FROM allura_memories;"
 
 # Neo4j
-docker exec knowledge-neo4j cypher-shell -u neo4j -p 'Kamina2026*' "MATCH (m:Memory) RETURN count(m)"
+docker exec knowledge-neo4j cypher-shell -u neo4j -p "$NEO4J_PASSWORD" "MATCH (m:Memory) RETURN count(m)"
 
 # Ollama
 curl http://localhost:11434/api/tags | grep qwen3

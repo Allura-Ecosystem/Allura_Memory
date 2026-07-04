@@ -13,7 +13,7 @@ echo "  PG memories: $PG_COUNT"
 
 # Test Neo4j
 echo "Testing Neo4j..."
-NEO4J_COUNT=$(docker exec knowledge-neo4j cypher-shell -u neo4j -p 'Kamina2026*' "MATCH (m:Memory) RETURN count(m)" 2>/dev/null | tail -2 | head -1 | tr -d ' ')
+NEO4J_COUNT=$(docker exec knowledge-neo4j cypher-shell -u neo4j -p "${NEO4J_PASSWORD:?set NEO4J_PASSWORD (see .env in the allura-memory stack)}" "MATCH (m:Memory) RETURN count(m)" 2>/dev/null | tail -2 | head -1 | tr -d ' ')
 echo "  Neo4j Memory nodes: $NEO4J_COUNT"
 
 # Test Ollama
