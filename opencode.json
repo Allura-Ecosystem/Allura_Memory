@@ -4,7 +4,7 @@
     "bellard": {
       "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "openai/gpt-5.4-mini",
+      "model": "ollama/qwen3-coder-next:cloud",
       "path": ".opencode/agent/subagents/code/bellard.md",
       "permission": {
         "skill": {
@@ -13,9 +13,9 @@
       }
     },
     "brooks": {
-      "fallback_model": "ollama/deepseek-v4-pro:cloud",
+      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "primary",
-      "model": "openai/gpt-5.5",
+      "model": "ollama/glm-5.2:cloud",
       "path": ".opencode/agent/core/brooks.md",
       "permission": {
         "skill": {
@@ -25,9 +25,9 @@
       }
     },
     "carmack": {
-      "fallback_model": "ollama/qwen3-coder-next:cloud",
+      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "openai/gpt-5.4-mini",
+      "model": "ollama/qwen3-coder-next:cloud",
       "path": ".opencode/agent/subagents/code/carmack.md",
       "permission": {
         "skill": {
@@ -38,7 +38,7 @@
     "fowler": {
       "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "openai/gpt-5.5",
+      "model": "ollama/qwen3-coder-next:cloud",
       "path": ".opencode/agent/subagents/review/fowler.md",
       "permission": {
         "skill": {
@@ -47,9 +47,9 @@
       }
     },
     "hightower": {
-      "fallback_model": "ollama/deepseek-v4-pro:cloud",
+      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "openai/gpt-5.5",
+      "model": "ollama/qwen3-coder-next:cloud",
       "path": ".opencode/agent/subagents/infrastructure/hightower.md",
       "permission": {
         "skill": {
@@ -58,9 +58,9 @@
       }
     },
     "jobs": {
-      "fallback_model": "ollama/kimi-k2.6:cloud",
+      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "primary",
-      "model": "ollama/deepseek-v4-pro:cloud",
+      "model": "ollama/glm-5.2:cloud",
       "path": ".opencode/agent/core/jobs.md",
       "permission": {
         "skill": {
@@ -69,7 +69,7 @@
       }
     },
     "knuth": {
-      "fallback_model": "openai/gpt-5.4-mini",
+      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
       "model": "ollama/qwen3-coder-next:cloud",
       "path": ".opencode/agent/subagents/infrastructure/knuth.md",
@@ -80,9 +80,9 @@
       }
     },
     "pike": {
-      "fallback_model": "ollama/deepseek-v4-pro:cloud",
+      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "openai/gpt-5.4-mini",
+      "model": "ollama/qwen3-coder-next:cloud",
       "path": ".opencode/agent/subagents/review/pike.md",
       "permission": {
         "skill": {
@@ -91,9 +91,9 @@
       }
     },
     "scout": {
-      "fallback_model": "ollama/nemotron-3-super:cloud",
+      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "openai/gpt-5.4-mini",
+      "model": "ollama/nemotron-3-super:cloud",
       "path": ".opencode/agent/subagents/core/scout.md",
       "permission": {
         "edit": "allow",
@@ -105,7 +105,7 @@
       }
     },
     "woz": {
-      "fallback_model": "openai/gpt-5.4-mini",
+      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
       "model": "ollama/qwen3-coder-next:cloud",
       "path": ".opencode/agent/subagents/code/woz.md",
@@ -146,7 +146,7 @@
       "type": "local"
     }
   },
-  "model": "ollama-cloud/kimi-k2.6",
+  "model": "ollama/glm-5.1:cloud",
   "permission": {
     "bash": "allow",
     "edit": "allow",
@@ -232,6 +232,9 @@
         },
         "qwen3:0.6b": {
           "name": "qwen3:0.6b"
+        },
+        "glm-5.2:cloud": {
+          "name": "glm-5.2:cloud"
         }
       },
       "name": "Ollama",

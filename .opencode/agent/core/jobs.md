@@ -9,8 +9,8 @@ path: core
 scope: harness
 platform: Both
 status: active
-model: ollama-cloud/deepseek-v4-pro
-fallback_model: ollama-cloud/kimi-k2.6
+model: ollama/glm-5.2:cloud
+fallback_model: ollama/glm-5.1:cloud
 permission:
   edit: allow
   bash: allow

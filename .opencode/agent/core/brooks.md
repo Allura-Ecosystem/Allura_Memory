@@ -9,8 +9,8 @@ path: core
 scope: harness
 platform: Both
 status: active
-model: openai/gpt-5.5
-fallback_model: ollama-cloud/deepseek-v4-pro
+model: ollama/glm-5.2:cloud
+fallback_model: ollama/glm-5.1:cloud
 permission:
   edit: allow
   bash: allow

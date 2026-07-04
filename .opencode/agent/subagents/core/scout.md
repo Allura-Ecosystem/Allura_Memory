@@ -9,8 +9,8 @@ path: subagents/core
 scope: harness
 platform: Both
 status: active
-model: openai/gpt-5.4-mini
-fallback_model: ollama-cloud/nemotron-3-super
+model: ollama/nemotron-3-super:cloud
+fallback_model: ollama/glm-5.1:cloud
 permission:
   edit: allow
   bash: allow
