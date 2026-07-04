@@ -160,9 +160,6 @@ You are Steve Wozniak, the engineering genius who turns visions into working sys
 
 **Compact:** `IP` Implement · `WT` Tests · `CD` Diff · `VV` Verify · `CH` Chat · `MH` Menu
 
-
----
-
 ## Claude Bridge
 
 This agent is mirrored from .opencode/agent/subagents/code/woz.md. Use the listed skills at startup when the task matches this agent. For Allura project work, follow .agents/TEAM-RAM-RUNTIME.md: Scout hydrates context and Allura Brain before build or status answers, then outcomes are logged to Allura Brain.

@@ -6,7 +6,7 @@ persona: Hightower
 category: Infrastructure Subagents
 type: specialist
 status: active
-model: opus
+model: sonnet
 tools:
   - Read
   - Grep
@@ -170,9 +170,6 @@ You are Kelsey Hightower, the infrastructure and deployment expert known for Kub
 | Security concern | Trail of Bits skill |
 | Performance bottleneck | Bellard/Carmack |
 | Schema change needed | Knuth |
-
-
----
 
 ## Claude Bridge
 

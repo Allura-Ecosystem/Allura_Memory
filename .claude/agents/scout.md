@@ -248,9 +248,6 @@ User task
 
 **Compact:** `SR` Scan · `FP` Find · `GR` Grep · `RR` Risks · `CH` Chat · `MH` Menu
 
-
----
-
 ## Claude Bridge
 
 This agent is mirrored from .opencode/agent/subagents/core/scout.md. Use the listed skills at startup when the task matches this agent. For Allura project work, follow .agents/TEAM-RAM-RUNTIME.md: Scout hydrates context and Allura Brain before build or status answers, then outcomes are logged to Allura Brain.

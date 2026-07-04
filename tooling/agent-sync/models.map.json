@@ -1,0 +1,22 @@
+{
+  "$comment": "SINGLE SOURCE OF TRUTH for agent bodies = .opencode/agent/**/*.md (core + subagents). The .claude/agents/*.md files are GENERATED mirrors: body = source body + Claude Bridge trailer; mirror frontmatter is runtime-owned (tools/skills) EXCEPT the model field, which sync-agents.mjs sets from the tier. bahari is EXCLUDED — its canon is plugins/allura-agents/agents/bahari.md. Tier policy adopted from allura-team-ram ADR 2026-07-04 (Ollama Cloud only; ollama/<model>:cloud namespace).",
+  "runtimes": ["opencode", "claude"],
+  "tiers": {
+    "ultrabrain": { "opencode": "ollama/glm-5.2:cloud", "claude": "opus" },
+    "standard":   { "opencode": "ollama/qwen3-coder-next:cloud", "claude": "sonnet" },
+    "cheap":      { "opencode": "ollama/nemotron-3-super:cloud", "claude": "haiku" }
+  },
+  "agents": {
+    "brooks":    { "tier": "ultrabrain", "source": ".opencode/agent/core/brooks.md" },
+    "jobs":      { "tier": "ultrabrain", "source": ".opencode/agent/core/jobs.md" },
+    "woz":       { "tier": "standard",   "source": ".opencode/agent/subagents/code/woz.md" },
+    "bellard":   { "tier": "standard",   "source": ".opencode/agent/subagents/code/bellard.md" },
+    "carmack":   { "tier": "standard",   "source": ".opencode/agent/subagents/code/carmack.md" },
+    "fowler":    { "tier": "standard",   "source": ".opencode/agent/subagents/review/fowler.md" },
+    "pike":      { "tier": "standard",   "source": ".opencode/agent/subagents/review/pike.md" },
+    "hightower": { "tier": "standard",   "source": ".opencode/agent/subagents/infrastructure/hightower.md" },
+    "knuth":     { "tier": "standard",   "source": ".opencode/agent/subagents/infrastructure/knuth.md" },
+    "scout":     { "tier": "cheap",      "source": ".opencode/agent/subagents/core/scout.md" }
+  },
+  "$changes_2026-07-04": "Initial port from allura-team-ram. Reconciliation finding: the feared mass body drift was an artifact of diffing the wrong path (.opencode/agents/ vs .opencode/agent/); real drift was only brooks (dual-pass hydration protocol of 2026-06-21 lived in the mirror only — backported to source) plus the intentional Claude Bridge trailer on every mirror, now formalized as part of the generation contract."
+}
