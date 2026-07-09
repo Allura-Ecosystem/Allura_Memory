@@ -1142,7 +1142,7 @@ policyRegistry.register(POLICY_EMAIL_MEMORY_PROMOTION_REQUIRES_HITL);
 policyRegistry.register(POLICY_EMAIL_ATTACHMENT_SANDBOX_REQUIREMENT);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// POL-BRAND-001..002: BRAND GOVERNANCE GATES
+// POL-BRAND-001..002: BRAND GOVERNANCE GATES (Notion source-of-truth + release approval)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -1191,6 +1191,151 @@ export const POLICY_BRAND_SOURCE_OF_TRUTH: Policy = {
   severity: "critical",
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POL-023..027: BRAND GOVERNANCE GATES (brand packet, token/copy lock, visual evidence, QA)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Operation patterns that count as brand-affecting work.
+ * Used by POL-023 (build/commit/push/deploy) and POL-026/027 (done/handoff/release).
+ */
+const BRAND_AFFECTING_WORK_OPERATION =
+  /(?:build|commit|push|deploy|done|handoff|release|package|publish|merge|implement)/i;
+
+const BRAND_DONE_OR_RELEASE_OPERATION =
+  /(?:done|handoff|release|publish|merge)/i;
+
+/**
+ * Brand token / typography file patterns.
+ * Mirrors the token definition file list in scripts/brand-audit.sh.
+ */
+const BRAND_TOKEN_FILE =
+  /(^|\/)(lib\/brand\/.*\.ts|lib\/theme\/brand\.ts|lib\/tokens\.ts|styles\/brand-tokens\.css|styles\/presets\/(?:allura|durham)\.css|theme\/brand\.ts)$|(^|\/)(brand|tokens|theme|typography|colors|fonts)\//i;
+
+/**
+ * Brand copy file patterns — messaging, taglines, voice, copy.
+ */
+const BRAND_COPY_FILE =
+  /(^|\/)(brand.*copy|copy.*brand|messaging|taglines?|voice|brand.*voice|brand.*messaging)\.(ts|tsx|json|md|css)$|(^|\/)(copy|messaging|taglines?|voice)\//i;
+
+function isBrandAffectingWork(context: PolicyContext): boolean {
+  const operation = String(context.operation ?? "");
+  return BRAND_AFFECTING_WORK_OPERATION.test(operation);
+}
+
+function isBrandDoneOrRelease(context: PolicyContext): boolean {
+  const operation = String(context.operation ?? "");
+  return BRAND_DONE_OR_RELEASE_OPERATION.test(operation);
+}
+
+function targetsBrandTokenFiles(context: PolicyContext): boolean {
+  const resource = String(context.resource ?? "");
+  const changedFiles = context.changedFiles as string[] | undefined;
+
+  if (BRAND_TOKEN_FILE.test(resource)) {
+    return true;
+  }
+
+  if (changedFiles?.some(file => BRAND_TOKEN_FILE.test(file))) {
+    return true;
+  }
+
+  return false;
+}
+
+function targetsBrandCopyFiles(context: PolicyContext): boolean {
+  const resource = String(context.resource ?? "");
+  const changedFiles = context.changedFiles as string[] | undefined;
+
+  if (BRAND_COPY_FILE.test(resource)) {
+    return true;
+  }
+
+  if (changedFiles?.some(file => BRAND_COPY_FILE.test(file))) {
+    return true;
+  }
+
+  return false;
+}
+
+function hasBrandPacketRead(context: PolicyContext): boolean {
+  // Direct flag on context
+  if (context.brandPacketRead === true) {
+    return true;
+  }
+
+  // Check validation receipts for a brand_packet_read receipt
+  const receipts = context.validationReceipts as ValidationReceipt[] | undefined;
+  if (Array.isArray(receipts)) {
+    return receipts.some(r =>
+      r.status === "passed" &&
+      /brand[_-]?packet[_-]?read/i.test(r.name)
+    );
+  }
+
+  return false;
+}
+
+function hasKotlerOrMunariApproval(context: PolicyContext): boolean {
+  return context.kotlerApproval === true ||
+    context.munariApproval === true ||
+    context.brandTokenApproval === true;
+}
+
+function hasCopywriterApproval(context: PolicyContext): boolean {
+  return context.copywriterApproval === true ||
+    context.brandCopyApproval === true;
+}
+
+function hasVisualEvidence(context: PolicyContext): boolean {
+  if (context.visualEvidence === true) {
+    return true;
+  }
+
+  const evidence = context.visual_evidence as unknown;
+  if (evidence === true) {
+    return true;
+  }
+
+  // Accept an array of screenshot/URL strings
+  if (Array.isArray(evidence) && evidence.length > 0) {
+    return true;
+  }
+
+  // Accept a non-empty string (screenshot path or recorded URL)
+  if (typeof evidence === "string" && evidence.trim().length > 0) {
+    return true;
+  }
+
+  return false;
+}
+
+function hasDurhamQaPassed(context: PolicyContext): boolean {
+  return context.durhamQaPassed === true ||
+    context.durham_qa_passed === true;
+}
+
+/**
+ * POL-023: Brand Department Packet Required
+ *
+ * Blocks brand-affecting work (build/commit/push/deploy) when no brand department
+ * packet has been read. The agent must first read the brand department packet and
+ * record a "brand_packet_read" receipt before any brand-affecting work proceeds.
+ */
+export const POLICY_BRAND_PACKET_REQUIRED: Policy = {
+  id: "POL-023",
+  description: "Brand-affecting work requires a prior brand department packet read",
+  condition: (_claims, context) => {
+    if (!isBrandAffectingWork(context)) {
+      return true;
+    }
+
+    return hasBrandPacketRead(context);
+  },
+  violation: "Brand Department Packet Required: read the brand department packet before brand-affecting work",
+  severity: "critical",
+};
+
 /**
  * POL-BRAND-002: Public Release Approval Gate
  *
@@ -1232,6 +1377,103 @@ export const POLICY_BRAND_RELEASE_APPROVAL: Policy = {
 policyRegistry.register(POLICY_BRAND_SOURCE_OF_TRUTH);
 policyRegistry.register(POLICY_BRAND_RELEASE_APPROVAL);
 
+/**
+ * POL-024: Brand Token and Typography Lock
+ *
+ * Blocks changes to brand tokens (colors, fonts, typography) when the change is
+ * not approved by Kotler/Munari. Brand token files are locked unless explicit
+ * approval is present in the policy context.
+ */
+export const POLICY_BRAND_TOKEN_TYPOGRAPHY_LOCK: Policy = {
+  id: "POL-024",
+  description: "Brand token and typography changes require Kotler/Munari approval",
+  condition: (_claims, context) => {
+    if (!targetsBrandTokenFiles(context)) {
+      return true;
+    }
+
+    return hasKotlerOrMunariApproval(context);
+  },
+  violation: "Brand Token and Typography Lock: brand token changes require Kotler/Munari approval",
+  severity: "critical",
+};
+
+/**
+ * POL-025: Brand Copy Lock
+ *
+ * Blocks changes to brand copy (messaging, taglines, voice) when not approved by
+ * the copywriter agent.
+ */
+export const POLICY_BRAND_COPY_LOCK: Policy = {
+  id: "POL-025",
+  description: "Brand copy changes require copywriter approval",
+  condition: (_claims, context) => {
+    if (!targetsBrandCopyFiles(context)) {
+      return true;
+    }
+
+    return hasCopywriterApproval(context);
+  },
+  violation: "Brand Copy Lock: brand copy changes require copywriter approval",
+  severity: "high",
+};
+
+/**
+ * POL-026: Visual Evidence Before Brand Done
+ *
+ * Blocks Done/handoff on brand-affecting work when no visual evidence
+ * (screenshot/recorded URL) exists in the policy context.
+ */
+export const POLICY_VISUAL_EVIDENCE_BEFORE_BRAND_DONE: Policy = {
+  id: "POL-026",
+  description: "Visual evidence required before marking brand-affecting work done",
+  condition: (_claims, context) => {
+    if (!isBrandDoneOrRelease(context)) {
+      return true;
+    }
+
+    // Only enforce when the work touches brand token or brand copy files
+    if (!targetsBrandTokenFiles(context) && !targetsBrandCopyFiles(context)) {
+      return true;
+    }
+
+    return hasVisualEvidence(context);
+  },
+  violation: "Visual Evidence Before Brand Done: visual evidence required before marking brand work done",
+  severity: "high",
+};
+
+/**
+ * POL-027: Durham QA Review Gate
+ *
+ * Blocks Done/release on brand-affecting work when Durham QA review has not
+ * passed.
+ */
+export const POLICY_DURHAM_QA_REVIEW_GATE: Policy = {
+  id: "POL-027",
+  description: "Durham QA review required before brand work release",
+  condition: (_claims, context) => {
+    if (!isBrandDoneOrRelease(context)) {
+      return true;
+    }
+
+    // Only enforce when the work touches brand token or brand copy files
+    if (!targetsBrandTokenFiles(context) && !targetsBrandCopyFiles(context)) {
+      return true;
+    }
+
+    return hasDurhamQaPassed(context);
+  },
+  violation: "Durham QA Review Gate: Durham QA review required before brand work release",
+  severity: "critical",
+};
+
+policyRegistry.register(POLICY_BRAND_PACKET_REQUIRED);
+policyRegistry.register(POLICY_BRAND_TOKEN_TYPOGRAPHY_LOCK);
+policyRegistry.register(POLICY_BRAND_COPY_LOCK);
+policyRegistry.register(POLICY_VISUAL_EVIDENCE_BEFORE_BRAND_DONE);
+policyRegistry.register(POLICY_DURHAM_QA_REVIEW_GATE);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // DEFAULT POLICY SET (post all policy definitions)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1262,6 +1504,11 @@ export const DEFAULT_POLICIES: Policy[] = [
   POLICY_EMAIL_ATTACHMENT_SANDBOX_REQUIREMENT,
   POLICY_BRAND_SOURCE_OF_TRUTH,
   POLICY_BRAND_RELEASE_APPROVAL,
+  POLICY_BRAND_PACKET_REQUIRED,
+  POLICY_BRAND_TOKEN_TYPOGRAPHY_LOCK,
+  POLICY_BRAND_COPY_LOCK,
+  POLICY_VISUAL_EVIDENCE_BEFORE_BRAND_DONE,
+  POLICY_DURHAM_QA_REVIEW_GATE,
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
