@@ -42,15 +42,14 @@ epic_18:
 
 epic_19:
   name: "RuVector Graph Cutover Execution"
-  status: blocked
+  status: in-progress
   retrospective: pending
   stories:
     - key: "19.1"
       title: "Live-DB E2E with GRAPH_BACKEND=ruvector"
-      status: blocked
+      status: ready-for-dev
       owner: "Knuth + Woz"
       status_evidence: ""
-      blocker: "needs Epic 18 done"
     - key: "19.2"
       title: "Dual-read validation"
       status: blocked
@@ -65,10 +64,9 @@ epic_19:
       blocker: "needs 19.2"
     - key: "19.4"
       title: "Path B crate adapter spike"
-      status: blocked
+      status: ready-for-dev
       owner: "Woz + Knuth"
       status_evidence: ""
-      blocker: "needs Epic 18 done"
     - key: "19.5"
       title: "Upstream gaps to ruvnet/RuVector"
       status: blocked
