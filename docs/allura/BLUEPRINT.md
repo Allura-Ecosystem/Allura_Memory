@@ -134,24 +134,24 @@ Allura is the governed memory engine: PostgreSQL append-only episodic traces, Ne
 
 Current runtime label: **pgvector bridge**. TALON readiness evidence on 2026-06-02 observed PostgreSQL `vector` extension `0.8.2`, `ruvector_function_count=0`, and `allura_memories_count` around `3392`. Until the `ruvector` extension/functions and feedback/search health are proven by runtime checks, docs and UI must not claim full RuVector.
 
-### Graph Adapter Posture (AD-29, AD-49)
+### Graph Adapter Posture (AD-29, AD-49, Story 19.3)
 
-Allura uses a two-tier graph approach: **Neo4j for canonical semantic memory** and **PostgreSQL tables (via IGraphAdapter)** for runtime graph operations during migration to RuVector.
+The RuVector Graph Cutover is **complete** (Story 19.3, 2026-07-12). Allura now uses **RuVector graph backend as default**, with **Neo4j as fallback read-only mode** during the one-release transition period.
 
 **Current stack:**
 
 | Layer | Backend | Implementation | Status | Evidence |
 |-------|---------|----------------|--------|----------|
 | Vector search | pgvector (bridge) | `src/lib/ruvector/bridge.ts` | Active | `ruvector_function_count=0`, `vector=0.8.2` (TALON 2026-06-02) |
-| Semantic/knowledge graph | IGraphAdapter (PG tables) | `src/lib/graph-adapter/` | 90% built | `GRAPH_BACKEND=igraph` flag; parity test 14/14 green (RK-32) |
-| Native RuVector extension | ruvnet Rust crate | Not yet active | Not enabled | `ruvector_function_count=0` — stubs only (RK-21) |
+| Semantic/knowledge graph | IGraphAdapter (PG tables) | `src/lib/graph-adapter/` | **CUTOVER COMPLETE** | `GRAPH_BACKEND=ruvector` default, `neo4j` fallback available; 14/14 parity checks green (Story 19.3) |
+| Native RuVector extension | ruvnet Rust crate | Not yet active | Not enabled | `ruvector_function_count=0` — stubs only (RK-21, Stage 2) |
 
 **Runtime flag:**
-- `GRAPH_BACKEND=igraph` — uses PG tables for graph ops (IGraphAdapter seam), self-hosted, no license tier
-- Default: `igu` (path A — ship now)
-- Path B (`ruvnet` Rust crate) remains upstreamable but is Sabir's choice, not active
+- `GRAPH_BACKEND=ruvector` — uses PG tables for graph ops (RuVectorGraphAdapter, default)
+- `GRAPH_BACKEND=neo4j` — uses Neo4j driver (legacy fallback)
+- `GRAPH_DUAL_READ=true` — wraps selected backend with dual-read validation
 
-This cutover removes the per-person Neo4j Community license limit (1 user), collapses two stores toward one engine, and enables self-hosted graphs. AD-49 explicitly defers Path B until Spike completed 2026-06-24; Path A (PG tables) is recommended for beta and is the active implementation.
+This cutover removes the per-person Neo4j Community license limit (1 user), collapses two stores toward one engine, and enables self-hosted graphs. Neo4j remains as fallback for one release after the cutover (AD-49 consequence); Story 19.3 executed the flip to ruvector as default.
 
 ### Agent Factory Delivery Boundary
 
@@ -185,7 +185,7 @@ first-class run API/product surface exists.
 | Live-DB 10-point engine acceptance gate | **PASSED** | All 10 engine unit/integration tests pass against real PostgreSQL and Neo4j (commit `f518b1eb`). Evidence in `bun run test:e2e` output. |
 | Docker fresh-deploy (stranger-on-new-machine) | **UNVERIFIED** | `docker compose up` on a fresh machine has not been end-to-end smoke-tested. External volumes and network marked `external: true` will fail first `up` without prior manual setup. See AD-41 for the approved delivery sequence and INSTALL-DEPLOY-REVIEW.md in `docs/archive/allura/` for the outstanding checklist. |
 | RuVector / full native extension | **NOT READY** | `ruvector_function_count=0` on 2026-06-02 (TALON). Label remains `pgvector bridge` until extension functions and feedback/search health checks pass (RK-21). |
-| Graph adapter (IGraphAdapter, PG tables) | **READY** | `GRAPH_BACKEND=igraph` active; 14/14 parity checks green (AD-29, AD-49, RK-32). |
+| Graph adapter (IGraphAdapter, PG tables) | **READY** / **CUTOVER COMPLETE** | `GRAPH_BACKEND=ruvector` default, `neo4j` fallback; 14/14 parity checks green (AD-29, AD-49, RK-32, Story 19.3). |
 
 No doc or UI surface may claim "production-ready" or "fresh-deploy verified" until the Docker fresh-deploy gate is independently executed and recorded in INSTALL-DEPLOY-REVIEW.md.
 

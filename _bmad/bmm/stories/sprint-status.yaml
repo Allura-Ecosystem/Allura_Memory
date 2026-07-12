@@ -42,7 +42,7 @@ epic_18:
 
 epic_19:
   name: "RuVector Graph Cutover Execution"
-  status: in-progress
+  status: done
   retrospective: pending
   stories:
     - key: "19.1"
@@ -52,24 +52,21 @@ epic_19:
       status_evidence: "14/14 live-DB E2E tests pass against Docker PG with GRAPH_BACKEND=ruvector; migrations 21+24 applied; RK-32 R5 resolved"
     - key: "19.2"
       title: "Dual-read validation"
-      status: blocked
+      status: done
       owner: "Woz + Bellard"
-      status_evidence: ""
-      blocker: "needs 19.1"
+      status_evidence: "7/7 dual-read tests pass; divergence detection working; Neo4j remains authoritative; DualReadAdapter implemented"
     - key: "19.3"
       title: "Flip default to ruvector"
-      status: blocked
+      status: done
       owner: "Woz"
-      status_evidence: ""
-      blocker: "needs 19.2"
+      status_evidence: "Factory default flipped to ruvector; AD-49 Decided; RK-32 Resolved; RK-21 Stage 1 graduation achieved; 34 tests pass"
     - key: "19.4"
       title: "Path B crate adapter spike"
-      status: ready-for-dev
+      status: done
       owner: "Woz + Knuth"
-      status_evidence: ""
+      status_evidence: "13/16 crate adapter methods working; 3 throw unsupported (G1/B3 constraints); AD-50 vendoring governance drafted; 20 tests pass"
     - key: "19.5"
       title: "Upstream gaps to ruvnet/RuVector"
-      status: blocked
+      status: done
       owner: "Brooks + Pike"
-      status_evidence: ""
-      blocker: "needs 19.4"
+      status_evidence: "3 issues filed on github.com/ruvnet/RuVector (#666 G1, #667 G2, #668 G3); issue drafts in docs/archive/allura/evidence/upstream-issues/; Brain tracking logged"
