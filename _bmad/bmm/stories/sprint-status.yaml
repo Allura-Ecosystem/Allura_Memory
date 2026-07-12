@@ -1,0 +1,77 @@
+# Sprint Status — RuVector Documentation Sync & Integration
+
+last_updated: "2026-07-12"
+owner: brooks
+group_id: allura-system
+
+epic_18:
+  name: "RuVector Documentation Sync"
+  status: done
+  retrospective: done
+  stories:
+    - key: "18.1"
+      title: "Promote AD-49 + RK-32 to canonical RISKS-AND-DECISIONS.md"
+      status: done
+      owner: "Brooks -> Woz"
+      status_evidence: "Pike+Fowler approved after fix cycle; AD-49+RK-32 promoted; AD-29 format; archive refs present"
+    - key: "18.2"
+      title: "Update SOLUTION-ARCHITECTURE.md §3.4.0 cutover path"
+      status: done
+      owner: "Brooks -> Woz"
+      status_evidence: "Pike+Fowler approved after fix cycle; §3.4.0.2 Graph Backend Cutover Path added; heading unique; method table accurate"
+    - key: "18.3"
+      title: "Update DATA-DICTIONARY.md GRAPH_BACKEND + RuVector tables"
+      status: done
+      owner: "Brooks -> Woz"
+      status_evidence: "Pike+Fowler approved after fix cycle; 4 graph tables + GRAPH_BACKEND + native fields added; TOC updated"
+    - key: "18.4"
+      title: "Update REQUIREMENTS-MATRIX.md REQ-RV-001..005"
+      status: done
+      owner: "Brooks -> Woz"
+      status_evidence: "Pike+Fowler combined review approved; Section 6C added with 5 REQ-RV entries"
+    - key: "18.5"
+      title: "Update BLUEPRINT.md §2 + §8 RuVector posture"
+      status: done
+      owner: "Brooks -> Woz"
+      status_evidence: "Three-layer RuVector posture added; ports clarified (5432 graph ops, 5433 native ext); E2E table updated"
+    - key: "18.6"
+      title: "Update RK-21 mitigation graduation criteria"
+      status: done
+      owner: "Brooks -> Woz"
+      status_evidence: "Two-stage graduation path added (pgvector_bridge→ruvector_graph→full_ruvector); cross-refs AD-49/AD-34/REQ-RV-005"
+
+epic_19:
+  name: "RuVector Graph Cutover Execution"
+  status: blocked
+  retrospective: pending
+  stories:
+    - key: "19.1"
+      title: "Live-DB E2E with GRAPH_BACKEND=ruvector"
+      status: blocked
+      owner: "Knuth + Woz"
+      status_evidence: ""
+      blocker: "needs Epic 18 done"
+    - key: "19.2"
+      title: "Dual-read validation"
+      status: blocked
+      owner: "Woz + Bellard"
+      status_evidence: ""
+      blocker: "needs 19.1"
+    - key: "19.3"
+      title: "Flip default to ruvector"
+      status: blocked
+      owner: "Woz"
+      status_evidence: ""
+      blocker: "needs 19.2"
+    - key: "19.4"
+      title: "Path B crate adapter spike"
+      status: blocked
+      owner: "Woz + Knuth"
+      status_evidence: ""
+      blocker: "needs Epic 18 done"
+    - key: "19.5"
+      title: "Upstream gaps to ruvnet/RuVector"
+      status: blocked
+      owner: "Brooks + Pike"
+      status_evidence: ""
+      blocker: "needs 19.4"

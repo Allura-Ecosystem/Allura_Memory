@@ -61,6 +61,7 @@
 | AD-44 | GIT-EXEC-001 — gitdir-contamination guardrail on git-exec wrapper and ralph cwd guard | Decided | Any `git` subprocess spawned by the harness or Ralph must have its `GIT_DIR` constrained to the project root. Unconstrained git commands can read or write to a parent `.git` directory when invoked from a nested working directory, silently corrupting history. The guardrail is a single git-exec choke point (`src/lib/git/exec.ts`) all agents route through: it refuses any working-tree git command when (A) the resolved cwd contains `/.git/`, or (B) `git rev-parse --git-dir` equals `--show-toplevel` (gitdir == worktree). Every invocation is stamped with a `GIT_EXEC_WRAPPER` trace token, and a static CI scanner (`scripts/validate-git-exec-choke-point.ts`, wired into the lint job) fails the build if any bare `git` call exists outside the wrapper — making the invariant's absence detectable. `scripts/agents/ralph-loop.ts` imports the cwd assertion before spawning the external ralph loop. Alternatives rejected: rely on operator discipline — rejected because git contamination is silent and catastrophic; whitelist specific commands — rejected because the attack surface is the path, not the command. Satisfies F20 (infra safety) and REQ-AF-CI-001 (canonical repo boundary). |
 | AD-45 | Port Allocation Policy — canonical port registry for all Allura services | Decided | Each service running in the Docker Compose stack or as a dev server must register a port in a canonical table rather than picking one ad hoc. Collisions produce silent service failures that are hard to diagnose. Port-band policy: the entire 3000–3999 band is BANNED (Next.js/React default — caused repeated 3100 collisions and orphaned containers). Allocate by tier, incrementing +1 per new service: UI/frontends 4000+ (Allura Control Center UI = 4001), APIs/backends 6000+ (Control Center API = 6001), tools/workers/aux 7000+. Existing infrastructure is unchanged and exempt: PostgreSQL 5432, RuVector PG 5433, MCP HTTP gateway 5888, Neo4j bolt 7687, Neo4j HTTP 7474. The legacy dashboard on 3100 is sunset and its port retired with the band. New services must claim a port via a PR that updates `docs/allura/BLUEPRINT.md` §8 and `docker-compose.yml` before the service is deployed. Alternatives rejected: runtime port discovery — rejected because it requires coordination across all harness scripts and increases cold-start complexity; no policy — rejected because port collisions have already caused incorrect service routing in prior development cycles. |
 | AD-46 | Allura Control Center pivot — dashboard repositioned as governed operator surface | Proposed | The Allura dashboard is proposed to be repositioned from a decorative product dashboard to a governed Memory Control Center: every route backed by live Allura Brain data, every mutation requiring a governance receipt, every panel showing source, freshness, and degraded state. The pivot eliminates fabricated-data claims and unverified health indicators. Implementation is gated on AD-42 middleware, AD-41 delivery sequence, and a live-DB smoke test for each Control Center route. Status: Proposed — not Decided. No route launches without route-parity evidence, source-of-truth declaration, auth validation, and rollback plan per AD-31. |
+| AD-49 | RuVector Graph Cutover — default to `GRAPH_BACKEND=ruvector` (PG tables) | Proposed | Removes per-person graph-auth wall (Neo4j Community = 1 user), collapses two stores toward one engine, self-hosted, no license tier. Two paths: Path A (PG tables, ship now — recommended for beta), Path B (ruvnet Rust crate, upstreamable — Sabir's choice, spike passed 2026-06-24). Naming: Allura's `ruvector` backend is a PG-table implementation named after the concept, NOT a binding to the ruvnet Rust crate. Related: AD-29 (graph adapter pattern), AD-34 (defers full RuVector-Postgres migration — this activates it). |
 
 ---
 
@@ -121,6 +122,7 @@
 | RK-29 | BMAD/Notion/story status drift causes false Done or false backlog | Medium | Active |
 | RK-30 | Resume against changed definitions repeats or corrupts work | High | Active |
 | RK-31 | Factory CI outside canonical Git boundary creates false green status | High | Mitigated |
+| RK-32 | RuVector Graph Cutover Risk | Medium | 🟡 Open |
 
 ### Risk Detail
 
@@ -146,7 +148,7 @@
 | RK-18 | WCAG contrast failures in token system | Medium | Brand gate requires approved Allura/Durham tokens, keyboard checks, screen-reader labels, and high-contrast review before dashboard launch. | Active |
 | RK-19 | Memory Command Center route/source-of-truth drift before launch | High | AD-31 requires route/source declarations, no-fabricated-data checks, auth validation, smoke tests, screenshots, and rollback docs before launch. | Active |
 | RK-20 | Email prompt injection/phishing drives agent actions | High | AD-30 + RuVix POL-EMAIL-001..005: email is external_untrusted evidence only; privileged actions require approval; high-risk mail quarantined; canonical memory promotion requires HITL; attachments require sandbox/quarantine. | Mitigated |
-| RK-21 | Full RuVector overclaim creates false runtime trust | High | Keep `pgvector bridge` label until `ruvector` extension/functions and feedback/search health pass. TALON evidence: `vector=0.8.2`, `ruvector_function_count=0`, memory count around `3392`. | Active |
+| RK-21 | Full RuVector overclaim creates false runtime trust | High | Two-stage graduation path: Stage 1 (`pgvector_bridge` → `ruvector_graph`): live-DB E2E passes with `GRAPH_BACKEND=ruvector`, dual-read validation clean for one release, parity test 14/14 green, TALON sign-off (AD-49). Stage 2 (`ruvector_graph` → `full_ruvector`): native RuVector extension installed, `ruvector_function_count > 0`, HNSW index health validated, search/feedback health validated, TALON sign-off (AD-34). REQ-RV-005 governs these transitions. TALON evidence: `vector=0.8.2`, `ruvector_function_count=0`, memory count around `3392`. | Active |
 | RK-22 | SONA feedback before clean receipts creates false learning | High | SONA feedback remains parked until receipts are clean, traceable, and approved. Feedback-generated learning cannot promote without HITL/policy path. | Active |
 | RK-23 | Duplicate MCP configs create harness drift | Medium | MCP config mutation is approval-required; use a single governed catalog path and record receipts for additions. | Active |
 | RK-24 | Live hook enforcement without approval mutates governance unexpectedly | High | RAM/Durham hook wrappers remain proposed support. Do not enable live hooks or RuVix enforcement changes without separate approval. | Active |
@@ -157,6 +159,7 @@
 | RK-29 | BMAD/Notion/story status drift causes false Done or false backlog | Medium | Epic 7 retrospective found local BMAD story files still marked `backlog` after prior completion evidence, while Notion remains the canonical board but was unavailable in the runtime. Require Scout reconciliation before dev/review/retro: check Notion when available, Brain outcome memories, local story artifacts, and validation evidence; record any source mismatch as a blocker or explicit caveat before marking Done. | Active |
 | RK-30 | Resume against changed definitions repeats or corrupts work | High | Pin an immutable process-definition revision at run start; refuse continuation when the revision is unavailable or mismatched; report a doctor finding instead of guessing. | Active |
 | RK-31 | Factory CI outside canonical Git boundary creates false green status | High | Keep factory modules, validators, smoke scripts, and workflows inside `Allura_Memory`; verify workflows parse and run locally where possible; require GitHub evidence before Done. | Mitigated |
+| RK-32 | RuVector Graph Cutover Risk | Medium | Flag-gated; Neo4j authoritative until live-DB E2E passes with GRAPH_BACKEND=ruvector; dual-read for one release; no canonical promotion until sign-off. 5 sub-risks: R1 Cypher-subset (✅ Resolved for Path A), R2 SUPERSEDES immutability (✅ Resolved), R3 Maturity/breaking changes (✅ N/A Path A, 🔴 Path B), R4 Fulltext+constraints (✅ Resolved Path A), R5 No live-DB E2E proof (🔴 Open). Full draft: `docs/archive/allura/AD-49-ruvector-graph-cutover.md`. | 🟡 Open — gated on live-DB E2E |
 
 | AD-25 | Phase 6 Closure — all deliverables shipped | Decided | DLQ shipped (curator watchdog). Knowledge Hub Bridge shipped (Notion sync worker). Auth layer shipped (dev-auth + config). CSV Export shipped (/admin/approvals CSV download). SDK not separately shipped — MCP tools are the SDK. CORS shipped (next.config). Sentry shipped (captureException in curator approve). Phase 6 scope is complete. Decision: close Phase 6 and record it. Alternatives rejected: (1) Continue tracking as open — rejected because all deliverables exist in code and pass tests. (2) Extend Phase 6 for k6 load testing — rejected because load testing is a separate concern (tracked as RK-14). Consequences: Phase 6 ADR is now closed. Next phases focus on Curator pipeline E2E (Sprint 1), Skills layer (Sprint 2), and MCP Catalog governance (Sprint 3). |
 
@@ -414,6 +417,27 @@ into a desktop application.
   (additive, idempotent). Requirement REQ-DASH-009.
 - **Owner**: Brooks (architecture), Woz (implementation)
 - **References**: REQ-DASH-009, DATA-DICTIONARY `memberships`, ARCHITECTURE_DECISION Brain trace ab8cdd06
+
+---
+
+### AD-49: RuVector Graph Cutover
+
+- **Status**: Proposed
+- **Decision**: Make `GRAPH_BACKEND=ruvector` the default, retiring Neo4j 5.26 Community as the semantic/knowledge-graph layer. The RuVector backend stores the graph in PostgreSQL tables (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) behind the same `IGraphAdapter` seam.
+- **Rationale**:
+  - **Removes the per-person graph-auth wall.** Neo4j Community supports exactly one user (`neo4j`); per-partner graph logins require paid Enterprise. PG tables have no separate login surface — access is governed by *our* kernel + MCP tokens.
+  - **Collapses two stores toward one engine.** Graph + vector both live in Postgres; removes the Neo4j + cross-store consistency burden.
+  - **Self-hosted, no license tier** — fits the compliance-grade, self-hosted posture.
+- **Two paths**:
+  - **Path A (ship what's built)**: Make `GRAPH_BACKEND=ruvector` the PG-table default. Fast, governed, reversible. Nothing to upstream — it's our own code.
+  - **Path B (the Rust crate)**: Re-implement the adapter over ruvnet's `ruvector-graph` crate and upstream gaps as PRs. Larger, v0.1.x churn, but matches the link literally and gives an upstreamable artifact.
+- **Naming reconciliation note**: Allura's `ruvector` backend is a PostgreSQL-table implementation named after the concept, *not* a binding to the ruvnet Rust crate. These are materially different programs of work — Path A is recommended for the beta (steady, low-risk), with Path B tracked as a follow-on behind the *same* `IGraphAdapter` seam.
+- **Consequences**:
+  - The `neo4j-adapter.ts` / `ruvector-adapter.ts` seam is the migration boundary; nothing else knows which engine backs it.
+  - SUPERSEDES immutability is enforced by **adapter discipline**, not the engine — already implemented transactionally in `ruvector-adapter.ts`.
+  - Neo4j stays as read-only fallback for one release after the flip.
+- **Owner**: Sabir (decision), Knuth (data), Brooks (architecture)
+- **References**: AD-29 (graph adapter pattern — the build), AD-34 (Deferred "full RuVector-Postgres migration" — this activates it), full draft at `docs/archive/allura/AD-49-ruvector-graph-cutover.md`
 
 ---
 

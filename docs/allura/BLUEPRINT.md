@@ -134,6 +134,25 @@ Allura is the governed memory engine: PostgreSQL append-only episodic traces, Ne
 
 Current runtime label: **pgvector bridge**. TALON readiness evidence on 2026-06-02 observed PostgreSQL `vector` extension `0.8.2`, `ruvector_function_count=0`, and `allura_memories_count` around `3392`. Until the `ruvector` extension/functions and feedback/search health are proven by runtime checks, docs and UI must not claim full RuVector.
 
+### Graph Adapter Posture (AD-29, AD-49)
+
+Allura uses a two-tier graph approach: **Neo4j for canonical semantic memory** and **PostgreSQL tables (via IGraphAdapter)** for runtime graph operations during migration to RuVector.
+
+**Current stack:**
+
+| Layer | Backend | Implementation | Status | Evidence |
+|-------|---------|----------------|--------|----------|
+| Vector search | pgvector (bridge) | `src/lib/ruvector/bridge.ts` | Active | `ruvector_function_count=0`, `vector=0.8.2` (TALON 2026-06-02) |
+| Semantic/knowledge graph | IGraphAdapter (PG tables) | `src/lib/graph-adapter/` | 90% built | `GRAPH_BACKEND=igraph` flag; parity test 14/14 green (RK-32) |
+| Native RuVector extension | ruvnet Rust crate | Not yet active | Not enabled | `ruvector_function_count=0` — stubs only (RK-21) |
+
+**Runtime flag:**
+- `GRAPH_BACKEND=igraph` — uses PG tables for graph ops (IGraphAdapter seam), self-hosted, no license tier
+- Default: `igu` (path A — ship now)
+- Path B (`ruvnet` Rust crate) remains upstreamable but is Sabir's choice, not active
+
+This cutover removes the per-person Neo4j Community license limit (1 user), collapses two stores toward one engine, and enables self-hosted graphs. AD-49 explicitly defers Path B until Spike completed 2026-06-24; Path A (PG tables) is recommended for beta and is the active implementation.
+
 ### Agent Factory Delivery Boundary
 
 The Allura Agent Factory uses BMad Builder as an authoring and packaging layer while Allura remains the governance and memory authority. Factory modules, validators, and CI workflows live in this canonical repository so GitHub can execute the gates that protect them. A module is shippable only after structural validation, roster and tenant consistency checks, live tenant-isolation smoke evidence, and explicit packaging of a named team.
@@ -165,7 +184,8 @@ first-class run API/product surface exists.
 |------|--------|-------|
 | Live-DB 10-point engine acceptance gate | **PASSED** | All 10 engine unit/integration tests pass against real PostgreSQL and Neo4j (commit `f518b1eb`). Evidence in `bun run test:e2e` output. |
 | Docker fresh-deploy (stranger-on-new-machine) | **UNVERIFIED** | `docker compose up` on a fresh machine has not been end-to-end smoke-tested. External volumes and network marked `external: true` will fail first `up` without prior manual setup. See AD-41 for the approved delivery sequence and INSTALL-DEPLOY-REVIEW.md in `docs/archive/allura/` for the outstanding checklist. |
-| RuVector / full native extension | **NOT READY** | `ruvector_function_count=0` on 2026-06-02 (TALON). Label remains `pgvector bridge` until extension functions and feedback/search health checks pass. |
+| RuVector / full native extension | **NOT READY** | `ruvector_function_count=0` on 2026-06-02 (TALON). Label remains `pgvector bridge` until extension functions and feedback/search health checks pass (RK-21). |
+| Graph adapter (IGraphAdapter, PG tables) | **READY** | `GRAPH_BACKEND=igraph` active; 14/14 parity checks green (AD-29, AD-49, RK-32). |
 
 No doc or UI surface may claim "production-ready" or "fresh-deploy verified" until the Docker fresh-deploy gate is independently executed and recorded in INSTALL-DEPLOY-REVIEW.md.
 
@@ -714,8 +734,8 @@ Canonical service ports. **The 3000–3999 band is banned** (Next.js/React defau
 | Allura Control Center UI (Next.js) | 4001 | UI (4000+) |
 | Allura Control Center API (FastAPI) | 6001 | API (6000+) |
 | MCP HTTP gateway | 5888 | infra (exempt) |
-| PostgreSQL | 5432 | infra (exempt) |
-| RuVector PG | 5433 | infra (exempt) |
+| PostgreSQL | 5432 | infra (exempt) — IGraphAdapter graph ops run here (AD-29, AD-49) |
+| RuVector PG | 5433 | infra (exempt) — native extension port (not yet active; see AD-45, RK-21) |
 | Neo4j bolt | 7687 | infra (exempt) |
 | Neo4j HTTP | 7474 | infra (exempt) |
 | legacy dashboard (sunset) | ~~3100~~ | retired with 3000-band ban |

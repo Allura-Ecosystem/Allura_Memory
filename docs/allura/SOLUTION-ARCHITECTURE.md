@@ -237,9 +237,58 @@ Key constraints:
 | Readiness signal | Current evidence | Required for full RuVector claim |
 |---|---|---|
 | `vector` extension | `0.8.2` observed by TALON | Present and healthy |
-| `ruvector_function_count` | `0` | Required RuVector SQL functions present |
+| `ruvector_function_count` | `0` | Required RuVector SQL functions present (this measures the *native extension*, not the graph adapter) |
 | `allura_memories_count` | Around `3392` observed by TALON | Search/feedback health validated against current count |
 | Runtime label | `pgvector bridge` | May change only after approved readiness evidence |
+| GRAPH_BACKEND | `neo4j` default, `ruvector` available, `ruvector-crate` planned | See Graph Backend Cutover Path |
+
+**Note:** `ruvector_function_count=0` refers to the RuVector *native extension* (SQL functions installed in PostgreSQL), not the graph adapter. The graph adapter uses PostgreSQL tables via RDMS queries, not the native extension.
+
+---
+
+### 3.4.0.2 Graph Backend Cutover Path
+
+The RuVector migration is layered across three distinct concerns, each with independent readiness metrics:
+
+1. **Vector search** — pgvector bridge (existing): `vector` extension `0.8.2`, ANN search via `pgvector_cosine_distance()` and BM25 RRF fusion
+2. **Graph backend** — IGraphAdapter seam (built): `Neo4jGraphAdapter` (legacy), `RuVectorGraphAdapter` (PG tables), `RuvectorCrateGraphAdapter` (planned, `ruvnet` crate)
+3. **Native RuVector extension** — future: SQL functions `ruvector_hybrid_search()` and friends (still stubs)
+
+The `GRAPH_BACKEND` env var selects the graph implementation:
+
+| Value | Implementation | Status | Notes |
+|---|---|---|---|
+| `neo4j` | `Neo4jGraphAdapter` (Cypher) | Default, legacy | Uses Neo4j Community Edition |
+| `ruvector` | `RuVectorGraphAdapter` (PG tables) | Available | PG tables via `src/lib/graph-adapter/ruvector-adapter.ts` |
+| `ruvector-crate` | `RuvectorCrateGraphAdapter` (Rust crate) | Planned | `ruvnet` crate, upstreamable design |
+
+The `IGraphAdapter` interface (AD-29, `src/lib/graph-adapter/types.ts`) defines 16 methods. Implementation status by adapter:
+
+| Adapter | Status | Lines |
+|---|---|---|
+| `Neo4jGraphAdapter` | ✅ Full (816 lines) | 16/16 implemented |
+| `RuVectorGraphAdapter` | ✅ Full (512 lines) | 16/16 implemented |
+| `RuvectorCrateGraphAdapter` | 🔲 Planned (528 lines) | 8/16 implemented, 8 planned (throws `unsupported`) |
+
+**Method coverage:**
+
+- `Neo4jGraphAdapter`: ✅ Full (816 lines, all 16 methods implemented)
+- `RuVectorGraphAdapter`: ✅ Full (512 lines, all 16 methods implemented)
+- `RuvectorCrateGraphAdapter`: 🔲 Planned (528 lines, 8 implemented + 8 throw `unsupported`)
+
+The adapter-specific methods (`supersedesMemory`, `softDeleteMemory`, `restoreMemory`) require mutation capabilities (`updateNode`) not yet available in the `ruvnet` crate binding (B3, B1), so they throw `GraphAdapterError` with descriptive messages. See `src/lib/graph-adapter/ruvector-crate-adapter.ts` lines 331-372.
+
+**Graduation criteria for `GRAPH_BACKEND=ruvector` cutover:**
+
+| Criterion | Target | Status |
+|---|---|---|
+| Live-DB E2E passes | `GRAPH_BACKEND=ruvector` | Open |
+| Dual-read validation clean | One full release cycle | Open |
+| Parity test (`adapter-parity.test.ts`) | 16/16 green | 14/14 green (2 methods pending) |
+| TALON sign-off | `ruvector` graph backend verified | Open |
+| `AD-49` approval | `RuVector Graph Cutover` decision | Proposed, pending Ronin approval |
+
+**Cross-references:** AD-29 (graph adapter pattern), AD-49 (cutover decision), RK-32 (graph cutover risk)
 
 ### 3.4.1 RuVix Kernel Governance Contract
 

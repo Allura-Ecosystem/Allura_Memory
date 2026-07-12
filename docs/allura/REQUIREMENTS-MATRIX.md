@@ -404,7 +404,19 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-DURHAM-004 | Accessibility AA compliance — dashboard controls and terminal output are keyboard reachable, screen-reader readable, and high-contrast safe | BRAND-004 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-2-brand-governance-layer) |
 | REQ-DURHAM-005 | Component consistency — reuse approved Allura/Durham UI and output patterns; ship only after Durham gate passes | BRAND-005, BRAND-006 | [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx1-ruvix-brand-governance-rules) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#durhamgateevent) |
 
-### Section 6C: Memory Command Center Requirements (REQ-DASH-001–REQ-DASH-009)
+### Section 6C: RuVector Graph Cutover Requirements (REQ-RV-001–REQ-RV-005)
+
+> **Note:** These requirements trace the RuVector graph backend cutover story (AD-49). They govern the transition from Neo4j legacy backend to PostgreSQL-backed RuVector graph adapter. Completion gates ensure live-DB E2E and dual-read validation pass before full cutover.
+
+| ID | Requirement | Trace | Satisfied by |
+|----|-------------|-------|--------------|
+| REQ-RV-001 | IGraphAdapter seam must back all graph operations; no direct Neo4j/PG graph calls outside the adapter | AD-29, AD-49, RK-32 | `src/lib/graph-adapter/types.ts` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-0-2-graph-backend-cutover-path) |
+| REQ-RV-002 | GRAPH_BACKEND flag must default to `neo4j` until live-DB E2E passes with `ruvector` | AD-49 | `src/lib/graph-adapter/factory.ts` · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-49-ruvector-graph-cutover) |
+| REQ-RV-003 | Parity test (`adapter-parity.test.ts`) must pass 14/14 before any cutover | AD-29 | `src/lib/graph-adapter/__tests__/adapter-parity.test.ts` · AD-29 |
+| REQ-RV-004 | Dual-read validation must run for one release cycle before Neo4j goes read-only | AD-49, RK-32 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-0-2-graph-backend-cutover-path) |
+| REQ-RV-005 | `runtime_readiness` label may upgrade from `pgvector_bridge` to `ruvector_graph` only after live-DB E2E + dual-read pass; to `full_ruvector` only after native extension activates | AD-49, AD-34, RK-21 | [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) |
+
+### Section 6D: Memory Command Center Requirements (REQ-DASH-001–REQ-DASH-009)
 
 | ID | Requirement | Trace | Satisfied by |
 |----|-------------|-------|--------------|
