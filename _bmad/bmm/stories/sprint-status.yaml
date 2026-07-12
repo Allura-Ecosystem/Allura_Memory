@@ -47,9 +47,9 @@ epic_19:
   stories:
     - key: "19.1"
       title: "Live-DB E2E with GRAPH_BACKEND=ruvector"
-      status: ready-for-dev
+      status: done
       owner: "Knuth + Woz"
-      status_evidence: ""
+      status_evidence: "14/14 live-DB E2E tests pass against Docker PG with GRAPH_BACKEND=ruvector; migrations 21+24 applied; RK-32 R5 resolved"
     - key: "19.2"
       title: "Dual-read validation"
       status: blocked
