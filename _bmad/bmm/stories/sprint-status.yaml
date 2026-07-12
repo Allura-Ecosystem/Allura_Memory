@@ -43,7 +43,7 @@ epic_18:
 epic_19:
   name: "RuVector Graph Cutover Execution"
   status: done
-  retrospective: pending
+  retrospective: done
   stories:
     - key: "19.1"
       title: "Live-DB E2E with GRAPH_BACKEND=ruvector"
