@@ -15,6 +15,8 @@ This document describes every table and node type in Allura's dual-database data
 
 - [PostgreSQL: events](#postgresql-events)
 - [PostgreSQL: canonical_proposals](#postgresql-canonical_proposals)
+- [PostgreSQL: Graph Adapter Tables](#postgresql-graph-adapter-tables)
+- [Environment Variables](#environment-variables)
 - [RuVix Governance Artifacts](#ruvix-governance-artifacts)
 - [RunRecord (AD-35)](#runrecord-ad-35)
 - [Neo4j: Memory](#neo4j-memory)
@@ -211,6 +213,164 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 
 ---
 
+## PostgreSQL: Graph Adapter Tables
+
+**Migrations:** `21-graph-adapter-tables.sql`, `24-graph-structural-context.sql`
+**ADR:** AD-29 — Graph Adapter Pattern for Neo4j → RuVector Migration
+
+These tables replace Neo4j nodes and relationships when `GRAPH_BACKEND=ruvector`. They implement the adjacency list pattern to replicate SUPERSEDES and structural context operations via PostgreSQL.
+
+### `graph_memories`
+
+**Migration:** `21-graph-adapter-tables.sql`
+
+Stores canonical (promoted) memory nodes equivalent to Neo4j's Memory label. Used by the RuVectorGraphAdapter when `GRAPH_BACKEND=ruvector`. Soft-deletes are marked via `deprecated=true`; restored memories set `restored_at`.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | TEXT | Yes | Memory node identifier (UUID) |
+| `group_id` | TEXT | Yes | Tenant namespace. CHECK: `^allura-[a-z0-9-]+$` |
+| `user_id` | TEXT | No | User identifier within tenant |
+| `content` | TEXT | Yes | Memory text content |
+| `score` | REAL | Yes | Confidence score (0.0–1.0). Default: `0.5` |
+| `provenance` | TEXT | Yes | Origin: `conversation` or `manual`. CHECK constraint |
+| `version` | INTEGER | Yes | Version number (incremented on SUPERSEDES). Default: `1` |
+| `tags` | TEXT[] | No | Freeform tags array. Default: `'{}'` |
+| `deprecated` | BOOLEAN | Yes | Soft-delete flag. Default: `false` |
+| `deleted_at` | TIMESTAMPTZ | No | Timestamp of soft-delete |
+| `restored_at` | TIMESTAMPTZ | No | Timestamp of restore |
+| `created_at` | TIMESTAMPTZ | Yes | Node creation timestamp. Default: `NOW()` |
+| `content_tsv` | tsvector | Yes | Generated tsvector for full-text search (stored) |
+
+**Comments:** `graph_memories` stores canonical memory nodes replacing Neo4j Memory label. Slice C of the 2-Store RuVector Migration.
+
+**Indexes:**
+| Index | Type | Purpose |
+|-------|------|---------|
+| `graph_mem_content_fts` | GIN | Full-text search via `content_tsv @@ plainto_tsquery()` |
+| `graph_mem_group_time` | btree (partial) | Tenant+time queries, filters `deprecated=false` |
+| `graph_mem_group_user` | btree (partial) | User-scoped queries within tenant |
+| `graph_mem_active` | btree (partial) | Active (non-deprecated, non-superseded) memories |
+| `graph_mem_deleted` | btree (partial) | Soft-deleted memories for recovery queries |
+| `graph_memories_pkey` | PRIMARY KEY | Composite key (`id, group_id`) |
+
+**Foreign Keys:** None (referenced by `graph_supersedes`).
+
+---
+
+### `graph_supersedes`
+
+**Migration:** `21-graph-adapter-tables.sql`
+
+Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:SUPERSEDES]->(superseded_id)` in Neo4j. Append-only: new rows on version update, deletes only for restore.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `newer_id` | TEXT | Yes | Memory ID that supersedes the old one (source node) |
+| `superseded_id` | TEXT | Yes | Memory ID that has been superseded (target node) |
+| `group_id` | TEXT | Yes | Tenant namespace. CHECK: `^allura-[a-z0-9-]+$` |
+| `created_at` | TIMESTAMPTZ | Yes | Relationship timestamp. Default: `NOW()` |
+
+**Comments:** `graph_supersedes` is the SUPERSEDES adjacency table replacing Neo4j SUPERSEDES relationships.
+
+**Indexes:**
+| Index | Type | Purpose |
+|-------|------|---------|
+| `graph_supersedes_pkey` | PRIMARY KEY | Composite key (`newer_id, superseded_id, group_id`) |
+| `graph_supersedes_target` | btree | "Is this memory superseded?" queries by `superseded_id` |
+| `graph_supersedes_source` | btree | "What does this memory supersede?" lineage queries by `newer_id` |
+
+**Foreign Keys:**
+| Constraint | References | On Delete |
+|------------|-----------|-----------|
+| `graph_supersedes_newer_id_fkey` | `graph_memories(id, group_id)` | CASCADE |
+| `graph_supersedes_superseded_id_fkey` | `graph_memories(id, group_id)` | CASCADE |
+
+---
+
+### `graph_structural_nodes`
+
+**Migration:** `24-graph-structural-context.sql`
+
+Structural context nodes replacing Neo4j labeled nodes (Agent, Project, Task, Decision, etc.). Uses JSONB `props` field to store arbitrary node properties. Used when `GRAPH_BACKEND=ruvector` for non-Memory nodes.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `node_id` | TEXT | Yes | Node identifier (UUID or logical ID) |
+| `label` | TEXT | Yes | Node label (e.g. `Agent`, `Project`, `Task`, `Decision`) |
+| `group_id` | TEXT | Yes | Tenant namespace. CHECK: `^allura-[a-z0-9-]+$` |
+| `props` | JSONB | Yes | Arbitrary properties stored as JSONB. Default: `'{}'` |
+| `created_at` | TIMESTAMPTZ | Yes | Node creation timestamp. Default: `NOW()` |
+| `updated_at` | TIMESTAMPTZ | No | Last update timestamp |
+
+**Comments:** `graph_structural_nodes` stores structural context nodes replacing Neo4j labeled nodes. Slice C of the 2-Store RuVector Migration.
+
+**Indexes:**
+| Index | Type | Purpose |
+|-------|------|---------|
+| `graph_struct_nodes_pkey` | PRIMARY KEY | Composite key (`node_id, group_id`) |
+| `graph_struct_nodes_label_group` | btree | Label+group queries for node type filtering |
+| `graph_struct_nodes_props_gin` | GIN | JSONB containment queries (`props @> '{}') |
+
+---
+
+### `graph_structural_edges`
+
+**Migration:** `24-graph-structural-context.sql`
+
+Structural context edges replacing Neo4j relationships (CONTRIBUTED, LEARNED, `AUTHORED_BY`, `RELATES_TO`, etc.). Stores directed relationships between structural nodes.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `from_id` | TEXT | Yes | Source node identifier |
+| `to_id` | TEXT | Yes | Target node identifier |
+| `rel_type` | TEXT | Yes | Relationship type (e.g. `CONTRIBUTES_TO`, `AUTHORED_BY`, `MEMBER_OF`) |
+| `group_id` | TEXT | Yes | Tenant namespace. CHECK: `^allura-[a-z0-9-]+$` |
+| `props` | JSONB | No | Relationship properties |
+| `created_at` | TIMESTAMPTZ | Yes | Edge creation timestamp. Default: `NOW()` |
+
+**Comments:** `graph_structural_edges` stores structural context edges replacing Neo4j relationships.
+
+**Indexes:**
+| Index | Type | Purpose |
+|-------|------|---------|
+| `graph_struct_edges_pkey` | PRIMARY KEY | Composite key (`from_id, to_id, rel_type, group_id`) |
+| `graph_struct_edges_from` | btree | Outgoing edges from node queries |
+| `graph_struct_edges_to` | btree | Incoming edges to node queries |
+| `graph_struct_edges_type` | btree | Relationship type queries |
+
+**Foreign Keys:** None (graph edges are not explicitly constrained to nodes — the adapter layer enforces references).
+
+---
+
+## Environment Variables
+
+### `GRAPH_BACKEND`
+
+**Migrations:** `21-graph-adapter-tables.sql`, `24-graph-structural-context.sql`
+**ADR:** AD-49 — GRAPH_BACKEND Configuration Flag
+
+Controls which graph backend adapter is active for memory and structural operations.
+
+| Value | Description | Status |
+|-------|-------------|--------|
+| `neo4j` | Neo4j backend (legacy, Slice C) | **Default** |
+| `ruvector` | PostgreSQL graph adapter tables (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) | Slice C+ |
+| `ruvector-crate` | Native RuVector extension with HNSW and GNN support (not yet implemented) | Planned |
+
+**Current default:** `neo4j`
+
+**Adapter selection behavior:**
+- `neo4j`: Uses `Neo4jGraphAdapter` in `src/lib/graph-adapter/neo4j-adapter.ts`
+- `ruvector`: Uses `RuVectorGraphAdapter` in `src/lib/graph-adapter/ruvector-adapter.ts`
+- `ruvector-crate`: Will use `RuVectorCrateGraphAdapter` (Slice E+)
+
+**Runtime detection:** `RuVixGateReceipt.ruvector_status.graph_backend` reports the active adapter.
+
+**Cross-references:** AD-49, `src/lib/graph-adapter/types.ts#IGraphAdapter`
+
+---
+
 ## RuVix Governance Artifacts
 
 ### `PROMOTION_MODE` / `AUTO_APPROVAL_THRESHOLD`
@@ -248,12 +408,32 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 | `gate_decision` | enum | Yes | RuVix disposition: `Permit`, `Defer`, or `Deny`. |
 | `gate_reason` | string | Yes | Human-readable reason for the gate decision, including missing evidence when deferred or denied. |
 | `receipt_id` | string | Yes | Stable governance receipt identifier linking action, evidence, and audit event. |
-| `runtime_readiness` | enum | Yes | Runtime readiness label, currently `pgvector_bridge`; may become `full_ruvector` only after approved readiness evidence. |
-| `ruvector_status` | object | Yes | Current readiness evidence such as `vector_extension_version`, `ruvector_function_count`, `allura_memories_count`, and observed timestamp. |
+| `runtime_readiness` | enum | Yes | Runtime readiness label: `pgvector_bridge` (PG only), `ruvector_graph` (graph adapter active), or `full_ruvector` (native extension active). |
+| `ruvector_status` | object | Yes | Current readiness evidence: when bridge mode, includes `vector_extension_version`, `ruvector_function_count`, `allura_memories_count`; when native mode, includes `graph_backend`, `native_extension_version`, `hnsw_index_status`, `gnn_enabled`, `dual_read_mode`. |
 | `harness_hook_status` | enum | Yes | Hook lifecycle: `not_installed`, `proposed`, `approval_required`, `enabled`, `disabled`, or `blocked`. |
 | `approval_required` | boolean | Yes | True when runtime/database/MCP/cron/hook/RuVix enforcement/semantic promotion/Notion sync/Done status approval is required before mutation. |
 
+**Runtime readiness values:**
+
+| Value | Description | When Active |
+|-------|-------------|-------------|
+| `pgvector_bridge` | PG backend only, Neo4j pending cutover | Current baseline |
+| `ruvector_graph` | Graph adapter tables active (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) | Slice C+ |
+| `full_ruvector` | Native RuVector extension active, Neo4j fully replaced | Slice E+ |
+
+**RuVector native status fields (`ruvector_status` when native mode active):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `graph_backend` | string | Yes | Target graph adapter: `neo4j` (legacy), `ruvector` (PG tables), `ruvector-crate` (native extension) |
+| `native_extension_version` | string | Yes | RuVector extension version string |
+| `hnsw_index_status` | string | Yes | HNSW index state: `disabled`, `creating`, `created`, `optimizing` |
+| `gnn_enabled` | boolean | Yes | Graph neural network processing enabled |
+| `dual_read_mode` | boolean | Yes | True when both Neo4j and RuVector backends are queried |
+
 **Current readiness baseline (TALON, 2026-06-02):** `vector_extension_version=0.8.2`, `ruvector_function_count=0`, `allura_memories_count≈3392`, `runtime_readiness=pgvector_bridge`.
+
+**Cross-references:** AD-29, AD-49, RK-32, `21-graph-adapter-tables.sql`, `24-graph-structural-context.sql`
 
 ### `RuVixBrandRule`
 

@@ -5,8 +5,9 @@
  *
  * GRAPH_BACKEND=neo4j     → Neo4jGraphAdapter (legacy, default for backward compat)
  * GRAPH_BACKEND=ruvector  → RuVectorGraphAdapter (new, target)
+ * GRAPH_BACKEND=neo4j + GRAPH_DUAL_READ=true → DualReadAdapter (validation wrapper)
  *
- * After Slice E (Remove Neo4j), the flag and Neo4j adapter are removed,
+ * After Slice E (Remove Neo4j), the flags and Neo4j adapter are removed,
  * and RuVectorGraphAdapter becomes the sole implementation.
  *
  * ADR: AD-029 — Graph Adapter Pattern for Neo4j → RuVector Migration
@@ -17,6 +18,7 @@ import type { Pool } from "pg"
 import { Neo4jGraphAdapter } from "./neo4j-adapter"
 import { RuVectorGraphAdapter } from "./ruvector-adapter"
 import { RuvectorCrateGraphAdapter, type Embedder } from "./ruvector-crate-adapter"
+import { DualReadAdapter, isDualReadEnabled, type DualReadAdapterConfig } from "./dual-read-adapter"
 import type { IGraphAdapter } from "./types"
 
 export type GraphBackend = "neo4j" | "ruvector" | "ruvector-crate"
@@ -33,15 +35,19 @@ export function getGraphBackend(): GraphBackend {
   if (value === "ruvector-crate") return "ruvector-crate"
   if (value === "ruvector") return "ruvector"
   if (value === "neo4j") return "neo4j"
-  // Default: neo4j during migration, ruvector after Slice E
-  return "neo4j"
+  // Default: ruvector after cutover (Story 19.3)
+  return "ruvector"
 }
 
 /**
- * Create the appropriate graph adapter based on feature flag.
+ * Create the appropriate graph adapter based on feature flags.
  *
  * @param connections - Object with pg Pool and/or neo4j Driver
  * @returns IGraphAdapter instance
+ *
+ * Feature flags:
+ *   GRAPH_BACKEND=neo4j|ruvector|ruvector-crate — selects backend
+ *   GRAPH_DUAL_READ=true — wraps selected backend with dual-read validation
  *
  * @example
  * ```ts
@@ -51,7 +57,8 @@ export function getGraphBackend(): GraphBackend {
  * // With RuVector (new)
  * const adapter = createGraphAdapter({ pg: pool })
  *
- * // Auto-select based on GRAPH_BACKEND env var
+ * // With dual-read validation (both backends, comparison logging)
+ * // Set GRAPH_BACKEND=neo4j and GRAPH_DUAL_READ=true
  * const adapter = createGraphAdapter({ pg: pool, neo4j: driver })
  * ```
  */
@@ -80,6 +87,9 @@ export function createGraphAdapter(connections: {
     })
   }
 
+  // Determine the base adapter based on GRAPH_BACKEND
+  let adapter: IGraphAdapter
+
   if (backend === "ruvector") {
     if (!connections.pg) {
       throw new Error(
@@ -87,17 +97,29 @@ export function createGraphAdapter(connections: {
         "Ensure PG connection is available for graph adapter."
       )
     }
-    return new RuVectorGraphAdapter(connections.pg)
+    adapter = new RuVectorGraphAdapter(connections.pg)
+  } else {
+    // neo4j (default)
+    if (!connections.neo4j) {
+      throw new Error(
+        "GRAPH_BACKEND=neo4j but no Neo4j driver provided. " +
+        "Ensure Neo4j connection is available, or set GRAPH_BACKEND=ruvector."
+      )
+    }
+    adapter = new Neo4jGraphAdapter(connections.neo4j)
   }
 
-  // neo4j (default)
-  if (!connections.neo4j) {
-    throw new Error(
-      "GRAPH_BACKEND=neo4j but no Neo4j driver provided. " +
-      "Ensure Neo4j connection is available, or set GRAPH_BACKEND=ruvector."
-    )
+  // Apply dual-read validation wrapper if enabled
+  // Dual-read uses the selected backend as authoritative, wraps with RuVector for comparison
+  if (isDualReadEnabled()) {
+    const dualReadConfig: DualReadAdapterConfig = {
+      neo4jAdapter: adapter,
+      ruvectorAdapter: new RuVectorGraphAdapter(connections.pg!),
+    }
+    return new DualReadAdapter(dualReadConfig)
   }
-  return new Neo4jGraphAdapter(connections.neo4j)
+
+  return adapter
 }
 
 /**

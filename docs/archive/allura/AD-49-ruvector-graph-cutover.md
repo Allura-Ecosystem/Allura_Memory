@@ -101,6 +101,10 @@ same `IGraphAdapter` seam.
 | R3 | Maturity / breaking changes | ✅ N/A for Path A (our code). 🔴 Applies under Path B (crate is v0.1.x). |
 | R4 | Fulltext + unique constraints | ✅ Resolved for Path A — PG `tsvector` FTS + PK/CHECK constraints in migrations 21/24. |
 | R5 | **No live-DB E2E proof** | 🔴 Open — parity tests pass but are DB-mocked. The 10-point acceptance gate has not run against live Docker Postgres with `GRAPH_BACKEND=ruvector`. This is the real "ready" gate (matches `_bootstrap.md`). |
+| R6 | **Upstream gap tracking** | ✅ **RESOLVED (2026-07-12)** — G1/G2/G3 issues filed on github.com/ruvnet/RuVector (666-668). Allura can contribute PRs if accepted. |
+|   | **G1 status** | Issue #666: "No updateNode method". Proposed fix: Add native `updateNode` method or recommend fallback to Neo4j. Allura PR possible. 🟡Pending upstream response. |
+|   | **G2 status** | Issue #667: "No keyword/BM25 fulltext search". Proposed fix: Add text index + `search_nodes`. Allura PR possible. 🟡Pending upstream response. |
+|   | **G3 status** | Issue #668: "No native multi-tenant scoping". Proposed fix: Add workspace API or recommend per-tenant GraphDatabase. Allura PR possible. 🟡Pending upstream response. |
 
 **Mitigation.** Flag-gated; Neo4j authoritative until the live-DB E2E gate passes with
 `GRAPH_BACKEND=ruvector`; dual-read validation for one release; no canonical promotion until sign-off.
@@ -124,6 +128,22 @@ same `IGraphAdapter` seam.
 > Sabir chose **Path B**: bind the adapter to the real ruvnet crate and "upstream it right."
 > This section scopes that honestly against the crate's actual API (verified from the crate README,
 > v0.1.1, MIT, crates.io).
+
+### Upstream contribution status (story 19.5, 2026-07-12)
+
+Allura filed three upstream issues to `github.com/ruvnet/RuVector`:
+
+| # | Type | Issue Title | Status | PR Possible? |
+|---|------|-------------|--------|--------------|
+| 666 | G1 | No `updateNode` method — SUPERSEDES versioning | 🟡 Open | Yes |
+| 667 | G2 | No keyword/BM25 fulltext search | 🟡 Open | Yes |
+| 668 | G3 | No native multi-tenant scoping | 🟡 Open | Yes |
+
+**Current status:** G1/G2/G3 issues filed, open for discussion. Allura will add tests and PRs if the community accepts the use case and design direction.
+
+See also:
+- Evidence files in `docs/archive/allura/evidence/upstream-issues/` (G1.md, G2.md, G3.md)
+- Allura Brain tracking (episodic records: `2c785887-...`, `f8a10896-...`, `5afb671b-...`)
 
 ### What the crate gives us (good fit)
 - **Cypher engine** — `MATCH (a)-[:KNOWS]->(b)`; our SUPERSEDES reads/writes map cleanly.
