@@ -73,7 +73,7 @@ Allura is a foundation for builders making their own governed agent systems.
 | Builder goal | Allura gives you |
 |--------------|------------------|
 | **Persistent agent memory** | MCP tools for add/search/get/list/delete with tenant isolation |
-| **Approved knowledge base** | Raw PostgreSQL traces plus promotion-gated Neo4j knowledge |
+| **Approved knowledge base** | Raw PostgreSQL traces plus promotion-gated semantic graph (RuVector PG tables) |
 | **Agent cowork handoffs** | Shared handoff packets and validation receipts for Claude, Codex, OpenCode, Cursor, and other runtimes |
 | **Evidence-gated workflows** | Story, review, architecture, product-intake, retrospective, and RunRecord templates |
 | **Audit-friendly automation** | Append-only events, actor identity, source metadata, and explicit approval points |
@@ -108,9 +108,11 @@ Allura uses a **dual-layer memory architecture** — two purpose-built stores, e
 | Layer | Store | Role | Write Pattern |
 |-------|-------|------|---------------|
 | **Episodic** | PostgreSQL | Raw event capture, audit trail, high-volume traces | Append-only |
-| **Semantic** | Neo4j | Curated knowledge, versioned relationships, promotion-gated | Review → Promote |
+| **Semantic** | RuVector (PG tables) | Curated knowledge, versioned relationships, promotion-gated | Review → Promote |
 
-**The rule:** Every memory starts in PostgreSQL. Knowledge moves to Neo4j only after scoring and (optionally) curator review. History is never overwritten — superseded nodes are deprecated, not deleted.
+> **AD-49 Cutover (2026-07-12):** The semantic layer now runs on PostgreSQL tables (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) behind the `IGraphAdapter` seam. `GRAPH_BACKEND=ruvector` is the production default. Neo4j 5.26 remains as a read-only fallback for one release. Runtime label: `ruvector_graph`.
+
+**The rule:** Every memory starts in PostgreSQL. Knowledge moves to the semantic graph only after scoring and (optionally) curator review. History is never overwritten — superseded nodes are deprecated, not deleted.
 
 ### Memory Flow
 
@@ -130,8 +132,8 @@ Content is scored (0–1 confidence)
       ↓
   Curator approves or rejects
       ↓
-  Approved → promoted to Neo4j (semantic layer)
-  Rejected → stays episodic with audit record
+   Approved → promoted to semantic graph (RuVector PG tables, AD-49)
+   Rejected → stays episodic with audit record
 ```
 
 ### Vector Search
@@ -148,17 +150,17 @@ Allura embeds every memory at write time using **Qwen3 Matryoshka embeddings** (
 
 | Feature | Description |
 |---------|-------------|
-| **Dual-layer storage** | PostgreSQL (episodic) + Neo4j (semantic) with clear promotion boundary |
+| **Dual-layer storage** | PostgreSQL (episodic) + RuVector graph adapter (semantic) with clear promotion boundary |
 | **Append-only audit trail** | Every write is an immutable event — reconstruct any point in time |
 | **Human-in-the-loop curation** | Score-gated review queue before knowledge promotion |
 | **Multi-tenant isolation** | `group_id`-based boundaries at the schema level |
 | **MCP protocol native** | Stdio + Streamable HTTP gateway for any MCP-compatible agent |
-| **Vector search** | pgvector HNSW (episodic) + Neo4j (semantic) via hybrid ANN + BM25 ranking |
+| **Vector search** | pgvector HNSW (episodic) + RuVector graph adapter (semantic) via hybrid ANN + BM25 ranking |
 | **Plugin harness** | MCP server discovery, approval, and routing |
 | **Allura Scout plugin** | Low-token context packets before planning, building, reviewing, or handoff |
 | **Claude/Codex cowork plugin** | Shared handoff protocol, runtime honesty rules, validation reminders, and receipt-first collaboration |
 | **Self-hostable** | Docker Compose — no external auth dependencies |
-| **Versioned knowledge** | `SUPERSEDES` relationships in Neo4j — old facts are deprecated, not erased |
+| **Versioned knowledge** | `SUPERSEDES` relationships in the semantic graph — old facts are deprecated, not erased |
 | **API-first operations** | MCP, CLI, and HTTP endpoints with inspectable receipts |
 
 ---
@@ -244,7 +246,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-This brings up PostgreSQL, Neo4j, and the Allura Brain HTTP gateway.
+This brings up PostgreSQL, Neo4j (fallback), and the Allura Brain HTTP gateway. The semantic graph runs on PostgreSQL tables via the RuVector graph adapter (`GRAPH_BACKEND=ruvector`, AD-49).
 
 ### 3. Verify
 
@@ -264,7 +266,7 @@ curl http://localhost:3201/health
 curl http://localhost:3201/live
 # → { "alive": true, "uptime": 123.45, "timestamp": "2026-04-20..." }
 
-# Readiness check (PostgreSQL, Neo4j, MCP initialized)
+# Readiness check (PostgreSQL, graph adapter, MCP initialized)
 curl http://localhost:3201/ready
 # → { "ready": true, ... }
 ```
@@ -393,8 +395,8 @@ curl http://localhost:3201/health
 ```
 
 Services started:
-- `postgres` — PostgreSQL 16 + pgvector (port 5432)
-- `neo4j` — Neo4j 5.26 knowledge graph (ports 7474, 7687)
+- `postgres` — PostgreSQL 16 + pgvector (port 5432) — episodic traces + RuVector graph adapter tables
+- `neo4j` — Neo4j 5.26 (ports 7474, 7687) — fallback semantic graph (`GRAPH_BACKEND=neo4j`)
 - `neo4j-init` — Schema initializer (runs once)
 - `mcp` — MCP HTTP gateway (port 3201 mapped to 5888)
 
@@ -495,7 +497,7 @@ bun run test:all     # Full suite (typecheck + lint + unit + e2e + MCP)
 |-------|-----------|
 | Runtime | Bun + TypeScript |
 | Episodic Store | PostgreSQL 16 + pgvector |
-| Semantic Store | Neo4j 5.26 |
+| Semantic Store | RuVector graph adapter (PG tables, AD-49) — Neo4j 5.26 fallback |
 | Embeddings | Qwen3 Matryoshka 1024d (Ollama) |
 | Containerization | Docker + Docker Compose |
 | Protocol | Model Context Protocol (MCP) |
