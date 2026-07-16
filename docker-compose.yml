@@ -98,6 +98,9 @@ services:
     # Only pass the explicitly whitelisted variables Neo4j actually needs.
     environment:
       - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j}
+      - NEO4J_server_memory_heap_initial__size=192m
+      - NEO4J_server_memory_heap_max__size=192m
+      - NEO4J_server_memory_pagecache_size=128m
     ports:
       # Loopback only — see Postgres note above.
       - "127.0.0.1:7474:7474"
@@ -117,7 +120,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 768M
 
   # Neo4j schema initializer — applies indexes/constraints on first startup
   neo4j-init:
@@ -188,6 +191,7 @@ services:
     command: ["bun", "run", "src/mcp/canonical-http-gateway.ts"]
     networks:
       - knowledge-network
+      - open-webui-stack_default
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3201/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
       interval: 10s
@@ -268,3 +272,6 @@ networks:
   knowledge-network:
     external: true
     name: knowledge-network
+  open-webui-stack_default:
+    external: true
+    name: open-webui-stack_default
