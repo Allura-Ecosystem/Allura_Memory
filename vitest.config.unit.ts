@@ -69,12 +69,20 @@ export default defineConfig({
       "src/__tests__/watchdog-sustained.test.ts",
       // Backup automation (pure logic, mocked deps)
       "src/__tests__/backup-automation.test.ts",
+      // Self-healing auto-recovery (pure decision logic, mocked deps — Story 2.3)
+      "src/__tests__/auto-recovery.test.ts",
       // Token compliance validation (Story 2.7)
       "src/__tests__/token-compliance.test.ts",
       // Retrieval benchmark (FR-1.2 — mocked DB/services)
       "src/__tests__/retrieval-benchmark.test.ts",
       // TraceMiddleware (Story 1.2)
       "src/__tests__/trace-middleware.test.ts",
+      // SONA Trajectory Engine (Story 1.3)
+      "src/__tests__/trajectory-engine.test.ts",
+      // Skill usage tracker (Story 1.2)
+      "src/__tests__/skill-usage-tracker.test.ts",
+      // Genesis Engine (Story 2.2) — pattern detector + proposal generator
+      "src/__tests__/genesis-engine.test.ts",
       // Team RAM
       "src/team-ram/orchestrator.test.ts",
       "src/team-ram/orchestration-tracing.test.ts",
@@ -107,6 +115,10 @@ export default defineConfig({
       // Graph adapter — ruvector-crate subset parity (fake fixture by default;
       // real binding opt-in via RUVECTOR_TEST_BINDING_PATH — no DB either way)
       "src/lib/graph-adapter/__tests__/ruvector-crate-adapter.subset.test.ts",
+      // Coherence Monitor (Story 2.1) — pure detectors + monitor with mocked deps
+      "src/__tests__/coherence-monitor.test.ts",
+      // Coherence Monitor API routes (Story 2.1) — mocked auth/pool
+      "src/__tests__/coherence-routes.test.ts",
     ],
     exclude: [
       // ── Integration tests (mocked DB/services) — use test:integration ──

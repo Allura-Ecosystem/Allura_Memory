@@ -56,6 +56,10 @@ export default defineConfig({
       "tests/integration/overview-page-contract.test.ts",
       "tests/integration/governance-page-contract.test.ts",
       "tests/integration/members-page-contract.test.ts",
+      // Genesis Engine (Story 2.2) — insert trajectories → detect → verify proposal
+      "tests/integration/genesis-engine.test.ts",
+      // Coherence Monitor integration (Story 2.1) — mocked DB + kernel
+      "src/__tests__/coherence-integration.test.ts",
     ],
     exclude: [
       // canonical-memory needs live DB — E2E lane

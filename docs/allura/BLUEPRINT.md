@@ -6,7 +6,7 @@
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
 > When in doubt, defer to the source code, schemas, and team consensus.
 
-Allura is a sovereign AI memory engine — a self-hosted, governed alternative to mem0.ai. It gives AI agents persistent, auditable, multi-tenant memory backed by a dual-database architecture (PostgreSQL for episodic traces, Neo4j for semantic knowledge). The system enforces tenant isolation, append-only history, and versioned knowledge at the schema level — not by policy.
+Allura is a sovereign AI memory engine — a self-hosted, governed alternative to mem0.ai. It gives AI agents persistent, auditable, multi-tenant memory backed by a unified PostgreSQL architecture (pgvector for both episodic traces and semantic knowledge — Neo4j sunset 2026-07, see AD-50). The system enforces tenant isolation, append-only history, and versioned knowledge at the schema level — not by policy.
 
 ---
 

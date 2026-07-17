@@ -31,7 +31,7 @@ Human-in-the-loop curation before facts enter the knowledge graph. Append-only P
 
 | Aspect | mem0 | Allura |
 |--------|------|--------|
-| **Storage Approach** | Autonomous scoring → vector storage | Autonomous scoring → PostgreSQL (episodic) → curator gate → Neo4j (semantic) |
+| **Storage Approach** | Autonomous scoring → vector storage | Autonomous scoring → PostgreSQL (episodic) → curator gate → pgvector (semantic, Neo4j sunset 2026-07) |
 | **Deduplication** | Post-hoc (after storage) | Pre-promotion (before semantic write) |
 | **Junk Rate (Production)** | 97.8% after 32 days | 0% (curator blocks junk) |
 | **Correction Mechanism** | Edit existing memory | Create new node, link SUPERSEDES, mark old deprecated |
@@ -46,7 +46,7 @@ Human-in-the-loop curation before facts enter the knowledge graph. Append-only P
 | mem0 (vector-only) | 49.0% | Cosine similarity |
 | Zep (with retrieval) | 63.8% | Graph + vector |
 | Anthropic (dual-DB) | 68.5% | Semantic + episodic |
-| **Allura (benchmarked)** | 0.867 P@5 / 0.933 R@5 / 0.833 MRR | Neo4j + PostgreSQL + Retrieval Gateway |
+| **Allura (benchmarked)** | 0.867 P@5 / 0.933 R@5 / 0.833 MRR | PostgreSQL + pgvector + Retrieval Gateway (Neo4j sunset 2026-07) |
 
 Allura's benchmark results (2026-05-01):
 - **Precision@5:** 0.867 — 87% of top-5 results are relevant
@@ -62,7 +62,7 @@ Allura's benchmark results (2026-05-01):
 | Layer | mem0 | Allura |
 |-------|------|--------|
 | **Write** | Autonomous scoring (LLM-based) → vector embedding → storage | Autonomous scoring → PostgreSQL (episodic) |
-| **Promotion** | N/A (no secondary layer) | Curator approval → Neo4j graph (semantic) |
+| **Promotion** | N/A (no secondary layer) | Curator approval → pgvector semantic store (Neo4j sunset 2026-07) |
 | **Versioning** | Edit-in-place | SUPERSEDES relationships (immutable history) |
 | **Multi-Tenancy** | Application-layer row filtering | Schema-level CHECK constraints |
 | **Compliance** | Audit logs (stored post-facto) | Append-only traces (governance by design) |

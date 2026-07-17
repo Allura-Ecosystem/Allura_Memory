@@ -19,11 +19,11 @@ if (typeof window !== "undefined") {
 }
 
 import { randomUUID } from "crypto";
-import { getPool } from "@/lib/postgres/connection";
 import {
   readTransaction,
   writeTransaction,
 } from "@/lib/neo4j/connection";
+import { getPool } from "@/lib/postgres/connection";
 import { validateGroupId } from "@/lib/validation/group-id";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -115,6 +115,41 @@ async function pgMutate(
     );
   }
 
+  // Append-only invariant for the agent_trajectories table (SONA — Story 1.3)
+  if (table === "agent_trajectories" && (type === "update" || type === "delete_op")) {
+    throw new Error(
+      `pg:agent_trajectories is append-only — ${type} operations are not permitted`
+    );
+  }
+
+  // Append-only INSERT path for pattern_proposals (Genesis — Story 2.2).
+  // UPDATE (status/reviewed_at) is handled by a dedicated approve/reject path
+  // through syscall_mutate, NOT through pgMutate's generic update flow.
+  if (table === "pattern_proposals" && type === "delete_op") {
+    throw new Error(
+      `pg:pattern_proposals is append-only — delete_op is not permitted`
+    );
+  }
+
+  // ── UPDATE path for pattern_proposals (HITL review gate) ───────────────────
+  // The DB trigger restricts UPDATE to status / reviewed_at. We route the
+  // update through syscall_mutate so it is kernel-gated (AD-40) and audit-
+  // trailed. `query.id` selects the row; `data` carries the new column values.
+  if (table === "pattern_proposals" && type === "update") {
+    return pgUpdatePatternProposal(op);
+  }
+
+  // Append-only INSERT path for coherence_conflicts (Story 2.1).
+  // The monitor writes new conflict rows through this path. Curator
+  // resolution (status flip) is the ONE permitted UPDATE and is handled
+  // directly by the resolve API route, NOT through pgMutate's generic
+  // update flow — keeping the kernel INSERT-only invariant intact.
+  if (table === "coherence_conflicts" && (type === "update" || type === "delete_op")) {
+    throw new Error(
+      `pg:coherence_conflicts is append-only (INSERT) — ${type} operations are not permitted through the kernel. Curator resolution uses the dedicated API route.`
+    );
+  }
+
   const data = op.data ?? {};
   requireGroupId(data);
 
@@ -136,6 +171,62 @@ async function pgMutate(
 
   const pool = getPool();
   const result = await pool.query(sql, values);
+
+  return {
+    success: true,
+    affected_rows: result.rowCount ?? 0,
+  };
+}
+
+/**
+ * UPDATE handler for `pattern_proposals` (Story 2.2 HITL review gate).
+ *
+ * Permits UPDATE of status / reviewed_at WHERE id = $1 AND group_id = $2.
+ * The DB trigger (`trg_pattern_proposals_block_update`) rejects any
+ * UPDATE touching columns other than status / reviewed_at, so this handler
+ * is a thin kernel-gated wrapper around a parameterised UPDATE.
+ */
+async function pgUpdatePatternProposal(
+  op: TargetOperation
+): Promise<ResolveResult> {
+  const data = op.data ?? {};
+  const queryBag = op.query ?? {};
+
+  // group_id is mandatory — stamped by the kernel from proof claims.
+  const groupId = requireGroupId(data);
+
+  // `id` must be present in the query bag.
+  if (!("id" in queryBag) || queryBag["id"] === undefined) {
+    throw new Error(
+      "pg:pattern_proposals UPDATE requires query.id to select the row"
+    );
+  }
+
+  // Validate data column names (only status / reviewed_at are permitted by
+  // the DB trigger, but we also validate identifiers defensively).
+  const dataKeys = Object.keys(data)
+    .filter((k) => k !== "group_id") // group_id is in the WHERE, not SET
+    .map(validateIdentifier);
+
+  // Reject empty SET (no-op) defensively.
+  if (dataKeys.length === 0) {
+    throw new Error(
+      "pg:pattern_proposals UPDATE requires at least one column to SET"
+    );
+  }
+
+  // Build SET clause with parameterised placeholders.
+  const setClause = dataKeys.map((k, i) => `${k} = $${i + 1}`).join(", ");
+  const setValues = dataKeys.map((k) => serializeValue(data[k]));
+
+  // WHERE clause: id AND group_id (tenant isolation).
+  const whereClause = `WHERE id = $${dataKeys.length + 1} AND group_id = $${dataKeys.length + 2}`;
+  const whereValues = [queryBag["id"], groupId];
+
+  const sql = `UPDATE pattern_proposals SET ${setClause} ${whereClause}`;
+
+  const pool = getPool();
+  const result = await pool.query(sql, [...setValues, ...whereValues]);
 
   return {
     success: true,

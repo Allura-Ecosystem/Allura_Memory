@@ -41,9 +41,12 @@ import type {
 import type { EnvelopeMeta, MemoryResponseEnvelope } from "@/lib/memory/response-envelope"
 import { errorEnvelope, successEnvelope, validationErrorEnvelope } from "@/lib/memory/response-envelope"
 
+import { recordTrajectoryAsync } from "@/lib/sona/trajectory-engine"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 
 import * as canonicalTools from "@/mcp/canonical-tools"
+
+// SONA trajectory recording (Story 1.3)
 
 // ── Audit Logging ──────────────────────────────────────────────────────────
 
@@ -147,10 +150,29 @@ export class MemoryCoordinator {
     try {
       const result = await canonicalTools.memory_add(request)
       auditLog(tool, validation.groupId, "success")
+      // SONA: record trajectory (async, non-blocking)
+      recordTrajectoryAsync({
+        group_id: validation.groupId,
+        agent_id: (request as { metadata?: { agent_id?: string } }).metadata?.agent_id ?? "memory-coordinator",
+        action: "memory_add",
+        input: request.content,
+        output: result,
+        success: true,
+        duration_ms: Date.now() - startTime,
+      })
       return successEnvelope(result, tool, validation.groupId, startTime, extractMetaOverrides(result))
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       auditLog(tool, validation.groupId, "internal_error", message)
+      // SONA: record failed trajectory
+      recordTrajectoryAsync({
+        group_id: validation.groupId,
+        agent_id: (request as { metadata?: { agent_id?: string } }).metadata?.agent_id ?? "memory-coordinator",
+        action: "memory_add",
+        input: request.content,
+        success: false,
+        duration_ms: Date.now() - startTime,
+      })
       return errorEnvelope(500, message, tool, validation.groupId, startTime)
     }
   }
@@ -167,10 +189,29 @@ export class MemoryCoordinator {
     try {
       const result = await canonicalTools.memory_search(request)
       auditLog(tool, validation.groupId, "success")
+      // SONA: record trajectory (async, non-blocking)
+      recordTrajectoryAsync({
+        group_id: validation.groupId,
+        agent_id: "memory-coordinator",
+        action: "memory_search",
+        input: request.query,
+        output: result,
+        success: true,
+        duration_ms: Date.now() - startTime,
+      })
       return successEnvelope(result, tool, validation.groupId, startTime, extractMetaOverrides(result))
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       auditLog(tool, validation.groupId, "internal_error", message)
+      // SONA: record failed trajectory
+      recordTrajectoryAsync({
+        group_id: validation.groupId,
+        agent_id: "memory-coordinator",
+        action: "memory_search",
+        input: request.query,
+        success: false,
+        duration_ms: Date.now() - startTime,
+      })
       return errorEnvelope(500, message, tool, validation.groupId, startTime)
     }
   }
