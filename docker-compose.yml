@@ -85,66 +85,9 @@ services:
       retries: 10
       start_period: 30s
 
-  # Neo4j 5.26.0 — Knowledge graph database
-  # Version pin: 5.26.0-community (specific patch version, not :community)
-  # Prevents unexpected minor version upgrades that could break compatibility
-  neo4j:
-    image: neo4j:5.26.0-community
-    container_name: knowledge-neo4j
-    restart: unless-stopped
-    # Do NOT load the full .env file here — any NEO4J_* variable is interpreted
-    # as a Neo4j config key by the official image entrypoint, causing fatal
-    # "Unrecognized setting" errors on startup (e.g. NEO4J_READ_TIMEOUT → READ.TIMEOUT).
-    # Only pass the explicitly whitelisted variables Neo4j actually needs.
-    environment:
-      - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j}
-      - NEO4J_server_memory_heap_initial__size=192m
-      - NEO4J_server_memory_heap_max__size=192m
-      - NEO4J_server_memory_pagecache_size=128m
-    ports:
-      # Loopback only — see Postgres note above.
-      - "127.0.0.1:7474:7474"
-      - "127.0.0.1:7687:7687"
-    volumes:
-      - neo4j_data:/data
-      - neo4j_logs:/logs
-    networks:
-      - knowledge-network
-    # Healthcheck uses wget — curl is NOT available in neo4j:5.26.0-community
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    deploy:
-      resources:
-        limits:
-          memory: 768M
-
-  # Neo4j schema initializer — applies indexes/constraints on first startup
-  neo4j-init:
-    image: neo4j:5.26.0-community
-    container_name: allura-neo4j-init
-    depends_on:
-      neo4j:
-        condition: service_healthy
-    env_file:
-      - .env
-    volumes:
-      - ./docker/neo4j-init:/cypher:ro
-    networks:
-      - knowledge-network
-    entrypoint: ["/bin/bash", "-c"]
-    command:
-      - |
-        echo "Applying Neo4j schema..."
-        for f in /cypher/*.cypher; do
-          echo "  Running: $$f"
-          cypher-shell -a bolt://neo4j:7687 -u "$${NEO4J_USER}" -p "$${NEO4J_PASSWORD}" --format plain < "$$f" || echo "  WARN: $$f had errors (may already exist)"
-        done
-        echo "Schema applied."
-    restart: "no"
+  # Neo4j REMOVED 2026-07-17 — AD-49 executed. GRAPH_BACKEND=ruvector (PostgreSQL).
+  # Semantic graph now lives in graph_memories + graph_supersedes tables.
+  # Backup at ~/backups/neo4j-sunset-2026-07-17/
 
   # Web frontend (Next.js)
   mcp:
@@ -164,8 +107,6 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
-      - NEO4J_URI=bolt://knowledge-neo4j:7687
-      - NEO4J_USER=${NEO4J_USER}
       - RUVECTOR_HOST=knowledge-postgres
       - RUVECTOR_PORT=5432
       - RUVECTOR_USER=${POSTGRES_USER}
@@ -173,7 +114,7 @@ services:
       - OLLAMA_API_KEY=${OLLAMA_API_KEY:-}
       - OLLAMA_CLOUD_URL=${OLLAMA_CLOUD_URL:-https://ollama.com}
       - RUVECTOR_EMBEDDING_BASE_URL=http://host.docker.internal:11434
-      - GRAPH_BACKEND=${GRAPH_BACKEND:-neo4j}
+      - GRAPH_BACKEND=ruvector
       - DEFAULT_GROUP_ID=${DEFAULT_GROUP_ID:-allura-system}
       - RUVIX_KERNEL_SECRET=${RUVIX_KERNEL_SECRET:-}
       - ALLURA_MCP_HTTP_PORT=3201
@@ -255,15 +196,7 @@ volumes:
     external: true
     name: memory_postgres_data
 
-  # Neo4j data volume - pre-existing (created separately)
-  neo4j_data:
-    external: true
-    name: neo4j_data
-
-  # Neo4j logs volume - pre-existing (created separately)
-  neo4j_logs:
-    external: true
-    name: neo4j_logs
+  # Neo4j volumes REMOVED 2026-07-17 — Neo4j sunset.
 
 # =============================================================================
 # Network Configuration
