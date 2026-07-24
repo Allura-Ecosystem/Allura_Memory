@@ -113,7 +113,10 @@ services:
       - RUVECTOR_DB=${POSTGRES_DB}
       - OLLAMA_API_KEY=${OLLAMA_API_KEY:-}
       - OLLAMA_CLOUD_URL=${OLLAMA_CLOUD_URL:-https://ollama.com}
-      - RUVECTOR_EMBEDDING_BASE_URL=http://host.docker.internal:11434
+      - RUVECTOR_EMBEDDING_BASE_URL=https://api.openai.com
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - RUVECTOR_EMBEDDING_API_KEY=${RUVECTOR_EMBEDDING_API_KEY:-}
+      - RUVECTOR_EMBEDDING_MODEL=${RUVECTOR_EMBEDDING_MODEL:-text-embedding-3-small}
       - GRAPH_BACKEND=ruvector
       - DEFAULT_GROUP_ID=${DEFAULT_GROUP_ID:-allura-system}
       - RUVIX_KERNEL_SECRET=${RUVIX_KERNEL_SECRET:-}
