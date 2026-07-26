@@ -198,15 +198,23 @@ export async function audit_health_report(
   try {
     const start = Date.now()
     const { neo4j } = await getConnections()
-    const session = neo4j.session()
-    try {
-      await session.run("RETURN 1")
+    if (!neo4j) {
       neo4jStatus = {
-        status: "healthy",
-        latency_ms: Date.now() - start,
+        status: "degraded",
+        latency_ms: 0,
+        detail: "Neo4j disabled (GRAPH_BACKEND=ruvector)",
       }
-    } finally {
-      await session.close()
+    } else {
+      const session = neo4j.session()
+      try {
+        await session.run("RETURN 1")
+        neo4jStatus = {
+          status: "healthy",
+          latency_ms: Date.now() - start,
+        }
+      } finally {
+        await session.close()
+      }
     }
   } catch (err) {
     neo4jStatus = {
@@ -624,23 +632,28 @@ export async function audit_invariant_check(
 
     try {
       const { neo4j } = await getConnections()
-      const session = neo4j.session()
-      try {
-        const result = await session.run(
-          "MATCH ()-[r:SUPERSEDES]->() RETURN count(r) AS cnt LIMIT 1"
-        )
-        const cnt = result.records[0]?.get("cnt")
-        const supersededCount = typeof cnt === "object" && cnt !== null && "low" in cnt
-          ? (cnt as { low: number }).low
-          : typeof cnt === "number"
-          ? cnt
-          : 0
-        // Acceptable to have 0 (fresh system) — just check Neo4j is reachable
-        passed = true
-        violationCount = 0
-        detail = `Neo4j reachable; ${supersededCount} SUPERSEDES relationship(s) found`
-      } finally {
-        await session.close()
+      if (!neo4j) {
+        passed = false
+        detail = "Neo4j disabled (GRAPH_BACKEND=ruvector) — supersede check skipped"
+      } else {
+        const session = neo4j.session()
+        try {
+          const result = await session.run(
+            "MATCH ()-[r:SUPERSEDES]->() RETURN count(r) AS cnt LIMIT 1"
+          )
+          const cnt = result.records[0]?.get("cnt")
+          const supersededCount = typeof cnt === "object" && cnt !== null && "low" in cnt
+            ? (cnt as { low: number }).low
+            : typeof cnt === "number"
+            ? cnt
+            : 0
+          // Acceptable to have 0 (fresh system) — just check Neo4j is reachable
+          passed = true
+          violationCount = 0
+          detail = `Neo4j reachable; ${supersededCount} SUPERSEDES relationship(s) found`
+        } finally {
+          await session.close()
+        }
       }
     } catch (err) {
       // Neo4j is optional — treat as degraded, not a hard failure

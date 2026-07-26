@@ -38,7 +38,7 @@ loadEnvFiles()
 let pgPool: Pool | null = null
 let neo4jDriver: Driver | null = null
 
-export async function getConnections(): Promise<{ pg: Pool; neo4j: Driver }> {
+export async function getConnections(): Promise<{ pg: Pool; neo4j: Driver | null }> {
   if (!pgPool) {
     const pgPassword = process.env.POSTGRES_PASSWORD
     if (!pgPassword) {
@@ -55,6 +55,14 @@ export async function getConnections(): Promise<{ pg: Pool; neo4j: Driver }> {
     })
   }
 
+  // Neo4j is optional — skip driver creation when GRAPH_BACKEND=ruvector (AD-49)
+  const graphBackend = process.env.GRAPH_BACKEND?.toLowerCase() || "ruvector"
+  if (graphBackend === "ruvector" || graphBackend === "ruvector-crate") {
+    // PostgreSQL-only mode — no Neo4j driver needed
+    return { pg: pgPool, neo4j: null }
+  }
+
+  // Neo4j mode — driver required
   if (!neo4jDriver) {
     const password = process.env.NEO4J_PASSWORD;
     if (!password) {

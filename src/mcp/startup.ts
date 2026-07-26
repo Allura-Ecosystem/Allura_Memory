@@ -14,8 +14,10 @@ async function warmConnections(): Promise<void> {
     const { pg, neo4j } = await getConnections();
     const tasks: Promise<unknown>[] = [
       pg.query("SELECT 1").catch(() => undefined),
-      neo4j.verifyConnectivity().catch(() => undefined),
     ];
+    if (neo4j) {
+      tasks.push(neo4j.verifyConnectivity().catch(() => undefined));
+    }
 
     if (isRuVectorEnabled()) {
       tasks.push(getRuVectorPool().query("SELECT 1").catch(() => undefined));
