@@ -1,6 +1,6 @@
 # Story 20.2 — Wire delegate_task Brief Template
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Woz
 **group_id:** allura-system
 **Epic:** 20

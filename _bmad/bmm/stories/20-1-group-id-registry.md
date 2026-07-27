@@ -1,6 +1,6 @@
 # Story 20.1 — Create group_id Registry
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Woz
 **group_id:** allura-system
 **Epic:** 20

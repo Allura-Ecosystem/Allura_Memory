@@ -30,6 +30,12 @@ let mockAuthResult: {
   requiredRole: string;
   actualRole: string;
   user: { id: string; email: string; role: string; groupId: string } | null;
+} = {
+  allowed: true,
+  authenticated: true,
+  requiredRole: "admin",
+  actualRole: "admin",
+  user: { id: "admin-1", email: "admin@test.com", role: "admin", groupId: "allura-system" },
 };
 
 const queryMock = vi.fn();
@@ -88,12 +94,13 @@ function makeRequest(
   url: string,
   body?: unknown
 ): NextRequest {
-  const init: RequestInit = { method };
+  const init: Record<string, unknown> = { method };
   if (body !== undefined) {
     init.body = JSON.stringify(body);
     init.headers = { "Content-Type": "application/json" };
   }
-  return new NextRequest(url, init);
+  // NextRequest's RequestInit has a stricter signal type than DOM's; use `as any` to bridge
+  return new NextRequest(url, init as any);
 }
 
 // ── POST /api/tenants ──────────────────────────────────────────────────────────
