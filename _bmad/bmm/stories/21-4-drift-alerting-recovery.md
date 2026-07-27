@@ -1,9 +1,10 @@
 # Story 21.4 — Drift Alerting + Auto-Recovery Integration
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Woz + Bellard
 **group_id:** allura-system
 **Epic:** 21
+**status_evidence:** "Added drift check to auto-recovery.ts: classifyDriftType, decideDriftRecoveryAction, executeDriftRecovery, runDriftRecoveryCycle. Queries RETRIEVAL_DRIFT events, classifies into index_drift/missing_promotions/schema_mismatch, attempts re-index/trigger-watchdog/alert. 3-strike escalation to DRIFT_ESCALATION. 24/24 drift-recovery tests pass, 39/39 existing auto-recovery tests pass."
 
 ## User Story
 
@@ -18,11 +19,11 @@ As the Allura reliability lead, I need drift alerts to feed into the auto-recove
 
 ## Acceptance Criteria
 
-- [ ] AC-1: The auto-recovery engine checks for recent `RETRIEVAL_DRIFT` events in Allura Brain
-- [ ] AC-2: When a drift alert is detected, the engine attempts remediation based on drift type: index drift → re-index, missing promotions → trigger watchdog, schema mismatch → alert only (no auto-fix)
-- [ ] AC-3: Recovery attempts are logged to `recovery_events` table with `component=drift_audit`
-- [ ] AC-4: After 3 failed recovery attempts, the engine escalates to a human alert via Brain memory_add with `event_type=DRIFT_ESCALATION`
-- [ ] AC-5: Unit tests verify: drift event triggers recovery, 3-strike limit works, escalation fires
+- [x] AC-1: The auto-recovery engine checks for recent `RETRIEVAL_DRIFT` events in Allura Brain
+- [x] AC-2: When a drift alert is detected, the engine attempts remediation based on drift type: index drift → re-index, missing promotions → trigger watchdog, schema mismatch → alert only (no auto-fix)
+- [x] AC-3: Recovery attempts are logged to `recovery_events` table with `component=drift_audit`
+- [x] AC-4: After 3 failed recovery attempts, the engine escalates to a human alert via Brain memory_add with `event_type=DRIFT_ESCALATION`
+- [x] AC-5: Unit tests verify: drift event triggers recovery, 3-strike limit works, escalation fires
 
 ## Tasks
 

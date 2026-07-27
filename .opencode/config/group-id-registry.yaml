@@ -1,0 +1,57 @@
+# Group ID Registry — Agent → Tenant Mapping
+# Story 20.1: Maps each agent to its default group_id and optional allowed_group_ids.
+# The loader (src/lib/config/group-id-registry.ts) validates every group_id
+# against ^allura-[a-z0-9-]+$ at startup — fail closed on invalid format.
+
+agents:
+  # ── Core Orchestrators ──────────────────────────────────────────────
+  - id: gilliam
+    default_group_id: allura-system
+    allowed_group_ids:
+      - allura-system
+      - allura-faithmeats
+      - allura-difference-driven
+      - allura-coding
+
+  - id: troy
+    default_group_id: allura-system
+    allowed_group_ids:
+      - allura-system
+      - allura-faithmeats
+      - allura-difference-driven
+      - allura-coding
+
+  - id: openwork
+    default_group_id: allura-system
+    allowed_group_ids:
+      - allura-system
+      - allura-faithmeats
+      - allura-difference-driven
+      - allura-coding
+
+  # ── Nonprofit / Difference-Driven Agents (single-tenant) ───────────
+  # These agents are scoped to allura-difference-driven ONLY — no cross-tenant access.
+  - id: nonprofit-curator
+    default_group_id: allura-difference-driven
+    allowed_group_ids:
+      - allura-difference-driven
+
+  - id: nonprofit-researcher
+    default_group_id: allura-difference-driven
+    allowed_group_ids:
+      - allura-difference-driven
+
+  # ── Coding Agents ───────────────────────────────────────────────────
+  - id: coding-agent
+    default_group_id: allura-coding
+    allowed_group_ids:
+      - allura-coding
+
+  # ── FaithMeats Agents ──────────────────────────────────────────────
+  - id: faithmeats-agent
+    default_group_id: allura-faithmeats
+    allowed_group_ids:
+      - allura-faithmeats
+
+# Fallback group_id for agents not listed in this registry
+fallback_group_id: allura-system

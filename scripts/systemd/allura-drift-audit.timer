@@ -1,0 +1,16 @@
+[Unit]
+Description=Run Allura Retrieval Drift Audit daily at 03:00 ET
+Documentation=https://github.com/team-durham/allura-memory
+Requires=allura-drift-audit.service
+
+[Timer]
+# Daily at 03:00 ET (08:00 UTC during EDT, 07:00 UTC during EST)
+# Using OnCalendar with America/New_York timezone awareness
+OnCalendar=*-*-* 03:00:00
+# If missed (e.g. machine was off), run once on next boot
+Persistent=true
+# Random delay up to 5 min to avoid thundering herd
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

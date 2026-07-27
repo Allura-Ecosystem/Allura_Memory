@@ -81,6 +81,8 @@ function makeMockDeps(overrides: Partial<RecoveryDeps> = {}): RecoveryDeps {
     logRecoveryEvent: vi.fn().mockResolvedValue(undefined),
     getRecentAttemptCount: vi.fn().mockResolvedValue(0),
     sendAlert: vi.fn().mockResolvedValue(undefined),
+    getDriftAlerts: vi.fn().mockResolvedValue([]),
+    sendDriftEscalation: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -524,6 +526,8 @@ describe("Story 2.3: Self-Healing — Auto-Recovery", () => {
       expect(typeof deps.logRecoveryEvent).toBe("function");
       expect(typeof deps.getRecentAttemptCount).toBe("function");
       expect(typeof deps.sendAlert).toBe("function");
+      expect(typeof deps.getDriftAlerts).toBe("function");
+      expect(typeof deps.sendDriftEscalation).toBe("function");
     });
 
     it("allows overriding individual functions", () => {

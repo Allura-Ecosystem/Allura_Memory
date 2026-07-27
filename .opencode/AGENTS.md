@@ -513,6 +513,29 @@ The semantic/knowledge-graph layer is backed by the `IGraphAdapter` seam (`src/l
 
 **DB operations via MCP_DOCKER tools only** — never `docker exec`. Brain MCP uses Streamable HTTP transport (SSE): requires `Accept: application/json, text/event-stream` header and `mcp-session-id` for session continuity.
 
+## §4 — Subagent Task Briefs (MANDATORY)
+
+All `delegate_task` subagent dispatches must include a BRIEF.md following the
+template at `templates/BRIEF.md`. The brief has two mandatory sections:
+
+1. **Memory Hydration (Step 1):** Before any work, the subagent must call
+   `memory_search` with its `group_id` to find prior work, decisions, and
+   blockers on the assigned topic. This prevents duplicate work and ensures
+   the subagent has context from previous sessions.
+
+2. **Memory Writeback (Step 3):** After completing (or failing), the subagent
+   must call `memory_add` with a structured outcome payload including task
+   summary, files changed, outcome status, and key decisions. This feeds the
+   trajectory engine, curator pipeline, and future agent hydration.
+
+The `delegate_task` context payload must include `group_id` so the subagent
+knows its tenant namespace. Subagents inherit MCP tools via
+`inherit_mcp_toolsets: true` — `memory_search` and `memory_add` are available
+without explicit per-subagent configuration.
+
+**OpenCode agents** should also follow this template. See `templates/BRIEF.md`
+for the canonical structure.
+
 ## Team RAM — Agent Routing
 
 | Agent | Persona | Use When |

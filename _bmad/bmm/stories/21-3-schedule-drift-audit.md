@@ -1,9 +1,10 @@
 # Story 21.3 — Schedule the Retrieval Drift Audit
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Bellard
 **group_id:** allura-system
 **Epic:** 21
+**status_evidence:** "Created scripts/run-drift-audit.sh with 6 checks (subsystem health, count parity, index coverage, reader/writer parity, public API round-trip, legacy compatibility). Writes DRIFT_AUDIT + RETRIEVAL_DRIFT events to Allura Brain. Daily log to memory/YYYY-MM-DD.md. Systemd timer (03:00 ET) + oneshot service created. --group-id flag supported. Install commands documented in evidence file."
 
 ## User Story
 
@@ -18,12 +19,12 @@ As the Allura reliability lead, I need a daily cron job that runs the retrieval 
 
 ## Acceptance Criteria
 
-- [ ] AC-1: A daily cron job runs the drift audit at 03:00 ET (low-traffic window)
-- [ ] AC-2: The audit executes the 6 checks from the skill: (1) subsystem health, (2) count parity, (3) index coverage, (4) reader/writer parity, (5) public API round-trip, (6) legacy compatibility
-- [ ] AC-3: Results are written to Allura Brain as an event with `event_type=DRIFT_AUDIT` and `metadata={checks_passed, checks_failed, details}`
-- [ ] AC-4: If any check fails, an ALERT event is written with `event_type=RETRIEVAL_DRIFT` and severity
-- [ ] AC-5: A log entry is written to `memory/YYYY-MM-DD.md` with the audit summary
-- [ ] AC-6: The audit runs against `allura-system` group_id by default, with support for `--group-id` flag to audit other tenants
+- [x] AC-1: A daily cron job runs the drift audit at 03:00 ET (low-traffic window)
+- [x] AC-2: The audit executes the 6 checks from the skill: (1) subsystem health, (2) count parity, (3) index coverage, (4) reader/writer parity, (5) public API round-trip, (6) legacy compatibility
+- [x] AC-3: Results are written to Allura Brain as an event with `event_type=DRIFT_AUDIT` and `metadata={checks_passed, checks_failed, details}`
+- [x] AC-4: If any check fails, an ALERT event is written with `event_type=RETRIEVAL_DRIFT` and severity
+- [x] AC-5: A log entry is written to `memory/YYYY-MM-DD.md` with the audit summary
+- [x] AC-6: The audit runs against `allura-system` group_id by default, with support for `--group-id` flag to audit other tenants
 
 ## Tasks
 

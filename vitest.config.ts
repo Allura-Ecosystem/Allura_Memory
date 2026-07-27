@@ -106,6 +106,12 @@ export default defineConfig({
       "src/__tests__/tenant-curator-config.test.ts",
       // Story 22.6 — Cross-tenant audit
       "src/__tests__/cross-tenant-audit.test.ts",
+      // Epic 20 — Subagent Memory Access
+      "src/__tests__/group-id-registry.test.ts",
+      "src/__tests__/brief-template.test.ts",
+      "src/__tests__/subagent-mcp-access.test.ts",
+      "src/__tests__/memory-brief.test.ts",
+      "src/__tests__/memory-writeback.test.ts",
     ],
     exclude: [
       // E2E tests — require live stack

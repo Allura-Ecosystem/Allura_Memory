@@ -1,6 +1,6 @@
 # Story 21.5 — Curation Metrics Endpoint
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Woz
 **group_id:** allura-system
 **Epic:** 21

@@ -1,0 +1,16 @@
+[Unit]
+Description=Allura Retrieval Drift Audit (one-shot)
+Documentation=https://github.com/team-durham/allura-memory
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/media/ronin704/Games/Repos/team_durham-clean/allura-memory
+ExecStart=/media/ronin704/Games/Repos/team_durham-clean/allura-memory/scripts/run-drift-audit.sh --group-id allura-system
+# Send stdout/stderr to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=allura-drift-audit
+# Non-zero exit means drift detected — don't mark as failed for alerting
+SuccessExitStatus=0 1

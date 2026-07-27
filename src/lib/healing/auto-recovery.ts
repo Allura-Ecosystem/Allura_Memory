@@ -62,13 +62,16 @@ export const RECOVERY_LOG_DEFAULT_LIMIT = 50;
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type ComponentName = "postgres" | "mcp-container" | "disk" | "memory";
+export type ComponentName = "postgres" | "mcp-container" | "disk" | "memory" | "drift_audit";
 export type RecoveryAction =
   | "restart-mcp"
   | "brain-recover"
   | "clear-stale-connections"
   | "no-action"
-  | "alert";
+  | "alert"
+  | "re-index"
+  | "trigger-watchdog"
+  | "drift-escalation";
 
 export interface HealthCheckResult {
   component: ComponentName;
@@ -111,6 +114,35 @@ export interface SystemHealthReport {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Drift audit types (Story 21.4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** A RETRIEVAL_DRIFT event from the events table, produced by the drift audit. */
+export interface DriftAlertEvent {
+  id: number;
+  group_id: string;
+  event_type: string;
+  created_at: string;
+  metadata: {
+    checks_failed?: number;
+    severity?: string;
+    details?: Array<{ name: string; passed: boolean; detail: string }>;
+  };
+}
+
+/** The type of drift detected, determining the recovery action. */
+export type DriftType = "index_drift" | "missing_promotions" | "schema_mismatch" | "unknown";
+
+/** Result of a drift recovery attempt. */
+export interface DriftRecoveryResult {
+  driftType: DriftType;
+  action: RecoveryAction;
+  success: boolean;
+  errorMessage?: string;
+  escalated: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Injection points (for unit testing — override via mock or DI)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -131,6 +163,11 @@ export interface RecoveryDeps {
     component: ComponentName,
     message: string,
   ) => Promise<void>;
+  // ── Drift audit deps (Story 21.4) ──────────────────────────────────────────
+  /** Query recent RETRIEVAL_DRIFT events from the events table. */
+  getDriftAlerts: (windowMs: number) => Promise<DriftAlertEvent[]>;
+  /** Send a drift escalation alert via Brain memory_add. */
+  sendDriftEscalation: (driftType: string, message: string) => Promise<void>;
 }
 
 /** Default implementation of execCmd using child_process.exec. */
@@ -300,6 +337,64 @@ async function defaultSendAlert(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Drift alert defaults (Story 21.4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Default: query recent RETRIEVAL_DRIFT events from the events table.
+ * Looks for events within the given time window.
+ */
+async function defaultGetDriftAlerts(windowMs: number): Promise<DriftAlertEvent[]> {
+  try {
+    const pool = getPool();
+    const since = new Date(Date.now() - windowMs).toISOString();
+    const result = await pool.query(
+      `SELECT id, group_id, event_type, created_at, metadata
+       FROM events
+       WHERE event_type = 'RETRIEVAL_DRIFT'
+         AND created_at >= $1
+       ORDER BY created_at DESC`,
+      [since],
+    );
+    return result.rows as DriftAlertEvent[];
+  } catch (err) {
+    console.error(
+      `[auto-recovery] Failed to query drift alerts: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    return [];
+  }
+}
+
+/**
+ * Default: send a drift escalation alert via Brain memory_add.
+ * Writes a DRIFT_ESCALATION event to the events table.
+ */
+async function defaultSendDriftEscalation(driftType: string, message: string): Promise<void> {
+  try {
+    const pool = getPool();
+    const groupId = getRecoveryGroupId();
+    await pool.query(
+      `INSERT INTO events (group_id, event_type, agent_id, status, metadata)
+       VALUES ($1, 'DRIFT_ESCALATION', 'auto-recovery', 'completed', $2)`,
+      [
+        groupId,
+        JSON.stringify({
+          drift_type: driftType,
+          message,
+          severity: "critical",
+          timestamp: new Date().toISOString(),
+        }),
+      ],
+    );
+    console.warn(`[auto-recovery] DRIFT_ESCALATION: ${driftType} — ${message}`);
+  } catch (err) {
+    console.error(
+      `[auto-recovery] Failed to send drift escalation: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Default deps factory
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -317,6 +412,8 @@ export function createDefaultDeps(overrides: Partial<RecoveryDeps> = {}): Recove
     logRecoveryEvent: defaultLogRecoveryEvent,
     getRecentAttemptCount: defaultGetRecentAttemptCount,
     sendAlert: defaultSendAlert,
+    getDriftAlerts: defaultGetDriftAlerts,
+    sendDriftEscalation: defaultSendDriftEscalation,
     ...overrides,
   };
 }
@@ -532,6 +629,7 @@ export function decideRecoveryAction(
     postgres: "brain-recover",
     disk: "no-action", // Disk warnings can't be auto-recovered; alert only
     memory: "clear-stale-connections",
+    "drift_audit": "no-action", // Drift recovery is handled by the drift cycle
   };
 
   const action = health.warning && (health.component === "disk" || health.component === "memory")
@@ -636,6 +734,169 @@ export async function runRecoveryCycle(
   }
 
   return { healthReport, recoveryLog };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Drift recovery (Story 21.4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Classify a drift alert into a drift type based on the check details.
+ * This determines which recovery action to attempt.
+ */
+export function classifyDriftType(event: DriftAlertEvent): DriftType {
+  const details = event.metadata?.details ?? [];
+  const failedChecks = details.filter((d) => !d.passed);
+  const failedNames = failedChecks.map((d) => d.name);
+
+  if (failedNames.includes("index_coverage")) {
+    return "index_drift";
+  }
+  if (failedNames.includes("count_parity")) {
+    return "missing_promotions";
+  }
+  if (failedNames.includes("reader_writer_parity")) {
+    return "schema_mismatch";
+  }
+  return "unknown";
+}
+
+/**
+ * Determine the recovery action for a drift type.
+ * - index_drift → re-index (trigger re-indexing of proposals)
+ * - missing_promotions → trigger-watchdog (run the watchdog to create proposals)
+ * - schema_mismatch → alert only (no auto-fix; requires human intervention)
+ * - unknown → alert only
+ */
+export function decideDriftRecoveryAction(driftType: DriftType): RecoveryAction {
+  switch (driftType) {
+    case "index_drift":
+      return "re-index";
+    case "missing_promotions":
+      return "trigger-watchdog";
+    case "schema_mismatch":
+      return "alert"; // No auto-fix for schema mismatch
+    default:
+      return "alert";
+  }
+}
+
+/**
+ * Execute a drift recovery action.
+ * Returns the result of the recovery attempt.
+ */
+export async function executeDriftRecovery(
+  driftType: DriftType,
+  action: RecoveryAction,
+  deps: RecoveryDeps,
+): Promise<DriftRecoveryResult> {
+  const result: DriftRecoveryResult = {
+    driftType,
+    action,
+    success: false,
+    escalated: false,
+  };
+
+  if (action === "alert") {
+    // Schema mismatch or unknown — alert only, no auto-fix
+    await deps.sendDriftEscalation(driftType, `Drift detected (${driftType}) — manual intervention required`);
+    await deps.logRecoveryEvent("drift_audit", "alert", true, `Drift type: ${driftType}`);
+    result.success = true;
+    return result;
+  }
+
+  if (action === "re-index") {
+    try {
+      // Trigger re-indexing by running the brain:recover script
+      await deps.execCmd(BRAIN_RECOVER_SCRIPT);
+      await deps.logRecoveryEvent("drift_audit", "re-index", true);
+      result.success = true;
+      return result;
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      await deps.logRecoveryEvent("drift_audit", "re-index", false, errorMsg);
+      result.errorMessage = errorMsg;
+      return result;
+    }
+  }
+
+  if (action === "trigger-watchdog") {
+    try {
+      // Trigger the curator watchdog to create missing proposals
+      await deps.execCmd(
+        `${process.env.BUN_EXECUTABLE ?? "bun"} src/curator/watchdog.ts --interval 1 --group-id ${getRecoveryGroupId()}`,
+      );
+      await deps.logRecoveryEvent("drift_audit", "trigger-watchdog", true);
+      result.success = true;
+      return result;
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      await deps.logRecoveryEvent("drift_audit", "trigger-watchdog", false, errorMsg);
+      result.errorMessage = errorMsg;
+      return result;
+    }
+  }
+
+  // Unknown action — log and return failure
+  result.errorMessage = `Unknown drift recovery action: ${action}`;
+  await deps.logRecoveryEvent("drift_audit", "no-action", false, result.errorMessage);
+  return result;
+}
+
+/**
+ * Run the drift recovery cycle: check for recent RETRIEVAL_DRIFT events,
+ * classify each, attempt recovery, and escalate after 3 failed attempts.
+ *
+ * @param deps - Recovery dependencies (injectable for testing)
+ * @param windowMs - Time window to look back for drift events (default 1 hour)
+ * @returns Array of drift recovery results
+ */
+export async function runDriftRecoveryCycle(
+  deps: RecoveryDeps = createDefaultDeps(),
+  windowMs: number = 3_600_000,
+): Promise<DriftRecoveryResult[]> {
+  const driftEvents = await deps.getDriftAlerts(windowMs);
+
+  if (driftEvents.length === 0) {
+    return [];
+  }
+
+  const results: DriftRecoveryResult[] = [];
+
+  for (const event of driftEvents) {
+    const driftType = classifyDriftType(event);
+    const action = decideDriftRecoveryAction(driftType);
+
+    // Check recent attempt count for drift_audit component
+    const recentAttempts = await deps.getRecentAttemptCount("drift_audit", windowMs);
+
+    // After 3 failed recovery attempts, escalate
+    if (recentAttempts >= MAX_RECOVERY_ATTEMPTS) {
+      await deps.sendDriftEscalation(
+        driftType,
+        `Drift recovery failed ${recentAttempts} times for type ${driftType} — escalating to human alert`,
+      );
+      await deps.logRecoveryEvent(
+        "drift_audit",
+        "drift-escalation",
+        true,
+        `Escalated after ${recentAttempts} attempts`,
+      );
+      results.push({
+        driftType,
+        action: "drift-escalation",
+        success: true,
+        escalated: true,
+      });
+      continue;
+    }
+
+    // Attempt recovery
+    const recoveryResult = await executeDriftRecovery(driftType, action, deps);
+    results.push(recoveryResult);
+  }
+
+  return results;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
