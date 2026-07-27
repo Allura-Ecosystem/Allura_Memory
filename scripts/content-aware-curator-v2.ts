@@ -2,10 +2,17 @@
  * Content-Aware Auto-Curator v2
  * Marks eligible proposals as approved in PostgreSQL.
  * The MCP gateway handles Neo4j promotion separately.
+ *
+ * Usage: bun scripts/content-aware-curator-v2.ts [--group-id allura-system]
+ *
+ * Story 21.2: Added --group-id flag for tenant-scoped processing.
+ * Story 21.2: Added daily log output to memory/YYYY-MM-DD.md.
  */
 
 import { Pool } from "pg";
 import { createHash, randomUUID } from "crypto";
+import { appendFileSync, existsSync, mkdirSync } from "fs";
+import { join } from "path";
 
 const CURATOR_ID = "auto-curator-content-aware";
 const RATIONALE = "Content-aware auto-promotion: category classification passed threshold check";
@@ -21,6 +28,42 @@ const CATEGORIES: Record<string, string[]> = {
 };
 
 const VAGUE_MARKERS = ["maybe", "might", "could", "possibly", "tentative", "unclear", "tbd", "not sure"];
+
+// ── CLI arg parsing (Story 21.2) ─────────────────────────────────────────────
+
+function getArg(name: string, defaultValue: string): string {
+  const args = process.argv.slice(2);
+  const idx = args.indexOf(`--${name}`);
+  return idx >= 0 && args[idx + 1] ? args[idx + 1] : defaultValue;
+}
+
+const GROUP_ID_FILTER = getArg("group-id", "");
+
+// Validate group_id format if provided
+if (GROUP_ID_FILTER && !/^allura-[a-z0-9-]+$/.test(GROUP_ID_FILTER)) {
+  console.error(`[content-aware-curator-v2] Invalid group_id: ${GROUP_ID_FILTER}. Must match ^allura-[a-z0-9-]+$`);
+  process.exit(1);
+}
+
+// ── Daily log helper (Story 21.2 AC-5) ───────────────────────────────────────
+
+function getDailyLogPath(): string {
+  const date = new Date().toISOString().slice(0, 10);
+  return join(process.cwd(), "memory", `${date}.md`);
+}
+
+function appendDailyLog(message: string): void {
+  const logPath = getDailyLogPath();
+  const logDir = join(process.cwd(), "memory");
+  if (!existsSync(logDir)) {
+    mkdirSync(logDir, { recursive: true });
+  }
+  const timestamp = new Date().toISOString();
+  const line = `- **[${timestamp}] content-aware-curator-v2:** ${message}\n`;
+  appendFileSync(logPath, line, "utf8");
+}
+
+// ── Content classification ────────────────────────────────────────────────────
 
 function classifyContent(content: string): string {
   const lower = content.toLowerCase();
@@ -42,6 +85,7 @@ function hasVagueMarkers(content: string): boolean {
 }
 
 function shouldAutoPromote(category: string, score: number, content: string, groupId: string): boolean {
+  // AC-3: COMPLIANCE_CLAIM and SESSION_LOG are never auto-promoted
   if (category === "COMPLIANCE_CLAIM") return false;
   if (category === "SESSION_LOG") return false;
   if (groupId === "allura-system") {
@@ -49,6 +93,7 @@ function shouldAutoPromote(category: string, score: number, content: string, gro
     if (lower.includes("governance") && (lower.includes("policy") || lower.includes("invariant") || lower.includes("override"))) return false;
   }
   switch (category) {
+    // AC-4: Vague markers block BUSINESS_DECISION auto-promotion
     case "BUSINESS_DECISION": return score >= 0.85 && !hasVagueMarkers(content);
     case "STAKEHOLDER_COMM": return score >= 0.85;
     case "GRANT_DEADLINE": return score >= 0.80;
@@ -68,15 +113,22 @@ async function main() {
     password: process.env.POSTGRES_PASSWORD,
   });
 
+  // Story 21.2 AC-2: scope by --group-id if provided
+  const groupFilter = GROUP_ID_FILTER
+    ? ` AND group_id = $1`
+    : ` AND group_id NOT LIKE 'allura-test-%'`;
+  const queryParams: string[] = GROUP_ID_FILTER ? [GROUP_ID_FILTER] : [];
+
   const { rows: proposals } = await pool.query(
     `SELECT id, group_id, content, score, tier, created_at
      FROM canonical_proposals
      WHERE status = 'pending'
-     AND group_id NOT LIKE 'allura-test-%'
-     ORDER BY group_id, created_at ASC`
+     ${groupFilter}
+     ORDER BY group_id, created_at ASC`,
+    queryParams
   );
 
-  console.log(`[content-aware-curator-v2] Found ${proposals.length} pending proposals`);
+  console.log(`[content-aware-curator-v2] Found ${proposals.length} pending proposals${GROUP_ID_FILTER ? ` for group_id=${GROUP_ID_FILTER}` : " (all tenants)"}`);
 
   const stats = { promoted: 0, held: 0, failed: 0,
     byCategory: {} as Record<string, { promoted: number; held: number }>,
@@ -132,9 +184,9 @@ async function main() {
 
       // Mark proposal as approved
       await pool.query(
-        `UPDATE canonical_proposals 
-         SET status = 'approved', decided_at = $1, decision = 'approved', 
-             curator_id = $2, memory_id = $3, witness_hash = $4 
+        `UPDATE canonical_proposals
+         SET status = 'approved', decided_at = $1, decision = 'approved',
+             curator_id = $2, memory_id = $3, witness_hash = $4
          WHERE id = $5 AND status = 'pending'`,
         [decidedAt, CURATOR_ID, memoryId, witness_hash, p.id]
       );
@@ -163,6 +215,10 @@ async function main() {
   }
   console.log(`\nPromoted IDs (first 20): ${promotedIds.slice(0, 20).join(', ')}`);
   if (promotedIds.length > 20) console.log(`... and ${promotedIds.length - 20} more`);
+
+  // Story 21.2 AC-5: Log to memory/YYYY-MM-DD.md
+  const logMessage = `Reviewed=${proposals.length}, Promoted=${stats.promoted}, Held=${stats.held}, Failed=${stats.failed}${GROUP_ID_FILTER ? `, group_id=${GROUP_ID_FILTER}` : ""}`;
+  appendDailyLog(logMessage);
 
   await pool.end();
 }

@@ -25,6 +25,32 @@ import {
 } from "@/lib/neo4j/connection";
 import { getPool } from "@/lib/postgres/connection";
 import { validateGroupId } from "@/lib/validation/group-id";
+import { assertRegisteredTenant } from "@/lib/config/tenant-existence";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TENANT VALIDATION
+// ─────────────────────────────────────────────────────────────────────────────
+// Story 22.1: Writes to data tables must validate that the group_id is a
+// registered, active tenant. The `tenants` table itself is exempt (otherwise
+// we could never register new tenants). Tables in this set are system/config
+// tables that don't carry tenant-scoped memory data.
+const TENANT_EXEMPT_TABLES = new Set([
+  "tenants",
+  "schema_versions",
+]);
+
+/**
+ * Validate that the group_id is a registered tenant before allowing a write.
+ * Skips validation for system/config tables (tenants, schema_versions).
+ * Fail closed if the tenant is not registered.
+ */
+async function validateTenantForWrite(
+  table: string,
+  groupId: string
+): Promise<void> {
+  if (TENANT_EXEMPT_TABLES.has(table)) return;
+  await assertRegisteredTenant(groupId);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PUBLIC TYPES
@@ -151,7 +177,11 @@ async function pgMutate(
   }
 
   const data = op.data ?? {};
-  requireGroupId(data);
+  const groupId = requireGroupId(data);
+
+  // Story 22.1: Validate that the group_id is a registered, active tenant.
+  // Fail closed if the tenant is not registered. Exempt system tables.
+  await validateTenantForWrite(table, groupId);
 
   // Build a parameterized INSERT from data keys — validate all column names
   const keys = Object.keys(data).map(validateIdentifier);
@@ -194,6 +224,9 @@ async function pgUpdatePatternProposal(
 
   // group_id is mandatory — stamped by the kernel from proof claims.
   const groupId = requireGroupId(data);
+
+  // Story 22.1: Validate that the group_id is a registered, active tenant.
+  await validateTenantForWrite("pattern_proposals", groupId);
 
   // `id` must be present in the query bag.
   if (!("id" in queryBag) || queryBag["id"] === undefined) {
@@ -282,6 +315,9 @@ async function neo4jMutate(
 ): Promise<ResolveResult> {
   const data = op.data ?? {};
   const groupId = requireGroupId(data);
+
+  // Story 22.1: Validate that the group_id is a registered, active tenant.
+  await validateTenantForWrite("neo4j:" + resource, groupId);
 
   if (resource === "Entity" || resource === "Relationship") {
     const label = validateLabel(

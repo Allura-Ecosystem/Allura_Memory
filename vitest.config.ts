@@ -96,6 +96,16 @@ export default defineConfig({
       "src/__tests__/inspector-views.test.tsx",
       // Dashboard operational state tests (Tasks 5-8)
       "src/__tests__/dashboard-pages-5-8.test.ts",
+      // Story 22.1 — Tenant registry
+      "src/__tests__/tenant-registry.test.ts",
+      // Story 22.2 — Tenant onboarding API
+      "src/__tests__/tenants-api.test.ts",
+      // Story 22.3 — MCP startup tenant validation
+      "src/__tests__/tenant-startup-validation.test.ts",
+      // Story 22.4 — Tenant-scoped curator config
+      "src/__tests__/tenant-curator-config.test.ts",
+      // Story 22.6 — Cross-tenant audit
+      "src/__tests__/cross-tenant-audit.test.ts",
     ],
     exclude: [
       // E2E tests — require live stack

@@ -1,14 +1,20 @@
 [Unit]
 Description=Allura Curator Watchdog (scores events into proposals; BLOCKER alert when queue depth > threshold)
-After=network-online.target
+Documentation=https://github.com/team-durham/allura-memory
+After=network-online.target postgresql.service
+Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/media/ronin704/Games/Projects/Allura-ecosystem/allura-memory
+WorkingDirectory=/media/ronin704/Games/Repos/team_durham-clean/allura-memory
 Environment=WATCHDOG_QUEUE_DEPTH_THRESHOLD=50
-ExecStart=/home/ronin704/.bun/bin/bun src/curator/watchdog.ts --interval 1800 --group-id allura-system
+ExecStart=/home/ronin704/.bun/bin/bun src/curator/watchdog.ts --interval 300 --group-id allura-system
 Restart=on-failure
 RestartSec=60
+# Send stdout/stderr to journald (queryable via journalctl -u allura-curator-watchdog)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=allura-curator-watchdog
 
 [Install]
 WantedBy=default.target

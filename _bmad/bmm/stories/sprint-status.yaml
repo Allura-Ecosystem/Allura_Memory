@@ -140,9 +140,9 @@ epic_22:
   stories:
     - key: "22.1"
       title: "Create tenant registry table"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Knuth"
-      status_evidence: ""
+      status_evidence: "Migration 33-tenant-registry.sql creates tenants table with CHECK constraint and seeds 4 tenants; target-resolver updated with assertRegisteredTenant; 15/15 tests pass"
     - key: "22.2"
       title: "Tenant onboarding API"
       status: ready-for-dev

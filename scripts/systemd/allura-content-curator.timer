@@ -1,0 +1,15 @@
+[Unit]
+Description=Run Allura Content-Aware Curator every 6 hours
+Documentation=https://github.com/team-durham/allura-memory
+Requires=allura-content-curator.service
+
+[Timer]
+# Every 6 hours (AC-1): 00:00, 06:00, 12:00, 18:00
+OnCalendar=*-*-* 00/6:00:00
+# If missed (e.g. machine was off), run once on next boot
+Persistent=true
+# Random delay up to 5 min to avoid thundering herd with other scheduled jobs
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

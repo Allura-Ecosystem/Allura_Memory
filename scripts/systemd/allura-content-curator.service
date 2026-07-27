@@ -1,0 +1,16 @@
+[Unit]
+Description=Allura Content-Aware Curator (auto-promotes eligible proposals every 6 hours)
+Documentation=https://github.com/team-durham/allura-memory
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/media/ronin704/Games/Repos/team_durham-clean/allura-memory
+ExecStart=/home/ronin704/.bun/bin/bun scripts/content-aware-curator-v2.ts --group-id allura-system
+# Send stdout/stderr to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=allura-content-curator
+# Timeout: 10 minutes should be enough for a curation pass
+TimeoutStartSec=600

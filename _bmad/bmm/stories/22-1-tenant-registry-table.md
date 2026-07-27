@@ -1,6 +1,6 @@
 # Story 22.1 — Create Tenant Registry Table
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Knuth
 **group_id:** allura-system
 **Epic:** 22
@@ -18,12 +18,12 @@ As the Allura data architect, I need a `tenants` table in PostgreSQL that regist
 
 ## Acceptance Criteria
 
-- [ ] AC-1: Migration `docker/postgres-init/33-tenant-registry.sql` creates `tenants` table
-- [ ] AC-2: Columns: `group_id` (PK, TEXT, CHECK `^allura-`), `name` (TEXT), `description` (TEXT), `owner_agent_id` (TEXT), `config` (JSONB, default `{}`), `active` (BOOLEAN, default TRUE), `created_at` (TIMESTAMPTZ, default NOW())
-- [ ] AC-3: Seeds existing tenants: `allura-system`, `allura-faithmeats`, `allura-difference-driven`, `allura-coding`
-- [ ] AC-4: The kernel target resolver (`src/kernel/target-resolver.ts`) is updated to validate `group_id` exists in `tenants` table on writes — fail closed if tenant not registered
-- [ ] AC-5: Migration is idempotent — safe to run on existing databases
-- [ ] AC-6: Unit tests verify: table exists, seed data correct, unregistered group_id rejected
+- [x] AC-1: Migration `docker/postgres-init/33-tenant-registry.sql` creates `tenants` table
+- [x] AC-2: Columns: `group_id` (PK, TEXT, CHECK `^allura-`), `name` (TEXT), `description` (TEXT), `owner_agent_id` (TEXT), `config` (JSONB, default `{}`), `active` (BOOLEAN, default TRUE), `created_at` (TIMESTAMPTZ, default NOW())
+- [x] AC-3: Seeds existing tenants: `allura-system`, `allura-faithmeats`, `allura-difference-driven`, `allura-coding`
+- [x] AC-4: The kernel target resolver (`src/kernel/target-resolver.ts`) is updated to validate `group_id` exists in `tenants` table on writes — fail closed if tenant not registered
+- [x] AC-5: Migration is idempotent — safe to run on existing databases
+- [x] AC-6: Unit tests verify: table exists, seed data correct, unregistered group_id rejected
 
 ## Tasks
 
@@ -44,3 +44,4 @@ As the Allura data architect, I need a `tenants` table in PostgreSQL that regist
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-07-26 | Story created | Gilliam |
+| 2026-07-27 | Implemented: migration 33-tenant-registry.sql, tenant-existence.ts, target-resolver tenant validation, 15/15 tests pass | Knuth |
