@@ -44,3 +44,90 @@
 - Neo4j is read-only fallback for one release
 - Live-DB E2E passes with RuVector backend
 - Path B adapter exists behind flag with three-way parity test green
+
+---
+
+## Epic 20: Subagent Memory Access — Hermes ↔ Allura Wiring
+
+**Date:** 2026-07-26
+**Status:** Approved
+**Owner:** Brooks (orchestrator)
+**group_id:** allura-system
+
+**Goal:** Hermes subagents (via `delegate_task`) and external agents (Troy on laptop, OpenWork on desktop) must query Allura Brain before starting work and write outcomes back after completing. The infrastructure exists — the SONA trajectory engine records what happened, the MCP gateway exposes memory_add/search, and the kernel enforces group_id. What's missing is the wiring: subagent briefs don't include "query Allura first," and agent configs don't declare their group_id.
+
+**Why now:** The memory plane has the engines (trajectory, genesis, curator, coherence) but they're fed only by direct MCP calls from Gilliam. Subagents and external agents are blind — they don't read prior work, don't write outcomes, and don't carry tenant identity. This makes the brain Gilliam's brain, not the crew's brain.
+
+**Stories:**
+
+- **20.1** Create `group_id` registry — a config file mapping agents to their default tenant (`allura-system`, `allura-faithmeats`, `allura-difference-driven`, `allura-coding`). File: `.opencode/config/group-id-registry.yaml`. Each agent entry has `default_group_id` and optional `allowed_group_ids` for cross-tenant agents.
+- **20.2** Wire `delegate_task` brief template — update the BRIEF.md template (AGENTS.md §4) to include "Query Allura Brain for prior work on this topic" as step 1 and "Write your outcome to Allura Brain" as the final step. Add `group_id` to the delegate_task context payload so subagents inherit tenant identity.
+- **20.3** Add `memory_search` + `memory_add` to subagent tool allowlists — the Hermes config `mcp_servers.allura_brain.tools.include` currently only allows Gilliam. Subagents need their own tool access or inherited access via `inherit_mcp_toolsets: true` (already set in delegation config). Verify this actually propagates to children.
+- **20.4** Build a lightweight "memory brief" helper — a script or skill that an agent calls before starting work: `allura-brain memory_search --query "<task topic>" --group_id <tenant>`. Returns prior work, decisions, and blockers. Reduces token cost by filtering to relevant memories only.
+- **20.5** Build a "memory writeback" helper — after task completion, an agent calls `allura-brain memory_add` with a structured payload: task summary, files changed, outcome (pass/fail), and key decisions. This feeds the trajectory engine and curator pipeline automatically.
+
+**Exit gate:**
+- Every `delegate_task` subagent queries Allura before starting and writes back after completing
+- `group_id` is passed through the delegation chain — children inherit parent's tenant
+- A subagent working on `allura-faithmeats` cannot read `allura-difference-driven` memories
+- The trajectory engine records subagent work, not just Gilliam's direct calls
+- Evidence: a delegate_task run shows memory_search before work and memory_add after completion
+
+---
+
+## Epic 21: Retrieval Drift Audit + Curation Scheduling
+
+**Date:** 2026-07-26
+**Status:** Approved
+**Owner:** Brooks (orchestrator)
+**group_id:** allura-system
+
+**Goal:** The retrieval drift audit skill exists but doesn't run on a schedule — search quality could degrade silently. The curator scripts (auto-curator.js, curator-v3.js, content-aware-curator-v2.ts) exist but aren't scheduled — they're manual scripts. Wire both to cron/systemd so the brain self-monitors and self-curates without human intervention.
+
+**Why now:** Brooks built the engines but left them as manual scripts. The watchdog (`src/curator/watchdog.ts`) has a `--interval` flag but no systemd unit or cron job running it. The content-aware curator has no scheduling at all. Without scheduled execution, the brain accumulates uncurated episodic memories and has no drift detection.
+
+**Stories:**
+
+- **21.1** Schedule the curator watchdog — create a systemd unit or cron job that runs `bun src/curator/watchdog.ts --interval 300 --group-id allura-system` every 5 minutes. This continuously scores unpromoted events and creates proposals. Verify the existing `curator-watchdog` systemd unit (#60) is active and wired to the right binary.
+- **21.2** Schedule the content-aware curator — create a cron job that runs `bun scripts/content-aware-curator-v2.ts` every 6 hours. This auto-promotes eligible proposals based on category classification and score thresholds. Add `--group-id` flag support if missing. Log to `memory/YYYY-MM-DD.md`.
+- **21.3** Schedule the retrieval drift audit — create a daily cron job that runs the `allura-retrieval-drift-audit` skill. The audit checks: (1) subsystem health, (2) count parity between events and promoted insights, (3) index coverage, (4) reader/writer schema parity, (5) public API round-trip for a known promoted ID. If drift is detected, write to Allura Brain as an ALERT event.
+- **21.4** Add alerting on drift — when the drift audit detects degradation (missing promotions, index drift, schema mismatch), it writes an ALERT event to Allura Brain with `event_type=RETRIEVAL_DRIFT` and `metadata={component, drift_type, severity}`. The auto-recovery engine (`src/lib/healing/auto-recovery.ts`) picks this up and attempts remediation.
+- **21.5** Add a curation metrics endpoint — `GET /api/curator/metrics` that returns: pending proposal count, oldest proposal age, auto-promotion rate (last 24h), rejection rate, drift audit status, watchdog health. This gives any agent or human a quick "brain health" check without a dashboard.
+
+**Exit gate:**
+- Curator watchdog runs every 5 minutes via systemd/cron — proposals are created automatically
+- Content-aware curator runs every 6 hours — eligible proposals are auto-promoted
+- Drift audit runs daily — results written to Allura Brain
+- Alerts fire when drift is detected — auto-recovery engine responds
+- Metrics endpoint returns brain health in a single API call
+- Evidence: 7 days of scheduled execution logs with no manual intervention
+
+---
+
+## Epic 22: Enterprise Readiness — Multi-Tenant Hardening
+
+**Date:** 2026-07-26
+**Status:** Approved
+**Owner:** Brooks (orchestrator)
+**group_id:** allura-system
+
+**Goal:** The memory plane must be ready to deploy for multiple businesses (faithmeats, difference-driven, coding projects) with clean tenant onboarding, profile-based tool isolation, and export/import for sharing configs. The infrastructure is built — this epic hardens the edges so a new project can be onboarded in minutes, not hours.
+
+**Why now:** Docker MCP profiles are created (faithmeats, difference-driven, coding) but the Allura Brain side doesn't know about them. The `group_id` CHECK constraint enforces `^allura-` but there's no registry of which tenants exist, who owns them, or what tools they're allowed to access. Onboarding a new project means manually editing env vars and hoping.
+
+**Stories:**
+
+- **22.1** Create tenant registry table — a new PostgreSQL table `tenants` with columns: `group_id` (PK, matches `^allura-`), `name`, `description`, `owner_agent_id`, `created_at`, `active`. Migration `33-tenant-registry.sql`. This is the source of truth for which tenants exist, not env vars.
+- **22.2** Build tenant onboarding API — `POST /api/tenants` (admin-only) creates a new tenant: validates group_id format, inserts into `tenants` table, creates the default MCP profile association, and returns the tenant config. `GET /api/tenants` lists all active tenants. `GET /api/tenants/:group_id` returns tenant details.
+- **22.3** Wire MCP profile ↔ tenant mapping — when an agent connects via `docker mcp gateway run --profile faithmeats`, the Allura Brain MCP server reads the `DEFAULT_GROUP_ID` env var and enforces it as the tenant. Add a startup check that validates the `DEFAULT_GROUP_ID` exists in the `tenants` table — fail closed if not.
+- **22.4** Add tenant-scoped curator config — each tenant should be able to configure its own promotion threshold, auto-approval mode, and curator schedule. Store in `tenants` table as JSONB `config` column. The watchdog and content-aware curator read this config per-tenant instead of using global defaults.
+- **22.5** Build profile export/import — document the workflow: `docker mcp profile export faithmeats ./faithmeats-profile.yaml` → commit to repo → new machine does `docker mcp profile import ./faithmeats-profile.yaml`. Add a README in `_bmad/bmm/planning/profiles/` documenting each profile, its tenant, and its tool restrictions.
+- **22.6** Add cross-tenant audit — `GET /api/audit/cross-tenant` (admin-only) that verifies zero cross-tenant leakage: runs 100 random queries per tenant pair, confirms results are always empty for foreign tenants. This is the evidence gate for multi-tenant safety.
+
+**Exit gate:**
+- New project onboarding = `POST /api/tenants` + `docker mcp profile create` — under 5 minutes
+- Every tenant has a registered `group_id`, owner, and config in the database
+- MCP profiles enforce tool access per business context
+- Cross-tenant audit proves zero leakage across all tenant pairs
+- Profile export/import is documented and tested
+- Evidence: a new tenant (`allura-test-enterprise`) is created, configured, and verified end-to-end

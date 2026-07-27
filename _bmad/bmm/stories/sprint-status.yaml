@@ -70,3 +70,101 @@ epic_19:
       status: done
       owner: "Brooks + Pike"
       status_evidence: "3 issues filed on github.com/ruvnet/RuVector (#666 G1, #667 G2, #668 G3); issue drafts in docs/archive/allura/evidence/upstream-issues/; Brain tracking logged"
+
+epic_20:
+  name: "Subagent Memory Access — Hermes ↔ Allura Wiring"
+  status: ready-for-dev
+  retrospective: pending
+  stories:
+    - key: "20.1"
+      title: "Create group_id registry"
+      status: ready-for-dev
+      owner: "Brooks -> Woz"
+      status_evidence: ""
+    - key: "20.2"
+      title: "Wire delegate_task brief template"
+      status: ready-for-dev
+      owner: "Brooks -> Woz"
+      status_evidence: ""
+    - key: "20.3"
+      title: "Verify subagent MCP tool access"
+      status: ready-for-dev
+      owner: "Brooks -> Woz + Bellard"
+      status_evidence: ""
+    - key: "20.4"
+      title: "Memory brief helper"
+      status: ready-for-dev
+      owner: "Brooks -> Woz"
+      status_evidence: ""
+    - key: "20.5"
+      title: "Memory writeback helper"
+      status: ready-for-dev
+      owner: "Brooks -> Woz"
+      status_evidence: ""
+
+epic_21:
+  name: "Retrieval Drift Audit + Curation Scheduling"
+  status: ready-for-dev
+  retrospective: pending
+  stories:
+    - key: "21.1"
+      title: "Schedule the curator watchdog"
+      status: ready-for-dev
+      owner: "Brooks -> Hightower"
+      status_evidence: ""
+    - key: "21.2"
+      title: "Schedule the content-aware curator"
+      status: ready-for-dev
+      owner: "Brooks -> Hightower"
+      status_evidence: ""
+    - key: "21.3"
+      title: "Schedule the retrieval drift audit"
+      status: ready-for-dev
+      owner: "Brooks -> Bellard"
+      status_evidence: ""
+    - key: "21.4"
+      title: "Drift alerting + auto-recovery integration"
+      status: ready-for-dev
+      owner: "Brooks -> Woz + Bellard"
+      status_evidence: ""
+    - key: "21.5"
+      title: "Curation metrics endpoint"
+      status: ready-for-dev
+      owner: "Brooks -> Woz"
+      status_evidence: ""
+
+epic_22:
+  name: "Enterprise Readiness — Multi-Tenant Hardening"
+  status: ready-for-dev
+  retrospective: pending
+  stories:
+    - key: "22.1"
+      title: "Create tenant registry table"
+      status: ready-for-dev
+      owner: "Brooks -> Knuth"
+      status_evidence: ""
+    - key: "22.2"
+      title: "Tenant onboarding API"
+      status: ready-for-dev
+      owner: "Brooks -> Woz"
+      status_evidence: ""
+    - key: "22.3"
+      title: "Wire MCP profile ↔ tenant mapping"
+      status: ready-for-dev
+      owner: "Brooks -> Woz + Hightower"
+      status_evidence: ""
+    - key: "22.4"
+      title: "Tenant-scoped curator config"
+      status: ready-for-dev
+      owner: "Brooks -> Knuth + Woz"
+      status_evidence: ""
+    - key: "22.5"
+      title: "Profile export/import documentation"
+      status: ready-for-dev
+      owner: "Brooks -> Fowler"
+      status_evidence: ""
+    - key: "22.6"
+      title: "Cross-tenant audit endpoint"
+      status: ready-for-dev
+      owner: "Brooks -> Bellard + Pike"
+      status_evidence: ""
