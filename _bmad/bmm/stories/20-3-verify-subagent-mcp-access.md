@@ -1,9 +1,10 @@
 # Story 20.3 — Verify Subagent MCP Tool Access
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Woz + Bellard
 **group_id:** allura-system
 **Epic:** 20
+**status_evidence:** "subagent-mcp-access.test.ts (128 lines) verifies memory_search/memory_add exported, group_id enforcement via registry, gateway tool registration, BRIEF.md template, evidence file at docs/archive/allura/evidence/subagent-mcp-access-2026-07-26.md"
 
 ## User Story
 

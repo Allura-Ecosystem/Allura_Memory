@@ -13,6 +13,7 @@
 
 import { curatorScore } from "../lib/curator/score";
 import { closePool, getPool } from "../lib/postgres/connection";
+import { resolveScoreThreshold } from "../lib/config/tenant-config";
 
 export interface WatchdogConfig {
   groupId: string;
@@ -25,11 +26,23 @@ export interface WatchdogConfig {
  * Scan for unpromoted events and create proposals for those that pass scoring.
  * Returns the number of proposals created in this cycle.
  *
+ * Story 22.4: The score threshold is resolved from the tenant's config
+ * (tenants.config JSONB) on each cycle. If the tenant has a custom
+ * promotion_threshold, it overrides the WatchdogConfig.scoreThreshold.
+ * This means config changes take effect on the next cycle — no restart required.
+ *
  * @param config - Watchdog configuration (group_id and score threshold)
  * @returns Number of proposals created
  */
 export async function scanAndPropose(config: WatchdogConfig): Promise<number> {
   const pool = getPool();
+
+  // Story 22.4: Resolve score threshold from tenant config, falling back to
+  // the config.scoreThreshold provided by the caller (env or CLI flag).
+  const effectiveThreshold = await resolveScoreThreshold(
+    config.groupId,
+    config.scoreThreshold
+  );
 
   // Find events that don't have a corresponding proposal yet.
   // Exclude system-generated event types (trigger artifacts) to prevent
@@ -69,7 +82,7 @@ export async function scanAndPropose(config: WatchdogConfig): Promise<number> {
       source: "conversation",
     });
 
-    if (score.confidence >= config.scoreThreshold) {
+    if (score.confidence >= effectiveThreshold) {
       await pool.query(
         `INSERT INTO canonical_proposals (id, group_id, content, score, reasoning, tier, status, trace_ref, created_at)
          VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'pending', $6, NOW())

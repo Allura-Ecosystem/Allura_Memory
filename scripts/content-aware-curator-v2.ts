@@ -13,6 +13,7 @@ import { Pool } from "pg";
 import { createHash, randomUUID } from "crypto";
 import { appendFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
+import { getTenantConfig, parseTenantConfig, type TenantCuratorConfig } from "../src/lib/config/tenant-config";
 
 const CURATOR_ID = "auto-curator-content-aware";
 const RATIONALE = "Content-aware auto-promotion: category classification passed threshold check";
@@ -84,7 +85,7 @@ function hasVagueMarkers(content: string): boolean {
   return VAGUE_MARKERS.some(m => lower.includes(m));
 }
 
-function shouldAutoPromote(category: string, score: number, content: string, groupId: string): boolean {
+function shouldAutoPromote(category: string, score: number, content: string, groupId: string, tenantConfig: TenantCuratorConfig): boolean {
   // AC-3: COMPLIANCE_CLAIM and SESSION_LOG are never auto-promoted
   if (category === "COMPLIANCE_CLAIM") return false;
   if (category === "SESSION_LOG") return false;
@@ -92,14 +93,25 @@ function shouldAutoPromote(category: string, score: number, content: string, gro
     const lower = content.toLowerCase();
     if (lower.includes("governance") && (lower.includes("policy") || lower.includes("invariant") || lower.includes("override"))) return false;
   }
+
+  // Story 22.4: Use tenant config for score thresholds.
+  // The base promotion_threshold from tenant config is used as the floor.
+  // Category-specific thresholds are adjusted relative to the tenant's base.
+  const baseThreshold = tenantConfig.promotion_threshold;
+  const mode = tenantConfig.auto_approval_mode;
+
+  // Mode adjustment: conservative raises the bar, aggressive lowers it
+  const modeAdjust = mode === "conservative" ? 0.10 : mode === "aggressive" ? -0.10 : 0.00;
+  const effectiveBase = Math.max(0.0, Math.min(1.0, baseThreshold + modeAdjust));
+
   switch (category) {
     // AC-4: Vague markers block BUSINESS_DECISION auto-promotion
-    case "BUSINESS_DECISION": return score >= 0.85 && !hasVagueMarkers(content);
-    case "STAKEHOLDER_COMM": return score >= 0.85;
-    case "GRANT_DEADLINE": return score >= 0.80;
-    case "TASK_STATUS": return score >= 0.85;
-    case "PERSONAL_CAREER": return score >= 0.75;
-    case "GENERAL": return score >= 0.85;
+    case "BUSINESS_DECISION": return score >= Math.max(0.85, effectiveBase) && !hasVagueMarkers(content);
+    case "STAKEHOLDER_COMM": return score >= Math.max(0.85, effectiveBase);
+    case "GRANT_DEADLINE": return score >= Math.max(0.80, effectiveBase);
+    case "TASK_STATUS": return score >= Math.max(0.85, effectiveBase);
+    case "PERSONAL_CAREER": return score >= Math.max(0.75, effectiveBase);
+    case "GENERAL": return score >= Math.max(0.85, effectiveBase);
     default: return false;
   }
 }
