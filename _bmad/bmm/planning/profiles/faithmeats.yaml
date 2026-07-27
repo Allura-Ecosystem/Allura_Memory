@@ -1,0 +1,1378 @@
+version: 1
+id: faithmeats
+name: faithmeats
+servers:
+    - type: image
+      secrets: default
+      image: mcp/tavily@sha256:e8bbe2860c856a098ee4fbbd13caae4f5e67073ac24e05cd529691f424f1917b
+      snapshot:
+        server:
+            name: tavily
+            type: server
+            image: mcp/tavily@sha256:e8bbe2860c856a098ee4fbbd13caae4f5e67073ac24e05cd529691f424f1917b
+            description: The Tavily MCP server provides seamless interaction with the tavily-search and tavily-extract tools, real-time web search capabilities through the tavily-search tool and Intelligent data extraction from web pages via the tavily-extract tool.
+            title: Tavily
+            icon: https://avatars.githubusercontent.com/u/170207473?s=200&v=4
+            readme: https://desktop.docker.com/mcp/catalog/v3/readme/tavily.md
+            remote: {}
+            secrets:
+                - name: tavily.api_token
+                  env: TAVILY_API_KEY
+            tools:
+                - name: tavily_crawl
+                  description: Crawl a website starting from a URL. Extracts content from pages with configurable depth and breadth.
+                  arguments:
+                    - name: url
+                      type: string
+                      desc: The root URL to begin the crawl
+                    - name: allow_external
+                      type: boolean
+                      desc: Whether to return external links in the final response
+                      optional: true
+                    - name: extract_depth
+                      type: string
+                      desc: Advanced extraction retrieves more data, including tables and embedded content, with higher success but may increase latency
+                      optional: true
+                    - name: format
+                      type: string
+                      desc: The format of the extracted web page content. markdown returns content in markdown format. text returns plain text and may increase latency.
+                      optional: true
+                    - name: include_favicon
+                      type: boolean
+                      desc: Whether to include the favicon URL for each result
+                      optional: true
+                    - name: instructions
+                      type: string
+                      desc: Natural language instructions for the crawler. Instructions specify which types of pages the crawler should return.
+                      optional: true
+                    - name: limit
+                      type: integer
+                      desc: Total number of links the crawler will process before stopping
+                      optional: true
+                    - name: max_breadth
+                      type: integer
+                      desc: Max number of links to follow per level of the tree (i.e., per page)
+                      optional: true
+                    - name: max_depth
+                      type: integer
+                      desc: Max depth of the crawl. Defines how far from the base URL the crawler can explore.
+                      optional: true
+                    - name: select_domains
+                      type: array
+                      items:
+                        type: string
+                      desc: Regex patterns to restrict crawling to specific domains or subdomains (e.g., ^docs\.example\.com$)
+                      optional: true
+                    - name: select_paths
+                      type: array
+                      items:
+                        type: string
+                      desc: Regex patterns to select only URLs with specific path patterns (e.g., /docs/.*, /api/v1.*)
+                      optional: true
+                - name: tavily_extract
+                  description: Extract content from URLs. Returns raw page content in markdown or text format.
+                  arguments:
+                    - name: urls
+                      type: array
+                      items:
+                        type: string
+                      desc: List of URLs to extract content from
+                    - name: extract_depth
+                      type: string
+                      desc: Use 'advanced' for LinkedIn, protected sites, or tables/embedded content
+                      optional: true
+                    - name: format
+                      type: string
+                      desc: Output format
+                      optional: true
+                    - name: include_favicon
+                      type: boolean
+                      desc: Include favicon URLs
+                      optional: true
+                    - name: include_images
+                      type: boolean
+                      desc: Include images from pages
+                      optional: true
+                    - name: query
+                      type: string
+                      desc: Query to rerank content chunks by relevance
+                      optional: true
+                - name: tavily_map
+                  description: Map a website's structure. Returns a list of URLs found starting from the base URL.
+                  arguments:
+                    - name: url
+                      type: string
+                      desc: The root URL to begin the mapping
+                    - name: allow_external
+                      type: boolean
+                      desc: Whether to return external links in the final response
+                      optional: true
+                    - name: instructions
+                      type: string
+                      desc: Natural language instructions for the crawler
+                      optional: true
+                    - name: limit
+                      type: integer
+                      desc: Total number of links the crawler will process before stopping
+                      optional: true
+                    - name: max_breadth
+                      type: integer
+                      desc: Max number of links to follow per level of the tree (i.e., per page)
+                      optional: true
+                    - name: max_depth
+                      type: integer
+                      desc: Max depth of the mapping. Defines how far from the base URL the crawler can explore
+                      optional: true
+                    - name: select_domains
+                      type: array
+                      items:
+                        type: string
+                      desc: Regex patterns to restrict crawling to specific domains or subdomains (e.g., ^docs\.example\.com$)
+                      optional: true
+                    - name: select_paths
+                      type: array
+                      items:
+                        type: string
+                      desc: Regex patterns to select only URLs with specific path patterns (e.g., /docs/.*, /api/v1.*)
+                      optional: true
+                - name: tavily_research
+                  description: 'Perform comprehensive research on a given topic or question. Use this tool when you need to gather information from multiple sources to answer a question or complete a task. Returns a detailed response based on the research findings. Rate limit: 20 requests per minute.'
+                  arguments:
+                    - name: input
+                      type: string
+                      desc: A comprehensive description of the research task
+                    - name: model
+                      type: string
+                      desc: Defines the degree of depth of the research. 'mini' is good for narrow tasks with few subtopics. 'pro' is good for broad tasks with many subtopics. 'auto' automatically selects the best model.
+                      optional: true
+                - name: tavily_search
+                  description: Search the web for current information on any topic. Use for news, facts, or data beyond your knowledge cutoff. Returns snippets and source URLs.
+                  arguments:
+                    - name: query
+                      type: string
+                      desc: Search query
+                    - name: country
+                      type: string
+                      desc: Boost search results from a specific country. Must be a full country name (e.g., 'United States', 'Japan', 'Germany'). ISO country codes (e.g., 'us', 'jp') are not supported. Available only if topic is general. See https://docs.tavily.com/documentation/api-reference/search for the full list of supported countries.
+                      optional: true
+                    - name: end_date
+                      type: string
+                      desc: Will return all results before the specified end date. Required to be written in the format YYYY-MM-DD
+                      optional: true
+                    - name: exact_match
+                      type: boolean
+                      desc: Only return results containing the exact phrase(s) in quotes in your query
+                      optional: true
+                    - name: exclude_domains
+                      type: array
+                      items:
+                        type: string
+                      desc: List of domains to specifically exclude, if the user asks to exclude a domain set this to the domain of the site
+                      optional: true
+                    - name: include_domains
+                      type: array
+                      items:
+                        type: string
+                      desc: A list of domains to specifically include in the search results, if the user asks to search on specific sites set this to the domain of the site
+                      optional: true
+                    - name: include_favicon
+                      type: boolean
+                      desc: Whether to include the favicon URL for each result
+                      optional: true
+                    - name: include_image_descriptions
+                      type: boolean
+                      desc: Include a list of query-related images and their descriptions in the response
+                      optional: true
+                    - name: include_images
+                      type: boolean
+                      desc: Include a list of query-related images in the response
+                      optional: true
+                    - name: include_raw_content
+                      type: boolean
+                      desc: Include the cleaned and parsed HTML content of each search result
+                      optional: true
+                    - name: max_results
+                      type: number
+                      desc: The maximum number of search results to return
+                      optional: true
+                    - name: search_depth
+                      type: string
+                      desc: The depth of the search. 'basic' for generic results, 'advanced' for more thorough search, 'fast' for optimized low latency with high relevance, 'ultra-fast' for prioritizing latency above all else
+                      optional: true
+                    - name: start_date
+                      type: string
+                      desc: Will return all results after the specified start date. Required to be written in the format YYYY-MM-DD.
+                      optional: true
+                    - name: time_range
+                      type: string
+                      desc: The time range back from the current date to include in the search results
+                      optional: true
+                    - name: topic
+                      type: string
+                      desc: The category of the search. This will determine which of our agents will be used for the search
+                      optional: true
+            metadata:
+                pulls: 42418
+                stars: 8
+                githubStars: 2258
+                category: search
+                tags:
+                    - tavily
+                    - search
+                license: MIT License
+                owner: tavily-ai
+    - type: image
+      secrets: default
+      image: mcp/exa@sha256:d88edd571d982faa22eba1bff35e39b4d72c0aa51584e3c90c255e684626aaf8
+      snapshot:
+        server:
+            name: exa
+            type: server
+            image: mcp/exa@sha256:d88edd571d982faa22eba1bff35e39b4d72c0aa51584e3c90c255e684626aaf8
+            description: Exa MCP for web search and web crawling!.
+            title: Exa
+            icon: https://avatars.githubusercontent.com/u/77906174?s=200&v=4
+            readme: https://desktop.docker.com/mcp/catalog/v3/readme/exa.md
+            remote: {}
+            secrets:
+                - name: exa.api_key
+                  env: EXA_API_KEY
+            tools:
+                - name: web_fetch_exa
+                  description: |-
+                    Read a webpage's full content as clean markdown. Use after web_search_exa when highlights are insufficient or to read any URL.
+
+                    Best for: Extracting full content from known URLs. Batch multiple URLs in one call.
+                    Returns: Clean text content and metadata from the page(s).
+                  arguments:
+                    - name: urls
+                      type: array
+                      items:
+                        type: string
+                      desc: URLs to read. Batch multiple URLs in one call.
+                    - name: maxCharacters
+                      type: number
+                      desc: 'Maximum characters to extract per page (default: 3000)'
+                      optional: true
+                  annotations:
+                    readOnlyHint: true
+                    destructiveHint: false
+                    idempotentHint: true
+                    openWorldHint: false
+                - name: web_search_exa
+                  description: |-
+                    Search the web for any topic and get clean, ready-to-use content.
+
+                          Best for: Finding current information, news, facts, people, companies, or answering questions about any topic.
+                          Returns: Clean text content from top search results.
+
+                          Query tips:
+                          describe the ideal page, not keywords. "blog post comparing React and Vue performance" not "React vs Vue".
+                          Use category:people / category:company to search through Linkedin profiles / companies respectively.
+                          If highlights are insufficient, follow up with web_fetch_exa on the best URLs.
+                  arguments:
+                    - name: query
+                      type: string
+                      desc: Natural language search query. Should be a semantically rich description of the ideal page, not just keywords. Optionally include category:<type> (company, people) to focus results — e.g. 'category:people John Doe software engineer'.
+                    - name: numResults
+                      type: number
+                      desc: 'Number of search results to return (default: 10).'
+                      optional: true
+                  annotations:
+                    readOnlyHint: true
+                    destructiveHint: false
+                    idempotentHint: true
+                    openWorldHint: false
+            metadata:
+                pulls: 25143
+                stars: 7
+                githubStars: 4772
+                category: search
+                tags:
+                    - exa
+                    - devops
+                    - search
+                license: MIT License
+                owner: exa-labs
+    - type: remote
+      secrets: default
+      endpoint: https://mcp.context7.com/mcp
+      snapshot:
+        server:
+            name: context7
+            type: remote
+            image: ""
+            description: Pull up-to-date, version-specific documentation and code examples for any library or framework straight into your prompt.
+            title: Context7
+            icon: https://avatars.githubusercontent.com/u/74989412?s=200&v=4
+            readme: https://desktop.docker.com/mcp/catalog/v3/readme/context7.md
+            remote:
+                url: https://mcp.context7.com/mcp
+                transport_type: streamable-http
+                headers:
+                    CONTEXT7_API_KEY: ${CONTEXT7_API_KEY}
+            secrets:
+                - name: context7.api_key
+                  env: CONTEXT7_API_KEY
+            metadata:
+                category: documentation
+                tags:
+                    - documentation
+                    - developer-tools
+                    - code-examples
+                    - remote
+                license: Apache License 2.0
+                owner: docker
+    - type: image
+      secrets: default
+      image: ghcr.io/github/github-mcp-server@sha256:c491ffdf6f4c85cb5397021bc655edb8ab825c6f5f568e7597d77a1bd7c4d308
+      snapshot:
+        server:
+            name: github-official
+            type: server
+            image: ghcr.io/github/github-mcp-server@sha256:c491ffdf6f4c85cb5397021bc655edb8ab825c6f5f568e7597d77a1bd7c4d308
+            description: Official GitHub MCP Server, by GitHub. Provides seamless integration with GitHub APIs, enabling advanced automation and interaction capabilities for developers and tools.
+            title: GitHub Official
+            icon: https://avatars.githubusercontent.com/u/9919?s=200&v=4
+            readme: https://desktop.docker.com/mcp/catalog/v3/readme/github-official.md
+            remote: {}
+            oauth:
+                providers:
+                    - provider: github
+                      secret: github.personal_access_token
+                      env: GITHUB_PERSONAL_ACCESS_TOKEN
+            secrets:
+                - name: github.personal_access_token
+                  env: GITHUB_PERSONAL_ACCESS_TOKEN
+            allowHosts:
+                - api.github.com:443
+                - github.com:443
+                - raw.githubusercontent.com:443
+            tools:
+                - name: add_comment_to_pending_review
+                  description: Add review comment to the requester's latest pending pull request review. A pending review needs to already exist to call this (check with the user if not sure).
+                  arguments:
+                    - name: body
+                      type: string
+                      desc: The text of the review comment
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: path
+                      type: string
+                      desc: The relative path to the file that necessitates a comment
+                    - name: pullNumber
+                      type: number
+                      desc: Pull request number
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: subjectType
+                      type: string
+                      desc: The level at which the comment is targeted
+                    - name: line
+                      type: number
+                      desc: The line of the blob in the pull request diff that the comment applies to. For multi-line comments, the last line of the range
+                      optional: true
+                    - name: side
+                      type: string
+                      desc: The side of the diff to comment on. LEFT indicates the previous state, RIGHT indicates the new state
+                      optional: true
+                    - name: startLine
+                      type: number
+                      desc: For multi-line comments, the first line of the range that the comment applies to
+                      optional: true
+                    - name: startSide
+                      type: string
+                      desc: For multi-line comments, the starting side of the diff that the comment applies to. LEFT indicates the previous state, RIGHT indicates the new state
+                      optional: true
+                  annotations:
+                    title: Add review comment to the requester's latest pending pull request review
+                - name: add_issue_comment
+                  description: Add a comment to a specific issue in a GitHub repository. Use this tool to add comments to pull requests as well (in this case pass pull request number as issue_number), but only if user is not asking specifically to add review comments.
+                  arguments:
+                    - name: body
+                      type: string
+                      desc: Comment content
+                    - name: issue_number
+                      type: number
+                      desc: Issue number to comment on
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                  annotations:
+                    title: Add comment to issue
+                - name: assign_copilot_to_issue
+                  description: |-
+                    Assign Copilot to a specific issue in a GitHub repository.
+
+                    This tool can help with the following outcomes:
+                    - a Pull Request created with source code changes to resolve the issue
+
+
+                    More information can be found at:
+                    - https://docs.github.com/en/copilot/using-github-copilot/using-copilot-coding-agent-to-work-on-tasks/about-assigning-tasks-to-copilot
+                  arguments:
+                    - name: issueNumber
+                      type: number
+                      desc: Issue number
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                  annotations:
+                    title: Assign Copilot to issue
+                    idempotentHint: true
+                - name: create_branch
+                  description: Create a new branch in a GitHub repository
+                  arguments:
+                    - name: branch
+                      type: string
+                      desc: Name for new branch
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: from_branch
+                      type: string
+                      desc: Source branch (defaults to repo default)
+                      optional: true
+                  annotations:
+                    title: Create branch
+                - name: create_or_update_file
+                  description: Create or update a single file in a GitHub repository. If updating, you must provide the SHA of the file you want to update. Use this tool to create or update a file in a GitHub repository remotely; do not use it for local file operations.
+                  arguments:
+                    - name: branch
+                      type: string
+                      desc: Branch to create/update the file in
+                    - name: content
+                      type: string
+                      desc: Content of the file
+                    - name: message
+                      type: string
+                      desc: Commit message
+                    - name: owner
+                      type: string
+                      desc: Repository owner (username or organization)
+                    - name: path
+                      type: string
+                      desc: Path where to create/update the file
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: sha
+                      type: string
+                      desc: Required if updating an existing file. The blob SHA of the file being replaced.
+                      optional: true
+                  annotations:
+                    title: Create or update file
+                - name: create_pull_request
+                  description: Create a new pull request in a GitHub repository.
+                  arguments:
+                    - name: base
+                      type: string
+                      desc: Branch to merge into
+                    - name: head
+                      type: string
+                      desc: Branch containing changes
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: title
+                      type: string
+                      desc: PR title
+                    - name: body
+                      type: string
+                      desc: PR description
+                      optional: true
+                    - name: draft
+                      type: boolean
+                      desc: Create as draft PR
+                      optional: true
+                    - name: maintainer_can_modify
+                      type: boolean
+                      desc: Allow maintainer edits
+                      optional: true
+                  annotations:
+                    title: Open new pull request
+                - name: create_repository
+                  description: Create a new GitHub repository in your account or specified organization
+                  arguments:
+                    - name: name
+                      type: string
+                      desc: Repository name
+                    - name: autoInit
+                      type: boolean
+                      desc: Initialize with README
+                      optional: true
+                    - name: description
+                      type: string
+                      desc: Repository description
+                      optional: true
+                    - name: organization
+                      type: string
+                      desc: Organization to create the repository in (omit to create in your personal account)
+                      optional: true
+                    - name: private
+                      type: boolean
+                      desc: Whether repo should be private
+                      optional: true
+                  annotations:
+                    title: Create repository
+                - name: delete_file
+                  description: Delete a file from a GitHub repository
+                  arguments:
+                    - name: branch
+                      type: string
+                      desc: Branch to delete the file from
+                    - name: message
+                      type: string
+                      desc: Commit message
+                    - name: owner
+                      type: string
+                      desc: Repository owner (username or organization)
+                    - name: path
+                      type: string
+                      desc: Path to the file to delete
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                  annotations:
+                    title: Delete file
+                    destructiveHint: true
+                - name: fork_repository
+                  description: Fork a GitHub repository to your account or specified organization
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: organization
+                      type: string
+                      desc: Organization to fork to
+                      optional: true
+                  annotations:
+                    title: Fork repository
+                - name: get_commit
+                  description: Get details for a commit from a GitHub repository
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: sha
+                      type: string
+                      desc: Commit SHA, branch name, or tag name
+                    - name: include_diff
+                      type: boolean
+                      desc: Whether to include file diffs and stats in the response. Default is true.
+                      optional: true
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                  annotations:
+                    title: Get commit details
+                    readOnlyHint: true
+                - name: get_file_contents
+                  description: Get the contents of a file or directory from a GitHub repository
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner (username or organization)
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: path
+                      type: string
+                      desc: Path to file/directory (directories must end with a slash '/')
+                      optional: true
+                    - name: ref
+                      type: string
+                      desc: Accepts optional git refs such as `refs/tags/{tag}`, `refs/heads/{branch}` or `refs/pull/{pr_number}/head`
+                      optional: true
+                    - name: sha
+                      type: string
+                      desc: Accepts optional commit SHA. If specified, it will be used instead of ref
+                      optional: true
+                  annotations:
+                    title: Get file or directory contents
+                    readOnlyHint: true
+                - name: get_label
+                  description: Get a specific label from a repository.
+                  arguments:
+                    - name: name
+                      type: string
+                      desc: Label name.
+                    - name: owner
+                      type: string
+                      desc: Repository owner (username or organization name)
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                  annotations:
+                    title: Get a specific label from a repository.
+                    readOnlyHint: true
+                - name: get_latest_release
+                  description: Get the latest release in a GitHub repository
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                  annotations:
+                    title: Get latest release
+                    readOnlyHint: true
+                - name: get_me
+                  description: Get details of the authenticated GitHub user. Use this when a request is about the user's own profile for GitHub. Or when information is missing to build other tool calls.
+                  arguments: []
+                  annotations:
+                    title: Get my user profile
+                    readOnlyHint: true
+                - name: get_release_by_tag
+                  description: Get a specific release by its tag name in a GitHub repository
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: tag
+                      type: string
+                      desc: Tag name (e.g., 'v1.0.0')
+                  annotations:
+                    title: Get a release by tag name
+                    readOnlyHint: true
+                - name: get_tag
+                  description: Get details about a specific git tag in a GitHub repository
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: tag
+                      type: string
+                      desc: Tag name
+                  annotations:
+                    title: Get tag details
+                    readOnlyHint: true
+                - name: get_team_members
+                  description: Get member usernames of a specific team in an organization. Limited to organizations accessible with current credentials
+                  arguments:
+                    - name: org
+                      type: string
+                      desc: Organization login (owner) that contains the team.
+                    - name: team_slug
+                      type: string
+                      desc: Team slug
+                  annotations:
+                    title: Get team members
+                    readOnlyHint: true
+                - name: get_teams
+                  description: Get details of the teams the user is a member of. Limited to organizations accessible with current credentials
+                  arguments:
+                    - name: user
+                      type: string
+                      desc: Username to get teams for. If not provided, uses the authenticated user.
+                      optional: true
+                  annotations:
+                    title: Get teams
+                    readOnlyHint: true
+                - name: issue_read
+                  description: Get information about a specific issue in a GitHub repository.
+                  arguments:
+                    - name: issue_number
+                      type: number
+                      desc: The number of the issue
+                    - name: method
+                      type: string
+                      desc: |
+                        The read operation to perform on a single issue.
+                        Options are:
+                        1. get - Get details of a specific issue.
+                        2. get_comments - Get issue comments.
+                        3. get_sub_issues - Get sub-issues of the issue.
+                        4. get_labels - Get labels assigned to the issue.
+                    - name: owner
+                      type: string
+                      desc: The owner of the repository
+                    - name: repo
+                      type: string
+                      desc: The name of the repository
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                  annotations:
+                    title: Get issue details
+                    readOnlyHint: true
+                - name: issue_write
+                  description: Create a new or update an existing issue in a GitHub repository.
+                  arguments:
+                    - name: method
+                      type: string
+                      desc: |
+                        Write operation to perform on a single issue.
+                        Options are:
+                        - 'create' - creates a new issue.
+                        - 'update' - updates an existing issue.
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: assignees
+                      type: array
+                      items:
+                        type: string
+                      desc: Usernames to assign to this issue
+                      optional: true
+                    - name: body
+                      type: string
+                      desc: Issue body content
+                      optional: true
+                    - name: duplicate_of
+                      type: number
+                      desc: Issue number that this issue is a duplicate of. Only used when state_reason is 'duplicate'.
+                      optional: true
+                    - name: issue_number
+                      type: number
+                      desc: Issue number to update
+                      optional: true
+                    - name: labels
+                      type: array
+                      items:
+                        type: string
+                      desc: Labels to apply to this issue
+                      optional: true
+                    - name: milestone
+                      type: number
+                      desc: Milestone number
+                      optional: true
+                    - name: state
+                      type: string
+                      desc: New state
+                      optional: true
+                    - name: state_reason
+                      type: string
+                      desc: Reason for the state change. Ignored unless state is changed.
+                      optional: true
+                    - name: title
+                      type: string
+                      desc: Issue title
+                      optional: true
+                    - name: type
+                      type: string
+                      desc: Type of this issue. Only use if the repository has issue types configured. Use list_issue_types tool to get valid type values for the organization. If the repository doesn't support issue types, omit this parameter.
+                      optional: true
+                  annotations:
+                    title: Create or update issue.
+                - name: list_branches
+                  description: List branches in a GitHub repository
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                  annotations:
+                    title: List branches
+                    readOnlyHint: true
+                - name: list_commits
+                  description: Get list of commits of a branch in a GitHub repository. Returns at least 30 results per page by default, but can return more if specified using the perPage parameter (up to 100).
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: author
+                      type: string
+                      desc: Author username or email address to filter commits by
+                      optional: true
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                    - name: sha
+                      type: string
+                      desc: Commit SHA, branch or tag name to list commits of. If not provided, uses the default branch of the repository. If a commit SHA is provided, will list commits up to that SHA.
+                      optional: true
+                  annotations:
+                    title: List commits
+                    readOnlyHint: true
+                - name: list_issue_types
+                  description: List supported issue types for repository owner (organization).
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: The organization owner of the repository
+                  annotations:
+                    title: List available issue types
+                    readOnlyHint: true
+                - name: list_issues
+                  description: List issues in a GitHub repository. For pagination, use the 'endCursor' from the previous response's 'pageInfo' in the 'after' parameter.
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: after
+                      type: string
+                      desc: Cursor for pagination. Use the endCursor from the previous page's PageInfo for GraphQL APIs.
+                      optional: true
+                    - name: direction
+                      type: string
+                      desc: Order direction. If provided, the 'orderBy' also needs to be provided.
+                      optional: true
+                    - name: labels
+                      type: array
+                      items:
+                        type: string
+                      desc: Filter by labels
+                      optional: true
+                    - name: orderBy
+                      type: string
+                      desc: Order issues by field. If provided, the 'direction' also needs to be provided.
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                    - name: since
+                      type: string
+                      desc: Filter by date (ISO 8601 timestamp)
+                      optional: true
+                    - name: state
+                      type: string
+                      desc: Filter by state, by default both open and closed issues are returned when not provided
+                      optional: true
+                  annotations:
+                    title: List issues
+                    readOnlyHint: true
+                - name: list_pull_requests
+                  description: List pull requests in a GitHub repository. If the user specifies an author, then DO NOT use this tool and use the search_pull_requests tool instead.
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: base
+                      type: string
+                      desc: Filter by base branch
+                      optional: true
+                    - name: direction
+                      type: string
+                      desc: Sort direction
+                      optional: true
+                    - name: head
+                      type: string
+                      desc: Filter by head user/org and branch
+                      optional: true
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                    - name: sort
+                      type: string
+                      desc: Sort by
+                      optional: true
+                    - name: state
+                      type: string
+                      desc: Filter by state
+                      optional: true
+                  annotations:
+                    title: List pull requests
+                    readOnlyHint: true
+                - name: list_releases
+                  description: List releases in a GitHub repository
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                  annotations:
+                    title: List releases
+                    readOnlyHint: true
+                - name: list_tags
+                  description: List git tags in a GitHub repository
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                  annotations:
+                    title: List tags
+                    readOnlyHint: true
+                - name: merge_pull_request
+                  description: Merge a pull request in a GitHub repository.
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: pullNumber
+                      type: number
+                      desc: Pull request number
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: commit_message
+                      type: string
+                      desc: Extra detail for merge commit
+                      optional: true
+                    - name: commit_title
+                      type: string
+                      desc: Title for merge commit
+                      optional: true
+                    - name: merge_method
+                      type: string
+                      desc: Merge method
+                      optional: true
+                  annotations:
+                    title: Merge pull request
+                - name: pull_request_read
+                  description: Get information on a specific pull request in GitHub repository.
+                  arguments:
+                    - name: method
+                      type: string
+                      desc: "Action to specify what pull request data needs to be retrieved from GitHub. \nPossible options: \n 1. get - Get details of a specific pull request.\n 2. get_diff - Get the diff of a pull request.\n 3. get_status - Get status of a head commit in a pull request. This reflects status of builds and checks.\n 4. get_files - Get the list of files changed in a pull request. Use with pagination parameters to control the number of results returned.\n 5. get_review_comments - Get the review comments on a pull request. They are comments made on a portion of the unified diff during a pull request review. Use with pagination parameters to control the number of results returned.\n 6. get_reviews - Get the reviews on a pull request. When asked for review comments, use get_review_comments method.\n 7. get_comments - Get comments on a pull request. Use this if user doesn't specifically want review comments. Use with pagination parameters to control the number of results returned.\n"
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: pullNumber
+                      type: number
+                      desc: Pull request number
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                  annotations:
+                    title: Get details for a single pull request
+                    readOnlyHint: true
+                - name: pull_request_review_write
+                  description: |-
+                    Create and/or submit, delete review of a pull request.
+
+                    Available methods:
+                    - create: Create a new review of a pull request. If "event" parameter is provided, the review is submitted. If "event" is omitted, a pending review is created.
+                    - submit_pending: Submit an existing pending review of a pull request. This requires that a pending review exists for the current user on the specified pull request. The "body" and "event" parameters are used when submitting the review.
+                    - delete_pending: Delete an existing pending review of a pull request. This requires that a pending review exists for the current user on the specified pull request.
+                  arguments:
+                    - name: method
+                      type: string
+                      desc: The write operation to perform on pull request review.
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: pullNumber
+                      type: number
+                      desc: Pull request number
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: body
+                      type: string
+                      desc: Review comment text
+                      optional: true
+                    - name: commitID
+                      type: string
+                      desc: SHA of commit to review
+                      optional: true
+                    - name: event
+                      type: string
+                      desc: Review action to perform.
+                      optional: true
+                  annotations:
+                    title: Write operations (create, submit, delete) on pull request reviews.
+                - name: push_files
+                  description: Push multiple files to a GitHub repository in a single commit
+                  arguments:
+                    - name: branch
+                      type: string
+                      desc: Branch to push to
+                    - name: files
+                      type: array
+                      items:
+                        type: object
+                      desc: Array of file objects to push, each object with path (string) and content (string)
+                    - name: message
+                      type: string
+                      desc: Commit message
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                  annotations:
+                    title: Push files to repository
+                - name: request_copilot_review
+                  description: Request a GitHub Copilot code review for a pull request. Use this for automated feedback on pull requests, usually before requesting a human reviewer.
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: pullNumber
+                      type: number
+                      desc: Pull request number
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                  annotations:
+                    title: Request Copilot review
+                - name: search_code
+                  description: Fast and precise code search across ALL GitHub repositories using GitHub's native search engine. Best for finding exact symbols, functions, classes, or specific code patterns.
+                  arguments:
+                    - name: query
+                      type: string
+                      desc: 'Search query using GitHub''s powerful code search syntax. Examples: ''content:Skill language:Java org:github'', ''NOT is:archived language:Python OR language:go'', ''repo:github/github-mcp-server''. Supports exact matching, language filters, path filters, and more.'
+                    - name: order
+                      type: string
+                      desc: Sort order for results
+                      optional: true
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                    - name: sort
+                      type: string
+                      desc: Sort field ('indexed' only)
+                      optional: true
+                  annotations:
+                    title: Search code
+                    readOnlyHint: true
+                - name: search_issues
+                  description: Search for issues in GitHub repositories using issues search syntax already scoped to is:issue
+                  arguments:
+                    - name: query
+                      type: string
+                      desc: Search query using GitHub issues search syntax
+                    - name: order
+                      type: string
+                      desc: Sort order
+                      optional: true
+                    - name: owner
+                      type: string
+                      desc: Optional repository owner. If provided with repo, only issues for this repository are listed.
+                      optional: true
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                    - name: repo
+                      type: string
+                      desc: Optional repository name. If provided with owner, only issues for this repository are listed.
+                      optional: true
+                    - name: sort
+                      type: string
+                      desc: Sort field by number of matches of categories, defaults to best match
+                      optional: true
+                  annotations:
+                    title: Search issues
+                    readOnlyHint: true
+                - name: search_pull_requests
+                  description: Search for pull requests in GitHub repositories using issues search syntax already scoped to is:pr
+                  arguments:
+                    - name: query
+                      type: string
+                      desc: Search query using GitHub pull request search syntax
+                    - name: order
+                      type: string
+                      desc: Sort order
+                      optional: true
+                    - name: owner
+                      type: string
+                      desc: Optional repository owner. If provided with repo, only pull requests for this repository are listed.
+                      optional: true
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                    - name: repo
+                      type: string
+                      desc: Optional repository name. If provided with owner, only pull requests for this repository are listed.
+                      optional: true
+                    - name: sort
+                      type: string
+                      desc: Sort field by number of matches of categories, defaults to best match
+                      optional: true
+                  annotations:
+                    title: Search pull requests
+                    readOnlyHint: true
+                - name: search_repositories
+                  description: Find GitHub repositories by name, description, readme, topics, or other metadata. Perfect for discovering projects, finding examples, or locating specific repositories across GitHub.
+                  arguments:
+                    - name: query
+                      type: string
+                      desc: 'Repository search query. Examples: ''machine learning in:name stars:>1000 language:python'', ''topic:react'', ''user:facebook''. Supports advanced search syntax for precise filtering.'
+                    - name: minimal_output
+                      type: boolean
+                      desc: 'Return minimal repository information (default: true). When false, returns full GitHub API repository objects.'
+                      optional: true
+                    - name: order
+                      type: string
+                      desc: Sort order
+                      optional: true
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                    - name: sort
+                      type: string
+                      desc: Sort repositories by field, defaults to best match
+                      optional: true
+                  annotations:
+                    title: Search repositories
+                    readOnlyHint: true
+                - name: search_users
+                  description: Find GitHub users by username, real name, or other profile information. Useful for locating developers, contributors, or team members.
+                  arguments:
+                    - name: query
+                      type: string
+                      desc: 'User search query. Examples: ''john smith'', ''location:seattle'', ''followers:>100''. Search is automatically scoped to type:user.'
+                    - name: order
+                      type: string
+                      desc: Sort order
+                      optional: true
+                    - name: page
+                      type: number
+                      desc: Page number for pagination (min 1)
+                      optional: true
+                    - name: perPage
+                      type: number
+                      desc: Results per page for pagination (min 1, max 100)
+                      optional: true
+                    - name: sort
+                      type: string
+                      desc: Sort users by number of followers or repositories, or when the person joined GitHub.
+                      optional: true
+                  annotations:
+                    title: Search users
+                    readOnlyHint: true
+                - name: sub_issue_write
+                  description: Add a sub-issue to a parent issue in a GitHub repository.
+                  arguments:
+                    - name: issue_number
+                      type: number
+                      desc: The number of the parent issue
+                    - name: method
+                      type: string
+                      desc: "The action to perform on a single sub-issue\nOptions are:\n- 'add' - add a sub-issue to a parent issue in a GitHub repository.\n- 'remove' - remove a sub-issue from a parent issue in a GitHub repository.\n- 'reprioritize' - change the order of sub-issues within a parent issue in a GitHub repository. Use either 'after_id' or 'before_id' to specify the new position.\n                "
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: sub_issue_id
+                      type: number
+                      desc: The ID of the sub-issue to add. ID is not the same as issue number
+                    - name: after_id
+                      type: number
+                      desc: The ID of the sub-issue to be prioritized after (either after_id OR before_id should be specified)
+                      optional: true
+                    - name: before_id
+                      type: number
+                      desc: The ID of the sub-issue to be prioritized before (either after_id OR before_id should be specified)
+                      optional: true
+                    - name: replace_parent
+                      type: boolean
+                      desc: When true, replaces the sub-issue's current parent issue. Use with 'add' method only.
+                      optional: true
+                  annotations:
+                    title: Change sub-issue
+                - name: update_pull_request
+                  description: Update an existing pull request in a GitHub repository.
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: pullNumber
+                      type: number
+                      desc: Pull request number to update
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: base
+                      type: string
+                      desc: New base branch name
+                      optional: true
+                    - name: body
+                      type: string
+                      desc: New description
+                      optional: true
+                    - name: draft
+                      type: boolean
+                      desc: Mark pull request as draft (true) or ready for review (false)
+                      optional: true
+                    - name: maintainer_can_modify
+                      type: boolean
+                      desc: Allow maintainer edits
+                      optional: true
+                    - name: reviewers
+                      type: array
+                      items:
+                        type: string
+                      desc: GitHub usernames to request reviews from
+                      optional: true
+                    - name: state
+                      type: string
+                      desc: New state
+                      optional: true
+                    - name: title
+                      type: string
+                      desc: New title
+                      optional: true
+                  annotations:
+                    title: Edit pull request
+                - name: update_pull_request_branch
+                  description: Update the branch of a pull request with the latest changes from the base branch.
+                  arguments:
+                    - name: owner
+                      type: string
+                      desc: Repository owner
+                    - name: pullNumber
+                      type: number
+                      desc: Pull request number
+                    - name: repo
+                      type: string
+                      desc: Repository name
+                    - name: expectedHeadSha
+                      type: string
+                      desc: The expected SHA of the pull request's HEAD ref
+                      optional: true
+                  annotations:
+                    title: Update pull request branch
+            metadata:
+                githubStars: 31720
+                category: devops
+                tags:
+                    - github
+                    - devops
+                license: MIT License
+                owner: github
+    - type: remote
+      secrets: default
+      endpoint: https://mcp.notion.com/mcp
+      snapshot:
+        server:
+            name: notion-remote
+            type: remote
+            image: ""
+            description: Manage projects, create documentation, and organize information in collaborative workspaces.
+            title: Notion
+            icon: https://www.google.com/s2/favicons?domain=notion.so&sz=64
+            readme: https://desktop.docker.com/mcp/catalog/v3/readme/notion-remote.md
+            remote:
+                url: https://mcp.notion.com/mcp
+                transport_type: streamable-http
+            oauth:
+                providers:
+                    - provider: notion-remote
+                      secret: notion-remote.personal_access_token
+                      env: NOTION_REMOTE_PERSONAL_ACCESS_TOKEN
+            metadata:
+                category: productivity
+                tags:
+                    - productivity
+                    - documentation
+                    - collaboration
+                    - remote
+                license: Apache License 2.0
+                owner: docker
+secrets:
+    default:
+        provider: docker-desktop-store

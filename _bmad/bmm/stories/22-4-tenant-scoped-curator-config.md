@@ -1,9 +1,10 @@
 # Story 22.4 — Tenant-Scoped Curator Config
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Knuth + Woz
 **group_id:** allura-system
 **Epic:** 22
+**status_evidence:** "tenant-config.ts (193 lines) implements parseTenantConfig, getTenantConfig, getEffectiveScoreThreshold, resolveScoreThreshold with mode adjustments (conservative/balanced/aggressive); tenant-config.test.ts (270+ lines, 25+ tests) verifies parsing, DB loading, mode adjustments, clamping, fallback defaults"
 
 ## User Story
 

@@ -1,9 +1,10 @@
 # Story 20.5 — Memory Writeback Helper
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Woz
 **group_id:** allura-system
 **Epic:** 20
+**status_evidence:** "memory-writeback.ts (187 lines) implements writeTaskOutcome with structured content/metadata, MCP tool wrapper; memory-writeback.test.ts (250+ lines) verifies content format, metadata structure, group_id enforcement, field validation, tool wrapper"
 
 ## User Story
 

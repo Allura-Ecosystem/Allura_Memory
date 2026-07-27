@@ -1,9 +1,10 @@
 # Story 22.6 — Cross-Tenant Audit Endpoint
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Bellard + Pike
 **group_id:** allura-system
 **Epic:** 22
+**status_evidence:** "cross-tenant-test.ts (audit engine) creates synthetic tenants, seeds memories, runs 100 queries per pair, verifies zero leakage, cleans up; cross-tenant/route.ts (admin-only GET endpoint); cross-tenant-audit.test.ts (260+ lines, 8 tests) verifies clean run, leak detection, cleanup on error, auth, internal error handling"
 
 ## User Story
 

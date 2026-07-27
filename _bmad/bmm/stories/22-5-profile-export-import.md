@@ -1,9 +1,10 @@
 # Story 22.5 — Profile Export/Import Documentation
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Fowler
 **group_id:** allura-system
 **Epic:** 22
+**status_evidence:** "4 Docker MCP profiles exported (openclaw.yaml, faithmeats.yaml, difference-driven.yaml, coding.yaml) via docker mcp profile export; README.md documents each profile's tenant, tools, secrets, restrictions, export/import commands, and new machine onboarding workflow"
 
 ## User Story
 

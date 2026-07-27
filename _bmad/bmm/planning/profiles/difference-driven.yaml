@@ -1,0 +1,260 @@
+version: 1
+id: difference-driven
+name: difference-driven
+servers:
+    - type: image
+      secrets: default
+      tools:
+        - tavily_extract
+        - tavily_map
+        - tavily_research
+        - tavily_search
+      image: mcp/tavily@sha256:e8bbe2860c856a098ee4fbbd13caae4f5e67073ac24e05cd529691f424f1917b
+      snapshot:
+        server:
+            name: tavily
+            type: server
+            image: mcp/tavily@sha256:e8bbe2860c856a098ee4fbbd13caae4f5e67073ac24e05cd529691f424f1917b
+            description: The Tavily MCP server provides seamless interaction with the tavily-search and tavily-extract tools, real-time web search capabilities through the tavily-search tool and Intelligent data extraction from web pages via the tavily-extract tool.
+            title: Tavily
+            icon: https://avatars.githubusercontent.com/u/170207473?s=200&v=4
+            readme: https://desktop.docker.com/mcp/catalog/v3/readme/tavily.md
+            remote: {}
+            secrets:
+                - name: tavily.api_token
+                  env: TAVILY_API_KEY
+            tools:
+                - name: tavily_crawl
+                  description: Crawl a website starting from a URL. Extracts content from pages with configurable depth and breadth.
+                  arguments:
+                    - name: url
+                      type: string
+                      desc: The root URL to begin the crawl
+                    - name: allow_external
+                      type: boolean
+                      desc: Whether to return external links in the final response
+                      optional: true
+                    - name: extract_depth
+                      type: string
+                      desc: Advanced extraction retrieves more data, including tables and embedded content, with higher success but may increase latency
+                      optional: true
+                    - name: format
+                      type: string
+                      desc: The format of the extracted web page content. markdown returns content in markdown format. text returns plain text and may increase latency.
+                      optional: true
+                    - name: include_favicon
+                      type: boolean
+                      desc: Whether to include the favicon URL for each result
+                      optional: true
+                    - name: instructions
+                      type: string
+                      desc: Natural language instructions for the crawler. Instructions specify which types of pages the crawler should return.
+                      optional: true
+                    - name: limit
+                      type: integer
+                      desc: Total number of links the crawler will process before stopping
+                      optional: true
+                    - name: max_breadth
+                      type: integer
+                      desc: Max number of links to follow per level of the tree (i.e., per page)
+                      optional: true
+                    - name: max_depth
+                      type: integer
+                      desc: Max depth of the crawl. Defines how far from the base URL the crawler can explore.
+                      optional: true
+                    - name: select_domains
+                      type: array
+                      items:
+                        type: string
+                      desc: Regex patterns to restrict crawling to specific domains or subdomains (e.g., ^docs\.example\.com$)
+                      optional: true
+                    - name: select_paths
+                      type: array
+                      items:
+                        type: string
+                      desc: Regex patterns to select only URLs with specific path patterns (e.g., /docs/.*, /api/v1.*)
+                      optional: true
+                - name: tavily_extract
+                  description: Extract content from URLs. Returns raw page content in markdown or text format.
+                  arguments:
+                    - name: urls
+                      type: array
+                      items:
+                        type: string
+                      desc: List of URLs to extract content from
+                    - name: extract_depth
+                      type: string
+                      desc: Use 'advanced' for LinkedIn, protected sites, or tables/embedded content
+                      optional: true
+                    - name: format
+                      type: string
+                      desc: Output format
+                      optional: true
+                    - name: include_favicon
+                      type: boolean
+                      desc: Include favicon URLs
+                      optional: true
+                    - name: include_images
+                      type: boolean
+                      desc: Include images from pages
+                      optional: true
+                    - name: query
+                      type: string
+                      desc: Query to rerank content chunks by relevance
+                      optional: true
+                - name: tavily_map
+                  description: Map a website's structure. Returns a list of URLs found starting from the base URL.
+                  arguments:
+                    - name: url
+                      type: string
+                      desc: The root URL to begin the mapping
+                    - name: allow_external
+                      type: boolean
+                      desc: Whether to return external links in the final response
+                      optional: true
+                    - name: instructions
+                      type: string
+                      desc: Natural language instructions for the crawler
+                      optional: true
+                    - name: limit
+                      type: integer
+                      desc: Total number of links the crawler will process before stopping
+                      optional: true
+                    - name: max_breadth
+                      type: integer
+                      desc: Max number of links to follow per level of the tree (i.e., per page)
+                      optional: true
+                    - name: max_depth
+                      type: integer
+                      desc: Max depth of the mapping. Defines how far from the base URL the crawler can explore
+                      optional: true
+                    - name: select_domains
+                      type: array
+                      items:
+                        type: string
+                      desc: Regex patterns to restrict crawling to specific domains or subdomains (e.g., ^docs\.example\.com$)
+                      optional: true
+                    - name: select_paths
+                      type: array
+                      items:
+                        type: string
+                      desc: Regex patterns to select only URLs with specific path patterns (e.g., /docs/.*, /api/v1.*)
+                      optional: true
+                - name: tavily_research
+                  description: 'Perform comprehensive research on a given topic or question. Use this tool when you need to gather information from multiple sources to answer a question or complete a task. Returns a detailed response based on the research findings. Rate limit: 20 requests per minute.'
+                  arguments:
+                    - name: input
+                      type: string
+                      desc: A comprehensive description of the research task
+                    - name: model
+                      type: string
+                      desc: Defines the degree of depth of the research. 'mini' is good for narrow tasks with few subtopics. 'pro' is good for broad tasks with many subtopics. 'auto' automatically selects the best model.
+                      optional: true
+                - name: tavily_search
+                  description: Search the web for current information on any topic. Use for news, facts, or data beyond your knowledge cutoff. Returns snippets and source URLs.
+                  arguments:
+                    - name: query
+                      type: string
+                      desc: Search query
+                    - name: country
+                      type: string
+                      desc: Boost search results from a specific country. Must be a full country name (e.g., 'United States', 'Japan', 'Germany'). ISO country codes (e.g., 'us', 'jp') are not supported. Available only if topic is general. See https://docs.tavily.com/documentation/api-reference/search for the full list of supported countries.
+                      optional: true
+                    - name: end_date
+                      type: string
+                      desc: Will return all results before the specified end date. Required to be written in the format YYYY-MM-DD
+                      optional: true
+                    - name: exact_match
+                      type: boolean
+                      desc: Only return results containing the exact phrase(s) in quotes in your query
+                      optional: true
+                    - name: exclude_domains
+                      type: array
+                      items:
+                        type: string
+                      desc: List of domains to specifically exclude, if the user asks to exclude a domain set this to the domain of the site
+                      optional: true
+                    - name: include_domains
+                      type: array
+                      items:
+                        type: string
+                      desc: A list of domains to specifically include in the search results, if the user asks to search on specific sites set this to the domain of the site
+                      optional: true
+                    - name: include_favicon
+                      type: boolean
+                      desc: Whether to include the favicon URL for each result
+                      optional: true
+                    - name: include_image_descriptions
+                      type: boolean
+                      desc: Include a list of query-related images and their descriptions in the response
+                      optional: true
+                    - name: include_images
+                      type: boolean
+                      desc: Include a list of query-related images in the response
+                      optional: true
+                    - name: include_raw_content
+                      type: boolean
+                      desc: Include the cleaned and parsed HTML content of each search result
+                      optional: true
+                    - name: max_results
+                      type: number
+                      desc: The maximum number of search results to return
+                      optional: true
+                    - name: search_depth
+                      type: string
+                      desc: The depth of the search. 'basic' for generic results, 'advanced' for more thorough search, 'fast' for optimized low latency with high relevance, 'ultra-fast' for prioritizing latency above all else
+                      optional: true
+                    - name: start_date
+                      type: string
+                      desc: Will return all results after the specified start date. Required to be written in the format YYYY-MM-DD.
+                      optional: true
+                    - name: time_range
+                      type: string
+                      desc: The time range back from the current date to include in the search results
+                      optional: true
+                    - name: topic
+                      type: string
+                      desc: The category of the search. This will determine which of our agents will be used for the search
+                      optional: true
+            metadata:
+                pulls: 42418
+                stars: 8
+                githubStars: 2258
+                category: search
+                tags:
+                    - tavily
+                    - search
+                license: MIT License
+                owner: tavily-ai
+    - type: remote
+      secrets: default
+      endpoint: https://mcp.notion.com/mcp
+      snapshot:
+        server:
+            name: notion-remote
+            type: remote
+            image: ""
+            description: Manage projects, create documentation, and organize information in collaborative workspaces.
+            title: Notion
+            icon: https://www.google.com/s2/favicons?domain=notion.so&sz=64
+            readme: https://desktop.docker.com/mcp/catalog/v3/readme/notion-remote.md
+            remote:
+                url: https://mcp.notion.com/mcp
+                transport_type: streamable-http
+            oauth:
+                providers:
+                    - provider: notion-remote
+                      secret: notion-remote.personal_access_token
+                      env: NOTION_REMOTE_PERSONAL_ACCESS_TOKEN
+            metadata:
+                category: productivity
+                tags:
+                    - productivity
+                    - documentation
+                    - collaboration
+                    - remote
+                license: Apache License 2.0
+                owner: docker
+secrets:
+    default:
+        provider: docker-desktop-store

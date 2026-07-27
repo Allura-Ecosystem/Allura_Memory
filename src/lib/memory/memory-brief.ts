@@ -134,7 +134,7 @@ export async function getMemoryBrief(
   // so there's no cross-tenant leakage.
   const searchResponse = await memory_search({
     query: topic,
-    group_id: validatedGroupId,
+    group_id: validatedGroupId as unknown as GroupId,
     limit,
     status: "all", // include proposed + approved for a complete brief
   });

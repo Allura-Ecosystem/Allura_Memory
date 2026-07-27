@@ -1,9 +1,10 @@
 # Story 20.4 — Memory Brief Helper
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Woz
 **group_id:** allura-system
 **Epic:** 20
+**status_evidence:** "memory-brief.ts (205 lines) implements getMemoryBrief with categorization (priorWork/decisions/blockers), MCP tool wrapper; memory-brief.test.ts (250+ lines) verifies categorization, group_id enforcement, empty results, limit clamping, tool wrapper"
 
 ## User Story
 

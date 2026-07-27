@@ -1,9 +1,10 @@
 # Story 22.2 — Tenant Onboarding API
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Woz
 **group_id:** allura-system
 **Epic:** 22
+**status_evidence:** "tenants/route.ts (POST+GET) and tenants/[group_id]/route.ts (GET+PATCH) implemented with admin RBAC, group_id validation, duplicate rejection (409); tenants-api.test.ts (336 lines, 12 tests) verifies create, list, get, update, auth, duplicate rejection"
 
 ## User Story
 

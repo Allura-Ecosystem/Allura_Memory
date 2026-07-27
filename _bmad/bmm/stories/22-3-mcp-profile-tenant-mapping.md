@@ -1,9 +1,10 @@
 # Story 22.3 — Wire MCP Profile ↔ Tenant Mapping
 
-**Status:** ready-for-dev
+**Status:** done
 **Owner:** Brooks → Woz + Hightower
 **group_id:** allura-system
 **Epic:** 22
+**status_evidence:** "tenant-validator.ts implements resolveDefaultGroupId, validateTenantAtStartup, resolveAndValidateStartupTenant; bootstrapMemoryServer calls validator after DB warmup; tenant-startup-validation.test.ts (200 lines, 10 tests) verifies valid tenant starts, invalid/inactive fails closed, fallback warning, bootstrap integration"
 
 ## User Story
 

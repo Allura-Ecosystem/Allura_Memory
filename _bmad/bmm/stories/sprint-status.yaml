@@ -1,6 +1,6 @@
 # Sprint Status — RuVector Documentation Sync & Integration
 
-last_updated: "2026-07-12"
+last_updated: "2026-07-27"
 owner: brooks
 group_id: allura-system
 
@@ -73,70 +73,70 @@ epic_19:
 
 epic_20:
   name: "Subagent Memory Access — Hermes ↔ Allura Wiring"
-  status: ready-for-dev
-  retrospective: pending
+  status: done
+  retrospective: done
   stories:
     - key: "20.1"
       title: "Create group_id registry"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz"
-      status_evidence: ""
+      status_evidence: "group-id-registry.ts implements getDefaultGroupId, getAllowedGroupIds, isAgentAllowedGroupId with 4 tenant mappings (system, faithmeats, difference-driven, coding); group-id-registry.test.ts verifies all mappings and cross-tenant rejection"
     - key: "20.2"
       title: "Wire delegate_task brief template"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz"
-      status_evidence: ""
+      status_evidence: "BRIEF.md template includes mandatory memory_search before starting and memory_add after completing; brief-template.test.ts verifies template content and structure"
     - key: "20.3"
       title: "Verify subagent MCP tool access"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz + Bellard"
-      status_evidence: ""
+      status_evidence: "subagent-mcp-access.test.ts (128 lines) verifies memory_search/memory_add exported, group_id enforcement via registry, gateway tool registration, BRIEF.md template, evidence file at docs/archive/allura/evidence/subagent-mcp-access-2026-07-26.md"
     - key: "20.4"
       title: "Memory brief helper"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz"
-      status_evidence: ""
+      status_evidence: "memory-brief.ts (205 lines) implements getMemoryBrief with categorization (priorWork/decisions/blockers), MCP tool wrapper; memory-brief.test.ts (250+ lines) verifies categorization, group_id enforcement, empty results, limit clamping, tool wrapper"
     - key: "20.5"
       title: "Memory writeback helper"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz"
-      status_evidence: ""
+      status_evidence: "memory-writeback.ts (187 lines) implements writeTaskOutcome with structured content/metadata, MCP tool wrapper; memory-writeback.test.ts (250+ lines) verifies content format, metadata structure, group_id enforcement, field validation, tool wrapper"
 
 epic_21:
   name: "Retrieval Drift Audit + Curation Scheduling"
-  status: ready-for-dev
-  retrospective: pending
+  status: done
+  retrospective: done
   stories:
     - key: "21.1"
       title: "Schedule the curator watchdog"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Hightower"
-      status_evidence: ""
+      status_evidence: "systemd unit + timer for allura-curator-watchdog at 5-minute intervals with journald logging"
     - key: "21.2"
       title: "Schedule the content-aware curator"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Hightower"
-      status_evidence: ""
+      status_evidence: "systemd unit + timer for allura-content-curator at 6-hour cycles"
     - key: "21.3"
       title: "Schedule the retrieval drift audit"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Bellard"
-      status_evidence: ""
+      status_evidence: "systemd unit + timer for allura-drift-audit at daily 03:00 ET; run-drift-audit.sh script with 6 checks"
     - key: "21.4"
       title: "Drift alerting + auto-recovery integration"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz + Bellard"
-      status_evidence: ""
+      status_evidence: "auto-recovery.ts drift detection integration; 24/24 drift-recovery tests pass"
     - key: "21.5"
       title: "Curation metrics endpoint"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz"
-      status_evidence: ""
+      status_evidence: "curator/metrics/route.ts endpoint; 11/11 curator-metrics tests pass"
 
 epic_22:
   name: "Enterprise Readiness — Multi-Tenant Hardening"
-  status: ready-for-dev
-  retrospective: pending
+  status: done
+  retrospective: done
   stories:
     - key: "22.1"
       title: "Create tenant registry table"
@@ -145,26 +145,26 @@ epic_22:
       status_evidence: "Migration 33-tenant-registry.sql creates tenants table with CHECK constraint and seeds 4 tenants; target-resolver updated with assertRegisteredTenant; 15/15 tests pass"
     - key: "22.2"
       title: "Tenant onboarding API"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz"
-      status_evidence: ""
+      status_evidence: "tenants/route.ts (POST+GET) and tenants/[group_id]/route.ts (GET+PATCH) implemented with admin RBAC, group_id validation, duplicate rejection (409); tenants-api.test.ts (336 lines, 12 tests) verifies create, list, get, update, auth, duplicate rejection"
     - key: "22.3"
       title: "Wire MCP profile ↔ tenant mapping"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz + Hightower"
-      status_evidence: ""
+      status_evidence: "tenant-validator.ts implements resolveDefaultGroupId, validateTenantAtStartup, resolveAndValidateStartupTenant; bootstrapMemoryServer calls validator after DB warmup; tenant-startup-validation.test.ts (200 lines, 10 tests) verifies valid tenant starts, invalid/inactive fails closed, fallback warning, bootstrap integration"
     - key: "22.4"
       title: "Tenant-scoped curator config"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Knuth + Woz"
-      status_evidence: ""
+      status_evidence: "tenant-config.ts (193 lines) implements parseTenantConfig, getTenantConfig, getEffectiveScoreThreshold, resolveScoreThreshold with mode adjustments (conservative/balanced/aggressive); tenant-config.test.ts (270+ lines, 25+ tests) verifies parsing, DB loading, mode adjustments, clamping, fallback defaults"
     - key: "22.5"
       title: "Profile export/import documentation"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Fowler"
-      status_evidence: ""
+      status_evidence: "4 Docker MCP profiles exported (openclaw.yaml, faithmeats.yaml, difference-driven.yaml, coding.yaml) via docker mcp profile export; README.md documents each profile's tenant, tools, secrets, restrictions, export/import commands, and new machine onboarding workflow"
     - key: "22.6"
       title: "Cross-tenant audit endpoint"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Bellard + Pike"
-      status_evidence: ""
+      status_evidence: "cross-tenant-test.ts (audit engine) creates synthetic tenants, seeds memories, runs 100 queries per pair, verifies zero leakage, cleans up; cross-tenant/route.ts (admin-only GET endpoint); cross-tenant-audit.test.ts (260+ lines, 8 tests) verifies clean run, leak detection, cleanup on error, auth, internal error handling"
