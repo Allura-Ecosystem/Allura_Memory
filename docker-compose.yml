@@ -113,10 +113,14 @@ services:
       - RUVECTOR_DB=${POSTGRES_DB}
       - OLLAMA_API_KEY=${OLLAMA_API_KEY:-}
       - OLLAMA_CLOUD_URL=${OLLAMA_CLOUD_URL:-https://ollama.com}
-      - RUVECTOR_EMBEDDING_BASE_URL=https://api.openai.com
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - RUVECTOR_EMBEDDING_API_KEY=${RUVECTOR_EMBEDDING_API_KEY:-}
-      - RUVECTOR_EMBEDDING_MODEL=${RUVECTOR_EMBEDDING_MODEL:-text-embedding-3-small}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-ollama}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-qwen3-embedding:0.6b}
+      - RUVECTOR_EMBEDDING_BASE_URL=${RUVECTOR_EMBEDDING_BASE_URL:-http://host.docker.internal:11434}
+      - RUVECTOR_EMBEDDING_MODEL=${RUVECTOR_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
+      # To use OpenAI instead: set EMBEDDING_PROVIDER=openai, EMBEDDING_MODEL=text-embedding-3-small,
+      # RUVECTOR_EMBEDDING_BASE_URL=https://api.openai.com, and OPENAI_API_KEY in .env
+      # NOTE: OpenAI text-embedding-3-small produces 1536-dim vectors — existing DB vectors are 1024-dim (Ollama).
+      # Switching providers requires re-embedding all memories.
       - GRAPH_BACKEND=ruvector
       - DEFAULT_GROUP_ID=${DEFAULT_GROUP_ID:-allura-system}
       - RUVIX_KERNEL_SECRET=${RUVIX_KERNEL_SECRET:-}
