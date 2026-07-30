@@ -30,7 +30,7 @@ const ENTITY_COLORS: Record<InspectorView, string> = {
   run:         "var(--allura-blue)",
   "work-item": "var(--allura-orange)",
   project:     "var(--allura-green)",
-  evidence:    "var(--allura-gold)",
+  evidence:    "var(--c-gold)",
   handoff:     "var(--allura-gray-500)",
   memory:      "var(--allura-blue)",
 }
@@ -47,7 +47,7 @@ function ViewLoadingSkeleton() {
             height: "14px",
             width: `${w}%`,
             borderRadius: "var(--allura-r-sm)",
-            background: "var(--allura-gray-100, #f3f4f6)",
+            background: "var(--allura-gray-100)",
             marginBottom: "var(--allura-md)",
           }}
         />

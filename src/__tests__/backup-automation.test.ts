@@ -30,7 +30,6 @@ import type {
   RetentionPolicy,
 } from "../lib/backup"
 import { backupConfig } from "../lib/backup/config"
-import { backupNeo4j } from "../lib/backup/neo4j"
 import { backupPostgres } from "../lib/backup/postgres"
 import {
   getRetentionSummary,
@@ -103,7 +102,7 @@ async function createMockManifest(dir: string, overrides: Partial<BackupManifest
 describe("Backup Types", () => {
   it("ALL_BACKUP_TYPES includes all individual types", () => {
     expect(ALL_BACKUP_TYPES).toContain("postgres")
-    expect(ALL_BACKUP_TYPES).toContain("neo4j")
+    expect(ALL_BACKUP_TYPES).toContain("config")
     expect(ALL_BACKUP_TYPES).toContain("config")
     expect(ALL_BACKUP_TYPES).toContain("workspace")
     expect(ALL_BACKUP_TYPES).toContain("skills")
@@ -216,9 +215,8 @@ describe("getDefaultConfig", () => {
 
     expect(config.encryptionKey).toBe("")
     expect(config.containers.postgres).toBe("knowledge-postgres")
-    expect(config.containers.neo4j).toBe("knowledge-neo4j")
+    expect(config.containers.postgres).toBe("knowledge-postgres")
     expect(config.databases.postgres).toBe("memory")
-    expect(config.databases.neo4j).toBe("neo4j")
   })
 
   it("reads BACKUP_ENCRYPTION_KEY from env", () => {
@@ -464,7 +462,6 @@ describe("Backup Module Exports", () => {
     expect(typeof backup.loadManifest).toBe("function")
     expect(typeof backup.getRetentionSummary).toBe("function")
     expect(typeof backup.backupPostgres).toBe("function")
-    expect(typeof backup.backupNeo4j).toBe("function")
     expect(typeof backup.backupConfig).toBe("function")
     expect(typeof backup.backupWorkspace).toBe("function")
     expect(typeof backup.backupSkills).toBe("function")
@@ -484,25 +481,6 @@ describe("Error Handling", () => {
       container: "test-postgres",
       database: "test",
       user: "test",
-      outputDir: "/tmp",
-      encryption: { key: "test-key-123", cipher: "aes-256-cbc", saltLength: 16 },
-    })
-
-    expect(result.success).toBe(false)
-    expect(result.error).toBeDefined()
-  })
-
-  it("backupNeo4j fails gracefully without docker", async () => {
-    const mockExecSync = vi.mocked(execSync)
-    mockExecSync.mockImplementation(() => {
-      throw new Error("docker command not found")
-    })
-
-    const result = await backupNeo4j({
-      container: "test-neo4j",
-      database: "neo4j",
-      user: "neo4j",
-      password: "password",
       outputDir: "/tmp",
       encryption: { key: "test-key-123", cipher: "aes-256-cbc", saltLength: 16 },
     })

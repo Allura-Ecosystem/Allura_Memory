@@ -8,7 +8,7 @@
 
 import { Pool } from "pg";
 import { createHash, randomUUID } from "crypto";
-import { createInsight, InsightConflictError } from "../src/lib/neo4j/queries/insert-insight";
+import { createInsight, InsightConflictError } from "./lib/neo4j-stub";
 import { logApprovalEvent } from "../src/lib/memory/approval-audit";
 
 const CURATOR_ID = "auto-curator-content-aware";

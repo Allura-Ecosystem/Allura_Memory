@@ -35,8 +35,8 @@ const TYPE_BG: Record<EntityType, string> = {
   org:     "var(--allura-orange)",
   insight: "var(--allura-green)",
   memory:  "var(--allura-green)",
-  agent:   "#7C3AED",
-  project: "var(--allura-gold)",
+  agent:   "var(--allura-type-project)",
+  project: "var(--c-gold)",
   event:   "var(--allura-gray-500)",
   system:  "var(--allura-charcoal)",
 }
@@ -49,7 +49,7 @@ function initials2(label: string): string {
 
 function MemoryIcon({ size = 18 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="var(--allura-white)" strokeWidth="2" strokeLinecap="round">
       <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
       <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
     </svg>
@@ -143,7 +143,7 @@ export function DetailPanel({ node, onClose }: DetailPanelProps) {
           justifyContent: "center",
           fontSize: "18px",
           fontWeight: 700,
-          color: "#fff",
+          color: "var(--allura-white)",
           background: avatarBg,
           flexShrink: 0,
         }}>
@@ -220,7 +220,7 @@ export function DetailPanel({ node, onClose }: DetailPanelProps) {
                   justifyContent: "center",
                   fontSize: "10px",
                   fontWeight: 700,
-                  color: "#fff",
+                  color: "var(--allura-white)",
                   background: connBg,
                   flexShrink: 0,
                 }}>

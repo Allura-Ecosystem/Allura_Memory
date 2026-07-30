@@ -2,11 +2,11 @@
  * Controlled Retrieval Layer — F10, F11
  *
  * The sole interface through which agents retrieve approved knowledge.
- * Agents MUST NOT query PostgreSQL or Neo4j directly (AD-19).
+ * Agents MUST NOT query PostgreSQL directly (AD-19).
  *
  * This layer:
  * 1. Validates group_id and agent permissions
- * 2. Routes to the appropriate query backend (Neo4j insights, PG traces)
+ * 2. Routes to the appropriate query backend (PostgreSQL pgvector)
  * 3. Enforces scope (project + global)
  * 4. Attaches provenance metadata to every result
  * 5. Logs every retrieval call as an audit event
@@ -14,22 +14,10 @@
  * Reference: docs/allura/DESIGN-MEMORY-SYSTEM.md §Retrieval Layer
  */
 
-if (typeof window !== "undefined") {
+if (typeof globalThis !== "undefined" && typeof (globalThis as unknown as { window?: unknown }).window !== "undefined") {
   throw new Error("retrieval-layer can only be used server-side");
 }
 
-import {
-  type DualInsightQueryParams,
-  getDualContextSemanticMemory,
-  getMergedDualContextInsights,
-  type ScopedInsight,
-} from "@/lib/neo4j/queries/get-dual-context";
-import {
-  type InsightQueryParams,
-  listInsights,
-  type PaginatedInsights,
-  searchInsights,
-} from "@/lib/neo4j/queries/get-insight";
 import { getPool } from "@/lib/postgres/connection";
 import { queryTraces } from "@/lib/postgres/traces";
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
@@ -72,7 +60,7 @@ export interface RetrievalRequest {
 export interface RetrievalResult {
   insight_id: string;
   content: string;
-  source: "neo4j" | "postgres";
+  source: "postgres";
   confidence: number;
   scope: "project" | "global";
   version: number;
@@ -167,6 +155,81 @@ async function logRetrieval(
   }
 }
 
+// ── PostgreSQL query helpers ───────────────────────────────────────────────
+
+interface GraphMemoryRow {
+  id: string;
+  group_id: string;
+  content: string;
+  score: number;
+  version: number;
+  created_at: string;
+  provenance: string;
+  deprecated: boolean;
+}
+
+function rowToResult(row: GraphMemoryRow, scope: "project" | "global"): RetrievalResult {
+  return {
+    insight_id: row.id,
+    content: row.content,
+    source: "postgres",
+    confidence: row.score,
+    scope,
+    version: row.version ?? 1,
+    topic_key: row.id,
+    provenance: {
+      created_at: row.created_at,
+    },
+  };
+}
+
+function buildWhereClause(
+  groupId: string,
+  filters: RetrievalRequest["filters"],
+  includeGlobal: boolean,
+): { clause: string; params: unknown[] } {
+  const params: unknown[] = [];
+  const conditions: string[] = [];
+
+  if (includeGlobal) {
+    params.push(groupId, "global");
+    conditions.push("(group_id = $1 OR group_id = $2)");
+  } else {
+    params.push(groupId);
+    conditions.push("group_id = $1");
+  }
+
+  conditions.push("deprecated = false");
+
+  let paramIdx = includeGlobal ? 3 : 2;
+
+  if (filters?.min_confidence !== undefined) {
+    params.push(filters.min_confidence);
+    conditions.push(`score >= $${paramIdx}`);
+    paramIdx++;
+  }
+  if (filters?.max_confidence !== undefined) {
+    params.push(filters.max_confidence);
+    conditions.push(`score <= $${paramIdx}`);
+    paramIdx++;
+  }
+  if (filters?.since) {
+    params.push(filters.since);
+    conditions.push(`created_at >= $${paramIdx}::timestamptz`);
+    paramIdx++;
+  }
+  if (filters?.until) {
+    params.push(filters.until);
+    conditions.push(`created_at <= $${paramIdx}::timestamptz`);
+    paramIdx++;
+  }
+
+  return {
+    clause: conditions.join(" AND "),
+    params,
+  };
+}
+
 // ── Core Retrieval ─────────────────────────────────────────────────────────
 
 /**
@@ -184,6 +247,7 @@ export async function retrieveKnowledge(
   const includeTraces = req.include_traces ?? false;
   const includeProject = req.scope?.project ?? true;
   const includeGlobal = req.scope?.global ?? true;
+  const pool = getPool();
 
   let results: RetrievalResult[] = [];
   let projectCount = 0;
@@ -191,90 +255,73 @@ export async function retrieveKnowledge(
 
   switch (mode) {
     case "semantic": {
-      // Content-based search across approved insights
-      const searchResults = await searchInsights(req.query, {
-        group_id: validatedGroupId,
-        limit,
-        status: req.filters?.status,
-        min_confidence: req.filters?.min_confidence,
+      // Content-based full-text search across approved insights
+      const { clause, params } = buildWhereClause(validatedGroupId, req.filters, includeGlobal);
+      params.push(req.query);
+      const queryParamIdx = params.length;
+      params.push(limit);
+      const limitParamIdx = params.length;
+
+      const queryResult = await pool.query<GraphMemoryRow>(
+        `SELECT id, group_id, content, score, version, created_at, provenance, deprecated
+         FROM graph_memories
+         WHERE ${clause}
+           AND content ILIKE '%' || $${queryParamIdx} || '%'
+         ORDER BY score DESC, created_at DESC
+         LIMIT $${limitParamIdx}`,
+        params
+      );
+      results = queryResult.rows.map((row) => {
+        const isGlobal = row.group_id === "global";
+        if (isGlobal) globalCount++; else projectCount++;
+        return rowToResult(row, isGlobal ? "global" : "project");
       });
-      results = searchResults.items.map((insight) => ({
-        insight_id: insight.insight_id,
-        content: insight.content,
-        source: "neo4j" as const,
-        confidence: insight.confidence,
-        scope: "project" as const,
-        version: insight.version,
-        topic_key: insight.topic_key,
-        provenance: {
-          created_at: insight.created_at?.toISOString() ?? new Date().toISOString(),
-        },
-      }));
-      projectCount = results.length;
       break;
     }
 
     case "structured": {
       // Filter-based query on approved insights
-      const listParams: InsightQueryParams = {
-        group_id: validatedGroupId,
-        limit,
-        status: req.filters?.status,
-        source_type: req.filters?.source_type,
-        min_confidence: req.filters?.min_confidence,
-        max_confidence: req.filters?.max_confidence,
-        since: req.filters?.since ? new Date(req.filters.since) : undefined,
-        until: req.filters?.until ? new Date(req.filters.until) : undefined,
-      };
-      const listResults = await listInsights(listParams);
-      results = listResults.items.map((insight) => ({
-        insight_id: insight.insight_id,
-        content: insight.content,
-        source: "neo4j" as const,
-        confidence: insight.confidence,
-        scope: "project" as const,
-        version: insight.version,
-        topic_key: insight.topic_key,
-        provenance: {
-          created_at: insight.created_at?.toISOString() ?? new Date().toISOString(),
-        },
-      }));
-      projectCount = results.length;
+      const { clause, params } = buildWhereClause(validatedGroupId, req.filters, includeGlobal);
+      params.push(limit);
+      const queryResult = await pool.query<GraphMemoryRow>(
+        `SELECT id, group_id, content, score, version, created_at, provenance, deprecated
+         FROM graph_memories
+         WHERE ${clause}
+         ORDER BY score DESC, created_at DESC
+         LIMIT $${params.length}`,
+        params
+      );
+      results = queryResult.rows.map((row) => {
+        const isGlobal = row.group_id === "global";
+        if (isGlobal) globalCount++; else projectCount++;
+        return rowToResult(row, isGlobal ? "global" : "project");
+      });
       break;
     }
 
     case "hybrid": {
       // Dual-context: project + global insights merged by confidence
-      const dualParams: DualInsightQueryParams = {
-        project_group_id: validatedGroupId,
-        include_global: includeGlobal,
-        status: req.filters?.status,
-        min_confidence: req.filters?.min_confidence,
-        limit_per_scope: limit,
-      };
-      const dualResults = await getDualContextSemanticMemory(dualParams);
-      projectCount = dualResults.project_insights.length;
-      globalCount = dualResults.global_insights.length;
+      const { clause, params } = buildWhereClause(validatedGroupId, req.filters, includeGlobal);
+      params.push(limit);
+      const queryResult = await pool.query<GraphMemoryRow>(
+        `SELECT id, group_id, content, score, version, created_at, provenance, deprecated
+         FROM graph_memories
+         WHERE ${clause}
+         ORDER BY score DESC, created_at DESC
+         LIMIT $${params.length}`,
+        params
+      );
 
-      const allInsights: ScopedInsight[] = [];
-      if (includeProject) allInsights.push(...dualResults.project_insights);
-      if (includeGlobal) allInsights.push(...dualResults.global_insights);
+      const allRows = queryResult.rows;
+      projectCount = allRows.filter((r) => r.group_id === validatedGroupId).length;
+      globalCount = allRows.filter((r) => r.group_id === "global").length;
 
-      // Sort by confidence descending
-      allInsights.sort((a, b) => b.confidence - a.confidence);
-
-      results = allInsights.slice(0, limit).map((insight) => ({
-        insight_id: insight.insight_id,
-        content: insight.content,
-        source: "neo4j" as const,
-        confidence: insight.confidence,
-        scope: insight.scope,
-        version: insight.version,
-        topic_key: insight.topic_key,
-        provenance: {
-          created_at: insight.created_at?.toISOString() ?? new Date().toISOString(),
-        },
-      }));
+      results = allRows
+        .filter((row) => {
+          if (row.group_id === "global") return includeGlobal;
+          return includeProject;
+        })
+        .map((row) => rowToResult(row, row.group_id === "global" ? "global" : "project"));
       break;
     }
 

@@ -10,7 +10,6 @@
  * - Both return JSON with timestamp for observability
  */
 
-import { isDriverHealthy } from "@/lib/neo4j/connection";
 import { isPoolHealthy } from "@/lib/postgres/connection";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -117,7 +116,6 @@ async function isMcpHealthy(): Promise<boolean> {
  * Returns 200 if all required deps are healthy, 503 otherwise.
  *
  * Required: PostgreSQL (primary data store)
- * Optional: Neo4j (semantic memory — degraded but ready if down)
  * Required: MCP server initialized
  */
 export async function checkReadiness(): Promise<ReadinessResult> {
@@ -126,13 +124,10 @@ export async function checkReadiness(): Promise<ReadinessResult> {
   // Check PostgreSQL (required)
   checks.postgres = await checkWithTimeout("postgres", isPoolHealthy);
 
-  // Check Neo4j (optional — degraded mode if down)
-  checks.neo4j = await checkWithTimeout("neo4j", isDriverHealthy);
-
   // Check MCP server initialization or configured HTTP gateway (required)
   checks.mcp = await checkWithTimeout("mcp", isMcpHealthy);
 
-  // Ready if PostgreSQL and MCP are healthy (Neo4j is optional)
+  // Ready if PostgreSQL and MCP are healthy
   const ready = checks.postgres.healthy && checks.mcp.healthy;
 
   return {

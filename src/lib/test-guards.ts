@@ -9,7 +9,7 @@
  *   describe.skipIf(!shouldRunE2E)("My E2E test", () => { ... });
  */
 
-/** True when RUN_E2E_TESTS=true — enables PostgreSQL + Neo4j live tests */
+/** True when RUN_E2E_TESTS=true — enables PostgreSQL live tests */
 export const shouldRunE2E = process.env.RUN_E2E_TESTS === "true";
 
 /** True when RUN_BROWSER_TESTS=true — enables Playwright/browser automation tests */
@@ -28,22 +28,6 @@ export async function isPostgresReachable(): Promise<boolean> {
     const pool = getPool();
     await pool.query("SELECT 1");
     await closePool();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Check if Neo4j is reachable at the current env config.
- * Useful for beforeAll() health checks in E2E tests.
- */
-export async function isNeo4jReachable(): Promise<boolean> {
-  try {
-    const { getDriver, closeDriver } = await import("../lib/neo4j/connection");
-    const driver = getDriver();
-    await driver.verifyConnectivity();
-    await closeDriver();
     return true;
   } catch {
     return false;

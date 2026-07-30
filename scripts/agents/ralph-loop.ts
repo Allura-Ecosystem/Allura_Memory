@@ -203,14 +203,16 @@ async function ralphLoop() {
   // ── Log start to PostgreSQL ────────────────────────────────────────────
 
   const postgresUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
-  const neo4jUri = process.env.NEO4J_URI;
+  const neo4jUri: string | null = null;
   let pgPool: InstanceType<typeof import("pg").Pool> | null = null;
   let neo4jDriver: { session: () => { run: (q: string, p: Record<string, unknown>) => Promise<{ summary: unknown }>; close: () => Promise<void> } } | null = null;
 
-  if (postgresUrl && neo4jUri) {
+  // Neo4j is sunset — neo4jDriver stays null; all Neo4j functionality is in PostgreSQL.
+  const getDriver = (): typeof neo4jDriver => null;
+
+  if (postgresUrl) {
     try {
       const { getPool } = await import("../../src/lib/postgres/connection");
-      const { getDriver } = await import("../../src/lib/neo4j/connection");
       pgPool = getPool();
       neo4jDriver = getDriver();
     } catch (error) {
@@ -323,7 +325,7 @@ async function ralphLoop() {
 
   if (pgPool) {
     const { closePool } = await import("../../src/lib/postgres/connection");
-    const { closeDriver } = await import("../../src/lib/neo4j/connection");
+    const closeDriver = async () => {};
     await closeDriver();
     await closePool();
   }

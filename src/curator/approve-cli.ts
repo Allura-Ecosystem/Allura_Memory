@@ -23,8 +23,6 @@
 
 import { Pool } from "pg"
 import { createHash , randomUUID } from "crypto"
-import { Neo4jConnectionError, Neo4jPromotionError } from "../lib/errors/neo4j-errors"
-import { createInsight, InsightConflictError } from "../lib/neo4j/queries/insert-insight"
 import { closePool, getPool } from "../lib/postgres/connection"
 import { GroupIdValidationError, validateGroupId } from "../lib/validation/group-id"
 
@@ -158,56 +156,22 @@ async function promoteToNeo4j(
   const memoryId = randomUUID()
 
   try {
-    await createInsight({
-      insight_id: memoryId,
-      group_id: groupId,
-      content: proposal.content,
-      confidence: parseFloat(proposal.score),
-      topic_key: `curator.${proposal.tier}`,
-      source_type: "promotion",
-      created_by: curatorId,
-      metadata: {
-        trace_ref: proposal.trace_ref,
-        tier: proposal.tier,
-        rationale: proposal.reasoning,
-        proposal_id: proposal.id,
-      },
-    })
-
-    // DRIFT-2 fix: Phase 3 sync contract — link AUTHORED_BY → Agent and RELATES_TO → Project
-    // Best-effort: failure does not block the approval (matches API route behavior)
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getDriver } = require("../lib/neo4j/connection")
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { Neo4jGraphAdapter } = require("../lib/graph-adapter/neo4j-adapter")
-      const driver = getDriver()
-      const adapter = new Neo4jGraphAdapter(driver)
-      const linkResult = await adapter.linkMemoryContext({
-        memory_id: memoryId as any,
-        group_id: groupId as any,
-        agent_id: curatorId ?? null,
-        project_id: null,
-      })
-      if (linkResult.authored_by || linkResult.relates_to) {
-        console.info(
-          `[sync-contract] curator-approve-cli: linked memory=${memoryId} ` +
-          `authored_by=${linkResult.authored_by} relates_to=${linkResult.relates_to}`
-        )
-      }
-      await adapter.close()
-    } catch (linkErr) {
-      console.warn(`[sync-contract] linkMemoryContext failed in curator-approve-cli:`, linkErr)
-    }
+    const pool = getPool()
+    await pool.query(
+      `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
+       VALUES ($1, $2, $3, $4, $5, $6, 1, NOW()::timestamptz, false)`,
+      [
+        memoryId,
+        groupId,
+        curatorId,
+        proposal.content,
+        parseFloat(proposal.score),
+        'promotion',
+      ]
+    )
 
     return { memoryId }
   } catch (err) {
-    if (err instanceof InsightConflictError) {
-      return { memoryId: "", error: "Insight already promoted (idempotent skip)" }
-    }
-    if (err instanceof Neo4jConnectionError || err instanceof Neo4jPromotionError) {
-      return { memoryId: "", error: `Neo4j unavailable: ${err.message}` }
-    }
     return { memoryId: "", error: `Promotion failed: ${err instanceof Error ? err.message : String(err)}` }
   }
 }

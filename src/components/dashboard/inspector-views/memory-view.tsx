@@ -50,7 +50,7 @@ function layerFromData(data: MemoryData): MemoryLayer {
 
 const LAYER_COLORS: Record<MemoryLayer, string> = {
   episodic: "var(--allura-blue)",
-  semantic: "var(--allura-gold)",
+  semantic: "var(--c-gold)",
   unknown:  "var(--allura-gray-500)",
 }
 

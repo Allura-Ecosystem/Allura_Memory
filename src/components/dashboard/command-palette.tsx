@@ -251,7 +251,7 @@ export function CommandPalette() {
           style={{
             width: "90%",
             maxWidth: 640,
-            background: "#ffffff",
+            background: "var(--allura-white)",
             borderRadius: 12,
             boxShadow: "0 24px 64px rgba(17, 24, 39, 0.22), 0 4px 16px rgba(17, 24, 39, 0.10)",
             overflow: "hidden",

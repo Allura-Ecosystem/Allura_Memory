@@ -3,7 +3,7 @@ import {
   createInsightVersion,
   type InsightInsert,
   type InsightRecord,
-} from "../../src/lib/neo4j/queries/insert-insight";
+} from "../lib/neo4j-stub";
 import { getPool } from "../../src/lib/postgres/connection";
 import { type EventInsert, type EventRecord, insertEvent } from "../../src/lib/postgres/queries/insert-trace";
 

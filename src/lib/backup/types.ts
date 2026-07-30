@@ -12,11 +12,10 @@
 
 // ── Core Types ──────────────────────────────────────────────────────────────
 
-export type BackupType = "postgres" | "neo4j" | "config" | "workspace" | "skills" | "full"
+export type BackupType = "postgres" | "config" | "workspace" | "skills" | "full"
 
 export const ALL_BACKUP_TYPES: BackupType[] = [
   "postgres",
-  "neo4j",
   "config",
   "workspace",
   "skills",
@@ -178,19 +177,13 @@ export interface BackupWorkerConfig {
   /** Docker container names */
   containers: {
     postgres: string
-    neo4j: string
   }
   /** Database names */
   databases: {
     postgres: string
-    neo4j: string
   }
   /** PostgreSQL user */
   postgresUser: string
-  /** Neo4j user */
-  neo4jUser: string
-  /** Neo4j password */
-  neo4jPassword: string
   /** Workspace root to backup */
   workspaceRoot: string
   /** Skills directories */

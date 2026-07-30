@@ -27,7 +27,7 @@
  */
 
 import { createHash, randomUUID } from "crypto"
-import { createInsight, InsightConflictError } from "../src/lib/neo4j/queries/insert-insight"
+import { createInsight, InsightConflictError } from "./lib/neo4j-stub"
 import { closePool, getPool } from "../src/lib/postgres/connection"
 import { GroupIdValidationError, validateGroupId } from "../src/lib/validation/group-id"
 

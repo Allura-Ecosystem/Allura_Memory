@@ -30,7 +30,7 @@ const STATUS_COLORS: Record<ProcessStatus, string> = {
   running:   "var(--allura-blue)",
   completed: "var(--allura-green)",
   failed:    "var(--dashboard-error)",
-  paused:    "var(--allura-gold)",
+  paused:    "var(--c-gold)",
 }
 
 function StatusBadge({ status }: { status: ProcessStatus }) {

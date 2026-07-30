@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth";
-import { readTransaction } from "@/lib/neo4j/connection";
 import { getPool } from "@/lib/postgres/connection";
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
 
 export interface MemoryStats {
   episodic_count: number;
-  semantic_count: number | null;
+  semantic_count: number;
   search_count: number;
   total_count: number;
   last_activity: string | null;
@@ -32,7 +31,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [pgStats, pgIds, neo4jResult] = await Promise.all([
+    const [pgStats, pgIds, graphResult] = await Promise.all([
       // Combined PG aggregation
       getPool().query<{ episodic_count: string; search_count: string; last_activity: Date | null }>(
         `SELECT
@@ -53,51 +52,30 @@ export async function GET(request: NextRequest) {
            AND ($2::text IS NULL OR metadata->>'user_id' = $2)`,
         [groupId, userId],
       ),
-      // Neo4j active Memory nodes
-      readTransaction(async (tx) => {
-        const result = await tx.run(
-          `MATCH (m:Memory)
-           WHERE m.group_id = $groupId
-             AND ($userId IS NULL OR m.user_id = $userId)
-             AND NOT (m)<-[:SUPERSEDES]-()
-           RETURN m.id AS id`,
-          { groupId, userId: userId ?? null },
-        );
-        return { ids: result.records.map((r: { get: (k: string) => string }) => r.get("id")) as string[] };
-      }).catch((err) => {
-        console.warn("[degraded] Neo4j unavailable in memory stats:", err);
-        return { ids: null as string[] | null, degraded: true };
-      }),
+      // graph_memories: active (non-deprecated) memory nodes
+      getPool().query<{ id: string }>(
+        `SELECT id FROM graph_memories
+         WHERE group_id = $1
+           AND ($2::text IS NULL OR user_id = $2)
+           AND deprecated = false`,
+        [groupId, userId],
+      ),
     ]);
 
     const uniqueIds = new Set<string>();
     pgIds.rows.forEach((r) => { if (r.id) uniqueIds.add(r.id); });
+    graphResult.rows.forEach((r) => { if (r.id) uniqueIds.add(r.id); });
 
-    let semantic_count: number | null = null;
-    if (neo4jResult.ids !== null) {
-      neo4jResult.ids.forEach((id) => { if (id) uniqueIds.add(id); });
-      semantic_count = neo4jResult.ids.length;
-    }
-
+    const semantic_count = graphResult.rows.length;
     const row = pgStats.rows[0];
-    const degraded = neo4jResult.ids === null;
-    const response = NextResponse.json({
+
+    return NextResponse.json({
       episodic_count: parseInt(row.episodic_count, 10),
       semantic_count,
       search_count: parseInt(row.search_count, 10),
       total_count: uniqueIds.size,
       last_activity: row.last_activity?.toISOString() ?? null,
     } satisfies MemoryStats);
-
-    if (degraded) {
-      response.headers.set("Warning", '299 Allura "neo4j_unavailable"');
-      return new NextResponse(response.body, {
-        status: 206,
-        headers: response.headers,
-      });
-    }
-
-    return response;
   } catch (error) {
     console.error("memory_stats error:", error);
     return NextResponse.json({ error: "Failed to fetch memory stats" }, { status: 500 });

@@ -5,7 +5,7 @@
  * Updates the Agent Harness Team database in Notion with current status.
  */
 
-import { closeDriver, getDriver } from "../src/lib/neo4j/connection";
+import { closeDriver, getDriver } from "./lib/neo4j-stub";
 import { closePool, getPool } from "../src/lib/postgres/connection";
 
 const AGENTS = [
@@ -51,7 +51,7 @@ async function syncNotionAgents() {
       RETURN count(i) as insight_count
     `);
     
-    const insightCount = neo4jResult.records[0]?.get('insight_count') || 0;
+    const insightCount = neo4jResult.records[0]?.get<number>('insight_count') || 0;
     
     // Display sync data
     console.log('\nAgent Sync Data:');

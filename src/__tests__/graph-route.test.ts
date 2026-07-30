@@ -58,12 +58,11 @@ describe("Graph API Route Contract (Story 2.8)", () => {
     expect(DELETE).toBeDefined()
   })
 
-  it("should include Warning header for degraded responses", async () => {
+  it("should include degraded mode flag for error responses", async () => {
     const routeContent = await readRouteFile()
 
-    // Check for Warning header usage
-    expect(routeContent).toContain("Warning")
-    expect(routeContent).toContain("299 Allura")
+    // Check for degraded flag usage (Neo4j is sunset, errors now return degraded=true)
+    expect(routeContent).toContain("degraded")
   })
 
   it("should return 200 instead of 500 on Neo4j errors", async () => {

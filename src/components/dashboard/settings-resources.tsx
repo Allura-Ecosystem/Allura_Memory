@@ -67,7 +67,7 @@ function StatusBadge({ status }: { status: string }) {
     status === "healthy" || status === "active"
       ? "var(--allura-green)"
       : status === "degraded" || status === "idle"
-        ? "var(--allura-gold)"
+        ? "var(--c-gold)"
         : "var(--allura-red)"
   return (
     <code
@@ -168,10 +168,6 @@ export function SettingsResources() {
                 <div style={{ ...rowStyle, ...dividerStyle(true) }}>
                   <span style={labelStyle}>PostgreSQL</span>
                   <StatusBadge status={state.health.dependencies.postgres.status} />
-                </div>
-                <div style={rowStyle}>
-                  <span style={labelStyle}>Neo4j</span>
-                  <StatusBadge status={state.health.dependencies.neo4j.status} />
                 </div>
               </>
             )}

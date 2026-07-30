@@ -1,14 +1,12 @@
 /**
  * Group ID Governance Tools
  * Story 1.5: Enforce Tenant Isolation with group_ids
- * 
+ *
  * Detects orphaned, misspelled, and anomalous group_ids across the system.
  */
 
-import { Driver } from "neo4j-driver";
 import type { Pool } from "pg";
 import { GroupIdValidationError, normalizeGroupId, validateGroupId } from "./group-id";
-import { getDriver } from "../neo4j/connection";
 import { getPool } from "../postgres/connection";
 
 /**
@@ -55,7 +53,7 @@ export interface GroupIdStats {
 }
 
 /**
- * Group ID usage across PostgreSQL
+ * Group ID usage across PostgreSQL (events table)
  */
 export interface PostgresGroupIdReport {
   total_groups: number;
@@ -64,9 +62,9 @@ export interface PostgresGroupIdReport {
 }
 
 /**
- * Group ID usage across Neo4j
+ * Group ID usage across graph_memories table
  */
-export interface Neo4jGroupIdReport {
+export interface GraphGroupIdReport {
   total_groups: number;
   groups: Array<{
     group_id: string;
@@ -84,14 +82,14 @@ export interface Neo4jGroupIdReport {
  */
 export interface GroupIdGovernanceReport {
   postgres: PostgresGroupIdReport;
-  neo4j: Neo4jGroupIdReport;
+  graph: GraphGroupIdReport;
   orphaned_groups: string[];
   similar_groups: Array<{ group_id_1: string; group_id_2: string; distance: number }>;
   recommendations: string[];
 }
 
 /**
- * Get group_id usage statistics from PostgreSQL
+ * Get group_id usage statistics from PostgreSQL events table
  */
 export async function getPostgresGroupIdStats(): Promise<PostgresGroupIdReport> {
   const pool = getPool();
@@ -109,27 +107,25 @@ export async function getPostgresGroupIdStats(): Promise<PostgresGroupIdReport> 
 
   const result = await pool.query(query);
 
-  const groups: GroupIdStats[] = result.rows.map((row) => {
+  const groups: GroupIdStats[] = result.rows.map((row: Record<string, unknown>) => {
     let isValid = true;
-    let reason = "";
 
     try {
-      validateGroupId(row.group_id);
+      validateGroupId(row.group_id as string);
     } catch (error) {
       if (error instanceof GroupIdValidationError) {
         isValid = false;
-        reason = error.message;
       }
     }
 
     return {
-      group_id: row.group_id,
-      event_count: parseInt(row.event_count, 10),
-      earliest_event: row.earliest_event,
-      latest_event: row.latest_event,
+      group_id: row.group_id as string,
+      event_count: parseInt(row.event_count as string, 10),
+      earliest_event: row.earliest_event as Date | null,
+      latest_event: row.latest_event as Date | null,
       is_valid: isValid,
       is_reserved: ["global", "system", "admin", "public"].includes(
-        normalizeGroupId(row.group_id)
+        normalizeGroupId(row.group_id as string)
       ),
     };
   });
@@ -149,69 +145,57 @@ export async function getPostgresGroupIdStats(): Promise<PostgresGroupIdReport> 
 }
 
 /**
- * Get group_id usage statistics from Neo4j
+ * Get group_id usage statistics from graph_memories table
  */
-export async function getNeo4jGroupIdStats(): Promise<Neo4jGroupIdReport> {
-  const driver = getDriver();
-  const session = driver.session();
+export async function getGraphGroupIdStats(): Promise<GraphGroupIdReport> {
+  const pool = getPool();
 
-  try {
-    const query = `
-      MATCH (h:InsightHead)
-      OPTIONAL MATCH (i:Insight)-[:VERSION_OF]->(h)
-      RETURN
-        h.group_id as group_id,
-        COUNT(i) as insight_count,
-        MIN(i.created_at) as earliest_created,
-        MAX(i.created_at) as latest_created
-      ORDER BY insight_count DESC
-    `;
+  const query = `
+    SELECT
+      group_id,
+      COUNT(*) as insight_count,
+      MIN(created_at) as earliest_created,
+      MAX(created_at) as latest_created
+    FROM graph_memories
+    GROUP BY group_id
+    ORDER BY insight_count DESC
+  `;
 
-    const result = await session.run(query);
+  const result = await pool.query(query);
 
-    const groups = result.records.map((record) => {
-      const groupId = record.get("group_id") as string;
-      const insightCount = record.get("insight_count");
-      const count = typeof insightCount === "object" && "toNumber" in insightCount
-        ? insightCount.toNumber()
-        : parseInt(String(insightCount), 10);
-      const earliest = record.get("earliest_created");
-      const latest = record.get("latest_created");
-
-      let isValid = true;
-      try {
-        validateGroupId(groupId);
-      } catch {
-        isValid = false;
-      }
-
-      return {
-        group_id: groupId,
-        insight_count: count,
-        earliest_created: earliest ? new Date(earliest.toString()) : null,
-        latest_created: latest ? new Date(latest.toString()) : null,
-        is_valid: isValid,
-        is_reserved: ["global", "system", "admin", "public"].includes(
-          normalizeGroupId(groupId)
-        ),
-      };
-    });
-
-    const invalidGroups = groups
-      .filter((g) => !g.is_valid)
-      .map((g) => ({
-        group_id: g.group_id,
-        reason: `Invalid format: ${g.group_id}`,
-      }));
+  const groups = result.rows.map((row: Record<string, unknown>) => {
+    const groupId = row.group_id as string;
+    let isValid = true;
+    try {
+      validateGroupId(groupId);
+    } catch {
+      isValid = false;
+    }
 
     return {
-      total_groups: groups.length,
-      groups,
-      invalid_groups: invalidGroups,
+      group_id: groupId,
+      insight_count: parseInt(row.insight_count as string, 10),
+      earliest_created: row.earliest_created as Date | null,
+      latest_created: row.latest_created as Date | null,
+      is_valid: isValid,
+      is_reserved: ["global", "system", "admin", "public"].includes(
+        normalizeGroupId(groupId)
+      ),
     };
-  } finally {
-    await session.close();
-  }
+  });
+
+  const invalidGroups = groups
+    .filter((g) => !g.is_valid)
+    .map((g) => ({
+      group_id: g.group_id,
+      reason: `Invalid format: ${g.group_id}`,
+    }));
+
+  return {
+    total_groups: groups.length,
+    groups,
+    invalid_groups: invalidGroups,
+  };
 }
 
 /**
@@ -271,7 +255,7 @@ export async function findOrphanedGroupIds(
   `;
 
   const result = await pool.query(query);
-  return result.rows.map((row) => row.group_id);
+  return result.rows.map((row: Record<string, unknown>) => row.group_id as string);
 }
 
 /**
@@ -285,9 +269,9 @@ export async function generateGroupIdGovernanceReport(
 ): Promise<GroupIdGovernanceReport> {
   const { orphanThresholdDays = 30, similarMaxDistance = 2 } = options;
 
-  // Get stats from both databases
+  // Get stats from both tables
   const postgresReport = await getPostgresGroupIdStats();
-  const neo4jReport = await getNeo4jGroupIdStats();
+  const graphReport = await getGraphGroupIdStats();
 
   // Find orphaned groups
   const orphanedGroups = await findOrphanedGroupIds(orphanThresholdDays);
@@ -296,7 +280,7 @@ export async function generateGroupIdGovernanceReport(
   const allGroupIds = [
     ...new Set([
       ...postgresReport.groups.map((g) => g.group_id),
-      ...neo4jReport.groups.map((g) => g.group_id),
+      ...graphReport.groups.map((g) => g.group_id),
     ]),
   ];
   const similarGroups = findSimilarGroupIds(allGroupIds, similarMaxDistance);
@@ -311,10 +295,10 @@ export async function generateGroupIdGovernanceReport(
     );
   }
 
-  if (neo4jReport.invalid_groups.length > 0) {
+  if (graphReport.invalid_groups.length > 0) {
     recommendations.push(
-      `Fix ${neo4jReport.invalid_groups.length} invalid group_id(s) in Neo4j: ` +
-        neo4jReport.invalid_groups.map((g) => g.group_id).join(", ")
+      `Fix ${graphReport.invalid_groups.length} invalid group_id(s) in graph_memories: ` +
+        graphReport.invalid_groups.map((g) => g.group_id).join(", ")
     );
   }
 
@@ -338,7 +322,7 @@ export async function generateGroupIdGovernanceReport(
 
   return {
     postgres: postgresReport,
-    neo4j: neo4jReport,
+    graph: graphReport,
     orphaned_groups: orphanedGroups,
     similar_groups: similarGroups,
     recommendations,

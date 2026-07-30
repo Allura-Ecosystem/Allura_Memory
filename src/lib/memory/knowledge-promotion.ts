@@ -24,10 +24,26 @@
 
 import { z } from 'zod';
 import { requireApprovalBeforePromotion } from './approval-audit';
-import { Neo4jPromotionError } from '../errors/neo4j-errors';
-import { createInsight, createInsightVersion, type InsightRecord } from '../neo4j/queries/insert-insight';
 import { getPool } from '../postgres/connection';
 import { type EventRecord, insertEvent } from '../postgres/queries/insert-trace';
+
+// ── Error class (replaces deleted neo4j-errors) ─────────────────────────────
+
+/**
+ * Error thrown when promoting an insight to the knowledge graph fails.
+ */
+export class KnowledgePromotionError extends Error {
+  constructor(
+    public readonly insightId: string,
+    public readonly cause: Error
+  ) {
+    super(`Failed to promote insight ${insightId}: ${cause.message}`);
+    this.name = 'KnowledgePromotionError';
+  }
+}
+
+/** @deprecated Alias for backward compatibility */
+export const Neo4jPromotionError = KnowledgePromotionError;
 
 // ============================================================================
 // Constants
@@ -714,17 +730,17 @@ function buildKnowledgeHubContent(params: {
 // ============================================================================
 
 /**
- * Promote an insight to Neo4j knowledge graph
- * 
- * Creates Insight node with Steel Frame versioning:
- *   - If new: Creates version 1 with InsightHead
+ * Promote an insight to the knowledge graph (PostgreSQL + pgvector).
+ *
+ * Creates a memory node with Steel Frame versioning:
+ *   - If new: Creates version 1
  *   - If update: Creates new version with SUPERSEDES relationship
- * 
+ *
  * @param insight - Knowledge insight to promote
- * @returns Neo4j node ID
+ * @returns Memory node ID
  */
 export async function promoteToNeo4j(insight: KnowledgeInsight): Promise<string> {
-  console.log('[knowledge-promotion] Promoting insight to Neo4j:', {
+  console.log('[knowledge-promotion] Promoting insight to knowledge graph:', {
     id: insight.id,
     topic: insight.topic,
     group_id: insight.group_id,
@@ -736,62 +752,78 @@ export async function promoteToNeo4j(insight: KnowledgeInsight): Promise<string>
 
   await requireApprovalBeforePromotion(insight.proposal_id, insight.group_id);
 
-  // Build Neo4j insight payload
-  const insightPayload = {
-    insight_id: insight.id,
-    group_id: insight.group_id,
-    content: insight.content,
-    confidence: insight.confidence,
-    topic_key: insight.topic,
-    source_type: 'promotion' as const,
-    source_ref: insight.postgres_trace_id,
-    created_by: insight.source,
-    metadata: {
-      topic: insight.topic,
-      category: insight.category,
-      notion_page_id: insight.notion_page_id,
-    },
-  };
-
-  let record: InsightRecord;
+  const pool = getPool();
+  const createdAt = new Date().toISOString();
+  const provenance = 'promotion' as const;
 
   try {
     if (insight.supersedes_id) {
       // Create new version (supersedes existing)
       console.log('[knowledge-promotion] Creating new version superseding:', insight.supersedes_id);
-      record = await createInsightVersion(
-        insight.id,
-        insight.content,
-        insight.confidence,
-        insight.group_id,
-        insightPayload.metadata
+
+      // Get the previous version's details
+      const prevResult = await pool.query<{ version: number }>(
+        'SELECT version FROM graph_memories WHERE id = $1 AND group_id = $2',
+        [insight.supersedes_id, insight.group_id]
       );
+
+      if (prevResult.rows.length === 0) {
+        throw new KnowledgePromotionError(insight.id, new Error(`Previous insight not found: ${insight.supersedes_id}`));
+      }
+
+      const newVersion = (prevResult.rows[0].version ?? 1) + 1;
+
+      // Insert new version
+      await pool.query(
+        `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, false)`,
+        [insight.id, insight.group_id, insight.source, insight.content, insight.confidence, provenance, newVersion, createdAt]
+      );
+
+      // Create SUPERSEDES relationship
+      await pool.query(
+        `INSERT INTO graph_supersedes (newer_id, superseded_id, group_id, created_at)
+         VALUES ($1, $2, $3, $4::timestamptz)`,
+        [insight.id, insight.supersedes_id, insight.group_id, createdAt]
+      );
+
+      console.log('[knowledge-promotion] Promotion complete:', {
+        insight_id: insight.id,
+        version: newVersion,
+      });
+
+      return insight.id;
     } else {
       // Create new insight (version 1)
       console.log('[knowledge-promotion] Creating new insight:', insight.id);
-      record = await createInsight(insightPayload);
+
+      await pool.query(
+        `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
+         VALUES ($1, $2, $3, $4, $5, $6, 1, $7::timestamptz, false)`,
+        [insight.id, insight.group_id, insight.source, insight.content, insight.confidence, provenance, createdAt]
+      );
+
+      console.log('[knowledge-promotion] Promotion complete:', {
+        insight_id: insight.id,
+        version: 1,
+      });
+
+      return insight.id;
     }
   } catch (err) {
-    if (err instanceof Neo4jPromotionError) throw err;
-    throw new Neo4jPromotionError(insight.id, err instanceof Error ? err : new Error(String(err)));
+    if (err instanceof KnowledgePromotionError) throw err;
+    throw new KnowledgePromotionError(insight.id, err instanceof Error ? err : new Error(String(err)));
   }
-
-  console.log('[knowledge-promotion] Neo4j promotion complete:', {
-    neo4j_id: record.id,
-    version: record.version,
-    status: record.status,
-  });
-
-  return record.id;
 }
 
 /**
  * Create CONTRIBUTED relationship between Agent and Insight
- * 
+ *
  * Links the agent who proposed this insight to the knowledge node.
- * 
+ * Uses PostgreSQL graph_structural_nodes + adjacency table.
+ *
  * @param agentId - Agent ID
- * @param insightId - Neo4j insight ID
+ * @param insightId - Insight ID
  * @param confidence - Confidence score
  * @param groupId - Tenant identifier
  */
@@ -809,18 +841,19 @@ export async function linkInsightToAgent(
   });
 
   try {
-    const { writeTransaction } = await import("@/lib/neo4j/connection");
+    const pool = getPool();
 
-    await writeTransaction((tx) =>
-      tx.run(
-        `MATCH (a:Agent {id: $agentId, group_id: $groupId})
-         MATCH (i:Memory {id: $insightId})
-         MERGE (a)-[r:CONTRIBUTED]->(i)
-         SET r.confidence = $confidence,
-             r.linked_at = datetime(),
-             r.group_id = $groupId`,
-        { agentId, insightId, confidence, groupId }
-      )
+    await pool.query(
+      `INSERT INTO graph_structural_edges (source_id, target_id, edge_type, group_id, props, created_at)
+       SELECT
+         (SELECT node_id FROM graph_structural_nodes WHERE label = 'Agent' AND group_id = $1 AND props->>'id' = $2 LIMIT 1),
+         $3,
+         'CONTRIBUTED',
+         $1,
+         $4::jsonb,
+         NOW()
+       WHERE EXISTS (SELECT 1 FROM graph_memories WHERE id = $3 AND group_id = $1)`,
+      [groupId, agentId, insightId, JSON.stringify({ confidence, linked_at: new Date().toISOString() })]
     );
 
     console.log('[knowledge-promotion] Successfully linked insight to agent:', {
@@ -828,7 +861,7 @@ export async function linkInsightToAgent(
       insight_id: insightId,
     });
   } catch (error) {
-    // Non-fatal: Neo4j link failure should not block promotion
+    // Non-fatal: link failure should not block promotion
     console.error('[knowledge-promotion] Failed to link insight to agent (non-fatal):', {
       agent_id: agentId,
       insight_id: insightId,

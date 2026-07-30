@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { forbiddenResponse, getAuthUser, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
-import { readTransaction } from "@/lib/neo4j/connection"
 import { getPool } from "@/lib/postgres/connection"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 
@@ -17,8 +16,6 @@ import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-
  *   - stats=true (optional, returns only counts, no nodes/edges)
  * Response (200 OK):
  *   { nodes: [], edges: [], total_edges: number }
- * Response (206 Partial Content + Warning header):
- *   Degraded mode — Neo4j unavailable, returns empty arrays but valid shape
  * Response (400 Bad Request):
  *   Missing or invalid group_id
  * Response (405 Method Not Allowed):
@@ -114,17 +111,6 @@ async function loadPostgresEventGraph(groupId: string, statsOnly: boolean) {
   }
 }
 
-function nodeType(labels: string[]): string {
-  const joined = labels.join(" ").toLowerCase()
-  if (joined.includes("agent")) return "agent"
-  if (joined.includes("project")) return "project"
-  if (joined.includes("insight")) return "insight"
-  if (joined.includes("outcome")) return "outcome"
-  if (joined.includes("event") || joined.includes("trace")) return "event"
-  if (joined.includes("system")) return "system"
-  return "memory"
-}
-
 function edgeLabel(type: string): "performed" | "resulted_in" | "generated" | "applies_to" | "connected_to" | "caused_by" {
   const normalized = type.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")
   return EDGE_LABELS.has(normalized) ? normalized as ReturnType<typeof edgeLabel> : "connected_to"
@@ -139,7 +125,7 @@ export async function GET(request: NextRequest) {
   // Resolve group_id from x-allura-group-id header (primary) or query param (fallback)
   const authUser = getAuthUser(request)
   const { searchParams } = new URL(request.url)
-  
+
   // Primary: header-based scoping
   const headerGroupId = request.headers.get("x-allura-group-id")
   // Fallback: query parameter
@@ -167,31 +153,28 @@ export async function GET(request: NextRequest) {
   const statsOnly = searchParams.get("stats") === "true"
 
   try {
-    // Execute Neo4j query
+    const pool = getPool()
+
     if (statsOnly) {
+      // Return counts only
       const [nodeCountResult, edgeCountResult] = await Promise.all([
-        readTransaction(async (tx) => {
-          return await tx.run(
-            `MATCH (node)
-             WHERE node.group_id = $groupId
-             RETURN count(node) AS total`,
-            { groupId }
-          )
-        }),
-        readTransaction(async (tx) => {
-          return await tx.run(
-            `MATCH (source)-[relationship]->(target)
-             WHERE source.group_id = $groupId AND target.group_id = $groupId
-             RETURN count(relationship) AS total`,
-            { groupId }
-          )
-        }),
+        pool.query<{ total: string }>(
+          `SELECT COUNT(*) AS total
+           FROM graph_structural_nodes
+           WHERE group_id = $1`,
+          [groupId]
+        ),
+        pool.query<{ total: string }>(
+          `SELECT COUNT(*) AS total
+           FROM graph_structural_edges
+           WHERE group_id = $1`,
+          [groupId]
+        ),
       ])
 
-      const totalNodes = nodeCountResult.records[0]?.get("total")?.toNumber?.() ?? 0
-      const totalEdges = edgeCountResult.records[0]?.get("total")?.toNumber?.() ?? 0
+      const totalNodes = parseInt(nodeCountResult.rows[0]?.total ?? "0", 10)
+      const totalEdges = parseInt(edgeCountResult.rows[0]?.total ?? "0", 10)
 
-        // Return stats-only response (nodes: [], edges: [])
       return NextResponse.json({
         nodes: [],
         edges: [],
@@ -200,108 +183,109 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const [countResult, result] = await Promise.all([
-      readTransaction(async (tx) => {
-        return await tx.run(
-          `MATCH (source)-[relationship]->(target)
-           WHERE source.group_id = $groupId AND target.group_id = $groupId
-           RETURN count(relationship) AS total`,
-          { groupId }
-        )
-      }),
-      readTransaction(async (tx) => {
-        return await tx.run(
-          `MATCH (source)-[relationship]->(target)
-           WHERE source.group_id = $groupId AND target.group_id = $groupId
-           RETURN source, relationship, target
-           LIMIT 150`,
-          { groupId }
-        )
-      }),
-    ])
+    // Fetch edges with source and target nodes
+    const edgeResult = await pool.query<{
+      edge_id: string;
+      source_id: string;
+      source_label: string;
+      source_props: Record<string, unknown>;
+      target_id: string;
+      target_label: string;
+      target_props: Record<string, unknown>;
+      edge_type: string;
+      edge_props: Record<string, unknown>;
+    }>(
+      `SELECT
+         e.edge_id, e.edge_type, e.props AS edge_props,
+         sn.node_id AS source_id, sn.label AS source_label, sn.props AS source_props,
+         tn.node_id AS target_id, tn.label AS target_label, tn.props AS target_props
+       FROM graph_structural_edges e
+       JOIN graph_structural_nodes sn ON e.source_id = sn.node_id
+       JOIN graph_structural_nodes tn ON e.target_id = tn.node_id
+       WHERE e.group_id = $1
+       LIMIT 150`,
+      [groupId]
+    )
 
-    const totalEdges = countResult.records[0]?.get("total")?.toNumber?.() ?? 0
+    // Count total edges
+    const countResult = await pool.query<{ total: string }>(
+      `SELECT COUNT(*) AS total FROM graph_structural_edges WHERE group_id = $1`,
+      [groupId]
+    )
+    const totalEdges = parseInt(countResult.rows[0]?.total ?? "0", 10)
 
     const nodeMap = new Map<string, { id: string; label: string; type: string; metadata: Record<string, unknown> }>()
     const edges: Array<{ id: string; source: string; target: string; label: ReturnType<typeof edgeLabel>; metadata: Record<string, unknown> }> = []
 
-    for (const record of result.records) {
-      const source = record.get("source")
-      const target = record.get("target")
-      const relationship = record.get("relationship")
-      const sourceProps = source.properties as Record<string, unknown>
-      const targetProps = target.properties as Record<string, unknown>
-      const sourceId = String(sourceProps.id ?? source.elementId)
-      const targetId = String(targetProps.id ?? target.elementId)
-      nodeMap.set(sourceId, {
-        id: sourceId,
-        label: String(sourceProps.title ?? sourceProps.name ?? sourceProps.content ?? sourceId).slice(0, 80),
-        type: nodeType(source.labels as string[]),
-        metadata: {},
-      })
-      nodeMap.set(targetId, {
-        id: targetId,
-        label: String(targetProps.title ?? targetProps.name ?? targetProps.content ?? targetId).slice(0, 80),
-        type: nodeType(target.labels as string[]),
-        metadata: {},
-      })
+    for (const row of edgeResult.rows) {
+      const sourceId = row.source_id
+      const targetId = row.target_id
+
+      const sourceProps = row.source_props || {}
+      const targetProps = row.target_props || {}
+
+      if (!nodeMap.has(sourceId)) {
+        nodeMap.set(sourceId, {
+          id: sourceId,
+          label: String(sourceProps.name ?? sourceProps.title ?? sourceProps.content ?? sourceId).slice(0, 80),
+          type: (row.source_label || "memory").toLowerCase(),
+          metadata: {},
+        })
+      }
+      if (!nodeMap.has(targetId)) {
+        nodeMap.set(targetId, {
+          id: targetId,
+          label: String(targetProps.name ?? targetProps.title ?? targetProps.content ?? targetId).slice(0, 80),
+          type: (row.target_label || "memory").toLowerCase(),
+          metadata: {},
+        })
+      }
+
       edges.push({
-        id: String(relationship.properties?.id ?? relationship.elementId),
+        id: row.edge_id,
         source: sourceId,
         target: targetId,
-        label: edgeLabel(relationship.type),
-        metadata: { relationship_type: relationship.type },
+        label: edgeLabel(row.edge_type),
+        metadata: { relationship_type: row.edge_type },
       })
     }
 
-    const response = NextResponse.json({ nodes: Array.from(nodeMap.values()), edges, total_edges: totalEdges })
-    // Mark degraded when Neo4j is unavailable (handled by Neo4j error handler)
-    return response
+    return NextResponse.json({
+      nodes: Array.from(nodeMap.values()),
+      edges,
+      total_edges: totalEdges,
+    })
   } catch (error) {
     // Log the error for debugging
     console.error("Failed to fetch memory graph:", error)
 
     try {
       const fallback = await loadPostgresEventGraph(groupId, statsOnly)
-      const response = NextResponse.json({
+      return NextResponse.json({
         ...fallback,
         degraded: true,
         source: "postgres_events",
-        warning: "Neo4j graph is unavailable; returning scoped PostgreSQL event graph fallback.",
       })
-      const warningMsg = error instanceof Error
-        ? `299 Allura "${error.message.replace(/"/g, "'")}; postgres_event_graph_fallback"`
-        : '299 Allura "neo4j_unavailable; postgres_event_graph_fallback"'
-      response.headers.set("Warning", warningMsg)
-      return response
     } catch (fallbackError) {
       console.error("Failed to fetch PostgreSQL event graph fallback:", fallbackError)
     }
 
-    // Return 200 with degraded=true and empty data instead of 500
-    // This is the key change: degraded response instead of server error
-    const response = NextResponse.json(
-      { 
-        nodes: [], 
-        edges: [], 
+    // Return 200 with degraded=true and empty data
+    return NextResponse.json(
+      {
+        nodes: [],
+        edges: [],
         total_edges: 0,
         degraded: true,
         error: error instanceof Error ? error.message : "Failed to fetch memory graph"
       },
       { status: 200 }
     )
-    // Add Warning header to indicate degraded state
-    const warningMsg = error instanceof Error 
-      ? `299 Allura "${error.message.replace(/"/g, "'")}"` 
-      : '299 Allura "neo4j_unavailable"'
-    response.headers.set("Warning", warningMsg)
-    return response
   }
 }
 
 /**
  * Reject non-GET methods with 405 Method Not Allowed
- * (Story 2.8 — Pike Interface Gate: read-only GET only)
  */
 export async function POST() {
   return NextResponse.json({ error: "Method not allowed. Use GET." }, { status: 405 })

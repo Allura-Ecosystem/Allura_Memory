@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
-import { getInsightHistory } from "@/lib/neo4j/client"
+import { getPool } from "@/lib/postgres/connection"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 
 /**
@@ -42,7 +42,27 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       throw error
     }
 
-    const history = await getInsightHistory(id, group_id)
+    // Query version history from PostgreSQL (graph_memories + graph_supersedes)
+    const pool = getPool()
+    const result = await pool.query(
+      `SELECT m.id, m.group_id, m.content, m.score, m.version, m.created_at,
+              m.provenance, m.user_id, m.deprecated
+       FROM graph_memories m
+       WHERE m.id = $1
+         AND (m.group_id = $2 OR m.group_id = 'global')
+       ORDER BY m.version DESC`,
+      [id, group_id]
+    )
+
+    const history = result.rows.map((row: Record<string, unknown>) => ({
+      insight_id: row.id,
+      content: row.content,
+      confidence: row.score,
+      version: row.version,
+      created_at: row.created_at,
+      status: row.deprecated ? "deprecated" : "active",
+      provenance: row.provenance,
+    }))
 
     return NextResponse.json({ history })
   } catch (error) {

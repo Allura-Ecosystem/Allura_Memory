@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
-import { listInsights } from "@/lib/neo4j/client"
+import { getPool } from "@/lib/postgres/connection"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 
 /**
@@ -54,7 +54,6 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50")
     const offset = parseInt(searchParams.get("offset") || "0")
     const status = searchParams.get("status") as "active" | "superseded" | "deprecated" | "reverted" | undefined
-    const source_type = searchParams.get("source_type") || undefined
     const min_confidence = searchParams.get("min_confidence")
       ? parseFloat(searchParams.get("min_confidence")!)
       : undefined
@@ -80,22 +79,74 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid until date. Use ISO 8601 format." }, { status: 400 })
     }
 
-    const result = await listInsights({
-      group_id,
-      limit,
-      offset,
-      status,
-      source_type,
-      min_confidence,
-      max_confidence,
-      since,
-      until,
-    })
+    // Build query for graph_memories
+    const pool = getPool()
+    const params: unknown[] = [group_id]
+    const conditions = ["(group_id = $1 OR group_id = 'global')"]
+    let paramIdx = 2
+
+    if (status === "active") {
+      conditions.push("deprecated = false")
+    } else if (status === "deprecated") {
+      conditions.push("deprecated = true")
+    }
+
+    if (min_confidence !== undefined) {
+      params.push(min_confidence)
+      conditions.push(`score >= $${paramIdx}`)
+      paramIdx++
+    }
+    if (max_confidence !== undefined) {
+      params.push(max_confidence)
+      conditions.push(`score <= $${paramIdx}`)
+      paramIdx++
+    }
+    if (since) {
+      params.push(since)
+      conditions.push(`created_at >= $${paramIdx}::timestamptz`)
+      paramIdx++
+    }
+    if (until) {
+      params.push(until)
+      conditions.push(`created_at <= $${paramIdx}::timestamptz`)
+      paramIdx++
+    }
+
+    params.push(limit)
+    const limitIdx = paramIdx
+    paramIdx++
+    params.push(offset)
+    const offsetIdx = paramIdx
+
+    const query = `
+      SELECT id, group_id, content, score, version, created_at, provenance, user_id, deprecated
+      FROM graph_memories
+      WHERE ${conditions.join(" AND ")}
+      ORDER BY score DESC, created_at DESC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `
+
+    const result = await pool.query(query, params)
+
+    const items = result.rows.map((row: Record<string, unknown>) => ({
+      insight_id: row.id,
+      content: row.content,
+      confidence: row.score,
+      version: row.version,
+      created_at: row.created_at,
+      status: row.deprecated ? "deprecated" : "active",
+      provenance: row.provenance,
+    }))
+
+    // Get total count
+    const countQuery = `SELECT COUNT(*) as total FROM graph_memories WHERE ${conditions.join(" AND ")}`
+    const countResult = await pool.query(countQuery, params.slice(0, paramIdx - 2))
+    const total = parseInt(countResult.rows[0].total as string, 10)
 
     return NextResponse.json({
-      insights: result.items,
-      total: result.total,
-      has_more: result.has_more,
+      insights: items,
+      total,
+      has_more: offset + items.length < total,
     })
   } catch (error) {
     console.error("Failed to fetch insights:", error)

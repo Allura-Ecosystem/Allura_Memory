@@ -19,14 +19,14 @@ export interface EntityNodeData {
 export type EntityNode = Node<EntityNodeData, "entity">
 
 const TYPE_CONFIG: Record<EntityType, { bg: string; textColor: string; initials: (label: string) => string }> = {
-  person:  { bg: "var(--allura-blue)",   textColor: "#fff", initials: initials2 },
-  org:     { bg: "var(--allura-orange)", textColor: "#fff", initials: initials2 },
-  insight: { bg: "var(--allura-green)",  textColor: "#fff", initials: () => "" },
-  memory:  { bg: "var(--allura-green)",  textColor: "#fff", initials: () => "" },
-  agent:   { bg: "#7C3AED",             textColor: "#fff", initials: initials2 },
-  project: { bg: "var(--allura-gold)",   textColor: "#fff", initials: initials2 },
-  event:   { bg: "var(--allura-gray-500)", textColor: "#fff", initials: initials2 },
-  system:  { bg: "var(--allura-charcoal)", textColor: "#fff", initials: initials2 },
+  person:  { bg: "var(--allura-blue)",   textColor: "var(--allura-white)", initials: initials2 },
+  org:     { bg: "var(--allura-orange)", textColor: "var(--allura-white)", initials: initials2 },
+  insight: { bg: "var(--allura-green)",  textColor: "var(--allura-white)", initials: () => "" },
+  memory:  { bg: "var(--allura-green)",  textColor: "var(--allura-white)", initials: () => "" },
+  agent:   { bg: "var(--allura-type-project)", textColor: "var(--allura-white)", initials: initials2 },
+  project: { bg: "var(--c-gold)",   textColor: "var(--allura-white)", initials: initials2 },
+  event:   { bg: "var(--allura-gray-500)", textColor: "var(--allura-white)", initials: initials2 },
+  system:  { bg: "var(--allura-charcoal)", textColor: "var(--allura-white)", initials: initials2 },
 }
 
 const TYPE_BADGE: Record<EntityType, { label: string; bg: string; color: string }> = {
@@ -34,8 +34,8 @@ const TYPE_BADGE: Record<EntityType, { label: string; bg: string; color: string 
   org:     { label: "Org",      bg: "rgba(255,90,46,.08)",   color: "var(--allura-orange)" },
   insight: { label: "Insight",  bg: "rgba(17,148,90,.08)",   color: "var(--allura-green)" },
   memory:  { label: "Memory",   bg: "rgba(17,148,90,.08)",   color: "var(--allura-green)" },
-  agent:   { label: "Agent",    bg: "rgba(124,58,237,.08)",  color: "#7C3AED" },
-  project: { label: "Project",  bg: "rgba(217,154,23,.12)",  color: "var(--allura-gold)" },
+  agent:   { label: "Agent",    bg: "rgba(124,58,237,.08)",  color: "var(--allura-type-project)" },
+  project: { label: "Project",  bg: "rgba(217,154,23,.12)",  color: "var(--c-gold)" },
   event:   { label: "Event",    bg: "rgba(102,112,133,.08)", color: "var(--allura-gray-500)" },
   system:  { label: "System",   bg: "rgba(17,24,39,.08)",    color: "var(--allura-charcoal)" },
 }
@@ -48,7 +48,7 @@ function initials2(label: string): string {
 
 function MemoryIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--allura-white)" strokeWidth="2" strokeLinecap="round">
       <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
       <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
     </svg>

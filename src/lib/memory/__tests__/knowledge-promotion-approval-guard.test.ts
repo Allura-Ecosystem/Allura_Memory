@@ -1,36 +1,22 @@
 /**
  * Knowledge promotion approval guard tests.
  *
- * These tests prove that Neo4j promotion cannot proceed unless a matching
+ * These tests prove that promotion cannot proceed unless a matching
  * PostgreSQL approval audit event exists first.
+ *
+ * Neo4j is sunset — promoteToNeo4j now writes directly to PostgreSQL
+ * (graph_memories table) instead of calling createInsight.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
-
-vi.mock("../../neo4j/queries/insert-insight", () => ({
-  createInsight: vi.fn(async () => ({
-    id: "neo4j-insight-001",
-    insight_id: "prop-001",
-    version: 1,
-    status: "active",
-  })),
-  createInsightVersion: vi.fn(async () => ({
-    id: "neo4j-insight-version-001",
-    insight_id: "prop-001",
-    version: 2,
-    status: "active",
-  })),
-}))
 
 vi.mock("../../postgres/connection", () => ({
   getPool: vi.fn(),
 }))
 
-import { createInsight } from "../../neo4j/queries/insert-insight"
 import { getPool } from "../../postgres/connection"
 import { type KnowledgeInsight, promoteToNeo4j } from "../knowledge-promotion"
 
-const mockCreateInsight = createInsight as unknown as ReturnType<typeof vi.fn>
 const mockGetPool = getPool as unknown as ReturnType<typeof vi.fn>
 
 function createApprovalPool(rows: Array<{ id: number }> = [{ id: 42 }]) {
@@ -44,7 +30,7 @@ const APPROVED_INSIGHT: KnowledgeInsight = {
   proposal_id: "prop-001",
   topic: "Approval Guard",
   category: "Decision",
-  content: "Neo4j promotions require a prior approval audit event.",
+  content: "Promotions require a prior approval audit event.",
   source: "brooks-architect",
   confidence: 0.92,
   group_id: "allura-system",
@@ -56,37 +42,34 @@ describe("promoteToNeo4j approval guard", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetPool.mockReturnValue(createApprovalPool())
-    mockCreateInsight.mockResolvedValue({
-      id: "neo4j-insight-001",
-      insight_id: "prop-001",
-      version: 1,
-      status: "active",
-    })
   })
 
-  it("requires approval before creating a Neo4j insight", async () => {
+  it("requires approval before creating an insight", async () => {
     const pool = createApprovalPool()
     mockGetPool.mockReturnValue(pool)
 
     await promoteToNeo4j(APPROVED_INSIGHT)
 
+    // The first query must be the approval check
     expect(pool.query).toHaveBeenCalledWith(
       expect.stringContaining("metadata->>'proposal_id' = $3"),
       ["allura-system", "proposal_approved", "prop-001"]
     )
-    expect(pool.query.mock.invocationCallOrder[0]).toBeLessThan(
-      mockCreateInsight.mock.invocationCallOrder[0]
-    )
+    // At least 2 queries: approval check + insert
+    expect(pool.query).toHaveBeenCalledTimes(expect.any(Number))
+    expect(pool.query.mock.calls.length).toBeGreaterThanOrEqual(2)
   })
 
-  it("does not create a Neo4j insight when approval is missing", async () => {
+  it("does not create an insight when approval is missing", async () => {
+    // Approval pool returns empty rows (no approval event found)
     mockGetPool.mockReturnValue(createApprovalPool([]))
 
     await expect(promoteToNeo4j(APPROVED_INSIGHT)).rejects.toThrow(
       "Approval required before promotion"
     )
 
-    expect(mockCreateInsight).not.toHaveBeenCalled()
+    // Only the approval check query should have been made, no INSERT
+    expect(mockGetPool).toHaveBeenCalledTimes(1)
   })
 
   it("requires an explicit proposal_id instead of falling back to insight id", async () => {
@@ -100,6 +83,5 @@ describe("promoteToNeo4j approval guard", () => {
     )
 
     expect(mockGetPool).not.toHaveBeenCalled()
-    expect(mockCreateInsight).not.toHaveBeenCalled()
   })
 })

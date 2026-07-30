@@ -25,7 +25,7 @@ interface HandoffViewProps {
 // ── Badge helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<HandoffStatus, string> = {
-  pending:      "var(--allura-gold)",
+  pending:      "var(--c-gold)",
   acknowledged: "var(--allura-green)",
   rejected:     "var(--dashboard-error)",
 }

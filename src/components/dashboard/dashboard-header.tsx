@@ -151,7 +151,7 @@ export function DashboardHeader({
               padding: "0 5px",
               borderRadius: 9,
               background: "var(--c-blue)",
-              color: "#fff",
+              color: "var(--allura-white)",
               fontSize: 11,
               fontWeight: 600,
               display: "inline-flex",

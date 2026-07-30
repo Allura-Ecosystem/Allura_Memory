@@ -1,4 +1,4 @@
-import { closeDriver, isDriverHealthy } from "@/lib/neo4j/connection";
+import { closeDriver, isDriverHealthy } from "./lib/neo4j-stub";
 import { closePool, isPoolHealthy } from "@/lib/postgres/connection";
 
 interface HealthSummary {

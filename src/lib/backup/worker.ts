@@ -11,7 +11,6 @@ import { mkdir, writeFile } from "node:fs/promises"
 import { homedir, hostname } from "node:os"
 import { basename, join, resolve } from "node:path"
 import { backupConfig } from "./config"
-import { backupNeo4j } from "./neo4j"
 import { backupPostgres } from "./postgres"
 import { backupSkills } from "./skills"
 import type {
@@ -118,15 +117,11 @@ export function getDefaultConfig(): BackupWorkerConfig {
     encryptionKey: env.BACKUP_ENCRYPTION_KEY || "",
     containers: {
       postgres: env.POSTGRES_CONTAINER || "knowledge-postgres",
-      neo4j: env.NEO4J_CONTAINER || "knowledge-neo4j",
     },
     databases: {
       postgres: env.POSTGRES_DB || "memory",
-      neo4j: env.NEO4J_DATABASE || "neo4j",
     },
     postgresUser: env.POSTGRES_USER || "ronin4life",
-    neo4jUser: env.NEO4J_USER || "neo4j",
-    neo4jPassword: env.NEO4J_PASSWORD || "",
     workspaceRoot: env.WORKSPACE_ROOT || resolve(homedir(), ".openclaw/workspace"),
     skillsDirs: env.SKILLS_DIRS?.split(",") || DEFAULT_WORKSPACE_DIRS,
     configFiles: env.CONFIG_FILES?.split(",") || DEFAULT_CONFIG_FILES,
@@ -212,20 +207,6 @@ export async function runBackup(
             container: config.containers.postgres,
             database: config.databases.postgres,
             user: config.postgresUser,
-            outputDir: backupDir,
-            encryption,
-          })
-          break
-
-        case "neo4j":
-          if (!config.neo4jPassword) {
-            throw new Error("NEO4J_PASSWORD is required for Neo4j backup")
-          }
-          result = await backupNeo4j({
-            container: config.containers.neo4j,
-            database: config.databases.neo4j,
-            user: config.neo4jUser,
-            password: config.neo4jPassword,
             outputDir: backupDir,
             encryption,
           })

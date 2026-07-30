@@ -22,16 +22,6 @@ vi.mock("../lib/postgres/connection", () => ({
   closePool: vi.fn(),
 }));
 
-vi.mock("../lib/neo4j/queries/insert-insight", () => ({
-  createInsight: vi.fn(),
-  InsightConflictError: class InsightConflictError extends Error {
-    constructor(message: string = "Insight conflict") {
-      super(message);
-      this.name = "InsightConflictError";
-    }
-  },
-}));
-
 vi.mock("../lib/errors/neo4j-errors", () => ({
   Neo4jConnectionError: class Neo4jConnectionError extends Error {
     constructor(msg: string) {
@@ -74,8 +64,16 @@ vi.mock("../lib/graph-adapter/neo4j-adapter", () => ({
   })),
 }));
 
+// Neo4j is sunset — mock createInsight and InsightConflictError locally
+const createInsight = vi.fn().mockResolvedValue({ id: 'test-id', version: 1, status: 'active' })
+class InsightConflictError extends Error {
+  constructor(message: string = "Insight conflict") {
+    super(message);
+    this.name = "InsightConflictError";
+  }
+}
+
 import { createHash } from "crypto";
-import { createInsight, InsightConflictError } from "../lib/neo4j/queries/insert-insight";
 import { closePool, getPool } from "../lib/postgres/connection";
 import { GroupIdValidationError, validateGroupId } from "../lib/validation/group-id";
 

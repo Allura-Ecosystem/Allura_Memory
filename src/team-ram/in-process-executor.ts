@@ -26,23 +26,21 @@
  */
 
 import { getPool } from "@/lib/postgres/connection"
-import type { ManagedTransaction } from "@/lib/neo4j/connection"
-import { readTransaction } from "@/lib/neo4j/connection"
 import { validateGroupId } from "@/lib/validation/group-id"
 import type { SkillCall, SkillExecutor, TeamRamSkillName } from "./orchestrator"
 
 // ── Read-Only Guards ─────────────────────────────────────────────────────────
 
 /**
- * Mutation keywords that are forbidden in execute_cypher.
+ * Mutation keywords that are forbidden in raw SQL queries.
  * Matched as whole words (case-insensitive).
  */
-const CYPHER_MUTATION_RE = /\b(CREATE|MERGE|SET|DELETE|REMOVE|DROP|DETACH)\b/i
+const SQL_MUTATION_RE = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE)\b/i
 
-function assertReadOnlyCypher(cypher: string): void {
-  if (CYPHER_MUTATION_RE.test(cypher)) {
+function assertReadOnlySQL(sql: string): void {
+  if (SQL_MUTATION_RE.test(sql)) {
     throw new Error(
-      "execute_cypher: mutation statements (CREATE, MERGE, SET, DELETE, REMOVE, DROP, DETACH) " +
+      "execute_sql: mutation statements (INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, CREATE, GRANT, REVOKE) " +
         "are not allowed — read-only queries only",
     )
   }
@@ -66,7 +64,7 @@ function assertReadOnlySql(query: string): void {
 // --- skill-neo4j-memory / recall_insight ---
 
 /**
- * Search Neo4j for Insight nodes whose content matches the query term,
+ * Search graph_memories for insights whose content matches the query term,
  * scoped to the given group_id. Returns an empty array if no insights exist.
  *
  * Input shape (from orchestrator):
@@ -76,59 +74,45 @@ async function recallInsight(input: Record<string, unknown>): Promise<unknown[]>
   const groupId = validateGroupId(String(input.groupId ?? ""))
   const query = String(input.query ?? "")
   const limit = typeof input.limit === "number" ? input.limit : 10
+  const pool = getPool()
 
-  // Build the WHERE content-filter clause so we avoid passing the empty-string
-  // check into Cypher (avoids float-vs-integer ambiguity with LIMIT and other
-  // potential type-coercion issues with empty-string comparisons).
-  const contentFilter =
-    query.length > 0
-      ? "AND toLower(i.content) CONTAINS toLower($query)"
-      : ""
+  const params: unknown[] = [groupId, limit]
+  let contentFilter = ""
+  if (query.length > 0) {
+    params.unshift(`%${query}%`)
+    contentFilter = "AND content ILIKE $1"
+  }
 
-  const result = await readTransaction(async (tx: ManagedTransaction) => {
-    return tx.run(
-      `
-      MATCH (h:InsightHead {group_id: $groupId})
-      MATCH (i:Insight {id: h.current_id})
-      WHERE i.status = 'active'
-        ${contentFilter}
-      RETURN
-        i.insight_id AS insight_id,
-        i.content    AS content,
-        i.confidence AS confidence,
-        i.topic_key  AS topic_key,
-        i.created_at AS created_at,
-        i.status     AS status
-      ORDER BY i.confidence DESC
-      LIMIT toInteger($limit)
-      `,
-      { groupId, query, limit },
-    )
-  })
+  const paramOffset = query.length > 0 ? 1 : 0
+  const groupParam = paramOffset + 1
+  const limitParam = paramOffset + 2
 
-  return result.records.map((rec) => {
-    const confidence = rec.get("confidence")
-    return {
-      insight_id: rec.get("insight_id") as string | null,
-      content: rec.get("content") as string | null,
-      // Neo4j integer → JS number
-      confidence:
-        typeof confidence === "object" &&
-        confidence !== null &&
-        "toNumber" in (confidence as object)
-          ? (confidence as { toNumber: () => number }).toNumber()
-          : (confidence as number | null),
-      topic_key: rec.get("topic_key") as string | null,
-      created_at: rec.get("created_at"),
-      status: rec.get("status") as string | null,
-    }
-  })
+  const result = await pool.query(
+    `SELECT id AS insight_id, content, score AS confidence,
+            id AS topic_key, created_at, deprecated
+     FROM graph_memories
+     WHERE group_id = $${groupParam}
+       AND deprecated = false
+       ${contentFilter}
+     ORDER BY score DESC
+     LIMIT $${limitParam}`,
+    params
+  )
+
+  return result.rows.map((rec: Record<string, unknown>) => ({
+    insight_id: rec.insight_id,
+    content: rec.content,
+    confidence: rec.confidence,
+    topic_key: rec.topic_key,
+    created_at: rec.created_at,
+    status: rec.deprecated ? "deprecated" : "active",
+  }))
 }
 
 // --- skill-cypher-query / get_schema_info ---
 
 /**
- * Return node labels and relationship types present in the Neo4j database.
+ * Return table names and column info from the PostgreSQL database.
  *
  * Input shape:
  *   { groupId: string }
@@ -140,24 +124,17 @@ async function getSchemaInfo(input: Record<string, unknown>): Promise<{
   nodeLabels: string[]
   relationshipTypes: string[]
 }> {
-  // groupId validated for consistency; schema is global in Neo4j, not tenant-scoped.
   validateGroupId(String(input.groupId ?? ""))
+  const pool = getPool()
 
-  const [labelsResult, relsResult] = await Promise.all([
-    readTransaction((tx: ManagedTransaction) =>
-      tx.run("CALL db.labels() YIELD label RETURN collect(label) AS nodeLabels"),
-    ),
-    readTransaction((tx: ManagedTransaction) =>
-      tx.run(
-        "CALL db.relationshipTypes() YIELD relationshipType " +
-          "RETURN collect(relationshipType) AS relationshipTypes",
-      ),
-    ),
-  ])
+  const tablesResult = await pool.query<{ table_name: string }>(
+    `SELECT table_name FROM information_schema.tables
+     WHERE table_schema = 'public'
+     ORDER BY table_name`,
+  )
 
-  const nodeLabels = (labelsResult.records[0]?.get("nodeLabels") as string[] | null) ?? []
-  const relationshipTypes =
-    (relsResult.records[0]?.get("relationshipTypes") as string[] | null) ?? []
+  const nodeLabels = tablesResult.rows.map((r) => r.table_name)
+  const relationshipTypes: string[] = []
 
   return { nodeLabels, relationshipTypes }
 }
@@ -165,9 +142,8 @@ async function getSchemaInfo(input: Record<string, unknown>): Promise<{
 // --- skill-cypher-query / execute_cypher ---
 
 /**
- * Execute an arbitrary read-only Cypher query against Neo4j.
- * Mutation keywords (CREATE, MERGE, SET, DELETE, REMOVE, DROP, DETACH)
- * cause an immediate rejection before the query reaches the database.
+ * Execute an arbitrary read-only SQL query against PostgreSQL.
+ * Mutation keywords cause an immediate rejection before the query reaches the database.
  *
  * Input shape:
  *   { cypher: string, parameters?: Record<string,unknown>, groupId: string }
@@ -180,25 +156,16 @@ async function executeCypher(input: Record<string, unknown>): Promise<{
   fields: string[]
 }> {
   const groupId = validateGroupId(String(input.groupId ?? ""))
-  const cypher = String(input.cypher ?? "")
-  const parameters = (input.parameters as Record<string, unknown> | undefined) ?? {}
+  const sql = String(input.cypher ?? "")
+  void groupId
 
-  assertReadOnlyCypher(cypher)
+  assertReadOnlySQL(sql)
 
-  const result = await readTransaction((tx: ManagedTransaction) =>
-    tx.run(cypher, { ...parameters, groupId }),
-  )
+  const pool = getPool()
+  const result = await pool.query(sql)
 
-  const fields: string[] =
-    result.records.length > 0 ? (result.records[0].keys as unknown as string[]) : []
-
-  const records = result.records.map((rec) => {
-    const obj: Record<string, unknown> = {}
-    for (const key of rec.keys) {
-      obj[key as string] = rec.get(key as string)
-    }
-    return obj
-  })
+  const fields = result.fields.length > 0 ? result.fields.map((f) => f.name) : []
+  const records = result.rows
 
   return { records, fields }
 }

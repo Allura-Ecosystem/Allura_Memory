@@ -8,7 +8,7 @@
 
 import { spawn } from "child_process";
 import { curatorScore } from "../src/lib/curator/score";
-import { closeDriver, getDriver } from "../src/lib/neo4j/connection";
+import { closeDriver, getDriver } from "./lib/neo4j-stub";
 import { closePool, getPool } from "../src/lib/postgres/connection";
 
 const TRACE_ID = process.argv[2];
@@ -121,15 +121,15 @@ async function curatorTeamPromote(traceId: string) {
             RETURN count(i) as total
           `);
           
-          const total = result.records[0]?.get('total');
+          const total = result.records[0]?.get<number>('total');
           
           return {
             agent: "pike (Analyst)",
             task: "Pattern analysis",
             output: {
               total_insights: total,
-              pattern_detected: total > 10 ? "established_knowledge" : "emerging",
-              recommendation: total > 10 ? "link_to_existing" : "create_new"
+              pattern_detected: total! > 10 ? "established_knowledge" : "emerging",
+              recommendation: total! > 10 ? "link_to_existing" : "create_new"
             }
           };
         } finally {
@@ -146,7 +146,7 @@ async function curatorTeamPromote(traceId: string) {
             RETURN count(p) as exists
           `, { traceId });
 
-          const exists = result.records[0]?.get('exists') > 0;
+          const exists = (result.records[0]?.get<number>('exists') || 0) > 0;
 
           return {
             agent: "brooks (Validator)",

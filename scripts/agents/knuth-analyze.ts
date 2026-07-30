@@ -1138,18 +1138,18 @@ interface DbConnections {
 
 async function getDbConnections(): Promise<DbConnections | null> {
   const postgresUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
-  const neo4jUri = process.env.NEO4J_URI;
+  const neo4jUri: string | null = null;
 
-  if (!postgresUrl || !neo4jUri) {
+  if (!postgresUrl) {
     return null;
   }
 
   const { getPool, closePool } = await import("../../src/lib/postgres/connection");
-  const { getDriver, closeDriver } = await import("../../src/lib/neo4j/connection");
+  const closeDriver = async () => {};
 
   const pgPool = getPool();
-  const neo4jDriver = getDriver();
-  const session = neo4jDriver.session();
+  // Neo4j sunset — PostgreSQL only
+  const session = null as unknown as { run: () => Promise<never[]>; close: () => Promise<void> };
 
   return {
     pgPool,

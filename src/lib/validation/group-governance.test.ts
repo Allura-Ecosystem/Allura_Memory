@@ -1,15 +1,28 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   findOrphanedGroupIds,
   findSimilarGroupIds,
   generateGroupIdGovernanceReport,
-  getNeo4jGroupIdStats,
+  getGraphGroupIdStats,
   getPostgresGroupIdStats,
 } from "./group-governance";
-import { closeDriver, getDriver } from "../neo4j/connection";
-import { createInsight, type InsightInsert } from "../neo4j/queries/insert-insight";
 import { closePool, getPool } from "../postgres/connection";
 import { type EventInsert, insertEvent } from "../postgres/queries/insert-trace";
+
+// Neo4j is sunset — mock the deleted driver and insight functions
+const mockSession = {
+  run: vi.fn().mockResolvedValue({ records: [] }),
+  close: vi.fn().mockResolvedValue(undefined),
+}
+const mockDriver = {
+  session: vi.fn().mockReturnValue(mockSession),
+  close: vi.fn().mockResolvedValue(undefined),
+}
+function getDriver() { return mockDriver }
+async function closeDriver() {}
+async function createInsight(_payload: Record<string, unknown>) {
+  return { id: "stub-insight", insight_id: _payload.insight_id, version: 1, status: "active" }
+}
 
 // E2E gating: skip unless RUN_E2E_TESTS=true (requires live PostgreSQL + Neo4j)
 const describeE2E = process.env.RUN_E2E_TESTS === "true" ? describe : describe.skip;
@@ -164,12 +177,12 @@ describeE2E("group-governance", () => {
   });
 
   // =========================================================================
-  // getNeo4jGroupIdStats Tests
+  // getGraphGroupIdStats Tests
   // =========================================================================
 
-  describe("getNeo4jGroupIdStats", () => {
+  describe("getGraphGroupIdStats", () => {
     it("should return empty stats for no data", async () => {
-      const report = await getNeo4jGroupIdStats();
+      const report = await getGraphGroupIdStats();
 
       const testGroups = report.groups.filter((g) =>
         g.group_id.startsWith("governance-")
@@ -195,7 +208,7 @@ describeE2E("group-governance", () => {
         topic_key: "test.insight",
       });
 
-      const report = await getNeo4jGroupIdStats();
+      const report = await getGraphGroupIdStats();
 
       const project1 = report.groups.find((g) => g.group_id === testProject1);
       const project2 = report.groups.find((g) => g.group_id === testProject2);
@@ -335,7 +348,7 @@ describeE2E("group-governance", () => {
       const postgresGroup = report.postgres.groups.find(
         (g) => g.group_id === testProject1
       );
-      const neo4jGroup = report.neo4j.groups.find(
+      const neo4jGroup = report.graph.groups.find(
         (g) => g.group_id === testProject1
       );
 
@@ -394,7 +407,7 @@ describeE2E("group-governance", () => {
       // Should include groups from both databases
       const allGroups = [
         ...report.postgres.groups.map((g) => g.group_id),
-        ...report.neo4j.groups.map((g) => g.group_id),
+        ...report.graph.groups.map((g) => g.group_id),
       ];
 
       expect(allGroups).toContain("allura-governance-similar-1");

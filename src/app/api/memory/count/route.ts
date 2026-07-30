@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth";
-import { readTransaction } from "@/lib/neo4j/connection";
 import { getPool } from "@/lib/postgres/connection";
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
 
@@ -8,11 +7,8 @@ import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-
  * GET /api/memory/count
  *
  * Returns the total count of unique active memories for a tenant.
- * Queries both PostgreSQL (episodic) and Neo4j (semantic), deduplicates
- * promoted memories, and returns the merged count.
- *
- * This ensures the dashboard "Total Memories" matches what users see
- * in the Memory Viewer page.
+ * Queries PostgreSQL (episodic events + graph_memories), deduplicates,
+ * and returns the merged count.
  *
  * Query params:
  *   group_id  — required
@@ -38,8 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Query both stores in parallel
-    const [pgResult, neo4jResult] = await Promise.all([
+    const [pgResult, graphResult] = await Promise.all([
       // PostgreSQL: Get all memory IDs (episodic layer)
       getPool().query<{ id: string }>(
         `SELECT metadata->>'memory_id' AS id
@@ -50,31 +45,23 @@ export async function GET(request: NextRequest) {
         [groupId, userId],
       ),
 
-      // Neo4j: Get all memory IDs (semantic layer, non-deprecated)
-      readTransaction(async (tx) => {
-        const result = await tx.run(
-          `MATCH (m:Memory)
-           WHERE m.group_id = $groupId
-             AND ($userId IS NULL OR m.user_id = $userId)
-             AND NOT (m)<-[:SUPERSEDES]-()
-           RETURN m.id AS id`,
-          { groupId, userId: userId ?? null }
-        );
-        return { ids: result.records.map((r: { get: (key: string) => string }) => r.get("id")) };
-      }).catch((err) => {
-        console.warn("[degraded] Neo4j unavailable in memory count:", err);
-        return { ids: [] as string[] };
-      }),
+      // graph_memories: Get all memory IDs (semantic layer, non-deprecated)
+      getPool().query<{ id: string }>(
+        `SELECT id FROM graph_memories
+         WHERE group_id = $1
+           AND ($2::text IS NULL OR user_id = $2)
+           AND deprecated = false`,
+        [groupId, userId],
+      ),
     ]);
 
     // Deduplicate: Create a Set of all unique memory IDs
-    // Promoted memories exist in both stores; we count them once
     const uniqueIds = new Set<string>();
     pgResult.rows.forEach((row: { id: string | null }) => {
       if (row.id) uniqueIds.add(row.id);
     });
-    neo4jResult.ids.forEach((id: string) => {
-      if (id) uniqueIds.add(id);
+    graphResult.rows.forEach((row: { id: string | null }) => {
+      if (row.id) uniqueIds.add(row.id);
     });
 
     return NextResponse.json({ count: uniqueIds.size });

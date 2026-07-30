@@ -10,7 +10,6 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { getSession } from "@/lib/neo4j/connection"
 import { captureException } from "@/lib/observability/sentry"
 import { getPool } from "@/lib/postgres/connection"
 
@@ -37,12 +36,6 @@ export interface HealthResponse {
   interface?: "rest"
   dependencies?: {
     postgres: { status: "up" | "down"; required: true; latency_ms?: number }
-    neo4j: { status: "up" | "down"; required: false; latency_ms?: number }
-  }
-  degraded?: {
-    enabled: boolean
-    reason?: "neo4j_unavailable"
-    capabilities_lost?: string[]
   }
   components?: ComponentHealth[]
 }
@@ -72,41 +65,6 @@ async function checkPostgreSQL(): Promise<ComponentHealth> {
       name: "postgresql",
       status: "unhealthy",
       message: `Database connection failed: ${errorMessage}`,
-      latency: Date.now() - start,
-      details: {
-        connected: false,
-        error: errorMessage,
-      },
-    }
-  }
-}
-
-/**
- * Check Neo4j health
- */
-async function checkNeo4j(): Promise<ComponentHealth> {
-  const start = Date.now()
-
-  try {
-    const session = getSession()
-    await session.run("RETURN 1 AS test")
-    await session.close()
-
-    return {
-      name: "neo4j",
-      status: "healthy",
-      message: "Graph database connection verified",
-      latency: Date.now() - start,
-      details: {
-        connected: true,
-      },
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    return {
-      name: "neo4j",
-      status: "unhealthy",
-      message: `Graph database connection failed: ${errorMessage}`,
       latency: Date.now() - start,
       details: {
         connected: false,
@@ -225,14 +183,9 @@ async function checkDiskSpace(): Promise<ComponentHealth> {
  */
 function getOverallStatus(components: ComponentHealth[]): "healthy" | "degraded" | "unhealthy" {
   const postgres = components.find((c) => c.name === "postgresql")
-  const neo4j = components.find((c) => c.name === "neo4j")
 
   if (postgres?.status === "unhealthy") {
     return "unhealthy"
-  }
-
-  if (neo4j?.status === "unhealthy") {
-    return "degraded"
   }
 
   if (components.some((c) => c.status === "degraded")) {
@@ -254,7 +207,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<HealthResp
   const exclude = searchParams.get("exclude")?.split(",").filter(Boolean) || []
 
   // Determine which components to check
-  const allComponents = [checkPostgreSQL, checkNeo4j, checkSessionBootstrap, checkEncodingValidator, checkDiskSpace]
+  const allComponents = [checkPostgreSQL, checkSessionBootstrap, checkEncodingValidator, checkDiskSpace]
 
   let componentsToCheck = allComponents
 
@@ -286,28 +239,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<HealthResp
   }
 
   const postgres = componentResults.find((c) => c.name === "postgresql")
-  const neo4jComponent = componentResults.find((c) => c.name === "neo4j")
 
-  if (postgres && neo4jComponent) {
+  if (postgres) {
     healthResponse.dependencies = {
       postgres: {
         status: postgres.status === "healthy" ? "up" : "down",
         required: true,
         latency_ms: postgres.latency,
       },
-      neo4j: {
-        status: neo4jComponent.status === "healthy" ? "up" : "down",
-        required: false,
-        latency_ms: neo4jComponent.latency,
-      },
-    }
-
-    if (healthResponse.status === "degraded" && neo4jComponent.status === "unhealthy") {
-      healthResponse.degraded = {
-        enabled: true,
-        reason: "neo4j_unavailable",
-        capabilities_lost: ["semantic_search", "semantic_read", "semantic_deprecate"],
-      }
     }
   }
 

@@ -44,7 +44,7 @@ const STATUS_COLORS: Record<WorkItemStatus, string> = {
   backlog:     "var(--allura-gray-500)",
   ready:       "var(--allura-blue)",
   in_progress: "var(--allura-blue)",
-  in_review:   "var(--allura-gold)",
+  in_review:   "var(--c-gold)",
   blocked:     "var(--dashboard-error)",
   done:        "var(--allura-green)",
   cancelled:   "var(--allura-gray-500)",
@@ -63,7 +63,7 @@ const STATUS_LABELS: Record<WorkItemStatus, string> = {
 const PRIORITY_COLORS: Record<WorkItemPriority, string> = {
   critical: "var(--dashboard-error)",
   high:     "var(--allura-orange)",
-  medium:   "var(--allura-gold)",
+  medium:   "var(--c-gold)",
   low:      "var(--allura-gray-500)",
 }
 

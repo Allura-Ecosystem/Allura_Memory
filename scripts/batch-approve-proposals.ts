@@ -10,9 +10,9 @@
 
 import { Pool } from "pg";
 import { createHash, randomUUID } from "crypto";
-import { Neo4jConnectionError, Neo4jPromotionError } from "@/lib/errors/neo4j-errors";
+import { Neo4jConnectionError, Neo4jPromotionError } from "./lib/neo4j-stub";
 import { logApprovalEvent } from "@/lib/memory/approval-audit";
-import { createInsight } from "@/lib/neo4j/queries/insert-insight";
+import { createInsight } from "./lib/neo4j-stub";
 
 const isDryRun = process.argv.includes("--dry-run");
 const limitArg = process.argv.indexOf("--limit");

@@ -312,7 +312,6 @@ export async function validateRestore(
   // ── Check 6: Target containers running (for DB types) ─────────────────
   const requestedTypes = options.types || manifest.types
   const needsPostgres = requestedTypes.includes("postgres") || requestedTypes.includes("full")
-  const needsNeo4j = requestedTypes.includes("neo4j") || requestedTypes.includes("full")
 
   if (needsPostgres) {
     try {
@@ -332,27 +331,6 @@ export async function validateRestore(
         message: "PostgreSQL container (knowledge-postgres) is not running",
       })
       errors.push("PostgreSQL container is not running")
-    }
-  }
-
-  if (needsNeo4j) {
-    try {
-      execSync("docker ps --format '{{.Names}}' | grep -Fx 'knowledge-neo4j'", {
-        encoding: "utf-8",
-        timeout: 5000,
-      })
-      checks.push({
-        name: "neo4j_container_running",
-        passed: true,
-        message: "Neo4j container (knowledge-neo4j) is running",
-      })
-    } catch {
-      checks.push({
-        name: "neo4j_container_running",
-        passed: false,
-        message: "Neo4j container (knowledge-neo4j) is not running",
-      })
-      errors.push("Neo4j container is not running")
     }
   }
 
@@ -505,11 +483,6 @@ export async function runRestore(
           restored.push("postgres")
           break
 
-        case "neo4j":
-          await restoreNeo4j(dateDir, encryptionKey)
-          restored.push("neo4j")
-          break
-
         case "config":
           await restoreConfig(dateDir, encryptionKey)
           restored.push("config")
@@ -602,50 +575,6 @@ async function restorePostgres(dateDir: string, encryptionKey: string): Promise<
   execSync(`rm -f "${gzipPath}" "${sqlPath}"`, { encoding: "utf-8" })
 
   console.log("PostgreSQL restore complete")
-}
-
-async function restoreNeo4j(dateDir: string, encryptionKey: string): Promise<void> {
-  const files = await execSync(`ls -1 "${dateDir}" | grep '^neo4j-.*\.dump\.gz\.enc$'`, {
-    encoding: "utf-8",
-  })
-  const encFile = files.trim().split("\n")[0]
-  if (!encFile) {
-    throw new Error("No Neo4j backup file found")
-  }
-
-  const encPath = resolve(dateDir, encFile)
-  const gzipPath = encPath.replace(".enc", "")
-  const dumpPath = gzipPath.replace(".gz", "")
-
-  // Decrypt
-  execSync(`openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -in "${encPath}" -out "${gzipPath}" -pass pass:"${encryptionKey}"`, {
-    encoding: "utf-8",
-    timeout: 120_000,
-  })
-
-  // Decompress
-  execSync(`gunzip -f "${gzipPath}"`, { encoding: "utf-8", timeout: 120_000 })
-
-  // Restore
-  const container = process.env.NEO4J_CONTAINER || "knowledge-neo4j"
-  const db = process.env.NEO4J_DATABASE || "neo4j"
-
-  console.log(`Stopping Neo4j for restore...`)
-  execSync(`docker exec "${container}" neo4j stop`, { encoding: "utf-8", timeout: 60_000 })
-
-  console.log(`Restoring Neo4j database ${db}...`)
-  execSync(`docker exec "${container}" neo4j-admin database load "${db}" --from-path=/tmp --overwrite-destination=true`, {
-    encoding: "utf-8",
-    timeout: 300_000,
-  })
-
-  console.log("Restarting Neo4j...")
-  execSync(`docker exec "${container}" neo4j start`, { encoding: "utf-8", timeout: 60_000 })
-
-  // Cleanup
-  execSync(`rm -f "${gzipPath}" "${dumpPath}"`, { encoding: "utf-8" })
-
-  console.log("Neo4j restore complete")
 }
 
 async function restoreConfig(dateDir: string, encryptionKey: string): Promise<void> {

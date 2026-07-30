@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createHash } from "crypto"
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
-import { Neo4jConnectionError, Neo4jPromotionError } from "@/lib/errors/neo4j-errors"
+import { KnowledgePromotionError } from "@/lib/memory/knowledge-promotion"
 import { ApprovalAuditAuthorizationError, logApprovalEvent, logProposalNeedsEvidenceEvent, SegregationOfDutiesError } from "@/lib/memory/approval-audit"
 import { captureException } from "@/lib/observability/sentry"
 import { getPool } from "@/lib/postgres/connection"
@@ -491,11 +491,11 @@ export async function POST(request: NextRequest) {
     if (error instanceof SegregationOfDutiesError || error instanceof ApprovalAuditAuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
-    if (error instanceof Neo4jConnectionError || error instanceof Neo4jPromotionError) {
+    if (error instanceof KnowledgePromotionError) {
       captureException(error, {
-        tags: { route: "/api/curator/approve", method: "POST", error_type: "neo4j_unavailable" },
+        tags: { route: "/api/curator/approve", method: "POST", error_type: "promotion_failed" },
       })
-      return NextResponse.json({ error: "Neo4j unavailable" }, { status: 503 })
+      return NextResponse.json({ error: "Knowledge promotion failed" }, { status: 503 })
     }
     captureException(error, { tags: { route: "/api/curator/approve", method: "POST" } })
     console.error("Failed to process curator decision:", error)

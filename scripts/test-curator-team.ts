@@ -7,7 +7,7 @@
  */
 
 import { curatorScore } from "../src/lib/curator/score";
-import { closeDriver, getDriver } from "../src/lib/neo4j/connection";
+import { closeDriver, getDriver } from "./lib/neo4j-stub";
 import { closePool, getPool } from "../src/lib/postgres/connection";
 
 const TRACE_ID = process.argv[2] || "35994";
@@ -107,7 +107,7 @@ async function testCuratorTeam() {
           RETURN count(i) as related_count
         `, { category: trace.event_type });
 
-        const relatedCount = result.records[0]?.get('related_count') || 0;
+        const relatedCount = (result.records[0]?.get<number>('related_count') || 0) as number;
 
         return {
           agent: "pike (Analyst)",
@@ -136,7 +136,7 @@ async function testCuratorTeam() {
           RETURN count(p) as exists
         `, { traceId: TRACE_ID });
 
-        const exists = existingResult.records[0]?.get('exists') > 0;
+        const exists = (existingResult.records[0]?.get<number>('exists') || 0) > 0;
 
         // Check SUPERSEDES chain validity
         const chainResult = await validatorSession.run(`
@@ -145,7 +145,7 @@ async function testCuratorTeam() {
           RETURN count(i) as total_insights
         `);
 
-        const totalInsights = chainResult.records[0]?.get('total_insights');
+        const totalInsights = chainResult.records[0]?.get<number>('total_insights') || 0;
 
         return {
           agent: "brooks (Validator)",

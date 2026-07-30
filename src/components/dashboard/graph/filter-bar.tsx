@@ -15,8 +15,8 @@ const FILTERS: FilterOption[] = [
   { value: "person",  label: "People",   dotColor: "var(--allura-blue)" },
   { value: "org",     label: "Orgs",     dotColor: "var(--allura-orange)" },
   { value: "memory",  label: "Memories", dotColor: "var(--allura-green)" },
-  { value: "agent",   label: "Agents",   dotColor: "#7C3AED" },
-  { value: "project", label: "Projects", dotColor: "var(--allura-gold)" },
+  { value: "agent",   label: "Agents",   dotColor: "var(--allura-type-project)" },
+  { value: "project", label: "Projects", dotColor: "var(--c-gold)" },
 ]
 
 interface FilterBarProps {
@@ -58,7 +58,7 @@ export function FilterBar({ active, onChange }: FilterBarProps) {
                 ? "1px solid var(--allura-blue)"
                 : "1px solid var(--dashboard-border)",
               background: isActive ? "var(--allura-blue)" : "var(--allura-paper)",
-              color: isActive ? "#fff" : "var(--allura-charcoal)",
+              color: isActive ? "var(--allura-white)" : "var(--allura-charcoal)",
             }}
           >
             <span
@@ -66,7 +66,7 @@ export function FilterBar({ active, onChange }: FilterBarProps) {
                 width: "8px",
                 height: "8px",
                 borderRadius: "50%",
-                background: isActive ? "#fff" : f.dotColor,
+                background: isActive ? "var(--allura-white)" : f.dotColor,
                 flexShrink: 0,
               }}
             />

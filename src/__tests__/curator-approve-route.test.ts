@@ -18,24 +18,9 @@ vi.mock("@/lib/postgres/connection", () => ({
   getPool: vi.fn(() => ({ query: queryMock })),
 }))
 
-vi.mock("@/lib/neo4j/queries/insert-insight", () => ({
-  createInsight: vi.fn().mockResolvedValue(undefined),
-  InsightConflictError: class InsightConflictError extends Error {},
-}))
-
-vi.mock("@/lib/neo4j/connection", () => ({
-  getDriver: vi.fn(() => ({
-    session: vi.fn(),
-    close: vi.fn(),
-  })),
-}))
-
-vi.mock("@/lib/graph-adapter/neo4j-adapter", () => ({
-  Neo4jGraphAdapter: class MockNeo4jGraphAdapter {
-    async linkMemoryContext() { return { authored_by: null, relates_to: null } }
-    async close() {}
-  },
-}))
+// Neo4j mocks removed — sunset. createInsight is now in-knowledge-promotion via PG.
+const createInsight = vi.fn().mockResolvedValue(undefined)
+const InsightConflictError = class InsightConflictError extends Error {}
 
 vi.mock("@/lib/observability/sentry", () => ({
   captureException: vi.fn(),
@@ -43,12 +28,11 @@ vi.mock("@/lib/observability/sentry", () => ({
 
 import { POST } from "@/app/api/curator/approve/route"
 import { requireRole } from "@/lib/auth/api-auth"
-import { createInsight } from "@/lib/neo4j/queries/insert-insight"
 import { getPool } from "@/lib/postgres/connection"
 
 beforeEach(() => {
   queryMock.mockReset()
-  ;(createInsight as any).mockClear()
+  createInsight.mockClear()
     ;(requireRole as any).mockReturnValue({ user: { id: "curator-1", role: "curator" }, allowed: true })
   })
 

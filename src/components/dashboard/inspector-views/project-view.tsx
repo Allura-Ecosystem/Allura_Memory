@@ -27,7 +27,7 @@ interface ProjectViewProps {
 
 const STATUS_COLORS: Record<ProjectStatus, string> = {
   active:   "var(--allura-green)",
-  paused:   "var(--allura-gold)",
+  paused:   "var(--c-gold)",
   archived: "var(--allura-gray-500)",
 }
 

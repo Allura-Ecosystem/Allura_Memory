@@ -34,7 +34,7 @@ interface EvidenceViewProps {
 const TYPE_COLORS: Record<EvidencePacketType, string> = {
   general:     "var(--allura-gray-500)",
   gate_result: "var(--allura-blue)",
-  review:      "var(--allura-gold)",
+  review:      "var(--c-gold)",
   approval:    "var(--allura-green)",
   test_result: "var(--allura-blue)",
   audit:       "var(--allura-orange)",

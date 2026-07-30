@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { execSync } from "child_process";
-import { closeDriver, getDriver } from "../src/lib/neo4j/connection";
+import { closeDriver, getDriver } from "./lib/neo4j-stub";
 import { closePool, getPool } from "../src/lib/postgres/connection";
 
 async function promoteInsights() {
@@ -23,11 +23,11 @@ async function promoteInsights() {
     `);
     
     const insights = result.records.map(r => ({
-      id: r.get('id'),
-      summary: r.get('summary'),
-      confidence: r.get('confidence'),
-      traceRef: r.get('traceRef'),
-      sourceType: r.get('sourceType')
+      id: r.get<string>('id'),
+      summary: r.get<string>('summary'),
+      confidence: r.get<number>('confidence'),
+      traceRef: r.get<number>('traceRef'),
+      sourceType: r.get<string>('sourceType')
     }));
     
     console.log(`[Promoter] Found ${insights.length} candidate insights`);

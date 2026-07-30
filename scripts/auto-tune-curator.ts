@@ -6,7 +6,7 @@
  * Agents: curator_tuner, feedback_validator, decision_analyzer
  */
 
-import { closeDriver, getDriver } from "../src/lib/neo4j/connection";
+import { closeDriver, getDriver } from "./lib/neo4j-stub";
 import { closePool, getPool } from "../src/lib/postgres/connection";
 
 interface TuningProposal {
@@ -41,9 +41,9 @@ async function curatorTuner(): Promise<TuningProposal[]> {
     `);
     
     const proposals = result.records.map(r => ({
-      confidence: r.get('confidence'),
-      tier: r.get('tier'),
-      outcome: r.get('outcome')
+      confidence: r.get<number>('confidence'),
+      tier: r.get<string>('tier'),
+      outcome: r.get<string>('outcome')
     }));
     
     console.log(`[curator_tuner] Analyzed ${proposals.length} historical promotions`);

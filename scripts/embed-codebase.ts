@@ -1,7 +1,7 @@
 import { readdir , readFile } from "fs/promises";
 import { join } from "path";
 import { createOllamaEmbeddingManager } from "../src/lib/dedup/embeddings";
-import { closeDriver, getDriver } from "../src/lib/neo4j/connection";
+import { closeDriver, getDriver } from "./lib/neo4j-stub";
 
 async function getTsFiles(dir: string): Promise<string[]> {
   const files: string[] = [];

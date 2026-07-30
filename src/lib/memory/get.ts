@@ -1,167 +1,157 @@
 /**
  * Memory Get Functions
  *
- * Retrieve specific memories from Neo4j knowledge graph
+ * Retrieve specific memories from PostgreSQL (pgvector) knowledge graph
  * with optional history and evidence linkage.
  */
 
+import type { Pool } from "pg"
 import { GetMemoryRequest, GetMemoryResponse, MemorySearchResult } from "./types"
-import { Neo4jConnectionError, Neo4jQueryError } from "../errors/neo4j-errors"
-import { readTransaction } from "../neo4j/connection"
 
-/**
- * Get a specific memory by topic_key
- *
- * @param request - Get parameters
- * @returns Memory with optional history
- * @throws {Neo4jConnectionError} if Neo4j is unreachable
- * @throws {Neo4jQueryError} if the Cypher query fails
- */
-export async function getMemory(request: GetMemoryRequest): Promise<GetMemoryResponse | null> {
-  const { topic_key, group_id, version, include_history = false, include_evidence = false } = request
+// ── PG Pool singleton ─────────────────────────────────────────────────────
 
-  // Build the main query
-  let versionFilter = ""
-  if (version !== undefined) {
-    versionFilter = " AND m.version = $version"
-  }
+let getPgPool: Pool | null = null;
 
-  // Get current version (not superseded)
-  const mainCypher = `
-    MATCH (m)
-    WHERE m.topic_key = $topic_key
-      AND (m.group_id = $group_id OR m.group_id = 'global')
-      AND m.status IN ['active', 'draft', 'testing']
-      ${versionFilter}
-      AND NOT (m)<-[:SUPERSEDES]-()
-    RETURN m.topic_key AS topic_key,
-           m.group_id AS group_id,
-           labels(m)[0] AS type,
-           m.title AS title,
-           m.summary AS summary,
-           m.content AS content,
-           m.confidence AS confidence,
-           m.status AS status,
-           m.created_at AS created_at,
-           m.updated_at AS updated_at,
-           m.version AS version,
-           m.trace_ref AS trace_ref,
-           m.tags AS tags,
-           m.metadata AS metadata
-    LIMIT 1
-  `
-
-  const mainResult = await readTransaction(async (tx) => {
-    const result = await tx.run(mainCypher, {
-      topic_key,
-      group_id,
-      version: version || null,
-    })
-
-    if (result.records.length === 0) {
-      return null
+function getGetPgPool(): Pool {
+  if (!getPgPool) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Pool: PgPool } = require("pg") as { Pool: new (config: Record<string, unknown>) => Pool };
+    const password = process.env.POSTGRES_PASSWORD;
+    if (!password) {
+      throw new Error("POSTGRES_PASSWORD environment variable is required");
     }
-
-    const record = result.records[0]
-    return {
-      id: record.get("topic_key"),
-      type: record.get("type"),
-      topic_key: record.get("topic_key"),
-      title: record.get("title") || undefined,
-      summary: record.get("summary") || undefined,
-      content: record.get("content"),
-      confidence: record.get("confidence") || 0.5,
-      group_id: record.get("group_id"),
-      status: record.get("status") || "active",
-      created_at: record.get("created_at")?.toString() || new Date().toISOString(),
-      updated_at: record.get("updated_at")?.toString() || new Date().toISOString(),
-      version: record.get("version")?.toNumber?.() || 1,
-      superseded_by: undefined,
-      trace_ref: record.get("trace_ref") || undefined,
-      tags: record.get("tags") || [],
-      metadata: record.get("metadata") || {},
-    } as MemorySearchResult
-  })
-
-  if (!mainResult) {
-    return null
+    getPgPool = new PgPool({
+      host: process.env.POSTGRES_HOST || "localhost",
+      port: parseInt(process.env.POSTGRES_PORT || "5432"),
+      database: process.env.POSTGRES_DB || "allura",
+      user: process.env.POSTGRES_USER || "allura",
+      password,
+      connectionTimeoutMillis: 10000,
+      max: 10,
+    });
   }
+  return getPgPool!;
+}
 
-  const response: GetMemoryResponse = {
-    current: mainResult,
-  }
-
-  // Get history if requested
-  if (include_history) {
-    const historyCypher = `
-      MATCH (current {topic_key: $topic_key})-[:SUPERSEDES]->(old)
-      WHERE current.group_id = $group_id OR $group_id = 'global'
-      RETURN old.topic_key AS topic_key,
-             old.group_id AS group_id,
-             labels(old)[0] AS type,
-             old.title AS title,
-             old.summary AS summary,
-             old.content AS content,
-             old.confidence AS confidence,
-             old.status AS status,
-             old.created_at AS created_at,
-             old.updated_at AS updated_at,
-             old.version AS version,
-             old.trace_ref AS trace_ref,
-             old.tags AS tags
-      ORDER BY old.version DESC
-      LIMIT 10
-    `
-
-    const historyResult = await readTransaction(async (tx) => {
-      const result = await tx.run(historyCypher, { topic_key, group_id })
-      return result.records.map((record) => ({
-        id: record.get("topic_key"),
-        type: record.get("type"),
-        topic_key: record.get("topic_key"),
-        title: record.get("title") || undefined,
-        summary: record.get("summary") || undefined,
-        content: record.get("content"),
-        confidence: record.get("confidence") || 0.5,
-        group_id: record.get("group_id"),
-        status: record.get("status") || "active",
-        created_at: record.get("created_at")?.toString() || new Date().toISOString(),
-        updated_at: record.get("updated_at")?.toString() || new Date().toISOString(),
-        version: record.get("version")?.toNumber?.() || 1,
-        superseded_by: topic_key,
-        trace_ref: record.get("trace_ref") || undefined,
-        tags: record.get("tags") || [],
-      })) as MemorySearchResult[]
-    })
-
-    response.history = historyResult
-  }
-
-  // Get evidence if requested and trace_ref exists
-  if (include_evidence && mainResult.trace_ref) {
-    // This would query PostgreSQL for trace evidence
-    // For now, we'll return a placeholder
-    response.evidence = [
-      {
-        id: mainResult.trace_ref,
-        type: "trace",
-        timestamp: mainResult.created_at,
-        summary: "Evidence linked via trace_ref",
-      },
-    ]
-  }
-
-  return response
+function rowToMemorySearchResult(row: {
+  id: string;
+  group_id: string;
+  content: string;
+  score: number;
+  created_at: string;
+  version: number;
+  tags: string[];
+  provenance: string;
+  user_id: string | null;
+  deprecated: boolean;
+}): MemorySearchResult {
+  return {
+    id: row.id,
+    type: "Insight" as const,
+    topic_key: row.id,
+    title: undefined,
+    summary: undefined,
+    content: row.content,
+    confidence: row.score,
+    group_id: row.group_id,
+    status: row.deprecated ? ("deprecated" as const) : ("active" as const),
+    created_at: row.created_at,
+    updated_at: row.created_at,
+    version: row.version,
+    superseded_by: undefined,
+    trace_ref: undefined,
+    tags: row.tags || [],
+    metadata: {},
+  };
 }
 
 /**
- * Get current active version of a memory
+ * Get a specific memory by topic_key (maps to id in PostgreSQL).
+ *
+ * @param request - Get parameters
+ * @returns Memory with optional history
+ */
+export async function getMemory(request: GetMemoryRequest): Promise<GetMemoryResponse | null> {
+  const { topic_key, group_id, version, include_history = false, include_evidence = false } = request;
+  const pool = getGetPgPool();
+
+  let versionFilter = "";
+  const params: unknown[] = [topic_key, group_id];
+  if (version !== undefined) {
+    versionFilter = " AND m.version = $3";
+    params.push(version);
+  }
+
+  // Get current version (not superseded)
+  const result = await pool.query(
+    `SELECT m.id, m.group_id, m.content, m.score, m.created_at,
+            m.version, m.tags, m.provenance, m.user_id, m.deprecated
+     FROM graph_memories m
+     WHERE m.id = $1
+       AND (m.group_id = $2 OR m.group_id = 'global')
+       AND m.deprecated = false
+       ${versionFilter}
+       AND NOT EXISTS (
+         SELECT 1 FROM graph_supersedes s
+         WHERE s.superseded_id = m.id
+       )
+     LIMIT 1`,
+    params
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  const mainResult = rowToMemorySearchResult(result.rows[0] as Record<string, unknown> & {
+    id: string; group_id: string; content: string; score: number;
+    created_at: string; version: number; tags: string[];
+    provenance: string; user_id: string | null; deprecated: boolean;
+  });
+
+  const response: GetMemoryResponse = {
+    current: mainResult,
+  };
+
+  // Get history if requested
+  if (include_history) {
+    const historyResult = await pool.query(
+      `SELECT m.id, m.group_id, m.content, m.score, m.created_at,
+              m.version, m.tags, m.provenance, m.user_id, m.deprecated
+       FROM graph_supersedes s
+       JOIN graph_memories m ON s.superseded_id = m.id
+       WHERE s.newer_id = $1
+         AND (m.group_id = $2 OR m.group_id = 'global')
+       ORDER BY m.version DESC
+       LIMIT 10`,
+      [topic_key, group_id]
+    );
+
+    response.history = historyResult.rows.map((row) => {
+      const r = rowToMemorySearchResult(row as Record<string, unknown> & {
+        id: string; group_id: string; content: string; score: number;
+        created_at: string; version: number; tags: string[];
+        provenance: string; user_id: string | null; deprecated: boolean;
+      });
+      r.superseded_by = topic_key;
+      return r;
+    });
+  }
+
+  // Get evidence if requested (trace_ref not available in current schema)
+  if (include_evidence) {
+    response.evidence = [];
+  }
+
+  return response;
+}
+
+/**
+ * Get current active version of a memory.
  *
  * @param topic_key - Memory identifier
  * @param group_id - Tenant/group identifier
  * @returns Current memory or null
- * @throws {Neo4jConnectionError} if Neo4j is unreachable
- * @throws {Neo4jQueryError} if the Cypher query fails
  */
 export async function getCurrentMemory(topic_key: string, group_id: string): Promise<MemorySearchResult | null> {
   const response = await getMemory({
@@ -169,85 +159,59 @@ export async function getCurrentMemory(topic_key: string, group_id: string): Pro
     group_id,
     include_history: false,
     include_evidence: false,
-  })
+  });
 
-  return response?.current || null
+  return response?.current || null;
 }
 
 /**
- * Get memory history (all versions)
+ * Get memory history (all versions).
  *
  * @param topic_key - Memory identifier
  * @param group_id - Tenant/group identifier
  * @returns Array of historical versions
- * @throws {Neo4jConnectionError} if Neo4j is unreachable
- * @throws {Neo4jQueryError} if the Cypher query fails
  */
 export async function getMemoryHistory(topic_key: string, group_id: string): Promise<MemorySearchResult[]> {
-  const cypher = `
-    MATCH (m {topic_key: $topic_key})
-    WHERE m.group_id = $group_id OR m.group_id = 'global'
-    RETURN m.topic_key AS topic_key,
-           m.group_id AS group_id,
-           labels(m)[0] AS type,
-           m.title AS title,
-           m.summary AS summary,
-           m.content AS content,
-           m.confidence AS confidence,
-           m.status AS status,
-           m.created_at AS created_at,
-           m.updated_at AS updated_at,
-           m.version AS version,
-           m.trace_ref AS trace_ref,
-           m.tags AS tags
-    ORDER BY m.version DESC
-    LIMIT 20
-  `
+  const pool = getGetPgPool();
 
-  const results = await readTransaction(async (tx) => {
-    const result = await tx.run(cypher, { topic_key, group_id })
-    return result.records.map((record) => ({
-      id: record.get("topic_key"),
-      type: record.get("type"),
-      topic_key: record.get("topic_key"),
-      title: record.get("title") || undefined,
-      summary: record.get("summary") || undefined,
-      content: record.get("content"),
-      confidence: record.get("confidence") || 0.5,
-      group_id: record.get("group_id"),
-      status: record.get("status") || "active",
-      created_at: record.get("created_at")?.toString() || new Date().toISOString(),
-      updated_at: record.get("updated_at")?.toString() || new Date().toISOString(),
-      version: record.get("version")?.toNumber?.() || 1,
-      superseded_by: undefined,
-      trace_ref: record.get("trace_ref") || undefined,
-      tags: record.get("tags") || [],
-    }))
-  })
+  const result = await pool.query(
+    `SELECT m.id, m.group_id, m.content, m.score, m.created_at,
+            m.version, m.tags, m.provenance, m.user_id, m.deprecated
+     FROM graph_memories m
+     WHERE m.id = $1
+       AND (m.group_id = $2 OR m.group_id = 'global')
+     ORDER BY m.version DESC
+     LIMIT 20`,
+    [topic_key, group_id]
+  );
 
-  return results as MemorySearchResult[]
+  return result.rows.map((row) =>
+    rowToMemorySearchResult(row as Record<string, unknown> & {
+      id: string; group_id: string; content: string; score: number;
+      created_at: string; version: number; tags: string[];
+      provenance: string; user_id: string | null; deprecated: boolean;
+    })
+  );
 }
 
 /**
- * Check if a topic_key exists
+ * Check if a topic_key exists.
  *
  * @param topic_key - Memory identifier
  * @param group_id - Tenant/group identifier
  * @returns True if memory exists
- * @throws {Neo4jConnectionError} if Neo4j is unreachable
- * @throws {Neo4jQueryError} if the Cypher query fails
  */
 export async function memoryExists(topic_key: string, group_id: string): Promise<boolean> {
-  const cypher = `
-    MATCH (m {topic_key: $topic_key})
-    WHERE m.group_id = $group_id OR m.group_id = 'global'
-    RETURN count(m) > 0 AS exists
-  `
+  const pool = getGetPgPool();
 
-  const result = await readTransaction(async (tx) => {
-    const res = await tx.run(cypher, { topic_key, group_id })
-    return res.records[0]?.get("exists") || false
-  })
+  const result = await pool.query(
+    `SELECT EXISTS(
+       SELECT 1 FROM graph_memories
+       WHERE id = $1
+         AND (group_id = $2 OR group_id = 'global')
+     ) AS exists`,
+    [topic_key, group_id]
+  );
 
-  return Boolean(result)
+  return Boolean(result.rows[0]?.exists);
 }

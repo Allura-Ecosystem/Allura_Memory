@@ -34,10 +34,6 @@ export {
 } from "./postgres"
 
 export {
-  backupNeo4j,
-} from "./neo4j"
-
-export {
   backupConfig,
 } from "./config"
 
