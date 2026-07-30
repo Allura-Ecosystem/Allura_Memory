@@ -152,7 +152,8 @@ async function main() {
   for (const p of proposals) {
     const category = classifyContent(p.content);
     const score = parseFloat(p.score);
-    const eligible = shouldAutoPromote(category, score, p.content, p.group_id);
+    const tenantConfig = await getTenantConfig(p.group_id);
+    const eligible = shouldAutoPromote(category, score, p.content, p.group_id, tenantConfig);
 
     if (!stats.byCategory[category]) stats.byCategory[category] = { promoted: 0, held: 0 };
     if (!stats.byGroup[p.group_id]) stats.byGroup[p.group_id] = { promoted: 0, held: 0 };

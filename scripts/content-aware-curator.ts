@@ -137,10 +137,10 @@ async function main() {
           insight_id: memoryId,
           group_id: p.group_id,
           content: p.content,
-          score: score,
-          tier: p.tier,
-          source: "curator",
-          metadata: { proposal_id: p.id, category, auto_promoted: true },
+          confidence: score,
+          topic_key: "curator.auto-promote",
+          source_type: "promotion",
+          metadata: { proposal_id: p.id, category, auto_promoted: true, tier: p.tier },
         });
 
         // Mark proposal as approved

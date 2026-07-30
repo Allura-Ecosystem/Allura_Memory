@@ -1,16 +1,13 @@
 /**
  * Kernel Target Resolver
  *
- * Maps syscall target strings ("backend:resource") to real PostgreSQL and
- * Neo4j operations.  Called by syscall_mutate / syscall_query once the
+ * Maps syscall target strings ("backend:resource") to real PostgreSQL
+ * operations.  Called by syscall_mutate / syscall_query once the
  * proof-gate and policy checks have passed.
  *
  * Supported targets
  *   pg:events        → PostgreSQL `events` table  (INSERT only — append-only)
  *   pg:memories      → PostgreSQL `memories` table
- *   neo4j:Entity     → Neo4j node write  (MERGE via writeTransaction)
- *   neo4j:Relationship → Neo4j relationship write (writeTransaction)
- *   neo4j:Query      → Neo4j read  (readTransaction)
  */
 
 // Server-only guard
@@ -18,11 +15,6 @@ if (typeof window !== "undefined") {
   throw new Error("server-side only");
 }
 
-import { randomUUID } from "crypto";
-import {
-  readTransaction,
-  writeTransaction,
-} from "@/lib/neo4j/connection";
 import { getPool } from "@/lib/postgres/connection";
 import { validateGroupId } from "@/lib/validation/group-id";
 import { assertRegisteredTenant } from "@/lib/config/tenant-existence";
@@ -83,20 +75,6 @@ function validateIdentifier(name: string): string {
     throw new Error(`Invalid SQL identifier: "${name}"`);
   }
   return name;
-}
-
-const VALID_LABELS = new Set([
-  "Task", "Decision", "Lesson", "Person", "Project", "Tool",
-  "Context", "Agent", "AgentGroup", "Insight", "Event", "Session", "Memory",
-]);
-
-function validateLabel(label: unknown): string {
-  if (typeof label !== "string" || !VALID_LABELS.has(label)) {
-    throw new Error(
-      `Invalid node label: "${String(label)}" — must be one of: ${[...VALID_LABELS].join(", ")}`
-    );
-  }
-  return label;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -306,79 +284,6 @@ async function pgQuery(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NEO4J HANDLERS
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function neo4jMutate(
-  resource: string,
-  op: TargetOperation
-): Promise<ResolveResult> {
-  const data = op.data ?? {};
-  const groupId = requireGroupId(data);
-
-  // Story 22.1: Validate that the group_id is a registered, active tenant.
-  await validateTenantForWrite("neo4j:" + resource, groupId);
-
-  if (resource === "Entity" || resource === "Relationship") {
-    const label = validateLabel(
-      typeof data["label"] === "string" ? data["label"] : resource
-    );
-    const nodeId = (data["node_id"] as string) ?? randomUUID();
-
-    // Build props bag — exclude synthetic fields consumed above
-    const exclude = new Set(["label", "node_id", "group_id"]);
-    const props: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(data)) {
-      if (!exclude.has(k)) props[k] = v;
-    }
-
-    await writeTransaction(async (tx) => {
-      await tx.run(
-        `MERGE (n:${label} {node_id: $node_id, group_id: $group_id}) SET n += $props`,
-        { node_id: nodeId, group_id: groupId, props }
-      );
-    });
-
-    return { success: true };
-  }
-
-  throw new Error(`Unknown neo4j mutation resource: ${resource}`);
-}
-
-async function neo4jQuery(op: TargetOperation): Promise<ResolveResult> {
-  const queryBag = op.query ?? {};
-  requireGroupId(queryBag);
-
-  const label = validateLabel(
-    typeof queryBag["label"] === "string" ? queryBag["label"] : "Memory"
-  );
-  const limit = op.limit ?? 25;
-
-  // Build WHERE conditions from query bag keys (excluding label)
-  const conditionKeys = Object.keys(queryBag).filter((k) => k !== "label");
-  const whereClause =
-    conditionKeys.length > 0
-      ? "WHERE " +
-        conditionKeys.map((k) => `n.${k} = $${k}`).join(" AND ") + " "
-      : "";
-
-  const params: Record<string, unknown> = { limit };
-  for (const k of conditionKeys) {
-    params[k] = queryBag[k];
-  }
-
-  const rows = await readTransaction(async (tx) => {
-    const result = await tx.run(
-      `MATCH (n:${label}) ${whereClause}RETURN n LIMIT $limit`,
-      params
-    );
-    return result.records.map((r) => r.get("n"));
-  });
-
-  return { success: true, rows };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // MAIN EXPORT
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -401,14 +306,7 @@ export async function resolveTarget(op: TargetOperation): Promise<ResolveResult>
     return pgQuery(table, op);
   }
 
-  if (prefix === "neo4j") {
-    if (op.intent === "mutate") {
-      return neo4jMutate(resource, op);
-    }
-    return neo4jQuery(op);
-  }
-
   throw new Error(
-    `Unknown target prefix "${prefix}" in target "${op.target}". Supported prefixes: pg, neo4j`
+    `Unknown target prefix "${prefix}" in target "${op.target}". Supported prefixes: pg`
   );
 }

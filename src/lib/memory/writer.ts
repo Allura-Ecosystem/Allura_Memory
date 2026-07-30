@@ -2,11 +2,8 @@
  * memory() — Allura Memory Write Wrapper (Story 1.7, Slice C migration)
  *
  * The single interface the MemoryOrchestrator uses for all POST-WRITE operations.
- * Builds Cypher from a declarative spec — callers never write raw Cypher.
- *
- * GRAPH_BACKEND selection (Slice C):
- *   GRAPH_BACKEND=neo4j  (default) — routes through readTransaction/writeTransaction
- *   GRAPH_BACKEND=ruvector           — routes through IGraphAdapter + PG structural tables
+ * Routes writes through the kernel syscall layer (default) or the adapter
+ * backend (GRAPH_BACKEND=ruvector fallback for testing).
  *
  * Usage:
  *   const { node_id } = await memory().createEntity({ label: 'Task', props: { ... } })
@@ -26,13 +23,8 @@ if (typeof window !== "undefined") {
 
 import type { Pool } from "pg";
 import { randomUUID } from "crypto";
-import { createGraphAdapter, getGraphBackend } from "@/lib/graph-adapter";
+import { createGraphAdapter } from "@/lib/graph-adapter";
 import type { IGraphAdapter } from "@/lib/graph-adapter";
-import {
-  type ManagedTransaction,
-  readTransaction,
-  writeTransaction,
-} from "@/lib/neo4j/connection";
 import { validateGroupId } from "@/lib/validation/group-id";
 import { syscall_mutate, syscall_query } from "@/kernel/syscalls";
 import type { SyscallContext } from "@/kernel/syscalls";
@@ -165,157 +157,6 @@ function getAdapter(): IGraphAdapter {
     adapterInstance = createGraphAdapter({ pg: pool });
   }
   return adapterInstance;
-}
-
-// ── Neo4j Backend (legacy, GRAPH_BACKEND=neo4j) ───────────────────────────
-
-function buildNeo4jBackend(): MemoryAPI {
-  return {
-    async createEntity({
-      label,
-      props,
-      group_id,
-      relationships,
-    }: CreateEntityInput): Promise<CreateEntityResult> {
-      const validatedGroupId = validateGroupId(group_id);
-
-      const node_id = resolveNodeId(props);
-      const finalProps: Record<string, unknown> = {
-        ...props,
-        node_id,
-        group_id: validatedGroupId,
-        created_at: props.created_at ?? new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      await writeTransaction(async (tx) => {
-        await tx.run(
-          `MERGE (n:${label} {node_id: $node_id}) SET n += $props`,
-          { node_id, props: finalProps }
-        );
-
-        for (const rel of relationships ?? []) {
-          const targetKey = rel.targetKey ?? "node_id";
-          const relPropKeys = Object.keys(rel.props ?? {});
-          const relPropClause =
-            relPropKeys.length > 0
-              ? " {" + relPropKeys.map((k) => `${k}: $rel_${k}`).join(", ") + "}"
-              : "";
-
-          const params: Record<string, unknown> = {
-            node_id,
-            targetId: rel.targetId,
-          };
-          for (const [k, v] of Object.entries(rel.props ?? {})) {
-            params[`rel_${k}`] = v;
-          }
-
-          const pattern =
-            rel.direction === "in"
-              ? `(target)-[:${rel.type}${relPropClause}]->(n)`
-              : `(n)-[:${rel.type}${relPropClause}]->(target)`;
-
-          await tx.run(
-            `MATCH (n:${label} {node_id: $node_id})
-             MATCH (target:${rel.targetLabel} {${targetKey}: $targetId})
-             MERGE ${pattern}`,
-            params
-          );
-        }
-      });
-
-      return { node_id };
-    },
-
-    async createRelationship({
-      fromId,
-      fromLabel,
-      toId,
-      toLabel,
-      type,
-      props,
-    }: CreateRelationshipCallInput): Promise<void> {
-      const propKeys = Object.keys(props ?? {});
-      const relPropClause =
-        propKeys.length > 0
-          ? " {" + propKeys.map((k) => `${k}: $${k}`).join(", ") + "}"
-          : "";
-
-      await writeTransaction(async (tx) => {
-        await tx.run(
-          `MATCH (from:${fromLabel} {node_id: $fromId})
-           MATCH (to:${toLabel} {node_id: $toId})
-           MERGE (from)-[:${type}${relPropClause}]->(to)`,
-          { fromId, toId, ...(props ?? {}) }
-        );
-      });
-    },
-
-    async query<T = Record<string, unknown>>(
-      cypher: string,
-      params?: Record<string, unknown>
-    ): Promise<T[]> {
-      return readTransaction(async (tx) => {
-        const result = await tx.run(cypher, params ?? {});
-        return result.records.map((r) => {
-          const obj: Record<string, unknown> = {};
-          for (const key of r.keys) {
-            const val = r.get(key as string);
-            obj[key as string] = val?.properties ?? val;
-          }
-          return obj as T;
-        });
-      });
-    },
-
-    async search<T = Record<string, unknown>>({
-      label,
-      group_id,
-      props,
-      textMatch,
-      limit = 10,
-    }: SearchInput): Promise<T[]> {
-      const validatedGroupId = validateGroupId(group_id);
-
-      return readTransaction(async (tx) => {
-        const exactMatchClauses: string[] = ["n.group_id = $group_id"];
-        const params: Record<string, unknown> = { group_id: validatedGroupId };
-
-        if (props) {
-          for (const [key, value] of Object.entries(props)) {
-            exactMatchClauses.push(`n.${key} = $${key}`);
-            params[key] = value;
-          }
-        }
-
-        const textMatchClauses: string[] = [];
-        if (textMatch) {
-          for (const [key, value] of Object.entries(textMatch)) {
-            textMatchClauses.push(`n.${key} CONTAINS $text_${key}`);
-            params[`text_${key}`] = value;
-          }
-        }
-
-        const allConditions = [...exactMatchClauses, ...textMatchClauses];
-        const whereClause =
-          allConditions.length > 0 ? `WHERE ${allConditions.join(" AND ")}` : "";
-
-        const cypher = `
-          MATCH (n:${label})
-          ${whereClause}
-          RETURN n
-          LIMIT $limit
-        `;
-        params.limit = limit;
-
-        const result = await tx.run(cypher, params);
-        return result.records.map((r) => {
-          const val = r.get("n");
-          return (val?.properties ?? val) as T;
-        });
-      });
-    },
-  };
 }
 
 // ── Adapter Backend (GRAPH_BACKEND=ruvector) ───────────────────────────────
@@ -601,9 +442,9 @@ function buildKernelBackend(): MemoryAPI {
 /**
  * memory() — returns a MemoryAPI scoped to the current call.
  *
- * Selects backend based on GRAPH_BACKEND env var:
- *   - GRAPH_BACKEND=ruvector → AdapterBackend (IGraphAdapter + PG structural tables)
- *   - GRAPH_BACKEND=neo4j    → Neo4jBackend (readTransaction/writeTransaction)
+ * Routes through the kernel syscall layer by default. When
+ * MEMORY_BYPASS_KERNEL=true, falls back to the adapter backend
+ * (IGraphAdapter + PG structural tables) for testing only.
  *
  * @example
  * const { node_id } = await memory().createEntity({
@@ -635,12 +476,9 @@ export function memory(): MemoryAPI {
     return buildKernelBackend();
   }
 
-  // Fallback: direct DB access (for migration/testing only)
-  const backend = getGraphBackend();
-  if (backend === "ruvector") {
-    return buildAdapterBackend();
-  }
-  return buildNeo4jBackend();
+  // Fallback: direct adapter access (for migration/testing only)
+  // Neo4j direct-driver path removed — PostgreSQL + pgvector only.
+  return buildAdapterBackend();
 }
 
 /**

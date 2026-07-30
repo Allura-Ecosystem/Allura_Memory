@@ -146,7 +146,7 @@ export async function memory_add(request: MemoryAddRequest): Promise<MemoryAddRe
 
   try {
     const { pg, neo4j: neo4jDriver } = await getConnections()
-    const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver })
+    const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
 
     // Write to PostgreSQL (episodic) — wrapped in circuit breaker
     const eventResult = await withCircuitBreaker("postgres", groupId, "memory_add:insert_event", async () =>
@@ -425,7 +425,7 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
   if (ruvectorResults.length < limit) {
     try {
       const { pg, neo4j: neo4jDriver } = await getConnections()
-      const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver })
+      const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
       const graphResults = await graphAdapter.searchMemories({
         query: request.query,
         group_id: groupId,
@@ -568,7 +568,7 @@ async function searchApprovedOnly(
 ): Promise<MemorySearchResponse> {
   try {
     const { pg, neo4j: neo4jDriver } = await getConnections()
-    const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver })
+    const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
 
     const graphResults = await graphAdapter.searchMemories({
       query: request.query,
@@ -638,7 +638,7 @@ export async function memory_get(request: MemoryGetRequest): Promise<MemoryGetRe
 
   try {
     const { pg, neo4j: neo4jDriver } = await getConnections()
-    const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver })
+    const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
 
     // Try graph adapter first (semantic) - secondary store, degradation acceptable
     let getMeta = baseMeta(["postgres", "graph"])
@@ -740,7 +740,7 @@ export async function memory_list(request: MemoryListRequest): Promise<MemoryLis
 
   try {
     const { pg, neo4j: neo4jDriver } = await getConnections()
-    const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver })
+    const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
 
     // Parallel query both stores — no LIMIT/OFFSET; we paginate in application code
     let listMeta = baseMeta(["postgres", "graph"])
@@ -904,7 +904,7 @@ export async function memory_delete(request: MemoryDeleteRequest): Promise<Memor
     // 2. Mark graph node as deprecated (if exists) — secondary store, degradation acceptable
     let deleteMeta = baseMeta(["postgres", "graph"])
     try {
-      const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver })
+      const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
       await withCircuitBreaker("graph", groupId, "memory_delete:mark_deprecated", async () =>
         graphAdapter.softDeleteMemory({ id: request.id, group_id: groupId, deleted_at: deletedAt })
       )
@@ -981,7 +981,7 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
     // 2. Attempt graph adapter SUPERSEDES versioning — circuit-breaker wrapped
     try {
       return await withCircuitBreaker("graph", groupId, "memory_update:supersedes", async () => {
-        const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver })
+        const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
 
         const versionResult = await graphAdapter.getVersion({ id: request.id as MemoryId, group_id: groupId })
 
@@ -1059,7 +1059,7 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
   const queuedAt = new Date().toISOString()
 
   const { pg, neo4j: neo4jDriver } = await getConnections()
-  const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver })
+  const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
 
   // 1. Check if already canonical in graph layer — fails loudly (no silent fallback)
   const canonicalResult = await graphAdapter.checkCanonical({ id: request.id, group_id: groupId })
@@ -1223,7 +1223,7 @@ export async function memory_export(request: MemoryExportRequest): Promise<Memor
   const exportedAt = new Date().toISOString()
 
   const { pg, neo4j: neo4jDriver } = await getConnections()
-  const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver })
+  const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
 
   // Canonical memories from graph layer
   let canonicalMemories: MemoryGetResponse[] = []
@@ -1386,7 +1386,7 @@ export async function memory_restore(request: MemoryRestoreRequest): Promise<Mem
     // 2. Restore in graph layer — remove deprecated flag and SUPERSEDES relationships
     let restoreMeta = baseMeta(["postgres", "graph"])
     try {
-      const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver })
+      const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
       await withCircuitBreaker("graph", groupId, "memory_restore:restore_node", async () =>
         graphAdapter.restoreMemory({ id: request.id, group_id: groupId, restored_at: restoredAt })
       )
@@ -1463,7 +1463,7 @@ export async function memory_list_deleted(request: MemoryListDeletedRequest): Pr
 
   try {
     const { pg, neo4j: neo4jDriver } = await getConnections()
-    const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver })
+    const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
 
     let listMeta = baseMeta(["postgres", "graph"])
 

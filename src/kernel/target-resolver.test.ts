@@ -20,31 +20,8 @@ vi.mock("@/lib/postgres/connection", () => ({
   })),
 }));
 
-vi.mock("@/lib/neo4j/connection", () => ({
-  writeTransaction: vi.fn(async (work: (tx: unknown) => Promise<unknown>) =>
-    work({
-      run: vi.fn().mockResolvedValue({
-        records: [
-          {
-            get: () => ({ properties: { node_id: "n1" } }),
-            keys: ["n"],
-          },
-        ],
-      }),
-    })
-  ),
-  readTransaction: vi.fn(async (work: (tx: unknown) => Promise<unknown>) =>
-    work({
-      run: vi.fn().mockResolvedValue({
-        records: [
-          {
-            get: () => ({ properties: { node_id: "n1" } }),
-            keys: ["n"],
-          },
-        ],
-      }),
-    })
-  ),
+vi.mock("@/lib/config/tenant-existence", () => ({
+  assertRegisteredTenant: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -124,27 +101,7 @@ describe("resolveTarget", () => {
     await expect(resolveTarget(op)).rejects.toThrow("group_id");
   });
 
-  // ── 5. neo4j:Entity insert resolves successfully ──────────────────────────
-  it("neo4j:Entity insert resolves successfully", async () => {
-    const resolveTarget = await getResolver();
-
-    const op: TargetOperation = {
-      intent: "mutate",
-      target: "neo4j:Entity",
-      type: "upsert",
-      data: {
-        group_id: "allura-system",
-        label: "Insight",
-        node_id: "ins-abc123",
-        summary: "Target resolver wired",
-      },
-    };
-
-    const result = await resolveTarget(op);
-    expect(result.success).toBe(true);
-  });
-
-  // ── 6. pg:memories query resolves successfully ────────────────────────────
+  // ── 5. pg:memories query resolves successfully ────────────────────────────
   it("pg:memories query resolves successfully", async () => {
     const resolveTarget = await getResolver();
 
@@ -161,23 +118,7 @@ describe("resolveTarget", () => {
     expect(Array.isArray(result.rows)).toBe(true);
   });
 
-  // ── 7. neo4j:Query read resolves successfully ─────────────────────────────
-  it("should resolve neo4j:Query", async () => {
-    const resolveTarget = await getResolver();
-
-    const op: TargetOperation = {
-      intent: "query",
-      target: "neo4j:Query",
-      query: { group_id: "allura-system", label: "Insight" },
-      limit: 5,
-    };
-
-    const result = await resolveTarget(op);
-    expect(result.success).toBe(true);
-    expect(Array.isArray(result.rows)).toBe(true);
-  });
-
-  // ── 8. Unknown target prefix rejected ────────────────────────────────────
+  // ── 6. Unknown target prefix rejected ────────────────────────────────────
   it("unknown target prefix throws an error containing 'Unknown target'", async () => {
     const resolveTarget = await getResolver();
 

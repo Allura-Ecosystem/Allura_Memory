@@ -168,3 +168,34 @@ epic_22:
       status: done
       owner: "Brooks -> Bellard + Pike"
       status_evidence: "cross-tenant-test.ts (audit engine) creates synthetic tenants, seeds memories, runs 100 queries per pair, verifies zero leakage, cleans up; cross-tenant/route.ts (admin-only GET endpoint); cross-tenant-audit.test.ts (260+ lines, 8 tests) verifies clean run, leak detection, cleanup on error, auth, internal error handling"
+
+epic_23:
+  name: "Neo4j Sunset Completion — Clean Codebase"
+  status: in-progress
+  retrospective: optional
+  stories:
+    - key: "23.1"
+      title: "Fix typecheck errors in canonical-tools.ts"
+      status: ready-for-dev
+      owner: "Brooks -> Woz"
+      status_evidence: ""
+    - key: "23.2"
+      title: "Remove Neo4j fallback tests in writer.test.ts"
+      status: ready-for-dev
+      owner: "Brooks -> Woz"
+      status_evidence: ""
+    - key: "23.3"
+      title: "Fix target-resolver.test.ts failures"
+      status: ready-for-dev
+      owner: "Brooks -> Woz"
+      status_evidence: ""
+    - key: "23.4"
+      title: "Fix token compliance failures"
+      status: ready-for-dev
+      owner: "Brooks -> Woz"
+      status_evidence: ""
+    - key: "23.5"
+      title: "Remove dead Neo4j code"
+      status: ready-for-dev
+      owner: "Brooks -> Woz"
+      status_evidence: ""
