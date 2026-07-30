@@ -25,6 +25,12 @@ export type GraphBackend = "ruvector" | "ruvector-crate"
  */
 export function getGraphBackend(): GraphBackend {
   const value = process.env.GRAPH_BACKEND?.toLowerCase()
+  if (value === "neo4j") {
+    throw new Error(
+      "GRAPH_BACKEND=neo4j is no longer supported. Neo4j has been sunset — " +
+        "use GRAPH_BACKEND=ruvector (default) or GRAPH_BACKEND=ruvector-crate.",
+    )
+  }
   if (value === "ruvector-crate") return "ruvector-crate"
   return "ruvector"
 }

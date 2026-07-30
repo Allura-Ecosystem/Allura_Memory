@@ -761,7 +761,7 @@ export async function promoteToNeo4j(insight: KnowledgeInsight): Promise<string>
       // Create new version (supersedes existing)
       console.log('[knowledge-promotion] Creating new version superseding:', insight.supersedes_id);
 
-      // Get the previous version's details
+      // Get the previous version's details (read before transaction — no write)
       const prevResult = await pool.query<{ version: number }>(
         'SELECT version FROM graph_memories WHERE id = $1 AND group_id = $2',
         [insight.supersedes_id, insight.group_id]
@@ -773,19 +773,34 @@ export async function promoteToNeo4j(insight: KnowledgeInsight): Promise<string>
 
       const newVersion = (prevResult.rows[0].version ?? 1) + 1;
 
-      // Insert new version
-      await pool.query(
-        `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, false)`,
-        [insight.id, insight.group_id, insight.source, insight.content, insight.confidence, provenance, newVersion, createdAt]
-      );
+      // Wrap both INSERTs in a transaction so a failure of the second
+      // (graph_supersedes) rolls back the first (graph_memories), preventing
+      // orphaned memory nodes (W1 fix).
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
 
-      // Create SUPERSEDES relationship
-      await pool.query(
-        `INSERT INTO graph_supersedes (newer_id, superseded_id, group_id, created_at)
-         VALUES ($1, $2, $3, $4::timestamptz)`,
-        [insight.id, insight.supersedes_id, insight.group_id, createdAt]
-      );
+        // Insert new version
+        await client.query(
+          `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, false)`,
+          [insight.id, insight.group_id, insight.source, insight.content, insight.confidence, provenance, newVersion, createdAt]
+        );
+
+        // Create SUPERSEDES relationship
+        await client.query(
+          `INSERT INTO graph_supersedes (newer_id, superseded_id, group_id, created_at)
+           VALUES ($1, $2, $3, $4::timestamptz)`,
+          [insight.id, insight.supersedes_id, insight.group_id, createdAt]
+        );
+
+        await client.query('COMMIT');
+      } catch (txErr) {
+        await client.query('ROLLBACK');
+        throw txErr;
+      } finally {
+        client.release();
+      }
 
       console.log('[knowledge-promotion] Promotion complete:', {
         insight_id: insight.id,

@@ -32,21 +32,6 @@ import type { SkillCall, SkillExecutor, TeamRamSkillName } from "./orchestrator"
 // ── Read-Only Guards ─────────────────────────────────────────────────────────
 
 /**
- * Mutation keywords that are forbidden in raw SQL queries.
- * Matched as whole words (case-insensitive).
- */
-const SQL_MUTATION_RE = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE)\b/i
-
-function assertReadOnlySQL(sql: string): void {
-  if (SQL_MUTATION_RE.test(sql)) {
-    throw new Error(
-      "execute_sql: mutation statements (INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, CREATE, GRANT, REVOKE) " +
-        "are not allowed — read-only queries only",
-    )
-  }
-}
-
-/**
  * execute_sql only accepts SELECT (or CTEs that start with WITH … SELECT).
  * Any other statement verb is rejected.
  */
@@ -143,31 +128,21 @@ async function getSchemaInfo(input: Record<string, unknown>): Promise<{
 
 /**
  * Execute an arbitrary read-only SQL query against PostgreSQL.
- * Mutation keywords cause an immediate rejection before the query reaches the database.
+ *
+ * SECURITY: This function previously executed raw, unparameterized SQL without
+ * tenant scoping — a critical injection risk (C1). It has been removed.
+ * Callers should use execute_sql (skill-database) which enforces SELECT-only
+ * and requires groupId as a parameterized argument.
  *
  * Input shape:
  *   { cypher: string, parameters?: Record<string,unknown>, groupId: string }
- *
- * Output shape:
- *   { records: unknown[], fields: string[] }
  */
-async function executeCypher(input: Record<string, unknown>): Promise<{
-  records: unknown[]
-  fields: string[]
-}> {
-  const groupId = validateGroupId(String(input.groupId ?? ""))
-  const sql = String(input.cypher ?? "")
-  void groupId
-
-  assertReadOnlySQL(sql)
-
-  const pool = getPool()
-  const result = await pool.query(sql)
-
-  const fields = result.fields.length > 0 ? result.fields.map((f) => f.name) : []
-  const records = result.rows
-
-  return { records, fields }
+async function executeCypher(_input: Record<string, unknown>): Promise<never> {
+  throw new Error(
+    "execute_cypher has been removed for security (raw SQL injection risk). " +
+      "Use execute_sql from skill-database instead, which enforces SELECT-only " +
+      "and parameterized queries with tenant scoping.",
+  )
 }
 
 // --- skill-database / query_traces ---

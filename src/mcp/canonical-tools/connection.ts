@@ -6,7 +6,7 @@
  */
 
 import { parse } from "dotenv"
-import neo4j, { Driver } from "neo4j-driver"
+import type { Driver } from "neo4j-driver"
 import { Pool } from "pg"
 import { existsSync, readFileSync } from "fs"
 import { join } from "path"
@@ -36,7 +36,7 @@ loadEnvFiles()
 // ── Connection Management ─────────────────────────────────────────────────
 
 let pgPool: Pool | null = null
-let neo4jDriver: Driver | null = null
+// Neo4j driver removed — Neo4j has been sunset (AD-49).
 
 export async function getConnections(): Promise<{ pg: Pool; neo4j: Driver | null }> {
   if (!pgPool) {
@@ -55,27 +55,10 @@ export async function getConnections(): Promise<{ pg: Pool; neo4j: Driver | null
     })
   }
 
-  // Neo4j is optional — skip driver creation when GRAPH_BACKEND=ruvector (AD-49)
-  const graphBackend = process.env.GRAPH_BACKEND?.toLowerCase() || "ruvector"
-  if (graphBackend === "ruvector" || graphBackend === "ruvector-crate") {
-    // PostgreSQL-only mode — no Neo4j driver needed
-    return { pg: pgPool, neo4j: null }
-  }
-
-  // Neo4j mode — driver required
-  if (!neo4jDriver) {
-    const password = process.env.NEO4J_PASSWORD;
-    if (!password) {
-      throw new Error("NEO4J_PASSWORD environment variable is required");
-    }
-    neo4jDriver = neo4j.driver(
-      process.env.NEO4J_URI || "bolt://localhost:7687",
-      neo4j.auth.basic(process.env.NEO4J_USER || "neo4j", password),
-      { maxConnectionPoolSize: 50 }
-    )
-  }
-
-  return { pg: pgPool, neo4j: neo4jDriver }
+  // Neo4j has been sunset (AD-49). PostgreSQL + pgvector is the sole graph backend.
+  // Return null for neo4j unconditionally — the Driver type is kept for backward
+  // compatibility with consumers that destructure { neo4j } and null-check it.
+  return { pg: pgPool, neo4j: null }
 }
 
 /**
@@ -87,10 +70,6 @@ export function resetConnections(): void {
     pgPool.end().catch(() => {})
     pgPool = null
   }
-  if (neo4jDriver) {
-    neo4jDriver.close().catch(() => {})
-    neo4jDriver = null
-  }
   resetBudgetState()
 }
 
@@ -100,10 +79,8 @@ export function resetConnections(): void {
  */
 export async function closeConnections(): Promise<void> {
   const pg = pgPool
-  const graph = neo4jDriver
   pgPool = null
-  neo4jDriver = null
 
-  await Promise.allSettled([pg?.end(), graph?.close()])
+  await pg?.end()
   resetBudgetState()
 }
