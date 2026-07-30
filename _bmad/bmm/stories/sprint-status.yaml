@@ -171,31 +171,31 @@ epic_22:
 
 epic_23:
   name: "Neo4j Sunset Completion — Clean Codebase"
-  status: in-progress
-  retrospective: optional
+  status: done
+  retrospective: done
   stories:
     - key: "23.1"
       title: "Fix typecheck errors in canonical-tools.ts"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz"
-      status_evidence: ""
+      status_evidence: "10 Driver|null→undefined errors fixed; content-aware-curator arg + InsightInsert fixed; typecheck 0 errors"
     - key: "23.2"
       title: "Remove Neo4j fallback tests in writer.test.ts"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz"
-      status_evidence: ""
+      status_evidence: "23 Neo4j fallback tests removed; buildNeo4jBackend() removed from writer.ts (~150 lines); writer.test.ts 7/7 pass"
     - key: "23.3"
       title: "Fix target-resolver.test.ts failures"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz"
-      status_evidence: ""
+      status_evidence: "neo4jMutate/neo4jQuery removed from target-resolver.ts; 6/6 tests pass"
     - key: "23.4"
       title: "Fix token compliance failures"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz"
-      status_evidence: ""
+      status_evidence: "19 hex colors replaced with CSS custom properties; 13 deprecated tokens updated; token compliance 3/3 pass"
     - key: "23.5"
       title: "Remove dead Neo4j code"
-      status: ready-for-dev
+      status: done
       owner: "Brooks -> Woz"
-      status_evidence: ""
+      status_evidence: "src/lib/neo4j/ deleted; neo4j-adapter.ts, dual-read-adapter.ts, backup/neo4j.ts, neo4j-errors.ts deleted; 6 core files rewritten to PostgreSQL; 91 files changed; typecheck 0 errors; 1623 tests pass 0 failures. Code review: C1 security fix (executeCypher raw SQL removed), W1 transaction wrap, W2 neo4j error throw, W3 connection.ts driver removed"
