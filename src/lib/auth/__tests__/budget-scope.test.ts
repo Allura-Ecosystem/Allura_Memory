@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createPrincipalContext, resolveBudgetTenant, PrincipalAuthError } from "../principal-context";
+import { createPrincipalContext, PrincipalAuthError, resolveBudgetTenant } from "../principal-context";
 
 const principal = (tenantIds: string[], scopes: string[] = ["admin:budget"]) =>
   createPrincipalContext({
