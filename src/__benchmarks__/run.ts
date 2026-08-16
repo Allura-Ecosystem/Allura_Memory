@@ -33,7 +33,7 @@ import { run as runAuditCompleteness } from "./benchmarks/audit-completeness"
 import { BrainClient } from "./lib/client"
 import { buildReportFile, hasFailures, printReport } from "./lib/report"
 import type { BenchmarkContext, BenchmarkResult } from "./lib/types"
-import { DEFAULT_BENCHMARK_GROUP_ID } from "../../scripts/ci/benchmark-contract"
+import { DEFAULT_BENCHMARK_AGENT_NAME, DEFAULT_BENCHMARK_GROUP_ID } from "../../scripts/ci/benchmark-contract"
 
 const DEFAULT_JSON_PATH = "src/__benchmarks__/benchmark-results.json"
 
@@ -137,7 +137,13 @@ async function main(): Promise<number> {
   // The `-loadtest` suffix routes seed writes straight to episodic storage,
   // skipping the HITL proposal queue (see memory_add in canonical-tools.ts).
   const groupId = resolveBenchmarkGroup(opts.group)
-  const userId = `bench-user-${runId}`
+  // user_id is an actor-selector field (see ACTOR_FIELDS in
+  // src/lib/auth/principal-context.ts): for an mcp_token credential it must
+  // equal the authenticated principal exactly, or the gateway denies the
+  // call with ACTOR_MISMATCH. Run isolation is carried by the runId marker
+  // embedded in seeded content (see markerFor in lib/dataset.ts), not by a
+  // synthetic per-run user_id.
+  const userId = DEFAULT_BENCHMARK_AGENT_NAME
 
   const client = new BrainClient()
   const ctx: BenchmarkContext = { client, groupId, runId, userId, verbose: opts.verbose }

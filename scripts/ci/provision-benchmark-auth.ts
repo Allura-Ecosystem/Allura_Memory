@@ -1,9 +1,9 @@
 import { chmod, writeFile } from "node:fs/promises";
 import { createToken } from "@/lib/mcp-token/repository";
 import { createWorkspace, getWorkspace, type Workspace } from "@/lib/workspace/repository";
-import { DEFAULT_BENCHMARK_GROUP_ID, DEFAULT_BENCHMARK_WORKSPACE_ID } from "./benchmark-contract";
+import { DEFAULT_BENCHMARK_AGENT_NAME, DEFAULT_BENCHMARK_GROUP_ID, DEFAULT_BENCHMARK_WORKSPACE_ID } from "./benchmark-contract";
 
-export { DEFAULT_BENCHMARK_GROUP_ID, DEFAULT_BENCHMARK_WORKSPACE_ID } from "./benchmark-contract";
+export { DEFAULT_BENCHMARK_AGENT_NAME, DEFAULT_BENCHMARK_GROUP_ID, DEFAULT_BENCHMARK_WORKSPACE_ID } from "./benchmark-contract";
 
 const BENCHMARK_SCOPES = [
   "memory:read",
@@ -100,7 +100,7 @@ export async function provisionBenchmarkAuth(
   const result = await deps.createToken({
     group_id,
     workspace_id,
-    agent_name: "epic-24-ci-benchmark",
+    agent_name: DEFAULT_BENCHMARK_AGENT_NAME,
     scopes: [...BENCHMARK_SCOPES],
     created_by: "epic-24-ci",
   });
