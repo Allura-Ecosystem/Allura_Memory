@@ -33,6 +33,7 @@ import { run as runAuditCompleteness } from "./benchmarks/audit-completeness"
 import { BrainClient } from "./lib/client"
 import { buildReportFile, hasFailures, printReport } from "./lib/report"
 import type { BenchmarkContext, BenchmarkResult } from "./lib/types"
+import { DEFAULT_BENCHMARK_GROUP_ID } from "../../scripts/ci/benchmark-contract"
 
 const DEFAULT_JSON_PATH = "src/__benchmarks__/benchmark-results.json"
 
@@ -87,6 +88,14 @@ export function parseArgs(argv: string[]): CliOptions {
   return opts
 }
 
+export function resolveBenchmarkGroup(explicitGroup?: string): string {
+  const credentialGroup = process.env.BENCHMARK_GROUP_ID || DEFAULT_BENCHMARK_GROUP_ID;
+  if (explicitGroup && explicitGroup !== credentialGroup) {
+    throw new Error(`--group must match the benchmark credential tenant '${credentialGroup}'`);
+  }
+  return credentialGroup;
+}
+
 /**
  * Baseline CI proves that the runner and every required benchmark executed.
  * Numerical threshold enforcement is intentionally separate until Story 24.6.
@@ -128,7 +137,7 @@ async function main(): Promise<number> {
   const runId = randomBytes(4).toString("hex")
   // The `-loadtest` suffix routes seed writes straight to episodic storage,
   // skipping the HITL proposal queue (see memory_add in canonical-tools.ts).
-  const groupId = opts.group || `allura-bench-${runId}-loadtest`
+  const groupId = resolveBenchmarkGroup(opts.group)
   const userId = `bench-user-${runId}`
 
   const client = new BrainClient()
@@ -163,13 +172,10 @@ async function main(): Promise<number> {
     process.stderr.write(`gateway reachable (${Math.round(ping.latencyMs)}ms)\n`)
     for (const e of selected) {
       if (opts.verbose) process.stderr.write(`\n▶ running ${e.id}…\n`)
-      // Isolate each benchmark in its own loadtest sub-group so a write-heavy
-      // benchmark (e.g. latency-profile) cannot poison a later one by tripping a
-      // shared per-group budget / circuit breaker. Each still skips the HITL
-      // queue via the `-loadtest` suffix.
-      const benchCtx: BenchmarkContext = opts.group
-        ? ctx
-        : { ...ctx, groupId: `allura-bench-${runId}-${e.id}-loadtest` }
+      // Keep every benchmark call inside the credential's exact tenant allowlist.
+      // Run isolation is represented by runId/userId, not by an unauthorized
+      // per-module tenant.
+      const benchCtx: BenchmarkContext = ctx
       try {
         results.push(await e.run(benchCtx))
       } catch (err) {

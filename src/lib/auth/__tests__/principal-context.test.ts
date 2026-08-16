@@ -201,6 +201,15 @@ describe("authorizeToolCall (AC-5)", () => {
       .toThrow(/not authorized|unknown tool|requires scope/i);
   });
 
+  it("does not authorize receipt_create through a different or unknown scope", () => {
+    expect(() => authorizeToolCall(tokenPrincipal({ scopes: ["memory:read"] }), "receipt_create"))
+      .toThrow(/requires scope receipt:create/);
+    expect(() => authorizeToolCall(tokenPrincipal({ scopes: ["receipt:create"] }), "receipt_create"))
+      .not.toThrow();
+    expect(() => authorizeToolCall(tokenPrincipal({ scopes: ["receipt:create"] }), "receipt_create_typo"))
+      .toThrow(/not authorized|unknown tool/i);
+  });
+
   it.each([
     ["governance_curator_pass", "review:approve"],
     ["governance_proposal_approve", "review:approve"],

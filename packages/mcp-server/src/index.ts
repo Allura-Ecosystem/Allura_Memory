@@ -35,6 +35,7 @@ export const TOOL_POLICIES: Readonly<Record<string, ToolDef>> = {
   governance_curator_pass: { name: "governance_curator_pass", requiredScope: "review:approve", requiresElevatedRole: true },
   governance_proposal_approve: { name: "governance_proposal_approve", requiredScope: "review:approve", requiresElevatedRole: true },
   governance_proposal_reject: { name: "governance_proposal_reject", requiredScope: "review:reject", requiresElevatedRole: true },
+  receipt_create: { name: "receipt_create", requiredScope: "receipt:create" },
   audit_query_events: { name: "audit_query_events", requiredScope: "audit:read" },
   audit_health_report: { name: "audit_health_report", requiredScope: "audit:read" },
   audit_agent_activity: { name: "audit_agent_activity", requiredScope: "audit:read" },
@@ -53,9 +54,10 @@ export function toolsForScopes(granted: Scope[]): ToolDef[] {
 }
 
 /**
- * Server-side scope resolution. In the real gateway, group_id + workspace_id come
- * from the validated token, NOT from the request body. Any client-supplied scope
- * is dropped here (ADR-001).
+ * Server-side scope resolution. In the real gateway, group_id comes from the
+ * validated token, NOT from the request body. workspace_id enforcement is
+ * deferred and non-enforced in this scaffold until a canonical handler consumes
+ * it end to end. Any client-supplied scope is dropped here (ADR-001).
  */
 export function resolveInjectedScope(injected: AlluraScope): AlluraScope {
   return injected;

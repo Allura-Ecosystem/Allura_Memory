@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import type { BenchmarkResult } from "./lib/types"
-import { determineExitCode, parseArgs } from "./run"
+import { DEFAULT_BENCHMARK_GROUP_ID } from "../../scripts/ci/benchmark-contract"
+import { determineExitCode, parseArgs, resolveBenchmarkGroup } from "./run"
 
 function result(status: BenchmarkResult["status"]): BenchmarkResult {
   return { id: status, title: status, status, durationMs: 1, metrics: [], notes: [] }
@@ -25,5 +26,12 @@ describe("benchmark CI baseline exit policy", () => {
     const options = parseArgs([])
     expect(determineExitCode([result("fail")], options)).toBe(1)
     expect(determineExitCode([result("skip")], options)).toBe(0)
+  })
+
+  it("uses the provisioned deterministic tenant unless an explicit tenant is supplied", () => {
+    expect(DEFAULT_BENCHMARK_GROUP_ID).toBe("allura-bench-ci-loadtest")
+    expect(resolveBenchmarkGroup()).toBe(DEFAULT_BENCHMARK_GROUP_ID)
+    expect(resolveBenchmarkGroup(DEFAULT_BENCHMARK_GROUP_ID)).toBe(DEFAULT_BENCHMARK_GROUP_ID)
+    expect(() => resolveBenchmarkGroup("allura-custom-ci")).toThrow(/must match the benchmark credential tenant/)
   })
 })
