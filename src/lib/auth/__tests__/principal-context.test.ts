@@ -195,6 +195,22 @@ describe("authorizeToolCall (AC-5)", () => {
     const curatorWithoutPromotion = tokenPrincipal({ roles: ["curator"], scopes: ["memory:read"] });
     expect(() => authorizeToolCall(curatorWithoutPromotion, "memory_promote")).toThrow(/requires scope/);
   });
+
+  it("fails closed for unknown tools instead of treating them as unscoped", () => {
+    expect(() => authorizeToolCall(tokenPrincipal(), "future_unmapped_tool"))
+      .toThrow(/not authorized|unknown tool|requires scope/i);
+  });
+
+  it.each([
+    ["governance_curator_pass", "review:approve"],
+    ["governance_proposal_approve", "review:approve"],
+    ["governance_proposal_reject", "review:reject"],
+  ] as const)("requires the mapped scope for %s", (tool, scope) => {
+    const principal = tokenPrincipal({ roles: ["admin"], scopes: ["memory:read"] });
+    expect(() => authorizeToolCall(principal, tool)).toThrow(/requires scope/);
+    const scoped = tokenPrincipal({ roles: ["admin"], scopes: [scope] });
+    expect(() => authorizeToolCall(scoped, tool)).not.toThrow();
+  });
 });
 
 describe("resolveEffectiveTenant (AC-4)", () => {

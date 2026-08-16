@@ -13,16 +13,22 @@ mkdir -p "$artifact_dir"
 gateway_log="${artifact_dir}/gateway.log"
 benchmark_report="${artifact_dir}/benchmark-results.json"
 gateway_port="${ALLURA_MCP_HTTP_PORT:-6477}"
+benchmark_auth_env="$(mktemp)"
 
 bash scripts/ci/run-live-db-tests.sh \
   --migrate-only \
   --artifact-dir="${artifact_dir}/database"
+
+bun run scripts/ci/provision-benchmark-auth.ts --env-file="$benchmark_auth_env"
+source "$benchmark_auth_env"
+export BENCHMARK_AUTH_TOKEN
 
 ALLURA_MCP_HTTP_PORT="$gateway_port" bun run mcp:http >"$gateway_log" 2>&1 &
 gateway_pid=$!
 cleanup() {
   kill "$gateway_pid" 2>/dev/null || true
   wait "$gateway_pid" 2>/dev/null || true
+  rm -f "$benchmark_auth_env"
 }
 trap cleanup EXIT
 

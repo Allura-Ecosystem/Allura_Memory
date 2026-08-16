@@ -125,7 +125,7 @@ asserted by the test suite.
 
 ## Dev Agent Record
 
-**Status:** review rounds 1-3 addressed - all Definition of Done items closed (doc impact satisfied by record; edits tracked in Story 24.8). Remaining: laptop verification of AC-1/AC-6/AC-7 live-infrastructure evidence.
+**Status:** in-review. Review rounds 1-3 fixes are recorded, but this story is not done: AC-1/AC-6/AC-7 still require laptop-authoritative live-infrastructure evidence, and the full validation lane retains one unhandled failure.
 
 ### Implementation Plan
 
@@ -208,17 +208,16 @@ restricted to typecheck, build, and in-process tests:
 |---|---|
 | `bun run typecheck` | pass (tsc --noEmit, no errors) |
 | `bun run build` | pass (next build completed) |
-| `bun run vitest run src/lib/auth/__tests__/ src/__tests__/mcp-auth-adversarial.test.ts --config vitest.config.unit.ts` | 144 passed / 144 (70 + 13 + 61) |
-| `bun run test:unit` | 87 files passed, 8 skipped; 1770 tests passed, 171 skipped |
-| `bun run test` (default lane) | 137 files passed, 8 failed, 12 skipped; 2796 passed, 8 failed |
-| `bun run test` on stashed baseline | 135 files passed, 8 failed, 12 skipped; 2713 passed, 8 failed |
+| `bun run vitest run src/lib/auth/__tests__/principal-context.test.ts src/lib/auth/__tests__/principal-audit.test.ts src/lib/auth/__tests__/budget-scope.test.ts src/__tests__/mcp-auth-adversarial.test.ts --config vitest.config.unit.ts` | 150 passed / 150 (73 + 13 + 3 + 61) |
+| `bun run test:unit` | 88 files passed, 8 skipped; 1779 tests passed, 171 skipped |
+| `bun test packages/mcp-server/tests/mcp-server.test.ts` | 4 passed / 4 |
+| `bun test scripts/ci/run-benchmark.test.ts scripts/ci/collect-evidence.test.ts scripts/ci/lint-changed.test.ts` | 18 passed / 18 |
+| `bun run test` (full lane) | 7 suites failed / 7 tests failed; 1 unhandled failure remains and is recorded as a blocker |
 
-All counts above are from the post-review round. The 8 default-lane failures are identical before and after this change
-(pre-existing, caused by a missing `POSTGRES_PASSWORD` in this environment):
-`mcp-startup`, `hitl-promotion-lock-policy`, `knowledge-promotion-approval-guard`,
-`cross-tenant-audit`, `memory-brief`, `memory-writeback`, `subagent-mcp-access`,
-`sync-contract`. Net effect of this story on the default lane: +83 passing, 0
-regressions.
+All counts above are current local evidence. The Epic 24 full-test blocker is
+kept explicit; it is not converted into a completion claim. Live PostgreSQL,
+gateway, and remote CI evidence remain laptop/CI-authoritative follow-ups for
+AC-1, AC-6, AC-7, and Story 24.1's benchmark gate.
 
 ### Adversarial Evidence Table (AC-9)
 

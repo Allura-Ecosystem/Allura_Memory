@@ -21,7 +21,7 @@
  * the approval-workflow `role` union in `src/kernel/policy.ts`.
  */
 
-import { MEMORY_TOOLS } from "@allura/mcp-server";
+import { getToolPolicy, TOOL_POLICIES } from "@allura/mcp-server";
 import { scopesForRole } from "@allura/rbac";
 import type { Scope } from "@allura/types";
 
@@ -81,6 +81,7 @@ export type AuthReasonCode =
   | "TENANT_MISMATCH"
   | "ROLE_INSUFFICIENT"
   | "SCOPE_INSUFFICIENT"
+  | "UNKNOWN_TOOL"
   | "ACTOR_MISMATCH"
   | "PRINCIPAL_MISSING"
   // configuration
@@ -96,6 +97,7 @@ const REASON_STATUS: Record<AuthReasonCode, number> = {
   TENANT_MISMATCH: 403,
   ROLE_INSUFFICIENT: 403,
   SCOPE_INSUFFICIENT: 403,
+  UNKNOWN_TOOL: 403,
   ACTOR_MISMATCH: 403,
   PRINCIPAL_MISSING: 401,
   CONFIG_MISSING: 500,
@@ -225,12 +227,11 @@ export function createPrincipalContext(input: CreatePrincipalInput): PrincipalCo
  * these comes from `PrincipalContext.roles` and nothing else — never from
  * `request.params.role` or any other caller-controlled field.
  */
-export const ELEVATED_TOOLS: ReadonlySet<string> = new Set([
-  "governance_curator_pass",
-  "governance_proposal_approve",
-  "governance_proposal_reject",
-  "governance_update_policy",
-]);
+export const ELEVATED_TOOLS: ReadonlySet<string> = new Set(
+  Object.values(TOOL_POLICIES)
+    .filter((tool) => tool.requiresElevatedRole)
+    .map((tool) => tool.name),
+);
 
 /** Roles that satisfy an elevated tool call. */
 const ELEVATED_ROLES: readonly PrincipalRole[] = ["admin", "curator"];
@@ -257,8 +258,11 @@ export function authorizeToolCall(principal: PrincipalContext, toolName: string)
   if (!principal) {
     throw new PrincipalAuthError("PRINCIPAL_MISSING", "No verified principal on this request");
   }
-  const tool = MEMORY_TOOLS.find((candidate) => candidate.name === toolName);
-  if (isElevatedTool(toolName)) {
+  const tool = getToolPolicy(toolName);
+  if (!tool) {
+    throw new PrincipalAuthError("UNKNOWN_TOOL", `Tool '${toolName}' is not authorized by the gateway policy map`);
+  }
+  if (tool.requiresElevatedRole) {
     const satisfied = ELEVATED_ROLES.some((r) => principal.roles.includes(r));
     if (!satisfied) {
       throw new PrincipalAuthError(
@@ -267,13 +271,12 @@ export function authorizeToolCall(principal: PrincipalContext, toolName: string)
       );
     }
   }
-  if (tool && !principal.scopes.includes(tool.requiredScope)) {
+  if (!principal.scopes.includes(tool.requiredScope)) {
     throw new PrincipalAuthError(
       "SCOPE_INSUFFICIENT",
       `Tool '${toolName}' requires scope ${tool.requiredScope}; principal '${principal.principalId}' lacks it`,
     );
   }
-  if (!isElevatedTool(toolName)) return;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

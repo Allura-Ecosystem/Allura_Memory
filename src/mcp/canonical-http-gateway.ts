@@ -147,14 +147,15 @@ async function resolveRequestPrincipal(
   route: string,
   protocolRequestId?: unknown,
 ): Promise<PrincipalContext | null> {
+  const correlationId = resolveRequestCorrelationId(
+    req.headers as Record<string, string | string[] | undefined>,
+    protocolRequestId,
+  );
   try {
     const authenticator = await authenticatorPromise;
     const principal = await authenticator.authenticate(
       req.headers as Record<string, string | string[] | undefined>,
-      resolveRequestCorrelationId(
-        req.headers as Record<string, string | string[] | undefined>,
-        protocolRequestId,
-      ) ?? undefined,
+      correlationId ?? undefined,
     );
     return principal;
   } catch (error) {
@@ -168,6 +169,7 @@ async function resolveRequestPrincipal(
         tool: route,
         decision: "deny",
         reasonCode: err.reasonCode,
+        sessionId: correlationId ?? undefined,
       }),
     );
     res.writeHead(err.httpStatus, {
