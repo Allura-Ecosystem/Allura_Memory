@@ -17,7 +17,7 @@ a genuine acceptance gate rather than a unit test in disguise.
 ## Quick start
 
 ```bash
-# 1. Bring up the Brain stack (PostgreSQL + Neo4j + RuVector + MCP gateway)
+# 1. Bring up the Brain stack (PostgreSQL + RuVector + MCP gateway)
 bun run brain:up
 bun run brain:status        # confirm healthy
 
@@ -29,6 +29,10 @@ bun src/__benchmarks__/run.ts --only=retrieval-quality,latency-profile
 
 # 4. Machine-readable output + per-step detail
 bun src/__benchmarks__/run.ts --json=bench-results.json --verbose
+
+# 5. CI baseline: require every benchmark to execute, but only record numerical
+#    threshold outcomes until Story 24.6 defines the regression policy
+bun run benchmark -- --ci-baseline --require-gateway
 ```
 
 The pure metric math (Precision@K, Recall@K, MRR, percentiles) is covered by a
@@ -88,8 +92,8 @@ Four sub-checks of the compliance invariants:
 ### 4. Latency profile (`latency-profile`)
 
 Warms up, then times `memory_search` and `memory_add` round trips at the fetch
-boundary (what a real client sees), reporting mean/P50/P95/P99. Iterations per op
-are configurable with `--latency-iters` (default 50).
+boundary (what a real client sees), reporting mean/P50/P95/P99. Iterations per
+operation are configurable with `--iters` (default 20).
 
 ### 5. Audit completeness (`audit-completeness`)
 
@@ -110,30 +114,32 @@ bun src/__benchmarks__/run.ts [flags]
 
 --only=<ids>        Comma-separated benchmark ids (default: all)
 --group=<id>        Seed tenant; must match ^allura-[a-z0-9-]+$
-                    (default: allura-benchmark-loadtest)
---latency-iters=N   Iterations per op in the latency profile (default: 50)
+                    (default: a run-specific allura-bench-*-loadtest tenant)
+--iters=N           Iterations per operation in the latency profile (default: 20)
 --json=<path>       Write the full machine-readable report to <path>
+--require-gateway   Exit non-zero when the gateway is unreachable or a benchmark skips
+--ci-baseline       Require complete execution but record, rather than enforce, numerical thresholds
 --verbose, -v       Per-step detail in the report
---help, -h          Show help
 ```
 
 ### Exit codes
 
 | Code | Meaning |
 |------|---------|
-| `0` | All selected benchmarks passed |
-| `1` | One or more benchmarks **failed** or **errored** |
+| `0` | The selected policy passed; CI baseline may still record numerical threshold misses |
+| `1` | A runner or benchmark execution error occurred, or a locally enforced threshold failed |
 | `2` | Gateway unreachable (preflight failed) |
-| `3` | Bad arguments |
+| `3` | A required benchmark skipped |
 
-CI can gate on a non-zero exit. The `--json` report carries every metric with its
-threshold and pass flag for trend tracking.
+CI gates on runner integrity and complete execution with `--ci-baseline`. The
+`--json` report still carries every metric with its threshold and pass flag for
+honest trend tracking. Story 24.6 owns numerical regression enforcement.
 
 ---
 
 ## Governance & data hygiene
 
-- The default seed tenant is **`allura-benchmark-loadtest`**. The `-loadtest`
+- The default seed tenant is run-specific under **`allura-bench-*-loadtest`**. The `-loadtest`
   suffix makes `memory_add` store writes **directly as episodic**, skipping the
   HITL proposal queue (see `memory_add` in `src/mcp/canonical-tools.ts`). The
   harness therefore **never pollutes the curator queue**.

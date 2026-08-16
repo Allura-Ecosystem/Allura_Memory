@@ -1,0 +1,30 @@
+/**
+ * Live PostgreSQL CI lane.
+ *
+ * Keep this inventory intentionally narrow: every included test must require a
+ * real PostgreSQL connection, and an empty inventory is a hard failure.
+ */
+import { defineConfig } from "vitest/config"
+import path from "node:path"
+
+export default defineConfig({
+  test: {
+    environment: "node",
+    pool: "forks",
+    passWithNoTests: false,
+    include: [
+      "src/lib/process-engine/checkpoint-continuation.integration.test.ts",
+    ],
+    testTimeout: 60_000,
+    hookTimeout: 30_000,
+    teardownTimeout: 10_000,
+  },
+  resolve: {
+    alias: [
+      { find: "@allura/types", replacement: path.resolve(__dirname, "./packages/types/src/index.ts") },
+      { find: "@allura/rbac", replacement: path.resolve(__dirname, "./packages/rbac/src/index.ts") },
+      { find: "@allura/mcp-server", replacement: path.resolve(__dirname, "./packages/mcp-server/src/index.ts") },
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+    ],
+  },
+})

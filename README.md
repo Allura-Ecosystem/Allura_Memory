@@ -55,8 +55,6 @@ Allura Memory is built around those questions. It separates **episodic evidence*
 | Operations | Health, readiness, audit, benchmark, recovery, and curator tools |
 | Deployment | Docker Compose or direct Bun runtime |
 
-Neo4j was sunset as an active dependency under AD-50. Historical adapters, migration artifacts, and older documents may still mention it. The current default implementation uses PostgreSQL graph tables through the RuVector adapter; this describes the active code path, not a claim of production readiness.
-
 ## Core model
 
 Allura uses one PostgreSQL engine with two governed logical layers.
@@ -126,14 +124,14 @@ RuVector is the semantic execution layer; Allura is the governance layer.
 | Search execution | Provenance and audit |
 | Supersession primitives | Policy and lifecycle meaning |
 
-The `GRAPH_BACKEND=ruvector` adapter is a PostgreSQL-table implementation. It is distinct from the optional native RuVector extension and from the historical Neo4j adapter.
+The `GRAPH_BACKEND=ruvector` adapter is a PostgreSQL-table implementation. It is distinct from the optional native RuVector extension.
 
 ## Getting started
 
 ### Prerequisites
 
 - Docker Engine with Docker Compose
-- Bun 1.x for local development and validation
+- Bun 1.3.14 for local development and validation (pinned in `package.json`)
 - An embedding provider: Ollama, OpenAI, Voyage, or a compatible endpoint
 
 ### Clone and configure
@@ -166,8 +164,6 @@ RUVECTOR_EMBEDDING_BASE_URL=http://localhost:11434
 RUVIX_KERNEL_SECRET=<minimum-32-character-secret>
 ALLURA_MCP_TOKEN_SECRET=<minimum-16-character-secret>
 ```
-
-The legacy Neo4j variables still present in `.env.example` are compatibility residue and are not required for `GRAPH_BACKEND=ruvector`.
 
 ### Start the containerized service
 
@@ -283,7 +279,7 @@ Fresh writes are episodic. They may be searchable for operational workflows, but
 |---|---|
 | `audit_query_events` | Query append-only events with filters |
 | `audit_agent_activity` | Inspect activity attributed to one agent |
-| `audit_health_report` | Check database, graph, embedding, queue, and MCP health |
+| `audit_health_report` | Check database, semantic adapter, embedding, queue, and MCP health |
 | `audit_invariant_check` | Validate governance invariants against live data |
 
 See [`.github/API-REFERENCE.md`](.github/API-REFERENCE.md) and [`docs/reference/`](docs/reference/) for request and response contracts.
@@ -336,6 +332,7 @@ bun run brain:status
 - E2E suites require live infrastructure and are gated by `RUN_E2E_TESTS=true`.
 - Health output is runtime evidence, not a substitute for functional tests.
 - A “done” claim should identify the command, result, and relevant artifact.
+- Required pull-request validation produces a commit-bound evidence manifest; see the [capability matrix](docs/portfolio/capability-matrix.md) and [evidence index](docs/portfolio/evidence-index.md).
 
 ## Repository map
 
@@ -362,6 +359,8 @@ Allura_Memory/
 | [`docs/allura/DATA-DICTIONARY.md`](docs/allura/DATA-DICTIONARY.md) | Tables, fields, and relationships |
 | [`docs/allura/REQUIREMENTS-MATRIX.md`](docs/allura/REQUIREMENTS-MATRIX.md) | Requirement-to-evidence traceability |
 | [`docs/allura/RISKS-AND-DECISIONS.md`](docs/allura/RISKS-AND-DECISIONS.md) | ADRs, risk posture, and superseded decisions |
+| [`docs/portfolio/capability-matrix.md`](docs/portfolio/capability-matrix.md) | Implemented/planned claims and their independent evidence state |
+| [`docs/portfolio/evidence-index.md`](docs/portfolio/evidence-index.md) | Commit-bound CI evidence and controlled failure proof |
 
 When documentation disagrees, use this authority order: current code and schema → accepted ADRs → canonical architecture docs → operational notes.
 

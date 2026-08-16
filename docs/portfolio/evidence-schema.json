@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allura.dev/schemas/ci-evidence-manifest-1.0.0.json",
+  "title": "Allura CI Evidence Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "commit_sha",
+    "generated_at",
+    "run_url",
+    "status",
+    "environment",
+    "missing_lanes",
+    "lanes",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "enum": ["1.0.0"] },
+    "kind": { "type": "string", "enum": ["ci-evidence-manifest"] },
+    "commit_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "run_url": { "type": ["string", "null"] },
+    "status": { "type": "string", "enum": ["passed", "failed"] },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bun", "node", "postgresql"],
+      "properties": {
+        "bun": { "type": "string" },
+        "node": { "type": "string" },
+        "postgresql": {
+          "type": ["string", "null"],
+          "pattern": "^PostgreSQL .+$",
+          "description": "Server-reported PostgreSQL version from SHOW server_version; null when no live-database lane completed."
+        }
+      }
+    },
+    "missing_lanes": { "type": "array", "items": { "type": "string" } },
+    "lanes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lane", "status", "commands"],
+        "properties": {
+          "lane": { "type": "string" },
+          "status": { "type": "string", "enum": ["passed", "failed", "missing"] },
+          "commands": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/command" }
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lane", "logical_name", "path", "run_url"],
+        "properties": {
+          "lane": { "type": "string" },
+          "logical_name": { "type": "string" },
+          "path": { "type": "string" },
+          "run_url": { "type": ["string", "null"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "command",
+        "started_at",
+        "duration_ms",
+        "exit_status",
+        "status",
+        "artifact_paths"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "command": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "started_at": { "type": "string", "format": "date-time" },
+        "duration_ms": { "type": "number", "minimum": 0 },
+        "exit_status": { "type": "number", "minimum": 0 },
+        "status": { "type": "string", "enum": ["passed", "failed"] },
+        "artifact_paths": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

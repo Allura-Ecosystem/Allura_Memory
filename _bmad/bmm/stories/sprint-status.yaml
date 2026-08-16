@@ -1,6 +1,6 @@
 # Sprint Status — RuVector Documentation Sync & Integration
 
-last_updated: "2026-07-27"
+last_updated: "2026-08-15"
 owner: brooks
 group_id: allura-system
 
@@ -199,3 +199,56 @@ epic_23:
       status: done
       owner: "Brooks -> Woz"
       status_evidence: "src/lib/neo4j/ deleted; neo4j-adapter.ts, dual-read-adapter.ts, backup/neo4j.ts, neo4j-errors.ts deleted; 6 core files rewritten to PostgreSQL; 91 files changed; typecheck 0 errors; 1623 tests pass 0 failures. Code review: C1 security fix (executeCypher raw SQL removed), W1 transaction wrap, W2 neo4j error throw, W3 connection.ts driver removed"
+
+epic_24:
+  name: "Agentic AI Framework and Harness Portfolio Readiness"
+  status: in-progress
+  retrospective: pending
+  next_story: "24.1"
+  sequence_note: "Complete Gate A first; trust-boundary stories precede portfolio claims and presentation work."
+  stories:
+    - key: "24.1"
+      title: "CI and Evidence Baseline"
+      status: in-review
+      owner: "Brooks -> Woz + Hightower; Pike/Fowler review"
+      depends_on: []
+    - key: "24.2"
+      title: "Authenticated Principal Context"
+      status: ready-for-dev
+      owner: "unassigned"
+      depends_on: ["24.1"]
+    - key: "24.3"
+      title: "Database-Enforced Tenant Isolation and Immutable Ledger"
+      status: ready-for-dev
+      owner: "unassigned"
+      depends_on: ["24.2"]
+    - key: "24.4"
+      title: "Atomic Human-Governed Promotion"
+      status: ready-for-dev
+      owner: "unassigned"
+      depends_on: ["24.3"]
+    - key: "24.5"
+      title: "Deterministic Scenario Harness"
+      status: ready-for-dev
+      owner: "unassigned"
+      depends_on: ["24.2"]
+    - key: "24.6"
+      title: "Evaluation and Regression Gates"
+      status: ready-for-dev
+      owner: "unassigned"
+      depends_on: ["24.4", "24.5"]
+    - key: "24.7"
+      title: "SDK, CLI, and Ten-Minute Developer Path"
+      status: ready-for-dev
+      owner: "unassigned"
+      depends_on: ["24.5", "24.6"]
+    - key: "24.8"
+      title: "Enterprise Documentation Truth Pack"
+      status: ready-for-dev
+      owner: "unassigned"
+      depends_on: ["24.2", "24.3", "24.4", "24.5", "24.6", "24.7"]
+    - key: "24.9"
+      title: "Reference Integrations and Portfolio Demonstration"
+      status: ready-for-dev
+      owner: "unassigned"
+      depends_on: ["24.8"]
