@@ -125,7 +125,7 @@ asserted by the test suite.
 
 ## Dev Agent Record
 
-**Status:** in-review. Review rounds 1-3 fixes are recorded, but this story is not done: AC-1/AC-6/AC-7 still require laptop-authoritative live-infrastructure evidence, and the full validation lane retains one unhandled failure.
+**Status:** in-review. Review rounds 1-3 fixes are recorded, but this story is not done: AC-1/AC-6/AC-7 still require laptop-authoritative live-infrastructure evidence, and the full validation lane has seven failed test files plus one unhandled rejection.
 
 ### Implementation Plan
 
@@ -208,11 +208,11 @@ restricted to typecheck, build, and in-process tests:
 |---|---|
 | `bun run typecheck` | pass (tsc --noEmit, no errors) |
 | `bun run build` | pass (next build completed) |
-| `bun run vitest run src/lib/auth/__tests__/principal-context.test.ts src/lib/auth/__tests__/principal-audit.test.ts src/lib/auth/__tests__/budget-scope.test.ts src/__tests__/mcp-auth-adversarial.test.ts --config vitest.config.unit.ts` | 150 passed / 150 (73 + 13 + 3 + 61) |
-| `bun run test:unit` | 88 files passed, 8 skipped; 1779 tests passed, 171 skipped |
+| `bun run vitest run src/lib/auth/__tests__/principal-context.test.ts src/lib/auth/__tests__/principal-audit.test.ts src/lib/auth/__tests__/budget-scope.test.ts src/__tests__/mcp-auth-adversarial.test.ts --config vitest.config.unit.ts` | 151 passed / 151 (74 + 13 + 3 + 61) |
+| `bun run test:unit` | 89 files passed, 8 skipped; 1782 tests passed, 171 skipped |
 | `bun test packages/mcp-server/tests/mcp-server.test.ts` | 4 passed / 4 |
 | `bun test scripts/ci/run-benchmark.test.ts scripts/ci/collect-evidence.test.ts scripts/ci/lint-changed.test.ts` | 18 passed / 18 |
-| `bun run test` (full lane) | 7 suites failed / 7 tests failed; 1 unhandled failure remains and is recorded as a blocker |
+| `bun run test` (full lane) | exited 1: 7 test files failed (including 3 Vitest mock-initialization load failures), 7 tests failed, and 1 unhandled rejection: `POSTGRES_PASSWORD environment variable is required` from `src/lib/mcp-startup.test.ts` |
 
 All counts above are current local evidence. The Epic 24 full-test blocker is
 kept explicit; it is not converted into a completion claim. Live PostgreSQL,
@@ -451,3 +451,4 @@ setting.
 | 2026-08-15 | Review round 2 (docs only, no code change): corrected Scope and Implementation Files, which still claimed kernel policy threading after the Finding-3 revert; swept the whole story and additionally corrected Implementation Plan step 6, the stale AC-7 "persistence is a follow-up" note, and the POL-028 note; recorded as-built Architectural Contract, the review-time descope in Out of Scope, evidence-ID qualification, honest per-item Definition of Done (one item marked NOT DONE), and three known follow-ups. | Woz (Team RAM) |
 | 2026-08-15 | Review round 1: session rebinding now compares credential identity (F1); AC-7 audit persisted to `events.metadata` JSONB (F2); POL-028 and all kernel changes removed as unreachable, ruling (b) (F3); workspace restriction claim deferred because the canonical boundary does not enforce it (F4); legacy shared token gated out of mcp_token mode with a named residual gap (F5). 144 auth tests, 0 regressions. | Woz (Team RAM) |
 | 2026-08-15 | Story 24.2 implemented: PrincipalContext contract, MCP credential authenticator over existing `mcp_tokens`, principal-derived authorization at both MCP transports, POL-028 tenant binding, 109 new tests (57 unit + 52 adversarial). Live-infrastructure evidence pending laptop verification. | Woz (Team RAM) |
+| 2026-08-16 | Documentation-only verification receipt: focused 24.2 auth suite passed 151/151; `bun run test:unit` passed 89 files / 1782 tests with 8 files / 171 tests skipped. Full `bun run test` exited 1 with 7 failed test files, 7 failed tests, and one unhandled missing-`POSTGRES_PASSWORD` rejection from `src/lib/mcp-startup.test.ts`. Story remains in-review; no code change or completion claim. | OpenCode |

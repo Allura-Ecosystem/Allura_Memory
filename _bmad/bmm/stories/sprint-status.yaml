@@ -1,6 +1,6 @@
 # Sprint Status — RuVector Documentation Sync & Integration
 
-last_updated: "2026-08-15"
+last_updated: "2026-08-16"
 owner: brooks
 group_id: allura-system
 
@@ -217,7 +217,7 @@ epic_24:
       status: in-review
       owner: "Brooks -> Woz; Pike/Fowler review"
       depends_on: ["24.1"]
-      status_evidence: "In review after Pike/Fowler review cycles. Dead-open auth default and request.params.role admin gate removed; single guardToolCall chokepoint on HTTP + stdio. Reused existing mcp_tokens table (migration 28) — no new credential table, no migration. Kernel policy descoped (POL-028 reverted; canonical MCP dispatch never reaches src/kernel/). Current evidence: typecheck pass; 150 auth tests pass; test:unit 1779 passed / 0 failed / 171 skipped; full bun test 7 suites failed / 7 tests failed with 1 unhandled failure noted. NOT done: AC-1/AC-6/AC-7 pending laptop-authoritative verification; no all-DoD completion claim. Changes uncommitted. Brain outcome trace FAILED to write (MCP timeout x2) — governance trace outstanding."
+      status_evidence: "In review after Pike/Fowler review cycles. Dead-open auth default and request.params.role admin gate removed; single guardToolCall chokepoint on HTTP + stdio. Reused existing mcp_tokens table (migration 28) — no new credential table, no migration. Kernel policy descoped (POL-028 reverted; canonical MCP dispatch never reaches src/kernel/). Current 2026-08-16 evidence: focused auth suite 151 passed / 0 failed; test:unit 89 files passed, 8 skipped; 1782 tests passed / 0 failed / 171 skipped. Full bun test exited 1: 7 test files failed (including 3 Vitest mock-initialization load failures), 7 tests failed, and 1 unhandled POSTGRES_PASSWORD-required rejection from src/lib/mcp-startup.test.ts. NOT done: AC-1/AC-6/AC-7 pending laptop-authoritative verification; no all-DoD completion claim. Documentation receipt committed locally; remote/live evidence remains outstanding."
     - key: "24.3"
       title: "Database-Enforced Tenant Isolation and Immutable Ledger"
       status: ready-for-dev
