@@ -350,6 +350,17 @@ export const ACTOR_FIELDS = ["curator_id", "user_id", "actor", "agent_id"] as co
 export type ActorField = (typeof ACTOR_FIELDS)[number];
 
 /**
+ * Tools where `agent_id` is a **query filter** (not an actor assertion).
+ * For these audit/read tools, `agent_id` selects which agent's events to
+ * return — it does not assert "I am this agent." The field must still be a
+ * string (format validation), but it is NOT compared against the principal.
+ */
+const AGENT_ID_FILTER_TOOLS: ReadonlySet<string> = new Set([
+  "audit_query_events",
+  "audit_agent_activity",
+]);
+
+/**
  * dev_local is an explicit local-development escape hatch (it cannot activate
  * in production — see `mcp-authenticator.ts` / AC-1 / AC-6). Only in that mode
  * may a caller name a different actor, so that local curator scripts keep
@@ -357,6 +368,14 @@ export type ActorField = (typeof ACTOR_FIELDS)[number];
  */
 function actorOverrideAllowed(principal: PrincipalContext): boolean {
   return principal.authMethod === "dev_local";
+}
+
+/**
+ * For audit/read tools, `agent_id` is a query filter, not an actor assertion.
+ * It should be passed through without the ACTOR_MISMATCH check.
+ */
+function isAgentIdFilter(toolName: string): boolean {
+  return AGENT_ID_FILTER_TOOLS.has(toolName);
 }
 
 /**
@@ -371,6 +390,7 @@ export function resolveEffectiveActor(
   principal: PrincipalContext,
   field: string,
   selector?: unknown,
+  toolName?: string,
 ): string {
   if (selector === undefined || selector === null || selector === "") {
     return principal.principalId;
@@ -381,6 +401,8 @@ export function resolveEffectiveActor(
   const requested = selector.trim();
   if (requested === principal.principalId) return requested;
   if (actorOverrideAllowed(principal)) return requested;
+  // For audit/read tools, agent_id is a query filter, not an actor assertion.
+  if (field === "agent_id" && toolName && isAgentIdFilter(toolName)) return requested;
 
   throw new PrincipalAuthError(
     "ACTOR_MISMATCH",
@@ -456,7 +478,7 @@ export function applyPrincipalToArgs(
   for (const field of ACTOR_FIELDS) {
     const present = Object.prototype.hasOwnProperty.call(source, field);
     if (!present && !(field === "curator_id" && isElevatedTool(toolName))) continue;
-    const resolved = resolveEffectiveActor(principal, field, source[field]);
+    const resolved = resolveEffectiveActor(principal, field, source[field], toolName);
     args[field] = resolved;
     actors[field] = resolved;
   }
