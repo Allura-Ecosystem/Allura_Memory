@@ -28,6 +28,54 @@ import { coordinator } from "@/lib/memory/memory-coordinator"
 import { bootstrapMemoryServer } from "./startup"
 import { cleanupMemoryState } from "./cleanup"
 
+// ── Story 24.2 — Authenticated Principal Context (stdio/service transport) ───
+//
+// AC-6: stdio has no HTTP credential to present, so it binds an EXPLICIT
+// service identity and tenant allowlist from configuration. Production refuses
+// to start without ALLURA_MCP_SERVICE_PRINCIPAL_ID and ALLURA_MCP_SERVICE_TENANTS
+// — there is no anonymous default. Outside production this falls back to an
+// explicit dev-local principal.
+import { randomUUID } from "node:crypto"
+import {
+  createServicePrincipal,
+  resolveServiceAuthConfig,
+} from "@/lib/auth/mcp-authenticator"
+import { emitAuthAudit } from "@/lib/auth/principal-audit"
+import {
+  buildAuthAuditEvent,
+  guardToolCall,
+  PrincipalAuthError,
+  type PrincipalContext,
+} from "@/lib/auth/principal-context"
+
+/**
+ * The service principal for this stdio process. Resolved lazily at first use
+ * (and eagerly in main()) so that importing this module for static analysis
+ * does not require the environment to be configured.
+ */
+let servicePrincipal: PrincipalContext | null = null
+
+export function getServicePrincipal(): PrincipalContext {
+  if (!servicePrincipal) {
+    const config = resolveServiceAuthConfig(process.env as Record<string, string | undefined>)
+    servicePrincipal = createServicePrincipal(config, `stdio_${randomUUID()}`)
+  }
+  return servicePrincipal
+}
+
+/**
+ * AC-7: audit the authorization decision without ever touching credentials.
+ *
+ * Persists to the append-only `events` table (metadata JSONB) and always writes
+ * a structured line. On stdio the line MUST go to stderr — stdout carries the
+ * MCP JSON-RPC framing and any stray write there corrupts the protocol.
+ */
+const stdioAuditLogger = { log: console.error, error: console.error }
+
+function auditAuthDecision(event: ReturnType<typeof buildAuthAuditEvent>): void {
+  void emitAuthAudit(event, { logger: stdioAuditLogger })
+}
+
 // Server setup
 const server = new Server(
   {
@@ -376,7 +424,37 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 // envelope (F-002), and logs policy decisions. canonical-tools remains
 // the data layer — the coordinator is a thin policy layer above it.
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params
+  const { name } = request.params
+
+  // Story 24.2: same chokepoint as the HTTP gateway. group_id / user_id /
+  // curator_id / role in the arguments are resource selectors, never authority.
+  let args: Record<string, unknown>
+  let principal: PrincipalContext | null = null
+  try {
+    principal = getServicePrincipal()
+    const guarded = guardToolCall(principal, name, request.params.arguments)
+    args = guarded.args
+    auditAuthDecision(
+      buildAuthAuditEvent({
+        principal,
+        tool: name,
+        decision: "allow",
+        effectiveTenant: guarded.effectiveTenant,
+      })
+    )
+  } catch (error) {
+    const err =
+      error instanceof PrincipalAuthError
+        ? error
+        : new PrincipalAuthError("PRINCIPAL_MISSING", "Authorization failed")
+    auditAuthDecision(
+      buildAuthAuditEvent({ principal, tool: name, decision: "deny", reasonCode: err.reasonCode })
+    )
+    return {
+      content: [{ type: "text", text: JSON.stringify(err.toErrorPayload(), null, 2) }],
+      isError: true,
+    }
+  }
 
   try {
     let envelope: { data: unknown; meta: unknown; error: { code: number; message: string; details?: unknown } | null }
@@ -460,10 +538,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Start server
 async function main() {
+  // AC-6: bind the service principal BEFORE any transport is connected. In
+  // production this throws if no explicit service identity/tenant allowlist is
+  // configured, so the process refuses to serve anonymously.
+  const principal = getServicePrincipal()
   const transport = new StdioServerTransport()
   await bootstrapMemoryServer()
   await server.connect(transport)
-  console.error("Allura Memory MCP Server (Canonical) running on stdio")
+  console.error(
+    `Allura Memory MCP Server (Canonical) running on stdio as principal '${principal.principalId}' ` +
+      `(auth_method=${principal.authMethod}, tenants=${principal.tenantIds.join(",")}, roles=${principal.roles.join(",")})`
+  )
 }
 
 main().catch((error) => {

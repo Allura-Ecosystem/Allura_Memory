@@ -14,8 +14,10 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const queryMock = vi.fn();
-const mutateMock = vi.fn();
+const { queryMock, mutateMock } = vi.hoisted(() => ({
+  queryMock: vi.fn(),
+  mutateMock: vi.fn(),
+}));
 
 vi.mock("@/lib/postgres/connection", () => ({
   getPool: vi.fn(() => ({ query: queryMock })),

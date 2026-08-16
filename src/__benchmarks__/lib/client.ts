@@ -64,6 +64,8 @@ export class BrainClient {
         "Content-Type": "application/json",
         Accept: "application/json, text/event-stream",
       }
+      const authToken = process.env.BENCHMARK_AUTH_TOKEN
+      if (authToken) headers.Authorization = `Bearer ${authToken}`
       if (this.sessionId) headers["mcp-session-id"] = this.sessionId
       return await fetch(this.url, {
         method: "POST",
@@ -140,10 +142,14 @@ export class BrainClient {
         parsed.result?.isError === true ||
         (typeof payload === "object" && payload !== null && "error" in payload)
       if (isError) {
-        const errMsg =
-          typeof payload === "object" && payload !== null && "error" in payload
-            ? String((payload as { error: unknown }).error)
-            : "tool reported isError"
+        const rawErr = typeof payload === "object" && payload !== null && "error" in payload
+            ? (payload as { error: unknown }).error
+            : "tool reported isError";
+        const errMsg = typeof rawErr === "string"
+            ? rawErr
+            : typeof rawErr === "object" && rawErr !== null && "message" in (rawErr as Record<string, unknown>)
+                ? String((rawErr as { message: unknown }).message)
+                : JSON.stringify(rawErr);
         return { ok: false, error: errMsg, data: payload as T, latencyMs }
       }
       return { ok: true, data: payload as T, latencyMs }

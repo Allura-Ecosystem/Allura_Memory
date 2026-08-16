@@ -723,17 +723,16 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       expect(hasRuvectorWarning).toBe(true);
     });
 
-    it("approved-only search returns degraded:true when Neo4j is unreachable", async () => {
-      // When status='approved' (default), searchApprovedOnly is used
-      // which depends on Neo4j. If Neo4j is down, it should return
-      // degraded: true with empty results and a warning.
+    it("approved-only search returns degraded:true when the graph adapter is unavailable", async () => {
+      // Approved-only retrieval uses the governed semantic graph path. Make
+      // the status explicit because the general search default is now `all`.
 
-      mockGraphSearchMemories.mockRejectedValue(new Error("Neo4j connection refused"));
+      mockGraphSearchMemories.mockRejectedValue(new Error("graph adapter unavailable"));
 
       const request: MemorySearchRequest = {
         query: "TypeScript",
         group_id: GROUP_SYSTEM as any,
-        // status defaults to 'approved' — exercises searchApprovedOnly path
+        status: "approved",
       };
 
       const response = await memory_search(request);

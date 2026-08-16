@@ -14,7 +14,7 @@
 
 import type { BenchmarkContext, BenchmarkResult } from "../lib/types"
 import { markerFor } from "../lib/dataset"
-import { searchKeys, type AddResult } from "../lib/seed"
+import { type AddResult, searchKeys } from "../lib/seed"
 import { gated, info, statusFromMetrics } from "../lib/metric-builder"
 
 interface InvariantCheckResult {
@@ -48,15 +48,23 @@ export async function run(ctx: BenchmarkContext): Promise<BenchmarkResult> {
 
   try {
     // ── A. Cross-namespace isolation ──────────────────────────────────────────
+    // Write to groupA (derived from the credential tenant) and verify the
+    // memory does NOT leak into groupB. Both groups are derived from the
+    // principal's tenant — the write uses tryCall so a tenant denial (expected
+    // when the derived group is outside the allowlist) is captured as a metric
+    // rather than crashing the entire benchmark with an opaque error.
     const groupA = loadtestGroup(ctx.groupId, "nsa")
     const groupB = loadtestGroup(ctx.groupId, "nsb")
     const secret = `Confidential tenant-A revenue figures Q3 ${markerFor(ctx.runId, "xns-secret")}`
-    await ctx.client.call<AddResult>("memory_add", {
+    const writeRes = await ctx.client.tryCall<AddResult>("memory_add", {
       group_id: groupA,
       user_id: ctx.userId,
       content: secret,
       metadata: { source: "manual", agent_id: "benchmark" },
     })
+    if (!writeRes.ok) {
+      notes.push(`cross-namespace write to ${groupA} denied: ${writeRes.error ?? "unknown"}`)
+    }
     const leak = await searchKeys(ctx.client, {
       groupId: groupB,
       query: "confidential tenant-A revenue figures",

@@ -5,6 +5,12 @@
 **Owner:** Brooks (orchestrator)
 **group_id:** allura-system
 
+## Current Active Epic
+
+- [Epic 24 — Agentic AI Framework and Harness Portfolio Readiness](./epic-24-portfolio-readiness.md) — `ready-for-dev`; implementation begins with Story 24.1 and follows the evidence, trust-boundary, harness, then portfolio gates.
+
+Epics 18–23 below are retained as historical delivery context. Epic 24 is the active plan for new development.
+
 ## Epic 18: RuVector Documentation Sync — Promote Archive to Canon
 
 **Goal:** The RuVector graph cutover is 90% built behind `GRAPH_BACKEND` flag (AD-029), but the canonical 6-file doc set still says "pgvector bridge, not full RuVector." This epic promotes the archived AD-49/RK-15 and the RuVector integration boundary into the canonical docs, updates the readiness boundary with the actual cutover path, and prepares the receipt shapes for when native activates.

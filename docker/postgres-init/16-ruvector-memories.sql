@@ -32,10 +32,20 @@
 --     (b) Changing store.ts to use the main PG pool for fallback writes.
 -- ============================================================================
 
--- Guard: only create allura_memories on instances that have the ruvector extension
+-- Guard: only create allura_memories on instances that have the pgvector
+-- extension's `vector` type available. This table's own DDL below uses the
+-- standard pgvector `vector(1024)` column type and `vector_cosine_ops` HNSW
+-- index (see src/lib/ruvector/bridge.ts, which queries it with the standard
+-- `<=>` operator, not a proprietary type) -- it does NOT require a distinct
+-- custom "ruvector" pg_type. That type is never created anywhere in this
+-- repo's migrations, Dockerfiles, or docker-compose.yml (production also
+-- runs pgvector/pgvector:pg16), so the previous `typname = 'ruvector'` guard
+-- was always false and silently skipped table creation everywhere, CI and
+-- prod alike. Checking for `vector` instead matches what the DDL actually
+-- needs and what `CREATE EXTENSION IF NOT EXISTS vector;` provides.
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ruvector') THEN
+  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'vector') THEN
 
     -- ============================================================================
     -- 1. Create the memories table
@@ -235,7 +245,7 @@ BEGIN
         'JSON array with one 0.0-1.0 score per used memory ID.';
 
   ELSE
-    RAISE NOTICE 'Skipping allura_memories — ruvector type not available (standard PG instance)';
+    RAISE NOTICE 'Skipping allura_memories — pgvector "vector" type not available (run CREATE EXTENSION vector first)';
   END IF;
 END $$;
 

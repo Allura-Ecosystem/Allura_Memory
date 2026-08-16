@@ -14,40 +14,49 @@
  *   bun src/__benchmarks__/run.ts --iters=50          # latency sample count
  *   bun src/__benchmarks__/run.ts --group=allura-bench-loadtest
  *
- * Exit code: 0 when every benchmark passed/skipped, 1 when any failed or errored
- * (so the harness can act as a CI acceptance gate). If the gateway is
- * unreachable, all benchmarks are reported as `skip` and the process still
- * writes its JSON and exits 0 — a cold stack is not a test failure.
+ * Local mode retains threshold gating and permits a cold stack. CI baseline
+ * mode records numerical threshold results without enforcing them (Story 24.6
+ * owns regression policy), but fails closed on transport errors and skips.
  */
 import { config } from "dotenv"
 config()
 
 import { randomBytes } from "node:crypto"
-import { writeFile } from "node:fs/promises"
+import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
-
-import { BrainClient } from "./lib/client"
-import { buildReportFile, hasFailures, printReport } from "./lib/report"
-import type { BenchmarkContext, BenchmarkResult } from "./lib/types"
 
 import { run as runRetrievalQuality } from "./benchmarks/retrieval-quality"
 import { run as runCurationAccuracy } from "./benchmarks/curation-accuracy"
 import { run as runGovernanceIntegrity } from "./benchmarks/governance-integrity"
 import { run as runLatencyProfile } from "./benchmarks/latency-profile"
 import { run as runAuditCompleteness } from "./benchmarks/audit-completeness"
+import { BrainClient } from "./lib/client"
+import { buildReportFile, hasFailures, printReport } from "./lib/report"
+import type { BenchmarkContext, BenchmarkResult } from "./lib/types"
+import { DEFAULT_BENCHMARK_AGENT_NAME, DEFAULT_BENCHMARK_GROUP_ID } from "../../scripts/ci/benchmark-contract"
 
 const DEFAULT_JSON_PATH = "src/__benchmarks__/benchmark-results.json"
 
-interface CliOptions {
+export interface CliOptions {
   only: string[] | null
   json: string | null
   verbose: boolean
   iters: number
   group: string
+  requireGateway: boolean
+  enforceThresholds: boolean
 }
 
-function parseArgs(argv: string[]): CliOptions {
-  const opts: CliOptions = { only: null, json: null, verbose: false, iters: 20, group: "" }
+export function parseArgs(argv: string[]): CliOptions {
+  const opts: CliOptions = {
+    only: null,
+    json: null,
+    verbose: false,
+    iters: 20,
+    group: "",
+    requireGateway: false,
+    enforceThresholds: true,
+  }
   for (const arg of argv) {
     const [key, value] = arg.replace(/^--/, "").split("=")
     switch (key) {
@@ -67,9 +76,34 @@ function parseArgs(argv: string[]): CliOptions {
       case "group":
         if (value) opts.group = value
         break
+      case "require-gateway":
+        opts.requireGateway = true
+        break
+      case "ci-baseline":
+        opts.requireGateway = true
+        opts.enforceThresholds = false
+        break
     }
   }
   return opts
+}
+
+export function resolveBenchmarkGroup(explicitGroup?: string): string {
+  if (explicitGroup && explicitGroup !== DEFAULT_BENCHMARK_GROUP_ID) {
+    throw new Error(`--group must match the benchmark credential tenant '${DEFAULT_BENCHMARK_GROUP_ID}'`);
+  }
+  return DEFAULT_BENCHMARK_GROUP_ID;
+}
+
+/**
+ * Baseline CI proves that the runner and every required benchmark executed.
+ * Numerical threshold enforcement is intentionally separate until Story 24.6.
+ */
+export function determineExitCode(results: BenchmarkResult[], opts: Pick<CliOptions, "requireGateway" | "enforceThresholds">): number {
+  if (results.some((result) => result.status === "error")) return 1
+  if (opts.requireGateway && results.some((result) => result.status === "skip")) return 3
+  if (opts.enforceThresholds && hasFailures(results)) return 1
+  return 0
 }
 
 /** Registry of benchmark modules in display order. */
@@ -97,13 +131,19 @@ function skipResult(id: string, reason: string): BenchmarkResult {
   }
 }
 
-async function main(): Promise<void> {
+async function main(): Promise<number> {
   const opts = parseArgs(process.argv.slice(2))
   const runId = randomBytes(4).toString("hex")
   // The `-loadtest` suffix routes seed writes straight to episodic storage,
   // skipping the HITL proposal queue (see memory_add in canonical-tools.ts).
-  const groupId = opts.group || `allura-bench-${runId}-loadtest`
-  const userId = `bench-user-${runId}`
+  const groupId = resolveBenchmarkGroup(opts.group)
+  // user_id is an actor-selector field (see ACTOR_FIELDS in
+  // src/lib/auth/principal-context.ts): for an mcp_token credential it must
+  // equal the authenticated principal exactly, or the gateway denies the
+  // call with ACTOR_MISMATCH. Run isolation is carried by the runId marker
+  // embedded in seeded content (see markerFor in lib/dataset.ts), not by a
+  // synthetic per-run user_id.
+  const userId = DEFAULT_BENCHMARK_AGENT_NAME
 
   const client = new BrainClient()
   const ctx: BenchmarkContext = { client, groupId, runId, userId, verbose: opts.verbose }
@@ -122,8 +162,10 @@ async function main(): Promise<void> {
   // Preflight: is the gateway reachable at all?
   const ping = await client.ping(groupId)
   const results: BenchmarkResult[] = []
+  let unreachable = false
 
   if (!ping.reachable) {
+    unreachable = true
     process.stderr.write(
       `\n⚠ Gateway unreachable (${ping.detail ?? "no detail"}). ` +
         `Reporting all benchmarks as skip. Bring the stack up with \`bun run brain:up\`.\n`,
@@ -135,13 +177,10 @@ async function main(): Promise<void> {
     process.stderr.write(`gateway reachable (${Math.round(ping.latencyMs)}ms)\n`)
     for (const e of selected) {
       if (opts.verbose) process.stderr.write(`\n▶ running ${e.id}…\n`)
-      // Isolate each benchmark in its own loadtest sub-group so a write-heavy
-      // benchmark (e.g. latency-profile) cannot poison a later one by tripping a
-      // shared per-group budget / circuit breaker. Each still skips the HITL
-      // queue via the `-loadtest` suffix.
-      const benchCtx: BenchmarkContext = opts.group
-        ? ctx
-        : { ...ctx, groupId: `allura-bench-${runId}-${e.id}-loadtest` }
+      // Keep every benchmark call inside the credential's exact tenant allowlist.
+      // Run isolation is represented by runId/userId, not by an unauthorized
+      // per-module tenant.
+      const benchCtx: BenchmarkContext = ctx
       try {
         results.push(await e.run(benchCtx))
       } catch (err) {
@@ -168,15 +207,18 @@ async function main(): Promise<void> {
       generatedAt: new Date().toISOString(),
       results,
     })
+    await mkdir(path.dirname(outPath), { recursive: true })
     await writeFile(outPath, JSON.stringify(report, null, 2) + "\n", "utf8")
     process.stderr.write(`\nJSON results written to ${path.relative(process.cwd(), outPath)}\n`)
   }
 
-  // A cold stack (everything skipped) is not a failure; real fails/errors are.
-  process.exit(hasFailures(results) ? 1 : 0)
+  if (unreachable && opts.requireGateway) return 2
+  return determineExitCode(results, opts)
 }
 
-main().catch((err) => {
-  process.stderr.write(`[benchmark] fatal: ${err instanceof Error ? err.stack : String(err)}\n`)
-  process.exit(1)
-})
+if (import.meta.main) {
+  main().then((code) => process.exit(code)).catch((err) => {
+    process.stderr.write(`[benchmark] fatal: ${err instanceof Error ? err.stack : String(err)}\n`)
+    process.exit(1)
+  })
+}

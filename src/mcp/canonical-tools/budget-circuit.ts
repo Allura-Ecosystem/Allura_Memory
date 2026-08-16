@@ -213,8 +213,9 @@ export function resetHaltedGroup(groupId?: string): number {
 /**
  * Admin: Get list of currently halted session keys.
  */
-export function getHaltedSessions(): string[] {
+export function getHaltedSessions(groupId?: string): string[] {
   const enforcer = getBudgetEnforcer()
   if (!enforcer) return []
-  return enforcer.getHaltedSessionKeys()
+  const halted = enforcer.getHaltedSessionKeys()
+  return groupId ? halted.filter((key) => key.startsWith(`${groupId}:`)) : halted
 }
