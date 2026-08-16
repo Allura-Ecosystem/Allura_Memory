@@ -14,7 +14,7 @@
 
 import type { BenchmarkContext, BenchmarkResult } from "../lib/types"
 import { markerFor } from "../lib/dataset"
-import { searchKeys, type AddResult } from "../lib/seed"
+import { type AddResult, searchKeys } from "../lib/seed"
 import { gated, info, statusFromMetrics } from "../lib/metric-builder"
 
 interface InvariantCheckResult {
