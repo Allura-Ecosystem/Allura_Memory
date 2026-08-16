@@ -733,11 +733,12 @@ describe("AC-10: existing flows keep working with principal context injected", (
     expect(principal.principalId).toBe("dev-local");
   });
 
-  it("normal memory tools remain callable by a plain viewer credential", async () => {
+  it("plain viewer credentials can read but cannot mutate memory", async () => {
     const auth = new McpAuthenticator(tokenConfig(), deps());
     const principal = await auth.authenticate(bearer(RAW_VIEWER));
-    for (const tool of ["memory_add", "memory_search", "memory_get", "memory_list", "memory_export"]) {
+    for (const tool of ["memory_search", "memory_get", "memory_list", "memory_export"]) {
       expect(() => guardToolCall(principal, tool, { group_id: "allura-system" })).not.toThrow();
     }
+    expect(() => guardToolCall(principal, "memory_add", { group_id: "allura-system" })).toThrow(/requires scope/);
   });
 });

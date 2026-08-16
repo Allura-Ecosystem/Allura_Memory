@@ -42,7 +42,7 @@ import {
 export interface McpCredentialRecord {
   id: string;
   group_id: string;
-  workspace_id: string;
+  workspace_id?: string;
   agent_name: string;
   token_prefix: string;
   token_hash: string;
@@ -317,11 +317,23 @@ export function timingSafeCompare(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 
+/** Stable transport correlation: MCP session, then request id, otherwise null. */
+export function resolveRequestCorrelationId(headers: HeaderBag, protocolRequestId?: unknown): string | null {
+  for (const name of ["mcp-session-id", "x-request-id"]) {
+    const value = headers[name] ?? headers[name.toLowerCase()];
+    const candidate = Array.isArray(value) ? value[0] : value;
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  if (typeof protocolRequestId === "string" && protocolRequestId.trim()) return protocolRequestId.trim();
+  if (typeof protocolRequestId === "number" && Number.isFinite(protocolRequestId)) return String(protocolRequestId);
+  return null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SCOPE -> ROLE MAPPING
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ADMIN_SCOPES = new Set(["admin:roles", "admin:users", "workspace:lock", "agents:revoke"]);
+const ADMIN_SCOPES = new Set(["admin:roles", "admin:users", "workspace:lock", "agents:revoke", "admin:budget", "admin:budget:global"]);
 const CURATOR_SCOPES = new Set(["review:approve", "review:reject", "memory:promote"]);
 
 /** Every scope defined in `@allura/types`. An unknown scope grants nothing. */
@@ -344,6 +356,8 @@ const KNOWN_SCOPES = new Set([
   "workspace:lock",
   "admin:users",
   "admin:roles",
+  "admin:budget",
+  "admin:budget:global",
 ]);
 
 /**
@@ -555,7 +569,7 @@ export class McpAuthenticator {
       authMethod: "mcp_token",
       sessionId: this.sessionId(sessionId),
       credentialId: record.id,
-      workspaceId: record.workspace_id,
+      scopes: record.scopes ?? [],
       expiresAt: record.expires_at instanceof Date
         ? record.expires_at.toISOString()
         : record.expires_at,

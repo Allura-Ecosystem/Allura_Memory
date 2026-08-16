@@ -1,7 +1,7 @@
 # Story 24.2 — Authenticated Principal Context
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** ready-for-review
+**Status:** in-review
 **Priority:** P0-Critical
 **Complexity:** Large
 **Owner:** unassigned
@@ -30,10 +30,11 @@ type PrincipalContext = {
 The exact type may vary, but every trusted field must originate from verified credentials or explicit local-development configuration. Tool arguments are resource selectors, never sources of authority.
 
 **As built** (`src/lib/auth/principal-context.ts`): the five fields above shipped
-as specified, plus three optional credential-derived fields — `credentialId`
-(the `mcp_tokens.id` row id, never the token or its hash), `workspaceId`, and
-`expiresAt`. The object and its arrays are frozen. `workspaceId` is treated as
-authority-shaped and reconciled like the tenant (review Finding 4).
+as specified, plus two optional credential-derived fields — `credentialId`
+(the `mcp_tokens.id` row id, never the token or its hash) and `expiresAt`. The
+object and its arrays are frozen. Workspace restriction remains deferred: the
+canonical MCP tool boundary does not currently enforce `workspace_id`, so this
+story does not claim that it does.
 
 ## Scope
 
@@ -108,8 +109,8 @@ asserted by the test suite.
   refuses without a principal; production startup refuses without an auth
   configuration. Verified in-process, not yet against a running gateway.
 - [x] No caller-controlled field can expand the principal's tenant or role
-  authority. `role`/`roles`/`principal`/`session_id`/`workspace_id` are
-  stripped; `group_id`, `workspace_id` and the actor fields are reconciled
+ authority. `role`/`roles`/`principal`/`session_id` are stripped; `group_id`
+ and the actor fields are reconciled
   against the principal. Covered by the AC-9 matrix.
 - [x] Documentation impact **recorded** for BLUEPRINT, SOLUTION-ARCHITECTURE,
   DATA-DICTIONARY, REQUIREMENTS-MATRIX and RISKS-AND-DECISIONS — see
@@ -329,13 +330,13 @@ File List. A comment at the former call site records why, and what would make it
 worth re-adding. Tenant binding remains enforced by `resolveEffectiveTenant` in
 `guardToolCall`, which is in the actual request path and is tested.
 
-### Finding 4 (Low) - `workspace_id` omitted from the strip list. FIXED.
+### Finding 4 (Low) - workspace restriction claim deferred.
 
-`workspace_id` is credential-derived (`mcp_tokens.workspace_id`) and therefore
-authority-shaped. Added to `STRIPPED_AUTHORITY_KEYS` and reconciled like the
-tenant: injected from the principal when omitted, accepted when it matches,
-refused with TENANT_MISMATCH when forged, and dropped entirely when the
-principal has no workspace. 5 new unit tests.
+The canonical MCP boundary does not currently enforce `workspace_id`. The
+principal contract therefore does not carry a workspace authority field, the
+sanitizer does not claim to reconcile it, and this story does not present
+workspace isolation as implemented. A future story may add the restriction at
+the canonical handler boundary where it can be enforced end-to-end.
 
 ### Finding 5 (Low) - Shared token bypassed per-credential revocation. RULING: GATE IT.
 
@@ -420,7 +421,7 @@ needs the equivalent treatment if it turns out to be canonical.
 | D7 | DATA-DICTIONARY.md | new section, adjacent to the `events` entry | `mcp_tokens` is not documented in `docs/allura/DATA-DICTIONARY.md` at all, despite being the credential store this story depends on. (It is documented in `docs/allura-hosted/DATA-DICTIONARY.md`.) | Document `mcp_tokens` as the MCP credential table, **reused as-is** by this story: no new credential table, no migration. Raw tokens are never stored — HMAC-SHA256 `token_hash` plus a display `token_prefix` (unique, the lookup key). Revocation and expiry are the nullable `revoked_at` / `expires_at` timestamps; rows are never deleted or destructively mutated. Note `agent_name` has **no uniqueness constraint**, which is why session rebinding compares `id`, not `agent_name` (review Finding 1). |
 | D8 | DATA-DICTIONARY.md | `## Environment Variables` | None of this story's auth configuration is listed. | Add, with production semantics: `ALLURA_MCP_TOKEN_SECRET` (>=16 chars, selects `mcp_token` mode), `ALLURA_MCP_AUTH_TOKEN` (legacy `shared_token` mode), `ALLURA_MCP_DEV_AUTH` (`dev_local`, refused in production), `ALLURA_MCP_DEV_PRINCIPAL_ID` / `_DEV_TENANTS` / `_DEV_ROLES`, `ALLURA_MCP_SHARED_TOKEN_PRINCIPAL` / `_TENANTS` / `_ROLES`, `ALLURA_MCP_SERVICE_PRINCIPAL_ID` / `_SERVICE_TENANTS` / `_SERVICE_ROLES` (required for stdio in production, wildcard forbidden), `ALLURA_MCP_AUTH_CACHE_TTL_MS` (default 0, capped at 60000). |
 | D9 | REQUIREMENTS-MATRIX.md | `## Governed Memory Pipeline — Business → Functional Traceability` | No traceability row maps the authenticated-principal requirement to its enforcement point and evidence. | Add rows tracing AC-1..AC-10 of Story 24.2 to `src/lib/auth/principal-context.ts`, `src/lib/auth/mcp-authenticator.ts`, `src/lib/auth/principal-audit.ts`, with evidence pointing at the 144-test suite (`src/lib/auth/__tests__/`, `src/__tests__/mcp-auth-adversarial.test.ts`). Classify AC-1, AC-6 and AC-7 as implemented-but-not-yet-verified-on-live-infrastructure, matching the `[~]` marks in this story. |
-| D10 | RISKS-AND-DECISIONS.md | `## Architectural Decisions` | No ADR exists for the principal-context contract. | Add an ADR: transport-independent `PrincipalContext` (`principalId`, `tenantIds`, `roles`, `authMethod`, `sessionId`, plus credential-derived `credentialId`, `workspaceId`, `expiresAt`; frozen). Alternatives considered: per-tool ad-hoc checks; a kernel-policy layer (rejected — unreachable, Finding 3). Consequence: one chokepoint, `guardToolCall`, shared by HTTP and stdio. Rollback: revert to shared-token mode via `ALLURA_MCP_AUTH_TOKEN`. |
+| D10 | RISKS-AND-DECISIONS.md | `## Architectural Decisions` | No ADR exists for the principal-context contract. | Add an ADR: transport-independent `PrincipalContext` (`principalId`, `tenantIds`, `roles`, `authMethod`, `sessionId`, plus credential-derived `credentialId` and `expiresAt`; frozen). Workspace restriction is explicitly deferred until a canonical handler can enforce it. Alternatives considered: per-tool ad-hoc checks; a kernel-policy layer (rejected — unreachable, Finding 3). Consequence: one chokepoint, `guardToolCall`, shared by HTTP and stdio. Rollback: revert to shared-token mode via `ALLURA_MCP_AUTH_TOKEN`. |
 | D11 | RISKS-AND-DECISIONS.md | `## Architectural Decisions` | No ADR records the three auth modes or the production fail-closed rule. | Add an ADR covering `mcp_token` / `shared_token` / `dev_local`, the selection precedence, production fail-closed startup, and the rule that `dev_local` cannot activate in production. |
 | D12 | RISKS-AND-DECISIONS.md | `## Risks` | The Finding 5 residual gap is not recorded as a risk anywhere outside this story and `.env.example`. | Add the named residual risk: **the legacy shared bearer token has no per-caller identity and no revocation path.** AC-8 revocation covers `mcp_tokens` rows only. In `shared_token` mode a leaked credential can be revoked only by rotating `ALLURA_MCP_AUTH_TOKEN` and restarting, cutting off every caller at once. Mitigation: the token is now inert whenever `mcp_token` mode is active, and the gateway logs an `[auth-config]` warning. Operator guidance: mint `mcp_tokens` credentials, set `ALLURA_MCP_TOKEN_SECRET`, then unset `ALLURA_MCP_AUTH_TOKEN`. |
 | D13 | RISKS-AND-DECISIONS.md | `## Risks` | The unbounded `[mcp-auth-persist-failed]` log under sustained database outage is not recorded. | Add as a low-severity operational risk with the accepted follow-up (rate limit or circuit breaker). Note the behaviour is deliberately fail-open: authentication never fails because auditing is unreachable. |
@@ -449,5 +450,5 @@ setting.
 |---|---|---|
 | 2026-08-15 | Review round 3 (docs only): added the Documentation Impact Record (16 rows, D1-D16) satisfying DoD item 3 by record per Brooks' ruling; edits deferred to Story 24.8. Recorded the unresolved canonical-doc-set question (`docs/allura/` vs `docs/allura-hosted/`) with supporting evidence and no guess. Noted `planning docs/` does not exist in this repo. No file under `docs/` was edited. | Woz (Team RAM) |
 | 2026-08-15 | Review round 2 (docs only, no code change): corrected Scope and Implementation Files, which still claimed kernel policy threading after the Finding-3 revert; swept the whole story and additionally corrected Implementation Plan step 6, the stale AC-7 "persistence is a follow-up" note, and the POL-028 note; recorded as-built Architectural Contract, the review-time descope in Out of Scope, evidence-ID qualification, honest per-item Definition of Done (one item marked NOT DONE), and three known follow-ups. | Woz (Team RAM) |
-| 2026-08-15 | Review round 1: session rebinding now compares credential identity (F1); AC-7 audit persisted to `events.metadata` JSONB (F2); POL-028 and all kernel changes removed as unreachable, ruling (b) (F3); `workspace_id` reconciled as authority (F4); legacy shared token gated out of mcp_token mode with a named residual gap (F5). 144 auth tests, 0 regressions. | Woz (Team RAM) |
+| 2026-08-15 | Review round 1: session rebinding now compares credential identity (F1); AC-7 audit persisted to `events.metadata` JSONB (F2); POL-028 and all kernel changes removed as unreachable, ruling (b) (F3); workspace restriction claim deferred because the canonical boundary does not enforce it (F4); legacy shared token gated out of mcp_token mode with a named residual gap (F5). 144 auth tests, 0 regressions. | Woz (Team RAM) |
 | 2026-08-15 | Story 24.2 implemented: PrincipalContext contract, MCP credential authenticator over existing `mcp_tokens`, principal-derived authorization at both MCP transports, POL-028 tenant binding, 109 new tests (57 unit + 52 adversarial). Live-infrastructure evidence pending laptop verification. | Woz (Team RAM) |

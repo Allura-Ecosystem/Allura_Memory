@@ -21,7 +21,6 @@ function principal() {
     authMethod: "mcp_token",
     sessionId: "sess-9",
     credentialId: "tok_abc",
-    workspaceId: "ws-main",
   });
 }
 

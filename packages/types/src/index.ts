@@ -45,7 +45,9 @@ export type Scope =
   | "tokens:rotate"
   | "workspace:lock"
   | "admin:users"
-  | "admin:roles";
+  | "admin:roles"
+  | "admin:budget"
+  | "admin:budget:global";
 
 export type LockMode =
   | "normal"
@@ -67,7 +69,8 @@ export type MemoryStatus =
 /**
  * Scope context carried by every governed operation.
  * `group_id` = org (the tenant boundary); `workspace_id` = sub-scope (ADR-001).
- * Both are server-injected by Allura Guard, never client-supplied.
+ * `group_id` is server-injected by Allura Guard, never client-supplied.
+ * Workspace enforcement remains deferred until a canonical handler consumes it.
  */
 export interface AlluraScope {
   group_id: GroupId;

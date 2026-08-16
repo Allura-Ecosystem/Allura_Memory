@@ -21,6 +21,10 @@
  * the approval-workflow `role` union in `src/kernel/policy.ts`.
  */
 
+import { MEMORY_TOOLS } from "@allura/mcp-server";
+import { scopesForRole } from "@allura/rbac";
+import type { Scope } from "@allura/types";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,6 +51,8 @@ export interface PrincipalContext {
   readonly tenantIds: readonly string[];
   /** Effective roles. Authority for elevated tools comes from here ONLY. */
   readonly roles: readonly PrincipalRole[];
+  /** Exact MCP scopes granted by the verified credential. */
+  readonly scopes: readonly Scope[];
   /** How the identity was established. */
   readonly authMethod: AuthMethod;
   /** Per-connection session identifier, used to correlate audit events. */
@@ -56,8 +62,6 @@ export interface PrincipalContext {
    * NEVER the raw token, and never the token hash.
    */
   readonly credentialId?: string;
-  /** Workspace sub-scope bound to the credential, when present. */
-  readonly workspaceId?: string;
   /** Credential expiry (ISO 8601) when the credential carries one. */
   readonly expiresAt?: string | null;
 }
@@ -76,6 +80,7 @@ export type AuthReasonCode =
   // authorization
   | "TENANT_MISMATCH"
   | "ROLE_INSUFFICIENT"
+  | "SCOPE_INSUFFICIENT"
   | "ACTOR_MISMATCH"
   | "PRINCIPAL_MISSING"
   // configuration
@@ -90,6 +95,7 @@ const REASON_STATUS: Record<AuthReasonCode, number> = {
   AUTH_EXPIRED: 401,
   TENANT_MISMATCH: 403,
   ROLE_INSUFFICIENT: 403,
+  SCOPE_INSUFFICIENT: 403,
   ACTOR_MISMATCH: 403,
   PRINCIPAL_MISSING: 401,
   CONFIG_MISSING: 500,
@@ -140,10 +146,10 @@ export interface CreatePrincipalInput {
   principalId: string;
   tenantIds: readonly string[];
   roles: readonly string[];
+  scopes?: readonly string[];
   authMethod: AuthMethod;
   sessionId: string;
   credentialId?: string;
-  workspaceId?: string;
   expiresAt?: string | null;
 }
 
@@ -194,15 +200,18 @@ export function createPrincipalContext(input: CreatePrincipalInput): PrincipalCo
   }
 
   const roles = normalizeRoles(input.roles ?? []);
+  const scopes = input.scopes === undefined
+    ? [...new Set(roles.flatMap((role) => scopesForRole(role === "curator" ? "reviewer" : role)))]
+    : [...new Set(input.scopes.map((scope) => String(scope).trim()).filter(Boolean))] as Scope[];
 
   return Object.freeze({
     principalId,
     tenantIds: Object.freeze([...tenantIds]) as readonly string[],
     roles: Object.freeze(roles) as readonly PrincipalRole[],
+    scopes: Object.freeze(scopes) as readonly Scope[],
     authMethod: input.authMethod,
     sessionId,
     credentialId: input.credentialId,
-    workspaceId: input.workspaceId,
     expiresAt: input.expiresAt ?? null,
   });
 }
@@ -230,6 +239,10 @@ export function hasRole(principal: PrincipalContext, role: PrincipalRole): boole
   return principal.roles.includes(role);
 }
 
+export function hasScope(principal: PrincipalContext, scope: Scope): boolean {
+  return principal.scopes.includes(scope);
+}
+
 export function isElevatedTool(toolName: string): boolean {
   return ELEVATED_TOOLS.has(toolName);
 }
@@ -244,15 +257,23 @@ export function authorizeToolCall(principal: PrincipalContext, toolName: string)
   if (!principal) {
     throw new PrincipalAuthError("PRINCIPAL_MISSING", "No verified principal on this request");
   }
-  if (!isElevatedTool(toolName)) return;
-
-  const satisfied = ELEVATED_ROLES.some((r) => principal.roles.includes(r));
-  if (!satisfied) {
+  const tool = MEMORY_TOOLS.find((candidate) => candidate.name === toolName);
+  if (isElevatedTool(toolName)) {
+    const satisfied = ELEVATED_ROLES.some((r) => principal.roles.includes(r));
+    if (!satisfied) {
+      throw new PrincipalAuthError(
+        "ROLE_INSUFFICIENT",
+        `Tool '${toolName}' requires role admin or curator; principal '${principal.principalId}' has [${principal.roles.join(", ")}]`,
+      );
+    }
+  }
+  if (tool && !principal.scopes.includes(tool.requiredScope)) {
     throw new PrincipalAuthError(
-      "ROLE_INSUFFICIENT",
-      `Tool '${toolName}' requires role admin or curator; principal '${principal.principalId}' has [${principal.roles.join(", ")}]`,
+      "SCOPE_INSUFFICIENT",
+      `Tool '${toolName}' requires scope ${tool.requiredScope}; principal '${principal.principalId}' lacks it`,
     );
   }
+  if (!isElevatedTool(toolName)) return;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -380,10 +401,6 @@ export const STRIPPED_AUTHORITY_KEYS = [
   "principal_context",
   "auth_method",
   "session_id",
-  // `workspace_id` is credential-derived (mcp_tokens.workspace_id) and is
-  // therefore authority-shaped. Stripped here and re-injected below from the
-  // principal, so a caller can never widen or redirect its own sub-scope.
-  "workspace_id",
 ] as const;
 
 export interface AppliedPrincipalArgs {
@@ -399,11 +416,10 @@ export interface AppliedPrincipalArgs {
  * Bind the verified principal onto a tool-call argument object.
  *
  * Guarantees, in order:
- *  1. authority keys (`role`, `workspace_id`, injected principal, ...) removed;
+ *  1. authority keys (`role`, injected principal, ...) removed;
  *  2. `group_id` is replaced with the reconciled effective tenant;
- *  3. `workspace_id` is reconciled against the credential's sub-scope;
- *  4. any present actor field must match the principal, else ACTOR_MISMATCH;
- *  5. `curator_id` is injected for elevated tools when omitted.
+ *  3. any present actor field must match the principal, else ACTOR_MISMATCH;
+ *  4. `curator_id` is injected for elevated tools when omitted.
  *
  * The input object is never mutated.
  */
@@ -432,23 +448,7 @@ export function applyPrincipalToArgs(
   const effectiveTenant = resolveEffectiveTenant(principal, source.group_id);
   args.group_id = effectiveTenant;
 
-  // 3. Workspace sub-scope. Bound to the credential at mint time
-  // (mcp_tokens.workspace_id) and never widened by the caller. A caller that
-  // names a different workspace is forging authority, exactly like a tenant.
-  if (principal.workspaceId) {
-    const supplied = source.workspace_id;
-    if (supplied !== undefined && supplied !== null && supplied !== "") {
-      if (typeof supplied !== "string" || supplied.trim() !== principal.workspaceId) {
-        throw new PrincipalAuthError(
-          "TENANT_MISMATCH",
-          `workspace_id '${String(supplied)}' is not the workspace bound to the authenticated credential`,
-        );
-      }
-    }
-    args.workspace_id = principal.workspaceId;
-  }
-
-  // 4/5. Actors.
+  // 3/4. Actors.
   const actors: Record<string, string> = {};
   for (const field of ACTOR_FIELDS) {
     const present = Object.prototype.hasOwnProperty.call(source, field);
@@ -484,7 +484,7 @@ function sameStringSet(a: readonly string[], b: readonly string[]): boolean {
  *
  * So we compare the *credential identity* and the full authority envelope:
  *  - `credentialId` must match exactly when either side has one (mcp_token);
- *  - `authMethod`, tenant set, role set and workspace must all match.
+ *  - `authMethod`, tenant set, role set and exact scope set must all match.
  */
 export function canRebindSession(
   current: PrincipalContext | null | undefined,
@@ -502,9 +502,9 @@ export function canRebindSession(
     return false;
   }
 
-  if (current.workspaceId !== next.workspaceId) return false;
   if (!sameStringSet(current.tenantIds, next.tenantIds)) return false;
   if (!sameStringSet(current.roles, next.roles)) return false;
+  if (!sameStringSet(current.scopes, next.scopes)) return false;
 
   return true;
 }
@@ -544,6 +544,21 @@ export function guardToolCall(
   }
   authorizeToolCall(principal, toolName);
   return applyPrincipalToArgs(principal, toolName, rawArgs);
+}
+
+/** Resolve a budget route's tenant without allowing omission to mean "all". */
+export function resolveBudgetTenant(
+  principal: PrincipalContext,
+  selector?: unknown,
+): string | null {
+  if (selector === undefined || selector === null || selector === "") {
+    if (principal.tenantIds.length === 1 && principal.tenantIds[0] !== "*") return principal.tenantIds[0]!;
+    throw new PrincipalAuthError(
+      "TENANT_MISMATCH",
+      "A budget tenant must be selected explicitly for a multi-tenant principal",
+    );
+  }
+  return resolveEffectiveTenant(principal, selector);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

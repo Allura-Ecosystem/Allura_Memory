@@ -64,6 +64,8 @@ export class BrainClient {
         "Content-Type": "application/json",
         Accept: "application/json, text/event-stream",
       }
+      const authToken = process.env.BENCHMARK_AUTH_TOKEN
+      if (authToken) headers.Authorization = `Bearer ${authToken}`
       if (this.sessionId) headers["mcp-session-id"] = this.sessionId
       return await fetch(this.url, {
         method: "POST",

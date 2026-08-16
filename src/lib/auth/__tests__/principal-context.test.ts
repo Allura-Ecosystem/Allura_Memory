@@ -22,6 +22,31 @@ import {
   STRIPPED_AUTHORITY_KEYS,
 } from "../principal-context";
 
+describe("per-tool scope authorization", () => {
+  it("allows memory:read only for read tools and denies writes, deletes, restores, updates, and audits", () => {
+    const principal = createPrincipalContext({
+      principalId: "viewer",
+      tenantIds: ["allura-system"],
+      roles: ["viewer"],
+      scopes: ["memory:read"],
+      authMethod: "mcp_token",
+      sessionId: "session-read-only",
+      credentialId: "credential-read-only",
+    });
+
+    expect(() => authorizeToolCall(principal, "memory_search")).not.toThrow();
+    for (const tool of [
+      "memory_add",
+      "memory_delete",
+      "memory_update",
+      "memory_restore",
+      "audit_query_events",
+    ]) {
+      expect(() => authorizeToolCall(principal, tool)).toThrow(/requires scope/);
+    }
+  });
+});
+
 function tokenPrincipal(overrides: Partial<Parameters<typeof createPrincipalContext>[0]> = {}): PrincipalContext {
   return createPrincipalContext({
     principalId: "agent-scout",
@@ -91,6 +116,11 @@ describe("createPrincipalContext", () => {
     expect(serialized).not.toMatch(/token_hash|secret|allura_mcp_/);
     expect(p.credentialId).toBe("tok_abc");
   });
+
+  it("does not advertise workspace isolation before a canonical handler consumes it", () => {
+    const p = tokenPrincipal();
+    expect(p).not.toHaveProperty("workspaceId");
+  });
 });
 
 describe("isValidTenantId", () => {
@@ -150,6 +180,20 @@ describe("authorizeToolCall (AC-5)", () => {
       "governance_update_policy",
     ]);
     expect(isElevatedTool("memory_add")).toBe(false);
+  });
+
+  it("authorizes every canonical tool from its exact credential scope", () => {
+    const readOnly = tokenPrincipal({ scopes: ["memory:read"] });
+
+    expect(() => authorizeToolCall(readOnly, "memory_search")).not.toThrow();
+    expect(() => authorizeToolCall(readOnly, "memory_add")).toThrow(/requires scope/);
+    expect(() => authorizeToolCall(readOnly, "memory_delete")).toThrow(/requires scope/);
+    expect(() => authorizeToolCall(readOnly, "audit_query_events")).toThrow(/requires scope/);
+  });
+
+  it("does not let a coarse curator role replace the required scope", () => {
+    const curatorWithoutPromotion = tokenPrincipal({ roles: ["curator"], scopes: ["memory:read"] });
+    expect(() => authorizeToolCall(curatorWithoutPromotion, "memory_promote")).toThrow(/requires scope/);
   });
 });
 
@@ -361,42 +405,15 @@ describe("buildAuthAuditEvent (AC-7)", () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// REVIEW FINDING 4 — workspace_id is authority-shaped
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe("workspace_id reconciliation (review Finding 4)", () => {
-  it("lists workspace_id as a stripped authority key", () => {
-    expect(STRIPPED_AUTHORITY_KEYS).toContain("workspace_id");
-  });
-
-  it("injects the credential-bound workspace when the caller omits it", () => {
-    const p = tokenPrincipal({ workspaceId: "ws-main" });
-    const { args } = applyPrincipalToArgs(p, "memory_add", { group_id: "allura-system" });
-    expect(args.workspace_id).toBe("ws-main");
-  });
-
-  it("accepts a matching workspace selector", () => {
-    const p = tokenPrincipal({ workspaceId: "ws-main" });
-    const { args } = applyPrincipalToArgs(p, "memory_add", { workspace_id: "ws-main" });
-    expect(args.workspace_id).toBe("ws-main");
-  });
-
-  it("refuses a forged workspace selector", () => {
-    const p = tokenPrincipal({ workspaceId: "ws-main" });
-    try {
-      applyPrincipalToArgs(p, "memory_add", { workspace_id: "ws-someone-else" });
-      throw new Error("expected refusal");
-    } catch (error) {
-      expect(error).toBeInstanceOf(PrincipalAuthError);
-      expect((error as PrincipalAuthError).reasonCode).toBe("TENANT_MISMATCH");
-    }
-  });
-
-  it("drops a caller-supplied workspace when the principal has none", () => {
+// Workspace restriction is deliberately deferred until a canonical handler
+// enforces it. This boundary does not claim that it is isolated here.
+describe("workspace_id boundary claim", () => {
+  it("does not advertise workspace authorization", () => {
     const p = tokenPrincipal();
-    const { args } = applyPrincipalToArgs(p, "memory_add", { workspace_id: "ws-invented" });
-    expect(args).not.toHaveProperty("workspace_id");
+    const { args } = applyPrincipalToArgs(p, "memory_add", { workspace_id: "ws-main" });
+    expect(p).not.toHaveProperty("workspaceId");
+    expect(STRIPPED_AUTHORITY_KEYS).not.toContain("workspace_id");
+    expect(args.workspace_id).toBe("ws-main");
   });
 });
 
@@ -410,7 +427,6 @@ describe("canRebindSession (review Finding 1)", () => {
     tenantIds: ["allura-system"],
     roles: ["curator"],
     credentialId: "tok_alpha",
-    workspaceId: "ws-a",
   });
 
   it("allows the same credential to continue its own session", () => {
@@ -419,7 +435,6 @@ describe("canRebindSession (review Finding 1)", () => {
       tenantIds: ["allura-system"],
       roles: ["curator"],
       credentialId: "tok_alpha",
-      workspaceId: "ws-a",
       sessionId: "sess-2",
     });
     expect(canRebindSession(sessionOwner, sameCredential)).toBe(true);
@@ -433,7 +448,6 @@ describe("canRebindSession (review Finding 1)", () => {
       tenantIds: ["allura-mortagate"],
       roles: ["admin"],
       credentialId: "tok_beta",
-      workspaceId: "ws-b",
       sessionId: "sess-3",
     });
     expect(impostor.principalId).toBe(sessionOwner.principalId);
@@ -446,7 +460,6 @@ describe("canRebindSession (review Finding 1)", () => {
       tenantIds: ["allura-system"],
       roles: ["curator"],
       credentialId: "tok_beta",
-      workspaceId: "ws-a",
     });
     expect(canRebindSession(sessionOwner, impostor)).toBe(false);
   });
@@ -457,7 +470,6 @@ describe("canRebindSession (review Finding 1)", () => {
       tenantIds: ["allura-system", "allura-mortagate"],
       roles: ["curator"],
       credentialId: "tok_alpha",
-      workspaceId: "ws-a",
     });
     expect(canRebindSession(sessionOwner, escalated)).toBe(false);
 
@@ -466,20 +478,8 @@ describe("canRebindSession (review Finding 1)", () => {
       tenantIds: ["allura-system"],
       roles: ["curator", "admin"],
       credentialId: "tok_alpha",
-      workspaceId: "ws-a",
     });
     expect(canRebindSession(sessionOwner, roleEscalated)).toBe(false);
-  });
-
-  it("refuses a workspace change under the same credential id", () => {
-    const moved = tokenPrincipal({
-      principalId: "cursor",
-      tenantIds: ["allura-system"],
-      roles: ["curator"],
-      credentialId: "tok_alpha",
-      workspaceId: "ws-b",
-    });
-    expect(canRebindSession(sessionOwner, moved)).toBe(false);
   });
 
   it("refuses when there is no incumbent principal", () => {

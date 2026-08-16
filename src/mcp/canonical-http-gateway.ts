@@ -96,16 +96,19 @@ const PORT = HTTP_PORT.port;
 
 import {
   createDefaultAuthenticator,
-  resolveHttpAuthConfig,
   type McpAuthenticator,
+  resolveHttpAuthConfig,
+  resolveRequestCorrelationId,
 } from "@/lib/auth/mcp-authenticator";
 import { emitAuthAudit } from "@/lib/auth/principal-audit";
 import {
   buildAuthAuditEvent,
   canRebindSession,
   guardToolCall,
+  hasScope,
   PrincipalAuthError,
   type PrincipalContext,
+  resolveBudgetTenant,
 } from "@/lib/auth/principal-context";
 
 // Throws (and therefore refuses to boot) when production is unauthenticated.
@@ -142,11 +145,16 @@ async function resolveRequestPrincipal(
   req: IncomingMessage,
   res: ServerResponse,
   route: string,
+  protocolRequestId?: unknown,
 ): Promise<PrincipalContext | null> {
   try {
     const authenticator = await authenticatorPromise;
     const principal = await authenticator.authenticate(
       req.headers as Record<string, string | string[] | undefined>,
+      resolveRequestCorrelationId(
+        req.headers as Record<string, string | string[] | undefined>,
+        protocolRequestId,
+      ) ?? undefined,
     );
     return principal;
   } catch (error) {
@@ -182,15 +190,17 @@ async function requireElevatedPrincipal(
   req: IncomingMessage,
   res: ServerResponse,
   route: string,
+  requiredScope?: Parameters<typeof hasScope>[1],
 ): Promise<PrincipalContext | null> {
   const principal = await resolveRequestPrincipal(req, res, route);
   if (!principal) return null;
 
   const elevated = principal.roles.includes("admin") || principal.roles.includes("curator");
-  if (!elevated) {
+  const scoped = requiredScope ? hasScope(principal, requiredScope) : true;
+  if (!elevated || !scoped) {
     const err = new PrincipalAuthError(
-      "ROLE_INSUFFICIENT",
-      `Route '${route}' requires role admin or curator`,
+      scoped ? "ROLE_INSUFFICIENT" : "SCOPE_INSUFFICIENT",
+      scoped ? `Route '${route}' requires role admin or curator` : `Route '${route}' requires scope ${requiredScope}`,
     );
     auditAuthDecision(
       buildAuthAuditEvent({ principal, tool: route, decision: "deny", reasonCode: err.reasonCode }),
@@ -224,21 +234,30 @@ import {
 import { cleanupMemoryState } from "./cleanup.js";
 
 import {
-  governance_list_policies,
-  governance_get_policy,
-  governance_check_gate,
   governance_apply_policy_override,
   governance_audit_log,
+  governance_check_gate,
+  governance_get_policy,
+  governance_list_policies,
 } from "./governance-tools.js";
 
 import {
-  audit_query_events,
-  audit_health_report,
   audit_agent_activity,
+  audit_health_report,
   audit_invariant_check,
+  audit_query_events,
 } from "./audit-tools.js";
 
 import type {
+  AuditAgentActivityRequest,
+  AuditHealthReportRequest,
+  AuditInvariantCheckRequest,
+  AuditQueryEventsRequest,
+  GovernanceAuditLogRequest,
+  GovernanceCheckGateRequest,
+  GovernanceGetPolicyRequest,
+  GovernanceListPoliciesRequest,
+  GovernanceUpdatePolicyRequest,
   MemoryAddRequest,
   MemoryDeleteRequest,
   MemoryExportRequest,
@@ -249,15 +268,6 @@ import type {
   MemoryRestoreRequest,
   MemorySearchRequest,
   MemoryUpdateRequest,
-  GovernanceListPoliciesRequest,
-  GovernanceGetPolicyRequest,
-  GovernanceCheckGateRequest,
-  GovernanceUpdatePolicyRequest,
-  GovernanceAuditLogRequest,
-  AuditQueryEventsRequest,
-  AuditHealthReportRequest,
-  AuditAgentActivityRequest,
-  AuditInvariantCheckRequest,
 } from "@/lib/memory/canonical-contracts.js";
 
 // ── MCP Server Setup (Streamable HTTP) ───────────────────────────────────────
@@ -864,9 +874,22 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   // This is the primary integration path for OpenAI Agents SDK and any
   // MCP-compatible client using the Streamable HTTP transport.
   if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
+    let parsedBody: unknown;
+    if (req.method === "POST") {
+      try {
+        parsedBody = await readJsonBody(req);
+      } catch {
+        parsedBody = undefined;
+      }
+    }
+
     // Story 24.2: resolve a verified principal on EVERY request (not just at
     // session initialize), so revocation/expiry applies to the next call.
-    const principal = await resolveRequestPrincipal(req, res, "/mcp");
+    const protocolRequestId =
+      parsedBody && typeof parsedBody === "object" && "id" in parsedBody
+        ? (parsedBody as { id?: unknown }).id
+        : undefined;
+    const principal = await resolveRequestPrincipal(req, res, "/mcp", protocolRequestId);
     if (!principal) {
       transaction.finish();
       return;
@@ -876,8 +899,6 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       const sessionIdHeader = req.headers["mcp-session-id"];
       const sessionId = Array.isArray(sessionIdHeader) ? sessionIdHeader[0] : sessionIdHeader;
       let transport: StreamableHTTPServerTransport | undefined;
-      let parsedBody: unknown;
-
       if (sessionId) {
         transport = mcpTransports.get(sessionId);
         if (!transport) {
@@ -914,7 +935,6 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
         // Refresh with the freshly verified principal.
         holder.current = principal;
       } else if (req.method === "POST") {
-        parsedBody = await readJsonBody(req);
         if (!isInitializeRequest(parsedBody)) {
           res.writeHead(400, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "MCP session required" }));
@@ -946,10 +966,11 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
   // ── Admin: Budget reset endpoint ───────────────────────────────────────
   // POST /api/admin/reset-budget  { group_id?: string }
-  // Resets halted sessions for a group (or all if no group_id)
+  // Resets halted sessions for the authenticated principal's selected tenant.
   if (url.pathname === "/api/admin/reset-budget" && req.method === "POST") {
     // Story 24.2: admin routes authorize from the verified principal's roles.
-    if (!(await requireElevatedPrincipal(req, res, "/api/admin/reset-budget"))) {
+    const principal = await requireElevatedPrincipal(req, res, "/api/admin/reset-budget", "admin:budget");
+    if (!principal) {
       transaction.finish();
       return;
     }
@@ -962,22 +983,29 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
         try { body = JSON.parse(Buffer.concat(chunks).toString()); } catch { body = {}; }
       }
 
-      const before = getHaltedSessions();
-      const count = resetHaltedGroup(body.group_id);
-      const after = getHaltedSessions();
+      const effectiveGroupId = resolveBudgetTenant(principal, body.group_id);
+      const before = getHaltedSessions(effectiveGroupId ?? undefined);
+      const count = resetHaltedGroup(effectiveGroupId ?? undefined);
+      const after = getHaltedSessions(effectiveGroupId ?? undefined);
 
-      console.log(`[admin] Budget reset: group_id=${body.group_id || "ALL"}, cleared=${count}, before=${before.length}, after=${after.length}`);
+      console.log(`[admin] Budget reset: group_id=${effectiveGroupId || "ALL"}, cleared=${count}, before=${before.length}, after=${after.length}`);
 
       res.writeHead(200, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
       res.end(JSON.stringify({
         ok: true,
-        group_id: body.group_id || null,
+        group_id: effectiveGroupId,
         sessions_cleared: count,
         halted_before: before,
         halted_after: after,
         timestamp: new Date().toISOString(),
       }));
     } catch (error) {
+      if (error instanceof PrincipalAuthError) {
+        res.writeHead(error.httpStatus, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
+        res.end(JSON.stringify(error.toErrorPayload()));
+        transaction.finish();
+        return;
+      }
       console.error("[admin] Budget reset failed:", error);
       res.writeHead(500, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Budget reset failed", details: String(error) }));
@@ -989,16 +1017,30 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   // ── Admin: Budget status endpoint ──────────────────────────────────────
   // GET /api/admin/budget-status
   if (url.pathname === "/api/admin/budget-status" && req.method === "GET") {
-    if (!(await requireElevatedPrincipal(req, res, "/api/admin/budget-status"))) {
+    const principal = await requireElevatedPrincipal(req, res, "/api/admin/budget-status", "admin:budget");
+    if (!principal) {
       transaction.finish();
       return;
     }
 
-    const halted = getHaltedSessions();
+    let effectiveGroupId: string | null;
+    try {
+      effectiveGroupId = resolveBudgetTenant(principal);
+    } catch (error) {
+      if (error instanceof PrincipalAuthError) {
+        res.writeHead(error.httpStatus, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
+        res.end(JSON.stringify(error.toErrorPayload()));
+        transaction.finish();
+        return;
+      }
+      throw error;
+    }
+    const halted = getHaltedSessions(effectiveGroupId ?? undefined);
     res.writeHead(200, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
       res.end(JSON.stringify({
         halted_sessions: halted,
         count: halted.length,
+        group_id: effectiveGroupId,
         timestamp: new Date().toISOString(),
       }));
     transaction.finish();
