@@ -214,9 +214,10 @@ epic_24:
       depends_on: []
     - key: "24.2"
       title: "Authenticated Principal Context"
-      status: ready-for-dev
-      owner: "unassigned"
+      status: in-review
+      owner: "Brooks -> Woz; Pike/Fowler review"
       depends_on: ["24.1"]
+      status_evidence: "Pike APPROVE + Fowler APPROVE after 3 review cycles. Dead-open auth default and request.params.role admin gate removed; single guardToolCall chokepoint on HTTP + stdio. Reused existing mcp_tokens table (migration 28) — no new credential table, no migration. Kernel policy descoped (POL-028 reverted; canonical MCP dispatch never reaches src/kernel/). Evidence: typecheck pass, build pass, 144/144 auth tests, test:unit 1770 passed / 0 failed / 171 skipped; 8 default-lane failures pre-existing POSTGRES_PASSWORD env-blocks, byte-identical on stashed baseline (Fowler re-measured independently each round). NOT done: AC-1/AC-6/AC-7 pending laptop-authoritative verification. Changes uncommitted. Brain outcome trace FAILED to write (MCP timeout x2) — governance trace outstanding."
     - key: "24.3"
       title: "Database-Enforced Tenant Isolation and Immutable Ledger"
       status: ready-for-dev

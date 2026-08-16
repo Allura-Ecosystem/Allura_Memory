@@ -108,6 +108,9 @@ export default defineConfig({
       // Allura Hosted — Guard gateway + MCP token (pure logic, no DB)
       "src/lib/guard/**/*.test.ts",
       "src/lib/mcp-token/**/*.test.ts",
+      // Story 24.2 — Authenticated principal context (pure logic, injected deps)
+      "src/lib/auth/__tests__/*.test.ts",
+      "src/__tests__/mcp-auth-adversarial.test.ts",
       // Allura Hosted — admin route auth/shape tests (mocked repos)
       "src/__tests__/hosted-admin-routes.test.ts",
       // Benchmark harness — pure IR-metric math (no live stack)

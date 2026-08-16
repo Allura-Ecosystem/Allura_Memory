@@ -12,7 +12,9 @@
  *
  * Usage: bun run src/mcp/canonical-http-gateway.ts
  * Env:   ALLURA_MCP_HTTP_PORT  (default: 3201)
- *        ALLURA_MCP_AUTH_TOKEN  (optional Bearer token for /mcp endpoint)
+ *        ALLURA_MCP_TOKEN_SECRET (hashed per-caller mcp_tokens credentials)
+ *        ALLURA_MCP_AUTH_TOKEN   (legacy shared Bearer token)
+ *        ALLURA_MCP_DEV_AUTH=true (explicit local-dev principal; refused in production)
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -83,28 +85,123 @@ function resolveHttpPort(): { port: number; source: string; warnings: string[] }
 const HTTP_PORT = resolveHttpPort();
 const PORT = HTTP_PORT.port;
 
-// ── Auth Configuration ───────────────────────────────────────────────────────
+// ── Auth Configuration (Story 24.2 — Authenticated Principal Context) ────────
+//
+// Authority no longer comes from a shared token alone, and NEVER from a tool
+// argument. Every request resolves a verified PrincipalContext at the transport
+// boundary; tool dispatch is guarded by `guardToolCall`, which is the single
+// chokepoint shared with the stdio transport.
+//
+// AC-1: production startup throws when no supported auth configuration exists.
 
-const AUTH_TOKEN = process.env.ALLURA_MCP_AUTH_TOKEN || "";
+import {
+  createDefaultAuthenticator,
+  resolveHttpAuthConfig,
+  type McpAuthenticator,
+} from "@/lib/auth/mcp-authenticator";
+import { emitAuthAudit } from "@/lib/auth/principal-audit";
+import {
+  buildAuthAuditEvent,
+  canRebindSession,
+  guardToolCall,
+  PrincipalAuthError,
+  type PrincipalContext,
+} from "@/lib/auth/principal-context";
+
+// Throws (and therefore refuses to boot) when production is unauthenticated.
+const AUTH_CONFIG = resolveHttpAuthConfig(process.env as Record<string, string | undefined>);
+
+const authenticatorPromise: Promise<McpAuthenticator> = createDefaultAuthenticator(
+  AUTH_CONFIG,
+  () => randomUUID(),
+);
+
+/** Per-session mutable principal holder, re-authenticated on every request. */
+interface PrincipalHolder {
+  current: PrincipalContext | null;
+}
 
 /**
- * Validate Bearer token at the transport layer.
- * If ALLURA_MCP_AUTH_TOKEN is not set, auth is disabled (dev mode).
- * Uses timing-safe comparison to prevent timing attacks.
+ * Emit an authentication/authorization decision to the audit trail.
+ *
+ * AC-7: records principal id, effective tenant, roles, session id, tool,
+ * decision and reason code into the append-only `events` table via
+ * `emitAuthAudit` (metadata JSONB; the hot table is not altered). Never records
+ * credentials or request payloads. Fire-and-forget: a request is never failed
+ * because the audit sink is unreachable, but a persistence failure is logged.
  */
-function validateBearerAuth(req: IncomingMessage): boolean {
-  // If no token configured, auth is disabled (development mode)
-  if (!AUTH_TOKEN) return true;
+function auditAuthDecision(event: ReturnType<typeof buildAuthAuditEvent>): void {
+  void emitAuthAudit(event);
+}
 
-  const authHeader = req.headers["authorization"];
-  if (!authHeader || !authHeader.startsWith("Bearer ")) return false;
+/**
+ * Resolve the verified principal for an HTTP request.
+ * Returns null after having already written the 401/403 response.
+ */
+async function resolveRequestPrincipal(
+  req: IncomingMessage,
+  res: ServerResponse,
+  route: string,
+): Promise<PrincipalContext | null> {
+  try {
+    const authenticator = await authenticatorPromise;
+    const principal = await authenticator.authenticate(
+      req.headers as Record<string, string | string[] | undefined>,
+    );
+    return principal;
+  } catch (error) {
+    const err =
+      error instanceof PrincipalAuthError
+        ? error
+        : new PrincipalAuthError("AUTH_INVALID", "Authentication failed");
+    auditAuthDecision(
+      buildAuthAuditEvent({
+        principal: null,
+        tool: route,
+        decision: "deny",
+        reasonCode: err.reasonCode,
+      }),
+    );
+    res.writeHead(err.httpStatus, {
+      ...corsHeaders(req.headers["origin"]),
+      "Content-Type": "application/json",
+      ...(err.httpStatus === 401
+        ? { "WWW-Authenticate": 'Bearer realm="Allura Memory MCP"' }
+        : {}),
+    });
+    res.end(JSON.stringify(err.toErrorPayload()));
+    return null;
+  }
+}
 
-  const token = authHeader.slice(7);
-  // Timing-safe comparison
-  const expected = Buffer.from(AUTH_TOKEN, "utf-8");
-  const provided = Buffer.from(token, "utf-8");
-  if (expected.length !== provided.length) return false;
-  return expected.equals(provided);
+/**
+ * Resolve a principal for an administrative route and require elevated roles.
+ * Returns null after having already written the 401/403 response.
+ */
+async function requireElevatedPrincipal(
+  req: IncomingMessage,
+  res: ServerResponse,
+  route: string,
+): Promise<PrincipalContext | null> {
+  const principal = await resolveRequestPrincipal(req, res, route);
+  if (!principal) return null;
+
+  const elevated = principal.roles.includes("admin") || principal.roles.includes("curator");
+  if (!elevated) {
+    const err = new PrincipalAuthError(
+      "ROLE_INSUFFICIENT",
+      `Route '${route}' requires role admin or curator`,
+    );
+    auditAuthDecision(
+      buildAuthAuditEvent({ principal, tool: route, decision: "deny", reasonCode: err.reasonCode }),
+    );
+    res.writeHead(err.httpStatus, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
+    res.end(JSON.stringify(err.toErrorPayload()));
+    return null;
+  }
+
+  auditAuthDecision(buildAuthAuditEvent({ principal, tool: route, decision: "allow" }));
+  return principal;
 }
 
 // ── Canonical Tool Imports ───────────────────────────────────────────────────
@@ -165,7 +262,7 @@ import type {
 
 // ── MCP Server Setup (Streamable HTTP) ───────────────────────────────────────
 
-function createMcpServer(): Server {
+function createMcpServer(principalHolder: PrincipalHolder): Server {
   const mcpServer = new Server(
     {
       name: "allura-memory-canonical",
@@ -552,7 +649,44 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
 
 // Tool execution handler
 mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+  const { name } = request.params;
+
+  // ── Story 24.2: principal-derived authorization ──────────────────────────
+  // Authority comes from the verified PrincipalContext resolved at the HTTP
+  // boundary. `request.params.role`, `group_id`, `user_id` and `curator_id`
+  // are resource selectors only; `guardToolCall` strips the authority keys,
+  // reconciles the tenant, and binds the actor to the authenticated identity.
+  let args: Record<string, unknown>;
+  const principal = principalHolder.current;
+  try {
+    const guarded = guardToolCall(principal, name, request.params.arguments);
+    args = guarded.args;
+    auditAuthDecision(
+      buildAuthAuditEvent({
+        principal,
+        tool: name,
+        decision: "allow",
+        effectiveTenant: guarded.effectiveTenant,
+      }),
+    );
+  } catch (error) {
+    const err =
+      error instanceof PrincipalAuthError
+        ? error
+        : new PrincipalAuthError("PRINCIPAL_MISSING", "Authorization failed");
+    auditAuthDecision(
+      buildAuthAuditEvent({
+        principal,
+        tool: name,
+        decision: "deny",
+        reasonCode: err.reasonCode,
+      }),
+    );
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(err.toErrorPayload()) }],
+      isError: true,
+    };
+  }
 
   try {
     let result: unknown;
@@ -645,24 +779,34 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
 }
 
 const mcpTransports = new Map<string, StreamableHTTPServerTransport>();
+/**
+ * Principal holder per MCP session. The holder is refreshed on every request
+ * (see the /mcp route), so a revoked or expired credential stops working on the
+ * next call even within a long-lived session.
+ */
+const mcpSessionPrincipals = new Map<string, PrincipalHolder>();
 
-async function createMcpTransport(): Promise<StreamableHTTPServerTransport> {
+async function createMcpTransport(
+  principalHolder: PrincipalHolder,
+): Promise<StreamableHTTPServerTransport> {
   let initializedSessionId: string | undefined;
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
     onsessioninitialized: (sessionId) => {
       initializedSessionId = sessionId;
       mcpTransports.set(sessionId, transport);
+      mcpSessionPrincipals.set(sessionId, principalHolder);
     },
   });
 
   transport.onclose = () => {
     if (initializedSessionId) {
       mcpTransports.delete(initializedSessionId);
+      mcpSessionPrincipals.delete(initializedSessionId);
     }
   };
 
-  await createMcpServer().connect(transport);
+  await createMcpServer(principalHolder).connect(transport);
   return transport;
 }
 
@@ -720,14 +864,10 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   // This is the primary integration path for OpenAI Agents SDK and any
   // MCP-compatible client using the Streamable HTTP transport.
   if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
-    // Bearer token auth at the transport layer
-    if (!validateBearerAuth(req)) {
-      res.writeHead(401, {
-        ...corsHeaders(req.headers["origin"]),
-        "Content-Type": "application/json",
-        "WWW-Authenticate": 'Bearer realm="Allura Memory MCP"',
-      });
-      res.end(JSON.stringify({ error: "Unauthorized: Invalid or missing Bearer token" }));
+    // Story 24.2: resolve a verified principal on EVERY request (not just at
+    // session initialize), so revocation/expiry applies to the next call.
+    const principal = await resolveRequestPrincipal(req, res, "/mcp");
+    if (!principal) {
       transaction.finish();
       return;
     }
@@ -746,6 +886,33 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
           transaction.finish();
           return;
         }
+        const holder = mcpSessionPrincipals.get(sessionId);
+        // A session belongs to the CREDENTIAL that created it. Comparing
+        // principalId alone is not tenant-safe: principalId derives from
+        // mcp_tokens.agent_name, which is not unique, so two tokens for
+        // different tenants can share a name. canRebindSession compares the
+        // credential row id plus the whole authority envelope (auth method,
+        // tenants, roles, workspace).
+        if (!holder || !canRebindSession(holder.current, principal)) {
+          const err = new PrincipalAuthError(
+            "PRINCIPAL_MISSING",
+            "MCP session does not belong to the authenticated principal",
+          );
+          auditAuthDecision(
+            buildAuthAuditEvent({
+              principal,
+              tool: "/mcp",
+              decision: "deny",
+              reasonCode: err.reasonCode,
+            }),
+          );
+          res.writeHead(err.httpStatus, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
+          res.end(JSON.stringify(err.toErrorPayload()));
+          transaction.finish();
+          return;
+        }
+        // Refresh with the freshly verified principal.
+        holder.current = principal;
       } else if (req.method === "POST") {
         parsedBody = await readJsonBody(req);
         if (!isInitializeRequest(parsedBody)) {
@@ -754,7 +921,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
           transaction.finish();
           return;
         }
-        transport = await createMcpTransport();
+        transport = await createMcpTransport({ current: principal });
       } else {
         res.writeHead(400, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "MCP session required" }));
@@ -781,9 +948,8 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   // POST /api/admin/reset-budget  { group_id?: string }
   // Resets halted sessions for a group (or all if no group_id)
   if (url.pathname === "/api/admin/reset-budget" && req.method === "POST") {
-    if (!validateBearerAuth(req)) {
-      res.writeHead(401, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Unauthorized" }));
+    // Story 24.2: admin routes authorize from the verified principal's roles.
+    if (!(await requireElevatedPrincipal(req, res, "/api/admin/reset-budget"))) {
       transaction.finish();
       return;
     }
@@ -823,9 +989,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   // ── Admin: Budget status endpoint ──────────────────────────────────────
   // GET /api/admin/budget-status
   if (url.pathname === "/api/admin/budget-status" && req.method === "GET") {
-    if (!validateBearerAuth(req)) {
-      res.writeHead(401, { ...corsHeaders(req.headers["origin"]), "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Unauthorized" }));
+    if (!(await requireElevatedPrincipal(req, res, "/api/admin/budget-status"))) {
       transaction.finish();
       return;
     }
@@ -855,7 +1019,8 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
         mcp_endpoint: "/mcp",
         port: PORT,
         port_source: HTTP_PORT.source,
-        auth_enabled: !!AUTH_TOKEN,
+        auth_enabled: true,
+        auth_mode: AUTH_CONFIG.mode,
         cors_mode: getCorsConfig().isDevelopment ? "development" : "production",
         rate_limit: getRateLimitConfig(),
         warnings: HTTP_PORT.warnings,
@@ -887,13 +1052,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
   // ── Prometheus metrics — requires auth (same as MCP endpoint) ─────────────
   if (url.pathname === "/metrics" || url.pathname === "/api/metrics") {
-    if (!validateBearerAuth(req)) {
-      res.writeHead(401, {
-        ...corsHeaders(req.headers["origin"]),
-        "Content-Type": "text/plain",
-        "WWW-Authenticate": 'Bearer realm="Allura Memory Metrics"',
-      });
-      res.end("Unauthorized\n");
+    if (!(await resolveRequestPrincipal(req, res, "/metrics"))) {
       transaction.finish();
       return;
     }
@@ -930,7 +1089,10 @@ server.listen(PORT, () => {
   console.log("  Admin Reset Budget:   POST /api/admin/reset-budget (auth required, body: {group_id?})");
   console.log("  Admin Budget Status:  GET /api/admin/budget-status (auth required)");
   console.log("");
-  console.log(`Auth: ${AUTH_TOKEN ? "Bearer token required" : "No auth token set (development mode)"}`);
+  console.log(`Auth mode: ${AUTH_CONFIG.mode} (Story 24.2 — principal context required on every request)`);
+  for (const warning of AUTH_CONFIG.warnings) {
+    console.warn(`[auth-config] ${warning}`);
+  }
   console.log("");
   console.log("Available tools: memory_add, memory_search, memory_get, memory_list, memory_delete,");
   console.log("                 governance_list_policies, governance_get_policy, governance_check_gate,");
