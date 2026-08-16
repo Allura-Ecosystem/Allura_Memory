@@ -16,8 +16,14 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'allura_memories') THEN
 
-    -- 1. Drop existing HNSW index (768d)
-    DROP INDEX IF EXISTS allura_mem_embedding_hnsw;
+    -- 1. Drop existing HNSW index on the `embedding` column so the column type
+    --    can be widened past pgvector's 2000d HNSW limit. Migration 16 names
+    --    this index `allura_mem_hnsw` (not `allura_mem_embedding_hnsw` — this
+    --    migration never actually dropped it before, since the DROP INDEX name
+    --    didn't match and allura_memories was never created for this branch to
+    --    run against until the migration 16 guard was fixed to check for the
+    --    pgvector `vector` type instead of a nonexistent `ruvector` type).
+    DROP INDEX IF EXISTS allura_mem_hnsw;
 
     -- 2. Alter the embedding column from vector(768) to vector(4096)
     --    Existing embeddings are incompatible (wrong dimension) → NULL them out.
