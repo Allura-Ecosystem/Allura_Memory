@@ -34,4 +34,15 @@ describe("benchmark CI baseline exit policy", () => {
     expect(resolveBenchmarkGroup(DEFAULT_BENCHMARK_GROUP_ID)).toBe(DEFAULT_BENCHMARK_GROUP_ID)
     expect(() => resolveBenchmarkGroup("allura-custom-ci")).toThrow(/must match the benchmark credential tenant/)
   })
+
+  it("does not let an environment override diverge from the provisioned credential tenant", () => {
+    const original = process.env.BENCHMARK_GROUP_ID
+    process.env.BENCHMARK_GROUP_ID = "allura-mismatched-ci"
+    try {
+      expect(resolveBenchmarkGroup()).toBe(DEFAULT_BENCHMARK_GROUP_ID)
+    } finally {
+      if (original === undefined) delete process.env.BENCHMARK_GROUP_ID
+      else process.env.BENCHMARK_GROUP_ID = original
+    }
+  })
 })

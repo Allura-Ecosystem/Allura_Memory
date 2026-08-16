@@ -89,11 +89,10 @@ export function parseArgs(argv: string[]): CliOptions {
 }
 
 export function resolveBenchmarkGroup(explicitGroup?: string): string {
-  const credentialGroup = process.env.BENCHMARK_GROUP_ID || DEFAULT_BENCHMARK_GROUP_ID;
-  if (explicitGroup && explicitGroup !== credentialGroup) {
-    throw new Error(`--group must match the benchmark credential tenant '${credentialGroup}'`);
+  if (explicitGroup && explicitGroup !== DEFAULT_BENCHMARK_GROUP_ID) {
+    throw new Error(`--group must match the benchmark credential tenant '${DEFAULT_BENCHMARK_GROUP_ID}'`);
   }
-  return credentialGroup;
+  return DEFAULT_BENCHMARK_GROUP_ID;
 }
 
 /**

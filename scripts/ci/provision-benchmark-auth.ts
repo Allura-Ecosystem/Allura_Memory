@@ -59,8 +59,8 @@ const defaultProvisionDeps: ProvisionBenchmarkAuthDeps = {
 /** Resolve-or-create the FK prerequisite without accepting cross-tenant reuse. */
 export async function ensureBenchmarkWorkspace(
   input: BenchmarkWorkspaceInput = {
-    group_id: process.env.BENCHMARK_GROUP_ID ?? DEFAULT_BENCHMARK_GROUP_ID,
-    workspace_id: process.env.BENCHMARK_WORKSPACE_ID ?? DEFAULT_BENCHMARK_WORKSPACE_ID,
+    group_id: DEFAULT_BENCHMARK_GROUP_ID,
+    workspace_id: DEFAULT_BENCHMARK_WORKSPACE_ID,
   },
   deps: BenchmarkWorkspaceDeps = defaultWorkspaceDeps,
 ): Promise<Workspace> {
@@ -94,8 +94,8 @@ export async function provisionBenchmarkAuth(
   envFile: string,
   deps: ProvisionBenchmarkAuthDeps = defaultProvisionDeps,
 ): Promise<void> {
-  const group_id = process.env.BENCHMARK_GROUP_ID ?? DEFAULT_BENCHMARK_GROUP_ID;
-  const workspace_id = process.env.BENCHMARK_WORKSPACE_ID ?? DEFAULT_BENCHMARK_WORKSPACE_ID;
+  const group_id = DEFAULT_BENCHMARK_GROUP_ID;
+  const workspace_id = DEFAULT_BENCHMARK_WORKSPACE_ID;
   await deps.ensureWorkspace({ group_id, workspace_id });
   const result = await deps.createToken({
     group_id,
