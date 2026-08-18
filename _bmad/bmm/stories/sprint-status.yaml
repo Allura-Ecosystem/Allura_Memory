@@ -209,9 +209,10 @@ epic_24:
   stories:
     - key: "24.1"
       title: "CI and Evidence Baseline"
-      status: in-review
+      status: done
       owner: "Brooks -> Woz + Hightower; Pike/Fowler review"
       depends_on: []
+      status_evidence: "Pike/Fowler PASS after remediation. Green Epic 24 Evidence run 31945804098 (main a7f2a236, PR #64): Static/Unit/Build/Live-PostgreSQL/Benchmark/Aggregate all passed. Controlled-red run 32086543694 (PR #65 ci/controlled-red-ac10, 44b80591): deliberately failing unit test blocked Unit+Aggregate lanes, PR closed unmerged, branch deleted. Laptop runtime confirmed PG server 16.15, pgvector 0.8.6, all migrations deterministic, 5-ID benchmark inventory present. All 10 ACs evidenced."
     - key: "24.2"
       title: "Authenticated Principal Context"
       status: in-review
