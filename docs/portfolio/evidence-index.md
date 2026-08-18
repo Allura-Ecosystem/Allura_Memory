@@ -25,6 +25,6 @@ The green run `31945804098` (merge of PR #64, commit `a7f2a236`) executed all si
 
 | Proof | Commit SHA | Workflow run | Result | Required artifact |
 |---|---|---|---|---|
-| Controlled red branch (not merged) | Pending | Pending | Pending | Failed run manifest showing the blocking lane |
+| Controlled red branch (not merged) | `44b80591` | [Epic 24 Evidence #32086543694](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32086543694) | failure | Failed run manifest showing the blocking lane |
 
-Local test output supports development but is not substituted for these remote run URLs. AC-10 specifically requires a temporary-branch failure that demonstrates the repository gate blocks the change.
+The controlled-red demonstration used PR #65 (`ci/controlled-red-ac10`, commit `44b80591`), which added a deliberately failing test to `src/lib/validation/group-id.test.ts`. Run `32086543694` failed on the **Epic 24 Evidence / Unit** lane (`Run unit tests`, exit 1) and the **Aggregate** lane, while Static, Build, Live PostgreSQL, and Benchmark passed — proving the required gate blocks a broken change. PR #65 was closed without merging and the temporary branch deleted, so the failure was never merged into `main`.

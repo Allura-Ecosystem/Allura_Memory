@@ -1,7 +1,7 @@
 # Story 24.1 — CI and Evidence Baseline
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** in-review
+**Status:** done
 **Priority:** P0-Critical
 **Complexity:** Large
 **Owner:** Woz / Hightower
@@ -31,16 +31,16 @@ The repository exposes unit, integration, end-to-end, benchmark, typecheck, buil
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `.github/workflows/epic-24-evidence.yml` runs on pull requests and pushes to the default branch without replacing the canonical `.github/workflows/ci.yml` gates.
-- [ ] AC-2: CI installs pinned Bun and project dependencies from the lockfile without modifying the lockfile.
-- [ ] AC-3: Separate jobs run typecheck plus a changed-file ESLint ratchet, unit tests, a production build, live-PostgreSQL integration tests, and the benchmark baseline. The ratchet uses the explicit PR/push base SHA and fails on new lint errors or an invalid base.
-- [ ] AC-4: Live database jobs apply `docker/postgres-init/*.sql` in deterministic filename order to PostgreSQL 16 with pgvector support.
-- [ ] AC-5: No required validation job uses `continue-on-error`; validation command failures, runner errors, an unreachable benchmark gateway, or required benchmark skips fail the workflow. Numerical benchmark threshold enforcement is deferred to Story 24.6.
-- [ ] AC-6: `scripts/ci/collect-evidence.ts` emits a JSON manifest containing schema version, commit SHA, UTC timestamp, Bun/Node versions, the server-reported PostgreSQL version from the live connection, exact commands, exit status, duration, and verified artifact paths.
-- [ ] AC-7: Test and benchmark artifacts are uploaded with retention configured and names containing the commit SHA.
-- [ ] AC-8: `docs/portfolio/capability-matrix.md` lists major claims with independent capability/evidence states, source path, validation command, and latest evidence type; it contains no manually invented measurements.
-- [ ] AC-9: README numerical claims link to evidence or are removed until Story 24.9.
-- [ ] AC-10: A deliberately failing test or benchmark on a temporary branch demonstrates that CI blocks the change; the evidence is recorded without merging the failure.
+- [x] AC-1: `.github/workflows/epic-24-evidence.yml` runs on pull requests and pushes to the default branch without replacing the canonical `.github/workflows/ci.yml` gates.
+- [x] AC-2: CI installs pinned Bun and project dependencies from the lockfile without modifying the lockfile.
+- [x] AC-3: Separate jobs run typecheck plus a changed-file ESLint ratchet, unit tests, a production build, live-PostgreSQL integration tests, and the benchmark baseline. The ratchet uses the explicit PR/push base SHA and fails on new lint errors or an invalid base.
+- [x] AC-4: Live database jobs apply `docker/postgres-init/*.sql` in deterministic filename order to PostgreSQL 16 with pgvector support.
+- [x] AC-5: No required validation job uses `continue-on-error`; validation command failures, runner errors, an unreachable benchmark gateway, or required benchmark skips fail the workflow. Numerical benchmark threshold enforcement is deferred to Story 24.6.
+- [x] AC-6: `scripts/ci/collect-evidence.ts` emits a JSON manifest containing schema version, commit SHA, UTC timestamp, Bun/Node versions, the server-reported PostgreSQL version from the live connection, exact commands, exit status, duration, and verified artifact paths.
+- [x] AC-7: Test and benchmark artifacts are uploaded with retention configured and names containing the commit SHA.
+- [x] AC-8: `docs/portfolio/capability-matrix.md` lists major claims with independent capability/evidence states, source path, validation command, and latest evidence type; it contains no manually invented measurements.
+- [x] AC-9: README numerical claims link to evidence or are removed until Story 24.9.
+- [x] AC-10: A deliberately failing test or benchmark on a temporary branch demonstrates that CI blocks the change; the evidence is recorded without merging the failure.
 
 ## Implementation Files
 
@@ -61,7 +61,7 @@ The repository exposes unit, integration, end-to-end, benchmark, typecheck, buil
 - [x] Upload artifacts in an `always()` step while preserving the original failing exit status.
 - [x] Pin third-party GitHub Actions to immutable commit SHAs and grant the workflow only read access to repository contents.
 - [x] Create the capability matrix and remove or qualify stale public measurements.
-- [ ] Run a green workflow and a controlled red workflow.
+- [x] Run a green workflow and a controlled red workflow.
 
 ## Validation and Evidence
 
@@ -91,7 +91,7 @@ Required artifacts:
 
 ## Dev Agent Record
 
-**Status:** in-review
+**Status:** done
 
 ### Completion Notes
 
@@ -136,4 +136,7 @@ Required artifacts:
 - Pike/Fowler adversarial review: PASS after remediation of all evidence-integrity findings.
 - Review receipts: Pike `625c0297-2ef5-4851-9f91-f2b808bd758f`; Fowler `8434242e-78cd-448d-a5c5-e0cc0278172d`.
 - Implementation outcome receipt: `6b5b8a2b-e981-4394-be3e-edc5369d2b52` (episodic, pending curator review).
-- Story remains not done until all acceptance criteria, including remote green/red evidence, are satisfied.
+- **Green baseline (AC-1..AC-9):** Epic 24 Evidence run [#31945804098](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/31945804098) succeeded on main (commit `a7f2a236`, PR #64) — all six jobs (Static, Unit, Build, Live PostgreSQL, Benchmark, Aggregate) passed.
+- **Controlled red (AC-10):** Epic 24 Evidence run [#32086543694](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32086543694) failed on PR #65 (`ci/controlled-red-ac10`, commit `44b80591`) — the deliberately failing unit test blocked the Unit and Aggregate lanes while Static/Build/Live-DB/Benchmark passed. PR closed without merging; branch deleted.
+- **Laptop runtime confirmation (AC-4/AC-6):** live-db integration ran against `pgvector/pgvector:pg16` (PostgreSQL server 16.15, pgvector 0.8.6); all migrations applied deterministically; benchmark lane produced the exact five-ID inventory with no skipped/errored results.
+- Story is done: all ten acceptance criteria have evidence.
