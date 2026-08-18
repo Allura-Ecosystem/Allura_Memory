@@ -358,3 +358,14 @@ describe("group-id validation", () => {
     });
   });
 });
+// ─────────────────────────────────────────────────────────────────────────────
+// TEMPORARY controlled-red demonstration (Story 24.1 AC-10).
+// This test deliberately fails so the Epic 24 Evidence unit lane proves it
+// blocks a broken change. It lives only on the temporary ci/controlled-red-ac10
+// branch and will be removed before merge.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("controlled-red-ac10-demonstration (temporary, never merged)", () => {
+  it("deliberately fails to prove the CI gate blocks the change", () => {
+    expect(1).toBe(2); // intentional failure for AC-10 evidence
+  });
+});
