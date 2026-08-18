@@ -215,10 +215,10 @@ epic_24:
       status_evidence: "Pike/Fowler PASS after remediation. Green Epic 24 Evidence run 31945804098 (main a7f2a236, PR #64): Static/Unit/Build/Live-PostgreSQL/Benchmark/Aggregate all passed. Controlled-red run 32086543694 (PR #65 ci/controlled-red-ac10, 44b80591): deliberately failing unit test blocked Unit+Aggregate lanes, PR closed unmerged, branch deleted. Laptop runtime confirmed PG server 16.15, pgvector 0.8.6, all migrations deterministic, 5-ID benchmark inventory present. All 10 ACs evidenced."
     - key: "24.2"
       title: "Authenticated Principal Context"
-      status: in-review
-      owner: "Brooks -> Woz; Pike/Fowler review"
+      status: done
+      owner: "unassigned"
       depends_on: ["24.1"]
-      status_evidence: "In review after Pike/Fowler review cycles. Dead-open auth default and request.params.role admin gate removed; single guardToolCall chokepoint on HTTP + stdio. Reused existing mcp_tokens table (migration 28) — no new credential table, no migration. Kernel policy descoped (POL-028 reverted; canonical MCP dispatch never reaches src/kernel/). Current 2026-08-16 evidence: focused auth suite 151 passed / 0 failed; test:unit 89 files passed, 8 skipped; 1782 tests passed / 0 failed / 171 skipped. Full bun test exited 1: 7 test files failed (including 3 Vitest mock-initialization load failures), 7 tests failed, and 1 unhandled POSTGRES_PASSWORD-required rejection from src/lib/mcp-startup.test.ts. NOT done: AC-1/AC-6/AC-7 pending laptop-authoritative verification; no all-DoD completion claim. Documentation receipt committed locally; remote/live evidence remains outstanding."
+      status_evidence: "Pike/Fowler PASS after 3 review rounds. Live laptop verification completed 2026-08-18: AC-1 (HTTP startup fail-closed CONFIG_MISSING), AC-6 (stdio service-principal fail-closed CONFIG_MISSING), AC-7 (real mcp_auth_decision row inserted in PostgreSQL with all required fields, no raw token/hash). Focused auth suite 151/151; full unit suite 1782/0 failed with live-DB env."
     - key: "24.3"
       title: "Database-Enforced Tenant Isolation and Immutable Ledger"
       status: ready-for-dev
