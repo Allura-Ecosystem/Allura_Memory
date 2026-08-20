@@ -1,5 +1,10 @@
 # Glossary
 
+> [!NOTE]
+> **AI-Assisted Documentation** — this file is maintained with AI assistance.
+> Where it conflicts with the source code, schemas, or tests, defer to those.
+
+
 > Terms and concepts used across Allura Memory.
 
 ## A

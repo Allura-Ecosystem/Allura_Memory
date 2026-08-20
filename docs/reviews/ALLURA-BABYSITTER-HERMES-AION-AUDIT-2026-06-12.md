@@ -1,5 +1,10 @@
 # Allura Product Parity Audit
 
+> [!NOTE]
+> **AI-Assisted Documentation** — this file is maintained with AI assistance.
+> Where it conflicts with the source code, schemas, or tests, defer to those.
+
+
 **Date:** 2026-06-12  
 **Scope:** Workflow strength, dashboard layout, navigation, projects/tasks,
 command-center behavior, backend wiring, desktop readiness, and UX polish.

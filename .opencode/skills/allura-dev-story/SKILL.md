@@ -6,6 +6,11 @@ globs: ["src/**", "docs/allura/**", "guidelines/**"]
 
 # Allura Dev Story — Governed Story Implementation
 
+> [!NOTE]
+> **AI-Assisted Documentation** — this file is maintained with AI assistance.
+> Where it conflicts with the source code, schemas, or tests, defer to those.
+
+
 > **Allura-governed story implementation.** This skill enforces the governance pattern defined in `allura-team-ram`.
 
 ## When to Use

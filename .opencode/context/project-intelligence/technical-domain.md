@@ -1,3 +1,8 @@
+
+> [!NOTE]
+> **AI-Assisted Documentation** — this file is maintained with AI assistance.
+> Where it conflicts with the source code, schemas, or tests, defer to those.
+
 <!-- Context: project-intelligence/technical | Priority: critical | Version: 1.3 | Updated: 2026-05-16 -->
 
 # Technical Domain

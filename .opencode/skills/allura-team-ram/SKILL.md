@@ -6,6 +6,11 @@ globs: ["src/**", ".opencode/**", "docs/allura/**", "guidelines/**"]
 
 # Allura Team RAM — Shared Operating Core
 
+> [!NOTE]
+> **AI-Assisted Documentation** — this file is maintained with AI assistance.
+> Where it conflicts with the source code, schemas, or tests, defer to those.
+
+
 > **Allura decides. Team RAM owns. Guidelines constrain docs. RuVix validates. Brain remembers.**
 
 This skill is the shared foundation for all `allura-*` wrapper skills. It defines the gates, routing, memory, and validation rules that every Allura workflow must follow.
