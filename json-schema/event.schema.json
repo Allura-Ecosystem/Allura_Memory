@@ -47,6 +47,7 @@
         "auto_curated",
         "sync_contract",
         "kernel_rule",
+        "control_plane_rule",
         "governance_gate_checked",
         "WATCHDOG_HEARTBEAT",
         "BLOCKER",

@@ -110,7 +110,7 @@ CREATE TRIGGER trg_recovery_block_truncate
 COMMENT ON TABLE recovery_events IS
   'Append-only auto-recovery attempt log. INSERT only; UPDATE/DELETE/TRUNCATE blocked by trigger. Story 2.3.';
 COMMENT ON COLUMN recovery_events.group_id IS
-  'Tenant isolation identifier (allura-* format). Stamped by kernel on every insert.';
+  'Tenant isolation identifier (allura-* format). Stamped by control plane on every insert.';
 COMMENT ON COLUMN recovery_events.component IS
   'Component that was unhealthy (e.g. mcp-container, postgres, disk, memory).';
 COMMENT ON COLUMN recovery_events.action IS

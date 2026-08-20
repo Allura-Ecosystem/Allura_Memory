@@ -8,23 +8,23 @@
 -- detects a contradiction between two memories in the same tenant scope.
 --
 -- DESIGN
---   * Append-only: the kernel target resolver forbids UPDATE/DELETE on
+--   * Append-only: the control plane target resolver forbids UPDATE/DELETE on
 --     this table (see the guard added below and the resolver's table list).
 --     Resolution flips `status` from 'active' to one of the resolved states
 --     by INSERT-ing a new row with the same group_id — but the canonical
---     resolve path uses the kernel `pg:coherence_conflicts` target which
+--     resolve path uses the control plane `pg:coherence_conflicts` target which
 --     is INSERT-only by design. The API `POST /api/coherence/resolve`
 --     performs a single UPDATE on `status` + `resolved_at`; this is the
 --     ONE permitted mutation and it is curator-gated.
 --   * group_id stamped: every row carries a `group_id` matching the strict
---     ^allura- pattern, enforced by CHECK. The kernel syscall_mutate path
+--     ^allura- pattern, enforced by CHECK. The control plane syscall_mutate path
 --     stamps group_id from the proof claims (AD-40).
 --   * pgvector cosine similarity is used by the monitor to find semantically
 --     similar memory pairs; this table records the *result* of that scan.
 --
 -- FIELDS
 --   id              SERIAL PK
---   group_id        tenant scope (^allura-…), stamped by the kernel
+--   group_id        tenant scope (^allura-…), stamped by the control plane
 --   memory_id_a      FK-ish reference to allura_memories.id (BIGINT)
 --   memory_id_b      FK-ish reference to allura_memories.id (BIGINT)
 --   conflict_type    entity_attribute | temporal_contradiction | duplicate_with_different_fact
@@ -78,11 +78,11 @@ CREATE INDEX IF NOT EXISTS idx_coherence_conflicts_pair
 -- ── Comments ────────────────────────────────────────────────────────────────
 COMMENT ON TABLE coherence_conflicts IS
     'Append-only coherence conflict ledger. Written by the Coherence Monitor '
-    '(src/lib/coherence/monitor.ts) via the kernel syscall_mutate path (AD-40). '
+    '(src/lib/coherence/monitor.ts) via the control plane syscall_mutate path (AD-40). '
     'Curator resolution flips status via POST /api/coherence/resolve.';
 
 COMMENT ON COLUMN coherence_conflicts.group_id IS
-    'Tenant scope, stamped by the kernel from proof claims. Enforced ^allura-.';
+    'Tenant scope, stamped by the control plane from proof claims. Enforced ^allura-.';
 
 COMMENT ON COLUMN coherence_conflicts.conflict_type IS
     'entity_attribute: same entity, different attribute value. '

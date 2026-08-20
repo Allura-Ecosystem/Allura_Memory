@@ -3,7 +3,7 @@
 -- ============================================================================
 -- Purpose: Single source of truth for all tenant namespaces in Allura Memory.
 --   Every group_id that writes memories must be registered here first.
---   The kernel target-resolver validates tenant existence on writes and
+--   The control plane target-resolver validates tenant existence on writes and
 --   fails closed if the tenant is not registered.
 --
 -- Design:
@@ -62,7 +62,7 @@ ON CONFLICT (group_id) DO NOTHING;
 
 -- ── Documentation ───────────────────────────────────────────────────────────
 COMMENT ON TABLE tenants IS
-  'Tenant registry — source of truth for all tenant namespaces. group_id must be registered here before kernel writes are accepted. Story 22.1.';
+  'Tenant registry — source of truth for all tenant namespaces. group_id must be registered here before control plane writes are accepted. Story 22.1.';
 COMMENT ON COLUMN tenants.group_id IS
   'Tenant namespace identifier (allura-* format, enforced by CHECK constraint). Primary key.';
 COMMENT ON COLUMN tenants.name IS

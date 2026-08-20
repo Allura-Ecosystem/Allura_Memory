@@ -7,7 +7,7 @@
 -- proposals for skills/workflows that should exist but do not.
 --
 -- Design:
---   * Append-only for the *creation* path — INSERTs flow through the kernel
+--   * Append-only for the *creation* path — INSERTs flow through the control plane
 --     syscall_mutate (AD-40) path. UPDATEs are permitted ONLY for the HITL
 --     review gate (status + reviewed_at). A trigger blocks DELETE/TRUNCATE.
 --   * group_id stamped on every row for tenant isolation (AD-40). The CHECK
@@ -90,7 +90,7 @@ CREATE INDEX IF NOT EXISTS idx_pattern_proposals_pattern_type
 -- ============================================================================
 -- Append-only guard for pattern_proposals
 -- ============================================================================
--- INSERT: permitted (kernel syscall_mutate).
+-- INSERT: permitted (control plane syscall_mutate).
 -- UPDATE: permitted ONLY for the HITL review gate (status + reviewed_at).
 --         This is enforced by a BEFORE UPDATE trigger that rejects any UPDATE
 --         touching columns other than status / reviewed_at.
@@ -159,9 +159,9 @@ CREATE TRIGGER trg_pattern_proposals_block_truncate
 
 -- ── Documentation ─────────────────────────────────────────────────────────────
 COMMENT ON TABLE pattern_proposals IS
-  'Story 2.2 Genesis Engine: append-only pattern proposals. INSERT via kernel syscall_mutate; UPDATE restricted to status/reviewed_at by trigger; DELETE/TRUNCATE blocked.';
+  'Story 2.2 Genesis Engine: append-only pattern proposals. INSERT via control plane syscall_mutate; UPDATE restricted to status/reviewed_at by trigger; DELETE/TRUNCATE blocked.';
 COMMENT ON COLUMN pattern_proposals.group_id IS
-  'Tenant isolation identifier (allura-* format). Stamped by kernel on every insert.';
+  'Tenant isolation identifier (allura-* format). Stamped by control plane on every insert.';
 COMMENT ON COLUMN pattern_proposals.pattern_description IS
   'Human-readable description of the detected pattern.';
 COMMENT ON COLUMN pattern_proposals.pattern_type IS
