@@ -1,0 +1,22 @@
+-- ============================================================================
+-- Migration 00: Required PostgreSQL extensions
+-- ============================================================================
+--
+-- Story 24.3 remediation. `docker/postgres-init/16-ruvector-memories.sql`
+-- guards `allura_memories` and `allura_feedback` behind the presence of the
+-- pgvector `vector` type, but nothing in this directory ever created the
+-- extension. `scripts/ci/run-live-db-tests.sh` issues
+-- `CREATE EXTENSION IF NOT EXISTS vector;` before applying migrations, so the
+-- Epic 24 Evidence live-PostgreSQL lane built the full schema while every lane
+-- that applied `docker/postgres-init/*.sql` directly silently skipped both
+-- tables — and then failed in `36-tenant-rls.sql`, which enables RLS on them
+-- unconditionally.
+--
+-- This script makes the two bootstrap paths converge. It must sort first in
+-- `ls -1v` order, hence the `00-` prefix ahead of `00-traces.sql`.
+--
+-- Requires a pgvector-capable image (pgvector/pgvector:pg16, matching
+-- docker-compose.yml and the Epic 24 Evidence workflow).
+-- ============================================================================
+
+CREATE EXTENSION IF NOT EXISTS vector;

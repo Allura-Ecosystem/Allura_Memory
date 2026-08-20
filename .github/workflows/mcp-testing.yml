@@ -61,9 +61,20 @@ jobs:
     needs: unit-tests
     services:
       postgres:
-        image: postgres:16-alpine
+        # pgvector/pgvector:pg16 — matches docker-compose.yml and every other
+        # lane that builds this schema. docker/postgres-init/16-ruvector-memories.sql
+        # guards allura_memories/allura_feedback on the pgvector `vector` type;
+        # a plain postgres:16-alpine image silently skips those tables and
+        # then fails 36-tenant-rls.sql (see 0a5fa580 for the same defect fixed
+        # in ci.yml and integration-tests.yml).
+        image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: ronin4life
+          # POSTGRES_USER was previously `ronin4life` — a personal dev
+          # credential with no bearing on CI, not a deliberate portability
+          # test like the postgres/allura split in integration-tests.yml.
+          # Aligned to the `allura` convention used by ci.yml,
+          # factory-cross-team-smoke.yml, and epic-24-evidence.yml.
+          POSTGRES_USER: allura
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'dev_password' }}
           POSTGRES_DB: memory
         options: >-
@@ -97,7 +108,7 @@ jobs:
       - name: Wait for databases
         run: |
           echo "Waiting for PostgreSQL..."
-          until pg_isready -h localhost -p 5432 -U ronin4life; do
+          until pg_isready -h localhost -p 5432 -U allura; do
             sleep 1
           done
           echo "PostgreSQL is ready"
@@ -108,14 +119,30 @@ jobs:
           done
           echo "Neo4j is ready"
 
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Run database migrations
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'dev_password' }}
+        run: |
+          set -e
+          # Apply init scripts in ls -1v (name) order — same ordering every
+          # other lane uses, so 00-extensions.sql (CREATE EXTENSION vector)
+          # always runs before anything that depends on the vector type.
+          for f in $(ls -1v docker/postgres-init/*.sql); do
+            echo "Applying $f..."
+            psql -v ON_ERROR_STOP=1 -h localhost -U allura -d memory -f "$f"
+          done
+
       - name: Run E2E tests
         continue-on-error: true
         env:
-          POSTGRES_URL: postgresql://ronin4life:${{ secrets.POSTGRES_PASSWORD || 'dev_password' }}@localhost:5432/memory
+          POSTGRES_URL: postgresql://allura:${{ secrets.POSTGRES_PASSWORD || 'dev_password' }}@localhost:5432/memory
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"
           POSTGRES_DB: memory
-          POSTGRES_USER: ronin4life
+          POSTGRES_USER: allura
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'dev_password' }}
           POSTGRES_POOL_MAX: "5"
           NEO4J_URI: bolt://localhost:7687

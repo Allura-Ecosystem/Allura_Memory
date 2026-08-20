@@ -14,6 +14,9 @@ export default defineConfig({
     passWithNoTests: false,
     include: [
       "src/lib/process-engine/checkpoint-continuation.integration.test.ts",
+      "src/__tests__/database-tenant-isolation.e2e.test.ts",
+      "src/__tests__/events-immutability.e2e.test.ts",
+      "src/lib/db/tenant-table-inventory.test.ts",
     ],
     testTimeout: 60_000,
     hookTimeout: 30_000,

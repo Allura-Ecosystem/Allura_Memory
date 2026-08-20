@@ -45,17 +45,24 @@ let poolInstance: Pool | null = null;
  */
 export function getConnectionConfig(): ConnectionConfig {
   const password = env.POSTGRES_PASSWORD;
-  
+
   if (!password) {
     throw new Error("POSTGRES_PASSWORD environment variable is required");
   }
-  
+
+  // Story 24.3: optional application role. If POSTGRES_APP_USER is set, the
+  // service connects as the restricted application role that is subject to RLS.
+  // Otherwise we fall back to the owner/migration role for backwards compatibility.
+  const appUser = env.POSTGRES_APP_USER;
+  const appPassword = env.POSTGRES_APP_PASSWORD;
+
   return {
     host: env.POSTGRES_HOST || "localhost",
     port: parseInt(env.POSTGRES_PORT || "5432", 10),
     database: env.POSTGRES_DB || "memory",
-    user: env.POSTGRES_USER || "ronin4life",
-    password,
+    user: appUser || env.POSTGRES_USER || "ronin4life",
+    // Only use the app role password when the app role is explicitly selected.
+    password: appUser ? appPassword || password : password,
     connectionTimeoutMillis: DEFAULT_POOL_CONFIG.connectionTimeoutMillis,
     idleTimeoutMillis: DEFAULT_POOL_CONFIG.idleTimeoutMillis,
     max: DEFAULT_POOL_CONFIG.maxConnections,
@@ -101,6 +108,35 @@ export function getPool(): Pool {
   }
 
   return poolInstance;
+}
+
+/**
+ * Get a dedicated pool that connects as the restricted application role.
+ * Used by Story 24.3 tests and break-glass tooling. The main service should
+ * prefer the env-based `POSTGRES_APP_USER` path; this helper exists for tests
+ * that must compare owner vs. application-role behavior.
+ */
+export function getAppPool(): Pool {
+  const ownerConfig = getConnectionConfig();
+  const appUser = process.env.POSTGRES_APP_USER || "allura_app";
+  const appPassword = process.env.POSTGRES_APP_PASSWORD || "change-me-in-production";
+
+  const pool = new Pool({
+    host: ownerConfig.host,
+    port: ownerConfig.port,
+    database: ownerConfig.database,
+    user: appUser,
+    password: appPassword,
+    connectionTimeoutMillis: ownerConfig.connectionTimeoutMillis,
+    idleTimeoutMillis: ownerConfig.idleTimeoutMillis,
+    max: ownerConfig.max,
+  });
+
+  pool.on("error", (err: Error) => {
+    console.error("[PostgreSQL App Pool] Unexpected error on idle client:", err.message);
+  });
+
+  return pool;
 }
 
 /**

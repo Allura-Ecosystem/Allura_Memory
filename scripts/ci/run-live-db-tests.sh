@@ -13,6 +13,7 @@ for arg in "$@"; do
 done
 
 : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+: "${POSTGRES_APP_PASSWORD:=change-me-in-production}"
 postgres_host="${POSTGRES_HOST:-127.0.0.1}"
 postgres_port="${POSTGRES_PORT:-5432}"
 postgres_db="${POSTGRES_DB:-memory}"
@@ -81,6 +82,10 @@ for migration in "${migration_files[@]}"; do
   PGPASSWORD="$POSTGRES_PASSWORD" psql "${psql_args[@]}" --file "$migration"
 done
 
+# Ensure the restricted application role uses the password the test harness expects.
+PGPASSWORD="$POSTGRES_PASSWORD" psql "${psql_args[@]}" \
+  --command "ALTER ROLE allura_app WITH PASSWORD '$POSTGRES_APP_PASSWORD';"
+
 PGPASSWORD="$POSTGRES_PASSWORD" psql "${psql_args[@]}" \
   --tuples-only --no-align \
   --command "SELECT extname || ':' || extversion FROM pg_extension WHERE extname = 'vector';"
@@ -90,7 +95,7 @@ if [[ "$mode" == "migrate-only" ]]; then
   exit 0
 fi
 
-RUN_E2E_TESTS=true bun vitest run \
+RUN_E2E_TESTS=true POSTGRES_APP_PASSWORD="$POSTGRES_APP_PASSWORD" bun vitest run \
   --config vitest.config.live-db.ts \
   --reporter=json \
   --outputFile="$test_report"
