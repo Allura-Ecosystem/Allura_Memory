@@ -11,7 +11,7 @@ As the Allura architect, I need a config file that maps each agent to its defaul
 
 ## Context
 
-- The kernel (`src/kernel/syscalls.ts`) enforces `group_id` on every read/write via CHECK constraint `^allura-[a-z0-9-]+$`
+- The control plane (`src/control-plane/syscalls.ts`) enforces `group_id` on every read/write via CHECK constraint `^allura-[a-z0-9-]+$`
 - Hermes config has `inherit_mcp_toolsets: true` in delegation settings — children inherit parent's MCP tools
 - Docker MCP profiles created: `openclaw`, `faithmeats`, `difference-driven`, `coding`
 - No registry exists today — `DEFAULT_GROUP_ID` is set via env var only

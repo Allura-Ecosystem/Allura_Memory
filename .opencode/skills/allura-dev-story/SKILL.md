@@ -129,7 +129,7 @@ allura-brain_memory_add({
 | 2.8 Pike Gate / Zod | `allura-dev-story` | `allura-code-review` |
 | E2.1–E2.5 Dashboard Quality | `allura-dev-story` | `frontend-craft`, `allura-health-observability` |
 | E3.1–E3.5 Hardening | `allura-dev-story` | `allura-code-review` |
-| E4.1–E4.5 Kernel | `allura-dev-story` | — |
+| E4.1–E4.5 Control Plane | `allura-dev-story` | — |
 | E5.1–E5.5 Infra | `allura-dev-story` | — |
 
 ## Failure Modes

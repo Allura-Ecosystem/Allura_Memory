@@ -138,7 +138,7 @@ For scripts, a `scripts/lib/neo4j-stub.ts` was created that exports all previous
 
 **Assessment:** ✅ Correct.
 
-- `writer.test.ts`: Neo4j driver mock and session mock fully removed. The `neo4j-driver` vi.mock() is deleted. Tests now only test the kernel and adapter backends. Tests pass (1623/1623).
+- `writer.test.ts`: Neo4j driver mock and session mock fully removed. The `neo4j-driver` vi.mock() is deleted. Tests now only test the control plane and adapter backends. Tests pass (1623/1623).
 - `target-resolver.test.ts`: Neo4j connection mock replaced with `assertRegisteredTenant` mock. Test numbering updated (tests 5-8 renumbered to 5-6). Tests pass.
 - `backup-automation.test.ts`: `backupNeo4j` import removed. `ALL_BACKUP_TYPES` assertion updated (removed `neo4j`, kept `config`). `getDefaultConfig` assertions updated to remove neo4j fields. Module export assertion updated. Tests pass.
 - `sync-contract.test.ts`: Updated (91 lines changed). Tests pass.
@@ -171,7 +171,7 @@ These were not cleaned up in Epic 23 and represent remaining dead code that will
 
 - 12 Neo4j fallback tests removed (457 lines deleted)
 - Neo4j driver mock, session mock, and env vars removed
-- Remaining tests pass (kernel + adapter backends only)
+- Remaining tests pass (control plane + adapter backends only)
 
 ### Story 23.3: Fix target-resolver.test.ts — ✅ PASS
 

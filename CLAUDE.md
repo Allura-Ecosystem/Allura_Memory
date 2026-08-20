@@ -89,7 +89,7 @@ API routes under `src/app/api/`: agents, audit, curator, dreams, evidence, execu
 ### Key Subsystems
 
 - **Curator** (`src/curator/`): HITL promotion pipeline — scores traces, queues proposals, requires human approval before Neo4j writes.
-- **Kernel** (`src/kernel/`): RuVix proof-gated mutation layer.
+- **Control Plane** (`src/control-plane/`): RuVix proof-gated mutation layer.
 - **Process Engine** (`src/lib/process-engine/`): Workflow execution with checkpoint resume, revision pinning.
 - **Budget / Circuit Breaker** (`src/lib/budget/`, `src/lib/circuit-breaker/`): Hard limits and automatic shutdown for agent runaway prevention.
 - **Operational State** (`src/lib/operational-state/`): Ready/empty/stale/error/degraded contract for live surfaces.

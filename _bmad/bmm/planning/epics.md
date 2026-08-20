@@ -60,7 +60,7 @@ Epics 18–23 below are retained as historical delivery context. Epic 24 is the 
 **Owner:** Brooks (orchestrator)
 **group_id:** allura-system
 
-**Goal:** Hermes subagents (via `delegate_task`) and external agents (Troy on laptop, OpenWork on desktop) must query Allura Brain before starting work and write outcomes back after completing. The infrastructure exists — the SONA trajectory engine records what happened, the MCP gateway exposes memory_add/search, and the kernel enforces group_id. What's missing is the wiring: subagent briefs don't include "query Allura first," and agent configs don't declare their group_id.
+**Goal:** Hermes subagents (via `delegate_task`) and external agents (Troy on laptop, OpenWork on desktop) must query Allura Brain before starting work and write outcomes back after completing. The infrastructure exists — the SONA trajectory engine records what happened, the MCP gateway exposes memory_add/search, and the control plane enforces group_id. What's missing is the wiring: subagent briefs don't include "query Allura first," and agent configs don't declare their group_id.
 
 **Why now:** The memory plane has the engines (trajectory, genesis, curator, coherence) but they're fed only by direct MCP calls from Gilliam. Subagents and external agents are blind — they don't read prior work, don't write outcomes, and don't carry tenant identity. This makes the brain Gilliam's brain, not the crew's brain.
 

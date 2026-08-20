@@ -116,10 +116,10 @@ Based on Anthropic's research, JSON format reduces the chance of agents modifyin
   "features": [
     {
       "category": "functional",
-      "description": "Record Raw Execution Traces — Schema + Kernel Routing",
+      "description": "Record Raw Execution Traces — Schema + Control Plane Routing",
       "steps": [
         "Add evidence_ref and confidence columns to events table",
-        "Wire trace writes through RuVixKernel.syscall('trace')",
+        "Wire trace writes through RuVixControlPlane.syscall('trace')",
         "Wire TraceMiddleware into agent execution paths",
         "Run bun run typecheck — zero errors",
         "Run bun test — all 42 tests pass"
@@ -148,7 +148,7 @@ When using Ralph with Allura, these rules MUST be enforced:
 1. **bun only** — never npm, npx, or node directly
 2. **Postgres is append-only** — INSERT only, never UPDATE/DELETE on events table
 3. **group_id required** — every DB operation must include group_id with allura-* format
-4. **Kernel routing** — trace writes go through RuVixKernel.syscall('trace'), not direct inserts
+4. **Control Plane routing** — trace writes go through RuVixControlPlane.syscall('trace'), not direct inserts
 5. **Neo4j versioning** — use SUPERSEDES relationships, never edit existing nodes
 6. **HITL** — never autonomously promote to Neo4j without going through curator flow
 7. **MCP_DOCKER tools only** — never docker exec for database operations

@@ -1,12 +1,12 @@
-# Kernel Write Gate — Implementation Plan
+# Control Plane Write Gate — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make syscall_mutate and syscall_query the single choke point for all database writes and reads — both the agent-facing `agentMemory` API and the internal `memory()` graph writer route through the kernel's proof→policy→audit pipeline.
+**Goal:** Make syscall_mutate and syscall_query the single choke point for all database writes and reads — both the agent-facing `agentMemory` API and the internal `memory()` graph writer route through the control plane's proof→policy→audit pipeline.
 
 **Architecture:** A new target resolver module maps syscall target strings (e.g., `pg:events`, `neo4j:Entity`) to actual database operations using the existing `getPool()` and `writeTransaction()`/`readTransaction()` functions. The two load-bearing syscalls (`mutate`, `query`) call the resolver inside their executor callbacks. `agentMemory` and `memory()` are rewired to call syscalls instead of DB clients directly. The other 10 syscalls stay stubbed.
 
-**Tech Stack:** TypeScript, Vitest, PostgreSQL (`pg` via `getPool()`), Neo4j (`neo4j-driver` via `writeTransaction`/`readTransaction`), RuVix kernel (proof.ts, policy.ts)
+**Tech Stack:** TypeScript, Vitest, PostgreSQL (`pg` via `getPool()`), Neo4j (`neo4j-driver` via `writeTransaction`/`readTransaction`), RuVix control plane (proof.ts, policy.ts)
 
 ---
 
@@ -14,27 +14,27 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/kernel/target-resolver.ts` | **Create** | Maps target strings to DB operations, enforces invariants |
-| `src/kernel/target-resolver.test.ts` | **Create** | Unit tests for target resolver |
-| `src/kernel/syscalls.ts` | **Modify** | Wire mutate + query executors to target resolver |
-| `src/kernel/syscalls.test.ts` | **Create** | Unit tests for wired syscalls (mocked resolver) |
-| `src/agents/memory-wrapper.ts` | **Modify** | Route through kernel instead of canonicalMemoryTools |
+| `src/control-plane/target-resolver.ts` | **Create** | Maps target strings to DB operations, enforces invariants |
+| `src/control-plane/target-resolver.test.ts` | **Create** | Unit tests for target resolver |
+| `src/control-plane/syscalls.ts` | **Modify** | Wire mutate + query executors to target resolver |
+| `src/control-plane/syscalls.test.ts` | **Create** | Unit tests for wired syscalls (mocked resolver) |
+| `src/agents/memory-wrapper.ts` | **Modify** | Route through control plane instead of canonicalMemoryTools |
 | `src/agents/memory-wrapper.test.ts` | **Modify** | Update mock boundary from canonicalTools to syscalls |
-| `src/lib/memory/writer.ts` | **Modify** | Route through kernel instead of direct Neo4j/PG |
-| `src/lib/memory/writer.test.ts` | **Create** | Unit tests for kernel-routed writer |
+| `src/lib/memory/writer.ts` | **Modify** | Route through control plane instead of direct Neo4j/PG |
+| `src/lib/memory/writer.test.ts` | **Create** | Unit tests for control plane-routed writer |
 
 ---
 
 ### Task 1: Target Resolver
 
 **Files:**
-- Create: `src/kernel/target-resolver.ts`
-- Test: `src/kernel/target-resolver.test.ts`
+- Create: `src/control-plane/target-resolver.ts`
+- Test: `src/control-plane/target-resolver.test.ts`
 
 - [ ] **Step 1: Write the failing test for target resolution**
 
 ```typescript
-// src/kernel/target-resolver.test.ts
+// src/control-plane/target-resolver.test.ts
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   resolveTarget,
@@ -161,15 +161,15 @@ describe("Target Resolver", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `bun vitest run src/kernel/target-resolver.test.ts`
+Run: `bun vitest run src/control-plane/target-resolver.test.ts`
 Expected: FAIL — module `./target-resolver` not found
 
 - [ ] **Step 3: Write the target resolver**
 
 ```typescript
-// src/kernel/target-resolver.ts
+// src/control-plane/target-resolver.ts
 /**
- * Kernel Target Resolver
+ * Control Plane Target Resolver
  *
  * Maps syscall target strings to actual database operations.
  * Enforces invariants (append-only, group_id, SUPERSEDES) at the boundary.
@@ -386,14 +386,14 @@ export async function resolveTarget(op: TargetOperation): Promise<ResolveResult>
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `bun vitest run src/kernel/target-resolver.test.ts`
+Run: `bun vitest run src/control-plane/target-resolver.test.ts`
 Expected: All 6 tests PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/kernel/target-resolver.ts src/kernel/target-resolver.test.ts
-git commit -m "feat(kernel): add target resolver for syscall DB routing
+git add src/control-plane/target-resolver.ts src/control-plane/target-resolver.test.ts
+git commit -m "feat(control plane): add target resolver for syscall DB routing
 
 Maps pg:events, pg:memories, neo4j:Entity, neo4j:Query targets to actual
 DB operations. Enforces append-only on events, group_id on all ops."
@@ -404,19 +404,19 @@ DB operations. Enforces append-only on events, group_id on all ops."
 ### Task 2: Wire syscall_mutate and syscall_query
 
 **Files:**
-- Modify: `src/kernel/syscalls.ts:310-376` (mutate and query executors)
-- Create: `src/kernel/syscalls.test.ts`
+- Modify: `src/control-plane/syscalls.ts:310-376` (mutate and query executors)
+- Create: `src/control-plane/syscalls.test.ts`
 
 - [ ] **Step 1: Write the failing test for wired mutate**
 
 ```typescript
-// src/kernel/syscalls.test.ts
+// src/control-plane/syscalls.test.ts
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { syscall_mutate, syscall_query } from "./syscalls";
 import type { SyscallContext } from "./syscalls";
 
-// Mock the kernel secret
-vi.stubEnv("RUVIX_KERNEL_SECRET", "test-secret-key-for-ruvix-kernel-proof-engine-32chars");
+// Mock the control plane secret
+vi.stubEnv("RUVIX_CONTROL_PLANE_SECRET", "test-secret-key-for-ruvix-control plane-proof-engine-32chars");
 
 // Mock target resolver
 vi.mock("./target-resolver", () => ({
@@ -431,7 +431,7 @@ import { resolveTarget } from "./target-resolver";
 const ctx: SyscallContext = {
   actor: "brooks-architect",
   group_id: "allura-system",
-  permission_tier: "kernel",
+  permission_tier: "control plane",
 };
 
 describe("Wired Syscalls", () => {
@@ -495,12 +495,12 @@ describe("Wired Syscalls", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `bun vitest run src/kernel/syscalls.test.ts`
+Run: `bun vitest run src/control-plane/syscalls.test.ts`
 Expected: FAIL — mutate still returns `affected_rows: 0` (stub), query returns `[]` (stub)
 
 - [ ] **Step 3: Wire syscall_mutate executor to target resolver**
 
-In `src/kernel/syscalls.ts`, replace the mutate executor (lines ~317–351):
+In `src/control-plane/syscalls.ts`, replace the mutate executor (lines ~317–351):
 
 ```typescript
 // Add import at top of file
@@ -575,19 +575,19 @@ Also remove the now-unused transaction helpers (`beginTransaction`, `commitTrans
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `bun vitest run src/kernel/syscalls.test.ts`
+Run: `bun vitest run src/control-plane/syscalls.test.ts`
 Expected: All 3 tests PASS
 
-- [ ] **Step 5: Run existing kernel tests**
+- [ ] **Step 5: Run existing control plane tests**
 
-Run: `bun vitest run src/kernel/`
+Run: `bun vitest run src/control-plane/`
 Expected: All existing tests still pass (proof.test.ts, mutate-events.test.ts etc.)
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/kernel/syscalls.ts src/kernel/syscalls.test.ts
-git commit -m "feat(kernel): wire syscall_mutate and syscall_query to target resolver
+git add src/control-plane/syscalls.ts src/control-plane/syscalls.test.ts
+git commit -m "feat(control plane): wire syscall_mutate and syscall_query to target resolver
 
 Replaces TODO stubs with real DB routing through resolveTarget().
 Removes in-memory transaction scaffolding — resolver owns transactions."
@@ -595,7 +595,7 @@ Removes in-memory transaction scaffolding — resolver owns transactions."
 
 ---
 
-### Task 3: Route agentMemory through kernel
+### Task 3: Route agentMemory through control plane
 
 **Files:**
 - Modify: `src/agents/memory-wrapper.ts`
@@ -608,8 +608,8 @@ The current tests mock `canonicalMemoryTools`. After this change, the mock bound
 ```typescript
 // src/agents/memory-wrapper.test.ts — replace the existing mock block
 
-// Mock kernel syscalls (the new boundary)
-vi.mock("@/kernel/syscalls", () => ({
+// Mock control plane syscalls (the new boundary)
+vi.mock("/control-plane/syscalls", () => ({
   syscall_mutate: vi.fn().mockResolvedValue({
     success: true,
     data: { affected_rows: 1, auditId: "audit-allura-system-mutate-123" },
@@ -621,10 +621,10 @@ vi.mock("@/kernel/syscalls", () => ({
   }),
 }));
 
-// Mock kernel secret for proof generation
-vi.stubEnv("RUVIX_KERNEL_SECRET", "test-secret-key-for-ruvix-kernel-proof-engine-32chars");
+// Mock control plane secret for proof generation
+vi.stubEnv("RUVIX_CONTROL_PLANE_SECRET", "test-secret-key-for-ruvix-control plane-proof-engine-32chars");
 
-import { syscall_mutate, syscall_query } from "@/kernel/syscalls";
+import { syscall_mutate, syscall_query } from "/control-plane/syscalls";
 ```
 
 Update the `add()` success test expectation:
@@ -684,14 +684,14 @@ it("should search memories with valid parameters", async () => {
 });
 ```
 
-Validation tests (empty content, invalid group_id, missing user_id) remain unchanged — those fire before the kernel is called.
+Validation tests (empty content, invalid group_id, missing user_id) remain unchanged — those fire before the control plane is called.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `bun vitest run src/agents/memory-wrapper.test.ts`
 Expected: FAIL — agentMemory still calls canonicalMemoryTools, not syscalls
 
-- [ ] **Step 3: Rewire agentMemory to use kernel syscalls**
+- [ ] **Step 3: Rewire agentMemory to use control plane syscalls**
 
 In `src/agents/memory-wrapper.ts`, replace the imports and implementation:
 
@@ -702,8 +702,8 @@ Replace the canonicalMemoryTools import:
 // import { canonicalMemoryTools } from "@/mcp/canonical-tools";
 
 // Add this:
-import { syscall_mutate, syscall_query } from "@/kernel/syscalls";
-import type { SyscallContext } from "@/kernel/syscalls";
+import { syscall_mutate, syscall_query } from "/control-plane/syscalls";
+import type { SyscallContext } from "/control-plane/syscalls";
 ```
 
 Add a helper to build syscall context:
@@ -759,7 +759,7 @@ async add(params: AgentMemoryAddParams): Promise<MemoryAddResponse> {
   );
 
   if (!result.success) {
-    throw new Error(result.error ?? "Kernel mutate failed");
+    throw new Error(result.error ?? "Control Plane mutate failed");
   }
 
   return MemoryAddResponseSchema.parse({
@@ -803,7 +803,7 @@ async search(params: MemorySearchParams): Promise<MemorySearchResponse> {
   );
 
   if (!result.success) {
-    throw new Error(result.error ?? "Kernel query failed");
+    throw new Error(result.error ?? "Control Plane query failed");
   }
 
   const rows = (result.data ?? []) as Array<Record<string, unknown>>;
@@ -852,7 +852,7 @@ async get(params: MemoryGetParams): Promise<MemoryGetResponse> {
   );
 
   if (!result.success) {
-    throw new Error(result.error ?? "Kernel query failed");
+    throw new Error(result.error ?? "Control Plane query failed");
   }
 
   const rows = (result.data ?? []) as Array<Record<string, unknown>>;
@@ -905,7 +905,7 @@ async list(params: MemoryListParams): Promise<MemoryListResponse> {
   );
 
   if (!result.success) {
-    throw new Error(result.error ?? "Kernel query failed");
+    throw new Error(result.error ?? "Control Plane query failed");
   }
 
   const rows = (result.data ?? []) as Array<Record<string, unknown>>;
@@ -959,7 +959,7 @@ async delete(params: MemoryDeleteParams): Promise<MemoryDeleteResponse> {
   );
 
   if (!result.success) {
-    throw new Error(result.error ?? "Kernel delete event failed");
+    throw new Error(result.error ?? "Control Plane delete event failed");
   }
 
   return MemoryDeleteResponseSchema.parse({
@@ -980,7 +980,7 @@ Expected: All validation tests PASS. Success path tests PASS with new mock bound
 
 ```bash
 git add src/agents/memory-wrapper.ts src/agents/memory-wrapper.test.ts
-git commit -m "feat(agents): route agentMemory through kernel syscalls
+git commit -m "feat(agents): route agentMemory through control plane syscalls
 
 agentMemory.add/search/get/list/delete now flow through
 syscall_mutate/syscall_query instead of calling canonicalMemoryTools
@@ -989,7 +989,7 @@ directly. Validation remains at the wrapper boundary."
 
 ---
 
-### Task 4: Route memory() writer through kernel
+### Task 4: Route memory() writer through control plane
 
 **Files:**
 - Modify: `src/lib/memory/writer.ts`
@@ -1001,8 +1001,8 @@ directly. Validation remains at the wrapper boundary."
 // src/lib/memory/writer.test.ts
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock kernel syscalls
-vi.mock("@/kernel/syscalls", () => ({
+// Mock control plane syscalls
+vi.mock("/control-plane/syscalls", () => ({
   syscall_mutate: vi.fn().mockResolvedValue({
     success: true,
     data: { affected_rows: 1, auditId: "audit-123" },
@@ -1013,13 +1013,13 @@ vi.mock("@/kernel/syscalls", () => ({
   }),
 }));
 
-vi.stubEnv("RUVIX_KERNEL_SECRET", "test-secret-key-for-ruvix-kernel-proof-engine-32chars");
+vi.stubEnv("RUVIX_CONTROL_PLANE_SECRET", "test-secret-key-for-ruvix-control plane-proof-engine-32chars");
 vi.stubEnv("GRAPH_BACKEND", "neo4j");
 
-import { syscall_mutate, syscall_query } from "@/kernel/syscalls";
+import { syscall_mutate, syscall_query } from "/control-plane/syscalls";
 import { memory } from "./writer";
 
-describe("memory() — kernel-routed writer", () => {
+describe("memory() — control plane-routed writer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -1119,23 +1119,23 @@ describe("memory() — kernel-routed writer", () => {
 Run: `bun vitest run src/lib/memory/writer.test.ts`
 Expected: FAIL — memory() still calls Neo4j/PG directly, not syscalls
 
-- [ ] **Step 3: Add kernel-routed backend to writer.ts**
+- [ ] **Step 3: Add control plane-routed backend to writer.ts**
 
 In `src/lib/memory/writer.ts`, add a new import and backend builder.
 
 Add import near top:
 
 ```typescript
-import { syscall_mutate, syscall_query } from "@/kernel/syscalls";
-import type { SyscallContext } from "@/kernel/syscalls";
+import { syscall_mutate, syscall_query } from "/control-plane/syscalls";
+import type { SyscallContext } from "/control-plane/syscalls";
 ```
 
 Add a new backend builder after `buildAdapterBackend()`:
 
 ```typescript
-// ── Kernel Backend (routes all operations through proof-gated syscalls) ──
+// ── Control Plane Backend (routes all operations through proof-gated syscalls) ──
 
-function buildKernelBackend(): MemoryAPI {
+function buildControlPlaneBackend(): MemoryAPI {
   function ctx(groupId: string, actor = "system"): SyscallContext {
     return { actor, group_id: groupId, permission_tier: "plugin" };
   }
@@ -1167,7 +1167,7 @@ function buildKernelBackend(): MemoryAPI {
       );
 
       if (!result.success) {
-        throw new Error(result.error ?? "Kernel mutate failed for createEntity");
+        throw new Error(result.error ?? "Control Plane mutate failed for createEntity");
       }
 
       // Handle relationships
@@ -1223,7 +1223,7 @@ function buildKernelBackend(): MemoryAPI {
       );
 
       if (!result.success) {
-        throw new Error(result.error ?? "Kernel mutate failed for createRelationship");
+        throw new Error(result.error ?? "Control Plane mutate failed for createRelationship");
       }
     },
 
@@ -1231,7 +1231,7 @@ function buildKernelBackend(): MemoryAPI {
       cypher: string,
       params?: Record<string, unknown>
     ): Promise<T[]> {
-      // Raw cypher queries still need a group_id for the kernel context
+      // Raw cypher queries still need a group_id for the control plane context
       const groupId = (params?.group_id as string) ?? process.env.DEFAULT_GROUP_ID ?? "allura-system";
 
       const result = await syscall_query(
@@ -1275,15 +1275,15 @@ function buildKernelBackend(): MemoryAPI {
 }
 ```
 
-Update the `memory()` export to use the kernel backend:
+Update the `memory()` export to use the control plane backend:
 
 ```typescript
 export function memory(): MemoryAPI {
-  // Kernel backend is now the default — proof-gates all operations
-  const useKernel = process.env.MEMORY_BYPASS_KERNEL !== "true";
+  // Control Plane backend is now the default — proof-gates all operations
+  const useControlPlane = process.env.MEMORY_BYPASS_KERNEL !== "true";
 
-  if (useKernel) {
-    return buildKernelBackend();
+  if (useControlPlane) {
+    return buildControlPlaneBackend();
   }
 
   // Fallback: direct DB access (for migration/testing only)
@@ -1309,7 +1309,7 @@ Expected: Existing relationship and traceable-memory tests still pass (they mock
 
 ```bash
 git add src/lib/memory/writer.ts src/lib/memory/writer.test.ts
-git commit -m "feat(memory): route memory() writer through kernel syscalls
+git commit -m "feat(memory): route memory() writer through control plane syscalls
 
 createEntity, createRelationship, query, and search now flow through
 syscall_mutate/syscall_query. Direct Neo4j/PG backends kept as fallback
@@ -1335,16 +1335,16 @@ Expected: All tests pass. If any fail, diagnose and fix — the mock boundaries 
 
 - [ ] **Step 3: Verify no circular imports**
 
-Run: `bun vitest run src/kernel/target-resolver.test.ts src/kernel/syscalls.test.ts src/agents/memory-wrapper.test.ts src/lib/memory/writer.test.ts`
+Run: `bun vitest run src/control-plane/target-resolver.test.ts src/control-plane/syscalls.test.ts src/agents/memory-wrapper.test.ts src/lib/memory/writer.test.ts`
 Expected: All 4 test files pass without circular dependency errors
 
 - [ ] **Step 4: Final commit**
 
 ```bash
 git add -A
-git commit -m "chore: fix any typecheck or test issues from kernel write gate
+git commit -m "chore: fix any typecheck or test issues from control plane write gate
 
-Ensures all existing tests pass with the new kernel routing layer."
+Ensures all existing tests pass with the new control plane routing layer."
 ```
 
 ---
@@ -1364,4 +1364,4 @@ After all tasks complete:
 - [ ] Audit IDs generated for all mutations
 - [ ] `bun run typecheck` passes
 - [ ] `bun test` passes
-- [ ] No circular imports between kernel ↔ memory ↔ agents
+- [ ] No circular imports between control plane ↔ memory ↔ agents

@@ -130,7 +130,7 @@ Event types: `ADR_CREATED`, `INTERFACE_DEFINED`, `TECH_STACK_DECISION`, `TASK_CO
 | E2.4 Graph Targeting | `allura-graph-debug` → `allura-dev-story` | — |
 | E2.5 LCP/FID Baseline | `allura-health-observability` | — |
 | E3.1–E3.5 Hardening | `allura-dev-story` | `allura-code-review`, `allura-health-observability` |
-| E4.1–E4.5 Kernel | `allura-dev-story` (per syscall) | — |
+| E4.1–E4.5 Control Plane | `allura-dev-story` (per syscall) | — |
 | E5.1–E5.5 Infra | `allura-dev-story` | — |
 | CARD-SHOWCASE-A | `figma-generate-design` → `allura-dev-story` | — |
 

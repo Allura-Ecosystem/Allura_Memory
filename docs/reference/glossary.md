@@ -112,7 +112,7 @@ The controlled read path (`POST /api/memory/retrieval`) that enforces scoping, a
 Reciprocal Rank Fusion — the algorithm that combines vector and text search scores: `score = 1/(60+rank_v) + 1/(60+rank_t)`.
 
 **RuVix**
-Allura's kernel governance layer — 12 rules that enforce HITL approval, append-only history, tenant isolation, fail-closed tool use, and evidence-backed completion.
+Allura's control plane governance layer — 12 rules that enforce HITL approval, append-only history, tenant isolation, fail-closed tool use, and evidence-backed completion.
 
 ## S
 

@@ -12,15 +12,15 @@ Anchor: [BLUEPRINT.md](./BLUEPRINT.md) (F24–F25). Related: [DESIGN-GUARD.md](.
 
 The Audit subsystem records every permit/deny/defer decision and every memory write as an **append-only, hash-chained** event. It is the evidence backbone for compliance and reversibility (AD-05, RK-06).
 
-## Kernel Audit Primitive (`syscall_trace`)
+## Control Plane Audit Primitive (`syscall_trace`)
 
-Traces enter the audit trail through the RuVix kernel's **SYSCALL 5: `trace`** (`src/kernel/syscalls.ts`). It is an **audit-only** syscall — it runs the full `proof → policy → audit` gate via `executeSyscall`, validating proof, tenant policy, and actor identity, but it deliberately performs **no database write of its own**.
+Traces enter the audit trail through the RuVix control plane's **SYSCALL 5: `trace`** (`src/control-plane/syscalls.ts`). It is an **audit-only** syscall — it runs the full `proof → policy → audit` gate via `executeSyscall`, validating proof, tenant policy, and actor identity, but it deliberately performs **no database write of its own**.
 
-- **Why audit-only (H-005 fix):** the kernel's `resolveTarget()` would otherwise `INSERT` into `events` using the outer `traceData` wrapper as columns (e.g. `table`, `data`), producing a Postgres syntax error (a double-write bug). Instead, `syscall_trace` returns a validated `trace_id`, and the canonical event row is the **caller's** responsibility — written via `logTrace()` in `src/lib/postgres/trace-logger.ts` (or `createKernelTraceLogger()` in `src/kernel/audit/trace.ts`) through `insertEvent()`.
+- **Why audit-only (H-005 fix):** the control plane's `resolveTarget()` would otherwise `INSERT` into `events` using the outer `traceData` wrapper as columns (e.g. `table`, `data`), producing a Postgres syntax error (a double-write bug). Instead, `syscall_trace` returns a validated `trace_id`, and the canonical event row is the **caller's** responsibility — written via `logTrace()` in `src/lib/postgres/trace-logger.ts` (or `createControlPlaneTraceLogger()` in `src/control-plane/audit/trace.ts`) through `insertEvent()`.
 - **Return shape:** `{ trace_id }`, where `trace_id` matches `^audit-<group_id>-trace-…` (via `generateAuditId("trace", "audit", claims.group_id)`).
-- **Tested behavior** (`src/kernel/syscalls.test.ts`): returns success and a `trace_id` **without** calling `resolveTarget` (audit-only), and accepts arbitrary trace data without requiring a schema match. Both cases pass.
+- **Tested behavior** (`src/control-plane/syscalls.test.ts`): returns success and a `trace_id` **without** calling `resolveTarget` (audit-only), and accepts arbitrary trace data without requiring a schema match. Both cases pass.
 
-This keeps a single source of truth for the canonical event row while still forcing every trace through the kernel's proof/policy/tenant gate — the write is the caller's, the *authorization to write* is the kernel's.
+This keeps a single source of truth for the canonical event row while still forcing every trace through the control plane's proof/policy/tenant gate — the write is the caller's, the *authorization to write* is the control plane's.
 
 ## Functional Requirements
 
@@ -60,13 +60,13 @@ Each event stores `prev_hash` and `hash`; a broken chain indicates tampering.
 ## MODEL_EVAL Bridge (PROPOSED — not yet built)
 
 > [!WARNING]
-> **Proposal, not implemented.** As of 2026-07-04 there is **no** wiring between the kernel audit trace (this repo) and MODEL_EVAL v1 (the `allura-team-ram` harness, `src/agent-executor.ts`). A grep for `syscall_trace` / kernel-witnessed outcomes in `allura-team-ram/src/` returns nothing. This section records the design intent so it is not lost; do not cite it as an existing capability.
+> **Proposal, not implemented.** As of 2026-07-04 there is **no** wiring between the control plane audit trace (this repo) and MODEL_EVAL v1 (the `allura-team-ram` harness, `src/agent-executor.ts`). A grep for `syscall_trace` / control plane-witnessed outcomes in `allura-team-ram/src/` returns nothing. This section records the design intent so it is not lost; do not cite it as an existing capability.
 
-MODEL_EVAL v1 currently derives a task's `outcome` from the **executor's own report** of the invocation result envelope — the model, in effect, grades its own homework (a limitation flagged by Bellard in the 2026-07-04 party review). The kernel audit trace is the natural fix: because `syscall_trace` runs the proof/policy gate and the canonical event is append-only and hash-chained, a **kernel-witnessed** trace is an *observed* outcome rather than a *claimed* one.
+MODEL_EVAL v1 currently derives a task's `outcome` from the **executor's own report** of the invocation result envelope — the model, in effect, grades its own homework (a limitation flagged by Bellard in the 2026-07-04 party review). The control plane audit trace is the natural fix: because `syscall_trace` runs the proof/policy gate and the canonical event is append-only and hash-chained, a **control plane-witnessed** trace is an *observed* outcome rather than a *claimed* one.
 
-**Proposed shape:** MODEL_EVAL's per-task `TASK_COMPLETE` event references the `trace_id` the kernel emitted for that task; the `outcome` is derived from the witnessed trace's success/failure rather than the executor envelope. This closes the objectivity gap without a new subsystem — it reuses the hash-chained audit trail as the source of truth.
+**Proposed shape:** MODEL_EVAL's per-task `TASK_COMPLETE` event references the `trace_id` the control plane emitted for that task; the `outcome` is derived from the witnessed trace's success/failure rather than the executor envelope. This closes the objectivity gap without a new subsystem — it reuses the hash-chained audit trail as the source of truth.
 
-**Open questions for a future ADR:** cross-repo transport (the harness and the kernel are separate runtimes); how a harness task maps to a kernel `trace_id`; whether the bridge runs at write time or is reconciled at report time. Track under the standing backlog, not as shipped work.
+**Open questions for a future ADR:** cross-repo transport (the harness and the control plane are separate runtimes); how a harness task maps to a control plane `trace_id`; whether the bridge runs at write time or is reconciled at report time. Track under the standing backlog, not as shipped work.
 
 ## Important Constraints
 

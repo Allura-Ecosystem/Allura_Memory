@@ -117,7 +117,7 @@ The Memory Command Center is the approved operator surface for Allura memory gov
 | Provenance | `/dashboard/audit` and evidence drawer | Trace → proposal → approval → graph evidence chain |
 | Extracted | `/dashboard/memories` | Allura extraction/memory APIs |
 | Approvals | `/dashboard/curator` | Curator proposals + Native Allura Kanban work state; Notion/Linear/GitHub Projects optional adapters |
-| Governance | `/dashboard/governance` | RuVix kernel rules, policy mode, thresholds, isolation, drift |
+| Governance | `/dashboard/governance` | RuVix control plane rules, policy mode, thresholds, isolation, drift |
 | Settings | `/dashboard/settings` | Resource manifest + dashboard configuration |
 | Search | Memory search surface | Allura retrieval layer |
 | Add memory | Governed Allura action | Controlled memory write endpoint |

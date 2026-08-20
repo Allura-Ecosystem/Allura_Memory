@@ -37,7 +37,7 @@
 ├─────────────────────────────────────────────┤
 │ Layer 2: PostgreSQL + Neo4j + RuVector       │
 ├─────────────────────────────────────────────┤
-│ Layer 1: RuVix Kernel (Proof-gated mutation)│
+│ Layer 1: RuVix Control Plane (Proof-gated mutation)│
 └─────────────────────────────────────────────┘
 ```
 
@@ -53,7 +53,7 @@ src/
 │   ├── ruvector/  # Vector DB connection
 │   └── dedup/     # Duplicate detection
 ├── mcp/           # MCP tools and server
-├── kernel/        # RuVix kernel (proof system)
+├── control plane/        # RuVix control plane (proof system)
 └── stores/        # Zustand stores
 ```
 

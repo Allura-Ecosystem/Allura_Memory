@@ -21,14 +21,14 @@ As the Allura data architect, I need a `tenants` table in PostgreSQL that regist
 - [x] AC-1: Migration `docker/postgres-init/33-tenant-registry.sql` creates `tenants` table
 - [x] AC-2: Columns: `group_id` (PK, TEXT, CHECK `^allura-`), `name` (TEXT), `description` (TEXT), `owner_agent_id` (TEXT), `config` (JSONB, default `{}`), `active` (BOOLEAN, default TRUE), `created_at` (TIMESTAMPTZ, default NOW())
 - [x] AC-3: Seeds existing tenants: `allura-system`, `allura-faithmeats`, `allura-difference-driven`, `allura-coding`
-- [x] AC-4: The kernel target resolver (`src/kernel/target-resolver.ts`) is updated to validate `group_id` exists in `tenants` table on writes — fail closed if tenant not registered
+- [x] AC-4: The control plane target resolver (`src/control-plane/target-resolver.ts`) is updated to validate `group_id` exists in `tenants` table on writes — fail closed if tenant not registered
 - [x] AC-5: Migration is idempotent — safe to run on existing databases
 - [x] AC-6: Unit tests verify: table exists, seed data correct, unregistered group_id rejected
 
 ## Tasks
 
 1. Create `docker/postgres-init/33-tenant-registry.sql`
-2. Update `src/kernel/target-resolver.ts` to validate tenant existence
+2. Update `src/control-plane/target-resolver.ts` to validate tenant existence
 3. Create `src/__tests__/tenant-registry.test.ts`
 4. Run migration against dev database
 5. Run `bun run typecheck && bun test`
@@ -36,7 +36,7 @@ As the Allura data architect, I need a `tenants` table in PostgreSQL that regist
 ## File List
 
 - `docker/postgres-init/33-tenant-registry.sql` (NEW)
-- `src/kernel/target-resolver.ts` (MODIFY — tenant validation)
+- `src/control-plane/target-resolver.ts` (MODIFY — tenant validation)
 - `src/__tests__/tenant-registry.test.ts` (NEW)
 
 ## Change Log

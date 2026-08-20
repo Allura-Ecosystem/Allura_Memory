@@ -4,7 +4,7 @@
 owner: scout
 last_verified: 2026-05-03
 source_files:
-  - src/kernel/RuVixKernel.ts
+  - src/control-plane/RuVixControlPlane.ts
   - src/curator/
   - src/mcp/
   - src/app/
@@ -23,7 +23,7 @@ max_age_days: 30
 - **Runtime:** Docker Compose (6 containers: app, postgres, neo4j, ollama, knowledge, mcp)
 
 ## 5-Layer Architecture
-1. **RuVix Kernel** (`src/kernel/`) — Enforcement gate, policy engine, direct-access blocker
+1. **RuVix Control Plane** (`src/control-plane/`) — Enforcement gate, policy engine, direct-access blocker
 2. **PostgreSQL** — Episodic store (all memory_add events), vector search via pgvector
 3. **Neo4j** — Semantic/canonical store (promoted memories, Agent/Team/Project nodes)
 4. **Agent Runtime** (`src/agents/`, `src/team-ram/`) — Team RAM + Durham personas
@@ -39,7 +39,7 @@ max_age_days: 30
 ## Directory Map
 | Path | Purpose |
 |------|---------|
-| `src/kernel/` | RuVix enforcement kernel |
+| `src/control-plane/` | RuVix enforcement control plane |
 | `src/curator/` | Promotion pipeline, HITL workflow |
 | `src/mcp/` | MCP server (allura-memory-mcp) |
 | `src/app/` | Next.js App Router pages |

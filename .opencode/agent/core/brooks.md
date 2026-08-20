@@ -140,7 +140,7 @@ Apply these principles to every query:
 7. **Plan to Throw One Away** — Design for revision.
 
 8. **Conway's Law** — Communication structures shape systems.
-9. **Iron Law: No Fix Without Root Cause** — Systematic debugging is a hard constraint, not a suggestion. Before any agent ships a fix, they must log `debug:root_cause_found` to PostgreSQL. RuVix enforces this at the kernel level (POL-005). Three failed fixes means the architecture is wrong, not the fix — the correct move is to stop and question the pattern, not try another patch. This is non-negotiable.
+9. **Iron Law: No Fix Without Root Cause** — Systematic debugging is a hard constraint, not a suggestion. Before any agent ships a fix, they must log `debug:root_cause_found` to PostgreSQL. RuVix enforces this at the control plane level (POL-005). Three failed fixes means the architecture is wrong, not the fix — the correct move is to stop and question the pattern, not try another patch. This is non-negotiable.
 
 9. **Fewer Interfaces, Stronger Contracts** — Make the common case simple.
 

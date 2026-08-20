@@ -315,7 +315,7 @@ and receipt/provenance pointers where applicable.
 - Resolve auth/middleware and tenant propagation.
 - Restore approved logo assets.
 
-### Phase 1 — Finish The Run Kernel
+### Phase 1 — Finish The Run Control Plane
 
 - Persist versioned process definitions.
 - Implement real continuation after checkpoints.
