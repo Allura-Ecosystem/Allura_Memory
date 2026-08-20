@@ -232,6 +232,12 @@ class EnforcementGate {
     fn: T,
     caller: string
   ): T {
+    // The returned function is intentionally a `function` expression, not an
+    // arrow: it must receive the caller's dynamic `this` and forward it via
+    // fn.apply(this, args). An arrow would capture the gate's `this` and
+    // silently break this-forwarding at every call site, so the alias is
+    // required here rather than incidental.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
     return (async function (this: unknown, ...args: unknown[]) {
