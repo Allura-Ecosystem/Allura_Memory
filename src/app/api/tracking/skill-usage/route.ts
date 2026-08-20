@@ -16,11 +16,11 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import {
-  SkillUsageValidationError,
   getSkillUsageSummary,
+  SkillUsageValidationError,
 } from "@/lib/tracking/skill-usage-tracker"
+import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 
 // Always render live — analytics should never be statically cached.
 export const dynamic = "force-dynamic"

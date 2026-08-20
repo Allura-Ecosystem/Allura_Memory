@@ -1,13 +1,13 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   evaluatePolicies,
-  POLICY_SOURCE_OF_TRUTH_GATE,
   POLICY_INFRASTRUCTURE_TARGET_LOCK,
   POLICY_PROJECT_MANIFEST_REQUIRED,
+  POLICY_SOURCE_OF_TRUTH_GATE,
   type PolicyContext,
   type ProjectManifest,
-  type SourceOfTruthRead,
   type ProofClaims,
+  type SourceOfTruthRead,
 } from "../control-plane/policy";
 
 // Minimal ProofClaims for testing

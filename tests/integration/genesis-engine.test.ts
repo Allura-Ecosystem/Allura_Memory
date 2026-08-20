@@ -17,15 +17,15 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { getPool } from "@/lib/postgres/connection";
-import { recordTrajectory } from "@/lib/sona/trajectory-engine";
 import {
-  runDetection,
-  detectPatterns,
   type DetectionWindow,
+  detectPatterns,
+  runDetection,
   type TrajectoryPoint,
 } from "@/lib/genesis/pattern-detector";
 import { generateProposals } from "@/lib/genesis/proposal-generator";
+import { getPool } from "@/lib/postgres/connection";
+import { recordTrajectory } from "@/lib/sona/trajectory-engine";
 
 // ── DB availability probe ────────────────────────────────────────────────────
 

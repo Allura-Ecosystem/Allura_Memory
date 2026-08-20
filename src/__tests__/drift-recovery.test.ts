@@ -31,12 +31,12 @@ import {
   classifyDriftType,
   createDefaultDeps,
   decideDriftRecoveryAction,
-  executeDriftRecovery,
-  runDriftRecoveryCycle,
-  MAX_RECOVERY_ATTEMPTS,
   type DriftAlertEvent,
   type DriftType,
+  executeDriftRecovery,
+  MAX_RECOVERY_ATTEMPTS,
   type RecoveryDeps,
+  runDriftRecoveryCycle,
 } from "@/lib/healing/auto-recovery";
 
 // ── Test helpers ──────────────────────────────────────────────────────────────

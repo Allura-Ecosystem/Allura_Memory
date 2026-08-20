@@ -18,10 +18,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth";
+import { generateSkillTemplateDraft, reviewProposal } from "@/lib/genesis/proposal-generator";
 import { captureException } from "@/lib/observability/sentry";
 import { getPool } from "@/lib/postgres/connection";
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
-import { reviewProposal, generateSkillTemplateDraft } from "@/lib/genesis/proposal-generator";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const roleCheck = requireRole(request, "curator");

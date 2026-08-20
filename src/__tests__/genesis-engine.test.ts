@@ -56,22 +56,22 @@ vi.mock("@/control-plane/target-resolver", () => ({
 // ── Import modules under test (after mocks registered) ──────────────────────
 
 import {
+  DEFAULT_CONFIG,
+  type DetectedPattern,
+  detectFailedThenSucceeded,
+  detectHighFrequencyTasks,
+  type DetectionWindow,
   detectPatterns,
   detectRepeatedSequences,
-  detectHighFrequencyTasks,
-  detectFailedThenSucceeded,
   suggestSkillName,
-  DEFAULT_CONFIG,
-  type DetectionWindow,
-  type DetectedPattern,
   type TrajectoryPoint,
 } from "@/lib/genesis/pattern-detector";
 
 import {
   generateProposal,
   generateProposals,
-  reviewProposal,
   generateSkillTemplateDraft,
+  reviewProposal,
 } from "@/lib/genesis/proposal-generator";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

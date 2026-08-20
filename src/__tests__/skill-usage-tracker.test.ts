@@ -38,12 +38,13 @@ vi.mock("@/lib/postgres/connection", () => ({
   getPool: () => ({ query: (...args: unknown[]) => mockPoolQuery(...args) }),
 }))
 
+import { GET } from "@/app/api/tracking/skill-usage/route"
 import {
   getSkillUsageEvents,
   getSkillUsageSummary,
   logSkillUsage,
-  validateSkillUsageEvent,
   SkillUsageValidationError,
+  validateSkillUsageEvent,
 } from "@/lib/tracking/skill-usage-tracker"
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -418,7 +419,6 @@ describe("getSkillUsageSummary", () => {
 // module-level mock — we just configure `mockQuery` to return the rows we want
 // for each route test.
 
-import { GET } from "@/app/api/tracking/skill-usage/route"
 
 describe("GET /api/tracking/skill-usage", () => {
   it("returns 400 when group_id is missing", async () => {

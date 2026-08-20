@@ -13,7 +13,7 @@
  *   - runDoctorCycle: scans all active runs in tenant
  */
 
-import { describe, expect, it, vi, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 // ── Pool Mock ─────────────────────────────────────────────────────────────────
 

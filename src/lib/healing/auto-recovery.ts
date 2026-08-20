@@ -28,8 +28,8 @@
 
 import { exec } from "child_process";
 import { promisify } from "util";
+import { type MutationType, syscall_mutate, type SyscallContext } from "@/control-plane/syscalls";
 import { getPool, isPoolHealthy } from "@/lib/postgres/connection";
-import { syscall_mutate, type SyscallContext, type MutationType } from "@/control-plane/syscalls";
 
 const execAsync = promisify(exec);
 

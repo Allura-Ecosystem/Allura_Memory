@@ -28,7 +28,7 @@ vi.mock("@/lib/neo4j/connection", () => ({
 }));
 
 // Import after mocks
-import { assertRegisteredTenant, isRegisteredTenant, getTenant } from "@/lib/config/tenant-existence";
+import { assertRegisteredTenant, getTenant, isRegisteredTenant } from "@/lib/config/tenant-existence";
 
 beforeEach(() => {
   queryMock.mockReset();

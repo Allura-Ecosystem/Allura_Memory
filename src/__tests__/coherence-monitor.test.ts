@@ -13,7 +13,7 @@
  * No DB, no controlPlane, no Ollama — this is the unit lane.
  */
 
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Mocks for the monitor (DB pool + controlPlane mutate) ──────────────────────────
 //
@@ -69,12 +69,12 @@ import {
   extractFacts,
   extractFactsFromMemory,
 } from "@/lib/coherence/detectors";
-import type { MemoryRow } from "@/lib/coherence/types";
 import {
-  runCoherenceScan,
   listActiveConflicts,
   resolveConflict,
+  runCoherenceScan,
 } from "@/lib/coherence/monitor";
+import type { MemoryRow } from "@/lib/coherence/types";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

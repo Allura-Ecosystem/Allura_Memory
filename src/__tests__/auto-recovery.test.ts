@@ -28,20 +28,20 @@ vi.mock("@/control-plane/syscalls", () => ({
 
 import {
   checkDiskSpace,
-  checkMemoryUsage,
   checkMcpContainer,
+  checkMemoryUsage,
   checkPostgres,
   clearStaleConnections,
   createDefaultDeps,
   decideRecoveryAction,
   executeRecovery,
+  type HealthCheckResult,
   MAX_RECOVERY_ATTEMPTS,
-  runHealthChecks,
+  type RecoveryDeps,
   restartMcpContainer,
   runBrainRecover,
+  runHealthChecks,
   runRecoveryCycle,
-  type HealthCheckResult,
-  type RecoveryDeps,
 } from "@/lib/healing/auto-recovery";
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
