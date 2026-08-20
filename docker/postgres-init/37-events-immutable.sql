@@ -8,6 +8,8 @@
 -- Break-glass role: documented here, must be used only for approved retention,
 -- incident response, or legal holds, and only after explicit human approval.
 DO $$
+DECLARE
+    db_name text := current_database();
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'allura_breakglass') THEN
         CREATE ROLE allura_breakglass WITH NOLOGIN NOINHERIT BYPASSRLS;
@@ -15,7 +17,24 @@ BEGIN
 
     -- Allow the migration/admin role to assume break-glass for approved procedures.
     EXECUTE 'GRANT allura_breakglass TO allura_migration WITH ADMIN OPTION';
-    EXECUTE 'GRANT allura_breakglass TO allura';
+
+    -- Also grant break-glass to the role applying this migration, so the
+    -- operator who bootstraps the database keeps the documented emergency
+    -- path. The bootstrap role's name is not fixed across environments
+    -- (`allura` in some CI lanes, `postgres` in others, a cloud-provider
+    -- default elsewhere), and it is not guaranteed to be a superuser, so the
+    -- membership is load-bearing rather than redundant. current_user resolves
+    -- to the actual connecting role; %I quotes it safely. Skip the self-grant
+    -- when applied as allura_migration or allura_breakglass, since a role
+    -- cannot be granted to itself.
+    IF current_user NOT IN ('allura_migration', 'allura_breakglass') THEN
+        EXECUTE format('GRANT allura_breakglass TO %I', current_user);
+    END IF;
+
+    -- Database name is not fixed across environments; derive it from
+    -- current_database() rather than hardcoding, matching the pattern
+    -- already established in 35-application-roles.sql.
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO allura_breakglass', db_name);
 END
 $$;
 
@@ -24,7 +43,6 @@ $$;
 GRANT USAGE ON SCHEMA public TO allura_breakglass;
 GRANT USAGE ON SCHEMA app TO allura_breakglass;
 GRANT ALL PRIVILEGES ON TABLE events TO allura_breakglass;
-GRANT CONNECT ON DATABASE memory TO allura_breakglass;
 
 COMMENT ON ROLE allura_breakglass IS 'Emergency role for approved retention/incident-response work on the events ledger. Use requires documented approval; normal application paths cannot assume this role.';
 
