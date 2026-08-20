@@ -38,6 +38,15 @@ DECLARE
 BEGIN
     FOREACH tbl IN ARRAY tenant_tables
     LOOP
+        -- A table may be absent when an earlier migration skipped it (for
+        -- example a guarded extension-dependent block). Warn loudly rather than
+        -- aborting the whole bootstrap; validateTenantTableInventory() is the
+        -- enforcement point and fails the live-DB lane on any missing-RLS table.
+        IF to_regclass(format('public.%I', tbl)) IS NULL THEN
+            RAISE WARNING 'RLS skipped: table % does not exist (schema bootstrap is incomplete)', tbl;
+            CONTINUE;
+        END IF;
+
         -- Enable RLS and force it for the owner too, ensuring no accidental bypass.
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', tbl);

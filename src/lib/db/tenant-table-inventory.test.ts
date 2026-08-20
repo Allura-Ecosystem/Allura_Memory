@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { validateTenantTableInventory, TENANT_TABLE_INVENTORY } from "@/lib/db/tenant-table-inventory";
+import { describe, expect, it } from "vitest";
+import { TENANT_TABLE_INVENTORY, validateTenantTableInventory } from "@/lib/db/tenant-table-inventory";
 
 const describeLive = process.env.POSTGRES_PASSWORD ? describe : describe.skip;
 

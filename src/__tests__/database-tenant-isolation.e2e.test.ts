@@ -1,6 +1,6 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
+import { tenantQuery, withTenantTransaction } from "@/lib/db/tenant-transaction";
 import { getAppPool } from "@/lib/postgres/connection";
-import { withTenantTransaction, tenantQuery } from "@/lib/db/tenant-transaction";
 
 const TENANT_A = "allura-tenant-isolation-a";
 const TENANT_B = "allura-tenant-isolation-b";

@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_PASSWORD: allura
           POSTGRES_DB: memory
@@ -171,7 +171,7 @@ jobs:
           set -e
           for f in $(ls -1v docker/postgres-init/*.sql); do
             echo "▶ Applying $f..."
-            psql -h localhost -U allura -d memory -f "$f"
+            psql -v ON_ERROR_STOP=1 -h localhost -U allura -d memory -f "$f"
           done
       - name: Run E2E tests
         run: bun run test:e2e
