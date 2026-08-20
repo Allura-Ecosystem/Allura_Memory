@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Story 1.2: Skill Usage Tracking — Append-only Event Table
 -- ============================================================================
--- Purpose: Track every skill load through the kernel syscall_mutate path.
+-- Purpose: Track every skill load through the control plane syscall_mutate path.
 -- Enables usage analytics: count, success rate, avg tokens, avg duration
 -- per skill_name, scoped to a tenant group_id.
 --
@@ -132,7 +132,7 @@ GROUP BY group_id, skill_name;
 COMMENT ON TABLE skill_usage_events IS
   'Append-only skill usage tracking. INSERT only; UPDATE/DELETE/TRUNCATE blocked by trigger. Story 1.2.';
 COMMENT ON COLUMN skill_usage_events.group_id IS
-  'Tenant isolation identifier (allura-* format). Stamped by kernel on every insert.';
+  'Tenant isolation identifier (allura-* format). Stamped by control plane on every insert.';
 COMMENT ON COLUMN skill_usage_events.skill_name IS
   'Canonical skill name (lowercase, hyphens/underscores).';
 COMMENT ON COLUMN skill_usage_events.success IS

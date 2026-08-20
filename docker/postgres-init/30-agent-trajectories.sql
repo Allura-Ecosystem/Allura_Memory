@@ -6,11 +6,11 @@
 -- memory_search, and curator operation records a row here so that we can
 -- measure per-agent success rate, action counts, and latency.
 --
--- TENANCY (AD-40): group_id is mandatory and stamped via the kernel
+-- TENANCY (AD-40): group_id is mandatory and stamped via the control plane
 -- syscall_mutate path. The CHECK constraint enforces the ^allura- format
 -- established by ADR-001.
 --
--- MUTABILITY: append-only. There is no UPDATE or DELETE in the kernel target
+-- MUTABILITY: append-only. There is no UPDATE or DELETE in the control plane target
 -- resolver for this table — only INSERTs flow through. The table is
 -- therefore a durable evidence store for SOC2 audit replay.
 

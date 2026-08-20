@@ -1,5 +1,5 @@
 -- 25-process-engine.sql
--- Phase 1: Production Run Kernel — process_definitions + process_runs tables
+-- Phase 1: Production Run Control Plane — process_definitions + process_runs tables
 -- AD-P1-01, AD-P1-02 from architecture-phase1-run-kernel.md
 -- Migration is ADDITIVE ONLY — no DROP, no ALTER on existing tables
 
