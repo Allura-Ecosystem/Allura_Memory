@@ -1,17 +1,17 @@
 /**
- * RuVix Kernel - Enforcement Gate
+ * RuVix ControlPlane - Enforcement Gate
  * 
- * Blocks non-kernel access to database operations.
- * This is the "zero-trust" boundary - all operations must flow through the kernel.
+ * Blocks non-controlPlane access to database operations.
+ * This is the "zero-trust" boundary - all operations must flow through the controlPlane.
  * 
  * ENFORCEMENT STRATEGY:
  * 1. Monkey-patch MCP_DOCKER tools to intercept calls
- * 2. Validate that calls have kernel proof metadata
- * 3. Block calls that bypass the kernel
+ * 2. Validate that calls have controlPlane proof metadata
+ * 3. Block calls that bypass the controlPlane
  * 4. Log violations for audit
  */
 
-import { initializeKernel, RuVixKernel } from "./ruvix";
+import { initializeControlPlane, RuVixControlPlane } from "./ruvix";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -80,11 +80,11 @@ class EnforcementGate {
    * Must be called before enabling enforcement.
    */
   initialize(): void {
-    const status = initializeKernel();
+    const status = initializeControlPlane();
     
     if (!status.initialized) {
       const error = new Error(
-        `Kernel initialization failed: ${status.errors.join("; ")}`
+        `ControlPlane initialization failed: ${status.errors.join("; ")}`
       );
       this.recordViolation({
         timestamp: Date.now(),
@@ -102,14 +102,14 @@ class EnforcementGate {
     this.initialized = true;
     
     if (this.config.logViolations) {
-      console.log(`[EnforcementGate] Initialized. Kernel status:`, status);
+      console.log(`[EnforcementGate] Initialized. ControlPlane status:`, status);
     }
   }
 
   /**
    * Enable enforcement
    * 
-   * After this, all DB operations must flow through the kernel.
+   * After this, all DB operations must flow through the controlPlane.
    */
   enable(): void {
     if (!this.initialized) {
@@ -171,7 +171,7 @@ class EnforcementGate {
   }
 
   /**
-   * Validate that an operation has kernel proof
+   * Validate that an operation has controlPlane proof
    * 
    * @param proof - Proof metadata from the operation
    * @param caller - Caller identification
@@ -202,13 +202,13 @@ class EnforcementGate {
         type: "missing_proof",
         caller,
         operation,
-        message: "Operation lacks kernel proof metadata",
+        message: "Operation lacks controlPlane proof metadata",
       });
 
       if (this.config.throwOnViolation) {
         throw new Error(
-          `Enforcement Gate Violation: ${caller} attempted ${operation} without kernel proof. ` +
-          "All database operations must flow through the RuVix kernel."
+          `Enforcement Gate Violation: ${caller} attempted ${operation} without controlPlane proof. ` +
+          "All database operations must flow through the RuVix controlPlane."
         );
       }
 
@@ -222,7 +222,7 @@ class EnforcementGate {
   }
 
   /**
-   * Wrap a function to enforce kernel access
+   * Wrap a function to enforce controlPlane access
    * 
    * @param fn - Function to wrap
    * @param caller - Caller identification
@@ -232,6 +232,12 @@ class EnforcementGate {
     fn: T,
     caller: string
   ): T {
+    // The returned function is intentionally a `function` expression, not an
+    // arrow: it must receive the caller's dynamic `this` and forward it via
+    // fn.apply(this, args). An arrow would capture the gate's `this` and
+    // silently break this-forwarding at every call site, so the alias is
+    // required here rather than incidental.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
     return (async function (this: unknown, ...args: unknown[]) {
@@ -261,7 +267,7 @@ export const enforcementGate = new EnforcementGate();
 /**
  * Initialize and enable the enforcement gate
  * 
- * Call this at application startup to enable kernel-only access.
+ * Call this at application startup to enable controlPlane-only access.
  */
 export function enableEnforcementGate(config?: Partial<GateConfig>): void {
   if (config) {
@@ -308,10 +314,10 @@ export function clearGateViolations(): void {
 /**
  * Intercept MCP_DOCKER tool calls
  * 
- * This monkey-patches the MCP client to validate kernel proof.
+ * This monkey-patches the MCP client to validate controlPlane proof.
  * 
  * WARNING: This is a aggressive enforcement strategy.
- * Use only when ready for full kernel-only operation.
+ * Use only when ready for full controlPlane-only operation.
  */
 export function interceptMcpCalls(): void {
   if (typeof globalThis === "undefined") {
@@ -346,23 +352,23 @@ export function interceptMcpCalls(): void {
 
     if (typeof originalFn === "function") {
       mcpDocker[op] = function (...args: unknown[]) {
-        // Check for kernel proof in call stack
+        // Check for controlPlane proof in call stack
         const stack = new Error().stack || "";
-        const isFromKernel = stack.includes("/kernel/");
+        const isFromControlPlane = stack.includes("/control-plane/");
 
-        if (!isFromKernel && enforcementGate.isEnabled()) {
+        if (!isFromControlPlane && enforcementGate.isEnabled()) {
           enforcementGate.recordViolation({
             timestamp: Date.now(),
             type: "direct_db_access",
             caller: "MCP_DOCKER." + op,
             operation: op,
-            message: "Direct database access detected (bypassing kernel)",
+            message: "Direct database access detected (bypassing controlPlane)",
           });
 
           if (enforcementGate.isEnabled() && enforcementGate.isEnabled()) {
             throw new Error(
               `Enforcement Gate: Direct database access blocked. ` +
-              `Use RuVix kernel syscalls instead. Operation: ${op}`
+              `Use RuVix controlPlane syscalls instead. Operation: ${op}`
             );
           }
         }

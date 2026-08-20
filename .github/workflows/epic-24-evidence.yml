@@ -188,7 +188,7 @@ jobs:
       GRAPH_BACKEND: ruvector
       PROMOTION_MODE: soc2
       RUVECTOR_EMBEDDING_BASE_URL: http://127.0.0.1:9
-      RUVIX_KERNEL_SECRET: allura-ci-kernel-secret-at-least-32-characters
+      RUVIX_CONTROL_PLANE_SECRET: allura-ci-controlPlane-secret-at-least-32-characters
       ALLURA_MCP_TOKEN_SECRET: allura-ci-token-secret
       ALLURA_RATE_LIMIT_ENABLED: "false"
       ALLURA_MCP_HTTP_PORT: "6477"

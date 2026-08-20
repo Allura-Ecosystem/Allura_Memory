@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { ProofClaims } from "../kernel/proof";
+import type { ProofClaims } from "../control-plane/proof";
 import {
   evaluatePolicies,
   POLICY_VALIDATION_BEFORE_DONE,
   type PolicyContext,
-} from "../kernel/policy";
+} from "../control-plane/policy";
 
 const baseClaims: ProofClaims = {
   group_id: "allura-system",

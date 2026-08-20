@@ -28,7 +28,7 @@ vi.mock("@/lib/neo4j/connection", () => ({
 }));
 
 // Import after mocks
-import { assertRegisteredTenant, isRegisteredTenant, getTenant } from "@/lib/config/tenant-existence";
+import { assertRegisteredTenant, getTenant, isRegisteredTenant } from "@/lib/config/tenant-existence";
 
 beforeEach(() => {
   queryMock.mockReset();
@@ -163,7 +163,7 @@ describe("Story 22.1 — assertRegisteredTenant", () => {
 describe("Story 22.1 — Target resolver tenant validation", () => {
   it("rejects writes for unregistered group_id via pgMutate", async () => {
     queryMock.mockResolvedValue({ rowCount: 0, rows: [] });
-    const { resolveTarget } = await import("@/kernel/target-resolver");
+    const { resolveTarget } = await import("@/control-plane/target-resolver");
     await expect(
       resolveTarget({
         intent: "mutate",
@@ -177,7 +177,7 @@ describe("Story 22.1 — Target resolver tenant validation", () => {
   it("allows writes to tenants table (exempt from validation)", async () => {
     // The tenants table should NOT trigger tenant validation
     queryMock.mockResolvedValue({ rowCount: 1, rows: [] });
-    const { resolveTarget } = await import("@/kernel/target-resolver");
+    const { resolveTarget } = await import("@/control-plane/target-resolver");
     const result = await resolveTarget({
       intent: "mutate",
       target: "pg:tenants",

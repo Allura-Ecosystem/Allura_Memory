@@ -44,8 +44,8 @@ export default defineConfig({
       "src/lib/mcp/trace-middleware.test.ts",
       "src/lib/mcp/wrapped-client.test.ts",
       "src/lib/ruvector/embedding-service.test.ts",
-      // Kernel
-      "src/kernel/**/*.test.ts",
+      // ControlPlane
+      "src/control-plane/**/*.test.ts",
       // Auto-Curator hardening
       "src/__tests__/auto-curator*.test.ts",
       // Curator pipeline

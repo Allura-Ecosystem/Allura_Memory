@@ -5,7 +5,7 @@
  * Captures agent execution trajectories for the Self-Observing Neural
  * Architecture (SONA). Every memory_add, memory_search, and curator
  * operation records an append-only row in `agent_trajectories` through the
- * kernel syscall_mutate (AD-40) path — never a direct DB write.
+ * controlPlane syscall_mutate (AD-40) path — never a direct DB write.
  *
  * Invariants:
  * - group_id is required and validated before any write.
@@ -24,7 +24,7 @@ if (typeof window !== "undefined") {
 
 import { createHash } from "node:crypto";
 
-import { syscall_mutate, type SyscallContext } from "@/kernel/syscalls";
+import { syscall_mutate, type SyscallContext } from "@/control-plane/syscalls";
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -153,7 +153,7 @@ export function hashPayload(payload: unknown): string | null {
 }
 
 /**
- * Build the SyscallContext for a trajectory write. The kernel stamps
+ * Build the SyscallContext for a trajectory write. The controlPlane stamps
  * group_id from the proof claims, but we also pass it in the context so
  * policy evaluation has tenant scope.
  */
@@ -174,11 +174,11 @@ function buildContext(record: TrajectoryRecord, groupId: string): SyscallContext
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Persist a trajectory row through the kernel syscall_mutate path.
+ * Persist a trajectory row through the controlPlane syscall_mutate path.
  *
  * This function is ASYNC but callers should treat it as fire-and-forget:
  * use `recordTrajectoryAsync` (below) for the non-blocking wrapper. Any
- * validation or kernel failure is returned in the `RecordResult` and never
+ * validation or controlPlane failure is returned in the `RecordResult` and never
  * thrown — trajectory recording must not break the wrapped operation.
  */
 export async function recordTrajectory(
@@ -200,7 +200,7 @@ export async function recordTrajectory(
   // 2. Validate duration is a non-negative integer.
   const durationMs = Math.max(0, Math.trunc(record.duration_ms ?? 0));
 
-  // 3. Build the kernel mutation payload. group_id is stamped by the kernel
+  // 3. Build the controlPlane mutation payload. group_id is stamped by the controlPlane
   //    from the proof claims (AD-40), but we also include it in the data bag
   //    so the resolver writes it to the column.
   const inputHash = hashPayload(record.input);
@@ -229,9 +229,9 @@ export async function recordTrajectory(
     );
 
     if (!result.success) {
-      // Kernel/policy failure — log and swallow. Never surface to caller.
+      // ControlPlane/policy failure — log and swallow. Never surface to caller.
       console.error(
-        `[sona] trajectory write failed for agent=${record.agent_id} action=${record.action}: ${result.error ?? "unknown kernel error"}`
+        `[sona] trajectory write failed for agent=${record.agent_id} action=${record.action}: ${result.error ?? "unknown controlPlane error"}`
       );
       return { recorded: false, error: result.error };
     }
@@ -345,7 +345,7 @@ export interface TrajectoryListRow {
 /**
  * Query the `agent_trajectories` table directly via the pg pool.
  *
- * Reads are NOT routed through the kernel (only writes are — AD-40). The
+ * Reads are NOT routed through the controlPlane (only writes are — AD-40). The
  * query is tenant-scoped: group_id is mandatory and parameterised.
  */
 export async function queryTrajectories(

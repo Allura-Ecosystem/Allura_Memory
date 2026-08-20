@@ -8,7 +8,7 @@
  *   Default: "proposed" (active proposals awaiting HITL review).
  * - limit: Max results (default 50, max 1000).
  *
- * Reads are direct (not kernel-gated) — only writes flow through
+ * Reads are direct (not controlPlane-gated) — only writes flow through
  * syscall_mutate (AD-40). group_id is parameterised for tenant isolation.
  *
  * Auth: requires viewer role or above.

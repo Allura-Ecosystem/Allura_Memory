@@ -17,7 +17,7 @@ vi.mock("@/lib/postgres/connection", () => ({
   closePool: vi.fn(),
 }));
 
-vi.mock("@/kernel/syscalls", () => ({
+vi.mock("@/control-plane/syscalls", () => ({
   syscall_mutate: vi.fn().mockResolvedValue({
     success: true,
     data: { affected_rows: 1, auditId: "test-audit-id" },
@@ -28,20 +28,20 @@ vi.mock("@/kernel/syscalls", () => ({
 
 import {
   checkDiskSpace,
-  checkMemoryUsage,
   checkMcpContainer,
+  checkMemoryUsage,
   checkPostgres,
   clearStaleConnections,
   createDefaultDeps,
   decideRecoveryAction,
   executeRecovery,
+  type HealthCheckResult,
   MAX_RECOVERY_ATTEMPTS,
-  runHealthChecks,
+  type RecoveryDeps,
   restartMcpContainer,
   runBrainRecover,
+  runHealthChecks,
   runRecoveryCycle,
-  type HealthCheckResult,
-  type RecoveryDeps,
 } from "@/lib/healing/auto-recovery";
 
 // ── Test helpers ──────────────────────────────────────────────────────────────

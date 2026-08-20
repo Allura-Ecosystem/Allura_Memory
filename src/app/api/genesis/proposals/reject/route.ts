@@ -4,8 +4,8 @@
  *
  * Rejects a `proposed` pattern proposal. No skill template is generated.
  *
- * The UPDATE flows through the kernel `syscall_mutate` path (AD-40) so it
- * is kernel-gated, proof-stamped, and audit-trailed. The DB trigger on
+ * The UPDATE flows through the controlPlane `syscall_mutate` path (AD-40) so it
+ * is controlPlane-gated, proof-stamped, and audit-trailed. The DB trigger on
  * `pattern_proposals` restricts UPDATE to status / reviewed_at.
  *
  * Body:
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // ── Apply the rejection through the kernel syscall_mutate path ──
+    // ── Apply the rejection through the controlPlane syscall_mutate path ──
     const result = await reviewProposal(validatedGroupId, proposal_id, "rejected");
     if (!result.updated) {
       return NextResponse.json(

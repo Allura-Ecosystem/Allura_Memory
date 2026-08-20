@@ -100,7 +100,7 @@ type SubCommand = (typeof SUBCOMMANDS)[number];
 type ArchitecturalLayer = "L1" | "L2" | "L3" | "L4" | "L5" | "unknown";
 
 const LAYER_NAMES: Record<ArchitecturalLayer, string> = {
-  L1: "RuVix Kernel",
+  L1: "RuVix ControlPlane",
   L2: "Data Layer",
   L3: "Agent Runtime",
   L4: "Workflow/API",
@@ -153,7 +153,7 @@ const MAX_FILE_COMPLEXITY = 50;
 /**
  * Classify a file path into the 5-layer Allura architecture model.
  *
- * L1: src/kernel/ (RuVix Kernel)
+ * L1: src/control-plane/ (RuVix ControlPlane)
  * L2: src/lib/postgres/, src/lib/neo4j/, src/lib/ruvector/ (Data Layer)
  * L3: src/mcp/, src/lib/agents/, src/lib/config/ (Agent Runtime)
  * L4: src/app/api/, src/lib/memory/ (Workflow/API)
@@ -163,8 +163,8 @@ function classifyLayer(filePath: string): ArchitecturalLayer {
   const rel = filePath.startsWith("/") ? relative(ROOT_DIR, filePath) : filePath;
   const normalized = rel.replace(/\\/g, "/");
 
-  // L1: Kernel
-  if (normalized.startsWith("src/kernel/")) return "L1";
+  // L1: ControlPlane
+  if (normalized.startsWith("src/control-plane/")) return "L1";
 
   // L2: Data Layer (must check before L4/L5 since lib/postgres etc. are under src/lib/)
   if (
@@ -210,7 +210,7 @@ function classifyLayer(filePath: string): ArchitecturalLayer {
 /**
  * Check if a cross-layer import is a violation.
  * Adjacent layers are allowed. Non-adjacent layers are violations.
- * L5 → L1 is always a violation (UI reaching into kernel).
+ * L5 → L1 is always a violation (UI reaching into controlPlane).
  */
 function isLayerViolation(
   fromLayer: ArchitecturalLayer,

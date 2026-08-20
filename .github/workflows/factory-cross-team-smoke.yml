@@ -83,5 +83,5 @@ jobs:
           NEO4J_USER: neo4j
           NEO4J_PASSWORD: password
           EMBEDDING_BASE_URL: http://127.0.0.1:9
-          RUVIX_KERNEL_SECRET: factory-ci-test-secret-at-least-32-characters
+          RUVIX_CONTROL_PLANE_SECRET: factory-ci-test-secret-at-least-32-characters
         run: bun scripts/factory-cross-team-smoke.ts

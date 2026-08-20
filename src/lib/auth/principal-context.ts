@@ -18,7 +18,7 @@
  *
  * NOTE: this is the *MCP transport* principal. It is intentionally separate
  * from the Next.js/Clerk web-app auth in `src/lib/auth/api-auth.ts` and from
- * the approval-workflow `role` union in `src/kernel/policy.ts`.
+ * the approval-workflow `role` union in `src/control-plane/policy.ts`.
  */
 
 import { getToolPolicy, TOOL_POLICIES } from "@allura/mcp-server";
@@ -646,20 +646,20 @@ export function buildAuthAuditEvent(input: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NOTE ON KERNEL POLICY (Story 24.2 review, Finding 3)
+// NOTE ON CONTROL_PLANE POLICY (Story 24.2 review, Finding 3)
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // An earlier draft added `ProofClaims.principal` plus a POL-028 "principal
-// tenant binding" kernel policy as defence in depth. It was removed, because
+// tenant binding" controlPlane policy as defence in depth. It was removed, because
 // nothing could populate it: the canonical MCP dispatch path
 // (canonical-http-gateway.ts / memory-server-canonical.ts -> memory-coordinator
-// -> canonical-tools) never imports `src/kernel/*`, so `evaluatePolicies` is
+// -> canonical-tools) never imports `src/control-plane/*`, so `evaluatePolicies` is
 // never reached by an MCP request. The policy would have been permanently
 // short-circuited on `if (!principal) return true` while reading like a live
 // second check.
 //
 // Tenant binding IS enforced, in the layer that actually sits in the request
 // path: `resolveEffectiveTenant` below, called from `guardToolCall` before any
-// handler runs. If the memory write path is ever moved onto the kernel syscall
-// layer (`src/lib/memory/writer.ts` -> `syscall_mutate`), re-adding the kernel
+// handler runs. If the memory write path is ever moved onto the controlPlane syscall
+// layer (`src/lib/memory/writer.ts` -> `syscall_mutate`), re-adding the controlPlane
 // policy becomes worthwhile — until then it would be theatre.

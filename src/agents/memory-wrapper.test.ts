@@ -3,7 +3,7 @@
  *
  * Verifies that:
  * 1. Agents can import agentMemory
- * 2. agentMemory routes through kernel syscalls
+ * 2. agentMemory routes through controlPlane syscalls
  * 3. All operations validate group_id and content
  * 4. Responses match SDK schemas
  *
@@ -17,8 +17,8 @@ import { ValidationError } from "@/lib/sdk";
 const TEST_MEMORY_ID = "550e8400-e29b-41d4-a716-446655440000";
 const OTHER_MEMORY_ID = "550e8400-e29b-41d4-a716-446655440001";
 
-// Mock kernel syscalls
-vi.mock("@/kernel/syscalls", () => ({
+// Mock controlPlane syscalls
+vi.mock("@/control-plane/syscalls", () => ({
   syscall_mutate: vi.fn().mockResolvedValue({
     success: true,
     data: { affected_rows: 1, auditId: "audit-allura-system-mutate-123" },
@@ -30,9 +30,9 @@ vi.mock("@/kernel/syscalls", () => ({
   }),
 }));
 
-vi.stubEnv("RUVIX_KERNEL_SECRET", "test-secret-key-for-ruvix-kernel-proof-engine-32chars");
+vi.stubEnv("RUVIX_CONTROL_PLANE_SECRET", "test-secret-key-for-ruvix-controlPlane-proof-engine-32chars");
 
-import { syscall_mutate, syscall_query } from "@/kernel/syscalls";
+import { syscall_mutate, syscall_query } from "@/control-plane/syscalls";
 
 describe("Agent Memory Wrapper (Story 1.2)", () => {
   beforeEach(() => {
@@ -129,7 +129,7 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
       );
     });
 
-    it("should reject missing group_id before calling kernel query", async () => {
+    it("should reject missing group_id before calling controlPlane query", async () => {
       await expect(
         agentMemory.search({
           group_id: undefined as any,
@@ -140,7 +140,7 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
       expect(syscall_query).not.toHaveBeenCalled();
     });
 
-    it("should reject invalid group_id before calling kernel query", async () => {
+    it("should reject invalid group_id before calling controlPlane query", async () => {
       await expect(
         agentMemory.search({
           group_id: "invalid-group",
@@ -170,7 +170,7 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    it("should preserve optional user_id through kernel query routing", async () => {
+    it("should preserve optional user_id through controlPlane query routing", async () => {
       vi.mocked(syscall_query).mockResolvedValueOnce({
         success: true,
         data: [],
@@ -219,7 +219,7 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    it("should reject non-UUID memory IDs before calling kernel", async () => {
+    it("should reject non-UUID memory IDs before calling controlPlane", async () => {
       await expect(
         agentMemory.get({
           group_id: "allura-system",
@@ -245,7 +245,7 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
       expect(result.memories.length).toBe(1);
     });
 
-    it("should reject missing group_id before calling kernel list", async () => {
+    it("should reject missing group_id before calling controlPlane list", async () => {
       await expect(
         agentMemory.list({
           group_id: undefined as any,
@@ -256,7 +256,7 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
       expect(syscall_query).not.toHaveBeenCalled();
     });
 
-    it("should reject invalid group_id before calling kernel list", async () => {
+    it("should reject invalid group_id before calling controlPlane list", async () => {
       await expect(
         agentMemory.list({
           group_id: "invalid-group",
@@ -335,7 +335,7 @@ describe("Agent Memory Wrapper (Story 1.2)", () => {
     });
   });
 
-  describe("Integration: Agent → Kernel Syscall Routing", () => {
+  describe("Integration: Agent → ControlPlane Syscall Routing", () => {
     it("should route add through syscall_mutate", async () => {
       vi.mocked(syscall_mutate).mockResolvedValueOnce({
         success: true,

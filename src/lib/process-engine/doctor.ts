@@ -1,6 +1,6 @@
 /**
  * Process Engine — Doctor Module
- * Phase 1 Run Kernel (AD-P1-04)
+ * Phase 1 Run ControlPlane (AD-P1-04)
  *
  * Detects 3 run health conditions at launch:
  *   stale              — run is active but has received no event in N minutes

@@ -1,5 +1,5 @@
 /**
- * Runs Source: Phase 1 Run Kernel dashboard surface.
+ * Runs Source: Phase 1 Run ControlPlane dashboard surface.
  *
  * Reads live run state from two Postgres tables:
  * 1. `process_runs` — snapshot table for run status and metadata

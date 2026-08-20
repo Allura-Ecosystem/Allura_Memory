@@ -1,7 +1,7 @@
 /**
- * RuVix Kernel - System Calls Implementation
+ * RuVix ControlPlane - System Calls Implementation
  * 
- * The 12 syscalls that form the kernel's public interface.
+ * The 12 syscalls that form the controlPlane's public interface.
  * Each syscall requires proof-of-intent and passes policy validation.
  * 
  * CRITICAL: The `mutate` syscall is the linchpin - it atomically:
@@ -19,7 +19,7 @@ import {
 } from "./policy";
 import {
   createProof,
-  getKernelSecretKey,
+  getControlPlaneSecretKey,
   ProofClaims,
   ProofOfIntent,
   verifyProofOrThrow,
@@ -62,7 +62,7 @@ export interface SyscallContext {
   group_id: string;
   
   /** Permission tier */
-  permission_tier?: "kernel" | "plugin" | "skill";
+  permission_tier?: "controlPlane" | "plugin" | "skill";
   
   /** Budget cost estimate */
   budget_cost?: number;
@@ -141,7 +141,7 @@ async function executeSyscall<T>(
     // Step 1: Create proof-of-intent
     // ─────────────────────────────────────────────────────────────────────────
     
-    const secretKey = getKernelSecretKey();
+    const secretKey = getControlPlaneSecretKey();
     
     const proof = createProof(intent, subject, context.actor, {
       group_id: context.group_id,
@@ -357,7 +357,7 @@ export async function syscall_kill(
  * executeSyscall, but does NOT issue a database write. The canonical
  * event row is written by the caller (e.g. logTrace() in
  * src/lib/postgres/trace-logger.ts) via insertEvent(). This avoids the
- * double-write bug where the kernel's resolveTarget would INSERT into
+ * double-write bug where the controlPlane's resolveTarget would INSERT into
  * events using the outer traceData wrapper as columns (e.g. `table`,
  * `data`), which produces a Postgres syntax error.
  *
@@ -375,7 +375,7 @@ export async function syscall_trace(
     "audit:trace",
     context,
     async (claims) => {
-      // Intentionally no resolveTarget() call here. The kernel's audit
+      // Intentionally no resolveTarget() call here. The controlPlane's audit
       // gate has already validated proof, policy, and actor identity.
       // The canonical event row is the caller's responsibility.
       return {

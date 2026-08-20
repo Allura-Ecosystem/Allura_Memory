@@ -2,7 +2,7 @@
  * Proxy middleware tests.
  *
  * The request proxy now owns auth/RBAC header forwarding. Legacy request
- * tracing lives in MCP/kernel wrappers and is not emitted from `src/proxy.ts`.
+ * tracing lives in MCP/controlPlane wrappers and is not emitted from `src/proxy.ts`.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"

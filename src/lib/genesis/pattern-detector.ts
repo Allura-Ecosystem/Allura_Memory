@@ -14,7 +14,7 @@
  *   3. Failed-then-succeeded patterns — a task_type that fails and then
  *      later succeeds (a learning/correction signal worth codifying).
  *
- * Reads are NOT routed through the kernel (only writes are — AD-40). The
+ * Reads are NOT routed through the controlPlane (only writes are — AD-40). The
  * queries are tenant-scoped: group_id is mandatory and parameterised. The
  * detector is pure with respect to its inputs — callers can inject a mock
  * fetcher for unit tests (`TrajectoryFetcher`), or use the default
@@ -109,7 +109,7 @@ export type TrajectoryFetcher = (
 
 /**
  * Fetch trajectories and skill usage from PostgreSQL over the window.
- * Reads are direct (not kernel-gated) — only writes flow through
+ * Reads are direct (not controlPlane-gated) — only writes flow through
  * syscall_mutate (AD-40). group_id is parameterised for tenant isolation.
  */
 export async function fetchDetectionWindow(

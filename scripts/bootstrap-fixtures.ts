@@ -35,7 +35,7 @@ const FIXTURES = [
   // Project context (15)
   "Allura Memory project is located at /home/ronin704/Projects/allura memory",
   "The tech stack is Next.js + Bun + TypeScript with PostgreSQL and Neo4j",
-  "RuVix is the kernel enforcement gate that blocks direct database access from agents",
+  "RuVix is the controlPlane enforcement gate that blocks direct database access from agents",
   "Docker compose runs PostgreSQL, Neo4j, and the MCP server container",
   "The MCP server exposes 10 canonical memory operations via stdio transport",
   "Canonical proposals are stored in the canonical_proposals PostgreSQL table",

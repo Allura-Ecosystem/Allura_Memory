@@ -2,7 +2,7 @@
  * Unit tests for the Coherence Monitor (Story 2.1)
  *
  * These tests exercise the pure-logic surface of the coherence detectors
- * and the monitor's orchestration with mocked DB + kernel dependencies:
+ * and the monitor's orchestration with mocked DB + controlPlane dependencies:
  *   - extractFacts / extractFactsFromMemory
  *   - detectEntityAttributeConflict
  *   - detectTemporalContradiction
@@ -10,12 +10,12 @@
  *   - runCoherenceScan with mocked pool + mutate
  *   - API routes (GET /api/coherence/conflicts, POST /api/coherence/resolve)
  *
- * No DB, no kernel, no Ollama — this is the unit lane.
+ * No DB, no controlPlane, no Ollama — this is the unit lane.
  */
 
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// ── Mocks for the monitor (DB pool + kernel mutate) ──────────────────────────
+// ── Mocks for the monitor (DB pool + controlPlane mutate) ──────────────────────────
 //
 // vi.mock factories are hoisted, so the mock fns must be created with
 // vi.hoisted (also hoisted) — not as plain top-level consts.
@@ -29,12 +29,12 @@ vi.mock("@/lib/postgres/connection", () => ({
   getPool: vi.fn(() => ({ query: queryMock })),
 }));
 
-vi.mock("@/kernel/syscalls", () => ({
+vi.mock("@/control-plane/syscalls", () => ({
   syscall_mutate: mutateMock,
   SyscallContext: {},
 }));
 
-vi.mock("@/kernel/proof", () => ({
+vi.mock("@/control-plane/proof", () => ({
   createProof: vi.fn(() => ({ intent: "mutate", subject: "test", actor: "test", claims: {} })),
   verifyProofOrThrow: vi.fn(() => ({
     group_id: "allura-test",
@@ -44,16 +44,16 @@ vi.mock("@/kernel/proof", () => ({
     nonce: "n",
     timestamp: 0,
   })),
-  getKernelSecretKey: vi.fn(() => "test-secret-key"),
+  getControlPlaneSecretKey: vi.fn(() => "test-secret-key"),
 }));
 
-vi.mock("@/kernel/policy", () => ({
+vi.mock("@/control-plane/policy", () => ({
   evaluatePoliciesOrThrow: vi.fn(),
   Policy: {},
   PolicyContext: {},
 }));
 
-vi.mock("@/kernel/target-resolver", () => ({
+vi.mock("@/control-plane/target-resolver", () => ({
   resolveTarget: vi.fn(async () => ({ success: true, affected_rows: 1 })),
 }));
 
@@ -69,12 +69,12 @@ import {
   extractFacts,
   extractFactsFromMemory,
 } from "@/lib/coherence/detectors";
-import type { MemoryRow } from "@/lib/coherence/types";
 import {
-  runCoherenceScan,
   listActiveConflicts,
   resolveConflict,
+  runCoherenceScan,
 } from "@/lib/coherence/monitor";
+import type { MemoryRow } from "@/lib/coherence/types";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -285,7 +285,7 @@ describe("runCoherenceScan", () => {
     expect(res.errors[0]).toMatch(/group_id/i);
   });
 
-  it("scans memories and inserts detected conflicts via the kernel", async () => {
+  it("scans memories and inserts detected conflicts via the controlPlane", async () => {
     // First query: fetchRecentMemories -> two memories with a fact conflict
     // Second query: pgvector self-join -> throws so we fall to entity pairs
     // Third query: fetchExistingActiveConflictKeys -> none

@@ -5,8 +5,8 @@
  * Approves a `proposed` pattern proposal. On approval a skill template draft
  * (Markdown) is generated and returned — it is NOT auto-deployed.
  *
- * The UPDATE flows through the kernel `syscall_mutate` path (AD-40) so it
- * is kernel-gated, proof-stamped, and audit-trailed. The DB trigger on
+ * The UPDATE flows through the controlPlane `syscall_mutate` path (AD-40) so it
+ * is controlPlane-gated, proof-stamped, and audit-trailed. The DB trigger on
  * `pattern_proposals` restricts UPDATE to status / reviewed_at.
  *
  * Body:
@@ -18,10 +18,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth";
+import { generateSkillTemplateDraft, reviewProposal } from "@/lib/genesis/proposal-generator";
 import { captureException } from "@/lib/observability/sentry";
 import { getPool } from "@/lib/postgres/connection";
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
-import { reviewProposal, generateSkillTemplateDraft } from "@/lib/genesis/proposal-generator";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const roleCheck = requireRole(request, "curator");
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // ── Apply the approval through the kernel syscall_mutate path ──
+    // ── Apply the approval through the controlPlane syscall_mutate path ──
     const result = await reviewProposal(validatedGroupId, proposal_id, "approved");
     if (!result.updated) {
       return NextResponse.json(

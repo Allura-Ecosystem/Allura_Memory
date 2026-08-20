@@ -4,7 +4,7 @@
  * GET /api/tracking/skill-usage?group_id=X[&skill_name=Y][&since=ISO8601]
  *
  * Returns a usage summary (count, success rate, avg tokens, avg duration) per
- * skill_name for the given tenant group_id. Reads flow through the kernel
+ * skill_name for the given tenant group_id. Reads flow through the controlPlane
  * `syscall_query` path (AD-40 compliance for the read side as well).
  *
  * Query params:
@@ -16,11 +16,11 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import {
-  SkillUsageValidationError,
   getSkillUsageSummary,
+  SkillUsageValidationError,
 } from "@/lib/tracking/skill-usage-tracker"
+import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 
 // Always render live — analytics should never be statically cached.
 export const dynamic = "force-dynamic"

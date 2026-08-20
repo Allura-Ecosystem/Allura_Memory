@@ -1,5 +1,5 @@
 /**
- * RuVix Kernel - SDK Wrapper
+ * RuVix ControlPlane - SDK Wrapper
  * 
  * Backward-compatible wrapper that exports the same interface as the old enforcers.
  * This allows gradual migration without rewriting all imports at once.
@@ -9,7 +9,7 @@
  */
 
 import {
-  RuVixKernel,
+  RuVixControlPlane,
 } from "./ruvix";
 import type {
   MutationRequest,
@@ -33,7 +33,7 @@ export interface SDKConfig {
   group_id: string;
   
   /** Default permission tier */
-  permission_tier?: "kernel" | "plugin" | "skill";
+  permission_tier?: "controlPlane" | "plugin" | "skill";
   
   /** Default budget cost estimate */
   default_budget_cost?: number;
@@ -61,7 +61,7 @@ const DEFAULT_CONFIG: SDKConfig = {
  * RuVix SDK - Backward-compatible wrapper
  * 
  * Provides the same interface as the old EnforcedMcpClient
- * but routes all operations through the kernel.
+ * but routes all operations through the controlPlane.
  */
 export class RuVixSDK {
   private config: SDKConfig;
@@ -69,12 +69,12 @@ export class RuVixSDK {
   constructor(config: Partial<SDKConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     
-    // H-003 FIX: Verify kernel is initialized before use
-    const status = RuVixKernel.initializeKernel();
+    // H-003 FIX: Verify controlPlane is initialized before use
+    const status = RuVixControlPlane.initializeControlPlane();
     if (!status.initialized) {
       throw new Error(
-        `Kernel initialization failed: ${status.errors.join('; ')}. ` +
-        `Ensure RUVIX_KERNEL_SECRET is configured.`
+        `ControlPlane initialization failed: ${status.errors.join('; ')}. ` +
+        `Ensure RUVIX_CONTROL_PLANE_SECRET is configured.`
       );
     }
     
@@ -88,7 +88,7 @@ export class RuVixSDK {
     
     if (this.config.debug) {
       console.log(`[RuVixSDK] Initialized with group_id: ${this.config.group_id}`);
-      console.log(`[RuVixSDK] Kernel version: ${RuVixKernel.KERNEL_VERSION}`);
+      console.log(`[RuVixSDK] ControlPlane version: ${RuVixControlPlane.CONTROL_PLANE_VERSION}`);
     }
   }
 
@@ -127,7 +127,7 @@ export class RuVixSDK {
       console.log(`[RuVixSDK] executeQuery: ${target}`, { query, options });
     }
 
-    const result = await RuVixKernel.syscall("query", request, context);
+    const result = await RuVixControlPlane.syscall("query", request, context);
     return result as SyscallResult<T[]>;
   }
 
@@ -159,7 +159,7 @@ export class RuVixSDK {
       console.log(`[RuVixSDK] insert: ${target}`, { data });
     }
 
-    const result = await RuVixKernel.syscall("mutate", request, context);
+    const result = await RuVixControlPlane.syscall("mutate", request, context);
     return result as SyscallResult<T & { id: string }>;
   }
 
@@ -194,7 +194,7 @@ export class RuVixSDK {
       console.log(`[RuVixSDK] update: ${target}`, { data, query });
     }
 
-    const result = await RuVixKernel.syscall("mutate", request, context);
+    const result = await RuVixControlPlane.syscall("mutate", request, context);
     return result as SyscallResult<{ affected_rows: number }>;
   }
 
@@ -227,7 +227,7 @@ export class RuVixSDK {
       console.log(`[RuVixSDK] deleteRecords: ${target}`, { query });
     }
 
-    const result = await RuVixKernel.syscall("mutate", request, context);
+    const result = await RuVixControlPlane.syscall("mutate", request, context);
     return result as SyscallResult<{ affected_rows: number }>;
   }
 
@@ -262,7 +262,7 @@ export class RuVixSDK {
       console.log(`[RuVixSDK] upsert: ${target}`, { data, query });
     }
 
-    const result = await RuVixKernel.syscall("mutate", request, context);
+    const result = await RuVixControlPlane.syscall("mutate", request, context);
     return result as SyscallResult<T & { id: string }>;
   }
 
@@ -294,7 +294,7 @@ export class RuVixSDK {
       console.log(`[RuVixSDK] bulkInsert: ${target}`, { count: records.length });
     }
 
-    const result = await RuVixKernel.syscall("mutate", request, context);
+    const result = await RuVixControlPlane.syscall("mutate", request, context);
     return result as SyscallResult<{ inserted_count: number }>;
   }
 
@@ -329,7 +329,7 @@ export class RuVixSDK {
       console.log(`[RuVixSDK] logTrace: ${traceData.type}`, traceData);
     }
 
-    const result = await RuVixKernel.syscall("trace", traceData, context);
+    const result = await RuVixControlPlane.syscall("trace", traceData, context);
     return result as SyscallResult<{ trace_id: string }>;
   }
 
@@ -349,7 +349,7 @@ export class RuVixSDK {
       permission_tier: this.config.permission_tier,
     };
 
-    const result = await RuVixKernel.syscall("budget", "check", 0, context);
+    const result = await RuVixControlPlane.syscall("budget", "check", 0, context);
     return result as SyscallResult<{ remaining: number }>;
   }
 
@@ -366,21 +366,21 @@ export class RuVixSDK {
       permission_tier: this.config.permission_tier,
     };
 
-    const result = await RuVixKernel.syscall("budget", "allocate", amount, context);
+    const result = await RuVixControlPlane.syscall("budget", "allocate", amount, context);
     return result as SyscallResult<{ remaining: number }>;
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // KERNEL DIRECT ACCESS
+  // CONTROL_PLANE DIRECT ACCESS
   // ───────────────────────────────────────────────────────────────────────────
 
   /**
-   * Get direct access to kernel for advanced operations
+   * Get direct access to controlPlane for advanced operations
    * 
-   * @returns RuVixKernel instance
+   * @returns RuVixControlPlane instance
    */
-  getKernel() {
-    return RuVixKernel;
+  getControlPlane() {
+    return RuVixControlPlane;
   }
 
   /**

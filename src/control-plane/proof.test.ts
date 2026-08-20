@@ -1,5 +1,5 @@
 /**
- * RuVix Kernel - Proof Engine Tests
+ * RuVix ControlPlane - Proof Engine Tests
  * 
  * Tests for proof-of-intent creation and verification.
  * Zero-trust enforcement: every proof must be cryptographically valid.
@@ -8,9 +8,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createProof,
-  getKernelSecretKey,
+  getControlPlaneSecretKey,
   ProofClaims,
-  validateKernelSecret,
+  validateControlPlaneSecret,
   verifyProof,
   verifyProofOrThrow,
 } from "./proof";
@@ -19,28 +19,28 @@ import {
 // TEST SETUP
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TEST_SECRET = "test-secret-key-for-ruvix-kernel-proof-engine-32chars";
+const TEST_SECRET = "test-secret-key-for-ruvix-controlPlane-proof-engine-32chars";
 const VALID_CLAIMS: ProofClaims = {
   group_id: "allura-test-tenant",
   nonce: "0123456789abcdef0123456789abcdef", // 32-char hex nonce
   budget_cost: 100,
-  permission_tier: "kernel",
+  permission_tier: "controlPlane",
   audit_context: { test: true },
 };
 
-describe("RuVix Kernel - Proof Engine", () => {
+describe("RuVix ControlPlane - Proof Engine", () => {
   let originalSecret: string | undefined;
 
   beforeEach(() => {
-    originalSecret = process.env.RUVIX_KERNEL_SECRET;
-    process.env.RUVIX_KERNEL_SECRET = TEST_SECRET;
+    originalSecret = process.env.RUVIX_CONTROL_PLANE_SECRET;
+    process.env.RUVIX_CONTROL_PLANE_SECRET = TEST_SECRET;
   });
 
   afterEach(() => {
     if (originalSecret !== undefined) {
-      process.env.RUVIX_KERNEL_SECRET = originalSecret;
+      process.env.RUVIX_CONTROL_PLANE_SECRET = originalSecret;
     } else {
-      delete process.env.RUVIX_KERNEL_SECRET;
+      delete process.env.RUVIX_CONTROL_PLANE_SECRET;
     }
   });
 
@@ -492,38 +492,38 @@ describe("RuVix Kernel - Proof Engine", () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // KERNEL SECRET KEY TESTS
+  // CONTROL_PLANE SECRET KEY TESTS
   // ───────────────────────────────────────────────────────────────────────────
 
-  describe("getKernelSecretKey", () => {
+  describe("getControlPlaneSecretKey", () => {
     it("should return secret when configured", () => {
-      const secret = getKernelSecretKey();
+      const secret = getControlPlaneSecretKey();
       expect(secret).toBe(TEST_SECRET);
     });
 
     it("should throw error when secret is not configured", () => {
-      delete process.env.RUVIX_KERNEL_SECRET;
+      delete process.env.RUVIX_CONTROL_PLANE_SECRET;
 
-      expect(() => getKernelSecretKey()).toThrow(
-        "RUVIX_KERNEL_SECRET environment variable is required"
+      expect(() => getControlPlaneSecretKey()).toThrow(
+        "RUVIX_CONTROL_PLANE_SECRET environment variable is required"
       );
     });
   });
 
-  describe("validateKernelSecret", () => {
+  describe("validateControlPlaneSecret", () => {
     it("should return true when secret is configured and valid length", () => {
-      process.env.RUVIX_KERNEL_SECRET = TEST_SECRET;
-      expect(validateKernelSecret()).toBe(true);
+      process.env.RUVIX_CONTROL_PLANE_SECRET = TEST_SECRET;
+      expect(validateControlPlaneSecret()).toBe(true);
     });
 
     it("should return false when secret is too short", () => {
-      process.env.RUVIX_KERNEL_SECRET = "short";
-      expect(validateKernelSecret()).toBe(false);
+      process.env.RUVIX_CONTROL_PLANE_SECRET = "short";
+      expect(validateControlPlaneSecret()).toBe(false);
     });
 
     it("should return false when secret is not configured", () => {
-      delete process.env.RUVIX_KERNEL_SECRET;
-      expect(validateKernelSecret()).toBe(false);
+      delete process.env.RUVIX_CONTROL_PLANE_SECRET;
+      expect(validateControlPlaneSecret()).toBe(false);
     });
   });
 });

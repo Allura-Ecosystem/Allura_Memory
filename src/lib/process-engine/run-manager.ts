@@ -1,6 +1,6 @@
 /**
  * Process Engine — Run Manager
- * Phase 1: Production Run Kernel (AD-P1-02)
+ * Phase 1: Production Run ControlPlane (AD-P1-02)
  *
  * Snapshot CRUD for process_runs. This module owns:
  *   - createRun   — INSERT new snapshot row

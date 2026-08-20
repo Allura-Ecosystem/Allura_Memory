@@ -31,7 +31,7 @@ describe("install deploy review", () => {
     expect(envValidator).toContain("POSTGRES_PASSWORD")
     expect(envValidator).toContain("NEO4J_PASSWORD")
     expect(envValidator).toContain("OLLAMA_API_KEY")
-    expect(envValidator).toContain("RUVIX_KERNEL_SECRET")
+    expect(envValidator).toContain("RUVIX_CONTROL_PLANE_SECRET")
     expect(envValidator).toContain("missing=$((missing + 1))")
     expect(envValidator).not.toContain("((missing++))")
   })

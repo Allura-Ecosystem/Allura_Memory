@@ -1,5 +1,5 @@
 /**
- * Kernel Target Resolver
+ * ControlPlane Target Resolver
  *
  * Maps syscall target strings ("backend:resource") to real PostgreSQL
  * operations.  Called by syscall_mutate / syscall_query once the
@@ -87,7 +87,7 @@ function validateIdentifier(name: string): string {
  */
 function requireGroupId(bag: Record<string, unknown> | undefined): string {
   if (!bag || !("group_id" in bag)) {
-    throw new Error("group_id is required on all kernel operations");
+    throw new Error("group_id is required on all controlPlane operations");
   }
   return validateGroupId(bag["group_id"]);
 }
@@ -137,7 +137,7 @@ async function pgMutate(
 
   // ── UPDATE path for pattern_proposals (HITL review gate) ───────────────────
   // The DB trigger restricts UPDATE to status / reviewed_at. We route the
-  // update through syscall_mutate so it is kernel-gated (AD-40) and audit-
+  // update through syscall_mutate so it is controlPlane-gated (AD-40) and audit-
   // trailed. `query.id` selects the row; `data` carries the new column values.
   if (table === "pattern_proposals" && type === "update") {
     return pgUpdatePatternProposal(op);
@@ -147,10 +147,10 @@ async function pgMutate(
   // The monitor writes new conflict rows through this path. Curator
   // resolution (status flip) is the ONE permitted UPDATE and is handled
   // directly by the resolve API route, NOT through pgMutate's generic
-  // update flow — keeping the kernel INSERT-only invariant intact.
+  // update flow — keeping the controlPlane INSERT-only invariant intact.
   if (table === "coherence_conflicts" && (type === "update" || type === "delete_op")) {
     throw new Error(
-      `pg:coherence_conflicts is append-only (INSERT) — ${type} operations are not permitted through the kernel. Curator resolution uses the dedicated API route.`
+      `pg:coherence_conflicts is append-only (INSERT) — ${type} operations are not permitted through the controlPlane. Curator resolution uses the dedicated API route.`
     );
   }
 
@@ -192,7 +192,7 @@ async function pgMutate(
  * Permits UPDATE of status / reviewed_at WHERE id = $1 AND group_id = $2.
  * The DB trigger (`trg_pattern_proposals_block_update`) rejects any
  * UPDATE touching columns other than status / reviewed_at, so this handler
- * is a thin kernel-gated wrapper around a parameterised UPDATE.
+ * is a thin controlPlane-gated wrapper around a parameterised UPDATE.
  */
 async function pgUpdatePatternProposal(
   op: TargetOperation
@@ -200,7 +200,7 @@ async function pgUpdatePatternProposal(
   const data = op.data ?? {};
   const queryBag = op.query ?? {};
 
-  // group_id is mandatory — stamped by the kernel from proof claims.
+  // group_id is mandatory — stamped by the controlPlane from proof claims.
   const groupId = requireGroupId(data);
 
   // Story 22.1: Validate that the group_id is a registered, active tenant.

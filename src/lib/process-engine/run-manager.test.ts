@@ -1,6 +1,6 @@
 /**
  * Run Manager Tests
- * Phase 1: Production Run Kernel (AD-P1-02)
+ * Phase 1: Production Run ControlPlane (AD-P1-02)
  *
  * Unit tests using a mocked Pool — no live DB required.
  * Pattern mirrors replay.test.ts: { query } as unknown as Pool.

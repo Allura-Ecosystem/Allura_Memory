@@ -8,10 +8,10 @@
  * Agents import this and call memory.add(), memory.search(), etc. directly.
  *
  * Design:
- * - Routes through kernel syscalls (syscall_mutate / syscall_query)
+ * - Routes through controlPlane syscalls (syscall_mutate / syscall_query)
  * - Validation at the boundary: group_id, content, agent_id
  * - Type-safe: matches @allura/sdk contracts
- * - Audit trail: all operations logged to PostgreSQL via kernel
+ * - Audit trail: all operations logged to PostgreSQL via controlPlane
  *
  * Usage (from agents):
  *   import { agentMemory } from '@/agents/memory-wrapper';
@@ -29,30 +29,30 @@
  *   });
  */
 
+import { syscall_mutate, syscall_query } from "@/control-plane/syscalls";
+import type { SyscallContext } from "@/control-plane/syscalls";
 import type {
   MemoryAddParams,
-  MemorySearchParams,
-  MemoryGetParams,
-  MemoryListParams,
-  MemoryDeleteParams,
   MemoryAddResponse,
-  MemorySearchResponse,
-  MemoryGetResponse,
-  MemoryListResponse,
+  MemoryDeleteParams,
   MemoryDeleteResponse,
+  MemoryGetParams,
+  MemoryGetResponse,
+  MemoryListParams,
+  MemoryListResponse,
+  MemorySearchParams,
+  MemorySearchResponse,
 } from "@/lib/sdk";
 import {
   MemoryAddResponseSchema,
-  MemorySearchResponseSchema,
-  MemoryGetResponseSchema,
-  MemoryListResponseSchema,
   MemoryDeleteResponseSchema,
+  MemoryGetResponseSchema,
   MemoryIdSchema,
+  MemoryListResponseSchema,
+  MemorySearchResponseSchema,
   ValidationError,
 } from "@/lib/sdk";
 import { validateGroupId } from "@/lib/validation/group-id";
-import { syscall_mutate, syscall_query } from "@/kernel/syscalls";
-import type { SyscallContext } from "@/kernel/syscalls";
 
 /**
  * Build a SyscallContext for agent memory operations.
@@ -80,7 +80,7 @@ export interface AgentMemoryAPI {
 /**
  * Agent-callable memory wrapper
  *
- * Routes through kernel syscalls (syscall_mutate / syscall_query) instead of
+ * Routes through controlPlane syscalls (syscall_mutate / syscall_query) instead of
  * calling canonicalMemoryTools directly.
  */
 class AgentMemory implements AgentMemoryAPI {
@@ -90,7 +90,7 @@ class AgentMemory implements AgentMemoryAPI {
    * @param params - Memory parameters
    * @returns Memory add response with ID and storage location
    * @throws ValidationError if validation fails
-   * @throws Error if kernel mutate fails
+   * @throws Error if controlPlane mutate fails
    */
   async add(params: AgentMemoryAddParams): Promise<MemoryAddResponse> {
     // Validate required fields
@@ -131,7 +131,7 @@ class AgentMemory implements AgentMemoryAPI {
     );
 
     if (!result.success) {
-      throw new Error(result.error ?? "Kernel mutate failed");
+      throw new Error(result.error ?? "ControlPlane mutate failed");
     }
 
     return MemoryAddResponseSchema.parse({
@@ -178,7 +178,7 @@ class AgentMemory implements AgentMemoryAPI {
     );
 
     if (!result.success) {
-      throw new Error(result.error ?? "Kernel query failed");
+      throw new Error(result.error ?? "ControlPlane query failed");
     }
 
     const rows = (result.data ?? []) as Array<Record<string, unknown>>;
@@ -234,7 +234,7 @@ class AgentMemory implements AgentMemoryAPI {
     );
 
     if (!result.success) {
-      throw new Error(result.error ?? "Kernel query failed");
+      throw new Error(result.error ?? "ControlPlane query failed");
     }
 
     const rows = (result.data ?? []) as Array<Record<string, unknown>>;
@@ -291,7 +291,7 @@ class AgentMemory implements AgentMemoryAPI {
     );
 
     if (!result.success) {
-      throw new Error(result.error ?? "Kernel query failed");
+      throw new Error(result.error ?? "ControlPlane query failed");
     }
 
     const rows = (result.data ?? []) as Array<Record<string, unknown>>;
@@ -313,7 +313,7 @@ class AgentMemory implements AgentMemoryAPI {
   /**
    * Soft-delete a memory
    *
-   * Records a MEMORY_DELETED event via the kernel. The actual row-level
+   * Records a MEMORY_DELETED event via the controlPlane. The actual row-level
    * soft-delete is handled downstream by the target resolver or a cleanup job.
    *
    * @param params - Delete parameters
@@ -355,7 +355,7 @@ class AgentMemory implements AgentMemoryAPI {
     );
 
     if (!result.success) {
-      throw new Error(result.error ?? "Kernel delete event failed");
+      throw new Error(result.error ?? "ControlPlane delete event failed");
     }
 
     return MemoryDeleteResponseSchema.parse({

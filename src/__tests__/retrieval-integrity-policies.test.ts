@@ -4,8 +4,8 @@ import {
   POLICY_READER_WRITER_SCHEMA_PARITY,
   POLICY_RETRIEVAL_CLAIM_PRECISION,
   type PolicyContext,
-} from "../kernel/policy";
-import type { ProofClaims } from "../kernel/proof";
+} from "../control-plane/policy";
+import type { ProofClaims } from "../control-plane/proof";
 
 const claims = {} as ProofClaims;
 const baseContext: PolicyContext = {

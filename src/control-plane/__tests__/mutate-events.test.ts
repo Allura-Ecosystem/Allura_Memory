@@ -5,9 +5,9 @@
  *
  * Story 1.1: Record Raw Execution Traces - Integration Tests
  *
- * Tests for kernel-backed trace logging via RuVix mutate syscall.
+ * Tests for controlPlane-backed trace logging via RuVix mutate syscall.
  * These tests verify:
- * - Kernel integration with PostgreSQL
+ * - ControlPlane integration with PostgreSQL
  * - Proof validation (nonce, group_id)
  * - Policy enforcement (POL-001 tenant isolation)
  * - Append-only semantics
@@ -17,27 +17,27 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { getPool } from "@/lib/postgres/connection"
 import { logTrace, queryTraces } from "@/lib/postgres/trace-logger"
 import type { QueryTracesOptions, TraceLog } from "@/lib/postgres/types"
-import { RuVixKernel } from "../ruvix"
+import { RuVixControlPlane } from "../ruvix"
 
 // Pre-Phase-4 baseline — tracked in docs/deferred/pre-existing-failures.md
-// Reason: requires live PostgreSQL DB for kernel syscall integration
+// Reason: requires live PostgreSQL DB for controlPlane syscall integration
 const shouldRunDbIntegration = process.env.RUN_DB_INTEGRATION === "true"
 
 // Test setup
 type GroupId = string
 const TEST_AGENT_ID = "agent-test-001"
 
-describe.skipIf(!shouldRunDbIntegration)("Story 1.1: Kernel-backed Trace Logging", () => {
+describe.skipIf(!shouldRunDbIntegration)("Story 1.1: ControlPlane-backed Trace Logging", () => {
   let originalSecret: string | undefined
   let testGroupId: GroupId
   let testGroupIds: GroupId[] = []
 
   beforeEach(() => {
-    originalSecret = process.env.RUVIX_KERNEL_SECRET
-    process.env.RUVIX_KERNEL_SECRET = "test-secret-key-for-ruvix-kernel-proof-engine-32chars"
+    originalSecret = process.env.RUVIX_CONTROL_PLANE_SECRET
+    process.env.RUVIX_CONTROL_PLANE_SECRET = "test-secret-key-for-ruvix-controlPlane-proof-engine-32chars"
 
-    // Initialize kernel
-    RuVixKernel.initializeKernel()
+    // Initialize controlPlane
+    RuVixControlPlane.initializeControlPlane()
 
     // Generate unique group_id for this test run
     testGroupId = `allura-test-mutate-ev-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -46,9 +46,9 @@ describe.skipIf(!shouldRunDbIntegration)("Story 1.1: Kernel-backed Trace Logging
 
   afterEach(async () => {
     if (originalSecret !== undefined) {
-      process.env.RUVIX_KERNEL_SECRET = originalSecret
+      process.env.RUVIX_CONTROL_PLANE_SECRET = originalSecret
     } else {
-      delete process.env.RUVIX_KERNEL_SECRET
+      delete process.env.RUVIX_CONTROL_PLANE_SECRET
     }
 
     // Cleanup test data
@@ -64,11 +64,11 @@ describe.skipIf(!shouldRunDbIntegration)("Story 1.1: Kernel-backed Trace Logging
   })
 
   // ───────────────────────────────────────────────────────────────────────────
-  // AC-1: Every agent action logged via kernel mutate syscall
+  // AC-1: Every agent action logged via controlPlane mutate syscall
   // ───────────────────────────────────────────────────────────────────────────
 
-  describe("AC-1: Kernel Mutate Syscall Integration", () => {
-    it("should log trace via kernel mutate syscall", async () => {
+  describe("AC-1: ControlPlane Mutate Syscall Integration", () => {
+    it("should log trace via controlPlane mutate syscall", async () => {
       const trace: TraceLog = {
         group_id: testGroupId,
         agent_id: TEST_AGENT_ID,
@@ -98,7 +98,7 @@ describe.skipIf(!shouldRunDbIntegration)("Story 1.1: Kernel-backed Trace Logging
       const result = await logTrace(trace)
 
       // Verify proof was created with nonce
-      // (This would require inspecting the kernel internals or mocking)
+      // (This would require inspecting the controlPlane internals or mocking)
       expect(result).toBeDefined()
     })
 
@@ -145,7 +145,7 @@ describe.skipIf(!shouldRunDbIntegration)("Story 1.1: Kernel-backed Trace Logging
 
       expect(stored.group_id).toBe(testGroupId)
       expect(stored.agent_id).toBe(TEST_AGENT_ID)
-      // event_type is prefixed with "trace." to namespace kernel traces
+      // event_type is prefixed with "trace." to namespace controlPlane traces
       expect(stored.event_type).toBe("trace.learning")
       expect(stored.outcome).toMatchObject({ content: "Learning from session" })
       expect(stored.metadata).toMatchObject({ confidence: 0.87 })

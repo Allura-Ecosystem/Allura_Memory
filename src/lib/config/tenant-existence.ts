@@ -2,9 +2,9 @@
  * Tenant Existence Validation
  *
  * Story 22.1: Validates that a group_id is registered in the `tenants`
- * table before allowing kernel writes. Fail closed if tenant not registered.
+ * table before allowing controlPlane writes. Fail closed if tenant not registered.
  *
- * This module is used by the kernel target-resolver to enforce that only
+ * This module is used by the controlPlane target-resolver to enforce that only
  * registered tenants can write to the database.
  */
 

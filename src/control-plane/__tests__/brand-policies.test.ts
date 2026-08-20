@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
-import type { ProofClaims } from "../proof";
 import {
   evaluatePolicies,
-  POLICY_BRAND_SOURCE_OF_TRUTH,
-  POLICY_BRAND_RELEASE_APPROVAL,
-  POLICY_BRAND_PACKET_REQUIRED,
-  POLICY_BRAND_TOKEN_TYPOGRAPHY_LOCK,
   POLICY_BRAND_COPY_LOCK,
-  POLICY_VISUAL_EVIDENCE_BEFORE_BRAND_DONE,
+  POLICY_BRAND_PACKET_REQUIRED,
+  POLICY_BRAND_RELEASE_APPROVAL,
+  POLICY_BRAND_SOURCE_OF_TRUTH,
+  POLICY_BRAND_TOKEN_TYPOGRAPHY_LOCK,
   POLICY_DURHAM_QA_REVIEW_GATE,
+  POLICY_VISUAL_EVIDENCE_BEFORE_BRAND_DONE,
   type PolicyContext,
   type PolicyViolation,
 } from "../policy";
+import type { ProofClaims } from "../proof";
 
 const baseClaims: ProofClaims = {
   group_id: "allura-system",

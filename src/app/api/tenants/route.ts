@@ -6,7 +6,7 @@
  * POST /api/tenants — admin-only — creates a new tenant
  * GET  /api/tenants — admin-only — lists all active tenants
  *
- * All writes go through the kernel syscall_mutate path (pg:tenants target).
+ * All writes go through the controlPlane syscall_mutate path (pg:tenants target).
  * The tenants table is exempt from tenant-existence validation (Story 22.1).
  */
 

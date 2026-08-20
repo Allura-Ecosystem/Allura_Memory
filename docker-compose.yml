@@ -123,7 +123,7 @@ services:
       # Switching providers requires re-embedding all memories.
       - GRAPH_BACKEND=ruvector
       - DEFAULT_GROUP_ID=${DEFAULT_GROUP_ID:-allura-system}
-      - RUVIX_KERNEL_SECRET=${RUVIX_KERNEL_SECRET:-}
+      - RUVIX_CONTROL_PLANE_SECRET=${RUVIX_CONTROL_PLANE_SECRET:-}
       - ALLURA_MCP_HTTP_PORT=3201
       - ALLURA_MCP_HTTP_ENABLED=true
       - ALLURA_RATE_LIMIT_ENABLED=false
