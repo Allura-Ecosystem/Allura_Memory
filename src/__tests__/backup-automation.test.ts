@@ -207,9 +207,21 @@ describe("getDefaultConfig", () => {
   })
 
   it("returns default values when no env vars set", () => {
-    delete process.env.BACKUP_ENCRYPTION_KEY
-    delete process.env.BACKUP_DIR
-    delete process.env.POSTGRES_CONTAINER
+    // getDefaultConfig() reads eight env vars; clear all of them so this test
+    // exercises real defaults rather than whatever the ambient environment or a
+    // developer's local .env happens to set.
+    for (const key of [
+      "BACKUP_DIR",
+      "BACKUP_ENCRYPTION_KEY",
+      "CONFIG_FILES",
+      "POSTGRES_CONTAINER",
+      "POSTGRES_DB",
+      "POSTGRES_USER",
+      "SKILLS_DIRS",
+      "WORKSPACE_ROOT",
+    ]) {
+      delete process.env[key]
+    }
 
     const config = getDefaultConfig()
 
