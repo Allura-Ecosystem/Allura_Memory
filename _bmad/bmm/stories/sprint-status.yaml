@@ -224,7 +224,7 @@ epic_24:
       status: done
       owner: "unassigned"
       depends_on: ["24.2"]
-      status_evidence: "Fresh pgvector/pgvector:pg16 container (PG 16.15, pgvector 0.8.6) destroyed and rebuilt; 40 migrations applied deterministically; live-DB lane 12/12 pass including new database-tenant-isolation.e2e.test.ts, events-immutability.e2e.test.ts, tenant-table-inventory.test.ts, plus existing checkpoint-continuation.integration.test.ts. Unit suite remains 1782/0 failed. RLS enabled+forced on 37 tenant-scoped tables; allura_app role has least-privilege DML; events UPDATE/DELETE rejected for app role; allura_breakglass role permits documented break-glass mutation."
+      status_evidence: "Fresh pgvector/pgvector:pg16 container (PG 16.15, pgvector 0.8.6) destroyed and rebuilt; 40 migrations applied deterministically; live-DB lane 12/12 pass including new database-tenant-isolation.e2e.test.ts, events-immutability.e2e.test.ts, tenant-table-inventory.test.ts, plus existing checkpoint-continuation.integration.test.ts. Unit suite remains 1782/0 failed. RLS enabled+forced on 37 tenant-scoped tables; allura_app role has least-privilege DML; events UPDATE/DELETE rejected for app role; allura_breakglass role permits documented break-glass mutation. Merged to main as 10a6324b (PR #66) with all 25 checks green; remote Epic 24 Evidence run 32369489097. Two schema-bootstrap defects fixed en route: missing CREATE EXTENSION vector in docker/postgres-init (added 00-extensions.sql), and hardcoded bootstrap-superuser/database names in 37-events-immutable.sql (now current_user / current_database())."
     - key: "24.4"
       title: "Atomic Human-Governed Promotion"
       status: ready-for-dev
@@ -250,6 +250,12 @@ epic_24:
       status: ready-for-dev
       owner: "unassigned"
       depends_on: ["24.2", "24.3", "24.4", "24.5", "24.6", "24.7"]
+    - key: "24.10"
+      title: "CI Gate Integrity and Branch Protection"
+      status: ready-for-dev
+      owner: "unassigned"
+      depends_on: ["24.1"]
+      status_evidence: "Opened 2026-08-20 from a Team RAM audit of all 14 workflows. main has NO branch-protection rule (gh api returns 404), so no status check is merge-blocking. 28 continue-on-error occurrences across 7 workflow files; 4 lanes report green while suppressing test failures (ci.yml test-e2e, mcp-testing.yml e2e-tests + unit-tests, check.yml check). epic-24-evidence.yml gates hard and is unaffected."
     - key: "24.9"
       title: "Reference Integrations and Portfolio Demonstration"
       status: ready-for-dev

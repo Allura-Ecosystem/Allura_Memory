@@ -45,7 +45,7 @@ The previous plan prioritized a benchmark dashboard, public deployment, and port
 
 | Gate | Stories | Question answered | Exit evidence |
 |---|---|---|---|
-| A — Truthful baseline | 24.1 | Can a reviewer reproduce the current state? | Green CI lanes, evidence manifest, no unverified README claims |
+| A — Truthful baseline | 24.1, 24.10 | Can a reviewer reproduce the current state? | Green CI lanes, evidence manifest, no unverified README claims |
 | B — Trust boundary | 24.2–24.4 | Does authority come from trusted identity and remain enforced through persistence? | Auth adversarial suite, RLS isolation matrix, immutable-ledger proof, atomic promotion concurrency test |
 | C — Framework and harness | 24.5–24.7 | Can another team define, run, replay, evaluate, and integrate an agent workflow? | Scenario schema, deterministic replay receipt, evaluation report, SDK/CLI quickstart |
 | D — Enterprise portfolio | 24.8–24.9 | Can a principal-engineer reviewer understand the standards, tradeoffs, evidence, and limitations? | Canonical doc guard, threat model, reference integrations, recorded demo script, evidence-indexed README |
@@ -65,6 +65,7 @@ No later gate may be represented as complete until all earlier gates have passed
 | 24.7 | SDK, CLI, and Ten-Minute Developer Path | P1 | 24.5, 24.6 | Platform adoption and developer ergonomics |
 | 24.8 | Enterprise Documentation Truth Pack | P0 | 24.2–24.7 | Standards, threat modeling, audit and risk communication |
 | 24.9 | Reference Integrations and Portfolio Demonstration | P1 | 24.8 | Reuse, architectural leadership, adoption evidence |
+| 24.10 | CI Gate Integrity and Branch Protection | P0 | 24.1 | Enforceable quality gates; green means green |
 
 ## Cross-Epic Acceptance Criteria
 
