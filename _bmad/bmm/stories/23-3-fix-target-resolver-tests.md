@@ -6,23 +6,23 @@
 **Agent:** Woz
 
 **Description:**
-Tests in `src/kernel/target-resolver.test.ts` are failing because `validateTenantForWrite` and `neo4jMutate` reference the dead Neo4j path. The `neo4jMutate` function in target-resolver.ts calls Neo4j which no longer exists. Remove the Neo4j mutate path and update tests.
+Tests in `src/control-plane/target-resolver.test.ts` are failing because `validateTenantForWrite` and `neo4jMutate` reference the dead Neo4j path. The `neo4jMutate` function in target-resolver.ts calls Neo4j which no longer exists. Remove the Neo4j mutate path and update tests.
 
 ## Acceptance Criteria
 
-- [ ] `neo4jMutate` function removed from `src/kernel/target-resolver.ts`
+- [ ] `neo4jMutate` function removed from `src/control-plane/target-resolver.ts`
 - [ ] `validateTenantForWrite` no longer references Neo4j
 - [ ] `bun run test:unit` — 0 failures from target-resolver.test.ts
 - [ ] No new test failures introduced
 
 ## Implementation Files
 
-- `src/kernel/target-resolver.ts` — remove `neo4jMutate` function, keep `pgMutate` path
-- `src/kernel/target-resolver.test.ts` — remove tests for `neo4jMutate`
+- `src/control-plane/target-resolver.ts` — remove `neo4jMutate` function, keep `pgMutate` path
+- `src/control-plane/target-resolver.test.ts` — remove tests for `neo4jMutate`
 
 ## Dev Notes
 
-The target-resolver had two paths: `pgMutate` (PostgreSQL) and `neo4jMutate` (Neo4j). With Neo4j sunset, only `pgMutate` should remain. The kernel write path (AD-40) goes through PostgreSQL only.
+The target-resolver had two paths: `pgMutate` (PostgreSQL) and `neo4jMutate` (Neo4j). With Neo4j sunset, only `pgMutate` should remain. The control plane write path (AD-40) goes through PostgreSQL only.
 
 ## Dev Agent Record
 

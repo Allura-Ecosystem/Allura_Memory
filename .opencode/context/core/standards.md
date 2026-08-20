@@ -4,7 +4,7 @@
 owner: scout
 last_verified: 2026-05-03
 source_files:
-  - src/kernel/RuVixKernel.ts
+  - src/control-plane/RuVixControlPlane.ts
   - .opencode/context/allura/ALLURA-BRAIN-PROMPT.md
   - .opencode/rules/AI-GUIDELINES.md
   - .opencode/rules/neo4j-best-practices.md

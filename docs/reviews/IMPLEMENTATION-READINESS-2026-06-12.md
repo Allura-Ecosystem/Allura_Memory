@@ -32,7 +32,7 @@ added runtime and contract evidence that invalidates the broad green light:
 - Epic 11: reopened for route parity and permission enforcement.
 - Epic 12: reopened for true checkpoint continuation.
 - Epic 13: product truth and contract reconciliation.
-- Epic 14: production run kernel.
+- Epic 14: production run control plane.
 - Epic 15: PostgreSQL work plane.
 - Epic 16: operator workspace and Command Center.
 - Epic 17: desktop product and UX release gates.
@@ -52,7 +52,7 @@ the work plane, operator workspace, and desktop product.
 
 Inputs, evidence, acceptance criteria, and verification commands are defined.
 
-### Production Run Kernel
+### Production Run Control Plane
 
 **NOT READY**
 

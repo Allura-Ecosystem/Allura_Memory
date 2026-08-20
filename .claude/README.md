@@ -21,7 +21,7 @@ Project-specific extensions on top of OAC core.
 - **Brain memory** — Allura Brain (PostgreSQL + Neo4j) for episodic + semantic memory
 - **Brooks orchestration** — Architecture-first orchestration via Frederick Brooks persona
 - **HITL / curator / governance** — Promotion pipeline with human-in-the-loop approval
-- **RuVix kernel** — Policy enforcement gate for all memory operations
+- **RuVix control plane** — Policy enforcement gate for all memory operations
 
 ## Execution Rule
 

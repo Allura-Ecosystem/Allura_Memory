@@ -15,7 +15,7 @@ versioning, and audit (governed canon ADR-003; AD-09 in the hosted Risks doc).
 ```
 User/Agent question
   → Allura Guard checks permission + injects org group_id + workspace_id
-  → Memory Kernel plans search
+  → Memory Control Plane plans search
   → RuVector adapter accelerates ranking
   → results returned WITH provenance IDs
   → audit receipt written

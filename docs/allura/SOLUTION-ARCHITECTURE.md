@@ -291,11 +291,11 @@ The adapter-specific methods (`supersedesMemory`, `softDeleteMemory`, `restoreMe
 
 **Cross-references:** AD-29 (graph adapter pattern), AD-49 (cutover decision), RK-32 (graph cutover risk)
 
-### 3.4.1 RuVix Kernel Governance Contract
+### 3.4.1 RuVix Control Plane Governance Contract
 
-The RuVix kernel is the governance contract for Allura Brain. Every operation carries identity, scope, authority, evidence, audit, and a disposition: `Permit`, `Defer`, or `Deny`. Gated operations carry `approval_required=true` until the approved owner clears them.
+The RuVix control plane is the governance contract for Allura Brain. Every operation carries identity, scope, authority, evidence, audit, and a disposition: `Permit`, `Defer`, or `Deny`. Gated operations carry `approval_required=true` until the approved owner clears them.
 
-**Kernel invariant:** Every operation carries identity, scope, authority, evidence, and audit.
+**Control Plane invariant:** Every operation carries identity, scope, authority, evidence, and audit.
 
 **The five questions:**
 
@@ -331,7 +331,7 @@ The RuVix kernel is the governance contract for Allura Brain. Every operation ca
 | `soc2` | Queue eligible memories for human approval; never auto-promote. | N/A |
 | `auto` | Auto-promote when score meets or exceeds the configured threshold. | `AUTO_APPROVAL_THRESHOLD` (default `0.85`) |
 
-The canonical kernel contract is stored as `RUVIX_KERNEL_CONTRACT_v1` in Neo4j, with 12 individual rule entries plus one anchor ADR in PostgreSQL.
+The canonical control plane contract is stored as `RUVIX_CONTROL_PLANE_CONTRACT_v1` in Neo4j, with 12 individual rule entries plus one anchor ADR in PostgreSQL.
 
 ### 3.4.2 Brand Governance Layer
 
@@ -408,7 +408,7 @@ Allura is MCP/API-first. The MCP HTTP gateway (port 3201), API routes, and CLI s
 | `/api/memory` | Allura Brain APIs | Governed memory actions only; no direct substrate writes |
 | `/api/curator/approve` | PostgreSQL proposals | Curator approval required; auto-promote >85% configurable |
 | `/api/audit/events` | PostgreSQL events | Read-only audit trail |
-| `/dashboard/governance` | RuVix kernel and policy APIs | Governed settings only; all mutations require receipt |
+| `/dashboard/governance` | RuVix control plane and policy APIs | Governed settings only; all mutations require receipt |
 
 **Architecture note:** Previous dashboard ports (3100, 3334, 6420) are reference/cutover history. New dashboard work is scoped to the approved RuVix-governed Memory Command Center plan and must pass source-of-truth, no-fabricated-data, auth, accessibility, and rollback gates before launch.
 
@@ -489,7 +489,7 @@ sequenceDiagram
 | Neo4j nodes MUST NOT be edited in place | SUPERSEDES versioning preserves full lineage — AD-02 |
 | Neo4j writes MUST be preceded by a dedup check | Prevents knowledge graph bloat — RK-01 |
 | `PROMOTION_MODE=soc2` MUST prevent all autonomous Neo4j writes | Regulatory compliance gate — AD-04 |
-| Circuit breaker MUST trip before budget exhaustion | Prevents agent runaway — kernel/circuit-breaker |
+| Circuit breaker MUST trip before budget exhaustion | Prevents agent runaway — control plane/circuit-breaker |
 | Memory Command Center MUST use API/MCP contracts and never write directly to substrates | Prevents governance bypass and UI drift — AD-31 |
 | RunRecord wrappers MUST remain outside the memory data plane | Preserves Allura Brain's memory-only boundary — AD-35 |
 | Done MUST require declared evidence gates | Prevents assertion-only completion — AD-35 / RK-27 |
@@ -527,7 +527,7 @@ needsEvidence   → POST /api/curator/reject with rationale prefix "Needs eviden
 Native Kanban direction: PostgreSQL owns operational board state; Neo4j may project semantic relationships; Allura Brain stores durable decisions/evidence receipts. Notion, Linear, and GitHub Projects are optional sync adapters; Native Allura Kanban is default upstream.
 
 Governed AI office delivery order: reconcile product truth, finish the run
-kernel, build the PostgreSQL work plane, build the operator workspace, then
+control plane, build the PostgreSQL work plane, build the operator workspace, then
 package one desktop shell. This order prevents the desktop from packaging
 placeholder state or unstable contracts.
 
@@ -637,7 +637,7 @@ graph TD
         C --> F[Next.js API]
         D --> F
         F --> G[(PostgreSQL)]
-        F --> H[RuVixKernel]
+        F --> H[RuVixControlPlane]
         H --> G
         E --> G
         E --> I[(Neo4j)]

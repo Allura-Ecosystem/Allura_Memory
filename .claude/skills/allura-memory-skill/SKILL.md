@@ -73,7 +73,7 @@ Allura Brain is a **dual-layer governed memory system**:
    - Only populated via curator promotion after policy checks
    - This is the canonical truth layer
 
-3. **Governance (RuVix kernel)**
+3. **Governance (RuVix control plane)**
    - Promotion gating — raw → curated requires approval
    - Policy enforcement on every operation
    - Budget enforcement and circuit breakers

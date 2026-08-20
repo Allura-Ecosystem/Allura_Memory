@@ -39,7 +39,7 @@ As the Allura architecture owner, I need SOLUTION-ARCHITECTURE.md §3.4.0 "Curre
 
 ## Dev Notes
 
-- **Pattern to follow:** §3.4.1 (RuVix Kernel Governance Contract) — same density, same table style
+- **Pattern to follow:** §3.4.1 (RuVix Control Plane Governance Contract) — same density, same table style
 - Keep the existing `ruvector_function_count=0` evidence — it's still true for the native extension. Add context that the graph adapter is a separate concern.
 - **Dev implementation:** Woz (2026-07-12) added new subsection "§3.4.0.1 Graph Backend Cutover Path" after existing readiness table (line 242), inserted 40 lines of new content, clarified `ruvector_function_count=0` note, cross-references AD-29, AD-49, RK-32 (RK-15 is resolved; RK-32 is active graph cutover risk)
 - **Cross-reference note:** Story AC-6 mentioned RK-15, but RK-15 is "Approve route connection leak" (marked resolved). The active graph cutover risk is RK-32.

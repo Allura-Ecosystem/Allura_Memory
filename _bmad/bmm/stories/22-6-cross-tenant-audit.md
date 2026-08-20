@@ -12,7 +12,7 @@ As the Allura security lead, I need an automated cross-tenant audit endpoint, so
 
 ## Context
 
-- The kernel enforces `group_id` on every read/write via CHECK constraint and syscall validation
+- The control plane enforces `group_id` on every read/write via CHECK constraint and syscall validation
 - The completion spec (§C) requires: "Cross-tenant read/search/update/delete/promote attempts fail. Verified by: adversarial matrix with ≥5 synthetic tenants and ≥100 seeded memories per tenant."
 - No automated audit endpoint exists today
 - This is the evidence gate for multi-tenant safety

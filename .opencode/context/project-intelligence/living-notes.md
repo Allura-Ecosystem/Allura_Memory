@@ -52,7 +52,7 @@
 *Priority:* High  
 *Impact:* Agents cannot write back to Allura Brain during task execution — only at session end  
 *Root Cause:* memory() wrapper not yet implemented as a first-class primitive  
-*Proposed Solution:* Implement memory() wrapper in kernel layer, expose via MCP  
+*Proposed Solution:* Implement memory() wrapper in control plane layer, expose via MCP  
 *Status:* Acknowledged — Story 1.2 dependency
 
 **Neo4j Memory Graph — Dirty Entities**  

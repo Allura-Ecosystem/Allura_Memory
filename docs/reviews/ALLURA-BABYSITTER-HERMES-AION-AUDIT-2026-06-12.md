@@ -1,5 +1,10 @@
 # Allura Product Parity Audit
 
+> [!NOTE]
+> **AI-Assisted Documentation** — this file is maintained with AI assistance.
+> Where it conflicts with the source code, schemas, or tests, defer to those.
+
+
 **Date:** 2026-06-12  
 **Scope:** Workflow strength, dashboard layout, navigation, projects/tasks,
 command-center behavior, backend wiring, desktop readiness, and UX polish.
@@ -315,7 +320,7 @@ and receipt/provenance pointers where applicable.
 - Resolve auth/middleware and tenant propagation.
 - Restore approved logo assets.
 
-### Phase 1 — Finish The Run Kernel
+### Phase 1 — Finish The Run Control Plane
 
 - Persist versioned process definitions.
 - Implement real continuation after checkpoints.

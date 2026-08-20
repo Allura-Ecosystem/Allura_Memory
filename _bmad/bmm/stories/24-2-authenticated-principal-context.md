@@ -39,7 +39,7 @@ story does not claim that it does.
 ## Scope
 
 - Authenticate HTTP requests against hashed, revocable MCP credentials.
-- Resolve one `PrincipalContext` at the transport boundary and pass it through tool dispatch and audit. **As-built correction:** the original scope also said *kernel policy*. That was descoped during review because the canonical MCP dispatch path never reaches `src/kernel/` — see Ruling on Finding 3 under Review Round 1. No kernel file changed in this story.
+- Resolve one `PrincipalContext` at the transport boundary and pass it through tool dispatch and audit. **As-built correction:** the original scope also said *control plane policy*. That was descoped during review because the canonical MCP dispatch path never reaches `src/control-plane/` — see Ruling on Finding 3 under Review Round 1. No control plane file changed in this story.
 - Bind stdio/service operation to an explicit configured service principal and tenant allowlist.
 - Reject tenant/user/role argument mismatches before business logic runs.
 - Audit authentication and authorization decisions without logging credentials.
@@ -49,10 +49,10 @@ story does not claim that it does.
 - Building login UI or selecting an enterprise identity provider.
 - Authorization policy beyond the existing admin/curator/viewer model.
 - Database row-level security, which is Story 24.3.
-- **Added at review:** kernel-level policy consumption of principal claims
-  (`src/kernel/proof.ts`, `src/kernel/policy.ts`). Descoped because the MCP
-  dispatch path does not traverse the kernel — Ruling on Finding 3. Becomes
-  worthwhile only if the memory write path is moved onto the kernel syscall
+- **Added at review:** control plane-level policy consumption of principal claims
+  (`src/control-plane/proof.ts`, `src/control-plane/policy.ts`). Descoped because the MCP
+  dispatch path does not traverse the control plane — Ruling on Finding 3. Becomes
+  worthwhile only if the memory write path is moved onto the control plane syscall
   layer.
 
 ## Acceptance Criteria
@@ -76,7 +76,7 @@ Legend: `[x]` = fully satisfied and provable on the build machine. `[~]` = imple
 - `src/lib/auth/mcp-authenticator.ts` — new credential verification and revocation path.
 - `src/mcp/canonical-http-gateway.ts` — resolve principal once and remove parameter-derived role authority.
 - `src/mcp/memory-server-canonical.ts` — bind service principal for non-HTTP transport.
-- ~~`src/kernel/policy.ts` and `src/kernel/proof.ts` — consume trusted principal claims.~~ **NOT IMPLEMENTED — descoped during review.** An earlier draft added `ProofClaims.principal` and a POL-028 tenant-binding policy; both were reverted because nothing on the MCP request path can populate them. `git diff HEAD -- src/kernel/` is empty. Rationale and evidence: Ruling on Finding 3 under Review Round 1.
+- ~~`src/control-plane/policy.ts` and `src/control-plane/proof.ts` — consume trusted principal claims.~~ **NOT IMPLEMENTED — descoped during review.** An earlier draft added `ProofClaims.principal` and a POL-028 tenant-binding policy; both were reverted because nothing on the MCP request path can populate them. `git diff HEAD -- src/control-plane/` is empty. Rationale and evidence: Ruling on Finding 3 under Review Round 1.
 - `src/lib/auth/__tests__/principal-context.test.ts` — unit contract tests.
 - `src/__tests__/mcp-auth-adversarial.test.ts` — gateway-level adversarial matrix.
 - `.env.example` and deployment configuration — secure defaults and explicit local-dev mode.
@@ -142,7 +142,7 @@ asserted by the test suite.
    call before dispatch, so HTTP and stdio cannot drift.
 5. **Wire transports.** HTTP gateway authenticates every request (not just
    session initialize); stdio binds an explicit service principal at boot.
-6. ~~**Kernel.** Add optional trusted principal claims to `ProofClaims` plus
+6. ~~**Control Plane.** Add optional trusted principal claims to `ProofClaims` plus
    POL-028 tenant binding, backwards compatible when claims are absent.~~
    **ABANDONED at review.** Executed as planned in round 1, then reverted in
    round 2 once it was shown unreachable. See Ruling on Finding 3. Tenant
@@ -190,9 +190,9 @@ asserted by the test suite.
   escalates based on a presented token value.
 - **Role model kept separate.** `PrincipalContext.roles`
   (admin|curator|viewer) is distinct from the approval-workflow `role` union in
-  `src/kernel/policy.ts` and from the Clerk/Next.js auth in `src/lib/auth/*`,
+  `src/control-plane/policy.ts` and from the Clerk/Next.js auth in `src/lib/auth/*`,
   which was not touched.
-- **No kernel policy shipped.** A round-1 draft registered POL-028 (that id
+- **No control plane policy shipped.** A round-1 draft registered POL-028 (that id
   chosen because POL-024 through POL-027 were already taken). It was reverted in
   round 2 as unreachable — Ruling on Finding 3.
 - **Legacy shared token is gated,** not merely deprioritised: it is honoured
@@ -259,7 +259,7 @@ asserts this explicitly.
 - `vitest.config.unit.ts` - include the new suites in the unit lane.
 
 **Reverted after review (Finding 3)**
-- `src/kernel/proof.ts` and `src/kernel/policy.ts` are back at HEAD - no kernel changes ship with this story.
+- `src/control-plane/proof.ts` and `src/control-plane/policy.ts` are back at HEAD - no control plane changes ship with this story.
 
 ### Status Evidence
 
@@ -316,16 +316,16 @@ fallback, never fail closed, audit-failure logged, no raw token - is met.
 ### Finding 3 (Med) - POL-028 was unreachable. RULING: (b) REMOVE.
 
 Evidence: neither `src/mcp/canonical-tools.ts` nor
-`src/lib/memory/memory-coordinator.ts` imports anything from `src/kernel/`. The
-kernel's `evaluatePolicies` is reached only via
+`src/lib/memory/memory-coordinator.ts` imports anything from `src/control-plane/`. The
+control plane's `evaluatePolicies` is reached only via
 `src/lib/memory/writer.ts -> syscall_mutate`, which the canonical MCP tools do
 not use. So an MCP request can never populate `ProofClaims.principal`, and
 option (a) is not a short wire-up - it would mean re-hosting the memory write
-path on the kernel syscall layer, which is a different story.
+path on the control plane syscall layer, which is a different story.
 
-Per Brooks' own criterion, that makes it (b). Reverted `src/kernel/proof.ts` and
-`src/kernel/policy.ts` to HEAD; removed `TrustedPrincipalClaims`,
-`PrincipalClaims` and `toPrincipalClaims`; dropped both kernel files from the
+Per Brooks' own criterion, that makes it (b). Reverted `src/control-plane/proof.ts` and
+`src/control-plane/policy.ts` to HEAD; removed `TrustedPrincipalClaims`,
+`PrincipalClaims` and `toPrincipalClaims`; dropped both control plane files from the
 File List. A comment at the former call site records why, and what would make it
 worth re-adding. Tenant binding remains enforced by `resolveEffectiveTenant` in
 `guardToolCall`, which is in the actual request path and is tested.
@@ -416,20 +416,20 @@ needs the equivalent treatment if it turns out to be canonical.
 | D2 | BLUEPRINT.md | `## 9) Logging & Audit` | Does not mention the `mcp_auth_decision` event type introduced by this story. | Document `mcp_auth_decision` as an append-only `events` row emitted for every auth decision, allow and deny, with the guarantee that it never carries a raw token or token hash. |
 | D3 | SOLUTION-ARCHITECTURE.md | `## 2. System Boundary and External Actors` | The MCP HTTP gateway and the stdio server are described without their now-differing identity models. | Record two authenticated entry points: HTTP resolves a per-request principal from a hashed `mcp_tokens` credential; stdio binds an explicit configured service principal at boot. Both refuse to serve anonymously in production. |
 | D4 | SOLUTION-ARCHITECTURE.md | `## 4. Interface Catalogue`, `## 6. Key Architectural Constraints` | No constraint captures the removal of the dead-open default. Prior behaviour was that an unset `ALLURA_MCP_AUTH_TOKEN` disabled auth entirely and `validateBearerAuth()` returned `true`. | State the constraint: `validateBearerAuth()` and its `if (!AUTH_TOKEN) return true` default are **deleted**. Replaced by `resolveRequestPrincipal()` over `McpAuthenticator`. Production startup throws `CONFIG_MISSING` when no supported auth configuration is present, and `DEV_MODE_FORBIDDEN` if dev mode is requested in production. |
-| D5 | SOLUTION-ARCHITECTURE.md | `## 6. Key Architectural Constraints` | Nothing records that kernel policy does **not** enforce principal binding. Risk of a future doc asserting kernel-level enforcement that does not exist. | Record explicitly: tenant/role binding is enforced at the **transport boundary only** (`resolveEffectiveTenant` / `authorizeToolCall` inside `guardToolCall`). `src/kernel/` is **not** involved — the MCP dispatch path does not import it. See Ruling on Finding 3. Do not describe kernel policy as an auth control. |
+| D5 | SOLUTION-ARCHITECTURE.md | `## 6. Key Architectural Constraints` | Nothing records that control plane policy does **not** enforce principal binding. Risk of a future doc asserting control plane-level enforcement that does not exist. | Record explicitly: tenant/role binding is enforced at the **transport boundary only** (`resolveEffectiveTenant` / `authorizeToolCall` inside `guardToolCall`). `src/control-plane/` is **not** involved — the MCP dispatch path does not import it. See Ruling on Finding 3. Do not describe control plane policy as an auth control. |
 | D6 | DATA-DICTIONARY.md | `## PostgreSQL: `events`` | The `events` table is documented without the new `mcp_auth_decision` event type or its metadata contract. | Add an `mcp_auth_decision` subsection: `event_type='mcp_auth_decision'`; `group_id` = effective tenant, falling back to `allura-system` when a request is refused before a tenant resolves; `agent_id` = principal id or `anonymous`; `status` = `completed` on allow, `failed` on deny (constrained by `chk_events_valid_status`). `metadata` JSONB keys: `principal_id`, `effective_tenant`, `roles`, `session_id`, `tool`, `decision`, `reason_code`, `auth_method`, `credential_id`, `occurred_at`. State that no schema change was made — the hot table was not altered and no migration was added. |
 | D7 | DATA-DICTIONARY.md | new section, adjacent to the `events` entry | `mcp_tokens` is not documented in `docs/allura/DATA-DICTIONARY.md` at all, despite being the credential store this story depends on. (It is documented in `docs/allura-hosted/DATA-DICTIONARY.md`.) | Document `mcp_tokens` as the MCP credential table, **reused as-is** by this story: no new credential table, no migration. Raw tokens are never stored — HMAC-SHA256 `token_hash` plus a display `token_prefix` (unique, the lookup key). Revocation and expiry are the nullable `revoked_at` / `expires_at` timestamps; rows are never deleted or destructively mutated. Note `agent_name` has **no uniqueness constraint**, which is why session rebinding compares `id`, not `agent_name` (review Finding 1). |
 | D8 | DATA-DICTIONARY.md | `## Environment Variables` | None of this story's auth configuration is listed. | Add, with production semantics: `ALLURA_MCP_TOKEN_SECRET` (>=16 chars, selects `mcp_token` mode), `ALLURA_MCP_AUTH_TOKEN` (legacy `shared_token` mode), `ALLURA_MCP_DEV_AUTH` (`dev_local`, refused in production), `ALLURA_MCP_DEV_PRINCIPAL_ID` / `_DEV_TENANTS` / `_DEV_ROLES`, `ALLURA_MCP_SHARED_TOKEN_PRINCIPAL` / `_TENANTS` / `_ROLES`, `ALLURA_MCP_SERVICE_PRINCIPAL_ID` / `_SERVICE_TENANTS` / `_SERVICE_ROLES` (required for stdio in production, wildcard forbidden), `ALLURA_MCP_AUTH_CACHE_TTL_MS` (default 0, capped at 60000). |
 | D9 | REQUIREMENTS-MATRIX.md | `## Governed Memory Pipeline — Business → Functional Traceability` | No traceability row maps the authenticated-principal requirement to its enforcement point and evidence. | Add rows tracing AC-1..AC-10 of Story 24.2 to `src/lib/auth/principal-context.ts`, `src/lib/auth/mcp-authenticator.ts`, `src/lib/auth/principal-audit.ts`, with evidence pointing at the 144-test suite (`src/lib/auth/__tests__/`, `src/__tests__/mcp-auth-adversarial.test.ts`). Classify AC-1, AC-6 and AC-7 as implemented-but-not-yet-verified-on-live-infrastructure, matching the `[~]` marks in this story. |
-| D10 | RISKS-AND-DECISIONS.md | `## Architectural Decisions` | No ADR exists for the principal-context contract. | Add an ADR: transport-independent `PrincipalContext` (`principalId`, `tenantIds`, `roles`, `authMethod`, `sessionId`, plus credential-derived `credentialId` and `expiresAt`; frozen). Workspace restriction is explicitly deferred until a canonical handler can enforce it. Alternatives considered: per-tool ad-hoc checks; a kernel-policy layer (rejected — unreachable, Finding 3). Consequence: one chokepoint, `guardToolCall`, shared by HTTP and stdio. Rollback: revert to shared-token mode via `ALLURA_MCP_AUTH_TOKEN`. |
+| D10 | RISKS-AND-DECISIONS.md | `## Architectural Decisions` | No ADR exists for the principal-context contract. | Add an ADR: transport-independent `PrincipalContext` (`principalId`, `tenantIds`, `roles`, `authMethod`, `sessionId`, plus credential-derived `credentialId` and `expiresAt`; frozen). Workspace restriction is explicitly deferred until a canonical handler can enforce it. Alternatives considered: per-tool ad-hoc checks; a control plane-policy layer (rejected — unreachable, Finding 3). Consequence: one chokepoint, `guardToolCall`, shared by HTTP and stdio. Rollback: revert to shared-token mode via `ALLURA_MCP_AUTH_TOKEN`. |
 | D11 | RISKS-AND-DECISIONS.md | `## Architectural Decisions` | No ADR records the three auth modes or the production fail-closed rule. | Add an ADR covering `mcp_token` / `shared_token` / `dev_local`, the selection precedence, production fail-closed startup, and the rule that `dev_local` cannot activate in production. |
 | D12 | RISKS-AND-DECISIONS.md | `## Risks` | The Finding 5 residual gap is not recorded as a risk anywhere outside this story and `.env.example`. | Add the named residual risk: **the legacy shared bearer token has no per-caller identity and no revocation path.** AC-8 revocation covers `mcp_tokens` rows only. In `shared_token` mode a leaked credential can be revoked only by rotating `ALLURA_MCP_AUTH_TOKEN` and restarting, cutting off every caller at once. Mitigation: the token is now inert whenever `mcp_token` mode is active, and the gateway logs an `[auth-config]` warning. Operator guidance: mint `mcp_tokens` credentials, set `ALLURA_MCP_TOKEN_SECRET`, then unset `ALLURA_MCP_AUTH_TOKEN`. |
 | D13 | RISKS-AND-DECISIONS.md | `## Risks` | The unbounded `[mcp-auth-persist-failed]` log under sustained database outage is not recorded. | Add as a low-severity operational risk with the accepted follow-up (rate limit or circuit breaker). Note the behaviour is deliberately fail-open: authentication never fails because auditing is unreachable. |
-| D14 | `docs/allura-hosted/DESIGN-AUTH.md` — **only if that set is canonical** | whole document | Predates this story entirely; describes MCP auth without `PrincipalContext`, without the three modes, and without the dead-open removal. | Rewrite the MCP transport auth section against `src/lib/auth/principal-context.ts` and `mcp-authenticator.ts`. Must not conflict with the Clerk/Next.js web-app auth in `src/lib/auth/api-auth.ts`, which this story did **not** touch, nor with the approval-workflow `role` union in `src/kernel/policy.ts`, which is a different concept from `PrincipalContext.roles`. |
+| D14 | `docs/allura-hosted/DESIGN-AUTH.md` — **only if that set is canonical** | whole document | Predates this story entirely; describes MCP auth without `PrincipalContext`, without the three modes, and without the dead-open removal. | Rewrite the MCP transport auth section against `src/lib/auth/principal-context.ts` and `mcp-authenticator.ts`. Must not conflict with the Clerk/Next.js web-app auth in `src/lib/auth/api-auth.ts`, which this story did **not** touch, nor with the approval-workflow `role` union in `src/control-plane/policy.ts`, which is a different concept from `PrincipalContext.roles`. |
 | D15 | `docs/allura-hosted/DESIGN-MCP-GATEWAY.md` — **only if canonical** | gateway request lifecycle | Describes the gateway without per-request principal resolution or session-to-credential binding. | Document the lifecycle: authenticate every request (not only session initialize, so revocation applies on the next call); bind the MCP session to the **credential identity** via `canRebindSession`; `guardToolCall` before dispatch; `requireElevatedPrincipal` on `/api/admin/*`; verified principal on `/metrics`. |
 | D16 | `docs/allura-hosted/THREAT-MODEL.md` and `SECURITY.md` — **only if canonical**; otherwise 24.8's new `docs/enterprise/threat-model.md` | trust boundaries, attack trees | No coverage of role forgery, tenant forgery, actor forgery or session takeover at the MCP boundary. | Add the trust boundary and the mitigated attack set, each traceable to a test in `src/__tests__/mcp-auth-adversarial.test.ts`: missing auth, malformed auth, forged role, forged tenant, forged curator id, forged workspace, revoked token, expired token, unknown token, tampered token body, and same-`agent_name` session takeover across tenants (Finding 1). |
 
-**Guard-rail for 24.8 (AC-9/AC-10 of that story):** any assertion that kernel
+**Guard-rail for 24.8 (AC-9/AC-10 of that story):** any assertion that control plane
 policy enforces principal or tenant binding is false and must fail review. The
 only enforcement points are `resolveEffectiveTenant`, `resolveEffectiveActor`
 and `authorizeToolCall`, all reached through `guardToolCall`.
@@ -449,8 +449,8 @@ setting.
 | Date | Change | By |
 |---|---|---|
 | 2026-08-15 | Review round 3 (docs only): added the Documentation Impact Record (16 rows, D1-D16) satisfying DoD item 3 by record per Brooks' ruling; edits deferred to Story 24.8. Recorded the unresolved canonical-doc-set question (`docs/allura/` vs `docs/allura-hosted/`) with supporting evidence and no guess. Noted `planning docs/` does not exist in this repo. No file under `docs/` was edited. | Woz (Team RAM) |
-| 2026-08-15 | Review round 2 (docs only, no code change): corrected Scope and Implementation Files, which still claimed kernel policy threading after the Finding-3 revert; swept the whole story and additionally corrected Implementation Plan step 6, the stale AC-7 "persistence is a follow-up" note, and the POL-028 note; recorded as-built Architectural Contract, the review-time descope in Out of Scope, evidence-ID qualification, honest per-item Definition of Done (one item marked NOT DONE), and three known follow-ups. | Woz (Team RAM) |
-| 2026-08-15 | Review round 1: session rebinding now compares credential identity (F1); AC-7 audit persisted to `events.metadata` JSONB (F2); POL-028 and all kernel changes removed as unreachable, ruling (b) (F3); workspace restriction claim deferred because the canonical boundary does not enforce it (F4); legacy shared token gated out of mcp_token mode with a named residual gap (F5). 144 auth tests, 0 regressions. | Woz (Team RAM) |
+| 2026-08-15 | Review round 2 (docs only, no code change): corrected Scope and Implementation Files, which still claimed control plane policy threading after the Finding-3 revert; swept the whole story and additionally corrected Implementation Plan step 6, the stale AC-7 "persistence is a follow-up" note, and the POL-028 note; recorded as-built Architectural Contract, the review-time descope in Out of Scope, evidence-ID qualification, honest per-item Definition of Done (one item marked NOT DONE), and three known follow-ups. | Woz (Team RAM) |
+| 2026-08-15 | Review round 1: session rebinding now compares credential identity (F1); AC-7 audit persisted to `events.metadata` JSONB (F2); POL-028 and all control plane changes removed as unreachable, ruling (b) (F3); workspace restriction claim deferred because the canonical boundary does not enforce it (F4); legacy shared token gated out of mcp_token mode with a named residual gap (F5). 144 auth tests, 0 regressions. | Woz (Team RAM) |
 | 2026-08-15 | Story 24.2 implemented: PrincipalContext contract, MCP credential authenticator over existing `mcp_tokens`, principal-derived authorization at both MCP transports, POL-028 tenant binding, 109 new tests (57 unit + 52 adversarial). Live-infrastructure evidence pending laptop verification. | Woz (Team RAM) |
 | 2026-08-18 | Live laptop evidence captured for AC-1, AC-6, AC-7: production HTTP startup refuses without auth (CONFIG_MISSING), stdio refuses without service principal (CONFIG_MISSING), real `mcp_auth_decision` row inserted into PostgreSQL with all required fields and no raw token/hash. Full unit suite passes (1782/0 failed) with live DB env set; previous failure was environment-precondition. Story marked done. | Sabir (manual verification) |
 | 2026-08-16 | Documentation-only verification receipt: focused 24.2 auth suite passed 151/151; `bun run test:unit` passed 89 files / 1782 tests with 8 files / 171 tests skipped. Full `bun run test` exited 1 with 7 failed test files, 7 failed tests, and one unhandled missing-`POSTGRES_PASSWORD` rejection from `src/lib/mcp-startup.test.ts`. Story remained in-review; no code change or completion claim. | OpenCode |

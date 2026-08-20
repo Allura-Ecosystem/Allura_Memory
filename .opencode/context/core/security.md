@@ -4,7 +4,7 @@
 owner: scout
 last_verified: 2026-05-03
 source_files:
-  - src/kernel/RuVixKernel.ts
+  - src/control-plane/RuVixControlPlane.ts
   - docker/docker-compose.yml
   - .opencode/rules/AI-GUIDELINES.md
 max_age_days: 30
@@ -13,10 +13,10 @@ max_age_days: 30
 # Allura Memory — Security Patterns
 
 ## Access Control
-- **RuVix Kernel** (`src/kernel/`) enforces all database access policies
+- **RuVix Control Plane** (`src/control-plane/`) enforces all database access policies
 - No agent may write directly to Neo4j — must go through promotion pipeline
 - `POL-004`: Rejects non-canonical agent IDs in trace calls — graceful degradation
-- `POL-001`: Direct Neo4j writes are blocked at the kernel level
+- `POL-001`: Direct Neo4j writes are blocked at the control plane level
 
 ## Credential Management
 - `CREDENTIALS_DIR` must be chmod 700 (was world-writable — fixed 2026-04-28)

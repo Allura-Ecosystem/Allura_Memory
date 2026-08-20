@@ -267,7 +267,7 @@ Finish-all-epics order:
 
 ```text
 current review debt -> Epic 2 Frontend Tightening -> E1 Host Stability ->
-E2 Dashboard Quality -> E3/E4 Hardening Deploy -> E4 Kernel Completion ->
+E2 Dashboard Quality -> E3/E4 Hardening Deploy -> E4 Control Plane Completion ->
 E5 Infrastructure Polish
 ```
 
@@ -439,7 +439,7 @@ API routes under `src/app/api/`: agents, audit, curator, dreams, evidence, execu
 ### Key Subsystems
 
 - **Curator** (`src/curator/`): HITL promotion pipeline — scores traces, queues proposals, requires human approval before semantic-graph writes (Neo4j or RuVector via `IGraphAdapter`).
-- **Kernel** (`src/kernel/`): RuVix proof-gated mutation layer.
+- **Control Plane** (`src/control-plane/`): RuVix proof-gated mutation layer.
 - **Process Engine** (`src/lib/process-engine/`): Workflow execution with checkpoint resume, revision pinning.
 - **Budget / Circuit Breaker** (`src/lib/budget/`, `src/lib/circuit-breaker/`): Hard limits and automatic shutdown for agent runaway prevention.
 - **Operational State** (`src/lib/operational-state/`): Ready/empty/stale/error/degraded contract for live surfaces.

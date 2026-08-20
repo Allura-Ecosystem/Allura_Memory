@@ -161,7 +161,7 @@ EMBEDDING_PROVIDER=ollama
 EMBEDDING_MODEL=qwen3-embedding:8b
 RUVECTOR_EMBEDDING_BASE_URL=http://localhost:11434
 
-RUVIX_KERNEL_SECRET=<minimum-32-character-secret>
+RUVIX_CONTROL_PLANE_SECRET=<minimum-32-character-secret>
 ALLURA_MCP_TOKEN_SECRET=<minimum-16-character-secret>
 ```
 
@@ -339,7 +339,7 @@ bun run brain:status
 ```text
 Allura_Memory/
 ├── src/mcp/                 canonical MCP servers and tools
-├── src/kernel/              RuVix policy and enforcement boundary
+├── src/control-plane/              RuVix policy and enforcement boundary
 ├── src/lib/graph-adapter/   PostgreSQL/RuVector graph interface
 ├── src/curator/             scoring, proposals, approval, and workers
 ├── src/lib/audit/           audit and isolation checks

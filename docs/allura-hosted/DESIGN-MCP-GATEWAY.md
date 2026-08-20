@@ -73,7 +73,7 @@ graph LR
 The isolation mechanism is **taxonomy-agnostic**: a token binds to any `^allura-[a-z0-9-]+$` group, and the gateway enforces exactly that group. *What the groups represent is a configuration decision, not a code change.*
 
 - **Per-person** (as shipped in `onboard-team.ts`): `allura-gabriel`, `allura-samuel` — each coworker gets a private graph.
-- **Per-project** (the Faith Meats / Difference Driven split): mint project groups such as `allura-faith-meats` (already the canonical example in the kernel tenant validator) and `allura-difference-driven`, then bind each coworker's token to the project group they should see. **"Gabe sees Difference Driven"** = issue Gabe a token bound to `allura-difference-driven`.
+- **Per-project** (the Faith Meats / Difference Driven split): mint project groups such as `allura-faith-meats` (already the canonical example in the control plane tenant validator) and `allura-difference-driven`, then bind each coworker's token to the project group they should see. **"Gabe sees Difference Driven"** = issue Gabe a token bound to `allura-difference-driven`.
 - **The one real limitation:** one token binds to exactly one `group_id`. For a coworker who must span *multiple* project graphs in one session, either issue multiple scoped tokens or place genuinely-shared knowledge in a common tier (`global` / `allura-system`) that reads overlay via `include_global`. There is no single-token multi-group ACL today — that would be net-new work.
 
 > Owner-only: minting real coworker tokens touches `ALLURA_MCP_TOKEN_SECRET` and live workspaces; run `onboard-team.ts` (or the tokens API) under the operator's control. This doc specifies the design; it does not issue credentials.

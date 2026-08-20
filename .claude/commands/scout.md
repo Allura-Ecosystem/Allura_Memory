@@ -1,5 +1,10 @@
 # /scout — Brain Search Command
 
+> [!NOTE]
+> **AI-Assisted Documentation** — this file is maintained with AI assistance.
+> Where it conflicts with the source code, schemas, or tests, defer to those.
+
+
 ## Usage
 
 ```
@@ -22,7 +27,7 @@ Invoke **Scout** (Grace Hopper persona) to search Allura Brain memory. Scout ret
 ### Pattern 2: Trace Historical Context
 ```
 /scout "Who decided on the group_id enforcement?"
-/scout "When was the RuVix kernel integrated?"
+/scout "When was the RuVix control plane integrated?"
 /scout "What was the rationale for SUPERSEDES versioning?"
 ```
 

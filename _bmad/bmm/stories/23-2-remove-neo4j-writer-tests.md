@@ -6,7 +6,7 @@
 **Agent:** Woz
 
 **Description:**
-12 tests in `src/lib/memory/writer.test.ts` test the `MEMORY_BYPASS_KERNEL=true` Neo4j fallback path (createEntity, createRelationship with Cypher, session.run mocks). Neo4j is dead. These tests reference a code path that should no longer exist. Delete the Neo4j fallback tests or rewrite them to test the PostgreSQL-only kernel path.
+12 tests in `src/lib/memory/writer.test.ts` test the `MEMORY_BYPASS_KERNEL=true` Neo4j fallback path (createEntity, createRelationship with Cypher, session.run mocks). Neo4j is dead. These tests reference a code path that should no longer exist. Delete the Neo4j fallback tests or rewrite them to test the PostgreSQL-only control plane path.
 
 ## Acceptance Criteria
 

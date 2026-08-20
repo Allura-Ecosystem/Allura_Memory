@@ -129,7 +129,7 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `memory_update` | Append-only versioned update (SUPERSEDES chain created) |
 | `memory_promote` | Request promotion to Neo4j (creates proposal) |
 | `sync_contract` | Sync contract mapping applied on curator approve or auto-promote — user_id→Agent, group_id→Project relationships wired |
-| `kernel_rule` | RuVix kernel rule evaluation or rule-anchored audit event |
+| `control_plane_rule` | RuVix control plane rule evaluation or rule-anchored audit event |
 | `proposal_decided` | A curator proposal received a decision (approve or reject) |
 | `proposal_rejected` | A curator proposal was rejected during HITL review |
 | `auto_curated` | A memory was scored/curated by the auto-curator pipeline |
@@ -389,12 +389,12 @@ Controls which graph backend adapter is active for memory and structural operati
 | `confidence` | float | Yes | Confidence or enforcement score from `0.0` to `1.0` |
 | `status` | enum | Yes | Rule lifecycle state (e.g. `active`, `deprecated`, `pending`) |
 
-### `KernelRuleEvent`
+### `ControlPlaneRuleEvent`
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `rule_id` | string | Yes | RuVix rule that was evaluated |
-| `event_type` | string | Yes | Must be `kernel_rule` |
+| `event_type` | string | Yes | Must be `control_plane_rule` |
 | `group_id` | string | Yes | Tenant namespace for the event |
 | `agent_id` | string | Yes | Agent identity for the event |
 | `session_id` | string | Yes | Session identity for the event |
@@ -1018,12 +1018,12 @@ When the sync contract applies mappings, an event with `event_type = 'sync_contr
 }
 ```
 
-### `kernel_rule`
+### `control_plane_rule`
 
 ```jsonc
 {
   "rule_id": "RULE-004",
-  "event_type": "kernel_rule",
+  "event_type": "control_plane_rule",
   "score": 0.91,
   "status": "active",
   "evidence": "proposal_created",
