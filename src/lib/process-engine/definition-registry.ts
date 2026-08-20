@@ -1,6 +1,6 @@
 /**
  * Process Engine — Definition Registry
- * Story 12.1: Production Run Kernel — AD-P1-01
+ * Story 12.1: Production Run ControlPlane — AD-P1-01
  *
  * CRUD operations for versioned process definitions stored in PostgreSQL.
  * - Revisions auto-increment within tenant (group_id + id).

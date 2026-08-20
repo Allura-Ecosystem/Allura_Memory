@@ -35,7 +35,7 @@ export default defineConfig({
     // Excludes: E2E (needs live stack), MCP browser (needs browser), canonical-memory (flaky in parallel)
     include: [
       "src/lib/**/*.test.ts",
-      "src/kernel/**/*.test.ts",
+      "src/control-plane/**/*.test.ts",
       "src/curator/**/*.test.ts",
       // Benchmark harness — pure metric math (no live stack)
       "src/__benchmarks__/**/*.test.ts",

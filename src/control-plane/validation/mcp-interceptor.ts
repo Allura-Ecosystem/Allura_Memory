@@ -1,5 +1,5 @@
 /**
- * RuVix Kernel Phase 3 - MCP Interceptor
+ * RuVix ControlPlane Phase 3 - MCP Interceptor
  *
  * Intercepts all MCP tool calls to verify they carry valid proof-of-intent.
  * Rejects calls without proof and logs rejection details.
@@ -12,7 +12,7 @@
  */
 
 import { ViolationRecord } from "../gate";
-import { getKernelSecretKey, ProofOfIntent, VerificationResult, verifyProof } from "../proof";
+import { getControlPlaneSecretKey, ProofOfIntent, VerificationResult, verifyProof } from "../proof";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -93,7 +93,7 @@ const DEFAULT_CONFIG: InterceptorConfig = {
   logCalls: true,
   logRejections: true,
   rejectWithoutProof: true,
-  allowlist: ["/kernel/", "RuVixKernel", "test", "spec"],
+  allowlist: ["/control-plane/", "RuVixControlPlane", "test", "spec"],
   requiredFields: ["intent", "subject", "actor", "timestamp", "signature", "claims"],
 };
 
@@ -277,7 +277,7 @@ export class McpInterceptor {
       }
     } else {
       try {
-        const secretKey = getKernelSecretKey();
+        const secretKey = getControlPlaneSecretKey();
         verification = verifyProof(proof, secretKey);
         allowed = verification.valid;
 
@@ -494,7 +494,7 @@ export function wouldMcpCallBeAllowed(
 
   // Validate proof
   try {
-    const secretKey = getKernelSecretKey();
+    const secretKey = getControlPlaneSecretKey();
     const verification = verifyProof(proof, secretKey);
 
     return {
@@ -531,7 +531,7 @@ export async function wrapMcpCallWithProof<T>(
   originalFn: () => Promise<T>
 ): Promise<McpCallResult<T>> {
   try {
-    const secretKey = getKernelSecretKey();
+    const secretKey = getControlPlaneSecretKey();
     const verification = verifyProof(proof, secretKey);
 
     if (!verification.valid) {

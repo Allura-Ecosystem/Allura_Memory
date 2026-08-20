@@ -1,13 +1,13 @@
 /**
- * RuVix Kernel - Budget Enforcement Policy
+ * RuVix ControlPlane - Budget Enforcement Policy
  * 
  * Migrated from src/lib/budget/enforcer.ts
  * 
- * This module provides budget enforcement through the kernel.
+ * This module provides budget enforcement through the controlPlane.
  * All operations must stay within configured budget limits.
  * 
  * DEPRECATION: src/lib/budget/enforcer.ts is now deprecated.
- * Use kernel syscalls or SDK wrapper instead.
+ * Use controlPlane syscalls or SDK wrapper instead.
  */
 
 import type { BudgetConsumption, BudgetLimits } from "@/lib/budget/types";
@@ -101,9 +101,9 @@ export const DEFAULT_BUDGET_POLICY: BudgetPolicyConfig = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Budget policy engine for kernel enforcement
+ * Budget policy engine for controlPlane enforcement
  * 
- * Evaluates budget constraints before allowing kernel operations.
+ * Evaluates budget constraints before allowing controlPlane operations.
  */
 export class BudgetPolicyEngine {
   private config: BudgetPolicyConfig;
@@ -238,15 +238,15 @@ export class BudgetPolicyEngine {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KERNEL BUDGET SYSCALL INTEGRATION
+// CONTROL_PLANE BUDGET SYSCALL INTEGRATION
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Build budget claims for kernel proof
+ * Build budget claims for controlPlane proof
  * 
  * @param estimatedCost - Estimated cost of operation
  * @param budgetContext - Additional budget context
- * @returns Claims object for kernel proof
+ * @returns Claims object for controlPlane proof
  */
 export function buildBudgetClaims(
   estimatedCost?: number,

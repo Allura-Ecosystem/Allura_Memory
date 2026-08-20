@@ -2,7 +2,7 @@
  * memory() — Allura Memory Write Wrapper (Story 1.7, Slice C migration)
  *
  * The single interface the MemoryOrchestrator uses for all POST-WRITE operations.
- * Routes writes through the kernel syscall layer (default) or the adapter
+ * Routes writes through the controlPlane syscall layer (default) or the adapter
  * backend (GRAPH_BACKEND=ruvector fallback for testing).
  *
  * Usage:
@@ -26,8 +26,8 @@ import { randomUUID } from "crypto";
 import { createGraphAdapter } from "@/lib/graph-adapter";
 import type { IGraphAdapter } from "@/lib/graph-adapter";
 import { validateGroupId } from "@/lib/validation/group-id";
-import { syscall_mutate, syscall_query } from "@/kernel/syscalls";
-import type { SyscallContext } from "@/kernel/syscalls";
+import { syscall_mutate, syscall_query } from "@/control-plane/syscalls";
+import type { SyscallContext } from "@/control-plane/syscalls";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -315,9 +315,9 @@ function buildAdapterBackend(): MemoryAPI {
   };
 }
 
-// ── Kernel Backend (default, MEMORY_BYPASS_KERNEL != "true") ─────────────────
+// ── ControlPlane Backend (default, MEMORY_BYPASS_CONTROL_PLANE != "true") ─────────────────
 
-function buildKernelBackend(): MemoryAPI {
+function buildControlPlaneBackend(): MemoryAPI {
   function ctx(groupId: string, actor = "system"): SyscallContext {
     return { actor, group_id: groupId, permission_tier: "plugin" };
   }
@@ -344,7 +344,7 @@ function buildKernelBackend(): MemoryAPI {
       );
 
       if (!result.success) {
-        throw new Error(result.error ?? "Kernel mutate failed for createEntity");
+        throw new Error(result.error ?? "ControlPlane mutate failed for createEntity");
       }
 
       for (const rel of relationships ?? []) {
@@ -396,7 +396,7 @@ function buildKernelBackend(): MemoryAPI {
       );
 
       if (!result.success) {
-        throw new Error(result.error ?? "Kernel mutate failed for createRelationship");
+        throw new Error(result.error ?? "ControlPlane mutate failed for createRelationship");
       }
     },
 
@@ -442,8 +442,8 @@ function buildKernelBackend(): MemoryAPI {
 /**
  * memory() — returns a MemoryAPI scoped to the current call.
  *
- * Routes through the kernel syscall layer by default. When
- * MEMORY_BYPASS_KERNEL=true, falls back to the adapter backend
+ * Routes through the controlPlane syscall layer by default. When
+ * MEMORY_BYPASS_CONTROL_PLANE=true, falls back to the adapter backend
  * (IGraphAdapter + PG structural tables) for testing only.
  *
  * @example
@@ -470,10 +470,10 @@ function buildKernelBackend(): MemoryAPI {
  * });
  */
 export function memory(): MemoryAPI {
-  const useKernel = process.env.MEMORY_BYPASS_KERNEL !== "true";
+  const useControlPlane = process.env.MEMORY_BYPASS_CONTROL_PLANE !== "true";
 
-  if (useKernel) {
-    return buildKernelBackend();
+  if (useControlPlane) {
+    return buildControlPlaneBackend();
   }
 
   // Fallback: direct adapter access (for migration/testing only)

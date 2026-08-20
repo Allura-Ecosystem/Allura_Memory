@@ -1,6 +1,6 @@
 /**
  * Doctor Module Tests
- * Phase 1 Run Kernel (AD-P1-04)
+ * Phase 1 Run ControlPlane (AD-P1-04)
  *
  * Covers:
  *   - stale detection (active run, last event older than threshold)

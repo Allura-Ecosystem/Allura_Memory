@@ -1,5 +1,5 @@
 /**
- * RuVix Kernel Phase 3 - Bypass Detector
+ * RuVix ControlPlane Phase 3 - Bypass Detector
  *
  * Monitors for common bypass patterns and detects legacy imports.
  * Alerts on policy violations and provides migration guidance.
@@ -136,7 +136,7 @@ const BYPASS_PATTERNS = {
     /globalThis\[.*\]\s*=\s*/i,
   ],
   environment_manipulation: [
-    /process\.env\.RUVIX_KERNEL_SECRET\s*=/i,
+    /process\.env\.RUVIX_CONTROL_PLANE_SECRET\s*=/i,
     /process\.env\[.*SECRET.*\]\s*=/i,
   ],
 };
@@ -221,7 +221,7 @@ export class BypassDetector {
           location: filePath,
           pattern: pattern.toString(),
           severity: "critical",
-          suggestion: "Migrate to RuVixKernel.syscall or RuVixSDK",
+          suggestion: "Migrate to RuVixControlPlane.syscall or RuVixSDK",
           blocked: this.config.blockCritical,
         };
 
@@ -245,7 +245,7 @@ export class BypassDetector {
           location: filePath,
           pattern: pattern.toString(),
           severity: "high",
-          suggestion: "Use kernel-backed database access only",
+          suggestion: "Use controlPlane-backed database access only",
           blocked: false,
         };
 
@@ -372,7 +372,7 @@ export class BypassDetector {
           location: "process.env",
           pattern: pattern.toString(),
           severity: "critical",
-          suggestion: "Kernel secret manipulation detected - security violation",
+          suggestion: "ControlPlane secret manipulation detected - security violation",
           blocked: true,
         };
 
@@ -530,9 +530,9 @@ export class BypassDetector {
 
     const suggestions = [
       "Replace @/lib/mcp/enforced-client with RuVixSDK",
-      "Use RuVixKernel.syscall for all database operations",
+      "Use RuVixControlPlane.syscall for all database operations",
       "Remove direct pg/neo4j imports",
-      "Update tests to use kernel-backed mocks",
+      "Update tests to use controlPlane-backed mocks",
     ];
 
     return { critical, high, medium, low, suggestions };
@@ -665,10 +665,10 @@ export function isLegacyImport(importPath: string): boolean {
  */
 export function getMigrationPath(legacyImport: string): string {
   if (legacyImport.includes("enforced-client")) {
-    return "RuVixSDK (import { RuVixSDK } from '@/kernel/sdk')";
+    return "RuVixSDK (import { RuVixSDK } from '@/control-plane/sdk')";
   }
   if (legacyImport.includes("direct")) {
-    return "RuVixKernel.syscall (import { RuVixKernel } from '@/kernel/ruvix')";
+    return "RuVixControlPlane.syscall (import { RuVixControlPlane } from '@/control-plane/ruvix')";
   }
-  return "Review and migrate to kernel-backed access patterns";
+  return "Review and migrate to controlPlane-backed access patterns";
 }

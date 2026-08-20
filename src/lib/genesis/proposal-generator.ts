@@ -3,9 +3,9 @@
  * Story 2.2: Genesis Engine (Pattern Proposal)
  *
  * Takes `DetectedPattern` objects from the pattern detector and persists
- * them as `pattern_proposals` rows through the kernel `syscall_mutate`
+ * them as `pattern_proposals` rows through the controlPlane `syscall_mutate`
  * path (AD-40). All writes are tenant-scoped: group_id is mandatory and
- * stamped by the kernel from the proof claims.
+ * stamped by the controlPlane from the proof claims.
  *
  * Approved proposals produce a skill template draft (Markdown) — they are
  * NOT auto-deployed. A human reviewer must explicitly approve via the
@@ -19,7 +19,7 @@ if (typeof window !== "undefined") {
   throw new Error("proposal-generator can only be used server-side");
 }
 
-import { syscall_mutate, type SyscallContext } from "@/kernel/syscalls";
+import { syscall_mutate, type SyscallContext } from "@/control-plane/syscalls";
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
 import type { DetectedPattern } from "@/lib/genesis/pattern-detector";
 
@@ -62,10 +62,10 @@ export interface BatchProposalResult {
 
 /**
  * Persist a single detected pattern as a `pattern_proposals` row through
- * the kernel `syscall_mutate` path.
+ * the controlPlane `syscall_mutate` path.
  *
- * group_id is validated up front and then re-stamped by the kernel from
- * the proof claims (defence in depth). On any validation/kernel failure a
+ * group_id is validated up front and then re-stamped by the controlPlane from
+ * the proof claims (defence in depth). On any validation/controlPlane failure a
  * failed `ProposalResult` is returned — the function never throws.
  */
 export async function generateProposal(
@@ -119,12 +119,12 @@ export async function generateProposal(
 
     if (!result.success) {
       console.error(
-        `[genesis] proposal write failed for pattern=${pattern.pattern_type}: ${result.error ?? "unknown kernel error"}`
+        `[genesis] proposal write failed for pattern=${pattern.pattern_type}: ${result.error ?? "unknown controlPlane error"}`
       );
       return { recorded: false, error: result.error };
     }
 
-    // The kernel returns affected_rows, not the inserted id. We query the
+    // The controlPlane returns affected_rows, not the inserted id. We query the
     // latest proposed row for this group+pattern to recover the id when
     // callers need it (best-effort — returns undefined if not recoverable).
     return { recorded: true };
@@ -167,14 +167,14 @@ export async function generateProposals(
 /**
  * Apply an HITL decision (approve / reject) to a pattern proposal.
  *
- * Writes flow through the kernel `syscall_mutate` path (AD-40). The DB
+ * Writes flow through the controlPlane `syscall_mutate` path (AD-40). The DB
  * trigger on `pattern_proposals` permits UPDATE only on `status` and
  * `reviewed_at`.
  *
  * On approve, a skill template draft (Markdown) is generated and returned
  * — it is NOT auto-deployed. The caller (API route) stores/returns it.
  *
- * Returns null on validation/kernel failure.
+ * Returns null on validation/controlPlane failure.
  */
 export async function reviewProposal(
   group_id: string,

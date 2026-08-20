@@ -4,7 +4,7 @@
  * GET /api/tracking/skill-usage?group_id=X[&skill_name=Y][&since=ISO8601]
  *
  * Returns a usage summary (count, success rate, avg tokens, avg duration) per
- * skill_name for the given tenant group_id. Reads flow through the kernel
+ * skill_name for the given tenant group_id. Reads flow through the controlPlane
  * `syscall_query` path (AD-40 compliance for the read side as well).
  *
  * Query params:

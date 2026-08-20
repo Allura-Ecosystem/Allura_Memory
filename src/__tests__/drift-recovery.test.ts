@@ -18,7 +18,7 @@ vi.mock("@/lib/postgres/connection", () => ({
   closePool: vi.fn(),
 }));
 
-vi.mock("@/kernel/syscalls", () => ({
+vi.mock("@/control-plane/syscalls", () => ({
   syscall_mutate: vi.fn().mockResolvedValue({
     success: true,
     data: { affected_rows: 1, auditId: "test-audit-id" },

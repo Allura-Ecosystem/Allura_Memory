@@ -5,7 +5,7 @@
  * This module continuously checks the health of core Allura Memory components
  * and performs automatic recovery actions when a component is unhealthy. All
  * recovery attempts are logged to the `recovery_events` PostgreSQL table
- * through the kernel `syscall_mutate` path (AD-40 — tenant-stamped writes).
+ * through the controlPlane `syscall_mutate` path (AD-40 — tenant-stamped writes).
  *
  * Health checks performed:
  *   1. PostgreSQL   — pg_isready (or a SELECT 1 fallback)
@@ -22,14 +22,14 @@
  *   - Max 3 recovery attempts per component per cycle before alerting.
  *   - After 3 failed attempts → alert via Brain memory_add (ALERT) + daily note.
  *
- * All writes to recovery_events go through kernel syscall_mutate so the group_id
+ * All writes to recovery_events go through controlPlane syscall_mutate so the group_id
  * tenant stamp and proof-of-intent audit trail are preserved (AD-40).
  */
 
 import { exec } from "child_process";
 import { promisify } from "util";
 import { getPool, isPoolHealthy } from "@/lib/postgres/connection";
-import { syscall_mutate, type SyscallContext, type MutationType } from "@/kernel/syscalls";
+import { syscall_mutate, type SyscallContext, type MutationType } from "@/control-plane/syscalls";
 
 const execAsync = promisify(exec);
 
@@ -224,7 +224,7 @@ async function defaultGetMemoryUsage(): Promise<{ availableMB: number; totalMB: 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Recovery event logging via kernel syscall_mutate (AD-40)
+// Recovery event logging via controlPlane syscall_mutate (AD-40)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Get the default group_id for recovery operations. */
@@ -232,20 +232,20 @@ function getRecoveryGroupId(): string {
   return process.env.ALLURA_RECOVERY_GROUP_ID ?? "allura-system";
 }
 
-/** Build a SyscallContext for kernel-mutated recovery event writes. */
+/** Build a SyscallContext for controlPlane-mutated recovery event writes. */
 function buildSyscallContext(): SyscallContext {
   return {
     actor: "auto-recovery",
     group_id: getRecoveryGroupId(),
-    permission_tier: "kernel",
+    permission_tier: "controlPlane",
     budget_cost: 1,
     audit_context: { subsystem: "self-healing" },
   };
 }
 
 /**
- * Log a recovery event to the recovery_events table via kernel syscall_mutate.
- * This is the AD-40-compliant write path — all writes go through the kernel
+ * Log a recovery event to the recovery_events table via controlPlane syscall_mutate.
+ * This is the AD-40-compliant write path — all writes go through the controlPlane
  * with proof-of-intent and tenant-stamped group_id.
  */
 async function defaultLogRecoveryEvent(
@@ -273,7 +273,7 @@ async function defaultLogRecoveryEvent(
 
   if (!result.success) {
     console.error(
-      `[auto-recovery] Failed to log recovery event via kernel: ${result.error}`,
+      `[auto-recovery] Failed to log recovery event via controlPlane: ${result.error}`,
     );
   }
 }
@@ -319,7 +319,7 @@ async function defaultSendAlert(
   };
 
   try {
-    // Log alert as a recovery event too (via kernel mutate)
+    // Log alert as a recovery event too (via controlPlane mutate)
     await defaultLogRecoveryEvent(component, "alert", true, message);
 
     // Write a daily note (best-effort)
@@ -695,7 +695,7 @@ export async function executeRecovery(
       result = { success: false, error: `Unknown recovery action: ${action}` };
   }
 
-  // Log the recovery event via kernel syscall_mutate (AD-40)
+  // Log the recovery event via controlPlane syscall_mutate (AD-40)
   await deps.logRecoveryEvent(component, action, result.success, result.error);
 
   return {

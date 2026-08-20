@@ -8,13 +8,13 @@
  * - recordTrajectoryAsync non-blocking behavior
  * - withTrajectory success/failure wrapping
  *
- * The kernel syscall_mutate is mocked so no DB is touched — this keeps the
+ * The controlPlane syscall_mutate is mocked so no DB is touched — this keeps the
  * tests in the unit lane (no external services).
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// ── Mock the kernel syscall_mutate so we never touch the DB / proof engine ──
+// ── Mock the controlPlane syscall_mutate so we never touch the DB / proof engine ──
 //
 // vi.mock factories are hoisted to the top of the file, so any variables
 // they reference must be created with vi.hoisted (which is also hoisted).
@@ -23,7 +23,7 @@ const { mockMutate } = vi.hoisted(() => ({
   mockMutate: vi.fn(),
 }));
 
-vi.mock("@/kernel/syscalls", () => ({
+vi.mock("@/control-plane/syscalls", () => ({
   syscall_mutate: mockMutate,
   SyscallContext: {}, // type-only export; just need the symbol present
 }));
@@ -31,19 +31,19 @@ vi.mock("@/kernel/syscalls", () => ({
 // Stub the proof/policy modules that syscalls.ts imports transitively so
 // the mock is self-contained. These are only needed if syscall_mutate is
 // called for real, but mocking them prevents env-dependent initialization.
-vi.mock("@/kernel/proof", () => ({
+vi.mock("@/control-plane/proof", () => ({
   createProof: vi.fn(() => ({ intent: "mutate", subject: "test", actor: "test", claims: {} })),
   verifyProofOrThrow: vi.fn(() => ({ group_id: "allura-test", actor: "test", intent: "mutate", subject: "test", nonce: "n", timestamp: 0 })),
-  getKernelSecretKey: vi.fn(() => "test-secret-key"),
+  getControlPlaneSecretKey: vi.fn(() => "test-secret-key"),
 }));
 
-vi.mock("@/kernel/policy", () => ({
+vi.mock("@/control-plane/policy", () => ({
   evaluatePoliciesOrThrow: vi.fn(),
   Policy: {},
   PolicyContext: {},
 }));
 
-vi.mock("@/kernel/target-resolver", () => ({
+vi.mock("@/control-plane/target-resolver", () => ({
   resolveTarget: vi.fn(async () => ({ success: true, affected_rows: 1 })),
 }));
 
@@ -353,7 +353,7 @@ describe("recordTrajectory", () => {
   it("returns recorded=false when syscall_mutate fails (no throw)", async () => {
     mockMutate.mockResolvedValueOnce({
       success: false,
-      error: "kernel policy denied",
+      error: "controlPlane policy denied",
     });
 
     const result = await recordTrajectory({
@@ -365,11 +365,11 @@ describe("recordTrajectory", () => {
     });
 
     expect(result.recorded).toBe(false);
-    expect(result.error).toBe("kernel policy denied");
+    expect(result.error).toBe("controlPlane policy denied");
   });
 
   it("returns recorded=false when syscall_mutate throws (defensive)", async () => {
-    mockMutate.mockRejectedValueOnce(new Error("unexpected kernel blowup"));
+    mockMutate.mockRejectedValueOnce(new Error("unexpected controlPlane blowup"));
 
     const result = await recordTrajectory({
       group_id: "allura-test",
@@ -380,7 +380,7 @@ describe("recordTrajectory", () => {
     });
 
     expect(result.recorded).toBe(false);
-    expect(result.error).toBe("unexpected kernel blowup");
+    expect(result.error).toBe("unexpected controlPlane blowup");
   });
 
   it("passes group_id in the SyscallContext", async () => {
@@ -426,7 +426,7 @@ describe("recordTrajectoryAsync", () => {
   });
 
   it("swallows errors from recordTrajectory without throwing", async () => {
-    mockMutate.mockRejectedValueOnce(new Error("async kernel failure"));
+    mockMutate.mockRejectedValueOnce(new Error("async controlPlane failure"));
     // Should not throw
     recordTrajectoryAsync({
       group_id: "allura-test",

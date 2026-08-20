@@ -8,7 +8,7 @@ REQUIRED_VARS=(
     "POSTGRES_PASSWORD:Database password"
     "NEO4J_PASSWORD:Neo4j password"
     "OLLAMA_API_KEY:Ollama API key"
-    "RUVIX_KERNEL_SECRET:Secret (min 32 chars)"
+    "RUVIX_CONTROL_PLANE_SECRET:Secret (min 32 chars)"
 )
 
 missing=0
@@ -54,7 +54,7 @@ for entry in "${REQUIRED_VARS[@]}"; do
         echo "  MISSING: $var"
         missing=$((missing + 1))
     else
-        if [[ "$var" == "RUVIX_KERNEL_SECRET" && ${#value} -lt 32 ]]; then
+        if [[ "$var" == "RUVIX_CONTROL_PLANE_SECRET" && ${#value} -lt 32 ]]; then
             echo "  TOO_SHORT: $var (got ${#value}, need 32+)"
             missing=$((missing + 1))
         else

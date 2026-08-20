@@ -1,13 +1,13 @@
 /**
- * RuVix Kernel - Audit Trace Implementation
+ * RuVix ControlPlane - Audit Trace Implementation
  * 
  * Migrated from src/lib/mcp/trace-middleware.ts
  * 
- * This module provides audit trail logging through the kernel.
- * All traces are logged via the kernel's audit syscall.
+ * This module provides audit trail logging through the controlPlane.
+ * All traces are logged via the controlPlane's audit syscall.
  * 
  * DEPRECATION: src/lib/mcp/trace-middleware.ts is now deprecated.
- * Use kernel syscalls or SDK wrapper instead.
+ * Use controlPlane syscalls or SDK wrapper instead.
  */
 
 if (typeof window !== "undefined") {
@@ -29,9 +29,9 @@ const STRING_TRUNCATE_LIMIT = 5000;
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Kernel audit trace configuration
+ * ControlPlane audit trace configuration
  */
-export interface KernelTraceConfig {
+export interface ControlPlaneTraceConfig {
   /** Agent ID */
   agentId: string;
   
@@ -52,9 +52,9 @@ export interface KernelTraceConfig {
 }
 
 /**
- * Kernel trace result
+ * ControlPlane trace result
  */
-export interface KernelTraceResult {
+export interface ControlPlaneTraceResult {
   success: boolean;
   traceId?: string;
   error?: string;
@@ -94,16 +94,16 @@ function serializeAndTruncate<T>(data: T): { data: unknown; wasTruncated: boolea
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KERNEL TRACE LOGGER
+// CONTROL_PLANE TRACE LOGGER
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Kernel-native trace logger
+ * ControlPlane-native trace logger
  * 
- * Logs traces through the kernel's audit syscall.
- * Replaces TraceMiddleware for kernel-backed tracing.
+ * Logs traces through the controlPlane's audit syscall.
+ * Replaces TraceMiddleware for controlPlane-backed tracing.
  */
-export class KernelTraceLogger {
+export class ControlPlaneTraceLogger {
   private readonly agentId: string;
   private readonly groupId: string;
   private readonly workflowId?: string;
@@ -114,7 +114,7 @@ export class KernelTraceLogger {
   private timer: ReturnType<typeof setInterval> | null = null;
   private toolCallCount = 0;
 
-  constructor(config: KernelTraceConfig) {
+  constructor(config: ControlPlaneTraceConfig) {
     if (!config.agentId || config.agentId.trim().length === 0) {
       throw new Error("agentId is required and cannot be empty");
     }
@@ -141,7 +141,7 @@ export class KernelTraceLogger {
     input: Record<string, unknown>,
     result: T,
     durationMs: number
-  ): Promise<KernelTraceResult> {
+  ): Promise<ControlPlaneTraceResult> {
     try {
       const { data: safeInput, wasTruncated: inputTruncated } = serializeAndTruncate(input);
       const { data: safeOutput, wasTruncated: outputTruncated } = serializeAndTruncate(result);
@@ -201,7 +201,7 @@ export class KernelTraceLogger {
     toolName: string,
     error: unknown,
     durationMs: number
-  ): Promise<KernelTraceResult> {
+  ): Promise<ControlPlaneTraceResult> {
     const errorType = error instanceof Error ? error.constructor.name : "Unknown";
     const errorMessage = error instanceof Error ? error.message : String(error);
 
@@ -302,15 +302,15 @@ export class KernelTraceLogger {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KERNEL SYSCALL INTEGRATION
+// CONTROL_PLANE SYSCALL INTEGRATION
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Build audit claims for kernel proof
+ * Build audit claims for controlPlane proof
  * 
  * @param traceType - Type of trace
  * @param auditContext - Additional audit context
- * @returns Claims object for kernel proof
+ * @returns Claims object for controlPlane proof
  */
 export function buildAuditClaims(
   traceType: string,
@@ -325,12 +325,12 @@ export function buildAuditClaims(
 }
 
 /**
- * Create kernel trace logger
+ * Create controlPlane trace logger
  */
-export function createKernelTraceLogger(
-  config: KernelTraceConfig
-): KernelTraceLogger {
-  return new KernelTraceLogger(config);
+export function createControlPlaneTraceLogger(
+  config: ControlPlaneTraceConfig
+): ControlPlaneTraceLogger {
+  return new ControlPlaneTraceLogger(config);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -340,15 +340,15 @@ export function createKernelTraceLogger(
 /**
  * Backward compatibility wrapper for TraceMiddleware migration
  * 
- * This allows gradual migration from TraceMiddleware to kernel-native tracing.
+ * This allows gradual migration from TraceMiddleware to controlPlane-native tracing.
  * 
- * @deprecated Use KernelTraceLogger or kernel syscalls directly
+ * @deprecated Use ControlPlaneTraceLogger or controlPlane syscalls directly
  */
 export class TraceMiddlewareCompatWrapper {
-  private readonly logger: KernelTraceLogger;
+  private readonly logger: ControlPlaneTraceLogger;
 
-  constructor(config: KernelTraceConfig) {
-    this.logger = createKernelTraceLogger(config);
+  constructor(config: ControlPlaneTraceConfig) {
+    this.logger = createControlPlaneTraceLogger(config);
   }
 
   /**

@@ -1,13 +1,13 @@
 /**
- * RuVix Kernel Phase 3 - Direct Access Blocker
+ * RuVix ControlPlane Phase 3 - Direct Access Blocker
  *
- * Detects and blocks direct PostgreSQL/Neo4j connections that bypass the kernel.
- * Enforces 100% kernel-only database access policy.
+ * Detects and blocks direct PostgreSQL/Neo4j connections that bypass the controlPlane.
+ * Enforces 100% controlPlane-only database access policy.
  *
  * STRATEGY:
  * 1. Monitor for direct database client instantiation
  * 2. Intercept raw connection attempts
- * 3. Redirect to kernel-backed path
+ * 3. Redirect to controlPlane-backed path
  * 4. Log all violations for audit
  */
 
@@ -36,7 +36,7 @@ export interface DirectAccessAttempt {
   /** Whether attempt was blocked */
   blocked: boolean;
 
-  /** Redirect target (kernel path) */
+  /** Redirect target (controlPlane path) */
   redirectTarget?: string;
 }
 
@@ -50,7 +50,7 @@ export interface BlockerConfig {
   /** Log attempts (default: true) */
   logAttempts: boolean;
 
-  /** Auto-redirect to kernel (default: true) */
+  /** Auto-redirect to controlPlane (default: true) */
   autoRedirect: boolean;
 
   /** Throw on violation (default: true) */
@@ -69,7 +69,7 @@ const DEFAULT_CONFIG: BlockerConfig = {
   logAttempts: true,
   autoRedirect: true,
   throwOnViolation: true,
-  allowlist: ["/kernel/", "/lib/db/", "test", "spec"],
+  allowlist: ["/control-plane/", "/lib/db/", "test", "spec"],
 };
 
 // Patterns that indicate direct database access
@@ -91,12 +91,12 @@ const DIRECT_ACCESS_PATTERNS = {
   ],
 };
 
-// Allowed kernel paths that can access databases
-const KERNEL_PATHS = [
-  "/src/kernel/",
-  "/kernel/",
-  "@/kernel/",
-  "RuVixKernel",
+// Allowed controlPlane paths that can access databases
+const CONTROL_PLANE_PATHS = [
+  "/src/control-plane/",
+  "/control-plane/",
+  "/control-plane/",
+  "RuVixControlPlane",
   "syscall_",
 ];
 
@@ -131,11 +131,11 @@ export class DirectAccessBlocker {
   }
 
   /**
-   * Check if caller is from kernel path
+   * Check if caller is from controlPlane path
    */
-  private isKernelCaller(stack: string): boolean {
-    // Check if any kernel path is in the stack
-    return KERNEL_PATHS.some((path) => stack.includes(path));
+  private isControlPlaneCaller(stack: string): boolean {
+    // Check if any controlPlane path is in the stack
+    return CONTROL_PLANE_PATHS.some((path) => stack.includes(path));
   }
 
   /**
@@ -216,8 +216,8 @@ export class DirectAccessBlocker {
       return { allowed: true };
     }
 
-    // Check if caller is from kernel
-    if (this.isKernelCaller(caller)) {
+    // Check if caller is from controlPlane
+    if (this.isControlPlaneCaller(caller)) {
       return { allowed: true };
     }
 
@@ -231,7 +231,7 @@ export class DirectAccessBlocker {
       connectionMethod: operation,
       caller: caller,
       blocked: true,
-      redirectTarget: "RuVixKernel.syscall",
+      redirectTarget: "RuVixControlPlane.syscall",
     };
 
     this.recordAttempt(attempt);
@@ -239,7 +239,7 @@ export class DirectAccessBlocker {
     // Determine response
     if (this.config.throwOnViolation) {
       throw new DirectAccessBlockedError(
-        `Direct ${dbType} access blocked. Use RuVix kernel syscalls instead.`,
+        `Direct ${dbType} access blocked. Use RuVix controlPlane syscalls instead.`,
         attempt
       );
     }
@@ -247,8 +247,8 @@ export class DirectAccessBlocker {
     if (this.config.autoRedirect) {
       return {
         allowed: false,
-        redirect: "RuVixKernel.syscall",
-        reason: `Direct ${dbType} access must flow through kernel`,
+        redirect: "RuVixControlPlane.syscall",
+        reason: `Direct ${dbType} access must flow through controlPlane`,
       };
     }
 
@@ -370,14 +370,14 @@ export function clearDirectAccessHistory(): void {
 /**
  * Check if a module is allowed to access databases directly
  */
-export function isKernelOnlyPath(modulePath: string): boolean {
-  return KERNEL_PATHS.some((kernelPath) => modulePath.includes(kernelPath));
+export function isControlPlaneOnlyPath(modulePath: string): boolean {
+  return CONTROL_PLANE_PATHS.some((controlPlanePath) => modulePath.includes(controlPlanePath));
 }
 
 /**
- * Assert that operation is kernel-backed
+ * Assert that operation is controlPlane-backed
  */
-export function assertKernelBacked(
+export function assertControlPlaneBacked(
   operation: string,
   caller: string
 ): void {
@@ -385,8 +385,8 @@ export function assertKernelBacked(
 
   if (!result.allowed) {
     throw new Error(
-      `Kernel enforcement violation: ${result.reason}. ` +
-      `Use RuVixKernel.syscall instead of direct database access.`
+      `ControlPlane enforcement violation: ${result.reason}. ` +
+      `Use RuVixControlPlane.syscall instead of direct database access.`
     );
   }
 }

@@ -8,7 +8,7 @@ import {
   type ProjectManifest,
   type SourceOfTruthRead,
   type ProofClaims,
-} from "../kernel/policy";
+} from "../control-plane/policy";
 
 // Minimal ProofClaims for testing
 const baseClaims: ProofClaims = {

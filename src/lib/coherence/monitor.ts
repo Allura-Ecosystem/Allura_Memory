@@ -14,7 +14,7 @@
  *   3. For each candidate pair (similar OR same entity), run the pure
  *      detectors in src/lib/coherence/detectors.ts.
  *   4. Deduplicate against existing *active* conflicts for the same pair.
- *   5. Persist new conflicts to `coherence_conflicts` through the kernel
+ *   5. Persist new conflicts to `coherence_conflicts` through the controlPlane
  *      syscall_mutate path (AD-40) — never a direct DB write.
  *
  * Invariants:
@@ -29,7 +29,7 @@ if (typeof window !== "undefined") {
 }
 
 import { getPool } from "@/lib/postgres/connection";
-import { syscall_mutate, type SyscallContext } from "@/kernel/syscalls";
+import { syscall_mutate, type SyscallContext } from "@/control-plane/syscalls";
 import {
   GroupIdValidationError,
   validateGroupId,
@@ -170,7 +170,7 @@ export async function runCoherenceScan(
     return result;
   }
 
-  // 7. Persist new conflicts through the kernel
+  // 7. Persist new conflicts through the controlPlane
   const context: SyscallContext = {
     actor: agentId,
     group_id: groupId,
@@ -206,12 +206,12 @@ export async function runCoherenceScan(
         existingKeys.add(key);
       } else {
         result.errors.push(
-          `Kernel write failed for pair ${det.memory_id_a}/${det.memory_id_b}: ${res.error ?? "unknown"}`
+          `ControlPlane write failed for pair ${det.memory_id_a}/${det.memory_id_b}: ${res.error ?? "unknown"}`
         );
       }
     } catch (error) {
       result.errors.push(
-        `Kernel write threw for pair ${det.memory_id_a}/${det.memory_id_b}: ${error instanceof Error ? error.message : String(error)}`
+        `ControlPlane write threw for pair ${det.memory_id_a}/${det.memory_id_b}: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }

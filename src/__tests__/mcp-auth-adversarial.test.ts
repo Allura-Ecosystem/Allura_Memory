@@ -413,7 +413,7 @@ describe("AC-9: adversarial matrix", () => {
   it("case 8 — valid least-privilege access: 200 OK", async () => {
     const { outcome, principal, args } = await simulateRequest(auth, bearer(RAW_VIEWER), "memory_search", {
       group_id: "allura-system",
-      query: "kernel",
+      query: "controlPlane",
     });
     expect(outcome.status).toBe(200);
     expect(outcome.reason).toBe("OK");
@@ -421,7 +421,7 @@ describe("AC-9: adversarial matrix", () => {
     expect(principal?.roles).toEqual(["viewer"]);
     expect(principal?.authMethod).toBe("mcp_token");
     expect(args?.group_id).toBe("allura-system");
-    expect(args?.query).toBe("kernel");
+    expect(args?.query).toBe("controlPlane");
   });
 
   it("case 9 — unknown token: 401 AUTH_INVALID", async () => {

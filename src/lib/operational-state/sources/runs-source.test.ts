@@ -1,5 +1,5 @@
 /**
- * Runs Source — Unit Tests (Phase 1 Run Kernel)
+ * Runs Source — Unit Tests (Phase 1 Run ControlPlane)
  *
  * Pins the SourceOutcome mapping for the Runs surface:
  * - successful query          -> { ok: true } with parsed snapshot

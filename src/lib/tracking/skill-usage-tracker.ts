@@ -2,23 +2,23 @@
  * Skill Usage Tracker — Story 1.2
  *
  * Logs skill load events to the `skill_usage_events` append-only table through
- * the kernel `syscall_mutate` path. All writes flow through the RuVix kernel so
+ * the controlPlane `syscall_mutate` path. All writes flow through the RuVix controlPlane so
  * that proof-of-intent, tenant isolation (POL-001), and the audit trail
- * (POL-005) are enforced — satisfying AD-40 (all writes via kernel syscalls).
+ * (POL-005) are enforced — satisfying AD-40 (all writes via controlPlane syscalls).
  *
- * The kernel stamps `group_id` onto every insert (see `syscall_mutate` in
- * `src/kernel/syscalls.ts`), so callers must supply a valid `group_id` in the
+ * The controlPlane stamps `group_id` onto every insert (see `syscall_mutate` in
+ * `src/control-plane/syscalls.ts`), so callers must supply a valid `group_id` in the
  * `SyscallContext` and do NOT need to repeat it in the data payload.
  */
 
-// Server-only guard: the tracker touches the kernel and PostgreSQL pool.
+// Server-only guard: the tracker touches the controlPlane and PostgreSQL pool.
 import "server-only"
 
 import {
   syscall_mutate,
   syscall_query,
   type SyscallContext,
-} from "@/kernel/syscalls"
+} from "@/control-plane/syscalls"
 import {
   GroupIdValidationError,
   validateGroupId,
@@ -103,7 +103,7 @@ export class SkillUsageValidationError extends Error {
 const SKILL_NAME_PATTERN = /^[a-z0-9][a-z0-9_-]{0,127}$/
 
 /**
- * Validate a skill usage event payload before it enters the kernel.
+ * Validate a skill usage event payload before it enters the controlPlane.
  */
 export function validateSkillUsageEvent(event: SkillUsageEvent): void {
   const errors: string[] = []
@@ -157,21 +157,21 @@ export function validateSkillUsageEvent(event: SkillUsageEvent): void {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Write path — kernel syscall_mutate
+// Write path — controlPlane syscall_mutate
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Log a skill usage event through the kernel `syscall_mutate` path.
+ * Log a skill usage event through the controlPlane `syscall_mutate` path.
  *
- * AD-40 compliance: the only write path is the kernel. The kernel stamps
+ * AD-40 compliance: the only write path is the controlPlane. The controlPlane stamps
  * `group_id` onto the data payload from the signed proof claims, so the
  * caller's `group_id` (in `event` and in `context`) is authoritative.
  *
  * @param event   - The skill usage event payload.
- * @param context - Kernel syscall context (actor, group_id, permission tier).
- * @returns `{ id, auditId }` on success, throws on kernel failure.
+ * @param context - ControlPlane syscall context (actor, group_id, permission tier).
+ * @returns `{ id, auditId }` on success, throws on controlPlane failure.
  * @throws {SkillUsageValidationError} if the payload is invalid.
- * @throws {Error} if the kernel syscall returns `success: false`.
+ * @throws {Error} if the controlPlane syscall returns `success: false`.
  */
 export async function logSkillUsage(
   event: SkillUsageEvent,
@@ -189,11 +189,11 @@ export async function logSkillUsage(
     },
   }
 
-  // The kernel's resolveTarget will INSERT into the `skill_usage_events`
-  // table using the data payload. `group_id` is re-stamped by the kernel
+  // The controlPlane's resolveTarget will INSERT into the `skill_usage_events`
+  // table using the data payload. `group_id` is re-stamped by the controlPlane
   // from the proof claims (defense-in-depth), but we include it here so
   // the payload is self-describing and the append-only table gets it even
-  // if the kernel's stamping is ever bypassed.
+  // if the controlPlane's stamping is ever bypassed.
   const result = await syscall_mutate(
     {
       type: "insert",
@@ -211,7 +211,7 @@ export async function logSkillUsage(
 
   if (!result.success) {
     throw new Error(
-      `Skill usage log failed (kernel): ${result.error ?? "unknown error"}`,
+      `Skill usage log failed (controlPlane): ${result.error ?? "unknown error"}`,
     )
   }
 
@@ -226,18 +226,18 @@ export async function logSkillUsage(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Read path — kernel syscall_query + direct summary aggregation
+// Read path — controlPlane syscall_query + direct summary aggregation
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Query raw skill usage events for a group via the kernel `syscall_query` path.
+ * Query raw skill usage events for a group via the controlPlane `syscall_query` path.
  *
- * Returns the most recent events (ordered by created_at DESC). The kernel
+ * Returns the most recent events (ordered by created_at DESC). The controlPlane
  * stamps `group_id` onto the query filter from the proof claims, enforcing
  * tenant isolation on reads as well as writes.
  *
  * @param query   - Query options (group_id required).
- * @param context - Optional kernel syscall context override.
+ * @param context - Optional controlPlane syscall context override.
  * @returns Array of raw event rows.
  * @throws {SkillUsageValidationError} if group_id is invalid.
  */
@@ -267,7 +267,7 @@ export async function getSkillUsageEvents(
 
   if (!result.success) {
     throw new Error(
-      `Skill usage query failed (kernel): ${result.error ?? "unknown error"}`,
+      `Skill usage query failed (controlPlane): ${result.error ?? "unknown error"}`,
     )
   }
 
@@ -278,8 +278,8 @@ export async function getSkillUsageEvents(
  * Compute a usage summary (count, success rate, avg tokens, avg duration)
  * per skill_name for a given group_id.
  *
- * The kernel's `syscall_query` returns raw rows; this function performs the
- * aggregation in-memory so the read stays fully kernel-gated (AD-40) without
+ * The controlPlane's `syscall_query` returns raw rows; this function performs the
+ * aggregation in-memory so the read stays fully controlPlane-gated (AD-40) without
  * needing a second direct-DB aggregation query. A production deployment may
  * alternatively read the `skill_usage_summary` view directly via the pool;
  * both paths are tenant-isolated by group_id.
@@ -293,7 +293,7 @@ export async function getSkillUsageSummary(
 ): Promise<SkillUsageSummaryRow[]> {
   const events = await getSkillUsageEvents(query)
 
-  // Optional: filter by `since` in-memory (kernel query handler is equality-only)
+  // Optional: filter by `since` in-memory (controlPlane query handler is equality-only)
   const filtered = query.since
     ? events.filter((e) => new Date(e.created_at).getTime() >= query.since!.getTime())
     : events

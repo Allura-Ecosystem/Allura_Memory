@@ -58,7 +58,7 @@ export default defineConfig({
       "tests/integration/members-page-contract.test.ts",
       // Genesis Engine (Story 2.2) — insert trajectories → detect → verify proposal
       "tests/integration/genesis-engine.test.ts",
-      // Coherence Monitor integration (Story 2.1) — mocked DB + kernel
+      // Coherence Monitor integration (Story 2.1) — mocked DB + controlPlane
       "src/__tests__/coherence-integration.test.ts",
     ],
     exclude: [

@@ -1,8 +1,8 @@
 /**
- * Kernel-backed Trace API
+ * ControlPlane-backed Trace API
  * 
- * Replaces the direct PostgreSQL implementation with RuVix kernel syscalls.
- * All trace operations now flow through the kernel for proof-gated mutation.
+ * Replaces the direct PostgreSQL implementation with RuVix controlPlane syscalls.
+ * All trace operations now flow through the controlPlane for proof-gated mutation.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -60,8 +60,8 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
     const type = searchParams.get('type');
 
-    // TEMP: Still using direct query for GET (kernel-backed query not implemented)
-    // TODO: Add kernel-backed query syscall
+    // TEMP: Still using direct query for GET (controlPlane-backed query not implemented)
+    // TODO: Add controlPlane-backed query syscall
     const { queryTraces } = await import('@/lib/postgres/traces');
     const traces = await queryTraces({
       group_id,
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/memory/traces
  * 
- * Log a trace with RuVix kernel proof-gated mutation.
+ * Log a trace with RuVix controlPlane proof-gated mutation.
  * Body:
  * - group_id: Required tenant identifier (format: allura-*)
  * - type: Trace type (memory | decision | action | prompt)
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build kernel-backed trace log
+    // Build controlPlane-backed trace log
     const traceLog: TraceLog = {
       agent_id: agent || 'api',
       group_id: validatedGroupId,
@@ -145,21 +145,21 @@ export async function POST(request: NextRequest) {
       metadata: metadata || {},
     };
 
-    // Log through kernel (proof-gated)
+    // Log through controlPlane (proof-gated)
     const trace = await logTrace(traceLog);
 
     return NextResponse.json({ success: true, trace });
   } catch (error) {
-    console.error('Failed to log trace via kernel:', error);
+    console.error('Failed to log trace via controlPlane:', error);
     
-    // Check if it's a kernel initialization error
+    // Check if it's a controlPlane initialization error
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    if (errorMessage.includes('RUVIX_KERNEL_SECRET') || errorMessage.includes('kernel')) {
+    if (errorMessage.includes('RUVIX_CONTROL_PLANE_SECRET') || errorMessage.includes('controlPlane')) {
       return NextResponse.json(
         { 
-          error: 'Kernel not initialized', 
-          details: 'RUVIX_KERNEL_SECRET environment variable must be set',
-          hint: 'Add RUVIX_KERNEL_SECRET to your .env.local file'
+          error: 'ControlPlane not initialized', 
+          details: 'RUVIX_CONTROL_PLANE_SECRET environment variable must be set',
+          hint: 'Add RUVIX_CONTROL_PLANE_SECRET to your .env.local file'
         },
         { status: 503 }
       );

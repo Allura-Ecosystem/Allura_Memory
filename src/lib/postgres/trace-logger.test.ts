@@ -1,6 +1,6 @@
 import { Pool } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { RuVixKernel } from "@/kernel/ruvix";
+import { RuVixControlPlane } from "@/control-plane/ruvix";
 import { closePool, getPool } from "./connection";
 import {
   countTraces,
@@ -25,21 +25,21 @@ describe.skipIf(!shouldRunE2E)("TraceLogger", () => {
   let originalSecret: string | undefined;
 
   beforeEach(async () => {
-    // Kernel proof engine requires RUVIX_KERNEL_SECRET
-    originalSecret = process.env.RUVIX_KERNEL_SECRET;
-    process.env.RUVIX_KERNEL_SECRET = "test-secret-key-for-ruvix-kernel-proof-engine-32chars";
-    RuVixKernel.initializeKernel();
+    // ControlPlane proof engine requires RUVIX_CONTROL_PLANE_SECRET
+    originalSecret = process.env.RUVIX_CONTROL_PLANE_SECRET;
+    process.env.RUVIX_CONTROL_PLANE_SECRET = "test-secret-key-for-ruvix-controlPlane-proof-engine-32chars";
+    RuVixControlPlane.initializeControlPlane();
 
     // Ensure pool is ready
     const pool = getPool();
   });
 
   afterEach(() => {
-    // Restore original RUVIX_KERNEL_SECRET
+    // Restore original RUVIX_CONTROL_PLANE_SECRET
     if (originalSecret !== undefined) {
-      process.env.RUVIX_KERNEL_SECRET = originalSecret;
+      process.env.RUVIX_CONTROL_PLANE_SECRET = originalSecret;
     } else {
-      delete process.env.RUVIX_KERNEL_SECRET;
+      delete process.env.RUVIX_CONTROL_PLANE_SECRET;
     }
   });
 

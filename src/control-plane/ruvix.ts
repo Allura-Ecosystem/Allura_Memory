@@ -1,7 +1,7 @@
 /**
- * RuVix Kernel - Core Orchestrator
+ * RuVix ControlPlane - Core Orchestrator
  * 
- * The L1 kernel for Allura Agent-OS.
+ * The L1 controlPlane for Allura Agent-OS.
  * Provides proof-gated mutation and zero-trust enforcement.
  * 
  * 6 PRIMITIVES:
@@ -33,10 +33,10 @@ import {
 } from "./policy";
 import {
   createProof,
-  getKernelSecretKey,
+  getControlPlaneSecretKey,
   ProofClaims,
   ProofOfIntent,
-  validateKernelSecret,
+  validateControlPlaneSecret,
   verifyProof,
   verifyProofOrThrow,
 } from "./proof";
@@ -62,24 +62,24 @@ import {
 } from "./syscalls";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KERNEL VERSION
+// CONTROL_PLANE VERSION
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const KERNEL_VERSION = "1.0.0-alpha";
-export const KERNEL_BUILD = "ruvix-l1-core";
+export const CONTROL_PLANE_VERSION = "1.0.0-alpha";
+export const CONTROL_PLANE_BUILD = "ruvix-l1-core";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KERNEL INITIALIZATION
+// CONTROL_PLANE INITIALIZATION
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Kernel initialization status
+ * ControlPlane initialization status
  */
-export interface KernelStatus {
-  /** Whether kernel is initialized */
+export interface ControlPlaneStatus {
+  /** Whether controlPlane is initialized */
   initialized: boolean;
   
-  /** Kernel version */
+  /** ControlPlane version */
   version: string;
   
   /** Secret key configured */
@@ -96,22 +96,22 @@ export interface KernelStatus {
 }
 
 /**
- * Initialize the RuVix kernel
+ * Initialize the RuVix controlPlane
  * 
- * Must be called before any kernel operations.
+ * Must be called before any controlPlane operations.
  * Validates environment, loads policies, and prepares syscalls.
  * 
- * @returns Kernel status
+ * @returns ControlPlane status
  */
-export function initializeKernel(): KernelStatus {
+export function initializeControlPlane(): ControlPlaneStatus {
   const errors: string[] = [];
   
   // Check 1: Secret key
-  const secretConfigured = validateKernelSecret();
+  const secretConfigured = validateControlPlaneSecret();
   if (!secretConfigured) {
     errors.push(
-      "RUVIX_KERNEL_SECRET environment variable is not configured. " +
-      "Kernel cannot operate without cryptographic proof verification."
+      "RUVIX_CONTROL_PLANE_SECRET environment variable is not configured. " +
+      "ControlPlane cannot operate without cryptographic proof verification."
     );
   }
   
@@ -129,7 +129,7 @@ export function initializeKernel(): KernelStatus {
   
   return {
     initialized: errors.length === 0,
-    version: KERNEL_VERSION,
+    version: CONTROL_PLANE_VERSION,
     secretConfigured,
     syscalls,
     policies,
@@ -266,17 +266,17 @@ export async function syscall(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KERNEL EXPORTS
+// CONTROL_PLANE EXPORTS
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Full kernel API export
+ * Full controlPlane API export
  */
-export const RuVixKernel = {
+export const RuVixControlPlane = {
   // Initialization
-  initializeKernel,
-  KERNEL_VERSION,
-  KERNEL_BUILD,
+  initializeControlPlane,
+  CONTROL_PLANE_VERSION,
+  CONTROL_PLANE_BUILD,
   
   // 6 Primitives
   mutate,
@@ -294,8 +294,8 @@ export const RuVixKernel = {
   createProof,
   verifyProof,
   verifyProofOrThrow,
-  getKernelSecretKey,
-  validateKernelSecret,
+  getControlPlaneSecretKey,
+  validateControlPlaneSecret,
   
   // Policy engine (exported for SDK wrapper)
   evaluatePolicies,
@@ -317,4 +317,4 @@ export const RuVixKernel = {
 // DEFAULT EXPORT
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default RuVixKernel;
+export default RuVixControlPlane;

@@ -9,7 +9,7 @@
  */
 
 import type { Pool } from "pg"
-import { RuVixKernel } from "@/kernel/ruvix"
+import { RuVixControlPlane } from "@/control-plane/ruvix"
 import { canonicalizeAgentId } from "@/lib/agents/canonical-identity"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import { getPool } from "./connection"
@@ -130,9 +130,9 @@ function validateTraceLog(trace: TraceLog): void {
 }
 
 /**
- * Log a trace via RuVix kernel (proof-gated, append-only)
+ * Log a trace via RuVix controlPlane (proof-gated, append-only)
  *
- * Story 1.1: This is the NEW implementation using the kernel for:
+ * Story 1.1: This is the NEW implementation using the controlPlane for:
  * - Proof-of-intent validation (with nonce)
  * - Tenant isolation enforcement (POL-001)
  * - Audit trail requirements (POL-005)
@@ -141,7 +141,7 @@ function validateTraceLog(trace: TraceLog): void {
  * @param trace - Trace payload to log
  * @returns The created trace record with assigned ID
  * @throws TraceValidationError if required fields are missing or invalid
- * @throws Error if kernel syscall fails
+ * @throws Error if controlPlane syscall fails
  */
 export async function logTrace(trace: TraceLog): Promise<TraceRecord> {
   const canonicalAgentId = canonicalizeAgentId(trace.agent_id)
@@ -153,7 +153,7 @@ export async function logTrace(trace: TraceLog): Promise<TraceRecord> {
   // Validate required fields first
   validateTraceLog(canonicalTrace)
 
-  // Prepare trace data for kernel
+  // Prepare trace data for controlPlane
   const traceData = {
     table: "events",
     data: {
@@ -170,8 +170,8 @@ export async function logTrace(trace: TraceLog): Promise<TraceRecord> {
     },
   }
 
-  // Call kernel trace syscall with proof-of-intent
-  const result = await RuVixKernel.syscall("trace", traceData, {
+  // Call controlPlane trace syscall with proof-of-intent
+  const result = await RuVixControlPlane.syscall("trace", traceData, {
     actor: canonicalTrace.agent_id,
     group_id: canonicalTrace.group_id,
     permission_tier: "plugin",
@@ -194,7 +194,7 @@ export async function logTrace(trace: TraceLog): Promise<TraceRecord> {
     confidence: canonicalTrace.confidence,
     logged_at: new Date().toISOString(),
     agent_version: "1.0.0",
-    kernel_audit_id: result.auditId, // Track kernel audit ID
+    control_plane_audit_id: result.auditId, // Track controlPlane audit ID
   }
 
   // Build outcome with content

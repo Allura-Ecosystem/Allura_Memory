@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ProofClaims } from "../kernel/proof";
+import type { ProofClaims } from "../control-plane/proof";
 import {
   evaluatePolicies,
   POLICY_EMAIL_ACTION_APPROVAL_GATE,
@@ -8,7 +8,7 @@ import {
   POLICY_EMAIL_MEMORY_PROMOTION_REQUIRES_HITL,
   POLICY_HIGH_RISK_EMAIL_QUARANTINE,
   type PolicyContext,
-} from "../kernel/policy";
+} from "../control-plane/policy";
 
 const baseClaims: ProofClaims = {
   group_id: "allura-system",

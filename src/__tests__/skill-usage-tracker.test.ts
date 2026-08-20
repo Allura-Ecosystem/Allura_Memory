@@ -5,26 +5,26 @@
  *
  * Verifies:
  *   - Payload validation (group_id, skill_name, success, token_count, duration_ms)
- *   - `logSkillUsage` routes through kernel `syscall_mutate` with the correct
+ *   - `logSkillUsage` routes through controlPlane `syscall_mutate` with the correct
  *     target (`pg:skill_usage_events`) and context (AD-40 compliance).
- *   - `getSkillUsageEvents` routes through kernel `syscall_query`.
+ *   - `getSkillUsageEvents` routes through controlPlane `syscall_query`.
  *   - `getSkillUsageSummary` aggregates count, success rate, avg tokens, avg
  *     duration per skill_name and supports `skill_name` / `since` filters.
  *   - The API route returns the expected response shapes and status codes.
  *
- * The kernel syscalls are mocked so no live PostgreSQL is required.
+ * The controlPlane syscalls are mocked so no live PostgreSQL is required.
  */
 
 import { NextRequest } from "next/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-// ── Mock the kernel syscalls BEFORE importing the tracker ─────────────────────
+// ── Mock the controlPlane syscalls BEFORE importing the tracker ─────────────────────
 // This mirrors the pattern in src/lib/memory/writer.test.ts.
 
 const mockMutate = vi.fn()
 const mockQuery = vi.fn()
 
-vi.mock("@/kernel/syscalls", () => ({
+vi.mock("@/control-plane/syscalls", () => ({
   syscall_mutate: (...args: unknown[]) => mockMutate(...args),
   syscall_query: (...args: unknown[]) => mockQuery(...args),
 }))
@@ -72,17 +72,17 @@ function makeStoredRow(overrides: Partial<Record<string, unknown>> = {}) {
   }
 }
 
-function kernelMutateSuccess() {
+function controlPlaneMutateSuccess() {
   return {
     success: true,
     data: { affected_rows: 1, auditId: "audit-123" },
   }
 }
 
-function kernelMutateFailure() {
+function controlPlaneMutateFailure() {
   return {
     success: false,
-    error: "Kernel policy denied",
+    error: "ControlPlane policy denied",
   }
 }
 
@@ -189,7 +189,7 @@ describe("validateSkillUsageEvent", () => {
 
 describe("logSkillUsage", () => {
   it("routes through syscall_mutate with the pg:skill_usage_events target", async () => {
-    mockMutate.mockResolvedValue(kernelMutateSuccess())
+    mockMutate.mockResolvedValue(controlPlaneMutateSuccess())
 
     await logSkillUsage(makeEvent())
 
@@ -206,7 +206,7 @@ describe("logSkillUsage", () => {
   })
 
   it("includes all payload fields in the data bag", async () => {
-    mockMutate.mockResolvedValue(kernelMutateSuccess())
+    mockMutate.mockResolvedValue(controlPlaneMutateSuccess())
 
     await logSkillUsage(makeEvent({ token_count: 250, duration_ms: 75 }))
 
@@ -221,7 +221,7 @@ describe("logSkillUsage", () => {
   })
 
   it("defaults token_count and duration_ms to 0", async () => {
-    mockMutate.mockResolvedValue(kernelMutateSuccess())
+    mockMutate.mockResolvedValue(controlPlaneMutateSuccess())
 
     await logSkillUsage({
       group_id: "allura-test",
@@ -234,21 +234,21 @@ describe("logSkillUsage", () => {
     expect(request.data.duration_ms).toBe(0)
   })
 
-  it("returns the auditId from the kernel result", async () => {
-    mockMutate.mockResolvedValue(kernelMutateSuccess())
+  it("returns the auditId from the controlPlane result", async () => {
+    mockMutate.mockResolvedValue(controlPlaneMutateSuccess())
 
     const result = await logSkillUsage(makeEvent())
     expect(result.auditId).toBe("audit-123")
   })
 
-  it("throws when the kernel returns success: false", async () => {
-    mockMutate.mockResolvedValue(kernelMutateFailure())
+  it("throws when the controlPlane returns success: false", async () => {
+    mockMutate.mockResolvedValue(controlPlaneMutateFailure())
 
-    await expect(logSkillUsage(makeEvent())).rejects.toThrow(/Kernel policy denied/)
+    await expect(logSkillUsage(makeEvent())).rejects.toThrow(/ControlPlane policy denied/)
   })
 
-  it("throws SkillUsageValidationError before calling the kernel for bad input", async () => {
-    mockMutate.mockResolvedValue(kernelMutateSuccess())
+  it("throws SkillUsageValidationError before calling the controlPlane for bad input", async () => {
+    mockMutate.mockResolvedValue(controlPlaneMutateSuccess())
 
     await expect(
       logSkillUsage(makeEvent({ group_id: "bad-group" })),
@@ -257,7 +257,7 @@ describe("logSkillUsage", () => {
   })
 
   it("honours an explicit actor override", async () => {
-    mockMutate.mockResolvedValue(kernelMutateSuccess())
+    mockMutate.mockResolvedValue(controlPlaneMutateSuccess())
 
     await logSkillUsage(makeEvent(), { actor: "agent-brooks" })
 
@@ -293,7 +293,7 @@ describe("getSkillUsageEvents", () => {
     expect(request.query).toMatchObject({ skill_name: "my-skill" })
   })
 
-  it("throws when the kernel returns success: false", async () => {
+  it("throws when the controlPlane returns success: false", async () => {
     mockQuery.mockResolvedValue({ success: false, error: "denied" })
 
     await expect(getSkillUsageEvents({ group_id: "allura-test" })).rejects.toThrow(
@@ -360,8 +360,8 @@ describe("getSkillUsageSummary", () => {
     expect(summary).toEqual([])
   })
 
-  it("filters by skill_name when provided (kernel-side filter)", async () => {
-    // The kernel's syscall_query is mocked — it returns whatever we give it.
+  it("filters by skill_name when provided (controlPlane-side filter)", async () => {
+    // The controlPlane's syscall_query is mocked — it returns whatever we give it.
     // In production, the query handler would filter rows by skill_name in SQL.
     // Here we simulate that by only returning the matching row.
     const rows = [makeStoredRow({ skill_name: "alpha" })]
@@ -372,7 +372,7 @@ describe("getSkillUsageSummary", () => {
       skill_name: "alpha",
     })
 
-    // Verify skill_name was forwarded into the kernel query filter
+    // Verify skill_name was forwarded into the controlPlane query filter
     const [request] = mockQuery.mock.calls[0] as [{ query: Record<string, unknown> }, unknown]
     expect(request.query).toMatchObject({ skill_name: "alpha" })
 
@@ -502,7 +502,7 @@ describe("GET /api/tracking/skill-usage", () => {
     expect(body.totals.success_rate_pct).toBe(0)
   })
 
-  it("passes skill_name and since query params through to the kernel query", async () => {
+  it("passes skill_name and since query params through to the controlPlane query", async () => {
     mockQuery.mockResolvedValue({ success: true, data: [] })
 
     const req = new NextRequest(

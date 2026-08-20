@@ -1,5 +1,5 @@
 /**
- * RuVix Kernel - Proof-of-Intent Engine
+ * RuVix ControlPlane - Proof-of-Intent Engine
  * 
  * TRUSTED CORE: This module contains the cryptographic proof verification logic.
  * Zero external dependencies. Zero trust assumptions.
@@ -54,8 +54,8 @@ export interface ProofClaims {
   /** Budget tracking - operation cost estimate */
   budget_cost?: number;
   
-  /** Permission tier required (kernel, plugin, skill) */
-  permission_tier?: "kernel" | "plugin" | "skill";
+  /** Permission tier required (controlPlane, plugin, skill) */
+  permission_tier?: "controlPlane" | "plugin" | "skill";
   
   /** Additional context for audit trail */
   audit_context?: Record<string, unknown>;
@@ -303,21 +303,21 @@ export function verifyProofOrThrow(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KERNEL SECRET KEY MANAGEMENT
+// CONTROL_PLANE SECRET KEY MANAGEMENT
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Get the kernel secret key from environment
+ * Get the controlPlane secret key from environment
  * 
  * @returns Secret key for proof signing/verification
- * @throws Error if RUVIX_KERNEL_SECRET is not set
+ * @throws Error if RUVIX_CONTROL_PLANE_SECRET is not set
  */
-export function getKernelSecretKey(): string {
-  const secret = process.env.RUVIX_KERNEL_SECRET;
+export function getControlPlaneSecretKey(): string {
+  const secret = process.env.RUVIX_CONTROL_PLANE_SECRET;
   
   if (!secret) {
     throw new Error(
-      "RUVIX_KERNEL_SECRET environment variable is required for kernel operation. " +
+      "RUVIX_CONTROL_PLANE_SECRET environment variable is required for controlPlane operation. " +
       "Generate a secure random string (e.g., openssl rand -hex 32) and set it."
     );
   }
@@ -326,15 +326,15 @@ export function getKernelSecretKey(): string {
 }
 
 /**
- * Validate that kernel secret key is properly configured
+ * Validate that controlPlane secret key is properly configured
  * 
  * H-001 FIX: Added entropy validation to prevent weak secrets
  * 
  * @returns true if configured with sufficient entropy, false otherwise
  */
-export function validateKernelSecret(): boolean {
+export function validateControlPlaneSecret(): boolean {
   try {
-    const secret = getKernelSecretKey();
+    const secret = getControlPlaneSecretKey();
     
     // Minimum 256 bits (32 bytes)
     if (secret.length < 32) {
@@ -343,13 +343,13 @@ export function validateKernelSecret(): boolean {
     
     // H-001 FIX: Check for sufficient entropy (no long repeated patterns)
     if (/(.)\1{7,}/.test(secret)) {
-      console.warn("[RuVix] Kernel secret has low entropy (repeated patterns detected)");
+      console.warn("[RuVix] ControlPlane secret has low entropy (repeated patterns detected)");
       return false;
     }
     
     // Prefer hex or base64 format (warn if not)
     if (!/^[a-fA-F0-9+/=]+$/.test(secret)) {
-      console.warn("[RuVix] Kernel secret should be hex or base64 encoded for maximum entropy");
+      console.warn("[RuVix] ControlPlane secret should be hex or base64 encoded for maximum entropy");
     }
     
     return true;

@@ -87,7 +87,7 @@ export interface ScanOptions {
   window_hours?: number;
   /** Cosine similarity threshold above which two memories are compared (default 0.85). */
   similarity_threshold?: number;
-  /** Agent ID for the kernel context (default "coherence-monitor"). */
+  /** Agent ID for the controlPlane context (default "coherence-monitor"). */
   agent_id?: string;
   /** Max memories to scan per run (default 500). */
   limit?: number;
@@ -102,8 +102,8 @@ export interface ScanDeps {
       params?: unknown[]
     ) => Promise<{ rows: T[]; rowCount: number | null }>;
   };
-  /** Kernel mutate function (default: real syscall_mutate). */
-  mutate?: typeof import("@/kernel/syscalls").syscall_mutate;
+  /** ControlPlane mutate function (default: real syscall_mutate). */
+  mutate?: typeof import("@/control-plane/syscalls").syscall_mutate;
   /** Stub for pgvector cosine distance — only used in tests. */
   cosineDistance?: (a: number[], b: number[]) => number;
 }

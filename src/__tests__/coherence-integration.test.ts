@@ -5,11 +5,11 @@
  *   1. Insert conflicting memories (mocked pool returns two memories with
  *      the same entity + attribute but different values).
  *   2. Run the monitor (`runCoherenceScan`).
- *   3. Verify a conflict is detected and written through the kernel
+ *   3. Verify a conflict is detected and written through the controlPlane
  *      `syscall_mutate` path (AD-40).
  *
  * This belongs in the integration lane because it exercises the monitor's
- * DB-query + kernel-write orchestration, not just pure logic.
+ * DB-query + controlPlane-write orchestration, not just pure logic.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,12 +23,12 @@ vi.mock("@/lib/postgres/connection", () => ({
   getPool: vi.fn(() => ({ query: queryMock })),
 }));
 
-vi.mock("@/kernel/syscalls", () => ({
+vi.mock("@/control-plane/syscalls", () => ({
   syscall_mutate: mutateMock,
   SyscallContext: {},
 }));
 
-vi.mock("@/kernel/proof", () => ({
+vi.mock("@/control-plane/proof", () => ({
   createProof: vi.fn(() => ({ intent: "mutate", subject: "test", actor: "test", claims: {} })),
   verifyProofOrThrow: vi.fn(() => ({
     group_id: "allura-test",
@@ -38,16 +38,16 @@ vi.mock("@/kernel/proof", () => ({
     nonce: "n",
     timestamp: 0,
   })),
-  getKernelSecretKey: vi.fn(() => "test-secret-key"),
+  getControlPlaneSecretKey: vi.fn(() => "test-secret-key"),
 }));
 
-vi.mock("@/kernel/policy", () => ({
+vi.mock("@/control-plane/policy", () => ({
   evaluatePoliciesOrThrow: vi.fn(),
   Policy: {},
   PolicyContext: {},
 }));
 
-vi.mock("@/kernel/target-resolver", () => ({
+vi.mock("@/control-plane/target-resolver", () => ({
   resolveTarget: vi.fn(async () => ({ success: true, affected_rows: 1 })),
 }));
 
@@ -63,7 +63,7 @@ beforeEach(() => {
   });
 });
 
-describe("Coherence Monitor integration (mocked DB + kernel)", () => {
+describe("Coherence Monitor integration (mocked DB + controlPlane)", () => {
   it("insert conflicting memories → run monitor → conflict detected and written via syscall_mutate", async () => {
     // Step 1: pool returns two conflicting memories
     queryMock.mockImplementation(async (sql: string) => {
@@ -109,7 +109,7 @@ describe("Coherence Monitor integration (mocked DB + kernel)", () => {
       window_hours: 24,
     });
 
-    // Step 3: verify a conflict was detected and written via the kernel
+    // Step 3: verify a conflict was detected and written via the controlPlane
     expect(result.scanned).toBe(2);
     expect(result.conflicts_detected).toBeGreaterThanOrEqual(1);
     expect(result.conflicts_inserted).toBeGreaterThanOrEqual(1);
@@ -125,7 +125,7 @@ describe("Coherence Monitor integration (mocked DB + kernel)", () => {
     expect(firstCall[0].data.severity).toMatch(/^(high|medium|low)$/);
     expect(firstCall[0].data.status).toBe("active");
 
-    // The kernel context must carry group_id and the coherence subsystem tag
+    // The controlPlane context must carry group_id and the coherence subsystem tag
     const ctx = firstCall[1];
     expect(ctx.group_id).toBe("allura-test");
     expect(ctx.audit_context).toMatchObject({ subsystem: "coherence" });

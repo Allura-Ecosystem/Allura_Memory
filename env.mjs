@@ -58,8 +58,8 @@ export const env = createEnv({
     OLLAMA_BASE_URL: z.string().default("http://localhost:11434"),
     OLLAMA_EMBED_MODEL: z.string().default("nomic-embed-text"),
 
-    // RuVix kernel
-    RUVIX_KERNEL_SECRET: z.string().min(32).optional(),
+    // RuVix controlPlane
+    RUVIX_CONTROL_PLANE_SECRET: z.string().min(32).optional(),
 
     // Multi-tenancy
     DEFAULT_GROUP_ID: z.string().default("allura-default"),
@@ -104,7 +104,7 @@ export const env = createEnv({
     RUVECTOR_PASSWORD: process.env.RUVECTOR_PASSWORD,
     OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL,
     OLLAMA_EMBED_MODEL: process.env.OLLAMA_EMBED_MODEL,
-    RUVIX_KERNEL_SECRET: process.env.RUVIX_KERNEL_SECRET,
+    RUVIX_CONTROL_PLANE_SECRET: process.env.RUVIX_CONTROL_PLANE_SECRET,
     DEFAULT_GROUP_ID: process.env.DEFAULT_GROUP_ID,
     ALLURA_DEV_AUTH_ENABLED: process.env.ALLURA_DEV_AUTH_ENABLED,
     ALLURA_DEV_AUTH_ROLE: process.env.ALLURA_DEV_AUTH_ROLE,

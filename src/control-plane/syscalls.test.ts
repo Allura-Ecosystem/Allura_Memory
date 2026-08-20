@@ -24,8 +24,8 @@ vi.mock("./policy", () => ({
   evaluatePoliciesOrThrow: vi.fn(), // no-op
 }));
 
-process.env.RUVIX_KERNEL_SECRET =
-  "test-secret-key-for-ruvix-kernel-proof-engine-32chars";
+process.env.RUVIX_CONTROL_PLANE_SECRET =
+  "test-secret-key-for-ruvix-controlPlane-proof-engine-32chars";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIXTURES
@@ -34,7 +34,7 @@ process.env.RUVIX_KERNEL_SECRET =
 const ctx: SyscallContext = {
   actor: "brooks-architect",
   group_id: "allura-system",
-  permission_tier: "kernel",
+  permission_tier: "controlPlane",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ describe("syscall_mutate", () => {
       data: {
         event_type: "BUILD_COMPLETE",
         agent_id: "woz",
-        content: "Kernel syscalls wired",
+        content: "ControlPlane syscalls wired",
       },
     };
 
@@ -184,7 +184,7 @@ describe("syscall_trace", () => {
       ctx
     );
 
-    // syscall_trace is audit-only: it runs the kernel's proof/policy/audit
+    // syscall_trace is audit-only: it runs the controlPlane's proof/policy/audit
     // gate via executeSyscall, but does NOT issue a database write.
     // The canonical event row is the caller's responsibility (e.g.
     // logTrace() in src/lib/postgres/trace-logger.ts). This avoids the

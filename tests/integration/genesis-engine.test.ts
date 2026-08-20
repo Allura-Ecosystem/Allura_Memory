@@ -46,7 +46,7 @@ const TEST_AGENT_ID = "genesis-test-agent";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Insert a trajectory row directly via the pool (test setup — not the kernel path). */
+/** Insert a trajectory row directly via the pool (test setup — not the controlPlane path). */
 async function insertTrajectory(
   action: string,
   task_type: string,
@@ -148,7 +148,7 @@ describe("Genesis Engine — Integration (Story 2.2)", () => {
     );
     expect(seqPatterns.length).toBeGreaterThanOrEqual(1);
 
-    // ── 3. Generate proposals through the kernel syscall_mutate path ──
+    // ── 3. Generate proposals through the controlPlane syscall_mutate path ──
     const result = await generateProposals(TEST_GROUP_ID, detected);
     expect(result.recorded).toBeGreaterThan(0);
 

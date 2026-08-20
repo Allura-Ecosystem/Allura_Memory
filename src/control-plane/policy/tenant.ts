@@ -1,13 +1,13 @@
 /**
- * RuVix Kernel - Tenant Isolation Policy
+ * RuVix ControlPlane - Tenant Isolation Policy
  * 
  * Migrated from src/lib/mcp/enforced-client.ts
  * 
- * This module provides tenant isolation enforcement through the kernel.
+ * This module provides tenant isolation enforcement through the controlPlane.
  * All operations must have a valid allura-* group_id.
  * 
  * DEPRECATION: src/lib/mcp/enforced-client.ts is now deprecated.
- * Use kernel syscalls or SDK wrapper instead.
+ * Use controlPlane syscalls or SDK wrapper instead.
  */
 
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
@@ -46,7 +46,7 @@ export function validateAlluraPrefix(groupId: string): void {
 }
 
 /**
- * Validate group_id for kernel operations
+ * Validate group_id for controlPlane operations
  *
  * Combines existing validateGroupId() with allura-* prefix check.
  * ARCH-001: validateGroupId now enforces the prefix, so this is
@@ -66,7 +66,7 @@ export function validateTenantIsolation(groupId: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Tenant context for kernel operations
+ * Tenant context for controlPlane operations
  */
 export interface TenantContext {
   /** Validated group_id */
@@ -101,12 +101,12 @@ export function extractTenantContext(groupId: string): TenantContext {
 }
 
 /**
- * Build tenant isolation claims for kernel proof
+ * Build tenant isolation claims for controlPlane proof
  * 
  * @param groupId - Group ID for isolation
  * @param actor - Actor making the request
  * @param auditContext - Additional audit context
- * @returns Claims object for kernel proof
+ * @returns Claims object for controlPlane proof
  */
 export function buildTenantIsolationClaims(
   groupId: string,
@@ -126,24 +126,24 @@ export function buildTenantIsolationClaims(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KERNEL-NATIVE TENANT ENFORCEMENT
+// CONTROL_PLANE-NATIVE TENANT ENFORCEMENT
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Kernel-native tenant enforcement
+ * ControlPlane-native tenant enforcement
  * 
- * This class replaces EnforcedMcpClient with kernel-backed enforcement.
- * All operations flow through RuVix kernel syscalls.
+ * This class replaces EnforcedMcpClient with controlPlane-backed enforcement.
+ * All operations flow through RuVix controlPlane syscalls.
  * 
  * Usage:
  * ```typescript
- * const tenant = new KernelTenantEnforcer('allura-faith-meats', 'agent-001');
+ * const tenant = new ControlPlaneTenantEnforcer('allura-faith-meats', 'agent-001');
  * 
  * // All operations automatically include tenant isolation
- * await tenant.callKernelSyscall('mutate', { ... });
+ * await tenant.callControlPlaneSyscall('mutate', { ... });
  * ```
  */
-export class KernelTenantEnforcer {
+export class ControlPlaneTenantEnforcer {
   private readonly tenantContext: TenantContext;
   private readonly actor: string;
 
@@ -167,7 +167,7 @@ export class KernelTenantEnforcer {
   }
 
   /**
-   * Build claims for kernel proof
+   * Build claims for controlPlane proof
    * 
    * @param auditContext - Additional audit context
    * @returns Claims object
@@ -181,18 +181,18 @@ export class KernelTenantEnforcer {
   }
 
   /**
-   * Call a kernel syscall with tenant isolation
+   * Call a controlPlane syscall with tenant isolation
    * 
    * @param syscallName - Syscall to invoke
    * @param args - Syscall arguments
    * @returns Syscall result
    */
-  async callKernelSyscall(
+  async callControlPlaneSyscall(
     syscallName: string,
     args: Record<string, unknown>
   ): Promise<unknown> {
-    // Import kernel dynamically to avoid circular dependency
-    const { RuVixKernel } = await import("../ruvix");
+    // Import controlPlane dynamically to avoid circular dependency
+    const { RuVixControlPlane } = await import("../ruvix");
     
     // Build context with tenant isolation
     const context = {
@@ -203,22 +203,22 @@ export class KernelTenantEnforcer {
     };
     
     // Invoke syscall
-    return RuVixKernel.syscall(syscallName, args, context);
+    return RuVixControlPlane.syscall(syscallName, args, context);
   }
 }
 
 /**
- * Factory function to create kernel tenant enforcer
+ * Factory function to create controlPlane tenant enforcer
  * 
  * @param groupId - Tenant group ID
  * @param actor - Actor identifier
- * @returns KernelTenantEnforcer instance
+ * @returns ControlPlaneTenantEnforcer instance
  */
-export function createKernelTenantEnforcer(
+export function createControlPlaneTenantEnforcer(
   groupId: string,
   actor: string
-): KernelTenantEnforcer {
-  return new KernelTenantEnforcer(groupId, actor);
+): ControlPlaneTenantEnforcer {
+  return new ControlPlaneTenantEnforcer(groupId, actor);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -228,15 +228,15 @@ export function createKernelTenantEnforcer(
 /**
  * Backward compatibility wrapper for EnforcedMcpClient migration
  * 
- * This allows gradual migration from EnforcedMcpClient to kernel-native enforcement.
+ * This allows gradual migration from EnforcedMcpClient to controlPlane-native enforcement.
  * 
- * @deprecated Use KernelTenantEnforcer or kernel SDK directly
+ * @deprecated Use ControlPlaneTenantEnforcer or controlPlane SDK directly
  */
 export class EnforcedClientCompatWrapper {
-  private readonly enforcer: KernelTenantEnforcer;
+  private readonly enforcer: ControlPlaneTenantEnforcer;
 
   constructor(groupId: string, actor: string) {
-    this.enforcer = createKernelTenantEnforcer(groupId, actor);
+    this.enforcer = createControlPlaneTenantEnforcer(groupId, actor);
   }
 
   /**
@@ -247,13 +247,13 @@ export class EnforcedClientCompatWrapper {
   }
 
   /**
-   * Call kernel syscall (replaces callTool)
+   * Call controlPlane syscall (replaces callTool)
    */
-  async callKernelSyscall(
+  async callControlPlaneSyscall(
     syscallName: string,
     args: Record<string, unknown>
   ): Promise<unknown> {
-    return this.enforcer.callKernelSyscall(syscallName, args);
+    return this.enforcer.callControlPlaneSyscall(syscallName, args);
   }
 }
 

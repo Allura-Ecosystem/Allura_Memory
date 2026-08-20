@@ -1,7 +1,7 @@
 /**
- * RuVix Kernel Phase 3 - Validation Suite
+ * RuVix ControlPlane Phase 3 - Validation Suite
  *
- * Unified validation API for kernel enforcement.
+ * Unified validation API for controlPlane enforcement.
  * Provides comprehensive protection against bypass attempts.
  *
  * VALIDATION LAYERS:
@@ -11,7 +11,7 @@
  *
  * USAGE:
  * ```typescript
- * import { initializeValidation, validateOperation } from '@/kernel/validation';
+ * import { initializeValidation, validateOperation } from '@/control-plane/validation';
  *
  * // Initialize at app startup
  * initializeValidation();
@@ -49,7 +49,7 @@ import {
   scanCodeForBypasses,
 } from "./bypass-detector";
 import {
-  assertKernelBacked,
+  assertControlPlaneBacked,
   clearDirectAccessHistory,
   DirectAccessAttempt,
   DirectAccessBlockedError,
@@ -58,7 +58,7 @@ import {
   disableDirectAccessBlocker,
   enableDirectAccessBlocker,
   getDirectAccessAttempts,
-  isKernelOnlyPath,
+  isControlPlaneOnlyPath,
   validateDatabaseAccess,
 } from "./direct-access-blocker";
 
@@ -310,7 +310,7 @@ class ValidationSuite {
             severity: "critical",
             suggestion: result.redirect
               ? `Use ${result.redirect} instead`
-              : "Route through RuVix kernel",
+              : "Route through RuVix controlPlane",
           });
         }
       } catch (error) {
@@ -320,7 +320,7 @@ class ValidationSuite {
             code: error.code,
             message: error.message,
             severity: "critical",
-            suggestion: `Use ${error.attempt.redirectTarget || "RuVixKernel.syscall"}`,
+            suggestion: `Use ${error.attempt.redirectTarget || "RuVixControlPlane.syscall"}`,
           });
         } else {
           directAccessErrors.push({

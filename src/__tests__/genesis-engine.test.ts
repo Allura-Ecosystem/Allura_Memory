@@ -9,12 +9,12 @@
  *       * repeated action sequences (3+ identical action patterns)
  *       * high-frequency tasks (10+ same task_type)
  *       * failed-then-succeeded patterns
- *   - Proposal generation routes through kernel syscall_mutate (AD-40).
- *   - HITL approve/reject routes through kernel syscall_mutate; approve
+ *   - Proposal generation routes through controlPlane syscall_mutate (AD-40).
+ *   - HITL approve/reject routes through controlPlane syscall_mutate; approve
  *     returns a skill template draft (not auto-deployed).
  *   - group_id validation rejects invalid tenants.
  *
- * The kernel syscall_mutate is mocked so no DB is touched — this keeps the
+ * The controlPlane syscall_mutate is mocked so no DB is touched — this keeps the
  * tests in the unit lane (no external services). The detector is pure with
  * respect to its inputs, so we call `detectPatterns` directly with a
  * synthetic `DetectionWindow`.
@@ -22,15 +22,15 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// ── Mock the kernel syscall_mutate so we never touch the DB / proof engine ──
+// ── Mock the controlPlane syscall_mutate so we never touch the DB / proof engine ──
 const mockMutate = vi.fn();
 
-vi.mock("@/kernel/syscalls", () => ({
+vi.mock("@/control-plane/syscalls", () => ({
   syscall_mutate: (...args: unknown[]) => mockMutate(...args),
   SyscallContext: {}, // type-only export
 }));
 
-vi.mock("@/kernel/proof", () => ({
+vi.mock("@/control-plane/proof", () => ({
   createProof: vi.fn(() => ({ intent: "mutate", subject: "test", actor: "test", claims: {} })),
   verifyProofOrThrow: vi.fn(() => ({
     group_id: "allura-test",
@@ -40,16 +40,16 @@ vi.mock("@/kernel/proof", () => ({
     nonce: "n",
     timestamp: 0,
   })),
-  getKernelSecretKey: vi.fn(() => "test-secret-key"),
+  getControlPlaneSecretKey: vi.fn(() => "test-secret-key"),
 }));
 
-vi.mock("@/kernel/policy", () => ({
+vi.mock("@/control-plane/policy", () => ({
   evaluatePoliciesOrThrow: vi.fn(),
   Policy: {},
   PolicyContext: {},
 }));
 
-vi.mock("@/kernel/target-resolver", () => ({
+vi.mock("@/control-plane/target-resolver", () => ({
   resolveTarget: vi.fn(async () => ({ success: true, affected_rows: 1 })),
 }));
 
@@ -343,7 +343,7 @@ describe("generateProposal", () => {
     expect(mutation.data.status).toBe("proposed");
   });
 
-  it("rejects an invalid group_id without calling the kernel", async () => {
+  it("rejects an invalid group_id without calling the controlPlane", async () => {
     const pattern: DetectedPattern = {
       pattern_type: "high_frequency_task",
       pattern_description: "x",
@@ -375,7 +375,7 @@ describe("generateProposal", () => {
     expect(mutation.data.confidence).toBeGreaterThanOrEqual(0.0);
   });
 
-  it("returns a failed result when the kernel mutate fails", async () => {
+  it("returns a failed result when the controlPlane mutate fails", async () => {
     mockMutate.mockResolvedValueOnce({ success: false, error: "policy denied" });
     const pattern: DetectedPattern = {
       pattern_type: "high_frequency_task",
@@ -476,7 +476,7 @@ describe("reviewProposal", () => {
     expect(result.error).toMatch(/group_id/i);
   });
 
-  it("returns updated=false on kernel failure", async () => {
+  it("returns updated=false on controlPlane failure", async () => {
     mockMutate.mockResolvedValueOnce({ success: false, error: "no row" });
     const result = await reviewProposal("allura-test", 99, "rejected");
     expect(result.updated).toBe(false);

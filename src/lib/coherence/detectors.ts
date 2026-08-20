@@ -3,7 +3,7 @@
  * Story 2.1
  *
  * Pure functions that extract facts from memory content and detect conflicts
- * between pairs of memories. No DB, no kernel, no side effects — this module
+ * between pairs of memories. No DB, no controlPlane, no side effects — this module
  * is the unit-testable core of the coherence monitor.
  *
  * Detection strategy

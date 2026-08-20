@@ -4,7 +4,7 @@
  * Tests the createEntity(), createRelationship(), query(), and search() API surface
  * of the Allura Memory write wrapper (src/lib/memory/writer.ts).
  *
- * Kernel tests: verify syscall routing when MEMORY_BYPASS_KERNEL is not set
+ * ControlPlane tests: verify syscall routing when MEMORY_BYPASS_CONTROL_PLANE is not set
  * (default path). Neo4j fallback tests have been removed — Neo4j is sunset.
  */
 
@@ -27,17 +27,17 @@ vi.mock("@/lib/validation/group-id", async () => {
 
 // ── Set required env vars before module load ──────────────────────────────────
 
-process.env.RUVIX_KERNEL_SECRET = "test-secret-key-for-ruvix-kernel-proof-engine-32chars"
+process.env.RUVIX_CONTROL_PLANE_SECRET = "test-secret-key-for-ruvix-controlPlane-proof-engine-32chars"
 
 // ── Import under test (after mocks are in place) ─────────────────────────────
 
 import { memory } from "./writer"
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KERNEL ROUTING TESTS (default path — MEMORY_BYPASS_KERNEL unset)
+// CONTROL_PLANE ROUTING TESTS (default path — MEMORY_BYPASS_CONTROL_PLANE unset)
 // ─────────────────────────────────────────────────────────────────────────────
 
-vi.mock("@/kernel/syscalls", () => ({
+vi.mock("@/control-plane/syscalls", () => ({
   syscall_mutate: vi.fn().mockResolvedValue({
     success: true,
     data: { affected_rows: 1, auditId: "audit-123" },
@@ -48,13 +48,13 @@ vi.mock("@/kernel/syscalls", () => ({
   }),
 }))
 
-import { syscall_mutate, syscall_query } from "@/kernel/syscalls"
+import { syscall_mutate, syscall_query } from "@/control-plane/syscalls"
 
-describe("memory() — kernel-routed writer", () => {
+describe("memory() — controlPlane-routed writer", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Ensure kernel path is active (default)
-    delete process.env.MEMORY_BYPASS_KERNEL
+    // Ensure controlPlane path is active (default)
+    delete process.env.MEMORY_BYPASS_CONTROL_PLANE
     // Re-stub syscalls after clearAllMocks
     vi.mocked(syscall_mutate).mockResolvedValue({
       success: true,
@@ -145,7 +145,7 @@ describe("memory() — kernel-routed writer", () => {
     it("throws when syscall_mutate returns success: false", async () => {
       vi.mocked(syscall_mutate).mockResolvedValueOnce({
         success: false,
-        error: "Kernel policy denied",
+        error: "ControlPlane policy denied",
       })
 
       await expect(
@@ -154,7 +154,7 @@ describe("memory() — kernel-routed writer", () => {
           group_id: "allura-system",
           props: { summary: "test" },
         })
-      ).rejects.toThrow("Kernel policy denied")
+      ).rejects.toThrow("ControlPlane policy denied")
     })
 
     it("throws when createRelationship syscall_mutate returns failure", async () => {

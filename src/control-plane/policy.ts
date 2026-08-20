@@ -1,5 +1,5 @@
 /**
- * RuVix Kernel - Policy Validation Engine
+ * RuVix ControlPlane - Policy Validation Engine
  * 
  * TRUSTED CORE: This module contains policy evaluation logic.
  * Zero external dependencies. Policies are evaluated against verified claims.
@@ -57,7 +57,7 @@ export interface PolicyContext {
   budgetLimit?: number;
   
   /** Required permission tier for POL-003 */
-  requiredTier?: "kernel" | "plugin" | "skill";
+  requiredTier?: "controlPlane" | "plugin" | "skill";
   
   /** Actor for POL-004 */
   actor?: string;
@@ -352,19 +352,19 @@ export const POLICY_BUDGET_ENFORCEMENT: Policy = {
 /**
  * POL-003: Permission Tier Validation
  * 
- * Kernel operations require kernel permission tier.
- * Plugin operations require plugin or kernel tier.
+ * ControlPlane operations require controlPlane permission tier.
+ * Plugin operations require plugin or controlPlane tier.
  * Skill operations allow any tier.
  */
 export const POLICY_PERMISSION_TIER: Policy = {
   id: "POL-003",
   description: "Operations must have appropriate permission tier",
   condition: (claims, context) => {
-    const requiredTier = context.requiredTier as "kernel" | "plugin" | "skill" ?? "skill";
+    const requiredTier = context.requiredTier as "controlPlane" | "plugin" | "skill" ?? "skill";
     const actorTier = claims.permission_tier ?? "skill";
     
     const tierHierarchy: Record<string, number> = {
-      kernel: 3,
+      controlPlane: 3,
       plugin: 2,
       skill: 1,
     };
@@ -408,12 +408,12 @@ export const POLICY_ACTOR_VALIDATION: Policy = {
  * 
  * C-002 FIX: Actually enforce audit trail requirement
  * 
- * All kernel operations must be auditable.
+ * All controlPlane operations must be auditable.
  * If audit_context is required, it must be present and non-empty.
  */
 export const POLICY_AUDIT_TRAIL: Policy = {
   id: "POL-005",
-  description: "Kernel operations must have audit trail",
+  description: "ControlPlane operations must have audit trail",
   condition: (claims, context) => {
     const requiresAudit = context.requiresAudit as boolean ?? true;
     
@@ -438,7 +438,7 @@ export const POLICY_AUDIT_TRAIL: Policy = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Default policy set for kernel operations
+ * Default policy set for controlPlane operations
  * 
  * NOTE: Must be defined after all referenced policies to avoid
  * block-scoped variable hoisting errors.
@@ -1479,7 +1479,7 @@ policyRegistry.register(POLICY_DURHAM_QA_REVIEW_GATE);
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Default policy set for kernel operations
+ * Default policy set for controlPlane operations
  * 
  * Includes all 9 builtin policies:
  * POL-001 through POL-009
