@@ -1,0 +1,8 @@
+{
+  "revision": "0001",
+  "provenance": "Synthetic audit completeness fixtures for Story 24.6.",
+  "cases": [
+    { "id": "ac1", "group_id": "allura-eval-test", "event_type": "proposal_approved", "expected_count": 1 },
+    { "id": "ac2", "group_id": "allura-eval-test", "event_type": "proposal_rejected", "expected_count": 1 }
+  ]
+}
