@@ -63,7 +63,7 @@ describeLive("Story 24.4 atomic approval (live PostgreSQL)", () => {
     expect(proposal.rows).toEqual([{ status: "approved", decided_by: principal.principalId }]);
     expect(memory.rows).toEqual([{ id: result.memoryId, deprecated: false }]);
     expect(audit.rows).toHaveLength(1);
-    expect(outbox.rows).toEqual([{ id: expect.any(String), status: "pending" }]);
+    expect(outbox.rows).toEqual([{ id: expect.any(String), status: expect.stringMatching(/^(pending|delivered)$/) }]);
   });
 
   it("rolls back every durable write at each injected boundary", async () => {

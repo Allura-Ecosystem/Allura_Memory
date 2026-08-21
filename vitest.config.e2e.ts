@@ -37,6 +37,8 @@ export default defineConfig({
       "src/__tests__/acceptance-gate.e2e.test.ts",
       // Story 24.4 — atomic approval transaction against live PostgreSQL
       "src/lib/memory/__tests__/atomic-promotion.e2e.test.ts",
+      "src/lib/memory/__tests__/promotion-roundtrip.e2e.test.ts",
+      "src/lib/memory/__tests__/promotion-outbox-worker.e2e.test.ts",
     ],
     testTimeout: 60_000,
     hookTimeout: 30_000,
