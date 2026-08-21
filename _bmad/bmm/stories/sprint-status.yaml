@@ -252,12 +252,12 @@ epic_24:
       depends_on: ["24.2", "24.3", "24.4", "24.5", "24.6", "24.7"]
     - key: "24.10"
       title: "CI Gate Integrity and Branch Protection"
-      status: in-progress
+      status: done
       owner: "Troy"
       started_at: "2026-08-21T12:26:17Z"
       baseline_commit: "1873666307891ca88654c20ad12debf4342e2d9f"
       depends_on: ["24.1"]
-      status_evidence: "Troy completed the CI implementation and hosted proof on 2026-08-21. Local: PostgreSQL E2E 150 passed (1 intentional skip), unit 1,785 passed (171 skipped), runtime health 2 passed, typecheck/build passed. Hosted PR #74 commit 1cf1b28b passed required typecheck, test-unit, test-e2e, MCP Runtime Health Tests, and Epic 24 Evidence / Aggregate. GitHub main protection is active (strict/up-to-date, admin enforced, force-push/deletion blocked, conversations required). Controlled-red PR #81 failed required test-unit and was GitHub BLOCKED; normal merge was refused by base branch policy. Final documentation evidence push remains pending."
+      status_evidence: "Troy completed Story 24.10 on 2026-08-21. Local: PostgreSQL E2E 150 passed (1 intentional skip), unit 1,785 passed (171 skipped), runtime health 2 passed, typecheck/build passed. Protected PR #74: hosted CI #32504104054, MCP Testing Suite #32504104110, and Epic 24 Evidence #32504104096 passed the required typecheck, test-unit, test-e2e, MCP Runtime Health Tests, and Evidence Aggregate checks. GitHub main protection is active (strict/up-to-date, admin enforced, force-push/deletion blocked, conversations required). Controlled-red PR #81 failed required test-unit, was GitHub BLOCKED, and a normal merge was refused by base-branch policy; it was closed unmerged and deleted."
     - key: "24.9"
       title: "Reference Integrations and Portfolio Demonstration"
       status: ready-for-dev

@@ -1,6 +1,6 @@
 # Story 24.10: CI Gate Integrity and Branch Protection
 
-**Status:** in-progress
+**Status:** done
 **Priority:** P0-Critical
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
 **Gate:** A — Truthful baseline
