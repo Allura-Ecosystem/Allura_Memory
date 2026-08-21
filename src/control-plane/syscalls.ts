@@ -62,7 +62,7 @@ export interface SyscallContext {
   group_id: string;
   
   /** Permission tier */
-  permission_tier?: "controlPlane" | "plugin" | "skill";
+  permission_tier?: "controlPlane" | "kernel" | "plugin" | "skill";
   
   /** Budget cost estimate */
   budget_cost?: number;

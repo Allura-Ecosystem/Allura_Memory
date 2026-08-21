@@ -57,7 +57,7 @@ export interface PolicyContext {
   budgetLimit?: number;
   
   /** Required permission tier for POL-003 */
-  requiredTier?: "controlPlane" | "plugin" | "skill";
+  requiredTier?: "controlPlane" | "kernel" | "plugin" | "skill";
   
   /** Actor for POL-004 */
   actor?: string;
@@ -360,11 +360,20 @@ export const POLICY_PERMISSION_TIER: Policy = {
   id: "POL-003",
   description: "Operations must have appropriate permission tier",
   condition: (claims, context) => {
-    const requiredTier = context.requiredTier as "controlPlane" | "plugin" | "skill" ?? "skill";
+    const requiredTier = context.requiredTier as "controlPlane" | "kernel" | "plugin" | "skill" ?? "skill";
     const actorTier = claims.permission_tier ?? "skill";
     
     const tierHierarchy: Record<string, number> = {
       controlPlane: 3,
+      // DEPRECATED ALIAS — remove after the deprecation window closes.
+      // permission_tier is a runtime value carried inside HMAC-signed ProofClaims,
+      // not merely a TypeScript symbol. Proofs have a 5-minute TTL and the signing
+      // domain carries no version, so during a rolling deploy an old process can
+      // mint a still-valid proof claiming "kernel". Without this alias the lookup
+      // yields undefined, `undefined >= 3` is false, and every control-plane-tier
+      // operation is denied for the length of the window with an error that says
+      // nothing about a renamed value. Fails closed, but needlessly.
+      kernel: 3,
       plugin: 2,
       skill: 1,
     };

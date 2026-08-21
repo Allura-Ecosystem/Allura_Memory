@@ -58,8 +58,13 @@ export const env = createEnv({
     OLLAMA_BASE_URL: z.string().default("http://localhost:11434"),
     OLLAMA_EMBED_MODEL: z.string().default("nomic-embed-text"),
 
-    // RuVix controlPlane
+    // RuVix control plane
     RUVIX_CONTROL_PLANE_SECRET: z.string().min(32).optional(),
+    // Routes memory() writes to the direct adapter backend instead of syscall_mutate.
+    // Migration escape hatch per AD-40. The pre-rename name MEMORY_BYPASS_KERNEL is
+    // still honoured as a deprecated fallback (see src/lib/memory/writer.ts).
+    MEMORY_BYPASS_CONTROL_PLANE: z.string().optional(),
+    MEMORY_BYPASS_KERNEL: z.string().optional(),
 
     // Multi-tenancy
     DEFAULT_GROUP_ID: z.string().default("allura-default"),
@@ -105,6 +110,8 @@ export const env = createEnv({
     OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL,
     OLLAMA_EMBED_MODEL: process.env.OLLAMA_EMBED_MODEL,
     RUVIX_CONTROL_PLANE_SECRET: process.env.RUVIX_CONTROL_PLANE_SECRET,
+    MEMORY_BYPASS_CONTROL_PLANE: process.env.MEMORY_BYPASS_CONTROL_PLANE,
+    MEMORY_BYPASS_KERNEL: process.env.MEMORY_BYPASS_KERNEL,
     DEFAULT_GROUP_ID: process.env.DEFAULT_GROUP_ID,
     ALLURA_DEV_AUTH_ENABLED: process.env.ALLURA_DEV_AUTH_ENABLED,
     ALLURA_DEV_AUTH_ROLE: process.env.ALLURA_DEV_AUTH_ROLE,
