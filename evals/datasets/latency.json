@@ -1,0 +1,8 @@
+{
+  "revision": "0001",
+  "provenance": "Synthetic latency fixtures for Story 24.6. Laptop-specific, not generalizable.",
+  "cases": [
+    { "id": "lt1", "operation": "memory_search", "concurrency": 1, "duration_seconds": 10, "expected_p95_ms": 5000 },
+    { "id": "lt2", "operation": "memory_add", "concurrency": 1, "duration_seconds": 10, "expected_p95_ms": 3000 }
+  ]
+}
