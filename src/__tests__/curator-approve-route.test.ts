@@ -33,7 +33,7 @@ import { getPool } from "@/lib/postgres/connection"
 beforeEach(() => {
   queryMock.mockReset()
   createInsight.mockClear()
-    ;(requireRole as any).mockReturnValue({ user: { id: "curator-1", role: "curator" }, allowed: true })
+    ;(requireRole as any).mockReturnValue({ user: { id: "curator-1", role: "curator", groupId: "allura-test" }, allowed: true })
   })
 
 describe("curator approve route", () => {

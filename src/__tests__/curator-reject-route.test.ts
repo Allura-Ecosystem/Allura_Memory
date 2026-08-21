@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const queryMock = vi.fn()
 
 vi.mock("@/lib/auth/api-auth", () => ({
-  requireRole: vi.fn(() => ({ user: { id: "curator-1" }, allowed: true })),
+  requireRole: vi.fn(() => ({ user: { id: "curator-1", groupId: "allura-test" }, allowed: true })),
   unauthorizedResponse: vi.fn(),
   forbiddenResponse: vi.fn(),
 }))
