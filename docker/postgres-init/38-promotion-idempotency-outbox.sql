@@ -38,9 +38,11 @@ CREATE TABLE IF NOT EXISTS promotion_idempotency (
 -- existing route.ts flow; the approveProposal service writes its own event
 -- explicitly and does not rely on the trigger.
 
--- Enable RLS on new tenant-scoped tables (Story 24.3 compliance)
+-- Enable and FORCE RLS on new tenant-scoped tables (Story 24.3 compliance)
 ALTER TABLE promotion_outbox ENABLE ROW LEVEL SECURITY;
+ALTER TABLE promotion_outbox FORCE ROW LEVEL SECURITY;
 ALTER TABLE promotion_idempotency ENABLE ROW LEVEL SECURITY;
+ALTER TABLE promotion_idempotency FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS tenant_isolation_policy ON promotion_outbox;
 CREATE POLICY tenant_isolation_policy ON promotion_outbox
