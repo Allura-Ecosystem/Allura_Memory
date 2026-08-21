@@ -110,6 +110,7 @@ export default defineConfig({
       "src/lib/mcp-token/**/*.test.ts",
       // Story 24.2 — Authenticated principal context (pure logic, injected deps)
       "src/lib/auth/__tests__/principal-context.test.ts",
+    "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
       "src/lib/auth/__tests__/principal-audit.test.ts",
       "src/lib/auth/__tests__/budget-scope.test.ts",
       "src/__tests__/mcp-auth-adversarial.test.ts",
