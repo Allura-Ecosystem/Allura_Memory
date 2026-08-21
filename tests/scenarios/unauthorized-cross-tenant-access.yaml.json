@@ -1,0 +1,49 @@
+{
+  "scenario_id": "unauthorized-cross-tenant-access",
+  "schema_version": "v1",
+  "description": "Unauthorized cross-tenant access: a viewer attempts to access another tenant's memories and is denied",
+  "tenant_fixture": {
+    "group_id": "allura-test-tenant-a",
+    "cleanup": true
+  },
+  "principal_fixture": {
+    "principal_id": "viewer-1",
+    "roles": ["viewer"],
+    "tenant_ids": ["allura-test-tenant-a"],
+    "auth_method": "mcp_token"
+  },
+  "process_definition": {
+    "id": "cross-tenant-access-attempt",
+    "revision": "r1"
+  },
+  "initial_state": {
+    "memories": [
+      { "content": "Tenant A private memory", "score": 0.9 }
+    ]
+  },
+  "tool_fixtures": [
+    {
+      "tool_name": "memory_search",
+      "match": "ordered",
+      "response": { "result": { "results": [] } }
+    },
+    {
+      "tool_name": "memory_add",
+      "match": "ordered",
+      "error": { "code": "POLICY_DENIED", "message": "TENANT_MISMATCH: Principal 'viewer-1' is not authorized for tenant 'allura-test-tenant-b'" }
+    }
+  ],
+  "virtual_clock": {
+    "start_time": "2026-01-01T00:00:00.000Z",
+    "tick_interval_ms": 1000
+  },
+  "random_seed": 42,
+  "policy_expectations": [
+    { "policy_id": "pol-001", "expected_decision": "deny", "at_step": 1 }
+  ],
+  "assertions": {
+    "output": { "expected_status": "failed", "expected_error": "TENANT_MISMATCH" },
+    "state": { "memory_count": 0 },
+    "audit": { "expected_events": [] }
+  }
+}
