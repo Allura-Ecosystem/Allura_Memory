@@ -35,6 +35,8 @@ export default defineConfig({
       "src/__tests__/hosted-mcp.e2e.test.ts",
       // Task B1 — 10-point acceptance gate against live PostgreSQL (no mocks)
       "src/__tests__/acceptance-gate.e2e.test.ts",
+      // Story 24.4 — atomic approval transaction against live PostgreSQL
+      "src/lib/memory/__tests__/atomic-promotion.e2e.test.ts",
     ],
     testTimeout: 60_000,
     hookTimeout: 30_000,

@@ -1,0 +1,38 @@
+-- Story 24.4 — Atomic human-governed promotion
+-- One approval decision owns exactly one canonical memory and one projection job.
+
+ALTER TABLE canonical_proposals
+  ADD COLUMN IF NOT EXISTS approved_memory_id TEXT;
+
+CREATE TABLE IF NOT EXISTS promotion_outbox (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id TEXT NOT NULL CHECK (group_id ~ '^allura-[a-z0-9-]+$'),
+  proposal_id UUID NOT NULL REFERENCES canonical_proposals(id) ON DELETE CASCADE,
+  memory_id TEXT NOT NULL,
+  event_type TEXT NOT NULL DEFAULT 'canonical_memory_promoted',
+  payload JSONB NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'delivered', 'failed')),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  delivered_at TIMESTAMPTZ,
+  last_error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (group_id, proposal_id)
+);
+
+CREATE INDEX IF NOT EXISTS promotion_outbox_pending_idx
+  ON promotion_outbox (status, available_at, created_at)
+  WHERE status IN ('pending', 'failed');
+
+CREATE TABLE IF NOT EXISTS promotion_idempotency (
+  group_id TEXT NOT NULL CHECK (group_id ~ '^allura-[a-z0-9-]+$'),
+  idempotency_key TEXT NOT NULL CHECK (LENGTH(TRIM(idempotency_key)) > 0),
+  proposal_id UUID NOT NULL REFERENCES canonical_proposals(id) ON DELETE CASCADE,
+  result JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (group_id, idempotency_key)
+);
+
+-- The canonical service writes the one complete approval event in its transaction.
+-- Retire the old proposal-update trigger, whose event lacks the canonical memory id.
+DROP TRIGGER IF EXISTS trigger_proposal_decided ON canonical_proposals;

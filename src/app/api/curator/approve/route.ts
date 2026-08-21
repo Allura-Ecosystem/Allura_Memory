@@ -19,11 +19,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createHash } from "crypto"
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
+import { resolveWebApprovalTenant } from "@/lib/auth/web-principal"
 import { KnowledgePromotionError } from "@/lib/memory/knowledge-promotion"
 import { ApprovalAuditAuthorizationError, logApprovalEvent, logProposalNeedsEvidenceEvent, SegregationOfDutiesError } from "@/lib/memory/approval-audit"
 import { captureException } from "@/lib/observability/sentry"
 import { getPool } from "@/lib/postgres/connection"
-import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 
 const DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || "allura-system"
 
@@ -234,15 +234,16 @@ export async function POST(request: NextRequest) {
 
     const decisionRationale = rationale.trim()
 
-    // Validate group_id format (ARCH-001: enforces allura-* pattern)
+    // The authenticated identity is the sole tenant authority. A body group_id
+    // is accepted only when it proves the caller and resource agree.
     let validatedGroupId: string
     try {
-      validatedGroupId = validateGroupId(group_id)
+      validatedGroupId = resolveWebApprovalTenant(authenticatedUser, group_id)
     } catch (error) {
-      if (error instanceof GroupIdValidationError) {
-        return NextResponse.json({ error: `Invalid group_id: ${error.message}` }, { status: 400 })
-      }
-      throw error
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Authenticated tenant could not be resolved" },
+        { status: 403 },
+      )
     }
 
     const pg = getPool()
