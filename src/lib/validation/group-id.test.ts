@@ -32,6 +32,12 @@ describe("group-id validation", () => {
       expect(validateGroupId("allura-ab")).toBe("allura-ab"); // Minimum meaningful allura- ID
     });
 
+    // Story 24.10 AC-7 controlled-red fixture: this assertion is deliberately
+    // wrong and exists only on the disposable ci/controlled-red-24-10 branch.
+    it("deliberately fails to prove branch protection blocks merge", () => {
+      expect(validateGroupId("allura-controlled-red")).toBe("blocked-by-required-check");
+    });
+
     it("should reject null or undefined", () => {
       expect(() => validateGroupId(null)).toThrow(GroupIdValidationError);
       expect(() => validateGroupId(null)).toThrow("group_id is required");
