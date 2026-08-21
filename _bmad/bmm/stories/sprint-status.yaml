@@ -257,7 +257,7 @@ epic_24:
       started_at: "2026-08-21T12:26:17Z"
       baseline_commit: "1873666307891ca88654c20ad12debf4342e2d9f"
       depends_on: ["24.1"]
-      status_evidence: "Troy started 2026-08-21. Local verification: PostgreSQL E2E 150 passed (1 intentional skip), unit 1,785 passed (171 skipped), runtime health 2 passed, typecheck and production build passed. CI now retires the duplicate MCP E2E lane, uses bounded port-3100 runtime readiness, and never labels runtime health as browser or protocol validation. GitHub main branch protection is active with required typecheck, test-unit, test-e2e, MCP Runtime Health Tests, and Epic 24 Evidence / Aggregate; hosted run and controlled-red prevention evidence remain pending."
+      status_evidence: "Troy completed the CI implementation and hosted proof on 2026-08-21. Local: PostgreSQL E2E 150 passed (1 intentional skip), unit 1,785 passed (171 skipped), runtime health 2 passed, typecheck/build passed. Hosted PR #74 commit 1cf1b28b passed required typecheck, test-unit, test-e2e, MCP Runtime Health Tests, and Epic 24 Evidence / Aggregate. GitHub main protection is active (strict/up-to-date, admin enforced, force-push/deletion blocked, conversations required). Controlled-red PR #81 failed required test-unit and was GitHub BLOCKED; normal merge was refused by base branch policy. Final documentation evidence push remains pending."
     - key: "24.9"
       title: "Reference Integrations and Portfolio Demonstration"
       status: ready-for-dev

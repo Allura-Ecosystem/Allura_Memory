@@ -59,8 +59,8 @@ The controlled-red demonstration used PR #65 (`ci/controlled-red-ac10`, commit `
 On 2026-08-21, GitHub branch protection was applied to `main` with strict
 up-to-date checks, administrator enforcement, required conversation resolution,
 and force-push/deletion disabled. The rule is verified through the GitHub Branch
-Protection API; the controlled-red prevention result is recorded below once the
-fresh PR #74 run completes.
+Protection API. The hosted green and controlled-red prevention outcomes are
+recorded below.
 
 | Lane / check | Before Story 24.10 | After Story 24.10 | Required by `main` protection |
 |---|---|---|---|
@@ -77,3 +77,26 @@ truth. The MCP workflow’s duplicate E2E job was removed rather than retained a
 a redundant signal. The separate required MCP runtime-health check validates the
 running application and is explicitly not represented as either browser
 automation or canonical Streamable HTTP protocol validation.
+
+#### Hosted green proof
+
+| Proof | Commit SHA | Workflow run | Result |
+|---|---|---|---|
+| Protected PR #74 | `1cf1b28b` | [CI #32503413843](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32503413843), [MCP Testing Suite #32503413880](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32503413880), [Epic 24 Evidence #32503413887](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32503413887) | success |
+
+All five required checks on PR #74 passed: `typecheck`, `test-unit`,
+`test-e2e`, `MCP Runtime Health Tests`, and `Epic 24 Evidence / Aggregate`.
+The runtime lane used a real PostgreSQL service and the running application on
+port 3100.
+
+#### Controlled-red prevention proof (AC-7)
+
+| Proof | Commit SHA | Workflow run | Result |
+|---|---|---|---|
+| Disposable PR #81 (not merged) | `f9d30335` | [CI #32503784539](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32503784539), [Epic 24 Evidence #32503784452](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32503784452) | required `test-unit` and Evidence Aggregate failed |
+
+PR #81 contained one explicitly documented, deliberately wrong unit assertion.
+GitHub marked the PR `BLOCKED`; a normal `gh pr merge --merge` attempt was
+refused with “the base branch policy prohibits the merge.” No `--admin` or
+`--auto` bypass was used. The PR was closed without merging and its temporary
+branch deleted after this evidence was captured.
