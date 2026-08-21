@@ -45,7 +45,6 @@ jobs:
 
       - name: Run unit tests
         run: bun run test:unit
-        continue-on-error: true
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
@@ -136,7 +135,6 @@ jobs:
           done
 
       - name: Run E2E tests
-        continue-on-error: true
         env:
           POSTGRES_URL: postgresql://allura:${{ secrets.POSTGRES_PASSWORD || 'dev_password' }}@localhost:5432/memory
           POSTGRES_HOST: localhost
@@ -182,7 +180,6 @@ jobs:
           curl -s http://localhost:3000/api/health || true
 
       - name: Run MCP browser tests
-        continue-on-error: true
         env:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           MCP_SCREENSHOT_DIR: tests/mcp/fixtures/screenshots

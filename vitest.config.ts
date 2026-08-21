@@ -53,6 +53,9 @@ export default defineConfig({
       "src/__tests__/api-degradation.test.ts",
       "src/__tests__/auth-middleware.test.ts",
       "src/__tests__/auth-roles.test.ts",
+    // RK-34: adversarial auth coverage must run in the default lane,
+    // not only under vitest.config.unit.ts.
+    "src/__tests__/mcp-auth-adversarial.test.ts",
       "src/__tests__/permission-profile.test.ts",
       "src/__tests__/mission-control-route-parity.test.ts",
       "src/__tests__/cors-middleware.test.ts",

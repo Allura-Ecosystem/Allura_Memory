@@ -28,6 +28,8 @@ jobs:
 
       - name: Lint check
         run: bun run lint
-      - name: Unit & Integration tests
-        run: bun run test:unit && bun run test:integration
-        continue-on-error: true
+      - name: Unit tests
+        run: bun run test:unit
+
+      - name: Integration tests
+        run: bun run test:integration
