@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { authEnvSchema, getDevAuthConfig, isDevAuthActive, type AuthEnvConfig } from "../config";
+import { type AuthEnvConfig, authEnvSchema, getDevAuthConfig, isDevAuthActive } from "../config";
 
 type Env = "development" | "production" | "test";
 
