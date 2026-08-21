@@ -87,14 +87,11 @@ export async function approveProposal(input: ApproveProposalInput): Promise<Appr
   let committedResult: ApprovalResult | undefined;
   try {
     await client.query("BEGIN");
-    // Suppress the legacy proposal_decided trigger during the atomic service
-    // transaction — the service writes its own complete audit event explicitly.
-    // Use a DO block with IF EXISTS to handle DB states where the trigger is absent.
-    await client.query(`DO $$ BEGIN
-      IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_proposal_decided' AND tgrelid = 'canonical_proposals'::regclass) THEN
-        ALTER TABLE canonical_proposals DISABLE TRIGGER trigger_proposal_decided;
-      END IF;
-    END $$`);
+    // Suppress all triggers during the atomic service transaction by
+    // switching to replica role — the service writes its own complete
+    // audit event explicitly and doesn't need the legacy trigger.
+    // session_replication_role is transaction-local via SET LOCAL.
+    await client.query("SET LOCAL session_replication_role = 'replica'");
     const proposalResult = await client.query<ProposalRow>(
       `SELECT id, group_id, content, score, tier, status, trace_ref, approved_memory_id
        FROM canonical_proposals WHERE id = $1 FOR UPDATE`,
@@ -162,19 +159,9 @@ export async function approveProposal(input: ApproveProposalInput): Promise<Appr
     );
     maybeFail("idempotency", input.failAt);
     await client.query("COMMIT");
-    // Re-enable the trigger after commit if it existed and was disabled
-    await client.query(`DO $$ BEGIN
-      IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_proposal_decided' AND tgrelid = 'canonical_proposals'::regclass AND tgenabled = 'D') THEN
-        ALTER TABLE canonical_proposals ENABLE TRIGGER trigger_proposal_decided;
-      END IF;
-    END $$`);
+    // session_replication_role resets automatically after COMMIT (SET LOCAL)
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
-    await client.query(`DO $$ BEGIN
-      IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_proposal_decided' AND tgrelid = 'canonical_proposals'::regclass AND tgenabled = 'D') THEN
-        ALTER TABLE canonical_proposals ENABLE TRIGGER trigger_proposal_decided;
-      END IF;
-    END $$`).catch(() => undefined);
     throw error;
   } finally {
     client.release();
