@@ -19,9 +19,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createHash } from "crypto"
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
-import { resolveWebApprovalTenant } from "@/lib/auth/web-principal"
-import { KnowledgePromotionError } from "@/lib/memory/knowledge-promotion"
+import { resolveWebApprovalTenant, webPrincipalFromAuthUser } from "@/lib/auth/web-principal"
 import { ApprovalAuditAuthorizationError, logApprovalEvent, logProposalNeedsEvidenceEvent, SegregationOfDutiesError } from "@/lib/memory/approval-audit"
+import { KnowledgePromotionError } from "@/lib/memory/knowledge-promotion"
 import { captureException } from "@/lib/observability/sentry"
 import { getPool } from "@/lib/postgres/connection"
 

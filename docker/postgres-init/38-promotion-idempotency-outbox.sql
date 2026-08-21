@@ -34,5 +34,6 @@ CREATE TABLE IF NOT EXISTS promotion_idempotency (
 );
 
 -- The canonical service writes the one complete approval event in its transaction.
--- Retire the old proposal-update trigger, whose event lacks the canonical memory id.
-DROP TRIGGER IF EXISTS trigger_proposal_decided ON canonical_proposals;
+-- The old proposal-update trigger remains for backward compatibility with the
+-- existing route.ts flow; the approveProposal service writes its own event
+-- explicitly and does not rely on the trigger.
