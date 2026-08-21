@@ -1,0 +1,8 @@
+{
+  "revision": "0001",
+  "provenance": "Synthetic policy violation fixtures for Story 24.6.",
+  "cases": [
+    { "id": "pv1", "action": "memory_add", "group_id": "allura-unauthorized", "expected_decision": "deny" },
+    { "id": "pv2", "action": "governance_proposal_approve", "role": "viewer", "expected_decision": "deny" }
+  ]
+}
