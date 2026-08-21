@@ -1,7 +1,7 @@
 /**
  * Vitest Config — E2E Lane
  *
- * Live stack tests. Requires PostgreSQL, Neo4j, Ollama, and full service stack.
+ * Live stack tests. Requires PostgreSQL, Ollama, and the full service stack.
  * Gated behind RUN_E2E_TESTS=true environment variable.
  * Do NOT run in CI unless the full stack is available.
  *
@@ -24,16 +24,16 @@ export default defineConfig({
       "src/__tests__/ruvector-e2e.test.ts",
       "src/__tests__/canonical-memory.test.ts",
       "src/team-ram/e2e-smoke.test.ts",
-      // Brain contract — shape stability against live PG/Neo4j
+      // Brain contract — shape stability against live PostgreSQL
       "tests/integration/brain-contract.test.ts",
       // Validation tests that need live DB for trace-ref verification
       "src/lib/validation/group-governance.test.ts",
       "src/lib/validation/trace-ref.test.ts",
       // Story 12.2 — true checkpoint continuation against live PostgreSQL
       "src/lib/process-engine/checkpoint-continuation.integration.test.ts",
-      // Allura Hosted — MCP gateway full round-trip (live PG/Neo4j/ruvector)
+      // Allura Hosted — MCP gateway full round-trip (live PostgreSQL/ruvector)
       "src/__tests__/hosted-mcp.e2e.test.ts",
-      // Task B1 — 10-point acceptance gate against live PG+Neo4j (no mocks)
+      // Task B1 — 10-point acceptance gate against live PostgreSQL (no mocks)
       "src/__tests__/acceptance-gate.e2e.test.ts",
     ],
     testTimeout: 60_000,
