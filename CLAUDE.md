@@ -77,7 +77,7 @@ Allura is a **dual-database AI memory engine** exposed via MCP — a self-hosted
 |----------|----------------|------|------|
 | Episodic | PostgreSQL 16  | 5432 | Append-only execution traces. **Never mutate historical rows.** |
 | Semantic | Neo4j 5.26     | 7687 | Versioned knowledge graph. Updates via `SUPERSEDES` — never edit nodes. |
-| Vector   | RuVector (PG)  | 5433 | 768d embeddings (nomic-embed-text). Hybrid search: vector ANN + BM25 RRF. |
+| Vector   | RuVector (PG)  | 5432 | Same PostgreSQL instance as episodic — `RUVECTOR_PORT` defaults to 5432 (`src/lib/ruvector/connection.ts:70`, `docker-compose.yml:112`). Hybrid search: vector ANN + BM25 RRF. Embedding model/dimensions unverified — see note below. |
 | MCP      | Allura Brain   | 5888 | Streamable HTTP (SSE + JSON-RPC). `memory_search`, `memory_add`, `audit_*`, `governance_*`. |
 
 ### Dashboard (Next.js 16)

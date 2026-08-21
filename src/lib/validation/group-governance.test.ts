@@ -20,8 +20,20 @@ const mockDriver = {
 }
 function getDriver() { return mockDriver }
 async function closeDriver() {}
-async function createInsight(_payload: Record<string, unknown>) {
-  return { id: "stub-insight", insight_id: _payload.insight_id, version: 1, status: "active" }
+// AD-49: the semantic graph is graph_memories (PostgreSQL), not Neo4j.
+// This previously returned a stub and wrote nothing, so getGraphGroupIdStats()
+// always queried an empty table and every graph-side assertion failed while the
+// suppressed CI lane reported green.
+async function createInsight(payload: Record<string, unknown>) {
+  const pool = getPool()
+  const id = String(payload.insight_id)
+  await pool.query(
+    `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance)
+     VALUES ($1, $2, $3, $4, $5, 'manual')
+     ON CONFLICT (id, group_id) DO NOTHING`,
+    [id, String(payload.group_id), "governance-agent", String(payload.content), Number(payload.confidence ?? 0.5)],
+  )
+  return { id, insight_id: id, version: 1, status: "active" }
 }
 
 // E2E gating: skip unless RUN_E2E_TESTS=true (requires live PostgreSQL + Neo4j)
@@ -54,6 +66,13 @@ describeE2E("group-governance", () => {
       "DELETE FROM events WHERE group_id LIKE $1",
       ["allura-governance-%"]
     );
+    // AD-49: graph rows live in graph_memories, not Neo4j. The Cypher
+    // DETACH DELETE calls against mockSession are no-ops, so without this
+    // the test tenant leaks rows between runs and skews the stats assertions.
+    await pool.query(
+      "DELETE FROM graph_memories WHERE group_id LIKE $1",
+      ["allura-governance-%"]
+    );
 
     const driver = getDriver();
     const session = driver.session();
@@ -76,6 +95,13 @@ describeE2E("group-governance", () => {
     const pool = getPool();
     await pool.query(
       "DELETE FROM events WHERE group_id LIKE $1",
+      ["allura-governance-%"]
+    );
+    // AD-49: graph rows live in graph_memories, not Neo4j. The Cypher
+    // DETACH DELETE calls against mockSession are no-ops, so without this
+    // the test tenant leaks rows between runs and skews the stats assertions.
+    await pool.query(
+      "DELETE FROM graph_memories WHERE group_id LIKE $1",
       ["allura-governance-%"]
     );
 
@@ -103,6 +129,13 @@ describeE2E("group-governance", () => {
     const pool = getPool();
     await pool.query(
       "DELETE FROM events WHERE group_id LIKE $1",
+      ["allura-governance-%"]
+    );
+    // AD-49: graph rows live in graph_memories, not Neo4j. The Cypher
+    // DETACH DELETE calls against mockSession are no-ops, so without this
+    // the test tenant leaks rows between runs and skews the stats assertions.
+    await pool.query(
+      "DELETE FROM graph_memories WHERE group_id LIKE $1",
       ["allura-governance-%"]
     );
 
@@ -332,7 +365,7 @@ describeE2E("group-governance", () => {
       const report = await generateGroupIdGovernanceReport();
 
       expect(report).toHaveProperty("postgres");
-      expect(report).toHaveProperty("neo4j");
+      expect(report).toHaveProperty("graph");
       expect(report).toHaveProperty("orphaned_groups");
       expect(report).toHaveProperty("similar_groups");
       expect(report).toHaveProperty("recommendations");

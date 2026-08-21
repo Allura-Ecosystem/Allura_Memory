@@ -153,7 +153,10 @@ describeE2E("Team RAM e2e smoke", () => {
       expect(Array.isArray(output?.nodeLabels) || typeof output?.schema === "object").toBe(true)
     }, 30_000)
 
-    it("execute_cypher runs a read-only query", async () => {
+    // C1 (commit 3e6e2faf): execute_cypher was removed — raw unparameterized SQL
+    // with no tenant scoping. src/team-ram/in-process-executor.ts:140 now always
+    // rejects. The contract under test is that it fails closed.
+    it("execute_cypher is rejected — removed for injection risk (C1)", async () => {
       const result = await orchestrateTeamRamTask(
         {
           goal: "Count insights",
@@ -164,7 +167,8 @@ describeE2E("Team RAM e2e smoke", () => {
       )
 
       const graphResult = result.results.find((r) => r.skillName === "skill-cypher-query")
-      expect(graphResult?.ok).toBe(true)
+      expect(graphResult?.ok).toBe(false)
+      expect(String(graphResult?.error ?? "")).toContain("execute_cypher has been removed")
     }, 30_000)
   })
 
