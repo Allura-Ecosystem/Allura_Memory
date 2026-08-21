@@ -7,12 +7,12 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadScenario, scenarioDigest, validateScenario } from "../scenario";
-import { VirtualClock, SeededRandom } from "../determinism";
-import { ToolSimulator } from "../tool-simulator";
-import { runScenario } from "../runner";
+import { SeededRandom, VirtualClock } from "../determinism";
 import { buildReceipt, compareReceipts } from "../receipt";
+import { runScenario } from "../runner";
+import { loadScenario, scenarioDigest, validateScenario } from "../scenario";
 import type { ScenarioFixture } from "../scenario";
+import { ToolSimulator } from "../tool-simulator";
 
 const SCENARIOS_DIR = resolve(process.cwd(), "tests/scenarios");
 

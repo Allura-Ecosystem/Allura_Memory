@@ -4,11 +4,11 @@
  * Executes scenarios in simulate, record, and replay modes.
  * Virtualizes clock, randomness, and tool calls during deterministic runs.
  */
+import { SeededRandom, VirtualClock } from "./determinism";
+import { buildReceipt, compareReceipts, type RunReceipt } from "./receipt";
 import type { ScenarioFixture } from "./scenario";
 import { scenarioDigest, validateScenario } from "./scenario";
-import { VirtualClock, SeededRandom } from "./determinism";
-import { ToolSimulator, type ToolCall } from "./tool-simulator";
-import { buildReceipt, compareReceipts, type RunReceipt } from "./receipt";
+import { type ToolCall, ToolSimulator } from "./tool-simulator";
 
 export type RunMode = "simulate" | "record" | "replay";
 
