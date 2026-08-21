@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { webPrincipalFromAuthUser, resolveWebApprovalTenant } from "../web-principal";
+import { resolveWebApprovalTenant, webPrincipalFromAuthUser } from "../web-principal";
 
 describe("webPrincipalFromAuthUser", () => {
   it("derives a tenant-locked curator principal from the verified web identity", () => {
