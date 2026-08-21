@@ -75,5 +75,18 @@
       "source": ".claude/commands/harness-status.md",
       "description": "Show harness health and loaded servers"
     }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -qE 'git add (-A|--all|\\.)( |$)'; then echo \"BLOCKED: broad git staging. Several agents share this working tree, so 'git add -A/.' sweeps in other agents' uncommitted work \u2014 this is how commit 0a5fa580 broke the integration-test lane. Stage explicit paths instead, e.g. 'git add src/foo.ts' or 'git add -u src/'.\"; exit 1; fi"
+          }
+        ]
+      }
+    ]
   }
 }

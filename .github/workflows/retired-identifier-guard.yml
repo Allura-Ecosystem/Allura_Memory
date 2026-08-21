@@ -1,0 +1,21 @@
+name: Retired Identifier Guard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  retired-identifier-guard:
+    name: Retired Identifier Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # No continue-on-error: a gate that cannot fail is not a gate.
+      - name: Fail if retired control-plane identifiers reappear
+        run: bash .github/scripts/retired-identifier-guard.sh
