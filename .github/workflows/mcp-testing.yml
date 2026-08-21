@@ -54,103 +54,8 @@ jobs:
           path: coverage/
           retention-days: 7
 
-  e2e-tests:
-    name: E2E Integration Tests
-    runs-on: ubuntu-latest
-    needs: unit-tests
-    services:
-      postgres:
-        # pgvector/pgvector:pg16 — matches docker-compose.yml and every other
-        # lane that builds this schema. docker/postgres-init/16-ruvector-memories.sql
-        # guards allura_memories/allura_feedback on the pgvector `vector` type;
-        # a plain postgres:16-alpine image silently skips those tables and
-        # then fails 36-tenant-rls.sql (see 0a5fa580 for the same defect fixed
-        # in ci.yml and integration-tests.yml).
-        image: pgvector/pgvector:pg16
-        env:
-          # POSTGRES_USER was previously `ronin4life` — a personal dev
-          # credential with no bearing on CI, not a deliberate portability
-          # test like the postgres/allura split in integration-tests.yml.
-          # Aligned to the `allura` convention used by ci.yml,
-          # factory-cross-team-smoke.yml, and epic-24-evidence.yml.
-          POSTGRES_USER: allura
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'dev_password' }}
-          POSTGRES_DB: memory
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-      neo4j:
-        image: neo4j:5.26-community
-        env:
-          NEO4J_AUTH: neo4j/${{ secrets.NEO4J_PASSWORD || 'dev_password' }}
-          NEO4J_PLUGINS: '["apoc"]'
-        ports:
-          - 7474:7474
-          - 7687:7687
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Wait for databases
-        run: |
-          echo "Waiting for PostgreSQL..."
-          until pg_isready -h localhost -p 5432 -U allura; do
-            sleep 1
-          done
-          echo "PostgreSQL is ready"
-
-          echo "Waiting for Neo4j..."
-          until curl -s http://localhost:7474; do
-            sleep 1
-          done
-          echo "Neo4j is ready"
-
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      - name: Run database migrations
-        env:
-          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'dev_password' }}
-        run: |
-          set -e
-          # Apply init scripts in ls -1v (name) order — same ordering every
-          # other lane uses, so 00-extensions.sql (CREATE EXTENSION vector)
-          # always runs before anything that depends on the vector type.
-          for f in $(ls -1v docker/postgres-init/*.sql); do
-            echo "Applying $f..."
-            psql -v ON_ERROR_STOP=1 -h localhost -U allura -d memory -f "$f"
-          done
-
-      - name: Run E2E tests
-        env:
-          POSTGRES_URL: postgresql://allura:${{ secrets.POSTGRES_PASSWORD || 'dev_password' }}@localhost:5432/memory
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: "5432"
-          POSTGRES_DB: memory
-          POSTGRES_USER: allura
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'dev_password' }}
-          POSTGRES_POOL_MAX: "5"
-          NEO4J_URI: bolt://localhost:7687
-          NEO4J_USER: neo4j
-          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD || 'dev_password' }}
-          RUN_E2E_TESTS: "true"
-        run: bun run test:e2e
-
   mcp-browser-tests:
-    name: MCP Browser Tests
+    name: MCP Runtime Health Tests
     runs-on: ubuntu-latest
     needs: unit-tests
     steps:
@@ -163,48 +68,35 @@ jobs:
 
       - name: Install dependencies
         run: bun install
-
-      - name: Install Playwright
-        run: |
-          bun add -d @playwright/test
-          bunx playwright install chromium
 
       - name: Build application
         run: bun run build
 
       - name: Start application
+        env:
+          ALLURA_DASHBOARD_PORT: "3100"
         run: |
           bun run start &
-          echo "Waiting for app to start..."
-          sleep 10
-          curl -s http://localhost:3000/api/health || true
+          echo "Waiting for app on port 3100..."
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:3100/api/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "App did not become healthy within 60 seconds" >&2
+          exit 1
 
-      - name: Run MCP browser tests
+      - name: Run MCP runtime health tests
         env:
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
-          MCP_SCREENSHOT_DIR: tests/mcp/fixtures/screenshots
+          ALLURA_DASHBOARD_PORT: "3100"
+          NEXT_PUBLIC_APP_URL: http://localhost:3100
         run: bun run test:mcp:browser
-
-      - name: Upload screenshots
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mcp-screenshots
-          path: tests/mcp/fixtures/screenshots/
-          retention-days: 7
-
-      - name: Upload failed screenshots
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: mcp-failed-screenshots
-          path: tests/mcp/fixtures/screenshots/failed/
-          retention-days: 14
 
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [static-analysis, unit-tests, e2e-tests, mcp-browser-tests]
+    needs: [static-analysis, unit-tests, mcp-browser-tests]
     if: always()
     steps:
       - name: Test Results
@@ -215,5 +107,4 @@ jobs:
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Static Analysis | ${{ needs.static-analysis.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| MCP Browser Tests | ${{ needs.mcp-browser-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| MCP Runtime Health Tests | ${{ needs.mcp-browser-tests.result }} |" >> $GITHUB_STEP_SUMMARY

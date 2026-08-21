@@ -60,7 +60,9 @@
     "scripts/**/*.ts",
     "tests/**/*.ts",
     "vitest.config.ts",
-    "eslint.config.mjs"
+    "eslint.config.mjs",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

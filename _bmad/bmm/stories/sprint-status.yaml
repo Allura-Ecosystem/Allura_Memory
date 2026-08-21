@@ -252,10 +252,12 @@ epic_24:
       depends_on: ["24.2", "24.3", "24.4", "24.5", "24.6", "24.7"]
     - key: "24.10"
       title: "CI Gate Integrity and Branch Protection"
-      status: ready-for-dev
-      owner: "unassigned"
+      status: in-progress
+      owner: "Troy"
+      started_at: "2026-08-21T12:26:17Z"
+      baseline_commit: "1873666307891ca88654c20ad12debf4342e2d9f"
       depends_on: ["24.1"]
-      status_evidence: "Opened 2026-08-20 from a Team RAM audit of all 14 workflows. main has NO branch-protection rule (gh api returns 404), so no status check is merge-blocking. 28 continue-on-error occurrences across 7 workflow files; 4 lanes report green while suppressing test failures (ci.yml test-e2e, mcp-testing.yml e2e-tests + unit-tests, check.yml check). epic-24-evidence.yml gates hard and is unaffected."
+      status_evidence: "Troy started 2026-08-21. Local verification: PostgreSQL E2E 150 passed (1 intentional skip), unit 1,785 passed (171 skipped), runtime health 2 passed, typecheck and production build passed. CI now retires the duplicate MCP E2E lane, uses bounded port-3100 runtime readiness, and never labels runtime health as browser or protocol validation. GitHub main branch protection is active with required typecheck, test-unit, test-e2e, MCP Runtime Health Tests, and Epic 24 Evidence / Aggregate; hosted run and controlled-red prevention evidence remain pending."
     - key: "24.9"
       title: "Reference Integrations and Portfolio Demonstration"
       status: ready-for-dev

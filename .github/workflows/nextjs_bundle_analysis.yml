@@ -48,6 +48,8 @@ jobs:
 
       - name: Analyze bundle
         run: node report-bundle-size.js
+        # Informational: bundle deltas are uploaded and compared below, but are
+        # not a functional correctness gate for this repository.
         continue-on-error: true
 
       - name: Upload bundle
