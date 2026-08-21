@@ -1,61 +1,11 @@
 {
   "name": "@allura/sdk",
-  "version": "0.2.0",
-  "description": "TypeScript SDK for Allura Memory — MCP Streamable HTTP client",
-  "keywords": [
-    "allura",
-    "memory",
-    "mcp",
-    "sdk",
-    "ai",
-    "knowledge-graph"
-  ],
-  "author": "Allura Memory Team",
+  "version": "1.0.0",
+  "description": "Allura TypeScript SDK — public clients for governed memory, scenarios, evaluations, and evidence",
   "license": "MIT",
-  "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "lint": "tsc --noEmit",
-    "bump-version": "bun run scripts/bump-version.ts",
-    "prepublishOnly": "bun run build"
-  },
-  "dependencies": {
-    "zod": "^3.24.0"
-  },
-  "devDependencies": {
-    "tsup": "^8.4.0",
-    "typescript": "^5.9.0",
-    "vitest": "^3.2.0"
-  },
-  "peerDependencies": {},
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Charitablebusinessronin/Allura_Memory.git",
-    "directory": "packages/sdk"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    ".": "./src/index.ts"
   }
 }
