@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Allura Evaluation Result v1",
+  "description": "Result contract for the Allura evaluation and regression gate system",
+  "type": "object",
+  "required": ["schema_version", "suite", "dataset_revision", "environment", "thresholds", "metrics", "failures", "evidence_hashes"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "v1" },
+    "suite": {
+      "type": "string",
+      "description": "Evaluation suite name"
+    },
+    "dataset_revision": {
+      "type": "string",
+      "description": "Git SHA or tagged revision of the dataset fixtures"
+    },
+    "environment": {
+      "type": "object",
+      "required": ["machine", "timestamp"],
+      "properties": {
+        "machine": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "node_version": { "type": "string" },
+        "bun_version": { "type": "string" },
+        "postgres_version": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "thresholds": {
+      "type": "object",
+      "description": "Declared before execution; runner cannot rewrite from observed results",
+      "additionalProperties": { "type": "number" }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "value", "status"],
+        "properties": {
+          "name": { "type": "string" },
+          "value": { "type": "number" },
+          "threshold": { "type": "number" },
+          "status": { "enum": ["pass", "fail", "skip"] },
+          "scenario_ids": { "type": "array", "items": { "type": "string" } },
+          "case_ids": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["metric", "observed", "threshold", "scenario_id"],
+        "properties": {
+          "metric": { "type": "string" },
+          "observed": { "type": "number" },
+          "threshold": { "type": "number" },
+          "baseline": { "type": "number" },
+          "scenario_id": { "type": "string" },
+          "case_id": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "evidence_hashes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "baseline_revision": {
+      "type": "string",
+      "description": "The baseline file revision this run was compared against"
+    },
+    "overall_status": { "enum": ["pass", "fail", "skip"] }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,67 @@
+# Portfolio evaluation suite — canonical configuration
+# Story 24.6 AC-3: offline CI evaluation lanes
+
+suite: portfolio
+version: v1
+dataset_revision: "0001"
+environment:
+  label: "ci-laptop"
+  hardware: "4GB laptop, local PostgreSQL"
+
+thresholds:
+  retrieval_relevance_p@5: 0.70
+  approved_only_recall: 0.85
+  policy_violation_block_rate: 1.00
+  cross_tenant_isolation: 1.00
+  promotion_correctness: 1.00
+  audit_completeness: 1.00
+  deterministic_replay_match: 1.00
+  tool_contract_validation: 1.00
+  latency_p95_ms: 5000
+
+lanes:
+  - name: retrieval_relevance
+    type: offline
+    description: "Retrieval relevance P@K over fixture queries"
+    cases: evals/datasets/relevance-queries.json
+
+  - name: approved_only_recall
+    type: offline
+    description: "Approved-only memory recall against fixture proposals"
+    cases: evals/datasets/approved-recall.json
+
+  - name: policy_violation_blocking
+    type: offline
+    description: "Policy violation detection and blocking"
+    cases: evals/datasets/policy-violations.json
+
+  - name: cross_tenant_isolation
+    type: offline
+    description: "Cross-tenant memory isolation verification"
+    cases: evals/datasets/cross-tenant.json
+
+  - name: promotion_correctness
+    type: offline
+    description: "Atomic promotion correctness: one proposal, one canonical memory"
+    cases: evals/datasets/promotion-correctness.json
+
+  - name: audit_completeness
+    type: offline
+    description: "Audit event completeness for approval/rejection decisions"
+    cases: evals/datasets/audit-completeness.json
+
+  - name: deterministic_replay
+    type: offline
+    description: "Deterministic replay of scenario harness runs"
+    cases: evals/datasets/replay-scenarios.json
+
+  - name: tool_contract_validation
+    type: offline
+    description: "Tool contract schema validation against MCP gateway"
+    cases: evals/datasets/tool-contracts.json
+
+  - name: latency
+    type: performance
+    description: "Latency percentiles for memory search and promote operations"
+    cases: evals/datasets/latency.json
+    environment_note: "Laptop-specific; not generalizable"
