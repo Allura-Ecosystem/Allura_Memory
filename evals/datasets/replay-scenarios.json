@@ -1,0 +1,8 @@
+{
+  "revision": "0001",
+  "provenance": "Synthetic replay scenario fixtures for Story 24.6.",
+  "cases": [
+    { "id": "rp1", "scenario": "governed-memory-success", "expected_identical": true },
+    { "id": "rp2", "scenario": "unauthorized-cross-tenant-access", "expected_identical": true }
+  ]
+}

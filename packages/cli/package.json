@@ -1,0 +1,15 @@
+{
+  "name": "@allura/cli",
+  "version": "1.0.0",
+  "description": "Allura CLI — governed memory platform developer path",
+  "license": "MIT",
+  "bin": {
+    "allura": "src/index.ts"
+  },
+  "scripts": {
+    "start": "bun src/index.ts"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
+  }
+}
