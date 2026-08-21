@@ -4,6 +4,7 @@
  * Typed access to allura-scenario-v1 JSON scenarios. Uses ajv for validation
  * and rejects any scenario with unknown executable fields.
  */
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import Ajv, { type ValidateFunction } from "ajv";
@@ -92,6 +93,5 @@ export function scenarioDigest(scenario: ScenarioFixture): string {
     assertions: scenario.assertions,
     approval_breakpoints: scenario.approval_breakpoints,
   };
-  const { createHash } = require("node:crypto") as typeof import("node:crypto");
   return createHash("sha256").update(JSON.stringify(stable)).digest("hex");
 }
