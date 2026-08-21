@@ -120,7 +120,7 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
       await pgPool.query(
         `INSERT INTO graph_memories (id, group_id, content, score, provenance, version)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        ["e2e-graph-memory", "allura-e2e-graph", "e2e: graph memory", 0.85, "system", 1],
+        ["e2e-graph-memory", "allura-e2e-graph", "e2e: graph memory", 0.85, "manual", 1],
       );
 
       const result = await pgPool.query(
@@ -318,7 +318,7 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
       const result = await pgPool.query(
         `INSERT INTO graph_memories (id, group_id, content, score, provenance, version)
          SELECT 'e2e-graph-perf-' || series, 'allura-e2e-perf',
-                'e2e: graph performance row ' || series, 0.5, 'system', 1
+                'e2e: graph performance row ' || series, 0.5, 'manual', 1
          FROM generate_series(1, 100) AS series
          RETURNING id`,
       );

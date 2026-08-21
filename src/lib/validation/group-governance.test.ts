@@ -16,7 +16,7 @@ async function insertGraphMemory(id: string, groupId: string, content: string): 
     `INSERT INTO graph_memories
        (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
      VALUES ($1, $2, $3, $4, $5, $6, 1, NOW()::timestamptz, false)`,
-    [id, groupId, "governance-agent", content, 0.9, "system"],
+    [id, groupId, "governance-agent", content, 0.9, "manual"],
   );
 }
 
