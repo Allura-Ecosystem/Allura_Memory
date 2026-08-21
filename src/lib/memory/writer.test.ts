@@ -8,7 +8,7 @@
  * (default path). Neo4j fallback tests have been removed — Neo4j is sunset.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 // ── Mock path-mapped imports BEFORE any imports ────────────────────────────
 
@@ -55,6 +55,7 @@ describe("memory() — controlPlane-routed writer", () => {
     vi.clearAllMocks()
     // Ensure controlPlane path is active (default)
     delete process.env.MEMORY_BYPASS_CONTROL_PLANE
+    delete process.env.MEMORY_BYPASS_KERNEL
     // Re-stub syscalls after clearAllMocks
     vi.mocked(syscall_mutate).mockResolvedValue({
       success: true,
@@ -173,5 +174,49 @@ describe("memory() — controlPlane-routed writer", () => {
         })
       ).rejects.toThrow("Relationship write denied")
     })
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEPRECATED BYPASS FALLBACK
+// MEMORY_BYPASS_KERNEL is the pre-rename name. It is still honoured so an
+// operator mid-migration does not silently lose the bypass and get rerouted
+// through syscall_mutate, where different policies apply.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("memory() — MEMORY_BYPASS_KERNEL deprecated fallback", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    delete process.env.MEMORY_BYPASS_CONTROL_PLANE
+    delete process.env.MEMORY_BYPASS_KERNEL
+  })
+
+  afterEach(() => {
+    delete process.env.MEMORY_BYPASS_CONTROL_PLANE
+    delete process.env.MEMORY_BYPASS_KERNEL
+  })
+
+  it("honours the legacy MEMORY_BYPASS_KERNEL name — does not route to syscall_mutate", async () => {
+    process.env.MEMORY_BYPASS_KERNEL = "true"
+    await memory()
+      .createEntity({ label: "Insight", group_id: "allura-system", props: { summary: "legacy" } })
+      .catch(() => undefined)
+    expect(syscall_mutate).not.toHaveBeenCalled()
+  })
+
+  it("prefers MEMORY_BYPASS_CONTROL_PLANE when both are set", async () => {
+    process.env.MEMORY_BYPASS_KERNEL = "true"
+    process.env.MEMORY_BYPASS_CONTROL_PLANE = "false"
+    await memory()
+      .createEntity({ label: "Insight", group_id: "allura-system", props: { summary: "new wins" } })
+      .catch(() => undefined)
+    expect(syscall_mutate).toHaveBeenCalled()
+  })
+
+  it("routes through the control plane when neither is set", async () => {
+    await memory()
+      .createEntity({ label: "Insight", group_id: "allura-system", props: { summary: "default" } })
+      .catch(() => undefined)
+    expect(syscall_mutate).toHaveBeenCalled()
   })
 })

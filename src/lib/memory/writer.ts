@@ -470,7 +470,20 @@ function buildControlPlaneBackend(): MemoryAPI {
  * });
  */
 export function memory(): MemoryAPI {
-  const useControlPlane = process.env.MEMORY_BYPASS_CONTROL_PLANE !== "true";
+  // MEMORY_BYPASS_KERNEL is the pre-rename name, still documented in AD-40.
+  // Read it as a fallback: unlike RUVIX_CONTROL_PLANE_SECRET, which fails loudly
+  // when unset, a stale boolean flag would fail SILENTLY — an operator mid-migration
+  // would lose the bypass and every write would reroute through syscall_mutate,
+  // changing which policies apply, with no error to explain it.
+  const legacyBypass = process.env.MEMORY_BYPASS_KERNEL;
+  if (legacyBypass !== undefined && process.env.MEMORY_BYPASS_CONTROL_PLANE === undefined) {
+    console.warn(
+      "[deprecated] MEMORY_BYPASS_KERNEL is renamed to MEMORY_BYPASS_CONTROL_PLANE. " +
+        "Honouring the old name for now; update your environment before it is removed."
+    );
+  }
+  const bypass = process.env.MEMORY_BYPASS_CONTROL_PLANE ?? legacyBypass;
+  const useControlPlane = bypass !== "true";
 
   if (useControlPlane) {
     return buildControlPlaneBackend();

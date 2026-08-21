@@ -130,6 +130,7 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `memory_promote` | Request promotion to Neo4j (creates proposal) |
 | `sync_contract` | Sync contract mapping applied on curator approve or auto-promote — user_id→Agent, group_id→Project relationships wired |
 | `control_plane_rule` | RuVix control plane rule evaluation or rule-anchored audit event |
+| `kernel_rule` | DEPRECATED — pre-2026-08-20 name for `control_plane_rule`. Retained because the events table is append-only and historical rows can never be migrated. Do not emit; readers must still accept it. |
 | `proposal_decided` | A curator proposal received a decision (approve or reject) |
 | `proposal_rejected` | A curator proposal was rejected during HITL review |
 | `auto_curated` | A memory was scored/curated by the auto-curator pipeline |
@@ -394,7 +395,7 @@ Controls which graph backend adapter is active for memory and structural operati
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `rule_id` | string | Yes | RuVix rule that was evaluated |
-| `event_type` | string | Yes | Must be `control_plane_rule` |
+| `event_type` | string | Yes | `control_plane_rule`. Rows written before the 2026-08-20 rename carry `kernel_rule`; the events table is append-only, so both remain valid in `event.schema.json` and readers must accept either. |
 | `group_id` | string | Yes | Tenant namespace for the event |
 | `agent_id` | string | Yes | Agent identity for the event |
 | `session_id` | string | Yes | Session identity for the event |

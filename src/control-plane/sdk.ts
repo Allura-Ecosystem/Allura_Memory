@@ -33,7 +33,7 @@ export interface SDKConfig {
   group_id: string;
   
   /** Default permission tier */
-  permission_tier?: "controlPlane" | "plugin" | "skill";
+  permission_tier?: "controlPlane" | "kernel" | "plugin" | "skill";
   
   /** Default budget cost estimate */
   default_budget_cost?: number;

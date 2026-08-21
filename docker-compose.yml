@@ -78,6 +78,7 @@ services:
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
     networks:
       - knowledge-network
+      - open-webui-stack_default
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -211,3 +212,6 @@ networks:
   knowledge-network:
     external: true
     name: knowledge-network
+  open-webui-stack_default:
+    external: true
+    name: open-webui-stack_default

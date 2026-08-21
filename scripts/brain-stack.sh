@@ -15,7 +15,10 @@ SERVICES=(postgres neo4j mcp)
 # exist (the live stack binds them); pre-creating them is a no-op that preserves
 # data. On a FRESH machine they do not exist, so `compose up` fails before any
 # container starts — bootstrap_external_resources() fixes that (G1 + G2).
-EXTERNAL_NETWORK="knowledge-network"
+# Both networks are declared `external: true` in docker-compose.yml, so compose
+# will NOT create them. On a fresh machine a missing one aborts `up` before any
+# container starts — which is exactly how open-webui-stack_default broke setup.
+EXTERNAL_NETWORKS=(knowledge-network open-webui-stack_default)
 EXTERNAL_VOLUMES=(memory_postgres_data neo4j_data neo4j_logs)
 
 # --env-file args (G4): the stack needs BOTH .env (base) and .env.local (secrets)
@@ -39,13 +42,16 @@ compose() {
 # a missing one is created. Safe to re-run; never destroys data. Fixes G1 (network)
 # and G2 (volumes) for fresh machines without changing how the live stack binds.
 bootstrap_external_resources() {
-  echo "==> Ensuring external network '${EXTERNAL_NETWORK}' exists"
-  if docker network inspect "${EXTERNAL_NETWORK}" >/dev/null 2>&1; then
-    echo "    network '${EXTERNAL_NETWORK}' already exists — skipping"
-  else
-    docker network create "${EXTERNAL_NETWORK}" >/dev/null
-    echo "    network '${EXTERNAL_NETWORK}' created"
-  fi
+  local net
+  for net in "${EXTERNAL_NETWORKS[@]}"; do
+    echo "==> Ensuring external network '${net}' exists"
+    if docker network inspect "${net}" >/dev/null 2>&1; then
+      echo "    network '${net}' already exists — skipping"
+    else
+      docker network create "${net}" >/dev/null
+      echo "    network '${net}' created"
+    fi
+  done
 
   local vol
   for vol in "${EXTERNAL_VOLUMES[@]}"; do

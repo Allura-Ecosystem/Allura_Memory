@@ -55,7 +55,7 @@ export interface ProofClaims {
   budget_cost?: number;
   
   /** Permission tier required (controlPlane, plugin, skill) */
-  permission_tier?: "controlPlane" | "plugin" | "skill";
+  permission_tier?: "controlPlane" | "kernel" | "plugin" | "skill";
   
   /** Additional context for audit trail */
   audit_context?: Record<string, unknown>;

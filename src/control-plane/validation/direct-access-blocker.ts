@@ -95,7 +95,7 @@ const DIRECT_ACCESS_PATTERNS = {
 const CONTROL_PLANE_PATHS = [
   "/src/control-plane/",
   "/control-plane/",
-  "/control-plane/",
+  "@/control-plane/",
   "RuVixControlPlane",
   "syscall_",
 ];
