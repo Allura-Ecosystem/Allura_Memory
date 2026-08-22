@@ -202,10 +202,10 @@ epic_23:
 
 epic_24:
   name: "Agentic AI Framework and Harness Portfolio Readiness"
-  status: done
+  status: in-progress
   retrospective: done
-  next_story: ""
-  sequence_note: "Complete Gate A first; trust-boundary stories precede portfolio claims and presentation work."
+  next_story: "24.4-remediation"
+  sequence_note: "Post-merge adversarial review on 2026-08-22 reopened 24.4-24.9. See docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md."
   stories:
     - key: "24.1"
       title: "CI and Evidence Baseline"
@@ -227,29 +227,34 @@ epic_24:
       status_evidence: "Fresh pgvector/pgvector:pg16 container (PG 16.15, pgvector 0.8.6) destroyed and rebuilt; 40 migrations applied deterministically; live-DB lane 12/12 pass including new database-tenant-isolation.e2e.test.ts, events-immutability.e2e.test.ts, tenant-table-inventory.test.ts, plus existing checkpoint-continuation.integration.test.ts. Unit suite remains 1782/0 failed. RLS enabled+forced on 37 tenant-scoped tables; allura_app role has least-privilege DML; events UPDATE/DELETE rejected for app role; allura_breakglass role permits documented break-glass mutation. Merged to main as 10a6324b (PR #66) with all 25 checks green; remote Epic 24 Evidence run 32369489097. Two schema-bootstrap defects fixed en route: missing CREATE EXTENSION vector in docker/postgres-init (added 00-extensions.sql), and hardcoded bootstrap-superuser/database names in 37-events-immutable.sql (now current_user / current_database())."
     - key: "24.4"
       title: "Atomic Human-Governed Promotion"
-      status: done
+      status: changes-requested
       owner: "Troy"
       depends_on: ["24.3"]
+      status_evidence: "PR #82 merged, but post-merge review found production entrypoints bypass the service, unsafe broad trigger suppression, and a non-transactional outbox claim. Remediation required."
     - key: "24.5"
       title: "Deterministic Scenario Harness"
-      status: done
+      status: changes-requested
       owner: "Troy"
       depends_on: ["24.2"]
+      status_evidence: "PR #83 merged, but post-merge review found the runner does not compose the process engine and does not enforce record/replay/network/side-effect requirements."
     - key: "24.6"
       title: "Evaluation and Regression Gates"
-      status: done
+      status: changes-requested
       owner: "Troy"
       depends_on: ["24.4", "24.5"]
+      status_evidence: "PR #84 merged, but the runner compares caller-supplied values rather than executing declared datasets, and no required evaluation CI artifact exists."
     - key: "24.7"
       title: "SDK, CLI, and Ten-Minute Developer Path"
-      status: done
+      status: changes-requested
       owner: "Troy"
       depends_on: ["24.5", "24.6"]
+      status_evidence: "PR #85 merged, but CLI parsing and SDK build fail; clean quickstart and public contract evidence are absent."
     - key: "24.8"
       title: "Enterprise Documentation Truth Pack"
-      status: done
+      status: changes-requested
       owner: "Troy"
       depends_on: ["24.2", "24.3", "24.4", "24.5", "24.6", "24.7"]
+      status_evidence: "PR #86 merged only four enterprise Markdown files; canonical-doc alignment, traceability, evidence index, and CI guards remain incomplete."
     - key: "24.10"
       title: "CI Gate Integrity and Branch Protection"
       status: done
@@ -260,6 +265,7 @@ epic_24:
       status_evidence: "Troy completed Story 24.10 on 2026-08-21. Local: PostgreSQL E2E 150 passed (1 intentional skip), unit 1,785 passed (171 skipped), runtime health 2 passed, typecheck/build passed. Protected PR #74: hosted CI #32504104054, MCP Testing Suite #32504104110, and Epic 24 Evidence #32504104096 passed the required typecheck, test-unit, test-e2e, MCP Runtime Health Tests, and Evidence Aggregate checks. GitHub main protection is active (strict/up-to-date, admin enforced, force-push/deletion blocked, conversations required). Controlled-red PR #81 failed required test-unit, was GitHub BLOCKED, and a normal merge was refused by base-branch policy; it was closed unmerged and deleted."
     - key: "24.9"
       title: "Reference Integrations and Portfolio Demonstration"
-      status: done
+      status: changes-requested
       owner: "Troy"
       depends_on: ["24.8"]
+      status_evidence: "PR #87 merged documentation only; no runnable integrations, scenarios, receipts, evaluation artifacts, or measured clean-environment evidence exist."
