@@ -35,7 +35,7 @@ export const PRINCIPAL_ROLES = ["viewer", "curator", "admin"] as const;
 export type PrincipalRole = (typeof PRINCIPAL_ROLES)[number];
 
 /** How the principal proved who it is. */
-export type AuthMethod = "mcp_token" | "service_identity" | "dev_local";
+export type AuthMethod = "mcp_token" | "service_identity" | "web_session" | "dev_local";
 
 /** Wildcard tenant marker. Only ever legal for dev_local / service_identity. */
 export const TENANT_WILDCARD = "*";
@@ -185,10 +185,10 @@ export function createPrincipalContext(input: CreatePrincipalInput): PrincipalCo
   }
   for (const tenant of tenantIds) {
     if (tenant === TENANT_WILDCARD) {
-      if (input.authMethod === "mcp_token") {
+      if (input.authMethod !== "dev_local" && input.authMethod !== "service_identity") {
         throw new PrincipalAuthError(
           "CONFIG_MISSING",
-          "Wildcard tenant is not permitted for mcp_token principals",
+          `Wildcard tenant is not permitted for ${input.authMethod} principals`,
         );
       }
       continue;

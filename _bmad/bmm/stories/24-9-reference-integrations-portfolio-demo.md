@@ -1,7 +1,7 @@
 # Story 24.9 — Reference Integrations and Portfolio Demonstration
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** ready-for-dev
+**Status:** changes-requested
 **Priority:** P1-High
 **Complexity:** Large
 **Owner:** unassigned
@@ -93,7 +93,7 @@ The final portfolio evidence bundle must contain:
 
 ## Dev Agent Record
 
-**Status:** pending
+**Status:** changes-requested — see `docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md`
 
 ### Completion Notes
 

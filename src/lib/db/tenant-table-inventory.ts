@@ -61,6 +61,8 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "notion_sync_dlq", class: "tenant-scoped", notes: "Notion sync dead-letter" },
   { table: "ruvector_memory_fallback", class: "tenant-scoped", notes: "RuVector fallback memory" },
   { table: "skill_usage_events", class: "tenant-scoped", notes: "Skill usage events" },
+  { table: "promotion_outbox", class: "tenant-scoped", notes: "Story 24.4 projection outbox" },
+  { table: "promotion_idempotency", class: "tenant-scoped", notes: "Story 24.4 idempotency receipts" },
 
   // Credential / identity tables
   { table: "mcp_tokens", class: "tenant-scoped-credential", notes: "MCP credentials; lookup by token prefix before tenant resolution" },

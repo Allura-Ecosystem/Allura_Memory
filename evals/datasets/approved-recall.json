@@ -1,0 +1,8 @@
+{
+  "revision": "0001",
+  "provenance": "Synthetic approved-memory recall fixtures for Story 24.6.",
+  "cases": [
+    { "id": "ar1", "group_id": "allura-eval-test", "query": "approved memory one", "expected_count": 1 },
+    { "id": "ar2", "group_id": "allura-eval-test", "query": "approved memory two", "expected_count": 1 }
+  ]
+}

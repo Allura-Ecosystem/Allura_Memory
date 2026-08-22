@@ -1,0 +1,58 @@
+{
+  "scenario_id": "checkpoint-recovery-after-failure",
+  "schema_version": "v1",
+  "description": "Checkpoint recovery after a tool failure: a transient error is retried and the process recovers",
+  "tenant_fixture": {
+    "group_id": "allura-test-recovery",
+    "cleanup": true
+  },
+  "principal_fixture": {
+    "principal_id": "curator-2",
+    "roles": ["curator"],
+    "tenant_ids": ["allura-test-recovery"],
+    "auth_method": "service_identity"
+  },
+  "process_definition": {
+    "id": "checkpoint-recovery",
+    "revision": "r1"
+  },
+  "initial_state": {
+    "memories": [],
+    "proposals": [
+      { "content": "Proposal for recovery test", "score": 0.85, "tier": "mainstream", "status": "pending" }
+    ]
+  },
+  "tool_fixtures": [
+    {
+      "tool_name": "memory_search",
+      "match": "ordered",
+      "response": { "result": { "results": [] } }
+    },
+    {
+      "tool_name": "memory_add",
+      "match": "ordered",
+      "error": { "code": "TRANSIENT_RETRY", "message": "Connection temporarily unavailable" }
+    },
+    {
+      "tool_name": "memory_add",
+      "match": "ordered",
+      "response": { "result": { "id": "mem-recovered", "stored": "episodic" } }
+    },
+    {
+      "tool_name": "governance_proposal_approve",
+      "match": "ordered",
+      "response": { "result": { "outcome": "approved", "memory_id": "canonical-recovered" } }
+    }
+  ],
+  "virtual_clock": {
+    "start_time": "2026-01-01T00:00:00.000Z",
+    "tick_interval_ms": 500
+  },
+  "random_seed": 42,
+  "policy_expectations": [],
+  "assertions": {
+    "output": { "expected_status": "completed" },
+    "state": { "proposal_status": "approved" },
+    "audit": { "expected_events": ["proposal_approved"] }
+  }
+}
