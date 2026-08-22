@@ -31,7 +31,7 @@ bun test                          # all unit tests (vitest run)
 bun run test:unit                 # unit lane only (no DB)
 bun run test:integration          # mocked services + contracts
 bun run test:curator              # curator pipeline tests
-bun run test:e2e                  # RUN_E2E_TESTS=true, requires live PG + Neo4j
+bun run test:e2e                  # RUN_E2E_TESTS=true, requires live PostgreSQL
 bun run test:all                  # typecheck + lint + unit + e2e + mcp browser
 bun run test:watch                # watch mode
 
@@ -40,7 +40,7 @@ bun vitest run src/lib/postgres/connection.test.ts
 bun vitest run -t "should build connection config"
 
 # Brain stack (Docker)
-bun run brain:up          # start PG + Neo4j + MCP containers
+bun run brain:up          # start PostgreSQL + MCP containers
 bun run brain:down        # stop stack
 bun run brain:status      # health check
 bun run brain:recover     # restart in dependency order
@@ -69,15 +69,15 @@ bun run validate:tokens           # token compliance
 
 ## Architecture
 
-Allura is a **dual-database AI memory engine** exposed via MCP — a self-hosted, compliance-grade alternative to mem0.
+Allura is a **PostgreSQL-only AI memory engine** exposed via MCP — a self-hosted, compliance-grade alternative to mem0.
 
 ### Data Layers
 
 | Layer    | Store          | Port | Role |
 |----------|----------------|------|------|
-| Episodic | PostgreSQL 16  | 5432 | Append-only execution traces. **Never mutate historical rows.** |
-| Semantic | Neo4j 5.26     | 7687 | Versioned knowledge graph. Updates via `SUPERSEDES` — never edit nodes. |
-| Vector   | RuVector (PG)  | 5432 | Same PostgreSQL instance as episodic — `RUVECTOR_PORT` defaults to 5432 (`src/lib/ruvector/connection.ts:70`, `docker-compose.yml:112`). Hybrid search: vector ANN + BM25 RRF. Embedding model/dimensions unverified — see note below. |
+| Episodic | PostgreSQL 16 | 5432 | Append-only execution traces. **Never mutate historical rows.** |
+| Semantic | PostgreSQL 16 (`graph_memories`, `graph_supersedes`) | 5432 | Versioned canonical memory and supersession edges. Existing versions remain immutable. |
+| Vector | RuVector (PostgreSQL) | 5432 | Same PostgreSQL instance — `RUVECTOR_PORT` defaults to 5432 (`src/lib/ruvector/connection.ts:70`, `docker-compose.yml:112`). Hybrid search: vector ANN + BM25 RRF. |
 | MCP      | Allura Brain   | 5888 | Streamable HTTP (SSE + JSON-RPC). `memory_search`, `memory_add`, `audit_*`, `governance_*`. |
 
 ### Dashboard (Next.js 16)
@@ -88,7 +88,7 @@ API routes under `src/app/api/`: agents, audit, curator, dreams, evidence, execu
 
 ### Key Subsystems
 
-- **Curator** (`src/curator/`): HITL promotion pipeline — scores traces, queues proposals, requires human approval before Neo4j writes.
+- **Curator** (`src/curator/`): HITL promotion pipeline — scores traces, queues proposals, and requires human approval before canonical PostgreSQL writes.
 - **Control Plane** (`src/control-plane/`): RuVix proof-gated mutation layer.
 - **Process Engine** (`src/lib/process-engine/`): Workflow execution with checkpoint resume, revision pinning.
 - **Budget / Circuit Breaker** (`src/lib/budget/`, `src/lib/circuit-breaker/`): Hard limits and automatic shutdown for agent runaway prevention.
@@ -108,10 +108,10 @@ API routes under `src/app/api/`: agents, audit, curator, dreams, evidence, execu
 
 ## Non-Negotiable Invariants
 
-- **`group_id` on every DB read/write** — pattern `^allura-[a-z0-9-]+$`. Missing it causes CHECK constraint failure.
+- **`group_id` on every DB read/write** — pattern `^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$`. Missing or malformed values cause a CHECK constraint failure.
 - **PostgreSQL traces are append-only** — no UPDATE/DELETE on trace rows, ever.
-- **Neo4j versioning via `SUPERSEDES`** — `(v2)-[:SUPERSEDES]->(v1:deprecated)`, never edit existing nodes.
-- **HITL required for promotion** — agents cannot autonomously promote to Neo4j; route through `curator:approve`.
+- **Semantic versioning uses `graph_supersedes`** — create a new `graph_memories` version and a supersession edge; never rewrite historical canonical rows.
+- **HITL required for promotion** — agents cannot autonomously promote to the canonical store; route through `curator:approve`.
 - **`allura-*` tenant namespace** — `roninclaw-*` group_ids are deprecated; flag any occurrence as drift.
 - **Allura Brain is the memory surface** — all memories go to Brain (`allura-brain__memory_*`), never to local file banks.
 - **Verify before presenting** — never claim code works without testing the endpoint and confirming real data returns.
@@ -140,7 +140,7 @@ API routes under `src/app/api/`: agents, audit, curator, dreams, evidence, execu
 
 ## Port Allocation (AD-45)
 
-3000–3999 band is **banned**. UI: 4000+ · API: 6000+ · Tools: 7000+. Infra exempt (PG 5432, Neo4j 7687, Brain MCP 5888).
+3000–3999 band is **banned**. UI: 4000+ · API: 6000+ · Tools: 7000+. Infra exempt (PostgreSQL 5432, Brain MCP 5888).
 
 ## MCP Integration
 

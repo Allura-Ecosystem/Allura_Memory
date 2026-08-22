@@ -1,6 +1,6 @@
 # Story 24.10: CI Gate Integrity and Branch Protection
 
-**Status:** ready-for-dev
+**Status:** done
 **Priority:** P0-Critical
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
 **Gate:** A — Truthful baseline
@@ -17,7 +17,7 @@ green" is evidence rather than decoration.
 
 ## Why This Exists
 
-Found during Story 24.3 remediation, by a Team RAM audit of all 14 workflows.
+Found during Story 24.3 remediation, by a workflow audit of all 14 workflows.
 Two independent problems, either of which alone invalidates the Gate A claim:
 
 1. **Four lanes report green while suppressing test failures.** 28

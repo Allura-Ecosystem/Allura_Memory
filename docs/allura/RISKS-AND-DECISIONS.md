@@ -68,6 +68,7 @@
 | AD-53 | Coherence monitor — contradiction detection in memory | Accepted | 2026-07-17: Scans recent memories for semantic conflicts (entity-attribute, temporal contradictions, duplicate-with-different-fact). Uses pgvector cosine similarity to find semantically similar memories, then compares extracted facts. Conflicts stored in `coherence_conflicts` table with severity score. HITL review for all high-severity conflicts. See epic: `epic-level-4-pattern-learning.md`, Story 2.1. |
 | AD-54 | Genesis engine — pattern-based skill proposal | Accepted | 2026-07-17: Analyzes trajectories and skill usage to detect repeated patterns (3+ identical action sequences, 10+ same task_type, failed-then-succeeded). Generates proposals with confidence score. HITL gate: approved proposals create skill template drafts (markdown), never auto-deployed. See epic: `epic-level-4-pattern-learning.md`, Story 2.2. |
 | AD-55 | Self-healing — auto-recovery with HITL alert escalation | Accepted | 2026-07-17: Health monitor checks PostgreSQL, MCP container, disk, memory. Auto-recovery: restart containers, run recovery scripts. Max 3 attempts per component before alerting Captain via Brain memory_add (event_type=ALERT). Recovery attempts logged in `recovery_events` table. See epic: `epic-level-4-pattern-learning.md`, Story 2.3. |
+| AD-56 | Dev auth bypass cannot activate in production, unconditionally | Accepted | 2026-08-21: `isDevAuthActive()` evaluated `ALLURA_DEV_AUTH_ENABLED && (!isClerkEnabled(c) \|\| NODE_ENV !== "production")`. The `\|\|` made "Clerk not configured" sufficient on its own, so a production deployment with no Clerk keys and the flag set true returned an authenticated principal carrying `ALLURA_DEV_AUTH_ROLE` (default `admin`) with no credential presented. Production is now short-circuited to `false` before any flag is consulted. Scope was web auth only — the MCP gateway runs `mcp_token` mode and never consumed these flags, so the principal path was unaffected and Gate B identity enforcement held. Commit 96f7ae0a. |
 
 ---
 
@@ -129,6 +130,8 @@
 | RK-30 | Resume against changed definitions repeats or corrupts work | High | Active |
 | RK-31 | Factory CI outside canonical Git boundary creates false green status | High | Mitigated |
 | RK-32 | RuVector Graph Cutover Risk | Medium | ✅ Resolved — Story 19.3 flip executed (2026-07-12): `GRAPH_BACKEND=ruvector` default, live-DB E2E passed (14/14), dual-read validated, parity test 14/14 green. Neo4j remains as fallback for one release as per AD-49. 5 sub-risks: R1 Cypher-subset (✅ Resolved for Path A), R2 SUPERSEDES immutability (✅ Resolved), R3 Maturity/breaking changes (✅ N/A Path A), R4 Fulltext+constraints (✅ Resolved Path A), R5 Live-DB E2E proof (✅ Resolved — 2026-07-12). |
+| RK-33 | Dev-auth flags remain in the production runtime env | Medium | Mitigated in code by AD-56; the flags are now inert but still present. Remove `ALLURA_DEV_AUTH_ENABLED` and `ALLURA_DEV_AUTH_ROLE` from the deployment environment for defence in depth |
+| RK-34 | Default test config omits the adversarial auth suite | High | Active — `src/__tests__/mcp-auth-adversarial.test.ts` (61 tests) is not collected by the default vitest config, which backs the `test` npm script, so `bun run test` reports green without executing it. It runs only under `vitest.config.unit.ts`. Same false-green family as RK-31 |
 
 ### Risk Detail
 
@@ -459,6 +462,49 @@ into a desktop application.
 | Postgres trace growth       | Table size metric            | > 100GB               |
 
 ---
+
+### AD-56: Dev Auth Cannot Activate in Production
+
+**Context.** `ALLURA_DEV_AUTH_ENABLED=true` and `ALLURA_DEV_AUTH_ROLE=admin` were present in the production
+runtime environment. The schema default at `src/lib/auth/config.ts` already resolves the flag to `false` in
+production when unset, but an explicit `true` in the environment overrides that default.
+
+**Defect.** `isDevAuthActive()` read:
+
+```ts
+return c.ALLURA_DEV_AUTH_ENABLED && (!isClerkEnabled(c) || c.NODE_ENV !== "production");
+```
+
+The `||` made "Clerk is not configured" sufficient on its own. In production without Clerk keys the disjunction
+short-circuits true, and dev auth activates with the configured role. A condition written as a safety check was
+what granted the bypass.
+
+**Second defect, found by test rather than inspection.** The same condition returned `true` in development when
+Clerk *was* properly configured, because `NODE_ENV !== "production"` held. Dev auth overrode real configured auth
+outside production as well.
+
+**Decision.** Production is checked first and unconditionally:
+
+```ts
+if (c.NODE_ENV === "production") return false;
+return c.ALLURA_DEV_AUTH_ENABLED && !isClerkEnabled(c);
+```
+
+No combination of flags, missing Clerk keys, or role configuration can re-enable the bypass.
+
+**Blast radius.** Web auth only. The live MCP gateway runs `mcp_token` mode — `ALLURA_MCP_TOKEN_SECRET` is set,
+`ALLURA_MCP_DEV_AUTH` is empty, and startup logs confirm `Auth mode: mcp_token`. The gateway never consumed these
+flags, so the principal model and Epic 24 Gate B identity enforcement were not affected. The dashboard is retired,
+making the exposure latent rather than live.
+
+**Evidence.** `src/lib/auth/__tests__/dev-auth-production-guard.test.ts`, 7 behavioural cases exercising
+`isDevAuthActive` and `getDevAuthConfig` with constructed configs — deliberately not source-text assertions.
+Proven by controlled red: 3 of 7 fail against the vulnerable condition, 7/7 pass against the fix. Regression run:
+203 tests green across `auth-roles`, `principal-context`, `auth-middleware`, and `mcp-auth-adversarial`.
+
+**Follow-ups.** RK-33 (strip the flags from the deployment env) and RK-34 (default test config does not collect
+the adversarial auth suite).
+
 
 ## References
 

@@ -1,53 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { nextjs_runtime } from "@mcp-docker/next-devtools";
-
-/**
- * Next.js Integration Tests
- * 
- * These tests verify Next.js runtime behavior and build configuration
- * using the Next DevTools MCP server.
- * 
- * Run with: RUN_INTEGRATION_TESTS=true bun vitest run tests/mcp/integration/nextjs-runtime.test.ts
- */
-
-const shouldRunIntegration = process.env.RUN_INTEGRATION_TESTS === "true";
-
-describe.skipIf(!shouldRunIntegration)("Next.js Integration", () => {
-  describe("Runtime Information", () => {
-    it("should return valid runtime info", async () => {
-      const runtime = await nextjs_runtime({});
-      
-      expect(runtime).toBeDefined();
-      expect(typeof runtime).toBe("object");
-    });
-
-    it("should report Next.js version", async () => {
-      const runtime = await nextjs_runtime({});
-      
-      // Runtime should contain version info
-      expect(runtime).toHaveProperty("version");
-    });
-  });
-
-  describe("Build Configuration", () => {
-    it("should have valid build configuration", async () => {
-      const runtime = await nextjs_runtime({});
-      
-      // Check for expected configuration properties
-      expect(runtime).toHaveProperty("config");
-    });
-  });
-});
 
 /**
  * Health Check Tests
  * 
- * Verify the application health endpoints are responding correctly.
- * Requires a running Next.js server.
- * Run with: RUN_INTEGRATION_TESTS=true bun vitest run tests/mcp/integration/nextjs-runtime.test.ts
+ * Verify the application health endpoints against a running Next.js server.
+ * Run with: NEXT_PUBLIC_APP_URL=http://localhost:3100 bun vitest run --config vitest.config.mcp.ts
  */
-describe.skipIf(!shouldRunIntegration)("Health Check Integration", () => {
-  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL;
+if (!BASE_URL) {
+  throw new Error("NEXT_PUBLIC_APP_URL is required for MCP runtime tests");
+}
+
+describe("MCP Runtime Health", () => {
 
   it("should respond to health check endpoint", async () => {
     const response = await fetch(`${BASE_URL}/api/health`);

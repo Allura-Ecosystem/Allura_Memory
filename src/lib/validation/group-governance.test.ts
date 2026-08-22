@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   findOrphanedGroupIds,
   findSimilarGroupIds,
@@ -9,34 +9,24 @@ import {
 import { closePool, getPool } from "../postgres/connection";
 import { type EventInsert, insertEvent } from "../postgres/queries/insert-trace";
 
-// Neo4j is sunset — mock the deleted driver and insight functions
-const mockSession = {
-  run: vi.fn().mockResolvedValue({ records: [] }),
-  close: vi.fn().mockResolvedValue(undefined),
-}
-const mockDriver = {
-  session: vi.fn().mockReturnValue(mockSession),
-  close: vi.fn().mockResolvedValue(undefined),
-}
-function getDriver() { return mockDriver }
-async function closeDriver() {}
-// AD-49: the semantic graph is graph_memories (PostgreSQL), not Neo4j.
-// This previously returned a stub and wrote nothing, so getGraphGroupIdStats()
-// always queried an empty table and every graph-side assertion failed while the
-// suppressed CI lane reported green.
-async function createInsight(payload: Record<string, unknown>) {
-  const pool = getPool()
-  const id = String(payload.insight_id)
-  await pool.query(
-    `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance)
-     VALUES ($1, $2, $3, $4, $5, 'manual')
-     ON CONFLICT (id, group_id) DO NOTHING`,
-    [id, String(payload.group_id), "governance-agent", String(payload.content), Number(payload.confidence ?? 0.5)],
-  )
-  return { id, insight_id: id, version: 1, status: "active" }
+const TEST_GROUP_PREFIX = "allura-governance-%";
+
+async function insertGraphMemory(id: string, groupId: string, content: string): Promise<void> {
+  await getPool().query(
+    `INSERT INTO graph_memories
+       (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
+     VALUES ($1, $2, $3, $4, $5, $6, 1, NOW()::timestamptz, false)`,
+    [id, groupId, "governance-agent", content, 0.9, "manual"],
+  );
 }
 
-// E2E gating: skip unless RUN_E2E_TESTS=true (requires live PostgreSQL + Neo4j)
+async function cleanupTestData(): Promise<void> {
+  const pool = getPool();
+  await pool.query("DELETE FROM graph_memories WHERE group_id LIKE $1", [TEST_GROUP_PREFIX]);
+  await pool.query("DELETE FROM events WHERE group_id LIKE $1", [TEST_GROUP_PREFIX]);
+}
+
+// E2E gating: skip unless RUN_E2E_TESTS=true (requires live PostgreSQL)
 const describeE2E = process.env.RUN_E2E_TESTS === "true" ? describe : describe.skip;
 
 describeE2E("group-governance", () => {
@@ -54,105 +44,16 @@ describeE2E("group-governance", () => {
     process.env.POSTGRES_USER = process.env.POSTGRES_USER || "allura";
     process.env.POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD || "allura";
 
-    // Configure Neo4j
-    process.env.NEO4J_URI = process.env.NEO4J_URI || "bolt://localhost:7687";
-    process.env.NEO4J_USER = process.env.NEO4J_USER || "neo4j";
-    process.env.NEO4J_PASSWORD = process.env.NEO4J_PASSWORD || "password";
-    process.env.NEO4J_DATABASE = process.env.NEO4J_DATABASE || "neo4j";
-
-    // Clean up any previous test data
-    const pool = getPool();
-    await pool.query(
-      "DELETE FROM events WHERE group_id LIKE $1",
-      ["allura-governance-%"]
-    );
-    // AD-49: graph rows live in graph_memories, not Neo4j. The Cypher
-    // DETACH DELETE calls against mockSession are no-ops, so without this
-    // the test tenant leaks rows between runs and skews the stats assertions.
-    await pool.query(
-      "DELETE FROM graph_memories WHERE group_id LIKE $1",
-      ["allura-governance-%"]
-    );
-
-    const driver = getDriver();
-    const session = driver.session();
-    try {
-      await session.run(
-        "MATCH (i:Insight) WHERE i.group_id STARTS WITH $prefix DETACH DELETE i",
-        { prefix: "allura-governance-" }
-      );
-      await session.run(
-        "MATCH (h:InsightHead) WHERE h.group_id STARTS WITH $prefix DETACH DELETE h",
-        { prefix: "allura-governance-" }
-      );
-    } finally {
-      await session.close();
-    }
+    await cleanupTestData();
   });
 
   afterAll(async () => {
-    // Clean up test data
-    const pool = getPool();
-    await pool.query(
-      "DELETE FROM events WHERE group_id LIKE $1",
-      ["allura-governance-%"]
-    );
-    // AD-49: graph rows live in graph_memories, not Neo4j. The Cypher
-    // DETACH DELETE calls against mockSession are no-ops, so without this
-    // the test tenant leaks rows between runs and skews the stats assertions.
-    await pool.query(
-      "DELETE FROM graph_memories WHERE group_id LIKE $1",
-      ["allura-governance-%"]
-    );
-
-    const driver = getDriver();
-    const session = driver.session();
-    try {
-      await session.run(
-        "MATCH (i:Insight) WHERE i.group_id STARTS WITH $prefix DETACH DELETE i",
-        { prefix: "allura-governance-" }
-      );
-      await session.run(
-        "MATCH (h:InsightHead) WHERE h.group_id STARTS WITH $prefix DETACH DELETE h",
-        { prefix: "allura-governance-" }
-      );
-    } finally {
-      await session.close();
-    }
-
+    await cleanupTestData();
     await closePool();
-    await closeDriver();
   });
 
   beforeEach(async () => {
-    // Clean up before each test
-    const pool = getPool();
-    await pool.query(
-      "DELETE FROM events WHERE group_id LIKE $1",
-      ["allura-governance-%"]
-    );
-    // AD-49: graph rows live in graph_memories, not Neo4j. The Cypher
-    // DETACH DELETE calls against mockSession are no-ops, so without this
-    // the test tenant leaks rows between runs and skews the stats assertions.
-    await pool.query(
-      "DELETE FROM graph_memories WHERE group_id LIKE $1",
-      ["allura-governance-%"]
-    );
-
-    const driver = getDriver();
-    const session = driver.session();
-    try {
-      await session.run(
-        "MATCH (i:Insight) WHERE i.group_id STARTS WITH $prefix DETACH DELETE i",
-        { prefix: "allura-governance-" }
-      );
-      await session.run(
-        "MATCH (h:InsightHead) WHERE h.group_id STARTS WITH $prefix DETACH DELETE h",
-        { prefix: "allura-governance-" }
-      );
-    } finally {
-      await session.close();
-    }
+    await cleanupTestData();
   });
 
   // =========================================================================
@@ -165,7 +66,7 @@ describeE2E("group-governance", () => {
 
       // Find our test groups (should not exist yet)
       const testGroups = report.groups.filter((g) =>
-        g.group_id.startsWith("governance-")
+        g.group_id.startsWith("allura-governance-")
       );
       expect(testGroups.length).toBe(0);
     });
@@ -224,22 +125,9 @@ describeE2E("group-governance", () => {
     });
 
     it("should return stats for existing groups", async () => {
-      // Create test insights
-      await createInsight({
-        insight_id: "gov-insight-1",
-        group_id: testProject1,
-        content: "Test insight for governance",
-        confidence: 0.9,
-        topic_key: "test.insight",
-      });
-
-      await createInsight({
-        insight_id: "gov-insight-2",
-        group_id: testProject2,
-        content: "Another test insight",
-        confidence: 0.8,
-        topic_key: "test.insight",
-      });
+      // Seed canonical graph memory in PostgreSQL.
+      await insertGraphMemory("gov-insight-1", testProject1, "Test insight for governance");
+      await insertGraphMemory("gov-insight-2", testProject2, "Another test insight");
 
       const report = await getGraphGroupIdStats();
 
@@ -352,13 +240,7 @@ describeE2E("group-governance", () => {
         agent_id: testAgentId,
       });
 
-      await createInsight({
-        insight_id: "gov-report-insight",
-        group_id: testProject1,
-        content: "Test insight",
-        confidence: 0.9,
-        topic_key: "test.insight",
-      });
+      await insertGraphMemory("gov-report-insight", testProject1, "Test insight");
     });
 
     it("should generate comprehensive report", async () => {
@@ -381,12 +263,12 @@ describeE2E("group-governance", () => {
       const postgresGroup = report.postgres.groups.find(
         (g) => g.group_id === testProject1
       );
-      const neo4jGroup = report.graph.groups.find(
+      const graphGroup = report.graph.groups.find(
         (g) => g.group_id === testProject1
       );
 
       expect(postgresGroup).toBeDefined();
-      expect(neo4jGroup).toBeDefined();
+      expect(graphGroup).toBeDefined();
     });
 
     it("should use custom options", async () => {
@@ -427,13 +309,11 @@ describeE2E("group-governance", () => {
         agent_id: testAgentId,
       });
 
-      await createInsight({
-        insight_id: `test-similar-insight-${timestamp}`,
-        group_id: "allura-governance-similar-2",
-        content: "Test",
-        confidence: 0.9,
-        topic_key: "test.insight",
-      });
+      await insertGraphMemory(
+        `test-similar-insight-${timestamp}`,
+        "allura-governance-similar-2",
+        "Test",
+      );
 
       const report = await generateGroupIdGovernanceReport();
 
@@ -452,7 +332,7 @@ describeE2E("group-governance", () => {
 
       // All our test groups should be valid
       const testGroups = report.postgres.groups.filter((g) =>
-        g.group_id.startsWith("governance-")
+        g.group_id.startsWith("allura-governance-")
       );
 
       testGroups.forEach((g) => {

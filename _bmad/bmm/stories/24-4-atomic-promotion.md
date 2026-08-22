@@ -1,7 +1,7 @@
 # Story 24.4 — Atomic Human-Governed Promotion
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** ready-for-dev
+**Status:** changes-requested
 **Priority:** P0-Critical
 **Complexity:** Large
 **Owner:** unassigned
@@ -78,7 +78,7 @@ Evidence must include database counts and IDs before and after each injected fai
 
 ## Dev Agent Record
 
-**Status:** pending
+**Status:** changes-requested — see `docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md`
 
 ### Completion Notes
 

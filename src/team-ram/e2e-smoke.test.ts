@@ -153,10 +153,7 @@ describeE2E("Team RAM e2e smoke", () => {
       expect(Array.isArray(output?.nodeLabels) || typeof output?.schema === "object").toBe(true)
     }, 30_000)
 
-    // C1 (commit 3e6e2faf): execute_cypher was removed — raw unparameterized SQL
-    // with no tenant scoping. src/team-ram/in-process-executor.ts:140 now always
-    // rejects. The contract under test is that it fails closed.
-    it("execute_cypher is rejected — removed for injection risk (C1)", async () => {
+    it("rejects the retired raw query path", async () => {
       const result = await orchestrateTeamRamTask(
         {
           goal: "Count insights",
@@ -168,7 +165,7 @@ describeE2E("Team RAM e2e smoke", () => {
 
       const graphResult = result.results.find((r) => r.skillName === "skill-cypher-query")
       expect(graphResult?.ok).toBe(false)
-      expect(String(graphResult?.error ?? "")).toContain("execute_cypher has been removed")
+      expect(graphResult?.error).toContain("execute_cypher has been removed")
     }, 30_000)
   })
 
@@ -192,40 +189,46 @@ describeE2E("Team RAM e2e smoke", () => {
       // Should have rows array and total count
       expect(typeof output?.total).toBe("number")
     }, 30_000)
+
+    it("execute_sql runs a parameterized tenant-scoped query", async () => {
+      const result = await orchestrateTeamRamTask(
+        {
+          goal: "Count tenant records",
+          groupId: GROUP_ID,
+          sql: "SELECT COUNT(*)::int AS total FROM events WHERE group_id = $1",
+        },
+        executor,
+      )
+
+      const databaseResult = result.results.find((r) => r.skillName === "skill-database")
+      expect(databaseResult?.ok).toBe(true)
+      const output = databaseResult?.output as Record<string, unknown> | undefined
+      expect(Array.isArray(output?.rows)).toBe(true)
+    }, 30_000)
   })
 
   // ── Full Orchestration ───────────────────────────────────────────────
 
   describe("full orchestration", () => {
-    it("dispatches multiple skills in parallel and assembles context", async () => {
+    it("dispatches successful memory and trace skills and assembles context", async () => {
       const result = await orchestrateTeamRamTask(
         {
-          goal: "Full context: memory + graph + traces",
+          goal: "Full context: memory and traces",
           groupId: GROUP_ID,
-          cypher: "MATCH (n {group_id: $groupId}) RETURN n LIMIT 3",
           needs: { memory: true, traces: true },
         },
         executor,
       )
 
-      // Should have 3 skills dispatched
-      expect(result.plan).toHaveLength(3)
-      expect(result.results).toHaveLength(3)
+      expect(result.plan).toHaveLength(2)
+      expect(result.results).toHaveLength(2)
 
-      // Context should be assembled
       expect(Array.isArray(result.context.memories)).toBe(true)
       expect(Array.isArray(result.context.graph)).toBe(true)
       expect(Array.isArray(result.context.traces)).toBe(true)
       expect(Array.isArray(result.context.failures)).toBe(true)
-
-      // All should succeed (services are healthy)
-      const failedSkills = result.results.filter((r) => !r.ok)
-      if (failedSkills.length > 0) {
-        console.warn(
-          "Some skills failed in e2e:",
-          failedSkills.map((f) => `${f.skillName}: ${f.error}`),
-        )
-      }
+      expect(result.results.every((result) => result.ok)).toBe(true)
+      expect(result.context.failures).toHaveLength(0)
     }, 60_000)
 
     it("retries and records failures for unreachable skills", async () => {
@@ -243,7 +246,6 @@ describeE2E("Team RAM e2e smoke", () => {
         {
           goal: "Test with one failing skill",
           groupId: GROUP_ID,
-          cypher: "MATCH (n) RETURN n LIMIT 1",
           needs: { memory: true, traces: true },
           maxRetriesPerSkill: 1,
         },
