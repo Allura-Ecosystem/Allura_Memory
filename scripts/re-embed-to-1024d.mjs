@@ -11,8 +11,23 @@ const OLLAMA_BASE = process.env.EMBEDDING_BASE_URL || 'http://localhost:11434';
 const BATCH_SIZE = 5;
 const DELAY_MS = 100;
 
-// Direct PG connection
-const PG_CONN = process.env.DATABASE_URL || 'postgresql://ronin4life:KaminaDabs*@localhost:5432/memory';
+// Direct PG connection.
+// Never hardcode a credential fallback here: this file is tracked, and a committed
+// password is compromised the moment it reaches a remote. Compose from the
+// environment and fail fast when it is absent.
+const PG_CONN =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  (process.env.POSTGRES_USER && process.env.POSTGRES_PASSWORD && process.env.POSTGRES_HOST
+    ? `postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT || 5432}/${process.env.POSTGRES_DB || 'memory'}`
+    : null);
+
+if (!PG_CONN) {
+  console.error(
+    'No database connection configured. Set DATABASE_URL, or POSTGRES_USER + POSTGRES_PASSWORD + POSTGRES_HOST.'
+  );
+  process.exit(1);
+}
 
 import pg from 'pg';
 const { Pool } = pg.default || pg;
