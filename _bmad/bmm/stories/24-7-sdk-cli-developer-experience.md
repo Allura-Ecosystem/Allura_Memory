@@ -1,7 +1,7 @@
 # Story 24.7 — SDK, CLI, and Ten-Minute Developer Path
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** ready-for-dev
+**Status:** changes-requested
 **Priority:** P1-High
 **Complexity:** Large
 **Owner:** unassigned
@@ -76,7 +76,7 @@ Evidence must include a terminal transcript or structured log from the clean-env
 
 ## Dev Agent Record
 
-**Status:** pending
+**Status:** changes-requested — see `docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md`
 
 ### Completion Notes
 
