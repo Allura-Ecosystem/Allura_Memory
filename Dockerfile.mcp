@@ -3,7 +3,14 @@ FROM oven/bun:1 AS base
 WORKDIR /app
 
 COPY package.json ./
+COPY bun.lock ./
 COPY tsconfig.json ./
+# Workspace packages (@allura/*) MUST be copied before `bun install`:
+# package.json declares `workspaces: ["packages/*"]`, and src/ imports
+# @allura/mcp-server, @allura/rbac and @allura/types at runtime. Without
+# this the install cannot link the workspace and the container fails at
+# startup with "Cannot find module '@allura/mcp-server'".
+COPY packages ./packages
 COPY src ./src
 COPY scripts ./scripts
 # Skill MCP servers — launched via docker exec for MCP_DOCKER

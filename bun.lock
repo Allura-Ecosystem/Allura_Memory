@@ -95,11 +95,53 @@
         "vitest": "^2.1.9",
       },
     },
+    "packages/cli": {
+      "name": "@allura/cli",
+      "version": "1.0.0",
+      "bin": {
+        "allura": "src/index.ts",
+      },
+      "dependencies": {
+        "pg": "^8.20.0",
+      },
+    },
+    "packages/mcp-server": {
+      "name": "@allura/mcp-server",
+      "version": "0.0.0",
+    },
+    "packages/rbac": {
+      "name": "@allura/rbac",
+      "version": "0.0.0",
+    },
+    "packages/ruvector-adapter": {
+      "name": "@allura/ruvector-adapter",
+      "version": "0.0.0",
+    },
+    "packages/sdk": {
+      "name": "@allura/sdk",
+      "version": "1.0.0",
+    },
+    "packages/types": {
+      "name": "@allura/types",
+      "version": "0.0.0",
+    },
   },
   "packages": {
     "@adobe/css-tools": ["@adobe/css-tools@4.4.4", "", {}, "sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg=="],
 
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
+
+    "@allura/cli": ["@allura/cli@workspace:packages/cli"],
+
+    "@allura/mcp-server": ["@allura/mcp-server@workspace:packages/mcp-server"],
+
+    "@allura/rbac": ["@allura/rbac@workspace:packages/rbac"],
+
+    "@allura/ruvector-adapter": ["@allura/ruvector-adapter@workspace:packages/ruvector-adapter"],
+
+    "@allura/sdk": ["@allura/sdk@workspace:packages/sdk"],
+
+    "@allura/types": ["@allura/types@workspace:packages/types"],
 
     "@asamuzakjp/css-color": ["@asamuzakjp/css-color@3.2.0", "", { "dependencies": { "@csstools/css-calc": "^2.1.3", "@csstools/css-color-parser": "^3.0.9", "@csstools/css-parser-algorithms": "^3.0.4", "@csstools/css-tokenizer": "^3.0.3", "lru-cache": "^10.4.3" } }, "sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw=="],
 
