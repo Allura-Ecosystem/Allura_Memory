@@ -64,7 +64,9 @@ skills:
 ### On EVERY Task Complete (Before Responding)
 
 1. **Write outcome to brain** — use `allura-brain_memory_add`
-   - `user_id`: your agent persona (e.g., `brooks-architect`)
+   - `user_id`: the AUTHENTICATED PRINCIPAL (e.g., `claude-code`). The runtime rejects
+     any other value with `ACTOR_MISMATCH` — Story 24.2 binds user_id to the verified
+     principal and request parameters cannot override it.
    - `group_id`: `allura-system`
    - `content`: what you did, what you found, what to watch out for
    - `metadata.source`: `"conversation"`
@@ -78,8 +80,11 @@ skills:
 
 ### Agent Identity
 
-Every memory operation MUST include your agent persona as `user_id`:
-- Brooks → `brooks-architect`
+Every memory operation MUST carry your agent persona in `metadata.agent_id`.
+`user_id` MUST be the authenticated principal, NOT the persona — the runtime enforces
+`user_id == principal` and returns `ACTOR_MISMATCH` otherwise. Persona attribution lives
+in metadata only:
+- Brooks → `metadata.agent_id: brooks-architect`
 - Woz → `woz-builder`
 - Torvalds → `torvalds-critique`
 - Norvig → `norvig-reasoner`

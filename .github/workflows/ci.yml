@@ -175,7 +175,6 @@ jobs:
           done
       - name: Run E2E tests
         run: bun run test:e2e
-        continue-on-error: true
         env:
           RUN_E2E_TESTS: "true"
           DATABASE_URL: postgresql://allura:allura@localhost:5432/memory

@@ -1,0 +1,8 @@
+{
+  "revision": "0001",
+  "provenance": "Synthetic promotion correctness fixtures for Story 24.6.",
+  "cases": [
+    { "id": "pc1", "proposal_id": "prop-eval-1", "group_id": "allura-eval-test", "expected_outcome": "approved", "expected_memory_count": 1 },
+    { "id": "pc2", "proposal_id": "prop-eval-2", "group_id": "allura-eval-test", "expected_outcome": "rejected", "expected_memory_count": 0 }
+  ]
+}

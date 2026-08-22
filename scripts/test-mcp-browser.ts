@@ -1,101 +1,26 @@
 #!/usr/bin/env bun
 /**
- * MCP Browser Test Runner
+ * MCP Runtime Test Runner
  * 
- * Runs MCP-adjacent browser tests.
+ * Runs live MCP-adjacent runtime-health tests against the built app.
  *
  * Important contract boundary:
- * - This runner validates the Next.js/browser test surface.
- * - It does NOT validate the canonical MCP Streamable HTTP /mcp protocol gate.
+ * - This runner validates a live Next.js runtime-health surface.
+ * - It does NOT validate browser automation or the canonical MCP Streamable HTTP `/mcp` protocol gate.
  *   Use `RUN_MCP_TESTS=true ALLURA_MCP_HTTP_URL=... bun vitest run
- *   src/__tests__/mcp-streamable-http.test.ts` for that gate.
- *
- * The Vitest configuration aliases @mcp-docker/* imports to local mocks by
- * default, so an external mcp-docker CLI is not a normal prerequisite. Set
- * USE_REAL_MCP_DOCKER=true only when intentionally testing against real MCP
- * Docker servers.
+ *   src/__tests__/mcp-streamable-http.test.ts` for the protocol gate.
  */
 
 import { spawn } from "child_process";
-import { existsSync } from "fs";
-import { join } from "path";
 import { getPort } from "../src/lib/config/ports";
 
 const DASHBOARD_PORT = getPort("dashboard", "ALLURA_DASHBOARD_PORT");
 const TEST_TIMEOUT = 300000; // 5 minutes
-const SCREENSHOT_DIR = "tests/mcp/fixtures/screenshots";
 
 interface TestOptions {
-  update?: boolean;
   verbose?: boolean;
-  keepBrowser?: boolean;
   testNamePattern?: string;
   testPathPattern?: string;
-}
-
-async function runCommand(
-  command: string,
-  args: string[],
-  options: { timeout?: number } = {}
-): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  return new Promise((resolve, reject) => {
-    const timeout = options.timeout || TEST_TIMEOUT;
-    const child = spawn(command, args, {
-      stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, FORCE_COLOR: "1" }
-    });
-
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout?.on("data", (data) => {
-      stdout += data.toString();
-      process.stdout.write(data);
-    });
-
-    child.stderr?.on("data", (data) => {
-      stderr += data.toString();
-      process.stderr.write(data);
-    });
-
-    const timeoutId = setTimeout(() => {
-      child.kill("SIGTERM");
-      reject(new Error(`Command timed out after ${timeout}ms`));
-    }, timeout);
-
-    child.on("close", (code) => {
-      clearTimeout(timeoutId);
-      resolve({ stdout, stderr, exitCode: code || 0 });
-    });
-
-    child.on("error", (error) => {
-      clearTimeout(timeoutId);
-      reject(error);
-    });
-  });
-}
-
-async function checkMcpServers(): Promise<boolean> {
-  if (process.env.USE_REAL_MCP_DOCKER !== "true") {
-    console.log("🔍 MCP Docker CLI check skipped");
-    console.log("   Using Vitest aliases/mocks for @mcp-docker/* imports.");
-    console.log("   Set USE_REAL_MCP_DOCKER=true to require real MCP Docker servers.");
-    return true;
-  }
-
-  console.log("🔍 Checking MCP Docker servers...");
-
-  try {
-    // Check if MCP Docker is available. This path is opt-in because the
-    // published package may not expose a runnable CLI in all environments.
-    const result = await runCommand("bun", ["x", "mcp-docker", "status"], { timeout: 10000 });
-    return result.exitCode === 0;
-  } catch (error) {
-    console.warn("⚠️  MCP Docker status check failed");
-    console.warn("   Disable this check by unsetting USE_REAL_MCP_DOCKER.");
-    console.warn(`   Cause: ${error instanceof Error ? error.message : String(error)}`);
-    return false;
-  }
 }
 
 async function checkDevServer(): Promise<boolean> {
@@ -117,11 +42,7 @@ async function checkDevServer(): Promise<boolean> {
 }
 
 async function runTests(options: TestOptions): Promise<number> {
-  const args = ["vitest", "run", "tests/mcp/"];
-
-  if (options.update) {
-    args.push("--update");
-  }
+  const args = ["vitest", "run", "--config", "vitest.config.mcp.ts"];
 
   if (options.verbose) {
     args.push("--reporter=verbose");
@@ -135,16 +56,11 @@ async function runTests(options: TestOptions): Promise<number> {
     args.push(options.testPathPattern);
   }
 
-  // Set environment variables
-  const env = {
-    ...process.env,
-    KEEP_BROWSER_OPEN: options.keepBrowser ? "true" : "false",
-    MCP_SCREENSHOT_DIR: SCREENSHOT_DIR
-  };
+  const env = { ...process.env };
 
-  console.log("\n🧪 Running MCP browser tests...\n");
+  console.log("\n🧪 Running MCP runtime tests against the live app...\n");
   
-  const child = spawn("bun", args, {
+  const child = spawn(process.execPath, args, {
     stdio: "inherit",
     env
   });
@@ -164,17 +80,9 @@ function parseArgs(): TestOptions {
     const arg = args[i];
 
     switch (arg) {
-      case "--update":
-      case "-u":
-        options.update = true;
-        break;
       case "--verbose":
       case "-v":
         options.verbose = true;
-        break;
-      case "--keep-browser":
-      case "-k":
-        options.keepBrowser = true;
         break;
       case "--testNamePattern":
       case "-t":
@@ -197,49 +105,33 @@ function parseArgs(): TestOptions {
 
 function printHelp(): void {
   console.log(`
-MCP Browser Test Runner
+MCP Runtime Test Runner
 
 Usage: bun run test:mcp:browser [options]
 
 Options:
-  -u, --update              Update screenshot baselines
   -v, --verbose             Verbose output
-  -k, --keep-browser        Keep browser open after tests
   -t, --testNamePattern     Run tests matching pattern
-  -p, --testPathPattern      Run tests in specific path
+  -p, --testPathPattern     Run tests in specific path
   -h, --help                Show this help
 
 Examples:
-  bun run test:mcp:browser                    # Run all MCP tests
-  bun run test:mcp:browser --update           # Update baselines
-  bun run test:mcp:browser -t "dashboard"     # Run dashboard tests
-  bun run test:mcp:browser -v               # Verbose output
+  bun run test:mcp:browser              # Run MCP runtime health tests
+  bun run test:mcp:browser -v           # Verbose output
+  bun run test:mcp:browser -t "health"  # Run health tests
 `);
 }
 
 async function main(): Promise<void> {
-  console.log("🚀 MCP Browser Test Runner\n");
+  console.log("🚀 MCP Runtime Test Runner\n");
 
   const options = parseArgs();
-
-  // Ensure screenshot directory exists
-  if (!existsSync(SCREENSHOT_DIR)) {
-    await import("fs/promises").then(fs => fs.mkdir(SCREENSHOT_DIR, { recursive: true }));
-  }
-
-  // Check prerequisites
-  const mcpAvailable = await checkMcpServers();
   const devServerRunning = await checkDevServer();
 
-  if (!mcpAvailable) {
-    console.warn("\n⚠️  MCP Docker servers may not be available");
-    console.log("   Tests will attempt to run anyway...\n");
-  }
-
   if (!devServerRunning) {
-    console.error("\n❌ Next.js dev server is not running!");
-    console.log("   This is a browser/dev validation precondition, not a /mcp protocol failure.");
-    console.log(`   Please start it with: ALLURA_DASHBOARD_PORT=${DASHBOARD_PORT} bun run dev`);
+    console.error("\n❌ Next.js app is not responding!");
+    console.log("   This is a runtime-health validation precondition, not a /mcp protocol failure.");
+    console.log(`   Start it with: ALLURA_DASHBOARD_PORT=${DASHBOARD_PORT} bun run start`);
     console.log(`   Expected health endpoint: http://localhost:${DASHBOARD_PORT}/api/health\n`);
     process.exit(1);
   }
@@ -248,10 +140,9 @@ async function main(): Promise<void> {
   const exitCode = await runTests(options);
 
   if (exitCode === 0) {
-    console.log("\n✅ All MCP browser tests passed!");
+    console.log("\n✅ All MCP runtime tests passed!");
   } else {
-    console.log("\n❌ Some MCP browser tests failed");
-    console.log(`   Screenshots saved to: ${SCREENSHOT_DIR}`);
+    console.log("\n❌ MCP runtime tests failed");
   }
 
   process.exit(exitCode);

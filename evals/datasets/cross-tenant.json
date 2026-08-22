@@ -1,0 +1,8 @@
+{
+  "revision": "0001",
+  "provenance": "Synthetic cross-tenant isolation fixtures for Story 24.6.",
+  "cases": [
+    { "id": "ct1", "source_group": "allura-eval-tenant-a", "target_group": "allura-eval-tenant-b", "expected_leak": 0 },
+    { "id": "ct2", "source_group": "allura-eval-tenant-b", "target_group": "allura-eval-tenant-a", "expected_leak": 0 }
+  ]
+}

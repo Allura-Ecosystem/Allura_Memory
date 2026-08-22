@@ -101,7 +101,13 @@ RAM-NEEDS-FROM-DURHAM.md
 brand-audit-results.json
 
 # Harness runtime directories (installed, not versioned)
-.agents/
+# .agents/ holds 61 generated/vendored skills — ignored.
+# TEAM-RAM-RUNTIME.md is the contract all 11 agent definitions cite in their
+# Claude Bridge; it must be tracked or the reference dangles for everyone.
+# git does not descend into an ignored directory, so the directory rule must
+# be .agents/* for the negation below to take effect.
+.agents/*
+!.agents/TEAM-RAM-RUNTIME.md
 .codex/*
 !.codex/config.toml
 !.codex/agents/
