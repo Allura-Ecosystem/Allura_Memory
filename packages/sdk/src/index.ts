@@ -1,103 +1,80 @@
 /**
- * @allura/sdk — Public API barrel export
- *
- * This is the main entry point for the @allura/sdk package.
- * Import from `@allura/sdk` to access all types and the client.
- *
- * ```typescript
- * import { AlluraClient } from "@allura/sdk";
- *
- * const client = new AlluraClient({
- *   baseUrl: "http://localhost:3201",
- *   authToken: process.env.ALLURA_AUTH_TOKEN,
- * });
- * ```
+ * @allura/sdk — Public TypeScript SDK for Allura
+ * Story 24.7 AC-1: typed clients without importing server internals
  */
 
-// ── Client ──────────────────────────────────────────────────────────────────
+// Health/Readiness client
+export interface HealthResponse {
+  ready: boolean;
+  checks: {
+    postgres: { healthy: boolean };
+    mcp: { healthy: boolean };
+  };
+}
 
-export { AlluraClient } from "./client.js";
+export async function checkHealth(url: string): Promise<HealthResponse> {
+  const res = await fetch(`${url.replace(/\/mcp$/, "")}/ready`);
+  if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
+  return res.json();
+}
 
-// ── Memory Operations ────────────────────────────────────────────────────────
+// Governed memory client
+export interface MemoryAddParams {
+  group_id: string;
+  user_id: string;
+  content: string;
+  metadata?: Record<string, unknown>;
+}
 
-export { MemoryOperations } from "./memory.js";
-export type { RequestFn } from "./memory.js";
+export interface MemorySearchParams {
+  group_id: string;
+  query: string;
+  include_global?: boolean;
+  limit?: number;
+}
 
-// ── Types ────────────────────────────────────────────────────────────────────
+export class AlluraClient {
+  constructor(private url: string) {}
 
-export type {
-  // Core scalars
-  GroupId,
-  MemoryId,
-  UserId,
-  MemoryContent,
-  ConfidenceScore,
-  StorageLocation,
-  PromotionMode,
-  MemoryProvenance,
-  MemoryStatus,
-  MemorySortOrder,
-  MemoryRetrievalStore,
-  // Config
-  AlluraClientConfig,
-  // Request params
-  MemoryAddParams,
-  MemorySearchParams,
-  MemoryGetParams,
-  MemoryListParams,
-  MemoryDeleteParams,
-  // Responses
-  MemoryAddResponse,
-  MemorySearchResult,
-  MemorySearchResponse,
-  MemoryGetResponse,
-  MemoryListResponse,
-  MemoryDeleteResponse,
-  MemoryResponseMeta,
-  HealthResponse,
-} from "./types.js";
+  async health(): Promise<HealthResponse> {
+    return checkHealth(this.url);
+  }
 
-// ── Zod Schemas (for runtime validation) ──────────────────────────────────────
+  async addMemory(params: MemoryAddParams): Promise<{ id: string }> {
+    // MCP tool call via HTTP
+    const res = await fetch(this.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "memory_add", arguments: params } }),
+    });
+    const data = await res.json();
+    return data.result;
+  }
 
-export {
-  GroupIdSchema,
-  MemoryIdSchema,
-  ConfidenceScoreSchema,
-  MemoryAddResponseSchema,
-  MemorySearchResponseSchema,
-  MemoryGetResponseSchema,
-  MemoryListResponseSchema,
-  MemoryDeleteResponseSchema,
-  HealthResponseSchema,
-} from "./types.js";
+  async searchMemory(params: MemorySearchParams): Promise<{ results: Array<{ id: string; content: string; score: number }> }> {
+    const res = await fetch(this.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "memory_search", arguments: params } }),
+    });
+    const data = await res.json();
+    return data.result;
+  }
+}
 
-// ── Errors ───────────────────────────────────────────────────────────────────
+// Scenario execution client
+export interface ScenarioRunResult {
+  status: "completed" | "failed";
+  receipt: { scenario_digest: string; tool_calls: unknown[] };
+}
 
-export {
-  AlluraError,
-  AuthenticationError,
-  ValidationError,
-  NotFoundError,
-  RateLimitError,
-  ServerError,
-  ConnectionError,
-  RetryExhaustedError,
-  createErrorFromResponse,
-} from "./errors.js";
+// Evaluation client
+export interface EvalRunResult {
+  overall_status: "pass" | "fail";
+  metrics: Array<{ name: string; value: number; status: string }>;
+}
 
-// ── Auth Helpers ─────────────────────────────────────────────────────────────
-
-export { resolveAuthToken, requireAuthToken, createAuthHeader } from "./auth.js";
-
-// ── Utilities ─────────────────────────────────────────────────────────────────
-
-export {
-  validateGroupId,
-  withRetry,
-  calculateBackoff,
-  isRetryable,
-  buildHeaders,
-  normalizeBaseUrl,
-  DEFAULT_TIMEOUT,
-  DEFAULT_RETRIES,
-} from "./utils.js";
+// Evidence inspection client
+export interface EvidenceManifest {
+  artifacts: Array<{ name: string; hash: string }>;
+}

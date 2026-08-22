@@ -1,0 +1,205 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Allura Scenario v1",
+  "description": "Deterministic scenario contract for the Allura harness",
+  "type": "object",
+  "required": ["scenario_id", "schema_version", "tenant_fixture", "principal_fixture", "process_definition", "initial_state", "tool_fixtures", "assertions"],
+  "properties": {
+    "scenario_id": {
+      "type": "string",
+      "description": "Unique scenario identifier",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "description": {
+      "type": "string"
+    },
+    "tenant_fixture": {
+      "type": "object",
+      "required": ["group_id"],
+      "properties": {
+        "group_id": {
+          "type": "string",
+          "pattern": "^allura-[a-z0-9-]+$"
+        },
+        "cleanup": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "principal_fixture": {
+      "type": "object",
+      "required": ["principal_id", "roles", "tenant_ids"],
+      "properties": {
+        "principal_id": { "type": "string" },
+        "roles": {
+          "type": "array",
+          "items": { "enum": ["viewer", "curator", "admin"] },
+          "minItems": 1
+        },
+        "tenant_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "auth_method": {
+          "enum": ["mcp_token", "service_identity", "dev_local", "web_session"],
+          "default": "service_identity"
+        }
+      },
+      "additionalProperties": false
+    },
+    "process_definition": {
+      "type": "object",
+      "required": ["id", "revision"],
+      "properties": {
+        "id": { "type": "string" },
+        "revision": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "initial_state": {
+      "type": "object",
+      "properties": {
+        "memories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["content"],
+            "properties": {
+              "content": { "type": "string" },
+              "score": { "type": "number", "minimum": 0, "maximum": 1 },
+              "provenance": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "proposals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["content", "score"],
+            "properties": {
+              "content": { "type": "string" },
+              "score": { "type": "number" },
+              "tier": { "type": "string" },
+              "status": { "enum": ["pending", "approved", "rejected"], "default": "pending" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tool_fixtures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tool_name", "match"],
+        "properties": {
+          "tool_name": { "type": "string" },
+          "match": {
+            "enum": ["ordered", "unordered"],
+            "default": "ordered"
+          },
+          "response": {
+            "type": "object",
+            "properties": {
+              "result": { "description": "Any valid JSON tool response" }
+            },
+            "additionalProperties": true
+          },
+          "error": {
+            "type": "object",
+            "required": ["code"],
+            "properties": {
+              "code": { "enum": ["TIMEOUT", "TOOL_ERROR", "MALFORMED_RESULT", "POLICY_DENIED", "TRANSIENT_RETRY"] },
+              "message": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "latency_ms": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "virtual_clock": {
+      "type": "object",
+      "properties": {
+        "start_time": { "type": "string", "description": "ISO 8601 timestamp" },
+        "tick_interval_ms": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "random_seed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "policy_expectations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["policy_id", "expected_decision"],
+        "properties": {
+          "policy_id": { "type": "string" },
+          "expected_decision": { "enum": ["allow", "deny", "needs_evidence"] },
+          "at_step": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "assertions": {
+      "type": "object",
+      "required": ["output"],
+      "properties": {
+        "output": {
+          "type": "object",
+          "properties": {
+            "expected_status": { "enum": ["completed", "failed", "pending"] },
+            "expected_error": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "state": {
+          "type": "object",
+          "properties": {
+            "memory_count": { "type": "integer" },
+            "proposal_status": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "audit": {
+          "type": "object",
+          "properties": {
+            "expected_events": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "approval_breakpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["at_step", "decision"],
+        "properties": {
+          "at_step": { "type": "integer", "minimum": 0 },
+          "decision": { "enum": ["approve", "reject", "needs_evidence"] },
+          "rationale": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {}
+}

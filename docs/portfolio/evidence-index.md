@@ -53,3 +53,50 @@ in `artifacts/ci/local/live-db/live-db-tests.json`.
 | Controlled red branch (not merged) | `44b80591` | [Epic 24 Evidence #32086543694](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32086543694) | failure | Failed run manifest showing the blocking lane |
 
 The controlled-red demonstration used PR #65 (`ci/controlled-red-ac10`, commit `44b80591`), which added a deliberately failing test to `src/lib/validation/group-id.test.ts`. Run `32086543694` failed on the **Epic 24 Evidence / Unit** lane (`Run unit tests`, exit 1) and the **Aggregate** lane, while Static, Build, Live PostgreSQL, and Benchmark passed — proving the Epic 24 Evidence workflow fails on a broken change. Note the scope of this claim: as of 2026-08-20 `main` carries no branch-protection rule, so no status check is *required* by GitHub — this run demonstrates that the workflow detects and reports a broken change, not that the platform would prevent it from merging. Story 24.10 tracks making the gate enforceable. PR #65 was closed without merging and the temporary branch deleted, so the failure was never merged into `main`.
+
+### Story 24.10 — CI Gate Integrity and Branch Protection
+
+On 2026-08-21, GitHub branch protection was applied to `main` with strict
+up-to-date checks, administrator enforcement, required conversation resolution,
+and force-push/deletion disabled. The rule is verified through the GitHub Branch
+Protection API. The hosted green and controlled-red prevention outcomes are
+recorded below.
+
+| Lane / check | Before Story 24.10 | After Story 24.10 | Required by `main` protection |
+|---|---|---|---|
+| `CI / test-e2e` | Test result could be suppressed | Unsuppressed PostgreSQL E2E source of truth | Yes |
+| `MCP Testing Suite / E2E Integration Tests` | Duplicate E2E lane could be suppressed | Retired; it duplicated `CI / test-e2e` without distinct evidence | No |
+| `MCP Testing Suite / Unit Tests (Vitest)` | Test result could be suppressed | Unsuppressed reporting lane | No — `CI / test-unit` is required |
+| `Check / Unit tests` + `Integration tests` | Previously chained/suppressed | Two independent, visible unsuppressed steps | No |
+| `MCP Browser Tests` | Mock-adapter surface; misleading name | `MCP Runtime Health Tests` against the running application | Yes |
+| `CI / typecheck` | Green but unenforced | Failing check can block merge | Yes |
+| `Epic 24 Evidence / Aggregate` | Green but unenforced | Schema-validated evidence aggregate can block merge | Yes |
+
+**Duplicate E2E decision:** `CI / test-e2e` is the sole full E2E source of
+truth. The MCP workflow’s duplicate E2E job was removed rather than retained as
+a redundant signal. The separate required MCP runtime-health check validates the
+running application and is explicitly not represented as either browser
+automation or canonical Streamable HTTP protocol validation.
+
+#### Hosted green proof
+
+| Proof | Commit SHA | Workflow run | Result |
+|---|---|---|---|
+| Protected PR #74 | `1cf1b28b` | [CI #32503413843](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32503413843), [MCP Testing Suite #32503413880](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32503413880), [Epic 24 Evidence #32503413887](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32503413887) | success |
+
+All five required checks on PR #74 passed: `typecheck`, `test-unit`,
+`test-e2e`, `MCP Runtime Health Tests`, and `Epic 24 Evidence / Aggregate`.
+The runtime lane used a real PostgreSQL service and the running application on
+port 3100.
+
+#### Controlled-red prevention proof (AC-7)
+
+| Proof | Commit SHA | Workflow run | Result |
+|---|---|---|---|
+| Disposable PR #81 (not merged) | `f9d30335` | [CI #32503784539](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32503784539), [Epic 24 Evidence #32503784452](https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/32503784452) | required `test-unit` and Evidence Aggregate failed |
+
+PR #81 contained one explicitly documented, deliberately wrong unit assertion.
+GitHub marked the PR `BLOCKED`; a normal `gh pr merge --merge` attempt was
+refused with “the base branch policy prohibits the merge.” No `--admin` or
+`--auto` bypass was used. The PR was closed without merging and its temporary
+branch deleted after this evidence was captured.
