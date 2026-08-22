@@ -64,7 +64,7 @@ skills:
 ### On EVERY Task Complete (Before Responding)
 
 1. **Write outcome to brain** — use `allura-brain_memory_add`
-   - `user_id`: the AUTHENTICATED PRINCIPAL (e.g., `hermes-agent`). The runtime rejects
+   - `user_id`: the AUTHENTICATED PRINCIPAL (e.g., `claude-code`). The runtime rejects
      any other value with `ACTOR_MISMATCH` — Story 24.2 binds user_id to the verified
      principal and request parameters cannot override it.
    - `group_id`: `allura-system`

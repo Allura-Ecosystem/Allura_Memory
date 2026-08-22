@@ -77,8 +77,11 @@ memory_add({
 })
 ```
 
-`group_id` is required on every read and write and must match `^allura-[a-z0-9-]+$`.
-`allura-roninmemory` and `allura-team-ram` are legacy and must not be used.
+`group_id` is required on every read and write and must match
+`^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$`.
+`allura-roninmemory` is legacy and must not be used. `allura-team-ram` is the
+active coding-agent tenant; business and operational traces must use their
+authorized tenant instead of being routed there by default.
 
 *Source: `src/lib/auth/principal-context.ts`, `CLAUDE.md` (Non-Negotiable Invariants),
 `.claude/rules/semantic-graph-best-practices.md`.*
@@ -144,13 +147,16 @@ Do not force Team RAM onto a repository that does not declare it.
 
 ## 7. Environment
 
-Allura is a **cloud deployment**. PostgreSQL runs on the operator's laptop and is
-reached over the network; the MCP endpoint is a tunnel, not a local service.
+Allura is reached by remote agents through the protected public MCP endpoint at
+`https://mcp.faithmeats.org/mcp`. The endpoint is a Cloudflare tunnel to the
+operator-hosted service; the canonical PostgreSQL instance is not a managed
+cloud database.
 
-A workstation may run a container named `knowledge-postgres` whose database is an
-**empty scratch copy**. It is not the canonical ledger and will silently answer
-queries with nothing. A "0 results" or "0 processed" reading from a workstation
-means *wrong database* before it means *empty queue*.
+A workstation may run a container named `knowledge-postgres`, but its role cannot
+be inferred from the container name. Verify the declared infrastructure target
+before treating any local database as canonical. A "0 results" or "0 processed"
+reading from an unverified target is not evidence that the canonical queue is
+empty.
 
 Database operations go through MCP tooling. Never `docker exec`.
 
