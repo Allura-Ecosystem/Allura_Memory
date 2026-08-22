@@ -38,6 +38,8 @@ jobs:
           else
             python3 .opencode/scripts/check-skills.py
           fi
+        # Informational by default: workflow_dispatch can opt into blocking mode
+        # through fail_on_dead=true; routine push/PR triage must only report drift.
         continue-on-error: true
       - name: Upload triage report
         if: always()

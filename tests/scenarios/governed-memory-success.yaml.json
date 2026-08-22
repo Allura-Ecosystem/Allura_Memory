@@ -1,0 +1,65 @@
+{
+  "scenario_id": "governed-memory-success",
+  "schema_version": "v1",
+  "description": "Successful governed memory use: a curator approves a proposal and the memory is promoted",
+  "tenant_fixture": {
+    "group_id": "allura-test-success",
+    "cleanup": true
+  },
+  "principal_fixture": {
+    "principal_id": "curator-1",
+    "roles": ["curator"],
+    "tenant_ids": ["allura-test-success"],
+    "auth_method": "service_identity"
+  },
+  "process_definition": {
+    "id": "governed-memory-promotion",
+    "revision": "r1"
+  },
+  "initial_state": {
+    "memories": [
+      { "content": "Initial memory for test", "score": 0.5 }
+    ],
+    "proposals": [
+      { "content": "High-confidence proposal", "score": 0.91, "tier": "mainstream", "status": "pending" }
+    ]
+  },
+  "tool_fixtures": [
+    {
+      "tool_name": "memory_search",
+      "match": "ordered",
+      "response": { "result": { "results": [{ "id": "mem-1", "content": "Initial memory", "score": 0.5 }] } }
+    },
+    {
+      "tool_name": "memory_add",
+      "match": "ordered",
+      "response": { "result": { "id": "mem-2", "stored": "episodic" } }
+    },
+    {
+      "tool_name": "memory_promote",
+      "match": "ordered",
+      "response": { "result": { "proposal_id": "prop-1", "status": "pending" } }
+    },
+    {
+      "tool_name": "governance_proposal_approve",
+      "match": "ordered",
+      "response": { "result": { "outcome": "approved", "memory_id": "canonical-1" } }
+    }
+  ],
+  "virtual_clock": {
+    "start_time": "2026-01-01T00:00:00.000Z",
+    "tick_interval_ms": 1000
+  },
+  "random_seed": 42,
+  "policy_expectations": [
+    { "policy_id": "pol-004", "expected_decision": "allow", "at_step": 3 }
+  ],
+  "assertions": {
+    "output": { "expected_status": "completed" },
+    "state": { "memory_count": 2, "proposal_status": "approved" },
+    "audit": { "expected_events": ["proposal_approved"] }
+  },
+  "approval_breakpoints": [
+    { "at_step": 3, "decision": "approve", "rationale": "High-confidence, ready for promotion" }
+  ]
+}
