@@ -37,12 +37,6 @@
   },
   "experimentalAgentTeams": true,
   "terminals": "tmux",
-  "mcpServers": {
-    "allura-brain": {
-      "type": "http",
-      "url": "http://localhost:5888/mcp"
-    }
-  },
   "commands": {
     "mcp-discover": {
       "source": ".claude/commands/mcp-discover.md",
