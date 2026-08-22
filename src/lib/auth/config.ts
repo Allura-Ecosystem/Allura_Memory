@@ -149,13 +149,21 @@ export function isClerkEnabled(config?: AuthEnvConfig): boolean {
 /**
  * Check if dev auth bypass is active.
  *
- * Dev auth is active when:
- * 1. ALLURA_DEV_AUTH_ENABLED is true, AND
- * 2. Clerk is NOT configured, OR we're in development/test mode
+ * Dev auth is NEVER active in production. This is unconditional and is checked
+ * first: no combination of ALLURA_DEV_AUTH_ENABLED, missing Clerk keys, or role
+ * configuration can re-enable it. Outside production, dev auth is active only
+ * when explicitly enabled AND Clerk is not configured.
+ *
+ * The previous form was:
+ *   ALLURA_DEV_AUTH_ENABLED && (!isClerkEnabled(c) || c.NODE_ENV !== "production")
+ * where the `||` made "Clerk not configured" sufficient on its own, so a
+ * production deployment without Clerk and with ALLURA_DEV_AUTH_ENABLED=true
+ * granted an authenticated principal with ALLURA_DEV_AUTH_ROLE (default "admin").
  */
 export function isDevAuthActive(config?: AuthEnvConfig): boolean {
   const c = config ?? getAuthConfig();
-  return c.ALLURA_DEV_AUTH_ENABLED && (!isClerkEnabled(c) || c.NODE_ENV !== "production");
+  if (c.NODE_ENV === "production") return false;
+  return c.ALLURA_DEV_AUTH_ENABLED && !isClerkEnabled(c);
 }
 
 /**
