@@ -3,7 +3,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { getPool } from "@/lib/postgres/connection";
 import { autoCurate, submitCandidate } from "@/lib/curator/auto-curator";
 
-const describeLive = process.env.POSTGRES_PASSWORD ? describe : describe.skip;
+const describeLive = process.env.RUN_E2E_TESTS === "true" && process.env.POSTGRES_PASSWORD
+  ? describe
+  : describe.skip;
 const groupId = `allura-autocurator-${randomUUID().slice(0, 8)}`;
 const workspaceA = `workspace-auto-a-${randomUUID().slice(0, 8)}`;
 const workspaceB = `workspace-auto-b-${randomUUID().slice(0, 8)}`;
@@ -11,9 +13,10 @@ const scopeA = { tenantId: groupId, workspaceId: workspaceA, principalId: "auto-
 
 /** Uses the fresh disposable live-lane database; every fixture is UUID-namespaced and removed. */
 describeLive("auto-curator workspace authority", () => {
-  const owner = getPool();
+  let owner: ReturnType<typeof getPool>;
 
   beforeAll(async () => {
+    owner = getPool();
     await owner.query(
       `INSERT INTO workspaces (workspace_id, group_id, name)
        VALUES ($1, $2, 'Auto curator A'), ($3, $2, 'Auto curator B')`,
