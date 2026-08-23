@@ -3,7 +3,7 @@
 **Status:** Planned / dependency-blocked
 **Owner:** Troy + Knuth + Brooks
 **Depends on:** 24.2 authenticated principal context; 24.3 tenant isolation; 25.1 scope/product truth
-**Blocks:** 25.2–25.6
+**Blocks:** 25.3, 25.4, 25.5, 25.6, 25.7
 
 ## Outcome
 
@@ -15,6 +15,34 @@ Make workspace scope, evidence requests, and review receipts durable application
 - Workspace-governed watchdog events and canonical proposals persist `workspace_id` and use composite tenant/workspace integrity.
 - Request-evidence is currently an append-only event projection over a `pending` proposal, not a queryable evidence-request lifecycle.
 - Decision events are durable append-only audit records, but the operator contract lacks a frozen workspace/policy/evidence-version receipt projection.
+
+## Dependency Re-evaluation (added by Story 25.1, AC-8)
+
+**Date:** 2026-08-23. **Status: NOT advanced.** 25.2a stays `dependency-blocked`.
+
+The `**Depends on:**` header is left unchanged. It is the historical dependency edge, and
+`_bmad/bmm/stories/sprint-status.yaml` and the epic planning doc must continue to agree
+with it (`bun run epic25:drift`). Blocker *state* is restated here instead.
+
+| Declared blocker | State after Story 25.1 | Still blocking? |
+|---|---|---|
+| 24.2 authenticated principal context | Done (per `sprint-status.yaml` epic_24) | No |
+| 24.3 tenant isolation | Done (per `sprint-status.yaml` epic_24) | No |
+| 25.1 scope and product truth | Repository/Notion reconciliation is written and contract-tested; `bun run epic25:drift` exits 0 | **Partially** |
+
+**What 25.1 now proves.** The planning doc mirrors the verified Notion decision: Notion is
+canonical for scope, acceptance criteria, and decisions; the repository is versioned
+implementation/test/commit evidence. The focused drift fixtures and the documentation-loop
+contract test cover the repository evidence mirror. This clears the earlier drift-gate
+reconciliation condition without rewriting the builder's historical red handoff.
+
+**Remaining blockers on 25.2a's Done transition, restated explicitly:**
+
+1. The declared Epic 24 authority prerequisites for 25.2 retrieval work
+   (see the epic planning doc "Cross-epic prerequisites" table).
+2. AD-57 is recorded but **Proposed, with no captured rationale**. If 25.2a's Done
+   contract depends on AD-57 being ratified scope authority, it is not yet.
+3. Independent review remains required; this re-evaluation does not advance 25.2a to Done.
 
 ## Acceptance Criteria
 
