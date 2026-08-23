@@ -1,10 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { tenantQuery, withTenantTransaction } from "@/lib/db/tenant-transaction";
 import { getAppPool } from "@/lib/postgres/connection";
 
-const TENANT_A = "allura-tenant-isolation-a";
-const TENANT_B = "allura-tenant-isolation-b";
-const PRINCIPAL = "test-principal-24-3";
+const RUN_ID = randomUUID().replaceAll("-", "");
+const TENANT_A = `allura-tenant-isolation-a-${RUN_ID}`;
+const TENANT_B = `allura-tenant-isolation-b-${RUN_ID}`;
+const PRINCIPAL = `test-principal-24-3-${RUN_ID}`;
 
 const describeLive = process.env.POSTGRES_PASSWORD ? describe : describe.skip;
 

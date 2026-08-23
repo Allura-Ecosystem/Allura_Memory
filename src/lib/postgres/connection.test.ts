@@ -137,5 +137,19 @@ describe("PostgreSQL Connection Layer", () => {
       // Restore
       if (originalPassword !== undefined) process.env.POSTGRES_PASSWORD = originalPassword;
     });
+
+    it("requires explicit restricted application credentials for workspace-governed services", () => {
+      const originalAppUser = process.env.POSTGRES_APP_USER;
+      const originalAppPassword = process.env.POSTGRES_APP_PASSWORD;
+      delete process.env.POSTGRES_APP_USER;
+      delete process.env.POSTGRES_APP_PASSWORD;
+
+      expect(() => getConnectionConfig({ requireAppRole: true })).toThrow(
+        "POSTGRES_APP_USER and POSTGRES_APP_PASSWORD are required",
+      );
+
+      if (originalAppUser !== undefined) process.env.POSTGRES_APP_USER = originalAppUser;
+      if (originalAppPassword !== undefined) process.env.POSTGRES_APP_PASSWORD = originalAppPassword;
+    });
   });
 });

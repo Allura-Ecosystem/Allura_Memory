@@ -1,4 +1,5 @@
-import { getPool } from "@/lib/postgres/connection";
+import { getAppPool, getPool } from "@/lib/postgres/connection";
+import type { ResolvedWorkspaceScope } from "./workspace-scope";
 
 /**
  * Transaction-local principal and tenant context for PostgreSQL RLS.
@@ -12,6 +13,8 @@ import { getPool } from "@/lib/postgres/connection";
 export interface TenantContext {
   tenantId: string;
   principalId: string;
+  /** Optional for legacy group-scoped tables; required by workspace-scoped tables. */
+  workspaceId?: string;
 }
 
 function validateTenantId(tenantId: string): void {
@@ -29,6 +32,12 @@ function validatePrincipalId(principalId: string): void {
   }
 }
 
+function validateWorkspaceId(workspaceId: string): void {
+  if (!workspaceId || typeof workspaceId !== "string") {
+    throw new Error("workspaceId is required and must be a non-empty string");
+  }
+}
+
 /**
  * Run a callback inside a database transaction that has tenant/principal context
  * set. The context is reset (back to empty) when the client is released.
@@ -40,6 +49,9 @@ export async function withTenantTransaction<T>(
 ): Promise<T> {
   validateTenantId(context.tenantId);
   validatePrincipalId(context.principalId);
+  if (context.workspaceId !== undefined) {
+    validateWorkspaceId(context.workspaceId);
+  }
 
   const resolvedPool = pool ?? getPool();
   const client = await resolvedPool.connect();
@@ -49,6 +61,9 @@ export async function withTenantTransaction<T>(
     // Migration 08 already uses app.current_group_id; set app.current_tenant as an alias for forward compatibility.
     await client.query(`SET LOCAL app.current_tenant = '${context.tenantId.replace(/'/g, "''")}'`);
     await client.query(`SET LOCAL app.current_principal = '${context.principalId.replace(/'/g, "''")}'`);
+    if (context.workspaceId !== undefined) {
+      await client.query(`SET LOCAL app.current_workspace_id = '${context.workspaceId.replace(/'/g, "''")}'`);
+    }
     const result = await callback(client);
     await client.query("COMMIT");
     return result;
@@ -60,8 +75,21 @@ export async function withTenantTransaction<T>(
     await client.query("SET LOCAL app.current_group_id = ''").catch(() => undefined);
     await client.query("SET LOCAL app.current_tenant = ''").catch(() => undefined);
     await client.query("SET LOCAL app.current_principal = ''").catch(() => undefined);
+    await client.query("SET LOCAL app.current_workspace_id = ''").catch(() => undefined);
     client.release();
   }
+}
+
+export async function withWorkspaceTransaction<T>(
+  scope: ResolvedWorkspaceScope,
+  callback: (client: import("pg").PoolClient) => Promise<T>,
+): Promise<T> {
+  // Production workspace operations always use the managed restricted app role.
+  return withTenantTransaction(
+    { tenantId: scope.tenantId, workspaceId: scope.workspaceId, principalId: scope.principalId },
+    callback,
+    getAppPool(),
+  );
 }
 
 /**
