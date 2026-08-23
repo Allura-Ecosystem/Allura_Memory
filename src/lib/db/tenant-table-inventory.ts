@@ -63,6 +63,9 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "skill_usage_events", class: "tenant-scoped", notes: "Skill usage events" },
   { table: "promotion_outbox", class: "tenant-scoped", notes: "Story 24.4 projection outbox" },
   { table: "promotion_idempotency", class: "tenant-scoped", notes: "Story 24.4 idempotency receipts" },
+  { table: "evidence_requests", class: "tenant-scoped", notes: "Workspace-scoped evidence request lifecycle" },
+  { table: "governance_receipts", class: "tenant-scoped", notes: "Immutable workspace-scoped governance receipts" },
+  { table: "semantic_projections", class: "tenant-scoped", notes: "Versioned derived workspace semantic projections" },
 
   // Credential / identity tables
   { table: "mcp_tokens", class: "tenant-scoped-credential", notes: "MCP credentials; lookup by token prefix before tenant resolution" },

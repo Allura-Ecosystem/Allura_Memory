@@ -12,14 +12,57 @@
  */
 
 import { curatorScore } from "../lib/curator/score";
-import { closePool, getPool } from "../lib/postgres/connection";
-import { resolveScoreThreshold } from "../lib/config/tenant-config";
+import { closePool } from "../lib/postgres/connection";
+import { withWorkspaceTransaction } from "../lib/db/tenant-transaction";
+import type { ResolvedWorkspaceScope } from "../lib/db/workspace-scope";
+import { resolveScoreThresholdWithClient } from "../lib/config/tenant-config";
 
 export interface WatchdogConfig {
   groupId: string;
+  /** Server-derived scope from the validated credential boundary. */
+  scope: ResolvedWorkspaceScope;
   scoreThreshold: number;
   /** Alert threshold for pending canonical_proposals. Default: 100. Override via WATCHDOG_QUEUE_DEPTH_THRESHOLD. */
   queueDepthThreshold?: number;
+}
+
+export interface WatchdogEventRow {
+  id: number;
+  event_type: string;
+  agent_id: string;
+  metadata: Record<string, unknown>;
+  created_at: string | Date;
+}
+
+/**
+ * Return only events whose durable tenant/workspace scope matches the resolved
+ * watchdog credential. Legacy NULL-workspace events are intentionally excluded.
+ */
+export async function getWorkspaceWatchdogCandidates(
+  pool: { query: (sql: string, params?: unknown[]) => Promise<{ rows: WatchdogEventRow[] }> },
+  scope: ResolvedWorkspaceScope,
+): Promise<{ rows: WatchdogEventRow[] }> {
+  return pool.query(`
+    SELECT e.id, e.event_type, e.agent_id, e.metadata, e.created_at
+    FROM events e
+    WHERE e.group_id = $1
+      -- Workspace watchdog ingestion intentionally excludes legacy unscoped
+      -- events: no default workspace ownership is inferred for append-only rows.
+      AND e.workspace_id = $2
+      AND e.status != 'promoted'
+      AND e.agent_id != 'system'
+      AND e.agent_id NOT LIKE 'k6-%'
+      AND e.event_type NOT IN ('proposal_created', 'proposal_decided', 'proposal_approved', 'proposal_rejected', 'session_start', 'session_end', 'WATCHDOG_HEARTBEAT', 'notion_sync_pending')
+      AND NOT EXISTS (
+        SELECT 1 FROM canonical_proposals cp
+        WHERE cp.trace_ref = e.id
+          AND cp.group_id = e.group_id
+          AND cp.workspace_id = e.workspace_id
+      )
+      AND e.created_at > NOW() - INTERVAL '7 days'
+    ORDER BY e.created_at DESC
+    LIMIT 50
+  `, [scope.tenantId, scope.workspaceId]);
 }
 
 /**
@@ -35,73 +78,60 @@ export interface WatchdogConfig {
  * @returns Number of proposals created
  */
 export async function scanAndPropose(config: WatchdogConfig): Promise<number> {
-  const pool = getPool();
-
-  // Story 22.4: Resolve score threshold from tenant config, falling back to
-  // the config.scoreThreshold provided by the caller (env or CLI flag).
-  const effectiveThreshold = await resolveScoreThreshold(
-    config.groupId,
-    config.scoreThreshold
-  );
-
-  // Find events that don't have a corresponding proposal yet.
-  // Exclude system-generated event types (trigger artifacts) to prevent
-  // the log_proposal_created trigger from creating a re-scan loop.
-  const result = await pool.query(`
-    SELECT e.id, e.event_type, e.agent_id, e.metadata, e.created_at
-    FROM events e
-    WHERE e.group_id = $1
-      AND e.status != 'promoted'
-      AND e.agent_id != 'system'
-      AND e.agent_id NOT LIKE 'k6-%'
-      AND e.event_type NOT IN ('proposal_created', 'proposal_decided', 'proposal_approved', 'proposal_rejected', 'session_start', 'session_end', 'WATCHDOG_HEARTBEAT', 'notion_sync_pending')
-      AND NOT EXISTS (
-        SELECT 1 FROM canonical_proposals cp
-        WHERE cp.trace_ref = e.id
-      )
-      AND e.created_at > NOW() - INTERVAL '7 days'
-    ORDER BY e.created_at DESC
-    LIMIT 50
-  `, [config.groupId]);
-
-  let proposalsCreated = 0;
-
-  for (const row of result.rows) {
-    const content = JSON.stringify({
-      type: row.event_type,
-      agent: row.agent_id,
-      ...row.metadata,
-    });
-
-    const score = await curatorScore({
-      content,
-      usageCount: 0,
-      daysSinceCreated: Math.floor(
-        (Date.now() - new Date(row.created_at).getTime()) / (1000 * 60 * 60 * 24)
-      ),
-      source: "conversation",
-    });
-
-    if (score.confidence >= effectiveThreshold) {
-      await pool.query(
-        `INSERT INTO canonical_proposals (id, group_id, content, score, reasoning, tier, status, trace_ref, created_at)
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'pending', $6, NOW())
-         ON CONFLICT DO NOTHING`,
-        [
-          config.groupId,
-          content,
-          score.confidence,
-          score.reasoning,
-          score.tier,
-          row.id,
-        ]
-      );
-      proposalsCreated++;
-      console.log(`[Watchdog] Queued proposal for event ${row.id}: ${score.confidence.toFixed(2)} (${score.tier})`);
-    }
+  if (!config.scope || config.scope.tenantId !== config.groupId) {
+    throw new Error("watchdog requires a server-resolved workspace scope")
   }
 
-  return proposalsCreated;
+  // Candidate evidence and tenant config are workspace-governed reads. Keep all
+  // reads and the corresponding proposal writes on the same app-role client so
+  // an owner connection can never bypass the RLS boundary.
+  return withWorkspaceTransaction(config.scope, async (client) => {
+    const effectiveThreshold = await resolveScoreThresholdWithClient(
+      client,
+      config.groupId,
+      config.scoreThreshold,
+    );
+    const result = await getWorkspaceWatchdogCandidates(client, config.scope);
+    let proposalsCreated = 0;
+
+    for (const row of result.rows) {
+      const content = JSON.stringify({
+        type: row.event_type,
+        agent: row.agent_id,
+        ...row.metadata,
+      });
+
+      const score = await curatorScore({
+        content,
+        usageCount: 0,
+        daysSinceCreated: Math.floor(
+          (Date.now() - new Date(row.created_at).getTime()) / (1000 * 60 * 60 * 24)
+        ),
+        source: "conversation",
+      });
+
+      if (score.confidence >= effectiveThreshold) {
+        await client.query(
+          `INSERT INTO canonical_proposals (id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref, created_at)
+           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, 'pending', $7, NOW())
+           ON CONFLICT DO NOTHING`,
+          [
+            config.groupId,
+            config.scope.workspaceId,
+            content,
+            score.confidence,
+            score.reasoning,
+            score.tier,
+            row.id,
+          ]
+        );
+        proposalsCreated++;
+        console.log(`[Watchdog] Queued proposal for event ${row.id}: ${score.confidence.toFixed(2)} (${score.tier})`);
+      }
+    }
+
+    return proposalsCreated;
+  });
 }
 
 // ── Exported cycle function (also used by CLI) ───────────────────────────────
@@ -110,12 +140,10 @@ export async function scanAndPropose(config: WatchdogConfig): Promise<number> {
  * Run one watchdog cycle: scan + propose, emit heartbeat, check queue depth.
  * Exported for unit-testing without starting the interval loop.
  *
- * @param pool   - Active pg Pool
  * @param config - Watchdog configuration
  * @param cycleCount - Current cycle index (1-based)
  */
 export async function runWatchdogCycle(
-  pool: { query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }> },
   config: WatchdogConfig,
   cycleCount: number
 ): Promise<void> {
@@ -127,37 +155,47 @@ export async function runWatchdogCycle(
 
   const newProposals = await scanAndPropose(config);
 
-  await pool.query(
-    `INSERT INTO events (event_type, agent_id, group_id, metadata, created_at)
-     VALUES ($1, $2, $3, $4, NOW())`,
-    [
-      'WATCHDOG_HEARTBEAT',
-      'watchdog',
-      config.groupId,
-      JSON.stringify({ proposals_created: newProposals, scan_cycle: cycleCount }),
-    ]
-  );
-
-  // Queue-depth check — emit BLOCKER at most once per cycle if pending > threshold
-  const depthResult = await pool.query(
-    `SELECT COUNT(*)::int AS pending FROM canonical_proposals WHERE group_id = $1 AND status = 'pending'`,
-    [config.groupId]
-  );
-  const pending = (depthResult.rows[0] as { pending: number }).pending;
-
-  if (pending > threshold) {
-    await pool.query(
-      `INSERT INTO events (event_type, agent_id, group_id, metadata, created_at)
-       VALUES ($1, $2, $3, $4, NOW())`,
+  // Cycle evidence and queue depth are workspace-owned writes/reads. Keep them
+  // together in the strict app-role transaction rather than trusting a caller
+  // pool that could be an owner connection.
+  await withWorkspaceTransaction(config.scope, async (client) => {
+    await client.query(
+      `INSERT INTO events (event_type, agent_id, group_id, workspace_id, metadata, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
       [
-        'BLOCKER',
+        'WATCHDOG_HEARTBEAT',
         'watchdog',
         config.groupId,
-        JSON.stringify({ kind: 'curator_queue_depth', pending, threshold, hint: 'run curator batch triage' }),
+        config.scope.workspaceId,
+        JSON.stringify({ proposals_created: newProposals, scan_cycle: cycleCount }),
       ]
     );
-    console.warn(`[Watchdog] BLOCKER: curator queue depth ${pending} exceeds threshold ${threshold}`);
-  }
+
+    // Legacy NULL-workspace proposals are deliberately excluded from a scoped
+    // queue-depth blocker; only this credential's group/workspace can contribute.
+    const depthResult = await client.query(
+      `SELECT COUNT(*)::int AS pending
+       FROM canonical_proposals
+       WHERE group_id = $1 AND workspace_id = $2 AND status = 'pending'`,
+      [config.groupId, config.scope.workspaceId]
+    );
+    const pending = (depthResult.rows[0] as { pending: number }).pending;
+
+    if (pending > threshold) {
+      await client.query(
+        `INSERT INTO events (event_type, agent_id, group_id, workspace_id, metadata, created_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())`,
+        [
+          'BLOCKER',
+          'watchdog',
+          config.groupId,
+          config.scope.workspaceId,
+          JSON.stringify({ kind: 'curator_queue_depth', pending, threshold, hint: 'run curator batch triage' }),
+        ]
+      );
+      console.warn(`[Watchdog] BLOCKER: curator queue depth ${pending} exceeds threshold ${threshold}`);
+    }
+  });
 
   if (newProposals > 0) {
     console.log(`[Watchdog] Scan complete: ${newProposals} new proposals`);
@@ -189,6 +227,9 @@ if (isMainModule) {
 
   const watchdogConfig: WatchdogConfig = {
     groupId: GROUP_ID,
+    scope: (() => {
+      throw new Error("Direct watchdog CLI has no validated workspace credential; use the authenticated server ingress");
+    })(),
     scoreThreshold: SCORE_THRESHOLD,
   };
 
@@ -197,11 +238,10 @@ if (isMainModule) {
     console.log(`[Watchdog] group_id=${GROUP_ID}, interval=${INTERVAL_MS / 1000}s, threshold=${SCORE_THRESHOLD}`);
 
     let cycleCount = 0;
-    const pool = getPool();
 
     async function runCycle(): Promise<void> {
       cycleCount++;
-      await runWatchdogCycle(pool, watchdogConfig, cycleCount);
+      await runWatchdogCycle(watchdogConfig, cycleCount);
     }
 
     // Run first scan immediately

@@ -69,8 +69,10 @@ export type MemoryStatus =
 /**
  * Scope context carried by every governed operation.
  * `group_id` = org (the tenant boundary); `workspace_id` = sub-scope (ADR-001).
- * `group_id` is server-injected by Allura Guard, never client-supplied.
- * Workspace enforcement remains deferred until a canonical handler consumes it.
+ * `group_id` and `workspace_id` are server-derived authority values; callers
+ * cannot select either. This shared type requires the workspace boundary, but
+ * runtime routes must opt into the workspace-aware transaction/RLS path before
+ * application enforcement can be claimed.
  */
 export interface AlluraScope {
   group_id: GroupId;

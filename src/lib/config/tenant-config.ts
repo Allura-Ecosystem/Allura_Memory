@@ -158,13 +158,20 @@ export async function getEffectiveScoreThreshold(groupId: string): Promise<numbe
  * @param fallbackThreshold - Fallback threshold if tenant config is empty (default: 0.7)
  * @returns The score threshold to use
  */
-export async function resolveScoreThreshold(
+type ConfigQueryClient = Pick<import("pg").PoolClient, "query">;
+
+/**
+ * Resolve a score threshold using the caller's already-authorized database
+ * client. Workspace-governed callers use this inside their strict app-role
+ * transaction rather than opening an owner-pool connection.
+ */
+export async function resolveScoreThresholdWithClient(
+  client: ConfigQueryClient,
   groupId: string,
-  fallbackThreshold: number = 0.7
+  fallbackThreshold: number = 0.7,
 ): Promise<number> {
   const validated = validateGroupId(groupId);
-  const pool = getPool();
-  const result = await pool.query(
+  const result = await client.query(
     "SELECT config FROM tenants WHERE group_id = $1 AND active = TRUE",
     [validated]
   );
@@ -191,4 +198,16 @@ export async function resolveScoreThreshold(
   }
 
   return Math.max(0.0, Math.min(1.0, adjusted));
+}
+
+/**
+ * Resolve a score threshold from the default owner-pool path used by legacy
+ * group-scoped callers. Workspace-scoped callers must use
+ * resolveScoreThresholdWithClient inside withWorkspaceTransaction.
+ */
+export async function resolveScoreThreshold(
+  groupId: string,
+  fallbackThreshold: number = 0.7,
+): Promise<number> {
+  return resolveScoreThresholdWithClient(getPool(), groupId, fallbackThreshold);
 }

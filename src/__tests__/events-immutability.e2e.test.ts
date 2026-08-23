@@ -5,6 +5,7 @@ import { getAppPool, getPool } from "@/lib/postgres/connection";
 const TENANT_A = "allura-tenant-isolation-a";
 const TENANT_B = "allura-tenant-isolation-b";
 const PRINCIPAL = "test-principal-24-3";
+const WORKSPACE_A = "workspace-tenant-isolation-a";
 
 // Live PostgreSQL is required. The test is included by vitest.config.live-db.ts.
 const describeLive = process.env.POSTGRES_PASSWORD ? describe : describe.skip;
@@ -17,15 +18,21 @@ describeLive("events ledger immutability (AC-7)", () => {
   });
 
   it("rejects UPDATE and DELETE on events when connected as the application role", async () => {
-    // Insert an event as the application role with tenant context.
+    await getPool().query(
+      `INSERT INTO workspaces (workspace_id, group_id, name)
+       VALUES ($1, $2, 'Events immutability workspace')
+       ON CONFLICT (workspace_id) DO NOTHING`,
+      [WORKSPACE_A, TENANT_A],
+    );
+    // Insert an event as the application role with tenant/workspace context.
     const insertResult = await withTenantTransaction(
-      { tenantId: TENANT_A, principalId: PRINCIPAL },
+      { tenantId: TENANT_A, workspaceId: WORKSPACE_A, principalId: PRINCIPAL },
       async (client) => {
         return await client.query(
-          `INSERT INTO events (group_id, event_type, agent_id, status, metadata, session_id)
-           VALUES ($1, 'tenant_isolation_test', $2, 'completed', '{"source":"24.3-test"}', $3)
+          `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, session_id)
+           VALUES ($1, $2, 'tenant_isolation_test', $3, 'completed', '{"source":"24.3-test"}', $4)
            RETURNING id`,
-          [TENANT_A, PRINCIPAL, "test-session"],
+          [TENANT_A, WORKSPACE_A, PRINCIPAL, "test-session"],
         );
       },
       appPool,
@@ -37,7 +44,7 @@ describeLive("events ledger immutability (AC-7)", () => {
     // Attempt UPDATE as application role: must fail.
     await expect(
       withTenantTransaction(
-        { tenantId: TENANT_A, principalId: PRINCIPAL },
+        { tenantId: TENANT_A, workspaceId: WORKSPACE_A, principalId: PRINCIPAL },
         async (client) => {
           return await client.query("UPDATE events SET status = 'failed' WHERE id = $1", [eventId]);
         },
@@ -48,7 +55,7 @@ describeLive("events ledger immutability (AC-7)", () => {
     // Attempt DELETE as application role: must fail.
     await expect(
       withTenantTransaction(
-        { tenantId: TENANT_A, principalId: PRINCIPAL },
+        { tenantId: TENANT_A, workspaceId: WORKSPACE_A, principalId: PRINCIPAL },
         async (client) => {
           return await client.query("DELETE FROM events WHERE id = $1", [eventId]);
         },
@@ -58,7 +65,7 @@ describeLive("events ledger immutability (AC-7)", () => {
 
     // The row must still exist.
     const check = await tenantQuery(
-      { tenantId: TENANT_A, principalId: PRINCIPAL },
+      { tenantId: TENANT_A, workspaceId: WORKSPACE_A, principalId: PRINCIPAL },
       "SELECT id FROM events WHERE id = $1",
       [eventId],
       appPool,

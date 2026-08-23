@@ -21,6 +21,13 @@ export interface ConnectionConfig {
   max: number;
 }
 
+export interface ConnectionConfigOptions {
+  /** Workspace-governed operations must use the restricted app role. */
+  requireAppRole?: boolean;
+  /** Explicit compatibility boundary for migration/admin tooling. */
+  role?: "app" | "owner";
+}
+
 /**
  * Pool configuration for connection safety
  */
@@ -36,33 +43,36 @@ const DEFAULT_POOL_CONFIG: PoolConfig = {
   idleTimeoutMillis: 30000, // 30 seconds
 };
 
-// Singleton pool instance
+// Long-lived process pools. Owner access remains separate from the restricted
+// application role so workspace-governed writes cannot fall back to owner credentials.
 let poolInstance: Pool | null = null;
+let appPoolInstance: Pool | null = null;
 
 /**
  * Get connection configuration from environment variables
  * Uses safe defaults matching docker-compose.yml setup
  */
-export function getConnectionConfig(): ConnectionConfig {
+export function getConnectionConfig(options: ConnectionConfigOptions = {}): ConnectionConfig {
   const password = env.POSTGRES_PASSWORD;
 
   if (!password) {
     throw new Error("POSTGRES_PASSWORD environment variable is required");
   }
 
-  // Story 24.3: optional application role. If POSTGRES_APP_USER is set, the
-  // service connects as the restricted application role that is subject to RLS.
-  // Otherwise we fall back to the owner/migration role for backwards compatibility.
   const appUser = env.POSTGRES_APP_USER;
   const appPassword = env.POSTGRES_APP_PASSWORD;
+  const useAppRole = options.role === "app";
+
+  if ((options.requireAppRole || options.role === "app") && (!appUser || !appPassword)) {
+    throw new Error("POSTGRES_APP_USER and POSTGRES_APP_PASSWORD are required for workspace-governed services");
+  }
 
   return {
     host: env.POSTGRES_HOST || "localhost",
     port: parseInt(env.POSTGRES_PORT || "5432", 10),
     database: env.POSTGRES_DB || "memory",
-    user: appUser || env.POSTGRES_USER || "ronin4life",
-    // Only use the app role password when the app role is explicitly selected.
-    password: appUser ? appPassword || password : password,
+    user: useAppRole ? appUser! : env.POSTGRES_USER || "ronin4life",
+    password: useAppRole ? appPassword! : password,
     connectionTimeoutMillis: DEFAULT_POOL_CONFIG.connectionTimeoutMillis,
     idleTimeoutMillis: DEFAULT_POOL_CONFIG.idleTimeoutMillis,
     max: DEFAULT_POOL_CONFIG.maxConnections,
@@ -111,32 +121,21 @@ export function getPool(): Pool {
 }
 
 /**
- * Get a dedicated pool that connects as the restricted application role.
- * Used by Story 24.3 tests and break-glass tooling. The main service should
- * prefer the env-based `POSTGRES_APP_USER` path; this helper exists for tests
- * that must compare owner vs. application-role behavior.
+ * Get or create the managed pool that connects as the restricted application
+ * role. Workspace transactions share this process singleton rather than
+ * creating one pool per write, and it is closed by closePool during shutdown.
  */
 export function getAppPool(): Pool {
-  const ownerConfig = getConnectionConfig();
-  const appUser = process.env.POSTGRES_APP_USER || "allura_app";
-  const appPassword = process.env.POSTGRES_APP_PASSWORD || "change-me-in-production";
+  if (!appPoolInstance) {
+    const appConfig = getConnectionConfig({ requireAppRole: true, role: "app" });
+    appPoolInstance = new Pool({ ...appConfig });
 
-  const pool = new Pool({
-    host: ownerConfig.host,
-    port: ownerConfig.port,
-    database: ownerConfig.database,
-    user: appUser,
-    password: appPassword,
-    connectionTimeoutMillis: ownerConfig.connectionTimeoutMillis,
-    idleTimeoutMillis: ownerConfig.idleTimeoutMillis,
-    max: ownerConfig.max,
-  });
+    appPoolInstance.on("error", (err: Error) => {
+      console.error("[PostgreSQL App Pool] Unexpected error on idle client:", err.message);
+    });
+  }
 
-  pool.on("error", (err: Error) => {
-    console.error("[PostgreSQL App Pool] Unexpected error on idle client:", err.message);
-  });
-
-  return pool;
+  return appPoolInstance;
 }
 
 /**
@@ -144,9 +143,16 @@ export function getAppPool(): Pool {
  * Call this during graceful shutdown
  */
 export async function closePool(): Promise<void> {
-  if (poolInstance) {
-    await poolInstance.end();
-    poolInstance = null;
+  const pools = [poolInstance, appPoolInstance].filter((pool): pool is Pool => pool !== null);
+  // Clear both references before awaiting cleanup so a shutdown failure cannot
+  // leave a closed/rejected singleton available to the next caller.
+  poolInstance = null;
+  appPoolInstance = null;
+
+  const results = await Promise.allSettled(pools.map((pool) => pool.end()));
+  const failed = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+  if (failed) {
+    throw failed.reason;
   }
 }
 

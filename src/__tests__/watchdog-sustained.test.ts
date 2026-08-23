@@ -25,6 +25,7 @@ const E2E_TIMEOUT = 30000;
 // Per-run isolation
 const RUN_ID = randomUUID().slice(0, 8);
 const GROUP_ID = `allura-wd-sustained-${RUN_ID}` as const;
+const WORKSPACE_ID = `workspace-wd-sustained-${RUN_ID}`;
 
 describe.skipIf(!shouldRunE2E)("Watchdog Sustained Validation", () => {
   let pgPool: Pool;
@@ -52,15 +53,20 @@ describe.skipIf(!shouldRunE2E)("Watchdog Sustained Validation", () => {
 
     // Verify connection
     await pgPool.query("SELECT 1");
+    await pgPool.query(
+      "INSERT INTO workspaces (workspace_id, group_id, name) VALUES ($1, $2, 'Watchdog sustained fixture')",
+      [WORKSPACE_ID, GROUP_ID]
+    );
 
     // Seed events for watchdog to discover — 3 events with high-specificity content
     await pgPool.query(
-      `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at) VALUES
-        ($1, 'memory_add', 'test-watchdog', 'completed', $2, NOW() - INTERVAL '1 hour'),
-        ($1, 'decision', 'brooks', 'completed', $3, NOW() - INTERVAL '30 minutes'),
-        ($1, 'insight', 'curator', 'completed', $4, NOW() - INTERVAL '15 minutes')`,
+      `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at) VALUES
+        ($1, $2, 'memory_add', 'test-watchdog', 'completed', $3, NOW() - INTERVAL '1 hour'),
+        ($1, $2, 'decision', 'brooks', 'completed', $4, NOW() - INTERVAL '30 minutes'),
+        ($1, $2, 'insight', 'curator', 'completed', $5, NOW() - INTERVAL '15 minutes')`,
       [
         GROUP_ID,
+        WORKSPACE_ID,
         JSON.stringify({ content: "I always prefer TypeScript with strict mode and explicit return types for production code", source: "conversation" }),
         JSON.stringify({ content: "I never deploy on Fridays without a rollback plan and a monitoring dashboard", source: "conversation" }),
         JSON.stringify({ content: "We always use PostgreSQL for raw traces and Neo4j for promoted knowledge graph", source: "conversation" }),
@@ -70,8 +76,9 @@ describe.skipIf(!shouldRunE2E)("Watchdog Sustained Validation", () => {
 
   afterAll(async () => {
     // Clean up test data
-    await pgPool?.query("DELETE FROM canonical_proposals WHERE group_id = $1", [GROUP_ID]);
-    await pgPool?.query("DELETE FROM events WHERE group_id = $1", [GROUP_ID]);
+    await pgPool?.query("DELETE FROM canonical_proposals WHERE group_id = $1 AND workspace_id = $2", [GROUP_ID, WORKSPACE_ID]);
+    await pgPool?.query("DELETE FROM events WHERE group_id = $1 AND workspace_id = $2", [GROUP_ID, WORKSPACE_ID]);
+    await pgPool?.query("DELETE FROM workspaces WHERE workspace_id = $1", [WORKSPACE_ID]);
     await pgPool?.end();
     await closePool();
   }, E2E_TIMEOUT);
@@ -103,6 +110,11 @@ describe.skipIf(!shouldRunE2E)("Watchdog Sustained Validation", () => {
     async () => {
       const watchdogConfig: WatchdogConfig = {
         groupId: GROUP_ID,
+        scope: {
+          tenantId: GROUP_ID,
+          workspaceId: WORKSPACE_ID,
+          principalId: "watchdog-sustained-test",
+        },
         scoreThreshold: 0.3, // Low threshold to ensure our test events qualify
       };
 
@@ -115,8 +127,8 @@ describe.skipIf(!shouldRunE2E)("Watchdog Sustained Validation", () => {
 
       // Verify after cycle 1
       const after1 = await pgPool.query(
-        "SELECT id, status FROM canonical_proposals WHERE group_id = $1",
-        [GROUP_ID]
+        "SELECT id, status FROM canonical_proposals WHERE group_id = $1 AND workspace_id = $2",
+        [GROUP_ID, WORKSPACE_ID]
       );
       expect(after1.rows.length).toBeGreaterThan(0);
       for (const row of after1.rows) {
@@ -130,17 +142,18 @@ describe.skipIf(!shouldRunE2E)("Watchdog Sustained Validation", () => {
 
       // Verify count didn't change
       const after2 = await pgPool.query(
-        "SELECT COUNT(*) as cnt FROM canonical_proposals WHERE group_id = $1",
-        [GROUP_ID]
+        "SELECT COUNT(*) as cnt FROM canonical_proposals WHERE group_id = $1 AND workspace_id = $2",
+        [GROUP_ID, WORKSPACE_ID]
       );
       expect(Number(after2.rows[0].cnt)).toBe(after1.rows.length);
 
       // Seed a new event for cycle 3
       await pgPool.query(
-        `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-         VALUES ($1, 'insight', 'curator', 'completed', $2, NOW())`,
+        `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at)
+         VALUES ($1, $2, 'insight', 'curator', 'completed', $3, NOW())`,
         [
           GROUP_ID,
+          WORKSPACE_ID,
           JSON.stringify({ content: "I always validate with typecheck before committing changes to main", source: "conversation" }),
         ]
       );
@@ -155,8 +168,8 @@ describe.skipIf(!shouldRunE2E)("Watchdog Sustained Validation", () => {
 
       // Final verification: all proposals are pending
       const finalResult = await pgPool.query(
-        "SELECT id, status FROM canonical_proposals WHERE group_id = $1",
-        [GROUP_ID]
+        "SELECT id, status FROM canonical_proposals WHERE group_id = $1 AND workspace_id = $2",
+        [GROUP_ID, WORKSPACE_ID]
       );
       expect(finalResult.rows.length).toBeGreaterThanOrEqual(2);
       for (const row of finalResult.rows) {

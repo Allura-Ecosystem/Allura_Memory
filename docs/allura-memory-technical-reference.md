@@ -396,8 +396,8 @@ Rule-based heuristic scorer. NOT an LLM — uses deterministic signals:
 
 ### Auto-Curator (`src/lib/curator/auto-curator.ts`)
 
-Pattern detection system that reads recent events and proposes candidate insights:
-- **Failure patterns**: Same error, same agent, same group (≥2 occurrences)
+Pattern detection system that accepts only a server-resolved workspace scope, reads events through a strict app-role workspace transaction, and proposes candidate insights. Candidate provenance retains `source_event_ids` plus their `(group_id, workspace_id)` scope; all source IDs are revalidated in the proposal/evidence transaction before a write:
+- **Failure patterns**: Same error, same agent, same workspace (≥2 occurrences)
 - **Win patterns**: Successful promotions (≥3 occurrences)
 - **Approval patterns**: High/low approval rate detection
 - **Tool risk patterns**: Tool governance decisions

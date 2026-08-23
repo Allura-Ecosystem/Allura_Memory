@@ -16,7 +16,8 @@ if (typeof window !== "undefined") {
 
 import { createHash } from "crypto"
 import { curatorScore, type CuratorScore, type PromotionTier } from "@/lib/curator/score"
-import { getPool } from "@/lib/postgres/connection"
+import type { ResolvedWorkspaceScope } from "@/lib/db/workspace-scope";
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction";
 import { validateGroupId } from "@/lib/validation/group-id"
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -47,6 +48,8 @@ export interface CandidateInsight {
   tier: PromotionTier
   /** Source event IDs that contributed */
   source_event_ids: number[]
+  /** Durable authority scope retained with the source-event provenance. */
+  source_scope?: { group_id: string; workspace_id: string }
   /** Whether this requires HITL approval */
   requires_approval: boolean
   /** When this candidate was created */
@@ -68,6 +71,7 @@ export interface RawEvent {
   event_type: string
   agent_id: string
   group_id: string
+  workspace_id?: string
   status: string
   metadata: Record<string, unknown>
   created_at: string
@@ -330,7 +334,7 @@ export function classifySimilarity(
  * It does NOT write to Neo4j or Notion directly.
  */
 export async function autoCurate(
-  groupId: string,
+  scope: ResolvedWorkspaceScope,
   options?: {
     /** Analysis window in hours (default: 24) */
     windowHours?: number
@@ -338,103 +342,87 @@ export async function autoCurate(
     maxCandidates?: number
   }
 ): Promise<PatternDetectionResult> {
-  const validatedGroupId = validateGroupId(groupId)
+  if (!scope || typeof scope !== "object" || !scope.tenantId || !scope.workspaceId || !scope.principalId) {
+    throw new Error("auto-curator requires a server-resolved workspace scope")
+  }
+  const validatedGroupId = validateGroupId(scope.tenantId)
   const windowHours = options?.windowHours ?? 24
   const maxCandidates = options?.maxCandidates ?? 10
 
-  const pg = getPool()
+  // All analysis reads use the app role in the resolved workspace transaction.
+  // Legacy NULL-workspace events are intentionally excluded.
+  const { eventResult, existingMemories } = await withWorkspaceTransaction(scope, async (pg) => {
+    const eventResult = await pg.query(
+      `SELECT id, event_type, agent_id, group_id, workspace_id, status, metadata, created_at
+       FROM events
+       WHERE group_id = $1
+         AND workspace_id = $2
+         AND created_at >= NOW() - ($3 * INTERVAL '1 hour')
+       ORDER BY created_at DESC`,
+      [validatedGroupId, scope.workspaceId, windowHours],
+    )
+    const existingMemories = await pg.query(
+      `SELECT content FROM allura_memories WHERE group_id = $1 LIMIT 100`,
+      [validatedGroupId],
+    )
+    return { eventResult, existingMemories }
+  })
 
-  // Fetch recent events for analysis
-  const result = await pg.query(
-    `SELECT id, event_type, agent_id, group_id, status, metadata, created_at
-     FROM events
-     WHERE group_id = $1
-       AND created_at >= NOW() - INTERVAL '${windowHours} hours'
-     ORDER BY created_at DESC`,
-    [validatedGroupId]
-  )
-
-  const events: RawEvent[] = result.rows.map((row) => ({
+  const events: RawEvent[] = eventResult.rows.map((row) => ({
     id: row.id,
     event_type: row.event_type,
     agent_id: row.agent_id,
     group_id: row.group_id,
+    workspace_id: row.workspace_id,
     status: row.status,
     metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata || {},
     created_at: row.created_at,
   }))
 
-  // Run all pattern detectors
-  const failureCandidates = detectFailurePatterns(events)
-  const winCandidates = detectWinPatterns(events)
-  const approvalCandidates = detectApprovalPatterns(events)
-  const toolRiskCandidates = detectToolRiskPatterns(events)
-
-  // Combine and deduplicate
   const allCandidates = [
-    ...failureCandidates,
-    ...winCandidates,
-    ...approvalCandidates,
-    ...toolRiskCandidates,
+    ...detectFailurePatterns(events),
+    ...detectWinPatterns(events),
+    ...detectApprovalPatterns(events),
+    ...detectToolRiskPatterns(events),
   ]
-
-  // Fetch existing canonical memory contents for dedup
-  const existingMemories = await pg.query(
-    `SELECT content FROM allura_memories WHERE group_id = $1 LIMIT 100`,
-    [validatedGroupId]
-  )
   const existingContents = existingMemories.rows.map((r) => r.content as string)
 
-  // Classify similarity and filter
   const filteredCandidates: CandidateInsight[] = []
   let duplicatesSuppressed = 0
 
   for (const candidate of allCandidates) {
+    candidate.source_scope = { group_id: validatedGroupId, workspace_id: scope.workspaceId }
     const similarity = classifySimilarity(candidate.content, existingContents)
 
     switch (similarity.classification) {
       case "duplicate":
         duplicatesSuppressed++
-        continue // Skip duplicates entirely
+        continue
       case "supersede":
-        candidate.requires_approval = true // Flag for HITL review
+        candidate.requires_approval = true
         candidate.reasoning += ` (Similar to existing insight, similarity: ${Math.round(similarity.similarity * 100)}%)`
         break
       case "related":
         candidate.reasoning += ` (Related to existing content, similarity: ${Math.round(similarity.similarity * 100)}%)`
         break
       case "new":
-        break // New insight, proceed as-is
+        break
     }
 
-    // Apply curator scoring
-    const score = await curatorScore({
-      content: candidate.content,
-      source: "conversation",
-      usageCount: candidate.frequency,
-    })
-
+    const score = await curatorScore({ content: candidate.content, source: "conversation", usageCount: candidate.frequency })
     candidate.confidence = score.confidence
     candidate.tier = score.tier
     candidate.reasoning = score.reasoning + ". " + candidate.reasoning
-
-    // Determine impact from frequency and type
     if (candidate.type === "failure" && candidate.frequency >= 5) {
       candidate.impact = "high"
       candidate.requires_approval = true
     }
-
     filteredCandidates.push(candidate)
   }
 
-  // Sort by confidence descending and take top N
   filteredCandidates.sort((a, b) => b.confidence - a.confidence)
   const topCandidates = filteredCandidates.slice(0, maxCandidates)
-
-  // Validate all candidates before returning (safety guardrail)
-  for (const candidate of topCandidates) {
-    validateCandidate(candidate)
-  }
+  for (const candidate of topCandidates) validateCandidate(candidate)
 
   return {
     candidates: topCandidates,
@@ -450,47 +438,68 @@ export async function autoCurate(
  * Creates a canonical_proposals row with status='pending'.
  * High-impact candidates ALWAYS require HITL.
  */
-export async function submitCandidate(candidate: CandidateInsight): Promise<{ proposal_id: string; status: string; requires_approval: boolean }> {
+export async function submitCandidate(candidate: CandidateInsight, scope: ResolvedWorkspaceScope): Promise<{ proposal_id: string; status: string; requires_approval: boolean }> {
   validateCandidate(candidate)
-  const pg = getPool()
   const validatedGroupId = validateGroupId(candidate.group_id)
+  if (validatedGroupId !== scope.tenantId) {
+    throw new Error("candidate group does not match resolved workspace scope")
+  }
 
-  const result = await pg.query(
-    `INSERT INTO canonical_proposals (group_id, content, score, tier, reasoning, status, trace_ref, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-     RETURNING id, status`,
-    [
-      validatedGroupId,
-      candidate.content,
-      candidate.confidence,
-      candidate.tier,
-      candidate.reasoning,
-      candidate.requires_approval ? "pending" : "pending", // All go to pending — auto-promote handles the rest
-      JSON.stringify(candidate.source_event_ids),
-    ]
-  )
+  const result = await withWorkspaceTransaction(scope, async (pg) => {
+    if (!candidate.source_scope || candidate.source_scope.group_id !== scope.tenantId || candidate.source_scope.workspace_id !== scope.workspaceId) {
+      throw new Error("candidate source scope does not match resolved workspace scope")
+    }
+    const sourceEvents = await pg.query(
+      `SELECT id FROM events
+       WHERE group_id = $1 AND workspace_id = $2 AND id = ANY($3::bigint[])`,
+      [scope.tenantId, scope.workspaceId, candidate.source_event_ids],
+    )
+    if (sourceEvents.rows.length !== new Set(candidate.source_event_ids).size) {
+      throw new Error("candidate source events do not belong to resolved workspace scope")
+    }
+    const proposal = await pg.query(
+      `INSERT INTO canonical_proposals (group_id, workspace_id, content, score, tier, reasoning, status, trace_ref, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+       RETURNING id, status`,
+      [
+        validatedGroupId,
+        scope.workspaceId,
+        candidate.content,
+        candidate.confidence,
+        candidate.tier,
+        candidate.reasoning,
+        "pending", // All go to pending — auto-promote handles the rest
+        candidate.source_event_ids[0], // canonical_proposals.trace_ref is a durable single-event bigint reference; full provenance is retained in evidence metadata.
+      ]
+    )
 
-  // Log the auto-curation event
-  await pg.query(
-    `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-     VALUES ($1, $2, $3, $4, $5, NOW())`,
-    [
-      validatedGroupId,
-      "auto_curated",
-      "auto-curator",
-      "completed",
-      JSON.stringify({
-        candidate_id: candidate.id,
-        proposal_id: result.rows[0].id,
-        type: candidate.type,
-        impact: candidate.impact,
-        frequency: candidate.frequency,
-        novelty_score: candidate.novelty_score,
-        requires_approval: candidate.requires_approval,
-        source_event_ids: candidate.source_event_ids,
-      }),
-    ]
-  )
+    // The append-only evidence row is part of the same app-role, workspace
+    // transaction as its proposal; it cannot become legacy-unscoped evidence.
+    await pg.query(
+      `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+      [
+        validatedGroupId,
+        scope.workspaceId,
+        "auto_curated",
+        "auto-curator",
+        "completed",
+        JSON.stringify({
+          candidate_id: candidate.id,
+          proposal_id: proposal.rows[0].id,
+          type: candidate.type,
+          impact: candidate.impact,
+          frequency: candidate.frequency,
+          novelty_score: candidate.novelty_score,
+          requires_approval: candidate.requires_approval,
+          source_scope: candidate.source_scope,
+          source_event_ids: candidate.source_event_ids,
+        }),
+      ]
+    )
+
+    return proposal
+  })
 
   return {
     proposal_id: result.rows[0].id,

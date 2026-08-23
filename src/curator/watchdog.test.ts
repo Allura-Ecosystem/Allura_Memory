@@ -1,163 +1,112 @@
-/**
- * watchdog.test.ts — Unit tests for runWatchdogCycle()
- *
- * Strategy:
- * - Mock `getPool` so no real DB connection is required
- * - Mock `curatorScore` to control scoring output
- * - Test heartbeat INSERT, queue-depth SELECT, and conditional BLOCKER INSERT
- *
- * No external services required. Pure unit lane.
- */
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-// ── Module mocks ──────────────────────────────────────────────────────────────
 
 vi.mock("../lib/postgres/connection", () => ({
   getPool: vi.fn(),
   closePool: vi.fn(),
 }));
+vi.mock("../lib/curator/score", () => ({ curatorScore: vi.fn() }));
+vi.mock("../lib/db/tenant-transaction", () => ({ withWorkspaceTransaction: vi.fn() }));
+vi.mock("../lib/config/tenant-config", () => ({ resolveScoreThresholdWithClient: vi.fn() }));
 
-vi.mock("../lib/curator/score", () => ({
-  curatorScore: vi.fn(),
-}));
-
-import { runWatchdogCycle, type WatchdogConfig } from "./watchdog";
+import { getWorkspaceWatchdogCandidates, runWatchdogCycle, scanAndPropose, type WatchdogConfig } from "./watchdog";
 import { getPool } from "../lib/postgres/connection";
 import { curatorScore } from "../lib/curator/score";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
+import { withWorkspaceTransaction } from "../lib/db/tenant-transaction";
+import { resolveScoreThresholdWithClient } from "../lib/config/tenant-config";
 
 function makeConfig(overrides: Partial<WatchdogConfig> = {}): WatchdogConfig {
   return {
     groupId: "allura-system",
+    scope: { tenantId: "allura-system", workspaceId: "watchdog-test", principalId: "watchdog-test" },
     scoreThreshold: 0.7,
     ...overrides,
   };
 }
 
-/**
- * Build a mock pool whose query() responses are driven by a sequence.
- * Each call pops from the front of `responses`; falls back to { rows: [] }.
- */
 function makeMockPool(responses: Array<{ rows: Record<string, unknown>[] }> = []) {
   const queue = [...responses];
-  return {
-    query: vi.fn().mockImplementation(() => {
-      const next = queue.shift();
-      return Promise.resolve(next ?? { rows: [] });
-    }),
-  };
+  return { query: vi.fn().mockImplementation(() => Promise.resolve(queue.shift() ?? { rows: [] })) };
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+describe("watchdog workspace integrity", () => {
+  beforeEach(() => vi.clearAllMocks());
 
-describe("runWatchdogCycle", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("inserts WATCHDOG_HEARTBEAT and does NOT insert BLOCKER when queue depth is below threshold", async () => {
+  it("writes heartbeat through the strict workspace transaction and counts only its group and workspace", async () => {
     const config = makeConfig({ queueDepthThreshold: 100 });
+    vi.mocked(getPool).mockReturnValue(makeMockPool([{ rows: [] }]) as never);
+    const appClient = makeMockPool([{ rows: [] }, { rows: [] }, { rows: [{ pending: 50 }] }]);
+    vi.mocked(withWorkspaceTransaction).mockImplementation(async (scope, callback) => {
+      expect(scope).toBe(config.scope);
+      return callback(appClient as never);
+    });
 
-    // scanAndPropose calls getPool() internally; return a pool that
-    // returns 0 events (so no proposals are created)
-    const innerPool = makeMockPool([{ rows: [] }]);
-    vi.mocked(getPool).mockReturnValue(innerPool as unknown as ReturnType<typeof getPool>);
+    await runWatchdogCycle(config, 1);
 
-    // The outer pool passed to runWatchdogCycle returns:
-    //  call 1 — WATCHDOG_HEARTBEAT INSERT → { rows: [] }
-    //  call 2 — COUNT query → pending = 50 (below threshold)
-    const outerPool = makeMockPool([
-      { rows: [] },                           // heartbeat INSERT
-      { rows: [{ pending: 50 }] },            // COUNT query
-    ]);
-
-    await runWatchdogCycle(outerPool, config, 1);
-
-    // Should have made exactly 2 queries on outerPool
-    expect(outerPool.query).toHaveBeenCalledTimes(2);
-
-    // First call must be the heartbeat INSERT (event type in params, not SQL)
-    const [firstSql, firstParams] = outerPool.query.mock.calls[0] as [string, unknown[]];
-    expect(firstSql).toContain("INSERT INTO events");
-    expect(firstParams[0]).toBe("WATCHDOG_HEARTBEAT");
-
-    // Second call must be the COUNT SELECT with group_id
-    const [secondSql, secondParams] = outerPool.query.mock.calls[1] as [string, unknown[]];
-    expect(secondSql).toContain("canonical_proposals");
-    expect(secondSql).toContain("group_id = $1");
-    expect(secondParams).toEqual([config.groupId]);
-
-    // No BLOCKER INSERT (check params, not SQL — parameterized queries)
-    const allCalls = outerPool.query.mock.calls as [string, unknown[]][];
-    expect(allCalls.some(([, params]) => params?.[0] === "BLOCKER")).toBe(false);
+    expect(withWorkspaceTransaction).toHaveBeenCalledTimes(2);
+    const [heartbeatSql, heartbeatParams] = appClient.query.mock.calls[1] as [string, unknown[]];
+    expect(heartbeatSql).toContain("INSERT INTO events");
+    expect(heartbeatParams.slice(0, 4)).toEqual(["WATCHDOG_HEARTBEAT", "watchdog", config.groupId, config.scope.workspaceId]);
+    const [depthSql, depthParams] = appClient.query.mock.calls[2] as [string, unknown[]];
+    expect(depthSql).toContain("group_id = $1");
+    expect(depthSql).toContain("workspace_id = $2");
+    expect(depthParams).toEqual([config.groupId, config.scope.workspaceId]);
   });
 
-  it("inserts BLOCKER event when queue depth exceeds threshold", async () => {
+  it("writes a workspace-scoped BLOCKER through the same strict transaction", async () => {
     const config = makeConfig({ queueDepthThreshold: 100 });
+    vi.mocked(getPool).mockReturnValue(makeMockPool([{ rows: [] }]) as never);
+    const appClient = makeMockPool([{ rows: [] }, { rows: [] }, { rows: [{ pending: 704 }] }, { rows: [] }]);
+    vi.mocked(withWorkspaceTransaction).mockImplementation(async (_scope, callback) => callback(appClient as never));
 
-    const innerPool = makeMockPool([{ rows: [] }]);
-    vi.mocked(getPool).mockReturnValue(innerPool as unknown as ReturnType<typeof getPool>);
+    await runWatchdogCycle(config, 2);
 
-    // outerPool responses:
-    //  call 1 — heartbeat INSERT
-    //  call 2 — COUNT query → pending = 704 (above threshold)
-    //  call 3 — BLOCKER INSERT
-    const outerPool = makeMockPool([
-      { rows: [] },
-      { rows: [{ pending: 704 }] },
-      { rows: [] },
-    ]);
-
-    await runWatchdogCycle(outerPool, config, 2);
-
-    expect(outerPool.query).toHaveBeenCalledTimes(3);
-
-    const allCalls = outerPool.query.mock.calls as [string, unknown[]][];
-    const blockerCall = allCalls.find(([, params]) => params?.[0] === "BLOCKER");
+    expect(withWorkspaceTransaction).toHaveBeenCalledTimes(2);
+    const blockerCall = appClient.query.mock.calls.find(([, params]) => (params as unknown[])?.[0] === "BLOCKER") as [string, unknown[]] | undefined;
     expect(blockerCall).toBeDefined();
-
-    // BLOCKER INSERT must carry correct params
-    const [, blockerParams] = blockerCall!;
-    expect(blockerParams![0]).toBe("BLOCKER");
-    expect(blockerParams![1]).toBe("watchdog");
-    expect(blockerParams![2]).toBe(config.groupId);
-
-    const meta = JSON.parse(blockerParams![3] as string) as Record<string, unknown>;
-    expect(meta.kind).toBe("curator_queue_depth");
-    expect(meta.pending).toBe(704);
-    expect(meta.threshold).toBe(100);
-    expect(meta.hint).toBe("run curator batch triage");
+    expect(blockerCall![1].slice(0, 4)).toEqual(["BLOCKER", "watchdog", config.groupId, config.scope.workspaceId]);
   });
 
-  it("respects WATCHDOG_QUEUE_DEPTH_THRESHOLD env var when queueDepthThreshold is not set in config", async () => {
-    const originalEnv = process.env.WATCHDOG_QUEUE_DEPTH_THRESHOLD;
-    process.env.WATCHDOG_QUEUE_DEPTH_THRESHOLD = "50";
+  it("reads candidates and score config through one strict workspace transaction, never the owner pool", async () => {
+    const config = makeConfig();
+    vi.mocked(curatorScore).mockResolvedValue({ confidence: 0.9, reasoning: "qualified", tier: "adoption" });
+    vi.mocked(resolveScoreThresholdWithClient).mockResolvedValue(0.7);
+    const appClient = makeMockPool([{ rows: [{ id: 42, event_type: "memory_add", agent_id: "agent-a", metadata: {}, created_at: new Date().toISOString() }] }, { rows: [] }]);
+    vi.mocked(withWorkspaceTransaction).mockImplementation(async (_scope, callback) => callback(appClient as never));
 
-    const config = makeConfig(); // no queueDepthThreshold set
+    await expect(scanAndPropose(config)).resolves.toBe(1);
 
-    const innerPool = makeMockPool([{ rows: [] }]);
-    vi.mocked(getPool).mockReturnValue(innerPool as unknown as ReturnType<typeof getPool>);
+    expect(getPool).not.toHaveBeenCalled();
+    expect(resolveScoreThresholdWithClient).toHaveBeenCalledWith(appClient, config.groupId, config.scoreThreshold);
+    const [candidateSql, candidateParams] = appClient.query.mock.calls[0] as [string, unknown[]];
+    expect(candidateSql).toContain("FROM events e");
+    expect(candidateParams).toEqual([config.groupId, config.scope.workspaceId]);
+    const [proposalSql, proposalParams] = appClient.query.mock.calls[1] as [string, unknown[]];
+    expect(proposalSql).toContain("workspace_id");
+    expect(proposalParams.slice(0, 2)).toEqual([config.groupId, config.scope.workspaceId]);
+    expect(withWorkspaceTransaction).toHaveBeenCalledTimes(1);
+  });
 
-    // pending = 60, env threshold = 50 → should emit BLOCKER
-    const outerPool = makeMockPool([
-      { rows: [] },
-      { rows: [{ pending: 60 }] },
-      { rows: [] },
-    ]);
+  it("fails closed when the workspace scope is absent or belongs to another tenant", async () => {
+    await expect(scanAndPropose({ groupId: "allura-system", scoreThreshold: 0.7 } as WatchdogConfig)).rejects.toThrow("server-resolved workspace scope");
+    await expect(scanAndPropose(makeConfig({ scope: { tenantId: "allura-other", workspaceId: "ws-other", principalId: "attacker" } }))).rejects.toThrow("server-resolved workspace scope");
+  });
 
-    await runWatchdogCycle(outerPool, config, 1);
+  it("queries only scoped events and deduplicates trace references within that workspace", async () => {
+    const config = makeConfig();
+    const appClient = makeMockPool([{ rows: [] }]);
+    vi.mocked(resolveScoreThresholdWithClient).mockResolvedValue(0.7);
+    vi.mocked(withWorkspaceTransaction).mockImplementation(async (_scope, callback) => callback(appClient as never));
+    await expect(scanAndPropose(config)).resolves.toBe(0);
+    expect(getPool).not.toHaveBeenCalled();
+    const [sql, params] = appClient.query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("e.workspace_id = $2");
+    expect(sql).toContain("cp.workspace_id = e.workspace_id");
+    expect(params).toEqual([config.groupId, config.scope.workspaceId]);
+  });
 
-    const allCalls = outerPool.query.mock.calls as [string, unknown[]][];
-    const blockerCall = allCalls.find(([, params]) => params?.[0] === "BLOCKER");
-    expect(blockerCall).toBeDefined();
-
-    // Restore env
-    if (originalEnv === undefined) {
-      delete process.env.WATCHDOG_QUEUE_DEPTH_THRESHOLD;
-    } else {
-      process.env.WATCHDOG_QUEUE_DEPTH_THRESHOLD = originalEnv;
-    }
+  it("excludes legacy unscoped events from watchdog candidates", async () => {
+    const pool = makeMockPool([{ rows: [] }]);
+    await getWorkspaceWatchdogCandidates(pool, makeConfig().scope);
+    expect(pool.query.mock.calls[0]?.[0]).toContain("e.workspace_id = $2");
   });
 });

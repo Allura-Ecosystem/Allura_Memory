@@ -10,6 +10,8 @@
 
 ## Executive Summary
 
+**Current architecture authority:** PostgreSQL-only under AD-50; the Epic 25 initial route is `/dashboard/curator` under AD-57. Legacy dual-database, Neo4j-tool, broad-dashboard, benchmark, and consumer-UX claims below are historical/reconciliation debt unless a requirement is explicitly reintroduced in Section 6E. They are not implementation authority for new work.
+
 mem0 has solved **distribution** (easy SDK, 6 deployment options, 50k+ GitHub stars). Allura solves **trust**.
 
 **The Problem mem0 Has Not Solved:**
@@ -429,6 +431,40 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-DASH-007 | Every dashboard panel shows source of truth, freshness, degraded state, and no fabricated healthy/live claims | AD-14, AD-26 | `src/lib/operational-state/sources/header-source.ts` · `src/app/dashboard/overview/page.tsx` (live receipts + bounded Neo4j/Brain health probes) · [docs/design/command-center/DATA-SOURCES.md](../design/command-center/DATA-SOURCES.md) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) |
 | REQ-DASH-008 | Every mutation shows a governance receipt containing intent, actor, source, policy, validation, and audit trail before completion | AD-XX, REQ-GOV-001 | [BLUEPRINT.md](./BLUEPRINT.md#ruvix-governed-memory-command-center) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memory-command-center-adapter-contracts) |
 | REQ-DASH-009 | A non-coder admin manages team members and roles (admin/curator/viewer) entirely from the dashboard UI; group_id-scoped, soft-remove, append-only audit | AD-48, REQ-GOV-001 | `src/app/dashboard/members/page.tsx` + `members-client.tsx` (add/role/remove UI) · `docker/postgres-init/29-memberships.sql` · `src/lib/membership/repository.ts` · `src/app/api/members/route.ts` · `src/app/api/members/[userId]/route.ts` · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memberships) |
+
+### Section 6E: Governed Curator Review Console (REQ-CUR-001–008)
+
+| ID | Requirement | Trace | Status |
+|----|-------------|-------|--------|
+| REQ-CUR-001 | The sole initial browser route is `/dashboard/curator`; all rendered navigation targets pass route-smoke validation. | AD-46, AD-57, 25.1, 25.3 | Planned |
+| REQ-CUR-002 | Proposal and retrieval scope is durably enforced by server-derived tenant/workspace identity; conflicting caller `group_id` or workspace assertion receives `403`. Migration 39 also forces app-role events policies to require both scope GUCs and keeps legacy NULL-workspace events unavailable to scoped app reads/writes. | 24.2, 24.3, 25.2a, 25.2 | Foundation implemented (25.2a); downstream read contract dependency-blocked |
+| REQ-CUR-003 | Queue/detail responses include a durable queryable evidence-request lifecycle, evidence version, source, freshness, degraded state, and server-derived allowed actions. | 25.2a, 25.2, 25.4, `ReviewItem` | Planned |
+| REQ-CUR-004 | A failed, forbidden, stale, degraded, empty, or conflict state is never represented as another state. | 25.3, 25.4 | Planned |
+| REQ-CUR-005 | Only approve, reject, and request-evidence decisions exist; all require nonblank rationale and server receipt. | 24.4, 25.5 | Blocked by 24.4 |
+| REQ-CUR-006 | Tenant forgery, role failure, missing rationale, missing evidence, segregation-of-duties, and concurrent decision behavior are live-DB tested. | 24.3, 24.4, 25.6 | Blocked |
+| REQ-CUR-007 | Dialogs, forms, states, and navigation meet keyboard/focus/accessible-name requirements and are route/ARIA tested. | 25.3–25.6 | Planned |
+| REQ-CUR-008 | Every story produces commit-bound evidence and has a documented MCP/API/CLI rollback. | AD-57, 25.1–25.6 | Planned |
+
+| REQ-CUR-009 | A governed retrieval plan resolves tenant/workspace, relational facts, explicit entity IDs, role/membership, state, and time constraints before semantic/vector expansion. Semantic results may widen or rank only the authorized candidate set and must report provenance, freshness, and degraded state. | AD-58, 25.2a, 25.2, 25.4 | Planned |
+| REQ-CUR-010 | Relational entity families are embedded only through deterministic, redaction-aware Markdown `SemanticProjection` documents assembled from their meaningful header/detail relationships. Projections retain source references, version, hash, and embedding metadata; relational records remain authoritative and rebuildable. | AD-58, 25.2a | Planned |
+| REQ-AST-001 | The dashboard assistant, SDK, MCP, and CLI share a typed, server-owned read contract that returns an answer, citations, `RetrievalPlan`, freshness/degraded state, and server-derived allowed actions. | 25.4a | Dependency-blocked |
+| REQ-AST-002 | Connector integrations are capability-manifested, deny-by-default adapters. External writes require policy permission, audit, idempotency, and truthful receipt/outbox state; provider SDKs never become the authority plane. | 25.4a, 25.5 | Dependency-blocked |
+| REQ-COP-001 | One canonical Allura Agent Skill source is packaged through thin adapters for Microsoft Copilot Cowork, Claude Code, and Codex. Every host consumes the same server-derived scope, RetrievalPlan, evidence, freshness, denial/degraded, human-review, and receipt contracts. | AD-61, 25.4b | Dependency-blocked |
+| REQ-COP-002 | Cowork policy intake uses typed MCP elicitation with server revalidation and review-before-save. Skills, forms, widgets, Claude/Codex adapters, and host-visible roles cannot grant permission, choose tenant/workspace scope, persist policy directly, or issue receipts. | AD-61, 25.4b | Dependency-blocked |
+| REQ-COP-003 | External research and connector output remains provisional evidence until an explicitly confirmed Allura action records source identity, revision/hash, workspace, classification/redaction, freshness, and audit context. Provider credentials never appear in host clients, skills, manifests, or browser state. | AD-61, 25.4b | Dependency-blocked |
+| REQ-ID-001 | Validated Microsoft Entra tenant, user/object, group, and app-role claims map server-side to an internal Allura principal, memberships, allowed workspaces, and roles. Unknown, missing, overage, stale, disabled, audience/issuer-mismatched, and forged identity conditions fail closed without scope leakage. | AD-61, 25.4b | Dependency-blocked |
+| REQ-MTG-001 | The vendor-neutral Mortgage Approval Gate demonstrates intake, document/OCR evidence, policy evaluation, required human rationale, atomic decision, and immutable receipt across Cowork, Claude Code, and Codex using sanitized deterministic fixtures. | AD-62, 25.5a | Dependency-blocked |
+| REQ-MTG-002 | The mortgage demonstration has no Salesforce dependency and makes no automated underwriting, lending/credit decision, fair-lending, compliance certification, production mortgage, or employer/vendor endorsement claim. | AD-62, 25.5a, 25.6 | Dependency-blocked |
+| REQ-MOD-001 | `/dashboard/curator` is a stable shell that receives a server-issued, allow-listed, versioned module registry and renders workflow modules only through approved shared intake/evidence/map/policy/review/receipt components. | AD-63, 25.3b | Dependency-blocked |
+| REQ-MOD-002 | Workflow modules may define presentation and typed workflow descriptors but cannot load arbitrary client code, query storage, select scope, map identity, authorize, evaluate policy, mutate state, issue receipts, or redefine standard truth states. | AD-63, 25.3b | Dependency-blocked |
+| REQ-MOD-003 | Unknown, duplicate, incompatible, untrusted, capability-missing, disabled, or failed modules fail closed and are independently rollbackable without affecting the shell, other modules, engine, SDK, API, MCP, CLI, or external host adapters. | AD-63, 25.3b, 25.6 | Dependency-blocked |
+| REQ-MAP-001 | The 2D Knowledge Map uses one server-owned focused `SubgraphQuery`/`SubgraphResponse` contract. Scope is server-derived; nodes and edges carry evidence or versioned derived-rule references; empty, denied, partial, degraded, and complete are distinct states. | AD-59, 25.2, 25.3 | Dependency-blocked |
+| REQ-MAP-002 | Subgraph traversal uses relational authorization first, deterministic ordering, signed opaque continuation bound to scope/query/policy/snapshot, and explicit budgets. Initial 200-node/400-edge/depth-2 limits are safety caps, not scale claims. | AD-59, 25.2, 25.6 | Dependency-blocked |
+| REQ-MAP-003 | The map has an adjacent same-data text relationship list and complete keyboard/screen-reader interaction. 3D, if enabled later, is opt-in, flagged, rollbackable, and consumes the identical authorized response. | AD-59, 25.3, 25.3a, 25.6 | Planned |
+
+| REQ-UX-001 | Primary dashboard copy targets about a sixth-grade reading level: short sentences, common words, one idea at a time. Technical IDs and policy terms remain available through secondary labels or progressive disclosure. | `DESIGN.md`, 25.3–25.6 | Planned |
+| REQ-UX-002 | Major two-pane desktop layouts target a 38.2% / 61.8% golden-ratio split and stack in logical reading order on smaller screens. | `DESIGN.md`, 25.3, 25.4 | Planned |
+| REQ-UX-003 | The Memory Map presents governed lineage as labeled nodes and connections with an equivalent text description. It never fabricates relationships or makes the visual graph the only accessible source. | 25.4, 25.6 | Planned |
 
 ### Section 7: Use Case Index
 

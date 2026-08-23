@@ -14,54 +14,42 @@ if (typeof window !== "undefined") {
 
 import { NextRequest, NextResponse } from "next/server";
 import { scanAndPropose } from "@/curator/watchdog";
-import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth";
-import { getPool } from "@/lib/postgres/connection";
-import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
+import { validateToken } from "@/lib/guard/validate-token";
+import { resolveWorkspaceScope } from "@/lib/db/workspace-scope";
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction";
 
 const DEFAULT_GROUP_ID = process.env.ALLURA_GROUP_ID ?? "allura-system";
 const DEFAULT_THRESHOLD = parseFloat(process.env.CURATOR_SCORE_THRESHOLD ?? "0.7");
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  // Auth: require curator or admin role
-  const roleCheck = requireRole(req, "curator");
-  if (!roleCheck.user) {
-    return unauthorizedResponse();
+  // The credential row is validated server-side. Browser headers/body are not
+  // workspace authority and cannot select a tenant or workspace.
+  const validation = await validateToken(req.headers.get("authorization"));
+  if (!validation.ok) {
+    return NextResponse.json({ error: "Valid watchdog credential required" }, { status: 401 });
   }
-  if (!roleCheck.allowed) {
-    return forbiddenResponse(roleCheck);
+  if (!validation.token.scopes.includes("memory:promote")) {
+    return NextResponse.json({ error: "Watchdog credential lacks curator permission" }, { status: 403 });
   }
+  const scope = resolveWorkspaceScope(validation.token);
 
   const requestId = crypto.randomUUID().slice(0, 8);
   console.log(`[watchdog:POST] start requestId=${requestId}`);
 
-  let groupId = DEFAULT_GROUP_ID;
+  const groupId = scope.tenantId;
   let scoreThreshold = DEFAULT_THRESHOLD;
 
   try {
     const body = await req.json().catch(() => ({}));
-    if (body.group_id) {
-      try {
-        groupId = validateGroupId(body.group_id);
-      } catch (error) {
-        if (error instanceof GroupIdValidationError) {
-          console.warn(`[watchdog:POST] invalid group_id="${body.group_id}" requestId=${requestId}`);
-          return NextResponse.json(
-            { error: `Invalid group_id: ${error.message}` },
-            { status: 400 }
-          );
-        }
-        throw error;
-      }
-    }
     if (typeof body.score_threshold === "number") {
       scoreThreshold = body.score_threshold;
     }
   } catch {
-    // malformed body — use defaults
+    // malformed body — use default threshold
   }
 
   const start = Date.now();
-  const proposed = await scanAndPropose({ groupId, scoreThreshold });
+  const proposed = await scanAndPropose({ groupId, scope, scoreThreshold });
   const duration_ms = Date.now() - start;
 
   console.log(`[watchdog:POST] done requestId=${requestId} group=${groupId} proposed=${proposed} duration=${duration_ms}ms`);
@@ -77,35 +65,40 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  // Auth: require curator or admin role
-  const roleCheck = requireRole(req, "curator");
-  if (!roleCheck.user) {
-    return unauthorizedResponse();
+  // GET has exactly the same server-authenticated scope boundary as POST.
+  // Request query/body values can never select the queue being counted.
+  const validation = await validateToken(req.headers.get("authorization"));
+  if (!validation.ok) {
+    return NextResponse.json({ error: "Valid watchdog credential required" }, { status: 401 });
   }
-  if (!roleCheck.allowed) {
-    return forbiddenResponse(roleCheck);
+  if (!validation.token.scopes.includes("memory:promote")) {
+    return NextResponse.json({ error: "Watchdog credential lacks curator permission" }, { status: 403 });
   }
+  const scope = resolveWorkspaceScope(validation.token);
 
-  console.log(`[watchdog:GET] status check group=${DEFAULT_GROUP_ID}`);
-  const pool = getPool();
-
-  const [pending, total] = await Promise.all([
-    pool.query(
-      "SELECT COUNT(*) AS cnt FROM canonical_proposals WHERE status = 'pending'"
-    ),
-    pool.query("SELECT COUNT(*) AS cnt FROM canonical_proposals"),
-  ]);
+  console.log(`[watchdog:GET] status check group=${scope.tenantId} workspace=${scope.workspaceId}`);
+  const { pending, total } = await withWorkspaceTransaction(scope, async (client) => {
+    const pendingResult = await client.query(
+      "SELECT COUNT(*) AS cnt FROM canonical_proposals WHERE group_id = $1 AND workspace_id = $2 AND status = 'pending'",
+      [scope.tenantId, scope.workspaceId],
+    );
+    const totalResult = await client.query(
+      "SELECT COUNT(*) AS cnt FROM canonical_proposals WHERE group_id = $1 AND workspace_id = $2",
+      [scope.tenantId, scope.workspaceId],
+    );
+    return { pending: pendingResult, total: totalResult };
+  });
 
   const pendingCount = Number(pending.rows[0].cnt);
   const totalCount = Number(total.rows[0].cnt);
 
-  console.log(`[watchdog:GET] group=${DEFAULT_GROUP_ID} pending=${pendingCount} total=${totalCount}`);
+  console.log(`[watchdog:GET] group=${scope.tenantId} workspace=${scope.workspaceId} pending=${pendingCount} total=${totalCount}`);
 
   return NextResponse.json({
     ok: true,
     pending: pendingCount,
     total: totalCount,
-    group_id: DEFAULT_GROUP_ID,
+    group_id: scope.tenantId,
     score_threshold: DEFAULT_THRESHOLD,
     checked_at: new Date().toISOString(),
   });
