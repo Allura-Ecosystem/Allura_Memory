@@ -1,6 +1,6 @@
 # Sprint Status — RuVector Documentation Sync & Integration
 
-last_updated: "2026-08-18"
+last_updated: "2026-08-23"
 owner: brooks
 group_id: allura-system
 
@@ -202,32 +202,10 @@ epic_23:
 
 epic_24:
   name: "Agentic AI Framework and Harness Portfolio Readiness"
-  status: done
-  completion_authority: "GitHub merged Epic 24 delivery and retrospective; do not reopen this Epic from local remediation metadata."
+  status: in-progress
   retrospective: done
-  next_story: null
-  sequence_note: "Post-merge adversarial review on 2026-08-22 created corrective follow-up issues; it did not reopen Epic 24. See docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md."
-  post_epic_remediation:
-    authority: "GitHub issues are the follow-up tracker. These are corrective work after Epic completion, not remaining Epic 24 stories."
-    issues:
-      - issue: 89
-        story: "24.4"
-        title: "Atomic promotion production wiring"
-      - issue: 90
-        story: "24.5"
-        title: "Real deterministic process harness"
-      - issue: 91
-        story: "24.6"
-        title: "Measured evaluation and required CI gate"
-      - issue: 92
-        story: "24.7"
-        title: "Restore SDK and executable CLI quickstart"
-      - issue: 93
-        story: "24.8"
-        title: "Canonical documentation truth and drift guards"
-      - issue: 94
-        story: "24.9"
-        title: "Runnable reference integrations and evidence"
+  next_story: "24.4-remediation"
+  sequence_note: "Post-merge adversarial review on 2026-08-22 reopened 24.4-24.9. See docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md."
   stories:
     - key: "24.1"
       title: "CI and Evidence Baseline"
@@ -249,31 +227,40 @@ epic_24:
       status_evidence: "Fresh pgvector/pgvector:pg16 container (PG 16.15, pgvector 0.8.6) destroyed and rebuilt; 40 migrations applied deterministically; live-DB lane 12/12 pass including new database-tenant-isolation.e2e.test.ts, events-immutability.e2e.test.ts, tenant-table-inventory.test.ts, plus existing checkpoint-continuation.integration.test.ts. Unit suite remains 1782/0 failed. RLS enabled+forced on 37 tenant-scoped tables; allura_app role has least-privilege DML; events UPDATE/DELETE rejected for app role; allura_breakglass role permits documented break-glass mutation. Merged to main as 10a6324b (PR #66) with all 25 checks green; remote Epic 24 Evidence run 32369489097. Two schema-bootstrap defects fixed en route: missing CREATE EXTENSION vector in docker/postgres-init (added 00-extensions.sql), and hardcoded bootstrap-superuser/database names in 37-events-immutable.sql (now current_user / current_database())."
     - key: "24.4"
       title: "Atomic Human-Governed Promotion"
-      status: changes-requested
+      status: review
+      triage_note: "2026-08-23 Stage 1 triage: moved changes-requested -> review. This story is IMPLEMENTED, not awaiting a build pass. CA-24-04: all 8 decision entrypoints (HTTP route, approve-cli, 4 scripts, curator-v3.js, content-aware-curator-v2) delegate to the canonical service; no direct decision DML remains. CA-24-05: session_replication_role suppression removed and guarded by test (atomic-promotion.e2e.test.ts:313). CA-24-06: per-claim claim_token fencing in promotion-outbox-worker.ts plus migration 41. Live lane 58/58 on fresh PostgreSQL 16, unit lane 1750 passed, typecheck exit 0 (2026-08-23). Two defects were found and fixed that day: a TS status guard shadowing DB idempotency replay, and migration 40 revoking INSERT on canonical_proposals which broke both application-role proposal writers. NEW FINDING FOR THE REVIEWER: notion-sync-worker.ts:214, notion-bridge.ts:287, and notion-sync.ts:165 append to canonical_proposals.rationale with no group_id in the WHERE clause, using the owner pool - decision-record mutation outside the governed writer and a violation of the group_id invariant. Requires independent approval review before commit/PR; evidence NOT self-certified."
       owner: "Troy"
       depends_on: ["24.3"]
       status_evidence: "PR #82 merged, but post-merge review found production entrypoints bypass the service, unsafe broad trigger suppression, and a non-transactional outbox claim. Remediation required."
     - key: "24.5"
       title: "Deterministic Scenario Harness"
-      status: changes-requested
+      status: ready-for-dev
+      corrective_actions: ["CA-24-07"]
+      triage_note: "2026-08-23 Stage 1 triage: no remediation work present in the tree. CA-24-07 scope: replace the fixture-loop harness with real process-engine composition and enforce offline transport. Gates Story 25.7. Beta-critical."
       owner: "Troy"
       depends_on: ["24.2"]
       status_evidence: "PR #83 merged, but post-merge review found the runner does not compose the process engine and does not enforce record/replay/network/side-effect requirements."
     - key: "24.6"
       title: "Evaluation and Regression Gates"
-      status: changes-requested
+      status: ready-for-dev
+      corrective_actions: ["CA-24-08"]
+      triage_note: "2026-08-23 Stage 1 triage: no remediation work present in the tree. CA-24-08 scope: execute the real evaluation datasets and require the generated result artifact in CI. Portfolio baseline metrics remain caller-supplied rather than measured. Gates Story 25.7. Beta-critical."
       owner: "Troy"
       depends_on: ["24.4", "24.5"]
       status_evidence: "PR #84 merged, but the runner compares caller-supplied values rather than executing declared datasets, and no required evaluation CI artifact exists."
     - key: "24.7"
       title: "SDK, CLI, and Ten-Minute Developer Path"
-      status: changes-requested
+      status: deferred-post-beta
+      corrective_actions: ["CA-24-03", "CA-24-09"]
+      triage_note: "2026-08-23 Stage 1 triage: DEFERRED out of the beta critical path by explicit decision. Gates no Epic 25 story. Remains open and re-enters the queue after the Curator Review Console ships. Known state: the documented CLI cannot start and the SDK package cannot run its release build. This is portfolio/job-application work, not beta work."
       owner: "Troy"
       depends_on: ["24.5", "24.6"]
       status_evidence: "PR #85 merged, but CLI parsing and SDK build fail; clean quickstart and public contract evidence are absent."
     - key: "24.8"
       title: "Enterprise Documentation Truth Pack"
-      status: changes-requested
+      status: ready-for-dev
+      corrective_actions: ["CA-24-10"]
+      triage_note: "2026-08-23 Stage 1 triage: no remediation work present in the tree. CA-24-10 scope: complete canonical documentation traceability and add automated drift guards. docs/portfolio/capability-matrix.md is itself stale in both directions - it lists capabilities as planned that are now done (24.2 authenticated principal) and as unverified that now have indexed CI evidence. Gates Story 25.7. Beta-critical."
       owner: "Troy"
       depends_on: ["24.2", "24.3", "24.4", "24.5", "24.6", "24.7"]
       status_evidence: "PR #86 merged only four enterprise Markdown files; canonical-doc alignment, traceability, evidence index, and CI guards remain incomplete."
@@ -287,87 +274,73 @@ epic_24:
       status_evidence: "Troy completed Story 24.10 on 2026-08-21. Local: PostgreSQL E2E 150 passed (1 intentional skip), unit 1,785 passed (171 skipped), runtime health 2 passed, typecheck/build passed. Protected PR #74: hosted CI #32504104054, MCP Testing Suite #32504104110, and Epic 24 Evidence #32504104096 passed the required typecheck, test-unit, test-e2e, MCP Runtime Health Tests, and Evidence Aggregate checks. GitHub main protection is active (strict/up-to-date, admin enforced, force-push/deletion blocked, conversations required). Controlled-red PR #81 failed required test-unit, was GitHub BLOCKED, and a normal merge was refused by base-branch policy; it was closed unmerged and deleted."
     - key: "24.9"
       title: "Reference Integrations and Portfolio Demonstration"
-      status: changes-requested
+      status: deferred-post-beta
+      corrective_actions: ["CA-24-11"]
+      triage_note: "2026-08-23 Stage 1 triage: DEFERRED out of the beta critical path by explicit decision. Gates no Epic 25 story. Remains open and re-enters the queue after the Curator Review Console ships. This is the LangGraph / OpenAI Agents reference-integration work - portfolio/job-application scope, not beta."
       owner: "Troy"
       depends_on: ["24.8"]
       status_evidence: "PR #87 merged documentation only; no runnable integrations, scenarios, receipts, evaluation artifacts, or measured clean-environment evidence exist."
+    - key: "24.11"
+      title: "Web-Plane Authority and Test-Role Integrity"
+      status: ready-for-dev
+      owner: "Troy + Brooks"
+      depends_on: ["24.2", "24.3"]
+      corrective_actions: ["CA-24-02"]
+      status_evidence: "Opened 2026-08-23 from verified state. Closes two unchecked Epic 24 cross-epic criteria: production HTTP requests without a verified principal fail closed, and request parameters cannot elevate them. Covers ~35 route files reading group_id from the query string, two unauthenticated /api/brain routes, a route-scope manifest never wired into CI, a divergent hardcoded ROLE_GATES table in the production Clerk branch, and live e2e tests that require POSTGRES_APP_USER then connect via getPool() as owner. That last blind spot allowed migration 40's over-broad REVOKE to break both application-role proposal writers behind a green lane."
 
 epic_25:
   name: "Governed Curator Review Console"
-  status: planned
+  status: in-progress
   retrospective: pending
-  next_story: "25.1"
-  sequence_note: "Curator-first operator slice. Read-only documentation and shell work may proceed after scope approval. Decision mutation is blocked until 24.4 remediation; scenario/demo closure depends on 24.5, 24.6, and 24.8."
+  planning_doc: "_bmad/bmm/planning/epic-25-governed-curator-review-console.md"
+  canonical_source: "Notion — Epic 25 — Governed Curator Review Console"
+  sequence_note: "Epic was specified in Notion but absent from the repository until 2026-08-23. Planning doc and stories 25.1, 25.2b, 25.3-25.7 scaffolded that day. Decision mutations remain blocked by Story 24.4 remediation."
   stories:
     - key: "25.1"
-      title: "Scope Reopening and Product Truth"
-      status: ready-for-dev
+      title: "Scope and Product Truth Documentation Loop"
+      status: done
       owner: "Brooks + Jobs"
       depends_on: []
-      status_evidence: "Development loop, canonical route boundary, brand-token contract, and Epic 25 story pack authored; requires code/doc review before Done."
+      status_evidence: "Independent Pike/Fowler review approved 2026-08-23. Notion page 3c41d9be-65b3-819b-96c6-c9d14a3424ea is canonical for scope/acceptance/decisions; repository mirror and durable drift tests reconcile ownership, dependency metadata, REQ-CUR traceability, and the closed-six-document rule."
     - key: "25.2a"
       title: "Workspace Scope and Evidence Lifecycle Foundation"
-      status: planned
+      status: dependency-blocked
       owner: "Troy + Knuth + Brooks"
       depends_on: ["24.2", "24.3", "25.1"]
-      status_evidence: "Validated gap: workspace scope is metadata-only on active MCP writes; canonical proposals have no workspace_id; evidence requests require a durable queryable projection."
-    - key: "25.2"
-      title: "Curator Read Contract and Tenant Hardening"
-      status: dependency-blocked
-      owner: "Troy + Knuth + Pike"
-      depends_on: ["25.2a"]
-      status_evidence: "Must derive tenant/workspace from authenticated principal, add typed contracts, and prove forged scope denial."
+      status_evidence: "Status corrected 2026-08-23 from changes-requested to dependency-blocked by Story 25.1 drift reconciliation. changes-requested contradicted this story's own evidence: the independent Pike/Fowler/Knuth review returned APPROVE. The hold is a deliberate dependency block, not a rejection. Merged as PR #97, origin/main commit 9f8e5dac4f43b6e7615f8dca49af42276ddd4394. Independent Pike/Fowler/Knuth review returned APPROVE. Fresh PostgreSQL 16 evidence: 14/14 suites, 38/38 tests, typecheck and staged diff passed. Allura receipts: implementation b869be34-8461-438a-9c55-29d43a4753bd, merge 3a6d4cb9-d6cf-4150-91c9-213d7a2fd25a. Deliberately NOT Done: dependency-blocked pending 25.1 and declared Epic 24 authority prerequisites before 25.2 retrieval work. This distinction is intentional and must be preserved."
+    - key: "25.2b"
+      title: "Authenticated Session Entry Point"
+      status: ready-for-dev
+      owner: "Troy + Pike"
+      depends_on: ["24.2", "24.3"]
+      status_evidence: "Opened 2026-08-23. Not in the original Notion seven-story list; identified when verification showed src/proxy.ts:147 redirects unauthenticated users to /auth/v2/login, a route that does not exist, and that layout.tsx mounts no ClerkProvider. No human can currently sign in. Blocks every browser-facing Epic 25 story."
     - key: "25.3"
-      title: "Focused 2D Knowledge Map Shell"
-      status: planned
-      owner: "Woz + Pike"
-      depends_on: ["25.1", "25.2", "25.2a"]
-      status_evidence: "One real /dashboard/curator route over a server-authorized bounded SubgraphResponse; no mock data, broad navigation, or caller-selected scope."
-    - key: "25.3b"
-      title: "Modular Dashboard Workflow Contract and Registry"
-      status: dependency-blocked
-      owner: "Brooks + Woz + Pike + Fowler + Bellard"
-      depends_on: ["25.2", "25.3"]
-      status_evidence: "Stable /dashboard/curator shell with server-issued allow-listed WorkflowModuleManifest registry and shared governed components; Mortgage Approval Gate is the first module, not hardcoded dashboard logic."
-    - key: "25.3a"
-      title: "Optional 3D Knowledge Explorer"
-      status: dependency-blocked
-      owner: "Pike + Bellard + Hightower"
-      depends_on: ["25.3", "25.4"]
-      status_evidence: "3D is optional and may only render the 2D map's typed focused-subgraph contract after measured device/browser/accessibility/rollback proof."
+      title: "Curator Read Contract and Tenant Hardening"
+      status: blocked
+      owner: "Troy + Knuth + Pike"
+      depends_on: ["25.1", "25.2a", "25.2b", "24.11"]
+      status_evidence: "Scaffolded 2026-08-23. Implements AD-58 relational-facts-before-semantic-expansion for the curator read path."
     - key: "25.4"
-      title: "Evidence-First Proposal Queue"
-      status: planned
-      owner: "Woz + Pike"
-      depends_on: ["25.2", "25.3"]
-      status_evidence: "Read-only tenant-scoped queue/detail/provenance before decision actions."
-    - key: "25.4a"
-      title: "Governed Assistant API, SDK, and Connector Harness"
-      status: dependency-blocked
-      owner: "Troy + Brooks + Bellard"
-      depends_on: ["25.2a", "25.2", "25.4", "24.5"]
-      status_evidence: "Assistant and connector work requires relational-first retrieval, evidence-first queue contracts, and deterministic harness proof; vendor SDKs remain optional adapters."
-    - key: "25.4b"
-      title: "Portable Agent-Skill Interoperability and Entra Policy Intake"
-      status: dependency-blocked
-      owner: "Troy + Brooks + Pike + Bellard + Hightower"
-      depends_on: ["25.2", "25.4a"]
-      status_evidence: "One canonical Mortgage Approval Gate skill source with Cowork, Claude Code, and Codex adapters; Entra user/group/app-role mapping; native policy elicitation; auth/denial/parity/disable proof."
+      title: "Minimal /dashboard/curator Shell"
+      status: blocked
+      owner: "Troy + Pike"
+      depends_on: ["25.3"]
+      status_evidence: "Scaffolded 2026-08-23. src/app/dashboard/ does not exist; sidebar.tsx links to nine /dashboard/* routes that all 404 and the component is imported nowhere."
     - key: "25.5"
-      title: "Governed Decisions and Receipts"
-      status: dependency-blocked
-      owner: "Knuth + Woz + Pike"
-      depends_on: ["24.4", "25.4"]
-      status_evidence: "Blocked: 24.4 must prove atomic promotion before browser decision actions can ship."
-    - key: "25.5a"
-      title: "Mortgage Approval Gate Cross-Host Demonstration"
-      status: dependency-blocked
-      owner: "Jobs + Brooks + Troy + Pike + Bellard + Hightower"
-      depends_on: ["25.3b", "25.4b", "25.5"]
-      status_evidence: "Vendor-neutral intake→evidence/OCR→policy→human review→receipt proof across Cowork, Claude Code, and Codex; no Salesforce, underwriting, lending-decision, or production suitability claim."
+      title: "Evidence-First Read-Only Proposal Queue"
+      status: blocked
+      owner: "Troy + Pike + Fowler"
+      depends_on: ["25.4"]
+      status_evidence: "Scaffolded 2026-08-23. Strictly read-only; decisions arrive in 25.6."
     - key: "25.6"
+      title: "Governed Decisions and Receipts"
+      status: blocked
+      owner: "Troy + Knuth + Brooks"
+      depends_on: ["24.4", "25.5"]
+      status_evidence: "Scaffolded 2026-08-23. Blocked by Story 24.4, which is changes-requested. 24.4's live lane passes 58/58 on fresh PostgreSQL 16 as of 2026-08-23 but remains uncommitted and pending independent approval review."
+    - key: "25.7"
       title: "Security, Accessibility, and Demo Gate"
-      status: dependency-blocked
-      owner: "Bellard + Hightower + Pike + Fowler"
-      depends_on: ["24.5", "24.6", "24.8", "25.5", "25.5a"]
-      status_evidence: "Requires live-DB, harness/eval, documentation truth, accessibility, route smoke, evidence bundle, and rollback rehearsal."
+      status: blocked
+      owner: "Pike + Fowler + Brooks"
+      depends_on: ["24.5", "24.6", "24.8", "25.5", "25.6"]
+      status_evidence: "Scaffolded 2026-08-23. Carries CA-24-12: an independent reviewer, not the implementer, must sign off before Epic 25 closure. 25.6 added to depends_on 2026-08-23 by Story 25.1 drift reconciliation: this story's acceptance criteria require recording a decision, reading the receipt, and testing decision replay - all 25.6 deliverables. The original omission was a scaffolding error."

@@ -69,6 +69,13 @@
 | AD-54 | Genesis engine — pattern-based skill proposal | Accepted | 2026-07-17: Analyzes trajectories and skill usage to detect repeated patterns (3+ identical action sequences, 10+ same task_type, failed-then-succeeded). Generates proposals with confidence score. HITL gate: approved proposals create skill template drafts (markdown), never auto-deployed. See epic: `epic-level-4-pattern-learning.md`, Story 2.2. |
 | AD-55 | Self-healing — auto-recovery with HITL alert escalation | Accepted | 2026-07-17: Health monitor checks PostgreSQL, MCP container, disk, memory. Auto-recovery: restart containers, run recovery scripts. Max 3 attempts per component before alerting Captain via Brain memory_add (event_type=ALERT). Recovery attempts logged in `recovery_events` table. See epic: `epic-level-4-pattern-learning.md`, Story 2.3. |
 | AD-56 | Dev auth bypass cannot activate in production, unconditionally | Accepted | 2026-08-21: `isDevAuthActive()` evaluated `ALLURA_DEV_AUTH_ENABLED && (!isClerkEnabled(c) \|\| NODE_ENV !== "production")`. The `\|\|` made "Clerk not configured" sufficient on its own, so a production deployment with no Clerk keys and the flag set true returned an authenticated principal carrying `ALLURA_DEV_AUTH_ROLE` (default `admin`) with no credential presented. Production is now short-circuited to `false` before any flag is consulted. Scope was web auth only — the MCP gateway runs `mcp_token` mode and never consumed these flags, so the principal path was unaffected and Gate B identity enforcement held. Commit 96f7ae0a. |
+| AD-57 | Epic 25 scope discipline — one browser route, evidence-bound stories | Proposed | 2026-08-23, recorded by Story 25.1: `/dashboard/curator` is the sole initial browser route for the Curator Review Console, and every Epic 25 story must produce commit-bound evidence and a documented MCP/API/CLI rollback path. **The rationale for this decision is not captured anywhere in the repository.** AD-57 was cited by `REQUIREMENTS-MATRIX.md` (header line and REQ-CUR-001, REQ-CUR-008) without ever being recorded here. The decision text above is reconstructed from those citations only. Alternatives considered: unknown — not recorded. Do not treat as ratified. |
+| AD-58 | Relational facts before semantic expansion | Accepted | 2026-08-23, propagated by Story 25.1 from `_bmad/bmm/planning/epic-25-governed-curator-review-console.md`. Allura resolves server-derived tenant/workspace scope, memberships/roles, explicit IDs, proposal/evidence/receipt state, actor, and time filters in PostgreSQL **before** semantic/vector expansion. Semantic retrieval may widen or rank only the already-authorized candidate set; it can neither bypass a relational boundary nor substitute for a factual lookup. Implementation addition: relational entity families are embedded only via deterministic, redaction-aware Markdown `SemanticProjection` documents. See detail section below. |
+| AD-59 | Server-owned focused subgraph contract for the Knowledge Map | Proposed | 2026-08-23, recorded by Story 25.1. The 2D Knowledge Map uses one server-owned `SubgraphQuery`/`SubgraphResponse` contract with server-derived scope, relational-authorization-first traversal, deterministic ordering, signed opaque continuation bound to scope/query/policy/snapshot, and explicit 200-node/400-edge/depth-2 safety caps. **Rationale and alternatives are not captured anywhere in the repository.** Reconstructed from REQ-MAP-001..003 trace citations only. The stories it targets (25.2, 25.3a) have no story files. Do not treat as ratified. |
+| AD-60 | (reserved — no decision content exists) | Proposed | 2026-08-23, recorded by Story 25.1 to close the AD-57..AD-63 numbering gap. **AD-60 is cited nowhere in this repository** — not in `REQUIREMENTS-MATRIX.md`, not in any `_bmad/` planning doc or story, not in source. No decision, rationale, or alternatives exist to record. The number is reserved so that a future author does not silently reuse it for unrelated content. |
+| AD-61 | One canonical Agent Skill source with thin host adapters; Entra claims map server-side | Proposed | 2026-08-23, recorded by Story 25.1. One canonical Allura Agent Skill source is packaged through thin adapters for Microsoft Copilot Cowork, Claude Code, and Codex; every host consumes the same server-derived scope, RetrievalPlan, evidence, freshness, denial/degraded, human-review, and receipt contracts. Validated Microsoft Entra tenant/user/group/app-role claims map server-side to an internal Allura principal; unknown, stale, overage, disabled, or forged identity conditions fail closed. **Rationale and alternatives are not captured anywhere in the repository.** Reconstructed from REQ-COP-001..003 and REQ-ID-001 trace citations only. The story it targets (25.4b) has no story file. Do not treat as ratified. |
+| AD-62 | Vendor-neutral Mortgage Approval Gate as the demonstration workload | Proposed | 2026-08-23, recorded by Story 25.1. A vendor-neutral Mortgage Approval Gate demonstrates intake, document/OCR evidence, policy evaluation, required human rationale, atomic decision, and immutable receipt across Cowork, Claude Code, and Codex using sanitized deterministic fixtures — with no Salesforce dependency and no automated-underwriting, lending/credit, fair-lending, compliance-certification, production-mortgage, or employer/vendor-endorsement claim. **Rationale and alternatives are not captured anywhere in the repository.** Reconstructed from REQ-MTG-001..002 trace citations only. The story it targets (25.5a) has no story file. Do not treat as ratified. |
+| AD-63 | `/dashboard/curator` is a shell over an allow-listed, versioned module registry | Proposed | 2026-08-23, recorded by Story 25.1. `/dashboard/curator` is a stable shell receiving a server-issued, allow-listed, versioned module registry; workflow modules may define presentation and typed workflow descriptors but cannot load arbitrary client code, query storage, select scope, map identity, authorize, evaluate policy, mutate state, issue receipts, or redefine truth states. Unknown, duplicate, incompatible, untrusted, capability-missing, disabled, or failed modules fail closed and are independently rollbackable. **Rationale and alternatives are not captured anywhere in the repository.** Reconstructed from REQ-MOD-001..003 trace citations only. The story it targets (25.3b) has no story file. Do not treat as ratified. |
 
 ---
 
@@ -568,6 +575,88 @@ the adversarial auth suite).
 - **Consequences:** Modules can define presentation vocabulary, typed intake descriptors, evidence/relationship grammar, policy references, stages, capabilities, and host skill bindings. They cannot load arbitrary browser code, query storage, select scope, map identity, authorize, decide policy, mutate state, or issue receipts. The server validates and allow-lists modules; unknown/incompatible/untrusted modules fail closed. Module disable/rollback cannot affect the dashboard shell, other modules, engine, or external clients. No third-party plugin marketplace ships in Epic 25.
 - **Owner:** Brooks (module boundary), Woz (registry/shell), Pike (component/UX grammar), Fowler (maintainability), Bellard (invalid-module/capability harness).
 - **References:** Story 25.3b; Story 25.5a; AD-57; AD-59; AD-61; AD-62.
+
+### AD-57: Epic 25 Scope Discipline
+
+- **Status**: **Proposed** — recorded 2026-08-23 by Story 25.1. Not ratified.
+- **Decision**: For Epic 25, `/dashboard/curator` is the sole initial browser route; all
+  rendered navigation targets must pass route-smoke validation. Every Epic 25 story must
+  produce commit-bound evidence and document an MCP/API/CLI rollback path.
+- **Rationale**: **Not captured.** No rationale for AD-57 exists in this repository. The
+  decision text above is reconstructed from the only three places AD-57 was ever cited:
+  the `REQUIREMENTS-MATRIX.md` "Current architecture authority" header line, REQ-CUR-001,
+  and REQ-CUR-008. Story 25.1 records it so the citations resolve; it does not invent the
+  reasoning that was never written down.
+- **Alternatives considered**: **Not recorded.**
+- **References**: [REQUIREMENTS-MATRIX.md](./REQUIREMENTS-MATRIX.md) REQ-CUR-001,
+  REQ-CUR-008 · `_bmad/bmm/planning/epic-25-governed-curator-review-console.md` ·
+  `_bmad/bmm/stories/25-1-scope-product-truth-documentation-loop.md`
+- **Action required**: Brooks or Jobs must supply the rationale and alternatives, or
+  supersede this entry.
+
+---
+
+### AD-58: Relational Facts Before Semantic Expansion
+
+- **Status**: Accepted — 2026-08-23. Sole source is
+  `_bmad/bmm/planning/epic-25-governed-curator-review-console.md`; propagated here by
+  Story 25.1 because REQ-CUR-009 and REQ-CUR-010 cite AD-58 as already-decided and no
+  reader could resolve it.
+- **Decision**: Allura resolves server-derived tenant/workspace scope, memberships and
+  roles, explicit entity IDs, proposal/evidence/receipt state, actor, and time filters
+  through PostgreSQL **before** semantic or vector expansion. Semantic retrieval may widen
+  or rank only the already-authorized candidate set; it cannot bypass a relational
+  boundary or substitute for a factual lookup.
+- **Implementation addition — `SemanticProjection`**: For a relational entity family,
+  Allura assembles a deterministic, redaction-aware Markdown `SemanticProjection` from the
+  meaningful header/detail relationship *before* embedding. A memory-proposal projection
+  includes scope, proposal header, linked trace/event evidence, evidence-request state,
+  and decision/receipt state when present. It records source references, projection
+  version, content hash, redaction policy, embedding model, and generation time.
+- **Rationale**:
+  - A vector index is not an authorization boundary. Ranking cannot be trusted to exclude
+    another tenant's rows; only a relational predicate can.
+  - Factual questions ("which proposals are pending in this workspace") have exact
+    answers. Answering them by similarity produces plausible wrong sets.
+  - Embedding a redaction-aware projection rather than raw rows keeps the relational
+    records authoritative and the derived retrieval data rebuildable.
+- **Alternatives considered**: Post-filter semantic results by scope — rejected, because a
+  recall ceiling set by the vector index silently drops authorized rows and the filter
+  runs after the boundary has already been crossed. Embed raw relational rows — rejected,
+  because it loses the header/detail relationship and cannot carry redaction policy.
+- **Consequences**: The 25.3 curator read contract must resolve relational hard filters
+  first and report the resulting `RetrievalPlan`. Semantic results carry provenance,
+  freshness, and degraded state.
+- **Owner**: Brooks (architecture), Knuth (data)
+- **References**: `_bmad/bmm/planning/epic-25-governed-curator-review-console.md` (source
+  text) · [REQUIREMENTS-MATRIX.md](./REQUIREMENTS-MATRIX.md) REQ-CUR-009, REQ-CUR-010 ·
+  `_bmad/bmm/stories/25-3-curator-read-contract-tenant-hardening.md` · AD-50
+  (PostgreSQL-only architecture)
+
+---
+
+### AD-59, AD-60, AD-61, AD-62, AD-63: Recorded Without Captured Rationale
+
+- **Status**: **Proposed** — all five. Recorded 2026-08-23 by Story 25.1. **None is
+  ratified.**
+- **Why they are here**: `REQUIREMENTS-MATRIX.md` Section 6E cites AD-59, AD-61, AD-62,
+  and AD-63 in the Trace column of REQ-MAP-*, REQ-COP-*, REQ-ID-*, REQ-MTG-*, and
+  REQ-MOD-* rows as though they were settled decisions. They were never recorded in this
+  log, so no reader could resolve them. AD-60 is cited nowhere at all.
+- **What is recorded**: Only the decision statement, reverse-engineered from the
+  requirement text that cites it. See the summary table above for each.
+- **What is NOT recorded, and was not invented**: rationale, alternatives considered,
+  consequences, and owner for every one of AD-59, AD-61, AD-62, and AD-63. For AD-60,
+  nothing at all exists — the number is reserved to prevent silent reuse.
+- **Scope warning**: The stories these decisions target — 25.2, 25.3a, 25.3b, 25.4a,
+  25.4b, 25.5a — **have no story files** and are not part of the eight-story Epic 25
+  scope. They are listed as out of scope in
+  `_bmad/bmm/planning/epic-25-governed-curator-review-console.md`.
+- **Action required**: Before any of AD-59, AD-61, AD-62, or AD-63 is relied on as
+  implementation authority, its author must supply rationale and alternatives here, or the
+  citing requirement rows must be downgraded.
+
+---
 
 ## References
 

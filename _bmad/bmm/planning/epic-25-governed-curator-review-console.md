@@ -1,97 +1,192 @@
 # Epic 25 — Governed Curator Review Console
 
-**Status:** Planned; read-only work may begin after scope approval. Mutation work is blocked by Story 24.4 remediation.
-**Owner:** Brooks (architecture) + Troy (implementation), with Jobs, Knuth, Pike, Fowler, Bellard, and Hightower gates.
-**Tenant:** `allura-system`
+> [!NOTE]
+> **AI-Assisted Documentation**
+> This file was scaffolded with AI assistance from the canonical Notion epic page
+> (`Epic 25 — Governed Curator Review Console`, updated 2026-08-22) and from verified
+> repository state. It has not been fully reviewed.
+> When in doubt, defer to the source code, schemas, and the Notion epic page.
 
-**Execution identity:** Gilliam prepares and orchestrates documentation/tooling work for this session; Gilliam is not the project architecture or implementation owner.
+**Status:** Planned; decision mutations blocked by Story 24.4 remediation.
+**Owner:** Brooks (architecture and trust boundary)
+**group_id:** allura-system
+**Canonical source:** Notion — [`Epic 25 — Governed Curator Review Console`](https://app.notion.com/p/3c41d9be65b3819b96c6c9d14a3424ea?pvs=204) (page ID `3c41d9be-65b3-819b-96c6-c9d14a3424ea`)
+**Repository artifact:** versioned implementation, test, and commit-evidence mirror (created 2026-08-23)
 
 ## Goal
 
-An authenticated reviewer sees only their tenant/workspace proposals, inspects evidence and provenance, takes only server-permitted actions, and can inspect a truthful immutable decision receipt. The same governed contracts serve a portable **Mortgage Approval Gate** workflow across Microsoft Copilot Cowork, Claude Code, and Codex without giving any client authority over tenant scope, policy, promotion, or receipts.
+An authenticated reviewer sees only tenant/workspace proposals, inspects evidence, and
+receives a truthful immutable receipt for any permitted decision.
 
-## Product Boundary
+## Why this epic exists
 
-This epic implements the first **Workspace Memory Map** vertical slice:
+The HITL promotion gate is Allura's core product claim. Today it is reachable only through
+a CLI (`bun run curator:approve`). There is no browser surface a reviewer can use, and — as
+of 2026-08-23 — no working sign-in path at all. This epic delivers one console, one
+workflow, end to end, honestly.
 
-```text
-Mine (future read-only) → Review Queue → Evidence/Provenance → Decision Receipt → Shared Knowledge (future read-only)
-```
+## Beta scope statement
 
-Initial operator route: `/dashboard/curator`.
+> Added by Story 25.1 (AC-1). This is the single written definition of the beta console.
+> No later story may infer scope from presentation text, a Notion excerpt, or a stale doc.
 
-The route is a modular governed shell, not a Mortgage-specific page:
+The beta Curator Review Console is **one reviewer completing one workflow in a browser**:
 
-```text
-DashboardShell
-  → server-issued ModuleRegistry
-  → shared intake/evidence/map/policy/review/receipt components
-  → installed allow-listed WorkflowModuleManifest
-      └─ mortgage-approval-gate (first module)
-```
+1. **Sign in** - the reviewer authenticates and obtains a session whose principal, tenant
+   (`group_id`, matching `^allura-[a-z0-9-]+$`), workspace, and role are **server-derived**.
+   The browser never asserts any of them. (Story 25.2b)
+2. **See tenant/workspace-scoped proposals** - a queue listing exactly the pending curator
+   proposals that principal is permitted to see, and nothing else. Scope is enforced in
+   PostgreSQL before any semantic or vector expansion (AD-58). (Stories 25.2a, 25.3, 25.4, 25.5)
+3. **Inspect evidence** - for any queued proposal, the reviewer can open the full supporting
+   evidence: linked traces/events, evidence-request lifecycle state, version, source,
+   freshness, and degraded state. Read-only. (Stories 25.2a, 25.5)
+4. **Record a decision** - approve, reject, or request-evidence. Exactly three verbs, no
+   others. Every one requires a nonblank rationale. (Story 25.6)
+5. **Receive an immutable receipt** - the server issues a durable, append-only receipt that
+   freezes workspace, policy, evidence version, actor, and outcome. The browser never
+   synthesises a successful decision state. (Story 25.6)
 
-Modules are declarative presentation/workflow adapters. They cannot supply authority scope, SQL, credentials, policy decisions, mutations, or receipts.
+That is the whole product claim for beta. Anything that is not one of those five steps is
+out of scope for Epic 25.
 
-Optional interoperability surfaces after the secure read contract:
+## Explicitly out of scope for beta
 
-```text
-Portable Mortgage Approval Gate skill source
-  ├─ Microsoft Copilot Cowork M365 package + remote MCP connector
-  ├─ Claude Code plugin/Agent Skills adapter
-  └─ Codex skill/plugin adapter
-       → authenticated Allura adapter
-       → Microsoft Entra identity mapping where applicable
-       → server-derived Allura scope and policy
-       → the same RetrievalPlan / evidence / decision / receipt contracts
-```
+> Added by Story 25.1 (AC-2). Each exclusion names the artifact that owns it instead.
+> "No owner in the repository" is recorded honestly rather than assigned to an invented one.
 
-The workflow is `intake → evidence/OCR → policy evaluation → human review → immutable receipt`. Cowork policy setup uses native MCP elicitation forms first. Rich MCP App widgets are optional presentation adapters later; forms, widgets, skills, and host plugins never become authority or storage surfaces.
+| Excluded from Epic 25 | Owned instead by |
+|---|---|
+| Enterprise SSO and SCIM provisioning; Microsoft Entra tenant/group/app-role claim mapping | AD-61 and `REQUIREMENTS-MATRIX.md` REQ-ID-001 / REQ-COP-001..003, targeted at proposed story 25.4b. **25.4b is proposed only - it has no story file and is not scaffolded.** Story 25.2b states the same exclusion for its own scope. |
+| Broad dashboard restoration - the other 21 `/dashboard/*` pages, mission-control, graph, dreams, kanban, work-board, teams, settings | AD-46 (Allura Control Center pivot, Status: Proposed) and `REQUIREMENTS-MATRIX.md` Section 6D (REQ-DASH-001..009). Not an Epic 25 story. `/dashboard/curator` is the sole initial browser route under REQ-CUR-001. |
+| Polyglot SDKs, CLI ergonomics, and the ten-minute developer path | Story 24.7 - portfolio work, explicitly **not** beta-critical and gating no Epic 25 story. |
+| Agent-framework integrations and reference integration demos | Story 24.9 - portfolio work, explicitly **not** beta-critical and gating no Epic 25 story. |
+| Planning loops - autonomous multi-step planning, dream/genesis proposal loops, scheduled planning agents | **No repository backlog item owns this.** AD-51..AD-54 reference an epic file `epic-level-4-pattern-learning.md` that **does not exist in this repository**. Recorded as an unowned exclusion rather than assigned to a fabricated owner. |
+| Workflow module registry and pluggable console modules | AD-63 / REQ-MOD-001..003, targeted at proposed story 25.3b (**no story file; proposed only**). |
+| 2D/3D Knowledge Map subgraph surface | AD-59 / REQ-MAP-001..003, targeted at proposed stories 25.2, 25.3a (**no story files; proposed only**). |
+| Mortgage Approval Gate demonstration | AD-62 / REQ-MTG-001..002, targeted at proposed story 25.5a (**no story file; proposed only**). |
+| Connector integrations and the shared assistant read contract | AD-61 / REQ-AST-001..002, targeted at proposed story 25.4a (**no story file; proposed only**). |
 
-## Explicit Exclusions
+## Delivery loop
 
-- Restore of the nine retired sidebar destinations.
-- Generic chat/workbench.
-- Browser-to-PostgreSQL access.
-- New memory database or Meko terminology.
-- Auto-sharing, document-ingestion portal, and run-control UI.
-- Python SDK and MCP v2 migration.
-- Microsoft, Anthropic, or OpenAI branding, copied host skill content, or a claim that Allura is their product.
-- Salesforce as a demo dependency, data source, CRM implementation, or product claim; the active demo is the vendor-neutral Mortgage Approval Gate.
-- Direct Cowork/Claude Code/Codex-to-database, direct client-to-Exa credentials, ungated external writes, or automatic promotion of connector/research content.
-- Any external host as a launch dependency for the local curator console; host adapters follow 25.2/25.4a contract proof.
-- External product claims before a privately tested package, Entra/connector authorization proof, and cross-surface harness evidence exist.
+Hydrate → specify typed contract and state matrix → RED test → minimal implementation →
+inspect UI/auth/accessibility → Pike/Fowler/Brooks review → commit-bound evidence → learn.
 
-## Story Map
+## Ownership
 
-| Story | Outcome | Dependency | Ship condition |
+| Role | Owner |
+|---|---|
+| Architecture and trust boundary | Brooks |
+| Implementation | Troy |
+| Scope and acceptance criteria | Jobs |
+| Data/transaction integrity | Knuth |
+| Interface and accessibility | Pike |
+| Maintainability | Fowler |
+| Session documentation/tooling orchestration | Gilliam (not architecture or implementation owner) |
+
+## Stories
+
+| Key | Title | Status | Blocked by |
 |---|---|---|---|
-| 25.1 | Scope/Product Truth and development loop | explicit scope approval | docs, AD-57, route inventory, readiness checklist complete |
-| 25.2a | Workspace Scope and Evidence Lifecycle Foundation | 24.2, 24.3, 25.1 | durable workspace/evidence/receipt contracts and live-DB scope plan complete |
-| 25.2 | Curator Read Contract and tenant hardening | 25.2a | server derives tenant/workspace scope; 401/403/validation tests pass |
-| 25.3 | Focused 2D Knowledge Map shell | 25.1, 25.2, 25.2a | `/dashboard/curator` real route; server-authorized bounded 2D map; route/state/a11y smoke passes |
-| 25.3b | Modular Dashboard Workflow Contract and Registry | 25.2, 25.3 | stable shell; server-issued allow-listed module registry; shared governed components; disable/rollback proof; Mortgage Gate as first module |
-| 25.3a | Optional 3D Knowledge Explorer | 25.3, 25.4, measured device/browser proof | same bounded contract as 2D; opt-in/flagged/a11y fallback/rollback proof |
-| 25.4 | Evidence-first proposal queue | 25.2, 25.3 | real queue/detail/provenance and truthful state matrix pass |
-| 25.4a | Governed Assistant API, SDK, and Connector Harness | 25.2a, 25.2, 25.4, 24.5 | typed read-only assistant; parity/harness proof; one narrow connector contract |
-| 25.4b | Portable Agent-Skill Interoperability and Entra Policy Intake | 25.2, 25.4a | one canonical Mortgage Approval Gate skill source; Cowork/Claude Code/Codex adapters; remote MCP read tools; Entra mapping; native policy elicitation; auth, denial, parity, and disable proof |
-| 25.5 | Governed decisions and receipts | 24.4 remediated, 25.4 | atomic decision/receipt path; conflict and duty separation pass |
-| 25.5a | Mortgage Approval Gate Cross-Host Demonstration | 25.3b, 25.4b, 25.5 | installed dashboard module plus Cowork/Claude/Codex adapters prove intake → evidence/OCR → policy → human review → receipt with identical authority and traceability; no Salesforce dependency |
-| 25.6 | Security, accessibility, and demo gate | 24.5, 24.6, 24.8, 25.5 | live-DB, route, a11y, evidence bundle, demo rehearsal pass |
+| 25.1 | Scope/product truth and documentation loop | done | — |
+| 25.2a | Workspace scope and evidence lifecycle foundation | merged, dependency-blocked | 24.2, 24.3, 25.1 |
+| 25.2b | Authenticated session entry point | ready-for-dev | 24.2, 24.3 |
+| 25.3 | Curator read contract and tenant hardening | blocked | 25.1, 25.2a, 25.2b, 24.11 |
+| 25.4 | Minimal `/dashboard/curator` shell | blocked | 25.3 |
+| 25.5 | Evidence-first read-only proposal queue | blocked | 25.4 |
+| 25.6 | Governed decisions and receipts | blocked | 24.4, 25.5 |
+| 25.7 | Security, accessibility, and demo gate | blocked | 24.5, 24.6, 24.8, 25.5, 25.6 |
 
-## Acceptance Evidence
+Story 25.2a merged as PR #97 (`9f8e5dac`) with an APPROVE verdict from independent
+Pike/Fowler/Knuth review, and is deliberately **not** marked Done pending 25.1 and the
+declared Epic 24 authority prerequisites. That distinction is intentional and must be
+preserved.
 
-Each story uses `docs/allura/DEVELOPMENT-LOOP.md` and writes its evidence bundle under `docs/archive/allura/evidence/epic-25/`. The cross-role frozen delivery plan is in [`docs/archive/allura/EPIC-25-TEAM-RAM-HANDOFF.md`](../../../docs/archive/allura/EPIC-25-TEAM-RAM-HANDOFF.md). Microsoft Copilot Cowork reference implementations remain outside the product repository under `/mnt/projects/git/references/microsoft-copilot/`; they are source/standards references, not vendored Allura dependencies.
+Story 25.2b is inserted by the same convention as 25.2a: a foundation required before any
+UI work. It did not appear in the original seven-story list because the missing sign-in
+path was not yet identified.
 
-## Demo Definition
+## Documentation loop
 
-1. A mortgage-review item enters through a governed intake surface with source identity, workspace, classification, and document/OCR state.
-2. The same canonical Mortgage Approval Gate skill guides Copilot Cowork, Claude Code, and Codex; each host calls the same Allura MCP/API contracts rather than implementing policy locally.
-3. Allura maps Microsoft Entra tenant/user/group/app-role claims to an internal principal, memberships, and allowed roles; the client cannot self-assert approver authority.
-4. The reviewer inspects evidence and policy results, sees missing/stale/degraded conditions, and supplies required human rationale.
-5. Allura commits the permitted transition through the normal atomic decision path and returns an immutable receipt with actor, action, rationale, policy, evidence, timestamp, and sync state.
-6. A forged role, cross-workspace request, unsupported host action, or insufficient-evidence case is denied without data leakage and produces deterministic harness evidence.
-7. The demonstration has no Salesforce dependency and makes no claim of underwriting, lending, or regulatory-production suitability.
+> Story 25.1 reconciliation, verified 2026-08-23 against the updated Notion page.
 
-## Rollback
+**Established decision.** Notion is canonical for Epic 25 scope, acceptance criteria, and
+decisions. The repository is the versioned implementation, test, and commit-evidence mirror.
+The authoritative page is [`Epic 25 — Governed Curator Review Console`](https://app.notion.com/p/3c41d9be65b3819b96c6c9d14a3424ea?pvs=204)
+(page ID `3c41d9be-65b3-819b-96c6-c9d14a3424ea`). This is a split of authority by concern,
+not competing canonical sources for the same claim.
 
-The operator UI is optional. If an Epic 25 route is disabled or rolled back, the supported fallback is the governed MCP/API/CLI path. No migration makes the engine depend on the browser.
+| Concern | Authority | Repository responsibility |
+|---|---|---|
+| Epic scope, acceptance criteria, stakeholder narrative, decisions | Notion Epic 25 page | Mirror the accepted scope/decision into versioned planning and story evidence; do not override Notion. |
+| Implementation, tests, reviews, commits, and reproducible gate output | Repository | Preserve the versioned evidence and link it back to the Notion scope/acceptance/decision it implements. |
+| Story membership, status, `Depends on`, `Blocks` | Notion scope/acceptance decision, mirrored in repository | Keep the three repository evidence artifacts aligned; `bun run epic25:drift` verifies the mirror, not a competing authority. |
+
+**Reconciler and trigger.**
+
+| Trigger | Who reconciles | Action |
+|---|---|---|
+| Notion scope, acceptance, decision, or story-map change | Brooks + Jobs | Update the repository mirror in the same review cycle; run `bun run epic25:drift` and the documentation-loop contract test. |
+| Repository implementation/test/commit evidence changes | Implementer | Update the repository evidence in the same commit and preserve the Notion page link; `bun run epic25:drift` must exit 0. |
+| Epic closure | Independent reviewer (CA-24-12) | Confirm the repository evidence mirrors the Notion scope/acceptance/decision source before any Done claim. |
+
+**Current verification.** `bun run epic25:drift` exits 0: `PASS - no drift. All three
+sources agree on status, Depends-on, and Blocks.` The historical red handoff remains
+attributed in the Story 25.1 Brooks Gate Addendum; it is not rewritten as a builder result.
+
+## Guardrails
+
+- PostgreSQL-only active architecture; Neo4j is sunset under AD-50.
+- No broad dashboard restoration and no clickable 404 routes.
+- The browser never derives tenant scope, role permission, or successful decision state.
+- Every mutating decision needs a nonblank rationale and a server-issued receipt.
+- CLI/MCP/API operation remains the rollback path.
+
+## AD-58 — Relational Facts Before Semantic Expansion
+
+Allura resolves server-derived tenant/workspace scope, memberships/roles, explicit IDs,
+proposal/evidence/receipt state, actor, and time filters through PostgreSQL **before**
+semantic/vector expansion. Semantic retrieval may widen or rank only the authorized
+candidate set; it cannot bypass a relational boundary or substitute for a factual lookup.
+
+### AD-58 implementation addition — SemanticProjection
+
+For a relational entity family, Allura must assemble a deterministic, redaction-aware
+Markdown `SemanticProjection` from the meaningful header/detail relationship before
+embedding. A memory proposal projection includes scope, proposal header, linked
+trace/event evidence, evidence-request state, and decision/receipt state when present. It
+records source references, projection version, content hash, redaction policy, embedding
+model, and generation time. Relational records remain authoritative; the embedding is
+rebuildable derived retrieval data.
+
+## Cross-epic prerequisites
+
+| Prerequisite | Epic 24 status (2026-08-23) | Gates |
+|---|---|---|
+| 24.4 atomic promotion | changes-requested; live lane 58/58 green, pending independent review + merge | 25.6 |
+| 24.5 deterministic scenario harness | changes-requested | 25.7 |
+| 24.6 evaluation regression gates | changes-requested | 25.7 |
+| 24.8 enterprise documentation truth | changes-requested | 25.7 |
+| 24.11 web-plane authority | new, ready-for-dev | 25.3 |
+
+Stories 24.7 (SDK/CLI) and 24.9 (reference integrations) are portfolio work and are **not**
+beta-critical. They do not gate any Epic 25 story.
+
+## Exit gate
+
+- All eight stories Done under the BMAD Done contract with commit-bound evidence.
+- A reviewer can sign in, see only their tenant/workspace proposals, inspect evidence, and
+  record a decision that produces an immutable receipt.
+- No route in the shipped navigation returns 404.
+- Independent reviewer sign-off before epic closure (CA-24-12).
+
+## References
+
+- Notion canonical scope/acceptance/decision source: [`Epic 25 — Governed Curator Review Console`](https://app.notion.com/p/3c41d9be65b3819b96c6c9d14a3424ea?pvs=204) (page ID `3c41d9be-65b3-819b-96c6-c9d14a3424ea`).
+- The former documentation-loop reference was removed from both Notion and this repository.
+  No seventh canonical `docs/allura/` artifact is created; the closed six-document rule in
+  `guidelines/AI-GUIDELINES.md` remains intact. This planning document's Delivery loop and
+  Documentation loop sections are repository evidence, not a replacement canonical source.
+- `docs/archive/allura/NEO4J-SUNSET-INTEGRITY-GATE.md`
+- `docs/retrospectives/epic-24-retrospective-2026-08-22.md`
+- `docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md`
