@@ -1,7 +1,8 @@
-import { randomUUID } from "node:crypto";
+import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { getPool } from "@/lib/postgres/connection";
-import { autoCurate, submitCandidate } from "@/lib/curator/auto-curator";
+import { randomUUID } from "node:crypto";
+
+type AutoCuratorModule = typeof import("@/lib/curator/auto-curator");
 
 const describeLive = process.env.RUN_E2E_TESTS === "true" && process.env.POSTGRES_PASSWORD
   ? describe
@@ -13,10 +14,18 @@ const scopeA = { tenantId: groupId, workspaceId: workspaceA, principalId: "auto-
 
 /** Uses the fresh disposable live-lane database; every fixture is UUID-namespaced and removed. */
 describeLive("auto-curator workspace authority", () => {
-  let owner: ReturnType<typeof getPool>;
+  let owner: Pool;
+  let curator: AutoCuratorModule;
 
   beforeAll(async () => {
+    // Keep all DB-owning modules out of skipped-suite collection. Vitest still
+    // evaluates describe.skip callbacks, so live dependencies load only here.
+    const [{ getPool }, autoCurator] = await Promise.all([
+      import("@/lib/postgres/connection"),
+      import("@/lib/curator/auto-curator"),
+    ]);
     owner = getPool();
+    curator = autoCurator;
     await owner.query(
       `INSERT INTO workspaces (workspace_id, group_id, name)
        VALUES ($1, $2, 'Auto curator A'), ($3, $2, 'Auto curator B')`,
@@ -40,7 +49,7 @@ describeLive("auto-curator workspace authority", () => {
   });
 
   it("does not let a same-group workspace-B event appear in or influence workspace-A candidate, proposal, or evidence", async () => {
-    const analysis = await autoCurate(scopeA, { windowHours: 24 });
+    const analysis = await curator.autoCurate(scopeA, { windowHours: 24 });
     expect(analysis.events_analyzed).toBe(2);
     expect(analysis.candidates).toHaveLength(1);
     const candidate = analysis.candidates[0];
@@ -48,7 +57,7 @@ describeLive("auto-curator workspace authority", () => {
     expect(candidate.content).not.toContain("workspace-b-must-not-influence");
     expect(candidate.source_scope).toEqual({ group_id: groupId, workspace_id: workspaceA });
 
-    const submitted = await submitCandidate(candidate, scopeA);
+    const submitted = await curator.submitCandidate(candidate, scopeA);
     const proposal = await owner.query(
       "SELECT workspace_id, content FROM canonical_proposals WHERE id = $1",
       [submitted.proposal_id],
