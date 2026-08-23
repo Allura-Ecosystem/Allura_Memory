@@ -23,7 +23,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isClerkEnabled } from "./config";
 import { getDevUserSync } from "./dev-auth";
-import { checkPermission, parseRole } from "./roles";
+import { checkPermission, parseRole, roleLevel } from "./roles";
+import { minimumRoleForAction } from "./permission-action-role";
 import type { AlluraRole, AuthUser, PermissionAction, PermissionCheckResult } from "./types";
 
 // ── Discriminated Union for requireRole ──────────────────────────────────────
@@ -214,6 +215,30 @@ export function getGroupIdFromAuth(
   return fallbackGroupId ?? "allura-system";
 }
 
+// ── Action -> Role Floor ─────────────────────────────────────────────────────
+
+/**
+ * Minimum AlluraRole that may perform each PermissionAction.
+ *
+ * Story 24.11a AC-7. `withPermission` previously accepted a PermissionAction
+ * and discarded it (`void action`), so a caller could pass a destructive action
+ * with a permissive requiredRole and the action name would have no effect. The
+ * argument is now enforced: the effective requirement is the stricter of the
+ * caller-supplied requiredRole and this floor.
+ *
+ * Reads are viewer, mutations are curator, tenant/identity administration is
+ * admin. Covers every literal member of PermissionAction plus the extra action
+ * strings used by route handlers (memory:write, memory:delete).
+ */
+// Shared with the static validator so two-argument withPermission calls retain
+// the exact same action floor in runtime and CI analysis.
+export { minimumRoleForAction } from "./permission-action-role";
+
+/** The stricter of two roles. */
+function stricterRole(a: AlluraRole, b: AlluraRole): AlluraRole {
+  return roleLevel(a) >= roleLevel(b) ? a : b;
+}
+
 // ── withPermission Helper ────────────────────────────────────────────────────
 
 /**
@@ -222,13 +247,16 @@ export function getGroupIdFromAuth(
  * Returns the resolved user and groupId when the check passes.
  * Returns a NextResponse (401 or 403) when the check fails.
  *
+ * The effective requirement is `stricter(requiredRole, minimumRoleForAction(action))`.
+ * Both arguments are enforced; neither is decorative.
+ *
  * Usage:
  *   const result = await withPermission(request, "memory:read");
  *   if (result instanceof NextResponse) return result;
  *   const { user, groupId } = result;
  *
  * @param request - Incoming Next.js request
- * @param action - PermissionAction being requested (for future policy checks)
+ * @param action - PermissionAction being requested; enforced via ACTION_MINIMUM_ROLE
  * @param requiredRole - Minimum AlluraRole required (defaults to "viewer")
  */
 export async function withPermission(
@@ -236,11 +264,9 @@ export async function withPermission(
   action: PermissionAction,
   requiredRole: AlluraRole = "viewer",
 ): Promise<{ user: AuthUser; groupId: string } | NextResponse> {
-  // Suppress unused-variable warning for action — reserved for future
-  // PermissionProfile.allowed_actions checks without breaking the signature.
-  void action;
+  const effectiveRole = stricterRole(requiredRole, minimumRoleForAction(action));
 
-  const roleCheck = requireRole(request, requiredRole);
+  const roleCheck = requireRole(request, effectiveRole);
 
   if (!roleCheck.allowed) {
     // authenticated === false → no identity → 401

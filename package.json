@@ -89,6 +89,8 @@
     "factory:smoke": "bun scripts/factory-cross-team-smoke.ts",
     "ruvector:readiness": "bun scripts/check-ruvector-readiness.ts",
     "validate:git-exec": "bun scripts/validate-git-exec-choke-point.ts",
+    "validate:route-scope-manifest": "bun run scripts/validate-route-scope-manifest.ts",
+    "validate:story-status": "bun run scripts/check-story-status-guard.ts",
     "validate:vendor": "bun scripts/verify-vendor-checksums.ts"
   },
   "repository": {

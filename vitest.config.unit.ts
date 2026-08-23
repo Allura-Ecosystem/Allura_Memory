@@ -35,6 +35,9 @@ export default defineConfig({
       "src/lib/memory/relationships/*.test.ts",
       "src/lib/memory/__tests__/approval-audit.test.ts",
       "src/lib/memory/traceable-memory.test.ts",
+      "src/lib/memory/approve-proposal.test.ts",
+      "src/lib/memory/decision-trigger-metadata-contract.test.ts",
+      "src/lib/memory/__tests__/decision-delegation.test.ts",
       "src/lib/session/**/*.test.ts",
       // Command Center header live-state source (mocked pool — pure logic)
       "src/lib/operational-state/sources/header-source.test.ts",
@@ -46,11 +49,8 @@ export default defineConfig({
       "src/lib/ruvector/embedding-service.test.ts",
       // ControlPlane
       "src/control-plane/**/*.test.ts",
-      // Auto-Curator hardening
-      "src/__tests__/auto-curator*.test.ts",
-      // Curator pipeline
-      "src/__tests__/curator-approve.test.ts",
-      "src/__tests__/curator-reject.test.ts",
+      // Auto-Curator pure-unit tests are listed explicitly below; database E2Es
+      // remain in vitest.config.live-db.ts.
       // API route tests (mocked DB)
       "src/__tests__/api-degradation.test.ts",
       "src/__tests__/auth-middleware.test.ts",
@@ -66,7 +66,6 @@ export default defineConfig({
       "src/__tests__/sentry-integration.test.ts",
       "src/__tests__/sentry-wiring.test.ts",
       "src/__tests__/byok-key-manager.test.ts",
-      "src/__tests__/watchdog-sustained.test.ts",
       // Backup automation (pure logic, mocked deps)
       "src/__tests__/backup-automation.test.ts",
       // Self-healing auto-recovery (pure decision logic, mocked deps — Story 2.3)
@@ -113,6 +112,8 @@ export default defineConfig({
     "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
       "src/lib/auth/__tests__/principal-audit.test.ts",
       "src/lib/auth/__tests__/budget-scope.test.ts",
+      // Story 24.11a AC-7 — withPermission enforces its PermissionAction argument
+      "src/lib/auth/__tests__/with-permission-action.test.ts",
       "src/__tests__/mcp-auth-adversarial.test.ts",
       // Allura Hosted — admin route auth/shape tests (mocked repos)
       "src/__tests__/hosted-admin-routes.test.ts",
@@ -150,6 +151,11 @@ export default defineConfig({
       "src/lib/validation/trace-ref.test.ts",
       "src/lib/agents/agent-manifest.test.ts",
       "src/lib/memory/__tests__/approval-audit.test.ts",
+      // ── DB-backed Story 24.4 / workspace E2Es — use test:live-db ──
+      "src/__tests__/curator-approve.test.ts",
+      "src/__tests__/curator-reject.test.ts",
+      "src/__tests__/watchdog-sustained.test.ts",
+      "src/__tests__/auto-curator-workspace-authority.e2e.test.ts",
       // ── E2E tests — use test:e2e ──
       "src/__tests__/e2e-integration.test.ts",
       "src/__tests__/curator-pipeline.e2e.test.ts",
