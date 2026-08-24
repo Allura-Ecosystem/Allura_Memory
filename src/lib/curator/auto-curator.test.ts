@@ -56,7 +56,11 @@ describe("autoCurate", () => {
         { id: 1, event_type: "promotion_failed", agent_id: "agent-a", group_id: scope.tenantId, workspace_id: scope.workspaceId, status: "failed", metadata: { error: "only-a" }, created_at: "2026-08-22T00:00:00.000Z" },
         { id: 2, event_type: "promotion_failed", agent_id: "agent-a", group_id: scope.tenantId, workspace_id: scope.workspaceId, status: "failed", metadata: { error: "only-a" }, created_at: "2026-08-22T00:01:00.000Z" },
       ] })
-      .mockResolvedValueOnce({ rows: [] }) };
+      // This is legacy group-scoped retained content. It may have been written
+      // by another workspace and must not suppress this workspace's candidate.
+      .mockResolvedValueOnce({ rows: [
+        { content: "Agent agent-a encountered repeated failures: only-a (2 occurrences)" },
+      ] }) };
     vi.mocked(withWorkspaceTransaction).mockImplementation(async (receivedScope, callback) => {
       expect(receivedScope).toBe(scope);
       return callback(appClient as never);
@@ -64,10 +68,12 @@ describe("autoCurate", () => {
 
     const result = await autoCurate(scope, { windowHours: 24 });
     expect(result.candidates).toHaveLength(1);
+    expect(result.duplicates_suppressed).toBe(0);
     expect(result.candidates[0]).toMatchObject({ source_event_ids: [1, 2], source_scope: { group_id: scope.tenantId, workspace_id: scope.workspaceId } });
     expect(appClient.query.mock.calls[0][0]).toContain("workspace_id = $2");
     expect(appClient.query.mock.calls[0][1]).toEqual([scope.tenantId, scope.workspaceId, 24]);
-    expect(appClient.query.mock.calls[1][1]).toEqual([scope.tenantId]);
+    expect(appClient.query).toHaveBeenCalledTimes(1);
+    expect(appClient.query.mock.calls.some(([sql]) => String(sql).includes("allura_memories"))).toBe(false);
     expect(getPool).not.toHaveBeenCalled();
   });
 
