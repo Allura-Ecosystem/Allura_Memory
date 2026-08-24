@@ -166,7 +166,7 @@ private workspace context → evidence-backed proposal → policy check
 → human review with rationale → immutable receipt → approved shared knowledge
 ```
 
-Read-only work may begin only after 25.2a and 25.2 establish durable workspace scope, evidence/receipt lifecycle, relational-first retrieval, and typed focused-subgraph contracts. The first user job is: **see what your team knows about one review item, where it came from, and what still needs review.** Its real UI is a bounded 2D Knowledge Map, source-first detail, and one read-only cited question. Optional 3D is a later renderer over the identical authorized response. Decision mutations remain blocked until Story 24.4 is remediated. Every implementation slice follows [`DEVELOPMENT-LOOP.md`](./DEVELOPMENT-LOOP.md) and must expose source, freshness, tenant/workspace scope, and degraded state.
+Read-only work may begin only after 25.2a and 25.2 establish durable workspace scope, evidence/receipt lifecycle, relational-first retrieval, and typed focused-subgraph contracts. The first user job is: **see what your team knows about one review item, where it came from, and what still needs review.** Its real UI is a bounded 2D Knowledge Map, source-first detail, and one read-only cited question. Optional 3D is a later renderer over the identical authorized response. Decision mutations remain blocked until Story 24.4 is remediated. Every implementation slice follows [`DEVELOPMENT-LOOP.md`](../archive/allura/DEVELOPMENT-LOOP.md) and must expose source, freshness, tenant/workspace scope, and degraded state.
 
 #### Modular dashboard contract
 

@@ -515,12 +515,12 @@ the adversarial auth suite).
 ### AD-57: Governed Development Loop and Curator-First Delivery
 
 - **Status:** Decided
-- **Decision:** Epic 25 proceeds through the bounded loop in [`DEVELOPMENT-LOOP.md`](./DEVELOPMENT-LOOP.md): hydrate → specify → RED → GREEN → inspect → independent review → evidence → learn. The sole initial browser route is `/dashboard/curator`; the first adapter is read-only memory-proposal review.
+- **Decision:** Epic 25 proceeds through the bounded loop in [`DEVELOPMENT-LOOP.md`](../archive/allura/DEVELOPMENT-LOOP.md): hydrate → specify → RED → GREEN → inspect → independent review → evidence → learn. The sole initial browser route is `/dashboard/curator`; the first adapter is read-only memory-proposal review.
 - **Rationale:** The repository has a strong engine but inconsistent legacy dashboard/docs. A constrained, typed, evidence-first slice demonstrates the intended human-governed memory lifecycle without restoring a static nine-route dashboard or bypassing the MCP/API engine.
 - **Alternatives considered:** (1) Restore the retired dashboard — rejected: broad, dead-route-prone, and not evidence-first. (2) Build a generic chat/workbench — rejected: does not prove governance. (3) Ship decision mutations before Epic 24.4 remediation — rejected: would place UX ahead of the atomic trust boundary.
 - **Consequences:** Every Epic 25 story needs Definition of Ready/Done, a typed service boundary, state matrix, accessibility checks, route smoke, and commit-bound evidence. Decisions remain blocked until 24.4 is remediated; scenario/demonstration claims remain blocked by 24.5–24.9 as recorded in sprint status.
 - **Owner:** Brooks (architecture) + Troy (implementation); Jobs, Knuth, Pike, Fowler, Bellard, and Hightower own their named gates.
-- **References:** `_bmad/bmm/planning/epic-25-governed-curator-review-console.md`, `DESIGN.md`, `docs/allura/DEVELOPMENT-LOOP.md`, AD-46, AD-50, Epic 24.
+- **References:** `_bmad/bmm/planning/epic-25-governed-curator-review-console.md`, `DESIGN.md`, `docs/archive/allura/DEVELOPMENT-LOOP.md`, AD-46, AD-50, Epic 24.
 
 ### AD-58: Relational Facts Before Semantic Expansion
 
