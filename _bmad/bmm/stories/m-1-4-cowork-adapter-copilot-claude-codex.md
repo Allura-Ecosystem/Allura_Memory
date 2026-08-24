@@ -1,5 +1,11 @@
 # Story M-1.4 — Co-Work Adapter — Copilot Cowork, Claude Code, Codex
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Status:** Planned
 **Owner:** Brooks + Woz + Pike
 **Depends on:** M-1.2, M-1.3

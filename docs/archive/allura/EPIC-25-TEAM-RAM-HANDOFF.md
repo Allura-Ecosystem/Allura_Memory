@@ -1,5 +1,11 @@
 # Epic 25 Team RAM implementation handoff
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Status:** Planning handoff only. No production implementation is authorized until the listed gates pass.
 **Architecture chair:** Brooks
 **Scope owner:** Jobs

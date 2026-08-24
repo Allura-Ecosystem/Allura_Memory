@@ -1,5 +1,11 @@
 # Story 25.7 — Security, Accessibility, and Demo Gate
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Status:** Blocked
 **Owner:** Bellard + Hightower + Pike + Fowler
 **Depends on:** 24.5, 24.6, 24.8, 25.5, 25.6

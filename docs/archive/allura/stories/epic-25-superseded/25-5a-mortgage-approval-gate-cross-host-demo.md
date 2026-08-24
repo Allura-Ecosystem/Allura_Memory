@@ -1,5 +1,11 @@
 # Story 25.5a — Mortgage Approval Gate Cross-Host Demonstration
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Status:** Planned / dependency-blocked
 **Owner:** Jobs + Brooks + Troy/Woz + Pike + Bellard + Hightower
 **Depends on:** 25.3b modular dashboard registry; 25.4b portable skills/identity; 25.5 governed decisions and receipts

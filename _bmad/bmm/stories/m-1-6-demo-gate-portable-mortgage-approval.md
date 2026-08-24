@@ -1,5 +1,11 @@
 # Story M-1.6 — Demo Gate — Portable Mortgage Approval Gate Across Hosts
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Status:** Planned
 **Owner:** Brooks + Jobs + Pike + Fowler
 **Depends on:** M-1.4, M-1.5

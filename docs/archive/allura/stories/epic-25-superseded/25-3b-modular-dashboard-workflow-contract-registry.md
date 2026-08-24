@@ -1,5 +1,11 @@
 # Story 25.3b — Modular Dashboard Workflow Contract and Registry
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Status:** Planned / dependency-blocked
 **Owner:** Brooks + Woz + Pike + Fowler + Bellard
 **Depends on:** 25.2 authenticated read contract; 25.3 real curator shell
