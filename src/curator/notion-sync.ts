@@ -158,14 +158,18 @@ export async function getPendingProposals(groupId: string): Promise<PendingPropo
  * @param proposalId - UUID of the canonical_proposals record
  * @param notionPageId - Notion page ID returned after creation
  */
-export async function markSynced(proposalId: string, notionPageId: string): Promise<void> {
+export async function markSynced(proposalId: string, notionPageId: string, groupId: string): Promise<void> {
+  if (!/^allura-[a-z0-9-]+$/.test(groupId)) {
+    throw new Error(`Invalid group_id: ${groupId}. Must match ^allura-[a-z0-9-]+$`);
+  }
+
   const pool = getPool();
 
   await pool.query(
     `UPDATE canonical_proposals
      SET rationale = COALESCE(rationale, '') || $1
-     WHERE id = $2`,
-    [`[notion:${notionPageId}]`, proposalId]
+     WHERE id = $2 AND group_id = $3`,
+    [`[notion:${notionPageId}]`, proposalId, groupId]
   );
 }
 
@@ -286,7 +290,7 @@ export async function syncToNotion(config: NotionSyncConfig): Promise<NotionSync
 
       const notionPage = await config.notionCreatePage(pageParams);
 
-      await markSynced(proposal.id, notionPage.id);
+      await markSynced(proposal.id, notionPage.id, config.groupId);
       syncedIds.push(proposal.id);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

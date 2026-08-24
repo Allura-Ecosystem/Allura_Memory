@@ -339,15 +339,15 @@ describe("getPendingProposals", () => {
 // ── markSynced ───────────────────────────────────────────────────────────────
 
 describe("markSynced", () => {
-  it("writes the notion page id into the rationale field", async () => {
+  it("scopes the Notion receipt update to the proposal tenant", async () => {
     const pool = makePool();
     vi.mocked(getPool).mockReturnValue(pool as never);
 
-    await markSynced("proposal-id-123", "notion-page-abc");
+    await markSynced("proposal-id-123", "notion-page-abc", GROUP_ID);
 
     expect(pool.query).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE canonical_proposals"),
-      ["[notion:notion-page-abc]", "proposal-id-123"]
+      expect.stringContaining("WHERE id = $2 AND group_id = $3"),
+      ["[notion:notion-page-abc]", "proposal-id-123", GROUP_ID]
     );
   });
 });
