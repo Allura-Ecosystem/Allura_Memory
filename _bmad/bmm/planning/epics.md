@@ -5,12 +5,13 @@
 **Owner:** Brooks (orchestrator)
 **group_id:** allura-system
 
-## Current Active Epic
+## Current Active Epics
 
 - [Epic 24 — Agentic AI Framework and Harness Portfolio Readiness](./epic-24-portfolio-readiness.md) — `in-progress`; Stories 24.4–24.9 require remediation before dependent claims or mutations ship.
-- [Epic 25 — Governed Curator Review Console](./epic-25-governed-curator-review-console.md) — `planned`; read-only scope/documentation work is eligible, while decisions remain dependency-blocked on 24.4.
+- [Epic 25 — Governed Curator Review Console](./epic-25-governed-curator-review-console.md) — `in-progress`; Story 25.1 is review-gated, 25.2a merged but dependency-blocked. Read-only scope/documentation work is eligible, while decisions remain dependency-blocked on 24.4.
+- [Epic 26 — Bumblebee Supply-Chain Threat Intelligence & Governed Mitigation](./epic-26-bumblebee-supply-chain-threat-intelligence.md) — `proposed`; planning only. No scheduler, connector, or policy mutation is authorized.
 
-Epics 18–23 below are retained as historical delivery context. Epic 24 remains the active remediation plan; Epic 25 is its bounded operator-surface successor.
+Epics 18–23 below are retained as historical delivery context. Epic 24 remains the active remediation plan; Epic 25 is its bounded operator-surface successor; Epic 26 is the proposed supply-chain threat intelligence plugin.
 
 ## Epic 18: RuVector Documentation Sync — Promote Archive to Canon
 
