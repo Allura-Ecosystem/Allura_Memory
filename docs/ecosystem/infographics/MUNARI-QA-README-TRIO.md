@@ -1,5 +1,11 @@
 # Munari QA — Coordinated README Trio
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Date:** 2026-08-15
 **Reviewer:** Munari, Team Durham
 **Score:** 57/60 (95%)

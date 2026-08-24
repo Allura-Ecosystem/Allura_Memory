@@ -1,5 +1,11 @@
 # Allura Ecosystem — Layout & README Plan
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 > Brooks (Chief Architect) · 2026-06-12 · updated 2026-07-25 (post-RuVector cutover).
 > Companion to ALLURA-CONSOLIDATION-PLAN.md + ALLURA-CONSOLIDATION-GOAL.md.
 > Canonical architecture reference: `allura-memory/docs/allura/BLUEPRINT.md`.

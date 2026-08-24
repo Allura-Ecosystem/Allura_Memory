@@ -1,5 +1,11 @@
 # Allura Infographic Collection — On-Canvas Copy Deck
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Owner:** Ogilvy, Team Durham copywriter
 **Prepared:** 2026-08-15
 **Status:** Revised after Kotler review — no unresolved copy corrections
@@ -557,7 +563,7 @@ This graphic uses lowercase governance `pol-*`. Uppercase kernel `POL-*` and RuV
 | ID | Factual statement | Precise repository source |
 |---|---|---|
 | 10.1 | The governance registry defines lowercase `pol-001` through `pol-006` for tenant scope, append-only events, versioning, promotion, canonical database access, and tenant namespace. | [`Allura_Memory/src/lib/governance/policies.ts:47-137`](../../../Allura_Memory/src/lib/governance/policies.ts) |
-| 10.2 | The kernel separately uses uppercase `POL-001..006` for different controls. | [`Allura_Memory/src/kernel/policy.ts:323-423`](../../../Allura_Memory/src/kernel/policy.ts); [`Allura_Memory/src/kernel/policy.ts:582-602`](../../../Allura_Memory/src/kernel/policy.ts) |
+| 10.2 | The control plane separately uses uppercase `POL-001..006` for different controls. | [`Allura_Memory/src/control-plane/policy.ts:323-423`](../../../Allura_Memory/src/control-plane/policy.ts); [`Allura_Memory/src/control-plane/policy.ts:582-602`](../../../Allura_Memory/src/control-plane/policy.ts) |
 | 10.3 | RuVix separately defines `RULE-001..012`. | [`Allura_Memory/docs/allura/SOLUTION-ARCHITECTURE.md:313-366`](../../../Allura_Memory/docs/allura/SOLUTION-ARCHITECTURE.md) |
 | 10.4 | Current semantic persistence uses PostgreSQL graph tables, while registry copy for `pol-003` and `pol-004` still names Neo4j. | [`Allura_Memory/src/lib/governance/policies.ts:81-105`](../../../Allura_Memory/src/lib/governance/policies.ts); [`Allura_Memory/src/lib/graph-adapter/factory.ts:26-35`](../../../Allura_Memory/src/lib/graph-adapter/factory.ts) |
 | 10.5 | An automated curator mode creates ambiguity around an absolute human-only interpretation of the promotion gate. | [`Allura_Memory/src/mcp/curator-tools.ts:457-520`](../../../Allura_Memory/src/mcp/curator-tools.ts); [`Allura_Memory/src/mcp/canonical-http-gateway.ts:709-714`](../../../Allura_Memory/src/mcp/canonical-http-gateway.ts) |

@@ -1,5 +1,11 @@
 # Allura Infographic Collection — Strategic Content Plan
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Owner:** Kotler, Team Durham Brand Orchestrator
 **Stage:** Strategy gate before copywriting
 **Prepared:** 2026-08-15
@@ -354,7 +360,7 @@ Current code, schema, manifests, and measured repository contents take precedenc
   5. `pol-005` and `pol-006` protect canonical database access and the `allura-*` tenant namespace.
 - **Verified facts and source documents:**
   - The active six-policy governance registry is defined in [`src/lib/governance/policies.ts`](../../../Allura_Memory/src/lib/governance/policies.ts): `pol-001` tenant scope, `pol-002` append-only evidence, `pol-003` semantic versioning, `pol-004` promotion approval, `pol-005` canonical database access, and `pol-006` tenant namespace.
-  - The runtime kernel separately defines uppercase `POL-001..006` with different meanings ([kernel policy implementation](../../../Allura_Memory/src/kernel/policy.ts)).
+  - The control plane separately defines uppercase `POL-001..006` with different meanings ([control-plane policy implementation](../../../Allura_Memory/src/control-plane/policy.ts)).
   - RuVix separately defines `RULE-001..012` ([solution architecture, RuVix policy contract](../../../Allura_Memory/docs/allura/SOLUTION-ARCHITECTURE.md)).
   - Current semantic persistence is PostgreSQL graph tables; the registry text for `pol-003` and `pol-004` still refers to Neo4j ([governance registry](../../../Allura_Memory/src/lib/governance/policies.ts); [graph adapter factory](../../../Allura_Memory/src/lib/graph-adapter/factory.ts)).
 - **Claims that require validation:**

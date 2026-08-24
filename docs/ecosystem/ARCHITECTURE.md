@@ -1,5 +1,11 @@
 # Allura Ecosystem — Architecture
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 > The map of the system. Diagrams are Mermaid so GitHub renders them and they stay
 > version-controlled (no stale screenshots). Detail lives in linked docs; this stays lean.
 > **Canonical architecture source:** [`allura-memory/docs/allura/BLUEPRINT.md`](../allura-memory/docs/allura/BLUEPRINT.md).

@@ -1,5 +1,11 @@
 # Lessons from TALON & IRIS — Patterns to Adopt
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Created:** 2026-07-10
 **Status:** TALON and IRIS are sunset. This document extracts their best patterns for adoption by Team RAM, Team Durham, Bahari, and Sarah Boone.
 

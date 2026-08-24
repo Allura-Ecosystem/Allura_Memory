@@ -1,5 +1,11 @@
 # Allura Infographic Collection — Kotler Final Approval and Visual Director Handoff
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Approved by:** Kotler, Team Durham Brand Orchestrator
 **Decision timestamp:** 2026-08-15T12:01:17-04:00
 **Strategy authority:** [ALLURA-INFOGRAPHIC-STRATEGY.md](./ALLURA-INFOGRAPHIC-STRATEGY.md)

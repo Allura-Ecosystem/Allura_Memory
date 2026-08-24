@@ -1,4 +1,10 @@
 # FaithMeats → OpenWebUI Migration Plan
+
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
 _"Move off Claude Desktop, holding nanoclaw (Fatima)."_
 Ground-truthed on desktop 2026-07-05 against cloned source + live Brain.
 

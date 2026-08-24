@@ -1,5 +1,11 @@
 # Allura Ecosystem — Repository Topology and Index
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 This document is a repository-grounded navigation index for the Allura ecosystem. It describes what is present in the current workspace, what the owning repositories say about themselves, and where a relationship still needs confirmation.
 
 It is not a deployment dashboard, client registry, ownership ledger, or substitute for runtime health checks. Repository code and schemas outrank status prose when they disagree.
