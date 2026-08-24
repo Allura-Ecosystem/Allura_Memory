@@ -104,9 +104,9 @@ Every memory write lands here first. Append-only. Never mutated. Provides the ra
 
 ---
 
-### Semantic Memory (Neo4j)
+### Semantic Memory (PostgreSQL graph tables)
 
-Promoted, curated knowledge. Versioned via `SUPERSEDES` relationships. Nodes are never edited — a new node is created that supersedes the prior one.
+Promoted, curated knowledge is stored in PostgreSQL `graph_memories` with version lineage in `graph_supersedes`. Records are never edited in place: a new record supersedes the prior one.
 
 **States:** `active | deprecated`
 
@@ -117,6 +117,8 @@ Promoted, curated knowledge. Versioned via `SUPERSEDES` relationships. Nodes are
 - `content` — memory content
 - `score` — confidence score
 - `deprecated` — true when a newer version exists
+
+> **Authority note:** AD-50 is the current architecture. Any earlier Neo4j fallback, dual-store, or `GRAPH_BACKEND=neo4j` wording in this document is historical migration context only and must not be implemented as active behavior.
 
 ---
 
@@ -152,6 +154,43 @@ The RuVector Graph Cutover is **complete** (Story 19.3, 2026-07-12). Allura now 
 - `GRAPH_DUAL_READ=true` — wraps selected backend with dual-read validation
 
 This cutover removes the per-person Neo4j Community license limit (1 user), collapses two stores toward one engine, and enables self-hosted graphs. Neo4j remains as fallback for one release after the cutover (AD-49 consequence); Story 19.3 executed the flip to ruvector as default.
+
+### Epic 25 — Governed Curator Review Console
+
+Epic 25 is the curator-first operator slice decided by AD-46 and AD-57. It does not revive a broad dashboard. The sole initial browser route is `/dashboard/curator`, backed only by typed, authenticated, tenant-derived API/service contracts.
+
+The product loop is:
+
+```text
+private workspace context → evidence-backed proposal → policy check
+→ human review with rationale → immutable receipt → approved shared knowledge
+```
+
+Read-only work may begin only after 25.2a and 25.2 establish durable workspace scope, evidence/receipt lifecycle, relational-first retrieval, and typed focused-subgraph contracts. The first user job is: **see what your team knows about one review item, where it came from, and what still needs review.** Its real UI is a bounded 2D Knowledge Map, source-first detail, and one read-only cited question. Optional 3D is a later renderer over the identical authorized response. Decision mutations remain blocked until Story 24.4 is remediated. Every implementation slice follows [`DEVELOPMENT-LOOP.md`](./DEVELOPMENT-LOOP.md) and must expose source, freshness, tenant/workspace scope, and degraded state.
+
+#### Modular dashboard contract
+
+`/dashboard/curator` is a stable governed shell. It renders server-issued, allow-listed `WorkflowModuleManifest` definitions through shared intake, evidence, map, policy-result, human-review, and receipt components. A module may provide domain labels, typed intake descriptors, evidence/relationship vocabulary, policy references, stage presentation, required capabilities, and host skill bindings. It cannot provide arbitrary browser code, SQL, credentials, tenant/workspace selectors, authorization, policy decisions, mutation implementations, or receipt issuance.
+
+Mortgage Approval Gate is the first module. It must be independently disabled or rolled back without affecting the shell, other modules, engine, API, SDK, MCP, CLI, or external host adapters. The initial route remains `/dashboard/curator`; modularity does not reopen a broad route collection or establish a third-party plugin marketplace.
+
+#### Portable Mortgage Approval Gate interoperability
+
+The active external demonstration is the vendor-neutral **Mortgage Approval Gate**, not Salesforce. One canonical, host-neutral Agent Skill defines the workflow:
+
+```text
+intake → evidence/OCR → policy evaluation → human review → immutable receipt
+```
+
+Thin packaging adapters expose that same workflow through Microsoft Copilot Cowork, Claude Code, and Codex. Every host calls the same Allura MCP/API services and receives the same scope, evidence, policy, allowed-action, denial/degradation, and receipt contracts. Hosts may guide work but do not implement policy, store authoritative state, or issue receipts.
+
+Microsoft Copilot Cowork uses an original Microsoft 365 app package with standard Agent Skills and a remote HTTPS MCP connector. Native MCP elicitation is the first structured policy-intake surface; optional MCP App widgets may present policy/evidence state. Microsoft identities are accepted only after validating Entra issuer, audience, tenant, user/object, group, and app-role claims, then mapping them server-side to Allura principals, memberships, allowed workspaces, and roles. Unknown, stale, overage, missing, disabled, or forged identity conditions fail closed.
+
+Claude Code and Codex use their native skill/plugin adapters and separately reviewed host credentials, mapping to the same internal Allura principal contract. Neither can imitate Entra roles or gain host-specific authority.
+
+Connector and research results—including Exa-backed public web research—remain provisional external evidence until Allura applies workspace scope, source identity, redaction/classification, freshness, policy, and explicit confirmation. Host adapters are independently disableable and never block local dashboard, API, SDK, MCP, or CLI operation.
+
+The demonstration uses sanitized synthetic mortgage-review fixtures only. It makes no claim of underwriting, lending or credit decisioning, regulatory compliance/certification, production mortgage suitability, Salesforce integration, or endorsement by Microsoft, Anthropic, OpenAI, Bank of America, or another company.
 
 ### Agent Factory Delivery Boundary
 
@@ -192,7 +231,7 @@ No doc or UI surface may claim "production-ready" or "fresh-deploy verified" unt
 - **MCP tools** — `memory_add`, `memory_search`, `memory_get`, `memory_list`, `memory_delete`
 - **API routes** — `/api/health/*`, `/api/memory/*`, `/api/curator/*`
 - **CLI scripts** — `bun run curator:run`, `bun run curator:approve`, `bun run mcp:http`
-- **Memory Command Center** — `/dashboard`, `/dashboard/memories`, `/dashboard/curator`, `/dashboard/governance`, `/dashboard/graph`, `/dashboard/audit`, `/dashboard/settings`
+- **Memory Command Center** — Only `/dashboard/curator` is the planned initial browser route. Other historical dashboard route names are not implementation authority until backed by a typed contract, route-smoke proof, and approved Epic 25 story.
 
 **Core goals:**
 - Provide real-time system status and health via API endpoints

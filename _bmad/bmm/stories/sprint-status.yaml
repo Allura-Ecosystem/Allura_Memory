@@ -269,3 +269,83 @@ epic_24:
       owner: "Troy"
       depends_on: ["24.8"]
       status_evidence: "PR #87 merged documentation only; no runnable integrations, scenarios, receipts, evaluation artifacts, or measured clean-environment evidence exist."
+
+epic_25:
+  name: "Governed Curator Review Console"
+  status: planned
+  retrospective: pending
+  next_story: "25.1"
+  sequence_note: "Curator-first operator slice. Read-only documentation and shell work may proceed after scope approval. Decision mutation is blocked until 24.4 remediation; scenario/demo closure depends on 24.5, 24.6, and 24.8."
+  stories:
+    - key: "25.1"
+      title: "Scope Reopening and Product Truth"
+      status: ready-for-dev
+      owner: "Brooks + Jobs"
+      depends_on: []
+      status_evidence: "Development loop, canonical route boundary, brand-token contract, and Epic 25 story pack authored; requires code/doc review before Done."
+    - key: "25.2a"
+      title: "Workspace Scope and Evidence Lifecycle Foundation"
+      status: planned
+      owner: "Troy + Knuth + Brooks"
+      depends_on: ["24.2", "24.3", "25.1"]
+      status_evidence: "Validated gap: workspace scope is metadata-only on active MCP writes; canonical proposals have no workspace_id; evidence requests require a durable queryable projection."
+    - key: "25.2"
+      title: "Curator Read Contract and Tenant Hardening"
+      status: dependency-blocked
+      owner: "Troy + Knuth + Pike"
+      depends_on: ["25.2a"]
+      status_evidence: "Must derive tenant/workspace from authenticated principal, add typed contracts, and prove forged scope denial."
+    - key: "25.3"
+      title: "Focused 2D Knowledge Map Shell"
+      status: planned
+      owner: "Woz + Pike"
+      depends_on: ["25.1", "25.2", "25.2a"]
+      status_evidence: "One real /dashboard/curator route over a server-authorized bounded SubgraphResponse; no mock data, broad navigation, or caller-selected scope."
+    - key: "25.3b"
+      title: "Modular Dashboard Workflow Contract and Registry"
+      status: dependency-blocked
+      owner: "Brooks + Woz + Pike + Fowler + Bellard"
+      depends_on: ["25.2", "25.3"]
+      status_evidence: "Stable /dashboard/curator shell with server-issued allow-listed WorkflowModuleManifest registry and shared governed components; Mortgage Approval Gate is the first module, not hardcoded dashboard logic."
+    - key: "25.3a"
+      title: "Optional 3D Knowledge Explorer"
+      status: dependency-blocked
+      owner: "Pike + Bellard + Hightower"
+      depends_on: ["25.3", "25.4"]
+      status_evidence: "3D is optional and may only render the 2D map's typed focused-subgraph contract after measured device/browser/accessibility/rollback proof."
+    - key: "25.4"
+      title: "Evidence-First Proposal Queue"
+      status: planned
+      owner: "Woz + Pike"
+      depends_on: ["25.2", "25.3"]
+      status_evidence: "Read-only tenant-scoped queue/detail/provenance before decision actions."
+    - key: "25.4a"
+      title: "Governed Assistant API, SDK, and Connector Harness"
+      status: dependency-blocked
+      owner: "Troy + Brooks + Bellard"
+      depends_on: ["25.2a", "25.2", "25.4", "24.5"]
+      status_evidence: "Assistant and connector work requires relational-first retrieval, evidence-first queue contracts, and deterministic harness proof; vendor SDKs remain optional adapters."
+    - key: "25.4b"
+      title: "Portable Agent-Skill Interoperability and Entra Policy Intake"
+      status: dependency-blocked
+      owner: "Troy + Brooks + Pike + Bellard + Hightower"
+      depends_on: ["25.2", "25.4a"]
+      status_evidence: "One canonical Mortgage Approval Gate skill source with Cowork, Claude Code, and Codex adapters; Entra user/group/app-role mapping; native policy elicitation; auth/denial/parity/disable proof."
+    - key: "25.5"
+      title: "Governed Decisions and Receipts"
+      status: dependency-blocked
+      owner: "Knuth + Woz + Pike"
+      depends_on: ["24.4", "25.4"]
+      status_evidence: "Blocked: 24.4 must prove atomic promotion before browser decision actions can ship."
+    - key: "25.5a"
+      title: "Mortgage Approval Gate Cross-Host Demonstration"
+      status: dependency-blocked
+      owner: "Jobs + Brooks + Troy + Pike + Bellard + Hightower"
+      depends_on: ["25.3b", "25.4b", "25.5"]
+      status_evidence: "Vendor-neutral intake→evidence/OCR→policy→human review→receipt proof across Cowork, Claude Code, and Codex; no Salesforce, underwriting, lending-decision, or production suitability claim."
+    - key: "25.6"
+      title: "Security, Accessibility, and Demo Gate"
+      status: dependency-blocked
+      owner: "Bellard + Hightower + Pike + Fowler"
+      depends_on: ["24.5", "24.6", "24.8", "25.5", "25.5a"]
+      status_evidence: "Requires live-DB, harness/eval, documentation truth, accessibility, route smoke, evidence bundle, and rollback rehearsal."

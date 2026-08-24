@@ -8,6 +8,8 @@
 
 This document covers Allura's deployment topologies, integration interfaces, and architectural constraints. The data model and API surface are defined in [BLUEPRINT.md](./BLUEPRINT.md).
 
+> **Current architecture authority (AD-50, AD-57):** PostgreSQL is the sole active durable store for evidence, proposals, graph lineage, receipts, and outbox state. The Curator Review Console is an optional API-first adapter whose sole initial route is `/dashboard/curator`. Any Neo4j server, packaged `neo4j-*` tool, fallback topology, or broad dashboard route described below is historical migration material or active-remediation debt; it must not be used as a new implementation target. Story 25.1 owns the source-first cleanup inventory and `verify-neo4j-sunset.ts` gate.
+
 ---
 
 ## Table of Contents
@@ -620,6 +622,74 @@ Brooks / Team RAM
 - ✓ Core stack remains deployable independently of a custom monolithic MCP runtime
 
 ---
+
+## 8.5 Epic 25 Curator Console Topology
+
+The browser is an optional governed operator adapter. It does not own memory state, tenant scope, policy, or promotion authority.
+
+```text
+Browser `/dashboard/curator`
+  → typed UI adapter
+  → authenticated Next.js route handler
+  → server-owned scope resolver (tenant + workspace + role + policy)
+  → SubgraphQueryService / RetrievalPlanner / GovernedAssistant
+  → relational facts + evidence + receipt service
+  → optional SemanticProjection expansion (derived only)
+  → PostgreSQL transaction + append-only audit/outbox
+  → typed SubgraphResponse / RetrievalPlan / AssistantAnswer / DecisionReceipt
+```
+
+The default map is a focused 2D renderer over `SubgraphResponse`; a later 3D renderer can consume that same response but never adds retrieval, scope, or authority. The service derives tenant/workspace scope from the authenticated principal. Client `group_id`, workspace, role, and policy values are intent assertions only and are rejected when they conflict. Read operations show source/freshness/degraded state. The first assistant is selected-item-scoped and read-only; decision mutations are disabled until Epic 24.4 remediation proves the atomic promotion path.
+
+### 8.5.1 Modular dashboard shell
+
+```text
+/dashboard/curator
+  → authenticated DashboardShell
+  → server-issued ModuleRegistry
+  → allow-listed WorkflowModuleManifest
+  → shared Intake / Evidence / Map / Policy / Review / Receipt components
+  → shared governed services
+```
+
+The registry is resolved after principal and scope derivation. Modules are declarative descriptors, not executable clients: they cannot carry SQL, credentials, role mappings, direct internal URLs, policy outcomes, mutation handlers, or receipt generators. Startup and request-time checks reject unknown IDs, duplicate IDs, incompatible contract versions, untrusted integrity state, missing capabilities, or disabled flags. Failure produces a typed module-unavailable/degraded state, never fallback code or partial authority.
+
+Mortgage Approval Gate is the first registered module. Disabling it preserves the shell and every other Allura surface. Epic 25 does not introduce arbitrary third-party module loading or a plugin marketplace.
+
+### 8.5.2 Portable skill adapters and Microsoft Entra mapping
+
+```text
+Canonical Mortgage Approval Gate Agent Skill
+  ├─ Microsoft Copilot Cowork M365 package + HTTPS MCP connector
+  ├─ Claude Code plugin / Agent Skills adapter
+  └─ Codex skill / plugin adapter
+       → authenticated Allura adapter
+       → server-owned principal and role mapping
+       → shared governed application services
+       → PostgreSQL authority plane
+```
+
+The adapters are replaceable clients. Cowork native MCP elicitation may collect a typed policy draft; optional MCP App widgets may display policy/evidence state. Claude Code and Codex use native packaging but call the same tools and cannot fork workflow or policy logic. Every host reuses Allura's server-owned validation, scope, save, confirmation, audit, idempotency, and receipt paths.
+
+For Microsoft clients, Allura validates Entra token signature, issuer, audience, tenant ID, user/object ID, expiry, group claims, and app-role claims, then maps them through server-owned configuration to an internal principal, memberships, allowed workspaces, and roles. Raw claims never become direct SQL/RLS predicates. Unknown tenants/roles, group overage, missing or stale membership, disabled users, audience/issuer mismatch, and forged claims fail closed.
+
+An Exa-backed `research_public_web` capability, if enabled, stays behind an Allura connector capability manifest. Hosts receive cited provisional results; saving them as evidence is a separate confirmation-required Allura action. Provider credentials stay server-side and outside packages, skills, manifests, and browser state.
+
+Each adapter is independently feature-flagged and disabled without changing dashboard/API/SDK/MCP/CLI operation. Private host tests, identity mapping, cross-scope denial, audit, revoke, and rollback evidence precede organization deployment.
+
+### 8.5.3 Mortgage Approval Gate demonstration topology
+
+```text
+synthetic mortgage-review intake
+  → source/document/OCR evidence
+  → relational facts and deterministic policy
+  → human review + rationale
+  → atomic governed decision
+  → immutable receipt
+  → cross-host receipt verification
+```
+
+The demonstration is vendor-neutral and has no Salesforce dependency. It validates framework/harness behavior, not underwriting or lending outcomes. Fixtures contain no applicant PII or customer records, and no production, compliance-certification, fair-lending, credit-decision, or employer/vendor endorsement claim is permitted.
 
 ## 9. Validation Topology (merged)
 

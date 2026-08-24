@@ -7,9 +7,10 @@
 
 ## Current Active Epic
 
-- [Epic 24 — Agentic AI Framework and Harness Portfolio Readiness](./epic-24-portfolio-readiness.md) — `ready-for-dev`; implementation begins with Story 24.1 and follows the evidence, trust-boundary, harness, then portfolio gates.
+- [Epic 24 — Agentic AI Framework and Harness Portfolio Readiness](./epic-24-portfolio-readiness.md) — `in-progress`; Stories 24.4–24.9 require remediation before dependent claims or mutations ship.
+- [Epic 25 — Governed Curator Review Console](./epic-25-governed-curator-review-console.md) — `planned`; read-only scope/documentation work is eligible, while decisions remain dependency-blocked on 24.4.
 
-Epics 18–23 below are retained as historical delivery context. Epic 24 is the active plan for new development.
+Epics 18–23 below are retained as historical delivery context. Epic 24 remains the active remediation plan; Epic 25 is its bounded operator-surface successor.
 
 ## Epic 18: RuVector Documentation Sync — Promote Archive to Canon
 

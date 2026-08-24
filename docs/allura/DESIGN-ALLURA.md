@@ -28,20 +28,15 @@ The Allura Memory Command Center provides the human-facing control plane for the
 
 AD-35 adds a proposed run-inspection responsibility for future operator surfaces: show evidence-gated `RunRecord` receipts without making the dashboard or Brain the orchestrator. Runs are reviewable audit objects that connect Notion/board work to Team RAM skill execution, approval breakpoints, quality gates, and memory writeback candidates.
 
-**Core surfaces:**
+**Core surface:**
 
-| Surface | Role | Purpose |
-|---------|------|---------|
-| **Overview** (`/dashboard`) | Operator / Admin | Observe system health, queue status, freshness, degraded state, and active tenant scope |
-| **Memories** (`/dashboard/memories`) | Operator / Curator | Search, filter, inspect, export, and trace memory records |
-| **Curator** (`/dashboard/curator`) | Curator / Reviewer | Review, approve, or reject proposed insights before they become active knowledge |
-| **Governance** (`/dashboard/governance`) | Admin / RuVix owner | Manage policy mode, thresholds, role separation, tenant isolation checks, and drift warnings |
-| **Graph** (`/dashboard/graph`) | Operator / Admin | Explore promoted semantic memory with source receipts |
-| **Audit** (`/dashboard/audit`) | Admin / Compliance | Filter event logs, inspect receipts, and export evidence packets |
-| **Settings** (`/dashboard/settings`) | Admin | View tenant config, roles, endpoint health, and promotion settings |
-| **Runs** (future `/dashboard/runs` or Audit extension) | PM / Reviewer / Compliance | Inspect RunRecord state, approval breakpoints, quality gates, run journals, doctor findings, and evidence packets |
+| Surface | Role | Status |
+|---------|------|--------|
+| **Curator Review Console** (`/dashboard/curator`) | Viewer / Curator / Admin | Epic 25 initial route; read-only before 24.4 remediation |
+| **MCP / API / CLI** | Agent / operator | Canonical engine path; available even when browser surface is absent |
+| **All other dashboard destinations** | — | Future or historical; they must not be linked until implemented and route-smoke tested |
 
-The Command Center is optional: MCP tools, API routes, and CLI scripts remain the primary engine path. The UI surfaces real data from Allura Brain (PostgreSQL + Neo4j), not mocks. Every component consumes mapped UI contracts from `src/lib/dashboard/`; raw Brain API shapes stay behind `api.ts`, `queries.ts`, and `mappers.ts` (AD-26).
+The Command Center is optional: MCP tools, API routes, and CLI scripts remain the primary engine path. The Curator Review Console consumes typed PostgreSQL-backed contracts; it does not query a database directly, construct authority in the browser, or display mock health data.
 
 ### Memory Lifecycle and Done Gate
 
@@ -886,6 +881,77 @@ async function readJson<T>(path: string, init?: RequestInit): Promise<{ data: T;
 ```
 
 ---
+
+## Epic 25 Curator Interaction Contract
+
+```text
+queue loading → queue ready → proposal detail → evidence inspected
+→ action available (server-derived) → decision pending → receipt | conflict | denied | error
+```
+
+Required states are `loading`, `empty`, `forbidden`, `error`, `stale`, `degraded`, `conflict`, and `complete`. No state may be represented as another: a failed fetch is not an empty queue, a missing receipt is not success, and a denied role is not a disabled-but-hidden successful action.
+
+Until Story 24.4 is remediated, the UI presents decision controls as unavailable/read-only with the dependency reason. Once enabled, the only actions are approve, reject, and request evidence; each needs nonblank rationale and returns a server-issued receipt.
+
+## Focused Knowledge Map and Assistant Contract
+
+The first real `/dashboard/curator` experience has one task: **see what your team knows about one review item, where it came from, and what still needs review.**
+
+```text
+Context bar → focused 2D Knowledge Map → selected-item detail → sources → Ask about this item
+```
+
+- The map uses only the server-owned, evidence-bound `SubgraphResponse`; it is a bounded review context, never a whole-workspace graph.
+- The map is the 61.8% primary pane; the selected-item detail and read-only assistant occupy the 38.2% support pane. Small screens stack context → item → map → relationship list → detail → assistant → sources.
+- A same-data `Relationships in words` list remains adjacent to the visual graph, labels each relation, and supports a text-only inspection flow.
+- The assistant cites the same authorized source records as the map/detail and returns `complete`, `partial`, `degraded`, or `denied`. It may explain context but cannot act, connect externally, or change authority.
+- Primary labels use sixth-grade copy: `What your team knows`, `Knowledge map`, `Ask about this item`, `Sources for this answer`, `May be old`, and `Needs more proof`.
+- Optional 3D is a later opt-in renderer over the identical subgraph response. It is feature-flagged, measured, rollbackable, and never required to inspect evidence or make a decision.
+
+## Modular Dashboard Shell
+
+The dashboard is a stable Allura shell, not a fixed mortgage application. It provides consistent scope, source, freshness, truth states, navigation, assistant, evidence, policy, review, and receipt behavior. Installed workflow modules change domain vocabulary and workflow descriptors inside that shell.
+
+```text
+Context and role
+→ module selector/orientation
+→ standard workflow stages
+→ shared map/evidence/detail components
+→ server-derived action
+→ server-issued receipt
+```
+
+Mortgage Approval Gate is the first module. It may label standard components for mortgage-review intake and evidence, but cannot introduce a new visual system, route tree, role model, state meaning, direct fetch, decision control, or receipt design. A disabled or unavailable module shows a named module-unavailable state without exposing hidden modules or stale data.
+
+The initial module selector is intentionally small and server-issued. Do not build a marketplace, upload button, arbitrary extension manager, card grid of unavailable modules, or remote JavaScript host in Epic 25.
+
+## Portable Policy Intake and Mortgage Approval Gate
+
+Copilot Cowork is the richest structured setup surface because it supports native elicitation, but the same canonical policy and Mortgage Approval Gate skill must also run through Claude Code and Codex adapters. The first Allura interaction is a short governed intake, not a generic chat or copied host admin screen.
+
+```text
+Name the workspace
+→ choose who can see and add information
+→ choose allowed source/connector types
+→ set OCR, redaction, classification, and retention rules
+→ confirm assistant authority and human-review requirements
+→ review the policy draft
+→ explicitly save or cancel
+```
+
+The cross-host mortgage demonstration then uses:
+
+```text
+Mortgage review intake
+→ source/document/OCR evidence
+→ policy result and missing-proof state
+→ human review with rationale
+→ immutable receipt
+```
+
+Primary copy remains plain: `Set up your workspace`, `Who can see this?`, `Which sources are allowed?`, `How should scanned files work?`, `What can AI do?`, `Review policy`, `Evidence needed`, and `Review decision`. The UI never exposes tenant IDs, raw policy JSON, provider credentials, database fields, credit scores, pricing, protected-class data, or implied underwriting. The workflow is explicitly illustrative and vendor-neutral, with no Salesforce branding or CRM frame.
+
+Cowork forms/widgets, Claude Code prompts, and Codex prompts are adapters over the same server-owned states. The server owns identity mapping, validation, scope, policy, confirmation, audit, decision, and receipt. A host surface cannot make a partial/degraded state look complete or turn a displayed Entra role into authority.
 
 ## References
 
