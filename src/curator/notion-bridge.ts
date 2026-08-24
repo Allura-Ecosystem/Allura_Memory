@@ -31,6 +31,7 @@
  */
 
 import type { Pool } from "pg";
+import { validateGroupId } from "../lib/validation/group-id";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -275,6 +276,7 @@ export async function updateProposalNotionPage(
  * (matching the existing markSynced pattern).
  *
  * @param proposalId - UUID of the canonical_proposals record
+ * @param groupId - Server-derived tenant boundary for the proposal update
  * @param notionPageUrl - URL of the created Notion page
  * @param pg - PostgreSQL pool
  */
@@ -284,11 +286,12 @@ export async function writeNotionUrlToProposal(
   notionPageUrl: string,
   pg: Pool
 ): Promise<void> {
+  const scopedGroupId = validateGroupId(groupId);
   await pg.query(
     `UPDATE canonical_proposals
      SET rationale = COALESCE(rationale, '') || $1
      WHERE id = $2 AND group_id = $3`,
-    [`\n[notion-page:${notionPageUrl}]`, proposalId, groupId]
+    [`\n[notion-page:${notionPageUrl}]`, proposalId, scopedGroupId]
   );
 }
 

@@ -32,6 +32,7 @@
 
 import { insertDlqEntry } from "./notion-sync-dlq";
 import { closePool, getPool } from "../lib/postgres/connection";
+import { validateGroupId } from "../lib/validation/group-id";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -157,11 +158,10 @@ export async function getPendingProposals(groupId: string): Promise<PendingPropo
  *
  * @param proposalId - UUID of the canonical_proposals record
  * @param notionPageId - Notion page ID returned after creation
+ * @param groupId - Tenant boundary used to scope the proposal update
  */
 export async function markSynced(proposalId: string, notionPageId: string, groupId: string): Promise<void> {
-  if (!/^allura-[a-z0-9-]+$/.test(groupId)) {
-    throw new Error(`Invalid group_id: ${groupId}. Must match ^allura-[a-z0-9-]+$`);
-  }
+  const scopedGroupId = validateGroupId(groupId);
 
   const pool = getPool();
 
@@ -169,7 +169,7 @@ export async function markSynced(proposalId: string, notionPageId: string, group
     `UPDATE canonical_proposals
      SET rationale = COALESCE(rationale, '') || $1
      WHERE id = $2 AND group_id = $3`,
-    [`[notion:${notionPageId}]`, proposalId, groupId]
+    [`[notion:${notionPageId}]`, proposalId, scopedGroupId]
   );
 }
 

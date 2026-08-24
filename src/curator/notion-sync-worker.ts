@@ -54,6 +54,7 @@ import {
   markEntryRetrying,
 } from "./notion-sync-dlq"
 import { closePool, getPool } from "../lib/postgres/connection"
+import { validateGroupId } from "../lib/validation/group-id"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -205,6 +206,7 @@ export async function writeNotionUrlToProposal(
   groupId: string,
   notionPageUrl: string
 ): Promise<void> {
+  const scopedGroupId = validateGroupId(groupId)
   // Validate proposalId is a valid UUID before querying
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   if (!uuidRegex.test(proposalId)) {
@@ -218,7 +220,7 @@ export async function writeNotionUrlToProposal(
     `UPDATE canonical_proposals
      SET rationale = COALESCE(rationale, '') || $1
      WHERE id = $2 AND group_id = $3`,
-    [`\n[notion-page:${notionPageUrl}]`, proposalId, groupId]
+    [`\n[notion-page:${notionPageUrl}]`, proposalId, scopedGroupId]
   )
 }
 
