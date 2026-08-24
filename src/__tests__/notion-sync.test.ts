@@ -137,7 +137,7 @@ describe.skipIf(!shouldRunE2E)("Notion Sync", () => {
       const proposals = await getPendingProposals(GROUP_ID);
       const target = proposals[0];
 
-      await markSynced(target.id, "notion-page-123");
+      await markSynced(target.id, "notion-page-123", GROUP_ID);
 
       // Verify the rationale was updated
       const result = await pgPool.query(

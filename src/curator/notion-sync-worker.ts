@@ -200,7 +200,11 @@ async function markEventFailed(
 /**
  * Write Notion page URL back to canonical_proposals.
  */
-async function writeNotionUrlToProposal(proposalId: string, notionPageUrl: string): Promise<void> {
+export async function writeNotionUrlToProposal(
+  proposalId: string,
+  groupId: string,
+  notionPageUrl: string
+): Promise<void> {
   // Validate proposalId is a valid UUID before querying
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   if (!uuidRegex.test(proposalId)) {
@@ -213,8 +217,8 @@ async function writeNotionUrlToProposal(proposalId: string, notionPageUrl: strin
   await pool.query(
     `UPDATE canonical_proposals
      SET rationale = COALESCE(rationale, '') || $1
-     WHERE id = $2`,
-    [`\n[notion-page:${notionPageUrl}]`, proposalId]
+     WHERE id = $2 AND group_id = $3`,
+    [`\n[notion-page:${notionPageUrl}]`, proposalId, groupId]
   )
 }
 
@@ -445,7 +449,7 @@ export async function processDlqRetries(
 
         // Write Notion URL back to proposal
         if (entry.proposal_id && result.pageUrl) {
-          await writeNotionUrlToProposal(entry.proposal_id, result.pageUrl)
+          await writeNotionUrlToProposal(entry.proposal_id, groupId, result.pageUrl)
         }
 
         succeeded++
@@ -528,7 +532,7 @@ if (isMainModule) {
         await markEventCompleted(String(event.id), event.group_id, "notion-sync-direct", result.pageUrl)
         // Write Notion URL back to proposal
         if (event.metadata.proposal_id) {
-          await writeNotionUrlToProposal(event.metadata.proposal_id as string, result.pageUrl)
+          await writeNotionUrlToProposal(event.metadata.proposal_id as string, event.group_id, result.pageUrl)
         }
       } else if (result.success && !result.pageUrl) {
         console.log(`[NotionSyncWorker] Event prepared for MCP delegation (no direct client)`)

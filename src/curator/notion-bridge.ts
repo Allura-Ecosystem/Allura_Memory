@@ -280,14 +280,15 @@ export async function updateProposalNotionPage(
  */
 export async function writeNotionUrlToProposal(
   proposalId: string,
+  groupId: string,
   notionPageUrl: string,
   pg: Pool
 ): Promise<void> {
   await pg.query(
     `UPDATE canonical_proposals
      SET rationale = COALESCE(rationale, '') || $1
-     WHERE id = $2`,
-    [`\n[notion-page:${notionPageUrl}]`, proposalId]
+     WHERE id = $2 AND group_id = $3`,
+    [`\n[notion-page:${notionPageUrl}]`, proposalId, groupId]
   );
 }
 
