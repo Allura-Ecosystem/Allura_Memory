@@ -1,8 +1,8 @@
-# Story 25.6 — Security, Accessibility, and Demo Gate
+# Story 25.7 — Security, Accessibility, and Demo Gate
 
-**Status:** Planned / blocked
+**Status:** Blocked
 **Owner:** Bellard + Hightower + Pike + Fowler
-**Depends on:** 24.5, 24.6, 24.8, 25.5, 25.5a
+**Depends on:** 24.5, 24.6, 24.8, 25.5, 25.6
 
 ## Outcome
 

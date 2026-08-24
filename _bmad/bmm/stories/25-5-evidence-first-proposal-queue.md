@@ -1,9 +1,9 @@
-# Story 25.4 — Evidence-First Proposal Queue
+# Story 25.5 — Evidence-First Read-Only Proposal Queue
 
-**Status:** Planned / read-only implementation eligible after 25.2–25.3
+**Status:** Blocked
 **Owner:** Woz + Pike
-**Depends on:** 25.2, 25.3
-**Blocks:** 25.5
+**Depends on:** 25.4
+**Blocks:** 25.6
 
 ## Outcome
 

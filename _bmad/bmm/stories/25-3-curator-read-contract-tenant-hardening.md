@@ -1,9 +1,9 @@
-# Story 25.2 — Curator Read Contract and Tenant Hardening
+# Story 25.3 — Curator Read Contract and Tenant Hardening
 
-**Status:** Planned / dependency-blocked
+**Status:** Blocked
 **Owner:** Troy + Knuth + Pike
-**Depends on:** 25.2a Workspace Scope and Evidence Lifecycle Foundation
-**Blocks:** 25.3–25.5
+**Depends on:** 25.1, 25.2a, 25.2b, 24.11
+**Blocks:** 25.4–25.7
 
 ## Outcome
 

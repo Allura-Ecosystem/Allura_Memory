@@ -1,9 +1,9 @@
-# Story 25.5 — Governed Decisions and Receipts
+# Story 25.6 — Governed Decisions and Receipts
 
-**Status:** Planned / blocked
+**Status:** Blocked
 **Owner:** Knuth + Woz + Pike
-**Depends on:** 24.4 remediation, 25.4
-**Blocks:** 25.6
+**Depends on:** 24.4, 25.5
+**Blocks:** 25.7
 
 ## Outcome
 

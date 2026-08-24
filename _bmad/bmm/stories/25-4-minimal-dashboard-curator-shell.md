@@ -1,9 +1,9 @@
-# Story 25.3 — Focused 2D Knowledge Map Shell
+# Story 25.4 — Minimal /dashboard/curator Shell
 
-**Status:** Planned
+**Status:** Blocked
 **Owner:** Woz + Pike
-**Depends on:** 25.1, 25.2, 25.2a
-**Blocks:** 25.3b, 25.4, and optional Story 25.3a
+**Depends on:** 25.3
+**Blocks:** 25.5
 
 ## Outcome
 
