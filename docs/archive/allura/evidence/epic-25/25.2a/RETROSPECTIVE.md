@@ -1,5 +1,11 @@
 # Story 25.2a Retrospective — Workspace Scope and Evidence Lifecycle Foundation
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Date:** 2026-08-23
 **Review outcome:** Approved by independent Pike + Fowler + Knuth review
 **Story state:** Implementation/review unit accepted; story remains dependency-blocked, not Done.

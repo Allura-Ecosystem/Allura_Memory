@@ -2,10 +2,15 @@
  * Allura Memory — Proxy Middleware (Next.js 16)
  *
  * Runs before every request. Responsibilities:
- *  1. Allow public routes through without auth
- *  2. Require authentication on protected routes
+ *  1. Allow explicitly-declared public routes through without auth
+ *  2. Require authentication on every other route
  *  3. Enforce RBAC — return 401/403 or redirect as appropriate
  *  4. Inject x-allura-* headers for downstream use
+ *
+ * FAIL CLOSED (Story 24.11a). Both branches resolve authority through the one
+ * manifest in src/lib/auth/route-scope-manifest.ts. A pathname that matches
+ * neither manifest is denied, not passed through. There is no branch that
+ * serves an unmatched path without a principal.
  *
  * Auth strategy:
  *  - Production: Clerk middleware (SSO + RBAC) — dynamically loaded
@@ -16,15 +21,15 @@
  * package throws at import time if publishableKey is missing, making
  * the isClerkEnabled() check useless if Clerk is imported at the top level.
  *
- * Route table lives in src/lib/auth/config.ts.
+ * Route authority lives in src/lib/auth/route-scope-manifest.ts (single source).
  * Role helpers live in src/lib/auth/roles.ts.
  */
 
 import { NextRequest, NextResponse } from "next/server"
 
-import { AUTH_ROUTES, isClerkEnabled, PROTECTED_ROUTES, PUBLIC_ROUTES } from "@/lib/auth/config"
+import { isClerkEnabled } from "@/lib/auth/config"
 import { getDevUserSync } from "@/lib/auth/dev-auth"
-import { getScopeName, getRequiredRole as getManifestRequiredRole } from "@/lib/auth/route-scope-manifest"
+import { resolveRouteAuthority } from "@/lib/auth/route-scope-manifest"
 import { hasPermission } from "@/lib/auth/roles"
 import type { AlluraRole } from "@/lib/auth/types"
 import { emitGatedAudit } from "@/lib/auth/edge-audit"
@@ -40,35 +45,35 @@ const AUTH_HEADER_NAMES = [
 
 // ── Route Classification ─────────────────────────────────────────────────────
 
-function matchesRoute(pathname: string, pattern: string): boolean {
-  if (!pattern.includes(":path*") && !pattern.includes(":path+")) {
-    return pathname === pattern || pathname.startsWith(pattern + "/")
-  }
-  const regexPattern = pattern
-    .replace(/:path\*/g, "(?:/.*)?")
-    .replace(/:path\+/g, "(?:/.+)")
-    .replace(/\//g, "\\/")
-  const regex = new RegExp(`^${regexPattern}$`)
-  return regex.test(pathname)
+/**
+ * Static assets and Next.js internals, which are files rather than routes.
+ *
+ * Anything under /api/ is a route handler and is never treated as an asset, no
+ * matter what its path looks like. Without that guard a path containing a dot
+ * (e.g. /api/memory/report.json) would skip the gate entirely via the
+ * `pathname.includes(".")` test below.
+ */
+function isStaticAsset(pathname: string): boolean {
+  if (pathname.startsWith("/api/")) return false
+  return (
+    pathname.startsWith("/_next/") || pathname.startsWith("/favicon") || pathname.includes(".")
+  )
 }
 
-function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.some((pattern) => matchesRoute(pathname, pattern))
-}
-
-function getRequiredRole(pathname: string): AlluraRole | null {
-  // Canonical source: route-scope-manifest (AD-42)
-  // Declared separately so CI can validate independently without importing Edge runtime.
-  const manifestRole = getManifestRequiredRole(pathname)
-  if (manifestRole) return manifestRole
-
-  // Fallback: legacy PROTECTED_ROUTES from config (migration path)
-  for (const route of PROTECTED_ROUTES) {
-    if (matchesRoute(pathname, route.pattern)) {
-      return route.requiredRole
-    }
+/**
+ * Terminal denial for a request whose principal could not be verified.
+ *
+ * Used where the gate cannot reach a decision (e.g. the auth provider returned
+ * an unrecognised result). Fail closed: deny rather than forward.
+ */
+function denyUnverified(request: NextRequest): NextResponse {
+  const { pathname } = request.nextUrl
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Authentication required", statusCode: 401 }, { status: 401 })
   }
-  return null
+  const loginUrl = new URL("/auth/v2/login", request.url)
+  loginUrl.searchParams.set("redirect_url", pathname)
+  return NextResponse.redirect(loginUrl)
 }
 
 // ── Dev Auth Handler ──────────────────────────────────────────────────────────
@@ -117,26 +122,25 @@ export function nextWithoutAuthHeaders(request: NextRequest): NextResponse {
 function handleDevAuth(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl
 
-  // Public routes — always pass through
-  if (isPublicRoute(pathname)) {
+  // Static assets and Next.js internals — files, not routes.
+  if (isStaticAsset(pathname)) {
     return nextWithoutAuthHeaders(request)
   }
 
-  // Static assets and Next.js internals
-  if (pathname.startsWith("/_next/") || pathname.startsWith("/favicon") || pathname.includes(".")) {
+  // Single source of route authority — same call as the production branch.
+  const authority = resolveRouteAuthority(pathname)
+
+  // Explicitly declared public route — pass through with auth headers stripped.
+  if (authority.kind === "public") {
     return nextWithoutAuthHeaders(request)
   }
+
+  // Declared or undeclared: either way a principal is required. An undeclared
+  // path is denied (UNDECLARED_ROUTE_ROLE), never passed through.
+  const requiredRole: AlluraRole = authority.requiredRole
+  const scopeName: string = authority.scopeName
 
   const devUser = getDevUserSync()
-  const requiredRole = getRequiredRole(pathname)
-
-  // Unprotected route — allow through
-  if (requiredRole === null) {
-    return nextWithoutAuthHeaders(request)
-  }
-
-  // ── Resolve scope name for audit —──────────────────────────────────────────
-  const scopeName = getScopeName(pathname) ?? null
 
   // No dev user and route is protected — 401
   if (!devUser) {
@@ -190,67 +194,37 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
   // This avoids the import-time crash when publishableKey is missing.
   if (!_clerkHandler) {
     try {
-      const { clerkMiddleware, createRouteMatcher } = await import("@clerk/nextjs/server")
+      const { clerkMiddleware } = await import("@clerk/nextjs/server")
       const { extractAlluraMetadata } = await import("@/lib/auth/clerk")
       type ClerkPublicMetadata = import("@/lib/auth/types").ClerkPublicMetadata
 
-      const isPublicMatcher = createRouteMatcher(["/", "/api/health(.*)", "/api/mcp(.*)", "/auth(.*)"])
-
-      const ROLE_GATES: Array<{
-        matcher: ReturnType<typeof createRouteMatcher>
-        role: AlluraRole
-      }> = [
-        {
-          matcher: createRouteMatcher(["/admin", "/admin/(.*)"]),
-          role: "admin",
-        },
-        {
-          matcher: createRouteMatcher(["/api/curator/approve", "/api/curator/watchdog", "/curator", "/curator/(.*)"]),
-          role: "curator",
-        },
-        {
-          matcher: createRouteMatcher([
-            "/api/curator/proposals",
-            "/api/memory",
-            "/api/memory/(.*)",
-            "/api/permission-profiles",
-            "/api/permission-profiles/(.*)",
-            "/memory",
-            "/memory/(.*)",
-          ]),
-          role: "viewer",
-        },
-      ]
+      // Story 24.11a AC-2: the hardcoded ROLE_GATES table that used to live here
+      // is deleted. It covered 13 matchers across 8 route families while the
+      // manifest declared 46 entries, and every path it did not match fell
+      // through to nextWithoutAuthHeaders — served fully unauthenticated in
+      // production. Authority now comes from resolveRouteAuthority() only, the
+      // same call the dev-auth branch makes.
 
       const clerkInstance = clerkMiddleware(async (auth, req) => {
         const { pathname } = req.nextUrl
 
-        // Public routes — always pass through
-        if (isPublicMatcher(req)) {
+        // Static assets and Next.js internals — files, not routes.
+        if (isStaticAsset(pathname)) {
           return nextWithoutAuthHeaders(req)
         }
 
-        // Static assets and Next.js internals
-        if (pathname.startsWith("/_next/") || pathname.startsWith("/favicon") || pathname.includes(".")) {
+        // Single source of route authority — same call as the dev-auth branch.
+        const authority = resolveRouteAuthority(pathname)
+
+        // Explicitly declared public route — pass through, headers stripped.
+        if (authority.kind === "public") {
           return nextWithoutAuthHeaders(req)
         }
 
-        // Determine required role
-        let requiredRole: AlluraRole | null = null
-        for (const gate of ROLE_GATES) {
-          if (gate.matcher(req)) {
-            requiredRole = gate.role
-            break
-          }
-        }
-
-        // Unprotected route — allow through
-        if (!requiredRole) {
-          return nextWithoutAuthHeaders(req)
-        }
-
-        // Resolve scope name for audit
-        const clerkScopeName = getScopeName(pathname) ?? null
+        // Declared or undeclared: either way a principal is required. There is
+        // no fall-through that serves an unmatched path unauthenticated.
+        const requiredRole: AlluraRole = authority.requiredRole
+        const clerkScopeName: string = authority.scopeName
 
         // Require auth
         const { userId, sessionClaims } = await auth()
@@ -317,8 +291,10 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
               headers: result.headers,
             })
           }
-          // Fallback — shouldn't normally happen
-          return nextWithoutAuthHeaders(req)
+          // Unexpected return shape from Clerk. Fail closed (Story 24.11a):
+          // an unrecognised result is not evidence of a verified principal.
+          console.error("[proxy] Clerk handler returned an unexpected result shape; denying")
+          return denyUnverified(req)
         } catch (err) {
           console.error("[proxy] Clerk handler error, falling back to dev auth:", err)
           return handleDevAuth(req)

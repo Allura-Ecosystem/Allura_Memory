@@ -55,6 +55,19 @@ jobs:
         run: bun run validate:git-exec
       - name: Vendored native addon checksum gate (AD-50 / RK-16)
         run: bun run validate:vendor
+      # Story 24.11a AC-6 — route-scope manifest is the single source of route
+      # authority. Blocking: an undeclared route handler, or a manifest entry
+      # weaker than the role its handler enforces, fails this job.
+      - name: Route-scope manifest authority (AD-42 / Story 24.11a)
+        run: bun run validate:route-scope-manifest --json=artifacts/ci/route-scope-manifest.json
+      - name: Upload route-scope manifest coverage
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: route-scope-manifest-${{ github.sha }}
+          path: artifacts/ci/route-scope-manifest.json
+          if-no-files-found: warn
+          retention-days: 14
 
   # ── Unit Tests ────────────────────────────────────────────────────────────
   # Pure logic only. NO database. NO Ollama. NO Notion. NO MCP browser.

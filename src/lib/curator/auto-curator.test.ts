@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/postgres/connection", () => ({ getPool: vi.fn() }));
 vi.mock("@/lib/db/tenant-transaction", () => ({ withWorkspaceTransaction: vi.fn() }));
 
-import { autoCurate, submitCandidate, type CandidateInsight } from "./auto-curator";
-import { getPool } from "@/lib/postgres/connection";
 import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction";
+import { getPool } from "@/lib/postgres/connection";
+import { autoCurate, type CandidateInsight, submitCandidate } from "./auto-curator";
 
 const scope = { tenantId: "allura-curator-test", workspaceId: "workspace-curator-test", principalId: "curator-test-agent" };
 const candidate: CandidateInsight = {
