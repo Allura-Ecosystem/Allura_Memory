@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "48e9333c-71e8-41e6-bc8d-346c970c2c47",
+      "agentId": "troy-curator",
+      "name": "Troy Unified Governance + Canon Review",
+      "description": "Weekly proposal-first governance review covering RuVix policies, skills, cron, team routing, and canon drift. Migrated from desktop to laptop 2026-07-10.",
+      "enabled": true,
+      "createdAtMs": 1778565097647,
+      "schedule": {
+        "kind": "cron",
+        "expr": "45 9 * * 1",
+        "tz": "America/New_York"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "timeoutSeconds": 900,
+        "lightContext": true,
+        "message": "Run Troy Unified Governance + Canon Review.\n\nRead:\n- agents/troy-curator/SOUL.md\n- agents/troy-curator/AGENTS.md\n- agents/troy-curator/PERMISSION-LADDER.md\n- agents/troy-curator/SCORECARD.md\n- workspace/MEMORY.md\n- workspace/RESOURCE-MANIFEST.md\n- workspace/memory/ruvix-policy-suggestions/_tracker.md\n\nScope: one weekly proposal-first governance lane.\n\nCheck:\n1. RuVix policy backlog: proposed, approved, implemented, drifted. Use the _tracker.md as canonical source.\n2. Skill roster drift: duplicates, stale skills, broken references, Penpot remnants, Durham Brand Maker path.\n3. Cron taxonomy drift: job sprawl, missing monitors, noisy jobs, disabled jobs. Run scripts/skill-roster-drift-watch.py if available.\n4. Team routing drift: TALON/RAM/IRIS/Durham ownership, OpenClaw vs CLI harness boundaries.\n5. Canon drift: stale/superseded/conflicting memory, promotion/deprecation candidates, evidence gaps.\n6. Governance health: approval-needed actions, missing receipts, daily note/writeback gaps.\n7. Notion policy DB reconciliation: compare Notion 'Allura Policies & Governance' DB against _tracker.md.\n8. Cross-team coherence: bmad-gilliam-sync-auditor staleness.\n\nHard boundaries:\n- Do NOT edit code, promote/delete/restore memory, change config, change cron, enforce RuVix runtime policy, or touch production/data-bearing runtime.\n- Safe docs-only reports may be drafted. Mutations must be marked APPROVAL REQUIRED.\n- Use group_id=allura-system on all Allura Brain operations.\n\nOutput:\n- Write concise report under workspace/memory/troy-curator/YYYY-MM-DD-unified-governance-review.md\n- Log short summary to Allura Brain with group_id=allura-system, user_id=troy-curator, agent_id=troy-curator.\n- Include Status, Receipts, Risks, Proposed moves, Approval needed.\nDog, run the receipts before we call it canon.",
+        "model": "openai/gpt-5.5"
+      },
+      "delivery": {
+        "mode": "none"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "whatsapp",
+        "to": "+17043309400",
+        "cooldownMs": 21600000,
+        "includeSkipped": true,
+        "mode": "announce"
+      },
+      "state": {}
+    },
+    {
+      "id": "bad27483-a21f-4f48-9bca-cec871fcc89d",
+      "agentId": "troy-curator",
+      "name": "Allura Unified Operations Monitor",
+      "description": "Six-hour report-only operations monitor for Allura Brain health, embeddings, memory hygiene, and external/business watch. Migrated from desktop to laptop 2026-07-10.",
+      "enabled": true,
+      "createdAtMs": 1778946481438,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 */6 * * *",
+        "tz": "America/New_York",
+        "staggerMs": 300000
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Run Allura Unified Operations Monitor.\n\nScope: one report-only pass covering system health, memory health, embedding coverage, and external/business watch items.\n\nHard boundaries:\n- Do NOT restart containers, mutate databases, promote/delete/restore/update memories, change config, change cron, send external/public messages, or touch production/data-bearing runtime.\n- Report only. Mark APPROVAL REQUIRED for any mutation or repair.\n- Use group_id=allura-system on all Allura Brain operations.\n\nChecks:\n1. Core runtime health:\n   - docker ps -a status for expected Allura containers (allura-web, allura-memory-mcp, knowledge-postgres, knowledge-neo4j)\n   - http://localhost:5888/api/health and /ready\n   - PostgreSQL, Neo4j, MCP availability via allura-brain_audit_health_report (group_id=allura-system)\n   - allura-brain_audit_invariant_check (group_id=allura-system) — validate all 6 governance invariants\n2. Embedding/data quality:\n   - active allura_memories total\n   - active rows where embedding is null\n   - vector_dims(embedding) distribution; expected 1024\n   - HNSW index allura_mem_hnsw presence\n   - newest 24h rows missing embeddings\n3. Memory hygiene:\n   - duplicates/low-quality/group_id drift/missing metadata summary\n   - recent writeback sanity for allura-system\n   - curator queue depth (use allura-brain_governance_audit_log to check for stuck proposals)\n4. External/business watch:\n   - Faith Meats/business triage summary if tools are available\n   - Charlotte/NC grant scout only on Monday/Thursday; otherwise skip with \"not scheduled today\"\n5. Maintenance:\n   - retention/dreaming/promotion status summary only; do not run destructive pruning or promotion unless separately approved.\n\nOutput:\n- Status: PASS / WATCH / BLOCKED\n- Receipts with exact counts\n- Risks\n- Proposed actions\n- Approval needed yes/no\nKeep it concise. Queen City rule: one ops monitor, no scattered partial health claims.",
+        "timeoutSeconds": 600,
+        "lightContext": true,
+        "model": "openai/gpt-5.5"
+      },
+      "delivery": {
+        "mode": "none"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "whatsapp",
+        "to": "+17043309400",
+        "cooldownMs": 21600000,
+        "includeSkipped": true,
+        "mode": "announce"
+      },
+      "state": {}
+    },
+    {
+      "id": "68511ece-536d-46c2-b18b-2a965fc2f6fb",
+      "name": "Memory Dreaming Promotion",
+      "description": "[managed-by=memory-core.short-term-promotion] Promote weighted short-term recalls into MEMORY.md. Migrated from desktop to laptop 2026-07-10. HITL-gated per pol-004 — never auto-promotes to semantic layer.",
+      "enabled": true,
+      "createdAtMs": 1778948523554,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 3 * * *",
+        "tz": "America/New_York"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Run Memory Dreaming Promotion review.\n\nScope: review high-scoring episodic memories and submit promotion requests for HITL review. This is NOT auto-promotion — pol-004 requires HITL for all semantic promotion.\n\nSteps:\n1. List recent memories for group_id=allura-system using allura-brain_memory_list (limit 50, sort score_desc).\n2. Search Allura Brain for memories that appear eligible for promotion (high score, low usage_count, stable content).\n3. For each strong candidate, use allura-brain_memory_promote to REQUEST curator promotion — this queues it for HITL review.\n4. Check if any previously queued proposals have been approved or rejected using allura-brain_governance_audit_log.\n5. Write a brief dreaming report: how many candidates identified, how many promotion requests submitted, any stale proposals awaiting Captain action.\n6. Log a summary memory to Allura Brain with group_id=allura-system, agent_id=dreaming-promoter.\n\nHonor pol-004: never claim a promotion is complete. Requests queue for HITL. Report what's in the queue.\n\nHard boundaries:\n- Do NOT auto-promote memories to semantic layer.\n- Do NOT delete, restore, or update memories.\n- Use group_id=allura-system on all operations.",
+        "lightContext": true,
+        "timeoutSeconds": 600
+      },
+      "delivery": {
+        "mode": "none"
+      },
+      "failureAlert": {
+        "after": 3,
+        "channel": "whatsapp",
+        "to": "+17043309400",
+        "cooldownMs": 21600000,
+        "includeSkipped": true,
+        "mode": "announce"
+      },
+      "state": {}
+    },
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "agentId": "troy-curator",
+      "name": "BMAD Gilliam/Troy Doctrine Sync",
+      "description": "Quarterly doctrine drift audit between Troy and Gilliam BMAD skills. New job created 2026-07-10. BMAD-006 policy remains proposed but audit cadence is automated.",
+      "enabled": true,
+      "createdAtMs": 1752192000000,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 10 1 1,4,7,10 *",
+        "tz": "America/New_York"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Run BMAD Gilliam/Troy Doctrine Sync Audit (BMAD-006).\n\nPurpose: Check Troy and Gilliam BMAD doctrine for drift before declaring BMAD integration mature or implementing RuVix runtime enforcement.\n\nSteps:\n1. Read Troy Curator's BMAD skills: list agents/troy-curator/skills/ and read each bmad-* SKILL.md.\n2. Check for Gilliam's BMAD doctrine — search Allura Brain (group_id=allura-system) for 'Gilliam BMAD doctrine' and 'Gilliam skill roster'.\n3. Compare skill names, workflow coverage counts, ownership mapping, artifact handling, TEA maturity status, and any duplicate/conflicting rules between Troy and Gilliam.\n4. Flag any drift: missing skills, conflicting ownership, duplicate rules, stale references.\n5. Write a report with verdict (SYNC / DRIFT / ERROR), findings, and proposed moves.\n6. Log a summary memory to Allura Brain with group_id=allura-system, agent_id=gilliam-sync-auditor.\n\nHard boundaries:\n- Read-only audit. Do NOT mutate configs, promote memories, or enforce policies.\n- Use group_id=allura-system on all operations.\n- Mark any proposed mutations as APPROVAL REQUIRED.",
+        "timeoutSeconds": 600,
+        "lightContext": true,
+        "model": "openai/gpt-5.5"
+      },
+      "delivery": {
+        "mode": "none"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "whatsapp",
+        "to": "+17043309400",
+        "cooldownMs": 21600000,
+        "includeSkipped": true,
+        "mode": "announce"
+      },
+      "state": {}
+    }
+  ]
+}
