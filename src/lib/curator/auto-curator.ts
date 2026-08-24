@@ -351,22 +351,15 @@ export async function autoCurate(
 
   // All analysis reads use the app role in the resolved workspace transaction.
   // Legacy NULL-workspace events are intentionally excluded.
-  const { eventResult, existingMemories } = await withWorkspaceTransaction(scope, async (pg) => {
-    const eventResult = await pg.query(
-      `SELECT id, event_type, agent_id, group_id, workspace_id, status, metadata, created_at
-       FROM events
-       WHERE group_id = $1
-         AND workspace_id = $2
-         AND created_at >= NOW() - ($3 * INTERVAL '1 hour')
-       ORDER BY created_at DESC`,
-      [validatedGroupId, scope.workspaceId, windowHours],
-    )
-    const existingMemories = await pg.query(
-      `SELECT content FROM allura_memories WHERE group_id = $1 LIMIT 100`,
-      [validatedGroupId],
-    )
-    return { eventResult, existingMemories }
-  })
+  const eventResult = await withWorkspaceTransaction(scope, async (pg) => pg.query(
+    `SELECT id, event_type, agent_id, group_id, workspace_id, status, metadata, created_at
+     FROM events
+     WHERE group_id = $1
+       AND workspace_id = $2
+       AND created_at >= NOW() - ($3 * INTERVAL '1 hour')
+     ORDER BY created_at DESC`,
+    [validatedGroupId, scope.workspaceId, windowHours],
+  ))
 
   const events: RawEvent[] = eventResult.rows.map((row) => ({
     id: row.id,
@@ -385,7 +378,10 @@ export async function autoCurate(
     ...detectApprovalPatterns(events),
     ...detectToolRiskPatterns(events),
   ]
-  const existingContents = existingMemories.rows.map((r) => r.content as string)
+  // `allura_memories` is legacy group-scoped data with no workspace authority.
+  // It must not affect a workspace-governed candidate until retained knowledge
+  // has its own reviewed workspace-scoped model.
+  const existingContents: string[] = []
 
   const filteredCandidates: CandidateInsight[] = []
   let duplicatesSuppressed = 0
