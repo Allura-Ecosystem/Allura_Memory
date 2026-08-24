@@ -202,10 +202,32 @@ epic_23:
 
 epic_24:
   name: "Agentic AI Framework and Harness Portfolio Readiness"
-  status: in-progress
+  status: done
+  completion_authority: "GitHub merged Epic 24 delivery and retrospective; do not reopen this Epic from local remediation metadata."
   retrospective: done
-  next_story: "24.4-remediation"
-  sequence_note: "Post-merge adversarial review on 2026-08-22 reopened 24.4-24.9. See docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md."
+  next_story: null
+  sequence_note: "Post-merge adversarial review on 2026-08-22 created corrective follow-up issues; it did not reopen Epic 24. See docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md."
+  post_epic_remediation:
+    authority: "GitHub issues are the follow-up tracker. These are corrective work after Epic completion, not remaining Epic 24 stories."
+    issues:
+      - issue: 89
+        story: "24.4"
+        title: "Atomic promotion production wiring"
+      - issue: 90
+        story: "24.5"
+        title: "Real deterministic process harness"
+      - issue: 91
+        story: "24.6"
+        title: "Measured evaluation and required CI gate"
+      - issue: 92
+        story: "24.7"
+        title: "Restore SDK and executable CLI quickstart"
+      - issue: 93
+        story: "24.8"
+        title: "Canonical documentation truth and drift guards"
+      - issue: 94
+        story: "24.9"
+        title: "Runnable reference integrations and evidence"
   stories:
     - key: "24.1"
       title: "CI and Evidence Baseline"
