@@ -344,3 +344,54 @@ epic_25:
       owner: "Pike + Fowler + Brooks"
       depends_on: ["24.5", "24.6", "24.8", "25.5", "25.6"]
       status_evidence: "Scaffolded 2026-08-23. Carries CA-24-12: an independent reviewer, not the implementer, must sign off before Epic 25 closure. 25.6 added to depends_on 2026-08-23 by Story 25.1 drift reconciliation: this story's acceptance criteria require recording a decision, reading the receipt, and testing decision replay - all 25.6 deliverables. The original omission was a scaffolding error."
+
+epic_26:
+  name: "Bumblebee Supply-Chain Threat Intelligence & Governed Mitigation"
+  status: planned
+  retrospective: pending
+  planning_doc: "_bmad/bmm/planning/epic-26-bumblebee-supply-chain-threat-intelligence.md"
+  canonical_source: "Notion — Epic 26 — Bumblebee Supply-Chain Threat Intelligence"
+  sequence_note: "Planning only. No scheduler, connector, or policy mutation is authorized. Stories scaffolded 2026-08-24."
+  stories:
+    - key: "26.1"
+      title: "Boundary, Ownership, and Threat-Source Trust Contract"
+      status: planned
+      owner: "Brooks + Jobs + Knuth"
+      depends_on: ["Epic 24"]
+      status_evidence: "Scaffolded 2026-08-24. Defines trust boundary, evidence schema, source allowlist, retention, roles, and Bumblebee naming boundary."
+    - key: "26.2"
+      title: "Read-Only Supply-Chain Inventory"
+      status: planned
+      owner: "Woz + Knuth"
+      depends_on: ["26.1"]
+      status_evidence: "Scaffolded 2026-08-24. Normalized metadata inventory of SBOMs, lockfiles, manifests, CI workflows, containers, extensions, MCP manifests, skills, plugins, and model artifacts."
+    - key: "26.3"
+      title: "Exposure Matcher and Current-Threat Packs"
+      status: planned
+      owner: "Woz + Knuth + Bellard"
+      depends_on: ["26.1", "26.2"]
+      status_evidence: "Scaffolded 2026-08-24. Exact matching on package/version/hash/publisher/workflow/indicator with fixtures for compromised dependencies, malicious install hooks, workflow drift, credential exposure, and AI tool compromise."
+    - key: "26.4"
+      title: "Scheduled Discovery and Alert Routing"
+      status: planned
+      owner: "Hightower + Woz"
+      depends_on: ["26.3", "security-owner approval"]
+      status_evidence: "Scaffolded 2026-08-24. Governed worker schedule, alert lifecycle, freshness/degraded states, deduplicated routing, scheduler health, and audit evidence."
+    - key: "26.5"
+      title: "Governed Mitigation Policy Drafts"
+      status: planned
+      owner: "Brooks + Knuth + Woz"
+      depends_on: ["26.3", "Epic 24 mutation-boundary remediation"]
+      status_evidence: "Scaffolded 2026-08-24. Verified exposure maps to versioned mitigation template, reviewable policy draft, dry-run result, scope explanation, and approval-required receipt."
+    - key: "26.6"
+      title: "Containment Connectors and Response Receipts"
+      status: planned
+      owner: "Hightower + Brooks + Knuth"
+      depends_on: ["26.5", "role-model reconciliation"]
+      status_evidence: "Scaffolded 2026-08-24. Feature-flagged, propose-only connectors for approved response systems; explicit authorization for token revocation, workspace locks, and endpoint actions."
+    - key: "26.7"
+      title: "Operator Module, Adversarial Tests, and Demo Gate"
+      status: planned
+      owner: "Pike + Fowler + Brooks + Bellard"
+      depends_on: ["26.4", "26.5", "26.6", "Epic 25 module registry"]
+      status_evidence: "Scaffolded 2026-08-24. Truthful Sources, Exposures, Policy Drafts, Incidents, and Receipts surfaces; fail-closed, tenant-isolation, accessibility, rollback, and incident-replay evidence."
