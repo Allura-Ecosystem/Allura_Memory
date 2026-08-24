@@ -395,3 +395,143 @@ epic_26:
       owner: "Pike + Fowler + Brooks + Bellard"
       depends_on: ["26.4", "26.5", "26.6", "Epic 25 module registry"]
       status_evidence: "Scaffolded 2026-08-24. Truthful Sources, Exposures, Policy Drafts, Incidents, and Receipts surfaces; fail-closed, tenant-isolation, accessibility, rollback, and incident-replay evidence."
+
+epic_p_1:
+  name: "Plugin Catalog Release"
+  status: planned
+  retrospective: pending
+  planning_doc: "_bmad/bmm/planning/plugins/epic-p-1-plugin-catalog-release.md"
+  repo: "plugins/allura-plugins/"
+  stories:
+    - key: "P-1.1"
+      title: "Marketplace CI Hardening"
+      status: planned
+      owner: "Woz + Pike"
+      depends_on: []
+      status_evidence: "Scaffolded 2026-08-24. Manifest validation, path resolution, hardcoded path elimination."
+    - key: "P-1.2"
+      title: "Eval Fixture Expansion"
+      status: planned
+      owner: "Woz + Fowler"
+      depends_on: ["P-1.1"]
+      status_evidence: "Scaffolded 2026-08-24. Expand eval coverage beyond 5 agents."
+    - key: "P-1.3"
+      title: "OpenCode Three-Way Sync"
+      status: planned
+      owner: "Woz + Knuth"
+      depends_on: ["P-1.1"]
+      status_evidence: "Scaffolded 2026-08-24. Reconcile Claude/Codex/OpenCode surfaces, detect drift."
+    - key: "P-1.4"
+      title: "Per-Skill Dependency Detection"
+      status: planned
+      owner: "Woz + Pike"
+      depends_on: ["P-1.1"]
+      status_evidence: "Scaffolded 2026-08-24. Skills gracefully no-op when service absent."
+    - key: "P-1.5"
+      title: "Public Release Gate"
+      status: planned
+      owner: "Brooks + Jobs + Fowler"
+      depends_on: ["P-1.1", "P-1.2", "P-1.3", "P-1.4"]
+      status_evidence: "Scaffolded 2026-08-24. Full release checklist from PUBLIC-RELEASE-PLAN.md."
+
+epic_p_2:
+  name: "Hermes Allura Brain Connector"
+  status: planned
+  retrospective: pending
+  planning_doc: "_bmad/bmm/planning/plugins/epic-p-2-hermes-brain-connector.md"
+  repo: "plugins/allura-plugins/plugins/hermes-allura-brain/"
+  stories:
+    - key: "P-2.1"
+      title: "Connector Contract — Typed MCP Tool Surface"
+      status: planned
+      owner: "Brooks + Pike"
+      depends_on: []
+      status_evidence: "Scaffolded 2026-08-24. memory_search and memory_add typed, validated, documented."
+    - key: "P-2.2"
+      title: "Auth and Tenant Scoping — Group_id Propagation"
+      status: planned
+      owner: "Brooks + Knuth"
+      depends_on: ["P-2.1"]
+      status_evidence: "Scaffolded 2026-08-24. group_id inherited from delegation context, cross-tenant denied."
+    - key: "P-2.3"
+      title: "Connection Health and Retry — Degraded State"
+      status: planned
+      owner: "Woz + Bellard"
+      depends_on: ["P-2.1"]
+      status_evidence: "Scaffolded 2026-08-24. Brain-down detection, backoff retry, degraded state surfaced."
+
+epic_a_1:
+  name: "Team RAM Agent Roster Maintenance"
+  status: planned
+  retrospective: pending
+  planning_doc: "_bmad/bmm/planning/agents/epic-a-1-team-ram-agent-roster.md"
+  repo: "plugins/allura-team-ram/"
+  stories:
+    - key: "A-1.1"
+      title: "Agent Sync Drift Fix"
+      status: planned
+      owner: "Woz + Knuth"
+      depends_on: []
+      status_evidence: "Scaffolded 2026-08-24. Reconcile agents/ vs .opencode/agent/, agent-sync-check.sh passes."
+    - key: "A-1.2"
+      title: "Hook Governance — Preflight Validation"
+      status: planned
+      owner: "Brooks + Fowler"
+      depends_on: ["A-1.1"]
+      status_evidence: "Scaffolded 2026-08-24. Governance preflight before dispatch, blocks on failure."
+    - key: "A-1.3"
+      title: "Migration Framework — Skill-Revisions Schema"
+      status: planned
+      owner: "Knuth + Woz"
+      depends_on: ["A-1.1"]
+      status_evidence: "Scaffolded 2026-08-24. Migration 001 applied, schema versioned, rollback tested."
+    - key: "A-1.4"
+      title: "Dual-Runtime Parity — Claude vs OpenCode"
+      status: planned
+      owner: "Brooks + Pike + Fowler"
+      depends_on: ["A-1.1"]
+      status_evidence: "Scaffolded 2026-08-24. Agent definitions produce identical behavior in both runtimes."
+
+epic_m_1:
+  name: "Mortagate Co-Work Plugin Pivot"
+  status: planned
+  retrospective: pending
+  planning_doc: "_bmad/bmm/planning/mortagate/epic-m-1-cowork-plugin-pivot.md"
+  repo: "plugins/mortagate/"
+  stories:
+    - key: "M-1.1"
+      title: "Archive Salesforce BMAD"
+      status: planned
+      owner: "Brooks + Jobs"
+      depends_on: []
+      status_evidence: "Scaffolded 2026-08-24. US-1.0 through US-1.7 moved to archive, sprint-status updated."
+    - key: "M-1.2"
+      title: "Define Co-Work Plugin Contract"
+      status: planned
+      owner: "Brooks + Jobs + Pike"
+      depends_on: ["M-1.1"]
+      status_evidence: "Scaffolded 2026-08-24. Five-stage workflow contract documented and approved."
+    - key: "M-1.3"
+      title: "Strip Salesforce Dependencies"
+      status: planned
+      owner: "Woz + Hightower"
+      depends_on: ["M-1.1"]
+      status_evidence: "Scaffolded 2026-08-24. force-app, manifest, data archived; no Salesforce imports remain."
+    - key: "M-1.4"
+      title: "Co-Work Adapter — Copilot Cowork, Claude Code, Codex"
+      status: planned
+      owner: "Brooks + Woz + Pike"
+      depends_on: ["M-1.2", "M-1.3"]
+      status_evidence: "Scaffolded 2026-08-24. One canonical skill source, three host adapters, identical authority."
+    - key: "M-1.5"
+      title: "Allura Brain Integration"
+      status: planned
+      owner: "Brooks + Knuth + Woz"
+      depends_on: ["M-1.2"]
+      status_evidence: "Scaffolded 2026-08-24. group_id, evidence, receipts through Allura Brain MCP/API."
+    - key: "M-1.6"
+      title: "Demo Gate — Portable Mortgage Approval Gate Across Hosts"
+      status: planned
+      owner: "Brooks + Jobs + Pike + Fowler"
+      depends_on: ["M-1.4", "M-1.5"]
+      status_evidence: "Scaffolded 2026-08-24. Sanitized fixtures, cross-host demo, no Salesforce dependency."

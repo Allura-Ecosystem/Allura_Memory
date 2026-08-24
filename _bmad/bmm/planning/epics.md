@@ -1,17 +1,26 @@
-# Epics — RuVector Documentation Sync & Integration Execution
+# Epics — Allura Ecosystem BMAD Index
 
-**Date:** 2026-07-12
+**Date:** 2026-07-12 (updated 2026-08-24)
 **Status:** Approved
 **Owner:** Brooks (orchestrator)
 **group_id:** allura-system
 
 ## Current Active Epics
 
+### Allura Memory (engine)
+
 - [Epic 24 — Agentic AI Framework and Harness Portfolio Readiness](./epic-24-portfolio-readiness.md) — `in-progress`; Stories 24.4–24.9 require remediation before dependent claims or mutations ship.
 - [Epic 25 — Governed Curator Review Console](./epic-25-governed-curator-review-console.md) — `in-progress`; Story 25.1 is review-gated, 25.2a merged but dependency-blocked. Read-only scope/documentation work is eligible, while decisions remain dependency-blocked on 24.4.
 - [Epic 26 — Bumblebee Supply-Chain Threat Intelligence & Governed Mitigation](./epic-26-bumblebee-supply-chain-threat-intelligence.md) — `proposed`; planning only. No scheduler, connector, or policy mutation is authorized.
 
-Epics 18–23 below are retained as historical delivery context. Epic 24 remains the active remediation plan; Epic 25 is its bounded operator-surface successor; Epic 26 is the proposed supply-chain threat intelligence plugin.
+### Plugin Ecosystem
+
+- [Epic P-1 — Plugin Catalog Release](./plugins/epic-p-1-plugin-catalog-release.md) — `planned`; CI hardening, eval expansion, three-way sync, public release gate. Repo: `plugins/allura-plugins/`.
+- [Epic P-2 — Hermes Allura Brain Connector](./plugins/epic-p-2-hermes-brain-connector.md) — `planned`; typed MCP tool surface, tenant scoping, degraded-state handling. Repo: `plugins/allura-plugins/plugins/hermes-allura-brain/`.
+- [Epic A-1 — Team RAM Agent Roster Maintenance](./agents/epic-a-1-team-ram-agent-roster.md) — `planned`; agent sync drift fix, hook governance, migration framework, dual-runtime parity. Repo: `plugins/allura-team-ram/`.
+- [Epic M-1 — Mortagate Co-Work Plugin Pivot](./mortagate/epic-m-1-cowork-plugin-pivot.md) — `planned`; archive Salesforce BMAD, define co-work contract, strip Salesforce deps, build co-work adapters, Allura Brain integration, demo gate. Repo: `plugins/mortagate/`.
+
+Epics 18–23 below are retained as historical delivery context. Epic 24 remains the active remediation plan; Epic 25 is its bounded operator-surface successor; Epic 26 is the proposed supply-chain threat intelligence plugin. Plugin epics (P-, A-, M- prefixed) track work in the `plugins/` directory repos from the canonical BMAD in Allura_Memory.
 
 ## Epic 18: RuVector Documentation Sync — Promote Archive to Canon
 
