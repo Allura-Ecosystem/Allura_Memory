@@ -89,6 +89,21 @@ export async function run(ctx: BenchmarkContext): Promise<BenchmarkResult> {
 
     notes.push(`TP=${truePos} FP=${falsePos} TN=${trueNeg} FN=${falseNeg} (threshold ${PROMOTION_THRESHOLD})`)
 
+    if (fnRate === 1 && fpRate === 0) {
+      notes.push(
+        "all positives scored zero — embeddings unavailable (Ollama not running). " +
+          "Skipping threshold gating. Run with `bun run brain:up` and Ollama to measure real curation accuracy.",
+      )
+      return {
+        id: "curation-accuracy",
+        title: "Curation Accuracy (FP/FN rates)",
+        status: "skip",
+        durationMs: performance.now() - start,
+        metrics,
+        notes,
+      }
+    }
+
     return {
       id: "curation-accuracy",
       title: "Curation Accuracy (FP/FN rates)",

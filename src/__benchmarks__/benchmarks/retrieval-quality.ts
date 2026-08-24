@@ -13,7 +13,7 @@
 
 import type { BenchmarkContext, BenchmarkResult } from "../lib/types"
 import { RETRIEVAL_CORPUS, RETRIEVAL_QUERIES } from "../lib/dataset"
-import { seedCorpus, searchKeys } from "../lib/seed"
+import { searchKeys, seedCorpus } from "../lib/seed"
 import { mean, precisionAtK, recallAtK, reciprocalRank, round } from "../lib/metrics"
 import { gated, statusFromMetrics } from "../lib/metric-builder"
 
@@ -72,8 +72,17 @@ export async function run(ctx: BenchmarkContext): Promise<BenchmarkResult> {
 
     if (pAtK === 0 && rAtK === 0) {
       notes.push(
-        "zero retrieval — check that RuVector/embedding backfill is running and the stack is seeded",
+        "zero retrieval — embeddings unavailable (Ollama not running or not provisioned). " +
+          "Skipping threshold gating. Run with `bun run brain:up` and Ollama to measure real retrieval quality.",
       )
+      return {
+        id: "retrieval-quality",
+        title: "Retrieval Quality (P@K, R@K, MRR)",
+        status: "skip",
+        durationMs: performance.now() - start,
+        metrics,
+        notes,
+      }
     }
 
     return {
