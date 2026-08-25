@@ -42,6 +42,8 @@ export class DevAuthProvider implements AuthProvider {
       name: "Dev User",
       role: devConfig.defaultRole,
       groupId: devConfig.defaultGroupId,
+      workspaceId: devConfig.defaultWorkspaceId,
+      sessionId: `dev:${devConfig.defaultUserId}`,
       imageUrl: undefined,
     };
   }
@@ -93,6 +95,8 @@ export function getDevUserSync(): AuthUser | null {
     name: "Dev User",
     role: devConfig.defaultRole,
     groupId: devConfig.defaultGroupId,
+    workspaceId: devConfig.defaultWorkspaceId,
+    sessionId: `dev:${devConfig.defaultUserId}`,
     imageUrl: undefined,
   };
 }

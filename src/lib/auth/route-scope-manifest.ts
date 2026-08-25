@@ -468,6 +468,12 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     description: "Dashboard landing page",
   },
   {
+    pattern: "/dashboard/curator",
+    requiredRole: "curator",
+    scopeName: "curator:dashboard:handoff",
+    description: "Authenticated curator console handoff",
+  },
+  {
     pattern: "/dashboard/:path*",
     requiredRole: "viewer",
     scopeName: "dashboard:pages",
@@ -542,6 +548,11 @@ export const PUBLIC_ROUTE_MANIFEST: PublicRouteEntry[] = [
     scopeName: "public:auth",
     rationale:
       "Sign-in, sign-up and callback surfaces must be reachable before a principal exists.",
+  },
+  {
+    pattern: "/unauthorized",
+    scopeName: "public:unauthorized",
+    rationale: "Explains an authenticated authorization refusal without tenant data.",
   },
   {
     pattern: "/api/auth/:path*",

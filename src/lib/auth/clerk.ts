@@ -2,7 +2,8 @@
  * Clerk Integration Helpers
  *
  * Provides Clerk-specific auth utilities for Allura Memory.
- * When Clerk is not installed or configured, falls back to DevAuthProvider.
+ * Production authority is fail closed. DevAuthProvider is available only in
+ * explicitly configured non-production environments.
  *
  * Reference: Phase 7 benchmark — Clerk SSO + RBAC
  *
@@ -12,57 +13,51 @@
  * where @clerk/nextjs is conditionally imported.
  */
 
-import { GroupIdValidationError , validateGroupId } from "@/lib/validation/group-id";
-import { parseRole } from "./roles";
+import { validateGroupId } from "@/lib/validation/group-id";
+import { isValidRole } from "./roles";
 import type { AlluraRole, AuthUser, ClerkAlluraMetadata, ClerkPublicMetadata } from "./types";
 
 // ── Clerk Metadata Access ──────────────────────────────────────────────────
 
 /**
- * Extract Allura role and group_id from Clerk's publicMetadata.
+ * Extract fail-closed Allura authority from Clerk's custom `allura` session claim.
  *
- * Clerk stores custom metadata in `user.publicMetadata.allura`:
+ * Clerk's session token template maps `allura` from
+ * `{{user.public_metadata.allura}}`:
  * ```json
  * {
  *   "allura": {
  *     "role": "curator",
- *     "groupId": "allura-acme"
+ *     "groupId": "allura-acme",
+ *     "workspaceId": "workspace-a"
  *   }
  * }
  * ```
  *
- * @param metadata - Clerk user's publicMetadata object
- * @returns Parsed role and groupId, with safe defaults
+ * @param claim - Value of `auth().sessionClaims.allura`
+ * @returns Parsed role, groupId, and workspaceId
+ * @throws when any authority field is absent or malformed
  */
-export function extractAlluraMetadata(metadata: ClerkPublicMetadata | null | undefined): {
+export function extractAlluraMetadata(claim: ClerkAlluraMetadata | null | undefined): {
   role: AlluraRole;
   groupId: string;
+  workspaceId: string;
 } {
-  const allura = metadata?.allura;
-
-  if (!allura) {
-    return {
-      role: "viewer",
-      groupId: "allura-system",
-    };
+  if (!claim) {
+    throw new Error("Clerk session claim is missing Allura authority");
   }
 
-  const role = parseRole(allura.role, "viewer");
-  let groupId = allura.groupId;
-
-  // Validate group_id format (ARCH-001: must match allura-* pattern)
-  try {
-    groupId = validateGroupId(groupId);
-  } catch (error) {
-    if (error instanceof GroupIdValidationError) {
-      console.warn(`[auth] Invalid groupId in Clerk metadata: "${allura.groupId}". Falling back to allura-system.`);
-      groupId = "allura-system";
-    } else {
-      throw error;
-    }
+  if (!isValidRole(claim.role)) {
+    throw new Error("Clerk session claim contains an invalid Allura role");
   }
 
-  return { role, groupId };
+  const groupId = validateGroupId(claim.groupId);
+  const workspaceId = claim.workspaceId;
+  if (typeof workspaceId !== "string" || workspaceId.trim() === "" || /[\u0000-\u001f\u007f]/.test(workspaceId)) {
+    throw new Error("Clerk session claim contains an invalid workspace ID");
+  }
+
+  return { role: claim.role, groupId, workspaceId };
 }
 
 // ── Auth User Construction ──────────────────────────────────────────────────
@@ -74,7 +69,7 @@ export function extractAlluraMetadata(metadata: ClerkPublicMetadata | null | und
  * Used in middleware and server actions.
  *
  * @param params - Clerk user fields
- * @returns AuthUser with role and groupId from Clerk metadata
+ * @returns AuthUser with strictly validated Clerk authority metadata
  */
 export function buildAuthUser(params: {
   id: string;
@@ -83,7 +78,7 @@ export function buildAuthUser(params: {
   imageUrl?: string;
   publicMetadata: ClerkPublicMetadata;
 }): AuthUser {
-  const { role, groupId } = extractAlluraMetadata(params.publicMetadata);
+  const { role, groupId, workspaceId } = extractAlluraMetadata(params.publicMetadata.allura);
 
   return {
     id: params.id,
@@ -91,6 +86,7 @@ export function buildAuthUser(params: {
     name: params.name,
     role,
     groupId,
+    workspaceId,
     imageUrl: params.imageUrl,
   };
 }
@@ -136,24 +132,20 @@ export function getClerkPublishableKey(): string {
  *
  * @param role - The role to assign
  * @param groupId - The tenant group_id
+ * @param workspaceId - The workspace sub-scope
  * @returns Clerk publicMetadata.allura payload
  */
 export function buildClerkMetadataPayload(
   role: AlluraRole,
   groupId: string,
+  workspaceId: string,
 ): ClerkAlluraMetadata {
   // Validate group_id before storing
-  try {
-    validateGroupId(groupId);
-  } catch (error) {
-    if (error instanceof GroupIdValidationError) {
-      throw new Error(`Cannot set Clerk metadata with invalid groupId: ${error.message}`);
-    }
-    throw error;
+  validateGroupId(groupId);
+
+  if (workspaceId.trim() === "" || /[\u0000-\u001f\u007f]/.test(workspaceId)) {
+    throw new Error("Cannot set Clerk metadata with invalid workspaceId");
   }
 
-  return {
-    role,
-    groupId,
-  };
+  return { role, groupId, workspaceId };
 }

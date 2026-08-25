@@ -21,9 +21,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { isClerkEnabled } from "./config";
+import { validateGroupId } from "@/lib/validation/group-id";
+import { isDevAuthActive } from "./config";
 import { getDevUserSync } from "./dev-auth";
-import { checkPermission, parseRole, roleLevel } from "./roles";
+import { checkPermission, isValidRole, roleLevel } from "./roles";
 import { minimumRoleForAction } from "./permission-action-role";
 import { resolveApiTenant } from "./web-principal";
 import { PrincipalAuthError } from "./principal-context";
@@ -56,6 +57,23 @@ export type RoleCheckResult =
       actualRole: AlluraRole;
     };
 
+const AUTHORITY_HEADER_NAMES = [
+  "x-allura-user-id",
+  "x-allura-session-id",
+  "x-allura-role",
+  "x-allura-group-id",
+  "x-allura-workspace-id",
+  "x-allura-email",
+  "x-allura-name",
+  "x-allura-image-url",
+] as const;
+
+function isValidAuthorityIdentifier(value: string | null): value is string {
+  return typeof value === "string"
+    && value.trim() !== ""
+    && !/[\u0000-\u001f\u007f]/.test(value);
+}
+
 // ── Auth Resolution ─────────────────────────────────────────────────────────
 
 /**
@@ -75,20 +93,41 @@ export function getAuthUser(request: NextRequest): AuthUser | null {
   const email = request.headers.get("x-allura-email");
   const name = request.headers.get("x-allura-name");
   const imageUrl = request.headers.get("x-allura-image-url");
+  const workspaceId = request.headers.get("x-allura-workspace-id");
+  const sessionId = request.headers.get("x-allura-session-id");
+  const hasAuthorityHeaders = AUTHORITY_HEADER_NAMES.some((header) => request.headers.has(header));
 
-  if (userId) {
+  if (hasAuthorityHeaders) {
+    if (
+      !isValidAuthorityIdentifier(userId)
+      || !isValidAuthorityIdentifier(sessionId)
+      || !isValidRole(role)
+      || !isValidAuthorityIdentifier(workspaceId)
+    ) {
+      return null;
+    }
+
+    let validatedGroupId: string;
+    try {
+      validatedGroupId = validateGroupId(groupId);
+    } catch {
+      return null;
+    }
+
     return {
       id: userId,
       email: email ?? "",
       name: name ?? undefined,
-      role: parseRole(role, "viewer"),
-      groupId: groupId ?? "allura-system",
+      role,
+      groupId: validatedGroupId,
+      workspaceId,
+      sessionId,
       imageUrl: imageUrl ?? undefined,
     };
   }
 
   // Development mode: use DevAuthProvider only when no auth headers exist.
-  if (!isClerkEnabled()) {
+  if (isDevAuthActive()) {
     return getDevUserSync();
   }
 

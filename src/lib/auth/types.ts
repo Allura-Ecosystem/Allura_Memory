@@ -93,6 +93,10 @@ export interface AuthUser {
   role: AlluraRole;
   /** Tenant group_id derived from auth (format: allura-*) */
   groupId: string;
+  /** Workspace scope derived from the authenticated principal. */
+  workspaceId?: string;
+  /** Verified session identifier. */
+  sessionId?: string;
   /** URL to user's avatar image */
   imageUrl?: string;
 }
@@ -147,7 +151,7 @@ export interface AuthProvider {
 // ── Clerk Metadata Types ───────────────────────────────────────────────────
 
 /**
- * Shape of Clerk's publicMetadata where we store Allura roles.
+ * Shape of Clerk's publicMetadata where we store Allura authority.
  *
  * Stored at: user.publicMetadata.allura
  */
@@ -156,6 +160,8 @@ export interface ClerkAlluraMetadata {
   role: AlluraRole;
   /** Tenant group_id this user belongs to */
   groupId: string;
+  /** Workspace scope assigned to the authenticated principal. */
+  workspaceId: string;
   /** Additional roles if user has multiple (optional) */
   roles?: AlluraRole[];
 }
@@ -186,4 +192,6 @@ export interface DevAuthConfig {
   defaultUserId: string;
   /** Default email for dev users */
   defaultEmail: string;
+  /** Default workspace scope for dev users. */
+  defaultWorkspaceId: string;
 }

@@ -9,6 +9,8 @@
 
 import { z } from "zod";
 import type { AlluraRole, DevAuthConfig } from "./types";
+import { PUBLIC_ROUTE_MANIFEST, ROUTE_SCOPE_MANIFEST } from "./route-scope-manifest";
+import { AUTH_LOGIN_PATH } from "./redirect-target";
 
 // ── Environment Schema ──────────────────────────────────────────────────────
 
@@ -45,6 +47,9 @@ export const authEnvSchema = z.object({
 
   /** Default email for dev auth users. */
   ALLURA_DEV_AUTH_EMAIL: z.string().default("dev@allura.local"),
+
+  /** Default workspace scope for dev auth users. */
+  ALLURA_DEV_AUTH_WORKSPACE_ID: z.string().default("workspace-allura"),
 
   /** Node environment */
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -177,6 +182,7 @@ export function getDevAuthConfig(config?: AuthEnvConfig): DevAuthConfig {
     defaultGroupId: c.ALLURA_DEV_AUTH_GROUP_ID,
     defaultUserId: c.ALLURA_DEV_AUTH_USER_ID,
     defaultEmail: c.ALLURA_DEV_AUTH_EMAIL,
+    defaultWorkspaceId: c.ALLURA_DEV_AUTH_WORKSPACE_ID,
   };
 }
 
@@ -188,46 +194,15 @@ export function getDevAuthConfig(config?: AuthEnvConfig): DevAuthConfig {
  * Routes not listed here are public (no auth required).
  * Public routes: /api/health, /api/mcp (MCP has its own Bearer token auth)
  */
-export const PROTECTED_ROUTES = [
-  // Admin routes — admin only
-  { pattern: "/admin", requiredRole: "admin" as AlluraRole },
-  { pattern: "/admin/:path*", requiredRole: "admin" as AlluraRole },
-
-  // Curator API — curator or admin
-  { pattern: "/api/curator/approve", requiredRole: "curator" as AlluraRole },
-  { pattern: "/api/curator/watchdog", requiredRole: "curator" as AlluraRole },
-
-  // Curator proposals — viewer can read, but write requires curator
-  { pattern: "/api/curator/proposals", requiredRole: "viewer" as AlluraRole },
-
-  // Memory API — viewer or above
-  { pattern: "/api/memory", requiredRole: "viewer" as AlluraRole },
-  { pattern: "/api/memory/:path*", requiredRole: "viewer" as AlluraRole },
-
-  // Permission profiles — viewer may read; route handlers enforce admin for mutation
-  { pattern: "/api/permission-profiles", requiredRole: "viewer" as AlluraRole },
-  { pattern: "/api/permission-profiles/:path*", requiredRole: "viewer" as AlluraRole },
-
-  // Memory UI — viewer or above
-  { pattern: "/memory", requiredRole: "viewer" as AlluraRole },
-  { pattern: "/memory/:path*", requiredRole: "viewer" as AlluraRole },
-
-  // Curator UI — curator or above
-  { pattern: "/curator", requiredRole: "curator" as AlluraRole },
-  { pattern: "/curator/:path*", requiredRole: "curator" as AlluraRole },
-] as const;
+export const PROTECTED_ROUTES = ROUTE_SCOPE_MANIFEST.map(({ pattern, requiredRole }) => ({
+  pattern,
+  requiredRole,
+}));
 
 /**
  * Routes that are always public (no auth required).
  */
-export const PUBLIC_ROUTES = [
-  "/api/health",
-  "/api/health/:path*",
-  "/api/mcp",
-  "/api/mcp/:path*",
-  "/auth/:path*",
-  "/",
-] as const;
+export const PUBLIC_ROUTES = PUBLIC_ROUTE_MANIFEST.map(({ pattern }) => pattern);
 
 /**
  * Routes that redirect authenticated users away (e.g., login page).
@@ -235,6 +210,6 @@ export const PUBLIC_ROUTES = [
 export const AUTH_ROUTES = [
   "/auth/v1/login",
   "/auth/v1/register",
-  "/auth/v2/login",
+  AUTH_LOGIN_PATH,
   "/auth/v2/register",
 ] as const;
