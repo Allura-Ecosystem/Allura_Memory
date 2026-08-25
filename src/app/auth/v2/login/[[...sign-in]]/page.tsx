@@ -1,4 +1,4 @@
-import { isClerkEnabled } from "@/lib/auth/config";
+import { isClerkEnabled, isDevAuthActive } from "@/lib/auth/config";
 import ClerkSignIn from "@/app/clerk-sign-in";
 import { AUTH_LOGIN_PATH, sanitizeRedirectTarget } from "@/lib/auth/redirect-target";
 
@@ -11,9 +11,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const clerkEnabled = isClerkEnabled();
 
   if (!clerkEnabled) {
+    const heading = process.env.NODE_ENV === "production"
+      ? "Authentication unavailable"
+      : isDevAuthActive()
+        ? "Development authentication is active"
+        : "Development authentication unavailable";
+
     return (
       <main>
-        <h1>{process.env.NODE_ENV === "production" ? "Authentication unavailable" : "Development authentication is active"}</h1>
+        <h1>{heading}</h1>
         <p>Clerk sign-in requires Clerk configuration.</p>
       </main>
     );

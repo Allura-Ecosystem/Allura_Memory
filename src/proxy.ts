@@ -24,7 +24,7 @@
  * Role helpers live in src/lib/auth/roles.ts.
  */
 
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse, type NextFetchEvent } from "next/server"
 
 import { isClerkEnabled } from "@/lib/auth/config"
 import { extractAlluraMetadata } from "@/lib/auth/clerk"
@@ -227,9 +227,12 @@ function handleDevAuth(request: NextRequest): NextResponse {
 
 // ── Production Clerk Handler ─────────────────────────────────────────────────
 
-let _clerkHandler: ((request: NextRequest) => Promise<NextResponse>) | null = null
+let _clerkHandler: ((request: NextRequest, event?: NextFetchEvent) => Promise<NextResponse>) | null = null
 
-async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
+async function handleClerkAuth(
+  request: NextRequest,
+  event?: NextFetchEvent,
+): Promise<NextResponse> {
   // Dynamic import — only loads Clerk when needed.
   // This avoids the import-time crash when publishableKey is missing.
   if (!_clerkHandler) {
@@ -321,7 +324,7 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
       // Wrap clerkInstance to match our handler signature.
       // clerkMiddleware returns a Next.js middleware function;
       // we call it with (request, evt) to get a Response.
-      _clerkHandler = async (req: NextRequest) => {
+      _clerkHandler = async (req: NextRequest, clerkEvent?: NextFetchEvent) => {
         try {
           // clerkMiddleware returns a function that Next.js calls with (req, evt).
           // In dynamic context, we call it directly.
@@ -329,7 +332,7 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
             request: NextRequest,
             event: unknown,
           ) => Promise<unknown>
-          const result = await invokeClerk(req, {})
+          const result = await invokeClerk(req, clerkEvent ?? {})
           // If result is a Response, wrap it; if it's already a NextResponse, return it
           if (result instanceof NextResponse) {
             return result
@@ -355,7 +358,7 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
       _clerkHandler = async (req: NextRequest) => denyUnverified(req)
     }
   }
-  return _clerkHandler!(request)
+  return _clerkHandler!(request, event)
 }
 
 // ── Proxy Export ─────────────────────────────────────────────────────────────
@@ -366,14 +369,17 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
  * Clerk is loaded dynamically to avoid import-time crashes when
  * NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not configured.
  */
-export default async function proxy(request: NextRequest, _event?: unknown): Promise<NextResponse> {
+export default async function proxy(
+  request: NextRequest,
+  event?: NextFetchEvent,
+): Promise<NextResponse> {
   if (!isClerkEnabled()) {
     if (process.env.NODE_ENV === "production") {
       return handleKeylessProduction(request)
     }
     return handleDevAuth(request)
   }
-  return handleClerkAuth(request)
+  return handleClerkAuth(request, event)
 }
 
 export const config = {

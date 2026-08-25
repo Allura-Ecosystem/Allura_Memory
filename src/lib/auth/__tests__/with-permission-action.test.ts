@@ -10,8 +10,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { beforeEach, describe, expect, it } from "vitest"
 
-// No dev-auth principal: identity comes from explicit headers only.
-process.env.ALLURA_DEV_AUTH_ENABLED = "false"
+// Principals must come from the sanctioned dev-auth mechanism. Raw browser
+// authority headers are untrusted and must not be used to fabricate identity.
+process.env.ALLURA_DEV_AUTH_ENABLED = "true"
 // @ts-expect-error — NODE_ENV is read-only in Next.js types but must be set for tests
 process.env.NODE_ENV = "test"
 delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
@@ -22,13 +23,14 @@ import { clearAuthConfig } from "@/lib/auth/config"
 import type { AlluraRole } from "@/lib/auth/types"
 
 function requestAs(role: AlluraRole | null, groupId = "allura-testtenant"): NextRequest {
-  const headers: Record<string, string> = {}
+  process.env.ALLURA_DEV_AUTH_ENABLED = role ? "true" : "false"
   if (role) {
-    headers["x-allura-user-id"] = "user-under-test"
-    headers["x-allura-role"] = role
-    headers["x-allura-group-id"] = groupId
+    process.env.ALLURA_DEV_AUTH_ROLE = role
+    process.env.ALLURA_DEV_AUTH_GROUP_ID = groupId
+    process.env.ALLURA_DEV_AUTH_USER_ID = "user-under-test"
   }
-  return new NextRequest(new URL("/api/anything", "http://localhost:4100"), { headers })
+  clearAuthConfig()
+  return new NextRequest(new URL("/api/anything", "http://localhost:4100"))
 }
 
 describe("minimumRoleForAction", () => {

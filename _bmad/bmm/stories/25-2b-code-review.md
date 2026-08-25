@@ -1,47 +1,37 @@
-# Story 25.2b — Code Review Evidence Report
+# Story 25.2b — Findings-Only Code Review
 
-> [!NOTE]
-> **AI-Assisted Documentation** — assembled by Brooks (reconciliation chair) from
-> subagent gate reports, 2026-08-25. Defer to test output and diffs as primary evidence.
+**Frozen implementation hash:** `dc08351ae6b8d820e0a0cf742b13dfe590c60feb86102454b987cd2850649352`
 
-**Story:** 25.2b — Authenticated Session Entry Point
-**Epic:** 25 — Governed Curator Review Console
-**Surface:** `.worktrees/epic-25-bmad-closure` @ `feat/epic-25-bmad-closure` (base `64af9365`)
-**Builder:** Woz (subagent, TDD) · **Orchestrator:** Brooks (main thread)
-**Verdict:** ✅ **APPROVED — all gates green after 2 fix cycles (max 3)**
+**Verdict:** **APPROVE**
 
-## Gate Chain Results
+**Independent reviewers:** Pike, Fowler
 
-| Gate | Reviewer | Cycle 1 | Cycle 2 | Final |
-|---|---|---|---|---|
-| Scope | Jobs (intent gate) | CHANGES-REQUESTED (3 findings) | APPROVE | ✅ |
-| Interface | Pike | CHANGES-REQUESTED (3 findings) | CHANGES-REQUESTED (1 High: keyless redirect loop) | ✅ APPROVE |
-| Maintainability / truthfulness | Fowler | CHANGES-REQUESTED (4 findings) | APPROVE | ✅ APPROVE (regression re-check cycle 3) |
-| Schema/RLS | Knuth | NOT DISPATCHED — no schema/migration/DB-write changes in diff | — | n/a |
+**Knuth:** Not applicable — no schema, migration, query, or data-contract change.
 
-## Defects Found and Fixed
+## Non-blocking findings
 
-1. **[HIGH, scope+truthfulness]** Woz implemented workspace-tuple DB validation (`web-session-authority.ts`) — Story 25.2a territory — then misrecorded it as absent. **Fix:** module deleted, all references removed; AC-3 satisfied by fail-closed server-derived metadata checks alone. Per-request PostgreSQL coupling on the Clerk auth path eliminated.
-2. **[HIGH, crash risk]** Static `ClerkProvider`/`SignIn` imports could crash keyless production before fail-closed fallback rendered. **Fix:** dynamic Clerk client wrappers (`clerk-provider.tsx`, `clerk-sign-in.tsx`).
-3. **[HIGH, redirect loop]** Keyless production denied all routes before route-authority resolution — public login route redirected to itself; degraded "Authentication unavailable" state unreachable over HTTP. Found by Pike in cycle 2. **Fix:** `handleKeylessProduction()` resolves manifest authority first (`src/proxy.ts:82-103, 354-357`); login renders 200 degraded, protected routes 307 to it.
-4. **[MED, split authority]** `config.ts` PROTECTED_ROUTES/PUBLIC_ROUTES duplicated `route-scope-manifest`. **Fix:** derived from manifest — one authority surface.
-5. **[MED, AC-5/AC-6 coverage gaps]** Expired-session redirect and full-flow rendering untested. **Fix:** focused tests added (`story-25-2b-auth-entry.test.ts`, `auth-middleware.test.ts:302-317`).
-6. **[LOW]** `/auth/v2/login` magic strings centralized in `redirect-target.ts`; phantom `sign-in` file claim struck from File List; namespace-drift rename (`allura-roninmemory` → `allura-system`) explicitly documented in Change Log.
+| Severity | Reviewer | Finding | Evidence |
+| --- | --- | --- | --- |
+| Low, pre-existing | Pike | Two stale comments describe undeclared routes as public although the active manifest fails closed. Not introduced by this candidate. | `src/lib/auth/config.ts:191-196`; `src/lib/auth/types.ts:119-124`; actual contract `src/lib/auth/route-scope-manifest.ts:617-625,720-754` |
+| Low | Fowler | The unit smoke reconstructs downstream headers and renders `CuratorHandoffContent` rather than executing the complete route component. Real browser proof covers the integrated route. | `src/lib/auth/__tests__/story-25-2b-auth-entry.test.ts:175-215`; integrated route `src/app/dashboard/curator/page.tsx:21-30` |
+| Low | Fowler | Malformed-claim coverage reaches an early role failure and lacks a focused otherwise-valid missing/blank/control-character workspace case. Runtime validation exists and broader/browser evidence is green. | `src/lib/auth/__tests__/story-25-2b-auth-entry.test.ts:45-49`; `src/lib/auth/clerk.ts:52-55` |
 
-## Verification Evidence
+## Verification
 
-- `bun run typecheck` — **passed**
-- Focused Vitest: `story-25-2b-auth-entry.test.ts` + `auth-middleware.test.ts` — **80/80 passed** (7 story tests, 73 middleware)
-- `bun run build` — passed (cycle 0); `git diff --check` — clean
-- Route manifest validation — 0 uncovered, 0 weak
-- Dev smoke: unauthenticated `/dashboard/curator` → 307 login; authenticated → 200 with server-derived identity
+- Parent focused auth lane: **94/94 passed**.
+- Earlier broader auth lane: **218/218 passed**.
+- Typecheck: passed.
+- Route manifest: **89 routes; 0 uncovered; 0 weak roles**.
+- `git diff --check`: passed.
+- Production build: passed; **53 pages** generated.
+- Disposable PostgreSQL 16 lane: **14 suites / 38 tests passed**.
+- Unauthenticated `/dashboard/curator`: HTTP 307 to the real login route.
+- Credentialed Clerk browser proof reached `/dashboard/curator` and rendered the verified user, `ws_curator_console`, `allura-system`, and `admin`.
+- After all test-user sessions were revoked, the stored browser context redirected to the real login route.
+- Browser artifacts:
+  - `artifacts/epic25/story-25.2b-authenticated-curator.png`
+  - `artifacts/epic25/story-25.2b-expired-session-login.png`
 
-## Honest Residuals (recorded, not hidden)
+## Scope conclusion
 
-1. **Interactive Clerk sign-in not exercised** — no Clerk credentials available in this environment. Unit/degraded-path coverage is complete; live interactive proof is assigned to the Epic 25 closure gate (signed-in browser screenshot).
-2. Tests emit expected `ECONNREFUSED` warnings from audit telemetry (no local audit endpoint running) — cosmetic, no failures.
-3. `resolveValidatedWebApprovalScope` (25.2a) remains absent from this branch — correctly so; 25.2a is dependency-blocked and its scope was not consumed here.
-
-## Status Advancement
-
-Story 25.2b advanced to `done` in `_bmad/bmm/stories/sprint-status.yaml` only after this report was written green, per loop contract C2.
+The curator page is a metadata-only authenticated handoff. It performs no curator data query or mutation and makes no PostgreSQL authorization claim. Exact `(group_id, workspace_id)` validation remains at the merged Story 25.2a resolver and Story 25.3 read boundary. No Story 25.3+ data UI or second membership model was introduced.

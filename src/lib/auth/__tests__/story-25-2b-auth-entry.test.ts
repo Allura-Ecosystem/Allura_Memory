@@ -6,7 +6,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@clerk/nextjs", () => ({
-  ClerkProvider: ({ children }: { children: ReactNode }) => children,
+  ClerkProvider: ({ children }: { children: ReactNode }) => [
+    "clerk-provider-mounted",
+    children,
+  ],
   SignIn: () => null,
 }));
 
@@ -40,7 +43,7 @@ describe("Story 25.2b authenticated session entry", () => {
   });
 
   it("fails closed when Clerk authority metadata is missing or malformed", () => {
-    expect(() => extractAlluraMetadata(undefined)).toThrow(/metadata/i);
+    expect(() => extractAlluraMetadata(undefined)).toThrow(/allura|claim|authority/i);
     expect(() => extractAlluraMetadata({
       allura: { role: "owner", groupId: "not-a-group", workspaceId: "workspace-a" },
     } as never)).toThrow(/role|group/i);
@@ -56,7 +59,11 @@ describe("Story 25.2b authenticated session entry", () => {
     expect(layout).toContain("ClerkProvider");
     expect(layout).not.toContain('from "@clerk/nextjs"');
     expect(layout).not.toContain("ssr: false");
-    expect(readFileSync("src/app/clerk-provider.tsx", "utf8")).toContain("dynamic(");
+    expect(layout).toContain("isClerkEnabled");
+    const provider = readFileSync("src/app/clerk-provider.tsx", "utf8");
+    expect(provider).toContain('import { ClerkProvider } from "@clerk/nextjs"');
+    expect(provider).not.toContain("next/dynamic");
+    expect(provider).not.toContain("ssr: false");
 
     const login = readFileSync("src/app/auth/v2/login/[[...sign-in]]/page.tsx", "utf8");
     expect(login).not.toContain('from "@clerk/nextjs"');
@@ -72,6 +79,21 @@ describe("Story 25.2b authenticated session entry", () => {
     clearAuthConfig();
 
     expect(isDevAuthActive()).toBe(false);
+  });
+
+  it("does not claim development authentication is active when DevAuth is disabled", async () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = "development";
+    process.env.ALLURA_DEV_AUTH_ENABLED = "false";
+    delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    delete process.env.CLERK_SECRET_KEY;
+    clearAuthConfig();
+
+    const markup = renderToStaticMarkup(
+      await LoginPage({ searchParams: Promise.resolve({}) }),
+    );
+
+    expect(markup).toContain("Development authentication unavailable");
+    expect(markup).not.toContain("Development authentication is active");
   });
 
   it("rejects partial downstream authority instead of fabricating defaults", () => {
@@ -122,6 +144,7 @@ describe("Story 25.2b authenticated session entry", () => {
       RootLayout({ children: createElement("p", null, "configured") }),
     );
 
+    expect(markup).toContain("clerk-provider-mounted");
     expect(markup).toContain("configured");
   });
 

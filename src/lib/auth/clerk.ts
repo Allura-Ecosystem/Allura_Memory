@@ -7,10 +7,8 @@
  *
  * Reference: Phase 7 benchmark — Clerk SSO + RBAC
  *
- * IMPORTANT: This module does NOT import @clerk/nextjs directly.
- * It defines the integration layer that will use Clerk when installed.
- * The actual Clerk imports happen in middleware.ts and layout components
- * where @clerk/nextjs is conditionally imported.
+ * IMPORTANT: This module does NOT import @clerk/nextjs directly. Clerk runtime
+ * imports live at the proxy and App Router UI boundaries.
  */
 
 import { validateGroupId } from "@/lib/validation/group-id";
@@ -65,8 +63,7 @@ export function extractAlluraMetadata(claim: ClerkAlluraMetadata | null | undefi
 /**
  * Build an AuthUser from Clerk user data.
  *
- * This is the canonical way to construct an AuthUser from Clerk.
- * Used in middleware and server actions.
+ * This is the canonical helper for converting Clerk user data into AuthUser.
  *
  * @param params - Clerk user fields
  * @returns AuthUser with strictly validated Clerk authority metadata
