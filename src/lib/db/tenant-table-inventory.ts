@@ -19,12 +19,13 @@ export interface TableClassification {
   table: string;
   class: TenantTableClass;
   notes: string;
+  workspaceTreatment?: "workspace-scoped-new-writes" | "legacy-unscoped-excluded";
 }
 
 export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   // Core tenant-scoped tables
-  { table: "allura_memories", class: "tenant-scoped", notes: "Canonical governed memory store" },
-  { table: "events", class: "tenant-scoped", notes: "Append-only audit/event ledger (immutable by trigger)" },
+  { table: "allura_memories", class: "tenant-scoped", notes: "Migration 40 scopes new app writes and explicitly quarantines legacy NULL-workspace knowledge", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "events", class: "tenant-scoped", notes: "New writes carry workspace; legacy NULL rows remain excluded", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "workspaces", class: "tenant-scoped", notes: "Tenant workspace registry; FK target" },
   { table: "projects", class: "tenant-scoped", notes: "Tenant projects" },
   { table: "work_items", class: "tenant-scoped", notes: "Tenant work items" },
@@ -36,7 +37,7 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "process_definitions", class: "tenant-scoped", notes: "Process definitions" },
   { table: "process_runs", class: "tenant-scoped", notes: "Process executions" },
   { table: "evidence_packets", class: "tenant-scoped", notes: "Evidence packets" },
-  { table: "canonical_proposals", class: "tenant-scoped", notes: "Canonical change proposals" },
+  { table: "canonical_proposals", class: "tenant-scoped", notes: "New writes carry workspace; legacy NULL rows remain excluded", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "promotion_proposals", class: "tenant-scoped", notes: "Promotion proposals" },
   { table: "pattern_proposals", class: "tenant-scoped", notes: "Pattern proposals" },
   { table: "approval_notifications", class: "tenant-scoped", notes: "Approval notifications" },
@@ -54,18 +55,20 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "adas_runs", class: "tenant-scoped", notes: "ADAS execution records" },
   { table: "agent_trajectories", class: "tenant-scoped", notes: "Agent interaction history" },
   { table: "allura_feedback", class: "tenant-scoped", notes: "Feedback data" },
-  { table: "graph_memories", class: "tenant-scoped", notes: "Graph-backed memory" },
+  { table: "graph_memories", class: "tenant-scoped", notes: "Canonical promoted memory; Migration 40 requires exact workspace for new rows and quarantines legacy NULL workspace rows", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "graph_structural_edges", class: "tenant-scoped", notes: "Graph edges" },
   { table: "graph_structural_nodes", class: "tenant-scoped", notes: "Graph nodes" },
   { table: "graph_supersedes", class: "tenant-scoped", notes: "Supersedes relationships" },
   { table: "notion_sync_dlq", class: "tenant-scoped", notes: "Notion sync dead-letter" },
   { table: "ruvector_memory_fallback", class: "tenant-scoped", notes: "RuVector fallback memory" },
   { table: "skill_usage_events", class: "tenant-scoped", notes: "Skill usage events" },
-  { table: "promotion_outbox", class: "tenant-scoped", notes: "Story 24.4 projection outbox" },
-  { table: "promotion_idempotency", class: "tenant-scoped", notes: "Story 24.4 idempotency receipts" },
-  { table: "evidence_requests", class: "tenant-scoped", notes: "Workspace-scoped evidence request lifecycle" },
-  { table: "governance_receipts", class: "tenant-scoped", notes: "Immutable workspace-scoped governance receipts" },
-  { table: "semantic_projections", class: "tenant-scoped", notes: "Versioned derived workspace semantic projections" },
+  { table: "promotion_outbox", class: "tenant-scoped", notes: "Migration 40 workspace-scoped delivery; legacy NULL-workspace rows are quarantined", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "promotion_idempotency", class: "tenant-scoped", notes: "Migration 40 workspace-scoped replay identity; legacy NULL-workspace rows are quarantined", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "evidence_requests", class: "tenant-scoped", notes: "Workspace-scoped evidence request lifecycle", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "governance_receipts", class: "tenant-scoped", notes: "Immutable workspace-scoped governance receipts", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "governance_receipt_evidence_requests", class: "tenant-scoped", notes: "Immutable FK-backed complete receipt evidence membership", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "governance_receipts_legacy_archive", class: "migration-only", notes: "Quarantined pre-040 receipt envelopes; no application grants" },
+  { table: "semantic_projections", class: "tenant-scoped", notes: "Versioned derived workspace semantic projections", workspaceTreatment: "workspace-scoped-new-writes" },
 
   // Credential / identity tables
   { table: "mcp_tokens", class: "tenant-scoped-credential", notes: "MCP credentials; lookup by token prefix before tenant resolution" },

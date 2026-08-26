@@ -1,451 +1,101 @@
 #!/usr/bin/env bun
-/**
- * Curator Approve CLI — Headless HITL Approval Workflow
- *
- * Processes all pending proposals from canonical_proposals table
- * and promotes approved ones to Neo4j via createInsight().
- *
- * Usage:
- *   bun run curator:approve [--auto-approve] [--group-id <id>]
- *
- * Flags:
- *   --auto-approve    Skip interactive prompts (CI mode)
- *   --group-id <id>   Target group (default: allura-system)
- *
- * Invariants enforced:
- *   - group_id validated (allura-* pattern)
- *   - witness_hash (SHAKE-256) generated on every decision
- *   - proposal_approved event appended (no UPDATE on existing rows)
- *   - Idempotent: re-running on approved proposals is a no-op
- *
- * Reference: docs/allura/BLUEPRINT.md (Requirements F6, F12, B18-B19)
- */
+/** Workspace-authoritative curator approval CLI. */
+import { closePool, getAppPool } from "../lib/postgres/connection"
+import { withWorkspaceTransaction } from "../lib/db/tenant-transaction"
+import type { ResolvedWorkspaceScope } from "../lib/db/workspace-scope"
+import { resolveWorkspaceScope } from "../lib/db/workspace-scope"
+import { validateToken } from "../lib/guard/validate-token"
+import { validateGroupId } from "../lib/validation/group-id"
+import { createPrincipalContext, type PrincipalContext } from "../lib/auth/principal-context"
+import { approveProposal, type GovernanceReceipt } from "../lib/memory/approve-proposal"
 
-import { Pool } from "pg"
-import { createHash , randomUUID } from "crypto"
-import { closePool, getPool } from "../lib/postgres/connection"
-import { GroupIdValidationError, validateGroupId } from "../lib/validation/group-id"
+export interface PendingProposal {
+  id: string; group_id: string; workspace_id: string; content: string; score: string;
+  reasoning: string | null; tier: string; created_at: string; trace_ref: number | null;
+}
+interface SkippedApprovalResult { proposal_id: string; status: "skipped"; reason: string }
+export interface CLIArgs { autoApprove: boolean; groupId: string; workspaceId: string }
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
-/** Decision type for HITL approval workflow */
-type ApprovalDecision = "approve" | "reject" | "skip"
-
-interface PendingProposal {
-  id: string
-  group_id: string
-  content: string
-  score: string
-  reasoning: string | null
-  tier: string
-  created_at: string
-  trace_ref: number | null
+export function parseArgs(argv = process.argv.slice(2)): CLIArgs {
+  const autoApprove = argv.includes("--auto-approve")
+  const groupId = argv.find((arg) => arg.startsWith("--group-id="))?.slice("--group-id=".length) ?? ""
+  const workspaceId = argv.find((arg) => arg.startsWith("--workspace-id="))?.slice("--workspace-id=".length) ?? ""
+  if (!groupId) throw new Error("--group-id is required")
+  validateGroupId(groupId)
+  if (!workspaceId.trim()) throw new Error("--workspace-id is required")
+  return { autoApprove, groupId, workspaceId: workspaceId.trim() }
 }
 
-interface ApprovalResult {
-  proposal_id: string
-  status: "approved" | "rejected" | "skipped"
-  reason?: string
-  memory_id?: string
-  decided_at?: string
-}
-
-// ── CLI Argument Parsing ─────────────────────────────────────────────────────
-
-interface CLIArgs {
-  autoApprove: boolean
-  groupId: string
-}
-
-function parseArgs(): CLIArgs {
-  const args = process.argv.slice(2)
-  const result: CLIArgs = { autoApprove: false, groupId: "allura-system" }
-
-  for (const arg of args) {
-    if (arg === "--auto-approve") {
-      result.autoApprove = true
-    } else if (arg.startsWith("--group-id=")) {
-      result.groupId = arg.split("=")[1]
-    } else if (arg === "--help" || arg === "-h") {
-      console.log(`
-Curator Approve CLI — Headless HITL Approval Workflow
-
-Usage: bun run curator:approve [options]
-
-Options:
-  --auto-approve    Skip interactive prompts (CI mode)
-  --group-id=<id>   Target group (default: allura-system)
-  --help, -h        Show this help message
-
-Invariants enforced:
-  - group_id validated (allura-* pattern)
-  - witness_hash (SHAKE-256) generated on every decision
-  - proposal_approved event appended (no UPDATE on existing rows)
-  - Idempotent: re-running on approved proposals is a no-op
-
-Example:
-  bun run curator:approve --auto-approve --group-id=allura-system
-`)
-      process.exit(0)
-    }
-  }
-
-  return result
-}
-
-// ── Core Functions ───────────────────────────────────────────────────────────
-
-/**
- * Fetch pending proposals from canonical_proposals table.
- */
-async function getPendingProposals(groupId: string): Promise<PendingProposal[]> {
-  const pool = getPool()
-
-  try {
-    const result = await pool.query(
-      `SELECT id, group_id, content, score, reasoning, tier, created_at, trace_ref
+export async function getPendingProposals(scope: ResolvedWorkspaceScope): Promise<PendingProposal[]> {
+  return withWorkspaceTransaction(scope, async (db) => {
+    const result = await db.query<PendingProposal>(
+      `SELECT id,group_id,workspace_id,content,score,reasoning,tier,created_at,trace_ref
        FROM canonical_proposals
-       WHERE group_id = $1 AND status = 'pending'
-       ORDER BY score DESC, created_at ASC`,
-      [groupId]
+       WHERE group_id = $1 AND workspace_id = $2 AND status='pending'
+       ORDER BY score DESC,created_at ASC`,
+      [scope.tenantId, scope.workspaceId],
     )
+    return result.rows
+  })
+}
 
-    return result.rows as PendingProposal[]
-  } finally {
-    // Don't close pool here — we'll close it at the end
+function assertAuthority(scope: ResolvedWorkspaceScope, principal: PrincipalContext): void {
+  if (principal.principalId !== scope.principalId || principal.workspaceId !== scope.workspaceId || !principal.tenantIds.includes(scope.tenantId)) {
+    throw new Error("CLI verified actor authority does not match workspace scope")
+  }
+  if (!principal.roles.some((role) => role === "curator" || role === "admin") || !principal.scopes.includes("review:approve")) {
+    throw new Error("CLI verified actor lacks approval authority")
   }
 }
 
-/**
- * Check if a proposal has already been approved (idempotency check).
- */
-async function isProposalApproved(pool: Pool, proposalId: string, groupId: string): Promise<boolean> {
-  // FINDING-3 fix: filter by group_id for defense-in-depth tenant isolation
-  const result = await pool.query(
-    `SELECT status FROM canonical_proposals WHERE id = $1 AND group_id = $2`,
-    [proposalId, groupId]
-  )
-  return result.rows.length > 0 && result.rows[0].status === "approved"
-}
-
-/**
- * Generate witness hash for audit trail (SHAKE-256, 64-byte output).
- */
-function generateWitnessHash(
-  proposalId: string,
-  groupId: string,
-  content: string,
-  score: string,
-  tier: string,
-  decision: string,
-  decidedAt: string,
-  curatorId: string
-): string {
-  const witnessPayload = `${proposalId}|${groupId}|${content}|${score}|${tier}|${decision}|${decidedAt}|${curatorId}`
-  return createHash("shake256", { outputLength: 64 }).update(witnessPayload).digest("hex")
-}
-
-/**
- * Promote proposal to Neo4j via createInsight().
- */
-async function promoteToNeo4j(
+export async function processProposal(
   proposal: PendingProposal,
-  groupId: string,
-  curatorId: string
-): Promise<{ memoryId: string; error?: string }> {
-  const memoryId = randomUUID()
-
-  try {
-    const pool = getPool()
-    await pool.query(
-      `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
-       VALUES ($1, $2, $3, $4, $5, $6, 1, NOW()::timestamptz, false)`,
-      [
-        memoryId,
-        groupId,
-        curatorId,
-        proposal.content,
-        parseFloat(proposal.score),
-        'promotion',
-      ]
-    )
-
-    return { memoryId }
-  } catch (err) {
-    return { memoryId: "", error: `Promotion failed: ${err instanceof Error ? err.message : String(err)}` }
-  }
-}
-
-/**
- * Update proposal status and log approval event.
- */
-async function finalizeApproval(
-  pool: Pool,
-  proposal: PendingProposal,
-  groupId: string,
-  curatorId: string,
-  memoryId: string,
-  witnessHash: string
-): Promise<void> {
-  const decidedAt = new Date().toISOString()
-
-  // Update proposal status
-  await pool.query(
-    `UPDATE canonical_proposals
-     SET status = 'approved',
-         decided_at = $1,
-         decided_by = $2,
-         rationale = $3,
-         witness_hash = $4
-     WHERE id = $5`,
-    [decidedAt, curatorId, proposal.reasoning || null, witnessHash, proposal.id]
-  )
-
-  // Log approval event (append-only, no UPDATE on existing rows)
-  await pool.query(
-    `INSERT INTO events (
-      group_id, event_type, agent_id, status, metadata, created_at
-    ) VALUES ($1, $2, $3, $4, $5, $6)`,
-    [
-      groupId,
-      "proposal_approved",
-      curatorId,
-      "completed",
-      JSON.stringify({
-        proposal_id: proposal.id,
-        memory_id: memoryId,
-        score: proposal.score,
-        tier: proposal.tier,
-        rationale: proposal.reasoning,
-      }),
-      decidedAt,
-    ]
-  )
-
-  // Emit notion_sync_pending event for async MCP Docker processing
-  // The notion-sync-worker will pick this up and call MCP_DOCKER_notion-create-pages
-  // DRIFT-1 fix: matches API route behavior (route.ts line ~230)
-  // Notion sync sunset ADR 2026-07-02 — emission disabled unless NOTION_SYNC_ENABLED=true
-  if (process.env.NOTION_SYNC_ENABLED === "true") {
-    try {
-      await pool.query(
-        `INSERT INTO events (
-          group_id, event_type, agent_id, status, metadata, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          groupId,
-          "notion_sync_pending",
-          "curator-approve",
-          "pending",
-          JSON.stringify({
-            proposal_id: proposal.id,
-            content: proposal.content,
-            score: parseFloat(proposal.score),
-            tier: proposal.tier,
-            status: "approved",
-            curator_id: curatorId,
-            rationale: proposal.reasoning,
-            decided_at: decidedAt,
-            data_source_id: "42894678-aedb-4c90-9371-6494a9fe5270",
-          }),
-          decidedAt,
-        ]
-      )
-    } catch (notionErr) {
-      // Non-blocking: Notion sync failure must not block approval
-      console.warn(`[notion-sync] Failed to emit notion_sync_pending event:`, notionErr)
-    }
-  }
-}
-
-/**
- * Process a single proposal with optional interactive prompt.
- */
-async function processProposal(
-  proposal: PendingProposal,
-  groupId: string,
-  curatorId: string,
+  scope: ResolvedWorkspaceScope,
+  principal: PrincipalContext,
   autoApprove: boolean,
-  pool: Pool
-): Promise<ApprovalResult> {
-  // Idempotency check: skip if already approved (FINDING-3: includes group_id for tenant isolation)
-  const alreadyApproved = await isProposalApproved(pool, proposal.id, groupId)
-  if (alreadyApproved) {
-    return { proposal_id: proposal.id, status: "skipped", reason: "already approved" }
+): Promise<GovernanceReceipt | SkippedApprovalResult> {
+  assertAuthority(scope, principal)
+  if (proposal.group_id !== scope.tenantId || proposal.workspace_id !== scope.workspaceId) {
+    throw new Error("Proposal is outside verified CLI workspace scope")
   }
-
-  // Display proposal info
-  console.log(`\n┌─ Proposal ${proposal.id}`)
-  console.log(`│  Score: ${proposal.score} | Tier: ${proposal.tier}`)
-  console.log(`│  Content: ${proposal.content.substring(0, 100)}${proposal.content.length > 100 ? "..." : ""}`)
-  if (proposal.reasoning) {
-    console.log(`│  Reasoning: ${proposal.reasoning}`)
+  if (!autoApprove) {
+    return { proposal_id: proposal.id, status: "skipped", reason: "noninteractive approval requires explicit --auto-approve" }
   }
-  console.log(`└─`)
-
-  // Determine decision: auto-approve always approves; future interactive mode may reject/skip
-  // Cast to ApprovalDecision to preserve union type for future interactive mode branches
-  const decision = (autoApprove ? "approve" : "approve") as ApprovalDecision
-
-  // Reject path (reserved for future interactive mode)
-  if (decision === "reject") {
-    const decidedAt = new Date().toISOString()
-    const witnessHash = generateWitnessHash(
-      proposal.id,
-      groupId,
-      proposal.content,
-      proposal.score,
-      proposal.tier,
-      "reject",
-      decidedAt,
-      curatorId
-    )
-
-    await pool.query(
-      `UPDATE canonical_proposals
-       SET status = 'rejected',
-           decided_at = $1,
-           decided_by = $2,
-           rationale = $3,
-           witness_hash = $4
-       WHERE id = $5`,
-      [decidedAt, curatorId, proposal.reasoning || null, witnessHash, proposal.id]
-    )
-
-    // Log rejection event
-    await pool.query(
-      `INSERT INTO events (
-        group_id, event_type, agent_id, status, metadata, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        groupId,
-        "proposal_rejected",
-        curatorId,
-        "completed",
-        JSON.stringify({
-          proposal_id: proposal.id,
-          score: proposal.score,
-          tier: proposal.tier,
-          rationale: proposal.reasoning,
-        }),
-        decidedAt,
-      ]
-    )
-
-    return { proposal_id: proposal.id, status: "rejected", decided_at: decidedAt }
-  }
-
-  // Skip path (reserved for future interactive mode)
-  if (decision === "skip") {
-    return { proposal_id: proposal.id, status: "skipped", reason: "user skipped" }
-  }
-
-  // Approve path
-  const memoryResult = await promoteToNeo4j(proposal, groupId, curatorId)
-
-  if (memoryResult.error) {
-    console.error(`[ERROR] Failed to promote proposal ${proposal.id}: ${memoryResult.error}`)
-    return { proposal_id: proposal.id, status: "skipped", reason: memoryResult.error }
-  }
-
-  const decidedAt = new Date().toISOString()
-  const witnessHash = generateWitnessHash(
-    proposal.id,
-    groupId,
-    proposal.content,
-    proposal.score,
-    proposal.tier,
-    "approve",
-    decidedAt,
-    curatorId
-  )
-
-  await finalizeApproval(pool, proposal, groupId, curatorId, memoryResult.memoryId, witnessHash)
-
-  console.log(`[APPROVED] Proposal ${proposal.id} → Insight ${memoryResult.memoryId}`)
-
-  return {
-    proposal_id: proposal.id,
-    status: "approved",
-    memory_id: memoryResult.memoryId,
-    decided_at: decidedAt,
-  }
+  return approveProposal({
+    principal,
+    groupId: scope.tenantId,
+    workspaceId: scope.workspaceId,
+    proposalId: proposal.id,
+    rationale: proposal.reasoning?.trim() || "Approved by curator CLI",
+    idempotencyKey: `curator-cli:${proposal.id}:${scope.principalId}`,
+    pool: getAppPool(),
+  })
 }
 
-// ── Main Entry Point ─────────────────────────────────────────────────────────
-
-async function runApproveCLI() {
+async function runApproveCLI(): Promise<void> {
   const args = parseArgs()
-
-  console.log(`[Curator Approve] Starting headless approval workflow`)
-  console.log(`[Curator Approve] Group: ${args.groupId} | Auto-approve: ${args.autoApprove}`)
-
-  // Validate group_id
-  try {
-    validateGroupId(args.groupId)
-  } catch (err) {
-    if (err instanceof GroupIdValidationError) {
-      console.error(`[ERROR] Invalid group_id: ${err.message}`)
-      process.exit(1)
-    }
-    throw err
+  if (!args.autoApprove) throw new Error("noninteractive CLI refuses approval without explicit --auto-approve")
+  const validation = await validateToken(process.env.ALLURA_CURATOR_TOKEN ?? null)
+  if (!validation.ok) throw new Error(`valid ALLURA_CURATOR_TOKEN is required (${validation.reason})`)
+  const scope = resolveWorkspaceScope(validation.token)
+  if (scope.tenantId !== args.groupId || scope.workspaceId !== args.workspaceId) {
+    throw new Error("explicit CLI tenant/workspace must match verified credential authority")
   }
-
-  const pool = getPool()
-  let totalProcessed = 0
-  let totalApproved = 0
-  let totalRejected = 0
-  let totalSkipped = 0
-  const results: ApprovalResult[] = []
-
-  try {
-    // Fetch pending proposals
-    console.log(`[Curator Approve] Fetching pending proposals for group ${args.groupId}...`)
-    const proposals = await getPendingProposals(args.groupId)
-
-    if (proposals.length === 0) {
-      console.log(`[Curator Approve] No pending proposals found for group ${args.groupId}`)
-      console.log(`[Curator Approve] Summary: 0 processed (0 approved, 0 rejected, 0 skipped)`)
-      return
-    }
-
-    console.log(`[Curator Approve] Found ${proposals.length} pending proposals\n`)
-
-    // Process each proposal
-    for (const proposal of proposals) {
-      const result = await processProposal(proposal, args.groupId, "curator-cli", args.autoApprove, pool)
-      results.push(result)
-
-      totalProcessed++
-      if (result.status === "approved") totalApproved++
-      else if (result.status === "rejected") totalRejected++
-      else if (result.status === "skipped") totalSkipped++
-    }
-
-    // Summary
-    console.log(`\n[Curator Approve] Summary`)
-    console.log(`[Curator Approve] Total processed: ${totalProcessed}`)
-    console.log(`[Curator Approve] Approved: ${totalApproved}`)
-    console.log(`[Curator Approve] Rejected: ${totalRejected}`)
-    console.log(`[Curator Approve] Skipped: ${totalSkipped}`)
-
-    if (totalApproved > 0 || totalRejected > 0) {
-      console.log(`[Curator Approve] Status updates written to canonical_proposals`)
-      console.log(`[Curator Approve] Events appended to events table`)
-    }
-  } catch (err) {
-    console.error(`[Curator Approve] Fatal error: ${err instanceof Error ? err.message : String(err)}`)
-    process.exit(1)
-  } finally {
-    await closePool()
-  }
-
-  process.exit(0)
+  if (!validation.token.scopes.includes("review:approve")) throw new Error("verified credential lacks review:approve")
+  const principal = createPrincipalContext({
+    principalId: scope.principalId, workspaceId: scope.workspaceId, tenantIds: [scope.tenantId],
+    roles: ["curator"], scopes: validation.token.scopes, authMethod: "mcp_token",
+    sessionId: `curator-cli:${Date.now()}`, credentialId: validation.token.id,
+  })
+  const proposals = await getPendingProposals(scope)
+  for (const proposal of proposals) await processProposal(proposal, scope, principal, true)
+  console.log(`[Curator Approve] ${proposals.length} proposal(s) approved in ${scope.workspaceId}`)
 }
 
-// ── CLI Entry ────────────────────────────────────────────────────────────────
-
-const isMainModule = process.argv[1]?.includes("approve-cli.ts")
-if (isMainModule) {
-  runApproveCLI()
+if (process.argv[1]?.includes("approve-cli.ts")) {
+  runApproveCLI().catch(async (error) => {
+    console.error(`[Curator Approve] Fatal error: ${error instanceof Error ? error.message : String(error)}`)
+    await closePool()
+    process.exit(1)
+  })
 }

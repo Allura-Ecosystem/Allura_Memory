@@ -42,6 +42,7 @@ interface GateResult {
 // ── Config ─────────────────────────────────────────────────────────────────
 
 const GROUP_ID = "allura-system";
+const WORKSPACE_ID = "workspace-allura-system";
 const VALIDATION_AGENT = "validation-agent";
 const VALIDATION_AGENT_2 = "validation-agent-2";
 const SKIP_NEO4J = process.argv.includes("--skip-neo4j");
@@ -365,6 +366,7 @@ async function gate08_retrievalLayer(): Promise<void> {
   try {
     const response = await retrieveKnowledge({
       group_id: GROUP_ID,
+      workspace_id: WORKSPACE_ID,
       agent_id: VALIDATION_AGENT_2,
       query: "postgres image",
       mode: "hybrid",
@@ -397,6 +399,7 @@ async function gate09_scopedRetrieval(): Promise<void> {
     // Project-only scope
     const projectResponse = await retrieveKnowledge({
       group_id: GROUP_ID,
+      workspace_id: WORKSPACE_ID,
       agent_id: VALIDATION_AGENT_2,
       query: "validation",
       mode: "hybrid",
@@ -407,6 +410,7 @@ async function gate09_scopedRetrieval(): Promise<void> {
     // Global-only scope
     const globalResponse = await retrieveKnowledge({
       group_id: GROUP_ID,
+      workspace_id: WORKSPACE_ID,
       agent_id: VALIDATION_AGENT_2,
       query: "validation",
       mode: "hybrid",
@@ -438,6 +442,7 @@ async function gate10_mixedRetrieval(): Promise<void> {
     // Hybrid retrieval with trace augmentation
     const response = await retrieveKnowledge({
       group_id: GROUP_ID,
+      workspace_id: WORKSPACE_ID,
       agent_id: VALIDATION_AGENT_2,
       query: "validation",
       mode: "hybrid",
@@ -475,6 +480,7 @@ async function gate11_policyEnforcement(): Promise<void> {
     try {
       await retrieveKnowledge({
         group_id: "invalid-group",
+        workspace_id: WORKSPACE_ID,
         agent_id: VALIDATION_AGENT_2,
         query: "test",
         mode: "hybrid",
@@ -504,6 +510,7 @@ async function gate12_secondAgentReuse(): Promise<void> {
     // A second agent retrieves knowledge that was approved earlier
     const response = await retrieveKnowledge({
       group_id: GROUP_ID,
+      workspace_id: WORKSPACE_ID,
       agent_id: VALIDATION_AGENT_2,
       query: "postgres pgvector image",
       mode: "hybrid",

@@ -70,6 +70,8 @@ export type InsightStatus = z.infer<typeof InsightStatus>;
 export const MemorySearchRequest = z.object({
   query: z.string().min(1, "Query cannot be empty"),
   group_id: z.string().min(1, "group_id is required for tenant isolation"),
+  workspace_id: z.string().min(1, "workspace_id is required for workspace isolation"),
+  agent_id: z.string().min(1, "agent_id is required for scoped access"),
   types: z.array(MemoryNodeType).optional(),
   limit: z.number().int().min(1).max(100).default(10),
   offset: z.number().int().min(0).default(0),
@@ -160,6 +162,8 @@ export type CreateMemoryResponse = z.infer<typeof CreateMemoryResponse>;
 export const GetMemoryRequest = z.object({
   topic_key: z.string().min(1, "topic_key is required"),
   group_id: z.string().min(1, "group_id is required for tenant isolation"),
+  workspace_id: z.string().min(1, "workspace_id is required for workspace isolation"),
+  agent_id: z.string().min(1, "agent_id is required for scoped access"),
   version: z.number().int().min(1).optional(),
   include_history: z.boolean().default(false),
   include_evidence: z.boolean().default(false),

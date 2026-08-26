@@ -14,10 +14,21 @@ vi.mock("../../postgres/connection", () => ({
   getPool: vi.fn(),
 }))
 
+vi.mock("../../db/tenant-transaction", () => ({
+  withWorkspaceTransaction: vi.fn(),
+}))
+
 import { getPool } from "../../postgres/connection"
-import { type KnowledgeInsight, promoteToNeo4j } from "../knowledge-promotion"
+import { withWorkspaceTransaction } from "../../db/tenant-transaction"
+import {
+  linkInsightToAgent,
+  type KnowledgeInsight,
+  promoteToNeo4j,
+  queryApprovedInsights,
+} from "../knowledge-promotion"
 
 const mockGetPool = getPool as unknown as ReturnType<typeof vi.fn>
+const mockWithWorkspaceTransaction = withWorkspaceTransaction as unknown as ReturnType<typeof vi.fn>
 
 function createApprovalPool(rows: Array<{ id: number }> = [{ id: 42 }]) {
   return {
@@ -34,6 +45,7 @@ const APPROVED_INSIGHT: KnowledgeInsight = {
   source: "brooks-architect",
   confidence: 0.92,
   group_id: "allura-system",
+  workspace_id: "workspace-a",
   notion_page_id: "notion-page-001",
   postgres_trace_id: "trace-001",
 }
@@ -42,6 +54,68 @@ describe("promoteToNeo4j approval guard", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetPool.mockReturnValue(createApprovalPool())
+    mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) =>
+      callback({ query: vi.fn(async () => ({ rows: [], rowCount: 1 })) })
+    )
+  })
+
+  it("writes a promoted memory through the app-role workspace transaction", async () => {
+    const appClient = { query: vi.fn(async () => ({ rows: [], rowCount: 1 })) }
+    mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(appClient))
+
+    await promoteToNeo4j(APPROVED_INSIGHT)
+
+    expect(mockWithWorkspaceTransaction).toHaveBeenCalledWith(
+      {
+        tenantId: "allura-system",
+        workspaceId: "workspace-a",
+        principalId: "brooks-architect",
+      },
+      expect.any(Function)
+    )
+    expect(appClient.query).toHaveBeenCalledWith(
+      expect.stringMatching(/INSERT INTO graph_memories[\s\S]*workspace_id[\s\S]*workspace_scope_state/),
+      expect.arrayContaining(["allura-system", "workspace-a", "workspace_scoped"])
+    )
+  })
+
+  it("queries approved proposals inside an explicit workspace boundary", async () => {
+    const appClient = { query: vi.fn(async () => ({ rows: [], rowCount: 0 })) }
+    mockGetPool.mockReturnValue({ query: vi.fn(async () => ({ rows: [], rowCount: 0 })) })
+    mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(appClient))
+    await (queryApprovedInsights as unknown as (
+      groupId: string,
+      workspaceId: string,
+      principalId: string,
+      limit: number,
+    ) => Promise<unknown>)("allura-system", "workspace-a", "agent-a", 10)
+    expect(mockWithWorkspaceTransaction).toHaveBeenCalledWith(
+      { tenantId: "allura-system", workspaceId: "workspace-a", principalId: "agent-a" },
+      expect.any(Function),
+    )
+    expect(appClient.query).toHaveBeenCalledWith(
+      expect.stringMatching(/WHERE group_id = \$1[\s\S]*workspace_id = \$2/),
+      ["allura-system", "workspace-a", 10],
+    )
+  })
+
+  it("links an agent through the app-role workspace transaction", async () => {
+    const appClient = { query: vi.fn(async (_sql: string) => ({ rows: [], rowCount: 1 })) }
+    mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(appClient))
+    await (linkInsightToAgent as unknown as (
+      agentId: string,
+      insightId: string,
+      confidence: number,
+      groupId: string,
+      workspaceId: string,
+    ) => Promise<void>)("agent-a", "memory-a", 0.9, "allura-system", "workspace-a")
+    expect(mockWithWorkspaceTransaction).toHaveBeenCalledWith(
+      { tenantId: "allura-system", workspaceId: "workspace-a", principalId: "agent-a" },
+      expect.any(Function),
+    )
+    const sql = appClient.query.mock.calls.map(([statement]) => String(statement)).join("\n")
+    expect(sql).toContain("workspace_id")
+    expect(sql).toContain("workspace_scope_state")
   })
 
   it("requires approval before creating an insight", async () => {
@@ -55,9 +129,10 @@ describe("promoteToNeo4j approval guard", () => {
       expect.stringContaining("metadata->>'proposal_id' = $3"),
       ["allura-system", "proposal_approved", "prop-001"]
     )
-    // At least 2 queries: approval check + insert
-    expect(pool.query).toHaveBeenCalledTimes(expect.any(Number))
-    expect(pool.query.mock.calls.length).toBeGreaterThanOrEqual(2)
+    // The owner-backed pool performs only the approval read. The write must
+    // cross the restricted app-role workspace transaction boundary.
+    expect(pool.query).toHaveBeenCalledTimes(1)
+    expect(mockWithWorkspaceTransaction).toHaveBeenCalledTimes(1)
   })
 
   it("does not create an insight when approval is missing", async () => {

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
-import { getPool } from "@/lib/postgres/connection"
-import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
 
 /**
  * GET /api/memory/insights
@@ -30,25 +29,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const group_id_param = searchParams.get("group_id")
-
-    // Validate group_id is provided
-    if (!group_id_param) {
-      return NextResponse.json(
-        { error: "group_id is required. Provide a valid tenant identifier (format: allura-*)" },
-        { status: 400 }
-      )
-    }
-
-    // Validate group_id format
-    let group_id: string
-    try {
-      group_id = validateGroupId(group_id_param)
-    } catch (error) {
-      if (error instanceof GroupIdValidationError) {
-        return NextResponse.json({ error: `Invalid group_id: ${error.message}` }, { status: 400 })
-      }
-      throw error
+    const group_id = roleCheck.user.groupId
+    const workspace_id = roleCheck.user.workspaceId
+    if (!workspace_id) return unauthorizedResponse("Authenticated workspace scope is required")
+    if ((searchParams.has("group_id") && searchParams.get("group_id") !== group_id)
+      || (searchParams.has("workspace_id") && searchParams.get("workspace_id") !== workspace_id)) {
+      return NextResponse.json({ error: "Forged memory scope is forbidden" }, { status: 403 })
     }
 
     const limit = parseInt(searchParams.get("limit") || "50")
@@ -80,10 +66,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query for graph_memories
-    const pool = getPool()
-    const params: unknown[] = [group_id]
-    const conditions = ["(group_id = $1 OR group_id = 'global')"]
-    let paramIdx = 2
+    const params: unknown[] = [group_id, workspace_id]
+    const conditions = ["group_id = $1", "workspace_id = $2", "workspace_scope_state = 'workspace_scoped'"]
+    let paramIdx = 3
 
     if (status === "active") {
       conditions.push("deprecated = false")
@@ -126,7 +111,12 @@ export async function GET(request: NextRequest) {
       LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `
 
-    const result = await pool.query(query, params)
+    const { result, countResult } = await withWorkspaceTransaction({
+      tenantId: group_id, workspaceId: workspace_id, principalId: roleCheck.user.id,
+    }, async (db) => ({
+      result: await db.query(query, params),
+      countResult: await db.query(`SELECT COUNT(*) as total FROM graph_memories WHERE ${conditions.join(" AND ")}`, params.slice(0, paramIdx - 2)),
+    }))
 
     const items = result.rows.map((row: Record<string, unknown>) => ({
       insight_id: row.id,
@@ -138,9 +128,6 @@ export async function GET(request: NextRequest) {
       provenance: row.provenance,
     }))
 
-    // Get total count
-    const countQuery = `SELECT COUNT(*) as total FROM graph_memories WHERE ${conditions.join(" AND ")}`
-    const countResult = await pool.query(countQuery, params.slice(0, paramIdx - 2))
     const total = parseInt(countResult.rows[0].total as string, 10)
 
     return NextResponse.json({

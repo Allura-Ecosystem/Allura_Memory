@@ -231,11 +231,13 @@ describe("AC-6: stdio/service mode requires explicit identity and tenant allowli
       NODE_ENV: "production",
       ALLURA_MCP_SERVICE_PRINCIPAL_ID: "svc-memory",
       ALLURA_MCP_SERVICE_TENANTS: "allura-system,allura-mortagate",
+      ALLURA_MCP_SERVICE_WORKSPACE_ID: "workspace-governance",
       ALLURA_MCP_SERVICE_ROLES: "curator",
     });
     const principal = createServicePrincipal(cfg, "sess-stdio");
     expect(principal.authMethod).toBe("service_identity");
     expect(principal.principalId).toBe("svc-memory");
+    expect(principal.workspaceId).toBe("workspace-governance");
     expect(principal.tenantIds).toEqual(["allura-system", "allura-mortagate"]);
     expect(principal.roles).toEqual(["curator"]);
   });

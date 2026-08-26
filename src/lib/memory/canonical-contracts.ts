@@ -111,6 +111,8 @@ export interface MemoryResponseMeta {
 export interface ScopeTuple {
   /** Required: Tenant namespace (format: allura-*) */
   group_id: GroupId
+  /** Server-derived workspace authority; MCP callers cannot choose this value. */
+  workspace_id?: string
   /** Optional: Project within the tenant */
   project_id?: string
   /** Optional: Agent identity (defaults from session) */

@@ -46,10 +46,23 @@ export async function POST(
 
   try {
     const body = await request.json();
+    const workspaceId = roleCheck.user.workspaceId;
+    if (!workspaceId) {
+      return unauthorizedResponse("Authenticated workspace scope is required");
+    }
+    const authority = {
+      group_id: roleCheck.user.groupId,
+      workspace_id: workspaceId,
+      agent_id: roleCheck.user.id,
+    };
+    for (const key of ["group_id", "workspace_id", "agent_id"] as const) {
+      if (body[key] !== undefined && body[key] !== authority[key]) {
+        return NextResponse.json({ error: `Forged ${key} scope is forbidden` }, { status: 403 });
+      }
+    }
 
     const retrievalRequest: RetrievalRequest = {
-      group_id: body.group_id,
-      agent_id: body.agent_id,
+      ...authority,
       query: body.query,
       mode: body.mode,
       scope: body.scope,

@@ -198,6 +198,8 @@ export interface IGraphAdapter {
   createMemory(params: {
     id: MemoryId
     group_id: GroupId
+    workspace_id: string
+    principal_id: string
     user_id: string | null
     content: string
     score: ConfidenceScore
@@ -238,6 +240,8 @@ export interface IGraphAdapter {
     prev_id: MemoryId
     new_id: MemoryId
     group_id: GroupId
+    workspace_id: string
+    principal_id: string
     user_id: string | null
     content: string
     version: number
@@ -286,7 +290,7 @@ export interface IGraphAdapter {
    * @param group_id - Tenant isolation key
    * @returns The memory node, or null if not found
    */
-  getMemory(params: { id: MemoryId; group_id: GroupId }): Promise<GraphGetResult>
+  getMemory(params: { id: MemoryId; group_id: GroupId; workspace_id: string; principal_id: string }): Promise<GraphGetResult>
 
   /**
    * Full-text search for memories.
@@ -300,6 +304,8 @@ export interface IGraphAdapter {
   searchMemories(params: {
     query: string
     group_id: GroupId
+    workspace_id: string
+    principal_id: string
     limit: number
   }): Promise<GraphSearchResult[]>
 
@@ -313,6 +319,8 @@ export interface IGraphAdapter {
    */
   listMemories(params: {
     group_id: GroupId
+    workspace_id: string
+    principal_id: string
     user_id: string | null
   }): Promise<GraphListResult>
 

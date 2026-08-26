@@ -41,6 +41,24 @@ END $$;
 -- tenant/workspace pair resolved from the authenticated principal.
 ALTER TABLE canonical_proposals
   ADD COLUMN IF NOT EXISTS workspace_id TEXT;
+ALTER TABLE canonical_proposals
+  ADD COLUMN IF NOT EXISTS proposal_version BIGINT NOT NULL DEFAULT 1;
+
+CREATE OR REPLACE FUNCTION app.bump_canonical_proposal_version()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF ROW(NEW.content, NEW.score, NEW.tier, NEW.status, NEW.trace_ref, NEW.rationale)
+     IS DISTINCT FROM
+     ROW(OLD.content, OLD.score, OLD.tier, OLD.status, OLD.trace_ref, OLD.rationale) THEN
+    NEW.proposal_version := OLD.proposal_version + 1;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS canonical_proposals_version_trigger ON canonical_proposals;
+CREATE TRIGGER canonical_proposals_version_trigger
+  BEFORE UPDATE ON canonical_proposals FOR EACH ROW
+  EXECUTE FUNCTION app.bump_canonical_proposal_version();
 
 DO $$
 BEGIN
@@ -122,44 +140,22 @@ BEGIN
   END IF;
 END $$;
 
--- Migration 36 created a group-only events policy. Tighten it and every policy
--- already present on events so permissive-policy OR semantics cannot retain a
--- same-group cross-workspace bypass. NULL-workspace legacy events fail this
--- predicate and therefore remain unavailable to workspace-scoped app reads.
+-- Preserve every heterogeneous existing policy verbatim. A restrictive policy
+-- is ANDed with all permissive policies, closing cross-workspace access without
+-- erasing or rewriting predicates owned by earlier migrations.
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events FORCE ROW LEVEL SECURITY;
-DO $$
-DECLARE
-  policy_name TEXT;
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policy
-    WHERE polrelid = 'public.events'::regclass
-      AND polname = 'tenant_isolation_policy'
-  ) THEN
-    CREATE POLICY tenant_isolation_policy ON events
-      FOR ALL TO allura_app
-      USING (
-        group_id = current_setting('app.current_group_id', true)
-        AND workspace_id = current_setting('app.current_workspace_id', true)
-      )
-      WITH CHECK (
-        group_id = current_setting('app.current_group_id', true)
-        AND workspace_id = current_setting('app.current_workspace_id', true)
-      );
-  END IF;
-
-  FOR policy_name IN
-    SELECT polname
-    FROM pg_policy
-    WHERE polrelid = 'public.events'::regclass
-  LOOP
-    EXECUTE format(
-      'ALTER POLICY %I ON events USING (group_id = current_setting(''app.current_group_id'', true) AND workspace_id = current_setting(''app.current_workspace_id'', true)) WITH CHECK (group_id = current_setting(''app.current_group_id'', true) AND workspace_id = current_setting(''app.current_workspace_id'', true))',
-      policy_name
-    );
-  END LOOP;
-END $$;
+DROP POLICY IF EXISTS workspace_scope_restrictive_policy ON events;
+CREATE POLICY workspace_scope_restrictive_policy ON events AS RESTRICTIVE
+  FOR ALL TO allura_app
+  USING (
+    group_id = current_setting('app.current_group_id', true)
+    AND workspace_id = current_setting('app.current_workspace_id', true)
+  )
+  WITH CHECK (
+    group_id = current_setting('app.current_group_id', true)
+    AND workspace_id = current_setting('app.current_workspace_id', true)
+  );
 
 -- Proposal audit triggers predate workspace scope. Preserve their append-only
 -- behavior while propagating a real workspace for every scoped app proposal;
@@ -219,44 +215,19 @@ $$ LANGUAGE plpgsql;
 ALTER TABLE canonical_proposals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE canonical_proposals FORCE ROW LEVEL SECURITY;
 
--- Compatibility/replay guard: deployed databases may already have the original
--- tenant_isolation_policy. Alter it in place rather than removing its protection.
--- Fresh databases create that same correctly scoped policy. Then constrain every
--- extant proposal policy so PostgreSQL's permissive-policy OR semantics cannot
--- leave an older group-only policy as a workspace bypass.
-DO $$
-DECLARE
-  policy_name TEXT;
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_policy
-    WHERE polrelid = 'public.canonical_proposals'::regclass
-      AND polname = 'tenant_isolation_policy'
-  ) THEN
-    CREATE POLICY tenant_isolation_policy ON canonical_proposals
-      FOR ALL TO allura_app
-      USING (
-        group_id = current_setting('app.current_group_id', true)
-        AND workspace_id = current_setting('app.current_workspace_id', true)
-      )
-      WITH CHECK (
-        group_id = current_setting('app.current_group_id', true)
-        AND workspace_id = current_setting('app.current_workspace_id', true)
-      );
-  END IF;
-
-  FOR policy_name IN
-    SELECT polname
-    FROM pg_policy
-    WHERE polrelid = 'public.canonical_proposals'::regclass
-  LOOP
-    EXECUTE format(
-      'ALTER POLICY %I ON canonical_proposals USING (group_id = current_setting(''app.current_group_id'', true) AND workspace_id = current_setting(''app.current_workspace_id'', true)) WITH CHECK (group_id = current_setting(''app.current_group_id'', true) AND workspace_id = current_setting(''app.current_workspace_id'', true))',
-      policy_name
-    );
-  END LOOP;
-END $$;
+-- Preserve heterogeneous proposal policies and apply scope as a restrictive
+-- policy so replay cannot destroy predicates from another migration.
+DROP POLICY IF EXISTS workspace_scope_restrictive_policy ON canonical_proposals;
+CREATE POLICY workspace_scope_restrictive_policy ON canonical_proposals AS RESTRICTIVE
+  FOR ALL TO allura_app
+  USING (
+    group_id = current_setting('app.current_group_id', true)
+    AND workspace_id = current_setting('app.current_workspace_id', true)
+  )
+  WITH CHECK (
+    group_id = current_setting('app.current_group_id', true)
+    AND workspace_id = current_setting('app.current_workspace_id', true)
+  );
 
 CREATE TABLE IF NOT EXISTS evidence_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -285,37 +256,57 @@ CREATE TABLE IF NOT EXISTS evidence_requests (
 CREATE INDEX IF NOT EXISTS evidence_requests_scope_proposal_state_idx
   ON evidence_requests (group_id, workspace_id, proposal_id, state, requested_at DESC, id);
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.evidence_requests'::regclass
+      AND conname = 'evidence_requests_scope_identity_key'
+  ) THEN
+    ALTER TABLE evidence_requests
+      ADD CONSTRAINT evidence_requests_scope_identity_key
+      UNIQUE (group_id, workspace_id, proposal_id, id);
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS governance_receipts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id TEXT NOT NULL CHECK (group_id ~ '^allura-[a-z0-9-]+$'),
   workspace_id TEXT NOT NULL,
-  subject_kind TEXT NOT NULL CHECK (LENGTH(TRIM(subject_kind)) > 0),
-  subject_id TEXT NOT NULL CHECK (LENGTH(TRIM(subject_id)) > 0),
-  action TEXT NOT NULL CHECK (LENGTH(TRIM(action)) > 0),
+  proposal_id UUID NOT NULL,
+  proposal_version TEXT NOT NULL CHECK (LENGTH(TRIM(proposal_version)) > 0),
+  evidence_request_id UUID NOT NULL,
+  evidence_identity_hash TEXT NOT NULL CHECK (evidence_identity_hash ~ '^[a-f0-9]{64}$'),
+  action TEXT NOT NULL CHECK (action IN ('approve', 'reject', 'request_evidence')),
   actor_id TEXT NOT NULL CHECK (LENGTH(TRIM(actor_id)) > 0),
-  actor_role TEXT NOT NULL CHECK (LENGTH(TRIM(actor_role)) > 0),
+  actor_role TEXT NOT NULL CHECK (actor_role IN ('curator', 'admin')),
   rationale TEXT NOT NULL CHECK (LENGTH(TRIM(rationale)) > 0),
   policy_reference TEXT NOT NULL CHECK (LENGTH(TRIM(policy_reference)) > 0),
   policy_version TEXT NOT NULL CHECK (LENGTH(TRIM(policy_version)) > 0),
-  proposal_version TEXT,
   memory_id TEXT,
   result_ref TEXT,
-  outbox_state TEXT NOT NULL DEFAULT 'not_enqueued'
+  outbox_state TEXT NOT NULL
     CHECK (outbox_state IN ('not_enqueued', 'queued', 'synced', 'failed', 'not_applicable')),
   source_event_id BIGINT,
   witness_hash TEXT,
-  evidence_references JSONB NOT NULL DEFAULT '[]'::jsonb
-    CHECK (jsonb_typeof(evidence_references) = 'array'),
-  occurred_at TIMESTAMPTZ NOT NULL,
+  evidence_references JSONB NOT NULL CHECK (
+    jsonb_typeof(evidence_references) = 'array' AND jsonb_array_length(evidence_references) > 0
+  ),
+  occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT governance_receipts_group_workspace_fkey
-    FOREIGN KEY (group_id, workspace_id)
-    REFERENCES workspaces(group_id, workspace_id)
+    FOREIGN KEY (group_id, workspace_id) REFERENCES workspaces(group_id, workspace_id),
+  CONSTRAINT governance_receipts_proposal_scope_fkey
+    FOREIGN KEY (group_id, workspace_id, proposal_id)
+    REFERENCES canonical_proposals(group_id, workspace_id, id) ON DELETE RESTRICT,
+  CONSTRAINT governance_receipts_evidence_scope_fkey
+    FOREIGN KEY (group_id, workspace_id, proposal_id, evidence_request_id)
+    REFERENCES evidence_requests(group_id, workspace_id, proposal_id, id) ON DELETE RESTRICT,
+  CONSTRAINT governance_receipts_replay_key
+    UNIQUE (group_id, workspace_id, proposal_id, proposal_version, evidence_identity_hash, action)
 );
 
 -- A receipt can cite an event only from that receipt's exact tenant/workspace.
--- NOT VALID preserves any pre-existing receipt data without inventing workspace
--- backfills, while still enforcing this provenance boundary for every new write.
 ALTER TABLE governance_receipts
   DROP CONSTRAINT IF EXISTS governance_receipts_source_event_id_fkey;
 DO $$
@@ -329,43 +320,47 @@ BEGIN
       ADD CONSTRAINT governance_receipts_source_event_scope_fkey
       FOREIGN KEY (group_id, workspace_id, source_event_id)
       REFERENCES events(group_id, workspace_id, id)
-      ON DELETE RESTRICT
-      NOT VALID;
+      ON DELETE RESTRICT NOT VALID;
   END IF;
 END $$;
 
-CREATE INDEX IF NOT EXISTS governance_receipts_scope_subject_occurred_idx
-  ON governance_receipts (group_id, workspace_id, subject_kind, subject_id, occurred_at DESC, id);
+CREATE INDEX IF NOT EXISTS governance_receipts_scope_proposal_occurred_idx
+  ON governance_receipts (group_id, workspace_id, proposal_id, occurred_at DESC, id);
 
 CREATE TABLE IF NOT EXISTS semantic_projections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id TEXT NOT NULL CHECK (group_id ~ '^allura-[a-z0-9-]+$'),
   workspace_id TEXT NOT NULL,
-  subject_kind TEXT NOT NULL CHECK (LENGTH(TRIM(subject_kind)) > 0),
-  subject_id TEXT NOT NULL CHECK (LENGTH(TRIM(subject_id)) > 0),
+  source_kind TEXT NOT NULL CHECK (LENGTH(TRIM(source_kind)) > 0),
+  source_id TEXT NOT NULL CHECK (LENGTH(TRIM(source_id)) > 0),
   projection_version TEXT NOT NULL CHECK (LENGTH(TRIM(projection_version)) > 0),
-  source_revision_hash TEXT NOT NULL CHECK (LENGTH(TRIM(source_revision_hash)) > 0),
+  source_revision_hash TEXT NOT NULL CHECK (source_revision_hash ~ '^[a-f0-9]{64}$'),
+  content_hash TEXT NOT NULL CHECK (content_hash ~ '^[a-f0-9]{64}$'),
   source_refs JSONB NOT NULL CHECK (
     jsonb_typeof(source_refs) = 'array' AND jsonb_array_length(source_refs) > 0
   ),
   redaction_policy_version TEXT NOT NULL CHECK (LENGTH(TRIM(redaction_policy_version)) > 0),
-  content_markdown TEXT NOT NULL,
+  markdown TEXT NOT NULL,
   embedding vector,
+  embedding_model TEXT,
   embedding_model_version TEXT,
-  build_state TEXT NOT NULL DEFAULT 'ready'
-    CHECK (build_state IN ('ready', 'failed')),
+  build_state TEXT NOT NULL DEFAULT 'pending_embedding'
+    CHECK (
+      (build_state = 'pending_embedding' AND embedding IS NULL AND embedding_model IS NULL AND embedding_model_version IS NULL AND failure_code IS NULL)
+      OR (build_state = 'ready' AND embedding IS NOT NULL AND LENGTH(TRIM(embedding_model)) > 0 AND LENGTH(TRIM(embedding_model_version)) > 0 AND failure_code IS NULL)
+      OR (build_state = 'failed' AND embedding IS NULL AND LENGTH(TRIM(failure_code)) > 0)
+    ),
   failure_code TEXT,
-  built_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT semantic_projections_group_workspace_fkey
-    FOREIGN KEY (group_id, workspace_id)
-    REFERENCES workspaces(group_id, workspace_id),
+    FOREIGN KEY (group_id, workspace_id) REFERENCES workspaces(group_id, workspace_id),
   CONSTRAINT semantic_projections_idempotency_key
-    UNIQUE (group_id, workspace_id, subject_kind, subject_id, projection_version,
-            source_revision_hash, source_refs, redaction_policy_version)
+    UNIQUE (group_id, workspace_id, source_kind, source_id, projection_version,
+            source_revision_hash, content_hash, source_refs, redaction_policy_version)
 );
 
-CREATE INDEX IF NOT EXISTS semantic_projections_scope_subject_built_idx
-  ON semantic_projections (group_id, workspace_id, subject_kind, subject_id, built_at DESC);
+CREATE INDEX IF NOT EXISTS semantic_projections_scope_source_generated_idx
+  ON semantic_projections (group_id, workspace_id, source_kind, source_id, generated_at DESC);
 
 -- These tables are workspace-owned. New routes must establish both transaction
 -- settings before accessing them; this migration does not change legacy routes.

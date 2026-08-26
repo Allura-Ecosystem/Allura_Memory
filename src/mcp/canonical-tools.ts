@@ -109,6 +109,14 @@ import {
 
 // ── Canonical Operations ───────────────────────────────────────────────────
 
+function requireVerifiedWorkspaceScope(request: { group_id: GroupId; scope?: ScopeTuple }): ScopeTuple & { workspace_id: string; agent_id: string } {
+  const scope = request.scope
+  if (!scope?.workspace_id || !scope.agent_id || scope.group_id !== request.group_id) {
+    throw new Error("verified MCP workspace scope is required")
+  }
+  return scope as ScopeTuple & { workspace_id: string; agent_id: string }
+}
+
 /**
  * 1. memory_add
  *
@@ -355,8 +363,8 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
   const startTime = Date.now()
   const retrievalStatus = request.status || "approved" // Default: approved-only retrieval
 
-  // ── Scope resolution (implicit) ────────────────────────────────────────────
-  const scope = request.scope || { group_id: groupId }
+  // Scope was injected from a verified MCP principal at the transport boundary.
+  const scope = requireVerifiedWorkspaceScope(request)
   console.log(`[memory_search] scope: group=${groupId} project=${scope.project_id || "none"} agent=${scope.agent_id || "none"} session=${scope.session_id || "none"} status=${retrievalStatus}`)
 
   // ── Approved-only filter ──────────────────────────────────────────────────
@@ -429,6 +437,8 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
       const graphResults = await graphAdapter.searchMemories({
         query: request.query,
         group_id: groupId,
+        workspace_id: scope.workspace_id,
+        principal_id: scope.agent_id,
         limit: limit - ruvectorResults.length,
       })
 
@@ -564,7 +574,7 @@ async function searchApprovedOnly(
   groupId: GroupId,
   limit: number,
   startTime: number,
-  scope: ScopeTuple
+  scope: ScopeTuple & { workspace_id: string; agent_id: string }
 ): Promise<MemorySearchResponse> {
   try {
     const { pg, neo4j: neo4jDriver } = await getConnections()
@@ -573,6 +583,8 @@ async function searchApprovedOnly(
     const graphResults = await graphAdapter.searchMemories({
       query: request.query,
       group_id: groupId,
+      workspace_id: scope.workspace_id,
+      principal_id: scope.agent_id,
       limit,
     })
 
@@ -635,6 +647,7 @@ async function searchApprovedOnly(
 export async function memory_get(request: MemoryGetRequest): Promise<MemoryGetResponse> {
   // Validate
   const groupId = validateGroupId(request.group_id)
+  const scope = requireVerifiedWorkspaceScope(request)
 
   try {
     const { pg, neo4j: neo4jDriver } = await getConnections()
@@ -643,7 +656,9 @@ export async function memory_get(request: MemoryGetRequest): Promise<MemoryGetRe
     // Try graph adapter first (semantic) - secondary store, degradation acceptable
     let getMeta = baseMeta(["postgres", "graph"])
     try {
-      const graphResult = await graphAdapter.getMemory({ id: request.id, group_id: groupId })
+      const graphResult = await graphAdapter.getMemory({
+        id: request.id, group_id: groupId, workspace_id: scope.workspace_id, principal_id: scope.agent_id,
+      })
 
       if (graphResult.node) {
         const node = graphResult.node
@@ -734,6 +749,7 @@ export async function memory_get(request: MemoryGetRequest): Promise<MemoryGetRe
 export async function memory_list(request: MemoryListRequest): Promise<MemoryListResponse> {
   // Validate
   const groupId = validateGroupId(request.group_id)
+  const scope = requireVerifiedWorkspaceScope(request)
   const limit = request.limit || 50
   const offset = request.offset || 0
   const sort = request.sort || "created_at_desc"
@@ -777,6 +793,8 @@ export async function memory_list(request: MemoryListRequest): Promise<MemoryLis
         try {
           const graphResult = await graphAdapter.listMemories({
             group_id: groupId,
+            workspace_id: scope.workspace_id,
+            principal_id: scope.agent_id,
             user_id: request.user_id ?? null,
           })
 
@@ -947,6 +965,7 @@ export async function memory_delete(request: MemoryDeleteRequest): Promise<Memor
  */
 export async function memory_update(request: MemoryUpdateRequest): Promise<MemoryUpdateResponse> {
   const groupId = validateGroupId(request.group_id)
+  const scope = requireVerifiedWorkspaceScope(request)
   const newId = generateMemoryId()
   const updatedAt = new Date().toISOString()
   const agentId = String(request.metadata?.agent_id ?? request.user_id)
@@ -1003,6 +1022,8 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
           prev_id: request.id as MemoryId,
           new_id: newId,
           group_id: groupId,
+          workspace_id: scope.workspace_id,
+          principal_id: scope.agent_id,
           user_id: request.user_id,
           content: request.content,
           version: newVersion,

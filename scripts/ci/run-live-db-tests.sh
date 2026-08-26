@@ -13,8 +13,8 @@ for arg in "$@"; do
 done
 
 : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
-: "${POSTGRES_APP_PASSWORD:=change-me-in-production}"
-: "${POSTGRES_APP_USER:=allura_app}"
+: "${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}"
+: "${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD is required}"
 export POSTGRES_APP_USER POSTGRES_APP_PASSWORD
 postgres_host="${POSTGRES_HOST:-127.0.0.1}"
 postgres_port="${POSTGRES_PORT:-5432}"

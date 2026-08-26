@@ -67,6 +67,8 @@ describe("Memory Types", () => {
       const validRequest = {
         query: "test query",
         group_id: "test-group",
+        workspace_id: "workspace-test",
+        agent_id: "agent-test",
       };
 
       const result = MemorySearchRequest.safeParse(validRequest);
@@ -84,6 +86,8 @@ describe("Memory Types", () => {
       const minimalRequest = {
         query: "test",
         group_id: "test",
+        workspace_id: "workspace-test",
+        agent_id: "agent-test",
       };
 
       const result = MemorySearchRequest.safeParse(minimalRequest);
@@ -99,6 +103,8 @@ describe("Memory Types", () => {
       const validRequest = {
         query: "test",
         group_id: "test",
+        workspace_id: "workspace-test",
+        agent_id: "agent-test",
         confidence_min: 0.7,
       };
 
@@ -108,6 +114,8 @@ describe("Memory Types", () => {
       const invalidRequest = {
         query: "test",
         group_id: "test",
+        workspace_id: "workspace-test",
+        agent_id: "agent-test",
         confidence_min: 1.5, // Invalid: > 1
       };
 
@@ -167,6 +175,8 @@ describe("Memory Types", () => {
       const validRequest = {
         topic_key: "test.insight.example",
         group_id: "test-group",
+        workspace_id: "workspace-test",
+        agent_id: "agent-test",
       };
 
       const result = GetMemoryRequest.safeParse(validRequest);
@@ -183,6 +193,8 @@ describe("Memory Types", () => {
       const requestWithVersion = {
         topic_key: "test.insight.example",
         group_id: "test-group",
+        workspace_id: "workspace-test",
+        agent_id: "agent-test",
         version: 2,
       };
 

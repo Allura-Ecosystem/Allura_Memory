@@ -45,7 +45,7 @@ const DEFAULT_POOL_CONFIG: PoolConfig = {
 
 // Long-lived process pools. Owner access remains separate from the restricted
 // application role so workspace-governed writes cannot fall back to owner credentials.
-let poolInstance: Pool | null = null;
+let ownerPoolInstance: Pool | null = null;
 let appPoolInstance: Pool | null = null;
 
 /**
@@ -80,14 +80,14 @@ export function getConnectionConfig(options: ConnectionConfigOptions = {}): Conn
 }
 
 /**
- * Get or create the singleton PostgreSQL connection pool
- * Uses server-only pattern - should only be called from server-side code
+ * Get or create the explicit owner/migration pool. Runtime code must use
+ * getPool()/getAppPool(); this elevated boundary is intentionally named.
  */
-export function getPool(): Pool {
-  if (!poolInstance) {
-    const config = getConnectionConfig();
+export function getOwnerPool(): Pool {
+  if (!ownerPoolInstance) {
+    const config = getConnectionConfig({ role: "owner" });
 
-    poolInstance = new Pool({
+    ownerPoolInstance = new Pool({
       host: config.host,
       port: config.port,
       database: config.database,
@@ -98,26 +98,12 @@ export function getPool(): Pool {
       max: config.max,
     });
 
-    // Error handling: prevent silent crashes
-    // This must be attached before any queries are made
-    poolInstance.on("error", (err: Error) => {
-      // Log background connection failures without throwing
-      // This is important for idle connections dropping
-      console.error("[PostgreSQL Pool] Unexpected error on idle client:", err.message);
-
-      // Don't exit the process - let the application handle recovery
-      // The pool will attempt to reconnect on next query
-    });
-
-    poolInstance.on("connect", () => {
-      // Log successful connections in development for debugging
-      if (process.env.NODE_ENV !== "production") {
-        console.log("[PostgreSQL Pool] New client connected");
-      }
+    ownerPoolInstance.on("error", (err: Error) => {
+      console.error("[PostgreSQL Owner Pool] Unexpected error on idle client:", err.message);
     });
   }
 
-  return poolInstance;
+  return ownerPoolInstance;
 }
 
 /**
@@ -139,14 +125,23 @@ export function getAppPool(): Pool {
 }
 
 /**
+ * Legacy/default runtime pool. Preserve the repository-wide owner-backed
+ * behavior; workspace-governed boundaries must opt into getAppPool() through
+ * withWorkspaceTransaction().
+ */
+export function getPool(): Pool {
+  return getOwnerPool();
+}
+
+/**
  * Close the connection pool
  * Call this during graceful shutdown
  */
 export async function closePool(): Promise<void> {
-  const pools = [poolInstance, appPoolInstance].filter((pool): pool is Pool => pool !== null);
+  const pools = [ownerPoolInstance, appPoolInstance].filter((pool): pool is Pool => pool !== null);
   // Clear both references before awaiting cleanup so a shutdown failure cannot
   // leave a closed/rejected singleton available to the next caller.
-  poolInstance = null;
+  ownerPoolInstance = null;
   appPoolInstance = null;
 
   const results = await Promise.allSettled(pools.map((pool) => pool.end()));

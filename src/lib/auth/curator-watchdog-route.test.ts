@@ -27,7 +27,7 @@ const validToken: McpTokenRecord = {
   agent_name: "watchdog-agent",
   token_prefix: "prefix",
   token_hash: "hash",
-  scopes: ["memory:promote"],
+  scopes: ["review:read"],
   expires_at: null,
   revoked_at: null,
   last_used_at: null,
@@ -83,6 +83,13 @@ describe("POST /api/curator/watchdog", () => {
 
     const response = await POST(request({}, "Bearer low-privilege"));
 
+    expect(response.status).toBe(403);
+    expect(scanAndPropose).not.toHaveBeenCalled();
+  });
+
+  it("does not treat memory promotion capability as reviewer authorization", async () => {
+    vi.mocked(validateToken).mockResolvedValue({ ok: true, token: { ...validToken, scopes: ["memory:promote"] } });
+    const response = await POST(request({}, "Bearer promoter"));
     expect(response.status).toBe(403);
     expect(scanAndPropose).not.toHaveBeenCalled();
   });

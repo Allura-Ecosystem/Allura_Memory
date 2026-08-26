@@ -28,6 +28,8 @@ function req(url: string, role: string | null, body?: unknown): NextRequest {
     headers["x-allura-user-id"] = "u1";
     headers["x-allura-role"] = role;
     headers["x-allura-group-id"] = "allura-test";
+    headers["x-allura-workspace-id"] = "ws_1";
+    headers["x-allura-session-id"] = "session-admin-route-test";
   }
   return new NextRequest(`http://localhost${url}`, {
     method: body ? "POST" : "GET",

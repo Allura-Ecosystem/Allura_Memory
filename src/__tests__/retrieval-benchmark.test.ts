@@ -454,6 +454,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
         const request: MemorySearchRequest = {
           query: judgment.query,
           group_id: GROUP_SYSTEM as any,
+          scope: { group_id: GROUP_SYSTEM as any, workspace_id: "workspace-system", agent_id: "benchmark" },
           status: "all" as any, // Bypass approved-only filter to exercise full pipeline
           limit: K,
         };
@@ -490,6 +491,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
         const request: MemorySearchRequest = {
           query: judgment.query,
           group_id: GROUP_SYSTEM as any,
+          scope: { group_id: GROUP_SYSTEM as any, workspace_id: "workspace-system", agent_id: "benchmark" },
           status: "all" as any,
           limit: K,
         };
@@ -524,6 +526,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
         const request: MemorySearchRequest = {
           query: judgment.query,
           group_id: GROUP_SYSTEM as any,
+          scope: { group_id: GROUP_SYSTEM as any, workspace_id: "workspace-system", agent_id: "benchmark" },
           status: "all" as any,
           limit: 10,
         };
@@ -554,6 +557,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       const request: MemorySearchRequest = {
         query: "TypeScript design patterns",
         group_id: GROUP_SYSTEM as any,
+          scope: { group_id: GROUP_SYSTEM as any, workspace_id: "workspace-system", agent_id: "benchmark" },
         status: "all" as any,
         limit: 10,
       };
@@ -580,6 +584,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       const request: MemorySearchRequest = {
         query: "TypeScript rules",
         group_id: GROUP_DURHAM as any,
+          scope: { group_id: GROUP_DURHAM as any, workspace_id: "workspace-durham", agent_id: "benchmark" },
         status: "all" as any,
         limit: 10,
       };
@@ -644,6 +649,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       const request: MemorySearchRequest = {
         query: "TypeScript type validation",
         group_id: GROUP_SYSTEM as any,
+          scope: { group_id: GROUP_SYSTEM as any, workspace_id: "workspace-system", agent_id: "benchmark" },
         status: "all" as any,
         limit: 5,
       };
@@ -694,6 +700,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       const request: MemorySearchRequest = {
         query: "TypeScript patterns",
         group_id: GROUP_SYSTEM as any,
+          scope: { group_id: GROUP_SYSTEM as any, workspace_id: "workspace-system", agent_id: "benchmark" },
         status: "all" as any,
         limit: 5,
       };
@@ -732,6 +739,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       const request: MemorySearchRequest = {
         query: "TypeScript",
         group_id: GROUP_SYSTEM as any,
+          scope: { group_id: GROUP_SYSTEM as any, workspace_id: "workspace-system", agent_id: "benchmark" },
         status: "approved",
       };
 
@@ -773,6 +781,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       const request: MemorySearchRequest = {
         query: "",
         group_id: GROUP_SYSTEM as any,
+          scope: { group_id: GROUP_SYSTEM as any, workspace_id: "workspace-system", agent_id: "benchmark" },
         status: "all" as any,
         limit: 10,
       };
@@ -804,6 +813,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       const request: MemorySearchRequest = {
         query: "   ",
         group_id: GROUP_SYSTEM as any,
+          scope: { group_id: GROUP_SYSTEM as any, workspace_id: "workspace-system", agent_id: "benchmark" },
         status: "all" as any,
         limit: 10,
       };

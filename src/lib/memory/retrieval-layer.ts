@@ -18,8 +18,8 @@ if (typeof globalThis !== "undefined" && typeof (globalThis as unknown as { wind
   throw new Error("retrieval-layer can only be used server-side");
 }
 
-import { getPool } from "@/lib/postgres/connection";
-import { queryTraces } from "@/lib/postgres/traces";
+import type { PoolClient } from "pg";
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction";
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -29,6 +29,8 @@ export type RetrievalMode = "semantic" | "structured" | "hybrid" | "traces";
 export interface RetrievalRequest {
   /** Required: Tenant isolation identifier */
   group_id: string;
+  /** Required: authenticated workspace boundary */
+  workspace_id: string;
   /** Required: Agent making the request (for audit) */
   agent_id: string;
   /** Required: Query text or search term */
@@ -106,6 +108,9 @@ function validateRequest(req: RetrievalRequest): string {
   if (!req.agent_id) {
     throw new RetrievalError("agent_id is required");
   }
+  if (!req.workspace_id?.trim()) {
+    throw new RetrievalError("workspace_id is required");
+  }
   if (!req.query || req.query.trim().length === 0) {
     throw new RetrievalError("query is required and cannot be empty");
   }
@@ -133,18 +138,20 @@ export class RetrievalError extends Error {
 // ── Audit Logging ──────────────────────────────────────────────────────────
 
 async function logRetrieval(
+  db: Pick<PoolClient, "query">,
   groupId: string,
+  workspaceId: string,
   agentId: string,
   mode: RetrievalMode,
   resultCount: number
 ): Promise<void> {
   try {
-    const pool = getPool();
-    await pool.query(
-      `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-       VALUES ($1, 'retrieval_query', $2, 'completed', $3, NOW())`,
+    await db.query(
+      `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at)
+       VALUES ($1, $2, 'retrieval_query', $3, 'completed', $4, NOW())`,
       [
         groupId,
+        workspaceId,
         agentId,
         JSON.stringify({ mode, result_count: resultCount }),
       ]
@@ -185,23 +192,18 @@ function rowToResult(row: GraphMemoryRow, scope: "project" | "global"): Retrieva
 
 function buildWhereClause(
   groupId: string,
+  workspaceId: string,
   filters: RetrievalRequest["filters"],
-  includeGlobal: boolean,
+  _includeGlobal: boolean,
 ): { clause: string; params: unknown[] } {
-  const params: unknown[] = [];
-  const conditions: string[] = [];
-
-  if (includeGlobal) {
-    params.push(groupId, "global");
-    conditions.push("(group_id = $1 OR group_id = $2)");
-  } else {
-    params.push(groupId);
-    conditions.push("group_id = $1");
-  }
-
-  conditions.push("deprecated = false");
-
-  let paramIdx = includeGlobal ? 3 : 2;
+  const params: unknown[] = [groupId, workspaceId];
+  const conditions: string[] = [
+    "group_id = $1",
+    "workspace_id = $2",
+    "workspace_scope_state = 'workspace_scoped'",
+    "deprecated = false",
+  ];
+  let paramIdx = 3;
 
   if (filters?.min_confidence !== undefined) {
     params.push(filters.min_confidence);
@@ -242,12 +244,17 @@ export async function retrieveKnowledge(
   req: RetrievalRequest
 ): Promise<RetrievalResponse> {
   const validatedGroupId = validateRequest(req);
+  return withWorkspaceTransaction({
+    tenantId: validatedGroupId,
+    workspaceId: req.workspace_id,
+    principalId: req.agent_id,
+  }, async (pool) => {
   const mode = req.mode ?? "hybrid";
   const limit = req.limit ?? 10;
   const includeTraces = req.include_traces ?? false;
   const includeProject = req.scope?.project ?? true;
   const includeGlobal = req.scope?.global ?? true;
-  const pool = getPool();
+
 
   let results: RetrievalResult[] = [];
   let projectCount = 0;
@@ -256,7 +263,7 @@ export async function retrieveKnowledge(
   switch (mode) {
     case "semantic": {
       // Content-based full-text search across approved insights
-      const { clause, params } = buildWhereClause(validatedGroupId, req.filters, includeGlobal);
+      const { clause, params } = buildWhereClause(validatedGroupId, req.workspace_id, req.filters, includeGlobal);
       params.push(req.query);
       const queryParamIdx = params.length;
       params.push(limit);
@@ -281,7 +288,7 @@ export async function retrieveKnowledge(
 
     case "structured": {
       // Filter-based query on approved insights
-      const { clause, params } = buildWhereClause(validatedGroupId, req.filters, includeGlobal);
+      const { clause, params } = buildWhereClause(validatedGroupId, req.workspace_id, req.filters, includeGlobal);
       params.push(limit);
       const queryResult = await pool.query<GraphMemoryRow>(
         `SELECT id, group_id, content, score, version, created_at, provenance, deprecated
@@ -301,7 +308,7 @@ export async function retrieveKnowledge(
 
     case "hybrid": {
       // Dual-context: project + global insights merged by confidence
-      const { clause, params } = buildWhereClause(validatedGroupId, req.filters, includeGlobal);
+      const { clause, params } = buildWhereClause(validatedGroupId, req.workspace_id, req.filters, includeGlobal);
       params.push(limit);
       const queryResult = await pool.query<GraphMemoryRow>(
         `SELECT id, group_id, content, score, version, created_at, provenance, deprecated
@@ -341,31 +348,33 @@ export async function retrieveKnowledge(
   let traces: TraceResult[] | undefined;
   let traceCount = 0;
   if (includeTraces && mode !== "traces") {
-    const traceResults = await queryTraces({
-      group_id: validatedGroupId,
-      limit: Math.min(limit, 5), // Traces are supplementary, cap at 5
-    });
-    traces = traceResults.map((trace) => ({
-      id: trace.id,
-      type: trace.type,
-      agent: trace.agent,
-      content: trace.content,
+    const traceResults = await pool.query(
+      `SELECT id::text,event_type AS type,agent_id AS agent,COALESCE(metadata->>'content','') AS content,created_at AS timestamp
+       FROM events WHERE group_id=$1 AND workspace_id=$2 ORDER BY created_at DESC LIMIT $3`,
+      [validatedGroupId, req.workspace_id, Math.min(limit, 5)],
+    );
+    traces = traceResults.rows.map((trace) => ({
+      id: String(trace.id),
+      type: String(trace.type),
+      agent: String(trace.agent ?? ""),
+      content: String(trace.content ?? ""),
       source: "postgres" as const,
-      timestamp: trace.timestamp,
+      timestamp: new Date(trace.timestamp),
     }));
     traceCount = traces.length;
   } else if (mode === "traces" && includeTraces) {
-    const traceResults = await queryTraces({
-      group_id: validatedGroupId,
-      limit,
-    });
-    traces = traceResults.map((trace) => ({
-      id: trace.id,
-      type: trace.type,
-      agent: trace.agent,
-      content: trace.content,
+    const traceResults = await pool.query(
+      `SELECT id::text,event_type AS type,agent_id AS agent,COALESCE(metadata->>'content','') AS content,created_at AS timestamp
+       FROM events WHERE group_id=$1 AND workspace_id=$2 ORDER BY created_at DESC LIMIT $3`,
+      [validatedGroupId, req.workspace_id, limit],
+    );
+    traces = traceResults.rows.map((trace) => ({
+      id: String(trace.id),
+      type: String(trace.type),
+      agent: String(trace.agent ?? ""),
+      content: String(trace.content ?? ""),
       source: "postgres" as const,
-      timestamp: trace.timestamp,
+      timestamp: new Date(trace.timestamp),
     }));
     traceCount = traces.length;
   }
@@ -386,7 +395,8 @@ export async function retrieveKnowledge(
   };
 
   // Log retrieval audit event
-  await logRetrieval(validatedGroupId, req.agent_id, mode, results.length);
+  await logRetrieval(pool, validatedGroupId, req.workspace_id, req.agent_id, mode, results.length);
 
   return response;
+  });
 }

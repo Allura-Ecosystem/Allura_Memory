@@ -66,6 +66,7 @@ describeE2E("Team RAM e2e smoke", () => {
       const plan = selectSkills({
         goal: "What do I know about authentication?",
         groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
       })
       expect(plan).toHaveLength(1)
       expect(plan[0]?.skillName).toBe("skill-neo4j-memory")
@@ -75,6 +76,7 @@ describeE2E("Team RAM e2e smoke", () => {
       const plan = selectSkills({
         goal: "Run graph query",
         groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
         cypher: "MATCH (n:Insight) RETURN n LIMIT 3",
       })
       const names = plan.map((c) => c.skillName)
@@ -85,6 +87,7 @@ describeE2E("Team RAM e2e smoke", () => {
       const plan = selectSkills({
         goal: "Check trace logs",
         groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
         sql: "SELECT * FROM events LIMIT 5",
       })
       const names = plan.map((c) => c.skillName)
@@ -95,6 +98,7 @@ describeE2E("Team RAM e2e smoke", () => {
       const plan = selectSkills({
         goal: "Full context retrieval",
         groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
         cypher: "MATCH (n) RETURN n LIMIT 1",
         needs: { memory: true, traces: true },
       })
@@ -115,6 +119,7 @@ describeE2E("Team RAM e2e smoke", () => {
         {
           goal: "Search for architecture decisions",
           groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
           query: "architecture",
           limit: 5,
         },
@@ -138,6 +143,7 @@ describeE2E("Team RAM e2e smoke", () => {
         {
           goal: "Get graph schema",
           groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
           needs: { graph: true },
         },
         executor,
@@ -158,6 +164,7 @@ describeE2E("Team RAM e2e smoke", () => {
         {
           goal: "Count insights",
           groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
           cypher: "MATCH (n:Insight) WHERE n.group_id = $groupId RETURN count(n) AS cnt",
         },
         executor,
@@ -175,6 +182,7 @@ describeE2E("Team RAM e2e smoke", () => {
         {
           goal: "Check recent traces",
           groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
           needs: { traces: true },
         },
         executor,
@@ -195,6 +203,7 @@ describeE2E("Team RAM e2e smoke", () => {
         {
           goal: "Count tenant records",
           groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
           sql: "SELECT COUNT(*)::int AS total FROM events WHERE group_id = $1",
         },
         executor,
@@ -215,6 +224,7 @@ describeE2E("Team RAM e2e smoke", () => {
         {
           goal: "Full context: memory and traces",
           groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
           needs: { memory: true, traces: true },
         },
         executor,
@@ -246,6 +256,7 @@ describeE2E("Team RAM e2e smoke", () => {
         {
           goal: "Test with one failing skill",
           groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
           needs: { memory: true, traces: true },
           maxRetriesPerSkill: 1,
         },
@@ -267,6 +278,7 @@ describeE2E("Team RAM e2e smoke", () => {
   describe("orchestration tracing (live)", () => {
     const traceConfig: OrchestrationTraceConfig = {
       groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
       agentId: "e2e-smoke-test",
       workflowId: "e2e-smoke-workflow",
     }
@@ -280,6 +292,7 @@ describeE2E("Team RAM e2e smoke", () => {
         {
           goal: "Traced memory recall",
           groupId: GROUP_ID,
+          workspaceId: "workspace-teamram",
         },
         executor,
       )

@@ -312,6 +312,8 @@ describe("TraceableMemory", () => {
       const input = {
         label: "Task" as const,
         group_id: "allura-test",
+        workspace_id: "workspace-test",
+        principal_id: "agent-test",
         props: { status: "complete" },
       };
 
@@ -340,6 +342,8 @@ describe("TraceableMemory", () => {
         traceableMemory.search({
           label: "Task" as const,
           group_id: "allura-test",
+          workspace_id: "workspace-test",
+          principal_id: "agent-test",
         })
       ).rejects.toThrow("Search index unavailable");
 
