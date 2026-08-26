@@ -25,6 +25,8 @@ import { isClerkEnabled } from "./config";
 import { getDevUserSync } from "./dev-auth";
 import { checkPermission, parseRole, roleLevel } from "./roles";
 import { minimumRoleForAction } from "./permission-action-role";
+import { resolveApiTenant } from "./web-principal";
+import { PrincipalAuthError } from "./principal-context";
 import type { AlluraRole, AuthUser, PermissionAction, PermissionCheckResult } from "./types";
 
 // ── Discriminated Union for requireRole ──────────────────────────────────────
@@ -189,30 +191,45 @@ export function forbiddenResponse(
 }
 
 /**
- * Extract group_id from auth context.
+ * Extract group_id from auth context via the Story 24.12 authority seam.
+ *
+ * Reconciles with `resolveWebApprovalTenant`: both now delegate to
+ * `resolveApiTenant` in `web-principal.ts`.
  *
  * Resolution order (highest precedence first):
  * 1. AuthUser.groupId — from Clerk or dev-auth (always trusted)
  * 2. fallbackGroupId parameter — caller-supplied explicit override
- * 3. "allura-system" — hard-coded safe default
  *
- * SECURITY: Caller-supplied query parameters are intentionally excluded.
- * Accepting group_id from unauthenticated request query strings allows
- * tenant injection — an unauthenticated caller could supply any tenant
- * and read cross-tenant data. Only authenticated identity determines
- * the effective tenant.
+ * SECURITY: There is NO hard-coded "allura-system" fallback for protected
+ * routes. Caller-supplied query parameters are intentionally excluded.
+ * Accepting group_id from unauthenticated request query strings allows tenant
+ * injection. Only authenticated identity determines the effective tenant.
+ *
+ * @throws PrincipalAuthError (INVALID_GROUP_ID 400 / AUTH_MISSING 401 / TENANT_MISMATCH 403)
+ * when the request cannot be resolved to an authenticated active tenant without
+ * an unsafe default. This is a breaking change from the prior silent
+ * `allura-system` fallback and is the point of Story 24.12.
  */
 export function getGroupIdFromAuth(
   request: NextRequest,
   fallbackGroupId?: string,
 ): string {
   const user = getAuthUser(request);
-  if (user?.groupId) {
-    return user.groupId;
+  // Explicit caller-supplied fallback is permitted only when no identity exists;
+  // otherwise authority comes from the authenticated tenant via the seam.
+  const selector = fallbackGroupId;
+  const result = resolveApiTenant(user, selector);
+  if (result.status === "ok") {
+    return result.groupId;
   }
-
-  // Use provided fallback or default — never caller-supplied query params
-  return fallbackGroupId ?? "allura-system";
+  if (result.status === "invalid_group_id") {
+    throw new PrincipalAuthError("INVALID_GROUP_ID", result.reason);
+  }
+  if (result.status === "tenant_mismatch") {
+    throw new PrincipalAuthError("TENANT_MISMATCH", result.reason);
+  }
+  // unauthenticated — no hard-coded allura-system fallback
+  throw new PrincipalAuthError("AUTH_MISSING", "authenticated tenant required; no protected-route tenant fallback");
 }
 
 // ── Action -> Role Floor ─────────────────────────────────────────────────────
@@ -277,7 +294,24 @@ export async function withPermission(
     return forbiddenResponse(roleCheck);
   }
 
-  const groupId = getGroupIdFromAuth(request);
+  // Resolve the effective tenant via the Story 24.12 seam. A refusal must map
+  // to a stable 400/401/403 response rather than propagate as an unhandled 500.
+  let groupId: string;
+  try {
+    groupId = getGroupIdFromAuth(request);
+  } catch (error) {
+    if (error instanceof PrincipalAuthError) {
+      return NextResponse.json(
+        {
+          error: error.reasonCode,
+          statusCode: error.httpStatus,
+          message: error.message,
+        },
+        { status: error.httpStatus },
+      );
+    }
+    throw error;
+  }
 
   return { user: roleCheck.user, groupId };
 }

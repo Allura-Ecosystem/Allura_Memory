@@ -114,6 +114,9 @@ export default defineConfig({
       "src/lib/auth/__tests__/budget-scope.test.ts",
       // Story 24.11a AC-7 — withPermission enforces its PermissionAction argument
       "src/lib/auth/__tests__/with-permission-action.test.ts",
+      // Story 24.12 — effective-tenant authority seam (pure logic)
+      "src/lib/auth/__tests__/api-tenant-seam.test.ts",
+      "src/lib/auth/__tests__/web-principal.test.ts",
       "src/__tests__/mcp-auth-adversarial.test.ts",
       // Allura Hosted — admin route auth/shape tests (mocked repos)
       "src/__tests__/hosted-admin-routes.test.ts",
