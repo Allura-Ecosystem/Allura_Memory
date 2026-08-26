@@ -84,6 +84,8 @@ export type AuthReasonCode =
   | "UNKNOWN_TOOL"
   | "ACTOR_MISMATCH"
   | "PRINCIPAL_MISSING"
+  // client input
+  | "INVALID_GROUP_ID"
   // configuration
   | "CONFIG_MISSING"
   | "DEV_MODE_FORBIDDEN";
@@ -100,6 +102,7 @@ const REASON_STATUS: Record<AuthReasonCode, number> = {
   UNKNOWN_TOOL: 403,
   ACTOR_MISMATCH: 403,
   PRINCIPAL_MISSING: 401,
+  INVALID_GROUP_ID: 400,
   CONFIG_MISSING: 500,
   DEV_MODE_FORBIDDEN: 500,
 };
