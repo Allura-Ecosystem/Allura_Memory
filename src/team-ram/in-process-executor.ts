@@ -25,7 +25,7 @@
  * @module team-ram/in-process-executor
  */
 
-import { getPool } from "@/lib/postgres/connection"
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
 import { validateGroupId } from "@/lib/validation/group-id"
 import type { SkillCall, SkillExecutor, TeamRamSkillName } from "./orchestrator"
 
@@ -44,6 +44,14 @@ function assertReadOnlySql(query: string): void {
   }
 }
 
+function workspaceScope(input: Record<string, unknown>) {
+  const tenantId = validateGroupId(String(input.groupId ?? input.group_id ?? ""))
+  const workspaceId = String(input.workspaceId ?? input.workspace_id ?? "").trim()
+  const principalId = String(input.principalId ?? input.agent_id ?? "team-ram").trim()
+  if (!workspaceId) throw new Error("workspaceId is required for Team RAM database access")
+  return { tenantId, workspaceId, principalId }
+}
+
 // ── Tool Handlers ─────────────────────────────────────────────────────────────
 
 // --- skill-neo4j-memory / recall_insight ---
@@ -56,40 +64,20 @@ function assertReadOnlySql(query: string): void {
  *   { query: string, groupId: string, limit: number }
  */
 async function recallInsight(input: Record<string, unknown>): Promise<unknown[]> {
-  const groupId = validateGroupId(String(input.groupId ?? ""))
+  const scope = workspaceScope(input)
   const query = String(input.query ?? "")
   const limit = typeof input.limit === "number" ? input.limit : 10
-  const pool = getPool()
-
-  const params: unknown[] = [groupId, limit]
-  let contentFilter = ""
-  if (query.length > 0) {
-    params.unshift(`%${query}%`)
-    contentFilter = "AND content ILIKE $1"
-  }
-
-  const paramOffset = query.length > 0 ? 1 : 0
-  const groupParam = paramOffset + 1
-  const limitParam = paramOffset + 2
-
-  const result = await pool.query(
-    `SELECT id AS insight_id, content, score AS confidence,
-            id AS topic_key, created_at, deprecated
-     FROM graph_memories
-     WHERE group_id = $${groupParam}
-       AND deprecated = false
-       ${contentFilter}
-     ORDER BY score DESC
-     LIMIT $${limitParam}`,
-    params
-  )
-
+  const result = await withWorkspaceTransaction(scope, (db) => db.query(
+    `SELECT id AS insight_id,content,score AS confidence,id AS topic_key,created_at,deprecated
+       FROM graph_memories
+      WHERE group_id=$1 AND workspace_id=$2 AND workspace_scope_state='workspace_scoped'
+        AND deprecated=false AND ($3='' OR content ILIKE '%' || $3 || '%')
+      ORDER BY score DESC LIMIT $4`,
+    [scope.tenantId, scope.workspaceId, query, limit],
+  ))
   return result.rows.map((rec: Record<string, unknown>) => ({
-    insight_id: rec.insight_id,
-    content: rec.content,
-    confidence: rec.confidence,
-    topic_key: rec.topic_key,
-    created_at: rec.created_at,
+    insight_id: rec.insight_id, content: rec.content, confidence: rec.confidence,
+    topic_key: rec.topic_key, created_at: rec.created_at,
     status: rec.deprecated ? "deprecated" : "active",
   }))
 }
@@ -109,14 +97,12 @@ async function getSchemaInfo(input: Record<string, unknown>): Promise<{
   nodeLabels: string[]
   relationshipTypes: string[]
 }> {
-  validateGroupId(String(input.groupId ?? ""))
-  const pool = getPool()
-
-  const tablesResult = await pool.query<{ table_name: string }>(
+  const scope = workspaceScope(input)
+  const tablesResult = await withWorkspaceTransaction(scope, (pool) => pool.query<{ table_name: string }>(
     `SELECT table_name FROM information_schema.tables
      WHERE table_schema = 'public'
      ORDER BY table_name`,
-  )
+  ))
 
   const nodeLabels = tablesResult.rows.map((r) => r.table_name)
   const relationshipTypes: string[] = []
@@ -161,7 +147,8 @@ async function queryTraces(input: Record<string, unknown>): Promise<{
   rows: unknown[]
   total: number
 }> {
-  const group_id = validateGroupId(String(input.group_id ?? ""))
+  const scope = workspaceScope(input)
+  const group_id = scope.tenantId
   const limit = typeof input.limit === "number" ? input.limit : 100
   const offset = typeof input.offset === "number" ? input.offset : 0
 
@@ -175,19 +162,17 @@ async function queryTraces(input: Record<string, unknown>): Promise<{
   const raw_order = String(input.order_by ?? "created_at DESC")
   const order_by = ALLOWED_ORDER.has(raw_order) ? raw_order : "created_at DESC"
 
-  const pool = getPool()
-
-  const [dataResult, countResult] = await Promise.all([
+  const [dataResult, countResult] = await withWorkspaceTransaction(scope, (pool) => Promise.all([
     pool.query(
       `SELECT id::text, group_id, event_type, agent_id, created_at, metadata
        FROM events
-       WHERE group_id = $1
+       WHERE group_id = $1 AND workspace_id = $2
        ORDER BY ${order_by}
-       LIMIT $2 OFFSET $3`,
-      [group_id, limit, offset],
+       LIMIT $3 OFFSET $4`,
+      [group_id, scope.workspaceId, limit, offset],
     ),
-    pool.query(`SELECT COUNT(*)::int AS total FROM events WHERE group_id = $1`, [group_id]),
-  ])
+    pool.query(`SELECT COUNT(*)::int AS total FROM events WHERE group_id = $1 AND workspace_id=$2`, [group_id, scope.workspaceId]),
+  ]))
 
   return {
     rows: dataResult.rows,
@@ -215,14 +200,13 @@ async function executeSql(input: Record<string, unknown>): Promise<{
   rows: unknown[]
   rowCount: number
 }> {
-  validateGroupId(String(input.groupId ?? ""))
+  const scope = workspaceScope(input)
   const query = String(input.query ?? "")
   const parameters = Array.isArray(input.parameters) ? input.parameters : []
 
   assertReadOnlySql(query)
 
-  const pool = getPool()
-  const result = await pool.query(query, parameters)
+  const result = await withWorkspaceTransaction(scope, (pool) => pool.query(query, parameters))
   return { rows: result.rows, rowCount: result.rowCount ?? 0 }
 }
 

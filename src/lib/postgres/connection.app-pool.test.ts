@@ -90,28 +90,29 @@ describe("managed application-role pool", () => {
     expect(appPool.connect).toHaveBeenCalledTimes(50);
   });
 
-  it("closes owner and app singletons, then creates fresh pools after reset", async () => {
+  it("preserves the legacy owner-backed getPool default while workspace boundaries opt into getAppPool", async () => {
     process.env.POSTGRES_PASSWORD = "owner-password";
     process.env.POSTGRES_APP_USER = "allura_app";
     process.env.POSTGRES_APP_PASSWORD = "app-password";
 
     const ownerPool = makePool();
     const appPool = makePool();
-    const replacementAppPool = makePool();
+    const replacementOwnerPool = makePool();
     poolConstructor
       .mockReturnValueOnce(ownerPool)
       .mockReturnValueOnce(appPool)
-      .mockReturnValueOnce(replacementAppPool);
+      .mockReturnValueOnce(replacementOwnerPool);
 
-    const { closePool, getAppPool, getPool } = await import("./connection");
+    const { closePool, getAppPool, getOwnerPool, getPool } = await import("./connection");
     expect(getPool()).toBe(ownerPool);
+    expect(getOwnerPool()).toBe(ownerPool);
     expect(getAppPool()).toBe(appPool);
 
     await closePool();
 
     expect(ownerPool.end).toHaveBeenCalledTimes(1);
     expect(appPool.end).toHaveBeenCalledTimes(1);
-    expect(getAppPool()).toBe(replacementAppPool);
+    expect(getPool()).toBe(replacementOwnerPool);
     expect(poolConstructor).toHaveBeenCalledTimes(3);
   });
 });

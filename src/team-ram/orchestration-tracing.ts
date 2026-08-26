@@ -24,6 +24,8 @@ export interface OrchestrationTraceConfig {
   agentId?: string
   /** Group ID — validated at construction */
   groupId: string
+  /** Verified workspace carried by every Team RAM trace. */
+  workspaceId: string
   /** Optional workflow ID to link traces */
   workflowId?: string
   /** Whether tracing is enabled (default: true) */
@@ -45,6 +47,7 @@ async function emit(
     await logTrace({
       agent_id: config.agentId ?? "team-ram-orchestrator",
       group_id: validateGroupId(config.groupId),
+      workspace_id: config.workspaceId,
       trace_type: traceType,
       content,
       confidence,
@@ -147,6 +150,9 @@ export function createTracedOrchestrator(config: OrchestrationTraceConfig) {
   ): Promise<OrchestrationResult> => {
     const { orchestrateTeamRamTask, selectSkills } = await import("./orchestrator")
 
+    if (config.groupId !== task.groupId || config.workspaceId !== task.workspaceId) {
+      throw new Error("Team RAM trace scope must match task workspace authority")
+    }
     const plan = selectSkills(task)
     await traceOrchestrationStart(config, task.goal, plan.map((c) => c.skillName))
 

@@ -1,112 +1,43 @@
-/**
- * @vitest-environment node
- */
-import { NextRequest } from "next/server"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+/** @vitest-environment node */
+import { readFileSync } from "node:fs";
+import { NextRequest, NextResponse } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const queryMock = vi.fn()
+const { postDecisionMock } = vi.hoisted(() => ({ postDecisionMock: vi.fn() }));
+vi.mock("@/app/api/curator/approve/route", () => ({ POST: postDecisionMock }));
+import { POST } from "@/app/api/curator/reject/route";
 
-vi.mock("@/lib/auth/api-auth", () => ({
-  requireRole: vi.fn(() => ({ user: { id: "curator-1", groupId: "allura-test" }, allowed: true })),
-  unauthorizedResponse: vi.fn(),
-  forbiddenResponse: vi.fn(),
-}))
+beforeEach(() => postDecisionMock.mockReset());
 
-vi.mock("@/lib/postgres/connection", () => ({
-  getPool: vi.fn(() => ({ query: queryMock })),
-}))
-
-vi.mock("@/lib/observability/sentry", () => ({
-  captureException: vi.fn(),
-}))
-
-import { POST } from "@/app/api/curator/reject/route"
-
-beforeEach(() => {
-  queryMock.mockReset()
-})
-
-describe("curator reject route", () => {
-  it("returns 400 when rationale is blank", async () => {
-    const request = new NextRequest("http://localhost:4748/api/curator/reject", {
+describe("curator reject compatibility route", () => {
+  it("delegates rejection to the governed workspace decision boundary and returns its receipt unchanged", async () => {
+    const receipt = {
+      id: "receipt-1", group_id: "allura-test", workspace_id: "workspace-a",
+      proposal_id: "proposal-1", proposal_version: "2", evidence_request_id: null,
+      evidence_identity_hash: "a".repeat(64), action: "reject", actor_id: "curator-1",
+      actor_role: "curator", rationale: "not enough evidence", policy_reference: "policy://test",
+      policy_version: "v1", memory_id: null, result_ref: null, outbox_state: "not_applicable",
+      source_event_id: 41, witness_hash: null, evidence_references: ["event:41"],
+      occurred_at: "2026-08-25T17:00:00.000Z", created_at: "2026-08-25T17:00:00.000Z",
+    };
+    postDecisionMock.mockResolvedValue(NextResponse.json(receipt));
+    const request = new NextRequest("http://localhost/api/curator/reject", {
       method: "POST",
-      body: JSON.stringify({
-        proposal_id: "proposal-1",
-        group_id: "allura-test",
-        rationale: "   ",
-      }),
-    })
+      headers: { "x-allura-group-id": "allura-test", "x-allura-workspace-id": "workspace-a" },
+      body: JSON.stringify({ proposal_id: "proposal-1", group_id: "allura-test", workspace_id: "forged", rationale: "not enough evidence" }),
+    });
 
-    const response = await POST(request)
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(receipt);
+    const delegated = postDecisionMock.mock.calls[0][0] as NextRequest;
+    expect(await delegated.json()).toMatchObject({ proposal_id: "proposal-1", decision: "reject", rationale: "not enough evidence" });
+    expect(delegated.headers.get("x-allura-workspace-id")).toBe("workspace-a");
+  });
 
-    expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: "rationale is required for curator decisions" })
-    expect(queryMock).not.toHaveBeenCalled()
-  })
-
-  it("delegates legacy rejection to the governed decision door", async () => {
-    queryMock.mockImplementation(async (sql: string) => {
-      if (sql.includes("FROM canonical_proposals")) {
-        return {
-          rows: [
-            {
-              id: "proposal-1",
-              group_id: "allura-test",
-              content: "Reject me",
-              score: "0.77",
-              reasoning: "Needs more evidence",
-              tier: "emerging",
-              status: "pending",
-              trace_ref: "trace-1",
-            },
-          ],
-        }
-      }
-
-      return { rows: [] }
-    })
-
-    const request = new NextRequest("http://localhost:4748/api/curator/reject", {
-      method: "POST",
-      body: JSON.stringify({
-        proposal_id: "proposal-1",
-        group_id: "allura-test",
-        curator_id: "spoofed-curator",
-        rationale: "not enough evidence",
-      }),
-    })
-
-    const response = await POST(request)
-
-    expect(response.status).toBe(200)
-    const body = await response.json()
-    const decidedAt = body.decided_at as string
-
-    expect(body.receipt).toMatchObject({
-      proposal_id: "proposal-1",
-      group_id: "allura-test",
-      decision: "rejected",
-      resulting_status: "rejected",
-      actor: "curator-1",
-      rationale: "not enough evidence",
-      notion_sync: "pending",
-    })
-
-    const updateCall = queryMock.mock.calls.find(([sql]) => String(sql).includes("UPDATE canonical_proposals"))
-    expect(String(updateCall?.[0])).toContain("group_id = $7")
-    expect(String(updateCall?.[0])).toContain("status = 'pending'")
-    expect(updateCall?.[1]).toEqual(["rejected", decidedAt, "curator-1", "not enough evidence", expect.any(String), "proposal-1", "allura-test"])
-
-    const eventCall = queryMock.mock.calls.find(
-      ([sql, params]) => String(sql).includes("INSERT INTO events") && Array.isArray(params) && params[1] === "proposal_rejected",
-    )
-    const metadata = JSON.parse(String((eventCall?.[1] as unknown[])[4]))
-    expect(metadata).toMatchObject({
-      proposal_id: "proposal-1",
-      decision: "rejected",
-      resulting_status: "rejected",
-      curator_id: "curator-1",
-      rationale: "not enough evidence",
-    })
-  })
-})
+  it("contains no direct unreceipted decision DML", () => {
+    const source = readFileSync(new URL("../app/api/curator/reject/route.ts", import.meta.url), "utf8");
+    expect(source).not.toMatch(/UPDATE\s+canonical_proposals|INSERT\s+INTO\s+events/i);
+    expect(source).toContain("postCuratorDecision");
+  });
+});

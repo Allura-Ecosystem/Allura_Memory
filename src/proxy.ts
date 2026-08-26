@@ -16,28 +16,31 @@
  *  - Production: Clerk middleware (SSO + RBAC) — dynamically loaded
  *  - Development: DevAuthProvider fallback (no Clerk needed)
  *
- * CRITICAL: Clerk is imported dynamically to avoid import-time crashes
- * when NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set. The @clerk/nextjs
- * package throws at import time if publishableKey is missing, making
- * the isClerkEnabled() check useless if Clerk is imported at the top level.
+ * Clerk's server middleware is imported dynamically only after configuration
+ * is validated. Import or runtime failures deny the request and never select
+ * DevAuthProvider in production.
  *
  * Route authority lives in src/lib/auth/route-scope-manifest.ts (single source).
  * Role helpers live in src/lib/auth/roles.ts.
  */
 
-import { NextRequest, NextResponse } from "next/server"
+import { type NextFetchEvent, NextRequest, NextResponse } from "next/server"
 
+import { extractAlluraMetadata } from "@/lib/auth/clerk"
 import { isClerkEnabled } from "@/lib/auth/config"
 import { getDevUserSync } from "@/lib/auth/dev-auth"
-import { resolveRouteAuthority } from "@/lib/auth/route-scope-manifest"
-import { hasPermission } from "@/lib/auth/roles"
-import type { AlluraRole } from "@/lib/auth/types"
 import { emitGatedAudit } from "@/lib/auth/edge-audit"
+import { AUTH_LOGIN_PATH } from "@/lib/auth/redirect-target"
+import { hasPermission } from "@/lib/auth/roles"
+import { resolveRouteAuthority } from "@/lib/auth/route-scope-manifest"
+import type { AlluraRole } from "@/lib/auth/types"
 
 const AUTH_HEADER_NAMES = [
   "x-allura-user-id",
   "x-allura-role",
   "x-allura-group-id",
+  "x-allura-workspace-id",
+  "x-allura-session-id",
   "x-allura-email",
   "x-allura-name",
   "x-allura-image-url",
@@ -71,9 +74,40 @@ function denyUnverified(request: NextRequest): NextResponse {
   if (pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "Authentication required", statusCode: 401 }, { status: 401 })
   }
-  const loginUrl = new URL("/auth/v2/login", request.url)
+  const loginUrl = new URL(AUTH_LOGIN_PATH, request.url)
   loginUrl.searchParams.set("redirect_url", pathname)
   return NextResponse.redirect(loginUrl)
+}
+
+function denyInvalidAuthority(request: NextRequest): NextResponse {
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json(
+      { error: "Invalid authenticated authority", statusCode: 403 },
+      { status: 403 },
+    )
+  }
+  return NextResponse.redirect(new URL("/unauthorized", request.url))
+}
+
+/**
+ * Keyless production has no provider capable of establishing a principal.
+ * Public routes must still reach their own degraded/fail-closed surfaces;
+ * otherwise the login target redirects to itself forever. Protected routes
+ * remain denied and continue to use the normal login redirect.
+ */
+function handleKeylessProduction(request: NextRequest): NextResponse {
+  const { pathname } = request.nextUrl
+
+  if (isStaticAsset(pathname)) {
+    return nextWithoutAuthHeaders(request)
+  }
+
+  const authority = resolveRouteAuthority(pathname)
+  if (authority.kind === "public") {
+    return nextWithoutAuthHeaders(request)
+  }
+
+  return denyUnverified(request)
 }
 
 // ── Dev Auth Handler ──────────────────────────────────────────────────────────
@@ -82,6 +116,8 @@ type AuthForwardHeaders = {
   userId: string
   role: AlluraRole
   groupId: string
+  workspaceId?: string
+  sessionId?: string
   email?: string
   name?: string
   imageUrl?: string
@@ -95,6 +131,8 @@ export function nextWithAuthHeaders(request: NextRequest, auth: AuthForwardHeade
   requestHeaders.set("x-allura-user-id", auth.userId)
   requestHeaders.set("x-allura-role", auth.role)
   requestHeaders.set("x-allura-group-id", auth.groupId)
+  if (auth.workspaceId) requestHeaders.set("x-allura-workspace-id", auth.workspaceId)
+  if (auth.sessionId) requestHeaders.set("x-allura-session-id", auth.sessionId)
   if (auth.email) requestHeaders.set("x-allura-email", auth.email)
   if (auth.name) requestHeaders.set("x-allura-name", auth.name)
   if (auth.imageUrl) requestHeaders.set("x-allura-image-url", auth.imageUrl)
@@ -148,7 +186,7 @@ function handleDevAuth(request: NextRequest): NextResponse {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Authentication required", statusCode: 401 }, { status: 401 })
     }
-    const loginUrl = new URL("/auth/v2/login", request.url)
+    const loginUrl = new URL(AUTH_LOGIN_PATH, request.url)
     loginUrl.searchParams.set("redirect_url", pathname)
     return NextResponse.redirect(loginUrl)
   }
@@ -179,6 +217,8 @@ function handleDevAuth(request: NextRequest): NextResponse {
     userId: devUser.id,
     role: devUser.role,
     groupId: devUser.groupId,
+    workspaceId: devUser.workspaceId,
+    sessionId: devUser.sessionId,
     email: devUser.email,
     name: devUser.name,
     imageUrl: devUser.imageUrl,
@@ -187,16 +227,18 @@ function handleDevAuth(request: NextRequest): NextResponse {
 
 // ── Production Clerk Handler ─────────────────────────────────────────────────
 
-let _clerkHandler: ((request: NextRequest) => Promise<NextResponse>) | null = null
+let _clerkHandler: ((request: NextRequest, event?: NextFetchEvent) => Promise<NextResponse>) | null = null
 
-async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
+async function handleClerkAuth(
+  request: NextRequest,
+  event?: NextFetchEvent,
+): Promise<NextResponse> {
   // Dynamic import — only loads Clerk when needed.
   // This avoids the import-time crash when publishableKey is missing.
   if (!_clerkHandler) {
     try {
       const { clerkMiddleware } = await import("@clerk/nextjs/server")
-      const { extractAlluraMetadata } = await import("@/lib/auth/clerk")
-      type ClerkPublicMetadata = import("@/lib/auth/types").ClerkPublicMetadata
+      type ClerkAlluraMetadata = import("@/lib/auth/types").ClerkAlluraMetadata
 
       // Story 24.11a AC-2: the hardcoded ROLE_GATES table that used to live here
       // is deleted. It covered 13 matchers across 8 route families while the
@@ -227,22 +269,27 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
         const clerkScopeName: string = authority.scopeName
 
         // Require auth
-        const { userId, sessionClaims } = await auth()
+        const { userId, sessionId, sessionClaims } = await auth()
 
-        if (!userId) {
+        if (!userId || !sessionId) {
           emitGatedAudit(req, clerkScopeName, "unauthorized", "unauthenticated", "none")
           if (pathname.startsWith("/api/")) {
             return NextResponse.json({ error: "Authentication required", statusCode: 401 }, { status: 401 })
           }
-          const loginUrl = new URL("/auth/v2/login", req.url)
+          const loginUrl = new URL(AUTH_LOGIN_PATH, req.url)
           loginUrl.searchParams.set("redirect_url", pathname)
           return NextResponse.redirect(loginUrl)
         }
 
-        // RBAC check
-        const { role, groupId } = extractAlluraMetadata(
-          sessionClaims?.publicMetadata as ClerkPublicMetadata | undefined
-        )
+        const claims = sessionClaims as { allura?: ClerkAlluraMetadata } | null | undefined
+        let authorityClaim: ReturnType<typeof extractAlluraMetadata>
+        try {
+          authorityClaim = extractAlluraMetadata(claims?.allura)
+        } catch {
+          emitGatedAudit(req, clerkScopeName, "forbidden", "authenticated", "none")
+          return denyInvalidAuthority(req)
+        }
+        const { role, groupId, workspaceId } = authorityClaim
 
         if (!hasPermission(role, requiredRole)) {
           emitGatedAudit(req, clerkScopeName, "forbidden", "authenticated", role)
@@ -269,17 +316,23 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
           userId,
           role,
           groupId,
+          workspaceId,
+          sessionId,
         })
       })
 
       // Wrap clerkInstance to match our handler signature.
       // clerkMiddleware returns a Next.js middleware function;
       // we call it with (request, evt) to get a Response.
-      _clerkHandler = async (req: NextRequest) => {
+      _clerkHandler = async (req: NextRequest, clerkEvent?: NextFetchEvent) => {
         try {
           // clerkMiddleware returns a function that Next.js calls with (req, evt).
           // In dynamic context, we call it directly.
-          const result = await (clerkInstance as any)(req, {} as any)
+          const invokeClerk = clerkInstance as unknown as (
+            request: NextRequest,
+            event: unknown,
+          ) => Promise<unknown>
+          const result = await invokeClerk(req, clerkEvent ?? {})
           // If result is a Response, wrap it; if it's already a NextResponse, return it
           if (result instanceof NextResponse) {
             return result
@@ -296,17 +349,16 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
           console.error("[proxy] Clerk handler returned an unexpected result shape; denying")
           return denyUnverified(req)
         } catch (err) {
-          console.error("[proxy] Clerk handler error, falling back to dev auth:", err)
-          return handleDevAuth(req)
+          console.error("[proxy] Clerk handler error; denying request:", err)
+          return denyUnverified(req)
         }
       }
     } catch (err) {
-      console.warn("[proxy] Clerk dynamic import failed, using DevAuthProvider:", err)
-      // Wrap sync handleDevAuth in async signature to match handler type
-      _clerkHandler = async (req: NextRequest) => handleDevAuth(req)
+      console.error("[proxy] Clerk dynamic import failed; denying requests:", err)
+      _clerkHandler = async (req: NextRequest) => denyUnverified(req)
     }
   }
-  return _clerkHandler!(request)
+  return _clerkHandler!(request, event)
 }
 
 // ── Proxy Export ─────────────────────────────────────────────────────────────
@@ -317,11 +369,17 @@ async function handleClerkAuth(request: NextRequest): Promise<NextResponse> {
  * Clerk is loaded dynamically to avoid import-time crashes when
  * NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not configured.
  */
-export default async function proxy(request: NextRequest, _event?: unknown): Promise<NextResponse> {
+export default async function proxy(
+  request: NextRequest,
+  event?: NextFetchEvent,
+): Promise<NextResponse> {
   if (!isClerkEnabled()) {
+    if (process.env.NODE_ENV === "production") {
+      return handleKeylessProduction(request)
+    }
     return handleDevAuth(request)
   }
-  return handleClerkAuth(request)
+  return handleClerkAuth(request, event)
 }
 
 export const config = {

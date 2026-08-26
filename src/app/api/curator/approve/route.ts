@@ -1,505 +1,143 @@
-/**
- * Curator Approve/Reject API
- *
- * POST /api/curator/approve - Approve or reject a proposal
- *
- * Reference: docs/allura/BLUEPRINT.md (Requirements F11-F12, B18-B19)
- *
- * ## Notion Integration (P0 — AD-CURATOR-NOTION)
- *
- * On approve/reject, a Notion page is created in the Curator Proposals
- * database. This is NON-BLOCKING — if the Notion MCP call fails,
- * the approval state machine still completes. The Notion page URL
- * is written back to the proposal's rationale field for traceability.
- *
- * Idempotency: Before creating a new page, we check if one already
- * exists (via the [notion-page:...] marker in rationale).
- */
+/** Curator decision boundary: authenticate/validate HTTP input, then delegate. */
+import { createHash } from "node:crypto";
+import { NextRequest, NextResponse } from "next/server";
+import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth";
+import { resolveWebApprovalTenant } from "@/lib/auth/web-principal";
+import { createPrincipalContext, PrincipalAuthError } from "@/lib/auth/principal-context";
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction";
+import { getAppPool } from "@/lib/postgres/connection";
+import { approveProposal, PromotionDecisionError } from "@/lib/memory/approve-proposal";
+import { logApprovalEvent, logProposalNeedsEvidenceEvent, SegregationOfDutiesError } from "@/lib/memory/approval-audit";
+import { writeGovernanceReceipt } from "@/lib/memory/governance-receipt-writer";
+import { captureException } from "@/lib/observability/sentry";
 
-import { NextRequest, NextResponse } from "next/server"
-import { createHash } from "crypto"
-import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
-import { resolveWebApprovalTenant } from "@/lib/auth/web-principal"
-import { ApprovalAuditAuthorizationError, logApprovalEvent, logProposalNeedsEvidenceEvent, SegregationOfDutiesError } from "@/lib/memory/approval-audit"
-import { KnowledgePromotionError } from "@/lib/memory/knowledge-promotion"
-import { captureException } from "@/lib/observability/sentry"
-import { getPool } from "@/lib/postgres/connection"
+const POLICY_REFERENCE = "policy://allura/curator-decision";
+const POLICY_VERSION = "25.2a/v1";
 
-const DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || "allura-system"
-
-function deterministicMemoryId(proposalId: string, groupId: string): string {
-  const hex = createHash("sha256").update(`${groupId}:${proposalId}`).digest("hex")
-  const variant = ((parseInt(hex[16] ?? "0", 16) & 0x3) | 0x8).toString(16)
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`
+class DecisionRouteError extends Error {
+  constructor(readonly status: number, message: string) { super(message); }
 }
 
-async function getProposalRequester(pg: ReturnType<typeof getPool>, traceRef: unknown, groupId: string): Promise<string | undefined> {
-  if (traceRef === null || traceRef === undefined) return undefined
-
-  const result = await pg.query<{ agent_id: string | null }>(
-    `SELECT agent_id
-     FROM events
-     WHERE id = $1 AND group_id = $2
-     LIMIT 1`,
-    [traceRef, groupId]
-  )
-
-  return result.rows[0]?.agent_id ?? undefined
-}
-
-async function updateProposalDecision(
-  pg: Pick<ReturnType<typeof getPool>, "query">,
-  params: {
-    proposalId: string
-    groupId: string
-    status: "approved" | "rejected" | "pending"
-    decision?: "needs_evidence"
-    decidedAt: string
-    curatorId: string
-    rationale: string
-    witnessHash: string
-  }
-): Promise<boolean> {
-  const result = await pg.query(
-    `UPDATE canonical_proposals
-     SET status = $1,
-         decided_at = $2,
-         decided_by = $3,
-         rationale = $4,
-         witness_hash = $5
-     WHERE id = $6
-       AND group_id = $7
-       AND status = 'pending'`,
-    [
-      params.status,
-      params.decidedAt,
-      params.curatorId,
-      params.rationale,
-      params.witnessHash,
-      params.proposalId,
-      params.groupId,
-    ]
-  )
-
-  return !("rowCount" in result) || result.rowCount !== 0
-}
-
-async function withDecisionTransaction<T>(pg: ReturnType<typeof getPool>, action: (client: Pick<ReturnType<typeof getPool>, "query">) => Promise<T>): Promise<T> {
-  if (!("connect" in pg) || typeof pg.connect !== "function") {
-    return action(pg)
-  }
-
-  const client = await pg.connect()
-  try {
-    await client.query("BEGIN")
-    const result = await action(client)
-    await client.query("COMMIT")
-    return result
-  } catch (error) {
-    await client.query("ROLLBACK")
-    throw error
-  } finally {
-    client.release()
-  }
-}
-
-async function enqueueNotionSync(
-  queryable: Pick<ReturnType<typeof getPool>, "query">,
-  params: {
-    groupId: string
-    proposalId: string
-    content: string
-    score: number
-    tier: string
-    status: "approved" | "rejected" | "pending"
-    decision?: "needs_evidence"
-    curatorId: string
-    rationale: string
-    decidedAt: string
-  }
-): Promise<void> {
-  // Notion sync sunset ADR 2026-07-02 — emission disabled unless NOTION_SYNC_ENABLED=true
-  if (process.env.NOTION_SYNC_ENABLED !== "true") return
-  await queryable.query(
-    `INSERT INTO events (
-      group_id, event_type, agent_id, status, metadata, created_at
-    ) VALUES ($1, $2, $3, $4, $5, $6)`,
-    [
-      params.groupId,
-      "notion_sync_pending",
-      "curator-approve",
-      "pending",
-      JSON.stringify({
-        proposal_id: params.proposalId,
-        content: params.content,
-        score: params.score,
-        tier: params.tier,
-        status: params.status,
-        decision: params.decision,
-        curator_id: params.curatorId,
-        rationale: params.rationale,
-        decided_at: params.decidedAt,
-        data_source_id: "42894678-aedb-4c90-9371-6494a9fe5270",
-      }),
-      params.decidedAt,
-    ]
-  )
-}
-
-async function enqueuePromotionSync(
-  queryable: Pick<ReturnType<typeof getPool>, "query">,
-  params: {
-    groupId: string
-    proposalId: string
-    memoryId: string
-    content: string
-    score: number
-    tier: string
-    traceRef: unknown
-    curatorId: string
-    requestedBy?: string
-    rationale: string
-    decidedAt: string
-  }
-): Promise<void> {
-  await queryable.query(
-    `INSERT INTO events (
-      group_id, event_type, agent_id, status, metadata, created_at
-    ) VALUES ($1, $2, $3, $4, $5, $6)`,
-    [
-      params.groupId,
-      "promotion_sync_pending",
-      "curator-approve",
-      "pending",
-      JSON.stringify({
-        proposal_id: params.proposalId,
-        memory_id: params.memoryId,
-        content: params.content,
-        score: params.score,
-        tier: params.tier,
-        trace_ref: params.traceRef ?? null,
-        curator_id: params.curatorId,
-        requested_by: params.requestedBy ?? null,
-        agent_id: params.requestedBy ?? null,
-        rationale: params.rationale,
-        decided_at: params.decidedAt,
-      }),
-      params.decidedAt,
-    ]
-  )
-}
-
-/**
- * POST /api/curator/approve
- *
- * Body:
- * - proposal_id: Required
- * - group_id: Required tenant identifier
- * - decision: 'approve' | 'reject' | 'request_evidence'
- * - curator_id: Ignored if supplied; server derives curator identity from auth
- * - rationale: Required human reasoning
- */
 export async function POST(request: NextRequest) {
-  // Auth: require curator or admin role
-  const roleCheck = requireRole(request, "curator")
-  if (!roleCheck.user) {
-    return unauthorizedResponse()
-  }
-  if (!roleCheck.allowed) {
-    return forbiddenResponse(roleCheck)
-  }
+  const roleCheck = requireRole(request, "curator");
+  if (!roleCheck.user) return unauthorizedResponse();
+  if (!roleCheck.allowed) return forbiddenResponse(roleCheck);
 
   try {
-    const body = await request.json()
-    const { proposal_id, group_id, decision, rationale } = body
-    const authenticatedUser = roleCheck.user
-    const curatorId = authenticatedUser.id
-
-    // Validate required fields
-    if (!proposal_id) {
-      return NextResponse.json({ error: "proposal_id is required" }, { status: 400 })
+    const body = await request.json();
+    const proposalId = typeof body.proposal_id === "string" ? body.proposal_id.trim() : "";
+    const decision = body.decision;
+    const rationale = typeof body.rationale === "string" ? body.rationale.trim() : "";
+    if (!proposalId) return NextResponse.json({ error: "proposal_id is required" }, { status: 400 });
+    if (!body.group_id) return NextResponse.json({ error: "group_id is required" }, { status: 400 });
+    if (!["approve", "reject", "request_evidence"].includes(decision)) {
+      return NextResponse.json({ error: "decision must be 'approve', 'reject', or 'request_evidence'" }, { status: 400 });
     }
+    if (!rationale) return NextResponse.json({ error: "rationale is required for curator decisions" }, { status: 400 });
 
-    if (!group_id) {
-      return NextResponse.json({ error: "group_id is required" }, { status: 400 })
-    }
-
-    if (!decision || !["approve", "reject", "request_evidence"].includes(decision)) {
-      return NextResponse.json({ error: "decision must be 'approve', 'reject', or 'request_evidence'" }, { status: 400 })
-    }
-
-    if (typeof rationale !== "string" || rationale.trim().length === 0) {
-      return NextResponse.json({ error: "rationale is required for curator decisions" }, { status: 400 })
-    }
-
-    const decisionRationale = rationale.trim()
-
-    // The authenticated identity is the sole tenant authority. A body group_id
-    // is accepted only when it proves the caller and resource agree.
-    let validatedGroupId: string
+    const user = roleCheck.user;
+    let groupId: string;
     try {
-      validatedGroupId = resolveWebApprovalTenant(authenticatedUser, group_id)
+      groupId = resolveWebApprovalTenant(user, body.group_id);
     } catch (error) {
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : "Authenticated tenant could not be resolved" },
-        { status: 403 },
-      )
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Authenticated tenant could not be resolved" }, { status: 403 });
     }
-
-    const pg = getPool()
-
-    // Fetch proposal
-    const proposalResult = await pg.query(
-      `SELECT id, group_id, content, score, reasoning, tier, status, trace_ref
-       FROM canonical_proposals
-       WHERE id = $1 AND group_id = $2`,
-      [proposal_id, validatedGroupId]
-    )
-
-    if (proposalResult.rows.length === 0) {
-      return NextResponse.json({ error: "Proposal not found" }, { status: 404 })
-    }
-
-    const proposal = proposalResult.rows[0]
-
-    if (proposal.status !== "pending") {
-      return NextResponse.json({ error: `Proposal already ${proposal.status}` }, { status: 400 })
-    }
-
-    const decidedAt = new Date().toISOString()
-    const proposalRequester = await getProposalRequester(pg, proposal.trace_ref, validatedGroupId)
-    if (decision === "approve" && !proposalRequester) {
-      return NextResponse.json(
-        { error: "Proposal requester provenance is required before approval" },
-        { status: 403 }
-      )
-    }
-    if (proposalRequester && proposalRequester === curatorId) {
-      return NextResponse.json(
-        { error: `Segregation of duties violation: requester and approver must be different actors (${curatorId})` },
-        { status: 403 }
-      )
-    }
-    const witnessPayload = `${proposal_id}|${validatedGroupId}|${proposal.content}|${proposal.score}|${proposal.tier}|${decision}|${decidedAt}|${curatorId}`
-    // SHAKE-256 per spec (AD-CURATOR-WITNESS) — 64-byte output matches SHA-256 security level
-    const witness_hash = createHash("shake256", { outputLength: 64 }).update(witnessPayload).digest("hex")
-
-    if (decision === "request_evidence") {
-      await withDecisionTransaction(pg, async (client) => {
-        await logProposalNeedsEvidenceEvent({
-          proposal_id,
-          group_id: validatedGroupId,
-          memory_id: proposal.trace_ref ?? proposal_id,
-          requested_by: proposalRequester,
-          curator_id: curatorId,
-          decision_actor_role: authenticatedUser.role,
-          decision: "needs_evidence",
-          resulting_status: "pending",
-          rationale: decisionRationale,
-          score: parseFloat(proposal.score),
-          tier: proposal.tier,
-          approved_at: decidedAt,
-        }, client as any)
-
-        await enqueueNotionSync(client, {
-          groupId: validatedGroupId,
-          proposalId: proposal_id,
-          content: proposal.content,
-          score: parseFloat(proposal.score),
-          tier: proposal.tier,
-          status: "pending",
-          decision: "needs_evidence",
-          curatorId,
-          rationale: decisionRationale,
-          decidedAt,
-        })
-      })
-
-      return NextResponse.json({
-        success: true,
-        decided_at: decidedAt,
-        notion_sync: "pending",
-        receipt: {
-          proposal_id,
-          group_id: validatedGroupId,
-          decision: "needs_evidence",
-          previous_status: "pending",
-          resulting_status: "pending",
-          promoted_memory_id: null,
-          actor: curatorId,
-          rationale: decisionRationale,
-          decided_at: decidedAt,
-          notion_sync: "pending",
-        },
-      })
-    }
+    if (!user.workspaceId) return NextResponse.json({ error: "Authenticated workspace could not be resolved" }, { status: 403 });
+    const workspaceId = user.workspaceId;
+    const actorRole = user.role === "admin" ? "admin" : "curator";
+    const scope = { tenantId: groupId, workspaceId, principalId: user.id };
 
     if (decision === "approve") {
-      // Queue governed Neo4j promotion via durable PostgreSQL outbox.
-      const memoryId = deterministicMemoryId(proposal_id, validatedGroupId)
-
-      const transitioned = await withDecisionTransaction(pg, async (client) => {
-        const didTransition = await updateProposalDecision(client, {
-          proposalId: proposal_id,
-          groupId: validatedGroupId,
-          status: "approved",
-          decidedAt,
-          curatorId,
-          rationale: decisionRationale,
-          witnessHash: witness_hash,
-        })
-        if (!didTransition) return false
-
-        await logApprovalEvent(
-          {
-            proposal_id,
-            group_id: validatedGroupId,
-            memory_id: memoryId,
-            requested_by: proposalRequester,
-            curator_id: curatorId,
-            decision_actor_role: authenticatedUser.role,
-            decision: "approved",
-            resulting_status: "approved",
-            rationale: decisionRationale,
-            score: parseFloat(proposal.score),
-            tier: proposal.tier,
-            approved_at: decidedAt,
-          },
-          client as any
-        )
-
-        const agentId = proposalRequester ?? null
-        const promotionAuthorship = { agent_id: proposalRequester ?? null, agentId }
-        await enqueuePromotionSync(client, {
-          groupId: validatedGroupId,
-          proposalId: proposal_id,
-          memoryId,
-          content: proposal.content,
-          score: parseFloat(proposal.score),
-          tier: proposal.tier,
-          traceRef: proposal.trace_ref,
-          curatorId,
-          requestedBy: promotionAuthorship.agentId ?? undefined,
-          rationale: decisionRationale,
-          decidedAt,
-        })
-
-        await enqueueNotionSync(client, {
-          groupId: validatedGroupId,
-          proposalId: proposal_id,
-          content: proposal.content,
-          score: parseFloat(proposal.score),
-          tier: proposal.tier,
-          status: "approved",
-          curatorId,
-          rationale: decisionRationale,
-          decidedAt,
-        })
-
-        return true
-      })
-      if (!transitioned) {
-        return NextResponse.json({ error: "Proposal is no longer pending" }, { status: 409 })
-      }
-
-      return NextResponse.json({
-        success: true,
-        memory_id: memoryId,
-        decided_at: decidedAt,
-        notion_sync: "pending",
-        promotion_sync: "pending",
-        receipt: {
-          proposal_id,
-          group_id: validatedGroupId,
-          decision: "approved",
-          previous_status: "pending",
-          resulting_status: "approved",
-          promoted_memory_id: memoryId,
-          queued_memory_id: memoryId,
-          actor: curatorId,
-          rationale: decisionRationale,
-          decided_at: decidedAt,
-          notion_sync: "pending",
-        },
-      })
-    } else {
-      const transitioned = await withDecisionTransaction(pg, async (client) => {
-        const didTransition = await updateProposalDecision(client, {
-          proposalId: proposal_id,
-          groupId: validatedGroupId,
-          status: "rejected",
-          decidedAt,
-          curatorId,
-          rationale: decisionRationale,
-          witnessHash: witness_hash,
-        })
-        if (!didTransition) return false
-
-        await logApprovalEvent(
-          {
-            proposal_id,
-            group_id: validatedGroupId,
-            memory_id: proposal.trace_ref ?? proposal_id,
-            requested_by: proposalRequester,
-            curator_id: curatorId,
-            decision_actor_role: authenticatedUser.role,
-            decision: "rejected",
-            rationale: decisionRationale,
-            score: parseFloat(proposal.score),
-            tier: proposal.tier,
-            approved_at: decidedAt,
-          },
-          client as any
-        )
-
-        await enqueueNotionSync(client, {
-          groupId: validatedGroupId,
-          proposalId: proposal_id,
-          content: proposal.content,
-          score: parseFloat(proposal.score),
-          tier: proposal.tier,
-          status: "rejected",
-          curatorId,
-          rationale: decisionRationale,
-          decidedAt,
-        })
-
-        return true
-      })
-      if (!transitioned) {
-        return NextResponse.json({ error: "Proposal is no longer pending" }, { status: 409 })
-      }
-
-      return NextResponse.json({
-        success: true,
-        decided_at: decidedAt,
-        notion_sync: "pending",
-        receipt: {
-          proposal_id,
-          group_id: validatedGroupId,
-          decision: "rejected",
-          previous_status: "pending",
-          resulting_status: "rejected",
-          promoted_memory_id: null,
-          actor: curatorId,
-          rationale: decisionRationale,
-          decided_at: decidedAt,
-          notion_sync: "pending",
-        },
-      })
+      const principal = createPrincipalContext({
+        principalId: user.id,
+        tenantIds: [groupId],
+        roles: [actorRole],
+        scopes: ["review:approve"],
+        authMethod: "web_session",
+        sessionId: user.sessionId ?? `web:${user.id}`,
+      });
+      const idempotencyKey = request.headers.get("idempotency-key")?.trim() || `${proposalId}:approve:${user.id}`;
+      const receipt = await approveProposal({
+        principal,
+        groupId,
+        workspaceId,
+        proposalId,
+        rationale,
+        idempotencyKey,
+        evidenceRequestIds: Array.isArray(body.evidence_request_ids) ? body.evidence_request_ids : [],
+        pool: getAppPool(),
+      });
+      return NextResponse.json(receipt);
     }
+
+    const receipt = await withWorkspaceTransaction(scope, async (client) => {
+      const locked = await client.query(
+        `SELECT id,content,score,tier,status,trace_ref,proposal_version
+         FROM canonical_proposals
+         WHERE id=$1 AND group_id=$2 AND workspace_id=$3 FOR UPDATE`,
+        [proposalId, groupId, workspaceId],
+      );
+      const proposal = locked.rows[0];
+      if (!proposal) throw new DecisionRouteError(404, "Proposal not found");
+      if (proposal.status !== "pending") throw new DecisionRouteError(400, `Proposal already ${proposal.status}`);
+      if (proposal.trace_ref === null || proposal.trace_ref === undefined) throw new DecisionRouteError(400, "Proposal trace evidence is required");
+      const source = await client.query(
+        `SELECT id,agent_id FROM events WHERE id=$1 AND group_id=$2 AND workspace_id=$3`,
+        [proposal.trace_ref, groupId, workspaceId],
+      );
+      const sourceEvent = source.rows[0];
+      if (!sourceEvent) throw new DecisionRouteError(400, "Proposal trace evidence is missing or outside workspace scope");
+      if (sourceEvent.agent_id === user.id) throw new SegregationOfDutiesError(user.id);
+
+      const decidedAt = new Date().toISOString();
+      let version = String(proposal.proposal_version);
+      let evidenceRequestIds: string[] = [];
+      if (decision === "request_evidence") {
+        const evidenceRequestId = await logProposalNeedsEvidenceEvent({
+          proposal_id: proposalId, group_id: groupId, workspace_id: workspaceId,
+          memory_id: String(proposal.trace_ref), requested_by: sourceEvent.agent_id ?? undefined,
+          curator_id: user.id, decision_actor_role: actorRole, decision: "needs_evidence",
+          resulting_status: "pending", rationale, score: Number(proposal.score), tier: proposal.tier,
+          approved_at: decidedAt,
+        }, client as never);
+        evidenceRequestIds = [evidenceRequestId];
+      } else {
+        const witnessHash = createHash("shake256", { outputLength: 64 })
+          .update(`${proposalId}|${groupId}|${proposal.content}|${proposal.score}|${proposal.tier}|reject|${decidedAt}|${user.id}`)
+          .digest("hex");
+        const transition = await client.query(
+          `UPDATE canonical_proposals
+           SET status='rejected',decided_at=$1,decided_by=$2,rationale=$3,witness_hash=$4,approved_memory_id=NULL
+           WHERE id=$5 AND group_id=$6 AND workspace_id=$7 AND proposal_version=$8 AND status='pending'
+           RETURNING proposal_version`,
+          [decidedAt, user.id, rationale, witnessHash, proposalId, groupId, workspaceId, proposal.proposal_version],
+        );
+        if (!transition.rows[0]) throw new DecisionRouteError(409, "Proposal is no longer pending");
+        version = String(transition.rows[0].proposal_version);
+        await logApprovalEvent({
+          proposal_id: proposalId, group_id: groupId, workspace_id: workspaceId,
+          memory_id: String(proposal.trace_ref), requested_by: sourceEvent.agent_id ?? undefined,
+          curator_id: user.id, decision_actor_role: actorRole, decision: "rejected",
+          resulting_status: "rejected", rationale, score: Number(proposal.score), tier: proposal.tier,
+          approved_at: decidedAt,
+        }, client as never);
+      }
+
+      return writeGovernanceReceipt(scope, { actorId: user.id, role: actorRole }, {
+        proposalId, proposalVersion: version, action: decision, rationale,
+        policyReference: POLICY_REFERENCE, policyVersion: POLICY_VERSION, evidenceRequestIds,
+      }, client);
+    });
+    return NextResponse.json(receipt);
   } catch (error) {
-    if (error instanceof SegregationOfDutiesError || error instanceof ApprovalAuditAuthorizationError) {
-      return NextResponse.json({ error: error.message }, { status: 403 })
+    if (error instanceof DecisionRouteError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof PrincipalAuthError) return NextResponse.json(error.toErrorPayload(), { status: error.httpStatus });
+    if (error instanceof PromotionDecisionError) {
+      const status = error.code === "NOT_FOUND" ? 404 : error.code === "ALREADY_DECIDED" ? 409 : error.code === "UNAUTHORIZED" ? 403 : 400;
+      return NextResponse.json({ error: error.message }, { status });
     }
-    if (error instanceof KnowledgePromotionError) {
-      captureException(error, {
-        tags: { route: "/api/curator/approve", method: "POST", error_type: "promotion_failed" },
-      })
-      return NextResponse.json({ error: "Knowledge promotion failed" }, { status: 503 })
-    }
-    captureException(error, { tags: { route: "/api/curator/approve", method: "POST" } })
-    console.error("Failed to process curator decision:", error)
-    return NextResponse.json({ error: "Failed to process curator decision" }, { status: 500 })
+    if (error instanceof SegregationOfDutiesError) return NextResponse.json({ error: error.message }, { status: 403 });
+    captureException(error, { tags: { route: "/api/curator/approve", method: "POST" } });
+    return NextResponse.json({ error: "Failed to process curator decision" }, { status: 500 });
   }
 }

@@ -86,7 +86,8 @@ describe("McpSkillExecutor", () => {
       skillName: "skill-neo4j-memory",
       toolName: "recall_insight",
       assignedAgent: "scout",
-      input: { query: "architecture decisions", groupId: "allura-test-teamram", limit: 10 },
+      input: { query: "architecture decisions", groupId: "allura-test-teamram",
+        workspaceId: "workspace-teamram", limit: 10 },
     }
 
     const result = await executor.execute(call)
@@ -97,6 +98,7 @@ describe("McpSkillExecutor", () => {
     expect(callLog[0].args).toEqual({
       query: "architecture decisions",
       groupId: "allura-test-teamram",
+        workspaceId: "workspace-teamram",
       limit: 10,
     })
     expect(result).toEqual([{ id: "insight-1", content: "test" }])
@@ -313,6 +315,7 @@ describe("McpSkillExecutor + orchestrator integration", () => {
       {
         goal: "Investigate architecture decisions and recent trace events",
         groupId: "allura-test-teamram",
+        workspaceId: "workspace-teamram",
         cypher: "MATCH (n {group_id: $groupId}) RETURN n LIMIT 5",
         needs: { traces: true },
       },

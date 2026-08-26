@@ -7,10 +7,11 @@
 
 import { parse } from "dotenv"
 import type { Driver } from "neo4j-driver"
-import { Pool } from "pg"
+
 import { existsSync, readFileSync } from "fs"
 import { join } from "path"
 import { resetBudgetState } from "./budget-circuit"
+import { getAppPool, resetAppPoolSingleton } from "@/lib/postgres/connection"
 
 // Load base config plus local overrides without clobbering already-injected
 // runtime environment variables. This keeps Docker/CI/Varlock injection
@@ -35,24 +36,12 @@ loadEnvFiles()
 
 // ── Connection Management ─────────────────────────────────────────────────
 
-let pgPool: Pool | null = null
+let pgPool: import("pg").Pool | null = null
 // Neo4j driver removed — Neo4j has been sunset (AD-49).
 
-export async function getConnections(): Promise<{ pg: Pool; neo4j: Driver | null }> {
+export async function getConnections(): Promise<{ pg: import("pg").Pool; neo4j: Driver | null }> {
   if (!pgPool) {
-    const pgPassword = process.env.POSTGRES_PASSWORD
-    if (!pgPassword) {
-      throw new Error("POSTGRES_PASSWORD environment variable is required")
-    }
-    pgPool = new Pool({
-      host: process.env.POSTGRES_HOST || "localhost",
-      port: parseInt(process.env.POSTGRES_PORT || "5432"),
-      database: process.env.POSTGRES_DB || "memory",
-      user: process.env.POSTGRES_USER || "allura",
-      password: pgPassword,
-      connectionTimeoutMillis: 10000,
-      max: 10,
-    })
+    pgPool = getAppPool()
   }
 
   // Neo4j has been sunset (AD-49). PostgreSQL + pgvector is the sole graph backend.
@@ -70,6 +59,9 @@ export function resetConnections(): void {
     pgPool.end().catch(() => {})
     pgPool = null
   }
+  // Drop the upstream singleton too — it points at the pool we just ended.
+  // Without this, the next getAppPool() returns the dead instance.
+  resetAppPoolSingleton()
   resetBudgetState()
 }
 

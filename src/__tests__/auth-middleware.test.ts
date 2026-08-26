@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 // Set dev auth environment before importing modules
 process.env.ALLURA_DEV_AUTH_ENABLED = "true"
 process.env.ALLURA_DEV_AUTH_ROLE = "admin"
-process.env.ALLURA_DEV_AUTH_GROUP_ID = "allura-roninmemory"
+process.env.ALLURA_DEV_AUTH_GROUP_ID = "allura-system"
 process.env.ALLURA_DEV_AUTH_USER_ID = "dev-user-allura"
 process.env.ALLURA_DEV_AUTH_EMAIL = "dev@allura.local"
 // @ts-expect-error — NODE_ENV is read-only in Next.js types but must be set for tests
@@ -29,15 +29,37 @@ delete process.env.CLERK_SECRET_KEY
 // clerkMiddleware wraps our handler; the mock passes (auth, req) directly so
 // the dev-mode branch executes when Clerk is disabled.
 
+const clerkTestState = vi.hoisted(() => ({
+  throwAtRuntime: false,
+  receivedEvent: undefined as unknown,
+  authResult: {
+    userId: null as string | null,
+    sessionId: null as string | null,
+    sessionClaims: null as Record<string, unknown> | null,
+  },
+}))
+
 vi.mock("@clerk/nextjs/server", () => ({
-  clerkMiddleware: (handler: (auth: any, req: any) => any) => {
+  clerkMiddleware: (handler: (
+    auth: () => Promise<{
+      userId: string | null
+      sessionId: string | null
+      sessionClaims: Record<string, unknown> | null
+    }>,
+    req: NextRequest,
+  ) => unknown) => {
     // Return a function that calls the handler with a mock auth and the request
-    return (req: NextRequest) =>
-      handler(
+    return (req: NextRequest, event: unknown) => {
+      clerkTestState.receivedEvent = event
+      if (clerkTestState.throwAtRuntime) {
+        throw new Error("simulated Clerk runtime failure")
+      }
+      return handler(
         // Mock auth() — should never be called in dev mode (Clerk disabled)
-        vi.fn().mockResolvedValue({ userId: null, sessionClaims: null }),
+        vi.fn().mockResolvedValue(clerkTestState.authResult),
         req
       )
+    }
   },
   createRouteMatcher: (patterns: string[]) => {
     // Simple route matcher that converts glob patterns to regex
@@ -56,8 +78,13 @@ vi.mock("@clerk/nextjs/server", () => ({
 
 // ── Import after env setup and mocks ──────────────────────────────────────────
 
-import { clearAuthConfig, PROTECTED_ROUTES , PUBLIC_ROUTES } from "@/lib/auth/config"
-import { matchesPattern, PUBLIC_ROUTE_MANIFEST, resolveRouteAuthority } from "@/lib/auth/route-scope-manifest"
+import { clearAuthConfig } from "@/lib/auth/config"
+import {
+  matchesPattern,
+  PUBLIC_ROUTE_MANIFEST,
+  resolveRouteAuthority,
+  ROUTE_SCOPE_MANIFEST,
+} from "@/lib/auth/route-scope-manifest"
 import proxyDefault from "@/proxy"
 
 // vi.mock replaces the real clerkMiddleware with our passthrough, so the
@@ -70,6 +97,9 @@ const middleware = proxyDefault as unknown as TestMiddleware
 describe("Auth Middleware", () => {
   beforeEach(() => {
     clearAuthConfig()
+    clerkTestState.throwAtRuntime = false
+    clerkTestState.receivedEvent = undefined
+    clerkTestState.authResult = { userId: null, sessionId: null, sessionClaims: null }
   })
 
   // ── Public Routes ────────────────────────────────────────────────────────
@@ -196,7 +226,7 @@ describe("Auth Middleware", () => {
     it("should forward x-allura-group-id header upstream for authenticated requests", async () => {
       const request = new NextRequest(new URL("/memory", "http://localhost:3100"))
       const response = await middleware(request)
-      expect(response.headers.get("x-middleware-request-x-allura-group-id")).toBe("allura-roninmemory")
+      expect(response.headers.get("x-middleware-request-x-allura-group-id")).toBe("allura-system")
     })
 
     it("should overwrite spoofed incoming x-allura headers before forwarding upstream", async () => {
@@ -205,6 +235,8 @@ describe("Auth Middleware", () => {
           "x-allura-user-id": "spoofed-user",
           "x-allura-role": "viewer",
           "x-allura-group-id": "allura-attacker",
+          "x-allura-workspace-id": "workspace-attacker",
+          "x-allura-session-id": "session-attacker",
           "x-allura-email": "spoof@example.test",
           "x-allura-name": "Spoofed User",
           "x-allura-image-url": "https://example.test/spoof.png",
@@ -214,7 +246,9 @@ describe("Auth Middleware", () => {
 
       expect(response.headers.get("x-middleware-request-x-allura-user-id")).toBe("dev-user-allura")
       expect(response.headers.get("x-middleware-request-x-allura-role")).toBe("admin")
-      expect(response.headers.get("x-middleware-request-x-allura-group-id")).toBe("allura-roninmemory")
+      expect(response.headers.get("x-middleware-request-x-allura-group-id")).toBe("allura-system")
+      expect(response.headers.get("x-middleware-request-x-allura-workspace-id")).toBe("workspace-allura")
+      expect(response.headers.get("x-middleware-request-x-allura-session-id")).toBe("dev:dev-user-allura")
       expect(response.headers.get("x-middleware-request-x-allura-email")).toBe("dev@allura.local")
       expect(response.headers.get("x-middleware-request-x-allura-name")).toBe("Dev User")
       expect(response.headers.get("x-middleware-request-x-allura-image-url")).toBeNull()
@@ -227,6 +261,8 @@ describe("Auth Middleware", () => {
           "x-allura-user-id": "spoofed-user",
           "x-allura-role": "admin",
           "x-allura-group-id": "allura-attacker",
+          "x-allura-workspace-id": "workspace-attacker",
+          "x-allura-session-id": "session-attacker",
           "x-allura-email": "spoof@example.test",
           "x-allura-name": "Spoofed User",
           "x-allura-image-url": "https://example.test/spoof.png",
@@ -237,6 +273,8 @@ describe("Auth Middleware", () => {
       expect(response.headers.get("x-middleware-request-x-allura-user-id")).toBeNull()
       expect(response.headers.get("x-middleware-request-x-allura-role")).toBeNull()
       expect(response.headers.get("x-middleware-request-x-allura-group-id")).toBeNull()
+      expect(response.headers.get("x-middleware-request-x-allura-workspace-id")).toBeNull()
+      expect(response.headers.get("x-middleware-request-x-allura-session-id")).toBeNull()
       expect(response.headers.get("x-middleware-request-x-allura-email")).toBeNull()
       expect(response.headers.get("x-middleware-request-x-allura-name")).toBeNull()
       expect(response.headers.get("x-middleware-request-x-allura-image-url")).toBeNull()
@@ -247,28 +285,54 @@ describe("Auth Middleware", () => {
 
   describe("role-based access control", () => {
     it("should define correct protected routes", () => {
-      expect(PROTECTED_ROUTES).toBeDefined()
-      expect(PROTECTED_ROUTES.length).toBeGreaterThan(0)
+      expect(ROUTE_SCOPE_MANIFEST).toBeDefined()
+      expect(ROUTE_SCOPE_MANIFEST.length).toBeGreaterThan(0)
 
       // Check admin routes
-      const adminRoutes = PROTECTED_ROUTES.filter((r) => r.requiredRole === "admin")
+      const adminRoutes = ROUTE_SCOPE_MANIFEST.filter((r) => r.requiredRole === "admin")
       expect(adminRoutes.some((r) => r.pattern.includes("/admin"))).toBe(true)
 
       // Check curator routes
-      const curatorRoutes = PROTECTED_ROUTES.filter((r) => r.requiredRole === "curator")
+      const curatorRoutes = ROUTE_SCOPE_MANIFEST.filter((r) => r.requiredRole === "curator")
       expect(curatorRoutes.some((r) => r.pattern.includes("/curator"))).toBe(true)
 
       // Check viewer routes
-      const viewerRoutes = PROTECTED_ROUTES.filter((r) => r.requiredRole === "viewer")
+      const viewerRoutes = ROUTE_SCOPE_MANIFEST.filter((r) => r.requiredRole === "viewer")
       expect(viewerRoutes.some((r) => r.pattern.includes("/memory"))).toBe(true)
       expect(viewerRoutes.some((r) => r.pattern.includes("/api/permission-profiles"))).toBe(true)
     })
 
     it("should define correct public routes", () => {
-      expect(PUBLIC_ROUTES).toBeDefined()
-      expect(PUBLIC_ROUTES).toContain("/api/health")
-      expect(PUBLIC_ROUTES).toContain("/api/mcp")
-      expect(PUBLIC_ROUTES).toContain("/")
+      const publicPatterns = PUBLIC_ROUTE_MANIFEST.map((entry) => entry.pattern)
+      expect(publicPatterns).toContain("/api/health")
+      expect(publicPatterns).toContain("/api/mcp")
+      expect(publicPatterns).toContain("/")
+    })
+  })
+
+  describe("invalid Clerk sessions", () => {
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+      delete process.env.CLERK_SECRET_KEY
+      process.env.ALLURA_DEV_AUTH_ENABLED = "true"
+      clearAuthConfig()
+    })
+
+    it("redirects an expired or invalid Clerk session to login", async () => {
+      ;(process.env as Record<string, string | undefined>).NODE_ENV = "test"
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_configured"
+      process.env.CLERK_SECRET_KEY = "sk_test_configured"
+      process.env.ALLURA_DEV_AUTH_ENABLED = "true"
+      clearAuthConfig()
+      clerkTestState.authResult = { userId: null, sessionId: null, sessionClaims: null }
+
+      const response = await middleware(
+        new NextRequest(new URL("/dashboard/curator", "http://localhost:3100")),
+      )
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get("location")).toContain("/auth/v2/login")
+      expect(response.headers.get("location")).not.toContain("/unauthorized")
     })
   })
 
@@ -493,6 +557,7 @@ describe("Auth Middleware", () => {
     })
 
     afterEach(() => {
+      clerkTestState.throwAtRuntime = false
       delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
       delete process.env.CLERK_SECRET_KEY
       clearAuthConfig()
@@ -506,6 +571,70 @@ describe("Auth Middleware", () => {
       "/api/brain/search",
     ])("denies %s with 401 when Clerk reports no userId", async (path) => {
       const request = new NextRequest(new URL(path, "http://localhost:3100"))
+      const response = await middleware(request)
+
+      expect(response.status).toBe(401)
+      expect(response.headers.get("x-middleware-request-x-allura-user-id")).toBeNull()
+    })
+
+    it("forwards authority from the canonical allura custom session claim", async () => {
+      clerkTestState.authResult = {
+        userId: "user-clerk",
+        sessionId: "session-clerk",
+        sessionClaims: {
+          allura: {
+            role: "curator",
+            groupId: "allura-acme",
+            workspaceId: "workspace-a",
+          },
+        },
+      }
+
+      const response = await middleware(
+        new NextRequest(new URL("/dashboard/curator", "http://localhost:3100")),
+      )
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get("x-middleware-request-x-allura-user-id")).toBe("user-clerk")
+      expect(response.headers.get("x-middleware-request-x-allura-group-id")).toBe("allura-acme")
+      expect(response.headers.get("x-middleware-request-x-allura-workspace-id")).toBe("workspace-a")
+    })
+
+    it("passes the supplied NextFetchEvent to Clerk middleware", async () => {
+      const event = { waitUntil: vi.fn() }
+
+      await proxyDefault(
+        new NextRequest(new URL("/api/brain/memories", "http://localhost:3100")),
+        event as never,
+      )
+
+      expect(clerkTestState.receivedEvent).toBe(event)
+    })
+
+    it.each([
+      ["missing", null],
+      ["malformed", { allura: { role: "owner", groupId: "not-a-group" } }],
+    ])("returns 403 for an authenticated session with %s authority", async (_case, sessionClaims) => {
+      clerkTestState.authResult = {
+        userId: "user-clerk",
+        sessionId: "session-clerk",
+        sessionClaims,
+      }
+
+      const response = await middleware(
+        new NextRequest(new URL("/api/curator/proposals", "http://localhost:3100")),
+      )
+
+      expect(response.status).toBe(403)
+      expect(await response.json()).toMatchObject({
+        error: "Invalid authenticated authority",
+        statusCode: 403,
+      })
+    })
+
+    it("denies instead of falling back to the dev-admin principal when Clerk fails", async () => {
+      clerkTestState.throwAtRuntime = true
+      const request = new NextRequest(new URL("/api/curator/proposals", "http://localhost:3100"))
       const response = await middleware(request)
 
       expect(response.status).toBe(401)

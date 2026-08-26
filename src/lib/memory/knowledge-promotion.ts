@@ -24,7 +24,7 @@
 
 import { z } from 'zod';
 import { requireApprovalBeforePromotion } from './approval-audit';
-import { getPool } from '../postgres/connection';
+import { withWorkspaceTransaction } from '../db/tenant-transaction';
 import { type EventRecord, insertEvent } from '../postgres/queries/insert-trace';
 
 // ── Error class (replaces deleted neo4j-errors) ─────────────────────────────
@@ -96,6 +96,8 @@ export interface KnowledgeInsight {
   confidence: number;
   /** Tenant isolation identifier */
   group_id: string;
+  /** Server-derived workspace isolation identifier */
+  workspace_id: string;
   /** Notion page ID in Approval Queue */
   notion_page_id: string;
   /** PostgreSQL trace event ID */
@@ -133,6 +135,8 @@ export interface ApprovalQueueItem {
   confidence: number;
   /** Tenant group */
   group_id: string;
+  /** Server-derived workspace scope */
+  workspace_id: string;
   /** PostgreSQL trace ID */
   postgres_trace_id: string;
   /** Category */
@@ -229,6 +233,7 @@ export const KnowledgeHubPromotionParamsSchema = z.object({
 export const ApprovedProposalRowSchema = z.object({
   id: z.string().uuid(),
   group_id: z.string().min(1),
+  workspace_id: z.string().min(1),
   content: z.string().min(1),
   score: z.string().or(z.number()),
   reasoning: z.string().nullable().optional(),
@@ -330,22 +335,25 @@ export interface NotionMCPClient {
  * @returns Array of approved proposal rows
  */
 export async function queryApprovedInsights(
-  groupId: string = 'allura-system',
+  groupId: string,
+  workspaceId: string,
+  principalId: string,
   limit: number = 50
 ): Promise<ApprovalQueueItem[]> {
   console.log('[knowledge-promotion] Querying approved insights for group:', groupId);
 
-  const pool = getPool();
-
-  const result = await pool.query(
-    `SELECT id, group_id, content, score, reasoning, tier, status, trace_ref,
-            decided_by, decided_at, notion_page_id
-     FROM canonical_proposals
-     WHERE group_id = $1
-       AND status = 'approved'
-     ORDER BY decided_at ASC NULLS LAST
-     LIMIT $2`,
-    [groupId, limit]
+  const result = await withWorkspaceTransaction(
+    { tenantId: groupId, workspaceId, principalId },
+    (db) => db.query(
+      `SELECT id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref,
+              decided_by, decided_at, notion_page_id
+       FROM canonical_proposals
+       WHERE group_id = $1 AND workspace_id = $2
+         AND status = 'approved'
+       ORDER BY decided_at ASC NULLS LAST
+       LIMIT $3`,
+      [groupId, workspaceId, limit],
+    ),
   );
 
   if (result.rows.length === 0) {
@@ -367,6 +375,7 @@ export async function queryApprovedInsights(
       status: 'Approved' as const,
       confidence: Number(row.score) || 0.5,
       group_id: row.group_id as string,
+      workspace_id: row.workspace_id as string,
       postgres_trace_id: (row.trace_ref as string) || (row.id as string),
       category,
       approved_by: (row.decided_by as string) || undefined,
@@ -387,18 +396,21 @@ export async function queryApprovedInsights(
  */
 export async function queryApprovedInsightById(
   proposalId: string,
-  groupId: string
+  groupId: string,
+  workspaceId: string,
+  principalId: string,
 ): Promise<ApprovalQueueItem | null> {
   console.log('[knowledge-promotion] Querying approved insight by ID:', proposalId);
 
-  const pool = getPool();
-
-  const result = await pool.query(
-    `SELECT id, group_id, content, score, reasoning, tier, status, trace_ref,
-            decided_by, decided_at, notion_page_id
-     FROM canonical_proposals
-     WHERE id = $1 AND group_id = $2 AND status = 'approved'`,
-    [proposalId, groupId]
+  const result = await withWorkspaceTransaction(
+    { tenantId: groupId, workspaceId, principalId },
+    (db) => db.query(
+      `SELECT id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref,
+              decided_by, decided_at, notion_page_id
+       FROM canonical_proposals
+       WHERE id = $1 AND group_id = $2 AND workspace_id = $3 AND status = 'approved'`,
+      [proposalId, groupId, workspaceId],
+    ),
   );
 
   if (result.rows.length === 0) {
@@ -418,6 +430,7 @@ export async function queryApprovedInsightById(
     status: 'Approved' as const,
     confidence: Number(row.score) || 0.5,
     group_id: row.group_id as string,
+    workspace_id: row.workspace_id as string,
     postgres_trace_id: (row.trace_ref as string) || (row.id as string),
     category,
     approved_by: (row.decided_by as string) || undefined,
@@ -744,87 +757,71 @@ export async function promoteToNeo4j(insight: KnowledgeInsight): Promise<string>
     id: insight.id,
     topic: insight.topic,
     group_id: insight.group_id,
+    workspace_id: insight.workspace_id,
   });
 
   if (!insight.proposal_id || insight.proposal_id.trim().length === 0) {
     throw new Error('Proposal ID is required for promotion approval');
   }
+  if (!insight.workspace_id || insight.workspace_id.trim().length === 0) {
+    throw new Error('Workspace ID is required for promotion');
+  }
 
   await requireApprovalBeforePromotion(insight.proposal_id, insight.group_id);
 
-  const pool = getPool();
   const createdAt = new Date().toISOString();
-  const provenance = 'promotion' as const;
+  // graph_memories constrains provenance to conversation|manual. A curator-
+  // approved HITL promotion is the governed manual path.
+  const provenance = 'manual' as const;
 
   try {
-    if (insight.supersedes_id) {
-      // Create new version (supersedes existing)
-      console.log('[knowledge-promotion] Creating new version superseding:', insight.supersedes_id);
+    return await withWorkspaceTransaction(
+      {
+        tenantId: insight.group_id,
+        workspaceId: insight.workspace_id,
+        principalId: insight.source,
+      },
+      async (client) => {
+        let version = 1;
+        if (insight.supersedes_id) {
+          console.log('[knowledge-promotion] Creating new version superseding:', insight.supersedes_id);
+          const prevResult = await client.query<{ version: number }>(
+            `SELECT version FROM graph_memories
+             WHERE id = $1 AND group_id = $2 AND workspace_id = $3
+               AND workspace_scope_state = $4`,
+            [insight.supersedes_id, insight.group_id, insight.workspace_id, 'workspace_scoped']
+          );
+          const previous = prevResult.rows[0];
+          if (!previous) {
+            throw new KnowledgePromotionError(insight.id, new Error(`Previous insight not found: ${insight.supersedes_id}`));
+          }
+          version = (previous.version ?? 1) + 1;
+        }
 
-      // Get the previous version's details (read before transaction — no write)
-      const prevResult = await pool.query<{ version: number }>(
-        'SELECT version FROM graph_memories WHERE id = $1 AND group_id = $2',
-        [insight.supersedes_id, insight.group_id]
-      );
-
-      if (prevResult.rows.length === 0) {
-        throw new KnowledgePromotionError(insight.id, new Error(`Previous insight not found: ${insight.supersedes_id}`));
-      }
-
-      const newVersion = (prevResult.rows[0].version ?? 1) + 1;
-
-      // Wrap both INSERTs in a transaction so a failure of the second
-      // (graph_supersedes) rolls back the first (graph_memories), preventing
-      // orphaned memory nodes (W1 fix).
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-
-        // Insert new version
         await client.query(
-          `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, false)`,
-          [insight.id, insight.group_id, insight.source, insight.content, insight.confidence, provenance, newVersion, createdAt]
+          `INSERT INTO graph_memories
+             (id, group_id, workspace_id, workspace_scope_state, user_id, content, score, provenance, version, created_at, deprecated)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::timestamptz, false)`,
+          [insight.id, insight.group_id, insight.workspace_id, 'workspace_scoped', insight.source, insight.content, insight.confidence, provenance, version, createdAt]
         );
 
-        // Create SUPERSEDES relationship
-        await client.query(
-          `INSERT INTO graph_supersedes (newer_id, superseded_id, group_id, created_at)
-           VALUES ($1, $2, $3, $4::timestamptz)`,
-          [insight.id, insight.supersedes_id, insight.group_id, createdAt]
-        );
+        if (insight.supersedes_id) {
+          await client.query(
+            `INSERT INTO graph_supersedes
+               (newer_id, superseded_id, group_id, workspace_id, workspace_scope_state, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6::timestamptz)`,
+            [insight.id, insight.supersedes_id, insight.group_id, insight.workspace_id, 'workspace_scoped', createdAt]
+          );
+        }
 
-        await client.query('COMMIT');
-      } catch (txErr) {
-        await client.query('ROLLBACK');
-        throw txErr;
-      } finally {
-        client.release();
+        console.log('[knowledge-promotion] Promotion complete:', {
+          insight_id: insight.id,
+          workspace_id: insight.workspace_id,
+          version,
+        });
+        return insight.id;
       }
-
-      console.log('[knowledge-promotion] Promotion complete:', {
-        insight_id: insight.id,
-        version: newVersion,
-      });
-
-      return insight.id;
-    } else {
-      // Create new insight (version 1)
-      console.log('[knowledge-promotion] Creating new insight:', insight.id);
-
-      await pool.query(
-        `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
-         VALUES ($1, $2, $3, $4, $5, $6, 1, $7::timestamptz, false)`,
-        [insight.id, insight.group_id, insight.source, insight.content, insight.confidence, provenance, createdAt]
-      );
-
-      console.log('[knowledge-promotion] Promotion complete:', {
-        insight_id: insight.id,
-        version: 1,
-      });
-
-      return insight.id;
-    }
+    );
   } catch (err) {
     if (err instanceof KnowledgePromotionError) throw err;
     throw new KnowledgePromotionError(insight.id, err instanceof Error ? err : new Error(String(err)));
@@ -846,29 +843,41 @@ export async function linkInsightToAgent(
   agentId: string,
   insightId: string,
   confidence: number,
-  groupId: string
+  groupId: string,
+  workspaceId: string,
 ): Promise<void> {
   console.log('[knowledge-promotion] Linking insight to agent:', {
     agent_id: agentId,
     insight_id: insightId,
     confidence,
     group_id: groupId,
+    workspace_id: workspaceId,
   });
 
   try {
-    const pool = getPool();
-
-    await pool.query(
-      `INSERT INTO graph_structural_edges (source_id, target_id, edge_type, group_id, props, created_at)
-       SELECT
-         (SELECT node_id FROM graph_structural_nodes WHERE label = 'Agent' AND group_id = $1 AND props->>'id' = $2 LIMIT 1),
-         $3,
-         'CONTRIBUTED',
-         $1,
-         $4::jsonb,
-         NOW()
-       WHERE EXISTS (SELECT 1 FROM graph_memories WHERE id = $3 AND group_id = $1)`,
-      [groupId, agentId, insightId, JSON.stringify({ confidence, linked_at: new Date().toISOString() })]
+    await withWorkspaceTransaction(
+      { tenantId: groupId, workspaceId, principalId: agentId },
+      (db) => db.query(
+        `INSERT INTO graph_structural_edges
+           (from_id, to_id, rel_type, group_id, workspace_id, workspace_scope_state, props, created_at)
+         SELECT
+           (SELECT node_id FROM graph_structural_nodes
+             WHERE label = 'Agent' AND group_id = $1 AND workspace_id = $2
+               AND workspace_scope_state = 'workspace_scoped' AND props->>'id' = $3 LIMIT 1),
+           $4,
+           'CONTRIBUTED',
+           $1,
+           $2,
+           'workspace_scoped',
+           $5::jsonb,
+           NOW()
+         WHERE EXISTS (
+           SELECT 1 FROM graph_memories
+            WHERE id = $4 AND group_id = $1 AND workspace_id = $2
+              AND workspace_scope_state = 'workspace_scoped'
+         )`,
+        [groupId, workspaceId, agentId, insightId, JSON.stringify({ confidence, linked_at: new Date().toISOString() })],
+      ),
     );
 
     console.log('[knowledge-promotion] Successfully linked insight to agent:', {
@@ -1046,14 +1055,16 @@ export async function logPromotionEvent(
  * @returns Array of promotion results
  */
 export async function processApprovedInsights(
-  groupId: string = 'allura-system',
+  groupId: string,
+  workspaceId: string,
+  principalId: string,
   batchSize: number = 10,
   mcpClient?: NotionMCPClient
 ): Promise<PromotionResult[]> {
   console.log('[knowledge-promotion] Processing approved insights for group:', groupId);
 
   // Step 1: Query approved items from PostgreSQL
-  const approvedItems = await queryApprovedInsights(groupId, batchSize);
+  const approvedItems = await queryApprovedInsights(groupId, workspaceId, principalId, batchSize);
   
   if (approvedItems.length === 0) {
     console.log('[knowledge-promotion] No approved items found');
@@ -1083,6 +1094,7 @@ export async function processApprovedInsights(
         source: item.source,
         confidence: item.confidence,
         group_id: item.group_id,
+        workspace_id: item.workspace_id,
         notion_page_id: item.notion_page_id,
         postgres_trace_id: item.postgres_trace_id,
         supersedes_id: item.supersedes_id,
@@ -1128,7 +1140,7 @@ export async function processApprovedInsights(
       }
 
       // Step 6: Create CONTRIBUTED relationship
-      await linkInsightToAgent(item.source, neo4jId, item.confidence, item.group_id);
+      await linkInsightToAgent(item.source, neo4jId, item.confidence, item.group_id, item.workspace_id);
 
       // Step 7: Log promotion event
       await logPromotionEvent(
@@ -1206,13 +1218,15 @@ export async function processApprovedInsights(
 export async function promoteSingleInsight(
   proposalId: string,
   groupId: string,
+  workspaceId: string,
+  principalId: string,
   approvedBy: string,
   mcpClient?: NotionMCPClient
 ): Promise<PromotionResult> {
   console.log('[knowledge-promotion] Promoting single insight:', proposalId);
 
   // Step 1: Query the approved proposal from PostgreSQL
-  const item = await queryApprovedInsightById(proposalId, groupId);
+  const item = await queryApprovedInsightById(proposalId, groupId, workspaceId, principalId);
 
   if (!item) {
     return {
@@ -1236,6 +1250,7 @@ export async function promoteSingleInsight(
       source: item.source,
       confidence: item.confidence,
       group_id: item.group_id,
+      workspace_id: item.workspace_id,
       notion_page_id: item.notion_page_id,
       postgres_trace_id: item.postgres_trace_id,
       supersedes_id: item.supersedes_id,
@@ -1276,7 +1291,7 @@ export async function promoteSingleInsight(
     }
 
     // Step 5: Create CONTRIBUTED relationship
-    await linkInsightToAgent(item.source, neo4jId, item.confidence, item.group_id);
+    await linkInsightToAgent(item.source, neo4jId, item.confidence, item.group_id, item.workspace_id);
 
     // Step 6: Log promotion event
     await logPromotionEvent(
@@ -1341,6 +1356,10 @@ export function validateInsightForPromotion(insight: KnowledgeInsight): boolean 
 
   if (!insight.group_id || insight.group_id.trim().length === 0) {
     throw new Error('group_id is required for promotion');
+  }
+
+  if (!insight.workspace_id || insight.workspace_id.trim().length === 0) {
+    throw new Error('Workspace ID is required for promotion');
   }
 
   if (!insight.content || insight.content.trim().length === 0) {

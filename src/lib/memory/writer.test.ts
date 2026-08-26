@@ -118,6 +118,8 @@ describe("memory() — controlPlane-routed writer", () => {
       const results = await memory().search({
         label: "Insight",
         group_id: "allura-system",
+        workspace_id: "workspace-test",
+        principal_id: "agent-test",
         props: { status: "active" },
         limit: 5,
       })
@@ -178,10 +180,9 @@ describe("memory() — controlPlane-routed writer", () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DEPRECATED BYPASS FALLBACK
-// MEMORY_BYPASS_KERNEL is the pre-rename name. It is still honoured so an
-// operator mid-migration does not silently lose the bypass and get rerouted
-// through syscall_mutate, where different policies apply.
+// RETIRED BYPASS FALLBACK
+// Direct adapter SQL cannot represent the mandatory workspace authority
+// contract and must fail closed instead of silently bypassing the control plane.
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("memory() — MEMORY_BYPASS_KERNEL deprecated fallback", () => {
@@ -196,11 +197,15 @@ describe("memory() — MEMORY_BYPASS_KERNEL deprecated fallback", () => {
     delete process.env.MEMORY_BYPASS_KERNEL
   })
 
-  it("honours the legacy MEMORY_BYPASS_KERNEL name — does not route to syscall_mutate", async () => {
+  it("rejects the legacy MEMORY_BYPASS_KERNEL fallback", () => {
     process.env.MEMORY_BYPASS_KERNEL = "true"
-    await memory()
-      .createEntity({ label: "Insight", group_id: "allura-system", props: { summary: "legacy" } })
-      .catch(() => undefined)
+    expect(() => memory()).toThrow("direct adapter fallback is retired")
+    expect(syscall_mutate).not.toHaveBeenCalled()
+  })
+
+  it("rejects the renamed MEMORY_BYPASS_CONTROL_PLANE fallback", () => {
+    process.env.MEMORY_BYPASS_CONTROL_PLANE = "true"
+    expect(() => memory()).toThrow("direct adapter fallback is retired")
     expect(syscall_mutate).not.toHaveBeenCalled()
   })
 

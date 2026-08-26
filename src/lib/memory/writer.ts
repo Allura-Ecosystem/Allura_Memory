@@ -93,6 +93,8 @@ export interface CreateRelationshipCallInput {
 export interface SearchInput {
   label: MemoryLabel;
   group_id: string;
+  workspace_id: string;
+  principal_id: string;
   props?: Record<string, unknown>;
   textMatch?: Record<string, string>;
   limit?: number;
@@ -178,10 +180,17 @@ function buildAdapterBackend(): MemoryAPI {
         const content = (props.content as string) ?? (props.summary as string) ?? "";
         const score = (props.score as number) ?? (props.confidence as number) ?? 0.5;
         const provenance = (props.provenance as "conversation" | "manual") ?? "conversation";
+        const workspaceId = String(props.workspace_id ?? "").trim();
+        const principalId = String(props.principal_id ?? props.agent_id ?? props.user_id ?? "").trim();
+        if (!workspaceId || !principalId) {
+          throw new Error("verified workspace_id and principal_id are required for graph memory writes");
+        }
 
         await adapter.createMemory({
           id: node_id as import("@/lib/memory/canonical-contracts").MemoryId,
           group_id: validatedGroupId as import("@/lib/memory/canonical-contracts").GroupId,
+          workspace_id: workspaceId,
+          principal_id: principalId,
           user_id: (props.user_id as string | null) ?? null,
           content,
           score: score as import("@/lib/memory/canonical-contracts").ConfidenceScore,
@@ -247,6 +256,8 @@ function buildAdapterBackend(): MemoryAPI {
     async search<T = Record<string, unknown>>({
       label,
       group_id,
+      workspace_id,
+      principal_id,
       props,
       textMatch,
       limit = 10,
@@ -264,6 +275,8 @@ function buildAdapterBackend(): MemoryAPI {
         const results = await adapter.searchMemories({
           query,
           group_id: validatedGroupId as import("@/lib/memory/canonical-contracts").GroupId,
+          workspace_id,
+          principal_id,
           limit,
         });
         return results.map((r) => ({
@@ -489,9 +502,9 @@ export function memory(): MemoryAPI {
     return buildControlPlaneBackend();
   }
 
-  // Fallback: direct adapter access (for migration/testing only)
-  // Neo4j direct-driver path removed — PostgreSQL + pgvector only.
-  return buildAdapterBackend();
+  throw new Error(
+    "direct adapter fallback is retired: workspace-governed memory operations must use the control plane",
+  );
 }
 
 /**
@@ -499,9 +512,10 @@ export function memory(): MemoryAPI {
  * For callers that already have an IGraphAdapter and Pool instance.
  * Bypasses env-var selection and uses the provided adapter directly.
  */
-export function memoryWithAdapter(adapter: IGraphAdapter, pool: Pool): MemoryAPI {
-  const adapterBackend = buildAdapterBackend();
-  return adapterBackend;
+export function memoryWithAdapter(_adapter: IGraphAdapter, _pool: Pool): MemoryAPI {
+  throw new Error(
+    "direct adapter fallback is retired: workspace-governed memory operations must use the control plane",
+  );
 }
 
 // Backward compatibility exports

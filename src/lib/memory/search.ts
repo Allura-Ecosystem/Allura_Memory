@@ -7,77 +7,36 @@
  * Uses IGraphAdapter (RuVector — PostgreSQL + pgvector) for all searches.
  */
 
-import type { Pool } from "pg"
-import { createGraphAdapter } from "@/lib/graph-adapter"
-import type { IGraphAdapter } from "@/lib/graph-adapter"
-import type { GroupId } from "@/lib/memory/canonical-contracts"
 import { MemorySearchRequest, MemorySearchResponse, MemorySearchResult } from "./types"
+import { retrieveKnowledge } from "./retrieval-layer"
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
 
-// ── PG Pool singleton ─────────────────────────────────────────────────────
-
-let searchPgPool: Pool | null = null;
-
-function getSearchPgPool(): Pool {
-  if (!searchPgPool) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Pool: PgPool } = require("pg") as { Pool: new (config: Record<string, unknown>) => Pool };
-    const password = process.env.POSTGRES_PASSWORD;
-    if (!password) {
-      throw new Error("POSTGRES_PASSWORD environment variable is required");
-    }
-    searchPgPool = new PgPool({
-      host: process.env.POSTGRES_HOST || "localhost",
-      port: parseInt(process.env.POSTGRES_PORT || "5432"),
-      database: process.env.POSTGRES_DB || "allura",
-      user: process.env.POSTGRES_USER || "allura",
-      password,
-      connectionTimeoutMillis: 10000,
-      max: 10,
-    });
-  }
-  return searchPgPool!;
-}
-
-let searchAdapterInstance: IGraphAdapter | null = null;
-
-function getSearchAdapter(): IGraphAdapter {
-  if (!searchAdapterInstance) {
-    const pool = getSearchPgPool();
-    searchAdapterInstance = createGraphAdapter({ pg: pool });
-  }
-  return searchAdapterInstance;
-}
 
 // ── Adapter-based search ──────────────────────────────────────────────────
 
 async function searchMemoriesAdapter(request: MemorySearchRequest): Promise<MemorySearchResponse> {
   const startTime = Date.now();
-  const { query, group_id, limit = 10 } = request;
-
-  const adapter = getSearchAdapter();
-  const results = await adapter.searchMemories({
-    query,
-    group_id: group_id as unknown as GroupId,
-    limit,
-  });
+  const { query, group_id, workspace_id, agent_id, limit = 10 } = request;
+  const controlled = await retrieveKnowledge({group_id,workspace_id,agent_id,query,limit,mode:"semantic"});
+  const results = controlled.results;
 
   const mapped: MemorySearchResult[] = results.map((r) => ({
-    id: r.id,
+    id: r.insight_id,
     type: "Insight" as const,
-    topic_key: r.id,
+    topic_key: r.insight_id,
     title: undefined,
     summary: undefined,
     content: r.content,
-    confidence: r.score,
+    confidence: r.confidence,
     group_id,
     status: "active" as const,
-    created_at: r.created_at,
-    updated_at: r.created_at,
-    version: 1,
+    created_at: r.provenance.created_at,
+    updated_at: r.provenance.created_at,
+    version: r.version,
     superseded_by: undefined,
     trace_ref: undefined,
-    tags: r.tags,
-    metadata: { relevance_score: r.relevance },
+    tags: [],
+    metadata: {},
   }));
 
   const queryTimeMs = Date.now() - startTime;
@@ -93,44 +52,42 @@ async function searchMemoriesAdapter(request: MemorySearchRequest): Promise<Memo
 async function getMemoriesByTypeAdapter(
   _type: string,
   group_id: string,
+  workspace_id: string,
+  agent_id: string,
   limit: number = 50
 ): Promise<MemorySearchResult[]> {
-  const adapter = getSearchAdapter();
-  const listResult = await adapter.listMemories({
-    group_id: group_id as unknown as GroupId,
-    user_id: null,
-  });
-
-  return listResult.memories.slice(0, limit).map((m) => ({
-    id: m.id,
+  const listResult = await retrieveKnowledge({group_id,workspace_id,agent_id,query:"*",limit,mode:"structured"});
+  return listResult.results.map((m) => ({
+    id: m.insight_id,
     type: "Insight" as const,
-    topic_key: m.id,
+    topic_key: m.insight_id,
     title: undefined,
     summary: undefined,
     content: m.content,
-    confidence: m.score,
+    confidence: m.confidence,
     group_id,
-    status: m.deprecated ? ("deprecated" as const) : ("active" as const),
-    created_at: m.created_at,
-    updated_at: m.created_at,
+    status: "active" as const,
+    created_at: m.provenance.created_at,
+    updated_at: m.provenance.created_at,
     version: m.version,
     superseded_by: undefined,
     trace_ref: undefined,
-    tags: m.tags,
+    tags: [],
   }));
 }
 
-async function searchAgentsAdapter(query: string, group_id: string): Promise<MemorySearchResult[]> {
-  const pool = getSearchPgPool();
-  const result = await pool.query(
+async function searchAgentsAdapter(query: string, group_id: string, workspace_id: string, agent_id: string): Promise<MemorySearchResult[]> {
+  const result = await withWorkspaceTransaction({ tenantId: group_id, workspaceId: workspace_id, principalId: agent_id }, (pool) => pool.query(
     `SELECT node_id, props FROM graph_structural_nodes
      WHERE label = 'Agent'
        AND group_id = $1
-       AND (props->>'name' ILIKE $2 OR props->>'capabilities' ILIKE $2)
+       AND workspace_id = $2
+       AND workspace_scope_state='workspace_scoped'
+       AND (props->>'name' ILIKE $3 OR props->>'capabilities' ILIKE $3)
      ORDER BY (props->>'confidence')::real DESC
      LIMIT 20`,
-    [group_id, `%${query}%`]
-  );
+    [group_id, workspace_id, `%${query}%`]
+  ));
 
   return result.rows.map((row) => {
     const props = row.props as Record<string, unknown>;
@@ -177,9 +134,11 @@ export async function searchMemories(request: MemorySearchRequest): Promise<Memo
 export async function getMemoriesByType(
   type: string,
   group_id: string,
+  workspace_id: string,
+  agent_id: string,
   limit: number = 50
 ): Promise<MemorySearchResult[]> {
-  return getMemoriesByTypeAdapter(type, group_id, limit);
+  return getMemoriesByTypeAdapter(type, group_id, workspace_id, agent_id, limit);
 }
 
 /**
@@ -189,6 +148,7 @@ export async function getMemoriesByType(
  * @param group_id - Tenant/group identifier
  * @returns Matching agent memories
  */
-export async function searchAgents(query: string, group_id: string): Promise<MemorySearchResult[]> {
-  return searchAgentsAdapter(query, group_id);
+export async function searchAgents(query: string, group_id: string, workspace_id: string, agent_id: string): Promise<MemorySearchResult[]> {
+  if (!workspace_id || !agent_id) throw new Error("verified workspace scope is required for agent search");
+  return searchAgentsAdapter(query, group_id, workspace_id, agent_id);
 }

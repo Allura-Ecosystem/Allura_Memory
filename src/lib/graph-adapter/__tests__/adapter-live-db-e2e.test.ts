@@ -11,9 +11,9 @@
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { closePool, getPool } from "@/lib/postgres/connection"
-import { getGraphBackend, createGraphAdapter } from "@/lib/graph-adapter/factory"
+import { createGraphAdapter } from "@/lib/graph-adapter/factory"
 import type { IGraphAdapter } from "@/lib/graph-adapter/types"
+import { closePool, getPool } from "@/lib/postgres/connection"
 
 // ── Gate: only run against a live stack ──────────────────────────────────────
 
@@ -24,20 +24,27 @@ const runLiveE2E =
 
 /** Tenant used exclusively by this test file — never allura-system. */
 const E2E_GROUP = "allura-test-e2e"
+const E2E_WORKSPACE = "workspace-test-e2e"
+const E2E_PRINCIPAL = "adapter-live-e2e"
 
 // ── Describe block ────────────────────────────────────────────────────────────
 
 describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
   let pool: import("pg").Pool
   let adapter: IGraphAdapter
-  let testMemoryIds: string[] = []
+  const testMemoryIds: string[] = []
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Set GRAPH_BACKEND before creating adapter
     process.env.GRAPH_BACKEND = "ruvector"
 
     pool = getPool()
     adapter = createGraphAdapter({ pg: pool })
+    await pool.query(
+      `INSERT INTO workspaces(workspace_id,group_id,name)
+       VALUES($1,$2,'Graph adapter live E2E') ON CONFLICT DO NOTHING`,
+      [E2E_WORKSPACE, E2E_GROUP],
+    )
   })
 
   afterAll(async () => {
@@ -66,6 +73,8 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     const createdId = await adapter.createMemory({
       id: memoryId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
+      workspace_id: E2E_WORKSPACE,
+      principal_id: E2E_PRINCIPAL,
       user_id: null,
       content: "Live DB test memory content",
       score: 0.8 as unknown as import("@/lib/memory/canonical-contracts").ConfidenceScore,
@@ -91,7 +100,7 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     // Use a memory created in previous test
     const testMemoryId = testMemoryIds[0]
 
-    const result = await adapter.getMemory({
+    const result = await adapter.getMemory({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       id: testMemoryId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
     })
@@ -106,7 +115,7 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
   // ── AC-3: Search memory ────────────────────────────────────────────────────
 
   it("AC-3: searchMemories — full-text search finds memory", async () => {
-    const results = await adapter.searchMemories({
+    const results = await adapter.searchMemories({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       query: "test",
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
       limit: 10,
@@ -122,7 +131,7 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
   // ── AC-3: List memories ────────────────────────────────────────────────────
 
   it("AC-3: listMemories — returns memories for tenant", async () => {
-    const result = await adapter.listMemories({
+    const result = await adapter.listMemories({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
       user_id: null,
     })
@@ -136,7 +145,10 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
 
   // ── AC-3: Count memories ───────────────────────────────────────────────────
 
-  it("AC-3: countMemories — returns count for tenant", async () => {
+  it("AC-3: countMemories — retired tenant-only lifecycle fails closed", async () => {
+    await expect(adapter.countMemories({ group_id:E2E_GROUP as never, user_id:null }))
+      .rejects.toThrow("tenant-only graph lifecycle operation is retired")
+    return
     const result = await adapter.countMemories({
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
       user_id: null,
@@ -155,6 +167,8 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     await adapter.createMemory({
       id: oldId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
+      workspace_id: E2E_WORKSPACE,
+      principal_id: E2E_PRINCIPAL,
       user_id: null,
       content: "Original content",
       score: 0.8 as unknown as import("@/lib/memory/canonical-contracts").ConfidenceScore,
@@ -163,7 +177,7 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     })
 
     // Verify original exists
-    const getOld = await adapter.getMemory({
+    const getOld = await adapter.getMemory({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       id: oldId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
     })
@@ -177,6 +191,8 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
       prev_id: oldId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       new_id: newId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
+      workspace_id: E2E_WORKSPACE,
+      principal_id: E2E_PRINCIPAL,
       user_id: null,
       content: "Updated content",
       version: 2,
@@ -188,7 +204,7 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     expect(supersedesResult.newVersion).toBe(2)
 
     // Old node should now be deprecated
-    const getOldAfter = await adapter.getMemory({
+    const getOldAfter = await adapter.getMemory({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       id: oldId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
     })
@@ -202,7 +218,7 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     expect(oldRow.rows[0].deprecated).toBe(true)
 
     // New node should be canonical (non-deprecated, not superseded)
-    const getNew = await adapter.getMemory({
+    const getNew = await adapter.getMemory({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       id: newId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
     })
@@ -219,7 +235,10 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
 
   // ── AC-4: Restore memory ───────────────────────────────────────────────────
 
-  it("AC-4: restoreMemory — removes deprecated flag, cleans SUPERSEDES", async () => {
+  it("AC-4: restoreMemory — retired tenant-only lifecycle fails closed", async () => {
+    await expect(adapter.restoreMemory({ id:"retired-restore" as never, group_id:E2E_GROUP as never, restored_at:new Date().toISOString() }))
+      .rejects.toThrow("tenant-only graph lifecycle operation is retired")
+    return
     // First create and supersede another memory
     const restoreOldId = `mem-restore-${Date.now()}`
     const restoreNewId = `mem-restore-${Date.now()}-v2`
@@ -228,6 +247,8 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     await adapter.createMemory({
       id: restoreOldId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
+      workspace_id: E2E_WORKSPACE,
+      principal_id: E2E_PRINCIPAL,
       user_id: null,
       content: "Content to restore",
       score: 0.8 as unknown as import("@/lib/memory/canonical-contracts").ConfidenceScore,
@@ -239,6 +260,8 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
       prev_id: restoreOldId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       new_id: restoreNewId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
+      workspace_id: E2E_WORKSPACE,
+      principal_id: E2E_PRINCIPAL,
       user_id: null,
       content: "Superseded content",
       version: 2,
@@ -276,7 +299,7 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     expect(Number(supersedesRemoved.rows[0].cnt)).toBe(0)
 
     // Old node should now be retrievable (canonical)
-    const restoredNode = await adapter.getMemory({
+    const restoredNode = await adapter.getMemory({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       id: restoreOldId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
     })
@@ -297,6 +320,8 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     await adapter.createMemory({
       id: ourMemoryId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
+      workspace_id: E2E_WORKSPACE,
+      principal_id: E2E_PRINCIPAL,
       user_id: null,
       content: "Memory in our tenant",
       score: 0.8 as unknown as import("@/lib/memory/canonical-contracts").ConfidenceScore,
@@ -305,7 +330,7 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     })
 
     // Read from our tenant (should find it)
-    const ourResult = await adapter.getMemory({
+    const ourResult = await adapter.getMemory({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       id: ourMemoryId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
     })
@@ -313,14 +338,14 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     expect(ourResult.node?.content).toBe("Memory in our tenant")
 
     // Try to read from foreign tenant (should be null)
-    const foreignResult = await adapter.getMemory({
+    const foreignResult = await adapter.getMemory({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       id: ourMemoryId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: foreignTenant as unknown as import("@/lib/memory/canonical-contracts").GroupId,
     })
     expect(foreignResult.node).toBeNull()
 
     // List from foreign tenant (should be empty)
-    const foreignList = await adapter.listMemories({
+    const foreignList = await adapter.listMemories({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       group_id: foreignTenant as unknown as import("@/lib/memory/canonical-contracts").GroupId,
       user_id: null,
     })
@@ -328,7 +353,7 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     expect(foreignList.memories.length).toBe(0)
 
     // Search in foreign tenant (should be empty)
-    const foreignSearch = await adapter.searchMemories({
+    const foreignSearch = await adapter.searchMemories({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       query: "tenant",
       group_id: foreignTenant as unknown as import("@/lib/memory/canonical-contracts").GroupId,
       limit: 10,
@@ -346,6 +371,8 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     await adapter.createMemory({
       id: keywordMemoryId as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
+      workspace_id: E2E_WORKSPACE,
+      principal_id: E2E_PRINCIPAL,
       user_id: null,
       content: "This memory contains the keyword search test",
       score: 0.8 as unknown as import("@/lib/memory/canonical-contracts").ConfidenceScore,
@@ -354,7 +381,7 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     })
 
     // Search for "keyword" — should find the memory
-    const results = await adapter.searchMemories({
+    const results = await adapter.searchMemories({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       query: "keyword",
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
       limit: 10,
@@ -365,7 +392,7 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     expect(foundByKeyword?.content).toContain("keyword")
 
     // Search for "search" — should also find it
-    const searchResults = await adapter.searchMemories({
+    const searchResults = await adapter.searchMemories({ workspace_id: E2E_WORKSPACE, principal_id: E2E_PRINCIPAL,
       query: "search",
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
       limit: 10,
@@ -387,7 +414,10 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
 
   // ── Additional: Get version ────────────────────────────────────────────────
 
-  it("Extra: getVersion — returns memory version", async () => {
+  it("Extra: getVersion — retired tenant-only lifecycle fails closed", async () => {
+    await expect(adapter.getVersion({ id:"retired-version" as never, group_id:E2E_GROUP as never }))
+      .rejects.toThrow("tenant-only graph lifecycle operation is retired")
+    return
     // Use a memory we know has version=1
     const testId = testMemoryIds[0]
 
@@ -402,7 +432,10 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
 
   // ── Additional: Check canonical ─────────────────────────────────────────────
 
-  it("Extra: checkCanonical — identifies canonical (non-deprecated, non-superseded)", async () => {
+  it("Extra: checkCanonical — retired tenant-only lifecycle fails closed", async () => {
+    await expect(adapter.checkCanonical({ id:"retired-canonical" as never, group_id:E2E_GROUP as never }))
+      .rejects.toThrow("tenant-only graph lifecycle operation is retired")
+    return
     // Use a memory we created (should be canonical)
     const testId = testMemoryIds[0]
 
@@ -416,7 +449,10 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
 
   // ── Additional: Export memories ────────────────────────────────────────────
 
-  it("Extra: exportMemories — exports paginated memories", async () => {
+  it("Extra: exportMemories — retired tenant-only lifecycle fails closed", async () => {
+    await expect(adapter.exportMemories({ group_id:E2E_GROUP as never, user_id:null, offset:0, limit:10 }))
+      .rejects.toThrow("tenant-only graph lifecycle operation is retired")
+    return
     const result = await adapter.exportMemories({
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
       user_id: null,
@@ -436,7 +472,10 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
 
   // ── Additional: Export with offset/limit pagination ────────────────────────
 
-  it("Extra: exportMemories pagination — offset and limit work correctly", async () => {
+  it("Extra: exportMemories pagination — retired tenant-only lifecycle fails closed", async () => {
+    await expect(adapter.exportMemories({ group_id:E2E_GROUP as never, user_id:null, offset:1, limit:1 }))
+      .rejects.toThrow("tenant-only graph lifecycle operation is retired")
+    return
     // Get first page
     const page1 = await adapter.exportMemories({
       group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,

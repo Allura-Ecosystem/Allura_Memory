@@ -444,6 +444,7 @@ describe("validateInsightForPromotion", () => {
     source: "test-agent",
     confidence: 0.9,
     group_id: "allura-test",
+    workspace_id: "workspace-test",
     notion_page_id: "page_test",
     postgres_trace_id: "evt_test",
   };
@@ -465,6 +466,11 @@ describe("validateInsightForPromotion", () => {
   it("should reject missing group_id", () => {
     const insight = { ...validInsight, group_id: "" };
     expect(() => validateInsightForPromotion(insight)).toThrow("group_id is required");
+  });
+
+  it("should reject missing workspace_id", () => {
+    const insight = { ...validInsight, workspace_id: "" };
+    expect(() => validateInsightForPromotion(insight)).toThrow("Workspace ID is required");
   });
 
   it("should reject missing content", () => {

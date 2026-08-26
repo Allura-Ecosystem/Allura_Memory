@@ -102,7 +102,7 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `created_at` | timestamptz | Yes | Logical event timestamp. DEFAULT NOW(). Immutable. |
 | `inserted_at` | timestamptz | Yes | Physical insert timestamp. DEFAULT NOW(). Immutable. |
 
-**Workspace RLS:** Migration 39 replay-safely alters every pre-existing `events` policy so `allura_app` requires both `app.current_group_id` and `app.current_workspace_id` in `USING` and `WITH CHECK`. This closes PostgreSQL permissive-policy OR bypasses; an A-scoped app transaction cannot read or write same-group workspace B events.
+**Workspace RLS:** Migrations 39 and 40 preserve every heterogeneous pre-existing `events` policy and add `workspace_scope_restrictive_policy`. PostgreSQL ANDs this restrictive `allura_app` tenant/workspace predicate with the permissive policy set, so an A-scoped app transaction cannot read or write same-group workspace B events without erasing predicates owned by earlier migrations.
 
 **`event_type` values**
 
@@ -217,7 +217,7 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 - Composite candidate key: `(group_id, workspace_id, id)` (`canonical_proposals_group_workspace_id_key`), referenced by workspace evidence requests.
 - Referenced by: `notion_sync_dlq.proposal_id` → `canonical_proposals(id)` ON DELETE SET NULL
 
-**Workspace scope, trace identity, and index:** `workspace_id` is nullable only for legacy rows and is required by the `allura_app` workspace-RLS policy. `idx_canonical_proposals_workspace_queue` is `(group_id, workspace_id, status, score DESC)` partial on non-null workspace IDs. `idx_canonical_proposals_trace_ref_unique` remains the single partial unique index on non-null `trace_ref`: `events.id` is a globally durable identifier, so one event belongs to one workspace and cannot legitimately yield proposals in two workspaces. Migration 39 does not drop or replace that index with a scoped duplicate. The canonical-proposal RLS policy is created only when absent; every pre-existing canonical-proposal policy is altered in place to conjunct both group and workspace settings, preventing PostgreSQL permissive-policy OR semantics from retaining a group-only bypass.
+**Workspace scope, trace identity, and index:** `workspace_id` is nullable only for legacy rows and is required by the `allura_app` workspace-RLS boundary. `idx_canonical_proposals_workspace_queue` is `(group_id, workspace_id, status, score DESC)` partial on non-null workspace IDs. `idx_canonical_proposals_trace_ref_unique` remains the single partial unique index on non-null `trace_ref`: `events.id` is a globally durable identifier, so one event belongs to one workspace and cannot legitimately yield proposals in two workspaces. Migration 39 does not drop or replace that index with a scoped duplicate. It preserves every heterogeneous pre-existing policy byte-for-byte and adds `workspace_scope_restrictive_policy`; PostgreSQL ANDs that restrictive tenant/workspace predicate with the existing permissive policy set.
 
 ---
 
@@ -227,10 +227,10 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 `id` UUID PK; non-null `group_id`, `workspace_id`, `proposal_id`, `requested_by`, `reason`, `state` (`requested|satisfied|reopened|cancelled`), timestamps/resolver, and JSONB-array `evidence_references`. FKs bind both `(group_id, workspace_id)` to `workspaces` and `(group_id, workspace_id, proposal_id)` to `canonical_proposals`; cross-workspace proposal references are rejected. Index: `evidence_requests_scope_proposal_state_idx`.
 
 ### `governance_receipts`
-Immutable scoped receipt: UUID `id`, scope, subject/action, server-issued actor/role, nonblank rationale and policy reference/version, optional proposal version, `memory_id`, `result_ref`, source event/witness, immutable JSONB-array evidence references, occurrence time, and truthful `outbox_state` (`not_enqueued|queued|synced|failed|not_applicable`). When `source_event_id` is non-null, the `governance_receipts_source_event_scope_fkey` binds `(group_id, workspace_id, source_event_id)` to the event's composite scoped identity, rejecting cross-workspace and cross-tenant provenance forgery. The `NOT VALID` migration constraint preserves pre-existing data without a workspace backfill while enforcing every new write. This foundation does not claim a new decision or sync flow; `not_enqueued` means no outbox item was created. Index: `governance_receipts_scope_subject_occurred_idx`; update/delete trigger rejects mutation.
+Immutable scoped receipt: UUID `id`, scope, required proposal identity/version and evidence-request identity, action, server-issued actor/role, nonblank rationale and policy reference/version, `memory_id`, `result_ref`, source event/witness, immutable non-empty JSONB-array evidence references, SHA-256 `evidence_identity_hash` over the complete sorted unique reference array, database-issued occurrence time, and truthful `outbox_state` (`not_enqueued|queued|synced|failed|not_applicable`; Migration-38 `delivered` maps to `synced`). Reordering the same full evidence set retains replay identity; changing any member changes it. When `source_event_id` is non-null, the `governance_receipts_source_event_scope_fkey` binds `(group_id, workspace_id, source_event_id)` to the event's composite scoped identity, rejecting cross-workspace and cross-tenant provenance forgery. The `NOT VALID` upgrade constraints preserve pre-existing data without a workspace backfill while enforcing every new write. Index: `governance_receipts_scope_proposal_occurred_idx`; update/delete trigger rejects mutation.
 
 ### `semantic_projections`
-Derived, rebuildable scoped index: UUID `id`, subject/version, source revision hash, non-empty JSONB-array `source_refs` (source table/row relationships), redaction policy version, content, optional vector/model, build state/failure, built time. Deterministic unique key includes scope, subject, projection version, source hash, **source_refs**, and redaction policy. Index: `semantic_projections_scope_subject_built_idx`.
+Derived, rebuildable scoped index: UUID `id`, source kind/id, projection version, independent source-revision and Markdown content hashes, non-empty JSONB-array `source_refs` (canonical source table/row relationships), redaction policy version, governed Markdown, optional vector/model, build state/failure, and generated time. Deterministic unique key includes scope, source identity, projection version, both hashes, **source_refs**, and redaction policy. Index: `semantic_projections_scope_source_generated_idx`.
 
 All three tables have forced workspace RLS for `allura_app`, using both transaction-local `app.current_group_id` and `app.current_workspace_id` in `USING`/`WITH CHECK`.
 
@@ -245,7 +245,7 @@ These tables replace Neo4j nodes and relationships when `GRAPH_BACKEND=ruvector`
 
 ### `graph_memories`
 
-**Migration:** `21-graph-adapter-tables.sql`
+**Migrations:** `21-graph-adapter-tables.sql`, `40-workspace-subgraph-forward-upgrade.sql`
 
 Stores canonical (promoted) memory nodes equivalent to Neo4j's Memory label. Used by the RuVectorGraphAdapter when `GRAPH_BACKEND=ruvector`. Soft-deletes are marked via `deprecated=true`; restored memories set `restored_at`.
 
@@ -253,6 +253,8 @@ Stores canonical (promoted) memory nodes equivalent to Neo4j's Memory label. Use
 |-------|------|----------|-------------|
 | `id` | TEXT | Yes | Memory node identifier (UUID) |
 | `group_id` | TEXT | Yes | Tenant namespace. CHECK: `^allura-[a-z0-9-]+$` |
+| `workspace_id` | TEXT | Current rows | Workspace authority. Legacy `NULL` rows are quarantined and excluded from application reads. |
+| `workspace_scope_state` | TEXT | Yes | `workspace_scoped` only with a non-null workspace; `legacy_quarantined` only with `workspace_id IS NULL`. |
 | `user_id` | TEXT | No | User identifier within tenant |
 | `content` | TEXT | Yes | Memory text content |
 | `score` | REAL | Yes | Confidence score (0.0–1.0). Default: `0.5` |
@@ -277,7 +279,7 @@ Stores canonical (promoted) memory nodes equivalent to Neo4j's Memory label. Use
 | `graph_mem_deleted` | btree (partial) | Soft-deleted memories for recovery queries |
 | `graph_memories_pkey` | PRIMARY KEY | Composite key (`id, group_id`) |
 
-**Foreign Keys:** None (referenced by `graph_supersedes`).
+**Authority:** Migration 40 adds unique `(group_id, workspace_id, id)`, a same-scope workspace FK, and restrictive `allura_app` RLS. Canonical approval and controlled retrieval write/filter all three scope fields. Legacy `NULL` workspace rows remain owner-visible for remediation but are never current application knowledge.
 
 ---
 
@@ -591,7 +593,11 @@ Production dashboard components consume these mapped contracts, never raw databa
 | `freshness` | `DashboardFreshness` | Yes | Timestamp and freshness state for the panel |
 | `group_id` | string | Yes | Active tenant scope; required on every dashboard page and operation |
 
-### `GovernanceReceipt`
+### `DashboardGovernanceActionSummary` (legacy dashboard adapter)
+
+This adapter summary is **not** the durable `GovernanceReceipt` authority. The sole
+current receipt contract is the Story 25.2a `GovernanceReceipt` definition below;
+dashboard adapters must map that durable record rather than publish a second receipt shape.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -1017,211 +1023,72 @@ Budget enforcement tracks session state for agent write operations. Halted sessi
 
 ---
 
-## Epic 25 Review Console Contracts
+## Story 25.2a Durable Workspace Evidence Contracts
 
-These are UI/API contracts for the governed operator adapter. They do not authorize actions; the server derives the tenant, workspace, role, and allowed actions from the authenticated principal.
+Story 25.2a defines relational foundations only. Browser queue, map, assistant,
+module, intake, external identity, demonstration, and later-story UI/API contracts
+are intentionally excluded until their owning stories are implemented and reviewed.
 
-### `ReviewItem`
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `id` | UUID | Yes | Proposal identifier. |
-| `group_id` | string | Yes | Server-derived tenant boundary. |
-| `workspace_id` | string \| null | Yes | Workspace boundary when the source model has one. |
-| `summary` | string | Yes | Human-readable proposed learning. |
-| `status` | `pending \| approved \| rejected \| evidence_requested` | Yes | Authoritative proposal state. |
-| `score` | number | Yes | Curator score; never a substitute for evidence. |
-| `tier` | string | Yes | Curator tier. |
-| `requester` | object | Yes | Server-resolved requester/agent identity. |
-| `trace_ref` | string \| null | Yes | Originating trace reference. |
-| `evidence` | `EvidenceSummary[]` | Yes | Provenance summaries, possibly empty. |
-| `allowed_actions` | string[] | Yes | Server-derived action names; UI may not add to this list. |
-| `freshness` | `current \| stale \| degraded` | Yes | Truthfulness state for source data. |
-
-### `EvidenceSummary`
+### `EvidenceRequest`
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `id` | string | Yes | Stable evidence reference. |
-| `kind` | string | Yes | Trace, event, document, or other governed source type. |
-| `summary` | string | Yes | Reviewable description. |
-| `source` | string | Yes | Origin subsystem. |
-| `available` | boolean | Yes | Whether governed detail is retrievable. |
-
-### `RetrievalPlan`
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `scope` | object | Yes | Server-derived tenant/workspace and authorized role context. |
-| `relational_filters` | object | Yes | Explicit IDs, state, actor, membership/role, and time filters applied before semantic expansion. |
-| `relational_sources` | string[] | Yes | PostgreSQL tables/views that supplied authoritative facts. |
-| `semantic_source` | string \| null | Yes | Candidate-expansion/ranking source, if used. |
-| `evidence_refs` | string[] | Yes | Returned governed evidence/trace/receipt references. |
-| `freshness` | `current \| stale \| degraded` | Yes | Truthfulness state of the result set. |
-| `degraded_reason` | string \| null | Yes | Declared missing/unavailable retrieval dependency, if any. |
-
-A semantic result cannot add a record outside `scope`, defeat `relational_filters`, or represent a factual state absent from `relational_sources`.
-
-### `SubgraphQuery` and `SubgraphResponse`
-
-The 2D and optional 3D map use one server-owned focused-subgraph contract. Callers may name an authorized anchor and intent; they never provide tenant, workspace, role, or policy authority.
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `anchor` | `{ kind, id }` | Conditional | Server-authorized entity, proposal, evidence request, receipt, event, memory, or structural node. Required except a saved server-authorized overview. |
-| `intent` | `overview \| neighbors \| lineage \| review_context \| search` | Yes | Bounded map purpose. |
-| `depth` | `0 \| 1 \| 2` | No | Server-capped traversal depth. |
-| `relation_types` | string[] | No | Server allow-listed relationship filter. |
-| `filters` | object | No | Allowed kind/status/time filters; server normalizes and validates them. |
-| `continuation` | opaque string | No | Signed, expiring, scope/query/policy-bound continuation token. |
-| `render_hint` | `2d \| 3d` | No | Renderer preference only; it never changes retrieval or authority. |
-
-A `SubgraphResponse` returns typed nodes/edges, evidence references, freshness, explicit `complete \| partial \| empty \| denied \| degraded` state, traversal budget, semantic-expansion metadata, warnings, and a continuation only when the server truncated an authorized deterministic result.
-
-Initial budgets are product safety caps, not scale claims: at most 200 nodes, 400 edges, and depth 2. A graph page must state when it is bounded or partial and offer an authorized continuation or aggregate—not imply whole-workspace coverage.
-
-### `AssistantQuery` and `AssistantAnswer`
-
-The first governed assistant is read-only and selected-item-scoped.
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `question` | string | Yes | User question about the selected authorized item. |
-| `focus` | `{ kind, id }` | Yes | Current authorized proposal, evidence, receipt, or entity. |
-| `answer` | string | Yes | Plain-language answer or explicit inability to verify. |
-| `citations` | object[] | Yes | Authorized source IDs, kinds, freshness, and inspectable detail links. |
-| `retrieval_plan` | `RetrievalPlan` | Yes | Same relational-first plan used by map/detail. |
-| `allowed_actions` | object[] | Yes | Declarative server-provided hints only; actions still re-authorize through normal endpoints. |
-| `state` | `complete \| partial \| degraded \| denied` | Yes | Truthful answer state. |
-
-The assistant cannot choose scope, call raw storage, approve/reject/promote, invoke connectors, mint receipts, or hide stale/degraded evidence.
-
-### `PolicyIntakeDraft`
-
-A typed, non-authoritative workspace-policy proposal collected by the local dashboard or an external client such as Copilot Cowork MCP elicitation. The server supplies the schema, revalidates every field, derives scope, and returns a review summary before a separate save action.
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `workspace_name` | string | Yes | Human-readable requested name; not an authority identifier. |
-| `member_rules` | object | Yes | Proposed viewer/curator/admin capabilities. |
-| `allowed_source_kinds` | string[] | Yes | Proposed document, repository, or connector source allowlist. |
-| `allowed_connector_ids` | string[] | Yes | Proposed connector manifest IDs; availability does not grant permission. |
-| `ocr_policy` | object | Yes | OCR allowed, original retention, language/quality review, and low-confidence handling. |
-| `classification_redaction` | object | Yes | Proposed classification and redaction-policy references. |
-| `retention_policy` | object | Yes | Proposed source/evidence retention terms. |
-| `assistant_authority` | `explain_only \| cited_read` | Yes | Initial assistant boundary; no decision authority. |
-| `promotion_requires_human` | boolean | Yes | Must remain `true` for the first Copilot package. |
-| `receipt_required` | boolean | Yes | Whether governed saved transitions require a receipt; initial value is `true`. |
-| `client_context` | object | Yes | Non-authoritative adapter, package/skill version, and correlation ID for audit. No secrets. |
-
-A `PolicyIntakeDraft` is not an active policy. `save_policy_draft` is confirmation-required, re-authorizes the principal, derives group/workspace context, validates referenced connector capabilities, records an audit event, and returns a truthful draft/receipt response. Cowork, skills, forms, widgets, and Exa results cannot activate a policy directly.
-
-### `ExternalIdentityContext`
-
-A validated, non-secret identity envelope resolved at an external-client adapter before Allura authorization. It does not replace Allura membership or role records.
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `provider` | `microsoft_entra \| claude_code \| codex` | Yes | Authenticated host identity provider. |
-| `provider_tenant_id` | string \| null | Yes | Validated Microsoft Entra tenant ID when applicable. |
-| `provider_subject_id` | string | Yes | Validated Entra object/user ID or reviewed host subject. |
-| `group_claims` | string[] | Yes | Validated Entra groups when available; overage is an explicit failure/lookup state. |
-| `app_role_claims` | string[] | Yes | Validated Entra app roles when available. |
-| `token_issuer` | string | Yes | Validated issuer identifier; never used as display copy. |
-| `token_audience` | string | Yes | Validated audience for the Allura connector. |
-| `internal_principal_id` | string | Yes | Server-mapped Allura principal. |
-| `mapped_memberships` | object[] | Yes | Server-resolved tenant/workspace memberships. |
-| `mapped_roles` | string[] | Yes | Server-resolved Allura roles; client claims are inputs to mapping, not authority. |
-| `mapping_version` | string | Yes | Identity/role mapping policy version. |
-| `correlation_id` | string | Yes | Non-secret audit correlation. |
-
-Unknown tenants, roles, claim overage, stale membership, disabled principals, invalid signature/issuer/audience/expiry, and forged claims fail closed. Bearer tokens and provider secrets are never stored in this contract.
-
-### `WorkflowModuleManifest`
-
-A server-issued, allow-listed, versioned declarative adapter that lets the stable dashboard shell present a governed domain workflow. It is not executable authority or arbitrary UI code.
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `module_id` | string | Yes | Stable kebab-case identity, for example `mortgage-approval-gate`. |
-| `module_version` | semver | Yes | Module contract/content version. |
-| `contract_version` | string | Yes | Compatible dashboard/shared-service contract version. |
-| `display` | object | Yes | Plain title, summary, and approved token/icon references. |
-| `stages` | `WorkflowStageDescriptor[]` | Yes | Ordered presentation stages using standard shell states. |
-| `intake_schema_ref` | string | Yes | Server-owned typed intake schema reference. No inline executable validator. |
-| `evidence_kinds` | `EvidenceKindDescriptor[]` | Yes | Allowed evidence labels and source requirements. |
-| `relationships` | `RelationshipDescriptor[]` | Yes | Allow-listed plain-language relationship vocabulary. |
-| `policy_refs` | string[] | Yes | Server-known policy identifiers/versions required by the workflow. |
-| `required_capabilities` | string[] | Yes | Allow-listed service/tool capabilities; absence disables the module. |
-| `host_skill_bindings` | `HostSkillBinding[]` | Yes | Canonical skill ID plus Cowork/Claude Code/Codex adapter references. |
-| `feature_flag` | string | Yes | Server-side enable/disable control. |
-| `rollback_id` | string | Yes | Tested rollback/runbook identity. |
-| `integrity` | object | Yes | Source/version/hash/signature or trust-policy evidence used by the registry. |
-
-A module cannot contain JavaScript, SQL, credentials, direct URLs to internal storage, role mappings, policy outcomes, mutation handlers, or receipt generators. The registry rejects unknown, duplicate, incompatible, untrusted, capability-missing, or disabled modules before rendering.
-
-### `MortgageReviewCase`
-
-A sanitized demonstration entity for Story 25.5a. It proves governed workflow transitions but is not an underwriting or lending-decision record.
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `case_id` | UUID | Yes | Synthetic case identity. |
-| `scope` | object | Yes | Server-derived tenant/workspace. |
-| `source_refs` | object[] | Yes | Synthetic document/event references. |
-| `ocr_evidence_refs` | object[] | Yes | Original-page, engine/version, span, quality, classification, and redaction references. |
-| `policy_ref` | string | Yes | Deterministic demonstration policy/version. |
-| `review_state` | `intake \| evidence_missing \| ready_for_review \| decided` | Yes | Workflow state only. |
-| `allowed_actions` | string[] | Yes | Server-derived actions; no underwriting semantics. |
-| `receipt_id` | UUID \| null | Yes | Server-issued receipt after a permitted human decision. |
-
-Fixtures contain no real applicant PII, protected-class data, financial data, customer records, credit score, pricing, or automated approval/denial result.
+| `id` | UUID | Yes | Durable lifecycle identity. |
+| `group_id` | string | Yes | Server-derived tenant scope. |
+| `workspace_id` | string | Yes | Server-derived workspace scope. |
+| `proposal_id` | UUID | Yes | Same-scope proposal identity. |
+| `state` | `requested \| satisfied \| reopened \| cancelled` | Yes | Lifecycle state, separate from proposal status. |
+| `reason` | string | Yes | Nonblank governed request rationale. |
+| `requested_by` / `requested_at` | string / RFC 3339 | Yes | Server-issued requester and time. |
+| `resolved_by` / `resolved_at` | string / RFC 3339 | No | Server-issued resolution identity and time. |
+| `evidence_references` | string[] | Yes | Governed evidence identities. |
 
 ### `SemanticProjection`
 
-A rebuildable, governed Markdown document assembled from a relational entity and its meaningful header/detail relationships before embedding. It is a retrieval derivative, never the source of truth.
-
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `id` | UUID | Yes | Projection identity. |
-| `scope` | object | Yes | Server-derived tenant/workspace scope. |
-| `source_kind` | string | Yes | Entity family, such as `memory_proposal` or `decision_receipt`. |
-| `source_refs` | object[] | Yes | Header/detail table-row references used to assemble content. |
-| `markdown` | string | Yes | Deterministic, human-inspectable projection content. |
+| `id` | UUID | Yes | Projection row identity. |
+| `group_id` / `workspace_id` | string | Yes | Server-derived scope. |
+| `source_kind` / `source_id` | string | Yes | Authoritative relational entity identity. |
+| `source_refs` | object[] | Yes | Canonical same-scope table/row references used by the builder. |
+| `markdown` | string | Yes | Deterministic governed Markdown derived from relational facts. |
 | `projection_version` | string | Yes | Builder/schema version. |
-| `content_hash` | string | Yes | Integrity/rebuild comparison hash. |
-| `redaction_policy` | string | Yes | Applied data-classification/redaction rule. |
-| `embedding_model` | string \| null | Yes | Derived-index model/version when embedded. |
-| `generated_at` | RFC 3339 | Yes | Projection generation time. |
+| `source_revision_hash` | SHA-256 | Yes | Hash of canonical source facts. |
+| `content_hash` | SHA-256 | Yes | Independent Markdown content hash. |
+| `redaction_policy_version` | string | Yes | Applied classification/redaction policy. |
+| `build_state` | `pending_embedding \| ready \| failed` | Yes | Projected/redacted Markdown is pending until a real embedding result is persisted. `ready` requires vector plus exact model and version. |
+| `embedding` | vector \| null | No | Actual produced vector; null while pending or failed. |
+| `embedding_model` / `embedding_model_version` | string / string \| null | No | Exact producer provenance, present only with a persisted vector and `ready` state. |
+| `generated_at` | RFC 3339 | Yes | Server generation time; excluded from idempotency identity. |
 
-An embedding may be deleted and rebuilt from `source_refs`; it never becomes authority over the relational records.
-
-### `DecisionReceipt`
+### `GovernanceReceipt`
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `decision_id` | UUID | Yes | Immutable decision identifier. |
-| `proposal_id` | UUID | Yes | Reviewed proposal. |
-| `proposal_version` | string | Yes | Version actually decided. |
-| `actor` | object | Yes | Server-issued actor and role. |
-| `action` | `approve \| reject \| request_evidence` | Yes | Terminal/transition action. |
-| `rationale` | string | Yes | Nonblank human rationale. |
-| `policy_ref` | string | Yes | Governing policy/version. |
-| `evidence_refs` | string[] | Yes | Evidence considered by the decision. |
-| `timestamp` | RFC 3339 | Yes | Decision time. |
-| `memory_id` | UUID \| null | Yes | Resulting approved memory when created. |
-| `sync_state` | `committed \| queued \| failed` | Yes | Truthful outbox/synchronization state. |
+| `id` | UUID | Yes | Immutable receipt identity. |
+| `group_id` / `workspace_id` | string | Yes | Server-derived scope. |
+| `proposal_id` / `proposal_version` | UUID / string | Yes | Exact proposal revision decided. |
+| `evidence_request_id` | UUID | Conditional | Compatibility pointer to the first canonical evidence request; required for `request_evidence`. Complete membership is authoritative in `governance_receipt_evidence_requests`. |
+| `evidence_identity_hash` | SHA-256 | Yes | Hash of the complete sorted, unique `evidence_references` array. |
+| `actor_id` / `actor_role` | string | Yes | Server-issued authenticated reviewer identity (`curator | admin`). |
+| `action` | `approve \| reject \| request_evidence` | Yes | Governed action. |
+| `rationale` | string | Yes | Nonblank rationale. |
+| `policy_reference` / `policy_version` | string | Yes | Governing policy identity. |
+| `memory_id` | string \| null | No | Resulting promoted `graph_memories.id` when applicable. |
+| `result_ref` | string \| null | No | Optional durable result identity for non-memory outcomes. |
+| `outbox_state` | `not_enqueued \| queued \| synced \| failed \| not_applicable` | Yes | State derived from the durable outbox, never caller supplied. |
+| `source_event_id` | bigint | Yes (current) | Same-scope authoritative source event; composite FK prevents cross-workspace provenance. |
+| `witness_hash` | string \| null | No | Decision witness hash copied from the locked proposal transition. |
+| `evidence_references` | string[] | Yes | Canonically sorted immutable source identities; not the relational authority for evidence-request membership. |
+| `occurred_at` | RFC 3339 | Yes | Database-issued decision time (`DEFAULT NOW()` / SQL `NOW()`); callers do not supply it. |
+| `created_at` | RFC 3339 | Yes | Database row creation time (`DEFAULT NOW()`). |
 
-### `ReviewApiError`
+### `governance_receipt_evidence_requests`
 
-| HTTP | Code | UI behavior |
-|---|---|---|
-| 400 | `VALIDATION_ERROR` | Keep input; identify invalid field. |
-| 401 | `UNAUTHENTICATED` | Stop; require a new authenticated session. |
-| 403 | `FORBIDDEN` | Show a permission state; never an empty queue. |
-| 404 | `NOT_FOUND` | Explain the item is absent or no longer available in scope. |
-| 409 | `DECISION_CONFLICT` | Refresh authoritative state; never show success. |
-| 503 | `DEPENDENCY_DEGRADED` | Display degraded source state and retry option. |
+Immutable FK-backed membership for **every** evidence request considered by a receipt. Fields are `receipt_id`, `group_id`, `workspace_id`, `proposal_id`, `evidence_request_id`, and zero-based canonical `ordinal`. Composite FKs bind both receipt and evidence request to the same tenant/workspace/proposal. `(receipt_id,evidence_request_id)` and `(receipt_id,ordinal)` are unique; update/delete triggers reject mutation, and both parent deletes are `RESTRICT`.
+
+Proposal `status` remains `pending | approved | rejected`; request-evidence state is
+read from `evidence_requests` and must never be collapsed into proposal status.
 
 ---
 

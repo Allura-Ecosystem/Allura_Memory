@@ -73,8 +73,6 @@ export {
   isClerkEnabled,
   isDevAuthActive,
   getDevAuthConfig,
-  PROTECTED_ROUTES,
-  PUBLIC_ROUTES,
   AUTH_ROUTES,
 } from "./config";
 

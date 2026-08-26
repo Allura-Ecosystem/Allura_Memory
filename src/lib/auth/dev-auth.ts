@@ -26,7 +26,8 @@ import type { AlluraRole, AuthProvider, AuthUser } from "./types";
  *
  * ⚠️ This provider is ONLY active when:
  *   1. ALLURA_DEV_AUTH_ENABLED=true (default)
- *   2. Clerk is NOT configured, OR NODE_ENV !== "production"
+ *   2. Clerk is NOT configured
+ *   3. NODE_ENV !== "production"
  */
 export class DevAuthProvider implements AuthProvider {
   async getCurrentUser(): Promise<AuthUser | null> {
@@ -42,6 +43,8 @@ export class DevAuthProvider implements AuthProvider {
       name: "Dev User",
       role: devConfig.defaultRole,
       groupId: devConfig.defaultGroupId,
+      workspaceId: devConfig.defaultWorkspaceId,
+      sessionId: `dev:${devConfig.defaultUserId}`,
       imageUrl: undefined,
     };
   }
@@ -93,6 +96,8 @@ export function getDevUserSync(): AuthUser | null {
     name: "Dev User",
     role: devConfig.defaultRole,
     groupId: devConfig.defaultGroupId,
+    workspaceId: devConfig.defaultWorkspaceId,
+    sessionId: `dev:${devConfig.defaultUserId}`,
     imageUrl: undefined,
   };
 }

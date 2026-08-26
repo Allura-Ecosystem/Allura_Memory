@@ -92,6 +92,7 @@ export interface HttpAuthConfig {
 
 export interface ServiceAuthConfig {
   principalId: string;
+  workspaceId: string;
   tenantIds: readonly string[];
   roles: readonly PrincipalRole[];
   authMethod: Extract<AuthMethod, "service_identity" | "dev_local">;
@@ -215,6 +216,7 @@ export function resolveHttpAuthConfig(env: EnvLike): HttpAuthConfig {
 export function resolveServiceAuthConfig(env: EnvLike): ServiceAuthConfig {
   const production = isProductionEnv(env);
   const principalId = (env.ALLURA_MCP_SERVICE_PRINCIPAL_ID ?? "").trim();
+  const workspaceId = (env.ALLURA_MCP_SERVICE_WORKSPACE_ID ?? "").trim();
   const tenantIds = parseList(env.ALLURA_MCP_SERVICE_TENANTS);
   const roles = parseRoles(env.ALLURA_MCP_SERVICE_ROLES, ["viewer", "curator"]);
 
@@ -237,17 +239,19 @@ export function resolveServiceAuthConfig(env: EnvLike): ServiceAuthConfig {
         "ALLURA_MCP_SERVICE_TENANTS may not contain the wildcard '*' in production",
       );
     }
-    return { principalId, tenantIds, roles, authMethod: "service_identity" };
+    if (!workspaceId) throw new PrincipalAuthError("CONFIG_MISSING", "ALLURA_MCP_SERVICE_WORKSPACE_ID is required for stdio/service mode in production");
+    return { principalId, workspaceId, tenantIds, roles, authMethod: "service_identity" };
   }
 
   // Non-production: an explicit service identity is honoured when configured,
   // otherwise fall back to the dev-local principal.
   if (principalId && tenantIds.length > 0) {
-    return { principalId, tenantIds, roles, authMethod: "service_identity" };
+    return { principalId, workspaceId: workspaceId || "dev-local", tenantIds, roles, authMethod: "service_identity" };
   }
 
   return {
     principalId: env.ALLURA_MCP_DEV_PRINCIPAL_ID || "dev-local-stdio",
+    workspaceId: workspaceId || "dev-local",
     tenantIds: parseList(env.ALLURA_MCP_DEV_TENANTS).length
       ? parseList(env.ALLURA_MCP_DEV_TENANTS)
       : [TENANT_WILDCARD],
@@ -263,6 +267,7 @@ export function createServicePrincipal(
 ): PrincipalContext {
   return createPrincipalContext({
     principalId: config.principalId,
+    workspaceId: config.workspaceId,
     tenantIds: config.tenantIds,
     roles: config.roles,
     authMethod: config.authMethod,
@@ -564,6 +569,7 @@ export class McpAuthenticator {
 
     return createPrincipalContext({
       principalId: record.agent_name,
+      workspaceId: record.workspace_id,
       tenantIds: [record.group_id],
       roles: rolesFromScopes(record.scopes ?? []),
       authMethod: "mcp_token",

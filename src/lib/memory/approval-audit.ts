@@ -30,6 +30,8 @@ export interface ApprovalAuditEvent {
   proposal_id: string
   /** Tenant namespace (must match ^allura-*) */
   group_id: string
+  /** Server-resolved workspace for workspace-governed lifecycle records. */
+  workspace_id?: string
   /** Memory identifier being promoted */
   memory_id: string
   /** Actor that requested promotion; separate from the decision actor when known */
@@ -51,6 +53,7 @@ export interface ApprovalAuditEvent {
   /** ISO 8601 timestamp of the decision */
   approved_at: string
 }
+
 
 export interface CuratorDecisionReceipt {
   proposal_id: string
@@ -125,8 +128,8 @@ type ApprovalAuditEventType = typeof EVENT_TYPE_APPROVED | typeof EVENT_TYPE_REJ
 
 async function insertApprovalEvent(event: ApprovalAuditEvent, validatedGroupId: string, eventType: ApprovalAuditEventType, queryable: Queryable): Promise<QueryResult> {
   return queryable.query(
-    `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
+    `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at, workspace_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [
       validatedGroupId,
       eventType,
@@ -146,6 +149,7 @@ async function insertApprovalEvent(event: ApprovalAuditEvent, validatedGroupId: 
         approved_at: event.approved_at,
       }),
       event.approved_at,
+      event.workspace_id ?? null,
     ]
   )
 }
@@ -238,9 +242,9 @@ function getAuditEventType(decision: ApprovalAuditEvent["decision"]): ApprovalAu
 }
 
 export async function logProposalNeedsEvidenceEvent(
-  event: ApprovalAuditEvent & { decision: "needs_evidence"; resulting_status: "pending" },
+  event: ApprovalAuditEvent & { workspace_id: string; decision: "needs_evidence"; resulting_status: "pending" },
   pool?: Pool,
-): Promise<void> {
+): Promise<string> {
   const validatedGroupId = validateGroupId(event.group_id)
 
   if (event.requested_by && event.requested_by === event.curator_id) {
@@ -251,8 +255,18 @@ export async function logProposalNeedsEvidenceEvent(
     throw new ApprovalAuditAuthorizationError(event.decision_actor_role)
   }
 
+  if (!event.rationale?.trim()) throw new Error("Evidence request reason is required")
   const pg = pool ?? getPool()
+  const request = await pg.query<{ id: string }>(
+    `INSERT INTO evidence_requests (
+       group_id, workspace_id, proposal_id, requested_by, requested_at, state, reason
+     ) VALUES ($1, $2, $3, $4, $5, 'requested', $6)
+     RETURNING id`,
+    [validatedGroupId, event.workspace_id, event.proposal_id, event.curator_id, event.approved_at, event.rationale.trim()],
+  )
   await insertApprovalEvent(event, validatedGroupId, EVENT_TYPE_EVIDENCE_REQUESTED, pg)
+  if (!request.rows[0]?.id) throw new Error("Evidence request identity was not returned")
+  return request.rows[0].id
 }
 
 /**
@@ -322,6 +336,7 @@ export async function hasApprovalEvent(
     throw error
   }
 }
+
 
 function stringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null

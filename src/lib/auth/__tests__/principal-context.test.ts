@@ -50,6 +50,7 @@ describe("per-tool scope authorization", () => {
 function tokenPrincipal(overrides: Partial<Parameters<typeof createPrincipalContext>[0]> = {}): PrincipalContext {
   return createPrincipalContext({
     principalId: "agent-scout",
+    workspaceId: "ws-main",
     tenantIds: ["allura-system"],
     roles: ["viewer"],
     authMethod: "mcp_token",
@@ -117,9 +118,9 @@ describe("createPrincipalContext", () => {
     expect(p.credentialId).toBe("tok_abc");
   });
 
-  it("does not advertise workspace isolation before a canonical handler consumes it", () => {
+  it("carries verified workspace isolation into canonical handlers", () => {
     const p = tokenPrincipal();
-    expect(p).not.toHaveProperty("workspaceId");
+    expect(p.workspaceId).toBe("ws-main");
   });
 });
 
@@ -433,11 +434,10 @@ describe("buildAuthAuditEvent (AC-7)", () => {
 // Workspace restriction is deliberately deferred until a canonical handler
 // enforces it. This boundary does not claim that it is isolated here.
 describe("workspace_id boundary claim", () => {
-  it("does not advertise workspace authorization", () => {
+  it("overrides caller workspace with verified workspace authorization", () => {
     const p = tokenPrincipal();
     const { args } = applyPrincipalToArgs(p, "memory_add", { workspace_id: "ws-main" });
-    expect(p).not.toHaveProperty("workspaceId");
-    expect(STRIPPED_AUTHORITY_KEYS).not.toContain("workspace_id");
+    expect(p.workspaceId).toBe("ws-main");
     expect(args.workspace_id).toBe("ws-main");
   });
 });

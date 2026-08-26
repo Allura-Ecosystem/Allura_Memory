@@ -26,10 +26,20 @@ describe("run-live-db-tests.sh", () => {
 
     const result = spawnSync("bash", ["scripts/ci/run-live-db-tests.sh", `--artifact-dir=${artifact}`], {
       cwd: process.cwd(),
-      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, POSTGRES_PASSWORD: "owner-test", POSTGRES_APP_USER: "", POSTGRES_APP_PASSWORD: "app-test" },
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, POSTGRES_PASSWORD: "owner-test", POSTGRES_APP_USER: "allura_app", POSTGRES_APP_PASSWORD: "app-test" },
     });
 
     expect(result.status).toBe(0);
     expect(readFileSync(capture, "utf8")).toBe("allura_app");
+  });
+
+  it("fails closed when disposable app credentials are not supplied", () => {
+    const result = spawnSync("bash", ["scripts/ci/run-live-db-tests.sh"], {
+      cwd: process.cwd(),
+      env: { ...process.env, POSTGRES_PASSWORD: "owner-test", POSTGRES_APP_USER: "", POSTGRES_APP_PASSWORD: "" },
+      encoding: "utf8",
+    });
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("POSTGRES_APP_USER is required");
   });
 });

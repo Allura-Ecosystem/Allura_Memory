@@ -18,9 +18,9 @@ vi.mock("@/lib/workspace/repository", () => ({
   listWorkspacesForGroup: (...a: unknown[]) => listWorkspacesForGroup(...a),
 }));
 
-import { POST as tokensPOST, GET as tokensGET } from "@/app/api/tokens/route";
-import { POST as wsPOST } from "@/app/api/workspaces/route";
 import { POST as revokePOST } from "@/app/api/tokens/[id]/revoke/route";
+import { GET as tokensGET, POST as tokensPOST } from "@/app/api/tokens/route";
+import { POST as wsPOST } from "@/app/api/workspaces/route";
 
 function req(url: string, role: string | null, body?: unknown): NextRequest {
   const headers: Record<string, string> = { "content-type": "application/json" };
@@ -28,6 +28,8 @@ function req(url: string, role: string | null, body?: unknown): NextRequest {
     headers["x-allura-user-id"] = "u1";
     headers["x-allura-role"] = role;
     headers["x-allura-group-id"] = "allura-test";
+    headers["x-allura-workspace-id"] = "ws_1";
+    headers["x-allura-session-id"] = "session-admin-route-test";
   }
   return new NextRequest(`http://localhost${url}`, {
     method: body ? "POST" : "GET",

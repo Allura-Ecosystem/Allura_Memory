@@ -28,7 +28,7 @@ beforeEach(() => {
 })
 
 const defaultConfig: OrchestrationTraceConfig = {
-  groupId: "allura-test-teamram",
+  groupId: "allura-test-teamram", workspaceId: "workspace-teamram",
 }
 
 describe("orchestration-tracing", () => {
@@ -102,7 +102,7 @@ describe("orchestration-tracing", () => {
   describe("traceOrchestrationEnd", () => {
     it("emits summary with success/failure counts", async () => {
       const result: OrchestrationResult = {
-        task: { goal: "test", groupId: "allura-test-teamram" },
+        task: { goal: "test", groupId: "allura-test-teamram", workspaceId: "workspace-teamram" },
         plan: [],
         results: [
           { skillName: "skill-neo4j-memory", toolName: "recall_insight", assignedAgent: "scout", ok: true, attempts: 1 },
@@ -130,7 +130,7 @@ describe("orchestration-tracing", () => {
 
     it("emits confidence 1.0 when all skills succeed", async () => {
       const result: OrchestrationResult = {
-        task: { goal: "test", groupId: "allura-test-teamram" },
+        task: { goal: "test", groupId: "allura-test-teamram", workspaceId: "workspace-teamram" },
         plan: [],
         results: [
           { skillName: "skill-neo4j-memory", toolName: "recall_insight", assignedAgent: "scout", ok: true, attempts: 1 },
@@ -158,7 +158,7 @@ describe("orchestration-tracing", () => {
       const result = await tracedOrchestrator(
         {
           goal: "Recall memory",
-          groupId: "allura-test-teamram",
+          groupId: "allura-test-teamram", workspaceId: "workspace-teamram",
         },
         mockExecutor,
       )
@@ -191,7 +191,7 @@ describe("orchestration-tracing", () => {
       const result = await tracedOrchestrator(
         {
           goal: "Bad task",
-          groupId: "allura-test-teamram",
+          groupId: "allura-test-teamram", workspaceId: "workspace-teamram",
           maxRetriesPerSkill: 0,
         },
         badExecutor,

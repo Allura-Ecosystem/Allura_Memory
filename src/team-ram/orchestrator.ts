@@ -7,6 +7,7 @@ export type TeamRamSkillName = "skill-neo4j-memory" | "skill-cypher-query" | "sk
 export interface TeamRamTask {
   goal: string
   groupId: string
+  workspaceId: string
   query?: string
   cypher?: string
   sql?: string
@@ -95,6 +96,8 @@ function dedupePlan(calls: SkillCall[]): SkillCall[] {
  */
 export function selectSkills(task: TeamRamTask): SkillCall[] {
   const groupId = validateGroupId(task.groupId)
+  const workspaceId = String(task.workspaceId ?? "").trim()
+  if (!workspaceId) throw new Error("workspaceId is required for Team RAM orchestration")
   const text = [task.goal, task.query, task.cypher, task.sql].filter(Boolean).join(" ")
   const calls: SkillCall[] = []
 
@@ -112,6 +115,7 @@ export function selectSkills(task: TeamRamTask): SkillCall[] {
       input: {
         query: task.query ?? task.goal,
         groupId,
+        workspaceId,
         limit: task.limit ?? 10,
       },
     })
@@ -131,11 +135,14 @@ export function selectSkills(task: TeamRamTask): SkillCall[] {
       input: task.sql
         ? {
             query: task.sql,
-            parameters: [groupId],
+            parameters: [groupId, workspaceId],
             groupId,
+            workspaceId,
           }
         : {
             group_id: groupId,
+            workspace_id: workspaceId,
+            workspaceId,
             limit: task.limit ?? 100,
             offset: task.offset ?? 0,
             order_by: "created_at DESC",
@@ -157,11 +164,13 @@ export function selectSkills(task: TeamRamTask): SkillCall[] {
       input: task.cypher
         ? {
             cypher: task.cypher,
-            parameters: { groupId },
+            parameters: { groupId, workspaceId },
             groupId,
+            workspaceId,
           }
         : {
             groupId,
+            workspaceId,
           },
     })
   }
@@ -175,6 +184,7 @@ export function selectSkills(task: TeamRamTask): SkillCall[] {
       input: {
         query: task.goal,
         groupId,
+        workspaceId,
         limit: task.limit ?? 10,
       },
     })

@@ -31,6 +31,12 @@ const mockPgPool = {
   query: mockPgQuery,
   end: vi.fn(),
   on: vi.fn(),
+  // Tenant-scoped queries run inside withTenantTransaction, which needs a
+  // pooled client (BEGIN/SET LOCAL/query/COMMIT + release).
+  connect: vi.fn(async () => ({
+    query: mockPgQuery,
+    release: vi.fn(),
+  })),
 };
 
 // Mock graph adapter for Neo4j fallback path (Step 2: semantic search via graph adapter)
@@ -148,6 +154,11 @@ function makeSearchRequest(overrides?: Partial<MemorySearchRequest>): MemorySear
   return {
     query: "test query",
     group_id: VALID_GROUP_ID as any,
+    scope: {
+      group_id: VALID_GROUP_ID as any,
+      workspace_id: "workspace-test",
+      agent_id: "integration-test-agent",
+    },
     status: "all" as any, // Bypass approved-only path to exercise RuVector primary backend
     ...overrides,
   };

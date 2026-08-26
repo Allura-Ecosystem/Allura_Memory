@@ -38,6 +38,7 @@
 import { randomUUID } from "crypto"
 import { curatorScore } from "@/lib/curator/score"
 import { createProposalDedupChecker, getDedupThreshold, type ProposalCandidate } from "@/lib/dedup/proposal-dedup"
+import { tenantQuery } from "@/lib/db/tenant-transaction"
 import { classifyPostgresError, DatabaseQueryError, DatabaseUnavailableError } from "@/lib/errors/database-errors"
 import { createGraphAdapter } from "@/lib/graph-adapter"
 import {
@@ -110,6 +111,40 @@ import {
 // ── Canonical Operations ───────────────────────────────────────────────────
 
 /**
+ * Run a canonical query inside a transaction carrying the tenant RLS context
+ * (app.current_group_id + app.current_workspace_id). getConnections() returns
+ * the restricted app pool; without these GUCs, forced RLS (including the
+ * workspace_scope_restrictive_policy added by migration 39) rejects writes
+ * and filters every read to zero rows. Every tenant-scoped canonical query
+ * must go through this helper.
+ */
+function tenantPgQuery<T extends import("pg").QueryResultRow>(
+  groupId: GroupId,
+  principalId: string,
+  pg: import("pg").Pool,
+  sql: string,
+  values?: unknown[],
+  workspaceId?: string,
+): Promise<import("pg").QueryResult<T>> {
+  return tenantQuery<T>(
+    workspaceId
+      ? { tenantId: groupId, principalId, workspaceId }
+      : { tenantId: groupId, principalId },
+    sql,
+    values,
+    pg,
+  )
+}
+
+function requireVerifiedWorkspaceScope(request: { group_id: GroupId; scope?: ScopeTuple }): ScopeTuple & { workspace_id: string; agent_id: string } {
+  const scope = request.scope
+  if (!scope?.workspace_id || !scope.agent_id || scope.group_id !== request.group_id) {
+    throw new Error("verified MCP workspace scope is required")
+  }
+  return scope as ScopeTuple & { workspace_id: string; agent_id: string }
+}
+
+/**
  * 1. memory_add
  *
  * Add a memory for a user.
@@ -150,13 +185,14 @@ export async function memory_add(request: MemoryAddRequest): Promise<MemoryAddRe
 
     // Write to PostgreSQL (episodic) — wrapped in circuit breaker
     const eventResult = await withCircuitBreaker("postgres", groupId, "memory_add:insert_event", async () =>
-      pg.query(
+      tenantPgQuery(groupId, agentId, pg,
         `INSERT INTO events (
-      group_id, event_type, agent_id, status, metadata, created_at
-    ) VALUES ($1, $2, $3, $4, $5, $6)
+      group_id, workspace_id, event_type, agent_id, status, metadata, created_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING id`,
         [
           groupId,
+          scope.workspace_id ?? null,
           "memory_add",
           agentId,
           "completed",
@@ -175,7 +211,8 @@ export async function memory_add(request: MemoryAddRequest): Promise<MemoryAddRe
             },
           }),
           createdAt,
-        ]
+        ],
+        scope.workspace_id
       )
     )
 
@@ -246,20 +283,21 @@ export async function memory_add(request: MemoryAddRequest): Promise<MemoryAddRe
       const dedupChecker = createProposalDedupChecker(undefined, dedupThreshold)
 
       try {
-        const existingRows = await pg.query<{
+        const existingRows = await tenantPgQuery<{
           id: string
           content: string
           score: number
           status: string
           created_at: string
-        }>(
+        }>(groupId, agentId, pg,
           `SELECT id, content, score, status, created_at
          FROM canonical_proposals
          WHERE group_id = $1
            AND status IN ('pending', 'approved')
          ORDER BY created_at DESC
          LIMIT 100`,
-          [groupId]
+          [groupId],
+          scope.workspace_id
         )
 
         const existingProposals: ProposalCandidate[] = existingRows.rows.map((row) => ({
@@ -311,11 +349,12 @@ export async function memory_add(request: MemoryAddRequest): Promise<MemoryAddRe
 
       // SOC2 mode: Queue for human approval — circuit-breaker wrapped PG insert
       await withCircuitBreaker("postgres", groupId, "memory_add:insert_proposal", async () =>
-        pg.query(
+        tenantPgQuery(groupId, agentId, pg,
           `INSERT INTO canonical_proposals (
-          id, group_id, content, score, reasoning, tier, status, trace_ref, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [randomUUID(), groupId, request.content, score, reasoning, tier, "pending", eventId, createdAt]
+          id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [randomUUID(), groupId, scope.workspace_id ?? null, request.content, score, reasoning, tier, "pending", eventId, createdAt],
+          scope.workspace_id
         )
       )
 
@@ -355,8 +394,8 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
   const startTime = Date.now()
   const retrievalStatus = request.status || "approved" // Default: approved-only retrieval
 
-  // ── Scope resolution (implicit) ────────────────────────────────────────────
-  const scope = request.scope || { group_id: groupId }
+  // Scope was injected from a verified MCP principal at the transport boundary.
+  const scope = requireVerifiedWorkspaceScope(request)
   console.log(`[memory_search] scope: group=${groupId} project=${scope.project_id || "none"} agent=${scope.agent_id || "none"} session=${scope.session_id || "none"} status=${retrievalStatus}`)
 
   // ── Approved-only filter ──────────────────────────────────────────────────
@@ -429,6 +468,8 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
       const graphResults = await graphAdapter.searchMemories({
         query: request.query,
         group_id: groupId,
+        workspace_id: scope.workspace_id,
+        principal_id: scope.agent_id,
         limit: limit - ruvectorResults.length,
       })
 
@@ -467,7 +508,8 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
   if (totalSoFar < limit) {
     try {
       const { pg } = await getConnections()
-      const result = await pg.query<EpisodicMemoryRow>(
+      const result = await tenantPgQuery<EpisodicMemoryRow>(
+        groupId, scope.agent_id, pg,
         `SELECT metadata->>'memory_id' AS id, metadata->>'content' AS content, 
               metadata->>'source' AS provenance,
               metadata->>'tags' AS tags,
@@ -479,7 +521,8 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
         AND metadata->>'content' ILIKE '%' || $3 || '%'
       ORDER BY created_at DESC
       LIMIT $4`,
-        [groupId, request.user_id || null, request.query, limit - totalSoFar]
+        [groupId, request.user_id || null, request.query, limit - totalSoFar],
+        scope.workspace_id
       )
 
       episodicResults = result.rows.map((row) => ({
@@ -564,7 +607,7 @@ async function searchApprovedOnly(
   groupId: GroupId,
   limit: number,
   startTime: number,
-  scope: ScopeTuple
+  scope: ScopeTuple & { workspace_id: string; agent_id: string }
 ): Promise<MemorySearchResponse> {
   try {
     const { pg, neo4j: neo4jDriver } = await getConnections()
@@ -573,6 +616,8 @@ async function searchApprovedOnly(
     const graphResults = await graphAdapter.searchMemories({
       query: request.query,
       group_id: groupId,
+      workspace_id: scope.workspace_id,
+      principal_id: scope.agent_id,
       limit,
     })
 
@@ -635,6 +680,7 @@ async function searchApprovedOnly(
 export async function memory_get(request: MemoryGetRequest): Promise<MemoryGetResponse> {
   // Validate
   const groupId = validateGroupId(request.group_id)
+  const scope = requireVerifiedWorkspaceScope(request)
 
   try {
     const { pg, neo4j: neo4jDriver } = await getConnections()
@@ -643,7 +689,9 @@ export async function memory_get(request: MemoryGetRequest): Promise<MemoryGetRe
     // Try graph adapter first (semantic) - secondary store, degradation acceptable
     let getMeta = baseMeta(["postgres", "graph"])
     try {
-      const graphResult = await graphAdapter.getMemory({ id: request.id, group_id: groupId })
+      const graphResult = await graphAdapter.getMemory({
+        id: request.id, group_id: groupId, workspace_id: scope.workspace_id, principal_id: scope.agent_id,
+      })
 
       if (graphResult.node) {
         const node = graphResult.node
@@ -672,7 +720,8 @@ export async function memory_get(request: MemoryGetRequest): Promise<MemoryGetRe
     }
 
     // Fall back to PostgreSQL (episodic)
-    const result = await pg.query<EpisodicMemoryRow>(
+    const result = await tenantPgQuery<EpisodicMemoryRow>(
+      groupId, scope.agent_id, pg,
       `SELECT metadata->>'memory_id' AS id, metadata->>'content' AS content,
             metadata->>'source' AS provenance,
             metadata->>'user_id' AS user_id,
@@ -682,7 +731,8 @@ export async function memory_get(request: MemoryGetRequest): Promise<MemoryGetRe
      WHERE metadata->>'memory_id' = $1
        AND group_id = $2
        AND event_type = 'memory_add'`,
-      [request.id, groupId]
+      [request.id, groupId],
+      scope.workspace_id
     )
 
     if (result.rows.length === 0) {
@@ -734,6 +784,7 @@ export async function memory_get(request: MemoryGetRequest): Promise<MemoryGetRe
 export async function memory_list(request: MemoryListRequest): Promise<MemoryListResponse> {
   // Validate
   const groupId = validateGroupId(request.group_id)
+  const scope = requireVerifiedWorkspaceScope(request)
   const limit = request.limit || 50
   const offset = request.offset || 0
   const sort = request.sort || "created_at_desc"
@@ -748,17 +799,20 @@ export async function memory_list(request: MemoryListRequest): Promise<MemoryLis
     // PG: fetch count + data (no LIMIT/OFFSET on data)
     const [pgCountResult, episodicResults, semanticResults] = await Promise.all([
       // Total count from PG
-      pg.query<{ total_count: string }>(
+      tenantPgQuery<{ total_count: string }>(
+        groupId, scope.agent_id, pg,
         `SELECT COUNT(*) AS total_count
          FROM events
          WHERE group_id = $1
            AND ($2::text IS NULL OR metadata->>'user_id' = $2)
            AND event_type = 'memory_add'`,
-        [groupId, request.user_id ?? null]
+        [groupId, request.user_id ?? null],
+        scope.workspace_id
       ),
 
       // PG data (no LIMIT/OFFSET — all rows for merge)
-      pg.query<EpisodicMemoryRow>(
+      tenantPgQuery<EpisodicMemoryRow>(
+        groupId, scope.agent_id, pg,
         `SELECT metadata->>'memory_id' AS id, metadata->>'content' AS content,
                 metadata->>'source' AS provenance,
                 metadata->>'user_id' AS user_id,
@@ -769,7 +823,8 @@ export async function memory_list(request: MemoryListRequest): Promise<MemoryLis
            AND ($2::text IS NULL OR metadata->>'user_id' = $2)
            AND event_type = 'memory_add'
          ORDER BY created_at DESC`,
-        [groupId, request.user_id ?? null]
+        [groupId, request.user_id ?? null],
+        scope.workspace_id
       ),
 
       // Graph adapter — fetch all + count in one pass
@@ -777,6 +832,8 @@ export async function memory_list(request: MemoryListRequest): Promise<MemoryLis
         try {
           const graphResult = await graphAdapter.listMemories({
             group_id: groupId,
+            workspace_id: scope.workspace_id,
+            principal_id: scope.agent_id,
             user_id: request.user_id ?? null,
           })
 
@@ -883,12 +940,13 @@ export async function memory_delete(request: MemoryDeleteRequest): Promise<Memor
 
     // 1. Append deletion event to PostgreSQL — circuit-breaker wrapped
     await withCircuitBreaker("postgres", groupId, "memory_delete:insert_event", async () =>
-      pg.query(
+      tenantPgQuery(groupId, request.user_id, pg,
         `INSERT INTO events (
-        group_id, event_type, agent_id, status, metadata, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6)`,
+        group_id, workspace_id, event_type, agent_id, status, metadata, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           groupId,
+          request.scope?.workspace_id ?? null,
           "memory_delete",
           request.user_id,
           "completed",
@@ -897,7 +955,8 @@ export async function memory_delete(request: MemoryDeleteRequest): Promise<Memor
             user_id: request.user_id,
           }),
           deletedAt,
-        ]
+        ],
+        request.scope?.workspace_id
       )
     )
 
@@ -947,6 +1006,7 @@ export async function memory_delete(request: MemoryDeleteRequest): Promise<Memor
  */
 export async function memory_update(request: MemoryUpdateRequest): Promise<MemoryUpdateResponse> {
   const groupId = validateGroupId(request.group_id)
+  const scope = requireVerifiedWorkspaceScope(request)
   const newId = generateMemoryId()
   const updatedAt = new Date().toISOString()
   const agentId = String(request.metadata?.agent_id ?? request.user_id)
@@ -957,11 +1017,12 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
 
     // 1. Append audit event to PostgreSQL (mandatory, append-only) — circuit-breaker wrapped
     await withCircuitBreaker("postgres", groupId, "memory_update:insert_event", async () =>
-      pg.query(
-        `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+      tenantPgQuery(groupId, agentId, pg,
+        `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           groupId,
+          request.scope?.workspace_id ?? null,
           "memory_update",
           agentId,
           "completed",
@@ -974,7 +1035,8 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
             ...request.metadata,
           }),
           updatedAt,
-        ]
+        ],
+        request.scope?.workspace_id
       )
     )
 
@@ -1003,6 +1065,8 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
           prev_id: request.id as MemoryId,
           new_id: newId,
           group_id: groupId,
+          workspace_id: scope.workspace_id,
+          principal_id: scope.agent_id,
           user_id: request.user_id,
           content: request.content,
           version: newVersion,
@@ -1074,13 +1138,15 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
   }
 
   // 2. Check for existing pending proposal (idempotency)
-  const existingProposal = await pg.query<{ id: string }>(
+  const existingProposal = await tenantPgQuery<{ id: string }>(
+    groupId, request.curator_id ?? request.user_id, pg,
     `SELECT id FROM canonical_proposals
      WHERE group_id = $1
        AND status = 'pending'
        AND content LIKE '%' || $2 || '%'
      LIMIT 1`,
-    [groupId, request.id]
+    [groupId, request.id],
+    request.scope?.workspace_id
   )
   if (existingProposal.rows.length > 0) {
     return {
@@ -1097,7 +1163,8 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
   const dedupChecker = createProposalDedupChecker(undefined, dedupThreshold)
 
   // 4. Fetch memory content from PG
-  const memoryRow = await pg.query<{ id: string; content: string; event_id: string }>(
+  const memoryRow = await tenantPgQuery<{ id: string; content: string; event_id: string }>(
+    groupId, request.curator_id ?? request.user_id, pg,
     `SELECT metadata->>'memory_id' AS id,
             metadata->>'content' AS content,
             id AS event_id
@@ -1107,7 +1174,8 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
        AND metadata->>'memory_id' = $2
      ORDER BY created_at DESC
      LIMIT 1`,
-    [groupId, request.id]
+    [groupId, request.id],
+    request.scope?.workspace_id
   )
 
   if (memoryRow.rows.length === 0) {
@@ -1126,20 +1194,21 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
 
   // 4b. Dedup: check for near-duplicate proposals before inserting
   try {
-    const dedupRows = await pg.query<{
+    const dedupRows = await tenantPgQuery<{
       id: string
       content: string
       score: number
       status: string
       created_at: string
-    }>(
+    }>(groupId, request.curator_id ?? request.user_id, pg,
       `SELECT id, content, score, status, created_at
        FROM canonical_proposals
        WHERE group_id = $1
          AND status IN ('pending', 'approved')
        ORDER BY created_at DESC
        LIMIT 100`,
-      [groupId]
+      [groupId],
+      request.scope?.workspace_id
     )
 
     const dedupCandidates: ProposalCandidate[] = dedupRows.rows.map((row) => ({
@@ -1174,19 +1243,23 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
 
   // 5. Insert proposal
   const proposalId = randomUUID()
-  await pg.query(
+  await tenantPgQuery(
+    groupId, request.curator_id ?? request.user_id, pg,
     `INSERT INTO canonical_proposals
-       (id, group_id, content, score, reasoning, tier, status, trace_ref, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8)`,
-    [proposalId, groupId, content, scoreResult.confidence, scoreResult.reasoning, scoreResult.tier, event_id, queuedAt]
+       (id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9)`,
+    [proposalId, groupId, request.scope?.workspace_id ?? null, content, scoreResult.confidence, scoreResult.reasoning, scoreResult.tier, event_id, queuedAt],
+    request.scope?.workspace_id
   )
 
   // 6. Append audit event
-  await pg.query(
-    `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
+  await tenantPgQuery(
+    groupId, request.curator_id ?? request.user_id, pg,
+    `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [
       groupId,
+      request.scope?.workspace_id ?? null,
       "memory_promote_requested",
       request.curator_id ?? request.user_id,
       "completed",
@@ -1197,7 +1270,8 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
         score: scoreResult.confidence,
       }),
       queuedAt,
-    ]
+    ],
+    request.scope?.workspace_id
   )
 
   return {
@@ -1274,7 +1348,8 @@ export async function memory_export(request: MemoryExportRequest): Promise<Memor
   // Episodic memories from PostgreSQL
   const canonicalIds = new Set(canonicalMemories.map((m) => m.id))
 
-  const pgResult = await pg.query<EpisodicMemoryRow>(
+  const pgResult = await tenantPgQuery<EpisodicMemoryRow>(
+    groupId, request.user_id ?? "api", pg,
     `SELECT metadata->>'memory_id' AS id,
             metadata->>'content' AS content,
             metadata->>'source' AS provenance,
@@ -1287,7 +1362,8 @@ export async function memory_export(request: MemoryExportRequest): Promise<Memor
        AND ($2::text IS NULL OR metadata->>'user_id' = $2)
      ORDER BY created_at DESC
      LIMIT $3 OFFSET $4`,
-    [groupId, request.user_id ?? null, limit, offset]
+    [groupId, request.user_id ?? null, limit, offset],
+    request.scope?.workspace_id
   )
 
   // Deduplicate: Neo4j wins on collision
@@ -1351,7 +1427,8 @@ export async function memory_restore(request: MemoryRestoreRequest): Promise<Mem
       groupId,
       "memory_restore:find_delete_event",
       async () =>
-        pg.query<{ id: string; created_at: string; metadata: Record<string, unknown> }>(
+        tenantPgQuery<{ id: string; created_at: string; metadata: Record<string, unknown> }>(
+          groupId, request.user_id, pg,
           `SELECT id, created_at, metadata
          FROM events
          WHERE group_id = $1
@@ -1360,7 +1437,8 @@ export async function memory_restore(request: MemoryRestoreRequest): Promise<Mem
            AND created_at >= NOW() - INTERVAL '${RECOVERY_WINDOW_DAYS} days'
          ORDER BY created_at DESC
          LIMIT 1`,
-          [groupId, request.id]
+          [groupId, request.id],
+          request.scope?.workspace_id
         )
     )
 
@@ -1371,9 +1449,11 @@ export async function memory_restore(request: MemoryRestoreRequest): Promise<Mem
         groupId,
         "memory_restore:find_any_delete",
         async () =>
-          pg.query<{ id: string }>(
+          tenantPgQuery<{ id: string }>(
+            groupId, request.user_id, pg,
             `SELECT id FROM events WHERE group_id = $1 AND event_type = 'memory_delete' AND metadata->>'memory_id' = $2 LIMIT 1`,
-            [groupId, request.id]
+            [groupId, request.id],
+            request.scope?.workspace_id
           )
       )
 
@@ -1400,11 +1480,12 @@ export async function memory_restore(request: MemoryRestoreRequest): Promise<Mem
 
     // 3. Append restore event to PostgreSQL (append-only)
     await withCircuitBreaker("postgres", groupId, "memory_restore:insert_event", async () =>
-      pg.query(
-        `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+      tenantPgQuery(groupId, request.user_id, pg,
+        `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           groupId,
+          request.scope?.workspace_id ?? null,
           "memory_restore",
           request.user_id,
           "completed",
@@ -1414,7 +1495,8 @@ export async function memory_restore(request: MemoryRestoreRequest): Promise<Mem
             deleted_at: deleteEventResult.rows[0].created_at,
           }),
           restoredAt,
-        ]
+        ],
+        request.scope?.workspace_id
       )
     )
 
@@ -1473,7 +1555,8 @@ export async function memory_list_deleted(request: MemoryListDeletedRequest): Pr
       groupId,
       "memory_list_deleted:find_deletes",
       async () =>
-        pg.query<{ memory_id: string; user_id: string; deleted_at: string }>(
+        tenantPgQuery<{ memory_id: string; user_id: string; deleted_at: string }>(
+          groupId, request.user_id ?? "api", pg,
           `SELECT DISTINCT ON (metadata->>'memory_id')
            metadata->>'memory_id' AS memory_id,
            metadata->>'user_id' AS user_id,
@@ -1484,7 +1567,8 @@ export async function memory_list_deleted(request: MemoryListDeletedRequest): Pr
            AND ($2::text IS NULL OR metadata->>'user_id' = $2)
            AND created_at >= NOW() - INTERVAL '${RECOVERY_WINDOW_DAYS} days'
          ORDER BY metadata->>'memory_id', created_at DESC`,
-          [groupId, request.user_id ?? null]
+          [groupId, request.user_id ?? null],
+          request.scope?.workspace_id
         )
     )
 
@@ -1501,7 +1585,7 @@ export async function memory_list_deleted(request: MemoryListDeletedRequest): Pr
       groupId,
       "memory_list_deleted:find_add_events",
       async () =>
-        pg.query<{
+        tenantPgQuery<{
           memory_id: string
           content: string
           source: string
@@ -1510,7 +1594,7 @@ export async function memory_list_deleted(request: MemoryListDeletedRequest): Pr
           created_at: string
           score: string
           tags: string
-        }>(
+        }>(groupId, request.user_id ?? "api", pg,
           `SELECT DISTINCT ON (metadata->>'memory_id')
            metadata->>'memory_id' AS memory_id,
            metadata->>'content' AS content,
@@ -1525,7 +1609,8 @@ export async function memory_list_deleted(request: MemoryListDeletedRequest): Pr
            AND event_type = 'memory_add'
            AND metadata->>'memory_id' = ANY($2)
          ORDER BY metadata->>'memory_id', created_at DESC`,
-          [groupId, deletedMemoryIds]
+          [groupId, deletedMemoryIds],
+          request.scope?.workspace_id
         )
     )
 

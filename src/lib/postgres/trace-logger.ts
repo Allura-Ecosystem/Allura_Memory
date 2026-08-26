@@ -32,6 +32,8 @@ export interface TraceLog {
   agent_id: string
   /** Required: Tenant isolation - must use 'allura-*' naming */
   group_id: string
+  /** Workspace authority for workspace-scoped event writes. */
+  workspace_id?: string
   /** Required: Trace classification */
   trace_type: TraceType
   /** Required: Trace content - what happened */
@@ -158,6 +160,7 @@ export async function logTrace(trace: TraceLog): Promise<TraceRecord> {
     table: "events",
     data: {
       agent_id: canonicalTrace.agent_id,
+      workspace_id: canonicalTrace.workspace_id,
       trace_type: canonicalTrace.trace_type,
       content: canonicalTrace.content,
       confidence: canonicalTrace.confidence,

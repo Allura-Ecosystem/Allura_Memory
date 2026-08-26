@@ -20,11 +20,11 @@ describeLive("auto-curator workspace authority", () => {
   beforeAll(async () => {
     // Keep all DB-owning modules out of skipped-suite collection. Vitest still
     // evaluates describe.skip callbacks, so live dependencies load only here.
-    const [{ getPool }, autoCurator] = await Promise.all([
+    const [{ getOwnerPool }, autoCurator] = await Promise.all([
       import("@/lib/postgres/connection"),
       import("@/lib/curator/auto-curator"),
     ]);
-    owner = getPool();
+    owner = getOwnerPool();
     curator = autoCurator;
     await owner.query(
       `INSERT INTO workspaces (workspace_id, group_id, name)
@@ -40,11 +40,18 @@ describeLive("auto-curator workspace authority", () => {
          ($1, $3, 'promotion_failed', 'agent-a', 'failed', '{"error":"workspace-b-must-not-influence"}'::jsonb)`,
       [groupId, workspaceA, workspaceB],
     );
+    await owner.query(
+      `INSERT INTO allura_memories (session_id, user_id, content, memory_type, metadata, group_id, workspace_id, workspace_scope_state)
+       VALUES ('workspace-b-retained', 'agent-b', 'workspace-b-retained-must-not-influence', 'semantic',
+               jsonb_build_object('workspace_id', $2::text), $1, $2, 'workspace_scoped')`,
+      [groupId, workspaceB],
+    );
   });
 
   afterAll(async () => {
     await owner.query("DELETE FROM events WHERE group_id = $1", [groupId]);
     await owner.query("DELETE FROM canonical_proposals WHERE group_id = $1", [groupId]);
+    await owner.query("DELETE FROM allura_memories WHERE group_id = $1", [groupId]);
     await owner.query("DELETE FROM workspaces WHERE group_id = $1", [groupId]);
   });
 
@@ -55,6 +62,7 @@ describeLive("auto-curator workspace authority", () => {
     const candidate = analysis.candidates[0];
     expect(candidate.content).toContain("workspace-a-only");
     expect(candidate.content).not.toContain("workspace-b-must-not-influence");
+    expect(candidate.content).not.toContain("workspace-b-retained-must-not-influence");
     expect(candidate.source_scope).toEqual({ group_id: groupId, workspace_id: workspaceA });
 
     const submitted = await curator.submitCandidate(candidate, scopeA);

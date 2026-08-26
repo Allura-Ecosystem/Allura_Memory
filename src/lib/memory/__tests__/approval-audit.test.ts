@@ -19,15 +19,14 @@
 
 import { beforeEach, describe, expect, it, type MockInstance, vi } from "vitest"
 import {
-  type ApprovalAuditEvent,
   ApprovalAuditAuthorizationError,
+  type ApprovalAuditEvent,
   ApprovalRequiredError,
-  buildCuratorDecisionReceipt,
-  SegregationOfDutiesError,
   hasApprovalEvent,
-  logProposalNeedsEvidenceEvent,
   logApprovalEvent,
+  logProposalNeedsEvidenceEvent,
   requireApprovalBeforePromotion,
+  SegregationOfDutiesError,
 } from "@/lib/memory/approval-audit"
 
 // ── Mock Setup ────────────────────────────────────────────────────────────
@@ -65,6 +64,7 @@ const VALID_GROUP_ID = "allura-test-tenant"
 const VALID_APPROVAL_EVENT: ApprovalAuditEvent = {
   proposal_id: "prop-001",
   group_id: VALID_GROUP_ID,
+  workspace_id: "workspace-review-a",
   memory_id: "mem-001",
   requested_by: "agent-woz",
   curator_id: "curator-alice",
@@ -94,6 +94,7 @@ const VALID_NEEDS_EVIDENCE_EVENT = {
   rationale: "Please attach source trace and requester provenance before approval",
   score: 0.71,
   tier: "adoption",
+  workspace_id: "workspace-review-a",
 }
 
 /**
@@ -114,6 +115,10 @@ function createMockPool(existingRows: Record<string, unknown[]> = {}) {
       const key = `${eventType}:${proposalId}`
       const rows = existingRows[key] ?? []
       return { rows, rowCount: rows.length }
+    }
+
+    if (text.includes("INSERT INTO evidence_requests")) {
+      return { rows: [{ id: "evidence-request-1" }], rowCount: 1 }
     }
 
     if (text.includes("INSERT INTO events")) {
@@ -159,10 +164,12 @@ describe("Approval Audit Logger", () => {
       // Second query: INSERT
       const insertQuery = queryCalls[1]
       expect(insertQuery.text).toContain("INSERT INTO events")
-      expect(insertQuery.text).toContain("VALUES ($1, $2, $3, $4, $5, $6)")
+      expect(insertQuery.text).toContain("VALUES ($1, $2, $3, $4, $5, $6, $7)")
+      expect(insertQuery.params).toHaveLength(7)
       expect(insertQuery.params[0]).toBe(VALID_GROUP_ID) // group_id always first
       expect(insertQuery.params[1]).toBe("proposal_approved")
       expect(insertQuery.params[2]).toBe("curator-alice") // agent_id = curator_id
+      expect(insertQuery.params[6]).toBe("workspace-review-a")
 
       // Verify metadata JSON contains all required fields
       const metadata = JSON.parse(insertQuery.params[4] as string)
@@ -302,20 +309,22 @@ describe("Approval Audit Logger", () => {
       expect(metadata.curator_id).toBe("admin-riley")
     })
 
-    it("should log request-evidence as append-only audit without changing proposal semantic status", async () => {
+    it("persists a durable evidence request and keeps proposal status pending", async () => {
       const { pool, queryCalls } = createMockPool()
       mockGetPool.mockReturnValue(pool)
 
       await logProposalNeedsEvidenceEvent(VALID_NEEDS_EVIDENCE_EVENT, pool)
 
-      expect(queryCalls).toHaveLength(1)
+      expect(queryCalls).toHaveLength(2)
       const insertQuery = queryCalls[0]
+      expect(insertQuery.text).toContain("INSERT INTO evidence_requests")
       expect(insertQuery.params[0]).toBe(VALID_GROUP_ID)
-      expect(insertQuery.params[1]).toBe("proposal_evidence_requested")
-      expect(insertQuery.params[2]).toBe("curator-alice")
-      expect(insertQuery.params[3]).toBe("completed")
-
-      const metadata = JSON.parse(insertQuery.params[4] as string)
+      expect(insertQuery.params[1]).toBe("workspace-review-a")
+      expect(insertQuery.params[2]).toBe("prop-003")
+      expect(insertQuery.params[3]).toBe("curator-alice")
+      const auditQuery = queryCalls[1]
+      expect(auditQuery.text).toContain("INSERT INTO events")
+      const metadata = JSON.parse(auditQuery.params[4] as string)
       expect(metadata).toMatchObject({
         proposal_id: "prop-003",
         memory_id: "trace-003",
@@ -330,7 +339,7 @@ describe("Approval Audit Logger", () => {
       })
     })
 
-    it("should append repeated request-evidence events even when prior evidence requests exist", async () => {
+    it("opens a new durable lifecycle record when evidence is requested again", async () => {
       const { pool, queryCalls } = createMockPool({
         "proposal_evidence_requested:prop-003": [{ id: 44 }],
       })
@@ -338,11 +347,11 @@ describe("Approval Audit Logger", () => {
 
       await logProposalNeedsEvidenceEvent(VALID_NEEDS_EVIDENCE_EVENT, pool)
 
-      expect(queryCalls).toHaveLength(1)
+      expect(queryCalls).toHaveLength(2)
       const insertQuery = queryCalls[0]
-      expect(insertQuery.text).toContain("INSERT INTO events")
-      expect(insertQuery.params[1]).toBe("proposal_evidence_requested")
-      expect(JSON.parse(insertQuery.params[4] as string)).toMatchObject({
+      expect(insertQuery.text).toContain("INSERT INTO evidence_requests")
+      const auditQuery = queryCalls[1]
+      expect(JSON.parse(auditQuery.params[4] as string)).toMatchObject({
         proposal_id: "prop-003",
         decision: "needs_evidence",
         resulting_status: "pending",
@@ -486,67 +495,5 @@ describe("Approval Audit Logger", () => {
     })
   })
 
-  describe("buildCuratorDecisionReceipt", () => {
-    it("maps append-only approval audit metadata into an inspectable decision receipt", () => {
-      const receipt = buildCuratorDecisionReceipt({
-        proposal: {
-          id: "prop-001",
-          group_id: VALID_GROUP_ID,
-          status: "approved",
-          trace_ref: "trace-001",
-          memory_id: "mem-001",
-        },
-        event: {
-          event_type: "proposal_approved",
-          agent_id: "curator-alice",
-          created_at: "2026-05-24T09:00:00.000Z",
-          metadata: {
-            proposal_id: "prop-001",
-            decision: "approved",
-            resulting_status: "approved",
-            rationale: "Evidence is sufficient",
-            memory_id: "mem-001",
-            requested_by: "agent-woz",
-          },
-        },
-      })
 
-      expect(receipt).toMatchObject({
-        proposal_id: "prop-001",
-        group_id: VALID_GROUP_ID,
-        decision: "approved",
-        actor: "curator-alice",
-        rationale: "Evidence is sufficient",
-        previous_status: "pending",
-        resulting_status: "approved",
-        trace_reference: "trace-001",
-        promoted_memory_id: "mem-001",
-        source_event_type: "proposal_approved",
-        receipt_status: "available",
-      })
-    })
-
-    it("returns a degraded blocker receipt when a decided proposal has no audit event", () => {
-      const receipt = buildCuratorDecisionReceipt({
-        proposal: {
-          id: "prop-004",
-          group_id: VALID_GROUP_ID,
-          status: "rejected",
-          trace_ref: "trace-004",
-        },
-        event: null,
-      })
-
-      expect(receipt).toMatchObject({
-        proposal_id: "prop-004",
-        group_id: VALID_GROUP_ID,
-        decision: "missing_receipt",
-        resulting_status: "rejected",
-        trace_reference: "trace-004",
-        promoted_memory_id: null,
-        receipt_status: "missing_receipt_blocker",
-      })
-      expect(receipt.degraded_reason).toMatch(/Missing append-only curator decision receipt/i)
-    })
-  })
 })

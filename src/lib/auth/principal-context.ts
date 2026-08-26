@@ -47,6 +47,8 @@ export const TENANT_WILDCARD = "*";
 export interface PrincipalContext {
   /** Stable identity of the caller (agent name, service id, or dev id). */
   readonly principalId: string;
+  /** Workspace bound to a verified credential/service identity. */
+  readonly workspaceId?: string;
   /** Tenants this principal may act on. May be ["*"] for dev/service only. */
   readonly tenantIds: readonly string[];
   /** Effective roles. Authority for elevated tools comes from here ONLY. */
@@ -149,6 +151,7 @@ function normalizeRoles(roles: readonly string[]): PrincipalRole[] {
 
 export interface CreatePrincipalInput {
   principalId: string;
+  workspaceId?: string;
   tenantIds: readonly string[];
   roles: readonly string[];
   scopes?: readonly string[];
@@ -211,6 +214,7 @@ export function createPrincipalContext(input: CreatePrincipalInput): PrincipalCo
 
   return Object.freeze({
     principalId,
+    workspaceId: input.workspaceId?.trim() || undefined,
     tenantIds: Object.freeze([...tenantIds]) as readonly string[],
     roles: Object.freeze(roles) as readonly PrincipalRole[],
     scopes: Object.freeze(scopes) as readonly Scope[],
@@ -475,6 +479,12 @@ export function applyPrincipalToArgs(
   // 2. Tenant.
   const effectiveTenant = resolveEffectiveTenant(principal, source.group_id);
   args.group_id = effectiveTenant;
+  if (principal.workspaceId) {
+    args.workspace_id = principal.workspaceId;
+    args.scope = Object.freeze({ group_id: effectiveTenant, workspace_id: principal.workspaceId, agent_id: principal.principalId });
+  } else if (new Set(["memory_search", "memory_get", "memory_list"]).has(toolName)) {
+    throw new PrincipalAuthError("CONFIG_MISSING", `Principal '${principal.principalId}' has no verified workspace binding`);
+  }
 
   // 3/4. Actors.
   const actors: Record<string, string> = {};
@@ -531,6 +541,7 @@ export function canRebindSession(
   }
 
   if (!sameStringSet(current.tenantIds, next.tenantIds)) return false;
+  if (current.workspaceId !== next.workspaceId) return false;
   if (!sameStringSet(current.roles, next.roles)) return false;
   if (!sameStringSet(current.scopes, next.scopes)) return false;
 

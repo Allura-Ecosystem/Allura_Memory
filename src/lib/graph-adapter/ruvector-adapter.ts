@@ -36,6 +36,7 @@ import type {
   VersionLookupResult,
 } from "./types"
 import { GraphAdapterError } from "./types"
+import { withTenantTransaction, withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
 
 // ── Row Types ────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,21 @@ function rowToNode(row: GraphMemoryRow): GraphMemoryNode {
   }
 }
 
+function requireWorkspaceScope(params: { workspace_id: string; principal_id: string }) {
+  const workspaceId = String(params.workspace_id ?? "").trim()
+  const principalId = String(params.principal_id ?? "").trim()
+  if (!workspaceId || !principalId) throw new Error("verified workspace_id and principal_id are required")
+  return { workspaceId, principalId }
+}
+
+function retiredTenantOnlyLifecycle(operation: string): void {
+  throw new GraphAdapterError(
+    "ruvector-graph",
+    operation,
+    "tenant-only graph lifecycle operation is retired; use a workspace-scoped service",
+  )
+}
+
 // ── RuVectorGraphAdapter ─────────────────────────────────────────────────────
 
 export class RuVectorGraphAdapter implements IGraphAdapter {
@@ -85,6 +101,8 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
   async createMemory(params: {
     id: MemoryId
     group_id: GroupId
+    workspace_id: string
+    principal_id: string
     user_id: string | null
     content: string
     score: ConfidenceScore
@@ -92,10 +110,15 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
     created_at: string
   }): Promise<MemoryId> {
     try {
-      await this.pool.query(
-        `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance, created_at, deprecated)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8)`,
-        [params.id, params.group_id, params.user_id, params.content, params.score, params.provenance, params.created_at, false]
+      const scope = requireWorkspaceScope(params)
+      await withWorkspaceTransaction(
+        { tenantId: params.group_id, ...scope },
+        (db) => db.query(
+          `INSERT INTO graph_memories
+             (id, group_id, workspace_id, workspace_scope_state, user_id, content, score, provenance, created_at, deprecated)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::timestamptz, $10)`,
+          [params.id, params.group_id, scope.workspaceId, "workspace_scoped", params.user_id, params.content, params.score, params.provenance, params.created_at, false],
+        ),
       )
       return params.id
     } catch (error) {
@@ -108,6 +131,7 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
     user_id: string | null
     content: string
   }): Promise<DuplicateCheckResult> {
+    retiredTenantOnlyLifecycle("checkDuplicate")
     try {
       // Check for non-superseded, non-deprecated exact match
       const result = await this.pool.query<{ id: string }>(
@@ -137,57 +161,51 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
     prev_id: MemoryId
     new_id: MemoryId
     group_id: GroupId
+    workspace_id: string
+    principal_id: string
     user_id: string | null
     content: string
     version: number
     created_at: string
   }): Promise<GraphSupersedesResult> {
-    const client = await this.pool.connect()
     try {
-      await client.query("BEGIN")
+      const scope = requireWorkspaceScope(params)
+      return await withWorkspaceTransaction(
+        { tenantId: params.group_id, ...scope },
+        async (db) => {
+          const prevResult = await db.query<{ score: number; provenance: string }>(
+            `SELECT score, provenance FROM graph_memories
+             WHERE id = $1 AND group_id = $2 AND workspace_id = $3
+               AND workspace_scope_state = $4
+             FOR UPDATE`,
+            [params.prev_id, params.group_id, scope.workspaceId, "workspace_scoped"],
+          )
+          const previous = prevResult.rows[0]
+          if (!previous) return { newId: params.new_id, newVersion: params.version, success: false }
 
-      // Get the previous version's score and provenance
-      const prevResult = await client.query<{ score: number; provenance: string }>(
-        `SELECT score, provenance FROM graph_memories
-         WHERE id = $1 AND group_id = $2
-         FOR UPDATE`,
-        [params.prev_id, params.group_id]
+          await db.query(
+            `INSERT INTO graph_memories
+               (id, group_id, workspace_id, workspace_scope_state, user_id, content, score, provenance, version, created_at, deprecated)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::timestamptz, $11)`,
+            [params.new_id, params.group_id, scope.workspaceId, "workspace_scoped", params.user_id, params.content, previous.score, previous.provenance, params.version, params.created_at, false],
+          )
+          await db.query(
+            `INSERT INTO graph_supersedes
+               (newer_id, superseded_id, group_id, workspace_id, workspace_scope_state, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6::timestamptz)`,
+            [params.new_id, params.prev_id, params.group_id, scope.workspaceId, "workspace_scoped", params.created_at],
+          )
+          await db.query(
+            `UPDATE graph_memories SET deprecated = true
+             WHERE id = $1 AND group_id = $2 AND workspace_id = $3
+               AND workspace_scope_state = $4`,
+            [params.prev_id, params.group_id, scope.workspaceId, "workspace_scoped"],
+          )
+          return { newId: params.new_id, newVersion: params.version, success: true }
+        },
       )
-
-      if (prevResult.rows.length === 0) {
-        await client.query("ROLLBACK")
-        return { newId: params.new_id, newVersion: params.version, success: false }
-      }
-
-      const { score, provenance } = prevResult.rows[0]
-
-      // Create new version
-      await client.query(
-        `INSERT INTO graph_memories (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, $9)`,
-        [params.new_id, params.group_id, params.user_id, params.content, score, provenance, params.version, params.created_at, false]
-      )
-
-      // Create SUPERSEDES relationship
-      await client.query(
-        `INSERT INTO graph_supersedes (newer_id, superseded_id, group_id, created_at)
-         VALUES ($1, $2, $3, $4::timestamptz)`,
-        [params.new_id, params.prev_id, params.group_id, params.created_at]
-      )
-
-      // Mark previous as deprecated
-      await client.query(
-        `UPDATE graph_memories SET deprecated = true WHERE id = $1 AND group_id = $2`,
-        [params.prev_id, params.group_id]
-      )
-
-      await client.query("COMMIT")
-      return { newId: params.new_id, newVersion: params.version, success: true }
     } catch (error) {
-      await client.query("ROLLBACK").catch(() => {})
       throw new GraphAdapterError("ruvector-graph", "supersedesMemory", "SUPERSEDES operation failed", error instanceof Error ? error : undefined)
-    } finally {
-      client.release()
     }
   }
 
@@ -196,6 +214,7 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
     group_id: GroupId
     deleted_at: string
   }): Promise<GraphDeleteResult> {
+    retiredTenantOnlyLifecycle("softDeleteMemory")
     try {
       const result = await this.pool.query(
         `UPDATE graph_memories
@@ -214,6 +233,7 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
     group_id: GroupId
     restored_at: string
   }): Promise<GraphRestoreResult> {
+    retiredTenantOnlyLifecycle("restoreMemory")
     const client = await this.pool.connect()
     try {
       await client.query("BEGIN")
@@ -245,25 +265,27 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
 
   // ── Read Operations ─────────────────────────────────────────────────────
 
-  async getMemory(params: { id: MemoryId; group_id: GroupId }): Promise<GraphGetResult> {
+  async getMemory(params: { id: MemoryId; group_id: GroupId; workspace_id: string; principal_id: string }): Promise<GraphGetResult> {
     try {
-      const result = await this.pool.query<GraphMemoryRow>(
-        `SELECT id, group_id, user_id, content, score, provenance,
-                created_at, version, tags, deprecated, deleted_at, restored_at
-         FROM graph_memories
-         WHERE id = $1
-           AND group_id = $2
-           AND deprecated = false
-           AND NOT EXISTS (
-             SELECT 1 FROM graph_supersedes s
-             WHERE s.superseded_id = graph_memories.id
-           )`,
-        [params.id, params.group_id]
+      const scope = requireWorkspaceScope(params)
+      const result = await withTenantTransaction(
+        { tenantId: params.group_id, ...scope },
+        (db) => db.query<GraphMemoryRow>(
+          `SELECT m.id, m.group_id, m.user_id, m.content, m.score, m.provenance,
+                  m.created_at, m.version, m.tags, m.deprecated, m.deleted_at, m.restored_at
+           FROM graph_memories m
+           WHERE m.id=$1 AND m.group_id=$2 AND m.workspace_id=$3
+             AND m.workspace_scope_state='workspace_scoped' AND m.deprecated=false
+             AND NOT EXISTS (
+               SELECT 1 FROM graph_supersedes s
+               WHERE s.superseded_id=m.id AND s.group_id=m.group_id
+                 AND s.workspace_id=m.workspace_id AND s.workspace_scope_state='workspace_scoped'
+             )`,
+          [params.id, params.group_id, scope.workspaceId],
+        ),
+        this.pool,
       )
-      if (result.rows.length === 0) {
-        return { node: null }
-      }
-      return { node: rowToNode(result.rows[0]) }
+      return { node: result.rows[0] ? rowToNode(result.rows[0]) : null }
     } catch (error) {
       throw new GraphAdapterError("ruvector-graph", "getMemory", "Get memory failed", error instanceof Error ? error : undefined)
     }
@@ -272,45 +294,39 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
   async searchMemories(params: {
     query: string
     group_id: GroupId
+    workspace_id: string
+    principal_id: string
     limit: number
   }): Promise<GraphSearchResult[]> {
     try {
-      // Use tsvector full-text search (equivalent to Neo4j fulltext index)
-      // ts_rank provides relevance scoring similar to Neo4j's fulltext score
-      const result = await this.pool.query<{
-        id: string
-        content: string
-        score: number
-        provenance: string
-        created_at: Date | string
-        tags: string[] | null
-        relevance: number
-      }>(
-        `SELECT m.id, m.content, m.score, m.provenance,
-                m.created_at, m.tags,
-                ts_rank(m.content_tsv, plainto_tsquery('english', $1)) AS relevance
-         FROM graph_memories m
-         WHERE m.group_id = $2
-           AND m.deprecated = false
-           AND NOT EXISTS (
-             SELECT 1 FROM graph_supersedes s
-             WHERE s.superseded_id = m.id
-           )
-           AND m.content_tsv @@ plainto_tsquery('english', $1)
-         ORDER BY relevance DESC, m.score DESC
-         LIMIT $3`,
-        [params.query, params.group_id, params.limit]
+      const scope = requireWorkspaceScope(params)
+      const result = await withTenantTransaction(
+        { tenantId: params.group_id, ...scope },
+        (db) => db.query<{
+          id: string; content: string; score: number; provenance: string; created_at: Date | string;
+          tags: string[] | null; relevance: number
+        }>(
+          `SELECT m.id,m.content,m.score,m.provenance,m.created_at,m.tags,
+                  ts_rank(m.content_tsv,plainto_tsquery('english',$1)) AS relevance
+           FROM graph_memories m
+           WHERE m.group_id=$2 AND m.workspace_id=$3 AND m.workspace_scope_state='workspace_scoped'
+             AND m.deprecated=false
+             AND NOT EXISTS (
+               SELECT 1 FROM graph_supersedes s
+               WHERE s.superseded_id=m.id AND s.group_id=m.group_id
+                 AND s.workspace_id=m.workspace_id AND s.workspace_scope_state='workspace_scoped'
+             )
+             AND m.content_tsv @@ plainto_tsquery('english',$1)
+           ORDER BY relevance DESC,m.score DESC LIMIT $4`,
+          [params.query, params.group_id, scope.workspaceId, params.limit],
+        ),
+        this.pool,
       )
-
       return result.rows.map((row) => ({
-        id: row.id as MemoryId,
-        content: row.content,
-        score: row.score as ConfidenceScore,
+        id: row.id as MemoryId, content: row.content, score: row.score as ConfidenceScore,
         provenance: (row.provenance === "manual" ? "manual" : "conversation") as MemoryProvenance,
         created_at: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
-        usage_count: 0, // Usage count tracked in PG events, not graph layer
-        tags: Array.isArray(row.tags) ? row.tags : [],
-        relevance: row.relevance,
+        usage_count: 0, tags: Array.isArray(row.tags) ? row.tags : [], relevance: row.relevance,
       }))
     } catch (error) {
       throw new GraphAdapterError("ruvector-graph", "searchMemories", "Full-text search failed", error instanceof Error ? error : undefined)
@@ -319,41 +335,31 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
 
   async listMemories(params: {
     group_id: GroupId
+    workspace_id: string
+    principal_id: string
     user_id: string | null
   }): Promise<GraphListResult> {
     try {
-      // Count
-      const countResult = await this.pool.query<{ total: string }>(
-        `SELECT COUNT(*) AS total
-         FROM graph_memories m
-         WHERE m.group_id = $1
-           AND ($2::text IS NULL OR m.user_id = $2)
-           AND m.deprecated = false
-           AND NOT EXISTS (
-             SELECT 1 FROM graph_supersedes s
-             WHERE s.superseded_id = m.id
-           )`,
-        [params.group_id, params.user_id ?? null]
+      const scope = requireWorkspaceScope(params)
+      return await withTenantTransaction(
+        { tenantId: params.group_id, ...scope },
+        async (db) => {
+          const values = [params.group_id, scope.workspaceId, params.user_id ?? null]
+          const canonical = `m.group_id=$1 AND m.workspace_id=$2 AND m.workspace_scope_state='workspace_scoped'
+            AND ($3::text IS NULL OR m.user_id=$3) AND m.deprecated=false
+            AND NOT EXISTS (SELECT 1 FROM graph_supersedes s
+              WHERE s.superseded_id=m.id AND s.group_id=m.group_id
+                AND s.workspace_id=m.workspace_id AND s.workspace_scope_state='workspace_scoped')`
+          const countResult = await db.query<{ total: string }>(`SELECT COUNT(*) AS total FROM graph_memories m WHERE ${canonical}`, values)
+          const result = await db.query<GraphMemoryRow>(
+            `SELECT m.id,m.group_id,m.user_id,m.content,m.score,m.provenance,m.created_at,m.version,
+                    m.tags,m.deprecated,m.deleted_at,m.restored_at
+             FROM graph_memories m WHERE ${canonical} ORDER BY m.created_at DESC`, values,
+          )
+          return { memories: result.rows.map(rowToNode), total: parseInt(countResult.rows[0]?.total ?? "0", 10) }
+        },
+        this.pool,
       )
-      const total = parseInt(countResult.rows[0]?.total ?? "0", 10)
-
-      // Data
-      const result = await this.pool.query<GraphMemoryRow>(
-        `SELECT id, group_id, user_id, content, score, provenance,
-                created_at, version, tags, deprecated, deleted_at, restored_at
-         FROM graph_memories m
-         WHERE m.group_id = $1
-           AND ($2::text IS NULL OR m.user_id = $2)
-           AND m.deprecated = false
-           AND NOT EXISTS (
-             SELECT 1 FROM graph_supersedes s
-             WHERE s.superseded_id = m.id
-           )
-         ORDER BY m.created_at DESC`,
-        [params.group_id, params.user_id ?? null]
-      )
-
-      return { memories: result.rows.map(rowToNode), total }
     } catch (error) {
       throw new GraphAdapterError("ruvector-graph", "listMemories", "List memories failed", error instanceof Error ? error : undefined)
     }
@@ -363,6 +369,7 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
     group_id: GroupId
     user_id: string | null
   }): Promise<CountResult> {
+    retiredTenantOnlyLifecycle("countMemories")
     try {
       const result = await this.pool.query<{ total: string }>(
         `SELECT COUNT(*) AS total
@@ -383,6 +390,7 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
   }
 
   async checkCanonical(params: { id: MemoryId; group_id: GroupId }): Promise<CanonicalCheckResult> {
+    retiredTenantOnlyLifecycle("checkCanonical")
     try {
       const result = await this.pool.query<{ id: string }>(
         `SELECT m.id
@@ -404,6 +412,7 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
   }
 
   async getVersion(params: { id: MemoryId; group_id: GroupId }): Promise<VersionLookupResult> {
+    retiredTenantOnlyLifecycle("getVersion")
     try {
       const result = await this.pool.query<{ version: number }>(
         `SELECT m.version
@@ -432,6 +441,7 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
     offset: number
     limit: number
   }): Promise<GraphExportResult> {
+    retiredTenantOnlyLifecycle("exportMemories")
     try {
       const result = await this.pool.query<GraphMemoryRow>(
         `SELECT id, group_id, user_id, content, score, provenance,
@@ -458,6 +468,7 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
     ids: string[]
     group_id: GroupId
   }): Promise<Map<string, GraphMemoryNode>> {
+    retiredTenantOnlyLifecycle("getDeprecatedMemories")
     try {
       const result = await this.pool.query<GraphMemoryRow>(
         `SELECT id, group_id, user_id, content, score, provenance,
@@ -485,14 +496,7 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
     agent_id: string | null
     project_id: string | null
   }): Promise<{ authored_by: boolean; relates_to: boolean }> {
-    // Phase 3: RuVector adapter doesn't yet have structural context tables.
-    // When graph_memories gains agent_id/project_id columns and a
-    // graph_relationships table is created, this will wire them.
-    // For now, return false — the Neo4j adapter handles the active path.
-    console.warn(
-      `[sync-contract] linkMemoryContext called on ruvector adapter (no-op). ` +
-      `memory_id=${params.memory_id} agent_id=${params.agent_id} project_id=${params.project_id}`
-    )
+    retiredTenantOnlyLifecycle("linkMemoryContext")
     return { authored_by: false, relates_to: false }
   }
 

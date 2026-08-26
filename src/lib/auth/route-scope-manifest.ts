@@ -468,6 +468,12 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     description: "Dashboard landing page",
   },
   {
+    pattern: "/dashboard/curator",
+    requiredRole: "curator",
+    scopeName: "curator:dashboard:handoff",
+    description: "Authenticated curator console handoff",
+  },
+  {
     pattern: "/dashboard/:path*",
     requiredRole: "viewer",
     scopeName: "dashboard:pages",
@@ -542,6 +548,11 @@ export const PUBLIC_ROUTE_MANIFEST: PublicRouteEntry[] = [
     scopeName: "public:auth",
     rationale:
       "Sign-in, sign-up and callback surfaces must be reachable before a principal exists.",
+  },
+  {
+    pattern: "/unauthorized",
+    scopeName: "public:unauthorized",
+    rationale: "Explains an authenticated authorization refusal without tenant data.",
   },
   {
     pattern: "/api/auth/:path*",
@@ -650,8 +661,9 @@ export function matchesPattern(pathname: string, pattern: string): boolean {
 // ── Route Resolution ─────────────────────────────────────────────────────────
 
 /**
- * Get the required role for a given pathname.
- * Returns null if the route is public (not in the manifest).
+ * Get the required role from the protected manifest only.
+ * Returns null when no protected entry matches; use resolveRouteAuthority()
+ * whenever public and fail-closed undeclared routes must be distinguished.
  */
 export function getRequiredRole(pathname: string): AlluraRole | null {
   for (const entry of ROUTE_SCOPE_MANIFEST) {
@@ -663,8 +675,8 @@ export function getRequiredRole(pathname: string): AlluraRole | null {
 }
 
 /**
- * Get the full scope entry for a given pathname.
- * Returns null if the route is public.
+ * Get the protected-manifest scope entry for a pathname.
+ * Returns null when no protected entry matches.
  */
 export function getScopeEntry(pathname: string): RouteScopeEntry | null {
   for (const entry of ROUTE_SCOPE_MANIFEST) {
@@ -676,8 +688,8 @@ export function getScopeEntry(pathname: string): RouteScopeEntry | null {
 }
 
 /**
- * Get scope name for a given pathname.
- * Returns undefined if the route is public.
+ * Get the protected-manifest scope name for a pathname.
+ * Returns undefined when no protected entry matches.
  */
 export function getScopeName(pathname: string): string | undefined {
   return getScopeEntry(pathname)?.scopeName;

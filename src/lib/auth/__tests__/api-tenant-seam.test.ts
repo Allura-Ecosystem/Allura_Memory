@@ -5,7 +5,7 @@ import { getGroupIdFromAuth } from "../api-auth";
 import { PrincipalAuthError } from "../principal-context";
 import type { AuthUser } from "../types";
 
-const curator = { id: "clerk-curator-1", email: "curator@example.test", role: "curator" as const, groupId: "allura-faithmeats" };
+const curator = { id: "clerk-curator-1", email: "curator@example.test", role: "curator" as const, groupId: "allura-faithmeats", workspaceId: "workspace-faithmeats" };
 
 function ok(r: ApiTenantResult) { return r.status === "ok" ? r.groupId : `not-ok:${r.status}`; }
 
@@ -18,6 +18,7 @@ function authedRequest(user: AuthUser): NextRequest {
       "x-allura-session-id": "sess-1",
       "x-allura-role": user.role,
       "x-allura-group-id": user.groupId,
+      "x-allura-workspace-id": user.workspaceId ?? "workspace-test",
       "x-allura-email": user.email,
     },
   });

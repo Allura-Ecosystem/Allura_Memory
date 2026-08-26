@@ -2,47 +2,36 @@
 
 > [!NOTE]
 > **AI-Assisted Documentation**
-> Portions of this document were drafted with the assistance of an AI language model.
-> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
-> When in doubt, defer to code, schemas, and team consensus.
+> Portions of this document were drafted with AI assistance and checked against the scoped source, tests, and disposable-PostgreSQL evidence.
 
-**Date:** 2026-08-23
-**Review outcome:** Approved by independent Pike + Fowler + Knuth review
-**Story state:** Implementation/review unit accepted; story remains dependency-blocked, not Done.
+**Updated:** 2026-08-25
+**Review outcome:** Knuth + Pike + Fowler **REQUEST CHANGES**; remediation is awaiting re-review.
+**Story state:** **Changes Requested** — not Done; the review verdict is unchanged.
 
-## What was delivered
+## What the remediation now implements
 
-- A PostgreSQL workspace-scope foundation for proposals, events, evidence requests, immutable governance receipts, and semantic projections.
-- Composite tenant/workspace provenance for token, proposal, event, evidence, receipt, and projection relationships.
-- Token-derived workspace scope at Watchdog GET/POST; request-selected tenant/workspace values do not confer authority.
-- Restricted `allura_app` workspace transactions, managed app-pool lifecycle, and fail-closed legacy curator entry points.
-- Scope-preserving watchdog and auto-curator paths with event provenance revalidation.
-- Replay-oriented migration policy tightening without a default workspace backfill or destructive legacy-data rewrite.
-- Queryable lifecycle records, projection source references, receipt state fields, and migration/rollback evidence.
+- A numbered Migration 40 forward path for databases where the originally shipped Migration 39 already ran; incomplete legacy receipts are preserved losslessly in a no-app-grant archive rather than remaining visible in the current table.
+- Restrictive workspace policies that compose with, rather than rewrite, heterogeneous earlier policies.
+- Canonical `approveProposal()` now owns graph memory, version-CAS proposal transition, promotion idempotency, workspace event/outbox, and governance receipt in one transaction; HTTP and CLI approval adapters delegate.
+- Server-derived receipt scope, actor/role, proposal version, exact scoped source event, database time, canonical full evidence-set identity, and promotion outbox truth.
+- Source-driven semantic projections that follow `canonical_proposals.trace_ref` to the linked event and persist redacted Markdown as `pending_embedding`; only an injected/real vector result persists its exact model/version and changes the row to `ready`.
+- Migration 40 ownership for retained knowledge, promotion outbox, and promotion idempotency: new app writes are workspace-scoped and old NULL-workspace rows are explicitly `legacy_quarantined`.
 
-## Evidence
+## Current evidence truth
 
-- Fresh PostgreSQL 16 live lane: **14/14 suites, 38/38 tests passed**.
-- TypeScript typecheck: passed.
-- Staged diff whitespace check: passed.
-- Independent final review: **APPROVE**.
-- Validation container/anonymous volume cleanup was explicitly approved and completed. Generated live reports remain ignored local artifacts and are reproducible through the command in `migration-rollback-evidence.md`.
+- RED: **11 failures observed and reconciled** — 6 focused receipt/projection/inventory regressions, 2 operative-route wiring regressions, 1 first-live-upgrade `pgcrypto` failure, and 2 live receipt-fixture failures missing the full evidence-set hash. Later TDD also exposed and fixed false-ready embedding provenance and real app-role promotion-outbox privilege/RLS wiring; those are remediation cycles, not retroactively substituted for the frozen eleven-review count.
+- GREEN (2026-08-25 remediation rerun): focused retrieval/CLI/receipt/projection/route/Team-RAM coverage passes **41/41** across 8 collected files, the authoritative seven-file disposable live runner passes **43/43** (workspace authority **21/21**), and Story 24.4 receipt/outbox/idempotency compatibility passes **10/10**.
+- Disposable PostgreSQL proves failure-atomic refusal with unchanged receipt schema/immutable trigger/version, fresh install through 40, and 40 apply → recovery rollback → reapply.
+- This evidence does **not** constitute independent approval and does not change the story/review status.
 
-## Review lessons
+## Lessons
 
-1. Adding a `workspace_id` column is not authority. Every reader, writer, foreign key, RLS policy, transaction boundary, test fixture, and durable provenance reference must carry the same scope.
-2. A restricted DB role is ineffective if a public helper permits arbitrary owner-pool injection or if candidate reads happen before scope enforcement.
-3. Live fixtures must be workspace-aware and teardown must close every pool even when an earlier cleanup action fails.
-4. Evidence must distinguish tracked narrative from ignored generated reports and must record approved cleanup truthfully.
-5. Review iterations found meaningful defects; code review remains a delivery activity, not a ceremonial last step.
+1. Editing an already-numbered migration is not an upgrade strategy; deployed schemas require a later forward migration.
+2. Idempotency must return the persisted receipt and include the complete relationally proven evidence set, not an opaque caller assertion.
+3. A redaction policy label is not redaction, and a configured model name is not a produced embedding; ready requires a real vector with exact producer model/version.
+4. Rollback evidence must cover schema and policy recovery and must refuse destructive rollback whenever proposal versions or any other new state cannot be reconstructed—not merely when receipts exist.
+5. Retrospective truth must follow the latest review verdict rather than preserving obsolete green counts or approval claims.
 
-## Remaining boundaries
+## Remaining boundary
 
-- This story does **not** release approval mutation: Story 24.4 remains the atomic-promotion gate.
-- This story does **not** provide the complete scoped retrieval/API contract: Story 25.2 remains blocked until dependencies are reconciled.
-- Legacy unscoped events/proposals remain unavailable to workspace-scoped governed readers; no ownership is inferred.
-- No browser dashboard, workflow module, Copilot Cowork, Claude Code, Codex adapter, or laptop deployment was released by this story.
-
-## Next dependency-ready work
-
-Reconcile and close the declared prerequisites in dependency order—25.1 scope/product truth and the relevant Epic 24 authority evidence—before changing Story 25.2a to Done or starting the 25.2 read-contract implementation.
+Independent Knuth/Pike/Fowler re-review is still required. Do not mark Story 25.2a Done or alter the review verdict in this remediation branch.

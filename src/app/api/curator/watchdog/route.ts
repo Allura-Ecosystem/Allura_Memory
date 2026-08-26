@@ -28,7 +28,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!validation.ok) {
     return NextResponse.json({ error: "Valid watchdog credential required" }, { status: 401 });
   }
-  if (!validation.token.scopes.includes("memory:promote")) {
+  if (!validation.token.scopes.includes("review:read")) {
     return NextResponse.json({ error: "Watchdog credential lacks curator permission" }, { status: 403 });
   }
   const scope = resolveWorkspaceScope(validation.token);
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!validation.ok) {
     return NextResponse.json({ error: "Valid watchdog credential required" }, { status: 401 });
   }
-  if (!validation.token.scopes.includes("memory:promote")) {
+  if (!validation.token.scopes.includes("review:read")) {
     return NextResponse.json({ error: "Watchdog credential lacks curator permission" }, { status: 403 });
   }
   const scope = resolveWorkspaceScope(validation.token);
