@@ -21,6 +21,7 @@ export type InvariantKey =
   | "hitl_promotion"
   | "db_connection_only"
   | "allura_namespace"
+  | "approval_required_for_mutations"
 
 export interface GovernancePolicy {
   /** Stable policy identifier */
@@ -133,6 +134,21 @@ export const CANONICAL_POLICIES: readonly GovernancePolicy[] = Object.freeze([
     overridable: false,
     version: 1,
     updated_at: "2026-06-06T00:00:00.000Z",
+  },
+  {
+    id: "pol-007",
+    name: "Approval Required for Engine Mutations",
+    description:
+      "Runtime/database/MCP/cron/live hook/RuVix enforcement/semantic promotion/" +
+      "Notion sync/Done status changes require explicit approval and a non-empty " +
+      "approval_ref before the control plane will execute the mutation. " +
+      "This is enforced in executeSyscall after proof verification and policy " +
+      "evaluation, before the syscall executor runs.",
+    severity: "critical",
+    invariant_key: "approval_required_for_mutations",
+    overridable: false,
+    version: 1,
+    updated_at: "2026-08-26T00:00:00.000Z",
   },
 ] as const)
 
