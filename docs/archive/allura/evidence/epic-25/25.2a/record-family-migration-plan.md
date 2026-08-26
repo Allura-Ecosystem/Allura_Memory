@@ -1,6 +1,6 @@
 # Story 25.2a — Reviewed record-family migration plan
 
-**State:** remediation evidence; review verdict remains **REQUEST CHANGES** until independent re-review.  
+**State:** final evidence; independent Knuth/Pike/Fowler **APPROVE**.
 **Authority:** Migration 39 defines fresh workspace foundations; numbered Migration 40 owns every forward upgrade listed below for databases where shipped Migration 39 already ran. No default workspace is inferred.
 
 | Record family | Owning sequence | New-write contract | Legacy handling | Recovery boundary |
