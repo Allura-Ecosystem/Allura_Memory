@@ -462,6 +462,18 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-MAP-002 | Subgraph traversal uses relational authorization first, deterministic ordering, signed opaque continuation bound to scope/query/policy/snapshot, and explicit budgets. Initial 200-node/400-edge/depth-2 limits are safety caps, not scale claims. | AD-59, 25.2, 25.6 | Dependency-blocked |
 | REQ-MAP-003 | The map has an adjacent same-data text relationship list and complete keyboard/screen-reader interaction. 3D, if enabled later, is opt-in, flagged, rollbackable, and consumes the identical authorized response. | AD-59, 25.3, 25.3a, 25.6 | Planned |
 
+### Section 6F: Bumblebee V1 Threat Intelligence Requirements (REQ-BMB-001–007)
+
+| ID | Requirement | Trace | Status |
+|----|-------------|-------|--------|
+| REQ-BMB-001 | Advisory evidence preserves source identity, publisher, source URL, publication/fetch times, revision/hash, trust state, freshness state, classification/redaction policy, scope, and retention disposition. | 26.1, B32, F56, AD-57 | Planned contract |
+| REQ-BMB-002 | Only reviewed allowlisted sources and approved internal events may enter the V1 intake path; each source has a documented verification rule. | 26.1, AD-57 | Planned contract |
+| REQ-BMB-003 | Failed verification, stale input, schema failure, degraded retrieval, or scope conflict is represented distinctly and cannot become verified exposure evidence. | 26.1, AD-57, REQ-DASH-007 | Planned contract |
+| REQ-BMB-004 | Exposure correlation is relationally scoped and deduplicated; an alert cites the authoritative inventory/artifact record and all supporting evidence identities. | 26.1, 26.3, AD-57 | Planned contract |
+| REQ-BMB-005 | Automatic V1 outputs are limited to a deduplicated alert and simulated mitigation proposal from verified evidence. | 26.1, F56, AD-57 | Planned contract |
+| REQ-BMB-006 | V1 cannot scan endpoints, activate policy, block CI/packages, change schedules, revoke credentials, lock a workspace, or perform containment. | 26.1, F56, AD-57 | Planned contract; runtime not authorized |
+| REQ-BMB-007 | Source configuration and mitigation approval remain human-authorized, with actor, role, rationale, validation, evidence identity, and receipt recorded before any later enforcement workflow. | 26.1, AD-57, REQ-GOV-001 | Planned contract |
+
 | REQ-UX-001 | Primary dashboard copy targets about a sixth-grade reading level: short sentences, common words, one idea at a time. Technical IDs and policy terms remain available through secondary labels or progressive disclosure. | `DESIGN.md`, 25.3–25.6 | Planned |
 | REQ-UX-002 | Major two-pane desktop layouts target a 38.2% / 61.8% golden-ratio split and stack in logical reading order on smaller screens. | `DESIGN.md`, 25.3, 25.4 | Planned |
 | REQ-UX-003 | The Memory Map presents governed lineage as labeled nodes and connections with an equivalent text description. It never fabricates relationships or makes the visual graph the only accessible source. | 25.4, 25.6 | Planned |

@@ -257,6 +257,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | B29 | The full loop from agent execution to knowledge reuse must be demonstrably end-to-end |
 | B30 | Team RAM agents must integrate with BMAD planning and Allura Brain memory through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth |
 | B31 | Teams must be able to define evidence-gated orchestration runs that map familiar work ceremonies to governed Allura receipts without exposing internal agent-routing details |
+| B32 | Supply-chain threat intelligence must preserve source provenance, tenant/workspace scope, evidence freshness, and human authority while remaining read-only toward inventoried endpoints and external enforcement systems |
 
 ---
 
@@ -326,6 +327,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | F38 | Agent permissions enforced and all access to trace/knowledge resources is audited                                  |
 | F39 | A second agent can retrieve approved knowledge and use it correctly in a later task                                |
 | F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible                   |
+| F56 | Bumblebee V1 may ingest allowlisted advisory evidence, correlate verified exposure, create deduplicated alerts, and prepare simulated mitigation proposals; it must not activate policy, block CI/packages, change schedules, or perform containment |
 
 #### Memory Command Center
 
@@ -584,6 +586,26 @@ The primary append-only log. Every memory operation produces a row here. No UPDA
 | `memory_get`    | A single memory was fetched         |
 | `memory_list`   | All memories for a user were listed |
 | `memory_delete` | A memory was soft-deleted           |
+
+### Planned Bumblebee V1 trust contract
+
+Epic 26 is documentation-only until its later stories receive separate approval.
+**Bumblebee Guard** names approved inventory reconciliation; **Bumblebee Threat
+Watch** names advisory intake and correlation. Neither name grants a distinct
+authority level.
+The future contract treats advisory records, exposure findings, alerts, and simulated
+mitigation proposals as scoped evidence objects; it does not create an enforcement
+plane. Each object must retain its source identity, publication and fetch times,
+verification/trust state, classification or redaction policy, evidence references,
+and retention disposition. `group_id` and `workspace_id` are server-derived;
+caller-supplied scope is never authoritative.
+
+Allowed V1 intake lanes are: approved internal events, allowlisted scheduled advisory
+polling, and periodic reconciliation against approved inventory. A verified match may
+create a deduplicated alert and a simulated proposal only. Any policy activation,
+CI/package block, change schedules, credential revocation, workspace lock, or
+containment action requires a separately approved, human-authorized workflow with a
+governance receipt.
 
 ---
 

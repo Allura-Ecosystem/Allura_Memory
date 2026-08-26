@@ -1092,6 +1092,61 @@ read from `evidence_requests` and must never be collapsed into proposal status.
 
 ---
 
+## Planned Story 26.1 Bumblebee Threat Intelligence Contracts
+
+These are documentation contracts, not deployed tables, migrations, routes, or
+schedulers. They define the minimum durable shapes later stories must implement
+through governed, server-scoped APIs. No caller-supplied `group_id` or
+`workspace_id` is authoritative.
+
+### `ThreatAdvisoryEvidence`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | UUID | Yes | Immutable evidence identity. |
+| `group_id` / `workspace_id` | string | Yes | Server-derived tenant/workspace scope. |
+| `source_id` / `source_url` | string / URL | Yes | Reviewed allowlist identity and canonical location. |
+| `publisher` | string | Yes | Named publisher responsible for the advisory. |
+| `published_at` / `fetched_at` | RFC 3339 | Yes | Publisher and retrieval times; used for freshness calculation. |
+| `source_revision` / `content_hash` | string / SHA-256 | Yes | Upstream revision when available and immutable payload identity. |
+| `trust_state` | `provisional \| verified \| rejected` | Yes | Verification outcome; only `verified` may support an alert. |
+| `freshness_state` | `fresh \| stale \| degraded \| unknown` | Yes | Explicit freshness/degradation outcome. |
+| `classification` / `redaction_policy_version` | string | Yes | Data handling and redaction provenance. |
+| `retention_disposition` | string | Yes | Policy-defined retention class; deletion remains append-only/auditable. |
+| `indicators` | object[] | Yes | Normalized affected artifact/version/CVE or equivalent supporting indicators. |
+
+### `ThreatExposureAlert`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | UUID | Yes | Immutable alert identity. |
+| `group_id` / `workspace_id` | string | Yes | Server-derived scope. |
+| `inventory_ref` / `artifact_ref` | string | Yes | Authoritative approved inventory and affected artifact identities. |
+| `match_type` | string | Yes | Deterministic correlation rule identifier. |
+| `confidence` / `severity` | number / string | Yes | Bounded assessment with rule/source provenance. |
+| `evidence_ids` | UUID[] | Yes | Complete immutable advisory/internal-evidence lineage. |
+| `dedup_key` | SHA-256 | Yes | Scope-bound idempotency identity for repeated observations. |
+| `state` | `open \| acknowledged \| resolved \| suppressed` | Yes | Alert lifecycle; no enforcement state is implied. |
+| `created_at` | RFC 3339 | Yes | Database-issued alert time. |
+
+### `SimulatedMitigationProposal`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | UUID | Yes | Immutable proposal identity. |
+| `alert_id` / `evidence_ids` | UUID / UUID[] | Yes | Same-scope alert and complete supporting evidence lineage. |
+| `recommended_action` | string | Yes | Human-readable, non-executing mitigation recommendation. |
+| `approval_state` | `draft \| reviewed \| approved \| rejected` | Yes | Human review lifecycle, not an enforcement result. |
+| `approved_by` / `approved_at` | string / RFC 3339 | No | Server-issued only after a human decision. |
+| `governance_receipt_id` | UUID | No | Required before a separately approved later workflow can consume it. |
+
+**Prohibited V1 fields/actions:** endpoint scan command, policy activation flag,
+CI/package block flag, schedule-change action, credential revocation, workspace lock,
+or containment command. Their presence would violate AD-57 rather than extend this
+contract.
+
+---
+
 ## Sync Contract Mapping Table
 
 The sync contract (`src/lib/graph-adapter/sync-contract-mappings.ts`) provides deterministic mappings for relationship wiring during memory promotion (AD-28).
