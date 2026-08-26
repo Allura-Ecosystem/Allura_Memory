@@ -1147,6 +1147,63 @@ contract.
 
 ---
 
+## Story 26.2 Supply-Chain Inventory
+
+Read-only metadata inventory of approved software and AI supply-chain artifacts.
+This is a code-level contract in `src/lib/inventory/` backed by declared metadata
+records; it performs no executable scanning, no package installation, and no
+package-manager invocation. No DB tables or migrations are added for this story.
+`trust_state` and `freshness_state` values are shared with the Planned Story 26.1
+`ThreatAdvisoryEvidence` contract; change both in lockstep.
+
+### `InventoryRecord`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | string | Yes | Immutable within-tenant key; re-ingestion of the same id updates the record. |
+| `group_id` | string | Yes | Server-derived tenant namespace (`^allura-[a-z0-9-]+$`). |
+| `workspace_id` | string | Yes | Server-derived workspace scope. |
+| `artifact_type` | enum | Yes | `sbom`, `lockfile`, `package_manifest`, `ci_workflow`, `container_metadata`, `extension`, `mcp_manifest`, `skill`, `plugin`, `model_artifact`. |
+| `ecosystem` | string | Yes | Logical ecosystem the artifact belongs to (e.g., `npm`, `python`, `github-actions`, `ollama`). |
+| `package` | string | Yes | Artifact package or logical name. |
+| `version` | string | Yes | Declared version string. |
+| `hash` | string | Yes | Immutable identity hash for the artifact metadata. |
+| `publisher` | string | Yes | Named publisher or owner of the artifact. |
+| `workflow_reference` | string | Yes | Human-readable reference to the CI/workflow that produced or approved the artifact metadata. |
+| `source_ref` | string | Yes | Reference to the declared source list this record came from. |
+| `trust_state` | enum | Yes | `provisional`, `verified`, `rejected`. |
+| `freshness_state` | enum | Yes | `fresh`, `stale`, `degraded`, `unknown`; stale or degraded records are surfaced explicitly, never silently omitted. |
+| `created_at` | RFC 3339 | Yes | Record creation time. |
+| `updated_at` | RFC 3339 | Yes | Last update time. |
+
+### `InventorySourceRecord`
+
+Declaration shape supplied to the service. The service normalizes it into an
+`InventoryRecord` by stamping server-derived `group_id` and `workspace_id`. Callers
+cannot supply an authoritative scope.
+
+### `InventoryQuery`
+
+Read-only query filters. Tenant scope is supplied separately from the authenticated
+principal.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `artifact_type` | enum | No | Filter by one of the artifact type values. |
+| `ecosystem` | string | No | Case-insensitive filter by ecosystem. |
+| `package` | string | No | Case-insensitive filter by package name. |
+
+### `InventoryQueryResult`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `records` | `InventoryRecord[]` | Yes | Matching records scoped to the authenticated tenant/workspace. |
+| `total` | integer | Yes | Count of matching records. |
+| `degraded` | boolean | Yes | True when partial data is returned. |
+| `warnings` | string[] | Yes | Non-fatal warnings. |
+
+---
+
 ## Sync Contract Mapping Table
 
 The sync contract (`src/lib/graph-adapter/sync-contract-mappings.ts`) provides deterministic mappings for relationship wiring during memory promotion (AD-28).
