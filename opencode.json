@@ -107,7 +107,7 @@
     "woz": {
       "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/qwen3-coder-next:cloud",
+      "model": "ollama/kimi-k2.7-code:cloud",
       "path": ".opencode/agent/subagents/code/woz.md",
       "permission": {
         "skill": {
@@ -210,6 +210,9 @@
         },
         "kimi-k2.6:cloud": {
           "name": "kimi-k2.6:cloud"
+        },
+        "kimi-k2.7-code:cloud": {
+          "name": "kimi-k2.7-code:cloud"
         },
         "minimax-m2.5:cloud": {
           "name": "minimax-m2.5:cloud"
