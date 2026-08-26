@@ -1240,3 +1240,91 @@ When the sync contract applies mappings, an event with `event_type = 'sync_contr
   "audit_ref": "events.id"
 }
 ```
+
+---
+
+## Story 26.3 — Exposure Matcher
+
+Read-only matching of threat advisories against the Story 26.2 supply-chain inventory. Source: `src/lib/exposure/`.
+
+### `ThreatAdvisory`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Advisory identifier. |
+| `source_id` | `string` | Yes | External source identifier (e.g., GHSA, OSV). |
+| `source_url` | `string` | Yes | Canonical source URL. |
+| `publisher` | `string` | Yes | Entity that published the advisory. |
+| `published_at` | `string` | Yes | RFC 3339 publication timestamp. |
+| `fetched_at` | `string` | Yes | RFC 3339 fetch timestamp. |
+| `source_revision` | `string` | Yes | Source revision or sequence id. |
+| `content_hash` | `string` | Yes | Hash of the normalized advisory content. |
+| `trust_state` | `provisional \| verified \| rejected` | Yes | Story 26.1 trust contract; only `verified` may match. |
+| `freshness_state` | `fresh \| stale \| degraded \| unknown` | Yes | `stale`/`degraded`/`unknown` fail closed. |
+| `classification` | `string` | Yes | Advisory category. |
+| `retention_disposition` | `string` | Yes | Retention policy label. |
+| `severity` | `low \| medium \| high \| critical` | Yes | Exposure severity. |
+| `evidence_ids` | `string[]` | Yes | Supporting evidence references. |
+| `indicators` | `Indicator[]` | Yes | Normalized match indicators. |
+
+### `Indicator`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `type` | `cve \| package \| version \| hash \| publisher \| workflow_reference \| credential \| install_hook \| action_ref` | Yes | Indicator kind. |
+| `value` | `string` | Yes | Exact match value. |
+
+### `ExposureMatch`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `inventory_ref` | `string` | Yes | Matched inventory record id. |
+| `artifact_ref` | `string` | Yes | Matched artifact `source_ref`. |
+| `advisory_ref` | `string` | Yes | Advisory id that produced the match. |
+| `match_type` | `package_version \| package_hash \| workflow_reference \| indicator \| publisher` | Yes | Match classification. |
+| `confidence` | `number` | Yes | 0–1; exact matching yields 1. |
+| `severity` | `Severity` | Yes | Severity inherited from the advisory. |
+| `evidence_ids` | `string[]` | Yes | Evidence references from the advisory. |
+
+### `ExposureAlert`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Unique per alert creation (derived from `dedup_key` + creation timestamp). NOT stable across re-matches; consumers must key on `dedup_key` for idempotency. |
+| `group_id` | `string` | Yes | Server-derived tenant namespace. |
+| `workspace_id` | `string` | Yes | Server-derived workspace scope. |
+| `inventory_ref` | `string` | Yes | Inventory record id. |
+| `artifact_ref` | `string` | Yes | Artifact `source_ref`. |
+| `advisory_refs` | `string[]` | Yes | Collapsed advisory ids for the same exposure. |
+| `match_type` | `MatchType` | Yes | Match classification. |
+| `confidence` | `number` | Yes | Exact match confidence. |
+| `severity` | `Severity` | Yes | Highest severity among collapsed advisories. |
+| `evidence_ids` | `string[]` | Yes | Merged evidence references. |
+| `dedup_key` | `string` | Yes | SHA-256 of scope + inventory ref + artifact ref + match type. |
+| `state` | `open \| acknowledged \| resolved \| suppressed` | Yes | Alert lifecycle state. |
+| `created_at` | `string` | Yes | RFC 3339 creation timestamp. |
+
+### `ExposureQuery`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `severity` | `Severity` | No | Filter by severity. |
+| `state` | `AlertState` | No | Filter by alert state. |
+
+### Matching rules
+
+- Exact match only: package+version, package+hash, workflow/action reference, publisher, or indicator value must equal the inventory field.
+- Fail-closed (both sides): a match requires the advisory **and** the inventory record to both have `trust_state === "verified"` and `freshness_state === "fresh"`. Any other trust or freshness state on either side produces no match.
+- Scope is validated here; principal-binding is enforced at the API boundary (Story 26.1).
+- Read-only: the matcher never writes to a database, filesystem, or subprocess, and never activates policy.
+- Deduplication: one alert per unique exposure (`scope + inventory_ref + artifact_ref + match_type`); re-matching yields the same `dedup_key`.
+
+### Match-type precedence
+
+Matchers are evaluated from most specific to most general. A single inventory record produces at most one match per advisory:
+
+1. `package_version` — both package and version match.
+2. `package_hash` — hash matches.
+3. `workflow_reference` — workflow/action reference matches.
+4. `publisher` — publisher matches.
+5. `indicator` — fallback for credential/install-hook/action indicators that do not map to a dedicated type.
