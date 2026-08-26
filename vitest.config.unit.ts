@@ -28,6 +28,8 @@ export default defineConfig({
       "src/lib/circuit-breaker/**/*.test.ts",
       "src/lib/dedup/**/*.test.ts",
       "src/lib/git/**/*.test.ts",
+      // Story 26.5 — governed mitigation drafts must stay in the CI unit lane.
+      "src/lib/mitigation/**/*.test.ts",
       "src/lib/memory/config.test.ts",
       "src/lib/memory/embeddings.test.ts",
       "src/lib/memory/types.test.ts",
@@ -113,7 +115,7 @@ export default defineConfig({
       "src/lib/mcp-token/**/*.test.ts",
       // Story 24.2 — Authenticated principal context (pure logic, injected deps)
       "src/lib/auth/__tests__/principal-context.test.ts",
-    "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
+      "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
       "src/lib/auth/__tests__/principal-audit.test.ts",
       "src/lib/auth/__tests__/budget-scope.test.ts",
       // Story 24.11a AC-7 — withPermission enforces its PermissionAction argument

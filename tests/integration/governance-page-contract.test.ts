@@ -2,7 +2,7 @@
  * Governance Page Contract Test
  *
  * Pins the data the Governance screen depends on:
- *  - the static CANONICAL_POLICIES registry (6 invariants, well-formed)
+ *  - the static CANONICAL_POLICIES registry (7 invariants, well-formed)
  *  - the governance audit-trail query over the events table runs (no throw)
  *
  * Run: bun vitest run tests/integration/governance-page-contract.test.ts
@@ -32,8 +32,8 @@ describe("Governance Page Contract", () => {
   })
   afterAll(() => {})
 
-  it("CANONICAL_POLICIES is the 6-invariant registry, each well-formed", () => {
-    expect(CANONICAL_POLICIES.length).toBe(6)
+  it("CANONICAL_POLICIES is the 7-invariant registry, each well-formed", () => {
+    expect(CANONICAL_POLICIES.length).toBe(7)
     const sevs = new Set(["critical", "high", "medium", "low"])
     for (const p of CANONICAL_POLICIES) {
       expect(p.id).toMatch(/^pol-\d{3}$/)

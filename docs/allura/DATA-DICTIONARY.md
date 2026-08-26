@@ -1204,6 +1204,75 @@ principal.
 
 ---
 
+## Story 26.5 — Governed Mitigation Policy Drafts
+
+Read-only simulated policy draft generator. Source: `src/lib/mitigation/`. A validated `ExposureAlert` maps deterministically to a versioned `MitigationTemplate`, producing a reviewable `MitigationDraft` with dry-run results, scope explanation, and rollback evidence. It may also produce a local `MitigationDraftRecord` for simulated draft activity. Draft generation does not execute package blocks, CI changes, containment, connector actions, policy approval, or activation. Any future mutation must use the canonical governance receipt and approval path.
+
+### `MitigationTemplate`
+
+| Field                  | Type                                                         | Required | Description                                                                                                                                                |
+| ---------------------- | ------------------------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                   | `string`                                                     | Yes      | Stable template identifier.                                                                                                                                |
+| `version`              | `string`                                                     | Yes      | Semantic version of the template; new versions are immutable.                                                                                              |
+| `name`                 | `string`                                                     | Yes      | Human-readable template name.                                                                                                                              |
+| `description`          | `string`                                                     | Yes      | What the draft proposes.                                                                                                                                   |
+| `affected_scope_kinds` | `systems \| packages \| workflows \| tokens \| workspaces`[] | Yes      | Kinds of scope the policy would affect.                                                                                                                    |
+| `parameter_schema`     | `ZodTypeAny`                                                 | Yes      | Immutable strict Zod object schema for typed, bounded parameters derived from alert fields. Free-text advisory content can never satisfy a parameter slot. |
+| `dry_run_plan`         | `string`                                                     | Yes      | Human-readable description of what the dry-run computes.                                                                                                   |
+| `rollback_plan`        | `string`                                                     | Yes      | Human-readable reversal plan, executed only via approved governance receipt.                                                                               |
+| `created_at`           | `string`                                                     | Yes      | RFC 3339 template publication time.                                                                                                                        |
+
+### `MitigationDraft`
+
+| Field                              | Type                            | Required | Description                                                                                                         |
+| ---------------------------------- | ------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `id`                               | `string`                        | Yes      | Unique draft identity.                                                                                              |
+| `group_id`                         | `string`                        | Yes      | Server-derived tenant namespace.                                                                                    |
+| `workspace_id`                     | `string`                        | Yes      | Server-derived workspace scope.                                                                                     |
+| `alert_id`                         | `string`                        | Yes      | Source `ExposureAlert` id.                                                                                          |
+| `template_id` / `template_version` | `string` / `string`             | Yes      | Exact template revision used.                                                                                       |
+| `parameters`                       | `Record<string, unknown>`       | Yes      | Validated against the template's `parameter_schema`. Only typed evidence fields from the alert may populate values. |
+| `scope_explanation`                | `string`                        | Yes      | What systems, packages, workflows, tokens, or workspaces are affected.                                              |
+| `dry_run_result`                   | `string`                        | Yes      | Description of what would happen without executing.                                                                 |
+| `rollback_evidence`                | `string`                        | Yes      | Reversal evidence and governance path.                                                                              |
+| `authority_state`                  | `"simulated_only"`              | Yes      | Drafts are never active policy.                                                                                     |
+| `approval_state`                   | `draft \| reviewed \| rejected` | Yes      | Local simulated-draft lifecycle; approval is unavailable.                                                           |
+| `evidence_ids`                     | non-empty `string[]`            | Yes      | Evidence references copied from the alert.                                                                          |
+| `created_at`                       | `string`                        | Yes      | RFC 3339 draft creation time.                                                                                       |
+
+### `MitigationDraftRecord`
+
+Local, in-memory attribution record generated by `createDraftRecord` for simulated draft actions. It is **not** an authenticated or durable `GovernanceReceipt` and cannot approve, activate, or enforce a policy.
+
+| Field                                 | Type                                                | Required | Description                                                      |
+| ------------------------------------- | --------------------------------------------------- | -------- | ---------------------------------------------------------------- |
+| `id`                                  | `string`                                            | Yes      | Locally generated record identity.                               |
+| `group_id` / `workspace_id`           | `string` / `string`                                 | Yes      | Scope copied from the simulated draft.                           |
+| `draft_id`                            | `string`                                            | Yes      | Related `MitigationDraft` id.                                    |
+| `actor_id` / `actor_role`             | `string` / `string`                                 | Yes      | Caller-supplied simulation attribution; not authenticated proof. |
+| `action`                              | `draft_created \| draft_reviewed \| draft_rejected` | Yes      | Simulated draft action; approval is intentionally unavailable.   |
+| `rationale`                           | `string`                                            | Yes      | Nonblank simulated-action rationale.                             |
+| `policy_reference` / `policy_version` | `string` / `string`                                 | Yes      | Template id/version used for the draft.                          |
+| `evidence_ids`                        | non-empty `string[]`                                | Yes      | Evidence references copied from the draft.                       |
+| `occurred_at`                         | `string`                                            | Yes      | Locally generated simulation timestamp.                          |
+
+### Template library
+
+| Template id                         | Trigger                                        | Affected scope                    | Purpose                                    |
+| ----------------------------------- | ---------------------------------------------- | --------------------------------- | ------------------------------------------ |
+| `mitigation-compromised-dependency` | `package_version`, `package_hash`, `publisher` | `packages`, `systems`             | Propose a package pin/upgrade review.      |
+| `mitigation-malicious-install-hook` | `workflow_reference`                           | `workflows`, `systems`            | Propose a workflow/action inspection gate. |
+| `mitigation-credential-exposure`    | `indicator`                                    | `tokens`, `workspaces`, `systems` | Propose a token rotation review.           |
+
+### Invariants
+
+- Draft generation is read-only and in-memory only.
+- Parameters are derived only from typed alert fields (`inventory_ref`, `artifact_ref`, `match_type`, `severity`, `evidence_ids`). Advisory free-text never becomes a parameter value or instruction.
+- `authority_state` is always `simulated_only`; the draft API cannot approve or activate policy.
+- Activation, enforcement changes, schedule changes, and external response actions are outside this slice and must use the canonical governance approval and receipt path.
+
+---
+
 ## Sync Contract Mapping Table
 
 The sync contract (`src/lib/graph-adapter/sync-contract-mappings.ts`) provides deterministic mappings for relationship wiring during memory promotion (AD-28).
