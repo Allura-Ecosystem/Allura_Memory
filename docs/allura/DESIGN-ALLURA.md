@@ -90,7 +90,7 @@ Truthfulness rules: no fabricated live data, no “healthy” without verificati
 
 Run truthfulness rules: no “hallucination-free” claims, no yolo/forever autonomous modes, no foreign process library as canon, and no Done state unless declared quality gates and evidence requirements pass. Interrupted work must show resumable or stale state rather than restarting from vibes.
 
-Governance receipt rule: every mutation and approval must show intent, actor, source, policy, validation, audit trail, `gate_decision` (`Permit | Defer | Deny`), and `approval_required` before completion.
+Governance receipt rule: every mutation and approval must show intent, actor, source, policy, validation, audit trail, `gate_decision` (`Permit | Defer | Deny`), and `approval_required` before completion. For mutations in the approval-required set (REQ-GOV-008), the control plane's `executeSyscall` enforces a non-empty `approval_ref` after proof verification and policy evaluation and before the syscall executor runs.
 
 ### Planned Bumblebee V1 trust and authority contract
 

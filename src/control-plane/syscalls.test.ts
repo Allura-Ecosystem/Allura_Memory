@@ -35,6 +35,7 @@ const ctx: SyscallContext = {
   actor: "brooks-architect",
   group_id: "allura-system",
   permission_tier: "controlPlane",
+  approval_ref: "test-approval",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -344,6 +345,110 @@ describe("syscall_audit", () => {
     expect(resolveTarget).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 100 })
     );
+  });
+});
+
+describe("approval_required gate (REQ-GOV-008)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("denies database mutation when approval_ref is missing", async () => {
+    const { syscall_mutate } = await import("./syscalls");
+
+    const request: MutationRequest = {
+      type: "insert",
+      target: "pg:events",
+      data: { event_type: "TEST" },
+    };
+
+    const ctxWithoutApproval = { ...ctx, approval_ref: undefined };
+
+    const result = await syscall_mutate(request, ctxWithoutApproval);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Approval required");
+    expect(result.error).toContain("database");
+    expect(result.error).toContain("approval_ref");
+  });
+
+  it("denies database mutation when approval_ref is empty", async () => {
+    const { syscall_mutate } = await import("./syscalls");
+
+    const request: MutationRequest = {
+      type: "insert",
+      target: "pg:events",
+      data: { event_type: "TEST" },
+      approval_ref: "   ",
+    };
+
+    const result = await syscall_mutate(request, ctx);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Approval required");
+  });
+
+  it("proceeds when approval_ref is provided for database mutation", async () => {
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValue(
+      { success: true, affected_rows: 1 }
+    );
+
+    const { syscall_mutate } = await import("./syscalls");
+
+    const request: MutationRequest = {
+      type: "insert",
+      target: "pg:events",
+      data: { event_type: "TEST" },
+      approval_ref: "approval-123",
+    };
+
+    const result = await syscall_mutate(request, ctx);
+
+    expect(result.success).toBe(true);
+    expect(result.data?.affected_rows).toBe(1);
+  });
+
+  it("does not affect query syscalls", async () => {
+    const mockRows = [{ id: "row-1", content: "test" }];
+    vi.mocked(await import("./target-resolver")).resolveTarget.mockResolvedValue(
+      { success: true, rows: mockRows }
+    );
+
+    const { syscall_query } = await import("./syscalls");
+
+    const request: QueryRequest = {
+      target: "pg:events",
+      query: { agent_id: "woz" },
+    };
+
+    const result = await syscall_query(request, ctx);
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual(mockRows);
+  });
+
+  it("detects approval-required kinds from intent", async () => {
+    const { syscall_spawn } = await import("./syscalls");
+
+    const ctxWithoutApproval = { ...ctx, approval_ref: undefined };
+
+    const result = await syscall_spawn("worker", ctxWithoutApproval);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Approval required");
+    expect(result.error).toContain("runtime");
+  });
+
+  it("proceeds with runtime mutation when approval_ref is provided", async () => {
+    const { syscall_spawn } = await import("./syscalls");
+
+    const result = await syscall_spawn("worker", {
+      ...ctx,
+      approval_ref: "runtime-approval-456",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.agent_id).toBeDefined();
   });
 });
 

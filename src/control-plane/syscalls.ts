@@ -12,9 +12,10 @@
  */
 
 import { randomBytes } from "crypto";
+
+import { validateGroupId } from "@/lib/validation/group-id";
 import {
   evaluatePoliciesOrThrow,
-  Policy,
   PolicyContext,
 } from "./policy";
 import {
@@ -25,7 +26,6 @@ import {
   verifyProofOrThrow,
 } from "./proof";
 import { resolveTarget } from "./target-resolver";
-import { validateGroupId } from "@/lib/validation/group-id";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -57,18 +57,24 @@ export interface SyscallResult<T = unknown> {
 export interface SyscallContext {
   /** Actor making the syscall */
   actor: string;
-  
+
   /** Tenant group ID */
   group_id: string;
-  
+
   /** Permission tier */
   permission_tier?: "controlPlane" | "kernel" | "plugin" | "skill";
-  
+
   /** Budget cost estimate */
   budget_cost?: number;
-  
+
   /** Additional audit context */
   audit_context?: Record<string, unknown>;
+
+  /**
+   * Explicit governed approval identity.
+   * Required when the syscall targets an approval-required mutation kind.
+   */
+  approval_ref?: string;
 }
 
 /**
@@ -82,20 +88,48 @@ export type MutationType =
   | "bulk_insert";
 
 /**
+ * Approval-required mutation kinds (REQ-GOV-008).
+ *
+ * Any syscall whose resource/intent matches one of these categories must carry
+ * an explicit `approval_ref` in the syscall context. The gate lives in the
+ * control plane's proof→policy→audit pipeline so it cannot be bypassed at the
+ * target resolver layer.
+ */
+export const APPROVAL_REQUIRED_KINDS = [
+  "runtime",
+  "database",
+  "mcp",
+  "cron",
+  "live_hook",
+  "ruvix",
+  "semantic_promotion",
+  "notion_sync",
+  "done_status",
+] as const;
+
+export type ApprovalRequiredKind = (typeof APPROVAL_REQUIRED_KINDS)[number];
+
+/**
  * Mutation request
  */
 export interface MutationRequest {
   /** Type of mutation */
   type: MutationType;
-  
+
   /** Target table/collection */
   target: string;
-  
+
   /** Data to mutate */
   data: unknown;
-  
+
   /** Optional query/filter */
   query?: Record<string, unknown>;
+
+  /**
+   * Explicit governed approval identity.
+   * Required when the mutation kind is in APPROVAL_REQUIRED_KINDS.
+   */
+  approval_ref?: string;
 }
 
 /**
@@ -172,11 +206,20 @@ async function executeSyscall<T>(
     };
     
     evaluatePoliciesOrThrow(claims, policyContext);
-    
+
     // ─────────────────────────────────────────────────────────────────────────
-    // Step 4: Execute the syscall
+    // Step 4: Approval-required gate (REQ-GOV-008)
     // ─────────────────────────────────────────────────────────────────────────
-    
+
+    const approvalReason = requireApprovalRef(intent, subject, context.approval_ref);
+    if (approvalReason) {
+      throw new Error(approvalReason);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Step 5: Execute the syscall
+    // ─────────────────────────────────────────────────────────────────────────
+
     const data = await executor(claims);
     
     // ─────────────────────────────────────────────────────────────────────────
@@ -210,13 +253,80 @@ async function executeSyscall<T>(
 
 /**
  * Generate audit trail ID
- * 
+ *
  * H-002 FIX: Added crypto-random suffix to prevent timestamp collision
  */
 function generateAuditId(intent: string, subject: string, groupId: string): string {
   const timestamp = Date.now();
   const nonce = randomBytes(4).toString("hex");
   return `audit-${groupId}-${intent}-${timestamp}-${nonce}`;
+}
+
+/**
+ * Determine whether a syscall requires an explicit approval reference.
+ *
+ * REQ-GOV-008: runtime/database/MCP/cron/live hook/RuVix enforcement/
+ * semantic promotion/Notion sync/Done status changes require explicit
+ * approval and `approval_required=true`.
+ *
+ * The resource subject uses the convention `<kind>:<target>` (e.g.
+ * `database:pg:events`). We also consider the syscall intent as a secondary
+ * signal for kinds that do not naturally map to a resource prefix.
+ *
+ * @param intent - The syscall intent
+ * @param subject - The target resource
+ * @param approvalRef - The approval reference provided in context
+ * @returns A gate reason string if approval is missing/invalid, undefined otherwise
+ */
+function requireApprovalRef(
+  intent: string,
+  subject: string,
+  approvalRef?: string
+): string | undefined {
+  const kind = detectMutationKind(intent, subject);
+  if (!kind) {
+    return undefined;
+  }
+
+  const normalizedRef = approvalRef?.trim();
+  if (!normalizedRef || normalizedRef.length === 0) {
+    return `Approval required for ${kind} mutation: missing approval_ref`;
+  }
+
+  if (normalizedRef.length > 256) {
+    return `Approval reference too long for ${kind} mutation: ${normalizedRef.length} chars (max 256)`;
+  }
+
+  return undefined;
+}
+
+/**
+ * Detect the approval-required mutation kind from intent and subject.
+ *
+ * @returns The matching kind, or undefined if this syscall is not approval-required.
+ */
+function detectMutationKind(intent: string, subject: string): ApprovalRequiredKind | undefined {
+  const subjectLower = subject.toLowerCase();
+  const intentLower = intent.toLowerCase();
+
+  // Subject-prefix detection: "kind:target"
+  if (subjectLower.startsWith("runtime:")) return "runtime";
+  if (subjectLower.startsWith("database:")) return "database";
+  if (subjectLower.startsWith("mcp:")) return "mcp";
+  if (subjectLower.startsWith("cron:")) return "cron";
+  if (subjectLower.startsWith("live_hook:")) return "live_hook";
+  if (subjectLower.startsWith("ruvix:")) return "ruvix";
+  if (subjectLower.startsWith("semantic_promotion:")) return "semantic_promotion";
+  if (subjectLower.startsWith("notion_sync:")) return "notion_sync";
+  if (subjectLower.startsWith("done_status:")) return "done_status";
+
+  // Intent-based detection for syscalls whose resource does not carry a prefix.
+  if (intentLower === "mutate") return "database";
+  if (intentLower === "spawn" || intentLower === "kill") return "runtime";
+  if (intentLower === "policy") return "ruvix";
+  if (intentLower === "budget") return "ruvix";
+
+  return undefined;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -240,7 +350,7 @@ export async function syscall_mutate(
   return executeSyscall(
     "mutate",
     `database:${request.target}`,
-    context,
+    { ...context, approval_ref: request.approval_ref ?? context.approval_ref },
     async (claims) => {
       const result = await resolveTarget({
         intent: "mutate",
