@@ -47,8 +47,9 @@ async function executeTool(
       group_id,
       user_id: scope.actor_id,
       content: String(args.content ?? ""),
-      // workspace_id is carried in metadata until memory tables are workspace-scoped.
       metadata: { ...(args.metadata as Record<string, unknown> | undefined), workspace_id: scope.workspace_id },
+      // Verified server-injected scope — required for workspace-scoped RLS writes.
+      scope: { group_id, workspace_id: scope.workspace_id, agent_id: scope.actor_id },
     };
     return memory_add(req);
   }
@@ -59,6 +60,8 @@ async function executeTool(
       group_id,
       user_id: scope.actor_id,
       limit: typeof args.limit === "number" ? args.limit : 10,
+      // Verified server-injected scope — required by requireVerifiedWorkspaceScope.
+      scope: { group_id, workspace_id: scope.workspace_id, agent_id: scope.actor_id },
     };
     return memory_search(req);
   }

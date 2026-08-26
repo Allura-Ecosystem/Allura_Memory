@@ -32,6 +32,7 @@ import {
   memory_search,
   resetConnections,
 } from "../mcp/canonical-tools";
+import { closePool, getPool } from "../lib/postgres/connection";
 
 // Live-DB gating: skip tests requiring live PostgreSQL/Neo4j unless RUN_E2E_TESTS=true
 const itIfE2E = process.env.RUN_E2E_TESTS === "true" ? it : it.skip;
@@ -44,6 +45,18 @@ const TEST_USER_ID_2 = "test-user-2";
 const GROUP_A = `allura-tenant-a-${RUN_ID}` as any;
 const GROUP_B = `allura-tenant-b-${RUN_ID}` as any;
 
+// Workspace scope is mandatory for app-role writes/reads (migration 39
+// restrictive RLS policy). Seed one workspace per test group and attach a
+// verified scope tuple to every canonical request.
+const TEST_AGENT_ID = "canonical-test-agent";
+function wsScope(groupId: string) {
+  return {
+    group_id: groupId as any,
+    workspace_id: `ws-${groupId}`,
+    agent_id: TEST_AGENT_ID,
+  };
+}
+
 function uniqueContent(base: string): string {
   return `${base} [run:${RUN_ID}] [id:${randomUUID().slice(0, 8)}]`;
 }
@@ -54,19 +67,27 @@ describe("Canonical Memory Operations", () => {
   });
 
   beforeAll(async () => {
-    // Setup: Ensure databases are running
-    // TODO: Add database health check
+    // Seed one workspace per test group so app-role writes satisfy the
+    // workspace_scope_restrictive_policy and the workspace FK.
+    const pool = getPool();
+    const groups = [String(TEST_GROUP_ID), String(GROUP_A), String(GROUP_B)];
+    for (const g of groups) {
+      await pool.query(
+        `INSERT INTO workspaces (workspace_id, group_id, name) VALUES ($1, $2, 'canonical-test')`,
+        [`ws-${g}`, g],
+      );
+    }
   });
 
   afterAll(async () => {
-    // Cleanup: Remove test data
-    // TODO: Add cleanup logic
+    await closePool();
   });
 
   describe("1. memory_add", () => {
     it("should add a memory to PostgreSQL (episodic only) when score < threshold", async () => {
       const request: MemoryAddRequest = {
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID,
         content: "Test memory with low confidence",
         metadata: { source: "manual" },
@@ -91,6 +112,7 @@ describe("Canonical Memory Operations", () => {
        try {
          const request: MemoryAddRequest = {
            group_id: TEST_GROUP_ID,
+           scope: wsScope(TEST_GROUP_ID),
            user_id: TEST_USER_ID,
           content: uniqueContent("I always prefer using the dark theme in VS Code editor settings for all my development work"),
            metadata: { source: "conversation" },
@@ -118,6 +140,7 @@ describe("Canonical Memory Operations", () => {
        try {
          const request: MemoryAddRequest = {
            group_id: TEST_GROUP_ID,
+           scope: wsScope(TEST_GROUP_ID),
            user_id: TEST_USER_ID,
            content: uniqueContent("I always prefer working with TypeScript strict mode enabled in my IDE for all new projects"),
            metadata: { source: "conversation" },
@@ -144,6 +167,7 @@ describe("Canonical Memory Operations", () => {
        try {
          const response = await memory_add({
            group_id: TEST_GROUP_ID,
+           scope: wsScope(TEST_GROUP_ID),
            user_id: TEST_USER_ID,
            content: uniqueContent("I always prefer deterministic testing patterns over flaky integration tests in all codebases"),
            metadata: { source: "conversation" },
@@ -172,6 +196,7 @@ describe("Canonical Memory Operations", () => {
     it("should reject missing required fields", async () => {
       const request = {
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         // Missing user_id and content
       } as any;
 
@@ -184,6 +209,7 @@ describe("Canonical Memory Operations", () => {
       // Add test memories
       await memory_add({
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID,
         content: uniqueContent("User prefers dark mode"),
         metadata: { source: "manual" },
@@ -191,6 +217,7 @@ describe("Canonical Memory Operations", () => {
 
       await memory_add({
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID,
         content: uniqueContent("User uses TypeScript"),
         metadata: { source: "conversation" },
@@ -201,6 +228,7 @@ describe("Canonical Memory Operations", () => {
        const request: MemorySearchRequest = {
          query: "dark mode",
          group_id: TEST_GROUP_ID,
+         scope: wsScope(TEST_GROUP_ID),
        };
 
        // Debug: Check the request
@@ -217,6 +245,7 @@ describe("Canonical Memory Operations", () => {
       const request: MemorySearchRequest = {
         query: "TypeScript",
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID,
       };
 
@@ -235,6 +264,7 @@ describe("Canonical Memory Operations", () => {
        const request: MemorySearchRequest = {
          query: "user",
          group_id: TEST_GROUP_ID,
+         scope: wsScope(TEST_GROUP_ID),
          limit: 2, // Already an integer, but let's be explicit
        };
 
@@ -260,6 +290,7 @@ describe("Canonical Memory Operations", () => {
       // Add a test memory
       const response = await memory_add({
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID,
         content: uniqueContent("Test memory for get operation"),
         metadata: { source: "manual" },
@@ -271,6 +302,7 @@ describe("Canonical Memory Operations", () => {
       const request: MemoryGetRequest = {
         id: testMemoryId as any,
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
       };
 
       const response = await memory_get(request);
@@ -286,6 +318,7 @@ describe("Canonical Memory Operations", () => {
       const request: MemoryGetRequest = {
         id: "non-existent-id" as any,
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
       };
 
       await expect(memory_get(request)).rejects.toThrow("not found");
@@ -306,6 +339,7 @@ describe("Canonical Memory Operations", () => {
       // Add test memories for different users
       await memory_add({
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID,
         content: uniqueContent("Memory 1 for user 1"),
         metadata: { source: "manual" },
@@ -313,6 +347,7 @@ describe("Canonical Memory Operations", () => {
 
       await memory_add({
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID,
         content: uniqueContent("Memory 2 for user 1"),
         metadata: { source: "conversation" },
@@ -320,6 +355,7 @@ describe("Canonical Memory Operations", () => {
 
       await memory_add({
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID_2,
         content: uniqueContent("Memory 1 for user 2"),
         metadata: { source: "manual" },
@@ -329,6 +365,7 @@ describe("Canonical Memory Operations", () => {
     it("should list all memories for a user", async () => {
       const request: MemoryListRequest = {
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID,
       };
 
@@ -342,6 +379,7 @@ describe("Canonical Memory Operations", () => {
     it("should respect limit and offset parameters", async () => {
       const request: MemoryListRequest = {
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID,
         limit: 1,
         offset: 0,
@@ -355,6 +393,7 @@ describe("Canonical Memory Operations", () => {
     it("should not return memories from other users", async () => {
       const request: MemoryListRequest = {
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID,
       };
 
@@ -383,6 +422,7 @@ describe("Canonical Memory Operations", () => {
       // Add a test memory
         const response = await memory_add({
           group_id: TEST_GROUP_ID,
+          scope: wsScope(TEST_GROUP_ID),
           user_id: TEST_USER_ID,
           content: uniqueContent("Test memory for delete operation"),
         metadata: { source: "manual" },
@@ -394,6 +434,7 @@ describe("Canonical Memory Operations", () => {
       const request: MemoryDeleteRequest = {
         id: testMemoryId as any,
         group_id: TEST_GROUP_ID,
+        scope: wsScope(TEST_GROUP_ID),
         user_id: TEST_USER_ID,
       };
 
@@ -412,6 +453,7 @@ describe("Canonical Memory Operations", () => {
       try {
         const addResponse = await memory_add({
           group_id: TEST_GROUP_ID,
+          scope: wsScope(TEST_GROUP_ID),
           user_id: TEST_USER_ID,
           content: uniqueContent("User prefers dark mode for deletion test"),
           metadata: { source: "conversation" },
@@ -420,6 +462,7 @@ describe("Canonical Memory Operations", () => {
         const deleteRequest: MemoryDeleteRequest = {
           id: addResponse.id as any,
           group_id: TEST_GROUP_ID,
+          scope: wsScope(TEST_GROUP_ID),
           user_id: TEST_USER_ID,
         };
 
@@ -450,6 +493,7 @@ describe("Canonical Memory Operations", () => {
       // Add memory for Group A
         await memory_add({
           group_id: GROUP_A,
+          scope: wsScope(GROUP_A),
           user_id: USER_A,
           content: uniqueContent("Memory for Group A"),
         metadata: { source: "manual" },
@@ -458,6 +502,7 @@ describe("Canonical Memory Operations", () => {
       // Add memory for Group B
         await memory_add({
           group_id: GROUP_B,
+          scope: wsScope(GROUP_B),
           user_id: USER_B,
           content: uniqueContent("Memory for Group B"),
         metadata: { source: "manual" },
@@ -467,6 +512,7 @@ describe("Canonical Memory Operations", () => {
       const searchA = await memory_search({
         query: "Memory",
         group_id: GROUP_A,
+        scope: wsScope(GROUP_A),
         status: "all" as any,
       });
 
@@ -474,6 +520,7 @@ describe("Canonical Memory Operations", () => {
       const searchB = await memory_search({
         query: "Memory",
         group_id: GROUP_B,
+        scope: wsScope(GROUP_B),
         status: "all" as any,
       });
 
@@ -489,6 +536,7 @@ describe("Canonical Memory Operations", () => {
       // Add memory for Group A
         const addResponse = await memory_add({
           group_id: GROUP_A,
+          scope: wsScope(GROUP_A),
           user_id: USER_A,
           content: uniqueContent("Private memory for Group A"),
         metadata: { source: "manual" },
@@ -499,6 +547,7 @@ describe("Canonical Memory Operations", () => {
         memory_get({
           id: addResponse.id as any,
           group_id: GROUP_B,
+          scope: wsScope(GROUP_B),
         })
       ).rejects.toThrow("not found");
     });
@@ -512,6 +561,7 @@ describe("Canonical Memory Operations", () => {
        try {
          const response = await memory_add({
            group_id: TEST_GROUP_ID,
+           scope: wsScope(TEST_GROUP_ID),
            user_id: TEST_USER_ID,
            // Content must trigger specificity pattern + be long enough for score >= 0.85
            content: uniqueContent("I always prefer dark mode in VS Code editor and terminal window for late night coding sessions"),
@@ -532,6 +582,7 @@ describe("Canonical Memory Operations", () => {
        try {
          const response = await memory_add({
            group_id: TEST_GROUP_ID,
+           scope: wsScope(TEST_GROUP_ID),
            user_id: TEST_USER_ID,
            // Content must trigger specificity pattern + be long enough for score >= 0.85
            content: uniqueContent("I always prefer using TypeScript strict mode in all my projects and I never compromise on type safety"),
@@ -632,6 +683,7 @@ describe("Canonical Memory Operations", () => {
       it("should return empty result for legitimate no-data case when databases are available", async () => {
         const request: MemoryListRequest = {
           group_id: TEST_GROUP_ID,
+          scope: wsScope(TEST_GROUP_ID),
           user_id: `nonexistent-user-${RUN_ID}`,
         };
 
@@ -653,6 +705,7 @@ describe("Canonical Memory Operations", () => {
         try {
           const request: MemoryListRequest = {
             group_id: `allura-test-${RUN_ID}` as any,
+            scope: wsScope(`allura-test-${RUN_ID}` as any),
             user_id: "test-user-error",
           };
 
@@ -682,6 +735,7 @@ describe("Canonical Memory Operations", () => {
           const request: MemorySearchRequest = {
             query: "test",
             group_id: `allura-test-${RUN_ID}` as any,
+            scope: wsScope(`allura-test-${RUN_ID}` as any),
           };
 
           // With Slice B architecture: RuVector is primary, Neo4j is fallback.
@@ -711,6 +765,7 @@ describe("Canonical Memory Operations", () => {
         try {
           const request: MemoryAddRequest = {
             group_id: `allura-test-${RUN_ID}` as any,
+            scope: wsScope(`allura-test-${RUN_ID}` as any),
             user_id: "test-user-error",
             content: "Error propagation test",
           };
@@ -741,6 +796,7 @@ describe("Canonical Memory Operations", () => {
           const request: MemoryGetRequest = {
             id: "some-id" as any,
             group_id: `allura-test-${RUN_ID}` as any,
+            scope: wsScope(`allura-test-${RUN_ID}` as any),
           };
 
           await expect(memory_get(request)).rejects.toThrow();
@@ -769,6 +825,7 @@ describe("Canonical Memory Operations", () => {
           const request: MemoryDeleteRequest = {
             id: "some-id" as any,
             group_id: `allura-test-${RUN_ID}` as any,
+            scope: wsScope(`allura-test-${RUN_ID}` as any),
             user_id: "test-user-error",
           };
 

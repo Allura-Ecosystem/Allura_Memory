@@ -11,7 +11,7 @@ import type { Driver } from "neo4j-driver"
 import { existsSync, readFileSync } from "fs"
 import { join } from "path"
 import { resetBudgetState } from "./budget-circuit"
-import { getAppPool } from "@/lib/postgres/connection"
+import { getAppPool, resetAppPoolSingleton } from "@/lib/postgres/connection"
 
 // Load base config plus local overrides without clobbering already-injected
 // runtime environment variables. This keeps Docker/CI/Varlock injection
@@ -59,6 +59,9 @@ export function resetConnections(): void {
     pgPool.end().catch(() => {})
     pgPool = null
   }
+  // Drop the upstream singleton too — it points at the pool we just ended.
+  // Without this, the next getAppPool() returns the dead instance.
+  resetAppPoolSingleton()
   resetBudgetState()
 }
 

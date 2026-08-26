@@ -118,8 +118,8 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
 
     it("should write and read an active graph memory", async () => {
       await pgPool.query(
-        `INSERT INTO graph_memories (id, group_id, content, score, provenance, version)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+        `INSERT INTO graph_memories (id, group_id, content, score, provenance, version, workspace_scope_state)
+         VALUES ($1, $2, $3, $4, $5, $6, 'legacy_quarantined')`,
         ["e2e-graph-memory", "allura-e2e-graph", "e2e: graph memory", 0.85, "manual", 1],
       );
 
@@ -316,9 +316,9 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
     it("should bulk insert 100 graph memories in under 2 seconds", async () => {
       const start = Date.now();
       const result = await pgPool.query(
-        `INSERT INTO graph_memories (id, group_id, content, score, provenance, version)
+        `INSERT INTO graph_memories (id, group_id, content, score, provenance, version, workspace_scope_state)
          SELECT 'e2e-graph-perf-' || series, 'allura-e2e-perf',
-                'e2e: graph performance row ' || series, 0.5, 'manual', 1
+                'e2e: graph performance row ' || series, 0.5, 'manual', 1, 'legacy_quarantined'
          FROM generate_series(1, 100) AS series
          RETURNING id`,
       );

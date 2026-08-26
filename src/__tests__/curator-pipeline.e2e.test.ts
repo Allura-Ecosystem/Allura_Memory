@@ -86,6 +86,14 @@ describe.skipIf(!shouldRunE2E)("Curator Pipeline E2E", () => {
     // Verify connections are live
     await pgPool.query("SELECT 1");
 
+    // Seed the workspace required by workspace_scope_restrictive_policy (migration 39)
+    const WORKSPACE_ID = `ws-${GROUP_ID}`;
+    await pgPool.query(
+      `INSERT INTO workspaces (workspace_id, group_id, name) VALUES ($1, $2, 'curator-pipeline-e2e')
+       ON CONFLICT (workspace_id, group_id) DO NOTHING`,
+      [WORKSPACE_ID, GROUP_ID],
+    );
+
     // Reset canonical-tools internal connection cache so it picks up the
     // current env vars (important when running after other test suites)
     resetConnections();
@@ -118,6 +126,7 @@ describe.skipIf(!shouldRunE2E)("Curator Pipeline E2E", () => {
         user_id: "test-user",
         content: `I always prefer TypeScript with strict mode and explicit return types [run:${RUN_ID}]`,
         metadata: { source: "conversation" },
+        scope: { group_id: GROUP_ID, workspace_id: `ws-${GROUP_ID}`, agent_id: "curator-pipeline-test" } as any,
       });
 
       expect(response.stored).toBe("episodic");
@@ -234,6 +243,7 @@ describe.skipIf(!shouldRunE2E)("Curator Pipeline E2E", () => {
         user_id: "pipeline-user",
         content: `I always prefer explicit return types and strict null checks in TypeScript [pipeline:${RUN_ID}]`,
         metadata: { source: "conversation" },
+        scope: { group_id: GROUP_ID, workspace_id: `ws-${GROUP_ID}`, agent_id: "curator-pipeline-test" } as any,
       });
 
       // Step 2: Fetch the proposal from canonical_proposals

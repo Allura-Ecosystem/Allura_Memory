@@ -14,8 +14,8 @@ const TEST_GROUP_PREFIX = "allura-governance-%";
 async function insertGraphMemory(id: string, groupId: string, content: string): Promise<void> {
   await getPool().query(
     `INSERT INTO graph_memories
-       (id, group_id, user_id, content, score, provenance, version, created_at, deprecated)
-     VALUES ($1, $2, $3, $4, $5, $6, 1, NOW()::timestamptz, false)`,
+       (id, group_id, user_id, content, score, provenance, version, created_at, deprecated, workspace_scope_state)
+     VALUES ($1, $2, $3, $4, $5, $6, 1, NOW()::timestamptz, false, 'legacy_quarantined')`,
     [id, groupId, "governance-agent", content, 0.9, "manual"],
   );
 }

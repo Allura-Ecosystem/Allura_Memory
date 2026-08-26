@@ -275,6 +275,9 @@ export interface MemoryGetRequest {
 
   /** Required: Tenant namespace (for isolation) */
   group_id: GroupId
+
+  /** Optional: Scope tuple for governed retrieval (project/agent/session) */
+  scope?: ScopeTuple
 }
 
 export interface MemoryGetResponse {
@@ -338,6 +341,9 @@ export interface MemoryListRequest {
   /** Optional: User identifier — omit to list all users in the tenant (admin view) */
   user_id?: UserId
 
+  /** Optional: Scope tuple for governed retrieval (project/agent/session) */
+  scope?: ScopeTuple
+
   /** Optional: Maximum results (default: 50) */
   limit?: number
 
@@ -379,6 +385,9 @@ export interface MemoryDeleteRequest {
 
   /** Required: User identifier (for authorization) */
   user_id: UserId
+
+  /** Optional: Scope tuple for governed memory (project/agent/session) */
+  scope?: ScopeTuple
 }
 
 export interface MemoryDeleteResponse {
@@ -416,6 +425,8 @@ export interface MemoryUpdateRequest {
   reason?: string
   /** Optional: Additional metadata */
   metadata?: Record<string, unknown>
+  /** Optional: Scope tuple for governed memory (project/agent/session) */
+  scope?: ScopeTuple
 }
 
 export interface MemoryUpdateResponse {
@@ -449,6 +460,8 @@ export interface MemoryPromoteRequest {
   rationale?: string
   /** Optional: Who is requesting promotion */
   curator_id?: string
+  /** Optional: Scope tuple for governed memory (project/agent/session) */
+  scope?: ScopeTuple
 }
 
 export interface MemoryPromoteResponse {
@@ -474,6 +487,8 @@ export interface MemoryExportRequest {
   group_id: GroupId
   /** Optional: Filter by user */
   user_id?: UserId
+  /** Optional: Scope tuple for governed memory (project/agent/session) */
+  scope?: ScopeTuple
   /** Optional: true = Neo4j canonical only; false/undefined = all stores */
   canonical_only?: boolean
   /** Optional: Output format (json only for now) */
@@ -684,6 +699,9 @@ export interface MemoryRestoreRequest {
 
   /** Required: User identifier (for audit trail) */
   user_id: UserId
+
+  /** Optional: Scope tuple for governed memory (project/agent/session) */
+  scope?: ScopeTuple
 }
 
 export interface MemoryRestoreResponse {
@@ -844,6 +862,9 @@ export interface MemoryListDeletedRequest {
 
   /** Optional: User identifier — scope to a specific user */
   user_id?: UserId
+
+  /** Optional: Scope tuple for governed memory (project/agent/session) */
+  scope?: ScopeTuple
 
   /** Optional: Maximum results (default: 50) */
   limit?: number

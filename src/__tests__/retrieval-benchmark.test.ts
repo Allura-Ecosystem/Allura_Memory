@@ -35,6 +35,12 @@ const mockPgPool = {
   query: mockPgQuery,
   end: vi.fn(),
   on: vi.fn(),
+  // Tenant-scoped queries run inside withTenantTransaction, which needs a
+  // pooled client (BEGIN/SET LOCAL/query/COMMIT + release).
+  connect: vi.fn(async () => ({
+    query: mockPgQuery,
+    release: vi.fn(),
+  })),
 };
 
 // Mock graph adapter (Neo4j semantic search)

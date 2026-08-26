@@ -204,7 +204,8 @@ describeE2E("Team RAM e2e smoke", () => {
           goal: "Count tenant records",
           groupId: GROUP_ID,
           workspaceId: "workspace-teamram",
-          sql: "SELECT COUNT(*)::int AS total FROM events WHERE group_id = $1",
+          // Orchestrator binds [groupId, workspaceId] as $1/$2 for execute_sql.
+          sql: "SELECT COUNT(*)::int AS total FROM events WHERE group_id = $1 AND ($2::text IS NULL OR workspace_id = $2)",
         },
         executor,
       )

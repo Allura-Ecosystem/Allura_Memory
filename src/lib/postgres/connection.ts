@@ -107,6 +107,16 @@ export function getOwnerPool(): Pool {
 }
 
 /**
+ * Drop the cached app-pool singleton so the next getAppPool() call builds a
+ * fresh pool. Callers must have ended the previous pool themselves (this does
+ * not close anything). Without this, resetConnections()-style test hooks end
+ * the shared pool while getAppPool() keeps handing back the dead instance.
+ */
+export function resetAppPoolSingleton(): void {
+  appPoolInstance = null;
+}
+
+/**
  * Get or create the managed pool that connects as the restricted application
  * role. Workspace transactions share this process singleton rather than
  * creating one pool per write, and it is closed by closePool during shutdown.
