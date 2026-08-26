@@ -14,8 +14,9 @@
  * - happy path + error/validation cases per tool
  */
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { randomUUID } from "crypto"
+import { describe, expect, it } from "vitest"
+import { CANONICAL_POLICIES } from "../lib/governance/policies"
 import type {
   GovernanceAuditLogRequest,
   GovernanceCheckGateRequest,
@@ -25,13 +26,12 @@ import type {
   GroupId,
 } from "../lib/memory/canonical-contracts"
 import {
+  governance_apply_policy_override,
   governance_audit_log,
   governance_check_gate,
   governance_get_policy,
   governance_list_policies,
-  governance_apply_policy_override,
 } from "../mcp/governance-tools"
-import { CANONICAL_POLICIES } from "../lib/governance/policies"
 
 // Live-DB gating: skip tests requiring live PostgreSQL unless RUN_E2E_TESTS=true
 const itIfE2E = process.env.RUN_E2E_TESTS === "true" ? it : it.skip
@@ -69,12 +69,12 @@ describe("Governance MCP Tools (Story 9.1)", () => {
       await expect(governance_list_policies(req)).rejects.toThrow()
     })
 
-    itIfE2E("should return all 6 canonical policies with valid group_id", async () => {
+    itIfE2E("should return all 7 canonical policies with valid group_id", async () => {
       const req: GovernanceListPoliciesRequest = { group_id: VALID_GROUP }
       const response = await governance_list_policies(req)
 
-      expect(response.count).toBe(6)
-      expect(response.policies).toHaveLength(6)
+      expect(response.count).toBe(7)
+      expect(response.policies).toHaveLength(7)
       expect(response.meta).toBeDefined()
       expect(response.meta?.degraded).toBe(false)
 
@@ -99,8 +99,8 @@ describe("Governance MCP Tools (Story 9.1)", () => {
     })
 
     // Pure logic test — no DB needed
-    it("CANONICAL_POLICIES registry should contain exactly 6 policies", () => {
-      expect(CANONICAL_POLICIES).toHaveLength(6)
+    it("CANONICAL_POLICIES registry should contain exactly 7 policies", () => {
+      expect(CANONICAL_POLICIES).toHaveLength(7)
     })
 
     it("CANONICAL_POLICIES should have unique IDs", () => {
@@ -108,7 +108,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
       expect(new Set(ids).size).toBe(ids.length)
     })
 
-    it("CANONICAL_POLICIES should cover all 6 invariant keys", () => {
+    it("CANONICAL_POLICIES should cover all 7 invariant keys", () => {
       const keys = CANONICAL_POLICIES.map((p) => p.invariant_key)
       expect(keys).toContain("group_id_required")
       expect(keys).toContain("append_only_events")
@@ -116,6 +116,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
       expect(keys).toContain("hitl_promotion")
       expect(keys).toContain("db_connection_only")
       expect(keys).toContain("allura_namespace")
+      expect(keys).toContain("approval_required_for_mutations")
     })
   })
 
@@ -165,7 +166,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
       expect(response.meta?.degraded).toBe(false)
     })
 
-    itIfE2E("should return all 6 policies without error", async () => {
+    itIfE2E("should return all 7 policies without error", async () => {
       for (const policy of CANONICAL_POLICIES) {
         const req: GovernanceGetPolicyRequest = {
           group_id: VALID_GROUP,
@@ -202,7 +203,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
       await expect(governance_check_gate(req)).rejects.toThrow("action is required")
     })
 
-    itIfE2E("should pass all 6 checks for a benign action", async () => {
+    itIfE2E("should pass all 7 checks for a benign action", async () => {
       const req: GovernanceCheckGateRequest = {
         group_id: VALID_GROUP,
         action: "memory_add",
@@ -212,7 +213,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
 
       expect(response.pass).toBe(true)
       expect(response.action).toBe("memory_add")
-      expect(response.checks).toHaveLength(6)
+      expect(response.checks).toHaveLength(7)
       expect(response.checked_at).toBeTruthy()
 
       for (const check of response.checks) {
@@ -248,7 +249,7 @@ describe("Governance MCP Tools (Story 9.1)", () => {
       expect(appendCheck?.pass).toBe(false)
     })
 
-    itIfE2E("should return 6 checks with invariant keys covering all invariants", async () => {
+    itIfE2E("should return 7 checks with invariant keys covering all invariants", async () => {
       const req: GovernanceCheckGateRequest = {
         group_id: VALID_GROUP,
         action: "read_memories",
@@ -256,12 +257,14 @@ describe("Governance MCP Tools (Story 9.1)", () => {
       const response = await governance_check_gate(req)
 
       const keys = response.checks.map((c) => c.invariant_key)
+      expect(keys).toHaveLength(7)
       expect(keys).toContain("group_id_required")
       expect(keys).toContain("append_only_events")
       expect(keys).toContain("neo4j_supersedes")
       expect(keys).toContain("hitl_promotion")
       expect(keys).toContain("db_connection_only")
       expect(keys).toContain("allura_namespace")
+      expect(keys).toContain("approval_required_for_mutations")
     })
   })
 

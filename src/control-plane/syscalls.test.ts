@@ -5,6 +5,7 @@
  * Verifies that syscall_mutate and syscall_query route through resolveTarget.
  */
 
+import { randomUUID } from "crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MutationRequest, QueryRequest, SyscallContext } from "./syscalls";
 
@@ -35,7 +36,7 @@ const ctx: SyscallContext = {
   actor: "brooks-architect",
   group_id: "allura-system",
   permission_tier: "controlPlane",
-  approval_ref: "test-approval",
+  approval_ref: randomUUID(),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -399,13 +400,64 @@ describe("approval_required gate (REQ-GOV-008)", () => {
       type: "insert",
       target: "pg:events",
       data: { event_type: "TEST" },
-      approval_ref: "approval-123",
+      approval_ref: randomUUID(),
     };
 
     const result = await syscall_mutate(request, ctx);
 
     expect(result.success).toBe(true);
     expect(result.data?.affected_rows).toBe(1);
+  });
+
+  it("denies database mutation when approval_ref is not a UUID", async () => {
+    const { syscall_mutate } = await import("./syscalls");
+
+    const request: MutationRequest = {
+      type: "insert",
+      target: "pg:events",
+      data: { event_type: "TEST" },
+      approval_ref: "not-a-uuid",
+    };
+
+    const result = await syscall_mutate(request, ctx);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Approval required");
+    expect(result.error).toContain("valid UUID");
+  });
+
+  it("denies database mutation when approval_ref exceeds 256 chars", async () => {
+    const { syscall_mutate } = await import("./syscalls");
+
+    const longRef = `${randomUUID()}-${"x".repeat(300)}`;
+
+    const request: MutationRequest = {
+      type: "insert",
+      target: "pg:events",
+      data: { event_type: "TEST" },
+      approval_ref: longRef,
+    };
+
+    const result = await syscall_mutate(request, ctx);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Approval reference too long");
+  });
+
+  it("requires approval for non-database kinds (mcp, cron, notion_sync)", async () => {
+    const { executeSyscallDirectlyForTest } = await import("./syscalls");
+
+    const ctxWithoutApproval = { ...ctx, approval_ref: undefined };
+
+    const mcpResult = await executeSyscallDirectlyForTest(
+      "mutate",
+      "mcp:sync",
+      ctxWithoutApproval,
+      async () => ({ output: "" })
+    );
+    expect(mcpResult.success).toBe(false);
+    expect(mcpResult.error).toContain("Approval required");
+    expect(mcpResult.error).toContain("mcp");
   });
 
   it("does not affect query syscalls", async () => {
@@ -444,11 +496,33 @@ describe("approval_required gate (REQ-GOV-008)", () => {
 
     const result = await syscall_spawn("worker", {
       ...ctx,
-      approval_ref: "runtime-approval-456",
+      approval_ref: randomUUID(),
     });
 
     expect(result.success).toBe(true);
     expect(result.data?.agent_id).toBeDefined();
+  });
+
+  it("does not require approval for budget 'check' (read-like operation)", async () => {
+    const { syscall_budget } = await import("./syscalls");
+
+    const ctxWithoutApproval = { ...ctx, approval_ref: undefined };
+
+    const result = await syscall_budget("check", 0, ctxWithoutApproval);
+
+    expect(result.success).toBe(true);
+    expect(result.data?.remaining).toBeDefined();
+  });
+
+  it("does not require approval for policy 'evaluate' (read-like operation)", async () => {
+    const { syscall_policy } = await import("./syscalls");
+
+    const ctxWithoutApproval = { ...ctx, approval_ref: undefined };
+
+    const result = await syscall_policy("evaluate", {}, ctxWithoutApproval);
+
+    expect(result.success).toBe(true);
+    expect(result.data).toBeDefined();
   });
 });
 

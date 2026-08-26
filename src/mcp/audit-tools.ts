@@ -5,7 +5,7 @@
  * 1. audit_query_events     — paginated event query with filters
  * 2. audit_health_report    — per-subsystem health status
  * 3. audit_agent_activity   — agent-scoped event query
- * 4. audit_invariant_check  — 6-invariant live compliance check
+ * 4. audit_invariant_check  — 7-invariant live compliance check
  *
  * ALL READS ONLY — no INSERT/UPDATE/DELETE on events table.
  * group_id enforced on every query via validateGroupId.
@@ -452,7 +452,7 @@ export async function audit_agent_activity(
 // ── 4. audit_invariant_check ─────────────────────────────────────────────────
 
 /**
- * Validate 6 governance invariants against live data.
+ * Validate 7 governance invariants against live data.
  * Returns per-invariant pass/fail with violation count and detail.
  * Read-only — no DB writes.
  *
@@ -463,6 +463,7 @@ export async function audit_agent_activity(
  * 4. Neo4j SUPERSEDES relationships exist (optional — degraded OK)
  * 5. No approved proposals without decided_by (unapproved promotions)
  * 6. allura-* namespace compliance (no deprecated group_id prefixes)
+ * 7. Approval required for engine mutations (pol-007)
  */
 export async function audit_invariant_check(
   request: AuditInvariantCheckRequest
@@ -761,6 +762,41 @@ export async function audit_invariant_check(
     invariants.push({
       key: "allura_namespace",
       name: "allura-* Tenant Namespace Compliance",
+      passed,
+      violation_count: violationCount,
+      detail,
+    })
+  }
+
+  // ── Check 7: Approval required for engine mutations (pol-007) ─────────────
+  {
+    let passed = false
+    let detail = ""
+    let violationCount = 0
+
+    // Static structural check: the control-plane gate code and the invariant
+    // policy must both be present. We verify APPROVAL_REQUIRED_KINDS is
+    // exported and that the registry contains pol-007.
+    try {
+      const { APPROVAL_REQUIRED_KINDS } = await import("@/control-plane/syscalls")
+      const hasKinds = Array.isArray(APPROVAL_REQUIRED_KINDS) && APPROVAL_REQUIRED_KINDS.length > 0
+      const { CANONICAL_POLICIES } = await import("@/lib/governance/policies")
+      const hasPolicy = CANONICAL_POLICIES.some((p) => p.id === "pol-007" && p.invariant_key === "approval_required_for_mutations")
+
+      passed = hasKinds && hasPolicy
+      violationCount = passed ? 0 : 1
+      detail = passed
+        ? `pol-007 wired: ${APPROVAL_REQUIRED_KINDS.length} approval-required kind(s) registered`
+        : "pol-007 not wired — approval-required gate may be disabled"
+    } catch (err) {
+      passed = false
+      violationCount = 1
+      detail = `Check failed: ${err instanceof Error ? err.message : String(err)}`
+    }
+
+    invariants.push({
+      key: "approval_required_for_mutations",
+      name: "Approval Required for Engine Mutations (pol-007)",
       passed,
       violation_count: violationCount,
       detail,

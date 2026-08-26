@@ -11,6 +11,7 @@
  * 4. Logs audit trail
  */
 
+import { z } from "zod/v4";
 import { randomBytes } from "crypto";
 
 import { validateGroupId } from "@/lib/validation/group-id";
@@ -70,11 +71,12 @@ export interface SyscallContext {
   /** Additional audit context */
   audit_context?: Record<string, unknown>;
 
-  /**
-   * Explicit governed approval identity.
-   * Required when the syscall targets an approval-required mutation kind.
-   */
-  approval_ref?: string;
+/**
+ * Explicit governed approval identity.
+ * Required when the syscall targets an approval-required mutation kind.
+ * Must be a well-formed UUID (canonical approval identity shape).
+ */
+approval_ref?: string;
 }
 
 /**
@@ -96,15 +98,15 @@ export type MutationType =
  * target resolver layer.
  */
 export const APPROVAL_REQUIRED_KINDS = [
-  "runtime",
-  "database",
-  "mcp",
   "cron",
+  "database",
+  "done_status",
   "live_hook",
+  "mcp",
+  "notion_sync",
+  "runtime",
   "ruvix",
   "semantic_promotion",
-  "notion_sync",
-  "done_status",
 ] as const;
 
 export type ApprovalRequiredKind = (typeof APPROVAL_REQUIRED_KINDS)[number];
@@ -128,6 +130,7 @@ export interface MutationRequest {
   /**
    * Explicit governed approval identity.
    * Required when the mutation kind is in APPROVAL_REQUIRED_KINDS.
+   * Must be a well-formed UUID (canonical approval identity shape).
    */
   approval_ref?: string;
 }
@@ -210,8 +213,21 @@ async function executeSyscall<T>(
     // ─────────────────────────────────────────────────────────────────────────
     // Step 4: Approval-required gate (REQ-GOV-008)
     // ─────────────────────────────────────────────────────────────────────────
+    //
+    // approval_ref resolution rule: request-level approval_ref overrides the
+    // context-level approval_ref. All approval-required syscalls use the same
+    // carrier, so callers can pass it either via SyscallContext or the typed
+    // request payload (e.g., MutationRequest). The resolved value is validated
+    // as a well-formed UUID before the gate is considered satisfied.
+    //
+    // Note: resolution against the canonical approval store (canonical_proposals)
+    // is the approval-lifecycle layer's responsibility; the control plane only
+    // enforces presence + well-formed UUID format here.
 
-    const approvalReason = requireApprovalRef(intent, subject, context.approval_ref);
+    const resolvedApprovalRef = context.approval_ref;
+    const approvalReason = requireApprovalRef(intent, subject, resolvedApprovalRef);
+    const approvalRequired = approvalReason !== undefined || isApprovalRequiredKind(intent, subject);
+
     if (approvalReason) {
       throw new Error(approvalReason);
     }
@@ -221,16 +237,30 @@ async function executeSyscall<T>(
     // ─────────────────────────────────────────────────────────────────────────
 
     const data = await executor(claims);
-    
+
     // ─────────────────────────────────────────────────────────────────────────
-    // Step 5: Return success
+    // Step 6: Audit trail — include approval_required + gate decision
     // ─────────────────────────────────────────────────────────────────────────
-    
+
+    const auditId = generateAuditId(intent, subject, context.group_id);
+    if (approvalRequired) {
+      context.audit_context = {
+        ...context.audit_context,
+        approval_required: true,
+        approval_decision: resolvedApprovalRef ? "approved" : "denied",
+        approval_ref: resolvedApprovalRef ?? null,
+      };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Step 7: Return success
+    // ─────────────────────────────────────────────────────────────────────────
+
     return {
       success: true,
       data,
       proof,
-      auditId: generateAuditId(intent, subject, context.group_id),
+      auditId,
     };
   } catch (error) {
     // H-005 FIX: Preserve stack trace in debug mode
@@ -263,6 +293,15 @@ function generateAuditId(intent: string, subject: string, groupId: string): stri
 }
 
 /**
+ * Determine whether a syscall subject/intent matches an approval-required kind.
+ *
+ * @returns true if the syscall targets an APPROVAL_REQUIRED_KINDS category.
+ */
+function isApprovalRequiredKind(intent: string, subject: string): boolean {
+  return detectMutationKind(intent, subject) !== undefined;
+}
+
+/**
  * Determine whether a syscall requires an explicit approval reference.
  *
  * REQ-GOV-008: runtime/database/MCP/cron/live hook/RuVix enforcement/
@@ -270,8 +309,11 @@ function generateAuditId(intent: string, subject: string, groupId: string): stri
  * approval and `approval_required=true`.
  *
  * The resource subject uses the convention `<kind>:<target>` (e.g.
- * `database:pg:events`). We also consider the syscall intent as a secondary
- * signal for kinds that do not naturally map to a resource prefix.
+ * `database:pg:events`). The intent is used only as a fallback for genuine
+ * runtime mutations that do not carry a prefix (spawn/kill).
+ *
+ * The approval_ref must be a well-formed UUID (canonical approval identity
+ * shape). Non-UUID strings are denied.
  *
  * @param intent - The syscall intent
  * @param subject - The target resource
@@ -297,11 +339,21 @@ function requireApprovalRef(
     return `Approval reference too long for ${kind} mutation: ${normalizedRef.length} chars (max 256)`;
   }
 
+  // Pike H1: approval_ref must be a well-formed governed approval identity (UUID).
+  const uuidResult = z.string().uuid().safeParse(normalizedRef);
+  if (!uuidResult.success) {
+    return `Approval required for ${kind} mutation: approval_ref must be a valid UUID`;
+  }
+
   return undefined;
 }
 
 /**
  * Detect the approval-required mutation kind from intent and subject.
+ *
+ * Single source of truth: iterates APPROVAL_REQUIRED_KINDS for subject prefix
+ * detection. Only genuine runtime mutations without a prefix fall back to
+ * intent-based detection (spawn/kill).
  *
  * @returns The matching kind, or undefined if this syscall is not approval-required.
  */
@@ -310,21 +362,14 @@ function detectMutationKind(intent: string, subject: string): ApprovalRequiredKi
   const intentLower = intent.toLowerCase();
 
   // Subject-prefix detection: "kind:target"
-  if (subjectLower.startsWith("runtime:")) return "runtime";
-  if (subjectLower.startsWith("database:")) return "database";
-  if (subjectLower.startsWith("mcp:")) return "mcp";
-  if (subjectLower.startsWith("cron:")) return "cron";
-  if (subjectLower.startsWith("live_hook:")) return "live_hook";
-  if (subjectLower.startsWith("ruvix:")) return "ruvix";
-  if (subjectLower.startsWith("semantic_promotion:")) return "semantic_promotion";
-  if (subjectLower.startsWith("notion_sync:")) return "notion_sync";
-  if (subjectLower.startsWith("done_status:")) return "done_status";
+  const matchedKind = APPROVAL_REQUIRED_KINDS.find((k) =>
+    subjectLower.startsWith(`${k}:`)
+  );
+  if (matchedKind) return matchedKind;
 
   // Intent-based detection for syscalls whose resource does not carry a prefix.
   if (intentLower === "mutate") return "database";
   if (intentLower === "spawn" || intentLower === "kill") return "runtime";
-  if (intentLower === "policy") return "ruvix";
-  if (intentLower === "budget") return "ruvix";
 
   return undefined;
 }
@@ -347,10 +392,18 @@ export async function syscall_mutate(
   request: MutationRequest,
   context: SyscallContext
 ): Promise<SyscallResult<{ affected_rows: number; auditId: string }>> {
+  // approval_ref resolution rule: request-level approval_ref wins over the
+  // context-level approval_ref. executeSyscall reads only the resolved
+  // context.approval_ref so there is a single carrier throughout the gate.
+  const resolvedContext: SyscallContext = {
+    ...context,
+    approval_ref: request.approval_ref ?? context.approval_ref,
+  };
+
   return executeSyscall(
     "mutate",
     `database:${request.target}`,
-    { ...context, approval_ref: request.approval_ref ?? context.approval_ref },
+    resolvedContext,
     async (claims) => {
       const result = await resolveTarget({
         intent: "mutate",
@@ -751,4 +804,20 @@ export const syscallTable: Record<string, (...args: unknown[]) => Promise<Syscal
  */
 export function getAvailableSyscalls(): string[] {
   return Object.keys(syscallTable);
+}
+
+/**
+ * Test-only entry point that runs executeSyscall with an arbitrary intent and
+ * subject. This lets unit tests exercise the approval gate for kinds that do
+ * not have a dedicated syscall wrapper yet (e.g., mcp:, cron:).
+ *
+ * @internal
+ */
+export async function executeSyscallDirectlyForTest<T>(
+  intent: string,
+  subject: string,
+  context: SyscallContext,
+  executor: (claims: ProofClaims) => Promise<T>
+): Promise<SyscallResult<T>> {
+  return executeSyscall(intent, subject, context, executor);
 }

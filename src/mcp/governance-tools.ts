@@ -4,7 +4,7 @@
  * Implements 5 governance tools for the canonical Allura Brain MCP server:
  * 1. governance_list_policies   — list all 6 invariant policies
  * 2. governance_get_policy      — retrieve a single policy by ID
- * 3. governance_check_gate      — evaluate 6 invariants for a proposed action
+ * 3. governance_check_gate      — evaluate 7 invariants for a proposed action
  * 4. governance_apply_policy_override — HITL-gated policy override
  * 5. governance_audit_log       — paginated read of governance audit events
  *
@@ -247,7 +247,7 @@ export async function governance_get_policy(
 // ── 3. governance_check_gate ─────────────────────────────────────────────
 
 /**
- * Evaluates all 6 invariants for a proposed action and returns pass/fail per check.
+ * Evaluates all 7 invariants for a proposed action and returns pass/fail per check.
  * Appends a governance_gate_checked event to the events table.
  * Always completes — individual invariant failures are non-throwing (they set pass=false).
  */
@@ -263,7 +263,7 @@ export async function governance_check_gate(
 
   const ctx = request.context ?? {}
 
-  // Evaluate each of the 6 invariants
+  // Evaluate each of the 7 invariants
   const checks = evaluateInvariants(groupId, request.action, ctx)
   const overallPass = checks.every((c) => c.pass)
 
@@ -311,7 +311,7 @@ export async function governance_check_gate(
 }
 
 /**
- * Evaluate all 6 invariants for a given action and context.
+ * Evaluate all 7 invariants for a given action and context.
  * Returns one check per invariant.
  */
 function evaluateInvariants(
@@ -386,6 +386,22 @@ function evaluateInvariants(
       reason: /^allura-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(groupId)
         ? `group_id '${groupId}' matches required allura-* namespace pattern`
         : `group_id '${groupId}' does not match ^allura-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$`,
+    },
+
+    // 7. Approval required for engine mutations (pol-007)
+    {
+      invariant: "Approval Required for Engine Mutations",
+      invariant_key: "approval_required_for_mutations",
+      pass:
+        !ctx.approval_required ||
+        (typeof ctx.approval_required === "boolean" && ctx.approval_required === true &&
+          typeof ctx.approval_ref === "string" && ctx.approval_ref.length > 0),
+      reason:
+        ctx.approval_required === true
+          ? typeof ctx.approval_ref === "string" && ctx.approval_ref.length > 0
+            ? "Approval reference present for approval-required mutation"
+            : "Approval required but no approval_ref provided"
+          : "Action is not flagged as approval-required",
     },
   ]
 }
