@@ -24,16 +24,16 @@
  * Role helpers live in src/lib/auth/roles.ts.
  */
 
-import { NextRequest, NextResponse, type NextFetchEvent } from "next/server"
+import { type NextFetchEvent, NextRequest, NextResponse } from "next/server"
 
-import { isClerkEnabled } from "@/lib/auth/config"
 import { extractAlluraMetadata } from "@/lib/auth/clerk"
+import { isClerkEnabled } from "@/lib/auth/config"
 import { getDevUserSync } from "@/lib/auth/dev-auth"
-import { AUTH_LOGIN_PATH } from "@/lib/auth/redirect-target"
-import { resolveRouteAuthority } from "@/lib/auth/route-scope-manifest"
-import { hasPermission } from "@/lib/auth/roles"
-import type { AlluraRole } from "@/lib/auth/types"
 import { emitGatedAudit } from "@/lib/auth/edge-audit"
+import { AUTH_LOGIN_PATH } from "@/lib/auth/redirect-target"
+import { hasPermission } from "@/lib/auth/roles"
+import { resolveRouteAuthority } from "@/lib/auth/route-scope-manifest"
+import type { AlluraRole } from "@/lib/auth/types"
 
 const AUTH_HEADER_NAMES = [
   "x-allura-user-id",

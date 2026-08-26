@@ -148,6 +148,11 @@ function makeSearchRequest(overrides?: Partial<MemorySearchRequest>): MemorySear
   return {
     query: "test query",
     group_id: VALID_GROUP_ID as any,
+    scope: {
+      group_id: VALID_GROUP_ID as any,
+      workspace_id: "workspace-test",
+      agent_id: "integration-test-agent",
+    },
     status: "all" as any, // Bypass approved-only path to exercise RuVector primary backend
     ...overrides,
   };

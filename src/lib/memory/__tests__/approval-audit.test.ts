@@ -19,15 +19,14 @@
 
 import { beforeEach, describe, expect, it, type MockInstance, vi } from "vitest"
 import {
-  type ApprovalAuditEvent,
   ApprovalAuditAuthorizationError,
+  type ApprovalAuditEvent,
   ApprovalRequiredError,
-
-  SegregationOfDutiesError,
   hasApprovalEvent,
-  logProposalNeedsEvidenceEvent,
   logApprovalEvent,
+  logProposalNeedsEvidenceEvent,
   requireApprovalBeforePromotion,
+  SegregationOfDutiesError,
 } from "@/lib/memory/approval-audit"
 
 // ── Mock Setup ────────────────────────────────────────────────────────────

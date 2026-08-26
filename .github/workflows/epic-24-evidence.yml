@@ -146,6 +146,8 @@ jobs:
       POSTGRES_DB: memory
       POSTGRES_USER: allura
       POSTGRES_PASSWORD: allura-ci-password
+      POSTGRES_APP_USER: allura_app
+      POSTGRES_APP_PASSWORD: change-me-in-production
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -201,6 +203,8 @@ jobs:
       POSTGRES_DB: memory
       POSTGRES_USER: allura
       POSTGRES_PASSWORD: allura-ci-password
+      POSTGRES_APP_USER: allura_app
+      POSTGRES_APP_PASSWORD: change-me-in-production
       GRAPH_BACKEND: ruvector
       PROMOTION_MODE: soc2
       RUVECTOR_EMBEDDING_BASE_URL: http://127.0.0.1:9

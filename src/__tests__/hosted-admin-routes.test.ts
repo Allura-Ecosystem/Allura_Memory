@@ -18,9 +18,9 @@ vi.mock("@/lib/workspace/repository", () => ({
   listWorkspacesForGroup: (...a: unknown[]) => listWorkspacesForGroup(...a),
 }));
 
-import { POST as tokensPOST, GET as tokensGET } from "@/app/api/tokens/route";
-import { POST as wsPOST } from "@/app/api/workspaces/route";
 import { POST as revokePOST } from "@/app/api/tokens/[id]/revoke/route";
+import { GET as tokensGET, POST as tokensPOST } from "@/app/api/tokens/route";
+import { POST as wsPOST } from "@/app/api/workspaces/route";
 
 function req(url: string, role: string | null, body?: unknown): NextRequest {
   const headers: Record<string, string> = { "content-type": "application/json" };

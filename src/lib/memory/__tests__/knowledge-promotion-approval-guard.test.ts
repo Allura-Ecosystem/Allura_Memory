@@ -18,11 +18,11 @@ vi.mock("../../db/tenant-transaction", () => ({
   withWorkspaceTransaction: vi.fn(),
 }))
 
-import { getPool } from "../../postgres/connection"
 import { withWorkspaceTransaction } from "../../db/tenant-transaction"
+import { getPool } from "../../postgres/connection"
 import {
-  linkInsightToAgent,
   type KnowledgeInsight,
+  linkInsightToAgent,
   promoteToNeo4j,
   queryApprovedInsights,
 } from "../knowledge-promotion"

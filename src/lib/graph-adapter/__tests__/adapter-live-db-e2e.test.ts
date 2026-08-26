@@ -11,9 +11,9 @@
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { closePool, getPool } from "@/lib/postgres/connection"
-import { getGraphBackend, createGraphAdapter } from "@/lib/graph-adapter/factory"
+import { createGraphAdapter } from "@/lib/graph-adapter/factory"
 import type { IGraphAdapter } from "@/lib/graph-adapter/types"
+import { closePool, getPool } from "@/lib/postgres/connection"
 
 // ── Gate: only run against a live stack ──────────────────────────────────────
 
@@ -32,7 +32,7 @@ const E2E_PRINCIPAL = "adapter-live-e2e"
 describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
   let pool: import("pg").Pool
   let adapter: IGraphAdapter
-  let testMemoryIds: string[] = []
+  const testMemoryIds: string[] = []
 
   beforeAll(async () => {
     // Set GRAPH_BACKEND before creating adapter
