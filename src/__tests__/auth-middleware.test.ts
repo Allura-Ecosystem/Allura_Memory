@@ -235,6 +235,8 @@ describe("Auth Middleware", () => {
           "x-allura-user-id": "spoofed-user",
           "x-allura-role": "viewer",
           "x-allura-group-id": "allura-attacker",
+          "x-allura-workspace-id": "workspace-attacker",
+          "x-allura-session-id": "session-attacker",
           "x-allura-email": "spoof@example.test",
           "x-allura-name": "Spoofed User",
           "x-allura-image-url": "https://example.test/spoof.png",
@@ -245,6 +247,8 @@ describe("Auth Middleware", () => {
       expect(response.headers.get("x-middleware-request-x-allura-user-id")).toBe("dev-user-allura")
       expect(response.headers.get("x-middleware-request-x-allura-role")).toBe("admin")
       expect(response.headers.get("x-middleware-request-x-allura-group-id")).toBe("allura-system")
+      expect(response.headers.get("x-middleware-request-x-allura-workspace-id")).toBe("workspace-allura")
+      expect(response.headers.get("x-middleware-request-x-allura-session-id")).toBe("dev:dev-user-allura")
       expect(response.headers.get("x-middleware-request-x-allura-email")).toBe("dev@allura.local")
       expect(response.headers.get("x-middleware-request-x-allura-name")).toBe("Dev User")
       expect(response.headers.get("x-middleware-request-x-allura-image-url")).toBeNull()
@@ -257,6 +261,8 @@ describe("Auth Middleware", () => {
           "x-allura-user-id": "spoofed-user",
           "x-allura-role": "admin",
           "x-allura-group-id": "allura-attacker",
+          "x-allura-workspace-id": "workspace-attacker",
+          "x-allura-session-id": "session-attacker",
           "x-allura-email": "spoof@example.test",
           "x-allura-name": "Spoofed User",
           "x-allura-image-url": "https://example.test/spoof.png",
@@ -267,6 +273,8 @@ describe("Auth Middleware", () => {
       expect(response.headers.get("x-middleware-request-x-allura-user-id")).toBeNull()
       expect(response.headers.get("x-middleware-request-x-allura-role")).toBeNull()
       expect(response.headers.get("x-middleware-request-x-allura-group-id")).toBeNull()
+      expect(response.headers.get("x-middleware-request-x-allura-workspace-id")).toBeNull()
+      expect(response.headers.get("x-middleware-request-x-allura-session-id")).toBeNull()
       expect(response.headers.get("x-middleware-request-x-allura-email")).toBeNull()
       expect(response.headers.get("x-middleware-request-x-allura-name")).toBeNull()
       expect(response.headers.get("x-middleware-request-x-allura-image-url")).toBeNull()
