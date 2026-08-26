@@ -7,7 +7,7 @@
 
 ## Outcome
 
-Establish the trust boundary, evidence schema, source allowlist, retention rules, roles, and the Bumblebee naming boundary before any ingestion or matching work begins.
+Establish the trust boundary, evidence schema, source allowlist, retention rules, roles, Bumblebee naming boundary, and V1 authority contract before any ingestion or matching work begins.
 
 ## Acceptance Criteria
 
@@ -17,6 +17,8 @@ Establish the trust boundary, evidence schema, source allowlist, retention rules
 - [ ] Trust/freshness rules are defined: stale feed handling, degraded state, and fail-closed behavior.
 - [ ] Retention policy is defined for advisories, alerts, and evidence.
 - [ ] Roles are defined: who can add sources, who can review alerts, who can approve mitigation drafts.
+- [ ] V1 authority is defined and testable: verified evidence may create an alert and simulated mitigation proposal; it cannot activate enforcement or change a worker schedule.
+- [ ] The three intake lanes are defined with source ownership and freshness expectations: approved internal events, allowlisted scheduled advisory polling, and inventory reconciliation.
 - [ ] Bumblebee naming boundary is reconciled: Guard and Threat Watch have unambiguous contracts.
 - [ ] No ingestion, scanning, or policy mutation is authorized by this story.
 
@@ -26,6 +28,7 @@ Establish the trust boundary, evidence schema, source allowlist, retention rules
 - Source allowlist with verification rules.
 - Roles and retention policy document.
 - Bumblebee naming boundary reconciliation.
+- V1 authority and intake-lane contract, including prohibited enforcement actions.
 
 ## Rollback
 

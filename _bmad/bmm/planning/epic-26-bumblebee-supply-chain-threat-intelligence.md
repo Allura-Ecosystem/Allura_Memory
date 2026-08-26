@@ -49,6 +49,14 @@ The plugin surface contains the dashboard module, narrow MCP tools, skills, conn
 - The plugin is server allow-listed and independently disableable without affecting the shell or other modules.
 - The existing Bumblebee gateway naming must be reconciled before implementation so Guard and Threat Watch have unambiguous contracts.
 
+## V1 Authority Contract
+
+Bumblebee V1 is **alert plus simulated proposal** authority. It may automatically ingest allowlisted evidence, correlate a verified exposure, create one deduplicated alert, and prepare a versioned mitigation-policy proposal with dry-run and rollback evidence.
+
+It may not activate a policy, block a package or CI workflow, revoke a token, lock a workspace, isolate an endpoint, or change a worker schedule. Those actions remain outside the plugin and require the canonical Allura role, policy, approval, and receipt path.
+
+Continuous intake uses three independently observable lanes: event-driven signals from approved internal security systems, scheduled polling of allowlisted advisory sources, and periodic reconciliation against the approved inventory. A scheduled worker is an implementation of this contract, not an authority to act.
+
 ## Story Map
 
 | Story | Outcome | Depends on | Ship condition |
@@ -67,6 +75,7 @@ The plugin surface contains the dashboard module, narrow MCP tools, skills, conn
 - [ ] A malicious or stale feed cannot activate a policy, execute code, or cross tenant boundaries.
 - [ ] A newly matched high-severity exposure creates one deduplicated alert and a reviewable mitigation draft; it does not activate enforcement.
 - [ ] Policy activation, scheduler configuration, token revocation, workspace locking, and connector actions are denied without the required role, policy, approval, and receipt.
+- [ ] The V1 authority contract is enforced: automatic intake, correlation, alerts, and simulated proposals are permitted; enforcement actions are denied until separately approved.
 - [ ] Disabling Bumblebee leaves the dashboard shell, core API/MCP controls, and other modules operational.
 - [ ] Initial replay fixtures cover the 2025 Nx s1ngularity compromise, the 2025 Shai-Hulud supply-chain worm pattern, and a mutable GitHub Action reference compromise.
 - [ ] The operator can replay an incident from advisory through exposure, decision, action result, and recovery evidence.
@@ -82,6 +91,7 @@ The plugin surface contains the dashboard module, narrow MCP tools, skills, conn
 
 - [Allura Hosted Security](../../../docs/allura-hosted/SECURITY.md)
 - [Allura Risks and Decisions](../../../docs/allura/RISKS-AND-DECISIONS.md)
+- [AD-57 — Bumblebee V1 authority boundary](../../../docs/allura/RISKS-AND-DECISIONS.md)
 - [NIST AI 100-2e2025](https://csrc.nist.gov/pubs/ai/100/2/e2025/final)
 - [CISA supply-chain alert](https://content.govdelivery.com/accounts/USDHSCISA/bulletins/3f408db)
 - [Nx s1ngularity postmortem](https://nx.dev/blog/s1ngularity-postmortem)

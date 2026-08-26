@@ -92,6 +92,36 @@ Run truthfulness rules: no “hallucination-free” claims, no yolo/forever auto
 
 Governance receipt rule: every mutation and approval must show intent, actor, source, policy, validation, audit trail, `gate_decision` (`Permit | Defer | Deny`), and `approval_required` before completion.
 
+### Planned Bumblebee V1 trust and authority contract
+
+Bumblebee is a threat-intelligence and inventory-correlation boundary, not an
+autonomous security responder. Its canonical names are **Bumblebee Guard** for
+approved inventory reconciliation and **Bumblebee Threat Watch** for advisory
+intake/correlation. Neither name grants a different authority level.
+
+Each advisory must record source identity and URL, publisher, publication time,
+fetch time, trust state, freshness state, content revision/hash, classification or
+redaction policy, and retention disposition. A source is eligible only when it is
+on the reviewed allowlist and passes its defined verification rule. Failed,
+unverified, stale, malformed, or scope-conflicting input becomes a distinct
+`rejected`, `degraded`, or `stale` evidence state; it must not appear as a verified
+finding. `trust_state` and `freshness_state` remain separate contract dimensions.
+
+V1 permits three intake lanes only: approved internal events, allowlisted scheduled
+advisory polling, and periodic reconciliation of approved inventory. A verified
+match may create a deduplicated alert and a **simulated** mitigation proposal.
+It cannot scan endpoints, activate policy, block CI or packages, change schedules,
+revoke credentials, lock a workspace, or contain a host. Those are
+separate human-authorized workflows with their own receipt.
+
+| Action | V1 authority | Required owner |
+|---|---|---|
+| Add/change advisory source or verification rule | Human-approved configuration only | Security owner + governance owner |
+| Review alert and evidence | Read/review | Security reviewer |
+| Approve a mitigation draft for a later enforcement flow | Human approval only | Authorized approver |
+| Create alert/simulated proposal from verified evidence | Automatic, deduplicated | Allura worker under AD-57 |
+| Enforcement, schedule change, or endpoint action | Prohibited | Separate approved workflow |
+
 Brand/accessibility rules: use existing Allura shell, navigation, logo assets, and semantic tokens; do not import Difference Driven tokens, colors, language, or assumptions; avoid marketing hero sections, fake charts, vanity metrics, AI-gradient tropes, inflated claims, or generated logo marks; approval actions must be keyboard reachable and confirmation dialogs must trap/restore focus.
 
 ## Memory Command Center Addendum
@@ -594,6 +624,13 @@ The following event types are recorded in the PostgreSQL `events` table (append-
 | `proposal_rejected` | Human rejects proposal | Curator reject route |
 | `memory_promoted` | Memory written to Neo4j (semantic layer) | Promotion worker |
 | `memory_deprecated` | Old version marked deprecated via SUPERSEDES | Version workflow |
+| `threat_advisory_received` | Allowlisted advisory or approved internal evidence accepted as provisional | Planned Bumblebee intake |
+| `threat_evidence_rejected` | Evidence denied for trust, freshness, schema, or scope failure | Planned Bumblebee intake |
+| `threat_alert_created` | Deduplicated alert created from verified exposure evidence | Planned Bumblebee correlation |
+| `mitigation_proposal_simulated` | Non-enforcing mitigation draft prepared for human review | Planned Bumblebee correlation |
+
+These planned event types are defined by the planned Story 26.1 contracts in
+[DATA-DICTIONARY.md](./DATA-DICTIONARY.md#planned-story-261-bumblebee-threat-intelligence-contracts); they do not denote deployed event producers.
 
 ### Curator Pipeline State Machine
 
@@ -810,6 +847,8 @@ stateDiagram-v2
 9. **Immutable insight nodes.** Neo4j nodes are never updated in place. Any change requires a new proposal → approval → new node with `SUPERSEDES` edge.
 
 10. **30-day soft-delete recovery.** Memories can be restored within 30 days of soft-deletion. After that, they are permanently gone.
+
+11. **Bumblebee V1 is proposal-only (AD-57).** Its only automatic outputs are verified, deduplicated alerts and simulated mitigation proposals. It is read-only toward endpoints and external enforcement systems.
 
 ---
 

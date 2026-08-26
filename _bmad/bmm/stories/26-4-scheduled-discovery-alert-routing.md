@@ -7,16 +7,18 @@
 
 ## Outcome
 
-A governed worker runs scheduled discovery scans, routes alerts to the right tenants/workspaces, and maintains alert lifecycle, freshness, and health evidence.
+A governed worker operates the scheduled advisory-polling and reconciliation lanes, routes alerts to the right tenants/workspaces, and maintains alert lifecycle, freshness, and health evidence. Internal security events remain a separately observable event-driven lane.
 
 ## Acceptance Criteria
 
 - [ ] Governed worker schedule is configured with security-owner approval.
+- [ ] Polling cadence, checkpoints, retry behavior, and source freshness expectations are security-owner-configured and auditable; the worker cannot alter its own schedule.
 - [ ] Alert lifecycle is defined: new, acknowledged, mitigated, resolved, stale.
 - [ ] Freshness/degraded states are visible — stale alerts are marked, not silently retained.
 - [ ] Alert routing is deduplicated and tenant-scoped.
 - [ ] Scheduler health is monitored with audit evidence.
 - [ ] A newly matched high-severity exposure creates one deduplicated alert and a reviewable mitigation draft; it does not activate enforcement.
+- [ ] Scheduler execution can create alerts and simulated proposals only; package blocks, CI changes, containment, and policy activation remain denied without a separate approval receipt.
 - [ ] Disabling the scheduler leaves the dashboard shell, core API/MCP controls, and other modules operational.
 
 ## Evidence

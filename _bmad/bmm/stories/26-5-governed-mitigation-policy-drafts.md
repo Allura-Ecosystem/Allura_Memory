@@ -7,17 +7,19 @@
 
 ## Outcome
 
-A verified exposure maps to a versioned mitigation template, producing a reviewable policy draft with dry-run results, scope explanation, and an approval-required receipt.
+A verified exposure maps to a versioned mitigation template, producing a reviewable simulated policy draft with dry-run results, scope explanation, rollback evidence, and an approval-required receipt.
 
 ## Acceptance Criteria
 
 - [ ] Verified exposure maps to a versioned mitigation template.
 - [ ] Policy draft is reviewable — not active policy.
+- [ ] Template parameters are derived from verified exposure evidence; untrusted advisory text cannot introduce an executable instruction or broaden the proposed scope.
 - [ ] Dry-run result shows what would happen without executing.
 - [ ] Scope explanation is included: what systems, packages, or workflows are affected.
 - [ ] Approval-required receipt is generated: actor, action, rationale, policy reference, evidence references, timestamp.
 - [ ] Policy activation, enforcement changes, schedule changes, and external response actions use the canonical Allura approval and receipt path.
 - [ ] A policy draft is not active policy — activation requires explicit approval.
+- [ ] Draft generation does not execute package blocks, CI changes, containment, or connector actions.
 
 ## Evidence
 
