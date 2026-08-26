@@ -11,16 +11,15 @@
 
 import { z } from "zod";
 import {
-  InventorySourceRecord,
   InventoryQuery as InventoryQuerySchema,
   InventoryRecord as InventoryRecordSchema,
-  InventoryQueryResult as InventoryQueryResultSchema,
+  InventorySourceRecord,
   TenantScope as TenantScopeSchema,
 } from "./schemas";
 import type {
-  InventoryRecord,
   InventoryQuery,
   InventoryQueryResult,
+  InventoryRecord,
   TenantScope,
 } from "./types";
 

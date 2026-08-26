@@ -8,13 +8,13 @@
 import type { z } from "zod";
 import type {
   ArtifactType,
-  TrustState,
   FreshnessState,
-  InventoryRecord,
   InventoryQuery,
   InventoryQueryResult,
+  InventoryRecord,
   InventorySourceRecord,
   TenantScope,
+  TrustState,
 } from "./schemas";
 
 // Re-export inferred types from the Zod schemas so consumers can import either
