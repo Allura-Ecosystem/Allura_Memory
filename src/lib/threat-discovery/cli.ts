@@ -22,26 +22,45 @@
  * Usage: bun src/lib/threat-discovery/cli.ts --group-id allura-system --workspace-id ws-main --principal-id threat-discovery-worker
  */
 
+import { readFile } from "node:fs/promises"
+import { resolve } from "node:path"
 import { runDiscoveryCycle } from "./worker"
 import type { ResolvedWorkspaceScope } from "../db/workspace-scope"
-import { createInventoryService } from "../inventory/service"
+import { parseBunLock } from "../inventory/lockfile-parser"
+import { hydrateInventoryService, reconcileInventory } from "../inventory/reconciliation"
 import { buildQueryTargets, pollAdvisorySources } from "../threat-ingestion/poller"
 
 const isMainModule = import.meta.path === Bun.main
+const BUN_LOCK_SOURCE_REF = "bun.lock"
 
 function getArg(args: string[], name: string): string | undefined {
   const idx = args.indexOf(`--${name}`)
   return idx >= 0 && args[idx + 1] ? args[idx + 1] : undefined
 }
 
+/**
+ * Reconcile this repo's own bun.lock into inventory_records (Bumblebee
+ * Guard), then hydrate an in-memory InventoryService from what is actually
+ * persisted. A read/parse failure reconciles nothing this cycle (fail-soft
+ * -- reconcileInventory's own empty-list guard means it never wrongly ages
+ * out prior good data) and the cycle proceeds against whatever was already
+ * persisted from an earlier successful run.
+ */
+async function reconcileAndHydrate(scope: ResolvedWorkspaceScope) {
+  try {
+    const content = await readFile(resolve(process.cwd(), "bun.lock"), "utf8")
+    const parsed = parseBunLock(content)
+    const result = await reconcileInventory(scope, BUN_LOCK_SOURCE_REF, parsed)
+    console.log(`[ThreatDiscovery] Guard: reconciled bun.lock -- upserted=${result.upserted} marked_stale=${result.markedStale}`)
+  } catch (error) {
+    console.warn(`[ThreatDiscovery] Guard: bun.lock reconciliation failed this cycle (proceeding with prior data): ${error instanceof Error ? error.message : String(error)}`)
+  }
+
+  return hydrateInventoryService(scope)
+}
+
 export async function runOneCycle(scope: ResolvedWorkspaceScope): Promise<void> {
-  // Story 26.2's inventory service is in-memory; a real deployment's
-  // discovery worker must be handed a populated InventoryProvider from
-  // wherever the live inventory actually lives (out of this story's
-  // scope -- inventory persistence/reconciliation is not yet built).
-  // This CLI wires the pipeline end-to-end against an empty inventory
-  // until that exists, which is honestly a no-op in production today.
-  const inventory = createInventoryService()
+  const inventory = await reconcileAndHydrate(scope)
   const targets = buildQueryTargets({ group_id: scope.tenantId, workspace_id: scope.workspaceId }, inventory)
 
   console.log(`[ThreatDiscovery] Polling ${targets.length} inventory targets across 3 approved sources`)

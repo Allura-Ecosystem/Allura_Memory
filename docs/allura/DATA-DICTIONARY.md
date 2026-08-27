@@ -1170,7 +1170,14 @@ package-manager invocation. No DB tables or migrations are added for this story.
 `trust_state` and `freshness_state` values are shared with the Planned Story 26.1
 `ThreatAdvisoryEvidence` contract; change both in lockstep.
 
-### `InventoryRecord`
+### `InventoryRecord` — persisted as `inventory_records` (migration 44, Bumblebee Guard, Story 26.2 extension)
+
+The schema below was originally an in-memory-only shape (`src/lib/inventory/service.ts`).
+It is now also a real, persisted table with the identical field names, populated by
+reconciling real sources -- currently `bun.lock` only (`src/lib/inventory/lockfile-parser.ts`,
+`reconciliation.ts`). Unlike `governance_receipts`/`mitigation_receipts`/`threat_alerts`,
+this table is fully mutable (no restricted-column trigger) -- a real dependency's
+version and hash genuinely change between reconciliation cycles.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
