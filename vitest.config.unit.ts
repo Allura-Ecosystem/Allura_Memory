@@ -38,6 +38,8 @@ export default defineConfig({
       // Story 26.4 Slice B — external advisory ingestion. All HTTP calls
       // mocked; no live network access in the test suite itself.
       "src/lib/threat-ingestion/**/*.test.ts",
+      // Story 26.6 — containment connectors and response receipts.
+      "src/lib/containment/**/*.test.ts",
       // Story 26.5 — governed mitigation drafts must stay in the CI unit lane.
       "src/lib/mitigation/**/*.test.ts",
       "src/lib/memory/config.test.ts",

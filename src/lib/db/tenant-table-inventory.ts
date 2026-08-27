@@ -72,6 +72,7 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "mitigation_receipts", class: "tenant-scoped", notes: "Story 26.5 (migration 41): immutable governed mitigation-draft approval/rejection receipts, gated by REQ-GOV-008 approval_ref", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "threat_alerts", class: "tenant-scoped", notes: "Story 26.4 (migration 42): durable, deduplicated exposure alerts; UPDATE restricted to lifecycle_state/updated_at only", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "inventory_records", class: "tenant-scoped", notes: "Bumblebee Guard (migration 44): persisted, fully-mutable supply-chain inventory reconciled from bun.lock", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "containment_receipts", class: "tenant-scoped", notes: "Story 26.6 (migration 45): immutable governed containment-action receipts, gated by REQ-GOV-008 approval_ref and AD-58 admin-role constraint", workspaceTreatment: "workspace-scoped-new-writes" },
 
   // Credential / identity tables
   { table: "mcp_tokens", class: "tenant-scoped-credential", notes: "MCP credentials; lookup by token prefix before tenant resolution" },
