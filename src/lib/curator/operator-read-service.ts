@@ -1,8 +1,8 @@
 /**
- * Bumblebee operator-module read layer (Story 26.7).
+ * Shared curator-owned operator read boundary (Story 25.3a).
  *
- * The five operator surfaces -- Sources, Exposures, Policy Drafts, Incidents,
- * and Receipts -- all read through this module. Every function is READ-ONLY
+ * Operator surfaces -- including Bumblebee -- consume this curator-owned
+ * boundary. Every function is READ-ONLY
  * (SELECT only, no INSERT/UPDATE/DELETE anywhere in this file) and every
  * function goes through `withWorkspaceTransaction`, which sets the
  * `app.current_group_id` / `app.current_workspace_id` GUCs that the RLS

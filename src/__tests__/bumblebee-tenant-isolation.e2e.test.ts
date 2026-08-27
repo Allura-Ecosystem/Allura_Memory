@@ -3,7 +3,7 @@
  * module.
  *
  * "A forged tenant cannot read or mutate another tenant's alerts or policy
- * drafts." This exercises the REAL read layer (src/lib/bumblebee/queries.ts)
+ * drafts." This exercises the REAL read layer (src/lib/curator/operator-read-service.ts)
  * against a REAL PostgreSQL instance with RLS enforced -- nothing mocked. Two
  * tenants are seeded with genuinely distinct data, and every surface is then
  * read as each tenant to prove neither can see the other.
@@ -20,7 +20,7 @@ import {
   listIncidents,
   listReceipts,
   listSources,
-} from "@/lib/bumblebee/queries";
+} from "@/lib/curator/operator-read-service";
 import type { ResolvedWorkspaceScope } from "@/lib/db/workspace-scope";
 import { closePool, getPool } from "@/lib/postgres/connection";
 
@@ -188,7 +188,7 @@ describeLive("Bumblebee operator module — adversarial tenant isolation (Story 
     // Structural assertion: if someone later adds a write to this module,
     // this test fails and forces the governed path to be used instead.
     const source = await import("fs/promises").then((fs) =>
-      fs.readFile("src/lib/bumblebee/queries.ts", "utf8"),
+      fs.readFile("src/lib/curator/operator-read-service.ts", "utf8"),
     );
     expect(source).not.toMatch(/\b(INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM)\b/i);
   });

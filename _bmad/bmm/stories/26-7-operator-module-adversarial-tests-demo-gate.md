@@ -1,6 +1,6 @@
 # Story 26.7 — Operator Module, Adversarial Tests, and Demo Gate
 
-**Status:** In Progress — 8 of 9 acceptance criteria met and verified 2026-08-27. AC-2 is blocked on an out-of-epic dependency (canonical Story 25.3b exists but its Epic 25 module registry is dependency-blocked and unimplemented).
+**Status:** In Progress — the direct Bumblebee dashboard route is absent after Story 25.3a scope reconciliation. AC-1, AC-6, and AC-9 therefore lack an active-route evidence path; AC-2 remains blocked on the unimplemented Epic 25 server-issued registry. The remaining five criteria retain their local test evidence, but this story must not be described as "8 of 9 complete."
 **Owner:** Pike + Fowler + Brooks + Bellard
 **Depends on:** 26.4, 26.5, 26.6, Story 25.3b Epic 25 module registry (dependency-blocked)
 **Blocks:** —
@@ -11,15 +11,15 @@ A truthful operator surface with Sources, Exposures, Policy Drafts, Incidents, a
 
 ## Acceptance Criteria
 
-- [x] Operator module surfaces: Sources, Exposures, Policy Drafts, Incidents, and Receipts.
+- [ ] Operator module surfaces: Sources, Exposures, Policy Drafts, Incidents, and Receipts. — **Not currently route-evidenced:** `src/app/dashboard/bumblebee/page.tsx` is absent.
 - [ ] Module is registered through the Epic 25 server-issued module registry. — **Blocked, not deferred.** That registry does not exist; see "AC-2 is genuinely blocked" below.
 - [x] Fail-closed: invalid/incompatible/untrusted/capability-missing modules are rejected.
 - [x] Tenant isolation: a forged tenant cannot read or mutate another tenant's alerts or policy drafts.
 - [x] Accessibility: ARIA/keyboard tests pass for all surfaces.
-- [x] Rollback: disabling Bumblebee leaves the dashboard shell, core API/MCP controls, and other modules operational.
+- [ ] Rollback: disabling Bumblebee leaves the dashboard shell, core API/MCP controls, and other modules operational. — **Not currently route-evidenced:** there is no active Bumblebee route to disable.
 - [x] Incident replay: an advisory can be replayed through exposure, decision, action result, and recovery evidence.
 - [x] Initial replay fixtures cover: 2025 Nx s1ngularity compromise, 2025 Shai-Hulud supply-chain worm pattern, and a mutable GitHub Action reference compromise.
-- [x] Demo shows the full flow: advisory → exposure → policy draft → approval → action → receipt → recovery.
+- [ ] Demo shows the full flow: advisory → exposure → policy draft → approval → action → receipt → recovery. — **Not currently route-evidenced.**
 
 ## AC-2 is genuinely blocked (not skipped)
 
@@ -44,21 +44,11 @@ registry would call (`assertCapabilities`, `assertCompatible`). When 25.3b ships
 registration should be wiring, not a rewrite. AC-2 stays unchecked until it is
 genuinely done.
 
-## Implementation Summary — 2026-08-27
+## Current Implementation Context — 2026-08-27
 
-**Operator surfaces (AC-1).** Five surfaces in
-`src/components/bumblebee/surfaces.tsx`, composed by
-`src/app/dashboard/bumblebee/page.tsx` (async Server Component with an inline auth
-gate, matching the convention set by `src/app/dashboard/curator/page.tsx`). Scope is
-server-derived from the authenticated principal and never read from a query
-parameter — a tenant-selecting URL parameter would hand the entire isolation
-boundary to the client.
+The five presentational surfaces remain in `src/components/bumblebee/surfaces.tsx`, but `src/app/dashboard/bumblebee/page.tsx` is intentionally absent while Story 25.3a preserves `/dashboard/curator` as the only future registry host. This is not an active operator module route and does not meet AC-1, AC-6, or AC-9.
 
-The read layer is `src/lib/bumblebee/queries.ts`: **SELECT-only**, every query routed
-through `withWorkspaceTransaction` (which sets the RLS GUCs) *and* carrying an
-explicit `group_id`/`workspace_id` predicate as defence in depth, so a future
-migration that loosens a policy degrades to "returns nothing" rather than "returns
-another tenant's rows".
+Storage reads are no longer module-owned: `src/lib/curator/operator-read-service.ts` is the shared curator boundary. It is **SELECT-only**, routes every read through `withWorkspaceTransaction` (which sets the RLS GUCs), and carries explicit `group_id`/`workspace_id` predicates as defence in depth. `src/lib/bumblebee/queries.ts` is absent and a regression test prevents its return.
 
 Two deliberate modelling decisions worth recording:
 
@@ -161,23 +151,23 @@ this.
 
 ## Evidence
 
-- Operator surfaces: `src/components/bumblebee/surfaces.tsx`, `src/app/dashboard/bumblebee/page.tsx`, read layer `src/lib/bumblebee/queries.ts`.
+- Operator surfaces: presentational components `src/components/bumblebee/surfaces.tsx`; shared curator read boundary `src/lib/curator/operator-read-service.ts`. There is no active `src/app/dashboard/bumblebee/page.tsx` route.
 - Accessibility + surface tests: `src/__tests__/bumblebee-surfaces.test.tsx` — 34/34 passed.
 - Fail-closed + rollback + no-coupling tests: `src/lib/bumblebee/__tests__/module.test.ts` — 13/13 passed.
 - Adversarial tenant isolation: `src/__tests__/bumblebee-tenant-isolation.e2e.test.ts` — 8/8 passed against a real PostgreSQL 16 container with RLS enforced. Registered in `vitest.config.live-db.ts`. Run twice against the same database to prove the seed is idempotent.
 - Incident replay: `src/lib/replay/{fixtures,engine}.ts`, `src/lib/replay/__tests__/engine.test.ts` — 24/24 passed, driving the real matcher and draft generator.
 - CI-workflow inventory source: `src/lib/inventory/ci-workflow-parser.ts`, `src/lib/inventory/__tests__/ci-workflow-parser.test.ts` — 19/19 passed, including the `trust_state` regression guard.
 - Scheduler-health evidence bundle: `docs/archive/allura/evidence/epic-26/26.7/scheduler-health-evidence.md`.
-- Full suite: `bun run test:unit` → 2147/2147 passed (was 2040), exit 0. `bun run typecheck` → exit 0. `bun eslint` → 0 errors.
+- Full suite remediation verification: `bun run test:unit` → 2152 passed / 160 skipped, exit 0; `bun run typecheck` → exit 0. The known assertion-path stderr remains from existing negative/degradation tests.
 
 ## Rollback
 
-Disable the Bumblebee module through the module registry. The dashboard shell and other modules remain operational.
+Disable or keep absent any future Bumblebee route until the Epic 25 registry composes it. The dashboard shell and other modules remain operational; no registry is implemented by this story.
 
 ## Completion Notes
 
 - agent: Brooks
 - date: 2026-08-27
-- files changed: `src/lib/bumblebee/{module,queries}.ts` (new), `src/lib/bumblebee/__tests__/module.test.ts` (new, 13 tests), `src/components/bumblebee/surfaces.tsx` (new), `src/app/dashboard/bumblebee/page.tsx` (new), `src/lib/replay/{fixtures,engine}.ts` (new), `src/lib/replay/__tests__/engine.test.ts` (new, 24 tests), `src/lib/inventory/ci-workflow-parser.ts` (new), `src/lib/inventory/__tests__/ci-workflow-parser.test.ts` (new, 19 tests), `src/__tests__/bumblebee-surfaces.test.tsx` (new, 34 tests), `src/__tests__/bumblebee-tenant-isolation.e2e.test.ts` (new, 8 tests), `src/lib/threat-discovery/cli.ts` (wired the workflow inventory source in), `src/lib/db/tenant-table-inventory.ts`, `vitest.config.unit.ts`, `vitest.config.live-db.ts`, `docs/allura/RISKS-AND-DECISIONS.md` (AD-59), `docs/archive/allura/evidence/epic-26/26.7/scheduler-health-evidence.md` (new)
-- evidence: `bun run test:unit` → 2147/2147 passed, exit 0; `bun run typecheck` → exit 0; `bun eslint` → 0 errors; tenant-isolation e2e → 8/8 against a real PostgreSQL 16 container with RLS enforced (run twice, idempotent), container destroyed afterward
-- remaining gaps: **AC-2 is genuinely blocked** on the Epic 25 server-issued module registry (`REQ-MOD-001/002/003`, canonical story 25.3b). The canonical story is dependency-blocked pending prerequisite verification, and no registry implementation exists — the module descriptor and fail-closed checks a registry would consume are built and tested, but nothing registers them. The Policy Drafts surface renders empty by design: Story 26.5 deliberately does not persist unapproved drafts, so there is no draft table to read; rendering the empty surface is the truthful state until an approval produces a receipt. AC-9's "demo" is the replay test suite driving the real pipeline, not a recorded human-facing walkthrough. Inventory coverage remains 2 of 10 artifact types. The new dashboard route has not been exercised against a running Next.js server — the surfaces are tested as components and the read layer is tested against a real database, but no end-to-end browser run was performed.
+- files changed: historical initial implementation included `src/lib/bumblebee/queries.ts` and `src/app/dashboard/bumblebee/page.tsx`; both are superseded by the Story 25.3a reconciliation. Current operator reads live only at `src/lib/curator/operator-read-service.ts`; the direct route remains absent.
+- evidence: historical component/replay/live-RLS evidence is retained above. Remediation verification: focused curator/Bumblebee tests 55/55 passed; `bun run test:unit` → 2152 passed / 160 skipped; `bun run typecheck` → exit 0.
+- remaining gaps: **AC-1, AC-6, and AC-9 are not currently evidenced** because the direct dashboard route is absent. **AC-2 is genuinely blocked** on the Epic 25 server-issued module registry (`REQ-MOD-001/002/003`, canonical story 25.3b); no registry implementation exists. AC-3/4/5/7/8 retain their local evidence. Inventory coverage remains 2 of 10 artifact types.

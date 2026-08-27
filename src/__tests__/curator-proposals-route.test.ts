@@ -95,6 +95,18 @@ describe("GET /api/curator/proposals", () => {
     expect(queryMock).not.toHaveBeenCalled()
   })
 
+  it("fails closed on duplicate scope selectors, even when the first value matches the principal", async () => {
+    for (const selector of [
+      "?group_id=allura-test&group_id=allura-forged",
+      "?workspace_id=workspace-test&workspace_id=workspace-forged",
+    ]) {
+      const response = await GET(makeRequest(selector))
+      expect(response.status, selector).toBe(403)
+    }
+    expect(withWorkspaceTransactionMock).not.toHaveBeenCalled()
+    expect(queryMock).not.toHaveBeenCalled()
+  })
+
   it("fails closed when authenticated workspace authority is missing", async () => {
     mockAuthResult.user = { ...mockAuthResult.user!, workspaceId: undefined }
 
@@ -133,5 +145,18 @@ describe("GET /api/curator/proposals", () => {
     expect(routeSource).not.toContain("buildCuratorDecisionReceipt")
     expect(fs.existsSync(`${root}/src/app/dashboard/curator/page.tsx`)).toBe(true)
     expect(fs.existsSync(`${root}/src/app/dashboard/bumblebee/page.tsx`)).toBe(false)
+  })
+
+  it("prohibits module-owned direct storage access and keeps operator reads in the shared curator boundary", async () => {
+    const fs = await import("node:fs")
+    const files = await import("node:fs/promises")
+    const root = process.cwd()
+    const sharedBoundary = `${root}/src/lib/curator/operator-read-service.ts`
+
+    expect(fs.existsSync(`${root}/src/lib/bumblebee/queries.ts`)).toBe(false)
+    expect(fs.existsSync(sharedBoundary)).toBe(true)
+    const source = await files.readFile(sharedBoundary, "utf8")
+    expect(source).toContain("withWorkspaceTransaction")
+    expect(source).toMatch(/FROM\s+(inventory_records|threat_alerts|mitigation_receipts)/)
   })
 })

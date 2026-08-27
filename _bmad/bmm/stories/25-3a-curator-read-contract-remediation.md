@@ -16,7 +16,7 @@ The authenticated curator read boundary derives tenant, workspace, principal, an
 - [x] Forged, mismatched, missing, and cross-workspace selectors fail closed without returning data.
 - [x] The read model uses scoped evidence and immutable governance receipts; legacy event metadata is not treated as the authoritative decision receipt source.
 - [x] `/dashboard/curator` is prepared as the only future registry host boundary; direct Bumblebee routing/module-owned direct storage access is prohibited by regression tests until registry composition is implemented.
-- [x] Tests cover server-derived authority, tenant/workspace isolation, forged-principal/selector rejection, and no direct data-access regression.
+- [x] Tests cover server-derived authority, tenant/workspace isolation, forged-principal/selector rejection (including duplicate scope selectors), and no direct data-access regression.
 - [ ] Typecheck, focused tests, independent Pike/Fowler/Knuth review, PR CI, and source reconciliation pass.
 
 ## Evidence
@@ -25,7 +25,7 @@ The authenticated curator read boundary derives tenant, workspace, principal, an
 - Fresh PostgreSQL/RLS tenant-isolation evidence where database behavior is changed.
 - Static-boundary tests for curator shell and module access.
 - Pike/Fowler/Knuth review findings and final verdict.
-- Local implementation evidence (2026-08-27): `bun run typecheck` passed; `bun run test:unit` passed (2,150 passed, 160 skipped); focused curator-route and effective-tenant seam tests passed (15 assertions). Independent review, PR CI, and source reconciliation remain pending.
+- Local remediation evidence (2026-08-27): duplicate `group_id`/`workspace_id` selectors now fail closed before a transaction; the shared `src/lib/curator/operator-read-service.ts` owns operator storage reads, while `src/lib/bumblebee/queries.ts` is absent and guarded by a regression test. Focused unit tests passed (55/55 across curator route, module, and surfaces); `bun run typecheck` passed; `bun run test:unit` passed (2152 passed, 160 skipped). Independent review, PR CI, and source reconciliation remain pending.
 
 ## Rollback
 

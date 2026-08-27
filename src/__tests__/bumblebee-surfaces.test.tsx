@@ -17,7 +17,7 @@ import {
   ReceiptsSurface,
   SourcesSurface,
 } from "@/components/bumblebee/surfaces"
-import type { ExposureRow, ReceiptRow, SourceRow } from "@/lib/bumblebee/queries"
+import type { ExposureRow, ReceiptRow, SourceRow } from "@/lib/curator/operator-read-service"
 import type { MitigationDraft } from "@/lib/mitigation/types"
 
 // Explicit cleanup, matching the convention in toast.test.tsx and

@@ -64,8 +64,12 @@ function parseLimit(raw: string | null): number {
 }
 
 function selectorMismatch(searchParams: URLSearchParams, groupId: string, workspaceId: string): boolean {
-  return (searchParams.has("group_id") && searchParams.get("group_id") !== groupId)
-    || (searchParams.has("workspace_id") && searchParams.get("workspace_id") !== workspaceId);
+  const hasExactlyOne = (name: "group_id" | "workspace_id", expected: string) => {
+    const values = searchParams.getAll(name);
+    return values.length === 0 || (values.length === 1 && values[0] === expected);
+  };
+
+  return !hasExactlyOne("group_id", groupId) || !hasExactlyOne("workspace_id", workspaceId);
 }
 
 /** GET /api/curator/proposals — workspace-scoped proposal/evidence/receipt read. */
