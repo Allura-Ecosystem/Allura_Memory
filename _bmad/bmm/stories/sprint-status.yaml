@@ -295,6 +295,20 @@ epic_24:
       depends_on: ["24.8"]
       status_evidence: "PR #87 merged documentation only; no runnable integrations, scenarios, receipts, evaluation artifacts, or measured clean-environment evidence exist."
 
+epic_25:
+  name: "Governed Curator Console — Module Registry Reconciliation"
+  status: dependency-blocked
+  retrospective: null
+  next_story: "25.3b"
+  sequence_note: "Canonical Epic 25 scope is intentionally limited to Story 25.3b in this reconciliation. Historical/archived Epic 25 planning is not restored. Story 25.3b is planning only: no server-issued module registry implementation exists."
+  stories:
+    - key: "25.3b"
+      title: "Modular Dashboard Workflow Contract Registry"
+      status: dependency-blocked
+      owner: "Brooks + Woz + Pike + Fowler + Bellard"
+      depends_on: ["25.2a", "25.2b", "24.12"]
+      status_evidence: "Canonical story restored by Option A reconciliation on 2026-08-27. Existing story files declare 25.2a Workspace Scope and Evidence Lifecycle Foundation Done (final Knuth/Pike/Fowler approval 2026-08-26) and 25.2b Authenticated Session Entry Point Done; 24.12 Effective-Tenant Authority Seam is recorded Done in the authoritative status. Those prerequisite claims and the module-registry authority boundary require fresh implementation-readiness verification before this story may advance. No registry implementation, registration path, or registry tests exist. REQ-MOD-001/002/003 remain Dependency-blocked; Story 26.7 remains in-progress with its AC-2 blocked."
+
 epic_26:
   name: "Bumblebee — Supply-Chain Threat Intelligence"
   status: in-progress
@@ -343,4 +357,4 @@ epic_26:
       status: in-progress
       owner: "Pike + Fowler + Brooks + Bellard"
       depends_on: ["26.4", "26.6", "epic_25_module_registry"]
-      status_evidence: "8 of 9 AC met and verified 2026-08-27. Built: Bumblebee operator module (5 surfaces -- Sources/Exposures/Policy Drafts/Incidents/Receipts) at src/app/dashboard/bumblebee with a SELECT-only, RLS-scoped read layer (src/lib/bumblebee/queries.ts); fail-closed capability/compatibility checks; default-off feature flag with a structural no-coupling test proving rollback isolation; and src/lib/replay/ driving all three named 2025 incident patterns (Nx s1ngularity, Shai-Hulud worm, mutable GitHub Action ref) through the REAL unmodified 26.2/26.3/26.5 primitives, each exercising a different matcher path and each loading decoy inventory that must not match. bun run test:unit -> 2147/2147 passed (was 2040); typecheck exit 0; eslint 0 errors. Adversarial tenant isolation (8/8) verified against a real PostgreSQL 16 container with RLS enforced -- including the mixed tenant-A-id/workspace-B-id forgery -- run twice to prove seed idempotency, container destroyed after. AC-2 (registration through the Epic 25 server-issued module registry) is GENUINELY BLOCKED, not skipped: REQ-MOD-001/002/003 are Dependency-blocked against story 25.3b, which has no story file and no implementation. The descriptor and fail-closed checks a registry would consume are built and tested so registration is wiring, not a rewrite. Real finding produced en route: a new ci_workflow inventory source found 13 of this repo's own 17 GitHub Action references pinned to attacker-movable mutable tags (only 4 SHA-pinned) -- the exact exposure class the Mar 2025 tj-actions compromise used."
+      status_evidence: "8 of 9 AC met and verified 2026-08-27. Built: Bumblebee operator module (5 surfaces -- Sources/Exposures/Policy Drafts/Incidents/Receipts) at src/app/dashboard/bumblebee with a SELECT-only, RLS-scoped read layer (src/lib/bumblebee/queries.ts); fail-closed capability/compatibility checks; default-off feature flag with a structural no-coupling test proving rollback isolation; and src/lib/replay/ driving all three named 2025 incident patterns (Nx s1ngularity, Shai-Hulud worm, mutable GitHub Action ref) through the REAL unmodified 26.2/26.3/26.5 primitives, each exercising a different matcher path and each loading decoy inventory that must not match. bun run test:unit -> 2147/2147 passed (was 2040); typecheck exit 0; eslint 0 errors. Adversarial tenant isolation (8/8) verified against a real PostgreSQL 16 container with RLS enforced -- including the mixed tenant-A-id/workspace-B-id forgery -- run twice to prove seed idempotency, container destroyed after. AC-2 (registration through the Epic 25 server-issued module registry) is GENUINELY BLOCKED, not skipped: REQ-MOD-001/002/003 are Dependency-blocked against canonical story 25.3b, whose prerequisite-verification gate remains open and whose registry implementation does not exist. The descriptor and fail-closed checks a registry would consume are built and tested so registration is wiring, not a rewrite. Real finding produced en route: a new ci_workflow inventory source found 13 of this repo's own 17 GitHub Action references pinned to attacker-movable mutable tags (only 4 SHA-pinned) -- the exact exposure class the Mar 2025 tj-actions compromise used."

@@ -1,8 +1,8 @@
 # Story 26.7 — Operator Module, Adversarial Tests, and Demo Gate
 
-**Status:** In Progress — 8 of 9 acceptance criteria met and verified 2026-08-27. AC-2 is blocked on an out-of-epic dependency (the Epic 25 module registry does not exist).
+**Status:** In Progress — 8 of 9 acceptance criteria met and verified 2026-08-27. AC-2 is blocked on an out-of-epic dependency (canonical Story 25.3b exists but its Epic 25 module registry is dependency-blocked and unimplemented).
 **Owner:** Pike + Fowler + Brooks + Bellard
-**Depends on:** 26.4, 26.5, 26.6, Epic 25 module registry
+**Depends on:** 26.4, 26.5, 26.6, Story 25.3b Epic 25 module registry (dependency-blocked)
 **Blocks:** —
 
 ## Outcome
@@ -25,9 +25,10 @@ A truthful operator surface with Sources, Exposures, Policy Drafts, Incidents, a
 
 `REQ-MOD-001`, `REQ-MOD-002`, and `REQ-MOD-003` in
 [REQUIREMENTS-MATRIX.md](../../../docs/allura/REQUIREMENTS-MATRIX.md) are all marked
-`Dependency-blocked` against story **25.3b**, and no 25.3b story file exists in
-`_bmad/bmm/stories/`. There is no server-issued module registry in this codebase
-to register with — verified by search, not assumed.
+`Dependency-blocked` against canonical story **25.3b**. The story is present in
+`_bmad/bmm/stories/`, but its prerequisite-verification gate remains open and there
+is no server-issued module registry implementation in this codebase to register with
+— verified by search, not assumed.
 
 Two dishonest options were available and rejected:
 
@@ -179,4 +180,4 @@ Disable the Bumblebee module through the module registry. The dashboard shell an
 - date: 2026-08-27
 - files changed: `src/lib/bumblebee/{module,queries}.ts` (new), `src/lib/bumblebee/__tests__/module.test.ts` (new, 13 tests), `src/components/bumblebee/surfaces.tsx` (new), `src/app/dashboard/bumblebee/page.tsx` (new), `src/lib/replay/{fixtures,engine}.ts` (new), `src/lib/replay/__tests__/engine.test.ts` (new, 24 tests), `src/lib/inventory/ci-workflow-parser.ts` (new), `src/lib/inventory/__tests__/ci-workflow-parser.test.ts` (new, 19 tests), `src/__tests__/bumblebee-surfaces.test.tsx` (new, 34 tests), `src/__tests__/bumblebee-tenant-isolation.e2e.test.ts` (new, 8 tests), `src/lib/threat-discovery/cli.ts` (wired the workflow inventory source in), `src/lib/db/tenant-table-inventory.ts`, `vitest.config.unit.ts`, `vitest.config.live-db.ts`, `docs/allura/RISKS-AND-DECISIONS.md` (AD-59), `docs/archive/allura/evidence/epic-26/26.7/scheduler-health-evidence.md` (new)
 - evidence: `bun run test:unit` → 2147/2147 passed, exit 0; `bun run typecheck` → exit 0; `bun eslint` → 0 errors; tenant-isolation e2e → 8/8 against a real PostgreSQL 16 container with RLS enforced (run twice, idempotent), container destroyed afterward
-- remaining gaps: **AC-2 is genuinely blocked** on the Epic 25 server-issued module registry (`REQ-MOD-001/002/003`, story 25.3b), which does not exist — the module descriptor and fail-closed checks a registry would consume are built and tested, but nothing registers them. The Policy Drafts surface renders empty by design: Story 26.5 deliberately does not persist unapproved drafts, so there is no draft table to read; rendering the empty surface is the truthful state until an approval produces a receipt. AC-9's "demo" is the replay test suite driving the real pipeline, not a recorded human-facing walkthrough. Inventory coverage remains 2 of 10 artifact types. The new dashboard route has not been exercised against a running Next.js server — the surfaces are tested as components and the read layer is tested against a real database, but no end-to-end browser run was performed.
+- remaining gaps: **AC-2 is genuinely blocked** on the Epic 25 server-issued module registry (`REQ-MOD-001/002/003`, canonical story 25.3b). The canonical story is dependency-blocked pending prerequisite verification, and no registry implementation exists — the module descriptor and fail-closed checks a registry would consume are built and tested, but nothing registers them. The Policy Drafts surface renders empty by design: Story 26.5 deliberately does not persist unapproved drafts, so there is no draft table to read; rendering the empty surface is the truthful state until an approval produces a receipt. AC-9's "demo" is the replay test suite driving the real pipeline, not a recorded human-facing walkthrough. Inventory coverage remains 2 of 10 artifact types. The new dashboard route has not been exercised against a running Next.js server — the surfaces are tested as components and the read layer is tested against a real database, but no end-to-end browser run was performed.
