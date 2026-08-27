@@ -1,0 +1,16 @@
+[Unit]
+Description=Run Allura Threat Discovery Worker every 6 hours
+Documentation=https://github.com/Allura-Ecosystem/Allura_Memory/blob/main/docs/governance/2026-08-27-story-26-4-security-owner-approval.md
+Requires=allura-threat-discovery.service
+
+[Timer]
+# Every 6 hours, security-owner-approved cadence (AC-2):
+# docs/governance/2026-08-27-story-26-4-security-owner-approval.md
+OnCalendar=*-*-* 00/6:00:00
+# If missed (e.g. machine was off), run once on next boot
+Persistent=true
+# Random delay up to 5 min to avoid thundering herd with other scheduled jobs
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
