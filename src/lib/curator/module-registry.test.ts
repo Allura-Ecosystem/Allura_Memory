@@ -18,6 +18,7 @@ vi.mock("@/lib/curator/operator-read-service", () => ({ getBumblebeeSummaryInTra
 import {
   CURATOR_MODULE_CONTRACT_VERSION,
   issueCuratorModules,
+  missingCapabilitiesForRole,
   validateModuleManifests,
 } from "./module-registry"
 import { BUMBLEBEE_ENABLED_ENV_VAR, BUMBLEBEE_MODULE } from "../bumblebee/module"
@@ -77,6 +78,15 @@ describe("Story 25.3b server-issued curator module registry", () => {
 
     await expect(issueCuratorModules(request as never)).resolves.toMatchObject({ state: "denied", modules: [] })
     expect(getBumblebeeSummaryInTransaction).not.toHaveBeenCalled()
+  })
+
+  it("denies the module for the specific canonical read capabilities its role lacks", () => {
+    expect(missingCapabilitiesForRole("viewer", BUMBLEBEE_MODULE.requiredCapabilities)).toEqual([
+      "read:inventory",
+      "read:exposures",
+      "read:receipts",
+    ])
+    expect(missingCapabilitiesForRole("curator", BUMBLEBEE_MODULE.requiredCapabilities)).toEqual([])
   })
 
   it("records a completed, relational, replay-safe issuance snapshot atomically with the read", async () => {

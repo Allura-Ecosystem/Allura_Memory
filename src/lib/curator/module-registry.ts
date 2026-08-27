@@ -3,6 +3,7 @@ import "server-only"
 import { createHash } from "node:crypto"
 
 import { getAuthUser } from "@/lib/auth/api-auth"
+import { actionForReadCapability, minimumRoleForAction } from "@/lib/auth/permission-action-role"
 import { hasPermission } from "@/lib/auth/roles"
 import type { AlluraRole } from "@/lib/auth/types"
 import { BUMBLEBEE_MODULE, isBumblebeeEnabled } from "@/lib/bumblebee/module"
@@ -18,7 +19,6 @@ import {
 
 export { CURATOR_MODULE_CONTRACT_VERSION } from "./module-contract"
 
-const CURATOR_CAPABILITIES = ["read:inventory", "read:exposures", "read:receipts"] as const
 const CONTRACT_REVISION = "25.3b-r1" as const
 
 type Scope = { tenantId: string; workspaceId: string; principalId: string; sessionId: string; role: AlluraRole }
@@ -58,9 +58,16 @@ const SOURCE_ALLOWLIST = new Map<string, Readonly<CuratorModuleManifest>>([
 ])
 const SOURCE_HASHES = new Map([...SOURCE_ALLOWLIST].map(([id, manifest]) => [id, manifestHash(manifest)]))
 
-/** Capability grant is explicitly derived from the canonical role hierarchy. */
-function capabilitiesForRole(role: AlluraRole): readonly string[] {
-  return hasPermission(role, "curator") ? CURATOR_CAPABILITIES : []
+/**
+ * The registry's capability evaluation delegates to the canonical action
+ * authority. An unmapped capability is denied rather than receiving a local
+ * fallback grant.
+ */
+export function missingCapabilitiesForRole(role: AlluraRole, requiredCapabilities: readonly string[]): string[] {
+  return requiredCapabilities.filter((capability) => {
+    const action = actionForReadCapability(capability)
+    return !action || !hasPermission(role, minimumRoleForAction(action))
+  })
 }
 
 function validateManifest(manifest: CuratorModuleManifest): void {
@@ -73,7 +80,7 @@ function validateManifest(manifest: CuratorModuleManifest): void {
   if (manifest.trust !== "allura-source" || manifest.readOnly !== true) throw new Error(`invalid trust or authority declaration: ${manifest.id}`)
   if (manifest.hostBindings.length !== 1 || manifest.hostBindings[0] !== "dashboard/curator") throw new Error(`invalid host binding: ${manifest.id}`)
   if (!manifest.featureFlag || !manifest.rollbackId || manifest.stages.length === 0) throw new Error(`malformed module manifest: ${manifest.id}`)
-  if (manifest.requiredCapabilities.some((capability) => !CURATOR_CAPABILITIES.includes(capability as never))) {
+  if (manifest.requiredCapabilities.some((capability) => !actionForReadCapability(capability))) {
     throw new Error(`module requests non-read capability: ${manifest.id}`)
   }
 }
@@ -125,7 +132,7 @@ async function appendDecision(
         manifest_sha256: SOURCE_HASHES.get("bumblebee"),
         contract_version: CURATOR_MODULE_CONTRACT_VERSION,
         contract_revision: CONTRACT_REVISION,
-        capability_policy: "auth.roles.hasPermission(role, curator)",
+        capability_policy: "auth.permission-action-role.READ_CAPABILITY_ACTIONS",
         required_capabilities: manifest.requiredCapabilities,
         feature_flag: rollbackSnapshot(),
         rollback: rollbackSnapshot(),
@@ -157,9 +164,8 @@ export async function issueCuratorModules(request: NextRequest): Promise<Curator
     return { state: "error", modules: [], message: "Curator workflow access is unavailable." }
   }
 
-  const capabilities = capabilitiesForRole(scope.role)
   const manifest = SOURCE_ALLOWLIST.get("bumblebee")!
-  if (manifest.requiredCapabilities.some((capability) => !capabilities.includes(capability))) {
+  if (missingCapabilitiesForRole(scope.role, manifest.requiredCapabilities).length > 0) {
     await recordOutcome(scope, "denied").catch(() => undefined)
     return { state: "denied", modules: [], message: "Your role cannot access this curator workflow." }
   }

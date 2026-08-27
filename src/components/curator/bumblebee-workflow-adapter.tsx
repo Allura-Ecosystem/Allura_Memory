@@ -1,10 +1,3 @@
-import {
-  ExposuresSurface,
-  IncidentsSurface,
-  PolicyDraftsSurface,
-  ReceiptsSurface,
-  SourcesSurface,
-} from "@/components/bumblebee/surfaces"
 import type { BumblebeeModuleView } from "@/lib/curator/module-contract"
 
 /**
@@ -21,13 +14,13 @@ export function BumblebeeWorkflowAdapter({ module }: { module: BumblebeeModuleVi
   return (
     <section aria-label={module.title} data-testid="host-owned-bumblebee-adapter">
       <h2>{module.title}</h2>
-      <p>{summary.sources} sources</p>
-      <p>{summary.openExposures} open exposures</p>
-      <SourcesSurface rows={[]} />
-      <ExposuresSurface rows={[]} />
-      <PolicyDraftsSurface drafts={[]} />
-      <IncidentsSurface rows={[]} />
-      <ReceiptsSurface rows={[]} />
+      <dl aria-label="Bumblebee workspace summary">
+        <div><dt>Sources</dt><dd>{summary.sources} sources</dd></div>
+        <div><dt>Open exposures</dt><dd>{summary.openExposures} open exposures</dd></div>
+        <div><dt>Unpinned actions</dt><dd>{summary.unpinnedActions} unpinned actions</dd></div>
+        <div><dt>Incidents</dt><dd>{summary.incidents} incidents</dd></div>
+        <div><dt>Receipts</dt><dd>{summary.receipts} receipts</dd></div>
+      </dl>
     </section>
   )
 }

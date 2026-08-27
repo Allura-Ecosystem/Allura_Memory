@@ -55,7 +55,7 @@ describeLive("Story 25.3b managed app-role registry ledger", () => {
     expect(event).toMatchObject({ workspace_id: WORKSPACE, status: "completed", session_id: SESSION })
     expect(event.metadata).toMatchObject({
       decision: "issued", principal_id: PRINCIPAL, session_id: SESSION,
-      contract_revision: "25.3b-r1", capability_policy: "auth.roles.hasPermission(role, curator)",
+      contract_revision: "25.3b-r1", capability_policy: "auth.permission-action-role.READ_CAPABILITY_ACTIONS",
     })
     expect(event.metadata.issuance_snapshot).toMatchObject({ sources: expect.any(Number) })
 

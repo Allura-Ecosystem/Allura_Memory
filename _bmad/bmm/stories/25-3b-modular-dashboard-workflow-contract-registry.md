@@ -25,9 +25,9 @@ The implementation still must meet every acceptance criterion and pass independe
 
 Implemented locally, pending independent review and evidence archival:
 
-- `src/lib/curator/module-contract.ts` and `module-registry.ts` define the versioned, source-controlled allowlist and server issuer. It derives the authenticated principal/workspace/role and static host capability mapping, validates the complete set before rendering, reads the curator-owned summary, and appends a scoped issuance/denial decision through `withWorkspaceTransaction`.
+- `src/lib/curator/module-contract.ts` and `module-registry.ts` define the versioned, source-controlled allowlist and server issuer. It derives the authenticated principal/workspace/role and evaluates module capabilities through the canonical permission-action binding, validates the complete set before rendering, reads the curator-owned summary, and appends a scoped issuance/denial decision through `withWorkspaceTransaction`.
 - `/dashboard/curator` composes the host-owned accessible shell. Disabled modules render truthful unavailable state; no direct `/dashboard/bumblebee` route exists.
-- Local verification passed: focused Vitest 58 tests, `bun run typecheck`, and `bun run test:unit` (2,162 passed; 160 skipped). Independent review and evidence archival remain pending.
+- Remediation verification (2026-08-27): focused Vitest 31 tests, `bun run typecheck`, and `bun run test:unit` (2,166 passed; 160 skipped); fresh live PostgreSQL CI-app-role lane (24 suites / 73 tests passed). Exact commands and real outputs are recorded in `docs/archive/allura/evidence/epic-25/25.3b/remediation-verification-2026-08-27.md`. Independent review remains pending.
 
 ## Acceptance Criteria
 
