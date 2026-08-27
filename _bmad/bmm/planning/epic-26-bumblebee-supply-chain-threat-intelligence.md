@@ -67,7 +67,7 @@ Continuous intake uses three independently observable lanes: event-driven signal
 | 26.4 | Scheduled discovery and alert routing | 26.3, security-owner approval | Governed worker schedule, alert lifecycle, freshness/degraded states, deduplicated routing, scheduler health, and audit evidence. |
 | 26.5 | Governed mitigation policy drafts | 26.3, Epic 24 mutation-boundary remediation | Verified exposure maps to a versioned mitigation template, reviewable policy draft, dry-run result, scope explanation, and approval-required receipt. |
 | 26.6 | Containment connectors and response receipts | 26.5, role-model reconciliation | Feature-flagged, propose-only connectors for approved response systems; explicit authorization for token revocation, workspace locks, and endpoint actions. |
-| 26.7 | Operator module, adversarial tests, and demo gate | 26.4, 26.5, 26.6, Epic 25 module registry | Truthful Sources, Exposures, Policy Drafts, Incidents, and Receipts surfaces; fail-closed, tenant-isolation, accessibility, rollback, and incident-replay evidence. |
+| 26.7 | Operator module, adversarial tests, and demo gate | 26.4, 26.5, 26.6, Story 25.3b server-issued module registry (Dependency-blocked) | Truthful Sources, Exposures, Policy Drafts, Incidents, and Receipts surfaces; fail-closed, tenant-isolation, accessibility, rollback, and incident-replay evidence. |
 
 ## Acceptance Criteria
 
@@ -83,7 +83,7 @@ Continuous intake uses three independently observable lanes: event-driven signal
 ## Dependencies
 
 - Epic 24 identity, scope, audit, and mutation-boundary remediation.
-- Epic 25 server-issued module registry and governed shell.
+- Canonical Story 25.3b server-issued module registry and governed shell. It is Dependency-blocked pending prerequisite verification and has no implementation; it continues to block Story 26.7 registration AC-2.
 - Role-model reconciliation before response authorization is exposed.
 - Security-owner approval before external response connectors or production schedules are enabled.
 
