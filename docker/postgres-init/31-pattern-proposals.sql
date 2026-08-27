@@ -101,8 +101,6 @@ CREATE OR REPLACE FUNCTION fn_pattern_proposals_append_only_guard()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
-DECLARE
-  changed_cols text[];
 BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION 'pattern_proposals is append-only: DELETE is not permitted';
@@ -112,26 +110,26 @@ BEGIN
     RAISE EXCEPTION 'pattern_proposals is append-only: TRUNCATE is not permitted';
   END IF;
 
+  -- Explicit per-column comparison, not a jsonb diff: `jsonb - jsonb` is not
+  -- a valid PostgreSQL operator (only `jsonb - text` / `jsonb - text[]`
+  -- exist). The prior version of this function used
+  -- `jsonb_object_keys(to_jsonb(NEW) - to_jsonb(OLD))`, which raises
+  -- "operator does not exist: jsonb - jsonb" on every real UPDATE -- this
+  -- broke /api/genesis/proposals/approve and /reject in production. Found
+  -- and fixed 2026-08-27; see migration 43 for the forward-fix applied to
+  -- already-bootstrapped databases.
   IF TG_OP = 'UPDATE' THEN
-    -- Compute which user-supplied columns are actually being changed.
-    -- to_jsonb(NEW) - to_jsonb(OLD) yields the set of keys that differ.
-    changed_cols := ARRAY(
-      SELECT key FROM jsonb_object_keys(to_jsonb(NEW) - to_jsonb(OLD)) AS key
-    );
-
-    -- The HITL review gate may ONLY change status and reviewed_at.
-    -- Reject if any changed column is NOT in the allowed review-gate set.
-    IF EXISTS (
-      SELECT 1 FROM unnest(changed_cols) AS c(col)
-      WHERE c.col NOT IN ('status', 'reviewed_at')
-    ) THEN
+    IF NEW.id IS DISTINCT FROM OLD.id
+      OR NEW.group_id IS DISTINCT FROM OLD.group_id
+      OR NEW.pattern_description IS DISTINCT FROM OLD.pattern_description
+      OR NEW.pattern_type IS DISTINCT FROM OLD.pattern_type
+      OR NEW.frequency IS DISTINCT FROM OLD.frequency
+      OR NEW.suggested_skill IS DISTINCT FROM OLD.suggested_skill
+      OR NEW.confidence IS DISTINCT FROM OLD.confidence
+      OR NEW.created_at IS DISTINCT FROM OLD.created_at
+    THEN
       RAISE EXCEPTION
-        'pattern_proposals is append-only: UPDATE may only touch status / reviewed_at (HITL review gate). Disallowed columns: %',
-        array_to_string(
-          ARRAY(SELECT c.col FROM unnest(changed_cols) AS c(col)
-                WHERE c.col NOT IN ('status', 'reviewed_at')),
-          ', '
-        );
+        'pattern_proposals is append-only: UPDATE may only touch status / reviewed_at (HITL review gate)';
     END IF;
   END IF;
 
