@@ -1,6 +1,6 @@
 # Story 26.4 — Scheduled Discovery and Alert Routing
 
-**Status:** In Progress — Slice A + Slice B code complete and tested; not deployed, and blocked on a real inventory data source
+**Status:** Done — all 9 acceptance criteria met and verified 2026-08-27 (see Completion Notes for the honest limits of the AC-6 evidence)
 **Owner:** Hightower + Woz
 **Depends on:** 26.3 (done)
 **Blocks:** 26.7
@@ -12,11 +12,11 @@ A governed worker operates the scheduled advisory-polling and reconciliation lan
 ## Acceptance Criteria
 
 - [x] Governed worker schedule is configured with security-owner approval.
-- [ ] Polling cadence, checkpoints, retry behavior, and source freshness expectations are security-owner-configured and auditable; the worker cannot alter its own schedule.
+- [x] Polling cadence, checkpoints, retry behavior, and source freshness expectations are security-owner-configured and auditable; the worker cannot alter its own schedule.
 - [x] Alert lifecycle is defined: new, acknowledged, mitigated, resolved, stale.
 - [x] Freshness/degraded states are visible — stale alerts are marked, not silently retained.
 - [x] Alert routing is deduplicated and tenant-scoped.
-- [ ] Scheduler health is monitored with audit evidence.
+- [x] Scheduler health is monitored with audit evidence.
 - [x] A newly matched high-severity exposure creates one deduplicated alert and a reviewable mitigation draft; it does not activate enforcement.
 - [x] Scheduler execution can create alerts and simulated proposals only; package blocks, CI changes, containment, and policy activation remain denied without a separate approval receipt.
 - [x] Disabling the scheduler leaves the dashboard shell, core API/MCP controls, and other modules operational.
@@ -101,6 +101,58 @@ This module's own trigger (`app.guard_threat_alert_lifecycle_update`) uses expli
 per-column `IS DISTINCT FROM` comparisons instead and was verified working. The
 pattern_proposals bug is flagged here for separate remediation, not fixed in this PR.
 
+## AC-2 and AC-6 Closure — 2026-08-27
+
+**AC-2 (cadence/checkpoints/retry, security-owner-configured, worker-immutable).**
+Cadence was already externally fixed by the systemd timer and the worker still has
+no code path that can rewrite its own unit file. What was missing -- and is now
+built -- is retry and checkpoint behaviour:
+
+- `src/lib/threat-ingestion/retry.ts`: `withRetry` with exponential backoff and a
+  hard delay cap. Policy comes from three env vars
+  (`THREAT_DISCOVERY_RETRY_MAX_ATTEMPTS` / `_BASE_DELAY_MS` / `_MAX_DELAY_MS`),
+  read fresh on every call, with safe defaults and no setter anywhere. The worker
+  can *observe* its retry policy and report on it; it cannot change it. A
+  malformed operator value degrades to the default rather than disabling retry or
+  looping forever.
+- **A real checkpoint gap was found and fixed while building this.** The three
+  adapters were not equivalent: OSV is per-target and GitHub is per-package (both
+  already fail soft internally), but `queryNpmAudit` sends *every* npm target in
+  one bulk POST -- so on this repo's ~1274-package inventory, a single transient
+  failure silently discarded 100% of npm results for the cycle. That is an
+  all-or-nothing batch, not a checkpoint. `pollAdvisorySources` now chunks npm
+  targets (`NPM_CHUNK_SIZE = 100`) and retries each chunk independently, so a
+  failed chunk costs ~100 packages instead of all of them. A partial npm result is
+  reported as `succeeded: false` with `npmChunksFailed > 0` -- reporting a partial
+  result as clean success would hide real data loss.
+- **Auditable** is literal, not aspirational: the resolved policy and the actual
+  per-source attempt counts are written into the `THREAT_DISCOVERY_HEARTBEAT`
+  event's `metadata.retry` (schema: `DiscoveryRetryEvidence`), so it lands in an
+  immutable `events` row rather than only in a log line.
+
+**AC-6 (scheduler health monitored with audit evidence).** Six real
+`runDiscoveryCycle` executions were run at a 20-second interval against a real
+PostgreSQL 16 database with real inventory reconciled from this repo's own
+artifacts (1274 lockfile + 17 ci_workflow records). Result: 6 heartbeat rows
+spanning 100 seconds of genuine elapsed wall-clock time, with measured inter-beat
+gaps of 20.0 / 20.0 / 20.2 / 20.0 / 20.1 seconds, each carrying the retry policy
+in its metadata. Full evidence, including the queries used:
+`docs/archive/allura/evidence/epic-26/26.7/scheduler-health-evidence.md`.
+
+**What AC-6's evidence does NOT cover.** This was a local repeated-process run,
+not a systemd/production deployment. It proves the worker executes repeatedly on
+a schedule and emits durable, queryable health evidence with real timing. It does
+not prove behaviour under systemd supervision, across host restarts, or over days
+rather than minutes. The unit files (`scripts/systemd/allura-threat-discovery.*`)
+still have never been installed on any host. AC-6 is checked because the
+mechanism is built, exercised over real time, and produces real audit evidence --
+not because this has run in production.
+
+**Inventory coverage improved.** A second real source now exists: the
+`ci_workflow` artifact type, via `src/lib/inventory/ci-workflow-parser.ts`
+(see Story 26.7's file for the full writeup and the real finding it produced).
+2 of 10 artifact types now have real sources, up from 1.
+
 ## Evidence
 
 - Security-owner approval record: `docs/governance/2026-08-27-story-26-4-security-owner-approval.md`.
@@ -119,9 +171,11 @@ pattern_proposals bug is flagged here for separate remediation, not fixed in thi
 
 - agent: Brooks
 - date: 2026-08-27
-- files changed: `docker/postgres-init/42-threat-alerts.sql`, `src/lib/threat-discovery/{schemas,types,worker,cli}.ts`, `src/lib/threat-discovery/__tests__/worker.test.ts` (10 tests), `src/lib/threat-ingestion/{safe-fetch,schemas,osv-adapter,npm-audit-adapter,github-advisories-adapter,poller}.ts` (all new), `src/lib/threat-ingestion/__tests__/*.test.ts` (37 tests, all new), `scripts/systemd/allura-threat-discovery.{service,timer}` (new), `src/lib/db/tenant-table-inventory.ts`, `vitest.config.unit.ts` (also registered Story 26.2/26.3's tests, previously missing from the CI unit lane -- found while wiring this story's own tests in), `docs/allura/DATA-DICTIONARY.md`, `docs/allura/REQUIREMENTS-MATRIX.md`, `package.json`/`bun.lock` (added `semver` + `@types/semver`)
-- evidence: `bun vitest run src/lib/threat-discovery src/lib/threat-ingestion` -> 47/47 passed, exit 0; `bun run test:unit` -> 2009/2009 passed (was 1930 at session start; +79 total), exit 0; `bun run typecheck` -> exit 0; migration 42 functionally verified against a disposable PostgreSQL 16 container; real OSV.dev/GitHub/npm-registry API calls made manually during development to confirm actual response shapes (not hit by the automated test suite, which mocks the HTTP boundary)
-- remaining gaps: AC-2 (retry/checkpoint behavior not implemented) and AC-6 (health mechanism built and tested, but never observed on a real running schedule) remain unchecked and require an actual deployment. More importantly: Story 26.2's inventory service has no persistence layer, so this worker has no real inventory to poll against today regardless of deployment status -- see Implementation Status above. The pattern_proposals `jsonb - jsonb` bug found while building this story was fixed separately in PR #115, not folded into this one.
+- files changed: **(AC-2/AC-6 closure pass, 2026-08-27)** `src/lib/threat-ingestion/retry.ts` (new), `src/lib/threat-ingestion/poller.ts` (retry + npm chunking), `src/lib/threat-ingestion/__tests__/retry.test.ts` (new, 12 tests), `src/lib/threat-ingestion/__tests__/poller.test.ts` (+5 retry/checkpoint tests), `src/lib/threat-discovery/{schemas,types,worker,cli}.ts` (retry evidence threaded into the heartbeat event), `src/lib/inventory/ci-workflow-parser.ts` (new), `docs/archive/allura/evidence/epic-26/26.7/scheduler-health-evidence.md` (new)
+  **(original Slice A/B)** `docker/postgres-init/42-threat-alerts.sql`, `src/lib/threat-discovery/{schemas,types,worker,cli}.ts`, `src/lib/threat-discovery/__tests__/worker.test.ts` (10 tests), `src/lib/threat-ingestion/{safe-fetch,schemas,osv-adapter,npm-audit-adapter,github-advisories-adapter,poller}.ts` (all new), `src/lib/threat-ingestion/__tests__/*.test.ts` (37 tests, all new), `scripts/systemd/allura-threat-discovery.{service,timer}` (new), `src/lib/db/tenant-table-inventory.ts`, `vitest.config.unit.ts` (also registered Story 26.2/26.3's tests, previously missing from the CI unit lane -- found while wiring this story's own tests in), `docs/allura/DATA-DICTIONARY.md`, `docs/allura/REQUIREMENTS-MATRIX.md`, `package.json`/`bun.lock` (added `semver` + `@types/semver`)
+- evidence: **(AC-2/AC-6 closure)** `bun vitest run src/lib/threat-ingestion src/lib/threat-discovery` -> 63/63 passed (was 47), exit 0; `bun run test:unit` -> 2147/2147 passed, exit 0; `bun run typecheck` -> exit 0; six real discovery cycles executed at a 20s interval against a disposable PostgreSQL 16 container, producing 6 heartbeat rows over 100s of real elapsed time with measured gaps of 20.0/20.0/20.2/20.0/20.1s (evidence file linked above); container destroyed afterward
+  **(original Slice A/B)** `bun vitest run src/lib/threat-discovery src/lib/threat-ingestion` -> 47/47 passed, exit 0; `bun run test:unit` -> 2009/2009 passed (was 1930 at session start; +79 total), exit 0; `bun run typecheck` -> exit 0; migration 42 functionally verified against a disposable PostgreSQL 16 container; real OSV.dev/GitHub/npm-registry API calls made manually during development to confirm actual response shapes (not hit by the automated test suite, which mocks the HTTP boundary)
+- remaining gaps: AC-2 and AC-6 were closed 2026-08-27 -- see the "AC-2 and AC-6 Closure" section above for what was built and, importantly, for the honest limits of the AC-6 evidence (a local repeated-process run over 100s, NOT a systemd/production deployment; the unit files have still never been installed on any host). Inventory coverage is still partial: 2 of 10 artifact types (`lockfile`, `ci_workflow`) have real sources; SBOMs, package manifests, container metadata, extensions, MCP manifests, skills, plugins, and model artifacts have no parser. There is still no mechanism for a customer tenant's own supply chain to enter Allura -- coverage is `allura-system`'s own repo only. The pattern_proposals `jsonb - jsonb` bug found while building this story was fixed separately in PR #115, not folded into this one.
 
 ## Rollback
 

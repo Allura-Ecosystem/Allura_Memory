@@ -22,16 +22,19 @@
  * Usage: bun src/lib/threat-discovery/cli.ts --group-id allura-system --workspace-id ws-main --principal-id threat-discovery-worker
  */
 
-import { readFile } from "node:fs/promises"
+import { readdir, readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { runDiscoveryCycle } from "./worker"
 import type { ResolvedWorkspaceScope } from "../db/workspace-scope"
+import { parseGithubWorkflows } from "../inventory/ci-workflow-parser"
 import { parseBunLock } from "../inventory/lockfile-parser"
 import { hydrateInventoryService, reconcileInventory } from "../inventory/reconciliation"
 import { buildQueryTargets, pollAdvisorySources } from "../threat-ingestion/poller"
 
 const isMainModule = import.meta.path === Bun.main
 const BUN_LOCK_SOURCE_REF = "bun.lock"
+const WORKFLOWS_DIR = ".github/workflows"
+const WORKFLOWS_SOURCE_REF = WORKFLOWS_DIR
 
 function getArg(args: string[], name: string): string | undefined {
   const idx = args.indexOf(`--${name}`)
@@ -56,6 +59,29 @@ async function reconcileAndHydrate(scope: ResolvedWorkspaceScope) {
     console.warn(`[ThreatDiscovery] Guard: bun.lock reconciliation failed this cycle (proceeding with prior data): ${error instanceof Error ? error.message : String(error)}`)
   }
 
+  // Second source, independent of the first: a failure here must not lose
+  // the lockfile reconciliation above, and vice versa.
+  try {
+    const dir = resolve(process.cwd(), WORKFLOWS_DIR)
+    const names = (await readdir(dir)).filter((n) => n.endsWith(".yml") || n.endsWith(".yaml"))
+    const files = await Promise.all(
+      names.map(async (name) => ({
+        path: `${WORKFLOWS_DIR}/${name}`,
+        content: await readFile(resolve(dir, name), "utf8"),
+      })),
+    )
+    const parsed = parseGithubWorkflows(files)
+    const result = await reconcileInventory(scope, WORKFLOWS_SOURCE_REF, parsed)
+    const unpinned = parsed.filter((r) => r.trust_state === "provisional").length
+    console.log(
+      `[ThreatDiscovery] Guard: reconciled ${files.length} workflow files -- ` +
+        `upserted=${result.upserted} marked_stale=${result.markedStale} ` +
+        `action_refs=${parsed.length} mutable_tag=${unpinned}`,
+    )
+  } catch (error) {
+    console.warn(`[ThreatDiscovery] Guard: workflow reconciliation failed this cycle (proceeding with prior data): ${error instanceof Error ? error.message : String(error)}`)
+  }
+
   return hydrateInventoryService(scope)
 }
 
@@ -69,7 +95,27 @@ export async function runOneCycle(scope: ResolvedWorkspaceScope): Promise<void> 
     `[ThreatDiscovery] Sources returned: osv=${poll.osvCount} npm=${poll.npmCount} github=${poll.githubCount}`,
   )
 
-  const result = await runDiscoveryCycle(scope, inventory, poll.advisories)
+  const r = poll.retrySummary
+  console.log(
+    `[ThreatDiscovery] Retry: policy=${r.config.maxAttempts}x/${r.config.baseDelayMs}ms ` +
+      `osv=${r.osv.attempts}(${r.osv.succeeded ? "ok" : "FAILED"}) ` +
+      `npm=${r.npm.attempts}(${r.npmChunksTotal - r.npmChunksFailed}/${r.npmChunksTotal} chunks) ` +
+      `github=${r.github.attempts}(${r.github.succeeded ? "ok" : "FAILED"})`,
+  )
+
+  const result = await runDiscoveryCycle(scope, inventory, poll.advisories, {
+    max_attempts: r.config.maxAttempts,
+    base_delay_ms: r.config.baseDelayMs,
+    max_delay_ms: r.config.maxDelayMs,
+    osv_attempts: r.osv.attempts,
+    osv_succeeded: r.osv.succeeded,
+    npm_attempts: r.npm.attempts,
+    npm_succeeded: r.npm.succeeded,
+    npm_chunks_failed: r.npmChunksFailed,
+    npm_chunks_total: r.npmChunksTotal,
+    github_attempts: r.github.attempts,
+    github_succeeded: r.github.succeeded,
+  })
   console.log(
     `[ThreatDiscovery] Cycle complete: alerts_created=${result.alertsCreated.length} already_known=${result.alertsAlreadyKnown} drafts_generated=${result.draftsGenerated.length}`,
   )

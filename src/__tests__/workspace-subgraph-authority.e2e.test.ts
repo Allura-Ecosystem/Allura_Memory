@@ -114,6 +114,14 @@ describeLive("workspace subgraph authority", () => {
   const databaseName = `allura_252a_authority_${RUN_ID.replaceAll("-", "")}`;
   let ownerPool: Pool;
   let appPool: Pool;
+  // Captured so afterAll can put POSTGRES_DB back. Without this restore, every
+  // test file that shares this process afterwards builds its pool against a
+  // database this suite has already dropped, and fails with
+  // `database "allura_252a_authority_..." does not exist`. Whether that happens
+  // depends purely on how vitest's fork pool groups files across available
+  // CPUs, so the bug stays invisible on a many-core dev machine and appears on
+  // a 2-core CI runner -- or the moment a tenth file joins this lane.
+  const originalPostgresDb = process.env.POSTGRES_DB;
 
   beforeAll(async () => {
     await rootOwnerPool.query(`CREATE DATABASE ${quoteIdentifier(databaseName)}`);
@@ -143,6 +151,14 @@ describeLive("workspace subgraph authority", () => {
   afterAll(async () => {
     await closePool();
     await teardownDisposableDatabase({ ownerPool, rootOwnerPool, databaseName });
+    // Restore BEFORE any later file can lazily rebuild the pool singleton.
+    // closePool() nulls the singletons, so the next getAppPool() re-reads
+    // POSTGRES_DB -- it must point at the real database again by then.
+    if (originalPostgresDb === undefined) {
+      delete process.env.POSTGRES_DB;
+    } else {
+      process.env.POSTGRES_DB = originalPostgresDb;
+    }
   }, 30_000);
 
   it.each([
