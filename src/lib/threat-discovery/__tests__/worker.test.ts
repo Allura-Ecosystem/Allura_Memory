@@ -7,10 +7,10 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { createInventoryService } from "../../inventory/service"
-import type { InventorySourceRecord, TenantScope } from "../../inventory/types"
 import type { ResolvedWorkspaceScope } from "../../db/workspace-scope"
 import type { ThreatAdvisory } from "../../exposure/types"
+import { createInventoryService } from "../../inventory/service"
+import type { InventorySourceRecord, TenantScope } from "../../inventory/types"
 
 const { withWorkspaceTransaction } = vi.hoisted(() => ({
   withWorkspaceTransaction: vi.fn(),

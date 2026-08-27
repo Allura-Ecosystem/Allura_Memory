@@ -47,10 +47,32 @@ export const PersistedThreatAlert = z.object({
  * Per-cycle audit evidence (AC-6), written as a THREAT_DISCOVERY_HEARTBEAT
  * event -- same pattern as curator/watchdog.ts's WATCHDOG_HEARTBEAT.
  */
+/**
+ * Per-source retry accounting carried into the heartbeat so AC-2's
+ * "retry behavior ... auditable" is literally true: the retry policy and
+ * what it actually did land in an immutable `events` row, not just a log.
+ * Optional so a caller that polls nothing (e.g. an empty inventory) still
+ * emits a valid heartbeat.
+ */
+export const DiscoveryRetryEvidence = z.object({
+  max_attempts: z.number().int().min(1),
+  base_delay_ms: z.number().int().min(1),
+  max_delay_ms: z.number().int().min(1),
+  osv_attempts: z.number().int().min(0),
+  osv_succeeded: z.boolean(),
+  npm_attempts: z.number().int().min(0),
+  npm_succeeded: z.boolean(),
+  npm_chunks_failed: z.number().int().min(0),
+  npm_chunks_total: z.number().int().min(0),
+  github_attempts: z.number().int().min(0),
+  github_succeeded: z.boolean(),
+})
+
 export const DiscoveryCycleHeartbeat = z.object({
   advisories_processed: z.number().int().min(0),
   advisories_failed: z.number().int().min(0),
   alerts_created: z.number().int().min(0),
   alerts_already_known: z.number().int().min(0),
   drafts_generated: z.number().int().min(0),
+  retry: DiscoveryRetryEvidence.optional(),
 })

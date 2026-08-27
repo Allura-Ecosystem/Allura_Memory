@@ -40,6 +40,10 @@ export default defineConfig({
       "src/lib/threat-ingestion/**/*.test.ts",
       // Story 26.6 — containment connectors and response receipts.
       "src/lib/containment/**/*.test.ts",
+      // Story 26.7 — incident replay through the real pipeline, and the
+      // Bumblebee operator module's fail-closed/rollback behaviour.
+      "src/lib/replay/**/*.test.ts",
+      "src/lib/bumblebee/**/*.test.ts",
       // Story 26.5 — governed mitigation drafts must stay in the CI unit lane.
       "src/lib/mitigation/**/*.test.ts",
       "src/lib/memory/config.test.ts",
@@ -112,6 +116,8 @@ export default defineConfig({
       "src/__tests__/toast.test.tsx",
       // UI unit tests (Story 16.3 — 3-pane inspector)
       "src/__tests__/inspector-panel.test.tsx",
+      // UI unit tests (Story 26.7 — Bumblebee operator surfaces, ARIA/keyboard)
+      "src/__tests__/bumblebee-surfaces.test.tsx",
       // UI unit tests — inspector entity views (6 view components)
       "src/__tests__/inspector-views.test.tsx",
       // Dashboard pages (Story 16.4 — approvals/handoffs/evidence)
@@ -190,6 +196,7 @@ export default defineConfig({
       ["src/__tests__/toast.test.tsx", "jsdom"],
       ["src/__tests__/inspector-panel.test.tsx", "jsdom"],
       ["src/__tests__/inspector-views.test.tsx", "jsdom"],
+      ["src/__tests__/bumblebee-surfaces.test.tsx", "jsdom"],
     ],
   },
   resolve: {

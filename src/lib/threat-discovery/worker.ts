@@ -22,15 +22,20 @@
  * workflows (Story 26.5 AC 6-7's governed-approval.ts; Story 26.6).
  */
 
-import { randomUUID } from "crypto"
 import type { PoolClient } from "pg"
+import { randomUUID } from "crypto"
+import { PersistedThreatAlert as PersistedThreatAlertSchema } from "./schemas"
+import type {
+  AlertWithDraft,
+  DiscoveryCycleResult,
+  DiscoveryRetryEvidence,
+  PersistedThreatAlert,
+} from "./types"
 import { withWorkspaceTransaction } from "../db/tenant-transaction"
 import type { ResolvedWorkspaceScope } from "../db/workspace-scope"
 import { createExposureMatcher, type InventoryProvider } from "../exposure/matcher"
 import type { ExposureAlert, ThreatAdvisory } from "../exposure/types"
 import { createDraftGenerator } from "../mitigation/draft-generator"
-import { PersistedThreatAlert as PersistedThreatAlertSchema } from "./schemas"
-import type { AlertWithDraft, DiscoveryCycleResult, PersistedThreatAlert } from "./types"
 
 if (typeof window !== "undefined") {
   throw new Error("server-side only")
@@ -135,6 +140,7 @@ export async function runDiscoveryCycle(
   scope: ResolvedWorkspaceScope,
   inventoryProvider: InventoryProvider,
   advisories: ThreatAdvisory[],
+  retryEvidence?: DiscoveryRetryEvidence,
 ): Promise<DiscoveryCycleResult> {
   const tenantScope = toTenantScope(scope)
   const matcher = createExposureMatcher()
@@ -173,6 +179,15 @@ export async function runDiscoveryCycle(
     }
   }
 
+  const heartbeat = {
+    advisories_processed: advisories.length,
+    advisories_failed: advisoriesFailed,
+    alerts_created: alertsCreated.length,
+    alerts_already_known: alertsAlreadyKnown,
+    drafts_generated: draftsGenerated.length,
+    ...(retryEvidence ? { retry: retryEvidence } : {}),
+  }
+
   await withWorkspaceTransaction(scope, async (client: Queryable) => {
     await client.query(
       `INSERT INTO events (event_type, agent_id, group_id, workspace_id, metadata, created_at)
@@ -182,13 +197,7 @@ export async function runDiscoveryCycle(
         "threat-discovery-worker",
         scope.tenantId,
         scope.workspaceId,
-        JSON.stringify({
-          advisories_processed: advisories.length,
-          advisories_failed: advisoriesFailed,
-          alerts_created: alertsCreated.length,
-          alerts_already_known: alertsAlreadyKnown,
-          drafts_generated: draftsGenerated.length,
-        }),
+        JSON.stringify(heartbeat),
       ],
     )
 
@@ -207,16 +216,5 @@ export async function runDiscoveryCycle(
     }
   })
 
-  return {
-    alertsCreated,
-    alertsAlreadyKnown,
-    draftsGenerated,
-    heartbeat: {
-      advisories_processed: advisories.length,
-      advisories_failed: advisoriesFailed,
-      alerts_created: alertsCreated.length,
-      alerts_already_known: alertsAlreadyKnown,
-      drafts_generated: draftsGenerated.length,
-    },
-  }
+  return { alertsCreated, alertsAlreadyKnown, draftsGenerated, heartbeat }
 }
