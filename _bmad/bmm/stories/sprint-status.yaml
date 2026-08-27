@@ -299,21 +299,21 @@ epic_25:
   name: "Governed Curator Console — Module Registry Reconciliation"
   status: in-progress
   retrospective: null
-  next_story: "25.3a"
-  sequence_note: "Canonical Epic 25 scope is limited to the prerequisite read-contract remediation (25.3a) followed by the server-issued module registry (25.3b). Historical/archived Epic 25 planning is not restored. No registry implementation exists."
+  next_story: "25.3b"
+  sequence_note: "Story 25.3a curator read-contract remediation merged 2026-08-27. Story 25.3b is now ready for governed implementation; no server-issued registry exists yet."
   stories:
     - key: "25.3a"
       title: "Curator Read Contract and Workspace Authority Remediation"
-      status: in-progress
+      status: done
       owner: "Brooks + Woz + Knuth + Pike + Fowler"
       depends_on: ["25.2a", "25.2b", "24.12"]
-      status_evidence: "Remediation after Pike/Fowler findings (2026-08-27): /api/curator/proposals now fails closed on duplicate group_id/workspace_id selectors before opening a transaction; operator storage reads moved from the Bumblebee module to the shared curator-owned src/lib/curator/operator-read-service.ts boundary, with regression coverage prohibiting src/lib/bumblebee/queries.ts. Direct /dashboard/bumblebee route remains absent; no registry implementation exists. Focused tests passed (55/55); typecheck passed; unit lane passed (2152 passed, 160 skipped). Story remains in-progress pending independent re-review (including Knuth's credentialed app-role live-RLS evidence), PR CI, and source reconciliation; 25.3b remains blocked."
+      status_evidence: "Merged PR #122 as bff4f8456b4a7deea56f12e18847788409967742, verified on origin/main. Authenticated curator reads derive tenant/workspace/principal, reject forged and duplicate selectors, use restricted workspace transactions plus explicit scope predicates, read scoped evidence/immutable governance receipts, and remove direct Bumblebee route/module-owned storage reads. Pike PASS, Fowler PASS, Knuth GO; current PR SHA remote CI passed including Epic 24 Evidence Live PostgreSQL. Brain receipt ee8cfe36-0329-4fd0-830c-222e42e45941 read back."
     - key: "25.3b"
       title: "Modular Dashboard Workflow Contract Registry"
-      status: dependency-blocked
+      status: ready-for-dev
       owner: "Brooks + Woz + Pike + Fowler + Bellard"
       depends_on: ["25.3a"]
-      status_evidence: "Canonical story restored by Option A reconciliation on 2026-08-27. Its prerequisite gate did not pass: the curator read boundary must first be remediated by Story 25.3a. No registry implementation, registration path, or registry tests exist. REQ-MOD-001/002/003 remain Dependency-blocked; Story 26.7 remains in-progress with its AC-2 blocked."
+      status_evidence: "Prerequisite-verification gate passed after Story 25.3a merged. No registry implementation, registration path, or registry tests exist. REQ-MOD-001/002/003 remain Dependency-blocked until implementation evidence; Story 26.7 remains in-progress with AC-2 blocked."
 
 epic_26:
   name: "Bumblebee — Supply-Chain Threat Intelligence"
