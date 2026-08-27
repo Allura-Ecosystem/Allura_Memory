@@ -9,10 +9,10 @@
  */
 
 import { createHash } from "crypto"
-import { safeFetchJson, assertSafeIdentifier } from "./safe-fetch"
-import { normalizeSeverity, NpmBulkAdvisoriesResponse, type InventoryQueryTarget } from "./schemas"
-import type { ThreatAdvisory } from "../exposure/types"
+import { assertSafeIdentifier, safeFetchJson } from "./safe-fetch"
+import { type InventoryQueryTarget, normalizeSeverity, NpmBulkAdvisoriesResponse } from "./schemas"
 import { ThreatAdvisory as ThreatAdvisorySchema } from "../exposure/schemas"
+import type { ThreatAdvisory } from "../exposure/types"
 
 if (typeof window !== "undefined") {
   throw new Error("server-side only")

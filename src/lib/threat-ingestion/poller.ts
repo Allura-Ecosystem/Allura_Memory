@@ -14,13 +14,13 @@
  * fails soft internally, and this module runs them independently.
  */
 
-import type { InventoryProvider } from "../exposure/matcher"
-import type { TenantScope } from "../inventory/types"
-import type { ThreatAdvisory } from "../exposure/types"
-import { queryOsv } from "./osv-adapter"
+import { MAX_PACKAGES_PER_CYCLE, queryGithubAdvisories } from "./github-advisories-adapter"
 import { queryNpmAudit } from "./npm-audit-adapter"
-import { queryGithubAdvisories, MAX_PACKAGES_PER_CYCLE } from "./github-advisories-adapter"
+import { queryOsv } from "./osv-adapter"
 import type { InventoryQueryTarget } from "./schemas"
+import type { InventoryProvider } from "../exposure/matcher"
+import type { ThreatAdvisory } from "../exposure/types"
+import type { TenantScope } from "../inventory/types"
 
 if (typeof window !== "undefined") {
   throw new Error("server-side only")

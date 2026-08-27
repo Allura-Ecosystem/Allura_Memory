@@ -22,10 +22,10 @@
  * Usage: bun src/lib/threat-discovery/cli.ts --group-id allura-system --workspace-id ws-main --principal-id threat-discovery-worker
  */
 
-import { createInventoryService } from "../inventory/service"
-import { buildQueryTargets, pollAdvisorySources } from "../threat-ingestion/poller"
 import { runDiscoveryCycle } from "./worker"
 import type { ResolvedWorkspaceScope } from "../db/workspace-scope"
+import { createInventoryService } from "../inventory/service"
+import { buildQueryTargets, pollAdvisorySources } from "../threat-ingestion/poller"
 
 const isMainModule = import.meta.path === Bun.main
 

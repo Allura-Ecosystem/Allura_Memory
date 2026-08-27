@@ -7,7 +7,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { assertSafeIdentifier, safeFetchJson, SafeFetchError, ALLOWED_HOSTS } from "../safe-fetch"
+import { ALLOWED_HOSTS, assertSafeIdentifier, SafeFetchError, safeFetchJson } from "../safe-fetch"
 
 const originalFetch = global.fetch
 

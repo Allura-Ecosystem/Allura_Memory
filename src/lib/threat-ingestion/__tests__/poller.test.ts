@@ -8,9 +8,9 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import type { ThreatAdvisory } from "../../exposure/types"
 import { createInventoryService } from "../../inventory/service"
 import type { InventorySourceRecord, TenantScope } from "../../inventory/types"
-import type { ThreatAdvisory } from "../../exposure/types"
 
 const { queryOsv, queryNpmAudit, queryGithubAdvisories } = vi.hoisted(() => ({
   queryOsv: vi.fn(),

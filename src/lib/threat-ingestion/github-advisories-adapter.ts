@@ -15,12 +15,12 @@
  * see MAX_PACKAGES_PER_CYCLE.
  */
 
-import { createHash } from "crypto"
 import semver from "semver"
-import { safeFetchJson, assertSafeIdentifier } from "./safe-fetch"
-import { GithubAdvisoriesResponse, normalizeSeverity, type InventoryQueryTarget } from "./schemas"
-import type { ThreatAdvisory } from "../exposure/types"
+import { createHash } from "crypto"
+import { assertSafeIdentifier, safeFetchJson } from "./safe-fetch"
+import { GithubAdvisoriesResponse, type InventoryQueryTarget, normalizeSeverity } from "./schemas"
 import { ThreatAdvisory as ThreatAdvisorySchema } from "../exposure/schemas"
+import type { ThreatAdvisory } from "../exposure/types"
 
 if (typeof window !== "undefined") {
   throw new Error("server-side only")
