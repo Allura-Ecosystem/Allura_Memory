@@ -122,6 +122,33 @@ describe("Story 25.3b server-issued curator module registry", () => {
     expect(transactionClient.query.mock.calls.at(-1)?.[1]).toContain("failed")
   })
 
+  it("returns an explicit audit-unavailable error when denied-outcome persistence fails", async () => {
+    getAuthUser.mockReturnValue({ ...user, role: "viewer" })
+    transactionClient.query.mockRejectedValueOnce(new Error("audit unavailable"))
+
+    await expect(issueCuratorModules(request as never)).resolves.toMatchObject({
+      state: "error", modules: [], message: "Curator workflow access is unavailable because audit recording failed.",
+    })
+  })
+
+  it("returns an explicit audit-unavailable error when disabled-outcome persistence fails", async () => {
+    transactionClient.query.mockRejectedValueOnce(new Error("audit unavailable"))
+
+    await expect(issueCuratorModules(request as never)).resolves.toMatchObject({
+      state: "error", modules: [], message: "Curator workflow access is unavailable because audit recording failed.",
+    })
+  })
+
+  it("returns an explicit audit-unavailable error when read-failure persistence fails", async () => {
+    process.env[BUMBLEBEE_ENABLED_ENV_VAR] = "true"
+    getBumblebeeSummaryInTransaction.mockRejectedValueOnce(new Error("read down"))
+    transactionClient.query.mockRejectedValueOnce(new Error("audit unavailable"))
+
+    await expect(issueCuratorModules(request as never)).resolves.toMatchObject({
+      state: "error", modules: [], message: "Curator workflow access is unavailable because audit recording failed.",
+    })
+  })
+
   it("keeps the registry snapshot immutable when a caller attempts runtime descriptor mutation", () => {
     expect(Object.isFrozen(BUMBLEBEE_MODULE)).toBe(true)
     expect(Object.isFrozen(BUMBLEBEE_MODULE.requiredCapabilities)).toBe(true)

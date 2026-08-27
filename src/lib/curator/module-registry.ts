@@ -146,6 +146,25 @@ async function recordOutcome(scope: Scope, decision: Exclude<Decision, "issued">
   await withWorkspaceTransaction(scope, (client) => appendDecision(client, scope, decision, "failed"))
 }
 
+function auditUnavailable(): CuratorModuleIssue {
+  return { state: "error", modules: [], message: "Curator workflow access is unavailable because audit recording failed." }
+}
+
+/**
+ * A denied, disabled, invalid-manifest, or read-failure response is not
+ * trustworthy unless its required audit outcome committed. Convert an audit
+ * transaction failure into an explicit unavailable response rather than
+ * claiming the ordinary outcome without durable evidence.
+ */
+async function recordOutcomeOrUnavailable(scope: Scope, decision: Exclude<Decision, "issued">): Promise<CuratorModuleIssue | null> {
+  try {
+    await recordOutcome(scope, decision)
+    return null
+  } catch {
+    return auditUnavailable()
+  }
+}
+
 /**
  * Server-only authenticated entry. It accepts a request, never an AuthUser;
  * scope and role come only from the canonical server auth resolver. Available
@@ -160,18 +179,21 @@ export async function issueCuratorModules(request: NextRequest): Promise<Curator
   try {
     validateModuleManifests([...SOURCE_ALLOWLIST.values()])
   } catch {
-    await recordOutcome(scope, "manifest_invalid").catch(() => undefined)
+    const unavailable = await recordOutcomeOrUnavailable(scope, "manifest_invalid")
+    if (unavailable) return unavailable
     return { state: "error", modules: [], message: "Curator workflow access is unavailable." }
   }
 
   const manifest = SOURCE_ALLOWLIST.get("bumblebee")!
   if (missingCapabilitiesForRole(scope.role, manifest.requiredCapabilities).length > 0) {
-    await recordOutcome(scope, "denied").catch(() => undefined)
+    const unavailable = await recordOutcomeOrUnavailable(scope, "denied")
+    if (unavailable) return unavailable
     return { state: "denied", modules: [], message: "Your role cannot access this curator workflow." }
   }
 
   if (!isBumblebeeEnabled()) {
-    await recordOutcome(scope, "disabled").catch(() => undefined)
+    const unavailable = await recordOutcomeOrUnavailable(scope, "disabled")
+    if (unavailable) return unavailable
     return { state: "complete", modules: [{ id: "bumblebee", state: "unavailable", title: manifest.title }] }
   }
 
@@ -182,7 +204,8 @@ export async function issueCuratorModules(request: NextRequest): Promise<Curator
       return { state: "complete", modules: [{ id: "bumblebee", state: "available", title: manifest.title, summary }] }
     })
   } catch {
-    await recordOutcome(scope, "read_failure").catch(() => undefined)
+    const unavailable = await recordOutcomeOrUnavailable(scope, "read_failure")
+    if (unavailable) return unavailable
     return { state: "error", modules: [], message: "Curator workflow data is temporarily unavailable." }
   }
 }

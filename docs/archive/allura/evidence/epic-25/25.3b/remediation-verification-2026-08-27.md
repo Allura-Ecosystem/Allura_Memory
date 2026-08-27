@@ -4,20 +4,16 @@ This receipt records local remediation verification only. It does **not** mark S
 
 ## Candidate identity
 
-The prior pre-commit diff hash was removed because it could not reproduce a committed candidate. The deterministic core-remediation content hash below covers the implementation test, lifecycle/status records, and story record. The evidence documents are excluded to avoid a recursive self-hash.
+The remediation candidate is the complete Git tree of the remediation commit, not a selected-file hash. The commit records that exact full-tree identity in its `Candidate-Tree:` trailer; this receipt and the evidence index are included in that tree.
 
 ```bash
-files=(
-  _bmad/bmm/stories/25-3b-modular-dashboard-workflow-contract-registry.md
-  _bmad/bmm/stories/sprint-status.yaml
-  src/__tests__/curator-module-registry.live-db.test.ts
-  src/lib/curator/module-registry.test.ts
-)
-printf '%s\n' "${files[@]}" | LC_ALL=C xargs sha256sum | sha256sum
-# 94134642d6aa0f3e8925f4ad927971c98fe16f1177d75194ad32ee869dca0b70  -
+# From the clean worktree at the remediation commit:
+git status --porcelain=v1          # must print nothing
+git rev-parse HEAD^{tree}          # must equal the commit's Candidate-Tree trailer
+git log -1 --format=%B | grep '^Candidate-Tree: '
 ```
 
-After committing, `git rev-parse HEAD^{tree}` separately reproduces the full committed tree identity.
+This checks Git's complete tracked snapshot, including production implementation, tests, contracts, status/story records, and evidence. It is a local candidate freeze only: independent review must review this exact tree or a newly frozen replacement.
 
 ## Focused verification
 
@@ -25,10 +21,11 @@ After committing, `git rev-parse HEAD^{tree}` separately reproduces the full com
 bun vitest run --config vitest.config.unit.ts \
   src/__tests__/curator-module-shell.test.tsx \
   src/lib/curator/module-registry.test.ts \
+  src/lib/curator/module-registry.audit-failure.test.ts \
   src/lib/auth/__tests__/with-permission-action.test.ts
 ```
 
-Actual result: exit 0 — **3 files, 31 passed, 0 failed**.
+Actual result: exit 0 — **4 files, 35 passed, 0 failed**.
 
 ```bash
 bun run typecheck
@@ -42,7 +39,7 @@ Actual result: exit 0.
 bun run test:unit
 ```
 
-Actual result: exit 0 — **120 files passed, 6 skipped; 2,166 tests passed, 160 skipped, 0 failed.** Expected-error logging from unrelated test fixtures was emitted, but Vitest reported no failed tests.
+Actual result: exit 0 — **121 files passed, 6 skipped; 2,170 tests passed, 160 skipped, 0 failed.** Expected-error logging from unrelated test fixtures was emitted, but Vitest reported no failed tests.
 
 ## Fresh live PostgreSQL CI app-role lane
 
@@ -76,4 +73,4 @@ docker rm -f -v allura-253b-remediation-db
 
 Actual result: exit 0. A new disposable `pgvector/pgvector:pg16` container applied **49 migrations**. The recorded server version was **PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2)**. The ignored generated report at `artifacts/ci/local/25-3b-remediation-final/live-db-tests.json` reported **24/24 suites passed and 72/72 tests passed**.
 
-The Story 25.3b live test now has two managed-app-role assertions (available issuance and denied/disabled outcomes). It performs no global `REVOKE`/`GRANT`; that unsafe probe was removed because the configured live lane runs forked tests against a shared database. The read-failure outcome remains covered in the focused unit test by rejecting the host-owned summary reader.
+The Story 25.3b live test now has two managed-app-role assertions (available issuance and denied/disabled outcomes). It performs no global `REVOKE`/`GRANT`; that unsafe probe was removed because the configured live lane runs forked tests against a shared database. The focused unit suite forces audit transaction failure for manifest-invalid, denied, disabled, and read-failure outcomes; each returns the explicit audit-unavailable error rather than a normal outcome. The ordinary read-failure outcome remains covered there by rejecting the host-owned summary reader.
