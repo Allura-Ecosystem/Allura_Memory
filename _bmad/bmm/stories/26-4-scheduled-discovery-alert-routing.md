@@ -1,8 +1,8 @@
 # Story 26.4 — Scheduled Discovery and Alert Routing
 
-**Status:** Planned
+**Status:** Planned — unblocked; security-owner approval recorded, no implementation exists yet
 **Owner:** Hightower + Woz
-**Depends on:** 26.3, security-owner approval
+**Depends on:** 26.3 (done)
 **Blocks:** 26.7
 
 ## Outcome
@@ -27,6 +27,18 @@ A governed worker operates the scheduled advisory-polling and reconciliation lan
 - Alert lifecycle state machine tests.
 - Freshness/degraded state tests.
 - Scheduler health and audit evidence.
+
+## Implementation Status — 2026-08-27
+
+The external blocker for this story was the security-owner approval, not code. That
+approval is now recorded: `docs/governance/2026-08-27-story-26-4-security-owner-approval.md`,
+approved by Sabir Asheed (ronin704) on 2026-08-27, covering advisory source allowlist
+(GitHub Security Advisories, OSV.dev, npm audit API), 6-hour polling cadence,
+stale/degraded thresholds (12h/36h), and indefinite retention.
+
+**No AC box is checked** — the approval covers only the *configuration decision* AC-1
+and AC-2 require; none of the worker, alert lifecycle, routing, or health-monitoring
+code exists yet. This story is unblocked and ready for implementation, not started.
 
 ## Rollback
 
