@@ -1,6 +1,6 @@
 # Story 25.3b — Modular Dashboard Workflow Contract Registry
 
-**Status:** Dependency-blocked — canonical planning restored 2026-08-27; implementation must not start until the prerequisite-verification gate is closed.
+**Status:** In Progress — source-controlled server registry implemented locally 2026-08-27; independent review and required evidence remain pending.
 **Owner:** Brooks + Woz + Pike + Fowler + Bellard
 **Depends on:** Story 25.2a — Workspace Scope and Evidence Lifecycle Foundation (**Done**, final approval 2026-08-26); Story 25.2b — Authenticated Session Entry Point (**Done**); Story 24.12 — Effective-Tenant Authority Seam (**Done** in authoritative sprint status).
 **Blocks:** REQ-MOD-001, REQ-MOD-002, REQ-MOD-003; Story 26.7 AC-2 module registration.
@@ -15,17 +15,19 @@ There is **no server-issued module registry implementation**, registration path,
 
 Define and then implement one server-owned, allow-listed module-registry boundary for the authenticated `/dashboard/curator` shell. A registered workflow module may supply typed presentation and workflow descriptors only. Tenant/workspace scope, principal authority, policy decisions, mutations, receipts, storage access, and standard UI truth states remain owned by canonical Allura services.
 
-## Prerequisite-Verification Gate
+## Prerequisite-Verification Record
 
-Status remains `Dependency-blocked` until a designated readiness review verifies all of the following against current `origin/main` and records the evidence:
+The designated 2026-08-27 Scout/Knuth/Pike/Fowler readiness review verified the workspace authority, authenticated entry, effective-tenant seam, curator read-boundary remediation, and required red-test plan against current `origin/main`. This story may now begin its **source-controlled, server-only** registry implementation. The review explicitly rejected caller-supplied capability data, direct Bumblebee-route bypasses, dynamic/admin-managed registration, and any separate module authority plane.
 
-1. **25.2a workspace authority:** the frozen 25.2a completion claims still match the current scoped transaction, RLS, workspace, evidence-lifecycle, and receipt seams that the registry will invoke.
-2. **25.2b authenticated entry:** the authenticated curator route still derives principal, tenant, workspace, and role server-side, with no browser-controlled scope authority.
-3. **24.12 effective-tenant seam:** the authoritative effective-tenant boundary is present at every intended registry/read entrypoint and fails closed on mismatch.
-4. **Architecture authority:** a recon names the current canonical shell, shared components, allowed action contract, feature-flag/rollback convention, and the only approved registration boundary. It must reject caller-supplied capability data, direct Bumblebee-route bypasses, and any separate module authority plane.
-5. **Review and test plan:** Pike/Fowler/Knuth review scope and a red test plan exist before implementation begins, including cross-tenant, forged-principal, duplicate/unknown/incompatible/disabled module, rollback, accessibility, and no-direct-data-access cases.
+The implementation still must meet every acceptance criterion and pass independent review before REQ-MOD status or Story 26.7 can advance.
 
-Completion of earlier stories is not itself evidence that this new composition boundary is ready. Do not advance this story, change REQ-MOD status, or mark Story 26.7 complete until the gate and implementation acceptance criteria are independently evidenced.
+## Local Implementation Record (2026-08-27)
+
+Implemented locally, pending independent review and evidence archival:
+
+- `src/lib/curator/module-contract.ts` and `module-registry.ts` define the versioned, source-controlled allowlist and server issuer. It derives the authenticated principal/workspace/role and static host capability mapping, validates the complete set before rendering, reads the curator-owned summary, and appends a scoped issuance/denial decision through `withWorkspaceTransaction`.
+- `/dashboard/curator` composes the host-owned accessible shell. Disabled modules render truthful unavailable state; no direct `/dashboard/bumblebee` route exists.
+- Local verification passed: focused Vitest 58 tests, `bun run typecheck`, and `bun run test:unit` (2,162 passed; 160 skipped). Independent review and evidence archival remain pending.
 
 ## Acceptance Criteria
 

@@ -118,6 +118,8 @@ export default defineConfig({
       "src/__tests__/inspector-panel.test.tsx",
       // UI unit tests (Story 26.7 — Bumblebee operator surfaces, ARIA/keyboard)
       "src/__tests__/bumblebee-surfaces.test.tsx",
+      // Story 25.3b — server-issued curator shell state/accessibility.
+      "src/__tests__/curator-module-shell.test.tsx",
       // UI unit tests — inspector entity views (6 view components)
       "src/__tests__/inspector-views.test.tsx",
       // Dashboard pages (Story 16.4 — approvals/handoffs/evidence)

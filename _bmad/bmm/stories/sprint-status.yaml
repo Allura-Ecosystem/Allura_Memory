@@ -300,7 +300,7 @@ epic_25:
   status: in-progress
   retrospective: null
   next_story: "25.3b"
-  sequence_note: "Story 25.3a curator read-contract remediation merged 2026-08-27. Story 25.3b is now ready for governed implementation; no server-issued registry exists yet."
+  sequence_note: "Story 25.3a curator read-contract remediation merged 2026-08-27. Story 25.3b has a local source-controlled server registry implementation with passing unit lane, pending independent review."
   stories:
     - key: "25.3a"
       title: "Curator Read Contract and Workspace Authority Remediation"
@@ -310,10 +310,10 @@ epic_25:
       status_evidence: "Merged PR #122 as bff4f8456b4a7deea56f12e18847788409967742, verified on origin/main. Authenticated curator reads derive tenant/workspace/principal, reject forged and duplicate selectors, use restricted workspace transactions plus explicit scope predicates, read scoped evidence/immutable governance receipts, and remove direct Bumblebee route/module-owned storage reads. Pike PASS, Fowler PASS, Knuth GO; current PR SHA remote CI passed including Epic 24 Evidence Live PostgreSQL. Brain receipt ee8cfe36-0329-4fd0-830c-222e42e45941 read back."
     - key: "25.3b"
       title: "Modular Dashboard Workflow Contract Registry"
-      status: ready-for-dev
+      status: in-progress
       owner: "Brooks + Woz + Pike + Fowler + Bellard"
       depends_on: ["25.3a"]
-      status_evidence: "Prerequisite-verification gate passed after Story 25.3a merged. No registry implementation, registration path, or registry tests exist. REQ-MOD-001/002/003 remain Dependency-blocked until implementation evidence; Story 26.7 remains in-progress with AC-2 blocked."
+      status_evidence: "Local implementation pending independent review: source-controlled typed registry and host-owned /dashboard/curator shell added, authenticating principal/workspace/role server-side, evaluating static host capabilities, validating the whole allowlist fail-closed, issuing scoped append-only decisions through withWorkspaceTransaction, and rendering disabled Bumblebee as unavailable. Focused local Vitest: 58 tests passed; bun run typecheck passed; bun run test:unit passed (2,162 passed; 160 skipped). Independent review/evidence archival remain required; REQ-MOD-001/002/003 and Story 26.7 AC-2 must not advance yet."
 
 epic_26:
   name: "Bumblebee — Supply-Chain Threat Intelligence"

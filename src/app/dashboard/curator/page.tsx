@@ -2,11 +2,26 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextRequest } from "next/server";
 
+import { CuratorModuleShell } from "@/components/curator/module-shell";
 import { getAuthUser } from "@/lib/auth/api-auth";
 import { AUTH_LOGIN_PATH } from "@/lib/auth/redirect-target";
 import type { AuthUser } from "@/lib/auth/types";
+import type { CuratorModuleIssue } from "@/lib/curator/module-contract";
+import { issueCuratorModules } from "@/lib/curator/module-registry";
 
-export function CuratorHandoffContent({ user }: { user: AuthUser }) {
+export function CuratorHandoffContent({ user, issue }: { user: AuthUser; issue?: CuratorModuleIssue }) {
+  if (issue) {
+    return (
+      <>
+        <p data-testid="authenticated-identity">Signed in as {user.id}</p>
+        <p data-testid="authenticated-scope">
+          Workspace {user.workspaceId} | Tenant {user.groupId} | Role {user.role}
+        </p>
+        <CuratorModuleShell issue={issue} />
+      </>
+    );
+  }
+
   return (
     <main>
       <h1>Curator console</h1>
@@ -19,13 +34,10 @@ export function CuratorHandoffContent({ user }: { user: AuthUser }) {
 }
 
 export default async function CuratorHandoffPage() {
-  const request = new NextRequest("http://allura.local/dashboard/curator", {
-    headers: await headers(),
-  });
+  const request = new NextRequest("http://allura.local/dashboard/curator", { headers: await headers() });
   const user = getAuthUser(request);
-  if (!user?.workspaceId || !user.sessionId) {
-    redirect(`${AUTH_LOGIN_PATH}?redirect_url=%2Fdashboard%2Fcurator`);
-  }
+  if (!user?.workspaceId || !user.sessionId) redirect(`${AUTH_LOGIN_PATH}?redirect_url=%2Fdashboard%2Fcurator`);
 
-  return <CuratorHandoffContent user={user} />;
+  const issue = await issueCuratorModules(user);
+  return <CuratorHandoffContent user={user} issue={issue} />;
 }
