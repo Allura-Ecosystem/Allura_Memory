@@ -139,7 +139,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_search",
         description:
-          "Search memories across both stores (PostgreSQL + Neo4j). Federated search with results merged by relevance.",
+          "Search memories. Defaults to status='approved', which returns ONLY canonical approved insights from the graph store — unpromoted episodic traces are excluded by design, so an empty result does NOT mean no history exists. Pass status='all' to federate across PostgreSQL episodic + graph.",
         inputSchema: {
           type: "object",
           properties: {
@@ -166,6 +166,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             include_global: {
               type: "boolean",
               description: "Optional: Include global memories (default: true)",
+            },
+            status: {
+              type: "string",
+              enum: ["approved", "proposed", "deprecated", "all"],
+              description:
+                "Optional: Retrieval status filter (default: 'approved'). Use 'all' to include unpromoted episodic traces — required for session hydration.",
             },
           },
           required: ["query", "group_id"],

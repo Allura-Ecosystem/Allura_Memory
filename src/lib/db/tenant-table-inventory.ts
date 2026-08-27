@@ -69,6 +69,7 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "governance_receipt_evidence_requests", class: "tenant-scoped", notes: "Immutable FK-backed complete receipt evidence membership", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "governance_receipts_legacy_archive", class: "migration-only", notes: "Quarantined pre-040 receipt envelopes; no application grants" },
   { table: "semantic_projections", class: "tenant-scoped", notes: "Versioned derived workspace semantic projections", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "mitigation_receipts", class: "tenant-scoped", notes: "Story 26.5 (migration 41): immutable governed mitigation-draft approval/rejection receipts, gated by REQ-GOV-008 approval_ref", workspaceTreatment: "workspace-scoped-new-writes" },
 
   // Credential / identity tables
   { table: "mcp_tokens", class: "tenant-scoped-credential", notes: "MCP credentials; lookup by token prefix before tenant resolution" },
