@@ -1,5 +1,6 @@
 import "server-only"
 
+import type { NextRequest } from "next/server"
 import { createHash } from "node:crypto"
 
 import { getAuthUser } from "@/lib/auth/api-auth"
@@ -7,9 +8,8 @@ import { actionForReadCapability, minimumRoleForAction } from "@/lib/auth/permis
 import { hasPermission } from "@/lib/auth/roles"
 import type { AlluraRole } from "@/lib/auth/types"
 import { BUMBLEBEE_MODULE, isBumblebeeEnabled } from "@/lib/bumblebee/module"
+import { type BumblebeeSummary, getBumblebeeSummaryInTransaction } from "@/lib/curator/operator-read-service"
 import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
-import { getBumblebeeSummaryInTransaction, type BumblebeeSummary } from "@/lib/curator/operator-read-service"
-import type { NextRequest } from "next/server"
 
 import {
   CURATOR_MODULE_CONTRACT_VERSION,
