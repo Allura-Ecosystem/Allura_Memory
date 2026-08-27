@@ -15,7 +15,7 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 import { withTenantTransaction } from "@/lib/db/tenant-transaction";
-import { getAppPool, getPool } from "@/lib/postgres/connection";
+import { closePool, getAppPool, getPool } from "@/lib/postgres/connection";
 
 const TENANT = "allura-pattern-proposals-e2e";
 const PRINCIPAL = "test-principal-pattern-proposals";
@@ -27,7 +27,13 @@ describeLive("pattern_proposals append-only guard (migrations 31 + 43)", () => {
   const appPool = getAppPool();
 
   afterAll(async () => {
-    await appPool.end();
+    // closePool() (not appPool.end() directly): getAppPool()/getOwnerPool()
+    // are module-level singletons (src/lib/postgres/connection.ts), and a
+    // raw .end() leaves the singleton reference pointing at a now-dead pool
+    // for any other e2e file sharing this worker process. closePool() nulls
+    // both singleton references before awaiting, and is idempotent-safe if
+    // another file's teardown already ran it.
+    await closePool();
   });
 
   it("allows the HITL review-gate transition (status + reviewed_at) as the application role", async () => {

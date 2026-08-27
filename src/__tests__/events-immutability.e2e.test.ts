@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { tenantQuery, withTenantTransaction } from "@/lib/db/tenant-transaction";
-import { getAppPool, getPool } from "@/lib/postgres/connection";
+import { closePool, getAppPool, getPool } from "@/lib/postgres/connection";
 
 const TENANT_A = "allura-tenant-isolation-a";
 const TENANT_B = "allura-tenant-isolation-b";
@@ -14,7 +14,13 @@ describeLive("events ledger immutability (AC-7)", () => {
   const appPool = getAppPool();
 
   afterAll(async () => {
-    await appPool.end();
+    // closePool() (not appPool.end() directly): getAppPool()/getOwnerPool()
+    // are module-level singletons (src/lib/postgres/connection.ts), and a
+    // raw .end() leaves the singleton reference pointing at a now-dead pool
+    // for any other e2e file sharing this worker process. closePool() nulls
+    // both singleton references before awaiting, and is idempotent-safe if
+    // another file's teardown already ran it.
+    await closePool();
   });
 
   it("rejects UPDATE and DELETE on events when connected as the application role", async () => {

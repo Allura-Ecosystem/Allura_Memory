@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { tenantQuery, withTenantTransaction } from "@/lib/db/tenant-transaction";
-import { getAppPool } from "@/lib/postgres/connection";
+import { closePool, getAppPool } from "@/lib/postgres/connection";
 
 const RUN_ID = randomUUID().replaceAll("-", "");
 const TENANT_A = `allura-tenant-isolation-a-${RUN_ID}`;
@@ -16,7 +16,13 @@ describeLive("database-enforced tenant isolation (AC-3..AC-6, AC-9)", () => {
   const appPool = getAppPool();
 
   afterAll(async () => {
-    await appPool.end();
+    // closePool() (not appPool.end() directly): getAppPool()/getOwnerPool()
+    // are module-level singletons (src/lib/postgres/connection.ts), and a
+    // raw .end() leaves the singleton reference pointing at a now-dead pool
+    // for any other e2e file sharing this worker process. closePool() nulls
+    // both singleton references before awaiting, and is idempotent-safe if
+    // another file's teardown already ran it.
+    await closePool();
   });
 
   it("returns only rows matching the active tenant context", async () => {
