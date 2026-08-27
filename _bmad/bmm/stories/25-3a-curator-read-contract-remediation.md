@@ -1,6 +1,6 @@
 # Story 25.3a — Curator Read Contract and Workspace Authority Remediation
 
-**Status:** In Progress
+**Status:** Done — merged PR #122 with final Pike/Fowler/Knuth verdicts and current-SHA CI evidence 2026-08-27.
 **Owner:** Brooks + Woz + Knuth + Pike + Fowler
 **Depends on:** 25.2a, 25.2b, 24.12
 **Blocks:** 25.3b, REQ-MOD-001..003, Story 26.7 AC-2
@@ -17,7 +17,14 @@ The authenticated curator read boundary derives tenant, workspace, principal, an
 - [x] The read model uses scoped evidence and immutable governance receipts; legacy event metadata is not treated as the authoritative decision receipt source.
 - [x] `/dashboard/curator` is prepared as the only future registry host boundary; direct Bumblebee routing/module-owned direct storage access is prohibited by regression tests until registry composition is implemented.
 - [x] Tests cover server-derived authority, tenant/workspace isolation, forged-principal/selector rejection (including duplicate scope selectors), and no direct data-access regression.
-- [ ] Typecheck, focused tests, independent Pike/Fowler/Knuth review, PR CI, and source reconciliation pass.
+- [x] Typecheck, focused tests, independent Pike/Fowler/Knuth review, PR CI, and source reconciliation pass.
+
+## Completion Evidence — 2026-08-27
+
+- Merged as PR #122, `bff4f8456b4a7deea56f12e18847788409967742`, verified on `origin/main`.
+- Pike final PASS; Fowler final PASS; Knuth GO.
+- Current PR SHA remote CI passed, including the Epic 24 Evidence Live PostgreSQL lane.
+- Allura Brain merge receipt read back: `ee8cfe36-0329-4fd0-830c-222e42e45941`.
 
 ## Evidence
 
