@@ -20,7 +20,15 @@
  */
 
 import type { ExposureRow, ReceiptRow, SourceRow } from "@/lib/curator/operator-read-service"
-import type { MitigationDraft } from "@/lib/mitigation/types"
+
+/** Safe host-prepared display shape; no policy/mutation authority crosses this boundary. */
+export interface PolicyDraftView {
+  id: string
+  template_id: string
+  alert_id: string
+  authority_state: string
+  approval_state: string
+}
 
 function EmptyState({ message }: { message: string }) {
   return <p data-testid="empty-state">{message}</p>
@@ -120,7 +128,7 @@ export function ExposuresSurface({ rows }: { rows: readonly ExposureRow[] }) {
   )
 }
 
-export function PolicyDraftsSurface({ drafts }: { drafts: readonly MitigationDraft[] }) {
+export function PolicyDraftsSurface({ drafts }: { drafts: readonly PolicyDraftView[] }) {
   return (
     <Surface id="policy-drafts" title="Policy Drafts">
       <p data-testid="drafts-authority-note">

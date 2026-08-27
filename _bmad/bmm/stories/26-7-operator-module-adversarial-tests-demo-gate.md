@@ -1,6 +1,6 @@
 # Story 26.7 — Operator Module, Adversarial Tests, and Demo Gate
 
-**Status:** In Progress — the direct Bumblebee dashboard route is absent after Story 25.3a scope reconciliation. AC-1, AC-6, and AC-9 therefore lack an active-route evidence path; AC-2 remains blocked on the unimplemented Epic 25 server-issued registry. The remaining five criteria retain their local test evidence, but this story must not be described as "8 of 9 complete."
+**Status:** In Progress — the direct Bumblebee dashboard route is absent after Story 25.3a scope reconciliation. AC-1, AC-6, and AC-9 therefore lack an active-route evidence path; AC-2 remains blocked pending remediation verification and independent review of the local Epic 25 server-issued registry. The remaining five criteria retain their local test evidence, but this story must not be described as "8 of 9 complete."
 **Owner:** Pike + Fowler + Brooks + Bellard
 **Depends on:** 26.4, 26.5, 26.6, Story 25.3b Epic 25 module registry (dependency-blocked)
 **Blocks:** —
@@ -12,7 +12,7 @@ A truthful operator surface with Sources, Exposures, Policy Drafts, Incidents, a
 ## Acceptance Criteria
 
 - [ ] Operator module surfaces: Sources, Exposures, Policy Drafts, Incidents, and Receipts. — **Not currently route-evidenced:** `src/app/dashboard/bumblebee/page.tsx` is absent.
-- [ ] Module is registered through the Epic 25 server-issued module registry. — **Blocked, not deferred.** That registry does not exist; see "AC-2 is genuinely blocked" below.
+- [ ] Module is registered through the Epic 25 server-issued module registry. — **Blocked, not deferred.** A local registry remediation exists but is pending verification and independent review; AC-2 cannot advance until Story 25.3b is accepted.
 - [x] Fail-closed: invalid/incompatible/untrusted/capability-missing modules are rejected.
 - [x] Tenant isolation: a forged tenant cannot read or mutate another tenant's alerts or policy drafts.
 - [x] Accessibility: ARIA/keyboard tests pass for all surfaces.
@@ -26,9 +26,7 @@ A truthful operator surface with Sources, Exposures, Policy Drafts, Incidents, a
 `REQ-MOD-001`, `REQ-MOD-002`, and `REQ-MOD-003` in
 [REQUIREMENTS-MATRIX.md](../../../docs/allura/REQUIREMENTS-MATRIX.md) are all marked
 `Dependency-blocked` against canonical story **25.3b**. The story is present in
-`_bmad/bmm/stories/`, but its prerequisite-verification gate remains open and there
-is no server-issued module registry implementation in this codebase to register with
-— verified by search, not assumed.
+`_bmad/bmm/stories/`, but its prerequisite-verification and independent-review gates remain open. A local source-controlled registry remediation is present in this branch, but it is not accepted implementation evidence and cannot register Story 26.7 yet.
 
 Two dishonest options were available and rejected:
 
@@ -170,4 +168,4 @@ Disable or keep absent any future Bumblebee route until the Epic 25 registry com
 - date: 2026-08-27
 - files changed: historical initial implementation included `src/lib/bumblebee/queries.ts` and `src/app/dashboard/bumblebee/page.tsx`; both are superseded by the Story 25.3a reconciliation. Current operator reads live only at `src/lib/curator/operator-read-service.ts`; the direct route remains absent.
 - evidence: historical component/replay/live-RLS evidence is retained above. Remediation verification: focused curator/Bumblebee tests 55/55 passed; `bun run test:unit` → 2152 passed / 160 skipped; `bun run typecheck` → exit 0.
-- remaining gaps: **AC-1, AC-6, and AC-9 are not currently evidenced** because the direct dashboard route is absent. **AC-2 is genuinely blocked** on the Epic 25 server-issued module registry (`REQ-MOD-001/002/003`, canonical story 25.3b); no registry implementation exists. AC-3/4/5/7/8 retain their local evidence. Inventory coverage remains 2 of 10 artifact types.
+- remaining gaps: **AC-1, AC-6, and AC-9 are not currently evidenced** because the direct dashboard route is absent. **AC-2 is genuinely blocked** on the Epic 25 server-issued module registry (`REQ-MOD-001/002/003`, canonical story 25.3b); a local source-controlled registry candidate is present but pending independent acceptance, so it cannot register Story 26.7. AC-3/4/5/7/8 retain their local evidence. Inventory coverage remains 2 of 10 artifact types.

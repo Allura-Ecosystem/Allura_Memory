@@ -83,7 +83,7 @@ Continuous intake uses three independently observable lanes: event-driven signal
 ## Dependencies
 
 - Epic 24 identity, scope, audit, and mutation-boundary remediation.
-- Canonical Story 25.3b server-issued module registry and governed shell. It is Dependency-blocked pending prerequisite verification and has no implementation; it continues to block Story 26.7 registration AC-2.
+- Canonical Story 25.3b source-controlled server-issued registry remediation and governed shell. It remains Dependency-blocked pending remediation verification and independent review; it has local implementation but does not yet satisfy or unblock Story 26.7 registration AC-2.
 - Role-model reconciliation before response authorization is exposed.
 - Security-owner approval before external response connectors or production schedules are enabled.
 

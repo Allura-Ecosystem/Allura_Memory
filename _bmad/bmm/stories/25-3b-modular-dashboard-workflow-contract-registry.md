@@ -1,6 +1,6 @@
 # Story 25.3b — Modular Dashboard Workflow Contract Registry
 
-**Status:** Dependency-blocked — canonical planning restored 2026-08-27; implementation must not start until the prerequisite-verification gate is closed.
+**Status:** In Progress — source-controlled server registry implemented locally 2026-08-27; independent review and required evidence remain pending.
 **Owner:** Brooks + Woz + Pike + Fowler + Bellard
 **Depends on:** Story 25.2a — Workspace Scope and Evidence Lifecycle Foundation (**Done**, final approval 2026-08-26); Story 25.2b — Authenticated Session Entry Point (**Done**); Story 24.12 — Effective-Tenant Authority Seam (**Done** in authoritative sprint status).
 **Blocks:** REQ-MOD-001, REQ-MOD-002, REQ-MOD-003; Story 26.7 AC-2 module registration.
@@ -9,23 +9,25 @@
 
 This is the active canonical Story 25.3b. It replaces neither source code nor the archived/superseded planning artifact. The reconciliation restores only a truthful planning and status record.
 
-There is **no server-issued module registry implementation**, registration path, or registry test suite in the repository. The existing Bumblebee descriptor and its local fail-closed compatibility checks are inputs a future registry may consume; they are not a registry and do not satisfy this story or Story 26.7 AC-2.
+A local, source-controlled registry implementation is present in this branch, but it is **pending remediation verification and independent review**. It does not yet satisfy this story, REQ-MOD-001..003, or Story 26.7 AC-2. The Bumblebee descriptor remains only declarative input; the host-owned adapter is not a separate route or authority boundary.
 
 ## Outcome
 
 Define and then implement one server-owned, allow-listed module-registry boundary for the authenticated `/dashboard/curator` shell. A registered workflow module may supply typed presentation and workflow descriptors only. Tenant/workspace scope, principal authority, policy decisions, mutations, receipts, storage access, and standard UI truth states remain owned by canonical Allura services.
 
-## Prerequisite-Verification Gate
+## Prerequisite-Verification Record
 
-Status remains `Dependency-blocked` until a designated readiness review verifies all of the following against current `origin/main` and records the evidence:
+The designated 2026-08-27 Scout/Knuth/Pike/Fowler readiness review verified the workspace authority, authenticated entry, effective-tenant seam, curator read-boundary remediation, and required red-test plan against current `origin/main`. This story may now begin its **source-controlled, server-only** registry implementation. The review explicitly rejected caller-supplied capability data, direct Bumblebee-route bypasses, dynamic/admin-managed registration, and any separate module authority plane.
 
-1. **25.2a workspace authority:** the frozen 25.2a completion claims still match the current scoped transaction, RLS, workspace, evidence-lifecycle, and receipt seams that the registry will invoke.
-2. **25.2b authenticated entry:** the authenticated curator route still derives principal, tenant, workspace, and role server-side, with no browser-controlled scope authority.
-3. **24.12 effective-tenant seam:** the authoritative effective-tenant boundary is present at every intended registry/read entrypoint and fails closed on mismatch.
-4. **Architecture authority:** a recon names the current canonical shell, shared components, allowed action contract, feature-flag/rollback convention, and the only approved registration boundary. It must reject caller-supplied capability data, direct Bumblebee-route bypasses, and any separate module authority plane.
-5. **Review and test plan:** Pike/Fowler/Knuth review scope and a red test plan exist before implementation begins, including cross-tenant, forged-principal, duplicate/unknown/incompatible/disabled module, rollback, accessibility, and no-direct-data-access cases.
+The implementation still must meet every acceptance criterion and pass independent review before REQ-MOD status or Story 26.7 can advance.
 
-Completion of earlier stories is not itself evidence that this new composition boundary is ready. Do not advance this story, change REQ-MOD status, or mark Story 26.7 complete until the gate and implementation acceptance criteria are independently evidenced.
+## Local Implementation Record (2026-08-27)
+
+Implemented locally, pending independent review and evidence archival:
+
+- `src/lib/curator/module-contract.ts` and `module-registry.ts` define the versioned, source-controlled allowlist and server issuer. It derives the authenticated principal/workspace/role and evaluates module capabilities through the canonical permission-action binding, validates the complete set before rendering, reads the curator-owned summary, and appends a scoped issuance/denial decision through `withWorkspaceTransaction`.
+- `/dashboard/curator` composes the host-owned accessible shell. Disabled modules render truthful unavailable state; no direct `/dashboard/bumblebee` route exists.
+- Local remediation verification (2026-08-27): focused Vitest 35 tests, `bun run typecheck`, and `bun run test:unit` (2,170 passed; 160 skipped); fresh live PostgreSQL CI-app-role lane (24 suites / 72 tests passed). The live test does not mutate shared `allura_app` grants. The complete truthful evidence map, exact commands, and candidate-tree recipe are in `docs/archive/allura/evidence/epic-25/25.3b/EVIDENCE-INDEX.md` and `remediation-verification-2026-08-27.md`. Independent review remains pending; this local verification does not satisfy the story, REQ-MOD-001..003, or Story 26.7 AC-2.
 
 ## Acceptance Criteria
 

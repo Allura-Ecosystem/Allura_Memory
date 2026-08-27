@@ -1,0 +1,211 @@
+import "server-only"
+
+import type { NextRequest } from "next/server"
+import { createHash } from "node:crypto"
+
+import { getAuthUser } from "@/lib/auth/api-auth"
+import { actionForReadCapability, minimumRoleForAction } from "@/lib/auth/permission-action-role"
+import { hasPermission } from "@/lib/auth/roles"
+import type { AlluraRole } from "@/lib/auth/types"
+import { BUMBLEBEE_MODULE, isBumblebeeEnabled } from "@/lib/bumblebee/module"
+import { type BumblebeeSummary, getBumblebeeSummaryInTransaction } from "@/lib/curator/operator-read-service"
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
+
+import {
+  CURATOR_MODULE_CONTRACT_VERSION,
+  type CuratorModuleIssue,
+  type CuratorModuleManifest,
+} from "./module-contract"
+
+export { CURATOR_MODULE_CONTRACT_VERSION } from "./module-contract"
+
+const CONTRACT_REVISION = "25.3b-r1" as const
+
+type Scope = { tenantId: string; workspaceId: string; principalId: string; sessionId: string; role: AlluraRole }
+type Decision = "issued" | "denied" | "disabled" | "read_failure" | "manifest_invalid"
+
+function deepFreeze<T>(value: T): Readonly<T> {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value)
+    for (const nested of Object.values(value as object)) deepFreeze(nested)
+  }
+  return value as Readonly<T>
+}
+
+function canonicalManifest(manifest: CuratorModuleManifest): string {
+  return JSON.stringify({
+    id: manifest.id,
+    version: manifest.version,
+    contractVersion: manifest.contractVersion,
+    title: manifest.title,
+    stages: manifest.stages,
+    requiredCapabilities: manifest.requiredCapabilities,
+    hostBindings: manifest.hostBindings,
+    featureFlag: manifest.featureFlag,
+    rollbackId: manifest.rollbackId,
+    trust: manifest.trust,
+    readOnly: manifest.readOnly,
+  })
+}
+
+function manifestHash(manifest: CuratorModuleManifest): string {
+  return createHash("sha256").update(canonicalManifest(manifest)).digest("hex")
+}
+
+/** Registry-private immutable snapshot; no mutable module descriptor is trusted. */
+const SOURCE_ALLOWLIST = new Map<string, Readonly<CuratorModuleManifest>>([
+  ["bumblebee", deepFreeze(JSON.parse(canonicalManifest(BUMBLEBEE_MODULE)) as CuratorModuleManifest)],
+])
+const SOURCE_HASHES = new Map([...SOURCE_ALLOWLIST].map(([id, manifest]) => [id, manifestHash(manifest)]))
+
+/**
+ * The registry's capability evaluation delegates to the canonical action
+ * authority. An unmapped capability is denied rather than receiving a local
+ * fallback grant.
+ */
+export function missingCapabilitiesForRole(role: AlluraRole, requiredCapabilities: readonly string[]): string[] {
+  return requiredCapabilities.filter((capability) => {
+    const action = actionForReadCapability(capability)
+    return !action || !hasPermission(role, minimumRoleForAction(action))
+  })
+}
+
+function validateManifest(manifest: CuratorModuleManifest): void {
+  const trusted = SOURCE_ALLOWLIST.get(manifest.id)
+  if (!trusted) throw new Error(`untrusted module id: ${String(manifest.id)}`)
+  if (manifest !== trusted) throw new Error(`untrusted module manifest: ${manifest.id}`)
+  if (manifestHash(manifest) !== SOURCE_HASHES.get(manifest.id)) throw new Error(`manifest integrity mismatch: ${manifest.id}`)
+  if (manifest.contractVersion !== CURATOR_MODULE_CONTRACT_VERSION) throw new Error(`incompatible contract version: ${manifest.contractVersion}`)
+  if (!/^1\.\d+\.\d+$/.test(manifest.version)) throw new Error(`incompatible module version: ${manifest.version}`)
+  if (manifest.trust !== "allura-source" || manifest.readOnly !== true) throw new Error(`invalid trust or authority declaration: ${manifest.id}`)
+  if (manifest.hostBindings.length !== 1 || manifest.hostBindings[0] !== "dashboard/curator") throw new Error(`invalid host binding: ${manifest.id}`)
+  if (!manifest.featureFlag || !manifest.rollbackId || manifest.stages.length === 0) throw new Error(`malformed module manifest: ${manifest.id}`)
+  if (manifest.requiredCapabilities.some((capability) => !actionForReadCapability(capability))) {
+    throw new Error(`module requests non-read capability: ${manifest.id}`)
+  }
+}
+
+/** Validate the complete source-controlled set before any module can render. */
+export function validateModuleManifests(manifests: readonly CuratorModuleManifest[]): void {
+  const ids = new Set<string>()
+  for (const manifest of manifests) {
+    if (ids.has(manifest.id)) throw new Error(`duplicate module id: ${manifest.id}`)
+    ids.add(manifest.id)
+    validateManifest(manifest)
+  }
+  if (manifests.length !== SOURCE_ALLOWLIST.size) throw new Error("incomplete source-controlled module set")
+}
+
+function deriveScope(request: NextRequest): Scope | null {
+  const user = getAuthUser(request)
+  if (!user?.id || !user.groupId || !user.workspaceId || !user.sessionId) return null
+  return { tenantId: user.groupId, workspaceId: user.workspaceId, principalId: user.id, sessionId: user.sessionId, role: user.role }
+}
+
+function rollbackSnapshot() {
+  return { feature_flag: BUMBLEBEE_MODULE.featureFlag, enabled: isBumblebeeEnabled(), rollback_id: BUMBLEBEE_MODULE.rollbackId }
+}
+
+async function appendDecision(
+  client: import("pg").PoolClient,
+  scope: Scope,
+  decision: Decision,
+  status: "completed" | "failed",
+  snapshot?: BumblebeeSummary,
+): Promise<void> {
+  const manifest = SOURCE_ALLOWLIST.get("bumblebee")!
+  await client.query(
+    `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, session_id, metadata, created_at)
+     VALUES ($1, $2, 'curator_module_registry_decision', $3, $4, $5, $6, NOW())`,
+    [
+      scope.tenantId,
+      scope.workspaceId,
+      scope.principalId,
+      status,
+      scope.sessionId,
+      JSON.stringify({
+        schema_version: 1,
+        decision,
+        principal_id: scope.principalId,
+        session_id: scope.sessionId,
+        manifest_version: manifest.version,
+        manifest_sha256: SOURCE_HASHES.get("bumblebee"),
+        contract_version: CURATOR_MODULE_CONTRACT_VERSION,
+        contract_revision: CONTRACT_REVISION,
+        capability_policy: "auth.permission-action-role.READ_CAPABILITY_ACTIONS",
+        required_capabilities: manifest.requiredCapabilities,
+        feature_flag: rollbackSnapshot(),
+        rollback: rollbackSnapshot(),
+        issuance_snapshot: snapshot ?? null,
+      }),
+    ],
+  )
+}
+
+async function recordOutcome(scope: Scope, decision: Exclude<Decision, "issued">): Promise<void> {
+  await withWorkspaceTransaction(scope, (client) => appendDecision(client, scope, decision, "failed"))
+}
+
+function auditUnavailable(): CuratorModuleIssue {
+  return { state: "error", modules: [], message: "Curator workflow access is unavailable because audit recording failed." }
+}
+
+/**
+ * A denied, disabled, invalid-manifest, or read-failure response is not
+ * trustworthy unless its required audit outcome committed. Convert an audit
+ * transaction failure into an explicit unavailable response rather than
+ * claiming the ordinary outcome without durable evidence.
+ */
+async function recordOutcomeOrUnavailable(scope: Scope, decision: Exclude<Decision, "issued">): Promise<CuratorModuleIssue | null> {
+  try {
+    await recordOutcome(scope, decision)
+    return null
+  } catch {
+    return auditUnavailable()
+  }
+}
+
+/**
+ * Server-only authenticated entry. It accepts a request, never an AuthUser;
+ * scope and role come only from the canonical server auth resolver. Available
+ * issuance commits the exact summary snapshot and ledger event in one managed
+ * app-role transaction. A failed read rolls back that transaction, then writes
+ * a separate failed outcome (no issuance snapshot was emitted to replay).
+ */
+export async function issueCuratorModules(request: NextRequest): Promise<CuratorModuleIssue> {
+  const scope = deriveScope(request)
+  if (!scope) return { state: "denied", modules: [], message: "Curator workflow access is unavailable." }
+
+  try {
+    validateModuleManifests([...SOURCE_ALLOWLIST.values()])
+  } catch {
+    const unavailable = await recordOutcomeOrUnavailable(scope, "manifest_invalid")
+    if (unavailable) return unavailable
+    return { state: "error", modules: [], message: "Curator workflow access is unavailable." }
+  }
+
+  const manifest = SOURCE_ALLOWLIST.get("bumblebee")!
+  if (missingCapabilitiesForRole(scope.role, manifest.requiredCapabilities).length > 0) {
+    const unavailable = await recordOutcomeOrUnavailable(scope, "denied")
+    if (unavailable) return unavailable
+    return { state: "denied", modules: [], message: "Your role cannot access this curator workflow." }
+  }
+
+  if (!isBumblebeeEnabled()) {
+    const unavailable = await recordOutcomeOrUnavailable(scope, "disabled")
+    if (unavailable) return unavailable
+    return { state: "complete", modules: [{ id: "bumblebee", state: "unavailable", title: manifest.title }] }
+  }
+
+  try {
+    return await withWorkspaceTransaction(scope, async (client) => {
+      const summary = await getBumblebeeSummaryInTransaction(client, scope)
+      await appendDecision(client, scope, "issued", "completed", summary)
+      return { state: "complete", modules: [{ id: "bumblebee", state: "available", title: manifest.title, summary }] }
+    })
+  } catch {
+    const unavailable = await recordOutcomeOrUnavailable(scope, "read_failure")
+    if (unavailable) return unavailable
+    return { state: "error", modules: [], message: "Curator workflow data is temporarily unavailable." }
+  }
+}

@@ -1,6 +1,21 @@
 import type { AlluraRole, PermissionAction } from "./types";
 
 /**
+ * Canonical binding from declarative read capabilities to permission actions.
+ * Module registries may consume this authority but may not introduce their own
+ * capability-to-role map.
+ */
+export const READ_CAPABILITY_ACTIONS: Readonly<Record<string, PermissionAction>> = Object.freeze({
+  "read:inventory": "inventory:read",
+  "read:exposures": "exposure:read",
+  "read:receipts": "receipt:read",
+});
+
+export function actionForReadCapability(capability: string): PermissionAction | undefined {
+  return READ_CAPABILITY_ACTIONS[capability];
+}
+
+/**
  * Minimum AlluraRole that may perform each PermissionAction.
  *
  * Kept free of Next.js dependencies so runtime authorization and the static
@@ -11,6 +26,9 @@ export const ACTION_MINIMUM_ROLE: Readonly<Record<string, AlluraRole>> = {
   "memory:read": "viewer",
   "audit:read": "viewer",
   "policy:evaluate": "viewer",
+  "inventory:read": "curator",
+  "exposure:read": "curator",
+  "receipt:read": "curator",
 
   // Mutations / governance decisions
   "memory:write": "curator",

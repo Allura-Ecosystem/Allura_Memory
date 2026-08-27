@@ -1,67 +1,44 @@
 /**
- * Bumblebee module descriptor and rollback switch (Story 26.7 AC-2/AC-3/AC-6).
- *
- * ON AC-2 ("registered through the Epic 25 server-issued module registry").
- * That registry does not exist. `REQ-MOD-001/002/003` in
- * docs/allura/REQUIREMENTS-MATRIX.md are all marked `Dependency-blocked`
- * against story 25.3b, and no 25.3b story file exists in _bmad/bmm/stories/.
- * Rather than invent a private registry -- which would have to be thrown away
- * and would make AC-2 look satisfied when the actual dependency is still
- * missing -- this module publishes the descriptor a server-issued registry
- * would consume, and the story file records AC-2 as genuinely blocked.
- *
- * What IS real here is the fail-closed rollback behaviour (AC-3/AC-6): the
- * module is feature-flagged off by default, and when disabled the operator
- * surfaces render nothing while the dashboard shell, API, MCP, and every
- * other module keep working -- because nothing outside src/lib/bumblebee,
- * src/components/bumblebee, and the module's own route imports any of it.
+ * Bumblebee's source-controlled declarative module manifest and local rollback flag.
+ * It is not a registry and cannot obtain data or authority on its own.
  */
+import type { CuratorModuleManifest } from "../curator/module-contract"
 
-/** Capabilities this module requires a host to grant. Read-only by design. */
-export const BUMBLEBEE_REQUIRED_CAPABILITIES = [
+export const BUMBLEBEE_REQUIRED_CAPABILITIES = Object.freeze([
   "read:inventory",
   "read:exposures",
   "read:receipts",
-] as const
+] as const)
 
 export type BumblebeeCapability = (typeof BUMBLEBEE_REQUIRED_CAPABILITIES)[number]
-
-export interface ModuleDescriptor {
-  id: string
-  version: string
-  title: string
-  surfaces: readonly string[]
-  requiredCapabilities: readonly string[]
-  /** This module never mutates state; a host may enforce that. */
-  readOnly: boolean
-}
-
-export const BUMBLEBEE_MODULE: ModuleDescriptor = {
-  id: "bumblebee",
-  version: "1.0.0",
-  title: "Bumblebee — Supply-Chain Threat Intelligence",
-  surfaces: ["sources", "exposures", "policy-drafts", "incidents", "receipts"],
-  requiredCapabilities: BUMBLEBEE_REQUIRED_CAPABILITIES,
-  readOnly: true,
-}
+export type ModuleDescriptor = Readonly<CuratorModuleManifest & { readonly surfaces: readonly string[] }>
 
 export const BUMBLEBEE_ENABLED_ENV_VAR = "BUMBLEBEE_MODULE_ENABLED"
 
 /**
- * Whether the operator module is enabled. Default-off, read fresh on every
- * call, and only the exact string "true" enables it -- same convention as
- * src/lib/containment/feature-flags.ts.
+ * Public descriptor is immutable data only. The registry creates and hashes its
+ * own private snapshot; consumers never receive a mutable registry identity.
  */
+export const BUMBLEBEE_MODULE: ModuleDescriptor = Object.freeze({
+  id: "bumblebee",
+  version: "1.0.0",
+  contractVersion: "1.0",
+  title: "Bumblebee — Supply-Chain Threat Intelligence",
+  stages: Object.freeze(["sources", "exposures", "policy-drafts", "incidents", "receipts"]),
+  surfaces: Object.freeze(["sources", "exposures", "policy-drafts", "incidents", "receipts"]),
+  requiredCapabilities: BUMBLEBEE_REQUIRED_CAPABILITIES,
+  hostBindings: Object.freeze(["dashboard/curator"] as const),
+  featureFlag: BUMBLEBEE_ENABLED_ENV_VAR,
+  rollbackId: "bumblebee-disable",
+  trust: "allura-source",
+  readOnly: true,
+})
+
+/** Default-off, exact true only, and evaluated on every server issue. */
 export function isBumblebeeEnabled(): boolean {
   return process.env[BUMBLEBEE_ENABLED_ENV_VAR] === "true"
 }
 
-/**
- * Fail-closed capability check (AC-3). A host that cannot grant every
- * required capability must be refused rather than served a degraded module:
- * a partially-capable security surface is worse than an absent one, because
- * an operator cannot tell which parts of it are lying.
- */
 export function assertCapabilities(granted: readonly string[]): void {
   const missing = BUMBLEBEE_REQUIRED_CAPABILITIES.filter((c) => !granted.includes(c))
   if (missing.length > 0) {
@@ -69,17 +46,9 @@ export function assertCapabilities(granted: readonly string[]): void {
   }
 }
 
-/**
- * Fail-closed compatibility check (AC-3). Only an exact major-version match
- * is accepted; an unknown or incompatible descriptor is rejected outright.
- */
-export function assertCompatible(descriptor: Pick<ModuleDescriptor, "id" | "version">): void {
-  if (descriptor.id !== BUMBLEBEE_MODULE.id) {
-    throw new Error(`unknown module id "${descriptor.id}"`)
-  }
-  const major = descriptor.version.split(".")[0]
-  const expected = BUMBLEBEE_MODULE.version.split(".")[0]
-  if (major !== expected) {
-    throw new Error(`incompatible bumblebee module version "${descriptor.version}" (host supports ${expected}.x)`)
+export function assertCompatible(descriptor: { id: string; version: string }): void {
+  if (descriptor.id !== BUMBLEBEE_MODULE.id) throw new Error(`unknown module id "${descriptor.id}"`)
+  if (descriptor.version.split(".")[0] !== BUMBLEBEE_MODULE.version.split(".")[0]) {
+    throw new Error(`incompatible bumblebee module version "${descriptor.version}"`)
   }
 }
