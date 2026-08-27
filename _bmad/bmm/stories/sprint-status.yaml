@@ -1,6 +1,6 @@
 # Sprint Status — RuVector Documentation Sync & Integration
 
-last_updated: "2026-08-18"
+last_updated: "2026-08-27"
 owner: brooks
 group_id: allura-system
 
@@ -297,17 +297,23 @@ epic_24:
 
 epic_25:
   name: "Governed Curator Console — Module Registry Reconciliation"
-  status: dependency-blocked
+  status: in-progress
   retrospective: null
-  next_story: "25.3b"
-  sequence_note: "Canonical Epic 25 scope is intentionally limited to Story 25.3b in this reconciliation. Historical/archived Epic 25 planning is not restored. Story 25.3b is planning only: no server-issued module registry implementation exists."
+  next_story: "25.3a"
+  sequence_note: "Canonical Epic 25 scope is limited to the prerequisite read-contract remediation (25.3a) followed by the server-issued module registry (25.3b). Historical/archived Epic 25 planning is not restored. No registry implementation exists."
   stories:
+    - key: "25.3a"
+      title: "Curator Read Contract and Workspace Authority Remediation"
+      status: in-progress
+      owner: "Brooks + Woz + Knuth + Pike + Fowler"
+      depends_on: ["25.2a", "25.2b", "24.12"]
+      status_evidence: "Implementation completed locally 2026-08-27: /api/curator/proposals derives group/workspace/principal from authenticated authority, rejects forged/missing scope, uses restricted withWorkspaceTransaction for scoped canonical_proposals/evidence_requests/governance_receipts reads, and no longer treats events metadata as a decision receipt. Direct /dashboard/bumblebee route removed; regression tests retain /dashboard/curator as the only future host. Local typecheck passed; unit suite 2150 passed/160 skipped. Story remains in-progress pending independent Pike/Fowler/Knuth review, PR CI, and source reconciliation; 25.3b and Story 26.7 AC-2 remain blocked."
     - key: "25.3b"
       title: "Modular Dashboard Workflow Contract Registry"
       status: dependency-blocked
       owner: "Brooks + Woz + Pike + Fowler + Bellard"
-      depends_on: ["25.2a", "25.2b", "24.12"]
-      status_evidence: "Canonical story restored by Option A reconciliation on 2026-08-27. Existing story files declare 25.2a Workspace Scope and Evidence Lifecycle Foundation Done (final Knuth/Pike/Fowler approval 2026-08-26) and 25.2b Authenticated Session Entry Point Done; 24.12 Effective-Tenant Authority Seam is recorded Done in the authoritative status. Those prerequisite claims and the module-registry authority boundary require fresh implementation-readiness verification before this story may advance. No registry implementation, registration path, or registry tests exist. REQ-MOD-001/002/003 remain Dependency-blocked; Story 26.7 remains in-progress with its AC-2 blocked."
+      depends_on: ["25.3a"]
+      status_evidence: "Canonical story restored by Option A reconciliation on 2026-08-27. Its prerequisite gate did not pass: the curator read boundary must first be remediated by Story 25.3a. No registry implementation, registration path, or registry tests exist. REQ-MOD-001/002/003 remain Dependency-blocked; Story 26.7 remains in-progress with its AC-2 blocked."
 
 epic_26:
   name: "Bumblebee — Supply-Chain Threat Intelligence"
