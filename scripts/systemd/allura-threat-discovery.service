@@ -1,0 +1,18 @@
+[Unit]
+Description=Allura Threat Discovery Worker (polls approved advisory sources, matches inventory, creates alerts + simulated drafts)
+Documentation=https://github.com/Allura-Ecosystem/Allura_Memory/blob/main/docs/governance/2026-08-27-story-26-4-security-owner-approval.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/media/ronin704/Games/Repos/team_durham-clean/allura-memory
+ExecStart=/home/ronin704/.bun/bin/bun src/lib/threat-discovery/cli.ts --group-id allura-system --workspace-id workspace-main --principal-id threat-discovery-worker
+# Send stdout/stderr to journald (queryable via journalctl -u allura-threat-discovery)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=allura-threat-discovery
+# Three external HTTP calls (OSV.dev, npm registry, GitHub) per package;
+# 10 minutes covers a normal inventory size with the per-request timeout
+# in src/lib/threat-ingestion/safe-fetch.ts.
+TimeoutStartSec=600
