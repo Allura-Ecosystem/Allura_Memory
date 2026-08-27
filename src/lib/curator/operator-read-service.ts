@@ -242,9 +242,15 @@ export interface BumblebeeSummary {
   receipts: number
 }
 
-/** Counts for the module's landing view. */
-export async function getBumblebeeSummary(scope: ResolvedWorkspaceScope): Promise<BumblebeeSummary> {
-  return withWorkspaceTransaction(scope, async (client) => {
+/**
+ * Counts for the module's landing view using a host-owned transaction.
+ * The issuer calls this before writing its immutable issuance snapshot, so an
+ * available module and the exact read snapshot are committed together.
+ */
+export async function getBumblebeeSummaryInTransaction(
+  client: import("pg").PoolClient,
+  scope: ResolvedWorkspaceScope,
+): Promise<BumblebeeSummary> {
     const result = await client.query<Record<string, string>>(
       `SELECT
          (SELECT COUNT(*) FROM inventory_records
@@ -273,5 +279,9 @@ export async function getBumblebeeSummary(scope: ResolvedWorkspaceScope): Promis
       incidents: Number(row.incidents ?? 0),
       receipts: Number(row.receipts ?? 0),
     }
-  })
+}
+
+/** Counts for callers that do not need to couple the read to another write. */
+export async function getBumblebeeSummary(scope: ResolvedWorkspaceScope): Promise<BumblebeeSummary> {
+  return withWorkspaceTransaction(scope, (client) => getBumblebeeSummaryInTransaction(client, scope))
 }

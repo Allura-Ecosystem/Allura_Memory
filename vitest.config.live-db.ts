@@ -15,6 +15,7 @@ export default defineConfig({
     include: [
       "src/lib/process-engine/checkpoint-continuation.integration.test.ts",
       "src/__tests__/database-tenant-isolation.e2e.test.ts",
+      "src/__tests__/curator-module-registry.live-db.test.ts",
       "src/__tests__/events-immutability.e2e.test.ts",
       "src/__tests__/pattern-proposals-append-only.e2e.test.ts",
       "src/__tests__/bumblebee-tenant-isolation.e2e.test.ts",

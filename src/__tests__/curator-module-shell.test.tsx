@@ -30,5 +30,9 @@ describe("Story 25.3b curator shell", () => {
     }))
     expect(markup).toContain("4 sources")
     expect(markup).toContain("2 open exposures")
+    expect(markup).toContain('data-testid="host-owned-bumblebee-adapter"')
+    for (const surface of ["Sources", "Exposures", "Policy Drafts", "Incidents", "Receipts"]) {
+      expect(markup).toContain(surface)
+    }
   })
 })

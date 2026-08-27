@@ -9,7 +9,7 @@
 
 This is the active canonical Story 25.3b. It replaces neither source code nor the archived/superseded planning artifact. The reconciliation restores only a truthful planning and status record.
 
-There is **no server-issued module registry implementation**, registration path, or registry test suite in the repository. The existing Bumblebee descriptor and its local fail-closed compatibility checks are inputs a future registry may consume; they are not a registry and do not satisfy this story or Story 26.7 AC-2.
+A local, source-controlled registry implementation is present in this branch, but it is **pending remediation verification and independent review**. It does not yet satisfy this story, REQ-MOD-001..003, or Story 26.7 AC-2. The Bumblebee descriptor remains only declarative input; the host-owned adapter is not a separate route or authority boundary.
 
 ## Outcome
 

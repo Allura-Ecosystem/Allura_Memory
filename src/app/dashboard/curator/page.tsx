@@ -38,6 +38,6 @@ export default async function CuratorHandoffPage() {
   const user = getAuthUser(request);
   if (!user?.workspaceId || !user.sessionId) redirect(`${AUTH_LOGIN_PATH}?redirect_url=%2Fdashboard%2Fcurator`);
 
-  const issue = await issueCuratorModules(user);
+  const issue = await issueCuratorModules(request);
   return <CuratorHandoffContent user={user} issue={issue} />;
 }

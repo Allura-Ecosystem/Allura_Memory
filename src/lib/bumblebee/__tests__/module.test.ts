@@ -76,7 +76,7 @@ describe("Story 26.7 AC-3 — fail closed on compatibility", () => {
 })
 
 describe("Story 26.7 AC-6 — rollback leaves the rest of the system intact", () => {
-  it("is imported by nothing except its own route", async () => {
+  it("is imported only by the registry and its host-owned adapter", async () => {
     // The rollback guarantee is structural, not behavioural: disabling
     // Bumblebee can only be safe if nothing else depends on it. A grep run
     // once by hand proves that today; this test keeps it true tomorrow.
@@ -97,6 +97,7 @@ describe("Story 26.7 AC-6 — rollback leaves the rest of the system intact", ()
           !file.endsWith(".test.ts") &&
           !file.endsWith(".test.tsx") &&
           file !== "src/lib/curator/module-registry.ts" &&
+          file !== "src/components/curator/bumblebee-workflow-adapter.tsx" &&
           file !== "src/app/dashboard/bumblebee/page.tsx",
       )
 
