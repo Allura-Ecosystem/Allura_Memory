@@ -1115,19 +1115,33 @@ through governed, server-scoped APIs. No caller-supplied `group_id` or
 | `retention_disposition` | string | Yes | Policy-defined retention class; deletion remains append-only/auditable. |
 | `indicators` | object[] | Yes | Normalized affected artifact/version/CVE or equivalent supporting indicators. |
 
-### `ThreatExposureAlert`
+### `ThreatExposureAlert` — implemented as `threat_alerts` (migration 42, Story 26.4)
+
+This planned contract is now implemented. One field differs from the original
+plan: `state` is `lifecycle_state`, with the richer vocabulary Story 26.4's
+own acceptance criteria required (`new | acknowledged | mitigated | resolved |
+stale`) rather than the originally planned `open | acknowledged | resolved |
+suppressed` — Story 26.3's in-memory `ExposureAlert.state` (always created as
+`open`) still uses the original four-value enum and maps to `lifecycle_state:
+"new"` on first persistence; the two are deliberately separate vocabularies
+for two different layers (in-memory match output vs. durable, tenant-routed
+lifecycle). `stale` is a lifecycle state, not a separate freshness column: it
+means the alert's supporting evidence has degraded since creation, and is
+never silently retained as if still current (AC-4). `resolved` is terminal —
+a staleness transition never overwrites it.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `id` | UUID | Yes | Immutable alert identity. |
 | `group_id` / `workspace_id` | string | Yes | Server-derived scope. |
 | `inventory_ref` / `artifact_ref` | string | Yes | Authoritative approved inventory and affected artifact identities. |
+| `advisory_refs` | string[] | Yes | Advisory identities that produced this alert (may span multiple advisories for the same exposure). |
 | `match_type` | string | Yes | Deterministic correlation rule identifier. |
 | `confidence` / `severity` | number / string | Yes | Bounded assessment with rule/source provenance. |
-| `evidence_ids` | UUID[] | Yes | Complete immutable advisory/internal-evidence lineage. |
-| `dedup_key` | SHA-256 | Yes | Scope-bound idempotency identity for repeated observations. |
-| `state` | `open \| acknowledged \| resolved \| suppressed` | Yes | Alert lifecycle; no enforcement state is implied. |
-| `created_at` | RFC 3339 | Yes | Database-issued alert time. |
+| `evidence_ids` | string[] | Yes | Complete immutable advisory/internal-evidence lineage. |
+| `dedup_key` | string | Yes | Scope-bound idempotency identity for repeated observations; `UNIQUE (group_id, workspace_id, dedup_key)`. |
+| `lifecycle_state` | `new \| acknowledged \| mitigated \| resolved \| stale` | Yes | Alert lifecycle; no enforcement state is implied. The only column an UPDATE may touch, besides `updated_at` — every other field is immutable once written (`app.guard_threat_alert_lifecycle_update()`). |
+| `created_at` / `updated_at` | RFC 3339 | Yes | Database-issued alert and last-transition times. |
 
 ### `SimulatedMitigationProposal`
 
