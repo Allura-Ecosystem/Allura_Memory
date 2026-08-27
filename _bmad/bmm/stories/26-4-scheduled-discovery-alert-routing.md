@@ -72,19 +72,22 @@ its own schedule, but there is no configurable retry/backoff behavior implemente
 "scheduler health monitored" means observed over real time on a real running schedule,
 which does not exist -- these files have never been installed on any host.
 
-**The gap that actually blocks this from doing anything useful in production:**
-Story 26.2's inventory service (`src/lib/inventory/service.ts`) is deliberately
-in-memory only -- "no DB writes, no filesystem, no subprocesses" is its own stated
-design. Nothing in this codebase persists real inventory data or reconciles it into
-that service. `src/lib/threat-discovery/cli.ts` therefore constructs a fresh, empty
-`createInventoryService()` on every invocation -- `buildQueryTargets` will always
-return `[]`, so even fully deployed on a real schedule, this worker would poll zero
-packages and create zero alerts today. This is not a Slice-B network-safety problem;
-it is that Story 26.2 built the matching primitive without ever building inventory
-*persistence*, and no later story has yet either. That gap is a separate,
-undocumented piece of work this session did not scope or estimate -- flagging it
-plainly rather than let a green checklist imply this worker does something useful
-right now.
+**The inventory gap noted above -- now partially closed, same day (2026-08-27):**
+Story 26.2 was extended with "Bumblebee Guard" -- a real, persisted inventory
+reconciled from this repo's own `bun.lock` (see Story 26.2's own file for the
+full writeup: `src/lib/inventory/{lockfile-parser,reconciliation}.ts`,
+`docker/postgres-init/44-inventory-records.sql`). `src/lib/threat-discovery/cli.ts`
+now reconciles `bun.lock` and hydrates the real persisted inventory instead of
+an empty in-memory service, so `buildQueryTargets` returns real targets (1274
+unique dependencies from this repo's own lockfile) rather than always `[]`.
+
+**Still genuinely limited, not solved:** only the `lockfile` artifact type has
+a real source. SBOMs, CI workflows, container metadata, extensions, MCP
+manifests, skills, plugins, and model artifacts (9 of the 10 types Story
+26.2's schema supports) have no parser -- inventory for those remains empty.
+And this only covers `allura-system`'s own repo; there is still no mechanism
+for a customer tenant's supply chain to enter Allura at all. This worker is
+no longer a guaranteed no-op, but it is far from complete inventory coverage.
 
 **A pre-existing bug found and NOT fixed here (out of this story's scope):** Story
 26.4's `threat_alerts` migration needed a restricted-column UPDATE trigger, and the
