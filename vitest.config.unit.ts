@@ -28,6 +28,13 @@ export default defineConfig({
       "src/lib/circuit-breaker/**/*.test.ts",
       "src/lib/dedup/**/*.test.ts",
       "src/lib/git/**/*.test.ts",
+      // Story 26.2 — read-only supply-chain inventory. Was never added to this
+      // lane despite merging (PR #108); found and fixed 2026-08-27.
+      "src/lib/inventory/**/*.test.ts",
+      // Story 26.3 — exposure matcher. Same gap as 26.2, same fix.
+      "src/lib/exposure/**/*.test.ts",
+      // Story 26.4 — scheduled discovery and alert routing.
+      "src/lib/threat-discovery/**/*.test.ts",
       // Story 26.5 — governed mitigation drafts must stay in the CI unit lane.
       "src/lib/mitigation/**/*.test.ts",
       "src/lib/memory/config.test.ts",

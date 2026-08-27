@@ -322,10 +322,10 @@ epic_26:
       status_evidence: "Merged PR #109 (9d66f9df) 2026-08-26. src/lib/exposure/{matcher,dedup,schemas,types}.ts + tests. Re-verified 2026-08-27: bun vitest run src/lib/exposure -> 19/19 passed, exit 0, including both fail-closed fixture cases. Story file status/checkboxes were stale and corrected 2026-08-27."
     - key: "26.4"
       title: "Scheduled Discovery and Alert Routing"
-      status: planned
+      status: in-progress
       owner: "Hightower + Woz"
       depends_on: ["26.3"]
-      status_evidence: "Unblocked 2026-08-27: security-owner approval recorded in docs/governance/2026-08-27-story-26-4-security-owner-approval.md (approved by Sabir Asheed/ronin704 -- advisory source allowlist, 6h cadence, 12h/36h stale/degraded thresholds, indefinite retention). No implementation exists yet; all AC remain unchecked. Not started, no longer blocked."
+      status_evidence: "Security-owner approval recorded 2026-08-27 (docs/governance/2026-08-27-story-26-4-security-owner-approval.md). Slice A implemented same day: threat_alerts table (migration 42) + src/lib/threat-discovery/worker.ts compose Story 26.3's matcher and Story 26.5's draft generator unmodified, persisting deduplicated tenant-scoped alerts with a real lifecycle (new/acknowledged/mitigated/resolved/stale). AC-3,4,5,7,8 met, verified: bun vitest run src/lib/threat-discovery -> 10/10; migration 42 functionally validated against disposable PostgreSQL (RLS, dedup, restricted-update trigger, DELETE rejection all confirmed with real statements). AC-1,2,6,9 remain open pending Slice B: real external advisory ingestion (GitHub/OSV/npm) and an actual running scheduler -- deliberately not built this session (new, unreviewed security surface). Also found and fixed: Story 26.2/26.3 tests were never wired into the CI unit lane (vitest.config.unit.ts); found a pre-existing bug in migration 31's pattern_proposals trigger (invalid `jsonb - jsonb` operator, likely breaking live genesis-proposal approve/reject) -- flagged, not fixed here."
     - key: "26.5"
       title: "Governed Mitigation Policy Drafts"
       status: done
