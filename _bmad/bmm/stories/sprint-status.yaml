@@ -1,6 +1,6 @@
 # Sprint Status — RuVector Documentation Sync & Integration
 
-last_updated: "2026-08-18"
+last_updated: "2026-08-27"
 owner: brooks
 group_id: allura-system
 
@@ -297,17 +297,23 @@ epic_24:
 
 epic_25:
   name: "Governed Curator Console — Module Registry Reconciliation"
-  status: dependency-blocked
+  status: in-progress
   retrospective: null
-  next_story: "25.3b"
-  sequence_note: "Canonical Epic 25 scope is intentionally limited to Story 25.3b in this reconciliation. Historical/archived Epic 25 planning is not restored. Story 25.3b is planning only: no server-issued module registry implementation exists."
+  next_story: "25.3a"
+  sequence_note: "Canonical Epic 25 scope is limited to the prerequisite read-contract remediation (25.3a) followed by the server-issued module registry (25.3b). Historical/archived Epic 25 planning is not restored. No registry implementation exists."
   stories:
+    - key: "25.3a"
+      title: "Curator Read Contract and Workspace Authority Remediation"
+      status: in-progress
+      owner: "Brooks + Woz + Knuth + Pike + Fowler"
+      depends_on: ["25.2a", "25.2b", "24.12"]
+      status_evidence: "Remediation after Pike/Fowler findings (2026-08-27): /api/curator/proposals now fails closed on duplicate group_id/workspace_id selectors before opening a transaction; operator storage reads moved from the Bumblebee module to the shared curator-owned src/lib/curator/operator-read-service.ts boundary, with regression coverage prohibiting src/lib/bumblebee/queries.ts. Direct /dashboard/bumblebee route remains absent; no registry implementation exists. Focused tests passed (55/55); typecheck passed; unit lane passed (2152 passed, 160 skipped). Story remains in-progress pending independent re-review (including Knuth's credentialed app-role live-RLS evidence), PR CI, and source reconciliation; 25.3b remains blocked."
     - key: "25.3b"
       title: "Modular Dashboard Workflow Contract Registry"
       status: dependency-blocked
       owner: "Brooks + Woz + Pike + Fowler + Bellard"
-      depends_on: ["25.2a", "25.2b", "24.12"]
-      status_evidence: "Canonical story restored by Option A reconciliation on 2026-08-27. Existing story files declare 25.2a Workspace Scope and Evidence Lifecycle Foundation Done (final Knuth/Pike/Fowler approval 2026-08-26) and 25.2b Authenticated Session Entry Point Done; 24.12 Effective-Tenant Authority Seam is recorded Done in the authoritative status. Those prerequisite claims and the module-registry authority boundary require fresh implementation-readiness verification before this story may advance. No registry implementation, registration path, or registry tests exist. REQ-MOD-001/002/003 remain Dependency-blocked; Story 26.7 remains in-progress with its AC-2 blocked."
+      depends_on: ["25.3a"]
+      status_evidence: "Canonical story restored by Option A reconciliation on 2026-08-27. Its prerequisite gate did not pass: the curator read boundary must first be remediated by Story 25.3a. No registry implementation, registration path, or registry tests exist. REQ-MOD-001/002/003 remain Dependency-blocked; Story 26.7 remains in-progress with its AC-2 blocked."
 
 epic_26:
   name: "Bumblebee — Supply-Chain Threat Intelligence"
@@ -357,4 +363,4 @@ epic_26:
       status: in-progress
       owner: "Pike + Fowler + Brooks + Bellard"
       depends_on: ["26.4", "26.6", "epic_25_module_registry"]
-      status_evidence: "8 of 9 AC met and verified 2026-08-27. Built: Bumblebee operator module (5 surfaces -- Sources/Exposures/Policy Drafts/Incidents/Receipts) at src/app/dashboard/bumblebee with a SELECT-only, RLS-scoped read layer (src/lib/bumblebee/queries.ts); fail-closed capability/compatibility checks; default-off feature flag with a structural no-coupling test proving rollback isolation; and src/lib/replay/ driving all three named 2025 incident patterns (Nx s1ngularity, Shai-Hulud worm, mutable GitHub Action ref) through the REAL unmodified 26.2/26.3/26.5 primitives, each exercising a different matcher path and each loading decoy inventory that must not match. bun run test:unit -> 2147/2147 passed (was 2040); typecheck exit 0; eslint 0 errors. Adversarial tenant isolation (8/8) verified against a real PostgreSQL 16 container with RLS enforced -- including the mixed tenant-A-id/workspace-B-id forgery -- run twice to prove seed idempotency, container destroyed after. AC-2 (registration through the Epic 25 server-issued module registry) is GENUINELY BLOCKED, not skipped: REQ-MOD-001/002/003 are Dependency-blocked against canonical story 25.3b, whose prerequisite-verification gate remains open and whose registry implementation does not exist. The descriptor and fail-closed checks a registry would consume are built and tested so registration is wiring, not a rewrite. Real finding produced en route: a new ci_workflow inventory source found 13 of this repo's own 17 GitHub Action references pinned to attacker-movable mutable tags (only 4 SHA-pinned) -- the exact exposure class the Mar 2025 tj-actions compromise used."
+      status_evidence: "Story remains in-progress. The direct src/app/dashboard/bumblebee/page.tsx route is absent after Story 25.3a scope reconciliation, so AC-1 (operator route), AC-6 (route rollback), and AC-9 (full route demo) are not currently evidenced; AC-2 remains genuinely blocked on canonical Story 25.3b's unimplemented server-issued registry. AC-3/4/5/7/8 retain local test evidence, including adversarial isolation now through the shared curator-owned operator read boundary. Do not describe this story as 8/9 complete."

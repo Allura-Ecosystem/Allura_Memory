@@ -19,7 +19,7 @@
  * that failed to load must never look identical).
  */
 
-import type { ExposureRow, ReceiptRow, SourceRow } from "@/lib/bumblebee/queries"
+import type { ExposureRow, ReceiptRow, SourceRow } from "@/lib/curator/operator-read-service"
 import type { MitigationDraft } from "@/lib/mitigation/types"
 
 function EmptyState({ message }: { message: string }) {
