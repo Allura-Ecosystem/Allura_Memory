@@ -52,6 +52,10 @@ AC 1–5 and 8–9 were implemented and independently reviewed PASS on 2026-08-2
 - evidence: `bun vitest run src/lib/mitigation` -> 24/24 passed, exit 0; `bun run test:unit` -> 1930/1930 passed 0 failed, exit 0; `bun run typecheck` -> exit 0; migration 41 applied against a disposable PostgreSQL 16 container and functionally verified (valid insert, cross-tenant RLS rejection, grant-level and trigger-level immutability), container destroyed afterward
 - remaining gaps: none for this story's own scope. Actual policy activation/enforcement (what a `mitigation_receipts` row with `approved_for_activation` eventually authorizes) is explicitly out of this story's scope and belongs to Story 26.6. Deploying migration 41 to the laptop's live Brain instance is a separate, later step the user has indicated will happen once everything here is clear.
 
+## PR #112 CI Feedback — 2026-08-27
+
+Opening the PR surfaced a real gap my own disposable-Postgres validation missed: `src/lib/db/tenant-table-inventory.test.ts` (`Epic 24 Evidence / Live PostgreSQL`) failed 1/59 — `mitigation_receipts` has `group_id` and forced RLS but was not registered in `TENANT_TABLE_INVENTORY` (`src/lib/db/tenant-table-inventory.ts`), which every new tenant-scoped table must be deliberately classified in. Fixed by adding the entry (`class: "tenant-scoped"`, `workspaceTreatment: "workspace-scoped-new-writes"`). Re-verified against a second disposable PostgreSQL 16 container: the specific failing test now passes (12/12), and the full live-db lane passes 59/59 (previously 58/59). Container destroyed afterward. `bun run typecheck` and `bun run test:unit` (1930/1930) re-confirmed clean.
+
 ## Rollback
 
 Policy drafts are read-only proposals. Disabling draft generation does not affect active policy. The `mitigation_receipts` table is additive-only (migration 41 creates a new table; nothing existing is altered) — dropping it removes only governed mitigation-approval history, not any other subsystem.
