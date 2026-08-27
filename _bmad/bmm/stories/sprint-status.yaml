@@ -334,10 +334,10 @@ epic_26:
       status_evidence: "Merged PR #111 (3e37c31d) as a safe partial slice covering AC 1-5/8-9, then closed AC 6-7 on 2026-08-27: new append-only mitigation_receipts table (migration 41) plus src/lib/mitigation/governed-approval.ts routes approval/rejection through the REQ-GOV-008 syscall_mutate gate (PR #110, 5383501d) rather than the local MitigationDraftRecord. All 9 AC verified against passing tests: bun vitest run src/lib/mitigation -> 24/24, bun run test:unit -> 1930/1930, typecheck exit 0. Migration 41 validated against a disposable PostgreSQL 16 container (RLS tenant isolation, grant-level and trigger-level immutability all confirmed), container destroyed afterward; not yet deployed to the laptop live Brain."
     - key: "26.6"
       title: "Containment Connectors and Response Receipts"
-      status: planned
+      status: in-progress
       owner: "Hightower + Brooks + Knuth"
       depends_on: ["26.5"]
-      status_evidence: "Not started. Blocked on 26.5 AC 6-7 closure and a separate role-model reconciliation."
+      status_evidence: "Role-model reconciliation resolved 2026-08-27 (AD-58: security owner = existing admin RBAC role, docs/allura/RISKS-AND-DECISIONS.md). Partial slice implemented and tested same day: containment_receipts table (migration 45, RLS + admin-only actor_role CHECK + connector-allowlist CHECK + append-only immutability trigger), src/lib/containment/{feature-flags,propose,governed-authorization}.ts. bun vitest run src/lib/containment -> 16/16 passed, exit 0; typecheck exit 0; eslint 0 errors/0 warnings. Migration 45 functionally verified against a disposable PostgreSQL 16 container: real INSERT under correct scope, cross-tenant SELECT returned 0 rows under RLS, non-admin actor_role and invalid connector both rejected by CHECK constraints, real UPDATE and DELETE both rejected by the immutability trigger. AC-1,2,4,5,6 met and verified. AC-3 (explicit authorization for token revocation, workspace locks, AND endpoint actions) only partially met -- token revocation and workspace lock connectors are real and gated; endpoint_isolation has no concrete target anywhere in this codebase and deliberately throws rather than fake-authorizing a nonexistent action. Not yet deployed to the live Brain."
     - key: "26.7"
       title: "Operator Module Adversarial Tests and Demo Gate"
       status: planned
