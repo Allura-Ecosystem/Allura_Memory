@@ -300,7 +300,7 @@ epic_25:
   status: in-progress
   retrospective: null
   next_story: "25.3b"
-  sequence_note: "Story 25.3a curator read-contract remediation merged 2026-08-27. Story 25.3b has a local source-controlled registry remediation pending fresh focused/live verification and independent review."
+  sequence_note: "Story 25.3a curator read-contract remediation merged 2026-08-27. Story 25.3b has locally verified source-controlled registry remediation (focused, typecheck, unit, and fresh live CI-app-role lane); independent review remains pending, so its status and downstream blocks do not advance."
   stories:
     - key: "25.3a"
       title: "Curator Read Contract and Workspace Authority Remediation"
@@ -313,7 +313,7 @@ epic_25:
       status: in-progress
       owner: "Brooks + Woz + Pike + Fowler + Bellard"
       depends_on: ["25.3a"]
-      status_evidence: "Local remediation pending independent review: source-controlled registry uses a registry-private deep-frozen/hash-checked manifest snapshot; the server-only issuer resolves the authenticated principal from the request, derives grants from canonical role hierarchy, writes relational managed-app-role events with session/principal/manifest/contract/policy/flag/rollback metadata, atomically couples available issuance to the summary snapshot, and renders Bumblebee only through a host-owned typed adapter at /dashboard/curator. Focused and live PostgreSQL verification are required before any status may advance. REQ-MOD-001/002/003 and Story 26.7 AC-2 remain blocked."
+      status_evidence: "Local remediation locally verified, pending independent review: source-controlled registry uses a registry-private deep-frozen/hash-checked manifest snapshot; the server-only issuer resolves the authenticated principal from the request, derives grants from canonical role hierarchy, writes scoped managed-app-role events with session/principal/manifest/contract/policy/flag/rollback metadata, atomically couples available issuance to the summary snapshot, and renders Bumblebee only through a host-owned typed adapter at /dashboard/curator. Focused (31), typecheck, unit (2,166 passed/160 skipped), and fresh 49-migration live CI-app-role verification (24 suites/72 tests) passed locally; the live probe no longer mutates shared role grants. Evidence index: docs/archive/allura/evidence/epic-25/25.3b/EVIDENCE-INDEX.md. This is not acceptance: independent review is required, and REQ-MOD-001/002/003 and Story 26.7 AC-2 remain blocked."
 
 epic_26:
   name: "Bumblebee — Supply-Chain Threat Intelligence"

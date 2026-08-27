@@ -89,7 +89,7 @@ describe("Story 25.3b server-issued curator module registry", () => {
     expect(missingCapabilitiesForRole("curator", BUMBLEBEE_MODULE.requiredCapabilities)).toEqual([])
   })
 
-  it("records a completed, relational, replay-safe issuance snapshot atomically with the read", async () => {
+  it("records a completed scoped issuance snapshot atomically with the read", async () => {
     process.env[BUMBLEBEE_ENABLED_ENV_VAR] = "true"
     const issued = await issueCuratorModules(request as never)
 

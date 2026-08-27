@@ -40,7 +40,7 @@ describeLive("Story 25.3b managed app-role registry ledger", () => {
   afterEach(() => { delete process.env.BUMBLEBEE_MODULE_ENABLED })
   afterAll(async () => { await closePool() })
 
-  it("records relational, completed issuance atomically with its live summary snapshot", async () => {
+  it("records a completed scoped issuance atomically with its live summary snapshot", async () => {
     await getPool().query(
       `INSERT INTO workspaces (workspace_id, group_id, name) VALUES ($1, $2, '25.3b live')
        ON CONFLICT (workspace_id) DO UPDATE SET group_id = EXCLUDED.group_id`,
@@ -74,15 +74,8 @@ describeLive("Story 25.3b managed app-role registry ledger", () => {
     expect(await latestDecision()).toMatchObject({ workspace_id: WORKSPACE, status: "failed", metadata: { decision: "disabled" } })
   })
 
-  it("isolates a live read failure: it emits only a failed, snapshot-free outcome", async () => {
-    process.env.BUMBLEBEE_MODULE_ENABLED = "true"
-    await getPool().query("REVOKE SELECT ON inventory_records FROM allura_app")
-    try {
-      await expect(issueCuratorModules(authenticatedRequest("curator"))).resolves.toMatchObject({ state: "error", modules: [] })
-    } finally {
-      await getPool().query("GRANT SELECT ON inventory_records TO allura_app")
-    }
-    const event = await latestDecision()
-    expect(event).toMatchObject({ workspace_id: WORKSPACE, status: "failed", metadata: { decision: "read_failure", issuance_snapshot: null } })
-  })
+  // Read-failure handling is exercised in the focused unit suite by rejecting
+  // the host-owned summary reader. Do not revoke a shared role grant here:
+  // Vitest runs this live inventory in parallel and a global REVOKE can deny
+  // unrelated app-role tests in another worker.
 })
