@@ -322,10 +322,10 @@ epic_26:
       status_evidence: "Merged PR #109 (9d66f9df) 2026-08-26. src/lib/exposure/{matcher,dedup,schemas,types}.ts + tests. Re-verified 2026-08-27: bun vitest run src/lib/exposure -> 19/19 passed, exit 0, including both fail-closed fixture cases. Story file status/checkboxes were stale and corrected 2026-08-27."
     - key: "26.4"
       title: "Scheduled Discovery and Alert Routing"
-      status: blocked
+      status: planned
       owner: "Hightower + Woz"
       depends_on: ["26.3"]
-      status_evidence: "Not started. Externally blocked pending security-owner signature on the governed worker schedule; this is a human approval gate, not an implementation gap."
+      status_evidence: "Unblocked 2026-08-27: security-owner approval recorded in docs/governance/2026-08-27-story-26-4-security-owner-approval.md (approved by Sabir Asheed/ronin704 -- advisory source allowlist, 6h cadence, 12h/36h stale/degraded thresholds, indefinite retention). No implementation exists yet; all AC remain unchecked. Not started, no longer blocked."
     - key: "26.5"
       title: "Governed Mitigation Policy Drafts"
       status: done
