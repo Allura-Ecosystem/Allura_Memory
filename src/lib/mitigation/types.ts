@@ -11,6 +11,8 @@ import type {
   AffectedScopeKind,
   ApprovalState,
   AuthorityState,
+  MitigationApprovalAction,
+  MitigationApprovalReceipt,
   MitigationDraft,
   MitigationDraftRecord,
   MitigationDraftRecordAction,
@@ -21,6 +23,8 @@ export type AffectedScopeKind = z.infer<typeof AffectedScopeKind>
 export type AuthorityState = z.infer<typeof AuthorityState>
 export type ApprovalState = z.infer<typeof ApprovalState>
 export type MitigationDraftRecordAction = z.infer<typeof MitigationDraftRecordAction>
+export type MitigationApprovalAction = z.infer<typeof MitigationApprovalAction>
 export type MitigationTemplate = z.infer<typeof MitigationTemplate>
 export type MitigationDraft = z.infer<typeof MitigationDraft>
 export type MitigationDraftRecord = z.infer<typeof MitigationDraftRecord>
+export type MitigationApprovalReceipt = z.infer<typeof MitigationApprovalReceipt>

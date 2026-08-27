@@ -294,3 +294,53 @@ epic_24:
       owner: "Troy"
       depends_on: ["24.8"]
       status_evidence: "PR #87 merged documentation only; no runnable integrations, scenarios, receipts, evaluation artifacts, or measured clean-environment evidence exist."
+
+epic_26:
+  name: "Bumblebee — Supply-Chain Threat Intelligence"
+  status: in-progress
+  retrospective: null
+  next_story: "26.4"
+  sequence_note: "Added 2026-08-27. Story files 26.1-26.3 were previously stale (marked Planned/unchecked despite being merged); corrected this session with evidence re-verified against the actual diffs and test suites. See _bmad/bmm/planning/epic-26-bumblebee-supply-chain-threat-intelligence.md."
+  stories:
+    - key: "26.1"
+      title: "Boundary, Ownership, and Threat-Source Trust Contract"
+      status: done
+      owner: "Brooks + Jobs + Knuth"
+      depends_on: []
+      status_evidence: "Documentation-only trust/authority contract merged 2026-08-26 as 6e7e9efd. All 10 acceptance criteria are documentation contracts, not code; zero src/ files touched, confirmed via git show --stat. Story file status/checkboxes were stale and corrected 2026-08-27."
+    - key: "26.2"
+      title: "Read-Only Supply-Chain Inventory"
+      status: done
+      owner: "Woz + Knuth"
+      depends_on: ["26.1"]
+      status_evidence: "Merged PR #108 (57dd9af8) 2026-08-26. src/lib/inventory/{types,schemas,service}.ts + tests. Re-verified 2026-08-27: bun vitest run src/lib/inventory -> 13/13 passed, exit 0. Story file status/checkboxes were stale and corrected 2026-08-27."
+    - key: "26.3"
+      title: "Exposure Matcher and Current-Threat Packs"
+      status: done
+      owner: "Woz + Knuth + Bellard"
+      depends_on: ["26.1", "26.2"]
+      status_evidence: "Merged PR #109 (9d66f9df) 2026-08-26. src/lib/exposure/{matcher,dedup,schemas,types}.ts + tests. Re-verified 2026-08-27: bun vitest run src/lib/exposure -> 19/19 passed, exit 0, including both fail-closed fixture cases. Story file status/checkboxes were stale and corrected 2026-08-27."
+    - key: "26.4"
+      title: "Scheduled Discovery and Alert Routing"
+      status: blocked
+      owner: "Hightower + Woz"
+      depends_on: ["26.3"]
+      status_evidence: "Not started. Externally blocked pending security-owner signature on the governed worker schedule; this is a human approval gate, not an implementation gap."
+    - key: "26.5"
+      title: "Governed Mitigation Policy Drafts"
+      status: done
+      owner: "Brooks + Knuth + Woz"
+      depends_on: ["26.3", "epic_24_mutation_boundary_remediation"]
+      status_evidence: "Merged PR #111 (3e37c31d) as a safe partial slice covering AC 1-5/8-9, then closed AC 6-7 on 2026-08-27: new append-only mitigation_receipts table (migration 41) plus src/lib/mitigation/governed-approval.ts routes approval/rejection through the REQ-GOV-008 syscall_mutate gate (PR #110, 5383501d) rather than the local MitigationDraftRecord. All 9 AC verified against passing tests: bun vitest run src/lib/mitigation -> 24/24, bun run test:unit -> 1930/1930, typecheck exit 0. Migration 41 validated against a disposable PostgreSQL 16 container (RLS tenant isolation, grant-level and trigger-level immutability all confirmed), container destroyed afterward; not yet deployed to the laptop live Brain."
+    - key: "26.6"
+      title: "Containment Connectors and Response Receipts"
+      status: planned
+      owner: "Hightower + Brooks + Knuth"
+      depends_on: ["26.5"]
+      status_evidence: "Not started. Blocked on 26.5 AC 6-7 closure and a separate role-model reconciliation."
+    - key: "26.7"
+      title: "Operator Module Adversarial Tests and Demo Gate"
+      status: planned
+      owner: null
+      depends_on: ["26.4", "26.6"]
+      status_evidence: "Not started."

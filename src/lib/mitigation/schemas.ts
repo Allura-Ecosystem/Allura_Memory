@@ -40,6 +40,15 @@ export const ApprovalState = z.enum(["draft", "reviewed", "rejected"])
 export const MitigationDraftRecordAction = z.enum(["draft_created", "draft_reviewed", "draft_rejected"])
 
 /**
+ * Actions recorded by the GOVERNED approval path (mitigation_receipts, migration 41).
+ * `approved_for_activation` means a human approved this draft for a later,
+ * separately authorized enforcement workflow — it does not itself activate,
+ * enforce, or change anything (AD-57). There is no "activated" action: Story
+ * 26.5 grants no activation authority at all.
+ */
+export const MitigationApprovalAction = z.enum(["approved_for_activation", "rejected"])
+
+/**
  * Parameter shape shared by all mitigation templates. Each template may extend
  * this with additional typed, bounded fields. Free-text from advisories is
  * never accepted as a parameter value.
@@ -108,6 +117,28 @@ export const MitigationDraftRecord = z.object({
   actor_id: z.string().min(1),
   actor_role: z.string().min(1),
   action: MitigationDraftRecordAction,
+  rationale: z.string().min(1),
+  policy_reference: z.string().min(1),
+  policy_version: z.string().min(1),
+  evidence_ids: z.array(z.string().min(1)).min(1),
+  occurred_at: z.string().datetime(),
+})
+
+/**
+ * A durable, governed mitigation-approval receipt (mitigation_receipts table).
+ * Only ever produced by recordGovernedMitigationApproval() after the
+ * REQ-GOV-008 control-plane gate has verified `approval_ref` is a well-formed
+ * approval identity. This IS a canonical receipt, unlike MitigationDraftRecord.
+ */
+export const MitigationApprovalReceipt = z.object({
+  id: z.string().uuid(),
+  group_id: TenantScope.shape.group_id,
+  workspace_id: z.string().min(1),
+  draft_id: z.string().min(1),
+  approval_ref: z.string().uuid(),
+  action: MitigationApprovalAction,
+  actor_id: z.string().min(1),
+  actor_role: z.string().min(1),
   rationale: z.string().min(1),
   policy_reference: z.string().min(1),
   policy_version: z.string().min(1),
