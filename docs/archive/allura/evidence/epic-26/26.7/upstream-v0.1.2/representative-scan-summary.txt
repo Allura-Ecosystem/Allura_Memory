@@ -1,0 +1,31 @@
+command:
+/tmp/allura-bumblebee-evidence/dist/bumblebee scan \
+  --profile project \
+  --root /tmp/allura-bumblebee-v0.1.2/cmd/bumblebee/selftest/fixtures/npm-fixture \
+  --ecosystem npm \
+  --max-duration 30s \
+  --concurrency 1 \
+  --output file \
+  --output-file /tmp/allura-bumblebee-evidence/representative-scan.ndjson
+
+exit_code=0
+raw_output_committed=false
+raw_output_reason=Contains endpoint and source-path fields; only cryptographic hashes and privacy-safe aggregate facts are retained.
+raw_sha256=716d03bcd95ab0c56193b81e3818288c3c09d683dad05d0ec09f021b6cf9b425
+stderr_sha256=4a938ca6739a7a25ed88ec9a5beca23fd0a4536ad983cd011ad6e0ad08ba3bc2
+raw_bytes=1674
+stderr_bytes=393
+records=2
+record_types={"package":1,"scan_summary":1}
+schema_versions=["0.1.0"]
+package_ecosystems=["npm"]
+summary_status=complete
+summary_package_records_emitted=1
+summary_findings_emitted=0
+summary_diagnostics_count=0
+summary_timed_out=false
+single_run_id=true
+scanner_names=["bumblebee"]
+scanner_versions=["v0.1.2"]
+trailing_record_type=scan_summary
+contract_validation=true

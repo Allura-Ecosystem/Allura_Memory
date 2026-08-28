@@ -8,7 +8,7 @@
 > **Correct Course — 2026-08-27**
 > The intended Bumblebee is the upstream `perplexityai/bumblebee` endpoint scanner. Allura integrates it as a governed plugin. Existing Stories 26.1–26.6 are useful Allura-native downstream workflow slices, but they do not prove upstream scanner integration. See [the Correct Course decision](epic-26-correct-course-upstream-bumblebee-plugin.md).
 
-**Status:** In Progress — Correct Course accepted; Story 26.7 is Ready for Dev and upstream plugin implementation is absent.
+**Status:** In Progress — Correct Course accepted; Story 26.7 implementation has begun on its dedicated upstream-plugin branch, while the scanner ingestion path remains incomplete.
 **Owner:** Brooks (architecture); Woz (implementation); Pike/Fowler/Knuth (review).
 **Tenant:** `allura-system`
 **Canonical source pin:** `perplexityai/bumblebee` tag `v0.1.2`, commit `cc57710eeaf685e7b89924a36c8583cad0a378fe`, emitted schema `0.1.0`
@@ -102,7 +102,7 @@ Automatic V1 authority stops at accepted inventory, verified exposure evidence, 
 | 26.4  | Allura advisory polling and alert routing                                         | Done as downstream worker; not an endpoint scanner scheduler.                                                    |
 | 26.5  | Governed simulated mitigation proposals                                           | Done as downstream host service.                                                                                 |
 | 26.6  | Optional canonical host response handoff and receipts                             | Done as downstream/optional host response; not a Bumblebee V1 dependency.                                        |
-| 26.7  | Upstream Bumblebee plugin integration, adversarial conformance, and headless demo | **Ready for Dev — Correct Course accepted.**                                                                     |
+| 26.7  | Upstream Bumblebee plugin integration, adversarial conformance, and headless demo | **In Progress — bounded provenance/schema-contract work started; all acceptance criteria remain open.**          |
 
 ## Epic acceptance criteria
 

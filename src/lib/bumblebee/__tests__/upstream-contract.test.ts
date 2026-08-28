@@ -71,7 +71,7 @@ describe("Story 26.7 upstream compatibility contract", () => {
     ).toThrowError("BUMBLEBEE_CONTRACT_UNSUPPORTED_ECOSYSTEM")
   })
 
-  it("rejects findings-only mode without a findings-enabled catalog binding", () => {
+  it("rejects findings-only mode when finding emission is not enabled", () => {
     expect(() =>
       assertSupportedScanContract({
         schemaVersion: "0.1.0",
