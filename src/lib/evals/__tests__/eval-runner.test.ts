@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { generateHtmlReport, generateJsonReport, generateMarkdownReport } from "../report";
-import { type CaseOutcome, type EvalResult, defaultOfflineExecutor, loadSuite, runEvaluation, runSuite } from "../runner";
+import { type CaseOutcome, defaultOfflineExecutor, loadSuite, runEvaluation, runSuite } from "../runner";
 
 const SUITE_PATH = "evals/suites/portfolio.yaml";
 
