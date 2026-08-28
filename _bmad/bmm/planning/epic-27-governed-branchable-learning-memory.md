@@ -1,7 +1,8 @@
 # Epic 27 — Governed Branchable Learning Memory
 
 > [!NOTE]
-> AI-assisted BMad planning artifact. Source code, schemas, tests, and verified
+> **AI-Assisted Documentation**
+> This BMad planning artifact was drafted with AI assistance. Source code, schemas, tests, and verified
 > upstream revisions override unverified capability claims.
 
 **Status:** Planned; experiment-first and blocked by Epic 25 closure
