@@ -42,7 +42,11 @@ export function createRunsHandler(deps: {
   return async function POST(request: Request): Promise<Response> {
     let authority: { rawToken: string }
     try {
-      authority = await deps.authenticate(request, "bumblebee_runner")
+      const authenticated = await deps.authenticate(request, "bumblebee_runner")
+      // Mirror of the ingest guard: a lease-bound ingest authority must never be
+      // accepted at the run-lease route, and carries no runner token to forward.
+      if ("leaseId" in authenticated) throw new Error("BUMBLEBEE_AUTH_CREDENTIAL_CLASS_FORBIDDEN")
+      authority = authenticated
     } catch (error) {
       return refusal(error)
     }

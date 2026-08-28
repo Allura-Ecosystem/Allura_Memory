@@ -28,6 +28,32 @@ describe("Story 26.7 Bumblebee route audiences", () => {
     expect(authenticate.mock.calls.map((call) => call[1])).toEqual(["bumblebee_runner", "bumblebee_ingest"])
   })
 
+  it("rejects a lease-bound ingest authority at the run-lease route", async () => {
+    // AC-3 mirror: /ingest already refuses a runner credential. A lease-bound
+    // ingest authority reaching /runs must be refused by credential class, not
+    // silently forwarded as a runner token it does not carry.
+    const issue = vi.fn()
+    const runsJson = vi.fn()
+    const response = await createRunsHandler({
+      authenticate: async () => ({
+        groupId: "allura-ingest",
+        workspaceId: "ws-1",
+        sourceId: "source-1",
+        sourceRevisionId: "revision-1",
+        leaseId: "lease-1",
+      }),
+      issue,
+    })({
+      headers: new Headers({ authorization: "Bearer bmb_ingest_abcdefgh_body" }),
+      json: runsJson,
+    } as unknown as Request)
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: "BUMBLEBEE_AUTH_CREDENTIAL_CLASS_FORBIDDEN" })
+    expect(issue).not.toHaveBeenCalled()
+    expect(runsJson).not.toHaveBeenCalled()
+  })
+
   it.each([
     [new Error("BUMBLEBEE_AUTH_INVALID"), 401, "BUMBLEBEE_AUTH_INVALID"],
     [new Error("BUMBLEBEE_AUTH_REVOKED"), 401, "BUMBLEBEE_AUTH_REVOKED"],

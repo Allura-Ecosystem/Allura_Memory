@@ -67,7 +67,7 @@ function summaryRecord() {
 
 describe("Story 26.7 HTTPS NDJSON ingest route", () => {
   it("authenticates an HTTPS request and atomically forwards a strict sanitized batch", async () => {
-    const persist = vi.fn(async () => ({ receiptId: "receipt-1", replayed: false }))
+    const persist = vi.fn(async (_batch: ParsedIngestBatch) => ({ receiptId: "receipt-1", replayed: false }))
     const record = packageRecord()
     const handler = createIngestHandler({ authenticate: vi.fn(async () => authority), persist })
 

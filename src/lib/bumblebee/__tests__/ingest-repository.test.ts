@@ -4,7 +4,7 @@ import { persistIngestBatch } from "../ingest-repository"
 import type { ParsedIngestBatch } from "../ingest"
 
 const batch = {
-  authority: { rawToken: "secret", groupId: "allura-ingest", workspaceId: "ws-1", sourceId: "source-1", sourceRevisionId: "revision-1", leaseId: "lease-1" },
+  authority: { groupId: "allura-ingest", workspaceId: "ws-1", sourceId: "source-1", sourceRevisionId: "revision-1", leaseId: "lease-1" },
   bodySha256: "a".repeat(64), expandedSha256: "b".repeat(64), sanitizedPayloadDigest: "c".repeat(64),
   compressedBytes: 10, expandedBytes: 10, lineCount: 1,
   records: [{ lineNumber: 1, recordId: `package:${"d".repeat(64)}`, runId: "0123456789abcdef0123456789abcdef", recordType: "package" as const,
