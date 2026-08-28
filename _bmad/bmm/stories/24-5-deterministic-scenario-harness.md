@@ -1,5 +1,11 @@
 # Story 24.5 — Deterministic Scenario Harness
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
 **Status:** in-review
 **Priority:** P0-Critical
