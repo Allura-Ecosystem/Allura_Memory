@@ -194,7 +194,9 @@ export async function issueCuratorModules(request: NextRequest): Promise<Curator
   if (!isBumblebeeEnabled()) {
     const unavailable = await recordOutcomeOrUnavailable(scope, "disabled")
     if (unavailable) return unavailable
-    return { state: "complete", modules: [{ id: "bumblebee", state: "unavailable", title: manifest.title }] }
+    // Auditor finding (25.3b #3): 'complete' claims "Curator workflows are
+    // ready" — a disabled-only shell must say so truthfully.
+    return { state: "degraded", modules: [{ id: "bumblebee", state: "unavailable", title: manifest.title }], message: "Bumblebee is currently unavailable." }
   }
 
   try {

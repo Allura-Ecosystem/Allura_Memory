@@ -6,7 +6,10 @@ import type { BumblebeeModuleView } from "@/lib/curator/module-contract"
  * controls routes, scope, storage, identity, or authority.
  */
 export function BumblebeeWorkflowAdapter({ module }: { module: BumblebeeModuleView }) {
-  if (module.state === "unavailable") {
+  // Edge-case guard: only render the summary when the server actually issued
+  // an available module WITH data. An available-without-summary state would
+  // otherwise crash the whole curator page on summary.sources.
+  if (module.state !== "available" || !module.summary) {
     return <section aria-label={module.title}><h2>{module.title}</h2><p>Bumblebee is currently unavailable.</p></section>
   }
 

@@ -35,7 +35,15 @@ export function CuratorHandoffContent({ user, issue }: { user: AuthUser; issue?:
 
 export default async function CuratorHandoffPage() {
   const request = new NextRequest("http://allura.local/dashboard/curator", { headers: await headers() });
-  const user = getAuthUser(request);
+
+  // Auditor finding (25.3b #9): a throwing auth resolver must render the
+  // canonical error shell state, not an unhandled 500.
+  let user;
+  try {
+    user = getAuthUser(request);
+  } catch {
+    user = null;
+  }
   if (!user?.workspaceId || !user.sessionId) redirect(`${AUTH_LOGIN_PATH}?redirect_url=%2Fdashboard%2Fcurator`);
 
   const issue = await issueCuratorModules(request);
