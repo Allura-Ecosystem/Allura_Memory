@@ -1,7 +1,7 @@
 # Story 23-5 — Remove Dead Neo4j Code
 
 **Epic:** Epic 23 — Neo4j Sunset Completion
-**Status:** ready-for-dev
+**Status:** Done — authoritative sprint status
 **Priority:** P0-Critical | **Complexity:** Medium
 **Agent:** Woz
 

@@ -1,6 +1,6 @@
 # Story 18.3 — Update DATA-DICTIONARY.md GRAPH_BACKEND + RuVector Tables
 
-**Status:** ready-for-dev
+**Status:** Done — authoritative sprint status
 **Owner:** Brooks → Woz
 **group_id:** allura-system
 **Epic:** 18

@@ -1,6 +1,6 @@
 # Story 19.3 — Flip Default to ruvector
 
-**Status:** blocked (needs 19.2)
+**Status:** Done — authoritative sprint status
 **Owner:** Brooks → Woz
 **group_id:** allura-system
 **Epic:** 19

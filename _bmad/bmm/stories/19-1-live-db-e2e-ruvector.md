@@ -1,6 +1,6 @@
 # Story 19.1 — Live-DB E2E with GRAPH_BACKEND=ruvector
 
-**Status:** ready-for-dev
+**Status:** Done — authoritative sprint status
 **Owner:** Brooks → Knuth + Woz
 **group_id:** allura-system
 **Epic:** 19

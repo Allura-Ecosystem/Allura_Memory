@@ -1,7 +1,7 @@
 # Story 23-2 — Remove Neo4j Fallback Tests in writer.test.ts
 
 **Epic:** Epic 23 — Neo4j Sunset Completion
-**Status:** ready-for-dev
+**Status:** Done — authoritative sprint status
 **Priority:** P0-Critical | **Complexity:** Small
 **Agent:** Woz
 
