@@ -98,7 +98,10 @@ export function validateModuleManifests(manifests: readonly CuratorModuleManifes
 
 function deriveScope(request: NextRequest): Scope | null {
   const user = getAuthUser(request)
-  if (!user?.id || !user.groupId || !user.workspaceId || !user.sessionId) return null
+  // role is required explicitly: hasPermission(undefined, r) happens to be
+  // false (undefined >= n), but the fail-closed intent must not rest on that
+  // coincidence (Edge Case review 25.3b #2).
+  if (!user?.id || !user.groupId || !user.workspaceId || !user.sessionId || !user.role) return null
   return { tenantId: user.groupId, workspaceId: user.workspaceId, principalId: user.id, sessionId: user.sessionId, role: user.role }
 }
 

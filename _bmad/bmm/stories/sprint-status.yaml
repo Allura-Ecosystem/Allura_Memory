@@ -404,13 +404,12 @@ epic_24:
 
 epic_25:
   name: "Governed Curator Console — Module Registry Reconciliation"
-  status: in-progress
+  status: done
   retrospective:
-  next_story: "25.3b"
-  sequence_note: "Story 25.3a merged in PR #122. Story 25.3b implementation and current-SHA
-    CI merged in PR #124; canonical independent-acceptance/status reconciliation remains
-    pending. Epic 26 no longer depends on this optional display registry for headless
-    scanner ingestion."
+  next_story: null
+  sequence_note: "Story 25.3a merged in PR #122. Story 25.3b accepted 2026-08-28 after
+    independent acceptance review (4 findings remediated in c1516812 + 9dfe12b9, remainder
+    disposed). Epic 25 complete — retrospective recommended next."
   stories:
   - key: "25.2a"
     title: "Workspace Scope and Evidence Lifecycle Foundation"
@@ -444,16 +443,15 @@ epic_25:
       PostgreSQL. Brain receipt ee8cfe36-0329-4fd0-830c-222e42e45941 read back."
   - key: "25.3b"
     title: "Modular Dashboard Workflow Contract Registry"
-    status: in-review
+    status: done
     owner: "Brooks + Woz + Pike + Fowler + Bellard"
     depends_on: ["25.3a"]
-    status_evidence: "Merged PR #124 as d25a1f6e026717512364e1b5973ccd352b90ba11 after
-      focused, typecheck, unit, fresh app-role PostgreSQL, and current-SHA hosted
-      CI passed. The registry remains server-owned, allowlisted, fail-closed, scoped,
-      audited, independently rollbackable, and hosted only at /dashboard/curator.
-      Canonical independent-acceptance/status reconciliation remains pending for REQ-MOD-001/002/003.
-      It is optional display infrastructure and no longer blocks Epic 26 headless
-      scanner ingestion."
+    status_evidence: "Independent acceptance review accepted 2026-08-28 (see 25-3b-code-review.md):
+      4 findings remediated (adapter crash guard, degraded-when-disabled state, page-boundary
+      auth try/catch, executing page-wiring test); remaining items disposed with recorded
+      rationale. Remediation commits c1516812 + 9dfe12b9; focused 14/14, shell 3/3, page 3/3,
+      full unit lane 2,252 passed, typecheck clean, CI green. Unblocks REQ-MOD-001/002/003 and
+      Story 26.7 AC-2."
 
 epic_26:
   name: "Bumblebee Plugin — Upstream Endpoint Inventory and Governed Allura Response"
