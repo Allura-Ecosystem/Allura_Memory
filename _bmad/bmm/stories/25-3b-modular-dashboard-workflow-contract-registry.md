@@ -1,6 +1,6 @@
 # Story 25.3b — Modular Dashboard Workflow Contract Registry
 
-**Status:** Accepted — independent acceptance review completed 2026-08-28 (bmad-code-review: Edge Case Hunter, Verification Gap, Acceptance Auditor; 4 findings remediated in `c1516812` + `9dfe12b9`, remaining items disposed with recorded rationale). See `25-3b-code-review.md`. Unblocks `REQ-MOD-001..003` and Story 26.7 AC-2.
+**Status:** done — accepted 2026-08-28 after independent acceptance review (bmad-code-review: Edge Case Hunter, Verification Gap, Acceptance Auditor; 4+2 findings remediated, remainder disposed with recorded rationale). See `25-3b-code-review.md`. Unblocks `REQ-MOD-001..003` and Story 26.7 AC-2.
 **Owner:** Brooks + Woz + Pike + Fowler + Bellard
 **Depends on:** Story 25.2a — Workspace Scope and Evidence Lifecycle Foundation (**Done**, final approval 2026-08-26); Story 25.2b — Authenticated Session Entry Point (**Done**); Story 24.12 — Effective-Tenant Authority Seam (**Done** in authoritative sprint status).
 **Blocks:** Final acceptance reconciliation for REQ-MOD-001, REQ-MOD-002, and REQ-MOD-003. It is optional downstream display infrastructure for Epic 26, not a scanner-ingestion dependency.
