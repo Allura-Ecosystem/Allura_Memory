@@ -1,7 +1,7 @@
 # Story 23-3 — Fix target-resolver.test.ts Failures
 
 **Epic:** Epic 23 — Neo4j Sunset Completion
-**Status:** ready-for-dev
+**Status:** Done — authoritative sprint status
 **Priority:** P0-Critical | **Complexity:** Small
 **Agent:** Woz
 

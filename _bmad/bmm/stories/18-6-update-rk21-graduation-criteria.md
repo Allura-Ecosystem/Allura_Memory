@@ -1,5 +1,6 @@
 # Story 18.6 — Update RK-21 Mitigation Graduation Criteria
 
+**Status:** Done — authoritative sprint status
 ## Dev Agent Record
 
 - Story started: 2026-07-12 (Brooks)

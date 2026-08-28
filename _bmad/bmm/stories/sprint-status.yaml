@@ -1,6 +1,6 @@
 # Sprint Status — RuVector Documentation Sync & Integration
 
-last_updated: "2026-08-27"
+last_updated: "2026-08-28"
 owner: brooks
 group_id: allura-system
 
@@ -209,6 +209,11 @@ epic_24:
   sequence_note: "Post-merge adversarial review on 2026-08-22 created corrective follow-up issues; it did not reopen Epic 24. See docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md."
   post_epic_remediation:
     authority: "GitHub issues are the follow-up tracker. These are corrective work after Epic completion, not remaining Epic 24 stories."
+    unmapped_story_artifacts:
+      - key: "24.11a"
+        title: "Fail-Closed Web Authority and Manifest as Single Source"
+        status: "ready-for-dev"
+        reconciliation_note: "The story file is a retained post-Epic-24 remediation artifact with no recovered GitHub issue mapping. Its header status remains authoritative until an issue/source reconciliation assigns its next delivery path; do not advance it from downstream dependency inference."
     issues:
       - issue: 89
         story: "24.4"
@@ -302,6 +307,18 @@ epic_25:
   next_story: "25.3b"
   sequence_note: "Story 25.3a merged in PR #122. Story 25.3b implementation and current-SHA CI merged in PR #124; canonical independent-acceptance/status reconciliation remains pending. Epic 26 no longer depends on this optional display registry for headless scanner ingestion."
   stories:
+    - key: "25.2a"
+      title: "Workspace Scope and Evidence Lifecycle Foundation"
+      status: done
+      owner: "Troy + Knuth + Brooks"
+      depends_on: ["24.2", "24.3"]
+      status_evidence: "Final Knuth/Pike/Fowler approval recorded 2026-08-26. Workspace scope, evidence lifecycle rows, immutable decision receipts, and fail-closed remediation passed focused, full-unit, disposable PostgreSQL, typecheck, lint, and build verification. See 25-2a-workspace-evidence-lifecycle-foundation.md and 25-2a-code-review.md."
+    - key: "25.2b"
+      title: "Authenticated Session Entry Point"
+      status: done
+      owner: "Troy + Pike"
+      depends_on: ["24.2", "24.3"]
+      status_evidence: "Authenticated curator entry derives principal, tenant, and workspace server-side; the story records complete acceptance criteria and evidence. See 25-2b-authenticated-session-entry-point.md."
     - key: "25.3a"
       title: "Curator Read Contract and Workspace Authority Remediation"
       status: done
@@ -364,3 +381,19 @@ epic_26:
       owner: "Woz + Knuth + Pike + Fowler"
       depends_on: ["26.1", "26.2", "26.3", "26.4", "26.5"]
       status_evidence: "Implementation began 2026-08-27 on dedicated branch feat/epic-26-story-26.7-upstream-plugin from merged Correct Course commit 822a5311. First bounded TDD slice pins the upstream source/schema contract, rejects empty filters and known enum drift, models findings emission independently from scan mode, and emits stable non-reflective failure codes. Focused test is currently 12/12 green; RED phases were observed in the implementation job but are not yet a committed evidence artifact. All corrected ACs remain open. The preserved dashboard-focused branch is not active architecture and must not be merged wholesale."
+
+epic_27:
+  name: "Governed Branchable Learning Memory"
+  status: planned
+  retrospective: null
+  next_story: "27.1"
+  sequence_note: "Planning-only epic. No story files are scaffolded yet. It is experiment-first and blocked by Epic 25 closure; see planning/epic-27-governed-branchable-learning-memory.md."
+  stories: []
+
+epic_28:
+  name: "Enterprise Documentation Consolidation"
+  status: in-progress
+  retrospective: null
+  next_story: "28.8"
+  sequence_note: "Planning record restored from the preserved source. Tasks 28.1–28.7 are documented as complete in the epic plan; Task 28.8 remains undefined and no numbered story files are scaffolded. See planning/epic-28-enterprise-documentation-consolidation.md."
+  stories: []

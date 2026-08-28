@@ -1,6 +1,6 @@
 # Story 18.2 — Update SOLUTION-ARCHITECTURE.md §3.4.0 Cutover Path
 
-**Status:** ready-for-dev
+**Status:** Done — authoritative sprint status
 **Owner:** Brooks → Woz
 **group_id:** allura-system
 **Epic:** 18

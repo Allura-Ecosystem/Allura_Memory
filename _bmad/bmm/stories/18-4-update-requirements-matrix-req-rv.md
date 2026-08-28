@@ -1,6 +1,6 @@
 # Story 18.4 — Update REQUIREMENTS-MATRIX.md REQ-RV-001..005
 
-**Status:** ready-for-dev
+**Status:** Done — authoritative sprint status
 **Owner:** Brooks → Woz
 **group_id:** allura-system
 **Epic:** 18
