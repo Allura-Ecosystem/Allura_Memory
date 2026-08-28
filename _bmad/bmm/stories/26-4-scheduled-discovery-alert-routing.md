@@ -66,14 +66,13 @@ exist, matching the approved 6-hour cadence and the pattern already established 
 Stories 21.1-21.3 (`allura-content-curator.timer`). AC-1 is checked because the
 configuration artifact exists and matches the approval exactly. AC-9 is checked because
 disabling this (not-yet-deployed) timer changes nothing else: no dashboard/API route
-anywhere imports `threat-discovery` or `threat-ingestion` (verified by grep). AC-2 and
-AC-6 remain unchecked: cadence is configured and the worker has no code path to alter
-its own schedule, but there is no configurable retry/backoff behavior implemented, and
-"scheduler health monitored" means observed over real time on a real running schedule,
-which does not exist -- these files have never been installed on any host.
+anywhere imports `threat-discovery` or `threat-ingestion` (verified by grep). This
+paragraph records the original slice state. AC-2 and AC-6 were later closed by the
+retry/checkpoint and repeated-process evidence recorded below; the systemd units still
+have never been installed on a production host.
 
 **The inventory gap noted above -- now partially closed, same day (2026-08-27):**
-Story 26.2 was extended with "Bumblebee Guard" -- a real, persisted inventory
+Story 26.2 was extended with an Allura-local inventory adjunct -- a real, persisted inventory
 reconciled from this repo's own `bun.lock` (see Story 26.2's own file for the
 full writeup: `src/lib/inventory/{lockfile-parser,reconciliation}.ts`,
 `docker/postgres-init/44-inventory-records.sql`). `src/lib/threat-discovery/cli.ts`
@@ -149,8 +148,9 @@ mechanism is built, exercised over real time, and produces real audit evidence -
 not because this has run in production.
 
 **Inventory coverage improved.** A second real source now exists: the
-`ci_workflow` artifact type, via `src/lib/inventory/ci-workflow-parser.ts`
-(see Story 26.7's file for the full writeup and the real finding it produced).
+`ci_workflow` artifact type, via `src/lib/inventory/ci-workflow-parser.ts`.
+Its historical evidence remains in this Story 26.4 completion record and the parser tests;
+it is an Allura-local adjunct source, not the upstream Bumblebee scanner.
 2 of 10 artifact types now have real sources, up from 1.
 
 ## Evidence

@@ -92,12 +92,13 @@ Run truthfulness rules: no “hallucination-free” claims, no yolo/forever auto
 
 Governance receipt rule: every mutation and approval must show intent, actor, source, policy, validation, audit trail, `gate_decision` (`Permit | Defer | Deny`), and `approval_required` before completion. For mutations in the approval-required set (REQ-GOV-008), the control plane's `executeSyscall` enforces a well-formed `approval_ref` (a UUID, the canonical governed approval identity shape) after proof verification and policy evaluation and before the syscall executor runs. When the gate fires, the syscall's audit context is updated with `approval_required: true`, the gate decision (`approved`/`denied`), and the resolved `approval_ref`. Resolution against the canonical approval store (`canonical_proposals`) is the approval-lifecycle layer's responsibility: curator/HITL issues the governed identity, and the control plane enforces presence plus UUID format here.
 
-### Planned Bumblebee V1 trust and authority contract
+### Accepted Bumblebee plugin planning contract
 
-Bumblebee is a threat-intelligence and inventory-correlation boundary, not an
-autonomous security responder. Its canonical names are **Bumblebee Guard** for
-approved inventory reconciliation and **Bumblebee Threat Watch** for advisory
-intake/correlation. Neither name grants a different authority level.
+The intended Bumblebee is the pinned upstream `perplexityai/bumblebee` read-only
+endpoint scanner. Allura integrates it through a headless plugin runner and receiver.
+The historical names “Bumblebee Guard” and “Bumblebee Threat Watch” refer to local
+Allura inventory/advisory adjuncts; they are not the upstream scanner or separate
+authority planes.
 
 Each advisory must record source identity and URL, publisher, publication time,
 fetch time, trust state, freshness state, content revision/hash, classification or
@@ -107,12 +108,12 @@ unverified, stale, malformed, or scope-conflicting input becomes a distinct
 `rejected`, `degraded`, or `stale` evidence state; it must not appear as a verified
 finding. `trust_state` and `freshness_state` remain separate contract dimensions.
 
-V1 permits three intake lanes only: approved internal events, allowlisted scheduled
-advisory polling, and periodic reconciliation of approved inventory. A verified
-match may create a deduplicated alert and a **simulated** mitigation proposal.
-It cannot scan endpoints, activate policy, block CI or packages, change schedules,
-revoke credentials, lock a workspace, or contain a host. Those are
-separate human-authorized workflows with their own receipt.
+The plugin may run the upstream scanner to read approved endpoint metadata. Its runner
+must obtain a server-issued source/population lease and dedicated ingestion-only
+credential. Accepted scanner evidence may feed a deduplicated alert and a **simulated**
+mitigation proposal. Neither scanner nor plugin may execute packages, activate policy,
+block CI or packages, change schedules, revoke credentials, lock a workspace, or
+contain a host. Those are separate human-authorized workflows with their own receipts.
 
 | Action | V1 authority | Required owner |
 |---|---|---|
@@ -624,13 +625,14 @@ The following event types are recorded in the PostgreSQL `events` table (append-
 | `proposal_rejected` | Human rejects proposal | Curator reject route |
 | `memory_promoted` | Memory written to Neo4j (semantic layer) | Promotion worker |
 | `memory_deprecated` | Old version marked deprecated via SUPERSEDES | Version workflow |
-| `threat_advisory_received` | Allowlisted advisory or approved internal evidence accepted as provisional | Planned Bumblebee intake |
-| `threat_evidence_rejected` | Evidence denied for trust, freshness, schema, or scope failure | Planned Bumblebee intake |
-| `threat_alert_created` | Deduplicated alert created from verified exposure evidence | Planned Bumblebee correlation |
-| `mitigation_proposal_simulated` | Non-enforcing mitigation draft prepared for human review | Planned Bumblebee correlation |
+| `threat_advisory_received` | Allowlisted advisory or approved internal evidence accepted as provisional | Allura downstream threat intake |
+| `threat_evidence_rejected` | Evidence denied for trust, freshness, schema, or scope failure | Allura downstream threat intake |
+| `threat_alert_created` | Deduplicated alert created from verified exposure evidence | Allura downstream correlation |
+| `mitigation_proposal_simulated` | Non-enforcing mitigation draft prepared for human review | Allura downstream correlation |
 
-These planned event types are defined by the planned Story 26.1 contracts in
-[DATA-DICTIONARY.md](./DATA-DICTIONARY.md#planned-story-261-bumblebee-threat-intelligence-contracts); they do not denote deployed event producers.
+These event types are defined by the Story 26.1 downstream Allura contracts in
+[DATA-DICTIONARY.md](./DATA-DICTIONARY.md#story-261-allura-threat-intelligence-contracts).
+They do not define the upstream scanner transport or snapshot ledger.
 
 ### Curator Pipeline State Machine
 

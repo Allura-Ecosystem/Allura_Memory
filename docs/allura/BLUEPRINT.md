@@ -587,12 +587,12 @@ The primary append-only log. Every memory operation produces a row here. No UPDA
 | `memory_list`   | All memories for a user were listed |
 | `memory_delete` | A memory was soft-deleted           |
 
-### Planned Bumblebee V1 trust contract
+### Accepted Bumblebee plugin planning contract
 
-Epic 26 is documentation-only until its later stories receive separate approval.
-**Bumblebee Guard** names approved inventory reconciliation; **Bumblebee Threat
-Watch** names advisory intake and correlation. Neither name grants a distinct
-authority level.
+Epic 26's remaining gate integrates the pinned upstream `perplexityai/bumblebee`
+read-only endpoint scanner as an Allura plugin. Historical “Bumblebee Guard” and
+“Bumblebee Threat Watch” labels describe local Allura adjuncts only; they are not the
+upstream scanner and do not grant a distinct authority level.
 The future contract treats advisory records, exposure findings, alerts, and simulated
 mitigation proposals as scoped evidence objects; it does not create an enforcement
 plane. Each object must retain its source identity, publication and fetch times,
@@ -600,12 +600,12 @@ verification/trust state, classification or redaction policy, evidence reference
 and retention disposition. `group_id` and `workspace_id` are server-derived;
 caller-supplied scope is never authoritative.
 
-Allowed V1 intake lanes are: approved internal events, allowlisted scheduled advisory
-polling, and periodic reconciliation against approved inventory. A verified match may
-create a deduplicated alert and a simulated proposal only. Any policy activation,
-CI/package block, change schedules, credential revocation, workspace lock, or
-containment action requires a separately approved, human-authorized workflow with a
-governance receipt.
+The plugin runner obtains a server-issued source/population lease and dedicated
+ingestion-only credential before a scan. Accepted scanner snapshots join approved
+internal events and allowlisted advisory polling as evidence lanes. A verified match
+may create a deduplicated alert and a simulated proposal only. Any policy activation,
+CI/package block, schedule change, credential revocation, workspace lock, or
+containment action requires a separately approved workflow and governance receipt.
 
 ---
 

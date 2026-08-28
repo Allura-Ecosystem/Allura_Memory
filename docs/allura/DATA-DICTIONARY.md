@@ -1092,10 +1092,11 @@ read from `evidence_requests` and must never be collapsed into proposal status.
 
 ---
 
-## Planned Story 26.1 Bumblebee Threat Intelligence Contracts
+## Story 26.1 Allura Threat Intelligence Contracts
 
-These are documentation contracts, not deployed tables, migrations, routes, or
-schedulers. They define the minimum durable shapes later stories must implement
+These began as documentation contracts and now describe downstream Allura evidence
+shapes implemented across later Epic 26 stories. They do not define the upstream
+Bumblebee scanner wire or snapshot-state contract, which is replanned in Story 26.7.
 through governed, server-scoped APIs. No caller-supplied `group_id` or
 `workspace_id` is authoritative.
 
@@ -1167,10 +1168,10 @@ Read-only metadata inventory of approved software and AI supply-chain artifacts.
 This is a code-level contract in `src/lib/inventory/` backed by declared metadata
 records; it performs no executable scanning, no package installation, and no
 package-manager invocation. No DB tables or migrations are added for this story.
-`trust_state` and `freshness_state` values are shared with the Planned Story 26.1
+`trust_state` and `freshness_state` values are shared with the Story 26.1
 `ThreatAdvisoryEvidence` contract; change both in lockstep.
 
-### `InventoryRecord` — persisted as `inventory_records` (migration 44, Bumblebee Guard, Story 26.2 extension)
+### `InventoryRecord` — persisted as `inventory_records` (migration 44, Allura-local Story 26.2 adjunct)
 
 The schema below was originally an in-memory-only shape (`src/lib/inventory/service.ts`).
 It is now also a real, persisted table with the identical field names, populated by
@@ -1178,6 +1179,10 @@ reconciling real sources -- currently `bun.lock` only (`src/lib/inventory/lockfi
 `reconciliation.ts`). Unlike `governance_receipts`/`mitigation_receipts`/`threat_alerts`,
 this table is fully mutable (no restricted-column trigger) -- a real dependency's
 version and hash genuinely change between reconciliation cycles.
+
+This table is not the upstream Bumblebee raw/run/current snapshot contract. The Epic 26
+Correct Course plans separate sanitized plugin ledgers and a nullable downstream adapter;
+upstream fields must not be forced into this table using invented sentinels.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
