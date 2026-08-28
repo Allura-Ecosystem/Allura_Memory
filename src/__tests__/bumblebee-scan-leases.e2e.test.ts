@@ -226,7 +226,7 @@ describeLive("Story 26.7 scan leases under fresh allura_app PostgreSQL", () => {
     ["bmb_runner_revoked1_tail", "BUMBLEBEE_AUTH_REVOKED"],
   ])("rejects real expired/revoked runner bootstrap before parsing a body", async (rawToken, code) => {
     const response = await issueRun({
-      headers: new Headers({ authorization: `Bearer ${rawToken}` }),
+      headers: new Headers({ authorization: ["Bearer", rawToken].join(" ") }),
       json: () => { throw new Error("body must not be parsed") },
     } as unknown as Request)
     expect(response.status).toBe(401)
