@@ -619,13 +619,13 @@ development_status:
   24-1-ci-benchmarks: done
   24-2-authenticated-principal-context: done
   24-3-database-isolation-ledger: done
-  24-4-atomic-promotion: ready-for-dev
-  24-5-deterministic-scenario-harness: ready-for-dev
-  24-6-evaluation-regression-gates: ready-for-dev
-  24-7-sdk-cli-developer-experience: ready-for-dev
-  24-8-enterprise-documentation-truth: ready-for-dev
+  24-4-atomic-promotion: backlog
+  24-5-deterministic-scenario-harness: backlog
+  24-6-evaluation-regression-gates: backlog
+  24-7-sdk-cli-developer-experience: backlog
+  24-8-enterprise-documentation-truth: backlog
   24-10-ci-gate-integrity: done
-  24-9-reference-integrations-portfolio-demo: ready-for-dev
+  24-9-reference-integrations-portfolio-demo: backlog
   epic-24-retrospective: done
   epic-25: in-progress
   25-2a-workspace-evidence-lifecycle-foundation: done
@@ -642,5 +642,5 @@ development_status:
   26-7-operator-module-adversarial-tests-demo-gate: in-progress
   epic-27: backlog
   epic-28: in-progress
-  24-11a-fail-closed-web-authority: ready-for-dev
+  24-11a-fail-closed-web-authority: backlog
   24-12-effective-tenant-authority-seam: done
