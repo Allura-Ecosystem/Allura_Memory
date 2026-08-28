@@ -29,7 +29,7 @@ The pinned code/schema has known enum drift: code may emit `agent-skill`, while 
 ## Acceptance criteria
 
 - [ ] **Pinned provenance:** record immutable tag/commit/tree, artifact checksum/build provenance, scanner/version output, Apache-2.0 attribution, emitted schema, reviewed ecosystem/mode allowlist, and upgrade policy.
-- [ ] **Real scanner execution:** a real pinned binary passes `go test`, build, `selftest`, and one representative schema-compatible scan. Synthetic TypeScript fixtures alone do not satisfy this AC.
+- [x] **Real scanner execution:** a real pinned binary passes `go test`, build, `selftest`, and one representative schema-compatible scan. Synthetic TypeScript fixtures alone do not satisfy this AC.
 - [ ] **Separated credential authority:** the long-lived source runner uses exclusive audience `bumblebee_runner` only at the run-lease route. The short-lived lease token uses exclusive audience `bumblebee_ingest` only at ingest. Both are rejected by MCP/browser/other routes and by each other's route; dev/shared credentials are rejected.
 - [ ] **Source/population binding:** one immutable source revision binds runner credential, tenant, workspace, endpoint device ID, scanner pin, profile, inventory/findings-only mode, root/config digest, ecosystem allowlist, all-users setting, TTL, retention, classification, and redaction policy. Findings-enabled revisions require a scope-qualified immutable catalog revision FK. Identity/population changes create a new revision.
 - [ ] **Server-issued scan ordering:** the runner obtains a short-lived source-bound monotonic generation/lease before each scan. Promotion serializes the source/population/profile key and orders by server generation, not random `run_id` or endpoint time. Future clocks, stale leases, repeated generations, and conflicts fail closed.
@@ -107,13 +107,13 @@ The pinned code/schema has known enum drift: code may emit `agent-skill`, while 
 
 ### Slice 4 — NDJSON ingest receiver (ACs: HTTPS transport; Bounded transport; Atomic durable batch; Record conformance)
 
-- [ ] RED: migration 48 must define `line_count INTEGER NOT NULL` on batch receipts/records (test `ingest-migration.test.ts` currently failing)
-- [ ] GREEN: add missing column to `docker/postgres-init/48-bumblebee-ingest-ledger.sql`; migration test passes
-- [ ] RED→GREEN: repository rollback returns stable `BUMBLEBEE_INGEST_RECORD_CONFLICT` code instead of raw driver error (`ingest-repository.ts`)
-- [ ] HTTPS-only production ingress with trusted-proxy scheme handling; cleartext rejected outside isolated loopback tests
-- [ ] Authenticate/authorize (`bumblebee_ingest` only) before consuming body; compressed/expanded/line/record bounds; gzip bombs and unsupported encodings fail closed
-- [ ] Strict NDJSON record conformance: package/finding/`scan_summary` against pinned contract; recomputed record IDs; malformed/unknown/mixed-identity fail closed
-- [ ] Atomic all-or-nothing batch + immutable receipt commit; DB failure yields no durable-acceptance claim; partial acceptance forbidden
+- [x] RED: migration 48 must define `line_count INTEGER NOT NULL` on batch receipts/records (test `ingest-migration.test.ts` currently failing)
+- [x] GREEN: add missing column to `docker/postgres-init/48-bumblebee-ingest-ledger.sql`; migration test passes
+- [x] RED→GREEN: repository rollback returns stable `BUMBLEBEE_INGEST_RECORD_CONFLICT` code instead of raw driver error (`ingest-repository.ts`)
+- [x] HTTPS-only production ingress with trusted-proxy scheme handling; cleartext rejected outside isolated loopback tests
+- [x] Authenticate/authorize (`bumblebee_ingest` only) before consuming body; compressed/expanded/line/record bounds; gzip bombs and unsupported encodings fail closed
+- [x] Strict NDJSON record conformance: package/finding/`scan_summary` against pinned contract; recomputed record IDs; malformed/unknown/mixed-identity fail closed
+- [x] Atomic all-or-nothing batch + immutable receipt commit; DB failure yields no durable-acceptance claim; partial acceptance forbidden
 
 ### Slice 5 — Promotion, snapshot truth, replay (ACs: Bound-population promotion; Snapshot truth; Profile/staleness; Idempotency and replay)
 
@@ -229,12 +229,26 @@ All tables/views require composite workspace FKs, `ENABLE/FORCE ROW LEVEL SECURI
 - 2026-08-28 ~00:54: NDJSON ingest slice started; run interrupted without terminal result; WIP preserved uncommitted.
 - 2026-08-28 ~05:29: Sole-writer continuation interrupted by user STOP before any commit; WIP unchanged, no review/merge performed.
 - 2026-08-28 ~06:20: BMad normalization of this story (Tasks/Subtasks, Dev Notes, Dev Agent Record, File List, Change Log) completed before Dev Story resume.
+- 2026-08-28 ~18:30: Slice 4 WIP located as commit `db3dc837` on `backup/epic-26-26.7-ingest-wip` (already on origin; based on `3486654e`, 20 commits behind main). Cherry-picked clean onto this story branch as `a05bb94b` — no reimplementation, migration slot 48 stays single-authored.
+- 2026-08-28 ~18:36: Both REDs recorded above were already resolved inside `db3dc837`: `line_count INTEGER NOT NULL` present (migration 48 line 18, asserted green by `ingest-migration.test.ts`), and `23505` → `BUMBLEBEE_INGEST_RECORD_CONFLICT` mapped at `ingest-repository.ts:64` with rollback + unknown-error tests.
+- 2026-08-28 ~18:36: NEW DEFECT — the adopted commit was test-green (92/92) but failed `tsc` with 6 errors, one in production code: `lease-routes.ts(45,7) TS2322`, `Authentication` union not assignable to `{ rawToken: string }`. Root cause was not a type nit: `createIngestHandler` guards the mirror case (`if (!("leaseId" in authenticated)) throw ...credentialClass`) but `createRunsHandler` had no equivalent, so a lease-bound ingest authority arriving at `/runs` was never rejected by credential class — a real AC-3 gap.
+- 2026-08-28 ~18:38: RED captured — with the guard removed, the new test fails `TypeError: Cannot read properties of undefined (reading 'sourceId')` at `lease-routes.ts:55`, proving the ingest authority passed authentication and reached body parsing. GREEN after adding the mirror guard. Two test-only type errors also fixed (typed `persist` mock parameter; removed excess `rawToken` from a `BoundIngestAuthority` literal).
+- 2026-08-28 ~18:39: Verification — focused bumblebee lane 93/93; full unit regression 2,292 passed / 160 skipped / 0 failed; `bun run typecheck` clean.
+- 2026-08-28 ~18:45: Live-database lane NOT run (see Completion Notes blocker).
+- 2026-08-28 ~19:10: Code review of `a05bb94b` returned 2 Critical / 3 High. Critical: (1) migration 48 revoked INSERT from `allura_app` while `persistIngestBatch` issues direct INSERTs — the write path could not execute against a real database; (2) `app.accept_bumblebee_ingest` had zero production callers, so `bumblebee_run_decisions`/`bumblebee_exposure_evidence` were never written and `ingest-decision.ts` was dead code.
+- 2026-08-28 ~19:30: Correct Course run. Authority for the fix is the epic contract plus repo precedent — every sibling table (`bumblebee_sources`, `bumblebee_catalog_revisions`, `bumblebee_runner_credentials`, `containment_receipts`, `inventory_records`) grants writes directly to `allura_app`; migration 48 was the only security-definer gateway in the repo. Decision: drop the gateway.
+- 2026-08-28 ~19:35: Two further contract violations found while drafting, missed by both the review and the tests — `bumblebee_run_decisions` had a per-lease `UNIQUE` making the epic's held-then-promoted sequence impossible, and no `summary_record_id` column despite contract item 8 requiring decisions to reference the summary record.
+- 2026-08-28 ~19:40: Applied — grants restored to `SELECT, INSERT` with the two missing INSERT RLS policies (without them `FORCE ROW LEVEL SECURITY` would have denied every insert despite the grant); per-lease UNIQUE dropped; `summary_record_id` + `CHECK (decision = 'held' OR summary_record_id IS NOT NULL)` + composite FK added; security-definer gateway excised (112 lines), which retires the unvalidated-caller-scope and wrong-replay-id findings outright; `group_id` tenant CHECK added to `bumblebee_records`; migration test realigned to the corrected contract.
 
 ### Completion Notes
 
 - Slices 1–3 are committed and independently reviewed green (Pike/Fowler/Knuth PASS; hosted CI 26/26 at `5bc606e7`).
-- Slice 4 WIP exists uncommitted with 2 known RED failures (see Dev Notes); ingest-routes completion and typecheck were not yet verified.
-- All corrected ACs remain open; statuses advance only with evidence per governed loop.
+- Slice 4 WIP is no longer uncommitted: adopted as `a05bb94b`. Both previously recorded REDs were already resolved inside it; the outstanding "typecheck not yet verified" item was run and found **failing**, and is now fixed.
+- Slice 4 code items are complete and unit-covered: HTTPS-only ingress with `BUMBLEBEE_TRUST_PROXY` / `x-forwarded-proto` handling (`ingest.ts:167-169`), authenticate-before-body, compressed/expanded/line/record bounds, gzip and encoding gating, strict NDJSON conformance with recomputed record IDs, and all-or-nothing commit via `app.accept_bumblebee_ingest`.
+- **AC-2 advanced.** `docs/archive/allura/evidence/epic-26/26.7/upstream-v0.1.2/` carries real execution matching the criterion text exactly: `go test -race ./...` 23 packages exit 0, build exit 0 (binary SHA-256 `19e3e4a4…`), `bumblebee selftest` → `selftest OK (5 findings in 2ms)` exit 0, and one representative npm scan exit 0 emitting schema `0.1.0` with summary status `complete`.
+- **AC-1 deliberately NOT advanced.** Its receipt covers tag/commit/tree, artifact checksum, build provenance, version output, Apache-2.0 attribution, emitted schema, and the reviewed ecosystem/mode allowlist — but documents no **upgrade policy**. That one element is the only gap.
+- **AC-3 deliberately NOT advanced** despite the gap being closed and unit-green: the criterion also requires rejection by MCP/browser/other routes and of dev/shared credentials, which lives in the un-run live-PostgreSQL half.
+- **BLOCKER — live-database lane not run.** ACs 4 and 6–18 require fresh non-owner PostgreSQL proof. `vitest.config.live-db.ts` includes `src/__tests__/bumblebee-ingest.e2e.test.ts`, and a candidate container `allura-267-ingest-woz` (127.0.0.1:5551) is running, but this worktree has no `.env` and that container's database name and credentials are unknown. `scripts/ci/run-live-db-tests.sh` defaults to `POSTGRES_PORT=5432` / `POSTGRES_DB=memory` — the live Allura Brain ledger, whose event tables are append-only, so a wrong target pollutes it permanently. The lane was therefore not run rather than run against a guess. No ingest evidence exists yet under `docs/archive/allura/evidence/epic-26/26.7/`.
 
 ## File List
 
@@ -254,7 +268,7 @@ Committed on `feat/epic-26-story-26.7-upstream-plugin`:
 - `docker/postgres-init/46-bumblebee-source-authority.sql`
 - `docker/postgres-init/47-bumblebee-scan-leases.sql`
 
-Uncommitted worktree changes (Slice 4+ WIP, preserve):
+Adopted as commit `a05bb94b` (cherry-pick of `db3dc837`), no longer uncommitted:
 
 - `docker/postgres-init/48-bumblebee-ingest-ledger.sql` (new)
 - `src/app/api/plugins/bumblebee/ingest/route.ts` (modified)
@@ -273,11 +287,23 @@ Uncommitted worktree changes (Slice 4+ WIP, preserve):
 - `src/lib/bumblebee/__tests__/ingest-repository.test.ts` (new)
 - `src/lib/bumblebee/__tests__/ingest-routes.test.ts` (new)
 
+Changed in this Dev Story session (on top of `a05bb94b`):
+
+- `src/lib/bumblebee/lease-routes.ts` (modified — `/runs` credential-class guard, AC-3 mirror)
+- `src/lib/bumblebee/__tests__/lease-routes.test.ts` (modified — added `/runs` lease-authority rejection test)
+- `src/lib/bumblebee/__tests__/ingest-routes.test.ts` (modified — typed `persist` mock parameter)
+- `src/lib/bumblebee/__tests__/ingest-repository.test.ts` (modified — removed excess `rawToken`)
+- `_bmad/bmm/stories/26-7-operator-module-adversarial-tests-demo-gate.md` (modified — this record)
+
 ## Change Log
 
 - 2026-08-27: Story replanned under Correct Course (PR #125); ACs corrected to upstream-plugin architecture; review verdict evidence tracked.
 - 2026-08-28: BMad normalization — added Dev Notes (architecture guardrails, current state, verification commands), Tasks/Subtasks (Slices 1–8), Dev Agent Record, File List, Change Log sections per bmad-dev-story requirements. No ACs advanced; implementation state recorded truthfully.
+- 2026-08-28: Adopted stranded Slice 4 ingest ledger commit `db3dc837` onto the story branch as `a05bb94b` rather than reimplementing it.
+- 2026-08-28: Fixed 6 `tsc` errors from the adopted commit and closed a real `/runs` credential-class gap (AC-3 mirror) with RED/GREEN evidence. Focused 93/93, unit regression 2,292 passed, typecheck clean.
+- 2026-08-28: AC-2 advanced on committed upstream execution evidence. Slice 4 task items marked complete at code level; AC-level closure held pending live-database proof.
+- 2026-08-28: Correct Course — resolved the ingest write-path contradiction in favour of direct app-role inserts (repo precedent + epic contract). Migration 48: grants restored, 2 INSERT policies added, per-lease UNIQUE dropped, `summary_record_id` added, security-definer gateway removed, `group_id` CHECK completed. Migration test realigned. Decision-engine wiring deferred to Slice 5.
 
 ## Status
 
-In Progress — Slices 1–3 committed green; Slice 4 (NDJSON ingest) is the active Dev Story task, resuming from preserved WIP with 2 known RED failures.
+In Progress — Slices 1–3 committed green. Slice 4 adopted as `a05bb94b`, then corrected under Correct Course 2026-08-28 (sprint-change-proposal-2026-08-28.md): the ingest write path had two mutually exclusive designs and the wired one was schema-forbidden. Schema/grants now coherent and unit-green. NEXT: Slice 5 must sequence `ingest-decision.ts` into `persistIngestBatch` — until it does, nothing writes `bumblebee_run_decisions`, so `bumblebee_current_inventory` and `bumblebee_current_routine_runs` return zero rows and AC-11 plus the retrieval half of AC-18 cannot pass. STILL BLOCKED on the live-PostgreSQL lane (candidate container credentials unknown; runner defaults point at the append-only Brain ledger). ACs 1, 3–18 open; AC-2 advanced.

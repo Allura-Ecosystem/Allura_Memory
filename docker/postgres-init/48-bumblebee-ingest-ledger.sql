@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS bumblebee_batch_receipts (
 
 -- ── Sanitized records ────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS bumblebee_records (
-  group_id TEXT NOT NULL,
+  group_id TEXT NOT NULL CHECK (group_id ~ '^allura-[a-z0-9-]+$'),
   workspace_id TEXT NOT NULL,
   source_id TEXT NOT NULL,
   source_revision_id TEXT NOT NULL,
@@ -66,15 +66,23 @@ CREATE TABLE IF NOT EXISTS bumblebee_run_decisions (
   batch_id TEXT NOT NULL CHECK (LENGTH(TRIM(batch_id)) > 0),
   decision TEXT NOT NULL CHECK (decision IN ('promoted','held')),
   reason_code TEXT NOT NULL CHECK (LENGTH(TRIM(reason_code)) > 0),
+  -- Contract item 8: decisions reference the summary record that justified them.
+  -- NULL for held facts that arrived without a trailing scan_summary; a promoted
+  -- fact is never valid without one (AC-10 "matching summary").
+  summary_record_id TEXT CHECK (summary_record_id ~ '^scan_summary:[a-f0-9]{64}$'),
   decided_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),
+  CHECK (decision = 'held' OR summary_record_id IS NOT NULL),
+  -- One decision per batch, MANY per lease: promotion is a new append-only fact,
+  -- never an update of a prior held fact (epic contract item 8).
   PRIMARY KEY (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id),
-  UNIQUE (group_id, workspace_id, source_id, source_revision_id, lease_id),
   FOREIGN KEY (group_id, workspace_id, source_id, source_revision_id)
     REFERENCES bumblebee_sources(group_id, workspace_id, source_id, source_revision_id),
   FOREIGN KEY (group_id, workspace_id, source_id, source_revision_id, lease_id)
     REFERENCES bumblebee_scan_leases(group_id, workspace_id, source_id, source_revision_id, lease_id),
   FOREIGN KEY (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id)
-    REFERENCES bumblebee_batch_receipts(group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id)
+    REFERENCES bumblebee_batch_receipts(group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id),
+  FOREIGN KEY (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id, summary_record_id)
+    REFERENCES bumblebee_records(group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id, record_id)
 );
 
 -- ── Exposure evidence (provisional findings linked to accepted packages) ──
@@ -151,121 +159,20 @@ CREATE POLICY bumblebee_exposure_evidence_select_scope ON bumblebee_exposure_evi
   USING (group_id = current_setting('app.current_group_id', true)
     AND workspace_id = current_setting('app.current_workspace_id', true));
 
--- ── Grants: no direct INSERT; accept function only ─
+DROP POLICY IF EXISTS bumblebee_run_decisions_insert_scope ON bumblebee_run_decisions;
+CREATE POLICY bumblebee_run_decisions_insert_scope ON bumblebee_run_decisions FOR INSERT TO allura_app
+  WITH CHECK (group_id = current_setting('app.current_group_id', true)
+    AND workspace_id = current_setting('app.current_workspace_id', true));
+
+DROP POLICY IF EXISTS bumblebee_exposure_evidence_insert_scope ON bumblebee_exposure_evidence;
+CREATE POLICY bumblebee_exposure_evidence_insert_scope ON bumblebee_exposure_evidence FOR INSERT TO allura_app
+  WITH CHECK (group_id = current_setting('app.current_group_id', true)
+    AND workspace_id = current_setting('app.current_workspace_id', true));
+
+-- ── Grants: least-privilege append-only, matching sibling bumblebee tables ─
+-- No UPDATE/DELETE: immutability is enforced by trigger AND withheld grant.
 REVOKE ALL ON bumblebee_batch_receipts, bumblebee_records, bumblebee_run_decisions, bumblebee_exposure_evidence FROM allura_app;
-GRANT SELECT ON bumblebee_batch_receipts, bumblebee_records, bumblebee_run_decisions, bumblebee_exposure_evidence TO allura_app;
-
--- ── Security-definer accept function ─────────────────────────────────────
--- All-or-nothing atomic ingest: inserts batch receipt + records + decision +
--- exposure evidence inside a single transaction.  The app role cannot INSERT
--- directly into decisions or evidence; this function is the only gateway.
-CREATE OR REPLACE FUNCTION app.accept_bumblebee_ingest(
-  p_group_id TEXT,
-  p_workspace_id TEXT,
-  p_source_id TEXT,
-  p_source_revision_id TEXT,
-  p_lease_id TEXT,
-  p_batch_id TEXT,
-  p_body_sha256 TEXT,
-  p_expanded_sha256 TEXT,
-  p_sanitized_payload_digest TEXT,
-  p_compressed_bytes INTEGER,
-  p_expanded_bytes INTEGER,
-  p_line_count INTEGER,
-  p_record_count INTEGER,
-  p_records JSONB,
-  p_decision TEXT,
-  p_reason_code TEXT,
-  p_exposure_evidence JSONB DEFAULT '[]'::jsonb
-)
-RETURNS TEXT
-LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = pg_catalog
-AS $$
-DECLARE
-  v_rec RECORD;
-  v_evidence RECORD;
-BEGIN
-  -- Lock source then lease (same order as the TS repository).
-  PERFORM 1 FROM public.bumblebee_sources
-    WHERE group_id = p_group_id AND workspace_id = p_workspace_id
-      AND source_id = p_source_id AND source_revision_id = p_source_revision_id
-      AND disabled_at IS NULL
-    FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'source not found or disabled'; END IF;
-
-  PERFORM 1 FROM public.bumblebee_scan_leases
-    WHERE group_id = p_group_id AND workspace_id = p_workspace_id
-      AND source_id = p_source_id AND source_revision_id = p_source_revision_id
-      AND lease_id = p_lease_id AND revoked_at IS NULL
-      AND expires_at > statement_timestamp()
-    FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'lease not found, revoked, or expired'; END IF;
-
-  -- Idempotent replay: if exact body already accepted, return prior batch_id.
-  PERFORM 1 FROM public.bumblebee_batch_receipts
-    WHERE group_id = p_group_id AND workspace_id = p_workspace_id
-      AND source_id = p_source_id AND source_revision_id = p_source_revision_id
-      AND lease_id = p_lease_id AND body_sha256 = p_body_sha256;
-  IF FOUND THEN RETURN p_batch_id; END IF;
-
-  INSERT INTO public.bumblebee_batch_receipts
-    (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id,
-     body_sha256, expanded_sha256, sanitized_payload_digest,
-     compressed_bytes, expanded_bytes, line_count, record_count)
-  VALUES
-    (p_group_id, p_workspace_id, p_source_id, p_source_revision_id, p_lease_id, p_batch_id,
-     p_body_sha256, p_expanded_sha256, p_sanitized_payload_digest,
-     p_compressed_bytes, p_expanded_bytes, p_line_count, p_record_count);
-
-  FOR v_rec IN SELECT * FROM jsonb_array_elements(p_records) AS obj LOOP
-    INSERT INTO public.bumblebee_records
-      (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id,
-       run_id, record_id, record_type, line_number, line_sha256,
-       verification_digest, sanitized_payload, redaction_provenance)
-    VALUES
-      (p_group_id, p_workspace_id, p_source_id, p_source_revision_id, p_lease_id, p_batch_id,
-       v_rec->>'run_id', v_rec->>'record_id', v_rec->>'record_type',
-       (v_rec->>'line_number')::INTEGER, v_rec->>'line_sha256',
-       v_rec->>'verification_digest',
-       (v_rec->>'sanitized_payload')::jsonb,
-       (v_rec->>'redaction_provenance')::jsonb);
-  END LOOP;
-
-  INSERT INTO public.bumblebee_run_decisions
-    (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id,
-     decision, reason_code)
-  VALUES
-    (p_group_id, p_workspace_id, p_source_id, p_source_revision_id, p_lease_id, p_batch_id,
-     p_decision, p_reason_code);
-
-  FOR v_evidence IN SELECT * FROM jsonb_array_elements(p_exposure_evidence) AS obj LOOP
-    INSERT INTO public.bumblebee_exposure_evidence
-      (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id,
-       record_id, evidence_digest)
-    VALUES
-      (p_group_id, p_workspace_id, p_source_id, p_source_revision_id, p_lease_id, p_batch_id,
-       v_evidence->>'record_id', v_evidence->>'evidence_digest');
-  END LOOP;
-
-  RETURN p_batch_id;
-END;
-$$;
-ALTER FUNCTION app.accept_bumblebee_ingest(
-  TEXT, TEXT, TEXT, TEXT, TEXT, TEXT,
-  TEXT, TEXT, TEXT, INTEGER, INTEGER, INTEGER, INTEGER,
-  JSONB, TEXT, TEXT, JSONB
-) OWNER TO CURRENT_USER;
-REVOKE ALL ON FUNCTION app.accept_bumblebee_ingest(
-  TEXT, TEXT, TEXT, TEXT, TEXT, TEXT,
-  TEXT, TEXT, TEXT, INTEGER, INTEGER, INTEGER, INTEGER,
-  JSONB, TEXT, TEXT, JSONB
-) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION app.accept_bumblebee_ingest(
-  TEXT, TEXT, TEXT, TEXT, TEXT, TEXT,
-  TEXT, TEXT, TEXT, INTEGER, INTEGER, INTEGER, INTEGER,
-  JSONB, TEXT, TEXT, JSONB
-) TO allura_app;
+GRANT SELECT, INSERT ON bumblebee_batch_receipts, bumblebee_records, bumblebee_run_decisions, bumblebee_exposure_evidence TO allura_app;
 
 -- ── Views ───────────────────────────────────────────────────────────────
 CREATE VIEW bumblebee_current_routine_runs AS
