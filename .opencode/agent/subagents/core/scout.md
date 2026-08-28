@@ -48,6 +48,8 @@ permission:
 
 ### On Task Start — Allura Startup / Architecture Tasks
 
+Scout hydration follows the tiered budget in `.opencode/agent/core/brooks.md` (≤3k startup, ≤8k task).
+
 1. Load allura-memory-skill (`skill({ name: "allura-memory-skill" })`) for canonical interface reference.
 
 2. Use the governed Brain interface, not raw SQL, with `group_id: "allura-system"`:
