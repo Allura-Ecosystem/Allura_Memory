@@ -3,140 +3,30 @@
  * Copyright (c) Allura Memory Team. MIT License.
  */
 
-// src/types.ts
-import { z } from "zod";
-var GroupIdSchema = z.string().min(2).max(64).regex(
-  /^allura-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
-  "group_id must match pattern: ^allura-[a-z0-9-]+$ (ARCH-001 tenant isolation)"
-);
-var MemoryIdSchema = z.string().uuid({ message: "id must be a valid UUID v4" });
-var ConfidenceScoreSchema = z.number().min(0).max(1);
-var MemoryAddResponseSchema = z.object({
-  id: z.string(),
-  stored: z.enum(["episodic", "semantic", "both"]),
-  score: z.number().min(0).max(1),
-  pending_review: z.boolean().optional(),
-  created_at: z.string(),
-  meta: z.object({
-    contract_version: z.literal("v1"),
-    degraded: z.boolean(),
-    degraded_reason: z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-    stores_used: z.array(z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    stores_attempted: z.array(z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    warnings: z.array(z.string()).optional(),
-    ruvector_trajectory_id: z.string().optional(),
-    ruvector_count: z.number().int().min(0).optional()
-  }).optional(),
-  duplicate: z.boolean().optional(),
-  duplicate_of: z.string().optional(),
-  similarity: z.number().optional()
-});
-var MemorySearchResponseSchema = z.object({
-  results: z.array(
-    z.object({
-      id: z.string(),
-      content: z.string(),
-      score: z.number().min(0).max(1),
-      source: z.enum(["episodic", "semantic", "both"]),
-      provenance: z.enum(["conversation", "manual"]),
-      created_at: z.string(),
-      usage_count: z.number().optional()
-    })
-  ),
-  count: z.number().int().min(0),
-  latency_ms: z.number().min(0),
-  meta: z.object({
-    contract_version: z.literal("v1"),
-    degraded: z.boolean(),
-    degraded_reason: z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-    stores_used: z.array(z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    stores_attempted: z.array(z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    warnings: z.array(z.string()).optional(),
-    ruvector_trajectory_id: z.string().optional(),
-    ruvector_count: z.number().int().min(0).optional()
-  }).optional()
-});
-var MemoryGetResponseSchema = z.object({
-  id: z.string(),
-  content: z.string(),
-  score: z.number().min(0).max(1),
-  source: z.enum(["episodic", "semantic", "both"]),
-  provenance: z.enum(["conversation", "manual"]),
-  user_id: z.string(),
-  actor: z.string().nullable().optional(),
-  creator: z.string().nullable().optional(),
-  approver: z.string().nullable().optional(),
-  group_id: z.string().regex(/^allura-.+$/).optional(),
-  created_at: z.string(),
-  status: z.enum(["approved", "proposed", "pending", "deprecated", "active", "deleted"]).optional(),
-  source_event_id: z.string().nullable().optional(),
-  proposal_id: z.string().nullable().optional(),
-  trace_ref: z.union([z.string(), z.number()]).nullable().optional(),
-  evidence: z.array(z.object({
-    id: z.string().nullable(),
-    type: z.enum(["event", "proposal", "trace", "version"]),
-    label: z.string(),
-    status: z.enum(["available", "unavailable"])
-  })).optional(),
-  version: z.number().int().optional(),
-  superseded_by: z.string().optional(),
-  usage_count: z.number().optional(),
-  hash: z.string().nullable().optional(),
-  previous_hash: z.string().nullable().optional(),
-  meta: z.object({
-    contract_version: z.literal("v1"),
-    degraded: z.boolean(),
-    degraded_reason: z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-    stores_used: z.array(z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    stores_attempted: z.array(z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    warnings: z.array(z.string()).optional(),
-    ruvector_trajectory_id: z.string().optional(),
-    ruvector_count: z.number().int().min(0).optional()
-  }).optional()
-});
-var MemoryListResponseSchema = z.object({
-  memories: z.array(MemoryGetResponseSchema),
-  total: z.number().int().min(0),
-  has_more: z.boolean(),
-  meta: z.object({
-    contract_version: z.literal("v1"),
-    degraded: z.boolean(),
-    degraded_reason: z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-    stores_used: z.array(z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    stores_attempted: z.array(z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    warnings: z.array(z.string()).optional(),
-    ruvector_trajectory_id: z.string().optional(),
-    ruvector_count: z.number().int().min(0).optional()
-  }).optional()
-});
-var MemoryDeleteResponseSchema = z.object({
-  id: z.string(),
-  deleted: z.boolean(),
-  deleted_at: z.string(),
-  recovery_days: z.number().int().min(0),
-  meta: z.object({
-    contract_version: z.literal("v1"),
-    degraded: z.boolean(),
-    degraded_reason: z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-    stores_used: z.array(z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    stores_attempted: z.array(z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    warnings: z.array(z.string()).optional(),
-    ruvector_trajectory_id: z.string().optional(),
-    ruvector_count: z.number().int().min(0).optional()
-  }).optional()
-});
-var HealthResponseSchema = z.object({
-  status: z.string(),
-  mode: z.string(),
-  interface: z.string(),
-  transports: z.array(z.string()),
-  mcp_endpoint: z.string(),
-  port: z.number(),
-  port_source: z.string(),
-  auth_enabled: z.boolean(),
-  warnings: z.array(z.string()).optional(),
-  timestamp: z.string()
-});
+// src/auth.ts
+function resolveAuthToken(explicitToken) {
+  if (explicitToken) {
+    return explicitToken;
+  }
+  if (typeof process !== "undefined" && process.env) {
+    const envToken = process.env.ALLURA_AUTH_TOKEN || process.env.ALLURA_MCP_AUTH_TOKEN;
+    if (envToken) {
+      return envToken;
+    }
+  }
+  return void 0;
+}
+function requireAuthToken(token, required) {
+  if (required && !token) {
+    throw new Error(
+      "Authentication required: No Bearer token provided. Set ALLURA_AUTH_TOKEN or pass authToken to AlluraClient."
+    );
+  }
+}
+function createAuthHeader(token) {
+  if (!token) return void 0;
+  return `Bearer ${token}`;
+}
 
 // src/errors.ts
 var AlluraError = class _AlluraError extends Error {
@@ -243,6 +133,107 @@ function createErrorFromResponse(statusCode, body) {
       return new AlluraError(message, "UNKNOWN_ERROR", statusCode, body);
   }
 }
+
+// src/types.ts
+import { z } from "zod";
+var GroupIdSchema = z.string().min(2).max(64).regex(
+  /^allura-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
+  "group_id must match pattern: ^allura-[a-z0-9-]+$ (ARCH-001 tenant isolation)"
+);
+var MemoryIdSchema = z.string().uuid({ message: "id must be a valid UUID v4" });
+var ConfidenceScoreSchema = z.number().min(0).max(1);
+var MemoryRetrievalStoreSchema = z.enum(["postgres", "neo4j", "graph", "ruvector"]);
+var MemoryResponseMetaSchema = z.object({
+  contract_version: z.literal("v1"),
+  degraded: z.boolean(),
+  degraded_reason: z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+  stores_used: z.array(MemoryRetrievalStoreSchema),
+  stores_attempted: z.array(MemoryRetrievalStoreSchema),
+  warnings: z.array(z.string()).optional(),
+  ruvector_trajectory_id: z.string().optional(),
+  ruvector_count: z.number().int().min(0).optional()
+});
+var MemoryAddResponseSchema = z.object({
+  id: z.string(),
+  stored: z.enum(["episodic", "semantic", "both"]),
+  score: z.number().min(0).max(1),
+  pending_review: z.boolean().optional(),
+  created_at: z.string(),
+  meta: MemoryResponseMetaSchema.optional(),
+  duplicate: z.boolean().optional(),
+  duplicate_of: z.string().optional(),
+  similarity: z.number().optional()
+});
+var MemorySearchResponseSchema = z.object({
+  results: z.array(
+    z.object({
+      id: z.string(),
+      content: z.string(),
+      score: z.number().min(0).max(1),
+      source: z.enum(["episodic", "semantic", "both"]),
+      provenance: z.enum(["conversation", "manual"]),
+      created_at: z.string(),
+      usage_count: z.number().optional()
+    })
+  ),
+  count: z.number().int().min(0),
+  latency_ms: z.number().min(0),
+  meta: MemoryResponseMetaSchema.optional()
+});
+var MemoryGetResponseSchema = z.object({
+  id: z.string(),
+  content: z.string(),
+  score: z.number().min(0).max(1),
+  source: z.enum(["episodic", "semantic", "both"]),
+  provenance: z.enum(["conversation", "manual"]),
+  user_id: z.string(),
+  actor: z.string().nullable().optional(),
+  creator: z.string().nullable().optional(),
+  approver: z.string().nullable().optional(),
+  group_id: z.string().regex(/^allura-.+$/).optional(),
+  created_at: z.string(),
+  status: z.enum(["approved", "proposed", "pending", "deprecated", "active", "deleted"]).optional(),
+  source_event_id: z.string().nullable().optional(),
+  proposal_id: z.string().nullable().optional(),
+  trace_ref: z.union([z.string(), z.number()]).nullable().optional(),
+  evidence: z.array(z.object({
+    id: z.string().nullable(),
+    type: z.enum(["event", "proposal", "trace", "version"]),
+    label: z.string(),
+    status: z.enum(["available", "unavailable"])
+  })).optional(),
+  version: z.number().int().optional(),
+  superseded_by: z.string().optional(),
+  usage_count: z.number().optional(),
+  hash: z.string().nullable().optional(),
+  previous_hash: z.string().nullable().optional(),
+  meta: MemoryResponseMetaSchema.optional()
+});
+var MemoryListResponseSchema = z.object({
+  memories: z.array(MemoryGetResponseSchema),
+  total: z.number().int().min(0),
+  has_more: z.boolean(),
+  meta: MemoryResponseMetaSchema.optional()
+});
+var MemoryDeleteResponseSchema = z.object({
+  id: z.string(),
+  deleted: z.boolean(),
+  deleted_at: z.string(),
+  recovery_days: z.number().int().min(0),
+  meta: MemoryResponseMetaSchema.optional()
+});
+var HealthResponseSchema = z.object({
+  status: z.string(),
+  mode: z.string(),
+  interface: z.string(),
+  transports: z.array(z.string()),
+  mcp_endpoint: z.string(),
+  port: z.number(),
+  port_source: z.string(),
+  auth_enabled: z.boolean(),
+  warnings: z.array(z.string()).optional(),
+  timestamp: z.string()
+});
 
 // src/utils.ts
 var DEFAULT_TIMEOUT = 5e3;
@@ -434,31 +425,6 @@ var MemoryOperations = class {
     return this.request("memory_delete", params, MemoryDeleteResponseSchema);
   }
 };
-
-// src/auth.ts
-function resolveAuthToken(explicitToken) {
-  if (explicitToken) {
-    return explicitToken;
-  }
-  if (typeof process !== "undefined" && process.env) {
-    const envToken = process.env.ALLURA_AUTH_TOKEN || process.env.ALLURA_MCP_AUTH_TOKEN;
-    if (envToken) {
-      return envToken;
-    }
-  }
-  return void 0;
-}
-function requireAuthToken(token, required) {
-  if (required && !token) {
-    throw new Error(
-      "Authentication required: No Bearer token provided. Set ALLURA_AUTH_TOKEN or pass authToken to AlluraClient."
-    );
-  }
-}
-function createAuthHeader(token) {
-  if (!token) return void 0;
-  return `Bearer ${token}`;
-}
 
 // src/client.ts
 function createRequestId() {
@@ -717,3 +683,4 @@ export {
   validateGroupId,
   withRetry
 };
+//# sourceMappingURL=index.js.map

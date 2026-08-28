@@ -96,8 +96,12 @@ EMBEDDING_MODEL=text-embedding-3-small
 
 async function cmdUp() {
   console.log("Starting local development stack...");
-  console.log("  PostgreSQL: docker compose up -d knowledge-postgres");
-  console.log("  MCP Server: docker compose up -d allura-memory-mcp");
+  const { spawnSync } = await import("child_process");
+  const result = spawnSync("docker", ["compose", "up", "-d"], { stdio: "inherit" });
+  if (result.status !== 0) {
+    console.error("Failed to start local stack. Ensure docker compose is available and the compose file is present.");
+    process.exit(result.status ?? 1);
+  }
   console.log("Local stack ready at http://localhost:6477/mcp");
 }
 
@@ -130,6 +134,24 @@ async function cmdDoctor() {
     }
   } catch {
     checks.push({ name: "Migrations dir", status: "fail" });
+  }
+
+  // Check MCP gateway health (read-only, non-mutating)
+  try {
+    const port = process.env.ALLURA_MCP_HTTP_PORT ?? "3201";
+    const res = await fetch(`http://localhost:${port}/health`);
+    if (res.ok) {
+      const body = (await res.json()) as { status?: string; auth_enabled?: boolean };
+      checks.push({
+        name: "MCP gateway",
+        status: "ok",
+        detail: `status=${body.status ?? "ok"} auth=${body.auth_enabled ?? "unknown"}`,
+      });
+    } else {
+      checks.push({ name: "MCP gateway", status: "fail", detail: `HTTP ${res.status}` });
+    }
+  } catch {
+    checks.push({ name: "MCP gateway", status: "fail", detail: "Not reachable" });
   }
 
   // Output
@@ -176,7 +198,7 @@ async function cmdReplay() {
 async function cmdEval() {
   console.log("Running portfolio evaluation suite...");
   const { spawnSync } = await import("child_process");
-  const result = spawnSync("bun", ["x", "vitest", "run", "src/lib/evals/__tests__/eval-runner.test.ts"], { stdio: "inherit""inherit" });
+  const result = spawnSync("bun", ["x", "vitest", "run", "src/lib/evals/__tests__/eval-runner.test.ts"], { stdio: "inherit" });
   process.exit(result.status ?? 1);
 }
 
@@ -197,7 +219,12 @@ async function cmdInspect() {
 
 async function cmdDown() {
   console.log("Stopping local development stack...");
-  console.log("  docker compose down");
+  const { spawnSync } = await import("child_process");
+  const result = spawnSync("docker", ["compose", "down"], { stdio: "inherit" });
+  if (result.status !== 0) {
+    console.error("Failed to stop local stack.");
+    process.exit(result.status ?? 1);
+  }
 }
 
 main().catch((err) => {

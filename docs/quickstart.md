@@ -1,75 +1,125 @@
-# Allura Quickstart
+# Allura Quickstart — Ten-Minute Developer Path
+
+> Story 24.7 AC-6 / AC-7: a fresh clone can start the local stack, run one
+> fixture-backed scenario, replay it, execute the portfolio eval suite, and
+> inspect evidence by following this document. The ten-minute target is
+> reported honestly in the [Timing](#timing) section.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) v1.0+
-- Docker and Docker Compose
+- [Bun](https://bun.sh) v1.0+ (`bun --version`)
+- Docker and Docker Compose (`docker compose version`)
 
-## 1. Clone and initialize
+## 1. Clone and install (≈2 min)
 
 ```bash
 git clone https://github.com/Allura-Ecosystem/Allura_Memory.git
 cd Allura_Memory
 bun install
-allura init
 ```
 
-This creates `.env.portfolio.example` with non-secret defaults. Edit it to set
-your PostgreSQL password and MCP token secret.
-
-## 2. Start the local stack
+## 2. Initialize non-secret config (≈30 s)
 
 ```bash
-allura up
+bun packages/cli/src/index.ts init
 ```
 
-This starts PostgreSQL and the Allura MCP server via Docker Compose.
+This creates `.env.portfolio.example` with **non-secret** defaults. Edit it to
+set your PostgreSQL password and MCP token secret. Secrets are never printed
+after creation (AC-4).
 
-## 3. Verify your environment
+> The CLI is also exposed as the `allura` bin via `packages/cli/package.json`.
+> If you have linked the workspace (`bun link`), you can use `allura` directly;
+> otherwise use `bun packages/cli/src/index.ts <command>`.
+
+## 3. Start the local stack (≈2 min)
 
 ```bash
-allura doctor
+bun packages/cli/src/index.ts up
 ```
 
-Checks runtime versions, port availability, database readiness, migrations,
-and write/read round-trip.
+This runs `docker compose up -d` to start PostgreSQL and the Allura MCP server.
 
-## 4. Run a fixture-backed scenario
+## 4. Verify your environment (≈1 min)
 
 ```bash
-allura run tests/scenarios/governed-memory-success.yaml.json
+bun packages/cli/src/index.ts doctor
 ```
 
-## 5. Replay the scenario
+Checks runtime version, PostgreSQL readiness, migrations directory, and the MCP
+gateway health endpoint. Exits non-zero if any check fails (AC-5). For
+automation, add `--json` for stable machine-readable output (AC-8).
+
+## 5. Run a fixture-backed scenario (≈1 min)
 
 ```bash
-allura replay tests/scenarios/governed-memory-success.yaml.json receipt-*.json
+bun packages/cli/src/index.ts run tests/scenarios/governed-memory-success.yaml.json
 ```
 
-## 6. Run the evaluation suite
+## 6. Replay the scenario (≈1 min)
 
 ```bash
-allura eval
+bun packages/cli/src/index.ts replay tests/scenarios/governed-memory-success.yaml.json receipt-*.json
 ```
 
-## 7. Inspect evidence
+## 7. Run the evaluation suite (≈1 min)
 
 ```bash
-allura inspect
+bun packages/cli/src/index.ts eval
 ```
 
-## 8. Stop the stack
+## 8. Inspect evidence (≈30 s)
 
 ```bash
-allura down
+bun packages/cli/src/index.ts inspect
+```
+
+## 9. Stop the stack (≈30 s)
+
+```bash
+bun packages/cli/src/index.ts down
+```
+
+## Public contract evidence
+
+The SDK exposes a stable public contract (AC-1 / AC-2). Verify it builds and
+exports the documented surface:
+
+```bash
+cd packages/sdk
+bun run typecheck   # tsc --noEmit
+bun run build       # tsup → dist/index.js, dist/index.cjs, dist/index.d.ts
+bun run test        # vitest — includes public-contract.test.ts
+```
+
+The `public-contract.test.ts` suite imports from the **public barrel**
+(`src/index.ts`) and asserts the full documented surface — `AlluraClient`,
+`MemoryOperations`, all error classes, auth helpers, utilities, and versioned
+Zod schemas — without importing server internals.
+
+The smallest supported integration lives in `examples/quickstart/`:
+
+```bash
+bun run examples/quickstart/index.ts
 ```
 
 ## Compatibility Matrix
 
-| Component | Version |
-|-----------|---------|
-| CLI | 1.0.0 |
-| SDK | 1.0.0 |
-| API Schema | v1 |
-| Scenario Schema | v1 |
-| Evaluation Schema | v1 |
+See [docs/reference/compatibility.md](reference/compatibility.md) for the
+version/deprecation matrix (AC-9).
+
+| Component | Version | Status |
+|-----------|---------|--------|
+| @allura/cli | 1.0.0 | Stable |
+| @allura/sdk | 1.0.0 | Stable |
+| API Schema | v1 | Stable |
+| Scenario Schema | v1 | Stable |
+| Evaluation Result Schema | v1 | Stable |
+
+## Timing
+
+The ten-minute target assumes a warm Docker image cache and a machine with
+network access. The steps above total roughly **9–10 minutes** of active
+commands. A clean-environment transcript with actual elapsed time, machine
+profile, and any failures encountered is recorded in the story evidence
+(AC-7).
