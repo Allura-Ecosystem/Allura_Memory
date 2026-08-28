@@ -26,6 +26,14 @@ interface BootstrapCredential {
   revoked_at: Date | string | null
 }
 
+export interface BoundIngestAuthority {
+  groupId: string
+  workspaceId: string
+  sourceId: string
+  sourceRevisionId: string
+  leaseId: string
+}
+
 function dateOrNull(value: Date | string | null): Date | null {
   return value === null ? null : value instanceof Date ? value : new Date(value)
 }
@@ -55,7 +63,19 @@ async function bootstrap(raw: string, audience: BumblebeeTokenAudience): Promise
 
 export async function authenticateBumblebeeRequest(request: Request, audience: BumblebeeTokenAudience) {
   const rawToken = bearer(request)
-  await bootstrap(rawToken, audience)
+  const bound = await bootstrap(rawToken, audience)
+  if (audience === "bumblebee_ingest") {
+    if (!bound.lease_id || !bound.source_id || !bound.source_revision_id) {
+      throw new Error(BUMBLEBEE_AUTH_ERROR.credentialClass)
+    }
+    return {
+      groupId: bound.group_id,
+      workspaceId: bound.workspace_id,
+      sourceId: bound.source_id,
+      sourceRevisionId: bound.source_revision_id,
+      leaseId: bound.lease_id,
+    } satisfies BoundIngestAuthority
+  }
   return { rawToken }
 }
 

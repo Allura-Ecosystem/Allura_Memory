@@ -5,7 +5,7 @@
 > This replanned story was prepared with AI assistance. Independent Correct Course review [passed with a tracked verdict](../../../docs/archive/allura/evidence/epic-26/correct-course/review-verdict-2026-08-27.md); implementation evidence is still required before any AC advances.
 > Review evidence: `docs/archive/allura/evidence/epic-26/correct-course/review-verdict-2026-08-27.md`
 
-**Status:** In Progress — first bounded upstream provenance/schema-compatibility slice started 2026-08-27; the repository does not yet integrate the upstream scanner.
+**Status:** In Progress — Slices 1–3 committed green (PR #126 head `5bc606e7`); Slice 4 (NDJSON ingest) is the active Dev Story task, resuming from preserved WIP with 2 known RED failures.
 **Owner:** Woz + Knuth + Pike + Fowler
 **Depends on:** 26.1, 26.2, 26.3, 26.4, 26.5
 **Blocks:** Epic 26 completion
@@ -47,6 +47,103 @@ The pinned code/schema has known enum drift: code may emit `agent-skill`, while 
 - [ ] **Truthful downstream projection:** upstream fields remain nullable; no fake version/hash/publisher/workflow sentinels are created. Scope-qualified evidence junctions link accepted source/run/record identities to downstream match and alert evidence.
 - [ ] **Headless end-to-end proof:** on one frozen candidate, a real leased scan reaches HTTPS ingestion, sanitized ledgers, complete-population promotion, current inventory, and exposure retrieval. Evidence covers duplicate, empty, partial/error/missing-summary, filtered/changed population, stale/future clock, malformed/gzip limit, DB failure, conflicting replay, and cross-tenant cases.
 - [ ] **Independent acceptance:** Pike/Fowler/Knuth approve the same frozen candidate; focused/unit/typecheck/live PostgreSQL/upstream Go/selftest/current-SHA CI evidence passes before status advances.
+
+## Dev Notes
+
+### Architecture guardrails (from Correct Course, merged PR #125)
+
+- Bumblebee is an Allura **plugin** around pinned upstream `perplexityai/bumblebee` v0.1.2 (`cc57710e`). It is not a dashboard authority and gets no direct data route; `/dashboard/bumblebee` must not exist.
+- Separate credential audiences: `bumblebee_runner` only at `POST /api/plugins/bumblebee/runs`; `bumblebee_ingest` only at `POST /api/plugins/bumblebee/ingest`. Cross-audience and dev/shared credentials fail closed.
+- Server derives principal/tenant/workspace authority; callers cannot assert scope via body/query/header.
+- Storage is sanitized allowlisted fields only; no unqualified raw bodies; body/line hashes preserve verification.
+- `bumblebee_catalog_revisions` is the immutable catalog ledger; findings-enabled revisions FK to it.
+- Promotion serializes on server-issued monotonic generation, never `run_id` or endpoint time.
+- Dashboard display is optional; scanner proof must be headless.
+- Module code must not own direct storage reads outside the plugin's own governed repository boundary; downstream reads stay behind curator-owned shared read services.
+
+### Current implementation state (verified 2026-08-28)
+
+- Committed on `feat/epic-26-story-26.7-upstream-plugin` (PR #126, head `5bc606e7`, hosted CI 26/26 green):
+  - Upstream contract pin + validation tests (`4e91356d`)
+  - Go 1.25.7 toolchain; upstream `go test -race` 23 packages; build/selftest/real scan (`6e5451d1`)
+  - Source authority + migration 46 (`43b1e444`); lease issuance + migration 47 (`95bf95fe`, `2be355a5`); headless authority composition (`5bc606e7`)
+- Uncommitted WIP in the worktree (preserve; do not reset): ingest route/repository/decision, migration 48, live-DB E2E, lease hardening.
+- Known RED failures to fix first:
+  1. `src/lib/bumblebee/__tests__/ingest-migration.test.ts` expects `line_count INTEGER NOT NULL` in migration 48.
+  2. `src/lib/bumblebee/__tests__/ingest-repository.test.ts` rollback test expects stable `BUMBLEBEE_INGEST_RECORD_CONFLICT`, currently returns raw `duplicate`.
+
+### Verification commands
+
+- Focused: `bun vitest run src/lib/bumblebee`
+- Full unit: `bun run test:unit`
+- Typecheck: `bun run typecheck`
+- Live DB: fresh pgvector/pgvector:pg16 container (use `-v` on remove), migrations through 48, `vitest.config.live-db.ts` lanes; destroy container+volume afterward
+- Route security: repository route inventory guard (CI `route-to-agents` / local equivalent)
+- Story status guard: `bun run validate:story-status` (56 pre-existing legacy violations in Epics 18–24 are out of scope)
+
+## Tasks / Subtasks
+
+### Slice 1 — Upstream contract pin (AC: Pinned provenance)
+
+- [x] Pin validation module rejects empty filters, enum drift (`agent-skill`/`homebrew`), and emits stable non-reflective failure codes (`src/lib/bumblebee/upstream-contract.ts`, `__tests__/upstream-contract.test.ts`, 12/12 green) — commit `4e91356d`
+- [x] Record immutable tag/commit/tree and emitted schema in story + code contract tests
+
+### Slice 2 — Real scanner execution (AC: Real scanner execution)
+
+- [x] Go 1.25.7 toolchain installed; upstream `go test -race ./...` 23 packages pass — commit `6e5451d1`
+- [x] Bumblebee binary builds; `bumblebee version` correct; `selftest` exits 0 with 5 findings; one real restricted scan produces package record + summary
+
+### Slice 2 — Source/population authority (ACs: Separated credential authority, Source/population binding)
+
+- [x] Migration 46 `bumblebee_sources` immutable identity/population binding with exclusive `bumblebee_runner` audience (migration 46, `source-authority.ts`, `source-authority.test.ts`)
+- [x] Dev/shared/foreign credentials and cross-audience use rejected; route security list updated — commit `43b1e444`
+- [x] Blank-identity SQL constraints covered by app-role live DB tests; fresh PostgreSQL 82/82 passed — Knuth GO
+
+### Slice 3 — Server-issued scan leases (AC: Server-issued scan ordering)
+
+- [x] Migration 47 `bumblebee_scan_leases` with scope/source-qualified monotonic generation and hashed short-lived ingest credential (`47-bumblebee-scan-leases.sql`, `lease-*.ts`)
+- [x] Server-created leases; revoked-runner race safety; app role cannot create leases directly; safe error surfaces — commits `95bf95fe`, `2be355a5`
+- [x] Headless plugin authority composition; PR #126 26/26 hosted checks green at `5bc606e7`
+
+### Slice 4 — NDJSON ingest receiver (ACs: HTTPS transport; Bounded transport; Atomic durable batch; Record conformance)
+
+- [ ] RED: migration 48 must define `line_count INTEGER NOT NULL` on batch receipts/records (test `ingest-migration.test.ts` currently failing)
+- [ ] GREEN: add missing column to `docker/postgres-init/48-bumblebee-ingest-ledger.sql`; migration test passes
+- [ ] RED→GREEN: repository rollback returns stable `BUMBLEBEE_INGEST_RECORD_CONFLICT` code instead of raw driver error (`ingest-repository.ts`)
+- [ ] HTTPS-only production ingress with trusted-proxy scheme handling; cleartext rejected outside isolated loopback tests
+- [ ] Authenticate/authorize (`bumblebee_ingest` only) before consuming body; compressed/expanded/line/record bounds; gzip bombs and unsupported encodings fail closed
+- [ ] Strict NDJSON record conformance: package/finding/`scan_summary` against pinned contract; recomputed record IDs; malformed/unknown/mixed-identity fail closed
+- [ ] Atomic all-or-nothing batch + immutable receipt commit; DB failure yields no durable-acceptance claim; partial acceptance forbidden
+
+### Slice 5 — Promotion, snapshot truth, replay (ACs: Bound-population promotion; Snapshot truth; Profile/staleness; Idempotency and replay)
+
+- [ ] Promotion decision engine (`ingest-decision.ts`): complete-bound promotes at generation; empty-complete = known-empty; findings-only/deep/partial/error/timeout/missing-summary hold evidence and preserve current state; contradictory counts/failed-batch held with stable reason codes
+- [ ] Exact replay returns prior receipt; conflicting replay `409`; duplicate/late records and repeated summaries never duplicate state; older generation cannot replace current state
+- [ ] Profile/staleness semantics: baseline/project separate with deliberate union; deep = campaign evidence; missing recent complete generations = stale, not clean
+
+### Slice 6 — Isolation, privacy, finding authority (ACs: Tenant/source isolation; Privacy and secret safety; Truthful finding authority; Truthful downstream projection)
+
+- [ ] Non-owner app-role denials: cross-tenant/workspace, credential/source mismatch, caller-asserted scope fields, forged device/profile, mixed-scope replay
+- [ ] Allowlisted normalized fields only; secrets/canaries absent from logs, responses, payloads, events, receipts; body/line hashes + redaction provenance preserved
+- [ ] Findings stored as provisional endpoint assertions; trusted exposure recomputed server-side against accepted packages + lease-bound catalog digest; no fake sentinels; scope-qualified evidence junctions
+
+### Slice 7 — Headless end-to-end proof (AC: Headless end-to-end proof)
+
+- [ ] Live E2E: real leased scan → HTTPS ingest → sanitized ledgers → complete-population promotion → current inventory + exposure retrieval, headless
+- [ ] Adversarial cases covered: duplicate, empty, partial/error/missing-summary, filtered/changed population, stale/future clock, malformed/gzip limit, DB failure, conflicting replay, cross-tenant
+- [ ] Fresh disposable PostgreSQL (new container+volume) through migration 48; RLS/FK/immutability/idempotency/order proof; container destroyed afterward
+
+### Slice 7 — Full verification and story record
+
+- [ ] Focused `bun vitest run src/lib/bumblebee` all green; full unit suite; typecheck; changed-file lint; route security check; `git diff --check` clean
+- [ ] File List, Dev Agent Record, Change Log updated truthfully; no AC checked without evidence
+
+### Slice 8 — Independent acceptance (post-Dev-Story)
+
+- [ ] BMad Code Review + Pike/Fowler/Knuth verdicts on the frozen candidate
+- [ ] Remediation cycles (max 2) for confirmed findings, then re-review
+- [ ] Commit, push PR #126 head, current-SHA hosted CI green, protected merge, origin/main readback
+- [ ] Sprint status + story status advanced only with evidence; Allura Brain story receipt read back by ID
 
 ## Minimal V1 endpoints
 
@@ -121,3 +218,66 @@ All tables/views require composite workspace FKs, `ENABLE/FORCE ROW LEVEL SECURI
 - Pike/Fowler/Knuth final verdicts
 - Current-SHA protected PR CI and merge/source readback
 - Allura Brain story receipt read back by ID
+
+## Dev Agent Record
+
+### Debug Log
+
+- 2026-08-27: First slice started on dedicated branch from Correct Course commit `822a5311`; upstream contract tests 12/12 green (RED phases observed in implementation job, not yet committed as artifact).
+- 2026-08-28 ~00:00: Source-authority slice completed after HITL-authorized third remediation; fresh PostgreSQL 82/82; Knuth PASS; PR #126 green.
+- 2026-08-28 ~00:35–01:00: Scan-lease slice remediation completed (app-role lease creation blocked, revoked-runner race, safe errors, route inventory) — 94 focused / 2,209 unit / 90 live / 26 hosted checks green at `5bc606e7`.
+- 2026-08-28 ~00:54: NDJSON ingest slice started; run interrupted without terminal result; WIP preserved uncommitted.
+- 2026-08-28 ~05:29: Sole-writer continuation interrupted by user STOP before any commit; WIP unchanged, no review/merge performed.
+- 2026-08-28 ~06:20: BMad normalization of this story (Tasks/Subtasks, Dev Notes, Dev Agent Record, File List, Change Log) completed before Dev Story resume.
+
+### Completion Notes
+
+- Slices 1–3 are committed and independently reviewed green (Pike/Fowler/Knuth PASS; hosted CI 26/26 at `5bc606e7`).
+- Slice 4 WIP exists uncommitted with 2 known RED failures (see Dev Notes); ingest-routes completion and typecheck were not yet verified.
+- All corrected ACs remain open; statuses advance only with evidence per governed loop.
+
+## File List
+
+Committed on `feat/epic-26-story-26.7-upstream-plugin`:
+
+- `src/lib/bumblebee/upstream-contract.ts`
+- `src/lib/bumblebee/__tests__/upstream-contract.test.ts`
+- `src/lib/bumblebee/source-authority.ts`
+- `src/lib/bumblebee/__tests__/source-authority.test.ts`
+- `src/lib/bumblebee/lease-authority.ts`
+- `src/lib/bumblebee/lease-repository.ts`
+- `src/lib/bumblebee/lease-routes.ts`
+- `src/lib/bumblebee/lease-routes.test.ts` (via `src/lib/bumblebee/__tests__/`)
+- `src/lib/bumblebee/module.ts`
+- `src/lib/bumblebee/__tests__/module.test.ts`
+- `src/lib/bumblebee/__tests__/scan-lease-migration.test.ts`
+- `docker/postgres-init/46-bumblebee-source-authority.sql`
+- `docker/postgres-init/47-bumblebee-scan-leases.sql`
+
+Uncommitted worktree changes (Slice 4+ WIP, preserve):
+
+- `docker/postgres-init/48-bumblebee-ingest-ledger.sql` (new)
+- `src/app/api/plugins/bumblebee/ingest/route.ts` (modified)
+- `src/lib/bumblebee/ingest.ts` (new)
+- `src/lib/bumblebee/ingest-repository.ts` (new)
+- `src/lib/bumblebee/ingest-decision.ts` (new)
+- `src/lib/bumblebee/lease-repository.ts` (modified)
+- `src/lib/bumblebee/lease-routes.ts` (modified)
+- `src/lib/db/tenant-table-inventory.ts` (modified)
+- `vitest.config.live-db.ts` (modified)
+- `src/__tests__/bumblebee-scan-leases.e2e.test.ts` (modified)
+- `src/__tests__/bumblebee-ingest.e2e.test.ts` (new)
+- `src/lib/bumblebee/__tests__/ingest-binding.test.ts` (new)
+- `src/lib/bumblebee/__tests__/ingest-decision.test.ts` (new)
+- `src/lib/bumblebee/__tests__/ingest-migration.test.ts` (new)
+- `src/lib/bumblebee/__tests__/ingest-repository.test.ts` (new)
+- `src/lib/bumblebee/__tests__/ingest-routes.test.ts` (new)
+
+## Change Log
+
+- 2026-08-27: Story replanned under Correct Course (PR #125); ACs corrected to upstream-plugin architecture; review verdict evidence tracked.
+- 2026-08-28: BMad normalization — added Dev Notes (architecture guardrails, current state, verification commands), Tasks/Subtasks (Slices 1–8), Dev Agent Record, File List, Change Log sections per bmad-dev-story requirements. No ACs advanced; implementation state recorded truthfully.
+
+## Status
+
+In Progress — Slices 1–3 committed green; Slice 4 (NDJSON ingest) is the active Dev Story task, resuming from preserved WIP with 2 known RED failures.

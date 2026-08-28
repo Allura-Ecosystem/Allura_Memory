@@ -131,12 +131,6 @@
     ".opencode/COWORK.md"
   ],
   "mcp": {
-    "allura-brain": {
-      "enabled": true,
-      "timeout": 60000,
-      "type": "remote",
-      "url": "http://localhost:5888/mcp"
-    },
     "mcp-docker": {
       "command": [
         "docker",
