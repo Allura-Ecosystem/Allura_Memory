@@ -8,6 +8,7 @@ describe("Story 26.7 scan lease authority", () => {
     let persistedHash = ""
     const lease = await issueScanLease({
       runnerToken: "bmb_runner_abcdefgh_body",
+      sourceId: "source-1",
       sourceRevisionId: "revision-1",
       durationSeconds: 120,
     }, {

@@ -82,7 +82,7 @@ AS $$
   WHERE c.token_prefix = p_prefix AND c.audience = 'bumblebee_runner'
   LIMIT 1
 $$;
-ALTER FUNCTION app.bumblebee_bootstrap_runner(TEXT) OWNER TO allura;
+ALTER FUNCTION app.bumblebee_bootstrap_runner(TEXT) OWNER TO CURRENT_USER;
 REVOKE ALL ON FUNCTION app.bumblebee_bootstrap_runner(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app.bumblebee_bootstrap_runner(TEXT) TO allura_app;
 
@@ -98,7 +98,7 @@ AS $$
   WHERE l.ingest_token_prefix = p_prefix AND l.ingest_audience = 'bumblebee_ingest'
   LIMIT 1
 $$;
-ALTER FUNCTION app.bumblebee_bootstrap_ingest(TEXT) OWNER TO allura;
+ALTER FUNCTION app.bumblebee_bootstrap_ingest(TEXT) OWNER TO CURRENT_USER;
 REVOKE ALL ON FUNCTION app.bumblebee_bootstrap_ingest(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app.bumblebee_bootstrap_ingest(TEXT) TO allura_app;
 
@@ -158,7 +158,7 @@ BEGIN
   RETURN v_generation;
 END;
 $$;
-ALTER FUNCTION app.issue_bumblebee_scan_lease(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TIMESTAMPTZ) OWNER TO allura;
+ALTER FUNCTION app.issue_bumblebee_scan_lease(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TIMESTAMPTZ) OWNER TO CURRENT_USER;
 REVOKE ALL ON FUNCTION app.issue_bumblebee_scan_lease(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TIMESTAMPTZ) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app.issue_bumblebee_scan_lease(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TIMESTAMPTZ) TO allura_app;
 

@@ -59,7 +59,7 @@ describe("Story 26.7 Bumblebee route audiences", () => {
   it("maps known lease-domain failures but never discloses unknown issuance internals", async () => {
     const request = () => new Request("http://localhost/api/plugins/bumblebee/runs", {
       method: "POST",
-      body: JSON.stringify({ sourceRevisionId: "revision-1", durationSeconds: 60 }),
+      body: JSON.stringify({ sourceId: "source-1", sourceRevisionId: "revision-1", durationSeconds: 60 }),
     })
     const authenticate = async () => ({ rawToken: "bmb_runner_abcdefgh_body" })
     const mismatch = await createRunsHandler({
@@ -79,5 +79,32 @@ describe("Story 26.7 Bumblebee route audiences", () => {
     expect(await mismatch.json()).toEqual({ error: "BUMBLEBEE_LEASE_SOURCE_REVISION_MISMATCH" })
     expect(await invalidDuration.json()).toEqual({ error: "BUMBLEBEE_LEASE_INVALID_DURATION" })
     expect(await internal.json()).toEqual({ error: "BUMBLEBEE_SERVICE_UNAVAILABLE" })
+  })
+
+  it("requires and forwards the complete source identity", async () => {
+    const issue = vi.fn(async () => ({ leaseId: "lease-1", generation: 1 }))
+    const handler = createRunsHandler({
+      authenticate: async () => ({ rawToken: "bmb_runner_abcdefgh_body" }),
+      issue,
+    })
+
+    const accepted = await handler(new Request("http://localhost/api/plugins/bumblebee/runs", {
+      method: "POST",
+      body: JSON.stringify({ sourceId: "source-1", sourceRevisionId: "revision-1", durationSeconds: 60 }),
+    }))
+    const ambiguous = await handler(new Request("http://localhost/api/plugins/bumblebee/runs", {
+      method: "POST",
+      body: JSON.stringify({ sourceRevisionId: "revision-1", durationSeconds: 60 }),
+    }))
+
+    expect(accepted.status).toBe(201)
+    expect(ambiguous.status).toBe(400)
+    expect(issue).toHaveBeenCalledOnce()
+    expect(issue).toHaveBeenCalledWith({
+      runnerToken: "bmb_runner_abcdefgh_body",
+      sourceId: "source-1",
+      sourceRevisionId: "revision-1",
+      durationSeconds: 60,
+    })
   })
 })

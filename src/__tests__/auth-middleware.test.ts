@@ -427,6 +427,45 @@ describe("Auth Middleware", () => {
     })
 
     it.each([
+      ["/api/plugins/bumblebee/runs", "bmb_runner_abcdefgh_body"],
+      ["/api/plugins/bumblebee/ingest", "bmb_ingest_abcdefgh_body"],
+    ])("forwards only POST %s to its route-owned plugin-token gate", async (path, token) => {
+      process.env.ALLURA_DEV_AUTH_ENABLED = "false"
+      clearAuthConfig()
+
+      const forwarded = await middleware(new NextRequest(new URL(path, "http://localhost:3100"), {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "x-allura-user-id": "spoofed-user",
+          "x-allura-role": "admin",
+          "x-allura-group-id": "allura-attacker",
+        },
+      }))
+
+      expect(forwarded.status).toBe(200)
+      expect(forwarded.headers.get("x-middleware-request-authorization")).toBe(`Bearer ${token}`)
+      expect(forwarded.headers.get("x-middleware-request-x-allura-user-id")).toBeNull()
+      expect(forwarded.headers.get("x-middleware-request-x-allura-role")).toBeNull()
+      expect(forwarded.headers.get("x-middleware-request-x-allura-group-id")).toBeNull()
+
+      const wrongMethod = await middleware(new NextRequest(new URL(path, "http://localhost:3100")))
+      expect(wrongMethod.status).toBe(401)
+    })
+
+    it("does not extend plugin-token authority to neighboring routes", async () => {
+      process.env.ALLURA_DEV_AUTH_ENABLED = "false"
+      clearAuthConfig()
+
+      const response = await middleware(new NextRequest(
+        new URL("/api/plugins/bumblebee/runs/neighbor", "http://localhost:3100"),
+        { method: "POST", headers: { authorization: "Bearer bmb_runner_abcdefgh_body" } },
+      ))
+
+      expect(response.status).toBe(401)
+    })
+
+    it.each([
       "/api/tokens",
       "/api/members",
       "/api/workspaces",

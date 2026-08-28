@@ -123,6 +123,26 @@ describeLive("Story 26.7 scan leases under fresh allura_app PostgreSQL", () => {
     })
     expect(role.rows[0].owner).not.toBe("allura_app")
 
+    const functions = await app.query<{ owner: string; proconfig: string[]; prosecdef: boolean }>(`SELECT
+      pg_get_userbyid(p.proowner) AS owner, p.proconfig, p.prosecdef
+      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+      WHERE n.nspname='app' AND p.proname IN (
+        'bumblebee_bootstrap_runner','bumblebee_bootstrap_ingest','issue_bumblebee_scan_lease'
+      ) ORDER BY p.proname`)
+    expect(functions.rows).toHaveLength(3)
+    for (const fn of functions.rows) {
+      expect(fn.owner).not.toBe("allura_app")
+      expect(fn.prosecdef).toBe(true)
+      expect(fn.proconfig).toContain("search_path=pg_catalog")
+    }
+
+    const constraints = await app.query<{ definition: string }>(`SELECT pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint WHERE conrelid='bumblebee_scan_leases'::regclass AND contype='f'`)
+    expect(constraints.rows.some(({ definition }) =>
+      definition.includes("source_id") && definition.includes("source_revision_id") &&
+      definition.includes("runner_credential_id") && definition.includes("runner_audience"),
+    )).toBe(true)
+
     const client = await app.connect()
     try {
       await expect(scoped(client, () => client.query(`INSERT INTO bumblebee_scan_leases
@@ -181,7 +201,7 @@ describeLive("Story 26.7 scan leases under fresh allura_app PostgreSQL", () => {
     const response = await issueRun(new Request("http://localhost/api/plugins/bumblebee/runs", {
       method: "POST",
       headers: { authorization: "Bearer bmb_runner_live0001_tail", "content-type": "application/json" },
-      body: JSON.stringify({ sourceRevisionId: "live-revision", durationSeconds: 120 }),
+      body: JSON.stringify({ sourceId: "live-source", sourceRevisionId: "live-revision", durationSeconds: 120 }),
     }))
     expect(response.status).toBe(201)
     const body = await response.json() as { leaseId: string; generation: number; ingestToken: string }

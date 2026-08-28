@@ -59,7 +59,11 @@ export async function authenticateBumblebeeRequest(request: Request, audience: B
   return { rawToken }
 }
 
-export async function authenticateRunnerForSource(rawToken: string, sourceRevisionId: string): Promise<BoundRunnerAuthority> {
+export async function authenticateRunnerForSource(
+  rawToken: string,
+  sourceId: string,
+  sourceRevisionId: string,
+): Promise<BoundRunnerAuthority> {
   const credential = await bootstrap(rawToken, "bumblebee_runner")
   if (!credential.credential_id) throw new Error(BUMBLEBEE_AUTH_ERROR.credentialClass)
   return withTenantTransaction({
@@ -71,8 +75,9 @@ export async function authenticateRunnerForSource(rawToken: string, sourceRevisi
       source_id: string
       source_revision_id: string
     }>(`SELECT source_id, source_revision_id FROM bumblebee_sources
-       WHERE source_revision_id = $1 AND runner_credential_id = $2 AND disabled_at IS NULL`,
-    [sourceRevisionId, credential.credential_id])
+       WHERE source_id = $1 AND source_revision_id = $2
+         AND runner_credential_id = $3 AND disabled_at IS NULL`,
+    [sourceId, sourceRevisionId, credential.credential_id])
     const source = result.rows[0]
     if (!source) throw new Error(BUMBLEBEE_LEASE_ERROR.sourceRevisionMismatch)
     return {

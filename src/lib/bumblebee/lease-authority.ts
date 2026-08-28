@@ -30,13 +30,14 @@ export interface PersistLeaseInput extends BoundRunnerAuthority {
 }
 
 export interface LeaseAuthorityDependencies {
-  authenticateRunner(rawToken: string, sourceRevisionId: string): Promise<BoundRunnerAuthority>
+  authenticateRunner(rawToken: string, sourceId: string, sourceRevisionId: string): Promise<BoundRunnerAuthority>
   persistLease(input: PersistLeaseInput): Promise<{ leaseId: string; generation: number }>
   now?(): Date
 }
 
 export interface IssueScanLeaseInput {
   runnerToken: string
+  sourceId: string
   sourceRevisionId: string
   durationSeconds: number
 }
@@ -79,8 +80,8 @@ export async function issueScanLease(input: IssueScanLeaseInput, deps: LeaseAuth
   if (!Number.isInteger(input.durationSeconds) || input.durationSeconds <= 0 || input.durationSeconds > MAX_LEASE_SECONDS) {
     throw new Error(BUMBLEBEE_LEASE_ERROR.invalidDuration)
   }
-  const authority = await deps.authenticateRunner(input.runnerToken, input.sourceRevisionId)
-  if (authority.sourceRevisionId !== input.sourceRevisionId) {
+  const authority = await deps.authenticateRunner(input.runnerToken, input.sourceId, input.sourceRevisionId)
+  if (authority.sourceId !== input.sourceId || authority.sourceRevisionId !== input.sourceRevisionId) {
     throw new Error(BUMBLEBEE_LEASE_ERROR.sourceRevisionMismatch)
   }
   const now = deps.now?.() ?? new Date()

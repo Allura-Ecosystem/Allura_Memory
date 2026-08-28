@@ -32,18 +32,20 @@ export function createRunsHandler(deps: {
     } catch (error) {
       return refusal(error)
     }
-    let body: { sourceRevisionId?: unknown; durationSeconds?: unknown }
+    let body: { sourceId?: unknown; sourceRevisionId?: unknown; durationSeconds?: unknown }
     try {
       body = await request.json() as typeof body
     } catch {
       return Response.json({ error: "BUMBLEBEE_REQUEST_INVALID" }, { status: 400 })
     }
-    if (typeof body.sourceRevisionId !== "string" || typeof body.durationSeconds !== "number") {
+    if (typeof body.sourceId !== "string" || typeof body.sourceRevisionId !== "string" ||
+      typeof body.durationSeconds !== "number") {
       return Response.json({ error: "BUMBLEBEE_REQUEST_INVALID" }, { status: 400 })
     }
     try {
       const lease = await deps.issue({
         runnerToken: authority.rawToken,
+        sourceId: body.sourceId,
         sourceRevisionId: body.sourceRevisionId,
         durationSeconds: body.durationSeconds,
       })
