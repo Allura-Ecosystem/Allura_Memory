@@ -14,7 +14,7 @@
   },
   "process_definition": {
     "id": "checkpoint-recovery",
-    "revision": "r1"
+    "revision": "1"
   },
   "initial_state": {
     "memories": [],

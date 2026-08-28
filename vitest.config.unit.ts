@@ -46,6 +46,13 @@ export default defineConfig({
       "src/lib/bumblebee/**/*.test.ts",
       // Story 26.5 — governed mitigation drafts must stay in the CI unit lane.
       "src/lib/mitigation/**/*.test.ts",
+      // Story 24.5 — deterministic scenario harness. Hermetic: engine DB
+      // singletons + connection pool mocked to an in-memory store, so the
+      // lane runs with no live PostgreSQL.
+      "src/lib/harness/**/*.test.ts",
+      // Story 24.6 — portfolio evaluation runner/report unit tests (hermetic:
+      // offline fixture datasets only, no DB/network).
+      "src/lib/evals/**/*.test.ts",
       "src/lib/memory/config.test.ts",
       "src/lib/memory/embeddings.test.ts",
       "src/lib/memory/types.test.ts",

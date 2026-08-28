@@ -27,6 +27,8 @@ export interface ScenarioFixture {
     id: string;
     revision: string;
   };
+  /** Optional policy version bound at replay time (AC-4). */
+  policy_version?: string;
   initial_state?: {
     memories?: Array<{ content: string; score?: number; provenance?: string }>;
     proposals?: Array<{ content: string; score: number; tier?: string; status?: "pending" | "approved" | "rejected" }>;
@@ -85,8 +87,17 @@ export function scenarioDigest(scenario: ScenarioFixture): string {
     tenant_fixture: scenario.tenant_fixture,
     principal_fixture: scenario.principal_fixture,
     process_definition: scenario.process_definition,
+    policy_version: scenario.policy_version,
     initial_state: scenario.initial_state,
-    tool_fixtures: scenario.tool_fixtures.map((f) => ({ tool_name: f.tool_name, match: f.match, error: f.error, latency_ms: f.latency_ms })),
+    tool_fixtures: scenario.tool_fixtures.map((f) => ({
+      tool_name: f.tool_name,
+      match: f.match,
+      // C4: fixture response payloads MUST be part of the digest so a changed
+      // tool response cannot retain the same scenario digest.
+      response: f.response,
+      error: f.error,
+      latency_ms: f.latency_ms,
+    })),
     virtual_clock: scenario.virtual_clock,
     random_seed: scenario.random_seed,
     policy_expectations: scenario.policy_expectations,

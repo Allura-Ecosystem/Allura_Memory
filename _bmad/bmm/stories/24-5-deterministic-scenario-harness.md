@@ -1,10 +1,10 @@
 # Story 24.5 — Deterministic Scenario Harness
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** changes-requested
+**Status:** in-review
 **Priority:** P0-Critical
 **Complexity:** Large
-**Owner:** unassigned
+**Owner:** Brooks (Hermes)
 **Dependencies:** Story 24.2; Story 24.4 fixtures must be integrated before Gate C closes
 
 ## User Story
@@ -90,16 +90,53 @@ Run each required scenario twice from a clean fixture state. Evidence must compa
 
 ## Dev Agent Record
 
-**Status:** changes-requested — see `docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md`
+**Status:** in-review — remediation verified 2026-08-28 (Brooks/Hermes + Team RAM)
 
 ### Completion Notes
 
-(To be filled by the implementing BMAD dev agent.)
+C4 finding from the post-merge adversarial review (2026-08-22) is resolved in
+the current codebase:
+
+- **C4 (runner doesn't compose the process engine):** `src/lib/harness/runner.ts`
+  now builds a `ProcessDefinition` from the scenario and drives it through the
+  real `ProcessEngine.run()` → `resume()` (checkpoint loop) → `getTimeline()`
+  (replay). No parallel engine; the engine's own state manager, resume, replay,
+  and quality-gate contracts are used.
+- **Hermeticity (found 2026-08-28):** the harness tests previously hit the live
+  PostgreSQL via `getPool()` in `registerDefinition` (auth failure). Fixed by
+  mocking `@/lib/postgres/connection` in the test and adding
+  `src/lib/harness/**/*.test.ts` to `vitest.config.unit.ts` — CI now runs them
+  with no DB. Verified: 25/25 pass under the unit lane.
+- **Review fixes (Pike, 2026-08-28):** `compareReceipts` now binds
+  `scenario_id`, `principal_id`, `tenant_id`, `config_fingerprint`, and `status`
+  (previously omitted); the replay timeline hash is only carried when the prior
+  receipt has one, so a simulate→replay comparison can report `identical: true`.
+- **Residue guard (Story 24.8 AC-9):** `docs-backend-residue-guard.sh` wired
+  into `ai-guidelines-check.yml`; scan optimized (single-pass grep + tracked
+  files only — 6+ min → 15s) and caught/fixed live residue in the Brooks role
+  cards (`.claude/agents/brooks.md`, `.opencode/agent/core/brooks.md`).
 
 ### File List
 
-(To be filled by the implementing BMAD dev agent.)
+- `src/lib/harness/runner.ts` — rewritten to compose the ProcessEngine; replay
+  timeline-hash fix.
+- `src/lib/harness/scenario.ts` — digest includes fixture response payloads +
+  `policy_version` (C4).
+- `src/lib/harness/receipt.ts` — `policy_version`/`schema_version` fields;
+  `compareReceipts` binds identity/tenant/config/status fields.
+- `src/lib/harness/__tests__/scenario-harness.test.ts` — hermetic pool mock;
+  8 new tests (network-disabled, record mode, digest, version binding, idempotency).
+- `schemas/allura-scenario-v1.schema.json` — optional `policy_version`; numeric
+  revision pattern.
+- `vitest.config.unit.ts` — harness + evals tests added to the unit lane.
+- `tests/scenarios/*.yaml.json` — revisions normalized to numeric strings.
 
 ### Status Evidence
 
-(To be filled after gate review.)
+- `bun run vitest run --config vitest.config.unit.ts src/lib/harness/__tests__/`
+  → 25/25 passed (no DB).
+- `bun run vitest run --config vitest.config.unit.ts src/lib/evals/__tests__/`
+  → 12/12 passed (no DB).
+- `bun run typecheck` → clean.
+- `bun run test:unit` (full lane) → 2237 passed | 160 skipped.
+- `bash .github/scripts/docs-backend-residue-guard.sh` → OK (15s).

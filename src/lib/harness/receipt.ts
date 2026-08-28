@@ -10,6 +10,10 @@ export interface RunReceipt {
   scenario_id: string;
   scenario_digest: string;
   definition_revision: string;
+  /** Policy version bound at run/replay time (AC-4). */
+  policy_version?: string;
+  /** Scenario schema version bound at run/replay time (AC-4). */
+  schema_version?: string;
   principal_id: string;
   tenant_id: string;
   config_fingerprint: string;
@@ -32,6 +36,8 @@ export function buildReceipt(opts: {
   scenario_id: string;
   scenario_digest: string;
   definition_revision: string;
+  policy_version?: string;
+  schema_version?: string;
   principal_id: string;
   tenant_id: string;
   config: Record<string, unknown>;
@@ -55,6 +61,8 @@ export function buildReceipt(opts: {
     scenario_id: opts.scenario_id,
     scenario_digest: opts.scenario_digest,
     definition_revision: opts.definition_revision,
+    policy_version: opts.policy_version,
+    schema_version: opts.schema_version,
     principal_id: opts.principal_id,
     tenant_id: opts.tenant_id,
     config_fingerprint,
@@ -73,8 +81,15 @@ export function buildReceipt(opts: {
 
 export function compareReceipts(a: RunReceipt, b: RunReceipt): { identical: boolean; divergent_fields: string[] } {
   const fields: Array<keyof RunReceipt> = [
+    "scenario_id",
     "scenario_digest",
     "definition_revision",
+    "policy_version",
+    "schema_version",
+    "principal_id",
+    "tenant_id",
+    "config_fingerprint",
+    "status",
     "tool_calls",
     "policy_decisions",
     "checkpoint_transitions",

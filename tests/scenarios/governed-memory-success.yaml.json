@@ -14,7 +14,7 @@
   },
   "process_definition": {
     "id": "governed-memory-promotion",
-    "revision": "r1"
+    "revision": "1"
   },
   "initial_state": {
     "memories": [

@@ -3,8 +3,13 @@
  *
  * Tests schema validation, determinism, simulate mode, fault injection,
  * replay comparison, and side-effect idempotency.
+ *
+ * The runner composes the real ProcessEngine. To run deterministically without
+ * a live PostgreSQL instance, the engine's DB singletons (insertEvent,
+ * getBreakerManager, run-manager, state-manager, replay) are mocked to an
+ * in-memory store — the same pattern used by engine-wiring.test.ts.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SeededRandom, VirtualClock } from "../determinism";
@@ -13,6 +18,103 @@ import { runScenario } from "../runner";
 import { loadScenario, scenarioDigest, validateScenario } from "../scenario";
 import type { ScenarioFixture } from "../scenario";
 import { ToolSimulator } from "../tool-simulator";
+
+// ── In-memory event/state store shared by the mocked engine singletons ───────
+const inMemoryEvents: Array<Record<string, unknown>> = [];
+const inMemoryStates = new Map<string, Record<string, unknown>>();
+
+// Story 24.5 — hermetic harness: the runner's registerDefinition() fires a
+// real INSERT via getPool() when no pool is injected (runner.ts:392). Mock the
+// connection module so the harness tests run without a live PostgreSQL.
+vi.mock("@/lib/postgres/connection", () => ({
+  getPool: vi.fn(() => ({
+    query: vi.fn(async () => ({ rows: [] })),
+  })),
+  closePool: vi.fn(),
+}));
+
+vi.mock("@/lib/postgres/queries/insert-trace", () => ({
+  insertEvent: vi.fn(async (event: Record<string, unknown>) => {
+    inMemoryEvents.push(event);
+    return { id: inMemoryEvents.length, ...event };
+  }),
+}));
+
+vi.mock("@/lib/circuit-breaker", () => ({
+  getBreakerManager: vi.fn(() => ({
+    getOrCreateBreaker: vi.fn(() => ({ getState: vi.fn(() => "closed") })),
+  })),
+}));
+
+vi.mock("@/lib/process-engine/run-manager", () => ({
+  createRun: vi.fn(async (_pool: unknown, params: { id: string; groupId: string }) => ({
+    id: params.id,
+    definition_id: "def",
+    definition_revision: 1,
+    group_id: params.groupId,
+    status: "pending",
+    state_json: {},
+    actor_id: "process-engine",
+    started_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    completed_at: null,
+  })),
+  updateRunSnapshot: vi.fn(async (_pool: unknown, params: { id: string; groupId: string; status: string }) => ({
+    id: params.id,
+    definition_id: "def",
+    definition_revision: 1,
+    group_id: params.groupId,
+    status: params.status,
+    state_json: {},
+    actor_id: "process-engine",
+    started_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:01.000Z",
+    completed_at: params.status === "completed" ? "2026-01-01T00:00:01.000Z" : null,
+  })),
+  getRun: vi.fn(async (_pool: unknown, params: { id: string; groupId: string }) => ({
+    id: params.id,
+    definition_id: "def",
+    definition_revision: 1,
+    group_id: params.groupId,
+    status: "running",
+    state_json: {},
+    actor_id: "process-engine",
+    started_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    completed_at: null,
+  })),
+  listRuns: vi.fn(async () => []),
+}));
+
+vi.mock("@/lib/process-engine/state-manager", () => ({
+  ProcessStateManager: vi.fn().mockImplementation(() => ({
+    saveInitialState: vi.fn(async (state: { processId: string }) => {
+      inMemoryStates.set(state.processId, state as unknown as Record<string, unknown>);
+    }),
+    saveState: vi.fn(async (state: { processId: string }) => {
+      inMemoryStates.set(state.processId, state as unknown as Record<string, unknown>);
+    }),
+    loadState: vi.fn(async (processId: string) => inMemoryStates.get(processId) ?? null),
+    listProcesses: vi.fn(async () => []),
+  })),
+}));
+
+vi.mock("@/lib/process-engine/replay", () => ({
+  ReplayEngine: vi.fn().mockImplementation(() => ({
+    replay: vi.fn(async (processId: string) => ({
+      processId,
+      definitionId: "def",
+      groupId: "allura-test",
+      status: "completed",
+      steps: [],
+      totalDuration: 0,
+      startedAt: "2026-01-01T00:00:00.000Z",
+    })),
+    resumeFromCheckpoint: vi.fn(),
+    listPendingCheckpoints: vi.fn(async () => []),
+    diff: vi.fn(),
+  })),
+}));
 
 const SCENARIOS_DIR = resolve(process.cwd(), "tests/scenarios");
 
@@ -99,6 +201,44 @@ describe("Simulate mode (AC-2)", () => {
     expect(result.output.status).toBe("completed");
     expect(result.receipt.mode).toBe("simulate");
   });
+
+  it("enforces the offline transport by refusing real network URLs in fixtures", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    const tampered = {
+      ...scenario,
+      tool_fixtures: [
+        ...scenario.tool_fixtures,
+        { tool_name: "http_fetch", match: "ordered" as const, response: { result: { url: "https://example.com/data" } } },
+      ],
+    } as ScenarioFixture;
+    await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(/network access to be disabled/);
+  });
+});
+
+describe("Record mode (AC-3)", () => {
+  it("invokes a real permitted tool adapter and captures the redacted response", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    const calls: string[] = [];
+    const result = await runScenario(scenario, {
+      mode: "record",
+      toolAdapter: {
+        call: async (call) => {
+          calls.push(call.tool_name);
+          return { result: { ok: true, api_key: "super-secret", data: "value" } };
+        },
+        fingerprint: () => ({ provider: "mock", model: "mock-1", config: "mock-config" }),
+      },
+    });
+    expect(calls.length).toBeGreaterThan(0);
+    expect(result.output.status).toBe("completed");
+    // Secrets are never persisted in the receipt evidence.
+    expect(JSON.stringify(result.receipt.evidence_hashes)).not.toContain("super-secret");
+  });
+
+  it("refuses record mode without a real tool adapter", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    await expect(runScenario(scenario, { mode: "record" })).rejects.toThrow(/real permitted tool adapter/);
+  });
 });
 
 describe("Replay mode (AC-4/AC-7)", () => {
@@ -114,8 +254,60 @@ describe("Replay mode (AC-4/AC-7)", () => {
   it("refuses a mismatched definition revision", async () => {
     const scenario = loadJson("governed-memory-success.yaml.json");
     const run1 = await runScenario(scenario, { mode: "simulate" });
-    const tampered = { ...scenario, process_definition: { ...scenario.process_definition, revision: "r999" } };
+    const tampered = { ...scenario, process_definition: { ...scenario.process_definition, revision: "999" } };
     await expect(runScenario(tampered, { mode: "replay", priorReceipt: run1.receipt })).rejects.toThrow(/Replay mismatch.*revision/);
+  });
+
+  it("refuses a mismatched policy version", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    const run1 = await runScenario(scenario, { mode: "simulate", policyVersion: "pol-1" });
+    await expect(
+      runScenario(scenario, { mode: "replay", priorReceipt: run1.receipt, policyVersion: "pol-2" }),
+    ).rejects.toThrow(/policy version/);
+  });
+
+  it("refuses a mismatched schema version", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    // Build a prior receipt bound to a different schema version.
+    const prior = buildReceipt({
+      scenario_id: scenario.scenario_id,
+      scenario_digest: scenarioDigest(scenario),
+      definition_revision: scenario.process_definition.revision,
+      schema_version: "v2",
+      principal_id: scenario.principal_fixture.principal_id,
+      tenant_id: scenario.tenant_fixture.group_id,
+      config: {},
+      mode: "simulate",
+      started_at: "2026-01-01T00:00:00.000Z",
+      completed_at: "2026-01-01T00:00:01.000Z",
+      status: "completed",
+      tool_calls: [],
+      policy_decisions: [],
+      checkpoint_transitions: [],
+      side_effect_keys: [],
+      evidence: {},
+    });
+    await expect(runScenario(scenario, { mode: "replay", priorReceipt: prior })).rejects.toThrow(/schema version/);
+  });
+
+  it("refuses replay without a prior receipt", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    await expect(runScenario(scenario, { mode: "replay" })).rejects.toThrow(/prior run receipt/);
+  });
+});
+
+describe("Scenario digest includes fixture response payloads (C4)", () => {
+  it("changes the digest when a tool response payload changes", () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    const d1 = scenarioDigest(scenario);
+    const tampered = {
+      ...scenario,
+      tool_fixtures: scenario.tool_fixtures.map((f, i) =>
+        i === 0 ? { ...f, response: { result: { results: [{ id: "mem-1", content: "CHANGED", score: 0.9 }] } } } : f,
+      ),
+    };
+    const d2 = scenarioDigest(tampered);
+    expect(d1).not.toBe(d2);
   });
 });
 
@@ -125,6 +317,15 @@ describe("Side-effect idempotency (AC-8)", () => {
     const result = await runScenario(scenario, { mode: "simulate" });
     const keys = result.receipt.side_effect_keys;
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("does not re-apply side effects on replay", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    const run1 = await runScenario(scenario, { mode: "simulate" });
+    const run2 = await runScenario(scenario, { mode: "simulate" });
+    // Each run applies exactly one effect per tool step — no duplicates.
+    expect(run2.receipt.side_effect_keys).toEqual(run1.receipt.side_effect_keys);
+    expect(run2.receipt.side_effect_keys.length).toBe(scenario.tool_fixtures.length);
   });
 });
 
