@@ -3,7 +3,7 @@
   "runtimes": ["opencode", "claude"],
   "tiers": {
     "ultrabrain": { "opencode": "ollama/glm-5.2:cloud", "claude": "opus" },
-    "standard":   { "opencode": "ollama/qwen3-coder-next:cloud", "claude": "sonnet" },
+    "standard":   { "opencode": "ollama/glm-5.3-flash-next:cloud", "claude": "sonnet" },
     "cheap":      { "opencode": "ollama/nemotron-3-super:cloud", "claude": "haiku" }
   },
   "agents": {

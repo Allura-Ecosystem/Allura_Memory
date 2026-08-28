@@ -1,0 +1,21 @@
+toolchain:
+go version go1.25.7 linux/amd64
+GOTOOLCHAIN=local
+
+build_command:
+CGO_ENABLED=0 go build -trimpath -ldflags '-s -w -X main.Version=v0.1.2' -o /tmp/allura-bumblebee-evidence/dist/bumblebee ./cmd/bumblebee
+build_exit_code=0
+binary_sha256=19e3e4a4af878c983ccd06206ec8d31fbf904f901f6b24614182c5cd946345b4
+
+version_command:
+/tmp/allura-bumblebee-evidence/dist/bumblebee version
+bumblebee v0.1.2
+commit: cc57710eeaf685e7b89924a36c8583cad0a378fe
+built:  2026-06-18T15:03:13Z
+go:     go1.25.7
+version_exit_code=0
+
+selftest_command:
+/tmp/allura-bumblebee-evidence/dist/bumblebee selftest
+selftest OK (5 findings in 2ms)
+selftest_exit_code=0

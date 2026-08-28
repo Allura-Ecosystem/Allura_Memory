@@ -9,7 +9,7 @@ path: subagents/code
 scope: harness
 platform: Both
 status: active
-model: ollama/qwen3-coder-next:cloud
+model: ollama/glm-5.3-flash-next:cloud
 permission:
   edit: allow
   bash: allow

@@ -35,8 +35,6 @@ codex plugin install ./plugins/allura-governance
 # Cowork plugin — shared handoff protocol with Claude
 codex plugin install ./plugins/allura-cowork
 
-# Extended capabilities
-codex plugin install ./plugins/superpowers
 ```
 
 ### 3. Restart Codex

@@ -41,6 +41,8 @@ export interface RouteScopeEntry {
   scopeName: string;
   /** HTTP methods to protect (defaults to all methods) */
   methods?: string[];
+  /** Route handler owns a non-principal authentication protocol. */
+  authStrategy?: "principal" | "route_handler";
   /** Description of what this route does */
   description?: string;
 }
@@ -312,6 +314,24 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     requiredRole: "viewer",
     scopeName: "brain:search:read",
     description: "Hybrid search over Brain memories (returns real memory content)",
+  },
+
+  // ── Headless plugins (route handlers enforce server-derived plugin tokens) ──
+  {
+    pattern: "/api/plugins/bumblebee/ingest",
+    requiredRole: "admin",
+    scopeName: "plugin:bumblebee:ingest",
+    methods: ["POST"],
+    authStrategy: "route_handler",
+    description: "Bumblebee lease-bound ingest credential endpoint",
+  },
+  {
+    pattern: "/api/plugins/bumblebee/runs",
+    requiredRole: "admin",
+    scopeName: "plugin:bumblebee:runs",
+    methods: ["POST"],
+    authStrategy: "route_handler",
+    description: "Bumblebee runner credential lease issuance endpoint",
   },
 
   // ── Hosted Platform (Allura Guard) ────────────────────────────────────────
@@ -703,7 +723,13 @@ export function getScopeName(pathname: string): string | undefined {
  */
 export type RouteAuthority =
   | { kind: "public"; scopeName: string; rationale: string }
-  | { kind: "declared"; requiredRole: AlluraRole; scopeName: string }
+  | {
+      kind: "declared";
+      requiredRole: AlluraRole;
+      scopeName: string;
+      methods?: string[];
+      authStrategy: "principal" | "route_handler";
+    }
   | { kind: "undeclared"; requiredRole: AlluraRole; scopeName: string };
 
 /** Look up the public allowlist entry for a pathname, if any. */
@@ -735,6 +761,8 @@ export function resolveRouteAuthority(pathname: string): RouteAuthority {
       kind: "declared",
       requiredRole: declared.requiredRole,
       scopeName: declared.scopeName,
+      methods: declared.methods,
+      authStrategy: declared.authStrategy ?? "principal",
     };
   }
 

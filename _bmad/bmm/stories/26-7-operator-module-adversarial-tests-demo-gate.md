@@ -5,7 +5,7 @@
 > This replanned story was prepared with AI assistance. Independent Correct Course review [passed with a tracked verdict](../../../docs/archive/allura/evidence/epic-26/correct-course/review-verdict-2026-08-27.md); implementation evidence is still required before any AC advances.
 > Review evidence: `docs/archive/allura/evidence/epic-26/correct-course/review-verdict-2026-08-27.md`
 
-**Status:** Ready for Dev — Correct Course accepted 2026-08-27; the repository does not yet integrate the upstream scanner.
+**Status:** In Progress — first bounded upstream provenance/schema-compatibility slice started 2026-08-27; the repository does not yet integrate the upstream scanner.
 **Owner:** Woz + Knuth + Pike + Fowler
 **Depends on:** 26.1, 26.2, 26.3, 26.4, 26.5
 **Blocks:** Epic 26 completion

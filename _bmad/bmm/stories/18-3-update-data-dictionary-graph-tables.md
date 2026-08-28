@@ -61,7 +61,7 @@ As the Allura data architect, I need the Data Dictionary updated to document the
 | Story ID | 18-3 |
 | Agent | Woz |
 | Date | 2026-07-12 |
-| Runtime | OpenCode qwen3-coder-next:cloud |
+| Runtime | OpenCode glm-5.3-flash-next:cloud |
 | Git Status | Uncommitted edits to DATA-DICTIONARY.md |
 | Validation | `git diff --check` passed |
 

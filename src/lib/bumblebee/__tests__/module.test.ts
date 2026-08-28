@@ -98,6 +98,8 @@ describe("Story 26.7 AC-6 — rollback leaves the rest of the system intact", ()
           !file.endsWith(".test.tsx") &&
           file !== "src/lib/curator/module-registry.ts" &&
           file !== "src/components/curator/bumblebee-workflow-adapter.tsx" &&
+          file !== "src/app/api/plugins/bumblebee/runs/route.ts" &&
+          file !== "src/app/api/plugins/bumblebee/ingest/route.ts" &&
           file !== "src/app/dashboard/bumblebee/page.tsx",
       )
 

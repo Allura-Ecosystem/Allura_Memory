@@ -373,6 +373,14 @@ export default async function proxy(
   request: NextRequest,
   event?: NextFetchEvent,
 ): Promise<NextResponse> {
+  const routeAuthority = resolveRouteAuthority(request.nextUrl.pathname)
+  if (
+    routeAuthority.kind === "declared" &&
+    routeAuthority.authStrategy === "route_handler" &&
+    routeAuthority.methods?.includes(request.method)
+  ) {
+    return nextWithoutAuthHeaders(request)
+  }
   if (!isClerkEnabled()) {
     if (process.env.NODE_ENV === "production") {
       return handleKeylessProduction(request)

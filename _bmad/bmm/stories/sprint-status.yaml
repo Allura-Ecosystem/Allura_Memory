@@ -320,7 +320,7 @@ epic_26:
   status: in-progress
   retrospective: null
   next_story: "26.7"
-  sequence_note: "Correct Course accepted 2026-08-27 after reconciling against pinned upstream perplexityai/bumblebee v0.1.2. Pike/Fowler/Knuth and final staged-diff review passed. Stories 26.1-26.6 remain preserved Allura-native downstream foundations but do not prove upstream scanner integration. Story 26.7 is Ready for Dev as the headless plugin integration/conformance gate. The Curator registry is optional display infrastructure, not a scanner-ingestion dependency."
+  sequence_note: "Correct Course accepted 2026-08-27 after reconciling against pinned upstream perplexityai/bumblebee v0.1.2. Pike/Fowler/Knuth and final staged-diff review passed. Stories 26.1-26.6 remain preserved Allura-native downstream foundations but do not prove upstream scanner integration. Story 26.7 is In Progress on its dedicated upstream-plugin branch; all corrected acceptance criteria remain open. The Curator registry is optional display infrastructure, not a scanner-ingestion dependency."
   stories:
     - key: "26.1"
       title: "Boundary, Ownership, and Threat-Source Trust Contract"
@@ -360,7 +360,7 @@ epic_26:
       status_evidence: "All six criteria are recorded complete in the canonical story. Token revocation and workspace lock connectors are real, feature-flagged, propose-first, authorization-gated, and receipted; endpoint_isolation is formally descoped by AD-59 and fails closed because Allura owns no isolation target. Focused containment 16/16, typecheck, eslint, and fresh PostgreSQL RLS/CHECK/immutability proof passed. This optional host-response layer is not an upstream Bumblebee scanner capability or Story 26.7 dependency."
     - key: "26.7"
       title: "Upstream Bumblebee Plugin Integration, Adversarial Conformance, and Headless Demo Gate"
-      status: ready-for-dev
+      status: in-progress
       owner: "Woz + Knuth + Pike + Fowler"
       depends_on: ["26.1", "26.2", "26.3", "26.4", "26.5"]
-      status_evidence: "Correct Course accepted 2026-08-27 after Pike/Fowler/Knuth remediation and final staged-diff PASS. Story 26.7 now owns the pinned upstream scanner plugin runner, separate runner/ingest credential audiences, server-issued population/catalog generation lease, HTTPS NDJSON receiver, sanitized immutable ledgers, complete bound-population promotion, and headless proof. All corrected ACs remain open. The preserved dashboard-focused branch is not active architecture and must not be merged wholesale."
+      status_evidence: "Implementation began 2026-08-27 on dedicated branch feat/epic-26-story-26.7-upstream-plugin from merged Correct Course commit 822a5311. First bounded TDD slice pins the upstream source/schema contract, rejects empty filters and known enum drift, models findings emission independently from scan mode, and emits stable non-reflective failure codes. Focused test is currently 12/12 green; RED phases were observed in the implementation job but are not yet a committed evidence artifact. All corrected ACs remain open. The preserved dashboard-focused branch is not active architecture and must not be merged wholesale."

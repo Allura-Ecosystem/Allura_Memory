@@ -112,7 +112,7 @@ const manifestEntries: Array<AgentManifestEntry> = [
     role: "Builder",
     category: "code",
     ciRoutes: [],
-    primaryModel: "ollama-cloud/qwen3-coder-next",
+    primaryModel: "ollama-cloud/glm-5.3-flash-next",
     description:
       "Primary builder. Implements the Brooks plan with minimal ceremony. Ships working code, tests, and clean diffs.",
   },
@@ -132,7 +132,7 @@ const manifestEntries: Array<AgentManifestEntry> = [
     role: "Performance Specialist",
     category: "code",
     ciRoutes: [],
-    primaryModel: "ollama-cloud/qwen3-coder-next",
+    primaryModel: "ollama-cloud/glm-5.3-flash-next",
     description:
       "Performance specialist for optimization, API design, and latency reduction under hard constraints.",
   },

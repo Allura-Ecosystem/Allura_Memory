@@ -60,7 +60,7 @@ describe("Agent Manifest — identity and models", () => {
     expect(getAgentById("brooks").primaryModel).toBe("openai/gpt-5.4");
     expect(getAgentById("scout").primaryModel).toBe("openai/gpt-5.3-codex-spark");
     expect(getAgentById("scout").fallbackModel).toBe("ollama-cloud/nemotron-3-super");
-    expect(getAgentById("woz").primaryModel).toBe("ollama-cloud/qwen3-coder-next");
+    expect(getAgentById("woz").primaryModel).toBe("ollama-cloud/glm-5.3-flash-next");
     expect(getAgentById("norvig").primaryModel).toBe("ollama-cloud/glm-5.1");
     expect(getAgentById("torvalds").primaryModel).toBe("openai/gpt-5.4-mini");
   });
