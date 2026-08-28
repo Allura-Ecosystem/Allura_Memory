@@ -82,11 +82,37 @@ The final evidence must include a green run and a controlled red run. Published 
 
 ### Completion Notes
 
-(To be filled by the implementing BMAD dev agent.)
+C5 remediation (Knuth, Team RAM algorithms expert):
+
+- Rewrote `src/lib/evals/runner.ts` so the runner **executes** the declared
+  datasets/lanes from `evals/suites/portfolio.yaml` instead of comparing
+  caller-supplied values. `loadSuite()` now parses the YAML lane declarations
+  (name, type, description, cases path) via the `yaml` package — it no longer
+  returns `lanes: []`.
+- Added `runSuite()` as the primary entrypoint: it loads the suite, executes
+  every lane's dataset fixture through a `CaseExecutor`, derives each metric
+  from the executed case outcomes, and compares to the declared threshold.
+  The executor is injectable (AC-4 adapter seam); the default offline executor
+  evaluates the synthetic fixtures deterministically. Latency is a lower-is-better
+  `lte` metric; all other lanes are pass-rate `gte`.
+- Added `src/lib/evals/cli.ts` (`bun run eval:portfolio`) that runs the suite,
+  writes JSON + Markdown reports, and exits non-zero on failure.
+- Wired the portfolio evaluation into CI as the required `test-eval` job in
+  `.github/workflows/ci.yml`, and as the `Epic 24 Evidence / Evaluation` lane in
+  `.github/workflows/epic-24-evidence.yml` (aggregated into the SHA-bound manifest).
+- Added evaluation artifact hashes (sha256) for the suite, baseline, and all
+  dataset fixtures to `docs/portfolio/evidence-index.md` (AC-10).
+- Eval tests pass: `bun run vitest run src/lib/evals/__tests__/` → 12/12 passed.
 
 ### File List
 
-(To be filled by the implementing BMAD dev agent.)
+- `src/lib/evals/runner.ts` — rewritten to execute declared datasets/lanes.
+- `src/lib/evals/cli.ts` — new portfolio evaluation CLI.
+- `src/lib/evals/__tests__/eval-runner.test.ts` — added lane-parsing and dataset-execution tests.
+- `package.json` — added `eval:portfolio` script.
+- `.github/workflows/ci.yml` — added required `test-eval` job.
+- `.github/workflows/epic-24-evidence.yml` — added `epic24-eval` lane.
+- `docs/portfolio/evidence-index.md` — added evaluation artifact hashes.
 
 ### Status Evidence
 

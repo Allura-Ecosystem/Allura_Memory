@@ -1,10 +1,10 @@
 # Story 24.4 — Atomic Human-Governed Promotion
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** changes-requested
+**Status:** in-review
 **Priority:** P0-Critical
 **Complexity:** Large
-**Owner:** unassigned
+**Owner:** Brooks (Hermes)
 **Dependencies:** Story 24.3
 
 ## User Story
@@ -78,16 +78,40 @@ Evidence must include database counts and IDs before and after each injected fai
 
 ## Dev Agent Record
 
-**Status:** changes-requested — see `docs/reviews/epic-24-post-merge-adversarial-review-2026-08-22.md`
+**Status:** in-review — remediation verified 2026-08-28 (Brooks/Hermes)
 
 ### Completion Notes
 
-(To be filled by the implementing BMAD dev agent.)
+C1/C2/C3 findings from the post-merge adversarial review (2026-08-22) are
+resolved in the current codebase (landed via PR #105, Epic 25 workspace
+authority foundation):
+
+- **C1 (entrypoints bypass service):** HTTP route
+  (`src/app/api/curator/approve/route.ts:60`) and CLI
+  (`src/curator/approve-cli.ts:64`) both delegate to `approveProposal`. No
+  entrypoint duplicates the transaction logic.
+- **C2 (session_replication_role):** removed from production
+  `approve-proposal.ts`; only test fixtures use it for cleanup.
+- **C3 (outbox concurrency):** `promotion-outbox-worker.ts` claims rows with an
+  atomic `UPDATE ... WHERE status IN('pending','failed') RETURNING id` inside
+  `withTenantTransaction` — no `SELECT FOR UPDATE SKIP LOCKED` outside a
+  transaction.
+
+Verified against a fresh disposable PostgreSQL (all 52 migrations applied):
+7/7 atomic-promotion e2e, 1/1 promotion-roundtrip, 2/2 promotion-outbox-worker,
+4/4 curator-approve, 23/23 workspace-subgraph-authority — all pass.
 
 ### File List
 
-(To be filled by the implementing BMAD dev agent.)
+- `src/lib/memory/approve-proposal.ts` (verified, no change needed)
+- `src/app/api/curator/approve/route.ts` (verified, no change needed)
+- `src/curator/approve-cli.ts` (verified, no change needed)
+- `src/lib/memory/promotion-outbox-worker.ts` (verified, no change needed)
 
 ### Status Evidence
 
-(To be filled after gate review.)
+Fresh-DB e2e runs 2026-08-28: atomic-promotion 7/7, promotion-roundtrip 1/1,
+promotion-outbox-worker 2/2, curator-approve 4/4, workspace-subgraph-authority
+23/23. Note: the long-running `knowledge-postgres` dev container is stale
+(missing migration 38's `approved_memory_id` column); a fresh DB is required for
+these tests.

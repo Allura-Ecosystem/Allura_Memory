@@ -170,7 +170,6 @@ interface MemoryGetResponse {
     actor?: UserId | null;
     creator?: UserId | null;
     approver?: UserId | null;
-    /** Tenant namespace associated with the retrieved memory */
     group_id?: GroupId;
     created_at: string;
     status?: "approved" | "proposed" | "pending" | "deprecated" | "active" | "deleted";
@@ -218,12 +217,326 @@ interface HealthResponse {
     warnings?: string[];
     timestamp: string;
 }
-declare const MemoryAddResponseSchema: z.ZodType<MemoryAddResponse>;
-declare const MemorySearchResponseSchema: z.ZodType<MemorySearchResponse>;
-declare const MemoryGetResponseSchema: z.ZodType<MemoryGetResponse>;
-declare const MemoryListResponseSchema: z.ZodType<MemoryListResponse>;
-declare const MemoryDeleteResponseSchema: z.ZodType<MemoryDeleteResponse>;
-declare const HealthResponseSchema: z.ZodType<HealthResponse>;
+declare const MemoryAddResponseSchema: z.ZodObject<{
+    id: z.ZodString;
+    stored: z.ZodEnum<{
+        episodic: "episodic";
+        semantic: "semantic";
+        both: "both";
+    }>;
+    score: z.ZodNumber;
+    pending_review: z.ZodOptional<z.ZodBoolean>;
+    created_at: z.ZodString;
+    meta: z.ZodOptional<z.ZodObject<{
+        contract_version: z.ZodLiteral<"v1">;
+        degraded: z.ZodBoolean;
+        degraded_reason: z.ZodOptional<z.ZodEnum<{
+            neo4j_unavailable: "neo4j_unavailable";
+            graph_unavailable: "graph_unavailable";
+        }>>;
+        stores_used: z.ZodArray<z.ZodEnum<{
+            postgres: "postgres";
+            neo4j: "neo4j";
+            graph: "graph";
+            ruvector: "ruvector";
+        }>>;
+        stores_attempted: z.ZodArray<z.ZodEnum<{
+            postgres: "postgres";
+            neo4j: "neo4j";
+            graph: "graph";
+            ruvector: "ruvector";
+        }>>;
+        warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
+        ruvector_count: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>>;
+    duplicate: z.ZodOptional<z.ZodBoolean>;
+    duplicate_of: z.ZodOptional<z.ZodString>;
+    similarity: z.ZodOptional<z.ZodNumber>;
+}, z.core.$strip>;
+declare const MemorySearchResponseSchema: z.ZodObject<{
+    results: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        content: z.ZodString;
+        score: z.ZodNumber;
+        source: z.ZodEnum<{
+            episodic: "episodic";
+            semantic: "semantic";
+            both: "both";
+        }>;
+        provenance: z.ZodEnum<{
+            conversation: "conversation";
+            manual: "manual";
+        }>;
+        created_at: z.ZodString;
+        usage_count: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>>;
+    count: z.ZodNumber;
+    latency_ms: z.ZodNumber;
+    meta: z.ZodOptional<z.ZodObject<{
+        contract_version: z.ZodLiteral<"v1">;
+        degraded: z.ZodBoolean;
+        degraded_reason: z.ZodOptional<z.ZodEnum<{
+            neo4j_unavailable: "neo4j_unavailable";
+            graph_unavailable: "graph_unavailable";
+        }>>;
+        stores_used: z.ZodArray<z.ZodEnum<{
+            postgres: "postgres";
+            neo4j: "neo4j";
+            graph: "graph";
+            ruvector: "ruvector";
+        }>>;
+        stores_attempted: z.ZodArray<z.ZodEnum<{
+            postgres: "postgres";
+            neo4j: "neo4j";
+            graph: "graph";
+            ruvector: "ruvector";
+        }>>;
+        warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
+        ruvector_count: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const MemoryGetResponseSchema: z.ZodObject<{
+    id: z.ZodString;
+    content: z.ZodString;
+    score: z.ZodNumber;
+    source: z.ZodEnum<{
+        episodic: "episodic";
+        semantic: "semantic";
+        both: "both";
+    }>;
+    provenance: z.ZodEnum<{
+        conversation: "conversation";
+        manual: "manual";
+    }>;
+    user_id: z.ZodString;
+    actor: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    creator: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    approver: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    group_id: z.ZodOptional<z.ZodString>;
+    created_at: z.ZodString;
+    status: z.ZodOptional<z.ZodEnum<{
+        active: "active";
+        deprecated: "deprecated";
+        approved: "approved";
+        proposed: "proposed";
+        pending: "pending";
+        deleted: "deleted";
+    }>>;
+    source_event_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    proposal_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    trace_ref: z.ZodOptional<z.ZodNullable<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>;
+    evidence: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        id: z.ZodNullable<z.ZodString>;
+        type: z.ZodEnum<{
+            version: "version";
+            event: "event";
+            proposal: "proposal";
+            trace: "trace";
+        }>;
+        label: z.ZodString;
+        status: z.ZodEnum<{
+            available: "available";
+            unavailable: "unavailable";
+        }>;
+    }, z.core.$strip>>>;
+    version: z.ZodOptional<z.ZodNumber>;
+    superseded_by: z.ZodOptional<z.ZodString>;
+    usage_count: z.ZodOptional<z.ZodNumber>;
+    hash: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    previous_hash: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    meta: z.ZodOptional<z.ZodObject<{
+        contract_version: z.ZodLiteral<"v1">;
+        degraded: z.ZodBoolean;
+        degraded_reason: z.ZodOptional<z.ZodEnum<{
+            neo4j_unavailable: "neo4j_unavailable";
+            graph_unavailable: "graph_unavailable";
+        }>>;
+        stores_used: z.ZodArray<z.ZodEnum<{
+            postgres: "postgres";
+            neo4j: "neo4j";
+            graph: "graph";
+            ruvector: "ruvector";
+        }>>;
+        stores_attempted: z.ZodArray<z.ZodEnum<{
+            postgres: "postgres";
+            neo4j: "neo4j";
+            graph: "graph";
+            ruvector: "ruvector";
+        }>>;
+        warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
+        ruvector_count: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const MemoryListResponseSchema: z.ZodObject<{
+    memories: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        content: z.ZodString;
+        score: z.ZodNumber;
+        source: z.ZodEnum<{
+            episodic: "episodic";
+            semantic: "semantic";
+            both: "both";
+        }>;
+        provenance: z.ZodEnum<{
+            conversation: "conversation";
+            manual: "manual";
+        }>;
+        user_id: z.ZodString;
+        actor: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        creator: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        approver: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        group_id: z.ZodOptional<z.ZodString>;
+        created_at: z.ZodString;
+        status: z.ZodOptional<z.ZodEnum<{
+            active: "active";
+            deprecated: "deprecated";
+            approved: "approved";
+            proposed: "proposed";
+            pending: "pending";
+            deleted: "deleted";
+        }>>;
+        source_event_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        proposal_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        trace_ref: z.ZodOptional<z.ZodNullable<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>;
+        evidence: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            id: z.ZodNullable<z.ZodString>;
+            type: z.ZodEnum<{
+                version: "version";
+                event: "event";
+                proposal: "proposal";
+                trace: "trace";
+            }>;
+            label: z.ZodString;
+            status: z.ZodEnum<{
+                available: "available";
+                unavailable: "unavailable";
+            }>;
+        }, z.core.$strip>>>;
+        version: z.ZodOptional<z.ZodNumber>;
+        superseded_by: z.ZodOptional<z.ZodString>;
+        usage_count: z.ZodOptional<z.ZodNumber>;
+        hash: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        previous_hash: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        meta: z.ZodOptional<z.ZodObject<{
+            contract_version: z.ZodLiteral<"v1">;
+            degraded: z.ZodBoolean;
+            degraded_reason: z.ZodOptional<z.ZodEnum<{
+                neo4j_unavailable: "neo4j_unavailable";
+                graph_unavailable: "graph_unavailable";
+            }>>;
+            stores_used: z.ZodArray<z.ZodEnum<{
+                postgres: "postgres";
+                neo4j: "neo4j";
+                graph: "graph";
+                ruvector: "ruvector";
+            }>>;
+            stores_attempted: z.ZodArray<z.ZodEnum<{
+                postgres: "postgres";
+                neo4j: "neo4j";
+                graph: "graph";
+                ruvector: "ruvector";
+            }>>;
+            warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
+            ruvector_count: z.ZodOptional<z.ZodNumber>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+    total: z.ZodNumber;
+    has_more: z.ZodBoolean;
+    meta: z.ZodOptional<z.ZodObject<{
+        contract_version: z.ZodLiteral<"v1">;
+        degraded: z.ZodBoolean;
+        degraded_reason: z.ZodOptional<z.ZodEnum<{
+            neo4j_unavailable: "neo4j_unavailable";
+            graph_unavailable: "graph_unavailable";
+        }>>;
+        stores_used: z.ZodArray<z.ZodEnum<{
+            postgres: "postgres";
+            neo4j: "neo4j";
+            graph: "graph";
+            ruvector: "ruvector";
+        }>>;
+        stores_attempted: z.ZodArray<z.ZodEnum<{
+            postgres: "postgres";
+            neo4j: "neo4j";
+            graph: "graph";
+            ruvector: "ruvector";
+        }>>;
+        warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
+        ruvector_count: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const MemoryDeleteResponseSchema: z.ZodObject<{
+    id: z.ZodString;
+    deleted: z.ZodBoolean;
+    deleted_at: z.ZodString;
+    recovery_days: z.ZodNumber;
+    meta: z.ZodOptional<z.ZodObject<{
+        contract_version: z.ZodLiteral<"v1">;
+        degraded: z.ZodBoolean;
+        degraded_reason: z.ZodOptional<z.ZodEnum<{
+            neo4j_unavailable: "neo4j_unavailable";
+            graph_unavailable: "graph_unavailable";
+        }>>;
+        stores_used: z.ZodArray<z.ZodEnum<{
+            postgres: "postgres";
+            neo4j: "neo4j";
+            graph: "graph";
+            ruvector: "ruvector";
+        }>>;
+        stores_attempted: z.ZodArray<z.ZodEnum<{
+            postgres: "postgres";
+            neo4j: "neo4j";
+            graph: "graph";
+            ruvector: "ruvector";
+        }>>;
+        warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
+        ruvector_count: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const HealthResponseSchema: z.ZodObject<{
+    status: z.ZodString;
+    mode: z.ZodString;
+    interface: z.ZodString;
+    transports: z.ZodArray<z.ZodString>;
+    mcp_endpoint: z.ZodString;
+    port: z.ZodNumber;
+    port_source: z.ZodString;
+    auth_enabled: z.ZodBoolean;
+    warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    timestamp: z.ZodString;
+}, z.core.$strip>;
+
+/**
+ * @allura/sdk — Memory operations
+ *
+ * Implements the 5 canonical memory operations:
+ * add, search, get, list, delete
+ *
+ * Each operation:
+ * 1. Validates group_id (ARCH-001 tenant isolation)
+ * 2. Validates request parameters with Zod
+ * 3. Sends request via MCP Streamable HTTP (POST /mcp)
+ * 4. Validates response with Zod
+ * 5. Returns typed response
+ */
+
+/**
+ * Internal request function type — injected by AlluraClient.
+ */
+type RequestFn = <T>(method: string, params: Record<string, unknown>, responseSchema: {
+    parse: (data: unknown) => T;
+}) => Promise<T>;
+/**
+ * Memory operations class — provides the 5 canonical memory operations.
+ *
+ * This class is not instantiated directly. Use `client.memory` to access it.
+ */
 declare class MemoryOperations {
     private readonly request;
     constructor(requestFn: RequestFn);

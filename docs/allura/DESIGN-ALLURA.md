@@ -175,7 +175,7 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 
 **13-16-18 Validation Framework:** 13-year-olds spot emerging trends, 16-year-olds identify popularity gaps, 18-year-olds confirm mainstream readiness. Applied to all consumer-facing surfaces. Target score: 0.85+.
 
-**Consumer mental model:** "Your AI remembers" — not "Neo4j node." The machine is always invisible.
+**Consumer mental model:** "Your AI remembers" — the machine is always invisible.
 
 ---
 
@@ -209,7 +209,7 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 | # | Requirement | Satisfied by |
 |---|-------------|-------------|
 | F10 | `POST /api/curator/score` — score proposal, return confidence + reasoning + tier | `src/lib/curator/score.ts` |
-| F11 | `POST /api/curator/approve` — approve proposal, promote to Neo4j | `src/app/api/curator/approve/route.ts` |
+| F11 | `POST /api/curator/approve` — approve proposal, promote to `graph_memories` | `src/app/api/curator/approve/route.ts` |
 | F12 | `POST /api/curator/reject` — reject proposal, archive with rationale | `src/app/api/curator/reject/route.ts` |
 | F13 | `GET /api/curator/proposals` — list pending proposals (emerging + adoption tiers) | `src/app/api/curator/proposals/route.ts` |
 | F14 | Curator dashboard shows three tabs: Traces, Approved, Pending | `/dashboard/curator` |
@@ -409,7 +409,7 @@ Version history for a specific insight (SUPERSEDES chain).
 
 Read-only tenant-scoped knowledge graph visualization.
 
-Returns real Neo4j nodes and edges for the dashboard graph tab. Capped display sample plus `total_edges` count. Performs no mutations.
+Returns real `graph_memories` rows and edges for the dashboard graph tab. Capped display sample plus `total_edges` count. Performs no mutations.
 
 **Query parameters:**
 
@@ -439,7 +439,7 @@ List proposed insights awaiting review.
 
 #### `POST /api/curator/approve`
 
-Approve a proposed insight. Promotes to Neo4j as immutable knowledge node.
+Approve a proposed insight. Promotes to `graph_memories` as immutable knowledge row.
 
 **Request body:**
 
@@ -470,7 +470,7 @@ Approve a proposed insight. Promotes to Neo4j as immutable knowledge node.
 |--------|-----------|
 | `404` | Proposal not found |
 | `409` | Proposal already decided or insight already promoted |
-| `503` | Neo4j unavailable — proposal queued but not promoted |
+| `503` | Graph backend unavailable — proposal queued but not promoted |
 
 ---
 
@@ -644,8 +644,8 @@ stateDiagram-v2
   scored --> episodic_only : score < threshold
   proposed --> approved : human approves via dashboard/API
   proposed --> rejected : human rejects via dashboard/API
-  approved --> promoted : Neo4j write succeeds
-  approved --> promotion_failed : Neo4j unavailable (degraded)
+  approved --> promoted : graph write succeeds
+  approved --> promotion_failed : graph unavailable (degraded)
   promotion_failed --> promoted : retry succeeds
   promoted --> deprecated : newer version supersedes it
   promoted --> reverted : governance rollback
@@ -664,10 +664,10 @@ stateDiagram-v2
 | `raw_event` | Agent calls `memory_add` | `scored` | Episodic trace in PostgreSQL |
 | `scored` | Curator scorer evaluates content | `proposed`, `episodic_only` | Content has confidence score |
 | `proposed` | Score ≥ threshold, proposal created in `canonical_proposals` | `approved`, `rejected` | Awaiting human review |
-| `approved` | Human approves via curator dashboard | `promoted`, `promotion_failed` | Cleared for Neo4j write |
+| `approved` | Human approves via curator dashboard | `promoted`, `promotion_failed` | Cleared for semantic write |
 | `rejected` | Human rejects with rationale | `archived` | Denied, stays in PG only |
-| `promoted` | Neo4j write succeeds | `deprecated`, `reverted` | Active semantic knowledge |
-| `promotion_failed` | Neo4j unavailable | `promoted` (retry) | Degraded mode |
+| `promoted` | `graph_memories` write succeeds | `deprecated`, `reverted` | Active semantic knowledge |
+| `promotion_failed` | Graph backend unavailable | `promoted` (retry) | Degraded mode |
 | `deprecated` | Newer version supersedes | — (terminal) | Historical record only |
 | `archived` | Rejected proposal | — (terminal) | Kept for audit |
 | `episodic_only` | Score below threshold | — (terminal) | PG trace, no promotion |
@@ -693,7 +693,7 @@ stateDiagram-v2
 | — | Audit trail is append-only and exportable as CSV. | BLUEPRINT §9 F18 | `GET /api/audit/events?format=csv` |
 | — | `DashboardResult<T>` wraps all API responses with `{ data, error, degraded, warnings }`. | Dashboard architecture | `src/lib/dashboard/types.ts` |
 | — | Dashboard scoped to `group_id` (tenant isolation). All API calls include `group_id`. | Tenant isolation | `withGroupId()` in dashboard client |
-| — | Degraded mode returns HTTP 206 + `Warning` header when Neo4j unavailable. | AD-09 | Dashboard client checks `response.status === 206` |
+| — | Degraded mode returns HTTP 206 + `Warning` header when graph backend unavailable. | AD-09 | Dashboard client checks `response.status === 206` |
 
 ---
 
@@ -844,9 +844,9 @@ stateDiagram-v2
 
 7. **Agents MUST NOT query PG/Neo4j directly (AD-19).** All retrieval goes through `POST /api/memory/retrieval`. Code review gate checks for direct database imports in agent-facing code.
 
-8. **No direct graph writes outside approved promotion flow.** Services and agents cannot write directly to Neo4j. All writes go through the curator pipeline.
+8. **No direct graph writes outside approved promotion flow.** Services and agents cannot write directly to the semantic store. All writes go through the curator pipeline.
 
-9. **Immutable insight nodes.** Neo4j nodes are never updated in place. Any change requires a new proposal → approval → new node with `SUPERSEDES` edge.
+9. **Immutable insight rows.** `graph_memories` rows are never updated in place. Any change requires a new proposal → approval → new row with `SUPERSEDES` edge.
 
 10. **30-day soft-delete recovery.** Memories can be restored within 30 days of soft-deletion. After that, they are permanently gone.
 

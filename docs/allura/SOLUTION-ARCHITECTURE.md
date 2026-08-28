@@ -287,7 +287,7 @@ The adapter-specific methods (`supersedesMemory`, `softDeleteMemory`, `restoreMe
 | Parity test (`adapter-parity.test.ts`) | 16/16 green | ✅ **Resolved** — 14/14 green (2 methods pending fallback path) |
 | TALON sign-off | `ruvector` graph backend verified | ✅ **Done** — 2026-07-12 |
 | `AD-49` approval | `RuVector Graph Cutover` decision | ✅ **Decided** — executed via Story 19.3 |
-| `Neo4j remains available` | Fallback mode | � **Verified** — `GRAPH_BACKEND=neo4j` still works |
+| `Neo4j removed` | Fallback removed | ✅ **Done** — Epic 23 (2026-07-17); `GRAPH_BACKEND=ruvector` is the sole backend |
 
 **Cross-references:** AD-29 (graph adapter pattern), AD-49 (cutover decision), RK-32 (graph cutover risk)
 
@@ -460,9 +460,9 @@ sequenceDiagram
 | Board Sync Adapters | Outbound | Provider APIs | Optional Notion, Linear, and GitHub Projects projections of native board state | F43, AD-31 |
 | Governed Run Layer | Inbound | REST + CLI + Board + Brain receipts | Version-pinned run record, policy, runtime state, append-only events, breakpoints, evidence, doctor findings | AD-35, AD-41, RK-25–RK-30 |
 | Resource Manifest Adapter | Outbound | File or generated endpoint | Skills, agents, MCP servers, containers, cron jobs, drift warnings | F44, AD-31 |
-| Curator Approve CLI | Inbound | CLI (`bun run curator:approve`) | Processes pending proposals from PostgreSQL, promotes approved ones to Neo4j via `createInsight()` | F6, B18, B19 |
+| Curator Approve CLI | Inbound | CLI (`bun run curator:approve`) | Processes pending proposals from PostgreSQL, promotes approved ones to `graph_memories` via `approveProposal()` | F6, B18, B19 |
 | PostgreSQL 16 | Outbound | TCP (pg driver) | SQL — append-only INSERTs + SELECTs | AD-01, RK-02 |
-| Neo4j 5.26 | Outbound | Bolt (neo4j driver) | Approved memory recall + read-only Cypher fallback + governed writes | AD-02, RK-01, AD-23 |
+| RuVector graph (PG tables) | Outbound | TCP (pg driver) | Approved memory recall + governed writes via `graph_memories` | AD-29, AD-49, RK-32 |
 | Bumblebee plugin (accepted Correct Course plan) | Inbound | Pinned upstream endpoint scanner → server-issued lease → HTTPS NDJSON receiver | Sanitized package/finding/summary evidence, complete bound-population state, downstream exposure handoff | AD-57, AD-60; read-only scanning, no execution or enforcement authority |
 
 ---
@@ -488,9 +488,9 @@ sequenceDiagram
 |---|---|
 | Every operation MUST include a valid `group_id` matching `^allura-` | Tenant isolation enforced at schema level — AD-06 |
 | Postgres rows MUST NOT be updated or deleted | Append-only audit trail — AD-01 |
-| Neo4j nodes MUST NOT be edited in place | SUPERSEDES versioning preserves full lineage — AD-02 |
-| Neo4j writes MUST be preceded by a dedup check | Prevents knowledge graph bloat — RK-01 |
-| `PROMOTION_MODE=soc2` MUST prevent all autonomous Neo4j writes | Regulatory compliance gate — AD-04 |
+| `graph_memories` rows MUST NOT be edited in place | SUPERSEDES versioning preserves full lineage — AD-29 |
+| `graph_memories` writes MUST be preceded by a dedup check | Prevents knowledge graph bloat — RK-01 |
+| `PROMOTION_MODE=soc2` MUST prevent all autonomous semantic writes | Regulatory compliance gate — AD-04 |
 | Circuit breaker MUST trip before budget exhaustion | Prevents agent runaway — control plane/circuit-breaker |
 | Memory Command Center MUST use API/MCP contracts and never write directly to substrates | Prevents governance bypass and UI drift — AD-31 |
 | RunRecord wrappers MUST remain outside the memory data plane | Preserves Allura Brain's memory-only boundary — AD-35 |

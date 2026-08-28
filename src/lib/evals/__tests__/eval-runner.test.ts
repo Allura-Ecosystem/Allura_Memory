@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { generateHtmlReport, generateJsonReport, generateMarkdownReport } from "../report";
-import { type EvalResult, loadSuite, runEvaluation } from "../runner";
+import { type CaseOutcome, defaultOfflineExecutor, loadSuite, runEvaluation, runSuite } from "../runner";
 
 const SUITE_PATH = "evals/suites/portfolio.yaml";
 
@@ -63,6 +63,70 @@ describe("AC-3: offline CI evaluation lanes", () => {
     expect(suite.thresholds).toHaveProperty("deterministic_replay_match");
     expect(suite.thresholds).toHaveProperty("tool_contract_validation");
     expect(suite.thresholds).toHaveProperty("latency_p95_ms");
+  });
+
+  it("loadSuite parses the YAML lane declarations (not an empty lanes array)", () => {
+    const suite = loadSuite(SUITE_PATH);
+    expect(suite.lanes.length).toBe(9);
+    const names = suite.lanes.map((l) => l.name);
+    expect(names).toEqual([
+      "retrieval_relevance",
+      "approved_only_recall",
+      "policy_violation_blocking",
+      "cross_tenant_isolation",
+      "promotion_correctness",
+      "audit_completeness",
+      "deterministic_replay",
+      "tool_contract_validation",
+      "latency",
+    ]);
+    for (const lane of suite.lanes) {
+      expect(lane.cases).toMatch(/^evals\/datasets\/.+\.json$/);
+      expect(lane.type).toBeTruthy();
+    }
+  });
+});
+
+describe("AC-3/AC-4: runner executes declared datasets, not caller-supplied values", () => {
+  it("runSuite executes every lane's dataset and derives metrics from case outcomes", async () => {
+    const result = await runSuite({ suitePath: SUITE_PATH });
+    // All 9 lanes executed and produced a metric.
+    expect(result.metrics).toHaveLength(9);
+    const names = result.metrics.map((m) => m.name);
+    expect(names).toContain("retrieval_relevance_p@5");
+    expect(names).toContain("approved_only_recall");
+    expect(names).toContain("policy_violation_block_rate");
+    expect(names).toContain("cross_tenant_isolation");
+    expect(names).toContain("promotion_correctness");
+    expect(names).toContain("audit_completeness");
+    expect(names).toContain("deterministic_replay_match");
+    expect(names).toContain("tool_contract_validation");
+    expect(names).toContain("latency_p95_ms");
+    // Every metric is traceable to the case ids it executed.
+    for (const m of result.metrics) {
+      expect(m.case_ids).toBeDefined();
+      expect(m.case_ids!.length).toBeGreaterThan(0);
+    }
+    // Well-formed synthetic fixtures pass the offline gate.
+    expect(result.overall_status).toBe("pass");
+  });
+
+  it("an injected failing executor drives the metric below threshold (controlled red)", async () => {
+    const failingExecutor = (): CaseOutcome => ({ id: "case-x", passed: false, detail: "injected failure" });
+    const result = await runSuite({ suitePath: SUITE_PATH, executor: failingExecutor });
+    expect(result.overall_status).toBe("fail");
+    expect(result.failures.length).toBeGreaterThan(0);
+    // The failure identifies the affected metric and a case id.
+    expect(result.failures[0].metric).toBeTruthy();
+    expect(result.failures[0].case_id).toBe("case-x");
+  });
+
+  it("defaultOfflineExecutor rejects a malformed case", () => {
+    const lane = { name: "tool_contract_validation", type: "offline", description: "", cases: "x" };
+    const bad = defaultOfflineExecutor(lane, {}, { id: "tc-bad", required_params: [] });
+    expect(bad.passed).toBe(false);
+    const good = defaultOfflineExecutor(lane, {}, { id: "tc-good", required_params: ["group_id"] });
+    expect(good.passed).toBe(true);
   });
 });
 

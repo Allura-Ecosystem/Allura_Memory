@@ -58,140 +58,30 @@ __export(index_exports, {
 });
 module.exports = __toCommonJS(index_exports);
 
-// src/types.ts
-var import_zod = require("zod");
-var GroupIdSchema = import_zod.z.string().min(2).max(64).regex(
-  /^allura-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
-  "group_id must match pattern: ^allura-[a-z0-9-]+$ (ARCH-001 tenant isolation)"
-);
-var MemoryIdSchema = import_zod.z.string().uuid({ message: "id must be a valid UUID v4" });
-var ConfidenceScoreSchema = import_zod.z.number().min(0).max(1);
-var MemoryAddResponseSchema = import_zod.z.object({
-  id: import_zod.z.string(),
-  stored: import_zod.z.enum(["episodic", "semantic", "both"]),
-  score: import_zod.z.number().min(0).max(1),
-  pending_review: import_zod.z.boolean().optional(),
-  created_at: import_zod.z.string(),
-  meta: import_zod.z.object({
-    contract_version: import_zod.z.literal("v1"),
-    degraded: import_zod.z.boolean(),
-    degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    warnings: import_zod.z.array(import_zod.z.string()).optional(),
-    ruvector_trajectory_id: import_zod.z.string().optional(),
-    ruvector_count: import_zod.z.number().int().min(0).optional()
-  }).optional(),
-  duplicate: import_zod.z.boolean().optional(),
-  duplicate_of: import_zod.z.string().optional(),
-  similarity: import_zod.z.number().optional()
-});
-var MemorySearchResponseSchema = import_zod.z.object({
-  results: import_zod.z.array(
-    import_zod.z.object({
-      id: import_zod.z.string(),
-      content: import_zod.z.string(),
-      score: import_zod.z.number().min(0).max(1),
-      source: import_zod.z.enum(["episodic", "semantic", "both"]),
-      provenance: import_zod.z.enum(["conversation", "manual"]),
-      created_at: import_zod.z.string(),
-      usage_count: import_zod.z.number().optional()
-    })
-  ),
-  count: import_zod.z.number().int().min(0),
-  latency_ms: import_zod.z.number().min(0),
-  meta: import_zod.z.object({
-    contract_version: import_zod.z.literal("v1"),
-    degraded: import_zod.z.boolean(),
-    degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    warnings: import_zod.z.array(import_zod.z.string()).optional(),
-    ruvector_trajectory_id: import_zod.z.string().optional(),
-    ruvector_count: import_zod.z.number().int().min(0).optional()
-  }).optional()
-});
-var MemoryGetResponseSchema = import_zod.z.object({
-  id: import_zod.z.string(),
-  content: import_zod.z.string(),
-  score: import_zod.z.number().min(0).max(1),
-  source: import_zod.z.enum(["episodic", "semantic", "both"]),
-  provenance: import_zod.z.enum(["conversation", "manual"]),
-  user_id: import_zod.z.string(),
-  actor: import_zod.z.string().nullable().optional(),
-  creator: import_zod.z.string().nullable().optional(),
-  approver: import_zod.z.string().nullable().optional(),
-  group_id: import_zod.z.string().regex(/^allura-.+$/).optional(),
-  created_at: import_zod.z.string(),
-  status: import_zod.z.enum(["approved", "proposed", "pending", "deprecated", "active", "deleted"]).optional(),
-  source_event_id: import_zod.z.string().nullable().optional(),
-  proposal_id: import_zod.z.string().nullable().optional(),
-  trace_ref: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).nullable().optional(),
-  evidence: import_zod.z.array(import_zod.z.object({
-    id: import_zod.z.string().nullable(),
-    type: import_zod.z.enum(["event", "proposal", "trace", "version"]),
-    label: import_zod.z.string(),
-    status: import_zod.z.enum(["available", "unavailable"])
-  })).optional(),
-  version: import_zod.z.number().int().optional(),
-  superseded_by: import_zod.z.string().optional(),
-  usage_count: import_zod.z.number().optional(),
-  hash: import_zod.z.string().nullable().optional(),
-  previous_hash: import_zod.z.string().nullable().optional(),
-  meta: import_zod.z.object({
-    contract_version: import_zod.z.literal("v1"),
-    degraded: import_zod.z.boolean(),
-    degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    warnings: import_zod.z.array(import_zod.z.string()).optional(),
-    ruvector_trajectory_id: import_zod.z.string().optional(),
-    ruvector_count: import_zod.z.number().int().min(0).optional()
-  }).optional()
-});
-var MemoryListResponseSchema = import_zod.z.object({
-  memories: import_zod.z.array(MemoryGetResponseSchema),
-  total: import_zod.z.number().int().min(0),
-  has_more: import_zod.z.boolean(),
-  meta: import_zod.z.object({
-    contract_version: import_zod.z.literal("v1"),
-    degraded: import_zod.z.boolean(),
-    degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    warnings: import_zod.z.array(import_zod.z.string()).optional(),
-    ruvector_trajectory_id: import_zod.z.string().optional(),
-    ruvector_count: import_zod.z.number().int().min(0).optional()
-  }).optional()
-});
-var MemoryDeleteResponseSchema = import_zod.z.object({
-  id: import_zod.z.string(),
-  deleted: import_zod.z.boolean(),
-  deleted_at: import_zod.z.string(),
-  recovery_days: import_zod.z.number().int().min(0),
-  meta: import_zod.z.object({
-    contract_version: import_zod.z.literal("v1"),
-    degraded: import_zod.z.boolean(),
-    degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-    stores_used: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    stores_attempted: import_zod.z.array(import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"])),
-    warnings: import_zod.z.array(import_zod.z.string()).optional(),
-    ruvector_trajectory_id: import_zod.z.string().optional(),
-    ruvector_count: import_zod.z.number().int().min(0).optional()
-  }).optional()
-});
-var HealthResponseSchema = import_zod.z.object({
-  status: import_zod.z.string(),
-  mode: import_zod.z.string(),
-  interface: import_zod.z.string(),
-  transports: import_zod.z.array(import_zod.z.string()),
-  mcp_endpoint: import_zod.z.string(),
-  port: import_zod.z.number(),
-  port_source: import_zod.z.string(),
-  auth_enabled: import_zod.z.boolean(),
-  warnings: import_zod.z.array(import_zod.z.string()).optional(),
-  timestamp: import_zod.z.string()
-});
+// src/auth.ts
+function resolveAuthToken(explicitToken) {
+  if (explicitToken) {
+    return explicitToken;
+  }
+  if (typeof process !== "undefined" && process.env) {
+    const envToken = process.env.ALLURA_AUTH_TOKEN || process.env.ALLURA_MCP_AUTH_TOKEN;
+    if (envToken) {
+      return envToken;
+    }
+  }
+  return void 0;
+}
+function requireAuthToken(token, required) {
+  if (required && !token) {
+    throw new Error(
+      "Authentication required: No Bearer token provided. Set ALLURA_AUTH_TOKEN or pass authToken to AlluraClient."
+    );
+  }
+}
+function createAuthHeader(token) {
+  if (!token) return void 0;
+  return `Bearer ${token}`;
+}
 
 // src/errors.ts
 var AlluraError = class _AlluraError extends Error {
@@ -298,6 +188,107 @@ function createErrorFromResponse(statusCode, body) {
       return new AlluraError(message, "UNKNOWN_ERROR", statusCode, body);
   }
 }
+
+// src/types.ts
+var import_zod = require("zod");
+var GroupIdSchema = import_zod.z.string().min(2).max(64).regex(
+  /^allura-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
+  "group_id must match pattern: ^allura-[a-z0-9-]+$ (ARCH-001 tenant isolation)"
+);
+var MemoryIdSchema = import_zod.z.string().uuid({ message: "id must be a valid UUID v4" });
+var ConfidenceScoreSchema = import_zod.z.number().min(0).max(1);
+var MemoryRetrievalStoreSchema = import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"]);
+var MemoryResponseMetaSchema = import_zod.z.object({
+  contract_version: import_zod.z.literal("v1"),
+  degraded: import_zod.z.boolean(),
+  degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+  stores_used: import_zod.z.array(MemoryRetrievalStoreSchema),
+  stores_attempted: import_zod.z.array(MemoryRetrievalStoreSchema),
+  warnings: import_zod.z.array(import_zod.z.string()).optional(),
+  ruvector_trajectory_id: import_zod.z.string().optional(),
+  ruvector_count: import_zod.z.number().int().min(0).optional()
+});
+var MemoryAddResponseSchema = import_zod.z.object({
+  id: import_zod.z.string(),
+  stored: import_zod.z.enum(["episodic", "semantic", "both"]),
+  score: import_zod.z.number().min(0).max(1),
+  pending_review: import_zod.z.boolean().optional(),
+  created_at: import_zod.z.string(),
+  meta: MemoryResponseMetaSchema.optional(),
+  duplicate: import_zod.z.boolean().optional(),
+  duplicate_of: import_zod.z.string().optional(),
+  similarity: import_zod.z.number().optional()
+});
+var MemorySearchResponseSchema = import_zod.z.object({
+  results: import_zod.z.array(
+    import_zod.z.object({
+      id: import_zod.z.string(),
+      content: import_zod.z.string(),
+      score: import_zod.z.number().min(0).max(1),
+      source: import_zod.z.enum(["episodic", "semantic", "both"]),
+      provenance: import_zod.z.enum(["conversation", "manual"]),
+      created_at: import_zod.z.string(),
+      usage_count: import_zod.z.number().optional()
+    })
+  ),
+  count: import_zod.z.number().int().min(0),
+  latency_ms: import_zod.z.number().min(0),
+  meta: MemoryResponseMetaSchema.optional()
+});
+var MemoryGetResponseSchema = import_zod.z.object({
+  id: import_zod.z.string(),
+  content: import_zod.z.string(),
+  score: import_zod.z.number().min(0).max(1),
+  source: import_zod.z.enum(["episodic", "semantic", "both"]),
+  provenance: import_zod.z.enum(["conversation", "manual"]),
+  user_id: import_zod.z.string(),
+  actor: import_zod.z.string().nullable().optional(),
+  creator: import_zod.z.string().nullable().optional(),
+  approver: import_zod.z.string().nullable().optional(),
+  group_id: import_zod.z.string().regex(/^allura-.+$/).optional(),
+  created_at: import_zod.z.string(),
+  status: import_zod.z.enum(["approved", "proposed", "pending", "deprecated", "active", "deleted"]).optional(),
+  source_event_id: import_zod.z.string().nullable().optional(),
+  proposal_id: import_zod.z.string().nullable().optional(),
+  trace_ref: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).nullable().optional(),
+  evidence: import_zod.z.array(import_zod.z.object({
+    id: import_zod.z.string().nullable(),
+    type: import_zod.z.enum(["event", "proposal", "trace", "version"]),
+    label: import_zod.z.string(),
+    status: import_zod.z.enum(["available", "unavailable"])
+  })).optional(),
+  version: import_zod.z.number().int().optional(),
+  superseded_by: import_zod.z.string().optional(),
+  usage_count: import_zod.z.number().optional(),
+  hash: import_zod.z.string().nullable().optional(),
+  previous_hash: import_zod.z.string().nullable().optional(),
+  meta: MemoryResponseMetaSchema.optional()
+});
+var MemoryListResponseSchema = import_zod.z.object({
+  memories: import_zod.z.array(MemoryGetResponseSchema),
+  total: import_zod.z.number().int().min(0),
+  has_more: import_zod.z.boolean(),
+  meta: MemoryResponseMetaSchema.optional()
+});
+var MemoryDeleteResponseSchema = import_zod.z.object({
+  id: import_zod.z.string(),
+  deleted: import_zod.z.boolean(),
+  deleted_at: import_zod.z.string(),
+  recovery_days: import_zod.z.number().int().min(0),
+  meta: MemoryResponseMetaSchema.optional()
+});
+var HealthResponseSchema = import_zod.z.object({
+  status: import_zod.z.string(),
+  mode: import_zod.z.string(),
+  interface: import_zod.z.string(),
+  transports: import_zod.z.array(import_zod.z.string()),
+  mcp_endpoint: import_zod.z.string(),
+  port: import_zod.z.number(),
+  port_source: import_zod.z.string(),
+  auth_enabled: import_zod.z.boolean(),
+  warnings: import_zod.z.array(import_zod.z.string()).optional(),
+  timestamp: import_zod.z.string()
+});
 
 // src/utils.ts
 var DEFAULT_TIMEOUT = 5e3;
@@ -489,31 +480,6 @@ var MemoryOperations = class {
     return this.request("memory_delete", params, MemoryDeleteResponseSchema);
   }
 };
-
-// src/auth.ts
-function resolveAuthToken(explicitToken) {
-  if (explicitToken) {
-    return explicitToken;
-  }
-  if (typeof process !== "undefined" && process.env) {
-    const envToken = process.env.ALLURA_AUTH_TOKEN || process.env.ALLURA_MCP_AUTH_TOKEN;
-    if (envToken) {
-      return envToken;
-    }
-  }
-  return void 0;
-}
-function requireAuthToken(token, required) {
-  if (required && !token) {
-    throw new Error(
-      "Authentication required: No Bearer token provided. Set ALLURA_AUTH_TOKEN or pass authToken to AlluraClient."
-    );
-  }
-}
-function createAuthHeader(token) {
-  if (!token) return void 0;
-  return `Bearer ${token}`;
-}
 
 // src/client.ts
 function createRequestId() {
@@ -739,3 +705,4 @@ var AlluraClient = class {
     }
   }
 };
+//# sourceMappingURL=index.cjs.map

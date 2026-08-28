@@ -28,6 +28,7 @@
     "benchmark:only": "bun src/__benchmarks__/run.ts --json --only",
     "benchmark:metrics": "vitest run src/__benchmarks__/lib/metrics.test.ts",
     "benchmark:db": "bun scripts/benchmark.js --events=1000 --batch=100",
+    "eval:portfolio": "bun src/lib/evals/cli.ts",
     "docs": "bun scripts/generate-docs.js",
     "lint": "bun run typecheck",
     "mcp": "bun src/mcp/memory-server-canonical.ts",

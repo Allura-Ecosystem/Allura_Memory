@@ -46,6 +46,37 @@ Live-DB evidence for the AC matrix (37 tenant-scoped tables with forced RLS,
 for `allura_breakglass`) is recorded in the story's Status Evidence section and
 in `artifacts/ci/local/live-db/live-db-tests.json`.
 
+### Story 24.6 — Evaluation and Regression Gates
+
+The portfolio evaluation suite (`evals/suites/portfolio.yaml`) is a deterministic
+offline regression gate. `src/lib/evals/runner.ts` parses the suite's lane
+declarations, executes every lane's dataset fixture, derives each metric from the
+executed case outcomes, and compares it to the declared threshold. It is wired
+into CI as the required `test-eval` job (`.github/workflows/ci.yml`) and as the
+`Epic 24 Evidence / Evaluation` lane (`.github/workflows/epic-24-evidence.yml`),
+whose artifact is aggregated into the SHA-bound evidence manifest.
+
+Evaluation artifact hashes (sha256) for the canonical suite, baseline, and
+dataset fixtures:
+
+| Artifact | sha256 |
+|---|---|
+| `evals/suites/portfolio.yaml` | `2c1a2bd2db4f4c2c41966143e6c1bc3d445f0f0a51d340f6d9f4fdd771170b10` |
+| `evals/baselines/portfolio.json` | `20f439db1cd50364a2e258f287be15136271b3dc6d9aca31c3ecb6cfb6529dd9` |
+| `evals/datasets/relevance-queries.json` | `69c66b91cf32920ab08a19ced20dbabc8dc0505c4b9c108be3de13aad6fdf1d1` |
+| `evals/datasets/approved-recall.json` | `9e447c793cfb8970c731b7400c00a0a5060e677b116b64cca07a0680086985e3` |
+| `evals/datasets/policy-violations.json` | `358bac223cf478aae7044d6e8edd9e5b016c8c406735c39f76279c71abafaeb6` |
+| `evals/datasets/cross-tenant.json` | `696e9b7495921e5b5bbeea01711394b5bac37136288ebb158972b4f2b94868c2` |
+| `evals/datasets/promotion-correctness.json` | `82731d36a41d1005b7838fdf3235d8f1fa78e1d7ebd6070c27e4bd6cc0fc5786` |
+| `evals/datasets/audit-completeness.json` | `a63bdaa2c2587771e9ffd709ce390dd96a2c38d67df68a1d903caf9251cd2982` |
+| `evals/datasets/replay-scenarios.json` | `eca427567eb899a99927185809f2472140da7c9290c81bec8643489cc88fd573` |
+| `evals/datasets/tool-contracts.json` | `f8099511998f2dbf24764196269e8e286e7181bc0fc34341e0edacad60c7b7fd` |
+| `evals/datasets/latency.json` | `acb377dd290801d0b1b37ae3414802cd21207770685493655e546c36db8e6f3e` |
+
+Each metric in the generated `portfolio.json` report carries its own per-metric
+`evidence_hashes` entry (sha256 of `{name, value, threshold}`), so every reported
+result is traceable to a dataset revision, threshold, and case IDs.
+
 ### Controlled red branch (Story 24.1 AC-10)
 
 | Proof | Commit SHA | Workflow run | Result | Required artifact |

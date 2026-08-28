@@ -59,9 +59,17 @@
       "required": ["id", "revision"],
       "properties": {
         "id": { "type": "string" },
-        "revision": { "type": "string" }
+        "revision": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Numeric revision string. The process engine pins runs to an integer definition_revision (parseInt), so non-numeric revisions fail against a live PostgreSQL process_runs table."
+        }
       },
       "additionalProperties": false
+    },
+    "policy_version": {
+      "type": "string",
+      "description": "Policy version bound at replay time (AC-4). Replay refuses a mismatched policy version."
     },
     "initial_state": {
       "type": "object",

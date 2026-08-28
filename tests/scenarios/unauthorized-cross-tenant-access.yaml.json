@@ -14,7 +14,7 @@
   },
   "process_definition": {
     "id": "cross-tenant-access-attempt",
-    "revision": "r1"
+    "revision": "1"
   },
   "initial_state": {
     "memories": [

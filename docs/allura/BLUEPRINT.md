@@ -104,9 +104,9 @@ Every memory write lands here first. Append-only. Never mutated. Provides the ra
 
 ---
 
-### Semantic Memory (Neo4j)
+### Semantic Memory (PostgreSQL / RuVector)
 
-Promoted, curated knowledge. Versioned via `SUPERSEDES` relationships. Nodes are never edited — a new node is created that supersedes the prior one.
+Promoted, curated knowledge. Versioned via `SUPERSEDES` relationships in `graph_memories`. Nodes are never edited — a new row is created that supersedes the prior one. (Neo4j was sunset 2026-07-17, Epic 23; see AD-49/AD-50.)
 
 **States:** `active | deprecated`
 
@@ -130,28 +130,27 @@ The hard isolation boundary. Every read and write MUST include a valid `group_id
 
 ### Engine Boundary and RuVector/RuVix Posture
 
-Allura is the governed memory engine: PostgreSQL append-only episodic traces, Neo4j semantic promotion, MCP/API access, curator approval, and RuVix policy receipts. Dashboard and operator surfaces visualize and request governed actions; they are not core engine components and must not own canonical engine state.
+Allura is the governed memory engine: PostgreSQL append-only episodic traces, PostgreSQL/RuVector semantic knowledge, MCP/API access, curator approval, and RuVix policy receipts. Dashboard and operator surfaces visualize and request governed actions; they are not core engine components and must not own canonical engine state.
 
 Current runtime label: **pgvector bridge**. TALON readiness evidence on 2026-06-02 observed PostgreSQL `vector` extension `0.8.2`, `ruvector_function_count=0`, and `allura_memories_count` around `3392`. Until the `ruvector` extension/functions and feedback/search health are proven by runtime checks, docs and UI must not claim full RuVector.
 
 ### Graph Adapter Posture (AD-29, AD-49, Story 19.3)
 
-The RuVector Graph Cutover is **complete** (Story 19.3, 2026-07-12). Allura now uses **RuVector graph backend as default**, with **Neo4j as fallback read-only mode** during the one-release transition period.
+The RuVector Graph Cutover is **complete** (Story 19.3, 2026-07-12). Allura now uses **RuVector graph backend as default**. The Neo4j fallback was removed in Epic 23 (2026-07-17); PostgreSQL `graph_memories` is the sole semantic store.
 
 **Current stack:**
 
 | Layer | Backend | Implementation | Status | Evidence |
 |-------|---------|----------------|--------|----------|
 | Vector search | pgvector (bridge) | `src/lib/ruvector/bridge.ts` | Active | `ruvector_function_count=0`, `vector=0.8.2` (TALON 2026-06-02) |
-| Semantic/knowledge graph | IGraphAdapter (PG tables) | `src/lib/graph-adapter/` | **CUTOVER COMPLETE** | `GRAPH_BACKEND=ruvector` default, `neo4j` fallback available; 14/14 parity checks green (Story 19.3) |
+| Semantic/knowledge graph | IGraphAdapter (PG tables) | `src/lib/graph-adapter/` | **CUTOVER COMPLETE** | `GRAPH_BACKEND=ruvector` default; 14/14 parity checks green (Story 19.3); Neo4j removed Epic 23 |
 | Native RuVector extension | ruvnet Rust crate | Not yet active | Not enabled | `ruvector_function_count=0` — stubs only (RK-21, Stage 2) |
 
 **Runtime flag:**
-- `GRAPH_BACKEND=ruvector` — uses PG tables for graph ops (RuVectorGraphAdapter, default)
-- `GRAPH_BACKEND=neo4j` — uses Neo4j driver (legacy fallback)
+- `GRAPH_BACKEND=ruvector` — uses PG tables for graph ops (RuVectorGraphAdapter, default; sole backend since Epic 23)
 - `GRAPH_DUAL_READ=true` — wraps selected backend with dual-read validation
 
-This cutover removes the per-person Neo4j Community license limit (1 user), collapses two stores toward one engine, and enables self-hosted graphs. Neo4j remains as fallback for one release after the cutover (AD-49 consequence); Story 19.3 executed the flip to ruvector as default.
+This cutover removes the per-person Neo4j Community license limit (1 user), collapses two stores toward one engine, and enables self-hosted graphs. Story 19.3 executed the flip to ruvector as default; Epic 23 (2026-07-17) removed the Neo4j fallback entirely.
 
 ### Agent Factory Delivery Boundary
 
@@ -210,11 +209,11 @@ The approved dashboard direction is a Memory Command Center, not a decorative pr
 
 | Area | Purpose | First-release requirements |
 |------|---------|----------------------------|
-| Overview | System health, queue status, freshness, degraded state | PostgreSQL, Neo4j, MCP gateway, curator, embeddings, active `group_id` |
+| Overview | System health, queue status, freshness, degraded state | PostgreSQL, MCP gateway, curator, embeddings, active `group_id` |
 | Memories | Search, inspect, filter, and understand memory records | State, source, confidence, actor, evidence ID, graph relationship, provenance drawer |
 | Curator | Human decision surface for proposals | Approve, reject, request evidence, request changes, required rationale |
 | Governance | RuVix policy control and status | Promotion mode, thresholds, role separation, tenant isolation, locks, drift warnings |
-| Graph | Semantic relationship exploration | Real Neo4j data only, source receipts, fallback list when degraded |
+| Graph | Semantic relationship exploration | Real PostgreSQL graph data only, source receipts, fallback list when degraded |
 | Audit | Compliance and evidence surface | Full event log, filters, CSV/export packet, receipt details |
 | Settings | Read-mostly tenant and policy visibility | Tenant config, promotion mode, role matrix, endpoint health |
 
@@ -229,7 +228,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | B1  | Developers integrate Allura with a 5-tool API matching mem0's UX                             |
 | B2  | All memory is isolated by tenant (`group_id`) at the schema level                            |
 | B3  | Every write produces an immutable audit record in PostgreSQL                                 |
-| B4  | Promoted knowledge is versioned and never mutated in Neo4j                                   |
+| B4  | Promoted knowledge is versioned and never mutated in the semantic store (PostgreSQL `graph_memories`) |
 | B5  | The system is deployable via a single `docker compose up` command for core infra and app services |
 | B6  | Agents connect via MCP (Model Context Protocol) through Team RAM-selected packaged MCP servers |
 | B7  | Operators choose between human-gated (SOC2) and auto-promotion modes                         |
@@ -251,7 +250,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | B23 | Agents must persist all task activity as append-only raw traces for auditability |
 | B24 | A curator process must turn raw traces into proposed insights without promoting them directly |
 | B25 | No insight may become active knowledge until approved by a human or policy-controlled flow |
-| B26 | Approved insights must be stored in Neo4j as immutable, versioned knowledge records |
+| B26 | Approved insights must be stored in PostgreSQL `graph_memories` as immutable, versioned knowledge records |
 | B27 | Agents must retrieve approved knowledge through a controlled retrieval layer |
 | B28 | All reads/writes must pass through controlled APIs with project-level access and audit |
 | B29 | The full loop from agent execution to knowledge reuse must be demonstrably end-to-end |
@@ -267,27 +266,27 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 
 | #   | Requirement                                                                                                |
 | --- | ---------------------------------------------------------------------------------------------------------- |
-| F1  | `memory_add(content, userId, metadata?)` — writes to Postgres; conditionally promotes to Neo4j             |
-| F2  | `memory_search(query, userId, limit?)` — federated search across Postgres + Neo4j, merged by relevance     |
+| F1  | `memory_add(content, userId, metadata?)` — writes to Postgres; conditionally promotes to `graph_memories` |
+| F2  | `memory_search(query, userId, limit?)` — federated search across Postgres episodic + `graph_memories` semantic, merged by relevance |
 | F3  | `memory_get(memoryId)` — returns a single memory record by ID                                              |
 | F4  | `memory_list(userId)` — returns all memories for a user within the tenant                                  |
-| F5  | `memory_delete(memoryId)` — soft-delete: appends a deletion event to Postgres, marks Neo4j node deprecated |
+| F5  | `memory_delete(memoryId)` — soft-delete: appends a deletion event to Postgres, marks `graph_memories` row deprecated |
 
 #### Governance
 
 | #   | Requirement                                                                                    |
 | --- | ---------------------------------------------------------------------------------------------- |
-| F6  | `PROMOTION_MODE=soc2` — score ≥ threshold queues for human approval; no autonomous Neo4j write |
-| F7  | `PROMOTION_MODE=auto` — score ≥ `AUTO_APPROVAL_THRESHOLD` promotes immediately to Neo4j        |
+| F6  | `PROMOTION_MODE=soc2` — score ≥ threshold queues for human approval; no autonomous semantic write |
+| F7  | `PROMOTION_MODE=auto` — score ≥ `AUTO_APPROVAL_THRESHOLD` promotes immediately to `graph_memories` |
 | F8  | `group_id` CHECK constraint blocks writes with invalid tenant namespaces                       |
-| F9  | `SUPERSEDES` relationship created on every Neo4j node update                                   |
+| F9  | `SUPERSEDES` relationship created on every `graph_memories` row update |
 
 #### Curator Dashboard
 
 | #   | Requirement                                                                                         |
 | --- | --------------------------------------------------------------------------------------------------- |
 | F10 | `POST /api/curator/score` — scores proposal, returns {confidence, reasoning, tier}                  |
-| F11 | `POST /api/curator/approve` — moves proposal to approved knowledge, promotes to Neo4j if tier ≥ 85% |
+| F11 | `POST /api/curator/approve` — moves proposal to approved knowledge, promotes to `graph_memories` if tier ≥ 85% |
 | F12 | `POST /api/curator/reject` — archives proposal to 7-day undo, logs to audit trail                   |
 | F13 | `GET /api/curator/proposals` — returns pending proposals (emerging + adoption tiers only)           |
 | F14 | Curator dashboard shows three tabs: Traces (raw), Approved (knowledge), Pending (decisions)         |
@@ -693,22 +692,22 @@ Represents a project that agents contribute to and memories relate to. See [DATA
 1. Score the content using the memory engine scorer
 2. Compare against `AUTO_APPROVAL_THRESHOLD` (default: 0.85)
 3. If `score < threshold` → Postgres only, return
-4. If `score >= threshold` AND `PROMOTION_MODE=auto` → promote to Neo4j immediately
+4. If `score >= threshold` AND `PROMOTION_MODE=auto` → promote to `graph_memories` immediately
 5. If `score >= threshold` AND `PROMOTION_MODE=soc2` → insert into proposals table, return with `pending_review: true`
 
 ### Deduplication
 
-Before any Neo4j write, search for an existing node with matching `content` + `group_id` + `user_id`. If found and `score` is within `DUPLICATE_THRESHOLD`, skip the write and return the existing node ID.
+Before any `graph_memories` write, search for an existing row with matching `content` + `group_id` + `user_id`. If found and `score` is within `DUPLICATE_THRESHOLD`, skip the write and return the existing row ID.
 
 ### Failure Semantics
 
 - Postgres write failure → terminal error, return 500, nothing promoted
-- Neo4j write failure → log to Postgres as `promotion_failed` event, return episodic-only result (non-fatal)
+- `graph_memories` write failure → log to Postgres as `promotion_failed` event, return episodic-only result (non-fatal)
 - Score computation failure → treat score as 0, write Postgres only
 
 ### Soft Delete
 
-`memory_delete` never removes rows. It appends an event of type `memory_delete` to Postgres and sets `deprecated: true` on the Neo4j node (if promoted). The original rows remain for audit purposes.
+`memory_delete` never removes rows. It appends an event of type `memory_delete` to Postgres and sets `deprecated: true` on the `graph_memories` row (if promoted). The original rows remain for audit purposes.
 
 ---
 
@@ -716,7 +715,7 @@ Before any Neo4j write, search for an existing node with matching `content` + `g
 
 - **`group_id` MUST match `^allura-`** — enforced by PostgreSQL CHECK constraint. Failure is a schema error, not an application error.
 - **Postgres rows are append-only** — no UPDATE or DELETE on the `events` table under any circumstance.
-- **Neo4j nodes are immutable** — updates create a new node with a `SUPERSEDES` edge to the prior node.
+- **`graph_memories` rows are immutable** — updates create a new row with a `SUPERSEDES` edge to the prior row.
 - **Circuit breaker trips at budget threshold** — agent runaway is cut off at the infrastructure layer, not application layer.
 
 ---
@@ -742,7 +741,7 @@ Before any Neo4j write, search for an existing node with matching `content` + `g
 | `GET`    | `/api/memory/[id]`              | Get memory by ID     |
 | `DELETE` | `/api/memory/[id]`              | Soft-delete a memory |
 | `GET`    | `/api/memory/search?q=&userId=` | Search memories      |
-| `GET`    | `/api/memory/graph?group_id=`   | Read-only tenant-scoped graph view for dashboard; returns real Neo4j nodes/edges and total relationship count |
+| `GET`    | `/api/memory/graph?group_id=`   | Read-only tenant-scoped graph view for dashboard; returns real `graph_memories` rows/edges and total relationship count |
 | `GET`    | `/api/health`                   | System health check  |
 | `POST`   | `/api/admin/reset-budget`       | Reset halted budget sessions (auth required; body: `{group_id?}`) |
 | `POST`   | `/api/memory/retrieval`         | Governed retrieval gateway — sole agent read path (AD-19) |
@@ -758,8 +757,8 @@ Canonical service ports. **The 3000–3999 band is banned** (Next.js/React defau
 | MCP HTTP gateway | 5888 | infra (exempt) |
 | PostgreSQL | 5432 | infra (exempt) — IGraphAdapter graph ops run here (AD-29, AD-49) |
 | RuVector PG | 5433 | infra (exempt) — native extension port (not yet active; see AD-45, RK-21) |
-| Neo4j bolt | 7687 | infra (exempt) |
-| Neo4j HTTP | 7474 | infra (exempt) |
+| Neo4j bolt | 7687 | infra (exempt) — **retired** Epic 23 (2026-07-17) |
+| Neo4j HTTP | 7474 | infra (exempt) — **retired** Epic 23 (2026-07-17) |
 | legacy dashboard (sunset) | ~~3100~~ | retired with 3000-band ban |
 
 ---
@@ -771,7 +770,7 @@ Canonical service ports. **The 3000–3999 band is banned** (Next.js/React defau
 | Every memory operation | `events` (Postgres)    | Append-only, permanent                              |
 | Promotion decisions    | `events` (Postgres)    | `event_type: memory_promoted` or `promotion_failed` |
 | Search queries         | `events` (Postgres)    | Includes result count in metadata                   |
-| Neo4j node versions    | Neo4j SUPERSEDES chain | Full lineage preserved                              |
+| `graph_memories` row versions | `graph_supersedes` chain | Full lineage preserved                              |
 
 **Redacted fields:** passwords, API keys, raw credentials must never appear in `metadata` JSONB.
 
@@ -808,7 +807,7 @@ Allura's internal coordination is event-driven: every significant state change e
 | `execution_blocked` | Agent executor | Notion sync worker (`notion-projection-sync`) | Agent execution blocked |
 | `session_start` | Agent runtime | Dashboard, audit export | Agent session began |
 | `session_end` | Agent runtime | Dashboard, audit export | Agent session ended |
-| `neo4j_unavailable` | Circuit breaker / health check | Dashboard, Sentry | Neo4j backend was unreachable — system degraded gracefully |
+| `graph_backend_unavailable` | Circuit breaker / health check | Dashboard, Sentry | Graph backend was unreachable — system degraded gracefully |
 | `request_trace` | HTTP TraceMiddleware | Dashboard, audit export | HTTP request traced (Story 1.2) |
 | `health_check` | Health endpoint | Dashboard, monitoring | System health check performed |
 
