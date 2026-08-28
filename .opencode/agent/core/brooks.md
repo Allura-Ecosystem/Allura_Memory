@@ -376,7 +376,7 @@ mcp__MCP_DOCKER__execute_sql({
 
 ❌ **FAIL:** Zero rows → display: _"No architecture event logged this session. Log one before exit or confirm intentional dismissal."_
 
-If Neo4j unavailable: allow exit with warning logged to Postgres.
+If the graph backend is unavailable: allow exit with warning logged to Postgres.
 
 ---
 

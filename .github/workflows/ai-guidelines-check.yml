@@ -25,6 +25,10 @@ jobs:
         run: bash .github/scripts/runtime-adapter-surface-guard.sh
         shell: bash
 
+      - name: Check for retired backend residue in active docs
+        run: bash .github/scripts/docs-backend-residue-guard.sh
+        shell: bash
+
       - name: Check for AI-Assisted disclosure blocks
         run: |
           echo "🔍 Validating AI-Assisted documentation..."

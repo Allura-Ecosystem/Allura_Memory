@@ -221,7 +221,7 @@ This section traces the governed memory pipeline requirements from business goal
 | B1 | Agents must persist all task activity as append-only raw traces so execution history is auditable and recoverable. | [F1](#f1), [F2](#f2), [F3](#f3), [F16](#f16) | MEM-UC1, MEM-UC2, MEM-UC9 |
 | B2 | A curator process must turn raw traces into proposed insights with explicit evidence and confidence, without promoting them directly to active knowledge. | [F4](#f4), [F5](#f5) | MEM-UC3 |
 | B3 | No insight may become active knowledge until it is approved by a human or policy-controlled approval flow, and that approval must be auditable. | [F6](#f6), [F7](#f7) | MEM-UC4 |
-| B4 | Approved insights must be stored in Neo4j as immutable, versioned knowledge records with relationships such as `SUPERSEDES`, `DEPRECATED`, and `REVERTED`. | [F8](#f8), [F9](#f9) | MEM-UC5 |
+| B4 | Approved insights must be stored in `graph_memories` as immutable, versioned knowledge records with relationships such as `SUPERSEDES`, `DEPRECATED`, and `REVERTED`. | [F8](#f8), [F9](#f9) | MEM-UC5 |
 | B5 | Agents must retrieve approved knowledge through a controlled retrieval layer that supports semantic and structured queries with project and global scope. | [F10](#f10), [F11](#f11) | MEM-UC6 |
 | B6 | All reads and writes must pass through controlled APIs that enforce project-level access, agent permissions, and audit logging. | [F12](#f12), [F13](#f13) | MEM-UC7 |
 | B7 | The full loop from agent execution to later knowledge reuse must be demonstrably end-to-end and reversible. | [F14](#f14), [F15](#f15) | MEM-UC8 |
@@ -231,7 +231,7 @@ This section traces the governed memory pipeline requirements from business goal
 | B11 | Undo: recently forgotten memories recoverable within 30 days | F5, `memory_restore` | — |
 | B24 | A curator process must turn raw traces into proposed insights without promoting them directly | F4, F5, F29, F30 | MEM-UC3 |
 | B25 | No insight may become active knowledge until approved by a human or policy-controlled flow | F6, F7, F31 | MEM-UC4 |
-| B26 | Approved insights must be stored in Neo4j as immutable, versioned knowledge records | F8, F9, F33, F34 | MEM-UC5 |
+| B26 | Approved insights must be stored in `graph_memories` as immutable, versioned knowledge records | F8, F9, F33, F34 | MEM-UC5 |
 | B27 | Agents must retrieve approved knowledge through a controlled retrieval layer | F10, F11, F35, F36 | MEM-UC6 |
 | B28 | All reads/writes must pass through controlled APIs with project-level access and audit | F12, F13, F37, F38 | MEM-UC7 |
 | B29 | The full loop from agent execution to knowledge reuse must be demonstrably end-to-end | F14, F15, F39, F40 | MEM-UC8 |

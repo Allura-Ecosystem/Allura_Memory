@@ -113,16 +113,16 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `memory_get` | A single memory was fetched by ID |
 | `memory_list` | All memories for a user were listed |
 | `memory_delete` | A memory was soft-deleted |
-| `memory_promoted` | A memory was successfully promoted to Neo4j |
-| `promotion_failed` | Neo4j write failed — episodic record retained |
+| `memory_promoted` | A memory was successfully promoted to `graph_memories` |
+| `promotion_failed` | `graph_memories` write failed — episodic record retained |
 | `promotion_queued` | SOC2 mode — memory queued for human approval |
 | `proposal_created` | A canonical proposal was created for HITL review |
-| `proposal_approved` | A proposal was approved and promoted to Neo4j |
+| `proposal_approved` | A proposal was approved and promoted to `graph_memories` |
 | `notion_sync_pending` | A proposal is queued for Notion page creation |
 | `debug:root_cause_found` | Phase 1 complete — root cause identified with evidence (POL-006) |
 | `debug:hypothesis_tested` | Phase 3 — a single hypothesis was minimally tested |
 | `debug:fix_implemented` | Phase 4 — fix shipped after root cause confirmed (requires prior `debug:root_cause_found`) |
-| `neo4j_unavailable` | Neo4j backend was unreachable — system degraded gracefully |
+| `neo4j_unavailable` | Graph backend was unreachable — system degraded gracefully (event name retained for back-compat; Neo4j retired Epic 23) |
 | `tool_approved` | MCP tool was approved through catalog governance |
 | `tool_denied` | MCP tool was denied through catalog governance |
 | `request_trace` | HTTP request traced by TraceMiddleware (Story 1.2) |
@@ -379,11 +379,11 @@ Controls which graph backend adapter is active for memory and structural operati
 
 | Value | Description | Status |
 |-------|-------------|--------|
-| `neo4j` | Neo4j backend (legacy, Slice C) | **Default** |
-| `ruvector` | PostgreSQL graph adapter tables (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) | Slice C+ |
+| `neo4j` | Neo4j backend (legacy, retired Epic 23) | **Retired** |
+| `ruvector` | PostgreSQL graph adapter tables (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) | **Default** |
 | `ruvector-crate` | Native RuVector extension with HNSW and GNN support (not yet implemented) | Planned |
 
-**Current default:** `neo4j`
+**Current default:** `ruvector` (sole backend since Epic 23; `neo4j` retired)
 
 **Adapter selection behavior:**
 - `neo4j`: Uses `Neo4jGraphAdapter` in `src/lib/graph-adapter/neo4j-adapter.ts`
@@ -618,7 +618,7 @@ dashboard adapters must map that durable record rather than publish a second rec
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `label` | string | Yes | Human-readable source label, e.g. `PostgreSQL events`, `Neo4j graph`, `Curator proposals` |
+| `label` | string | Yes | Human-readable source label, e.g. `PostgreSQL events`, `graph_memories`, `Curator proposals` |
 | `endpoint` | string | Yes | API route or MCP tool that supplied data |
 | `trust_level` | enum | Yes | `verified`, `degraded`, `unknown`, `external_untrusted` |
 
