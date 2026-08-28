@@ -18,7 +18,7 @@ Three tiers, role-first. Every agent belongs to exactly one tier; per-runtime mo
 | Tier | Purpose | opencode | claude | codex |
 | ---- | ------- | -------- | ------ | ----- |
 | `ultrabrain` | Orchestration, architecture, scope — hard judgment | `ollama/glm-5.2:cloud` | `opus` | `gpt-5.4` |
-| `standard` | Building, refactoring, diagnostics — steady coding work | `ollama/qwen3-coder-next:cloud` | `sonnet` | `gpt-5.4-mini` |
+| `standard` | Building, refactoring, diagnostics — steady coding work | `ollama/glm-5.3-flash-next:cloud` | `sonnet` | `gpt-5.4-mini` |
 | `cheap` | Recon, curation, auditing — high-volume, low-stakes | `ollama/nemotron-3-super:cloud` | `haiku` | `gpt-5.4-mini` |
 
 ## Primary Assignments
@@ -27,13 +27,13 @@ Three tiers, role-first. Every agent belongs to exactly one tier; per-runtime mo
 | ----- | ---- | ---- | -------------- |
 | brooks | Chief Architect / orchestrator | ultrabrain | ollama/glm-5.2:cloud |
 | jobs | Intent Gate / scope owner | ultrabrain | ollama/glm-5.2:cloud |
-| woz | Primary Builder | standard | ollama/qwen3-coder-next:cloud |
-| pike | Interface & simplicity gate | standard | ollama/qwen3-coder-next:cloud |
-| bellard | Performance & diagnostics | standard | ollama/qwen3-coder-next:cloud |
-| fowler | Maintainability gate / refactor | standard | ollama/qwen3-coder-next:cloud |
-| carmack | Performance & optimization | standard | ollama/qwen3-coder-next:cloud |
-| hightower | DevOps / infrastructure | standard | ollama/qwen3-coder-next:cloud |
-| knuth | Data architect / schema | standard | ollama/qwen3-coder-next:cloud |
+| woz | Primary Builder | standard | ollama/glm-5.3-flash-next:cloud |
+| pike | Interface & simplicity gate | standard | ollama/glm-5.3-flash-next:cloud |
+| bellard | Performance & diagnostics | standard | ollama/glm-5.3-flash-next:cloud |
+| fowler | Maintainability gate / refactor | standard | ollama/glm-5.3-flash-next:cloud |
+| carmack | Performance & optimization | standard | ollama/glm-5.3-flash-next:cloud |
+| hightower | DevOps / infrastructure | standard | ollama/glm-5.3-flash-next:cloud |
+| knuth | Data architect / schema | standard | ollama/glm-5.3-flash-next:cloud |
 | scout | Recon / discovery | cheap | ollama/nemotron-3-super:cloud |
 | bahari | Allura Memory Curator | cheap | ollama/nemotron-3-super:cloud |
 | reality-checker-tram | Tier-2 Harness Auditor | cheap | ollama/nemotron-3-super:cloud |
@@ -53,7 +53,7 @@ Set in `opencode.json`. Activates on credit exhaustion or API error. No per-agen
 | Model | Why |
 | ----- | --- |
 | ollama/glm-5.2:cloud | Z.ai flagship for long-horizon tasks; ~1M-token context; project-level engineering and orchestration judgment |
-| ollama/qwen3-coder-next:cloud | Agentic coding specialist; 80B MoE (3B active per token) so it is cheap at volume; 256K context; tool-calling trained |
+| ollama/glm-5.3-flash-next:cloud | Agentic coding specialist; 80B MoE (3B active per token) so it is cheap at volume; 256K context; tool-calling trained |
 | ollama/nemotron-3-super:cloud | 120B open MoE built for multi-agent applications; fast wide-context scanning for recon and curation |
 | ollama/glm-5.1:cloud | Universal fallback — previous-generation flagship, instruction-following, always-on, distinct from all primaries |
 
@@ -84,5 +84,5 @@ Before freezing this routing, run per-agent evals with 10–20 tasks and record:
 Most likely changes after real evals:
 
 - **scout** may swap away from Nemotron if discovery accuracy is weaker than speed suggests
-- **standard tier** may promote `kimi-k2.7-code` or `deepseek-v4-pro` if qwen3-coder-next underperforms on multi-file surgery
+- **standard tier** may promote `kimi-k2.7-code` or `deepseek-v4-pro` if glm-5.3-flash-next underperforms on multi-file surgery
 - **pike/fowler** may occasionally need ultrabrain escalation on tricky architectural reviews

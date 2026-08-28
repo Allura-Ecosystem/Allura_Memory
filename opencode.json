@@ -4,7 +4,7 @@
     "bellard": {
       "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/qwen3-coder-next:cloud",
+      "model": "ollama/glm-5.3-flash-next:cloud",
       "path": ".opencode/agent/subagents/code/bellard.md",
       "permission": {
         "skill": {
@@ -27,7 +27,7 @@
     "carmack": {
       "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/qwen3-coder-next:cloud",
+      "model": "ollama/glm-5.3-flash-next:cloud",
       "path": ".opencode/agent/subagents/code/carmack.md",
       "permission": {
         "skill": {
@@ -38,7 +38,7 @@
     "fowler": {
       "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/qwen3-coder-next:cloud",
+      "model": "ollama/glm-5.3-flash-next:cloud",
       "path": ".opencode/agent/subagents/review/fowler.md",
       "permission": {
         "skill": {
@@ -49,7 +49,7 @@
     "hightower": {
       "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/qwen3-coder-next:cloud",
+      "model": "ollama/glm-5.3-flash-next:cloud",
       "path": ".opencode/agent/subagents/infrastructure/hightower.md",
       "permission": {
         "skill": {
@@ -71,7 +71,7 @@
     "knuth": {
       "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/qwen3-coder-next:cloud",
+      "model": "ollama/glm-5.3-flash-next:cloud",
       "path": ".opencode/agent/subagents/infrastructure/knuth.md",
       "permission": {
         "skill": {
@@ -82,7 +82,7 @@
     "pike": {
       "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/qwen3-coder-next:cloud",
+      "model": "ollama/glm-5.3-flash-next:cloud",
       "path": ".opencode/agent/subagents/review/pike.md",
       "permission": {
         "skill": {
@@ -229,11 +229,11 @@
         "nomic-embed-text:latest": {
           "name": "nomic-embed-text:latest"
         },
-        "qwen3-coder-next:cloud": {
-          "name": "qwen3-coder-next:cloud"
+        "glm-5.3-flash-next:cloud": {
+          "name": "glm-5.3-flash-next:cloud"
         },
-        "qwen3-coder:480b-cloud": {
-          "name": "qwen3-coder:480b-cloud"
+        "glm-5.3-flash:480b-cloud": {
+          "name": "glm-5.3-flash:480b-cloud"
         },
         "qwen3-embedding:8b": {
           "name": "qwen3-embedding:8b"

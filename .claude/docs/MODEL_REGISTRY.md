@@ -18,11 +18,11 @@ last_updated: "2026-05-05"
 | brooks       | Orchestrator   | openai/gpt-5.5                     | —                                 | ollama-cloud/deepseek-v4-pro           |
 | hightower    | Infra          | openai/gpt-5.5                     | —                                 | ollama-cloud/deepseek-v4-pro           |
 | jobs         | Strategy       | ollama-cloud/deepseek-v4-pro              | —                                 | ollama-cloud/kimi-k2.6                 |
-| woz          | Code           | ollama-cloud/qwen3-coder-next      | —                                 | —                               |
+| woz          | Code           | ollama-cloud/glm-5.3-flash-next      | —                                 | —                               |
 | carmack      | Code/Perf      | openai/gpt-5.4-mini                | —                                 | —                               |
 | bellard      | Code/Diag      | openai/gpt-5.4-mini                | —                                 | —                               |
 | fowler       | Code/Refactor  | openai/gpt-5.5                     | —                                 | —                               |
-| knuth        | Code/Data      | ollama-cloud/qwen3-coder-next      | —                                 | —                               |
+| knuth        | Code/Data      | ollama-cloud/glm-5.3-flash-next      | —                                 | —                               |
 | pike         | Code/Interface | openai/gpt-5.4-mini                | —                                 | —                               |
 | scout        | Search/Triage  | openai/gpt-5.4-mini                | —                                 | ollama-cloud/nemotron-3-super   |
 
@@ -52,7 +52,7 @@ model: openai/gpt-5.4-mini
 fallback_model: ollama-cloud/nemotron-3-super
 
 # woz.md / knuth.md
-model: ollama-cloud/qwen3-coder-next
+model: ollama-cloud/glm-5.3-flash-next
 
 # bellard.md / carmack.md / pike.md
 model: openai/gpt-5.4-mini
@@ -64,12 +64,12 @@ model: openai/gpt-5.4-mini
 |------------|-----------------------------|-----------------------------|------------------------------------------------------------|
 | Brooks     | openai/gpt-5.5              | claude-opus-4-6             | CA/VA commands; ADR discipline identical                   |
 | Jobs       | ollama-cloud/deepseek-v4-pro       | claude-sonnet-4-6           | Intent gate + scope control; same acceptance criteria      |
-| Woz        | ollama-cloud/qwen3-coder-next | claude-sonnet-4-6         | Builder; write templates identical; TDD enforced           |
+| Woz        | ollama-cloud/glm-5.3-flash-next | claude-sonnet-4-6         | Builder; write templates identical; TDD enforced           |
 | Pike       | openai/gpt-5.4-mini         | claude-sonnet-4-6           | Read-only architecture consultation; interface review      |
 | Bellard    | openai/gpt-5.4-mini         | claude-sonnet-4-6           | Performance + diagnostics; measurement-first               |
 | Carmack    | openai/gpt-5.4-mini         | claude-sonnet-4-6           | Optimization; latency profiling; API design                |
 | Fowler     | openai/gpt-5.5              | claude-opus-4-6             | Refactor gate; incremental change; maintainability         |
-| Knuth      | ollama-cloud/qwen3-coder-next | claude-sonnet-4-6         | Data architect; schema design; query optimization          |
+| Knuth      | ollama-cloud/glm-5.3-flash-next | claude-sonnet-4-6         | Data architect; schema design; query optimization          |
 | Hightower  | openai/gpt-5.5              | claude-opus-4-6             | CI/CD; IaC; one-command deploy                             |
 | Scout      | openai/gpt-5.4-mini          | claude-sonnet-4-6          | Recon + discovery; Nemotron-3-Super fallback               |
 
@@ -90,7 +90,7 @@ The following behaviors MUST be identical across both runtimes:
 | ollama-cloud/deepseek-v4-pro         | Long-context strategy, multimodal product reasoning, HIGH priority  |
 | ollama-cloud/kimi-k2.6               | Multimodal vision-capable, HIGH priority                            |
 | openai/gpt-5.4-mini           | Mini frontier model — sufficient for interface review and data tasks |
-| ollama-cloud/qwen3-coder-next | Coding specialist for patch, codegen, and perf-fix tasks            |
+| ollama-cloud/glm-5.3-flash-next | Coding specialist for patch, codegen, and perf-fix tasks            |
 | ollama-cloud/nemotron-3-super | Fast wide-context scanning for recon and discovery                  |
 | ollama-cloud/glm-5.1          | Steady workhorse — instruction-following, always-on, cost-efficient |
 

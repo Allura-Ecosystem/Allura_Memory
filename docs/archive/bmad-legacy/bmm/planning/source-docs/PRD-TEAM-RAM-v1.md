@@ -150,7 +150,7 @@ Team RAM (Real Actual Masters) is the **surgical team** of specialized AI agents
 
 | Agent | Persona | Role | Primary Model | Fallback | Use When |
 |-------|---------|------|---------------|----------|----------|
-| **Woz** | Steve Wozniak | Primary Builder | `ollama-cloud/qwen3-coder-next` | — | Autonomous implementation, ships working code |
+| **Woz** | Steve Wozniak | Primary Builder | `ollama-cloud/glm-5.3-flash-next` | — | Autonomous implementation, ships working code |
 | **Bellard** | Fabrice Bellard | Diagnostics + Perf | `openai/gpt-5.4-mini` | — | Performance, measurement, low-level fixes |
 | **Carmack** | John Carmack | Performance Specialist | `openai/gpt-5.4-mini` | — | Optimization, API design, latency analysis |
 
@@ -165,7 +165,7 @@ Team RAM (Real Actual Masters) is the **surgical team** of specialized AI agents
 
 | Agent | Persona | Role | Primary Model | Fallback | Use When |
 |-------|---------|------|---------------|----------|----------|
-| **Knuth** | Donald Knuth | Data Architect | `ollama-cloud/qwen3-coder-next` | — | Schema design, query optimization, data modeling |
+| **Knuth** | Donald Knuth | Data Architect | `ollama-cloud/glm-5.3-flash-next` | — | Schema design, query optimization, data modeling |
 | **Hightower** | Kelsey Hightower | DevOps Specialist | `openai/gpt-5.5` | `ollama-cloud/deepseek-v4-pro` | CI/CD, IaC, deployment, observability |
 
 ### 5.5 Reconnaissance Agents (Mode: subagent)

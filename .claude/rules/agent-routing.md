@@ -53,14 +53,14 @@ We don't hire 10 surgeons. We hire one surgeon and a team of specialists who own
 |-------|---------|------|---------|----------|----------|
 | **Brooks** | Frederick Brooks | Architect + Orchestrator | `ollama/glm-5.2:cloud` | `ollama/glm-5.1:cloud` | Task planning, architecture, delegation |
 | **Jobs** | Steve Jobs | Intent Gate | `ollama/glm-5.2:cloud` | `ollama/glm-5.1:cloud` | Scope control, acceptance criteria |
-| **Woz** | Steve Wozniak | Builder | `ollama/qwen3-coder-next:cloud` | `ollama/glm-5.1:cloud` | Autonomous implementation, ships working code |
-| **Pike** | Rob Pike | Interface Gate | `ollama/qwen3-coder-next:cloud` | `ollama/glm-5.1:cloud` | Read-only architecture consultation |
-| **Bellard** | Fabrice Bellard | Diagnostics + Perf | `ollama/qwen3-coder-next:cloud` | `ollama/glm-5.1:cloud` | Performance, measurement, low-level fixes |
-| **Fowler** | Martin Fowler | Refactor Gate | `ollama/qwen3-coder-next:cloud` | `ollama/glm-5.1:cloud` | Maintainability, incremental change |
+| **Woz** | Steve Wozniak | Builder | `ollama/glm-5.3-flash-next:cloud` | `ollama/glm-5.1:cloud` | Autonomous implementation, ships working code |
+| **Pike** | Rob Pike | Interface Gate | `ollama/glm-5.3-flash-next:cloud` | `ollama/glm-5.1:cloud` | Read-only architecture consultation |
+| **Bellard** | Fabrice Bellard | Diagnostics + Perf | `ollama/glm-5.3-flash-next:cloud` | `ollama/glm-5.1:cloud` | Performance, measurement, low-level fixes |
+| **Fowler** | Martin Fowler | Refactor Gate | `ollama/glm-5.3-flash-next:cloud` | `ollama/glm-5.1:cloud` | Maintainability, incremental change |
 | **Scout** | (none) | Recon + Discovery | `ollama/nemotron-3-super:cloud` | `ollama/glm-5.1:cloud` | Fast codebase search, pattern discovery |
-| **Carmack** | John Carmack | Performance Specialist | `ollama/qwen3-coder-next:cloud` | `ollama/glm-5.1:cloud` | Optimization, API design, latency |
-| **Knuth** | Donald Knuth | Data Architect | `ollama/qwen3-coder-next:cloud` | `ollama/glm-5.1:cloud` | Schema design, query optimization |
-| **Hightower** | Kelsey Hightower | DevOps Specialist | `ollama/qwen3-coder-next:cloud` | `ollama/glm-5.1:cloud` | CI/CD, IaC, deployment, observability |
+| **Carmack** | John Carmack | Performance Specialist | `ollama/glm-5.3-flash-next:cloud` | `ollama/glm-5.1:cloud` | Optimization, API design, latency |
+| **Knuth** | Donald Knuth | Data Architect | `ollama/glm-5.3-flash-next:cloud` | `ollama/glm-5.1:cloud` | Schema design, query optimization |
+| **Hightower** | Kelsey Hightower | DevOps Specialist | `ollama/glm-5.3-flash-next:cloud` | `ollama/glm-5.1:cloud` | CI/CD, IaC, deployment, observability |
 
 ## Category Routing
 
@@ -128,13 +128,13 @@ The category system reduces this further:
 |-------|------|--------------------|----------|
 | Brooks | ultrabrain | `ollama/glm-5.2:cloud` | global |
 | Jobs | ultrabrain | `ollama/glm-5.2:cloud` | global |
-| Woz | standard | `ollama/qwen3-coder-next:cloud` | global |
-| Pike | standard | `ollama/qwen3-coder-next:cloud` | global |
-| Bellard | standard | `ollama/qwen3-coder-next:cloud` | global |
-| Fowler | standard | `ollama/qwen3-coder-next:cloud` | global |
-| Carmack | standard | `ollama/qwen3-coder-next:cloud` | global |
-| Hightower | standard | `ollama/qwen3-coder-next:cloud` | global |
-| Knuth | standard | `ollama/qwen3-coder-next:cloud` | global |
+| Woz | standard | `ollama/glm-5.3-flash-next:cloud` | global |
+| Pike | standard | `ollama/glm-5.3-flash-next:cloud` | global |
+| Bellard | standard | `ollama/glm-5.3-flash-next:cloud` | global |
+| Fowler | standard | `ollama/glm-5.3-flash-next:cloud` | global |
+| Carmack | standard | `ollama/glm-5.3-flash-next:cloud` | global |
+| Hightower | standard | `ollama/glm-5.3-flash-next:cloud` | global |
+| Knuth | standard | `ollama/glm-5.3-flash-next:cloud` | global |
 | Scout | cheap | `ollama/nemotron-3-super:cloud` | global |
 
 **Global fallback** (in `opencode.json`): `ollama/glm-5.1:cloud` — deliberately distinct from every primary.
@@ -151,7 +151,7 @@ routing:
     use: ollama/glm-5.2:cloud
 
   - if: agent in [woz, pike, bellard, fowler, carmack, hightower, knuth]  # standard
-    use: ollama/qwen3-coder-next:cloud
+    use: ollama/glm-5.3-flash-next:cloud
 
   - if: agent in [scout, bahari]           # cheap
     use: ollama/nemotron-3-super:cloud
