@@ -5,3 +5,11 @@
 #
 # [agents.bmad-agent-pm]
 # description = "Prefers short, bulleted PRDs over narrative drafts."
+
+# Keep BMad planning and implementation artifacts in the tracked locations
+# used by this repository. `_bmad-output/` remains an ignored scratch surface
+# for transient core/TEA output only.
+[modules.bmm]
+planning_artifacts = "{project-root}/_bmad/bmm/planning"
+implementation_artifacts = "{project-root}/_bmad/bmm/stories"
+project_knowledge = "{project-root}/docs"
