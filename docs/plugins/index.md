@@ -44,7 +44,7 @@ plugins/<name>/
 | **Governance** | Enforce invariants on tool calls | `allura-governance` |
 | **Cowork** | Cross-runtime collaboration | `allura-cowork` |
 | **Core** | Runtime-specific skills and assets | `allura` |
-| **Extension** | Additional capabilities | `superpowers` |
+| **Extension** | Additional capabilities | `—` |
 
 ## Plugin Manifest
 
@@ -114,7 +114,6 @@ python3 plugins/<name>/scripts/validate_plugin.py plugins/<name>
 | Hard invariant enforcement | `allura-governance` |
 | Claude ↔ Codex handoff | `allura-cowork` |
 | Core memory skills for Codex | `allura` |
-| Extended Codex capabilities | `superpowers` |
 
 ## Writing Custom Plugins
 
