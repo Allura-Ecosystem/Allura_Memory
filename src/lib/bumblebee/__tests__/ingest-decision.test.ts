@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { evaluateIngestDecision, type IngestDecisionInput } from "../ingest-decision"
+import { evaluateIngestDecision, type IngestDecisionInput, type IngestDecisionSummary } from "../ingest-decision"
 
 const base: IngestDecisionInput = {
   profile: "baseline",
@@ -23,8 +23,8 @@ const base: IngestDecisionInput = {
   },
 }
 
-function decide(overrides: Partial<IngestDecisionInput> = {}, summary: Partial<IngestDecisionInput["summary"]> = {}) {
-  return evaluateIngestDecision({ ...base, ...overrides, summary: { ...base.summary, ...summary } })
+function decide(overrides: Partial<IngestDecisionInput> = {}, summary: Partial<IngestDecisionSummary> = {}) {
+  return evaluateIngestDecision({ ...base, ...overrides, summary: { ...base.summary, ...summary } as IngestDecisionSummary })
 }
 
 describe("Story 26.7 bound-population promotion matrix", () => {
@@ -51,5 +51,11 @@ describe("Story 26.7 bound-population promotion matrix", () => {
     [{}, { endTime: new Date("2026-08-28T11:59:59.000Z") }, "HELD_CLOCK_ORDER"],
   ] as const)("holds unsafe or non-routine evidence with stable code %#", (overrides, summary, reasonCode) => {
     expect(decide(overrides, summary)).toEqual({ decision: "held", reasonCode })
+  })
+
+  it("holds with a stable reason code when the batch carried no scan_summary record", () => {
+    expect(evaluateIngestDecision({ ...base, summary: null })).toEqual({
+      decision: "held", reasonCode: "HELD_MISSING_SUMMARY",
+    })
   })
 })

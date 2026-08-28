@@ -42,6 +42,9 @@ describe("Story 26.7 immutable ingest ledger migration", () => {
     expect(sql).not.toMatch(/UNIQUE \(group_id, workspace_id, source_id, source_revision_id, lease_id\)/)
     expect(sql).toMatch(/summary_record_id TEXT CHECK \(summary_record_id ~ '\^scan_summary:\[a-f0-9\]\{64\}\$'\)/)
     expect(sql).toMatch(/CHECK \(decision = 'held' OR summary_record_id IS NOT NULL\)/)
+    // Once populated, current-inventory/current-routine-run views scan promoted
+    // decisions; without this partial index that scan is a full table scan.
+    expect(sql).toMatch(/CREATE INDEX IF NOT EXISTS bumblebee_run_decisions_promoted_idx\s+ON bumblebee_run_decisions \(group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id\)\s+WHERE decision = 'promoted'/)
     expect(sql).toContain("CREATE VIEW bumblebee_current_routine_runs")
     expect(sql).toContain("CREATE VIEW bumblebee_current_inventory")
     expect(sql).toContain("CREATE VIEW bumblebee_incomplete_runs")

@@ -14,6 +14,19 @@ export type IngestDecisionReason =
   | "HELD_FUTURE_CLOCK"
   | "HELD_LEASE_CLOCK_MISMATCH"
   | "HELD_CLOCK_ORDER"
+  | "HELD_MISSING_SUMMARY"
+
+export interface IngestDecisionSummary {
+  status: "complete" | "partial" | "error"
+  timedOut: boolean
+  packageRecordsEmitted: number
+  packageRecordsSuppressed: number
+  findingsEmitted: number
+  httpBatchesFailed: number
+  errorPresent: boolean
+  scanTime: Date
+  endTime: Date
+}
 
 export interface IngestDecisionInput {
   profile: "baseline" | "project" | "deep"
@@ -23,17 +36,9 @@ export interface IngestDecisionInput {
   findingRecords: number
   leaseCreatedAt: Date
   databaseNow: Date
-  summary: {
-    status: "complete" | "partial" | "error"
-    timedOut: boolean
-    packageRecordsEmitted: number
-    packageRecordsSuppressed: number
-    findingsEmitted: number
-    httpBatchesFailed: number
-    errorPresent: boolean
-    scanTime: Date
-    endTime: Date
-  }
+  // null when the batch carried no trailing scan_summary record — a promotable
+  // fact can never be established without one (contract item 8 / AC-10).
+  summary: IngestDecisionSummary | null
 }
 
 export interface IngestDecision {
@@ -78,6 +83,7 @@ function held(reasonCode: Exclude<IngestDecisionReason, "PROMOTED_COMPLETE">): I
 
 export function evaluateIngestDecision(input: IngestDecisionInput): IngestDecision {
   const { summary } = input
+  if (summary === null) return held("HELD_MISSING_SUMMARY")
   if (summary.status === "partial") return held("HELD_PARTIAL")
   if (summary.status === "error") return held("HELD_ERROR")
   if (summary.timedOut) return held("HELD_TIMEOUT")

@@ -85,6 +85,10 @@ CREATE TABLE IF NOT EXISTS bumblebee_run_decisions (
     REFERENCES bumblebee_records(group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id, record_id)
 );
 
+CREATE INDEX IF NOT EXISTS bumblebee_run_decisions_promoted_idx
+  ON bumblebee_run_decisions (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id)
+  WHERE decision = 'promoted';
+
 -- ── Exposure evidence (provisional findings linked to accepted packages) ──
 CREATE TABLE IF NOT EXISTS bumblebee_exposure_evidence (
   group_id TEXT NOT NULL CHECK (group_id ~ '^allura-[a-z0-9-]+$'),
