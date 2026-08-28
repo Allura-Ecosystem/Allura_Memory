@@ -4,8 +4,17 @@
 # Date: 2026-06-14T18:21:13.034Z
 
 user_skill_level: intermediate
-planning_artifacts: "{project-root}/_bmad-output/planning-artifacts"
-implementation_artifacts: "{project-root}/_bmad-output/implementation-artifacts"
+
+# Artifact paths point at the TRACKED locations where this project's planning
+# content actually lives, not at the installer's default `_bmad-output/` (which
+# is gitignored — see .gitignore). The defaults were wrong for this repo: every
+# skill resolving {planning_artifacts} or {implementation_artifacts} was reading
+# and writing an empty, ignored directory while the real epics and stories sat
+# in _bmad/bmm/. Symptoms this fixes: bmad-sprint-status finding no
+# sprint-status.yaml, bmad-create-story orphaning new stories away from the
+# existing 65, and document-discovery steps reporting zero epics.
+planning_artifacts: "{project-root}/_bmad/bmm/planning"
+implementation_artifacts: "{project-root}/_bmad/bmm/stories"
 project_knowledge: "{project-root}/docs"
 
 # Core Configuration Values
