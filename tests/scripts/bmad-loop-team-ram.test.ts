@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "../..");
@@ -16,9 +17,9 @@ describe("BMad Loop Team RAM bridge", () => {
   });
 
   it("parses its CLI before it can touch Loop or GitHub state", () => {
-    const result = Bun.spawnSync({ cmd: [process.execPath, script], cwd: root, stdout: "pipe", stderr: "pipe" });
-    expect(result.exitCode).toBe(1);
-    expect(new TextDecoder().decode(result.stderr)).toContain("command must be preflight, run, or record-merge");
+    const result = spawnSync(process.execPath, [script], { cwd: root, encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("command must be preflight, run, or record-merge");
   });
 
   it("injects Allura and Team RAM gates through the durable BMad customization seam", () => {
