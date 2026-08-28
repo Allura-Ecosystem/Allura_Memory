@@ -3,7 +3,7 @@
 **Status:** Done — all 6 acceptance criteria met. AC-3 is satisfied for every containment target that exists in this system; `endpoint_isolation` is formally descoped (see AD-59).
 **Owner:** Hightower + Brooks + Knuth
 **Depends on:** 26.5, role-model reconciliation
-**Blocks:** 26.7
+**Blocks:** — Optional host-response demonstration only; the headless upstream scanner plugin does not depend on Story 26.6.
 
 ## Outcome
 

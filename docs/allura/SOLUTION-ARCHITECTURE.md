@@ -463,7 +463,7 @@ sequenceDiagram
 | Curator Approve CLI | Inbound | CLI (`bun run curator:approve`) | Processes pending proposals from PostgreSQL, promotes approved ones to Neo4j via `createInsight()` | F6, B18, B19 |
 | PostgreSQL 16 | Outbound | TCP (pg driver) | SQL — append-only INSERTs + SELECTs | AD-01, RK-02 |
 | Neo4j 5.26 | Outbound | Bolt (neo4j driver) | Approved memory recall + read-only Cypher fallback + governed writes | AD-02, RK-01, AD-23 |
-| Bumblebee V1 threat intelligence (planned) | Inbound | Approved internal events, allowlisted advisory polling, inventory reconciliation | Scoped advisory provenance, verified exposure match, deduplicated alert, simulated mitigation proposal | AD-57; no endpoint scanning or enforcement authority |
+| Bumblebee plugin (accepted Correct Course plan) | Inbound | Pinned upstream endpoint scanner → server-issued lease → HTTPS NDJSON receiver | Sanitized package/finding/summary evidence, complete bound-population state, downstream exposure handoff | AD-57, AD-60; read-only scanning, no execution or enforcement authority |
 
 ---
 
@@ -478,7 +478,7 @@ sequenceDiagram
 | §3.5 Memory API | AD-05 (5-tool surface) |
 | §3.6 API-First Architecture and Memory Command Center | AD-31 (Memory Command Center), AD-29 (superseded), RK-19 |
 | §3.7 Governed Run Layer | AD-35 (RunRecord contract), AD-41 (governed AI office sequence), RK-25–RK-30 |
-| §4 Bumblebee V1 threat intelligence | AD-57 (alert-and-proposal boundary) |
+| §4 Bumblebee plugin | AD-57 (alert-and-proposal ceiling), AD-60 (scanner/plugin/lease boundary) |
 
 ---
 
@@ -498,7 +498,8 @@ sequenceDiagram
 | PostgreSQL MUST own operational project, work-item, and run state | Prevents Kanban/runtime state from drifting into the semantic memory graph — AD-41 |
 | A run MUST pin a process definition revision before execution | Makes resume and replay deterministic — AD-41 / RK-30 |
 | Bumblebee V1 MUST treat external advisory data as provisional until source verification, freshness, scope, and evidence linkage pass | Prevents untrusted/stale intelligence from becoming an alert or proposal — AD-57 |
-| Bumblebee V1 MUST be read-only toward endpoints and enforcement systems | The V1 output ceiling is alert plus simulated proposal; no scan, block, schedule change, policy activation, or containment — AD-57 |
+| Bumblebee scanner/plugin MUST be read-only toward endpoint contents and enforcement systems | The pinned scanner may read approved metadata; neither scanner nor plugin may execute packages, invoke package managers, block, change schedules, activate policy, or contain — AD-57 / AD-60 |
+| Bumblebee production ingestion MUST use a server-issued source/population lease and HTTPS | Prevents caller scope, stale-run ordering, population drift, and cleartext credential exposure — AD-60 |
 
 ---
 
@@ -528,14 +529,16 @@ denyProposal    → POST /api/curator/reject
 needsEvidence   → POST /api/curator/reject with rationale prefix "Needs evidence: "
 ```
 
-Bumblebee V1 topology (planned; no runtime connector is authorized by Story 26.1):
+Bumblebee plugin topology (accepted Correct Course plan; not yet implemented):
 
 ```text
-approved internal event | allowlisted advisory | approved inventory snapshot
-  → provenance + trust/freshness validation
-  → scoped exposure correlation and deduplication
-  → alert + simulated mitigation proposal
-  → human review / separately authorized enforcement workflow
+pinned upstream scanner
+  → Allura runner obtains source/population generation lease
+  → HTTPS NDJSON ingest with dedicated short-lived credential
+  → sanitized append-only evidence + immutable batch/run decisions
+  → complete bound-population current inventory
+  → Allura exposure correlation, alert, and simulated proposal
+  → optional Curator display / separately governed host response
 ```
 
 Native Kanban direction: PostgreSQL owns operational board state; Neo4j may project semantic relationships; Allura Brain stores durable decisions/evidence receipts. Notion, Linear, and GitHub Projects are optional sync adapters; Native Allura Kanban is default upstream.

@@ -61,16 +61,16 @@ RuVector is MIT-licensed. If used:
 - Track as a pinned dependency in the SBOM and dependency review.
 - The adapter must enforce `group_id`, scopes, audit, and provenance (AD-09).
 
-## Bumblebee — supply-chain exposure scanner (planned, not built)
+## Bumblebee plugin — supply-chain exposure scanner (planned, not built)
 
-A separate read-only security layer from Allura Guard. Where Allura Guard gates *live*
-MCP/API requests, **Bumblebee** answers a supply-chain response question: when an advisory
-names a compromised package/extension/version, which connected developer endpoints or
-agents show a match in their on-disk metadata right now? It inventories lockfiles,
-package-manager metadata, editor/browser extensions, and MCP host configs into structured
-records and flags exact matches against an exposure catalog. Modeled on
-[perplexityai/bumblebee](https://github.com/perplexityai/bumblebee). Not yet implemented —
-tracked for a future phase.
+A separate read-only security layer from Allura Guard. The accepted plan pins upstream
+`perplexityai/bumblebee` `v0.1.2` at
+`cc57710eeaf685e7b89924a36c8583cad0a378fe`. The scanner inventories approved endpoint
+metadata; the Allura plugin runner obtains a server-issued source/population lease and
+uses a dedicated credential to send schema-compatible NDJSON over HTTPS. Allura derives
+tenant/workspace from verified server authority, stores sanitized immutable evidence,
+and promotes only a valid complete bound population. Scanner/plugin cannot execute
+packages or enforcement. Not yet implemented.
 
 ## References
 

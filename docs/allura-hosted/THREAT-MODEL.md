@@ -45,15 +45,16 @@ Anchor: [BLUEPRINT.md](./BLUEPRINT.md). Risk register: [RISKS-AND-DECISIONS.md](
 - **Poisoned dream output:** candidates require HITL; secrets redacted; contradictions flagged not merged.
 - **Backup that can't restore:** scheduled restore tests with receipts (RK-07, [BACKUP-RESTORE.md](./BACKUP-RESTORE.md)).
 
-## Bumblebee — supply-chain exposure (planned, not built)
+## Bumblebee plugin — supply-chain exposure (planned, not built)
 
-A future read-only scanner complementing Allura Guard. Allura Guard mitigates *runtime*
-request threats (above); **Bumblebee** addresses **supply-chain exposure** — compromised
-packages, editor/browser extensions, or MCP-host configs on connected developer endpoints
-and agents. It inventories on-disk metadata and flags matches against a known-compromise
-catalog, answering "which machines/agents are exposed to a named advisory now?". Read-only,
-no package-manager execution. Modeled on [perplexityai/bumblebee](https://github.com/perplexityai/bumblebee).
-Not yet implemented.
+The accepted plan pins upstream `perplexityai/bumblebee` `v0.1.2` at
+`cc57710eeaf685e7b89924a36c8583cad0a378fe` and wraps it with an Allura plugin runner and
+receiver. Main threats are credential theft, caller scope claims, gzip/resource abuse,
+population drift, stale/future run ordering, schema drift, secret-bearing paths/text,
+catalog spoofing, and partial snapshots becoming current. Controls require separate
+runner/lease credential audiences, server-issued monotonic generations, HTTPS, bounded
+atomic ingestion, sanitized immutable evidence, bound catalog revisions, and complete
+bound-population promotion. Scanner/plugin remain read-only and cannot enforce actions.
 
 ## References
 

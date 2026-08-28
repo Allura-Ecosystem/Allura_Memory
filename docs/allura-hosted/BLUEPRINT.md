@@ -32,7 +32,7 @@ This Blueprint is the single source of design intent. All `DESIGN-*`, `SOLUTION-
 | **Memory** | A governed unit of knowledge. Episodic (raw trace, PostgreSQL) or semantic (approved knowledge, Neo4j). |
 | **Curator** | The review queue where proposed memories await human approval before promotion. |
 | **Allura Guard** | The policy gate in front of all MCP/API actions: auth, RBAC, scope, rate limits, group_id injection, audit. |
-| **Bumblebee** *(planned — not built)* | A read-only **supply-chain exposure scanner** for connected developer endpoints/agents. Inventories on-disk package, extension, and MCP-config metadata and flags matches against a known-compromise catalog. Distinct from Allura Guard (which gates live requests); Bumblebee answers "which machines/agents are exposed to a named advisory right now?". Modeled on [perplexityai/bumblebee](https://github.com/perplexityai/bumblebee). |
+| **Bumblebee plugin** *(planned — not built)* | Allura plugin around pinned upstream `perplexityai/bumblebee` `v0.1.2` / `cc57710eeaf685e7b89924a36c8583cad0a378fe`. The upstream binary performs read-only endpoint metadata scans; the plugin adds server-issued source/population leases, separate runner/ingest credentials, HTTPS NDJSON receiver, sanitized snapshot state, and downstream Allura exposure handoff. Distinct from Allura Guard, which gates live requests. |
 | **MCP Token** | A scoped bearer credential for agents. Stored as a hash, never raw. |
 | **Receipt** | An append-only audit artifact proving an action happened (actor, scope, decision, evidence). |
 | **Dream Run** | A platform-agnostic memory-refinement job that produces approval candidates, never trusted memory directly. |
