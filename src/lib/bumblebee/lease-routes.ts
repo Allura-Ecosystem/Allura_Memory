@@ -4,10 +4,21 @@ import type { BumblebeeTokenAudience, IssueScanLeaseInput } from "./lease-author
 
 type Authenticate = (request: Request, audience: BumblebeeTokenAudience) => Promise<{ rawToken: string }>
 
+const PUBLIC_ERRORS: Readonly<Record<string, number>> = Object.freeze({
+  BUMBLEBEE_AUTH_INVALID: 401,
+  BUMBLEBEE_AUTH_REVOKED: 401,
+  BUMBLEBEE_AUTH_EXPIRED: 401,
+  BUMBLEBEE_AUTH_AUDIENCE_FORBIDDEN: 403,
+  BUMBLEBEE_AUTH_CREDENTIAL_CLASS_FORBIDDEN: 403,
+  BUMBLEBEE_LEASE_INVALID_DURATION: 400,
+  BUMBLEBEE_LEASE_SOURCE_REVISION_MISMATCH: 409,
+})
+
 function refusal(error: unknown): Response {
-  const code = error instanceof Error ? error.message : "BUMBLEBEE_AUTH_INVALID"
-  const status = code.includes("AUDIENCE") || code.includes("CREDENTIAL_CLASS") ? 403 : 401
-  return Response.json({ error: code }, { status })
+  const candidate = error instanceof Error ? error.message : ""
+  const status = PUBLIC_ERRORS[candidate]
+  if (status !== undefined) return Response.json({ error: candidate }, { status })
+  return Response.json({ error: "BUMBLEBEE_SERVICE_UNAVAILABLE" }, { status: 503 })
 }
 
 export function createRunsHandler(deps: {
@@ -38,7 +49,7 @@ export function createRunsHandler(deps: {
       })
       return Response.json(lease, { status: 201 })
     } catch (error) {
-      return Response.json({ error: error instanceof Error ? error.message : "BUMBLEBEE_LEASE_REFUSED" }, { status: 409 })
+      return refusal(error)
     }
   }
 }

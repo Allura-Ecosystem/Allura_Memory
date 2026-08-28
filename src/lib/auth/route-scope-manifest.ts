@@ -314,6 +314,22 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     description: "Hybrid search over Brain memories (returns real memory content)",
   },
 
+  // ── Headless plugins (route handlers enforce server-derived plugin tokens) ──
+  {
+    pattern: "/api/plugins/bumblebee/ingest",
+    requiredRole: "admin",
+    scopeName: "plugin:bumblebee:ingest",
+    methods: ["POST"],
+    description: "Bumblebee lease-bound ingest credential endpoint",
+  },
+  {
+    pattern: "/api/plugins/bumblebee/runs",
+    requiredRole: "admin",
+    scopeName: "plugin:bumblebee:runs",
+    methods: ["POST"],
+    description: "Bumblebee runner credential lease issuance endpoint",
+  },
+
   // ── Hosted Platform (Allura Guard) ────────────────────────────────────────
   {
     pattern: "/api/tokens",

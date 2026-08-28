@@ -28,6 +28,10 @@ CREATE TABLE IF NOT EXISTS bumblebee_scan_leases (
   UNIQUE (group_id, workspace_id, source_id, source_revision_id, generation),
   FOREIGN KEY (group_id, workspace_id, source_id, source_revision_id)
     REFERENCES bumblebee_sources(group_id, workspace_id, source_id, source_revision_id),
+  FOREIGN KEY (group_id, workspace_id, source_id, source_revision_id,
+    runner_credential_id, runner_audience)
+    REFERENCES bumblebee_sources(group_id, workspace_id, source_id, source_revision_id,
+      runner_credential_id, runner_audience),
   FOREIGN KEY (group_id, workspace_id, runner_credential_id, runner_audience)
     REFERENCES bumblebee_runner_credentials(group_id, workspace_id, credential_id, audience),
   FOREIGN KEY (group_id, workspace_id, catalog_revision_id, catalog_digest)
@@ -63,20 +67,22 @@ CREATE POLICY bumblebee_scan_leases_scope ON bumblebee_scan_leases FOR ALL TO al
     AND workspace_id = current_setting('app.current_workspace_id', true))
   WITH CHECK (group_id = current_setting('app.current_group_id', true)
     AND workspace_id = current_setting('app.current_workspace_id', true));
-GRANT SELECT, INSERT, UPDATE (revoked_at) ON bumblebee_scan_leases TO allura_app;
+REVOKE INSERT ON bumblebee_scan_leases FROM allura_app;
+GRANT SELECT, UPDATE (revoked_at) ON bumblebee_scan_leases TO allura_app;
 
 -- Narrow pre-scope bootstrap: exact prefix only, minimal authority output, no table grant bypass.
 CREATE OR REPLACE FUNCTION app.bumblebee_bootstrap_runner(p_prefix TEXT)
 RETURNS TABLE (credential_id TEXT, group_id TEXT, workspace_id TEXT, token_hash TEXT,
   expires_at TIMESTAMPTZ, revoked_at TIMESTAMPTZ)
 LANGUAGE sql SECURITY DEFINER STABLE
-SET search_path = pg_catalog, public, app
+SET search_path = pg_catalog
 AS $$
   SELECT c.credential_id, c.group_id, c.workspace_id, c.token_hash, c.expires_at, c.revoked_at
   FROM public.bumblebee_runner_credentials AS c
   WHERE c.token_prefix = p_prefix AND c.audience = 'bumblebee_runner'
   LIMIT 1
 $$;
+ALTER FUNCTION app.bumblebee_bootstrap_runner(TEXT) OWNER TO allura;
 REVOKE ALL ON FUNCTION app.bumblebee_bootstrap_runner(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app.bumblebee_bootstrap_runner(TEXT) TO allura_app;
 
@@ -84,7 +90,7 @@ CREATE OR REPLACE FUNCTION app.bumblebee_bootstrap_ingest(p_prefix TEXT)
 RETURNS TABLE (lease_id TEXT, group_id TEXT, workspace_id TEXT, source_id TEXT,
   source_revision_id TEXT, token_hash TEXT, expires_at TIMESTAMPTZ, revoked_at TIMESTAMPTZ)
 LANGUAGE sql SECURITY DEFINER STABLE
-SET search_path = pg_catalog, public, app
+SET search_path = pg_catalog
 AS $$
   SELECT l.lease_id, l.group_id, l.workspace_id, l.source_id, l.source_revision_id,
     l.ingest_token_hash, l.expires_at, l.revoked_at
@@ -92,6 +98,7 @@ AS $$
   WHERE l.ingest_token_prefix = p_prefix AND l.ingest_audience = 'bumblebee_ingest'
   LIMIT 1
 $$;
+ALTER FUNCTION app.bumblebee_bootstrap_ingest(TEXT) OWNER TO allura;
 REVOKE ALL ON FUNCTION app.bumblebee_bootstrap_ingest(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app.bumblebee_bootstrap_ingest(TEXT) TO allura_app;
 
@@ -102,11 +109,12 @@ CREATE OR REPLACE FUNCTION app.issue_bumblebee_scan_lease(
   p_lease_id TEXT, p_ingest_token_prefix TEXT, p_ingest_token_hash TEXT,
   p_expires_at TIMESTAMPTZ
 ) RETURNS BIGINT
-LANGUAGE plpgsql SECURITY INVOKER
-SET search_path = pg_catalog, public, app
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog
 AS $$
 DECLARE
   v_source public.bumblebee_sources%ROWTYPE;
+  v_credential public.bumblebee_runner_credentials%ROWTYPE;
   v_generation BIGINT;
 BEGIN
   SELECT * INTO STRICT v_source
@@ -117,6 +125,17 @@ BEGIN
     AND s.source_revision_id = p_source_revision_id
     AND s.runner_credential_id = p_runner_credential_id
     AND s.disabled_at IS NULL
+  FOR UPDATE;
+
+  -- Serialize with credential revocation and revalidate against database time.
+  SELECT * INTO STRICT v_credential
+  FROM public.bumblebee_runner_credentials AS c
+  WHERE c.group_id = v_source.group_id
+    AND c.workspace_id = v_source.workspace_id
+    AND c.credential_id = v_source.runner_credential_id
+    AND c.audience = 'bumblebee_runner'
+    AND c.revoked_at IS NULL
+    AND (c.expires_at IS NULL OR c.expires_at > statement_timestamp())
   FOR UPDATE;
 
   SELECT COALESCE(MAX(generation), 0) + 1 INTO v_generation
@@ -139,6 +158,7 @@ BEGIN
   RETURN v_generation;
 END;
 $$;
+ALTER FUNCTION app.issue_bumblebee_scan_lease(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TIMESTAMPTZ) OWNER TO allura;
 REVOKE ALL ON FUNCTION app.issue_bumblebee_scan_lease(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TIMESTAMPTZ) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app.issue_bumblebee_scan_lease(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TIMESTAMPTZ) TO allura_app;
 

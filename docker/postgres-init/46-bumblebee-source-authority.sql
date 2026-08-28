@@ -106,6 +106,8 @@ CREATE TABLE IF NOT EXISTS bumblebee_sources (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (group_id, workspace_id, source_id, source_revision_id),
   UNIQUE (group_id, workspace_id, source_id, revision_digest),
+  UNIQUE (group_id, workspace_id, source_id, source_revision_id,
+    runner_credential_id, runner_audience),
   FOREIGN KEY (group_id, workspace_id) REFERENCES workspaces(group_id, workspace_id),
   FOREIGN KEY (group_id, workspace_id, runner_credential_id, runner_audience)
     REFERENCES bumblebee_runner_credentials(group_id, workspace_id, credential_id, audience),

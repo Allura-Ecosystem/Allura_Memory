@@ -1,5 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { Pool, type PoolClient } from "pg"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 const GROUP_ID = "allura-bmb-source-e2e"
 const WORKSPACE_ID = "ws-bmb-source-e2e"
