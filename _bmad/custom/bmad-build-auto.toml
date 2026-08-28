@@ -1,0 +1,23 @@
+# Allura_Memory governance overlay for BMad's installer-owned bmad-build-auto skill.
+# This file survives BMad upgrades. It deliberately adds project governance;
+# it does not replace BMad's planning, implementation, or review workflow.
+
+[workflow]
+activation_steps_append = [
+  "Read {project-root}/AGENTS.md and {project-root}/.agents/TEAM-RAM-RUNTIME.md before routing work.",
+  "Run Scout hydration before planning: read local project context, call allura-brain audit_health_report with group_id=allura-system, call memory_search for the exact story/topic with group_id=allura-system, and query filtered recent events when the MCP tool is available. If Brain/MCP is unavailable, record the outage and HALT as blocked; do not claim hydration occurred.",
+  "Assign Team RAM ownership before implementation: Brooks routes and owns architecture; Woz is the sole implementation writer; add Knuth for schema/RLS/migration work; Pike and Fowler perform independent review; Ralph validates after review evidence exists. Do not claim a persona or subagent ran unless it actually did.",
+  "Use allura-system as the group_id for this repository. The authenticated principal is sabir-superadmin; place the active Team RAM persona in metadata.agent_id, never in user_id. Human curator approval remains required for any promotion."
+]
+
+persistent_facts = [
+  "file:{project-root}/AGENTS.md",
+  "file:{project-root}/.agents/TEAM-RAM-RUNTIME.md",
+  "file:{project-root}/guidelines/AI-GUIDELINES.md",
+  "Allura_Memory rule: raw BMad methods are workflow primitives. Team RAM and Allura govern their use. Keep Notion/human board state authoritative for priority; sprint-status.yaml is the Loop queue and reconciliation surface.",
+  "Loop rule: this workflow is entered only by an explicit epic or story selector. Never advance to a different story. Never run a global backlog sweep in this repository."
+]
+
+on_complete = """
+Before exiting a substantive build or review, write one append-only working-outcome receipt through allura-brain memory_add using group_id=allura-system and user_id=sabir-superadmin. Include the exact story key, active role(s), files changed, local verification, review result, remaining risks, and whether merge/remote CI is still pending. Set metadata.source=conversation and metadata.agent_id to the active role. Then read the returned id with memory_get to verify the receipt. If the MCP write or readback fails, report that failure honestly; do not claim the outcome was recorded or promoted.
+"""
