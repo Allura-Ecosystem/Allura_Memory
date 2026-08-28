@@ -85,6 +85,31 @@ jobs:
       - name: Run unit tests
         run: bun run test:unit
 
+  # ── Portfolio Evaluation (Story 24.6) ─────────────────────────────────────
+  # Deterministic offline regression gate. Executes every lane declared in
+  # evals/suites/portfolio.yaml against its dataset and fails when any metric
+  # falls below its declared threshold. Required — a regression must fail CI.
+  test-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install
+      - name: Run portfolio evaluation suite
+        run: bun run eval:portfolio --json=artifacts/ci/eval/portfolio.json --md=artifacts/ci/eval/portfolio.md
+      - name: Upload evaluation artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: portfolio-eval-${{ github.sha }}
+          path: artifacts/ci/eval
+          if-no-files-found: error
+          retention-days: 14
+
   # ── Curator Tests ─────────────────────────────────────────────────────────
   # Auto-Curator and proposal pipeline only.
   # NO database env vars — curator tests are pure unit tests.
