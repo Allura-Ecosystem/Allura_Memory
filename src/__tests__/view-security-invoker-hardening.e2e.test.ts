@@ -128,9 +128,9 @@ describeLive("Migration 51 security_invoker hardening against fresh allura_app P
     try {
       await withContext(client, { groupId: GROUP, workspaceId: WORKSPACE }, async () => {
         await client.query(
-          `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, confidence, metadata, outcome)
-           VALUES ($1, $2, 'ADR_CREATED', 'brooks', 'completed', 0.92, $3, '{}')`,
-          [GROUP, WORKSPACE, JSON.stringify({ principle: "conceptual-integrity" })],
+          `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, confidence, metadata, outcome, session_id)
+           VALUES ($1, $2, 'ADR_CREATED', 'brooks', 'completed', 0.92, $3, '{}', $4)`,
+          [GROUP, WORKSPACE, JSON.stringify({ principle: "conceptual-integrity" }), "view-invoker-e2e-session"],
         )
         await client.query(
           `INSERT INTO skill_usage_events (group_id, skill_name, success, token_count, duration_ms)
