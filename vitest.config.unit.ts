@@ -179,6 +179,10 @@ export default defineConfig({
       "src/__tests__/coherence-monitor.test.ts",
       // Coherence Monitor API routes (Story 2.1) — mocked auth/pool
       "src/__tests__/coherence-routes.test.ts",
+      // Story 24.7 — SDK public contract + CLI command surface (hermetic:
+      // injected fetch / subprocess; no server, no DB).
+      "packages/sdk/test/**/*.test.ts",
+      "packages/cli/src/**/*.test.ts",
     ],
     exclude: [
       // ── Integration tests (mocked DB/services) — use test:integration ──

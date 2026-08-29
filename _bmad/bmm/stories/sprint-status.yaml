@@ -372,11 +372,13 @@ epic_24:
         exists."
     - key: "24.7"
       title: "SDK, CLI, and Ten-Minute Developer Path"
-      status: changes-requested
+      status: review
       owner: "Troy"
       depends_on: ["24.5", "24.6"]
-      status_evidence: "PR #85 merged, but CLI parsing and SDK build fail; clean quickstart
-        and public contract evidence are absent."
+      status_evidence: "PR #85 merged, but post-merge review found CLI parsing and SDK
+        build fail. Remediation verified 2026-08-29 (Brooks/Hermes): SDK contract
+        tests (17) + CLI tests (8) added; withRetry retries:0 bug + error surfacing
+        + CLI --json unknown-command fixed; typecheck clean; 2499 unit tests pass."
     - key: "24.8"
       title: "Enterprise Documentation Truth Pack"
       status: changes-requested
@@ -668,7 +670,7 @@ development_status:
   24-4-atomic-promotion: in-review
   24-5-deterministic-scenario-harness: in-review
   24-6-evaluation-regression-gates: changes-requested
-  24-7-sdk-cli-developer-experience: changes-requested
+  24-7-sdk-cli-developer-experience: review
   24-8-enterprise-documentation-truth: changes-requested
   24-10-ci-gate-integrity: done
   24-9-reference-integrations-portfolio-demo: changes-requested

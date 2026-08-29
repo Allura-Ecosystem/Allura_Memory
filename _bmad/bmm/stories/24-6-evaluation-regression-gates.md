@@ -31,16 +31,16 @@ The repository contains governance, retrieval, audit, curation, latency, and loa
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `schemas/allura-eval-result-v1.schema.json` defines suite, dataset revision, environment, thresholds, metrics, failures, and evidence hashes.
-- [ ] AC-2: Evaluation configuration declares thresholds before execution; the runner cannot rewrite thresholds from observed results.
-- [ ] AC-3: Offline CI evaluates at least retrieval relevance, approved-only recall, policy violation blocking, cross-tenant isolation, promotion correctness, audit completeness, deterministic replay, tool-contract validation, and latency.
-- [ ] AC-4: Existing benchmark implementations are adapted or wrapped; duplicate metric implementations are not created without an ADR.
-- [ ] AC-5: Dataset fixtures are versioned, tenant-safe, free of secrets/regulated personal data, and have provenance documentation.
-- [ ] AC-6: A regression beyond its threshold fails CI and identifies the affected metric, baseline, observed value, and scenario/case IDs.
-- [ ] AC-7: Baseline changes require an explicit reviewed file change with rationale; CI never auto-promotes a new baseline.
-- [ ] AC-8: k6 or equivalent load evidence records hardware, concurrency, dataset, duration, error rate, and latency percentiles; results are labeled environment-specific.
-- [ ] AC-9: Reports are emitted as JSON plus Markdown/HTML derived from the same JSON source.
-- [ ] AC-10: Story 24.1 evidence manifests incorporate evaluation artifact hashes and pass/fail status.
+- [x] AC-1: `schemas/allura-eval-result-v1.schema.json` defines suite, dataset revision, environment, thresholds, metrics, failures, and evidence hashes.
+- [x] AC-2: Evaluation configuration declares thresholds before execution; the runner cannot rewrite thresholds from observed results.
+- [x] AC-3: Offline CI evaluates at least retrieval relevance, approved-only recall, policy violation blocking, cross-tenant isolation, promotion correctness, audit completeness, deterministic replay, tool-contract validation, and latency.
+- [x] AC-4: Existing benchmark implementations are adapted or wrapped; duplicate metric implementations are not created without an ADR.
+- [x] AC-5: Dataset fixtures are versioned, tenant-safe, free of secrets/regulated personal data, and have provenance documentation.
+- [x] AC-6: A regression beyond its threshold fails CI and identifies the affected metric, baseline, observed value, and scenario/case IDs.
+- [x] AC-7: Baseline changes require an explicit reviewed file change with rationale; CI never auto-promotes a new baseline.
+- [x] AC-8: k6 or equivalent load evidence records hardware, concurrency, dataset, duration, error rate, and latency percentiles; results are labeled environment-specific.
+- [x] AC-9: Reports are emitted as JSON plus Markdown/HTML derived from the same JSON source.
+- [x] AC-10: Story 24.1 evidence manifests incorporate evaluation artifact hashes and pass/fail status.
 
 ## Implementation Files
 
@@ -57,14 +57,14 @@ The repository contains governance, retrieval, audit, curation, latency, and loa
 
 ## Tasks
 
-- [ ] Inventory existing benchmark metrics, datasets, and thresholds.
-- [ ] Define the evaluation/result schema and baseline review rule.
-- [ ] Build adapters for existing benchmarks and scenario results.
-- [ ] Add missing security, replay, and tool-contract cases.
-- [ ] Create sanitized versioned datasets with provenance.
-- [ ] Add regression comparison and CI failure reporting.
-- [ ] Generate JSON and derived human-readable reports.
-- [ ] Run one controlled regression to prove the gate fails correctly.
+- [x] Inventory existing benchmark metrics, datasets, and thresholds.
+- [x] Define the evaluation/result schema and baseline review rule.
+- [x] Build adapters for existing benchmarks and scenario results.
+- [x] Add missing security, replay, and tool-contract cases.
+- [x] Create sanitized versioned datasets with provenance.
+- [x] Add regression comparison and CI failure reporting.
+- [x] Generate JSON and derived human-readable reports.
+- [x] Run one controlled regression to prove the gate fails correctly.
 
 ## Validation and Evidence
 
@@ -116,4 +116,13 @@ C5 remediation (Knuth, Team RAM algorithms expert):
 
 ### Status Evidence
 
-(To be filled after gate review.)
+Verified 2026-08-29 (Brooks/Hermes):
+- `bun run vitest run src/lib/evals/__tests__/` → 12/12 passed.
+- `bun run eval:portfolio` → all 9 lanes pass (retrieval relevance, approved-only
+  recall, policy violation blocking, cross-tenant isolation, promotion correctness,
+  audit completeness, deterministic replay, tool-contract validation, latency).
+- `test-eval` job wired in `.github/workflows/ci.yml` (required) and
+  `Epic 24 Evidence / Evaluation` lane in `.github/workflows/epic-24-evidence.yml`
+  (aggregated into SHA-bound manifest).
+- Evaluation artifact hashes (sha256) for suite, baseline, and dataset fixtures
+  recorded in `docs/portfolio/evidence-index.md` (AC-10).

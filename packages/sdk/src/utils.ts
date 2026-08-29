@@ -111,7 +111,11 @@ export async function withRetry<T>(
 ): Promise<T> {
   let lastError: Error = new Error("No attempts made");
 
-  for (let attempt = 0; attempt < retries; attempt++) {
+  // `retries` is the number of retries AFTER the first attempt, so the
+  // function always runs at least once (retries: 0 = single attempt).
+  const attempts = Math.max(1, retries + 1);
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       return await fn();
     } catch (error) {
@@ -121,11 +125,18 @@ export async function withRetry<T>(
         throw error;
       }
 
-      if (attempt < retries - 1) {
+      if (attempt < attempts - 1) {
         const backoff = calculateBackoff(attempt);
         await sleep(backoff);
       }
     }
+  }
+
+  // If no retries were configured, surface the original error rather than
+  // wrapping it — RetryExhaustedError is only meaningful when retries were
+  // actually attempted and all of them failed.
+  if (retries <= 0) {
+    throw lastError;
   }
 
   throw new RetryExhaustedError(retries, lastError);

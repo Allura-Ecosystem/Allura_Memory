@@ -31,16 +31,16 @@ Promotion spans proposal state, canonical memory/version records, relationship r
 
 ## Acceptance Criteria
 
-- [ ] AC-1: Every approval entrypoint calls one `approveProposal` domain service; no entrypoint duplicates transaction logic.
-- [ ] AC-2: The service accepts `PrincipalContext`, proposal ID, rationale, and idempotency key; curator identity is not accepted as caller-authoritative text.
-- [ ] AC-3: Proposal selection uses tenant scope and row locking; only a pending proposal may transition.
-- [ ] AC-4: Canonical memory/version write, supersession link when applicable, proposal transition, approval audit event, and projection outbox event share one transaction.
-- [ ] AC-5: Failure at any injected write point rolls back every write in the operation.
-- [ ] AC-6: Repeating the same idempotency key returns the original committed result without duplicate canonical or audit records.
-- [ ] AC-7: Concurrent approvals for the same proposal yield one success and stable already-decided/idempotent outcomes; no orphan or duplicate version is created.
-- [ ] AC-8: Unauthorized, wrong-tenant, rejected, or stale proposals cannot be promoted.
-- [ ] AC-9: The post-commit outbox worker is retryable and cannot change the committed approval decision.
-- [ ] AC-10: A round-trip assertion proves the promoted memory is retrievable by ID and approved-only search before the operation is reported complete.
+- [x] AC-1: Every approval entrypoint calls one `approveProposal` domain service; no entrypoint duplicates transaction logic.
+- [x] AC-2: The service accepts `PrincipalContext`, proposal ID, rationale, and idempotency key; curator identity is not accepted as caller-authoritative text.
+- [x] AC-3: Proposal selection uses tenant scope and row locking; only a pending proposal may transition.
+- [x] AC-4: Canonical memory/version write, supersession link when applicable, proposal transition, approval audit event, and projection outbox event share one transaction.
+- [x] AC-5: Failure at any injected write point rolls back every write in the operation.
+- [x] AC-6: Repeating the same idempotency key returns the original committed result without duplicate canonical or audit records.
+- [x] AC-7: Concurrent approvals for the same proposal yield one success and stable already-decided/idempotent outcomes; no orphan or duplicate version is created.
+- [x] AC-8: Unauthorized, wrong-tenant, rejected, or stale proposals cannot be promoted.
+- [x] AC-9: The post-commit outbox worker is retryable and cannot change the committed approval decision.
+- [x] AC-10: A round-trip assertion proves the promoted memory is retrievable by ID and approved-only search before the operation is reported complete.
 
 ## Implementation Files
 
@@ -57,14 +57,14 @@ Migration numbering is provisional and must follow the current migration head.
 
 ## Tasks
 
-- [ ] Inventory every approval/promotion entrypoint and remove duplicated write sequencing.
-- [ ] Define transaction result, reason codes, and idempotency semantics.
-- [ ] Add required uniqueness constraints and projection outbox schema.
-- [ ] Implement the transaction using one checked-out client.
-- [ ] Route MCP, HTTP, CLI, and curator calls through the domain service.
-- [ ] Add failure injection at each write boundary.
-- [ ] Add concurrent approval and replayed-request tests.
-- [ ] Prove approved-only retrieval before returning success.
+- [x] Inventory every approval/promotion entrypoint and remove duplicated write sequencing.
+- [x] Define transaction result, reason codes, and idempotency semantics.
+- [x] Add required uniqueness constraints and projection outbox schema.
+- [x] Implement the transaction using one checked-out client.
+- [x] Route MCP, HTTP, CLI, and curator calls through the domain service.
+- [x] Add failure injection at each write boundary.
+- [x] Add concurrent approval and replayed-request tests.
+- [x] Prove approved-only retrieval before returning success.
 
 ## Validation and Evidence
 

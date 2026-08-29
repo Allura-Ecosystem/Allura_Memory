@@ -56,8 +56,12 @@ async function main() {
 
   const handler = commands[command];
   if (!handler) {
-    console.error(`Unknown command: ${command}`);
-    console.error(HELP);
+    if (args.includes("--json")) {
+      console.log(JSON.stringify({ error: `Unknown command: ${command}`, code: 1 }));
+    } else {
+      console.error(`Unknown command: ${command}`);
+      console.error(HELP);
+    }
     process.exit(1);
   }
 

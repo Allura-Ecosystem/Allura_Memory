@@ -280,7 +280,8 @@ function isRetryable(error) {
 }
 async function withRetry(fn, retries = DEFAULT_RETRIES) {
   let lastError = new Error("No attempts made");
-  for (let attempt = 0; attempt < retries; attempt++) {
+  const attempts = Math.max(1, retries + 1);
+  for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       return await fn();
     } catch (error) {
@@ -288,11 +289,14 @@ async function withRetry(fn, retries = DEFAULT_RETRIES) {
       if (!isRetryable(error)) {
         throw error;
       }
-      if (attempt < retries - 1) {
+      if (attempt < attempts - 1) {
         const backoff = calculateBackoff(attempt);
         await sleep(backoff);
       }
     }
+  }
+  if (retries <= 0) {
+    throw lastError;
   }
   throw new RetryExhaustedError(retries, lastError);
 }
