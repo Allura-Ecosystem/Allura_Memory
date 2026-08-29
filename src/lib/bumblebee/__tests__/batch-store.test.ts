@@ -218,6 +218,19 @@ describe("Story 26.7 Bumblebee batch store", () => {
     ])
   })
 
+  it("does not nest BEGIN/COMMIT when a tenant-scoped caller owns the transaction", async () => {
+    const { pool, calls } = fakePool()
+    const store = await createBatchStore({ pool, transactional: false })
+
+    await store.persistBatch(input())
+
+    const texts = calls.map((call) => call.text)
+    expect(texts).not.toContain("BEGIN")
+    expect(texts).not.toContain("COMMIT")
+    expect(texts).not.toContain("ROLLBACK")
+    expect(texts.filter((text) => text.includes("INSERT INTO"))).toHaveLength(4)
+  })
+
   it("persistBatch ROLLBACKs and rethrows when a record INSERT fails, and never COMMITs", async () => {
     const { pool, calls } = fakePool({ failOnText: "INSERT INTO bumblebee_records" })
     const store = await createBatchStore({ pool })

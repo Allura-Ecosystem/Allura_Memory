@@ -12,6 +12,8 @@ export interface BatchStoreDeps {
   pool: {
     query(text: string, params?: unknown[]): Promise<{ rows: unknown[] }>
   }
+  /** False when the caller already owns the scoped transaction. */
+  transactional?: boolean
 }
 
 interface ReceiptRow {
@@ -71,8 +73,9 @@ export async function persistBatch(deps: BatchStoreDeps, input: PersistBatchInpu
 
   // The whole batch is one transaction: a failure in any INSERT rolls back the
   // receipt and every record so the scanner never sees a partially-landed
-  // batch. ROLLBACK is attempted on any error and the original error rethrown.
-  await deps.pool.query("BEGIN")
+  // batch. When an outer scoped transaction owns the client, it owns rollback.
+  const ownsTransaction = deps.transactional !== false
+  if (ownsTransaction) await deps.pool.query("BEGIN")
   try {
     await deps.pool.query(
       `INSERT INTO bumblebee_batch_receipts
@@ -138,9 +141,9 @@ export async function persistBatch(deps: BatchStoreDeps, input: PersistBatchInpu
       ],
     )
 
-    await deps.pool.query("COMMIT")
+    if (ownsTransaction) await deps.pool.query("COMMIT")
   } catch (error) {
-    await deps.pool.query("ROLLBACK")
+    if (ownsTransaction) await deps.pool.query("ROLLBACK")
     throw error
   }
 }
