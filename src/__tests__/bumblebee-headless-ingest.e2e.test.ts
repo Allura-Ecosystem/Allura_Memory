@@ -141,7 +141,7 @@ async function issueLease(): Promise<{ leaseId: string; ingestToken: string }> {
       runnerToken: RUNNER_RAW,
       sourceId: SOURCE_ID,
       sourceRevisionId: SOURCE_REV,
-      durationSeconds: 300,
+      durationSeconds: 240,
     },
     {
       authenticateRunner: authenticateRunnerForSource,
