@@ -1,6 +1,7 @@
 # Story 27.5 — Team RAM and Durham Branch Workflows
 
-**Status:** draft/planned
+**Status:** implemented, unit-verified (RED→GREEN), not committed — see
+`docs/archive/allura/evidence/epic-27/story-27.5-workflows.md`
 **Owner:** Brooks + Pike + Durham Munari/Rand
 **Depends on:** 27.3
 **Blocks:** 27.6
@@ -21,14 +22,14 @@ only through curator review.
 
 ## Acceptance Criteria
 
-- [ ] Team RAM: one branch per story/agent/review lane with sole-writer ownership.
-- [ ] Durham: conservative, expressive, and crop-resilient concept branches, each carrying
+- [x] Team RAM: one branch per story/agent/review lane with sole-writer ownership.
+- [x] Durham: conservative, expressive, and crop-resilient concept branches, each carrying
       reference, prompt, token, asset, accessibility, and provenance manifests.
-- [ ] Munari/Rand review branch evidence; only an approved diff becomes a curator proposal
+- [x] Munari/Rand review branch evidence; only an approved diff becomes a curator proposal
       (via the 27.3 adapter).
-- [ ] No broad new agent framework is added and no duplicate workflow-status ledger is
+- [x] No broad new agent framework is added and no duplicate workflow-status ledger is
       created (workflow status stays in Allura's existing ledgers).
-- [ ] Degraded, expired, rejected, quarantined, and rolled-back states remain explicit in
+- [x] Degraded, expired, rejected, quarantined, and rolled-back states remain explicit in
       these real lanes.
 
 ## Dependencies

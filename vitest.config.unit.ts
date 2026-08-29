@@ -47,6 +47,10 @@ export default defineConfig({
       // Story 27.3 — governed promotion adapter: proposal conversion,
       // receipts, quarantine, and rollback (pure logic, mocked queryable).
       "src/lib/branch/**/*.test.ts",
+      // Story 27.5 — Team RAM / Durham branch workflow lanes: sole-writer
+      // ownership, Durham manifests, Munari/Rand review gate (pure logic,
+      // mocked queryable; no DB/network).
+      "src/lib/branch-workflows/**/*.test.ts",
       // SONA vs AgentDB retrieval-learning evaluation harness
       // (pure logic, hermetic in-memory arms; no DB/network).
       "src/lib/branch-eval/**/*.test.ts",
