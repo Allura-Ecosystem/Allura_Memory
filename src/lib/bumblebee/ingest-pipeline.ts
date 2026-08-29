@@ -86,6 +86,16 @@ export async function ingestScannerBatch(request: Request, deps: IngestDeps): Pr
     return Response.json({ error: "BUMBLEBEE_BATCH_CONTENT_TYPE" }, { status: 415 })
   }
 
+  // (2b) Encoding gate: only identity is accepted. A compressed payload must
+  // be rejected deliberately here — otherwise gzip bytes fall through to the
+  // parser and fail as a misleading MALFORMED_LINE, and a future decompression
+  // step would need its bomb bound retroactively. AC-7: unsupported encodings
+  // fail closed.
+  const encoding = (request.headers.get("content-encoding") ?? "identity").trim().toLowerCase()
+  if (encoding !== "identity") {
+    return Response.json({ error: "BUMBLEBEE_BATCH_UNSUPPORTED_ENCODING" }, { status: 415 })
+  }
+
   // (3) Bounded read. A declared Content-Length gives a cheap early exit; the
   // post-read byte check still bounds chunked/streaming uploads where the
   // header is absent or lying.

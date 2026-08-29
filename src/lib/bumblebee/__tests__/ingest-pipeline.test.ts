@@ -155,6 +155,23 @@ describe("ingestScannerBatch", () => {
     },
   )
 
+  it.each(["gzip", "deflate", "br"])(
+    "rejects a non-identity content encoding deliberately before reading the body: %s",
+    async (encoding) => {
+      const text = vi.fn(async () => validBody)
+      const response = await ingestScannerBatch(
+        {
+          headers: new Headers({ "content-type": "application/x-ndjson", "content-encoding": encoding }),
+          text,
+        } as unknown as Request,
+        makeDeps(),
+      )
+      expect(response.status).toBe(415)
+      expect(await response.json()).toEqual({ error: "BUMBLEBEE_BATCH_UNSUPPORTED_ENCODING" })
+      expect(text).not.toHaveBeenCalled()
+    },
+  )
+
   it("rejects a missing content type", async () => {
     const text = vi.fn(async () => validBody)
     const response = await ingestScannerBatch(

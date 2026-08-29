@@ -122,6 +122,19 @@ const CONFLICT_PKG = {
 }
 const CONFLICT_NDJSON = `${JSON.stringify(CONFLICT_PKG)}\n${JSON.stringify(VALID_SUM)}\n`
 
+// Partial batch: the same single-package scan terminated early (status
+// 'partial', non-empty error), so the scanner emitted exactly the records
+// below and the counts stay consistent with them. It is still durable
+// evidence — the ingest path must accept it — but it must never be
+// presented as a promoted generation.
+const PARTIAL_SUM = {
+  ...VALID_SUM,
+  record_id: "scan_summary:ec1ca9bb40e82a7260197f987f3e9590a589c6f49f7e890adf3c17ad7d130632",
+  status: "partial",
+  error: "scan window ended before completion",
+}
+const PARTIAL_NDJSON = `${JSON.stringify(VALID_PKG)}\n${JSON.stringify(PARTIAL_SUM)}\n`
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function makeIngestRequest(body: string, ingestToken: string, contentType = "application/x-ndjson"): Request {
@@ -486,4 +499,55 @@ describeLive("AC-18 headless ingest proof matrix under live PostgreSQL", () => {
       client.release()
     }
   })
+
+  // ── (i) PARTIAL STATUS HELD ─────────────────────────────────────────────
+
+  it("accepts a partial-status batch and persists a held decision", async () => {
+    // A fresh lease so the partial batch is its own evidence unit and cannot
+    // collide with the valid batch already accepted under the shared lease.
+    const partialLease = await issueLease()
+
+    const response = await ingestScannerBatch(makeIngestRequest(PARTIAL_NDJSON, partialLease.ingestToken), {
+      authenticate: authenticateIngestLease,
+      findExistingBatch: async ({ lease, bodySha256 }) =>
+        (await createScopedIngestStore(lease)).findExistingBatch({ lease, bodySha256 }),
+      findConflictingBatch: async ({ lease }) =>
+        (await createScopedIngestStore(lease)).findConflictingBatch({ lease }),
+      persistBatch: async (input) =>
+        (await createScopedIngestStore(input.lease)).persistBatch(input),
+    })
+
+    // A partial scan is still legitimate evidence — the durable record of a
+    // run the scanner itself reported as unfinished. It must be accepted, not
+    // dropped, so an operator can see what was and was not covered.
+    expect(response.status).toBe(201)
+    const body = (await response.json()) as { batchId: string; accepted: boolean; recordCount: number }
+    expect(body.accepted).toBe(true)
+    expect(body.recordCount).toBe(2)
+
+    // The pipeline always persists the initial decision as 'held' — promotion
+    // is a later, separate step that may upgrade it. This asserts the full
+    // chain (auth → conformance → transactional persist) lands a held decision
+    // for a partial batch without pretending it promoted.
+    const client = await app.connect()
+    try {
+      const decisions = await scoped(client, () =>
+        client.query<{ decision: string; reason_code: string; summary_record_id: string | null }>(
+          `SELECT decision, reason_code, summary_record_id FROM bumblebee_run_decisions WHERE lease_id=$1`,
+          [partialLease.leaseId],
+        ),
+      )
+      expect(decisions.rows).toHaveLength(1)
+      // The summary reference must resolve on the full lease-bound grain in
+      // migration 52 — the same seven columns the decision row itself carries.
+      expect(decisions.rows[0]).toEqual({
+        decision: "held",
+        reason_code: "HELD_PENDING_PROMOTION",
+        summary_record_id: PARTIAL_SUM.record_id,
+      })
+    } finally {
+      client.release()
+    }
+  })
+
 })
