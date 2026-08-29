@@ -565,10 +565,10 @@ epic_27:
   stories:
     - key: "27.1"
       title: "Authorized Base Snapshot Contract — Design Spike"
-      status: ready-for-dev
+      status: done
     - key: "27.2"
       title: "Pin/Recon AgenticOW + Prove Disposable Branch Mechanics"
-      status: draft
+      status: in-progress
     - key: "27.3"
       title: "Governed Promotion Adapter, Receipts, and Quarantine"
       status: draft
@@ -668,8 +668,8 @@ development_status:
   26-6-containment-connectors-response-receipts: done
   26-7-operator-module-adversarial-tests-demo-gate: done
   epic-27: in-progress
-  27-1-base-snapshot-authorization-spike: ready-for-dev
-  27-2-disposable-branch-mechanics-agenticow-spike: draft
+  27-1-base-snapshot-authorization-spike: done
+  27-2-disposable-branch-mechanics-agenticow-spike: in-progress
   27-3-governed-promotion-adapter-receipts-quarantine: draft
   27-4-agentdb-sona-retrieval-learning-evaluation: draft
   27-5-team-ram-durham-branch-workflows: draft
