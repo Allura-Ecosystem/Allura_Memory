@@ -240,6 +240,14 @@ CREATE VIEW bumblebee_trusted_exposures AS
   FROM bumblebee_exposure_evidence ee
   WHERE ee.is_trusted = true;
 
+-- Views are separate ACL objects from their base tables: the base-table
+-- GRANT above does not extend to querying the view itself. Without this,
+-- allura_app hits "permission denied for view ..." on every one of these
+-- (AC-11 snapshot truth / AC-18 retrieval consumers), because these views
+-- had zero behavioural coverage until this story's e2e suite exercised them.
+GRANT SELECT ON bumblebee_current_routine_runs, bumblebee_current_inventory,
+  bumblebee_incomplete_runs, bumblebee_trusted_exposures TO allura_app;
+
 -- ── Schema version ───────────────────────────────────────────────────────
 INSERT INTO schema_versions (version, applied_at, description)
 VALUES ('048', NOW(), 'Story 26.7 immutable atomic Bumblebee NDJSON ingest receipt and sanitized record ledger')

@@ -79,6 +79,8 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "bumblebee_scan_leases", class: "tenant-scoped-credential", notes: "Story 26.7 (migration 47): source-bound monotonic leases with short-lived hashed ingest credentials", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "bumblebee_batch_receipts", class: "tenant-scoped", notes: "Story 26.7 (migration 48): immutable atomic ingest acceptance receipts", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "bumblebee_records", class: "tenant-scoped", notes: "Story 26.7 (migration 48): immutable sanitized upstream records", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "bumblebee_run_decisions", class: "tenant-scoped", notes: "Story 26.7 (migration 48): append-only held/promoted decision facts per ingest run", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "bumblebee_exposure_evidence", class: "tenant-scoped", notes: "Story 26.7 (migration 48): provisional finding evidence linked to accepted records", workspaceTreatment: "workspace-scoped-new-writes" },
 
   // Credential / identity tables
   { table: "mcp_tokens", class: "tenant-scoped-credential", notes: "MCP credentials; lookup by token prefix before tenant resolution" },

@@ -19,11 +19,21 @@ async function scoped<T>(client: PoolClient, work: () => Promise<T>) {
     const result = await work(); await client.query("COMMIT"); return result
   } catch (error) { await client.query("ROLLBACK"); throw error }
 }
-function record() {
-  const sourceFile = "/secret/CANARY-DO-NOT-PERSIST/package-lock.json"
-  const parts = ["baseline", "npm", "safe-package", "1.2.3", "", "", "", "npm", "lockfile", sourceFile, "", "false", "", "high", "", ""]
+const RUN_ID = "0123456789abcdef0123456789abcdef"
+
+function record(version = "1.2.3", sourceFile = "/secret/CANARY-DO-NOT-PERSIST/package-lock.json") {
+  const parts = ["baseline", "npm", "safe-package", version, "", "", "", "npm", "lockfile", sourceFile, "", "false", "", "high", "", ""]
   const id = `package:${createHash("sha256").update(`package\0${parts.join("\x1e")}`).digest("hex")}`
-  return { record_type: "package", record_id: id, schema_version: "0.1.0", scanner_name: "bumblebee", scanner_version: "v0.1.2", run_id: "live-run-1", scan_time: "2026-08-28T12:00:00.000Z", endpoint: { hostname: "CANARY-HOST", os: "linux", arch: "amd64", username: "CANARY-USER", uid: "1000", device_id: "device-live" }, profile: "baseline", ecosystem: "npm", package_name: "safe-package", normalized_name: "safe-package", version: "1.2.3", package_manager: "npm", source_type: "lockfile", source_file: sourceFile, has_lifecycle_scripts: false, confidence: "high" }
+  return { record_type: "package", record_id: id, schema_version: "0.1.0", scanner_name: "bumblebee", scanner_version: "v0.1.2", run_id: RUN_ID, scan_time: "2026-08-28T12:00:00.000Z", endpoint: { hostname: "CANARY-HOST", os: "linux", arch: "amd64", username: "CANARY-USER", uid: "1000", device_id: "device-live" }, profile: "baseline", ecosystem: "npm", package_name: "safe-package", normalized_name: "safe-package", version, package_manager: "npm", source_type: "lockfile", source_file: sourceFile, has_lifecycle_scripts: false, confidence: "high" }
+}
+
+function scanSummaryRecord(packageRecordsEmitted: number, findingsEmitted: number) {
+  const now = new Date()
+  const scanTime = new Date(now.getTime() - 5_000).toISOString()
+  const endTime = now.toISOString()
+  const parts = ["baseline", "complete", scanTime, endTime, "", "", String(packageRecordsEmitted), "0", String(findingsEmitted), "0", "0", "1", "false", "5", "0", "0", "0", "0", ""]
+  const id = `scan_summary:${createHash("sha256").update(`scan_summary\0${parts.join("\x1e")}`).digest("hex")}`
+  return { record_type: "scan_summary", record_id: id, schema_version: "0.1.0", scanner_name: "bumblebee", scanner_version: "v0.1.2", run_id: RUN_ID, scan_time: scanTime, endpoint: { hostname: "CANARY-HOST", os: "linux", arch: "amd64", username: "CANARY-USER", uid: "1000", device_id: "device-live" }, profile: "baseline", end_time: endTime, status: "complete", package_records_emitted: packageRecordsEmitted, findings_emitted: findingsEmitted, duplicates: 0, diagnostics_count: 0, files_considered: 1, timed_out: false, duration_ms: 5 }
 }
 const describeLive = process.env.RUN_E2E_TESTS === "true" && process.env.POSTGRES_APP_PASSWORD ? describe : describe.skip
 
@@ -48,7 +58,16 @@ describeLive("Story 26.7 ingest ledger under non-owner allura_app", () => {
     const accepted = await ingest(request(body)); expect(accepted.status).toBe(201)
     const receipt = await accepted.json() as { receiptId: string; replayed: boolean }
     const replay = await ingest(request(body)); expect(replay.status).toBe(200); expect(await replay.json()).toEqual({ ...receipt, replayed: true })
-    const conflict = await ingest(request(`${JSON.stringify(record(), null, 1)}\n`)); expect(conflict.status).toBe(409); expect(await conflict.json()).toEqual({ error: "BUMBLEBEE_INGEST_RECORD_CONFLICT" })
+    // Byte-different resubmission with the SAME record_id: reorder the top-level keys onto one
+    // physical line (NDJSON requires exactly one JSON object per line). sanitizeRecord() extracts
+    // named fields via object property access and exactKeys() checks membership, not order, and
+    // canonicalId() is computed from those extracted field values (ingest.ts:87-89, 133, 159) --
+    // never from serialized key order -- so record_id is unaffected by this reordering.
+    const reordered = Object.fromEntries(Object.entries(record()).reverse())
+    const conflictBody = `${JSON.stringify(reordered)}\n`
+    expect(conflictBody).not.toBe(body)
+    expect(conflictBody.split("\n").filter((line) => line.length > 0)).toHaveLength(1)
+    const conflict = await ingest(request(conflictBody)); expect(conflict.status).toBe(409); expect(await conflict.json()).toEqual({ error: "BUMBLEBEE_INGEST_RECORD_CONFLICT" })
 
     const client = await app.connect()
     try { await scoped(client, async () => {
@@ -57,6 +76,37 @@ describeLive("Story 26.7 ingest ledger under non-owner allura_app", () => {
       expect(JSON.stringify(rows.rows)).not.toMatch(/CANARY|package-lock\.json/)
       expect(rows.rows[0].provenance).toContain("source_file")
       await expect(client.query("UPDATE bumblebee_records SET run_id='changed'")).rejects.toThrow(/permission denied/)
+    }) } finally { client.release() }
+  })
+
+  it("promotes a batch with a matching trailing scan_summary and records the composite-FK decision fact", async () => {
+    const packageLine = JSON.stringify(record("9.9.9", "/secret/CANARY-DO-NOT-PERSIST/package-lock-2.json"))
+    const summary = scanSummaryRecord(1, 0)
+    const body = `${packageLine}\n${JSON.stringify(summary)}\n`
+    const request = new Request("https://allura.example/api/plugins/bumblebee/ingest", { method: "POST", headers: { authorization: ["Bearer", TOKEN].join(" "), "content-type": "application/x-ndjson" }, body })
+    const accepted = await ingest(request); expect(accepted.status).toBe(201)
+
+    const client = await app.connect()
+    try { await scoped(client, async () => {
+      const rows = await client.query<{ decision: string; reason_code: string; summary_record_id: string }>(
+        "SELECT decision, reason_code, summary_record_id FROM bumblebee_run_decisions WHERE summary_record_id=$1", [summary.record_id])
+      expect(rows.rows).toHaveLength(1)
+      expect(rows.rows[0]).toMatchObject({ decision: "promoted", reason_code: "PROMOTED_COMPLETE", summary_record_id: summary.record_id })
+
+      // AC-11 (snapshot truth): the promoted package must surface through the
+      // current-inventory view, scoped to this workspace/source/run via RLS on
+      // the underlying tables (exercised here through the allura_app role).
+      const inventoryRows = await client.query<{ record_id: string; record_type: string; run_id: string }>(
+        "SELECT record_id, record_type, run_id FROM bumblebee_current_inventory WHERE run_id=$1", [RUN_ID])
+      expect(inventoryRows.rows).toHaveLength(1)
+      expect(inventoryRows.rows[0]).toMatchObject({ record_type: "package", run_id: RUN_ID })
+
+      // AC-18 (retrieval half): the promoted run must surface through the
+      // current-routine-runs view.
+      const routineRunRows = await client.query<{ run_id: string; decision: string; reason_code: string }>(
+        "SELECT run_id, decision, reason_code FROM bumblebee_current_routine_runs WHERE run_id=$1 AND decision='promoted'", [RUN_ID])
+      expect(routineRunRows.rows.length).toBeGreaterThanOrEqual(1)
+      expect(routineRunRows.rows[0]).toMatchObject({ run_id: RUN_ID, decision: "promoted", reason_code: "PROMOTED_COMPLETE" })
     }) } finally { client.release() }
   })
 

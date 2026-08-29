@@ -49,6 +49,10 @@ describe("Story 26.7 immutable ingest ledger migration", () => {
     expect(sql).toContain("CREATE VIEW bumblebee_current_inventory")
     expect(sql).toContain("CREATE VIEW bumblebee_incomplete_runs")
     expect(sql).toContain("CREATE VIEW bumblebee_trusted_exposures")
+    // Views are ACL objects distinct from their base tables. Without an explicit
+    // GRANT on the view itself, allura_app gets "permission denied for view ..."
+    // even though it can SELECT the underlying tables directly.
+    expect(sql).toMatch(/GRANT SELECT ON bumblebee_current_routine_runs, bumblebee_current_inventory,\s+bumblebee_incomplete_runs, bumblebee_trusted_exposures TO allura_app/)
     for (const table of ["bumblebee_run_decisions", "bumblebee_exposure_evidence"]) {
       expect(sql).toContain(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`)
       expect(sql).toContain(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`)
