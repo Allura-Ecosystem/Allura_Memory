@@ -20,6 +20,15 @@ allura run tests/scenarios/governed-memory-success.yaml.json
 ```
 **Expected**: Scenario completes successfully, receipt written.
 
+### 2b. Run a reference integration (Story 24.9)
+```bash
+allura run examples/engineering-review-agent/scenarios/success.json
+allura run examples/controlled-research-agent/scenarios/success.json
+allura run examples/regulated-document-quality/scenarios/success.json
+```
+**Expected**: Each completes; receipts written with scenario digest, definition
+revision, principal/tenant references, and evidence hashes.
+
 ### 3. Demonstrate policy denial
 ```bash
 allura run tests/scenarios/unauthorized-cross-tenant-access.yaml.json

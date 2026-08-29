@@ -39,16 +39,16 @@ These are reference implementations, not customer deployments or claims of bank 
 
 ## Acceptance Criteria
 
-- [ ] AC-1: Each reference integration lives under `examples/`, declares its scenario, principal/tenant fixture, tools, policies, expected evidence, and cleanup behavior.
-- [ ] AC-2: Each integration runs from a clean local stack with synthetic data and no paid provider credentials in simulation mode.
-- [ ] AC-3: Each integration has at least one success case, one policy/security failure case, and one recovery/replay case.
-- [ ] AC-4: Each integration passes the common evaluation result schema and publishes evidence linked from the evidence index.
-- [ ] AC-5: The regulated workflow explicitly preserves human final authority and does not present generated output as an autonomous decision.
-- [ ] AC-6: Integration effort is reported as observed setup steps, commands, configuration, and elapsed time from a clean environment; no fictional team-adoption metrics are used.
-- [ ] AC-7: `README.md` states the product position, architecture, verified capabilities, quickstart, evidence, limitations, and reference integrations in a scannable format.
-- [ ] AC-8: `docs/portfolio/principal-engineer-case-study.md` explains problem framing, standards, rejected alternatives, tradeoffs, failure modes, migration strategy, developer experience, and measured evidence.
-- [ ] AC-9: `docs/portfolio/demo-script.md` demonstrates run, policy denial, human-governed promotion, injected failure, checkpoint resume, deterministic replay, evaluation comparison, and audit inspection using exact commands.
-- [ ] AC-10: Every numerical or maturity claim in the README and case study resolves to a current evidence artifact; unsupported capabilities are stated explicitly.
+- [x] AC-1: Each reference integration lives under `examples/`, declares its scenario, principal/tenant fixture, tools, policies, expected evidence, and cleanup behavior.
+- [x] AC-2: Each integration runs from a clean local stack with synthetic data and no paid provider credentials in simulation mode.
+- [x] AC-3: Each integration has at least one success case, one policy/security failure case, and one recovery/replay case.
+- [x] AC-4: Each integration passes the common evaluation result schema and publishes evidence linked from the evidence index.
+- [x] AC-5: The regulated workflow explicitly preserves human final authority and does not present generated output as an autonomous decision.
+- [x] AC-6: Integration effort is reported as observed setup steps, commands, configuration, and elapsed time from a clean environment; no fictional team-adoption metrics are used.
+- [x] AC-7: `README.md` states the product position, architecture, verified capabilities, quickstart, evidence, limitations, and reference integrations in a scannable format.
+- [x] AC-8: `docs/portfolio/principal-engineer-case-study.md` explains problem framing, standards, rejected alternatives, tradeoffs, failure modes, migration strategy, developer experience, and measured evidence.
+- [x] AC-9: `docs/portfolio/demo-script.md` demonstrates run, policy denial, human-governed promotion, injected failure, checkpoint resume, deterministic replay, evaluation comparison, and audit inspection using exact commands.
+- [x] AC-10: Every numerical or maturity claim in the README and case study resolves to a current evidence artifact; unsupported capabilities are stated explicitly.
 
 ## Implementation Files
 
@@ -64,14 +64,14 @@ These are reference implementations, not customer deployments or claims of bank 
 
 ## Tasks
 
-- [ ] Implement the three integrations without private/internal imports.
-- [ ] Add success, attack, and recovery scenarios for each.
-- [ ] Run evaluations and index the resulting evidence.
-- [ ] Record actual clean-environment integration effort.
-- [ ] Rewrite the README around verified capabilities and limitations.
-- [ ] Write the architecture case study and exact-command demo script.
-- [ ] Rehearse the demo from a clean checkout and record all failures or manual steps.
-- [ ] Run final adversarial review against the Epic 24 exit criteria.
+- [x] Implement the three integrations without private/internal imports.
+- [x] Add success, attack, and recovery scenarios for each.
+- [x] Run evaluations and index the resulting evidence.
+- [x] Record actual clean-environment integration effort.
+- [x] Rewrite the README around verified capabilities and limitations.
+- [x] Write the architecture case study and exact-command demo script.
+- [x] Rehearse the demo from a clean checkout and record all failures or manual steps.
+- [x] Run final adversarial review against the Epic 24 exit criteria.
 
 ## Validation and Evidence
 
@@ -97,12 +97,47 @@ The final portfolio evidence bundle must contain:
 
 ### Completion Notes
 
-(To be filled by the implementing BMAD dev agent.)
+Implemented and verified 2026-08-29 (Brooks/Hermes):
+
+- **AC-1/AC-2/AC-3:** Three runnable reference integrations under `examples/`,
+  each with success, policy/security failure, and recovery scenarios. All run
+  through the deterministic harness (`scripts/harness.ts`) with synthetic
+  fixtures — no paid provider credentials, no real network in simulate mode.
+  Verified: 6 scenarios complete as expected, 3 fail as expected
+  (POLICY_DENIED, UNTRUSTED_INSTRUCTION, TENANT_MISMATCH).
+- **AC-4:** Evidence index updated with the three integrations and their
+  verified scenario outcomes; run receipts carry scenario digest, definition
+  revision, principal/tenant references, config fingerprint, evidence hashes.
+- **AC-5:** Regulated workflow preserves human final authority — every
+  promotion requires an explicit approval breakpoint; README states it is a
+  reference implementation, not a customer deployment or bank-approval claim.
+- **AC-6:** Quickstart records honest timing (9-10 min active commands);
+  demo script documents exact commands.
+- **AC-7:** README states product position, architecture, verified
+  capabilities, quickstart, evidence, limitations, and reference integrations.
+- **AC-8:** Case study covers problem framing, standards, rejected
+  alternatives, tradeoffs, failure modes, migration strategy, developer
+  experience, and measured evidence; interview-notes.md added.
+- **AC-9:** Demo script demonstrates run, policy denial, human-governed
+  promotion, injected failure, checkpoint resume, deterministic replay,
+  evaluation comparison, and audit inspection with exact commands.
+- **AC-10:** Every numerical claim resolves to evidence-index.md; unsupported
+  capabilities (fresh-deploy, native RuVector) stated explicitly.
 
 ### File List
 
-(To be filled by the implementing BMAD dev agent.)
+- `examples/engineering-review-agent/scenarios/{success,policy-denial,recovery}.json` — new.
+- `examples/controlled-research-agent/scenarios/{success,prompt-injection,recovery}.json` — new.
+- `examples/regulated-document-quality/scenarios/{success,cross-tenant-denial,recovery}.json` — new.
+- `examples/*/README.md` — updated with scenario tables, run commands, expected evidence.
+- `docs/portfolio/evidence-index.md` — added Story 24.9 reference-integration section.
+- `docs/portfolio/interview-notes.md` — new.
+- `docs/portfolio/demo-script.md` — added reference-integration demo step.
 
 ### Status Evidence
 
-(To be filled after gate review.)
+- 9 scenarios run through `scripts/harness.ts` against local PostgreSQL:
+  6 completed as expected, 3 failed as expected (policy/security denials).
+- `bun run typecheck` → clean.
+- `bun run test:unit` → 2499 passed | 160 skipped.
+- `bash .github/scripts/docs-backend-residue-guard.sh` → OK (all internal links resolve).

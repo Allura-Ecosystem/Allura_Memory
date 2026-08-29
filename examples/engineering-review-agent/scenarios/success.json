@@ -1,0 +1,58 @@
+{
+  "scenario_id": "engineering-review-success",
+  "schema_version": "v1",
+  "description": "Engineering review agent success case: retrieves approved standards, records tool evidence, and passes the quality gate",
+  "tenant_fixture": {
+    "group_id": "allura-engineering-review",
+    "cleanup": true
+  },
+  "principal_fixture": {
+    "principal_id": "review-agent",
+    "roles": ["curator"],
+    "tenant_ids": ["allura-engineering-review"],
+    "auth_method": "service_identity"
+  },
+  "process_definition": {
+    "id": "engineering-review",
+    "revision": "1"
+  },
+  "initial_state": {
+    "memories": [
+      { "content": "Approved coding standard: TypeScript strict mode required", "score": 0.95 }
+    ],
+    "proposals": []
+  },
+  "tool_fixtures": [
+    {
+      "tool_name": "memory_search",
+      "match": "ordered",
+      "response": { "result": { "results": [{ "id": "std-1", "content": "Approved coding standard: TypeScript strict mode required", "score": 0.95 }] } }
+    },
+    {
+      "tool_name": "memory_add",
+      "match": "ordered",
+      "response": { "result": { "id": "ev-1", "stored": "episodic" } }
+    },
+    {
+      "tool_name": "governance_proposal_approve",
+      "match": "ordered",
+      "response": { "result": { "outcome": "approved", "memory_id": "canonical-review-1" } }
+    }
+  ],
+  "virtual_clock": {
+    "start_time": "2026-01-01T00:00:00.000Z",
+    "tick_interval_ms": 1000
+  },
+  "random_seed": 42,
+  "policy_expectations": [
+    { "policy_id": "pol-004", "expected_decision": "allow", "at_step": 2 }
+  ],
+  "assertions": {
+    "output": { "expected_status": "completed" },
+    "state": { "memory_count": 2 },
+    "audit": { "expected_events": ["proposal_approved"] }
+  },
+  "approval_breakpoints": [
+    { "at_step": 2, "decision": "approve", "rationale": "Review evidence complete, quality gate passed" }
+  ]
+}

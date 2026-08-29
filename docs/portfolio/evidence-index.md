@@ -131,3 +131,24 @@ GitHub marked the PR `BLOCKED`; a normal `gh pr merge --merge` attempt was
 refused with “the base branch policy prohibits the merge.” No `--admin` or
 `--auto` bypass was used. The PR was closed without merging and its temporary
 branch deleted after this evidence was captured.
+
+### Story 24.9 — Reference Integrations and Portfolio Demonstration
+
+Three runnable reference integrations live under `examples/`, each with a
+success case, a policy/security failure case, and a recovery case. All run
+through the deterministic scenario harness (`scripts/harness.ts`) against
+synthetic fixtures — no paid provider credentials, no real network in
+simulate mode.
+
+| Integration | Scenarios | Verified 2026-08-29 |
+|---|---|---|
+| `examples/engineering-review-agent/` | success, policy-denial, recovery | success ✓, denial ✓ (POLICY_DENIED), recovery ✓ |
+| `examples/controlled-research-agent/` | success, prompt-injection, recovery | success ✓, injection ✓ (UNTRUSTED_INSTRUCTION), recovery ✓ |
+| `examples/regulated-document-quality/` | success, cross-tenant-denial, recovery | success ✓, denial ✓ (TENANT_MISMATCH), recovery ✓ |
+
+Run receipts are written to `receipt-<scenario-id>-<timestamp>.json` by the
+harness; each receipt carries the scenario digest, definition revision,
+principal/tenant references, configuration fingerprint, evidence hashes, and
+replay comparison. The demo path is documented in
+`docs/portfolio/demo-script.md` and the architecture narrative in
+`docs/portfolio/principal-engineer-case-study.md`.
