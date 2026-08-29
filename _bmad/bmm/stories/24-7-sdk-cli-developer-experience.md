@@ -1,7 +1,7 @@
 # Story 24.7 — SDK, CLI, and Ten-Minute Developer Path
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** review — implementation verified 2026-08-29 (Brooks/Hermes): SDK contract tests + CLI tests added, 3 SDK/CLI defects fixed, typecheck clean, 2499 unit tests pass. Awaiting independent code review.
+**Status:** in-progress — code review 2026-08-29: patches applied; AC-1/AC-2/AC-5/AC-6/AC-7 re-scoped to partial with follow-up action items (SDK clients, gateway test, doctor depth, clean-env transcript).
 **Priority:** P1-High
 **Complexity:** Large
 **Owner:** unassigned

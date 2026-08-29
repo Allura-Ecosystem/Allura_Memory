@@ -685,10 +685,10 @@ development_status:
   24-4-atomic-promotion: review
   24-5-deterministic-scenario-harness: review
   24-6-evaluation-regression-gates: review
-  24-7-sdk-cli-developer-experience: review
-  24-8-enterprise-documentation-truth: review
+  24-7-sdk-cli-developer-experience: in-progress
+  24-8-enterprise-documentation-truth: done
   24-10-ci-gate-integrity: done
-  24-9-reference-integrations-portfolio-demo: review
+  24-9-reference-integrations-portfolio-demo: in-progress
   epic-24-retrospective: done
   epic-25: done
   epic-25-retrospective: done

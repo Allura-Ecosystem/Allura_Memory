@@ -1,7 +1,7 @@
 # Story 24.8 — Enterprise Documentation Truth Pack
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** review — all 10 ACs verified 2026-08-29 (Brooks/Hermes); residue guard extended with link check; awaiting independent code review.
+**Status:** done — code review 2026-08-29: all findings resolved (link-check titles, case-study Neo4j claim). All 10 ACs verified.
 **Priority:** P0-Critical
 **Complexity:** Large
 **Owner:** unassigned

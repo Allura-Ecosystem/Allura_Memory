@@ -1,7 +1,7 @@
 # Story 24.9 — Reference Integrations and Portfolio Demonstration
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** review — all 10 ACs verified 2026-08-29 (Brooks/Hermes); awaiting independent code review.
+**Status:** in-progress — code review 2026-08-29: patches applied (breakpoints, error-code claims, READMEs); assertions/initial_state/cleanup enforcement tracked as follow-up action item.
 **Priority:** P1-High
 **Complexity:** Large
 **Owner:** unassigned
