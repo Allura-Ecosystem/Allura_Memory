@@ -5,7 +5,7 @@
 > This replanned story was prepared with AI assistance. Independent Correct Course review [passed with a tracked verdict](../../../docs/archive/allura/evidence/epic-26/correct-course/review-verdict-2026-08-27.md); implementation evidence is still required before any AC advances.
 > Review evidence: `docs/archive/allura/evidence/epic-26/correct-course/review-verdict-2026-08-27.md`
 
-**Status:** In Progress — first bounded upstream provenance/schema-compatibility slice started 2026-08-27; the repository does not yet integrate the upstream scanner.
+**Status:** In Progress — 2026-08-28: pinned provenance and real scanner execution are COMPLETE (see `docs/archive/allura/evidence/epic-26/26.7/upstream-pin-and-execution-receipt.md`); ingestion pipeline (migration 48, batch conformance, transport) under active implementation. Upstream canonical-ID algorithm extracted and committed. Not yet closeable: headless proof matrix and independent acceptance remain.
 **Owner:** Woz + Knuth + Pike + Fowler
 **Depends on:** 26.1, 26.2, 26.3, 26.4, 26.5
 **Blocks:** Epic 26 completion
@@ -28,8 +28,8 @@ The pinned code/schema has known enum drift: code may emit `agent-skill`, while 
 
 ## Acceptance criteria
 
-- [ ] **Pinned provenance:** record immutable tag/commit/tree, artifact checksum/build provenance, scanner/version output, Apache-2.0 attribution, emitted schema, reviewed ecosystem/mode allowlist, and upgrade policy.
-- [ ] **Real scanner execution:** a real pinned binary passes `go test`, build, `selftest`, and one representative schema-compatible scan. Synthetic TypeScript fixtures alone do not satisfy this AC.
+- [x] **Pinned provenance:** record immutable tag/commit/tree, artifact checksum/build provenance, scanner/version output, Apache-2.0 attribution, emitted schema, reviewed ecosystem/mode allowlist, and upgrade policy. — Complete 2026-08-28: pin verified live against the upstream repository (commit/tree/schema/license all match); binary checksum and build provenance recorded; ecosystem enum verified from pinned source with the `agent-skill` drift documented and deliberately excluded; upgrade policy recorded. Evidence: `docs/archive/allura/evidence/epic-26/26.7/upstream-pin-and-execution-receipt.md`.
+- [x] **Real scanner execution:** a real pinned binary passes `go test`, build, `selftest`, and one representative schema-compatible scan. Synthetic TypeScript fixtures alone do not satisfy this AC. — Complete 2026-08-28: built with go1.27.0; upstream `go test` 23 packages/0 failures; `selftest OK (5 findings)`; representative baseline scan emitted 2 npm package records + a complete summary with matching counts. Evidence: `upstream-pin-and-execution-receipt.md`, `gotest-receipt.txt`, `selftest-receipt.txt`, `scan-output-baseline.ndjson` (all under `docs/archive/allura/evidence/epic-26/26.7/`).
 - [ ] **Separated credential authority:** the long-lived source runner uses exclusive audience `bumblebee_runner` only at the run-lease route. The short-lived lease token uses exclusive audience `bumblebee_ingest` only at ingest. Both are rejected by MCP/browser/other routes and by each other's route; dev/shared credentials are rejected.
 - [ ] **Source/population binding:** one immutable source revision binds runner credential, tenant, workspace, endpoint device ID, scanner pin, profile, inventory/findings-only mode, root/config digest, ecosystem allowlist, all-users setting, TTL, retention, classification, and redaction policy. Findings-enabled revisions require a scope-qualified immutable catalog revision FK. Identity/population changes create a new revision.
 - [ ] **Server-issued scan ordering:** the runner obtains a short-lived source-bound monotonic generation/lease before each scan. Promotion serializes the source/population/profile key and orders by server generation, not random `run_id` or endpoint time. Future clocks, stale leases, repeated generations, and conflicts fail closed.
