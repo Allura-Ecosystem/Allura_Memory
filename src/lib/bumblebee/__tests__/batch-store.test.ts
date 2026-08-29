@@ -9,6 +9,10 @@ import type { IngestLease, PersistBatchInput } from "../ingest-pipeline"
 // A fake pool that records every query verbatim and lets the test script the
 // rows each SELECT returns. It also supports a failure mode where a specific
 // INSERT throws, so the ROLLBACK path can be exercised without a database.
+// A single `rows` override is shared by every query issued against this pool
+// instance — fine here, because within one persistBatch call there is exactly
+// one SELECT (the lease clock lookup) that ever reads its result; every INSERT
+// ignores whatever `rows` comes back.
 function fakePool(overrides: {
   rows?: Record<string, unknown>[]
   failOnText?: string
@@ -24,12 +28,16 @@ function fakePool(overrides: {
   return { pool: { query } as unknown as BatchStoreDeps["pool"], calls, query }
 }
 
+const LEASE_CLOCK_ROW = { lease_created_at: "2026-08-28T23:00:00.000Z", database_now: "2026-08-28T23:59:20.000Z" }
+
 const lease: IngestLease = {
   groupId: "allura-acme",
   workspaceId: "workspace-1",
   sourceId: "source-1",
   sourceRevisionId: "revision-1",
   leaseId: "lease-1",
+  profile: "baseline",
+  mode: "inventory",
 }
 
 function record(overrides: Partial<ConformedRecord> = {}): ConformedRecord {
@@ -46,6 +54,27 @@ function record(overrides: Partial<ConformedRecord> = {}): ConformedRecord {
   }
 }
 
+const SUMMARY_RECORD_ID = "scan_summary:" + "e".repeat(64)
+
+function summaryRecord(payloadOverrides: Record<string, unknown> = {}): ConformedRecord {
+  return record({
+    line_number: 3,
+    record_type: "scan_summary",
+    record_id: SUMMARY_RECORD_ID,
+    sanitized_payload: {
+      status: "complete",
+      timed_out: false,
+      package_records_emitted: 2,
+      package_records_suppressed: 0,
+      findings_emitted: 0,
+      http_batches_failed: 0,
+      scan_time: "2026-08-28T23:59:14.725Z",
+      end_time: "2026-08-28T23:59:14.726Z",
+      ...payloadOverrides,
+    },
+  })
+}
+
 function input(overrides: Partial<PersistBatchInput> = {}): PersistBatchInput {
   return {
     lease,
@@ -55,7 +84,7 @@ function input(overrides: Partial<PersistBatchInput> = {}): PersistBatchInput {
     lineCount: 3,
     recordCount: 2,
     records: [record({ line_number: 1 }), record({ line_number: 2 })],
-    summaryRecordId: "scan_summary:" + "e".repeat(64),
+    summaryRecordId: SUMMARY_RECORD_ID,
     ...overrides,
   }
 }
@@ -124,8 +153,8 @@ describe("Story 26.7 Bumblebee batch store", () => {
     expect(result).toBeNull()
   })
 
-  it("persistBatch issues BEGIN, receipt INSERT, one INSERT per record, run_decisions INSERT, and COMMIT in order", async () => {
-    const { pool, calls } = fakePool()
+  it("persistBatch issues BEGIN, receipt INSERT, one INSERT per record, the lease-clock SELECT, run_decisions INSERT, and COMMIT in order", async () => {
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
     const store = await createBatchStore({ pool })
 
     await store.persistBatch(input())
@@ -135,13 +164,15 @@ describe("Story 26.7 Bumblebee batch store", () => {
     expect(texts[1]).toContain("INSERT INTO bumblebee_batch_receipts")
     expect(texts[2]).toContain("INSERT INTO bumblebee_records")
     expect(texts[3]).toContain("INSERT INTO bumblebee_records")
-    expect(texts[4]).toContain("INSERT INTO bumblebee_run_decisions")
+    expect(texts[4]).toContain("SELECT created_at AS lease_created_at, NOW() AS database_now")
+    expect(texts[4]).toContain("FROM bumblebee_scan_leases")
+    expect(texts[5]).toContain("INSERT INTO bumblebee_run_decisions")
     expect(texts[texts.length - 1]).toBe("COMMIT")
     expect(texts).not.toContain("ROLLBACK")
   })
 
   it("persistBatch writes the receipt with the full scoped identity and digest", async () => {
-    const { pool, calls } = fakePool()
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
     const store = await createBatchStore({ pool })
 
     await store.persistBatch(input())
@@ -165,7 +196,7 @@ describe("Story 26.7 Bumblebee batch store", () => {
   })
 
   it("persistBatch writes one record row per record with JSON-stringified payloads", async () => {
-    const { pool, calls } = fakePool()
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
     const store = await createBatchStore({ pool })
 
     await store.persistBatch(input())
@@ -194,32 +225,158 @@ describe("Story 26.7 Bumblebee batch store", () => {
     }
   })
 
-  it("persistBatch writes the run decision as held with the summary record id", async () => {
-    const { pool, calls } = fakePool()
+  it("persistBatch mints a decision_id that names neither outcome and is stable for the same lease/batch", async () => {
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
     const store = await createBatchStore({ pool })
 
     await store.persistBatch(input())
 
-    const decision = calls[4]
+    const decision = calls[5]
     expect(decision.text).toContain("INSERT INTO bumblebee_run_decisions")
-    expect(decision.text).toContain("group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id, decision_id, run_id, summary_record_id, decision, reason_code")
-    expect(decision.params).toEqual([
-      "allura-acme",
-      "workspace-1",
-      "source-1",
-      "revision-1",
-      "lease-1",
-      "batch_abc",
-      expect.stringMatching(/^held_[a-f0-9]{32}$/),
-      "c".repeat(32),
-      "scan_summary:" + "e".repeat(64),
-      "held",
-      "HELD_PENDING_PROMOTION",
-    ])
+    expect(decision.params[6]).toMatch(/^dec_[a-f0-9]{32}$/)
+  })
+
+  it("row 1: a batch with a matching complete summary and no scan_summary record present in `records` is held missing-summary (defensive: no promotable fact without a stored summary)", async () => {
+    // `records` here (2 package rows, no scan_summary) mirrors a caller that
+    // omitted the summary from the persisted set — the decision engine must
+    // never promote without one, even though nothing else is wrong.
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
+    const store = await createBatchStore({ pool })
+
+    await store.persistBatch(input())
+
+    const decision = calls[5]
+    expect(decision.params[8]).toBeNull() // summary_record_id
+    expect(decision.params[9]).toBe("held")
+    expect(decision.params[10]).toBe("HELD_MISSING_SUMMARY")
+  })
+
+  it("row 1: bound complete baseline inventory with valid counts and a stored summary is promoted", async () => {
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
+    const store = await createBatchStore({ pool })
+
+    await store.persistBatch(input({
+      records: [record({ line_number: 1 }), record({ line_number: 2 }), summaryRecord()],
+    }))
+
+    const decision = calls[calls.length - 2]
+    expect(decision.params[8]).toBe(SUMMARY_RECORD_ID) // summary_record_id required when promoted
+    expect(decision.params[9]).toBe("promoted")
+    expect(decision.params[10]).toBe("PROMOTED_COMPLETE")
+  })
+
+  it("row 2: bound EMPTY complete inventory (zero package/finding records, matching zero counters) is promoted", async () => {
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
+    const store = await createBatchStore({ pool })
+
+    await store.persistBatch(input({
+      records: [summaryRecord({ package_records_emitted: 0, findings_emitted: 0 })],
+    }))
+
+    const decision = calls[calls.length - 2] // run_decisions is second-to-last before COMMIT
+    expect(decision.text).toContain("INSERT INTO bumblebee_run_decisions")
+    expect(decision.params[8]).toBe(SUMMARY_RECORD_ID)
+    expect(decision.params[9]).toBe("promoted")
+    expect(decision.params[10]).toBe("PROMOTED_COMPLETE")
+  })
+
+  it("row 3: findings-only mode is held even with a matching complete summary", async () => {
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
+    const store = await createBatchStore({ pool })
+    const findingsLease: IngestLease = { ...lease, mode: "findings-only" }
+
+    await store.persistBatch(input({
+      lease: findingsLease,
+      records: [summaryRecord({ package_records_emitted: 0 })],
+    }))
+
+    const decision = calls[calls.length - 2]
+    expect(decision.params[8]).toBeNull()
+    expect(decision.params[9]).toBe("held")
+    expect(decision.params[10]).toBe("HELD_FINDINGS_ONLY")
+  })
+
+  it("row 4: complete deep profile is held as campaign evidence, never promoted", async () => {
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
+    const store = await createBatchStore({ pool })
+    const deepLease: IngestLease = { ...lease, profile: "deep" }
+
+    await store.persistBatch(input({
+      lease: deepLease,
+      records: [record({ line_number: 1 }), record({ line_number: 2 }), summaryRecord()],
+    }))
+
+    const decision = calls[calls.length - 2]
+    expect(decision.params[8]).toBeNull()
+    expect(decision.params[9]).toBe("held")
+    expect(decision.params[10]).toBe("HELD_DEEP")
+  })
+
+  it("row 5: partial status is held, preserving current state", async () => {
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
+    const store = await createBatchStore({ pool })
+
+    await store.persistBatch(input({
+      records: [record({ line_number: 1 }), record({ line_number: 2 }), summaryRecord({ status: "partial" })],
+    }))
+
+    const decision = calls[calls.length - 2]
+    expect(decision.params[8]).toBeNull()
+    expect(decision.params[9]).toBe("held")
+    expect(decision.params[10]).toBe("HELD_PARTIAL")
+  })
+
+  it("row 6: contradictory counters (stored package rows disagree with the summary's own counter) are held with a stable reason code", async () => {
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
+    const store = await createBatchStore({ pool })
+
+    await store.persistBatch(input({
+      // Only 1 package row stored, but the summary claims 2 were emitted.
+      records: [record({ line_number: 1 }), summaryRecord({ package_records_emitted: 2 })],
+    }))
+
+    const decision = calls[calls.length - 2]
+    expect(decision.params[8]).toBeNull()
+    expect(decision.params[9]).toBe("held")
+    expect(decision.params[10]).toBe("HELD_COUNTER_MISMATCH")
+  })
+
+  it("row 6: a failed-batch contradiction (http_batches_failed > 0) is held even with matching counters", async () => {
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
+    const store = await createBatchStore({ pool })
+
+    await store.persistBatch(input({
+      records: [
+        record({ line_number: 1 }),
+        record({ line_number: 2 }),
+        summaryRecord({ http_batches_failed: 1 }),
+      ],
+    }))
+
+    const decision = calls[calls.length - 2]
+    expect(decision.params[8]).toBeNull()
+    expect(decision.params[9]).toBe("held")
+    expect(decision.params[10]).toBe("HELD_FAILED_BATCH")
+  })
+
+  it("row 7 (write-path half): a batch is still evaluated and its decision persisted regardless of generation ordering — 'cannot replace current state' is a read-side view concern out of scope here", async () => {
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
+    const store = await createBatchStore({ pool })
+
+    await store.persistBatch(input({
+      records: [record({ line_number: 1 }), record({ line_number: 2 }), summaryRecord()],
+    }))
+
+    // The append-only decision fact always lands: this is the guarantee that
+    // satisfies "persist evidence" for a late/older-generation batch. Whether
+    // it may replace "current state" is not decided here at all.
+    const decision = calls[calls.length - 2]
+    expect(decision.text).toContain("INSERT INTO bumblebee_run_decisions")
+    expect(decision.params[9]).toBe("promoted")
   })
 
   it("does not nest BEGIN/COMMIT when a tenant-scoped caller owns the transaction", async () => {
-    const { pool, calls } = fakePool()
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
     const store = await createBatchStore({ pool, transactional: false })
 
     await store.persistBatch(input())
@@ -255,8 +412,20 @@ describe("Story 26.7 Bumblebee batch store", () => {
     expect(texts).not.toContain("COMMIT")
   })
 
+  it("persistBatch ROLLBACKs and rethrows when the run_decisions INSERT fails (e.g. the promoted/summary CHECK)", async () => {
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW], failOnText: "INSERT INTO bumblebee_run_decisions" })
+    const store = await createBatchStore({ pool })
+
+    await expect(store.persistBatch(input())).rejects.toThrow("boom")
+
+    const texts = calls.map((call) => call.text)
+    expect(texts[0]).toBe("BEGIN")
+    expect(texts).toContain("ROLLBACK")
+    expect(texts).not.toContain("COMMIT")
+  })
+
   it("sanitized_payload_digest is a 64-hex sha256 over the records' sanitized payloads", async () => {
-    const { pool, calls } = fakePool()
+    const { pool, calls } = fakePool({ rows: [LEASE_CLOCK_ROW] })
     const store = await createBatchStore({ pool })
 
     const payloads = [
