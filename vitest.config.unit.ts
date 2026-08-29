@@ -44,6 +44,12 @@ export default defineConfig({
       // Bumblebee operator module's fail-closed/rollback behaviour.
       "src/lib/replay/**/*.test.ts",
       "src/lib/bumblebee/**/*.test.ts",
+      // Story 27.3 — governed promotion adapter: proposal conversion,
+      // receipts, quarantine, and rollback (pure logic, mocked queryable).
+      "src/lib/branch/**/*.test.ts",
+      // SONA vs AgentDB retrieval-learning evaluation harness
+      // (pure logic, hermetic in-memory arms; no DB/network).
+      "src/lib/branch-eval/**/*.test.ts",
       // Story 26.5 — governed mitigation drafts must stay in the CI unit lane.
       "src/lib/mitigation/**/*.test.ts",
       // Story 24.5 — deterministic scenario harness. Hermetic: engine DB
