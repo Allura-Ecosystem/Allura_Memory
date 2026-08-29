@@ -131,3 +131,9 @@ Verified and completed 2026-08-29 (Brooks/Hermes):
 - `bash .github/scripts/docs-allura-canonical-guard.sh` → OK.
 - `bash .github/scripts/runtime-adapter-surface-guard.sh` → OK.
 - Capability-matrix evidence links all resolve to `evidence-index.md`.
+
+### Review Findings (2026-08-29 code review)
+
+- [x] [Review][Patch] Link check handles markdown titles + empty targets
+- [x] [Review][Patch] Case study "Neo4j read-only fallback" corrected to "fully removed" (Epic 23)
+- [x] [Review][Defer] Link guard misses reference-style links, multi-line targets, fenced-code examples — deferred, pre-existing guard scope

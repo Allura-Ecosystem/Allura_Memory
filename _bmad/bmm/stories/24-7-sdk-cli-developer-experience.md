@@ -133,3 +133,13 @@ Verified and completed 2026-08-29 (Brooks/Hermes):
 - `bun run typecheck` → clean.
 - `bun run test:unit` (full lane) → 2499 passed | 160 skipped.
 - `cd packages/sdk && bun run build` → CJS + DTS build success.
+
+### Review Findings (2026-08-29 code review)
+
+- [x] [Review][Patch] Canonical gateway port 5888 everywhere (up/doctor/quickstart) — was 6477/3201/5888 inconsistent
+- [x] [Review][Patch] `--json` errors to stderr, not stdout — automation-safe
+- [x] [Review][Patch] `withRetry` NaN/Infinity/negative guard + JSDoc semantics
+- [x] [Review][Patch] `inspect` scans cwd receipt-*.json
+- [x] [Review][Patch] Doctor exit-code asserted unconditionally; contract tests add upper bounds
+- [x] [Review][Decision] AC-1/AC-2/AC-5/AC-6/AC-7 re-scoped to partial with honest scope notes (SDK clients, gateway test, doctor depth, clean-env transcript are follow-up action items)
+- [x] [Review][Defer] `policy_expectations` self-fulfilling (echoes declared decisions) — deferred, pre-existing harness design

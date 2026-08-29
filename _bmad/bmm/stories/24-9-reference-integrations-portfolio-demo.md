@@ -151,3 +151,12 @@ Implemented and verified 2026-08-29 (Brooks/Hermes):
 - `bun run typecheck` → clean.
 - `bun run test:unit` → 2499 passed | 160 skipped.
 - `bash .github/scripts/docs-backend-residue-guard.sh` → OK (all internal links resolve).
+
+### Review Findings (2026-08-29 code review)
+
+- [x] [Review][Patch] Off-by-one approval breakpoints fixed in both recovery scenarios (TRANSIENT_RETRY folding shifts step indices) — human-authority breakpoint now fires
+- [x] [Review][Patch] Cross-tenant denial claim corrected (POLICY_DENIED with TENANT_MISMATCH in message — schema enum has no TENANT_MISMATCH)
+- [x] [Review][Patch] READMEs document .env.portfolio.example bootstrap; controlled-research stale POL-004 bullet corrected
+- [x] [Review][Patch] Demo-script 8->9 lanes + exact resume command; interview-notes numbers corrected
+- [x] [Review][Decision] Assertions/initial_state/cleanup not enforced by harness — re-scoped honestly; enforcement tracked as follow-up action item
+- [x] [Review][Defer] `audit.expected_events` uses nonexistent event vocabulary — deferred, harness event names
