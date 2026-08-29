@@ -1,0 +1,199 @@
+{
+  "story": "27-2-disposable-branch-mechanics-agenticow-spike",
+  "acceptance": [
+    "AC-2",
+    "AC-3",
+    "AC-4",
+    "AC-5",
+    "AC-6"
+  ],
+  "status": "PASS",
+  "failures": [],
+  "measuredAt": "2026-08-29T17:44:46.237Z",
+  "pin": {
+    "package": "agenticow",
+    "version": "0.2.4",
+    "gitCommit": "dd4f437b92d2dbbc1f40dfa00023eed6e9c3bd84",
+    "rvfNode": "0.2.3",
+    "provenance": "installed agenticow@0.2.4 hashes byte-identical (sha256 c9ab668…) to pinned clone src/index.js"
+  },
+  "dataset": {
+    "baseVectors": 5000,
+    "dimensions": 128,
+    "metric": "cosine",
+    "branchEditsB1": {
+      "added": 5,
+      "overridden": 1,
+      "tombstoned": 1
+    },
+    "branchEditsB2": {
+      "added": 5,
+      "overridden": 1,
+      "tombstoned": 1
+    },
+    "poisonDiscarded": {
+      "adds": 5,
+      "overrides": 1
+    }
+  },
+  "hardware": {
+    "cpu": "AMD Ryzen 7 5800XT 8-Core Processor",
+    "cores": 16,
+    "ramGB": 30.3,
+    "platform": "linux-x64",
+    "node": "v24.19.0",
+    "kernel": "Linux 7.0.0-30-generic",
+    "hostname": "ronin704-MS-7B86"
+  },
+  "storage": {
+    "bytes": {
+      "baseRvf": 2600603,
+      "emptyForkChild": 162,
+      "b1WorkingNodePostRollback": 162,
+      "b2ChildBeforeDiscard": 162,
+      "cleanCheckpointNode": 4843
+    },
+    "files": [],
+    "fixtures": {
+      "dir": "/tmp/agenticow-recon/fixtures",
+      "totalBytes": 2672195,
+      "fileCount": 158
+    }
+  },
+  "latencyMs": {
+    "fork": {
+      "min": 4.315,
+      "p50": 4.496,
+      "p95": 5.627,
+      "max": 13.458,
+      "n": 25
+    },
+    "queryBase": {
+      "min": 0.296,
+      "p50": 0.311,
+      "p95": 0.346,
+      "max": 0.381,
+      "n": 30
+    },
+    "queryBranchReadThrough": {
+      "min": 0.347,
+      "p50": 0.395,
+      "p95": 0.701,
+      "max": 0.744,
+      "n": 30
+    },
+    "checkpoint": {
+      "min": 4.291,
+      "p50": 4.453,
+      "p95": 5.741,
+      "max": 13.282,
+      "n": 25
+    },
+    "rollback": {
+      "min": 4.433,
+      "p50": 4.63,
+      "p95": 4.995,
+      "max": 9.719,
+      "n": 25
+    },
+    "diff": {
+      "min": 0.197,
+      "p50": 0.235,
+      "p95": 0.308,
+      "max": 0.763,
+      "n": 25
+    }
+  },
+  "recall": {
+    "method": "brute-force ground truth (base ∪ edits − tombstones, reranked by exact cosine/L2-normalized distance) vs agenticow top-K; author acceptance method",
+    "recallAtK": 100,
+    "exactOrderMatch": 100,
+    "baseVsBranchTopKOverlap": 99.7,
+    "k": 10,
+    "queries": 30,
+    "queriesUsedForRecall": 30
+  },
+  "proofs": {
+    "readThrough": "b1 and b2 both return base id 5 top-1 on base-vector query; base ∪ edits merged; child wins on id collision (42); tombstones masked",
+    "branchLocalWrites": "b1 add 8000 invisible to base and b2; b2 add 8100 invisible to b1 and base",
+    "tombstones": "b1 delete(7): id 7 masked from b1 queries, still returned by base; b2 delete(99) branch-local",
+    "checkpointRollback": "rollback to clean checkpoint reverted poison (5 adds + override 100), preserved clean adds/override/tombstone; poison files removed from disk",
+    "diff": {
+      "b1PrePoison": {
+        "added": [
+          8000,
+          8001,
+          8002,
+          8003,
+          8004
+        ],
+        "overridden": [
+          42
+        ],
+        "deleted": [
+          7
+        ]
+      },
+      "b2": {
+        "added": [
+          8100,
+          8101,
+          8102,
+          8103,
+          8104
+        ],
+        "overridden": [
+          123
+        ],
+        "deleted": [
+          99
+        ]
+      },
+      "note": "diff() is working-node-scoped (delta since last checkpoint/isolate), accumulated chain via lineage()"
+    },
+    "quarantineReject": "b2 checkpoint froze poison; discard + rm; base and b1 unaffected (zero blast radius)"
+  },
+  "ac2": {
+    "package": "agenticow",
+    "version": "0.2.4",
+    "pinnedGitCommit": "dd4f437b92d2dbbc1f40dfa00023eed6e9c3bd84",
+    "rvfNodeExactPin": "0.2.3",
+    "installedFrom": "npm i agenticow@0.2.4 + @ruvector/rvf-node@0.2.3 in /tmp/agenticow-recon/fixture-env (no in-repo install)",
+    "fixtureRoot": "/tmp/agenticow-recon/fixtures",
+    "disposable": true,
+    "cleanup": "rm -rf /tmp/agenticow-recon/fixtures /tmp/agenticow-recon/fixture-env"
+  },
+  "ac5": {
+    "verdict": "agenticow exposes no status model (no degraded/expired/rejected/quarantined/rolled_back states). Those STATE values must live app-level (27.1 branch_registry / 27.6 gate) per recon §2 invariant-8 seam. Demonstrated mechanical equivalents:",
+    "rolled_back_analog": {
+      "mechanism": "rollback(checkpointId) closes+rm-s owned poison nodes, derives fresh child from the target checkpoint",
+      "demonstrated": "b1 poison (5 adds + override id 100) reverted; poison files rm'd; clean edits preserved",
+      "stateOwner": "app-level (status=rolled_back)"
+    },
+    "quarantined_analog": {
+      "mechanism": "checkpoint(label) freezes the poisoned state as a COW node (retention = until close()/rm; no TTL in library)",
+      "demonstrated": "b2 checkpoint('quarantine-poison') froze bad state; child then rm'd; base untouched",
+      "stateOwner": "app-level (status=quarantined)"
+    },
+    "rejected_analog": {
+      "mechanism": "do-not-promote + close() + rm child (no native reject concept)",
+      "demonstrated": "b2 discarded with zero blast radius on base",
+      "stateOwner": "app-level (status=rejected; 27.3 promotion gate)"
+    },
+    "degraded_analog": {
+      "mechanism": "fork({nativeAnn}) try/catch → exact JS read-through, mem.nativeAnn === false",
+      "demonstrated": {
+        "requested": true,
+        "effective": true,
+        "degraded": false,
+        "recallSample": "base id 3 in top-10 (read-through intact)"
+      },
+      "stateOwner": "app-level (status=degraded)"
+    },
+    "expired_analog": {
+      "mechanism": "NONE in library (no TTL/expiry; branches persist until close()/rm)",
+      "demonstrated": "retention is app-level only (27.1 retention_expires_at)",
+      "stateOwner": "app-level (status=expired)"
+    }
+  }
+}

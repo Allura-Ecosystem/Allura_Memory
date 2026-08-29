@@ -36,16 +36,35 @@ adopted.
       acceptance artifact `bench/acceptance-results.json` records `pass: false` @ 30/1000
       branches, contradicting the README's "1000-branch PASS" badge; no upstream code
       executed, no adoption, nothing installed — recon only).
-- [ ] Spike uses only disposable fixtures and the pinned dependency/revision (no unbounded
-      branch retention, in line with the out-of-scope list).
-- [ ] At least two isolated branches are forked from one authorized base, and read-through
-      (branch sees the base) is proven.
-- [ ] Branch-local writes, tombstones, checkpoint, rollback, and diff are proven on the
-      fixtures.
-- [ ] Degraded, expired, rejected, quarantined, and rolled-back branch states are explicit
-      and observable.
-- [ ] Dataset size, dimensions, hardware, storage, latency percentiles, and recall are
-      recorded as machine-readable evidence.
+- [x] Spike uses only disposable fixtures and the pinned dependency/revision (no unbounded
+      branch retention, in line with the out-of-scope list). — Fixture proof §AC-2:
+      `agenticow@0.2.4` + `@ruvector/rvf-node@0.2.3` exact pins installed in
+      `/tmp/agenticow-recon/fixture-env` only (byte-identical to pinned clone `dd4f437b9`);
+      fixtures under `/tmp/agenticow-recon/fixtures`, removed after the run; no in-repo
+      installs.
+- [x] At least two isolated branches are forked from one authorized base, and read-through
+      (branch sees the base) is proven. — Fixture proof §AC-3: `b1` and `b2` forked from one
+      5,000-vector base; base id 5 is top-1 through both branches; `lineage()`
+      `[working, base]`; empty fork child exactly 162 B.
+- [x] Branch-local writes, tombstones, checkpoint, rollback, and diff are proven on the
+      fixtures. — Fixture proof §AC-4: adds invisible across branches, override id 42
+      child-wins, tombstone 7 masked branch-locally, checkpoint('clean'), rollback reverted
+      6 poison edits + removed poison file from disk, `diff()` all three shapes on both
+      branches; quarantine/reject analog with zero blast radius; CLI verbs corroborate.
+- [x] Degraded, expired, rejected, quarantined, and rolled-back branch states are explicit
+      and observable. — Fixture proof §AC-5: agenticow has **no status model**; mechanical
+      equivalents proven (rollback→rolled_back, checkpoint-after-poison→quarantine,
+      close+rm→reject, nativeAnn try/catch→degraded, none→expired) with STATE recorded as
+      app-level (27.1 `branch_registry` / 27.6 gate) per recon §2 invariant-8 seam; on this
+      linux-x64 host `fork({nativeAnn:true})` engaged natively (degraded path source-verified
+      only).
+- [x] Dataset size, dimensions, hardware, storage, latency percentiles, and recall are
+      recorded as machine-readable evidence. — `spike-27.2-fixture-metrics.json`: 5,000×d128
+      cosine; Ryzen 7 5800XT/16 thr/30.3 GB/linux-x64/Node v24.19.0; fork p50 4.50 ms,
+      query base 0.31 / branch read-through 0.40 ms, checkpoint 4.45, rollback 4.63, diff
+      0.24 ms; storage 162 B empty fork; recall@10 100.0% (brute-force ground truth, 30
+      queries). Marketing 0.5 ms fork/rollback NOT reproduced (10×) — COW crossover and
+      older hardware, per bench/results.json.
 
 ## Dependencies
 

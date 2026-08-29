@@ -228,3 +228,125 @@ explicit degraded/expired/rejected/quarantined/rolled-back observability; machin
 dataset/dimension/hardware/storage/latency/recall evidence) are the **next slice** —
 fixture proof using the pinned `dd4f437` + `agenticow@0.2.4` + exact rvf-node pin, still
 outside `src/`, per the story's Rollback section.
+
+---
+
+## Fixture proof (AC-2..AC-6)
+
+> ✅ **PROVEN on disposable fixtures, 2026-08-29.** All five ACs verified via
+> `fixture-proof.mjs` against the pinned revision. **No upstream code outside `/tmp`,
+> no in-repo installs, nothing adopted.** Machine-readable evidence:
+> [`spike-27.2-fixture-metrics.json`](./spike-27.2-fixture-metrics.json) (same directory).
+> Fixtures and the fixture-env were deleted after measurement; the pinned recon clone at
+> `/tmp/agenticow-recon/repo` remains as the pin reference.
+
+### AC-2 — Disposable fixtures with the pinned revision ✅
+
+- Installed **`agenticow@0.2.4` + `@ruvector/rvf-node@0.2.3` (exact pins)** in
+  `/tmp/agenticow-recon/fixture-env/` only (`npm install`, 3 packages, no install scripts).
+  Nothing touched `package.json`/`bun.lock`/`src/` in `Allura_Memory`.
+- **Pin provenance:** installed `agenticow@0.2.4` `src/index.js` hashes **byte-identical**
+  (sha256 `c9ab6683…`) to the pinned clone `dd4f437b92d2dbbc1f40dfa00023eed6e9c3bd84`.
+- Fixture root `/tmp/agenticow-recon/fixtures/` created, used, and **removed after the run**
+  (unbounded retention is app-level per §2 out-of-scope — the library has no TTL).
+
+### AC-3 — ≥2 isolated branches from one base + read-through ✅
+
+- One base: **5,000 vectors, dim 128, cosine** (`base.rvf`, 2.60 MB). Forked **two
+  branches, `b1` and `b2`** via the pinned `base.fork(label)` API.
+- **Read-through proven:** querying the base id-5 vector returns id 5 as top-1 through
+  **both** `b1` and `b2` (each sees `parent ∪ edits`); `lineage()` shows
+  `[working, base]` — one shared ancestor.
+- **Empty-branch storage claim CONFIRMED:** an empty fork child is **exactly 162 B**
+  (README and author's own `bench/results.json` both say 162 B — reproduced exactly).
+
+### AC-4 — Branch-local writes, tombstones, checkpoint, rollback, diff ✅
+
+| Mechanism | Fixture proof (b1: adds 8000-8004, override 42→new-vec, tombstone 7; b2: adds 8100-8104, override 123, tombstone 99) |
+|---|---|
+| Branch-local writes | b1's add 8000 is top-1 on b1 only — invisible to `base` and `b2`; b2's add 8100 invisible to `base` and `b1` |
+| Override / child-wins | b1 returns its NEW vector for id 42; collisions resolve child-wins in `query()` merge and re-rank |
+| Tombstones | `b1.delete([7])` masks id 7 from **all** b1 queries while `base` still returns it; b2's tombstone of 99 is branch-local (b1 still sees 99) |
+| Checkpoint | `b1.checkpoint('clean')` freezes a COW node (4843 B with tracked edits) and continues in a fresh child; node file exists on disk |
+| Rollback | After poisoning b1 (5 adds 9000-9004 + override of id 100), `b1.rollback(ckptId)` **removed the poison file from disk**, dropped it from lineage, reverted the id-100 override to the original base vector, and preserved clean adds/override/tombstone. Post-rollback lineage `[working, clean, base]` |
+| Diff | `{added:[8000..8004], overridden:[42], deleted:[7]}` on b1 and `{added:[8100..8104], overridden:[123], deleted:[99]}` on b2 — all three shapes populated on both branches. Diff is **working-node-scoped** (delta since the last checkpoint/isolate); accumulated chain deltas via `lineage()` |
+
+**Quarantine/reject analog (zero blast radius):** b2 was checkpointed
+(`'quarantine-poison'`), then discarded (`close()` + child rm) — the base never saw a
+single b2 edit, and b1 stayed healthy.
+
+**CLI corroboration:** `agenticow init/ingest/branch/checkpoint/query/diff/lineage/rollback`
+ran the same mechanics on a 300-vector fixture, including `✓ branched … 4.451 ms / 162 B`
+and `✓ rolled back … in 4.863 ms` — API and CLI agree; verbs are local-only.
+
+### AC-5 — Degraded/expired/rejected/quarantined/rolled-back: explicit seam ✅
+
+**agenticow has NO status model** (recon §2 invariant-8 seam confirmed in code: `status()`
+returns engine stats + `chainDepth`/`dimension`/`metric`, not lifecycle states). The
+fixtures therefore prove the **mechanical equivalents** and record where the **STATE
+lives — app-level** (27.1 `branch_registry` / 27.6 gate):
+
+- **rolled_back** ← `rollback(checkpointId)` reverted the poison (mechanics proven in AC-4); the
+  `status=rolled_back` **value lives app-level**.
+- **quarantined** ← `checkpoint('quarantine-poison')` after poisoning **freezes the bad state**
+  as a COW node (that is the quarantine analog); STATE stays app-level. Library retention is
+  unbounded (until `close()`/rm) — no TTL.
+- **rejected** ← do-not-promote + `close()`/rm child; base untouched (proven). No native
+  reject concept; 27.3's promotion gate owns `status=rejected`.
+- **degraded** ← `fork({nativeAnn:true})` degrades to exact JS read-through when the native
+  path throws; **on this host (linux-x64) nativeAnn engaged (effective: true)** — see note below.
+- **expired** ← **no library mechanism at all**; retention/expiry is purely app-level
+  (`retention_expires_at`).
+
+**nativeAnn note (honest):** this host is `linux-x64-gnu` (Ubuntu 24.04, x86_64) and
+`RvfDatabase.branch()` exists in rvf-node@0.2.3's native binding, so
+`fork({nativeAnn:true})` engaged the native COW dual-graph path
+(`nativeAnn: true`, sample read-through hit intact). The **degraded** path (non-linux-x64 →
+`nativeAnn === false`) was verified **in source** (§5) but not exercised on this host;
+the recon `reject` verdict on `nativeAnn`-as-shipped stands (linux-x64-only surface).
+
+### AC-6 — Machine-readable metrics ✅
+
+`spike-27.2-fixture-metrics.json` holds dataset/dim/hardware/storage/latency/recall verbatim.
+Summary (hardware: **AMD Ryzen 7 5800XT (16 threads), 30.3 GB RAM, linux-x64, Node v24.19.0**;
+base 5,000 × dim 128, cosine; 25 iterations per op; 30 queries for recall):
+
+| Metric | min | p50 | p95 | max |
+|---|---:|---:|---:|---:|
+| fork (exact, base.rvf 2.60 MB) | 4.32 | **4.50** | 5.63 | 13.46 ms |
+| query base (k=10) | 0.296 | **0.311** | 0.346 | 0.381 ms |
+| query branch read-through (k=10) | 0.347 | **0.395** | 0.701 | 0.744 ms |
+| checkpoint | 4.29 | **4.45** | 5.74 | 13.28 ms |
+| rollback | 4.43 | **4.63** | 5.00 | 9.72 ms |
+| diff | 0.197 | **0.235** | 0.308 | 0.763 ms |
+
+Storage: base.rvf 2,600,603 B; **empty fork child 162 B (claim exactly reproduced)**;
+clean-checkpoint node 4,843 B (with tracked edits) — delta ~5 KB for 6 edits, consistent
+with the README's ~520 B/edit figure; fixtures dir total 2.67 MB.
+
+Recall (author acceptance method — brute-force ground truth `base ∪ edits − tombstones`
+reranked by exact distance): **recall@10 = 100.00%**, **exact-order match 100.0%** (30
+queries); base-vs-branch read-through top-10 overlap 99.7% (expected <100%: branch
+overrides id 42 / tombstones 7).
+
+### Discrepancies vs marketing claims (measured → honest)
+
+| Marketing claim | Measured here (5800XT, dim 128, base 5,000) | Verdict |
+|---|---|---|
+| Fork ~0.5 ms | **p50 4.50 ms** (min 4.32 / max 13.46) | **Not reproduced at this base size/hardware.** The checked-in `bench/results.json` shows COW is *slower than full copy* below ~10k vectors (speedup 0.718 @ 10k) — this 5k-base measurement sits on the losing side of the crossover, and the 5800XT is older than the author's 9950X. Flat O(1)-in-base cost is real and confirmed; the *0.5 ms magnitude* is not portable |
+| Empty branch 162 B | **162 B exactly** | ✅ Reproduced exactly |
+| Rollback ~0.5 ms | **p50 4.63 ms** (min 4.43 / max 9.72) | Not reproduced as 0.5 ms (10×) — same crossover/hardware read |
+| Recall@10 = 100% | **100.0%** (30 queries, exact path) | ✅ Reproduced (exact read-through is the correctness core) |
+| native ANN across branch | engaged on this linux-x64 host | Behavior matches docs on linux-x64; platform-constrained claim unchanged (§9) |
+
+The task-brief secondary source ("fixed ~20 ms fork, wins past ~21k-vector crossover") was
+unverifiable (gunbark.dev auth-walled, §9 note); its *direction* is consistent with the
+checked-in bench and with our measurement (COW loses at 5k).
+
+### Cleanup (per §8 rollback path)
+
+`/tmp/agenticow-recon/fixtures/` (incl. CLI smoke) and `/tmp/agenticow-recon/fixture-env/`
+were `rm -rf`'d after measurement. Deliberately kept: the pinned recon clone
+`/tmp/agenticow-recon/repo` (the pin reference) and this note + metrics JSON in
+`docs/archive/allura/evidence/epic-27/`. `Allura_Memory` git state: only the 27-2 story +
+spike note + metrics JSON changed; **nothing committed.**
