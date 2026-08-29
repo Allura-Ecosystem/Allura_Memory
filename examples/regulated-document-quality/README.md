@@ -28,13 +28,15 @@ autonomous decision.
 | File | Case | Expected |
 |------|------|----------|
 | `scenarios/success.json` | Success: synthetic doc approved by human, promoted, audit exported | `completed` |
-| `scenarios/cross-tenant-denial.json` | Security failure: cross-tenant access denied | `failed` (TENANT_MISMATCH) |
+| `scenarios/cross-tenant-denial.json` | Security failure: cross-tenant access denied | `failed` (POLICY_DENIED — TENANT_MISMATCH in message) |
 | `scenarios/recovery.json` | Recovery: transient approval-service failure retried | `completed` |
 
 ## Run
 
 ```bash
 # From the repo root, with the local stack up:
+# (bun packages/cli/src/index.ts init creates .env.portfolio.example with
+# non-secret defaults; copy it to .env.local and set your secrets first)
 set -a && source .env.local && set +a
 bun run scripts/harness.ts examples/regulated-document-quality/scenarios/success.json
 bun run scripts/harness.ts examples/regulated-document-quality/scenarios/cross-tenant-denial.json
@@ -44,7 +46,7 @@ bun run scripts/harness.ts examples/regulated-document-quality/scenarios/recover
 ## Expected Evidence
 
 - One success case: human-approved promotion with audit export
-- One policy failure: cross-tenant access denied (TENANT_MISMATCH)
+- One policy failure: cross-tenant access denied (POLICY_DENIED — TENANT_MISMATCH in message)
 - One recovery case: transient failure retried via checkpoint resume
 
 ## Human Authority

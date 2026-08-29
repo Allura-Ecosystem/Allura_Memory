@@ -129,6 +129,9 @@ describe("AlluraClient memory contract", () => {
     await expect(
       client.memory.add({ group_id: "allura-test", user_id: "u", content: "  " })
     ).rejects.toBeInstanceOf(ValidationError);
+    await expect(
+      client.memory.add({ group_id: "allura-test", user_id: "u", content: "x", threshold: 1.5 })
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it("memory.search rejects an empty query", async () => {
@@ -143,6 +146,9 @@ describe("AlluraClient memory contract", () => {
     await expect(
       client.memory.search({ group_id: "allura-test", query: "q", limit: 0 })
     ).rejects.toBeInstanceOf(ValidationError);
+    await expect(
+      client.memory.search({ group_id: "allura-test", query: "q", limit: 101 })
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it("memory.get rejects a missing id", async () => {
@@ -156,6 +162,9 @@ describe("AlluraClient memory contract", () => {
     const client = makeClient(vi.fn() as unknown as typeof fetch);
     await expect(
       client.memory.list({ group_id: "allura-test", offset: -1 })
+    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(
+      client.memory.list({ group_id: "allura-test", limit: 1001 })
     ).rejects.toBeInstanceOf(ValidationError);
   });
 

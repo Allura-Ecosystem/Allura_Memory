@@ -144,7 +144,7 @@ simulate mode.
 |---|---|---|
 | `examples/engineering-review-agent/` | success, policy-denial, recovery | success ✓, denial ✓ (POLICY_DENIED), recovery ✓ |
 | `examples/controlled-research-agent/` | success, prompt-injection, recovery | success ✓, injection ✓ (UNTRUSTED_INSTRUCTION), recovery ✓ |
-| `examples/regulated-document-quality/` | success, cross-tenant-denial, recovery | success ✓, denial ✓ (TENANT_MISMATCH), recovery ✓ |
+| `examples/regulated-document-quality/` | success, cross-tenant-denial, recovery | success ✓, denial ✓ (POLICY_DENIED — TENANT_MISMATCH in message), recovery ✓ |
 
 Run receipts are written to `receipt-<scenario-id>-<timestamp>.json` by the
 harness; each receipt carries the scenario digest, definition revision,

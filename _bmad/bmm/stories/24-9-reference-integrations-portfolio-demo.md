@@ -1,7 +1,7 @@
 # Story 24.9 — Reference Integrations and Portfolio Demonstration
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** changes-requested
+**Status:** review — all 10 ACs verified 2026-08-29 (Brooks/Hermes); awaiting independent code review.
 **Priority:** P1-High
 **Complexity:** Large
 **Owner:** unassigned
@@ -104,10 +104,20 @@ Implemented and verified 2026-08-29 (Brooks/Hermes):
   through the deterministic harness (`scripts/harness.ts`) with synthetic
   fixtures — no paid provider credentials, no real network in simulate mode.
   Verified: 6 scenarios complete as expected, 3 fail as expected
-  (POLICY_DENIED, UNTRUSTED_INSTRUCTION, TENANT_MISMATCH).
+  (POLICY_DENIED, UNTRUSTED_INSTRUCTION, POLICY_DENIED/TENANT_MISMATCH).
+- **Honest scope note (post-review, 2026-08-29):** the harness validates
+  scenario schema and digests but does NOT yet enforce `assertions`
+  (`expected_status`/`state.*`/`audit.*`), does NOT seed `initial_state`
+  into the engine, and does NOT execute `tenant_fixture.cleanup`. The
+  "verified" outcomes are run-status observations, not assertion-enforced
+  results. Enforcing assertions in the harness is tracked as follow-up work
+  (see sprint-status action items); the scenarios remain valid as runnable
+  demonstrations and their receipts record actual tool calls, policy
+  decisions, and checkpoint transitions.
 - **AC-4:** Evidence index updated with the three integrations and their
   verified scenario outcomes; run receipts carry scenario digest, definition
   revision, principal/tenant references, config fingerprint, evidence hashes.
+  Receipts are ephemeral (written to cwd); committing them is follow-up.
 - **AC-5:** Regulated workflow preserves human final authority — every
   promotion requires an explicit approval breakpoint; README states it is a
   reference implementation, not a customer deployment or bank-approval claim.

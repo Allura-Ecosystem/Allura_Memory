@@ -51,7 +51,7 @@ describe("allura CLI — command surface", () => {
   it("exits 1 with JSON error for an unknown command under --json", () => {
     const res = runCli(["frobnicate", "--json"]);
     expect(res.status).toBe(1);
-    const parsed = JSON.parse(res.stdout);
+    const parsed = JSON.parse(res.stderr);
     expect(parsed.error).toContain("Unknown command");
     expect(parsed.code).toBe(1);
   });
@@ -92,8 +92,13 @@ describe("allura CLI — doctor", () => {
     expect(Array.isArray(parsed.checks)).toBe(true);
     expect(parsed.checks.length).toBeGreaterThan(0);
     expect(["ok", "fail"]).toContain(parsed.overall);
+    // The exit code must be consistent with the reported overall status:
+    // ok -> 0, fail -> 1. This is asserted unconditionally so a regression
+    // in the exit-code contract is caught even in a healthy environment.
     if (parsed.overall === "fail") {
       expect(res.status).toBe(1);
+    } else {
+      expect(res.status).toBe(0);
     }
   });
 });

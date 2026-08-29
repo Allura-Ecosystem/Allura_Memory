@@ -101,7 +101,8 @@ export function isRetryable(error: unknown): boolean {
  * Execute a function with retry and exponential backoff.
  *
  * @param fn - The async function to execute
- * @param retries - Maximum number of retry attempts
+ * @param retries - Number of retries AFTER the first attempt (0 = single
+ *   attempt, no retries). Must be a finite non-negative integer.
  * @returns The result of the function
  * @throws {RetryExhaustedError} if all retries are exhausted
  */
@@ -110,6 +111,12 @@ export async function withRetry<T>(
   retries: number = DEFAULT_RETRIES
 ): Promise<T> {
   let lastError: Error = new Error("No attempts made");
+
+  // Guard against non-finite or negative retry counts: NaN/Infinity would
+  // otherwise produce a silent no-op or an unbounded retry loop.
+  if (!Number.isFinite(retries) || retries < 0) {
+    retries = 0;
+  }
 
   // `retries` is the number of retries AFTER the first attempt, so the
   // function always runs at least once (retries: 0 = single attempt).

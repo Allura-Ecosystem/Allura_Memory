@@ -172,6 +172,8 @@ check_links() {
   local dir
   dir="$(dirname "$file")"
   local target
+  # Extract link targets, handling markdown titles `](url "title")` and
+  # nested parens by taking the first balanced-paren group after `](`.
   while IFS= read -r target; do
     [[ -z "$target" ]] && continue
     # Skip anchors, http(s), mailto, and code spans
@@ -189,7 +191,7 @@ check_links() {
       echo "ERROR: $rel — broken internal link: $target"
       STATUS=1
     fi
-  done < <(grep -oE '\]\([^)]+\)' "$file" | sed -E 's/^\]\(//; s/\)$//')
+  done < <(grep -oE '\]\([^)]*\)' "$file" | sed -E 's/^\]\(//; s/\)$//; s/ "[^"]*"$//')
 }
 
 for dir in "${ACTIVE_DOCS[@]}"; do

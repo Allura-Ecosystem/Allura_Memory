@@ -58,6 +58,6 @@
     "audit": { "expected_events": ["proposal_approved"] }
   },
   "approval_breakpoints": [
-    { "at_step": 3, "decision": "approve", "rationale": "Recovered from transient failure, evidence complete" }
+    { "at_step": 2, "decision": "approve", "rationale": "Recovered from transient failure, evidence complete" }
   ]
 }

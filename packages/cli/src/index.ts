@@ -57,7 +57,7 @@ async function main() {
   const handler = commands[command];
   if (!handler) {
     if (args.includes("--json")) {
-      console.log(JSON.stringify({ error: `Unknown command: ${command}`, code: 1 }));
+      console.error(JSON.stringify({ error: `Unknown command: ${command}`, code: 1 }));
     } else {
       console.error(`Unknown command: ${command}`);
       console.error(HELP);
@@ -70,7 +70,7 @@ async function main() {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (args.includes("--json")) {
-      console.log(JSON.stringify({ error: msg, code: 1 }));
+      console.error(JSON.stringify({ error: msg, code: 1 }));
     } else {
       console.error(`Error: ${msg}`);
     }
@@ -106,7 +106,7 @@ async function cmdUp() {
     console.error("Failed to start local stack. Ensure docker compose is available and the compose file is present.");
     process.exit(result.status ?? 1);
   }
-  console.log("Local stack ready at http://localhost:6477/mcp");
+  console.log("Local stack ready at http://localhost:5888/mcp");
 }
 
 async function cmdDoctor() {
@@ -142,7 +142,7 @@ async function cmdDoctor() {
 
   // Check MCP gateway health (read-only, non-mutating)
   try {
-    const port = process.env.ALLURA_MCP_HTTP_PORT ?? "3201";
+    const port = process.env.ALLURA_MCP_HTTP_PORT ?? "5888";
     const res = await fetch(`http://localhost:${port}/health`);
     if (res.ok) {
       const body = (await res.json()) as { status?: string; auth_enabled?: boolean };
@@ -207,16 +207,30 @@ async function cmdEval() {
 }
 
 async function cmdInspect() {
-  const evidenceDir = join(process.cwd(), "artifacts");
-  if (!existsSync(evidenceDir)) {
+  const { readdirSync } = await import("node:fs");
+  const cwd = process.cwd();
+  const evidenceDir = join(cwd, "artifacts");
+  const receipts = readdirSync(cwd, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.startsWith("receipt-") && e.name.endsWith(".json"))
+    .map((e) => e.name)
+    .sort();
+  if (receipts.length === 0 && !existsSync(evidenceDir)) {
     console.log("No evidence artifacts found.");
     return;
   }
   console.log("Evidence artifacts:");
-  const { readdirSync } = await import("node:fs");
-  for (const entry of readdirSync(evidenceDir, { recursive: true, withFileTypes: true })) {
-    if (entry.isFile()) {
-      console.log(`  ${join(entry.parentPath ?? "", entry.name)}`);
+  if (receipts.length > 0) {
+    console.log("  Run receipts (cwd):");
+    for (const name of receipts) {
+      console.log(`  ${name}`);
+    }
+  }
+  if (existsSync(evidenceDir)) {
+    console.log("  artifacts/:");
+    for (const entry of readdirSync(evidenceDir, { recursive: true, withFileTypes: true })) {
+      if (entry.isFile()) {
+        console.log(`  ${join(entry.parentPath ?? "", entry.name)}`);
+      }
     }
   }
 }

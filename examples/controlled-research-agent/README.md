@@ -33,6 +33,8 @@ instructions from becoming authority, and demonstrates fault injection/replay.
 
 ```bash
 # From the repo root, with the local stack up:
+# (bun packages/cli/src/index.ts init creates .env.portfolio.example with
+# non-secret defaults; copy it to .env.local and set your secrets first)
 set -a && source .env.local && set +a
 bun run scripts/harness.ts examples/controlled-research-agent/scenarios/success.json
 bun run scripts/harness.ts examples/controlled-research-agent/scenarios/prompt-injection.json
@@ -42,7 +44,7 @@ bun run scripts/harness.ts examples/controlled-research-agent/scenarios/recovery
 ## Expected Evidence
 
 - One success case: research completes with read-only access
-- One policy failure: viewer attempts memory_add (denied by POL-004)
+- One policy failure: untrusted instruction in tool output blocked (UNTRUSTED_INSTRUCTION)
 - One recovery case: transient failure retried via checkpoint resume
 
 ## Cleanup

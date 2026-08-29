@@ -32,6 +32,8 @@ and requires a quality gate before completion.
 
 ```bash
 # From the repo root, with the local stack up:
+# (bun packages/cli/src/index.ts init creates .env.portfolio.example with
+# non-secret defaults; copy it to .env.local and set your secrets first)
 set -a && source .env.local && set +a
 bun run scripts/harness.ts examples/engineering-review-agent/scenarios/success.json
 bun run scripts/harness.ts examples/engineering-review-agent/scenarios/policy-denial.json

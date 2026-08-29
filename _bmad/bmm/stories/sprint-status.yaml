@@ -823,3 +823,40 @@ action_items:
     status: open
     note: "Standing policy — no action; verify at each adoption review."
     ref: "_bmad/bmm/stories/epic-27-retro-2026-08-29.md"
+  - id: "epic-24-review-item-15-enforce-scenario-assertions-in-harness"
+    epic: 24
+    action: "Enforce scenario assertions (expected_status/state/audit) + seed
+      initial_state + execute tenant_fixture.cleanup in the harness runner"
+    owner: "Brooks"
+    status: open
+    note: "From 2026-08-29 code review of stories 24.7/24.8/24.9. The harness
+      validates schema and digests but does not compare assertions against run
+      results; initial_state is never seeded; cleanup is inert. Scenarios
+      remain valid demonstrations; enforcement is follow-up."
+    ref: "_bmad/bmm/stories/24-9-reference-integrations-portfolio-demo.md"
+  - id: "epic-24-review-item-16-sdk-clients-for-scenario-replay-eval-evidence"
+    epic: 24
+    action: "Add typed SDK clients for scenario execution, replay, evaluation,
+      and evidence inspection (24.7 AC-1 partial)"
+    owner: "Woz"
+    status: open
+    note: "From 2026-08-29 code review. SDK barrel currently exports health +
+      memory clients only."
+    ref: "_bmad/bmm/stories/24-7-sdk-cli-developer-experience.md"
+  - id: "epic-24-review-item-17-gateway-integration-test-for-sdk"
+    epic: 24
+    action: "Add an integration test running the SDK against the live canonical
+      gateway (24.7 AC-2 partial)"
+    owner: "Woz"
+    status: open
+    note: "From 2026-08-29 code review. Contract tests are hermetic (injected
+      fetch); no test exercises the real /health or /mcp endpoints."
+    ref: "_bmad/bmm/stories/24-7-sdk-cli-developer-experience.md"
+  - id: "epic-24-review-item-18-clean-environment-quickstart-transcript"
+    epic: 24
+    action: "Record a clean-environment quickstart transcript with measured
+      elapsed time and machine profile (24.7 AC-7, CA-24-09)"
+    owner: "Troy"
+    status: open
+    note: "From 2026-08-29 code review. Retrospective CA-24-09 remains open."
+    ref: "_bmad/bmm/stories/24-7-sdk-cli-developer-experience.md"

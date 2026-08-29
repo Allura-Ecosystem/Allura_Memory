@@ -96,6 +96,23 @@ Verified and completed 2026-08-29 (Brooks/Hermes):
      no retries were configured — now surfaces the original error.
   3. CLI unknown-command path ignored `--json` and printed help to stderr —
      now emits structured JSON when requested.
+- **Honest scope note (post-review, 2026-08-29):** the following ACs are
+  partially met and their claims are scoped accordingly:
+  - **AC-1 (partial):** the SDK barrel exports `AlluraClient` (health +
+    memory operations) plus types/errors/auth/utils. Typed clients for
+    scenario execution, replay, evaluation, and evidence inspection are NOT
+    yet implemented — those surfaces are exercised via the CLI/harness
+    instead. Full SDK coverage of those surfaces is follow-up work.
+  - **AC-2 (partial):** contract tests are hermetic (injected fetch), not
+    run against the live canonical gateway. A gateway integration test is
+    follow-up work.
+  - **AC-5 (partial):** `doctor` checks bun version, PostgreSQL reachability,
+    migrations-dir existence, and gateway health. Schema compatibility,
+    gateway auth, and write/read round-trip checks are not yet implemented.
+  - **AC-6/AC-7 (partial):** the quickstart documents the ten-minute path
+    with honest timing, but a clean-environment transcript with measured
+    elapsed time and machine profile has not been recorded (retrospective
+    CA-24-09 remains open).
 - **Verified:** SDK builds clean (tsup CJS+DTS), CLI runs all 8 commands,
   quickstart documents the ten-minute path with honest timing, compatibility
   matrix present, placeholder packages (mcp-server stub) excluded from the

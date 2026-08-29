@@ -34,14 +34,17 @@ memory storage performs worse than no memory at all.
 
 ## Measured evidence (all reproducible)
 
-- **Retrieval quality:** P@5 0.867, R@5 0.933, MRR 0.833 (2026-05-01 benchmark).
+- **Retrieval quality:** P@5 0.867, R@5 0.933, MRR 0.833 (2026-05-01 benchmark,
+  recorded in REQUIREMENTS-MATRIX.md; the committed benchmark artifact
+  `src/__benchmarks__/benchmark-results.json` reflects a later run and is the
+  current source of truth).
 - **Cross-tenant isolation:** 100% — zero leaks across all test scenarios.
 - **Deterministic harness:** 3 committed scenarios (success, policy denial,
   checkpoint recovery) replay byte-identical.
 - **Portfolio evaluation:** 9 offline lanes (retrieval relevance, approved-only
   recall, policy blocking, cross-tenant, promotion correctness, audit
   completeness, deterministic replay, tool contracts, latency) all pass in CI.
-- **Branch suites:** 97/97; full unit lane 2474+ passed; typecheck clean.
+- **Branch suites:** 97/97; full unit lane 2499 passed (2026-08-29).
 
 ## Architecture decisions worth defending
 
