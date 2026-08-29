@@ -81,6 +81,26 @@ describe("Story 26.7 Bumblebee route audiences", () => {
     expect(await internal.json()).toEqual({ error: "BUMBLEBEE_SERVICE_UNAVAILABLE" })
   })
 
+  it("maps the ingest pipeline's HTTPS policy refusal to 426, not a generic 503", async () => {
+    const response = await createIngestHandler({
+      authenticate: async () => ({ rawToken: "bmb_ingest_abcdefgh_body" }),
+      ingest: async () => { throw new Error("BUMBLEBEE_INGEST_HTTPS_REQUIRED") },
+    })(new Request("http://localhost/api/plugins/bumblebee/ingest", { method: "POST" }))
+
+    expect(response.status).toBe(426)
+    expect(await response.json()).toEqual({ error: "BUMBLEBEE_INGEST_HTTPS_REQUIRED" })
+  })
+
+  it("still sanitizes unknown ingest-pipeline failures to a generic 503", async () => {
+    const response = await createIngestHandler({
+      authenticate: async () => ({ rawToken: "bmb_ingest_abcdefgh_body" }),
+      ingest: async () => { throw new Error("relation batches does not exist") },
+    })(new Request("http://localhost/api/plugins/bumblebee/ingest", { method: "POST" }))
+
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({ error: "BUMBLEBEE_SERVICE_UNAVAILABLE" })
+  })
+
   it("requires and forwards the complete source identity", async () => {
     const issue = vi.fn(async () => ({ leaseId: "lease-1", generation: 1 }))
     const handler = createRunsHandler({

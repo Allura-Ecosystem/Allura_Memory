@@ -109,8 +109,16 @@ describe("workspace subgraph authority teardown", () => {
  * database, and fixed workspace identifiers cannot repurpose another fixture.
  */
 describeLive("workspace subgraph authority", () => {
-  const ownerConfig = getConnectionConfig({ role: "owner" });
-  const rootOwnerPool = new Pool(ownerConfig);
+  // getConnectionConfig() and `new Pool()` must not run until beforeAll:
+  // getConnectionConfig() throws synchronously when POSTGRES_PASSWORD (or,
+  // for the app role, POSTGRES_APP_USER/POSTGRES_APP_PASSWORD) is unset.
+  // describeLive resolves to describe.skip in that case, but vitest still
+  // *executes* a skipped suite's factory body during collection -- only the
+  // hooks and tests inside are skipped. A throw straight in the factory body
+  // therefore fails the whole file's collection instead of skipping cleanly,
+  // even though the env-gate correctly identified this lane as not runnable.
+  let ownerConfig: ReturnType<typeof getConnectionConfig>;
+  let rootOwnerPool: Pool;
   const databaseName = `allura_252a_authority_${RUN_ID.replaceAll("-", "")}`;
   let ownerPool: Pool;
   let appPool: Pool;
@@ -124,6 +132,8 @@ describeLive("workspace subgraph authority", () => {
   const originalPostgresDb = process.env.POSTGRES_DB;
 
   beforeAll(async () => {
+    ownerConfig = getConnectionConfig({ role: "owner" });
+    rootOwnerPool = new Pool(ownerConfig);
     await rootOwnerPool.query(`CREATE DATABASE ${quoteIdentifier(databaseName)}`);
 
     ownerPool = new Pool({ ...ownerConfig, database: databaseName });

@@ -396,6 +396,36 @@ Controls which graph backend adapter is active for memory and structural operati
 
 ---
 
+### `BUMBLEBEE_TRUST_PROXY` / `BUMBLEBEE_ALLOW_LOOPBACK_INGEST`
+
+**Story:** 26.7 AC-6/AC-19 — production ingestion is HTTPS-only
+**Source:** `src/app/api/plugins/bumblebee/ingest/route.ts#enforceHttps`
+**Env template:** `.env.example` ("Bumblebee ingest HTTPS enforcement")
+
+`enforceHttps()` only runs when `NODE_ENV=production`; it is a no-op in every
+other environment. In production it fails **CLOSED**: an absent or unproven
+scheme signal is rejected with `426 Upgrade Required` /
+`BUMBLEBEE_INGEST_HTTPS_REQUIRED` (see `PUBLIC_ERRORS` in
+`src/lib/bumblebee/lease-routes.ts`), never silently accepted. There are
+exactly three ways a production request can pass:
+
+1. The request's own URL scheme is `https:` — a signal the caller does not
+   control (it reflects how Next.js actually received the connection).
+2. `BUMBLEBEE_TRUST_PROXY=true` **and** the `x-forwarded-proto: https` header
+   is present.
+3. `BUMBLEBEE_ALLOW_LOOPBACK_INGEST=true` **and** the request is actually
+   addressed to a loopback host (`localhost` / `127.0.0.1` / `[::1]`).
+
+| Variable | Default | Security consequence when enabled |
+|----------|---------|-------------------------------------|
+| `BUMBLEBEE_TRUST_PROXY` | unset / `false` (OFF, fail-closed) | Declares a TLS-terminating reverse proxy trustworthy. `x-forwarded-proto` is **caller-controlled input** (any client can send it) and is never sufficient by itself — it is honoured **only** when this flag is `true`. Enabling it without a real TLS-terminating proxy in front of the service lets any caller who can reach the port directly bypass the HTTPS requirement by sending the header themselves. |
+| `BUMBLEBEE_ALLOW_LOOPBACK_INGEST` | unset / `false` (OFF, fail-closed) | Local-test escape hatch. Bypasses the HTTPS requirement only when the request's real hostname resolves to a loopback address (checked via `URL.hostname`, never implied by env alone). Enabling it on a host where the loopback interface is reachable by more than the local operator (port-forwarded, shared container network namespace) reopens the plaintext-ingest exposure this enforcement exists to close. |
+
+**Cross-references:** `src/lib/bumblebee/lease-routes.ts#PUBLIC_ERRORS`,
+`src/lib/bumblebee/__tests__/ingest-route-https.test.ts`.
+
+---
+
 ## RuVix Governance Artifacts
 
 ### `PROMOTION_MODE` / `AUTO_APPROVAL_THRESHOLD`

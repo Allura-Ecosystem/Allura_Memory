@@ -92,7 +92,7 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "insight_adoptions", class: "operational", notes: "Cross-tenant platform insight adoption state" },
   { table: "platform_insights", class: "operational", notes: "Aggregated platform-level insights" },
   { table: "platform_promotion_queue", class: "operational", notes: "Platform-wide promotion queue" },
-  { table: "skill_usage_summary", class: "operational", notes: "View over skill_usage_events; not directly RLS-protected" },
+  { table: "skill_usage_summary", class: "operational", notes: "View over skill_usage_events (which IS FORCE RLS-protected, migration 36). Migration 51 sets security_invoker = true on this view so it evaluates under the querying role's own RLS context rather than the (BYPASSRLS) view owner's -- see docker/postgres-init/51-view-security-invoker-hardening.sql." },
 
   // Migration-only
   { table: "schema_versions", class: "migration-only", notes: "Migration tracking; managed by migration tooling" },
