@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { readFile } from "node:fs/promises"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 
 const state = vi.hoisted(() => ({
   credential: {} as Record<string, unknown>,
@@ -141,5 +143,39 @@ describe("Bumblebee production ingest runtime", () => {
     expect(migration).toMatch(/SECURITY DEFINER[\s\S]*SET search_path = pg_catalog/)
     expect(migration).toMatch(/REVOKE ALL ON FUNCTION[\s\S]*FROM PUBLIC[\s\S]*GRANT EXECUTE ON FUNCTION[\s\S]*TO allura_app/)
     expect(migration).toMatch(/schema_versions[\s\S]*049/)
+  })
+
+  it("drops the migration-47 8-column bootstrap function before recreating it with the wider OUT row", () => {
+    // Text-shape assertion only: this proves the SQL file contains a DROP FUNCTION
+    // ahead of the CREATE, matching PostgreSQL's requirement that a function's
+    // OUT-row (return table) shape cannot be altered in place. It does not exercise
+    // a live database, so it cannot prove the statement actually applies cleanly
+    // against a real migration-47 schema — only a live-DB run can prove that.
+    const migration = readFileSync(
+      join(process.cwd(), "docker/postgres-init/49-bumblebee-ingest-bootstrap-contract.sql"),
+      "utf8",
+    )
+    const dropIndex = migration.indexOf("DROP FUNCTION IF EXISTS app.bumblebee_bootstrap_ingest(TEXT)")
+    const createIndex = migration.indexOf("CREATE OR REPLACE FUNCTION app.bumblebee_bootstrap_ingest(p_prefix TEXT)")
+    const revokeIndex = migration.indexOf("REVOKE ALL ON FUNCTION app.bumblebee_bootstrap_ingest(TEXT) FROM PUBLIC")
+    const grantIndex = migration.indexOf("GRANT EXECUTE ON FUNCTION app.bumblebee_bootstrap_ingest(TEXT) TO allura_app")
+
+    expect(dropIndex).toBeGreaterThan(-1)
+    expect(createIndex).toBeGreaterThan(dropIndex)
+    // Grants must come after the CREATE (a DROP discards any prior grants), so
+    // ordering here matters, not just presence.
+    expect(revokeIndex).toBeGreaterThan(createIndex)
+    expect(grantIndex).toBeGreaterThan(revokeIndex)
+  })
+
+  it("refuses to authenticate an ingest lease bound to a soft-disabled source revision", () => {
+    // Text-shape assertion only: confirms the join predicate is present in the SQL
+    // source. It cannot prove the runtime behavior (that a disabled source's lease
+    // is actually rejected) without executing the function against a live database.
+    const migration = readFileSync(
+      join(process.cwd(), "docker/postgres-init/49-bumblebee-ingest-bootstrap-contract.sql"),
+      "utf8",
+    )
+    expect(migration).toMatch(/l\.source_revision_id = s\.source_revision_id\s*\n\s*AND s\.disabled_at IS NULL/)
   })
 })

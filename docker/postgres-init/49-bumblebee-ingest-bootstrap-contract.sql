@@ -1,5 +1,12 @@
 BEGIN;
 
+-- PostgreSQL cannot alter a function's OUT-row type in place ("cannot change
+-- return type of existing function"); migration 47 declared this function with
+-- an 8-column OUT row and this migration adds three more (profile, mode,
+-- ecosystems). The prior definition must be dropped before it can be recreated
+-- with the wider signature, otherwise a from-zero migration run fails here.
+DROP FUNCTION IF EXISTS app.bumblebee_bootstrap_ingest(TEXT);
+
 CREATE OR REPLACE FUNCTION app.bumblebee_bootstrap_ingest(p_prefix TEXT)
 RETURNS TABLE (
   lease_id TEXT,
@@ -26,6 +33,7 @@ AS $$
    AND l.workspace_id = s.workspace_id
    AND l.source_id = s.source_id
    AND l.source_revision_id = s.source_revision_id
+   AND s.disabled_at IS NULL
   WHERE l.ingest_token_prefix = p_prefix AND l.ingest_audience = 'bumblebee_ingest'
   LIMIT 1
 $$;
