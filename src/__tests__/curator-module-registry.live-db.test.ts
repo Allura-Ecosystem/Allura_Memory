@@ -70,7 +70,7 @@ describeLive("Story 25.3b managed app-role registry ledger", () => {
     await expect(issueCuratorModules(authenticatedRequest("viewer"))).resolves.toMatchObject({ state: "denied" })
     expect(await latestDecision()).toMatchObject({ workspace_id: WORKSPACE, status: "failed", metadata: { decision: "denied" } })
 
-    await expect(issueCuratorModules(authenticatedRequest("curator"))).resolves.toMatchObject({ state: "complete", modules: [{ state: "unavailable" }] })
+    await expect(issueCuratorModules(authenticatedRequest("curator"))).resolves.toMatchObject({ state: "degraded", modules: [{ state: "unavailable" }] })
     expect(await latestDecision()).toMatchObject({ workspace_id: WORKSPACE, status: "failed", metadata: { decision: "disabled" } })
   })
 

@@ -77,6 +77,9 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "bumblebee_catalog_entries", class: "tenant-scoped", notes: "Story 26.7 (migration 46): immutable normalized entries bound to a scoped catalog revision", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "bumblebee_sources", class: "tenant-scoped", notes: "Story 26.7 (migration 46): immutable scanner source/population revisions with one-way soft-disable", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "bumblebee_scan_leases", class: "tenant-scoped-credential", notes: "Story 26.7 (migration 47): source-bound monotonic leases with short-lived hashed ingest credentials", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "bumblebee_batch_receipts", class: "tenant-scoped", notes: "Story 26.7 (migration 48): append-only batch receipts with exact-replay dedupe and composite FK to scan lease", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "bumblebee_records", class: "tenant-scoped", notes: "Story 26.7 (migration 48): sanitized immutable scanner records (package/finding/scan_summary/diagnostic) with composite FKs to batch receipt", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "bumblebee_run_decisions", class: "tenant-scoped", notes: "Story 26.7 (migration 48): append-only held/promoted decisions with promoted-requires-summary CHECK and composite FK to batch", workspaceTreatment: "workspace-scoped-new-writes" },
 
   // Credential / identity tables
   { table: "mcp_tokens", class: "tenant-scoped-credential", notes: "MCP credentials; lookup by token prefix before tenant resolution" },
