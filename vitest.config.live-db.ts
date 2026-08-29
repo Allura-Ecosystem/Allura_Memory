@@ -22,6 +22,7 @@ export default defineConfig({
       "src/__tests__/bumblebee-source-authority.e2e.test.ts",
       "src/__tests__/bumblebee-scan-leases.e2e.test.ts",
       "src/__tests__/bumblebee-ingest-bootstrap-contract.e2e.test.ts",
+      "src/__tests__/bumblebee-current-state-views.e2e.test.ts",
       "src/__tests__/workspace-subgraph-authority.e2e.test.ts",
       "src/__tests__/auto-curator-workspace-authority.e2e.test.ts",
       "src/lib/db/tenant-table-inventory.test.ts",
