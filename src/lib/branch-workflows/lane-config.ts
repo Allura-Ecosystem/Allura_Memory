@@ -160,20 +160,6 @@ export function assertDurhamManifestsComplete(manifests: DurhamManifestSet): voi
   }
 }
 
-/** Look up a Team RAM lane by id; throws when unknown. */
-export function getTeamRamLane(laneId: string): LaneConfig {
-  const lane = TEAM_RAM_LANES.find((candidate) => candidate.id === laneId)
-  if (!lane) throw new Error(`unknown Team RAM lane: ${laneId}`)
-  return lane
-}
-
-/** Look up a Durham concept by id; throws when unknown. */
-export function getDurhamConcept(conceptId: string): DurhamConceptConfig {
-  const concept = DURHAM_CONCEPTS.find((candidate) => candidate.id === conceptId)
-  if (!concept) throw new Error(`unknown Durham concept: ${conceptId}`)
-  return concept
-}
-
 /** The lifecycle statuses a real lane can hold, mirroring the registry enum. */
 export const LANE_LIFECYCLE_STATUSES: readonly BranchRegistryStatus[] = [
   "active",

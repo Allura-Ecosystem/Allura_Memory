@@ -705,7 +705,9 @@ action_items:
     epic: 25
     action: "Update epic-25 spec status lines (25.2a..25.3b done, acceptance reconciled)"
     owner: "Brooks"
-    status: open
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "epic-25-governed-curator-review-console.md Status updated to Done with per-story acceptance summary."
     ref: "_bmad/bmm/stories/epic-25-retro-2026-08-28.md"
   - id: "epic-25-retro-item-2-use-sprint_plan-py-sprint_status-py-excl"
     epic: 25
@@ -713,43 +715,56 @@ action_items:
       never hand-edit"
     owner: "Brooks"
     status: open
+    note: "sprint_plan.py and sprint_status.py do not exist in _bmad/scripts/ (verified 2026-08-29). The sanctioned tool is absent; hand-edits validated by YAML parse + detect-epic checks. Either restore the scripts or retire this item."
     ref: "_bmad/bmm/stories/epic-25-retro-2026-08-28.md"
   - id: "epic-25-retro-item-3-remove-or-wire-dead-assertcapabilities-a"
     epic: 25
     action: "Remove or wire dead assertCapabilities/assertCompatible in bumblebee/module.ts"
     owner: "Woz"
-    status: open
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "Wired — exercised by src/lib/bumblebee/__tests__/module.test.ts (grant validation, compatibility checks). Not dead."
     ref: "_bmad/bmm/stories/epic-25-retro-2026-08-28.md"
   - id: "epic-25-retro-item-4-rename-module-registry-audit-failure-tes"
     epic: 25
     action: "Rename module-registry.audit-failure.test.ts title (phantom manifest_invalid
       branch)"
     owner: "Woz"
-    status: open
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "Title is 'Story 25.3b audit persistence failures'; no phantom manifest_invalid branch (verified in file + d25a1f6e)."
     ref: "_bmad/bmm/stories/epic-25-retro-2026-08-28.md"
   - id: "epic-25-retro-item-5-produce-or-honestly-mark-the-epic-24-ret"
     epic: 25
     action: "Produce or honestly mark the epic-24 retrospective (key done, no document)"
     owner: "Fowler"
-    status: open
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "Document exists: docs/retrospectives/epic-24-retrospective-2026-08-22.md."
     ref: "_bmad/bmm/stories/epic-25-retro-2026-08-28.md"
   - id: "epic-26-retro-item-6-resolve-the-epic-24-retrospective-gap-ke"
     epic: 26
     action: "Resolve the Epic-24 retrospective gap (key marked done, no document)"
     owner: "Brooks"
-    status: open
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "docs/retrospectives/epic-24-retrospective-2026-08-22.md exists with corrective actions."
     ref: "_bmad/bmm/stories/epic-26-retro-2026-08-29.md"
   - id: "epic-26-retro-item-7-wire-or-document-the-ac-3-authmethod-aud"
     epic: 26
     action: "Wire or document the AC-3 authMethod audit-metadata path"
     owner: "Woz"
-    status: open
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "authMethod is wired: lease-repository.ts sets authMethod:'plugin_token'; source-authority.ts enforces credential class (throws on mismatch)."
     ref: "_bmad/bmm/stories/epic-26-retro-2026-08-29.md"
   - id: "epic-26-retro-item-8-touch-up-migration-50-header-comment-old"
     epic: 26
     action: "Touch up migration-50 header comment (old 5-column PK description)"
     owner: "Fowler"
-    status: open
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "Header comment updated to the 7-column PK (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id, record_id) per migration 52."
     ref: "_bmad/bmm/stories/epic-26-retro-2026-08-29.md"
   - id: "epic-26-retro-item-9-pre-architecture-schema-read-surface-pk"
     epic: 26
@@ -773,7 +788,9 @@ action_items:
     epic: 27
     action: "Remove or wire dead exports (getTeamRamLane, getDurhamConcept, buildRollbackPlan)"
     owner: "Brooks"
-    status: open
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "getTeamRamLane + getDurhamConcept removed (zero usage incl. tests). buildRollbackPlan kept — wired by promotion-adapter.test.ts; typecheck clean, 2474 unit tests pass."
     ref: "_bmad/bmm/stories/epic-27-retro-2026-08-29.md"
   - id: "epic-27-retro-item-13-re-run-agentdb-sona-comparison-without-o"
     epic: 27
@@ -787,4 +804,5 @@ action_items:
       gates"
     owner: "Brooks"
     status: open
+    note: "Standing policy — no action; verify at each adoption review."
     ref: "_bmad/bmm/stories/epic-27-retro-2026-08-29.md"

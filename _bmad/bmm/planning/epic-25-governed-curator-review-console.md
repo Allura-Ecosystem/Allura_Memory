@@ -6,7 +6,7 @@
 > Private product scope and approvals remain in the linked Notion epic; implementation truth remains in code, tests, PRs, and repository evidence.
 > When in doubt, defer to the source code, schemas, tests, and the authoritative sprint record.
 
-**Status:** In progress — Story 25.3a is done; Story 25.3b remains in review.
+**Status:** Done — 25.1 scope/product-truth reconciliation, 25.2a workspace-scope foundation, 25.2b authenticated entry, 25.3a read-contract remediation, and 25.3b module-registry reconciliation all accepted. Retrospective complete 2026-08-28.
 **Owner:** Brooks (architecture and trust boundary)
 **group_id:** `allura-system`
 **Private scope authority:** Notion — [Epic 25 — Governed Curator Review Console](https://app.notion.com/p/3c41d9be65b3819b96c6c9d14a3424ea?pvs=204)

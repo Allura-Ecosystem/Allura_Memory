@@ -26,9 +26,9 @@ BEGIN;
 -- ── Supporting indexes ───────────────────────────────────────────────────
 -- None of these lookups (decision by partition+decision, lease by
 -- partition+profile+generation, record by lease+type) had a supporting index
--- before this migration; bumblebee_records' PK is
--- (group_id, workspace_id, source_id, run_id, record_id), so a lease_id +
--- record_type predicate has no index at all today.
+-- before this migration; bumblebee_records' PK (as of migration 52) is
+-- (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id,
+-- record_id), so a lease_id + record_type predicate has no index at all today.
 CREATE INDEX IF NOT EXISTS bumblebee_run_decisions_partition_decision_idx
   ON bumblebee_run_decisions (group_id, workspace_id, source_id, source_revision_id, decision, lease_id, batch_id);
 
