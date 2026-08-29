@@ -124,13 +124,13 @@ function canonicalParts(record: RawRecord): string[] {
         requireString(record, "end_time"),
         rootsList(record),
         canonicalCounts,
-        String(record.package_records_emitted),
+        String(record.package_records_emitted ?? 0),
         String(record.package_records_suppressed ?? 0),
-        String(record.findings_emitted),
-        String(record.duplicates),
-        String(record.diagnostics_count),
-        String(record.files_considered),
-        String(record.timed_out),
+        String(record.findings_emitted ?? 0),
+        String(record.duplicates ?? 0),
+        String(record.diagnostics_count ?? 0),
+        String(record.files_considered ?? 0),
+        String(record.timed_out ?? false),
         String(record.duration_ms ?? 0),
         String(record.http_batches_attempted ?? 0),
         String(record.http_batches_succeeded ?? 0),
@@ -196,10 +196,62 @@ function endpointIdentity(record: RawRecord): string {
   return `${typeof hostname === "string" ? hostname : ""}|${typeof username === "string" ? username : ""}`
 }
 
+// Allowlist of fields permitted in the sanitized payload. Everything else
+// (endpoint, scan_time, scanner_name, scanner_version, and any unknown
+// future field) is stripped before storage. AC-15 requires allowlisted
+// normalized fields only — a deny-list would silently persist new
+// device-identifying metadata the upstream scanner adds.
+const SANITIZED_FIELDS: ReadonlySet<string> = Object.freeze(new Set([
+  "record_type",
+  "record_id",
+  "schema_version",
+  "run_id",
+  "profile",
+  "ecosystem",
+  "package_name",
+  "normalized_name",
+  "version",
+  "project_path",
+  "root_kind",
+  "package_manager",
+  "source_type",
+  "source_file",
+  "has_lifecycle_scripts",
+  "confidence",
+  "status",
+  "end_time",
+  "roots",
+  "counts",
+  "package_records_emitted",
+  "package_records_suppressed",
+  "findings_emitted",
+  "duplicates",
+  "diagnostics_count",
+  "files_considered",
+  "timed_out",
+  "duration_ms",
+  "finding_type",
+  "catalog_id",
+  "level",
+  "message",
+  "path",
+  "install_scope",
+  "direct_dependency",
+  "lifecycle_scripts",
+  "requested_spec",
+  "server_name",
+  "http_batches_attempted",
+  "http_batches_succeeded",
+  "http_batches_failed",
+  "http_last_status",
+  "error",
+]))
+
 function sanitize(record: RawRecord): Readonly<Record<string, unknown>> {
-  // Endpoint data is device-identifying; ingestion must never persist it.
-  const copy: Record<string, unknown> = { ...record }
-  delete copy.endpoint
+  const copy: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(record)) {
+    if (SANITIZED_FIELDS.has(key)) copy[key] = value
+  }
   return Object.freeze(copy)
 }
 

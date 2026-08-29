@@ -155,17 +155,21 @@ export function createProductionIngest(deps: {
   authenticateLease: (request: Request) => Promise<{ lease: IngestLease }>
   createScopedStore: (lease: IngestLease) => Promise<ScopedIngestStore>
   pipeline?: typeof ingestScannerBatch
+  prePipeline?: (request: Request) => void
 }) {
   const pipeline = deps.pipeline ?? ingestScannerBatch
-  return (request: Request) => pipeline(request, {
-    authenticate: async (candidate) => deps.authenticateLease(candidate),
-    findExistingBatch: async ({ lease, bodySha256 }) =>
-      (await deps.createScopedStore(lease)).findExistingBatch({ lease, bodySha256 }),
-    findConflictingBatch: async ({ lease }) =>
-      (await deps.createScopedStore(lease)).findConflictingBatch({ lease }),
-    persistBatch: async (input: PersistBatchInput) =>
-      (await deps.createScopedStore(input.lease)).persistBatch(input),
-  })
+  return async (request: Request) => {
+    if (deps.prePipeline) deps.prePipeline(request)
+    return pipeline(request, {
+      authenticate: async (candidate) => deps.authenticateLease(candidate),
+      findExistingBatch: async ({ lease, bodySha256 }) =>
+        (await deps.createScopedStore(lease)).findExistingBatch({ lease, bodySha256 }),
+      findConflictingBatch: async ({ lease }) =>
+        (await deps.createScopedStore(lease)).findConflictingBatch({ lease }),
+      persistBatch: async (input: PersistBatchInput) =>
+        (await deps.createScopedStore(input.lease)).persistBatch(input),
+    })
+  }
 }
 
 export async function persistScanLease(input: PersistLeaseInput): Promise<{ leaseId: string; generation: number }> {
