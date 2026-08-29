@@ -3,7 +3,7 @@
 
 generated: "2026-08-28"
 project: "allura-memory"
-last_updated: "08-28-2026 17:45"
+last_updated: "08-29-2026 16:20"
 owner: brooks
 group_id: allura-system
 
@@ -462,11 +462,11 @@ epic_26:
   name: "Bumblebee Plugin — Upstream Endpoint Inventory and Governed Allura Response"
   status: done
   retrospective:
-  next_story: null
-  sequence_note: "Epic complete 2026-08-29 — Story 26.7 reached all-19-AC approval with
-    unanimous Pike/Fowler/Knuth re-acceptance on candidate 097d5a10 (Correct Course:
-    migration 52 records grain + content-encoding gate). Live-DB 115/115, unit 2450,
-    typecheck clean. Retrospective recommended next."
+  next_story:
+  sequence_note: "Epic complete 2026-08-29 — Story 26.7 reached all-19-AC approval
+    with unanimous Pike/Fowler/Knuth re-acceptance on candidate 097d5a10 (Correct
+    Course: migration 52 records grain + content-encoding gate). Live-DB 115/115,
+    unit 2450, typecheck clean. Retrospective recommended next."
   stories:
     - key: "26.1"
       title: "Boundary, Ownership, and Threat-Source Trust Contract"
@@ -635,6 +635,7 @@ development_status:
   25-3a-curator-read-contract-remediation: done
   25-3b-modular-dashboard-workflow-contract-registry: done
   epic-26: done
+  epic-26-retrospective: done
   26-1-boundary-ownership-threat-source-trust-contract: done
   26-2-read-only-supply-chain-inventory: done
   26-3-exposure-matcher-threat-packs: done
@@ -679,3 +680,27 @@ action_items:
     owner: "Fowler"
     status: open
     ref: "_bmad/bmm/stories/epic-25-retro-2026-08-28.md"
+  - id: "epic-26-retro-item-6-resolve-the-epic-24-retrospective-gap-ke"
+    epic: 26
+    action: "Resolve the Epic-24 retrospective gap (key marked done, no document)"
+    owner: "Brooks"
+    status: open
+    ref: "_bmad/bmm/stories/epic-26-retro-2026-08-29.md"
+  - id: "epic-26-retro-item-7-wire-or-document-the-ac-3-authmethod-aud"
+    epic: 26
+    action: "Wire or document the AC-3 authMethod audit-metadata path"
+    owner: "Woz"
+    status: open
+    ref: "_bmad/bmm/stories/epic-26-retro-2026-08-29.md"
+  - id: "epic-26-retro-item-8-touch-up-migration-50-header-comment-old"
+    epic: 26
+    action: "Touch up migration-50 header comment (old 5-column PK description)"
+    owner: "Fowler"
+    status: open
+    ref: "_bmad/bmm/stories/epic-26-retro-2026-08-29.md"
+  - id: "epic-26-retro-item-9-pre-architecture-schema-read-surface-pk"
+    epic: 26
+    action: "Pre-architecture schema read: surface PK/FK grain before implementation"
+    owner: "Brooks"
+    status: open
+    ref: "_bmad/bmm/stories/epic-26-retro-2026-08-29.md"
