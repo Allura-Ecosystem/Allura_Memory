@@ -345,20 +345,23 @@ epic_24:
         (now current_user / current_database())."
     - key: "24.4"
       title: "Atomic Human-Governed Promotion"
-      status: changes-requested
+      status: in-review
       owner: "Troy"
       depends_on: ["24.3"]
       status_evidence: "PR #82 merged, but post-merge review found production entrypoints
         bypass the service, unsafe broad trigger suppression, and a non-transactional
-        outbox claim. Remediation required."
+        outbox claim. Remediation required. C1/C2/C3 findings resolved in current
+        codebase (PR #105, Epic 25 workspace authority foundation); remediation
+        verified 2026-08-28 (Brooks/Hermes)."
     - key: "24.5"
       title: "Deterministic Scenario Harness"
-      status: changes-requested
+      status: in-review
       owner: "Troy"
       depends_on: ["24.2"]
       status_evidence: "PR #83 merged, but post-merge review found the runner does
         not compose the process engine and does not enforce record/replay/network/side-effect
-        requirements."
+        requirements. C4 finding resolved (harness runner builds ProcessDefinition and
+        drives it through the engine); remediation verified 2026-08-28 (Brooks/Hermes + Team RAM)."
     - key: "24.6"
       title: "Evaluation and Regression Gates"
       status: changes-requested
@@ -405,6 +408,23 @@ epic_24:
       status_evidence: "PR #87 merged documentation only; no runnable integrations,
         scenarios, receipts, evaluation artifacts, or measured clean-environment evidence
         exist."
+    - key: "24.11a"
+      title: "Fail-Closed Web Authority"
+      status: ready-for-dev
+      owner: "Troy + Brooks"
+      depends_on: ["24.2", "24.3"]
+      status_evidence: "Story file states ready-for-dev; scope: fail-closed web
+        authority and manifest as single source. Blocks 24.11b, 25.3, and every
+        browser-facing Epic 25 story. Not yet started."
+    - key: "24.12"
+      title: "Effective Tenant Authority Seam"
+      status: done
+      owner: "Woz + Pike + Fowler"
+      depends_on: ["24.2"]
+      status_evidence: "Single resolveApiTenant seam reconciles duplicate
+        tenant-resolution helpers; discriminated 400/401/403/ok result, never a
+        protected-route fallback. Story file marked Done; code-review companion
+        file present."
 
 epic_25:
   name: "Governed Curator Console — Module Registry Reconciliation"
@@ -645,13 +665,13 @@ development_status:
   24-1-ci-benchmarks: done
   24-2-authenticated-principal-context: done
   24-3-database-isolation-ledger: done
-  24-4-atomic-promotion: backlog
-  24-5-deterministic-scenario-harness: backlog
-  24-6-evaluation-regression-gates: backlog
-  24-7-sdk-cli-developer-experience: backlog
-  24-8-enterprise-documentation-truth: backlog
+  24-4-atomic-promotion: in-review
+  24-5-deterministic-scenario-harness: in-review
+  24-6-evaluation-regression-gates: changes-requested
+  24-7-sdk-cli-developer-experience: changes-requested
+  24-8-enterprise-documentation-truth: changes-requested
   24-10-ci-gate-integrity: done
-  24-9-reference-integrations-portfolio-demo: backlog
+  24-9-reference-integrations-portfolio-demo: changes-requested
   epic-24-retrospective: done
   epic-25: done
   epic-25-retrospective: done
@@ -678,7 +698,7 @@ development_status:
   27-6-security-evidence-release-witness-demo-gate: done
   epic-28: done
   28-8-exit-gate-closure: done
-  24-11a-fail-closed-web-authority: backlog
+  24-11a-fail-closed-web-authority: ready-for-dev
   24-12-effective-tenant-authority-seam: done
 action_items:
   - id: "epic-25-retro-item-1-update-epic-25-spec-status-lines-25-2a-2"
