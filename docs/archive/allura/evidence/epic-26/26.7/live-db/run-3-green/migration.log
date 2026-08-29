@@ -1,0 +1,962 @@
+CREATE EXTENSION
+Applying 52 migrations in LC_ALL=C filename order.
+Applying: 00-extensions.sql
+psql:docker/postgres-init/00-extensions.sql:22: NOTICE:  extension "vector" already exists, skipping
+CREATE EXTENSION
+Applying: 00-traces.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+DO
+DO
+DO
+DO
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+DO
+DO
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+DO
+DO
+CREATE TABLE
+INSERT 0 1
+Applying: 01-sync-tables.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+INSERT 0 1
+Applying: 02_group_id_enforcement.sql
+DO
+DO
+INSERT 0 1
+Applying: 03-witness-logs.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMENT
+CREATE TABLE
+CREATE INDEX
+COMMENT
+Applying: 05-evidence-confidence.sql
+ALTER TABLE
+COMMENT
+CREATE INDEX
+ALTER TABLE
+COMMENT
+CREATE INDEX
+CREATE INDEX
+psql:docker/postgres-init/05-evidence-confidence.sql:42: NOTICE:  Migration 05-evidence-confidence.sql completed successfully
+DO
+Applying: 06-promotion-proposals.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE FUNCTION
+psql:docker/postgres-init/06-promotion-proposals.sql:116: NOTICE:  trigger "proposal_transition_trigger" for relation "promotion_proposals" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+Applying: 07-platform-library.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+psql:docker/postgres-init/07-platform-library.sql:129: NOTICE:  trigger "adoption_increment_trigger" for relation "insight_adoptions" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+psql:docker/postgres-init/07-platform-library.sql:146: NOTICE:  trigger "platform_insight_timestamp_trigger" for relation "platform_insights" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+Applying: 08-bank-audit-workflow.sql
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+Applying: 09-curator-config.sql
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE FUNCTION
+psql:docker/postgres-init/09-curator-config.sql:110: NOTICE:  trigger "curator_config_update_timestamp" for relation "curator_config" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+Applying: 10-brooks-tracking.sql
+DO
+DO
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+Applying: 11-canonical-proposals.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE TRIGGER
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+Applying: 12-ruvector-fallback.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+COMMENT
+Applying: 13-witness-hash.sql
+ALTER TABLE
+CREATE INDEX
+COMMENT
+Applying: 14-notion-sync-dlq.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+INSERT 0 1
+Applying: 15-canonical-proposals-notion-page-id.sql
+ALTER TABLE
+ALTER TABLE
+CREATE INDEX
+Applying: 16-ruvector-memories.sql
+DO
+Applying: 17-ruvector-fallback-sync.sql
+psql:docker/postgres-init/17-ruvector-fallback-sync.sql:49: NOTICE:  relation "ruvector_memory_fallback" already exists, skipping
+CREATE TABLE
+psql:docker/postgres-init/17-ruvector-fallback-sync.sql:52: NOTICE:  relation "idx_ruvector_fallback_group" already exists, skipping
+CREATE INDEX
+psql:docker/postgres-init/17-ruvector-fallback-sync.sql:56: NOTICE:  relation "idx_ruvector_fallback_pending" already exists, skipping
+CREATE INDEX
+COMMENT
+Applying: 17-schema-version.sql
+DO
+UPDATE 0
+UPDATE 0
+DO
+INSERT 0 1
+Applying: 18-events-metadata-memory-id-index.sql
+DO
+Applying: 19-group-id-check-constraints.sql
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+DO
+INSERT 0 1
+Applying: 20-migrate-to-1024d.sql
+psql:docker/postgres-init/20-migrate-to-1024d.sql:51: NOTICE:  index "test_hnsw_idx" does not exist, skipping
+psql:docker/postgres-init/20-migrate-to-1024d.sql:51: NOTICE:  Migration 20: allura_memories updated with embedding_1024 column and HNSW index
+DO
+Applying: 20-score-precision-fix.sql
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+COMMENT
+ALTER TABLE
+COMMENT
+Applying: 21-graph-adapter-tables.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+Applying: 22-embedding-4096-migration.sql
+psql:docker/postgres-init/22-embedding-4096-migration.sql:40: NOTICE:  Migration 22: allura_memories embedding column upgraded to vector(4096)
+DO
+Applying: 23-enable-4096d-hnsw.sql
+Applying: 24-graph-structural-context.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMENT
+COMMENT
+Applying: 25-process-engine.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+Applying: 26-work-plane.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+Applying: 27-workspaces.sql
+CREATE TABLE
+CREATE INDEX
+INSERT 0 1
+Applying: 28-mcp-tokens.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+INSERT 0 1
+Applying: 29-memberships.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+INSERT 0 1
+Applying: 30-agent-trajectories.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+INSERT 0 1
+Applying: 31-coherence-conflicts.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+INSERT 0 1
+Applying: 31-pattern-proposals.sql
+CREATE TABLE
+DO
+DO
+DO
+DO
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+psql:docker/postgres-init/31-pattern-proposals.sql:140: NOTICE:  trigger "trg_pattern_proposals_block_update" for relation "pattern_proposals" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/31-pattern-proposals.sql:146: NOTICE:  trigger "trg_pattern_proposals_block_delete" for relation "pattern_proposals" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/31-pattern-proposals.sql:152: NOTICE:  trigger "trg_pattern_proposals_block_truncate" for relation "pattern_proposals" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+INSERT 0 1
+Applying: 31-recovery-events.sql
+CREATE TABLE
+DO
+DO
+DO
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+psql:docker/postgres-init/31-recovery-events.sql:91: NOTICE:  trigger "trg_recovery_block_update" for relation "recovery_events" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/31-recovery-events.sql:97: NOTICE:  trigger "trg_recovery_block_delete" for relation "recovery_events" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/31-recovery-events.sql:103: NOTICE:  trigger "trg_recovery_block_truncate" for relation "recovery_events" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+INSERT 0 1
+Applying: 32-skill-usage-events.sql
+CREATE TABLE
+DO
+DO
+DO
+DO
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+psql:docker/postgres-init/32-skill-usage-events.sql:94: NOTICE:  trigger "trg_skill_usage_block_update" for relation "skill_usage_events" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/32-skill-usage-events.sql:100: NOTICE:  trigger "trg_skill_usage_block_delete" for relation "skill_usage_events" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/32-skill-usage-events.sql:106: NOTICE:  trigger "trg_skill_usage_block_truncate" for relation "skill_usage_events" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE VIEW
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+INSERT 0 1
+Applying: 33-tenant-registry.sql
+CREATE TABLE
+DO
+DO
+CREATE INDEX
+INSERT 0 4
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+INSERT 0 1
+Applying: 35-application-roles.sql
+DO
+Applying: 36-tenant-rls.sql
+CREATE FUNCTION
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "adas_runs" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "agent_trajectories" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "allura_feedback" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "allura_memories" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "approval_notifications" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "approval_transitions" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "canonical_proposals" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "checkpoints" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "coherence_conflicts" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "curator_config" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "curator_stats" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "design_sync_status" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "events" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "evidence_packets" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "graph_memories" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "graph_structural_edges" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "graph_structural_nodes" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "graph_supersedes" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "handoffs" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "lanes" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "notion_sync_dlq" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "outcomes" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "pattern_proposals" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "process_definitions" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "process_runs" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "projects" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "promotion_proposals" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "recovery_events" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "ruvector_memory_fallback" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "skill_usage_events" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "sync_drift_log" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "witness_logs" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "work_item_dependencies" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "work_items" does not exist, skipping
+psql:docker/postgres-init/36-tenant-rls.sql:64: NOTICE:  policy "tenant_isolation_policy" for relation "workspaces" does not exist, skipping
+DO
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/36-tenant-rls.sql:78: NOTICE:  policy "tenants_read_policy" for relation "tenants" does not exist, skipping
+DROP POLICY
+psql:docker/postgres-init/36-tenant-rls.sql:79: NOTICE:  policy "tenants_write_policy" for relation "tenants" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/36-tenant-rls.sql:85: NOTICE:  policy "memberships_policy" for relation "memberships" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/36-tenant-rls.sql:93: NOTICE:  policy "mcp_tokens_policy" for relation "mcp_tokens" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DO
+GRANT
+GRANT
+Applying: 37-events-immutable.sql
+DO
+GRANT
+GRANT
+GRANT
+COMMENT
+CREATE FUNCTION
+psql:docker/postgres-init/37-events-immutable.sql:70: NOTICE:  trigger "events_immutable_trigger" for relation "events" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+Applying: 38-promotion-idempotency-outbox.sql
+ALTER TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/38-promotion-idempotency-outbox.sql:47: NOTICE:  policy "tenant_isolation_policy" for relation "promotion_outbox" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/38-promotion-idempotency-outbox.sql:51: NOTICE:  policy "tenant_isolation_policy" for relation "promotion_idempotency" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+Applying: 39-workspace-subgraph-foundation.sql
+DO
+DO
+ALTER TABLE
+ALTER TABLE
+CREATE FUNCTION
+psql:docker/postgres-init/39-workspace-subgraph-foundation.sql:58: NOTICE:  trigger "canonical_proposals_version_trigger" for relation "canonical_proposals" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+DO
+DO
+CREATE INDEX
+ALTER TABLE
+DO
+CREATE INDEX
+DO
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/39-workspace-subgraph-foundation.sql:148: NOTICE:  policy "workspace_scope_restrictive_policy" for relation "events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+CREATE FUNCTION
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/39-workspace-subgraph-foundation.sql:220: NOTICE:  policy "workspace_scope_restrictive_policy" for relation "canonical_proposals" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+CREATE INDEX
+DO
+CREATE TABLE
+psql:docker/postgres-init/39-workspace-subgraph-foundation.sql:311: NOTICE:  constraint "governance_receipts_source_event_id_fkey" of relation "governance_receipts" does not exist, skipping
+ALTER TABLE
+DO
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/39-workspace-subgraph-foundation.sql:374: NOTICE:  policy "evidence_requests_workspace_isolation_policy" for relation "evidence_requests" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/39-workspace-subgraph-foundation.sql:386: NOTICE:  policy "governance_receipts_workspace_isolation_policy" for relation "governance_receipts" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/39-workspace-subgraph-foundation.sql:398: NOTICE:  policy "semantic_projections_workspace_isolation_policy" for relation "semantic_projections" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+psql:docker/postgres-init/39-workspace-subgraph-foundation.sql:419: NOTICE:  trigger "governance_receipts_immutable_trigger" for relation "governance_receipts" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+GRANT
+INSERT 0 1
+Applying: 40-workspace-subgraph-forward-upgrade.sql
+BEGIN
+CREATE EXTENSION
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:10: NOTICE:  column "proposal_version" of relation "canonical_proposals" already exists, skipping
+ALTER TABLE
+CREATE FUNCTION
+DROP TRIGGER
+CREATE TRIGGER
+DO
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:43: NOTICE:  column "proposal_id" of relation "governance_receipts" already exists, skipping
+ALTER TABLE
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:44: NOTICE:  column "evidence_request_id" of relation "governance_receipts" already exists, skipping
+ALTER TABLE
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:45: NOTICE:  column "evidence_identity_hash" of relation "governance_receipts" already exists, skipping
+ALTER TABLE
+ALTER TABLE
+DROP TRIGGER
+DO
+CREATE TABLE
+REVOKE
+REVOKE
+INSERT 0 0
+DELETE 0
+ALTER TABLE
+ALTER TABLE
+UPDATE 0
+ALTER TABLE
+ALTER TABLE
+UPDATE 0
+DO
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:165: NOTICE:  relation "governance_receipts_scope_proposal_occurred_idx" already exists, skipping
+CREATE INDEX
+DO
+CREATE TABLE
+INSERT 0 0
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:204: NOTICE:  policy "governance_receipt_evidence_requests_workspace_isolation_policy" for relation "governance_receipt_evidence_requests" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:244: NOTICE:  trigger "governance_receipt_evidence_requests_immutable_trigger" for relation "governance_receipt_evidence_requests" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE TRIGGER
+DO
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:272: NOTICE:  column "content_hash" of relation "semantic_projections" already exists, skipping
+ALTER TABLE
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:273: NOTICE:  column "embedding_model" of relation "semantic_projections" already exists, skipping
+ALTER TABLE
+UPDATE 0
+ALTER TABLE
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:276: NOTICE:  constraint "semantic_projections_build_state_check" of relation "semantic_projections" does not exist, skipping
+ALTER TABLE
+ALTER TABLE
+UPDATE 0
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:289: NOTICE:  index "semantic_projections_scope_subject_built_idx" does not exist, skipping
+DROP INDEX
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:291: NOTICE:  relation "semantic_projections_scope_source_generated_idx" already exists, skipping
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+DO
+DO
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:443: NOTICE:  constraint "promotion_outbox_scope_proposal_key" of relation "promotion_outbox" does not exist, skipping
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:448: NOTICE:  constraint "promotion_idempotency_scope_key" of relation "promotion_idempotency" does not exist, skipping
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:465: NOTICE:  policy "workspace_scope_restrictive_policy" for relation "graph_memories" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:469: NOTICE:  policy "workspace_scope_restrictive_policy" for relation "allura_memories" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:473: NOTICE:  policy "workspace_scope_restrictive_policy" for relation "promotion_outbox" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:477: NOTICE:  policy "workspace_scope_restrictive_policy" for relation "promotion_idempotency" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:481: NOTICE:  policy "workspace_scope_restrictive_policy" for relation "graph_supersedes" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:485: NOTICE:  policy "workspace_scope_restrictive_policy" for relation "graph_structural_nodes" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/40-workspace-subgraph-forward-upgrade.sql:489: NOTICE:  policy "workspace_scope_restrictive_policy" for relation "graph_structural_edges" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+GRANT
+ALTER TABLE
+ALTER TABLE
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+DROP POLICY
+CREATE POLICY
+INSERT 0 1
+COMMIT
+Applying: 41-mitigation-receipts.sql
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/41-mitigation-receipts.sql:52: NOTICE:  policy "mitigation_receipts_workspace_isolation_policy" for relation "mitigation_receipts" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+psql:docker/postgres-init/41-mitigation-receipts.sql:74: NOTICE:  trigger "mitigation_receipts_immutable_trigger" for relation "mitigation_receipts" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+GRANT
+INSERT 0 1
+Applying: 42-threat-alerts.sql
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/42-threat-alerts.sql:64: NOTICE:  policy "threat_alerts_workspace_isolation_policy" for relation "threat_alerts" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+psql:docker/postgres-init/42-threat-alerts.sql:115: NOTICE:  trigger "trg_threat_alerts_block_delete" for relation "threat_alerts" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/42-threat-alerts.sql:121: NOTICE:  trigger "trg_threat_alerts_restrict_update" for relation "threat_alerts" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+GRANT
+INSERT 0 1
+Applying: 43-fix-pattern-proposals-update-trigger.sql
+CREATE FUNCTION
+INSERT 0 1
+Applying: 44-inventory-records.sql
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/44-inventory-records.sql:59: NOTICE:  policy "inventory_records_workspace_isolation_policy" for relation "inventory_records" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+GRANT
+INSERT 0 1
+Applying: 45-containment-receipts.sql
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/45-containment-receipts.sql:52: NOTICE:  policy "containment_receipts_workspace_isolation_policy" for relation "containment_receipts" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+psql:docker/postgres-init/45-containment-receipts.sql:74: NOTICE:  trigger "containment_receipts_immutable_trigger" for relation "containment_receipts" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+GRANT
+INSERT 0 1
+Applying: 46-bumblebee-source-authority.sql
+BEGIN
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE FUNCTION
+CREATE TABLE
+CREATE INDEX
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+psql:docker/postgres-init/46-bumblebee-source-authority.sql:172: NOTICE:  trigger "bumblebee_runner_credentials_protected" for relation "bumblebee_runner_credentials" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/46-bumblebee-source-authority.sql:176: NOTICE:  trigger "bumblebee_catalog_revisions_immutable" for relation "bumblebee_catalog_revisions" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/46-bumblebee-source-authority.sql:180: NOTICE:  trigger "bumblebee_catalog_entries_immutable" for relation "bumblebee_catalog_entries" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/46-bumblebee-source-authority.sql:184: NOTICE:  trigger "bumblebee_sources_protected" for relation "bumblebee_sources" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/46-bumblebee-source-authority.sql:198: NOTICE:  policy "bumblebee_runner_credentials_scope" for relation "bumblebee_runner_credentials" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/46-bumblebee-source-authority.sql:202: NOTICE:  policy "bumblebee_catalog_revisions_scope" for relation "bumblebee_catalog_revisions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/46-bumblebee-source-authority.sql:206: NOTICE:  policy "bumblebee_catalog_entries_scope" for relation "bumblebee_catalog_entries" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/46-bumblebee-source-authority.sql:210: NOTICE:  policy "bumblebee_sources_scope" for relation "bumblebee_sources" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+GRANT
+GRANT
+GRANT
+INSERT 0 1
+COMMIT
+Applying: 47-bumblebee-scan-leases.sql
+BEGIN
+CREATE TABLE
+CREATE FUNCTION
+psql:docker/postgres-init/47-bumblebee-scan-leases.sql:57: NOTICE:  trigger "bumblebee_scan_leases_protected" for relation "bumblebee_scan_leases" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/47-bumblebee-scan-leases.sql:64: NOTICE:  policy "bumblebee_scan_leases_scope" for relation "bumblebee_scan_leases" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+ALTER FUNCTION
+REVOKE
+GRANT
+INSERT 0 1
+COMMIT
+Applying: 48-bumblebee-ingest-ledger.sql
+BEGIN
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:111: NOTICE:  trigger "bumblebee_batch_receipts_immutable" for relation "bumblebee_batch_receipts" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:115: NOTICE:  trigger "bumblebee_records_immutable" for relation "bumblebee_records" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:119: NOTICE:  trigger "bumblebee_run_decisions_immutable" for relation "bumblebee_run_decisions" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:123: NOTICE:  trigger "bumblebee_exposure_evidence_immutable" for relation "bumblebee_exposure_evidence" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:138: NOTICE:  policy "bumblebee_batch_receipts_select_scope" for relation "bumblebee_batch_receipts" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:142: NOTICE:  policy "bumblebee_batch_receipts_insert_scope" for relation "bumblebee_batch_receipts" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:147: NOTICE:  policy "bumblebee_records_select_scope" for relation "bumblebee_records" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:151: NOTICE:  policy "bumblebee_records_insert_scope" for relation "bumblebee_records" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:156: NOTICE:  policy "bumblebee_run_decisions_select_scope" for relation "bumblebee_run_decisions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:161: NOTICE:  policy "bumblebee_exposure_evidence_select_scope" for relation "bumblebee_exposure_evidence" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:166: NOTICE:  policy "bumblebee_run_decisions_insert_scope" for relation "bumblebee_run_decisions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:docker/postgres-init/48-bumblebee-ingest-ledger.sql:171: NOTICE:  policy "bumblebee_exposure_evidence_insert_scope" for relation "bumblebee_exposure_evidence" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+REVOKE
+GRANT
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+GRANT
+INSERT 0 1
+COMMIT
+ALTER ROLE
+vector:0.8.6
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+JSON report written to /tmp/claude-1000/-mnt-projects-git-Allura-Ecosystem-Allura-Memory--claude-worktrees-story-26-7-ingestion-a70332/ed9a1c70-9d48-4548-8156-df0e3b835327/scratchpad/hightower-4th-run/live-db-tests.json
