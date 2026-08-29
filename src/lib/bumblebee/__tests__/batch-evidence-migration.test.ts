@@ -42,6 +42,7 @@ describe("Story 26.7 batch evidence relational contract", () => {
     expect(sql).toContain("reason_code TEXT NOT NULL CHECK (LENGTH(TRIM(reason_code)) > 0)")
     expect(sql).toContain("decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW()")
     expect(sql).toContain("PRIMARY KEY (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id, decision_id)")
+    expect(sql).toContain("REFERENCES bumblebee_records(group_id, workspace_id, source_id, run_id, record_id)")
     expect(sql).toContain("CHECK ((decision = 'promoted') = (summary_record_id IS NOT NULL))")
   })
 

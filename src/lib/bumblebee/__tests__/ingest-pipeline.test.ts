@@ -256,7 +256,7 @@ describe("ingestScannerBatch", () => {
     expect(response.status).toBe(201)
     const body = await response.json()
     expect(body.accepted).toBe(true)
-    expect(body.recordCount).toBe(2)
+    expect(body.recordCount).toBe(3)
     expect(typeof body.batchId).toBe("string")
 
     expect(persisted).toHaveLength(1)
@@ -266,11 +266,12 @@ describe("ingestScannerBatch", () => {
     expect(input.bodySha256).toBe(createHash("sha256").update(validBody).digest("hex"))
     expect(input.byteCount).toBe(Buffer.byteLength(validBody, "utf8"))
     expect(input.lineCount).toBe(3)
-    expect(input.recordCount).toBe(2)
+    expect(input.recordCount).toBe(3)
     expect(input.summaryRecordId).toBe(scanSummary.record_id)
     expect(input.records.map((r) => r.record_id)).toEqual([
       packageA.record_id,
       packageB.record_id,
+      scanSummary.record_id,
     ])
     for (const record of input.records) {
       expect(record.sanitized_payload).not.toHaveProperty("endpoint")

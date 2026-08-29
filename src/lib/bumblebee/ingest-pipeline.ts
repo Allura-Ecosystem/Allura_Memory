@@ -154,6 +154,10 @@ export async function ingestScannerBatch(request: Request, deps: IngestDeps): Pr
   if (summary === undefined) return failClosed()
 
   const batchId = mintBatchId(lease, bodySha256)
+  // The summary is itself an immutable emitted record. Persisting it alongside
+  // the package/finding/diagnostic records keeps the held decision's summary
+  // reference durable and makes receipt counts describe the full NDJSON batch.
+  const batchRecords = [...parsed.records, summary]
 
   // (8) Atomic persist; fail closed on any storage fault so the client never
   // records an acceptance the system did not commit.
@@ -163,9 +167,9 @@ export async function ingestScannerBatch(request: Request, deps: IngestDeps): Pr
       batchId,
       bodySha256,
       byteCount,
-      lineCount: parsed.records.length + 1,
-      recordCount: parsed.records.length,
-      records: parsed.records,
+      lineCount: batchRecords.length,
+      recordCount: batchRecords.length,
+      records: batchRecords,
       summaryRecordId: summary.record_id,
     })
   } catch {
@@ -173,5 +177,5 @@ export async function ingestScannerBatch(request: Request, deps: IngestDeps): Pr
   }
 
   // (9) Accepted exactly once.
-  return Response.json({ batchId, accepted: true, recordCount: parsed.records.length }, { status: 201 })
+  return Response.json({ batchId, accepted: true, recordCount: batchRecords.length }, { status: 201 })
 }

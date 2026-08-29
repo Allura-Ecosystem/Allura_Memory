@@ -110,6 +110,8 @@ CREATE TABLE IF NOT EXISTS bumblebee_run_decisions (
   PRIMARY KEY (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id, decision_id),
   FOREIGN KEY (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id)
     REFERENCES bumblebee_batch_receipts(group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id),
+  FOREIGN KEY (group_id, workspace_id, source_id, run_id, summary_record_id)
+    REFERENCES bumblebee_records(group_id, workspace_id, source_id, run_id, record_id),
   CHECK ((decision = 'promoted') = (summary_record_id IS NOT NULL))
 );
 
