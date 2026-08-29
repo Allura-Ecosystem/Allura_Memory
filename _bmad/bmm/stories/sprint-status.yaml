@@ -389,11 +389,15 @@ epic_24:
         + CLI --json unknown-command fixed; typecheck clean; 2499 unit tests pass."
     - key: "24.8"
       title: "Enterprise Documentation Truth Pack"
-      status: changes-requested
+      status: review
       owner: "Troy"
       depends_on: ["24.2", "24.3", "24.4", "24.5", "24.6", "24.7"]
       status_evidence: "PR #86 merged only four enterprise Markdown files; canonical-doc
-        alignment, traceability, evidence index, and CI guards remain incomplete."
+        alignment, traceability, evidence index, and CI guards remain incomplete.
+        Remediation verified 2026-08-29 (Brooks/Hermes): all 10 ACs verified —
+        canonical docs describe PostgreSQL/RuVector, threat-model covers 10 topics,
+        security-controls maps controls, residue guard extended with internal link
+        check (AC-9). Awaiting review."
     - key: "24.10"
       title: "CI Gate Integrity and Branch Protection"
       status: done
@@ -679,7 +683,7 @@ development_status:
   24-5-deterministic-scenario-harness: review
   24-6-evaluation-regression-gates: review
   24-7-sdk-cli-developer-experience: review
-  24-8-enterprise-documentation-truth: changes-requested
+  24-8-enterprise-documentation-truth: review
   24-10-ci-gate-integrity: done
   24-9-reference-integrations-portfolio-demo: changes-requested
   epic-24-retrospective: done

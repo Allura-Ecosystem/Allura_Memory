@@ -162,9 +162,49 @@ for dir in "${RUNTIME_SURFACES[@]}"; do
   fi
 done
 
+# ── Internal link + evidence resolution check (Story 24.8 AC-9) ─────────────
+# Fails when an ACTIVE doc links to a missing internal markdown file, or when
+# a capability-matrix evidence link does not resolve. Relative links only;
+# http(s) links and anchors are out of scope for this guard.
+check_links() {
+  local file="$1"
+  local rel="${file#"$ROOT"/}"
+  local dir
+  dir="$(dirname "$file")"
+  local target
+  while IFS= read -r target; do
+    [[ -z "$target" ]] && continue
+    # Skip anchors, http(s), mailto, and code spans
+    case "$target" in
+      \#*|http://*|https://*|mailto:*|*'`'*) continue ;;
+    esac
+    # Skip regex-looking targets (e.g. `[a-z0-9-]*[a-z0-9]` inside code spans)
+    case "$target" in
+      *'['*|*']'*|*'*'*) continue ;;
+    esac
+    # Strip any anchor fragment
+    local path="${target%%#*}"
+    [[ -z "$path" ]] && continue
+    if [[ ! -e "$dir/$path" ]]; then
+      echo "ERROR: $rel — broken internal link: $target"
+      STATUS=1
+    fi
+  done < <(grep -oE '\]\([^)]+\)' "$file" | sed -E 's/^\]\(//; s/\)$//')
+}
+
+for dir in "${ACTIVE_DOCS[@]}"; do
+  if [[ -d "$dir" ]]; then
+    while IFS= read -r file; do
+      check_links "$file"
+    done < <(find "$dir" -name '*.md' -print | sort)
+  elif [[ -f "$dir" ]]; then
+    check_links "$dir"
+  fi
+done
+
 if [[ "$STATUS" -ne 0 ]]; then
-  echo "docs-backend-residue-guard: FAILED — active docs describe a retired backend as current"
+  echo "docs-backend-residue-guard: FAILED — active docs describe a retired backend as current, or contain broken internal links"
   exit "$STATUS"
 fi
 
-echo "docs-backend-residue-guard: OK — no retired backend residue in active surfaces"
+echo "docs-backend-residue-guard: OK — no retired backend residue in active surfaces; all internal links resolve"
