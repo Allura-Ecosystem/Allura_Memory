@@ -410,12 +410,12 @@ epic_24:
         exist."
     - key: "24.11a"
       title: "Fail-Closed Web Authority"
-      status: ready-for-dev
+      status: review
       owner: "Troy + Brooks"
       depends_on: ["24.2", "24.3"]
-      status_evidence: "Story file states ready-for-dev; scope: fail-closed web
-        authority and manifest as single source. Blocks 24.11b, 25.3, and every
-        browser-facing Epic 25 story. Not yet started."
+      status_evidence: "Implementation merged (PR #99, 823c94a9). All ACs verified
+        2026-08-29: typecheck clean, 2474 unit tests pass, route-scope-manifest
+        validator PASS (zero uncovered, zero weak). Awaiting independent review."
     - key: "24.12"
       title: "Effective Tenant Authority Seam"
       status: done
@@ -698,7 +698,7 @@ development_status:
   27-6-security-evidence-release-witness-demo-gate: done
   epic-28: done
   28-8-exit-gate-closure: done
-  24-11a-fail-closed-web-authority: ready-for-dev
+  24-11a-fail-closed-web-authority: review
   24-12-effective-tenant-authority-seam: done
 action_items:
   - id: "epic-25-retro-item-1-update-epic-25-spec-status-lines-25-2a-2"

@@ -4,7 +4,7 @@
 > **AI-Assisted Documentation** — scaffolded 2026-08-23 from enumerated recon findings
 > (`scratchpad/scout-24-11-findings.md`). Not yet reviewed by Pike or Fowler.
 
-**Status:** ready-for-dev
+**Status:** review — implementation merged (PR #99, `823c94a9`); all ACs verified 2026-08-29 (typecheck, 2474 unit tests, route-scope-manifest validator all pass). Awaiting independent code review.
 **Priority:** P0-Critical
 **Owner:** Troy + Brooks
 **Depends on:** 24.2 (done); 24.3 (done)
