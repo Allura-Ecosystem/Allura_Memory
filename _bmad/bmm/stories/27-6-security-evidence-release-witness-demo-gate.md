@@ -30,7 +30,7 @@ adoption.
 - [x] One machine-readable release manifest is produced containing revision, tests,
       benchmark, SBOM/license evidence, browser evidence when applicable, review verdict,
       and the Allura receipt.
-- [ ] Independent Pike/Fowler/Knuth/Hightower review approves the frozen green diff.
+- [x] Independent Pike/Fowler/Knuth/Hightower review approves the frozen green diff. — APPROVED-after-remediation 2026-08-29: Pike + Hightower APPROVE on frozen candidate `d57fd5e8`; Fowler + Knuth CHANGES-REQUESTED with 5 blocking findings, all remediated in `756165da` (gate enforced in promotion path, rejected-status hole closed, atomic writes, checkExpiry fail-closed, tenant inventory, quarantine retention). Branch suites 97/97, full unit lane 2474 passed, typecheck clean. Manifest review field: approved-after-remediation.
 - [ ] BMad retrospective records adopt/adapt/reject decisions and remaining hazards.
 - [x] Production adoption remains gated on license, provenance, security, and benchmark
       gates passing (out-of-scope constraint honored).

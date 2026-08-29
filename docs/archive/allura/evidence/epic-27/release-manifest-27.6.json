@@ -41,10 +41,19 @@
     "note": "headless run — no browser evidence applicable"
   },
   "review": {
-    "status": "pending"
+    "status": "approved-after-remediation",
+    "verdicts": {
+      "pike": "APPROVE",
+      "hightower": "APPROVE",
+      "fowler": "CHANGES-REQUESTED -> remediated (756165da)",
+      "knuth": "CHANGES-REQUESTED -> remediated (756165da)"
+    },
+    "frozen_candidate": "d57fd5e8",
+    "remediation_commit": "756165da"
   },
   "allura": {
-    "status": "pending"
+    "status": "recorded",
+    "receipt_id": "48fc8703-51e0-4347-adfc-795f764b2387"
   },
-  "generatedAt": "2026-08-29T00:00:00.000Z"
+  "generatedAt": "2026-08-29T19:02:26.049Z"
 }
