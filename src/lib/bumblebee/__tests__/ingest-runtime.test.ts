@@ -134,10 +134,12 @@ describe("Bumblebee production ingest runtime", () => {
 
   it("ships migration 49 with a source-bound secure bootstrap contract", async () => {
     const migration = await readFile("docker/postgres-init/49-bumblebee-ingest-bootstrap-contract.sql", "utf8")
+    expect(migration).toMatch(/DROP FUNCTION IF EXISTS app\.bumblebee_bootstrap_ingest\(TEXT\)[\s\S]*CREATE OR REPLACE FUNCTION app\.bumblebee_bootstrap_ingest/)
     expect(migration).toMatch(/CREATE OR REPLACE FUNCTION app\.bumblebee_bootstrap_ingest\(p_prefix TEXT\)/)
     expect(migration).toMatch(/JOIN public\.bumblebee_sources AS s/)
     expect(migration).toMatch(/l\.group_id = s\.group_id[\s\S]*l\.workspace_id = s\.workspace_id[\s\S]*l\.source_id = s\.source_id[\s\S]*l\.source_revision_id = s\.source_revision_id/)
     expect(migration).toMatch(/s\.profile[\s\S]*s\.mode[\s\S]*s\.ecosystems/)
+    expect(migration).toMatch(/AND s\.disabled_at IS NULL/)
     expect(migration).toMatch(/SECURITY DEFINER[\s\S]*SET search_path = pg_catalog/)
     expect(migration).toMatch(/REVOKE ALL ON FUNCTION[\s\S]*FROM PUBLIC[\s\S]*GRANT EXECUTE ON FUNCTION[\s\S]*TO allura_app/)
     expect(migration).toMatch(/schema_versions[\s\S]*049/)
