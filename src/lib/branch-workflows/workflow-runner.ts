@@ -73,6 +73,8 @@ export interface ReviewDecision {
   verdict: "approved" | "rejected" | "quarantined"
   reviewer: string
   reason: string
+  /** Retention deadline for a frozen lane; defaults to 30 days from review. */
+  retention_expires_at?: string
 }
 
 export interface ReviewOutcome {
@@ -242,6 +244,9 @@ export async function reviewLaneEvidence(
   }
 
   const status: BranchRegistryStatus = decision.verdict === "quarantined" ? "quarantined" : "rejected"
+  const retentionExpiresAt =
+    decision.retention_expires_at ??
+    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
   await quarantineBranch(
     {
       group_id: session.group_id,
@@ -252,6 +257,7 @@ export async function reviewLaneEvidence(
       status,
       reason,
       actor_id: reviewer,
+      retention_expires_at: retentionExpiresAt,
     },
     db,
   )

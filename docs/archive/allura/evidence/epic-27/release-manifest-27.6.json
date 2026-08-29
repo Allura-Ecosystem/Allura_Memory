@@ -1,6 +1,6 @@
 {
   "schema": "allura-release-manifest/1",
-  "revision": "474a326a49e69fd41229e1c527c960d9c4a2d889",
+  "revision": "d57fd5e8eddcae0bfb5b48f1c49015d12428f6a4",
   "tests": {
     "total": 2462,
     "passed": 2462,

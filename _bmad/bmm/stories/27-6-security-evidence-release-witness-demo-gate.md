@@ -24,6 +24,9 @@ adoption.
 - [x] Tenant/workspace isolation tests pass, including cross-tenant inheritance failing
       closed (live-database evidence, per the epic exit gate).
 - [x] Poisoning, replay, tamper, quota, expiry, and rollback tests pass.
+- [x] The epic gate is wired into the promotion path: `createPromotionProposal`
+      runs `evaluateGate` before any proposal INSERT, so a failing gate blocks
+      the proposal (AC-4 remediation; enforcement active in the adapter).
 - [x] One machine-readable release manifest is produced containing revision, tests,
       benchmark, SBOM/license evidence, browser evidence when applicable, review verdict,
       and the Allura receipt.

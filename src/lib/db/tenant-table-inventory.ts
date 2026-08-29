@@ -80,6 +80,8 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "bumblebee_batch_receipts", class: "tenant-scoped", notes: "Story 26.7 (migration 48): append-only batch receipts with exact-replay dedupe and composite FK to scan lease", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "bumblebee_records", class: "tenant-scoped", notes: "Story 26.7 (migration 48): sanitized immutable scanner records (package/finding/scan_summary/diagnostic) with composite FKs to batch receipt", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "bumblebee_run_decisions", class: "tenant-scoped", notes: "Story 26.7 (migration 48): append-only held/promoted decisions with promoted-requires-summary CHECK and composite FK to batch", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "branch_registry", class: "tenant-scoped", notes: "Epic 27 (migration 53): branch registry — status enum (active/degraded/expired/rejected/quarantined/rolled_back), retention_expires_at, recorded snapshot, RLS on app.current_group_id", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "promotion_receipts", class: "tenant-scoped", notes: "Epic 27 (migration 53): append-only promotion receipts with deterministic trace id and diff hash", workspaceTreatment: "workspace-scoped-new-writes" },
 
   // Credential / identity tables
   { table: "mcp_tokens", class: "tenant-scoped-credential", notes: "MCP credentials; lookup by token prefix before tenant resolution" },

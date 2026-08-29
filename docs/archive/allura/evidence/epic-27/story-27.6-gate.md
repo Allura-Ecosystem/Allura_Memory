@@ -54,6 +54,21 @@ produces the one machine-readable release manifest for the epic.
 - **AC-4 (independent review approves the frozen green diff):** parent
   responsibility — the manifest's `review` block is the slot; `pendingFields`
   reports `["review.verdict", "allura.receipt_id"]` until filled.
+  **AC-4 remediation (Fowler blocking finding):** enforcement is now active
+  in the promotion path — `createPromotionProposal` runs `evaluateGate`
+  before any write, so all seven checks (isolation, poisoning, replay,
+  tamper, quota, expiry, rollback) gate the proposal INSERT. The adapter
+  builds the `GateContext` from the promotion input plus a `branch_registry`
+  lookup (status, `retention_expires_at`, recorded `diff_snapshot`, and the
+  row's scope as the base owner); a failing gate throws
+  `promotion blocked by gate: <checks>` and no proposal row is written.
+  `checkPoisoning` now also blocks `rejected` (frozen statuses are
+  quarantined/rejected/rolled_back per spike 27.1 §5), `checkExpiry` fails
+  closed on an unparseable `retention_expires_at`, `quarantineBranch`
+  requires a retention deadline for every non-active status (migration 53
+  `chk_branch_registry_retention`), and the proposal + transition INSERTs
+  are wrapped in BEGIN/COMMIT/ROLLBACK so a failed second insert cannot
+  orphan the first.
 - **AC-5 (BMad retrospective records adopt/adapt/reject decisions):** parent
   responsibility (the parent reconciles the board and runs the
   retrospective).

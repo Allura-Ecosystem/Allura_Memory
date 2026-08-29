@@ -5,7 +5,9 @@
  * (promotion_proposals + approval_transitions) and never touches canonical
  * memory. These tests pin the structural guarantees: field preservation,
  * no-direct-mutation, no self-approval, immutable server-issued receipts,
- * quarantine, and reproducible rollback.
+ * quarantine, reproducible rollback, and the epic gate enforcement (AC-4):
+ * every promotion runs evaluateGate before any write, and a failing gate
+ * blocks the proposal.
  */
 
 import { describe, expect, it, vi } from "vitest"
@@ -46,10 +48,44 @@ function input(overrides: Partial<PromotionProposalInput> = {}): PromotionPropos
   }
 }
 
+/** A registry row that satisfies every gate check (active, same scope, full recorded snapshot). */
+function passingRegistryRow(): Record<string, unknown> {
+  return {
+    group_id: GROUP,
+    workspace_id: WORKSPACE,
+    status: "active",
+    retention_expires_at: null,
+    diff_snapshot: JSON.stringify({ base_revision: BASE_REVISION, diff: DIFF, evidence_refs: EVIDENCE }),
+  }
+}
+
+interface DbOptions {
+  registryRow?: Record<string, unknown> | null
+  receipts?: boolean
+  branchCount?: number
+  failOnTransition?: boolean
+}
+
 /** In-memory queryable that answers the adapter's exact SQL shapes. */
-function db() {
+function db(options: DbOptions = {}) {
+  const tx: string[] = []
   const query = vi.fn(async (sql: string, _params?: unknown[]) => {
     const text = String(sql)
+    const trimmed = text.trim()
+    if (trimmed === "BEGIN" || trimmed === "COMMIT" || trimmed === "ROLLBACK") {
+      tx.push(trimmed)
+      return { rows: [] }
+    }
+    if (text.includes("count(*)") && text.includes("FROM branch_registry")) {
+      return { rows: [{ count: options.branchCount ?? 0 }] }
+    }
+    if (text.includes("FROM promotion_receipts")) {
+      return { rows: options.receipts ? [{ found: 1 }] : [] }
+    }
+    if (text.includes("FROM branch_registry")) {
+      const row = options.registryRow === undefined ? passingRegistryRow() : options.registryRow
+      return { rows: row ? [row] : [] }
+    }
     if (text.includes("INSERT INTO promotion_proposals")) {
       return {
         rows: [
@@ -64,6 +100,7 @@ function db() {
       }
     }
     if (text.includes("INSERT INTO approval_transitions")) {
+      if (options.failOnTransition) throw new Error("transition insert failed")
       return { rows: [{ id: "transition-1" }] }
     }
     if (text.includes("INSERT INTO promotion_receipts")) {
@@ -86,17 +123,31 @@ function db() {
       }
     }
     if (text.includes("INSERT INTO branch_registry")) {
-      return { rows: [{ branch_id: BRANCH, status: "quarantined" }] }
+      const params = _params as unknown[]
+      return { rows: [{ branch_id: String(params[2]), status: String(params[3]) }] }
     }
     return { rows: [] }
   })
-  return { query }
+  const begin = vi.fn(async () => {
+    tx.push("BEGIN")
+  })
+  const commit = vi.fn(async () => {
+    tx.push("COMMIT")
+  })
+  const rollback = vi.fn(async () => {
+    tx.push("ROLLBACK")
+  })
+  return { query, begin, commit, rollback, tx }
 }
 
 function insertCall(database: ReturnType<typeof db>, marker: string): [string, unknown[]] {
   const call = database.query.mock.calls.find(([sql]) => String(sql).includes(marker))
   if (!call) throw new Error(`no query matched ${marker}`)
   return call as [string, unknown[]]
+}
+
+function proposalInserted(database: ReturnType<typeof db>): boolean {
+  return database.query.mock.calls.some(([sql]) => String(sql).includes("INSERT INTO promotion_proposals"))
 }
 
 describe("promotion adapter — proposal conversion", () => {
@@ -153,6 +204,65 @@ describe("promotion adapter — proposal conversion", () => {
     await expect(createPromotionProposal(input({ diff: { added: [], overridden: [], deleted: [] } as BranchDiff }), database as never)).rejects.toThrow(/diff/i)
     await expect(createPromotionProposal(input({ evidence_refs: "not-an-array" as never }), database as never)).rejects.toThrow(/evidence/i)
     await expect(createPromotionProposal(input({ actor_id: "" }), database as never)).rejects.toThrow(/actor/i)
+  })
+})
+
+describe("promotion adapter — epic gate enforcement (AC-4)", () => {
+  it("blocks a proposal for a quarantined branch before any INSERT", async () => {
+    const database = db({ registryRow: { ...passingRegistryRow(), status: "quarantined" } })
+    await expect(createPromotionProposal(input(), database as never)).rejects.toThrow(/gate|quarantined|poisoning/i)
+    expect(proposalInserted(database)).toBe(false)
+  })
+
+  it("blocks a proposal for a rejected branch before any INSERT", async () => {
+    const database = db({ registryRow: { ...passingRegistryRow(), status: "rejected" } })
+    await expect(createPromotionProposal(input(), database as never)).rejects.toThrow(/gate|rejected|poisoning/i)
+    expect(proposalInserted(database)).toBe(false)
+  })
+
+  it("blocks a proposal whose base owner is a different tenant", async () => {
+    const database = db({ registryRow: { ...passingRegistryRow(), group_id: "allura-other" } })
+    await expect(createPromotionProposal(input(), database as never)).rejects.toThrow(/gate|isolation|tenant/i)
+    expect(proposalInserted(database)).toBe(false)
+  })
+
+  it("blocks a replayed diff (existing promotion receipt) before any INSERT", async () => {
+    const database = db({ receipts: true })
+    await expect(createPromotionProposal(input(), database as never)).rejects.toThrow(/gate|replay/i)
+    expect(proposalInserted(database)).toBe(false)
+  })
+
+  it("blocks an expired branch before any INSERT", async () => {
+    const database = db({ registryRow: { ...passingRegistryRow(), status: "expired" } })
+    await expect(createPromotionProposal(input(), database as never)).rejects.toThrow(/gate|expir/i)
+    expect(proposalInserted(database)).toBe(false)
+  })
+
+  it("fails closed on an unparseable retention_expires_at", async () => {
+    const database = db({ registryRow: { ...passingRegistryRow(), retention_expires_at: "not-a-date" } })
+    await expect(createPromotionProposal(input(), database as never)).rejects.toThrow(/gate|expir/i)
+    expect(proposalInserted(database)).toBe(false)
+  })
+
+  it("fails closed when the branch is not registered at all", async () => {
+    const database = db({ registryRow: null })
+    await expect(createPromotionProposal(input(), database as never)).rejects.toThrow(/gate|not registered|registry/i)
+    expect(proposalInserted(database)).toBe(false)
+  })
+
+  it("passes a valid active branch and inserts the proposal atomically", async () => {
+    const database = db()
+    const result = await createPromotionProposal(input(), database as never)
+    expect(result.proposal_id).toBe("proposal-1")
+    expect(database.tx).toEqual(["BEGIN", "COMMIT"])
+    expect(proposalInserted(database)).toBe(true)
+  })
+
+  it("rolls back the transaction when the transition insert fails", async () => {
+    const database = db({ failOnTransition: true })
+    await expect(createPromotionProposal(input(), database as never)).rejects.toThrow(/transition/i)
+    expect(database.tx).toEqual(["BEGIN", "ROLLBACK"])
+    expect(database.tx).not.toContain("COMMIT")
   })
 })
 
@@ -272,6 +382,7 @@ describe("promotion adapter — quarantine and reproducible rollback", () => {
         status: "quarantined",
         reason: "poisoned after review",
         actor_id: ACTOR,
+        retention_expires_at: "2027-01-01T00:00:00.000Z",
       },
       database as never,
     )
@@ -284,6 +395,64 @@ describe("promotion adapter — quarantine and reproducible rollback", () => {
     expect(params).toContain("quarantined")
     const snapshot = JSON.parse(String(params.find((p) => typeof p === "string" && p.includes("base_revision"))))
     expect(snapshot).toEqual({ base_revision: BASE_REVISION, diff: DIFF })
+  })
+
+  it("fails closed when a non-active status lacks a retention deadline", async () => {
+    for (const status of ["degraded", "expired", "rejected", "quarantined", "rolled_back"] as const) {
+      const database = db()
+      await expect(
+        quarantineBranch(
+          {
+            group_id: GROUP,
+            workspace_id: WORKSPACE,
+            branch_id: BRANCH,
+            base_revision: BASE_REVISION,
+            diff: DIFF,
+            status,
+            reason: "frozen state",
+            actor_id: ACTOR,
+          },
+          database as never,
+        ),
+      ).rejects.toThrow(/retention/i)
+    }
+  })
+
+  it("accepts a non-active status with a retention deadline", async () => {
+    const database = db()
+    const result = await quarantineBranch(
+      {
+        group_id: GROUP,
+        workspace_id: WORKSPACE,
+        branch_id: BRANCH,
+        base_revision: BASE_REVISION,
+        diff: DIFF,
+        status: "rejected",
+        reason: "reference drift",
+        actor_id: ACTOR,
+        retention_expires_at: "2027-01-01T00:00:00.000Z",
+      },
+      database as never,
+    )
+    expect(result).toMatchObject({ branch_id: BRANCH, status: "rejected" })
+  })
+
+  it("allows an active status without a retention deadline", async () => {
+    const database = db()
+    const result = await quarantineBranch(
+      {
+        group_id: GROUP,
+        workspace_id: WORKSPACE,
+        branch_id: BRANCH,
+        base_revision: BASE_REVISION,
+        diff: DIFF,
+        status: "active",
+        reason: "reopen lane",
+        actor_id: ACTOR,
+      },
+      database as never,
+    )
+    expect(result).toMatchObject({ branch_id: BRANCH, status: "active" })
   })
 
   it("builds a reproducible rollback plan from the preserved diff", () => {

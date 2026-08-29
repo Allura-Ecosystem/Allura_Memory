@@ -13,6 +13,7 @@
  */
 
 import { createHash } from "node:crypto"
+import { evaluateGate, type GateContext } from "@/lib/branch-gate/epic-gate"
 import { validateGroupId } from "@/lib/validation/group-id"
 
 if (typeof window !== "undefined") {
@@ -109,6 +110,9 @@ export interface RollbackPlan {
 
 interface Queryable {
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>
+  begin?(): Promise<void>
+  commit?(): Promise<void>
+  rollback?(): Promise<void>
 }
 
 function requireText(value: unknown, field: string): string {
@@ -160,10 +164,13 @@ export function promotionTraceId(input: {
 }
 
 /**
- * Convert a branch diff into a pending curator proposal. Writes exactly two
- * rows: the proposal and its initial transition. The proposal starts pending
- * and only the curator flow can move it forward; this function has no
- * approval authority of its own.
+ * Convert a branch diff into a pending curator proposal. The epic gate runs
+ * first: all seven checks (isolation, poisoning, replay, tamper, quota,
+ * expiry, rollback) must pass before any write, and a failing gate blocks
+ * the proposal. The proposal and its initial transition are written inside
+ * one transaction so a failure on the second insert cannot orphan the
+ * first. The proposal starts pending and only the curator flow can move it
+ * forward; this function has no approval authority of its own.
  */
 export async function createPromotionProposal(
   input: PromotionProposalInput,
@@ -179,6 +186,52 @@ export async function createPromotionProposal(
 
   const traceId = promotionTraceId({ group_id: groupId, workspace_id: workspaceId, branch_id: branchId, base_revision: baseRevision, diff })
 
+  // Epic gate (AC-4): the branch must pass every check before any write.
+  // The registry row supplies the status, retention deadline, the recorded
+  // creation-time snapshot, and the base owner: the branch's base snapshot
+  // (base_snapshot_id / diff_snapshot) is recorded in the branch's own
+  // scope, so the row's group_id/workspace_id are the base owner. A row
+  // whose scope differs from the promotion scope is a cross-scope
+  // inheritance attempt and is blocked by the isolation check.
+  const registryResult = await db.query(
+    `SELECT group_id, workspace_id, status, retention_expires_at, diff_snapshot
+     FROM branch_registry
+     WHERE group_id = $1 AND workspace_id = $2 AND branch_id = $3`,
+    [groupId, workspaceId, branchId],
+  )
+  const registryRow = registryResult.rows[0]
+  if (!registryRow) {
+    throw new Error(`promotion blocked by gate: branch ${branchId} is not registered`)
+  }
+  const recordedSnapshot = registryRow.diff_snapshot
+  const gateContext: GateContext = {
+    group_id: groupId,
+    workspace_id: workspaceId,
+    branch_id: branchId,
+    base_revision: baseRevision,
+    diff,
+    evidence_refs: evidenceRefs,
+    status: String(registryRow.status) as GateContext["status"],
+    base_owner: {
+      group_id: String(registryRow.group_id),
+      workspace_id: String(registryRow.workspace_id),
+    },
+    retention_expires_at: registryRow.retention_expires_at != null ? String(registryRow.retention_expires_at) : undefined,
+    recorded:
+      recordedSnapshot != null && typeof recordedSnapshot === "object"
+        ? (recordedSnapshot as GateContext["recorded"])
+        : typeof recordedSnapshot === "string" && recordedSnapshot.trim().length > 0
+          ? (JSON.parse(recordedSnapshot) as GateContext["recorded"])
+          : undefined,
+  }
+  const verdict = await evaluateGate(gateContext, db)
+  if (!verdict.ok) {
+    const failed = Object.entries(verdict.checks)
+      .filter(([, check]) => !check.ok)
+      .map(([name]) => name)
+    throw new Error(`promotion blocked by gate: ${failed.join(", ")}`)
+  }
+
   const metadata = {
     branch_id: branchId,
     base_revision: baseRevision,
@@ -188,46 +241,53 @@ export async function createPromotionProposal(
     workspace_id: workspaceId,
   }
 
-  const proposalResult = await db.query(
-    `INSERT INTO promotion_proposals (
-       group_id, entity_type, entity_id, status, confidence_score,
-       evidence_refs, metadata, proposed_by
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     RETURNING id, group_id, entity_id, status, proposed_by`,
-    [groupId, "knowledge", branchId, "pending", 0.5, JSON.stringify(evidenceRefs), JSON.stringify(metadata), actorId],
-  )
-  const proposal = proposalResult.rows[0]
-  if (!proposal?.id) throw new Error("promotion proposal was not persisted")
+  await db.begin?.()
+  try {
+    const proposalResult = await db.query(
+      `INSERT INTO promotion_proposals (
+        group_id, entity_type, entity_id, status, confidence_score,
+        evidence_refs, metadata, proposed_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, group_id, entity_id, status, proposed_by`,
+      [groupId, "knowledge", branchId, "pending", 0.5, JSON.stringify(evidenceRefs), JSON.stringify(metadata), actorId],
+    )
+    const proposal = proposalResult.rows[0]
+    if (!proposal?.id) throw new Error("promotion proposal was not persisted")
 
-  await db.query(
-    `INSERT INTO approval_transitions (
-       group_id, entity_type, entity_id, from_state, to_state,
-       actor_id, actor_type, reason, metadata
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-    [
-      groupId,
-      "proposal",
-      String(proposal.id),
-      "draft",
-      "pending",
-      actorId,
-      "agent",
-      "Branch diff submitted for curator review",
-      JSON.stringify({ branch_id: branchId, trace_id: traceId, workspace_id: workspaceId }),
-    ],
-  )
+    await db.query(
+      `INSERT INTO approval_transitions (
+        group_id, entity_type, entity_id, from_state, to_state,
+        actor_id, actor_type, reason, metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        groupId,
+        "proposal",
+        String(proposal.id),
+        "draft",
+        "pending",
+        actorId,
+        "agent",
+        "Branch diff submitted for curator review",
+        JSON.stringify({ branch_id: branchId, trace_id: traceId, workspace_id: workspaceId }),
+      ],
+    )
+    await db.commit?.()
 
-  return {
-    proposal_id: String(proposal.id),
-    group_id: groupId,
-    workspace_id: workspaceId,
-    branch_id: branchId,
-    base_revision: baseRevision,
-    diff,
-    evidence_refs: evidenceRefs,
-    actor_id: actorId,
-    status: "pending",
-    trace_id: traceId,
+    return {
+      proposal_id: String(proposal.id),
+      group_id: groupId,
+      workspace_id: workspaceId,
+      branch_id: branchId,
+      base_revision: baseRevision,
+      diff,
+      evidence_refs: evidenceRefs,
+      actor_id: actorId,
+      status: "pending",
+      trace_id: traceId,
+    }
+  } catch (error) {
+    await db.rollback?.()
+    throw error
   }
 }
 
@@ -280,6 +340,16 @@ export async function quarantineBranch(
   const reason = requireText(input.reason, "reason")
   const actorId = requireText(input.actor_id, "actor_id")
   const status = input.status
+
+  // Migration 53 requires a retention deadline for every non-active row
+  // (chk_branch_registry_retention). Fail closed here so the common path
+  // cannot write a row the database would reject.
+  if (status !== "active" && !input.retention_expires_at) {
+    throw new Error(`retention_expires_at is required for status ${status}`)
+  }
+  if (input.retention_expires_at && Number.isNaN(new Date(input.retention_expires_at).getTime())) {
+    throw new Error(`retention_expires_at is not a valid date: ${input.retention_expires_at}`)
+  }
 
   const snapshot = JSON.stringify({ base_revision: baseRevision, diff })
   const retentionExpiresAt = input.retention_expires_at ?? null

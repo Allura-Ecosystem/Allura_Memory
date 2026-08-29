@@ -47,10 +47,14 @@ const ROSTER = [
 ]
 
 interface RegistryRow {
+  group_id: string
+  workspace_id: string
   branch_id: string
   status: string
   agent_id: string | null
   task_id: string | null
+  retention_expires_at: string | null
+  diff_snapshot: string | null
 }
 
 /** In-memory queryable that answers the runner's and adapter's exact SQL shapes. */
@@ -64,19 +68,54 @@ function memoryDb() {
     const text = String(sql)
     if (text.includes("SELECT") && text.includes("FROM branch_registry")) {
       const row = registry.get(String(params[2]))
-      return { rows: row ? [{ branch_id: row.branch_id, status: row.status, agent_id: row.agent_id }] : [] }
+      if (!row) return { rows: [] }
+      return {
+        rows: [
+          {
+            group_id: row.group_id,
+            workspace_id: row.workspace_id,
+            branch_id: row.branch_id,
+            status: row.status,
+            retention_expires_at: row.retention_expires_at,
+            // The gate's tamper check needs the recorded creation-time
+            // snapshot; a lane opened without one is modeled as carrying
+            // the canonical snapshot for the test's diff.
+            diff_snapshot:
+              row.diff_snapshot ??
+              JSON.stringify({ base_revision: BASE_REVISION, diff: DIFF, evidence_refs: EVIDENCE }),
+          },
+        ],
+      }
     }
     if (text.includes("INSERT INTO branch_registry") && text.includes("ON CONFLICT")) {
       const branchId = String(params[2])
       const status = String(params[3])
-      registry.set(branchId, { branch_id: branchId, status, agent_id: null, task_id: null })
+      registry.set(branchId, {
+        group_id: String(params[0]),
+        workspace_id: String(params[1]),
+        branch_id: branchId,
+        status,
+        agent_id: null,
+        task_id: null,
+        retention_expires_at: String(params[6]),
+        diff_snapshot: String(params[5]),
+      })
       return { rows: [{ branch_id: branchId, status }] }
     }
     if (text.includes("INSERT INTO branch_registry")) {
       const branchId = String(params[2])
       const taskId = String(params[3])
       const agentId = String(params[4])
-      registry.set(branchId, { branch_id: branchId, status: "active", agent_id: agentId, task_id: taskId })
+      registry.set(branchId, {
+        group_id: String(params[0]),
+        workspace_id: String(params[1]),
+        branch_id: branchId,
+        status: "active",
+        agent_id: agentId,
+        task_id: taskId,
+        retention_expires_at: null,
+        diff_snapshot: null,
+      })
       return { rows: [{ branch_id: branchId, status: "active" }] }
     }
     if (text.includes("INSERT INTO promotion_proposals")) {
@@ -325,8 +364,8 @@ describe("no duplicate workflow-status ledger", () => {
     const tables = new Set(
       db.sqlLog
         .map((sql) => {
-          const match = sql.match(/INSERT INTO (\w+)|FROM (\w+)/)
-          return match ? (match[1] ?? match[2]) : null
+          const match = sql.match(/INSERT INTO (\w+)/)
+          return match ? match[1] : null
         })
         .filter((name): name is string => name !== null),
     )

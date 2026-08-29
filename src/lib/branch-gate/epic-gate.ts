@@ -158,14 +158,18 @@ export function checkIsolation(context: GateContext): CheckResult {
 }
 
 /**
- * (b) Poisoning — a poisoned branch (quarantined status) cannot promote.
- * Quarantine is the registry's frozen-poison state (27.2 checkpoint
- * analog); a quarantined branch is blocked until a curator clears it.
+ * (b) Poisoning — a poisoned branch cannot promote. The frozen statuses are
+ * quarantined, rejected, and rolled_back: a quarantined branch is blocked
+ * until a curator clears it, and a rejected branch is frozen by the review
+ * verdict. Rollback is handled separately by checkRollback.
  */
 export function checkPoisoning(context: GateContext): CheckResult {
   const status = context.status
   if (status === "quarantined") {
     return fail(`branch ${context.branch_id} is quarantined (poisoned) and cannot promote`)
+  }
+  if (status === "rejected") {
+    return fail(`branch ${context.branch_id} is rejected and cannot promote`)
   }
   return pass()
 }
@@ -269,8 +273,14 @@ export function checkExpiry(context: GateContext, options: GateOptions = {}): Ch
   }
   const expiresAt = context.retention_expires_at
   if (expiresAt) {
+    const parsed = new Date(expiresAt).getTime()
+    // Fail closed on a malformed deadline: an unparseable date must never
+    // silently pass the expiry gate.
+    if (Number.isNaN(parsed)) {
+      return fail(`branch ${context.branch_id} has an unparseable retention_expires_at (${expiresAt}) and cannot promote`)
+    }
     const now = (options.now ?? (() => new Date()))()
-    if (new Date(expiresAt).getTime() <= now.getTime()) {
+    if (parsed <= now.getTime()) {
       return fail(`branch ${context.branch_id} expired at ${expiresAt} and cannot promote`)
     }
   }
