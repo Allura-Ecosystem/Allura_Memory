@@ -6,7 +6,7 @@
 > Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
 > When in doubt, defer to code, schemas, and team consensus.
 
-**Status:** In progress — Tasks 1–7 complete; Task 8 remains undefined, see Known Gaps.
+**Status:** Complete — Tasks 1–8 done. Task 8 (exit-gate closure) was scoped and executed repo-side on 2026-08-29 without a commit; see Story 28.8 and Known Gaps (now closed).
 **Owner:** Brooks (orchestrator)
 **Tenant:** `allura-system`
 **Canonical scope:** [Notion — Allura Documentation Hub](https://app.notion.com/p/3ca1d9be65b3818c8680cef760371320?pvs=204). This file is the versioned repository planning mirror; it did not exist as a tracked artifact when the work started, which is why Task 8's scope was lost — see Known Gaps.
@@ -44,7 +44,7 @@ Repo recon on 2026-08-28 found six parallel Superpowers documents plus public pl
 | 28.5 | Enforce adaptive hydration token budget for Brooks — 3,000 token startup / 8,000 cumulative cap (`docs(agent)`, commit `ab77c1f7`) | Done |
 | 28.6 | Scaffold GitHub Pages publication for the canonical six (`ci(docs)`, commit `020b3509`) | Done |
 | 28.7 | Notion consolidation — build one internal Documentation Hub, classify and archive duplicate Blueprint/Architecture/Brand-guide pages, link surviving pages to published GitHub docs | Done — verified 2026-08-28; see Verification below |
-| 28.8 | Undefined | **Open — needs scope** |
+| 28.8 | Exit-gate closure — canonical Notion Blueprint page body reconciled to PostgreSQL-only per AD-50 / Epic 23, scratch artifacts dispositioned, residue guard verified green | Done — repo-side evidence, no commit (see Story 28.8) |
 
 All Story 28.1–28.6 commits landed on `feat/epic-26-story-26.7-upstream-plugin` and merged to `main` via PR #126 (merge commit `7f649b7f`).
 
@@ -62,8 +62,10 @@ A prior Brain trace (`memory_id 325d0de4`, logged 2026-08-28T12:27:43Z) incorrec
 
 ## Known Gaps
 
-1. **Task 8 is undefined.** No Brain trace names its scope. The design/plan documents that would have enumerated it — `_bmad-output/planning-artifacts/2026-08-28-enterprise-documentation-consolidation-{design,plan}.md` and `implementation-readiness-report-2026-08-28.md` — originally lived only in a gitignored scratch directory. The readiness report has since been recovered and archived at `docs/archive/allura/readiness/implementation-readiness-report-2026-08-28.md`; the separate design and plan artifacts remain unrecovered. **This file's existence is the fix**: the initiative now has a permanent, git-tracked home so this cannot recur. Best guess, unconfirmed: Task 8 covers implementing the publication-gate workflow itself (the approval → sanitization → PR → checks → human approval → Brain receipt chain) as a real CI/process artifact, since that was the last architecture decision logged before Task 7 dispatched and Task 6 already scaffolds the GitHub Pages side. Needs confirmation from Sabir.
-2. **Stale content in the canonical Notion Blueprint page.** `be31d9be` (selected as canonical by Task 7) still describes Neo4j as a canonical dual-store alongside PostgreSQL in its body text, even though its own supersession banner cites AD-50 (PostgreSQL is now the sole active durable store; Neo4j is sunset — see also Epic 23, which removed Neo4j from the codebase entirely). Task 7 correctly picked *which* page is canonical; it did not rewrite stale body content. Not yet scoped as a story.
+> Both gaps below were closed on 2026-08-29 by Story 28.8 (exit-gate closure). Records are preserved here for lineage; they are historical, not open items.
+
+1. **Task 8 was undefined. ✅ Resolved by Story 28.8 (2026-08-29).** No Brain trace named its scope. The design/plan documents that would have enumerated it — `_bmad-output/planning-artifacts/2026-08-28-enterprise-documentation-consolidation-{design,plan}.md` and `implementation-readiness-report-2026-08-28.md` — originally lived only in a gitignored scratch directory. The readiness report has since been recovered and archived at `docs/archive/allura/readiness/implementation-readiness-report-2026-08-28.md`. On 2026-08-29 the scratch directory was confirmed to contain only `test-artifacts/`; the design/plan originals are gone (never tracked, no backup copy on this machine or in any repo worktree), so they cannot be archived — this file is the durable scope record. Task 8 was scoped as **exit-gate closure**: (a) reconcile the canonical Notion Blueprint page body with AD-50 / Epic 23 (PostgreSQL-only; Neo4j fully sunset), (b) disposition the scratch artifacts (archived where they existed; absence documented where they did not), (c) prove no active-doc Neo4j residue via the docs guard. See `_bmad/bmm/stories/28-8-exit-gate-closure.md` for the full record, including the Notion-write evidence.
+2. **Stale content in the canonical Notion Blueprint page. ✅ Resolved by Story 28.8 (2026-08-29).** `be31d9be` (selected as canonical by Task 7) described Neo4j as a canonical dual-store alongside PostgreSQL in its body text even though its own supersession banner cites AD-50 (PostgreSQL is now the sole active durable store; Neo4j is sunset — see also Epic 23, which removed Neo4j from the codebase entirely). Task 7 correctly picked *which* page is canonical; it did not rewrite stale body content. Story 28.8 replaced the page body's dual-store/canonical-now sections with a PostgreSQL-only architecture statement per AD-50/Epic 23 (verified via Notion API response `id be31d9be-65b3-828c-b46e-81b1d1078f3a`); the AD-50 supersession banner, brand tokens, authority-map, and references were preserved; the removed dual-store prose was archived in Notion under the Hub's Archive page as `[ARCHIVED] Allura Blueprint — legacy dual-store body (superseded 2026-08-29)`.
 
 ## Exit Gate
 
@@ -72,5 +74,5 @@ A prior Brain trace (`memory_id 325d0de4`, logged 2026-08-28T12:27:43Z) incorrec
 - [x] Tier-0 hydration authority map and Brooks token budget in place.
 - [x] GitHub Pages publication scaffold exists for the canonical six.
 - [x] Notion has exactly one active copy per artifact (Blueprint, Engine/Architecture, Brand Style Guide), each linked to its published GitHub counterpart, with superseded copies archived not deleted.
-- [ ] Task 8 scoped and completed.
-- [ ] Canonical Notion Blueprint page body reconciled with AD-50 / Epic 23 (PostgreSQL-only).
+- [x] Task 8 scoped and completed (Story 28.8 — exit-gate closure; repo-side evidence, no commit; Notion Blueprint body reconciled + archived legacy body, scratch artifacts dispositioned, residue guard green).
+- [x] Canonical Notion Blueprint page body reconciled with AD-50 / Epic 23 (PostgreSQL-only) — written 2026-08-29 via Notion API, verified by read-back (see Story 28.8 Evidence).
