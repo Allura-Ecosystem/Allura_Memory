@@ -416,12 +416,15 @@ epic_24:
         refused by base-branch policy; it was closed unmerged and deleted."
     - key: "24.9"
       title: "Reference Integrations and Portfolio Demonstration"
-      status: changes-requested
+      status: review
       owner: "Troy"
       depends_on: ["24.8"]
       status_evidence: "PR #87 merged documentation only; no runnable integrations,
         scenarios, receipts, evaluation artifacts, or measured clean-environment evidence
-        exist."
+        exist. Remediation verified 2026-08-29 (Brooks/Hermes): 3 runnable reference
+        integrations with 9 scenarios (success/policy-failure/recovery each), all
+        verified against the deterministic harness; evidence-index updated;
+        interview-notes.md added. Awaiting review."
     - key: "24.11a"
       title: "Fail-Closed Web Authority"
       status: review
@@ -685,7 +688,7 @@ development_status:
   24-7-sdk-cli-developer-experience: review
   24-8-enterprise-documentation-truth: review
   24-10-ci-gate-integrity: done
-  24-9-reference-integrations-portfolio-demo: changes-requested
+  24-9-reference-integrations-portfolio-demo: review
   epic-24-retrospective: done
   epic-25: done
   epic-25-retrospective: done
