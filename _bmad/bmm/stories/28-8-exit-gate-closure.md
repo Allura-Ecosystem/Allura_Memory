@@ -1,11 +1,15 @@
 # Story 28.8 — Exit-Gate Closure (Notion Blueprint reconciliation + scratch-artifact disposition + residue verification)
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+
 **Epic:** 28 — Enterprise Documentation Consolidation
 **Status:** done (repo-side evidence only; no commit — parent reconciles sprint status)
 **Priority:** P1
 **Complexity:** Medium
 **Owner:** subagent (Epic 28 closeout workstream)
-**Dependencies:** Tasks 28.1–28.7 (merged via PR #126); Epic 23 (PostgreSQL (graph_memories) sunset); AD-50 (PostgreSQL sole durable store)
+**Dependencies:** Tasks 28.1–28.7 (merged via PR #126); Epic 23 (Neo4j sunset); AD-50 (PostgreSQL sole durable store)
 
 ## Outcome
 
