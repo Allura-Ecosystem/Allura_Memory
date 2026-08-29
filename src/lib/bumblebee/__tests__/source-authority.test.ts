@@ -178,4 +178,17 @@ describe("Story 26.7 relational source/catalog contract", () => {
     expect(sql).toContain("GRANT SELECT, INSERT ON bumblebee_catalog_revisions, bumblebee_catalog_entries TO allura_app")
     expect(sql).toContain("GRANT SELECT, INSERT, UPDATE ON bumblebee_sources TO allura_app")
   })
+
+  it("requires the allura- tenant namespace on every scope-bearing bumblebee table, including catalog entries", () => {
+    // Text-shape assertion only: this proves the CHECK constraint text exists in
+    // the migration file for every group_id column declaration. It does not run
+    // the constraint against a live database, so it cannot prove the CHECK is
+    // actually enforced at insert time — only a live-DB run can prove that.
+    const sql = readFileSync(migration, "utf8")
+    const groupIdDeclarations = sql.match(/group_id TEXT NOT NULL[^\n]*/g) ?? []
+    expect(groupIdDeclarations.length).toBeGreaterThan(0)
+    for (const declaration of groupIdDeclarations) {
+      expect(declaration, declaration).toContain("CHECK (group_id ~ '^allura-[a-z0-9-]+$')")
+    }
+  })
 })

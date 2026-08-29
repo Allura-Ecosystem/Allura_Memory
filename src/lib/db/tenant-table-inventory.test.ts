@@ -113,6 +113,15 @@ describe("tenant table inventory — unit checks", () => {
     const entry = TENANT_TABLE_INVENTORY.find((t) => t.table === "schema_versions");
     expect(entry?.class).toBe("migration-only");
   });
+
+  it("classifies every table migration 48 creates so the inventory gate does not fail against a live database", () => {
+    const classifications = new Map(TENANT_TABLE_INVENTORY.map((entry) => [entry.table, entry.class]));
+    const treatments = new Map(TENANT_TABLE_INVENTORY.map((entry) => [entry.table, entry.workspaceTreatment]));
+    for (const table of ["bumblebee_batch_receipts", "bumblebee_records", "bumblebee_run_decisions"]) {
+      expect(classifications.get(table), table).toBe("tenant-scoped");
+      expect(treatments.get(table), table).toBe("workspace-scoped-new-writes");
+    }
+  });
 });
 
 describeLive("tenant table inventory — live validation", () => {

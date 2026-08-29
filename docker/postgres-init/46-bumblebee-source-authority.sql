@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS bumblebee_catalog_revisions (
 );
 
 CREATE TABLE IF NOT EXISTS bumblebee_catalog_entries (
-  group_id TEXT NOT NULL,
+  group_id TEXT NOT NULL CHECK (group_id ~ '^allura-[a-z0-9-]+$'),
   workspace_id TEXT NOT NULL,
   catalog_revision_id TEXT NOT NULL CHECK (LENGTH(TRIM(catalog_revision_id)) > 0),
   catalog_entry_id TEXT NOT NULL CHECK (LENGTH(TRIM(catalog_entry_id)) > 0),
