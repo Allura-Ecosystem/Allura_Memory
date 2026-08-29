@@ -328,6 +328,26 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible                   |
 | F56 | Bumblebee V1 may ingest allowlisted advisory evidence, correlate verified exposure, create deduplicated alerts, and prepare simulated mitigation proposals; it must not activate policy, block CI/packages, change schedules, or perform containment |
 
+#### Declared Disposition — Requirements Without Current Story Coverage
+
+As of 2026-08-29 (implementation readiness pass), these BLUEPRINT functional requirements have **no epic/story coverage**. This is a declared, honest disposition — not an oversight:
+
+| FR | Requirement (short) | Disposition |
+|----|---------------------|-------------|
+| F21 | `docker compose up` starts core infra + app services | Backlog (Story 24.7) — evidence gate remains unexecuted |
+| F22 | Memory viewer UI at `/memory` | Superseded by Memory Command Center (F41/F42) — legacy route, not planned |
+| F23 | Curator dashboard on Vercel + `CURATOR_ENGINE_URL` | Deployment detail, superseded by self-hosted control plane posture |
+| F24 | Vercel Functions call Docker engine via HTTPS | Same — superseded; dashboard is optional, not Vercel-mandated |
+| F25 | Sentry error tracking | Deferred operational requirement — no owner, no epic |
+| F43 | `/work-board` Native Allura Kanban | Defers to Notion Work Board as human source of truth (Allura planning convention) |
+| F44 | `/resources` manifest | Deferred — resource manifest endpoint not yet scoped |
+| F45 | `/agents` distinction taxonomy | Deferred — agent taxonomy in progress under governed AI office |
+| F46 | `/telemetry` metrics | Deferred — no fabrication rule respected; honest empty state |
+| F49–F52 | Governed run records/policy/journals/doctor | Partially implemented (AD-35 process-engine foundation); full run surface deferred |
+| F53–F55 | Governed AI Office (projects, workspace, desktop shell) | Explicitly deferred — larger program, no epic assigned |
+
+**Policy:** No FR is silently dropped. Each entry above declares its disposition. Any future epic must either address one of these FRs or update this table.
+
 #### Memory Command Center
 
 | #   | Requirement |
