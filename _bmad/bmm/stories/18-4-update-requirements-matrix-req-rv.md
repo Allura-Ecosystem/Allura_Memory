@@ -18,10 +18,10 @@ As the Allura requirements owner, I need the Requirements Matrix updated with Ru
 ## Acceptance Criteria
 
 - [x] AC-1: New "Section 6C: RuVector Graph Cutover Requirements (REQ-RV-001–REQ-RV-005)" is added
-- [x] AC-2: REQ-RV-001 — `IGraphAdapter` seam must back all graph operations; no direct Neo4j/PG graph calls outside the adapter
-- [x] AC-3: REQ-RV-002 — `GRAPH_BACKEND` flag must default to `neo4j` until live-DB E2E passes with `ruvector`
+- [x] AC-2: REQ-RV-001 — `IGraphAdapter` seam must back all graph operations; no direct PostgreSQL (graph_memories)/PG graph calls outside the adapter
+- [x] AC-3: REQ-RV-002 — `GRAPH_BACKEND` flag must default to `PostgreSQL (graph_memories)` until live-DB E2E passes with `ruvector`
 - [x] AC-4: REQ-RV-003 — Parity test (`adapter-parity.test.ts`) must pass 14/14 before any cutover
-- [x] AC-5: REQ-RV-004 — Dual-read validation must run for one release cycle before Neo4j goes read-only
+- [x] AC-5: REQ-RV-004 — Dual-read validation must run for one release cycle before PostgreSQL (graph_memories) goes read-only
 - [x] AC-6: REQ-RV-005 — `runtime_readiness` label may upgrade from `pgvector_bridge` to `ruvector_graph` only after live-DB E2E + dual-read pass; to `full_ruvector` only after native extension activates
 - [x] AC-7: Each REQ-RV entry has the 3-column format: ID | Requirement | Satisfied by (with cross-refs to AD-029, AD-49, RK-32, SOLUTION-ARCHITECTURE.md §3.4.0.2)
 - [x] AC-8: AI-Assisted Documentation notice preserved

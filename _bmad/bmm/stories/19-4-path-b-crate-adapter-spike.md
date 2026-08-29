@@ -25,7 +25,7 @@ As the Allura architect, I need a `ruvector-crate-adapter.ts` implemented behind
 - [ ] AC-4: `group_id` is encoded as a property and filtered in every Cypher/traversal (G3 mitigation)
 - [ ] AC-5: Every `createNode` includes a 768d embedding (G5 compliance) — use `nomic-embed-text` or equivalent
 - [ ] AC-6: Typed fields (score, version, status, confidence) are string-serialized at the adapter boundary and parsed on read (G5 compliance)
-- [ ] AC-7: Three-way parity test passes (Neo4j vs PG-table vs crate) — extend `adapter-parity.test.ts`
+- [ ] AC-7: Three-way parity test passes (PostgreSQL (graph_memories) vs PG-table vs crate) — extend `adapter-parity.test.ts`
 - [ ] AC-8: A governance AD for vendoring the compiled native `.node` addon is drafted (G4 — Bun-only/zero-trust tension)
 - [ ] AC-9: The adapter is thin — upstream fixes (G1 immutable mode, G2 text index, G3 tenant scoping) flow back without adapter changes
 

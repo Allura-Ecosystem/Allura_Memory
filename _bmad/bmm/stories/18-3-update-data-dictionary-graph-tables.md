@@ -12,14 +12,14 @@ As the Allura data architect, I need the Data Dictionary updated to document the
 ## Context
 
 - Migrations 21 and 24 created the graph adapter tables but they're not in the Data Dictionary
-- `GRAPH_BACKEND` env var controls which adapter is active (`neo4j` | `ruvector` | `ruvector-crate`)
+- `GRAPH_BACKEND` env var controls which adapter is active (`PostgreSQL (graph_memories)` | `ruvector` | `ruvector-crate`)
 - `RuVixGateReceipt.ruvector_status` currently only has bridge fields — needs native fields for when the cutover happens
 - The `runtime_readiness` enum currently says `pgvector_bridge` — needs `ruvector_graph` and `full_ruvector` values documented
 
 ## Acceptance Criteria
 
 - [x] AC-1: New section "Graph Adapter Tables" documents `graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges` with field tables
-- [x] AC-2: `GRAPH_BACKEND` env var is documented with its three values and default (`neo4j`)
+- [x] AC-2: `GRAPH_BACKEND` env var is documented with its three values and default (`PostgreSQL (graph_memories)`)
 - [x] AC-3: `RuVixGateReceipt.runtime_readiness` enum is expanded to include `ruvector_graph` (graph adapter active) and `full_ruvector` (native extension active)
 - [x] AC-4: `RuVixGateReceipt.ruvector_status` object is expanded with native fields: `graph_backend`, `native_extension_version`, `hnsw_index_status`, `gnn_enabled`, `dual_read_mode`
 - [x] AC-5: Cross-references to AD-29, AD-49, RK-32, and the migrations (21, 24) are present
@@ -67,7 +67,7 @@ As the Allura data architect, I need the Data Dictionary updated to document the
 
 **Changes:**
 1. Added "Graph Adapter Tables" section after canonical_proposals documenting: `graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`
-2. Added "Environment Variables" section documenting `GRAPH_BACKEND` with values: `neo4j` (default), `ruvector`, `ruvector-crate`
+2. Added "Environment Variables" section documenting `GRAPH_BACKEND` with values: `PostgreSQL (graph_memories)` (default), `ruvector`, `ruvector-crate`
 3. Expanded `RuVixGateReceipt.runtime_readiness` enum: `pgvector_bridge`, `ruvector_graph`, `full_ruvector`
 4. Expanded `RuVixGateReceipt.ruvector_status`: native fields added `graph_backend`, `native_extension_version`, `hnsw_index_status`, `gnn_enabled`, `dual_read_mode`
 5. Added cross-references: AD-29, AD-49, RK-32, migrations 21, 24

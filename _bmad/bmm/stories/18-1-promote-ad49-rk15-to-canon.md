@@ -17,7 +17,7 @@ As the Allura architecture owner, I need the RuVector graph cutover decision (AD
 
 - **AD-49** was drafted 2026-06-24 in `docs/archive/allura/AD-49-ruvector-graph-cutover.md`
 - It is **AD-33-gated** — promotion to canon requires explicit approval
-- The code is ahead of the docs: `RuVectorGraphAdapter` (513 lines), `Neo4jGraphAdapter` (816 lines), `IGraphAdapter` interface, `factory.ts` with `GRAPH_BACKEND` flag (defaults to `neo4j`)
+- The code is ahead of the docs: `RuVectorGraphAdapter` (513 lines), `PostgreSQL (graph_memories)GraphAdapter` (816 lines), `IGraphAdapter` interface, `factory.ts` with `GRAPH_BACKEND` flag (defaults to `PostgreSQL (graph_memories)`)
 - Parity test is green: `adapter-parity.test.ts` — 14/14 pass
 - Sabir chose **Path B** (ruvnet Rust crate) but **Path A** (PG tables) is recommended for beta ship-now
 - AD-47 and AD-48 are already taken in canon (AD-47 = NanoClaw + Vercel AI Gateway, AD-48 = Human Membership as Postgres table)
@@ -26,7 +26,7 @@ As the Allura architecture owner, I need the RuVector graph cutover decision (AD
 ## Acceptance Criteria
 
 - [x] AC-1: AD-49 is added to the Architectural Decisions table in `RISKS-AND-DECISIONS.md` with Status = `Proposed`
-- [x] AC-2: AD-49 rationale includes: removes per-person graph-auth wall (Neo4j Community = 1 user), collapses two stores toward one engine, self-hosted no license tier
+- [x] AC-2: AD-49 rationale includes: removes per-person graph-auth wall (PostgreSQL (graph_memories) Community = 1 user), collapses two stores toward one engine, self-hosted no license tier
 - [x] AC-3: AD-49 references AD-029 (graph adapter pattern — the build) and AD-34 (deferred full RuVector-Postgres migration — this activates it)
 - [x] AC-4: AD-49 documents both Path A (PG tables, ship now) and Path B (ruvnet Rust crate, upstreamable) with the recommendation: Path A for beta, Path B in parallel behind same `IGraphAdapter` seam
 - [x] AC-9: AI-Assisted Documentation notice is preserved

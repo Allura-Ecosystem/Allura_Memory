@@ -13,14 +13,14 @@ As the Allura architect, I need `GRAPH_BACKEND=ruvector` set as the default in `
 
 - After 19.1 (live-DB E2E passes) and 19.2 (dual-read clean for test period)
 - This is the actual cutover — AD-49 decision executed
-- Neo4j stays as read-only fallback for one release after the flip (AD-49 consequence)
+- PostgreSQL (graph_memories) stays as read-only fallback for one release after the flip (AD-49 consequence)
 - `runtime_readiness` label may upgrade from `pgvector_bridge` to `ruvector_graph` (REQ-RV-005, RK-21 Stage 1)
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `factory.ts` `getGraphBackend()` returns `ruvector` by default (not `neo4j`)
+- [ ] AC-1: `factory.ts` `getGraphBackend()` returns `ruvector` by default (not `PostgreSQL (graph_memories)`)
 - [ ] AC-2: The change is behind the existing flag mechanism (no new flag needed)
-- [ ] AC-3: Neo4j adapter remains available as fallback (`GRAPH_BACKEND=neo4j` still works)
+- [ ] AC-3: PostgreSQL (graph_memories) adapter remains available as fallback (`GRAPH_BACKEND=PostgreSQL (graph_memories)` still works)
 - [ ] AC-4: All existing tests pass with the new default
 - [ ] AC-5: The `runtime_readiness` label in docs is updated to `ruvector_graph` (RK-21 Stage 1 graduation)
 - [ ] AC-6: RISKS-AND-DECISIONS.md AD-49 status is updated from `Proposed` to `Decided`
@@ -31,7 +31,7 @@ As the Allura architect, I need `GRAPH_BACKEND=ruvector` set as the default in `
 ## Tasks
 
 1. Read `src/lib/graph-adapter/factory.ts`
-2. Change default from `neo4j` to `ruvector`
+2. Change default from `PostgreSQL (graph_memories)` to `ruvector`
 3. Run full test suite to verify no regressions
 4. Update AD-49 status in RISKS-AND-DECISIONS.md (Proposed → Decided)
 5. Update RK-32 status (🟡 Open → ✅ Resolved or Mitigated)
@@ -43,7 +43,7 @@ As the Allura architect, I need `GRAPH_BACKEND=ruvector` set as the default in `
 ## Dev Notes
 
 - **This is AD-33-gated** — engine mutation requires explicit approval. This story assumes approval to proceed.
-- **Do NOT** remove the Neo4j adapter. It stays as fallback for one release.
+- **Do NOT** remove the PostgreSQL (graph_memories) adapter. It stays as fallback for one release.
 - **Do NOT** upgrade to `full_ruvector` — that's Stage 2 (native extension), not this story.
 
 ## File List

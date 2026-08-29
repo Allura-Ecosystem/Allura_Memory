@@ -14,7 +14,7 @@ As the Allura data architect, I need the 10-point acceptance gate run against li
 - The parity test (`adapter-parity.test.ts`) passes 14/14 but is DB-mocked
 - RK-32 sub-risk R5: "No live-DB E2E proof" is the gating item for the cutover
 - The 10-point acceptance gate was defined for the engine acceptance (BLUEPRINT.md E2E Readiness Status)
-- `GRAPH_BACKEND=neo4j` is the current default; `GRAPH_BACKEND=ruvector` uses PG tables
+- `GRAPH_BACKEND=PostgreSQL (graph_memories)` is the current default; `GRAPH_BACKEND=ruvector` uses PG tables
 - Docker Postgres is running (knowledge-postgres container, port 5432, healthy)
 
 ## Acceptance Criteria
@@ -24,11 +24,11 @@ As the Allura data architect, I need the 10-point acceptance gate run against li
 - [ ] AC-3: Memory CRUD operations (create, read, search, list, count, export) work through the RuVector graph adapter
 - [ ] AC-4: SUPERSEDES immutability is verified — new node created, old node marked deprecated, no history mutation
 - [ ] AC-5: `group_id` scoping is verified — own-tenant retrieval returns data, foreign-tenant returns empty
-- [ ] AC-6: Full-text search works via PG `tsvector` (replaces Neo4j fulltext index)
+- [ ] AC-6: Full-text search works via PG `tsvector` (replaces PostgreSQL (graph_memories) fulltext index)
 - [ ] AC-7: Structural context (Agent/Project/Task nodes + edges) is written through `memory/writer.ts` → `graph_structural_nodes/edges`
 - [ ] AC-8: Evidence is captured: test output, timing, any failures with stack traces
 - [ ] AC-9: If any test fails, the failure is documented with root cause analysis (not just "it failed")
-- [ ] AC-10: The test run does NOT flip the default — `GRAPH_BACKEND=neo4j` remains the production default
+- [ ] AC-10: The test run does NOT flip the default — `GRAPH_BACKEND=PostgreSQL (graph_memories)` remains the production default
 
 ## Tasks
 

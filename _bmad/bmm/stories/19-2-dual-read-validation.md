@@ -8,7 +8,7 @@
 
 ## User Story
 
-As the Allura architect, I need a dual-read validation period where both Neo4j and RuVector graph backends are read simultaneously and results are diffed, so that we catch any divergence before Neo4j goes read-only.
+As the Allura architect, I need a dual-read validation period where both PostgreSQL (graph_memories) and RuVector graph backends are read simultaneously and results are diffed, so that we catch any divergence before PostgreSQL (graph_memories) goes read-only.
 
 ## Context
 
@@ -20,10 +20,10 @@ As the Allura architect, I need a dual-read validation period where both Neo4j a
 ## Acceptance Criteria
 
 - [x] AC-1: A dual-read mode is implemented behind a flag (e.g., `GRAPH_DUAL_READ=true`)
-- [x] AC-2: When dual-read is enabled, every graph read query hits both Neo4j and RuVector backends
-- [x] AC-3: Results are compared and divergence is logged with: query, Neo4j result, RuVector result, diff
+- [x] AC-2: When dual-read is enabled, every graph read query hits both PostgreSQL (graph_memories) and RuVector backends
+- [x] AC-3: Results are compared and divergence is logged with: query, PostgreSQL (graph_memories) result, RuVector result, diff
 - [x] AC-4: Divergence rate is tracked (target: 0% divergence on identical data)
-- [x] AC-5: The dual-read mode does NOT change which backend is authoritative (Neo4j remains source of truth)
+- [x] AC-5: The dual-read mode does NOT change which backend is authoritative (PostgreSQL (graph_memories) remains source of truth)
 - [x] AC-6: A report is generated showing divergence count, types of divergence, and timing impact
 - [x] AC-7: If divergence is found, it's documented with root cause (not just "they differ")
 

@@ -181,10 +181,10 @@ first-class run API/product surface exists.
 
 | Gate | Status | Notes |
 |------|--------|-------|
-| Live-DB 10-point engine acceptance gate | **PASSED** | All 10 engine unit/integration tests pass against real PostgreSQL and Neo4j (commit `f518b1eb`). Evidence in `bun run test:e2e` output. |
+| Live-DB 10-point engine acceptance gate | **PASSED** | All 10 engine unit/integration tests pass against real PostgreSQL (commit `f518b1eb`). Evidence in `bun run test:e2e` output. |
 | Docker fresh-deploy (stranger-on-new-machine) | **UNVERIFIED** | `docker compose up` on a fresh machine has not been end-to-end smoke-tested. External volumes and network marked `external: true` will fail first `up` without prior manual setup. See AD-41 for the approved delivery sequence and INSTALL-DEPLOY-REVIEW.md in `docs/archive/allura/` for the outstanding checklist. |
 | RuVector / full native extension | **NOT READY** | `ruvector_function_count=0` on 2026-06-02 (TALON). Label remains `pgvector bridge` until extension functions and feedback/search health checks pass (RK-21). |
-| Graph adapter (IGraphAdapter, PG tables) | **READY** / **CUTOVER COMPLETE** | `GRAPH_BACKEND=ruvector` default, `neo4j` fallback; 14/14 parity checks green (AD-29, AD-49, RK-32, Story 19.3). |
+| Graph adapter (IGraphAdapter, PG tables) | **READY** / **CUTOVER COMPLETE** | `GRAPH_BACKEND=ruvector` default, `PostgreSQL (graph_memories)` fallback; 14/14 parity checks green (AD-29, AD-49, RK-32, Story 19.3). |
 
 No doc or UI surface may claim "production-ready" or "fresh-deploy verified" until the Docker fresh-deploy gate is independently executed and recorded in INSTALL-DEPLOY-REVIEW.md.
 
@@ -318,7 +318,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | F30 | Each proposed insight includes summary, evidence links, confidence score, timestamp, and status                    |
 | F31 | Proposed insights enter an approval flow before becoming active knowledge                                           |
 | F32 | Every approval, rejection, or policy decision is recorded as an audit event with actor and timestamp                |
-| F33 | Approved insights are written to Neo4j as immutable nodes; no in-place updates                                     |
+| F33 | Approved insights are written to PostgreSQL (graph_memories) as immutable nodes; no in-place updates                                     |
 | F34 | Changed insights create new nodes linked with `SUPERSEDES`, `DEPRECATED`, or `REVERTED` relationships             |
 | F35 | Agents retrieve knowledge through a controlled retrieval service, not by querying databases directly                 |
 | F36 | Retrieval supports semantic and structured queries with project and global scope                                    |
@@ -364,7 +364,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | Next.js API              | REST endpoints for dashboard + curator APIs    | `src/app/api/memory/`, `src/app/api/curator/`     |
 | Memory Engine            | Core read/write/score/route logic              | `src/lib/memory/`                                 |
 | Curator Scorer           | Computes confidence (60-100%) + reasoning      | `src/lib/curator/score.ts` (rule-based or Claude) |
-| Dedup Engine             | Prevents duplicate Neo4j promotions            | `src/lib/dedup/`                                  |
+| Dedup Engine             | Prevents duplicate PostgreSQL (graph_memories) promotions            | `src/lib/dedup/`                                  |
 | Budget + Circuit Breaker | Prevents runaway agent writes, enforces Kmax limits, auto-expires halted sessions | `src/lib/budget/`, `src/lib/circuit-breaker/` |
 | Retrieval Gateway | Typed contract enforcement at the retrieval boundary — all agent reads pass through `SearchRequest`/`MemoryResult` typed contract | `src/lib/retrieval/contract.ts`, `src/lib/retrieval/policy.ts`, `src/lib/retrieval/startup-validator.ts` |
 | Sync Contract Mappings | Resolves user_id→Agent and group_id→Project for relationship wiring on promoted memories | `src/lib/graph-adapter/sync-contract-mappings.ts` |
@@ -420,7 +420,7 @@ graph TB
 
     subgraph Storage
         R[(PostgreSQL<br/>Episodic)]
-        S[(Neo4j<br/>Semantic)]
+        S[(PostgreSQL (graph_memories)<br/>Semantic)]
     end
 
     A --> D
@@ -455,7 +455,7 @@ flowchart TD
     Score --> Check{score >= threshold?}
     Check -->|No| Done1[Return — episodic only]
     Check -->|Yes| ModeCheck{PROMOTION_MODE?}
-    ModeCheck -->|auto| Promote[MERGE into Neo4j]
+    ModeCheck -->|auto| Promote[MERGE into PostgreSQL (graph_memories)]
     ModeCheck -->|soc2| Queue[INSERT into proposals — pending review]
     Promote --> Done2[Return — both stores]
     Queue --> Done3[Return — episodic + pending]
@@ -470,7 +470,7 @@ sequenceDiagram
     participant Agent
     participant MCP
     participant Postgres
-    participant Neo4j
+    participant PostgreSQL (graph_memories)
 
     Agent->>MCP: memory_add("user prefers dark mode", userId)
     MCP->>Postgres: INSERT INTO events (append-only)
@@ -608,7 +608,7 @@ containment action requires a separately approved workflow and governance receip
 
 ---
 
-### `Memory` Node — Neo4j (Semantic Memory)
+### `Memory` Node — PostgreSQL (graph_memories) (Semantic Memory)
 
 Promoted, curated knowledge. Immutable after creation. Versioned via SUPERSEDES. See [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-memory) for full property details.
 
@@ -626,7 +626,7 @@ Promoted, curated knowledge. Immutable after creation. Versioned via SUPERSEDES.
 | `deprecated` | boolean       | Yes      | True when a newer version supersedes this node |
 | `created_at` | datetime      | Yes      | Creation timestamp                             |
 
-### `Agent` Node — Neo4j (Structural Context)
+### `Agent` Node — PostgreSQL (graph_memories) (Structural Context)
 
 Represents an AI agent in the team. Seeded via `scripts/neo4j-seed-agents.cypher`. See [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-agent) for full property details.
 
@@ -644,7 +644,7 @@ Represents an AI agent in the team. Seeded via `scripts/neo4j-seed-agents.cypher
 | `group_id`   | string        | Yes      | Tenant namespace                                |
 | `description`| string        | No       | Extended description of the agent's role        |
 
-### `Team` Node — Neo4j (Structural Context)
+### `Team` Node — PostgreSQL (graph_memories) (Structural Context)
 
 Represents a team of agents. See [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-team) for full property details.
 
@@ -656,7 +656,7 @@ Represents a team of agents. See [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j
 | `icon`       | string        | No       | Emoji or icon identifier                        |
 | `description`| string        | No       | Team description and purpose                    |
 
-### `Project` Node — Neo4j (Structural Context)
+### `Project` Node — PostgreSQL (graph_memories) (Structural Context)
 
 Represents a project that agents contribute to and memories relate to. See [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-project) for full property details.
 
@@ -789,13 +789,13 @@ Allura's internal coordination is event-driven: every significant state change e
 | `memory_get` | `memory_get` tool | Dashboard | A single memory was fetched by ID |
 | `memory_list` | `memory_list` tool | Dashboard | All memories for a user were listed |
 | `memory_delete` | `memory_delete` tool / REST API | Dashboard, retrieval layer | A memory was soft-deleted |
-| `memory_promoted` | Memory engine (auto-mode) | Dashboard, Notion sync worker (`notion-projection-sync`) | A memory was promoted to Neo4j |
-| `promotion_failed` | Memory engine | Dashboard, Sentry alert | Neo4j write failed — episodic record retained |
+| `memory_promoted` | Memory engine (auto-mode) | Dashboard, Notion sync worker (`notion-projection-sync`) | A memory was promoted to PostgreSQL (graph_memories) |
+| `promotion_failed` | Memory engine | Dashboard, Sentry alert | PostgreSQL (graph_memories) write failed — episodic record retained |
 | `promotion_queued` | Memory engine (SOC2 mode) | Dashboard, curator | Memory queued for human approval |
 | `memory_restore` | `memory_restore` tool | Dashboard, retrieval layer | A soft-deleted memory was restored |
 | `memory_update` | `memory_update` tool | Dashboard, retrieval layer | Append-only versioned update (SUPERSEDES chain) |
 | `proposal_created` | Curator engine (trigger) | Dashboard, Notion sync worker | A canonical proposal was created for HITL review |
-| `proposal_approved` | Curator approve CLI / API | Dashboard, Notion sync worker (`notion-projection-sync`), audit export | A proposal was approved and promoted to Neo4j |
+| `proposal_approved` | Curator approve CLI / API | Dashboard, Notion sync worker (`notion-projection-sync`), audit export | A proposal was approved and promoted to PostgreSQL (graph_memories) |
 | `proposal_rejected` | Curator reject CLI / API | Dashboard, Notion sync worker, audit export | A proposal was rejected |
 | `knowledge_promotion` | Knowledge promotion path | Dashboard, audit export | Insight promoted via knowledge-promotion.ts |
 | `notion_sync_pending` | Curator approve flow | Notion sync worker (`notion-sync-worker.ts`) | Proposal queued for Notion page creation |
@@ -867,7 +867,7 @@ graph LR
 | Notion sync queue | `notion_sync_pending` | `src/curator/notion-sync.ts` |
 | MCP catalog governance | `tool_approved`, `tool_denied` | `supabase/migrations/20260423_mcp_catalog_governance.sql` |
 | Agent runtime | `session_start`, `session_end`, `execution_succeeded`, `execution_failed`, `execution_blocked` | `src/agents/` |
-| Circuit breaker | `neo4j_unavailable` | `src/lib/circuit-breaker/` |
+| Circuit breaker | `graph_memories_unavailable` | `src/lib/circuit-breaker/` |
 | TraceMiddleware | `request_trace` | `src/middleware.ts` |
 | Health endpoint | `health_check` | `src/app/api/health/` |
 
@@ -879,14 +879,14 @@ graph LR
 | Notion sync worker | `proposal_approved`, `proposal_rejected`, `memory_promoted`, `tool_approved`, `tool_denied`, `execution_*` | `src/curator/notion-projection-sync.ts`, `src/curator/notion-sync-worker.ts` |
 | Retrieval layer | `memory_add` (for search indexing) | `src/lib/memory/retrieval-layer.ts` |
 | Audit CSV export | All event types (filterable) | `src/app/api/audit/events/` |
-| Sentry alerts | `promotion_failed`, `neo4j_unavailable`, `execution_failed` | `src/lib/observability/sentry.ts` |
+| Sentry alerts | `promotion_failed`, `graph_memories_unavailable`, `execution_failed` | `src/lib/observability/sentry.ts` |
 
 ---
 
 ## 10) Admin Workflow
 
-1. Copy `.env.example` to `.env` and set `POSTGRES_PASSWORD`, `NEO4J_PASSWORD`, `PROMOTION_MODE`
-2. Run `docker compose up -d` — starts core infra and app services such as Postgres, Neo4j, and the web/API layer
+1. Copy `.env.example` to `.env` and set `POSTGRES_PASSWORD`, `PostgreSQL (graph_memories)_PASSWORD`, `PROMOTION_MODE`
+2. Run `docker compose up -d` — starts core infra and app services such as Postgres, PostgreSQL (graph_memories), and the web/API layer
 3. Configure Team RAM skills to use packaged MCP servers such as `neo4j-memory` and `database-server`; add `neo4j-cypher` only for targeted graph inspection
 4. Set `group_id` to your tenant namespace (e.g. `allura-myproject`)
 5. Agents call `memory_add` / `memory_search` — memories flow automatically
@@ -909,7 +909,7 @@ graph LR
 - `.opencode/skills/memory-client/` — default search → work → log behavior
 - `.opencode/skills/mcp-docker-memory-system/` — packaged MCP server discovery and configuration guidance
 - `src/lib/memory/` — memory engine
-- `src/lib/graph-adapter/neo4j-adapter.ts` — graph memory search must exclude `deprecated: true` nodes in normal recall
+- `src/lib/graph-adapter/ruvector-adapter.ts` — graph memory search must exclude `deprecated: true` nodes in normal recall
 - `postgres-init/` — PostgreSQL schema SQL
 - [MCP Protocol](https://modelcontextprotocol.io)
 - [mem0.ai](https://mem0.ai) — primary competitor benchmark
@@ -941,7 +941,7 @@ neo4j-memory database-server neo4j-cypher
     ↓             ↓               ↓
     └────────┬────┴───────┬──────┘
              ↓            ↓
-         PostgreSQL     Neo4j
+         PostgreSQL     PostgreSQL (graph_memories)
          (Episodic)     (Semantic)
          Raw events     Approved facts
     ↓                 ↓
@@ -956,14 +956,14 @@ Memory Command Center  MCP/API Clients
 **Three Layers:**
 
 1. **Agent Layer:** OpenClaw, Claude Code, Cursor — any MCP-compatible agent
-2. **Memory Layer:** PostgreSQL (episodic) + Neo4j (semantic)
+2. **Memory Layer:** PostgreSQL (episodic) + PostgreSQL (graph_memories) (semantic)
 3. **Governance Layer:** RuVix rules, curator approval, audit receipts, and optional Memory Command Center controls
 
 **Core Workflows:**
 
 - Agent Task → Automatic Logging → PostgreSQL
 - Claude Code Memory Commands → Team RAM skill routing → Focused MCP server calls
-- Manual Insight Proposal → Pending queue → Neo4j (if approved)
+- Manual Insight Proposal → Pending queue → PostgreSQL (graph_memories) (if approved)
 
 ---
 
@@ -976,7 +976,7 @@ This section defines the single authority map between Notion templates/policy an
 1. **Policy and templates are upstream in Notion.**
 2. **Implementation canon is downstream in `docs/allura/` and is limited to the approved files listed in the authority map.**
 3. **Agents do not auto-write repo content back to Notion template pages.**
-4. **Canonical-now alignment:** PostgreSQL remains the append-only episodic evidence store, and Neo4j remains the canonical semantic knowledge graph. RuVector-derived capabilities may be adopted selectively for retrieval quality, witness receipts, and observability — but they do **not** replace canonical stores until a formal migration benchmark is approved.
+4. **Canonical-now alignment:** PostgreSQL remains the append-only episodic evidence store, and PostgreSQL (graph_memories) remains the canonical semantic knowledge graph. RuVector-derived capabilities may be adopted selectively for retrieval quality, witness receipts, and observability — but they do **not** replace canonical stores until a formal migration benchmark is approved.
 5. **Residue** (reports, deliverables, ADR standalones, validation snapshots, benchmarks, prompts) goes to `docs/archive/allura/` or Allura Brain.
 
 ### Authority Map
@@ -1015,7 +1015,7 @@ For Claude Code integration, Allura exposes three core tools via MCP:
 ```typescript
 {
   episodic: string[],  // Raw traces from PostgreSQL
-  semantic: string[],  // Approved facts from Neo4j
+  semantic: string[],  // Approved facts from PostgreSQL (graph_memories)
   count: number
 }
 ```
