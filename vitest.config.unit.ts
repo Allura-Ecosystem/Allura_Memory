@@ -54,6 +54,10 @@ export default defineConfig({
       // SONA vs AgentDB retrieval-learning evaluation harness
       // (pure logic, hermetic in-memory arms; no DB/network).
       "src/lib/branch-eval/**/*.test.ts",
+      // Story 27.6 — epic gate: enforcement checks (isolation/poisoning/
+      // replay/tamper/quota/expiry/rollback) and the release manifest
+      // builder (pure logic, mocked queryable; no DB/network).
+      "src/lib/branch-gate/**/*.test.ts",
       // Story 26.5 — governed mitigation drafts must stay in the CI unit lane.
       "src/lib/mitigation/**/*.test.ts",
       // Story 24.5 — deterministic scenario harness. Hermetic: engine DB

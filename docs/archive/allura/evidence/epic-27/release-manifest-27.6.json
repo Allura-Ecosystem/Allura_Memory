@@ -1,0 +1,50 @@
+{
+  "schema": "allura-release-manifest/1",
+  "revision": "474a326a49e69fd41229e1c527c960d9c4a2d889",
+  "tests": {
+    "total": 2462,
+    "passed": 2462,
+    "failed": 0,
+    "skipped": 160
+  },
+  "benchmark": {
+    "fixture": "docs/archive/allura/evidence/epic-27/spike-27.2-fixture-metrics.json",
+    "story": "27-2-disposable-branch-mechanics-agenticow-spike",
+    "status": "PASS",
+    "measuredAt": "2026-08-29T17:44:46.237Z"
+  },
+  "sbom": {
+    "tool": "pinned-source recon (spike 27.2)",
+    "licenses": [
+      {
+        "name": "agenticow",
+        "version": "0.2.4",
+        "license": "MIT",
+        "source": "npm + GitHub spdx_id: MIT (pinned commit dd4f437b92d2dbbc1f40dfa00023eed6e9c3bd84)"
+      },
+      {
+        "name": "@ruvector/rvf-node",
+        "version": "0.2.3",
+        "license": "MIT",
+        "source": "npm metadata (native binding; LICENSES/ruvector-MIT.txt)"
+      },
+      {
+        "name": "allura",
+        "version": "workspace",
+        "license": "MIT",
+        "source": "packages/*/package.json (packages/cli, packages/sdk)"
+      }
+    ]
+  },
+  "browser": {
+    "applicable": false,
+    "note": "headless run — no browser evidence applicable"
+  },
+  "review": {
+    "status": "pending"
+  },
+  "allura": {
+    "status": "pending"
+  },
+  "generatedAt": "2026-08-29T00:00:00.000Z"
+}
