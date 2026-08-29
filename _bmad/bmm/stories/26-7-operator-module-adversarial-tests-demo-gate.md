@@ -5,7 +5,7 @@
 > This replanned story was prepared with AI assistance. Independent Correct Course review [passed with a tracked verdict](../../../docs/archive/allura/evidence/epic-26/correct-course/review-verdict-2026-08-27.md); implementation evidence is still required before any AC advances.
 > Review evidence: `docs/archive/allura/evidence/epic-26/correct-course/review-verdict-2026-08-27.md`
 
-**Status:** In Progress — 2026-08-28: pinned provenance and real scanner execution are COMPLETE (see `docs/archive/allura/evidence/epic-26/26.7/upstream-pin-and-execution-receipt.md`); ingestion pipeline (migration 48, batch conformance, transport) under active implementation. Upstream canonical-ID algorithm extracted and committed. Not yet closeable: headless proof matrix and independent acceptance remain.
+**Status:** done — all 19 ACs approved. Correct Course remediation (migration 52 records-grain + content-encoding gate) reached unanimous AC-19 re-acceptance (Pike/Fowler/Knuth) on candidate `097d5a10`, 2026-08-29. Epic 26 complete.
 **Owner:** Woz + Knuth + Pike + Fowler
 **Depends on:** 26.1, 26.2, 26.3, 26.4, 26.5
 **Blocks:** Epic 26 completion
@@ -46,7 +46,7 @@ The pinned code/schema has known enum drift: code may emit `agent-skill`, while 
 - [x] **Truthful finding authority:** uploaded findings are provisional endpoint assertions. Trusted exposure is recomputed server-side against accepted package evidence and a source-lease-bound catalog digest/revision. Allura hash/workflow/publisher/indicator/range enrichment has separate matcher/version provenance. — Complete 2026-08-29: finding-authority.ts recomputeExposures.
 - [x] **Truthful downstream projection:** upstream fields remain nullable; no fake version/hash/publisher/workflow sentinels are created. Scope-qualified evidence junctions link accepted source/run/record identities to downstream match and alert evidence. — Complete 2026-08-29: finding-authority.ts buildEvidenceJunctions.
 - [x] **Headless end-to-end proof:** on one frozen candidate, a real leased scan reaches HTTPS ingestion, sanitized ledgers, complete-population promotion, current inventory, and exposure retrieval. Evidence covers duplicate, empty, partial/error/missing-summary, filtered/changed population, stale/future clock, malformed/gzip limit, DB failure, conflicting replay, and cross-tenant cases. — Complete 2026-08-29: 15 live cases across two e2e suites on fresh PG16 (10 accept/replay/empty/partial/conflict/malformed/oversized/content-type/auth/RLS + 4 unbound-ecosystem/expired-lease/gzip-encoding/DB-failure-documented); 115/115 live-DB lane; gzip encoding now deliberately rejected 415 (was incidental 400).
-- [ ] **Independent acceptance:** Pike/Fowler/Knuth approve the same frozen candidate; focused/unit/typecheck/live PostgreSQL/upstream Go/selftest/current-SHA CI evidence passes before status advances.
+- [x] **Independent acceptance:** Pike/Fowler/Knuth approve the same frozen candidate; focused/unit/typecheck/live PostgreSQL/upstream Go/selftest/current-SHA CI evidence passes before status advances. — APPROVED 2026-08-29 (unanimous) on re-frozen candidate `097d5a10`: Pike (interface/contract), Fowler (refactor safety), Knuth (data/schema) each re-reviewed the Correct Course remediation (migration 52 grain fix + content-encoding gate) with live PG16 evidence, including the negative test proving cross-lease summary citations are now impossible. Live-DB 115/115, unit 2450, typecheck clean.
 
 ## Minimal V1 endpoints
 
