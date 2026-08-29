@@ -555,22 +555,46 @@ epic_26:
 
 epic_27:
   name: "Governed Branchable Learning Memory"
-  status: planned
+  status: in-progress
   retrospective:
   next_story: "27.1"
-  sequence_note: "Planning-only epic. No story files are scaffolded yet. It is experiment-first
-    and blocked by Epic 25 closure; see planning/epic-27-governed-branchable-learning-memory.md."
-  stories: []
+  sequence_note: "Foundation laid 2026-08-29 — story map 27.1-27.6 derived from the
+    planning-doc invariants and scaffolded; 27.1 (base-snapshot authorization spike,
+    design-only) is ready-for-dev; rest draft. Epic 25 block cleared. Experiment-first:
+    no src/ implementation yet."
+  stories:
+    - key: "27.1"
+      title: "Authorized Base Snapshot Contract — Design Spike"
+      status: ready-for-dev
+    - key: "27.2"
+      title: "Pin/Recon AgenticOW + Prove Disposable Branch Mechanics"
+      status: draft
+    - key: "27.3"
+      title: "Governed Promotion Adapter, Receipts, and Quarantine"
+      status: draft
+    - key: "27.4"
+      title: "AgentDB/SONA Retrieval and Learning Evaluation"
+      status: draft
+    - key: "27.5"
+      title: "Team RAM/Durham Branch Workflows"
+      status: draft
+    - key: "27.6"
+      title: "Security, Evidence, Release, and Demo Gate"
+      status: draft
 
 epic_28:
   name: "Enterprise Documentation Consolidation"
-  status: in-progress
+  status: done
   retrospective:
-  next_story: "28.8"
-  sequence_note: "Planning record restored from the preserved source. Tasks 28.1–28.7
-    are documented as complete in the epic plan; Task 28.8 remains undefined and no
-    numbered story files are scaffolded. See planning/epic-28-enterprise-documentation-consolidation.md."
-  stories: []
+  next_story: null
+  sequence_note: "Complete 2026-08-29 — Task 28.8 exit-gate closure: Notion Blueprint
+    body reconciled with AD-50/Epic 23 (PostgreSQL-only, API read-back verified),
+    scratch artifacts dispositioned, residue guard green, both exit-gate boxes
+    checked. Story 28.8 done; Epic 28 closeout pending retrospective."
+  stories:
+    - key: "28.8"
+      title: "Exit-Gate Closure"
+      status: done
 development_status:
   epic-18: done
   18-1-promote-ad49-rk15-to-canon: done
@@ -643,8 +667,15 @@ development_status:
   26-5-governed-mitigation-policy-drafts: done
   26-6-containment-connectors-response-receipts: done
   26-7-operator-module-adversarial-tests-demo-gate: done
-  epic-27: backlog
-  epic-28: in-progress
+  epic-27: in-progress
+  27-1-base-snapshot-authorization-spike: ready-for-dev
+  27-2-disposable-branch-mechanics-agenticow-spike: draft
+  27-3-governed-promotion-adapter-receipts-quarantine: draft
+  27-4-agentdb-sona-retrieval-learning-evaluation: draft
+  27-5-team-ram-durham-branch-workflows: draft
+  27-6-security-evidence-release-witness-demo-gate: draft
+  epic-28: done
+  28-8-exit-gate-closure: done
   24-11a-fail-closed-web-authority: backlog
   24-12-effective-tenant-authority-seam: done
 action_items:
