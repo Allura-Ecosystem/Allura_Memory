@@ -1,15 +1,15 @@
 import { Pool, type PoolClient } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
+import { MAX_BODY_BYTES } from "@/lib/bumblebee/batch-conformance"
+import { ingestScannerBatch } from "@/lib/bumblebee/ingest-pipeline"
 import { hashBumblebeeToken, issueScanLease } from "@/lib/bumblebee/lease-authority"
 import {
-  authenticateRunnerForSource,
   authenticateIngestLease,
+  authenticateRunnerForSource,
   createScopedIngestStore,
   persistScanLease,
 } from "@/lib/bumblebee/lease-repository"
-import { ingestScannerBatch } from "@/lib/bumblebee/ingest-pipeline"
-import { MAX_BODY_BYTES } from "@/lib/bumblebee/batch-conformance"
 import { closePool } from "@/lib/postgres/connection"
 
 const GROUP = "allura-bmb-ingest-e2e"

@@ -1,7 +1,8 @@
-import { gzipSync } from "node:zlib"
 import { Pool, type PoolClient } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { gzipSync } from "node:zlib"
 
+import { ingestScannerBatch } from "@/lib/bumblebee/ingest-pipeline"
 import {
   hashBumblebeeToken,
   issueScanLease,
@@ -13,7 +14,6 @@ import {
   createScopedIngestStore,
   persistScanLease,
 } from "@/lib/bumblebee/lease-repository"
-import { ingestScannerBatch } from "@/lib/bumblebee/ingest-pipeline"
 import { closePool } from "@/lib/postgres/connection"
 
 const GROUP = "allura-bmb-matrix2"
