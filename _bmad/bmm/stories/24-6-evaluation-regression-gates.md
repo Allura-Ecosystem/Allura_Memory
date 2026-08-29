@@ -1,7 +1,7 @@
 # Story 24.6 — Evaluation and Regression Gates
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** changes-requested
+**Status:** review — all 10 ACs verified 2026-08-29 (Brooks/Hermes); awaiting independent code review.
 **Priority:** P0-Critical
 **Complexity:** Large
 **Owner:** unassigned
