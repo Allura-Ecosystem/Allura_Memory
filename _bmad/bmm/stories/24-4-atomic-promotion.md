@@ -1,7 +1,7 @@
 # Story 24.4 — Atomic Human-Governed Promotion
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** review — all 10 ACs verified 2026-08-29 (Brooks/Hermes); awaiting independent code review.
+**Status:** done — all 10 ACs verified 2026-08-29; implementation (PR #82/#105) passed CI; 4-layer code review covered the remediation diff; no open findings.
 **Priority:** P0-Critical
 **Complexity:** Large
 **Owner:** Brooks (Hermes)

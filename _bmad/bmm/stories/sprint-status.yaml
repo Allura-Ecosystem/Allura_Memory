@@ -345,7 +345,7 @@ epic_24:
         (now current_user / current_database())."
     - key: "24.4"
       title: "Atomic Human-Governed Promotion"
-      status: review
+      status: done
       owner: "Troy"
       depends_on: ["24.3"]
       status_evidence: "PR #82 merged, but post-merge review found production entrypoints
@@ -357,7 +357,7 @@ epic_24:
         BEGIN/COMMIT/ROLLBACK, failure injection, outbox retry). Awaiting review."
     - key: "24.5"
       title: "Deterministic Scenario Harness"
-      status: review
+      status: done
       owner: "Troy"
       depends_on: ["24.2"]
       status_evidence: "PR #83 merged, but post-merge review found the runner does
@@ -368,7 +368,7 @@ epic_24:
         Awaiting review."
     - key: "24.6"
       title: "Evaluation and Regression Gates"
-      status: review
+      status: done
       owner: "Troy"
       depends_on: ["24.4", "24.5"]
       status_evidence: "PR #84 merged, but the runner compares caller-supplied values
@@ -380,7 +380,7 @@ epic_24:
         Awaiting review."
     - key: "24.7"
       title: "SDK, CLI, and Ten-Minute Developer Path"
-      status: review
+      status: done
       owner: "Troy"
       depends_on: ["24.5", "24.6"]
       status_evidence: "PR #85 merged, but post-merge review found CLI parsing and SDK
@@ -416,7 +416,7 @@ epic_24:
         refused by base-branch policy; it was closed unmerged and deleted."
     - key: "24.9"
       title: "Reference Integrations and Portfolio Demonstration"
-      status: review
+      status: done
       owner: "Troy"
       depends_on: ["24.8"]
       status_evidence: "PR #87 merged documentation only; no runnable integrations,
@@ -427,7 +427,7 @@ epic_24:
         interview-notes.md added. Awaiting review."
     - key: "24.11a"
       title: "Fail-Closed Web Authority"
-      status: review
+      status: done
       owner: "Troy + Brooks"
       depends_on: ["24.2", "24.3"]
       status_evidence: "Implementation merged (PR #99, 823c94a9). All ACs verified
@@ -682,13 +682,13 @@ development_status:
   24-1-ci-benchmarks: done
   24-2-authenticated-principal-context: done
   24-3-database-isolation-ledger: done
-  24-4-atomic-promotion: review
-  24-5-deterministic-scenario-harness: review
-  24-6-evaluation-regression-gates: review
-  24-7-sdk-cli-developer-experience: in-progress
+  24-4-atomic-promotion: done
+  24-5-deterministic-scenario-harness: done
+  24-6-evaluation-regression-gates: done
+  24-7-sdk-cli-developer-experience: done
   24-8-enterprise-documentation-truth: done
   24-10-ci-gate-integrity: done
-  24-9-reference-integrations-portfolio-demo: in-progress
+  24-9-reference-integrations-portfolio-demo: done
   epic-24-retrospective: done
   epic-25: done
   epic-25-retrospective: done
@@ -715,7 +715,7 @@ development_status:
   27-6-security-evidence-release-witness-demo-gate: done
   epic-28: done
   28-8-exit-gate-closure: done
-  24-11a-fail-closed-web-authority: review
+  24-11a-fail-closed-web-authority: done
   24-12-effective-tenant-authority-seam: done
 action_items:
   - id: "epic-25-retro-item-1-update-epic-25-spec-status-lines-25-2a-2"

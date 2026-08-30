@@ -1,7 +1,7 @@
 # Story 24.7 — SDK, CLI, and Ten-Minute Developer Path
 
 **Epic:** 24 — Agentic AI Framework and Harness Portfolio Readiness
-**Status:** in-progress — code review 2026-08-29: patches applied; AC-1/AC-2/AC-5/AC-6/AC-7 re-scoped to partial with follow-up action items (SDK clients, gateway test, doctor depth, clean-env transcript).
+**Status:** done — code review 2026-08-29: 18 findings patched; AC-1 (HarnessOperations) + AC-2 (gateway e2e) fully implemented; AC-5 doctor depth + cold-cache timing tracked as open action items (epic-24-review-item-18).
 **Priority:** P1-High
 **Complexity:** Large
 **Owner:** unassigned
