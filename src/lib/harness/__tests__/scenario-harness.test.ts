@@ -215,6 +215,43 @@ describe("Simulate mode (AC-2)", () => {
   });
 });
 
+describe("Scenario assertion enforcement (AC-1)", () => {
+  it("fails the run when expected_status does not match the actual outcome", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    const tampered = {
+      ...scenario,
+      assertions: { output: { expected_status: "failed" as const } },
+    } as ScenarioFixture;
+    await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(
+      /expected_status=failed but run ended completed/,
+    );
+  });
+
+  it("passes when expected_status matches the actual outcome", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    const result = await runScenario(scenario, { mode: "simulate" });
+    expect(result.output.status).toBe("completed");
+  });
+
+  it("fails the run when expected_error is not present in the actual error", async () => {
+    const scenario = loadJson("unauthorized-cross-tenant-access.yaml.json");
+    const tampered = {
+      ...scenario,
+      assertions: { output: { expected_status: "failed" as const, expected_error: "NONEXISTENT_CODE" } },
+    } as ScenarioFixture;
+    await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(
+      /expected_error="NONEXISTENT_CODE" not found/,
+    );
+  });
+
+  it("passes when expected_error matches the actual error code", async () => {
+    const scenario = loadJson("unauthorized-cross-tenant-access.yaml.json");
+    const result = await runScenario(scenario, { mode: "simulate" });
+    expect(result.output.status).toBe("failed");
+    expect(result.output.error).toContain("POLICY_DENIED");
+  });
+});
+
 describe("Record mode (AC-3)", () => {
   it("invokes a real permitted tool adapter and captures the redacted response", async () => {
     const scenario = loadJson("governed-memory-success.yaml.json");

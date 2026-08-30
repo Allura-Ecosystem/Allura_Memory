@@ -114,6 +114,14 @@ Implemented and verified 2026-08-29 (Brooks/Hermes):
   (see sprint-status action items); the scenarios remain valid as runnable
   demonstrations and their receipts record actual tool calls, policy
   decisions, and checkpoint transitions.
+- **Assertion enforcement landed (2026-08-29, follow-up item 15):** the
+  harness now enforces `assertions.output` (expected_status + expected_error)
+  and fails the run on mismatch; error codes are included in thrown messages
+  so `expected_error` matches codes like POLICY_DENIED. `state.*`/`audit.*`
+  assertions were removed from the 9 example scenarios (the harness does not
+  seed a memory store or emit domain audit events, so those fields were
+  vacuous). 4 new harness tests cover enforcement. All 9 scenarios verified
+  with enforcement active: 6 complete, 3 fail as expected.
 - **AC-4:** Evidence index updated with the three integrations and their
   verified scenario outcomes; run receipts carry scenario digest, definition
   revision, principal/tenant references, config fingerprint, evidence hashes.

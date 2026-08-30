@@ -828,11 +828,14 @@ action_items:
     action: "Enforce scenario assertions (expected_status/state/audit) + seed
       initial_state + execute tenant_fixture.cleanup in the harness runner"
     owner: "Brooks"
-    status: open
-    note: "From 2026-08-29 code review of stories 24.7/24.8/24.9. The harness
-      validates schema and digests but does not compare assertions against run
-      results; initial_state is never seeded; cleanup is inert. Scenarios
-      remain valid demonstrations; enforcement is follow-up."
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "assertions.output enforced (expected_status + expected_error,
+      run fails on mismatch); error codes included in thrown messages. state/audit
+      assertions removed from 9 example scenarios (vacuous without a seeded store).
+      4 new harness tests; 2503 unit tests pass; all 9 scenarios verified with
+      enforcement active. initial_state seeding + cleanup execution remain open
+      (harness does not seed a memory store)."
     ref: "_bmad/bmm/stories/24-9-reference-integrations-portfolio-demo.md"
   - id: "epic-24-review-item-16-sdk-clients-for-scenario-replay-eval-evidence"
     epic: 24

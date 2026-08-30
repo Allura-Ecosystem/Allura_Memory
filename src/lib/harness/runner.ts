@@ -327,8 +327,10 @@ function buildDefinition(
         deps.sideEffects.apply(key, result);
 
         // POLICY_DENIED and hard errors fail the process (required step).
+        // Include the error code in the thrown message so assertion checks
+        // can match on either the code or the message text.
         if (result.error && result.error.code !== "TRANSIENT_RETRY") {
-          throw new Error(result.error.message ?? result.error.code);
+          throw new Error(`${result.error.code}: ${result.error.message ?? ""}`.trim());
         }
 
         return result;
@@ -448,6 +450,28 @@ export async function runScenario(scenario: ScenarioFixture, opts: RunOptions): 
 
   const status: "completed" | "failed" | "pending" =
     state.status === "completed" ? "completed" : state.status === "failed" ? "failed" : "pending";
+
+  // AC-1 assertion enforcement: compare the run's actual outcome against the
+  // scenario's declared `assertions.output`. A mismatch is a hard failure —
+  // the scenario's own acceptance contract is violated. `state.*` and
+  // `audit.*` assertions are NOT enforced here: the harness does not seed a
+  // memory store or emit domain audit events, so those fields would be
+  // vacuous. Scenarios must declare only output assertions they can prove.
+  const expectedStatus = scenario.assertions?.output?.expected_status;
+  if (expectedStatus !== undefined && expectedStatus !== status) {
+    throw new Error(
+      `Scenario assertion failed: expected_status=${expectedStatus} but run ended ${status} (scenario ${scenario.scenario_id})`,
+    );
+  }
+  const expectedError = scenario.assertions?.output?.expected_error;
+  if (expectedError !== undefined && status === "failed") {
+    const actualError = state.error ?? "";
+    if (!actualError.includes(expectedError)) {
+      throw new Error(
+        `Scenario assertion failed: expected_error="${expectedError}" not found in "${actualError}" (scenario ${scenario.scenario_id})`,
+      );
+    }
+  }
 
   // AC-9: evidence hashes over the deterministic outcome fields.
   const evidence = {
