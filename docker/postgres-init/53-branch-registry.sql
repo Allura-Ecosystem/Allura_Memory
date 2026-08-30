@@ -87,6 +87,23 @@ CREATE TABLE IF NOT EXISTS promotion_receipts (
 CREATE INDEX IF NOT EXISTS promotion_receipts_scope_branch_issued_idx
   ON promotion_receipts (group_id, workspace_id, branch_id, issued_at DESC, id);
 
+-- ── Referential integrity: receipts must reference a real proposal ─────────
+-- Retro item (epic-27): promotion_receipts.proposal_id had no FK to
+-- promotion_proposals(id). Idempotent so it applies on fresh and existing DBs.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.promotion_receipts'::regclass
+      AND conname = 'promotion_receipts_proposal_fkey'
+  ) THEN
+    ALTER TABLE promotion_receipts
+      ADD CONSTRAINT promotion_receipts_proposal_fkey
+      FOREIGN KEY (proposal_id) REFERENCES promotion_proposals(id);
+  END IF;
+END
+$$;
+
 -- ── Row-level security (tenant axis only; workspace stays at API/CHECK) ─────
 ALTER TABLE branch_registry ENABLE ROW LEVEL SECURITY;
 ALTER TABLE branch_registry FORCE ROW LEVEL SECURITY;

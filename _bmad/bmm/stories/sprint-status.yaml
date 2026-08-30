@@ -789,11 +789,16 @@ action_items:
     owner: "Brooks"
     status: open
     ref: "_bmad/bmm/stories/epic-26-retro-2026-08-29.md"
-  - id: "epic-27-retro-item-10-add-promotion_receipts-proposal_id-fk-to"
+  - id: "epic-27-retro-item-10-add-promotion-receipts-proposal-id-fk"
     epic: 27
     action: "Add promotion_receipts.proposal_id FK to promotion_proposals(id)"
     owner: "Woz"
-    status: open
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "Idempotent DO/IF-NOT-EXISTS constraint added to
+      docker/postgres-init/53-branch-registry.sql; migration applied cleanly
+      to live DB; FK verified enforcing (orphan insert rejected); migration
+      test extended."
     ref: "_bmad/bmm/stories/epic-27-retro-2026-08-29.md"
   - id: "epic-27-retro-item-11-extract-shared-branch-validation-helpers"
     epic: 27

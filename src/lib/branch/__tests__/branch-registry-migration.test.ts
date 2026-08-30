@@ -60,4 +60,12 @@ describe("migration 53 branch registry relational contract", () => {
     expect(sql).toContain("BEFORE UPDATE OR DELETE ON promotion_receipts")
     expect(sql).toContain("promotion_receipts_replay_key")
   })
+
+  it("adds the promotion_receipts.proposal_id FK to promotion_proposals(id) (epic-27 retro item)", () => {
+    expect(sql).toContain("promotion_receipts_proposal_fkey")
+    expect(sql).toContain("FOREIGN KEY (proposal_id) REFERENCES promotion_proposals(id)")
+    // Idempotent guard so it applies on fresh and existing DBs
+    expect(sql).toContain("IF NOT EXISTS (")
+    expect(sql).toContain("conname = 'promotion_receipts_proposal_fkey'")
+  })
 })
