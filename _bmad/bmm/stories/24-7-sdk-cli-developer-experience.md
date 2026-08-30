@@ -123,6 +123,12 @@ Verified and completed 2026-08-29 (Brooks/Hermes):
     with honest timing, but a clean-environment transcript with measured
     elapsed time and machine profile has not been recorded (retrospective
     CA-24-09 remains open).
+  - **AC-6/AC-7 (warm-cache transcript recorded 2026-08-29, follow-up item
+    18):** `docs/portfolio/clean-environment-transcript-2026-08-29.md`
+    records machine profile, per-step timings (SDK build 1.7s, typecheck
+    2.5s, unit 5.7s, eval 0.05s, scenario 34.9s), and honest caveats: warm
+    cache only, gateway container not running during measurement, cold-cache
+    fresh-clone transcript still outstanding.
 - **Verified:** SDK builds clean (tsup CJS+DTS), CLI runs all 8 commands,
   quickstart documents the ten-minute path with honest timing, compatibility
   matrix present, placeholder packages (mcp-server stub) excluded from the

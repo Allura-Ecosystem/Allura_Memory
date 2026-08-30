@@ -866,6 +866,11 @@ action_items:
     action: "Record a clean-environment quickstart transcript with measured
       elapsed time and machine profile (24.7 AC-7, CA-24-09)"
     owner: "Troy"
-    status: open
-    note: "From 2026-08-29 code review. Retrospective CA-24-09 remains open."
+    status: in-progress
+    resolved_at: "2026-08-29"
+    resolution_note: "Warm-cache transcript recorded (docs/portfolio/
+      clean-environment-transcript-2026-08-29.md): machine profile, per-step
+      timings, honest caveats. Cold-cache fresh-clone transcript (docker pull
+      + brain:up bootstrap) remains outstanding — requires a machine without
+      the images."
     ref: "_bmad/bmm/stories/24-7-sdk-cli-developer-experience.md"
