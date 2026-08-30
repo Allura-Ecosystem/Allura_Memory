@@ -23,11 +23,14 @@ postgres_user="${POSTGRES_USER:-allura}"
 migration_log="${artifact_dir}/migration.log"
 test_report="${artifact_dir}/live-db-tests.json"
 server_version_report="${artifact_dir}/postgres-server-version.txt"
+gateway_log="${artifact_dir}/gateway.log"
+gateway_port="${ALLURA_MCP_HTTP_PORT:-5888}"
+gateway_token_secret="${ALLURA_MCP_TOKEN_SECRET:-sdk-gateway-e2e-secret-key-0001}"
 
 mkdir -p "$artifact_dir"
 exec > >(tee "$migration_log") 2>&1
 
-for command in psql pg_isready find sort bun; do
+for command in psql pg_isready find sort bun curl; do
   command -v "$command" >/dev/null || { printf 'Required command not found: %s\n' "$command"; exit 69; }
 done
 
@@ -97,7 +100,40 @@ if [[ "$mode" == "migrate-only" ]]; then
   exit 0
 fi
 
-RUN_E2E_TESTS=true POSTGRES_APP_PASSWORD="$POSTGRES_APP_PASSWORD" bun vitest run \
+ALLURA_MCP_HTTP_PORT="$gateway_port" \
+ALLURA_MCP_TOKEN_SECRET="$gateway_token_secret" \
+  bun run mcp:http >"$gateway_log" 2>&1 &
+gateway_pid=$!
+cleanup() {
+  kill "$gateway_pid" 2>/dev/null || true
+  wait "$gateway_pid" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+gateway_ready=false
+for _attempt in $(seq 1 90); do
+  if ! kill -0 "$gateway_pid" 2>/dev/null; then
+    printf 'MCP gateway exited before becoming ready.\n' >&2
+    tail -n 100 "$gateway_log" >&2 || true
+    exit 70
+  fi
+  if curl --fail --silent --show-error "http://127.0.0.1:${gateway_port}/ready" >/dev/null; then
+    gateway_ready=true
+    break
+  fi
+  sleep 1
+done
+
+if [[ "$gateway_ready" != "true" ]]; then
+  printf 'MCP gateway did not become ready within 90 polling attempts.\n' >&2
+  tail -n 100 "$gateway_log" >&2 || true
+  exit 70
+fi
+
+RUN_E2E_TESTS=true \
+ALLURA_MCP_HTTP_URL="http://127.0.0.1:${gateway_port}" \
+ALLURA_MCP_TOKEN_SECRET="$gateway_token_secret" \
+POSTGRES_APP_PASSWORD="$POSTGRES_APP_PASSWORD" bun vitest run \
   --config vitest.config.live-db.ts \
   --reporter=json \
   --outputFile="$test_report"

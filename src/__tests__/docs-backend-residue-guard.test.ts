@@ -4,11 +4,11 @@
  * Runs a copied guard in a temporary Git repository so its root discovery and
  * active-doc scan behave exactly as they do in CI.
  */
+import { afterEach, describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
-import { chmodSync, cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
 
 const roots: string[] = [];
 
