@@ -842,9 +842,12 @@ action_items:
     action: "Add typed SDK clients for scenario execution, replay, evaluation,
       and evidence inspection (24.7 AC-1 partial)"
     owner: "Woz"
-    status: open
-    note: "From 2026-08-29 code review. SDK barrel currently exports health +
-      memory clients only."
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "HarnessOperations added to packages/sdk/src/harness.ts —
+      scenario_run, scenario_replay, eval_run, evidence_inspect via the MCP
+      tools/call envelope; exported as client.harness.*. 4 new contract tests;
+      typecheck clean, 2507 unit tests pass. AC-1 fully implemented."
     ref: "_bmad/bmm/stories/24-7-sdk-cli-developer-experience.md"
   - id: "epic-24-review-item-17-gateway-integration-test-for-sdk"
     epic: 24

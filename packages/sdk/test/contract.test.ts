@@ -134,6 +134,53 @@ describe("AlluraClient memory contract", () => {
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
+  it("harness.run sends a scenario_run tools/call envelope", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      toolResult({ status: "completed", receiptPath: "./receipt-x.json" })
+    );
+    const client = makeClient(fetchMock as unknown as typeof fetch);
+    const result = await client.harness.run({
+      scenario: "examples/engineering-review-agent/scenarios/success.json",
+    });
+    expect(result.status).toBe("completed");
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.method).toBe("tools/call");
+    expect(body.params.name).toBe("scenario_run");
+  });
+
+  it("harness.replay parses the replay comparison", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      toolResult({ identical: true, divergentFields: [] })
+    );
+    const client = makeClient(fetchMock as unknown as typeof fetch);
+    const result = await client.harness.replay({
+      scenario: "tests/scenarios/governed-memory-success.yaml.json",
+      receipt: "./receipt-prior.json",
+    });
+    expect(result.identical).toBe(true);
+    expect(result.divergentFields).toEqual([]);
+  });
+
+  it("harness.eval parses the lane results", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      toolResult({ status: "pass", lanes: [{ name: "retrieval-quality", status: "pass" }] })
+    );
+    const client = makeClient(fetchMock as unknown as typeof fetch);
+    const result = await client.harness.eval();
+    expect(result.status).toBe("pass");
+    expect(result.lanes[0].name).toBe("retrieval-quality");
+  });
+
+  it("harness.inspect parses the evidence inventory", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      toolResult({ receipts: ["receipt-a.json"], artifacts: ["artifacts/ci/eval/portfolio.json"] })
+    );
+    const client = makeClient(fetchMock as unknown as typeof fetch);
+    const result = await client.harness.inspect();
+    expect(result.receipts).toContain("receipt-a.json");
+    expect(result.artifacts[0]).toContain("portfolio.json");
+  });
+
   it("memory.search rejects an empty query", async () => {
     const client = makeClient(vi.fn() as unknown as typeof fetch);
     await expect(

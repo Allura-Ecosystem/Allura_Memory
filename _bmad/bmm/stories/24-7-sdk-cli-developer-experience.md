@@ -103,6 +103,11 @@ Verified and completed 2026-08-29 (Brooks/Hermes):
     scenario execution, replay, evaluation, and evidence inspection are NOT
     yet implemented — those surfaces are exercised via the CLI/harness
     instead. Full SDK coverage of those surfaces is follow-up work.
+  - **AC-1 (landed 2026-08-29, follow-up item 16):** `HarnessOperations`
+    added — typed clients for `scenario_run`, `scenario_replay`, `eval_run`,
+    and `evidence_inspect` via the same MCP tools/call envelope. Exported
+    from the barrel as `client.harness.*`. 4 new contract tests cover the
+    envelope shape and response parsing. AC-1 is now fully implemented.
   - **AC-2 (partial):** contract tests are hermetic (injected fetch), not
     run against the live canonical gateway. A gateway integration test is
     follow-up work.
