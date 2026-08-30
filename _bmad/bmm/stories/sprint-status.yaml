@@ -824,7 +824,13 @@ action_items:
     epic: 27
     action: "Re-run AgentDB/SONA comparison without oracle-fed re-rank input"
     owner: "Bellard"
-    status: open
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "agentdbRetrieve no longer consults expected_ids — the
+      feedback loop closes on the executor's own round-1 results. Honest
+      re-run: retrieval recall identical to SONA (0.833, was 1.000 with
+      oracle); consolidation still wins. Evidence doc updated (§3 re-run
+      note, §4.1, §6). 12 tests pass, typecheck clean."
     ref: "_bmad/bmm/stories/epic-27-retro-2026-08-29.md"
   - id: "epic-27-retro-item-14-keep-production-adoption-gated-on-licens"
     epic: 27

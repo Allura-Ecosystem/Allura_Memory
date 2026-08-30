@@ -172,25 +172,26 @@ function sonaRetrieve(base: BaseDoc[], query: string, k: number): string[] {
 }
 
 /**
- * AgentDB retrieval-feedback pattern: after the first round, the harness
- * witnesses which returned results were actually used (matched ground truth)
- * and which expected results were missed; the next round re-ranks to promote
- * the witnessed-used results. This is the pattern's mechanism — feedback
- * closes the loop — evaluated on identical fixtures.
+ * AgentDB retrieval-feedback pattern — evaluated WITHOUT oracle access.
+ *
+ * Epic-27 retro item 13: the previous implementation re-ranked using
+ * `expected_ids` (the fixture's ground truth), which is oracle-fed input a
+ * real executor would never have. This version closes the feedback loop on
+ * the executor's OWN round-1 results only: the re-rank promotes what round 1
+ * actually returned (self-consistency), never the expected answer set. With
+ * no oracle signal, the pattern cannot manufacture recall it did not earn —
+ * the honest comparison.
  */
 function agentdbRetrieve(
   base: BaseDoc[],
   query: string,
-  k: number,
-  expectedIds: string[]
+  k: number
 ): string[] {
   const round1 = sonaRetrieve(base, query, k);
-  const used = round1.filter((id) => expectedIds.includes(id));
-  const missed = expectedIds.filter((id) => !round1.includes(id));
-  const rest = round1.filter(
-    (id) => !used.includes(id) && !missed.includes(id)
-  );
-  return [...used, ...missed, ...rest].slice(0, k);
+  // Feedback signal is the executor's own round-1 result set — no ground
+  // truth consulted. Re-ranking on self-results is a stable no-op, which is
+  // the honest outcome when no oracle signal exists.
+  return round1.slice(0, k);
 }
 
 function normalizeFact(text: string): string {
@@ -378,8 +379,7 @@ export async function runAgentdbArm(
       const resultIds = agentdbRetrieve(
         base,
         c.query ?? "",
-        c.k ?? 1,
-        c.expected_ids ?? []
+        c.k ?? 1
       );
       report = {
         trace: [

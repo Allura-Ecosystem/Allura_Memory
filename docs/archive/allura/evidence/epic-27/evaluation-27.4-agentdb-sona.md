@@ -66,21 +66,29 @@ witnessed outcomes were scored.
 
 | Metric | SONA | AgentDB |
 |---|---:|---:|
-| retrieval-feedback mean recall@k | 0.833 (5/6) | **1.000 (6/6)** |
+| retrieval-feedback mean recall@k | 0.833 (5/6) | **0.833 (5/6)** |
 | consolidation mean \|distinct − expected\| error | 0.5 | **0.0** |
 | curation-gate promotions written | 0 | 0 |
 | total trace rows witnessed | 7 | 12 |
 | promotions written (both arms) | **0** | **0** |
 
+> **Re-run note (epic-27 retro item 13, 2026-08-29):** the original run
+> re-ranked the AgentDB arm using the fixture's `expected_ids` — oracle-fed
+> input a real executor would never have. Re-run without oracle access, the
+> retrieval-feedback arm's recall is **identical to SONA (0.833)** — the
+> earlier 1.000 was an artifact of the oracle re-ranking, not a witnessed
+> pattern win. Only **consolidation** wins on witnessed evidence.
+
 ## 4. The decision
 
 ### 4.1 Which patterns win (witnessed)
 
-- **Retrieval-feedback loop — WINS** on witnessed recall@k (1.000 vs 0.833).
-  The win is real but narrow: it comes from a single case (rf-1) where the
-  feedback loop re-ranked to recover a missed expected result. On cases where
-  static SONA retrieval already matched ground truth, the pattern added
-  nothing.
+- **Retrieval-feedback loop — NO WIN on re-run without oracle access.** The
+  original 1.000 recall was an artifact of oracle-fed re-ranking (the arm
+  consulted `expected_ids` to promote missed results). Re-run with the
+  feedback loop closed on the executor's own results only, recall is
+  identical to static SONA (0.833). The pattern adds nothing without an
+  oracle signal — the honest, decision-relevant result.
 - **Consolidation — WINS** on witnessed distinct-fact error (0.0 vs 0.5).
   The win is the merge of duplicate facts (con-1); on already-distinct input
   (con-2) it is neutral.
@@ -143,7 +151,7 @@ as `adaptation_conditions`):
 | AC-1 — identical task classes and fixtures for both arms | ✅ | Shared fixture `retrieval-feedback.json` (revision 0001); tests assert both arms run the same case ids; harness `runSonaArm`/`runAgentdbArm` consume the same `cases` + `base` |
 | AC-2 — witnessed test/review/trace outcomes preferred over executor self-report | ✅ | `witness()` scores only trace rows + result store + ground truth; `self_report` is provenance-only; test asserts a lying self-report is recorded as a witnessed failure |
 | AC-3 — no model/skill/ranking promotion without curator approval | ✅ | `promotionGate()` is the only promotion path; harness holds no approval token; tests assert `promotions_written = 0` and gate denial without approval |
-| AC-4 — decision explicitly rejects AgentDB as a second durable authority even if a pattern wins | ✅ | §4.2; `buildDecision()` returns `rejected.authority = "agentdb"`, `verdict = "reject"`, `adaptation_inside_allura = true`; tests assert the rejection holds while `pattern_wins` is non-empty |
+| AC-4 — decision explicitly rejects AgentDB as a second durable authority even if a pattern wins | ✅ | §4.2; `buildDecision()` returns `rejected.authority = "agentdb"`, `verdict = "reject"`, `adaptation_inside_allura = true`; tests assert the rejection holds while `pattern_wins` is non-empty (consolidation) |
 
 ## 6. Verification receipts
 
@@ -152,6 +160,7 @@ as `adaptation_conditions`):
 - `npx eslint src/lib/branch-eval/` → clean (0 problems).
 - Full unit lane (`vitest.config.unit.ts`, all files) → 142 passed / 6 skipped, 2392 tests passed — no regressions.
 - Harness run output (revision 0001) captured in §3; `promotions_written = 0` on both arms.
+- **Re-run without oracle (epic-27 retro item 13, 2026-08-29):** `agentdbRetrieve` no longer consults `expected_ids`; feedback loop closes on the executor's own round-1 results. Re-run: retrieval recall identical to SONA (0.833), consolidation still wins. 12 tests pass, typecheck clean.
 
 ## 7. Rollback
 
