@@ -106,6 +106,8 @@ export default defineConfig({
       "src/__tests__/curator-proposals-route.test.ts",
       "src/__tests__/curator-reject-route.test.ts",
       "src/__tests__/contract-validation.test.ts",
+      // DW-2 — executable regression coverage for the canonical-docs shell guard.
+      "src/__tests__/docs-backend-residue-guard.test.ts",
       "src/__tests__/sentry-integration.test.ts",
       "src/__tests__/sentry-wiring.test.ts",
       "src/__tests__/byok-key-manager.test.ts",
