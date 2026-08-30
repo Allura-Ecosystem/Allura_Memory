@@ -27,6 +27,7 @@ import {
   createPromotionProposal,
   quarantineBranch,
 } from "../branch/promotion-adapter"
+import { requireDiff, requireEvidenceRefs, requireText } from "../branch/validation"
 
 if (typeof window !== "undefined") {
   throw new Error("server-side only")
@@ -94,32 +95,6 @@ export interface StatusUpdateInput {
 
 interface Queryable {
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>
-}
-
-function requireText(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`${field} is required`)
-  }
-  return value.trim()
-}
-
-function requireDiff(diff: unknown): BranchDiff {
-  if (!diff || typeof diff !== "object") throw new Error("diff is required")
-  const candidate = diff as Partial<BranchDiff>
-  const added = Array.isArray(candidate.added) ? candidate.added.map(String) : []
-  const overridden = Array.isArray(candidate.overridden) ? candidate.overridden.map(String) : []
-  const deleted = Array.isArray(candidate.deleted) ? candidate.deleted.map(String) : []
-  if (added.length === 0 && overridden.length === 0 && deleted.length === 0) {
-    throw new Error("diff must contain at least one addition, override, or tombstone")
-  }
-  return { added, overridden, deleted }
-}
-
-function requireEvidenceRefs(value: unknown): string[] {
-  if (!Array.isArray(value)) throw new Error("evidence_refs must be an array")
-  const refs = value.map(String).map((ref) => ref.trim()).filter(Boolean)
-  if (refs.length === 0) throw new Error("evidence_refs must not be empty")
-  return refs
 }
 
 interface RegistryRow {

@@ -804,7 +804,13 @@ action_items:
     epic: 27
     action: "Extract shared branch validation helpers + unify status enum"
     owner: "Fowler"
-    status: open
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "requireText/requireDiff/requireEvidenceRefs extracted to
+      src/lib/branch/validation.ts (was triplicated across promotion-adapter,
+      workflow-runner, epic-gate). BranchStatus in epic-gate.ts now aliases
+      BranchRegistryStatus (single source of truth). 8 new validation tests;
+      typecheck clean, 94 branch tests pass."
     ref: "_bmad/bmm/stories/epic-27-retro-2026-08-29.md"
   - id: "epic-27-retro-item-12-remove-or-wire-dead-exports-getteamramla"
     epic: 27
