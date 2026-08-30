@@ -88,10 +88,40 @@ POSTGRES_PORT=5432
 POSTGRES_DB=memory
 POSTGRES_USER=allura
 POSTGRES_PASSWORD=change-me
-ALLURA_MCP_TOKEN_SECRET=change-me
+# NOTE: must be >= 16 chars — the gateway refuses to start with a shorter secret
+ALLURA_MCP_TOKEN_SECRET=change-me-change-me
 GRAPH_BACKEND=ruvector
 EMBEDDING_PROVIDER=openai
 EMBEDDING_MODEL=text-embedding-3-small
+`);
+  }
+  // The compose stack needs a .env for ${VAR} substitution (brain-stack.sh
+  // passes --env-file .env). Create it from the example if absent so a fresh
+  // clone can `allura up` without a manual copy step.
+  const baseEnvPath = join(target, ".env");
+  if (!existsSync(baseEnvPath)) {
+    writeFileSync(baseEnvPath, `# Allura base environment (non-secret defaults)
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=memory
+POSTGRES_USER=allura
+POSTGRES_PASSWORD=change-me
+# NOTE: must be >= 16 chars — the gateway refuses to start with a shorter secret
+ALLURA_MCP_TOKEN_SECRET=change-me-change-me
+GRAPH_BACKEND=ruvector
+EMBEDDING_PROVIDER=openai
+EMBEDDING_MODEL=text-embedding-3-small
+`);
+  }
+  // The mcp service's env_file list includes .env.local (secrets override,
+  // gitignored). Create it with non-secret defaults so a fresh clone can
+  // `allura up` without a manual copy step; users replace the values.
+  const localEnvPath = join(target, ".env.local");
+  if (!existsSync(localEnvPath)) {
+    writeFileSync(localEnvPath, `# Allura local secrets override (gitignored — replace with real secrets)
+POSTGRES_PASSWORD=change-me
+# NOTE: must be >= 16 chars — the gateway refuses to start with a shorter secret
+ALLURA_MCP_TOKEN_SECRET=change-me-change-me
 `);
   }
   console.log("Created .env.portfolio.example with non-secret defaults.");
@@ -101,7 +131,12 @@ EMBEDDING_MODEL=text-embedding-3-small
 async function cmdUp() {
   console.log("Starting local development stack...");
   const { spawnSync } = await import("child_process");
-  const result = spawnSync("docker", ["compose", "up", "-d"], { stdio: "inherit" });
+  // Delegate to the bootstrap script: it pre-creates the external networks
+  // and volumes a fresh machine lacks, and applies the .env/.env.local
+  // env-file args compose needs for ${VAR} substitution. A bare
+  // `docker compose up -d` fails on a fresh clone (external resources
+  // missing) — this is the supported path (bun run brain:up).
+  const result = spawnSync("bash", ["scripts/brain-stack.sh", "up"], { stdio: "inherit" });
   if (result.status !== 0) {
     console.error("Failed to start local stack. Ensure docker compose is available and the compose file is present.");
     process.exit(result.status ?? 1);
