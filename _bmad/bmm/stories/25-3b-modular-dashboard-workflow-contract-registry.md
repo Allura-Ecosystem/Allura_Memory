@@ -29,6 +29,12 @@ Merged in PR #124, pending canonical independent-acceptance/status reconciliatio
 - `/dashboard/curator` composes the host-owned accessible shell. Disabled modules render truthful unavailable state; no direct `/dashboard/bumblebee` route exists.
 - Verification (2026-08-27): focused Vitest 35 tests, `bun run typecheck`, and `bun run test:unit` (2,170 passed; 160 skipped); fresh live PostgreSQL CI-app-role lane (24 suites / 72 tests passed). The live test does not mutate shared `allura_app` grants. PR #124 current-SHA CI passed and merged as `d25a1f6e026717512364e1b5973ccd352b90ba11`. The evidence map and candidate recipe are in `docs/archive/allura/evidence/epic-25/25.3b/`. Canonical independent-acceptance/status reconciliation remains pending.
 
+## Post-acceptance corrective implementation (2026-08-30)
+
+A visual/interaction traceability audit found that the host-owned registry shell was truthful but incomplete against the approved Epic 25 command-center design: it lacked the real review queue, evidence-first detail, rationale-bound actions, and receipt contract. The corrective candidate composes those surfaces over the existing server-owned APIs without changing module authority, storage, policy, identity, or receipt ownership.
+
+The candidate evidence is recorded in `docs/archive/allura/evidence/epic-25/25.3b/brandlocked-dashboard-repair-2026-08-30.md`. It is locally verified and remains subject to PR current-SHA CI and independent acceptance; this note does not claim deployment acceptance.
+
 ## Acceptance Criteria
 
 - [ ] A typed, versioned server contract defines module identity, compatible contract version, display/stage descriptors, required capabilities, host bindings, feature flag, and rollback identifier.

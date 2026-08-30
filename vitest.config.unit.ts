@@ -146,6 +146,7 @@ export default defineConfig({
       // Story 25.3b — executing test for the production /dashboard/curator
       // page wiring (issuance→shell, degraded state, denied scope).
       "src/__tests__/curator-handoff-page.test.tsx",
+      "src/__tests__/curator-dashboard.test.tsx",
       // UI unit tests — inspector entity views (6 view components)
       "src/__tests__/inspector-views.test.tsx",
       // Dashboard pages (Story 16.4 — approvals/handoffs/evidence)
@@ -229,6 +230,7 @@ export default defineConfig({
       ["src/__tests__/inspector-panel.test.tsx", "jsdom"],
       ["src/__tests__/inspector-views.test.tsx", "jsdom"],
       ["src/__tests__/bumblebee-surfaces.test.tsx", "jsdom"],
+      ["src/__tests__/curator-dashboard.test.tsx", "jsdom"],
     ],
   },
   resolve: {

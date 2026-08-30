@@ -64,6 +64,21 @@ describe("Story 25.3b production /dashboard/curator page wiring", () => {
     expect(metadata.decision).toBe("issued")
   })
 
+  it("renders the approved evidence-first command-center contract", async () => {
+    process.env[BUMBLEBEE_ENABLED_ENV_VAR] = "true"
+
+    const element = await CuratorHandoffPage()
+    const markup = renderToStaticMarkup(element)
+
+    expect(markup).toContain('aria-label="Dashboard navigation"')
+    expect(markup).toContain("Command Center")
+    expect(markup).toContain("Review queue")
+    expect(markup).toContain("Evidence path")
+    expect(markup).toContain("Module registry")
+    expect(markup).toContain("Receipt contract")
+    expect(markup.indexOf("Evidence")).toBeLessThan(markup.indexOf("Human review"))
+  })
+
   it("renders a truthful degraded state when the module is disabled", async () => {
     // BUMBLEBEE_MODULE_ENABLED unset → disabled branch → recordOutcome("disabled")
     const element = await CuratorHandoffPage()
