@@ -24,6 +24,7 @@ export interface RunReceipt {
   tool_calls: Array<{ tool_name: string; step: number }>;
   policy_decisions: Array<{ policy_id: string; decision: string; step: number }>;
   checkpoint_transitions: Array<{ from: string; to: string; step: number }>;
+  events: Array<{ event: string; step: number }>;
   side_effect_keys: string[];
   evidence_hashes: Record<string, string>;
   replay_comparison?: {
@@ -48,6 +49,7 @@ export function buildReceipt(opts: {
   tool_calls: Array<{ tool_name: string; step: number }>;
   policy_decisions: Array<{ policy_id: string; decision: string; step: number }>;
   checkpoint_transitions: Array<{ from: string; to: string; step: number }>;
+  events: Array<{ event: string; step: number }>;
   side_effect_keys: string[];
   evidence: Record<string, unknown>;
   replay_comparison?: { identical: boolean; divergent_fields: string[] };
@@ -73,6 +75,7 @@ export function buildReceipt(opts: {
     tool_calls: opts.tool_calls,
     policy_decisions: opts.policy_decisions,
     checkpoint_transitions: opts.checkpoint_transitions,
+    events: opts.events,
     side_effect_keys: opts.side_effect_keys,
     evidence_hashes,
     replay_comparison: opts.replay_comparison,
@@ -93,6 +96,7 @@ export function compareReceipts(a: RunReceipt, b: RunReceipt): { identical: bool
     "tool_calls",
     "policy_decisions",
     "checkpoint_transitions",
+    "events",
     "side_effect_keys",
     "evidence_hashes",
   ];

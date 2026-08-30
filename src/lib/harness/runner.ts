@@ -256,6 +256,7 @@ function buildDefinition(
     policyDecisions: Array<{ policy_id: string; decision: string; step: number }>;
     toolCalls: Array<{ tool_name: string; step: number }>;
     checkpointTransitions: Array<{ from: string; to: string; step: number }>;
+    events: Array<{ event: string; step: number }>;
   },
 ): ProcessDefinition {
   const steps: ProcessDefinition["steps"] = [];
@@ -283,6 +284,9 @@ function buildDefinition(
       type: "step",
       execute: async () => {
         const key = `${fixture.tool_name}:${stepIdx}`;
+
+        // Engine event record (process_step_started).
+        deps.events.push({ event: "process_step_started", step: stepIdx });
 
         // AC-8: idempotency — if this effect was already applied (resume/replay),
         // return the cached result without re-invoking the tool.
@@ -323,6 +327,12 @@ function buildDefinition(
 
         deps.checkpointTransitions.push({ from: `step-${stepIdx}`, to: `step-${stepIdx + 1}`, step: stepIdx });
 
+        // Engine event record (process_step_completed / process_step_failed).
+        deps.events.push({
+          event: result.error ? "process_step_failed" : "process_step_completed",
+          step: stepIdx,
+        });
+
         // AC-8: record the applied effect key.
         deps.sideEffects.apply(key, result);
 
@@ -340,6 +350,8 @@ function buildDefinition(
     // Insert a checkpoint step after the tool step at each approval breakpoint.
     const bp = scenario.approval_breakpoints?.find((b) => b.at_step === stepIdx);
     if (bp) {
+      // Engine event record (process_checkpoint_blocked).
+      deps.events.push({ event: "process_checkpoint_blocked", step: stepIdx });
       steps.push({
         id: `checkpoint-${stepIdx}`,
         name: `approval-${stepIdx}`,
@@ -409,6 +421,7 @@ export async function runScenario(scenario: ScenarioFixture, opts: RunOptions): 
   const toolCalls: Array<{ tool_name: string; step: number }> = [];
   const policyDecisions: Array<{ policy_id: string; decision: string; step: number }> = [];
   const checkpointTransitions: Array<{ from: string; to: string; step: number }> = [];
+  const events: Array<{ event: string; step: number }> = [];
 
   const startedAt = clock.isoNow();
 
@@ -422,6 +435,7 @@ export async function runScenario(scenario: ScenarioFixture, opts: RunOptions): 
     policyDecisions,
     toolCalls,
     checkpointTransitions,
+    events,
   });
 
   const hasApprovalBreakpoints = (scenario.approval_breakpoints?.length ?? 0) > 0;
@@ -473,6 +487,23 @@ export async function runScenario(scenario: ScenarioFixture, opts: RunOptions): 
     }
   }
 
+  // Deferred-work ledger (2026-08-29): audit.expected_events previously used a
+  // nonexistent vocabulary ("proposal_approved") and was never enforced. The
+  // engine emits process_step_started / process_step_completed /
+  // process_step_failed / process_checkpoint_blocked. Enforce expected_events
+  // as a subset check against the recorded event log.
+  const expectedEvents = scenario.assertions?.audit?.expected_events;
+  if (expectedEvents !== undefined) {
+    const actualEvents = events.map((e) => e.event);
+    for (const ev of expectedEvents) {
+      if (!actualEvents.includes(ev)) {
+        throw new Error(
+          `Scenario assertion failed: audit.expected_events entry "${ev}" not present in recorded events [${actualEvents.join(", ")}] (scenario ${scenario.scenario_id})`,
+        );
+      }
+    }
+  }
+
   // AC-9: evidence hashes over the deterministic outcome fields.
   const evidence = {
     finalStatus: status,
@@ -497,6 +528,7 @@ export async function runScenario(scenario: ScenarioFixture, opts: RunOptions): 
     tool_calls: toolCalls,
     policy_decisions: policyDecisions,
     checkpoint_transitions: checkpointTransitions,
+    events,
     side_effect_keys: sideEffects.keys(),
     evidence,
     replay_comparison: undefined,

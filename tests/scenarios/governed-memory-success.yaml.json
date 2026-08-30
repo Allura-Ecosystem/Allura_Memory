@@ -8,8 +8,12 @@
   },
   "principal_fixture": {
     "principal_id": "curator-1",
-    "roles": ["curator"],
-    "tenant_ids": ["allura-test-success"],
+    "roles": [
+      "curator"
+    ],
+    "tenant_ids": [
+      "allura-test-success"
+    ],
     "auth_method": "service_identity"
   },
   "process_definition": {
@@ -18,32 +22,65 @@
   },
   "initial_state": {
     "memories": [
-      { "content": "Initial memory for test", "score": 0.5 }
+      {
+        "content": "Initial memory for test",
+        "score": 0.5
+      }
     ],
     "proposals": [
-      { "content": "High-confidence proposal", "score": 0.91, "tier": "mainstream", "status": "pending" }
+      {
+        "content": "High-confidence proposal",
+        "score": 0.91,
+        "tier": "mainstream",
+        "status": "pending"
+      }
     ]
   },
   "tool_fixtures": [
     {
       "tool_name": "memory_search",
       "match": "ordered",
-      "response": { "result": { "results": [{ "id": "mem-1", "content": "Initial memory", "score": 0.5 }] } }
+      "response": {
+        "result": {
+          "results": [
+            {
+              "id": "mem-1",
+              "content": "Initial memory",
+              "score": 0.5
+            }
+          ]
+        }
+      }
     },
     {
       "tool_name": "memory_add",
       "match": "ordered",
-      "response": { "result": { "id": "mem-2", "stored": "episodic" } }
+      "response": {
+        "result": {
+          "id": "mem-2",
+          "stored": "episodic"
+        }
+      }
     },
     {
       "tool_name": "memory_promote",
       "match": "ordered",
-      "response": { "result": { "proposal_id": "prop-1", "status": "pending" } }
+      "response": {
+        "result": {
+          "proposal_id": "prop-1",
+          "status": "pending"
+        }
+      }
     },
     {
       "tool_name": "governance_proposal_approve",
       "match": "ordered",
-      "response": { "result": { "outcome": "approved", "memory_id": "canonical-1" } }
+      "response": {
+        "result": {
+          "outcome": "approved",
+          "memory_id": "canonical-1"
+        }
+      }
     }
   ],
   "virtual_clock": {
@@ -52,14 +89,32 @@
   },
   "random_seed": 42,
   "policy_expectations": [
-    { "policy_id": "pol-004", "expected_decision": "allow", "at_step": 3 }
+    {
+      "policy_id": "pol-004",
+      "expected_decision": "allow",
+      "at_step": 3
+    }
   ],
   "assertions": {
-    "output": { "expected_status": "completed" },
-    "state": { "memory_count": 2, "proposal_status": "approved" },
-    "audit": { "expected_events": ["proposal_approved"] }
+    "output": {
+      "expected_status": "completed"
+    },
+    "state": {
+      "memory_count": 2,
+      "proposal_status": "approved"
+    },
+    "audit": {
+      "expected_events": [
+        "process_step_completed",
+        "process_checkpoint_blocked"
+      ]
+    }
   },
   "approval_breakpoints": [
-    { "at_step": 3, "decision": "approve", "rationale": "High-confidence, ready for promotion" }
+    {
+      "at_step": 3,
+      "decision": "approve",
+      "rationale": "High-confidence, ready for promotion"
+    }
   ]
 }

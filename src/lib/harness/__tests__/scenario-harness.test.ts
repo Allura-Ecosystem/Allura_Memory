@@ -321,6 +321,7 @@ describe("Replay mode (AC-4/AC-7)", () => {
       tool_calls: [],
       policy_decisions: [],
       checkpoint_transitions: [],
+      events: [],
       side_effect_keys: [],
       evidence: {},
     });
