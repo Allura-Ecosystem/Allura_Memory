@@ -990,6 +990,79 @@ declare class MemoryOperations {
 }
 
 /**
+ * @allura/sdk — HarnessOperations
+ *
+ * Typed clients for scenario execution, replay, evaluation, and evidence
+ * inspection (Story 24.7 AC-1). All operations go through the same MCP
+ * tools/call envelope as memory operations, so they are transport-consistent
+ * with the rest of the SDK.
+ */
+
+interface ScenarioRunParams {
+    /** Scenario file path (repo-relative, e.g. examples/engineering-review-agent/scenarios/success.json) */
+    scenario: string;
+    /** Run mode: simulate (default) or replay */
+    mode?: "simulate" | "replay";
+    /** Prior receipt path for replay comparison */
+    priorReceipt?: string;
+}
+interface ScenarioReplayParams {
+    /** Scenario file path */
+    scenario: string;
+    /** Prior receipt path to compare against */
+    receipt: string;
+}
+interface EvalRunParams {
+    /** Evaluation suite path (defaults to evals/suites/portfolio.yaml) */
+    suite?: string;
+}
+interface EvidenceInspectParams {
+    /** Optional directory to inspect (defaults to cwd receipts + artifacts/) */
+    dir?: string;
+}
+interface ScenarioRunResponse {
+    status: "completed" | "failed" | "pending";
+    error?: string;
+    receiptPath?: string;
+}
+interface ScenarioReplayResponse {
+    identical: boolean;
+    divergentFields: string[];
+}
+interface EvalRunResponse {
+    status: "pass" | "fail";
+    lanes: Array<{
+        name: string;
+        status: string;
+        metrics?: Record<string, number>;
+    }>;
+}
+interface EvidenceInspectResponse {
+    receipts: string[];
+    artifacts: string[];
+}
+declare class HarnessOperations {
+    private readonly request;
+    constructor(request: RequestFn);
+    /**
+     * Execute a scenario through the deterministic harness.
+     */
+    run(params: ScenarioRunParams): Promise<ScenarioRunResponse>;
+    /**
+     * Replay a scenario against a prior receipt and compare determinism.
+     */
+    replay(params: ScenarioReplayParams): Promise<ScenarioReplayResponse>;
+    /**
+     * Run the portfolio evaluation suite.
+     */
+    eval(params?: EvalRunParams): Promise<EvalRunResponse>;
+    /**
+     * List evidence artifacts (run receipts + artifacts/ contents).
+     */
+    inspect(params?: EvidenceInspectParams): Promise<EvidenceInspectResponse>;
+}
+
+/**
  * @allura/sdk — AlluraClient
  *
  * Main client class for interacting with Allura Memory.
@@ -1026,6 +1099,7 @@ declare class AlluraClient {
     private readonly customFetch;
     private state;
     readonly memory: MemoryOperations;
+    readonly harness: HarnessOperations;
     constructor(config: AlluraClientConfig);
     /**
      * Verify connectivity to the Allura Memory server.
@@ -1236,7 +1310,8 @@ declare function isRetryable(error: unknown): boolean;
  * Execute a function with retry and exponential backoff.
  *
  * @param fn - The async function to execute
- * @param retries - Maximum number of retry attempts
+ * @param retries - Number of retries AFTER the first attempt (0 = single
+ *   attempt, no retries). Must be a finite non-negative integer.
  * @returns The result of the function
  * @throws {RetryExhaustedError} if all retries are exhausted
  */
@@ -1250,4 +1325,4 @@ declare function buildHeaders(authToken?: string, contentType?: string): Record<
  */
 declare function normalizeBaseUrl(url: string): string;
 
-export { AlluraClient, type AlluraClientConfig, AlluraError, AuthenticationError, type ConfidenceScore, ConfidenceScoreSchema, ConnectionError, DEFAULT_RETRIES, DEFAULT_TIMEOUT, type GroupId, GroupIdSchema, type HealthResponse, HealthResponseSchema, type MemoryAddParams, type MemoryAddResponse, MemoryAddResponseSchema, type MemoryContent, type MemoryDeleteParams, type MemoryDeleteResponse, MemoryDeleteResponseSchema, type MemoryGetParams, type MemoryGetResponse, MemoryGetResponseSchema, type MemoryId, MemoryIdSchema, type MemoryListParams, type MemoryListResponse, MemoryListResponseSchema, MemoryOperations, type MemoryProvenance, type MemoryResponseMeta, type MemoryRetrievalStore, type MemorySearchParams, type MemorySearchResponse, MemorySearchResponseSchema, type MemorySearchResult, type MemorySortOrder, type MemoryStatus, NotFoundError, type PromotionMode, RateLimitError, type RequestFn, RetryExhaustedError, ServerError, type StorageLocation, type UserId, ValidationError, buildHeaders, calculateBackoff, createAuthHeader, createErrorFromResponse, isRetryable, normalizeBaseUrl, requireAuthToken, resolveAuthToken, validateGroupId, withRetry };
+export { AlluraClient, type AlluraClientConfig, AlluraError, AuthenticationError, type ConfidenceScore, ConfidenceScoreSchema, ConnectionError, DEFAULT_RETRIES, DEFAULT_TIMEOUT, type EvalRunParams, type EvalRunResponse, type EvidenceInspectParams, type EvidenceInspectResponse, type GroupId, GroupIdSchema, HarnessOperations, type HealthResponse, HealthResponseSchema, type MemoryAddParams, type MemoryAddResponse, MemoryAddResponseSchema, type MemoryContent, type MemoryDeleteParams, type MemoryDeleteResponse, MemoryDeleteResponseSchema, type MemoryGetParams, type MemoryGetResponse, MemoryGetResponseSchema, type MemoryId, MemoryIdSchema, type MemoryListParams, type MemoryListResponse, MemoryListResponseSchema, MemoryOperations, type MemoryProvenance, type MemoryResponseMeta, type MemoryRetrievalStore, type MemorySearchParams, type MemorySearchResponse, MemorySearchResponseSchema, type MemorySearchResult, type MemorySortOrder, type MemoryStatus, NotFoundError, type PromotionMode, RateLimitError, type RequestFn, RetryExhaustedError, type ScenarioReplayParams, type ScenarioReplayResponse, type ScenarioRunParams, type ScenarioRunResponse, ServerError, type StorageLocation, type UserId, ValidationError, buildHeaders, calculateBackoff, createAuthHeader, createErrorFromResponse, isRetryable, normalizeBaseUrl, requireAuthToken, resolveAuthToken, validateGroupId, withRetry };

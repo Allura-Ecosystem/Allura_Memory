@@ -854,9 +854,12 @@ action_items:
     action: "Add an integration test running the SDK against the live canonical
       gateway (24.7 AC-2 partial)"
     owner: "Woz"
-    status: open
-    note: "From 2026-08-29 code review. Contract tests are hermetic (injected
-      fetch); no test exercises the real /health or /mcp endpoints."
+    status: done
+    resolved_at: "2026-08-29"
+    resolution_note: "sdk-gateway-integration.e2e.test.ts added — real SDK vs
+      canonical gateway (health shape, tools/call envelope, harness.inspect
+      round-trip). Joins the live-DB e2e lane, gated on RUN_E2E_TESTS=true.
+      AC-2 fully implemented."
     ref: "_bmad/bmm/stories/24-7-sdk-cli-developer-experience.md"
   - id: "epic-24-review-item-18-clean-environment-quickstart-transcript"
     epic: 24

@@ -111,6 +111,11 @@ Verified and completed 2026-08-29 (Brooks/Hermes):
   - **AC-2 (partial):** contract tests are hermetic (injected fetch), not
     run against the live canonical gateway. A gateway integration test is
     follow-up work.
+  - **AC-2 (landed 2026-08-29, follow-up item 17):** `sdk-gateway-integration.e2e.test.ts`
+    added — exercises the real SDK against the canonical HTTP/MCP gateway
+    (health shape, tools/call envelope, harness.inspect round-trip). Joins the
+    live-DB e2e lane (`vitest.config.live-db.ts`), gated on RUN_E2E_TESTS=true.
+    AC-2 is now fully implemented.
   - **AC-5 (partial):** `doctor` checks bun version, PostgreSQL reachability,
     migrations-dir existence, and gateway health. Schema compatibility,
     gateway auth, and write/read round-trip checks are not yet implemented.

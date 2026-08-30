@@ -32,6 +32,7 @@ __export(index_exports, {
   DEFAULT_RETRIES: () => DEFAULT_RETRIES,
   DEFAULT_TIMEOUT: () => DEFAULT_TIMEOUT,
   GroupIdSchema: () => GroupIdSchema,
+  HarnessOperations: () => HarnessOperations,
   HealthResponseSchema: () => HealthResponseSchema,
   MemoryAddResponseSchema: () => MemoryAddResponseSchema,
   MemoryDeleteResponseSchema: () => MemoryDeleteResponseSchema,
@@ -189,6 +190,41 @@ function createErrorFromResponse(statusCode, body) {
   }
 }
 
+// src/harness.ts
+var passthrough = {
+  parse: (data) => data
+};
+var HarnessOperations = class {
+  constructor(request) {
+    this.request = request;
+  }
+  request;
+  /**
+   * Execute a scenario through the deterministic harness.
+   */
+  async run(params) {
+    return await this.request("scenario_run", params, passthrough);
+  }
+  /**
+   * Replay a scenario against a prior receipt and compare determinism.
+   */
+  async replay(params) {
+    return await this.request("scenario_replay", params, passthrough);
+  }
+  /**
+   * Run the portfolio evaluation suite.
+   */
+  async eval(params = {}) {
+    return await this.request("eval_run", params, passthrough);
+  }
+  /**
+   * List evidence artifacts (run receipts + artifacts/ contents).
+   */
+  async inspect(params = {}) {
+    return await this.request("evidence_inspect", params, passthrough);
+  }
+};
+
 // src/types.ts
 var import_zod = require("zod");
 var GroupIdSchema = import_zod.z.string().min(2).max(64).regex(
@@ -335,6 +371,9 @@ function isRetryable(error) {
 }
 async function withRetry(fn, retries = DEFAULT_RETRIES) {
   let lastError = new Error("No attempts made");
+  if (!Number.isFinite(retries) || retries < 0) {
+    retries = 0;
+  }
   const attempts = Math.max(1, retries + 1);
   for (let attempt = 0; attempt < attempts; attempt++) {
     try {
@@ -503,6 +542,7 @@ var AlluraClient = class {
   state = "disconnected";
   // Operations
   memory;
+  harness;
   constructor(config) {
     if (!config.baseUrl) {
       throw new Error("AlluraClient requires a baseUrl");
@@ -513,6 +553,7 @@ var AlluraClient = class {
     this.retries = config.retries ?? DEFAULT_RETRIES;
     this.customFetch = config.fetch;
     this.memory = new MemoryOperations(this.makeRequest.bind(this));
+    this.harness = new HarnessOperations(this.makeRequest.bind(this));
   }
   // ── Connection Management ────────────────────────────────────────────────
   /**
