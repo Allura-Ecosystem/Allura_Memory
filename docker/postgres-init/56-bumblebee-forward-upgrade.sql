@@ -92,6 +92,11 @@ SELECT group_id,workspace_id,source_id,source_revision_id,lease_id,batch_id,
 FROM ranked WHERE rank > 1
 ON CONFLICT DO NOTHING;
 
+-- Reconciliation inserts reference already-existing receipts through the
+-- initially-deferred FK declared above. Resolve those events before the
+-- validation DDL below: PostgreSQL refuses ALTER TABLE while they are pending.
+SET CONSTRAINTS ALL IMMEDIATE;
+
 -- CREATE TABLE IF NOT EXISTS does not add constraints to an already-recorded
 -- 055 authority table. Name and validate this exact composite FK separately so
 -- fresh installs and partially-upgraded deployments converge.
@@ -111,10 +116,6 @@ BEGIN
 END $$;
 ALTER TABLE bumblebee_lease_body_authority
   VALIDATE CONSTRAINT bumblebee_lease_body_authority_active_receipt_fkey;
-
--- Reconciliation inserts reference already-existing receipts. Resolve the
--- deferred exact-receipt FK before subsequent DDL touches the authority table.
-SET CONSTRAINTS ALL IMMEDIATE;
 
 CREATE OR REPLACE VIEW bumblebee_lease_body_reconciliation
 WITH (security_invoker = true) AS

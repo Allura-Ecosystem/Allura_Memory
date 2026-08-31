@@ -24,6 +24,7 @@ export default defineConfig({
       "src/__tests__/bumblebee-headless-ingest.e2e.test.ts",
       "src/__tests__/bumblebee-headless-matrix2.e2e.test.ts",
       "src/__tests__/bumblebee-current-state-views.e2e.test.ts",
+      "src/__tests__/bumblebee-historical-upgrade.e2e.test.ts",
       "src/__tests__/view-security-invoker-hardening.e2e.test.ts",
       "src/__tests__/workspace-subgraph-authority.e2e.test.ts",
       "src/__tests__/auto-curator-workspace-authority.e2e.test.ts",
