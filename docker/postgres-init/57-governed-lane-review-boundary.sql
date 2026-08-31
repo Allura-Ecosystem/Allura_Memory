@@ -4,10 +4,13 @@
 -- authority read; proposal creation remains in the existing application path.
 BEGIN;
 
+DROP FUNCTION IF EXISTS app.load_governed_lane_snapshot_for_review(TEXT,TEXT,TEXT,UUID);
+
 CREATE OR REPLACE FUNCTION app.load_governed_lane_snapshot_for_review(
   p_group_id TEXT,
   p_workspace_id TEXT,
   p_lane_id TEXT,
+  p_branch_id TEXT,
   p_snapshot_id UUID
 ) RETURNS TABLE(
   group_id TEXT,
@@ -52,9 +55,11 @@ BEGIN
    AND snapshot.workspace_id=registry.workspace_id
    AND snapshot.branch_id=registry.branch_id
    AND snapshot.id=p_snapshot_id
+   AND snapshot.writer_id=authority.writer_id
   WHERE registry.group_id=p_group_id
     AND registry.workspace_id=p_workspace_id
     AND registry.lane_id=p_lane_id
+    AND registry.branch_id=p_branch_id
     AND principal=ANY(authority.reviewer_ids)
     AND principal IS DISTINCT FROM authority.writer_id
   FOR UPDATE OF registry,snapshot;
@@ -66,9 +71,9 @@ BEGIN
 END;
 $$;
 
-ALTER FUNCTION app.load_governed_lane_snapshot_for_review(TEXT,TEXT,TEXT,UUID) OWNER TO CURRENT_USER;
-REVOKE ALL ON FUNCTION app.load_governed_lane_snapshot_for_review(TEXT,TEXT,TEXT,UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION app.load_governed_lane_snapshot_for_review(TEXT,TEXT,TEXT,UUID) TO allura_app;
+ALTER FUNCTION app.load_governed_lane_snapshot_for_review(TEXT,TEXT,TEXT,TEXT,UUID) OWNER TO CURRENT_USER;
+REVOKE ALL ON FUNCTION app.load_governed_lane_snapshot_for_review(TEXT,TEXT,TEXT,TEXT,UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app.load_governed_lane_snapshot_for_review(TEXT,TEXT,TEXT,TEXT,UUID) TO allura_app;
 
 INSERT INTO schema_versions(version,applied_at,description)
 VALUES ('057',NOW(),'Authenticated governed lane review lock boundary')

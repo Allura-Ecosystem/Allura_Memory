@@ -149,6 +149,14 @@ describeIf("SDK ↔ canonical gateway integration (AC-2)", () => {
     });
     expect(snapshot).toMatchObject({ lane_id: "agent-lane-woz", status: "active" });
 
+    await expect(client.lanes.review({
+      group_id: GROUP,
+      lane_id: "agent-lane-woz",
+      snapshot_id: snapshot.snapshot_id,
+      verdict: "approved",
+      reason: "unauthorized reviewer must fail",
+    })).rejects.toThrow(/authoriz|scope|review/i);
+
     await expect(reviewerClient.lanes.review({
       group_id: GROUP,
       lane_id: "agent-lane-woz",
@@ -156,13 +164,5 @@ describeIf("SDK ↔ canonical gateway integration (AC-2)", () => {
       verdict: "approved",
       reason: "authenticated SDK production-path proof",
     })).resolves.toMatchObject({ approved: true });
-
-    await expect(client.lanes.review({
-      group_id: GROUP,
-      lane_id: "agent-lane-woz",
-      snapshot_id: snapshot.snapshot_id,
-      verdict: "approved",
-      reason: "unauthorized reviewer must fail",
-    })).rejects.toThrow();
   });
 });

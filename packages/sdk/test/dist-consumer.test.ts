@@ -12,6 +12,7 @@ const typescriptBin = join(dirname(require.resolve("typescript/package.json")), 
 let consumerRoot = "";
 
 beforeAll(() => {
+  execFileSync("bun", ["run", "build"], { cwd: packageRoot, encoding: "utf8" });
   consumerRoot = mkdtempSync(join(tmpdir(), "allura-sdk-packed-consumer-"));
   const packOutput = execFileSync(
     "npm",
@@ -28,7 +29,7 @@ beforeAll(() => {
   writeFileSync(join(consumerRoot, "package.json"), JSON.stringify({ name: "allura-sdk-consumer", private: true, type: "module" }));
   execFileSync(
     "npm",
-    ["install", "--ignore-scripts", "--no-audit", "--no-fund", join(consumerRoot, packed[0]!.filename)],
+    ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--package-lock=false", join(consumerRoot, packed[0]!.filename)],
     { cwd: consumerRoot, encoding: "utf8" },
   );
 });
@@ -77,5 +78,15 @@ describe("packed SDK clean-consumer contract", () => {
       "--moduleResolution", "NodeNext",
       "consumer.ts",
     ], { cwd: consumerRoot, encoding: "utf8" });
+  });
+
+  it("resolves the NodeNext require declaration branch through index.d.cts", () => {
+    writeFileSync(join(consumerRoot, "consumer.cts"), `
+      import sdk = require("@allura/sdk");
+      const client = new sdk.AlluraClient({ baseUrl: "http://127.0.0.1:3201", authToken: "consumer-token" });
+      const lanes: sdk.LaneOperations = client.lanes;
+      void lanes;
+    `);
+    execFileSync(process.execPath, [typescriptBin, "--noEmit", "--strict", "--target", "ES2022", "--module", "NodeNext", "--moduleResolution", "NodeNext", "consumer.cts"], { cwd: consumerRoot, encoding: "utf8" });
   });
 });

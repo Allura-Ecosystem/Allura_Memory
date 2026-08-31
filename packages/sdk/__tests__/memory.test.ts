@@ -72,9 +72,13 @@ function createMockFetch(
   status: number = 200
 ): typeof globalThis.fetch {
   return vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
-    const request = init?.body ? JSON.parse(String(init.body)) as { method?: string } : {};
+    const request = init?.body ? JSON.parse(String(init.body)) as { id?: string | number; method?: string } : {};
     if (request.method === "initialize") {
-      return new Response(JSON.stringify({ jsonrpc: "2.0", id: "init", result: {} }), {
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: request.id, result: {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        serverInfo: { name: "allura-sdk-memory-test", version: "1.0.0" },
+      } }), {
         status: 200,
         headers: { "content-type": "application/json", "mcp-session-id": "memory-test-session" },
       });

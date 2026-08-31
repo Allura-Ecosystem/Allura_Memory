@@ -16,10 +16,13 @@ import { join } from "node:path"
 import {
   type BranchDiff,
   branchSnapshotHash,
+  branchSnapshotHashCandidates,
   buildRollbackPlan,
   createPromotionProposal,
   issuePromotionReceipt,
   type PromotionProposalInput,
+  promotionTraceId,
+  promotionTraceIdCandidates,
   quarantineBranch,
 } from "../promotion-adapter"
 const GROUP = "allura-system"
@@ -211,6 +214,53 @@ function proposalInserted(database: ReturnType<typeof db>): boolean {
 }
 
 describe("promotion adapter — proposal conversion", () => {
+  it("keeps promotion identity stable across deep object-key reordering but not array reordering", () => {
+    const reordered: BranchDiff = {
+      deleted: [...DIFF.deleted],
+      overridden: DIFF.overridden.map((entry) => ({
+        tags: entry.tags,
+        supersedes_id: entry.supersedes_id,
+        provenance: entry.provenance,
+        score: entry.score,
+        content: entry.content,
+        id: entry.id,
+      })),
+      added: DIFF.added.map((entry) => ({
+        tags: entry.tags,
+        provenance: entry.provenance,
+        score: entry.score,
+        content: entry.content,
+        id: entry.id,
+      })),
+    }
+    const identity = { group_id: GROUP, workspace_id: WORKSPACE, branch_id: BRANCH, base_revision: BASE_REVISION }
+
+    expect(promotionTraceId({ ...identity, diff: reordered })).toBe(promotionTraceId({ ...identity, diff: DIFF }))
+    expect(promotionTraceId({ ...identity, diff: { ...DIFF, added: [...DIFF.added].reverse() } }))
+      .not.toBe(promotionTraceId({ ...identity, diff: DIFF }))
+  })
+
+  it("retains pre-canonical identity candidates for historical verification", () => {
+    const traceCandidates = promotionTraceIdCandidates({
+      group_id: GROUP,
+      workspace_id: WORKSPACE,
+      branch_id: BRANCH,
+      base_revision: BASE_REVISION,
+      diff: DIFF,
+    })
+    const hashCandidates = branchSnapshotHashCandidates({
+      group_id: GROUP,
+      workspace_id: WORKSPACE,
+      branch_id: BRANCH,
+      base_revision: BASE_REVISION,
+      diff: DIFF,
+      evidence_refs: EVIDENCE,
+      writer_id: "writer-b1",
+    })
+
+    expect(traceCandidates).toContain("promo-f7f80d2868aa663c")
+    expect(hashCandidates).toContain("e09e9af52e82a142ac29f094a8535599c1df1b31c810986657620fe792a51616")
+  })
   it("converts a branch diff into a pending curator proposal preserving every field", async () => {
     const database = db()
     const result = await createPromotionProposal(input(), database as never)
@@ -329,6 +379,9 @@ describe("promotion adapter — epic gate enforcement (AC-4)", () => {
     expect(result.proposal_id).toBe("proposal-1")
     expect(database.tx).toEqual(["BEGIN", "COMMIT"])
     expect(proposalInserted(database)).toBe(true)
+    const loaderCall = database.query.mock.calls.find(([sql]) =>
+      String(sql).includes("app.load_governed_lane_snapshot_for_review"))
+    expect(loaderCall?.[1]).toEqual([GROUP, WORKSPACE, "agent-lane-brooks", BRANCH, "snapshot-b1"])
   })
 
   it("rolls back the transaction when the transition insert fails", async () => {

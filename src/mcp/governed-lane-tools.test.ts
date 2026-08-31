@@ -119,4 +119,31 @@ describe("governed lane MCP tools", () => {
     expect(review).toHaveBeenCalledWith(expect.objectContaining({ lane_id: lane.id }), expect.objectContaining({ reviewer: "pike", verdict: "approved" }), expect.anything())
     expect(result).toMatchObject({ approved: true, proposal: { canonical_proposal_id: "canonical-1" } })
   })
+
+  it.each([
+    ["undeclared top-level fields", {
+      group_id: "allura-system", lane_id: "agent-lane-woz", base_revision: "base-1", hostile: true,
+    }],
+    ["undeclared nested fields", {
+      group_id: "allura-system", lane_id: "agent-lane-woz", base_revision: "base-1",
+      diff: { added: [{ id: "mem-1", content: "value", score: 0.9, provenance: "manual", tags: [], hostile: true }], overridden: [], deleted: [] },
+      evidence_refs: ["event:1"],
+    }],
+    ["out-of-range scores", {
+      group_id: "allura-system", lane_id: "agent-lane-woz", base_revision: "base-1",
+      diff: { added: [{ id: "mem-1", content: "value", score: 2, provenance: "manual", tags: [] }], overridden: [], deleted: [] },
+      evidence_refs: ["event:1"],
+    }],
+    ["empty evidence references", {
+      group_id: "allura-system", lane_id: "agent-lane-woz", base_revision: "base-1",
+      diff: { added: [{ id: "mem-1", content: "value", score: 0.9, provenance: "manual", tags: [] }], overridden: [], deleted: [] },
+      evidence_refs: [""],
+    }],
+  ])("rejects %s at the governed tool boundary", async (_label, args) => {
+    const operation = "diff" in args
+      ? governedLaneSnapshot(args, principal)
+      : governedLaneOpen(args, principal)
+    await expect(operation).rejects.toThrow()
+    expect(transaction).not.toHaveBeenCalled()
+  })
 })

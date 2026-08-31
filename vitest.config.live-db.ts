@@ -30,6 +30,7 @@ export default defineConfig({
       "src/__tests__/workspace-subgraph-authority.e2e.test.ts",
       "src/__tests__/auto-curator-workspace-authority.e2e.test.ts",
       "src/__tests__/sdk-gateway-integration.e2e.test.ts",
+      "src/__tests__/governed-lane-review-boundary.e2e.test.ts",
       "src/lib/db/tenant-table-inventory.test.ts",
       "src/lib/memory/proposal-semantic-projection.live-db.test.ts",
       "src/lib/graph-adapter/__tests__/adapter-live-db-e2e.test.ts",

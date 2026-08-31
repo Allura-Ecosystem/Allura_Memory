@@ -14,6 +14,7 @@
 
 import { createHash, randomUUID } from "node:crypto"
 import { evaluateGate, type GateContext } from "@/lib/branch-gate/epic-gate"
+import { canonicalJson } from "@/lib/canonical-json"
 import { validateGroupId } from "@/lib/validation/group-id"
 import { requireDiff, requireEvidenceRefs, requireText } from "./validation"
 
@@ -141,16 +142,24 @@ interface Queryable {
   connect?(): Promise<Queryable & { release(): void }>
 }
 
-/** PostgreSQL JSONB does not preserve caller key insertion order. */
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`
-  if (value !== null && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`)
-    return `{${entries.join(",")}}`
+function hash(value: string): string {
+  return createHash("sha256").update(value).digest("hex")
+}
+
+function promotionIdentityInput(input: {
+  group_id: string
+  workspace_id: string
+  branch_id: string
+  base_revision: string
+  diff: BranchDiff
+}): Record<string, unknown> {
+  return {
+    group_id: input.group_id,
+    workspace_id: input.workspace_id,
+    branch_id: input.branch_id,
+    base_revision: input.base_revision,
+    diff: input.diff,
   }
-  return JSON.stringify(value)
 }
 
 /**
@@ -165,14 +174,22 @@ export function promotionTraceId(input: {
   base_revision: string
   diff: BranchDiff
 }): string {
-  const canonical = canonicalJson({
-    group_id: input.group_id,
-    workspace_id: input.workspace_id,
-    branch_id: input.branch_id,
-    base_revision: input.base_revision,
-    diff: input.diff,
-  })
-  return `promo-${createHash("sha256").update(canonical).digest("hex").slice(0, 16)}`
+  return promotionTraceIdCandidates(input)[0]!
+}
+
+/** Current canonical identity plus the pre-canonical JSON.stringify identity. */
+export function promotionTraceIdCandidates(input: {
+  group_id: string
+  workspace_id: string
+  branch_id: string
+  base_revision: string
+  diff: BranchDiff
+}): string[] {
+  const identity = promotionIdentityInput(input)
+  return Array.from(new Set([
+    `promo-${hash(canonicalJson(identity)).slice(0, 16)}`,
+    `promo-${hash(JSON.stringify(identity)).slice(0, 16)}`,
+  ]))
 }
 
 /** Full immutable identity of one materialized branch snapshot. */
@@ -185,7 +202,20 @@ export function branchSnapshotHash(input: {
   evidence_refs: string[]
   writer_id: string
 }): string {
-  return createHash("sha256").update(canonicalJson(input)).digest("hex")
+  return branchSnapshotHashCandidates(input)[0]!
+}
+
+/** Current canonical hash plus the historical insertion-order hash. */
+export function branchSnapshotHashCandidates(input: {
+  group_id: string
+  workspace_id: string
+  branch_id: string
+  base_revision: string
+  diff: BranchDiff
+  evidence_refs: string[]
+  writer_id: string
+}): string[] {
+  return Array.from(new Set([hash(canonicalJson(input)), hash(JSON.stringify(input))]))
 }
 
 /**
@@ -227,8 +257,8 @@ export async function createPromotionProposal(
       `SELECT group_id,workspace_id,status,retention_expires_at,diff_snapshot,
               agent_id,reviewer_ids,snapshot_id,base_revision,snapshot_diff,
               snapshot_evidence_refs,writer_id,snapshot_hash
-       FROM app.load_governed_lane_snapshot_for_review($1,$2,$3,$4)`,
-      [groupId, workspaceId, laneId, snapshotId],
+       FROM app.load_governed_lane_snapshot_for_review($1,$2,$3,$4,$5)`,
+      [groupId, workspaceId, laneId, branchId, snapshotId],
     )
     const registryRow = registryResult.rows[0]
     if (!registryRow) throw new Error(`promotion blocked by gate: branch ${branchId} is not registered`)
@@ -254,11 +284,11 @@ export async function createPromotionProposal(
       JSON.stringify(requireEvidenceRefs(registryRow.snapshot_evidence_refs)) !== JSON.stringify(evidenceRefs)) {
       throw new Error("promotion blocked by gate: persisted branch snapshot identity does not match")
     }
-    const expectedSnapshotHash = branchSnapshotHash({
+    const expectedSnapshotHashes = branchSnapshotHashCandidates({
       group_id: groupId,workspace_id: workspaceId,branch_id: branchId,
       base_revision: baseRevision,diff,evidence_refs: evidenceRefs,writer_id: writerId,
     })
-    if (String(registryRow.snapshot_hash) !== expectedSnapshotHash) {
+    if (!expectedSnapshotHashes.includes(String(registryRow.snapshot_hash))) {
       throw new Error("promotion blocked by gate: persisted branch snapshot hash does not match")
     }
     const gateContext: GateContext = {
@@ -426,11 +456,11 @@ export async function quarantineBranch(
   const groupId = validateGroupId(input.group_id)
   const workspaceId = requireText(input.workspace_id, "workspace_id")
   const laneId = requireText(input.lane_id, "lane_id")
-  const branchId = requireText(input.branch_id, "branch_id")
+  requireText(input.branch_id, "branch_id")
   const baseRevision = requireText(input.base_revision, "base revision")
   const diff = requireDiff(input.diff)
   const reason = requireText(input.reason, "reason")
-  const actorId = requireText(input.actor_id, "actor_id")
+  requireText(input.actor_id, "actor_id")
   const status = input.status
 
   // Migration 53 requires a retention deadline for every non-active row
@@ -441,6 +471,9 @@ export async function quarantineBranch(
   }
   if (input.retention_expires_at && Number.isNaN(new Date(input.retention_expires_at).getTime())) {
     throw new Error(`retention_expires_at is not a valid date: ${input.retention_expires_at}`)
+  }
+  if (input.retention_expires_at && new Date(input.retention_expires_at).getTime() <= Date.now()) {
+    throw new Error("retention_expires_at must be in the future")
   }
 
   const snapshot = JSON.stringify({ base_revision: baseRevision, diff })

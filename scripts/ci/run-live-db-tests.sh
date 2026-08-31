@@ -115,9 +115,9 @@ if [[ "$mode" == "migrate-only" ]]; then
 fi
 
 # Historical upgrades cannot be proven against the fresh-install database,
-# which has already applied 056. Create a second disposable empty database and
+# which has already applied the current migration head. Create a second disposable empty database and
 # let the dedicated test stage the exact committed 055 state before applying
-# the forward-only 056 migration. This sub-gate is mandatory in every live run.
+# every forward-only migration through 057. This sub-gate is mandatory in every live run.
 PGPASSWORD="$POSTGRES_PASSWORD" psql --no-psqlrc --set ON_ERROR_STOP=1 \
   --host "$postgres_host" --port "$postgres_port" --dbname postgres --username "$postgres_user" \
   --command "CREATE DATABASE \"$historical_upgrade_db\";"

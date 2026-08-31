@@ -49,6 +49,8 @@ context:
 - `packages/sdk/package.json` and `packages/sdk/test/dist-consumer.test.ts` -- package files/exports and current direct-dist coverage; replace/extend with pack-install consumer proof.
 - `src/control-plane/genesis-policy-evidence.ts`, `src/control-plane/syscalls.ts`, `src/lib/genesis/proposal-generator.ts` -- signed evidence issuance, verification, and proposal boundary.
 - `src/control-plane/genesis-policy-evidence.test.ts` -- current isolated cryptographic tests; extend with real boundary proof.
+- `docker/postgres-init/57-governed-lane-review-boundary.sql` -- append-only SECURITY DEFINER authority/locking boundary for application-role review loading; binds group, workspace, lane, branch, snapshot, writer, and reviewer authority.
+- `src/__tests__/governed-lane-review-boundary.e2e.test.ts` -- live application-role grant, scope, authority, missing-row, and two-connection serialization proof for migration 057.
 
 ## Tasks & Acceptance
 
@@ -59,6 +61,7 @@ context:
 - [x] SDK packaging tests -- build, pack, install into a clean temporary consumer, and prove ESM/CJS/types plus `client.lanes` through package-name resolution.
 - [x] Genesis tests/fixture -- drive valid, tampered, and cross-tenant signed evidence through `generateProposal → syscall_mutate`; prove caller overrides cannot replace verified claims.
 - [x] Rebuild tracked SDK dist, run all gates, freeze one SHA, independently review it, and push only on a clean verdict.
+- [x] Migration 057 and live boundary tests -- bind the expected branch and authoritative writer inside the locked definer query; prove application-role grants and stale-snapshot race exclusion.
 
 **Acceptance Criteria:**
 - Given an authenticated authorized SDK principal, when it calls lane open, snapshot, and review, then the canonical HTTP gateway advertises and executes each tool and unauthorized principals fail closed.
@@ -70,14 +73,16 @@ context:
 
 ## Spec Change Log
 
+- 2026-08-31 -- Added migration 057 rather than rewriting frozen 056: the application role needs a narrowly granted SECURITY DEFINER loader to lock and validate lane/snapshot authority before proposal creation. Added live concurrency/grant proof, strict canonical JSON compatibility coverage, exact gateway schema assertions, reproducible SDK pack consumers, and the expanded provenance/Genesis negative matrix from final review.
+
 ## Design Notes
 
-Historical upgrade proof must run against its own disposable database because the normal live database has already applied 056. Gateway wiring must import and call the existing governed-lane handlers after principal resolution rather than replicating database/workflow logic.
+Historical upgrade proof must run against its own disposable database because the normal live database has already applied current migrations. It first proves the byte-exact 055→056 boundary, then advances through 057 and verifies the review loader is available. Migration 057 is append-only and must bind the caller's expected branch plus authoritative writer while holding registry/snapshot row locks. Gateway wiring must import and call the existing governed-lane handlers after principal resolution rather than replicating database/workflow logic. Canonical identities use strict UTF-16 code-unit key ordering while retaining legacy identity candidates for historical verification.
 
 ## Verification
 
 **Commands:**
-- `bun run typecheck && bun run build && bun run lint:ci -- --base=95cbb43e` -- expected: no errors.
+- `bun run typecheck && bun run build && bun run lint:ci -- --base=38cadce225a78f4c1ec8f5667344223ef7a04427` -- expected: no errors.
 - `bun run test:unit && bun run test:curator && bun run test:integration` -- expected: all configured suites green.
 - `cd packages/sdk && bun run build && bun run test` -- expected: package, dist, and clean-consumer tests green.
 - `bash scripts/ci/run-live-db-tests.sh --artifact-dir=<fresh>` -- expected: fresh install and mandatory isolated historical upgrade both green, zero failed tests.

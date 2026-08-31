@@ -63,7 +63,7 @@ const describeLive = process.env.RUN_HISTORICAL_UPGRADE_E2E === "true" && proces
   ? describe
   : describe.skip
 
-describeLive("Bumblebee v055 to v056 historical upgrade", () => {
+describeLive("Bumblebee v055 through v057 historical upgrade", () => {
   const owner = ownerPool()
   const app = appPool()
 
@@ -159,6 +159,11 @@ describeLive("Bumblebee v055 to v056 historical upgrade", () => {
       await readFile(path.join(REPOSITORY_ROOT, "docker/postgres-init/56-bumblebee-forward-upgrade.sql"), "utf8"),
       "056-bumblebee-forward-upgrade.sql",
     )
+    await applySql(
+      owner,
+      await readFile(path.join(REPOSITORY_ROOT, "docker/postgres-init/57-governed-lane-review-boundary.sql"), "utf8"),
+      "057-governed-lane-review-boundary.sql",
+    )
   }, 120_000)
 
   afterAll(async () => {
@@ -229,5 +234,35 @@ describeLive("Bumblebee v055 to v056 historical upgrade", () => {
     )
     expect(exposures).toHaveLength(1)
     expect(exposures[0]).toMatchObject({ evidenceState: "legacy_unverified", isTrusted: false })
+  })
+
+  it("applies the complete forward path and exposes the branch-bound v057 loader to allura_app", async () => {
+    const versions = await owner.query(
+      "SELECT version FROM schema_versions WHERE version IN ('056','057') ORDER BY version",
+    )
+    expect(versions.rows).toEqual([{ version: "056" }, { version: "057" }])
+
+    await app.query("BEGIN")
+    try {
+      await app.query("SELECT set_config('app.current_group_id',$1,true)", [GROUP_ID])
+      await app.query("SELECT set_config('app.current_workspace_id',$1,true)", [WORKSPACE_ID])
+      await app.query("SELECT set_config('app.current_principal','woz',true)")
+      await app.query("SELECT * FROM app.open_governed_lane($1,$2,'agent-lane-woz','historical-v057-base')", [GROUP_ID, WORKSPACE_ID])
+      const persisted = await app.query<{ id: string }>(
+        `SELECT id FROM app.persist_governed_lane_snapshot(
+           $1,$2,'agent-lane-woz','historical-v057-base',
+           '{"added":[{"id":"historical-v057","content":"upgrade proof","score":0.9,"provenance":"manual","tags":[]}],"overridden":[],"deleted":[]}'::jsonb,
+           '["historical:v057"]'::jsonb,$3)`,
+        [GROUP_ID, WORKSPACE_ID, sha("historical-v057-snapshot")],
+      )
+      await app.query("SELECT set_config('app.current_principal','pike',true)")
+      const loaded = await app.query(
+        "SELECT writer_id FROM app.load_governed_lane_snapshot_for_review($1,$2,'agent-lane-woz','ram/agent/woz',$3)",
+        [GROUP_ID, WORKSPACE_ID, persisted.rows[0]!.id],
+      )
+      expect(loaded.rows).toEqual([{ writer_id: "woz" }])
+    } finally {
+      await app.query("ROLLBACK")
+    }
   })
 })

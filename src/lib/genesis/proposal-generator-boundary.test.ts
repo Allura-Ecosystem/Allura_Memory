@@ -69,7 +69,9 @@ describe("Genesis signed evidence through generateProposal → syscall_mutate", 
   it("denies tampered signed evidence before mutation", async () => {
     const token = issueGenesisPolicyEvidence(evidenceInput);
     const [payload, signature] = token.split(".");
-    const tampered = `${payload}.${signature!.slice(0, -1)}${signature!.endsWith("a") ? "b" : "a"}`;
+    const decoded = Buffer.from(signature!, "base64url");
+    decoded[Math.floor(decoded.length / 2)]! ^= 0x80;
+    const tampered = `${payload}.${decoded.toString("base64url")}`;
 
     const result = await generateProposal(evidenceInput.groupId, pattern, { policyEvidence: tampered });
     expect(result.recorded).toBe(false);
