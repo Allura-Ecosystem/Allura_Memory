@@ -25,6 +25,97 @@ import { createWorkspace } from "@/lib/workspace/repository";
 const GATEWAY_URL = process.env.ALLURA_MCP_HTTP_URL || "http://localhost:5888";
 const GROUP = "allura-sdk-gateway-e2e";
 
+function parseJsonRpcResponse(contentType: string, body: string): {
+  jsonrpc: string;
+  id: string;
+  result: { tools: unknown[] };
+} {
+  if (contentType.includes("application/json")) return JSON.parse(body);
+  if (!contentType.includes("text/event-stream")) {
+    throw new Error(`unexpected MCP response content type: ${contentType}`);
+  }
+  const messages = body
+    .split(/\r?\n\r?\n/)
+    .map((event) => event.split(/\r?\n/)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trimStart())
+      .join("\n"))
+    .filter(Boolean)
+    .map((data) => JSON.parse(data));
+  const response = messages.find((message) => message.id === "lane-list");
+  if (!response) throw new Error("tools/list JSON-RPC response missing from MCP event stream");
+  return response;
+}
+
+const memoryValueSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    id: { type: "string", minLength: 1 },
+    content: { type: "string" },
+    score: { type: "number", minimum: 0, maximum: 1 },
+    provenance: { type: "string", enum: ["conversation", "manual"] },
+    tags: { type: "array", items: { type: "string" } },
+  },
+  required: ["id", "content", "score", "provenance", "tags"],
+};
+
+const governedToolDefinitions = [
+  {
+    name: "governed_lane_open",
+    description: "Open a repository-authorized governed branch lane using the authenticated principal's workspace and actor identity.",
+    inputSchema: {
+      type: "object", additionalProperties: false,
+      properties: {
+        group_id: { type: "string", minLength: 1 }, lane_id: { type: "string", minLength: 1 },
+        base_revision: { type: "string", minLength: 1 },
+      },
+      required: ["group_id", "lane_id", "base_revision"],
+    },
+  },
+  {
+    name: "governed_lane_snapshot",
+    description: "Persist an immutable governed-lane diff snapshot through repository-owned lane authority.",
+    inputSchema: {
+      type: "object", additionalProperties: false,
+      properties: {
+        group_id: { type: "string", minLength: 1 }, lane_id: { type: "string", minLength: 1 },
+        base_revision: { type: "string", minLength: 1 },
+        diff: {
+          type: "object", additionalProperties: false,
+          properties: {
+            added: { type: "array", items: memoryValueSchema },
+            overridden: { type: "array", items: {
+              ...memoryValueSchema,
+              properties: { ...memoryValueSchema.properties, supersedes_id: { type: "string", minLength: 1 } },
+              required: [...memoryValueSchema.required, "supersedes_id"],
+            } },
+            deleted: { type: "array", items: { type: "string", minLength: 1 } },
+          },
+          required: ["added", "overridden", "deleted"], minProperties: 3,
+        },
+        evidence_refs: { type: "array", minItems: 1, items: { type: "string", minLength: 1 } },
+      },
+      required: ["group_id", "lane_id", "base_revision", "diff", "evidence_refs"],
+    },
+  },
+  {
+    name: "governed_lane_review",
+    description: "Review one authenticated governed-lane snapshot and route approved evidence to the curator proposal queue.",
+    inputSchema: {
+      type: "object", additionalProperties: false,
+      properties: {
+        group_id: { type: "string", minLength: 1 }, lane_id: { type: "string", minLength: 1 },
+        snapshot_id: { type: "string", minLength: 1 },
+        verdict: { type: "string", enum: ["approved", "rejected", "quarantined"] },
+        reason: { type: "string", minLength: 1 },
+        retention_expires_at: { type: "string", format: "date-time" },
+      },
+      required: ["group_id", "lane_id", "snapshot_id", "verdict", "reason"],
+    },
+  },
+] as const;
+
 const shouldRun = process.env.RUN_E2E_TESTS === "true";
 const describeIf = shouldRun ? describe : describe.skip;
 
@@ -125,10 +216,13 @@ describeIf("SDK ↔ canonical gateway integration (AC-2)", () => {
       },
       body: JSON.stringify({ jsonrpc: "2.0", id: "lane-list", method: "tools/list", params: {} }),
     });
+    expect(listed.ok).toBe(true);
     const listedText = await listed.text();
-    for (const tool of ["governed_lane_open", "governed_lane_snapshot", "governed_lane_review"]) {
-      expect(listedText).toContain(`\"name\":\"${tool}\"`);
-    }
+    const listedRpc = parseJsonRpcResponse(listed.headers.get("content-type") ?? "", listedText);
+    expect(listedRpc).toMatchObject({ jsonrpc: "2.0", id: "lane-list" });
+    const governed = listedRpc.result.tools.filter((tool) =>
+      governedToolDefinitions.some(({ name }) => (tool as { name?: string }).name === name));
+    expect(governed).toEqual(governedToolDefinitions);
 
     await expect(writerClient.lanes.open({
       group_id: GROUP,

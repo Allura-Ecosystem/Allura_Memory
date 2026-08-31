@@ -146,6 +146,21 @@ describe("parseNdjsonBatch", () => {
     expect(records.map((r) => r.record_type)).toEqual(["package", "diagnostic"])
   })
 
+  it("preserves an allowlisted finding advisory identity for catalog recomputation", () => {
+    const finding = withValidId({
+      record_type: "finding", schema_version: "0.1.0", scanner_name: "bumblebee", scanner_version: "v0.1.2",
+      run_id: RUN_ID, scan_time: "2026-08-28T23:59:14.725988598Z",
+      endpoint: packageA.endpoint,
+      profile: "baseline", ecosystem: "npm", finding_type: "advisory", catalog_id: "catalog-entry-1",
+      advisory_id: "ADV-1", normalized_name: "left-pad", version: "1.3.0", root_kind: "user_package_root",
+      project_path: "/tmp/scan-target", source_type: "npm-node_modules",
+      source_file: "/tmp/scan-target/node_modules/left-pad/package.json", confidence: "medium",
+    })
+    const summary = withValidId({ ...scanSummary, counts: { npm: 0 }, package_records_emitted: 0, findings_emitted: 1 })
+    const parsed = parseNdjsonBatch([finding, summary].map((record) => JSON.stringify(record)).join("\n"), ctx())
+    expect(parsed.records[0]?.sanitized_payload.advisory_id).toBe("ADV-1")
+  })
+
   it("rejects a blank/empty batch with a stable error", () => {
     expect(() => parseNdjsonBatch("", ctx())).toThrow(BUMBLEBEE_BATCH_ERROR.malformedLine)
     expect(() => parseNdjsonBatch("\n\n", ctx())).toThrow(BUMBLEBEE_BATCH_ERROR.malformedLine)

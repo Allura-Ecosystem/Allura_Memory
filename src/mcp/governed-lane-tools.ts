@@ -1,5 +1,6 @@
 if (typeof window !== "undefined") throw new Error("server-side only")
 
+import { z } from "zod/v4"
 import type { PrincipalContext } from "@/lib/auth/principal-context"
 import type { BranchDiff } from "@/lib/branch/promotion-adapter"
 import { requireDiff, requireEvidenceRefs, requireText } from "@/lib/branch/validation"
@@ -25,6 +26,46 @@ interface ToolArgs {
   retention_expires_at?: unknown
 }
 
+const text = z.string().trim().min(1)
+const memoryValue = z.object({
+  id: text,
+  content: z.string(),
+  score: z.number().min(0).max(1),
+  provenance: z.enum(["conversation", "manual"]),
+  tags: z.array(z.string()),
+}).strict()
+const diffSchema = z.object({
+  added: z.array(memoryValue),
+  overridden: z.array(memoryValue.extend({ supersedes_id: text }).strict()),
+  deleted: z.array(text),
+}).strict().refine((value) => value.added.length + value.overridden.length + value.deleted.length > 0,
+  "diff must contain at least one addition, override, or tombstone")
+const openArgs = z.object({ group_id: text, lane_id: text, base_revision: text }).strict()
+const snapshotArgs = z.object({
+  group_id: text,
+  lane_id: text,
+  base_revision: text,
+  diff: diffSchema,
+  evidence_refs: z.array(text).min(1),
+}).strict()
+const reviewArgs = z.object({
+  group_id: text,
+  lane_id: text,
+  snapshot_id: text,
+  verdict: z.enum(["approved", "rejected", "quarantined"]),
+  reason: text,
+  retention_expires_at: z.string().datetime().optional(),
+}).strict()
+
+function callerArgs(args: ToolArgs): ToolArgs {
+  const { workspace_id: _workspaceId, scope: _scope, curator_id: _curatorId, ...caller } = args as ToolArgs & {
+    workspace_id?: unknown
+    scope?: unknown
+    curator_id?: unknown
+  }
+  return caller
+}
+
 function scope(principal: PrincipalContext, groupId: string) {
   const workspaceId = requireText(principal.workspaceId, "verified principal workspace")
   return {
@@ -41,6 +82,7 @@ function parseVerdict(value: unknown): "approved" | "rejected" | "quarantined" {
 
 /** Authenticated MCP production boundary for opening a durable governed lane. */
 export async function governedLaneOpen(args: ToolArgs, principal: PrincipalContext) {
+  args = openArgs.parse(callerArgs(args))
   const groupId = validateGroupId(requireText(args.group_id, "group_id"))
   const laneId = requireText(args.lane_id, "lane_id")
   const baseRevision = requireText(args.base_revision, "base_revision")
@@ -65,6 +107,7 @@ export async function governedLaneOpen(args: ToolArgs, principal: PrincipalConte
 
 /** Authenticated MCP production boundary for materializing one immutable snapshot. */
 export async function governedLaneSnapshot(args: ToolArgs, principal: PrincipalContext) {
+  args = snapshotArgs.parse(callerArgs(args))
   const groupId = validateGroupId(requireText(args.group_id, "group_id"))
   const laneId = requireText(args.lane_id, "lane_id")
   const baseRevision = requireText(args.base_revision, "base_revision")
@@ -93,6 +136,7 @@ export async function governedLaneSnapshot(args: ToolArgs, principal: PrincipalC
 
 /** Authenticated MCP review boundary that queues approved evidence for curator HITL. */
 export async function governedLaneReview(args: ToolArgs, principal: PrincipalContext) {
+  args = reviewArgs.parse(callerArgs(args))
   const groupId = validateGroupId(requireText(args.group_id, "group_id"))
   const laneId = requireText(args.lane_id, "lane_id")
   const snapshotId = requireText(args.snapshot_id, "snapshot_id")

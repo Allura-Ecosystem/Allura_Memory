@@ -44,6 +44,7 @@ export default defineConfig({
       // Bumblebee operator module's fail-closed/rollback behaviour.
       "src/lib/replay/**/*.test.ts",
       "src/lib/bumblebee/**/*.test.ts",
+      "src/mcp/governed-lane-tools.test.ts",
       // Story 27.3 — governed promotion adapter: proposal conversion,
       // receipts, quarantine, and rollback (pure logic, mocked queryable).
       "src/lib/branch/**/*.test.ts",

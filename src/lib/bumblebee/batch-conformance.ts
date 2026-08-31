@@ -232,6 +232,7 @@ const SANITIZED_FIELDS: ReadonlySet<string> = Object.freeze(new Set([
   "duration_ms",
   "finding_type",
   "catalog_id",
+  "advisory_id",
   "level",
   "message",
   "path",
