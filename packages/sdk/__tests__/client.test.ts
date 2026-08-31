@@ -95,6 +95,47 @@ describe("AlluraClient", () => {
   });
 
   describe("connection management", () => {
+  it("initializes an MCP session before the first tool call and reuses it", async () => {
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "application/json", "mcp-session-id": "session-123" }),
+        json: () => Promise.resolve({ jsonrpc: "2.0", id: 1, result: {} }),
+        text: () => Promise.resolve(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} })),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "text/event-stream" }),
+        json: () => Promise.resolve({
+          jsonrpc: "2.0",
+          id: 2,
+          result: { content: [{ type: "text", text: JSON.stringify({ results: [], count: 0, latency_ms: 0 }) }] },
+        }),
+        text: () => Promise.resolve(`event: message\ndata: ${JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          result: { content: [{ type: "text", text: JSON.stringify({ results: [], count: 0, latency_ms: 0 }) }] },
+        })}\n\n`),
+      });
+    const client = new AlluraClient({
+      baseUrl: "http://localhost:3201",
+      authToken: "test-token",
+      fetch: mockFetch,
+      retries: 0,
+    });
+
+    await client.memory.search({ group_id: "allura-test", query: "session proof" });
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    const initialize = JSON.parse(mockFetch.mock.calls[0][1]?.body as string);
+    expect(initialize.method).toBe("initialize");
+    expect(mockFetch.mock.calls[0][1]?.headers.Accept).toBe("application/json, text/event-stream");
+    expect(mockFetch.mock.calls[1][1]?.headers["mcp-session-id"]).toBe("session-123");
+    expect(mockFetch.mock.calls[1][1]?.headers.Accept).toBe("application/json, text/event-stream");
+  });
+
   it("should connect successfully when server is healthy", async () => {
     const mockFetch = createMockFetch({
       status: "healthy",

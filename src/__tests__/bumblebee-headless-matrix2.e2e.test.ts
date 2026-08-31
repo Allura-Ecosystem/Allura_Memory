@@ -276,7 +276,7 @@ describeLive("headless ingest rejection matrix — filtered ecosystems, stale cl
             ARRAY['npm'],false,NULL,NULL,
             $6,$7,NOW()-INTERVAL '1 second',NOW()-INTERVAL '2 minutes')
            ON CONFLICT (group_id, workspace_id, source_id, source_revision_id, lease_id) DO NOTHING`,
-          [GROUP, WORKSPACE, "2".repeat(64), CRED_ID, "4".repeat(64), STALE_PREFIX, hashBumblebeeToken(STALE_RAW)],
+          [GROUP, WORKSPACE, "2".repeat(64), CRED_ID, "6".repeat(64), STALE_PREFIX, hashBumblebeeToken(STALE_RAW)],
         ),
       )
 

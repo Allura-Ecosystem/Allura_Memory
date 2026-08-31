@@ -27,6 +27,8 @@ import {
 import { config } from "dotenv";
 import { randomUUID } from "crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "http";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import { parse } from "url";
 import { applyCors, corsHeaders, getCorsConfig, isPreflightRequest } from "@/lib/cors/index.js";
 import { collectMetrics, ensureMetricsInitialized, recordHttpRequest } from "@/lib/health/metrics";
@@ -135,6 +137,22 @@ interface PrincipalHolder {
  */
 function auditAuthDecision(event: ReturnType<typeof buildAuthAuditEvent>): void {
   void emitAuthAudit(event);
+}
+
+async function inspectEvidenceArtifacts(): Promise<{ receipts: string[]; artifacts: string[] }> {
+  const list = async (root: "receipts" | "artifacts"): Promise<string[]> => {
+    try {
+      return (await readdir(join(process.cwd(), root), { withFileTypes: true }))
+        .filter((entry) => entry.isFile())
+        .map((entry) => `${root}/${entry.name}`)
+        .sort();
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+  };
+  const [receipts, artifacts] = await Promise.all([list("receipts"), list("artifacts")]);
+  return { receipts, artifacts };
 }
 
 /**
@@ -655,6 +673,11 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["group_id"],
         },
       },
+      {
+        name: "evidence_inspect",
+        description: "List server-local receipt and artifact filenames. Read-only; requires audit:read.",
+        inputSchema: { type: "object", properties: {} },
+      },
     ],
   };
 });
@@ -768,6 +791,9 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case "audit_invariant_check":
         result = await audit_invariant_check(args as unknown as AuditInvariantCheckRequest);
+        break;
+      case "evidence_inspect":
+        result = await inspectEvidenceArtifacts();
         break;
       default:
         return {

@@ -547,6 +547,8 @@ var AlluraClient = class {
   customFetch;
   // State
   state = "disconnected";
+  mcpSessionId;
+  mcpSessionInitialization;
   // Operations
   memory;
   harness;
@@ -633,6 +635,8 @@ var AlluraClient = class {
    */
   async disconnect() {
     this.state = "disconnected";
+    this.mcpSessionId = void 0;
+    this.mcpSessionInitialization = void 0;
   }
   /**
    * Get the current connection state.
@@ -662,7 +666,9 @@ var AlluraClient = class {
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
       try {
         const url = `${this.baseUrl}/mcp`;
-        const headers = buildHeaders(this.authToken);
+        const headers = this.mcpHeaders();
+        await this.initializeMcpSession(fetchFn);
+        headers["mcp-session-id"] = this.mcpSessionId;
         const body = JSON.stringify({
           jsonrpc: "2.0",
           method: "tools/call",
@@ -704,6 +710,50 @@ var AlluraClient = class {
         clearTimeout(timeoutId);
       }
     }, this.retries);
+  }
+  async initializeMcpSession(fetchFn) {
+    if (this.mcpSessionId) return;
+    if (!this.mcpSessionInitialization) {
+      this.mcpSessionInitialization = (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+        try {
+          const response = await fetchFn(`${this.baseUrl}/mcp`, {
+            method: "POST",
+            headers: this.mcpHeaders(),
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              method: "initialize",
+              params: {
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                clientInfo: { name: "@allura/sdk", version: "1.0.0" }
+              },
+              id: createRequestId()
+            }),
+            signal: controller.signal
+          });
+          if (!response.ok) {
+            throw createErrorFromResponse(response.status, await this.parseResponseBody(response));
+          }
+          const sessionId = response.headers.get("mcp-session-id");
+          if (!sessionId) throw new ConnectionError("MCP server did not establish a session");
+          this.mcpSessionId = sessionId;
+          await response.text();
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      })();
+    }
+    try {
+      await this.mcpSessionInitialization;
+    } catch (error) {
+      this.mcpSessionInitialization = void 0;
+      throw error;
+    }
+  }
+  mcpHeaders() {
+    return { ...buildHeaders(this.authToken), Accept: "application/json, text/event-stream" };
   }
   unwrapToolResult(responseBody) {
     const rpc = responseBody;
@@ -747,6 +797,19 @@ var AlluraClient = class {
     if (contentType.includes("application/json")) {
       try {
         return await response.json();
+      } catch {
+        return {};
+      }
+    }
+    if (contentType.includes("text/event-stream")) {
+      const text = await response.text();
+      let lastData;
+      for (const line of text.split("\n")) {
+        if (line.startsWith("data: ")) lastData = line.slice(6);
+      }
+      if (!lastData) return {};
+      try {
+        return JSON.parse(lastData);
       } catch {
         return {};
       }

@@ -1155,6 +1155,8 @@ declare class AlluraClient {
     private readonly retries;
     private readonly customFetch;
     private state;
+    private mcpSessionId;
+    private mcpSessionInitialization;
     readonly memory: MemoryOperations;
     readonly harness: HarnessOperations;
     /** Governed lane operations; workspace/actor scope is derived by the gateway. */
@@ -1198,6 +1200,8 @@ declare class AlluraClient {
      * @internal
      */
     private makeRequest;
+    private initializeMcpSession;
+    private mcpHeaders;
     private unwrapToolResult;
     /**
      * Parse the response body as JSON.

@@ -39,7 +39,7 @@ describeIf("SDK ↔ canonical gateway integration (AC-2)", () => {
         group_id: GROUP,
         workspace_id: ws.workspace_id,
         agent_name: "sdk-e2e",
-        scopes: ["memory:read", "memory:write"],
+        scopes: ["memory:read", "memory:write", "audit:read"],
       })
     ).raw;
 

@@ -68,6 +68,8 @@ export class AlluraClient {
 
   // State
   private state: ClientState = "disconnected";
+  private mcpSessionId: string | undefined;
+  private mcpSessionInitialization: Promise<void> | undefined;
 
   // Operations
   public readonly memory: MemoryOperations;
@@ -168,6 +170,8 @@ export class AlluraClient {
    */
   async disconnect(): Promise<void> {
     this.state = "disconnected";
+    this.mcpSessionId = undefined;
+    this.mcpSessionInitialization = undefined;
   }
 
   /**
@@ -207,7 +211,9 @@ export class AlluraClient {
 
       try {
         const url = `${this.baseUrl}/mcp`;
-        const headers = buildHeaders(this.authToken);
+        const headers = this.mcpHeaders();
+        await this.initializeMcpSession(fetchFn);
+        headers["mcp-session-id"] = this.mcpSessionId!;
 
         const body = JSON.stringify({
           jsonrpc: "2.0",
@@ -254,6 +260,52 @@ export class AlluraClient {
         clearTimeout(timeoutId);
       }
     }, this.retries);
+  }
+
+  private async initializeMcpSession(fetchFn: typeof globalThis.fetch): Promise<void> {
+    if (this.mcpSessionId) return;
+    if (!this.mcpSessionInitialization) {
+      this.mcpSessionInitialization = (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+        try {
+          const response = await fetchFn(`${this.baseUrl}/mcp`, {
+            method: "POST",
+            headers: this.mcpHeaders(),
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              method: "initialize",
+              params: {
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                clientInfo: { name: "@allura/sdk", version: "1.0.0" },
+              },
+              id: createRequestId(),
+            }),
+            signal: controller.signal,
+          });
+          if (!response.ok) {
+            throw createErrorFromResponse(response.status, await this.parseResponseBody(response));
+          }
+          const sessionId = response.headers.get("mcp-session-id");
+          if (!sessionId) throw new ConnectionError("MCP server did not establish a session");
+          this.mcpSessionId = sessionId;
+          await response.text();
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      })();
+    }
+    try {
+      await this.mcpSessionInitialization;
+    } catch (error) {
+      this.mcpSessionInitialization = undefined;
+      throw error;
+    }
+  }
+
+  private mcpHeaders(): Record<string, string> {
+    return { ...buildHeaders(this.authToken), Accept: "application/json, text/event-stream" };
   }
 
   private unwrapToolResult(responseBody: unknown): unknown {
@@ -312,6 +364,22 @@ export class AlluraClient {
         return await response.json();
       } catch {
         // Empty body or malformed JSON
+        return {};
+      }
+    }
+
+    // Streamable HTTP tool responses use server-sent events. Extract the last
+    // JSON-RPC envelope rather than treating the SSE frame as plain JSON.
+    if (contentType.includes("text/event-stream")) {
+      const text = await response.text();
+      let lastData: string | undefined;
+      for (const line of text.split("\n")) {
+        if (line.startsWith("data: ")) lastData = line.slice(6);
+      }
+      if (!lastData) return {};
+      try {
+        return JSON.parse(lastData);
+      } catch {
         return {};
       }
     }
