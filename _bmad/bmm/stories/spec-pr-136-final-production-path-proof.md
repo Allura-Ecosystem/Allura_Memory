@@ -2,7 +2,7 @@
 title: 'PR 136 Final Production-Path Proof'
 type: 'bugfix'
 created: '2026-08-31'
-status: 'in-progress'
+status: 'in-review'
 review_loop_iteration: 0
 baseline_commit: '38cadce225a78f4c1ec8f5667344223ef7a04427'
 context:
