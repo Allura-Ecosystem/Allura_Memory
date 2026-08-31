@@ -4,9 +4,9 @@ import { Pool, type PoolClient } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import {
+  type BranchDiff,
   branchSnapshotHash,
   createPromotionProposal,
-  type BranchDiff,
 } from "@/lib/branch/promotion-adapter"
 
 const GROUP = "allura-lane-review-boundary"
