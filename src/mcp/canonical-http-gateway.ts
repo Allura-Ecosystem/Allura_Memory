@@ -268,6 +268,12 @@ import {
   audit_query_events,
 } from "./audit-tools.js";
 
+import {
+  governedLaneOpen,
+  governedLaneReview,
+  governedLaneSnapshot,
+} from "./governed-lane-tools.js";
+
 import type {
   AuditAgentActivityRequest,
   AuditHealthReportRequest,
@@ -678,6 +684,58 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
         description: "List server-local receipt and artifact filenames. Read-only; requires audit:read.",
         inputSchema: { type: "object", properties: {} },
       },
+      {
+        name: "governed_lane_open",
+        description: "Open a repository-authorized governed branch lane using the authenticated principal's workspace and actor identity.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string" },
+            lane_id: { type: "string" },
+            base_revision: { type: "string" },
+          },
+          required: ["group_id", "lane_id", "base_revision"],
+        },
+      },
+      {
+        name: "governed_lane_snapshot",
+        description: "Persist an immutable governed-lane diff snapshot through repository-owned lane authority.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string" },
+            lane_id: { type: "string" },
+            base_revision: { type: "string" },
+            diff: {
+              type: "object",
+              properties: {
+                added: { type: "array", items: { type: "object" } },
+                overridden: { type: "array", items: { type: "object" } },
+                deleted: { type: "array", items: { type: "string" } },
+              },
+              required: ["added", "overridden", "deleted"],
+            },
+            evidence_refs: { type: "array", items: { type: "string" } },
+          },
+          required: ["group_id", "lane_id", "base_revision", "diff", "evidence_refs"],
+        },
+      },
+      {
+        name: "governed_lane_review",
+        description: "Review one authenticated governed-lane snapshot and route approved evidence to the curator proposal queue.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "string" },
+            lane_id: { type: "string" },
+            snapshot_id: { type: "string" },
+            verdict: { type: "string", enum: ["approved", "rejected", "quarantined"] },
+            reason: { type: "string" },
+            retention_expires_at: { type: "string", format: "date-time" },
+          },
+          required: ["group_id", "lane_id", "snapshot_id", "verdict", "reason"],
+        },
+      },
     ],
   };
 });
@@ -794,6 +852,15 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case "evidence_inspect":
         result = await inspectEvidenceArtifacts();
+        break;
+      case "governed_lane_open":
+        result = await governedLaneOpen(args, principal!);
+        break;
+      case "governed_lane_snapshot":
+        result = await governedLaneSnapshot(args, principal!);
+        break;
+      case "governed_lane_review":
+        result = await governedLaneReview(args, principal!);
         break;
       default:
         return {

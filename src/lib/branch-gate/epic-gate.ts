@@ -198,7 +198,20 @@ export function checkTamper(context: GateContext): CheckResult {
   if (recorded.base_revision !== baseRevision) {
     return fail(`tamper rejected: base_revision was altered after creation (recorded ${recorded.base_revision}, now ${baseRevision})`)
   }
-  if (JSON.stringify(recorded.diff) !== JSON.stringify(diff)) {
+  // PostgreSQL JSONB normalizes object key order. Compare the materialized
+  // structure canonically so a round trip through the authority store does
+  // not look like tampering, while preserving array order and exact values.
+  const canonicalJson = (value: unknown): string => {
+    if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`
+    if (value !== null && typeof value === "object") {
+      return `{${Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`)
+        .join(",")}}`
+    }
+    return JSON.stringify(value)
+  }
+  if (canonicalJson(recorded.diff) !== canonicalJson(diff)) {
     return fail("tamper rejected: diff was altered after creation")
   }
   if (JSON.stringify(recorded.evidence_refs) !== JSON.stringify(evidenceRefs)) {

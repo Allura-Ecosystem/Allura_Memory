@@ -76,6 +76,21 @@ function memoryDb() {
   const query = vi.fn(async (sql: string, params: unknown[] = []) => {
     sqlLog.push(String(sql))
     const text = String(sql)
+    if (text.includes("app.open_governed_lane")) {
+      const lane = [...TEAM_RAM_LANES, ...DURHAM_CONCEPTS].find((candidate) => candidate.id === String(params[2]))
+      if (!lane) return { rows: [] }
+      const existing = registry.get(lane.branchId)
+      if (!existing) {
+        registry.set(lane.branchId, {
+          group_id: String(params[0]), workspace_id: String(params[1]), branch_id: lane.branchId,
+          status: "active", agent_id: lane.writer, task_id: "taskId" in lane ? (lane.taskId ?? null) : null,
+          retention_expires_at: null, diff_snapshot: null, reviewer_ids: [...lane.reviewers], lane_id: lane.id,
+        })
+      }
+      const row = registry.get(lane.branchId)!
+      return { rows: [{ lane_id: lane.id, branch_id: lane.branchId, writer_id: row.agent_id,
+        reviewer_ids: row.reviewer_ids, status: row.status }] }
+    }
     if (text.includes("app.persist_governed_lane_snapshot")) {
       const lane = [...TEAM_RAM_LANES, ...DURHAM_CONCEPTS].find((candidate) => candidate.id === String(params[2]))
       const row = lane ? registry.get(lane.branchId) : undefined
@@ -111,8 +126,10 @@ function memoryDb() {
       row.status = String(params[3])
       return { rows: [{ branch_id: row.branch_id, status: row.status }] }
     }
-    if (text.includes("JOIN governed_lane_authority") && text.includes("snapshot.id=$5")) {
-      const snapshot = snapshots.get(String(params[4])) ?? snapshots.values().next().value
+    if (text.includes("app.load_governed_lane_snapshot_for_review") ||
+        (text.includes("JOIN governed_lane_authority") && text.includes("snapshot.id=$5"))) {
+      const snapshotIndex = text.includes("app.load_governed_lane_snapshot_for_review") ? 3 : 4
+      const snapshot = snapshots.get(String(params[snapshotIndex])) ?? snapshots.values().next().value
       const row = snapshot ? registry.get(snapshot.branch_id) : undefined
       return {
         rows:
@@ -470,7 +487,8 @@ describe("no duplicate workflow-status ledger", () => {
         })
         .filter((name): name is string => name !== null)
     )
-    expect([...tables].sort()).toEqual(["approval_transitions", "branch_registry", "canonical_proposals", "events", "promotion_proposals"])
+    expect([...tables].sort()).toEqual(["approval_transitions", "canonical_proposals", "events", "promotion_proposals"])
+    expect(db.sqlLog.some((sql) => sql.includes("app.open_governed_lane"))).toBe(true)
     expect(db.sqlLog.some((sql) => sql.includes("app.persist_governed_lane_snapshot"))).toBe(true)
   })
 

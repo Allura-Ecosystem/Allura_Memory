@@ -142,7 +142,7 @@ function db(options: DbOptions = {}) {
     if (text.includes("INSERT INTO events")) return { rows: [{ id: "event-1" }] }
     if (text.includes("INSERT INTO canonical_proposals"))
       return { rows: [{ id: "canonical-proposal-1", status: "pending" }] }
-    if (text.includes("FROM branch_registry")) {
+    if (text.includes("app.load_governed_lane_snapshot_for_review") || text.includes("FROM branch_registry")) {
       const row = options.registryRow === undefined ? passingRegistryRow() : options.registryRow
       return { rows: row ? [row] : [] }
     }

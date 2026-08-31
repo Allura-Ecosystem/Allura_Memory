@@ -24,8 +24,22 @@ migration_log="${artifact_dir}/migration.log"
 test_report="${artifact_dir}/live-db-tests.json"
 server_version_report="${artifact_dir}/postgres-server-version.txt"
 gateway_log="${artifact_dir}/gateway.log"
+historical_upgrade_report="${artifact_dir}/historical-upgrade-tests.json"
 gateway_port="${ALLURA_MCP_HTTP_PORT:-5888}"
 gateway_token_secret="${ALLURA_MCP_TOKEN_SECRET:-sdk-gateway-e2e-secret-key-0001}"
+historical_upgrade_db="allura_historical_upgrade_$$"
+gateway_pid=""
+
+cleanup() {
+  if [[ -n "$gateway_pid" ]]; then
+    kill "$gateway_pid" 2>/dev/null || true
+    wait "$gateway_pid" 2>/dev/null || true
+  fi
+  PGPASSWORD="$POSTGRES_PASSWORD" psql --no-psqlrc --set ON_ERROR_STOP=1 \
+    --host "$postgres_host" --port "$postgres_port" --dbname postgres --username "$postgres_user" \
+    --command "DROP DATABASE IF EXISTS \"$historical_upgrade_db\" WITH (FORCE);" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
 
 mkdir -p "$artifact_dir"
 exec > >(tee "$migration_log") 2>&1
@@ -100,15 +114,30 @@ if [[ "$mode" == "migrate-only" ]]; then
   exit 0
 fi
 
+# Historical upgrades cannot be proven against the fresh-install database,
+# which has already applied 056. Create a second disposable empty database and
+# let the dedicated test stage the exact committed 055 state before applying
+# the forward-only 056 migration. This sub-gate is mandatory in every live run.
+PGPASSWORD="$POSTGRES_PASSWORD" psql --no-psqlrc --set ON_ERROR_STOP=1 \
+  --host "$postgres_host" --port "$postgres_port" --dbname postgres --username "$postgres_user" \
+  --command "CREATE DATABASE \"$historical_upgrade_db\";"
+
+RUN_HISTORICAL_UPGRADE_E2E=true \
+POSTGRES_DB="$historical_upgrade_db" \
+POSTGRES_APP_PASSWORD="$POSTGRES_APP_PASSWORD" bun vitest run \
+  --config vitest.config.live-db.ts \
+  src/__tests__/bumblebee-historical-upgrade.e2e.test.ts \
+  --reporter=json \
+  --outputFile="$historical_upgrade_report"
+
+PGPASSWORD="$POSTGRES_PASSWORD" psql --no-psqlrc --set ON_ERROR_STOP=1 \
+  --host "$postgres_host" --port "$postgres_port" --dbname postgres --username "$postgres_user" \
+  --command "DROP DATABASE \"$historical_upgrade_db\" WITH (FORCE);"
+
 ALLURA_MCP_HTTP_PORT="$gateway_port" \
 ALLURA_MCP_TOKEN_SECRET="$gateway_token_secret" \
   bun run mcp:http >"$gateway_log" 2>&1 &
 gateway_pid=$!
-cleanup() {
-  kill "$gateway_pid" 2>/dev/null || true
-  wait "$gateway_pid" 2>/dev/null || true
-}
-trap cleanup EXIT
 
 gateway_ready=false
 for _attempt in $(seq 1 90); do

@@ -30,6 +30,8 @@ const describeIf = shouldRun ? describe : describe.skip;
 
 describeIf("SDK ↔ canonical gateway integration (AC-2)", () => {
   let client: AlluraClient;
+  let writerClient: AlluraClient;
+  let reviewerClient: AlluraClient;
   let rawToken: string;
 
   beforeAll(async () => {
@@ -48,10 +50,25 @@ describeIf("SDK ↔ canonical gateway integration (AC-2)", () => {
       authToken: rawToken,
       retries: 0,
     });
+
+    const writerToken = await createToken({
+      group_id: GROUP,
+      workspace_id: ws.workspace_id,
+      agent_name: "woz",
+      scopes: ["memory:write"],
+    });
+    const reviewerToken = await createToken({
+      group_id: GROUP,
+      workspace_id: ws.workspace_id,
+      agent_name: "pike",
+      scopes: ["review:approve"],
+    });
+    writerClient = new AlluraClient({ baseUrl: GATEWAY_URL, authToken: writerToken.raw, retries: 0 });
+    reviewerClient = new AlluraClient({ baseUrl: GATEWAY_URL, authToken: reviewerToken.raw, retries: 0 });
   });
 
   afterAll(async () => {
-    await client.disconnect();
+    await Promise.all([client.disconnect(), writerClient.disconnect(), reviewerClient.disconnect()]);
     await closePool();
   });
 
@@ -77,5 +94,75 @@ describeIf("SDK ↔ canonical gateway integration (AC-2)", () => {
     const result = await client.harness.inspect();
     expect(Array.isArray(result.receipts)).toBe(true);
     expect(Array.isArray(result.artifacts)).toBe(true);
+  });
+
+  it("advertises and executes governed lane open, snapshot, and review through authenticated SDK principals", async () => {
+    const init = await fetch(`${GATEWAY_URL}/mcp`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${rawToken}`,
+        Accept: "application/json, text/event-stream",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: "lane-list-init",
+        method: "initialize",
+        params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "lane-list-e2e", version: "1" } },
+      }),
+    });
+    expect(init.ok).toBe(true);
+    const sessionId = init.headers.get("mcp-session-id");
+    expect(sessionId).toBeTruthy();
+    await init.text();
+    const listed = await fetch(`${GATEWAY_URL}/mcp`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${rawToken}`,
+        Accept: "application/json, text/event-stream",
+        "Content-Type": "application/json",
+        "mcp-session-id": sessionId!,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: "lane-list", method: "tools/list", params: {} }),
+    });
+    const listedText = await listed.text();
+    for (const tool of ["governed_lane_open", "governed_lane_snapshot", "governed_lane_review"]) {
+      expect(listedText).toContain(`\"name\":\"${tool}\"`);
+    }
+
+    await expect(writerClient.lanes.open({
+      group_id: GROUP,
+      lane_id: "agent-lane-woz",
+      base_revision: "sdk-gateway-base-1",
+    })).resolves.toMatchObject({ lane_id: "agent-lane-woz", writer_id: "woz", status: "active" });
+
+    const snapshot = await writerClient.lanes.snapshot({
+      group_id: GROUP,
+      lane_id: "agent-lane-woz",
+      base_revision: "sdk-gateway-base-1",
+      diff: {
+        added: [{ id: "sdk-gateway-memory-1", content: "authenticated production path", score: 0.9, provenance: "manual", tags: ["e2e"] }],
+        overridden: [],
+        deleted: [],
+      },
+      evidence_refs: ["sdk-gateway:e2e"],
+    });
+    expect(snapshot).toMatchObject({ lane_id: "agent-lane-woz", status: "active" });
+
+    await expect(reviewerClient.lanes.review({
+      group_id: GROUP,
+      lane_id: "agent-lane-woz",
+      snapshot_id: snapshot.snapshot_id,
+      verdict: "approved",
+      reason: "authenticated SDK production-path proof",
+    })).resolves.toMatchObject({ approved: true });
+
+    await expect(client.lanes.review({
+      group_id: GROUP,
+      lane_id: "agent-lane-woz",
+      snapshot_id: snapshot.snapshot_id,
+      verdict: "approved",
+      reason: "unauthorized reviewer must fail",
+    })).rejects.toThrow();
   });
 });

@@ -102,11 +102,6 @@ interface Queryable {
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>
 }
 
-interface RegistryRow {
-  branch_id: string
-  status: string
-  agent_id: string | null
-}
 
 /**
  * Open a lane branch and record sole-writer ownership. Fails closed:
@@ -130,30 +125,26 @@ export async function openLane(
     assertDurhamManifestsComplete(manifests)
   }
 
-  const existing = await db.query(
-    `SELECT branch_id, status, agent_id FROM branch_registry
-     WHERE group_id = $1 AND workspace_id = $2 AND branch_id = $3`,
-    [groupId, workspaceId, branchId],
+  // Production registry writes are available only through the narrow 054
+  // SECURITY DEFINER boundary. It re-resolves repository-owned lane authority
+  // and binds the writer to app.current_principal; the app role deliberately
+  // has no direct INSERT/UPDATE privilege on branch_registry.
+  const opened = await db.query(
+    `SELECT lane_id,branch_id,writer_id,reviewer_ids,status
+     FROM app.open_governed_lane($1,$2,$3,$4)`,
+    [groupId, workspaceId, lane.id, baseRevision],
   )
-  const row = existing.rows[0] as unknown as RegistryRow | undefined
-  if (row) {
-    if (row.status === "quarantined") {
-      throw new Error(`lane ${branchId} is quarantined and cannot be reopened`)
-    }
-    if (row.status !== "active") {
-      throw new Error(`lane ${branchId} is ${row.status} and cannot be opened for work`)
-    }
-    if (row.agent_id !== actorId) {
-      throw new SoleWriterViolation(branchId, row.agent_id ?? "unknown", actorId)
-    }
-  } else {
-    await db.query(
-      `INSERT INTO branch_registry (
-         group_id, workspace_id, branch_id, task_id, agent_id,
-         base_snapshot_id, branch_revision, status, created_by
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', $8)`,
-      [groupId, workspaceId, branchId, "taskId" in lane ? (lane.taskId ?? null) : null, actorId, baseRevision, baseRevision, actorId],
-    )
+  const row = opened.rows[0]
+  if (row?.writer_id !== actorId) {
+    throw new SoleWriterViolation(branchId, typeof row?.writer_id === "string" ? row.writer_id : "unknown", actorId)
+  }
+  if (row && row.status !== "active") {
+    throw new Error(`lane ${branchId} is ${String(row.status)} and cannot be opened for work`)
+  }
+  if (!row || row.lane_id !== lane.id || row.branch_id !== branchId ||
+      row.status !== "active" ||
+      JSON.stringify(row.reviewer_ids) !== JSON.stringify(lane.reviewers)) {
+    throw new Error("governed lane authority did not open the requested lane")
   }
 
   return {
@@ -196,7 +187,7 @@ export async function runLaneWork(
   let snapshotId = `local-${snapshotHash.slice(0, 16)}`
   if (db) {
     const stored = await db.query(
-      `SELECT snapshot_id,snapshot_hash,base_revision
+      `SELECT id AS snapshot_id,snapshot_hash,base_revision
        FROM app.persist_governed_lane_snapshot($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7)`,
       [session.group_id, session.workspace_id, session.lane_id, session.base_revision,
         JSON.stringify(diff), JSON.stringify(evidenceRefs), snapshotHash],

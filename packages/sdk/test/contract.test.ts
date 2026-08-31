@@ -24,10 +24,20 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 function makeClient(fetchImpl: typeof fetch): AlluraClient {
+  const sessionAwareFetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const request = init?.body ? JSON.parse(String(init.body)) as { method?: string } : {};
+    if (request.method === "initialize") {
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: "init", result: {} }), {
+        status: 200,
+        headers: { "content-type": "application/json", "mcp-session-id": "contract-test-session" },
+      });
+    }
+    return fetchImpl(url, init);
+  };
   return new AlluraClient({
     baseUrl: "http://localhost:3201",
     authToken: "test-token",
-    fetch: fetchImpl,
+    fetch: sessionAwareFetch as typeof fetch,
     retries: 0,
   });
 }

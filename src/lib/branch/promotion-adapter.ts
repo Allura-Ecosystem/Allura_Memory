@@ -141,6 +141,18 @@ interface Queryable {
   connect?(): Promise<Queryable & { release(): void }>
 }
 
+/** PostgreSQL JSONB does not preserve caller key insertion order. */
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`
+  if (value !== null && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`)
+    return `{${entries.join(",")}}`
+  }
+  return JSON.stringify(value)
+}
+
 /**
  * Deterministic trace identity for a promotion: same branch, base, and diff
  * always produce the same trace id, so receipts and proposals are replayable
@@ -153,7 +165,7 @@ export function promotionTraceId(input: {
   base_revision: string
   diff: BranchDiff
 }): string {
-  const canonical = JSON.stringify({
+  const canonical = canonicalJson({
     group_id: input.group_id,
     workspace_id: input.workspace_id,
     branch_id: input.branch_id,
@@ -173,7 +185,7 @@ export function branchSnapshotHash(input: {
   evidence_refs: string[]
   writer_id: string
 }): string {
-  return createHash("sha256").update(JSON.stringify(input)).digest("hex")
+  return createHash("sha256").update(canonicalJson(input)).digest("hex")
 }
 
 /**
@@ -212,28 +224,11 @@ export async function createPromotionProposal(
     // evaluation. Lifecycle writers lock the same registry row, so a passing
     // verdict cannot race a quarantine/expiry transition into the queue.
     const registryResult = await transaction.query(
-      `SELECT registry.group_id,registry.workspace_id,registry.status,
-              registry.retention_expires_at,registry.diff_snapshot,
-              authority.writer_id AS agent_id,
-              authority.reviewer_ids,
-              snapshot.id AS snapshot_id,snapshot.base_revision,
-              snapshot.diff AS snapshot_diff,snapshot.evidence_refs AS snapshot_evidence_refs,
-              snapshot.writer_id,snapshot.snapshot_hash
-       FROM branch_registry registry
-       JOIN governed_lane_authority authority
-         ON authority.lane_id=registry.lane_id
-        AND authority.branch_id=registry.branch_id
-        AND authority.writer_id=registry.agent_id
-        AND authority.reviewer_ids=registry.reviewer_ids
-       JOIN branch_snapshots snapshot
-         ON snapshot.group_id=registry.group_id
-        AND snapshot.workspace_id=registry.workspace_id
-        AND snapshot.branch_id=registry.branch_id
-        AND snapshot.id=$5
-       WHERE registry.group_id=$1 AND registry.workspace_id=$2
-         AND registry.branch_id=$3 AND registry.lane_id=$4
-       FOR UPDATE OF registry,snapshot`,
-      [groupId, workspaceId, branchId, laneId, snapshotId],
+      `SELECT group_id,workspace_id,status,retention_expires_at,diff_snapshot,
+              agent_id,reviewer_ids,snapshot_id,base_revision,snapshot_diff,
+              snapshot_evidence_refs,writer_id,snapshot_hash
+       FROM app.load_governed_lane_snapshot_for_review($1,$2,$3,$4)`,
+      [groupId, workspaceId, laneId, snapshotId],
     )
     const registryRow = registryResult.rows[0]
     if (!registryRow) throw new Error(`promotion blocked by gate: branch ${branchId} is not registered`)
