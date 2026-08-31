@@ -48,6 +48,10 @@ const ALLOWLIST = new Set([
   "src/lib/git/exec.ts",
   // The scanner's own doc-comment examples are not real invocations.
   "scripts/validate-git-exec-choke-point.ts",
+  // Isolated test fixture: creates a temporary repository so the docs guard can
+  // validate internal-link behavior. gitExec intentionally rejects this before
+  // a worktree exists, so this setup-only call cannot route through the wrapper.
+  "src/__tests__/docs-backend-residue-guard.test.ts",
 ]);
 
 // ── Bypass Patterns ───────────────────────────────────────────────────────────
