@@ -1,9 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const packageRoot = process.cwd();
+const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const esm = join(packageRoot, "dist", "index.js");
 const cjs = join(packageRoot, "dist", "index.cjs");
 

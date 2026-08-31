@@ -1,9 +1,9 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
+import type { ProjectManifest, SourceOfTruthRead } from "./policy";
 import {
   getControlPlaneSecretKey,
 } from "./proof";
-import type { ProjectManifest, SourceOfTruthRead } from "./policy";
 
 const EVIDENCE_TTL_MS = 5 * 60 * 1000;
 

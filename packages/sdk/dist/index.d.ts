@@ -1062,6 +1062,63 @@ declare class HarnessOperations {
     inspect(params?: EvidenceInspectParams): Promise<EvidenceInspectResponse>;
 }
 
+/** Typed SDK operations for the authenticated governed-lane MCP workflow. */
+
+interface LaneDiff {
+    added: Array<Record<string, unknown>>;
+    overridden: Array<Record<string, unknown>>;
+    deleted: string[];
+}
+interface LaneOpenParams {
+    group_id: string;
+    lane_id: string;
+    base_revision: string;
+}
+interface LaneSnapshotParams extends LaneOpenParams {
+    diff: LaneDiff;
+    evidence_refs: string[];
+}
+interface LaneReviewParams {
+    group_id: string;
+    lane_id: string;
+    snapshot_id: string;
+    verdict: "approved" | "rejected" | "quarantined";
+    reason: string;
+    retention_expires_at?: string;
+}
+interface LaneOpenResponse {
+    lane_id: string;
+    branch_id: string;
+    writer_id: string;
+    reviewer_ids: string[];
+    base_revision: string;
+    status: "active";
+}
+interface LaneSnapshotResponse {
+    lane_id: string;
+    branch_id: string;
+    snapshot_id: string;
+    snapshot_hash: string;
+    status: "active";
+}
+/** Gateway result is intentionally opaque because approval creates a policy-owned proposal. */
+type LaneReviewResponse = Record<string, unknown>;
+/**
+ * Governed-lane operations use the same authenticated MCP tools/call transport
+ * as memory and harness operations. Authority remains wholly gateway-derived.
+ */
+declare class LaneOperations {
+    private readonly request;
+    constructor(request: RequestFn);
+    /**
+     * group_id is only a resource selector. Workspace and actor authority are
+     * derived by the authenticated gateway principal, never from this payload.
+     */
+    open(params: LaneOpenParams): Promise<LaneOpenResponse>;
+    snapshot(params: LaneSnapshotParams): Promise<LaneSnapshotResponse>;
+    review(params: LaneReviewParams): Promise<LaneReviewResponse>;
+}
+
 /**
  * @allura/sdk — AlluraClient
  *
@@ -1100,6 +1157,8 @@ declare class AlluraClient {
     private state;
     readonly memory: MemoryOperations;
     readonly harness: HarnessOperations;
+    /** Governed lane operations; workspace/actor scope is derived by the gateway. */
+    readonly lanes: LaneOperations;
     constructor(config: AlluraClientConfig);
     /**
      * Verify connectivity to the Allura Memory server.
@@ -1325,4 +1384,4 @@ declare function buildHeaders(authToken?: string, contentType?: string): Record<
  */
 declare function normalizeBaseUrl(url: string): string;
 
-export { AlluraClient, type AlluraClientConfig, AlluraError, AuthenticationError, type ConfidenceScore, ConfidenceScoreSchema, ConnectionError, DEFAULT_RETRIES, DEFAULT_TIMEOUT, type EvalRunParams, type EvalRunResponse, type EvidenceInspectParams, type EvidenceInspectResponse, type GroupId, GroupIdSchema, HarnessOperations, type HealthResponse, HealthResponseSchema, type MemoryAddParams, type MemoryAddResponse, MemoryAddResponseSchema, type MemoryContent, type MemoryDeleteParams, type MemoryDeleteResponse, MemoryDeleteResponseSchema, type MemoryGetParams, type MemoryGetResponse, MemoryGetResponseSchema, type MemoryId, MemoryIdSchema, type MemoryListParams, type MemoryListResponse, MemoryListResponseSchema, MemoryOperations, type MemoryProvenance, type MemoryResponseMeta, type MemoryRetrievalStore, type MemorySearchParams, type MemorySearchResponse, MemorySearchResponseSchema, type MemorySearchResult, type MemorySortOrder, type MemoryStatus, NotFoundError, type PromotionMode, RateLimitError, type RequestFn, RetryExhaustedError, type ScenarioReplayParams, type ScenarioReplayResponse, type ScenarioRunParams, type ScenarioRunResponse, ServerError, type StorageLocation, type UserId, ValidationError, buildHeaders, calculateBackoff, createAuthHeader, createErrorFromResponse, isRetryable, normalizeBaseUrl, requireAuthToken, resolveAuthToken, validateGroupId, withRetry };
+export { AlluraClient, type AlluraClientConfig, AlluraError, AuthenticationError, type ConfidenceScore, ConfidenceScoreSchema, ConnectionError, DEFAULT_RETRIES, DEFAULT_TIMEOUT, type EvalRunParams, type EvalRunResponse, type EvidenceInspectParams, type EvidenceInspectResponse, type GroupId, GroupIdSchema, HarnessOperations, type HealthResponse, HealthResponseSchema, type LaneOpenParams, type LaneOpenResponse, LaneOperations, type LaneReviewParams, type LaneReviewResponse, type LaneSnapshotParams, type LaneSnapshotResponse, type MemoryAddParams, type MemoryAddResponse, MemoryAddResponseSchema, type MemoryContent, type MemoryDeleteParams, type MemoryDeleteResponse, MemoryDeleteResponseSchema, type MemoryGetParams, type MemoryGetResponse, MemoryGetResponseSchema, type MemoryId, MemoryIdSchema, type MemoryListParams, type MemoryListResponse, MemoryListResponseSchema, MemoryOperations, type MemoryProvenance, type MemoryResponseMeta, type MemoryRetrievalStore, type MemorySearchParams, type MemorySearchResponse, MemorySearchResponseSchema, type MemorySearchResult, type MemorySortOrder, type MemoryStatus, NotFoundError, type PromotionMode, RateLimitError, type RequestFn, RetryExhaustedError, type ScenarioReplayParams, type ScenarioReplayResponse, type ScenarioRunParams, type ScenarioRunResponse, ServerError, type StorageLocation, type UserId, ValidationError, buildHeaders, calculateBackoff, createAuthHeader, createErrorFromResponse, isRetryable, normalizeBaseUrl, requireAuthToken, resolveAuthToken, validateGroupId, withRetry };

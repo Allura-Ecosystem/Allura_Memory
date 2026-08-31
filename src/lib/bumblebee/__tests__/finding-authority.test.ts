@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   buildEvidenceJunctions,
+  type CatalogEntryAuthority,
   type FindingRecord,
   type PackageRecord,
   recomputeExposures,
@@ -25,11 +26,20 @@ const finding: FindingRecord = {
   advisory_id: "GHSA-xxxx",
 }
 
+const catalogEntry: CatalogEntryAuthority = {
+  catalog_entry_id: "catalog-lodash-cve-2021-23337",
+  ecosystem: "npm",
+  normalized_name: "lodash",
+  finding_type: "vulnerability",
+  advisory_id: "GHSA-xxxx",
+  affected_versions: ["4.17.21"],
+}
+
 // ── recomputeExposures ────────────────────────────────────────────────────
 
 describe("recomputeExposures", () => {
   it("marks a finding trusted when a matching package exists and catalogDigest is present", () => {
-    const result = recomputeExposures([finding], [pkg], "sha256:abc123")
+    const result = recomputeExposures([finding], [pkg], "sha256:abc123", [catalogEntry])
 
     expect(result).toHaveLength(1)
     expect(result[0].is_trusted).toBe(true)
@@ -79,7 +89,7 @@ describe("recomputeExposures", () => {
       ...finding,
       version: null,
     }
-    const result = recomputeExposures([nullVersionFinding], [pkg], "sha256:abc123")
+    const result = recomputeExposures([nullVersionFinding], [pkg], "sha256:abc123", [catalogEntry])
 
     // A null finding version still matches by name+ecosystem; the package
     // version is carried in matched_package but the exposure keeps null.
@@ -118,7 +128,7 @@ describe("recomputeExposures", () => {
 
 describe("buildEvidenceJunctions", () => {
   it("produces one junction per exposure with correct scope fields", () => {
-    const exposures = recomputeExposures([finding], [pkg], "sha256:abc123")
+    const exposures = recomputeExposures([finding], [pkg], "sha256:abc123", [catalogEntry])
     const junctions = buildEvidenceJunctions(
       exposures,
       "source-1",

@@ -15,12 +15,13 @@ import { z } from "zod/v4";
 import { randomBytes } from "crypto";
 
 import { validateGroupId } from "@/lib/validation/group-id";
+import { resolveGenesisPolicyEvidence } from "./genesis-policy-evidence";
 import {
   evaluatePoliciesOrThrow,
+  type InfrastructureTarget,
   type PolicyContext,
   type ProjectManifest,
   type SourceOfTruthRead,
-  type InfrastructureTarget,
 } from "./policy";
 import {
   createProof,
@@ -30,7 +31,6 @@ import {
   verifyProofOrThrow,
 } from "./proof";
 import { resolveTarget } from "./target-resolver";
-import { resolveGenesisPolicyEvidence } from "./genesis-policy-evidence";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES

@@ -25,8 +25,23 @@ describe("requireText", () => {
 
 describe("requireDiff", () => {
   it("accepts a diff with at least one change", () => {
-    expect(requireDiff({ added: ["a"] })).toEqual({ added: ["a"], overridden: [], deleted: [] })
-    expect(requireDiff({ overridden: ["b"] })).toEqual({ added: [], overridden: ["b"], deleted: [] })
+    const added = {
+      id: "memory-added",
+      content: "added branch value",
+      score: 0.9,
+      provenance: "conversation" as const,
+      tags: ["branch"],
+    }
+    const overridden = {
+      id: "memory-override",
+      content: "overridden branch value",
+      score: 0.8,
+      provenance: "manual" as const,
+      tags: ["branch"],
+      supersedes_id: "memory-active",
+    }
+    expect(requireDiff({ added: [added] })).toEqual({ added: [added], overridden: [], deleted: [] })
+    expect(requireDiff({ overridden: [overridden] })).toEqual({ added: [], overridden: [overridden], deleted: [] })
     expect(requireDiff({ deleted: ["c"] })).toEqual({ added: [], overridden: [], deleted: ["c"] })
   })
 
