@@ -28,8 +28,12 @@ const BASE_REVISION = "base-5000-d128-cosine"
 const ACTOR = "agent-b1"
 
 const DIFF: BranchDiff = {
-  added: ["8000", "8001", "8002"],
-  overridden: ["42"],
+  added: [
+    { id: "8000", content: "branch value", score: 0.9, provenance: "manual", tags: [] },
+    { id: "8001", content: "branch value", score: 0.9, provenance: "manual", tags: [] },
+    { id: "8002", content: "branch value", score: 0.9, provenance: "manual", tags: [] },
+  ],
+  overridden: [{ id: "42-next", content: "override value", score: 0.9, provenance: "manual", tags: [], supersedes_id: "42" }],
   deleted: ["7"],
 }
 
@@ -39,8 +43,10 @@ function input(overrides: Partial<PromotionProposalInput> = {}): PromotionPropos
   return {
     group_id: GROUP,
     workspace_id: WORKSPACE,
+    lane_id: "agent-lane-brooks",
     branch_id: BRANCH,
     base_revision: BASE_REVISION,
+    snapshot_id: "snapshot-b1",
     diff: DIFF,
     evidence_refs: EVIDENCE,
     actor_id: ACTOR,
@@ -376,6 +382,7 @@ describe("promotion adapter — quarantine and reproducible rollback", () => {
       {
         group_id: GROUP,
         workspace_id: WORKSPACE,
+        lane_id: "agent-lane-brooks",
         branch_id: BRANCH,
         base_revision: BASE_REVISION,
         diff: DIFF,
@@ -405,6 +412,7 @@ describe("promotion adapter — quarantine and reproducible rollback", () => {
           {
             group_id: GROUP,
             workspace_id: WORKSPACE,
+            lane_id: "agent-lane-brooks",
             branch_id: BRANCH,
             base_revision: BASE_REVISION,
             diff: DIFF,
@@ -424,6 +432,7 @@ describe("promotion adapter — quarantine and reproducible rollback", () => {
       {
         group_id: GROUP,
         workspace_id: WORKSPACE,
+        lane_id: "agent-lane-brooks",
         branch_id: BRANCH,
         base_revision: BASE_REVISION,
         diff: DIFF,
@@ -443,6 +452,7 @@ describe("promotion adapter — quarantine and reproducible rollback", () => {
       {
         group_id: GROUP,
         workspace_id: WORKSPACE,
+        lane_id: "agent-lane-brooks",
         branch_id: BRANCH,
         base_revision: BASE_REVISION,
         diff: DIFF,

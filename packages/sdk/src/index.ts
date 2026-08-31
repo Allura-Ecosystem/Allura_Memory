@@ -125,3 +125,6 @@ export {
   DEFAULT_TIMEOUT,
   DEFAULT_RETRIES,
 } from "./utils.js";
+
+export { LaneOperations } from "./lanes.js";
+export type { LaneOpenParams, LaneOpenResponse, LaneSnapshotParams, LaneSnapshotResponse, LaneReviewParams, LaneReviewResponse } from "./lanes.js";

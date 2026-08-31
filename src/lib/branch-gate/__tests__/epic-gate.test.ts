@@ -39,7 +39,9 @@ const WORKSPACE = "workspace-a"
 const BRANCH = "branch-b1"
 const BASE_REVISION = "base-5000-d128-cosine"
 
-const DIFF: BranchDiff = { added: ["8000", "8001"], overridden: ["42"], deleted: ["7"] }
+const MEMORY = { id: "8000", content: "branch value", score: 0.9, provenance: "manual" as const, tags: [] }
+const OVERRIDE = { id: "42-next", content: "override value", score: 0.9, provenance: "manual" as const, tags: [], supersedes_id: "42" }
+const DIFF: BranchDiff = { added: [MEMORY, { ...MEMORY, id: "8001" }], overridden: [OVERRIDE], deleted: ["7"] }
 const EVIDENCE = ["event:41", "evidence-request:00000000-0000-4000-8000-000000000001"]
 
 function baseContext(overrides: Record<string, unknown> = {}): GateContext {
@@ -136,7 +138,7 @@ describe("epic gate — replay dedupes", () => {
   it("computes a deterministic diff hash from base_revision and diff", () => {
     const a = diffHash(BASE_REVISION, DIFF)
     const b = diffHash(BASE_REVISION, DIFF)
-    const c = diffHash(BASE_REVISION, { ...DIFF, added: ["9999"] })
+    const c = diffHash(BASE_REVISION, { ...DIFF, added: [{ ...MEMORY, id: "9999" }] })
     expect(a).toBe(b)
     expect(a).not.toBe(c)
     expect(a).toMatch(/^diff-[a-f0-9]{16}$/)

@@ -29,7 +29,11 @@ const GROUP = "allura-system"
 const WORKSPACE = "workspace-a"
 const BASE_REVISION = "base-5000-d128-cosine"
 
-const DIFF: BranchDiff = { added: ["8000"], overridden: ["42"], deleted: ["7"] }
+const DIFF: BranchDiff = {
+  added: [{ id: "8000", content: "branch value", score: 0.9, provenance: "manual", tags: [] }],
+  overridden: [{ id: "42-next", content: "override value", score: 0.9, provenance: "manual", tags: [], supersedes_id: "42" }],
+  deleted: ["7"],
+}
 const EVIDENCE = ["event:41", "evidence-request:00000000-0000-4000-8000-000000000001"]
 
 const ROSTER = [

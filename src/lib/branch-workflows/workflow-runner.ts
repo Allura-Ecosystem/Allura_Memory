@@ -24,6 +24,7 @@ import {
 import {
   type BranchDiff,
   type BranchRegistryStatus,
+  branchSnapshotHash,
   createPromotionProposal,
   quarantineBranch,
 } from "../branch/promotion-adapter"
@@ -42,6 +43,9 @@ export class SoleWriterViolation extends Error {
 }
 
 export interface LaneEvidence {
+  snapshot_id: string
+  snapshot_hash: string
+  base_revision: string
   manifest?: DurhamManifestSet
   diff: BranchDiff
   evidence_refs: string[]
@@ -51,6 +55,7 @@ export interface LaneSession {
   lane_id: string
   branch_id: string
   writer_id: string
+  reviewer_ids: string[]
   group_id: string
   workspace_id: string
   base_revision: string
@@ -159,6 +164,7 @@ export async function openLane(
     workspace_id: workspaceId,
     base_revision: baseRevision,
     manifests,
+    reviewer_ids: [...lane.reviewers],
     evidence: [],
   }
 }
@@ -171,13 +177,44 @@ export async function runLaneWork(
   session: LaneSession,
   work: LaneWorkInput,
   actorId: string,
+  db?: Queryable,
 ): Promise<LaneSession> {
   if (actorId !== session.writer_id) {
     throw new SoleWriterViolation(session.branch_id, session.writer_id, actorId)
   }
   const diff = requireDiff(work.diff)
   const evidenceRefs = requireEvidenceRefs(work.evidence_refs)
-  session.evidence.push({ manifest: session.manifests, diff, evidence_refs: evidenceRefs })
+  const snapshotHash = branchSnapshotHash({
+    group_id: session.group_id,
+    workspace_id: session.workspace_id,
+    branch_id: session.branch_id,
+    base_revision: session.base_revision,
+    diff,
+    evidence_refs: evidenceRefs,
+    writer_id: session.writer_id,
+  })
+  let snapshotId = `local-${snapshotHash.slice(0, 16)}`
+  if (db) {
+    const stored = await db.query(
+      `SELECT snapshot_id,snapshot_hash,base_revision
+       FROM app.persist_governed_lane_snapshot($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7)`,
+      [session.group_id, session.workspace_id, session.lane_id, session.base_revision,
+        JSON.stringify(diff), JSON.stringify(evidenceRefs), snapshotHash],
+    )
+    const row = stored.rows[0]
+    if (!row || typeof row.snapshot_id !== "string" || typeof row.snapshot_hash !== "string") {
+      throw new Error("governed lane snapshot was not persisted")
+    }
+    snapshotId = row.snapshot_id
+  }
+  session.evidence.push({
+    snapshot_id: snapshotId,
+    snapshot_hash: snapshotHash,
+    base_revision: session.base_revision,
+    manifest: session.manifests,
+    diff,
+    evidence_refs: evidenceRefs,
+  })
   return session
 }
 
@@ -204,8 +241,10 @@ export async function reviewLaneEvidence(
       {
         group_id: session.group_id,
         workspace_id: session.workspace_id,
+        lane_id: session.lane_id,
         branch_id: session.branch_id,
         base_revision: session.base_revision,
+        snapshot_id: latest.snapshot_id,
         diff: latest.diff,
         evidence_refs: latest.evidence_refs,
         actor_id: reviewer,
@@ -226,6 +265,7 @@ export async function reviewLaneEvidence(
     {
       group_id: session.group_id,
       workspace_id: session.workspace_id,
+      lane_id: session.lane_id,
       branch_id: session.branch_id,
       base_revision: session.base_revision,
       diff: latest.diff,
@@ -266,6 +306,7 @@ export async function updateLaneStatus(
     {
       group_id: session.group_id,
       workspace_id: session.workspace_id,
+      lane_id: session.lane_id,
       branch_id: session.branch_id,
       base_revision: session.base_revision,
       diff: latest.diff,

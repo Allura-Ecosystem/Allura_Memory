@@ -1,0 +1,32 @@
+/** Tool names advertised by the canonical Streamable HTTP gateway. */
+export const CANONICAL_HTTP_TOOL_NAMES = [
+  "memory_add",
+  "memory_search",
+  "memory_get",
+  "memory_list",
+  "memory_delete",
+  "memory_promote",
+  "memory_update",
+  "memory_export",
+  "memory_restore",
+  "memory_list_deleted",
+  "memory_cleanup",
+  "governance_list_policies",
+  "governance_get_policy",
+  "governance_check_gate",
+  "governance_update_policy",
+  "governance_audit_log",
+  "audit_query_events",
+  "audit_health_report",
+  "audit_agent_activity",
+  "audit_invariant_check",
+  "scenario_run",
+  "scenario_replay",
+  "eval_run",
+  "evidence_inspect",
+  "governed_lane_open",
+  "governed_lane_snapshot",
+  "governed_lane_review",
+] as const
+
+export type CanonicalHttpToolName = (typeof CANONICAL_HTTP_TOOL_NAMES)[number]

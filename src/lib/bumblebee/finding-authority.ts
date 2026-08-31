@@ -38,6 +38,16 @@ export interface PackageRecord {
   readonly source_file: string
 }
 
+/** Immutable catalog authority required before a finding can become trusted. */
+export interface CatalogEntryAuthority {
+  readonly catalog_entry_id: string
+  readonly ecosystem: string
+  readonly normalized_name: string
+  readonly finding_type: string
+  readonly advisory_id: string
+  readonly affected_versions: readonly string[]
+}
+
 /**
  * The result of recomputing a single finding's exposure against accepted
  * package evidence.
@@ -110,6 +120,7 @@ export function recomputeExposures(
   findings: readonly FindingRecord[],
   packages: readonly PackageRecord[],
   catalogDigest: string | null,
+  catalogEntries: readonly CatalogEntryAuthority[] = [],
 ): RecomputedExposure[] {
   // Index packages by (ecosystem, normalized_name) for O(1) lookup.  When
   // multiple packages share the same name (e.g. different versions across
@@ -136,7 +147,14 @@ export function recomputeExposures(
       matchedPackage !== null &&
       (finding.version === null || finding.version === matchedPackage.version)
 
-    const isTrusted = hasCatalog && matchedPackage !== null && versionMatches
+    const catalogMatches = catalogEntries.some((entry) =>
+      entry.ecosystem === finding.ecosystem &&
+      entry.normalized_name === finding.normalized_name &&
+      entry.finding_type === finding.finding_type &&
+      entry.advisory_id === finding.advisory_id &&
+      matchedPackage !== null && entry.affected_versions.includes(matchedPackage.version),
+    )
+    const isTrusted = hasCatalog && matchedPackage !== null && versionMatches && catalogMatches
 
     return {
       ecosystem: finding.ecosystem,

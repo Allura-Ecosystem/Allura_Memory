@@ -33,6 +33,7 @@ import {
   createErrorFromResponse,
 } from "./errors.js";
 import { HarnessOperations } from "./harness.js";
+import { LaneOperations } from "./lanes.js";
 import { MemoryOperations } from "./memory.js";
 import type { AlluraClientConfig, HealthResponse } from "./types.js";
 import { HealthResponseSchema } from "./types.js";
@@ -71,6 +72,8 @@ export class AlluraClient {
   // Operations
   public readonly memory: MemoryOperations;
   public readonly harness: HarnessOperations;
+  /** Governed lane operations; workspace/actor scope is derived by the gateway. */
+  public readonly lanes: LaneOperations;
 
   constructor(config: AlluraClientConfig) {
     // Validate required config
@@ -87,6 +90,7 @@ export class AlluraClient {
     // Initialize memory operations with bound request function
     this.memory = new MemoryOperations(this.makeRequest.bind(this));
     this.harness = new HarnessOperations(this.makeRequest.bind(this));
+    this.lanes = new LaneOperations(this.makeRequest.bind(this));
   }
 
   // ── Connection Management ────────────────────────────────────────────────

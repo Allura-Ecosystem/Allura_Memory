@@ -23,6 +23,11 @@ export interface IngestLease {
   readonly mode?: "inventory" | "findings-only"
   readonly profile?: "baseline" | "project" | "deep"
   readonly ecosystems?: readonly string[]
+  /** Server-verified catalog revision/digest bound when the lease was issued. */
+  readonly catalogRevisionId?: string
+  readonly catalogDigest?: string
+  /** Monotonic source generation assigned by the authority store. */
+  readonly generation?: number
 }
 
 export interface PersistBatchInput {
@@ -34,6 +39,8 @@ export interface PersistBatchInput {
   readonly recordCount: number
   readonly records: readonly ConformedRecord[]
   readonly summaryRecordId: string
+  /** Optional promotion outcome supplied by the authoritative decision path. */
+  readonly promotion?: { readonly decision: "held" | "promoted" }
 }
 
 export interface IngestDeps {

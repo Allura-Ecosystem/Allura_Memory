@@ -161,6 +161,13 @@ export function assertDurhamManifestsComplete(manifests: DurhamManifestSet): voi
 }
 
 /** The lifecycle statuses a real lane can hold, mirroring the registry enum. */
+/** Resolve only a configured lane; caller-supplied branch identities are never authoritative. */
+export function resolveAuthoritativeLane(laneId: string): LaneConfig | DurhamConceptConfig {
+  const lane = [...TEAM_RAM_LANES, ...DURHAM_CONCEPTS].find((candidate) => candidate.id === laneId)
+  if (!lane) throw new Error(`unknown governed lane: ${laneId}`)
+  return lane
+}
+
 export const LANE_LIFECYCLE_STATUSES: readonly BranchRegistryStatus[] = [
   "active",
   "degraded",
