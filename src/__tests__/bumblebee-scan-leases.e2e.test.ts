@@ -8,6 +8,7 @@ import { closePool } from "@/lib/postgres/connection"
 const GROUP = "allura-bmb-lease-e2e"
 const WORKSPACE = "ws-bmb-lease-e2e"
 const TOKEN_SECRET = "live-scan-lease-secret-26-7"
+const CATALOG_DIGEST = "e3eb12da99e044ecc7d50cea407bf17f33c546e5309aa7ee661234baed2b7750"
 
 function makePool(user: string, password: string, max = 4) {
   return new Pool({
@@ -63,9 +64,9 @@ describeLive("Story 26.7 scan leases under fresh allura_app PostgreSQL", () => {
         await client.query(`INSERT INTO bumblebee_catalog_revisions
           (group_id,workspace_id,catalog_revision_id,catalog_digest,canonical_catalog,provenance,
            catalog_schema_version,reviewed_by,approval_receipt_id,classification,redaction_policy)
-          VALUES ($1,$2,'catalog-live',$3,'{"packages":["exact"]}','{"source":"reviewed"}',
+          VALUES ($1,$2,'catalog-live',$3,'{"entries":[]}','{"source":"reviewed"}',
             '1','reviewer','receipt-live','confidential','catalog-redaction')`,
-        [GROUP, WORKSPACE, "9".repeat(64)])
+        [GROUP, WORKSPACE, CATALOG_DIGEST])
 
         const credentials = [
           ["live-runner", "bmb_runner_live0001", hashBumblebeeToken("bmb_runner_live0001_tail"), null, null],
@@ -96,7 +97,7 @@ describeLive("Story 26.7 scan leases under fresh allura_app PostgreSQL", () => {
            '0.1.0','project','inventory',false,$12,ARRAY['rubygems'],false,900,7,'internal','exact-redaction',NULL,NULL)`,
         [GROUP, WORKSPACE, "1".repeat(64),
           "cc57710eeaf685e7b89924a36c8583cad0a378fe", "985f57cf1749c15561c886c4476f10950ffa9cae",
-          "2".repeat(64), "3".repeat(64), "9".repeat(64), "6".repeat(64), "7".repeat(64),
+          "2".repeat(64), "3".repeat(64), CATALOG_DIGEST, "6".repeat(64), "7".repeat(64),
           "8".repeat(64), "a".repeat(64)])
       })
     } finally { client.release() }
@@ -216,7 +217,7 @@ describeLive("Story 26.7 scan leases under fresh allura_app PostgreSQL", () => {
       expect(snapshot.rows[0]).toEqual({
         revision_digest: "1".repeat(64), runner_credential_id: "live-runner", profile: "deep",
         mode: "findings-only", root_config_digest: "3".repeat(64), ecosystems: ["npm", "pypi"],
-        all_users: true, catalog_revision_id: "catalog-live", catalog_digest: "9".repeat(64),
+        all_users: true, catalog_revision_id: "catalog-live", catalog_digest: CATALOG_DIGEST,
       })
     } finally { client.release() }
   })

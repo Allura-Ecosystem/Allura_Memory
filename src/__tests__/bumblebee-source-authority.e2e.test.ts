@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 const GROUP_ID = "allura-bmb-source-e2e"
 const WORKSPACE_ID = "ws-bmb-source-e2e"
-const CATALOG_DIGEST = "b".repeat(64)
+const CATALOG_DIGEST = "e3eb12da99e044ecc7d50cea407bf17f33c546e5309aa7ee661234baed2b7750"
 
 function pool(user: string, password: string): Pool {
   return new Pool({
@@ -58,7 +58,7 @@ describeLive("Story 26.7 Bumblebee source authority under allura_app", () => {
              (group_id, workspace_id, catalog_revision_id, catalog_digest, canonical_catalog,
               provenance, catalog_schema_version, reviewed_by, approval_receipt_id,
               classification, redaction_policy)
-           VALUES ($1, $2, 'catalog-1', $3, '{}'::jsonb, '{}'::jsonb,
+           VALUES ($1, $2, 'catalog-1', $3, '{"entries":[]}'::jsonb, '{}'::jsonb,
                    '1', 'reviewer', 'approval-1', 'internal', 'redaction-v1')`,
           [GROUP_ID, WORKSPACE_ID, CATALOG_DIGEST],
         )
