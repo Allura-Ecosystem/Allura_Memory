@@ -15,6 +15,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import {
   type BranchDiff,
+  branchSnapshotHash,
   buildRollbackPlan,
   createPromotionProposal,
   issuePromotionReceipt,
@@ -33,7 +34,9 @@ const DIFF: BranchDiff = {
     { id: "8001", content: "branch value", score: 0.9, provenance: "manual", tags: [] },
     { id: "8002", content: "branch value", score: 0.9, provenance: "manual", tags: [] },
   ],
-  overridden: [{ id: "42-next", content: "override value", score: 0.9, provenance: "manual", tags: [], supersedes_id: "42" }],
+  overridden: [
+    { id: "42-next", content: "override value", score: 0.9, provenance: "manual", tags: [], supersedes_id: "42" },
+  ],
   deleted: ["7"],
 }
 
@@ -56,12 +59,35 @@ function input(overrides: Partial<PromotionProposalInput> = {}): PromotionPropos
 
 /** A registry row that satisfies every gate check (active, same scope, full recorded snapshot). */
 function passingRegistryRow(): Record<string, unknown> {
+  const snapshotHash = branchSnapshotHash({
+    group_id: GROUP,
+    workspace_id: WORKSPACE,
+    branch_id: BRANCH,
+    base_revision: BASE_REVISION,
+    diff: DIFF,
+    evidence_refs: EVIDENCE,
+    writer_id: "writer-b1",
+  })
   return {
     group_id: GROUP,
     workspace_id: WORKSPACE,
     status: "active",
+    agent_id: "writer-b1",
+    reviewer_ids: [ACTOR],
     retention_expires_at: null,
-    diff_snapshot: JSON.stringify({ base_revision: BASE_REVISION, diff: DIFF, evidence_refs: EVIDENCE }),
+    lane_id: "agent-lane-brooks",
+    snapshot_id: "snapshot-b1",
+    base_revision: BASE_REVISION,
+    snapshot_diff: DIFF,
+    snapshot_evidence_refs: EVIDENCE,
+    writer_id: "writer-b1",
+    snapshot_hash: snapshotHash,
+    diff_snapshot: JSON.stringify({
+      snapshot_id: "snapshot-b1",
+      base_revision: BASE_REVISION,
+      diff: DIFF,
+      evidence_refs: EVIDENCE,
+    }),
   }
 }
 
@@ -86,8 +112,36 @@ function db(options: DbOptions = {}) {
       return { rows: [{ count: options.branchCount ?? 0 }] }
     }
     if (text.includes("FROM promotion_receipts")) {
+      if (text.includes("WHERE id=")) {
+        return {
+          rows: [
+            {
+              id: "receipt-1",
+              group_id: GROUP,
+              workspace_id: WORKSPACE,
+              proposal_id: "proposal-1",
+              branch_id: BRANCH,
+              base_revision: BASE_REVISION,
+              diff: DIFF,
+              evidence_refs: EVIDENCE,
+              actor_id: ACTOR,
+              trace_id: "promo-proposal-1",
+              issued_at: "2026-08-29T00:00:00.000Z",
+            },
+          ],
+        }
+      }
       return { rows: options.receipts ? [{ found: 1 }] : [] }
     }
+    if (text.includes("app.issue_governed_promotion_receipt")) {
+      return { rows: [{ id: "receipt-1" }] }
+    }
+    if (text.includes("app.transition_governed_lane")) {
+      return { rows: [{ branch_id: BRANCH, status: String(_params?.[3] ?? "quarantined") }] }
+    }
+    if (text.includes("INSERT INTO events")) return { rows: [{ id: "event-1" }] }
+    if (text.includes("INSERT INTO canonical_proposals"))
+      return { rows: [{ id: "canonical-proposal-1", status: "pending" }] }
     if (text.includes("FROM branch_registry")) {
       const row = options.registryRow === undefined ? passingRegistryRow() : options.registryRow
       return { rows: row ? [row] : [] }
@@ -181,7 +235,9 @@ describe("promotion adapter — proposal conversion", () => {
     expect(proposalParams).toContain(BRANCH)
     expect(proposalParams).toContain("pending")
     expect(proposalParams).toContain(ACTOR)
-    const metadata = JSON.parse(String(proposalParams.find((p) => typeof p === "string" && p.includes("base_revision"))))
+    const metadata = JSON.parse(
+      String(proposalParams.find((p) => typeof p === "string" && p.includes("base_revision")))
+    )
     expect(metadata).toMatchObject({
       branch_id: BRANCH,
       base_revision: BASE_REVISION,
@@ -203,12 +259,23 @@ describe("promotion adapter — proposal conversion", () => {
 
   it("fails closed on invalid or incomplete input", async () => {
     const database = db()
-    await expect(createPromotionProposal(input({ group_id: "legacy-system" }), database as never)).rejects.toThrow(/group_id/i)
+    await expect(createPromotionProposal(input({ group_id: "legacy-system" }), database as never)).rejects.toThrow(
+      /group_id/i
+    )
     await expect(createPromotionProposal(input({ workspace_id: "" }), database as never)).rejects.toThrow(/workspace/i)
     await expect(createPromotionProposal(input({ branch_id: "" }), database as never)).rejects.toThrow(/branch/i)
-    await expect(createPromotionProposal(input({ base_revision: "" }), database as never)).rejects.toThrow(/base revision/i)
-    await expect(createPromotionProposal(input({ diff: { added: [], overridden: [], deleted: [] } as BranchDiff }), database as never)).rejects.toThrow(/diff/i)
-    await expect(createPromotionProposal(input({ evidence_refs: "not-an-array" as never }), database as never)).rejects.toThrow(/evidence/i)
+    await expect(createPromotionProposal(input({ base_revision: "" }), database as never)).rejects.toThrow(
+      /base revision/i
+    )
+    await expect(
+      createPromotionProposal(
+        input({ diff: { added: [], overridden: [], deleted: [] } as BranchDiff }),
+        database as never
+      )
+    ).rejects.toThrow(/diff/i)
+    await expect(
+      createPromotionProposal(input({ evidence_refs: "not-an-array" as never }), database as never)
+    ).rejects.toThrow(/evidence/i)
     await expect(createPromotionProposal(input({ actor_id: "" }), database as never)).rejects.toThrow(/actor/i)
   })
 })
@@ -330,7 +397,7 @@ describe("promotion adapter — immutable server-issued receipt", () => {
         actor_id: ACTOR,
         trace_id: "promo-proposal-1",
       },
-      database as never,
+      database as never
     )
 
     expect(receipt).toMatchObject({
@@ -347,11 +414,13 @@ describe("promotion adapter — immutable server-issued receipt", () => {
     })
     expect(receipt.issued_at).toBeTruthy()
 
-    const [sql, params] = insertCall(database, "INSERT INTO promotion_receipts")
-    expect(sql).toContain("trace_id")
-    expect(params).toContain("promo-proposal-1")
-    expect(params).toContain(BRANCH)
-    expect(params).toContain(BASE_REVISION)
+    const [sql, params] = insertCall(database, "app.issue_governed_promotion_receipt")
+    expect(sql).toContain("app.issue_governed_promotion_receipt")
+    expect(params).toContain("proposal-1")
+    expect(params).toContain(ACTOR)
+    expect(database.query.mock.calls.some(([query]) => String(query).includes("INSERT INTO promotion_receipts"))).toBe(
+      false
+    )
   })
 
   it("fails closed when the receipt trace id is missing", async () => {
@@ -369,8 +438,8 @@ describe("promotion adapter — immutable server-issued receipt", () => {
           actor_id: ACTOR,
           trace_id: "",
         },
-        database as never,
-      ),
+        database as never
+      )
     ).rejects.toThrow(/trace/i)
   })
 })
@@ -391,14 +460,13 @@ describe("promotion adapter — quarantine and reproducible rollback", () => {
         actor_id: ACTOR,
         retention_expires_at: "2027-01-01T00:00:00.000Z",
       },
-      database as never,
+      database as never
     )
 
     expect(result).toMatchObject({ branch_id: BRANCH, status: "quarantined" })
 
-    const [sql, params] = insertCall(database, "INSERT INTO branch_registry")
-    expect(sql).toContain("ON CONFLICT")
-    expect(sql).toContain("status")
+    const [sql, params] = insertCall(database, "app.transition_governed_lane")
+    expect(sql).toContain("app.transition_governed_lane")
     expect(params).toContain("quarantined")
     const snapshot = JSON.parse(String(params.find((p) => typeof p === "string" && p.includes("base_revision"))))
     expect(snapshot).toEqual({ base_revision: BASE_REVISION, diff: DIFF })
@@ -420,8 +488,8 @@ describe("promotion adapter — quarantine and reproducible rollback", () => {
             reason: "frozen state",
             actor_id: ACTOR,
           },
-          database as never,
-        ),
+          database as never
+        )
       ).rejects.toThrow(/retention/i)
     }
   })
@@ -441,7 +509,7 @@ describe("promotion adapter — quarantine and reproducible rollback", () => {
         actor_id: ACTOR,
         retention_expires_at: "2027-01-01T00:00:00.000Z",
       },
-      database as never,
+      database as never
     )
     expect(result).toMatchObject({ branch_id: BRANCH, status: "rejected" })
   })
@@ -460,7 +528,7 @@ describe("promotion adapter — quarantine and reproducible rollback", () => {
         reason: "reopen lane",
         actor_id: ACTOR,
       },
-      database as never,
+      database as never
     )
     expect(result).toMatchObject({ branch_id: BRANCH, status: "active" })
   })
@@ -473,7 +541,7 @@ describe("promotion adapter — quarantine and reproducible rollback", () => {
     expect(plan.base_revision).toBe(BASE_REVISION)
     expect(plan.diff).toEqual(DIFF)
     expect(plan.replay_steps).toContain("replay add 8000")
-    expect(plan.replay_steps).toContain("replay override 42")
+    expect(plan.replay_steps).toContain("replay override 42-next supersedes 42")
     expect(plan.replay_steps).toContain("replay tombstone 7")
     expect(plan.replay_steps).toHaveLength(DIFF.added.length + DIFF.overridden.length + DIFF.deleted.length)
   })
