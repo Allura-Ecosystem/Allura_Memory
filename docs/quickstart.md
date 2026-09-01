@@ -123,3 +123,55 @@ network access. The steps above total roughly **9–10 minutes** of active
 commands. A clean-environment transcript with actual elapsed time, machine
 profile, and any failures encountered is recorded in the story evidence
 (AC-7).
+
+## Dashboard demo path
+
+The governed operator dashboard is a separate, loopback-only demo surface. It
+uses the same PostgreSQL stack but a collision-safe host port and a foreground
+Next.js server.
+
+### 1. Initialize the portfolio environment (≈30 s)
+
+`bun run portfolio:up` creates the ignored `.env.portfolio` from the checked-in
+non-secret local-demo example when it is absent. It never prints environment
+values. You may copy and edit the example first if you need a different local
+port.
+
+### 2. Start the portfolio database (≈1 min)
+
+```bash
+bun run portfolio:up
+```
+
+This starts only PostgreSQL on `127.0.0.1:${PORTFOLIO_POSTGRES_PORT:-5433}`.
+
+### 3. Start the dashboard in a separate terminal
+
+```bash
+bun run portfolio:dev
+```
+
+### 4. Verify the demo path
+
+```bash
+bun run dashboard:doctor
+```
+
+The doctor requires app-role connectivity, RLS isolation, and HTTP 200 on all
+seven mapped routes. It exits non-zero on any failure.
+
+### 5. Capture browser evidence
+
+```bash
+bun run dashboard:browser
+```
+
+This emits seven PNGs plus a `manifest.json` under
+`artifacts/dashboard-demo/`. A redirect, page error, console error, or 404
+fails the run and produces no image for that route.
+
+### 6. Stop the portfolio database
+
+```bash
+bun run portfolio:down
+```

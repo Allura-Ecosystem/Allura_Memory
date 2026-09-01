@@ -22,7 +22,7 @@ import type { AdapterDeclaration } from "@/lib/adapter-registry/types"
  * Maps a canonical registry route to its live dashboard implementation.
  * Kept here (not per-page) so the mapping is declared once.
  */
-const LIVE_SURFACE_BY_ROUTE: Record<string, string> = {
+export const LIVE_SURFACE_BY_ROUTE: Record<string, string> = {
   "/command": "/dashboard/mission-control",
   "/work-board": "/dashboard/kanban",
   "/allura": "/dashboard/search",

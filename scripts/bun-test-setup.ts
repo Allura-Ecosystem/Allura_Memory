@@ -66,3 +66,14 @@ if (typeof mutableVi.runAllTimersAsync !== "function") {
     return mutableVi
   }) as unknown as typeof vi.runAllTimersAsync
 }
+
+// Bun's native `bun test` runner does not apply Vitest's `vi.mock`, so modules
+// that import the `server-only` guard throw at import time. Mock it to a no-op
+// here so Bun-native execution can load server-only modules (the guard is a
+// build-time boundary, not a runtime behavior under test).
+try {
+  const { mock } = await import("bun:test")
+  mock.module("server-only", () => ({}))
+} catch {
+  // Not running under Bun's native test runner; nothing to shim.
+}

@@ -1,9 +1,8 @@
 import "server-only"
 
-import type { NextRequest } from "next/server"
 import { createHash } from "node:crypto"
 
-import { getAuthUser } from "@/lib/auth/api-auth"
+import type { AuthUser } from "@/lib/auth/types"
 import { actionForReadCapability, minimumRoleForAction } from "@/lib/auth/permission-action-role"
 import { hasPermission } from "@/lib/auth/roles"
 import type { AlluraRole } from "@/lib/auth/types"
@@ -96,8 +95,7 @@ export function validateModuleManifests(manifests: readonly CuratorModuleManifes
   if (manifests.length !== SOURCE_ALLOWLIST.size) throw new Error("incomplete source-controlled module set")
 }
 
-function deriveScope(request: NextRequest): Scope | null {
-  const user = getAuthUser(request)
+function deriveScope(user: AuthUser | null): Scope | null {
   // role is required explicitly: hasPermission(undefined, r) happens to be
   // false (undefined >= n), but the fail-closed intent must not rest on that
   // coincidence (Edge Case review 25.3b #2).
@@ -169,14 +167,15 @@ async function recordOutcomeOrUnavailable(scope: Scope, decision: Exclude<Decisi
 }
 
 /**
- * Server-only authenticated entry. It accepts a request, never an AuthUser;
- * scope and role come only from the canonical server auth resolver. Available
- * issuance commits the exact summary snapshot and ledger event in one managed
- * app-role transaction. A failed read rolls back that transaction, then writes
- * a separate failed outcome (no issuance snapshot was emitted to replay).
+ * Server-only authenticated entry. It accepts a server-derived principal, never
+ * a request; scope and role come only from the canonical server auth resolver
+ * (Clerk session or DevAuthProvider), never from browser-supplied headers.
+ * Available issuance commits the exact summary snapshot and ledger event in one
+ * managed app-role transaction. A failed read rolls back that transaction, then
+ * writes a separate failed outcome (no issuance snapshot was emitted to replay).
  */
-export async function issueCuratorModules(request: NextRequest): Promise<CuratorModuleIssue> {
-  const scope = deriveScope(request)
+export async function issueCuratorModules(principal: AuthUser | null): Promise<CuratorModuleIssue> {
+  const scope = deriveScope(principal)
   if (!scope) return { state: "denied", modules: [], message: "Curator workflow access is unavailable." }
 
   try {

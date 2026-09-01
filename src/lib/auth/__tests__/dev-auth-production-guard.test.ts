@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { type AuthEnvConfig, authEnvSchema, getDevAuthConfig, isDevAuthActive } from "../config";
+import { type AuthEnvConfig, authEnvSchema, getDevAuthConfig, isClerkEnabled, isDevAuthActive } from "../config";
 
 type Env = "development" | "production" | "test";
 
@@ -22,11 +22,13 @@ function config(overrides: {
   nodeEnv: Env;
   devAuthEnabled: boolean;
   clerk?: boolean;
+  forceDemoDevAuth?: boolean;
 }): AuthEnvConfig {
   return authEnvSchema.parse({
     NODE_ENV: overrides.nodeEnv,
     ALLURA_DEV_AUTH_ENABLED: overrides.devAuthEnabled ? "true" : "false",
     ALLURA_DEV_AUTH_ROLE: "admin",
+    ALLURA_DEMO_DEV_AUTH_FORCE: overrides.forceDemoDevAuth ? "true" : "false",
     ...(overrides.clerk
       ? {
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_placeholder",
@@ -46,6 +48,12 @@ describe("isDevAuthActive — production is absolute", () => {
     expect(
       isDevAuthActive(config({ nodeEnv: "production", devAuthEnabled: true, clerk: true }))
     ).toBe(false);
+  });
+
+  it("is false in production even when the portfolio override is requested", () => {
+    const production = config({ nodeEnv: "production", devAuthEnabled: true, clerk: true, forceDemoDevAuth: true });
+    expect(isDevAuthActive(production)).toBe(false);
+    expect(isClerkEnabled(production)).toBe(true);
   });
 
   it("does not expose an admin principal in production", () => {
@@ -69,6 +77,12 @@ describe("isDevAuthActive — non-production behaviour is preserved", () => {
     expect(
       isDevAuthActive(config({ nodeEnv: "development", devAuthEnabled: true, clerk: true }))
     ).toBe(false);
+  });
+
+  it("is true in development when the supported portfolio demo explicitly selects DevAuth", () => {
+    const demo = config({ nodeEnv: "development", devAuthEnabled: true, clerk: true, forceDemoDevAuth: true });
+    expect(isDevAuthActive(demo)).toBe(true);
+    expect(isClerkEnabled(demo)).toBe(false);
   });
 
   it("is false in development when not enabled", () => {

@@ -148,6 +148,9 @@ export default defineConfig({
       // page wiring (issuance→shell, degraded state, denied scope).
       "src/__tests__/curator-handoff-page.test.tsx",
       "src/__tests__/curator-dashboard.test.tsx",
+      // Dashboard demo readiness — canonical route parity, authority boundary,
+      // and rendered live/empty/degraded surface states.
+      "src/__tests__/mission-control-route-parity.test.ts",
       // UI unit tests — inspector entity views (6 view components)
       "src/__tests__/inspector-views.test.tsx",
       // Dashboard pages (Story 16.4 — approvals/handoffs/evidence)

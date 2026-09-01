@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { getAuthUser, withWorkspaceTransaction, getBumblebeeSummaryInTransaction, transactionClient } = vi.hoisted(() => {
+const { withWorkspaceTransaction, getBumblebeeSummaryInTransaction, transactionClient } = vi.hoisted(() => {
   const transactionClient = { query: vi.fn().mockResolvedValue({ rows: [] }) }
   return {
-    getAuthUser: vi.fn(),
     withWorkspaceTransaction: vi.fn(async (_scope, callback) => callback(transactionClient)),
     getBumblebeeSummaryInTransaction: vi.fn().mockResolvedValue({ sources: 1, unpinnedActions: 0, openExposures: 0, incidents: 0, receipts: 0 }),
     transactionClient,
@@ -11,7 +10,6 @@ const { getAuthUser, withWorkspaceTransaction, getBumblebeeSummaryInTransaction,
 })
 
 vi.mock("server-only", () => ({}))
-vi.mock("@/lib/auth/api-auth", () => ({ getAuthUser }))
 vi.mock("@/lib/db/tenant-transaction", () => ({ withWorkspaceTransaction }))
 vi.mock("@/lib/curator/operator-read-service", () => ({ getBumblebeeSummaryInTransaction }))
 
@@ -24,14 +22,13 @@ import {
 import { BUMBLEBEE_ENABLED_ENV_VAR, BUMBLEBEE_MODULE } from "../bumblebee/module"
 
 const user = { id: "curator-1", email: "curator@example.test", role: "curator" as const, groupId: "allura-acme", workspaceId: "workspace-a", sessionId: "session-a" }
-const request = { headers: new Headers() }
 
 function manifest(overrides: Record<string, unknown> = {}) {
   return { ...BUMBLEBEE_MODULE, ...overrides }
 }
 
 beforeEach(() => {
-  getAuthUser.mockReturnValue(user)
+  vi.clearAllMocks()
 })
 
 afterEach(() => {
@@ -53,11 +50,10 @@ describe("Story 25.3b server-issued curator module registry", () => {
     }
   })
 
-  it("rejects a forged AuthUser argument and resolves identity only from the server request", async () => {
+  it("derives scope only from the server-issued principal argument", async () => {
     process.env[BUMBLEBEE_ENABLED_ENV_VAR] = "true"
-    const forged = { ...user, id: "attacker", groupId: "allura-attacker", workspaceId: "workspace-forged", role: "admin" }
 
-    const issued = await issueCuratorModules(forged as never)
+    const issued = await issueCuratorModules(user)
 
     expect(issued.state).toBe("complete")
     expect(withWorkspaceTransaction).toHaveBeenCalledWith(
@@ -66,17 +62,15 @@ describe("Story 25.3b server-issued curator module registry", () => {
     )
   })
 
-  it("fails closed when the request has no server-authenticated principal", async () => {
-    getAuthUser.mockReturnValue(null)
-    await expect(issueCuratorModules(request as never)).resolves.toMatchObject({ state: "denied", modules: [] })
+  it("fails closed when no server-authenticated principal is supplied", async () => {
+    await expect(issueCuratorModules(null)).resolves.toMatchObject({ state: "denied", modules: [] })
     expect(withWorkspaceTransaction).not.toHaveBeenCalled()
   })
 
   it("uses the canonical role authority rather than a module-local role map", async () => {
     process.env[BUMBLEBEE_ENABLED_ENV_VAR] = "true"
-    getAuthUser.mockReturnValue({ ...user, role: "viewer" })
 
-    await expect(issueCuratorModules(request as never)).resolves.toMatchObject({ state: "denied", modules: [] })
+    await expect(issueCuratorModules({ ...user, role: "viewer" })).resolves.toMatchObject({ state: "denied", modules: [] })
     expect(getBumblebeeSummaryInTransaction).not.toHaveBeenCalled()
   })
 
@@ -91,7 +85,7 @@ describe("Story 25.3b server-issued curator module registry", () => {
 
   it("records a completed scoped issuance snapshot atomically with the read", async () => {
     process.env[BUMBLEBEE_ENABLED_ENV_VAR] = "true"
-    const issued = await issueCuratorModules(request as never)
+    const issued = await issueCuratorModules(user)
 
     expect(issued).toMatchObject({ state: "complete", modules: [{ id: "bumblebee", state: "available" }] })
     expect(getBumblebeeSummaryInTransaction).toHaveBeenCalledWith(transactionClient, expect.objectContaining({ workspaceId: "workspace-a" }))
@@ -105,28 +99,24 @@ describe("Story 25.3b server-issued curator module registry", () => {
   })
 
   it("writes failed audit decisions for denied, disabled, and read-failure outcomes", async () => {
-    getAuthUser.mockReturnValue({ ...user, role: "viewer" })
-    await issueCuratorModules(request as never)
+    await issueCuratorModules({ ...user, role: "viewer" })
     expect(transactionClient.query.mock.calls.at(-1)?.[1]).toContain("failed")
 
     vi.clearAllMocks()
-    getAuthUser.mockReturnValue(user)
-    await issueCuratorModules(request as never)
+    await issueCuratorModules(user)
     expect(transactionClient.query.mock.calls.at(-1)?.[1]).toContain("failed")
 
     vi.clearAllMocks()
-    getAuthUser.mockReturnValue(user)
     process.env[BUMBLEBEE_ENABLED_ENV_VAR] = "true"
     getBumblebeeSummaryInTransaction.mockRejectedValueOnce(new Error("read down"))
-    await issueCuratorModules(request as never)
+    await issueCuratorModules(user)
     expect(transactionClient.query.mock.calls.at(-1)?.[1]).toContain("failed")
   })
 
   it("returns an explicit audit-unavailable error when denied-outcome persistence fails", async () => {
-    getAuthUser.mockReturnValue({ ...user, role: "viewer" })
     transactionClient.query.mockRejectedValueOnce(new Error("audit unavailable"))
 
-    await expect(issueCuratorModules(request as never)).resolves.toMatchObject({
+    await expect(issueCuratorModules({ ...user, role: "viewer" })).resolves.toMatchObject({
       state: "error", modules: [], message: "Curator workflow access is unavailable because audit recording failed.",
     })
   })
@@ -134,7 +124,7 @@ describe("Story 25.3b server-issued curator module registry", () => {
   it("returns an explicit audit-unavailable error when disabled-outcome persistence fails", async () => {
     transactionClient.query.mockRejectedValueOnce(new Error("audit unavailable"))
 
-    await expect(issueCuratorModules(request as never)).resolves.toMatchObject({
+    await expect(issueCuratorModules(user)).resolves.toMatchObject({
       state: "error", modules: [], message: "Curator workflow access is unavailable because audit recording failed.",
     })
   })
@@ -144,7 +134,7 @@ describe("Story 25.3b server-issued curator module registry", () => {
     getBumblebeeSummaryInTransaction.mockRejectedValueOnce(new Error("read down"))
     transactionClient.query.mockRejectedValueOnce(new Error("audit unavailable"))
 
-    await expect(issueCuratorModules(request as never)).resolves.toMatchObject({
+    await expect(issueCuratorModules(user)).resolves.toMatchObject({
       state: "error", modules: [], message: "Curator workflow access is unavailable because audit recording failed.",
     })
   })
