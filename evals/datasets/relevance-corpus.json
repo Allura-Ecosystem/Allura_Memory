@@ -1,0 +1,40 @@
+{
+  "revision": "0003",
+  "provenance": "Synthetic mortgage-underwriting corpus authored for Story 24.6 live retrieval measurement. No real borrower, applicant, or customer data. No PII. Every document is fabricated and tenant-scoped to allura-system / workspace-allura.",
+  "domain": "Residential mortgage origination and underwriting review — the domain of the Mortgage Approval Gate module and the Northstar Lending demo tenant.",
+  "retrieval": {
+    "method": "PostgreSQL full-text search over the generated content_tsv column, ranked by ts_rank_cd",
+    "note": "Lexical retrieval only. The hybrid vector path is NOT exercised because no embedding service runs in this environment; see DEMO-EVIDENCE-PACK.md open items. A lexical-only score is reported honestly rather than presented as hybrid quality."
+  },
+  "design_note": "The corpus deliberately contains topical distractors that share vocabulary with the queries — several documents mention 'ratio', 'verification', 'insurance', 'disclosure', and 'timing'. Without distractors, P@5 over a corpus smaller than k is trivially 1.0 and measures nothing.",
+  "documents": [
+    { "memory_id": "mem-dti-1", "content": "Debt-to-income ratio exceeded the guideline ceiling at 47 percent back-end against a 43 percent maximum; underwriter documented compensating factors of twelve months reserves and a 780 representative credit score." },
+    { "memory_id": "mem-ltv-1", "content": "Loan-to-value ratio calculated at 91 percent against the appraised value, above the 80 percent threshold, which triggers the private mortgage insurance requirement." },
+    { "memory_id": "mem-reserves-1", "content": "Reserve requirement for a second home is two months of principal, interest, taxes and insurance, evidenced by seasoned depository statements." },
+    { "memory_id": "mem-income-1", "content": "Self-employed income verification requires two years of filed returns with the profit and loss statement, averaged, and declining income must be addressed in writing by the underwriter." },
+    { "memory_id": "mem-income-2", "content": "Wage earner income verification uses the most recent pay stubs, the prior year W-2, and a verbal verification of employment completed within ten days of closing." },
+    { "memory_id": "mem-flood-1", "content": "Flood zone determination returned zone AE, a special flood hazard area, so flood insurance is mandatory for the life of the loan with coverage at least equal to the outstanding principal." },
+    { "memory_id": "mem-title-1", "content": "Title insurance commitment lists an unreleased prior lien in Schedule B-I that must be cleared before the policy can issue without exception." },
+    { "memory_id": "mem-pmi-1", "content": "Private mortgage insurance terminates automatically at 78 percent loan-to-value based on the original amortization schedule, or earlier on borrower request at 80 percent." },
+    { "memory_id": "mem-escrow-1", "content": "Escrow account analysis projects a shortage after the county reassessment; the servicer must offer a spread of the shortage over twelve monthly installments." },
+    { "memory_id": "mem-adverse-1", "content": "Adverse action notice must be delivered within thirty days of receiving a completed application, stating the specific principal reasons for denial and the credit bureau relied upon." },
+    { "memory_id": "mem-trid-1", "content": "Closing disclosure timing requires the borrower to receive the disclosure at least three business days before consummation; a changed annual percentage rate outside tolerance restarts the waiting period." },
+    { "memory_id": "mem-appraisal-1", "content": "Appraisal came in below the contract price, creating a valuation gap; the file requires either a renegotiated price, additional borrower funds, or a reconsideration of value with comparable sales." },
+    { "memory_id": "mem-condo-1", "content": "Condominium project approval requires warrantability review covering owner-occupancy ratio, single-entity ownership concentration, budget reserve allocation, and pending litigation." },
+    { "memory_id": "mem-hmda-1", "content": "Home Mortgage Disclosure Act reporting fields must capture the loan purpose, action taken, and applicant demographic information collected under the required collection method." },
+    { "memory_id": "mem-ecoa-1", "content": "Fair lending review under the Equal Credit Opportunity Act examines whether underwriting exceptions were granted consistently across protected classes within the same product and period." },
+    { "memory_id": "mem-exception-1", "content": "Underwriting exception log records each guideline variance, the approving authority level, and the documented compensating factors supporting the decision." },
+    { "memory_id": "mem-lock-1", "content": "Rate lock extension policy charges a fee per additional fifteen day period, and the extension must be requested before the original expiration date." },
+    { "memory_id": "mem-fraud-1", "content": "Occupancy misrepresentation red flags include a subject property far from the stated employer with no relocation documentation in the file." },
+    { "memory_id": "mem-qm-1", "content": "Qualified mortgage points and fees test caps total points and fees at three percent of the loan amount for loans at or above the applicable threshold." },
+    { "memory_id": "mem-servicing-1", "content": "Loss mitigation review requires a complete borrower package before a foreclosure referral may proceed, and dual tracking is prohibited once the package is complete." }
+  ],
+  "queries": [
+    { "id": "q1", "query": "debt to income ratio exceeded guideline compensating factors", "expected_memory_ids": ["mem-dti-1"], "k": 5 },
+    { "id": "q2", "query": "self employed income verification two years returns", "expected_memory_ids": ["mem-income-1"], "k": 5 },
+    { "id": "q3", "query": "flood zone determination mandatory insurance", "expected_memory_ids": ["mem-flood-1"], "k": 5 },
+    { "id": "q4", "query": "adverse action notice thirty days denial reasons", "expected_memory_ids": ["mem-adverse-1"], "k": 5 },
+    { "id": "q5", "query": "condominium project warrantability owner occupancy", "expected_memory_ids": ["mem-condo-1"], "k": 5 },
+    { "id": "q6", "query": "closing disclosure three business days before consummation", "expected_memory_ids": ["mem-trid-1"], "k": 5 }
+  ]
+}

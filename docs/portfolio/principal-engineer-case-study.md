@@ -41,8 +41,9 @@ human accountability.
    Epic 19 (2026-07-17) to remove RAM cost on 4GB laptops and vendor lock-in.
    PostgreSQL pgvector provides equivalent HNSW + BM25 search. Neo4j was
    fully removed in Epic 23 (2026-07-17); no fallback remains.
-2. **Auto-promotion without HITL** — rejected because compliance claims
-   (halal, USDA, HACCP) carry legal liability and must always be human-approved.
+2. **Auto-promotion without HITL** — rejected because regulated credit
+   decisions (ECOA adverse action, HMDA reporting, TRID disclosure timing)
+   carry legal liability and must always be human-approved.
 3. **Token-level tenant isolation** — rejected for small teams; group_id
    server-side enforcement with forced RLS is sufficient and simpler.
 4. **Cloud/SaaS control plane** — rejected in favor of self-hosted,
