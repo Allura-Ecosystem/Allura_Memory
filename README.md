@@ -22,8 +22,7 @@
 ---
 
 <p align="center">
-  <a href="public/readme/infographic-governed-memory-lifecycle-digital-v1.png"><img src="public/readme/infographic-governed-memory-lifecycle-digital-v1.png" alt="Allura governed memory lifecycle from captured evidence through proposal, governance review, authorized or queued canonical materialization, scoped retrieval, and supersession" width="900" /></a><br/>
-  <sub><a href="public/readme/infographic-governed-memory-lifecycle-digital-v1.png">Open the full-size infographic</a></sub>
+  <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/01-every-action-leaves-proof.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/01-every-action-leaves-proof.png" alt="A request, a review, and a durable record are connected; source, decision, and result stay linked." width="860" /></a>
 </p>
 
 ## Evidence patterns
@@ -77,6 +76,10 @@ Allura uses one PostgreSQL engine with two governed logical layers.
 | **Episodic** | events, traces, proposals, audit metadata | Preserve what happened and what was observed | Evidence, not final truth |
 | **Semantic** | `graph_memories`, `graph_supersedes`, structural nodes and edges | Serve curated, versioned knowledge | Canonical after approved materialization |
 
+<p align="center">
+  <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/04-memory-keeps-its-history.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/04-memory-keeps-its-history.png" alt="Saved context, review, and approved memory stay connected across time." width="820" /></a>
+</p>
+
 ### Governed lifecycle
 
 1. An agent calls `memory_add` with content, `group_id`, and actor identity.
@@ -87,6 +90,10 @@ Allura uses one PostgreSQL engine with two governed logical layers.
 6. Approval authorizes or queues a canonical semantic version; materialization is not universally instantaneous.
 7. After materialization, `memory_search` can return approved, tenant-scoped context with lifecycle metadata.
 8. Updates create a new version that supersedes the old one.
+
+<p align="center">
+  <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/03-people-review-important-changes.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/03-people-review-important-changes.png" alt="A review module links a proposed change, policy check, and recorded decision." width="820" /></a>
+</p>
 
 Rejected or low-confidence content can remain useful evidence without becoming canonical knowledge.
 
@@ -125,6 +132,10 @@ PostgreSQL 16 + pgvector
 - **Promotion is governed.** `memory_promote` requests review; it does not bypass the curator.
 - **Storage is behind an interface.** Agent-facing clients use MCP/API operations instead of direct database access.
 - **Failure is visible.** Health and retrieval responses expose degraded state and warnings.
+
+<p align="center">
+  <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/02-access-has-boundaries.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/02-access-has-boundaries.png" alt="Two labeled workspaces are separated by a policy boundary lock." width="820" /></a>
+</p>
 
 ### RuVector boundary
 
@@ -346,6 +357,10 @@ bun run brain:status
 - Health output is runtime evidence, not a substitute for functional tests.
 - A “done” claim should identify the command, result, and relevant artifact.
 - Required pull-request validation produces a commit-bound evidence manifest; see the [capability matrix](docs/portfolio/capability-matrix.md) and [evidence index](docs/portfolio/evidence-index.md).
+
+<p align="center">
+  <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/05-test-before-release.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/05-test-before-release.png" alt="A loop links a scenario, run, result review, and saved proof." width="820" /></a>
+</p>
 
 ## Repository map
 
