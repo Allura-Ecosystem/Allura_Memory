@@ -27,6 +27,8 @@ export interface EvalMetric {
   status: "pass" | "fail" | "skip";
   scenario_ids?: string[];
   case_ids?: string[];
+  /** True when the value was derived from executed case outcomes, not a pass-rate. */
+  measured?: boolean;
 }
 
 export interface EvalFailure {
@@ -79,6 +81,19 @@ export interface CaseOutcome {
   passed: boolean;
   observed?: unknown;
   detail?: string;
+}
+
+/**
+ * A measured value carried by a case outcome. When an executor reports a
+ * numeric `value` in `observed`, the lane metric is derived from those values
+ * (mean for higher-is-better lanes, p95/max for latency) instead of a
+ * pass-rate. This is what distinguishes a real measurement from a wiring
+ * check: a shape-only executor reports no value, so the lane falls back to
+ * pass-rate and is explicitly not a measurement.
+ */
+export interface MeasuredOutcome {
+  value?: number;
+  [k: string]: unknown;
 }
 
 /**
@@ -218,29 +233,48 @@ export function defaultOfflineExecutor(lane: LaneConfig, _dataset: unknown, case
 export async function executeLane(
   lane: LaneConfig,
   executor: CaseExecutor,
-): Promise<{ name: string; value: number; comparator: "gte" | "lte"; case_ids: string[]; scenario_ids: string[] }> {
+): Promise<{ name: string; value: number; comparator: "gte" | "lte"; case_ids: string[]; scenario_ids: string[]; measured: boolean }> {
   const dataset = loadDataset(lane.cases);
   const outcomes: CaseOutcome[] = [];
   for (const caseItem of dataset.cases) {
     outcomes.push(await executor(lane, dataset, caseItem));
   }
 
+  const case_ids = outcomes.map((o) => o.id);
+
+  // A measured executor reports a numeric `value` in each case's `observed`.
+  // When present, the lane metric is derived from those values — never from a
+  // caller-supplied score. This is the falsifiability contract: a shape-only
+  // executor reports no value, so the lane is a pass-rate wiring check, not a
+  // measurement.
+  const measuredValues = outcomes
+    .map((o) => (o.observed as MeasuredOutcome | undefined)?.value)
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+
+  if (measuredValues.length > 0) {
+    if (lane.name === "latency") {
+      // Latency is lower-is-better; report the observed p95 (95th percentile).
+      const sorted = [...measuredValues].sort((a, b) => a - b);
+      const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))];
+      return { name: metricNameForLane(lane.name), value: p95, comparator: "lte", case_ids, scenario_ids: case_ids, measured: true };
+    }
+    const value = measuredValues.reduce((a, b) => a + b, 0) / measuredValues.length;
+    return { name: metricNameForLane(lane.name), value, comparator: "gte", case_ids, scenario_ids: case_ids, measured: true };
+  }
+
   if (lane.name === "latency") {
-    // Latency is a lower-is-better measurement in milliseconds. The observed
-    // value is the worst-case (max) declared p95 budget across the dataset.
+    // No measured latency: report the worst declared budget as a placeholder
+    // and mark it unmeasured so it cannot be mistaken for a real number.
     const budgets = dataset.cases
       .map((c) => (c as Record<string, unknown>).expected_p95_ms)
       .filter((v): v is number => typeof v === "number");
     const value = budgets.length === 0 ? 0 : Math.max(...budgets);
-    const case_ids = outcomes.map((o) => o.id);
-    return { name: metricNameForLane(lane.name), value, comparator: "lte", case_ids, scenario_ids: case_ids };
+    return { name: metricNameForLane(lane.name), value, comparator: "lte", case_ids, scenario_ids: case_ids, measured: false };
   }
 
   const passed = outcomes.filter((o) => o.passed).length;
   const value = outcomes.length === 0 ? 0 : passed / outcomes.length;
-  const case_ids = outcomes.map((o) => o.id);
-  const scenario_ids = outcomes.map((o) => o.id);
-  return { name: metricNameForLane(lane.name), value, comparator: "gte", case_ids, scenario_ids };
+  return { name: metricNameForLane(lane.name), value, comparator: "gte", case_ids, scenario_ids: case_ids, measured: false };
 }
 
 /** Map a lane name to its declared metric name in the suite thresholds. */
@@ -273,10 +307,10 @@ export async function runSuite(opts: {
   const suite = loadSuite(opts.suitePath);
   const executor = opts.executor ?? defaultOfflineExecutor;
 
-  const metrics: Array<{ name: string; value: number; comparator?: "gte" | "lte"; scenario_ids?: string[]; case_ids?: string[] }> = [];
+  const metrics: Array<{ name: string; value: number; comparator?: "gte" | "lte"; scenario_ids?: string[]; case_ids?: string[]; measured?: boolean }> = [];
   for (const lane of suite.lanes) {
     const executed = await executeLane(lane, executor);
-    metrics.push({ name: executed.name, value: executed.value, comparator: executed.comparator, scenario_ids: executed.scenario_ids, case_ids: executed.case_ids });
+    metrics.push({ name: executed.name, value: executed.value, comparator: executed.comparator, scenario_ids: executed.scenario_ids, case_ids: executed.case_ids, measured: executed.measured });
   }
 
   return runEvaluation({
@@ -293,7 +327,7 @@ export function runEvaluation(opts: {
   suite: string;
   datasetRevision: string;
   thresholds: Record<string, number>;
-  metrics: Array<{ name: string; value: number; comparator?: "gte" | "lte"; scenario_ids?: string[]; case_ids?: string[] }>;
+  metrics: Array<{ name: string; value: number; comparator?: "gte" | "lte"; scenario_ids?: string[]; case_ids?: string[]; measured?: boolean }>;
   baseline?: Record<string, number>;
   environment?: Record<string, unknown>;
 }): EvalResult {
@@ -303,14 +337,14 @@ export function runEvaluation(opts: {
   for (const m of opts.metrics) {
     const threshold = opts.thresholds[m.name];
     if (threshold === undefined) {
-      evalMetrics.push({ name: m.name, value: m.value, threshold: 0, status: "skip", scenario_ids: m.scenario_ids, case_ids: m.case_ids });
+      evalMetrics.push({ name: m.name, value: m.value, threshold: 0, status: "skip", scenario_ids: m.scenario_ids, case_ids: m.case_ids, measured: m.measured });
       continue;
     }
     // Default comparator is gte (higher is better). Latency uses lte.
     const comparator = m.comparator ?? "gte";
     const passed = comparator === "lte" ? m.value <= threshold : m.value >= threshold;
     const status: "pass" | "fail" = passed ? "pass" : "fail";
-    evalMetrics.push({ name: m.name, value: m.value, threshold, status, scenario_ids: m.scenario_ids, case_ids: m.case_ids });
+    evalMetrics.push({ name: m.name, value: m.value, threshold, status, scenario_ids: m.scenario_ids, case_ids: m.case_ids, measured: m.measured });
     if (status === "fail") {
       failures.push({
         metric: m.name,

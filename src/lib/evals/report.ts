@@ -21,7 +21,7 @@ export function generateMarkdownReport(result: EvalResult): string {
   lines.push("| Metric | Value | Threshold | Status |");
   lines.push("|--------|-------|-----------|--------|");
   for (const m of result.metrics) {
-    lines.push(`| ${m.name} | ${m.value} | ${m.threshold} | ${m.status} |`);
+    lines.push(`| ${m.name} | ${m.value} | ${m.threshold} | ${m.status}${m.measured ? " (measured)" : " (wiring-check)"} |`);
   }
   if (result.failures.length > 0) {
     lines.push("");
