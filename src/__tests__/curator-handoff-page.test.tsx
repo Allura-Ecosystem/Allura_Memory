@@ -10,10 +10,10 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { getAuthUser, withWorkspaceTransaction, getBumblebeeSummaryInTransaction, transactionClient } = vi.hoisted(() => {
+const { getDashboardPrincipal, withWorkspaceTransaction, getBumblebeeSummaryInTransaction, transactionClient } = vi.hoisted(() => {
   const transactionClient = { query: vi.fn().mockResolvedValue({ rows: [] }) }
   return {
-    getAuthUser: vi.fn(),
+    getDashboardPrincipal: vi.fn(),
     withWorkspaceTransaction: vi.fn(async (_scope, callback) => callback(transactionClient)),
     getBumblebeeSummaryInTransaction: vi.fn().mockResolvedValue({
       sources: 4,
@@ -27,9 +27,8 @@ const { getAuthUser, withWorkspaceTransaction, getBumblebeeSummaryInTransaction,
 })
 
 vi.mock("server-only", () => ({}))
-vi.mock("next/headers", () => ({ headers: () => new Headers() }))
 vi.mock("next/navigation", () => ({ redirect: () => { throw new Error("REDIRECT_TO_LOGIN") } }))
-vi.mock("@/lib/auth/api-auth", () => ({ getAuthUser }))
+vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal }))
 vi.mock("@/lib/db/tenant-transaction", () => ({ withWorkspaceTransaction }))
 vi.mock("@/lib/curator/operator-read-service", () => ({ getBumblebeeSummaryInTransaction }))
 
@@ -39,7 +38,7 @@ import { BUMBLEBEE_ENABLED_ENV_VAR } from "@/lib/bumblebee/module"
 const user = { id: "curator-1", email: "curator@example.test", role: "curator" as const, groupId: "allura-acme", workspaceId: "workspace-a", sessionId: "session-a" }
 
 beforeEach(() => {
-  getAuthUser.mockReturnValue(user)
+  getDashboardPrincipal.mockResolvedValue(user)
 })
 
 afterEach(() => {
@@ -92,7 +91,7 @@ describe("Story 25.3b production /dashboard/curator page wiring", () => {
   })
 
   it("redirects to login without a ledger event when unauthenticated", async () => {
-    getAuthUser.mockReturnValue(null)
+    getDashboardPrincipal.mockResolvedValue(null)
 
     await expect(CuratorHandoffPage()).rejects.toThrow("REDIRECT_TO_LOGIN")
     expect(transactionClient.query).not.toHaveBeenCalled()

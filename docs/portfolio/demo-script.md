@@ -83,3 +83,59 @@ allura inspect
 - All audit events are append-only (immutable)
 - All promotions require human approval (HITL)
 - All scenarios are deterministic and replayable
+## Dashboard walkthrough
+
+The governed operator dashboard demonstrates server-owned scope and truthful
+live/empty/degraded states over the PostgreSQL/RuVector stack.
+
+### 1. Start the portfolio database
+`bun run portfolio:up` creates `.env.portfolio` from the non-secret local-demo
+example if needed, without printing environment values.
+
+```bash
+bun run portfolio:up
+```
+
+The portfolio database is explicitly disposable: the compose file declares no
+named or host volumes, while the image copies its initializer and synthetic
+workspace fixture at build time. `portfolio:up` recreates the container; use a
+different database for persistent work.
+
+### 2. Start the dashboard (separate terminal)
+```bash
+bun run portfolio:dev
+```
+
+### 3. Verify the demo path
+```bash
+bun run dashboard:doctor
+```
+**Expected**: app-role connectivity, RLS isolation, and HTTP 200 on all seven
+routes.
+
+### 3b. Run the local HTTP/auth contract
+```bash
+bun run test:dashboard-http
+```
+**Expected**: a disposable supported PostgreSQL database and isolated Next
+processes prove all seven routes are 200 without redirects under explicit
+DevAuth, then redirect or deny every protected route with DevAuth disabled.
+
+### 4. Capture evidence
+```bash
+bun run dashboard:browser
+```
+**Expected**: seven PNGs and a `manifest.json` under `artifacts/dashboard-demo/`,
+with no image emitted for any failed route.
+
+### 5. Stop the portfolio database
+```bash
+bun run portfolio:down
+```
+
+## Key Points
+- All operations are tenant-isolated via PostgreSQL RLS
+- All audit events are append-only (immutable)
+- All promotions require human approval (HITL)
+- All scenarios are deterministic and replayable
+- Dashboard scope is server-derived; browser `x-allura-*` headers are never authority

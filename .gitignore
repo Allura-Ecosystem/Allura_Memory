@@ -33,6 +33,7 @@ tsconfig.tsbuildinfo
 # Environment variables - NEVER COMMIT SECRETS
 .env
 .env.local
+.env.portfolio
 .env.*.local
 .env.decrypted
 /.env.bak*

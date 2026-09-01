@@ -33,6 +33,15 @@ export const authEnvSchema = z.object({
     z.string().transform((val) => val === "true")
   ),
 
+  /**
+   * Portfolio-only local override. It can select DevAuth over configured Clerk
+   * credentials during a non-production demo, but production always ignores it.
+   */
+  ALLURA_DEMO_DEV_AUTH_FORCE: z.preprocess(
+    (val) => val ?? "false",
+    z.string().transform((val) => val === "true")
+  ),
+
   /** Default role for dev auth users. Defaults to "admin" for convenience. */
   ALLURA_DEV_AUTH_ROLE: z
     .string()
@@ -143,6 +152,7 @@ export function clearAuthConfig(): void {
  */
 export function isClerkEnabled(config?: AuthEnvConfig): boolean {
   const c = config ?? getAuthConfig();
+  if (c.NODE_ENV !== "production" && c.ALLURA_DEMO_DEV_AUTH_FORCE) return false;
   return (
     typeof c.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY === "string" &&
     c.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.length > 0 &&
@@ -157,7 +167,9 @@ export function isClerkEnabled(config?: AuthEnvConfig): boolean {
  * Dev auth is NEVER active in production. This is unconditional and is checked
  * first: no combination of ALLURA_DEV_AUTH_ENABLED, missing Clerk keys, or role
  * configuration can re-enable it. Outside production, dev auth is active only
- * when explicitly enabled AND Clerk is not configured.
+ * when explicitly enabled AND Clerk is not configured. The supported portfolio
+ * demo may explicitly select DevAuth in non-production even if a developer's
+ * `.env.local` contains Clerk credentials.
  *
  * The previous form was:
  *   ALLURA_DEV_AUTH_ENABLED && (!isClerkEnabled(c) || c.NODE_ENV !== "production")
@@ -168,7 +180,7 @@ export function isClerkEnabled(config?: AuthEnvConfig): boolean {
 export function isDevAuthActive(config?: AuthEnvConfig): boolean {
   const c = config ?? getAuthConfig();
   if (c.NODE_ENV === "production") return false;
-  return c.ALLURA_DEV_AUTH_ENABLED && !isClerkEnabled(c);
+  return c.ALLURA_DEV_AUTH_ENABLED && (!isClerkEnabled(c) || c.ALLURA_DEMO_DEV_AUTH_FORCE);
 }
 
 /**

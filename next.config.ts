@@ -1,6 +1,10 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
+  // The portfolio evidence runner drives the local development server through
+  // http://127.0.0.1. Declare that loopback origin explicitly so Next dev does
+  // not block HMR/font/client-hydration resources during browser proof.
+  allowedDevOrigins: ["127.0.0.1"],
   headers: async () => [
     {
       source: "/(.*)",

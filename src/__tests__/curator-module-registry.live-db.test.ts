@@ -1,5 +1,4 @@
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest"
-import { NextRequest } from "next/server"
 
 vi.mock("server-only", () => ({}))
 
@@ -13,16 +12,15 @@ const WORKSPACE = "workspace-253b-live"
 const PRINCIPAL = "curator-253b-live"
 const SESSION = "session-253b-live"
 
-function authenticatedRequest(role: "curator" | "viewer") {
-  return new NextRequest("http://allura.local/dashboard/curator", {
-    headers: {
-      "x-allura-user-id": PRINCIPAL,
-      "x-allura-role": role,
-      "x-allura-group-id": GROUP,
-      "x-allura-workspace-id": WORKSPACE,
-      "x-allura-session-id": SESSION,
-    },
-  })
+function authenticatedPrincipal(role: "curator" | "viewer") {
+  return {
+    id: PRINCIPAL,
+    email: "curator@example.test",
+    role,
+    groupId: GROUP,
+    workspaceId: WORKSPACE,
+    sessionId: SESSION,
+  }
 }
 
 async function latestDecision() {
@@ -48,7 +46,7 @@ describeLive("Story 25.3b managed app-role registry ledger", () => {
     )
     process.env.BUMBLEBEE_MODULE_ENABLED = "true"
 
-    await expect(issueCuratorModules(authenticatedRequest("curator"))).resolves.toMatchObject({
+    await expect(issueCuratorModules(authenticatedPrincipal("curator"))).resolves.toMatchObject({
       state: "complete", modules: [{ id: "bumblebee", state: "available" }],
     })
     const event = await latestDecision()
@@ -67,10 +65,10 @@ describeLive("Story 25.3b managed app-role registry ledger", () => {
   })
 
   it("records failed denied and disabled decisions through the managed app role", async () => {
-    await expect(issueCuratorModules(authenticatedRequest("viewer"))).resolves.toMatchObject({ state: "denied" })
+    await expect(issueCuratorModules(authenticatedPrincipal("viewer"))).resolves.toMatchObject({ state: "denied" })
     expect(await latestDecision()).toMatchObject({ workspace_id: WORKSPACE, status: "failed", metadata: { decision: "denied" } })
 
-    await expect(issueCuratorModules(authenticatedRequest("curator"))).resolves.toMatchObject({ state: "degraded", modules: [{ state: "unavailable" }] })
+    await expect(issueCuratorModules(authenticatedPrincipal("curator"))).resolves.toMatchObject({ state: "degraded", modules: [{ state: "unavailable" }] })
     expect(await latestDecision()).toMatchObject({ workspace_id: WORKSPACE, status: "failed", metadata: { decision: "disabled" } })
   })
 

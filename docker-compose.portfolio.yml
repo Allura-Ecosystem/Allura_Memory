@@ -1,0 +1,37 @@
+# =============================================================================
+# Portfolio demo stack — PostgreSQL only (loopback, collision-safe).
+#
+# This compose file starts ONLY a disposable database. The Next.js dashboard runs in the
+# foreground via `bun run dev` (or `bun run start`) so its logs and lifecycle
+# stay visible to the operator. The host port is configurable via
+# PORTFOLIO_POSTGRES_PORT (default 5433) and bound to 127.0.0.1 only.
+#
+# Usage:
+#   bun run portfolio:up
+#   bun run dashboard:doctor
+#   ALLURA_DASHBOARD_PORT=3100 bun run dev      # separate foreground terminal
+# =============================================================================
+
+services:
+  postgres:
+    image: allura-portfolio-postgres:local
+    build:
+      context: .
+      dockerfile: docker/portfolio-postgres/Dockerfile
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-allura}
+      POSTGRES_USER: ${POSTGRES_USER:-allura}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${PORTFOLIO_POSTGRES_PORT:-5433}:5432"
+    # Override the base image's declared data VOLUME with tmpfs. The portfolio
+    # database is intentionally disposable and has no host, named, or anonymous
+    # Docker volume dependency.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-allura} -d ${POSTGRES_DB:-allura}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s

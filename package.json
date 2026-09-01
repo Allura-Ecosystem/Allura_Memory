@@ -80,6 +80,7 @@
     "test:unit": "vitest run --config vitest.config.unit.ts",
     "test:integration": "vitest run --config vitest.config.integration.ts",
     "test:live-db": "POSTGRES_APP_USER=${POSTGRES_APP_USER:-allura_app} POSTGRES_APP_PASSWORD=${POSTGRES_APP_PASSWORD:-change-me-in-production} RUN_E2E_TESTS=true vitest run --config vitest.config.live-db.ts",
+    "test:dashboard-http": "vitest run --config vitest.config.dashboard-http.ts",
     "test:mcp": "bun scripts/test-mcp-browser.ts",
     "ci:evidence": "bun scripts/ci/collect-evidence.ts",
     "ci:live-db": "bash scripts/ci/run-live-db-tests.sh",
@@ -95,7 +96,12 @@
     "validate:git-exec": "bun scripts/validate-git-exec-choke-point.ts",
     "validate:route-scope-manifest": "bun run scripts/validate-route-scope-manifest.ts",
     "validate:story-status": "bun run scripts/check-story-status-guard.ts",
-    "validate:vendor": "bun scripts/verify-vendor-checksums.ts"
+    "validate:vendor": "bun scripts/verify-vendor-checksums.ts",
+    "dashboard:doctor": "bun scripts/dashboard-doctor.ts",
+    "dashboard:browser": "bun scripts/agent-browser-dashboard.ts",
+    "portfolio:up": "bun scripts/portfolio-demo.ts up",
+    "portfolio:dev": "bun scripts/portfolio-demo.ts dev",
+    "portfolio:down": "docker compose --env-file .env.portfolio -f docker-compose.portfolio.yml down"
   },
   "repository": {
     "type": "git",

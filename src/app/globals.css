@@ -1080,8 +1080,6 @@ textarea {
    ============================================================ */
 
 .curator-dashboard {
-  display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
   min-height: 100vh;
   background: var(--c-bg);
   color: var(--c-ink);
@@ -1709,10 +1707,6 @@ textarea {
 }
 
 @media (max-width: 1023px) {
-  .curator-dashboard {
-    grid-template-columns: 82px minmax(0, 1fr);
-  }
-
   .curator-sidebar {
     padding-inline: 12px;
   }
@@ -1750,10 +1744,6 @@ textarea {
 }
 
 @media (max-width: 767px) {
-  .curator-dashboard {
-    display: block;
-  }
-
   .curator-sidebar {
     position: static;
     width: 100%;
