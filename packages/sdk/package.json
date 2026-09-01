@@ -44,6 +44,9 @@
   "dependencies": {
     "zod": "^3.24.0"
   },
+  "bundledDependencies": [
+    "zod"
+  ],
   "devDependencies": {
     "tsup": "^8.4.0",
     "typescript": "^5.9.0",
