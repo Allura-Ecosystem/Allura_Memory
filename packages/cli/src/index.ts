@@ -151,10 +151,18 @@ async function cmdDoctor() {
   const bunVersion = process.version;
   checks.push({ name: "Runtime (Bun)", status: "ok", detail: bunVersion });
 
-  // Check PostgreSQL
+  // Check PostgreSQL. Connection details come from the environment so that
+  // `allura doctor` validates the stack `allura up` actually started (the
+  // portfolio demo binds PostgreSQL on POSTGRES_PORT, not the 5432 default).
   try {
     const { Client } = await import("pg");
-    const client = new Client({ host: "localhost", port: 5432, database: "memory", user: "allura" });
+    const client = new Client({
+      host: process.env.POSTGRES_HOST ?? "localhost",
+      port: Number.parseInt(process.env.POSTGRES_PORT ?? "5432", 10),
+      database: process.env.POSTGRES_DB ?? "memory",
+      user: process.env.POSTGRES_USER ?? "allura",
+      password: process.env.POSTGRES_PASSWORD,
+    });
     await client.connect();
     const res = await client.query("SELECT version()");
     checks.push({ name: "PostgreSQL", status: "ok", detail: res.rows[0].version.split(" ")[1] });
@@ -236,8 +244,11 @@ async function cmdReplay() {
 
 async function cmdEval() {
   console.log("Running portfolio evaluation suite...");
+  // Runs the scored evaluation lanes and prints each metric against its
+  // threshold. Previously this ran the eval-runner's own unit tests, which
+  // proved the runner compiled but reported no lane scores.
   const { spawnSync } = await import("child_process");
-  const result = spawnSync("bun", ["x", "vitest", "run", "src/lib/evals/__tests__/eval-runner.test.ts"], { stdio: "inherit" });
+  const result = spawnSync("bun", ["src/lib/evals/cli.ts"], { stdio: "inherit" });
   process.exit(result.status ?? 1);
 }
 

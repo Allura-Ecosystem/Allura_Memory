@@ -1,9 +1,9 @@
 {
-  "revision": "0001",
-  "provenance": "Synthetic tool contract fixtures for Story 24.6.",
+  "revision": "0002",
+  "provenance": "Synthetic tool contract fixtures for Story 24.6 measured evaluation. Tool names are drawn from the canonical HTTP catalog (src/mcp/http-tool-catalog.ts).",
   "cases": [
     { "id": "tc1", "tool": "memory_search", "required_params": ["group_id", "query"], "expected": "valid" },
     { "id": "tc2", "tool": "memory_add", "required_params": ["group_id", "user_id", "content"], "expected": "valid" },
-    { "id": "tc3", "tool": "governance_proposal_approve", "required_params": ["proposal_id", "group_id"], "expected": "valid" }
+    { "id": "tc3", "tool": "governance_check_gate", "required_params": ["group_id"], "expected": "valid" }
   ]
 }

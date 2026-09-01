@@ -40,6 +40,7 @@ export default defineConfig({
       "src/lib/db/tenant-table-inventory.test.ts",
       "src/lib/memory/proposal-semantic-projection.live-db.test.ts",
       "src/lib/graph-adapter/__tests__/adapter-live-db-e2e.test.ts",
+      "src/lib/evals/__tests__/live-executors.falsifiability.test.ts",
     ],
     testTimeout: 60_000,
     hookTimeout: 30_000,

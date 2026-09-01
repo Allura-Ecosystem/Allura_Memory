@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="#why-allura-memory">Why Allura</a> ·
+  <a href="#evidence-patterns">Evidence patterns</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#getting-started">Getting started</a> ·
   <a href="#mcp-api">MCP API</a> ·
@@ -23,6 +24,18 @@
 <p align="center">
   <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/01-every-action-leaves-proof.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/01-every-action-leaves-proof.png" alt="A request, a review, and a durable record are connected; source, decision, and result stay linked." width="860" /></a>
 </p>
+
+## Evidence patterns
+
+These six visuals explain how Allura turns captured context into trusted intelligence. They describe product patterns and implementation intent; they make no formal compliance or certification claim.
+
+|  |  |
+| --- | --- |
+| <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/01-every-action-leaves-proof.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/01-every-action-leaves-proof.png" alt="A request, a review, and a durable record are connected; source, decision, and result stay linked." width="440" /></a><br/><sub><strong>Every action leaves proof</strong></sub> | <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/02-access-has-boundaries.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/02-access-has-boundaries.png" alt="Two labeled workspaces are separated by a policy boundary lock." width="440" /></a><br/><sub><strong>Access has boundaries</strong></sub> |
+| <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/03-people-review-important-changes.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/03-people-review-important-changes.png" alt="A review module links a proposed change, policy check, and recorded decision." width="440" /></a><br/><sub><strong>People review important changes</strong></sub> | <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/04-memory-keeps-its-history.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/04-memory-keeps-its-history.png" alt="Saved context, review, and approved memory stay connected across time." width="440" /></a><br/><sub><strong>Memory keeps its history</strong></sub> |
+| <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/05-test-before-release.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/05-test-before-release.png" alt="A loop links a scenario, run, result review, and saved proof." width="440" /></a><br/><sub><strong>Test before release</strong></sub> | <a href="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/06-an-answer-can-show-its-work.png"><img src="docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/png/06-an-answer-can-show-its-work.png" alt="An answer points to factual source, review decision, and approved context." width="440" /></a><br/><sub><strong>An answer can show its work</strong></sub> |
+
+Every image links to a full-size PNG. The matching editable SVG files and complete descriptions are in the [evidence infographic set](docs/portfolio/allura-bofa-principal-engineer/evidence-infographics/README.md).
 
 ## Why Allura Memory
 

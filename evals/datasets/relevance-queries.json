@@ -1,9 +1,11 @@
 {
-  "revision": "0001",
-  "provenance": "Synthetic fixtures created for Story 24.6. No real user data. Tenant-safe.",
+  "revision": "0002",
+  "provenance": "Synthetic mortgage-underwriting fixtures for Story 24.6. No real borrower or applicant data. No PII. Tenant-safe.",
+  "domain": "Residential mortgage origination and underwriting review.",
+  "note": "This dataset feeds the OFFLINE lane, which validates case shape only and therefore reports a wiring check, not a measurement. The measured retrieval lane uses relevance-corpus.json with a real labeled corpus and negative controls — see scripts/eval-live-retrieval.ts.",
   "queries": [
-    { "id": "q1", "query": "ground beef supplier pricing", "expected_memory_ids": ["mem-pricing-1"], "k": 5 },
-    { "id": "q2", "query": "halal certification HMS", "expected_memory_ids": ["mem-halal-1"], "k": 5 },
-    { "id": "q3", "query": "exclusive agreement terms", "expected_memory_ids": ["mem-contract-1"], "k": 5 }
+    { "id": "q1", "query": "debt to income ratio exceeded guideline compensating factors", "expected_memory_ids": ["mem-dti-1"], "k": 5 },
+    { "id": "q2", "query": "self employed income verification two years returns", "expected_memory_ids": ["mem-income-1"], "k": 5 },
+    { "id": "q3", "query": "flood zone determination mandatory insurance", "expected_memory_ids": ["mem-flood-1"], "k": 5 }
   ]
 }

@@ -1,0 +1,126 @@
+{"kind":"deck","id":"pr/xmsc07","name":"Deck"}
+{"kind":"layout","layoutId":"dbb0fadf-e63c-4a5a-8099-ab675db4a5df","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"08a68092-885d-422d-a984-dafb19c5c090","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/1yq1w6","slide":1,"title":"ALLURA / TECHNICAL PORTFOLIO","textShapes":7}
+{"kind":"textbox","id":"sh/u1wjqtc7","slide":1,"name":"eyebrow","text":"ALLURA / TECHNICAL PORTFOLIO","textPreview":"ALLURA / TECHNICAL PORTFOLIO","textChars":28,"textLines":1,"bbox":[182,40,470,22]}
+{"kind":"textbox","id":"sh/v25kjyts","slide":1,"name":"slide-number","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[1175,40,50,22]}
+{"kind":"shape","id":"sh/47y1w3u9","slide":1,"name":"top-rule","bbox":[54,86,1172,0]}
+{"kind":"shape","id":"sh/5872p8bu","slide":1,"name":"title-panel","bbox":[54,125,1172,385]}
+{"kind":"textbox","id":"sh/i5gjutc3","slide":1,"name":"kicker","text":"AGENTIC AI FRAMEWORK & HARNESS","textPreview":"AGENTIC AI FRAMEWORK & HARNESS","textChars":30,"textLines":1,"bbox":[94,170,560,24]}
+{"kind":"textbox","id":"sh/36pknyto","slide":1,"name":"title","text":"Evidence-first\nenterprise AI systems.","textPreview":"Evidence-first | enterprise AI systems.","textChars":37,"textLines":2,"bbox":[94,213,760,150]}
+{"kind":"textbox","id":"sh/kbu1kzu5","slide":1,"name":"subtitle","text":"A technical case study of orchestration, governed memory, policy hooks, deterministic evaluation and developer interfaces.","textPreview":"A technical case study of orchestration, governed memory, policy hooks, deterministic evaluation and developer interfaces.","textChars":122,"textLines":1,"bbox":[94,395,780,60]}
+{"kind":"shape","id":"sh/lc32d4ba","slide":1,"name":"blue-module","bbox":[925,180,205,205]}
+{"kind":"shape","id":"sh/54zidkb6","slide":1,"name":"orange-module","bbox":[1030,335,145,145]}
+{"kind":"shape","id":"sh/4jqh4ful","slide":1,"name":"green-module","bbox":[1125,410,90,120]}
+{"kind":"textbox","id":"sh/jih0bat0","slide":1,"name":"role","text":"Role-aligned to Principal Engineer, Agentic AI Framework and Harness","textPreview":"Role-aligned to Principal Engineer, Agentic AI Framework and Harness","textChars":68,"textLines":1,"bbox":[54,565,900,30]}
+{"kind":"textbox","id":"sh/ih8z25cv","slide":1,"name":"disclaimer","text":"Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.","textPreview":"Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.","textChars":110,"textLines":1,"bbox":[54,610,1040,28]}
+{"kind":"image","id":"im/k3u90j2d","slide":1,"name":"","alt":"Official Allura wordmark","bbox":[54,28,112,44]}
+{"kind":"notes","id":"nt/1yq1w6","slide":1,"text":"[Sources]\n- Bank of America job posting (accessed 2026-09-01)\n- docs/portfolio/allura-bofa-principal-engineer/SOURCES.md\n\n[Presenter notes]\nOpen with scope and boundary: this shows engineering evidence, not a client claim."}
+{"kind":"slide","id":"sl/n8gldv","slide":2,"title":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textShapes":17}
+{"kind":"textbox","id":"sh/4vu5sj2l","slide":2,"name":"eyebrow","text":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textPreview":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textChars":34,"textLines":1,"bbox":[182,40,470,22]}
+{"kind":"textbox","id":"sh/5w36lo36","slide":2,"name":"slide-number","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1175,40,50,22]}
+{"kind":"shape","id":"sh/qxcnutkr","slide":2,"name":"top-rule","bbox":[54,86,1172,0]}
+{"kind":"textbox","id":"sh/rylonylc","slide":2,"name":"title","text":"What this portfolio demonstrates","textPreview":"What this portfolio demonstrates","textChars":32,"textLines":1,"bbox":[54,112,760,48]}
+{"kind":"textbox","id":"sh/szu5w32x","slide":2,"name":"intro","text":"The role calls for reusable frameworks, deterministic harnesses, memory, policy hooks and developer interfaces. Each claim below has a repository or CI source.","textPreview":"The role calls for reusable frameworks, deterministic harnesses, memory, policy hooks and developer interfaces. Each claim below has a re...","textChars":159,"textLines":1,"bbox":[54,166,1060,42]}
+{"kind":"shape","id":"sh/d036p83i","slide":2,"name":"theme-0","bbox":[54,260,260,230]}
+{"kind":"textbox","id":"sh/e1c7ydkn","slide":2,"name":"theme-kicker-0","text":"FRAMEWORK","textPreview":"FRAMEWORK","textChars":9,"textLines":1,"bbox":[78,292,210,20]}
+{"kind":"textbox","id":"sh/f25oryl8","slide":2,"name":"theme-heading-0","text":"Reusable execution path","textPreview":"Reusable execution path","textChars":23,"textLines":1,"bbox":[78,332,210,62]}
+{"kind":"textbox","id":"sh/3ipgve5g","slide":2,"name":"theme-body-0","text":"Orchestration plus shared interfaces","textPreview":"Orchestration plus shared interfaces","textChars":36,"textLines":1,"bbox":[78,418,210,38]}
+{"kind":"shape","id":"sh/2hwfm9ov","slide":2,"name":"theme-1","bbox":[346,260,260,230]}
+{"kind":"textbox","id":"sh/pk7yxonm","slide":2,"name":"theme-kicker-1","text":"HARNESS","textPreview":"HARNESS","textChars":7,"textLines":1,"bbox":[370,292,210,20]}
+{"kind":"textbox","id":"sh/ojyhoj61","slide":2,"name":"theme-heading-1","text":"Deterministic evidence","textPreview":"Deterministic evidence","textChars":22,"textLines":1,"bbox":[370,332,210,62]}
+{"kind":"textbox","id":"sh/fu5gre54","slide":2,"name":"theme-body-1","text":"Scenario, receipt, replay, evaluation","textPreview":"Scenario, receipt, replay, evaluation","textChars":37,"textLines":1,"bbox":[370,418,210,38]}
+{"kind":"shape","id":"sh/etwfi9oz","slide":2,"name":"theme-2","bbox":[638,260,260,230]}
+{"kind":"textbox","id":"sh/1gnyt4na","slide":2,"name":"theme-kicker-2","text":"GOVERNANCE","textPreview":"GOVERNANCE","textChars":10,"textLines":1,"bbox":[662,292,210,20]}
+{"kind":"textbox","id":"sh/gvexkz6p","slide":2,"name":"theme-heading-2","text":"Controls in the flow","textPreview":"Controls in the flow","textChars":20,"textLines":1,"bbox":[662,332,210,62]}
+{"kind":"textbox","id":"sh/zq9g3y5o","slide":2,"name":"theme-body-2","text":"Proof, policy, RLS, durable audit","textPreview":"Proof, policy, RLS, durable audit","textChars":33,"textLines":1,"bbox":[662,418,210,38]}
+{"kind":"shape","id":"sh/ypgzuto3","slide":2,"name":"theme-3","bbox":[930,260,260,230]}
+{"kind":"textbox","id":"sh/uh4ri1cn","slide":2,"name":"theme-kicker-3","text":"DEVELOPER EXPERIENCE","textPreview":"DEVELOPER EXPERIENCE","textChars":20,"textLines":1,"bbox":[954,292,210,20]}
+{"kind":"textbox","id":"sh/vidsb6ts","slide":2,"name":"theme-heading-3","text":"One governed core","textPreview":"One governed core","textChars":17,"textLines":1,"bbox":[954,332,210,62]}
+{"kind":"textbox","id":"sh/gjmtkrud","slide":2,"name":"theme-body-3","text":"SDK, API/MCP and CLI","textPreview":"SDK, API/MCP and CLI","textChars":20,"textLines":1,"bbox":[954,418,210,38]}
+{"kind":"textbox","id":"sh/hkvadwby","slide":2,"name":"close","text":"The focus is evidence that a hiring panel can inspect—not a collection of visual claims.","textPreview":"The focus is evidence that a hiring panel can inspect—not a collection of visual claims.","textChars":88,"textLines":1,"bbox":[54,570,900,28]}
+{"kind":"image","id":"im/q1orid07","slide":2,"name":"","alt":"Official Allura wordmark","bbox":[54,28,112,44]}
+{"kind":"notes","id":"nt/n8gldv","slide":2,"text":"[Sources]\n- Bank of America job posting (accessed 2026-09-01)\n- FRAMEWORK.md\n\n[Presenter notes]\nMap the job’s themes directly to the following visuals."}
+{"kind":"slide","id":"sl/upi4at","slide":3,"title":"03  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFIL...","textShapes":1}
+{"kind":"textbox","id":"sh/ihkzy9or","slide":3,"name":"boundary","text":"03  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textPreview":"03  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textChars":92,"textLines":1,"bbox":[54,690,1110,16]}
+{"kind":"image","id":"im/4vmt4vi1","slide":3,"name":"","alt":"Allura infographic: One governed execution path","bbox":[42,0,1196,680]}
+{"kind":"notes","id":"nt/upi4at","slide":3,"text":"[Sources]\n- FRAMEWORK.md §§ Architecture, Orchestration, Policy, Harness, Interfaces\n\n[Presenter notes]\nUse the graphic to explain the execution boundary and then invite verification through the cited paths."}
+{"kind":"slide","id":"sl/xg6pat","slide":4,"title":"04  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFIL...","textShapes":1}
+{"kind":"textbox","id":"sh/velcjixs","slide":4,"name":"boundary","text":"04  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textPreview":"04  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textChars":92,"textLines":1,"bbox":[54,690,1110,16]}
+{"kind":"image","id":"im/tkjqdofy","slide":4,"name":"","alt":"Allura infographic: Determinism is an engineering property","bbox":[42,0,1196,680]}
+{"kind":"notes","id":"nt/xg6pat","slide":4,"text":"[Sources]\n- FRAMEWORK.md § Simulator harness and evaluation\n- GitHub Actions run 33502490831\n\n[Presenter notes]\nUse the graphic to explain the execution boundary and then invite verification through the cited paths."}
+{"kind":"slide","id":"sl/9tshlc","slide":5,"title":"05  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFIL...","textShapes":1}
+{"kind":"textbox","id":"sh/43yl0329","slide":5,"name":"boundary","text":"05  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textPreview":"05  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textChars":92,"textLines":1,"bbox":[54,690,1110,16]}
+{"kind":"image","id":"im/alo3ah0r","slide":5,"name":"","alt":"Allura infographic: Memory is governed across its lifecycle","bbox":[42,0,1196,680]}
+{"kind":"notes","id":"nt/9tshlc","slide":5,"text":"[Sources]\n- FRAMEWORK.md § Memory patterns\n\n[Presenter notes]\nUse the graphic to explain the execution boundary and then invite verification through the cited paths."}
+{"kind":"slide","id":"sl/w91ryb","slide":6,"title":"06  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFIL...","textShapes":1}
+{"kind":"textbox","id":"sh/9c3ulobu","slide":6,"name":"boundary","text":"06  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textPreview":"06  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textChars":92,"textLines":1,"bbox":[54,690,1110,16]}
+{"kind":"image","id":"im/vel4be5s","slide":6,"name":"","alt":"Allura infographic: Controls belong on the critical path","bbox":[42,0,1196,680]}
+{"kind":"notes","id":"nt/w91ryb","slide":6,"text":"[Sources]\n- FRAMEWORK.md §§ Policy hooks and tool calling, Governance and scale\n\n[Presenter notes]\nUse the graphic to explain the execution boundary and then invite verification through the cited paths."}
+{"kind":"slide","id":"sl/jxoc3x","slide":7,"title":"07  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFIL...","textShapes":1}
+{"kind":"textbox","id":"sh/wbqpczi5","slide":7,"name":"boundary","text":"07  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textPreview":"07  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textChars":92,"textLines":1,"bbox":[54,690,1110,16]}
+{"kind":"image","id":"im/ahcza5kb","slide":7,"name":"","alt":"Allura infographic: Developer interfaces share the same controls","bbox":[42,0,1196,680]}
+{"kind":"notes","id":"nt/jxoc3x","slide":7,"text":"[Sources]\n- FRAMEWORK.md § Developer interfaces\n\n[Presenter notes]\nUse the graphic to explain the execution boundary and then invite verification through the cited paths."}
+{"kind":"slide","id":"sl/oe7os4","slide":8,"title":"08  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFIL...","textShapes":1}
+{"kind":"textbox","id":"sh/21s7i1wf","slide":8,"name":"boundary","text":"08  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textPreview":"08  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textChars":92,"textLines":1,"bbox":[54,690,1110,16]}
+{"kind":"image","id":"im/ofepof6x","slide":8,"name":"","alt":"Allura infographic: Evidence makes the release claim inspectable","bbox":[42,0,1196,680]}
+{"kind":"notes","id":"nt/oe7os4","slide":8,"text":"[Sources]\n- GitHub Actions run 33502490831\n- artifacts/dashboard-demo/manifest.json\n\n[Presenter notes]\nUse the graphic to explain the execution boundary and then invite verification through the cited paths."}
+{"kind":"slide","id":"sl/zsckug","slide":9,"title":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textShapes":11}
+{"kind":"textbox","id":"sh/yt4zilsn","slide":9,"name":"eyebrow","text":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textPreview":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textChars":34,"textLines":1,"bbox":[182,40,470,22]}
+{"kind":"textbox","id":"sh/zud0bqt8","slide":9,"name":"slide-number","text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1175,40,50,22]}
+{"kind":"shape","id":"sh/8zmhofap","slide":9,"name":"top-rule","bbox":[54,86,1172,0]}
+{"kind":"textbox","id":"sh/90fihkba","slide":9,"name":"title","text":"Dashboard proof: captured, not invented","textPreview":"Dashboard proof: captured, not invented","textChars":39,"textLines":1,"bbox":[54,112,800,45]}
+{"kind":"textbox","id":"sh/mx4zm5sj","slide":9,"name":"intro","text":"The Curator route is a real capture from the active local demonstration. The manifest records seven tested routes, all HTTP 200, without captured console or page errors.","textPreview":"The Curator route is a real capture from the active local demonstration. The manifest records seven tested routes, all HTTP 200, without ...","textChars":169,"textLines":1,"bbox":[54,164,1120,42]}
+{"kind":"shape","id":"sh/nyd0fat4","slide":9,"name":"screenshot-frame","bbox":[54,235,700,370]}
+{"kind":"textbox","id":"sh/xofilkb6","slide":9,"name":"metric-0","text":"7 / 7","textPreview":"7 / 7","textChars":5,"textLines":1,"bbox":[825,255,120,28]}
+{"kind":"textbox","id":"sh/9ozqh0ni","slide":9,"name":"metric-label-0","text":"captured routes returned HTTP 200","textPreview":"captured routes returned HTTP 200","textChars":33,"textLines":1,"bbox":[825,291,330,40]}
+{"kind":"shape","id":"sh/8nq98v6x","slide":9,"name":"metric-rule-0","bbox":[825,342,330,0]}
+{"kind":"textbox","id":"sh/7mh8fq5c","slide":9,"name":"metric-1","text":"0","textPreview":"0","textChars":1,"textLines":1,"bbox":[825,360,120,28]}
+{"kind":"textbox","id":"sh/ml8765or","slide":9,"name":"metric-label-1","text":"captured redirects","textPreview":"captured redirects","textChars":18,"textLines":1,"bbox":[825,396,330,40]}
+{"kind":"shape","id":"sh/hcjqlkne","slide":9,"name":"metric-rule-1","bbox":[825,447,330,0]}
+{"kind":"textbox","id":"sh/wra9cf69","slide":9,"name":"metric-2","text":"0","textPreview":"0","textChars":1,"textLines":1,"bbox":[825,465,120,28]}
+{"kind":"textbox","id":"sh/vq18ja5o","slide":9,"name":"metric-label-2","text":"captured console or page errors","textPreview":"captured console or page errors","textChars":31,"textLines":1,"bbox":[825,501,330,40]}
+{"kind":"shape","id":"sh/upsra5o3","slide":9,"name":"metric-rule-2","bbox":[825,552,330,0]}
+{"kind":"textbox","id":"sh/xgfq9gna","slide":9,"name":"boundary","text":"The screenshot is supporting evidence, not a mockup and not a substitute for the system test record.","textPreview":"The screenshot is supporting evidence, not a mockup and not a substitute for the system test record.","textChars":100,"textLines":1,"bbox":[54,645,1090,26]}
+{"kind":"image","id":"im/sjyl4nyh","slide":9,"name":"","alt":"Official Allura wordmark","bbox":[54,28,112,44]}
+{"kind":"image","id":"im/xsnmp8fu","slide":9,"name":"","alt":"Allura Curator dashboard screenshot from local route capture","bbox":[66,247,676,346]}
+{"kind":"notes","id":"nt/zsckug","slide":9,"text":"[Sources]\n- artifacts/dashboard-demo/manifest.json\n- artifacts/dashboard-demo/curator.png\n\n[Presenter notes]\nExplain the capture boundary and point to the machine-readable manifest."}
+{"kind":"slide","id":"sl/ce9lbv","slide":10,"title":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textShapes":20}
+{"kind":"textbox","id":"sh/e9gfi9sj","slide":10,"name":"eyebrow","text":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textPreview":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textChars":34,"textLines":1,"bbox":[182,40,470,22]}
+{"kind":"textbox","id":"sh/fapgbu94","slide":10,"name":"slide-number","text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1175,40,50,22]}
+{"kind":"shape","id":"sh/ozihojal","slide":10,"name":"top-rule","bbox":[54,86,1172,0]}
+{"kind":"textbox","id":"sh/p0ryhor6","slide":10,"name":"title","text":"How to verify this portfolio","textPreview":"How to verify this portfolio","textChars":28,"textLines":1,"bbox":[54,112,800,48]}
+{"kind":"textbox","id":"sh/2x0zm9sf","slide":10,"name":"intro","text":"A credible portfolio lets the reviewer separate demonstrated capability from future work.","textPreview":"A credible portfolio lets the reviewer separate demonstrated capability from future work.","textChars":89,"textLines":1,"bbox":[54,166,1030,32]}
+{"kind":"shape","id":"sh/3y9gfe90","slide":10,"name":"col-0","bbox":[54,250,350,285]}
+{"kind":"textbox","id":"sh/c3ihsjah","slide":10,"name":"col-kicker-0","text":"VERIFY NOW","textPreview":"VERIFY NOW","textChars":10,"textLines":1,"bbox":[80,282,290,20]}
+{"kind":"shape","id":"sh/d4bylor2","slide":10,"name":"dot-0-0","bbox":[82,334,10,10]}
+{"kind":"textbox","id":"sh/xcbylgri","slide":10,"name":"list-0-0","text":"Read FRAMEWORK.md","textPreview":"Read FRAMEWORK.md","textChars":17,"textLines":1,"bbox":[106,324,260,28]}
+{"kind":"shape","id":"sh/wb2hcbax","slide":10,"name":"dot-0-1","bbox":[82,377,10,10]}
+{"kind":"textbox","id":"sh/vatgj69c","slide":10,"name":"list-0-1","text":"Inspect PR #138","textPreview":"Inspect PR #138","textChars":15,"textLines":1,"bbox":[106,367,260,28]}
+{"kind":"shape","id":"sh/a9kza1s7","slide":10,"name":"dot-0-2","bbox":[82,420,10,10]}
+{"kind":"textbox","id":"sh/50vipgru","slide":10,"name":"list-0-2","text":"Open CI evidence run","textPreview":"Open CI evidence run","textChars":20,"textLines":1,"bbox":[106,410,260,28]}
+{"kind":"shape","id":"sh/kzmhgba9","slide":10,"name":"dot-0-3","bbox":[82,463,10,10]}
+{"kind":"textbox","id":"sh/jydgn69o","slide":10,"name":"list-0-3","text":"Review dashboard manifest","textPreview":"Review dashboard manifest","textChars":25,"textLines":1,"bbox":[106,453,260,28]}
+{"kind":"shape","id":"sh/id4zels3","slide":10,"name":"col-1","bbox":[442,250,350,285]}
+{"kind":"textbox","id":"sh/l4rydwra","slide":10,"name":"col-kicker-1","text":"DEMONSTRATED HERE","textPreview":"DEMONSTRATED HERE","textChars":17,"textLines":1,"bbox":[468,282,290,20]}
+{"kind":"shape","id":"sh/03ih4rap","slide":10,"name":"dot-1-0","bbox":[470,334,10,10]}
+{"kind":"textbox","id":"sh/cnmh0ril","slide":10,"name":"list-1-0","text":"Framework and harness","textPreview":"Framework and harness","textChars":21,"textLines":1,"bbox":[494,324,260,28]}
+{"kind":"shape","id":"sh/dovytwj6","slide":10,"name":"dot-1-1","bbox":[470,377,10,10]}
+{"kind":"textbox","id":"sh/ql4zyh0v","slide":10,"name":"list-1-1","text":"Governed memory","textPreview":"Governed memory","textChars":15,"textLines":1,"bbox":[494,367,260,28]}
+{"kind":"shape","id":"sh/rmdgrm10","slide":10,"name":"dot-1-2","bbox":[470,420,10,10]}
+{"kind":"textbox","id":"sh/0r6h4rix","slide":10,"name":"list-1-2","text":"Policy and audit path","textPreview":"Policy and audit path","textChars":21,"textLines":1,"bbox":[494,410,260,28]}
+{"kind":"shape","id":"sh/1sfixwzi","slide":10,"name":"dot-1-3","bbox":[470,463,10,10]}
+{"kind":"textbox","id":"sh/ep4z210r","slide":10,"name":"list-1-3","text":"Developer interfaces","textPreview":"Developer interfaces","textChars":20,"textLines":1,"bbox":[494,453,260,28]}
+{"kind":"shape","id":"sh/zqx0v6hc","slide":10,"name":"col-2","bbox":[830,250,350,285]}
+{"kind":"textbox","id":"sh/of6h8bit","slide":10,"name":"col-kicker-2","text":"NOT CLAIMED","textPreview":"NOT CLAIMED","textChars":11,"textLines":1,"bbox":[856,282,290,20]}
+{"kind":"shape","id":"sh/9gfi1gze","slide":10,"name":"dot-2-0","bbox":[858,334,10,10]}
+{"kind":"textbox","id":"sh/jm1sne5s","slide":10,"name":"list-2-0","text":"External client deployment","textPreview":"External client deployment","textChars":26,"textLines":1,"bbox":[882,324,260,28]}
+{"kind":"shape","id":"sh/ilsbe9o7","slide":10,"name":"dot-2-1","bbox":[858,377,10,10]}
+{"kind":"textbox","id":"sh/5o3ap4ny","slide":10,"name":"list-2-1","text":"Bank of America affiliation","textPreview":"Bank of America affiliation","textChars":27,"textLines":1,"bbox":[882,367,260,28]}
+{"kind":"shape","id":"sh/4nutgz6d","slide":10,"name":"dot-2-2","bbox":[858,420,10,10]}
+{"kind":"textbox","id":"sh/vy1sjupw","slide":10,"name":"list-2-2","text":"Production-scale adoption","textPreview":"Production-scale adoption","textChars":25,"textLines":1,"bbox":[882,410,260,28]}
+{"kind":"shape","id":"sh/axsbapob","slide":10,"name":"dot-2-3","bbox":[858,463,10,10]}
+{"kind":"textbox","id":"sh/xkjal47m","slide":10,"name":"list-2-3","text":"Unverified performance results","textPreview":"Unverified performance results","textChars":30,"textLines":1,"bbox":[882,453,260,28]}
+{"kind":"textbox","id":"sh/wjatcz61","slide":10,"name":"close","text":"The final deliverable includes editable SVGs, source notes, alt text and a production release gate.","textPreview":"The final deliverable includes editable SVGs, source notes, alt text and a production release gate.","textChars":99,"textLines":1,"bbox":[54,605,1050,28]}
+{"kind":"image","id":"im/wvm9sb2t","slide":10,"name":"","alt":"Official Allura wordmark","bbox":[54,28,112,44]}
+{"kind":"notes","id":"nt/ce9lbv","slide":10,"text":"[Sources]\n- docs/portfolio/allura-bofa-principal-engineer/SOURCES.md\n- docs/portfolio/allura-bofa-principal-engineer/qa/BRAND-RELEASE-GATE.md\n\n[Presenter notes]\nClose by making verification easy and stating what this case study does not claim."}

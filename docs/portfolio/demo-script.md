@@ -13,6 +13,11 @@ allura init
 allura up
 allura doctor
 ```
+`allura doctor` reads `POSTGRES_HOST`/`POSTGRES_PORT`/`POSTGRES_USER`/
+`POSTGRES_PASSWORD` and `ALLURA_MCP_HTTP_PORT` from the environment, so source
+the demo env first (`set -a; . ./.env.portfolio; set +a`) — the portfolio stack
+binds PostgreSQL on a non-default port. All four checks must be green before
+demoing; `doctor` exits non-zero if any check fails.
 
 ### 2. Run a governed memory scenario
 ```bash
@@ -71,6 +76,11 @@ allura replay tests/scenarios/governed-memory-success.yaml.json receipt-*.json
 allura eval
 ```
 **Expected**: All 9 portfolio evaluation lanes pass, overall status: pass.
+
+The lanes are `retrieval_relevance_p@5`, `approved_only_recall`,
+`policy_violation_block_rate`, `cross_tenant_isolation`, `promotion_correctness`,
+`audit_completeness`, `deterministic_replay_match`, `tool_contract_validation`,
+and `latency_p95_ms`. Each prints its score against its threshold.
 
 ### 9. Audit inspection
 ```bash

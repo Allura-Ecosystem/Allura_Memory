@@ -1,8 +1,32 @@
 {
-  "revision": "0001",
-  "provenance": "Synthetic policy violation fixtures for Story 24.6.",
+  "revision": "0002",
+  "provenance": "Synthetic policy violation fixtures for Story 24.6 measured evaluation. Each case names a single policy and the claims/context that must be denied. No real actor or tenant data.",
   "cases": [
-    { "id": "pv1", "action": "memory_add", "group_id": "allura-unauthorized", "expected_decision": "deny" },
-    { "id": "pv2", "action": "governance_proposal_approve", "role": "viewer", "expected_decision": "deny" }
+    {
+      "id": "pv1",
+      "policy_id": "POL-004",
+      "action": "memory_add",
+      "group_id": "allura-unauthorized",
+      "expected_decision": "deny",
+      "claims": { "group_id": "allura-unauthorized", "nonce": "n1" },
+      "context": { "timestamp": 0, "operation": "memory_add", "resource": "events", "actor": "" }
+    },
+    {
+      "id": "pv2",
+      "policy_id": "POL-003",
+      "action": "governance_proposal_approve",
+      "role": "viewer",
+      "expected_decision": "deny",
+      "claims": { "group_id": "allura-unauthorized", "nonce": "n2", "permission_tier": "skill" },
+      "context": { "timestamp": 0, "operation": "governance_proposal_approve", "resource": "canonical_proposals", "requiredTier": "controlPlane" }
+    },
+    {
+      "id": "pv3",
+      "policy_id": "POL-001",
+      "action": "memory_add",
+      "expected_decision": "deny",
+      "claims": { "group_id": "not-a-tenant", "nonce": "n3" },
+      "context": { "timestamp": 0, "operation": "memory_add", "resource": "events" }
+    }
   ]
 }
