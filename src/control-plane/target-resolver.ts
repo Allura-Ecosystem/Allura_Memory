@@ -153,7 +153,10 @@ async function pgMutate(
   // verified the signed evidence. The function writes the verified claim audit,
   // consumes the JTI, and creates the proposal atomically; allura_app has no
   // EXECUTE or INSERT privilege for this path.
-  if (table === "pattern_proposals" && type === "insert" && op.genesisEvidenceJti) {
+  if (table === "pattern_proposals" && type === "insert") {
+    if (!op.genesisEvidenceJti || !op.genesisEvidencePrincipal || !op.genesisEvidenceTarget || !op.genesisEvidenceMutationDigest) {
+      throw new Error("pg:pattern_proposals Genesis inserts require server-verified signed evidence");
+    }
     const data = op.data ?? {};
     const groupId = requireGroupId(data);
     const pool = getOwnerPool();
