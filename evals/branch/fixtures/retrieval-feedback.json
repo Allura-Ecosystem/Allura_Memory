@@ -1,0 +1,71 @@
+{
+  "revision": "0001",
+  "provenance": "Synthetic retrieval-feedback, consolidation, and curation-gate fixtures for Story 27.4. Identical task classes and fixtures are executed against current SONA behavior and the selected AgentDB patterns (retrieval-feedback loop, consolidation).",
+  "base": [
+    { "id": "doc-1", "text": "Vector memory for governed retrieval", "tags": ["vector", "memory"] },
+    { "id": "doc-2", "text": "Memory retrieval with feedback", "tags": ["memory", "feedback"] },
+    { "id": "doc-3", "text": "Vector storage engine notes", "tags": ["vector", "storage"] },
+    { "id": "doc-4", "text": "Feedback learning loop for agents", "tags": ["feedback", "learning"] },
+    { "id": "doc-5", "text": "Learning notes", "tags": ["learning"] },
+    { "id": "doc-6", "text": "Consolidation merges duplicate facts", "tags": ["consolidation"] },
+    { "id": "doc-7", "text": "Duplicate fact consolidation", "tags": ["consolidation", "duplicate"] },
+    { "id": "doc-8", "text": "Nightly learner runs", "tags": ["learner"] }
+  ],
+  "cases": [
+    {
+      "id": "rf-1",
+      "task_class": "retrieval-feedback",
+      "query": "vector memory retrieval",
+      "k": 2,
+      "expected_ids": ["doc-1", "doc-3"],
+      "feedback_rounds": 1
+    },
+    {
+      "id": "rf-2",
+      "task_class": "retrieval-feedback",
+      "query": "feedback learning loop",
+      "k": 1,
+      "expected_ids": ["doc-4"],
+      "feedback_rounds": 1
+    },
+    {
+      "id": "rf-3",
+      "task_class": "retrieval-feedback",
+      "query": "consolidation merge duplicates",
+      "k": 2,
+      "expected_ids": ["doc-6", "doc-7"],
+      "feedback_rounds": 1
+    },
+    {
+      "id": "con-1",
+      "task_class": "consolidation",
+      "facts": [
+        { "id": "f1", "text": "The sky is blue" },
+        { "id": "f2", "text": "The sky is blue" },
+        { "id": "f3", "text": "Water is wet" }
+      ],
+      "expected_distinct": 2
+    },
+    {
+      "id": "con-2",
+      "task_class": "consolidation",
+      "facts": [
+        { "id": "f4", "text": "Alpha" },
+        { "id": "f5", "text": "Beta" }
+      ],
+      "expected_distinct": 2
+    },
+    {
+      "id": "cg-1",
+      "task_class": "curation-gate",
+      "curator_approved": false,
+      "expected_promotion": false
+    },
+    {
+      "id": "cg-2",
+      "task_class": "curation-gate",
+      "curator_approved": true,
+      "expected_promotion": true
+    }
+  ]
+}

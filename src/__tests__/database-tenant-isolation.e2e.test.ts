@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { Pool } from "pg";
 import { tenantQuery, withTenantTransaction } from "@/lib/db/tenant-transaction";
 import { closePool, getAppPool } from "@/lib/postgres/connection";
 
@@ -10,10 +11,23 @@ const PRINCIPAL = `test-principal-24-3-${RUN_ID}`;
 const WORKSPACE_A = `workspace-a-${RUN_ID}`;
 const WORKSPACE_B = `workspace-b-${RUN_ID}`;
 
-const describeLive = process.env.POSTGRES_PASSWORD ? describe : describe.skip;
+// getAppPool() calls getConnectionConfig({ requireAppRole: true, ... }),
+// which throws synchronously when POSTGRES_APP_USER/POSTGRES_APP_PASSWORD
+// are unset -- not just when POSTGRES_PASSWORD is unset. The gate below
+// checks all three so describeLive only resolves to `describe` when
+// getAppPool() can actually succeed, and appPool is built inside beforeAll
+// (never in the describe factory body) so a skipped suite's factory can
+// never throw during collection.
+const describeLive = process.env.POSTGRES_PASSWORD && process.env.POSTGRES_APP_USER && process.env.POSTGRES_APP_PASSWORD
+  ? describe
+  : describe.skip;
 
 describeLive("database-enforced tenant isolation (AC-3..AC-6, AC-9)", () => {
-  const appPool = getAppPool();
+  let appPool: Pool;
+
+  beforeAll(() => {
+    appPool = getAppPool();
+  });
 
   afterAll(async () => {
     // closePool() (not appPool.end() directly): getAppPool()/getOwnerPool()

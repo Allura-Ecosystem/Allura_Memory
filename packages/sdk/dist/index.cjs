@@ -32,7 +32,9 @@ __export(index_exports, {
   DEFAULT_RETRIES: () => DEFAULT_RETRIES,
   DEFAULT_TIMEOUT: () => DEFAULT_TIMEOUT,
   GroupIdSchema: () => GroupIdSchema,
+  HarnessOperations: () => HarnessOperations,
   HealthResponseSchema: () => HealthResponseSchema,
+  LaneOperations: () => LaneOperations,
   MemoryAddResponseSchema: () => MemoryAddResponseSchema,
   MemoryDeleteResponseSchema: () => MemoryDeleteResponseSchema,
   MemoryGetResponseSchema: () => MemoryGetResponseSchema,
@@ -189,105 +191,203 @@ function createErrorFromResponse(statusCode, body) {
   }
 }
 
-// src/types.ts
+// src/harness.ts
+var passthrough = {
+  parse: (data) => data
+};
+var HarnessOperations = class {
+  constructor(request) {
+    this.request = request;
+  }
+  request;
+  /**
+   * Execute a scenario through the deterministic harness.
+   */
+  async run(params) {
+    return await this.request("scenario_run", params, passthrough);
+  }
+  /**
+   * Replay a scenario against a prior receipt and compare determinism.
+   */
+  async replay(params) {
+    return await this.request("scenario_replay", params, passthrough);
+  }
+  /**
+   * Run the portfolio evaluation suite.
+   */
+  async eval(params = {}) {
+    return await this.request("eval_run", params, passthrough);
+  }
+  /**
+   * List evidence artifacts (run receipts + artifacts/ contents).
+   */
+  async inspect(params = {}) {
+    return await this.request("evidence_inspect", params, passthrough);
+  }
+};
+
+// src/lanes.ts
 var import_zod = require("zod");
-var GroupIdSchema = import_zod.z.string().min(2).max(64).regex(
+var LaneDiffSchema = import_zod.z.object({
+  added: import_zod.z.array(import_zod.z.record(import_zod.z.unknown())),
+  overridden: import_zod.z.array(import_zod.z.record(import_zod.z.unknown())),
+  deleted: import_zod.z.array(import_zod.z.string())
+});
+var LaneOpenParamsSchema = import_zod.z.object({
+  group_id: import_zod.z.string().min(1),
+  lane_id: import_zod.z.string().min(1),
+  base_revision: import_zod.z.string().min(1)
+});
+var LaneSnapshotParamsSchema = LaneOpenParamsSchema.extend({
+  diff: LaneDiffSchema,
+  evidence_refs: import_zod.z.array(import_zod.z.string().min(1))
+});
+var LaneReviewParamsSchema = import_zod.z.object({
+  group_id: import_zod.z.string().min(1),
+  lane_id: import_zod.z.string().min(1),
+  snapshot_id: import_zod.z.string().min(1),
+  verdict: import_zod.z.enum(["approved", "rejected", "quarantined"]),
+  reason: import_zod.z.string().min(1),
+  retention_expires_at: import_zod.z.string().datetime().optional()
+});
+var LaneOpenResponseSchema = import_zod.z.object({
+  lane_id: import_zod.z.string(),
+  branch_id: import_zod.z.string(),
+  writer_id: import_zod.z.string(),
+  reviewer_ids: import_zod.z.array(import_zod.z.string()),
+  base_revision: import_zod.z.string(),
+  status: import_zod.z.literal("active")
+});
+var LaneSnapshotResponseSchema = import_zod.z.object({
+  lane_id: import_zod.z.string(),
+  branch_id: import_zod.z.string(),
+  snapshot_id: import_zod.z.string(),
+  snapshot_hash: import_zod.z.string(),
+  status: import_zod.z.literal("active")
+});
+var LaneReviewResponseSchema = import_zod.z.record(import_zod.z.unknown());
+var LaneOperations = class {
+  constructor(request) {
+    this.request = request;
+  }
+  request;
+  /**
+   * group_id is only a resource selector. Workspace and actor authority are
+   * derived by the authenticated gateway principal, never from this payload.
+   */
+  async open(params) {
+    const validated = LaneOpenParamsSchema.parse(params);
+    return this.request("governed_lane_open", validated, LaneOpenResponseSchema);
+  }
+  async snapshot(params) {
+    const validated = LaneSnapshotParamsSchema.parse(params);
+    return this.request("governed_lane_snapshot", validated, LaneSnapshotResponseSchema);
+  }
+  async review(params) {
+    const validated = LaneReviewParamsSchema.parse(params);
+    return this.request("governed_lane_review", validated, LaneReviewResponseSchema);
+  }
+};
+
+// src/types.ts
+var import_zod2 = require("zod");
+var GroupIdSchema = import_zod2.z.string().min(2).max(64).regex(
   /^allura-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
   "group_id must match pattern: ^allura-[a-z0-9-]+$ (ARCH-001 tenant isolation)"
 );
-var MemoryIdSchema = import_zod.z.string().uuid({ message: "id must be a valid UUID v4" });
-var ConfidenceScoreSchema = import_zod.z.number().min(0).max(1);
-var MemoryRetrievalStoreSchema = import_zod.z.enum(["postgres", "neo4j", "graph", "ruvector"]);
-var MemoryResponseMetaSchema = import_zod.z.object({
-  contract_version: import_zod.z.literal("v1"),
-  degraded: import_zod.z.boolean(),
-  degraded_reason: import_zod.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-  stores_used: import_zod.z.array(MemoryRetrievalStoreSchema),
-  stores_attempted: import_zod.z.array(MemoryRetrievalStoreSchema),
-  warnings: import_zod.z.array(import_zod.z.string()).optional(),
-  ruvector_trajectory_id: import_zod.z.string().optional(),
-  ruvector_count: import_zod.z.number().int().min(0).optional()
+var MemoryIdSchema = import_zod2.z.string().uuid({ message: "id must be a valid UUID v4" });
+var ConfidenceScoreSchema = import_zod2.z.number().min(0).max(1);
+var MemoryRetrievalStoreSchema = import_zod2.z.enum(["postgres", "neo4j", "graph", "ruvector"]);
+var MemoryResponseMetaSchema = import_zod2.z.object({
+  contract_version: import_zod2.z.literal("v1"),
+  degraded: import_zod2.z.boolean(),
+  degraded_reason: import_zod2.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+  stores_used: import_zod2.z.array(MemoryRetrievalStoreSchema),
+  stores_attempted: import_zod2.z.array(MemoryRetrievalStoreSchema),
+  warnings: import_zod2.z.array(import_zod2.z.string()).optional(),
+  ruvector_trajectory_id: import_zod2.z.string().optional(),
+  ruvector_count: import_zod2.z.number().int().min(0).optional()
 });
-var MemoryAddResponseSchema = import_zod.z.object({
-  id: import_zod.z.string(),
-  stored: import_zod.z.enum(["episodic", "semantic", "both"]),
-  score: import_zod.z.number().min(0).max(1),
-  pending_review: import_zod.z.boolean().optional(),
-  created_at: import_zod.z.string(),
+var MemoryAddResponseSchema = import_zod2.z.object({
+  id: import_zod2.z.string(),
+  stored: import_zod2.z.enum(["episodic", "semantic", "both"]),
+  score: import_zod2.z.number().min(0).max(1),
+  pending_review: import_zod2.z.boolean().optional(),
+  created_at: import_zod2.z.string(),
   meta: MemoryResponseMetaSchema.optional(),
-  duplicate: import_zod.z.boolean().optional(),
-  duplicate_of: import_zod.z.string().optional(),
-  similarity: import_zod.z.number().optional()
+  duplicate: import_zod2.z.boolean().optional(),
+  duplicate_of: import_zod2.z.string().optional(),
+  similarity: import_zod2.z.number().optional()
 });
-var MemorySearchResponseSchema = import_zod.z.object({
-  results: import_zod.z.array(
-    import_zod.z.object({
-      id: import_zod.z.string(),
-      content: import_zod.z.string(),
-      score: import_zod.z.number().min(0).max(1),
-      source: import_zod.z.enum(["episodic", "semantic", "both"]),
-      provenance: import_zod.z.enum(["conversation", "manual"]),
-      created_at: import_zod.z.string(),
-      usage_count: import_zod.z.number().optional()
+var MemorySearchResponseSchema = import_zod2.z.object({
+  results: import_zod2.z.array(
+    import_zod2.z.object({
+      id: import_zod2.z.string(),
+      content: import_zod2.z.string(),
+      score: import_zod2.z.number().min(0).max(1),
+      source: import_zod2.z.enum(["episodic", "semantic", "both"]),
+      provenance: import_zod2.z.enum(["conversation", "manual"]),
+      created_at: import_zod2.z.string(),
+      usage_count: import_zod2.z.number().optional()
     })
   ),
-  count: import_zod.z.number().int().min(0),
-  latency_ms: import_zod.z.number().min(0),
+  count: import_zod2.z.number().int().min(0),
+  latency_ms: import_zod2.z.number().min(0),
   meta: MemoryResponseMetaSchema.optional()
 });
-var MemoryGetResponseSchema = import_zod.z.object({
-  id: import_zod.z.string(),
-  content: import_zod.z.string(),
-  score: import_zod.z.number().min(0).max(1),
-  source: import_zod.z.enum(["episodic", "semantic", "both"]),
-  provenance: import_zod.z.enum(["conversation", "manual"]),
-  user_id: import_zod.z.string(),
-  actor: import_zod.z.string().nullable().optional(),
-  creator: import_zod.z.string().nullable().optional(),
-  approver: import_zod.z.string().nullable().optional(),
-  group_id: import_zod.z.string().regex(/^allura-.+$/).optional(),
-  created_at: import_zod.z.string(),
-  status: import_zod.z.enum(["approved", "proposed", "pending", "deprecated", "active", "deleted"]).optional(),
-  source_event_id: import_zod.z.string().nullable().optional(),
-  proposal_id: import_zod.z.string().nullable().optional(),
-  trace_ref: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).nullable().optional(),
-  evidence: import_zod.z.array(import_zod.z.object({
-    id: import_zod.z.string().nullable(),
-    type: import_zod.z.enum(["event", "proposal", "trace", "version"]),
-    label: import_zod.z.string(),
-    status: import_zod.z.enum(["available", "unavailable"])
+var MemoryGetResponseSchema = import_zod2.z.object({
+  id: import_zod2.z.string(),
+  content: import_zod2.z.string(),
+  score: import_zod2.z.number().min(0).max(1),
+  source: import_zod2.z.enum(["episodic", "semantic", "both"]),
+  provenance: import_zod2.z.enum(["conversation", "manual"]),
+  user_id: import_zod2.z.string(),
+  actor: import_zod2.z.string().nullable().optional(),
+  creator: import_zod2.z.string().nullable().optional(),
+  approver: import_zod2.z.string().nullable().optional(),
+  group_id: import_zod2.z.string().regex(/^allura-.+$/).optional(),
+  created_at: import_zod2.z.string(),
+  status: import_zod2.z.enum(["approved", "proposed", "pending", "deprecated", "active", "deleted"]).optional(),
+  source_event_id: import_zod2.z.string().nullable().optional(),
+  proposal_id: import_zod2.z.string().nullable().optional(),
+  trace_ref: import_zod2.z.union([import_zod2.z.string(), import_zod2.z.number()]).nullable().optional(),
+  evidence: import_zod2.z.array(import_zod2.z.object({
+    id: import_zod2.z.string().nullable(),
+    type: import_zod2.z.enum(["event", "proposal", "trace", "version"]),
+    label: import_zod2.z.string(),
+    status: import_zod2.z.enum(["available", "unavailable"])
   })).optional(),
-  version: import_zod.z.number().int().optional(),
-  superseded_by: import_zod.z.string().optional(),
-  usage_count: import_zod.z.number().optional(),
-  hash: import_zod.z.string().nullable().optional(),
-  previous_hash: import_zod.z.string().nullable().optional(),
+  version: import_zod2.z.number().int().optional(),
+  superseded_by: import_zod2.z.string().optional(),
+  usage_count: import_zod2.z.number().optional(),
+  hash: import_zod2.z.string().nullable().optional(),
+  previous_hash: import_zod2.z.string().nullable().optional(),
   meta: MemoryResponseMetaSchema.optional()
 });
-var MemoryListResponseSchema = import_zod.z.object({
-  memories: import_zod.z.array(MemoryGetResponseSchema),
-  total: import_zod.z.number().int().min(0),
-  has_more: import_zod.z.boolean(),
+var MemoryListResponseSchema = import_zod2.z.object({
+  memories: import_zod2.z.array(MemoryGetResponseSchema),
+  total: import_zod2.z.number().int().min(0),
+  has_more: import_zod2.z.boolean(),
   meta: MemoryResponseMetaSchema.optional()
 });
-var MemoryDeleteResponseSchema = import_zod.z.object({
-  id: import_zod.z.string(),
-  deleted: import_zod.z.boolean(),
-  deleted_at: import_zod.z.string(),
-  recovery_days: import_zod.z.number().int().min(0),
+var MemoryDeleteResponseSchema = import_zod2.z.object({
+  id: import_zod2.z.string(),
+  deleted: import_zod2.z.boolean(),
+  deleted_at: import_zod2.z.string(),
+  recovery_days: import_zod2.z.number().int().min(0),
   meta: MemoryResponseMetaSchema.optional()
 });
-var HealthResponseSchema = import_zod.z.object({
-  status: import_zod.z.string(),
-  mode: import_zod.z.string(),
-  interface: import_zod.z.string(),
-  transports: import_zod.z.array(import_zod.z.string()),
-  mcp_endpoint: import_zod.z.string(),
-  port: import_zod.z.number(),
-  port_source: import_zod.z.string(),
-  auth_enabled: import_zod.z.boolean(),
-  warnings: import_zod.z.array(import_zod.z.string()).optional(),
-  timestamp: import_zod.z.string()
+var HealthResponseSchema = import_zod2.z.object({
+  status: import_zod2.z.string(),
+  mode: import_zod2.z.string(),
+  interface: import_zod2.z.string(),
+  transports: import_zod2.z.array(import_zod2.z.string()),
+  mcp_endpoint: import_zod2.z.string(),
+  port: import_zod2.z.number(),
+  port_source: import_zod2.z.string(),
+  auth_enabled: import_zod2.z.boolean(),
+  warnings: import_zod2.z.array(import_zod2.z.string()).optional(),
+  timestamp: import_zod2.z.string()
 });
 
 // src/utils.ts
@@ -335,7 +435,11 @@ function isRetryable(error) {
 }
 async function withRetry(fn, retries = DEFAULT_RETRIES) {
   let lastError = new Error("No attempts made");
-  for (let attempt = 0; attempt < retries; attempt++) {
+  if (!Number.isFinite(retries) || retries < 0) {
+    retries = 0;
+  }
+  const attempts = Math.max(1, retries + 1);
+  for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       return await fn();
     } catch (error) {
@@ -343,11 +447,14 @@ async function withRetry(fn, retries = DEFAULT_RETRIES) {
       if (!isRetryable(error)) {
         throw error;
       }
-      if (attempt < retries - 1) {
+      if (attempt < attempts - 1) {
         const backoff = calculateBackoff(attempt);
         await sleep(backoff);
       }
     }
+  }
+  if (retries <= 0) {
+    throw lastError;
   }
   throw new RetryExhaustedError(retries, lastError);
 }
@@ -497,8 +604,13 @@ var AlluraClient = class {
   customFetch;
   // State
   state = "disconnected";
+  mcpSessionId;
+  mcpSessionInitialization;
   // Operations
   memory;
+  harness;
+  /** Governed lane operations; workspace/actor scope is derived by the gateway. */
+  lanes;
   constructor(config) {
     if (!config.baseUrl) {
       throw new Error("AlluraClient requires a baseUrl");
@@ -509,6 +621,8 @@ var AlluraClient = class {
     this.retries = config.retries ?? DEFAULT_RETRIES;
     this.customFetch = config.fetch;
     this.memory = new MemoryOperations(this.makeRequest.bind(this));
+    this.harness = new HarnessOperations(this.makeRequest.bind(this));
+    this.lanes = new LaneOperations(this.makeRequest.bind(this));
   }
   // ── Connection Management ────────────────────────────────────────────────
   /**
@@ -578,6 +692,8 @@ var AlluraClient = class {
    */
   async disconnect() {
     this.state = "disconnected";
+    this.mcpSessionId = void 0;
+    this.mcpSessionInitialization = void 0;
   }
   /**
    * Get the current connection state.
@@ -607,7 +723,9 @@ var AlluraClient = class {
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
       try {
         const url = `${this.baseUrl}/mcp`;
-        const headers = buildHeaders(this.authToken);
+        const headers = this.mcpHeaders();
+        await this.initializeMcpSession(fetchFn);
+        headers["mcp-session-id"] = this.mcpSessionId;
         const body = JSON.stringify({
           jsonrpc: "2.0",
           method: "tools/call",
@@ -649,6 +767,50 @@ var AlluraClient = class {
         clearTimeout(timeoutId);
       }
     }, this.retries);
+  }
+  async initializeMcpSession(fetchFn) {
+    if (this.mcpSessionId) return;
+    if (!this.mcpSessionInitialization) {
+      this.mcpSessionInitialization = (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+        try {
+          const response = await fetchFn(`${this.baseUrl}/mcp`, {
+            method: "POST",
+            headers: this.mcpHeaders(),
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              method: "initialize",
+              params: {
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                clientInfo: { name: "@allura/sdk", version: "1.0.0" }
+              },
+              id: createRequestId()
+            }),
+            signal: controller.signal
+          });
+          if (!response.ok) {
+            throw createErrorFromResponse(response.status, await this.parseResponseBody(response));
+          }
+          const sessionId = response.headers.get("mcp-session-id");
+          if (!sessionId) throw new ConnectionError("MCP server did not establish a session");
+          this.mcpSessionId = sessionId;
+          await response.text();
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      })();
+    }
+    try {
+      await this.mcpSessionInitialization;
+    } catch (error) {
+      this.mcpSessionInitialization = void 0;
+      throw error;
+    }
+  }
+  mcpHeaders() {
+    return { ...buildHeaders(this.authToken), Accept: "application/json, text/event-stream" };
   }
   unwrapToolResult(responseBody) {
     const rpc = responseBody;
@@ -692,6 +854,19 @@ var AlluraClient = class {
     if (contentType.includes("application/json")) {
       try {
         return await response.json();
+      } catch {
+        return {};
+      }
+    }
+    if (contentType.includes("text/event-stream")) {
+      const text = await response.text();
+      let lastData;
+      for (const line of text.split("\n")) {
+        if (line.startsWith("data: ")) lastData = line.slice(6);
+      }
+      if (!lastData) return {};
+      try {
+        return JSON.parse(lastData);
       } catch {
         return {};
       }

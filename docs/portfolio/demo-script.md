@@ -20,6 +20,15 @@ allura run tests/scenarios/governed-memory-success.yaml.json
 ```
 **Expected**: Scenario completes successfully, receipt written.
 
+### 2b. Run a reference integration (Story 24.9)
+```bash
+allura run examples/engineering-review-agent/scenarios/success.json
+allura run examples/controlled-research-agent/scenarios/success.json
+allura run examples/regulated-document-quality/scenarios/success.json
+```
+**Expected**: Each completes; receipts written with scenario digest, definition
+revision, principal/tenant references, and evidence hashes.
+
 ### 3. Demonstrate policy denial
 ```bash
 allura run tests/scenarios/unauthorized-cross-tenant-access.yaml.json
@@ -41,9 +50,15 @@ allura run tests/scenarios/checkpoint-recovery-after-failure.yaml.json
 **Expected**: TRANSIENT_RETRY error occurs, runner retries, scenario completes.
 
 ### 6. Checkpoint resume
-The scenario harness records checkpoint transitions. If the process were
-interrupted, it would resume from the last checkpoint without repeating
-side effects.
+The scenario harness records checkpoint transitions. To demonstrate resume
+from a checkpoint, run the recovery scenario and inspect its receipt:
+
+```bash
+allura run examples/engineering-review-agent/scenarios/recovery.json
+```
+**Expected**: TRANSIENT_RETRY occurs, the runner retries within the step, and
+the scenario completes. The receipt's `checkpoint_transitions` array shows the
+step sequence; `side_effect_keys` proves no side effect is repeated.
 
 ### 7. Deterministic replay
 ```bash
@@ -55,7 +70,7 @@ allura replay tests/scenarios/governed-memory-success.yaml.json receipt-*.json
 ```bash
 allura eval
 ```
-**Expected**: All 8 evaluation tests pass, overall status: pass.
+**Expected**: All 9 portfolio evaluation lanes pass, overall status: pass.
 
 ### 9. Audit inspection
 ```bash

@@ -33,6 +33,20 @@ export { AlluraClient } from "./client.js";
 export { MemoryOperations } from "./memory.js";
 export type { RequestFn } from "./memory.js";
 
+// ── Harness Operations (scenario/replay/eval/evidence) ───────────────────────
+
+export { HarnessOperations } from "./harness.js";
+export type {
+  ScenarioRunParams,
+  ScenarioReplayParams,
+  EvalRunParams,
+  EvidenceInspectParams,
+  ScenarioRunResponse,
+  ScenarioReplayResponse,
+  EvalRunResponse,
+  EvidenceInspectResponse,
+} from "./harness.js";
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export type {
@@ -111,3 +125,6 @@ export {
   DEFAULT_TIMEOUT,
   DEFAULT_RETRIES,
 } from "./utils.js";
+
+export { LaneOperations } from "./lanes.js";
+export type { LaneOpenParams, LaneOpenResponse, LaneSnapshotParams, LaneSnapshotResponse, LaneReviewParams, LaneReviewResponse } from "./lanes.js";

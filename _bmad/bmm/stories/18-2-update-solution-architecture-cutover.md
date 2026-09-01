@@ -19,7 +19,7 @@ As the Allura architecture owner, I need SOLUTION-ARCHITECTURE.md §3.4.0 "Curre
 ## Acceptance Criteria
 
 - [x] AC-1: §3.4.0 is expanded with a "Graph Backend Cutover Path" subsection
-- [x] AC-2: Documents the `GRAPH_BACKEND` flag (`neo4j` default, `ruvector` available, `ruvector-crate` planned)
+- [x] AC-2: Documents the `GRAPH_BACKEND` flag (`PostgreSQL (graph_memories)` default, `ruvector` available, `ruvector-crate` planned)
 - [x] AC-3: Documents the `IGraphAdapter` seam (AD-29) with the three adapter implementations
 - [x] AC-4: Includes the readiness table distinguishing vector search (pgvector bridge) from graph backend (adapter pattern)
 - [x] AC-5: Includes graduation criteria for the graph backend cutover: live-DB E2E pass, dual-read validation, parity test

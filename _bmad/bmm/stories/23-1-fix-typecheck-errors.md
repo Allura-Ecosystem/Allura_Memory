@@ -1,12 +1,12 @@
 # Story 23-1 — Fix Typecheck Errors in canonical-tools.ts
 
-**Epic:** Epic 23 — Neo4j Sunset Completion
+**Epic:** Epic 23 — PostgreSQL (graph_memories) Sunset Completion
 **Status:** Done — authoritative sprint status
 **Priority:** P0-Critical | **Complexity:** Small
 **Agent:** Woz
 
 **Description:**
-10 typecheck errors in `src/mcp/canonical-tools.ts` — all `Type 'Driver | null' is not assignable to type 'Driver | undefined'`. The Neo4j driver optional path returns `null` where `undefined` is expected. Also 2 errors in `scripts/content-aware-curator*.ts`.
+10 typecheck errors in `src/mcp/canonical-tools.ts` — all `Type 'Driver | null' is not assignable to type 'Driver | undefined'`. The PostgreSQL (graph_memories) driver optional path returns `null` where `undefined` is expected. Also 2 errors in `scripts/content-aware-curator*.ts`.
 
 ## Acceptance Criteria
 
@@ -23,7 +23,7 @@
 
 ## Dev Notes
 
-The Neo4j driver was made optional (Neo4j sunset). When absent, the code returns `null` but the type signatures expect `undefined`. Simplest fix: change the type to accept `null` or normalize `null` → `undefined` at the assignment site.
+The PostgreSQL (graph_memories) driver was made optional (PostgreSQL (graph_memories) sunset). When absent, the code returns `null` but the type signatures expect `undefined`. Simplest fix: change the type to accept `null` or normalize `null` → `undefined` at the assignment site.
 
 ## Dev Agent Record
 

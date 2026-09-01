@@ -98,7 +98,7 @@ sequenceDiagram
     participant Brooks as Brooks / Team RAM
     participant Skill as Memory Skill
     participant Memory as neo4j-memory
-    participant N4J as Neo4j
+    participant N4J as PostgreSQL (graph_memories)
 
     Agent->>Brooks: need context for task
     Brooks->>Skill: memory-first routing
@@ -155,7 +155,7 @@ sequenceDiagram
     participant Brooks as Brooks / Team RAM
     participant Memory as neo4j-memory
     participant Cypher as neo4j-cypher
-    participant N4J as Neo4j
+    participant N4J as PostgreSQL (graph_memories)
 
     Agent->>Brooks: inspect lineage / relationships / schema
     Brooks->>Memory: try approved memory recall first
@@ -181,7 +181,7 @@ sequenceDiagram
     participant API as Next.js API / controlled endpoint
     participant Engine as Memory Engine
     participant PG as PostgreSQL
-    participant N4J as Neo4j
+    participant N4J as PostgreSQL (graph_memories)
 
     Agent->>API: memory_add / governed write request
     API->>Engine: validate scope and content
@@ -198,7 +198,7 @@ sequenceDiagram
 **Key constraints:**
 - Agents do not write through packaged MCP inspection servers
 - Controlled service endpoints remain the only write path for governed memory changes
-    - Neo4j writes preserve immutable lineage and approval policy
+    - PostgreSQL (graph_memories) writes preserve immutable lineage and approval policy
     - The Curator Approve CLI (`src/curator/approve-cli.ts`) is an alternative entry point to the same governed write path — it uses the same `createInsight()` code path as the API route, enforces the same invariants (group_id validation, SHAKE-256 witness hash, append-only events), and emits `notion_sync_pending` events for async Notion sync
 
 ---
@@ -215,7 +215,7 @@ sequenceDiagram
     participant CI as GitHub Actions
     participant Validator as Factory Validator
     participant PG as PostgreSQL
-    participant Neo4j as Neo4j
+    participant PostgreSQL (graph_memories) as PostgreSQL (graph_memories)
     participant Artifact as Package Artifact
 
     Author->>CI: Push module or workflow change
@@ -240,7 +240,7 @@ Key constraints:
 | `ruvector_function_count` | `0` | Required RuVector SQL functions present (this measures the *native extension*, not the graph adapter) |
 | `allura_memories_count` | Around `3392` observed by TALON | Search/feedback health validated against current count |
 | Runtime label | `ruvector_graph` | Upgraded from `pgvector bridge` (Story 19.3, 2026-07-12) |
-| GRAPH_BACKEND | `ruvector` default, `neo4j` fallback available, `ruvector-crate` planned | See Graph Backend Cutover Path |
+| GRAPH_BACKEND | `ruvector` default, `PostgreSQL (graph_memories)` fallback available, `ruvector-crate` planned | See Graph Backend Cutover Path |
 
 **Note:** `ruvector_function_count=0` refers to the RuVector *native extension* (SQL functions installed in PostgreSQL), not the graph adapter. The graph adapter uses PostgreSQL tables via RDMS queries, not the native extension.
 
@@ -251,14 +251,14 @@ Key constraints:
 The RuVector migration is layered across three distinct concerns, each with independent readiness metrics:
 
 1. **Vector search** — pgvector bridge (existing): `vector` extension `0.8.2`, ANN search via `pgvector_cosine_distance()` and BM25 RRF fusion
-2. **Graph backend** — IGraphAdapter seam (built): `Neo4jGraphAdapter` (legacy), `RuVectorGraphAdapter` (PG tables), `RuvectorCrateGraphAdapter` (planned, `ruvnet` crate)
+2. **Graph backend** — IGraphAdapter seam (built): `PostgreSQL (graph_memories)GraphAdapter` (legacy), `RuVectorGraphAdapter` (PG tables), `RuvectorCrateGraphAdapter` (planned, `ruvnet` crate)
 3. **Native RuVector extension** — future: SQL functions `ruvector_hybrid_search()` and friends (still stubs)
 
 The `GRAPH_BACKEND` env var selects the graph implementation:
 
 | Value | Implementation | Status | Notes |
 |---|---|---|---|
-| `neo4j` | `Neo4jGraphAdapter` (Cypher) | Fallback | Uses Neo4j Community Edition; remains available as read-only fallback after cutover |
+| `PostgreSQL (graph_memories)` | `PostgreSQL (graph_memories)GraphAdapter` (Cypher) | Fallback | Uses PostgreSQL (graph_memories) Community Edition; remains available as read-only fallback after cutover |
 | `ruvector` | `RuVectorGraphAdapter` (PG tables) | **Default (Story 19.3)** | PG tables via `src/lib/graph-adapter/ruvector-adapter.ts`; runtime label upgraded to `ruvector_graph` |
 | `ruvector-crate` | `RuvectorCrateGraphAdapter` (Rust crate) | Planned | `ruvnet` crate, upstreamable design |
 
@@ -266,13 +266,13 @@ The `IGraphAdapter` interface (AD-29, `src/lib/graph-adapter/types.ts`) defines 
 
 | Adapter | Status | Lines |
 |---|---|---|
-| `Neo4jGraphAdapter` | ✅ Full (816 lines) | 16/16 implemented |
+| `PostgreSQL (graph_memories)GraphAdapter` | ✅ Full (816 lines) | 16/16 implemented |
 | `RuVectorGraphAdapter` | ✅ Full (512 lines) | 16/16 implemented |
 | `RuvectorCrateGraphAdapter` | 🔲 Planned (528 lines) | 8/16 implemented, 8 planned (throws `unsupported`) |
 
 **Method coverage:**
 
-- `Neo4jGraphAdapter`: ✅ Full (816 lines, all 16 methods implemented)
+- `PostgreSQL (graph_memories)GraphAdapter`: ✅ Full (816 lines, all 16 methods implemented)
 - `RuVectorGraphAdapter`: ✅ Full (512 lines, all 16 methods implemented)
 - `RuvectorCrateGraphAdapter`: 🔲 Planned (528 lines, 8 implemented + 8 throw `unsupported`)
 
@@ -287,7 +287,7 @@ The adapter-specific methods (`supersedesMemory`, `softDeleteMemory`, `restoreMe
 | Parity test (`adapter-parity.test.ts`) | 16/16 green | ✅ **Resolved** — 14/14 green (2 methods pending fallback path) |
 | TALON sign-off | `ruvector` graph backend verified | ✅ **Done** — 2026-07-12 |
 | `AD-49` approval | `RuVector Graph Cutover` decision | ✅ **Decided** — executed via Story 19.3 |
-| `Neo4j removed` | Fallback removed | ✅ **Done** — Epic 23 (2026-07-17); `GRAPH_BACKEND=ruvector` is the sole backend |
+| `PostgreSQL (graph_memories) removed` | Fallback removed | ✅ **Done** — Epic 23 (2026-07-17); `GRAPH_BACKEND=ruvector` is the sole backend |
 
 **Cross-references:** AD-29 (graph adapter pattern), AD-49 (cutover decision), RK-32 (graph cutover risk)
 
@@ -331,7 +331,7 @@ The RuVix control plane is the governance contract for Allura Brain. Every opera
 | `soc2` | Queue eligible memories for human approval; never auto-promote. | N/A |
 | `auto` | Auto-promote when score meets or exceeds the configured threshold. | `AUTO_APPROVAL_THRESHOLD` (default `0.85`) |
 
-The canonical control plane contract is stored as `RUVIX_CONTROL_PLANE_CONTRACT_v1` in Neo4j, with 12 individual rule entries plus one anchor ADR in PostgreSQL.
+The canonical control plane contract is stored as `RUVIX_CONTROL_PLANE_CONTRACT_v1` in PostgreSQL (graph_memories), with 12 individual rule entries plus one anchor ADR in PostgreSQL.
 
 ### 3.4.2 Brand Governance Layer
 
@@ -371,7 +371,7 @@ sequenceDiagram
     participant API as API Routes
     participant Engine as Memory Engine
     participant PG as PostgreSQL
-    participant N4J as Neo4j
+    participant N4J as PostgreSQL (graph_memories)
 
     Operator->>CLI: GET /api/memory?userId=&groupId=
     CLI->>API: HTTP request
@@ -473,7 +473,7 @@ sequenceDiagram
 |---|---|
 | §3.1 Primary Memory Recall | AD-23 (skills-first packaged MCP), AD-19 (controlled retrieval intent) |
 | §3.2 Evidence Escalation | AD-01 (Postgres for episodic), RK-02 (tenant isolation in queries) |
-| §3.3 Graph Escalation | AD-02 (Neo4j for semantic), AD-23 (read-only graph fallback) |
+| §3.3 Graph Escalation | AD-02 (PostgreSQL (graph_memories) for semantic), AD-23 (read-only graph fallback) |
 | §3.4 Governed Memory Write Path | AD-04 (promotion mode), RK-01 (dedup), RK-03 (low-quality promotion) |
 | §3.5 Memory API | AD-05 (5-tool surface) |
 | §3.6 API-First Architecture and Memory Command Center | AD-31 (Memory Command Center), AD-29 (superseded), RK-19 |
@@ -513,7 +513,7 @@ sequenceDiagram
 API route
   → src/lib/api/query helper
   → controlled API endpoint
-  → PostgreSQL / Neo4j through application service
+  → PostgreSQL / PostgreSQL (graph_memories) through application service
   → mapper + Zod validation
   → ApiResult<T>
   → CLI / MCP client state
@@ -541,7 +541,7 @@ pinned upstream scanner
   → optional Curator display / separately governed host response
 ```
 
-Native Kanban direction: PostgreSQL owns operational board state; Neo4j may project semantic relationships; Allura Brain stores durable decisions/evidence receipts. Notion, Linear, and GitHub Projects are optional sync adapters; Native Allura Kanban is default upstream.
+Native Kanban direction: PostgreSQL owns operational board state; PostgreSQL (graph_memories) may project semantic relationships; Allura Brain stores durable decisions/evidence receipts. Notion, Linear, and GitHub Projects are optional sync adapters; Native Allura Kanban is default upstream.
 
 Governed AI office delivery order: reconcile product truth, finish the run
 control plane, build the PostgreSQL work plane, build the operator workspace, then
@@ -595,7 +595,7 @@ services:
     command: bun run start
     environment:
       - POSTGRES_DB=...
-      - NEO4J_URI=...
+      - PostgreSQL (graph_memories)_URI=...
 ```
 
 **Current Docker caveat:** the primary local `docker-compose.yml` is a development stack with pre-existing external volumes/network and a compose-level command override for the `mcp` service. It is not yet the stranger-friendly public Docker story. Public Docker onboarding should add a separate OSS compose profile, `.env.example`, and an image-first `allura-brain` service before claiming one-command setup.
@@ -657,7 +657,7 @@ graph TD
         F --> H[RuVixControlPlane]
         H --> G
         E --> G
-        E --> I[(Neo4j)]
+        E --> I[(PostgreSQL (graph_memories))]
         E --> J[Validation Report]
         J --> K[Human Judge]
     end

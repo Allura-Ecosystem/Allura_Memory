@@ -71,12 +71,25 @@ function createMockFetch(
   response: unknown,
   status: number = 200
 ): typeof globalThis.fetch {
-  return vi.fn().mockResolvedValue({
-    ok: status >= 200 && status < 300,
-    status,
-    headers: new Headers({ "content-type": "application/json" }),
-    json: () => Promise.resolve(response),
-    text: () => Promise.resolve(JSON.stringify(response)),
+  return vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+    const request = init?.body ? JSON.parse(String(init.body)) as { id?: string | number; method?: string } : {};
+    if (request.method === "initialize") {
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: request.id, result: {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        serverInfo: { name: "allura-sdk-memory-test", version: "1.0.0" },
+      } }), {
+        status: 200,
+        headers: { "content-type": "application/json", "mcp-session-id": "memory-test-session" },
+      });
+    }
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () => Promise.resolve(response),
+      text: () => Promise.resolve(JSON.stringify(response)),
+    };
   }) as unknown as typeof globalThis.fetch;
 }
 
@@ -179,7 +192,7 @@ describe("MemoryOperations", () => {
     });
 
     // Verify the request body includes metadata in MCP tool-call arguments
-    const callArgs = mockFetch.mock.calls[0];
+    const callArgs = mockFetch.mock.calls[1];
     const body = JSON.parse(callArgs[1]?.body as string);
     expect(body.method).toBe("tools/call");
     expect(body.params.name).toBe("memory_add");

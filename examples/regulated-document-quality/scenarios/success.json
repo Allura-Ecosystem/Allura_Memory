@@ -1,0 +1,101 @@
+{
+  "scenario_id": "regulated-doc-quality-success",
+  "schema_version": "v1",
+  "description": "Regulated document-quality workflow success case: synthetic document passes tenant isolation, human approval, canonical promotion, and audit export",
+  "tenant_fixture": {
+    "group_id": "allura-regulated-docs",
+    "cleanup": true
+  },
+  "principal_fixture": {
+    "principal_id": "doc-curator",
+    "roles": [
+      "curator"
+    ],
+    "tenant_ids": [
+      "allura-regulated-docs"
+    ],
+    "auth_method": "service_identity"
+  },
+  "process_definition": {
+    "id": "regulated-doc-quality",
+    "revision": "1"
+  },
+  "initial_state": {
+    "memories": [
+      {
+        "content": "Synthetic document: quality standard v1",
+        "score": 0.5
+      }
+    ],
+    "proposals": [
+      {
+        "content": "Document quality assessment: PASS",
+        "score": 0.92,
+        "tier": "mainstream",
+        "status": "pending"
+      }
+    ]
+  },
+  "tool_fixtures": [
+    {
+      "tool_name": "memory_search",
+      "match": "ordered",
+      "response": {
+        "result": {
+          "results": [
+            {
+              "id": "doc-1",
+              "content": "Synthetic document",
+              "score": 0.5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool_name": "governance_proposal_approve",
+      "match": "ordered",
+      "response": {
+        "result": {
+          "outcome": "approved",
+          "memory_id": "canonical-doc-1"
+        }
+      }
+    },
+    {
+      "tool_name": "audit_export",
+      "match": "ordered",
+      "response": {
+        "result": {
+          "export_id": "audit-1",
+          "format": "csv",
+          "rows": 3
+        }
+      }
+    }
+  ],
+  "virtual_clock": {
+    "start_time": "2026-01-01T00:00:00.000Z",
+    "tick_interval_ms": 1000
+  },
+  "random_seed": 42,
+  "policy_expectations": [
+    {
+      "policy_id": "pol-004",
+      "expected_decision": "allow",
+      "at_step": 1
+    }
+  ],
+  "assertions": {
+    "output": {
+      "expected_status": "completed"
+    }
+  },
+  "approval_breakpoints": [
+    {
+      "at_step": 1,
+      "decision": "approve",
+      "rationale": "Human final authority: document quality assessment reviewed and approved"
+    }
+  ]
+}

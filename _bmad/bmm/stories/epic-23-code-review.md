@@ -1,10 +1,10 @@
-# Epic 23 Code Review — Neo4j Sunset Completion
+# Epic 23 Code Review — PostgreSQL (graph_memories) Sunset Completion
 
 **Reviewer:** BMad adversarial review (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
 **Date:** 2026-07-29
 **Commits reviewed:**
 - `fadbdc80` fix(epic-23): stories 23.1-23.3 — typecheck 0 errors, 25 test failures fixed
-- `e9934b13` feat(epic-23): stories 23.4-23.5 — token compliance + dead Neo4j code removal
+- `e9934b13` feat(epic-23): stories 23.4-23.5 — token compliance + dead PostgreSQL (graph_memories) code removal
 
 **Scope:** 104 files changed, +1651 / −10328 lines across 2 commits.
 
@@ -17,13 +17,13 @@
 | `bun run typecheck` | ✅ 0 errors |
 | `bun run test:unit` | ✅ 1623 passed, 171 skipped, 0 failures |
 | Token compliance test | ✅ 0 hex, 0 deprecated (3 token-compliance tests pass) |
-| `src/lib/neo4j/` deleted | ✅ Confirmed absent |
-| `src/lib/graph-adapter/neo4j-adapter.ts` deleted | ✅ Confirmed absent |
-| `src/lib/backup/neo4j.ts` deleted | ✅ Confirmed absent |
+| `src/lib/PostgreSQL (graph_memories)/` deleted | ✅ Confirmed absent |
+| `src/lib/graph-adapter/ruvector-adapter.ts` deleted | ✅ Confirmed absent |
+| `src/lib/backup/PostgreSQL (graph_memories).ts` deleted | ✅ Confirmed absent |
 | `src/lib/errors/neo4j-errors.ts` deleted | ✅ Confirmed absent |
 | `src/lib/graph-adapter/dual-read-adapter.ts` deleted | ✅ Confirmed absent |
 | `src/__tests__/neo4j-writer-errors.test.ts` deleted | ✅ Confirmed absent |
-| `src/lib/graph-adapter/neo4j-adapter.test.ts` deleted | ✅ Confirmed absent |
+| `src/lib/graph-adapter/ruvector-adapter.test.ts` deleted | ✅ Confirmed absent |
 
 ---
 
@@ -33,32 +33,32 @@
 
 **Assessment:** ✅ Correct but incomplete.
 
-The `getConnections()` in `src/mcp/canonical-tools/connection.ts` returns `neo4j: Driver | null`. The `createGraphAdapter()` signature was changed to accept `neo4j?: unknown` (deprecated, ignored). The `?? undefined` normalization converts `null` → `undefined` to satisfy the optional parameter type. This is functionally correct — the `neo4j` parameter is never read inside `createGraphAdapter()` (verified via grep: zero references to `connections.neo4j` in factory.ts).
+The `getConnections()` in `src/mcp/canonical-tools/connection.ts` returns `Neo4j: Driver | null`. The `createGraphAdapter()` signature was changed to accept `PostgreSQL (graph_memories)?: unknown` (deprecated, ignored). The `?? undefined` normalization converts `null` → `undefined` to satisfy the optional parameter type. This is functionally correct — the `PostgreSQL (graph_memories)` parameter is never read inside `createGraphAdapter()` (verified via grep: zero references to `connections.PostgreSQL (graph_memories)` in factory.ts).
 
-However, the **root cause was not fixed**: `connection.ts` still imports `neo4j-driver`, maintains a `neo4jDriver` singleton, and has an active code path that creates a real Neo4j driver when `GRAPH_BACKEND=neo4j` (lines 65-78). The `?? undefined` is a type-level band-aid over a connection layer that should have been cleaned up.
+However, the **root cause was not fixed**: `connection.ts` still imports `neo4j-driver`, maintains a `PostgreSQL (graph_memories)Driver` singleton, and has an active code path that creates a real PostgreSQL (graph_memories) driver when `GRAPH_BACKEND=PostgreSQL (graph_memories)` (lines 65-78). The `?? undefined` is a type-level band-aid over a connection layer that should have been cleaned up.
 
-### writer.ts: buildNeo4jBackend removal
+### writer.ts: buildPostgreSQL (graph_memories)Backend removal
 
 **Assessment:** ✅ Clean removal.
 
-- `buildNeo4jBackend()` function fully removed (157 lines deleted).
+- `buildPostgreSQL (graph_memories)Backend()` function fully removed (157 lines deleted).
 - `getGraphBackend` import removed (only `createGraphAdapter` is imported now).
-- `readTransaction` / `writeTransaction` / `ManagedTransaction` imports from `@/lib/neo4j/connection` removed.
+- `readTransaction` / `writeTransaction` / `ManagedTransaction` imports from `@/lib/PostgreSQL (graph_memories)/connection` removed.
 - The `memory()` function now falls back to `buildAdapterBackend()` unconditionally — the `getGraphBackend()` branching is gone.
-- Grep confirms zero references to `buildNeo4jBackend` in source files.
+- Grep confirms zero references to `buildPostgreSQL (graph_memories)Backend` in source files.
 
-### target-resolver.ts: neo4jMutate / neo4jQuery removal
+### target-resolver.ts: PostgreSQL (graph_memories)Mutate / PostgreSQL (graph_memories)Query removal
 
 **Assessment:** ✅ Clean removal, all callers updated.
 
-- `neo4jMutate()` and `neo4jQuery()` functions fully removed (79 lines).
+- `PostgreSQL (graph_memories)Mutate()` and `PostgreSQL (graph_memories)Query()` functions fully removed (79 lines).
 - `VALID_LABELS` set and `validateLabel()` helper removed.
-- `randomUUID` import removed (was only used by neo4jMutate).
-- `readTransaction` / `writeTransaction` imports from `@/lib/neo4j/connection` removed.
-- The `resolveTarget()` function's `neo4j` prefix branch is removed; error message updated to `"Supported prefixes: pg"`.
-- Test file `target-resolver.test.ts` updated: Neo4j mock removed, `assertRegisteredTenant` mock added, 2 Neo4j test cases removed. Tests pass.
+- `randomUUID` import removed (was only used by PostgreSQL (graph_memories)Mutate).
+- `readTransaction` / `writeTransaction` imports from `@/lib/PostgreSQL (graph_memories)/connection` removed.
+- The `resolveTarget()` function's `PostgreSQL (graph_memories)` prefix branch is removed; error message updated to `"Supported prefixes: pg"`.
+- Test file `target-resolver.test.ts` updated: PostgreSQL (graph_memories) mock removed, `assertRegisteredTenant` mock added, 2 PostgreSQL (graph_memories) test cases removed. Tests pass.
 
-### factory.ts: neo4j case removed from GRAPH_BACKEND switch
+### factory.ts: PostgreSQL (graph_memories) case removed from GRAPH_BACKEND switch
 
 **Assessment:** ⚠️ Silent fallback — no backward compat error.
 
@@ -66,12 +66,12 @@ However, the **root cause was not fixed**: `connection.ts` still imports `neo4j-
 ```ts
 const value = process.env.GRAPH_BACKEND?.toLowerCase()
 if (value === "ruvector-crate") return "ruvector-crate"
-return "ruvector"  // ← any other value, including "neo4j", silently falls back
+return "ruvector"  // ← any other value, including "graph_memories", silently falls back
 ```
 
-If `GRAPH_BACKEND=neo4j` is still set in `.env`, the factory **silently** selects `ruvector` rather than throwing a clear error. This masks a misconfiguration. See Edge Case Hunter finding below.
+If `GRAPH_BACKEND=PostgreSQL (graph_memories)` is still set in `.env`, the factory **silently** selects `ruvector` rather than throwing a clear error. This masks a misconfiguration. See Edge Case Hunter finding below.
 
-The `GraphBackend` type was narrowed to `"ruvector" | "ruvector-crate"` — the `"neo4j"` union member is removed. The `createGraphAdapter()` and `isGraphAdapterAvailable()` signatures now accept `neo4j?: unknown` (deprecated, ignored). The barrel export `index.ts` no longer exports `Neo4jGraphAdapter` or `DualReadAdapter`.
+The `GraphBackend` type was narrowed to `"ruvector" | "ruvector-crate"` — the `"graph_memories"` union member is removed. The `createGraphAdapter()` and `isGraphAdapterAvailable()` signatures now accept `PostgreSQL (graph_memories)?: unknown` (deprecated, ignored). The barrel export `index.ts` no longer exports `PostgreSQL (graph_memories)GraphAdapter` or `DualReadAdapter`.
 
 ### knowledge-promotion.ts: PostgreSQL rewrite — SQL injection + transaction safety
 
@@ -79,7 +79,7 @@ The `GraphBackend` type was narrowed to `"ruvector" | "ruvector-crate"` — the 
 
 **SQL injection:** ✅ Safe. All queries use parameterized placeholders (`$1`, `$2`, etc.). No string interpolation of user input into SQL. The `ILIKE '%' || $N || '%'` pattern in retrieval-layer.ts is also safe (parameter bound, concatenated in SQL).
 
-**Missing transaction:** ⚠️ The `promoteToNeo4j()` function performs two INSERTs without a transaction:
+**Missing transaction:** ⚠️ The `promoteToPostgreSQL (graph_memories)()` function performs two INSERTs without a transaction:
 1. `INSERT INTO graph_memories ...` (line 777)
 2. `INSERT INTO graph_supersedes ...` (line 784)
 
@@ -87,7 +87,7 @@ If the second INSERT fails (e.g., FK constraint, duplicate key), the first INSER
 
 **Error handling:** ✅ Adequate. The `try/catch` wraps both branches and re-throws as `KnowledgePromotionError`. The `linkInsightToAgent()` function has non-fatal error handling (logs and continues).
 
-**Naming:** ⚠️ The function is still named `promoteToNeo4j()` and the alias `Neo4jPromotionError = KnowledgePromotionError` is exported. The `updateNotionWithNeo4jId()` function also retains its Neo4j name. These are misleading since the implementation no longer touches Neo4j.
+**Naming:** ⚠️ The function is still named `promoteToPostgreSQL (graph_memories)()` and the alias `PostgreSQL (graph_memories)PromotionError = KnowledgePromotionError` is exported. The `updateNotionWithPostgreSQL (graph_memories)Id()` function also retains its PostgreSQL (graph_memories) name. These are misleading since the implementation no longer touches PostgreSQL (graph_memories).
 
 ### in-process-executor.ts: executeCypher — SQL injection risk
 
@@ -112,47 +112,47 @@ The `recallInsight()` function in the same file is correctly parameterized.
 
 ## Layer 2: Edge Case Hunter
 
-### GRAPH_BACKEND=neo4j still set in .env
+### GRAPH_BACKEND=PostgreSQL (graph_memories) still set in .env
 
 **Assessment:** ⚠️ WARNING — Silent fallback, no error.
 
-If `GRAPH_BACKEND=neo4j` is still set:
-- `factory.ts` → `getGraphBackend()` returns `"ruvector"` silently (the `neo4j` value is not matched, falls through to default `return "ruvector"`).
-- `connection.ts` → `getConnections()` enters the Neo4j driver creation path (line 65-78), requires `NEO4J_PASSWORD`, and will throw `"NEO4J_PASSWORD environment variable is required"` — a confusing error that doesn't mention the sunset.
-- `health/metrics/route.ts` → Still dynamically imports `neo4j-driver` and attempts to connect (line 156-171). This will fail and report `neo4jStatus = "unhealthy"` — but the health endpoint should not be checking Neo4j at all.
+If `GRAPH_BACKEND=PostgreSQL (graph_memories)` is still set:
+- `factory.ts` → `getGraphBackend()` returns `"ruvector"` silently (the `PostgreSQL (graph_memories)` value is not matched, falls through to default `return "ruvector"`).
+- `connection.ts` → `getConnections()` enters the PostgreSQL (graph_memories) driver creation path (line 65-78), requires `PostgreSQL (graph_memories)_PASSWORD`, and will throw `"PostgreSQL (graph_memories)_PASSWORD environment variable is required"` — a confusing error that doesn't mention the sunset.
+- `health/metrics/route.ts` → Still dynamically imports `neo4j-driver` and attempts to connect (line 156-171). This will fail and report `PostgreSQL (graph_memories)Status = "unhealthy"` — but the health endpoint should not be checking PostgreSQL (graph_memories) at all.
 
-**Recommendation:** `getGraphBackend()` should throw a clear deprecation error when `GRAPH_BACKEND=neo4j`:
+**Recommendation:** `getGraphBackend()` should throw a clear deprecation error when `GRAPH_BACKEND=PostgreSQL (graph_memories)`:
 ```ts
-if (value === "neo4j") throw new Error("GRAPH_BACKEND=neo4j is no longer supported. Neo4j has been sunset — use GRAPH_BACKEND=ruvector (default) or GRAPH_BACKEND=ruvector-crate.")
+if (value === "graph_memories") throw new Error("GRAPH_BACKEND=PostgreSQL (graph_memories) is no longer supported. PostgreSQL (graph_memories) has been sunset — use GRAPH_BACKEND=ruvector (default) or GRAPH_BACKEND=ruvector-crate.")
 ```
 
-### Importing from deleted `src/lib/neo4j/` path
+### Importing from deleted `src/lib/PostgreSQL (graph_memories)/` path
 
 **Assessment:** ✅ Adequate for source files, ⚠️ Scripts use throwing stub.
 
-Source files that imported from `@/lib/neo4j/*` have been updated. The deleted directory no longer exists, so TypeScript would catch any remaining imports at compile time (and typecheck passes).
+Source files that imported from `@/lib/PostgreSQL (graph_memories)/*` have been updated. The deleted directory no longer exists, so TypeScript would catch any remaining imports at compile time (and typecheck passes).
 
-For scripts, a `scripts/lib/neo4j-stub.ts` was created that exports all previously-available functions as throw-on-call stubs. 20+ scripts import from this stub. The error message is clear: `"Neo4j is sunset — use PostgreSQL (pgvector) instead"`. However, any script that calls these functions will fail at runtime.
+For scripts, a `scripts/lib/PostgreSQL (graph_memories)-stub.ts` was created that exports all previously-available functions as throw-on-call stubs. 20+ scripts import from this stub. The error message is clear: `"PostgreSQL (graph_memories) is sunset — use PostgreSQL (pgvector) instead"`. However, any script that calls these functions will fail at runtime.
 
 ### Test mocks vs actual function signatures
 
 **Assessment:** ✅ Correct.
 
-- `writer.test.ts`: Neo4j driver mock and session mock fully removed. The `neo4j-driver` vi.mock() is deleted. Tests now only test the control plane and adapter backends. Tests pass (1623/1623).
-- `target-resolver.test.ts`: Neo4j connection mock replaced with `assertRegisteredTenant` mock. Test numbering updated (tests 5-8 renumbered to 5-6). Tests pass.
-- `backup-automation.test.ts`: `backupNeo4j` import removed. `ALL_BACKUP_TYPES` assertion updated (removed `neo4j`, kept `config`). `getDefaultConfig` assertions updated to remove neo4j fields. Module export assertion updated. Tests pass.
+- `writer.test.ts`: PostgreSQL (graph_memories) driver mock and session mock fully removed. The `neo4j-driver` vi.mock() is deleted. Tests now only test the control plane and adapter backends. Tests pass (1623/1623).
+- `target-resolver.test.ts`: PostgreSQL (graph_memories) connection mock replaced with `assertRegisteredTenant` mock. Test numbering updated (tests 5-8 renumbered to 5-6). Tests pass.
+- `backup-automation.test.ts`: `backupPostgreSQL (graph_memories)` import removed. `ALL_BACKUP_TYPES` assertion updated (removed `PostgreSQL (graph_memories)`, kept `config`). `getDefaultConfig` assertions updated to remove PostgreSQL (graph_memories) fields. Module export assertion updated. Tests pass.
 - `sync-contract.test.ts`: Updated (91 lines changed). Tests pass.
 - `knowledge-promotion-approval-guard.test.ts`: Updated (48 lines changed). Tests pass.
 
-### Remaining active Neo4j code paths
+### Remaining active PostgreSQL (graph_memories) code paths
 
-**Assessment:** ⚠️ WARNING — Two source files still have active Neo4j runtime code.
+**Assessment:** ⚠️ WARNING — Two source files still have active PostgreSQL (graph_memories) runtime code.
 
-1. **`src/mcp/canonical-tools/connection.ts`** (lines 65-78): Still creates a real Neo4j driver when `GRAPH_BACKEND` is not `ruvector`/`ruvector-crate`. Imports `neo4j-driver` directly.
+1. **`src/mcp/canonical-tools/connection.ts`** (lines 65-78): Still creates a real PostgreSQL (graph_memories) driver when `GRAPH_BACKEND` is not `ruvector`/`ruvector-crate`. Imports `neo4j-driver` directly.
 
-2. **`src/app/api/health/metrics/route.ts`** (lines 156-171): Still dynamically imports `neo4j-driver` and attempts to connect to Neo4j for health metrics. Always reports Neo4j status (healthy/degraded/unhealthy).
+2. **`src/app/api/health/metrics/route.ts`** (lines 156-171): Still dynamically imports `neo4j-driver` and attempts to connect to PostgreSQL (graph_memories) for health metrics. Always reports PostgreSQL (graph_memories) status (healthy/degraded/unhealthy).
 
-3. **`src/lib/retrieval/startup-validator.ts`** (lines 33-104): Full Neo4j health check suite — `getNeo4jDriver()`, `checkNeo4jMemoryIndex()`, `checkNeo4jSchemaLabels()`. The `validateStartup()` function (line 130-140) actively tries to connect to Neo4j and will report failure.
+3. **`src/lib/retrieval/startup-validator.ts`** (lines 33-104): Full PostgreSQL (graph_memories) health check suite — `getPostgreSQL (graph_memories)Driver()`, `checkPostgreSQL (graph_memories)MemoryIndex()`, `checkPostgreSQL (graph_memories)SchemaLabels()`. The `validateStartup()` function (line 130-140) actively tries to connect to PostgreSQL (graph_memories) and will report failure.
 
 These were not cleaned up in Epic 23 and represent remaining dead code that will cause runtime errors or misleading health reports.
 
@@ -170,13 +170,13 @@ These were not cleaned up in Epic 23 and represent remaining dead code that will
 ### Story 23.2: Remove Neo4j fallback tests in writer.test.ts — ✅ PASS
 
 - 12 Neo4j fallback tests removed (457 lines deleted)
-- Neo4j driver mock, session mock, and env vars removed
+- PostgreSQL (graph_memories) driver mock, session mock, and env vars removed
 - Remaining tests pass (control plane + adapter backends only)
 
 ### Story 23.3: Fix target-resolver.test.ts — ✅ PASS
 
-- Neo4j connection mock replaced with tenant existence mock
-- 2 Neo4j test cases removed (neo4j:Entity insert, neo4j:Query read)
+- PostgreSQL (graph_memories) connection mock replaced with tenant existence mock
+- 2 PostgreSQL (graph_memories) test cases removed (PostgreSQL (graph_memories):Entity insert, PostgreSQL (graph_memories):Query read)
 - Test renumbered (8 → 6 tests)
 - Tests pass
 
@@ -186,26 +186,26 @@ These were not cleaned up in Epic 23 and represent remaining dead code that will
 - 3 token compliance test cases all green
 - Dashboard component files updated (command-palette, dashboard-header, graph components, inspector views)
 
-### Story 23.5: Remove dead Neo4j code — ⚠️ PARTIAL PASS
+### Story 23.5: Remove dead PostgreSQL (graph_memories) code — ⚠️ PARTIAL PASS
 
 **Completed:**
-- `src/lib/neo4j/` directory deleted ✅
-- `src/lib/graph-adapter/neo4j-adapter.ts` deleted ✅
-- `src/lib/backup/neo4j.ts` deleted ✅
+- `src/lib/PostgreSQL (graph_memories)/` directory deleted ✅
+- `src/lib/graph-adapter/ruvector-adapter.ts` deleted ✅
+- `src/lib/backup/PostgreSQL (graph_memories).ts` deleted ✅
 - `src/lib/errors/neo4j-errors.ts` deleted ✅
 - `src/lib/graph-adapter/dual-read-adapter.ts` deleted ✅
-- Neo4j-specific test files deleted ✅
-- `factory.ts` neo4j case removed from switch ✅
+- PostgreSQL (graph_memories)-specific test files deleted ✅
+- `factory.ts` PostgreSQL (graph_memories) case removed from switch ✅
 - `typecheck` 0 errors ✅
 - `test:unit` 0 failures ✅
 
 **NOT completed (exit gate criteria):**
-- `grep -r "neo4j\|Neo4j" src/ --include="*.ts" | grep -v node_modules | wc -l` → **843 results** (exit gate says 0 or only historical comments)
+- `grep -r "PostgreSQL (graph_memories)\|PostgreSQL (graph_memories)" src/ --include="*.ts" | grep -v node_modules | wc -l` → **843 results** (exit gate says 0 or only historical comments)
   - 465 in source files, 378 in test files
   - Many are comments/docs, but several are **active runtime code**:
     - `src/mcp/canonical-tools/connection.ts` — active `neo4j-driver` import + driver creation
     - `src/app/api/health/metrics/route.ts` — active `neo4j-driver` dynamic import + health check
-    - `src/lib/retrieval/startup-validator.ts` — active Neo4j health check functions
+    - `src/lib/retrieval/startup-validator.ts` — active PostgreSQL (graph_memories) health check functions
     - `src/team-ram/orchestrator.ts` — `skill-neo4j-memory` skill name in type definition
 
 ---
@@ -227,69 +227,69 @@ The function passes user-provided SQL directly to `pool.query(sql)` with only a 
 
 ### ⚠️ WARNING (should fix)
 
-**W1. `knowledge-promotion.ts`: `promoteToNeo4j()` performs two INSERTs without a transaction**
+**W1. `knowledge-promotion.ts`: `promoteToPostgreSQL (graph_memories)()` performs two INSERTs without a transaction**
 
 The supersede path inserts into `graph_memories` then `graph_supersedes` as separate statements. If the second INSERT fails, the first has committed — orphaning a memory node without its SUPERSEDES relationship, breaking the version chain.
 
 **Fix:** Wrap both INSERTs in a `pool.connect()` + `client.query('BEGIN')` / `COMMIT` transaction.
 
-**W2. `factory.ts`: `GRAPH_BACKEND=neo4j` silently falls back to `ruvector`**
+**W2. `factory.ts`: `GRAPH_BACKEND=PostgreSQL (graph_memories)` silently falls back to `ruvector`**
 
-No error or warning is emitted. A misconfigured `.env` with `GRAPH_BACKEND=neo4j` will silently use ruvector, masking the issue. The connection layer (`connection.ts`) will still try to create a Neo4j driver and throw a confusing `NEO4J_PASSWORD` error.
+No error or warning is emitted. A misconfigured `.env` with `GRAPH_BACKEND=PostgreSQL (graph_memories)` will silently use ruvector, masking the issue. The connection layer (`connection.ts`) will still try to create a PostgreSQL (graph_memories) driver and throw a confusing `PostgreSQL (graph_memories)_PASSWORD` error.
 
-**Fix:** Add `if (value === "neo4j") throw new Error("GRAPH_BACKEND=neo4j is no longer supported...")` in `getGraphBackend()`.
+**Fix:** Add `if (value === "graph_memories") throw new Error("GRAPH_BACKEND=PostgreSQL (graph_memories) is no longer supported...")` in `getGraphBackend()`.
 
-**W3. `connection.ts` still has active Neo4j driver creation path**
+**W3. `connection.ts` still has active PostgreSQL (graph_memories) driver creation path**
 
-`src/mcp/canonical-tools/connection.ts` lines 65-78 still create a real Neo4j driver when `GRAPH_BACKEND` is not `ruvector`/`ruvector-crate`. This is dead code that will cause runtime errors if triggered.
+`src/mcp/canonical-tools/connection.ts` lines 65-78 still create a real PostgreSQL (graph_memories) driver when `GRAPH_BACKEND` is not `ruvector`/`ruvector-crate`. This is dead code that will cause runtime errors if triggered.
 
-**Fix:** Remove the Neo4j driver creation block entirely. Return `{ pg: pgPool, neo4j: null }` unconditionally. Remove the `neo4j-driver` import.
+**Fix:** Remove the PostgreSQL (graph_memories) driver creation block entirely. Return `{ pg: pgPool, Neo4j: null }` unconditionally. Remove the `neo4j-driver` import.
 
-**W4. `health/metrics/route.ts` still checks Neo4j health**
+**W4. `health/metrics/route.ts` still checks PostgreSQL (graph_memories) health**
 
-The health metrics endpoint dynamically imports `neo4j-driver` and attempts to connect. It will always report Neo4j as unhealthy/degraded. This produces misleading health metrics.
+The health metrics endpoint dynamically imports `neo4j-driver` and attempts to connect. It will always report PostgreSQL (graph_memories) as unhealthy/degraded. This produces misleading health metrics.
 
-**Fix:** Remove the Neo4j health check block (lines 146-172). Remove Neo4j from the response schema. Clean up the degraded-mode counters that query `neo4j_unavailable` events (or keep as historical metrics).
+**Fix:** Remove the PostgreSQL (graph_memories) health check block (lines 146-172). Remove PostgreSQL (graph_memories) from the response schema. Clean up the degraded-mode counters that query `graph_memories_unavailable` events (or keep as historical metrics).
 
-**W5. `startup-validator.ts` still has full Neo4j health check suite**
+**W5. `startup-validator.ts` still has full PostgreSQL (graph_memories) health check suite**
 
-`src/lib/retrieval/startup-validator.ts` has `getNeo4jDriver()`, `checkNeo4jMemoryIndex()`, `checkNeo4jSchemaLabels()`, and the `validateStartup()` function actively calls them (lines 130-140). This will always report Neo4j connection failure.
+`src/lib/retrieval/startup-validator.ts` has `getPostgreSQL (graph_memories)Driver()`, `checkPostgreSQL (graph_memories)MemoryIndex()`, `checkPostgreSQL (graph_memories)SchemaLabels()`, and the `validateStartup()` function actively calls them (lines 130-140). This will always report PostgreSQL (graph_memories) connection failure.
 
-**Fix:** Remove the Neo4j check functions and the Neo4j check block in `validateStartup()`. Remove the `neo4j_url` from `RetrievalConfig` if no longer needed.
+**Fix:** Remove the PostgreSQL (graph_memories) check functions and the PostgreSQL (graph_memories) check block in `validateStartup()`. Remove the `PostgreSQL (graph_memories)_url` from `RetrievalConfig` if no longer needed.
 
 **W6. `scripts/content-aware-curator.ts` uses throwing stub — broken at runtime**
 
-The script imports `createInsight` from `./lib/neo4j-stub`, which throws `"Neo4j is sunset"` on call. The script is functionally broken — it cannot promote insights. Other scripts (`batch-approve-proposals.ts`, `curator-batch-triage.ts`, `approve-proposals-by-id.ts`, `e2e-validation-gate.ts`) have the same issue.
+The script imports `createInsight` from `./lib/PostgreSQL (graph_memories)-stub`, which throws `"PostgreSQL (graph_memories) is sunset"` on call. The script is functionally broken — it cannot promote insights. Other scripts (`batch-approve-proposals.ts`, `curator-batch-triage.ts`, `approve-proposals-by-id.ts`, `e2e-validation-gate.ts`) have the same issue.
 
 **Fix:** Either rewrite these scripts to use PostgreSQL directly (as was done for `approve-cli.ts`), or add a clear deprecation notice and remove them from the scripts directory.
 
-**W7. Exit gate not met: 843 Neo4j references remain in src/**
+**W7. Exit gate not met: 843 PostgreSQL (graph_memories) references remain in src/**
 
-The exit gate states `grep -r "neo4j\|Neo4j" src/ --include="*.ts" | grep -v node_modules | wc -l` should be 0 (or only historical comments). 843 references remain, including active runtime code in 3 source files. While many are comments, the active code paths in W3-W5 are not "historical comments."
+The exit gate states `grep -r "PostgreSQL (graph_memories)\|PostgreSQL (graph_memories)" src/ --include="*.ts" | grep -v node_modules | wc -l` should be 0 (or only historical comments). 843 references remain, including active runtime code in 3 source files. While many are comments, the active code paths in W3-W5 are not "historical comments."
 
 ---
 
 ### 💡 SUGGESTION (nice to have)
 
-**S1. Rename `promoteToNeo4j()` → `promoteToKnowledgeGraph()`**
+**S1. Rename `promoteToPostgreSQL (graph_memories)()` → `promoteToKnowledgeGraph()`**
 
-The function no longer touches Neo4j. The name is misleading. Similarly, `updateNotionWithNeo4jId()` → `updateNotionWithGraphId()`. Export a deprecation alias for backward compatibility.
+The function no longer touches PostgreSQL (graph_memories). The name is misleading. Similarly, `updateNotionWithPostgreSQL (graph_memories)Id()` → `updateNotionWithGraphId()`. Export a deprecation alias for backward compatibility.
 
-**S2. `Neo4jPromotionError` alias should be marked deprecated with a JSDoc `@deprecated` tag**
+**S2. `PostgreSQL (graph_memories)PromotionError` alias should be marked deprecated with a JSDoc `@deprecated` tag**
 
-Currently it's `export const Neo4jPromotionError = KnowledgePromotionError;` with a comment, but no `@deprecated` JSDoc annotation that IDEs would surface.
+Currently it's `export const PostgreSQL (graph_memories)PromotionError = KnowledgePromotionError;` with a comment, but no `@deprecated` JSDoc annotation that IDEs would surface.
 
 **S3. `in-process-executor.ts`: `recallInsight()` uses `id AS topic_key` — semantically incorrect**
 
-The query maps `id` to both `insight_id` and `topic_key`, which are different concepts. The original Neo4j query had `i.topic_key` as a separate field. If `graph_memories` doesn't have a `topic_key` column, this should return `null` or be removed from the result shape.
+The query maps `id` to both `insight_id` and `topic_key`, which are different concepts. The original PostgreSQL (graph_memories) query had `i.topic_key` as a separate field. If `graph_memories` doesn't have a `topic_key` column, this should return `null` or be removed from the result shape.
 
-**S4. `scripts/lib/neo4j-stub.ts` — consider adding a `@deprecated` module-level JSDoc**
+**S4. `scripts/lib/PostgreSQL (graph_memories)-stub.ts` — consider adding a `@deprecated` module-level JSDoc**
 
 The stub file is well-documented as deprecated, but adding `@deprecated` at the module level would surface warnings in IDEs when scripts import from it.
 
-**S5. `group-governance.ts`: `Neo4jGroupIdReport` renamed to `GraphGroupIdReport` but `GroupIdGovernanceReport.neo4j` → `.graph` — verify all consumers updated**
+**S5. `group-governance.ts`: `PostgreSQL (graph_memories)GroupIdReport` renamed to `GraphGroupIdReport` but `GroupIdGovernanceReport.PostgreSQL (graph_memories)` → `.graph` — verify all consumers updated**
 
-The interface field was renamed from `neo4j` to `graph`. Any code consuming `report.neo4j` would break. Typecheck passes, but runtime consumers in scripts might access the old field name via `any`-typed variables.
+The interface field was renamed from `PostgreSQL (graph_memories)` to `graph`. Any code consuming `report.PostgreSQL (graph_memories)` would break. Typecheck passes, but runtime consumers in scripts might access the old field name via `any`-typed variables.
 
 **S6. `in-process-executor.ts`: redundant `assertReadOnlySql` function**
 
@@ -299,10 +299,10 @@ Two read-only guard functions exist: `assertReadOnlySql` (line 64, pre-existing)
 
 ## Verdict
 
-The Epic 23 work successfully achieved its primary goals: typecheck is clean (0 errors), all tests pass (1623/1623), token compliance is green, and the major dead Neo4j modules are deleted. The 91-file cleanup removed ~10,328 lines of dead code.
+The Epic 23 work successfully achieved its primary goals: typecheck is clean (0 errors), all tests pass (1623/1623), token compliance is green, and the major dead PostgreSQL (graph_memories) modules are deleted. The 91-file cleanup removed ~10,328 lines of dead code.
 
-However, the exit gate criterion for Neo4j reference elimination is **not met** — 843 references remain, including **active runtime code** in 3 source files (`connection.ts`, `health/metrics/route.ts`, `startup-validator.ts`) that will cause runtime errors or misleading health reports.
+However, the exit gate criterion for PostgreSQL (graph_memories) reference elimination is **not met** — 843 references remain, including **active runtime code** in 3 source files (`connection.ts`, `health/metrics/route.ts`, `startup-validator.ts`) that will cause runtime errors or misleading health reports.
 
 The **CRITICAL** finding (C1) is a security regression: `executeCypher()` in `in-process-executor.ts` now executes raw, unparameterized SQL without tenant scoping. This must be fixed before merge.
 
-**Recommendation:** Fix C1 before merge. Address W1-W3 before merge (data integrity + silent misconfiguration). Track W4-W7 as follow-up stories for a "Neo4j Sunset Completion — Phase 2" cleanup.
+**Recommendation:** Fix C1 before merge. Address W1-W3 before merge (data integrity + silent misconfiguration). Track W4-W7 as follow-up stories for a "PostgreSQL (graph_memories) Sunset Completion — Phase 2" cleanup.

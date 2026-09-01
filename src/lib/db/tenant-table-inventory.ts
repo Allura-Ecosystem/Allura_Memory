@@ -40,6 +40,8 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "canonical_proposals", class: "tenant-scoped", notes: "New writes carry workspace; legacy NULL rows remain excluded", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "promotion_proposals", class: "tenant-scoped", notes: "Promotion proposals" },
   { table: "pattern_proposals", class: "tenant-scoped", notes: "Pattern proposals" },
+  { table: "genesis_evidence_consumptions", class: "tenant-scoped", notes: "Migration 58: append-only consumed signed Genesis JTI ledger bound to target and mutation digest" },
+  { table: "genesis_verified_claims", class: "tenant-scoped", notes: "Migration 59: append-only owner-only audit binding server-verified Genesis JTI, principal, tenant, target, and digest" },
   { table: "approval_notifications", class: "tenant-scoped", notes: "Approval notifications" },
   { table: "approval_transitions", class: "tenant-scoped", notes: "Approval transitions" },
   { table: "audit_analyses", class: "tenant-scoped", notes: "Audit analyses" },
@@ -77,6 +79,15 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "bumblebee_catalog_entries", class: "tenant-scoped", notes: "Story 26.7 (migration 46): immutable normalized entries bound to a scoped catalog revision", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "bumblebee_sources", class: "tenant-scoped", notes: "Story 26.7 (migration 46): immutable scanner source/population revisions with one-way soft-disable", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "bumblebee_scan_leases", class: "tenant-scoped-credential", notes: "Story 26.7 (migration 47): source-bound monotonic leases with short-lived hashed ingest credentials", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "bumblebee_batch_receipts", class: "tenant-scoped", notes: "Story 26.7 (migration 48): append-only batch receipts with exact-replay dedupe and composite FK to scan lease", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "bumblebee_records", class: "tenant-scoped", notes: "Story 26.7 (migration 48): sanitized immutable scanner records (package/finding/scan_summary/diagnostic) with composite FKs to batch receipt", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "bumblebee_run_decisions", class: "tenant-scoped", notes: "Story 26.7 (migration 48): append-only held/promoted decisions with promoted-requires-summary CHECK and composite FK to batch", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "bumblebee_lease_body_authority", class: "tenant-scoped", notes: "Migration 56: deterministic active receipt authority retained for every Bumblebee lease", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "bumblebee_batch_receipt_quarantine", class: "tenant-scoped", notes: "Migration 56: observable append-only reconciliation of non-authoritative legacy receipt bodies", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "bumblebee_exposure_evidence", class: "tenant-scoped", notes: "Migration 55/056: immutable exact source-revision/profile/catalog evidence bound to fresh promoted inventory provenance", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "branch_registry", class: "tenant-scoped", notes: "Epic 27 (migration 53): branch registry — status enum (active/degraded/expired/rejected/quarantined/rolled_back), retention_expires_at, recorded snapshot, RLS on app.current_group_id", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "branch_snapshots", class: "tenant-scoped", notes: "Migration 54: immutable materialized governed-lane snapshots, isolated by exact group and workspace claims", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "promotion_receipts", class: "tenant-scoped", notes: "Epic 27 (migration 53): append-only promotion receipts with deterministic trace id and diff hash", workspaceTreatment: "workspace-scoped-new-writes" },
 
   // Credential / identity tables
   { table: "mcp_tokens", class: "tenant-scoped-credential", notes: "MCP credentials; lookup by token prefix before tenant resolution" },
@@ -89,7 +100,8 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "insight_adoptions", class: "operational", notes: "Cross-tenant platform insight adoption state" },
   { table: "platform_insights", class: "operational", notes: "Aggregated platform-level insights" },
   { table: "platform_promotion_queue", class: "operational", notes: "Platform-wide promotion queue" },
-  { table: "skill_usage_summary", class: "operational", notes: "View over skill_usage_events; not directly RLS-protected" },
+  { table: "governed_lane_authority", class: "operational", notes: "Migration 54: immutable repository lane-policy projection; authority is joined to RLS-protected branch ledgers" },
+  { table: "skill_usage_summary", class: "operational", notes: "View over skill_usage_events (which IS FORCE RLS-protected, migration 36). Migration 51 sets security_invoker = true on this view so it evaluates under the querying role's own RLS context rather than the (BYPASSRLS) view owner's -- see docker/postgres-init/51-view-security-invoker-hardening.sql." },
 
   // Migration-only
   { table: "schema_versions", class: "migration-only", notes: "Migration tracking; managed by migration tooling" },

@@ -14,7 +14,7 @@
 
 3. **Parallel dispatch worked.** Stories 19.2 (dual-read) and 19.4 (crate adapter) were dispatched in parallel — they touched different files and had no dependencies. This cut the wall-clock time significantly.
 
-4. **Dual-read caught real divergence.** The dual-read adapter logged 15 divergence events between Neo4j and RuVector during the test run. This is expected during migration phase and proves the mechanism works — it will catch real divergence in production before Neo4j goes read-only.
+4. **Dual-read caught real divergence.** The dual-read adapter logged 15 divergence events between PostgreSQL (graph_memories) and RuVector during the test run. This is expected during migration phase and proves the mechanism works — it will catch real divergence in production before PostgreSQL (graph_memories) goes read-only.
 
 5. **Path B is honest.** The crate adapter has 13/16 methods working, 3 throw unsupported (G1/B3: no updateNode, no atomicity). We didn't fake it. The issues were filed upstream (#666, #667, #668) with honest framing: "here's our use case, here's what we need, here's what we can contribute."
 
@@ -36,7 +36,7 @@
 
 2. **Migrations that are idempotent and additive can be applied to live DB.** The fear of touching the live database is valid, but `CREATE TABLE IF NOT EXISTS` with no impact on existing tables is safe. The key is verifying idempotency before applying.
 
-3. **Dual-read is the safety net.** The cutover was safe because dual-read mode can run for one release cycle, catching divergence before Neo4j goes read-only. This is the pattern for any future backend swap.
+3. **Dual-read is the safety net.** The cutover was safe because dual-read mode can run for one release cycle, catching divergence before PostgreSQL (graph_memories) goes read-only. This is the pattern for any future backend swap.
 
 4. **Path A (ship what's built) was the right call.** The PG-table adapter was 90% built, parity-tested, and ready. Path B (Rust crate) is the upstreamable engine but has real constraints (G1/B3). Shipping Path A as the beta default was correct — Path B runs in parallel behind the same seam.
 
@@ -47,7 +47,7 @@
 | # | Action | Owner | Status |
 |---|--------|-------|--------|
 | 1 | Fix pre-existing typecheck error in `.next/dev/types/validator.ts` | Woz | New — separate from this epic |
-| 2 | Run dual-read mode in production for one release cycle before removing Neo4j | Brooks | Pending — post-cutover |
+| 2 | Run dual-read mode in production for one release cycle before removing PostgreSQL (graph_memories) | Brooks | Pending — post-cutover |
 | 3 | Verify GitHub issues #666-668 actually exist on ruvnet/RuVector | Brooks | Pending |
 | 4 | Monitor upstream responses to G1/G2/G3 issues | Brooks | Ongoing |
 | 5 | Plan Stage 2 graduation (ruvector_graph → full_ruvector) when native extension is ready | Brooks | Future |
@@ -82,4 +82,4 @@
 | AD-49 status | ✅ Decided | RISKS-AND-DECISIONS.md updated |
 | RK-32 status | ✅ Resolved | RISKS-AND-DECISIONS.md updated |
 | RK-21 Stage 1 | ✅ Graduated | pgvector_bridge → ruvector_graph |
-| Neo4j fallback | ✅ Available | `GRAPH_BACKEND=neo4j` still works |
+| Neo4j fallback | ✅ Available | `GRAPH_BACKEND=PostgreSQL (graph_memories)` still works |

@@ -173,12 +173,13 @@ describe("authorizeToolCall (AC-5)", () => {
       .toThrow(/No verified principal/);
   });
 
-  it("recognises exactly the four elevated tools", () => {
+  it("recognises exactly the five elevated tools", () => {
     expect([...ELEVATED_TOOLS].sort()).toEqual([
       "governance_curator_pass",
       "governance_proposal_approve",
       "governance_proposal_reject",
       "governance_update_policy",
+      "governed_lane_review",
     ]);
     expect(isElevatedTool("memory_add")).toBe(false);
   });

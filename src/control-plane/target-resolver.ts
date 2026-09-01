@@ -15,9 +15,9 @@ if (typeof window !== "undefined") {
   throw new Error("server-side only");
 }
 
-import { getPool } from "@/lib/postgres/connection";
-import { validateGroupId } from "@/lib/validation/group-id";
 import { assertRegisteredTenant } from "@/lib/config/tenant-existence";
+import { getOwnerPool, getPool } from "@/lib/postgres/connection";
+import { validateGroupId } from "@/lib/validation/group-id";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TENANT VALIDATION
@@ -56,6 +56,12 @@ export interface TargetOperation {
   query?: Record<string, unknown>;
   limit?: number;
   offset?: number;
+  /** Verified Genesis principal, carried only from HMAC-verified evidence. */
+  genesisEvidencePrincipal?: string;
+  /** Verified Genesis evidence JTI, passed only by syscall_mutate. */
+  genesisEvidenceJti?: string;
+  genesisEvidenceTarget?: string;
+  genesisEvidenceMutationDigest?: string;
 }
 
 export interface ResolveResult {
@@ -141,6 +147,24 @@ async function pgMutate(
   // trailed. `query.id` selects the row; `data` carries the new column values.
   if (table === "pattern_proposals" && type === "update") {
     return pgUpdatePatternProposal(op);
+  }
+
+  // A Genesis insert reaches an owner-only transaction after the server has
+  // verified the signed evidence. The function writes the verified claim audit,
+  // consumes the JTI, and creates the proposal atomically; allura_app has no
+  // EXECUTE or INSERT privilege for this path.
+  if (table === "pattern_proposals" && type === "insert") {
+    if (!op.genesisEvidenceJti || !op.genesisEvidencePrincipal || !op.genesisEvidenceTarget || !op.genesisEvidenceMutationDigest) {
+      throw new Error("pg:pattern_proposals Genesis inserts require server-verified signed evidence");
+    }
+    const data = op.data ?? {};
+    const groupId = requireGroupId(data);
+    const pool = getOwnerPool();
+    const result = await pool.query(
+      `SELECT app.persist_verified_genesis_proposal($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS proposal_id`,
+      [op.genesisEvidenceJti, groupId, op.genesisEvidencePrincipal, op.genesisEvidenceTarget, op.genesisEvidenceMutationDigest, data.pattern_description, data.pattern_type, data.frequency, data.suggested_skill, data.confidence, data.status],
+    );
+    return { success: true, affected_rows: result.rowCount ?? 0 };
   }
 
   // Append-only INSERT path for coherence_conflicts (Story 2.1).

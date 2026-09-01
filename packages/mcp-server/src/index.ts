@@ -40,6 +40,13 @@ export const TOOL_POLICIES: Readonly<Record<string, ToolDef>> = {
   audit_health_report: { name: "audit_health_report", requiredScope: "audit:read" },
   audit_agent_activity: { name: "audit_agent_activity", requiredScope: "audit:read" },
   audit_invariant_check: { name: "audit_invariant_check", requiredScope: "audit:read" },
+  scenario_run: { name: "scenario_run", requiredScope: "memory:write" },
+  scenario_replay: { name: "scenario_replay", requiredScope: "memory:write" },
+  eval_run: { name: "eval_run", requiredScope: "audit:read" },
+  evidence_inspect: { name: "evidence_inspect", requiredScope: "audit:read" },
+  governed_lane_open: { name: "governed_lane_open", requiredScope: "memory:write" },
+  governed_lane_snapshot: { name: "governed_lane_snapshot", requiredScope: "memory:write" },
+  governed_lane_review: { name: "governed_lane_review", requiredScope: "review:approve", requiresElevatedRole: true },
 };
 
 export const MEMORY_TOOLS: ToolDef[] = Object.values(TOOL_POLICIES);

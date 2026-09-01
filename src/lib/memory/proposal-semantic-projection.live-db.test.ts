@@ -2,17 +2,32 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool, type PoolClient } from "pg";
 import { runProposalSemanticProjectionJob } from "./proposal-semantic-projection";
 
+// Env-var discipline: this file must skip cleanly with RUN_E2E_TESTS unset
+// (the default for every non-live lane) and must not throw during test
+// collection even when POSTGRES_HOST/PORT/DB/USER are unset -- a prior
+// story's suite used a bare `process.env.X` (no `??` fallback) at the
+// `new Pool()` call site and threw inside beforeAll on a missing env var,
+// which vitest can surface as "skipped" rather than "failed" -- a thrown
+// setup masquerading as a healthy skip. All Pool construction here happens
+// with `??` fallbacks, and no Pool is created outside beforeAll/afterAll/it.
 const describeLive = process.env.RUN_E2E_TESTS === "true" && process.env.POSTGRES_PASSWORD ? describe : describe.skip;
 
 describeLive("proposal semantic projection — persisted source-driven rebuild", () => {
-  const pool = new Pool({
-    host: process.env.POSTGRES_HOST, port: Number(process.env.POSTGRES_PORT), database: process.env.POSTGRES_DB,
-    user: process.env.POSTGRES_USER, password: process.env.POSTGRES_PASSWORD,
-  });
+  let pool: Pool;
   let client: PoolClient;
 
-  beforeAll(async () => { client = await pool.connect(); await client.query("BEGIN"); });
-  afterAll(async () => { if (client) { await client.query("ROLLBACK"); client.release(); } await pool.end(); });
+  beforeAll(async () => {
+    pool = new Pool({
+      host: process.env.POSTGRES_HOST ?? "127.0.0.1",
+      port: Number(process.env.POSTGRES_PORT ?? "5432"),
+      database: process.env.POSTGRES_DB ?? "memory",
+      user: process.env.POSTGRES_USER ?? "allura",
+      password: process.env.POSTGRES_PASSWORD ?? "",
+    });
+    client = await pool.connect();
+    await client.query("BEGIN");
+  });
+  afterAll(async () => { if (client) { await client.query("ROLLBACK"); client.release(); } if (pool) await pool.end(); });
 
   it("persists a truthful pending projection, then only marks ready with an actual embedding result", async () => {
     const suffix = Date.now().toString(36);

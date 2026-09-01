@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-**Current architecture authority:** PostgreSQL-only under AD-50; the Epic 25 initial route is `/dashboard/curator` under AD-57. Legacy dual-database, Neo4j-tool, broad-dashboard, benchmark, and consumer-UX claims below are historical/reconciliation debt unless a requirement is explicitly reintroduced in Section 6E. They are not implementation authority for new work.
+**Current architecture authority:** PostgreSQL-only under AD-50; the Epic 25 initial route is `/dashboard/curator` under AD-57. Legacy dual-database, neo4j-tool, broad-dashboard, benchmark, and consumer-UX claims below are historical/reconciliation debt unless a requirement is explicitly reintroduced in Section 6E. They are not implementation authority for new work.
 
 mem0 has solved **distribution** (easy SDK, 6 deployment options, 50k+ GitHub stars). Allura solves **trust**.
 
@@ -168,7 +168,7 @@ Routed to: Pending Review (SOC2 mode)
   ↓
 Human curator sees: "Sabir uses Bun, not npm"
 Curator verifies: ✓ Yes, this is from the conversation
-Curator approves → Neo4j write
+Curator approves → PostgreSQL (graph_memories) write
 ```
 
 **This prevents:**
@@ -209,8 +209,8 @@ This section traces the governed memory pipeline requirements from business goal
 | B1 | Developers integrate Allura with a 5-tool API matching mem0's UX | F1–F5 | `memory_add`, `memory_search`, `memory_get`, `memory_list`, `memory_delete` via MCP tools · AD-05 |
 | B2 | All memory is isolated by tenant (`group_id`) at the schema level | F8 | PostgreSQL CHECK constraint `group_id ~ '^allura-'` · AD-06 · [BLUEPRINT.md](./BLUEPRINT.md#7-global-constraints) |
 | B3 | Every write produces an immutable audit record in PostgreSQL | F1, F26, F27 | Append-only `events` table · `insertEvent()` · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#postgresql-events) |
-| B4 | Promoted knowledge is versioned and never mutated in Neo4j | F9, F33, F34 | `SUPERSEDES` relationship pattern · AD-02 · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-relationships) |
-| B5 | The system is deployable via a single `docker compose up` command for core infra and app services | F21, F56 | `docker-compose.yml` · AD-45 (Port Allocation Policy) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#81-deployment-scenarios) |
+| B4 | Promoted knowledge is versioned and never mutated in PostgreSQL (graph_memories) | F9, F33, F34 | `SUPERSEDES` relationship pattern · AD-02 · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-relationships) |
+| B5 | The system is deployable via a single `docker compose up` command for core infra and app services | F21, F57 | `docker-compose.yml` · AD-45 (Port Allocation Policy) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#81-deployment-scenarios) |
 | B6 | Agents connect via MCP (Model Context Protocol) through Team RAM-selected packaged MCP servers | F20 | `neo4j-memory`, `database-server`, `neo4j-cypher` packaged MCP servers · AD-23 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-1-agent-memory-recall-primary-path) |
 | B7 | Operators choose between human-gated (SOC2) and auto-promotion modes | F6, F7 | `PROMOTION_MODE` env var · AD-04 · [BLUEPRINT.md](./BLUEPRINT.md#6-execution-rules) |
 
@@ -266,14 +266,14 @@ This section traces the governed memory pipeline requirements from business goal
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f8"></a>F8 | Approved insights must be written to Neo4j as immutable nodes and must never be updated in place. | `createInsight()` · `src/lib/neo4j/queries/insert-insight.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
+| <a name="f8"></a>F8 | Approved insights must be written to PostgreSQL (graph_memories) as immutable nodes and must never be updated in place. | `createInsight()` · `src/lib/PostgreSQL (graph_memories)/queries/insert-insight.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f9"></a>F9 | When an insight changes, the system must create a new insight node linked with `SUPERSEDES`, `DEPRECATED`, or `REVERTED`. | `createInsightVersion()` · `deprecateInsight()` · `revertInsightVersion()` · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 
 #### Retrieval Layer (F10–F11)
 
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
-| <a name="f10"></a>F10 | Agents must retrieve knowledge through a retrieval service rather than by directly querying PostgreSQL or Neo4j. | `POST /api/memory/retrieval` · `src/lib/memory/retrieval-layer.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
+| <a name="f10"></a>F10 | Agents must retrieve knowledge through a retrieval service rather than by directly querying PostgreSQL or PostgreSQL (graph_memories). | `POST /api/memory/retrieval` · `src/lib/memory/retrieval-layer.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f11"></a>F11 | The retrieval service must support semantic and structured queries and return scoped context from approved insights, with optional raw-trace access. | `searchInsights()` · `getDualContextSemanticMemory()` · `queryTraces()` · [BLUEPRINT.md](./BLUEPRINT.md) |
 
 #### Policy and Access Control (F12–F13)
@@ -288,7 +288,7 @@ This section traces the governed memory pipeline requirements from business goal
 | ID | Requirement | Satisfied by |
 |----|-------------|--------------|
 | <a name="f14"></a>F14 | A second agent must be able to retrieve approved knowledge as context and use it in a later task correctly. | Retrieval endpoint · validation gate scenario MEM-UC8 · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) |
-| <a name="f15"></a>F15 | The full lifecycle from trace capture to knowledge reuse must be traceable, auditable, and reversible. | Evidence chain: trace → proposal → approval → Neo4j → retrieval · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
+| <a name="f15"></a>F15 | The full lifecycle from trace capture to knowledge reuse must be traceable, auditable, and reversible. | Evidence chain: trace → proposal → approval → PostgreSQL (graph_memories) → retrieval · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 | <a name="f16"></a>F16 | The graph must include Agent, Team, and Project structural context nodes with relationships enabling traversal queries by ownership, project scope, and delegation path. | `scripts/neo4j-seed-agents.cypher` · [BLUEPRINT.md](./BLUEPRINT.md#5-data-model) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#neo4j-agent) |
 
 ### Section 3: Curator API/CLI (F17–F19)
@@ -309,7 +309,7 @@ This section traces the governed memory pipeline requirements from business goal
 | <a name="f23"></a>F23 | MCP HTTP gateway exposes backend engine via `CURATOR_ENGINE_URL` env var | `src/mcp/http-gateway.ts` · Docker deployment config · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#4-interface-catalogue) |
 | <a name="f24"></a>F24 | API routes call Docker engine in VPC/cloud via HTTPS | `src/app/api/` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#4-interface-catalogue) |
 | <a name="f25"></a>F25 | Error tracking: unhandled exceptions sent to Sentry; operator notified via email/Slack | `src/lib/observability/sentry.ts` · [BLUEPRINT.md](./BLUEPRINT.md#3-architecture) |
-| <a name="f56"></a>F56 | Git-safety guardrail (GIT-EXEC-001): all `git` subprocesses spawned by the harness or Ralph must have `GIT_DIR` constrained to the project root; Ralph refuses to run if `cwd` is not under the expected project root | `scripts/git-exec-guard.ts` · `.ralph/ralph-loop.state.json` cwd check · AD-44 · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
+| <a name="f57"></a>F57 | Git-safety guardrail (GIT-EXEC-001): all `git` subprocesses spawned by the harness or Ralph must have `GIT_DIR` constrained to the project root; Ralph refuses to run if `cwd` is not under the expected project root | `scripts/git-exec-guard.ts` · `.ralph/ralph-loop.state.json` cwd check · AD-44 · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 
 ### Section 5: Governed Memory Pipeline (F26–F40)
 
@@ -322,14 +322,14 @@ This section traces the governed memory pipeline requirements from business goal
 | <a name="f30"></a>F30 | Each proposed insight includes summary, evidence links, confidence score, timestamp, and status | Proposal schema · `score`, `reasoning`, `tier`, `trace_ref` fields · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#postgresql-canonical_proposals) |
 | <a name="f31"></a>F31 | Proposed insights enter an approval flow before becoming active knowledge | `POST /api/curator/approve` · `status: pending` gate · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f32"></a>F32 | Every approval, rejection, or policy decision is recorded as an audit event with actor and timestamp | `proposal_approved` / `proposal_rejected` event types · witness hash · `src/lib/memory/approval-audit.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
-| <a name="f33"></a>F33 | Approved insights are written to Neo4j as immutable nodes; no in-place updates | `createInsight()` · `src/lib/neo4j/queries/insert-insight.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
+| <a name="f33"></a>F33 | Approved insights are written to PostgreSQL (graph_memories) as immutable nodes; no in-place updates | `createInsight()` · `src/lib/PostgreSQL (graph_memories)/queries/insert-insight.ts` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f34"></a>F34 | Changed insights create new nodes linked with `SUPERSEDES`, `DEPRECATED`, or `REVERTED` relationships | `createInsightVersion()` · `deprecateInsight()` · `revertInsightVersion()` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f35"></a>F35 | Agents retrieve knowledge through a controlled retrieval service, not by querying databases directly | `POST /api/memory/retrieval` · `src/lib/memory/retrieval-layer.ts` · AD-19 · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f36"></a>F36 | Retrieval supports semantic and structured queries with project and global scope | `searchInsights()` · `getDualContextSemanticMemory()` · `queryTraces()` · [BLUEPRINT.md](./BLUEPRINT.md) |
 | <a name="f37"></a>F37 | All knowledge-system reads/writes pass through controlled endpoints enforcing project-level access | `requireRole()` · `validateGroupId()` · RBAC middleware · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#6-key-architectural-constraints) |
 | <a name="f38"></a>F38 | Agent permissions enforced and all access to trace/knowledge resources is audited | Auth middleware · audit event logging · [BLUEPRINT.md](./BLUEPRINT.md#9-logging--audit) |
 | <a name="f39"></a>F39 | A second agent can retrieve approved knowledge and use it correctly in a later task | Retrieval endpoint · validation gate scenario MEM-UC8 · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) |
-| <a name="f40"></a>F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible | Evidence chain: trace → proposal → approval → Neo4j → retrieval · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
+| <a name="f40"></a>F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible | Evidence chain: trace → proposal → approval → PostgreSQL (graph_memories) → retrieval · E2E gate table in [BLUEPRINT.md](./BLUEPRINT.md#e2e-readiness-status-as-of-2026-06-14) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) |
 
 ### Section 5A: Evidence-Gated Run Records (F49–F52)
 
@@ -387,10 +387,10 @@ This section traces the governed memory pipeline requirements from business goal
 | --- | --- | --- |
 | REQ-AF-CI-001 | Factory modules and workflows must be tracked in the canonical `Allura_Memory` repository. | `factory/` · `.github/workflows/factory-ci.yml` · AD-43 |
 | REQ-AF-CI-002 | Every module must pass YAML, roster, tenant, BMad dependency, and Allura governance validation. | `factory/validate.sh` · `.github/workflows/factory-ci.yml` |
-| REQ-AF-CI-003 | CI must prove PostgreSQL-first writes, own-tenant retrieval, and cross-tenant isolation against live PostgreSQL and Neo4j. | `scripts/factory-cross-team-smoke.ts` · `.github/workflows/factory-cross-team-smoke.yml` · RK-31 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3401-agent-factory-ci-topology) |
+| REQ-AF-CI-003 | CI must prove PostgreSQL-first writes, own-tenant retrieval, and cross-tenant isolation against live PostgreSQL and PostgreSQL (graph_memories). | `scripts/factory-cross-team-smoke.ts` · `.github/workflows/factory-cross-team-smoke.yml` · RK-31 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3401-agent-factory-ci-topology) |
 | REQ-AF-CI-004 | CI must preserve the `pgvector bridge` label and block native/upstream claims while required artifacts are absent. | `scripts/check-ruvector-readiness.ts` · `.github/workflows/ruvector-readiness.yml` · AD-32 · RK-21 |
 | REQ-AF-CI-005 | Packaging must require an explicit validated team and produce a commit-addressed artifact. | `.github/workflows/factory-ci.yml` |
-| REQ-GOV-007 | Dashboard and operator surfaces must consume API/MCP contracts only and must not write directly to PostgreSQL, Neo4j, or vector substrate. | AD-31, F37, F38 | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#important-constraints) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) |
+| REQ-GOV-007 | Dashboard and operator surfaces must consume API/MCP contracts only and must not write directly to PostgreSQL, PostgreSQL (graph_memories), or vector substrate. | AD-31, F37, F38 | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#important-constraints) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) |
 | REQ-GOV-008 | Runtime/database/MCP/cron/live hook/RuVix enforcement/semantic promotion/Notion sync/Done status changes require explicit approval and `approval_required=true`. The `approval_ref` must be a well-formed UUID (canonical governed approval identity), and the gate emits `approval_required=true`, the gate decision, and the resolved `approval_ref` into the audit context. Resolution against the canonical approval store is the approval-lifecycle layer's responsibility. | AD-33 | `src/control-plane/syscalls.ts` `executeSyscall` approval gate · `src/lib/governance/policies.ts` `pol-007` · `src/mcp/audit-tools.ts` `audit_invariant_check` · `src/mcp/governance-tools.ts` `evaluateInvariants` · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-33-approval-boundaries-for-engine-mutations) |
 | REQ-GOV-009 | Planned RAM/Durham hook wrappers are governed support surfaces, not live enforcement until separately approved. | AD-33, RK-24 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-control plane-governance-contract) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#risk-detail) |
 
@@ -408,14 +408,14 @@ This section traces the governed memory pipeline requirements from business goal
 
 ### Section 6C: RuVector Graph Cutover Requirements (REQ-RV-001–REQ-RV-005)
 
-> **Note:** These requirements trace the RuVector graph backend cutover story (AD-49). They govern the transition from Neo4j legacy backend to PostgreSQL-backed RuVector graph adapter. Completion gates ensure live-DB E2E and dual-read validation pass before full cutover.
+> **Note:** These requirements trace the RuVector graph backend cutover story (AD-49). They govern the transition from PostgreSQL (graph_memories) legacy backend to PostgreSQL-backed RuVector graph adapter. Completion gates ensure live-DB E2E and dual-read validation pass before full cutover.
 
 | ID | Requirement | Trace | Satisfied by |
 |----|-------------|-------|--------------|
-| REQ-RV-001 | IGraphAdapter seam must back all graph operations; no direct Neo4j/PG graph calls outside the adapter | AD-29, AD-49, RK-32 | `src/lib/graph-adapter/types.ts` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-0-2-graph-backend-cutover-path) |
-| REQ-RV-002 | GRAPH_BACKEND flag must default to `neo4j` until live-DB E2E passes with `ruvector` | AD-49 | `src/lib/graph-adapter/factory.ts` · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-49-ruvector-graph-cutover) |
+| REQ-RV-001 | IGraphAdapter seam must back all graph operations; no direct PostgreSQL (graph_memories)/PG graph calls outside the adapter | AD-29, AD-49, RK-32 | `src/lib/graph-adapter/types.ts` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-0-2-graph-backend-cutover-path) |
+| REQ-RV-002 | GRAPH_BACKEND flag must default to `PostgreSQL (graph_memories)` until live-DB E2E passes with `ruvector` | AD-49 | `src/lib/graph-adapter/factory.ts` · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-49-ruvector-graph-cutover) |
 | REQ-RV-003 | Parity test (`adapter-parity.test.ts`) must pass 14/14 before any cutover | AD-29 | `src/lib/graph-adapter/__tests__/adapter-parity.test.ts` · AD-29 |
-| REQ-RV-004 | Dual-read validation must run for one release cycle before Neo4j goes read-only | AD-49, RK-32 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-0-2-graph-backend-cutover-path) |
+| REQ-RV-004 | Dual-read validation must run for one release cycle before PostgreSQL (graph_memories) goes read-only | AD-49, RK-32 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-0-2-graph-backend-cutover-path) |
 | REQ-RV-005 | `runtime_readiness` label may upgrade from `pgvector_bridge` to `ruvector_graph` only after live-DB E2E + dual-read pass; to `full_ruvector` only after native extension activates | AD-49, AD-34, RK-21 | [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) |
 
 ### Section 6D: Memory Command Center Requirements (REQ-DASH-001–REQ-DASH-009)
@@ -427,8 +427,8 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-DASH-003 | Curator page supports approve, reject, request evidence, request changes, and rationale capture through governed endpoints only | F6, F7, F31, F32 | [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#curator-requirements) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-xx-ruvix-control plane-contract) |
 | REQ-DASH-004 | Governance page surfaces RuVix policy mode, thresholds, role separation, tenant isolation, promotion locks, drift warnings, and mutation receipts | REQ-GOV-001, REQ-GOV-002 | `src/app/dashboard/governance/page.tsx` (lists the 6 canonical policies + severity/invariant + governance audit trail; read-only, overrides HITL-gated) · `src/lib/governance/policies.ts` · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-control plane-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) |
 | REQ-DASH-005 | Audit page provides event filtering, receipt detail, CSV/export packet, and source lineage for compliance review | B13, F18, F32 | [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#postgresql-events) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#audit--health-requirements) |
-| REQ-DASH-006 | Graph page renders real Neo4j data only, with source receipts and a fallback list when graph data is degraded or unavailable | F8, F9, F16 | `src/app/dashboard/graph/page.tsx` (placeholder nodes removed; honest empty state) · `src/app/dashboard/knowledge-graph/` · [BLUEPRINT.md](./BLUEPRINT.md#5-data-model) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-architecture) |
-| REQ-DASH-007 | Every dashboard panel shows source of truth, freshness, degraded state, and no fabricated healthy/live claims | AD-14, AD-26 | `src/lib/operational-state/sources/header-source.ts` · `src/app/dashboard/overview/page.tsx` (live receipts + bounded Neo4j/Brain health probes) · [docs/design/command-center/DATA-SOURCES.md](../design/command-center/DATA-SOURCES.md) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) |
+| REQ-DASH-006 | Graph page renders real PostgreSQL (graph_memories) data only, with source receipts and a fallback list when graph data is degraded or unavailable | F8, F9, F16 | `src/app/dashboard/graph/page.tsx` (placeholder nodes removed; honest empty state) · `src/app/dashboard/knowledge-graph/` · [BLUEPRINT.md](./BLUEPRINT.md#5-data-model) · [DESIGN-ALLURA.md](./DESIGN-ALLURA.md#dashboard-architecture) |
+| REQ-DASH-007 | Every dashboard panel shows source of truth, freshness, degraded state, and no fabricated healthy/live claims | AD-14, AD-26 | `src/lib/operational-state/sources/header-source.ts` · `src/app/dashboard/overview/page.tsx` (live receipts + bounded PostgreSQL (graph_memories)/Brain health probes) · [docs/design/command-center/DATA-SOURCES.md](../design/command-center/DATA-SOURCES.md) · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-6-api-first-architecture-and-memory-command-center) |
 | REQ-DASH-008 | Every mutation shows a governance receipt containing intent, actor, source, policy, validation, and audit trail before completion | AD-XX, REQ-GOV-001 | [BLUEPRINT.md](./BLUEPRINT.md#ruvix-governed-memory-command-center) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memory-command-center-adapter-contracts) |
 | REQ-DASH-009 | A non-coder admin manages team members and roles (admin/curator/viewer) entirely from the dashboard UI; group_id-scoped, soft-remove, append-only audit | AD-48, REQ-GOV-001 | `src/app/dashboard/members/page.tsx` + `members-client.tsx` (add/role/remove UI) · `docker/postgres-init/29-memberships.sql` · `src/lib/membership/repository.ts` · `src/app/api/members/route.ts` · `src/app/api/members/[userId]/route.ts` · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#memberships) |
 
@@ -495,7 +495,7 @@ This section traces the governed memory pipeline requirements from business goal
 | MEM-UC2 | Trace Ingestion | Reject non-append trace write | F2 |
 | MEM-UC3 | Curation | Curate a proposed insight from traces | F4, F5 |
 | MEM-UC4 | Approval | Approve a proposed insight | F6, F7 |
-| MEM-UC5 | Knowledge Graph | Promote an approved insight to Neo4j | F8, F9 |
+| MEM-UC5 | Knowledge Graph | Promote an approved insight to PostgreSQL (graph_memories) | F8, F9 |
 | MEM-UC6 | Retrieval | Retrieve approved knowledge for an agent | F10, F11 |
 | MEM-UC7 | Access Control | Enforce access and audit on all reads/writes | F12, F13 |
 | MEM-UC8 | E2E Validation | Reuse approved knowledge in a later agent run | F14, F15 |

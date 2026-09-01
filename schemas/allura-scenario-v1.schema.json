@@ -186,7 +186,15 @@
           "properties": {
             "expected_events": {
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string",
+                "examples": [
+                  "process_step_started",
+                  "process_step_completed",
+                  "process_step_failed",
+                  "process_checkpoint_blocked"
+                ]
+              }
             }
           },
           "additionalProperties": true

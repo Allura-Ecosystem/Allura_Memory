@@ -1,0 +1,80 @@
+{
+  "scenario_id": "controlled-research-success",
+  "schema_version": "v1",
+  "description": "Controlled research agent success case: read-only research completes with mocked tools and no untrusted instruction becomes authority",
+  "tenant_fixture": {
+    "group_id": "allura-controlled-research",
+    "cleanup": true
+  },
+  "principal_fixture": {
+    "principal_id": "research-agent",
+    "roles": [
+      "viewer"
+    ],
+    "tenant_ids": [
+      "allura-controlled-research"
+    ],
+    "auth_method": "service_identity"
+  },
+  "process_definition": {
+    "id": "controlled-research",
+    "revision": "1"
+  },
+  "initial_state": {
+    "memories": [
+      {
+        "content": "Research baseline: market size estimate 4.2B",
+        "score": 0.9
+      }
+    ],
+    "proposals": []
+  },
+  "tool_fixtures": [
+    {
+      "tool_name": "memory_search",
+      "match": "ordered",
+      "response": {
+        "result": {
+          "results": [
+            {
+              "id": "base-1",
+              "content": "Research baseline",
+              "score": 0.9
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool_name": "web_search",
+      "match": "ordered",
+      "response": {
+        "result": {
+          "results": [
+            {
+              "title": "Mocked source",
+              "source_id": "mock-source-1"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "virtual_clock": {
+    "start_time": "2026-01-01T00:00:00.000Z",
+    "tick_interval_ms": 1000
+  },
+  "random_seed": 42,
+  "policy_expectations": [
+    {
+      "policy_id": "pol-004",
+      "expected_decision": "allow",
+      "at_step": 0
+    }
+  ],
+  "assertions": {
+    "output": {
+      "expected_status": "completed"
+    }
+  }
+}

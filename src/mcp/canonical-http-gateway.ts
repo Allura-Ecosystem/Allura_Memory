@@ -27,6 +27,8 @@ import {
 import { config } from "dotenv";
 import { randomUUID } from "crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "http";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import { parse } from "url";
 import { applyCors, corsHeaders, getCorsConfig, isPreflightRequest } from "@/lib/cors/index.js";
 import { collectMetrics, ensureMetricsInitialized, recordHttpRequest } from "@/lib/health/metrics";
@@ -135,6 +137,22 @@ interface PrincipalHolder {
  */
 function auditAuthDecision(event: ReturnType<typeof buildAuthAuditEvent>): void {
   void emitAuthAudit(event);
+}
+
+async function inspectEvidenceArtifacts(): Promise<{ receipts: string[]; artifacts: string[] }> {
+  const list = async (root: "receipts" | "artifacts"): Promise<string[]> => {
+    try {
+      return (await readdir(join(process.cwd(), root), { withFileTypes: true }))
+        .filter((entry) => entry.isFile())
+        .map((entry) => `${root}/${entry.name}`)
+        .sort();
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+  };
+  const [receipts, artifacts] = await Promise.all([list("receipts"), list("artifacts")]);
+  return { receipts, artifacts };
 }
 
 /**
@@ -249,6 +267,12 @@ import {
   audit_invariant_check,
   audit_query_events,
 } from "./audit-tools.js";
+
+import {
+  governedLaneOpen,
+  governedLaneReview,
+  governedLaneSnapshot,
+} from "./governed-lane-tools.js";
 
 import type {
   AuditAgentActivityRequest,
@@ -655,6 +679,87 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["group_id"],
         },
       },
+      {
+        name: "evidence_inspect",
+        description: "List server-local receipt and artifact filenames. Read-only; requires audit:read.",
+        inputSchema: { type: "object", properties: {} },
+      },
+      {
+        name: "governed_lane_open",
+        description: "Open a repository-authorized governed branch lane using the authenticated principal's workspace and actor identity.",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            group_id: { type: "string", minLength: 1 },
+            lane_id: { type: "string", minLength: 1 },
+            base_revision: { type: "string", minLength: 1 },
+          },
+          required: ["group_id", "lane_id", "base_revision"],
+        },
+      },
+      {
+        name: "governed_lane_snapshot",
+        description: "Persist an immutable governed-lane diff snapshot through repository-owned lane authority.",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            group_id: { type: "string", minLength: 1 },
+            lane_id: { type: "string", minLength: 1 },
+            base_revision: { type: "string", minLength: 1 },
+            diff: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                added: { type: "array", items: {
+                  type: "object", additionalProperties: false,
+                  properties: {
+                    id: { type: "string", minLength: 1 }, content: { type: "string" },
+                    score: { type: "number", minimum: 0, maximum: 1 },
+                    provenance: { type: "string", enum: ["conversation", "manual"] },
+                    tags: { type: "array", items: { type: "string" } },
+                  },
+                  required: ["id", "content", "score", "provenance", "tags"],
+                } },
+                overridden: { type: "array", items: {
+                  type: "object", additionalProperties: false,
+                  properties: {
+                    id: { type: "string", minLength: 1 }, content: { type: "string" },
+                    score: { type: "number", minimum: 0, maximum: 1 },
+                    provenance: { type: "string", enum: ["conversation", "manual"] },
+                    tags: { type: "array", items: { type: "string" } },
+                    supersedes_id: { type: "string", minLength: 1 },
+                  },
+                  required: ["id", "content", "score", "provenance", "tags", "supersedes_id"],
+                } },
+                deleted: { type: "array", items: { type: "string", minLength: 1 } },
+              },
+              required: ["added", "overridden", "deleted"],
+              minProperties: 3,
+            },
+            evidence_refs: { type: "array", minItems: 1, items: { type: "string", minLength: 1 } },
+          },
+          required: ["group_id", "lane_id", "base_revision", "diff", "evidence_refs"],
+        },
+      },
+      {
+        name: "governed_lane_review",
+        description: "Review one authenticated governed-lane snapshot and route approved evidence to the curator proposal queue.",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            group_id: { type: "string", minLength: 1 },
+            lane_id: { type: "string", minLength: 1 },
+            snapshot_id: { type: "string", minLength: 1 },
+            verdict: { type: "string", enum: ["approved", "rejected", "quarantined"] },
+            reason: { type: "string", minLength: 1 },
+            retention_expires_at: { type: "string", format: "date-time" },
+          },
+          required: ["group_id", "lane_id", "snapshot_id", "verdict", "reason"],
+        },
+      },
     ],
   };
 });
@@ -768,6 +873,18 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case "audit_invariant_check":
         result = await audit_invariant_check(args as unknown as AuditInvariantCheckRequest);
+        break;
+      case "evidence_inspect":
+        result = await inspectEvidenceArtifacts();
+        break;
+      case "governed_lane_open":
+        result = await governedLaneOpen(args, principal!);
+        break;
+      case "governed_lane_snapshot":
+        result = await governedLaneSnapshot(args, principal!);
+        break;
+      case "governed_lane_review":
+        result = await governedLaneReview(args, principal!);
         break;
       default:
         return {

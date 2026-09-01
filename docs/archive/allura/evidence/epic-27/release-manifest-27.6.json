@@ -1,0 +1,59 @@
+{
+  "schema": "allura-release-manifest/1",
+  "revision": "d57fd5e8eddcae0bfb5b48f1c49015d12428f6a4",
+  "tests": {
+    "total": 2462,
+    "passed": 2462,
+    "failed": 0,
+    "skipped": 160
+  },
+  "benchmark": {
+    "fixture": "docs/archive/allura/evidence/epic-27/spike-27.2-fixture-metrics.json",
+    "story": "27-2-disposable-branch-mechanics-agenticow-spike",
+    "status": "PASS",
+    "measuredAt": "2026-08-29T17:44:46.237Z"
+  },
+  "sbom": {
+    "tool": "pinned-source recon (spike 27.2)",
+    "licenses": [
+      {
+        "name": "agenticow",
+        "version": "0.2.4",
+        "license": "MIT",
+        "source": "npm + GitHub spdx_id: MIT (pinned commit dd4f437b92d2dbbc1f40dfa00023eed6e9c3bd84)"
+      },
+      {
+        "name": "@ruvector/rvf-node",
+        "version": "0.2.3",
+        "license": "MIT",
+        "source": "npm metadata (native binding; LICENSES/ruvector-MIT.txt)"
+      },
+      {
+        "name": "allura",
+        "version": "workspace",
+        "license": "MIT",
+        "source": "packages/*/package.json (packages/cli, packages/sdk)"
+      }
+    ]
+  },
+  "browser": {
+    "applicable": false,
+    "note": "headless run — no browser evidence applicable"
+  },
+  "review": {
+    "status": "approved-after-remediation",
+    "verdicts": {
+      "pike": "APPROVE",
+      "hightower": "APPROVE",
+      "fowler": "CHANGES-REQUESTED -> remediated (756165da)",
+      "knuth": "CHANGES-REQUESTED -> remediated (756165da)"
+    },
+    "frozen_candidate": "d57fd5e8",
+    "remediation_commit": "756165da"
+  },
+  "allura": {
+    "status": "recorded",
+    "receipt_id": "48fc8703-51e0-4347-adfc-795f764b2387"
+  },
+  "generatedAt": "2026-08-29T19:02:26.049Z"
+}

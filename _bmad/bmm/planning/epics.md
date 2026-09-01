@@ -13,10 +13,10 @@
 | 22 | [Enterprise Readiness — Multi-Tenant Hardening](./epic-22-enterprise-readiness-multi-tenant-hardening.md) | Done | Historical; retrospective complete. |
 | 23 | [Neo4j Sunset Completion](./epic-23-neo4j-sunset-completion.md) | Done | Historical; retrospective complete. |
 | 24 | [Agentic AI Framework and Harness Portfolio Readiness](./epic-24-portfolio-readiness.md) | Done | Corrective work is tracked as post-epic follow-up, not an Epic 24 reopen. |
-| 25 | [Governed Curator Review Console](./epic-25-governed-curator-review-console.md) | In progress | 25.3b remains in review. |
-| 26 | [Bumblebee Plugin Supply-Chain Intelligence](./epic-26-bumblebee-supply-chain-threat-intelligence.md) | In progress | See the [Correct Course](./epic-26-correct-course-upstream-bumblebee-plugin.md); 26.7 is active. |
-| 27 | [Governed Branchable Learning Memory](./epic-27-governed-branchable-learning-memory.md) | Planned | Experiment-first; blocked by Epic 25 closure. |
-| 28 | [Enterprise Documentation Consolidation](./epic-28-enterprise-documentation-consolidation.md) | In progress | Tasks 1–7 complete; Task 8 remains unscoped. |
+| 25 | [Governed Curator Review Console](./epic-25-governed-curator-review-console.md) | Done | Retrospective complete (2026-08-28). |
+| 26 | [Bumblebee Plugin Supply-Chain Intelligence](./epic-26-bumblebee-supply-chain-threat-intelligence.md) | Done | Retrospective complete (2026-08-29). See the [Correct Course](./epic-26-correct-course-upstream-bumblebee-plugin.md). |
+| 27 | [Governed Branchable Learning Memory](./epic-27-governed-branchable-learning-memory.md) | Done | Retrospective complete (2026-08-29); 6/6 stories, 5 action items. |
+| 28 | [Enterprise Documentation Consolidation](./epic-28-enterprise-documentation-consolidation.md) | Done | 28.8 exit-gate closure complete; retrospective pending. |
 
 ## Rules
 

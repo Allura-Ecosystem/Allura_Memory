@@ -194,6 +194,86 @@ describe("Tool simulator fault injection (AC-6)", () => {
   });
 });
 
+describe("Policy expectation cross-checks (DW-1)", () => {
+  it("rejects an unknown policy_id not in the canonical registry", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    const tampered = {
+      ...scenario,
+      policy_expectations: [{ policy_id: "pol-999", expected_decision: "allow" as const, at_step: 3 }],
+    } as ScenarioFixture;
+    await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(/unknown policy_id "pol-999"/);
+  });
+
+  it("checks an unknown policy_id even when its declared step never executes", async () => {
+    const scenario = loadJson("unauthorized-cross-tenant-access.yaml.json");
+    const tampered = {
+      ...scenario,
+      policy_expectations: [{ policy_id: "pol-999", expected_decision: "deny" as const, at_step: 99 }],
+    } as ScenarioFixture;
+    await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(/unknown policy_id "pol-999"/);
+  });
+
+  it("rejects a declared allow at a step that was actually denied", async () => {
+    const scenario = loadJson("unauthorized-cross-tenant-access.yaml.json");
+    // pol-001 is declared deny at step 1 (which IS denied); flip it to allow
+    // and the cross-check must fail because the step was POLICY_DENIED.
+    const tampered = {
+      ...scenario,
+      policy_expectations: [{ policy_id: "pol-001", expected_decision: "allow" as const, at_step: 1 }],
+    } as ScenarioFixture;
+    await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(/expected "pol-001" to allow/);
+  });
+
+  it("reports a policy mismatch after the engine run before unrelated output assertions", async () => {
+    const scenario = loadJson("unauthorized-cross-tenant-access.yaml.json");
+    const tampered = {
+      ...scenario,
+      policy_expectations: [{ policy_id: "pol-001", expected_decision: "allow" as const, at_step: 1 }],
+      assertions: { output: { expected_status: "completed" as const } },
+    } as ScenarioFixture;
+    await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(/policy_expectations error.*to allow/);
+  });
+
+  it("rejects a declared allow at a step that returned a non-policy error", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    const tampered = {
+      ...scenario,
+      tool_fixtures: [
+        {
+          ...scenario.tool_fixtures[0],
+          error: { code: "TOOL_ERROR", message: "fixture tool failure" },
+        },
+        ...scenario.tool_fixtures.slice(1),
+      ],
+      policy_expectations: [{ policy_id: "pol-004", expected_decision: "allow" as const, at_step: 0 }],
+    } as ScenarioFixture;
+    await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(/to allow at step 0, but observed error/);
+  });
+
+  it("rejects a declared deny at a step that actually succeeded", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    // pol-004 is declared allow at step 3 (which succeeds); flip it to deny
+    // and the cross-check must fail because the step succeeded.
+    const tampered = {
+      ...scenario,
+      policy_expectations: [{ policy_id: "pol-004", expected_decision: "deny" as const, at_step: 3 }],
+    } as ScenarioFixture;
+    await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(/expected "pol-004" to deny/);
+  });
+
+  it("accepts a declared deny at a step that was actually denied", async () => {
+    const scenario = loadJson("unauthorized-cross-tenant-access.yaml.json");
+    const result = await runScenario(scenario, { mode: "simulate" });
+    // Only the canonical declaration is recorded: fixture tool names are not
+    // policy IDs and must never appear as fabricated receipt decisions.
+    expect(result.receipt.policy_decisions).toContainEqual({
+      policy_id: "pol-001",
+      decision: "deny",
+      step: 1,
+    });
+  });
+});
+
 describe("Simulate mode (AC-2)", () => {
   it("executes entirely from local fixtures", async () => {
     const scenario = loadJson("governed-memory-success.yaml.json");
@@ -212,6 +292,43 @@ describe("Simulate mode (AC-2)", () => {
       ],
     } as ScenarioFixture;
     await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(/network access to be disabled/);
+  });
+});
+
+describe("Scenario assertion enforcement (AC-1)", () => {
+  it("fails the run when expected_status does not match the actual outcome", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    const tampered = {
+      ...scenario,
+      assertions: { output: { expected_status: "failed" as const } },
+    } as ScenarioFixture;
+    await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(
+      /expected_status=failed but run ended completed/,
+    );
+  });
+
+  it("passes when expected_status matches the actual outcome", async () => {
+    const scenario = loadJson("governed-memory-success.yaml.json");
+    const result = await runScenario(scenario, { mode: "simulate" });
+    expect(result.output.status).toBe("completed");
+  });
+
+  it("fails the run when expected_error is not present in the actual error", async () => {
+    const scenario = loadJson("unauthorized-cross-tenant-access.yaml.json");
+    const tampered = {
+      ...scenario,
+      assertions: { output: { expected_status: "failed" as const, expected_error: "NONEXISTENT_CODE" } },
+    } as ScenarioFixture;
+    await expect(runScenario(tampered, { mode: "simulate" })).rejects.toThrow(
+      /expected_error="NONEXISTENT_CODE" not found/,
+    );
+  });
+
+  it("passes when expected_error matches the actual error code", async () => {
+    const scenario = loadJson("unauthorized-cross-tenant-access.yaml.json");
+    const result = await runScenario(scenario, { mode: "simulate" });
+    expect(result.output.status).toBe("failed");
+    expect(result.output.error).toContain("POLICY_DENIED");
   });
 });
 
@@ -284,6 +401,7 @@ describe("Replay mode (AC-4/AC-7)", () => {
       tool_calls: [],
       policy_decisions: [],
       checkpoint_transitions: [],
+      events: [],
       side_effect_keys: [],
       evidence: {},
     });

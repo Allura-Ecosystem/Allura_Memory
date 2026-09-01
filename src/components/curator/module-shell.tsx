@@ -16,10 +16,10 @@ const STATE_COPY: Record<CuratorShellState, string> = {
 /** Host-owned shell: module adapters cannot replace its truthful states. */
 export function CuratorModuleShell({ issue }: { issue: CuratorModuleIssue }) {
   return (
-    <main aria-labelledby="curator-console-heading" data-shell-state={issue.state}>
+    <section className="curator-module-shell" aria-labelledby="curator-console-heading" data-shell-state={issue.state}>
       <h1 id="curator-console-heading">Curator console</h1>
       <p aria-live="polite" role="status">{issue.message ?? STATE_COPY[issue.state]}</p>
       {issue.modules.map((module) => <BumblebeeWorkflowAdapter key={module.id} module={module} />)}
-    </main>
+    </section>
   )
 }

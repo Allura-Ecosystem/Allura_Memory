@@ -11,7 +11,7 @@
  */
 import { AlluraClient } from "@allura/sdk";
 
-const baseUrl = process.env.ALLURA_BASE_URL ?? "http://localhost:3201";
+const baseUrl = process.env.ALLURA_BASE_URL ?? "http://localhost:5888";
 
 const client = new AlluraClient({
   baseUrl,

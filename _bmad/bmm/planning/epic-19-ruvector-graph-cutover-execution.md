@@ -11,7 +11,7 @@
 **group_id:** `allura-system`
 **Migration note:** Source-preserving split from `epics.md` on 2026-08-28 to give every epic one planning file.
 
-**Goal:** Execute the remaining work to flip `GRAPH_BACKEND` from `neo4j` to `ruvector` (Path A — PG tables, ship now) and spike Path B (ruvnet Rust crate, upstreamable engine) in parallel.
+**Goal:** Execute the remaining work to flip `GRAPH_BACKEND` from `PostgreSQL (graph_memories)` to `ruvector` (Path A — PG tables, ship now) and spike Path B (ruvnet Rust crate, upstreamable engine) in parallel.
 
 **Stories (to be refined after Epic 18 completes):**
 
@@ -23,6 +23,6 @@
 
 **Exit gate:**
 - `GRAPH_BACKEND=ruvector` is the default in production
-- Neo4j is read-only fallback for one release
+- PostgreSQL (graph_memories) is read-only fallback for one release
 - Live-DB E2E passes with RuVector backend
 - Path B adapter exists behind flag with three-way parity test green

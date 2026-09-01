@@ -64,6 +64,32 @@ Authorized Allura snapshot
 | 27.6 | Team RAM and Durham Branch Workflows | Brooks + Pike + Durham Munari/Rand | 27.4, 27.5 |
 | 27.7 | Security, Evidence, Release-Witness, and Demo Gate | Hightower + Pike + Fowler + Brooks | 27.4, 27.5, 27.6 |
 
+## Story Map
+
+> **Operative story list (derived 2026-08-29 — Epic 27 foundation pass).** The draft
+> story rows above were authored with this planning doc; the Story Map below is the
+> derived, dependency-ordered list the sprint tracks. It consolidates the seven draft
+> rows into six stories — 27.1 is deliberately a **bounded design spike for
+> authorized-base-snapshot authorization** (per the foundation decision), so draft
+> 27.1 (upstream recon) and draft 27.3 (AgenticOW spike) merge into Story 27.2, and
+> draft 27.2 (scope contract) becomes 27.1. Draft rows remain below for provenance
+> and owner history; where the two disagree, the Story Map wins.
+
+| Story | Outcome | Status |
+|---|---|---|
+| 27.1 | Prove the authorized-base-snapshot contract — a branch may inherit only from an authorized base snapshot within the same group/workspace — against Allura's existing authorization seams (PrincipalContext roles/scopes, effective-tenant seam, `workspaces.lock_mode`, tenant RLS) and decide where branch state lives, via a bounded design spike with zero `src/` changes | ready-for-dev |
+| 27.2 | Pin and recon the AgenticOW dependency (revision, license, provenance, adopt/adapt/experiment/reject verdict per capability, nothing executed during recon) and prove disposable mechanics — fork at least two isolated branches from one authorized base, branch-local writes, tombstones, checkpoint, diff, rollback, quarantine — on disposable fixtures with explicit degraded/expired/quarantined/rolled-back states and recorded dataset/hardware/latency/recall figures | draft |
+| 27.3 | Convert an approved branch diff into an Allura curator proposal (`promotion_proposals` + `approval_transitions`) preserving additions, overrides, tombstones, base revision, evidence references, and actor; accepted promotions receive an immutable server-issued receipt; no direct canonical mutation, no self-approval, no browser-synthesized success; rejected or poisoned branches stay quarantined and rollback stays reproducible | draft |
+| 27.4 | Compare current SONA behavior against selected AgentDB retrieval-feedback and consolidation patterns on identical task classes and fixtures, preferring witnessed test/review/trace outcomes over executor self-report, and explicitly reject AgentDB as a second durable authority even if an evaluated pattern wins; no model, skill, or ranking promotion without curator approval | draft |
+| 27.5 | Operate Team RAM workflows (one branch per story/agent/review lane, sole-writer ownership) and Durham workflows (conservative, expressive, and crop-resilient concept branches with reference/prompt/token/asset/accessibility/provenance manifests); Munari/Rand review branch evidence and only an approved diff becomes a proposal; no broad new agent framework and no duplicate workflow-status ledger | draft |
+| 27.6 | Close the epic: tenant/workspace isolation, poisoning, replay, tamper, quota, expiry, and rollback tests pass; one machine-readable release manifest (revision, tests, benchmark, SBOM/license evidence, browser evidence when applicable, review verdict, Allura receipt); independent review approves the frozen green diff; BMad retrospective records adopt/adapt/reject decisions and remaining hazards | draft |
+
+**Invariant coverage:** 27.1 → invariants 1, 2, 6 · 27.2 → 3, 8 · 27.3 → 4, 7 ·
+27.4 → 5 · 27.5 → 8 (exercised in real lanes) · 27.6 → exit gate 1–7.
+All eight architecture invariants map to a story, and the out-of-scope list (no
+second memory authority, no auto-promotion/self-approval, no cross-tenant
+inheritance, no unbounded branch retention) is enforced across 27.1–27.6.
+
 ## Story acceptance summaries
 
 ### 27.1 — Upstream boundary

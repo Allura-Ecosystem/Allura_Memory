@@ -98,7 +98,10 @@ export function validateModuleManifests(manifests: readonly CuratorModuleManifes
 
 function deriveScope(request: NextRequest): Scope | null {
   const user = getAuthUser(request)
-  if (!user?.id || !user.groupId || !user.workspaceId || !user.sessionId) return null
+  // role is required explicitly: hasPermission(undefined, r) happens to be
+  // false (undefined >= n), but the fail-closed intent must not rest on that
+  // coincidence (Edge Case review 25.3b #2).
+  if (!user?.id || !user.groupId || !user.workspaceId || !user.sessionId || !user.role) return null
   return { tenantId: user.groupId, workspaceId: user.workspaceId, principalId: user.id, sessionId: user.sessionId, role: user.role }
 }
 
@@ -194,7 +197,9 @@ export async function issueCuratorModules(request: NextRequest): Promise<Curator
   if (!isBumblebeeEnabled()) {
     const unavailable = await recordOutcomeOrUnavailable(scope, "disabled")
     if (unavailable) return unavailable
-    return { state: "complete", modules: [{ id: "bumblebee", state: "unavailable", title: manifest.title }] }
+    // Auditor finding (25.3b #3): 'complete' claims "Curator workflows are
+    // ready" — a disabled-only shell must say so truthfully.
+    return { state: "degraded", modules: [{ id: "bumblebee", state: "unavailable", title: manifest.title }], message: "Bumblebee is currently unavailable." }
   }
 
   try {

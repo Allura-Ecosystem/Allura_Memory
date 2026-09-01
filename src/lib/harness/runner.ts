@@ -31,6 +31,7 @@ import type { ProcessDefinition, ProcessState } from "@/lib/process-engine/types
 import { SeededRandom, VirtualClock } from "./determinism";
 import { buildReceipt, compareReceipts, type RunReceipt } from "./receipt";
 import type { ScenarioFixture } from "./scenario";
+import { findPolicyById } from "../governance/policies";
 import { scenarioDigest, validateScenario } from "./scenario";
 import { type ToolCall, type ToolResult, ToolSimulator } from "./tool-simulator";
 
@@ -134,6 +135,23 @@ class SideEffectRegistry {
 // references a real network URL (http/https/ws/wss) that is not under the
 // fixture:// scheme. This is an enforceable offline transport, not a no-op.
 const NETWORK_SCHEMES = /^(https?|wss?):\/\//i;
+type PolicyOutcome = "allow" | "deny" | "error";
+
+/**
+ * Validate declared policy IDs before the ProcessEngine runs. This ensures an
+ * unknown control is always reported as a policy-expectations contract error,
+ * even when a later engine failure prevents the declared step from executing.
+ */
+function assertKnownPolicyExpectations(scenario: ScenarioFixture): void {
+  const unknown = (scenario.policy_expectations ?? [])
+    .filter((pe) => !findPolicyById(pe.policy_id))
+    .map((pe) => `"${pe.policy_id}" at step ${pe.at_step ?? "unspecified"}`);
+  if (unknown.length > 0) {
+    throw new Error(
+      `Scenario policy_expectations error: unknown policy_id ${unknown.join(", ")} (not in CANONICAL_POLICIES; scenario ${scenario.scenario_id})`,
+    );
+  }
+}
 
 function assertNoNetworkAccess(scenario: ScenarioFixture): void {
   const offenders: string[] = [];
@@ -254,8 +272,10 @@ function buildDefinition(
     clock: VirtualClock;
     rng: SeededRandom;
     policyDecisions: Array<{ policy_id: string; decision: string; step: number }>;
+    policyObservations: Map<number, PolicyOutcome>;
     toolCalls: Array<{ tool_name: string; step: number }>;
     checkpointTransitions: Array<{ from: string; to: string; step: number }>;
+    events: Array<{ event: string; step: number }>;
   },
 ): ProcessDefinition {
   const steps: ProcessDefinition["steps"] = [];
@@ -284,6 +304,9 @@ function buildDefinition(
       execute: async () => {
         const key = `${fixture.tool_name}:${stepIdx}`;
 
+        // Engine event record (process_step_started).
+        deps.events.push({ event: "process_step_started", step: stepIdx });
+
         // AC-8: idempotency — if this effect was already applied (resume/replay),
         // return the cached result without re-invoking the tool.
         if (deps.sideEffects.has(key)) {
@@ -311,24 +334,32 @@ function buildDefinition(
           }
         }
 
-        // Record policy decisions from expectations and from POLICY_DENIED.
-        for (const pe of scenario.policy_expectations ?? []) {
-          if (pe.at_step === stepIdx) {
-            deps.policyDecisions.push({ policy_id: pe.policy_id, decision: pe.expected_decision, step: stepIdx });
-          }
-        }
-        if (result.error?.code === "POLICY_DENIED") {
-          deps.policyDecisions.push({ policy_id: fixture.tool_name, decision: "deny", step: stepIdx });
-        }
+        // Capture the fixture outcome only. Policy declarations are validated
+        // after the engine reaches a terminal state, so process-step error
+        // handling cannot turn an assertion violation into a tool failure.
+        const policyOutcome: PolicyOutcome = !result.error
+          ? "allow"
+          : result.error.code === "POLICY_DENIED"
+            ? "deny"
+            : "error";
+        deps.policyObservations.set(stepIdx, policyOutcome);
 
         deps.checkpointTransitions.push({ from: `step-${stepIdx}`, to: `step-${stepIdx + 1}`, step: stepIdx });
+
+        // Engine event record (process_step_completed / process_step_failed).
+        deps.events.push({
+          event: result.error ? "process_step_failed" : "process_step_completed",
+          step: stepIdx,
+        });
 
         // AC-8: record the applied effect key.
         deps.sideEffects.apply(key, result);
 
         // POLICY_DENIED and hard errors fail the process (required step).
+        // Include the error code in the thrown message so assertion checks
+        // can match on either the code or the message text.
         if (result.error && result.error.code !== "TRANSIENT_RETRY") {
-          throw new Error(result.error.message ?? result.error.code);
+          throw new Error(`${result.error.code}: ${result.error.message ?? ""}`.trim());
         }
 
         return result;
@@ -338,6 +369,8 @@ function buildDefinition(
     // Insert a checkpoint step after the tool step at each approval breakpoint.
     const bp = scenario.approval_breakpoints?.find((b) => b.at_step === stepIdx);
     if (bp) {
+      // Engine event record (process_checkpoint_blocked).
+      deps.events.push({ event: "process_checkpoint_blocked", step: stepIdx });
       steps.push({
         id: `checkpoint-${stepIdx}`,
         name: `approval-${stepIdx}`,
@@ -373,6 +406,7 @@ function approvalDecisionFor(
  */
 export async function runScenario(scenario: ScenarioFixture, opts: RunOptions): Promise<RunResult> {
   validateScenario(scenario);
+  assertKnownPolicyExpectations(scenario);
 
   // AC-2: enforce the offline transport in simulate mode.
   if (opts.mode === "simulate") {
@@ -406,7 +440,9 @@ export async function runScenario(scenario: ScenarioFixture, opts: RunOptions): 
 
   const toolCalls: Array<{ tool_name: string; step: number }> = [];
   const policyDecisions: Array<{ policy_id: string; decision: string; step: number }> = [];
+  const policyObservations = new Map<number, PolicyOutcome>();
   const checkpointTransitions: Array<{ from: string; to: string; step: number }> = [];
+  const events: Array<{ event: string; step: number }> = [];
 
   const startedAt = clock.isoNow();
 
@@ -418,8 +454,10 @@ export async function runScenario(scenario: ScenarioFixture, opts: RunOptions): 
     clock,
     rng,
     policyDecisions,
+    policyObservations,
     toolCalls,
     checkpointTransitions,
+    events,
   });
 
   const hasApprovalBreakpoints = (scenario.approval_breakpoints?.length ?? 0) > 0;
@@ -449,6 +487,94 @@ export async function runScenario(scenario: ScenarioFixture, opts: RunOptions): 
   const status: "completed" | "failed" | "pending" =
     state.status === "completed" ? "completed" : state.status === "failed" ? "failed" : "pending";
 
+  // Policy expectations are harness evidence, not policy execution. Validate
+  // every declared ID against the active registry and compare its decision to
+  // the observed fixture result only after the engine reaches terminal state.
+  // This keeps expected engine failures intact and prevents declarations from
+  // manufacturing receipt decisions without supporting execution evidence.
+  const policyViolations: string[] = [];
+  for (const pe of scenario.policy_expectations ?? []) {
+    const step = pe.at_step;
+    if (!findPolicyById(pe.policy_id)) {
+      policyViolations.push(
+        `unknown policy_id "${pe.policy_id}" (not in CANONICAL_POLICIES; scenario ${scenario.scenario_id}, step ${step ?? "unspecified"})`,
+      );
+      continue;
+    }
+
+    if (step === undefined) {
+      policyViolations.push(
+        `expected "${pe.policy_id}" to name an observed step (scenario ${scenario.scenario_id})`,
+      );
+      continue;
+    }
+    const observedOutcome = policyObservations.get(step);
+    if (observedOutcome === undefined) {
+      policyViolations.push(
+        `expected "${pe.policy_id}" at step ${step}, but that step did not execute (scenario ${scenario.scenario_id})`,
+      );
+      continue;
+    }
+    if (pe.expected_decision === "deny" && observedOutcome !== "deny") {
+      policyViolations.push(
+        `expected "${pe.policy_id}" to deny at step ${step}, but observed ${observedOutcome} (scenario ${scenario.scenario_id})`,
+      );
+      continue;
+    }
+    if (pe.expected_decision === "allow" && observedOutcome !== "allow") {
+      policyViolations.push(
+        `expected "${pe.policy_id}" to allow at step ${step}, but observed ${observedOutcome} (scenario ${scenario.scenario_id})`,
+      );
+      continue;
+    }
+    policyDecisions.push({ policy_id: pe.policy_id, decision: pe.expected_decision, step });
+  }
+
+  if (policyViolations.length > 0) {
+    throw new Error(
+      `Scenario policy_expectations error: ${policyViolations.join("; ")} (scenario ${scenario.scenario_id})`,
+    );
+  }
+
+  // AC-1 assertion enforcement: compare the run's actual outcome against the
+  // scenario's declared `assertions.output`. A mismatch is a hard failure —
+  // the scenario's own acceptance contract is violated. `state.*` and
+  // `audit.*` assertions are NOT enforced here: the harness does not seed a
+  // memory store or emit domain audit events, so those fields would be
+  // vacuous. Scenarios must declare only output assertions they can prove.
+  const expectedStatus = scenario.assertions?.output?.expected_status;
+  if (expectedStatus !== undefined && expectedStatus !== status) {
+    throw new Error(
+      `Scenario assertion failed: expected_status=${expectedStatus} but run ended ${status} (scenario ${scenario.scenario_id})`,
+    );
+  }
+  const expectedError = scenario.assertions?.output?.expected_error;
+  if (expectedError !== undefined && status === "failed") {
+    const actualError = state.error ?? "";
+    if (!actualError.includes(expectedError)) {
+      throw new Error(
+        `Scenario assertion failed: expected_error="${expectedError}" not found in "${actualError}" (scenario ${scenario.scenario_id})`,
+      );
+    }
+  }
+
+  // Deferred-work ledger (2026-08-29): audit.expected_events previously used a
+  // nonexistent vocabulary ("proposal_approved") and was never enforced. The
+  // engine emits process_step_started / process_step_completed /
+  // process_step_failed / process_checkpoint_blocked. Enforce expected_events
+  // as a subset check against the recorded event log.
+  const expectedEvents = scenario.assertions?.audit?.expected_events;
+  if (expectedEvents !== undefined) {
+    const actualEvents = events.map((e) => e.event);
+    for (const ev of expectedEvents) {
+      if (!actualEvents.includes(ev)) {
+        throw new Error(
+          `Scenario assertion failed: audit.expected_events entry "${ev}" not present in recorded events [${actualEvents.join(", ")}] (scenario ${scenario.scenario_id})`,
+        );
+      }
+    }
+  }
+
   // AC-9: evidence hashes over the deterministic outcome fields.
   const evidence = {
     finalStatus: status,
@@ -473,6 +599,7 @@ export async function runScenario(scenario: ScenarioFixture, opts: RunOptions): 
     tool_calls: toolCalls,
     policy_decisions: policyDecisions,
     checkpoint_transitions: checkpointTransitions,
+    events,
     side_effect_keys: sideEffects.keys(),
     evidence,
     replay_comparison: undefined,

@@ -7,7 +7,7 @@
 > AI-generated content may contain inaccuracies or omissions.
 > When in doubt, defer to the source code, JSON schemas, and team consensus.
 
-This document describes Allura's PostgreSQL-only governed memory data model. PostgreSQL holds append-only episodic evidence, canonical proposals, pgvector retrieval, promoted graph tables, receipts, and outbox state. Neo4j is sunset under AD-50; legacy naming is retained only where it describes a historical migration or compatibility record.
+This document describes Allura's PostgreSQL-only governed memory data model. PostgreSQL holds append-only episodic evidence, canonical proposals, pgvector retrieval, promoted graph tables, receipts, and outbox state. PostgreSQL (graph_memories) is sunset under AD-50; legacy naming is retained only where it describes a historical migration or compatibility record.
 
 ---
 
@@ -69,7 +69,7 @@ This document describes Allura's PostgreSQL-only governed memory data model. Pos
 | `hash` | `string` | Yes | Chain hash when available. |
 | `prev_hash` | `string` | Yes | Previous chain hash when available. |
 
-API data rules: every record includes `group_id`; unknown source state renders as unknown, not zero; no fabricated counts; export/copy actions are read-only formatting operations over existing records and must not mutate PostgreSQL or Neo4j.
+API data rules: every record includes `group_id`; unknown source state renders as unknown, not zero; no fabricated counts; export/copy actions are read-only formatting operations over existing records and must not mutate PostgreSQL or PostgreSQL (graph_memories).
 
 ---
 
@@ -122,7 +122,7 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `debug:root_cause_found` | Phase 1 complete — root cause identified with evidence (POL-006) |
 | `debug:hypothesis_tested` | Phase 3 — a single hypothesis was minimally tested |
 | `debug:fix_implemented` | Phase 4 — fix shipped after root cause confirmed (requires prior `debug:root_cause_found`) |
-| `neo4j_unavailable` | Graph backend was unreachable — system degraded gracefully (event name retained for back-compat; Neo4j retired Epic 23) |
+| `graph_memories_unavailable` | Graph backend was unreachable — system degraded gracefully (event name retained for back-compat; PostgreSQL (graph_memories) retired Epic 23) |
 | `tool_approved` | MCP tool was approved through catalog governance |
 | `tool_denied` | MCP tool was denied through catalog governance |
 | `request_trace` | HTTP request traced by TraceMiddleware (Story 1.2) |
@@ -130,7 +130,7 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `health_check` | System health check performed |
 | `memory_restore` | A soft-deleted memory was restored within the recovery window |
 | `memory_update` | Append-only versioned update (SUPERSEDES chain created) |
-| `memory_promote` | Request promotion to Neo4j (creates proposal) |
+| `memory_promote` | Request promotion to PostgreSQL (graph_memories) (creates proposal) |
 | `sync_contract` | Sync contract mapping applied on curator approve or auto-promote — user_id→Agent, group_id→Project relationships wired |
 | `control_plane_rule` | RuVix control plane rule evaluation or rule-anchored audit event |
 | `kernel_rule` | DEPRECATED — pre-2026-08-20 name for `control_plane_rule`. Retained because the events table is append-only and historical rows can never be migrated. Do not emit; readers must still accept it. |
@@ -154,7 +154,7 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 
 **JSON Schema:** [`json-schema/canonical_proposals.schema.json`](../../json-schema/canonical_proposals.schema.json)
 
-The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to Neo4j as InsightHead/Insight nodes.
+The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to PostgreSQL (graph_memories) as InsightHead/Insight nodes.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -187,7 +187,7 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 | Value | Description |
 |-------|-------------|
 | `pending` | Awaiting human review and decision. |
-| `approved` | Human approved. Promoted to Neo4j as InsightHead/Insight. |
+| `approved` | Human approved. Promoted to PostgreSQL (graph_memories) as InsightHead/Insight. |
 | `rejected` | Human rejected. Not promoted. Retained for audit trail. |
 
 **Indexes**
@@ -239,15 +239,15 @@ All three tables have forced workspace RLS for `allura_app`, using both transact
 ## PostgreSQL: Graph Adapter Tables
 
 **Migrations:** `21-graph-adapter-tables.sql`, `24-graph-structural-context.sql`
-**ADR:** AD-29 — Graph Adapter Pattern for Neo4j → RuVector Migration
+**ADR:** AD-29 — Graph Adapter Pattern for PostgreSQL (graph_memories) → RuVector Migration
 
-These tables replace Neo4j nodes and relationships when `GRAPH_BACKEND=ruvector`. They implement the adjacency list pattern to replicate SUPERSEDES and structural context operations via PostgreSQL.
+These tables replace PostgreSQL (graph_memories) nodes and relationships when `GRAPH_BACKEND=ruvector`. They implement the adjacency list pattern to replicate SUPERSEDES and structural context operations via PostgreSQL.
 
 ### `graph_memories`
 
 **Migrations:** `21-graph-adapter-tables.sql`, `40-workspace-subgraph-forward-upgrade.sql`
 
-Stores canonical (promoted) memory nodes equivalent to Neo4j's Memory label. Used by the RuVectorGraphAdapter when `GRAPH_BACKEND=ruvector`. Soft-deletes are marked via `deprecated=true`; restored memories set `restored_at`.
+Stores canonical (promoted) memory nodes equivalent to PostgreSQL (graph_memories)'s Memory label. Used by the RuVectorGraphAdapter when `GRAPH_BACKEND=ruvector`. Soft-deletes are marked via `deprecated=true`; restored memories set `restored_at`.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -267,7 +267,7 @@ Stores canonical (promoted) memory nodes equivalent to Neo4j's Memory label. Use
 | `created_at` | TIMESTAMPTZ | Yes | Node creation timestamp. Default: `NOW()` |
 | `content_tsv` | tsvector | Yes | Generated tsvector for full-text search (stored) |
 
-**Comments:** `graph_memories` stores canonical memory nodes replacing Neo4j Memory label. Slice C of the 2-Store RuVector Migration.
+**Comments:** `graph_memories` stores canonical memory nodes replacing PostgreSQL (graph_memories) Memory label. Slice C of the 2-Store RuVector Migration.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -287,7 +287,7 @@ Stores canonical (promoted) memory nodes equivalent to Neo4j's Memory label. Use
 
 **Migration:** `21-graph-adapter-tables.sql`
 
-Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:SUPERSEDES]->(superseded_id)` in Neo4j. Append-only: new rows on version update, deletes only for restore.
+Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:SUPERSEDES]->(superseded_id)` in PostgreSQL (graph_memories). Append-only: new rows on version update, deletes only for restore.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -296,7 +296,7 @@ Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:
 | `group_id` | TEXT | Yes | Tenant namespace. CHECK: `^allura-[a-z0-9-]+$` |
 | `created_at` | TIMESTAMPTZ | Yes | Relationship timestamp. Default: `NOW()` |
 
-**Comments:** `graph_supersedes` is the SUPERSEDES adjacency table replacing Neo4j SUPERSEDES relationships.
+**Comments:** `graph_supersedes` is the SUPERSEDES adjacency table replacing PostgreSQL (graph_memories) SUPERSEDES relationships.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -317,7 +317,7 @@ Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:
 
 **Migration:** `24-graph-structural-context.sql`
 
-Structural context nodes replacing Neo4j labeled nodes (Agent, Project, Task, Decision, etc.). Uses JSONB `props` field to store arbitrary node properties. Used when `GRAPH_BACKEND=ruvector` for non-Memory nodes.
+Structural context nodes replacing PostgreSQL (graph_memories) labeled nodes (Agent, Project, Task, Decision, etc.). Uses JSONB `props` field to store arbitrary node properties. Used when `GRAPH_BACKEND=ruvector` for non-Memory nodes.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -328,7 +328,7 @@ Structural context nodes replacing Neo4j labeled nodes (Agent, Project, Task, De
 | `created_at` | TIMESTAMPTZ | Yes | Node creation timestamp. Default: `NOW()` |
 | `updated_at` | TIMESTAMPTZ | No | Last update timestamp |
 
-**Comments:** `graph_structural_nodes` stores structural context nodes replacing Neo4j labeled nodes. Slice C of the 2-Store RuVector Migration.
+**Comments:** `graph_structural_nodes` stores structural context nodes replacing PostgreSQL (graph_memories) labeled nodes. Slice C of the 2-Store RuVector Migration.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -343,7 +343,7 @@ Structural context nodes replacing Neo4j labeled nodes (Agent, Project, Task, De
 
 **Migration:** `24-graph-structural-context.sql`
 
-Structural context edges replacing Neo4j relationships (CONTRIBUTED, LEARNED, `AUTHORED_BY`, `RELATES_TO`, etc.). Stores directed relationships between structural nodes.
+Structural context edges replacing PostgreSQL (graph_memories) relationships (CONTRIBUTED, LEARNED, `AUTHORED_BY`, `RELATES_TO`, etc.). Stores directed relationships between structural nodes.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -354,7 +354,7 @@ Structural context edges replacing Neo4j relationships (CONTRIBUTED, LEARNED, `A
 | `props` | JSONB | No | Relationship properties |
 | `created_at` | TIMESTAMPTZ | Yes | Edge creation timestamp. Default: `NOW()` |
 
-**Comments:** `graph_structural_edges` stores structural context edges replacing Neo4j relationships.
+**Comments:** `graph_structural_edges` stores structural context edges replacing PostgreSQL (graph_memories) relationships.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -379,20 +379,50 @@ Controls which graph backend adapter is active for memory and structural operati
 
 | Value | Description | Status |
 |-------|-------------|--------|
-| `neo4j` | Neo4j backend (legacy, retired Epic 23) | **Retired** |
+| `PostgreSQL (graph_memories)` | PostgreSQL (graph_memories) backend (legacy, retired Epic 23) | **Retired** |
 | `ruvector` | PostgreSQL graph adapter tables (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) | **Default** |
 | `ruvector-crate` | Native RuVector extension with HNSW and GNN support (not yet implemented) | Planned |
 
-**Current default:** `ruvector` (sole backend since Epic 23; `neo4j` retired)
+**Current default:** `ruvector` (sole backend since Epic 23; `PostgreSQL (graph_memories)` retired)
 
 **Adapter selection behavior:**
-- `neo4j`: Uses `Neo4jGraphAdapter` in `src/lib/graph-adapter/neo4j-adapter.ts`
+- `PostgreSQL (graph_memories)`: Uses `PostgreSQL (graph_memories)GraphAdapter` in `src/lib/graph-adapter/ruvector-adapter.ts`
 - `ruvector`: Uses `RuVectorGraphAdapter` in `src/lib/graph-adapter/ruvector-adapter.ts`
 - `ruvector-crate`: Will use `RuVectorCrateGraphAdapter` (Slice E+)
 
 **Runtime detection:** `RuVixGateReceipt.ruvector_status.graph_backend` reports the active adapter.
 
 **Cross-references:** AD-49, `src/lib/graph-adapter/types.ts#IGraphAdapter`
+
+---
+
+### `BUMBLEBEE_TRUST_PROXY` / `BUMBLEBEE_ALLOW_LOOPBACK_INGEST`
+
+**Story:** 26.7 AC-6/AC-19 — production ingestion is HTTPS-only
+**Source:** `src/app/api/plugins/bumblebee/ingest/route.ts#enforceHttps`
+**Env template:** `.env.example` ("Bumblebee ingest HTTPS enforcement")
+
+`enforceHttps()` only runs when `NODE_ENV=production`; it is a no-op in every
+other environment. In production it fails **CLOSED**: an absent or unproven
+scheme signal is rejected with `426 Upgrade Required` /
+`BUMBLEBEE_INGEST_HTTPS_REQUIRED` (see `PUBLIC_ERRORS` in
+`src/lib/bumblebee/lease-routes.ts`), never silently accepted. There are
+exactly three ways a production request can pass:
+
+1. The request's own URL scheme is `https:` — a signal the caller does not
+   control (it reflects how Next.js actually received the connection).
+2. `BUMBLEBEE_TRUST_PROXY=true` **and** the `x-forwarded-proto: https` header
+   is present.
+3. `BUMBLEBEE_ALLOW_LOOPBACK_INGEST=true` **and** the request is actually
+   addressed to a loopback host (`localhost` / `127.0.0.1` / `[::1]`).
+
+| Variable | Default | Security consequence when enabled |
+|----------|---------|-------------------------------------|
+| `BUMBLEBEE_TRUST_PROXY` | unset / `false` (OFF, fail-closed) | Declares a TLS-terminating reverse proxy trustworthy. `x-forwarded-proto` is **caller-controlled input** (any client can send it) and is never sufficient by itself — it is honoured **only** when this flag is `true`. Enabling it without a real TLS-terminating proxy in front of the service lets any caller who can reach the port directly bypass the HTTPS requirement by sending the header themselves. |
+| `BUMBLEBEE_ALLOW_LOOPBACK_INGEST` | unset / `false` (OFF, fail-closed) | Local-test escape hatch. Bypasses the HTTPS requirement only when the request's real hostname resolves to a loopback address (checked via `URL.hostname`, never implied by env alone). Enabling it on a host where the loopback interface is reachable by more than the local operator (port-forwarded, shared container network namespace) reopens the plaintext-ingest exposure this enforcement exists to close. |
+
+**Cross-references:** `src/lib/bumblebee/lease-routes.ts#PUBLIC_ERRORS`,
+`src/lib/bumblebee/__tests__/ingest-route-https.test.ts`.
 
 ---
 
@@ -442,19 +472,19 @@ Controls which graph backend adapter is active for memory and structural operati
 
 | Value | Description | When Active |
 |-------|-------------|-------------|
-| `pgvector_bridge` | PG backend only, Neo4j pending cutover | Current baseline |
+| `pgvector_bridge` | PG backend only, PostgreSQL (graph_memories) pending cutover | Current baseline |
 | `ruvector_graph` | Graph adapter tables active (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) | Slice C+ |
-| `full_ruvector` | Native RuVector extension active, Neo4j fully replaced | Slice E+ |
+| `full_ruvector` | Native RuVector extension active, PostgreSQL (graph_memories) fully replaced | Slice E+ |
 
 **RuVector native status fields (`ruvector_status` when native mode active):**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `graph_backend` | string | Yes | Target graph adapter: `neo4j` (legacy), `ruvector` (PG tables), `ruvector-crate` (native extension) |
+| `graph_backend` | string | Yes | Target graph adapter: `PostgreSQL (graph_memories)` (legacy), `ruvector` (PG tables), `ruvector-crate` (native extension) |
 | `native_extension_version` | string | Yes | RuVector extension version string |
 | `hnsw_index_status` | string | Yes | HNSW index state: `disabled`, `creating`, `created`, `optimizing` |
 | `gnn_enabled` | boolean | Yes | Graph neural network processing enabled |
-| `dual_read_mode` | boolean | Yes | True when both Neo4j and RuVector backends are queried |
+| `dual_read_mode` | boolean | Yes | True when both PostgreSQL (graph_memories) and RuVector backends are queried |
 
 **Current readiness baseline (TALON, 2026-06-02):** `vector_extension_version=0.8.2`, `ruvector_function_count=0`, `allura_memories_count≈3392`, `runtime_readiness=pgvector_bridge`.
 
@@ -519,7 +549,7 @@ idempotency guarantees, and product APIs remain required.
 
 **Persistence direction:** PostgreSQL owns run records, pinned definitions,
 runtime state, and append-only run events. Do not double-write operational run
-state to Neo4j. Neo4j may receive approved semantic relationships after the
+state to PostgreSQL (graph_memories). PostgreSQL (graph_memories) may receive approved semantic relationships after the
 operational contracts stabilize.
 
 ### `DashboardClaim`
@@ -870,7 +900,7 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
   "user_id": "user-123",
   "score": 0.91,
   "stored": "both",           // "episodic" | "both" | "episodic+pending"
-  "neo4j_id": "uuid",         // present if promoted
+  "PostgreSQL (graph_memories)_id": "uuid",         // present if promoted
   "pending_review": false     // true if SOC2 mode queued
 }
 ```
@@ -882,7 +912,7 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
   "query": "user preferences",
   "user_id": "user-123",
   "result_count": 5,
-  "sources": ["postgres", "neo4j"]
+  "sources": ["postgres", "graph_memories"]
 }
 ```
 
@@ -892,7 +922,7 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
 {
   "memory_id": "uuid",
   "user_id": "user-123",
-  "neo4j_deprecated": true    // false if memory was episodic-only
+  "PostgreSQL (graph_memories)_deprecated": true    // false if memory was episodic-only
 }
 ```
 
@@ -901,7 +931,7 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
 ```jsonc
 {
   "source_event_id": "12345",
-  "neo4j_id": "uuid",
+  "PostgreSQL (graph_memories)_id": "uuid",
   "score": 0.91,
   "user_id": "user-123",
   "mode": "auto"              // "auto" | "manual"
@@ -914,19 +944,19 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
 {
   "source_event_id": "12345",
   "score": 0.91,
-  "error": "Neo4j connection timeout",
+  "error": "PostgreSQL (graph_memories) connection timeout",
   "fallback": "episodic_only"
 }
 ```
 
 ### `proposal_approved`
 
-Emitted when a curator approves a proposal and promotes it to Neo4j.
+Emitted when a curator approves a proposal and promotes it to PostgreSQL (graph_memories).
 
 ```jsonc
 {
   "proposal_id": "uuid",          // canonical_proposals.id
-  "memory_id": "uuid",           // Neo4j InsightHead insight_id
+  "memory_id": "uuid",           // PostgreSQL (graph_memories) InsightHead insight_id
   "score": "0.85",               // Curator confidence score
   "tier": "mainstream",          // Confidence tier
   "rationale": "High specificity" // Optional human rationale

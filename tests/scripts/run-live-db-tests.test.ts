@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,6 +8,15 @@ const tempDirs: string[] = [];
 afterEach(() => tempDirs.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })));
 
 describe("run-live-db-tests.sh", () => {
+  it("starts the canonical gateway required by the SDK integration inventory", () => {
+    const script = readFileSync(join(process.cwd(), "scripts/ci/run-live-db-tests.sh"), "utf8");
+
+    expect(script).toContain("bun run mcp:http");
+    expect(script).toContain("ALLURA_MCP_HTTP_URL=");
+    expect(script).toContain("/ready");
+    expect(script).toContain("trap cleanup EXIT");
+  });
+
   it("exports the explicit allura_app user to the canonical live-test invocation", () => {
     const root = mkdtempSync(join(tmpdir(), "allura-live-harness-"));
     tempDirs.push(root);
@@ -20,8 +29,14 @@ describe("run-live-db-tests.sh", () => {
       writeFileSync(path, "#!/usr/bin/env bash\nprintf '16.0\\n'\nexit 0\n");
       chmodSync(path, 0o755);
     }
+    const curlPath = join(bin, "curl");
+    writeFileSync(curlPath, "#!/usr/bin/env bash\nexit 0\n");
+    chmodSync(curlPath, 0o755);
     const bunPath = join(bin, "bun");
-    writeFileSync(bunPath, `#!/usr/bin/env bash\nprintf '%s' "$POSTGRES_APP_USER" > ${JSON.stringify(capture)}\nexit 0\n`);
+    writeFileSync(
+      bunPath,
+      `#!/usr/bin/env bash\nif [[ "$*" == "run mcp:http" ]]; then\n  trap 'exit 0' TERM INT\n  while true; do sleep 1; done\nfi\nprintf '%s' "$POSTGRES_APP_USER" > ${JSON.stringify(capture)}\nexit 0\n`,
+    );
     chmodSync(bunPath, 0o755);
 
     const result = spawnSync("bash", ["scripts/ci/run-live-db-tests.sh", `--artifact-dir=${artifact}`], {

@@ -162,9 +162,77 @@ for dir in "${RUNTIME_SURFACES[@]}"; do
   fi
 done
 
+# ── Internal link + evidence resolution check (Story 24.8 AC-9) ─────────────
+# Fails when an ACTIVE doc links to a missing internal markdown file, or when
+# a capability-matrix evidence link does not resolve. Relative links only;
+# http(s) links and anchors are out of scope for this guard.
+#
+# Coverage (DW-2 triage 2026-08-29): inline links, links with titles, and
+# reference-style links `[label]: path` are checked. Fenced code blocks are
+# stripped before scanning so code samples never produce false positives.
+# Multi-line inline links (target on the next line) remain unchecked.
+check_links() {
+  local file="$1"
+  local rel="${file#"$ROOT"/}"
+  local dir
+  dir="$(dirname "$file")"
+  local target
+
+  # Strip fenced code blocks (``` or ~~~) so examples never trip the check,
+  # then strip inline code spans (`...`) — links inside code spans are
+  # examples/regexes, not real links.
+  local body
+  body="$(sed -E '/^(```|~~~)/,/^(```|~~~)$/d' "$file" | sed -E 's/`[^`]*`//g')"
+
+  # Extract link targets, handling markdown titles `](url "title")` and
+  # nested parens by taking the first balanced-paren group after `](`.
+  while IFS= read -r target; do
+    [[ -z "$target" ]] && continue
+    # Skip anchors, http(s), mailto, and code spans
+    case "$target" in
+      \#*|http://*|https://*|mailto:*|*'`'*) continue ;;
+    esac
+    # Skip regex-looking targets (e.g. `[a-z0-9-]*[a-z0-9]` inside code spans)
+    case "$target" in
+      *'['*|*']'*|*'*'*) continue ;;
+    esac
+    # Strip any anchor fragment
+    local path="${target%%#*}"
+    [[ -z "$path" ]] && continue
+    if [[ ! -e "$dir/$path" ]]; then
+      echo "ERROR: $rel — broken internal link: $target"
+      STATUS=1
+    fi
+  done < <(grep -oE '\]\([^)]*\)' <<< "$body" | sed -E 's/^\]\(//; s/\)$//; s/ "[^"]*"$//')
+
+  # Reference-style definitions: `[label]: path` — resolve the path.
+  while IFS= read -r target; do
+    [[ -z "$target" ]] && continue
+    case "$target" in
+      \#*|http://*|https://*|mailto:*|*'`'*|*'['*|*']'*|*'*'*) continue ;;
+    esac
+    local path="${target%%#*}"
+    [[ -z "$path" ]] && continue
+    if [[ ! -e "$dir/$path" ]]; then
+      echo "ERROR: $rel — broken reference link: $target"
+      STATUS=1
+    fi
+  done < <(grep -oE '^\[[^]]+\]:[[:space:]]*[^[:space:]]+' <<< "$body" | sed -E 's/^\[[^]]+\]:[[:space:]]*//')
+}
+
+for dir in "${ACTIVE_DOCS[@]}"; do
+  if [[ -d "$dir" ]]; then
+    while IFS= read -r file; do
+      check_links "$file"
+    done < <(find "$dir" -name '*.md' -print | sort)
+  elif [[ -f "$dir" ]]; then
+    check_links "$dir"
+  fi
+done
+
 if [[ "$STATUS" -ne 0 ]]; then
-  echo "docs-backend-residue-guard: FAILED — active docs describe a retired backend as current"
+  echo "docs-backend-residue-guard: FAILED — active docs describe a retired backend as current, or contain broken internal links"
   exit "$STATUS"
 fi
 
-echo "docs-backend-residue-guard: OK — no retired backend residue in active surfaces"
+echo "docs-backend-residue-guard: OK — no retired backend residue in active surfaces; inline, titled, and reference-style internal links resolve (fenced code stripped; multi-line inline links unchecked)"

@@ -19,9 +19,12 @@ if (typeof window !== "undefined") {
   throw new Error("proposal-generator can only be used server-side");
 }
 
-import { syscall_mutate, type SyscallContext } from "@/control-plane/syscalls";
-import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
+import {
+  syscall_mutate,
+  type SyscallContext,
+} from "@/control-plane/syscalls";
 import type { DetectedPattern } from "@/lib/genesis/pattern-detector";
+import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PUBLIC TYPES
@@ -56,6 +59,17 @@ export interface BatchProposalResult {
   results: ProposalResult[];
 }
 
+/**
+ * Opaque control-plane evidence for a Genesis proposal write.
+ *
+ * The token is issued by the server-side control-plane evidence resolver and
+ * verified immediately before policy evaluation. Genesis accepts no raw actor,
+ * approval, manifest, source-read, or infrastructure declarations from callers.
+ */
+export interface GenesisProposalContext {
+  policyEvidence: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PROPOSAL GENERATION
 // ─────────────────────────────────────────────────────────────────────────────
@@ -70,7 +84,8 @@ export interface BatchProposalResult {
  */
 export async function generateProposal(
   group_id: string,
-  pattern: DetectedPattern
+  pattern: DetectedPattern,
+  proposalContext?: GenesisProposalContext
 ): Promise<ProposalResult> {
   let validatedGroupId: string;
   try {
@@ -98,9 +113,12 @@ export async function generateProposal(
   };
 
   const context: SyscallContext = {
+    // The effective actor and approval are derived from cryptographically
+    // verified evidence in executeSyscall, never from the Genesis caller.
     actor: "genesis-engine",
     group_id: validatedGroupId,
     permission_tier: "plugin",
+    genesis_policy_evidence: proposalContext?.policyEvidence,
     audit_context: {
       subsystem: "genesis",
       pattern_type: pattern.pattern_type,
@@ -141,14 +159,15 @@ export async function generateProposal(
  */
 export async function generateProposals(
   group_id: string,
-  patterns: DetectedPattern[]
+  patterns: DetectedPattern[],
+  proposalContext?: GenesisProposalContext
 ): Promise<BatchProposalResult> {
   const results: ProposalResult[] = [];
   let recorded = 0;
   let failed = 0;
 
   for (const pattern of patterns) {
-    const result = await generateProposal(group_id, pattern);
+    const result = await generateProposal(group_id, pattern, proposalContext);
     results.push(result);
     if (result.recorded) {
       recorded++;

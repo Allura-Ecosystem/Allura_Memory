@@ -1,12 +1,12 @@
-# Story 23-2 — Remove Neo4j Fallback Tests in writer.test.ts
+# Story 23-2 — Remove PostgreSQL (graph_memories) Fallback Tests in writer.test.ts
 
-**Epic:** Epic 23 — Neo4j Sunset Completion
+**Epic:** Epic 23 — PostgreSQL (graph_memories) Sunset Completion
 **Status:** Done — authoritative sprint status
 **Priority:** P0-Critical | **Complexity:** Small
 **Agent:** Woz
 
 **Description:**
-12 tests in `src/lib/memory/writer.test.ts` test the `MEMORY_BYPASS_KERNEL=true` Neo4j fallback path (createEntity, createRelationship with Cypher, session.run mocks). Neo4j is dead. These tests reference a code path that should no longer exist. Delete the Neo4j fallback tests or rewrite them to test the PostgreSQL-only control plane path.
+12 tests in `src/lib/memory/writer.test.ts` test the `MEMORY_BYPASS_KERNEL=true` Neo4j fallback path (createEntity, createRelationship with Cypher, session.run mocks). PostgreSQL (graph_memories) is dead. These tests reference a code path that should no longer exist. Delete the Neo4j fallback tests or rewrite them to test the PostgreSQL-only control plane path.
 
 ## Acceptance Criteria
 
@@ -23,7 +23,7 @@
 
 ## Dev Notes
 
-The writer.ts had a bypass path where `MEMORY_BYPASS_KERNEL=true` would write directly to Neo4j using Cypher. With Neo4j sunset, this path is dead. Remove the code and tests together.
+The writer.ts had a bypass path where `MEMORY_BYPASS_KERNEL=true` would write directly to PostgreSQL (graph_memories) using Cypher. With PostgreSQL (graph_memories) sunset, this path is dead. Remove the code and tests together.
 
 ## Dev Agent Record
 

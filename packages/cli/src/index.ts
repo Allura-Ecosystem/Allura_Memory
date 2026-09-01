@@ -56,8 +56,12 @@ async function main() {
 
   const handler = commands[command];
   if (!handler) {
-    console.error(`Unknown command: ${command}`);
-    console.error(HELP);
+    if (args.includes("--json")) {
+      console.error(JSON.stringify({ error: `Unknown command: ${command}`, code: 1 }));
+    } else {
+      console.error(`Unknown command: ${command}`);
+      console.error(HELP);
+    }
     process.exit(1);
   }
 
@@ -66,7 +70,7 @@ async function main() {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (args.includes("--json")) {
-      console.log(JSON.stringify({ error: msg, code: 1 }));
+      console.error(JSON.stringify({ error: msg, code: 1 }));
     } else {
       console.error(`Error: ${msg}`);
     }
@@ -84,10 +88,40 @@ POSTGRES_PORT=5432
 POSTGRES_DB=memory
 POSTGRES_USER=allura
 POSTGRES_PASSWORD=change-me
-ALLURA_MCP_TOKEN_SECRET=change-me
+# NOTE: must be >= 16 chars — the gateway refuses to start with a shorter secret
+ALLURA_MCP_TOKEN_SECRET=change-me-change-me
 GRAPH_BACKEND=ruvector
 EMBEDDING_PROVIDER=openai
 EMBEDDING_MODEL=text-embedding-3-small
+`);
+  }
+  // The compose stack needs a .env for ${VAR} substitution (brain-stack.sh
+  // passes --env-file .env). Create it from the example if absent so a fresh
+  // clone can `allura up` without a manual copy step.
+  const baseEnvPath = join(target, ".env");
+  if (!existsSync(baseEnvPath)) {
+    writeFileSync(baseEnvPath, `# Allura base environment (non-secret defaults)
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=memory
+POSTGRES_USER=allura
+POSTGRES_PASSWORD=change-me
+# NOTE: must be >= 16 chars — the gateway refuses to start with a shorter secret
+ALLURA_MCP_TOKEN_SECRET=change-me-change-me
+GRAPH_BACKEND=ruvector
+EMBEDDING_PROVIDER=openai
+EMBEDDING_MODEL=text-embedding-3-small
+`);
+  }
+  // The mcp service's env_file list includes .env.local (secrets override,
+  // gitignored). Create it with non-secret defaults so a fresh clone can
+  // `allura up` without a manual copy step; users replace the values.
+  const localEnvPath = join(target, ".env.local");
+  if (!existsSync(localEnvPath)) {
+    writeFileSync(localEnvPath, `# Allura local secrets override (gitignored — replace with real secrets)
+POSTGRES_PASSWORD=change-me
+# NOTE: must be >= 16 chars — the gateway refuses to start with a shorter secret
+ALLURA_MCP_TOKEN_SECRET=change-me-change-me
 `);
   }
   console.log("Created .env.portfolio.example with non-secret defaults.");
@@ -97,12 +131,17 @@ EMBEDDING_MODEL=text-embedding-3-small
 async function cmdUp() {
   console.log("Starting local development stack...");
   const { spawnSync } = await import("child_process");
-  const result = spawnSync("docker", ["compose", "up", "-d"], { stdio: "inherit" });
+  // Delegate to the bootstrap script: it pre-creates the external networks
+  // and volumes a fresh machine lacks, and applies the .env/.env.local
+  // env-file args compose needs for ${VAR} substitution. A bare
+  // `docker compose up -d` fails on a fresh clone (external resources
+  // missing) — this is the supported path (bun run brain:up).
+  const result = spawnSync("bash", ["scripts/brain-stack.sh", "up"], { stdio: "inherit" });
   if (result.status !== 0) {
     console.error("Failed to start local stack. Ensure docker compose is available and the compose file is present.");
     process.exit(result.status ?? 1);
   }
-  console.log("Local stack ready at http://localhost:6477/mcp");
+  console.log("Local stack ready at http://localhost:5888/mcp");
 }
 
 async function cmdDoctor() {
@@ -138,7 +177,7 @@ async function cmdDoctor() {
 
   // Check MCP gateway health (read-only, non-mutating)
   try {
-    const port = process.env.ALLURA_MCP_HTTP_PORT ?? "3201";
+    const port = process.env.ALLURA_MCP_HTTP_PORT ?? "5888";
     const res = await fetch(`http://localhost:${port}/health`);
     if (res.ok) {
       const body = (await res.json()) as { status?: string; auth_enabled?: boolean };
@@ -203,16 +242,30 @@ async function cmdEval() {
 }
 
 async function cmdInspect() {
-  const evidenceDir = join(process.cwd(), "artifacts");
-  if (!existsSync(evidenceDir)) {
+  const { readdirSync } = await import("node:fs");
+  const cwd = process.cwd();
+  const evidenceDir = join(cwd, "artifacts");
+  const receipts = readdirSync(cwd, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.startsWith("receipt-") && e.name.endsWith(".json"))
+    .map((e) => e.name)
+    .sort();
+  if (receipts.length === 0 && !existsSync(evidenceDir)) {
     console.log("No evidence artifacts found.");
     return;
   }
   console.log("Evidence artifacts:");
-  const { readdirSync } = await import("node:fs");
-  for (const entry of readdirSync(evidenceDir, { recursive: true, withFileTypes: true })) {
-    if (entry.isFile()) {
-      console.log(`  ${join(entry.parentPath ?? "", entry.name)}`);
+  if (receipts.length > 0) {
+    console.log("  Run receipts (cwd):");
+    for (const name of receipts) {
+      console.log(`  ${name}`);
+    }
+  }
+  if (existsSync(evidenceDir)) {
+    console.log("  artifacts/:");
+    for (const entry of readdirSync(evidenceDir, { recursive: true, withFileTypes: true })) {
+      if (entry.isFile()) {
+        console.log(`  ${join(entry.parentPath ?? "", entry.name)}`);
+      }
     }
   }
 }

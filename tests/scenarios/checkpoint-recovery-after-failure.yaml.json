@@ -8,8 +8,12 @@
   },
   "principal_fixture": {
     "principal_id": "curator-2",
-    "roles": ["curator"],
-    "tenant_ids": ["allura-test-recovery"],
+    "roles": [
+      "curator"
+    ],
+    "tenant_ids": [
+      "allura-test-recovery"
+    ],
     "auth_method": "service_identity"
   },
   "process_definition": {
@@ -19,29 +23,51 @@
   "initial_state": {
     "memories": [],
     "proposals": [
-      { "content": "Proposal for recovery test", "score": 0.85, "tier": "mainstream", "status": "pending" }
+      {
+        "content": "Proposal for recovery test",
+        "score": 0.85,
+        "tier": "mainstream",
+        "status": "pending"
+      }
     ]
   },
   "tool_fixtures": [
     {
       "tool_name": "memory_search",
       "match": "ordered",
-      "response": { "result": { "results": [] } }
+      "response": {
+        "result": {
+          "results": []
+        }
+      }
     },
     {
       "tool_name": "memory_add",
       "match": "ordered",
-      "error": { "code": "TRANSIENT_RETRY", "message": "Connection temporarily unavailable" }
+      "error": {
+        "code": "TRANSIENT_RETRY",
+        "message": "Connection temporarily unavailable"
+      }
     },
     {
       "tool_name": "memory_add",
       "match": "ordered",
-      "response": { "result": { "id": "mem-recovered", "stored": "episodic" } }
+      "response": {
+        "result": {
+          "id": "mem-recovered",
+          "stored": "episodic"
+        }
+      }
     },
     {
       "tool_name": "governance_proposal_approve",
       "match": "ordered",
-      "response": { "result": { "outcome": "approved", "memory_id": "canonical-recovered" } }
+      "response": {
+        "result": {
+          "outcome": "approved",
+          "memory_id": "canonical-recovered"
+        }
+      }
     }
   ],
   "virtual_clock": {
@@ -51,8 +77,17 @@
   "random_seed": 42,
   "policy_expectations": [],
   "assertions": {
-    "output": { "expected_status": "completed" },
-    "state": { "proposal_status": "approved" },
-    "audit": { "expected_events": ["proposal_approved"] }
+    "output": {
+      "expected_status": "completed"
+    },
+    "state": {
+      "proposal_status": "approved"
+    },
+    "audit": {
+      "expected_events": [
+        "process_step_started",
+        "process_step_completed"
+      ]
+    }
   }
 }

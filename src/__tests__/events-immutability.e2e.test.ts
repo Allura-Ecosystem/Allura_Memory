@@ -1,4 +1,5 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { Pool } from "pg";
 import { tenantQuery, withTenantTransaction } from "@/lib/db/tenant-transaction";
 import { closePool, getAppPool, getPool } from "@/lib/postgres/connection";
 
@@ -8,10 +9,23 @@ const PRINCIPAL = "test-principal-24-3";
 const WORKSPACE_A = "workspace-tenant-isolation-a";
 
 // Live PostgreSQL is required. The test is included by vitest.config.live-db.ts.
-const describeLive = process.env.POSTGRES_PASSWORD ? describe : describe.skip;
+// getAppPool() calls getConnectionConfig({ requireAppRole: true, ... }),
+// which throws synchronously when POSTGRES_APP_USER/POSTGRES_APP_PASSWORD
+// are unset -- not just when POSTGRES_PASSWORD is unset. The gate checks all
+// three so describeLive only resolves to `describe` when getAppPool() can
+// actually succeed, and appPool is built inside beforeAll (never in the
+// describe factory body) so a skipped suite's factory can never throw
+// during collection.
+const describeLive = process.env.POSTGRES_PASSWORD && process.env.POSTGRES_APP_USER && process.env.POSTGRES_APP_PASSWORD
+  ? describe
+  : describe.skip;
 
 describeLive("events ledger immutability (AC-7)", () => {
-  const appPool = getAppPool();
+  let appPool: Pool;
+
+  beforeAll(() => {
+    appPool = getAppPool();
+  });
 
   afterAll(async () => {
     // closePool() (not appPool.end() directly): getAppPool()/getOwnerPool()

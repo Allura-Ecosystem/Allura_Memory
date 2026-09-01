@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const content = clerkEnabled ? <ClerkProviderShell>{children}</ClerkProviderShell> : children
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* FOCT prevention: apply stored theme before first paint */}
         <script

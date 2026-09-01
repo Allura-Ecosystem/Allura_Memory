@@ -1,0 +1,82 @@
+{
+  "scenario_id": "engineering-review-policy-denial",
+  "schema_version": "v1",
+  "description": "Engineering review agent policy failure case: a viewer attempts to approve a proposal and is denied (POL-004)",
+  "tenant_fixture": {
+    "group_id": "allura-engineering-review",
+    "cleanup": true
+  },
+  "principal_fixture": {
+    "principal_id": "review-viewer",
+    "roles": [
+      "viewer"
+    ],
+    "tenant_ids": [
+      "allura-engineering-review"
+    ],
+    "auth_method": "mcp_token"
+  },
+  "process_definition": {
+    "id": "engineering-review",
+    "revision": "1"
+  },
+  "initial_state": {
+    "memories": [
+      {
+        "content": "Approved coding standard: TypeScript strict mode required",
+        "score": 0.95
+      }
+    ],
+    "proposals": [
+      {
+        "content": "Review evidence proposal",
+        "score": 0.88,
+        "tier": "mainstream",
+        "status": "pending"
+      }
+    ]
+  },
+  "tool_fixtures": [
+    {
+      "tool_name": "memory_search",
+      "match": "ordered",
+      "response": {
+        "result": {
+          "results": [
+            {
+              "id": "std-1",
+              "content": "Approved coding standard",
+              "score": 0.95
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tool_name": "governance_proposal_approve",
+      "match": "ordered",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "ROLE_INSUFFICIENT: viewer role cannot approve proposals (POL-004)"
+      }
+    }
+  ],
+  "virtual_clock": {
+    "start_time": "2026-01-01T00:00:00.000Z",
+    "tick_interval_ms": 1000
+  },
+  "random_seed": 42,
+  "policy_expectations": [
+    {
+      "policy_id": "pol-004",
+      "expected_decision": "deny",
+      "at_step": 1
+    }
+  ],
+  "assertions": {
+    "output": {
+      "expected_status": "failed",
+      "expected_error": "POLICY_DENIED"
+    }
+  }
+}

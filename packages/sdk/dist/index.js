@@ -134,105 +134,203 @@ function createErrorFromResponse(statusCode, body) {
   }
 }
 
-// src/types.ts
+// src/harness.ts
+var passthrough = {
+  parse: (data) => data
+};
+var HarnessOperations = class {
+  constructor(request) {
+    this.request = request;
+  }
+  request;
+  /**
+   * Execute a scenario through the deterministic harness.
+   */
+  async run(params) {
+    return await this.request("scenario_run", params, passthrough);
+  }
+  /**
+   * Replay a scenario against a prior receipt and compare determinism.
+   */
+  async replay(params) {
+    return await this.request("scenario_replay", params, passthrough);
+  }
+  /**
+   * Run the portfolio evaluation suite.
+   */
+  async eval(params = {}) {
+    return await this.request("eval_run", params, passthrough);
+  }
+  /**
+   * List evidence artifacts (run receipts + artifacts/ contents).
+   */
+  async inspect(params = {}) {
+    return await this.request("evidence_inspect", params, passthrough);
+  }
+};
+
+// src/lanes.ts
 import { z } from "zod";
-var GroupIdSchema = z.string().min(2).max(64).regex(
+var LaneDiffSchema = z.object({
+  added: z.array(z.record(z.unknown())),
+  overridden: z.array(z.record(z.unknown())),
+  deleted: z.array(z.string())
+});
+var LaneOpenParamsSchema = z.object({
+  group_id: z.string().min(1),
+  lane_id: z.string().min(1),
+  base_revision: z.string().min(1)
+});
+var LaneSnapshotParamsSchema = LaneOpenParamsSchema.extend({
+  diff: LaneDiffSchema,
+  evidence_refs: z.array(z.string().min(1))
+});
+var LaneReviewParamsSchema = z.object({
+  group_id: z.string().min(1),
+  lane_id: z.string().min(1),
+  snapshot_id: z.string().min(1),
+  verdict: z.enum(["approved", "rejected", "quarantined"]),
+  reason: z.string().min(1),
+  retention_expires_at: z.string().datetime().optional()
+});
+var LaneOpenResponseSchema = z.object({
+  lane_id: z.string(),
+  branch_id: z.string(),
+  writer_id: z.string(),
+  reviewer_ids: z.array(z.string()),
+  base_revision: z.string(),
+  status: z.literal("active")
+});
+var LaneSnapshotResponseSchema = z.object({
+  lane_id: z.string(),
+  branch_id: z.string(),
+  snapshot_id: z.string(),
+  snapshot_hash: z.string(),
+  status: z.literal("active")
+});
+var LaneReviewResponseSchema = z.record(z.unknown());
+var LaneOperations = class {
+  constructor(request) {
+    this.request = request;
+  }
+  request;
+  /**
+   * group_id is only a resource selector. Workspace and actor authority are
+   * derived by the authenticated gateway principal, never from this payload.
+   */
+  async open(params) {
+    const validated = LaneOpenParamsSchema.parse(params);
+    return this.request("governed_lane_open", validated, LaneOpenResponseSchema);
+  }
+  async snapshot(params) {
+    const validated = LaneSnapshotParamsSchema.parse(params);
+    return this.request("governed_lane_snapshot", validated, LaneSnapshotResponseSchema);
+  }
+  async review(params) {
+    const validated = LaneReviewParamsSchema.parse(params);
+    return this.request("governed_lane_review", validated, LaneReviewResponseSchema);
+  }
+};
+
+// src/types.ts
+import { z as z2 } from "zod";
+var GroupIdSchema = z2.string().min(2).max(64).regex(
   /^allura-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
   "group_id must match pattern: ^allura-[a-z0-9-]+$ (ARCH-001 tenant isolation)"
 );
-var MemoryIdSchema = z.string().uuid({ message: "id must be a valid UUID v4" });
-var ConfidenceScoreSchema = z.number().min(0).max(1);
-var MemoryRetrievalStoreSchema = z.enum(["postgres", "neo4j", "graph", "ruvector"]);
-var MemoryResponseMetaSchema = z.object({
-  contract_version: z.literal("v1"),
-  degraded: z.boolean(),
-  degraded_reason: z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-  stores_used: z.array(MemoryRetrievalStoreSchema),
-  stores_attempted: z.array(MemoryRetrievalStoreSchema),
-  warnings: z.array(z.string()).optional(),
-  ruvector_trajectory_id: z.string().optional(),
-  ruvector_count: z.number().int().min(0).optional()
+var MemoryIdSchema = z2.string().uuid({ message: "id must be a valid UUID v4" });
+var ConfidenceScoreSchema = z2.number().min(0).max(1);
+var MemoryRetrievalStoreSchema = z2.enum(["postgres", "neo4j", "graph", "ruvector"]);
+var MemoryResponseMetaSchema = z2.object({
+  contract_version: z2.literal("v1"),
+  degraded: z2.boolean(),
+  degraded_reason: z2.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+  stores_used: z2.array(MemoryRetrievalStoreSchema),
+  stores_attempted: z2.array(MemoryRetrievalStoreSchema),
+  warnings: z2.array(z2.string()).optional(),
+  ruvector_trajectory_id: z2.string().optional(),
+  ruvector_count: z2.number().int().min(0).optional()
 });
-var MemoryAddResponseSchema = z.object({
-  id: z.string(),
-  stored: z.enum(["episodic", "semantic", "both"]),
-  score: z.number().min(0).max(1),
-  pending_review: z.boolean().optional(),
-  created_at: z.string(),
+var MemoryAddResponseSchema = z2.object({
+  id: z2.string(),
+  stored: z2.enum(["episodic", "semantic", "both"]),
+  score: z2.number().min(0).max(1),
+  pending_review: z2.boolean().optional(),
+  created_at: z2.string(),
   meta: MemoryResponseMetaSchema.optional(),
-  duplicate: z.boolean().optional(),
-  duplicate_of: z.string().optional(),
-  similarity: z.number().optional()
+  duplicate: z2.boolean().optional(),
+  duplicate_of: z2.string().optional(),
+  similarity: z2.number().optional()
 });
-var MemorySearchResponseSchema = z.object({
-  results: z.array(
-    z.object({
-      id: z.string(),
-      content: z.string(),
-      score: z.number().min(0).max(1),
-      source: z.enum(["episodic", "semantic", "both"]),
-      provenance: z.enum(["conversation", "manual"]),
-      created_at: z.string(),
-      usage_count: z.number().optional()
+var MemorySearchResponseSchema = z2.object({
+  results: z2.array(
+    z2.object({
+      id: z2.string(),
+      content: z2.string(),
+      score: z2.number().min(0).max(1),
+      source: z2.enum(["episodic", "semantic", "both"]),
+      provenance: z2.enum(["conversation", "manual"]),
+      created_at: z2.string(),
+      usage_count: z2.number().optional()
     })
   ),
-  count: z.number().int().min(0),
-  latency_ms: z.number().min(0),
+  count: z2.number().int().min(0),
+  latency_ms: z2.number().min(0),
   meta: MemoryResponseMetaSchema.optional()
 });
-var MemoryGetResponseSchema = z.object({
-  id: z.string(),
-  content: z.string(),
-  score: z.number().min(0).max(1),
-  source: z.enum(["episodic", "semantic", "both"]),
-  provenance: z.enum(["conversation", "manual"]),
-  user_id: z.string(),
-  actor: z.string().nullable().optional(),
-  creator: z.string().nullable().optional(),
-  approver: z.string().nullable().optional(),
-  group_id: z.string().regex(/^allura-.+$/).optional(),
-  created_at: z.string(),
-  status: z.enum(["approved", "proposed", "pending", "deprecated", "active", "deleted"]).optional(),
-  source_event_id: z.string().nullable().optional(),
-  proposal_id: z.string().nullable().optional(),
-  trace_ref: z.union([z.string(), z.number()]).nullable().optional(),
-  evidence: z.array(z.object({
-    id: z.string().nullable(),
-    type: z.enum(["event", "proposal", "trace", "version"]),
-    label: z.string(),
-    status: z.enum(["available", "unavailable"])
+var MemoryGetResponseSchema = z2.object({
+  id: z2.string(),
+  content: z2.string(),
+  score: z2.number().min(0).max(1),
+  source: z2.enum(["episodic", "semantic", "both"]),
+  provenance: z2.enum(["conversation", "manual"]),
+  user_id: z2.string(),
+  actor: z2.string().nullable().optional(),
+  creator: z2.string().nullable().optional(),
+  approver: z2.string().nullable().optional(),
+  group_id: z2.string().regex(/^allura-.+$/).optional(),
+  created_at: z2.string(),
+  status: z2.enum(["approved", "proposed", "pending", "deprecated", "active", "deleted"]).optional(),
+  source_event_id: z2.string().nullable().optional(),
+  proposal_id: z2.string().nullable().optional(),
+  trace_ref: z2.union([z2.string(), z2.number()]).nullable().optional(),
+  evidence: z2.array(z2.object({
+    id: z2.string().nullable(),
+    type: z2.enum(["event", "proposal", "trace", "version"]),
+    label: z2.string(),
+    status: z2.enum(["available", "unavailable"])
   })).optional(),
-  version: z.number().int().optional(),
-  superseded_by: z.string().optional(),
-  usage_count: z.number().optional(),
-  hash: z.string().nullable().optional(),
-  previous_hash: z.string().nullable().optional(),
+  version: z2.number().int().optional(),
+  superseded_by: z2.string().optional(),
+  usage_count: z2.number().optional(),
+  hash: z2.string().nullable().optional(),
+  previous_hash: z2.string().nullable().optional(),
   meta: MemoryResponseMetaSchema.optional()
 });
-var MemoryListResponseSchema = z.object({
-  memories: z.array(MemoryGetResponseSchema),
-  total: z.number().int().min(0),
-  has_more: z.boolean(),
+var MemoryListResponseSchema = z2.object({
+  memories: z2.array(MemoryGetResponseSchema),
+  total: z2.number().int().min(0),
+  has_more: z2.boolean(),
   meta: MemoryResponseMetaSchema.optional()
 });
-var MemoryDeleteResponseSchema = z.object({
-  id: z.string(),
-  deleted: z.boolean(),
-  deleted_at: z.string(),
-  recovery_days: z.number().int().min(0),
+var MemoryDeleteResponseSchema = z2.object({
+  id: z2.string(),
+  deleted: z2.boolean(),
+  deleted_at: z2.string(),
+  recovery_days: z2.number().int().min(0),
   meta: MemoryResponseMetaSchema.optional()
 });
-var HealthResponseSchema = z.object({
-  status: z.string(),
-  mode: z.string(),
-  interface: z.string(),
-  transports: z.array(z.string()),
-  mcp_endpoint: z.string(),
-  port: z.number(),
-  port_source: z.string(),
-  auth_enabled: z.boolean(),
-  warnings: z.array(z.string()).optional(),
-  timestamp: z.string()
+var HealthResponseSchema = z2.object({
+  status: z2.string(),
+  mode: z2.string(),
+  interface: z2.string(),
+  transports: z2.array(z2.string()),
+  mcp_endpoint: z2.string(),
+  port: z2.number(),
+  port_source: z2.string(),
+  auth_enabled: z2.boolean(),
+  warnings: z2.array(z2.string()).optional(),
+  timestamp: z2.string()
 });
 
 // src/utils.ts
@@ -280,7 +378,11 @@ function isRetryable(error) {
 }
 async function withRetry(fn, retries = DEFAULT_RETRIES) {
   let lastError = new Error("No attempts made");
-  for (let attempt = 0; attempt < retries; attempt++) {
+  if (!Number.isFinite(retries) || retries < 0) {
+    retries = 0;
+  }
+  const attempts = Math.max(1, retries + 1);
+  for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       return await fn();
     } catch (error) {
@@ -288,11 +390,14 @@ async function withRetry(fn, retries = DEFAULT_RETRIES) {
       if (!isRetryable(error)) {
         throw error;
       }
-      if (attempt < retries - 1) {
+      if (attempt < attempts - 1) {
         const backoff = calculateBackoff(attempt);
         await sleep(backoff);
       }
     }
+  }
+  if (retries <= 0) {
+    throw lastError;
   }
   throw new RetryExhaustedError(retries, lastError);
 }
@@ -442,8 +547,13 @@ var AlluraClient = class {
   customFetch;
   // State
   state = "disconnected";
+  mcpSessionId;
+  mcpSessionInitialization;
   // Operations
   memory;
+  harness;
+  /** Governed lane operations; workspace/actor scope is derived by the gateway. */
+  lanes;
   constructor(config) {
     if (!config.baseUrl) {
       throw new Error("AlluraClient requires a baseUrl");
@@ -454,6 +564,8 @@ var AlluraClient = class {
     this.retries = config.retries ?? DEFAULT_RETRIES;
     this.customFetch = config.fetch;
     this.memory = new MemoryOperations(this.makeRequest.bind(this));
+    this.harness = new HarnessOperations(this.makeRequest.bind(this));
+    this.lanes = new LaneOperations(this.makeRequest.bind(this));
   }
   // ── Connection Management ────────────────────────────────────────────────
   /**
@@ -523,6 +635,8 @@ var AlluraClient = class {
    */
   async disconnect() {
     this.state = "disconnected";
+    this.mcpSessionId = void 0;
+    this.mcpSessionInitialization = void 0;
   }
   /**
    * Get the current connection state.
@@ -552,7 +666,9 @@ var AlluraClient = class {
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
       try {
         const url = `${this.baseUrl}/mcp`;
-        const headers = buildHeaders(this.authToken);
+        const headers = this.mcpHeaders();
+        await this.initializeMcpSession(fetchFn);
+        headers["mcp-session-id"] = this.mcpSessionId;
         const body = JSON.stringify({
           jsonrpc: "2.0",
           method: "tools/call",
@@ -594,6 +710,50 @@ var AlluraClient = class {
         clearTimeout(timeoutId);
       }
     }, this.retries);
+  }
+  async initializeMcpSession(fetchFn) {
+    if (this.mcpSessionId) return;
+    if (!this.mcpSessionInitialization) {
+      this.mcpSessionInitialization = (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+        try {
+          const response = await fetchFn(`${this.baseUrl}/mcp`, {
+            method: "POST",
+            headers: this.mcpHeaders(),
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              method: "initialize",
+              params: {
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                clientInfo: { name: "@allura/sdk", version: "1.0.0" }
+              },
+              id: createRequestId()
+            }),
+            signal: controller.signal
+          });
+          if (!response.ok) {
+            throw createErrorFromResponse(response.status, await this.parseResponseBody(response));
+          }
+          const sessionId = response.headers.get("mcp-session-id");
+          if (!sessionId) throw new ConnectionError("MCP server did not establish a session");
+          this.mcpSessionId = sessionId;
+          await response.text();
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      })();
+    }
+    try {
+      await this.mcpSessionInitialization;
+    } catch (error) {
+      this.mcpSessionInitialization = void 0;
+      throw error;
+    }
+  }
+  mcpHeaders() {
+    return { ...buildHeaders(this.authToken), Accept: "application/json, text/event-stream" };
   }
   unwrapToolResult(responseBody) {
     const rpc = responseBody;
@@ -641,6 +801,19 @@ var AlluraClient = class {
         return {};
       }
     }
+    if (contentType.includes("text/event-stream")) {
+      const text = await response.text();
+      let lastData;
+      for (const line of text.split("\n")) {
+        if (line.startsWith("data: ")) lastData = line.slice(6);
+      }
+      if (!lastData) return {};
+      try {
+        return JSON.parse(lastData);
+      } catch {
+        return {};
+      }
+    }
     try {
       const text = await response.text();
       if (!text) return {};
@@ -659,7 +832,9 @@ export {
   DEFAULT_RETRIES,
   DEFAULT_TIMEOUT,
   GroupIdSchema,
+  HarnessOperations,
   HealthResponseSchema,
+  LaneOperations,
   MemoryAddResponseSchema,
   MemoryDeleteResponseSchema,
   MemoryGetResponseSchema,

@@ -11,6 +11,11 @@ export default defineConfig({
   test: {
     environment: "node",
     pool: "forks",
+    // Some live suites create and drop a disposable database, temporarily
+    // rebinding POSTGRES_DB. Run this stateful integration inventory in one
+    // fork so process environment and pool-singleton restoration cannot race
+    // unrelated live files on low-core CI runners.
+    poolOptions: { forks: { singleFork: true } },
     passWithNoTests: false,
     include: [
       "src/lib/process-engine/checkpoint-continuation.integration.test.ts",
@@ -21,8 +26,17 @@ export default defineConfig({
       "src/__tests__/bumblebee-tenant-isolation.e2e.test.ts",
       "src/__tests__/bumblebee-source-authority.e2e.test.ts",
       "src/__tests__/bumblebee-scan-leases.e2e.test.ts",
+      "src/__tests__/bumblebee-headless-ingest.e2e.test.ts",
+      "src/__tests__/bumblebee-headless-matrix2.e2e.test.ts",
+      "src/__tests__/bumblebee-current-state-views.e2e.test.ts",
+      "src/__tests__/bumblebee-exposure-provenance.e2e.test.ts",
+      "src/__tests__/bumblebee-historical-upgrade.e2e.test.ts",
+      "src/__tests__/view-security-invoker-hardening.e2e.test.ts",
       "src/__tests__/workspace-subgraph-authority.e2e.test.ts",
       "src/__tests__/auto-curator-workspace-authority.e2e.test.ts",
+      "src/__tests__/sdk-gateway-integration.e2e.test.ts",
+      "src/__tests__/governed-lane-review-boundary.e2e.test.ts",
+      "src/lib/genesis/proposal-generator.live-db.test.ts",
       "src/lib/db/tenant-table-inventory.test.ts",
       "src/lib/memory/proposal-semantic-projection.live-db.test.ts",
       "src/lib/graph-adapter/__tests__/adapter-live-db-e2e.test.ts",

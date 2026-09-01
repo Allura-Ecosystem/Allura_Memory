@@ -1,6 +1,6 @@
 # Story 23-4 — Fix Token Compliance Failures
 
-**Epic:** Epic 23 — Neo4j Sunset Completion
+**Epic:** Epic 23 — PostgreSQL (graph_memories) Sunset Completion
 **Status:** Done — authoritative sprint status
 **Priority:** P1-High | **Complexity:** Small
 **Agent:** Woz

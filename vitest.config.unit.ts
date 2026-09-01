@@ -44,6 +44,21 @@ export default defineConfig({
       // Bumblebee operator module's fail-closed/rollback behaviour.
       "src/lib/replay/**/*.test.ts",
       "src/lib/bumblebee/**/*.test.ts",
+      "src/mcp/governed-lane-tools.test.ts",
+      // Story 27.3 — governed promotion adapter: proposal conversion,
+      // receipts, quarantine, and rollback (pure logic, mocked queryable).
+      "src/lib/branch/**/*.test.ts",
+      // Story 27.5 — Team RAM / Durham branch workflow lanes: sole-writer
+      // ownership, Durham manifests, Munari/Rand review gate (pure logic,
+      // mocked queryable; no DB/network).
+      "src/lib/branch-workflows/**/*.test.ts",
+      // SONA vs AgentDB retrieval-learning evaluation harness
+      // (pure logic, hermetic in-memory arms; no DB/network).
+      "src/lib/branch-eval/**/*.test.ts",
+      // Story 27.6 — epic gate: enforcement checks (isolation/poisoning/
+      // replay/tamper/quota/expiry/rollback) and the release manifest
+      // builder (pure logic, mocked queryable; no DB/network).
+      "src/lib/branch-gate/**/*.test.ts",
       // Story 26.5 — governed mitigation drafts must stay in the CI unit lane.
       "src/lib/mitigation/**/*.test.ts",
       // Story 24.5 — deterministic scenario harness. Hermetic: engine DB
@@ -92,6 +107,8 @@ export default defineConfig({
       "src/__tests__/curator-proposals-route.test.ts",
       "src/__tests__/curator-reject-route.test.ts",
       "src/__tests__/contract-validation.test.ts",
+      // DW-2 — executable regression coverage for the canonical-docs shell guard.
+      "src/__tests__/docs-backend-residue-guard.test.ts",
       "src/__tests__/sentry-integration.test.ts",
       "src/__tests__/sentry-wiring.test.ts",
       "src/__tests__/byok-key-manager.test.ts",
@@ -127,6 +144,10 @@ export default defineConfig({
       "src/__tests__/bumblebee-surfaces.test.tsx",
       // Story 25.3b — server-issued curator shell state/accessibility.
       "src/__tests__/curator-module-shell.test.tsx",
+      // Story 25.3b — executing test for the production /dashboard/curator
+      // page wiring (issuance→shell, degraded state, denied scope).
+      "src/__tests__/curator-handoff-page.test.tsx",
+      "src/__tests__/curator-dashboard.test.tsx",
       // UI unit tests — inspector entity views (6 view components)
       "src/__tests__/inspector-views.test.tsx",
       // Dashboard pages (Story 16.4 — approvals/handoffs/evidence)
@@ -162,6 +183,10 @@ export default defineConfig({
       "src/__tests__/coherence-monitor.test.ts",
       // Coherence Monitor API routes (Story 2.1) — mocked auth/pool
       "src/__tests__/coherence-routes.test.ts",
+      // Story 24.7 — SDK public contract + CLI command surface (hermetic:
+      // injected fetch / subprocess; no server, no DB).
+      "packages/sdk/test/**/*.test.ts",
+      "packages/cli/src/**/*.test.ts",
     ],
     exclude: [
       // ── Integration tests (mocked DB/services) — use test:integration ──
@@ -206,6 +231,7 @@ export default defineConfig({
       ["src/__tests__/inspector-panel.test.tsx", "jsdom"],
       ["src/__tests__/inspector-views.test.tsx", "jsdom"],
       ["src/__tests__/bumblebee-surfaces.test.tsx", "jsdom"],
+      ["src/__tests__/curator-dashboard.test.tsx", "jsdom"],
     ],
   },
   resolve: {
