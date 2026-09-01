@@ -21,7 +21,7 @@ const loaded = config({ path: ".env.portfolio", override: true })
 if (loaded.error) throw loaded.error
 
 const command = action === "up"
-  ? ["docker", "compose", "--env-file", ".env.portfolio", "-f", "docker-compose.portfolio.yml", "up", "-d", "--build"]
+  ? ["docker", "compose", "--env-file", ".env.portfolio", "-f", "docker-compose.portfolio.yml", "up", "-d", "--build", "--force-recreate"]
   : ["bun", "run", "dev"]
 const child = Bun.spawn({ cmd: command, env: process.env, stdout: "inherit", stderr: "inherit" })
 process.exit(await child.exited)

@@ -27,10 +27,12 @@ type Check = { name: string; status: "ok" | "fail"; detail?: string }
 type AppScope = { groupId: string; workspaceId: string }
 
 function loadEnv(): void {
-  const envPath = join(process.cwd(), ".env.portfolio")
+  const envPath = process.env.ALLURA_PORTFOLIO_ENV_FILE || join(process.cwd(), ".env.portfolio")
   if (existsSync(envPath)) {
     const { config } = require("dotenv")
-    config({ path: envPath })
+    // The selected demo file is the source of truth for its scoped database
+    // proof; inherited shell values must not point doctor at another stack.
+    config({ path: envPath, override: true })
   }
 }
 

@@ -69,7 +69,10 @@ function artifactDir(): string {
 
 async function waitForSettledSnapshot(session: string): Promise<string> {
   let snapshot = ""
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  // A cold local Next compile plus the curator queue request can take longer
+  // than the former five-second window. Keep the evidence gate fail-closed,
+  // but allow a bounded fifteen seconds for the supported local stack.
+  for (let attempt = 0; attempt < 60; attempt += 1) {
     snapshot = runAgentBrowser(session, ["snapshot"])
     if (isSettledDashboardSnapshot(snapshot)) return snapshot
     await Bun.sleep(250)
@@ -78,7 +81,7 @@ async function waitForSettledSnapshot(session: string): Promise<string> {
 }
 
 function loadPortfolioEnv(): void {
-  const envPath = join(process.cwd(), ".env.portfolio")
+  const envPath = process.env.ALLURA_PORTFOLIO_ENV_FILE || join(process.cwd(), ".env.portfolio")
   if (existsSync(envPath)) config({ path: envPath, override: true })
 }
 

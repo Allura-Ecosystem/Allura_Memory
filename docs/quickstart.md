@@ -143,7 +143,11 @@ port.
 bun run portfolio:up
 ```
 
-This starts only PostgreSQL on `127.0.0.1:${PORTFOLIO_POSTGRES_PORT:-5433}`.
+This starts only a disposable PostgreSQL container on
+`127.0.0.1:${PORTFOLIO_POSTGRES_PORT:-5433}`. It has no named or host-mounted
+volumes: its schema and synthetic workspace fixture are copied into the image
+at build time. Each `portfolio:up` force-recreates it, so do not use it for
+data you need to keep.
 
 ### 3. Start the dashboard in a separate terminal
 
@@ -159,6 +163,15 @@ bun run dashboard:doctor
 
 The doctor requires app-role connectivity, RLS isolation, and HTTP 200 on all
 seven mapped routes. It exits non-zero on any failure.
+
+The registered real-process HTTP/auth contract can also be run independently:
+
+```bash
+bun run test:dashboard-http
+```
+
+It creates its own disposable portfolio database and isolated local ports. It
+starts Next twice: once with explicit DevAuth and once with DevAuth disabled.
 
 ### 5. Capture browser evidence
 

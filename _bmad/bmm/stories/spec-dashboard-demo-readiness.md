@@ -3,7 +3,7 @@ title: 'Restore the governed dashboard demo path'
 type: 'bugfix'
 created: '2026-09-01'
 status: 'in-progress'
-review_loop_iteration: 2
+review_loop_iteration: 3
 baseline_commit: '414142bcee3b3ba3fd122e427ca14b4a13ecc268'
 context:
   - 'docs/design/command-center/operator-surface-contract.md'
@@ -74,6 +74,8 @@ context:
 - Review loop 1 — DeepSeek Flash independent review found browser-trusted authority headers, owner-pool dashboard reads, a false-green route test/doctor, unrunnable Curator tests, and an unusable portfolio launch path. The code map, tasks, acceptance criteria, and verification requirements now require server-owned principal derivation, app-role workspace transactions, executable state/HTTP proof, real app-role/RLS doctor checks, and collision-safe demo startup. This avoids a polished dashboard that bypasses governance or falsely certifies broken routes. **Keep:** thin shared navigation, explicit live/empty/degraded/error states, current API/service reuse, non-secret demo configuration, and failed-capture exclusion.
 
 - Review loop 2 — Frozen candidate `acb4e98a` was independently rejected: RLS doctor could pass on an empty database, capture could publish degraded surface states, and Curator lacked shared link-based dashboard navigation. The re-derived correction must prove an app-role scoped positive row plus cross-scope denial and durable audit write, reject `data-surface-state="degraded"`/`"error"` and queue-unavailable snapshots, and place Curator under the same `DashboardShell` link navigation with a registered rendered-shell regression. **Keep:** all approved authority/RLS safeguards and truthful empty/disabled states.
+
+- Review loop 3 — Frozen candidate `162383f5` was independently rejected: named PostgreSQL volume conflicted with strict mount-free demo semantics, and mocked page parity did not prove the real Next HTTP/auth boundary. The correction must use no compose volumes (disposable image-backed database only) and add a registered HTTP contract that starts the dashboard in controlled DevAuth and auth-disabled modes, asserting seven 200 routes, no redirects while authorized, and login/denial behavior while unauthenticated. **Keep:** all review-loop 1/2 authority, RLS, evidence, and navigation safeguards.
 
 ## Design Notes
 

@@ -80,6 +80,7 @@
     "test:unit": "vitest run --config vitest.config.unit.ts",
     "test:integration": "vitest run --config vitest.config.integration.ts",
     "test:live-db": "POSTGRES_APP_USER=${POSTGRES_APP_USER:-allura_app} POSTGRES_APP_PASSWORD=${POSTGRES_APP_PASSWORD:-change-me-in-production} RUN_E2E_TESTS=true vitest run --config vitest.config.live-db.ts",
+    "test:dashboard-http": "vitest run --config vitest.config.dashboard-http.ts",
     "test:mcp": "bun scripts/test-mcp-browser.ts",
     "ci:evidence": "bun scripts/ci/collect-evidence.ts",
     "ci:live-db": "bash scripts/ci/run-live-db-tests.sh",

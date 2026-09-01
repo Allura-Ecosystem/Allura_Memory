@@ -96,6 +96,11 @@ example if needed, without printing environment values.
 bun run portfolio:up
 ```
 
+The portfolio database is explicitly disposable: the compose file declares no
+named or host volumes, while the image copies its initializer and synthetic
+workspace fixture at build time. `portfolio:up` recreates the container; use a
+different database for persistent work.
+
 ### 2. Start the dashboard (separate terminal)
 ```bash
 bun run portfolio:dev
@@ -107,6 +112,14 @@ bun run dashboard:doctor
 ```
 **Expected**: app-role connectivity, RLS isolation, and HTTP 200 on all seven
 routes.
+
+### 3b. Run the local HTTP/auth contract
+```bash
+bun run test:dashboard-http
+```
+**Expected**: a disposable supported PostgreSQL database and isolated Next
+processes prove all seven routes are 200 without redirects under explicit
+DevAuth, then redirect or deny every protected route with DevAuth disabled.
 
 ### 4. Capture evidence
 ```bash
