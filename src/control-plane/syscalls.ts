@@ -455,6 +455,7 @@ export async function syscall_mutate(
         intent: "mutate",
         target: request.target,
         type: request.type,
+        genesisEvidencePrincipal: genesisEvidence?.actor,
         genesisEvidenceJti: genesisEvidence?.jti,
         genesisEvidenceTarget: genesisEvidence?.target,
         genesisEvidenceMutationDigest: genesisEvidence?.mutationDigest,

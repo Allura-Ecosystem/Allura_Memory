@@ -15,9 +15,9 @@ if (typeof window !== "undefined") {
   throw new Error("server-side only");
 }
 
-import { getPool } from "@/lib/postgres/connection";
-import { validateGroupId } from "@/lib/validation/group-id";
 import { assertRegisteredTenant } from "@/lib/config/tenant-existence";
+import { getOwnerPool, getPool } from "@/lib/postgres/connection";
+import { validateGroupId } from "@/lib/validation/group-id";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TENANT VALIDATION
@@ -56,6 +56,8 @@ export interface TargetOperation {
   query?: Record<string, unknown>;
   limit?: number;
   offset?: number;
+  /** Verified Genesis principal, carried only from HMAC-verified evidence. */
+  genesisEvidencePrincipal?: string;
   /** Verified Genesis evidence JTI, passed only by syscall_mutate. */
   genesisEvidenceJti?: string;
   genesisEvidenceTarget?: string;
@@ -147,16 +149,17 @@ async function pgMutate(
     return pgUpdatePatternProposal(op);
   }
 
-  // A Genesis insert must consume the signed evidence JTI and persist the
-  // proposal in one database transaction. Generic INSERT would permit replay
-  // between a separate consume check and target persistence.
+  // A Genesis insert reaches an owner-only transaction after the server has
+  // verified the signed evidence. The function writes the verified claim audit,
+  // consumes the JTI, and creates the proposal atomically; allura_app has no
+  // EXECUTE or INSERT privilege for this path.
   if (table === "pattern_proposals" && type === "insert" && op.genesisEvidenceJti) {
     const data = op.data ?? {};
     const groupId = requireGroupId(data);
-    const pool = getPool();
+    const pool = getOwnerPool();
     const result = await pool.query(
-      `SELECT app.consume_genesis_evidence_and_insert($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS proposal_id`,
-      [op.genesisEvidenceJti, groupId, op.genesisEvidenceTarget, op.genesisEvidenceMutationDigest, data.pattern_description, data.pattern_type, data.frequency, data.suggested_skill, data.confidence, data.status],
+      `SELECT app.persist_verified_genesis_proposal($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS proposal_id`,
+      [op.genesisEvidenceJti, groupId, op.genesisEvidencePrincipal, op.genesisEvidenceTarget, op.genesisEvidenceMutationDigest, data.pattern_description, data.pattern_type, data.frequency, data.suggested_skill, data.confidence, data.status],
     );
     return { success: true, affected_rows: result.rowCount ?? 0 };
   }

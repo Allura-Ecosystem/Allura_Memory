@@ -41,6 +41,7 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "promotion_proposals", class: "tenant-scoped", notes: "Promotion proposals" },
   { table: "pattern_proposals", class: "tenant-scoped", notes: "Pattern proposals" },
   { table: "genesis_evidence_consumptions", class: "tenant-scoped", notes: "Migration 58: append-only consumed signed Genesis JTI ledger bound to target and mutation digest" },
+  { table: "genesis_verified_claims", class: "tenant-scoped", notes: "Migration 59: append-only owner-only audit binding server-verified Genesis JTI, principal, tenant, target, and digest" },
   { table: "approval_notifications", class: "tenant-scoped", notes: "Approval notifications" },
   { table: "approval_transitions", class: "tenant-scoped", notes: "Approval transitions" },
   { table: "audit_analyses", class: "tenant-scoped", notes: "Audit analyses" },

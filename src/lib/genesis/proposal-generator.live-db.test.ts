@@ -48,6 +48,13 @@ const describeLive = process.env.RUN_E2E_TESTS === "true" && process.env.POSTGRE
 
 describeLive("Genesis generateProposal → syscall_mutate → live target persistence", () => {
   const owner = ownerPool();
+  const app = new Pool({
+    host: process.env.POSTGRES_HOST ?? "127.0.0.1",
+    port: Number(process.env.POSTGRES_PORT ?? "5432"),
+    database: process.env.POSTGRES_DB ?? "memory",
+    user: process.env.POSTGRES_APP_USER ?? "allura_app",
+    password: process.env.POSTGRES_APP_PASSWORD ?? "",
+  });
   let previousSecret: string | undefined;
 
   beforeAll(async () => {
@@ -67,7 +74,7 @@ describeLive("Genesis generateProposal → syscall_mutate → live target persis
   afterAll(async () => {
     vi.useRealTimers();
     await closePool();
-    await owner.end();
+    await Promise.all([owner.end(), app.end()]);
     if (previousSecret === undefined) delete process.env.RUVIX_CONTROL_PLANE_SECRET;
     else process.env.RUVIX_CONTROL_PLANE_SECRET = previousSecret;
   });
@@ -87,6 +94,38 @@ describeLive("Genesis generateProposal → syscall_mutate → live target persis
     expect(await rows()).toEqual(before);
     return result.error;
   }
+
+  it("denies allura_app both Genesis persistence functions and a generic proposal INSERT", async () => {
+    const directDescription = `${DESCRIPTION} direct-app-bypass`;
+    const client = await app.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT set_config('app.current_group_id',$1,true)", [GROUP]);
+      await client.query("SAVEPOINT legacy_function");
+      await expect(client.query(
+        `SELECT app.consume_genesis_evidence_and_insert($1,$2,'pg:pattern_proposals',$3,$4,$5,$6,$7,$8,'proposed')`,
+        [randomUUID(), GROUP, "a".repeat(64), directDescription, pattern.pattern_type, pattern.frequency, pattern.suggested_skill, pattern.confidence],
+      )).rejects.toThrow(/permission denied|does not exist/i);
+      await client.query("ROLLBACK TO SAVEPOINT legacy_function");
+      await client.query("SAVEPOINT verified_function");
+      await expect(client.query(
+        `SELECT app.persist_verified_genesis_proposal($1,$2,'forged-app-principal','pg:pattern_proposals',$3,$4,$5,$6,$7,$8,'proposed')`,
+        [randomUUID(), GROUP, "a".repeat(64), directDescription, pattern.pattern_type, pattern.frequency, pattern.suggested_skill, pattern.confidence],
+      )).rejects.toThrow(/permission denied|does not exist/i);
+      await client.query("ROLLBACK TO SAVEPOINT verified_function");
+      await client.query("SAVEPOINT generic_insert");
+      await expect(client.query(
+        `INSERT INTO pattern_proposals(group_id,pattern_description,pattern_type,frequency,suggested_skill,confidence,status)
+         VALUES ($1,$2,$3,$4,$5,$6,'proposed')`,
+        [GROUP, directDescription, pattern.pattern_type, pattern.frequency, pattern.suggested_skill, pattern.confidence],
+      )).rejects.toThrow(/permission denied/i);
+      await client.query("ROLLBACK TO SAVEPOINT generic_insert");
+      expect((await owner.query("SELECT 1 FROM pattern_proposals WHERE group_id=$1 AND pattern_description=$2", [GROUP, directDescription])).rows).toEqual([]);
+    } finally {
+      await client.query("ROLLBACK").catch(() => undefined);
+      client.release();
+    }
+  });
 
   it("persists exactly one proposal using signed actor, approval, manifest, and source reads despite hostile raw context", async () => {
     const policyEvidence = issueGenesisPolicyEvidence(evidenceInput);
@@ -109,6 +148,17 @@ describeLive("Genesis generateProposal → syscall_mutate → live target persis
       suggested_skill: "signed-genesis-live-boundary",
       confidence: 0.9,
       status: "proposed",
+    }]);
+    expect((await owner.query(
+      `SELECT group_id,principal,canonical_target,mutation_digest
+       FROM genesis_verified_claims
+       WHERE group_id=$1 AND principal=$2 AND mutation_digest=$3`,
+      [GROUP, evidenceInput.actor, evidenceInput.mutationDigest],
+    )).rows).toEqual([{
+      group_id: GROUP,
+      principal: evidenceInput.actor,
+      canonical_target: "pg:pattern_proposals",
+      mutation_digest: evidenceInput.mutationDigest,
     }]);
 
     const replay = await generateProposal(GROUP, pattern, hostile);

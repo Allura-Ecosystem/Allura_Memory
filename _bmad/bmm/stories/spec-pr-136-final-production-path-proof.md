@@ -50,6 +50,8 @@ context:
 - `src/control-plane/genesis-policy-evidence.ts`, `src/control-plane/syscalls.ts`, `src/lib/genesis/proposal-generator.ts` -- signed evidence issuance, verification, and proposal boundary.
 - `src/control-plane/genesis-policy-evidence.test.ts` -- current isolated cryptographic tests; extend with real boundary proof.
 - `docker/postgres-init/57-governed-lane-review-boundary.sql` -- append-only SECURITY DEFINER authority/locking boundary for application-role review loading; binds group, workspace, lane, branch, snapshot, writer, and reviewer authority.
+- `docker/postgres-init/59-genesis-server-verified-authority.sql` -- owner-only verified-claim/proposal transaction; revokes application-role proposal INSERT and both Genesis persistence-function EXECUTE grants.
+- `src/lib/genesis/proposal-generator.live-db.test.ts` -- live app-role bypass, trusted signed flow, audit binding, replay, and mutation-mismatch proof.
 - `src/__tests__/governed-lane-review-boundary.e2e.test.ts` -- live application-role grant, scope, authority, missing-row, and two-connection serialization proof for migration 057.
 
 ## Tasks & Acceptance
@@ -62,6 +64,7 @@ context:
 - [x] Genesis tests/fixture -- drive valid, tampered, and cross-tenant signed evidence through `generateProposal → syscall_mutate`; prove caller overrides cannot replace verified claims.
 - [x] Rebuild tracked SDK dist, run all gates, freeze one SHA, independently review it, and push only on a clean verdict.
 - [x] Migration 057 and live boundary tests -- bind the expected branch and authoritative writer inside the locked definer query; prove application-role grants and stale-snapshot race exclusion.
+- [x] Migration 059 and Genesis live proof -- remove application-role access to both evidence persistence functions and generic proposal INSERT; persist the server-verified principal/group/target/digest/JTI audit atomically with the proposal and prove replay/mismatch fail closed.
 
 **Acceptance Criteria:**
 - Given an authenticated authorized SDK principal, when it calls lane open, snapshot, and review, then the canonical HTTP gateway advertises and executes each tool and unauthorized principals fail closed.
@@ -75,6 +78,7 @@ context:
 
 - 2026-08-31 -- Added migration 057 rather than rewriting frozen 056: the application role needs a narrowly granted SECURITY DEFINER loader to lock and validate lane/snapshot authority before proposal creation. Added live concurrency/grant proof, strict canonical JSON compatibility coverage, exact gateway schema assertions, reproducible SDK pack consumers, and the expanded provenance/Genesis negative matrix from final review.
 - 2026-09-01 -- Added forward migration 058: signed Genesis evidence now carries a canonical `pg:pattern_proposals` target, canonical mutation digest, and UUID JTI. The database consumes each JTI in an append-only, RLS-protected ledger in the same SECURITY DEFINER transaction that inserts the proposal. The isolated historical fixture now pins committed pre-056/057 baseline `dcd2bb25c8b56678451aa7846f2ead1328d3d4b5` and asserts v055 blob `c154a431fd3a7a3968461705725181d1b268ce5c`.
+- 2026-09-01 -- Added forward migration 059 after final architecture review: the HMAC remains exclusively server-side, `allura_app` loses both Genesis persistence-function EXECUTE grants and direct `pattern_proposals` INSERT, and an owner-only SECURITY DEFINER transaction records the server-verified JTI/principal/group/target/digest audit before atomically consuming and inserting the proposal. Live proof now demonstrates direct app-role calls and generic INSERT fail while the signed path succeeds once only.
 
 ## Design Notes
 
