@@ -15,10 +15,10 @@
  * remains the lower-level threshold-comparison primitive used internally and
  * by callers that already hold measured values.
  */
+import { parse as parseYaml } from "yaml";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parse as parseYaml } from "yaml";
 
 export interface EvalMetric {
   name: string;

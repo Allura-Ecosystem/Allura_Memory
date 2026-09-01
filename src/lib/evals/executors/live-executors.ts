@@ -18,30 +18,29 @@
  * missing audit, changed fixture) must move the metric below threshold, or the
  * lane is inert and must not be reported as measured.
  */
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { Client, Pool } from "pg";
+import { createHash } from "node:crypto";
+import { resolve } from "node:path";
 
 import {
   evaluatePolicies,
+  type Policy,
   POLICY_ACTOR_VALIDATION,
   POLICY_AUDIT_TRAIL,
   POLICY_BUDGET_ENFORCEMENT,
   POLICY_PERMISSION_TIER,
   POLICY_TENANT_ISOLATION,
-  type Policy,
   type PolicyContext,
 } from "@/control-plane/policy";
 import type { ProofClaims } from "@/control-plane/proof";
 import { createPrincipalContext } from "@/lib/auth/principal-context";
-import { retrieveKnowledge } from "@/lib/memory/retrieval-layer";
-import { approveProposal } from "@/lib/memory/approve-proposal";
+import { compareReceipts } from "@/lib/harness/receipt";
 import { runScenario } from "@/lib/harness/runner";
 import { loadScenario } from "@/lib/harness/scenario";
-import { compareReceipts } from "@/lib/harness/receipt";
+import { approveProposal } from "@/lib/memory/approve-proposal";
+import { retrieveKnowledge } from "@/lib/memory/retrieval-layer";
 import { CANONICAL_HTTP_TOOL_NAMES } from "@/mcp/http-tool-catalog";
-import type { LaneConfig, CaseOutcome } from "../runner";
+import type { CaseOutcome, LaneConfig } from "../runner";
 
 const GROUP_ID = process.env.EVAL_GROUP_ID ?? "allura-system";
 const WORKSPACE_ID = process.env.EVAL_WORKSPACE_ID ?? "workspace-allura";

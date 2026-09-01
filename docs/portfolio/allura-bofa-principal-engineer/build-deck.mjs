@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+// eslint-disable-next-line import/no-unresolved -- @oai/artifact-tool is a local-only deck tool, not a runtime dependency
 import { Presentation, PresentationFile } from '@oai/artifact-tool';
 
 const root = path.resolve('docs/portfolio/allura-bofa-principal-engineer');

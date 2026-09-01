@@ -23,10 +23,10 @@
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { generateJsonReport, generateMarkdownReport } from "./report";
-import { runSuite } from "./runner";
 import { liveExecutor } from "./executors/live-executors";
 import { seedCorpus } from "./executors/live-retrieval";
+import { generateJsonReport, generateMarkdownReport } from "./report";
+import { runSuite } from "./runner";
 
 const SUITE_PATH = "evals/suites/portfolio.yaml";
 const CORPUS_PATH = "evals/datasets/relevance-corpus.json";

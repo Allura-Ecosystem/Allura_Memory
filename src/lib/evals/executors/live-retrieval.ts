@@ -18,9 +18,9 @@
  * `app.current_workspace_id` via SET LOCAL, so the database enforces isolation
  * on the evaluation path exactly as it does in production.
  */
+import { Client } from "pg";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { Client } from "pg";
 
 const GROUP_ID = process.env.EVAL_GROUP_ID ?? "allura-system";
 const WORKSPACE_ID = process.env.EVAL_WORKSPACE_ID ?? "workspace-allura";
@@ -61,6 +61,15 @@ export async function seedCorpus(corpusPath: string): Promise<number> {
   const client = connect();
   await client.connect();
   try {
+    // The fresh CI database has no workspace rows (migrations create the table
+    // but seed no rows). Ensure the eval workspace exists before inserting
+    // memories, or the allura_memories group_workspace FK rejects every row.
+    await client.query(
+      `INSERT INTO workspaces (workspace_id, group_id, name)
+       VALUES ($1, $2, 'eval retrieval workspace')
+       ON CONFLICT (workspace_id) DO UPDATE SET group_id = EXCLUDED.group_id`,
+      [WORKSPACE_ID, GROUP_ID],
+    );
     await beginScoped(client);
     await client.query(
       `DELETE FROM allura_memories
