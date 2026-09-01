@@ -16,7 +16,7 @@ in `artifacts/portfolio-demo/`; dashboard captures are in
 | "simulator harnesses and execution testbeds… repeatable testing, scenario simulation, policy validation" | `allura run` over 3 core scenarios + 3 reference integrations | **Demonstrated** |
 | "deterministic workflow design… predictability, traceability" | `allura replay` → `Replay identical: true` | **Demonstrated** |
 | "policy hooks and runtime interception points that enforce governance… and enterprise controls" | RLS `forced=true` on 4 tables; live denial captured | **Demonstrated** |
-| "eval integration… benchmark design, regression detection" | `allura eval` → 9 scored lanes vs thresholds | **Demonstrated (synthetic fixtures)** |
+| "eval integration… benchmark design, regression detection" | `allura eval` → 9 lanes vs thresholds; **1 lane genuinely measured + falsifiability proof** | **Partially measured — see §7b and Open Item 1** |
 | "short-term and long-term context strategies, state persistence, retrieval interfaces" | Governed memory pipeline, PostgreSQL + graph backend | **Demonstrated** |
 | "robust tool calling abstractions, interface contracts" | 14 MCP tools over streamable-HTTP; `tool_contract_validation` lane | **Demonstrated** |
 | "SDK, API, and CLI design for enterprise adoption" | `allura` CLI (9 commands), `packages/sdk`, `packages/cli` | **Partial** — see Open Items |
@@ -122,6 +122,51 @@ portfolio evaluation: PASS (9 metrics)
   latency_p95_ms                5000  (threshold 5000)  pass
 ```
 
+## 7b. Measured retrieval — the one lane that is not a wiring check
+
+`07-measured-retrieval.json`, `08-retrieval-falsifiability.txt`
+
+The nine lanes above are **wiring checks**. The offline executor validates that
+a case is well formed and nothing more, so every well-formed case passes and
+the lane scores 1.0 by construction. This lane is different:
+
+```
+retrieval_relevance_p@5: 1.000 (threshold 0.7) pass  [MEASURED]
+```
+
+Real queries, issued against PostgreSQL, scored against labels — lexical
+retrieval over the generated `content_tsv` column ranked by `ts_rank_cd`, across
+a 20-document mortgage-underwriting corpus containing deliberate topical
+distractors. Every statement runs inside a transaction that sets
+`app.current_group_id` and `app.current_workspace_id`, so the FORCED RLS
+policies enforce tenant isolation on the evaluation path itself.
+
+**The number 1.000 is worthless on its own — it is identical to the synthetic
+value. What makes it evidence is that it can fail:**
+
+```bash
+bun run scripts/eval-live-retrieval.ts --control
+```
+
+```
+c1  P@5=0.00  mislabeled: right query, wrong gold doc
+c2  P@5=0.00  query with no corpus match
+c3  P@5=0.00  near-miss: distractor is the true match, label points elsewhere
+negative-control mean P@5: 0.000 (threshold 0.7) fail
+FALSIFIABLE: the lane reports failure on bad labels.
+```
+
+Case c3 is the one to show: the query *"wage earner pay stubs W-2 verbal
+verification"* correctly retrieved the wage-earner document, but the label
+pointed at the self-employed document, so it scored 0. The metric responds to
+what retrieval actually returned, not to the shape of the case. The offline
+lane would have scored all three of these 1.00.
+
+**Honest limits:** lexical retrieval only — no embedding service runs in this
+environment, so the hybrid vector path is not exercised and no claim is made
+about it. The corpus is synthetic and small (20 documents, 6 queries). This is
+one measured lane, not a measured suite.
+
 ## 8. Governed operator dashboard (`artifacts/dashboard-demo/`)
 
 7/7 routes HTTP 200, no redirects, **zero console or page errors**, per
@@ -137,12 +182,24 @@ evidence, or reject. Promotion is human-in-the-loop by construction.
 
 Credibility in this interview comes from knowing exactly where the seams are.
 
-1. **Eval lanes score synthetic fixtures, not production datasets.** Every lane
-   returns 1.0 and `latency_p95_ms` sits exactly at its 5000ms threshold. A
+1. **Eight of the nine suite lanes are wiring checks, not measurements.** They
+   return 1.0 by construction, and `latency_p95_ms` reports `Math.max()` of the
+   *declared* per-case budgets — which is why it sits exactly at 5000ms. A
    post-merge adversarial review (2026-08-22) recorded this as finding C5:
-   "evaluates caller-supplied scores, not datasets." Present it as a working
-   *evaluation harness with wired thresholds and regression hooks*, not as
-   measured production quality. GitHub issue #91 tracks it.
+   "evaluates caller-supplied scores, not datasets." GitHub issue #91 tracks it.
+   Say this before you are asked, then show §7b: `retrieval_relevance_p@5` is
+   now genuinely measured and demonstrably falsifiable. One real lane plus an
+   honest account of the other eight is a far stronger position than nine
+   unexplained 1.0s.
+
+1b. **The deck carries no honesty qualifiers.** An audit of all ten slides found
+   zero occurrences of "specimen", "synthetic", "illustrative", "fixture", or
+   "proposed". It also makes no numeric claims at all — no percentages, no
+   latency figures — so nothing in it is currently overclaimed. The risk is
+   narration: if you present the Epic 25 mockup from this deck without saying
+   "specimen", the deck will not say it for you. The mockup's own banner does
+   ("Synthetic fixtures only — no live connection, authorization, decision,
+   health, or production status is represented"); lead with it.
 2. **Harness scenarios are fixture-backed.** `allura run` exercises the
    orchestration, policy, checkpoint, and receipt machinery deterministically —
    it does not drive live model calls. That is the correct design for a
@@ -183,4 +240,8 @@ bun packages/cli/src/index.ts run tests/scenarios/unauthorized-cross-tenant-acce
 bun packages/cli/src/index.ts eval
 bun run dev &
 bun run dashboard:browser
+
+# the one measured lane, and the proof it can fail
+bun run scripts/eval-live-retrieval.ts
+bun run scripts/eval-live-retrieval.ts --control
 ```
