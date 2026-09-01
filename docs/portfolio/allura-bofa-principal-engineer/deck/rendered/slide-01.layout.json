@@ -1,0 +1,646 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/1yq1w6",
+    "id": "1yq1w6",
+    "slide": 1,
+    "layoutId": "08a68092-885d-422d-a984-dafb19c5c090",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#F7F3EE",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "+mn-lt"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "08a68092-885d-422d-a984-dafb19c5c090",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/k3u90j2d",
+      "id": "1",
+      "bbox": [
+        54,
+        28,
+        112,
+        44
+      ],
+      "alt": "Official Allura wordmark",
+      "contentType": "image/png",
+      "imageFit": "contain",
+      "asset": {
+        "assetId": "93eb3cc2-04af-41c7-9f5b-627fe5bbdcb3",
+        "contentType": "image/png",
+        "byteLength": 109062
+      }
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u1wjqtc7",
+      "id": "2",
+      "name": "eyebrow",
+      "bbox": [
+        182,
+        40,
+        470,
+        22
+      ],
+      "geometry": "rect",
+      "text": "ALLURA / TECHNICAL PORTFOLIO",
+      "textPreview": "ALLURA / TECHNICAL PORTFOLIO",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "+mn-lt",
+        "color": "#0D47A1",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "ALLURA / TECHNICAL PORTFOLIO"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "ALLURA / TECHNICAL PORTFOLIO",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "color": "#0D47A1",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "ALLURA / TECHNICAL PORTFOLIO",
+              "fontSize": 13,
+              "color": "#0D47A1",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/v25kjyts",
+      "id": "3",
+      "name": "slide-number",
+      "bbox": [
+        1175,
+        40,
+        50,
+        22
+      ],
+      "geometry": "rect",
+      "text": "01",
+      "textPreview": "01",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "+mn-lt",
+        "color": "#0D47A1",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "01"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "01",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "color": "#0D47A1",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "01",
+              "fontSize": 13,
+              "color": "#0D47A1",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/47y1w3u9",
+      "id": "4",
+      "name": "top-rule",
+      "bbox": [
+        54,
+        86,
+        1172,
+        0
+      ],
+      "geometry": "line",
+      "lineColor": "#D6D1CA",
+      "lineWidth": 1
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5872p8bu",
+      "id": "5",
+      "name": "title-panel",
+      "bbox": [
+        54,
+        125,
+        1172,
+        385
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#0F1720",
+      "lineColor": "#0F1720",
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/i5gjutc3",
+      "id": "6",
+      "name": "kicker",
+      "bbox": [
+        94,
+        170,
+        560,
+        24
+      ],
+      "geometry": "rect",
+      "text": "AGENTIC AI FRAMEWORK & HARNESS",
+      "textPreview": "AGENTIC AI FRAMEWORK & HARNESS",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "+mn-lt",
+        "color": "#FF4D1F",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "AGENTIC AI FRAMEWORK & HARNESS"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "AGENTIC AI FRAMEWORK & HARNESS",
+          "resolvedTextStyle": {
+            "fontSize": 15,
+            "color": "#FF4D1F",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "AGENTIC AI FRAMEWORK & HARNESS",
+              "fontSize": 15,
+              "color": "#FF4D1F",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/36pknyto",
+      "id": "7",
+      "name": "title",
+      "bbox": [
+        94,
+        213,
+        760,
+        150
+      ],
+      "geometry": "rect",
+      "text": "Evidence-first\nenterprise AI systems.",
+      "textPreview": "Evidence-first | enterprise AI systems.",
+      "resolvedFontSize": 54,
+      "resolvedTextStyle": {
+        "fontSize": 54,
+        "typeface": "+mn-lt",
+        "color": "#F7F3EE",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Evidence-first"
+          },
+          {
+            "index": 2,
+            "text": "enterprise AI systems."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Evidence-first",
+          "resolvedTextStyle": {
+            "fontSize": 54,
+            "color": "#F7F3EE",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Evidence-first",
+              "fontSize": 54,
+              "color": "#F7F3EE",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "enterprise AI systems.",
+          "resolvedTextStyle": {
+            "fontSize": 54,
+            "color": "#F7F3EE",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "enterprise AI systems.",
+              "fontSize": 54,
+              "color": "#F7F3EE",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kbu1kzu5",
+      "id": "8",
+      "name": "subtitle",
+      "bbox": [
+        94,
+        395,
+        780,
+        60
+      ],
+      "geometry": "rect",
+      "text": "A technical case study of orchestration, governed memory, policy hooks, deterministic evaluation and developer interfaces.",
+      "textPreview": "A technical case study of orchestration, governed memory, policy hooks, deterministic evaluation and developer interfaces.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "fontSize": 20,
+        "typeface": "+mn-lt",
+        "color": "#F7F3EE",
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "A technical case study of orchestration, governed memory, policy hooks, deterministic"
+          },
+          {
+            "index": 2,
+            "text": "evaluation and developer interfaces."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "A technical case study of orchestration, governed memory, policy hooks, deterministic evaluation and developer interfaces.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "color": "#F7F3EE",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "A technical case study of orchestration, governed memory, policy hooks, deterministic evaluation and developer interfaces.",
+              "fontSize": 20,
+              "color": "#F7F3EE",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/lc32d4ba",
+      "id": "9",
+      "name": "blue-module",
+      "bbox": [
+        925,
+        180,
+        205,
+        205
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#0D47A1",
+      "lineColor": "#0D47A1",
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/54zidkb6",
+      "id": "10",
+      "name": "orange-module",
+      "bbox": [
+        1030,
+        335,
+        145,
+        145
+      ],
+      "geometry": "ellipse",
+      "fillColor": "#FF4D1F",
+      "lineColor": "#FF4D1F",
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4jqh4ful",
+      "id": "11",
+      "name": "green-module",
+      "bbox": [
+        1125,
+        410,
+        90,
+        120
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#148A4B",
+      "lineColor": "#148A4B",
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/jih0bat0",
+      "id": "12",
+      "name": "role",
+      "bbox": [
+        54,
+        565,
+        900,
+        30
+      ],
+      "geometry": "rect",
+      "text": "Role-aligned to Principal Engineer, Agentic AI Framework and Harness",
+      "textPreview": "Role-aligned to Principal Engineer, Agentic AI Framework and Harness",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "fontSize": 22,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Role-aligned to Principal Engineer, Agentic AI Framework and Harness"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Role-aligned to Principal Engineer, Agentic AI Framework and Harness",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Role-aligned to Principal Engineer, Agentic AI Framework and Harness",
+              "fontSize": 22,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ih8z25cv",
+      "id": "13",
+      "name": "disclaimer",
+      "bbox": [
+        54,
+        610,
+        1040,
+        28
+      ],
+      "geometry": "rect",
+      "text": "Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.",
+      "textPreview": "Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "fontSize": 16,
+        "typeface": "+mn-lt",
+        "color": "#59616A",
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "color": "#59616A",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.",
+              "fontSize": 16,
+              "color": "#59616A",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

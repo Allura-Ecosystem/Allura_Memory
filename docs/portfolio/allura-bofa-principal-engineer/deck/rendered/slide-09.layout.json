@@ -1,0 +1,898 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/zsckug",
+    "id": "zsckug",
+    "slide": 9,
+    "layoutId": "08a68092-885d-422d-a984-dafb19c5c090",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#F7F3EE",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "+mn-lt"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "08a68092-885d-422d-a984-dafb19c5c090",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/sjyl4nyh",
+      "id": "1",
+      "bbox": [
+        54,
+        28,
+        112,
+        44
+      ],
+      "alt": "Official Allura wordmark",
+      "contentType": "image/png",
+      "imageFit": "contain",
+      "asset": {
+        "assetId": "12fd9434-fa28-442d-805b-c65ddacb6146",
+        "contentType": "image/png",
+        "byteLength": 109062
+      }
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yt4zilsn",
+      "id": "2",
+      "name": "eyebrow",
+      "bbox": [
+        182,
+        40,
+        470,
+        22
+      ],
+      "geometry": "rect",
+      "text": "ALLURA MEMORY / PORTFOLIO EVIDENCE",
+      "textPreview": "ALLURA MEMORY / PORTFOLIO EVIDENCE",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "+mn-lt",
+        "color": "#0D47A1",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "ALLURA MEMORY / PORTFOLIO EVIDENCE"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "ALLURA MEMORY / PORTFOLIO EVIDENCE",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "color": "#0D47A1",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "ALLURA MEMORY / PORTFOLIO EVIDENCE",
+              "fontSize": 13,
+              "color": "#0D47A1",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zud0bqt8",
+      "id": "3",
+      "name": "slide-number",
+      "bbox": [
+        1175,
+        40,
+        50,
+        22
+      ],
+      "geometry": "rect",
+      "text": "09",
+      "textPreview": "09",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "+mn-lt",
+        "color": "#0D47A1",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "09"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "09",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "color": "#0D47A1",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "09",
+              "fontSize": 13,
+              "color": "#0D47A1",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8zmhofap",
+      "id": "4",
+      "name": "top-rule",
+      "bbox": [
+        54,
+        86,
+        1172,
+        0
+      ],
+      "geometry": "line",
+      "lineColor": "#D6D1CA",
+      "lineWidth": 1
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/90fihkba",
+      "id": "5",
+      "name": "title",
+      "bbox": [
+        54,
+        112,
+        800,
+        45
+      ],
+      "geometry": "rect",
+      "text": "Dashboard proof: captured, not invented",
+      "textPreview": "Dashboard proof: captured, not invented",
+      "resolvedFontSize": 33,
+      "resolvedTextStyle": {
+        "fontSize": 33,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Dashboard proof: captured, not invented"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Dashboard proof: captured, not invented",
+          "resolvedTextStyle": {
+            "fontSize": 33,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Dashboard proof: captured, not invented",
+              "fontSize": 33,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mx4zm5sj",
+      "id": "6",
+      "name": "intro",
+      "bbox": [
+        54,
+        164,
+        1120,
+        42
+      ],
+      "geometry": "rect",
+      "text": "The Curator route is a real capture from the active local demonstration. The manifest records seven tested routes, all HTTP 200, without captured console or page errors.",
+      "textPreview": "The Curator route is a real capture from the active local demonstration. The manifest records seven tested routes, all HTTP 200, without ...",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "+mn-lt",
+        "color": "#59616A",
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "The Curator route is a real capture from the active local demonstration. The manifest records seven tested routes, all HTTP 200, without"
+          },
+          {
+            "index": 2,
+            "text": "captured console or page errors."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "The Curator route is a real capture from the active local demonstration. The manifest records seven tested routes, all HTTP 200, without captured console or page errors.",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "color": "#59616A",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "The Curator route is a real capture from the active local demonstration. The manifest records seven tested routes, all HTTP 200, without captured console or page errors.",
+              "fontSize": 18,
+              "color": "#59616A",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nyd0fat4",
+      "id": "7",
+      "name": "screenshot-frame",
+      "bbox": [
+        54,
+        235,
+        700,
+        370
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#0F1720",
+      "lineColor": "#0F1720",
+      "lineWidth": 1
+    },
+    {
+      "order": 8,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/xsnmp8fu",
+      "id": "8",
+      "bbox": [
+        66,
+        247,
+        676,
+        346
+      ],
+      "alt": "Allura Curator dashboard screenshot from local route capture",
+      "contentType": "image/png",
+      "imageFit": "contain",
+      "asset": {
+        "assetId": "085be93c-13ae-4c82-a51b-02112d2f248d",
+        "contentType": "image/png",
+        "byteLength": 94833
+      }
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xofilkb6",
+      "id": "9",
+      "name": "metric-0",
+      "bbox": [
+        825,
+        255,
+        120,
+        28
+      ],
+      "geometry": "rect",
+      "text": "7 / 7",
+      "textPreview": "7 / 7",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "+mn-lt",
+        "color": "#0D47A1",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "7 / 7"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "7 / 7",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "color": "#0D47A1",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "7 / 7",
+              "fontSize": 24,
+              "color": "#0D47A1",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9ozqh0ni",
+      "id": "10",
+      "name": "metric-label-0",
+      "bbox": [
+        825,
+        291,
+        330,
+        40
+      ],
+      "geometry": "rect",
+      "text": "captured routes returned HTTP 200",
+      "textPreview": "captured routes returned HTTP 200",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "fontSize": 17,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "captured routes returned HTTP 200"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "captured routes returned HTTP 200",
+          "resolvedTextStyle": {
+            "fontSize": 17,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "captured routes returned HTTP 200",
+              "fontSize": 17,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8nq98v6x",
+      "id": "11",
+      "name": "metric-rule-0",
+      "bbox": [
+        825,
+        342,
+        330,
+        0
+      ],
+      "geometry": "line",
+      "lineColor": "#D6D1CA",
+      "lineWidth": 1
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7mh8fq5c",
+      "id": "12",
+      "name": "metric-1",
+      "bbox": [
+        825,
+        360,
+        120,
+        28
+      ],
+      "geometry": "rect",
+      "text": "0",
+      "textPreview": "0",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "+mn-lt",
+        "color": "#FF4D1F",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "0"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "0",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "color": "#FF4D1F",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "0",
+              "fontSize": 24,
+              "color": "#FF4D1F",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ml8765or",
+      "id": "13",
+      "name": "metric-label-1",
+      "bbox": [
+        825,
+        396,
+        330,
+        40
+      ],
+      "geometry": "rect",
+      "text": "captured redirects",
+      "textPreview": "captured redirects",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "fontSize": 17,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "captured redirects"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "captured redirects",
+          "resolvedTextStyle": {
+            "fontSize": 17,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "captured redirects",
+              "fontSize": 17,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hcjqlkne",
+      "id": "14",
+      "name": "metric-rule-1",
+      "bbox": [
+        825,
+        447,
+        330,
+        0
+      ],
+      "geometry": "line",
+      "lineColor": "#D6D1CA",
+      "lineWidth": 1
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/wra9cf69",
+      "id": "15",
+      "name": "metric-2",
+      "bbox": [
+        825,
+        465,
+        120,
+        28
+      ],
+      "geometry": "rect",
+      "text": "0",
+      "textPreview": "0",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "+mn-lt",
+        "color": "#148A4B",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "0"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "0",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "color": "#148A4B",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "0",
+              "fontSize": 24,
+              "color": "#148A4B",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/vq18ja5o",
+      "id": "16",
+      "name": "metric-label-2",
+      "bbox": [
+        825,
+        501,
+        330,
+        40
+      ],
+      "geometry": "rect",
+      "text": "captured console or page errors",
+      "textPreview": "captured console or page errors",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "fontSize": 17,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "captured console or page errors"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "captured console or page errors",
+          "resolvedTextStyle": {
+            "fontSize": 17,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "captured console or page errors",
+              "fontSize": 17,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/upsra5o3",
+      "id": "17",
+      "name": "metric-rule-2",
+      "bbox": [
+        825,
+        552,
+        330,
+        0
+      ],
+      "geometry": "line",
+      "lineColor": "#D6D1CA",
+      "lineWidth": 1
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xgfq9gna",
+      "id": "18",
+      "name": "boundary",
+      "bbox": [
+        54,
+        645,
+        1090,
+        26
+      ],
+      "geometry": "rect",
+      "text": "The screenshot is supporting evidence, not a mockup and not a substitute for the system test record.",
+      "textPreview": "The screenshot is supporting evidence, not a mockup and not a substitute for the system test record.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "fontSize": 16,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "The screenshot is supporting evidence, not a mockup and not a substitute for the system test record."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "The screenshot is supporting evidence, not a mockup and not a substitute for the system test record.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "The screenshot is supporting evidence, not a mockup and not a substitute for the system test record.",
+              "fontSize": 16,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

@@ -1,0 +1,27 @@
+{
+  "recordCount": 124,
+  "truncated": true,
+  "metadata": {
+    "revision": "h6ubz9",
+    "target": {
+      "id": "pr/xmsc07"
+    },
+    "kind": {
+      "requested": "slide,textbox,shape,image,notes",
+      "tokens": [
+        "slide",
+        "textbox",
+        "shape",
+        "image",
+        "notes"
+      ]
+    },
+    "include": {
+      "tokens": []
+    },
+    "exclude": {
+      "tokens": []
+    },
+    "notices": []
+  }
+}

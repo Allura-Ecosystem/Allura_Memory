@@ -1,0 +1,1280 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/n8gldv",
+    "id": "n8gldv",
+    "slide": 2,
+    "layoutId": "08a68092-885d-422d-a984-dafb19c5c090",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#F7F3EE",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "+mn-lt"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "08a68092-885d-422d-a984-dafb19c5c090",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/q1orid07",
+      "id": "1",
+      "bbox": [
+        54,
+        28,
+        112,
+        44
+      ],
+      "alt": "Official Allura wordmark",
+      "contentType": "image/png",
+      "imageFit": "contain",
+      "asset": {
+        "assetId": "844caa4b-14fa-4c27-9fcf-a6bfa54990d8",
+        "contentType": "image/png",
+        "byteLength": 109062
+      }
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4vu5sj2l",
+      "id": "2",
+      "name": "eyebrow",
+      "bbox": [
+        182,
+        40,
+        470,
+        22
+      ],
+      "geometry": "rect",
+      "text": "ALLURA MEMORY / PORTFOLIO EVIDENCE",
+      "textPreview": "ALLURA MEMORY / PORTFOLIO EVIDENCE",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "+mn-lt",
+        "color": "#0D47A1",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "ALLURA MEMORY / PORTFOLIO EVIDENCE"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "ALLURA MEMORY / PORTFOLIO EVIDENCE",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "color": "#0D47A1",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "ALLURA MEMORY / PORTFOLIO EVIDENCE",
+              "fontSize": 13,
+              "color": "#0D47A1",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5w36lo36",
+      "id": "3",
+      "name": "slide-number",
+      "bbox": [
+        1175,
+        40,
+        50,
+        22
+      ],
+      "geometry": "rect",
+      "text": "02",
+      "textPreview": "02",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "+mn-lt",
+        "color": "#0D47A1",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "02"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "02",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "color": "#0D47A1",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "02",
+              "fontSize": 13,
+              "color": "#0D47A1",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qxcnutkr",
+      "id": "4",
+      "name": "top-rule",
+      "bbox": [
+        54,
+        86,
+        1172,
+        0
+      ],
+      "geometry": "line",
+      "lineColor": "#D6D1CA",
+      "lineWidth": 1
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/rylonylc",
+      "id": "5",
+      "name": "title",
+      "bbox": [
+        54,
+        112,
+        760,
+        48
+      ],
+      "geometry": "rect",
+      "text": "What this portfolio demonstrates",
+      "textPreview": "What this portfolio demonstrates",
+      "resolvedFontSize": 33,
+      "resolvedTextStyle": {
+        "fontSize": 33,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "What this portfolio demonstrates"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "What this portfolio demonstrates",
+          "resolvedTextStyle": {
+            "fontSize": 33,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "What this portfolio demonstrates",
+              "fontSize": 33,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/szu5w32x",
+      "id": "6",
+      "name": "intro",
+      "bbox": [
+        54,
+        166,
+        1060,
+        42
+      ],
+      "geometry": "rect",
+      "text": "The role calls for reusable frameworks, deterministic harnesses, memory, policy hooks and developer interfaces. Each claim below has a repository or CI source.",
+      "textPreview": "The role calls for reusable frameworks, deterministic harnesses, memory, policy hooks and developer interfaces. Each claim below has a re...",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "+mn-lt",
+        "color": "#59616A",
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "The role calls for reusable frameworks, deterministic harnesses, memory, policy hooks and developer interfaces. Each claim below"
+          },
+          {
+            "index": 2,
+            "text": "has a repository or CI source."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "The role calls for reusable frameworks, deterministic harnesses, memory, policy hooks and developer interfaces. Each claim below has a repository or CI source.",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "color": "#59616A",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "The role calls for reusable frameworks, deterministic harnesses, memory, policy hooks and developer interfaces. Each claim below has a repository or CI source.",
+              "fontSize": 18,
+              "color": "#59616A",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/d036p83i",
+      "id": "7",
+      "name": "theme-0",
+      "bbox": [
+        54,
+        260,
+        260,
+        230
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#E7EEF9",
+      "lineColor": "#0D47A1",
+      "lineWidth": 2
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/e1c7ydkn",
+      "id": "8",
+      "name": "theme-kicker-0",
+      "bbox": [
+        78,
+        292,
+        210,
+        20
+      ],
+      "geometry": "rect",
+      "text": "FRAMEWORK",
+      "textPreview": "FRAMEWORK",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "+mn-lt",
+        "color": "#0D47A1",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "FRAMEWORK"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "FRAMEWORK",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "color": "#0D47A1",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "FRAMEWORK",
+              "fontSize": 13,
+              "color": "#0D47A1",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/f25oryl8",
+      "id": "9",
+      "name": "theme-heading-0",
+      "bbox": [
+        78,
+        332,
+        210,
+        62
+      ],
+      "geometry": "rect",
+      "text": "Reusable execution path",
+      "textPreview": "Reusable execution path",
+      "resolvedFontSize": 25,
+      "resolvedTextStyle": {
+        "fontSize": 25,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Reusable"
+          },
+          {
+            "index": 2,
+            "text": "execution path"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Reusable execution path",
+          "resolvedTextStyle": {
+            "fontSize": 25,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Reusable execution path",
+              "fontSize": 25,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/3ipgve5g",
+      "id": "10",
+      "name": "theme-body-0",
+      "bbox": [
+        78,
+        418,
+        210,
+        38
+      ],
+      "geometry": "rect",
+      "text": "Orchestration plus shared interfaces",
+      "textPreview": "Orchestration plus shared interfaces",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "fontSize": 16,
+        "typeface": "+mn-lt",
+        "color": "#59616A",
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Orchestration plus shared"
+          },
+          {
+            "index": 2,
+            "text": "interfaces"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Orchestration plus shared interfaces",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "color": "#59616A",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Orchestration plus shared interfaces",
+              "fontSize": 16,
+              "color": "#59616A",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2hwfm9ov",
+      "id": "11",
+      "name": "theme-1",
+      "bbox": [
+        346,
+        260,
+        260,
+        230
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FCE9E2",
+      "lineColor": "#FF4D1F",
+      "lineWidth": 2
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/pk7yxonm",
+      "id": "12",
+      "name": "theme-kicker-1",
+      "bbox": [
+        370,
+        292,
+        210,
+        20
+      ],
+      "geometry": "rect",
+      "text": "HARNESS",
+      "textPreview": "HARNESS",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "+mn-lt",
+        "color": "#FF4D1F",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "HARNESS"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "HARNESS",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "color": "#FF4D1F",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "HARNESS",
+              "fontSize": 13,
+              "color": "#FF4D1F",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ojyhoj61",
+      "id": "13",
+      "name": "theme-heading-1",
+      "bbox": [
+        370,
+        332,
+        210,
+        62
+      ],
+      "geometry": "rect",
+      "text": "Deterministic evidence",
+      "textPreview": "Deterministic evidence",
+      "resolvedFontSize": 25,
+      "resolvedTextStyle": {
+        "fontSize": 25,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Deterministic"
+          },
+          {
+            "index": 2,
+            "text": "evidence"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Deterministic evidence",
+          "resolvedTextStyle": {
+            "fontSize": 25,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Deterministic evidence",
+              "fontSize": 25,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fu5gre54",
+      "id": "14",
+      "name": "theme-body-1",
+      "bbox": [
+        370,
+        418,
+        210,
+        38
+      ],
+      "geometry": "rect",
+      "text": "Scenario, receipt, replay, evaluation",
+      "textPreview": "Scenario, receipt, replay, evaluation",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "fontSize": 16,
+        "typeface": "+mn-lt",
+        "color": "#59616A",
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Scenario, receipt, replay,"
+          },
+          {
+            "index": 2,
+            "text": "evaluation"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Scenario, receipt, replay, evaluation",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "color": "#59616A",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Scenario, receipt, replay, evaluation",
+              "fontSize": 16,
+              "color": "#59616A",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/etwfi9oz",
+      "id": "15",
+      "name": "theme-2",
+      "bbox": [
+        638,
+        260,
+        260,
+        230
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#E5F1E9",
+      "lineColor": "#148A4B",
+      "lineWidth": 2
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1gnyt4na",
+      "id": "16",
+      "name": "theme-kicker-2",
+      "bbox": [
+        662,
+        292,
+        210,
+        20
+      ],
+      "geometry": "rect",
+      "text": "GOVERNANCE",
+      "textPreview": "GOVERNANCE",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "+mn-lt",
+        "color": "#148A4B",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "GOVERNANCE"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "GOVERNANCE",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "color": "#148A4B",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "GOVERNANCE",
+              "fontSize": 13,
+              "color": "#148A4B",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gvexkz6p",
+      "id": "17",
+      "name": "theme-heading-2",
+      "bbox": [
+        662,
+        332,
+        210,
+        62
+      ],
+      "geometry": "rect",
+      "text": "Controls in the flow",
+      "textPreview": "Controls in the flow",
+      "resolvedFontSize": 25,
+      "resolvedTextStyle": {
+        "fontSize": 25,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Controls in the"
+          },
+          {
+            "index": 2,
+            "text": "flow"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Controls in the flow",
+          "resolvedTextStyle": {
+            "fontSize": 25,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Controls in the flow",
+              "fontSize": 25,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zq9g3y5o",
+      "id": "18",
+      "name": "theme-body-2",
+      "bbox": [
+        662,
+        418,
+        210,
+        38
+      ],
+      "geometry": "rect",
+      "text": "Proof, policy, RLS, durable audit",
+      "textPreview": "Proof, policy, RLS, durable audit",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "fontSize": 16,
+        "typeface": "+mn-lt",
+        "color": "#59616A",
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Proof, policy, RLS, durable"
+          },
+          {
+            "index": 2,
+            "text": "audit"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Proof, policy, RLS, durable audit",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "color": "#59616A",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Proof, policy, RLS, durable audit",
+              "fontSize": 16,
+              "color": "#59616A",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ypgzuto3",
+      "id": "19",
+      "name": "theme-3",
+      "bbox": [
+        930,
+        260,
+        260,
+        230
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F7F3EE",
+      "lineColor": "#0F1720",
+      "lineWidth": 2
+    },
+    {
+      "order": 20,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/uh4ri1cn",
+      "id": "20",
+      "name": "theme-kicker-3",
+      "bbox": [
+        954,
+        292,
+        210,
+        20
+      ],
+      "geometry": "rect",
+      "text": "DEVELOPER EXPERIENCE",
+      "textPreview": "DEVELOPER EXPERIENCE",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "DEVELOPER EXPERIENCE"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "DEVELOPER EXPERIENCE",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "DEVELOPER EXPERIENCE",
+              "fontSize": 13,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 21,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/vidsb6ts",
+      "id": "21",
+      "name": "theme-heading-3",
+      "bbox": [
+        954,
+        332,
+        210,
+        62
+      ],
+      "geometry": "rect",
+      "text": "One governed core",
+      "textPreview": "One governed core",
+      "resolvedFontSize": 25,
+      "resolvedTextStyle": {
+        "fontSize": 25,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "One governed"
+          },
+          {
+            "index": 2,
+            "text": "core"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "One governed core",
+          "resolvedTextStyle": {
+            "fontSize": 25,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "One governed core",
+              "fontSize": 25,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 22,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gjmtkrud",
+      "id": "22",
+      "name": "theme-body-3",
+      "bbox": [
+        954,
+        418,
+        210,
+        38
+      ],
+      "geometry": "rect",
+      "text": "SDK, API/MCP and CLI",
+      "textPreview": "SDK, API/MCP and CLI",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "fontSize": 16,
+        "typeface": "+mn-lt",
+        "color": "#59616A",
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "SDK, API/MCP and CLI"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "SDK, API/MCP and CLI",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "color": "#59616A",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "SDK, API/MCP and CLI",
+              "fontSize": 16,
+              "color": "#59616A",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 23,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hkvadwby",
+      "id": "23",
+      "name": "close",
+      "bbox": [
+        54,
+        570,
+        900,
+        28
+      ],
+      "geometry": "rect",
+      "text": "The focus is evidence that a hiring panel can inspect—not a collection of visual claims.",
+      "textPreview": "The focus is evidence that a hiring panel can inspect—not a collection of visual claims.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "fontSize": 20,
+        "typeface": "+mn-lt",
+        "color": "#0F1720",
+        "bold": true,
+        "alignment": "left",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "The focus is evidence that a hiring panel can inspect—not a collection of visual claims."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "The focus is evidence that a hiring panel can inspect—not a collection of visual claims.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "color": "#0F1720",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "The focus is evidence that a hiring panel can inspect—not a collection of visual claims.",
+              "fontSize": 20,
+              "color": "#0F1720",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}
