@@ -2,13 +2,13 @@
  * Contract proof for the real Next HTTP/auth boundary. This deliberately does
  * not import pages, requireDashboardScope, or mock any dashboard dependency.
  */
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
+
+import { type ChildProcess, spawn } from "node:child_process"
 import { cp, mkdtemp, rm, symlink, writeFile } from "node:fs/promises"
-import { spawn, type ChildProcess } from "node:child_process"
+import net from "node:net"
 import { tmpdir } from "node:os"
 import { basename, join } from "node:path"
-import net from "node:net"
-
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 const DASHBOARD_ROUTES = [
   "/dashboard",
