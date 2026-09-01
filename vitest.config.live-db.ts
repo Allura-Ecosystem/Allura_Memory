@@ -11,6 +11,11 @@ export default defineConfig({
   test: {
     environment: "node",
     pool: "forks",
+    // Some live suites create and drop a disposable database, temporarily
+    // rebinding POSTGRES_DB. Run this stateful integration inventory in one
+    // fork so process environment and pool-singleton restoration cannot race
+    // unrelated live files on low-core CI runners.
+    poolOptions: { forks: { singleFork: true } },
     passWithNoTests: false,
     include: [
       "src/lib/process-engine/checkpoint-continuation.integration.test.ts",
