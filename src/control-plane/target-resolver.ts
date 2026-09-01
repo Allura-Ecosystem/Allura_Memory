@@ -56,6 +56,10 @@ export interface TargetOperation {
   query?: Record<string, unknown>;
   limit?: number;
   offset?: number;
+  /** Verified Genesis evidence JTI, passed only by syscall_mutate. */
+  genesisEvidenceJti?: string;
+  genesisEvidenceTarget?: string;
+  genesisEvidenceMutationDigest?: string;
 }
 
 export interface ResolveResult {
@@ -141,6 +145,20 @@ async function pgMutate(
   // trailed. `query.id` selects the row; `data` carries the new column values.
   if (table === "pattern_proposals" && type === "update") {
     return pgUpdatePatternProposal(op);
+  }
+
+  // A Genesis insert must consume the signed evidence JTI and persist the
+  // proposal in one database transaction. Generic INSERT would permit replay
+  // between a separate consume check and target persistence.
+  if (table === "pattern_proposals" && type === "insert" && op.genesisEvidenceJti) {
+    const data = op.data ?? {};
+    const groupId = requireGroupId(data);
+    const pool = getPool();
+    const result = await pool.query(
+      `SELECT app.consume_genesis_evidence_and_insert($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS proposal_id`,
+      [op.genesisEvidenceJti, groupId, op.genesisEvidenceTarget, op.genesisEvidenceMutationDigest, data.pattern_description, data.pattern_type, data.frequency, data.suggested_skill, data.confidence, data.status],
+    );
+    return { success: true, affected_rows: result.rowCount ?? 0 };
   }
 
   // Append-only INSERT path for coherence_conflicts (Story 2.1).

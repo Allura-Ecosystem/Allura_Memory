@@ -4,7 +4,7 @@ vi.mock("@/control-plane/target-resolver", () => ({
   resolveTarget: vi.fn().mockResolvedValue({ success: true, affected_rows: 1 }),
 }));
 
-import { issueGenesisPolicyEvidence } from "@/control-plane/genesis-policy-evidence";
+import { genesisMutationDigest, issueGenesisPolicyEvidence } from "@/control-plane/genesis-policy-evidence";
 import { resolveTarget } from "@/control-plane/target-resolver";
 import { generateProposal, type GenesisProposalContext } from "./proposal-generator";
 
@@ -21,6 +21,8 @@ const evidenceInput = {
   actor: "agent-genesis-boundary",
   groupId: "allura-genesis-boundary",
   approvalRef: APPROVAL,
+  target: "pg:pattern_proposals",
+  mutationDigest: genesisMutationDigest("pg:pattern_proposals", { group_id: "allura-genesis-boundary", pattern_description: pattern.pattern_description, pattern_type: pattern.pattern_type, frequency: pattern.frequency, suggested_skill: pattern.suggested_skill, confidence: pattern.confidence, status: "proposed" }),
   projectManifest: {
     name: "Genesis production boundary",
     sourcesOfTruth: [{ type: "local", id: "genesis-authority", name: "Genesis authority", required: true }],

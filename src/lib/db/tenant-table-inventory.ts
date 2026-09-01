@@ -40,6 +40,7 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "canonical_proposals", class: "tenant-scoped", notes: "New writes carry workspace; legacy NULL rows remain excluded", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "promotion_proposals", class: "tenant-scoped", notes: "Promotion proposals" },
   { table: "pattern_proposals", class: "tenant-scoped", notes: "Pattern proposals" },
+  { table: "genesis_evidence_consumptions", class: "tenant-scoped", notes: "Migration 58: append-only consumed signed Genesis JTI ledger bound to target and mutation digest" },
   { table: "approval_notifications", class: "tenant-scoped", notes: "Approval notifications" },
   { table: "approval_transitions", class: "tenant-scoped", notes: "Approval transitions" },
   { table: "audit_analyses", class: "tenant-scoped", notes: "Audit analyses" },

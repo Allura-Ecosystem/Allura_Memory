@@ -431,6 +431,13 @@ export async function syscall_mutate(
   request: MutationRequest,
   context: SyscallContext
 ): Promise<SyscallResult<{ affected_rows: number; auditId: string }>> {
+  // Bind Genesis evidence to the exact target and canonical mutation before
+  // policy evaluation. The resolver repeats signature/tenant validation in the
+  // common syscall path; this preflight supplies the one-time JTI to the DB
+  // transaction without exposing any caller-controlled binding fields.
+  const genesisEvidence = context.genesis_policy_evidence
+    ? resolveGenesisPolicyEvidence(context.genesis_policy_evidence, context.group_id, request.target, request.data)
+    : undefined;
   // approval_ref resolution rule: request-level approval_ref wins over the
   // context-level approval_ref. executeSyscall reads only the resolved
   // context.approval_ref so there is a single carrier throughout the gate.
@@ -448,6 +455,9 @@ export async function syscall_mutate(
         intent: "mutate",
         target: request.target,
         type: request.type,
+        genesisEvidenceJti: genesisEvidence?.jti,
+        genesisEvidenceTarget: genesisEvidence?.target,
+        genesisEvidenceMutationDigest: genesisEvidence?.mutationDigest,
         data: {
           ...(request.data as Record<string, unknown>),
           group_id: claims.group_id,

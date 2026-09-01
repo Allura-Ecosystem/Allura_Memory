@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { readdir, readFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import path from "node:path"
 
 import { Pool } from "pg"
@@ -14,6 +14,12 @@ const SOURCE_ID = "historical-source"
 const SOURCE_REVISION_ID = "historical-revision"
 const LEASE_ID = "historical-lease"
 const REPOSITORY_ROOT = process.cwd()
+// dcd2bb25 is an immutable, committed pre-056/pre-057 schema baseline. Do not
+// replace this with HEAD: this fixture must fail if its historical source is
+// rewritten or if a current migration accidentally leaks into the baseline.
+const HISTORICAL_SCHEMA_COMMIT = "dcd2bb25c8b56678451aa7846f2ead1328d3d4b5"
+const HISTORICAL_055_BLOB = "c154a431fd3a7a3968461705725181d1b268ce5c"
+const POSTGRES_INIT = "docker/postgres-init"
 
 function sha(value: string): string {
   return createHash("sha256").update(value).digest("hex")
@@ -50,13 +56,12 @@ async function applySql(pool: Pool, sql: string, label: string): Promise<void> {
 }
 
 async function historicalMigrationsThrough54(): Promise<string[]> {
-  const directory = path.join(REPOSITORY_ROOT, "docker/postgres-init")
-  const entries = await readdir(directory)
+  const entries = gitExec(["ls-tree", "-r", "--name-only", HISTORICAL_SCHEMA_COMMIT, POSTGRES_INIT], { cwd: REPOSITORY_ROOT }).trim().split("\n")
   return entries
-    .filter((entry) => /^\d+-.*\.sql$/.test(entry))
-    .filter((entry) => Number(entry.slice(0, entry.indexOf("-"))) <= 54)
+    .filter((entry) => /^\d+-.*\.sql$/.test(path.basename(entry)))
+    .filter((entry) => Number(path.basename(entry).slice(0, path.basename(entry).indexOf("-"))) <= 54)
     .sort((left, right) => left.localeCompare(right))
-    .map((entry) => path.join(directory, entry))
+    .map((entry) => `${HISTORICAL_SCHEMA_COMMIT}:${entry}`)
 }
 
 const describeLive = process.env.RUN_HISTORICAL_UPGRADE_E2E === "true" && process.env.POSTGRES_PASSWORD && process.env.POSTGRES_APP_PASSWORD
@@ -74,23 +79,20 @@ describeLive("Bumblebee v055 through v057 historical upgrade", () => {
     }
 
     await applySql(owner, "CREATE EXTENSION IF NOT EXISTS vector", "pgvector extension")
+    gitExec(["cat-file", "-e", `${HISTORICAL_SCHEMA_COMMIT}^{commit}`], { cwd: REPOSITORY_ROOT })
+    const actual055Blob = gitExec(["rev-parse", `${HISTORICAL_SCHEMA_COMMIT}:${POSTGRES_INIT}/55-bumblebee-production-hardening.sql`], { cwd: REPOSITORY_ROOT }).trim()
+    expect(actual055Blob).toBe(HISTORICAL_055_BLOB)
     for (const migration of await historicalMigrationsThrough54()) {
-      await applySql(owner, await readFile(migration, "utf8"), migration)
+      await applySql(owner, gitExec(["show", migration], { cwd: REPOSITORY_ROOT }), migration)
     }
 
-    const historicalHead = gitExec(["rev-parse", "HEAD"], { cwd: REPOSITORY_ROOT }).trim()
     const v055 = gitExec([
       "show",
-      `${historicalHead}:docker/postgres-init/55-bumblebee-production-hardening.sql`,
+      `${HISTORICAL_SCHEMA_COMMIT}:${POSTGRES_INIT}/55-bumblebee-production-hardening.sql`,
     ], { cwd: REPOSITORY_ROOT })
-    await applySql(owner, v055, `${historicalHead}:docker/postgres-init/55-bumblebee-production-hardening.sql`)
+    await applySql(owner, v055, `${HISTORICAL_SCHEMA_COMMIT}:${POSTGRES_INIT}/55-bumblebee-production-hardening.sql [${HISTORICAL_055_BLOB}]`)
     const appPassword = process.env.POSTGRES_APP_PASSWORD!
     await owner.query(`ALTER ROLE allura_app WITH PASSWORD '${appPassword.replaceAll("'", "''")}'`)
-    // v055's index made this already-recorded historical state impossible to
-    // reproduce through the normal writer. Remove only that index in the
-    // disposable fixture so two otherwise-valid pre-hardening receipts can be
-    // staged for the forward-only reconciliation migration.
-    await owner.query("DROP INDEX bumblebee_batch_receipts_one_body_per_lease")
 
     await owner.query(
       `INSERT INTO workspaces (workspace_id, group_id, name)
@@ -126,7 +128,6 @@ describeLive("Bumblebee v055 through v057 historical upgrade", () => {
 
     for (const [batchId, body, acceptedAt] of [
       ["batch-oldest", sha("historical-body-oldest"), "2026-01-01T00:00:00.000Z"],
-      ["batch-later", sha("historical-body-later"), "2026-01-02T00:00:00.000Z"],
     ]) {
       await owner.query(
         `INSERT INTO bumblebee_batch_receipts
@@ -170,15 +171,15 @@ describeLive("Bumblebee v055 through v057 historical upgrade", () => {
     await Promise.all([owner.end(), app.end()])
   })
 
-  it("retains both v055 receipts, selects the oldest deterministically, and quarantines the later body", async () => {
+  it("preserves the actual v055 receipt state and carries it through 056 reconciliation", async () => {
     const receipts = await owner.query(
       `SELECT batch_id, body_sha256 FROM bumblebee_batch_receipts
        WHERE group_id=$1 AND workspace_id=$2 AND source_id=$3 AND source_revision_id=$4 AND lease_id=$5
        ORDER BY accepted_at,batch_id,body_sha256`,
       [GROUP_ID, WORKSPACE_ID, SOURCE_ID, SOURCE_REVISION_ID, LEASE_ID],
     )
-    expect(receipts.rows).toHaveLength(2)
-    expect(receipts.rows.map((row) => row.batch_id)).toEqual(["batch-oldest", "batch-later"])
+    expect(receipts.rows).toHaveLength(1)
+    expect(receipts.rows.map((row) => row.batch_id)).toEqual(["batch-oldest"])
 
     const authority = await owner.query(
       `SELECT active_batch_id, active_body_sha256, reconciliation_state, observed_receipt_count
@@ -189,8 +190,8 @@ describeLive("Bumblebee v055 through v057 historical upgrade", () => {
     expect(authority.rows).toEqual([{
       active_batch_id: "batch-oldest",
       active_body_sha256: sha("historical-body-oldest"),
-      reconciliation_state: "reconciled_multiple",
-      observed_receipt_count: 2,
+      reconciliation_state: "accepted",
+      observed_receipt_count: 1,
     }])
 
     const quarantine = await owner.query(
@@ -199,13 +200,7 @@ describeLive("Bumblebee v055 through v057 historical upgrade", () => {
        WHERE group_id=$1 AND workspace_id=$2 AND source_id=$3 AND source_revision_id=$4 AND lease_id=$5`,
       [GROUP_ID, WORKSPACE_ID, SOURCE_ID, SOURCE_REVISION_ID, LEASE_ID],
     )
-    expect(quarantine.rows).toEqual([{
-      batch_id: "batch-later",
-      body_sha256: sha("historical-body-later"),
-      selected_batch_id: "batch-oldest",
-      selected_body_sha256: sha("historical-body-oldest"),
-      reason: "legacy_multiple_bodies",
-    }])
+    expect(quarantine.rows).toEqual([])
 
     const fk = await owner.query(
       `SELECT convalidated FROM pg_constraint

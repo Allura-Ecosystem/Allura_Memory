@@ -74,6 +74,7 @@ context:
 ## Spec Change Log
 
 - 2026-08-31 -- Added migration 057 rather than rewriting frozen 056: the application role needs a narrowly granted SECURITY DEFINER loader to lock and validate lane/snapshot authority before proposal creation. Added live concurrency/grant proof, strict canonical JSON compatibility coverage, exact gateway schema assertions, reproducible SDK pack consumers, and the expanded provenance/Genesis negative matrix from final review.
+- 2026-09-01 -- Added forward migration 058: signed Genesis evidence now carries a canonical `pg:pattern_proposals` target, canonical mutation digest, and UUID JTI. The database consumes each JTI in an append-only, RLS-protected ledger in the same SECURITY DEFINER transaction that inserts the proposal. The isolated historical fixture now pins committed pre-056/057 baseline `dcd2bb25c8b56678451aa7846f2ead1328d3d4b5` and asserts v055 blob `c154a431fd3a7a3968461705725181d1b268ce5c`.
 
 ## Design Notes
 

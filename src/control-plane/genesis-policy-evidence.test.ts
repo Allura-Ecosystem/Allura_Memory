@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  genesisMutationDigest,
   issueGenesisPolicyEvidence,
   resolveGenesisPolicyEvidence,
 } from "./genesis-policy-evidence";
@@ -11,6 +12,8 @@ const evidenceInput = {
   actor: "agent-genesis-unit",
   groupId: "allura-test",
   approvalRef: "6a64b1d2-8293-4c1e-9b6a-510b7b2d4f06",
+  target: "pg:pattern_proposals",
+  mutationDigest: genesisMutationDigest("pg:pattern_proposals", { group_id: "allura-test", pattern_description: "unit", pattern_type: "high_frequency_task", frequency: 12, suggested_skill: "unit", confidence: 0.9, status: "proposed" }),
   projectManifest: {
     name: "Genesis unit manifest",
     sourcesOfTruth: [{ type: "local", id: "genesis-unit-source", name: "Genesis unit source", required: true }],

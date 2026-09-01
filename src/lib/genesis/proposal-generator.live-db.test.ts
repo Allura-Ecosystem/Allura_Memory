@@ -2,7 +2,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 
-import { issueGenesisPolicyEvidence } from "@/control-plane/genesis-policy-evidence";
+import { genesisMutationDigest, issueGenesisPolicyEvidence } from "@/control-plane/genesis-policy-evidence";
 import { closePool } from "@/lib/postgres/connection";
 import { generateProposal, type GenesisProposalContext } from "./proposal-generator";
 
@@ -22,6 +22,8 @@ const evidenceInput = {
   actor: "agent-genesis-live-authority",
   groupId: GROUP,
   approvalRef: APPROVAL,
+  target: "pg:pattern_proposals",
+  mutationDigest: genesisMutationDigest("pg:pattern_proposals", { group_id: GROUP, pattern_description: DESCRIPTION, pattern_type: pattern.pattern_type, frequency: pattern.frequency, suggested_skill: pattern.suggested_skill, confidence: pattern.confidence, status: "proposed" }),
   projectManifest: {
     name: "Genesis live authority",
     sourcesOfTruth: [{ type: "local" as const, id: "genesis-live-source", name: "Genesis live source", required: true }],
@@ -108,6 +110,21 @@ describeLive("Genesis generateProposal → syscall_mutate → live target persis
       confidence: 0.9,
       status: "proposed",
     }]);
+
+    const replay = await generateProposal(GROUP, pattern, hostile);
+    expect(replay.recorded).toBe(false);
+    expect(replay.error).toMatch(/already been consumed|replay/i);
+    expect(await rows()).toHaveLength(1);
+  });
+
+  it("rejects evidence bound to a different proposal mutation without writing", async () => {
+    const token = issueGenesisPolicyEvidence(evidenceInput);
+    const changedPattern = { ...pattern, pattern_description: `${DESCRIPTION} mutation mismatch` };
+    const before = await rows();
+    const result = await generateProposal(GROUP, changedPattern, { policyEvidence: token });
+    expect(result.recorded).toBe(false);
+    expect(result.error).toMatch(/mutation digest|binding/i);
+    expect(await rows()).toEqual(before);
   });
 
   it("tampered evidence causes no row mutation", async () => {
