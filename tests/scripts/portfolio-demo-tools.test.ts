@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 
 import { ensurePortfolioEnvironment } from "../../scripts/portfolio-demo-env"
+import { dashboardEvidenceFailures, isSettledDashboardSnapshot } from "../../scripts/dashboard-evidence-contract"
 
 const temporaryDirectories: string[] = []
 
@@ -43,6 +44,37 @@ describe("portfolio demo tooling", () => {
     expect(capture).toContain("consoleErrors.length === 0")
     expect(capture).toContain("pageErrors.length === 0")
     expect(capture).toContain("evidence.length !== DASHBOARD_ROUTES.length")
+  })
+
+  it("rejects degraded, errored, unavailable, and unsettled browser evidence", () => {
+    for (const snapshot of [
+      '<div data-surface-state="degraded">Data temporarily unavailable.</div>',
+      '<div data-surface-state="error">This surface could not load.</div>',
+      '<div data-source-state="loading">Loading the governed proposal queue…</div>',
+      '<div data-source-state="error"><strong>Queue unavailable</strong></div>',
+      '<section data-shell-state="error">Curator workflow access is unavailable because audit recording failed.</section>',
+      '<section data-shell-state="partial">Curator workflow data is partial.</section>',
+      '<section data-shell-state="degraded">Curator workflow data is degraded.</section>',
+    ]) {
+      expect(dashboardEvidenceFailures(snapshot)).not.toEqual([])
+      expect(isSettledDashboardSnapshot(snapshot)).toBe(false)
+    }
+  })
+
+  it("permits truthful empty data and the documented optional module-disabled state", () => {
+    expect(dashboardEvidenceFailures('<div data-surface-state="empty">No governed records yet.</div>')).toEqual([])
+    expect(dashboardEvidenceFailures('<section data-shell-state="degraded">Bumblebee is currently unavailable.</section>')).toEqual([])
+  })
+
+  it("keeps doctor proof app-role scoped, nonempty, cross-scope, and append-only", () => {
+    const doctor = readFileSync("scripts/dashboard-doctor.ts", "utf8")
+    expect(doctor).toContain("ALLURA_DEV_AUTH_GROUP_ID")
+    expect(doctor).toContain("ALLURA_DEV_AUTH_WORKSPACE_ID")
+    expect(doctor).toContain("dashboard_doctor_rls_probe")
+    expect(doctor).toContain("dashboard_doctor_audit")
+    expect(doctor).toContain("marker remained visible under a different RLS scope")
+    expect(doctor).toContain("durable app-role audit event")
+    expect(doctor).not.toMatch(/DELETE\s+FROM\s+events/i)
   })
 
   it("keeps the checked-in example non-secret and enables the explicit local demo auth mode", () => {

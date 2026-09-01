@@ -94,6 +94,8 @@ describe("dashboard page rendering", () => {
 
   vi.mock("@/lib/dashboard/page-guard", () => ({ requireDashboardScope }))
   vi.mock("@/lib/dashboard/read-service", () => readService)
+  vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal: vi.fn() }))
+  vi.mock("@/lib/curator/module-registry", () => ({ issueCuratorModules: vi.fn() }))
 
   afterEach(() => {
     vi.clearAllMocks()
@@ -106,6 +108,10 @@ describe("dashboard page rendering", () => {
     readService.getRecentMemories.mockResolvedValue({ state: "live", data: [], fetchedAt: "2026-09-01T00:00:00.000Z" })
     readService.getTeams.mockResolvedValue({ state: "live", data: [], fetchedAt: "2026-09-01T00:00:00.000Z" })
     readService.getGraphStats.mockResolvedValue({ state: "live", data: { memories: 0, superseded: 0, structuralNodes: 0, structuralEdges: 0 }, fetchedAt: "2026-09-01T00:00:00.000Z" })
+    const { getDashboardPrincipal } = await import("@/lib/auth/dashboard-principal")
+    const { issueCuratorModules } = await import("@/lib/curator/module-registry")
+    vi.mocked(getDashboardPrincipal).mockResolvedValue(user)
+    vi.mocked(issueCuratorModules).mockResolvedValue({ state: "degraded", modules: [{ id: "bumblebee", state: "unavailable", title: "Bumblebee" }], message: "Bumblebee is currently unavailable." })
 
     const pages = {
       "/dashboard": (await import("@/app/dashboard/page")).default,
@@ -114,12 +120,18 @@ describe("dashboard page rendering", () => {
       "/dashboard/search": (await import("@/app/dashboard/search/page")).default,
       "/dashboard/teams": (await import("@/app/dashboard/teams/page")).default,
       "/dashboard/graph": (await import("@/app/dashboard/graph/page")).default,
+      "/dashboard/curator": (await import("@/app/dashboard/curator/page")).default,
     }
 
     for (const [route, page] of Object.entries(pages)) {
       const markup = renderToStaticMarkup(await page())
       expect(markup, `${route} should render the shared navigation shell`).toContain('aria-label="Dashboard navigation"')
-      expect(markup, `${route} should render a truthful surface state`).toMatch(/data-surface-state="(live|empty|degraded|error)"/)
+      if (route === "/dashboard/curator") {
+        expect(markup).toContain('data-shell-state="degraded"')
+        expect(markup).toContain("Bumblebee is currently unavailable.")
+      } else {
+        expect(markup, `${route} should render a truthful surface state`).toMatch(/data-surface-state="(live|empty|degraded|error)"/)
+      }
     }
   })
 

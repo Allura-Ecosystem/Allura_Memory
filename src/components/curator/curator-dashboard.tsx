@@ -5,14 +5,11 @@ import {
   Check,
   FileCheck2,
   FileSearch,
-  LayoutDashboard,
   ReceiptText,
   RefreshCw,
-  Scale,
   ShieldCheck,
   X,
 } from "lucide-react"
-import Image from "next/image"
 import { useEffect, useState } from "react"
 
 import type { AuthUser } from "@/lib/auth/types"
@@ -155,26 +152,6 @@ export function CuratorDashboard({ user, issue }: { user: AuthUser; issue: Curat
 
   return (
     <div className="curator-dashboard">
-      <aside className="curator-sidebar" aria-label="Dashboard navigation">
-        <div className="curator-brand">
-          <Image src="/brand/allura-lettermark-al-figma.png" alt="" width={40} height={40} priority />
-          <div><strong>Allura Memory</strong><span>Enterprise dashboard</span></div>
-        </div>
-        <nav aria-label="Primary navigation">
-          <p>Work</p>
-          <span className="curator-nav-item curator-nav-item-active" aria-current="page"><LayoutDashboard aria-hidden="true" /> Command Center</span>
-          <span className="curator-nav-item" aria-disabled="true"><Scale aria-hidden="true" /> Governance</span>
-          <span className="curator-nav-item" aria-disabled="true"><FileCheck2 aria-hidden="true" /> Evidence</span>
-          <span className="curator-nav-item" aria-disabled="true"><ReceiptText aria-hidden="true" /> Receipts</span>
-          <p>Modules</p>
-          <span className="curator-nav-item"><Boxes aria-hidden="true" /> Module Registry</span>
-        </nav>
-        <div className="curator-principal">
-          <span aria-hidden="true">{(user.name ?? user.email ?? user.id).slice(0, 2).toUpperCase()}</span>
-          <div><strong>{user.name ?? user.id}</strong><small>{user.role}</small></div>
-        </div>
-      </aside>
-
       <div className="curator-workspace">
         <header className="curator-header">
           <div><span>Organization</span><strong>{user.groupId}</strong></div>

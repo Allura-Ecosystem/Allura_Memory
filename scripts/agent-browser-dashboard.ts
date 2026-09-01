@@ -12,6 +12,8 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { config } from "dotenv"
 
+import { dashboardEvidenceFailures, isSettledDashboardSnapshot } from "./dashboard-evidence-contract"
+
 const DASHBOARD_ROUTES = [
   { route: "/dashboard", name: "overview" },
   { route: "/dashboard/mission-control", name: "mission-control" },
@@ -20,10 +22,6 @@ const DASHBOARD_ROUTES = [
   { route: "/dashboard/teams", name: "teams" },
   { route: "/dashboard/graph", name: "graph" },
   { route: "/dashboard/curator", name: "curator" },
-] as const
-
-const BUSINESS_FAILURE_MARKERS = [
-  "Curator workflow access is unavailable because audit recording failed.",
 ] as const
 
 type RouteEvidence = {
@@ -73,7 +71,7 @@ async function waitForSettledSnapshot(session: string): Promise<string> {
   let snapshot = ""
   for (let attempt = 0; attempt < 20; attempt += 1) {
     snapshot = runAgentBrowser(session, ["snapshot"])
-    if (!snapshot.includes("Loading the governed proposal queue…")) return snapshot
+    if (isSettledDashboardSnapshot(snapshot)) return snapshot
     await Bun.sleep(250)
   }
   throw new Error("dashboard route did not settle before evidence capture")
@@ -120,9 +118,7 @@ async function main(): Promise<void> {
         snapshot = snapshotName
         consoleErrors = errorLines(runAgentBrowser(session, ["console"]), "console")
         pageErrors = errorLines(runAgentBrowser(session, ["errors"]), "page")
-        for (const marker of BUSINESS_FAILURE_MARKERS) {
-          if (snapshotText.includes(marker)) pageErrors.push(`business state: ${marker}`)
-        }
+        pageErrors.push(...dashboardEvidenceFailures(snapshotText))
 
         const redirected = finalUrl !== target
         const clean = status === 200 && !redirected && consoleErrors.length === 0 && pageErrors.length === 0

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { CuratorDashboard } from "@/components/curator/curator-dashboard";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getDashboardPrincipal } from "@/lib/auth/dashboard-principal";
 import { AUTH_LOGIN_PATH } from "@/lib/auth/redirect-target";
 import type { AuthUser } from "@/lib/auth/types";
@@ -9,17 +10,20 @@ import { issueCuratorModules } from "@/lib/curator/module-registry";
 
 export function CuratorHandoffContent({ user, issue }: { user: AuthUser; issue?: CuratorModuleIssue }) {
   if (issue) {
-    return <CuratorDashboard user={user} issue={issue} />;
+    return (
+      <DashboardShell user={user} title="Curator">
+        <CuratorDashboard user={user} issue={issue} />
+      </DashboardShell>
+    );
   }
 
   return (
-    <main>
-      <h1>Curator console</h1>
+    <DashboardShell user={user} title="Curator">
       <p data-testid="authenticated-identity">Signed in as {user.id}</p>
       <p data-testid="authenticated-scope">
         Workspace {user.workspaceId} | Tenant {user.groupId} | Role {user.role}
       </p>
-    </main>
+    </DashboardShell>
   );
 }
 
