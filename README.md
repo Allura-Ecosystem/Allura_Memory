@@ -12,6 +12,7 @@
 <p align="center">
   <a href="#why-allura-memory">Why Allura</a> ·
   <a href="#product-walkthrough">Product walkthrough</a> ·
+  <a href="#product-explainers">Product explainers</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#getting-started">Getting started</a> ·
   <a href="#mcp-api">MCP API</a> ·
@@ -32,6 +33,16 @@ The deployed [Epic 25 interactive demo](https://allura-governed-demo.vercel.app)
 - **Command Center** — inspect a review packet before a qualified person acts.
 - **Framework & Harness** — show fail-closed boot, database-enforced boundaries, deterministic replay, and the measured evaluation surface.
 - **Governance** — show the separation between context, policy, a human decision, and a recorded receipt.
+
+## Product explainers
+
+Five plain-language visuals explain the evidence model behind the walkthrough. They are conceptual — they show the patterns the repository implements, not a live system.
+
+|  |  |
+| --- | --- |
+| <a href="docs/portfolio/allura-agentic-framework-harness/assets/explainers/explainer-01-every-action-leaves-proof.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/explainers/explainer-01-every-action-leaves-proof.png" alt="Source, review, and result stay connected to an immutable evidence record." width="420" /></a><br/><sub><strong>Every action leaves proof</strong></sub> | <a href="docs/portfolio/allura-agentic-framework-harness/assets/explainers/explainer-02-people-review-important-changes.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/explainers/explainer-02-people-review-important-changes.png" alt="A proposal passes a policy check, then a person reviews it before it is approved or queued." width="420" /></a><br/><sub><strong>People review important changes</strong></sub> |
+| <a href="docs/portfolio/allura-agentic-framework-harness/assets/explainers/explainer-03-memory-keeps-its-history.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/explainers/explainer-03-memory-keeps-its-history.png" alt="New versions supersede old ones while append-only evidence and traceable change stay in place." width="420" /></a><br/><sub><strong>Memory keeps its history</strong></sub> | <a href="docs/portfolio/allura-agentic-framework-harness/assets/explainers/explainer-04-test-before-release.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/explainers/explainer-04-test-before-release.png" alt="Scenario, run, evidence, and review loop into a confident release." width="420" /></a><br/><sub><strong>Test before release</strong></sub> |
+| <a href="docs/portfolio/allura-agentic-framework-harness/assets/explainers/explainer-05-an-answer-can-show-its-work.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/explainers/explainer-05-an-answer-can-show-its-work.png" alt="An answer stays attached to its source, approved memory, and decision record." width="420" /></a><br/><sub><strong>An answer can show its work</strong></sub> |  |
 
 ## Why Allura Memory
 
