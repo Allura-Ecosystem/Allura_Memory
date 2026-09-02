@@ -29,7 +29,7 @@
 ---
 
 <p align="center">
-  <a href="https://allura-governed-demo.vercel.app"><img src="docs/portfolio/allura-agentic-framework-harness/assets/dashboard-command-center.png" alt="Allura's deployed Command Center specimen: a review queue, evidence record, explicit human review gate, and receipt trail." width="860" /></a>
+  <a href="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/framework-and-harness.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/framework-and-harness.png" alt="Allura Agentic AI Framework and Harness: governed memory, controlled workflows, MCP tools, and evidence plus evaluation on PostgreSQL." width="860" /></a>
 </p>
 
 ## Product walkthrough
@@ -57,7 +57,7 @@ Allura Memory is built around those questions. It separates **episodic evidence*
 > **Logs are not knowledge. A trace becomes canonical only through an explicit promotion path.**
 
 <p align="center">
-  <a href="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/01-every-action-leaves-proof.png"><img src="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/01-every-action-leaves-proof.png" alt="Source, review, and result stay connected to a durable evidence record." width="760" /></a>
+  <a href="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/every-action-leaves-proof.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/every-action-leaves-proof.png" alt="Every action leaves proof: source, review, and result connect to an immutable evidence record." width="760" /></a>
 </p>
 
 ### At a glance
@@ -95,13 +95,13 @@ Allura uses one PostgreSQL engine with two governed logical layers.
 8. Updates create a new version that supersedes the old one.
 
 <p align="center">
-  <a href="https://allura-governed-demo.vercel.app"><img src="docs/portfolio/allura-agentic-framework-harness/assets/dashboard-governance.png" alt="The deployed Governance specimen keeps scope, evidence, policy, and a human decision visibly separate." width="820" /></a>
+  <a href="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/agent-runtime-request-flow.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/agent-runtime-request-flow.png" alt="One request through the Allura agent runtime: intent, workflow, tools plus memory, and an evidence-backed response under policy checkpoints." width="820" /></a>
 </p>
 
 Rejected or low-confidence content can remain useful evidence without becoming canonical knowledge.
 
 <p align="center">
-  <a href="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/04-memory-keeps-its-history.png"><img src="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/04-memory-keeps-its-history.png" alt="New versions supersede old ones while append-only evidence and traceable change stay in place." width="760" /></a>
+  <a href="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/memory-keeps-its-history.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/memory-keeps-its-history.png" alt="Memory keeps its history: new versions supersede old ones without erasing evidence." width="760" /></a>
 </p>
 
 ## Architecture
@@ -131,6 +131,10 @@ PostgreSQL 16 + pgvector
     canonical materialization
 ```
 
+<p align="center">
+  <a href="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/persistent-agent-memory.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/persistent-agent-memory.png" alt="Persistent agent memory architecture: one PostgreSQL engine with governed logical layers for episodic evidence and canonical graph tables." width="820" /></a>
+</p>
+
 ### Architectural boundaries
 
 - **All reads and writes are scoped.** A valid `group_id` is required; production tenants follow the `allura-*` namespace.
@@ -142,11 +146,11 @@ PostgreSQL 16 + pgvector
 - **Third-party substrate is attributed.** The retrieval accelerator (RuVector, MIT) is credited and scoped in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); the governed memory layer is original. See [Attribution](#attribution).
 
 <p align="center">
-  <a href="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/02-access-has-boundaries.png"><img src="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/02-access-has-boundaries.png" alt="Tenant-isolated workspaces are separated by a policy boundary." width="760" /></a>
+  <a href="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/access-has-boundaries.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/access-has-boundaries.png" alt="Access has boundaries: each tenant is isolated behind a policy boundary." width="760" /></a>
 </p>
 
 <p align="center">
-  <a href="https://allura-governed-demo.vercel.app"><img src="docs/portfolio/allura-agentic-framework-harness/assets/dashboard-framework-harness.png" alt="The deployed Framework and Harness specimen presents fail-closed boot, database-enforced policy, deterministic replay, and evaluation lanes." width="820" /></a>
+  <a href="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/ad50-canonical-graph-migration.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/ad50-canonical-graph-migration.png" alt="AD-50 canonical graph migration: fragmented sources unify on one PostgreSQL engine with episodic evidence, canonical graph tables, and governed lineage." width="820" /></a>
 </p>
 
 ### RuVector boundary
@@ -285,7 +289,7 @@ const results = await memory_search({
 Fresh writes are episodic. They may be searchable for operational workflows, but they are not approved truth until they complete the curator path.
 
 <p align="center">
-  <a href="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/06-an-answer-can-show-its-work.png"><img src="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/06-an-answer-can-show-its-work.png" alt="An answer stays attached to its source, approved memory, and decision record." width="760" /></a>
+  <a href="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/an-answer-can-show-its-work.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/an-answer-can-show-its-work.png" alt="An answer can show its work: source, approved memory, and decision record stay attached to the response." width="760" /></a>
 </p>
 
 ## MCP API
@@ -344,7 +348,11 @@ See [`.github/API-REFERENCE.md`](.github/API-REFERENCE.md) and [`docs/reference/
 The documented governance posture is `PROMOTION_MODE=soc2`, which routes eligible candidates through review. `memory_add` queues eligible records rather than treating `PROMOTION_MODE=auto` as score-based truth. Separately, the admin-only `governance_curator_pass(mode="auto")` path can batch-approve and materialize threshold-passing proposals; the HTTP gateway identifies that operation as a HITL bypass. Human approval remains the accountable boundary in the public governance model, while this automated curator path remains an explicit policy-resolution item.
 
 <p align="center">
-  <a href="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/03-people-review-important-changes.png"><img src="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/03-people-review-important-changes.png" alt="A proposal passes a policy check, then a person reviews it before it is approved or queued." width="760" /></a>
+  <a href="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/enterprise-governance-safety.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/enterprise-governance-safety.png" alt="Enterprise governance and safety architecture: policy hooks, human approval, and append-only evidence wrap the agent workflow." width="820" /></a>
+</p>
+
+<p align="center">
+  <a href="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/people-review-important-changes.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/people-review-important-changes.png" alt="People review important changes: a proposal passes a policy check, then a person reviews accuracy and impact before approval." width="760" /></a>
 </p>
 
 ## Operations
@@ -383,7 +391,7 @@ bun run brain:status
 - Required pull-request validation produces a commit-bound evidence manifest; see the [capability matrix](docs/portfolio/capability-matrix.md) and [evidence index](docs/portfolio/evidence-index.md).
 
 <p align="center">
-  <a href="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/05-test-before-release.png"><img src="docs/portfolio/allura-agentic-framework-harness/evidence-infographics/png/05-test-before-release.png" alt="Scenario, run, evidence, and review loop into a confident release." width="760" /></a>
+  <a href="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/test-before-release.png"><img src="docs/portfolio/allura-agentic-framework-harness/assets/product-visuals/test-before-release.png" alt="Test before release: scenario, run, evidence, and review repeat until the change ships with proof." width="760" /></a>
 </p>
 
 ## Repository map
