@@ -1,5 +1,11 @@
 # Framework Mapping — Bumblebee as an Allura Agent-Platform Instance
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 > Bumblebee is one branch of the Allura ecosystem, not a standalone product. This doc maps its design to the platform's reusable framework, harness, memory, and governance primitives — the same primitives that other agent integrations compose.
 
 ## Platform Primitives Overview

@@ -1,5 +1,11 @@
 # Plugin Documentation
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 > Documentation for Allura's plugin system — how plugins work, how to use them, and how to write your own.
 
 ## What Are Allura Plugins?
