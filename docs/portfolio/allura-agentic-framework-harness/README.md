@@ -64,7 +64,7 @@ Every figure in the demo and deck resolves to a committed artifact:
 
 - Framework &amp; harness architecture — [`FRAMEWORK.md`](../../../FRAMEWORK.md)
 - Captured demo runs — [`DEMO-EVIDENCE-PACK.md`](../DEMO-EVIDENCE-PACK.md)
-- Raw logs — [`artifacts/portfolio-demo/`](../../../artifacts/portfolio-demo/)
+- Reproduction commands and generated-output locations — [`DEMO-EVIDENCE-PACK.md`](../DEMO-EVIDENCE-PACK.md)
 - Case study — [`principal-engineer-case-study.md`](../principal-engineer-case-study.md)
 
 ## Presentation boundary

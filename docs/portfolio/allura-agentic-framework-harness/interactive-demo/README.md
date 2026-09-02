@@ -31,7 +31,7 @@ A full dashboard shell with a persistent nav across nine surfaces:
 
 - Conforms to the Epic 25 brand-locked authority: paper canvas, IBM Plex Sans + IBM Plex Mono, blue for structure / orange for action, canonical Allura wordmark.
 - **Self-contained**: CSS inlined, wordmark and lettermark embedded as `data:` URIs, tour engine is ~120 lines of vanilla JS. No CDN, no runtime fetch.
-- Every figure resolves to a committed artifact — see [`DEMO-EVIDENCE-PACK.md`](../../DEMO-EVIDENCE-PACK.md) and [`artifacts/portfolio-demo/`](../../../../artifacts/portfolio-demo/).
+- Every figure resolves to committed evidence or a documented reproducible run — see [`DEMO-EVIDENCE-PACK.md`](../../DEMO-EVIDENCE-PACK.md).
 
 ## Deploy
 
