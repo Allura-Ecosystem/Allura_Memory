@@ -52,7 +52,7 @@ bun run scripts/harness.ts examples/regulated-document-quality/scenarios/recover
 ## Human Authority
 
 This workflow is a **reference implementation**, not a customer deployment
-or a claim of bank approval. Every promotion requires an explicit human
+or a claim of institutional approval. Every promotion requires an explicit human
 approval breakpoint; no generated output is presented as an autonomous
 decision.
 

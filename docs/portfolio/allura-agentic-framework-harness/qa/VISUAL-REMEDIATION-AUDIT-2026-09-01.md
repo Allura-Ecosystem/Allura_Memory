@@ -32,10 +32,10 @@ The six deck-embedded SVG/PNG pairs were rebuilt from `build-assets.mjs`, raster
 ## Reproducible checks
 
 ```bash
-node docs/portfolio/allura-bofa-principal-engineer/build-assets.mjs
-node docs/portfolio/allura-bofa-principal-engineer/qa/validate-infographics.mjs
-node docs/portfolio/allura-bofa-principal-engineer/build-deck.mjs
-python3 /home/ronin704/.codex/plugins/cache/openai-primary-runtime/presentations/26.826.12353/skills/presentations/container_tools/slides_test.py docs/portfolio/allura-bofa-principal-engineer/deck/Allura-Agentic-AI-Framework-Harness-Portfolio.pptx
+node docs/portfolio/allura-agentic-framework-harness/build-assets.mjs
+node docs/portfolio/allura-agentic-framework-harness/qa/validate-infographics.mjs
+node docs/portfolio/allura-agentic-framework-harness/build-deck.mjs
+python3 /home/ronin704/.codex/plugins/cache/openai-primary-runtime/presentations/26.826.12353/skills/presentations/container_tools/slides_test.py docs/portfolio/allura-agentic-framework-harness/deck/Allura-Agentic-AI-Framework-Harness-Portfolio.pptx
 ```
 
 The structural check validates all six SVG/PNG pairs, their exact 902/558 layout anchors, accessibility metadata, official-wordmark embedding, legend/source band, approved palette, and raster dimensions. The slide test confirms the ten-slide PowerPoint has no detected canvas overflow. The visual pass remains a human review step and was completed against the current renders.

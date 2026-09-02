@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 
-const root = path.resolve('docs/portfolio/allura-bofa-principal-engineer');
+const root = path.resolve('docs/portfolio/allura-agentic-framework-harness');
 const names = [
   '01-framework-harness-architecture',
   '02-deterministic-harness',

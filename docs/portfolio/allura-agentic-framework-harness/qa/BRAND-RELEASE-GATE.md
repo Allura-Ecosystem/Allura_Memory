@@ -13,7 +13,7 @@ This is a release review of the rebuilt package, performed after SVG/PNG renderi
 | Evidence clarity | Pass | Readable source strip per infographic, speaker-note sources per slide, source map and role mapping included. |
 | Accessibility | Pass | SVG `title` and `desc`, image alt text and an `ALT-TEXT.md` register are included. |
 | Presentation QA | Pass | Ten slide PNG render check completed; `slides_test.py` reports no overflow. |
-| Claim boundaries | Pass | The deck explicitly avoids claims of Bank of America affiliation, deployment, sponsorship or unverified performance. |
+| Claim boundaries | Pass | The deck explicitly avoids claims of client affiliation, deployment, sponsorship or unverified performance. |
 
 ## Review notes
 

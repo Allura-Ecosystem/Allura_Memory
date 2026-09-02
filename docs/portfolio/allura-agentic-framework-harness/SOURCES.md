@@ -9,7 +9,7 @@
 
 ## Role context
 
-- [Bank of America — Principal Engineer, Agentic AI Framework and Harness](https://careers.bankofamerica.com/en-us/job-detail/26020197/principal-engineer-agentic-ai-framework-and-harness-charlotte-north-carolina-united-states), accessed 2026-09-01. The role context informs the evidence mapping; no affiliation is implied.
+- Target role — Principal Engineer, Agentic AI Framework and Harness (public posting; reference withheld), accessed 2026-09-01. The role context informs the evidence mapping; no affiliation is implied.
 
 ## Claim discipline
 
