@@ -135,6 +135,7 @@ PostgreSQL 16 + pgvector
 - **Promotion is governed.** `memory_promote` requests review; it does not bypass the curator.
 - **Storage is behind an interface.** Agent-facing clients use MCP/API operations instead of direct database access.
 - **Failure is visible.** Health and retrieval responses expose degraded state and warnings.
+- **Third-party substrate is attributed.** The retrieval accelerator (RuVector, MIT) is credited and scoped in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); the governed memory layer is original. See [Attribution](#attribution).
 
 <p align="center">
   <a href="https://allura-governed-demo.vercel.app"><img src="docs/portfolio/allura-agentic-framework-harness/assets/dashboard-framework-harness.png" alt="The deployed Framework and Harness specimen presents fail-closed boot, database-enforced policy, deterministic replay, and evaluation lanes." width="820" /></a>
@@ -152,6 +153,10 @@ RuVector is the semantic execution layer; Allura is the governance layer.
 | Supersession primitives | Policy and lifecycle meaning |
 
 The `GRAPH_BACKEND=ruvector` adapter is a PostgreSQL-table implementation. It is distinct from the optional native RuVector extension.
+
+### Attribution
+
+Allura is built with and inspired by [RuVector](https://github.com/ruvnet/RuVector) (MIT, © 2025 rUv). RuVector's vector and graph-memory substrate accelerates retrieval; Allura's original contribution is the governed layer around it — tenant scoping (`group_id`), human-review-gated promotion, `SUPERSEDES` lineage, and the audit trail. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the full notice, license text, and what each project owns.
 
 ## Getting started
 
