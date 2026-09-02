@@ -2,13 +2,13 @@
   "schema": "openai.presentation.layout/v4",
   "unit": "px",
   "slide": {
-    "aid": "sl/1yq1w6",
-    "id": "1yq1w6",
+    "aid": "sl/4l8oad",
+    "id": "4l8oad",
     "slide": 1,
-    "layoutId": "08a68092-885d-422d-a984-dafb19c5c090",
+    "layoutId": "7f3a531d-277c-4a4f-a4d8-d67f653b358c",
     "layoutName": "Title Slide",
     "layoutType": "title",
-    "masterLayoutId": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+    "masterLayoutId": "3916030c-27b5-4a7e-a5b1-3178025ab654",
     "masterLayoutName": "Master",
     "backgroundColor": "#F7F3EE",
     "frame": {
@@ -45,15 +45,15 @@
   "inheritedLayers": [
     {
       "scope": "layout",
-      "id": "08a68092-885d-422d-a984-dafb19c5c090",
+      "id": "7f3a531d-277c-4a4f-a4d8-d67f653b358c",
       "name": "Title Slide",
       "type": "title",
-      "parentLayoutId": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+      "parentLayoutId": "3916030c-27b5-4a7e-a5b1-3178025ab654",
       "elements": []
     },
     {
       "scope": "master",
-      "id": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+      "id": "3916030c-27b5-4a7e-a5b1-3178025ab654",
       "name": "Master",
       "type": "master",
       "elements": []
@@ -64,7 +64,7 @@
       "order": 1,
       "kind": "image",
       "scope": "slide",
-      "aid": "im/k3u90j2d",
+      "aid": "im/nml0bahc",
       "id": "1",
       "bbox": [
         54,
@@ -76,7 +76,7 @@
       "contentType": "image/png",
       "imageFit": "contain",
       "asset": {
-        "assetId": "93eb3cc2-04af-41c7-9f5b-627fe5bbdcb3",
+        "assetId": "7af87a3f-f788-4d12-99de-c70b4a0a3c17",
         "contentType": "image/png",
         "byteLength": 109062
       }
@@ -85,7 +85,7 @@
       "order": 2,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/u1wjqtc7",
+      "aid": "sh/l0b6tkby",
       "id": "2",
       "name": "eyebrow",
       "bbox": [
@@ -149,7 +149,7 @@
       "order": 3,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/v25kjyts",
+      "aid": "sh/kzi50zad",
       "id": "3",
       "name": "slide-number",
       "bbox": [
@@ -213,7 +213,7 @@
       "order": 4,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/47y1w3u9",
+      "aid": "sh/72tovut4",
       "id": "4",
       "name": "top-rule",
       "bbox": [
@@ -230,7 +230,7 @@
       "order": 5,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/5872p8bu",
+      "aid": "sh/m1kn2psj",
       "id": "5",
       "name": "title-panel",
       "bbox": [
@@ -248,7 +248,7 @@
       "order": 6,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/i5gjutc3",
+      "aid": "sh/9ob6x4bu",
       "id": "6",
       "name": "kicker",
       "bbox": [
@@ -312,7 +312,7 @@
       "order": 7,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/36pknyto",
+      "aid": "sh/8n254za9",
       "id": "7",
       "name": "title",
       "bbox": [
@@ -401,7 +401,7 @@
       "order": 8,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/kbu1kzu5",
+      "aid": "sh/vqtozet0",
       "id": "8",
       "name": "subtitle",
       "bbox": [
@@ -466,7 +466,7 @@
       "order": 9,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/lc32d4ba",
+      "aid": "sh/upkn69sf",
       "id": "9",
       "name": "blue-module",
       "bbox": [
@@ -484,7 +484,7 @@
       "order": 10,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/54zidkb6",
+      "aid": "sh/wvud0zah",
       "id": "10",
       "name": "orange-module",
       "bbox": [
@@ -502,7 +502,7 @@
       "order": 11,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/4jqh4ful",
+      "aid": "sh/xw3e94bm",
       "id": "11",
       "name": "green-module",
       "bbox": [
@@ -520,7 +520,7 @@
       "order": 12,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/jih0bat0",
+      "aid": "sh/atsvypsb",
       "id": "12",
       "name": "role",
       "bbox": [
@@ -584,7 +584,7 @@
       "order": 13,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/ih8z25cv",
+      "aid": "sh/bu1w7utw",
       "id": "13",
       "name": "disclaimer",
       "bbox": [

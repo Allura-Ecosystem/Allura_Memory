@@ -3,101 +3,46 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 const root = path.resolve('docs/portfolio/allura-bofa-principal-engineer');
-const assets = path.join(root, 'assets');
 const svgDir = path.join(root, 'infographics/svg');
 const pngDir = path.join(root, 'infographics/png');
-const brandMark = '/home/ronin704/.codex/skills/allura-brand/assets/allura-wordmark.png';
+const assets = path.join(root, 'assets');
+const wordmarkSource = '/home/ronin704/.codex/skills/allura-brand/assets/allura-wordmark.png';
+const W = 1600, H = 900;
 const C = { cream:'#F7F3EE', ink:'#0F1720', blue:'#0D47A1', orange:'#FF4D1F', green:'#148A4B', rule:'#D6D1CA', muted:'#59616A', paleBlue:'#E7EEF9', paleOrange:'#FCE9E2', paleGreen:'#E5F1E9' };
-await Promise.all([assets, svgDir, pngDir].map(d => fs.mkdir(d, { recursive: true })));
-const wordmarkPath = path.join(assets, 'allura-wordmark.png');
-const croppedPath = path.join(assets, 'allura-wordmark-cropped.png');
-await fs.copyFile(brandMark, wordmarkPath);
-await sharp(brandMark).trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toFile(croppedPath);
-const mark = (await fs.readFile(croppedPath)).toString('base64');
+await Promise.all([assets, svgDir, pngDir].map((dir) => fs.mkdir(dir, { recursive:true })));
+const wordmark = path.join(assets, 'allura-wordmark.png');
+const wordmarkCrop = path.join(assets, 'allura-wordmark-cropped.png');
+await fs.copyFile(wordmarkSource, wordmark);
+await sharp(wordmarkSource).trim({ background:{r:0,g:0,b:0,alpha:0} }).png().toFile(wordmarkCrop);
+const mark64 = (await fs.readFile(wordmarkCrop)).toString('base64');
+const headerMark = await sharp(wordmarkCrop).resize({width:154,height:58,fit:'inside'}).png().toBuffer();
 
-const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const text = (x,y,content,size=24,fill=C.ink,weight=400,anchor='start',family='Noto Sans') => `<text x="${x}" y="${y}" font-family="${family}" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}">${esc(content)}</text>`;
-const line = (x1,y1,x2,y2,color=C.ink,width=3,dash='') => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${width}" ${dash?`stroke-dasharray="${dash}"`:''}/>`;
-const box = (x,y,w,h,fill=C.cream,stroke=C.ink,r=0) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
-const dot = (x,y,color) => `<circle cx="${x}" cy="${y}" r="8" fill="${color}"/>`;
-const arrow = (x1,y1,x2,y2,color=C.ink) => `${line(x1,y1,x2,y2,color,4)}<path d="M ${x2-14} ${y2-9} L ${x2} ${y2} L ${x2-14} ${y2+9}" fill="none" stroke="${color}" stroke-width="4"/>`;
-const card = (x,y,w,h,kicker,heading,body,color) => `${box(x,y,w,h,C.cream,C.ink,18)}<rect x="${x}" y="${y}" width="${w}" height="11" rx="5" fill="${color}"/><text x="${x+26}" y="${y+52}" font-family="IBM Plex Mono" font-size="15" font-weight="700" fill="${color}">${esc(kicker.toUpperCase())}</text>${text(x+26,y+91,heading,27,C.ink,700)}${text(x+26,y+127,body,17,C.muted,400)}`;
-const header = (number,title,subtitle) => `<image href="data:image/png;base64,${mark}" x="70" y="48" width="145" height="58" preserveAspectRatio="xMinYMid meet"/><text x="245" y="78" font-family="IBM Plex Mono" font-size="16" font-weight="700" fill="${C.blue}">ALLURA MEMORY / PORTFOLIO EVIDENCE</text>${text(70,165,number,18,C.blue,700,'start','IBM Plex Mono')}${text(70,225,title,47,C.ink,700)}${text(70,264,subtitle,20,C.muted,400)}${line(70,292,1530,292,C.rule,2)}`;
-const footer = (source) => `${line(70,800,1530,800,C.rule,2)}${text(70,838,'SOURCE',14,C.blue,700,'start','IBM Plex Mono')}${text(150,838,source,14,C.muted,400,'start','IBM Plex Mono')}${text(1530,838,'Memory is the foundation. Intelligence is the outcome.',16,C.ink,700,'end')}`;
-const legend = () => `<g transform="translate(760 720)">${dot(0,0,C.blue)}${text(18,6,'Memory / intelligence',15,C.ink,600)}${dot(210,0,C.orange)}${text(228,6,'Review / control',15,C.ink,600)}${dot(390,0,C.green)}${text(408,6,'Approved / durable',15,C.ink,600)}</g>`;
-const wrap = (title,desc,body,source) => `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc"><title id="title">${esc(title)}</title><desc id="desc">${esc(desc)}</desc><defs><marker id="arrowInk" markerWidth="12" markerHeight="12" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="${C.ink}"/></marker></defs><rect width="1600" height="900" fill="${C.cream}"/>${body}${legend()}${footer(source)}</svg>`;
+const esc=(v)=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const t=(x,y,v,size=24,fill=C.ink,weight=400,anchor='start')=>`<text x="${x}" y="${y}" font-family="Aeonik, Noto Sans, Arial, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}">${esc(v)}</text>`;
+const mono=(x,y,v,fill=C.blue,size=14,anchor='start')=>`<text x="${x}" y="${y}" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="${size}" font-weight="700" fill="${fill}" text-anchor="${anchor}">${esc(v)}</text>`;
+const rect=(x,y,w,h,fill='none',stroke=C.rule,r=18)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1"/>`;
+const line=(x1,y1,x2,y2,stroke=C.ink,width=3,dash='')=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" ${dash?`stroke-dasharray="${dash}"`:''}/>`;
+const arrow=(x1,y1,x2,y2,stroke=C.ink)=>`${line(x1,y1,x2,y2,stroke,3)}<path d="M ${x2-12} ${y2-8} L ${x2} ${y2} L ${x2-12} ${y2+8}" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+const card=(x,y,w,h,accent,kicker,title,detail,fill=C.cream)=>`${rect(x,y,w,h,fill,C.rule,18)}<rect x="${x}" y="${y}" width="${w}" height="9" rx="4.5" fill="${accent}"/>${mono(x+34,y+43,kicker,accent,13)}${t(x+34,y+83,title,25,C.ink,700)}${t(x+34,y+113,detail,16,C.muted,400)}`;
+const node=(cx,cy,fill,kicker,title,detail,ink=C.ink,r=78)=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}"/>${mono(cx,cy-22,kicker,ink,12,'middle')}${t(cx,cy+9,title,21,ink,700,'middle')}${t(cx,cy+35,detail,14,ink,400,'middle')}`;
+const header=(number,title,sub)=>`<image href="data:image/png;base64,${mark64}" x="70" y="40" width="154" height="58" preserveAspectRatio="xMinYMid meet"/>${mono(250,72,'ALLURA MEMORY / PORTFOLIO EVIDENCE',C.blue,14)}${mono(1530,72,number,C.blue,14,'end')}${t(70,151,title,46,C.ink,700)}${t(70,188,sub,19,C.muted,400)}${line(70,224,1530,224,C.rule,2)}`;
+const legend=()=>`${line(70,790,1530,790,C.rule,2)}${mono(70,825,'LEGEND',C.blue,13)}<circle cx="190" cy="820" r="7" fill="${C.blue}"/>${t(204,826,'Memory / intelligence',14,C.ink,600)}<circle cx="430" cy="820" r="7" fill="${C.orange}"/>${t(444,826,'Review / decision',14,C.ink,600)}<circle cx="655" cy="820" r="7" fill="${C.green}"/>${t(669,826,'Approved / connection',14,C.ink,600)}${t(1530,826,'Memory is the foundation. Intelligence is the outcome.',15,C.ink,700,'end')}`;
+const proof=(kicker,title,lines,source)=>`${rect(972,270,558,470,C.cream,C.rule,22)}${mono(1006,314,kicker,C.blue,13)}${t(1006,360,title,29,C.ink,700)}${line(1006,387,1496,387,C.rule,1)}${lines.map((v,i)=>`${mono(1006,430+i*72,`0${i+1}`,C.blue,12)}${t(1052,430+i*72,v[0],18,C.ink,700)}${t(1052,455+i*72,v[1],15,C.muted,400)}`).join('')}${line(1006,688,1496,688,C.rule,1)}${mono(1006,718,'SOURCE',C.blue,12)}${t(1075,718,source,12,C.muted,400)}`;
+const frame=(title,desc,body)=>`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="title desc"><title id="title">${esc(title)}</title><desc id="desc">${esc(desc)}</desc><rect width="${W}" height="${H}" fill="${C.cream}"/>${body}${legend()}</svg>`;
 
-const graphics = [
-  {
-    file:'01-framework-harness-architecture', title:'Framework and harness architecture', desc:'A flat Allura system diagram connecting interfaces, orchestration, governed memory, policy and deterministic evidence.',
-    source:'FRAMEWORK.md §§ Architecture, Orchestration, Policy, Harness, Interfaces',
-    body: `${header('01','Framework and harness architecture','A reusable execution path: one governed system, multiple developer entry points.')}
-      ${card(95,380,255,160,'INTERFACES','SDK · API · CLI','Typed clients and replay commands.',C.blue)}
-      ${card(430,380,285,160,'ORCHESTRATION','ProcessEngine','DAG execution, checkpoint and replay.',C.blue)}
-      ${card(795,350,315,220,'GOVERNED MEMORY','Ledger → curator → graph','Episodic trace becomes reviewed, retrievable context.',C.green)}
-      ${card(1190,380,300,160,'EVIDENCE','Receipt + evaluation','Inspectable output for a controlled release.',C.orange)}
-      ${arrow(350,460,430,460,C.blue)}${arrow(715,460,795,460,C.ink)}${arrow(1110,460,1190,460,C.orange)}
-      ${box(430,610,680,72,C.ink,C.ink,14)}${text(770,655,'Policy hooks enforce proof-of-intent before a mutation.',22,C.cream,700,'middle')}`
-  },
-  {
-    file:'02-deterministic-harness', title:'Deterministic harness', desc:'A five-step Allura deterministic evaluation sequence from scenario to replayable evidence.',
-    source:'FRAMEWORK.md § Simulator harness and evaluation | CI evidence run 33502490831',
-    body: `${header('02','Deterministic harness','A scenario is only useful when the result can be replayed, inspected and evaluated.')}
-      ${box(105,395,230,132,C.paleBlue,C.blue,18)}${text(130,438,'01',18,C.blue,700,'start','IBM Plex Mono')}${text(130,480,'Fixture scenario',26,C.ink,700)}${text(130,512,'Declared inputs',17,C.muted)}
-      ${box(390,395,230,132,C.cream,C.ink,18)}${text(415,438,'02',18,C.blue,700,'start','IBM Plex Mono')}${text(415,480,'Run engine',26,C.ink,700)}${text(415,512,'Controlled tool calls',17,C.muted)}
-      ${box(675,395,230,132,C.paleOrange,C.orange,18)}${text(700,438,'03',18,C.orange,700,'start','IBM Plex Mono')}${text(700,480,'Issue receipt',26,C.ink,700)}${text(700,512,'Trace + proof',17,C.muted)}
-      ${box(960,395,230,132,C.paleGreen,C.green,18)}${text(985,438,'04',18,C.green,700,'start','IBM Plex Mono')}${text(985,480,'Replay',26,C.ink,700)}${text(985,512,'Same input, same path',17,C.muted)}
-      ${box(1245,395,230,132,C.cream,C.ink,18)}${text(1270,438,'05',18,C.blue,700,'start','IBM Plex Mono')}${text(1270,480,'Evaluate',26,C.ink,700)}${text(1270,512,'Regression signal',17,C.muted)}
-      ${arrow(335,461,390,461,C.blue)}${arrow(620,461,675,461,C.orange)}${arrow(905,461,960,461,C.green)}${arrow(1190,461,1245,461,C.ink)}
-      ${text(800,640,'The demonstration uses verified CI evidence—not a fabricated outcome dashboard.',22,C.ink,700,'middle')}`
-  },
-  {
-    file:'03-enterprise-governance', title:'Enterprise governance', desc:'An Allura governance diagram showing proof, policy, workspace isolation, audit and release evidence.',
-    source:'FRAMEWORK.md §§ Policy hooks and tool calling, Governance and scale',
-    body: `${header('03','Enterprise governance','Controls are part of the execution path, not a promise outside it.')}
-      ${box(95,365,310,280,C.ink,C.ink,22)}${text(125,420,'REQUEST',16,C.orange,700,'start','IBM Plex Mono')}${text(125,470,'Intent + proof',36,C.cream,700)}${text(125,510,'Every mutation declares',18,C.cream)}${text(125,540,'why it should happen.',18,C.cream)}
-      ${box(495,365,300,280,C.paleOrange,C.orange,22)}${text(525,420,'ENFORCEMENT',16,C.orange,700,'start','IBM Plex Mono')}${text(525,470,'Policy syscall',36,C.ink,700)}${text(525,510,'Proof-of-intent before',18,C.muted)}${text(525,540,'a governed action.',18,C.muted)}
-      ${box(885,365,260,280,C.paleGreen,C.green,22)}${text(915,420,'SCOPE',16,C.green,700,'start','IBM Plex Mono')}${text(915,470,'RLS boundary',36,C.ink,700)}${text(915,510,'Workspace isolation and',18,C.muted)}${text(915,540,'least privilege.',18,C.muted)}
-      ${box(1235,365,260,280,C.paleBlue,C.blue,22)}${text(1265,420,'RECEIPT',16,C.blue,700,'start','IBM Plex Mono')}${text(1265,470,'Durable audit',36,C.ink,700)}${text(1265,510,'Inspectable evidence for',18,C.muted)}${text(1265,540,'review and release.',18,C.muted)}
-      ${arrow(405,505,495,505,C.orange)}${arrow(795,505,885,505,C.green)}${arrow(1145,505,1235,505,C.blue)}`
-  },
-  {
-    file:'04-developer-interfaces', title:'Developer interfaces', desc:'A three-interface Allura diagram showing SDK, API and CLI reaching shared governed capabilities.',
-    source:'FRAMEWORK.md § Developer interfaces',
-    body: `${header('04','Developer interfaces','A shared governed core lets each engineering workflow use the same controls.')}
-      ${card(130,380,300,170,'SDK','Typed client','Memory, harness, replay and evaluation.',C.blue)}
-      ${card(650,380,300,170,'API / MCP','Authenticated gateway','Governed tool calling and streams.',C.orange)}
-      ${card(1170,380,300,170,'CLI','Run and replay','Scenario command line workflow.',C.green)}
-      ${line(280,550,280,655,C.blue,4)}${line(800,550,800,655,C.orange,4)}${line(1320,550,1320,655,C.green,4)}
-      ${box(290,655,1020,78,C.ink,C.ink,18)}${text(800,704,'One core: orchestration, policy, memory, receipts and evaluation.',25,C.cream,700,'middle')}`
-  },
-  {
-    file:'05-governed-memory-lifecycle', title:'Governed memory lifecycle', desc:'A lifecycle diagram of episodic capture, review, promotion, retrieval and supersession in Allura.',
-    source:'FRAMEWORK.md § Memory patterns',
-    body: `${header('05','Governed memory lifecycle','Memory gains value when it is scoped, reviewed and able to change without losing history.')}
-      ${box(110,400,250,145,C.paleBlue,C.blue,18)}${text(135,442,'CAPTURE',15,C.blue,700,'start','IBM Plex Mono')}${text(135,485,'Episodic ledger',28,C.ink,700)}${text(135,518,'Traceable event',17,C.muted)}
-      ${box(430,400,250,145,C.paleOrange,C.orange,18)}${text(455,442,'CURATE',15,C.orange,700,'start','IBM Plex Mono')}${text(455,485,'Review + promote',28,C.ink,700)}${text(455,518,'Approval boundary',17,C.muted)}
-      ${box(750,400,250,145,C.paleGreen,C.green,18)}${text(775,442,'RETRIEVE',15,C.green,700,'start','IBM Plex Mono')}${text(775,485,'Semantic layer',28,C.ink,700)}${text(775,518,'Approved-only search',17,C.muted)}
-      ${box(1070,400,250,145,C.cream,C.ink,18)}${text(1095,442,'EVOLVE',15,C.blue,700,'start','IBM Plex Mono')}${text(1095,485,'Supersede safely',28,C.ink,700)}${text(1095,518,'History remains visible',17,C.muted)}
-      ${arrow(360,472,430,472,C.orange)}${arrow(680,472,750,472,C.green)}${arrow(1000,472,1070,472,C.ink)}${line(1195,545,1195,625,C.ink,3)}${line(1195,625,235,625,C.ink,3)}${line(235,625,235,545,C.ink,3)}<text x="715" y="668" font-family="IBM Plex Mono" font-size="16" font-weight="700" fill="${C.blue}" text-anchor="middle">TENANT-SCOPED • BRANCH-AWARE • RETRIEVAL WITH APPROVAL STATE</text>`
-  },
-  {
-    file:'06-evidence-to-release-chain', title:'Evidence to release chain', desc:'A CI evidence chain from checks through a schema-validated manifest to an inspectable portfolio statement.',
-    source:'GitHub Actions run 33502490831 | artifacts/dashboard-demo/manifest.json',
-    body: `${header('06','Evidence to release chain','Claims remain useful when someone else can follow them back to the proof.')}
-      ${box(85,365,290,245,C.cream,C.ink,18)}${text(115,415,'CHECKS',15,C.blue,700,'start','IBM Plex Mono')}${text(115,460,'Static · unit · build',29,C.ink,700)}${text(115,500,'Live PostgreSQL',21,C.ink,700)}${text(115,534,'Benchmark · evaluation',21,C.ink,700)}
-      ${box(465,365,290,245,C.paleBlue,C.blue,18)}${text(495,415,'MANIFEST',15,C.blue,700,'start','IBM Plex Mono')}${text(495,460,'Schema-validated',29,C.ink,700)}${text(495,500,'six lanes passed',22,C.muted)}${text(495,534,'commit-tied record',22,C.muted)}
-      ${box(845,365,290,245,C.paleGreen,C.green,18)}${text(875,415,'DATABASE',15,C.green,700,'start','IBM Plex Mono')}${text(875,460,'48 / 48 suites',29,C.ink,700)}${text(875,500,'136 passed',22,C.muted)}${text(875,534,'3 intentionally pending',22,C.muted)}
-      ${box(1225,365,290,245,C.paleOrange,C.orange,18)}${text(1255,415,'DEMO',15,C.orange,700,'start','IBM Plex Mono')}${text(1255,460,'7 / 7 routes',29,C.ink,700)}${text(1255,500,'HTTP 200',22,C.muted)}${text(1255,534,'zero captured errors',22,C.muted)}
-      ${arrow(375,487,465,487,C.blue)}${arrow(755,487,845,487,C.green)}${arrow(1135,487,1225,487,C.orange)}`
-  }
+const pages=[
+{file:'01-framework-harness-architecture',title:'Framework and harness architecture',desc:'Three developer interfaces feed one governed execution path; the proof field identifies the shared controls.',body:`${header('01','Framework and harness architecture','One governed path supports many ways to build and inspect agent work.')}${rect(70,270,902,470,C.paleBlue,C.blue,22)}${mono(104,314,'PRIMARY STORY / GOVERNED EXECUTION PATH',C.blue,13)}${card(104,365,208,130,C.blue,'ENTRY','SDK','Typed client.')}${card(104,555,208,130,C.green,'ENTRY','API / MCP','Tool gateway.')}${card(382,455,220,130,C.orange,'ORCHESTRATE','Process engine','Run, replay, evaluate.')}${card(672,455,266,130,C.ink,'GOVERN','Memory + policy','Trace, review, retrieve.')}${arrow(312,430,348,430,C.blue)}${line(348,430,348,520,C.blue,3)}${arrow(348,520,382,520,C.blue)}${arrow(602,520,638,520,C.ink)}${arrow(638,520,672,520,C.ink)}${rect(382,635,556,54,C.ink,C.ink,14)}${t(660,670,'A policy hook checks intent before a governed mutation.',18,C.cream,700,'middle')}${proof('SECONDARY PROOF','Shared controls',[['Interfaces','SDK, API/MCP and CLI use one system boundary.'],['Orchestration','Execution, checkpoints and replay remain inspectable.'],['Governance','Memory and policy sit on the critical path.']], 'FRAMEWORK.md §§ Architecture, Harness, Interfaces')}`},
+{file:'02-deterministic-harness',title:'Deterministic harness',desc:'A bounded path moves from a declared scenario to a saved evaluation record; the proof field explains what each step makes inspectable.',body:`${header('02','Deterministic harness','Run the same scenario, inspect the same path, and compare the result.')}${rect(70,270,902,470,C.paleBlue,C.blue,22)}${mono(104,314,'PRIMARY STORY / REPEATABLE EVALUATION',C.blue,13)}${card(104,390,220,140,C.blue,'01 / DECLARE','Scenario','State the inputs.')}${card(376,390,220,140,C.ink,'02 / RUN','Engine','Use controlled tools.')}${card(648,390,220,140,C.orange,'03 / RECORD','Receipt','Save the outcome.')}${arrow(324,460,376,460,C.blue)}${arrow(596,460,648,460,C.orange)}${line(758,530,758,560,C.green,3)}${arrow(758,560,758,575,C.green)}${card(538,575,400,130,C.green,'04 / REPLAY + EVALUATE','Compare the result','A regression signal is inspectable.',C.paleGreen)}${proof('SECONDARY PROOF','What the harness proves',[['Declared input','The case is named before the run begins.'],['Recorded outcome','A receipt ties the run to its result.'],['Repeatable check','Replay and evaluation make change visible.']], 'FRAMEWORK.md § Simulator harness and evaluation')}`},
+{file:'03-enterprise-governance',title:'Enterprise governance',desc:'A governed workflow is the primary story; the proof field explains four control layers without relying on color alone.',body:`${header('03','Enterprise governance','Controls belong in the execution path, where people can inspect them.')}${rect(70,270,902,470,C.paleOrange,C.orange,22)}${mono(104,314,'PRIMARY STORY / CONTROL ON THE CRITICAL PATH',C.orange,13)}<circle cx="500" cy="515" r="110" fill="${C.ink}"/>${t(500,495,'AGENT',14,C.cream,700,'middle')}${t(500,527,'WORKFLOW',24,C.cream,700,'middle')}${t(500,554,'A proposed action.',15,C.cream,400,'middle')}${node(220,515,C.paleBlue,'SCOPE','Workspace','Access boundary.')} ${node(500,355,C.paleOrange,'POLICY','Check intent','Rules apply.')} ${node(780,515,C.paleGreen,'REVIEW','Human decision','Approval boundary.')} ${node(500,655,C.paleBlue,'RECORD','Evidence','History remains.',C.ink,68)}${line(298,515,390,515,C.blue,3)}${line(500,465,500,405,C.orange,3)}${line(610,515,702,515,C.green,3)}${line(500,625,500,587,C.blue,3)}${proof('SECONDARY PROOF','Control patterns',[['Scope','Workspace isolation limits who can act.'],['Policy','Intent is checked before a governed action.'],['Review','People retain an explicit decision boundary.']], 'FRAMEWORK.md §§ Policy hooks, Governance and scale')}`},
+{file:'04-developer-interfaces',title:'Developer interfaces',desc:'Three developer interfaces join a single governed core through a reserved connector lane.',body:`${header('04','Developer interfaces','Different engineering workflows share the same governed core.')}${rect(70,270,902,470,C.paleGreen,C.green,22)}${mono(104,314,'PRIMARY STORY / MANY ENTRY POINTS, ONE CORE',C.green,13)}${card(104,365,220,130,C.blue,'SDK','Typed client','Build in code.')}${card(376,365,220,130,C.orange,'API / MCP','Gateway','Call governed tools.')}${card(648,365,220,130,C.green,'CLI','Run + replay','Inspect a scenario.')}${line(214,495,214,570,C.blue,3)}${line(486,495,486,570,C.orange,3)}${line(758,495,758,570,C.green,3)}${line(214,570,758,570,C.ink,3)}${line(486,570,486,612,C.ink,3)}${arrow(486,612,486,630,C.ink)}${rect(174,630,624,74,C.ink,C.ink,18)}${t(486,664,'Governed core',25,C.cream,700,'middle')}${t(486,688,'Orchestration · policy · memory · receipts · evaluation',14,C.cream,400,'middle')}${proof('SECONDARY PROOF','Same boundary, clear choice',[['SDK','Typed integration for application code.'],['API / MCP','Authenticated tool access for agents and services.'],['CLI','A direct path for run and replay work.']], 'FRAMEWORK.md § Developer interfaces')}`},
+{file:'05-governed-memory-lifecycle',title:'Governed memory lifecycle',desc:'A bounded lifecycle moves from capture to safe supersession; the proof field names constraints that make history inspectable.',body:`${header('05','Governed memory lifecycle','Memory improves over time without erasing where it came from.')}${rect(70,270,902,470,C.paleBlue,C.blue,22)}${mono(104,314,'PRIMARY STORY / HISTORY WITH AN APPROVAL BOUNDARY',C.blue,13)}${card(104,385,190,140,C.blue,'01 / CAPTURE','Episodic','Keep an event.')}${card(344,385,190,140,C.orange,'02 / CURATE','Review','Check before reuse.')}${card(584,385,190,140,C.green,'03 / RETRIEVE','Approved','Use scoped context.')}${arrow(294,455,344,455,C.orange)}${arrow(534,455,584,455,C.green)}${line(679,525,679,585,C.ink,3)}${line(679,585,199,585,C.ink,3)}${arrow(199,585,199,545,C.ink)}${rect(264,630,520,74,C.ink,C.ink,18)}${mono(298,659,'04 / EVOLVE',C.green,12)}${t(298,687,'Supersede safely; retain the earlier record.',18,C.cream,700)}${proof('SECONDARY PROOF','History stays useful',[['Capture','Raw history is append-only.'],['Curate','Promotion keeps a review boundary.'],['Retrieve','Approved context retains its source and scope.']], 'FRAMEWORK.md § Memory patterns')}`},
+{file:'06-evidence-to-release-chain',title:'Evidence to release chain',desc:'A primary evidence path connects checks, a manifest and a release statement; the proof field identifies the evidence a reviewer can inspect.',body:`${header('06','Evidence to release chain','A portfolio claim should lead a reviewer back to the proof.')}${rect(70,270,902,470,C.paleGreen,C.green,22)}${mono(104,314,'PRIMARY STORY / CLAIM → RECORD → INSPECTION',C.green,13)}${card(104,385,205,140,C.blue,'CHECKS','Run lanes','Static, unit, build.')}${card(382,385,205,140,C.ink,'MANIFEST','Bind evidence','Tie it to a commit.')}${card(660,385,205,140,C.orange,'RELEASE','State a claim','Invite inspection.')}${arrow(309,455,382,455,C.blue)}${arrow(587,455,660,455,C.orange)}${rect(104,615,761,65,C.paleBlue,C.blue,18)}${t(138,654,'The visible statement is useful only when its sources are reachable.',19,C.ink,700)}${proof('SECONDARY PROOF','Inspect the evidence',[['CI lanes','Static, unit, build, live database, benchmark and evaluation.'],['Manifest','A schema-validated, commit-tied record.'],['Demo boundary','The portfolio cites captures and does not invent outcomes.']], 'docs/portfolio/DEMO-EVIDENCE-PACK.md')}`}
 ];
 
-for (const g of graphics) {
-  const svg = wrap(g.title, g.desc, g.body, g.source);
-  const svgPath = path.join(svgDir, `${g.file}.svg`);
-  const pngPath = path.join(pngDir, `${g.file}.png`);
-  await fs.writeFile(svgPath, svg);
-  await sharp(Buffer.from(svg)).png().toFile(pngPath);
+for (const page of pages) {
+  const svg=frame(page.title,page.desc,page.body);
+  await fs.writeFile(path.join(svgDir,`${page.file}.svg`),svg);
+  const raster=await sharp(Buffer.from(svg)).png().toBuffer();
+  await sharp(raster).composite([{input:headerMark,left:70,top:40}]).png().toFile(path.join(pngDir,`${page.file}.png`));
 }
-console.log(`Generated ${graphics.length} branded SVG/PNG infographic pairs in ${root}`);
+console.log(`Rebuilt ${pages.length} measured Allura SVG/PNG infographic pairs in ${root}`);
