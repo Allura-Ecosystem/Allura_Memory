@@ -27,6 +27,14 @@ A self-contained, self-guided walkthrough of the governed operator surface — n
 - **Guided tour** — a 14-stop coached walkthrough (dim + spotlight + popover) that opens the Framework view, walks each surface, and runs a live review case. Auto-runs once, replayable via **Take the tour**; hover any control for a one-line hint.
 - **Framework &amp; Harness view** — the engineering case: fail-closed boot, database-enforced policy denial, deterministic replay, nine live evaluation lanes, and the Bumblebee promote-or-held pipeline.
 
+<p align="center">
+  <a href="https://allura-governed-demo.vercel.app"><img src="assets/dashboard-framework-harness.png" alt="The deployed Framework &amp; Harness specimen presents fail-closed boot, database-enforced policy, deterministic replay, and the nine measured evaluation lanes." width="860" /></a>
+</p>
+
+<p align="center">
+  <a href="https://allura-governed-demo.vercel.app"><img src="assets/dashboard-governance.png" alt="The deployed Governance specimen keeps scope, evidence, policy, and a human decision visibly separate." width="860" /></a>
+</p>
+
 > The demo uses synthetic specimen data only. It makes no claim of affiliation with, deployment by, or endorsement from any organization.
 
 ## Evidence infographics
