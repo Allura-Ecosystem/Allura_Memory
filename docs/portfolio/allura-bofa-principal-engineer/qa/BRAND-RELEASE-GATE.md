@@ -2,7 +2,7 @@
 
 ## Result: approved for the portfolio package
 
-This is a release review of the rebuilt package, performed after SVG/PNG rendering and PowerPoint render inspection.
+This is a release review of the rebuilt package, performed after SVG/PNG rendering and PowerPoint render inspection. The asset-by-asset result is recorded in `qa/VISUAL-REMEDIATION-AUDIT-2026-09-01.md`.
 
 | Criterion | Result | Evidence |
 |---|---|---|
