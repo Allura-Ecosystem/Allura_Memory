@@ -44,6 +44,7 @@ plugins/<name>/
 | **Governance** | Enforce invariants on tool calls | `allura-governance` |
 | **Cowork** | Cross-runtime collaboration | `allura-cowork` |
 | **Core** | Runtime-specific skills and assets | `allura` |
+| **Agent Tool** | Governed agent-tool integrations | `bumblebee` |
 | **Extension** | Additional capabilities | `—` |
 
 ## Plugin Manifest
@@ -114,6 +115,7 @@ python3 plugins/<name>/scripts/validate_plugin.py plugins/<name>
 | Hard invariant enforcement | `allura-governance` |
 | Claude ↔ Codex handoff | `allura-cowork` |
 | Core memory skills for Codex | `allura` |
+| Supply-chain threat intelligence | `bumblebee` |
 
 ## Writing Custom Plugins
 
@@ -123,6 +125,7 @@ See [`writing-plugins.md`](writing-plugins.md) for the complete plugin authoring
 
 - [`allura-cowork.md`](allura-cowork.md) — Claude/Codex collaboration plugin
 - [`allura-governance.md`](allura-governance.md) — Invariant enforcement plugin
+- [`bumblebee/README.md`](bumblebee/README.md) — Supply-chain threat intelligence plugin
 - [`writing-plugins.md`](writing-plugins.md) — Authoring guide
 
 ---
