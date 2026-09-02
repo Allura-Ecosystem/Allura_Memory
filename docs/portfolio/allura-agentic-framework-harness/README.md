@@ -29,22 +29,24 @@ A self-contained, self-guided walkthrough of the governed operator surface — n
 
 > The demo uses synthetic specimen data only. It makes no claim of affiliation with, deployment by, or endorsement from any organization.
 
-## Evidence infographics
+## Walkthrough screens
 
-Six editable visuals explaining how Allura turns captured context into trusted intelligence. Each links to its full-size PNG; editable SVGs and full descriptions are in the [evidence infographic set](evidence-infographics/README.md).
+The screenshots below are fresh captures of the deployed demo, used here as product evidence rather than decorative artwork.
 
-|  |  |
-| --- | --- |
-| <a href="evidence-infographics/png/01-every-action-leaves-proof.png"><img src="evidence-infographics/png/01-every-action-leaves-proof.png" alt="A request, a review, and a durable record are connected; source, decision, and result stay linked." width="420" /></a><br/><sub><strong>Every action leaves proof</strong></sub> | <a href="evidence-infographics/png/02-access-has-boundaries.png"><img src="evidence-infographics/png/02-access-has-boundaries.png" alt="Two labeled workspaces are separated by a policy boundary lock." width="420" /></a><br/><sub><strong>Access has boundaries</strong></sub> |
-| <a href="evidence-infographics/png/03-people-review-important-changes.png"><img src="evidence-infographics/png/03-people-review-important-changes.png" alt="A review module links a proposed change, policy check, and recorded decision." width="420" /></a><br/><sub><strong>People review important changes</strong></sub> | <a href="evidence-infographics/png/04-memory-keeps-its-history.png"><img src="evidence-infographics/png/04-memory-keeps-its-history.png" alt="Saved context, review, and approved memory stay connected across time." width="420" /></a><br/><sub><strong>Memory keeps its history</strong></sub> |
-| <a href="evidence-infographics/png/05-test-before-release.png"><img src="evidence-infographics/png/05-test-before-release.png" alt="A loop links a scenario, run, result review, and saved proof." width="420" /></a><br/><sub><strong>Test before release</strong></sub> | <a href="evidence-infographics/png/06-an-answer-can-show-its-work.png"><img src="evidence-infographics/png/06-an-answer-can-show-its-work.png" alt="An answer points to factual source, review decision, and approved context." width="420" /></a><br/><sub><strong>An answer can show its work</strong></sub> |
+<p align="center">
+  <a href="https://allura-governed-demo.vercel.app"><img src="assets/dashboard-framework-harness.png" alt="Framework and Harness specimen showing fail-closed boot, database-enforced policy, deterministic replay, and measured evaluation lanes." width="860" /></a>
+</p>
+
+<p align="center">
+  <a href="https://allura-governed-demo.vercel.app"><img src="assets/dashboard-governance.png" alt="Governance specimen showing context, evidence, policy, and a human decision as separate boundaries." width="860" /></a>
+</p>
 
 ## Deliverables
 
 | Artifact | What it is |
 | --- | --- |
 | [`interactive-demo/`](interactive-demo/) | The self-contained dashboard demo ([live](https://allura-governed-demo.vercel.app)) — see its [README](interactive-demo/README.md). |
-| `evidence-infographics/` | Six editable SVG infographics (+ PNG renders) with embedded accessibility metadata. |
+| `evidence-infographics/` | Supporting editable SVG infographics (+ PNG renders) with embedded accessibility metadata; they are not the README gallery. |
 | `deck/Allura-Agentic-AI-Framework-Harness-Portfolio.pptx` | A ten-slide presentation with speaker-note sources. |
 | [`ROLE-MAPPING.md`](ROLE-MAPPING.md) | Role requirements mapped to inspectable Allura evidence. |
 | [`SOURCES.md`](SOURCES.md) · [`ALT-TEXT.md`](ALT-TEXT.md) | Provenance and accessible descriptions. |
