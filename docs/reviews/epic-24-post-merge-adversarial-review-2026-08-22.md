@@ -108,7 +108,7 @@ Two independent-agent passes were attempted but did not produce a verdict: the s
 
 ### H4 — Numerical portfolio claims are not linked to current artifacts
 
-- **File:** `docs/portfolio/principal-engineer-case-study.md:60-66`
+- **File:** `docs/portfolio/framework-case-study.md:60-66`
 - Counts have no immutable run/artifact links and the document overstates implementation maturity.
 
 ### H5 — Story and sprint artifacts contradict each other

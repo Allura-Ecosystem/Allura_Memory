@@ -151,4 +151,4 @@ harness; each receipt carries the scenario digest, definition revision,
 principal/tenant references, configuration fingerprint, evidence hashes, and
 replay comparison. The demo path is documented in
 `docs/portfolio/demo-script.md` and the architecture narrative in
-`docs/portfolio/principal-engineer-case-study.md`.
+`docs/portfolio/framework-case-study.md`.

@@ -46,7 +46,7 @@ These are reference implementations, not customer deployments or claims of bank 
 - [x] AC-5: The regulated workflow explicitly preserves human final authority and does not present generated output as an autonomous decision.
 - [x] AC-6: Integration effort is reported as observed setup steps, commands, configuration, and elapsed time from a clean environment; no fictional team-adoption metrics are used.
 - [x] AC-7: `README.md` states the product position, architecture, verified capabilities, quickstart, evidence, limitations, and reference integrations in a scannable format.
-- [x] AC-8: `docs/portfolio/principal-engineer-case-study.md` explains problem framing, standards, rejected alternatives, tradeoffs, failure modes, migration strategy, developer experience, and measured evidence.
+- [x] AC-8: `docs/portfolio/framework-case-study.md` explains problem framing, standards, rejected alternatives, tradeoffs, failure modes, migration strategy, developer experience, and measured evidence.
 - [x] AC-9: `docs/portfolio/demo-script.md` demonstrates run, policy denial, human-governed promotion, injected failure, checkpoint resume, deterministic replay, evaluation comparison, and audit inspection using exact commands.
 - [x] AC-10: Every numerical or maturity claim in the README and case study resolves to a current evidence artifact; unsupported capabilities are stated explicitly.
 
@@ -56,7 +56,7 @@ These are reference implementations, not customer deployments or claims of bank 
 - `examples/controlled-research-agent/`
 - `examples/regulated-document-quality/`
 - `README.md`
-- `docs/portfolio/principal-engineer-case-study.md`
+- `docs/portfolio/framework-case-study.md`
 - `docs/portfolio/demo-script.md`
 - `docs/portfolio/evidence-index.md`
 - `docs/portfolio/interview-notes.md`

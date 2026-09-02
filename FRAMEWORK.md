@@ -125,4 +125,4 @@ Two governed layers over one PostgreSQL engine (no dual-database split):
 2. `docs/allura/SOLUTION-ARCHITECTURE.md` — canonical architecture.
 3. `src/control-plane/syscalls.ts` — the enforcement boundary.
 4. `packages/sdk/src/client.ts` — the developer surface.
-5. `docs/portfolio/principal-engineer-case-study.md` — engineering case study.
+5. `docs/portfolio/framework-case-study.md` — engineering case study.
