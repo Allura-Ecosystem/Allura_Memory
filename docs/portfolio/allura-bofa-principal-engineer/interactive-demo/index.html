@@ -447,8 +447,8 @@
   </main>
 
   <p class="disclaimer">
-    Independent technical case study of the Allura control plane. It makes no claim of Bank of America
-    affiliation, deployment, endorsement, or sponsorship. Every figure shown resolves to a committed
+    Independent technical case study of the Allura control plane. It makes no claim of affiliation with,
+    deployment by, endorsement from, or sponsorship by any organization. Every figure shown resolves to a committed
     evidence artifact in the Allura&nbsp;Memory repository. Retrieval here is lexical over a small
     synthetic corpus — no scaled-performance claim is made.
   </p>
@@ -544,7 +544,7 @@
                 '<li><span class="tick">✓</span> Migrations dir <span class="v mono">ok</span></li>' +
                 '<li><span class="tick">✓</span> MCP gateway <span class="v mono">healthy · auth=true</span></li>' +
               '</ul></div>' +
-            '<div class="card"><span class="eyebrow">Why a bank cares</span>' +
+            '<div class="card"><span class="eyebrow">Why it matters in regulated environments</span>' +
               '<p style="margin:6px 0 0;font-size:13px;color:var(--text-soft)">The common failure mode — “auth is off when the token env var is unset” — was a real defect here and was removed. Production cannot boot anonymously; <span class="mono">doctor</span> exits non-zero if any check fails.</p></div>' +
           '</div>'));
         box.appendChild(el('<div class="callout"><span class="ct">Framework property</span>' +
@@ -825,7 +825,7 @@
     {
       short: "Mortgage", sub: "domain add-on",
       stop: "Stop 08 · Mortgage Approval Gate",
-      title: "A regulated banking module rides the same governed shell",
+      title: "A regulated-industry module rides the same governed shell",
       kicker: "Add-ons contribute domain language, not authority. The Mortgage Approval Gate supplies typed intake, evidence grammar, and cited policy — then hands off. Identity, policy evaluation, and the receipt stay with the host; a qualified human decides in Allura.",
       build: function () {
         var box = document.createElement("div");
