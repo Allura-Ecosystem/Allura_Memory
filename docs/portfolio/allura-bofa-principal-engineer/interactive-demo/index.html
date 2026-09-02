@@ -421,7 +421,7 @@
 
     <div class="body">
       <nav class="rail" aria-label="Demo steps">
-        <div class="rail-title eyebrow">Governed run · 8 stops</div>
+        <div class="rail-title eyebrow">Governed run · 10 stops</div>
         <ol id="rail"></ol>
       </nav>
 
@@ -823,8 +823,90 @@
       }
     },
     {
+      short: "Mortgage", sub: "domain add-on",
+      stop: "Stop 08 · Mortgage Approval Gate",
+      title: "A regulated banking module rides the same governed shell",
+      kicker: "Add-ons contribute domain language, not authority. The Mortgage Approval Gate supplies typed intake, evidence grammar, and cited policy — then hands off. Identity, policy evaluation, and the receipt stay with the host; a qualified human decides in Allura.",
+      build: function () {
+        var box = document.createElement("div");
+        box.appendChild(el(
+          '<div class="grid2">' +
+            '<div class="card"><span class="eyebrow">Module may provide</span>' +
+              '<ul class="checks" style="margin-top:4px">' +
+                '<li><span class="tick">✓</span> Typed intake fields <span class="v mono">case · purpose</span></li>' +
+                '<li><span class="tick">✓</span> Evidence grammar <span class="v mono">source · OCR</span></li>' +
+                '<li><span class="tick">✓</span> Cited policy refs <span class="v mono">MR-4.2</span></li>' +
+                '<li><span class="tick">✓</span> Stage language <span class="v mono">needs-human-review</span></li>' +
+              '</ul></div>' +
+            '<div class="card" style="border-color:var(--orange)"><span class="eyebrow" style="color:var(--orange-900)">Module may NOT provide</span>' +
+              '<ul class="checks" style="margin-top:4px">' +
+                '<li><span class="tick" style="background:var(--deny-bg);color:var(--deny-text)">✕</span> Identity or scope</li>' +
+                '<li><span class="tick" style="background:var(--deny-bg);color:var(--deny-text)">✕</span> SQL, secrets, mutation</li>' +
+                '<li><span class="tick" style="background:var(--deny-bg);color:var(--deny-text)">✕</span> Authorization or a decision</li>' +
+                '<li><span class="tick" style="background:var(--deny-bg);color:var(--deny-text)">✕</span> Receipt issuance</li>' +
+              '</ul></div>' +
+          '</div>'));
+        box.appendChild(el(
+          '<div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:baseline">' +
+            '<span class="eyebrow">Evidence desk · CASE-DEMO-014</span><span class="pill warn">human review required</span></div>' +
+            '<div class="grid2" style="margin-top:10px">' +
+              '<div><span class="eyebrow">Original evidence · source</span><p style="margin:4px 0 0;font-size:13px;color:var(--text-soft)"><span class="mono">fixture://income-note.pdf</span> · retained, authoritative</p></div>' +
+              '<div><span class="eyebrow">OCR derivative</span><p style="margin:4px 0 0;font-size:13px;color:var(--text-soft)">confidence <span class="mono">0.71</span> · derivative only — not normalized into a fact</p></div>' +
+            '</div>' +
+            '<div class="receipt" style="margin-top:12px">' +
+              '<div class="row"><span class="rk">policy observation</span><span class="rv">MR-4.2 · needs-human-review</span></div>' +
+              '<div class="row"><span class="rk">reading order</span><span class="rv">module context → host controls → human decision</span></div>' +
+              '<div class="row"><span class="rk">decision authority</span><span class="rv ok">authorized human in Allura only</span></div>' +
+            '</div></div>'));
+        box.appendChild(el('<div class="callout pass"><span class="ct">Modular add-on</span>' +
+          '<b>Declared, not privileged.</b> A domain module makes the shell speak mortgage — intake, evidence, cited policy — while the host keeps identity, policy evaluation, mutation, and receipt authority. Disable it and every other Allura surface still works.</div>'));
+        return box;
+      }
+    },
+    {
+      short: "Bumblebee", sub: "second pipeline",
+      stop: "Stop 09 · Bumblebee pipeline",
+      title: "A second governed pipeline — promote, or hold with a reason",
+      kicker: "Supply-chain threat intelligence, read-only and default-off. It ingests, batches, and either promotes a complete batch or holds a partial one with a stable reason code. Nothing reaches exposure without passing the same gate as memory.",
+      build: function () {
+        var box = document.createElement("div");
+        box.appendChild(el(
+          '<div class="card"><span class="eyebrow">Module surfaces</span>' +
+            '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' +
+              ["sources", "exposures", "policy-drafts", "incidents", "receipts"].map(function (s) { return '<span class="pill info">' + s + '</span>'; }).join("") +
+            '</div></div>'));
+        var t = terminal([
+          { c: "t-prompt", t: "$ " }, { c: "t-cmd", t: "bumblebee run --ingest --batch" },
+          { c: "t-dim", t: "▸ lease acquired   batch A   conform 128/128 records" },
+          { c: "t-ok",  t: "✓ batch A   decision: PROMOTED_COMPLETE → exposed" },
+          { c: "t-dim", t: "▸ lease acquired   batch B   conform 61/128 records" },
+          { c: "t-key", t: "● batch B   decision: HELD_PARTIAL → not exposed" },
+          { c: "t-dim", t: "reason_code persisted to bumblebee_run_decisions" }
+        ]);
+        var tw = el('<div style="margin-top:14px"></div>'); tw.appendChild(t.node); box.appendChild(tw);
+        box.appendChild(el(
+          '<div class="grid2" style="margin-top:14px">' +
+            '<div class="card"><span class="eyebrow">Held reasons are enumerated</span>' +
+              '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' +
+                ["HELD_PARTIAL", "HELD_CONTRADICTORY_COUNTS", "HELD_STALE_GENERATION", "HELD_TIMEOUT"].map(function (s) { return '<span class="pill warn">' + s + '</span>'; }).join("") +
+              '</div><p style="margin:10px 0 0;font-size:13px;color:var(--text-soft)">A batch that is partial, contradictory, or stale is <b>held</b> — never silently exposed.</p></div>' +
+            '<div class="card"><span class="eyebrow">Trust posture</span>' +
+              '<ul class="checks" style="margin-top:4px">' +
+                '<li><span class="tick">✓</span> Read-only <span class="v mono">read:inventory · exposures</span></li>' +
+                '<li><span class="tick">✓</span> Default-off <span class="v mono">BUMBLEBEE_MODULE_ENABLED</span></li>' +
+                '<li><span class="tick">✓</span> First-party <span class="v mono">trust: allura-source</span></li>' +
+              '</ul>' +
+              '<p style="margin:10px 0 0;font-size:12.5px;color:var(--text-mute)">Command Center shows the honest degraded state: <span class="mono">“Bumblebee is currently unavailable.”</span></p></div>' +
+          '</div>'));
+        box.appendChild(el('<div class="callout"><span class="ct">Same gate, second pipeline</span>' +
+          '<b>A held batch is not a promoted one.</b> Exposure is earned by passing the promotion gate — the framework generalizes beyond memory to any governed producer.</div>'));
+        t.play();
+        return box;
+      }
+    },
+    {
       short: "Fit", sub: "role map",
-      stop: "Stop 08 · The whole loop",
+      stop: "Stop 10 · The whole loop",
       title: "One governed run — mapped to the role",
       kicker: "Every capability the brief names was just exercised end to end: orchestration, policy hooks, a deterministic harness, memory patterns, evaluation, and the SDK/CLI surface — each traceable to committed evidence.",
       build: function () {
@@ -839,10 +921,12 @@
             rm("Memory patterns", "episodic ledger → HITL promotion → semantic") +
             rm("SDK · API · CLI for adoption", "allura run / replay · packages/sdk · HTTP gateway") +
             rm("Regulated SDLC &amp; controls", "append-only audit · fail-closed · SHA-bound evidence") +
+            rm("Modular domain add-ons", "Mortgage Approval Gate · declared, not privileged") +
+            rm("Generalizes beyond memory", "Bumblebee · promote-or-held supply-chain pipeline") +
           '</div>'));
         box.appendChild(el(
           '<div class="limits"><span class="eyebrow" style="color:var(--orange)">Honest limits — stated before you ask</span><br>' +
-          'Retrieval here is <b>lexical</b> (<span class="mono">ts_rank_cd</span>); no embedding service runs in this demo, so the hybrid vector path is not exercised. Corpora are <b>synthetic and small</b> (20 docs, 6 queries). Thresholds are met, not stress-tested at scale. Reference integrations (LangGraph, OpenAI Agents) and authenticated-principal propagation are scoped but not yet closed.</div>'));
+          'Retrieval here is <b>lexical</b> (<span class="mono">ts_rank_cd</span>); no embedding service runs in this demo, so the hybrid vector path is not exercised. Corpora are <b>synthetic and small</b> (20 docs, 6 queries). Thresholds are met, not stress-tested at scale. The Mortgage Approval Gate is an <b>illustrative specimen</b> (no live underwriting); Bumblebee is <b>default-off</b> and read-only. Reference integrations (LangGraph, OpenAI Agents) and authenticated-principal propagation are scoped but not yet closed.</div>'));
         box.appendChild(el(
           '<div class="callout"><span class="ct">Where to read the source</span>' +
           '<b>Everything here is inspectable.</b> <span class="mono">FRAMEWORK.md</span> maps each claim to a code path; <span class="mono">docs/portfolio/…/DEMO-EVIDENCE-PACK.md</span> holds the captured runs; <span class="mono">artifacts/portfolio-demo/</span> holds the raw logs.</div>'));
