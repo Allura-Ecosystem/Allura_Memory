@@ -1,6 +1,24 @@
 {
   "name": "allura-memory",
   "version": "0.2.0",
+  "description": "Self-hosted governed memory engine for AI agents: agent orchestration, policy hooks, deterministic harness, MCP-native retrieval, and audit.",
+  "license": "MIT",
+  "keywords": [
+    "agentic-ai",
+    "agent-framework",
+    "mcp",
+    "memory",
+    "governance",
+    "postgresql",
+    "vector-database",
+    "harness",
+    "sdk"
+  ],
+  "homepage": "https://github.com/Allura-Ecosystem/Allura_Memory",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Allura-Ecosystem/Allura_Memory.git"
+  },
   "private": true,
   "workspaces": [
     "packages/*"
@@ -102,10 +120,6 @@
     "portfolio:up": "bun scripts/portfolio-demo.ts up",
     "portfolio:dev": "bun scripts/portfolio-demo.ts dev",
     "portfolio:down": "docker compose --env-file .env.portfolio -f docker-compose.portfolio.yml down"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Charitablebusinessronin/Allura_Memory.git"
   },
   "engines": {
     "node": ">=20.0.0"
