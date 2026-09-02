@@ -16,7 +16,7 @@ in `artifacts/portfolio-demo/`; dashboard captures are in
 | "simulator harnesses and execution testbeds… repeatable testing, scenario simulation, policy validation" | `allura run` over 3 core scenarios + 3 reference integrations | **Demonstrated** |
 | "deterministic workflow design… predictability, traceability" | `allura replay` → `Replay identical: true` | **Demonstrated** |
 | "policy hooks and runtime interception points that enforce governance… and enterprise controls" | RLS `forced=true` on 4 tables; live denial captured | **Demonstrated** |
-| "eval integration… benchmark design, regression detection" | `allura eval` → 9 lanes vs thresholds; **1 lane genuinely measured + falsifiability proof** | **Partially measured — see §7b and Open Item 1** |
+| "eval integration… benchmark design, regression detection" | `eval:portfolio --live` → **all 9 lanes measured** through a NOBYPASSRLS role, plus a falsifiability suite | **Demonstrated — see §7b** |
 | "short-term and long-term context strategies, state persistence, retrieval interfaces" | Governed memory pipeline, PostgreSQL + graph backend | **Demonstrated** |
 | "robust tool calling abstractions, interface contracts" | 14 MCP tools over streamable-HTTP; `tool_contract_validation` lane | **Demonstrated** |
 | "SDK, API, and CLI design for enterprise adoption" | `allura` CLI (9 commands), `packages/sdk`, `packages/cli` | **Partial** — see Open Items |
@@ -122,50 +122,66 @@ portfolio evaluation: PASS (9 metrics)
   latency_p95_ms                5000  (threshold 5000)  pass
 ```
 
-## 7b. Measured retrieval — the one lane that is not a wiring check
+## 7b. Measured evaluation — all nine lanes (`09-eval-live-9-lanes.txt`)
 
-`07-measured-retrieval.json`, `08-retrieval-falsifiability.txt`
+Section 7 above is the **offline** suite: its executor validates that a case is
+well formed and nothing more, so every well-formed case passes and each lane
+scores 1.0 by construction. That proves the harness is wired. It measures
+nothing.
 
-The nine lanes above are **wiring checks**. The offline executor validates that
-a case is well formed and nothing more, so every well-formed case passes and
-the lane scores 1.0 by construction. This lane is different:
-
-```
-retrieval_relevance_p@5: 1.000 (threshold 0.7) pass  [MEASURED]
-```
-
-Real queries, issued against PostgreSQL, scored against labels — lexical
-retrieval over the generated `content_tsv` column ranked by `ts_rank_cd`, across
-a 20-document mortgage-underwriting corpus containing deliberate topical
-distractors. Every statement runs inside a transaction that sets
-`app.current_group_id` and `app.current_workspace_id`, so the FORCED RLS
-policies enforce tenant isolation on the evaluation path itself.
-
-**The number 1.000 is worthless on its own — it is identical to the synthetic
-value. What makes it evidence is that it can fail:**
-
-```bash
-bun run scripts/eval-live-retrieval.ts --control
-```
+`--live` runs the same nine lanes through real executors against PostgreSQL:
 
 ```
-c1  P@5=0.00  mislabeled: right query, wrong gold doc
-c2  P@5=0.00  query with no corpus match
-c3  P@5=0.00  near-miss: distractor is the true match, label points elsewhere
-negative-control mean P@5: 0.000 (threshold 0.7) fail
-FALSIFIABLE: the lane reports failure on bad labels.
+$ bun run eval:portfolio --live
+Seeded 20 labeled retrieval documents.
+portfolio evaluation: PASS (9 metrics, live)
+  retrieval_relevance_p@5       1  (threshold 0.7)   pass [measured]
+  approved_only_recall          1  (threshold 0.85)  pass [measured]
+  policy_violation_block_rate   1  (threshold 1)     pass [measured]
+  cross_tenant_isolation        1  (threshold 1)     pass [measured]
+  promotion_correctness         1  (threshold 1)     pass [measured]
+  audit_completeness            1  (threshold 1)     pass [measured]
+  deterministic_replay_match    1  (threshold 1)     pass [measured]
+  tool_contract_validation      1  (threshold 1)     pass [measured]
+  latency_p95_ms                7  (threshold 5000)  pass [measured]
 ```
 
-Case c3 is the one to show: the query *"wage earner pay stubs W-2 verbal
-verification"* correctly retrieved the wage-earner document, but the label
-pointed at the self-employed document, so it scored 0. The metric responds to
-what retrieval actually returned, not to the shape of the case. The offline
-lane would have scored all three of these 1.00.
+**Three things make this evidence rather than assertion:**
 
-**Honest limits:** lexical retrieval only — no embedding service runs in this
-environment, so the hybrid vector path is not exercised and no claim is made
-about it. The corpus is synthetic and small (20 documents, 6 queries). This is
-one measured lane, not a measured suite.
+**1. `latency_p95_ms` moves.** It read `5000` under the offline executor —
+exactly its threshold — because the lane returned `Math.max()` of the *declared*
+per-case budgets. Measured, it reads single-digit milliseconds and **varies run
+to run** (8 on one run, 7 on the next). A fixture cannot do that.
+
+**2. The connection cannot bypass the controls** (`11-app-role-nobypassrls.txt`):
+
+```
+  rolname   | rolbypassrls | rolsuper
+ allura     | t            | t
+ allura_app | f            | f
+```
+
+Executors connect as `allura_app`, not the owner. Because RLS is FORCED (§3),
+the evaluation path is subject to exactly the same tenant and workspace
+isolation as production. An eval that ran as the owner would silently prove
+nothing about isolation.
+
+**3. The lanes can fail** (`10-falsifiability-suite.txt`):
+
+```
+$ bun x vitest run src/lib/evals/__tests__/live-executors.falsifiability.test.ts
+Test Files  1 passed (1)
+     Tests  5 passed (5)
+```
+
+A metric that cannot fail is not a metric. These tests feed each lane inputs
+that *should* fail and assert that it reports failure. `--live` also fails
+closed when the database is unreachable — it errors rather than reporting 1.0s.
+
+**Honest limits.** Retrieval is lexical (`content_tsv` / `ts_rank_cd`); no
+embedding service runs here, so the hybrid vector path is not exercised and no
+claim is made about it. Corpora are synthetic and small — 20 documents, 6
+queries for retrieval. Thresholds are met, not stress-tested at scale.
 
 ## 8. Governed operator dashboard (`artifacts/dashboard-demo/`)
 
@@ -182,15 +198,11 @@ evidence, or reject. Promotion is human-in-the-loop by construction.
 
 Credibility in this interview comes from knowing exactly where the seams are.
 
-1. **Eight of the nine suite lanes are wiring checks, not measurements.** They
-   return 1.0 by construction, and `latency_p95_ms` reports `Math.max()` of the
-   *declared* per-case budgets — which is why it sits exactly at 5000ms. A
-   post-merge adversarial review (2026-08-22) recorded this as finding C5:
-   "evaluates caller-supplied scores, not datasets." GitHub issue #91 tracks it.
-   Say this before you are asked, then show §7b: `retrieval_relevance_p@5` is
-   now genuinely measured and demonstrably falsifiable. One real lane plus an
-   honest account of the other eight is a far stronger position than nine
-   unexplained 1.0s.
+1. **Corpora are synthetic and small.** All nine lanes are now genuinely
+   measured (§7b), which closes the original finding C5 from the 2026-08-22
+   adversarial review and GitHub issue #91. What remains is scale: 20 documents
+   and 6 retrieval queries, thresholds met rather than stress-tested, and
+   lexical retrieval only. Say this before you are asked.
 
 1b. **The deck carries no honesty qualifiers.** An audit of all ten slides found
    zero occurrences of "specimen", "synthetic", "illustrative", "fixture", or
@@ -242,6 +254,10 @@ bun run dev &
 bun run dashboard:browser
 
 # the one measured lane, and the proof it can fail
-bun run scripts/eval-live-retrieval.ts
-bun run scripts/eval-live-retrieval.ts --control
+# all nine lanes, measured, as the non-bypassing app role
+bun run eval:portfolio --live
+bun x vitest run src/lib/evals/__tests__/live-executors.falsifiability.test.ts
 ```
+
+> Running `--live` seeds 20 labeled documents, so the dashboard Overview shows
+> real memory counts rather than zero.
