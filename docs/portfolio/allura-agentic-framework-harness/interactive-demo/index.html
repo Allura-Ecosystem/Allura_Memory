@@ -271,6 +271,25 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .fx-pre-note{margin:10px 0 0;color:var(--allura-muted);font-size:12.5px}
 #framework .life-row{grid-template-columns:180px 1fr}
 </style>
+<style id="tour-style">
+.allura-hint{position:fixed;z-index:10001;display:none;max-width:260px;background:var(--allura-ink);color:var(--allura-cream);font:500 12.5px/1.45 "IBM Plex Sans",-apple-system,sans-serif;padding:8px 11px;border-radius:8px;box-shadow:0 10px 26px -12px rgba(15,23,32,.55);pointer-events:none}
+.tour-block{position:fixed;inset:0;z-index:9998;background:transparent}
+.tour-spot{position:fixed;z-index:9999;border-radius:12px;box-shadow:0 0 0 9999px rgba(15,23,32,.62);pointer-events:none;transition:top .25s ease,left .25s ease,width .25s ease,height .25s ease}
+.tour-pop{position:fixed;z-index:10000;width:322px;max-width:calc(100vw - 24px);background:var(--allura-paper);border:1px solid var(--line);border-radius:14px;box-shadow:0 26px 64px -26px rgba(15,23,32,.5);padding:16px 17px;outline:none}
+.tour-pop h3{margin:6px 0 6px;font-size:17px;line-height:1.25;color:var(--allura-ink)}
+.tour-pop p{margin:0;font-size:13.5px;line-height:1.5;color:var(--allura-muted)}
+.tp-eyebrow{font:600 11px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--allura-blue)}
+.tp-dots{display:flex;gap:5px;margin:13px 0;flex-wrap:wrap}
+.tp-dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.tp-dots i.on{background:var(--allura-blue)}
+.tp-row{display:flex;align-items:center;gap:8px}
+.tp-spacer{flex:1}
+.tp-skip{background:transparent;border:0;color:var(--allura-muted);font:600 12px/1 "IBM Plex Sans",sans-serif;cursor:pointer;padding:8px 4px}
+.tp-back{background:var(--allura-paper);border:1px solid var(--allura-ink);border-radius:8px;padding:9px 13px;font:600 13px/1 "IBM Plex Sans",sans-serif;color:var(--allura-ink);cursor:pointer}
+.tour-pop .tp-next{min-height:auto;padding:9px 15px;border-radius:8px}
+#allura-tour-btn::before{content:"\2726";margin-right:6px;color:var(--allura-blue)}
+@media (prefers-reduced-motion: reduce){.tour-spot{transition:none}}
+</style>
 </head>
 <body>
   <a class="skip-link" href="#command-title">Skip to dashboard content</a>
@@ -441,5 +460,68 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     demoActions.forEach(button=>button.addEventListener('click',()=>{const action=button.dataset.demoAction;if(action==='evidence'){reviewFeedback.textContent='More evidence requested in the local UI simulation. No server action occurred.';return}setReceipt(action);reviewFeedback.textContent=`${action==='approved'?'Approval':'Rejection'} preview recorded locally. No server action occurred.`;openView('receipts')}));
     syncReviewState();
   </script>
+<script id="tour-js">
+(function(){
+  "use strict";
+  var RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var tourActive=false;
+  var HINTS=[
+    ['.nav[data-view="command"]','Command Center — read the record before a person acts.'],
+    ['.nav[data-view="framework"]','Framework & Harness — the engineering evidence behind the product.'],
+    ['.nav[data-view="governance"]','Governance — curate context without giving a module authority.'],
+    ['.nav[data-view="evidence"]','Evidence — original source and OCR derivative kept distinct.'],
+    ['.nav[data-view="receipts"]','Receipts — a server-owned, append-only decision record.'],
+    ['.nav[data-view="modules"]','Module Registry — first-party signed modules only.'],
+    ['.nav[data-view="mortgage"]','Mortgage Approval Gate — a domain module: declared, not privileged.'],
+    ['.nav[data-view="admin"]','Organization Admin — enablement and posture via typed settings.'],
+    ['.nav[data-view="settings"]','Platform Settings — inherited, resolved configuration.'],
+    ['#demo-start','Start a guided mortgage review case.'],
+    ['#demo-reset','Reset the guided case.'],
+    ['.tab','Switch the Command Center workspace.'],
+    ['.queue-item','A synthetic review case — click to load its evidence.'],
+    ['.review-panel .action.primary','Human decision — simulated; no server action occurs.']
+  ];
+  HINTS.forEach(function(pr){document.querySelectorAll(pr[0]).forEach(function(el){if(!el.hasAttribute('data-hint'))el.setAttribute('data-hint',pr[1]);});});
+  var tip=document.createElement('div');tip.className='allura-hint';tip.setAttribute('role','tooltip');document.body.appendChild(tip);
+  function showTip(el){if(tourActive)return;var t=el.getAttribute('data-hint');if(!t)return;tip.textContent=t;tip.style.display='block';var r=el.getBoundingClientRect();var tw=tip.offsetWidth,th=tip.offsetHeight;var left=r.left,top=r.bottom+8;if(left+tw>innerWidth-12)left=innerWidth-12-tw;if(left<12)left=12;if(top+th>innerHeight-12)top=r.top-8-th;tip.style.left=left+'px';tip.style.top=top+'px';}
+  function hideTip(){tip.style.display='none';}
+  document.addEventListener('pointerover',function(e){var el=e.target.closest&&e.target.closest('[data-hint]');if(el)showTip(el);});
+  document.addEventListener('pointerout',function(e){var el=e.target.closest&&e.target.closest('[data-hint]');if(el)hideTip();});
+  document.addEventListener('focusin',function(e){var el=e.target.closest&&e.target.closest('[data-hint]');if(el)showTip(el);});
+  document.addEventListener('focusout',hideTip);
+  window.addEventListener('scroll',hideTip,true);
+
+  function nav(v){var b=document.querySelector('.nav[data-view="'+v+'"]');if(b)b.click();}
+  var STEPS=[
+    {sel:'.masthead .brand',title:'A governed operator surface',body:'Everything here is synthetic specimen data — no live connection, decision, or production status is represented.'},
+    {sel:'.side .nav-scroll',title:'Eight surfaces, one governed shell',body:'Work, modules, and administration all ride a single control plane.'},
+    {before:function(){nav('command');},sel:'.nav[data-view="command"]',title:'Command Center',body:'The evidence desk: queue → evidence → human review → receipt. Read the record before anyone acts.'},
+    {before:function(){nav('framework');},sel:'.nav[data-view="framework"]',title:'Framework & Harness',body:'The engineering case beneath the product — the part a Principal Engineer is hired to build.'},
+    {sel:'#framework .fx-term',title:'Fail-closed by construction',body:'No authentication configured → the gateway refuses to start. A missing token cannot silently disable the control.'},
+    {sel:'#framework .fx-lane',title:'Evaluation, measured live',body:'Nine lanes run through real executors — and they can fail. A metric that cannot fail is not evidence.'},
+    {before:function(){nav('governance');},sel:'.nav[data-view="governance"]',title:'Governance',body:'Curate the context around a request without giving any module independent authority.'},
+    {before:function(){nav('evidence');},sel:'.nav[data-view="evidence"]',title:'Evidence',body:'Original source and OCR derivative stay distinct; confidence is shown, never normalized into a fact.'},
+    {before:function(){nav('receipts');},sel:'.nav[data-view="receipts"]',title:'Receipts',body:'A server-owned, append-only record of who decided what, under which authority.'},
+    {before:function(){nav('modules');},sel:'.nav[data-view="modules"]',title:'Module Registry',body:'First-party signed modules only — authenticity, compatibility, capabilities, and lifecycle are host-checked.'},
+    {before:function(){nav('mortgage');},sel:'.nav[data-view="mortgage"]',title:'Mortgage Approval Gate',body:'A domain module: it contributes intake, evidence grammar, and cited policy — but no authority. Declared, not privileged.'},
+    {before:function(){nav('command');var b=document.getElementById('demo-start');if(b)b.click();},sel:'#selected-packet',title:'Run a real review',body:'The guided case loads synthetic evidence for a human to inspect — source, OCR confidence, and cited policy.'},
+    {sel:'.review-panel',title:'The human decides',body:'Only an authorized person may approve or reject — with a rationale. Cowork can request review; it cannot decide.'},
+    {before:function(){nav('command');},sel:'.demo-controls',title:'That’s the loop',body:'Explore freely — hover any control for a one-line hint, or replay this tour anytime from “Take the tour”.'}
+  ];
+  var block,spot,pop,idx=0;
+  function ensureUI(){block=document.createElement('div');block.className='tour-block';spot=document.createElement('div');spot.className='tour-spot';pop=document.createElement('div');pop.className='tour-pop';pop.tabIndex=-1;pop.setAttribute('role','dialog');pop.setAttribute('aria-modal','true');document.body.appendChild(block);document.body.appendChild(spot);document.body.appendChild(pop);}
+  function place(){var s=STEPS[idx];var el=document.querySelector(s.sel);if(!el){if(idx<STEPS.length-1){goto(idx+1);}else{end();}return;}el.scrollIntoView({block:'center',behavior:RM?'auto':'smooth'});setTimeout(function(){var r=el.getBoundingClientRect(),pad=6;spot.style.top=(r.top-pad)+'px';spot.style.left=(r.left-pad)+'px';spot.style.width=(r.width+pad*2)+'px';spot.style.height=(r.height+pad*2)+'px';pop.innerHTML='<div class="tp-eyebrow">Step '+(idx+1)+' / '+STEPS.length+'</div><h3>'+s.title+'</h3><p>'+s.body+'</p><div class="tp-dots">'+STEPS.map(function(_,i){return '<i'+(i===idx?' class="on"':'')+'></i>';}).join('')+'</div><div class="tp-row"><button class="tp-skip" type="button">Skip tour</button><span class="tp-spacer"></span>'+(idx>0?'<button class="tp-back" type="button">Back</button>':'')+'<button class="tp-next action primary" type="button">'+(idx===STEPS.length-1?'Done':'Next')+'</button></div>';pop.querySelector('.tp-skip').onclick=end;var bk=pop.querySelector('.tp-back');if(bk)bk.onclick=prev;pop.querySelector('.tp-next').onclick=next;var pw=pop.offsetWidth,ph=pop.offsetHeight;var top=r.bottom+12,left=r.left;if(top+ph>innerHeight-12)top=Math.max(12,r.top-12-ph);if(left+pw>innerWidth-12)left=innerWidth-12-pw;if(left<12)left=12;pop.style.top=top+'px';pop.style.left=left+'px';pop.focus();},RM?60:380);}
+  function goto(i){idx=Math.max(0,Math.min(STEPS.length-1,i));var s=STEPS[idx];if(s.before){try{s.before();}catch(e){}}place();}
+  function next(){if(idx>=STEPS.length-1){end();return;}goto(idx+1);}
+  function prev(){goto(idx-1);}
+  function start(){if(tourActive)return;tourActive=true;hideTip();ensureUI();document.body.classList.add('tour-on');goto(0);}
+  function end(){tourActive=false;document.body.classList.remove('tour-on');[block,spot,pop].forEach(function(n){if(n&&n.parentNode)n.parentNode.removeChild(n);});try{localStorage.setItem('allura_tour_seen','1');}catch(e){}nav('command');}
+  document.addEventListener('keydown',function(e){if(!tourActive)return;if(e.key==='Escape')end();else if(e.key==='ArrowRight')next();else if(e.key==='ArrowLeft')prev();});
+  window.addEventListener('resize',function(){if(tourActive)place();});
+  var actions=document.querySelector('.demo-control-actions');
+  if(actions){var b=document.createElement('button');b.type='button';b.className='action';b.id='allura-tour-btn';b.textContent='Take the tour';b.onclick=start;actions.insertBefore(b,actions.firstChild);}
+  try{if(!localStorage.getItem('allura_tour_seen'))setTimeout(start,700);}catch(e){}
+})();
+</script>
 </body>
 </html>
