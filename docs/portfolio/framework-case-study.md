@@ -1,4 +1,4 @@
-# Allura — Principal Engineer Case Study
+# Allura — Framework & Harness Case Study
 
 ## Market Category
 
