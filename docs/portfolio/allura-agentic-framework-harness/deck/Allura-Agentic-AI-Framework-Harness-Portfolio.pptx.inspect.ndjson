@@ -13,9 +13,9 @@
 {"kind":"shape","id":"sh/wvud0zah","slide":1,"name":"orange-module","bbox":[1030,335,145,145]}
 {"kind":"shape","id":"sh/xw3e94bm","slide":1,"name":"green-module","bbox":[1125,410,90,120]}
 {"kind":"textbox","id":"sh/atsvypsb","slide":1,"name":"role","text":"Role-aligned to Principal Engineer, Agentic AI Framework and Harness","textPreview":"Role-aligned to Principal Engineer, Agentic AI Framework and Harness","textChars":68,"textLines":1,"bbox":[54,565,900,30]}
-{"kind":"textbox","id":"sh/bu1w7utw","slide":1,"name":"disclaimer","text":"Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.","textPreview":"Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.","textChars":110,"textLines":1,"bbox":[54,610,1040,28]}
+{"kind":"textbox","id":"sh/bu1w7utw","slide":1,"name":"disclaimer","text":"Prepared as a portfolio presentation. It does not imply the target enterprise sponsorship, employment or deployment.","textPreview":"Prepared as a portfolio presentation. It does not imply the target enterprise sponsorship, employment or deployment.","textChars":110,"textLines":1,"bbox":[54,610,1040,28]}
 {"kind":"image","id":"im/nml0bahc","slide":1,"name":"","alt":"Official Allura wordmark","bbox":[54,28,112,44]}
-{"kind":"notes","id":"nt/4l8oad","slide":1,"text":"[Sources]\n- Bank of America job posting (accessed 2026-09-01)\n- docs/portfolio/allura-bofa-principal-engineer/SOURCES.md\n\n[Presenter notes]\nOpen with scope and boundary: this shows engineering evidence, not a client claim."}
+{"kind":"notes","id":"nt/4l8oad","slide":1,"text":"[Sources]\n- target role posting (accessed 2026-09-01)\n- docs/portfolio/allura-agentic-framework-harness/SOURCES.md\n\n[Presenter notes]\nOpen with scope and boundary: this shows engineering evidence, not a client claim."}
 {"kind":"slide","id":"sl/ripz9p","slide":2,"title":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textShapes":17}
 {"kind":"textbox","id":"sh/rm54zet8","slide":2,"name":"eyebrow","text":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textPreview":"ALLURA MEMORY / PORTFOLIO EVIDENCE","textChars":34,"textLines":1,"bbox":[182,40,470,22]}
 {"kind":"textbox","id":"sh/qlw3q9cn","slide":2,"name":"slide-number","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1175,40,50,22]}
@@ -40,7 +40,7 @@
 {"kind":"textbox","id":"sh/90fihcvi","slide":2,"name":"theme-body-3","text":"SDK, API/MCP and CLI","textPreview":"SDK, API/MCP and CLI","textChars":20,"textLines":1,"bbox":[954,418,210,38]}
 {"kind":"textbox","id":"sh/oz6h87ux","slide":2,"name":"close","text":"The focus is evidence that a hiring panel can inspect—not a collection of visual claims.","textPreview":"The focus is evidence that a hiring panel can inspect—not a collection of visual claims.","textChars":88,"textLines":1,"bbox":[54,570,900,28]}
 {"kind":"image","id":"im/xkz6hg7m","slide":2,"name":"","alt":"Official Allura wordmark","bbox":[54,28,112,44]}
-{"kind":"notes","id":"nt/ripz9p","slide":2,"text":"[Sources]\n- Bank of America job posting (accessed 2026-09-01)\n- FRAMEWORK.md\n\n[Presenter notes]\nMap the job’s themes directly to the following visuals."}
+{"kind":"notes","id":"nt/ripz9p","slide":2,"text":"[Sources]\n- target role posting (accessed 2026-09-01)\n- FRAMEWORK.md\n\n[Presenter notes]\nMap the job’s themes directly to the following visuals."}
 {"kind":"slide","id":"sl/6hkbxk","slide":3,"title":"03  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFIL...","textShapes":1}
 {"kind":"textbox","id":"sh/zih8jy5c","slide":3,"name":"boundary","text":"03  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textPreview":"03  /  ALLURA TECHNICAL CASE STUDY — ROLE-ALIGNED EVIDENCE; NO EXTERNAL AFFILIATION IMPLIED.","textChars":92,"textLines":1,"bbox":[54,690,1110,16]}
 {"kind":"image","id":"im/xwb2l4b2","slide":3,"name":"","alt":"Allura infographic: One governed execution path","bbox":[42,0,1196,680]}
@@ -116,11 +116,11 @@
 {"kind":"shape","id":"sh/cjmx4zih","slide":10,"name":"dot-2-0","bbox":[858,334,10,10]}
 {"kind":"textbox","id":"sh/a5wby10z","slide":10,"name":"list-2-0","text":"External client deployment","textPreview":"External client deployment","textChars":26,"textLines":1,"bbox":[882,324,260,28]}
 {"kind":"shape","id":"sh/v65c76hk","slide":10,"name":"dot-2-1","bbox":[858,377,10,10]}
-{"kind":"textbox","id":"sh/wret0bi5","slide":10,"name":"list-2-1","text":"Bank of America affiliation","textPreview":"Bank of America affiliation","textChars":27,"textLines":1,"bbox":[882,367,260,28]}
+{"kind":"textbox","id":"sh/wret0bi5","slide":10,"name":"list-2-1","text":"the target enterprise affiliation","textPreview":"the target enterprise affiliation","textChars":27,"textLines":1,"bbox":[882,367,260,28]}
 {"kind":"shape","id":"sh/xs7u9gzq","slide":10,"name":"dot-2-2","bbox":[858,420,10,10]}
 {"kind":"textbox","id":"sh/m1wbu103","slide":10,"name":"list-2-2","text":"Production-scale adoption","textPreview":"Production-scale adoption","textChars":25,"textLines":1,"bbox":[882,410,260,28]}
 {"kind":"shape","id":"sh/n25c36h8","slide":10,"name":"dot-2-3","bbox":[858,463,10,10]}
 {"kind":"textbox","id":"sh/83etwrit","slide":10,"name":"list-2-3","text":"Unverified performance results","textPreview":"Unverified performance results","textChars":30,"textLines":1,"bbox":[882,453,260,28]}
 {"kind":"textbox","id":"sh/94nu5wze","slide":10,"name":"close","text":"The final deliverable includes editable SVGs, source notes, alt text and a production release gate.","textPreview":"The final deliverable includes editable SVGs, source notes, alt text and a production release gate.","textChars":99,"textLines":1,"bbox":[54,605,1050,28]}
 {"kind":"image","id":"im/fu50r6hk","slide":10,"name":"","alt":"Official Allura wordmark","bbox":[54,28,112,44]}
-{"kind":"notes","id":"nt/1e3sx4","slide":10,"text":"[Sources]\n- docs/portfolio/allura-bofa-principal-engineer/SOURCES.md\n- docs/portfolio/allura-bofa-principal-engineer/qa/BRAND-RELEASE-GATE.md\n\n[Presenter notes]\nClose by making verification easy and stating what this case study does not claim."}
+{"kind":"notes","id":"nt/1e3sx4","slide":10,"text":"[Sources]\n- docs/portfolio/allura-agentic-framework-harness/SOURCES.md\n- docs/portfolio/allura-agentic-framework-harness/qa/BRAND-RELEASE-GATE.md\n\n[Presenter notes]\nClose by making verification easy and stating what this case study does not claim."}

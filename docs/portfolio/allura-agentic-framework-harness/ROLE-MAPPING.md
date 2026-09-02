@@ -9,4 +9,4 @@
 | SDK, API, CLI and developer experience | Three interfaces connected to one governed core | `FRAMEWORK.md` § Developer interfaces |
 | Technical leadership and standards | Evidence-to-release chain, explicit sources, honest boundaries and release gate | `SOURCES.md`; `qa/BRAND-RELEASE-GATE.md` |
 
-The Bank of America role asks for reusable frameworks/harnesses, orchestration, memory, policy hooks, evaluation, developer interfaces, and highly regulated delivery controls. This is a role-aligned technical case study, not a representation of Bank of America systems or approval. [Official role posting](https://careers.bankofamerica.com/en-us/job-detail/26020197/principal-engineer-agentic-ai-framework-and-harness-charlotte-north-carolina-united-states)
+The target role asks for reusable frameworks/harnesses, orchestration, memory, policy hooks, evaluation, developer interfaces, and highly regulated delivery controls. This is a role-aligned technical case study, not a representation of any employer's systems or approval. (public role posting; reference withheld)

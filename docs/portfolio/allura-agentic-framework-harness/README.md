@@ -1,6 +1,6 @@
 # Allura — Agentic AI Framework & Harness Portfolio
 
-This package is a brand-corrected, evidence-first portfolio presentation for the Principal Engineer, Agentic AI Framework and Harness role at Bank of America. It demonstrates Allura's architecture and verification approach without suggesting Bank of America endorsement, deployment, or affiliation.
+This package is a brand-corrected, evidence-first portfolio presentation for the Principal Engineer, Agentic AI Framework and Harness role. It demonstrates Allura's architecture and verification approach without suggesting any client endorsement, deployment, or affiliation.
 
 ## Deliverables
 
@@ -13,4 +13,4 @@ This package is a brand-corrected, evidence-first portfolio presentation for the
 
 ## Presentation boundary
 
-The portfolio presents a technical case study. It makes no claim that Allura is in use by, endorsed by, or associated with Bank of America. Quantitative statements are limited to the cited evidence artifacts.
+The portfolio presents a technical case study. It makes no claim that Allura is in use by, endorsed by, or associated with any specific employer. Quantitative statements are limited to the cited evidence artifacts.

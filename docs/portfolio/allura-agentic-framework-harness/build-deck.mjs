@@ -3,7 +3,7 @@ import path from 'node:path';
 // eslint-disable-next-line import/no-unresolved -- @oai/artifact-tool is a local-only deck tool, not a runtime dependency
 import { Presentation, PresentationFile } from '@oai/artifact-tool';
 
-const root = path.resolve('docs/portfolio/allura-bofa-principal-engineer');
+const root = path.resolve('docs/portfolio/allura-agentic-framework-harness');
 const out = path.join(root, 'deck');
 const renderDir = path.join(out, 'rendered');
 await fs.mkdir(renderDir, { recursive: true });
@@ -60,8 +60,8 @@ function infographicSlide(number, asset, heading, sources) {
  shape(s,'ellipse',{left:1030,top:335,width:145,height:145},C.orange,{style:'solid',fill:C.orange,width:0},'orange-module');
  shape(s,'roundRect',{left:1125,top:410,width:90,height:120},C.green,{style:'solid',fill:C.green,width:0},'green-module');
  txt(s,'Role-aligned to Principal Engineer, Agentic AI Framework and Harness',{left:54,top:565,width:900,height:30},22,C.ink,true,'role');
- txt(s,'Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.',{left:54,top:610,width:1040,height:28},16,C.muted,false,'disclaimer');
- notes(s,['Bank of America job posting (accessed 2026-09-01)','docs/portfolio/allura-bofa-principal-engineer/SOURCES.md'],'Open with scope and boundary: this shows engineering evidence, not a client claim.');
+ txt(s,'Prepared as a portfolio presentation. It does not imply the target enterprise sponsorship, employment or deployment.',{left:54,top:610,width:1040,height:28},16,C.muted,false,'disclaimer');
+ notes(s,['target role posting (accessed 2026-09-01)','docs/portfolio/allura-agentic-framework-harness/SOURCES.md'],'Open with scope and boundary: this shows engineering evidence, not a client claim.');
 }
 // 2 — role fit
 {
@@ -71,7 +71,7 @@ function infographicSlide(number, asset, heading, sources) {
  const items=[['FRAMEWORK','Reusable execution path','Orchestration plus shared interfaces',C.blue,C.paleBlue],['HARNESS','Deterministic evidence','Scenario, receipt, replay, evaluation',C.orange,C.paleOrange],['GOVERNANCE','Controls in the flow','Proof, policy, RLS, durable audit',C.green,C.paleGreen],['DEVELOPER EXPERIENCE','One governed core','SDK, API/MCP and CLI',C.ink,C.cream]];
  items.forEach((it,i)=>{const x=54+i*292;shape(s,'roundRect',{left:x,top:260,width:260,height:230},it[4],{style:'solid',fill:it[3],width:2},`theme-${i}`);mono(s,it[0],{left:x+24,top:292,width:210,height:20},it[3],13,`theme-kicker-${i}`);txt(s,it[1],{left:x+24,top:332,width:210,height:62},25,C.ink,true,`theme-heading-${i}`);txt(s,it[2],{left:x+24,top:418,width:210,height:38},16,C.muted,false,`theme-body-${i}`);});
  txt(s,'The focus is evidence that a hiring panel can inspect—not a collection of visual claims.',{left:54,top:570,width:900,height:28},20,C.ink,true,'close');
- notes(s,['Bank of America job posting (accessed 2026-09-01)','FRAMEWORK.md'],'Map the job’s themes directly to the following visuals.');
+ notes(s,['target role posting (accessed 2026-09-01)','FRAMEWORK.md'],'Map the job’s themes directly to the following visuals.');
 }
 infographicSlide(3,'01-framework-harness-architecture','One governed execution path',['FRAMEWORK.md §§ Architecture, Orchestration, Policy, Harness, Interfaces']);
 infographicSlide(4,'02-deterministic-harness','Determinism is an engineering property',['FRAMEWORK.md § Simulator harness and evaluation','GitHub Actions run 33502490831']);
@@ -96,10 +96,10 @@ infographicSlide(8,'06-evidence-to-release-chain','Evidence makes the release cl
  const s=shell(10);
  txt(s,'How to verify this portfolio',{left:54,top:112,width:800,height:48},33,C.ink,true,'title');
  txt(s,'A credible portfolio lets the reviewer separate demonstrated capability from future work.',{left:54,top:166,width:1030,height:32},19,C.muted,false,'intro');
- const cols=[['VERIFY NOW',['Read FRAMEWORK.md','Inspect PR #138','Open CI evidence run','Review dashboard manifest'],C.blue,C.paleBlue],['DEMONSTRATED HERE',['Framework and harness','Governed memory','Policy and audit path','Developer interfaces'],C.green,C.paleGreen],['NOT CLAIMED',['External client deployment','Bank of America affiliation','Production-scale adoption','Unverified performance results'],C.orange,C.paleOrange]];
+ const cols=[['VERIFY NOW',['Read FRAMEWORK.md','Inspect PR #138','Open CI evidence run','Review dashboard manifest'],C.blue,C.paleBlue],['DEMONSTRATED HERE',['Framework and harness','Governed memory','Policy and audit path','Developer interfaces'],C.green,C.paleGreen],['NOT CLAIMED',['External client deployment','the target enterprise affiliation','Production-scale adoption','Unverified performance results'],C.orange,C.paleOrange]];
  cols.forEach((c,i)=>{const x=54+i*388;shape(s,'roundRect',{left:x,top:250,width:350,height:285},c[3],{style:'solid',fill:c[2],width:2},`col-${i}`);mono(s,c[0],{left:x+26,top:282,width:290,height:20},c[2],14,`col-kicker-${i}`);c[1].forEach((v,j)=>{shape(s,'ellipse',{left:x+28,top:334+j*43,width:10,height:10},c[2],{style:'solid',fill:c[2],width:0},`dot-${i}-${j}`);txt(s,v,{left:x+52,top:324+j*43,width:260,height:28},18,C.ink,j===0,`list-${i}-${j}`);});});
  txt(s,'The final deliverable includes editable SVGs, source notes, alt text and a production release gate.',{left:54,top:605,width:1050,height:28},20,C.ink,true,'close');
- notes(s,['docs/portfolio/allura-bofa-principal-engineer/SOURCES.md','docs/portfolio/allura-bofa-principal-engineer/qa/BRAND-RELEASE-GATE.md'],'Close by making verification easy and stating what this case study does not claim.');
+ notes(s,['docs/portfolio/allura-agentic-framework-harness/SOURCES.md','docs/portfolio/allura-agentic-framework-harness/qa/BRAND-RELEASE-GATE.md'],'Close by making verification easy and stating what this case study does not claim.');
 }
 
 const write = async (file, blob) => {

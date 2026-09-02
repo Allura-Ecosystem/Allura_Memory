@@ -65,4 +65,4 @@ memory storage performs worse than no memory at all.
 - Native RuVector extension is not yet active (`ruvector_function_count=0`);
   the runtime label is honestly `pgvector bridge`.
 - Reference integrations are demonstrations, not customer deployments or
-  claims of bank approval.
+  claims of institutional approval.

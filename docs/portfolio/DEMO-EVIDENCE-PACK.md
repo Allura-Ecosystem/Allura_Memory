@@ -38,7 +38,7 @@ This is the designed behavior, not a failure: production cannot boot anonymously
 Booting with an explicit dev-local principal yields
 `auth_enabled: true, auth_mode: "dev_local"` with rate limiting active.
 
-**Why it matters for a bank:** the control cannot be skipped by omission. The
+**Why it matters in regulated environments:** the control cannot be skipped by omission. The
 common failure mode — "auth is disabled when the token env var is unset" — was a
 real defect in this codebase and was removed (Story 24.2).
 

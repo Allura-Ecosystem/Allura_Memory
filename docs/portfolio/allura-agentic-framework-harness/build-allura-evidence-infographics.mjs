@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 
-const root = path.resolve('docs/portfolio/allura-bofa-principal-engineer/evidence-infographics');
+const root = path.resolve('docs/portfolio/allura-agentic-framework-harness/evidence-infographics');
 const svgDir = path.join(root, 'svg');
 const pngDir = path.join(root, 'png');
 const assets = path.join(root, 'assets');

@@ -594,8 +594,8 @@
         28
       ],
       "geometry": "rect",
-      "text": "Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.",
-      "textPreview": "Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.",
+      "text": "Prepared as a portfolio presentation. It does not imply client sponsorship, employment or deployment.",
+      "textPreview": "Prepared as a portfolio presentation. It does not imply client sponsorship, employment or deployment.",
       "resolvedFontSize": 16,
       "resolvedTextStyle": {
         "fontSize": 16,
@@ -614,14 +614,14 @@
         "lines": [
           {
             "index": 1,
-            "text": "Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment."
+            "text": "Prepared as a portfolio presentation. It does not imply client sponsorship, employment or deployment."
           }
         ]
       },
       "paragraphs": [
         {
           "index": 1,
-          "text": "Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.",
+          "text": "Prepared as a portfolio presentation. It does not imply client sponsorship, employment or deployment.",
           "resolvedTextStyle": {
             "fontSize": 16,
             "color": "#59616A",
@@ -630,7 +630,7 @@
           "runs": [
             {
               "index": 1,
-              "text": "Prepared as a portfolio presentation. It does not imply Bank of America sponsorship, employment or deployment.",
+              "text": "Prepared as a portfolio presentation. It does not imply client sponsorship, employment or deployment.",
               "fontSize": 16,
               "color": "#59616A",
               "alignment": "left"
