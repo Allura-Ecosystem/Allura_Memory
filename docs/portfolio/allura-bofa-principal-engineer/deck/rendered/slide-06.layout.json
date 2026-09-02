@@ -2,13 +2,13 @@
   "schema": "openai.presentation.layout/v4",
   "unit": "px",
   "slide": {
-    "aid": "sl/w91ryb",
-    "id": "w91ryb",
+    "aid": "sl/196nfc",
+    "id": "196nfc",
     "slide": 6,
-    "layoutId": "08a68092-885d-422d-a984-dafb19c5c090",
+    "layoutId": "7f3a531d-277c-4a4f-a4d8-d67f653b358c",
     "layoutName": "Title Slide",
     "layoutType": "title",
-    "masterLayoutId": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+    "masterLayoutId": "3916030c-27b5-4a7e-a5b1-3178025ab654",
     "masterLayoutName": "Master",
     "backgroundColor": "#F7F3EE",
     "frame": {
@@ -45,15 +45,15 @@
   "inheritedLayers": [
     {
       "scope": "layout",
-      "id": "08a68092-885d-422d-a984-dafb19c5c090",
+      "id": "7f3a531d-277c-4a4f-a4d8-d67f653b358c",
       "name": "Title Slide",
       "type": "title",
-      "parentLayoutId": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+      "parentLayoutId": "3916030c-27b5-4a7e-a5b1-3178025ab654",
       "elements": []
     },
     {
       "scope": "master",
-      "id": "dbb0fadf-e63c-4a5a-8099-ab675db4a5df",
+      "id": "3916030c-27b5-4a7e-a5b1-3178025ab654",
       "name": "Master",
       "type": "master",
       "elements": []
@@ -64,7 +64,7 @@
       "order": 1,
       "kind": "image",
       "scope": "slide",
-      "aid": "im/vel4be5s",
+      "aid": "im/4bqlgfah",
       "id": "1",
       "bbox": [
         42,
@@ -76,16 +76,16 @@
       "contentType": "image/png",
       "imageFit": "contain",
       "asset": {
-        "assetId": "93ca58ea-047f-4051-86d5-564e98ec5ae6",
+        "assetId": "de3267e8-0c3d-4516-af79-97c220e6b04c",
         "contentType": "image/png",
-        "byteLength": 129381
+        "byteLength": 143826
       }
     },
     {
       "order": 2,
       "kind": "shape",
       "scope": "slide",
-      "aid": "sh/9c3ulobu",
+      "aid": "sh/a18j25sn",
       "id": "2",
       "name": "boundary",
       "bbox": [
