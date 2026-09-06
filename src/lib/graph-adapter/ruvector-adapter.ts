@@ -300,7 +300,13 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
   }): Promise<GraphSearchResult[]> {
     try {
       const scope = requireWorkspaceScope(params)
-      const result = await withTenantTransaction(
+
+      // ── Hybrid search: full-text first, trigram fallback ────────────────
+      // Primary: plainto_tsquery (fast, ranked, handles stemmed words)
+      // Fallback only when FTS returns zero rows: ILIKE plus word-level
+      // trigram similarity catches aliases and near-word matches such as
+      // "Gabe" → "Gabriel" and "stockout" → "sold out".
+      const ftsResult = await withTenantTransaction(
         { tenantId: params.group_id, ...scope },
         (db) => db.query<{
           id: string; content: string; score: number; provenance: string; created_at: Date | string;
@@ -322,12 +328,53 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
         ),
         this.pool,
       )
-      return result.rows.map((row) => ({
+
+      const toSearchResult = (row: {
+        id: string; content: string; score: number; provenance: string; created_at: Date | string;
+        tags: string[] | null; relevance: number
+      }): GraphSearchResult => ({
         id: row.id as MemoryId, content: row.content, score: row.score as ConfidenceScore,
         provenance: (row.provenance === "manual" ? "manual" : "conversation") as MemoryProvenance,
         created_at: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
         usage_count: 0, tags: Array.isArray(row.tags) ? row.tags : [], relevance: row.relevance,
-      }))
+      })
+
+      if (ftsResult.rows.length > 0) {
+        return ftsResult.rows.map(toSearchResult)
+      }
+
+      const trigramResult = await withTenantTransaction(
+        { tenantId: params.group_id, ...scope },
+        (db) => db.query<{
+          id: string; content: string; score: number; provenance: string; created_at: Date | string;
+          tags: string[] | null; relevance: number
+        }>(
+          `SELECT m.id,m.content,m.score,m.provenance,m.created_at,m.tags,
+                  GREATEST(
+                    CASE WHEN m.content ILIKE '%' || $1 || '%' THEN 1.0 ELSE 0.0 END,
+                    word_similarity($1,m.content),
+                    strict_word_similarity($1,m.content)
+                  ) AS relevance
+           FROM graph_memories m
+           WHERE m.group_id=$2 AND m.workspace_id=$3 AND m.workspace_scope_state='workspace_scoped'
+             AND m.deprecated=false
+             AND NOT EXISTS (
+               SELECT 1 FROM graph_supersedes s
+               WHERE s.superseded_id=m.id AND s.group_id=m.group_id
+                 AND s.workspace_id=m.workspace_id AND s.workspace_scope_state='workspace_scoped'
+             )
+             AND (
+               m.content ILIKE '%' || $1 || '%'
+               OR word_similarity($1,m.content) >= 0.15
+               OR strict_word_similarity($1,m.content) >= 0.15
+             )
+           ORDER BY relevance DESC,m.score DESC LIMIT $4`,
+          [params.query, params.group_id, scope.workspaceId, params.limit],
+        ),
+        this.pool,
+      )
+
+      return trigramResult.rows.map(toSearchResult)
     } catch (error) {
       throw new GraphAdapterError("ruvector-graph", "searchMemories", "Full-text search failed", error instanceof Error ? error : undefined)
     }

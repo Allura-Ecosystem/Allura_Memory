@@ -405,6 +405,47 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
     expect(foundBySearch?.relevance).toBeGreaterThan(0)
   })
 
+  it("AC-6: zero-hit fallback finds aliases and near-word phrases", async () => {
+    const aliasMemoryId = `mem-alias-${Date.now()}`
+    const phraseMemoryId = `mem-phrase-${Date.now()}`
+    testMemoryIds.push(aliasMemoryId, phraseMemoryId)
+
+    for (const [id, content] of [
+      [aliasMemoryId, "Gabriel"],
+      [phraseMemoryId, "The item was sold out."],
+    ]) {
+      await adapter.createMemory({
+        id: id as unknown as import("@/lib/memory/canonical-contracts").MemoryId,
+        group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
+        workspace_id: E2E_WORKSPACE,
+        principal_id: E2E_PRINCIPAL,
+        user_id: null,
+        content,
+        score: 0.8 as unknown as import("@/lib/memory/canonical-contracts").ConfidenceScore,
+        provenance: "conversation" as import("@/lib/memory/canonical-contracts").MemoryProvenance,
+        created_at: new Date().toISOString(),
+      })
+    }
+
+    const gabeResults = await adapter.searchMemories({
+      workspace_id: E2E_WORKSPACE,
+      principal_id: E2E_PRINCIPAL,
+      query: "Gabe",
+      group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
+      limit: 10,
+    })
+    const stockoutResults = await adapter.searchMemories({
+      workspace_id: E2E_WORKSPACE,
+      principal_id: E2E_PRINCIPAL,
+      query: "stockout",
+      group_id: E2E_GROUP as unknown as import("@/lib/memory/canonical-contracts").GroupId,
+      limit: 10,
+    })
+
+    expect(gabeResults.find((result) => result.id === aliasMemoryId)?.content).toBe("Gabriel")
+    expect(stockoutResults.find((result) => result.id === phraseMemoryId)?.content).toBe("The item was sold out.")
+  })
+
   // ── AC-8: Health check ─────────────────────────────────────────────────────
 
   it("AC-8: isHealthy — returns true when PG is reachable", async () => {
