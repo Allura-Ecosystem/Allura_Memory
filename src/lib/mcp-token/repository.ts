@@ -144,9 +144,13 @@ export async function touchLastUsed(id: string): Promise<void> {
   await getPool().query(`UPDATE mcp_tokens SET last_used_at = NOW() WHERE id = $1`, [id]);
 }
 
-export async function revokeToken(id: string): Promise<void> {
-  await getPool().query(
-    `UPDATE mcp_tokens SET revoked_at = NOW() WHERE id = $1 AND revoked_at IS NULL`,
-    [id],
+export async function revokeToken(id: string, groupId: string): Promise<boolean> {
+  const group_id = validateGroupId(groupId);
+  const result = await getPool().query(
+    `UPDATE mcp_tokens
+        SET revoked_at = NOW()
+      WHERE id = $1 AND group_id = $2 AND revoked_at IS NULL`,
+    [id, group_id],
   );
+  return result.rowCount === 1;
 }
