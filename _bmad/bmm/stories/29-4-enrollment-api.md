@@ -29,7 +29,7 @@ the user clicks "Connect to Allura" in the desktop client, the bridge calls `/en
 - New: `src/app/api/device-pairing/enroll/route.ts`
 - New: `src/lib/device-pairing/enrollment-service.ts` — `createEnrollment(input)` calls SECURITY DEFINER function, emits audit.
 - New: `src/lib/device-pairing/audit.ts` — `emitDeviceAudit(eventType, groupId, agentId, metadata)` transactional insertEvent helper (fail-closed).
-- Uses: `docker/postgres-init/060-device-enrollments.sql` (Story 29.1).
+- Uses: `docker/postgres-init/60-device-enrollments.sql` (logical schema version `060`; Story 29.1).
 - No existing file changes.
 
 **Required tests:**

@@ -26,11 +26,13 @@ The database can hold a PENDING enrollment (no tenant authority), an APPROVED pa
 **Architecture/ADR references:** §3.1, §3.1b, §3.2, §3.3, §3.4a, §3.4 (rollback), AD-61.
 
 **Source code and migration touchpoints:**
-- New: `docker/postgres-init/060-device-enrollments.sql` (table + 5 SECURITY DEFINER functions + REVOKE/GRANT + indexes)
-- New: `docker/postgres-init/061-paired-devices.sql` (table + RLS policy + indexes including `idx_paired_devices_rotation_idem` cross-device unique, `grace_exchange_count` column)
-- New: `docker/postgres-init/062-mcp-tokens-paired-device.sql` (ALTER ADD `paired_device_id` + partial unique index `idx_mcp_tokens_one_active_per_device` + DEFERRABLE CONSTRAINT TRIGGER `trg_mcp_tokens_device_agent_name` + `verify_device_token_agent_name()` function)
-- New: `docker/postgres-init/063-device-challenges.sql` (table + RLS + indexes + `resolve_device_route()` SECURITY DEFINER)
+- New: `docker/postgres-init/60-device-enrollments.sql` (logical schema version `060`; table + 5 SECURITY DEFINER functions + REVOKE/GRANT + indexes)
+- New: `docker/postgres-init/61-paired-devices.sql` (logical schema version `061`; table + RLS policy + indexes including `idx_paired_devices_rotation_idem` cross-device unique, `grace_exchange_count` column)
+- New: `docker/postgres-init/62-mcp-tokens-paired-device.sql` (logical schema version `062`; ALTER ADD `paired_device_id` + partial unique index `idx_mcp_tokens_one_active_per_device` + DEFERRABLE CONSTRAINT TRIGGER `trg_mcp_tokens_device_agent_name` + `verify_device_token_agent_name()` function)
+- New: `docker/postgres-init/63-device-challenges.sql` (logical schema version `063`; table + RLS + indexes + `resolve_device_route()` SECURITY DEFINER)
 - No changes to existing migrations 00/18/27/28/29/36/37.
+
+**Correct-course note (approved 2026-09-08):** Source filenames use the repository's established two-digit sequence (`60`–`63`) because fresh installs and CI apply `docker/postgres-init/*.sql` in `LC_ALL=C` filename order. Three-digit filenames (`060`–`063`) would sort between migrations `06` and `07`, before prerequisite migration `17-schema-version.sql`. The append-only `schema_versions.version` values remain `060`–`063`, preserving the approved logical migration IDs.
 
 **Required tests:**
 - `src/lib/device-pairing/__tests__/migrations/060-enrollments-schema.test.ts` — CHECK constraints: PENDING row has no post-approval columns; APPROVED row has all; CONSUMED has `consumed_at`; EXPIRED has no consumed code. SECURITY DEFINER functions callable by `allura_app`; direct table access rejected.
