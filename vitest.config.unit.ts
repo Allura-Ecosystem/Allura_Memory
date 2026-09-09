@@ -180,6 +180,9 @@ export default defineConfig({
       "src/lib/device-pairing/__tests__/rfc9421-payload.test.ts",
       "src/lib/device-pairing/__tests__/rfc9421-body-swap.test.ts",
       "src/lib/device-pairing/__tests__/rfc9421-target-uri.test.ts",
+      // Story 29.3 — PKCE S256 + authorization code + completion nonce (pure functions, no DB)
+      "src/lib/device-pairing/__tests__/pkce.test.ts",
+      "src/lib/device-pairing/__tests__/authorization-code.test.ts",
       "src/lib/auth/__tests__/web-principal.test.ts",
       "src/__tests__/mcp-auth-adversarial.test.ts",
       // Allura Hosted — admin route auth/shape tests (mocked repos)
