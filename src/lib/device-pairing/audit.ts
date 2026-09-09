@@ -42,6 +42,16 @@ export async function emitDeviceAudit(
   insert: DeviceAuditInsert,
 ): Promise<void> {
   if (insert.workspace_id == null) {
+    if (insert.event_type === "DEVICE_EXCHANGE_DENIED") {
+      if (insert.status !== "failed") {
+        throw new Error("DEVICE_EXCHANGE_DENIED audit status must be failed");
+      }
+      await client.query(
+        "SELECT device_exchange_denial_audit($1::jsonb)",
+        [JSON.stringify(insert.metadata ?? {})],
+      );
+      return;
+    }
     await client.query(
       "SELECT device_enrollment_pre_human_audit($1, $2::jsonb)",
       [insert.event_type, JSON.stringify(insert.metadata ?? {})],

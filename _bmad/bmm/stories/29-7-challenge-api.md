@@ -2,7 +2,7 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** B — Persistent Runtime Reconnection  
-**Status:** backlog  
+**Status:** done
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story
@@ -58,3 +58,14 @@ The desktop bridge calls `/challenge` with only `device_id` + `purpose`, and rec
 - No token mint (Story 29.9).
 
 ---
+
+## Active Execution Ledger — 2026-09-09
+
+- **Baseline:** `eefdc560` (Story 29.6 verified local commit).
+- **State:** done — verified local checkpoint pending; no shared Allura stack touched.
+- **Last receipt:** disposable `pgvector:pg16` containers (unique name, loopback-only port `55432`, tmpfs data, random one-run credentials, auto-removed) caught two real defects and prove the final RLS contract. RED/GREEN 1: authoritative `app.current_workspace_id` + `app.current_principal` now follow the row-locked approved-device reread before audited writes. RED/GREEN 2: unresolved device denial now writes only a fixed-identity, `failed` `DEVICE_EXCHANGE_DENIED` event through migration 067; `PUBLIC` has no execute grant. Final receipts: route/service 7/7, isolated live PostgreSQL 2/2, broader 293 passed/25 expected live skips, TypeScript/diff/credential scan clean, and production build green (59 pages).
+- **Review receipt:** initial independent review rejected the denial path; remediation review approved with 0 BLOCK/HIGH/MED. Two non-blocking evidence/metadata notes were resolved; a remaining TOCTOU observation is defense-in-depth, with the authoritative locked reread failing closed.
+- **Next named gate:** create the verified local Git checkpoint, complete the Story 29.7 Kanban card, then dispatch the dependency-ready Story 29.8 worker.
+- **Required receipts before review:** focused suite, live DB suite, typecheck, diff hygiene, static scan, build.
+- **Review/commit gate:** independent BMAD review with no BLOCK/HIGH/MED; governance check; local commit only. No push, deploy, secret change, or production DB mutation.
+- **Loop control:** a green slice is not a response boundary; execute the next named gate immediately unless Sabir explicitly stops or a real blocker occurs.

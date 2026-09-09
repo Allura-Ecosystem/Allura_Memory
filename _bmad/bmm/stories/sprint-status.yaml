@@ -700,7 +700,7 @@ epic_29:
     # Work-package 4: Reconnect + Authority (29.7-29.11)
     - key: "29.7"
       title: "Challenge API — POST /api/device-pairing/challenge (RLS Bootstrap)"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.1", "29.6"]
       work_package: 4
@@ -996,7 +996,7 @@ development_status:
   29-4-enrollment-api: backlog
   29-5-approval-api: backlog
   29-6-completion-api: backlog
-  29-7-challenge-api: backlog
+  29-7-challenge-api: done
   29-8-scope-and-authority-revocation: backlog
   29-9-exchange-api: backlog
   29-10-authenticator-cache-bypass: backlog
