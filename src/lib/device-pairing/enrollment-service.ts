@@ -49,6 +49,7 @@ const PREHUMAN_AGENT_ID = "device-enrollment";
 export interface EnrollmentInput {
   device_label: string;
   callback_type: string;
+  callback_uri: string;
   pkce_code_challenge: string;
   pkce_code_challenge_method: string;
   pkce_state: string;
@@ -69,6 +70,7 @@ export type EnrollmentErrorCode =
   | "INVALID_PKCE"
   | "INVALID_PUBLIC_KEY"
   | "INVALID_KEY_ALGORITHM"
+  | "INVALID_CALLBACK_URI"
   | "CALLBACK_TYPE_DISABLED";
 
 export class EnrollmentValidationError extends Error {
@@ -166,6 +168,43 @@ export function validateEnrollmentInput(input: EnrollmentInput): void {
       `callback_type '${input.callback_type}' is not enabled for this deployment`,
     );
   }
+
+  let callbackUrl: URL;
+  try {
+    callbackUrl = new URL(input.callback_uri);
+  } catch {
+    throw new EnrollmentValidationError(
+      "INVALID_CALLBACK_URI",
+      "callback_uri must be a valid absolute URI",
+    );
+  }
+  if (
+    input.callback_type === "deep_link" &&
+    input.callback_uri !== "allura-pairing://complete"
+  ) {
+    throw new EnrollmentValidationError(
+      "INVALID_CALLBACK_URI",
+      "deep_link callback_uri must be allura-pairing://complete",
+    );
+  }
+  if (
+    input.callback_type === "loopback" &&
+    (
+      callbackUrl.protocol !== "http:" ||
+      callbackUrl.hostname !== "127.0.0.1" ||
+      callbackUrl.pathname !== "/callback" ||
+      callbackUrl.search !== "" ||
+      callbackUrl.hash !== "" ||
+      callbackUrl.username !== "" ||
+      callbackUrl.password !== "" ||
+      !/^(?:4915[2-9]|491[6-9][0-9]|49[2-9][0-9]{2}|5[0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$/.test(callbackUrl.port)
+    )
+  ) {
+    throw new EnrollmentValidationError(
+      "INVALID_CALLBACK_URI",
+      "loopback callback_uri must target http://127.0.0.1:<ephemeral-port>/callback",
+    );
+  }
 }
 
 /**
@@ -219,7 +258,7 @@ export async function createEnrollment(
     // No group_id/workspace_id/principal_id is passed — the PENDING row
     // carries no tenant authority (chk_enroll_pending_no_auth CHECK).
     await client.query(
-      "SELECT device_enrollment_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+      "SELECT device_enrollment_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
       [
         enrollmentTransactionId,
         input.device_label,
@@ -230,6 +269,7 @@ export async function createEnrollment(
         input.pkce_code_challenge_method,
         input.pkce_state,
         input.callback_type,
+        input.callback_uri,
         expiresAt,
       ],
     );

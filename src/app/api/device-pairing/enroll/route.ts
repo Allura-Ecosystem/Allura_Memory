@@ -26,6 +26,7 @@ import {
 const requestSchema = z.object({
   device_label: z.string().min(1, "device_label is required"),
   callback_type: z.string().min(1, "callback_type is required"),
+  callback_uri: z.string().min(1, "callback_uri is required"),
   pkce_code_challenge: z.string().min(1, "pkce_code_challenge is required"),
   pkce_code_challenge_method: z.string().min(1, "pkce_code_challenge_method is required"),
   pkce_state: z.string().min(1, "pkce_state is required"),
@@ -53,6 +54,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     let code = "INVALID_PKCE";
     if (field === "public_key" || field === "key_id") code = "INVALID_PUBLIC_KEY";
     if (field === "key_algorithm") code = "INVALID_KEY_ALGORITHM";
+    if (field === "callback_uri") code = "INVALID_CALLBACK_URI";
     return NextResponse.json({ error: code, message: first?.message }, { status: 400 });
   }
 

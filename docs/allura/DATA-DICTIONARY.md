@@ -153,15 +153,15 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 
 ## PostgreSQL: Desktop Device Pairing
 
-**Migrations:** `60-device-enrollments.sql` through `63-device-challenges.sql`
-**Logical schema versions:** `060`–`063`
+**Migrations:** `60-device-enrollments.sql` through `64-device-enrollment-approval-context.sql`
+**Logical schema versions:** `060`–`064`
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication
 
 The pairing schema separates pre-auth enrollment state from durable device authority. `device_enrollments` is function-only and may hold a PENDING request with no tenant authority. `paired_devices` is created only after approval and requires the human principal, tenant, and workspace. Device-issued MCP tokens reference a paired device while retaining the human principal in `agent_name`. `device_challenges` is a tenant-scoped, single-use replay cache for post-pairing proof of possession.
 
 ### `device_enrollments`
 
-Direct access is revoked from `PUBLIC` and `allura_app`. The application may execute only the five fixed-search-path functions `device_enrollment_create`, `device_enrollment_approve`, `device_enrollment_lock_for_complete`, `device_enrollment_consume`, and `device_enrollment_expire`.
+Direct access is revoked from `PUBLIC` and `allura_app`. The application may execute only the six fixed-search-path functions `device_enrollment_create`, `device_enrollment_approval_context`, `device_enrollment_approve`, `device_enrollment_lock_for_complete`, `device_enrollment_consume`, and `device_enrollment_expire`. `device_enrollment_approval_context(id)` returns only `callback_type`, validated `callback_uri`, and `public_key` under the caller transaction's row lock; it exists so `/approve` never needs a direct table read. `device_enrollment_pre_human_audit(event_type, metadata)` is a separate fixed-identity, event-allowlisted `SECURITY DEFINER` function; it writes only transactional `DEVICE_ENROLL_REQUESTED`, `DEVICE_ENROLL_DENIED`, or `DEVICE_ENROLL_EXPIRED` events under `allura-system` with no workspace authority.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -170,6 +170,7 @@ Direct access is revoked from `PUBLIC` and `allura_app`. The application may exe
 | `public_key` / `key_id` / `key_algo` | text | Yes | Public key material and identifier. Algorithms: `ed25519`, `ecdsa-p256`, or `rsa-pss-2048`. No private key is stored. |
 | `pkce_code_challenge` / `pkce_code_challenge_method` / `pkce_state` | text | Yes | PKCE S256 challenge and browser-flow state. The verifier is never stored. |
 | `callback_type` | text | Yes | `deep_link` or `loopback`. |
+| `callback_uri` | text | Yes for new enrollments | Persisted, validated redirect target. Deep links are exactly `allura-pairing://complete`; loopback targets are only `http://127.0.0.1:<49152–65535>/callback`. |
 | `state` | text | Yes | `PENDING`, `APPROVED`, `EXPIRED`, or `CONSUMED`. |
 | `expires_at` | timestamptz | Yes | Enrollment expiration. |
 | `approved_principal_id` / `approved_group_id` / `approved_workspace_id` | text | APPROVED | Server-resolved authority. All are null while PENDING and required when APPROVED. |

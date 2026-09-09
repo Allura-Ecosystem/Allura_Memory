@@ -53,6 +53,7 @@ function makeValidBody(overrides: Record<string, unknown> = {}): Record<string, 
   return {
     device_label: "Workstation-1",
     callback_type: "deep_link",
+    callback_uri: "allura-pairing://complete",
     pkce_code_challenge: VALID_CHALLENGE,
     pkce_code_challenge_method: "S256",
     pkce_state: VALID_STATE,
@@ -125,6 +126,20 @@ describe("Story 29.4 — POST /api/device-pairing/enroll", () => {
       // ISO 8601 timestamp
       expect(typeof data.expires_at).toBe("string");
       expect(new Date(data.expires_at).toString()).not.toBe("Invalid Date");
+    });
+
+    it("persists the validated deep-link callback URI for the approval redirect", async () => {
+      const { pool, queryCalls } = createMockPool();
+      mockGetPool.mockReturnValue(pool);
+
+      const res = await POST(makeRequest(makeValidBody()));
+      expect(res.status).toBe(201);
+
+      const createCall = queryCalls.find((call) =>
+        call.text.includes("device_enrollment_create"),
+      );
+      expect(createCall).toBeDefined();
+      expect(createCall!.params[9]).toBe("allura-pairing://complete");
     });
   });
 
@@ -258,6 +273,20 @@ describe("Story 29.4 — POST /api/device-pairing/enroll", () => {
       expect(data.error).toBe("CALLBACK_TYPE_DISABLED");
     });
 
+    it("rejects loopback enrollment without the bridge's exact callback URI", async () => {
+      const { pool } = createMockPool();
+      mockGetPool.mockReturnValue(pool);
+
+      const res = await POST(makeRequest(makeValidBody({
+        callback_type: "loopback",
+        callback_uri: undefined,
+      })));
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBe("INVALID_CALLBACK_URI");
+    });
+
     it("accepts callback_type in allowlist", async () => {
       const { pool } = createMockPool();
       mockGetPool.mockReturnValue(pool);
@@ -287,25 +316,20 @@ describe("Story 29.4 — POST /api/device-pairing/enroll", () => {
   });
 
   describe("audit DEVICE_ENROLL_REQUESTED", () => {
-    it("inserts audit event with group_id=allura-system, agent_id=device-enrollment, event_type=DEVICE_ENROLL_REQUESTED", async () => {
+    it("uses the constrained pre-human audit function for DEVICE_ENROLL_REQUESTED", async () => {
       const { pool, queryCalls } = createMockPool();
       mockGetPool.mockReturnValue(pool);
 
       const req = makeRequest(makeValidBody());
       await POST(req);
 
-      // Find the audit INSERT query (parameterized — event_type is a bind param)
+      // Function fixes group_id and agent_id server-side; caller may provide
+      // only an allowed event type and structured metadata.
       const auditInsert = queryCalls.find(
-        (c) => c.text.includes("INSERT INTO events"),
+        (c) => c.text.includes("device_enrollment_pre_human_audit"),
       );
       expect(auditInsert).toBeDefined();
-      const params = auditInsert!.params;
-      // group_id
-      expect(params[0]).toBe("allura-system");
-      // event_type
-      expect(params[1]).toBe("DEVICE_ENROLL_REQUESTED");
-      // agent_id
-      expect(params[2]).toBe("device-enrollment");
+      expect(auditInsert!.params[0]).toBe("DEVICE_ENROLL_REQUESTED");
     });
 
     it("audit metadata includes enrollment_transaction_id, device_label, callback_type, key_algorithm, key_fingerprint", async () => {
@@ -316,11 +340,10 @@ describe("Story 29.4 — POST /api/device-pairing/enroll", () => {
       await POST(req);
 
       const auditInsert = queryCalls.find(
-        (c) => c.text.includes("INSERT INTO events"),
+        (c) => c.text.includes("device_enrollment_pre_human_audit"),
       );
       expect(auditInsert).toBeDefined();
-      // metadata is param index 3 (JSON string), status is index 4
-      const metadata = JSON.parse(auditInsert!.params[3] as string) as Record<string, unknown>;
+      const metadata = JSON.parse(auditInsert!.params[1] as string) as Record<string, unknown>;
       expect(metadata.enrollment_transaction_id).toMatch(/^enroll_/);
       expect(metadata.device_label).toBe("Workstation-1");
       expect(metadata.callback_type).toBe("deep_link");
@@ -342,19 +365,19 @@ describe("Story 29.4 — POST /api/device-pairing/enroll", () => {
         c.text.includes("device_enrollment_create"),
       );
       expect(createCall).toBeDefined();
-      // The SECURITY DEFINER function signature takes 10 params; none of them
-      // are group_id/workspace_id/principal_id. Verify params[0..9].
+      // The SECURITY DEFINER function signature takes 11 params; none of them
+      // are group_id/workspace_id/principal_id.
       const params = createCall!.params;
-      // params: id, display_label, public_key, key_id, key_algo,
+      // Params: id, label, public_key, key_id, key_algo,
       //         pkce_code_challenge, pkce_code_challenge_method, pkce_state,
-      //         callback_type, expires_at
-      expect(params).toHaveLength(10);
-      // Ensure none of the params look like a tenant selector (allura-*)
-      for (const p of params) {
-        if (typeof p === "string") {
-          expect(p).not.toMatch(/^allura-/);
-        }
-      }
+      //         callback_type, callback_uri, expires_at. callback_uri is the
+      //         bridge-selected redirect target, never tenant authority.
+      expect(params).toHaveLength(11);
+      // The callback URI may legitimately use the allura-pairing scheme. The
+      // function still has no positional group/workspace/principal authority.
+      expect(params.slice(0, 9)).not.toContain("allura-acme");
+      expect(params.slice(0, 9)).not.toContain("workspace-alpha");
+      expect(params.slice(0, 9)).not.toContain("principal-user-1");
     });
   });
 
@@ -363,10 +386,10 @@ describe("Story 29.4 — POST /api/device-pairing/enroll", () => {
       const { pool, client, queryCalls } = createMockPool();
       mockGetPool.mockReturnValue(pool);
 
-      // Make the audit INSERT fail (but still record calls)
+      // Make the constrained transactional audit invocation fail (but still record calls)
       client.query.mockImplementation(async (text: string, params?: unknown[]) => {
         queryCalls.push({ text, params: params ?? [] });
-        if (text.includes("INSERT INTO events")) {
+        if (text.includes("device_enrollment_pre_human_audit")) {
           throw new Error("audit insert failed (simulated)");
         }
         return { rows: [], rowCount: 0 };

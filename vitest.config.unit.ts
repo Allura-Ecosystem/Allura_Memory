@@ -183,6 +183,8 @@ export default defineConfig({
       // Story 29.3 — PKCE S256 + authorization code + completion nonce (pure functions, no DB)
       "src/lib/device-pairing/__tests__/pkce.test.ts",
       "src/lib/device-pairing/__tests__/authorization-code.test.ts",
+      // Story 29.5 — signed advisory lock key and device-limit helpers.
+      "src/lib/device-pairing/__tests__/device-limit.test.ts",
       "src/lib/auth/__tests__/web-principal.test.ts",
       "src/__tests__/mcp-auth-adversarial.test.ts",
       // Allura Hosted — admin route auth/shape tests (mocked repos)

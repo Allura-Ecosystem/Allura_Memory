@@ -60,6 +60,15 @@ export interface RouteScopeEntry {
  * Organisation: group by scope category, alphabetically within each group.
  */
 export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
+  // ── Desktop device pairing ────────────────────────────────────────────────
+  {
+    pattern: "/api/device-pairing/approve",
+    requiredRole: "viewer",
+    scopeName: "device-pairing:approve",
+    methods: ["POST"],
+    description: "Approve a desktop enrollment using the authenticated human authority",
+  },
+
   // ── Admin ────────────────────────────────────────────────────────────────
   {
     pattern: "/admin",

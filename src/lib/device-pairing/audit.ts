@@ -20,6 +20,7 @@ import type { PoolClient } from "pg";
 /** Audit insert parameters for a device-pairing lifecycle event. */
 export interface DeviceAuditInsert {
   group_id: string;
+  workspace_id?: string | null;
   event_type: string;
   agent_id: string;
   metadata: Record<string, unknown>;
@@ -40,17 +41,27 @@ export async function emitDeviceAudit(
   client: PoolClient,
   insert: DeviceAuditInsert,
 ): Promise<void> {
+  if (insert.workspace_id == null) {
+    await client.query(
+      "SELECT device_enrollment_pre_human_audit($1, $2::jsonb)",
+      [insert.event_type, JSON.stringify(insert.metadata ?? {})],
+    );
+    return;
+  }
+
   const sql = `
     INSERT INTO events (
       group_id,
+      workspace_id,
       event_type,
       agent_id,
       metadata,
       status
-    ) VALUES ($1, $2, $3, $4, $5)
+    ) VALUES ($1, $2, $3, $4, $5, $6)
   `;
   await client.query(sql, [
     insert.group_id,
+    insert.workspace_id,
     insert.event_type,
     insert.agent_id,
     JSON.stringify(insert.metadata ?? {}),

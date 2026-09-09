@@ -638,8 +638,8 @@ epic_29:
   name: "Desktop Device Pairing and Persistent Authentication"
   status: in-progress
   retrospective:
-  next_story: "29.5"
-  sequence_note: "29.1 through 29.4 complete; 29.5 is next. Stories execute one at a time through dev/review/done.
+  next_story: "29.6"
+  sequence_note: "29.1 through 29.5 complete; 29.6 is next. Stories execute one at a time through dev/review/done.
     B1 (Clerk test instance) gates Story 29.20; B2 (desktop client repo) gates Story 29.21.
     No production deployment, secret change, or direct main push without Sabir approval.
     Evidence requirements: typecheck, unit, integration, live-db, e2e, credential-leak
@@ -683,11 +683,12 @@ epic_29:
       status_evidence: "Final BMAD review APPROVED with zero Block/High/Medium. Focused enrollment integration: 19 passed, 0 failed; typecheck passed. Integration lane: 498 passed, 1 pre-existing failure. Unit lane: 2,649 passed, 4 pre-existing failures."
     - key: "29.5"
       title: "Approval API — POST /api/device-pairing/approve"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.1", "29.3", "29.4"]
       work_package: 3
       ac_participation: ["AC-02", "AC-07", "AC-08", "AC-10"]
+      status_evidence: "Independent Hermes BMAD review APPROVED with zero BLOCK/HIGH/MED after RLS audit remediation. Focused device-pairing suite 61 passed (4 live-only skips); disposable PostgreSQL 6/6; typecheck and diff hygiene passed. Integration lane 526 passed, 1 pre-existing unrelated Genesis policy failure."
     - key: "29.6"
       title: "Complete API — POST /api/device-pairing/complete"
       status: backlog

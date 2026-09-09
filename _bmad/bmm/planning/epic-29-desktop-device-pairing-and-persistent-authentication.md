@@ -58,7 +58,7 @@ Extracted from SPEC.md §1–§12 (29 acceptance criteria AC-01..AC-29 are the a
 
 ### Additional Requirements (from Architecture)
 
-- **AR1:** Migration 060 `device_enrollments` — pre-auth PENDING + post-approval completion state; no tenant RLS; direct privileges revoked from PUBLIC/allura_app; access only through 5 scoped SECURITY DEFINER functions with fixed `search_path` (architecture §3.1, AD-61).
+- **AR1:** Migrations 060 and 064 `device_enrollments` — pre-auth PENDING + post-approval completion state; no tenant RLS; direct privileges revoked from PUBLIC/allura_app; access only through six scoped SECURITY DEFINER functions with fixed `search_path`. Migration 064 adds `device_enrollment_approval_context()` so approval can retrieve only callback/audit context without direct table reads (architecture §3.1, AD-61).
 - **AR2:** Migration 061 `paired_devices` — post-auth APPROVED/REVOKED/LOST only, all authority NOT NULL by construction; `enrollment_id` is audit correlation only, NOT an FK; RLS-bound (architecture §3.1b, AD-61).
 - **AR3:** Migration 062 `mcp_tokens.paired_device_id` — nullable FK; partial unique index `idx_mcp_tokens_one_active_per_device`; DEFERRABLE CONSTRAINT TRIGGER `trg_mcp_tokens_device_agent_name` enforces `agent_name = paired_devices.principal_id` at COMMIT (architecture §3.2, AD-61).
 - **AR4:** Migration 063 `device_challenges` — post-device only, `group_id` + RLS + `purpose` discriminator (`exchange`/`rotation_stage`/`rotation_activate`/`recovery_status`), 60s TTL, consumed state; plus `resolve_device_route()` SECURITY DEFINER for RLS bootstrap (architecture §3.3, §3.4a, AD-61).
