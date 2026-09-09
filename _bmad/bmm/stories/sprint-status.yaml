@@ -638,8 +638,8 @@ epic_29:
   name: "Desktop Device Pairing and Persistent Authentication"
   status: in-progress
   retrospective:
-  next_story: "29.2"
-  sequence_note: "29.1 complete; 29.2 is next. Stories execute one at a time through dev/review/done.
+  next_story: "29.3"
+  sequence_note: "29.1 and 29.2 complete; 29.3 is next. Stories execute one at a time through dev/review/done.
     B1 (Clerk test instance) gates Story 29.20; B2 (desktop client repo) gates Story 29.21.
     No production deployment, secret change, or direct main push without Sabir approval.
     Evidence requirements: typecheck, unit, integration, live-db, e2e, credential-leak
@@ -658,11 +658,12 @@ epic_29:
     # Work-package 2: Foundations (29.1-29.3)
     - key: "29.2"
       title: "RFC 9421 Canonical Signing Envelope — Verifier and Helpers"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.1"]
       work_package: 2
       ac_participation: ["AC-09"]
+      status_evidence: "Final BMAD code review APPROVED with zero Critical/High/Medium. Focused RFC 9421 suite: 39 passed, 0 failed; typecheck passed. Full unit lane: 2,604 passed, 3 unrelated baseline failures, 169 skipped."
     - key: "29.3"
       title: "PKCE, Authorization Code, and Completion Nonce Utilities"
       status: backlog

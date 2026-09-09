@@ -499,6 +499,32 @@ exactly three ways a production request can pass:
 
 ---
 
+### `ALLURA_DEVICE_AUTH_ORIGIN` / `ALLURA_DEVICE_AUTH_AUDIENCE`
+
+**Story:** 29.2 — RFC 9421 Canonical Signing Envelope
+**Architecture:** §4.4, AD-64
+**Source:** `src/lib/device-pairing/config.ts`
+
+The RFC 9421 HTTP Message Signature verifier reconstructs `@target-uri`
+from `ALLURA_DEVICE_AUTH_ORIGIN`, **not** from the untrusted `Host` header.
+The audience is checked against `ALLURA_DEVICE_AUTH_AUDIENCE`, which is the
+device-auth API audience — **not** the MCP endpoint.
+
+| Variable | Format | Purpose |
+|----------|--------|---------|
+| `ALLURA_DEVICE_AUTH_ORIGIN` | Valid URL (e.g. `https://api.allura.example.com`) | Origin used to reconstruct `@target-uri` for RFC 9421 signature verification. Prevents Host-rewrite MITM attacks. |
+| `ALLURA_DEVICE_AUTH_AUDIENCE` | Valid URL (e.g. `https://api.allura.example.com/device-auth`) | Expected `x-allura-audience` header value. The audience is the device-auth API, not the MCP endpoint. |
+
+Both are validated with Zod at the boundary. The verifier functions
+(`verifyDeviceSignature`, `reconstructTargetUri`) accept these as injected
+parameters so they remain pure and testable without reading `process.env`
+directly.
+
+**Cross-references:** `src/lib/device-pairing/rfc9421.ts#verifyDeviceSignature`,
+`src/lib/device-pairing/rfc9421.ts#reconstructTargetUri`.
+
+---
+
 ## RuVix Governance Artifacts
 
 ### `PROMOTION_MODE` / `AUTO_APPROVAL_THRESHOLD`

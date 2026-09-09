@@ -173,6 +173,13 @@ export default defineConfig({
       "src/lib/auth/__tests__/with-permission-action.test.ts",
       // Story 24.12 — effective-tenant authority seam (pure logic)
       "src/lib/auth/__tests__/api-tenant-seam.test.ts",
+      // Story 29.2 — RFC 9421 signing envelope (pure functions, no DB)
+      "src/lib/device-pairing/__tests__/rfc9421-config.test.ts",
+      "src/lib/device-pairing/__tests__/rfc9421-content-digest.test.ts",
+      "src/lib/device-pairing/__tests__/rfc9421-ecdsa-p1363.test.ts",
+      "src/lib/device-pairing/__tests__/rfc9421-payload.test.ts",
+      "src/lib/device-pairing/__tests__/rfc9421-body-swap.test.ts",
+      "src/lib/device-pairing/__tests__/rfc9421-target-uri.test.ts",
       "src/lib/auth/__tests__/web-principal.test.ts",
       "src/__tests__/mcp-auth-adversarial.test.ts",
       // Allura Hosted — admin route auth/shape tests (mocked repos)

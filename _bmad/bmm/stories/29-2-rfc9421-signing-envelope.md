@@ -2,7 +2,7 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** A — Pair a Desktop Device  
-**Status:** backlog  
+**Status:** done
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story
@@ -56,5 +56,67 @@ The server can verify any device signature (`pairing_complete`, `exchange`, `rot
 - No API route integration (Story 29.4+ wires this in).
 - No challenge nonce consumption (Story 29.4).
 - No key algorithm negotiation — server accepts the algorithm declared at enrollment.
+
+---
+
+## Dev Agent Record
+
+### Implementation Plan
+
+Vertical-slice TDD (RED → GREEN → REFACTOR) across 7 slices:
+
+1. **Types + config readers** — `rfc9421-types.ts` (SigningPurpose, DeviceProof, VerifiedProof, SignatureParams, KeyAlgorithm) + `config.ts` (getDeviceAuthOrigin, getDeviceAuthAudience with Zod validation).
+2. **Content-Digest (RFC 9530)** — `computeContentDigest()` / `verifyContentDigest()` producing `sha-256=:<standard base64>:` format.
+3. **@target-uri reconstruction** — `reconstructTargetUri(origin, requestTarget)` using configured origin, NOT Host.
+4. **ECDSA P-256 DER→P1363 normalization** — `normalizeEcdsaP1363()` converts ASN.1 DER to 64-byte IEEE P1363 r‖s.
+5. **Signature base string + verifyDeviceSignature** — `buildSignatureBaseString()`, `parseSignatureInput()`, `verifyDeviceSignature()` for all 5 purposes × 3 algorithms.
+6. **Body-swap rejection** — Content-Digest mismatch + signature over stale digest both rejected.
+7. **Host rewrite rejection** — signature over configured-origin @target-uri fails when verified against a different origin.
+
+### Debug Log
+
+- Node 22 crypto API: `crypto.sign(algorithm, data, { key, dsaEncoding })` — the 4th positional arg is NOT the encoding string; encoding goes in the key options object. Verified via runtime probing.
+- `parseSignatureInput` regex: parameter extraction must handle `name=value` at the start of the params string (after the first `;`), not only after a leading `;`.
+- Typecheck: `crypto.verify` key argument needs proper typing — cast to `VerifyKeyObjectInput` for the union of KeyObject and options object.
+
+### Completion Notes
+
+- **39 focused tests pass** across 6 test files (config: 7, content-digest: 6, ecdsa-p1363: 5, payload: 11, body-swap: 4, target-uri: 6).
+- All 5 signing purposes verified: `pairing_complete`, `exchange`, `rotation_stage`, `rotation_activate`, `recovery_status`.
+- All 3 key algorithms verified: ECDSA P-256 (IEEE P1363 64-byte), Ed25519 (raw 64-byte), RSA-PSS-2048 (256-byte).
+- `@target-uri` reconstructed from configured `ALLURA_DEVICE_AUTH_ORIGIN` — Host header is never a parameter to any function.
+- Audience checked against configured `ALLURA_DEVICE_AUTH_AUDIENCE` — not the MCP endpoint.
+- Content-Digest uses standard base64 (not base64url) per RFC 9530.
+- Signature uses standard base64 (not base64url) per RFC 9421.
+- DER→P1363 normalization test vector included (architecture §4.4 requirement).
+- No private key ever parsed by the verifier — only public keys (NFR1).
+- `bun run typecheck` passes.
+- Full unit lane was run with Bun on `PATH`: 2,604 passed, 3 failed, 169 skipped. The three failures are in pre-existing SDK package-output and embedding-environment tests outside this story; focused Story 29.2 tests pass with no regressions.
+
+### Code Review
+
+- Final BMAD code review: **APPROVED** — zero Critical, High, or Medium findings.
+- Remediated: the RFC 9421 base now lowercases `@method`, serializes the full inner-list plus parameters in `@signature-params`, terminates every base-string line including the final line, and rejects a transmitted `alg` that differs from the enrolled key algorithm.
+- Story 29.4 must enforce its endpoint-specific required covered components plus timestamp/nonce replay checks; those are intentionally outside this pure-verifier story.
+
+### File List
+
+New files:
+- `src/lib/device-pairing/rfc9421-types.ts` — SigningPurpose, DeviceProof, VerifiedProof, SignatureParams, KeyAlgorithm types.
+- `src/lib/device-pairing/rfc9421.ts` — verifyDeviceSignature, reconstructTargetUri, computeContentDigest, verifyContentDigest, normalizeEcdsaP1363, parseSignatureInput, buildSignatureBaseString.
+- `src/lib/device-pairing/config.ts` — getDeviceAuthOrigin, getDeviceAuthAudience, clearDevicePairingConfig.
+- `src/lib/device-pairing/__tests__/rfc9421-config.test.ts` — 7 tests.
+- `src/lib/device-pairing/__tests__/rfc9421-content-digest.test.ts` — 6 tests.
+- `src/lib/device-pairing/__tests__/rfc9421-ecdsa-p1363.test.ts` — 5 tests.
+- `src/lib/device-pairing/__tests__/rfc9421-payload.test.ts` — 9 tests (all 5 purposes, all 3 algorithms).
+- `src/lib/device-pairing/__tests__/rfc9421-body-swap.test.ts` — 4 tests (MITM body swap).
+- `src/lib/device-pairing/__tests__/rfc9421-target-uri.test.ts` — 6 tests (Host rewrite rejection).
+
+Modified files:
+- `vitest.config.unit.ts` — registered 6 new test files in the unit lane.
+
+## Change Log
+
+- 2026-09-08: Story 29.2 implemented — RFC 9421 canonical signing envelope verifier and helpers. 37 tests pass. Typecheck passes. Status → review.
 
 ---
