@@ -2,7 +2,7 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** A — Pair a Desktop Device  
-**Status:** backlog  
+**Status:** done
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story
@@ -63,5 +63,13 @@ The database can hold a PENDING enrollment (no tenant authority), an APPROVED pa
 - No token mint logic.
 - No audit event emission from application code.
 - No Clerk integration.
+
+## Implementation Evidence
+
+- **BMAD dev-story:** migrations 060–063, four migration test files, live-DB inventory registration, data dictionary, and requirements traceability completed.
+- **Live PostgreSQL 16:** `RUN_E2E_TESTS=true bun test src/lib/device-pairing/__tests__/migrations/` — **27 passed, 0 failed**.
+- **Typecheck:** `bun run typecheck` — passed after dependency restoration.
+- **BMAD code review:** final independent review **APPROVED** with zero BLOCK, HIGH, or MED findings. The duplicate paired-device index was removed; the trigger’s SECURITY INVOKER/RLS boundary is explicit and contract-tested.
+- **Scope:** no existing migrations changed; no API route, service, token minting, deployment, secret, merge, or push occurred.
 
 ---

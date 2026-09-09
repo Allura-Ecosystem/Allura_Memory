@@ -638,8 +638,8 @@ epic_29:
   name: "Desktop Device Pairing and Persistent Authentication"
   status: in-progress
   retrospective:
-  next_story: "29.1"
-  sequence_note: "9 work-packages. Stories execute one at a time through dev/review/done.
+  next_story: "29.2"
+  sequence_note: "29.1 complete; 29.2 is next. Stories execute one at a time through dev/review/done.
     B1 (Clerk test instance) gates Story 29.20; B2 (desktop client repo) gates Story 29.21.
     No production deployment, secret change, or direct main push without Sabir approval.
     Evidence requirements: typecheck, unit, integration, live-db, e2e, credential-leak
@@ -649,11 +649,12 @@ epic_29:
     # Work-package 1 is the readiness gate; implementation begins in Work-package 2.
     - key: "29.1"
       title: "Schema — device_enrollments, paired_devices, mcp_tokens.paired_device_id"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: []
       work_package: 2
       ac_participation: ["AC-06", "AC-10"]
+      status_evidence: "Final BMAD review APPROVED with zero BLOCK/HIGH/MED after duplicate-index removal and explicit SECURITY INVOKER/RLS rationale. Live PostgreSQL migration suite: 27 passed, 0 failed; typecheck passed."
     # Work-package 2: Foundations (29.1-29.3)
     - key: "29.2"
       title: "RFC 9421 Canonical Signing Envelope — Verifier and Helpers"
@@ -984,7 +985,7 @@ development_status:
   24-11a-fail-closed-web-authority: done
   24-12-effective-tenant-authority-seam: done
   epic-29: in-progress
-  29-1-schema-foundation: backlog
+  29-1-schema-foundation: in-progress
   29-2-rfc9421-signing-envelope: backlog
   29-3-pkce-authorization-code: backlog
   29-4-enrollment-api: backlog

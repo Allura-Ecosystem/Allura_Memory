@@ -487,6 +487,16 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-UX-002 | Major two-pane desktop layouts target a 38.2% / 61.8% golden-ratio split and stack in logical reading order on smaller screens. | `DESIGN.md`, 25.3, 25.4 | Planned |
 | REQ-UX-003 | The Memory Map presents governed lineage as labeled nodes and connections with an equivalent text description. It never fabricates relationships or makes the visual graph the only accessible source. | 25.4, 25.6 | Planned |
 
+### Section 6G: Epic 29 Desktop Device Pairing Traceability
+
+| Acceptance Criterion | Story 29.1 contribution | Evidence | Status |
+|----------------------|-------------------------|----------|--------|
+| AC-06 | Schema stores device public keys and identifiers only; the enrollment and paired-device tables contain no private-key field. | `docker/postgres-init/60-device-enrollments.sql`; `61-paired-devices.sql`; `060-enrollments-schema.test.ts`; `061-paired-devices-schema.test.ts` | Partial — keystore/runtime proof remains in later Epic 29 stories. |
+| AC-10 | `paired_devices` contains the approved-device count index and non-negative `grace_exchange_count`; the rotation idempotency key is cross-device unique. | `docker/postgres-init/61-paired-devices.sql`; `061-paired-devices-schema.test.ts` | Partial — service-level advisory locking and device-limit behavior remain in later Epic 29 stories. |
+| AC-20 | Database backstop allows at most one non-revoked MCP token per paired device. | `docker/postgres-init/62-mcp-tokens-paired-device.sql`; `062-agent-name-trigger.test.ts` | Schema foundation complete; exchange concurrency behavior remains in Story 29.19. |
+| AC-26 | DEFERRABLE constraint trigger rejects device tokens whose `agent_name` differs from the linked device's human `principal_id`, while non-device tokens remain unaffected. | `docker/postgres-init/62-mcp-tokens-paired-device.sql`; live PostgreSQL COMMIT test in `062-agent-name-trigger.test.ts` | Story 29.1 schema evidence complete. |
+| NFR3 tenant isolation | `paired_devices` and `device_challenges` use strict `group_id` checks, explicit `allura_app` grants, and forced RLS. Pre-auth `device_enrollments` has no direct app table access. | Migrations 60, 61, 63; live PostgreSQL RLS/privilege tests | Story 29.1 schema evidence complete. |
+
 ### Section 7: Use Case Index
 
 | Use Case | Domain Area | Requirements |

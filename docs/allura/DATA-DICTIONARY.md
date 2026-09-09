@@ -14,6 +14,7 @@ This document describes Allura's PostgreSQL-only governed memory data model. Pos
 ## Table of Contents
 
 - [PostgreSQL: events](#postgresql-events)
+- [PostgreSQL: Desktop Device Pairing](#postgresql-desktop-device-pairing)
 - [PostgreSQL: canonical_proposals](#postgresql-canonical_proposals)
 - [PostgreSQL: Graph Adapter Tables](#postgresql-graph-adapter-tables)
 - [Environment Variables](#environment-variables)
@@ -147,6 +148,78 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `completed` | Operation succeeded |
 | `failed` | Operation failed — see metadata.error |
 | `pending` | Operation in progress or awaiting human action |
+
+---
+
+## PostgreSQL: Desktop Device Pairing
+
+**Migrations:** `60-device-enrollments.sql` through `63-device-challenges.sql`
+**Logical schema versions:** `060`–`063`
+**Epic:** 29 — Desktop Device Pairing and Persistent Authentication
+
+The pairing schema separates pre-auth enrollment state from durable device authority. `device_enrollments` is function-only and may hold a PENDING request with no tenant authority. `paired_devices` is created only after approval and requires the human principal, tenant, and workspace. Device-issued MCP tokens reference a paired device while retaining the human principal in `agent_name`. `device_challenges` is a tenant-scoped, single-use replay cache for post-pairing proof of possession.
+
+### `device_enrollments`
+
+Direct access is revoked from `PUBLIC` and `allura_app`. The application may execute only the five fixed-search-path functions `device_enrollment_create`, `device_enrollment_approve`, `device_enrollment_lock_for_complete`, `device_enrollment_consume`, and `device_enrollment_expire`.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | text | Yes | Opaque enrollment transaction ID; primary key. |
+| `display_label` | text | Yes | User-supplied device label. |
+| `public_key` / `key_id` / `key_algo` | text | Yes | Public key material and identifier. Algorithms: `ed25519`, `ecdsa-p256`, or `rsa-pss-2048`. No private key is stored. |
+| `pkce_code_challenge` / `pkce_code_challenge_method` / `pkce_state` | text | Yes | PKCE S256 challenge and browser-flow state. The verifier is never stored. |
+| `callback_type` | text | Yes | `deep_link` or `loopback`. |
+| `state` | text | Yes | `PENDING`, `APPROVED`, `EXPIRED`, or `CONSUMED`. |
+| `expires_at` | timestamptz | Yes | Enrollment expiration. |
+| `approved_principal_id` / `approved_group_id` / `approved_workspace_id` | text | APPROVED | Server-resolved authority. All are null while PENDING and required when APPROVED. |
+| `authorization_code_hash` / `authorization_code_expires_at` / `authorization_code_consumed_at` | text / timestamptz | State-dependent | One-time authorization-code hash and lifecycle. Raw authorization codes are not stored. |
+| `completion_nonce` / `completion_nonce_expires_at` | text / timestamptz | APPROVED | Short-lived proof-of-possession nonce used by `/complete`. |
+| `approved_at` / `consumed_at` | timestamptz | State-dependent | Approval and consumption timestamps. CONSUMED requires `consumed_at`. |
+| `created_at` / `updated_at` | timestamptz | Yes | Database timestamps. |
+
+### `paired_devices`
+
+Forced RLS permits `allura_app` rows only when `group_id = current_setting('app.current_group_id', true)`. The source table stores public keys only.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | text | Yes | Opaque paired-device ID; primary key. |
+| `principal_id` | text | Yes | Human principal. This remains the MCP principal. |
+| `group_id` / `workspace_id` | text | Yes | Server-resolved tenant and workspace authority. `workspace_id` references `workspaces`. |
+| `display_label` | text | Yes | Device label copied from enrollment. |
+| `current_public_key` / `current_key_id` / `current_key_algo` | text | Yes | Active public key. Algorithms match the enrollment allowlist. |
+| `pending_next_public_key` / `pending_next_key_id` / `pending_next_key_algo` | text | No | Staged key for two-phase rotation. |
+| `rotation_idempotency_key` | text | No | Cross-device unique key while present. |
+| `rotation_receipt` | jsonb | No | Server-issued crash-recovery receipt. |
+| `rotation_grace_expires_at` | timestamptz | No | Old-key recovery-only deadline. |
+| `grace_exchange_count` | integer | Yes | Non-negative number of recovery-only grace uses; default `0`. |
+| `key_generation` | integer | Yes | Monotonic key generation; default `1`. |
+| `lifecycle_state` | text | Yes | `APPROVED`, `REVOKED`, or `LOST`; PENDING is forbidden. |
+| `enrollment_id` | text | No | Audit correlation only; intentionally not a foreign key because consumed enrollment rows may be cleaned up. |
+| `created_at` / `updated_at` | timestamptz | Yes | Database timestamps. |
+| `last_exchange_at` / `last_rotation_at` / `revoked_at` / `lost_at` | timestamptz | No | Lifecycle evidence timestamps. |
+
+### `mcp_tokens.paired_device_id`
+
+Migration 62 adds nullable `paired_device_id → paired_devices(id)`. Existing non-device tokens remain valid with null linkage. `idx_mcp_tokens_one_active_per_device` permits at most one non-revoked token per paired device. The DEFERRABLE constraint trigger `trg_mcp_tokens_device_agent_name` verifies at COMMIT that a linked token's `agent_name` equals `paired_devices.principal_id`; non-device tokens are unaffected.
+
+### `device_challenges`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | text | Yes | Opaque challenge ID; primary key. |
+| `group_id` | text | Yes | Tenant boundary with the standard strict format check and forced RLS. |
+| `paired_device_id` | text | Yes | FK to `paired_devices(id)`. |
+| `nonce` | text | Yes | Single-use base64url nonce; unique while unconsumed. |
+| `audience` | text | Yes | Configured device-auth API audience. |
+| `purpose` | text | Yes | `exchange`, `rotation_stage`, `rotation_activate`, or `recovery_status`. `pairing_complete` is deliberately excluded. |
+| `server_context` | jsonb | Yes | Server-selected binding context; default `{}`. |
+| `expires_at` | timestamptz | Yes | Challenge deadline. |
+| `consumed_at` / `consumed_by_token_id` | timestamptz / text | No | Single-use consumption evidence. |
+| `created_at` | timestamptz | Yes | Database creation time. |
+
+`resolve_device_route(device_id)` is a fixed-search-path `SECURITY DEFINER` function executable by `allura_app`. It returns only the authoritative `group_id` for an APPROVED device and null for missing, REVOKED, or LOST devices, allowing the challenge endpoint to bootstrap RLS without accepting tenant authority from the client.
 
 ---
 
