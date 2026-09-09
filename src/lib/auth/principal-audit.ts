@@ -53,6 +53,8 @@ export interface AuthAuditEventInsert {
     reason_code: string;
     auth_method: string;
     credential_id: string | null;
+    /** Paired device row id for device-credential correlation; never raw credential material. */
+    paired_device_id: string | null;
     occurred_at: string;
   };
 }
@@ -95,6 +97,7 @@ export function buildAuthAuditInsert(event: AuthAuditEvent): AuthAuditEventInser
       reason_code: event.reason_code,
       auth_method: event.auth_method,
       credential_id: event.credential_id,
+      paired_device_id: event.paired_device_id,
       occurred_at: event.occurred_at,
     },
   };

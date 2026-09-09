@@ -18,7 +18,7 @@
  * - RSA-PSS-2048 signatures are 256 bytes.
  * - No private key is ever parsed by the verifier (NFR1).
  */
-import { createHash, timingSafeEqual } from "node:crypto";
+import { constants as cryptoConstants, createHash, timingSafeEqual } from "node:crypto";
 
 import type {
   DeviceProof,
@@ -201,24 +201,43 @@ export function parseSignatureInput(header: string): SignatureParams {
   if (firstSemi < 0) {
     throw new Error("Signature-Input missing signature parameters");
   }
-  const componentsStr = rest.slice(0, firstSemi);
+  const componentsStr = rest.slice(0, firstSemi).trim();
+  if (!componentsStr.startsWith("(") || !componentsStr.endsWith(")")) {
+    throw new Error("Signature-Input components must be a structured-field inner list");
+  }
   const paramsStr = rest.slice(firstSemi + 1);
 
   const coveredComponents: string[] = [];
   const componentRegex = /"([^"]+)"/g;
   let m: RegExpExecArray | null;
-  while ((m = componentRegex.exec(componentsStr)) !== null) {
+  const innerList = componentsStr.slice(1, -1);
+  if (!/^(?:"[^"]+"(?:\s+"[^"]+")*)?$/.test(innerList)) {
+    throw new Error("Signature-Input components are malformed");
+  }
+  while ((m = componentRegex.exec(innerList)) !== null) {
     coveredComponents.push(m[1]);
   }
 
-  // Parse key=value parameters
-  const created = extractParam(paramsStr, "created");
-  const expires = extractParam(paramsStr, "expires");
-  const keyid = extractParam(paramsStr, "keyid");
-  const alg = extractParam(paramsStr, "alg");
+  // Parse and type-check structured-field parameters.
+  const params = new Map<string, string>();
+  for (const segment of paramsStr.split(";")) {
+    const match = /^([a-z][a-z0-9_-]*)=(.+)$/i.exec(segment.trim());
+    if (!match || params.has(match[1].toLowerCase())) {
+      throw new Error("Signature-Input parameters are malformed");
+    }
+    params.set(match[1].toLowerCase(), match[2]);
+  }
+  const created = params.get("created");
+  const expires = params.get("expires");
+  const keyid = params.get("keyid");
+  const alg = params.get("alg");
 
-  if (created === undefined || expires === undefined) {
-    throw new Error("Signature-Input missing created/expires parameters");
+  if (created === undefined || expires === undefined || !/^\d+$/.test(created) || !/^\d+$/.test(expires)) {
+    throw new Error("Signature-Input created/expires parameters must be integers");
+  }
+  if ((keyid !== undefined && !/^"[^"]+"$/.test(keyid)) ||
+      (alg !== undefined && !/^"[^"]+"$/.test(alg))) {
+    throw new Error("Signature-Input keyid/alg parameters must be strings");
   }
 
   return {
@@ -226,8 +245,8 @@ export function parseSignatureInput(header: string): SignatureParams {
     coveredComponents,
     created: Number(created),
     expires: Number(expires),
-    keyid: keyid ?? "",
-    alg: alg ?? "",
+    keyid: keyid?.slice(1, -1) ?? "",
+    alg: alg?.slice(1, -1) ?? "",
   };
 }
 
@@ -267,7 +286,7 @@ export function buildSignatureBaseString(
       // Derived component
       switch (component) {
         case "@method":
-          lines.push(`"@method": ${method.toLowerCase()}`);
+          lines.push(`"@method": ${method}`);
           break;
         case "@target-uri":
           lines.push(`"@target-uri": ${targetUri}`);
@@ -292,7 +311,7 @@ export function buildSignatureBaseString(
   // Final line: @signature-params
   lines.push(`"@signature-params": ${signatureParamsRaw}`);
 
-  return `${lines.join("\n")}\n`;
+  return lines.join("\n");
 }
 
 /**
@@ -306,6 +325,23 @@ export function extractSignatureParamsRaw(signatureInputHeader: string): string 
     throw new Error("Signature-Input missing label delimiter '='");
   }
   return signatureInputHeader.slice(eqIdx + 1).trim();
+}
+
+export function extractStructuredSignatureValue(signatureHeader: string, label: string): string {
+  const members = signatureHeader.split(",").map((member) => member.trim());
+  const matching = members.filter((member) => member.startsWith(`${label}=`));
+  if (matching.length === 0) {
+    throw new Error(`Signature header missing label ${label}`);
+  }
+  if (matching.length !== 1) {
+    throw new Error(`Signature header has duplicate label ${label}`);
+  }
+  const value = matching[0].slice(label.length + 1);
+  const match = /^:([A-Za-z0-9+/]+={0,2}):$/.exec(value);
+  if (!match) {
+    throw new Error(`Signature header member ${label} is malformed`);
+  }
+  return match[1];
 }
 
 // ── Signature verification ─────────────────────────────────────────────────
@@ -463,8 +499,8 @@ function verifySignatureRaw(
         }
         return verifyOneShot("RSA-SHA256", data, {
           key: keyObject,
-          padding: 1, // RSA_PKCS1_PSS_PADDING
-          saltLength: 3, // RSA_PSS_SALTLEN_DIGEST
+          padding: cryptoConstants.RSA_PKCS1_PSS_PADDING,
+          saltLength: cryptoConstants.RSA_PSS_SALTLEN_DIGEST,
         }, signature);
       }
       default:

@@ -46,6 +46,7 @@ export default defineConfig({
       "src/lib/device-pairing/__tests__/migrations/062-agent-name-trigger.test.ts",
       "src/lib/device-pairing/__tests__/migrations/063-challenges-schema.test.ts",
       "src/lib/device-pairing/__tests__/migrations/064-approval-context-function.test.ts",
+      "src/lib/device-pairing/__tests__/completion-transaction.live-db.test.ts",
     ],
     testTimeout: 60_000,
     hookTimeout: 30_000,

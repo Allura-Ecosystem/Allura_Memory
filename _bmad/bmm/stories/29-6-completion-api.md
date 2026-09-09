@@ -2,7 +2,7 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** A — Pair a Desktop Device  
-**Status:** backlog  
+**Status:** done
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story
@@ -35,7 +35,7 @@ the user's desktop client receives the callback, calls `/complete`, and gets bac
 
 **Required tests:**
 - `src/lib/device-pairing/__tests__/complete-route.test.ts` — 200 on valid completion; 404 `ENROLLMENT_NOT_FOUND`; 410 `ENROLLMENT_EXPIRED` / `CODE_EXPIRED` / `COMPLETION_NONCE_EXPIRED`; 400 `INVALID_CODE` / `COMPLETION_NONCE_MISMATCH` / `PKCE_MISMATCH` + audit `DEVICE_ENROLL_DENIED`; 401 `AUTH_INVALID` (RFC 9421 signature fails) + audit; 403 `MEMBERSHIP_INACTIVE` (revalidation fails) + audit; 409 `DEVICE_LIMIT_EXCEEDED` (count changed between approve and complete); `paired_devices` row created with all authority NOT NULL; first MCP token has `agent_name=principal_id`, `paired_device_id` set; audit `DEVICE_PAIRING_COMPLETE` transactional; enrollment state = CONSUMED.
-- `src/lib/device-pairing/__tests__/authorization-code-redeem.test.ts` (integration) — 256-bit code, SHA-256 match, completion_nonce + expiry, PKCE verifier redemption, RFC 9421 `pairing_complete` proof, replay rejected, code consumed atomically with `paired_devices` insert.
+- `src/lib/device-pairing/__tests__/complete-route.test.ts` and `complete-route-rfc9421.test.ts` — typed route errors/audits plus real ECDSA P-256 and RSA-PSS `pairing_complete` proof vectors. `src/lib/device-pairing/__tests__/completion-transaction.live-db.test.ts` (real PostgreSQL) replaces the planned `authorization-code-redeem.test.ts` integration name: it proves commit/replay, token-mint rollback, and completion-audit rollback.
 - Integration lane (real PG for transactional assertions).
 
 **Governance/security evidence:**
@@ -59,6 +59,15 @@ the user's desktop client receives the callback, calls `/complete`, and gets bac
 - Enrollment state = CONSUMED, `consumed_at` + `authorization_code_consumed_at` set.
 - Audit `DEVICE_PAIRING_COMPLETE` inserted transactionally.
 - Integration tests pass.
+
+## Active Execution Ledger — 2026-09-09
+
+- **Baseline:** `4a2dd796` (Story 29.5 verified local commit).
+- **State:** done — final independent review approved and governance passed. Local commit is the final story artifact; no push, deployment, secret change, or production database action is authorized.
+- **Last receipt:** final acceptance is green: 286 focused tests passed (23 expected live skips), TypeScript and diff hygiene passed, and static added-line scan found no hardcoded secrets, bare dynamic execution, shell invocation, or unsafe deserialization. Disposable PostgreSQL app-role tests are 5/5 green: success/replay, post-transaction-start expiry, two-pool concurrent redemption (exactly one commit), token-mint rollback, and completion-audit rollback. Auth audit persistence (93/93), completion service (17/17), and RFC/route vectors (17/17) remain green.
+- **Review:** final independent BMAD review APPROVED with no BLOCK/HIGH/MED; one LOW unreachable route fallback deferred to later cleanup.
+- **Governance:** local-only commit passed all six invariants.
+- **Next story:** 29.7 — challenge API; no retrospective until Epic 29 closes.
 
 **Non-goals:**
 - No `/challenge` or `/exchange` (Story 29.7, 2.2).

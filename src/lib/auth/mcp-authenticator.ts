@@ -47,6 +47,7 @@ export interface McpCredentialRecord {
   token_prefix: string;
   token_hash: string;
   scopes: string[];
+  paired_device_id?: string | null;
   expires_at: string | Date | null;
   revoked_at: string | Date | null;
 }
@@ -575,6 +576,7 @@ export class McpAuthenticator {
       authMethod: "mcp_token",
       sessionId: this.sessionId(sessionId),
       credentialId: record.id,
+      pairedDeviceId: record.paired_device_id ?? undefined,
       scopes: record.scopes ?? [],
       expiresAt: record.expires_at instanceof Date
         ? record.expires_at.toISOString()

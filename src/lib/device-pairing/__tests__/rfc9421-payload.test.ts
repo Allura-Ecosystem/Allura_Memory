@@ -1,4 +1,5 @@
 import {
+  constants as cryptoConstants,
   generateKeyPairSync,
   sign,
   type KeyObject,
@@ -10,6 +11,7 @@ import {
   buildSignatureBaseString,
   computeContentDigest,
   extractSignatureParamsRaw,
+  extractStructuredSignatureValue,
   parseSignatureInput,
   verifyDeviceSignature,
 } from "../rfc9421";
@@ -77,8 +79,8 @@ function signData(
     case "rsa-pss-2048":
       return sign("RSA-SHA256", data, {
         key: privateKey,
-        padding: 1,
-        saltLength: 3,
+        padding: cryptoConstants.RSA_PKCS1_PSS_PADDING,
+        saltLength: cryptoConstants.RSA_PSS_SALTLEN_DIGEST,
       });
   }
 }
@@ -202,7 +204,7 @@ const ALL_ALGORITHMS: KeyAlgorithm[] = [
 ];
 
 describe("Story 29.2 RFC 9421 payload verification (all 5 purposes, all 3 algorithms)", () => {
-  it("builds the RFC 9421 base with lowercase @method, full @signature-params, and final newline", () => {
+  it("builds the RFC 9421 base with method case preserved and no terminal newline", () => {
     const signatureInput = 'sig1=("@method" "@target-uri" "content-digest");created=1700000000;expires=1700000060;keyid="kid_42";alg="ed25519"';
     const base = buildSignatureBaseString(
       "POST",
@@ -214,10 +216,10 @@ describe("Story 29.2 RFC 9421 payload verification (all 5 purposes, all 3 algori
     );
 
     expect(base).toBe(
-      '"@method": post\n' +
+      '"@method": POST\n' +
         '"@target-uri": https://api.allura.example.com/device-auth\n' +
         '"content-digest": sha-256=:digest=:\n' +
-        '"@signature-params": ("@method" "@target-uri" "content-digest");created=1700000000;expires=1700000060;keyid="kid_42";alg="ed25519"\n',
+        '"@signature-params": ("@method" "@target-uri" "content-digest");created=1700000000;expires=1700000060;keyid="kid_42";alg="ed25519"',
     );
   });
 
@@ -337,6 +339,24 @@ describe("Story 29.2 RFC 9421 payload verification (all 5 purposes, all 3 algori
     const r1 = verifyDeviceSignature(proof, ORIGIN, AUDIENCE);
     const r2 = verifyDeviceSignature(proof, ORIGIN, AUDIENCE);
     expect(r1.valid).toBe(r2.valid);
+  });
+
+  it("extracts only the matching structured Signature dictionary member", () => {
+    expect(extractStructuredSignatureValue("sig1=:ZmFrZQ==:", "sig1")).toBe("ZmFrZQ==");
+    expect(extractStructuredSignatureValue("other=:b3RoZXI=:, sig1=:ZmFrZQ==:", "sig1")).toBe("ZmFrZQ==");
+    expect(() => extractStructuredSignatureValue("sig2=:ZmFrZQ==:", "sig1")).toThrow(/missing/i);
+    expect(() => extractStructuredSignatureValue("sig1=ZmFrZQ==", "sig1")).toThrow(/malformed/i);
+  });
+
+  it("rejects Signature-Input without a structured-field inner list", () => {
+    const malformed = 'sig1="@method" "@target-uri" "content-digest";created=1000;expires=1060;keyid="kid_42";alg="ecdsa-p256"';
+    expect(() => parseSignatureInput(malformed)).toThrow(/inner list/i);
+  });
+
+  it("rejects malformed Signature-Input component and parameter types", () => {
+    expect(() => parseSignatureInput('sig1=("@method" junk);created=1000;expires=1060;keyid="kid_42";alg="ecdsa-p256"')).toThrow(/components/i);
+    expect(() => parseSignatureInput('sig1=("@method");created="1000";expires=1060;keyid="kid_42";alg="ecdsa-p256"')).toThrow(/created/i);
+    expect(() => parseSignatureInput('sig1=("@method");created=1000;expires=1060;keyid=kid_42;alg="ecdsa-p256"')).toThrow(/keyid/i);
   });
 
   it("Signature-Input parsing extracts covered components, created, expires, keyid, alg", () => {

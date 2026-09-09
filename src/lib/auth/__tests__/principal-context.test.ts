@@ -409,6 +409,7 @@ describe("buildAuthAuditEvent (AC-7)", () => {
       reason_code: "OK",
       auth_method: "mcp_token",
       credential_id: "tok_abc",
+      paired_device_id: null,
       occurred_at: "2026-08-15T00:00:00.000Z",
     });
   });
@@ -424,6 +425,15 @@ describe("buildAuthAuditEvent (AC-7)", () => {
     expect(event.auth_method).toBe("none");
     expect(event.credential_id).toBeNull();
     expect(event.reason_code).toBe("AUTH_MISSING");
+  });
+
+  it("projects the paired-device id without credential material", () => {
+    const event = buildAuthAuditEvent({
+      principal: tokenPrincipal({ pairedDeviceId: "dev_audit_1" }),
+      tool: "memory_get",
+      decision: "allow",
+    });
+    expect(event.paired_device_id).toBe("dev_audit_1");
   });
 
   it("never exposes credential material", () => {
@@ -453,6 +463,14 @@ describe("canRebindSession (review Finding 1)", () => {
     tenantIds: ["allura-system"],
     roles: ["curator"],
     credentialId: "tok_alpha",
+  });
+
+  it("refuses a same credential id when the paired device binding changes", () => {
+    const deviceA = tokenPrincipal({ credentialId: "tok_alpha", pairedDeviceId: "dev_a" });
+    const deviceB = tokenPrincipal({ credentialId: "tok_alpha", pairedDeviceId: "dev_b", sessionId: "sess-2" });
+
+    expect(deviceA.pairedDeviceId).toBe("dev_a");
+    expect(canRebindSession(deviceA, deviceB)).toBe(false);
   });
 
   it("allows the same credential to continue its own session", () => {

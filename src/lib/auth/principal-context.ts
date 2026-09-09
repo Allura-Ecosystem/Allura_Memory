@@ -22,7 +22,7 @@
  */
 
 import { getToolPolicy, TOOL_POLICIES } from "@allura/mcp-server";
-import { scopesForRole } from "@allura/rbac";
+import { deriveScopesForMembershipRole } from "./scope-derivation";
 import type { Scope } from "@allura/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,6 +64,8 @@ export interface PrincipalContext {
    * NEVER the raw token, and never the token hash.
    */
   readonly credentialId?: string;
+  /** Device row bound to an mcp_token credential; never raw credential material. */
+  readonly pairedDeviceId?: string;
   /** Credential expiry (ISO 8601) when the credential carries one. */
   readonly expiresAt?: string | null;
 }
@@ -158,6 +160,7 @@ export interface CreatePrincipalInput {
   authMethod: AuthMethod;
   sessionId: string;
   credentialId?: string;
+  pairedDeviceId?: string;
   expiresAt?: string | null;
 }
 
@@ -209,7 +212,7 @@ export function createPrincipalContext(input: CreatePrincipalInput): PrincipalCo
 
   const roles = normalizeRoles(input.roles ?? []);
   const scopes = input.scopes === undefined
-    ? [...new Set(roles.flatMap((role) => scopesForRole(role === "curator" ? "reviewer" : role)))]
+    ? [...new Set(roles.flatMap((role) => deriveScopesForMembershipRole(role)))]
     : [...new Set(input.scopes.map((scope) => String(scope).trim()).filter(Boolean))] as Scope[];
 
   return Object.freeze({
@@ -221,6 +224,7 @@ export function createPrincipalContext(input: CreatePrincipalInput): PrincipalCo
     authMethod: input.authMethod,
     sessionId,
     credentialId: input.credentialId,
+    pairedDeviceId: input.pairedDeviceId?.trim() || undefined,
     expiresAt: input.expiresAt ?? null,
   });
 }
@@ -542,6 +546,7 @@ export function canRebindSession(
 
   if (!sameStringSet(current.tenantIds, next.tenantIds)) return false;
   if (current.workspaceId !== next.workspaceId) return false;
+  if (current.pairedDeviceId !== next.pairedDeviceId) return false;
   if (!sameStringSet(current.roles, next.roles)) return false;
   if (!sameStringSet(current.scopes, next.scopes)) return false;
 
@@ -625,6 +630,8 @@ export interface AuthAuditEvent {
   auth_method: AuthMethod | "none";
   /** Credential row id — never the token, never the hash. */
   credential_id: string | null;
+  /** Paired device row id when this is a device credential; never raw credential material. */
+  paired_device_id: string | null;
   /** ISO timestamp. */
   occurred_at: string;
 }
@@ -655,6 +662,7 @@ export function buildAuthAuditEvent(input: {
     reason_code: input.reasonCode ?? (input.decision === "allow" ? "OK" : "AUTH_INVALID"),
     auth_method: p?.authMethod ?? "none",
     credential_id: p?.credentialId ?? null,
+    paired_device_id: p?.pairedDeviceId ?? null,
     occurred_at: (input.now ?? new Date()).toISOString(),
   };
 }

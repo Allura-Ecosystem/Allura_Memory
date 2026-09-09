@@ -153,15 +153,15 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 
 ## PostgreSQL: Desktop Device Pairing
 
-**Migrations:** `60-device-enrollments.sql` through `64-device-enrollment-approval-context.sql`
-**Logical schema versions:** `060`–`064`
+**Migrations:** `60-device-enrollments.sql` through `66-device-enrollment-expiry-transition.sql`
+**Logical schema versions:** `060`–`066`
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication
 
 The pairing schema separates pre-auth enrollment state from durable device authority. `device_enrollments` is function-only and may hold a PENDING request with no tenant authority. `paired_devices` is created only after approval and requires the human principal, tenant, and workspace. Device-issued MCP tokens reference a paired device while retaining the human principal in `agent_name`. `device_challenges` is a tenant-scoped, single-use replay cache for post-pairing proof of possession.
 
 ### `device_enrollments`
 
-Direct access is revoked from `PUBLIC` and `allura_app`. The application may execute only the six fixed-search-path functions `device_enrollment_create`, `device_enrollment_approval_context`, `device_enrollment_approve`, `device_enrollment_lock_for_complete`, `device_enrollment_consume`, and `device_enrollment_expire`. `device_enrollment_approval_context(id)` returns only `callback_type`, validated `callback_uri`, and `public_key` under the caller transaction's row lock; it exists so `/approve` never needs a direct table read. `device_enrollment_pre_human_audit(event_type, metadata)` is a separate fixed-identity, event-allowlisted `SECURITY DEFINER` function; it writes only transactional `DEVICE_ENROLL_REQUESTED`, `DEVICE_ENROLL_DENIED`, or `DEVICE_ENROLL_EXPIRED` events under `allura-system` with no workspace authority.
+Direct access is revoked from `PUBLIC` and `allura_app`. The application may execute only the six fixed-search-path functions `device_enrollment_create`, `device_enrollment_approval_context`, `device_enrollment_approve`, `device_enrollment_lock_for_complete`, `device_enrollment_consume`, and `device_enrollment_expire`. The completion lock returns the enrolled `display_label` alongside only the fields needed to mint the durable paired-device authority, under the caller transaction's row lock. `device_enrollment_expire(id)` returns whether it actually transitioned an eligible row, and uses `clock_timestamp()` so a row that expires while the caller waits on a lock cannot be audited as expired without a matching state transition. `device_enrollment_approval_context(id)` returns only `callback_type`, validated `callback_uri`, and `public_key` under the caller transaction's row lock; it exists so `/approve` never needs a direct table read. `device_enrollment_pre_human_audit(event_type, metadata)` is a separate fixed-identity, event-allowlisted `SECURITY DEFINER` function; it writes only transactional `DEVICE_ENROLL_REQUESTED`, `DEVICE_ENROLL_DENIED`, or `DEVICE_ENROLL_EXPIRED` events under `allura-system` with no workspace authority.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -203,7 +203,11 @@ Forced RLS permits `allura_app` rows only when `group_id = current_setting('app.
 
 ### `mcp_tokens.paired_device_id`
 
-Migration 62 adds nullable `paired_device_id → paired_devices(id)`. Existing non-device tokens remain valid with null linkage. `idx_mcp_tokens_one_active_per_device` permits at most one non-revoked token per paired device. The DEFERRABLE constraint trigger `trg_mcp_tokens_device_agent_name` verifies at COMMIT that a linked token's `agent_name` equals `paired_devices.principal_id`; non-device tokens are unaffected.
+Migration 62 adds nullable `paired_device_id → paired_devices(id)`. Existing non-device tokens remain valid with null linkage. `idx_mcp_tokens_one_active_per_device` permits at most one non-revoked token per paired device. The DEFERRABLE constraint trigger `trg_mcp_tokens_device_agent_name` verifies at COMMIT that a linked token's `agent_name` equals `paired_devices.principal_id`; non-device tokens are unaffected. `POST /api/device-pairing/complete` creates the device and its first linked token on the same app-role transaction, so the device authority, token linkage, completion audit, and enrollment consumption commit together or roll back together.
+
+### Completion redemption runtime
+
+`POST /api/device-pairing/complete` locks an APPROVED enrollment, rejects consumed/expired state before mutation, verifies the presented authorization-code hash, completion nonce, PKCE S256 verifier, and RFC 9421 `pairing_complete` proof, then revalidates membership/workspace and re-checks the device limit under the tenant advisory lock. It preserves the locked enrollment `display_label`, derives every inserted authority field from locked `approved_*` columns, and returns an absolute configured MCP gateway endpoint. Credential failures roll back device/token mutation and persist a constrained `DEVICE_ENROLL_DENIED` audit; explicit code or nonce expiry commits only after `device_enrollment_expire()` confirms the corresponding `EXPIRED` transition. The route returns `device_id`, one-time `access_token`, `expires_at`, and `mcp_endpoint`; raw codes, verifiers, signatures, and tokens are never placed in audit metadata.
 
 ### `device_challenges`
 
