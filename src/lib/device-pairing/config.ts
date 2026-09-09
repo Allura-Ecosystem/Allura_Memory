@@ -96,6 +96,42 @@ export function getDeviceAuthAudience(
   return _cachedAudience;
 }
 
+/**
+ * Enrollment TTL: 10 minutes (architecture §4.1 step 4, AC-07).
+ */
+const DEFAULT_ENROLLMENT_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Get the enrollment transaction TTL in ms (default 10 minutes).
+ *
+ * Architecture §4.1 step 4: `expires_at = NOW() + 10 minutes`.
+ */
+export function getEnrollmentTtlMs(): number {
+  const raw = process.env.ALLURA_DEVICE_ENROLLMENT_TTL_MS;
+  if (!raw) return DEFAULT_ENROLLMENT_TTL_MS;
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  return DEFAULT_ENROLLMENT_TTL_MS;
+}
+
+/**
+ * Callback type deployment allowlist (architecture §4.1 step 3, AD-63, LOW-F4).
+ *
+ * `deep_link` and `loopback` are the two supported callback types. A deployment
+ * may disable either by setting `ALLURA_DEVICE_PAIRING_CALLBACK_ALLOWLIST` to a
+ * comma-separated subset (e.g. `deep_link`). If unset, both are allowed.
+ */
+export function getPairingCallbackAllowlist(): string[] {
+  const raw = process.env.ALLURA_DEVICE_PAIRING_CALLBACK_ALLOWLIST;
+  if (!raw || raw.trim() === "") return ["deep_link", "loopback"];
+  const parsed = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s === "deep_link" || s === "loopback");
+  if (parsed.length === 0) return ["deep_link", "loopback"];
+  return parsed;
+}
+
 /** Clear the cached config — useful in tests. */
 export function clearDevicePairingConfig(): void {
   _cachedOrigin = null;

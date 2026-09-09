@@ -2,7 +2,7 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** A — Pair a Desktop Device  
-**Status:** backlog  
+**Status:** done
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story
@@ -59,3 +59,61 @@ the user clicks "Connect to Allura" in the desktop client, the bridge calls `/en
 - No device limit check here (that happens at `/approve` and `/complete`).
 
 ---
+
+## Implementation — Test Inventory and Traceability
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `src/app/api/device-pairing/enroll/route.ts` | POST route — Zod parse, validate, delegate to service, map errors to HTTP codes |
+| `src/lib/device-pairing/enrollment-service.ts` | `createEnrollment()` — validation, `device_enrollment_create()` call, audit, pairing URL |
+| `src/lib/device-pairing/audit.ts` | `emitDeviceAudit()` — transactional `insertEvent` helper (fail-closed) |
+| `src/lib/device-pairing/config.ts` | Extended: `getEnrollmentTtlMs()`, `getPairingCallbackAllowlist()` |
+| `src/lib/device-pairing/__tests__/enroll-route.test.ts` | Integration-lane route test (mocked PG pool) — 19 tests |
+
+### Test inventory (19 tests, all passing)
+
+| # | Test | AC / Architecture ref |
+|---|---|---|
+| 1 | 201 on valid input returns `enrollment_transaction_id`, `pairing_url`, `expires_at` | AC-07, §4.1 |
+| 2 | 400 INVALID_PKCE for missing `pkce_code_challenge` | §4.1 error codes |
+| 3 | 400 INVALID_PKCE for empty `pkce_code_challenge` | §4.1 error codes |
+| 4 | 400 INVALID_PKCE for malformed S256 challenge (43-char base64url required) | RFC 7636, §4.1 |
+| 5 | 400 INVALID_PKCE for missing `pkce_state` | §4.1 error codes |
+| 6 | 400 INVALID_PKCE for under-length (less than 16 chars) `pkce_state` | §4.1 error codes |
+| 7 | 400 INVALID_PUBLIC_KEY for missing `public_key` | §4.1 error codes |
+| 8 | 400 INVALID_PUBLIC_KEY for empty `public_key` | §4.1 error codes |
+| 9 | 400 INVALID_PUBLIC_KEY for non-PEM/JWK-shaped `public_key` | §4.1 error codes |
+| 10 | 400 INVALID_KEY_ALGORITHM for unsupported algo (`rsa-2048`) | §4.1 step 2, §9.1 |
+| 11 | 400 INVALID_KEY_ALGORITHM for missing `key_algorithm` | §4.1 step 2 |
+| 12 | 400 CALLBACK_TYPE_DISABLED for `loopback` when allowlist is `["deep_link"]` | §4.1 step 3, AD-63, LOW-F4 |
+| 13 | 201 accepts `callback_type` in allowlist | §4.1 step 3 |
+| 14 | `expires_at` is ~10 minutes (600000ms) from now | AC-07, §4.1 step 4 |
+| 15 | Audit `DEVICE_ENROLL_REQUESTED` inserted with `group_id=allura-system`, `agent_id=device-enrollment` | §11.1, MED-F3, AR11 |
+| 16 | Audit metadata includes `enrollment_transaction_id`, `device_label`, `callback_type`, `key_algorithm`, `key_fingerprint` | §11.1 audit table |
+| 17 | `device_enrollment_create()` call does not pass `group_id`/`workspace_id`/`principal_id` (10 params, no tenant selector) | AR1, §3.1 `chk_enroll_pending_no_auth` |
+| 18 | Fail-closed: audit insert failure triggers ROLLBACK, no COMMIT, returns 500 | §11.1 HIGH-F1, NFR5 |
+| 19 | `pairing_url` contains only `txn` + `state` (no verifier) | AD-65, §4.1 step 5 |
+
+### Validation results
+
+| Gate | Command | Result |
+|---|---|---|
+| Typecheck | `bun run typecheck` | PASS |
+| Focused integration | `bun vitest run src/lib/device-pairing/__tests__/enroll-route.test.ts --config vitest.config.integration.ts` | 19/19 PASS |
+| Integration lane | `bun run test:integration` | 498 passed; 1 pre-existing failure: `genesis-engine.test.ts` needs a configured project manifest/live DB |
+| Unit lane | `bun run test:unit` | 2,649 passed; 4 pre-existing failures outside this story |
+
+### Code Review
+
+- Final BMAD review: **APPROVED** — zero Block, High, or Medium findings.
+- Remediated during review: exact RFC 7636 S256 challenge shape, minimum PKCE state length, and PEM/JWK-shaped public-key validation. Final focused integration: 19/19 passing; typecheck clean.
+
+### Non-goals honored
+
+- No migrations changed or added (migration 060 from Story 29.1 is used as-is)
+- No live DB mutations
+- No deploy, commit, or push
+- No secrets edited
+- No `/approve` or `/complete` implementation

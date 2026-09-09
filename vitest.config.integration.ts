@@ -60,6 +60,8 @@ export default defineConfig({
       "tests/integration/genesis-engine.test.ts",
       // Coherence Monitor integration (Story 2.1) — mocked DB + controlPlane
       "src/__tests__/coherence-integration.test.ts",
+      // Story 29.4 — Enrollment API route (mocked PG pool, fail-closed audit)
+      "src/lib/device-pairing/__tests__/enroll-route.test.ts",
     ],
     exclude: [
       // canonical-memory needs live DB — E2E lane
