@@ -1,11 +1,17 @@
 import type { Pool } from "pg";
 import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { emitDeviceAudit } from "./audit";
-import { getDeviceAuthAudience, getDeviceAuthOrigin, getDeviceKeyGraceHours } from "./config";
-import { parseSignatureInput, verifyDeviceSignature } from "./rfc9421";
+import { getDeviceAuthAudience, getDeviceAuthOrigin, getDeviceGraceMaxExchanges, getDeviceKeyGraceHours } from "./config";
+import { hasExactCoveredComponents, parseSignatureInput, verifyDeviceSignature } from "./rfc9421";
 import type { KeyAlgorithm } from "./rfc9421-types";
 
-export type RotationErrorCode = "AUTH_EXPIRED" | "AUTH_INVALID" | "DEVICE_NOT_APPROVED" | "NO_PENDING_KEY";
+export type RotationErrorCode =
+  | "AUTH_EXPIRED"
+  | "AUTH_INVALID"
+  | "DEVICE_NOT_APPROVED"
+  | "NO_PENDING_KEY"
+  | "KEY_EXPIRED"
+  | "GRACE_LIMIT_EXCEEDED";
 
 export class RotationError extends Error {
   constructor(public readonly code: RotationErrorCode, message: string) {
@@ -71,10 +77,30 @@ export interface ActivatedRotationReceipt {
   signature: string;
 }
 
+export type PublicActivatedRotationReceipt = Omit<ActivatedRotationReceipt, "old_public_key" | "old_key_algo">;
+
+function publicActivatedReceipt(receipt: ActivatedRotationReceipt): PublicActivatedRotationReceipt {
+  const { old_public_key: _oldPublicKey, old_key_algo: _oldKeyAlgo, ...publicReceipt } = receipt;
+  return publicReceipt;
+}
+
 export interface ActivateRotationResult {
   status: "ACTIVATED" | "ALREADY_ACTIVATED";
   key_generation: number;
-  rotation_receipt: ActivatedRotationReceipt;
+  rotation_receipt: PublicActivatedRotationReceipt;
+}
+
+export interface GraceRecoveryInput {
+  device_id: string;
+  receipt_id: string;
+  request_target: string;
+  request_body: Uint8Array;
+  headers: StageRotationInput["headers"];
+}
+
+export interface GraceRecoveryResult {
+  status: "RECOVERED";
+  rotation_receipt: PublicActivatedRotationReceipt;
 }
 
 const requiredComponents = [
@@ -90,8 +116,9 @@ function matches(a: string, b: string): boolean {
 }
 
 function hasCoverage(components: readonly string[]): boolean {
+  if (components.length !== requiredComponents.length) return false;
   const covered = new Set(components.map((component) => component.toLowerCase()));
-  return requiredComponents.every((component) => covered.has(component));
+  return covered.size === requiredComponents.length && requiredComponents.every((component) => covered.has(component));
 }
 
 function hasCurrentSignatureWindow(
@@ -161,7 +188,7 @@ function activatedReceiptSignature(receipt: Omit<ActivatedRotationReceipt, "sign
   return createHmac("sha256", rotationReceiptKey()).update(canonicalActivatedReceipt(receipt)).digest("base64url");
 }
 
-function isStoredActivatedReceipt(value: unknown, device: {
+export function isStoredActivatedReceipt(value: unknown, device: {
   id: string; current_key_id: string; current_public_key: string; current_key_algo: KeyAlgorithm; key_generation: number;
 }): value is ActivatedRotationReceipt {
   if (!value || typeof value !== "object") return false;
@@ -329,7 +356,7 @@ export async function activateRotation(pool: Pool, input: ActivateRotationInput)
       verifyRotationProof(input, { ...device, key_generation: device.key_generation - 1 }, device.current_public_key, device.current_key_id, device.current_key_algo);
       await client.query("COMMIT");
       committed = true;
-      return { status: "ALREADY_ACTIVATED", key_generation: device.key_generation, rotation_receipt: device.rotation_receipt };
+      return { status: "ALREADY_ACTIVATED", key_generation: device.key_generation, rotation_receipt: publicActivatedReceipt(device.rotation_receipt) };
     }
 
     if (device.pending_next_public_key === null || device.pending_next_key_id === null || device.pending_next_key_algo === null) {
@@ -379,7 +406,90 @@ export async function activateRotation(pool: Pool, input: ActivateRotationInput)
     });
     await client.query("COMMIT");
     committed = true;
-    return { status: "ACTIVATED", key_generation: receipt.key_generation, rotation_receipt: receipt };
+    return { status: "ACTIVATED", key_generation: receipt.key_generation, rotation_receipt: publicActivatedReceipt(receipt) };
+  } catch (error) {
+    if (!committed) await client.query("ROLLBACK");
+    throw error;
+  } finally { client.release(); }
+}
+
+export async function recoverViaGrace(pool: Pool, input: GraceRecoveryInput): Promise<GraceRecoveryResult> {
+  const client = await pool.connect();
+  let committed = false;
+  try {
+    await client.query("BEGIN");
+    const route = await client.query<{ group_id: string | null }>("SELECT resolve_device_route($1) AS group_id", [input.device_id]);
+    const groupId = route.rows[0]?.group_id;
+    if (!groupId) throw new RotationError("DEVICE_NOT_APPROVED", "Device is not approved");
+    await client.query("SELECT set_config('app.current_group_id', $1, true)", [groupId]);
+    await client.query("SELECT set_config('app.current_tenant', $1, true)", [groupId]);
+
+    const locked = await client.query<{
+      id: string; group_id: string; workspace_id: string; principal_id: string; lifecycle_state: string;
+      current_public_key: string; current_key_id: string; current_key_algo: KeyAlgorithm; key_generation: number;
+      rotation_grace_expires_at: string | Date | null; grace_exchange_count: number; rotation_receipt: unknown;
+    }>(`SELECT id, group_id, workspace_id, principal_id, lifecycle_state, current_public_key, current_key_id,
+          current_key_algo, key_generation, rotation_grace_expires_at, grace_exchange_count, rotation_receipt
+        FROM paired_devices WHERE id = $1 FOR UPDATE`, [input.device_id]);
+    const device = locked.rows[0];
+    if (!device || device.lifecycle_state !== "APPROVED") throw new RotationError("DEVICE_NOT_APPROVED", "Device is not approved");
+    await client.query("SELECT set_config('app.current_workspace_id', $1, true)", [device.workspace_id]);
+    await client.query("SELECT set_config('app.current_principal', $1, true)", [device.principal_id]);
+
+    if (!isStoredActivatedReceipt(device.rotation_receipt, device) || device.rotation_receipt.receipt_id !== input.receipt_id) {
+      throw new RotationError("AUTH_INVALID", "Recovery receipt is invalid");
+    }
+    const receipt = device.rotation_receipt;
+    const graceExpiry = device.rotation_grace_expires_at === null ? Number.NaN : new Date(device.rotation_grace_expires_at).getTime();
+    if (!Number.isFinite(graceExpiry) || graceExpiry <= Date.now() || graceExpiry !== new Date(receipt.grace_expires_at).getTime()) {
+      throw new RotationError("KEY_EXPIRED", "Rotation recovery grace period has expired");
+    }
+    if (device.grace_exchange_count >= getDeviceGraceMaxExchanges()) {
+      throw new RotationError("GRACE_LIMIT_EXCEEDED", "Rotation recovery grace limit has been reached");
+    }
+
+    const challenge = await client.query<{ id: string; nonce: string; audience: string; purpose: string; expires_at: string | Date; consumed_at: string | Date | null }>(
+      `SELECT id, nonce, audience, purpose, expires_at, consumed_at FROM device_challenges
+       WHERE id = $1 AND paired_device_id = $2 FOR UPDATE`, [input.headers.proof_id, device.id]);
+    const row = challenge.rows[0];
+    if (!row || row.purpose !== "recovery_status" || row.consumed_at !== null || new Date(row.expires_at).getTime() <= Date.now() ||
+      !matches(row.nonce, input.headers.nonce) || !matches(row.audience, input.headers.audience)) {
+      throw new RotationError("AUTH_EXPIRED", "Recovery challenge is expired or invalid");
+    }
+
+    let params;
+    try { params = parseSignatureInput(input.headers.signature_input); }
+    catch { throw new RotationError("AUTH_INVALID", "RFC 9421 signature input is invalid"); }
+    const oldGeneration = receipt.key_generation - 1;
+    if (!hasExactCoveredComponents(params.coveredComponents, requiredComponents) || !hasCurrentSignatureWindow(params.created, params.expires) ||
+      input.headers.purpose !== "recovery_status" || input.headers.device_id !== input.device_id ||
+      input.headers.device_id !== device.id || Number(input.headers.key_generation) !== oldGeneration ||
+      oldGeneration === device.key_generation || params.keyid !== receipt.old_key_id || params.alg !== receipt.old_key_algo) {
+      throw new RotationError("AUTH_INVALID", "RFC 9421 recovery_status proof is invalid");
+    }
+    const proof = verifyDeviceSignature({
+      method: "POST", requestTarget: input.request_target, body: input.request_body,
+      contentDigestHeader: input.headers.content_digest, purpose: "recovery_status", audience: input.headers.audience,
+      nonce: input.headers.nonce, proofId: input.headers.proof_id, deviceId: input.headers.device_id,
+      keyGeneration: oldGeneration, signatureInputHeader: input.headers.signature_input, signatureHeader: input.headers.signature,
+      publicKey: receipt.old_public_key, keyAlgorithm: receipt.old_key_algo, signatureParams: params,
+    }, getDeviceAuthOrigin(), getDeviceAuthAudience());
+    if (!proof.valid || proof.purpose !== "recovery_status") {
+      throw new RotationError("AUTH_INVALID", "RFC 9421 recovery_status proof is invalid");
+    }
+
+    const consumed = await client.query<{ id: string }>(
+      "UPDATE device_challenges SET consumed_at = NOW() WHERE id = $1 AND consumed_at IS NULL RETURNING id", [row.id],
+    );
+    if (!consumed.rows[0]) throw new RotationError("AUTH_EXPIRED", "Recovery challenge is expired or invalid");
+    await client.query("UPDATE paired_devices SET grace_exchange_count = grace_exchange_count + 1, updated_at = NOW() WHERE id = $1", [device.id]);
+    await emitDeviceAudit(client, {
+      group_id: groupId, workspace_id: device.workspace_id, event_type: "DEVICE_ROTATION_RECOVERED", agent_id: device.principal_id,
+      metadata: { device_id: device.id, challenge_id: row.id, receipt_id: receipt.receipt_id, recovery: true, via: "grace" },
+    });
+    await client.query("COMMIT");
+    committed = true;
+    return { status: "RECOVERED", rotation_receipt: publicActivatedReceipt(receipt) };
   } catch (error) {
     if (!committed) await client.query("ROLLBACK");
     throw error;

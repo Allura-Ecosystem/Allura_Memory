@@ -17,6 +17,7 @@ import {
   type ActivatedRotationReceipt,
   activateRotation,
   type ActivateRotationInput,
+  isStoredActivatedReceipt,
   stageRotation,
   type StageRotationInput,
 } from "@/lib/device-pairing/rotation-service";
@@ -307,24 +308,31 @@ describeMigrationLive("Story 29.13 rotation-activate live PostgreSQL", () => {
       pending_next_key_algo: null,
       key_generation: 5,
       grace_exchange_count: 0,
-      rotation_receipt: result.rotation_receipt,
     });
+    expect(result.rotation_receipt).not.toHaveProperty("old_public_key");
+    expect(result.rotation_receipt).not.toHaveProperty("old_key_algo");
+    const storedReceipt = device.rotation_receipt as ActivatedRotationReceipt;
+    expect(storedReceipt).toMatchObject({ old_public_key: fixture.currentPublicKey, old_key_algo: "ecdsa-p256" });
+    expect(isStoredActivatedReceipt(storedReceipt, {
+      id: fixture.deviceId, current_public_key: fixture.nextPublicKey, current_key_id: fixture.nextKeyId,
+      current_key_algo: "ecdsa-p256", key_generation: 5,
+    })).toBe(true);
     expect(device.rotation_grace_expires_at).toBeInstanceOf(Date);
     expect(Date.parse(result.rotation_receipt.grace_expires_at) - Date.parse(result.rotation_receipt.activated_at))
       .toBeGreaterThanOrEqual(23 * 60 * 60 * 1000);
-    expect(result.rotation_receipt.signature).toBe(activatedReceiptSignature({
-      receipt_id: result.rotation_receipt.receipt_id,
-      device_id: result.rotation_receipt.device_id,
-      old_key_id: result.rotation_receipt.old_key_id,
-      old_public_key: result.rotation_receipt.old_public_key,
-      old_public_key_digest: result.rotation_receipt.old_public_key_digest,
-      old_key_algo: result.rotation_receipt.old_key_algo,
-      new_key_id: result.rotation_receipt.new_key_id,
-      new_public_key_digest: result.rotation_receipt.new_public_key_digest,
-      new_key_algo: result.rotation_receipt.new_key_algo,
-      key_generation: result.rotation_receipt.key_generation,
-      activated_at: result.rotation_receipt.activated_at,
-      grace_expires_at: result.rotation_receipt.grace_expires_at,
+    expect(storedReceipt.signature).toBe(activatedReceiptSignature({
+      receipt_id: storedReceipt.receipt_id,
+      device_id: storedReceipt.device_id,
+      old_key_id: storedReceipt.old_key_id,
+      old_public_key: storedReceipt.old_public_key,
+      old_public_key_digest: storedReceipt.old_public_key_digest,
+      old_key_algo: storedReceipt.old_key_algo,
+      new_key_id: storedReceipt.new_key_id,
+      new_public_key_digest: storedReceipt.new_public_key_digest,
+      new_key_algo: storedReceipt.new_key_algo,
+      key_generation: storedReceipt.key_generation,
+      activated_at: storedReceipt.activated_at,
+      grace_expires_at: storedReceipt.grace_expires_at,
     }));
     expect(emitDeviceAudit).toHaveBeenCalledOnce();
     expect(activationAudits.rows).toEqual([{ count: "1" }]);

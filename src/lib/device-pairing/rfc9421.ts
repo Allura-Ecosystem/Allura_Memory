@@ -18,13 +18,12 @@
  * - RSA-PSS-2048 signatures are 256 bytes.
  * - No private key is ever parsed by the verifier (NFR1).
  */
-import { constants as cryptoConstants, createHash, timingSafeEqual } from "node:crypto";
+import { createHash, createPublicKey, constants as cryptoConstants, type KeyObject, timingSafeEqual, type VerifyKeyObjectInput, verify as verifySignature } from "node:crypto";
 
 import type {
   DeviceProof,
   KeyAlgorithm,
   SignatureParams,
-  SigningPurpose,
   VerifyResult,
 } from "./rfc9421-types";
 
@@ -250,14 +249,16 @@ export function parseSignatureInput(header: string): SignatureParams {
   };
 }
 
-function extractParam(params: string, name: string): string | undefined {
-  // Match name=<value> where value may be quoted or numeric.
-  // The name may appear at the start or after a ';' separator.
-  const re = new RegExp(`(?:^|;)${name}=([^;\\s]+)`, "i");
-  const m = re.exec(params);
-  if (!m) return undefined;
-  return m[1].replace(/^"|"$/g, "");
+export function hasExactCoveredComponents(
+  coveredComponents: readonly string[],
+  canonicalComponents: readonly string[],
+): boolean {
+  if (coveredComponents.length !== canonicalComponents.length) return false;
+  const covered = new Set(coveredComponents.map((component) => component.toLowerCase()));
+  if (covered.size !== canonicalComponents.length) return false;
+  return canonicalComponents.every((component) => covered.has(component.toLowerCase()));
 }
+
 
 // ── RFC 9421 signature base string construction ────────────────────────────
 
@@ -519,14 +520,13 @@ function verifySignatureRaw(
  * - SPKI PEM (`-----BEGIN PUBLIC KEY-----...`)
  * - Standard base64 of SPKI DER
  */
-function loadPublicKey(publicKey: string): import("node:crypto").KeyObject {
-  const crypto = require("node:crypto") as typeof import("node:crypto");
+function loadPublicKey(publicKey: string): KeyObject {
   if (publicKey.includes("-----BEGIN")) {
-    return crypto.createPublicKey(publicKey);
+    return createPublicKey(publicKey);
   }
   // Assume standard base64 of SPKI DER
   const der = Buffer.from(publicKey, "base64");
-  return crypto.createPublicKey({ key: der, format: "der", type: "spki" });
+  return createPublicKey({ key: der, format: "der", type: "spki" });
 }
 
 /**
@@ -536,12 +536,11 @@ function loadPublicKey(publicKey: string): import("node:crypto").KeyObject {
 function verifyOneShot(
   algorithm: string | null,
   data: Buffer,
-  keyOrOptions: import("node:crypto").KeyObject | { key: import("node:crypto").KeyObject; dsaEncoding?: string; padding?: number; saltLength?: number },
+  keyOrOptions: KeyObject | { key: KeyObject; dsaEncoding?: string; padding?: number; saltLength?: number },
   signature: Buffer,
 ): boolean {
-  const crypto = require("node:crypto") as typeof import("node:crypto");
   try {
-    return crypto.verify(algorithm, data, keyOrOptions as import("node:crypto").VerifyKeyObjectInput, signature);
+    return verifySignature(algorithm, data, keyOrOptions as VerifyKeyObjectInput, signature);
   } catch {
     return false;
   }

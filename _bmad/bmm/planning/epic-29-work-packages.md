@@ -162,7 +162,7 @@
 - **Deliverables:** Old-key recovery-only during grace window (24h default, configurable 1–72h)
 - **Depends on:** 29.2, 29.7, 29.13
 - **Evidence:** Integration tests proving recovery-only grace, rate limiting, no normal token mint during grace
-- **Done when:** Grace window returns scoped recovery token or 403 RECOVERY_REQUIRED; rate-limited per device
+- **Done when:** Grace window returns only the public-safe activated receipt after server-authenticated old-key proof; rate-limited per device
 
 ---
 

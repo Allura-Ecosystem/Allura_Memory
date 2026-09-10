@@ -1,17 +1,18 @@
+import { describe, expect, it } from "vitest";
 import {
   constants as cryptoConstants,
   generateKeyPairSync,
-  sign,
   type KeyObject,
+  sign,
 } from "node:crypto";
 
-import { describe, expect, it } from "vitest";
 
 import {
   buildSignatureBaseString,
   computeContentDigest,
   extractSignatureParamsRaw,
   extractStructuredSignatureValue,
+  hasExactCoveredComponents,
   parseSignatureInput,
   verifyDeviceSignature,
 } from "../rfc9421";
@@ -357,6 +358,18 @@ describe("Story 29.2 RFC 9421 payload verification (all 5 purposes, all 3 algori
     expect(() => parseSignatureInput('sig1=("@method" junk);created=1000;expires=1060;keyid="kid_42";alg="ecdsa-p256"')).toThrow(/components/i);
     expect(() => parseSignatureInput('sig1=("@method");created="1000";expires=1060;keyid="kid_42";alg="ecdsa-p256"')).toThrow(/created/i);
     expect(() => parseSignatureInput('sig1=("@method");created=1000;expires=1060;keyid=kid_42;alg="ecdsa-p256"')).toThrow(/keyid/i);
+  });
+
+  it("requires exactly the canonical unique recovery components", () => {
+    const canonical = [
+      "@method", "@target-uri", "content-digest", "x-allura-purpose",
+      "x-allura-audience", "x-allura-nonce", "x-allura-proof-id",
+      "x-allura-device-id", "x-allura-key-generation",
+    ];
+
+    expect(hasExactCoveredComponents(canonical, canonical)).toBe(true);
+    expect(hasExactCoveredComponents([...canonical, "x-allura-purpose"], canonical)).toBe(false);
+    expect(hasExactCoveredComponents([...canonical, "x-unrelated"], canonical)).toBe(false);
   });
 
   it("Signature-Input parsing extracts covered components, created, expires, keyid, alg", () => {

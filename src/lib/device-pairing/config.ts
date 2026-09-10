@@ -28,7 +28,12 @@ const deviceKeyGraceHoursSchema = z
   .string()
   .regex(/^(?:[1-9]|[1-6][0-9]|7[0-2])$/, "ALLURA_DEVICE_KEY_GRACE_HOURS must be an integer from 1 through 72");
 
+const deviceGraceMaxExchangesSchema = z
+  .string()
+  .regex(/^(?:[1-9]|[1-9][0-9]|100)$/, "ALLURA_DEVICE_GRACE_MAX_EXCHANGES must be an integer from 1 through 100");
+
 const DEFAULT_DEVICE_KEY_GRACE_HOURS = 24;
+const DEFAULT_DEVICE_GRACE_MAX_EXCHANGES = 5;
 
 export type DeviceAuthEnv = {
   ALLURA_DEVICE_AUTH_ORIGIN: string;
@@ -114,6 +119,19 @@ export function getDeviceKeyGraceHours(
   const parsed = deviceKeyGraceHoursSchema.safeParse(raw);
   if (!parsed.success) {
     throw new Error("ALLURA_DEVICE_KEY_GRACE_HOURS must be an integer from 1 through 72");
+  }
+  return Number(parsed.data);
+}
+
+/** Get the bounded count of receipt re-issues permitted during a rotation grace window. */
+export function getDeviceGraceMaxExchanges(
+  overrides?: Partial<Record<string, string | undefined>>,
+): number {
+  const raw = overrides?.ALLURA_DEVICE_GRACE_MAX_EXCHANGES ?? process.env.ALLURA_DEVICE_GRACE_MAX_EXCHANGES;
+  if (raw === undefined) return DEFAULT_DEVICE_GRACE_MAX_EXCHANGES;
+  const parsed = deviceGraceMaxExchangesSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error("ALLURA_DEVICE_GRACE_MAX_EXCHANGES must be an integer from 1 through 100");
   }
   return Number(parsed.data);
 }

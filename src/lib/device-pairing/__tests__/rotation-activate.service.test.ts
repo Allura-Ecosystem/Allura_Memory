@@ -108,15 +108,18 @@ describe("Story 29.13 — rotation activate service", () => {
     expect(result).toMatchObject({
       status: "ACTIVATED", key_generation: 5,
       rotation_receipt: {
-        receipt_id: "rot-staged", device_id: "dev-rotation", old_key_id: "key-current", old_public_key: "current-public-key",
-        old_key_algo: "ecdsa-p256", new_key_id: "key-next",
+        receipt_id: "rot-staged", device_id: "dev-rotation", old_key_id: "key-current", new_key_id: "key-next",
         old_public_key_digest: expect.any(String), new_public_key_digest: expect.any(String), new_key_algo: "ecdsa-p256",
         grace_expires_at: expect.any(String), signature: expect.any(String),
       },
     });
+    expect(result.rotation_receipt).not.toHaveProperty("old_public_key");
+    expect(result.rotation_receipt).not.toHaveProperty("old_key_algo");
     const swap = calls.find((call) => call.text.includes("UPDATE paired_devices SET current_public_key"));
     expect(swap?.text).toContain("pending_next_public_key = NULL");
     expect(swap?.params).toEqual(expect.arrayContaining(["next-public-key", "key-next", "ecdsa-p256", "dev-rotation"]));
+    const storedReceipt = JSON.parse(String(swap?.params?.[4]));
+    expect(storedReceipt).toMatchObject({ old_public_key: "current-public-key", old_key_algo: "ecdsa-p256" });
     expect(calls.find((call) => call.text.includes("UPDATE device_challenges SET consumed_at"))?.params).toEqual(["challenge-activate"]);
     expect(emitDeviceAudit).toHaveBeenCalledWith(client, expect.objectContaining({ event_type: "DEVICE_ROTATION_ACTIVATED", group_id: "allura-faithmeats" }));
     expect(calls.map((call) => call.text)).toEqual(expect.arrayContaining(["BEGIN", "COMMIT"]));
@@ -157,12 +160,15 @@ describe("Story 29.13 — rotation activate service", () => {
     };
     const { activateRotation } = await import("@/lib/device-pairing/rotation-service");
 
-    await expect(activateRotation({ connect: vi.fn(async () => client) } as never, {
+    const replay = await activateRotation({ connect: vi.fn(async () => client) } as never, {
       device_id: "dev-rotation", receipt_id: "rot-staged", idempotency_key: "stage-idempotency", request_target: "/api/device-pairing/rotation/activate",
       request_body: new Uint8Array(),
       headers: { content_digest: "sha-256=:ZmFrZQ==:", purpose: "rotation_activate", audience: "https://device-auth.example.test",
         nonce: "unused", proof_id: "expired-challenge", device_id: "dev-rotation", key_generation: "4", signature_input: "sig1=()", signature: "ZmFrZQ==" },
-    })).resolves.toMatchObject({ status: "ALREADY_ACTIVATED", key_generation: 5, rotation_receipt: receipt });
+    });
+    expect(replay).toMatchObject({ status: "ALREADY_ACTIVATED", key_generation: 5, rotation_receipt: { receipt_id: receipt.receipt_id } });
+    expect(replay.rotation_receipt).not.toHaveProperty("old_public_key");
+    expect(replay.rotation_receipt).not.toHaveProperty("old_key_algo");
     expect(calls.some((text) => text.includes("FROM device_challenges"))).toBe(false);
     expect(emitDeviceAudit).not.toHaveBeenCalled();
   });

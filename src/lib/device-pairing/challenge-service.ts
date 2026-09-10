@@ -2,6 +2,8 @@ import type { Pool } from "pg";
 import { randomBytes, randomUUID } from "node:crypto";
 import { emitDeviceAudit } from "./audit";
 import { getDeviceAuthAudience } from "./config";
+import type { KeyAlgorithm } from "./rfc9421-types";
+import { isStoredActivatedReceipt } from "./rotation-service";
 
 const PREHUMAN_GROUP_ID = "allura-system";
 const PREHUMAN_AGENT_ID = "device-enrollment";
@@ -87,9 +89,16 @@ export async function issueChallenge(
       workspace_id: string;
       lifecycle_state: string;
       key_generation: number;
+      current_public_key: string;
+      current_key_id: string;
+      current_key_algo: KeyAlgorithm;
+      rotation_grace_expires_at: string | Date | null;
+      rotation_receipt: unknown;
       pending_next_public_key: string | null;
     }>(
-      `SELECT id, principal_id, workspace_id, lifecycle_state, key_generation, pending_next_public_key
+      `SELECT id, principal_id, workspace_id, lifecycle_state, key_generation,
+              current_public_key, current_key_id, current_key_algo, rotation_grace_expires_at, rotation_receipt,
+              pending_next_public_key
          FROM paired_devices
         WHERE id = $1
         FOR UPDATE`,
@@ -103,11 +112,26 @@ export async function issueChallenge(
     await client.query("SELECT set_config('app.current_workspace_id', $1, true)", [pairedDevice.workspace_id]);
     await client.query("SELECT set_config('app.current_principal', $1, true)", [pairedDevice.principal_id]);
 
+    let authenticatedGeneration = pairedDevice.key_generation;
+    if (input.purpose === "recovery_status") {
+      if (!isStoredActivatedReceipt(pairedDevice.rotation_receipt, pairedDevice)) {
+        throw new ChallengeError("PURPOSE_NOT_AVAILABLE", "Recovery is not available for this device");
+      }
+      const receiptExpiry = new Date(pairedDevice.rotation_receipt.grace_expires_at).getTime();
+      const storedExpiry = pairedDevice.rotation_grace_expires_at === null
+        ? Number.NaN
+        : new Date(pairedDevice.rotation_grace_expires_at).getTime();
+      if (pairedDevice.key_generation <= 1 || !Number.isFinite(storedExpiry) || storedExpiry <= Date.now() || storedExpiry !== receiptExpiry) {
+        throw new ChallengeError("PURPOSE_NOT_AVAILABLE", "Recovery is not available for this device");
+      }
+      authenticatedGeneration = pairedDevice.key_generation - 1;
+    }
+
     const nonce = randomBytes(32).toString("base64url");
     const audience = getDeviceAuthAudience();
     const serverContext = {
       device_id: pairedDevice.id,
-      key_generation: pairedDevice.key_generation,
+      key_generation: authenticatedGeneration,
       server_time: new Date().toISOString(),
     };
     const challenge = await client.query<{ id: string; expires_at: string }>(

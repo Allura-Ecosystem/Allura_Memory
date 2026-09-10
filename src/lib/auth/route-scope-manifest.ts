@@ -68,6 +68,38 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     methods: ["POST"],
     description: "Approve a desktop enrollment using the authenticated human authority",
   },
+  {
+    pattern: "/api/device-pairing/challenge",
+    requiredRole: "viewer",
+    scopeName: "device-pairing:challenge",
+    methods: ["POST"],
+    authStrategy: "route_handler",
+    description: "Issue a route-handler-verified RFC 9421 device possession challenge",
+  },
+  {
+    pattern: "/api/device-pairing/rotation/stage",
+    requiredRole: "viewer",
+    scopeName: "device-pairing:rotation:stage",
+    methods: ["POST"],
+    authStrategy: "route_handler",
+    description: "Stage a route-handler-verified RFC 9421 device key rotation",
+  },
+  {
+    pattern: "/api/device-pairing/rotation/activate",
+    requiredRole: "viewer",
+    scopeName: "device-pairing:rotation:activate",
+    methods: ["POST"],
+    authStrategy: "route_handler",
+    description: "Activate a route-handler-verified RFC 9421 device key rotation",
+  },
+  {
+    pattern: "/api/device-pairing/recovery",
+    requiredRole: "viewer",
+    scopeName: "device-pairing:recovery",
+    methods: ["POST"],
+    authStrategy: "route_handler",
+    description: "Recover only an authenticated activated rotation receipt with old-key RFC 9421 proof",
+  },
 
   // ── Admin ────────────────────────────────────────────────────────────────
   {
