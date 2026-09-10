@@ -1,11 +1,11 @@
 import type { Pool } from "pg";
 import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { emitDeviceAudit } from "./audit";
-import { getDeviceAuthAudience, getDeviceAuthOrigin } from "./config";
+import { getDeviceAuthAudience, getDeviceAuthOrigin, getDeviceKeyGraceHours } from "./config";
 import { parseSignatureInput, verifyDeviceSignature } from "./rfc9421";
 import type { KeyAlgorithm } from "./rfc9421-types";
 
-export type RotationErrorCode = "AUTH_EXPIRED" | "AUTH_INVALID" | "DEVICE_NOT_APPROVED";
+export type RotationErrorCode = "AUTH_EXPIRED" | "AUTH_INVALID" | "DEVICE_NOT_APPROVED" | "NO_PENDING_KEY";
 
 export class RotationError extends Error {
   constructor(public readonly code: RotationErrorCode, message: string) {
@@ -44,6 +44,37 @@ export interface StageRotationResult {
     grace_expires_at: null;
     signature: string;
   };
+}
+
+export interface ActivateRotationInput {
+  device_id: string;
+  receipt_id: string;
+  idempotency_key: string;
+  request_target: string;
+  request_body: Uint8Array;
+  headers: StageRotationInput["headers"];
+}
+
+export interface ActivatedRotationReceipt {
+  receipt_id: string;
+  device_id: string;
+  old_key_id: string;
+  old_public_key: string;
+  old_public_key_digest: string;
+  old_key_algo: KeyAlgorithm;
+  new_key_id: string;
+  new_public_key_digest: string;
+  new_key_algo: KeyAlgorithm;
+  key_generation: number;
+  activated_at: string;
+  grace_expires_at: string;
+  signature: string;
+}
+
+export interface ActivateRotationResult {
+  status: "ACTIVATED" | "ALREADY_ACTIVATED";
+  key_generation: number;
+  rotation_receipt: ActivatedRotationReceipt;
 }
 
 const requiredComponents = [
@@ -111,6 +142,71 @@ function receiptSignature(
   pendingKeyAlgo: KeyAlgorithm,
 ): string {
   return createHmac("sha256", rotationReceiptKey()).update(canonicalReceipt(payload, pendingPublicKey, pendingKeyAlgo)).digest("base64url");
+}
+
+function publicKeyDigest(publicKey: string): string {
+  return createHash("sha256").update(publicKey).digest("base64url");
+}
+
+function canonicalActivatedReceipt(receipt: Omit<ActivatedRotationReceipt, "signature">): string {
+  return [
+    "allura/device-pairing/rotation-activated/v1", receipt.receipt_id, receipt.device_id,
+    receipt.old_key_id, receipt.old_public_key_digest, receipt.old_key_algo, receipt.new_key_id,
+    receipt.new_public_key_digest, receipt.new_key_algo, String(receipt.key_generation),
+    receipt.activated_at, receipt.grace_expires_at,
+  ].join("\n");
+}
+
+function activatedReceiptSignature(receipt: Omit<ActivatedRotationReceipt, "signature">): string {
+  return createHmac("sha256", rotationReceiptKey()).update(canonicalActivatedReceipt(receipt)).digest("base64url");
+}
+
+function isStoredActivatedReceipt(value: unknown, device: {
+  id: string; current_key_id: string; current_public_key: string; current_key_algo: KeyAlgorithm; key_generation: number;
+}): value is ActivatedRotationReceipt {
+  if (!value || typeof value !== "object") return false;
+  const receipt = value as Partial<ActivatedRotationReceipt>;
+  if (typeof receipt.receipt_id !== "string" || receipt.device_id !== device.id ||
+    typeof receipt.old_key_id !== "string" || typeof receipt.old_public_key !== "string" ||
+    receipt.old_public_key_digest !== publicKeyDigest(receipt.old_public_key) ||
+    (receipt.old_key_algo !== "ecdsa-p256" && receipt.old_key_algo !== "ed25519" && receipt.old_key_algo !== "rsa-pss-2048") ||
+    receipt.new_key_id !== device.current_key_id || receipt.new_public_key_digest !== publicKeyDigest(device.current_public_key) ||
+    receipt.new_key_algo !== device.current_key_algo || receipt.key_generation !== device.key_generation ||
+    typeof receipt.activated_at !== "string" || typeof receipt.grace_expires_at !== "string" || typeof receipt.signature !== "string") return false;
+  return matches(receipt.signature, activatedReceiptSignature({
+    receipt_id: receipt.receipt_id, device_id: receipt.device_id, old_key_id: receipt.old_key_id,
+    old_public_key: receipt.old_public_key, old_public_key_digest: receipt.old_public_key_digest, old_key_algo: receipt.old_key_algo,
+    new_key_id: receipt.new_key_id,
+    new_public_key_digest: receipt.new_public_key_digest, new_key_algo: receipt.new_key_algo,
+    key_generation: receipt.key_generation, activated_at: receipt.activated_at, grace_expires_at: receipt.grace_expires_at,
+  }));
+}
+
+function verifyRotationProof(
+  input: ActivateRotationInput,
+  device: { id: string; key_generation: number },
+  publicKey: string,
+  keyId: string,
+  keyAlgo: KeyAlgorithm,
+): void {
+  let params;
+  try { params = parseSignatureInput(input.headers.signature_input); }
+  catch { throw new RotationError("AUTH_INVALID", "RFC 9421 signature input is invalid"); }
+  if (!hasCoverage(params.coveredComponents) || !hasCurrentSignatureWindow(params.created, params.expires) ||
+    input.headers.purpose !== "rotation_activate" || input.headers.device_id !== device.id ||
+    Number(input.headers.key_generation) !== device.key_generation || params.keyid !== keyId || params.alg !== keyAlgo) {
+    throw new RotationError("AUTH_INVALID", "RFC 9421 rotation_activate proof is invalid");
+  }
+  const proof = verifyDeviceSignature({
+    method: "POST", requestTarget: input.request_target, body: input.request_body,
+    contentDigestHeader: input.headers.content_digest, purpose: "rotation_activate", audience: input.headers.audience,
+    nonce: input.headers.nonce, proofId: input.headers.proof_id, deviceId: input.headers.device_id,
+    keyGeneration: device.key_generation, signatureInputHeader: input.headers.signature_input,
+    signatureHeader: input.headers.signature, publicKey, keyAlgorithm: keyAlgo, signatureParams: params,
+  }, getDeviceAuthOrigin(), getDeviceAuthAudience());
+  if (!proof.valid || proof.purpose !== "rotation_activate") {
+    throw new RotationError("AUTH_INVALID", "RFC 9421 rotation_activate proof is invalid");
+  }
 }
 
 export async function stageRotation(pool: Pool, input: StageRotationInput): Promise<StageRotationResult> {
@@ -196,6 +292,94 @@ export async function stageRotation(pool: Pool, input: StageRotationInput): Prom
       metadata: { device_id: device.id, challenge_id: row.id, new_key_id: input.new_key_id, receipt_id: receiptId } });
     await client.query("COMMIT"); committed = true;
     return result;
+  } catch (error) {
+    if (!committed) await client.query("ROLLBACK");
+    throw error;
+  } finally { client.release(); }
+}
+
+export async function activateRotation(pool: Pool, input: ActivateRotationInput): Promise<ActivateRotationResult> {
+  const client = await pool.connect();
+  let committed = false;
+  try {
+    await client.query("BEGIN");
+    const route = await client.query<{ group_id: string | null }>("SELECT resolve_device_route($1) AS group_id", [input.device_id]);
+    const groupId = route.rows[0]?.group_id;
+    if (!groupId) throw new RotationError("DEVICE_NOT_APPROVED", "Device is not approved");
+    await client.query("SELECT set_config('app.current_group_id', $1, true)", [groupId]);
+    await client.query("SELECT set_config('app.current_tenant', $1, true)", [groupId]);
+
+    const locked = await client.query<{
+      id: string; group_id: string; workspace_id: string; principal_id: string; lifecycle_state: string;
+      current_public_key: string; current_key_id: string; current_key_algo: KeyAlgorithm; key_generation: number;
+      pending_next_public_key: string | null; pending_next_key_id: string | null; pending_next_key_algo: KeyAlgorithm | null;
+      rotation_idempotency_key: string | null; rotation_receipt: unknown;
+    }>(`SELECT id, group_id, workspace_id, principal_id, lifecycle_state, current_public_key, current_key_id,
+          current_key_algo, key_generation, pending_next_public_key, pending_next_key_id, pending_next_key_algo, rotation_idempotency_key, rotation_receipt
+        FROM paired_devices WHERE id = $1 FOR UPDATE`, [input.device_id]);
+    const device = locked.rows[0];
+    if (!device || device.lifecycle_state !== "APPROVED") throw new RotationError("DEVICE_NOT_APPROVED", "Device is not approved");
+    await client.query("SELECT set_config('app.current_workspace_id', $1, true)", [device.workspace_id]);
+    await client.query("SELECT set_config('app.current_principal', $1, true)", [device.principal_id]);
+
+    if (isStoredActivatedReceipt(device.rotation_receipt, device) && device.rotation_receipt.receipt_id === input.receipt_id) {
+      if (device.rotation_idempotency_key === null || !matches(device.rotation_idempotency_key, input.idempotency_key)) {
+        throw new RotationError("AUTH_INVALID", "Rotation idempotency key does not match the receipt");
+      }
+      verifyRotationProof(input, { ...device, key_generation: device.key_generation - 1 }, device.current_public_key, device.current_key_id, device.current_key_algo);
+      await client.query("COMMIT");
+      committed = true;
+      return { status: "ALREADY_ACTIVATED", key_generation: device.key_generation, rotation_receipt: device.rotation_receipt };
+    }
+
+    if (device.pending_next_public_key === null || device.pending_next_key_id === null || device.pending_next_key_algo === null) {
+      throw new RotationError("NO_PENDING_KEY", "Device has no pending rotation key");
+    }
+    if (device.rotation_idempotency_key === null || !matches(device.rotation_idempotency_key, input.idempotency_key) ||
+      !isStoredRotationReceipt(device.rotation_receipt, device.pending_next_public_key, device.pending_next_key_algo) ||
+      device.rotation_receipt.receipt_id !== input.receipt_id || device.rotation_receipt.rotation_receipt.device_id !== device.id ||
+      device.rotation_receipt.rotation_receipt.new_key_id !== device.pending_next_key_id) {
+      throw new RotationError("AUTH_INVALID", "Rotation receipt is invalid or does not match the pending key");
+    }
+
+    const challenge = await client.query<{ id: string; nonce: string; audience: string; purpose: string; expires_at: string; consumed_at: string | null }>(
+      `SELECT id, nonce, audience, purpose, expires_at, consumed_at FROM device_challenges
+       WHERE id = $1 AND paired_device_id = $2 FOR UPDATE`, [input.headers.proof_id, device.id]);
+    const row = challenge.rows[0];
+    if (!row || row.purpose !== "rotation_activate" || row.consumed_at !== null || new Date(row.expires_at).getTime() <= Date.now() ||
+      !matches(row.nonce, input.headers.nonce) || !matches(row.audience, input.headers.audience)) {
+      throw new RotationError("AUTH_EXPIRED", "Rotation activation challenge is expired or invalid");
+    }
+    verifyRotationProof(input, device, device.pending_next_public_key, device.pending_next_key_id, device.pending_next_key_algo);
+
+    const consumed = await client.query<{ id: string }>(
+      "UPDATE device_challenges SET consumed_at = NOW() WHERE id = $1 AND consumed_at IS NULL RETURNING id", [row.id],
+    );
+    if (!consumed.rows[0]) throw new RotationError("AUTH_EXPIRED", "Rotation activation challenge is expired or invalid");
+
+    const activatedAt = new Date().toISOString();
+    const graceExpiresAt = new Date(Date.now() + getDeviceKeyGraceHours() * 60 * 60 * 1000).toISOString();
+    const unsignedReceipt: Omit<ActivatedRotationReceipt, "signature"> = {
+      receipt_id: input.receipt_id, device_id: device.id, old_key_id: device.current_key_id,
+      old_public_key: device.current_public_key, old_public_key_digest: publicKeyDigest(device.current_public_key), old_key_algo: device.current_key_algo,
+      new_key_id: device.pending_next_key_id,
+      new_public_key_digest: publicKeyDigest(device.pending_next_public_key), new_key_algo: device.pending_next_key_algo,
+      key_generation: device.key_generation + 1, activated_at: activatedAt, grace_expires_at: graceExpiresAt,
+    };
+    const receipt: ActivatedRotationReceipt = { ...unsignedReceipt, signature: activatedReceiptSignature(unsignedReceipt) };
+    await client.query(`UPDATE paired_devices SET current_public_key = $1, current_key_id = $2, current_key_algo = $3,
+        pending_next_public_key = NULL, pending_next_key_id = NULL, pending_next_key_algo = NULL,
+        key_generation = key_generation + 1, rotation_grace_expires_at = $4, grace_exchange_count = 0,
+        rotation_receipt = $5::jsonb, last_rotation_at = NOW(), updated_at = NOW() WHERE id = $6`,
+      [device.pending_next_public_key, device.pending_next_key_id, device.pending_next_key_algo, graceExpiresAt, JSON.stringify(receipt), device.id]);
+    await emitDeviceAudit(client, {
+      group_id: groupId, workspace_id: device.workspace_id, event_type: "DEVICE_ROTATION_ACTIVATED", agent_id: device.principal_id,
+      metadata: { device_id: device.id, challenge_id: row.id, receipt_id: input.receipt_id, old_key_id: device.current_key_id,
+        new_key_id: device.pending_next_key_id, key_generation: device.key_generation + 1, grace_expires_at: graceExpiresAt },
+    });
+    await client.query("COMMIT");
+    committed = true;
+    return { status: "ACTIVATED", key_generation: receipt.key_generation, rotation_receipt: receipt };
   } catch (error) {
     if (!committed) await client.query("ROLLBACK");
     throw error;

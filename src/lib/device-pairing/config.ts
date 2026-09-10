@@ -24,6 +24,12 @@ const audienceSchema = z.object({
     .url("ALLURA_DEVICE_AUTH_AUDIENCE must be a valid URL"),
 });
 
+const deviceKeyGraceHoursSchema = z
+  .string()
+  .regex(/^(?:[1-9]|[1-6][0-9]|7[0-2])$/, "ALLURA_DEVICE_KEY_GRACE_HOURS must be an integer from 1 through 72");
+
+const DEFAULT_DEVICE_KEY_GRACE_HOURS = 24;
+
 export type DeviceAuthEnv = {
   ALLURA_DEVICE_AUTH_ORIGIN: string;
   ALLURA_DEVICE_AUTH_AUDIENCE: string;
@@ -94,6 +100,22 @@ export function getDeviceAuthAudience(
     _cachedAudience = resolveAudience();
   }
   return _cachedAudience;
+}
+
+/**
+ * Get the key-rotation grace window in hours. Defaults to 24 and fails closed
+ * unless an explicit value is a base-10 integer in the inclusive 1..72 range.
+ */
+export function getDeviceKeyGraceHours(
+  overrides?: Partial<Record<string, string | undefined>>,
+): number {
+  const raw = overrides?.ALLURA_DEVICE_KEY_GRACE_HOURS ?? process.env.ALLURA_DEVICE_KEY_GRACE_HOURS;
+  if (raw === undefined) return DEFAULT_DEVICE_KEY_GRACE_HOURS;
+  const parsed = deviceKeyGraceHoursSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error("ALLURA_DEVICE_KEY_GRACE_HOURS must be an integer from 1 through 72");
+  }
+  return Number(parsed.data);
 }
 
 /**

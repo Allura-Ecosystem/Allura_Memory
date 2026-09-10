@@ -1003,7 +1003,7 @@ development_status:
   29-10-authenticator-cache-bypass: backlog
   29-11-offline-and-key-loss: backlog
   29-12-rotation-stage: done
-  29-13-rotation-activate: backlog
+  29-13-rotation-activate: done
   29-14-grace-path-recovery: backlog
   29-15-device-revocation-and-lost: backlog
   29-16-transactional-device-audit: backlog

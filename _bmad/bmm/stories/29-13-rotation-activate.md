@@ -2,7 +2,7 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** C — Automatic Device-Key Rotation  
-**Status:** backlog  
+**Status:** done
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story
@@ -57,5 +57,13 @@ the user's bridge proves the new key is readable and can sign, the server activa
 **Non-goals:**
 - No grace-path recovery endpoint (Story 29.14).
 - No concurrent rotation convergence test (Workstream F, AC-21).
+
+## Active Execution Ledger — 2026-09-10
+
+- **State:** implementation and final review approved; local commit pending.
+- **Last receipt:** activation now requires signed `receipt_id` and staged idempotency key; verifies the RFC 9421 proof with the pending new key; swaps atomically; keeps the old public key and algorithm in the HMAC-authenticated receipt for recovery-only grace verification; validates 1–72 hour grace configuration; preserves receipt-bound, pre-swap-generation replay without a second challenge mutation or audit.
+- **Validation:** focused Story 29.12/29.13 suite 19/19; disposable PostgreSQL stage+activation lane 6/6; `tsc --noEmit`, Story-scope ESLint, diff hygiene, and credential scan pass. Team RAM Codex 5.6 Terra Pike and Fowler final reviews approved with zero BLOCK/HIGH/MED.
+- **Next named gate:** governance-cleared local Story 29.13 commit; then advance to Story 29.14 Grace Path Recovery.
+- **Guard:** no push / no deploy / no production DB mutation; unrelated portal WIP excluded.
 
 ---
