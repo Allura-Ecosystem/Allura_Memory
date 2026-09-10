@@ -2,7 +2,7 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** D — Device Revocation and Recovery  
-**Status:** backlog  
+**Status:** done
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story
@@ -26,19 +26,19 @@ the user reports his laptop stolen. An admin marks it LOST. The device's tokens 
 **Architecture/ADR references:** §4.7, §3.1b (terminal CHECK constraint), §7 (AD-66 — device tokens bypass cache), §16.3, §11.1 (revoke/lost audit), AD-66.
 
 **Source code and migration touchpoints:**
-- New: `src/app/api/device-pairing/revoke/route.ts`
-- New: `src/app/api/device-pairing/mark-lost/route.ts`
-- New: `src/app/api/device-pairing/devices/route.ts` (GET — list caller's approved devices)
-- New: `src/lib/device-pairing/revocation-service.ts` — `revokeDevice(input)`, `markLostDevice(input)`, `listDevicesForPrincipal(principalId)`.
-- Uses: `src/lib/mcp-token/repository.ts` (revoke `WHERE paired_device_id`).
-- No migration changes.
+- New: `docker/postgres-init/69-device-revocation-lifecycle.sql` — tenant-bound lifecycle resolver with no lifecycle-state disclosure and DB-enforced terminal transitions.
+- New: `src/lib/device-pairing/revocation-service.ts` — typed errors; locked active-membership, device, and token transaction; owner/same-tenant database-admin authority; safe device list.
+- New: `src/app/api/device-pairing/{revoke,mark-lost,devices}/route.ts` — server-derived principal request handling and typed error mapping.
+- Updated: `src/lib/auth/mcp-authenticator.ts` — paired-device credentials bypass the cache even when a non-device TTL is enabled.
+- Updated: `src/lib/auth/route-scope-manifest.ts` — exact principal declarations for all three lifecycle routes.
+- Updated: `vitest.config.live-db.ts` — migration and revocation service live-DB inventory.
 
 **Required tests:**
-- `src/lib/device-pairing/__tests__/revocation.test.ts` (integration) — revoke → tokens revoked, device tokens immediate (AD-66 — bypass cache, no listener-drop window), new exchanges blocked (`lifecycle_state=REVOKED` → 403), audit `DEVICE_REVOKED` transactional; `ALREADY_REVOKED` for terminal device; authority check: user can revoke own device, admin can revoke within their `group_id`, cross-tenant admin rejected.
-- `src/lib/device-pairing/__tests__/mark-lost.test.ts` — same for LOST + `DEVICE_MARKED_LOST` audit.
-- `src/lib/device-pairing/__tests__/devices-list.test.ts` — `GET /devices` returns only caller's approved devices; cross-user listing rejected.
-- `src/lib/device-pairing/__tests__/terminal-irreversibility.test.ts` — revoked/lost device cannot transition back to APPROVED; replacement requires new pairing (new enrollment → approve → complete).
-- Integration lane (real PG).
+- `src/lib/device-pairing/__tests__/revocation-service.live-db.test.ts` — real PostgreSQL proof for owner/admin/cross-tenant behavior, terminal idempotency, linked-token revocation, exchange challenge denial after terminal, audit/notify rollback, and safe list fields.
+- `src/lib/device-pairing/__tests__/migrations/069-revocation-lifecycle.test.ts` — resolver non-disclosure and direct-SQL terminal-transition enforcement.
+- `src/lib/device-pairing/__tests__/revocation-{service,security,routes,route-errors,list}.test.ts` and `devices-route.test.ts` — typed route errors, no client-derived authority, and safe filter behavior.
+- `src/lib/auth/__tests__/device-token-cache-bypass.test.ts` — paired-device credentials re-read storage with non-zero cache TTL.
+- Integration lane (real PG), registered in `vitest.config.live-db.ts`.
 
 **Governance/security evidence:**
 - Revocation/loss atomically: marks device terminal + revokes all linked tokens + invalidates caches + rejects new exchanges/rotations + audit (SPEC §8, AC-22).
@@ -49,7 +49,7 @@ the user reports his laptop stolen. An admin marks it LOST. The device's tokens 
 - Transactional `insertEvent` fail-closed (NFR5).
 - Authority check: user can revoke own; admin can revoke within tenant (SPEC §8).
 
-**Rollback or failure behavior:** If authority check fails, 403 + no mutation. If audit fails, transaction rolls back — device stays APPROVED (fail-closed means the security decision doesn't take effect without the audit; operator must retry). If DB connection lost, PostgreSQL rolls back.
+**Rollback or failure behavior:** A missing, cross-tenant, or non-owner/non-admin device lookup returns the identical `DEVICE_NOT_FOUND` 404 with no mutation. An inactive membership fails before device resolution with `MEMBERSHIP_INACTIVE` 403, so its response is independent of the supplied device id. Audit or notification failure rolls back terminal state and linked-token revocation; the device remains APPROVED for a safe retry.
 
 **Definition of Done:**
 - `POST /api/device-pairing/revoke` and `/mark-lost` return 200 on valid authority.

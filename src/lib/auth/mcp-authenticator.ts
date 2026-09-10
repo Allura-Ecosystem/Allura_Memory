@@ -18,10 +18,12 @@
  * CACHE POLICY (AC-8)
  *  - Default TTL is 0 ms: every request re-reads the credential row, so a
  *    revocation or expiry takes effect on the very next request.
- *  - `ALLURA_MCP_AUTH_CACHE_TTL_MS` may raise the TTL to at most 60000 ms.
- *    With a non-zero TTL, `expires_at` is still evaluated live on every
- *    request (it is carried in the cached record), so expiry is always
- *    immediate; only *revocation* may lag by up to the configured TTL.
+ *  - Paired-device credentials always bypass the cache, even when a deployment
+ *    enables a non-zero cache TTL for non-device credentials. Revocation/loss
+ *    therefore takes effect for device tokens on the next MCP request.
+ *  - `ALLURA_MCP_AUTH_CACHE_TTL_MS` may raise the non-device TTL to at most
+ *    60000 ms. With a non-zero TTL, `expires_at` is still evaluated live on
+ *    every request; only non-device revocation may lag by the configured TTL.
  */
 
 import { timingSafeEqual } from "node:crypto";
@@ -537,6 +539,14 @@ export class McpAuthenticator {
     const nowMs = this.now().getTime();
 
     let record = this.cache.get(prefix, nowMs);
+    // Device rows must never be served from an in-process credential cache.
+    // A terminal transition revokes the DB row in the same transaction; this
+    // forces the next request to observe that committed state without relying
+    // on LISTEN/NOTIFY delivery.
+    if (record?.paired_device_id != null) {
+      this.cache.invalidate(prefix);
+      record = null;
+    }
     if (!record) {
       record = await this.deps.findByPrefix(prefix);
       if (!record) {
@@ -561,7 +571,11 @@ export class McpAuthenticator {
       throw new PrincipalAuthError("AUTH_EXPIRED", "Bearer credential has expired");
     }
 
-    this.cache.set(prefix, record, nowMs);
+    if (record.paired_device_id != null) {
+      this.cache.invalidate(prefix);
+    } else {
+      this.cache.set(prefix, record, nowMs);
+    }
 
     if (this.deps.touchLastUsed) {
       // Best effort — bookkeeping must never fail a valid request.

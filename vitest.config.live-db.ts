@@ -46,6 +46,8 @@ export default defineConfig({
       "src/lib/device-pairing/__tests__/migrations/062-agent-name-trigger.test.ts",
       "src/lib/device-pairing/__tests__/migrations/063-challenges-schema.test.ts",
       "src/lib/device-pairing/__tests__/migrations/064-approval-context-function.test.ts",
+      "src/lib/device-pairing/__tests__/migrations/069-revocation-lifecycle.test.ts",
+      "src/lib/device-pairing/__tests__/revocation-service.live-db.test.ts",
       "src/lib/device-pairing/__tests__/completion-transaction.live-db.test.ts",
       "src/lib/device-pairing/__tests__/challenge-service.live-db.test.ts",
       "src/lib/device-pairing/__tests__/rotation-stage.live-db.test.ts",

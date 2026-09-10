@@ -1005,7 +1005,7 @@ development_status:
   29-12-rotation-stage: done
   29-13-rotation-activate: done
   29-14-grace-path-recovery: done
-  29-15-device-revocation-and-lost: backlog
+  29-15-device-revocation-and-lost: done
   29-16-transactional-device-audit: backlog
   29-17-credential-leak-scan: backlog
   29-18-unit-test-suite: backlog
