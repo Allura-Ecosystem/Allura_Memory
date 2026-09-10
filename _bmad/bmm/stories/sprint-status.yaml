@@ -638,8 +638,8 @@ epic_29:
   name: "Desktop Device Pairing and Persistent Authentication"
   status: in-progress
   retrospective:
-  next_story: "29.7"
-  sequence_note: "29.1 through 29.6 complete; 29.7 is next. Stories execute one at a time through dev/review/done.
+  next_story: "29.12"
+  sequence_note: "29.1 through 29.7 complete; Sabir confirmed 29.12 is dependency-ready and active. Stories execute one at a time through dev/review/done.
     B1 (Clerk test instance) gates Story 29.20; B2 (desktop client repo) gates Story 29.21.
     No production deployment, secret change, or direct main push without Sabir approval.
     Evidence requirements: typecheck, unit, integration, live-db, e2e, credential-leak
@@ -736,7 +736,7 @@ epic_29:
     # Work-package 5: Rotation (29.12-29.14)
     - key: "29.12"
       title: "Rotation Stage API — POST /api/device-pairing/rotation/stage"
-      status: backlog
+      status: in-progress
       owner: "Woz"
       depends_on: ["29.1", "29.2", "29.7", "29.9"]
       work_package: 5
@@ -1002,7 +1002,7 @@ development_status:
   29-9-exchange-api: backlog
   29-10-authenticator-cache-bypass: backlog
   29-11-offline-and-key-loss: backlog
-  29-12-rotation-stage: backlog
+  29-12-rotation-stage: done
   29-13-rotation-activate: backlog
   29-14-grace-path-recovery: backlog
   29-15-device-revocation-and-lost: backlog

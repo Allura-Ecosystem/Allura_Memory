@@ -1,9 +1,9 @@
+import { Pool, type PoolConfig } from "pg"
+import { describe } from "vitest"
 import { randomUUID } from "node:crypto"
 import { readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
 
-import { Pool, type PoolConfig } from "pg"
-import { describe } from "vitest"
 
 const migrationsDirectory = path.resolve(process.cwd(), "docker/postgres-init")
 

@@ -46,7 +46,7 @@ CREATE INDEX IF NOT EXISTS idx_paired_devices_principal_workspace
     WHERE lifecycle_state = 'APPROVED';
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_paired_devices_rotation_idem
-    ON paired_devices (rotation_idempotency_key)
+    ON paired_devices (id, rotation_idempotency_key)
     WHERE rotation_idempotency_key IS NOT NULL;
 
 ALTER TABLE paired_devices ENABLE ROW LEVEL SECURITY;

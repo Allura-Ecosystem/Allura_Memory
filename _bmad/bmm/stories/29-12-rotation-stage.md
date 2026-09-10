@@ -2,7 +2,7 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** C — Automatic Device-Key Rotation  
-**Status:** backlog  
+**Status:** in-progress
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story
@@ -57,3 +57,12 @@ the user's bridge creates a new keypair, signs a rotation request with the old k
 - No concurrent rotation convergence test (Story 29.14 / Workstream F).
 
 ---
+
+## Active Execution Ledger — 2026-09-10
+
+- **Baseline:** `b94f1f35` (Story 29.7 verified commit; worktree also contains unrelated portal WIP, excluded from this story).
+- **State:** implementation and final review approved; local commit pending.
+- **Last receipt:** remediation closed single-use challenge enforcement, key/algorithm validation, receipt HMAC binding to staged key material, exact replay tuple matching, transactional audit persistence, and device-scoped idempotency indexing. Focused suite 15/15; disposable PostgreSQL live lane 11/11; `tsc --noEmit`, Story-scope ESLint, diff hygiene, and static credential scan pass. Independent Team RAM Codex 5.6 Terra reviewers Pike and Fowler both returned zero BLOCK/HIGH/MED approvals.
+- **Next named gate:** governance-cleared local Story 29.12 commit; then advance to the next Epic 29 story.
+- **Required receipts before review:** focused service/route tests, disposable PostgreSQL live-DB test, typecheck, diff hygiene, static credential scan.
+- **Guard:** no commit / no push / no deploy / no secret change / no production DB mutation; exclude unrelated portal WIP.

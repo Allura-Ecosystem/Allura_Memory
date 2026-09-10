@@ -13,6 +13,10 @@ const migrationPath = path.resolve(
   process.cwd(),
   "docker/postgres-init/61-paired-devices.sql",
 )
+const idempotencyScopeMigrationPath = path.resolve(
+  process.cwd(),
+  "docker/postgres-init/68-device-rotation-idempotency-scope.sql",
+)
 
 function migrationSql(): string {
   return readFileSync(migrationPath, "utf8")
@@ -39,7 +43,7 @@ describe("Story 29.1 migration 061 paired-device contract", () => {
     expect(sql).not.toMatch(/private_key/i)
   })
 
-  it("defines cross-device rotation uniqueness and an explicitly granted RLS policy", () => {
+  it("scopes rotation idempotency uniqueness to a device and grants the RLS policy", () => {
     const sql = migrationSql()
     expect(sql).toContain(
       "CREATE INDEX IF NOT EXISTS idx_paired_devices_principal_workspace",
@@ -48,7 +52,7 @@ describe("Story 29.1 migration 061 paired-device contract", () => {
       "CREATE INDEX IF NOT EXISTS idx_paired_devices_approved_count",
     )
     expect(sql).toContain("CREATE UNIQUE INDEX IF NOT EXISTS idx_paired_devices_rotation_idem")
-    expect(sql).toContain("ON paired_devices (rotation_idempotency_key)")
+    expect(sql).toContain("ON paired_devices (id, rotation_idempotency_key)")
     expect(sql).toContain("ALTER TABLE paired_devices FORCE ROW LEVEL SECURITY")
     expect(sql).toContain("CREATE POLICY paired_devices_policy")
     expect(sql).toContain("group_id = current_setting('app.current_group_id', true)")
@@ -149,7 +153,7 @@ describeMigrationLive("Story 29.1 migration 061 live PostgreSQL enforcement", ()
     }
   })
 
-  it("rejects reuse of a rotation idempotency key across devices", async () => {
+  it("allows reuse of a rotation idempotency key across devices", async () => {
     await db.owner.query(
       "UPDATE paired_devices SET rotation_idempotency_key = 'rotation-061' WHERE id = 'dev-061-a'",
     )
@@ -157,6 +161,29 @@ describeMigrationLive("Story 29.1 migration 061 live PostgreSQL enforcement", ()
       db.owner.query(
         "UPDATE paired_devices SET rotation_idempotency_key = 'rotation-061' WHERE id = 'dev-061-b'",
       ),
+    ).resolves.toBeDefined()
+  })
+
+  it("migration 068 replaces the deployed legacy global idempotency index", async () => {
+    await db.owner.query("UPDATE paired_devices SET rotation_idempotency_key = NULL")
+    await db.owner.query("DROP INDEX idx_paired_devices_rotation_idem")
+    await db.owner.query(`CREATE UNIQUE INDEX idx_paired_devices_rotation_idem
+      ON paired_devices (rotation_idempotency_key) WHERE rotation_idempotency_key IS NOT NULL`)
+    await db.owner.query(
+      "UPDATE paired_devices SET rotation_idempotency_key = 'rotation-068' WHERE id = 'dev-061-a'",
+    )
+    await expect(
+      db.owner.query(
+        "UPDATE paired_devices SET rotation_idempotency_key = 'rotation-068' WHERE id = 'dev-061-b'",
+      ),
     ).rejects.toThrow(/idx_paired_devices_rotation_idem/i)
+
+    await db.owner.query(readFileSync(idempotencyScopeMigrationPath, "utf8"))
+
+    await expect(
+      db.owner.query(
+        "UPDATE paired_devices SET rotation_idempotency_key = 'rotation-068' WHERE id = 'dev-061-b'",
+      ),
+    ).resolves.toBeDefined()
   })
 })

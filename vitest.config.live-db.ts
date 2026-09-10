@@ -48,6 +48,7 @@ export default defineConfig({
       "src/lib/device-pairing/__tests__/migrations/064-approval-context-function.test.ts",
       "src/lib/device-pairing/__tests__/completion-transaction.live-db.test.ts",
       "src/lib/device-pairing/__tests__/challenge-service.live-db.test.ts",
+      "src/lib/device-pairing/__tests__/rotation-stage.live-db.test.ts",
     ],
     testTimeout: 60_000,
     hookTimeout: 30_000,

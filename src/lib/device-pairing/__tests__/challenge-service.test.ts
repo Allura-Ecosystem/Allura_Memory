@@ -8,10 +8,10 @@ vi.mock("@/lib/device-pairing/audit", () => ({
 }));
 
 import { emitDeviceAudit } from "@/lib/device-pairing/audit";
-import { ChallengeError, issueChallenge } from "@/lib/device-pairing/challenge-service";
+import { issueChallenge } from "@/lib/device-pairing/challenge-service";
 
 describe("Story 29.7 — challenge service", () => {
-  it("rejects rotation_stage when the locked device has no pending key", async () => {
+  it("issues the first rotation_stage challenge before a pending key exists", async () => {
     const calls: string[] = [];
     const client = {
       query: vi.fn(async (text: string) => {
@@ -20,6 +20,7 @@ describe("Story 29.7 — challenge service", () => {
         if (text.includes("FROM paired_devices")) {
           return { rows: [{ id: "dev-approved", principal_id: "principal-1", workspace_id: "ws-1", lifecycle_state: "APPROVED", key_generation: 4, pending_next_public_key: null }] };
         }
+        if (text.includes("INSERT INTO device_challenges")) return { rows: [{ id: "challenge-first-rotation", expires_at: "2026-09-10T10:39:20.000Z" }] };
         return { rows: [] };
       }),
       release: vi.fn(),
@@ -28,10 +29,10 @@ describe("Story 29.7 — challenge service", () => {
     await expect(issueChallenge({ connect: vi.fn(async () => client) } as never, {
       device_id: "dev-approved",
       purpose: "rotation_stage",
-    })).rejects.toMatchObject({ code: "PURPOSE_NOT_AVAILABLE" });
+    })).resolves.toMatchObject({ challenge_id: "challenge-first-rotation", purpose: "rotation_stage" });
 
-    expect(calls.some((text) => text.includes("INSERT INTO device_challenges"))).toBe(false);
-    expect(calls).toContain("ROLLBACK");
+    expect(calls.some((text) => text.includes("INSERT INTO device_challenges"))).toBe(true);
+    expect(calls).toContain("COMMIT");
   });
 
   it("bootstraps RLS and issues a privacy-safe exchange challenge for an approved device", async () => {

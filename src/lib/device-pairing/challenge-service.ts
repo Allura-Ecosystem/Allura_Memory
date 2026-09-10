@@ -1,7 +1,7 @@
-import { randomBytes, randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { getDeviceAuthAudience } from "./config";
+import { randomBytes, randomUUID } from "node:crypto";
 import { emitDeviceAudit } from "./audit";
+import { getDeviceAuthAudience } from "./config";
 
 const PREHUMAN_GROUP_ID = "allura-system";
 const PREHUMAN_AGENT_ID = "device-enrollment";
@@ -102,13 +102,6 @@ export async function issueChallenge(
 
     await client.query("SELECT set_config('app.current_workspace_id', $1, true)", [pairedDevice.workspace_id]);
     await client.query("SELECT set_config('app.current_principal', $1, true)", [pairedDevice.principal_id]);
-
-    if (input.purpose === "rotation_stage" && pairedDevice.pending_next_public_key == null) {
-      throw new ChallengeError(
-        "PURPOSE_NOT_AVAILABLE",
-        "rotation_stage requires a pending next key",
-      );
-    }
 
     const nonce = randomBytes(32).toString("base64url");
     const audience = getDeviceAuthAudience();
