@@ -772,7 +772,7 @@ epic_29:
       ac_participation: ["AC-24"]
     - key: "29.17"
       title: "Automated Credential Leak Scan (AC-25)"
-      status: backlog
+      status: in-progress
       owner: "Woz"
       depends_on: ["29.16"]
       work_package: 6
@@ -1007,7 +1007,7 @@ development_status:
   29-14-grace-path-recovery: done
   29-15-device-revocation-and-lost: done
   29-16-transactional-device-audit: backlog
-  29-17-credential-leak-scan: backlog
+  29-17-credential-leak-scan: in-progress
   29-18-unit-test-suite: backlog
   29-19-postgres-integration-tests: backlog
   29-20-clerk-pairing-e2e: backlog

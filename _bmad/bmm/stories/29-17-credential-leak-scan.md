@@ -2,7 +2,7 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** E — Audit and Credential Hygiene  
-**Status:** backlog  
+**Status:** done
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story
@@ -55,5 +55,14 @@ A CI gate proves that no credentials leak into events/logs/errors/artifacts — 
 - No process-memory scan (out of scope — THREAT-MODEL.md residual risk).
 - No external secret scanning service (e.g., GitHub Secret Scanning) — this is an internal Allura-specific scan.
 - No fix for leaks in other epics' code (this story provides the scanner; leaks found must be fixed in their respective stories).
+
+## Active Execution Ledger — 2026-09-11
+
+- **Baseline:** `0849af38` (Story 29.16 verified commit).
+- **State:** reviewed WIP; explicit no-commit hold.
+- **Last receipt:** GREEN: focused unit 5/5, registered disposable live PostgreSQL 2/2 across all 13 `DEVICE_*` types, standalone scan, typecheck, scoped ESLint, YAML wiring parse, and diff hygiene. Local review found no Story 29.17 blocker. The full unit lane has five unrelated baseline failures; the legacy repo-wide secret guard fails only the pre-existing portal token fixture, which is out of scope.
+- **Next named gate:** Obtain scope to resolve the unrelated baseline gates or to make the requested local commit; otherwise preserve this unstaged WIP.
+- **Required receipts before review:** completed — focused unit/live DB, standalone scan, typecheck, scoped lint, diff hygiene, and local review.
+- **Review/commit gate:** local review approved; no commit, push, deploy, secret change, production DB mutation, or portal-WIP modification in this task.
 
 ---

@@ -1,0 +1,7 @@
+{
+  "event_type": "DEVICE_PAIRING_COMPLETE",
+  "metadata": {
+    "enrollment_transaction_id": "enroll-fixture-safe",
+    "paired_device_id": "device-fixture-safe"
+  }
+}

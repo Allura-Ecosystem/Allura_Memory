@@ -49,6 +49,7 @@ export default defineConfig({
       "src/lib/device-pairing/__tests__/migrations/069-revocation-lifecycle.test.ts",
       "src/lib/device-pairing/__tests__/revocation-service.live-db.test.ts",
       "src/lib/device-pairing/__tests__/audit-immutability.live-db.test.ts",
+      "src/lib/device-pairing/__tests__/credential-leak-scan.live-db.test.ts",
       "src/lib/device-pairing/__tests__/exchange.live-db.test.ts",
       "src/lib/device-pairing/__tests__/completion-transaction.live-db.test.ts",
       "src/lib/device-pairing/__tests__/challenge-service.live-db.test.ts",

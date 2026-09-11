@@ -1,0 +1,7 @@
+{
+  "status": 401,
+  "body": {
+    "error": "DEVICE_NOT_APPROVED",
+    "message": "Device is not approved"
+  }
+}
