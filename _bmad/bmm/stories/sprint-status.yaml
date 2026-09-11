@@ -1010,7 +1010,7 @@ development_status:
   29-17-credential-leak-scan: in-progress
   29-18-unit-test-suite: backlog
   29-19-postgres-integration-tests: done
-  29-20-clerk-pairing-e2e: backlog
+  29-20-clerk-pairing-e2e: done
   29-21-platform-secure-store-contracts: backlog
 action_items:
   - id: "epic-25-retro-item-1-update-epic-25-spec-status-lines-25-2a-2"

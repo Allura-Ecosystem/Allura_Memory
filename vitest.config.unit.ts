@@ -182,6 +182,8 @@ export default defineConfig({
       "src/lib/device-pairing/__tests__/rfc9421-target-uri.test.ts",
       // Story 29.3 — PKCE S256 + authorization code + completion nonce (pure functions, no DB)
       "src/lib/device-pairing/__tests__/pkce.test.ts",
+      // Story 29.20 — hermetic B1 readiness and secret-redaction checks.
+      "src/lib/device-pairing/__tests__/e2e/clerk-test-harness.test.ts",
       "src/lib/device-pairing/__tests__/authorization-code.test.ts",
       // Story 29.17 — deterministic credential scan for named fixtures/errors/logs.
       "src/lib/device-pairing/__tests__/credential-leak-scan.test.ts",
