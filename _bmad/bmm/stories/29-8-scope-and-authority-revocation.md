@@ -2,7 +2,7 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** B — Persistent Runtime Reconnection  
-**Status:** backlog  
+**Status:** done
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story

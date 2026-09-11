@@ -2,6 +2,7 @@ import type { Pool } from "pg";
 import { randomBytes, randomUUID } from "node:crypto";
 import { emitDeviceAudit } from "./audit";
 import { getDeviceAuthAudience } from "./config";
+import { DevicePairingErrorCode } from "./error-codes";
 import type { KeyAlgorithm } from "./rfc9421-types";
 import { isStoredActivatedReceipt } from "./rotation-service";
 
@@ -19,7 +20,9 @@ export interface ChallengeInput {
   purpose: ChallengePurpose;
 }
 
-export type ChallengeErrorCode = "DEVICE_NOT_APPROVED" | "PURPOSE_NOT_AVAILABLE";
+export type ChallengeErrorCode =
+  | DevicePairingErrorCode.DEVICE_NOT_APPROVED
+  | DevicePairingErrorCode.PURPOSE_NOT_AVAILABLE;
 
 export class ChallengeError extends Error {
   constructor(
@@ -79,7 +82,7 @@ export async function issueChallenge(
       });
       await client.query("COMMIT");
       committed = true;
-      throw new ChallengeError("DEVICE_NOT_APPROVED", "Device is not approved");
+      throw new ChallengeError(DevicePairingErrorCode.DEVICE_NOT_APPROVED, "Device is not approved");
     }
 
     await client.query("SELECT set_config('app.current_group_id', $1, true)", [groupId]);
@@ -106,7 +109,7 @@ export async function issueChallenge(
     );
     const pairedDevice = device.rows[0];
     if (pairedDevice == null || pairedDevice.lifecycle_state !== "APPROVED") {
-      throw new ChallengeError("DEVICE_NOT_APPROVED", "Device is not approved");
+      throw new ChallengeError(DevicePairingErrorCode.DEVICE_NOT_APPROVED, "Device is not approved");
     }
 
     await client.query("SELECT set_config('app.current_workspace_id', $1, true)", [pairedDevice.workspace_id]);
@@ -115,14 +118,14 @@ export async function issueChallenge(
     let authenticatedGeneration = pairedDevice.key_generation;
     if (input.purpose === "recovery_status") {
       if (!isStoredActivatedReceipt(pairedDevice.rotation_receipt, pairedDevice)) {
-        throw new ChallengeError("PURPOSE_NOT_AVAILABLE", "Recovery is not available for this device");
+        throw new ChallengeError(DevicePairingErrorCode.PURPOSE_NOT_AVAILABLE, "Recovery is not available for this device");
       }
       const receiptExpiry = new Date(pairedDevice.rotation_receipt.grace_expires_at).getTime();
       const storedExpiry = pairedDevice.rotation_grace_expires_at === null
         ? Number.NaN
         : new Date(pairedDevice.rotation_grace_expires_at).getTime();
       if (pairedDevice.key_generation <= 1 || !Number.isFinite(storedExpiry) || storedExpiry <= Date.now() || storedExpiry !== receiptExpiry) {
-        throw new ChallengeError("PURPOSE_NOT_AVAILABLE", "Recovery is not available for this device");
+        throw new ChallengeError(DevicePairingErrorCode.PURPOSE_NOT_AVAILABLE, "Recovery is not available for this device");
       }
       authenticatedGeneration = pairedDevice.key_generation - 1;
     }

@@ -10,6 +10,7 @@ vi.mock("@/lib/device-pairing/challenge-service", () => ({
 
 import { POST } from "@/app/api/device-pairing/challenge/route";
 import { ChallengeError, issueChallenge } from "@/lib/device-pairing/challenge-service";
+import { DevicePairingErrorCode } from "@/lib/device-pairing/error-codes";
 
 describe("Story 29.7 — POST /api/device-pairing/challenge", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -49,7 +50,7 @@ describe("Story 29.7 — POST /api/device-pairing/challenge", () => {
 
   it("maps an audited service denial to 403", async () => {
     vi.mocked(issueChallenge).mockRejectedValueOnce(
-      new ChallengeError("DEVICE_NOT_APPROVED", "Device is not approved"),
+      new ChallengeError(DevicePairingErrorCode.DEVICE_NOT_APPROVED, "Device is not approved"),
     );
 
     const response = await POST(new Request("http://localhost/api/device-pairing/challenge", {
@@ -59,7 +60,12 @@ describe("Story 29.7 — POST /api/device-pairing/challenge", () => {
     }));
 
     expect(response.status).toBe(403);
-    expect(await response.json()).toEqual({ error: "DEVICE_NOT_APPROVED", message: "Device is not approved" });
+    expect(await response.json()).toEqual({
+      error: "DEVICE_NOT_APPROVED",
+      message: "Device is not approved",
+      recovery_action: "re_pair",
+      retry_after_ms: 0,
+    });
   });
 
   it("maps unexpected service failures to 500", async () => {
@@ -73,7 +79,12 @@ describe("Story 29.7 — POST /api/device-pairing/challenge", () => {
     }));
 
     expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ error: "Internal server error" });
+    expect(await response.json()).toEqual({
+      error: "INTERNAL_ERROR",
+      message: "Internal server error",
+      recovery_action: "retry",
+      retry_after_ms: 1_000,
+    });
     expect(errorSpy).toHaveBeenCalledWith("[device-pairing/challenge] error:", expect.any(Error));
     errorSpy.mockRestore();
   });

@@ -11,15 +11,20 @@ vi.mock("@/lib/device-pairing/rfc9421", () => ({
   hasExactCoveredComponents: (covered: readonly string[], expected: readonly string[]) =>
     covered.length === expected.length && new Set(covered.map((component) => component.toLowerCase())).size === expected.length &&
     expected.every((component) => covered.map((value) => value.toLowerCase()).includes(component)),
-  parseSignatureInput: () => ({
+  parseSignatureInput: (input: string) => ({
     label: "sig1",
     coveredComponents: ["@method", "@target-uri", "content-digest", "x-allura-purpose", "x-allura-audience", "x-allura-nonce", "x-allura-proof-id"],
     created: Math.floor(Date.now() / 1000) - 1,
     expires: Math.floor(Date.now() / 1000) + 60,
-    keyid: "kid-1",
+    keyid: input.includes('keyid="stale-kid"') ? "stale-kid" : "kid-1",
     alg: "ecdsa-p256",
   }),
-  verifyDeviceSignature: () => ({ valid: true, purpose: "exchange" }),
+  verifyDeviceSignature: ({ signatureParams }: { signatureParams: { keyid: string } }) => {
+    if (signatureParams.keyid === "stale-kid") {
+      throw new Error("A stale key must not be verified against the current public key");
+    }
+    return { valid: true, purpose: "exchange" };
+  },
 }));
 vi.mock("@/lib/mcp-token/repository", () => ({
   createDeviceToken: vi.fn(async () => ({ raw: "allura_mcp_exchange", record: { id: "tok-new", expires_at: futureExpiry() } })),
@@ -27,6 +32,7 @@ vi.mock("@/lib/mcp-token/repository", () => ({
 vi.mock("@/lib/device-pairing/audit", () => ({ emitDeviceAudit: vi.fn() }));
 
 import { emitDeviceAudit } from "@/lib/device-pairing/audit";
+import { DevicePairingErrorCode } from "@/lib/device-pairing/error-codes";
 import { ExchangeError, exchangeToken } from "@/lib/device-pairing/exchange-service";
 import { createDeviceToken } from "@/lib/mcp-token/repository";
 
@@ -95,7 +101,7 @@ describe("Story 29.9 — exchange service", () => {
     await expect(exchangeToken({ connect: vi.fn(async () => client) } as never, {
       device_id: "dev-lock", challenge_id: "challenge-lock", request_target: "/api/device-pairing/exchange", request_body: new Uint8Array(),
       headers: { content_digest: "sha-256=:ZmFrZQ==:", purpose: "exchange", audience: "https://device-auth.example.test", nonce: "nonce-lock", proof_id: "challenge-lock", signature_input: "sig1=()", signature: "sig1=:ZmFrZQ==:" },
-    })).rejects.toMatchObject({ code: "WORKSPACE_LOCKED" } satisfies Partial<ExchangeError>);
+    })).rejects.toMatchObject({ code: DevicePairingErrorCode.WORKSPACE_LOCKED } satisfies Partial<ExchangeError>);
 
     expect(createDeviceToken).not.toHaveBeenCalled();
     expect(emitDeviceAudit).toHaveBeenCalledWith(client, expect.objectContaining({
@@ -129,6 +135,74 @@ describe("Story 29.9 — exchange service", () => {
       metadata: { device_id: "dev-removed", challenge_id: "challenge-removed", reason_code: "MEMBERSHIP_INACTIVE" },
       status: "failed",
     }));
+  });
+
+  it.each([
+    ["cannot resolve a device route", undefined, undefined, DevicePairingErrorCode.AUTH_INVALID],
+    ["finds a routed but non-approved device", "allura-faithmeats", "REVOKED", DevicePairingErrorCode.DEVICE_NOT_APPROVED],
+  ] as const)("returns %s only for the appropriate device-state boundary", async (_scenario, groupId, lifecycleState, expectedCode) => {
+    const client = {
+      query: vi.fn(async (text: string) => {
+        if (text.includes("resolve_device_route")) {
+          return { rows: groupId === undefined ? [] : [{ group_id: groupId }] };
+        }
+        if (text.includes("FROM device_challenges")) {
+          return {
+            rows: lifecycleState === undefined
+              ? []
+              : [{ id: "challenge-terminal", nonce: "nonce-terminal", audience: "https://device-auth.example.test", purpose: "exchange", expires_at: futureExpiry() }],
+          };
+        }
+        if (text.includes("FROM paired_devices")) {
+          return {
+            rows: lifecycleState === undefined
+              ? []
+              : [{ id: "dev-terminal", group_id: "allura-faithmeats", workspace_id: "ws-terminal", principal_id: "human-terminal", current_public_key: "public-key", current_key_id: "kid-1", current_key_algo: "ecdsa-p256", lifecycle_state: lifecycleState }],
+          };
+        }
+        return { rows: [] };
+      }),
+      release: vi.fn(),
+    };
+
+    await expect(exchangeToken({ connect: vi.fn(async () => client) } as never, {
+      device_id: "dev-terminal", challenge_id: "challenge-terminal", request_target: "/api/device-pairing/exchange", request_body: new Uint8Array(),
+      headers: { content_digest: "sha-256=:ZmFrZQ==:", purpose: "exchange", audience: "https://device-auth.example.test", nonce: "nonce-terminal", proof_id: "challenge-terminal", signature_input: "sig1=()", signature: "sig1=:ZmFrZQ==:" },
+    })).rejects.toMatchObject({ code: expectedCode } satisfies Partial<ExchangeError>);
+  });
+
+  it("classifies an otherwise valid proof from a stale secure-store key as KEY_EXPIRED", async () => {
+    const client = {
+      query: vi.fn(async (text: string) => {
+        if (text.includes("resolve_device_route")) return { rows: [{ group_id: "allura-faithmeats" }] };
+        if (text.includes("FROM paired_devices")) return { rows: [{ id: "dev-stale-key", group_id: "allura-faithmeats", workspace_id: "ws-stale-key", principal_id: "human-stale-key", current_public_key: "public-key", current_key_id: "kid-1", current_key_algo: "ecdsa-p256", lifecycle_state: "APPROVED" }] };
+        if (text.includes("FROM device_challenges")) return { rows: [{ id: "challenge-stale-key", nonce: "nonce-stale-key", audience: "https://device-auth.example.test", purpose: "exchange", expires_at: futureExpiry() }] };
+        return { rows: [] };
+      }),
+      release: vi.fn(),
+    };
+
+    await expect(exchangeToken({ connect: vi.fn(async () => client) } as never, {
+      device_id: "dev-stale-key", challenge_id: "challenge-stale-key", request_target: "/api/device-pairing/exchange", request_body: new Uint8Array(),
+      headers: { content_digest: "sha-256=:ZmFrZQ==:", purpose: "exchange", audience: "https://device-auth.example.test", nonce: "nonce-stale-key", proof_id: "challenge-stale-key", signature_input: 'sig1=();keyid="stale-kid"', signature: "sig1=:ZmFrZQ==:" },
+    })).rejects.toMatchObject({ code: DevicePairingErrorCode.KEY_EXPIRED } satisfies Partial<ExchangeError>);
+  });
+
+  it("keeps a stale key with a mismatched challenge binding generic", async () => {
+    const client = {
+      query: vi.fn(async (text: string) => {
+        if (text.includes("resolve_device_route")) return { rows: [{ group_id: "allura-faithmeats" }] };
+        if (text.includes("FROM paired_devices")) return { rows: [{ id: "dev-stale-bound", group_id: "allura-faithmeats", workspace_id: "ws-stale-bound", principal_id: "human-stale-bound", current_public_key: "public-key", current_key_id: "kid-1", current_key_algo: "ecdsa-p256", lifecycle_state: "APPROVED" }] };
+        if (text.includes("FROM device_challenges")) return { rows: [{ id: "challenge-stale-bound", nonce: "nonce-stale-bound", audience: "https://device-auth.example.test", purpose: "exchange", expires_at: futureExpiry() }] };
+        return { rows: [] };
+      }),
+      release: vi.fn(),
+    };
+
+    await expect(exchangeToken({ connect: vi.fn(async () => client) } as never, {
+      device_id: "dev-stale-bound", challenge_id: "challenge-stale-bound", request_target: "/api/device-pairing/exchange", request_body: new Uint8Array(),
+      headers: { content_digest: "sha-256=:ZmFrZQ==:", purpose: "exchange", audience: "https://device-auth.example.test", nonce: "wrong-nonce", proof_id: "challenge-stale-bound", signature_input: 'sig1=();keyid="stale-kid"', signature: "sig1=:ZmFrZQ==:" },
+    })).rejects.toMatchObject({ code: DevicePairingErrorCode.AUTH_INVALID } satisfies Partial<ExchangeError>);
   });
 
   it("persists a denial receipt when its resolved workspace disappears", async () => {

@@ -4,15 +4,18 @@ import { createDeviceToken } from "@/lib/mcp-token/repository";
 import type { LockMode } from "@allura/types";
 import { emitDeviceAudit } from "./audit";
 import { getDeviceAuthAudience, getDeviceAuthOrigin } from "./config";
+import { DevicePairingErrorCode } from "./error-codes";
 import { hasExactCoveredComponents, parseSignatureInput, verifyDeviceSignature } from "./rfc9421";
 import type { KeyAlgorithm, SignatureParams } from "./rfc9421-types";
 
 export type ExchangeErrorCode =
-  | "AUTH_EXPIRED"
-  | "AUTH_INVALID"
-  | "MEMBERSHIP_INACTIVE"
-  | "WORKSPACE_LOCKED"
-  | "WORKSPACE_NOT_FOUND";
+  | DevicePairingErrorCode.AUTH_EXPIRED
+  | DevicePairingErrorCode.AUTH_INVALID
+  | DevicePairingErrorCode.KEY_EXPIRED
+  | DevicePairingErrorCode.MEMBERSHIP_INACTIVE
+  | DevicePairingErrorCode.WORKSPACE_LOCKED
+  | DevicePairingErrorCode.WORKSPACE_NOT_FOUND
+  | DevicePairingErrorCode.DEVICE_NOT_APPROVED;
 
 export class ExchangeError extends Error {
   constructor(public readonly code: ExchangeErrorCode, message: string) {
@@ -82,7 +85,7 @@ export async function exchangeToken(pool: Pool, input: ExchangeTokenInput): Prom
       [input.device_id],
     );
     const groupId = route.rows[0]?.group_id;
-    if (!groupId) throw new ExchangeError("AUTH_EXPIRED", "Device is not approved");
+    if (!groupId) throw new ExchangeError(DevicePairingErrorCode.AUTH_INVALID, "Exchange proof is invalid");
     await client.query("SELECT set_config('app.current_group_id', $1, true)", [groupId]);
     await client.query("SELECT set_config('app.current_tenant', $1, true)", [groupId]);
 
@@ -101,8 +104,8 @@ export async function exchangeToken(pool: Pool, input: ExchangeTokenInput): Prom
       [input.device_id],
     );
     const pairedDevice = device.rows[0];
-    if (!pairedDevice || pairedDevice.lifecycle_state !== "APPROVED") {
-      throw new ExchangeError("AUTH_EXPIRED", "Device is not approved");
+    if (!pairedDevice) {
+      throw new ExchangeError(DevicePairingErrorCode.AUTH_INVALID, "Exchange proof is invalid");
     }
     await client.query("SELECT set_config('app.current_workspace_id', $1, true)", [pairedDevice.workspace_id]);
     await client.query("SELECT set_config('app.current_principal', $1, true)", [pairedDevice.principal_id]);
@@ -123,17 +126,26 @@ export async function exchangeToken(pool: Pool, input: ExchangeTokenInput): Prom
     const issuedChallenge = challenge.rows[0];
     if (!issuedChallenge || issuedChallenge.purpose !== "exchange" ||
       new Date(issuedChallenge.expires_at).getTime() <= Date.now()) {
-      throw new ExchangeError("AUTH_EXPIRED", "Challenge is expired or unavailable");
+      throw new ExchangeError(DevicePairingErrorCode.AUTH_EXPIRED, "Challenge is expired or unavailable");
     }
 
     let signatureParams;
     try {
       signatureParams = parseSignatureInput(input.headers.signature_input);
     } catch {
-      throw new ExchangeError("AUTH_INVALID", "RFC 9421 signature input is invalid");
+      throw new ExchangeError(DevicePairingErrorCode.AUTH_INVALID, "RFC 9421 signature input is invalid");
     }
     if (!isValidExchangeSignatureEnvelope(signatureParams)) {
-      throw new ExchangeError("AUTH_INVALID", "RFC 9421 exchange proof has invalid coverage or validity window");
+      throw new ExchangeError(DevicePairingErrorCode.AUTH_INVALID, "RFC 9421 exchange proof has invalid coverage or validity window");
+    }
+    if (input.headers.purpose !== "exchange" ||
+      input.headers.proof_id !== issuedChallenge.id ||
+      input.headers.nonce !== issuedChallenge.nonce ||
+      input.headers.audience !== issuedChallenge.audience) {
+      throw new ExchangeError(DevicePairingErrorCode.AUTH_INVALID, "RFC 9421 exchange proof is invalid");
+    }
+    if (signatureParams.keyid !== pairedDevice.current_key_id) {
+      throw new ExchangeError(DevicePairingErrorCode.KEY_EXPIRED, "Device key is no longer current");
     }
     const proof = verifyDeviceSignature({
       method: "POST",
@@ -150,13 +162,11 @@ export async function exchangeToken(pool: Pool, input: ExchangeTokenInput): Prom
       keyAlgorithm: pairedDevice.current_key_algo,
       signatureParams,
     }, getDeviceAuthOrigin(), getDeviceAuthAudience());
-    if (!proof.valid || proof.purpose !== "exchange" ||
-      input.headers.purpose !== "exchange" ||
-      input.headers.proof_id !== issuedChallenge.id ||
-      input.headers.nonce !== issuedChallenge.nonce ||
-      input.headers.audience !== issuedChallenge.audience ||
-      signatureParams.keyid !== pairedDevice.current_key_id) {
-      throw new ExchangeError("AUTH_INVALID", "RFC 9421 exchange proof is invalid");
+    if (!proof.valid || proof.purpose !== "exchange") {
+      throw new ExchangeError(DevicePairingErrorCode.AUTH_INVALID, "RFC 9421 exchange proof is invalid");
+    }
+    if (pairedDevice.lifecycle_state !== "APPROVED") {
+      throw new ExchangeError(DevicePairingErrorCode.DEVICE_NOT_APPROVED, "Device is not approved");
     }
 
     const membership = await client.query<{ role: string }>(
@@ -182,7 +192,7 @@ export async function exchangeToken(pool: Pool, input: ExchangeTokenInput): Prom
       });
       await client.query("COMMIT");
       committed = true;
-      throw new ExchangeError("MEMBERSHIP_INACTIVE", "Membership is inactive");
+      throw new ExchangeError(DevicePairingErrorCode.MEMBERSHIP_INACTIVE, "Membership is inactive");
     }
     const workspace = await client.query<{ lock_mode: LockMode }>(
       "SELECT lock_mode FROM workspaces WHERE workspace_id = $1 AND group_id = $2 FOR UPDATE",
@@ -203,7 +213,7 @@ export async function exchangeToken(pool: Pool, input: ExchangeTokenInput): Prom
       });
       await client.query("COMMIT");
       committed = true;
-      throw new ExchangeError("WORKSPACE_NOT_FOUND", "Workspace is unavailable");
+      throw new ExchangeError(DevicePairingErrorCode.WORKSPACE_NOT_FOUND, "Workspace is unavailable");
     }
     if (workspace.rows[0].lock_mode === "full_lockdown") {
       await emitDeviceAudit(client, {
@@ -220,7 +230,7 @@ export async function exchangeToken(pool: Pool, input: ExchangeTokenInput): Prom
       });
       await client.query("COMMIT");
       committed = true;
-      throw new ExchangeError("WORKSPACE_LOCKED", "Workspace is locked");
+      throw new ExchangeError(DevicePairingErrorCode.WORKSPACE_LOCKED, "Workspace is locked");
     }
 
     await client.query(
@@ -242,7 +252,7 @@ export async function exchangeToken(pool: Pool, input: ExchangeTokenInput): Prom
       [issuedChallenge.id, token.record.id],
     );
     if (!consumed.rows[0]) {
-      throw new ExchangeError("AUTH_EXPIRED", "Challenge has already been consumed");
+      throw new ExchangeError(DevicePairingErrorCode.AUTH_EXPIRED, "Challenge has already been consumed");
     }
     await client.query("UPDATE paired_devices SET last_exchange_at = NOW() WHERE id = $1", [pairedDevice.id]);
     await emitDeviceAudit(client, {

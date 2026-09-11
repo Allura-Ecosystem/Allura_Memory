@@ -2,7 +2,9 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** B — Persistent Runtime Reconnection  
-**Status:** backlog  
+**Status:** done
+
+**Last receipt:** 2026-09-11 — final Pike/Fowler staged-diff reviews APPROVE; 42/42 focused tests, `tsc --noEmit`, scoped ESLint, staged diff hygiene, and static credential scan pass. Bound stale key returns `KEY_EXPIRED`; stale key with mismatched binding remains `AUTH_INVALID`; no route error leaks outside the typed recovery contract.
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story

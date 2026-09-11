@@ -998,10 +998,10 @@ development_status:
   29-5-approval-api: backlog
   29-6-completion-api: backlog
   29-7-challenge-api: done
-  29-8-scope-and-authority-revocation: backlog
-  29-9-exchange-api: backlog
-  29-10-authenticator-cache-bypass: backlog
-  29-11-offline-and-key-loss: backlog
+  29-8-scope-and-authority-revocation: done
+  29-9-exchange-api: done
+  29-10-authenticator-cache-bypass: done
+  29-11-offline-and-key-loss: done
   29-12-rotation-stage: done
   29-13-rotation-activate: done
   29-14-grace-path-recovery: done

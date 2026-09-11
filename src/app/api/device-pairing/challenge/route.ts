@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getPool } from "@/lib/postgres/connection";
 import {
   ChallengeError,
-  issueChallenge,
   type ChallengeInput,
+  issueChallenge,
 } from "@/lib/device-pairing/challenge-service";
+import {
+  DevicePairingErrorCode,
+  devicePairingErrorResponse,
+} from "@/lib/device-pairing/error-codes";
+import { getPool } from "@/lib/postgres/connection";
 
 const requestSchema = z.object({
   device_id: z.string().min(1, "device_id is required"),
@@ -18,7 +22,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     body = await request.json();
   } catch {
     return NextResponse.json(
-      { error: "INVALID_CHALLENGE_REQUEST", message: "Request body must be valid JSON" },
+      devicePairingErrorResponse(DevicePairingErrorCode.INVALID_CHALLENGE_REQUEST, "Request body must be valid JSON"),
       { status: 400 },
     );
   }
@@ -26,7 +30,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "INVALID_CHALLENGE_REQUEST", message: parsed.error.issues[0]?.message },
+      devicePairingErrorResponse(
+        DevicePairingErrorCode.INVALID_CHALLENGE_REQUEST,
+        parsed.error.issues[0]?.message ?? "Invalid challenge request",
+      ),
       { status: 400 },
     );
   }
@@ -36,9 +43,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     if (error instanceof ChallengeError) {
-      return NextResponse.json({ error: error.code, message: error.message }, { status: 403 });
+      return NextResponse.json(devicePairingErrorResponse(error.code, error.message), { status: 403 });
     }
     console.error("[device-pairing/challenge] error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      devicePairingErrorResponse(DevicePairingErrorCode.INTERNAL_ERROR, "Internal server error"),
+      { status: 500 },
+    );
   }
 }
