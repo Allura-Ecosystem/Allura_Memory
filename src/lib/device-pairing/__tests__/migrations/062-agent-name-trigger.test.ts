@@ -1,7 +1,7 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
+
 import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
-
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import {
   createMigrationDatabase,
@@ -12,6 +12,10 @@ import {
 const migrationPath = path.resolve(
   process.cwd(),
   "docker/postgres-init/62-mcp-tokens-paired-device.sql",
+)
+const parentInvariantMigrationPath = path.resolve(
+  process.cwd(),
+  "docker/postgres-init/70-paired-device-principal-immutability.sql",
 )
 
 function migrationSql(): string {
@@ -135,5 +139,67 @@ describeMigrationLive("Story 29.1 migration 062 live PostgreSQL enforcement", ()
          VALUES ('token-062-live-b','allura-062','ws-062','human-062','pfx-062-b','hash','dev-062')`,
       ),
     ).rejects.toThrow(/idx_mcp_tokens_one_active_per_device/i)
+  })
+})
+
+describe("paired-device parent-principal migration 070 contract", () => {
+  it("is an additive, transactional forward migration", () => {
+    const sql = readFileSync(parentInvariantMigrationPath, "utf8")
+    expect(sql).toMatch(/\nBEGIN;\n/)
+    expect(sql).toContain("VALUES ('070',")
+    expect(sql.trimEnd().endsWith("COMMIT;")).toBe(true)
+  })
+})
+
+describeMigrationLive("paired-device parent-principal migration 070 live PostgreSQL enforcement", () => {
+  let db: MigrationDatabase
+
+  beforeAll(async () => {
+    db = await createMigrationDatabase("m070", "70-paired-device-principal-immutability.sql")
+    await db.owner.query(
+      `INSERT INTO workspaces (workspace_id, group_id, name)
+       VALUES ('ws-070','allura-070','Workspace 070')`,
+    )
+    await db.owner.query(
+      `INSERT INTO paired_devices
+         (id, principal_id, group_id, workspace_id, display_label,
+          current_public_key, current_key_id)
+       VALUES ('dev-070','human-070','allura-070','ws-070','Device 070','pub','kid')`,
+    )
+    await db.owner.query(
+      `INSERT INTO mcp_tokens
+         (id, group_id, workspace_id, agent_name, token_prefix, token_hash, paired_device_id)
+       VALUES ('token-070','allura-070','ws-070','human-070','pfx-070','hash','dev-070')`,
+    )
+  }, 120_000)
+
+  afterAll(async () => {
+    await db?.close()
+  })
+
+  it("rejects an RLS-scoped parent principal mutation and leaves the linked token identity aligned", async () => {
+    const app = await db.app.connect()
+    try {
+      await app.query("BEGIN")
+      await app.query("SELECT set_config('app.current_group_id', $1, true)", ["allura-070"])
+      await expect(
+        app.query("UPDATE paired_devices SET principal_id = 'human-070-mutated' WHERE id = 'dev-070'"),
+      ).rejects.toThrow(/cannot change principal_id while linked mcp_tokens exist/i)
+      await app.query("ROLLBACK")
+
+      await app.query("BEGIN")
+      await app.query("SELECT set_config('app.current_group_id', $1, true)", ["allura-070"])
+      const identity = await app.query(
+        `SELECT d.principal_id, t.agent_name
+           FROM paired_devices d
+           JOIN mcp_tokens t ON t.paired_device_id = d.id
+          WHERE d.id = 'dev-070'`,
+      )
+      expect(identity.rows).toEqual([{ principal_id: "human-070", agent_name: "human-070" }])
+      await app.query("COMMIT")
+    } finally {
+      await app.query("ROLLBACK").catch(() => undefined)
+      app.release()
+    }
   })
 })

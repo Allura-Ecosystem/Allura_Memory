@@ -187,6 +187,12 @@ export default defineConfig({
       "src/lib/device-pairing/__tests__/credential-leak-scan.test.ts",
       // Story 29.5 — signed advisory lock key and device-limit helpers.
       "src/lib/device-pairing/__tests__/device-limit.test.ts",
+      // Story 29.18 — pure state, scope, replay, authority, and grace-window evidence.
+      "src/lib/device-pairing/__tests__/state-machine.test.ts",
+      "src/lib/device-pairing/__tests__/scope-derivation.test.ts",
+      "src/lib/device-pairing/__tests__/idempotency.test.ts",
+      "src/lib/device-pairing/__tests__/agent-name-invariant.test.ts",
+      "src/lib/device-pairing/__tests__/grace-window.test.ts",
       "src/lib/auth/__tests__/web-principal.test.ts",
       "src/__tests__/mcp-auth-adversarial.test.ts",
       // Allura Hosted — admin route auth/shape tests (mocked repos)

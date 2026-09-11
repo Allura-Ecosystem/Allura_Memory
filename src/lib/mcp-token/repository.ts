@@ -3,7 +3,7 @@ import type { PoolClient } from "pg";
 import type { GroupId, LockMode, Scope } from "@allura/types";
 import { getPool } from "@/lib/postgres/connection";
 import { validateGroupId } from "@/lib/validation/group-id";
-import { deriveScopesForMembershipRole } from "@/lib/auth/scope-derivation";
+import { deriveDeviceTokenScopes } from "@/lib/auth/scope-derivation";
 import { generateToken } from "./hash";
 
 // MCP bearer token data access (DESIGN-BUMBLEBEE). The raw token is returned only
@@ -67,31 +67,39 @@ export async function createToken(input: CreateTokenInput): Promise<CreateTokenR
   return { raw, record: rows[0] };
 }
 
+export interface ServerResolvedPairedDeviceAuthority {
+  principal_id: string;
+  group_id: string;
+  workspace_id: string;
+}
+
+export interface DeviceTokenInsertAuthority {
+  group_id: GroupId;
+  workspace_id: string;
+  agent_name: string;
+}
+
+/**
+ * Converts a server-locked paired-device row into the only authority fields
+ * allowed in a device-token insert. Device credentials always identify as the
+ * paired-device principal; agent_name is intentionally not caller input.
+ */
+export function constructDeviceTokenInsertAuthority(
+  authority: ServerResolvedPairedDeviceAuthority,
+): DeviceTokenInsertAuthority {
+  return {
+    group_id: validateGroupId(authority.group_id) as GroupId,
+    workspace_id: authority.workspace_id,
+    agent_name: authority.principal_id,
+  };
+}
+
 export interface CreateDeviceTokenInput {
   paired_device_id: string;
   membership_role: string;
   /** Server-resolved from the locked workspace record by the owning transaction. */
   lock_mode: LockMode;
   expires_at: string;
-}
-
-function deriveDeviceTokenScopes(membershipRole: string, lockMode: LockMode): Scope[] {
-  const roleScopes = deriveScopesForMembershipRole(membershipRole);
-  switch (lockMode) {
-    case "normal":
-      return roleScopes;
-    case "read_only":
-    case "no_agent_writes":
-      return ["memory:read", "audit:read"];
-    case "no_promotions":
-      return roleScopes.filter((scope) =>
-        scope !== "memory:promote" && scope !== "review:approve" && scope !== "review:reject",
-      );
-    case "full_lockdown":
-      throw new Error("Workspace is locked for device token minting");
-    default:
-      throw new Error("Workspace lock mode is invalid for device token minting");
-  }
 }
 
 /**
@@ -103,20 +111,17 @@ export async function createDeviceToken(
   client: PoolClient,
   input: CreateDeviceTokenInput,
 ): Promise<CreateTokenResult> {
-  const device = await client.query<{
-    principal_id: string;
-    group_id: string;
-    workspace_id: string;
-  }>(
+  const device = await client.query<ServerResolvedPairedDeviceAuthority>(
     `SELECT principal_id, group_id, workspace_id
        FROM paired_devices
       WHERE id = $1
       FOR UPDATE`,
     [input.paired_device_id],
   );
-  const authority = device.rows[0];
-  if (!authority) throw new Error("Paired device not found for token minting");
+  const pairedDeviceAuthority = device.rows[0];
+  if (!pairedDeviceAuthority) throw new Error("Paired device not found for token minting");
 
+  const insertAuthority = constructDeviceTokenInsertAuthority(pairedDeviceAuthority);
   const scopes = deriveDeviceTokenScopes(input.membership_role, input.lock_mode);
   const id = `tok_${randomUUID()}`;
   const { raw, prefix, hash } = generateToken();
@@ -127,9 +132,9 @@ export async function createDeviceToken(
      RETURNING ${TOKEN_COLUMNS}`,
     [
       id,
-      validateGroupId(authority.group_id) as GroupId,
-      authority.workspace_id,
-      authority.principal_id,
+      insertAuthority.group_id,
+      insertAuthority.workspace_id,
+      insertAuthority.agent_name,
       prefix,
       hash,
       scopes,
