@@ -420,7 +420,7 @@ export async function recoverViaGrace(pool: Pool, input: GraceRecoveryInput): Pr
     await client.query("BEGIN");
     const route = await client.query<{ group_id: string | null }>("SELECT resolve_device_route($1) AS group_id", [input.device_id]);
     const groupId = route.rows[0]?.group_id;
-    if (!groupId) throw new RotationError("DEVICE_NOT_APPROVED", "Device is not approved");
+    if (!groupId) throw new RotationError("AUTH_INVALID", "Recovery proof is invalid");
     await client.query("SELECT set_config('app.current_group_id', $1, true)", [groupId]);
     await client.query("SELECT set_config('app.current_tenant', $1, true)", [groupId]);
 
@@ -432,7 +432,7 @@ export async function recoverViaGrace(pool: Pool, input: GraceRecoveryInput): Pr
           current_key_algo, key_generation, rotation_grace_expires_at, grace_exchange_count, rotation_receipt
         FROM paired_devices WHERE id = $1 FOR UPDATE`, [input.device_id]);
     const device = locked.rows[0];
-    if (!device || device.lifecycle_state !== "APPROVED") throw new RotationError("DEVICE_NOT_APPROVED", "Device is not approved");
+    if (!device || device.lifecycle_state !== "APPROVED") throw new RotationError("AUTH_INVALID", "Recovery proof is invalid");
     await client.query("SELECT set_config('app.current_workspace_id', $1, true)", [device.workspace_id]);
     await client.query("SELECT set_config('app.current_principal', $1, true)", [device.principal_id]);
 
@@ -440,13 +440,6 @@ export async function recoverViaGrace(pool: Pool, input: GraceRecoveryInput): Pr
       throw new RotationError("AUTH_INVALID", "Recovery receipt is invalid");
     }
     const receipt = device.rotation_receipt;
-    const graceExpiry = device.rotation_grace_expires_at === null ? Number.NaN : new Date(device.rotation_grace_expires_at).getTime();
-    if (!Number.isFinite(graceExpiry) || graceExpiry <= Date.now() || graceExpiry !== new Date(receipt.grace_expires_at).getTime()) {
-      throw new RotationError("KEY_EXPIRED", "Rotation recovery grace period has expired");
-    }
-    if (device.grace_exchange_count >= getDeviceGraceMaxExchanges()) {
-      throw new RotationError("GRACE_LIMIT_EXCEEDED", "Rotation recovery grace limit has been reached");
-    }
 
     const challenge = await client.query<{ id: string; nonce: string; audience: string; purpose: string; expires_at: string | Date; consumed_at: string | Date | null }>(
       `SELECT id, nonce, audience, purpose, expires_at, consumed_at FROM device_challenges
@@ -454,7 +447,7 @@ export async function recoverViaGrace(pool: Pool, input: GraceRecoveryInput): Pr
     const row = challenge.rows[0];
     if (!row || row.purpose !== "recovery_status" || row.consumed_at !== null || new Date(row.expires_at).getTime() <= Date.now() ||
       !matches(row.nonce, input.headers.nonce) || !matches(row.audience, input.headers.audience)) {
-      throw new RotationError("AUTH_EXPIRED", "Recovery challenge is expired or invalid");
+      throw new RotationError("AUTH_INVALID", "Recovery proof is invalid");
     }
 
     let params;
@@ -476,6 +469,13 @@ export async function recoverViaGrace(pool: Pool, input: GraceRecoveryInput): Pr
     }, getDeviceAuthOrigin(), getDeviceAuthAudience());
     if (!proof.valid || proof.purpose !== "recovery_status") {
       throw new RotationError("AUTH_INVALID", "RFC 9421 recovery_status proof is invalid");
+    }
+    const graceExpiry = device.rotation_grace_expires_at === null ? Number.NaN : new Date(device.rotation_grace_expires_at).getTime();
+    if (!Number.isFinite(graceExpiry) || graceExpiry <= Date.now() || graceExpiry !== new Date(receipt.grace_expires_at).getTime()) {
+      throw new RotationError("KEY_EXPIRED", "Rotation recovery grace period has expired");
+    }
+    if (device.grace_exchange_count >= getDeviceGraceMaxExchanges()) {
+      throw new RotationError("GRACE_LIMIT_EXCEEDED", "Rotation recovery grace limit has been reached");
     }
 
     const consumed = await client.query<{ id: string }>(

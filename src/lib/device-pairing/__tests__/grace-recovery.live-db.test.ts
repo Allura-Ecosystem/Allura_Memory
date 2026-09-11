@@ -159,7 +159,7 @@ describeMigrationLive("Story 29.14 grace recovery live PostgreSQL", () => {
     const receipt = stored.rows[0]?.rotation_receipt;
     if (!receipt) throw new Error("activated receipt was not persisted");
     const challenge = await issueChallenge(db.app, { device_id: deviceId, purpose: "recovery_status" });
-    expect(challenge.server_context.key_generation).toBe(4);
+    expect(challenge.server_context.key_generation).toBeNull();
     return { deviceId, receipt, oldPrivateKey: old.privateKey, currentPublicKey, challengeId: challenge.challenge_id, nonce: challenge.nonce };
   }
 
@@ -178,7 +178,7 @@ describeMigrationLive("Story 29.14 grace recovery live PostgreSQL", () => {
       purpose: "recovery_status",
     })));
     expect(new Set(challenges.map((challenge) => challenge.challenge_id)).size).toBe(6);
-    expect(challenges.every((challenge) => challenge.server_context.key_generation === 4)).toBe(true);
+    expect(challenges.every((challenge) => challenge.server_context.key_generation === null)).toBe(true);
 
     const outcomes = await Promise.allSettled(challenges.map((challenge) => recoverViaGrace(db.app, recoveryInput({
       ...root,
@@ -241,6 +241,37 @@ describeMigrationLive("Story 29.14 grace recovery live PostgreSQL", () => {
     expect((await db.owner.query<{ consumed_at: Date | null }>("SELECT consumed_at FROM device_challenges WHERE id = $1", [limited.challengeId])).rows).toEqual([{ consumed_at: null }]);
   });
 
+  it("keeps expired or rate-limited recovery state generic until old-key proof succeeds", async () => {
+    const expired = await fixture("expired-invalid-proof", { expiresAt: new Date(Date.now() - 1_000).toISOString() });
+    const limited = await fixture("limited-invalid-proof", { count: 5 });
+    const wrong = generateKeyPairSync("ec", { namedCurve: "P-256" });
+
+    await expect(recoverViaGrace(db.app, recoveryInput(expired, wrong.privateKey))).rejects.toMatchObject({ code: "AUTH_INVALID" });
+    await expect(recoverViaGrace(db.app, recoveryInput(limited, wrong.privateKey))).rejects.toMatchObject({ code: "AUTH_INVALID" });
+    expect((await snapshot(expired.deviceId)).grace_exchange_count).toBe(0);
+    expect((await snapshot(limited.deviceId)).grace_exchange_count).toBe(5);
+  });
+
+  it("keeps unavailable recovery challenges generic before old-key proof", async () => {
+    const wrong = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    const expired = await fixture("expired-challenge-invalid-proof");
+    await db.owner.query("UPDATE device_challenges SET expires_at = NOW() - INTERVAL '1 second' WHERE id = $1", [expired.challengeId]);
+    await expect(recoverViaGrace(db.app, recoveryInput(expired, wrong.privateKey))).rejects.toMatchObject({ code: "AUTH_INVALID" });
+
+    const consumed = await fixture("consumed-challenge-invalid-proof");
+    await db.owner.query("UPDATE device_challenges SET consumed_at = NOW() WHERE id = $1", [consumed.challengeId]);
+    await expect(recoverViaGrace(db.app, recoveryInput(consumed, wrong.privateKey))).rejects.toMatchObject({ code: "AUTH_INVALID" });
+
+    const missing = await fixture("missing-challenge-invalid-proof");
+    const malformed = recoveryInput(missing, wrong.privateKey);
+    malformed.headers.proof_id = "not-the-issued-challenge";
+    await expect(recoverViaGrace(db.app, malformed)).rejects.toMatchObject({ code: "AUTH_INVALID" });
+    const primary = await fixture("cross-device-primary");
+    const foreign = await fixture("cross-device-foreign");
+    const crossDevice = recoveryInput({ ...primary, challengeId: foreign.challengeId, nonce: foreign.nonce });
+    await expect(recoverViaGrace(db.app, crossDevice)).rejects.toMatchObject({ code: "AUTH_INVALID" });
+  });
+
   it("rolls back challenge consumption and counter increment when the real recovery audit INSERT fails", async () => {
     const value = await fixture("audit-rollback");
     await db.owner.query(`
@@ -268,7 +299,7 @@ describeMigrationLive("Story 29.14 grace recovery live PostgreSQL", () => {
   it("rejects replay after one successful recovery without a second audit or increment", async () => {
     const value = await fixture("replay");
     await recoverViaGrace(db.app, recoveryInput(value));
-    await expect(recoverViaGrace(db.app, recoveryInput(value))).rejects.toMatchObject({ code: "AUTH_EXPIRED" });
+    await expect(recoverViaGrace(db.app, recoveryInput(value))).rejects.toMatchObject({ code: "AUTH_INVALID" });
     expect((await snapshot(value.deviceId)).grace_exchange_count).toBe(1);
     expect((await db.owner.query("SELECT count(*)::text AS count FROM events WHERE event_type = 'DEVICE_ROTATION_RECOVERED' AND metadata->>'device_id' = $1", [value.deviceId])).rows).toEqual([{ count: "1" }]);
   });

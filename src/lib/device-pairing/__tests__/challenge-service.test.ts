@@ -55,18 +55,18 @@ describe("Story 29.7 — challenge service", () => {
       const result = await issueChallenge({ connect: vi.fn(async () => client) } as never, {
         device_id: "dev-recovery", purpose: "recovery_status",
       });
-      expect(result.server_context).toMatchObject({ device_id: "dev-recovery", key_generation: 4 });
+      expect(result.server_context).toMatchObject({ device_id: "dev-recovery", key_generation: null });
       expect(result.server_context).not.toHaveProperty("old_public_key");
       expect(result.server_context).not.toHaveProperty("old_key_algo");
       expect(JSON.parse(String(calls.find((call) => call.text.includes("INSERT INTO device_challenges"))?.params?.[6])))
-        .toMatchObject({ key_generation: 4 });
+        .toMatchObject({ key_generation: null });
     } finally {
       if (originalSecret === undefined) delete process.env.ALLURA_MCP_TOKEN_SECRET;
       else process.env.ALLURA_MCP_TOKEN_SECRET = originalSecret;
     }
   });
 
-  it("fails closed for recovery_status when the activated receipt is invalid or the grace window has expired", async () => {
+  it("returns a shape-identical decoy recovery challenge when the receipt is invalid or grace has expired", async () => {
     const calls: string[] = [];
     const client = {
       query: vi.fn(async (text: string) => {
@@ -82,10 +82,38 @@ describe("Story 29.7 — challenge service", () => {
       release: vi.fn(),
     };
 
-    await expect(issueChallenge({ connect: vi.fn(async () => client) } as never, {
+    const result = await issueChallenge({ connect: vi.fn(async () => client) } as never, {
       device_id: "dev-no-recovery", purpose: "recovery_status",
-    })).rejects.toMatchObject({ code: "PURPOSE_NOT_AVAILABLE" });
+    });
+    expect(result).toMatchObject({
+      purpose: "recovery_status",
+      audience: "https://device-auth.example.test",
+      server_context: { device_id: "dev-no-recovery", key_generation: null },
+    });
+    expect(result.challenge_id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(result.nonce).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(result.expires_at).toEqual(expect.any(String));
     expect(calls.some((text) => text.includes("INSERT INTO device_challenges"))).toBe(false);
+  });
+
+  it("returns a decoy recovery challenge for an unresolved device without creating a tenant challenge", async () => {
+    const calls: string[] = [];
+    const client = {
+      query: vi.fn(async (text: string) => {
+        calls.push(text);
+        if (text.includes("resolve_device_route")) return { rows: [{ group_id: null }] };
+        return { rows: [] };
+      }),
+      release: vi.fn(),
+    };
+
+    const result = await issueChallenge({ connect: vi.fn(async () => client) } as never, {
+      device_id: "dev-unknown", purpose: "recovery_status",
+    });
+    expect(result).toMatchObject({ purpose: "recovery_status", server_context: { device_id: "dev-unknown" } });
+    expect(result.challenge_id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(calls.some((text) => text.includes("INSERT INTO device_challenges"))).toBe(false);
+    expect(calls).toContain("COMMIT");
   });
 
   it("issues the first rotation_stage challenge before a pending key exists", async () => {

@@ -41,10 +41,26 @@ export interface ChallengeResult {
   purpose: ChallengePurpose;
   server_context: {
     device_id: string;
-    key_generation: number;
+    key_generation: number | null;
     server_time: string;
   };
   expires_at: string;
+}
+
+function recoveryDecoy(input: ChallengeInput): ChallengeResult {
+  const now = new Date();
+  return {
+    challenge_id: randomUUID(),
+    nonce: randomBytes(32).toString("base64url"),
+    audience: getDeviceAuthAudience(),
+    purpose: "recovery_status",
+    server_context: {
+      device_id: input.device_id,
+      key_generation: null,
+      server_time: now.toISOString(),
+    },
+    expires_at: new Date(now.getTime() + 60_000).toISOString(),
+  };
 }
 
 /**
@@ -63,6 +79,11 @@ export async function issueChallenge(
   let committed = false;
   try {
     await client.query("BEGIN");
+    const issueRecoveryDecoy = async (): Promise<ChallengeResult> => {
+      await client.query("COMMIT");
+      committed = true;
+      return recoveryDecoy(input);
+    };
     const route = await client.query<{ group_id: string | null }>(
       "SELECT resolve_device_route($1) AS group_id",
       [input.device_id],
@@ -80,6 +101,7 @@ export async function issueChallenge(
         },
         status: "failed",
       });
+      if (input.purpose === "recovery_status") return issueRecoveryDecoy();
       await client.query("COMMIT");
       committed = true;
       throw new ChallengeError(DevicePairingErrorCode.DEVICE_NOT_APPROVED, "Device is not approved");
@@ -109,25 +131,26 @@ export async function issueChallenge(
     );
     const pairedDevice = device.rows[0];
     if (pairedDevice == null || pairedDevice.lifecycle_state !== "APPROVED") {
+      if (input.purpose === "recovery_status") return issueRecoveryDecoy();
       throw new ChallengeError(DevicePairingErrorCode.DEVICE_NOT_APPROVED, "Device is not approved");
     }
 
     await client.query("SELECT set_config('app.current_workspace_id', $1, true)", [pairedDevice.workspace_id]);
     await client.query("SELECT set_config('app.current_principal', $1, true)", [pairedDevice.principal_id]);
 
-    let authenticatedGeneration = pairedDevice.key_generation;
+    let authenticatedGeneration: number | null = pairedDevice.key_generation;
     if (input.purpose === "recovery_status") {
       if (!isStoredActivatedReceipt(pairedDevice.rotation_receipt, pairedDevice)) {
-        throw new ChallengeError(DevicePairingErrorCode.PURPOSE_NOT_AVAILABLE, "Recovery is not available for this device");
+        return issueRecoveryDecoy();
       }
       const receiptExpiry = new Date(pairedDevice.rotation_receipt.grace_expires_at).getTime();
       const storedExpiry = pairedDevice.rotation_grace_expires_at === null
         ? Number.NaN
         : new Date(pairedDevice.rotation_grace_expires_at).getTime();
       if (pairedDevice.key_generation <= 1 || !Number.isFinite(storedExpiry) || storedExpiry <= Date.now() || storedExpiry !== receiptExpiry) {
-        throw new ChallengeError(DevicePairingErrorCode.PURPOSE_NOT_AVAILABLE, "Recovery is not available for this device");
+        return issueRecoveryDecoy();
       }
-      authenticatedGeneration = pairedDevice.key_generation - 1;
+      authenticatedGeneration = null;
     }
 
     const nonce = randomBytes(32).toString("base64url");
