@@ -803,7 +803,7 @@ epic_29:
       external_gate: "B1 — Clerk test instance"
     - key: "29.21"
       title: "Platform Contract Tests — macOS, Windows, Linux Secure-Store Adapters"
-      status: backlog
+      status: in-progress
       owner: "Woz"
       depends_on: ["29.1", "29.2", "29.6", "29.7", "29.8", "29.9", "29.10", "29.12", "29.13", "29.14", "29.15"]
       work_package: 8
@@ -1011,7 +1011,7 @@ development_status:
   29-18-unit-test-suite: backlog
   29-19-postgres-integration-tests: done
   29-20-clerk-pairing-e2e: done
-  29-21-platform-secure-store-contracts: backlog
+  29-21-platform-secure-store-contracts: done
 action_items:
   - id: "epic-25-retro-item-1-update-epic-25-spec-status-lines-25-2a-2"
     epic: 25

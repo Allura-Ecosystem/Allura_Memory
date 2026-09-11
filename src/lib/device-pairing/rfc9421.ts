@@ -464,8 +464,11 @@ function verifySignatureRaw(
   signature: Buffer,
   publicKey: string,
 ): boolean {
-  const keyObject = loadPublicKey(publicKey);
   try {
+    const keyObject = loadPublicKey(publicKey);
+    if (!isKeyAlgorithmCompatible(algorithm, keyObject)) {
+      return false;
+    }
     switch (algorithm) {
       case "ecdsa-p256": {
         // ECDSA P-256 with SHA-256, IEEE P1363 r‖s encoding
@@ -520,13 +523,51 @@ function verifySignatureRaw(
  * - SPKI PEM (`-----BEGIN PUBLIC KEY-----...`)
  * - Standard base64 of SPKI DER
  */
+/**
+ * Validate public key material before enrollment or signature verification.
+ * Only SPKI PEM and canonical standard-base64 SPKI DER are accepted; private,
+ * PKCS#1, malformed, and algorithm-mismatched material fails closed.
+ */
+export function validateDevicePublicKey(
+  algorithm: KeyAlgorithm,
+  publicKey: string,
+): boolean {
+  try {
+    return isKeyAlgorithmCompatible(algorithm, loadPublicKey(publicKey));
+  } catch {
+    return false;
+  }
+}
+
 function loadPublicKey(publicKey: string): KeyObject {
   if (publicKey.includes("-----BEGIN")) {
+    if (!publicKey.startsWith("-----BEGIN PUBLIC KEY-----") || !/-----END PUBLIC KEY-----\s*$/.test(publicKey)) {
+      throw new Error("public key must be SPKI PEM");
+    }
     return createPublicKey(publicKey);
   }
-  // Assume standard base64 of SPKI DER
+  // Accept only canonical standard base64 before decoding SPKI DER. Buffer.from
+  // otherwise silently accepts malformed non-base64 text.
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(publicKey)) {
+    throw new Error("public key must be standard-base64 SPKI DER");
+  }
   const der = Buffer.from(publicKey, "base64");
+  if (der.toString("base64") !== publicKey) {
+    throw new Error("public key must be canonical standard-base64 SPKI DER");
+  }
   return createPublicKey({ key: der, format: "der", type: "spki" });
+}
+
+function isKeyAlgorithmCompatible(algorithm: KeyAlgorithm, key: KeyObject): boolean {
+  switch (algorithm) {
+    case "ecdsa-p256":
+      return key.asymmetricKeyType === "ec" && key.asymmetricKeyDetails?.namedCurve === "prime256v1";
+    case "ed25519":
+      return key.asymmetricKeyType === "ed25519";
+    case "rsa-pss-2048":
+      return (key.asymmetricKeyType === "rsa" || key.asymmetricKeyType === "rsa-pss") &&
+        key.asymmetricKeyDetails?.modulusLength === 2048;
+  }
 }
 
 /**

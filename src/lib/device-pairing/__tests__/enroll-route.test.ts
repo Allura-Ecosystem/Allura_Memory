@@ -16,6 +16,7 @@
  */
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
+import { generateKeyPairSync } from "node:crypto";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -30,8 +31,8 @@ vi.mock("@/lib/device-pairing/config", () => ({
   getEnrollmentTtlMs: vi.fn(() => 10 * 60 * 1000),
 }));
 
-import { getPool } from "@/lib/postgres/connection";
 import { POST } from "@/app/api/device-pairing/enroll/route";
+import { getPool } from "@/lib/postgres/connection";
 
 const mockGetPool = getPool as unknown as MockInstance<() => {
   connect: () => {
@@ -40,11 +41,23 @@ const mockGetPool = getPool as unknown as MockInstance<() => {
   query: ReturnType<typeof vi.fn>;
 }>;
 
-/** A valid P-256 public key in PEM for tests (generated once). */
-const VALID_PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEv4Z+GyZ7n7vZ7R2Qqzq7Z6n7Z6n7
-Z6n7Z6n7Z6n7Z6n7Z6n7Z6n7Z6n7Z6n7Z6n7Z6n7Z6n7Z6n7Z6n7Z6n7Z6n7Z6n7
------END PUBLIC KEY-----`;
+/** A real P-256 SPKI key in both accepted enrollment encodings. */
+const VALID_PUBLIC_KEY = generateKeyPairSync("ec", { namedCurve: "P-256" }).publicKey;
+const VALID_PUBLIC_KEY_PEM = VALID_PUBLIC_KEY.export({ type: "spki", format: "pem" }).toString();
+const VALID_PUBLIC_KEY_SPKI_BASE64 = VALID_PUBLIC_KEY.export({ type: "spki", format: "der" }).toString("base64");
+
+/** Alters only unused trailing pad bits, preserving decoded DER bytes. */
+function mutateBase64PadBits(value: string): string {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const paddingStart = value.indexOf("=");
+  const paddingLength = value.length - paddingStart;
+  const dataIndex = paddingStart - 1;
+  const index = alphabet.indexOf(value[dataIndex]);
+  const mask = paddingLength === 2 ? 0b11_0000 : 0b11_1100;
+  const mutatedIndex = (index & mask) | ((index + 1) & ~mask);
+
+  return `${value.slice(0, dataIndex)}${alphabet[mutatedIndex]}${value.slice(dataIndex + 1)}`;
+}
 
 const VALID_CHALLENGE = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
 const VALID_STATE = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6";
@@ -232,6 +245,76 @@ describe("Story 29.4 — POST /api/device-pairing/enroll", () => {
       expect(res.status).toBe(400);
       const data = await res.json();
       expect(data.error).toBe("INVALID_PUBLIC_KEY");
+    });
+
+    it.each([
+      ["an invalid BEGIN prefix", "-----BEGIN RSA PUBLIC KEY-----\nMIIBCg==\n-----END RSA PUBLIC KEY-----"],
+      ["a malformed SPKI PEM", "-----BEGIN PUBLIC KEY-----\nnot-a-key\n-----END PUBLIC KEY-----"],
+    ])("rejects %s before enrollment persistence", async (_name, public_key) => {
+      const { pool, client, queryCalls } = createMockPool();
+      mockGetPool.mockReturnValue(pool);
+
+      const res = await POST(makeRequest(makeValidBody({ public_key })));
+
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toMatchObject({
+        error: "INVALID_PUBLIC_KEY",
+        message: "public_key must be a valid SPKI PEM or standard-base64 SPKI DER",
+      });
+      expect(pool.connect).not.toHaveBeenCalled();
+      expect(client.query).not.toHaveBeenCalled();
+      expect(queryCalls.some((call) => call.text.includes("device_enrollment_create"))).toBe(false);
+    });
+
+    it("rejects a noncanonical pad-bit mutation of valid SPKI DER before enrollment persistence", async () => {
+      const { pool, client, queryCalls } = createMockPool();
+      mockGetPool.mockReturnValue(pool);
+      const noncanonicalPublicKey = mutateBase64PadBits(VALID_PUBLIC_KEY_SPKI_BASE64);
+
+      expect(noncanonicalPublicKey).not.toBe(VALID_PUBLIC_KEY_SPKI_BASE64);
+      expect(Buffer.from(noncanonicalPublicKey, "base64")).toEqual(
+        Buffer.from(VALID_PUBLIC_KEY_SPKI_BASE64, "base64"),
+      );
+
+      const res = await POST(makeRequest(makeValidBody({ public_key: noncanonicalPublicKey })));
+
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toMatchObject({
+        error: "INVALID_PUBLIC_KEY",
+        message: "public_key must be a valid SPKI PEM or standard-base64 SPKI DER",
+      });
+      expect(pool.connect).not.toHaveBeenCalled();
+      expect(client.query).not.toHaveBeenCalled();
+      expect(queryCalls.some((call) => call.text.includes("device_enrollment_create"))).toBe(false);
+    });
+
+    it("accepts canonical standard-base64 SPKI DER and persists it unchanged", async () => {
+      const { pool, queryCalls } = createMockPool();
+      mockGetPool.mockReturnValue(pool);
+
+      const res = await POST(makeRequest(makeValidBody({ public_key: VALID_PUBLIC_KEY_SPKI_BASE64 })));
+
+      expect(res.status).toBe(201);
+      const createCall = queryCalls.find((call) => call.text.includes("device_enrollment_create"));
+      expect(createCall?.params[2]).toBe(VALID_PUBLIC_KEY_SPKI_BASE64);
+    });
+
+    it("rejects JWK input clearly before enrollment persistence", async () => {
+      const { pool, client, queryCalls } = createMockPool();
+      mockGetPool.mockReturnValue(pool);
+
+      const res = await POST(makeRequest(makeValidBody({
+        public_key: JSON.stringify({ kty: "EC", crv: "P-256", x: "test", y: "test" }),
+      })));
+
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toMatchObject({
+        error: "INVALID_PUBLIC_KEY",
+        message: "public_key must be a valid SPKI PEM or standard-base64 SPKI DER; JWK is not supported",
+      });
+      expect(pool.connect).not.toHaveBeenCalled();
+      expect(client.query).not.toHaveBeenCalled();
+      expect(queryCalls.some((call) => call.text.includes("device_enrollment_create"))).toBe(false);
     });
   });
 

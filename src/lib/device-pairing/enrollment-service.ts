@@ -22,14 +22,16 @@
  * Non-goals (Story 29.4 scope):
  *  - No `/approve`, `/complete`, Clerk integration, or device limit check.
  */
+import type { Pool } from "pg";
 import { createHash, randomUUID } from "node:crypto";
-import type { Pool, PoolClient } from "pg";
 import { emitDeviceAudit } from "./audit";
 import {
+  getDeviceAuthOrigin,
   getEnrollmentTtlMs,
   getPairingCallbackAllowlist,
-  getDeviceAuthOrigin,
 } from "./config";
+import { validateDevicePublicKey } from "./rfc9421";
+import type { KeyAlgorithm } from "./rfc9421-types";
 
 /** Server-accepted public-key algorithms (architecture §4.1 step 2, §9.1). */
 export const ACCEPTED_KEY_ALGORITHMS = new Set([
@@ -139,15 +141,6 @@ export function validateEnrollmentInput(input: EnrollmentInput): void {
     throw new EnrollmentValidationError("INVALID_PUBLIC_KEY", "public_key is required");
   }
   const publicKey = input.public_key.trim();
-  if (
-    !publicKey.startsWith("-----BEGIN PUBLIC KEY-----") &&
-    !publicKey.startsWith("{")
-  ) {
-    throw new EnrollmentValidationError(
-      "INVALID_PUBLIC_KEY",
-      "public_key must be PEM or JWK-shaped",
-    );
-  }
   if (!input.key_id || input.key_id.trim() === "") {
     throw new EnrollmentValidationError("INVALID_PUBLIC_KEY", "key_id is required");
   }
@@ -158,6 +151,17 @@ export function validateEnrollmentInput(input: EnrollmentInput): void {
       "INVALID_KEY_ALGORITHM",
       `key_algorithm must be one of: ${[...ACCEPTED_KEY_ALGORITHMS].join(", ")}`,
     );
+  }
+
+  // Use the RFC 9421 key loader as the single enrollment authority. It admits
+  // only algorithm-compatible SPKI PEM or canonical standard-base64 SPKI DER.
+  // JWK is intentionally not a server enrollment format.
+  const keyAlgorithm = input.key_algorithm as KeyAlgorithm;
+  if (!validateDevicePublicKey(keyAlgorithm, publicKey)) {
+    const message = publicKey.startsWith("{")
+      ? "public_key must be a valid SPKI PEM or standard-base64 SPKI DER; JWK is not supported"
+      : "public_key must be a valid SPKI PEM or standard-base64 SPKI DER";
+    throw new EnrollmentValidationError("INVALID_PUBLIC_KEY", message);
   }
 
   // 4. Callback type allowlist (AD-63, LOW-F4)
