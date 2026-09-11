@@ -16,10 +16,12 @@ import type { ContainmentProposal } from "../types"
 
 const mockResolveTarget = vi.fn()
 const mockWithWorkspaceTransaction = vi.fn()
+const mockSetLockModeInTransaction = vi.fn()
 
 vi.mock("@/control-plane/target-resolver", () => ({ resolveTarget: mockResolveTarget }))
 vi.mock("@/control-plane/policy", () => ({ evaluatePoliciesOrThrow: vi.fn() }))
 vi.mock("../../db/tenant-transaction", () => ({ withWorkspaceTransaction: mockWithWorkspaceTransaction }))
+vi.mock("../../workspace/repository", () => ({ setLockModeInTransaction: mockSetLockModeInTransaction }))
 
 process.env.RUVIX_CONTROL_PLANE_SECRET = "test-secret-key-for-ruvix-controlPlane-proof-engine-32chars"
 process.env.CONTAINMENT_MCP_TOKEN_REVOCATION_ENABLED = "true"
@@ -63,6 +65,7 @@ describe("Story 26.6 — executeContainmentAction", () => {
   beforeEach(() => {
     mockResolveTarget.mockReset().mockResolvedValue({ success: true, affected_rows: 1 })
     mockWithWorkspaceTransaction.mockReset()
+    mockSetLockModeInTransaction.mockReset().mockResolvedValue({ workspace_id: "workspace-b" })
     mockQuery.mockReset().mockResolvedValue({ rows: [], rowCount: 1 })
     mockWithWorkspaceTransaction.mockImplementation(async (_scope: unknown, callback: (c: unknown) => unknown) =>
       callback({ query: mockQuery }),
@@ -185,8 +188,12 @@ describe("Story 26.6 — executeContainmentAction", () => {
       "policy-v1",
     )
 
-    expect(mockQuery.mock.calls[0]![0]).toContain("UPDATE workspaces")
-    expect(mockQuery.mock.calls[0]![1]).toEqual(["full_lockdown", "workspace-b", "allura-test"])
+    expect(mockSetLockModeInTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ query: mockQuery }),
+      "allura-test",
+      "workspace-b",
+      "full_lockdown",
+    );
   })
 
   it("never performs the real mutation if the gated receipt insert fails (fail-safe ordering)", async () => {

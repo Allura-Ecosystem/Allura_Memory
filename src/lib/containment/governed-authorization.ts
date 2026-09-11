@@ -23,11 +23,13 @@ import { randomUUID } from "crypto"
 import { syscall_mutate } from "@/control-plane/syscalls"
 import { hasPermission } from "@/lib/auth/roles"
 import type { AlluraRole } from "@/lib/auth/types"
+import type { LockMode } from "@allura/types"
 import { connectorFlagEnvVar, isConnectorEnabled } from "./feature-flags"
 import { ContainmentReceipt as ContainmentReceiptSchema } from "./schemas"
 import type { ContainmentProposal, ContainmentReceipt } from "./types"
 import { withWorkspaceTransaction } from "../db/tenant-transaction"
 import type { ResolvedWorkspaceScope } from "../db/workspace-scope"
+import { setLockModeInTransaction } from "../workspace/repository"
 
 if (typeof window !== "undefined") {
   throw new Error("server-side only")
@@ -49,11 +51,9 @@ async function performRealMutation(scope: ResolvedWorkspaceScope, proposal: Cont
     }
 
     if (proposal.connector === "workspace_lock") {
-      const lockMode = proposal.action.replace(/^lock:/, "")
-      await client.query(
-        `UPDATE workspaces SET lock_mode = $1 WHERE workspace_id = $2 AND group_id = $3`,
-        [lockMode, proposal.target_ref, scope.tenantId],
-      )
+      const lockMode = proposal.action.replace(/^lock:/, "") as LockMode
+      const workspace = await setLockModeInTransaction(client, scope.tenantId, proposal.target_ref, lockMode)
+      if (!workspace) throw new Error("workspace lock target was not found in the active tenant")
       return
     }
 

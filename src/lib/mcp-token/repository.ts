@@ -1,9 +1,9 @@
-import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
-import type { GroupId, LockMode, Scope } from "@allura/types";
+import { randomUUID } from "node:crypto";
+import { deriveDeviceTokenScopes } from "@/lib/auth/scope-derivation";
 import { getPool } from "@/lib/postgres/connection";
 import { validateGroupId } from "@/lib/validation/group-id";
-import { deriveDeviceTokenScopes } from "@/lib/auth/scope-derivation";
+import type { GroupId, LockMode, Scope } from "@allura/types";
 import { generateToken } from "./hash";
 
 // MCP bearer token data access (DESIGN-BUMBLEBEE). The raw token is returned only
@@ -143,6 +143,57 @@ export async function createDeviceToken(
     ],
   );
   return { raw, record: rows[0] };
+}
+
+/**
+ * Revoke only active credentials linked to devices owned by one tenant member.
+ * The caller owns the transaction so a membership mutation cannot commit unless
+ * this revocation and its audit record commit with it.
+ */
+export async function revokeDeviceTokensForMembershipChange(
+  client: PoolClient,
+  groupId: string,
+  principalId: string,
+): Promise<number> {
+  const group_id = validateGroupId(groupId);
+  const result = await client.query(
+    `UPDATE mcp_tokens AS token
+        SET revoked_at = NOW()
+       FROM paired_devices AS device
+      WHERE token.paired_device_id = device.id
+        AND token.group_id = $1
+        AND device.group_id = $1
+        AND device.principal_id = $2
+        AND token.revoked_at IS NULL`,
+    [group_id, principalId],
+  );
+  return result.rowCount ?? 0;
+}
+
+/**
+ * Revoke only active credentials linked to devices in the tenant workspace.
+ * The group predicate prevents a workspace identifier from crossing a tenant
+ * boundary even if future schemas relax global workspace identity.
+ */
+export async function revokeDeviceTokensForWorkspaceLockChange(
+  client: PoolClient,
+  groupId: string,
+  workspaceId: string,
+): Promise<number> {
+  const group_id = validateGroupId(groupId);
+  const result = await client.query(
+    `UPDATE mcp_tokens AS token
+        SET revoked_at = NOW()
+       FROM paired_devices AS device
+      WHERE token.paired_device_id = device.id
+        AND token.group_id = $1
+        AND token.workspace_id = $2
+        AND device.group_id = $1
+        AND device.workspace_id = $2
+        AND token.revoked_at IS NULL`,
+    [group_id, workspaceId],
+  );
+  return result.rowCount ?? 0;
 }
 
 export async function findByPrefix(prefix: string): Promise<McpTokenRecord | null> {

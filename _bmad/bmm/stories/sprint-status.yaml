@@ -1009,7 +1009,7 @@ development_status:
   29-16-transactional-device-audit: backlog
   29-17-credential-leak-scan: in-progress
   29-18-unit-test-suite: backlog
-  29-19-postgres-integration-tests: backlog
+  29-19-postgres-integration-tests: done
   29-20-clerk-pairing-e2e: backlog
   29-21-platform-secure-store-contracts: backlog
 action_items:

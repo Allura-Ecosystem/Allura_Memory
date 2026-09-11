@@ -3,11 +3,19 @@ import { describe, expect, it } from "vitest";
 import {
   deriveDeviceTokenScopes,
   deriveScopesForMembershipRole,
+  roleLosesDeviceAuthority,
 } from "@/lib/auth/scope-derivation";
 
 describe("device-token scope derivation", () => {
   it("derives server-owned role scopes and maps curator to reviewer", () => {
     expect(deriveScopesForMembershipRole("curator")).toEqual(deriveScopesForMembershipRole("reviewer"));
+  });
+
+  it("detects only role changes that remove device-token authority", () => {
+    expect(roleLosesDeviceAuthority("admin", "curator")).toBe(true);
+    expect(roleLosesDeviceAuthority("curator", "viewer")).toBe(true);
+    expect(roleLosesDeviceAuthority("viewer", "curator")).toBe(false);
+    expect(roleLosesDeviceAuthority("viewer", "viewer")).toBe(false);
   });
 
   it("preserves role scopes in normal mode", () => {
