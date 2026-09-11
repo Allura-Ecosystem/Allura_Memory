@@ -6,7 +6,6 @@ vi.mock("@/lib/device-pairing/audit", async (importOriginal) => {
   return { ...actual, emitDeviceAudit: vi.fn(actual.emitDeviceAudit) };
 });
 
-import { emitDeviceAudit } from "@/lib/device-pairing/audit";
 import { issueChallenge } from "@/lib/device-pairing/challenge-service";
 import { clearDevicePairingConfig } from "@/lib/device-pairing/config";
 import { buildSignatureBaseString, computeContentDigest, extractSignatureParamsRaw } from "@/lib/device-pairing/rfc9421";
@@ -92,7 +91,7 @@ describeMigrationLive("Story 29.14 grace recovery live PostgreSQL", () => {
   });
 
   async function fixture(label: string, options: { expiresAt?: string; count?: number } = {}): Promise<Fixture> {
-    const suffix = `${label}-${randomUUID()}`;
+    const suffix = `${label}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
     const groupId = `allura-live-recovery-${suffix}`;
     const workspaceId = `ws-live-recovery-${suffix}`;
     const deviceId = `dev-live-recovery-${suffix}`;
@@ -124,7 +123,7 @@ describeMigrationLive("Story 29.14 grace recovery live PostgreSQL", () => {
   }
 
   async function activatedIssuerFixture(label: string): Promise<Fixture> {
-    const suffix = `${label}-${randomUUID()}`;
+    const suffix = `${label}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
     const groupId = `allura-live-issuer-${suffix}`;
     const workspaceId = `ws-live-issuer-${suffix}`;
     const deviceId = `dev-live-issuer-${suffix}`;
@@ -242,10 +241,26 @@ describeMigrationLive("Story 29.14 grace recovery live PostgreSQL", () => {
     expect((await db.owner.query<{ consumed_at: Date | null }>("SELECT consumed_at FROM device_challenges WHERE id = $1", [limited.challengeId])).rows).toEqual([{ consumed_at: null }]);
   });
 
-  it("rolls back challenge consumption and counter increment when the recovery audit fails", async () => {
+  it("rolls back challenge consumption and counter increment when the real recovery audit INSERT fails", async () => {
     const value = await fixture("audit-rollback");
-    vi.mocked(emitDeviceAudit).mockRejectedValueOnce(new Error("forced recovery audit failure"));
-    await expect(recoverViaGrace(db.app, recoveryInput(value))).rejects.toThrow("forced recovery audit failure");
+    await db.owner.query(`
+      CREATE FUNCTION fail_live_recovery_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.event_type = 'DEVICE_ROTATION_RECOVERED' AND NEW.metadata->>'device_id' = '${value.deviceId}' THEN
+          RAISE EXCEPTION 'forced recovery audit failure';
+        END IF;
+        RETURN NEW;
+      END;
+      $$;
+      CREATE TRIGGER fail_live_recovery_audit_trigger
+      BEFORE INSERT ON events FOR EACH ROW EXECUTE FUNCTION fail_live_recovery_audit();
+    `);
+    try {
+      await expect(recoverViaGrace(db.app, recoveryInput(value))).rejects.toThrow("forced recovery audit failure");
+    } finally {
+      await db.owner.query("DROP TRIGGER IF EXISTS fail_live_recovery_audit_trigger ON events");
+      await db.owner.query("DROP FUNCTION IF EXISTS fail_live_recovery_audit()");
+    }
     expect((await snapshot(value.deviceId)).grace_exchange_count).toBe(0);
     expect((await db.owner.query<{ consumed_at: Date | null }>("SELECT consumed_at FROM device_challenges WHERE id = $1", [value.challengeId])).rows).toEqual([{ consumed_at: null }]);
   });

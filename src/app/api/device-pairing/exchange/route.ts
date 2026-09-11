@@ -1,48 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { emitDeviceAudit } from "@/lib/device-pairing/audit";
-import { completePairing, CompletionError, type CompletionErrorCode } from "@/lib/device-pairing/complete-service";
+import {
+  ExchangeError,
+  type ExchangeErrorCode,
+  exchangeToken,
+} from "@/lib/device-pairing/exchange-service";
 import { extractStructuredSignatureValue, parseSignatureInput } from "@/lib/device-pairing/rfc9421";
 import { getAppPool } from "@/lib/postgres/connection";
 
-const completionErrorStatus: Record<CompletionErrorCode, number> = {
-  ENROLLMENT_NOT_FOUND: 404,
-  ENROLLMENT_CONSUMED: 409,
-  ENROLLMENT_EXPIRED: 410,
-  ENROLLMENT_NOT_APPROVED: 409,
-  CODE_EXPIRED: 410,
-  COMPLETION_NONCE_EXPIRED: 410,
-  INVALID_CODE: 400,
-  COMPLETION_NONCE_MISMATCH: 400,
-  PKCE_MISMATCH: 400,
+const requestSchema = z.object({
+  device_id: z.string().min(1),
+  challenge_id: z.string().min(1),
+}).strict();
+
+const errorStatus: Record<ExchangeErrorCode, number> = {
+  AUTH_EXPIRED: 401,
   AUTH_INVALID: 401,
   MEMBERSHIP_INACTIVE: 403,
+  WORKSPACE_LOCKED: 403,
   WORKSPACE_NOT_FOUND: 403,
-  DEVICE_LIMIT_EXCEEDED: 409,
 };
-
-const requestSchema = z.object({
-  enrollment_transaction_id: z.string().min(1),
-  authorization_code: z.string().min(1),
-  pkce_verifier: z.string().min(1),
-  completion_nonce: z.string().min(1),
-});
 
 function requiredHeader(request: NextRequest, name: string): string | null {
   const value = request.headers.get(name);
   return value?.trim() || null;
 }
 
-async function auditRouteDenial(enrollmentTransactionId: string, reasonCode: string): Promise<void> {
+async function auditRouteDenial(
+  deviceId: string | undefined,
+  challengeId: string | undefined,
+  reasonCode: "AUTH_INVALID" | "AUTH_EXPIRED" | "INVALID_REQUEST",
+): Promise<void> {
   const client = await getAppPool().connect();
   let committed = false;
+  const metadata: Record<string, string> = { reason_code: reasonCode };
+  if (deviceId !== undefined) metadata.device_id = deviceId;
+  if (challengeId !== undefined) metadata.challenge_id = challengeId;
   try {
     await client.query("BEGIN");
     await emitDeviceAudit(client, {
       group_id: "allura-system",
-      event_type: "DEVICE_ENROLL_DENIED",
+      workspace_id: null,
+      event_type: "DEVICE_EXCHANGE_DENIED",
       agent_id: "device-enrollment",
-      metadata: { enrollment_transaction_id: enrollmentTransactionId, reason_code: reasonCode },
+      metadata,
+      status: "failed",
     });
     await client.query("COMMIT");
     committed = true;
@@ -60,18 +63,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     body = JSON.parse(new TextDecoder().decode(requestBody));
   } catch {
-    return NextResponse.json(
-      { error: "INVALID_REQUEST", message: "Request body must be valid JSON" },
-      { status: 400 },
-    );
+    await auditRouteDenial(undefined, undefined, "INVALID_REQUEST");
+    return NextResponse.json({ error: "INVALID_REQUEST", message: "Request body must be valid JSON" }, { status: 400 });
   }
-
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "INVALID_REQUEST", message: parsed.error.issues[0]?.message },
-      { status: 400 },
+    const candidate = body && typeof body === "object" ? body as Record<string, unknown> : {};
+    await auditRouteDenial(
+      typeof candidate.device_id === "string" ? candidate.device_id : undefined,
+      typeof candidate.challenge_id === "string" ? candidate.challenge_id : undefined,
+      "INVALID_REQUEST",
     );
+    return NextResponse.json({ error: "INVALID_REQUEST", message: parsed.error.issues[0]?.message }, { status: 400 });
   }
 
   const contentDigest = requiredHeader(request, "content-digest");
@@ -82,27 +85,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const signatureInput = requiredHeader(request, "signature-input");
   const signature = requiredHeader(request, "signature");
   if (!contentDigest || !purpose || !audience || !nonce || !proofId || !signatureInput || !signature) {
-    await auditRouteDenial(parsed.data.enrollment_transaction_id, "AUTH_INVALID");
-    return NextResponse.json(
-      { error: "AUTH_INVALID", message: "RFC 9421 proof headers are required" },
-      { status: 401 },
-    );
+    await auditRouteDenial(parsed.data.device_id, parsed.data.challenge_id, "AUTH_INVALID");
+    return NextResponse.json({ error: "AUTH_INVALID", message: "RFC 9421 proof headers are required" }, { status: 401 });
   }
 
   let signatureValue: string;
   try {
     signatureValue = extractStructuredSignatureValue(signature, parseSignatureInput(signatureInput).label);
   } catch {
-    await auditRouteDenial(parsed.data.enrollment_transaction_id, "AUTH_INVALID");
-    return NextResponse.json(
-      { error: "AUTH_INVALID", message: "RFC 9421 signature headers are invalid" },
-      { status: 401 },
-    );
+    await auditRouteDenial(parsed.data.device_id, parsed.data.challenge_id, "AUTH_INVALID");
+    return NextResponse.json({ error: "AUTH_INVALID", message: "RFC 9421 signature headers are invalid" }, { status: 401 });
   }
 
   try {
     const url = new URL(request.url);
-    const result = await completePairing(getAppPool(), {
+    const result = await exchangeToken(getAppPool(), {
       ...parsed.data,
       request_target: `${url.pathname}${url.search}`,
       request_body: requestBody,
@@ -118,17 +115,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
     return NextResponse.json(result);
   } catch (error) {
-    if (error instanceof CompletionError) {
-      return NextResponse.json(
-        { error: error.code, message: error.message },
-        { status: completionErrorStatus[error.code] },
-      );
+    if (error instanceof ExchangeError) {
+      if (error.code === "AUTH_INVALID" || error.code === "AUTH_EXPIRED") {
+        await auditRouteDenial(parsed.data.device_id, parsed.data.challenge_id, error.code);
+      }
+      return NextResponse.json({ error: error.code, message: error.message }, { status: errorStatus[error.code] });
     }
-    throw error;
+    console.error("Device exchange route failed", error);
+    return NextResponse.json({ error: "INTERNAL_ERROR", message: "Exchange is unavailable" }, { status: 500 });
   }
-
-  return NextResponse.json(
-    { error: "NOT_IMPLEMENTED", message: "Completion verification is not available" },
-    { status: 501 },
-  );
 }

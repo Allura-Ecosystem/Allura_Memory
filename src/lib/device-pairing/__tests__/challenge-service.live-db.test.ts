@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, expect, it } from "vitest";
 
 import { issueChallenge } from "@/lib/device-pairing/challenge-service";
 import { clearDevicePairingConfig } from "@/lib/device-pairing/config";
@@ -124,6 +124,36 @@ describeMigrationLive("Story 29.7 challenge RLS bootstrap live PostgreSQL", () =
         purpose: "exchange",
       },
     }]);
+  });
+
+  it("rolls back challenge insertion when the real challenge audit INSERT fails", async () => {
+    const [beforeChallenges, beforeAudits] = await Promise.all([
+      db.owner.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM device_challenges WHERE paired_device_id = $1", [deviceId]),
+      db.owner.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM events WHERE event_type = 'DEVICE_CHALLENGE_ISSUED' AND metadata->>'device_id' = $1", [deviceId]),
+    ]);
+    await db.owner.query(`
+      CREATE FUNCTION fail_live_challenge_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.event_type = 'DEVICE_CHALLENGE_ISSUED' AND NEW.metadata->>'device_id' = 'dev-live-challenge' THEN
+          RAISE EXCEPTION 'forced DEVICE_CHALLENGE_ISSUED audit failure';
+        END IF;
+        RETURN NEW;
+      END;
+      $$;
+      CREATE TRIGGER fail_live_challenge_audit_trigger
+      BEFORE INSERT ON events FOR EACH ROW EXECUTE FUNCTION fail_live_challenge_audit();
+    `);
+    try {
+      await expect(issueChallenge(db.app, { device_id: deviceId, purpose: "exchange" }))
+        .rejects.toThrow("forced DEVICE_CHALLENGE_ISSUED audit failure");
+    } finally {
+      await db.owner.query("DROP TRIGGER IF EXISTS fail_live_challenge_audit_trigger ON events");
+      await db.owner.query("DROP FUNCTION IF EXISTS fail_live_challenge_audit()");
+    }
+    await expect(Promise.all([
+      db.owner.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM device_challenges WHERE paired_device_id = $1", [deviceId]),
+      db.owner.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM events WHERE event_type = 'DEVICE_CHALLENGE_ISSUED' AND metadata->>'device_id' = $1", [deviceId]),
+    ])).resolves.toEqual([beforeChallenges, beforeAudits]);
   });
 
   it("audits and rejects an unresolved device without persisting a challenge", async () => {

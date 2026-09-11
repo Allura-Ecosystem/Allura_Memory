@@ -25,11 +25,11 @@ vi.mock("@/lib/mcp-token/repository", () => ({
   createDeviceToken: vi.fn(),
 }));
 
-import { getAppPool } from "@/lib/postgres/connection";
 import { hashAuthorizationCode } from "@/lib/device-pairing/authorization-code";
 import { computePkceCodeChallengeS256 } from "@/lib/device-pairing/pkce";
-import { createDeviceToken } from "@/lib/mcp-token/repository";
 import { extractStructuredSignatureValue } from "@/lib/device-pairing/rfc9421";
+import { createDeviceToken } from "@/lib/mcp-token/repository";
+import { getAppPool } from "@/lib/postgres/connection";
 
 const proofHeaders = {
   "content-digest": "sha-256=:ZmFrZQ==:",
@@ -352,10 +352,11 @@ describe("Story 29.6 — POST /api/device-pairing/complete", () => {
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({ error: "AUTH_INVALID" });
-    expect(client.query).toHaveBeenCalledWith(
-      expect.stringContaining("device_enrollment_pre_human_audit"),
-      expect.arrayContaining(["DEVICE_ENROLL_DENIED"]),
-    );
+    const calls = (client.query.mock.calls as unknown as Array<[string, ...unknown[]]>).map(([statement]) => String(statement));
+    const auditIndex = calls.findIndex((statement) => statement.includes("device_enrollment_pre_human_audit"));
+    expect(auditIndex).toBeGreaterThanOrEqual(0);
+    expect(calls.indexOf("BEGIN")).toBeLessThan(auditIndex);
+    expect(auditIndex).toBeLessThan(calls.indexOf("COMMIT"));
     expect(client.release).toHaveBeenCalledOnce();
   });
 

@@ -28,10 +28,10 @@ vi.mock("@/lib/mcp-token/repository", () => ({
 }));
 import { getAuthConfig } from "@/lib/auth/config";
 import { hashAuthorizationCode } from "@/lib/device-pairing/authorization-code";
-import { computePkceCodeChallengeS256 } from "@/lib/device-pairing/pkce";
 import { acquireDeviceCountLock, countApprovedDevices } from "@/lib/device-pairing/device-limit";
-import { createDeviceToken } from "@/lib/mcp-token/repository";
+import { computePkceCodeChallengeS256 } from "@/lib/device-pairing/pkce";
 import { parseSignatureInput, verifyDeviceSignature } from "@/lib/device-pairing/rfc9421";
+import { createDeviceToken } from "@/lib/mcp-token/repository";
 
 const validProof = { valid: true as const, purpose: "pairing_complete" as const };
 const invalidProof = { valid: false as const, reason: "signature_invalid" };
@@ -224,7 +224,9 @@ describe("Story 29.6 — completion service", () => {
       "locked-public-key", "key-1", "ecdsa-p256", "enroll_complete",
     ]);
     expect(createDeviceToken).toHaveBeenCalledWith(client, expect.objectContaining({
-      paired_device_id: "device-1", membership_role: "curator",
+      paired_device_id: "device-1",
+      membership_role: "curator",
+      lock_mode: "normal",
     }));
     const auditInsert = calls.find((call) => call.text.includes("INSERT INTO events"));
     expect(auditInsert?.params?.slice(0, 4)).toEqual([
@@ -466,8 +468,10 @@ describe("Story 29.6 — completion service", () => {
 
     expect(calls.some((text) => text.includes("device_enrollment_consume"))).toBe(false);
     expect(calls.some((text) => text.includes("INSERT INTO paired_devices"))).toBe(false);
-    expect(calls).toContain("ROLLBACK");
-    expect(calls.some((text) => text.includes("device_enrollment_pre_human_audit"))).toBe(true);
+    const auditIndex = calls.findIndex((text) => text.includes("device_enrollment_pre_human_audit"));
+    expect(auditIndex).toBeGreaterThanOrEqual(0);
+    expect(auditIndex).toBeLessThan(calls.indexOf("COMMIT"));
+    expect(calls).not.toContain("ROLLBACK");
   });
 
   it("expires an approved enrollment when its completion nonce is no longer usable", async () => {

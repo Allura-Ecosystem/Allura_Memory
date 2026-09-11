@@ -70,17 +70,37 @@ describeMigrationLive("Story 29.15 revocation service live PostgreSQL", () => {
     expect((await deviceState(db, "dev-cross")).rows[0]).toMatchObject({ lifecycle_state: "APPROVED" })
   })
 
-  it("rolls back lifecycle state and token revocation when audit or notification fails", async () => {
-    await expect(revokeDevice(db.app, { device_id: "dev-audit-fail", authUser: owner }, {
-      emitAudit: async () => { throw new Error("forced audit failure") },
-    })).rejects.toThrow("forced audit failure")
+  it("rolls back lifecycle state and token revocation when the real device audit INSERT fails", async () => {
+    await db.owner.query(`
+      CREATE FUNCTION fail_live_revocation_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.event_type = 'DEVICE_REVOKED' AND NEW.metadata->>'device_id' = 'dev-audit-fail' THEN
+          RAISE EXCEPTION 'forced revocation audit failure';
+        END IF;
+        RETURN NEW;
+      END;
+      $$;
+      CREATE TRIGGER fail_live_revocation_audit_trigger
+      BEFORE INSERT ON events FOR EACH ROW EXECUTE FUNCTION fail_live_revocation_audit();
+    `)
+    try {
+      await expect(revokeDevice(db.app, { device_id: "dev-audit-fail", authUser: owner }))
+        .rejects.toThrow("forced revocation audit failure")
+    } finally {
+      await db.owner.query("DROP TRIGGER IF EXISTS fail_live_revocation_audit_trigger ON events")
+      await db.owner.query("DROP FUNCTION IF EXISTS fail_live_revocation_audit()")
+    }
+    expect((await deviceState(db, "dev-audit-fail")).rows[0]).toMatchObject({ lifecycle_state: "APPROVED", revoked_at: null })
+    expect((await db.owner.query("SELECT revoked_at FROM mcp_tokens WHERE id = 'tok-audit'")).rows).toEqual([{ revoked_at: null }])
+  })
+
+  it("rolls back lifecycle state and token revocation when notification fails", async () => {
     await expect(revokeDevice(db.app, { device_id: "dev-notify-fail", authUser: owner }, {
       notify: async () => { throw new Error("forced notify failure") },
     })).rejects.toThrow("forced notify failure")
 
-    expect((await deviceState(db, "dev-audit-fail")).rows[0]).toMatchObject({ lifecycle_state: "APPROVED", revoked_at: null })
     expect((await deviceState(db, "dev-notify-fail")).rows[0]).toMatchObject({ lifecycle_state: "APPROVED", revoked_at: null })
-    expect((await db.owner.query("SELECT revoked_at FROM mcp_tokens WHERE id IN ('tok-audit', 'tok-notify') ORDER BY id")).rows).toEqual([{ revoked_at: null }, { revoked_at: null }])
+    expect((await db.owner.query("SELECT revoked_at FROM mcp_tokens WHERE id = 'tok-notify'")).rows).toEqual([{ revoked_at: null }])
   })
 
   it("lists only safe fields for the caller's still-approved devices", async () => {

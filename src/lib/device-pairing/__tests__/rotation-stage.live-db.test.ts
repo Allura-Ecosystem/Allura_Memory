@@ -136,11 +136,26 @@ describeMigrationLive("Story 29.12 rotation-stage audit rollback live PostgreSQL
     await db?.close();
   });
 
-  it("rolls back both challenge consumption and pending-key persistence when transactional audit emission fails", async () => {
-    vi.mocked(emitDeviceAudit).mockRejectedValueOnce(new Error("forced DEVICE_ROTATION_STAGED audit failure"));
-
-    await expect(stageRotation(db.app, buildStageInput(privateKey, deviceId, challengeId)))
-      .rejects.toThrow("forced DEVICE_ROTATION_STAGED audit failure");
+  it("rolls back both challenge consumption and pending-key persistence when the real audit INSERT fails", async () => {
+    await db.owner.query(`
+      CREATE FUNCTION fail_live_rotation_stage_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.event_type = 'DEVICE_ROTATION_STAGED' AND NEW.metadata->>'device_id' = 'dev-live-rotation' THEN
+          RAISE EXCEPTION 'forced DEVICE_ROTATION_STAGED audit failure';
+        END IF;
+        RETURN NEW;
+      END;
+      $$;
+      CREATE TRIGGER fail_live_rotation_stage_audit_trigger
+      BEFORE INSERT ON events FOR EACH ROW EXECUTE FUNCTION fail_live_rotation_stage_audit();
+    `);
+    try {
+      await expect(stageRotation(db.app, buildStageInput(privateKey, deviceId, challengeId)))
+        .rejects.toThrow("forced DEVICE_ROTATION_STAGED audit failure");
+    } finally {
+      await db.owner.query("DROP TRIGGER IF EXISTS fail_live_rotation_stage_audit_trigger ON events");
+      await db.owner.query("DROP FUNCTION IF EXISTS fail_live_rotation_stage_audit()");
+    }
 
     const [challenge, device, audit] = await Promise.all([
       db.owner.query<{ id: string; consumed_at: string | null }>("SELECT id, consumed_at FROM device_challenges WHERE id = $1", [challengeId]),

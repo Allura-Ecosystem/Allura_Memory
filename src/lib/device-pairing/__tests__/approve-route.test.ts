@@ -45,13 +45,13 @@ vi.mock("@/lib/device-pairing/device-limit", () => ({
   deviceLimitLockKey: vi.fn(() => 0n),
 }));
 
-import { getAppPool } from "@/lib/postgres/connection";
+import { POST } from "@/app/api/device-pairing/approve/route";
 import { getPairingCallbackAllowlist } from "@/lib/device-pairing/config";
 import {
-  getDeviceLimit,
   countApprovedDevices,
+  getDeviceLimit,
 } from "@/lib/device-pairing/device-limit";
-import { POST } from "@/app/api/device-pairing/approve/route";
+import { getAppPool } from "@/lib/postgres/connection";
 
 const mockGetAppPool = getAppPool as unknown as MockInstance;
 const mockCountApproved = countApprovedDevices as unknown as MockInstance;
@@ -600,7 +600,7 @@ describe("Story 29.5 — POST /api/device-pairing/approve", () => {
       expect(auditInsert!.params[3]).toBe(PRINCIPAL_ID);
  
       // Metadata includes enrollment_transaction_id, principal_id, group_id, workspace_id, key_fingerprint, auth_method
-      const metadata = JSON.parse(auditInsert!.params[4] as string) as Record<string, unknown>;
+      const metadata = JSON.parse(auditInsert!.params[7] as string) as Record<string, unknown>;
       expect(metadata.enrollment_transaction_id).toBe(ENROLLMENT_ID);
       expect(metadata.principal_id).toBe(PRINCIPAL_ID);
       expect(metadata.group_id).toBe(GROUP_ID);

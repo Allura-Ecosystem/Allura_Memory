@@ -2,7 +2,7 @@
 
 **Epic:** 29 — Desktop Device Pairing and Persistent Authentication  
 **Workstream:** E — Audit and Credential Hygiene  
-**Status:** backlog  
+**Status:** done
 **Planning authority:** `../planning/epic-29-desktop-device-pairing-and-persistent-authentication.md`
 
 ## User Story
@@ -15,7 +15,7 @@ So that no security decision is lost and the audit trail is authoritative for co
 
 Every enrollment, approval, completion, challenge, exchange, rotation, revocation, and loss decision has a durable, transactional audit event with allowlisted metadata (AC-24).
 
-**Scope:** Implement `src/lib/device-pairing/audit.ts` (created in Story 29.4 — extend it here to cover all 13 event families): `DEVICE_ENROLL_REQUESTED`, `DEVICE_ENROLL_APPROVED`, `DEVICE_ENROLL_DENIED`, `DEVICE_ENROLL_EXPIRED`, `DEVICE_PAIRING_COMPLETE`, `DEVICE_CHALLENGE_ISSUED`, `DEVICE_EXCHANGE_ALLOWED`, `DEVICE_EXCHANGE_DENIED`, `DEVICE_ROTATION_STAGED`, `DEVICE_ROTATION_ACTIVATED`, `DEVICE_ROTATION_RECOVERED`, `DEVICE_REVOKED`, `DEVICE_MARKED_LOST`, `DEVICE_RECOVERED_AS_NEW_PAIRING`. Each uses transactional `insertEvent` (fail-closed) — NOT `emitAuthAudit` (fire-and-forget). Verify all API routes from Stories 1.4–4.1 call the correct audit helper. Pre-human events use `group_id='allura-system'`, `agent_id='device-enrollment'`; post-approval use approved tenant/principal. Metadata is allowlisted per §11.1 table.
+**Scope:** Implement `src/lib/device-pairing/audit.ts` (created in Story 29.4 — extend it here to cover all 13 implemented event families): `DEVICE_ENROLL_REQUESTED`, `DEVICE_ENROLL_APPROVED`, `DEVICE_ENROLL_DENIED`, `DEVICE_ENROLL_EXPIRED`, `DEVICE_PAIRING_COMPLETE`, `DEVICE_CHALLENGE_ISSUED`, `DEVICE_EXCHANGE_ALLOWED`, `DEVICE_EXCHANGE_DENIED`, `DEVICE_ROTATION_STAGED`, `DEVICE_ROTATION_ACTIVATED`, `DEVICE_ROTATION_RECOVERED`, `DEVICE_REVOKED`, `DEVICE_MARKED_LOST`. Each uses transactional `insertEvent` (fail-closed) — NOT `emitAuthAudit` (fire-and-forget). Verify all API routes from Stories 1.4–4.1 call the correct audit helper. Pre-human events use `group_id='allura-system'`, `agent_id='device-enrollment'`; post-approval use approved tenant/principal. Metadata is allowlisted per §11.1 table. `DEVICE_RECOVERED_AS_NEW_PAIRING` is excluded: there is no implemented recovery-as-new-pairing state transition in Epic 29; existing old-key grace recovery is represented by `DEVICE_ROTATION_RECOVERED`.
 
 **Dependencies:** Story 29.4, Story 29.5, Story 29.6, Story 29.7, Story 29.9, Story 29.12, Story 29.13, Story 29.14, Story 29.15
 
@@ -59,3 +59,35 @@ Every enrollment, approval, completion, challenge, exchange, rotation, revocatio
 - No structured log format changes (§11.4 — existing pattern).
 
 ---
+
+## Active Execution Ledger — 2026-09-10
+
+- **Baseline:** `f01bf0d1` (Story 29.15 verified commit).
+- **State:** unverified WIP — no commit / no push / no deploy / no secret change / no production DB mutation.
+- **RED receipts:** live device-audit test was initially absent from `vitest.config.live-db.ts` (config reported no matching test); the existing relevant live lane initially ran 20/24, with four completion proofs blocked before audit by a missing test-only MCP token secret.
+- **GREEN receipts:** registered device-audit immutability proof 1/1; corrected the completion fixture’s test-only secret and reran the relevant live lane 27/27. Existing strict caller metadata remains compatible with the narrow 13-type allowlist; no unknown key or credential-shaped value was permitted.
+- **Validation receipt:** focused 29.4–29.16 device-pairing directory is 264 passed / 48 skipped; typecheck passes; scoped ESLint has 0 errors / 4 pre-existing import-order warnings; `git diff --check` passes. The full registered live-db inventory was also run with `POSTGRES_USER=ronin4life RUN_E2E_TESTS=true`, but is not clean: 18 failed / 89 passed / 105 skipped in unrelated graph, curator, Bumblebee, SDK and genesis suites due missing app-role credentials and absent shared-schema columns/tables. The seven Story 29.16-relevant live files are green 27/27.
+- **Pike final-review remediation (2026-09-10):** Story 29.9 exchange now supplies its already locked, server-resolved `LockMode` to the shared device-token chokepoint. Normal, read-only/no-agent-writes, no-promotions, and full-lockdown scope policy is covered; full lockdown fails before a token insert. The missing-workspace exchange denial now uses the paired device's resolved group, workspace, and principal with `failed` status.
+- **Next named gate:** resolve unrelated shared live-db prerequisites, then rerun the full inventory and 13-family matrix.
+- **Required receipts before review:** focused suite, live DB suite, typecheck, scoped lint, diff hygiene, static scan.
+- **Review/commit gate:** independent BMAD review and governance check; user-directed deliverable remains uncommitted.
+
+## Audit Coverage Matrix — 2026-09-10
+
+| Event family | Current source and transaction | Actual evidence | Status |
+| --- | --- | --- | --- |
+| `DEVICE_ENROLL_REQUESTED` | `enrollment-service.createEnrollment`; create + audit before commit | `enroll-route.test.ts`; 13-family allowlist case | Unit-covered |
+| `DEVICE_ENROLL_APPROVED` | `approval-service.approveEnrollment`; approval + audit before commit | `approve-route.test.ts`; 13-family allowlist case | Unit-covered |
+| `DEVICE_ENROLL_DENIED` | `approval-service`, `complete-service`, completion route; denial audit commits only as its owning decision | `approve-route.test.ts`, `complete-service.test.ts`, `complete-route.test.ts` | Unit-covered |
+| `DEVICE_ENROLL_EXPIRED` | `approval-service` / `complete-service`; expiry transition + audit in one transaction | `complete-service.test.ts` expiry rollback | Unit-covered |
+| `DEVICE_PAIRING_COMPLETE` | `complete-service.completePairing`; device + token + enrollment consume + audit | `completion-transaction.live-db.test.ts` real `events` trigger rollback | Live forced-failure |
+| `DEVICE_CHALLENGE_ISSUED` | `challenge-service.issueChallenge`; challenge insert + audit | `challenge-service.live-db.test.ts` real `events` trigger rollback | Live forced-failure |
+| `DEVICE_EXCHANGE_ALLOWED` | `exchange-service.exchangeToken`; locked device/workspace/membership authority plus shared lock-aware token mint | `exchange-service.test.ts`, `repository.device.test.ts` (all lock modes), `exchange.live-db.test.ts` | Unit + live covered |
+| `DEVICE_EXCHANGE_DENIED` | `challenge-service.issueChallenge` pre-human denial and `exchange-service.exchangeToken` resolved-device denial | `challenge-service.live-db.test.ts`, `exchange-service.test.ts`, `exchange.live-db.test.ts` | Unit + live covered |
+| `DEVICE_ROTATION_STAGED` | `rotation-service.stageRotation`; challenge consume + pending key + audit | `rotation-stage.live-db.test.ts` real `events` trigger rollback | Live forced-failure |
+| `DEVICE_ROTATION_ACTIVATED` | `rotation-service.activateRotation`; challenge consume + key swap + audit | `rotation-activate.live-db.test.ts` real `events` trigger rollback | Live forced-failure |
+| `DEVICE_ROTATION_RECOVERED` | `rotation-service.recoverViaGrace`; challenge consume + counter increment + audit | `grace-recovery.live-db.test.ts` real `events` trigger rollback | Live forced-failure |
+| `DEVICE_REVOKED` | `revocation-service.revokeDevice`; device/token transition + audit | `revocation-service.live-db.test.ts` real `events` trigger rollback | Live forced-failure |
+| `DEVICE_MARKED_LOST` | `revocation-service.markLostDevice`; same `transitionDevice` transaction | `revocation-service.test.ts` shared transaction contract | Unit-covered via shared path |
+
+`DEVICE_RECOVERED_AS_NEW_PAIRING` remains excluded: no recovery-as-new-pairing transition exists; grace recovery emits `DEVICE_ROTATION_RECOVERED`.

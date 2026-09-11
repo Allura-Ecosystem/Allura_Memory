@@ -85,6 +85,14 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     description: "List only the authenticated principal's approved paired devices",
   },
   {
+    pattern: "/api/device-pairing/exchange",
+    requiredRole: "viewer",
+    scopeName: "device-pairing:exchange",
+    methods: ["POST"],
+    authStrategy: "route_handler",
+    description: "Exchange a route-handler-verified RFC 9421 device proof for a short-lived MCP token",
+  },
+  {
     pattern: "/api/device-pairing/mark-lost",
     requiredRole: "viewer",
     scopeName: "device-pairing:mark-lost",

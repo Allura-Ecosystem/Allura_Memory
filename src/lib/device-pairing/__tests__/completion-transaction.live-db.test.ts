@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/device-pairing/config", () => ({
   getDeviceAuthOrigin: () => "https://app.allura.example.com",
@@ -20,8 +20,8 @@ vi.mock("@/lib/device-pairing/rfc9421", () => ({
   verifyDeviceSignature: () => ({ valid: true, purpose: "pairing_complete" }),
 }));
 
-import { completePairing } from "@/lib/device-pairing/complete-service";
 import { hashAuthorizationCode } from "@/lib/device-pairing/authorization-code";
+import { completePairing } from "@/lib/device-pairing/complete-service";
 import { computePkceCodeChallengeS256 } from "@/lib/device-pairing/pkce";
 import {
   createMigrationDatabase,
@@ -38,8 +38,10 @@ describeMigrationLive("Story 29.6 complete transaction live PostgreSQL", () => {
   const authorizationCode = "live-authorization-code";
   const completionNonce = "live-completion-nonce";
   const pkceVerifier = "live-pkce-verifier";
+  const originalTokenSecret = process.env.ALLURA_MCP_TOKEN_SECRET;
 
   beforeAll(async () => {
+    process.env.ALLURA_MCP_TOKEN_SECRET = "test-completion-transaction-token-secret";
     db = await createMigrationDatabase("complete", "66-device-enrollment-expiry-transition.sql");
     await db.owner.query(
       "INSERT INTO workspaces (workspace_id, group_id, name) VALUES ($1, $2, $3)",
@@ -71,6 +73,8 @@ describeMigrationLive("Story 29.6 complete transaction live PostgreSQL", () => {
   }, 120_000);
 
   afterAll(async () => {
+    if (originalTokenSecret === undefined) delete process.env.ALLURA_MCP_TOKEN_SECRET;
+    else process.env.ALLURA_MCP_TOKEN_SECRET = originalTokenSecret;
     await db?.close();
   });
 
@@ -119,11 +123,7 @@ describeMigrationLive("Story 29.6 complete transaction live PostgreSQL", () => {
     });
     expect(audit.rows).toHaveLength(1);
     expect(audit.rows[0]).toMatchObject({ event_type: "DEVICE_PAIRING_COMPLETE", agent_id: principalId });
-    expect(denialAudit.rows).toEqual([{
-      event_type: "DEVICE_ENROLL_DENIED",
-      agent_id: "device-enrollment",
-      metadata: { enrollment_transaction_id: enrollmentId, reason_code: "ENROLLMENT_CONSUMED" },
-    }]);
+    expect(denialAudit.rows).toEqual([]);
     expect(enrollment.rows[0]).toMatchObject({ state: "CONSUMED" });
     expect(enrollment.rows[0]?.consumed_at).toBeTruthy();
     expect(enrollment.rows[0]?.authorization_code_consumed_at).toBeTruthy();

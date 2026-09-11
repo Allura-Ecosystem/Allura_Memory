@@ -181,7 +181,7 @@ describeMigrationLive("Story 29.13 rotation-activate live PostgreSQL", () => {
   });
 
   async function createStagedFixture(label: string): Promise<Fixture> {
-    const suffix = `${label}-${randomUUID()}`;
+    const suffix = `${label}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
     const groupId = `allura-live-activate-${suffix}`;
     const workspaceId = `ws-live-activate-${suffix}`;
     const deviceId = `dev-live-activate-${suffix}`;
@@ -338,15 +338,30 @@ describeMigrationLive("Story 29.13 rotation-activate live PostgreSQL", () => {
     expect(activationAudits.rows).toEqual([{ count: "1" }]);
   });
 
-  it("rolls every activation mutation back when transactional audit emission fails", async () => {
+  it("rolls every activation mutation back when the real audit INSERT fails", async () => {
     vi.clearAllMocks();
     const fixture = await createStagedFixture("rollback");
     const before = await snapshot(db, fixture.deviceId);
     vi.clearAllMocks();
-    vi.mocked(emitDeviceAudit).mockRejectedValueOnce(new Error("forced DEVICE_ROTATION_ACTIVATED audit failure"));
-
-    await expect(activateRotation(db.app, fixture.activationInput))
-      .rejects.toThrow("forced DEVICE_ROTATION_ACTIVATED audit failure");
+    await db.owner.query(`
+      CREATE FUNCTION fail_live_rotation_activate_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.event_type = 'DEVICE_ROTATION_ACTIVATED' AND NEW.metadata->>'device_id' = '${fixture.deviceId}' THEN
+          RAISE EXCEPTION 'forced DEVICE_ROTATION_ACTIVATED audit failure';
+        END IF;
+        RETURN NEW;
+      END;
+      $$;
+      CREATE TRIGGER fail_live_rotation_activate_audit_trigger
+      BEFORE INSERT ON events FOR EACH ROW EXECUTE FUNCTION fail_live_rotation_activate_audit();
+    `);
+    try {
+      await expect(activateRotation(db.app, fixture.activationInput))
+        .rejects.toThrow("forced DEVICE_ROTATION_ACTIVATED audit failure");
+    } finally {
+      await db.owner.query("DROP TRIGGER IF EXISTS fail_live_rotation_activate_audit_trigger ON events");
+      await db.owner.query("DROP FUNCTION IF EXISTS fail_live_rotation_activate_audit()");
+    }
 
     const [after, challenge, activationAudits] = await Promise.all([
       snapshot(db, fixture.deviceId),

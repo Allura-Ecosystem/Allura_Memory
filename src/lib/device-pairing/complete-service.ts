@@ -1,14 +1,15 @@
-import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { Pool } from "pg";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { getAuthConfig } from "@/lib/auth/config";
 import { createDeviceToken } from "@/lib/mcp-token/repository";
+import type { LockMode } from "@allura/types";
 import { emitDeviceAudit } from "./audit";
 import { hashAuthorizationCode } from "./authorization-code";
-import { verifyPkceS256 } from "./pkce";
 import { getDeviceAuthAudience, getDeviceAuthOrigin } from "./config";
+import { acquireDeviceCountLock, countApprovedDevices, getDeviceLimit } from "./device-limit";
+import { verifyPkceS256 } from "./pkce";
 import { parseSignatureInput, verifyDeviceSignature } from "./rfc9421";
 import type { KeyAlgorithm } from "./rfc9421-types";
-import { acquireDeviceCountLock, countApprovedDevices, getDeviceLimit } from "./device-limit";
 
 export type CompletionErrorCode =
   | "ENROLLMENT_NOT_FOUND"
@@ -232,7 +233,7 @@ export async function completePairing(
     if (membership.rows.length === 0) {
       throw new CompletionError("MEMBERSHIP_INACTIVE", "Approved principal no longer has active membership");
     }
-    const workspace = await client.query<{ lock_mode: string }>(
+    const workspace = await client.query<{ lock_mode: LockMode }>(
       "SELECT lock_mode FROM workspaces WHERE workspace_id = $1 AND group_id = $2",
       [enrollment.approved_workspace_id, enrollment.approved_group_id],
     );
@@ -275,6 +276,7 @@ export async function completePairing(
     const token = await createDeviceToken(client, {
       paired_device_id: pairedDeviceId,
       membership_role: membership.rows[0]?.role ?? "",
+      lock_mode: workspace.rows[0].lock_mode,
       expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
     });
     if (!token.record.expires_at) throw new Error("Device token must have an expiry");
@@ -300,17 +302,29 @@ export async function completePairing(
   } catch (error) {
     const persistsExpiry = error instanceof CompletionError &&
       (error.code === "CODE_EXPIRED" || error.code === "COMPLETION_NONCE_EXPIRED");
-    await client.query(persistsExpiry ? "COMMIT" : "ROLLBACK");
-    if (error instanceof CompletionError && !persistsExpiry && error.code !== "ENROLLMENT_NOT_FOUND") {
-      await emitDeviceAudit(client, {
-        group_id: "allura-system",
-        event_type: "DEVICE_ENROLL_DENIED",
-        agent_id: "device-enrollment",
-        metadata: {
-          enrollment_transaction_id: input.enrollment_transaction_id,
-          reason_code: error.code,
-        },
-      });
+    const isTerminalReplay = error instanceof CompletionError &&
+      (error.code === "ENROLLMENT_CONSUMED" || error.code === "ENROLLMENT_EXPIRED");
+    const commitsPureDenial = error instanceof CompletionError &&
+      !persistsExpiry && !isTerminalReplay && error.code !== "ENROLLMENT_NOT_FOUND";
+
+    if (commitsPureDenial) {
+      try {
+        await emitDeviceAudit(client, {
+          group_id: "allura-system",
+          event_type: "DEVICE_ENROLL_DENIED",
+          agent_id: "device-enrollment",
+          metadata: {
+            enrollment_transaction_id: input.enrollment_transaction_id,
+            reason_code: error.code,
+          },
+        });
+        await client.query("COMMIT");
+      } catch (auditError) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw auditError;
+      }
+    } else {
+      await client.query(persistsExpiry ? "COMMIT" : "ROLLBACK");
     }
     throw error;
   } finally {
