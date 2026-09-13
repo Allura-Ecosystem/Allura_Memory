@@ -707,28 +707,28 @@ epic_29:
       ac_participation: ["AC-09", "AC-11"]
     - key: "29.8"
       title: "Scope Derivation by Lock Mode and Demotion/Removal/Workspace-Lock Atomic Revocation"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.1", "29.6"]
       work_package: 4
       ac_participation: ["AC-12", "AC-14"]
     - key: "29.9"
       title: "Exchange API — POST /api/device-pairing/exchange"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.1", "29.2", "29.6", "29.7", "29.8"]
       work_package: 4
       ac_participation: ["AC-03", "AC-04", "AC-11", "AC-13", "AC-14", "AC-15"]
     - key: "29.10"
       title: "McpAuthenticator — Bypass CredentialCache for Paired-Device Tokens + PrincipalContext Extension"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.1", "29.6"]
       work_package: 4
       ac_participation: ["AC-15", "AC-22"]
     - key: "29.11"
       title: "Offline and Key-Loss Failure Behavior"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.7", "29.9"]
       work_package: 4
@@ -736,21 +736,21 @@ epic_29:
     # Work-package 5: Rotation (29.12-29.14)
     - key: "29.12"
       title: "Rotation Stage API — POST /api/device-pairing/rotation/stage"
-      status: in-progress
+      status: done
       owner: "Woz"
       depends_on: ["29.1", "29.2", "29.7", "29.9"]
       work_package: 5
       ac_participation: ["AC-16", "AC-19"]
     - key: "29.13"
       title: "Rotation Activate API — POST /api/device-pairing/rotation/activate"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.2", "29.7", "29.12"]
       work_package: 5
       ac_participation: ["AC-16", "AC-18", "AC-19"]
     - key: "29.14"
       title: "Grace-Path Recovery Endpoint — Old-Key Recovery-Only During Grace Window"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.2", "29.7", "29.13"]
       work_package: 5
@@ -758,21 +758,21 @@ epic_29:
     # Work-package 6: Revocation + Audit (29.15-29.17)
     - key: "29.15"
       title: "Revocation and Mark-Lost APIs"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.1", "29.10"]
       work_package: 6
       ac_participation: ["AC-22", "AC-23"]
     - key: "29.16"
       title: "Transactional Audit Emission for All Device Lifecycle Events"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.4", "29.5", "29.6", "29.7", "29.9", "29.12", "29.13", "29.14", "29.15"]
       work_package: 6
       ac_participation: ["AC-24"]
     - key: "29.17"
       title: "Automated Credential Leak Scan (AC-25)"
-      status: in-progress
+      status: done
       owner: "Woz"
       depends_on: ["29.16"]
       work_package: 6
@@ -780,14 +780,14 @@ epic_29:
     # Work-package 7: Automated Validation (29.18-29.19)
     - key: "29.18"
       title: "Unit Test Suite — State, Signing, Replay, Expiry, Scope, Redaction, PKCE, Auth Code, Agent-Name Invariant"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.1", "29.2", "29.3", "29.4", "29.5", "29.6", "29.7", "29.8", "29.9", "29.10", "29.11", "29.12", "29.13", "29.14", "29.15", "29.16", "29.17"]
       work_package: 7
       ac_participation: ["AC-26"]
     - key: "29.19"
       title: "PostgreSQL Integration Test Suite — Atomicity, Uniqueness, Membership, Locks, Revocation, Concurrency, Device Limit"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.1", "29.4", "29.5", "29.6", "29.7", "29.8", "29.9", "29.10", "29.12", "29.13", "29.14", "29.15", "29.16"]
       work_package: 7
@@ -795,7 +795,7 @@ epic_29:
     # Work-package 8: External Runtime Proof (29.20-29.21)
     - key: "29.20"
       title: "E2E Test — Browser-to-Desktop PKCE Completion with Clerk Test Instance"
-      status: backlog
+      status: done
       owner: "Woz"
       depends_on: ["29.1", "29.4", "29.5", "29.6", "29.7", "29.8", "29.9", "29.10"]
       work_package: 8
@@ -803,7 +803,7 @@ epic_29:
       external_gate: "B1 — Clerk test instance"
     - key: "29.21"
       title: "Platform Contract Tests — macOS, Windows, Linux Secure-Store Adapters"
-      status: in-progress
+      status: done
       owner: "Woz"
       depends_on: ["29.1", "29.2", "29.6", "29.7", "29.8", "29.9", "29.10", "29.12", "29.13", "29.14", "29.15"]
       work_package: 8
@@ -823,7 +823,7 @@ epic_29:
     - id: 2
       name: "Foundations — Schema, Signing, PKCE"
       stories: ["29.1", "29.2", "29.3"]
-      status: in-progress
+      status: done
       depends_on: [1]
       description: >
         Database schema (migrations 060-063), RFC 9421 canonical signing envelope,
@@ -832,7 +832,7 @@ epic_29:
     - id: 3
       name: "Pairing — Enrollment, Approval, Completion"
       stories: ["29.4", "29.5", "29.6"]
-      status: pending
+      status: done
       depends_on: [2]
       description: >
         The Clerk-mediated pairing flow: enroll → approve → complete. OAuth-style
@@ -841,7 +841,7 @@ epic_29:
     - id: 4
       name: "Reconnect + Authority — Challenge, Exchange, Scope, Offline"
       stories: ["29.7", "29.8", "29.9", "29.10", "29.11"]
-      status: pending
+      status: done
       depends_on: [3]
       description: >
         Runtime reconnection: challenge (RLS bootstrap), scope derivation by lock mode,
@@ -851,7 +851,7 @@ epic_29:
     - id: 5
       name: "Rotation — Stage, Activate, Grace Recovery"
       stories: ["29.12", "29.13", "29.14"]
-      status: pending
+      status: done
       depends_on: [4]
       description: >
         Automatic device-key rotation without Clerk: rotation stage, atomic key swap
@@ -860,7 +860,7 @@ epic_29:
     - id: 6
       name: "Revocation + Audit — Revoke, Audit, Credential Scan"
       stories: ["29.15", "29.16", "29.17"]
-      status: pending
+      status: done
       depends_on: [4, 5]
       description: >
         Revocation and mark-lost APIs (terminal state), transactional audit emission
@@ -870,7 +870,7 @@ epic_29:
     - id: 7
       name: "Automated Validation — Unit + PostgreSQL Integration"
       stories: ["29.18", "29.19"]
-      status: pending
+      status: done
       depends_on: [6]
       description: >
         Comprehensive test suites: unit tests (state, signing, replay, expiry, scope,
@@ -880,7 +880,7 @@ epic_29:
     - id: 8
       name: "External Runtime Proof — Clerk E2E + Platform Contracts"
       stories: ["29.20", "29.21"]
-      status: pending
+      status: done
       depends_on: [7]
       external_gates:
         - gate: "B1"
@@ -991,12 +991,12 @@ development_status:
   24-11a-fail-closed-web-authority: done
   24-12-effective-tenant-authority-seam: done
   epic-29: in-progress
-  29-1-schema-foundation: in-progress
-  29-2-rfc9421-signing-envelope: backlog
-  29-3-pkce-authorization-code: backlog
-  29-4-enrollment-api: backlog
-  29-5-approval-api: backlog
-  29-6-completion-api: backlog
+  29-1-schema-foundation: done
+  29-2-rfc9421-signing-envelope: done
+  29-3-pkce-authorization-code: done
+  29-4-enrollment-api: done
+  29-5-approval-api: done
+  29-6-completion-api: done
   29-7-challenge-api: done
   29-8-scope-and-authority-revocation: done
   29-9-exchange-api: done
@@ -1006,9 +1006,9 @@ development_status:
   29-13-rotation-activate: done
   29-14-grace-path-recovery: done
   29-15-device-revocation-and-lost: done
-  29-16-transactional-device-audit: backlog
-  29-17-credential-leak-scan: in-progress
-  29-18-unit-test-suite: backlog
+  29-16-transactional-device-audit: done
+  29-17-credential-leak-scan: done
+  29-18-unit-test-suite: done
   29-19-postgres-integration-tests: done
   29-20-clerk-pairing-e2e: done
   29-21-platform-secure-store-contracts: done
