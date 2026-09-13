@@ -16,8 +16,9 @@ dist
 .idea
 
 # Development
+.hermes
 .claude
-.opencode/skills/*/node_modules
+.opencode
 .opencode/skills/*/__tests__
 .opencode/skills/*/build.ts
 .opencode/skills/task-management

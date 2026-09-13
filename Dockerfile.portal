@@ -1,0 +1,22 @@
+FROM oven/bun:1 AS builder
+
+WORKDIR /app
+
+# .dockerignore excludes runtime secrets, local build output, and VCS state.
+COPY . .
+RUN bun install --frozen-lockfile
+RUN bun run build
+
+FROM oven/bun:1 AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3200
+
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+EXPOSE 3200
+
+CMD ["bun", "server.js"]
