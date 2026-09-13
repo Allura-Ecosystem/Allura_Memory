@@ -636,9 +636,9 @@ epic_28:
 
 epic_29:
   name: "Desktop Device Pairing and Persistent Authentication"
-  status: in-progress
+  status: done
   retrospective:
-  next_story: "29.12"
+  next_story: null
   sequence_note: "29.1 through 29.7 complete; Sabir confirmed 29.12 is dependency-ready and active. Stories execute one at a time through dev/review/done.
     B1 (Clerk test instance) gates Story 29.20; B2 (desktop client repo) gates Story 29.21.
     No production deployment, secret change, or direct main push without Sabir approval.
@@ -896,7 +896,7 @@ epic_29:
     - id: 9
       name: "Final Review + CI + Retrospective"
       stories: []
-      status: pending
+      status: done
       depends_on: [8]
       description: >
         Final gates: all 21 stories done; sprint-status.yaml shows done; AC-01 through
@@ -990,7 +990,8 @@ development_status:
   28-8-exit-gate-closure: done
   24-11a-fail-closed-web-authority: done
   24-12-effective-tenant-authority-seam: done
-  epic-29: in-progress
+  epic-29: done
+  epic-29-retrospective: done
   29-1-schema-foundation: done
   29-2-rfc9421-signing-envelope: done
   29-3-pkce-authorization-code: done

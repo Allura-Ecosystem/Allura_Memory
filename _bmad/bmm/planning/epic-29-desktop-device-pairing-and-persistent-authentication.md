@@ -3,7 +3,7 @@ title: "Epic 29 — Desktop Device Pairing and Persistent Authentication"
 type: epic-plan
 epic: 29
 created: "2026-09-08"
-status: ready-for-sprint-planning
+status: done
 owner: Brooks
 scope: brownfield Allura_Memory
 spec_authority: _bmad-output/specs/spec-desktop-device-pairing/SPEC.md
