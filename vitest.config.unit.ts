@@ -136,6 +136,12 @@ export default defineConfig({
       "src/curator/embedding-backfill-worker.test.ts",
       "src/curator/notion-sync.test.ts",
       "src/curator/approve-cli.test.ts",
+      // Story 29.20-R — Dashboard device pairing approval client component
+      "src/components/device-pairing/__tests__/dashboard-approval.test.tsx",
+      // Story 29.20-R — Dashboard approval handoff route (mocked scope, pool, and service).
+      "src/app/dashboard/device-pairing/approve/__tests__/route.test.ts",
+      // Story 29.20-R — Dashboard device-pairing server-page wiring (mocked auth and UI).
+      "src/app/dashboard/device-pairing/__tests__/page.test.tsx",
       // UI unit tests (Story 11.2 — toast system)
       "src/__tests__/toast.test.tsx",
       // UI unit tests (Story 16.3 — 3-pane inspector)
@@ -259,6 +265,7 @@ export default defineConfig({
       ["src/__tests__/inspector-views.test.tsx", "jsdom"],
       ["src/__tests__/bumblebee-surfaces.test.tsx", "jsdom"],
       ["src/__tests__/curator-dashboard.test.tsx", "jsdom"],
+      ["src/components/device-pairing/__tests__/dashboard-approval.test.tsx", "jsdom"],
     ],
   },
   resolve: {
