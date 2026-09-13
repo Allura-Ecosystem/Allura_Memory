@@ -12,6 +12,7 @@
  *
  * Usage: bun run src/mcp/canonical-http-gateway.ts
  * Env:   ALLURA_MCP_HTTP_PORT  (default: 3201)
+ *        ALLURA_MCP_HTTP_HOST  (optional explicit listen host)
  *        ALLURA_MCP_TOKEN_SECRET (hashed per-caller mcp_tokens credentials)
  *        ALLURA_MCP_AUTH_TOKEN   (legacy shared Bearer token)
  *        ALLURA_MCP_DEV_AUTH=true (explicit local-dev principal; refused in production)
@@ -86,6 +87,7 @@ function resolveHttpPort(): { port: number; source: string; warnings: string[] }
 
 const HTTP_PORT = resolveHttpPort();
 const PORT = HTTP_PORT.port;
+const HTTP_HOST = process.env.ALLURA_MCP_HTTP_HOST;
 
 // ── Auth Configuration (Story 24.2 — Authenticated Principal Context) ────────
 //
@@ -1234,8 +1236,9 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   transaction.finish();
 });
 
-server.listen(PORT, () => {
-  console.log(`Allura Memory Canonical HTTP Gateway listening on port ${PORT}`);
+server.listen(PORT, HTTP_HOST, () => {
+  const listener = HTTP_HOST ? `${HTTP_HOST}:${PORT}` : `port ${PORT}`;
+  console.log(`Allura Memory Canonical HTTP Gateway listening on ${listener}`);
   console.log(`Port source: ${HTTP_PORT.source}`);
   for (const warning of HTTP_PORT.warnings) {
     console.warn(`[deprecated-port-contract] ${warning}`);

@@ -36,6 +36,27 @@ describe("Story 29.20 — Clerk test harness readiness", () => {
     expect(summary).not.toContain(token);
   });
 
+  it("supports a local test-only approval mode without Clerk secrets", () => {
+    const readiness = inspectClerkPairingE2eReadiness({
+      ALLURA_E2E_APPROVAL_MODE: "test_only",
+      ALLURA_E2E_BASE_URL: "http://127.0.0.1:3310",
+      ALLURA_E2E_DEVICE_AUTH_ORIGIN: "http://127.0.0.1:3310",
+      ALLURA_E2E_DEVICE_AUTH_AUDIENCE: "http://127.0.0.1:3310/device-auth",
+    });
+
+    expect(readiness).toMatchObject({
+      ready: true,
+      config: {
+        approvalMode: "test_only",
+        e2eBaseUrl: "http://127.0.0.1:3310",
+        pairingBrowserUrl: "http://127.0.0.1:3310/pair",
+      },
+    });
+    expect(describeClerkPairingE2eReadiness(readiness)).toBe(
+      "B1_READY: local test-only pairing browser surface configured",
+    );
+  });
+
   it("exposes Playwright only after B1 readiness succeeds", () => {
     const unavailable = inspectClerkPairingE2eReadiness({});
     expect(createPlaywrightCapability(unavailable)).toBeNull();

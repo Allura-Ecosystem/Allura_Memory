@@ -77,12 +77,28 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     description: "Issue a route-handler-verified RFC 9421 device possession challenge",
   },
   {
+    pattern: "/api/device-pairing/complete",
+    requiredRole: "viewer",
+    scopeName: "device-pairing:complete",
+    methods: ["POST"],
+    authStrategy: "route_handler",
+    description: "Complete an approved enrollment with route-handler-verified RFC 9421 device proof",
+  },
+  {
     pattern: "/api/device-pairing/devices",
     requiredRole: "viewer",
     scopeName: "device-pairing:devices:list",
     methods: ["GET"],
     authStrategy: "principal",
     description: "List only the authenticated principal's approved paired devices",
+  },
+  {
+    pattern: "/api/device-pairing/enroll",
+    requiredRole: "viewer",
+    scopeName: "device-pairing:enroll",
+    methods: ["POST"],
+    authStrategy: "route_handler",
+    description: "Create a pending desktop enrollment with no caller-supplied human authority",
   },
   {
     pattern: "/api/device-pairing/exchange",
@@ -131,6 +147,28 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     methods: ["POST"],
     authStrategy: "route_handler",
     description: "Recover only an authenticated activated rotation receipt with old-key RFC 9421 proof",
+  },
+  {
+    pattern: "/api/device-pairing/test-approve",
+    requiredRole: "viewer",
+    scopeName: "device-pairing:test-approve",
+    methods: ["POST"],
+    authStrategy: "route_handler",
+    description: "Test-runtime-only fixed-human approval seam; the handler owns local-runtime gating and identity",
+  },
+  {
+    pattern: "/pair",
+    requiredRole: "viewer",
+    scopeName: "device-pairing:test-page",
+    authStrategy: "principal",
+    description: "Test-runtime-only device pairing page; production renders not found",
+  },
+  {
+    pattern: "/portal",
+    requiredRole: "viewer",
+    scopeName: "portal:connect",
+    authStrategy: "principal",
+    description: "Authenticated human portal for approved MCP client connection guidance and inventory",
   },
 
   // ── Admin ────────────────────────────────────────────────────────────────

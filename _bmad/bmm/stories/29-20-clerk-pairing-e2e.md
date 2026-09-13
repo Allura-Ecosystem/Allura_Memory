@@ -61,4 +61,13 @@ The full pairing flow is proven against a real (test) Clerk instance, a headless
 - No real OS keystore in E2E (in-memory keypair for server-side E2E — §12.4 step 2).
 - No claim of AC-28 runtime acceptance in this planning artifact.
 
+## Active Execution Ledger — 2026-09-12
+
+- **Baseline:** `9c3a6521` (dashboard device-approval handoff).
+- **State:** re-review — full local B1 precursor evidence green; no commit.
+- **Last receipt:** 13 focused unit tests and the shipped Next `/pair` browser→canonical-MCP `memory_search` E2E pass. Fixture routes remain absent and regression-asserted 404; resource acquisition/cleanup is exception-safe. CI E2E installs Chromium and enables the local runtime. Route-scope validator now passes repository-wide (113 routes; 0 uncovered/0 weak roles) after declaring `/pair`, test approval, enroll, complete, and existing authenticated `/portal` authority. Changed-file ESLint is clean; diff/secret scan clean. `bun run typecheck` retains only the 3 unchanged baseline `packages/sdk/src/lanes.ts` errors.
+- **Next named gate:** Pike + Fowler read-only final review; if both approve, Allura governance check and scoped local commit only.
+- **Required receipts before review:** focused E2E (including canonical MCP `memory_search`), live DB, typecheck, diff hygiene, literal-secret/static scan.
+- **Guard:** no commit / no push / no deploy / no secret change / no production DB mutation.
+
 ---

@@ -30,6 +30,15 @@ async function waitForLive(url: string, child: ChildProcess, diagnostics: () => 
   throw new Error("gateway did not become live");
 }
 
+async function waitForOutput(output: () => string, expected: string): Promise<void> {
+  const deadline = Date.now() + 3_000;
+  while (Date.now() < deadline) {
+    if (output().includes(expected)) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`gateway did not log required listener receipt: ${expected}`);
+}
+
 describe("canonical HTTP gateway auth denial wiring", () => {
   let child: ChildProcess | undefined;
 
@@ -48,6 +57,7 @@ describe("canonical HTTP gateway auth denial wiring", () => {
         ...process.env,
         NODE_ENV: "test",
         ALLURA_MCP_HTTP_PORT: String(port),
+        ALLURA_MCP_HTTP_HOST: "127.0.0.1",
         ALLURA_MCP_AUTH_TOKEN: "gateway-denial-valid-token",
         ALLURA_RATE_LIMIT_ENABLED: "false",
       },
@@ -58,6 +68,10 @@ describe("canonical HTTP gateway auth denial wiring", () => {
     running.stderr?.on("data", (chunk: Buffer) => { output += chunk.toString(); });
 
     await waitForLive(baseUrl, running, () => output);
+    await waitForOutput(
+      () => output,
+      `Allura Memory Canonical HTTP Gateway listening on 127.0.0.1:${port}`,
+    );
     const response = await fetch(`${baseUrl}/mcp`, {
       method: "POST",
       headers: {

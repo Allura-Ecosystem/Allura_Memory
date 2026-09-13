@@ -16,6 +16,8 @@ export interface ConnectionConfig {
   database: string;
   user: string;
   password: string;
+  /** Optional PostgreSQL startup options for an app-role session. */
+  options?: string;
   connectionTimeoutMillis: number;
   idleTimeoutMillis: number;
   max: number;
@@ -61,6 +63,7 @@ export function getConnectionConfig(options: ConnectionConfigOptions = {}): Conn
 
   const appUser = env.POSTGRES_APP_USER;
   const appPassword = env.POSTGRES_APP_PASSWORD;
+  const appOptions = env.POSTGRES_APP_OPTIONS;
   const useAppRole = options.role === "app";
 
   if ((options.requireAppRole || options.role === "app") && (!appUser || !appPassword)) {
@@ -73,6 +76,7 @@ export function getConnectionConfig(options: ConnectionConfigOptions = {}): Conn
     database: env.POSTGRES_DB || "memory",
     user: useAppRole ? appUser! : env.POSTGRES_USER || "ronin4life",
     password: useAppRole ? appPassword! : password,
+    options: useAppRole ? appOptions : undefined,
     connectionTimeoutMillis: DEFAULT_POOL_CONFIG.connectionTimeoutMillis,
     idleTimeoutMillis: DEFAULT_POOL_CONFIG.idleTimeoutMillis,
     max: DEFAULT_POOL_CONFIG.maxConnections,

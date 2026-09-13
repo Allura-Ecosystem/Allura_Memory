@@ -283,9 +283,12 @@ jobs:
             psql -v ON_ERROR_STOP=1 -h localhost -U allura -d memory -f "$f"
           done
       - name: Run E2E tests
-        run: bun run test:e2e
+        run: |
+          bun x playwright install --with-deps chromium
+          bun run test:e2e
         env:
           RUN_E2E_TESTS: "true"
+          ALLURA_E2E_LOCAL_TEST_RUNTIME: "true"
           DATABASE_URL: postgresql://allura:allura@localhost:5432/memory
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
