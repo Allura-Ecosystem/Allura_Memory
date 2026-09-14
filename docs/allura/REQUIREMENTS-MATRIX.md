@@ -500,6 +500,20 @@ This section traces the governed memory pipeline requirements from business goal
 | AC-26 | DEFERRABLE constraint trigger rejects device tokens whose `agent_name` differs from the linked device's human `principal_id`, while non-device tokens remain unaffected. | `docker/postgres-init/62-mcp-tokens-paired-device.sql`; live PostgreSQL COMMIT test in `062-agent-name-trigger.test.ts` | Story 29.1 schema evidence complete. |
 | NFR3 tenant isolation | `paired_devices` and `device_challenges` use strict `group_id` checks, explicit `allura_app` grants, and forced RLS. Pre-auth `device_enrollments` has no direct app table access; approval uses scoped `device_enrollment_approval_context()`, tenant audits persist the physical workspace column, and pre-human audits are fixed-identity function calls. | Migrations 60, 61, 63, 64; live PostgreSQL RLS/privilege tests | Story 29.5 complete; independent review approved and app-role RLS/ACL contracts proven in disposable PostgreSQL. |
 
+### Section 6H: allura device-first portal UI follow-up
+
+These UI receipts do not close Epic 29 external runtime gates or authorize deployment.
+
+| Requirement | Implementation | Evidence / limit |
+|-------------|----------------|------------------|
+| Device-first navigation, allura brand | `/portal`, `DeviceWorkspace`, shared `DashboardShell`; approved wordmark and scoped brand palette | `portal-page.test.ts`, `device-workspace.test.ts`; real-component browser preview, not live Clerk proof |
+| Scoped inventory and lifecycle controls | Existing principal-only device list; confirmed revoke/mark-lost; API failures retain state | `device-workspace.test.ts`; existing auth/service contracts unchanged; no production mutation during validation |
+| Device-bound versus account credentials | Exact `paired_device_id` UI filtering; expired/revoked rows excluded; unpaired keys shown separately | `token-inventory.test.ts`; no fabricated binding or app-installation claims |
+| Reusable permission profiles | Built-in read-only/read-write presets; server authority remains decisive | `device-workspace.test.ts`; applies to new setup only; no saved custom profile storage |
+| Truthful onboarding | Target-device proof remains required; generic token issuer absent in device-specific setup | `device-workspace.test.ts`; universal local adapter, per-client device credential model and OAuth integrations remain pending |
+
+Detailed behavior and release limits: `docs/guides/portal-devices-and-profiles.md`. Exact current gate receipts: `docs/guides/portal-devices-execution.md`.
+
 ### Section 7: Use Case Index
 
 | Use Case | Domain Area | Requirements |

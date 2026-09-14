@@ -205,6 +205,14 @@ Forced RLS permits `allura_app` rows only when `group_id = current_setting('app.
 
 Migration 62 adds nullable `paired_device_id → paired_devices(id)`. Existing non-device tokens remain valid with null linkage. `idx_mcp_tokens_one_active_per_device` permits at most one non-revoked token per paired device. The DEFERRABLE constraint trigger `trg_mcp_tokens_device_agent_name` verifies at COMMIT that a linked token's `agent_name` equals `paired_devices.principal_id`; non-device tokens are unaffected. `POST /api/device-pairing/complete` creates the device and its first linked token on the same app-role transaction, so the device authority, token linkage, completion audit, and enrollment consumption commit together or roll back together.
 
+### Device-first portal projection (no schema migration)
+
+The human `/portal` device screen consumes only approved-device `id`, `display_label`, `workspace_id`, `created_at` and `last_exchange_at`. `last_exchange_at` is evidence of a credential exchange, **not an online heartbeat**. Device credential views select only matching `mcp_tokens.paired_device_id`; account views select null linkage, and the UI excludes revoked/expired rows. The server API remains the authorization boundary.
+
+Connection profiles are immutable frontend presets (`src/lib/portal/connection-profiles.ts`) requesting `memory:read` or `memory:read,memory:write`. They are not persisted rows, do not create tenants, and contain no secrets. Existing `idx_mcp_tokens_one_active_per_device` and human-principal token binding remain unchanged; separate device-bound credentials per installed app require a future reviewed model, not a UI-only association.
+
+See `docs/guides/portal-devices-and-profiles.md` for navigation, lifecycle controls, test limits and the deployment hold.
+
 ### Completion redemption runtime
 
 `POST /api/device-pairing/complete` locks an APPROVED enrollment, rejects consumed/expired state before mutation, verifies the presented authorization-code hash, completion nonce, PKCE S256 verifier, and RFC 9421 `pairing_complete` proof, then revalidates membership/workspace and re-checks the device limit under the tenant advisory lock. It preserves the locked enrollment `display_label`, derives every inserted authority field from locked `approved_*` columns, and returns an absolute configured MCP gateway endpoint. Credential failures roll back device/token mutation and persist a constrained `DEVICE_ENROLL_DENIED` audit; explicit code or nonce expiry commits only after `device_enrollment_expire()` confirms the corresponding `EXPIRED` transition. The route returns `device_id`, one-time `access_token`, `expires_at`, and `mcp_endpoint`; raw codes, verifiers, signatures, and tokens are never placed in audit metadata.

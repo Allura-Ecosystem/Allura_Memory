@@ -4,7 +4,7 @@ import styles from "./dashboard-shell.module.css";
 
 export const DASHBOARD_ROUTES = [
   { href: "/dashboard", label: "Overview" },
-  { href: "/portal", label: "Clients" },
+  { href: "/portal", label: "Devices & clients" },
   { href: "/dashboard/mission-control", label: "Mission Control" },
   { href: "/dashboard/kanban", label: "Work Board" },
   { href: "/dashboard/search", label: "Search" },
@@ -25,8 +25,9 @@ export function DashboardShell({ user, title, activePath, children }: {
       <a className={styles.skipLink} href="#dashboard-content">Skip to content</a>
       <aside aria-label="Dashboard navigation" className={styles.sidebar}>
         <Link href="/dashboard" className={styles.brand}>
-          <span aria-hidden="true" className={styles.brandMark}>a</span>
-          <span>Allura<span className={styles.brandSub}>Memory workspace</span></span>
+          {/* Approved asset: preserve its colors, aspect ratio and lockup. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/allura-wordmark-runtime.png" alt="allura" width={791} height={272} />
         </Link>
         <p className={styles.navLabel}>WORKSPACE</p>
         <nav aria-label="Primary navigation">
@@ -48,12 +49,12 @@ export function DashboardShell({ user, title, activePath, children }: {
       </aside>
       <div className={styles.mainColumn}>
         <header className={styles.topbar}>
-          <span>Allura / Workspace</span>
+          <span>allura / Workspace</span>
           <span className={styles.account}>Session role: {user.role}</span>
         </header>
         <main id="dashboard-content" className={styles.main}>
           <div className={styles.pageHeading}><h1>{title}</h1>
-            {activePath === "/portal" ? <p>Manage the tools that access your memory.</p> : null}</div>
+            {activePath === "/portal" ? <p>One memory workspace. Every device you choose.</p> : null}</div>
           {children}
         </main>
       </div>

@@ -24,7 +24,7 @@ describe("TokenIssuerPanel", () => {
   it("tells a viewer that an administrator must issue credentials without calling an API", () => {
     render(createElement(TokenIssuerPanel, { isAdmin: false }));
 
-    expect(screen.getByRole("status").textContent).toContain("An administrator must issue an Allura MCP credential");
+    expect(screen.getByRole("status").textContent).toContain("An administrator must issue an allura MCP credential");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

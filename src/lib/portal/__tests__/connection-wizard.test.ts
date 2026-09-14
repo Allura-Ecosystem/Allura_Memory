@@ -93,7 +93,7 @@ describe("Clients screen", () => {
     fireEvent.change(screen.getByRole("searchbox", { name: "Search clients" }), { target: { value: "unknown-tool" } });
     expect(screen.getByText("No clients match your search.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Credentials" }));
-    await screen.findByText("No active credentials in this workspace.");
+    await screen.findByText("No active unpaired credentials.");
     expect(fetchMock).toHaveBeenCalledWith("/api/tokens?workspace_id=ws_personal");
   });
 

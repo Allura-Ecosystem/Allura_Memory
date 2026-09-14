@@ -1,5 +1,7 @@
 # Allura Clients UI
 
+> Follow-up: the current local `/portal` implementation is now device-first and uses the approved allura brand. See [Devices, clients and profiles](portal-devices-and-profiles.md). The verification below describes the initial Clients-only commit, not a live-deployment receipt.
+
 ## Implemented surface
 
 The guarded `/portal` route now renders a toolkit-style configuration screen in the shared dashboard shell. `Clients` links to it from dashboard navigation.

@@ -10,12 +10,13 @@ type TokenIssueResponse = Readonly<{ token?: string; error?: string }>;
  * Issues an MCP credential through the existing admin API. The raw credential
  * remains in React state only: it is never written to browser persistence.
  */
-export function TokenIssuerPanel({ isAdmin, workspaceId: scopedWorkspaceId, initialAgentName = "", onIssuingChange }: {
+export function TokenIssuerPanel({ isAdmin, workspaceId: scopedWorkspaceId, initialAgentName = "", onIssuingChange, scopes }: {
   isAdmin: boolean;
   /** Server-derived workspace; when present, the setup cannot choose another. */
   workspaceId?: string;
   initialAgentName?: string;
   onIssuingChange?: (issuing: boolean) => void;
+  scopes?: readonly string[];
 }) {
   const [workspaces, setWorkspaces] = useState<readonly Workspace[]>([]);
   const [workspaceId, setWorkspaceId] = useState(scopedWorkspaceId ?? "");
@@ -49,7 +50,7 @@ export function TokenIssuerPanel({ isAdmin, workspaceId: scopedWorkspaceId, init
   }, [isAdmin, scopedWorkspaceId]);
 
   if (!isAdmin) {
-    return <p role="status">An administrator must issue an Allura MCP credential for this workspace.</p>;
+    return <p role="status">An administrator must issue an allura MCP credential for this workspace.</p>;
   }
 
   async function issueCredential() {
@@ -61,7 +62,7 @@ export function TokenIssuerPanel({ isAdmin, workspaceId: scopedWorkspaceId, init
       const response = await fetch("/api/tokens", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ workspace_id: workspaceId, agent_name: agentName.trim() }),
+        body: JSON.stringify({ workspace_id: workspaceId, agent_name: agentName.trim(), ...(scopes ? { scopes } : {}) }),
       });
       const body = await response.json() as TokenIssueResponse;
       if (!response.ok || !body.token) throw new Error(body.error ?? "Credential issuance failed.");
@@ -78,6 +79,7 @@ export function TokenIssuerPanel({ isAdmin, workspaceId: scopedWorkspaceId, init
     <section aria-labelledby="issue-credential-heading">
       <h2 id="issue-credential-heading">Issue an MCP credential</h2>
       <p>The credential is shown once. Save it in your MCP client&apos;s secure store before dismissing it.</p>
+      {scopes ? <p>Requested permissions: <code>{scopes.join(", ")}</code></p> : null}
       {error ? <p role="alert">{error}</p> : null}
       {scopedWorkspaceId ? <p>Workspace: <code>{scopedWorkspaceId}</code></p> : <>
       <label htmlFor="portal-workspace">Workspace</label>

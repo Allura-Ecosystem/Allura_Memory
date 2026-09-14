@@ -30,16 +30,15 @@ describe("GET /portal", () => {
 
     expect(requireDashboardScope).toHaveBeenCalledWith("/portal");
     expect(buildConnectionGuide).toHaveBeenCalledWith("https://mcp.faithmeats.org/mcp");
-    expect(html).toContain("MCP connections");
+    expect(html).toContain("Devices &amp; clients");
     expect(html).toContain('href="/portal"');
     expect(html).toContain('aria-current="page"');
-    expect(html).toContain("Clients");
-    expect(html).toContain("Connect your AI tools");
-    expect(html).toContain("Connect ChatGPT");
-    expect(html).toContain("Connect Claude Desktop");
-    expect(html).toContain("Connect Hermes");
-    expect(html).toContain("Connect OpenCode");
-    expect(html).toContain("Connect OpenClaw");
+    expect(html).toContain('src="/brand/allura-wordmark-runtime.png"');
+    expect(html).toContain('alt="allura"');
+    expect(html).toContain("Your devices");
+    expect(html).toContain("Profiles");
+    expect(html).toContain("Account connections");
+    expect(html).not.toContain("Docker");
     expect(html).toContain("ws_1");
     expect(html).not.toContain("allura_mcp_");
   });
