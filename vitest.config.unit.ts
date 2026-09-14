@@ -22,6 +22,8 @@ export default defineConfig({
       // ── Pure unit tests (no DB, no external services) ──────────────────
       // Benchmark harness metric math (Precision@K, Recall@K, MRR, percentiles)
       "src/__benchmarks__/**/*.test.ts",
+      // Portal UI and deployment contracts: hermetic DOM/mocked API tests.
+      "src/lib/portal/**/*.test.ts",
       // Scoring, dedup, similarity, budget, circuit breaker
       "src/lib/curator/**/*.test.ts",
       "src/lib/budget/**/*.test.ts",

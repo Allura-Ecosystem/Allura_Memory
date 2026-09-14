@@ -1,0 +1,25 @@
+.shell { display: flex; min-height: 100vh; background: #fff; color: #1b1d21; font-family: var(--sans, sans-serif); }
+.sidebar { box-sizing: border-box; display: flex; flex-direction: column; width: 224px; flex-shrink: 0; padding: 28px 16px 20px; border-right: 1px solid #dce2e8; background: #f8fafc; }
+.brand { display: flex; align-items: center; gap: 10px; margin: 0 8px 36px; color: #203047; text-decoration: none; font-weight: 700; font-size: 23px; letter-spacing: -.5px; }
+.brandMark { display: flex; align-items: center; justify-content: center; width: 34px; height: 38px; background: #233f66; border-radius: 8px; color: white; font-size: 27px; font-weight: 500; }
+.brandSub { display: block; font-size: 10px; font-weight: 400; color: #657185; letter-spacing: .15px; margin-top: 1px; }
+.navLabel { font-size: 10px; letter-spacing: 1.1px; font-weight: 500; color: #637084; padding: 0 12px; margin-bottom: 10px; }
+.navList { list-style: none; padding: 0; margin: 0; }
+.navList li { margin-bottom: 4px; }
+.navList a { display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; min-height: 44px; padding: 10px 12px; border-radius: 6px; text-decoration: none; color: #4b596a; font-size: 13px; }
+.navList a:hover { background: #eaf0f6; }
+.navList a[aria-current="page"] { background: #e8f0fc; color: #244f85; font-weight: 500; }
+.scope { margin: auto 12px 0; padding-top: 32px; font-size: 11px; }
+.scope dt { color: #667286; margin-bottom: 4px; }
+.scope dd { color: #36465a; margin: 0 0 14px; overflow-wrap: anywhere; line-height: 1.6; }
+.scope .role { display: inline-block; border: 1px solid #d7e0e9; background: white; border-radius: 4px; padding: 1px 7px; }
+.mainColumn { flex: 1; min-width: 0; }
+.topbar { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid #e2e7ed; padding: 20px 36px; min-height: 65px; box-sizing: border-box; font-size: 12px; color: #697586; }
+.account { color: #3e5069; }
+.main { box-sizing: border-box; padding: 34px 36px 56px; max-width: 1320px; }
+.pageHeading h1 { font-size: 28px; font-weight: 500; letter-spacing: -.7px; margin: 0 0 8px; color: #1b2737; }
+.pageHeading p { color: #5c6879; margin: 0 0 26px; font-size: 14px; }
+.skipLink { position: absolute; top: -80px; left: 12px; z-index: 10; background: white; color: #244f85; padding: 12px; }
+.skipLink:focus { top: 12px; }
+.shell a:focus-visible { outline: 3px solid #2961b8; outline-offset: 3px; }
+@media (max-width: 760px) { .shell { flex-direction: column; } .sidebar { width: 100%; border-right: 0; border-bottom: 1px solid #dce2e8; padding: 16px; } .brand { margin: 0 8px 12px; } .navLabel, .scope { display: none; } .navList { display: flex; overflow-x: auto; gap: 4px; } .navList li { flex-shrink: 0; } .navList a { gap: 12px; } .main { padding: 24px 18px 40px; } .topbar { padding: 16px 18px; min-height: 0; } }

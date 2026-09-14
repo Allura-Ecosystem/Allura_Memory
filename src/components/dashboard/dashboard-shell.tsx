@@ -1,70 +1,62 @@
-import Link from "next/link"
-
-import type { AuthUser } from "@/lib/auth/types"
-
-/**
- * Thin server-owned dashboard shell shared by the six canonical live surfaces.
- *
- * It renders only server-derived scope (tenant/workspace/role) and a single
- * navigation list. It never reads browser-supplied authority and never fetches
- * data on its own; each route adapter supplies its own server-owned read.
- */
+import Link from "next/link";
+import type { AuthUser } from "@/lib/auth/types";
+import styles from "./dashboard-shell.module.css";
 
 export const DASHBOARD_ROUTES = [
   { href: "/dashboard", label: "Overview" },
+  { href: "/portal", label: "Clients" },
   { href: "/dashboard/mission-control", label: "Mission Control" },
   { href: "/dashboard/kanban", label: "Work Board" },
   { href: "/dashboard/search", label: "Search" },
   { href: "/dashboard/teams", label: "Teams" },
   { href: "/dashboard/graph", label: "Graph" },
   { href: "/dashboard/curator", label: "Curator" },
-] as const
+] as const;
 
-export function DashboardShell({
-  user,
-  title,
-  children,
-}: {
-  user: AuthUser
-  title: string
-  children: React.ReactNode
+/** Shared responsive shell. Tenant, workspace and role remain server-derived. */
+export function DashboardShell({ user, title, activePath, children }: {
+  user: AuthUser;
+  title: string;
+  activePath?: string;
+  children: React.ReactNode;
 }): React.ReactElement {
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <aside
-        aria-label="Dashboard navigation"
-        style={{ width: 220, borderRight: "1px solid #e5e7eb", padding: 16, flexShrink: 0 }}
-      >
-        <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", margin: "0 0 8px" }}>
-          Allura Memory
-        </p>
+    <div className={styles.shell}>
+      <a className={styles.skipLink} href="#dashboard-content">Skip to content</a>
+      <aside aria-label="Dashboard navigation" className={styles.sidebar}>
+        <Link href="/dashboard" className={styles.brand}>
+          <span aria-hidden="true" className={styles.brandMark}>a</span>
+          <span>Allura<span className={styles.brandSub}>Memory workspace</span></span>
+        </Link>
+        <p className={styles.navLabel}>WORKSPACE</p>
         <nav aria-label="Primary navigation">
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          <ul className={styles.navList}>
             {DASHBOARD_ROUTES.map((route) => (
-              <li key={route.href} style={{ marginBottom: 4 }}>
-                <Link
-                  href={route.href}
-                  style={{ display: "block", padding: "6px 8px", borderRadius: 6, color: "#111827", textDecoration: "none", fontSize: 14 }}
-                >
-                  {route.label}
+              <li key={route.href}>
+                <Link href={route.href} aria-current={activePath === route.href ? "page" : undefined}>
+                  {route.label}<span aria-hidden="true">{route.href === "/portal" ? "↗" : ""}</span>
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
-        <dl style={{ marginTop: 24, fontSize: 12, color: "#6b7280" }}>
-          <dt style={{ fontWeight: 600 }}>Tenant</dt>
-          <dd style={{ margin: "0 0 8px" }}>{user.groupId}</dd>
-          <dt style={{ fontWeight: 600 }}>Workspace</dt>
-          <dd style={{ margin: "0 0 8px" }}>{user.workspaceId}</dd>
-          <dt style={{ fontWeight: 600 }}>Role</dt>
-          <dd style={{ margin: 0 }}>{user.role}</dd>
+        <dl className={styles.scope}>
+          <dt>Tenant</dt><dd>{user.groupId}</dd>
+          <dt>Workspace</dt><dd>{user.workspaceId || "Not assigned"}</dd>
+          <dt>Role</dt><dd className={styles.role}>{user.role}</dd>
         </dl>
       </aside>
-      <main style={{ flex: 1, padding: 32, maxWidth: 960 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 16px" }}>{title}</h1>
-        {children}
-      </main>
+      <div className={styles.mainColumn}>
+        <header className={styles.topbar}>
+          <span>Allura / Workspace</span>
+          <span className={styles.account}>Session role: {user.role}</span>
+        </header>
+        <main id="dashboard-content" className={styles.main}>
+          <div className={styles.pageHeading}><h1>{title}</h1>
+            {activePath === "/portal" ? <p>Manage the tools that access your memory.</p> : null}</div>
+          {children}
+        </main>
+      </div>
     </div>
-  )
+  );
 }
