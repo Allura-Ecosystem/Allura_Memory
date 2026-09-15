@@ -1,0 +1,17 @@
+FROM oven/bun:1 AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3200
+
+# Copy the pre-built standalone (with server.js)
+COPY .next/standalone ./
+# Copy static assets
+COPY .next/static ./.next/static
+# Copy full node_modules to fix missing traced deps (react, react-dom, etc.)
+COPY node_modules ./node_modules
+
+EXPOSE 3200
+
+CMD ["node", "server.js"]
