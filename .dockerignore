@@ -1,6 +1,12 @@
 # Dependencies
 node_modules
 **/node_modules
+# Keep the standalone runtime's traced node_modules for the prebuilt portal image
+!.next/standalone/node_modules
+!.next/standalone/node_modules/**
+# The prebuilt image overlays the full dependency tree (Turbopack externals)
+!node_modules
+!node_modules/**
 
 # Build artifacts (keep .next for prebuilt portal Dockerfile)
 out
