@@ -3,7 +3,7 @@
 
 generated: "2026-08-28"
 project: "allura-memory"
-last_updated: "08-29-2026 15:10"
+last_updated: "09-08-2026"
 owner: brooks
 group_id: allura-system
 
@@ -633,6 +633,278 @@ epic_28:
     - key: "28.8"
       title: "Exit-Gate Closure"
       status: done
+
+epic_29:
+  name: "Desktop Device Pairing and Persistent Authentication"
+  status: done
+  retrospective:
+  next_story: null
+  sequence_note: "29.1 through 29.7 complete; Sabir confirmed 29.12 is dependency-ready and active. Stories execute one at a time through dev/review/done.
+    B1 (Clerk test instance) gates Story 29.20; B2 (desktop client repo) gates Story 29.21.
+    No production deployment, secret change, or direct main push without Sabir approval.
+    Evidence requirements: typecheck, unit, integration, live-db, e2e, credential-leak
+    scan, build, CI pass; B1/B2 real evidence without skips; independent security and
+    maintainability reviews with no BLOCK/HIGH findings; retrospective accepted and logged."
+  stories:
+    # Work-package 1 is the readiness gate; implementation begins in Work-package 2.
+    - key: "29.1"
+      title: "Schema — device_enrollments, paired_devices, mcp_tokens.paired_device_id"
+      status: done
+      owner: "Woz"
+      depends_on: []
+      work_package: 2
+      ac_participation: ["AC-06", "AC-10"]
+      status_evidence: "Final BMAD review APPROVED with zero BLOCK/HIGH/MED after duplicate-index removal and explicit SECURITY INVOKER/RLS rationale. Live PostgreSQL migration suite: 27 passed, 0 failed; typecheck passed."
+    # Work-package 2: Foundations (29.1-29.3)
+    - key: "29.2"
+      title: "RFC 9421 Canonical Signing Envelope — Verifier and Helpers"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1"]
+      work_package: 2
+      ac_participation: ["AC-09"]
+      status_evidence: "Final BMAD code review APPROVED with zero Critical/High/Medium. Focused RFC 9421 suite: 39 passed, 0 failed; typecheck passed. Full unit lane: 2,604 passed, 3 unrelated baseline failures, 169 skipped."
+    - key: "29.3"
+      title: "PKCE, Authorization Code, and Completion Nonce Utilities"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1"]
+      work_package: 2
+      ac_participation: ["AC-08", "AC-09"]
+      status_evidence: "Final BMAD review APPROVED with zero Block/High/Medium. Focused suite: 44 passed, 0 failed; RFC 7636 §B vector verified; typecheck passed. Full unit lane: 2,650 passed, 2 pre-existing failed tests plus 1 SDK suite failure, 169 skipped. Pure utilities only — no API/DB/state."
+    # Work-package 3: Pairing (29.4-29.6)
+    - key: "29.4"
+      title: "Enrollment API — POST /api/device-pairing/enroll"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.3"]
+      work_package: 3
+      ac_participation: ["AC-07", "AC-09"]
+      status_evidence: "Final BMAD review APPROVED with zero Block/High/Medium. Focused enrollment integration: 19 passed, 0 failed; typecheck passed. Integration lane: 498 passed, 1 pre-existing failure. Unit lane: 2,649 passed, 4 pre-existing failures."
+    - key: "29.5"
+      title: "Approval API — POST /api/device-pairing/approve"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.3", "29.4"]
+      work_package: 3
+      ac_participation: ["AC-02", "AC-07", "AC-08", "AC-10"]
+      status_evidence: "Independent Hermes BMAD review APPROVED with zero BLOCK/HIGH/MED after RLS audit remediation. Focused device-pairing suite 61 passed (4 live-only skips); disposable PostgreSQL 6/6; typecheck and diff hygiene passed. Integration lane 526 passed, 1 pre-existing unrelated Genesis policy failure."
+    - key: "29.6"
+      title: "Complete API — POST /api/device-pairing/complete"
+      status: done
+      owner: "Woz"
+      status_evidence: "Final independent BMAD review APPROVED with zero BLOCK/HIGH/MED. Focused device-pairing + changed-auth suite 286 passed (23 expected live-only skips); disposable restricted-role PostgreSQL 5/5 including two-pool concurrent redemption; TypeScript, diff hygiene, and static credential scan passed. Local-only governance gate passed all six invariants."
+      depends_on: ["29.1", "29.2", "29.3", "29.5"]
+      work_package: 3
+      ac_participation: ["AC-06", "AC-08", "AC-09"]
+    # Work-package 4: Reconnect + Authority (29.7-29.11)
+    - key: "29.7"
+      title: "Challenge API — POST /api/device-pairing/challenge (RLS Bootstrap)"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.6"]
+      work_package: 4
+      ac_participation: ["AC-09", "AC-11"]
+    - key: "29.8"
+      title: "Scope Derivation by Lock Mode and Demotion/Removal/Workspace-Lock Atomic Revocation"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.6"]
+      work_package: 4
+      ac_participation: ["AC-12", "AC-14"]
+    - key: "29.9"
+      title: "Exchange API — POST /api/device-pairing/exchange"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.2", "29.6", "29.7", "29.8"]
+      work_package: 4
+      ac_participation: ["AC-03", "AC-04", "AC-11", "AC-13", "AC-14", "AC-15"]
+    - key: "29.10"
+      title: "McpAuthenticator — Bypass CredentialCache for Paired-Device Tokens + PrincipalContext Extension"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.6"]
+      work_package: 4
+      ac_participation: ["AC-15", "AC-22"]
+    - key: "29.11"
+      title: "Offline and Key-Loss Failure Behavior"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.7", "29.9"]
+      work_package: 4
+      ac_participation: ["AC-04", "AC-05"]
+    # Work-package 5: Rotation (29.12-29.14)
+    - key: "29.12"
+      title: "Rotation Stage API — POST /api/device-pairing/rotation/stage"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.2", "29.7", "29.9"]
+      work_package: 5
+      ac_participation: ["AC-16", "AC-19"]
+    - key: "29.13"
+      title: "Rotation Activate API — POST /api/device-pairing/rotation/activate"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.2", "29.7", "29.12"]
+      work_package: 5
+      ac_participation: ["AC-16", "AC-18", "AC-19"]
+    - key: "29.14"
+      title: "Grace-Path Recovery Endpoint — Old-Key Recovery-Only During Grace Window"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.2", "29.7", "29.13"]
+      work_package: 5
+      ac_participation: ["AC-18"]
+    # Work-package 6: Revocation + Audit (29.15-29.17)
+    - key: "29.15"
+      title: "Revocation and Mark-Lost APIs"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.10"]
+      work_package: 6
+      ac_participation: ["AC-22", "AC-23"]
+    - key: "29.16"
+      title: "Transactional Audit Emission for All Device Lifecycle Events"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.4", "29.5", "29.6", "29.7", "29.9", "29.12", "29.13", "29.14", "29.15"]
+      work_package: 6
+      ac_participation: ["AC-24"]
+    - key: "29.17"
+      title: "Automated Credential Leak Scan (AC-25)"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.16"]
+      work_package: 6
+      ac_participation: ["AC-25"]
+    # Work-package 7: Automated Validation (29.18-29.19)
+    - key: "29.18"
+      title: "Unit Test Suite — State, Signing, Replay, Expiry, Scope, Redaction, PKCE, Auth Code, Agent-Name Invariant"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.2", "29.3", "29.4", "29.5", "29.6", "29.7", "29.8", "29.9", "29.10", "29.11", "29.12", "29.13", "29.14", "29.15", "29.16", "29.17"]
+      work_package: 7
+      ac_participation: ["AC-26"]
+    - key: "29.19"
+      title: "PostgreSQL Integration Test Suite — Atomicity, Uniqueness, Membership, Locks, Revocation, Concurrency, Device Limit"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.4", "29.5", "29.6", "29.7", "29.8", "29.9", "29.10", "29.12", "29.13", "29.14", "29.15", "29.16"]
+      work_package: 7
+      ac_participation: ["AC-20", "AC-27"]
+    # Work-package 8: External Runtime Proof (29.20-29.21)
+    - key: "29.20"
+      title: "E2E Test — Browser-to-Desktop PKCE Completion with Clerk Test Instance"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.4", "29.5", "29.6", "29.7", "29.8", "29.9", "29.10"]
+      work_package: 8
+      ac_participation: ["AC-28"]
+      external_gate: "B1 — Clerk test instance"
+    - key: "29.21"
+      title: "Platform Contract Tests — macOS, Windows, Linux Secure-Store Adapters"
+      status: done
+      owner: "Woz"
+      depends_on: ["29.1", "29.2", "29.6", "29.7", "29.8", "29.9", "29.10", "29.12", "29.13", "29.14", "29.15"]
+      work_package: 8
+      ac_participation: ["AC-29"]
+      external_gate: "B2 — Desktop client repository"
+
+  work_packages:
+    - id: 1
+      name: "Readiness + Sprint Setup"
+      stories: []
+      status: done
+      description: >
+        Sprint initialization. Verify Brain running, MCP reachable, scout context
+        loaded, skills resolved, and validation commands identified. Create sprint
+        tracking entries. Gate passed 2026-09-08 with GO-WITH-CONDITIONS:
+        0 BLOCK, 0 HIGH, 1 MED, 1 LOW. Story 29.1 is unblocked.
+    - id: 2
+      name: "Foundations — Schema, Signing, PKCE"
+      stories: ["29.1", "29.2", "29.3"]
+      status: done
+      depends_on: [1]
+      description: >
+        Database schema (migrations 060-063), RFC 9421 canonical signing envelope,
+        and PKCE/authorization-code utilities. No API routes yet — pure infrastructure.
+        Story 29.2 ∥ 29.3 can run in parallel after 29.1 completes.
+    - id: 3
+      name: "Pairing — Enrollment, Approval, Completion"
+      stories: ["29.4", "29.5", "29.6"]
+      status: done
+      depends_on: [2]
+      description: >
+        The Clerk-mediated pairing flow: enroll → approve → complete. OAuth-style
+        authorization code redemption with PKCE verifier, completion nonce, and
+        RFC 9421 pairing_complete proof. Strict sequential: 29.4 → 29.5 → 29.6.
+    - id: 4
+      name: "Reconnect + Authority — Challenge, Exchange, Scope, Offline"
+      stories: ["29.7", "29.8", "29.9", "29.10", "29.11"]
+      status: done
+      depends_on: [3]
+      description: >
+        Runtime reconnection: challenge (RLS bootstrap), scope derivation by lock mode,
+        atomic token mint with authority resolution, authenticator cache bypass for
+        paired-device tokens, and offline/key-loss failure behavior. 29.7 ∥ 29.8 ∥ 29.10
+        in parallel after 29.6; then 29.9; then 29.11.
+    - id: 5
+      name: "Rotation — Stage, Activate, Grace Recovery"
+      stories: ["29.12", "29.13", "29.14"]
+      status: done
+      depends_on: [4]
+      description: >
+        Automatic device-key rotation without Clerk: rotation stage, atomic key swap
+        with grace window, and grace-path recovery for old-key recovery-only. Strict
+        sequential: 29.12 → 29.13 → 29.14.
+    - id: 6
+      name: "Revocation + Audit — Revoke, Audit, Credential Scan"
+      stories: ["29.15", "29.16", "29.17"]
+      status: done
+      depends_on: [4, 5]
+      description: >
+        Revocation and mark-lost APIs (terminal state), transactional audit emission
+        for all device lifecycle events, and automated credential leak scan proving
+        no secrets in events/logs/errors. 29.15 after WP4; 29.16 after 29.15; 29.17
+        after 29.16.
+    - id: 7
+      name: "Automated Validation — Unit + PostgreSQL Integration"
+      stories: ["29.18", "29.19"]
+      status: done
+      depends_on: [6]
+      description: >
+        Comprehensive test suites: unit tests (state, signing, replay, expiry, scope,
+        redaction, PKCE, auth code, agent-name invariant) and PostgreSQL integration
+        tests (atomicity, uniqueness, membership, locks, revocation, concurrency,
+        device limit). 29.18 ∥ 29.19 can run in parallel after WP6.
+    - id: 8
+      name: "External Runtime Proof — Clerk E2E + Platform Contracts"
+      stories: ["29.20", "29.21"]
+      status: done
+      depends_on: [7]
+      external_gates:
+        - gate: "B1"
+          story: "29.20"
+          requirement: "Clerk test instance — no runtime acceptance without real evidence"
+        - gate: "B2"
+          story: "29.21"
+          requirement: "Desktop client repo — real macOS Keychain, Windows CNG, Linux libsecret"
+      description: >
+        E2E browser-to-desktop PKCE completion with Clerk test instance, and platform
+        contract tests for macOS/Windows/Linux secure-store adapters. Skip does not
+        equal pass. 29.20 ∥ 29.21 in parallel after WP7.
+    - id: 9
+      name: "Final Review + CI + Retrospective"
+      stories: []
+      status: done
+      depends_on: [8]
+      description: >
+        Final gates: all 21 stories done; sprint-status.yaml shows done; AC-01 through
+        AC-29 each have implementation evidence; bun run typecheck, bun run test:unit,
+        bun run test:integration, bun run test:live-db, bun run test:e2e, credential-leak
+        scanning, build and required CI pass; B1 and B2 real evidence passes without
+        skips; independent security review (no BLOCK/HIGH); independent maintainability
+        review (no BLOCK/HIGH); retrospective accepted and logged. Epic 29 status → done.
 development_status:
   epic-18: done
   18-1-promote-ad49-rk15-to-canon: done
@@ -696,6 +968,7 @@ development_status:
   25-2b-authenticated-session-entry-point: done
   25-3a-curator-read-contract-remediation: done
   25-3b-modular-dashboard-workflow-contract-registry: done
+  25-4-human-portal-mcp-onboarding: done
   epic-26: done
   epic-26-retrospective: done
   26-1-boundary-ownership-threat-source-trust-contract: done
@@ -717,6 +990,29 @@ development_status:
   28-8-exit-gate-closure: done
   24-11a-fail-closed-web-authority: done
   24-12-effective-tenant-authority-seam: done
+  epic-29: done
+  epic-29-retrospective: done
+  29-1-schema-foundation: done
+  29-2-rfc9421-signing-envelope: done
+  29-3-pkce-authorization-code: done
+  29-4-enrollment-api: done
+  29-5-approval-api: done
+  29-6-completion-api: done
+  29-7-challenge-api: done
+  29-8-scope-and-authority-revocation: done
+  29-9-exchange-api: done
+  29-10-authenticator-cache-bypass: done
+  29-11-offline-and-key-loss: done
+  29-12-rotation-stage: done
+  29-13-rotation-activate: done
+  29-14-grace-path-recovery: done
+  29-15-device-revocation-and-lost: done
+  29-16-transactional-device-audit: done
+  29-17-credential-leak-scan: done
+  29-18-unit-test-suite: done
+  29-19-postgres-integration-tests: done
+  29-20-clerk-pairing-e2e: done
+  29-21-platform-secure-store-contracts: done
 action_items:
   - id: "epic-25-retro-item-1-update-epic-25-spec-status-lines-25-2a-2"
     epic: 25

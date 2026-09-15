@@ -22,6 +22,8 @@ export default defineConfig({
       // ── Pure unit tests (no DB, no external services) ──────────────────
       // Benchmark harness metric math (Precision@K, Recall@K, MRR, percentiles)
       "src/__benchmarks__/**/*.test.ts",
+      // Portal UI and deployment contracts: hermetic DOM/mocked API tests.
+      "src/lib/portal/**/*.test.ts",
       // Scoring, dedup, similarity, budget, circuit breaker
       "src/lib/curator/**/*.test.ts",
       "src/lib/budget/**/*.test.ts",
@@ -136,6 +138,12 @@ export default defineConfig({
       "src/curator/embedding-backfill-worker.test.ts",
       "src/curator/notion-sync.test.ts",
       "src/curator/approve-cli.test.ts",
+      // Story 29.20-R — Dashboard device pairing approval client component
+      "src/components/device-pairing/__tests__/dashboard-approval.test.tsx",
+      // Story 29.20-R — Dashboard approval handoff route (mocked scope, pool, and service).
+      "src/app/dashboard/device-pairing/approve/__tests__/route.test.ts",
+      // Story 29.20-R — Dashboard device-pairing server-page wiring (mocked auth and UI).
+      "src/app/dashboard/device-pairing/__tests__/page.test.tsx",
       // UI unit tests (Story 11.2 — toast system)
       "src/__tests__/toast.test.tsx",
       // UI unit tests (Story 16.3 — 3-pane inspector)
@@ -164,8 +172,12 @@ export default defineConfig({
       // Allura Hosted — Guard gateway + MCP token (pure logic, no DB)
       "src/lib/guard/**/*.test.ts",
       "src/lib/mcp-token/**/*.test.ts",
+      // Managed PostgreSQL app-role pool is hermetic (mocked pg constructor).
+      "src/lib/postgres/connection.app-pool.test.ts",
       // Story 24.2 — Authenticated principal context (pure logic, injected deps)
       "src/lib/auth/__tests__/principal-context.test.ts",
+      "src/lib/auth/__tests__/mcp-legacy-route.test.ts",
+      "src/lib/memory/memory-add-workspace-scope.test.ts",
       "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
       "src/lib/auth/__tests__/principal-audit.test.ts",
       "src/lib/auth/__tests__/budget-scope.test.ts",
@@ -173,8 +185,37 @@ export default defineConfig({
       "src/lib/auth/__tests__/with-permission-action.test.ts",
       // Story 24.12 — effective-tenant authority seam (pure logic)
       "src/lib/auth/__tests__/api-tenant-seam.test.ts",
+      // Story 29.20 — pairing test-only route/page authority declarations.
+      "src/lib/auth/__tests__/device-pairing-route-manifest.test.ts",
+      // Story 29.2 — RFC 9421 signing envelope (pure functions, no DB)
+      "src/lib/device-pairing/__tests__/rfc9421-config.test.ts",
+      "src/lib/device-pairing/__tests__/rfc9421-content-digest.test.ts",
+      "src/lib/device-pairing/__tests__/rfc9421-ecdsa-p1363.test.ts",
+      "src/lib/device-pairing/__tests__/rfc9421-payload.test.ts",
+      "src/lib/device-pairing/__tests__/rfc9421-body-swap.test.ts",
+      "src/lib/device-pairing/__tests__/rfc9421-target-uri.test.ts",
+      // Story 29.21 — server key format and RFC 9421 signature contract.
+      "src/lib/device-pairing/__tests__/platform/server-contract.test.ts",
+      // Story 29.3 — PKCE S256 + authorization code + completion nonce (pure functions, no DB)
+      "src/lib/device-pairing/__tests__/pkce.test.ts",
+      // Story 29.20 — hermetic B1 readiness and secret-redaction checks.
+      "src/lib/device-pairing/__tests__/e2e/clerk-test-harness.test.ts",
+      "src/lib/device-pairing/__tests__/test-approve-route.test.ts",
+      "src/lib/device-pairing/__tests__/authorization-code.test.ts",
+      // Story 29.17 — deterministic credential scan for named fixtures/errors/logs.
+      "src/lib/device-pairing/__tests__/credential-leak-scan.test.ts",
+      // Story 29.5 — signed advisory lock key and device-limit helpers.
+      "src/lib/device-pairing/__tests__/device-limit.test.ts",
+      // Story 29.18 — pure state, scope, replay, authority, and grace-window evidence.
+      "src/lib/device-pairing/__tests__/state-machine.test.ts",
+      "src/lib/device-pairing/__tests__/scope-derivation.test.ts",
+      "src/lib/device-pairing/__tests__/idempotency.test.ts",
+      "src/lib/device-pairing/__tests__/agent-name-invariant.test.ts",
+      "src/lib/device-pairing/__tests__/grace-window.test.ts",
       "src/lib/auth/__tests__/web-principal.test.ts",
       "src/__tests__/mcp-auth-adversarial.test.ts",
+      // Canonical gateway process boundary: auth denials and explicit listener host.
+      "src/__tests__/gateway-auth-denial-wiring.test.ts",
       // Allura Hosted — admin route auth/shape tests (mocked repos)
       "src/__tests__/hosted-admin-routes.test.ts",
       // Benchmark harness — pure IR-metric math (no live stack)
@@ -235,6 +276,7 @@ export default defineConfig({
       ["src/__tests__/inspector-views.test.tsx", "jsdom"],
       ["src/__tests__/bumblebee-surfaces.test.tsx", "jsdom"],
       ["src/__tests__/curator-dashboard.test.tsx", "jsdom"],
+      ["src/components/device-pairing/__tests__/dashboard-approval.test.tsx", "jsdom"],
     ],
   },
   resolve: {

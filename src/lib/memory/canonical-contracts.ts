@@ -140,7 +140,7 @@ export interface MemoryAddRequest {
   /** Required: Memory content text */
   content: MemoryContent
 
-  /** Optional: Scope tuple for governed memory (project/agent/session) */
+  /** Untrusted legacy input. `memory_add` ignores it; authority is transport-bound at runtime. */
   scope?: ScopeTuple
 
   /** Optional: Trace type for raw trace ingestion */

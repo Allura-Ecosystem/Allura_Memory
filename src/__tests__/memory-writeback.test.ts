@@ -27,7 +27,9 @@ const mockAddResponse = {
   created_at: "2026-07-27T00:00:00Z",
 };
 
-const memoryAddMock = vi.fn(async () => ({ ...mockAddResponse }));
+const { memoryAddMock } = vi.hoisted(() => ({
+  memoryAddMock: vi.fn(),
+}));
 
 // ── Mock canonical-tools ──────────────────────────────────────────────────────
 
@@ -140,41 +142,11 @@ describe("Story 20.5 — buildTaskOutcomeMetadata", () => {
 // ── writeTaskOutcome ───────────────────────────────────────────────────────────
 
 describe("Story 20.5 — writeTaskOutcome", () => {
-  it("calls memory_add with structured content and metadata", async () => {
-    const params = makeParams();
-    const result = await writeTaskOutcome(params);
-
-    expect(memoryAddMock).toHaveBeenCalledTimes(1);
-    const callArgs = (memoryAddMock.mock.calls[0] as any[])[0] as Record<string, unknown>;
-    expect(callArgs["group_id"]).toBe("allura-system");
-    expect(callArgs["user_id"]).toBe("woz");
-    expect((callArgs["content"] as string)).toContain("Task: Implement auth module");
-    expect((callArgs["content"] as string)).toContain("Outcome: pass");
-    const metadata = callArgs["metadata"] as Record<string, unknown>;
-    expect(metadata["type"]).toBe("task_outcome");
-    expect(metadata["source"]).toBe("conversation");
-  });
-
-  it("returns the memory response, content, and metadata", async () => {
-    const result = await writeTaskOutcome(makeParams());
-
-    expect(result.memory.id).toBe("mem-test-001");
-    expect(result.content).toContain("Task: Implement auth module");
-    expect(result.metadata["type"]).toBe("task_outcome");
-  });
-
-  it("uses agent_id as user_id when user_id not provided", async () => {
-    await writeTaskOutcome(makeParams({ agent_id: "bellard" }));
-
-    const callArgs = (memoryAddMock.mock.calls[0] as any[])[0] as Record<string, unknown>;
-    expect(callArgs["user_id"]).toBe("bellard");
-  });
-
-  it("uses explicit user_id when provided", async () => {
-    await writeTaskOutcome(makeParams({ user_id: "user-42", agent_id: "bellard" }));
-
-    const callArgs = (memoryAddMock.mock.calls[0] as any[])[0] as Record<string, unknown>;
-    expect(callArgs["user_id"]).toBe("user-42");
+  it("fails closed without a verified workspace principal", async () => {
+    await expect(writeTaskOutcome(makeParams())).rejects.toThrow(
+      "memory_writeback requires a verified workspace-bound principal",
+    );
+    expect(memoryAddMock).not.toHaveBeenCalled();
   });
 
   it("rejects invalid group_id format", async () => {
@@ -207,21 +179,12 @@ describe("Story 20.5 — writeTaskOutcome", () => {
     ).rejects.toThrow("outcome must be 'pass', 'fail', or 'partial'");
   });
 
-  it("accepts all valid outcome values", async () => {
-    for (const outcome of ["pass", "fail", "partial"] as const) {
-      memoryAddMock.mockClear();
-      await writeTaskOutcome(makeParams({ outcome }));
-      expect(memoryAddMock).toHaveBeenCalledTimes(1);
-      const callArgs = (memoryAddMock.mock.calls[0] as any[])[0] as Record<string, unknown>;
-      expect((callArgs["content"] as string)).toContain(`Outcome: ${outcome}`);
-    }
-  });
 });
 
 // ── memory_writeback_tool (MCP wrapper) ────────────────────────────────────────
 
 describe("Story 20.5 — memory_writeback_tool", () => {
-  it("returns data envelope on success", async () => {
+  it("returns a fail-closed error envelope", async () => {
     const response = await memory_writeback_tool({
       task_summary: "Deployed the API",
       group_id: "allura-system",
@@ -230,12 +193,8 @@ describe("Story 20.5 — memory_writeback_tool", () => {
       files_changed: ["src/api.ts"],
     });
 
-    expect(response.data).not.toBeNull();
-    expect(response.data!.memory_id).toBe("mem-test-001");
-    expect(response.data!.content).toContain("Task: Deployed the API");
-    expect(response.data!.metadata["type"]).toBe("task_outcome");
-    expect(response.error).toBeNull();
-    expect(response.meta.contract_version).toBe("v1");
+    expect(response.data).toBeNull();
+    expect(response.error).toContain("verified workspace-bound principal");
   });
 
   it("returns error envelope on invalid group_id", async () => {
@@ -262,17 +221,4 @@ describe("Story 20.5 — memory_writeback_tool", () => {
     expect(response.error).toContain("task_summary");
   });
 
-  it("returns error envelope when memory_add throws", async () => {
-    memoryAddMock.mockRejectedValue(new Error("DB write failed"));
-
-    const response = await memory_writeback_tool({
-      task_summary: "Test task",
-      group_id: "allura-system",
-      agent_id: "woz",
-      outcome: "pass",
-    });
-
-    expect(response.data).toBeNull();
-    expect(response.error).toBe("DB write failed");
-  });
 });

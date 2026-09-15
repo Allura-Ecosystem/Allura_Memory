@@ -1,0 +1,50 @@
+.tabs { display: flex; gap: 28px; border-bottom: 1px solid #d6dce3; margin: 0 0 24px; }
+.tabs button { font-family: inherit; border: 0; border-bottom: 3px solid transparent; color: #5a6573; background: transparent; padding: 12px 4px; min-height: 48px; font-size: 14px; cursor: pointer; }
+.tabs button:disabled, .backButton:disabled { opacity: .6; cursor: not-allowed; }
+.tabs button[aria-pressed="true"] { color: #1d4ed8; border-bottom-color: #1d4ed8; font-weight: 500; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 24px 0 16px; }
+.toolbar .sectionLabel { margin: 0; }
+.toolbar input { min-height: 44px; width: min(240px, 55%); background: #fffdf8; border: 1px solid #cbd5df; padding: 10px 12px; border-radius: 6px; font-size: 13px; font-family: inherit; }
+.credentialPanel, .configPanel { border: 1px solid #d6dce3; border-radius: 8px; background: #fffdf8; padding: 24px; margin: 20px 0; }
+.credentialPanel h2, .configPanel h3 { font-size: 18px; font-weight: 500; margin: 8px 0 12px; }
+.credentialPanel p, .configPanel p { font-size: 13px; line-height: 1.7; color: #555d68; }
+.credentialPanel label { display: block; font-size: 13px; margin: 14px 0 6px; }
+.credentialPanel input, .credentialPanel select { box-sizing: border-box; display: block; width: 100%; min-height: 44px; border: 1px solid #b6c3d1; border-radius: 6px; padding: 10px 12px; font-family: inherit; font-size: 14px; background: #fffdf8; color: #0f1115; }
+.credentialPanel button { min-height: 44px; border: 1px solid #bdccdc; border-radius: 6px; padding: 10px 16px; margin: 12px 8px 0 0; cursor: pointer; background: #f4f8fd; color: #1d4ed8; font: inherit; font-size: 13px; }
+.credentialPanel button:disabled { opacity: .6; cursor: not-allowed; }
+.credentialPanel [role="alert"] { color: #a32525; background: #fff3f3; padding: 12px; border-radius: 6px; }
+.credentialPanel [role="status"] code { display: block; overflow-wrap: anywhere; padding: 14px; margin-top: 12px; background: #f6f4ef; }
+.credentialPanel ul { list-style: none; padding: 0; }
+.credentialPanel li { border-top: 1px solid #e2e7ed; padding: 12px 0; overflow-wrap: anywhere; }
+.configPanel pre { background: #f6f4ef; color: #223147; font-size: 12px; line-height: 1.7; padding: 16px; border-radius: 6px; overflow: auto; }
+.stepLabel { color: #64748b; font-size: 11px; font-weight: 500; letter-spacing: .6px; text-transform: uppercase; }
+.clients, .setup { color: #0f1115; font-family: var(--sans, sans-serif); }
+.intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 24px 0; }
+.intro h2, .setup h2 { font-size: 23px; font-weight: 500; margin: 0 0 8px; letter-spacing: -.4px; }
+.intro p, .customRow p, .card p { color: #555d68; font-size: 14px; line-height: 1.55; margin: 0; }
+.customRow { display: flex; align-items: center; gap: 16px; padding: 22px; border: 1px solid #cbd5df; border-radius: 8px; background: #f8fafc; }
+.customRow h3, .card h3 { margin: 0 0 5px; font-size: 16px; font-weight: 500; }
+.customRow > div { flex: 1; min-width: 0; }
+.clientMark, .customMark { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; flex-shrink: 0; border-radius: 10px; font-size: 23px; font-weight: 500; background: #edf1f5; color: #334155; }
+.customMark { border: 1px dashed #94a3b8; background: transparent; }
+.sectionLabel { color: #555d68; margin: 28px 0 12px; font-size: 13px; font-weight: 500; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.card { display: flex; gap: 15px; align-items: flex-start; border: 1px solid #d6dce3; border-radius: 8px; padding: 24px 20px; background: #fffdf8; }
+.card:hover { border-color: #9bafc5; }
+.cardContent { flex: 1; min-width: 0; }
+.badge { display: inline-block; font-size: 11px; font-weight: 500; line-height: 1.5; color: #73531b; background: #fff4df; border: 1px solid #ebd7b3; border-radius: 4px; padding: 2px 7px; margin-top: 12px; }
+.badge[data-ready="true"] { color: #355477; border-color: #cbd9e7; background: #f0f5fb; }
+.connectButton, .backButton { display: inline-flex; justify-content: center; align-items: center; gap: 12px; min-height: 44px; padding: 9px 15px; border: 1px solid #bbc9d8; border-radius: 6px; background: #fffdf8; color: #1d4ed8; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.connectButton:hover { background: #edf4fd; border-color: #1d4ed8; }
+.clients button:focus-visible, .setup button:focus-visible, .setup input:focus-visible, .setup select:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 3px; }
+.footnote { color: #616976; font-size: 12px; line-height: 1.65; margin: 24px 0 0; }
+.setup { max-width: 860px; }
+.setupHeader { display: flex; align-items: center; gap: 16px; margin: 24px 0; }
+.setupHeader .badge { margin-top: 0; }
+.setup > p { line-height: 1.7; font-size: 14px; color: #4b5563; }
+.notice { padding: 14px 16px; background: #f5f7fa; border: 1px solid #dae1ea; border-radius: 6px; }
+.endpoint { border-top: 1px solid #e1e6ec; border-bottom: 1px solid #e1e6ec; padding: 16px 0; margin: 24px 0; }
+.endpoint dt { color: #616976; font-size: 12px; margin-bottom: 6px; }
+.endpoint dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+@media (max-width: 1120px) { .grid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .card { flex-wrap: wrap; padding: 18px; } .cardContent { flex-basis: calc(100% - 60px); } .card > button { width: 100%; } .customRow { flex-wrap: wrap; } .customRow > button { width: 100%; } }

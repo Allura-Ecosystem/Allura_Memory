@@ -1,4 +1,4 @@
-import type { Pool } from "pg"
+import type { PoolClient } from "pg"
 import { CURRENT_SCHEMA_VERSION } from "@/lib/schema-version"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import { getPool } from "../connection"
@@ -15,6 +15,8 @@ export type EventStatus = "pending" | "completed" | "failed" | "cancelled"
 export interface EventInsert {
   /** Required: Tenant isolation identifier */
   group_id: string
+  /** Optional: Workspace authority for workspace-scoped events */
+  workspace_id?: string | null
   /** Required: Type of event (e.g., 'workflow_step', 'agent_action') */
   event_type: string
   /** Required: Agent or system that generated this event */
@@ -213,6 +215,60 @@ export async function insertEvent(event: EventInsert): Promise<EventRecord> {
 
   const result = await pool.query<EventRecord>(query, values)
 
+  return result.rows[0]
+}
+
+/**
+ * Insert an event through a caller-owned PostgreSQL transaction client.
+ *
+ * This is intentionally narrow: it reuses the canonical event validation and
+ * schema versioning but never acquires a pool or begins/commits a transaction.
+ * Callers that need an audit to be atomic with a security decision must use it.
+ */
+export async function insertEventWithClient(
+  client: PoolClient,
+  event: EventInsert,
+): Promise<EventRecord> {
+  validateEventInsert(event)
+
+  const query = `
+    INSERT INTO events (
+      group_id,
+      workspace_id,
+      event_type,
+      agent_id,
+      workflow_id,
+      step_id,
+      parent_event_id,
+      metadata,
+      outcome,
+      status,
+      error_message,
+      error_code,
+      confidence,
+      evidence_ref,
+      schema_version
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    RETURNING *
+  `
+  const values = [
+    event.group_id,
+    event.workspace_id ?? null,
+    event.event_type,
+    event.agent_id,
+    event.workflow_id ?? null,
+    event.step_id ?? null,
+    event.parent_event_id ?? null,
+    JSON.stringify(event.metadata ?? {}),
+    JSON.stringify(event.outcome ?? {}),
+    event.status ?? "pending",
+    event.error_message ?? null,
+    event.error_code ?? null,
+    event.confidence ?? null,
+    event.evidence_ref ?? null,
+    event.schema_version ?? CURRENT_SCHEMA_VERSION,
+  ]
+  const result = await client.query<EventRecord>(query, values)
   return result.rows[0]
 }
 

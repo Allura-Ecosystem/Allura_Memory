@@ -25,7 +25,7 @@ import type {
   MemorySearchRequest,
 } from "../lib/memory/canonical-contracts";
 import {
-  memory_add,
+  memory_add as rawMemoryAdd,
   memory_delete,
   memory_get,
   memory_list,
@@ -33,6 +33,9 @@ import {
   resetConnections,
 } from "../mcp/canonical-tools";
 import { closePool, getPool } from "../lib/postgres/connection";
+import {
+  authenticateServiceTransport,
+} from "../lib/auth/mcp-authenticator";
 
 // Live-DB gating: skip tests requiring live PostgreSQL/Neo4j unless RUN_E2E_TESTS=true
 const itIfE2E = process.env.RUN_E2E_TESTS === "true" ? it : it.skip;
@@ -40,8 +43,10 @@ const itIfE2E = process.env.RUN_E2E_TESTS === "true" ? it : it.skip;
 // Test configuration
 const RUN_ID = randomUUID().slice(0, 8);
 const TEST_GROUP_ID = `allura-test-canonical-${RUN_ID}` as any;
-const TEST_USER_ID = "test-user-1";
-const TEST_USER_ID_2 = "test-user-2";
+// `user_id` is an actor assertion on writes. The authenticated transport
+// principal, not this test's RPC arguments, determines the persisted actor.
+const TEST_USER_ID = "canonical-test-agent";
+const TEST_USER_ID_2 = TEST_USER_ID;
 const GROUP_A = `allura-tenant-a-${RUN_ID}` as any;
 const GROUP_B = `allura-tenant-b-${RUN_ID}` as any;
 
@@ -55,6 +60,27 @@ function wsScope(groupId: string) {
     workspace_id: `ws-${groupId}`,
     agent_id: TEST_AGENT_ID,
   };
+}
+
+// Canonical writes exercise the configured stdio production issuer boundary.
+// This is not a synthetic verifier: the test configures the actual service
+// credential boundary, which alone issues write capabilities.
+async function canonicalWritePrincipal(groupId: string) {
+  process.env.ALLURA_MCP_SERVICE_PRINCIPAL_ID = TEST_AGENT_ID;
+  process.env.ALLURA_MCP_SERVICE_WORKSPACE_ID = `ws-${groupId}`;
+  process.env.ALLURA_MCP_SERVICE_TENANTS = groupId;
+  process.env.ALLURA_MCP_SERVICE_SCOPES = "memory:write";
+  return authenticateServiceTransport(`canonical-${RUN_ID}-${groupId}`);
+}
+
+async function memory_add(request: MemoryAddRequest): ReturnType<typeof rawMemoryAdd> {
+  // Keep invalid-group coverage at the raw canonical boundary: it must reject
+  // malformed selectors before any authority is considered.
+  if (typeof request.group_id !== "string" || !request.group_id.startsWith("allura-")) {
+    return rawMemoryAdd(request);
+  }
+  const principal = await canonicalWritePrincipal(request.group_id);
+  return rawMemoryAdd(principal.prepareMemoryAdd(request).request);
 }
 
 function uniqueContent(base: string): string {
@@ -101,6 +127,14 @@ describe("Canonical Memory Operations", () => {
       expect(response.score).toBeLessThan(0.9);
       expect(response.pending_review).toBeUndefined();
       expect(response.created_at).toBeDefined();
+    });
+
+    it("rejects a caller-selected user that differs from the authenticated principal", async () => {
+      await expect(memory_add({
+        group_id: TEST_GROUP_ID,
+        user_id: "different-user",
+        content: "The caller cannot choose the persisted memory actor.",
+      })).rejects.toThrow("does not match the authenticated principal");
     });
 
      itIfE2E("should queue for HITL review even when PROMOTION_MODE=auto", async () => {
@@ -486,8 +520,8 @@ describe("Canonical Memory Operations", () => {
   });
 
   describe("Tenant Isolation", () => {
-    const USER_A = "user-a";
-    const USER_B = "user-b";
+    const USER_A = TEST_AGENT_ID;
+    const USER_B = TEST_AGENT_ID;
 
     it("should isolate memories by group_id", async () => {
       // Add memory for Group A

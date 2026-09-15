@@ -6,7 +6,7 @@
 > Private product scope and approvals remain in the linked Notion epic; implementation truth remains in code, tests, PRs, and repository evidence.
 > When in doubt, defer to the source code, schemas, tests, and the authoritative sprint record.
 
-**Status:** Done — 25.1 scope/product-truth reconciliation, 25.2a workspace-scope foundation, 25.2b authenticated entry, 25.3a read-contract remediation, and 25.3b module-registry reconciliation all accepted. Retrospective complete 2026-08-28.
+**Status:** In progress — prior scope through 25.3b remains accepted and its retrospective remains historical. Story 25.4, authorized 2026-09-09, adds the separate human portal and MCP connection-onboarding surface; it reopens browser-access work without changing the machine MCP protocol.
 **Owner:** Brooks (architecture and trust boundary)
 **group_id:** `allura-system`
 **Private scope authority:** Notion — [Epic 25 — Governed Curator Review Console](https://app.notion.com/p/3c41d9be65b3819b96c6c9d14a3424ea?pvs=204)

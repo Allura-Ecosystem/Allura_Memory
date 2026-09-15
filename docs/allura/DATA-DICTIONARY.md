@@ -14,6 +14,7 @@ This document describes Allura's PostgreSQL-only governed memory data model. Pos
 ## Table of Contents
 
 - [PostgreSQL: events](#postgresql-events)
+- [PostgreSQL: Desktop Device Pairing](#postgresql-desktop-device-pairing)
 - [PostgreSQL: canonical_proposals](#postgresql-canonical_proposals)
 - [PostgreSQL: Graph Adapter Tables](#postgresql-graph-adapter-tables)
 - [Environment Variables](#environment-variables)
@@ -147,6 +148,91 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `completed` | Operation succeeded |
 | `failed` | Operation failed — see metadata.error |
 | `pending` | Operation in progress or awaiting human action |
+
+---
+
+## PostgreSQL: Desktop Device Pairing
+
+**Migrations:** `60-device-enrollments.sql` through `67-device-exchange-denial-audit.sql`
+**Logical schema versions:** `060`–`067`
+**Epic:** 29 — Desktop Device Pairing and Persistent Authentication
+
+The pairing schema separates pre-auth enrollment state from durable device authority. `device_enrollments` is function-only and may hold a PENDING request with no tenant authority. `paired_devices` is created only after approval and requires the human principal, tenant, and workspace. Device-issued MCP tokens reference a paired device while retaining the human principal in `agent_name`. `device_challenges` is a tenant-scoped, single-use replay cache for post-pairing proof of possession.
+
+### `device_enrollments`
+
+Direct access is revoked from `PUBLIC` and `allura_app`. The application may execute only the six fixed-search-path enrollment functions `device_enrollment_create`, `device_enrollment_approval_context`, `device_enrollment_approve`, `device_enrollment_lock_for_complete`, `device_enrollment_consume`, and `device_enrollment_expire`, plus the narrowly scoped `device_exchange_denial_audit(metadata)` function for unresolved challenge requests. The completion lock returns the enrolled `display_label` alongside only the fields needed to mint the durable paired-device authority, under the caller transaction's row lock. `device_enrollment_expire(id)` returns whether it actually transitioned an eligible row, and uses `clock_timestamp()` so a row that expires while the caller waits on a lock cannot be audited as expired without a matching state transition. `device_enrollment_approval_context(id)` returns only `callback_type`, validated `callback_uri`, and `public_key` under the caller transaction's row lock; it exists so `/approve` never needs a direct table read. `device_enrollment_pre_human_audit(event_type, metadata)` is a separate fixed-identity, event-allowlisted `SECURITY DEFINER` function; it writes only transactional `DEVICE_ENROLL_REQUESTED`, `DEVICE_ENROLL_DENIED`, or `DEVICE_ENROLL_EXPIRED` events under `allura-system` with no workspace authority. `device_exchange_denial_audit(metadata)` is separately fixed to `DEVICE_EXCHANGE_DENIED`, `allura-system`, `device-enrollment`, and `failed`; it is not executable by `PUBLIC`.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | text | Yes | Opaque enrollment transaction ID; primary key. |
+| `display_label` | text | Yes | User-supplied device label. |
+| `public_key` / `key_id` / `key_algo` | text | Yes | Public key material and identifier. Algorithms: `ed25519`, `ecdsa-p256`, or `rsa-pss-2048`. No private key is stored. |
+| `pkce_code_challenge` / `pkce_code_challenge_method` / `pkce_state` | text | Yes | PKCE S256 challenge and browser-flow state. The verifier is never stored. |
+| `callback_type` | text | Yes | `deep_link` or `loopback`. |
+| `callback_uri` | text | Yes for new enrollments | Persisted, validated redirect target. Deep links are exactly `allura-pairing://complete`; loopback targets are only `http://127.0.0.1:<49152–65535>/callback`. |
+| `state` | text | Yes | `PENDING`, `APPROVED`, `EXPIRED`, or `CONSUMED`. |
+| `expires_at` | timestamptz | Yes | Enrollment expiration. |
+| `approved_principal_id` / `approved_group_id` / `approved_workspace_id` | text | APPROVED | Server-resolved authority. All are null while PENDING and required when APPROVED. |
+| `authorization_code_hash` / `authorization_code_expires_at` / `authorization_code_consumed_at` | text / timestamptz | State-dependent | One-time authorization-code hash and lifecycle. Raw authorization codes are not stored. |
+| `completion_nonce` / `completion_nonce_expires_at` | text / timestamptz | APPROVED | Short-lived proof-of-possession nonce used by `/complete`. |
+| `approved_at` / `consumed_at` | timestamptz | State-dependent | Approval and consumption timestamps. CONSUMED requires `consumed_at`. |
+| `created_at` / `updated_at` | timestamptz | Yes | Database timestamps. |
+
+### `paired_devices`
+
+Forced RLS permits `allura_app` rows only when `group_id = current_setting('app.current_group_id', true)`. The source table stores public keys only.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | text | Yes | Opaque paired-device ID; primary key. |
+| `principal_id` | text | Yes | Human principal. This remains the MCP principal. |
+| `group_id` / `workspace_id` | text | Yes | Server-resolved tenant and workspace authority. `workspace_id` references `workspaces`. |
+| `display_label` | text | Yes | Device label copied from enrollment. |
+| `current_public_key` / `current_key_id` / `current_key_algo` | text | Yes | Active public key. Algorithms match the enrollment allowlist. |
+| `pending_next_public_key` / `pending_next_key_id` / `pending_next_key_algo` | text | No | Staged key for two-phase rotation. |
+| `rotation_idempotency_key` | text | No | Cross-device unique key while present. |
+| `rotation_receipt` | jsonb | No | Server-issued crash-recovery receipt. |
+| `rotation_grace_expires_at` | timestamptz | No | Old-key recovery-only deadline. |
+| `grace_exchange_count` | integer | Yes | Non-negative number of recovery-only grace uses; default `0`. |
+| `key_generation` | integer | Yes | Monotonic key generation; default `1`. |
+| `lifecycle_state` | text | Yes | `APPROVED`, `REVOKED`, or `LOST`; PENDING is forbidden. |
+| `enrollment_id` | text | No | Audit correlation only; intentionally not a foreign key because consumed enrollment rows may be cleaned up. |
+| `created_at` / `updated_at` | timestamptz | Yes | Database timestamps. |
+| `last_exchange_at` / `last_rotation_at` / `revoked_at` / `lost_at` | timestamptz | No | Lifecycle evidence timestamps. |
+
+### `mcp_tokens.paired_device_id`
+
+Migration 62 adds nullable `paired_device_id → paired_devices(id)`. Existing non-device tokens remain valid with null linkage. `idx_mcp_tokens_one_active_per_device` permits at most one non-revoked token per paired device. The DEFERRABLE constraint trigger `trg_mcp_tokens_device_agent_name` verifies at COMMIT that a linked token's `agent_name` equals `paired_devices.principal_id`; non-device tokens are unaffected. `POST /api/device-pairing/complete` creates the device and its first linked token on the same app-role transaction, so the device authority, token linkage, completion audit, and enrollment consumption commit together or roll back together.
+
+### Device-first portal projection (no schema migration)
+
+The human `/portal` device screen consumes only approved-device `id`, `display_label`, `workspace_id`, `created_at` and `last_exchange_at`. `last_exchange_at` is evidence of a credential exchange, **not an online heartbeat**. Device credential views select only matching `mcp_tokens.paired_device_id`; account views select null linkage, and the UI excludes revoked/expired rows. The server API remains the authorization boundary.
+
+Connection profiles are immutable frontend presets (`src/lib/portal/connection-profiles.ts`) requesting `memory:read` or `memory:read,memory:write`. They are not persisted rows, do not create tenants, and contain no secrets. Existing `idx_mcp_tokens_one_active_per_device` and human-principal token binding remain unchanged; separate device-bound credentials per installed app require a future reviewed model, not a UI-only association.
+
+See `docs/guides/portal-devices-and-profiles.md` for navigation, lifecycle controls, test limits and the deployment hold.
+
+### Completion redemption runtime
+
+`POST /api/device-pairing/complete` locks an APPROVED enrollment, rejects consumed/expired state before mutation, verifies the presented authorization-code hash, completion nonce, PKCE S256 verifier, and RFC 9421 `pairing_complete` proof, then revalidates membership/workspace and re-checks the device limit under the tenant advisory lock. It preserves the locked enrollment `display_label`, derives every inserted authority field from locked `approved_*` columns, and returns an absolute configured MCP gateway endpoint. Credential failures roll back device/token mutation and persist a constrained `DEVICE_ENROLL_DENIED` audit; explicit code or nonce expiry commits only after `device_enrollment_expire()` confirms the corresponding `EXPIRED` transition. The route returns `device_id`, one-time `access_token`, `expires_at`, and `mcp_endpoint`; raw codes, verifiers, signatures, and tokens are never placed in audit metadata.
+
+### `device_challenges`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | text | Yes | Opaque challenge ID; primary key. |
+| `group_id` | text | Yes | Tenant boundary with the standard strict format check and forced RLS. |
+| `paired_device_id` | text | Yes | FK to `paired_devices(id)`. |
+| `nonce` | text | Yes | Single-use base64url nonce; unique while unconsumed. |
+| `audience` | text | Yes | Configured device-auth API audience. |
+| `purpose` | text | Yes | `exchange`, `rotation_stage`, `rotation_activate`, or `recovery_status`. `pairing_complete` is deliberately excluded. |
+| `server_context` | jsonb | Yes | Server-selected binding context; default `{}`. |
+| `expires_at` | timestamptz | Yes | Challenge deadline. |
+| `consumed_at` / `consumed_by_token_id` | timestamptz / text | No | Single-use consumption evidence. |
+| `created_at` | timestamptz | Yes | Database creation time. |
+
+`resolve_device_route(device_id)` is a fixed-search-path `SECURITY DEFINER` function executable by `allura_app`. It returns only the authoritative `group_id` for an APPROVED device and null for missing, REVOKED, or LOST devices, allowing the challenge endpoint to bootstrap RLS without accepting tenant authority from the client.
 
 ---
 
@@ -423,6 +509,32 @@ exactly three ways a production request can pass:
 
 **Cross-references:** `src/lib/bumblebee/lease-routes.ts#PUBLIC_ERRORS`,
 `src/lib/bumblebee/__tests__/ingest-route-https.test.ts`.
+
+---
+
+### `ALLURA_DEVICE_AUTH_ORIGIN` / `ALLURA_DEVICE_AUTH_AUDIENCE`
+
+**Story:** 29.2 — RFC 9421 Canonical Signing Envelope
+**Architecture:** §4.4, AD-64
+**Source:** `src/lib/device-pairing/config.ts`
+
+The RFC 9421 HTTP Message Signature verifier reconstructs `@target-uri`
+from `ALLURA_DEVICE_AUTH_ORIGIN`, **not** from the untrusted `Host` header.
+The audience is checked against `ALLURA_DEVICE_AUTH_AUDIENCE`, which is the
+device-auth API audience — **not** the MCP endpoint.
+
+| Variable | Format | Purpose |
+|----------|--------|---------|
+| `ALLURA_DEVICE_AUTH_ORIGIN` | Valid URL (e.g. `https://api.allura.example.com`) | Origin used to reconstruct `@target-uri` for RFC 9421 signature verification. Prevents Host-rewrite MITM attacks. |
+| `ALLURA_DEVICE_AUTH_AUDIENCE` | Valid URL (e.g. `https://api.allura.example.com/device-auth`) | Expected `x-allura-audience` header value. The audience is the device-auth API, not the MCP endpoint. |
+
+Both are validated with Zod at the boundary. The verifier functions
+(`verifyDeviceSignature`, `reconstructTargetUri`) accept these as injected
+parameters so they remain pure and testable without reading `process.env`
+directly.
+
+**Cross-references:** `src/lib/device-pairing/rfc9421.ts#verifyDeviceSignature`,
+`src/lib/device-pairing/rfc9421.ts#reconstructTargetUri`.
 
 ---
 

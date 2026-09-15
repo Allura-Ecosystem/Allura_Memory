@@ -16,9 +16,7 @@ if (typeof window !== "undefined") {
 }
 
 import { z } from "zod";
-import type { MemoryAddRequest } from "@/lib/memory/canonical-contracts";
 import { validateGroupId } from "@/lib/validation/group-id";
-import { memory_add } from "@/mcp/canonical-tools";
 
 // ── Error Class ───────────────────────────────────────────────────────────────
 
@@ -234,25 +232,7 @@ export async function writeAgentHook(payload: AgentHookPayload): Promise<void> {
   // 2. Validate full payload + per-agent metadata (throws HookValidationError on failure)
   validatePayload(payload);
 
-  // 3. Build the memory_add request
-  const content = buildContent(payload);
-
-  const request: MemoryAddRequest = {
-    group_id: payload.group_id as MemoryAddRequest["group_id"],
-    user_id: payload.user_id,
-    content,
-    metadata: {
-      agent_id: payload.agent_id,
-      event_type: payload.event_type,
-      session_id: payload.session_id,
-      source: "conversation" as const,
-      ...payload.metadata,
-    },
-    // threshold intentionally omitted — use system default
-  };
-
-  // 4. Call canonical op. Do NOT catch — propagate all errors.
-  await memory_add(request);
+  throw new Error("agent lifecycle writes require a verified workspace-bound principal and are unavailable to direct helpers");
 }
 
 // ── Per-Agent Convenience Wrappers ────────────────────────────────────────────

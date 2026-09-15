@@ -364,6 +364,15 @@ Canonical brand policy artifacts: BRAND-RULES-cli-v1.md for terminal/API surface
 
 Human operator or agent uses the `/api/memory` endpoints to inspect, search, and delete memories.
 
+Canonical `memory_add` is not a REST write. Only the authenticated MCP HTTP
+gateway and configured stdio service transport can mint its in-process write
+capability after credential/service identity verification. The capability is
+bound by object identity, not serialized request fields: copying, JSON
+serializing, or supplying `scope` cannot recreate it. The transport injects the
+authenticated `user_id` when absent and returns `403` for an actor mismatch.
+`POST /api/memory` is intentionally fail-closed (`403`) until a browser route
+has an equivalent verified workspace-principal boundary.
+
 ```mermaid
 sequenceDiagram
     actor Operator
@@ -397,7 +406,7 @@ Allura is MCP/API-first. The MCP HTTP gateway (port 3201), API routes, and CLI s
 | Surface | Architectural Role | Constraint |
 |---------|--------------------|------------|
 | `localhost:3201` | MCP HTTP gateway | Primary operator surface for MCP clients |
-| `/api/memory` | REST API | Memory search, insights, traces, provenance, extracted facts, agents, approvals |
+| `/api/memory` | REST API | Read/inspection surface; writes are fail-closed (`403`) |
 | `bun run curator:approve` | CLI approval | Curator approves pending proposals from terminal |
 | `/dashboard/*` | Optional Memory Command Center | Human control plane for memories, governance, curator, graph, audit, and settings |
 
@@ -405,7 +414,7 @@ Allura is MCP/API-first. The MCP HTTP gateway (port 3201), API routes, and CLI s
 
 | Route | Backing Source of Truth | Write Policy |
 |-----------------------|-------------------------|--------------|
-| `/api/memory` | Allura Brain APIs | Governed memory actions only; no direct substrate writes |
+| `/api/memory` | Allura Brain APIs | Governed reads/inspection only; `POST` write is fail-closed pending an equivalent verified transport boundary |
 | `/api/curator/approve` | PostgreSQL proposals | Curator approval required; auto-promote >85% configurable |
 | `/api/audit/events` | PostgreSQL events | Read-only audit trail |
 | `/dashboard/governance` | RuVix control plane and policy APIs | Governed settings only; all mutations require receipt |

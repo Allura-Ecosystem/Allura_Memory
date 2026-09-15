@@ -21,6 +21,7 @@ function principal() {
     authMethod: "mcp_token",
     sessionId: "sess-9",
     credentialId: "tok_abc",
+    pairedDeviceId: "dev_audit_persisted",
   });
 }
 
@@ -63,6 +64,7 @@ describe("buildAuthAuditInsert (AC-7)", () => {
       reason_code: "OK",
       auth_method: "mcp_token",
       credential_id: "tok_abc",
+      paired_device_id: "dev_audit_persisted",
       occurred_at: "2026-08-15T12:00:00.000Z",
     });
   });

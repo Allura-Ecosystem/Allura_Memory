@@ -5,9 +5,9 @@
  * verified `PrincipalContext`, or refuses with a stable reason code.
  *
  * Design constraints:
- *  - No import-time environment reads and no import-time DB access. Every
- *    dependency is injected, so the whole module is unit testable in-process
- *    with no live server and no live database.
+ *  - No import-time environment reads and no import-time DB access. Production
+ *    dependency wiring is private to this module; callers cannot supply a
+ *    credential verifier or repository and thereby mint transport authority.
  *  - The raw bearer token never leaves this module: it is never returned,
  *    never stored, never logged, and never placed on a PrincipalContext.
  *  - Credential state lives in the existing `mcp_tokens` table
@@ -18,21 +18,115 @@
  * CACHE POLICY (AC-8)
  *  - Default TTL is 0 ms: every request re-reads the credential row, so a
  *    revocation or expiry takes effect on the very next request.
- *  - `ALLURA_MCP_AUTH_CACHE_TTL_MS` may raise the TTL to at most 60000 ms.
- *    With a non-zero TTL, `expires_at` is still evaluated live on every
- *    request (it is carried in the cached record), so expiry is always
- *    immediate; only *revocation* may lag by up to the configured TTL.
+ *  - Paired-device credentials always bypass the cache, even when a deployment
+ *    enables a non-zero cache TTL for non-device credentials. Revocation/loss
+ *    therefore takes effect for device tokens on the next MCP request.
+ *  - `ALLURA_MCP_AUTH_CACHE_TTL_MS` may raise the non-device TTL to at most
+ *    60000 ms. With a non-zero TTL, `expires_at` is still evaluated live on
+ *    every request; only non-device revocation may lag by the configured TTL.
  */
 
-import { timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import {
   type AuthMethod,
   createPrincipalContext,
+  guardToolCall,
   PrincipalAuthError,
   type PrincipalContext,
   type PrincipalRole,
   TENANT_WILDCARD,
 } from "./principal-context";
+import type { Scope } from "@allura/types";
+import { isValidatedToken } from "@/lib/guard/validate-token";
+import type { MemoryAddRequest, ScopeTuple } from "@/lib/memory/canonical-contracts";
+
+type MemoryAddAuthority = Readonly<{
+  group_id: string;
+  workspace_id: string;
+  agent_id: string;
+  user_id: string;
+  session_id: string;
+}>;
+
+const memoryAddAuthorities = new WeakMap<object, MemoryAddAuthority>();
+
+export interface PreparedTransportMemoryAdd {
+  readonly request: MemoryAddRequest;
+  readonly guarded: import("./principal-context").GuardedToolCall;
+}
+
+/** A credential-verified or explicitly configured service identity. */
+export interface AuthenticatedTransportPrincipal extends PrincipalContext {
+  prepareMemoryAdd(rawArgs: unknown): PreparedTransportMemoryAdd;
+}
+
+class VerifiedTransportPrincipal implements AuthenticatedTransportPrincipal {
+  constructor(private readonly principal: PrincipalContext) {}
+
+  get principalId(): string { return this.principal.principalId; }
+  get workspaceId(): string | undefined { return this.principal.workspaceId; }
+  get tenantIds(): readonly string[] { return this.principal.tenantIds; }
+  get roles(): readonly PrincipalRole[] { return this.principal.roles; }
+  get scopes(): readonly Scope[] { return this.principal.scopes; }
+  get authMethod(): AuthMethod { return this.principal.authMethod; }
+  get sessionId(): string { return this.principal.sessionId; }
+  get credentialId(): string | undefined { return this.principal.credentialId; }
+  get pairedDeviceId(): string | undefined { return this.principal.pairedDeviceId; }
+  get expiresAt(): string | null | undefined { return this.principal.expiresAt; }
+
+  prepareMemoryAdd(rawArgs: unknown): PreparedTransportMemoryAdd {
+    const guarded = guardToolCall(this.principal, "memory_add", rawArgs);
+    if (!this.principal.workspaceId) {
+      throw new PrincipalAuthError("CONFIG_MISSING", `Principal '${this.principal.principalId}' has no verified workspace binding`);
+    }
+    const metadata = guarded.args.metadata && typeof guarded.args.metadata === "object" && !Array.isArray(guarded.args.metadata)
+      ? Object.freeze({ ...(guarded.args.metadata as Record<string, unknown>) })
+      : guarded.args.metadata;
+    const authority = Object.freeze({
+      group_id: guarded.effectiveTenant,
+      workspace_id: this.principal.workspaceId,
+      agent_id: this.principal.principalId,
+      user_id: this.principal.principalId,
+      session_id: this.principal.sessionId,
+    });
+    const scope = Object.freeze({
+      group_id: authority.group_id,
+      workspace_id: authority.workspace_id,
+      agent_id: authority.agent_id,
+      session_id: authority.session_id,
+    });
+    const request = Object.freeze({
+      ...guarded.args,
+      group_id: authority.group_id,
+      user_id: authority.user_id,
+      scope,
+      ...(metadata === undefined ? {} : { metadata }),
+    }) as MemoryAddRequest;
+    memoryAddAuthorities.set(request, authority);
+    return Object.freeze({ request, guarded });
+  }
+}
+
+function createAuthenticatedPrincipal(input: Parameters<typeof createPrincipalContext>[0]): AuthenticatedTransportPrincipal {
+  return new VerifiedTransportPrincipal(createPrincipalContext(input));
+}
+
+/** Rejects every request not issued by a verified transport capability. */
+export function requireTransportMemoryAddAuthority(request: MemoryAddRequest): ScopeTuple & {
+  workspace_id: string;
+  agent_id: string;
+  user_id: string;
+  session_id: string;
+} {
+  const authority = memoryAddAuthorities.get(request);
+  const scope = request.scope;
+  if (!authority || !Object.isFrozen(request) || request.group_id !== authority.group_id || request.user_id !== authority.user_id ||
+      !scope || !Object.isFrozen(scope) || scope.group_id !== authority.group_id ||
+      scope.workspace_id !== authority.workspace_id || scope.agent_id !== authority.agent_id || scope.session_id !== authority.session_id) {
+    throw new PrincipalAuthError("PRINCIPAL_MISSING", "memory_add requires a verified credential-issued write capability");
+  }
+  return authority as ScopeTuple & { workspace_id: string; agent_id: string; user_id: string; session_id: string };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INJECTED DEPENDENCIES
@@ -47,11 +141,12 @@ export interface McpCredentialRecord {
   token_prefix: string;
   token_hash: string;
   scopes: string[];
+  paired_device_id?: string | null;
   expires_at: string | Date | null;
   revoked_at: string | Date | null;
 }
 
-export interface AuthenticatorDeps {
+interface AuthenticatorDeps {
   /** Derive the stored lookup prefix from a presented raw token. */
   prefixOf(raw: string): string;
   /** Load the credential row by prefix. */
@@ -95,7 +190,78 @@ export interface ServiceAuthConfig {
   workspaceId: string;
   tenantIds: readonly string[];
   roles: readonly PrincipalRole[];
+  /** Explicit configured service scopes; never caller-supplied tool data. */
+  scopes?: readonly string[];
   authMethod: Extract<AuthMethod, "service_identity" | "dev_local">;
+}
+
+const resolvedServiceConfigs = new WeakSet<object>();
+
+const AUTH_PROOF = Symbol.for("allura:auth-proof");
+const AUTH_PROOF_KEY = randomBytes(32);
+
+type AuthAuthorityFields = Pick<HttpAuthConfig,
+  "mode" | "sharedToken" | "sharedTenantIds" | "sharedRoles" | "sharedPrincipalId" |
+  "devPrincipalId" | "devTenantIds" | "devRoles"
+>;
+
+function authorityFields(config: HttpAuthConfig): AuthAuthorityFields {
+  return {
+    mode: config.mode,
+    sharedToken: config.sharedToken,
+    sharedTenantIds: config.sharedTenantIds,
+    sharedRoles: config.sharedRoles,
+    sharedPrincipalId: config.sharedPrincipalId,
+    devPrincipalId: config.devPrincipalId,
+    devTenantIds: config.devTenantIds,
+    devRoles: config.devRoles,
+  };
+}
+
+/** A process-private structural HMAC prevents Symbol.for lookalike forgery. */
+function authProofFor(config: HttpAuthConfig): string {
+  return createHmac("sha256", AUTH_PROOF_KEY)
+    .update(JSON.stringify(authorityFields(config)))
+    .digest("base64url");
+}
+
+/**
+ * This is the HTTP transport boundary: freeze a defensive copy and attach an
+ * unenumerable proof. It is intentionally not exported; callers receive raw,
+ * cloneable diagnostics from resolveHttpAuthConfig(), never a proof issuer.
+ */
+function authenticateHttpConfig(config: HttpAuthConfig): HttpAuthConfig {
+  const authenticated = {
+    ...config,
+    sharedTenantIds: Object.freeze([...config.sharedTenantIds]),
+    sharedRoles: Object.freeze([...config.sharedRoles]),
+    devTenantIds: Object.freeze([...config.devTenantIds]),
+    devRoles: Object.freeze([...config.devRoles]),
+    warnings: Object.freeze([...config.warnings]),
+  } as HttpAuthConfig;
+  Object.defineProperty(authenticated, AUTH_PROOF, {
+    value: authProofFor(authenticated),
+    enumerable: false,
+    writable: false,
+    configurable: false,
+  });
+  return Object.freeze(authenticated);
+}
+
+function hasAuthenticatedHttpProof(config: HttpAuthConfig): boolean {
+  if (!Object.isFrozen(config)) return false;
+  const descriptor = Object.getOwnPropertyDescriptor(config, AUTH_PROOF);
+  if (!descriptor || descriptor.enumerable || descriptor.writable || descriptor.configurable || typeof descriptor.value !== "string") {
+    return false;
+  }
+  const expected = Buffer.from(authProofFor(config));
+  const actual = Buffer.from(descriptor.value);
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
+}
+
+function verifiedServiceConfig(config: ServiceAuthConfig): ServiceAuthConfig {
+  resolvedServiceConfigs.add(config);
+  return config;
 }
 
 export type EnvLike = Record<string, string | undefined>;
@@ -219,6 +385,7 @@ export function resolveServiceAuthConfig(env: EnvLike): ServiceAuthConfig {
   const workspaceId = (env.ALLURA_MCP_SERVICE_WORKSPACE_ID ?? "").trim();
   const tenantIds = parseList(env.ALLURA_MCP_SERVICE_TENANTS);
   const roles = parseRoles(env.ALLURA_MCP_SERVICE_ROLES, ["viewer", "curator"]);
+  const scopes = parseList(env.ALLURA_MCP_SERVICE_SCOPES);
 
   if (production) {
     if (!principalId) {
@@ -240,38 +407,85 @@ export function resolveServiceAuthConfig(env: EnvLike): ServiceAuthConfig {
       );
     }
     if (!workspaceId) throw new PrincipalAuthError("CONFIG_MISSING", "ALLURA_MCP_SERVICE_WORKSPACE_ID is required for stdio/service mode in production");
-    return { principalId, workspaceId, tenantIds, roles, authMethod: "service_identity" };
+    return verifiedServiceConfig({ principalId, workspaceId, tenantIds, roles, scopes: scopes.length ? scopes : undefined, authMethod: "service_identity" });
   }
 
   // Non-production: an explicit service identity is honoured when configured,
   // otherwise fall back to the dev-local principal.
   if (principalId && tenantIds.length > 0) {
-    return { principalId, workspaceId: workspaceId || "dev-local", tenantIds, roles, authMethod: "service_identity" };
+    return verifiedServiceConfig({ principalId, workspaceId: workspaceId || "dev-local", tenantIds, roles, scopes: scopes.length ? scopes : undefined, authMethod: "service_identity" });
   }
 
-  return {
+  return verifiedServiceConfig({
     principalId: env.ALLURA_MCP_DEV_PRINCIPAL_ID || "dev-local-stdio",
     workspaceId: workspaceId || "dev-local",
     tenantIds: parseList(env.ALLURA_MCP_DEV_TENANTS).length
       ? parseList(env.ALLURA_MCP_DEV_TENANTS)
       : [TENANT_WILDCARD],
     roles: parseRoles(env.ALLURA_MCP_DEV_ROLES, ["admin", "curator", "viewer"]),
+    scopes: parseList(env.ALLURA_MCP_DEV_SCOPES).length ? parseList(env.ALLURA_MCP_DEV_SCOPES) : undefined,
     authMethod: "dev_local",
-  };
+  });
 }
 
-/** Build the stdio/service principal from resolved configuration. */
-export function createServicePrincipal(
+/**
+ * Issue a stdio principal only inside the service-authentication boundary.
+ *
+ * Configuration is intentionally observable for startup diagnostics, but it is
+ * not itself a credential or capability. Keeping this issuer private prevents
+ * arbitrary in-process code from turning a public ServiceAuthConfig (or a
+ * hand-built PrincipalContext) into transport write authority.
+ */
+function issueServicePrincipal(
   config: ServiceAuthConfig,
   sessionId: string,
-): PrincipalContext {
-  return createPrincipalContext({
+): AuthenticatedTransportPrincipal {
+  if (!resolvedServiceConfigs.has(config)) {
+    throw new PrincipalAuthError("PRINCIPAL_MISSING", "service memory_add capability requires resolved service configuration");
+  }
+  return createAuthenticatedPrincipal({
     principalId: config.principalId,
     workspaceId: config.workspaceId,
     tenantIds: config.tenantIds,
     roles: config.roles,
+    scopes: config.scopes,
     authMethod: config.authMethod,
     sessionId,
+  });
+}
+
+/**
+ * Authenticate the stdio/service transport using this process's configured
+ * service identity. This is the sole public service-capability boundary.
+ */
+export function authenticateServiceTransport(sessionId: string): AuthenticatedTransportPrincipal {
+  return issueServicePrincipal(
+    resolveServiceAuthConfig(process.env as EnvLike),
+    sessionId,
+  );
+}
+
+/**
+ * Legacy /mcp bridge only: converts the exact token object returned by
+ * validateToken into a capability issuer. The validation module records those
+ * objects in a process-local WeakSet after hash/revocation/expiry checks, so a
+ * route or test cannot manufacture this authority from a lookalike token.
+ */
+export function createLegacyTokenPrincipal(token: McpCredentialRecord, sessionId: string): AuthenticatedTransportPrincipal {
+  if (!isValidatedToken(token)) {
+    throw new PrincipalAuthError("PRINCIPAL_MISSING", "legacy memory_add requires a credential verified by validateToken");
+  }
+  return createAuthenticatedPrincipal({
+    principalId: token.agent_name,
+    workspaceId: token.workspace_id,
+    tenantIds: [token.group_id],
+    roles: rolesFromScopes(token.scopes ?? []),
+    scopes: token.scopes ?? [],
+    authMethod: "mcp_token",
+    sessionId,
+    credentialId: token.id,
+    pairedDeviceId: token.paired_device_id ?? undefined,
+    expiresAt: token.expires_at instanceof Date ? token.expires_at.toISOString() : token.expires_at,
   });
 }
 
@@ -436,7 +650,17 @@ function toMillis(value: string | Date | null): number | null {
   return Number.isFinite(ms) ? ms : null;
 }
 
-export class McpAuthenticator {
+/**
+ * Public transport-authentication surface. Its issuer is deliberately private:
+ * production callers can obtain it only through createDefaultAuthenticator(),
+ * which wires the real token hash verifier and repository.
+ */
+export interface McpAuthenticator {
+  authenticate(headers: HeaderBag, sessionId?: string): Promise<AuthenticatedTransportPrincipal>;
+  clearCache(): void;
+}
+
+class McpAuthenticatorIssuer implements McpAuthenticator {
   private readonly cache: CredentialCache;
 
   constructor(
@@ -466,12 +690,12 @@ export class McpAuthenticator {
    *
    * @throws PrincipalAuthError with a stable reason code on every refusal.
    */
-  async authenticate(headers: HeaderBag, sessionId?: string): Promise<PrincipalContext> {
+  async authenticate(headers: HeaderBag, sessionId?: string): Promise<AuthenticatedTransportPrincipal> {
     const token = extractBearerToken(headers);
 
     if (token === null) {
       if (this.config.mode === "dev_local") {
-        return createPrincipalContext({
+        return createAuthenticatedPrincipal({
           principalId: this.config.devPrincipalId,
           tenantIds: this.config.devTenantIds,
           roles: this.config.devRoles,
@@ -499,7 +723,7 @@ export class McpAuthenticator {
       this.config.sharedToken &&
       timingSafeCompare(token, this.config.sharedToken)
     ) {
-      return createPrincipalContext({
+      return createAuthenticatedPrincipal({
         principalId: this.config.sharedPrincipalId,
         tenantIds: this.config.sharedTenantIds,
         roles: this.config.sharedRoles,
@@ -516,7 +740,7 @@ export class McpAuthenticator {
     if (this.config.mode === "dev_local") {
       // Dev-local accepts any token but grants only the dev principal — it
       // never escalates based on the token value.
-      return createPrincipalContext({
+      return createAuthenticatedPrincipal({
         principalId: this.config.devPrincipalId,
         tenantIds: this.config.devTenantIds,
         roles: this.config.devRoles,
@@ -531,11 +755,19 @@ export class McpAuthenticator {
   private async authenticateMcpToken(
     token: string,
     sessionId?: string,
-  ): Promise<PrincipalContext> {
+  ): Promise<AuthenticatedTransportPrincipal> {
     const prefix = this.deps.prefixOf(token);
     const nowMs = this.now().getTime();
 
     let record = this.cache.get(prefix, nowMs);
+    // Device rows must never be served from an in-process credential cache.
+    // A terminal transition revokes the DB row in the same transaction; this
+    // forces the next request to observe that committed state without relying
+    // on LISTEN/NOTIFY delivery.
+    if (record?.paired_device_id != null) {
+      this.cache.invalidate(prefix);
+      record = null;
+    }
     if (!record) {
       record = await this.deps.findByPrefix(prefix);
       if (!record) {
@@ -560,14 +792,18 @@ export class McpAuthenticator {
       throw new PrincipalAuthError("AUTH_EXPIRED", "Bearer credential has expired");
     }
 
-    this.cache.set(prefix, record, nowMs);
+    if (record.paired_device_id != null) {
+      this.cache.invalidate(prefix);
+    } else {
+      this.cache.set(prefix, record, nowMs);
+    }
 
     if (this.deps.touchLastUsed) {
       // Best effort — bookkeeping must never fail a valid request.
       void this.deps.touchLastUsed(record.id).catch(() => undefined);
     }
 
-    return createPrincipalContext({
+    return createAuthenticatedPrincipal({
       principalId: record.agent_name,
       workspaceId: record.workspace_id,
       tenantIds: [record.group_id],
@@ -575,6 +811,7 @@ export class McpAuthenticator {
       authMethod: "mcp_token",
       sessionId: this.sessionId(sessionId),
       credentialId: record.id,
+      pairedDeviceId: record.paired_device_id ?? undefined,
       scopes: record.scopes ?? [],
       expiresAt: record.expires_at instanceof Date
         ? record.expires_at.toISOString()
@@ -588,13 +825,20 @@ export class McpAuthenticator {
  *
  * Imported lazily so that this module stays DB-free for unit tests.
  */
-export async function createDefaultAuthenticator(
+async function createDefaultAuthenticator(
   config: HttpAuthConfig,
   newSessionId: () => string,
 ): Promise<McpAuthenticator> {
+  if (!hasAuthenticatedHttpProof(config)) {
+    throw new PrincipalAuthError(
+      "CONFIG_MISSING",
+      "HTTP authenticator requires configuration resolved at the transport boundary",
+    );
+  }
+
   if (config.mode !== "mcp_token") {
     // No DB needed for shared_token / dev_local modes.
-    return new McpAuthenticator(config, {
+    return new McpAuthenticatorIssuer(config, {
       prefixOf: (raw) => raw,
       findByPrefix: async () => null,
       verifyToken: () => false,
@@ -607,7 +851,7 @@ export async function createDefaultAuthenticator(
     import("@/lib/mcp-token/repository"),
   ]);
 
-  return new McpAuthenticator(config, {
+  return new McpAuthenticatorIssuer(config, {
     prefixOf,
     verifyToken,
     findByPrefix: async (prefix) =>
@@ -615,4 +859,27 @@ export async function createDefaultAuthenticator(
     touchLastUsed: repo.touchLastUsed,
     newSessionId,
   });
+}
+
+/**
+ * Resolve raw HTTP configuration for diagnostics. This does not issue an
+ * authenticator or any transport authority.
+ */
+export function createDefaultAuthenticatorFromEnvironment(env: EnvLike): HttpAuthConfig {
+  return resolveHttpAuthConfig(env);
+}
+
+/**
+ * The only public HTTP transport-authentication factory. It owns the complete
+ * resolve → freeze → stamp → verify flow, so external callers cannot issue an
+ * authenticator from caller-owned configuration.
+ */
+export async function createHttpAuthenticator(
+  env: EnvLike,
+  newSessionId: () => string,
+): Promise<McpAuthenticator> {
+  return createDefaultAuthenticator(
+    authenticateHttpConfig(createDefaultAuthenticatorFromEnvironment(env)),
+    newSessionId,
+  );
 }

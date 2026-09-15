@@ -1,0 +1,6 @@
+{
+  "event_type": "DEVICE_CHALLENGE_ISSUED",
+  "metadata": {
+    "code_verifier": "synthetic-only-leak"
+  }
+}

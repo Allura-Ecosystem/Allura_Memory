@@ -33,23 +33,25 @@ All tools use the Model Context Protocol (MCP) over stdio. Configure in your MCP
 
 ### `memory_add`
 
-Add a memory for a user. Returns immediately with storage status.
+Append an episodic memory. Eligible content is queued for human curator review;
+`memory_add` never promotes a memory to canonical knowledge itself.
 
 **Signature**
 ```typescript
-memory_add(
+memory_add({
+  group_id?: string,
+  user_id?: string,
   content: string,
-  userId: string,
   metadata?: {
     source?: "conversation" | "manual",
     context?: string,
     confidence?: number,
     [key: string]: any
   }
-): Promise<{
+}): Promise<{
   id: string,
-  status: "pending_review" | "promoted",
-  stored: "episodic" | "both",
+  stored: "episodic",
+  pending_review?: boolean,
   score: number
 }>
 ```
@@ -59,19 +61,27 @@ memory_add(
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `content` | string | Yes | The memory content (1–10,000 chars) |
-| `userId` | string | Yes | User ID (owner of the memory) |
+| `group_id` | string | No | Tenant selector. The authenticated transport principal supplies the effective group and rejects an unauthorized selector. |
+| `user_id` | string | No | Caller identity assertion. If supplied, it must equal the authenticated principal; it cannot choose the persisted actor. |
 | `metadata` | object | No | Additional context |
 | `metadata.source` | string | No | How the memory was created (default: "conversation") |
 | `metadata.context` | string | No | What conversation led to this memory |
 | `metadata.confidence` | number | No | Agent's confidence (0–1; default: auto-scored) |
+
+**Transport identity**
+
+The authenticated MCP transport derives the effective `group_id`, `workspace_id`,
+persisted `user_id`, and `agent_id`. Callers do not send a trusted `scope` object.
+`group_id` and `user_id` are selectors/assertions only: a tenant or identity
+mismatch is rejected rather than rebinding authority.
 
 **Response**
 
 ```typescript
 {
   id: "mem_7f9e2c3a1b5d",
-  status: "promoted",  // or "pending_review" (SOC2 mode)
-  stored: "both",      // or "episodic" (if score too low)
+  stored: "episodic",
+  pending_review: true, // present when the scorer queued curator review
   score: 0.92
 }
 ```
@@ -80,35 +90,34 @@ memory_add(
 
 | Status | Meaning |
 |--------|---------|
-| `promoted` | Immediately stored in both PostgreSQL and Neo4j |
-| `pending_review` | Stored in PostgreSQL; queued for curator approval (SOC2 mode) |
+| `stored: "episodic"` | Append-only episodic evidence was stored. |
+| `pending_review: true` | Eligible content was queued for human curator approval. |
 
 **Examples**
 
 ```typescript
-// Low-stakes preference (auto-promoted)
-const mem1 = await memory_add(
-  "Sabir prefers dark mode",
-  "sabir",
-  {
+// The authenticated transport supplies group/workspace/user/agent identity.
+const mem1 = await memory_add({
+  content: "Sabir prefers dark mode",
+  metadata: {
     source: "conversation",
     context: "IDE setup discussion",
     confidence: 0.92
   }
-);
-// { id: "mem_...", status: "promoted", stored: "both", score: 0.92 }
+});
+// { id: "mem_...", stored: "episodic", score: 0.92 }
 
-// Compliance-sensitive fact (pending curator review in SOC2)
-const mem2 = await memory_add(
-  "Borrower flagged for suspicious income source",
-  "loan-officer-1",
-  {
+// An identity assertion is allowed only when it matches the authenticated caller.
+const mem2 = await memory_add({
+  user_id: "authenticated-agent",
+  content: "Borrower flagged for suspicious income source",
+  metadata: {
     source: "conversation",
     context: "Application review for John Smith",
     confidence: 0.88
   }
-);
-// { id: "mem_...", status: "pending_review", stored: "episodic", score: 0.88 }
+});
+// { id: "mem_...", stored: "episodic", pending_review: true, score: 0.88 }
 ```
 
 ---
@@ -361,32 +370,10 @@ System health check. **No authentication required.**
 
 ### `POST /api/memory`
 
-Add a memory (dashboard equivalent of MCP tool).
-
-**Request**
-
-```json
-{
-  "content": "Sabir prefers dark mode",
-  "userId": "sabir",
-  "groupId": "allura-myproject",
-  "metadata": {
-    "source": "manual",
-    "context": "User preference"
-  }
-}
-```
-
-**Response**
-
-```json
-{
-  "id": "mem_7f9e2c3a1b5d",
-  "status": "promoted",
-  "stored": "both",
-  "score": 0.92
-}
-```
+**Currently disabled for writes.** This endpoint deliberately returns **403**.
+Use the canonical authenticated MCP `memory_add` tool (Streamable HTTP or stdio)
+to write memory; its verified credential boundary derives tenant, workspace,
+agent, and user identity.
 
 ---
 

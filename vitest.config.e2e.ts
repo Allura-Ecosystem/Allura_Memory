@@ -37,6 +37,8 @@ export default defineConfig({
       "src/__tests__/acceptance-gate.e2e.test.ts",
       // Story 24.4 — atomic approval transaction against live PostgreSQL
       "src/lib/memory/__tests__/atomic-promotion.e2e.test.ts",
+      // Story 29.20 — B1-gated browser-to-desktop Clerk pairing scaffold.
+      "src/lib/device-pairing/__tests__/e2e/pairing-flow.test.ts",
       "src/lib/memory/__tests__/promotion-roundtrip.e2e.test.ts",
       "src/lib/memory/__tests__/promotion-outbox-worker.e2e.test.ts",
     ],

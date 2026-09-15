@@ -136,7 +136,7 @@ services:
       - BUDGET_MAX_TOKENS_PER_HOUR=${BUDGET_MAX_TOKENS_PER_HOUR:-500000}
       - BUDGET_MAX_COST_USD=${BUDGET_MAX_COST_USD:-250.0}
     ports:
-      - "5888:3201"
+      - "6477:3201"
     command: ["bun", "run", "src/mcp/canonical-http-gateway.ts"]
     networks:
       - knowledge-network

@@ -13,19 +13,27 @@
  *   id, revoked token, expired token, valid least-privilege access.
  */
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const repository = vi.hoisted(() => ({
+  findByPrefix: vi.fn(),
+  touchLastUsed: vi.fn(),
+}));
+
+vi.mock("@/lib/mcp-token/repository", () => repository);
+
 import {
-  type AuthenticatorDeps,
-  createServicePrincipal,
+  authenticateServiceTransport,
+  createLegacyTokenPrincipal,
+  createHttpAuthenticator,
   extractBearerToken,
-  type HttpAuthConfig,
-  McpAuthenticator,
+  type McpAuthenticator,
   type McpCredentialRecord,
   resolveHttpAuthConfig,
   resolveServiceAuthConfig,
   rolesFromScopes,
   timingSafeCompare,
 } from "@/lib/auth/mcp-authenticator";
+import { hashToken, prefixOf } from "@/lib/mcp-token/hash";
 import {
   type AuthReasonCode,
   buildAuthAuditEvent,
@@ -46,13 +54,11 @@ const RAW_REVOKED = "allura_mcp_revokedtoken000000000000000";
 const RAW_EXPIRED = "allura_mcp_expiredtoken000000000000000";
 const RAW_UNKNOWN = "allura_mcp_unknowntoken000000000000000";
 
-/** Deterministic stand-in for the real HMAC. Never a real secret. */
-function fakeHash(raw: string): string {
-  return `hash::${raw}`;
-}
 function fakePrefix(raw: string): string {
-  return raw.slice(0, 18);
+  return prefixOf(raw);
 }
+
+process.env.ALLURA_MCP_TOKEN_SECRET = "0123456789abcdefghij";
 
 const NOW = new Date("2026-08-15T12:00:00.000Z");
 
@@ -66,7 +72,7 @@ function record(
     workspace_id: "ws-main",
     agent_name: "agent-scout",
     token_prefix: fakePrefix(raw),
-    token_hash: fakeHash(raw),
+    token_hash: hashToken(raw),
     scopes: ["memory:read"],
     expires_at: null,
     revoked_at: null,
@@ -112,32 +118,30 @@ function seedStore(): void {
   );
 }
 
-function deps(now: Date = NOW): AuthenticatorDeps {
+function tokenConfig(overrides: Record<string, string | undefined> = {}): Record<string, string | undefined> {
   return {
-    prefixOf: fakePrefix,
-    findByPrefix: async (prefix) => store.get(prefix) ?? null,
-    verifyToken: (raw, storedHash) => fakeHash(raw) === storedHash,
-    touchLastUsed: async (id) => {
-      touched.push(id);
-    },
-    now: () => now,
-    newSessionId: () => "sess-fixed",
+    NODE_ENV: "test",
+    ALLURA_MCP_TOKEN_SECRET: "0123456789abcdefghij",
+    ...overrides,
   };
 }
 
-function tokenConfig(overrides: Partial<HttpAuthConfig> = {}): HttpAuthConfig {
-  return resolveHttpAuthConfig({
-    NODE_ENV: "test",
-    ALLURA_MCP_TOKEN_SECRET: "0123456789abcdefghij",
-    ...(overrides as Record<string, string>),
-  }) as HttpAuthConfig;
+async function authenticateWith(env: Record<string, string | undefined> = tokenConfig()): Promise<McpAuthenticator> {
+  return createHttpAuthenticator(env, () => "sess-fixed");
 }
 
 function bearer(token: string) {
   return { authorization: `Bearer ${token}` };
 }
 
-beforeEach(seedStore);
+beforeEach(() => {
+  seedStore();
+  vi.setSystemTime(NOW);
+  repository.findByPrefix.mockImplementation(async (prefix: string) => store.get(prefix) ?? null);
+  repository.touchLastUsed.mockImplementation(async (id: string) => {
+    touched.push(id);
+  });
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STARTUP CONFIGURATION (AC-1, AC-6)
@@ -210,6 +214,23 @@ describe("AC-6: stdio/service mode requires explicit identity and tenant allowli
       .toThrow(/ALLURA_MCP_SERVICE_PRINCIPAL_ID is required/);
   });
 
+  it("refuses an unvalidated credential lookalike before it can mint write authority", () => {
+    const lookalike: McpCredentialRecord = {
+      id: "tok-lookalike",
+      group_id: "allura-system",
+      workspace_id: "ws-main",
+      agent_name: "attacker",
+      token_prefix: fakePrefix(RAW_VIEWER),
+      token_hash: hashToken(RAW_VIEWER),
+      scopes: ["memory:write"],
+      expires_at: null,
+      revoked_at: null,
+    };
+
+    expect(() => createLegacyTokenPrincipal(lookalike, "sess-lookalike"))
+      .toThrow(/credential verified by validateToken/);
+  });
+
   it("refuses production stdio without a tenant allowlist", () => {
     expect(() =>
       resolveServiceAuthConfig({ NODE_ENV: "production", ALLURA_MCP_SERVICE_PRINCIPAL_ID: "svc-memory" }),
@@ -234,18 +255,34 @@ describe("AC-6: stdio/service mode requires explicit identity and tenant allowli
       ALLURA_MCP_SERVICE_WORKSPACE_ID: "workspace-governance",
       ALLURA_MCP_SERVICE_ROLES: "curator",
     });
-    const principal = createServicePrincipal(cfg, "sess-stdio");
-    expect(principal.authMethod).toBe("service_identity");
-    expect(principal.principalId).toBe("svc-memory");
-    expect(principal.workspaceId).toBe("workspace-governance");
-    expect(principal.tenantIds).toEqual(["allura-system", "allura-mortagate"]);
-    expect(principal.roles).toEqual(["curator"]);
+    expect(cfg).toMatchObject({
+      authMethod: "service_identity",
+      principalId: "svc-memory",
+      workspaceId: "workspace-governance",
+      tenantIds: ["allura-system", "allura-mortagate"],
+      roles: ["curator"],
+    });
   });
 
   it("falls back to a dev-local stdio principal outside production", () => {
     const cfg = resolveServiceAuthConfig({ NODE_ENV: "test" });
     expect(cfg.authMethod).toBe("dev_local");
-    expect(createServicePrincipal(cfg, "s").authMethod).toBe("dev_local");
+    expect(cfg.authMethod).toBe("dev_local");
+  });
+
+  it("does not let public service configuration mint write authority", async () => {
+    const module = await import("@/lib/auth/mcp-authenticator");
+    const config = resolveServiceAuthConfig({
+      ALLURA_MCP_SERVICE_PRINCIPAL_ID: "svc-memory",
+      ALLURA_MCP_SERVICE_WORKSPACE_ID: "workspace-governance",
+      ALLURA_MCP_SERVICE_TENANTS: "allura-system",
+      ALLURA_MCP_SERVICE_SCOPES: "memory:write",
+    });
+
+    expect(config).not.toHaveProperty("prepareMemoryAdd");
+    expect(module).not.toHaveProperty("createServicePrincipal");
+    expect(module).not.toHaveProperty("McpAuthenticator");
+    expect(authenticateServiceTransport).toBeTypeOf("function");
   });
 });
 
@@ -312,8 +349,8 @@ function auditId(sessionId: string, tool: string, reason: string): string {
 describe("AC-9: adversarial matrix", () => {
   let auth: McpAuthenticator;
 
-  beforeEach(() => {
-    auth = new McpAuthenticator(tokenConfig(), deps());
+  beforeEach(async () => {
+    auth = await authenticateWith();
   });
 
   it("case 1 — missing auth: 401 AUTH_MISSING", async () => {
@@ -468,7 +505,7 @@ describe("AC-9: adversarial matrix", () => {
 
 describe("AC-8: revocation and expiry take effect per the documented cache policy", () => {
   it("with the default TTL of 0, revocation fails on the very next request", async () => {
-    const auth = new McpAuthenticator(tokenConfig(), deps());
+    const auth = await authenticateWith();
     const first = await auth.authenticate(bearer(RAW_VIEWER));
     expect(first.principalId).toBe("agent-viewer");
 
@@ -482,10 +519,12 @@ describe("AC-8: revocation and expiry take effect per the documented cache polic
   });
 
   it("expiry is evaluated against the live clock even when caching is enabled", async () => {
-    const cfg = tokenConfig({ } as Partial<HttpAuthConfig>);
-    const cached: HttpAuthConfig = { ...cfg, cacheTtlMs: 60_000 };
-    let now = new Date("2026-08-15T12:00:00.000Z");
-    const auth = new McpAuthenticator(cached, { ...deps(), now: () => now });
+    const cached = {
+      NODE_ENV: "test",
+      ALLURA_MCP_TOKEN_SECRET: "0123456789abcdefghij",
+      ALLURA_MCP_AUTH_CACHE_TTL_MS: "60000",
+    };
+    const auth = await authenticateWith(cached);
 
     const row = store.get(fakePrefix(RAW_VIEWER))!;
     store.set(fakePrefix(RAW_VIEWER), { ...row, expires_at: "2026-08-15T12:00:30.000Z" });
@@ -494,7 +533,7 @@ describe("AC-8: revocation and expiry take effect per the documented cache polic
       principalId: "agent-viewer",
     });
 
-    now = new Date("2026-08-15T12:01:00.000Z");
+    vi.setSystemTime(new Date("2026-08-15T12:01:00.000Z"));
     await expect(auth.authenticate(bearer(RAW_VIEWER))).rejects.toMatchObject({
       reasonCode: "AUTH_EXPIRED",
     });
@@ -503,14 +542,14 @@ describe("AC-8: revocation and expiry take effect per the documented cache polic
   it("a token expiring exactly now is treated as expired", async () => {
     const row = store.get(fakePrefix(RAW_VIEWER))!;
     store.set(fakePrefix(RAW_VIEWER), { ...row, expires_at: NOW.toISOString() });
-    const auth = new McpAuthenticator(tokenConfig(), deps());
+    const auth = await authenticateWith();
     await expect(auth.authenticate(bearer(RAW_VIEWER))).rejects.toMatchObject({
       reasonCode: "AUTH_EXPIRED",
     });
   });
 
   it("records last-used bookkeeping for a valid credential", async () => {
-    const auth = new McpAuthenticator(tokenConfig(), deps());
+    const auth = await authenticateWith();
     await auth.authenticate(bearer(RAW_VIEWER));
     await new Promise((r) => setTimeout(r, 0));
     expect(touched).toContain(`tok_${RAW_VIEWER.slice(11, 18)}`);
@@ -530,11 +569,11 @@ describe("AC-2: credential comparison and storage", () => {
   });
 
   it("the resolved principal carries the credential row id, never the token", async () => {
-    const auth = new McpAuthenticator(tokenConfig(), deps());
+    const auth = await authenticateWith();
     const principal = await auth.authenticate(bearer(RAW_CURATOR));
     expect(principal.credentialId).toBe(`tok_${RAW_CURATOR.slice(11, 18)}`);
     expect(JSON.stringify(principal)).not.toContain(RAW_CURATOR);
-    expect(JSON.stringify(principal)).not.toContain("hash::");
+    expect(JSON.stringify(principal)).not.toContain(hashToken(RAW_CURATOR));
   });
 
   it("extractBearerToken returns null for an absent header and throws for a malformed one", () => {
@@ -598,7 +637,7 @@ describe("Finding 1: two credentials sharing an agent_name are distinct principa
   });
 
   it("resolves the same principalId but different credential identity", async () => {
-    const auth = new McpAuthenticator(tokenConfig(), deps());
+    const auth = await authenticateWith();
     const a = await auth.authenticate(bearer(RAW_CURSOR_A));
     const b = await auth.authenticate(bearer(RAW_CURSOR_B));
 
@@ -610,7 +649,7 @@ describe("Finding 1: two credentials sharing an agent_name are distinct principa
   });
 
   it("credential B must NOT be able to take over credential A's session", async () => {
-    const auth = new McpAuthenticator(tokenConfig(), deps());
+    const auth = await authenticateWith();
     const a = await auth.authenticate(bearer(RAW_CURSOR_A));
     const b = await auth.authenticate(bearer(RAW_CURSOR_B));
 
@@ -621,14 +660,14 @@ describe("Finding 1: two credentials sharing an agent_name are distinct principa
   });
 
   it("credential A may continue its own session across requests", async () => {
-    const auth = new McpAuthenticator(tokenConfig(), deps());
+    const auth = await authenticateWith();
     const first = await auth.authenticate(bearer(RAW_CURSOR_A));
     const second = await auth.authenticate(bearer(RAW_CURSOR_A));
     expect(canRebindSession(first, second)).toBe(true);
   });
 
   it("a hijacked session cannot reach the other tenant's data even if rebinding were attempted", async () => {
-    const auth = new McpAuthenticator(tokenConfig(), deps());
+    const auth = await authenticateWith();
     const b = await auth.authenticate(bearer(RAW_CURSOR_B));
     // Defence in depth: even holding a session, B's principal cannot select A's tenant.
     expect(() => guardToolCall(b, "memory_search", { group_id: "allura-system" })).toThrow(
@@ -658,14 +697,14 @@ describe("Finding 5: leftover shared token does not bypass per-credential revoca
   });
 
   it("REFUSES the leftover shared token in mcp_token mode", async () => {
-    const auth = new McpAuthenticator(resolveHttpAuthConfig(envBoth), deps());
+    const auth = await authenticateWith(envBoth);
     await expect(auth.authenticate(bearer("leftover-shared-token"))).rejects.toMatchObject({
       reasonCode: "AUTH_INVALID",
     });
   });
 
   it("still accepts a real mcp_tokens credential in that same mode", async () => {
-    const auth = new McpAuthenticator(resolveHttpAuthConfig(envBoth), deps());
+    const auth = await authenticateWith(envBoth);
     await expect(auth.authenticate(bearer(RAW_VIEWER))).resolves.toMatchObject({
       principalId: "agent-viewer",
     });
@@ -682,14 +721,14 @@ describe("Finding 5: leftover shared token does not bypass per-credential revoca
 
 describe("AC-10: existing flows keep working with principal context injected", () => {
   it("legacy shared bearer token still authenticates", async () => {
-    const cfg = resolveHttpAuthConfig({
+    const cfg = {
       NODE_ENV: "test",
       ALLURA_MCP_AUTH_TOKEN: "legacy-shared-token",
       ALLURA_MCP_SHARED_TOKEN_ROLES: "curator",
       ALLURA_MCP_SHARED_TOKEN_TENANTS: "allura-system",
       ALLURA_MCP_SHARED_TOKEN_PRINCIPAL: "legacy-client",
-    });
-    const auth = new McpAuthenticator(cfg, deps());
+    };
+    const auth = await authenticateWith(cfg);
     const principal = await auth.authenticate(bearer("legacy-shared-token"));
     expect(principal.principalId).toBe("legacy-client");
     expect(principal.authMethod).toBe("service_identity");
@@ -702,16 +741,16 @@ describe("AC-10: existing flows keep working with principal context injected", (
   });
 
   it("a wrong shared token is refused", async () => {
-    const cfg = resolveHttpAuthConfig({ NODE_ENV: "test", ALLURA_MCP_AUTH_TOKEN: "legacy-shared-token" });
-    const auth = new McpAuthenticator(cfg, deps());
+    const cfg = { NODE_ENV: "test", ALLURA_MCP_AUTH_TOKEN: "legacy-shared-token" };
+    const auth = await authenticateWith(cfg);
     await expect(auth.authenticate(bearer("guessed"))).rejects.toMatchObject({
       reasonCode: "AUTH_INVALID",
     });
   });
 
   it("tokenless local dev still works and grants the dev principal", async () => {
-    const cfg = resolveHttpAuthConfig({ NODE_ENV: "development", ALLURA_MCP_DEV_AUTH: "true" });
-    const auth = new McpAuthenticator(cfg, deps());
+    const cfg = { NODE_ENV: "development", ALLURA_MCP_DEV_AUTH: "true" };
+    const auth = await authenticateWith(cfg);
     const principal = await auth.authenticate({});
     expect(principal.authMethod).toBe("dev_local");
     const guarded = guardToolCall(principal, "governance_curator_pass", {
@@ -724,19 +763,19 @@ describe("AC-10: existing flows keep working with principal context injected", (
   });
 
   it("dev-local never escalates based on a presented token value", async () => {
-    const cfg = resolveHttpAuthConfig({
+    const cfg = {
       NODE_ENV: "development",
       ALLURA_MCP_DEV_AUTH: "true",
       ALLURA_MCP_DEV_ROLES: "viewer",
-    });
-    const auth = new McpAuthenticator(cfg, deps());
+    };
+    const auth = await authenticateWith(cfg);
     const principal = await auth.authenticate(bearer(RAW_ADMIN));
     expect(principal.roles).toEqual(["viewer"]);
     expect(principal.principalId).toBe("dev-local");
   });
 
   it("plain viewer credentials can read but cannot mutate memory", async () => {
-    const auth = new McpAuthenticator(tokenConfig(), deps());
+    const auth = await authenticateWith();
     const principal = await auth.authenticate(bearer(RAW_VIEWER));
     for (const tool of ["memory_search", "memory_get", "memory_list", "memory_export"]) {
       expect(() => guardToolCall(principal, tool, { group_id: "allura-system" })).not.toThrow();

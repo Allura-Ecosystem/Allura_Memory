@@ -1,0 +1,25 @@
+.shell { display:flex; min-height:100vh; background:#f6f4ef; color:#0f1115; font-family:var(--sans,'IBM Plex Sans',sans-serif); color-scheme:light; }
+.sidebar { box-sizing:border-box; display:flex; flex-direction:column; width:240px; flex-shrink:0; padding:28px 18px; background:#0f1115; color:#f6f4ef; }
+.brand { display:block; border-radius:10px; background:#f6f4ef; padding:14px 20px; margin:0 8px 28px; }
+.brand img { display:block; width:100%; height:auto; object-fit:contain; }
+.navLabel { color:#a5adb6; font-size:11px; letter-spacing:.14em; padding:0 14px; margin:12px 0; }
+.navList { list-style:none; padding:0; margin:0; display:grid; gap:6px; }
+.navList a { display:flex; justify-content:space-between; gap:8px; padding:13px 14px; color:#ced1d5; text-decoration:none; font-size:14px; border-radius:8px; min-height:46px; box-sizing:border-box; }
+.navList a:hover { background:#202632; color:white; }
+.navList a[aria-current="page"] { background:#1d4ed8; color:white; font-weight:500; }
+.scope { margin:40px 12px 0; padding-top:22px; border-top:1px solid #353a42; font-size:11px; line-height:1.7; }
+.scope dt { color:#929ba8; margin-top:12px; }
+.scope dd { color:#d4d8df; margin:0; overflow-wrap:anywhere; }
+.role { text-transform:capitalize; }
+.mainColumn { flex:1; min-width:0; }
+.topbar { display:flex; justify-content:space-between; gap:14px; padding:18px 36px; min-height:66px; align-items:center; box-sizing:border-box; border-bottom:1px solid #ddd9d0; background:#fffdf8; color:#5b626b; font-size:12px; }
+.account { border:1px solid #d6dacd; padding:5px 11px; border-radius:20px; color:#157a4a; }
+.main { max-width:1240px; box-sizing:border-box; padding:36px 40px 64px; margin:0 auto; }
+.pageHeading { margin-bottom:26px; }
+.pageHeading h1 { margin:0 0 8px; font-size:clamp(30px,3vw,42px); line-height:1.15; letter-spacing:-.04em; font-weight:700; }
+.pageHeading p { margin:0; color:#5b626b; font-size:15px; line-height:1.6; }
+.skipLink { position:absolute; top:-100px; left:260px; z-index:10; padding:12px; background:#1d4ed8; color:white; }
+.skipLink:focus { top:8px; }
+.shell a:focus-visible { outline:3px solid #ff5a2e; outline-offset:3px; }
+@media(max-width:1050px) { .main { padding:28px 24px 48px; } .sidebar { width:210px; padding:22px 14px; } }
+@media(max-width:760px) { .shell { display:block; } .sidebar { width:100%; padding:14px 18px; } .brand { width:110px; margin:0 0 12px; padding:8px 12px; } .navLabel,.scope { display:none; } .navList { display:flex; overflow-x:auto; gap:4px; } .navList a { white-space:nowrap; font-size:12px; } .topbar { padding:14px 20px; min-height:54px; } .main { padding:26px 18px 44px; } .skipLink { left:16px; } }

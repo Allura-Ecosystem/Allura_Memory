@@ -17,6 +17,7 @@
 | 26 | [Bumblebee Plugin Supply-Chain Intelligence](./epic-26-bumblebee-supply-chain-threat-intelligence.md) | Done | Retrospective complete (2026-08-29). See the [Correct Course](./epic-26-correct-course-upstream-bumblebee-plugin.md). |
 | 27 | [Governed Branchable Learning Memory](./epic-27-governed-branchable-learning-memory.md) | Done | Retrospective complete (2026-08-29); 6/6 stories, 5 action items. |
 | 28 | [Enterprise Documentation Consolidation](./epic-28-enterprise-documentation-consolidation.md) | Done | 28.8 exit-gate closure complete; retrospective pending. |
+| 29 | [Desktop Device Pairing and Persistent Authentication](./epic-29-desktop-device-pairing-and-persistent-authentication.md) | Done | 21/21 stories implemented; retro accepted-with-open-items 2026-09-13; AC-28/AC-29 runtime acceptance deferred to follow-up epic (B1 Clerk test instance, B2 desktop client repo). |
 
 ## Rules
 

@@ -36,6 +36,7 @@ describe("managed application-role pool", () => {
     password: process.env.POSTGRES_PASSWORD,
     appUser: process.env.POSTGRES_APP_USER,
     appPassword: process.env.POSTGRES_APP_PASSWORD,
+    appOptions: process.env.POSTGRES_APP_OPTIONS,
   };
 
   afterEach(async () => {
@@ -47,6 +48,7 @@ describe("managed application-role pool", () => {
     process.env.POSTGRES_PASSWORD = originalEnvironment.password;
     process.env.POSTGRES_APP_USER = originalEnvironment.appUser;
     process.env.POSTGRES_APP_PASSWORD = originalEnvironment.appPassword;
+    process.env.POSTGRES_APP_OPTIONS = originalEnvironment.appOptions;
   });
 
   it("ignores a forged owner pool and unconditionally binds workspace work to the managed app pool", async () => {
@@ -88,6 +90,24 @@ describe("managed application-role pool", () => {
       password: "app-password",
     }));
     expect(appPool.connect).toHaveBeenCalledTimes(50);
+  });
+
+  it("passes explicitly configured PostgreSQL startup options to the managed app pool", async () => {
+    process.env.POSTGRES_PASSWORD = "owner-password";
+    process.env.POSTGRES_APP_USER = "owner-user";
+    process.env.POSTGRES_APP_PASSWORD = "owner-password";
+    process.env.POSTGRES_APP_OPTIONS = "-c role=allura_app";
+    const appPool = makePool();
+    poolConstructor.mockReturnValue(appPool);
+
+    const { getAppPool } = await import("./connection");
+    expect(getAppPool()).toBe(appPool);
+
+    expect(poolConstructor).toHaveBeenCalledWith(expect.objectContaining({
+      user: "owner-user",
+      password: "owner-password",
+      options: "-c role=allura_app",
+    }));
   });
 
   it("preserves the legacy owner-backed getPool default while workspace boundaries opt into getAppPool", async () => {

@@ -752,11 +752,17 @@ Before any `graph_memories` write, search for an existing row with matching `con
 | `memory_list`   | List all memories for a user       |
 | `memory_delete` | Soft-delete a memory               |
 
+`memory_add` is write-only through an authenticated MCP transport or configured
+stdio service boundary. The transport derives `group_id`, workspace, actor, and
+session from verified server-side identity; a caller-supplied `user_id` is
+injected when absent and rejected on mismatch. Raw canonical-tool calls and
+serializable `scope` objects cannot authorize a write.
+
 ### REST API (Dashboard Interface)
 
 | Method   | Path                            | Description          |
 | -------- | ------------------------------- | -------------------- |
-| `POST`   | `/api/memory`                   | Add a memory         |
+| `POST`   | `/api/memory`                   | Disabled for writes: returns `403`; use authenticated MCP/stdio `memory_add` |
 | `GET`    | `/api/memory?userId=&groupId=`  | List memories        |
 | `GET`    | `/api/memory/[id]`              | Get memory by ID     |
 | `DELETE` | `/api/memory/[id]`              | Soft-delete a memory |

@@ -6,12 +6,14 @@ const createToken = vi.fn();
 const listTokensForWorkspace = vi.fn();
 const createWorkspace = vi.fn();
 const listWorkspacesForGroup = vi.fn();
-const revokeToken = vi.fn(async (_id: string) => {});
+const revokeToken = vi.fn(async (_id: string, _groupId: string) => true);
 
 vi.mock("@/lib/mcp-token/repository", () => ({
   createToken: (...a: unknown[]) => createToken(...a),
   listTokensForWorkspace: (...a: unknown[]) => listTokensForWorkspace(...a),
-  revokeToken: (id: string) => revokeToken(id),
+  revokeToken: (...args: [string, string]) => (
+    revokeToken as unknown as (...input: [string, string]) => unknown
+  )(...args),
 }));
 vi.mock("@/lib/workspace/repository", () => ({
   createWorkspace: (...a: unknown[]) => createWorkspace(...a),
@@ -109,6 +111,13 @@ describe("POST /api/tokens/[id]/revoke", () => {
   it("admin revokes a token", async () => {
     const res = await revokePOST(req("/api/tokens/tok_1/revoke", "admin", {}), { params: Promise.resolve({ id: "tok_1" }) });
     expect(res.status).toBe(200);
-    expect(revokeToken).toHaveBeenCalledWith("tok_1");
+    expect(revokeToken).toHaveBeenCalledWith("tok_1", "allura-test");
+  });
+
+  it("does not disclose a token outside the authenticated tenant", async () => {
+    revokeToken.mockResolvedValueOnce(false);
+    const res = await revokePOST(req("/api/tokens/tok_elsewhere/revoke", "admin", {}), { params: Promise.resolve({ id: "tok_elsewhere" }) });
+    expect(res.status).toBe(404);
+    expect(revokeToken).toHaveBeenCalledWith("tok_elsewhere", "allura-test");
   });
 });

@@ -24,6 +24,77 @@ on:
 # E2E tests get live PostgreSQL + Neo4j service containers.
 
 jobs:
+  # ── Credential Leak Scan (Story 29.17 / AC-25) ───────────────────────────
+  credential-leak-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install
+      - name: Scan device-pairing credential artifacts
+        run: bun run scan:credentials
+
+  # ── Credential Leak Scan — Live DB (Story 29.17 / AC-25) ─────────────────
+  # Scans persisted DEVICE_* events.metadata in a real PostgreSQL 16 instance.
+  credential-leak-scan-live-db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: allura
+          POSTGRES_DB: memory
+          POSTGRES_USER: allura
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -U allura; do
+            echo "Waiting for postgres..."
+            sleep 1
+          done
+      - name: Run database migrations
+        env:
+          PGPASSWORD: allura
+        run: |
+          set -e
+          for f in $(ls -1v docker/postgres-init/*.sql); do
+            echo "▶ Applying $f..."
+            psql -v ON_ERROR_STOP=1 -h localhost -U allura -d memory -f "$f"
+          done
+      - name: Run credential leak scan live-DB tests
+        run: bun run test:live-db -- src/lib/device-pairing/__tests__/credential-leak-scan.live-db.test.ts
+        env:
+          RUN_E2E_TESTS: "true"
+          DATABASE_URL: postgresql://allura:***@localhost:5432/memory
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: memory
+          POSTGRES_USER: allura
+          POSTGRES_PASSWORD: allura
+          POSTGRES_APP_USER: allura_app
+          POSTGRES_APP_PASSWORD: change-me-in-production
+
   # ── Typecheck ─────────────────────────────────────────────────────────────
   typecheck:
     runs-on: ubuntu-latest
@@ -212,9 +283,12 @@ jobs:
             psql -v ON_ERROR_STOP=1 -h localhost -U allura -d memory -f "$f"
           done
       - name: Run E2E tests
-        run: bun run test:e2e
+        run: |
+          bun x playwright install --with-deps chromium
+          bun run test:e2e
         env:
           RUN_E2E_TESTS: "true"
+          ALLURA_E2E_LOCAL_TEST_RUNTIME: "true"
           DATABASE_URL: postgresql://allura:allura@localhost:5432/memory
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432

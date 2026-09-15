@@ -1,7 +1,9 @@
+import type { PoolClient } from "pg";
 import { randomUUID } from "node:crypto";
-import type { GroupId, Scope } from "@allura/types";
+import { deriveDeviceTokenScopes } from "@/lib/auth/scope-derivation";
 import { getPool } from "@/lib/postgres/connection";
 import { validateGroupId } from "@/lib/validation/group-id";
+import type { GroupId, LockMode, Scope } from "@allura/types";
 import { generateToken } from "./hash";
 
 // MCP bearer token data access (DESIGN-BUMBLEBEE). The raw token is returned only
@@ -20,6 +22,7 @@ export interface McpTokenRecord {
   last_used_at: string | null;
   created_by: string | null;
   created_at: string;
+  paired_device_id?: string | null;
 }
 
 export interface CreateTokenInput {
@@ -38,7 +41,7 @@ export interface CreateTokenResult {
 }
 
 const TOKEN_COLUMNS = `id, group_id, workspace_id, agent_name, token_prefix, token_hash,
-  scopes, expires_at, revoked_at, last_used_at, created_by, created_at`;
+  scopes, expires_at, revoked_at, last_used_at, created_by, created_at, paired_device_id`;
 
 export async function createToken(input: CreateTokenInput): Promise<CreateTokenResult> {
   const group_id = validateGroupId(input.group_id) as GroupId;
@@ -62,6 +65,135 @@ export async function createToken(input: CreateTokenInput): Promise<CreateTokenR
     ],
   );
   return { raw, record: rows[0] };
+}
+
+export interface ServerResolvedPairedDeviceAuthority {
+  principal_id: string;
+  group_id: string;
+  workspace_id: string;
+}
+
+export interface DeviceTokenInsertAuthority {
+  group_id: GroupId;
+  workspace_id: string;
+  agent_name: string;
+}
+
+/**
+ * Converts a server-locked paired-device row into the only authority fields
+ * allowed in a device-token insert. Device credentials always identify as the
+ * paired-device principal; agent_name is intentionally not caller input.
+ */
+export function constructDeviceTokenInsertAuthority(
+  authority: ServerResolvedPairedDeviceAuthority,
+): DeviceTokenInsertAuthority {
+  return {
+    group_id: validateGroupId(authority.group_id) as GroupId,
+    workspace_id: authority.workspace_id,
+    agent_name: authority.principal_id,
+  };
+}
+
+export interface CreateDeviceTokenInput {
+  paired_device_id: string;
+  membership_role: string;
+  /** Server-resolved from the locked workspace record by the owning transaction. */
+  lock_mode: LockMode;
+  expires_at: string;
+}
+
+/**
+ * Mint a first-party device credential inside a caller-owned transaction.
+ * Device authority is read from the just-inserted paired_devices row; callers
+ * cannot provide a principal, group, workspace, or scope.
+ */
+export async function createDeviceToken(
+  client: PoolClient,
+  input: CreateDeviceTokenInput,
+): Promise<CreateTokenResult> {
+  const device = await client.query<ServerResolvedPairedDeviceAuthority>(
+    `SELECT principal_id, group_id, workspace_id
+       FROM paired_devices
+      WHERE id = $1
+      FOR UPDATE`,
+    [input.paired_device_id],
+  );
+  const pairedDeviceAuthority = device.rows[0];
+  if (!pairedDeviceAuthority) throw new Error("Paired device not found for token minting");
+
+  const insertAuthority = constructDeviceTokenInsertAuthority(pairedDeviceAuthority);
+  const scopes = deriveDeviceTokenScopes(input.membership_role, input.lock_mode);
+  const id = `tok_${randomUUID()}`;
+  const { raw, prefix, hash } = generateToken();
+  const { rows } = await client.query<McpTokenRecord>(
+    `INSERT INTO mcp_tokens
+       (id, group_id, workspace_id, agent_name, token_prefix, token_hash, scopes, expires_at, paired_device_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING ${TOKEN_COLUMNS}`,
+    [
+      id,
+      insertAuthority.group_id,
+      insertAuthority.workspace_id,
+      insertAuthority.agent_name,
+      prefix,
+      hash,
+      scopes,
+      input.expires_at,
+      input.paired_device_id,
+    ],
+  );
+  return { raw, record: rows[0] };
+}
+
+/**
+ * Revoke only active credentials linked to devices owned by one tenant member.
+ * The caller owns the transaction so a membership mutation cannot commit unless
+ * this revocation and its audit record commit with it.
+ */
+export async function revokeDeviceTokensForMembershipChange(
+  client: PoolClient,
+  groupId: string,
+  principalId: string,
+): Promise<number> {
+  const group_id = validateGroupId(groupId);
+  const result = await client.query(
+    `UPDATE mcp_tokens AS token
+        SET revoked_at = NOW()
+       FROM paired_devices AS device
+      WHERE token.paired_device_id = device.id
+        AND token.group_id = $1
+        AND device.group_id = $1
+        AND device.principal_id = $2
+        AND token.revoked_at IS NULL`,
+    [group_id, principalId],
+  );
+  return result.rowCount ?? 0;
+}
+
+/**
+ * Revoke only active credentials linked to devices in the tenant workspace.
+ * The group predicate prevents a workspace identifier from crossing a tenant
+ * boundary even if future schemas relax global workspace identity.
+ */
+export async function revokeDeviceTokensForWorkspaceLockChange(
+  client: PoolClient,
+  groupId: string,
+  workspaceId: string,
+): Promise<number> {
+  const group_id = validateGroupId(groupId);
+  const result = await client.query(
+    `UPDATE mcp_tokens AS token
+        SET revoked_at = NOW()
+       FROM paired_devices AS device
+      WHERE token.paired_device_id = device.id
+        AND token.group_id = $1
+        AND token.workspace_id = $2
+        AND device.group_id = $1
+        AND device.workspace_id = $2
+        AND token.revoked_at IS NULL`,
+    [group_id, workspaceId],
+  );
+  return result.rowCount ?? 0;
 }
 
 export async function findByPrefix(prefix: string): Promise<McpTokenRecord | null> {
@@ -89,9 +221,13 @@ export async function touchLastUsed(id: string): Promise<void> {
   await getPool().query(`UPDATE mcp_tokens SET last_used_at = NOW() WHERE id = $1`, [id]);
 }
 
-export async function revokeToken(id: string): Promise<void> {
-  await getPool().query(
-    `UPDATE mcp_tokens SET revoked_at = NOW() WHERE id = $1 AND revoked_at IS NULL`,
-    [id],
+export async function revokeToken(id: string, groupId: string): Promise<boolean> {
+  const group_id = validateGroupId(groupId);
+  const result = await getPool().query(
+    `UPDATE mcp_tokens
+        SET revoked_at = NOW()
+      WHERE id = $1 AND group_id = $2 AND revoked_at IS NULL`,
+    [id, group_id],
   );
+  return result.rowCount === 1;
 }

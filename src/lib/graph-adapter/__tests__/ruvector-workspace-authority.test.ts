@@ -31,6 +31,72 @@ describe("RuVectorGraphAdapter workspace authority", () => {
     expect(params).toContain("workspace-a")
   })
 
+  it("uses only FTS results when FTS found a match", async () => {
+    const ftsRow = {
+      id: "fts-memory",
+      content: "FTS result",
+      score: 0.9,
+      provenance: "manual",
+      created_at: new Date(0),
+      tags: [],
+      relevance: 1,
+    }
+    const query = vi.fn(async (sql: string) =>
+      sql.includes("content_tsv @@")
+        ? { rows: [ftsRow], rowCount: 1 }
+        : { rows: [], rowCount: 0 },
+    )
+    const client = { query, release: vi.fn() }
+    transactionState.client = client
+    const adapter = new RuVectorGraphAdapter({ connect: vi.fn(async () => client) } as never)
+
+    const results = await adapter.searchMemories({
+      group_id: "allura-test" as never,
+      workspace_id: "workspace-a",
+      principal_id: "agent-a",
+      query: "match",
+      limit: 10,
+    })
+
+    expect(results).toHaveLength(1)
+    expect(results[0].id).toBe("fts-memory")
+    expect(query).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses word-level trigram matching in the zero-hit fallback", async () => {
+    const fallbackRow = {
+      id: "fuzzy-memory",
+      content: "Gabriel is the owner",
+      score: 0.9,
+      provenance: "manual",
+      created_at: new Date(0),
+      tags: [],
+      relevance: 0.6,
+    }
+    const query = vi.fn(async (sql: string) =>
+      sql.includes("content_tsv @@")
+        ? { rows: [], rowCount: 0 }
+        : { rows: [fallbackRow], rowCount: 1 },
+    )
+    const client = { query, release: vi.fn() }
+    transactionState.client = client
+    const adapter = new RuVectorGraphAdapter({ connect: vi.fn(async () => client) } as never)
+
+    const results = await adapter.searchMemories({
+      group_id: "allura-test" as never,
+      workspace_id: "workspace-a",
+      principal_id: "agent-a",
+      query: "Gabe",
+      limit: 10,
+    })
+
+    expect(results[0].id).toBe("fuzzy-memory")
+    const fallbackSql = String(query.mock.calls[1]?.[0])
+    expect(fallbackSql).toContain("word_similarity")
+    expect(fallbackSql).toContain("ILIKE")
+    expect(fallbackSql).not.toContain("m.id NOT IN")
+  })
+
   it("creates memories through the app-role workspace transaction", async () => {
     const client = { query: vi.fn(async () => ({ rows: [], rowCount: 1 })) }
     transactionState.client = client

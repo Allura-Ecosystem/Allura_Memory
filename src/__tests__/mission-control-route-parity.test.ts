@@ -89,7 +89,11 @@ describe("dashboard page rendering", () => {
     getRecentMemories: vi.fn(),
     getTeams: vi.fn(),
     getGraphStats: vi.fn(),
-    emptyWhen: vi.fn((state: unknown) => state),
+    emptyWhen: vi.fn((state: { state: string; data?: unknown; fetchedAt?: string }, isEmpty: (data: unknown) => boolean) => (
+      state.state === "live" && isEmpty(state.data)
+        ? { state: "empty", fetchedAt: state.fetchedAt ?? "" }
+        : state
+    )),
   }))
 
   vi.mock("@/lib/dashboard/page-guard", () => ({ requireDashboardScope }))

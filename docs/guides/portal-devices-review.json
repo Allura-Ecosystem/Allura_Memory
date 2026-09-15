@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "security_concerns": [],
+  "logic_errors": [],
+  "suggestions": [
+    {
+      "location": "src/components/portal/token-inventory-panel.tsx: projectSafeToken; src/lib/portal/__tests__/token-inventory.test.ts",
+      "recommendation": "Require explicit null or a nonempty string for paired_device_id. The current check rejects non-string values but still treats a missing field as unpaired, and one fixture preserves that behavior. Add missing-field and malformed-binding tests so response-contract drift cannot silently expose a device credential through account revocation controls. Consider reporting invalid rows as an incomplete inventory rather than silently dropping them into an apparent empty success."
+    },
+    {
+      "location": "src/components/portal/token-issuer-panel.tsx: issueCredential",
+      "recommendation": "Retain the prior asynchronous-lifecycle hardening recommendation: guard completion and parent callbacks against unmount or authority-context changes. Distinguish an ambiguous transport or response-parsing failure from a confirmed issuance rejection, and advise inspecting inventory before retrying when the server may already have created a credential. Current navigation locks and keyed parents reduce exposure but do not cancel an in-flight issuance."
+    },
+    {
+      "location": "src/components/portal/connection-wizard.tsx: leaveSetup and focus effect; src/lib/portal/__tests__",
+      "recommendation": "Extend focus coverage to switching from a selected client directly to Credentials. That transition removes the focused control, while the effect attempts to focus a client button that is not mounted in the credentials view. Focus the destination heading for this transition. Also add assertions for enrollment close, successful device removal, and credential-confirmation cancellation; the supplied tests cover only part of the improved focus lifecycle."
+    }
+  ],
+  "summary": "Passed the supplied-source delta review with nonblocking follow-ups. The prior principal-name finding is withdrawn: migration 62 explicitly exempts unpaired tokens, and POST /api/tokens separately attributes creation to the authenticated human through created_by. Device-bound inventory is inspection-only; explicit unpaired credential revocation requires confirmation and propagates pending state through both navigation levels. Device confirmation is bound to device ID and operation, verified before submission, and cleared on navigation. Request failures no longer render successful empty states, filtered empty labels are accurate, and refresh is explicit. The previously reported device confirmation and return-focus paths are corrected. No native adapter, per-client device credential, or deployment claim is inferred. The reported 61 tests and typecheck were not independently executed; HTTP fixtures do not establish live integration, and omitted authentication and repository implementations prevent independent verification of backend enforcement."
+}

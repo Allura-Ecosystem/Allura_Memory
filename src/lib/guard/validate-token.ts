@@ -16,6 +16,14 @@ export type TokenValidationResult =
   | { ok: true; token: McpTokenRecord }
   | { ok: false; reason: TokenRejection };
 
+// Credential verification is an object-identity boundary. A valid result is
+// recorded only after lookup, revocation, expiry, and hash verification.
+const validatedTokens = new WeakSet<object>();
+
+export function isValidatedToken(token: object): boolean {
+  return validatedTokens.has(token);
+}
+
 /** Extract the raw token from an `Authorization: Bearer <token>` header. */
 export function extractBearer(authorization: string | null): string | null {
   if (!authorization) return null;
@@ -38,5 +46,6 @@ export async function validateToken(raw: string | null): Promise<TokenValidation
   if (!verifyToken(raw, token.token_hash)) return { ok: false, reason: "invalid" };
 
   await touchLastUsed(token.id);
+  validatedTokens.add(token);
   return { ok: true, token };
 }

@@ -1,6 +1,13 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+  // The authoring skill trees are only meaningful in a developer checkout.
+  // `/api/skills` tolerates their absence and returns an empty list, so tracing
+  // them into the public portal image adds private tooling and stale paths.
+  outputFileTracingExcludes: {
+    "/api/skills": ["./.opencode/skills/**/*", "./.claude/skills/**/*"],
+  },
   // The portfolio evidence runner drives the local development server through
   // http://127.0.0.1. Declare that loopback origin explicitly so Next dev does
   // not block HMR/font/client-hydration resources during browser proof.

@@ -409,6 +409,7 @@ describe("buildAuthAuditEvent (AC-7)", () => {
       reason_code: "OK",
       auth_method: "mcp_token",
       credential_id: "tok_abc",
+      paired_device_id: null,
       occurred_at: "2026-08-15T00:00:00.000Z",
     });
   });
@@ -426,20 +427,28 @@ describe("buildAuthAuditEvent (AC-7)", () => {
     expect(event.reason_code).toBe("AUTH_MISSING");
   });
 
+  it("projects the paired-device id without credential material", () => {
+    const event = buildAuthAuditEvent({
+      principal: tokenPrincipal({ pairedDeviceId: "dev_audit_1" }),
+      tool: "memory_get",
+      decision: "allow",
+    });
+    expect(event.paired_device_id).toBe("dev_audit_1");
+  });
+
   it("never exposes credential material", () => {
     const event = buildAuthAuditEvent({ principal: tokenPrincipal(), tool: "memory_get", decision: "allow" });
     expect(JSON.stringify(event)).not.toMatch(/allura_mcp_|token_hash|Bearer/);
   });
 });
 
-// Workspace restriction is deliberately deferred until a canonical handler
-// enforces it. This boundary does not claim that it is isolated here.
 describe("workspace_id boundary claim", () => {
-  it("overrides caller workspace with verified workspace authorization", () => {
+  it("does not serialize workspace authority into memory_add arguments", () => {
     const p = tokenPrincipal();
     const { args } = applyPrincipalToArgs(p, "memory_add", { workspace_id: "ws-main" });
     expect(p.workspaceId).toBe("ws-main");
-    expect(args.workspace_id).toBe("ws-main");
+    expect(args.workspace_id).toBeUndefined();
+    expect(args.scope).toBeUndefined();
   });
 });
 
@@ -453,6 +462,14 @@ describe("canRebindSession (review Finding 1)", () => {
     tenantIds: ["allura-system"],
     roles: ["curator"],
     credentialId: "tok_alpha",
+  });
+
+  it("refuses a same credential id when the paired device binding changes", () => {
+    const deviceA = tokenPrincipal({ credentialId: "tok_alpha", pairedDeviceId: "dev_a" });
+    const deviceB = tokenPrincipal({ credentialId: "tok_alpha", pairedDeviceId: "dev_b", sessionId: "sess-2" });
+
+    expect(deviceA.pairedDeviceId).toBe("dev_a");
+    expect(canRebindSession(deviceA, deviceB)).toBe(false);
   });
 
   it("allows the same credential to continue its own session", () => {
