@@ -8,10 +8,10 @@ ENV PORT=3200
 
 # Copy the pre-built standalone (with server.js + traced node_modules)
 COPY .next/standalone ./
-# Turbopack mangles externals (e.g. pg-587764f78a6c7a9c) beyond what
-# outputFileTracing resolves; overlay the full dependency tree so every
-# external resolves at runtime.
-COPY node_modules ./node_modules
+# Turbopack emits externals under mangled names (e.g. pg-587764f78a6c7a9c)
+# via symlinks in .next/node_modules; the standalone copy does NOT include
+# them, so mirror the old working image's layout explicitly.
+COPY .next/node_modules ./.next/node_modules
 # Copy static assets
 COPY .next/static ./.next/static
 

@@ -4,6 +4,9 @@ node_modules
 # Keep the standalone runtime's traced node_modules for the prebuilt portal image
 !.next/standalone/node_modules
 !.next/standalone/node_modules/**
+# Turbopack externals (mangled pg-587764f78a6c7a9c symlinks) live here
+!.next/node_modules
+!.next/node_modules/**
 # The prebuilt image overlays the full dependency tree (Turbopack externals)
 !node_modules
 !node_modules/**
