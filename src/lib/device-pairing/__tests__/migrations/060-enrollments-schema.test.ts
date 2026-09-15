@@ -52,6 +52,15 @@ describe("Story 29.1 migration 060 enrollment contract", () => {
     expect(sql).not.toMatch(/private_key/i)
   })
 
+  it("requires the transaction-stamped authenticated principal before approval", () => {
+    const sql = migrationSql()
+
+    expect(sql).toContain("app.current_principal")
+    expect(sql).toContain("app.current_group_id")
+    expect(sql).toContain("app.current_workspace_id")
+    expect(sql).toContain("authenticated principal context required")
+  })
+
   it("exposes only five fixed-search-path SECURITY DEFINER functions to allura_app", () => {
     const sql = migrationSql()
     for (const functionName of [

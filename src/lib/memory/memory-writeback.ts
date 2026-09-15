@@ -17,8 +17,7 @@ if (typeof window !== "undefined") {
   throw new Error("server-side only");
 }
 
-import { memory_add } from "@/mcp/canonical-tools";
-import type { MemoryAddResponse, GroupId } from "@/lib/memory/canonical-contracts";
+import type { MemoryAddResponse } from "@/lib/memory/canonical-contracts";
 import { validateGroupId } from "@/lib/validation/group-id";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -111,7 +110,7 @@ export async function writeTaskOutcome(
   params: TaskOutcomeParams
 ): Promise<TaskOutcomeResult> {
   // Validate group_id format (fail fast)
-  const validatedGroupId = validateGroupId(params.group_id);
+  validateGroupId(params.group_id);
 
   // Validate required fields
   if (!params.task_summary || params.task_summary.trim().length === 0) {
@@ -124,20 +123,7 @@ export async function writeTaskOutcome(
     throw new Error(`outcome must be 'pass', 'fail', or 'partial' — got '${params.outcome}'`);
   }
 
-  const content = buildTaskOutcomeContent(params);
-  const metadata = buildTaskOutcomeMetadata(params);
-
-  const memory = await memory_add({
-    group_id: validatedGroupId as unknown as GroupId,
-    user_id: params.user_id ?? params.agent_id,
-    content,
-    metadata: {
-      ...metadata,
-      source: "conversation",
-    },
-  });
-
-  return { memory, content, metadata };
+  throw new Error("memory_writeback requires a verified workspace-bound principal and is unavailable to direct helpers");
 }
 
 // ── MCP Tool Wrapper ──────────────────────────────────────────────────────────

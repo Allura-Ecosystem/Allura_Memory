@@ -80,6 +80,7 @@ import type {
 } from "@/lib/memory/canonical-contracts"
 import { storeMemory } from "@/lib/ruvector/bridge"
 import { searchWithFeedback } from "@/lib/ruvector/retrieval-adapter"
+import { requireTransportMemoryAddAuthority } from "@/lib/auth/mcp-authenticator"
 import {
   checkBudget,
   ensureSession,
@@ -162,9 +163,12 @@ export async function memory_add(request: MemoryAddRequest): Promise<MemoryAddRe
   console.log(`[DEBUG memory_add] AUTO_APPROVAL_THRESHOLD=${AUTO_APPROVAL_THRESHOLD}; HITL promotion enforced`)
 
   const groupId = validateGroupId(request.group_id)
-  const agentId = request.metadata?.agent_id || request.scope?.agent_id || "api"
+  const scope = requireTransportMemoryAddAuthority(request)
+  const agentId = scope.agent_id
+  if (request.metadata?.agent_id && request.metadata.agent_id !== agentId) {
+    throw new Error("metadata.agent_id must match verified workspace scope")
+  }
   const traceType = request.trace_type || "conversation"
-  const scope = request.scope || { group_id: groupId }
   const memoryId = generateMemoryId()
   const createdAt = new Date().toISOString()
   const startTime = Date.now()

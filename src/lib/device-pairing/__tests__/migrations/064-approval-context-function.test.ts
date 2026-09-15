@@ -32,6 +32,9 @@ describe("Story 29.5 migration 064 approval-context contract", () => {
     expect(sql).toContain("device_enrollment_approval_context(TEXT)")
     expect(sql).toContain("TO allura_app")
     expect(sql).toContain("FUNCTION device_enrollment_pre_human_audit")
+    expect(sql).toContain("app.current_principal")
+    expect(sql).toContain("app.current_group_id")
+    expect(sql).toContain("app.current_workspace_id")
     expect(sql).toContain("REVOKE EXECUTE ON FUNCTION device_enrollment_pre_human_audit(TEXT, JSONB) FROM PUBLIC")
     expect(sql).toContain("GRANT EXECUTE ON FUNCTION device_enrollment_pre_human_audit(TEXT, JSONB) TO allura_app")
     expect(sql).toContain("VALUES ('064',")
@@ -112,6 +115,12 @@ describeMigrationLive("Story 29.5 migration 064 live PostgreSQL enforcement", ()
 
   it("returns NOT_PENDING on every replay, regardless of PKCE state", async () => {
     const args = ["enroll_live_064", "state-064", "principal-064", "allura-acme", "ws-064", "hash", new Date(Date.now() + 60_000), "nonce", new Date(Date.now() + 60_000)]
+    await expect(db.app.query("SELECT device_enrollment_approve($1,$2,$3,$4,$5,$6,$7,$8,$9) AS status", args)).rejects.toThrow(
+      /authenticated principal context required/i,
+    )
+    await db.app.query("SELECT set_config('app.current_principal', $1, false)", [args[2]])
+    await db.app.query("SELECT set_config('app.current_group_id', $1, false)", [args[3]])
+    await db.app.query("SELECT set_config('app.current_workspace_id', $1, false)", [args[4]])
     const first = await db.app.query("SELECT device_enrollment_approve($1,$2,$3,$4,$5,$6,$7,$8,$9) AS status", args)
     expect(first.rows[0].status).toBe("APPROVED")
     const replay = await db.app.query("SELECT device_enrollment_approve($1,$2,$3,$4,$5,$6,$7,$8,$9) AS status", args)

@@ -1,16 +1,16 @@
 /**
  * Cross-Tenant Audit Endpoint — GET /api/audit/cross-tenant
  *
- * Story 22.6: Admin-only endpoint that runs an automated cross-tenant
- * leakage test. Creates synthetic tenants, seeds memories, runs 100
- * queries per tenant pair, verifies zero leakage, and cleans up.
+ * Admin-only endpoint reserved for an automated cross-tenant leakage audit.
+ * It currently returns 503 for authenticated admins because no verified
+ * cross-workspace audit principal exists to seed synthetic data safely.
  *
  * Response: {
  *   tenants_tested, queries_per_pair, total_queries,
  *   leaks_found, status, leak_details, timestamp, cleanup_succeeded
  * }
  *
- * Returns 200 on pass, 500 on fail (leaks found).
+ * Returns 503 until the required audit authority is implemented.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -22,6 +22,7 @@ import {
 import {
   runCrossTenantAuditWithCleanup,
   getLastCleanupSucceeded,
+  CrossTenantAuditUnavailableError,
 } from "@/lib/audit/cross-tenant-test";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -65,6 +66,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
+    if (error instanceof CrossTenantAuditUnavailableError) {
+      return NextResponse.json(
+        {
+          error: "Cross-tenant synthetic audit is unavailable without verified cross-workspace audit principals",
+          status: "unavailable",
+          leaks_found: null,
+          leak_details: [],
+          cleanup_succeeded: getLastCleanupSucceeded(),
+        },
+        { status: 503 },
+      );
+    }
     console.error("[Cross-Tenant Audit] Failed:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(

@@ -12,10 +12,12 @@ export function SurfaceState<T>({
   state,
   render,
   emptyLabel,
+  emptyDescription = "No records exist for this tenant and workspace yet. Data will appear once governed activity begins.",
 }: {
   state: DashboardState<T>
   render: (data: T) => React.ReactNode
   emptyLabel: string
+  emptyDescription?: string
 }): React.ReactElement {
   if (state.state === "degraded") {
     return (
@@ -40,7 +42,7 @@ export function SurfaceState<T>({
       <div data-surface-state="empty" style={{ color: "#374151", background: "#f9fafb", borderRadius: 8, padding: 16 }}>
         <strong>{emptyLabel}</strong>
         <p style={{ margin: "8px 0 0", color: "#6b7280" }}>
-          No records exist for this tenant and workspace yet. Data will appear once governed activity begins.
+          {emptyDescription}
         </p>
         <p style={{ margin: "8px 0 0", color: "#6b7280", fontSize: 12 }}>Fetched {state.fetchedAt}</p>
       </div>

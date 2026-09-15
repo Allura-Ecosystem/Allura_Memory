@@ -99,8 +99,9 @@ const HTTP_HOST = process.env.ALLURA_MCP_HTTP_HOST;
 // AC-1: production startup throws when no supported auth configuration exists.
 
 import {
-  createDefaultAuthenticator,
+  createHttpAuthenticator,
   type McpAuthenticator,
+  type AuthenticatedTransportPrincipal,
   resolveHttpAuthConfig,
   resolveRequestCorrelationId,
 } from "@/lib/auth/mcp-authenticator";
@@ -118,14 +119,16 @@ import {
 // Throws (and therefore refuses to boot) when production is unauthenticated.
 const AUTH_CONFIG = resolveHttpAuthConfig(process.env as Record<string, string | undefined>);
 
-const authenticatorPromise: Promise<McpAuthenticator> = createDefaultAuthenticator(
-  AUTH_CONFIG,
+const authenticatorPromise: Promise<McpAuthenticator> = createHttpAuthenticator(
+  // The raw startup config remains diagnostics-only and cloneable. The auth
+  // boundary below privately freezes and stamps its own configuration copy.
+  process.env as Record<string, string | undefined>,
   () => randomUUID(),
 );
 
 /** Per-session mutable principal holder, re-authenticated on every request. */
 interface PrincipalHolder {
-  current: PrincipalContext | null;
+  current: AuthenticatedTransportPrincipal | null;
 }
 
 /**
@@ -166,7 +169,7 @@ async function resolveRequestPrincipal(
   res: ServerResponse,
   route: string,
   protocolRequestId?: unknown,
-): Promise<PrincipalContext | null> {
+): Promise<AuthenticatedTransportPrincipal | null> {
   const correlationId = resolveRequestCorrelationId(
     req.headers as Record<string, string | string[] | undefined>,
     protocolRequestId,
@@ -326,8 +329,8 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
-            user_id: { type: "string", description: "Required: User identifier within tenant" },
+            group_id: { type: "string", description: "Optional tenant selector (format: allura-*). The authenticated transport derives the effective tenant and rejects a mismatch." },
+            user_id: { type: "string", description: "Optional identity assertion. The authenticated transport derives the persisted user and rejects a mismatch." },
             content: { type: "string", description: "Required: Memory content text" },
             metadata: {
               type: "object",
@@ -340,7 +343,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             threshold: { type: "number", description: "Optional: Override promotion threshold (default: 0.85)" },
           },
-          required: ["group_id", "user_id", "content"],
+          required: ["content"],
         },
       },
       {
@@ -776,10 +779,15 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
   // are resource selectors only; `guardToolCall` strips the authority keys,
   // reconciles the tenant, and binds the actor to the authenticated identity.
   let args: Record<string, unknown>;
+  let verifiedMemoryAddRequest: MemoryAddRequest | undefined;
   const principal = principalHolder.current;
   try {
-    const guarded = guardToolCall(principal, name, request.params.arguments);
+    const prepared = name === "memory_add"
+      ? principal?.prepareMemoryAdd(request.params.arguments)
+      : undefined;
+    const guarded = prepared?.guarded ?? guardToolCall(principal, name, request.params.arguments);
     args = guarded.args;
+    verifiedMemoryAddRequest = prepared?.request;
     auditAuthDecision(
       buildAuthAuditEvent({
         principal,
@@ -811,7 +819,7 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
     let result: unknown;
     switch (name) {
       case "memory_add":
-        result = await memory_add(args as unknown as MemoryAddRequest);
+        result = await memory_add(verifiedMemoryAddRequest!);
         break;
       case "memory_search":
         result = await memory_search(args as unknown as MemorySearchRequest);

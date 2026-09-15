@@ -21,6 +21,8 @@ const USER_A = "user-a";
 const USER_B = "user-b";
 
 async function testScopeIsolation() {
+  throw new Error("scope isolation seeding requires verified workspace principals and is unavailable to direct scripts");
+
   let passed = 0;
   let failed = 0;
 
@@ -32,14 +34,12 @@ async function testScopeIsolation() {
     group_id: GROUP_A,
     user_id: USER_A,
     content: "SECRET-A: This data belongs to Group A only",
-    scope: { group_id: GROUP_A, agent_id: "test-isolation" },
   });
 
   await memory_add({
     group_id: GROUP_B,
     user_id: USER_B,
     content: "SECRET-B: This data belongs to Group B only",
-    scope: { group_id: GROUP_B, agent_id: "test-isolation" },
   });
 
   // Test 1: Group A search should not return Group B data

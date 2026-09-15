@@ -17,6 +17,9 @@ import { randomUUID } from "crypto";
 import { autoPromoteProposal, isAutoPromoteEnabled } from "../lib/curator/auto-promote";
 import { curatorScore } from "../lib/curator/score";
 import { memory_add, resetConnections } from "../mcp/canonical-tools";
+import {
+  authenticateServiceTransport,
+} from "../lib/auth/mcp-authenticator";
 
 // Neo4j is sunset — mock the old insert-insight module locally
 const createInsight = vi.fn(async (_payload: Record<string, unknown>) => ({
@@ -56,6 +59,22 @@ const E2E_TIMEOUT = 30000; // 30 seconds for integration tests
 // Per-run isolation: unique group_id so parallel runs never collide
 const RUN_ID = randomUUID().slice(0, 8);
 const GROUP_ID = `allura-curator-e2e-${RUN_ID}` as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+/** Use the configured stdio production issuer, never a synthetic verifier. */
+async function preparePipelineMemoryAdd() {
+  process.env.ALLURA_MCP_SERVICE_PRINCIPAL_ID = "curator-pipeline-test";
+  process.env.ALLURA_MCP_SERVICE_WORKSPACE_ID = `ws-${GROUP_ID}`;
+  process.env.ALLURA_MCP_SERVICE_TENANTS = GROUP_ID;
+  process.env.ALLURA_MCP_SERVICE_SCOPES = "memory:write";
+  const principal = authenticateServiceTransport(`curator-pipeline-session-${RUN_ID}`);
+
+  return principal.prepareMemoryAdd({
+    group_id: GROUP_ID,
+    user_id: "curator-pipeline-test",
+    content: `I always prefer explicit return types and strict null checks in TypeScript [pipeline:${RUN_ID}]`,
+    metadata: { source: "conversation" },
+  }).request;
+}
 
 describe.skipIf(!shouldRunE2E)("Curator Pipeline E2E", () => {
   let pgPool: Pool;
@@ -238,13 +257,7 @@ describe.skipIf(!shouldRunE2E)("Curator Pipeline E2E", () => {
       resetConnections();
 
       // Step 1: Add a high-confidence memory — should queue a proposal
-      await memory_add({
-        group_id: GROUP_ID,
-        user_id: "pipeline-user",
-        content: `I always prefer explicit return types and strict null checks in TypeScript [pipeline:${RUN_ID}]`,
-        metadata: { source: "conversation" },
-        scope: { group_id: GROUP_ID, workspace_id: `ws-${GROUP_ID}`, agent_id: "curator-pipeline-test" } as any,
-      });
+      await memory_add(await preparePipelineMemoryAdd());
 
       // Step 2: Fetch the proposal from canonical_proposals
       const proposalResult = await pgPool.query(

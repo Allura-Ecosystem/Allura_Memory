@@ -20,7 +20,6 @@ import { DatabaseQueryError, DatabaseUnavailableError } from "@/lib/errors/datab
 import { MemoryNotFoundError } from "@/lib/memory/canonical-contracts"
 import type {
   GroupId,
-  MemoryAddRequest,
   MemoryDeleteRequest,
   MemoryGetRequest,
   MemoryListDeletedRequest,
@@ -31,7 +30,6 @@ import type {
 import { captureException } from "@/lib/observability/sentry"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import {
-  memory_add,
   memory_delete,
   memory_get,
   memory_list,
@@ -92,42 +90,10 @@ export async function POST(request: NextRequest) {
     return forbiddenResponse(roleCheck)
   }
 
-  try {
-    const body = await request.json()
-
-    // Validate group_id format (ARCH-001: enforces allura-* pattern)
-    let validatedGroupId: string
-    try {
-      validatedGroupId = validateGroupId(body.group_id)
-    } catch (error) {
-      if (error instanceof GroupIdValidationError) {
-        return NextResponse.json({ error: `Invalid group_id: ${error.message}` }, { status: 400 })
-      }
-      throw error
-    }
-
-    if (!body.user_id) {
-      return NextResponse.json({ error: "user_id is required" }, { status: 400 })
-    }
-
-    if (!body.content) {
-      return NextResponse.json({ error: "content is required" }, { status: 400 })
-    }
-
-    const addRequest: MemoryAddRequest = {
-      group_id: validatedGroupId as GroupId,
-      user_id: body.user_id,
-      content: body.content,
-      metadata: body.metadata,
-      threshold: body.threshold,
-    }
-
-    const response = await memory_add(addRequest)
-
-    return jsonWithDegradation(response)
-  } catch (error) {
-    return handleError(error, "/api/memory", "POST")
-  }
+  return NextResponse.json(
+    { error: "memory_add requires a verified workspace-bound principal; REST writes are not supported" },
+    { status: 403 },
+  )
 }
 
 // ── GET /api/memory (memory_list) ─────────────────────────────────────────

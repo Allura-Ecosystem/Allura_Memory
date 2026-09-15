@@ -479,14 +479,16 @@ export function applyPrincipalToArgs(
   for (const key of STRIPPED_AUTHORITY_KEYS) {
     delete args[key];
   }
+  delete args.scope;
+  delete args.workspace_id;
 
   // 2. Tenant.
   const effectiveTenant = resolveEffectiveTenant(principal, source.group_id);
   args.group_id = effectiveTenant;
-  if (principal.workspaceId) {
+   if (principal.workspaceId && toolName !== "memory_add") {
     args.workspace_id = principal.workspaceId;
     args.scope = Object.freeze({ group_id: effectiveTenant, workspace_id: principal.workspaceId, agent_id: principal.principalId });
-  } else if (new Set(["memory_search", "memory_get", "memory_list"]).has(toolName)) {
+  } else if (!principal.workspaceId && new Set(["memory_search", "memory_get", "memory_list"]).has(toolName)) {
     throw new PrincipalAuthError("CONFIG_MISSING", `Principal '${principal.principalId}' has no verified workspace binding`);
   }
 
@@ -494,7 +496,8 @@ export function applyPrincipalToArgs(
   const actors: Record<string, string> = {};
   for (const field of ACTOR_FIELDS) {
     const present = Object.prototype.hasOwnProperty.call(source, field);
-    if (!present && !(field === "curator_id" && isElevatedTool(toolName))) continue;
+     const injectMemoryAddUser = toolName === "memory_add" && field === "user_id";
+     if (!present && !injectMemoryAddUser && !(field === "curator_id" && isElevatedTool(toolName))) continue;
     const resolved = resolveEffectiveActor(principal, field, source[field], toolName);
     args[field] = resolved;
     actors[field] = resolved;

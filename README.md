@@ -283,12 +283,13 @@ Stdio from a local checkout:
 
 ## First memory round trip
 
-All calls are tenant-scoped. Write operations also identify the actor for provenance.
+All calls are tenant-scoped. The authenticated transport—not caller-supplied
+arguments—derives the write's group, workspace, persisted user, and agent. A
+caller may provide `group_id` as a tenant selector and `user_id` as an identity
+assertion; either must match the authenticated principal or the call is rejected.
 
 ```typescript
 const created = await memory_add({
-  group_id: "allura-myteam",
-  user_id: "brooks-architect",
   content: "Decision: canonical promotion requires curator approval.",
   metadata: {
     source: "conversation",
@@ -304,7 +305,9 @@ const results = await memory_search({
 });
 ```
 
-Fresh writes are episodic. They may be searchable for operational workflows, but they are not approved truth until they complete the curator path.
+Fresh writes are episodic. Eligible writes queue for human curator review; they
+are never auto-promoted by `memory_add`. They may be searchable for operational
+workflows, but they are not approved truth until they complete the curator path.
 
 ## MCP API
 

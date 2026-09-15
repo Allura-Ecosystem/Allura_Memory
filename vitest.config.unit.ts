@@ -176,6 +176,8 @@ export default defineConfig({
       "src/lib/postgres/connection.app-pool.test.ts",
       // Story 24.2 — Authenticated principal context (pure logic, injected deps)
       "src/lib/auth/__tests__/principal-context.test.ts",
+      "src/lib/auth/__tests__/mcp-legacy-route.test.ts",
+      "src/lib/memory/memory-add-workspace-scope.test.ts",
       "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
       "src/lib/auth/__tests__/principal-audit.test.ts",
       "src/lib/auth/__tests__/budget-scope.test.ts",

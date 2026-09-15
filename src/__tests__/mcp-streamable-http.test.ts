@@ -98,7 +98,7 @@ describeIf("MCP Streamable HTTP Transport", () => {
       }
     });
 
-    it("should have correct required fields for memory_add", async () => {
+    it("should require only content for memory_add; identity fields are transport assertions", async () => {
       const client = new Client({
         name: "allura-test-client",
         version: "1.0.0",
@@ -112,9 +112,13 @@ describeIf("MCP Streamable HTTP Transport", () => {
         const addTool = toolsResult.tools.find((t) => t.name === "memory_add");
 
         expect(addTool).toBeDefined();
-        expect(addTool!.inputSchema.required).toContain("group_id");
-        expect(addTool!.inputSchema.required).toContain("user_id");
+        expect(addTool!.inputSchema.required).not.toContain("group_id");
+        expect(addTool!.inputSchema.required).not.toContain("user_id");
         expect(addTool!.inputSchema.required).toContain("content");
+        expect((addTool!.inputSchema.properties as Record<string, { description?: string }>).group_id.description)
+          .toMatch(/Optional tenant selector/);
+        expect((addTool!.inputSchema.properties as Record<string, { description?: string }>).user_id.description)
+          .toMatch(/Optional identity assertion/);
       } finally {
         await client.close();
       }

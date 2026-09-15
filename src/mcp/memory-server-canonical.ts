@@ -37,15 +37,14 @@ import { cleanupMemoryState } from "./cleanup"
 // explicit dev-local principal.
 import { randomUUID } from "node:crypto"
 import {
-  createServicePrincipal,
-  resolveServiceAuthConfig,
+  authenticateServiceTransport,
+  type AuthenticatedTransportPrincipal,
 } from "@/lib/auth/mcp-authenticator"
 import { emitAuthAudit } from "@/lib/auth/principal-audit"
 import {
   buildAuthAuditEvent,
   guardToolCall,
   PrincipalAuthError,
-  type PrincipalContext,
 } from "@/lib/auth/principal-context"
 
 /**
@@ -53,12 +52,11 @@ import {
  * (and eagerly in main()) so that importing this module for static analysis
  * does not require the environment to be configured.
  */
-let servicePrincipal: PrincipalContext | null = null
+let servicePrincipal: AuthenticatedTransportPrincipal | null = null
 
-export function getServicePrincipal(): PrincipalContext {
+export function getServicePrincipal(): AuthenticatedTransportPrincipal {
   if (!servicePrincipal) {
-    const config = resolveServiceAuthConfig(process.env as Record<string, string | undefined>)
-    servicePrincipal = createServicePrincipal(config, `stdio_${randomUUID()}`)
+    servicePrincipal = authenticateServiceTransport(`stdio_${randomUUID()}`)
   }
   return servicePrincipal
 }
@@ -102,11 +100,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             group_id: {
               type: "string",
-              description: "Required: Tenant namespace (format: allura-*)",
+              description: "Optional tenant selector (format: allura-*). The authenticated transport derives the effective tenant and rejects a mismatch.",
             },
             user_id: {
               type: "string",
-              description: "Required: User identifier within tenant",
+              description: "Optional identity assertion. The authenticated transport derives the persisted user and rejects a mismatch.",
             },
             content: {
               type: "string",
@@ -133,7 +131,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description: "Optional: Override promotion threshold (default: 0.85)",
             },
           },
-          required: ["group_id", "user_id", "content"],
+          required: ["content"],
         },
       },
       {
@@ -435,11 +433,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   // Story 24.2: same chokepoint as the HTTP gateway. group_id / user_id /
   // curator_id / role in the arguments are resource selectors, never authority.
   let args: Record<string, unknown>
-  let principal: PrincipalContext | null = null
+  let verifiedMemoryAddRequest: import("@/lib/memory/canonical-contracts").MemoryAddRequest | undefined
+  let principal: AuthenticatedTransportPrincipal | null = null
   try {
     principal = getServicePrincipal()
-    const guarded = guardToolCall(principal, name, request.params.arguments)
+    const prepared = name === "memory_add"
+      ? principal.prepareMemoryAdd(request.params.arguments)
+      : undefined
+    const guarded = prepared?.guarded ?? guardToolCall(principal, name, request.params.arguments)
     args = guarded.args
+    verifiedMemoryAddRequest = prepared?.request
     auditAuthDecision(
       buildAuthAuditEvent({
         principal,
@@ -467,7 +470,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     switch (name) {
       case "memory_add":
-        envelope = await coordinator.memory_add(args as any)
+        envelope = await coordinator.memory_add(verifiedMemoryAddRequest!)
         break
       case "memory_search":
         envelope = await coordinator.memory_search(args as any)

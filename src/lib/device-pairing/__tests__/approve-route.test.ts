@@ -354,6 +354,18 @@ describe("Story 29.5 — POST /api/device-pairing/approve", () => {
     });
   });
 
+  describe("PrincipalContext route guard", () => {
+    it("returns 403 for a verified viewer before opening a database connection", async () => {
+      const { pool } = createMockPool({});
+      mockGetAppPool.mockReturnValue(pool);
+
+      const res = await POST(makeRequest(makeValidBody(), makeAuthHeaders({ "x-allura-role": "viewer" })));
+
+      expect(res.status).toBe(403);
+      expect(mockGetAppPool).not.toHaveBeenCalled();
+    });
+  });
+
   describe("404 ENROLLMENT_NOT_FOUND", () => {
     it("returns 404 when device_enrollment_approve returns NOT_FOUND", async () => {
       const { pool, queryCalls } = createMockPool({ approveStatus: "NOT_FOUND" });

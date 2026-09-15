@@ -442,14 +442,13 @@ describe("buildAuthAuditEvent (AC-7)", () => {
   });
 });
 
-// Workspace restriction is deliberately deferred until a canonical handler
-// enforces it. This boundary does not claim that it is isolated here.
 describe("workspace_id boundary claim", () => {
-  it("overrides caller workspace with verified workspace authorization", () => {
+  it("does not serialize workspace authority into memory_add arguments", () => {
     const p = tokenPrincipal();
     const { args } = applyPrincipalToArgs(p, "memory_add", { workspace_id: "ws-main" });
     expect(p.workspaceId).toBe("ws-main");
-    expect(args.workspace_id).toBe("ws-main");
+    expect(args.workspace_id).toBeUndefined();
+    expect(args.scope).toBeUndefined();
   });
 });
 

@@ -88,31 +88,9 @@ Readiness check — verifies PostgreSQL, Neo4j, and MCP initialization.
 
 ### POST /api/memory
 
-Store a new memory.
-
-**Request:**
-```json
-{
-  "group_id": "allura-myteam",
-  "user_id": "alice",
-  "content": "Alice prefers dark mode",
-  "metadata": { "source": "conversation" },
-  "threshold": 0.85
-}
-```
-
-**Response:**
-```json
-{
-  "id": "mem_7f9e2c3a1b5d",
-  "content": "Alice prefers dark mode",
-  "score": 0.92,
-  "status": "queued",
-  "group_id": "allura-myteam",
-  "user_id": "alice",
-  "created_at": "2026-06-04T12:00:00Z"
-}
-```
+**Fail-closed: currently returns 403.** Browser REST writes do not yet have the
+required verified workspace-principal boundary. Use canonical authenticated MCP
+`memory_add` over Streamable HTTP or stdio; it is the supported memory writer.
 
 ### GET /api/memory
 

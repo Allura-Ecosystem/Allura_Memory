@@ -5,7 +5,10 @@ import { auditGateway } from "@/lib/guard/audit";
 import { authorizeToolCall } from "@/lib/guard/gateway";
 import { injectContext } from "@/lib/guard/inject-context";
 import { extractBearer, validateToken } from "@/lib/guard/validate-token";
-import type { GroupId as MemGroupId, MemoryAddRequest, MemorySearchRequest } from "@/lib/memory/canonical-contracts";
+import type { McpTokenRecord } from "@/lib/mcp-token/repository";
+import type { GroupId as MemGroupId, MemorySearchRequest } from "@/lib/memory/canonical-contracts";
+import { createLegacyTokenPrincipal } from "@/lib/auth/mcp-authenticator";
+import { PrincipalAuthError } from "@/lib/auth/principal-context";
 import { memory_add, memory_search } from "@/mcp/canonical-tools";
 
 // Allura MCP Gateway (DESIGN-MCP-GATEWAY) — POST-only for the Phase 1 slice
@@ -39,19 +42,17 @@ async function executeTool(
   toolName: string,
   args: Record<string, unknown>,
   scope: AlluraScope,
+  credential: McpTokenRecord,
 ): Promise<unknown> {
   const group_id = scope.group_id as unknown as MemGroupId;
 
   if (toolName === "memory_add") {
-    const req: MemoryAddRequest = {
-      group_id,
-      user_id: scope.actor_id,
-      content: String(args.content ?? ""),
-      metadata: { ...(args.metadata as Record<string, unknown> | undefined), workspace_id: scope.workspace_id },
-      // Verified server-injected scope — required for workspace-scoped RLS writes.
-      scope: { group_id, workspace_id: scope.workspace_id, agent_id: scope.actor_id },
-    };
-    return memory_add(req);
+    // The legacy validator owns the credential object. It is the only route to
+    // a capability issuer; JSON-RPC scope data and PrincipalContext data cannot
+    // mint a write by themselves.
+    const principal = createLegacyTokenPrincipal(credential, scope.request_id);
+    const { request } = principal.prepareMemoryAdd(args);
+    return memory_add(request);
   }
 
   if (toolName === "memory_search") {
@@ -60,7 +61,8 @@ async function executeTool(
       group_id,
       user_id: scope.actor_id,
       limit: typeof args.limit === "number" ? args.limit : 10,
-      // Verified server-injected scope — required by requireVerifiedWorkspaceScope.
+      // This legacy route's token validator owns this scope; callers cannot
+      // provide or override it through the RPC payload.
       scope: { group_id, workspace_id: scope.workspace_id, agent_id: scope.actor_id },
     };
     return memory_search(req);
@@ -108,10 +110,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return rpcError(body.id, auth.status, auth.reason);
   }
 
+  const validation = await validateToken(extractBearer(authorization));
+  if (!validation.ok) {
+    return rpcError(body.id, 401, `token ${validation.reason}`);
+  }
+
   try {
-    const result = await executeTool(toolName, args, auth.scope);
+    const result = await executeTool(toolName, args, auth.scope, validation.token);
     return rpcResult(body.id, result);
   } catch (error) {
+    if (error instanceof PrincipalAuthError) {
+      return rpcError(body.id, error.httpStatus, error.message);
+    }
     const message = error instanceof Error ? error.message : "tool execution failed";
     return rpcError(body.id, 500, message);
   }

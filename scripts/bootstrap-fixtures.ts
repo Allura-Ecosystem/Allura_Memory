@@ -139,6 +139,8 @@ const FIXTURES = [
 ]
 
 async function seedFixtures() {
+  throw new Error("bootstrap fixtures require verified workspace principals and are unavailable to direct scripts")
+
   // Use the canonical-tools directly (server-side, not MCP)
   const { memory_add } = await import("../src/mcp/canonical-tools")
   const { memory_promote } = await import("../src/mcp/canonical-tools")
@@ -154,7 +156,6 @@ async function seedFixtures() {
         user_id: USER_ID,
         content: FIXTURES[i],
         trace_type: "conversation",
-        scope: { group_id: GROUP_ID, agent_id: "bootstrap-fixture" },
         metadata: {
           source: "manual" as const,
           agent_id: "bootstrap-fixture",

@@ -26,6 +26,12 @@ import { z } from "zod";
 import { getAppPool } from "@/lib/postgres/connection";
 import { getAuthUser } from "@/lib/auth/api-auth";
 import {
+  createPrincipalContext,
+  hasRole,
+  PrincipalAuthError,
+  type PrincipalContext,
+} from "@/lib/auth/principal-context";
+import {
   approveEnrollment,
   ApprovalError,
   APPROVAL_ERROR_STATUS,
@@ -44,6 +50,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       { error: "Authentication required", statusCode: 401 },
       { status: 401 },
+    );
+  }
+
+  let principal: PrincipalContext;
+  try {
+    principal = createPrincipalContext({
+      principalId: authUser.id,
+      workspaceId: authUser.workspaceId,
+      tenantIds: [authUser.groupId],
+      roles: [authUser.role],
+      authMethod: "web_session",
+      sessionId: authUser.sessionId ?? `web:${authUser.id}`,
+    });
+  } catch (error) {
+    if (error instanceof PrincipalAuthError) {
+      return NextResponse.json(error.toErrorPayload(), { status: error.httpStatus });
+    }
+    return NextResponse.json({ error: "Authentication required", statusCode: 401 }, { status: 401 });
+  }
+
+  if (!hasRole(principal, "admin") && !hasRole(principal, "curator")) {
+    return NextResponse.json(
+      { error: "Insufficient permissions", statusCode: 403 },
+      { status: 403 },
+    );
+  }
+
+  if (!principal.workspaceId) {
+    return NextResponse.json(
+      { error: "Authenticated workspace could not be resolved", statusCode: 403 },
+      { status: 403 },
     );
   }
 
@@ -71,7 +108,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const result = await approveEnrollment(pool, {
       enrollment_transaction_id: parsed.data.enrollment_transaction_id,
       pkce_state: parsed.data.pkce_state,
-      authUser,
+      authUser: {
+        ...authUser,
+        id: principal.principalId,
+        groupId: principal.tenantIds[0]!,
+        workspaceId: principal.workspaceId,
+      },
     });
     return NextResponse.json(result, { status: 200 });
   } catch (error) {

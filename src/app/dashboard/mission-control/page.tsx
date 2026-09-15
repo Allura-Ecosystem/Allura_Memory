@@ -17,6 +17,7 @@ export default async function MissionControlPage() {
       <SurfaceState
         state={state}
         emptyLabel="No execution activity yet."
+        emptyDescription="No execution events exist in this workspace and no work items exist in this tenant yet."
         render={(data) => (
           <dl style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: "8px 16px", fontSize: 14, color: "#374151" }}>
             <dt style={{ fontWeight: 600 }}>Events</dt>
