@@ -14,7 +14,7 @@ export function buildConnectionGuide(endpoint: string): ConnectionGuide {
     endpoint,
     transport: "streamable-http",
     steps: [
-      "Sign in through Cloudflare Access with your approved work account.",
+      "Sign in with your approved Faith Meats account (Clerk sign-in on the portal).",
       "Create or obtain a least-privilege Allura MCP credential from an administrator.",
       "Add the endpoint and credential to your MCP client; store the credential in that client's secure store.",
     ],
