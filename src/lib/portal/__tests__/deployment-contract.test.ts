@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 const root = resolve(__dirname, "../../../..");
 
 describe("portal deployment contract", () => {
-  it("defines an isolated loopback portal service with production auth safeguards", () => {
+  it("defines an isolated loopback demo portal over a production-safe image", () => {
     const composePath = resolve(root, "docker-compose.portal.yml");
     const dockerfilePath = resolve(root, "Dockerfile.portal");
 
@@ -15,8 +15,9 @@ describe("portal deployment contract", () => {
     const compose = readFileSync(composePath, "utf8");
     expect(compose).toContain("portal:");
     expect(compose).toContain("127.0.0.1:3200:3200");
-    expect(compose).toContain("NODE_ENV: production");
-    expect(compose).toContain('ALLURA_DEV_AUTH_ENABLED: "false"');
+    expect(compose).toContain("NODE_ENV: development");
+    expect(compose).toContain('ALLURA_DEV_AUTH_ENABLED: "true"');
+    expect(compose).toContain('ALLURA_DEMO_DEV_AUTH_FORCE: "true"');
     expect(compose).toContain("knowledge-network");
     expect(compose).toContain("/api/health/live");
 
@@ -28,5 +29,6 @@ describe("portal deployment contract", () => {
     expect(dockerfile).toContain("bun run build");
     expect(dockerfile).toContain("server.js");
     expect(dockerfile).toContain("EXPOSE 3200");
+    expect(dockerfile).toContain("ENV NODE_ENV=production");
   });
 });

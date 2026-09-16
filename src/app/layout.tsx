@@ -7,6 +7,9 @@ import { ClerkProviderShell } from "./clerk-provider"
 
 import "./globals.css"
 
+// The provider decision comes from the container-generated runtime manifest.
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: APP_CONFIG.meta.title,
   description: APP_CONFIG.meta.description,

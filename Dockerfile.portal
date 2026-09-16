@@ -5,7 +5,11 @@ WORKDIR /app
 # .dockerignore excludes runtime secrets, local build output, and VCS state.
 COPY . .
 RUN bun install --frozen-lockfile
-RUN bun run build
+# Static generation needs a deliberately non-production manifest. It is removed
+# before the runner stage; the entrypoint creates the real manifest at startup.
+RUN NODE_ENV=development bun scripts/generate-runtime-auth-manifest.ts \
+    && bun run build \
+    && rm -rf /app/.allura
 
 FROM oven/bun:1 AS runner
 
@@ -16,7 +20,9 @@ ENV PORT=3200
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/scripts/generate-runtime-auth-manifest.ts ./scripts/generate-runtime-auth-manifest.ts
+COPY --from=builder /app/scripts/portal-entrypoint.sh ./scripts/portal-entrypoint.sh
 
 EXPOSE 3200
 
-CMD ["bun", "server.js"]
+ENTRYPOINT ["sh", "/app/scripts/portal-entrypoint.sh"]

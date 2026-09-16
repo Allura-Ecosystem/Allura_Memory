@@ -27,7 +27,7 @@
 import { type NextFetchEvent, NextRequest, NextResponse } from "next/server"
 
 import { extractAlluraMetadata } from "@/lib/auth/clerk"
-import { isClerkEnabled } from "@/lib/auth/config"
+import { getRuntimeAuthStrategy } from "@/lib/auth/config"
 import { getDevUserSync } from "@/lib/auth/dev-auth"
 import { emitGatedAudit } from "@/lib/auth/edge-audit"
 import { AUTH_LOGIN_PATH } from "@/lib/auth/redirect-target"
@@ -381,10 +381,11 @@ export default async function proxy(
   ) {
     return nextWithoutAuthHeaders(request)
   }
-  if (!isClerkEnabled()) {
-    if (process.env.NODE_ENV === "production") {
-      return handleKeylessProduction(request)
-    }
+  const authStrategy = getRuntimeAuthStrategy()
+  if (authStrategy === "keyless-production") {
+    return handleKeylessProduction(request)
+  }
+  if (authStrategy === "dev") {
     return handleDevAuth(request)
   }
   return handleClerkAuth(request, event)

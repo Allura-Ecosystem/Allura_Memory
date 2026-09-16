@@ -2,15 +2,19 @@ services:
   portal:
     build:
       context: .
-      dockerfile: Dockerfile.portal-prebuilt
+      dockerfile: Dockerfile.portal
     container_name: allura-human-portal
     restart: unless-stopped
     env_file:
       - .env
       - .env.local
     environment:
-      NODE_ENV: production
-      ALLURA_DEV_AUTH_ENABLED: "false"
+      NODE_ENV: development
+      ALLURA_DEV_AUTH_ENABLED: "true"
+      ALLURA_DEMO_DEV_AUTH_FORCE: "true"
+      ALLURA_DEV_AUTH_USER_ID: dev-user-allura
+      ALLURA_DEV_AUTH_EMAIL: dev@allura.local
+      ALLURA_DEV_AUTH_WORKSPACE_ID: workspace-allura
       ALLURA_DASHBOARD_PORT: "3200"
       POSTGRES_HOST: knowledge-postgres
       POSTGRES_PORT: "5432"

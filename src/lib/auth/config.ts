@@ -11,6 +11,7 @@ import { z } from "zod";
 import type { AlluraRole, DevAuthConfig } from "./types";
 import { PUBLIC_ROUTE_MANIFEST, ROUTE_SCOPE_MANIFEST } from "./route-scope-manifest";
 import { AUTH_LOGIN_PATH } from "./redirect-target";
+import { clearRuntimeAuthConfigForTests, getRuntimeAuthConfig } from "./runtime-auth-config";
 
 // ── Environment Schema ──────────────────────────────────────────────────────
 
@@ -118,23 +119,34 @@ export function getAuthConfig(): AuthEnvConfig {
     return _cachedConfig;
   }
 
+  const runtime = getRuntimeAuthConfig();
   const result = authEnvSchema.safeParse(process.env);
 
   if (!result.success) {
     console.error("[auth] Invalid auth environment variables:", result.error.flatten().fieldErrors);
-    // In production, fail fast. In development, use defaults.
-    if (process.env.NODE_ENV === "production") {
+    if (runtime.environment === "production") {
       throw new Error(
         `Auth environment validation failed: ${JSON.stringify(result.error.flatten().fieldErrors)}`
       );
     }
-    // Development: use safe defaults
+    // Non-production only: retain local test/dev ergonomics.
     console.warn("[auth] Using default auth config due to validation errors.");
     _cachedConfig = authEnvSchema.parse({});
-    return _cachedConfig;
+  } else {
+    _cachedConfig = result.data;
   }
 
-  _cachedConfig = result.data;
+  _cachedConfig = {
+    ..._cachedConfig,
+    NODE_ENV: runtime.environment,
+    ALLURA_DEV_AUTH_ENABLED: runtime.devAuthEnabled,
+    ALLURA_DEMO_DEV_AUTH_FORCE: runtime.devAuthForce,
+    ALLURA_DEV_AUTH_ROLE: runtime.devAuthRole,
+    ALLURA_DEV_AUTH_GROUP_ID: runtime.devAuthGroupId,
+    ALLURA_DEV_AUTH_USER_ID: runtime.devAuthUserId,
+    ALLURA_DEV_AUTH_EMAIL: runtime.devAuthEmail,
+    ALLURA_DEV_AUTH_WORKSPACE_ID: runtime.devAuthWorkspaceId,
+  };
   return _cachedConfig;
 }
 
@@ -143,6 +155,7 @@ export function getAuthConfig(): AuthEnvConfig {
  */
 export function clearAuthConfig(): void {
   _cachedConfig = null;
+  clearRuntimeAuthConfigForTests();
 }
 
 // ── Derived Configuration ───────────────────────────────────────────────────
@@ -151,6 +164,7 @@ export function clearAuthConfig(): void {
  * Check if Clerk is properly configured (both keys present).
  */
 export function isClerkEnabled(config?: AuthEnvConfig): boolean {
+  if (!config) return getRuntimeAuthStrategy() === "clerk";
   const c = config ?? getAuthConfig();
   if (c.NODE_ENV !== "production" && c.ALLURA_DEMO_DEV_AUTH_FORCE) return false;
   return (
@@ -159,6 +173,17 @@ export function isClerkEnabled(config?: AuthEnvConfig): boolean {
     typeof c.CLERK_SECRET_KEY === "string" &&
     c.CLERK_SECRET_KEY.length > 0
   );
+}
+
+export type RuntimeAuthStrategy = "clerk" | "dev" | "keyless-production";
+
+/** The Proxy and server-rendered auth paths select their provider from one manifest. */
+export function getRuntimeAuthStrategy(): RuntimeAuthStrategy {
+  const runtime = getRuntimeAuthConfig();
+  if (runtime.environment === "production") {
+    return runtime.clerkConfigured ? "clerk" : "keyless-production";
+  }
+  return runtime.clerkConfigured && !runtime.devAuthForce ? "clerk" : "dev";
 }
 
 /**
