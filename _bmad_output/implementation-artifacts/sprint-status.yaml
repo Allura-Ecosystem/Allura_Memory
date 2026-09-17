@@ -3,7 +3,7 @@
 
 generated: "2026-08-28"
 project: "allura-memory"
-last_updated: "09-08-2026"
+last_updated: "09-17-2026 23:41"
 owner: brooks
 group_id: allura-system
 
@@ -351,10 +351,10 @@ epic_24:
       status_evidence: "PR #82 merged, but post-merge review found production entrypoints
         bypass the service, unsafe broad trigger suppression, and a non-transactional
         outbox claim. Remediation required. C1/C2/C3 findings resolved in current
-        codebase (PR #105, Epic 25 workspace authority foundation); remediation
-        verified 2026-08-28 (Brooks/Hermes). All 10 ACs verified 2026-08-29 against
-        code (single approveProposal service, idempotency, FOR UPDATE locking,
-        BEGIN/COMMIT/ROLLBACK, failure injection, outbox retry). Awaiting review."
+        codebase (PR #105, Epic 25 workspace authority foundation); remediation verified
+        2026-08-28 (Brooks/Hermes). All 10 ACs verified 2026-08-29 against code (single
+        approveProposal service, idempotency, FOR UPDATE locking, BEGIN/COMMIT/ROLLBACK,
+        failure injection, outbox retry). Awaiting review."
     - key: "24.5"
       title: "Deterministic Scenario Harness"
       status: done
@@ -362,10 +362,10 @@ epic_24:
       depends_on: ["24.2"]
       status_evidence: "PR #83 merged, but post-merge review found the runner does
         not compose the process engine and does not enforce record/replay/network/side-effect
-        requirements. C4 finding resolved (harness runner builds ProcessDefinition and
-        drives it through the engine); remediation verified 2026-08-28 (Brooks/Hermes + Team RAM).
-        All 10 ACs verified 2026-08-29 (3 committed scenarios, 25/25 harness tests).
-        Awaiting review."
+        requirements. C4 finding resolved (harness runner builds ProcessDefinition
+        and drives it through the engine); remediation verified 2026-08-28 (Brooks/Hermes
+        + Team RAM). All 10 ACs verified 2026-08-29 (3 committed scenarios, 25/25
+        harness tests). Awaiting review."
     - key: "24.6"
       title: "Evaluation and Regression Gates"
       status: done
@@ -374,8 +374,8 @@ epic_24:
       status_evidence: "PR #84 merged, but the runner compares caller-supplied values
         rather than executing declared datasets, and no required evaluation CI artifact
         exists. C5 remediation (Knuth): runner executes declared datasets/lanes from
-        evals/suites/portfolio.yaml; runSuite() primary entrypoint; eval:portfolio CLI;
-        test-eval CI job + Epic 24 Evidence / Evaluation lane. All 10 ACs verified
+        evals/suites/portfolio.yaml; runSuite() primary entrypoint; eval:portfolio
+        CLI; test-eval CI job + Epic 24 Evidence / Evaluation lane. All 10 ACs verified
         2026-08-29 (9 lanes pass, 12/12 eval tests, artifact hashes in evidence-index).
         Awaiting review."
     - key: "24.7"
@@ -383,8 +383,8 @@ epic_24:
       status: done
       owner: "Troy"
       depends_on: ["24.5", "24.6"]
-      status_evidence: "PR #85 merged, but post-merge review found CLI parsing and SDK
-        build fail. Remediation verified 2026-08-29 (Brooks/Hermes): SDK contract
+      status_evidence: "PR #85 merged, but post-merge review found CLI parsing and
+        SDK build fail. Remediation verified 2026-08-29 (Brooks/Hermes): SDK contract
         tests (17) + CLI tests (8) added; withRetry retries:0 bug + error surfacing
         + CLI --json unknown-command fixed; typecheck clean; 2499 unit tests pass."
     - key: "24.8"
@@ -394,10 +394,10 @@ epic_24:
       depends_on: ["24.2", "24.3", "24.4", "24.5", "24.6", "24.7"]
       status_evidence: "PR #86 merged only four enterprise Markdown files; canonical-doc
         alignment, traceability, evidence index, and CI guards remain incomplete.
-        Remediation verified 2026-08-29 (Brooks/Hermes): all 10 ACs verified —
-        canonical docs describe PostgreSQL/RuVector, threat-model covers 10 topics,
-        security-controls maps controls, residue guard extended with internal link
-        check (AC-9). Awaiting review."
+        Remediation verified 2026-08-29 (Brooks/Hermes): all 10 ACs verified — canonical
+        docs describe PostgreSQL/RuVector, threat-model covers 10 topics, security-controls
+        maps controls, residue guard extended with internal link check (AC-9). Awaiting
+        review."
     - key: "24.10"
       title: "CI Gate Integrity and Branch Protection"
       status: done
@@ -423,25 +423,24 @@ epic_24:
         scenarios, receipts, evaluation artifacts, or measured clean-environment evidence
         exist. Remediation verified 2026-08-29 (Brooks/Hermes): 3 runnable reference
         integrations with 9 scenarios (success/policy-failure/recovery each), all
-        verified against the deterministic harness; evidence-index updated;
-        interview-notes.md added. Awaiting review."
+        verified against the deterministic harness; evidence-index updated; interview-notes.md
+        added. Awaiting review."
     - key: "24.11a"
       title: "Fail-Closed Web Authority"
       status: done
       owner: "Troy + Brooks"
       depends_on: ["24.2", "24.3"]
       status_evidence: "Implementation merged (PR #99, 823c94a9). All ACs verified
-        2026-08-29: typecheck clean, 2474 unit tests pass, route-scope-manifest
-        validator PASS (zero uncovered, zero weak). Awaiting independent review."
+        2026-08-29: typecheck clean, 2474 unit tests pass, route-scope-manifest validator
+        PASS (zero uncovered, zero weak). Awaiting independent review."
     - key: "24.12"
       title: "Effective Tenant Authority Seam"
       status: done
       owner: "Woz + Pike + Fowler"
       depends_on: ["24.2"]
-      status_evidence: "Single resolveApiTenant seam reconciles duplicate
-        tenant-resolution helpers; discriminated 400/401/403/ok result, never a
-        protected-route fallback. Story file marked Done; code-review companion
-        file present."
+      status_evidence: "Single resolveApiTenant seam reconciles duplicate tenant-resolution
+        helpers; discriminated 400/401/403/ok result, never a protected-route fallback.
+        Story file marked Done; code-review companion file present."
 
 epic_25:
   name: "Governed Curator Console — Module Registry Reconciliation"
@@ -594,12 +593,11 @@ epic_27:
   name: "Governed Branchable Learning Memory"
   status: done
   retrospective:
-  next_story: null
+  next_story:
   sequence_note: "Epic complete 2026-08-29 — 6/6 stories done, AC-4 approved-after-
-    remediation (Pike/Hightower APPROVE; Fowler/Knuth findings remediated in
-    756165da), retrospective accepted with 5 action items. Production adoption
-    remains gated on license/provenance/security/benchmark gates (out-of-scope
-    honored)."
+    remediation (Pike/Hightower APPROVE; Fowler/Knuth findings remediated in 756165da),
+    retrospective accepted with 5 action items. Production adoption remains gated
+    on license/provenance/security/benchmark gates (out-of-scope honored)."
   stories:
     - key: "27.1"
       title: "Authorized Base Snapshot Contract — Design Spike"
@@ -914,6 +912,7 @@ development_status:
   18-5-update-blueprint-ruvector-posture: done
   18-6-update-rk21-graduation-criteria: done
   epic-18-retrospective: done
+
   epic-19: done
   19-1-live-db-e2e-ruvector: done
   19-2-dual-read-validation: done
@@ -921,6 +920,7 @@ development_status:
   19-4-path-b-crate-adapter-spike: done
   19-5-upstream-gaps-ruvnet: done
   epic-19-retrospective: done
+
   epic-20: done
   20-1-group-id-registry: done
   20-2-delegate-task-brief: done
@@ -928,6 +928,7 @@ development_status:
   20-4-memory-brief-helper: done
   20-5-memory-writeback-helper: done
   epic-20-retrospective: done
+
   epic-21: done
   21-1-schedule-curator-watchdog: done
   21-2-schedule-content-curator: done
@@ -935,6 +936,7 @@ development_status:
   21-4-drift-alerting-recovery: done
   21-5-curation-metrics-endpoint: done
   epic-21-retrospective: done
+
   epic-22: done
   22-1-tenant-registry-table: done
   22-2-tenant-onboarding-api: done
@@ -943,6 +945,7 @@ development_status:
   22-5-profile-export-import: done
   22-6-cross-tenant-audit: done
   epic-22-retrospective: done
+
   epic-23: done
   23-1-fix-typecheck-errors: done
   23-2-remove-neo4j-writer-tests: done
@@ -950,6 +953,7 @@ development_status:
   23-4-fix-token-compliance: done
   23-5-remove-dead-neo4j-code: done
   epic-23-retrospective: done
+
   epic-24: done
   24-1-ci-benchmarks: done
   24-2-authenticated-principal-context: done
@@ -962,6 +966,7 @@ development_status:
   24-10-ci-gate-integrity: done
   24-9-reference-integrations-portfolio-demo: done
   epic-24-retrospective: done
+
   epic-25: done
   epic-25-retrospective: done
   25-2a-workspace-evidence-lifecycle-foundation: done
@@ -978,6 +983,7 @@ development_status:
   26-5-governed-mitigation-policy-drafts: done
   26-6-containment-connectors-response-receipts: done
   26-7-operator-module-adversarial-tests-demo-gate: done
+
   epic-27: done
   epic-27-retrospective: done
   27-1-base-snapshot-authorization-spike: done
@@ -986,6 +992,7 @@ development_status:
   27-4-agentdb-sona-retrieval-learning-evaluation: done
   27-5-team-ram-durham-branch-workflows: done
   27-6-security-evidence-release-witness-demo-gate: done
+
   epic-28: done
   28-8-exit-gate-closure: done
   24-11a-fail-closed-web-authority: done
@@ -1013,6 +1020,22 @@ development_status:
   29-19-postgres-integration-tests: done
   29-20-clerk-pairing-e2e: done
   29-21-platform-secure-store-contracts: done
+
+  epic-30: backlog
+  30-1-epic-authority-and-readiness: backlog
+  30-2-approved-workspace-design-and-user-test-plan: backlog
+  30-3-authorization-and-threat-contract: backlog
+  30-4-knowledge-schema-rls-and-audit-foundation: backlog
+  30-5-workspace-scope-and-legacy-remediation: backlog
+  30-6-safe-read-services: backlog
+  30-7-my-work-reading-shell: backlog
+  30-8-search-links-and-backlinks: backlog
+  30-9-read-only-ask-allura: backlog
+  30-10-restricted-contractor-messaging: backlog
+  30-11-integrated-review-ci-and-controlled-red: backlog
+  30-12-five-user-validation-and-remediation: backlog
+  30-13-release-evidence-receipts-and-retrospective: backlog
+  epic-30-retrospective: optional
 action_items:
   - id: "epic-25-retro-item-1-update-epic-25-spec-status-lines-25-2a-2"
     epic: 25
@@ -1020,7 +1043,8 @@ action_items:
     owner: "Brooks"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "epic-25-governed-curator-review-console.md Status updated to Done with per-story acceptance summary."
+    resolution_note: "epic-25-governed-curator-review-console.md Status updated to
+      Done with per-story acceptance summary."
     ref: "_bmad_output/implementation-artifacts/epic-25-retro-2026-08-28.md"
   - id: "epic-25-retro-item-2-use-sprint_plan-py-sprint_status-py-excl"
     epic: 25
@@ -1028,7 +1052,9 @@ action_items:
       never hand-edit"
     owner: "Brooks"
     status: open
-    note: "sprint_plan.py and sprint_status.py do not exist in _bmad/scripts/ (verified 2026-08-29). The sanctioned tool is absent; hand-edits validated by YAML parse + detect-epic checks. Either restore the scripts or retire this item."
+    note: "sprint_plan.py and sprint_status.py do not exist in _bmad/scripts/ (verified
+      2026-08-29). The sanctioned tool is absent; hand-edits validated by YAML parse
+      + detect-epic checks. Either restore the scripts or retire this item."
     ref: "_bmad_output/implementation-artifacts/epic-25-retro-2026-08-28.md"
   - id: "epic-25-retro-item-3-remove-or-wire-dead-assertcapabilities-a"
     epic: 25
@@ -1036,7 +1062,8 @@ action_items:
     owner: "Woz"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "Wired — exercised by src/lib/bumblebee/__tests__/module.test.ts (grant validation, compatibility checks). Not dead."
+    resolution_note: "Wired — exercised by src/lib/bumblebee/__tests__/module.test.ts
+      (grant validation, compatibility checks). Not dead."
     ref: "_bmad_output/implementation-artifacts/epic-25-retro-2026-08-28.md"
   - id: "epic-25-retro-item-4-rename-module-registry-audit-failure-tes"
     epic: 25
@@ -1045,7 +1072,8 @@ action_items:
     owner: "Woz"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "Title is 'Story 25.3b audit persistence failures'; no phantom manifest_invalid branch (verified in file + d25a1f6e)."
+    resolution_note: "Title is 'Story 25.3b audit persistence failures'; no phantom
+      manifest_invalid branch (verified in file + d25a1f6e)."
     ref: "_bmad_output/implementation-artifacts/epic-25-retro-2026-08-28.md"
   - id: "epic-25-retro-item-5-produce-or-honestly-mark-the-epic-24-ret"
     epic: 25
@@ -1061,7 +1089,8 @@ action_items:
     owner: "Brooks"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "docs/retrospectives/epic-24-retrospective-2026-08-22.md exists with corrective actions."
+    resolution_note: "docs/retrospectives/epic-24-retrospective-2026-08-22.md exists
+      with corrective actions."
     ref: "_bmad_output/implementation-artifacts/epic-26-retro-2026-08-29.md"
   - id: "epic-26-retro-item-7-wire-or-document-the-ac-3-authmethod-aud"
     epic: 26
@@ -1069,7 +1098,8 @@ action_items:
     owner: "Woz"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "authMethod is wired: lease-repository.ts sets authMethod:'plugin_token'; source-authority.ts enforces credential class (throws on mismatch)."
+    resolution_note: "authMethod is wired: lease-repository.ts sets authMethod:'plugin_token';
+      source-authority.ts enforces credential class (throws on mismatch)."
     ref: "_bmad_output/implementation-artifacts/epic-26-retro-2026-08-29.md"
   - id: "epic-26-retro-item-8-touch-up-migration-50-header-comment-old"
     epic: 26
@@ -1077,7 +1107,9 @@ action_items:
     owner: "Fowler"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "Header comment updated to the 7-column PK (group_id, workspace_id, source_id, source_revision_id, lease_id, batch_id, record_id) per migration 52."
+    resolution_note: "Header comment updated to the 7-column PK (group_id, workspace_id,
+      source_id, source_revision_id, lease_id, batch_id, record_id) per migration
+      52."
     ref: "_bmad_output/implementation-artifacts/epic-26-retro-2026-08-29.md"
   - id: "epic-26-retro-item-9-pre-architecture-schema-read-surface-pk"
     epic: 26
@@ -1091,10 +1123,9 @@ action_items:
     owner: "Woz"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "Idempotent DO/IF-NOT-EXISTS constraint added to
-      docker/postgres-init/53-branch-registry.sql; migration applied cleanly
-      to live DB; FK verified enforcing (orphan insert rejected); migration
-      test extended."
+    resolution_note: "Idempotent DO/IF-NOT-EXISTS constraint added to docker/postgres-init/53-branch-registry.sql;
+      migration applied cleanly to live DB; FK verified enforcing (orphan insert rejected);
+      migration test extended."
     ref: "_bmad_output/implementation-artifacts/epic-27-retro-2026-08-29.md"
   - id: "epic-27-retro-item-11-extract-shared-branch-validation-helpers"
     epic: 27
@@ -1102,11 +1133,10 @@ action_items:
     owner: "Fowler"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "requireText/requireDiff/requireEvidenceRefs extracted to
-      src/lib/branch/validation.ts (was triplicated across promotion-adapter,
-      workflow-runner, epic-gate). BranchStatus in epic-gate.ts now aliases
-      BranchRegistryStatus (single source of truth). 8 new validation tests;
-      typecheck clean, 94 branch tests pass."
+    resolution_note: "requireText/requireDiff/requireEvidenceRefs extracted to src/lib/branch/validation.ts
+      (was triplicated across promotion-adapter, workflow-runner, epic-gate). BranchStatus
+      in epic-gate.ts now aliases BranchRegistryStatus (single source of truth). 8
+      new validation tests; typecheck clean, 94 branch tests pass."
     ref: "_bmad_output/implementation-artifacts/epic-27-retro-2026-08-29.md"
   - id: "epic-27-retro-item-12-remove-or-wire-dead-exports-getteamramla"
     epic: 27
@@ -1114,7 +1144,9 @@ action_items:
     owner: "Brooks"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "getTeamRamLane + getDurhamConcept removed (zero usage incl. tests). buildRollbackPlan kept — wired by promotion-adapter.test.ts; typecheck clean, 2474 unit tests pass."
+    resolution_note: "getTeamRamLane + getDurhamConcept removed (zero usage incl.
+      tests). buildRollbackPlan kept — wired by promotion-adapter.test.ts; typecheck
+      clean, 2474 unit tests pass."
     ref: "_bmad_output/implementation-artifacts/epic-27-retro-2026-08-29.md"
   - id: "epic-27-retro-item-13-re-run-agentdb-sona-comparison-without-o"
     epic: 27
@@ -1122,11 +1154,11 @@ action_items:
     owner: "Bellard"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "agentdbRetrieve no longer consults expected_ids — the
-      feedback loop closes on the executor's own round-1 results. Honest
-      re-run: retrieval recall identical to SONA (0.833, was 1.000 with
-      oracle); consolidation still wins. Evidence doc updated (§3 re-run
-      note, §4.1, §6). 12 tests pass, typecheck clean."
+    resolution_note: "agentdbRetrieve no longer consults expected_ids — the feedback
+      loop closes on the executor's own round-1 results. Honest re-run: retrieval
+      recall identical to SONA (0.833, was 1.000 with oracle); consolidation still
+      wins. Evidence doc updated (§3 re-run note, §4.1, §6). 12 tests pass, typecheck
+      clean."
     ref: "_bmad_output/implementation-artifacts/epic-27-retro-2026-08-29.md"
   - id: "epic-27-retro-item-14-keep-production-adoption-gated-on-licens"
     epic: 27
@@ -1138,52 +1170,54 @@ action_items:
     ref: "_bmad_output/implementation-artifacts/epic-27-retro-2026-08-29.md"
   - id: "epic-24-review-item-15-enforce-scenario-assertions-in-harness"
     epic: 24
-    action: "Enforce scenario assertions (expected_status/state/audit) + seed
-      initial_state + execute tenant_fixture.cleanup in the harness runner"
+    action: "Enforce scenario assertions (expected_status/state/audit) + seed initial_state
+      + execute tenant_fixture.cleanup in the harness runner"
     owner: "Brooks"
     status: done
     resolved_at: "2026-08-29"
     resolution_note: "assertions.output enforced (expected_status + expected_error,
       run fails on mismatch); error codes included in thrown messages. state/audit
       assertions removed from 9 example scenarios (vacuous without a seeded store).
-      4 new harness tests; 2503 unit tests pass; all 9 scenarios verified with
-      enforcement active. initial_state seeding + cleanup execution remain open
-      (harness does not seed a memory store)."
+      4 new harness tests; 2503 unit tests pass; all 9 scenarios verified with enforcement
+      active. initial_state seeding + cleanup execution remain open (harness does
+      not seed a memory store)."
     ref: "_bmad_output/implementation-artifacts/24-9-reference-integrations-portfolio-demo.md"
   - id: "epic-24-review-item-16-sdk-clients-for-scenario-replay-eval-evidence"
     epic: 24
-    action: "Add typed SDK clients for scenario execution, replay, evaluation,
-      and evidence inspection (24.7 AC-1 partial)"
+    action: "Add typed SDK clients for scenario execution, replay, evaluation, and
+      evidence inspection (24.7 AC-1 partial)"
     owner: "Woz"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "HarnessOperations added to packages/sdk/src/harness.ts —
-      scenario_run, scenario_replay, eval_run, evidence_inspect via the MCP
-      tools/call envelope; exported as client.harness.*. 4 new contract tests;
-      typecheck clean, 2507 unit tests pass. AC-1 fully implemented."
+    resolution_note: "HarnessOperations added to packages/sdk/src/harness.ts — scenario_run,
+      scenario_replay, eval_run, evidence_inspect via the MCP tools/call envelope;
+      exported as client.harness.*. 4 new contract tests; typecheck clean, 2507 unit
+      tests pass. AC-1 fully implemented."
     ref: "_bmad_output/implementation-artifacts/24-7-sdk-cli-developer-experience.md"
   - id: "epic-24-review-item-17-gateway-integration-test-for-sdk"
     epic: 24
-    action: "Add an integration test running the SDK against the live canonical
-      gateway (24.7 AC-2 partial)"
+    action: "Add an integration test running the SDK against the live canonical gateway
+      (24.7 AC-2 partial)"
     owner: "Woz"
     status: done
     resolved_at: "2026-08-29"
-    resolution_note: "sdk-gateway-integration.e2e.test.ts added — real SDK vs
-      canonical gateway (health shape, tools/call envelope, harness.inspect
-      round-trip). Joins the live-DB e2e lane, gated on RUN_E2E_TESTS=true.
-      AC-2 fully implemented."
+    resolution_note: "sdk-gateway-integration.e2e.test.ts added — real SDK vs canonical
+      gateway (health shape, tools/call envelope, harness.inspect round-trip). Joins
+      the live-DB e2e lane, gated on RUN_E2E_TESTS=true. AC-2 fully implemented."
     ref: "_bmad_output/implementation-artifacts/24-7-sdk-cli-developer-experience.md"
   - id: "epic-24-review-item-18-clean-environment-quickstart-transcript"
     epic: 24
-    action: "Record a clean-environment quickstart transcript with measured
-      elapsed time and machine profile (24.7 AC-7, CA-24-09)"
+    action: "Record a clean-environment quickstart transcript with measured elapsed
+      time and machine profile (24.7 AC-7, CA-24-09)"
     owner: "Troy"
     status: in-progress
     resolved_at: "2026-08-29"
-    resolution_note: "Warm-cache transcript recorded (docs/portfolio/
-      clean-environment-transcript-2026-08-29.md): machine profile, per-step
-      timings, honest caveats. Cold-cache fresh-clone transcript (docker pull
-      + brain:up bootstrap) remains outstanding — requires a machine without
-      the images."
+    resolution_note: "Warm-cache transcript recorded (docs/portfolio/ clean-environment-transcript-2026-08-29.md):
+      machine profile, per-step timings, honest caveats. Cold-cache fresh-clone transcript
+      (docker pull + brain:up bootstrap) remains outstanding — requires a machine
+      without the images."
     ref: "_bmad_output/implementation-artifacts/24-7-sdk-cli-developer-experience.md"
+project_key: NOKEY
+tracking_system: file-system
+story_location:
+  /mnt/projects/git/Allura-Ecosystem/Allura_Memory/_bmad_output/implementation-artifacts
