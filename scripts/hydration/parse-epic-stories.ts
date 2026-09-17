@@ -95,13 +95,13 @@ export function parseEpicFile(filePath: string): {
 }
 
 /**
- * Find all epic files in the _bmad-output/planning-artifacts directory
+ * Find all epic files in the _bmad_output/planning-artifacts directory
  */
 export function findEpicFiles(baseDir: string): string[] {
-  const epicDir = path.join(baseDir, 'docs', 'planning-artifacts');
+  const epicDir = path.join(baseDir, '_bmad_output', 'planning-artifacts');
 
   if (!fs.existsSync(epicDir)) {
-    // Also check _bmad-output for archived epics
+    // Preserve the historical archive fallback when no current output exists.
     const archivedDir = path.join(baseDir, 'archive', 'bmad-output', 'planning-artifacts');
     if (fs.existsSync(archivedDir)) {
       return fs.readdirSync(archivedDir)

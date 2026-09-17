@@ -29,7 +29,7 @@ Allura is a **memory data plane** — it holds no business logic about what an a
 | Consumer Class | Interaction Mode | Notes |
 |---|---|---|
 | AI Agents (Claude, GPT, etc.) | Brooks / Team RAM + skills | Skills enforce memory-first routing to packaged MCP servers |
-| BMAD / Team RAM Planning | `_bmad/` + `_bmad-output/` | BMAD artifacts map intent, PRDs, architecture, epics, and stories to Team RAM owners |
+| BMAD / Team RAM Planning | `_bmad/` + `_bmad_output/` | BMAD artifacts map intent, PRDs, architecture, epics, and stories to Team RAM owners |
 | DevOps / Admin | Docker Compose + MCP_DOCKER config | Deployment, configuration, and packaged MCP server activation |
 
 Allura Brain does **not** orchestrate agents, run workflows, or make decisions. It stores and retrieves memory. Period. Optional orchestration wrappers may compose Team RAM skills into governed runs, but those wrappers remain outside the memory data plane and may only write receipts, proposals, and evidence through approved API/MCP paths.

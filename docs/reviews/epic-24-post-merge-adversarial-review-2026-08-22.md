@@ -113,7 +113,7 @@ Two independent-agent passes were attempted but did not produce a verdict: the s
 
 ### H5 — Story and sprint artifacts contradict each other
 
-- **Files:** `_bmad/bmm/stories/24-4-*.md` through `24-9-*.md`; `_bmad/bmm/stories/sprint-status.yaml`
+- **Files:** `_bmad_output/implementation-artifacts/24-4-*.md` through `24-9-*.md`; `_bmad_output/implementation-artifacts/sprint-status.yaml`
 - Story records remain `ready-for-dev` with pending agent records while the sprint file declared them done.
 
 ## Acceptance status after review

@@ -14,7 +14,7 @@ const shouldRunE2E = process.env.RUN_E2E_TESTS === "true"
 describe.skipIf(!shouldRunE2E)("StateHydrator", () => {
   let hydrator: StateHydrator
   const testStateDir = ".opencode/state/sessions-test"
-  const testPlanningDir = "_bmad-output/planning-artifacts-test"
+  const testPlanningDir = "_bmad_output/planning-artifacts-test"
   const sessionId = "00000000-0000-4000-8000-000000000001"
   const groupId = "allura-test"
 
@@ -262,7 +262,7 @@ describe("createStateHydrator", () => {
   it("should create instance with custom config", () => {
     const hydrator = createStateHydrator({
       stateDir: ".opencode/state/custom",
-      planningArtifactsDir: "_bmad-output/planning-artifacts-custom",
+      planningArtifactsDir: "_bmad_output/planning-artifacts-custom",
     })
     expect(hydrator).toBeInstanceOf(StateHydrator)
   })

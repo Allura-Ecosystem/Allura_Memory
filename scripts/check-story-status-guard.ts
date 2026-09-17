@@ -5,7 +5,7 @@
  * WHY THIS EXISTS
  * ---------------
  * On 2026-08-23 a story in this repository was found marked `done` in
- * `_bmad/bmm/stories/sprint-status.yaml` while its own acceptance criteria were
+ * `_bmad_output/implementation-artifacts/sprint-status.yaml` while its own acceptance criteria were
  * unchecked, and its story-file header claimed an "independent Pike/Fowler review
  * approved" when both reviewers had returned CHANGES-REQUESTED and no re-review was
  * ever run. A test had been written pinning that false claim, so a green suite was
@@ -75,7 +75,7 @@ import { parse as parseYaml } from "yaml";
 const REPO_ROOT = resolve(
   process.env.STORY_STATUS_GUARD_ROOT ?? resolve(import.meta.dir, ".."),
 );
-const STORIES_DIR = join(REPO_ROOT, "_bmad/bmm/stories");
+const STORIES_DIR = join(REPO_ROOT, "_bmad_output/implementation-artifacts");
 const SPRINT_STATUS = join(STORIES_DIR, "sprint-status.yaml");
 
 // ---------------------------------------------------------------------------
@@ -502,7 +502,7 @@ function main(): void {
           "missing-story-file",
           `marked "${story.rawStatus}" in sprint-status.yaml (${story.epic}) but no ` +
             `story file matching ${story.key.replace(".", "-")}-*.md exists in ` +
-            `_bmad/bmm/stories/. A done status with no story file has no evidence at all.`,
+            `_bmad_output/implementation-artifacts/. A done status with no story file has no evidence at all.`,
         );
       }
       continue;

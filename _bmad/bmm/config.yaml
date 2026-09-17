@@ -3,14 +3,14 @@
 # Version: 6.11.0
 # Date: 2026-09-08T19:29:59.593Z
 
-planning_artifacts: "{project-root}/_bmad/bmm/planning"
-implementation_artifacts: "{project-root}/_bmad/bmm/stories"
+planning_artifacts: "{project-root}/_bmad_output/planning-artifacts"
+implementation_artifacts: "{project-root}/_bmad_output/implementation-artifacts"
 project_knowledge: "{project-root}/docs"
 user_skill_level: intermediate
 
 # Core Configuration Values
 project_name: allura-memory
 document_output_language: English
-output_folder: "{project-root}/_bmad-output"
+output_folder: "{project-root}/_bmad_output"
 user_name: Sabir
 communication_language: English

@@ -49,8 +49,10 @@ tsconfig.tsbuildinfo
 .claude/mcp.json
 .opencode/mcp.json
 
-# Legacy / retired artifacts (never re-add)
-_bmad-output/
+# Durable BMAD documents are tracked; other generated output is transient.
+_bmad_output/*
+!_bmad_output/planning-artifacts/
+!_bmad_output/implementation-artifacts/
 /workspaces/
 artifacts/
 .impeccable/
