@@ -3,7 +3,7 @@
 # Version: 6.11.0
 # Date: 2026-09-08T19:29:59.593Z
 
-test_artifacts: "{project-root}/_bmad-output/test-artifacts"
+test_artifacts: "{project-root}/_bmad_output/test-artifacts"
 tea_use_playwright_utils: true
 tea_use_pactjs_utils: true
 tea_pact_mcp: none
@@ -14,13 +14,13 @@ test_stack_type: auto
 ci_platform: auto
 test_framework: auto
 risk_threshold: p1
-test_design_output: _bmad-output/test-artifacts/test-design
-test_review_output: _bmad-output/test-artifacts/test-reviews
-trace_output: _bmad-output/test-artifacts/traceability
+test_design_output: _bmad_output/test-artifacts/test-design
+test_review_output: _bmad_output/test-artifacts/test-reviews
+trace_output: _bmad_output/test-artifacts/traceability
 
 # Core Configuration Values
 project_name: allura-memory
 document_output_language: English
-output_folder: "{project-root}/_bmad-output"
+output_folder: "{project-root}/_bmad_output"
 user_name: Sabir
 communication_language: English

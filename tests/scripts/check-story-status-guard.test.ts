@@ -102,7 +102,7 @@ interface FixtureOptions {
 function fixture(specs: StorySpec[], options: FixtureOptions = {}): string {
   const root = mkdtempSync(join(tmpdir(), "story-status-guard-"))
   scratch.push(root)
-  const stories = join(root, "_bmad/bmm/stories")
+  const stories = join(root, "_bmad_output/implementation-artifacts")
   mkdirSync(stories, { recursive: true })
 
   for (const spec of specs) {
