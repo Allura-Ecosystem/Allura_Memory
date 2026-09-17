@@ -18,6 +18,8 @@
 | 27 | [Governed Branchable Learning Memory](./epic-27-governed-branchable-learning-memory.md) | Done | Retrospective complete (2026-08-29); 6/6 stories, 5 action items. |
 | 28 | [Enterprise Documentation Consolidation](./epic-28-enterprise-documentation-consolidation.md) | Done | 28.8 exit-gate closure complete; retrospective pending. |
 
+| 30 | [Governed Digital Brain Workspace](./epic-30-governed-digital-brain-workspace.md) | Backlog | 13 stories recovered; development readiness blocked. |
+
 ## Rules
 
 - Add one planning file per epic; do not create a second epic registry.
