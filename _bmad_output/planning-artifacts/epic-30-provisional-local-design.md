@@ -2,7 +2,7 @@
 
 # Epic 30 Provisional Local Design — My Work
 
-**Status:** provisional local-test design now represented by candidate `e65598e9`; still awaiting explicit design/variance approval. See the [current approval packet](./epic-30-design-approval-packet.md) and [current readiness](./implementation-readiness-epic-30.md).
+**Status:** provisional local-test design now represented by accessibility-remediated candidate `7d657aba`; still awaiting explicit design/variance approval. See the [current approval packet](./epic-30-design-approval-packet.md) and [current readiness](./implementation-readiness-epic-30.md).
 **Scope:** `/dashboard` only, synthetic fixture only, no production service or data.
 
 ## Design decision
@@ -17,7 +17,7 @@ The local test slice is a calm, Obsidian-style reading workspace:
 
 ## Accessibility and test protocol
 
-The local UI uses semantic `nav`, `article`, headings, labels, buttons and token-based colors. The earlier narrow-grid and close-focus defects were repaired and are covered by focused component tests. Current 1440 px and 320 px synthetic screenshots are hash-bound in the [approval packet](./epic-30-design-approval-packet.md). Real screen-reader, 200% browser zoom, role-journey, and live restricted-database evidence remain open. Browser simulations are preflight only. The human gate remains: five distinct people, uncoached task completion, at least four successes per task, no critical errors, and zero unauthorized disclosure. No design approval is recorded.
+The local UI uses semantic `nav`, `article`, headings, labels, buttons and token-based colors. The earlier narrow-grid and close-focus defects were repaired; the current candidate also exposes active state, connects the Ask disclosure, supplies visible keyboard focus, removes false button affordances, meets the 44 px local target, and raises normal-text contrast. Focused component tests cover the semantics. Current 1440 px and 320 px synthetic ready/comparison screenshots plus zero-violation automated WCAG A/AA scans are hash-bound in the [approval packet](./epic-30-design-approval-packet.md). Real screen-reader, 200% browser zoom, role-journey, and live restricted-database evidence remain open. Browser simulations are preflight only. The human gate remains: five distinct people, uncoached task completion, at least four successes per task, no critical errors, and zero unauthorized disclosure. No design approval is recorded.
 
 ## Deliberate exclusions
 

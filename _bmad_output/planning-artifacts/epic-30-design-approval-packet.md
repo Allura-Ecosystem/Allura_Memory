@@ -2,23 +2,24 @@
 
 Date: 2026-09-17  
 Status: **approval requested; not approved**  
-Candidate commit: `e65598e9a1c8c1f1f34b2eaf1ae825c0a7b56598`  
+Candidate commit: `7d657abacd18c9c0aa032243f3e08e92d631aeb6`
 Production route: `/dashboard`, only when explicit non-production Epic 30 synthetic mode is enabled.
 
-This packet replaces the repaired candidate at `f6c94f6` as the current visual baseline. It records what exists and the remaining variances; it does not grant design, story, human-study, or release acceptance.
+This packet replaces the visual candidate at `e65598e9` with its accessibility-remediated successor at `7d657aba`. It records what exists and the remaining variances; it does not grant design, story, human-study, or release acceptance.
 
 ## Bound artifacts
 
 | Artifact                                                | SHA-256                                                            |
 | ------------------------------------------------------- | ------------------------------------------------------------------ |
-| `src/components/dashboard/my-work-workspace.tsx`        | `be13eb353d9ae523993cd773d208eea4092ea56d2d78de0ba190e61ba4d79719` |
-| `src/components/dashboard/my-work-workspace.module.css` | `926f289dd75850ab3bda40d5f939920801342648951241608bf49e2ac1a85f64` |
-| Desktop ready screenshot                                | `586a6a26e2e509f546e354bd5cbd1c0f7e902e182e6cf746dae8468c6df8270b` |
-| Desktop comparison screenshot                           | `47e4cf252041cc71e4f342e042429df65dd8105adfb554dd9eb28eacc3943fa6` |
-| 320 px ready screenshot                                 | `e6d199945b44bb9619f5948b26b663739043c12fef9054f6301d693b27a93f57` |
-| 320 px comparison screenshot                            | `16e96e7f9bbce842a3d76d608ef07c87f122a415d788baf41d36c0609ad07a61` |
+| `src/components/dashboard/my-work-workspace.tsx`        | `d24488097c1aecdb2bae50f68fd40eca8b25f8eff90ac64ae9b805abf9c20c05` |
+| `src/components/dashboard/my-work-workspace.module.css` | `c4b238905f71b6ec7cccf1df3a0fd0b445eeade935fd484ee7d400c8fd284569` |
+| Desktop ready screenshot                                | `874d4816cfb87b0e960f47a3a1bbcd08c88326b850e0cf9275e2a319c0d37856` |
+| Desktop comparison screenshot                           | `23042beb7b84174a4ba109b4bee5ab2f18f09abd7ea457728290216e325e5f52` |
+| 320 px ready screenshot                                 | `63b1e15f36140ada76ec0b6e2722ee56917951f92c252eafbf3b8b9d9ada3d4e` |
+| 320 px comparison screenshot                            | `44f7c8aa2aa0f9b0663144426f816d3f44f1c6076ab18c2273ca4c66894aac41` |
+| Automated accessibility audit                           | `34483c0527cd694c3e72d466d0d44997ba1024b3ee95f4652f90f086e74800d4` |
 
-The screenshots are stored under `../implementation-artifacts/evidence/epic30-design-e65598e9/`. They were captured from a temporary non-shipping route that rendered the same committed component with synthetic `.invalid`-equivalent fixture content. The temporary route was removed after capture. No production data or model was attached.
+The screenshots and machine-readable audit are stored under `../implementation-artifacts/evidence/epic30-design-7d657aba/`. They were captured from a temporary non-shipping loopback route that rendered the same committed component with synthetic fixture content. The temporary route and capture code were removed after capture. Chromium at 1440×1000 and 320×900 reported zero automated WCAG 2 A/AA violations in both ready and comparison states and zero browser runtime errors. The development server's optional trace writer failed closed against absent local PostgreSQL; no trace was persisted, and this capture is not live-database evidence. No production data, credential, or model was attached.
 
 ## Current design
 
@@ -26,7 +27,8 @@ The screenshots are stored under `../implementation-artifacts/evidence/epic30-de
 - Allura Ink/Cream foundation with Blue for memory/intelligence, Orange for review emphasis, and Green for authorized visibility. The official Allura lettermark is used without modification.
 - One primary document and at most one comparison pane. Closing comparison returns keyboard focus to its opener or the main article fallback.
 - The context pane is explicitly labelled `PROXIMITY ONLY`; node position does not assert a link or verified relationship.
-- Search remains disabled and Ask remains unavailable until their later authorization and provider gates are implemented.
+- Search remains disabled and Ask remains unavailable until their later authorization and provider gates are implemented. Unavailable rail actions are disabled rather than presented as false interactive affordances.
+- Active document controls expose current state to assistive technology, Ask owns its disclosure with `aria-controls`, keyboard focus is visible, and interactive targets meet the 44 px local design target.
 - Ready, authorized-empty, and fail-closed-unavailable states exist. No production fallback is used.
 
 ## Variance record
@@ -38,7 +40,7 @@ The screenshots are stored under `../implementation-artifacts/evidence/epic30-de
 | Read-only cited Ask                 | Rail is present and truthfully unavailable; no content is transmitted                                                            | Implement only after Story 30.9 provider and authorization gates                                                |
 | Restricted contractor messaging     | Tool-rail affordance is absent; no messaging is performed                                                                        | Implement under Story 30.10                                                                                     |
 | Eight truth states                  | Ready, empty, and unavailable are implemented                                                                                    | Loading, forbidden, stale, degraded, conflict, and error/complete distinctions require contract-driven coverage |
-| Accessibility                       | Semantic navigation/article/aside structure, named controls, focus restoration, and responsive 320 px layout are locally covered | Screen-reader journey and real 200% browser zoom evidence remain required                                       |
+| Accessibility                       | Semantic landmarks, named/current-state controls, visible focus, 44 px targets, focus restoration, responsive 320 px layout, and automated WCAG A/AA scans are locally covered | Screen-reader journey and real 200% browser zoom evidence remain required                                       |
 | Live synthetic proof                | Static synthetic rendering and focused unit tests pass                                                                           | Restricted-role PostgreSQL/HTTP browser proof remains pending approved injected test credentials                |
 
 ## Proposed five-person protocol
