@@ -106,10 +106,10 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
       <div className={styles.appShell}>
         <aside className={styles.iconRail} aria-label="Workspace tools">
           <Image className={styles.lettermark} src="/brand/allura-lettermark-al-figma.png" width={34} height={34} alt="Allura" priority />
-          <button className={styles.railActive} aria-label="Documents"><BookOpenText aria-hidden="true" /></button>
-          <button aria-label="Memory map"><GitBranch aria-hidden="true" /></button>
+          <button className={styles.railActive} aria-label="Documents" aria-current="page"><BookOpenText aria-hidden="true" /></button>
+          <button aria-label="Memory map is shown in the current workspace" title="Memory map is shown in the current workspace" disabled><GitBranch aria-hidden="true" /></button>
           <button aria-label="Ask Allura" onClick={() => setAskOpen((open) => !open)}><MessageSquareText aria-hidden="true" /></button>
-          <button className={styles.railBottom} aria-label="Workspace scope"><LockKeyhole aria-hidden="true" /></button>
+          <button className={styles.railBottom} aria-label="Workspace scope is verified server-side" title="Workspace scope is verified server-side" disabled><LockKeyhole aria-hidden="true" /></button>
         </aside>
 
         <nav className={styles.tree} aria-label="Authorized synthetic Brain tree">
@@ -125,7 +125,7 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
             <p className={styles.treeLabel}><ChevronDown aria-hidden="true" /> YOUR BRAIN <span>{privateDocuments.length}</span></p>
             {privateDocuments.length === 0 ? <p className={styles.muted}>No private documents</p> : null}
             {privateDocuments.map((item) => (
-              <button key={item.id} className={active.id === item.id ? styles.selected : ""} onClick={() => setActiveId(item.id)}>
+              <button key={item.id} className={active.id === item.id ? styles.selected : ""} aria-current={active.id === item.id ? "page" : undefined} onClick={() => setActiveId(item.id)}>
                 <FileText aria-hidden="true" /><span>{item.title}<small>Private</small></span>
               </button>
             ))}
@@ -135,7 +135,7 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
             <p className={styles.treeLabel}><ChevronDown aria-hidden="true" /> APPROVED DEPARTMENTS <span>{departmentDocuments.length}</span></p>
             {departmentDocuments.length === 0 ? <p className={styles.muted}>No approved department documents</p> : null}
             {departmentDocuments.map((item) => (
-              <button key={item.id} className={active.id === item.id ? styles.selected : ""} onClick={() => setActiveId(item.id)}>
+              <button key={item.id} className={active.id === item.id ? styles.selected : ""} aria-current={active.id === item.id ? "page" : undefined} onClick={() => setActiveId(item.id)}>
                 <FileText aria-hidden="true" /><span>{item.title}<small>{item.departmentId}</small></span>
               </button>
             ))}
@@ -194,7 +194,7 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
                 <header><div><p className={styles.eyebrow}>CONTEXT MAP</p><h2>Visible scope</h2></div><span>PROXIMITY ONLY</span></header>
                 <div className={styles.mapCanvas}>
                   <div className={styles.mapCore}><BrainCircuit aria-hidden="true" /><span>My Work</span></div>
-                  {documents.slice(0, 6).map((item, index) => <button key={item.id} className={`${styles.mapNode} ${styles[`mapNode${index + 1}`]}`} onClick={() => setActiveId(item.id)}><i /><span>{item.title}</span></button>)}
+                  {documents.slice(0, 6).map((item, index) => <button key={item.id} className={`${styles.mapNode} ${styles[`mapNode${index + 1}`]}`} aria-current={active.id === item.id ? "page" : undefined} onClick={() => setActiveId(item.id)}><i /><span>{item.title}</span></button>)}
                 </div>
                 <p className={styles.mapCaption}>Documents are co-visible in this authorized scope. Position does not assert a verified relationship.</p>
               </aside>
@@ -203,7 +203,7 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
 
           <aside className={styles.inspector} aria-label="Document inspector">
             <div className={styles.inspectorTabs}><strong>Outline</strong><span>Context</span></div>
-            <section><p className={styles.treeLabel}>DOCUMENT</p><button className={styles.inspectorActive}>Overview</button><button>Available department document</button></section>
+            <section><p className={styles.treeLabel}>DOCUMENT</p><div className={styles.inspectorLinks}><strong>Overview</strong><span>Available department document</span></div></section>
             <section>
               <p className={styles.treeLabel}>ACCESS</p>
               <dl><div><dt>Visibility</dt><dd>{active.visibility}</dd></div><div><dt>Department</dt><dd>{active.departmentId ?? "—"}</dd></div><div><dt>Owner</dt><dd>{active.ownerId}</dd></div></dl>
@@ -212,8 +212,8 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
           </aside>
 
           <section className={styles.ask} aria-label="Ask allura">
-            <button aria-label="Ask allura" aria-expanded={askOpen} onClick={() => setAskOpen((open) => !open)}><MessageSquareText aria-hidden="true" /><span>Ask allura</span><kbd>⌘ ↵</kbd></button>
-            {askOpen ? <div><strong>Unavailable in this local fixture</strong><p>External-model retention and training policy evidence has not been verified. No real content is sent, and no answer is generated.</p></div> : <p>Read-only, cited AI is intentionally unavailable until its no-retention policy is verified.</p>}
+            <button aria-label="Ask allura" aria-expanded={askOpen} aria-controls="ask-allura-status" onClick={() => setAskOpen((open) => !open)}><MessageSquareText aria-hidden="true" /><span>Ask allura</span><kbd>⌘ ↵</kbd></button>
+            {askOpen ? <div id="ask-allura-status"><strong>Unavailable in this local fixture</strong><p>External-model retention and training policy evidence has not been verified. No real content is sent, and no answer is generated.</p></div> : <p id="ask-allura-status">Read-only, cited AI is intentionally unavailable until its no-retention policy is verified.</p>}
           </section>
         </main>
       </div>
