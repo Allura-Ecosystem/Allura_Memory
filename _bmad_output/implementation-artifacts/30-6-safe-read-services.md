@@ -21,5 +21,9 @@ As a reader, I want a single authorized read path so that navigation, retrieval 
 ## Required Evidence / Definition of Done
 Cross-tenant/workspace/private/department tests, admin-without-private-access denial, relationship/derivative/cursor/revocation tests, review and epic CI/publication/receipt gates.
 
+## Current Preparation State
+
+2026-09-17: canonical checkout is `main`. This story remains backlog; saved candidate implementation and historical test results are not evidence for this checkout. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md), [current readiness gates](../planning-artifacts/implementation-readiness-epic-30.md), and [bounded integration proposal](../planning-artifacts/sprint-change-proposal-2026-09-17.md). Dependencies above remain binding; no design, board, live-test or release approval is implied by this update.
+
 ## Historical Evidence — before repository consolidation
 `src/lib/digital-brain/read-service.ts` provides the restricted app-role read entry point with server-derived scope, SQL candidate authorization and row rechecking. `/dashboard` invokes it only in explicitly enabled non-production local mode. Fresh frozen-candidate focused unit verification on 2026-09-17 passed 62 tests across 8 files; historical DB/HTTP evidence records 21 passing tests, not rerun here. Independent review now exists and identifies missing routine execution of the opt-in HTTP proof, CI port incompatibility, and a non-local dashboard-route regression requiring contract reconciliation. Full derivative/revocation/audit and role acceptance are not established. Status remains backlog; see reconciled readiness and review evidence.

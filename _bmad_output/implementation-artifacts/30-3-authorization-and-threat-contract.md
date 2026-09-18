@@ -21,5 +21,9 @@ As a content owner, I want one deny-by-default contract so that no route, admini
 ## Required Evidence / Definition of Done
 Reviewed decision matrix and adversarial threat cases including forged scope, confused deputy, prompt injection and unknown surfaces. Set measurable revocation bounds before code. Exact contracts, independent security/data review and verified receipts are required; epic publication gates apply.
 
+## Current Preparation State
+
+2026-09-17: canonical checkout is `main`. This story remains backlog; saved candidate implementation and historical test results are not evidence for this checkout. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md), [current readiness gates](../planning-artifacts/implementation-readiness-epic-30.md), and [bounded integration proposal](../planning-artifacts/sprint-change-proposal-2026-09-17.md). Dependencies above remain binding; no design, board, live-test or release approval is implied by this update.
+
 ## Historical Evidence — before repository consolidation
 Policy defaults are accepted and the provisional v1 contract is documented in `../planning-artifacts/epic-30-local-authorization-contract.md`, including server-derived inputs, deny reason codes, enforcement inventory, derivative rules, audit behavior, and measurable revocation targets. The contract is implemented only for a bounded synthetic local read slice. Independent security/data review and production approval remain open; status stays backlog.

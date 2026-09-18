@@ -23,6 +23,14 @@ Direct adjustment is preferred over rollback of useful cleanup or reducing the a
 
 ## Handoff and success criteria
 
+### Inspected integration boundary
+
+Read-only inventory on 2026-09-17 confirms the saved `develop` comparison contains 313 changed files. Candidate reader paths are `src/lib/digital-brain/`, `src/components/dashboard/my-work-workspace.tsx`, its CSS and component tests, `docker/postgres-init/71-digital-brain-read-foundation.sql`, `docker/epic30-postgres/`, `scripts/epic30/`, `tests/scripts/epic30-*.test.ts`, and `src/__tests__/digital-brain-read-isolation.e2e.test.ts`. The Trash copy additionally contains `scripts/epic30/verify-reader.cjs` and unfinished repairs; copying the committed branch alone would omit those repairs.
+
+Shared integration points require selective review: dashboard route and scope guard, tenant transaction/table inventory, PostgreSQL app-role connection options, package scripts, test-lane configuration and CI. The reader imports the tenant transaction and app pool; its migration contract test imports the tenant table inventory. The saved dashboard route replaces the normal overview with unavailable outside local mode, so it must not be adopted unchanged. Current authorization documents require preserving the normal governed route outside explicit synthetic mode.
+
+Excluded from a blind port: device-pairing implementation and migrations, portal changes, credential-scan jobs, unrelated graph/membership changes, archived evidence, and old `_bmad/bmm` planning paths. This is a candidate boundary, not proof of dependency closure: migration ordering and transitive dependencies still need inspection before an exact approved patch set can be named. No saved implementation was copied during this inventory.
+
 Brooks owns the dependency inventory and scope. One developer performs the approved integration in this checkout; targeted independent review checks security and compatibility. Sabir approves the exact design/variances and unresolved policy decisions. No production changes or push are authorized here.
 
 Next proposed task: preserve the unfinished patch in Git-owned recovery storage; inventory Epic 30 and necessary shared dependencies; present the integration set before porting. Fresh tests/typecheck, ordinary-route checks and independent review must follow integration. Live credentials remain pending by user choice.
