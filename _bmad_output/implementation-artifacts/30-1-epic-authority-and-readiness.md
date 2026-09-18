@@ -21,5 +21,9 @@ As the sponsor, I want one bounded authority and honest readiness evidence so th
 ## Required Evidence / Definition of Done
 Deterministic count/link/traceability checks, focused independent review, verified Brain receipt, and authorized publication/reconciliation per the epic close rules. Draft files alone are not done.
 
+## Current Preparation State
+
+2026-09-17: canonical checkout is `main`. This story remains backlog; saved candidate implementation and historical test results are not evidence for this checkout. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md), [current readiness gates](../planning-artifacts/implementation-readiness-epic-30.md), and [bounded integration proposal](../planning-artifacts/sprint-change-proposal-2026-09-17.md). Dependencies above remain binding; no design, board, live-test or release approval is implied by this update.
+
 ## Historical Evidence — before repository consolidation
 2026-09-17: local plan and 13 backlog stories exist; tracking now validates with prior statuses preserved. The bounded synthetic candidate at `f6c94f6` received three independent BMAD code-review lenses and 62 passing focused tests. Review requires repairs; this does not accept the complete epic plan or advance story status. Current readiness and exact review/browser evidence are indexed in `../planning-artifacts/implementation-readiness-epic-30.md`. Board reconciliation, design acceptance and publication remain pending.

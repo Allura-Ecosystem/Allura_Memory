@@ -21,5 +21,9 @@ As a release owner, I want independent integrated proof so that a privacy regres
 ## Required Evidence / Definition of Done
 Real check/run IDs, frozen SHAs, review verdicts, clean regression removal, local DB/browser/accessibility results and read-back receipts. A screenshot or fabricated CI output is not evidence; epic publication gates apply.
 
+## Current Preparation State
+
+2026-09-17: canonical checkout is `main`. This story remains backlog; saved candidate implementation and historical test results are not evidence for this checkout. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md), [current readiness gates](../planning-artifacts/implementation-readiness-epic-30.md), and [bounded integration proposal](../planning-artifacts/sprint-change-proposal-2026-09-17.md). Dependencies above remain binding; no design, board, live-test or release approval is implied by this update.
+
 ## Historical Evidence — before repository consolidation
 No implementation, CI, controlled-red or independent review executed.
