@@ -45,10 +45,12 @@ describe("MyWorkWorkspace", () => {
 
   it("navigates the main document and restores a private selection", () => {
     render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    expect(screen.getByRole("button", { name: "Shipment exception review Private" }).getAttribute("aria-current")).toBe("page")
     fireEvent.click(screen.getByRole("button", { name: "Deployment checklist operations" }))
     expect(screen.getByRole("heading", { name: "Deployment checklist" })).toBeTruthy()
     expect(screen.getByText("Synthetic Operations content.")).toBeTruthy()
     expect(screen.queryByText("Synthetic owner-only content.")).toBeNull()
+    expect(screen.getByRole("button", { name: "Deployment checklist operations" }).getAttribute("aria-current")).toBe("page")
     fireEvent.click(screen.getByRole("button", { name: "Shipment exception review Private" }))
     expect(screen.getByRole("heading", { name: "Shipment exception review" })).toBeTruthy()
     expect(screen.getByText("Synthetic owner-only content.")).toBeTruthy()
@@ -84,10 +86,21 @@ describe("MyWorkWorkspace", () => {
   it("keeps Ask allura unavailable rather than fabricating an AI response", () => {
     render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
 
-    fireEvent.click(screen.getByRole("button", { name: "Ask allura" }))
+    const ask = screen.getByRole("button", { name: "Ask allura" })
+    expect(ask.getAttribute("aria-controls")).toBe("ask-allura-status")
+    fireEvent.click(ask)
 
     expect(screen.getByText("Unavailable in this local fixture")).toBeTruthy()
+    expect(document.getElementById("ask-allura-status")).toBeTruthy()
     expect(screen.queryByText(/generated answer/i)).toBeNull()
+  })
+
+  it("marks unavailable rail actions as disabled rather than interactive", () => {
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+
+    expect(screen.getByRole("button", { name: "Documents" }).getAttribute("aria-current")).toBe("page")
+    expect(screen.getByRole("button", { name: "Memory map is shown in the current workspace" }).hasAttribute("disabled")).toBe(true)
+    expect(screen.getByRole("button", { name: "Workspace scope is verified server-side" }).hasAttribute("disabled")).toBe(true)
   })
 
   it("fails closed when the explicit local database is unavailable", () => {
