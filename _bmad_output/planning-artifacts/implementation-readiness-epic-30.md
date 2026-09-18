@@ -13,13 +13,14 @@ Date: 2026-09-17. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — de
 - Local `main` is intentionally one commit behind `origin/main`: remote commit `1934d211` changes 266 files and contains the excluded Epic 29/device-pairing baseline. It was inspected but not merged or pushed under this Epic 30-only cleanup authority.
 - The ordinary `/dashboard` overview remains active unless explicit non-production Epic 30 synthetic mode is enabled. Synthetic failure remains unavailable without leaking connection or scope details.
 - A dedicated `.github/workflows/epic-30-evidence.yml` runs the confined PostgreSQL/HTTP lane on pull requests or manual dispatch without uploading dashboard/test payloads.
+- The current Obsidian-inspired Allura workspace candidate and 1440/320 px screenshots are hash-bound in the [design approval packet](./epic-30-design-approval-packet.md). This is an approval request, not approval.
 
 ## Fresh local evidence
 
 - `bun run typecheck`: PASS.
 - Focused Epic 30 unit and hermetic integration set: PASS, 78 tests across 9 files.
 - Ordinary-route headless Chromium check at 1440px: HTTP 200, truthful degraded state with the database intentionally unavailable, synthetic workspace absent, zero page errors.
-- The 320px ordinary dashboard shell exhibited pre-existing horizontal overflow; the Epic 30 component's repaired 320/640/1440 reflow remains covered by component tests and awaits live synthetic browser proof.
+- The 320px ordinary dashboard shell exhibited pre-existing horizontal overflow. The repaired Epic 30 component now has current 1440/320 px synthetic visual evidence plus component coverage; live restricted-database browser proof, screen-reader proof, and real 200% zoom proof remain pending.
 - Workflow/package parsing and missing-prerequisite behavior: PASS; the live runner exits 64 when required settings are absent.
 
 Live PostgreSQL/HTTP verification remains pending by the user's explicit choice. Approved test credentials are unavailable; do not discover credentials or alter configuration. Hosted CI has not run. Five-human usability evidence, publication and release gates remain later Epic completion work; they are not substituted by local tests.
