@@ -33,3 +33,8 @@ The independently reviewed candidate at `4370cac3` now has source-bound 1440 px 
 ## Historical Evidence — before repository consolidation
 
 2026-09-17: a provisional synthetic reader exists and has a browser artifact with exact screenshot/source hashes and a proposed five-person task protocol. The candidate has no tabs, live search, verified relationships or real Ask; mobile comparison overflow and keyboard close-focus defects were reproduced. Evidence is in `/mnt/projects/git/Allura-Ecosystem/.dev-readiness/epic30-review-20260917/design-candidate.md`. No design hash, variance or human-test protocol has been approved; no human study is complete. Repair and re-review precede design acceptance. Status remains backlog.
+
+## Auto Run Result
+
+Status: blocked
+Blocking condition: The governed `bmad-build-auto` activation for Story 30.2 requires `audit_health_report`, filtered `audit_query_events`, and outcome write/readback as `sabir-superadmin`. The active Allura principal is `chatgpt-desktop`: both audit calls returned `SCOPE_INSUFFICIENT`, and the required `sabir-superadmin` memory search returned `ACTOR_MISMATCH`. A scoped `chatgpt-desktop` memory-list fallback succeeded without degradation and recovered the current repair receipts, but it cannot satisfy or bypass the workflow's explicit identity and `audit:read` gate. No implementation, status advancement, approval, or promotion was performed by this auto-run.
