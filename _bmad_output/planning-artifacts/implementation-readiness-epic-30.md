@@ -10,6 +10,7 @@ Date: 2026-09-17. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — de
 - User approved preserving all 83 existing tracking entries and adding Epic 30 plus 13 stories as backlog, retrospective optional. Installed BMAD generator/validator confirmed this; metadata and action items preserved.
 - This is a preparation checkpoint, not a release or story acceptance. `main` was fast-forwarded to preparation commits `e8a32728` and `3d504117`. No push or whole-`develop` merge was performed.
 - The bounded Epic 30 reader foundation and interrupted repair set are integrated in the canonical checkout. Unrelated Epic 29/device-pairing, portal, graph and membership changes from `develop` were excluded.
+- Local `main` is intentionally one commit behind `origin/main`: remote commit `1934d211` changes 266 files and contains the excluded Epic 29/device-pairing baseline. It was inspected but not merged or pushed under this Epic 30-only cleanup authority.
 - The ordinary `/dashboard` overview remains active unless explicit non-production Epic 30 synthetic mode is enabled. Synthetic failure remains unavailable without leaking connection or scope details.
 - A dedicated `.github/workflows/epic-30-evidence.yml` runs the confined PostgreSQL/HTTP lane on pull requests or manual dispatch without uploading dashboard/test payloads.
 

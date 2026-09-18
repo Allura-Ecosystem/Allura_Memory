@@ -4,7 +4,7 @@ Date: 2026-09-17. Owner: Brooks. Mode: batch/low-token. Status: **implemented an
 
 ## Issue and impact
 
-Cleanup consolidated the project into one checkout. The user explicitly chose `main`; commits `e8a32728` and `3d504117` are included by fast-forward. The bounded reader and interrupted repairs are now integrated selectively. The prior `main...develop` comparison covered 313 files, including substantial Epic 29 work; those unrelated changes were not merged.
+Cleanup consolidated the project into one checkout. The user explicitly chose local `main`; commits `e8a32728` and `3d504117` are included by fast-forward. The bounded reader and interrupted repairs are now integrated selectively. The prior `main...develop` comparison covered 313 files, including substantial Epic 29 work; those unrelated changes were not merged. Local `main` therefore remains intentionally one commit behind `origin/main` (`1934d211`), whose 266-file payload contains that excluded baseline.
 
 Stories 30.1–30.3 own baseline, design and authorization decisions; 30.4–30.10 depend on them. Stories 30.11–30.13 retain integrated proof, actual human study and release gates. No epic is removed, renumbered or declared complete. Epic 29 acceptance remains independent.
 
