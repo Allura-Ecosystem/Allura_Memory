@@ -1,4 +1,4 @@
-> Recovery note (2026-09-17): planning restored into the canonical checkout. Earlier code/demo/test statements describe the separate saved candidate, not this branch. No story readiness or acceptance is granted by recovery. See implementation-readiness-epic-30.md in planning-artifacts for current gates.
+> Reconciliation note (2026-09-17): the bounded candidate and interrupted repairs were integrated into canonical `main`. Earlier test/demo statements remain historical unless repeated in the current readiness record. Integration does not grant story acceptance.
 
 # Epic 30 Local Authorization Contract (Provisional v1)
 
@@ -99,7 +99,7 @@ A receipt cannot grant authority. Wrong-scope, replayed, duplicate or unverifiab
 - `src/lib/digital-brain/read-service.ts` binds server-derived tenant/workspace/principal parameters, authorizes candidates in SQL and rechecks each returned row.
 - Outside explicit synthetic local mode, preserve the ordinary governed dashboard overview and its authorization checks. In explicit local mode, failed confinement or reads show an unavailable state; never substitute production data or static content.
 
-These bindings describe the saved candidate, not code integrated into current `main`. Proposed revocation timings are test targets, not measured guarantees or approved production policy. Verify actual enforcement after code reconciliation.
+These bindings describe the bounded code now integrated into current `main`. Proposed revocation timings remain test targets, not measured guarantees or approved production policy. Full enforcement review remains required before affected stories advance.
 
 ## 9. Remaining gates
 

@@ -1,8 +1,8 @@
-> Recovery note (2026-09-17): planning restored into the canonical checkout. Earlier code/demo/test statements describe the separate saved candidate, not this branch. No story readiness or acceptance is granted by recovery. See implementation-readiness-epic-30.md in planning-artifacts for current gates.
+> Reconciliation note (2026-09-17): the bounded candidate and interrupted repairs were integrated into canonical `main`. Earlier test/demo statements remain historical unless repeated in the current readiness record. Integration does not grant story acceptance.
 
 # Epic 30 Provisional Local Design — My Work
 
-**Status:** historical provisional local-test artifact; not design approval or an implementation available on current `main`. See [current readiness](./implementation-readiness-epic-30.md).
+**Status:** provisional local-test design now represented by the bounded implementation on current `main`; still awaiting explicit design/variance approval. See [current readiness](./implementation-readiness-epic-30.md).
 **Scope:** `/dashboard` only, synthetic fixture only, no production service or data.
 
 ## Design decision
@@ -21,4 +21,4 @@ The local UI uses semantic `nav`, `article`, headings, labels, buttons and token
 
 ## Deliberate exclusions
 
-No live search, production database connection, organization browsing, real AI, exports, messaging, writes, admin private-content access, graph canvas, autonomous actions, or user-controlled authorization selector are in this slice. The historical local demo used an explicitly configured disposable synthetic PostgreSQL database through the restricted application role; its availability is not asserted on current `main`.
+No live search, production database connection, organization browsing, real AI, exports, messaging, writes, admin private-content access, graph canvas, autonomous actions, or user-controlled authorization selector are in this slice. The integrated local demo requires an explicitly configured disposable synthetic PostgreSQL database through the restricted application role. Its live availability is not asserted because credentials were intentionally not supplied.

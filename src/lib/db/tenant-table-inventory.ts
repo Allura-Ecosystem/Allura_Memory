@@ -71,6 +71,8 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "governance_receipt_evidence_requests", class: "tenant-scoped", notes: "Immutable FK-backed complete receipt evidence membership", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "governance_receipts_legacy_archive", class: "migration-only", notes: "Quarantined pre-040 receipt envelopes; no application grants" },
   { table: "semantic_projections", class: "tenant-scoped", notes: "Versioned derived workspace semantic projections", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_documents", class: "tenant-scoped", notes: "Epic 30 owner-private or approved-department read documents; restricted app-role SELECT only", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_department_memberships", class: "tenant-scoped", notes: "Epic 30 current approved department read authority; revoked memberships fail closed", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "mitigation_receipts", class: "tenant-scoped", notes: "Story 26.5 (migration 41): immutable governed mitigation-draft approval/rejection receipts, gated by REQ-GOV-008 approval_ref", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "threat_alerts", class: "tenant-scoped", notes: "Story 26.4 (migration 42): durable, deduplicated exposure alerts; UPDATE restricted to lifecycle_state/updated_at only", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "inventory_records", class: "tenant-scoped", notes: "Bumblebee Guard (migration 44): persisted, fully-mutable supply-chain inventory reconciled from bun.lock (lockfile) and .github/workflows (ci_workflow)", workspaceTreatment: "workspace-scoped-new-writes" },

@@ -1,0 +1,24 @@
+.workspace { display: grid; gap: 1rem; color: var(--dashboard-text-primary); }
+.notice { display: flex; gap: .65rem; align-items: baseline; padding: .8rem 1rem; border: 1px solid var(--allura-warning-text); background: var(--allura-warning-light); border-radius: var(--allura-r-md); font-size: .9rem; }
+.toolbar { display: flex; justify-content: space-between; gap: 1rem; align-items: end; }
+.eyebrow, .treeLabel { margin: 0; color: var(--dashboard-text-secondary); font-size: .74rem; font-weight: 700; letter-spacing: .08em; }
+.toolbar h1, .document h2, .comparison h2 { margin: .2rem 0; }
+.search input { border: 1px solid var(--dashboard-border); border-radius: var(--allura-r-md); padding: .65rem .8rem; background: var(--allura-surface-white); color: var(--dashboard-text-primary); }
+.layout { display: grid; grid-template-columns: minmax(12rem, .65fr) minmax(20rem, 2fr); gap: 1rem; }
+.tree, .document, .comparison, .ask { border: 1px solid var(--dashboard-border); border-radius: var(--allura-r-md); background: var(--allura-surface-white); padding: 1rem; }
+.tree { display: grid; align-content: start; gap: .35rem; }
+.tree button, .linkButton, .ask button, .comparison button { border: 0; border-radius: var(--allura-r-sm); background: transparent; color: var(--dashboard-text-primary); cursor: pointer; padding: .65rem; text-align: left; }
+.tree button:hover, .tree .selected { background: var(--allura-info-bg); color: var(--allura-link); }
+.tree small { display: block; color: var(--dashboard-text-secondary); margin-top: .2rem; }
+.muted, .detail, .backlink, .ask p { color: var(--dashboard-text-secondary); }
+.document { min-height: 23rem; line-height: 1.6; }
+.document h3 { margin-top: 2rem; }
+.linkButton { color: var(--allura-link); text-decoration: underline; }
+.backlink { font-size: .85rem; }
+.comparison { grid-column: 1 / -1; }
+.layout > * { min-width: 0; overflow-wrap: anywhere; }
+.ask { display: grid; gap: .6rem; }
+.ask > button { width: fit-content; background: var(--allura-blue); color: var(--allura-white); }
+.ask div { border-left: 3px solid var(--allura-warning-text); padding-left: .75rem; }
+@media (min-width: 1100px) { .layout:has(.comparison) { grid-template-columns: minmax(12rem, .65fr) minmax(20rem, 2fr) minmax(16rem, 1fr); } .comparison { grid-column: auto; } }
+@media (max-width: 640px) { .toolbar, .layout { display: grid; grid-template-columns: minmax(0, 1fr); } .notice { display: grid; } .search input { width: 100%; box-sizing: border-box; } }

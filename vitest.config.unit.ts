@@ -132,6 +132,10 @@ export default defineConfig({
       "src/team-ram/orchestrator.test.ts",
       "src/team-ram/orchestration-tracing.test.ts",
       "src/team-ram/mcp-skill-executor.test.ts",
+      // Epic 30 — synthetic-only governed read slice and My Work interaction contract.
+      "src/lib/digital-brain/**/*.test.ts",
+      "src/app/dashboard/__tests__/page.test.tsx",
+      "src/components/dashboard/__tests__/my-work-workspace.test.tsx",
       // Curator workers
       "src/curator/embedding-backfill-worker.test.ts",
       "src/curator/notion-sync.test.ts",

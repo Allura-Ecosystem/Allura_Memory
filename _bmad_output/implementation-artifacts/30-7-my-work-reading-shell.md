@@ -1,4 +1,4 @@
-> Recovery note (2026-09-17): planning restored into the canonical checkout. Earlier code/demo/test statements describe the separate saved candidate, not this branch. No story readiness or acceptance is granted by recovery. See implementation-readiness-epic-30.md in planning-artifacts for current gates.
+> Reconciliation note (2026-09-17): the bounded candidate and interrupted repairs were integrated into canonical `main`. Earlier test/demo statements remain historical unless repeated in the current readiness record. Integration does not grant story acceptance.
 
 # Story 30.7 — My Work Reading Shell
 
@@ -23,7 +23,7 @@ Hash-bound browser comparisons and accepted variances, accessibility tests, owne
 
 ## Current Preparation State
 
-2026-09-17: canonical checkout is `main`. This story remains backlog; saved candidate implementation and historical test results are not evidence for this checkout. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md), [current readiness gates](../planning-artifacts/implementation-readiness-epic-30.md), and [bounded integration proposal](../planning-artifacts/sprint-change-proposal-2026-09-17.md). Dependencies above remain binding; no design, board, live-test or release approval is implied by this update.
+2026-09-17: canonical checkout is `main`. The bounded synthetic reader foundation and interrupted repair set are now integrated without the unrelated Epic 29 branch changes. Fresh local evidence is recorded in [current readiness](../planning-artifacts/implementation-readiness-epic-30.md). This story remains backlog: the integrated slice does not implement the full requirement, and no design, authorization-policy, board, live-database, hosted-CI, human-study or release approval is implied. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md) and [completed course correction](../planning-artifacts/sprint-change-proposal-2026-09-17.md).
 
 ## Historical Evidence — before repository consolidation
 2026-09-17: the bounded synthetic My Work reader is implemented at `f6c94f6`, with owner/department navigation, primary reading, one comparison pane, and honest Ask-unavailable disclosure. Fresh browser capture returned HTTP 200 with zero page errors; unit verification passed 62 tests. Review reproduced comparison overflow at 320px (347px page width) and keyboard focus falling to BODY on close. No tab controls exist, and tree-selection regression coverage is missing. Exact artifacts and variances: `/mnt/projects/git/Allura-Ecosystem/.dev-readiness/epic30-review-20260917/`. No approved design hash, full role/a11y acceptance or human study; status remains backlog. Historical unrelated dashboard evidence is still excluded.
