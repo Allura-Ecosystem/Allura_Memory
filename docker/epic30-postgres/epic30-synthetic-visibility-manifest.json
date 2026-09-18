@@ -1,0 +1,75 @@
+{
+  "dataset": "EPIC 30 SYNTHETIC TEST DATA ONLY",
+  "groupId": "allura-epic30-local",
+  "workspaceId": "epic30-local-workspace",
+  "expectedDocumentCount": 10,
+  "expectedMembershipCount": 9,
+  "principals": {
+    "owner-user": [
+      "epic30-operations-runbook",
+      "epic30-operations-safety-checklist",
+      "epic30-operations-task-queue",
+      "epic30-owner-private",
+      "epic30-owner-private-planning"
+    ],
+    "other-user": [
+      "epic30-other-private",
+      "epic30-other-private-reminder"
+    ],
+    "admin-user": [],
+    "department-user": [
+      "epic30-operations-runbook",
+      "epic30-operations-safety-checklist",
+      "epic30-operations-task-queue"
+    ],
+    "finance-user": [
+      "epic30-finance-close-checklist"
+    ],
+    "contractor-user": [],
+    "revoked-user": []
+  },
+  "sentinels": {
+    "crossWorkspace": {
+      "id": "epic30-cross-workspace-sentinel",
+      "tenantId": "allura-epic30-local",
+      "workspaceId": "epic30-other-workspace",
+      "ownerId": "workspace-sentinel-owner"
+    },
+    "crossTenant": {
+      "id": "epic30-cross-tenant-sentinel",
+      "tenantId": "allura-epic30-sentinel",
+      "workspaceId": "epic30-cross-tenant-workspace",
+      "ownerId": "cross-tenant-sentinel-owner"
+    }
+  },
+  "scopeScenarios": [
+    {
+      "name": "same-tenant sentinel is visible to its owner in its own workspace",
+      "principalId": "workspace-sentinel-owner",
+      "tenantId": "allura-epic30-local",
+      "workspaceId": "epic30-other-workspace",
+      "expectedDocumentIds": ["epic30-cross-workspace-sentinel"]
+    },
+    {
+      "name": "same-tenant sentinel stays hidden across the workspace boundary",
+      "principalId": "workspace-sentinel-owner",
+      "tenantId": "allura-epic30-local",
+      "workspaceId": "epic30-local-workspace",
+      "expectedDocumentIds": []
+    },
+    {
+      "name": "cross-tenant sentinel is visible to its owner in its own tenant",
+      "principalId": "cross-tenant-sentinel-owner",
+      "tenantId": "allura-epic30-sentinel",
+      "workspaceId": "epic30-cross-tenant-workspace",
+      "expectedDocumentIds": ["epic30-cross-tenant-sentinel"]
+    },
+    {
+      "name": "cross-tenant sentinel stays hidden when the tenant is forged",
+      "principalId": "cross-tenant-sentinel-owner",
+      "tenantId": "allura-epic30-local",
+      "workspaceId": "epic30-cross-tenant-workspace",
+      "expectedDocumentIds": []
+    }
+  ]
+}

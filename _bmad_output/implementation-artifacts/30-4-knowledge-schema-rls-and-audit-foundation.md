@@ -1,4 +1,4 @@
-> Recovery note (2026-09-17): planning restored into the canonical checkout. Earlier code/demo/test statements describe the separate saved candidate, not this branch. No story readiness or acceptance is granted by recovery. See implementation-readiness-epic-30.md in planning-artifacts for current gates.
+> Reconciliation note (2026-09-17): the bounded candidate and interrupted repairs were integrated into canonical `main`. Earlier test/demo statements remain historical unless repeated in the current readiness record. Integration does not grant story acceptance.
 
 # Story 30.4 — Knowledge Schema, RLS, and Audit Foundation
 
@@ -23,7 +23,7 @@ TDD, independent data/security review, fresh synthetic local PostgreSQL restrict
 
 ## Current Preparation State
 
-2026-09-17: canonical checkout is `main`. This story remains backlog; saved candidate implementation and historical test results are not evidence for this checkout. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md), [current readiness gates](../planning-artifacts/implementation-readiness-epic-30.md), and [bounded integration proposal](../planning-artifacts/sprint-change-proposal-2026-09-17.md). Dependencies above remain binding; no design, board, live-test or release approval is implied by this update.
+2026-09-17: canonical checkout is `main`. The bounded synthetic reader foundation and interrupted repair set are now integrated without the unrelated Epic 29 branch changes. Fresh local evidence is recorded in [current readiness](../planning-artifacts/implementation-readiness-epic-30.md). This story remains backlog: the integrated slice does not implement the full requirement, and no design, authorization-policy, board, live-database, hosted-CI, human-study or release approval is implied. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md) and [completed course correction](../planning-artifacts/sprint-change-proposal-2026-09-17.md).
 
 ## Historical Evidence — before repository consolidation
 A bounded local-only foundation exists: migration `docker/postgres-init/71-digital-brain-read-foundation.sql`, guarded synthetic fixtures, machine inventory and disposable-database tests. Historical remediation evidence records 21 passing DB/HTTP tests; this review did not rerun that lane. Fresh focused unit verification passed 62 tests. Independent review on 2026-09-17 found that the department visibility CHECK accepts NULL department_id; an explicit non-null guard and regression proof are required. Review also found the current CI port configuration incompatible with the suite's 5444 confinement requirement. No production migration or story approval occurred; status remains backlog. See the reconciled readiness document for evidence and remaining gates.

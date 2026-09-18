@@ -1,10 +1,10 @@
 # Epic 30 — Focused Course Correction
 
-Date: 2026-09-17. Owner: Brooks. Mode: batch/low-token. Status: preparation changes authorized; proposed code integration awaits approval. Scope: moderate integration correction, no product scope reduction.
+Date: 2026-09-17. Owner: Brooks. Mode: batch/low-token. Status: **implemented and locally verified; no push performed.** Scope: moderate integration correction, no product scope reduction.
 
 ## Issue and impact
 
-Cleanup consolidated the project into one checkout. The user explicitly chose `main`; commits `e8a32728` and `3d504117` are now included by fast-forward. The saved reader is not integrated. The prior `main...develop` comparison covered 313 files, including substantial Epic 29 work; a whole-branch merge would not be a bounded Epic 30 repair. Uncommitted reader changes remain recoverable in mount-local Trash.
+Cleanup consolidated the project into one checkout. The user explicitly chose `main`; commits `e8a32728` and `3d504117` are included by fast-forward. The bounded reader and interrupted repairs are now integrated selectively. The prior `main...develop` comparison covered 313 files, including substantial Epic 29 work; those unrelated changes were not merged.
 
 Stories 30.1–30.3 own baseline, design and authorization decisions; 30.4–30.10 depend on them. Stories 30.11–30.13 retain integrated proof, actual human study and release gates. No epic is removed, renumbered or declared complete. Epic 29 acceptance remains independent.
 
@@ -19,13 +19,13 @@ Direct adjustment is preferred over rollback of useful cleanup or reducing the a
 | Invitation contract | Department/channel owner substituted for project owner | Exact accepted pair: project owner and workspace membership administrator |
 | Local dashboard rule | Unavailable outside local mode | Preserve ordinary governed overview; explicit local failures remain unavailable |
 | Story evidence | Historical candidate could appear current | All 13 stories identify current backlog/preparation state and dependencies |
-| Code integration | Saved candidate assumed current | Inventory exact files/dependencies, preserve unfinished changes outside Trash, then port only the approved set |
+| Code integration | Saved candidate assumed current | Approved bounded files and repairs integrated on `main`; unrelated Epic 29 changes excluded |
 
 ## Handoff and success criteria
 
 ### Inspected integration boundary
 
-Read-only inventory on 2026-09-17 confirms the saved `develop` comparison contains 313 changed files. Candidate reader paths are `src/lib/digital-brain/`, `src/components/dashboard/my-work-workspace.tsx`, its CSS and component tests, `docker/postgres-init/71-digital-brain-read-foundation.sql`, `docker/epic30-postgres/`, `scripts/epic30/`, `tests/scripts/epic30-*.test.ts`, and `src/__tests__/digital-brain-read-isolation.e2e.test.ts`. The Trash copy additionally contains `scripts/epic30/verify-reader.cjs` and unfinished repairs; copying the committed branch alone would omit those repairs.
+The integrated set includes `src/lib/digital-brain/`, the My Work component/CSS/tests, the guarded dashboard route and route tests, migration 71, synthetic fixtures, Epic 30 scripts and tests, `scripts/epic30/verify-reader.cjs`, the dedicated live runner/config and its CI workflow. Shared edits are limited to app-role connection options, tenant-table inventory, package scripts and the unit-test inventory.
 
 Shared integration points require selective review: dashboard route and scope guard, tenant transaction/table inventory, PostgreSQL app-role connection options, package scripts, test-lane configuration and CI. The reader imports the tenant transaction and app pool; its migration contract test imports the tenant table inventory. The saved dashboard route replaces the normal overview with unavailable outside local mode, so it must not be adopted unchanged. Current authorization documents require preserving the normal governed route outside explicit synthetic mode.
 
@@ -33,6 +33,6 @@ Excluded from a blind port: device-pairing implementation and migrations, portal
 
 Brooks owns the dependency inventory and scope. One developer performs the approved integration in this checkout; targeted independent review checks security and compatibility. Sabir approves the exact design/variances and unresolved policy decisions. No production changes or push are authorized here.
 
-Next proposed task: preserve the unfinished patch in Git-owned recovery storage; inventory Epic 30 and necessary shared dependencies; present the integration set before porting. Fresh tests/typecheck, ordinary-route checks and independent review must follow integration. Live credentials remain pending by user choice.
+Fresh typecheck, 78 focused tests and the non-database ordinary-route browser check pass. Live credentials and hosted execution remain pending by user choice. Design, authorization-policy and board approvals remain the next gates before story advancement.
 
-Checklist: trigger/evidence and story impacts identified; requirements consolidated; documentation conflicts reconciled to accepted intent; alternatives assessed; sprint statuses preserved. Open: code integration approval, full design artifact/approval, authorization review and human-board reconciliation. No readiness PASS is claimed. Approve this bounded integration approach before implementation handoff.
+Checklist: trigger/evidence and story impacts identified; requirements consolidated; documentation conflicts reconciled; alternatives assessed; sprint statuses preserved; bounded integration and local verification complete. Open: exact design approval, authorization-policy approval and human-board reconciliation. Repository gate passes; story acceptance and release readiness are not claimed.

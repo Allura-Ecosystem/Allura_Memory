@@ -1,4 +1,4 @@
-> Recovery note (2026-09-17): planning restored into the canonical checkout. Earlier code/demo/test statements describe the separate saved candidate, not this branch. No story readiness or acceptance is granted by recovery. See implementation-readiness-epic-30.md in planning-artifacts for current gates.
+> Reconciliation note (2026-09-17): the bounded candidate and interrupted repairs were integrated into canonical `main`. Earlier test/demo statements remain historical unless repeated in the current readiness record. Integration does not grant story acceptance.
 
 # Story 30.6 — Safe Read Services
 
@@ -23,7 +23,7 @@ Cross-tenant/workspace/private/department tests, admin-without-private-access de
 
 ## Current Preparation State
 
-2026-09-17: canonical checkout is `main`. This story remains backlog; saved candidate implementation and historical test results are not evidence for this checkout. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md), [current readiness gates](../planning-artifacts/implementation-readiness-epic-30.md), and [bounded integration proposal](../planning-artifacts/sprint-change-proposal-2026-09-17.md). Dependencies above remain binding; no design, board, live-test or release approval is implied by this update.
+2026-09-17: canonical checkout is `main`. The bounded synthetic reader foundation and interrupted repair set are now integrated without the unrelated Epic 29 branch changes. Fresh local evidence is recorded in [current readiness](../planning-artifacts/implementation-readiness-epic-30.md). This story remains backlog: the integrated slice does not implement the full requirement, and no design, authorization-policy, board, live-database, hosted-CI, human-study or release approval is implied. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md) and [completed course correction](../planning-artifacts/sprint-change-proposal-2026-09-17.md).
 
 ## Historical Evidence — before repository consolidation
 `src/lib/digital-brain/read-service.ts` provides the restricted app-role read entry point with server-derived scope, SQL candidate authorization and row rechecking. `/dashboard` invokes it only in explicitly enabled non-production local mode. Fresh frozen-candidate focused unit verification on 2026-09-17 passed 62 tests across 8 files; historical DB/HTTP evidence records 21 passing tests, not rerun here. Independent review now exists and identifies missing routine execution of the opt-in HTTP proof, CI port incompatibility, and a non-local dashboard-route regression requiring contract reconciliation. Full derivative/revocation/audit and role acceptance are not established. Status remains backlog; see reconciled readiness and review evidence.
