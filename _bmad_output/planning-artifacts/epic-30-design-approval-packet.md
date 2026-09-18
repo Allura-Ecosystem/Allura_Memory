@@ -2,24 +2,24 @@
 
 Date: 2026-09-17  
 Status: **approval requested; not approved**  
-Candidate commit: `7d657abacd18c9c0aa032243f3e08e92d631aeb6`
+Candidate commit: `4370cac3f77d1ed9a10c069aaebaab470f9e69c7`
 Production route: `/dashboard`, only when explicit non-production Epic 30 synthetic mode is enabled.
 
-This packet replaces the visual candidate at `e65598e9` with its accessibility-remediated successor at `7d657aba`. It records what exists and the remaining variances; it does not grant design, story, human-study, or release acceptance.
+This packet replaces the visual candidate at `7d657aba` with its independently reviewed successor at `4370cac3`. It records what exists and the remaining variances; it does not grant design, story, human-study, or release acceptance.
 
 ## Bound artifacts
 
 | Artifact                                                | SHA-256                                                            |
 | ------------------------------------------------------- | ------------------------------------------------------------------ |
-| `src/components/dashboard/my-work-workspace.tsx`        | `d24488097c1aecdb2bae50f68fd40eca8b25f8eff90ac64ae9b805abf9c20c05` |
-| `src/components/dashboard/my-work-workspace.module.css` | `c4b238905f71b6ec7cccf1df3a0fd0b445eeade935fd484ee7d400c8fd284569` |
-| Desktop ready screenshot                                | `874d4816cfb87b0e960f47a3a1bbcd08c88326b850e0cf9275e2a319c0d37856` |
-| Desktop comparison screenshot                           | `23042beb7b84174a4ba109b4bee5ab2f18f09abd7ea457728290216e325e5f52` |
-| 320 px ready screenshot                                 | `63b1e15f36140ada76ec0b6e2722ee56917951f92c252eafbf3b8b9d9ada3d4e` |
-| 320 px comparison screenshot                            | `44f7c8aa2aa0f9b0663144426f816d3f44f1c6076ab18c2273ca4c66894aac41` |
-| Automated accessibility audit                           | `34483c0527cd694c3e72d466d0d44997ba1024b3ee95f4652f90f086e74800d4` |
+| `src/components/dashboard/my-work-workspace.tsx`        | `7de47369664ae59e067f3b9d9ea17c173c1affab7733a8ef341bea593e1a3639` |
+| `src/components/dashboard/my-work-workspace.module.css` | `c0e5536779a0116305d0c460b98553aebb7972015cb5fcb94197c33d6f3015ba` |
+| Desktop ready screenshot                                | `3c4c46f313ea165a1ec5b39a1d99592d94d461e21e548c56d6632e84a6feca97` |
+| Desktop comparison screenshot                           | `2189d23b9ec04169c636b29de85ffc9ad8647ec95615025943c1359e015a8dc1` |
+| 320 px ready screenshot                                 | `64805345fd418ece7c912275d3dc6bcf60387c1d43bf64c014dcd7ea41279584` |
+| 320 px comparison screenshot                            | `9ecebe42ea750c102dfeb16f117ad82ba36978b9247b57d52be824c79329b45a` |
+| Automated accessibility audit                           | `8691c503e48be9791d70482458a5c2e274ce23979c5509fdad1b9c472fccce45` |
 
-The screenshots and machine-readable audit are stored under `../implementation-artifacts/evidence/epic30-design-7d657aba/`. They were captured from a temporary non-shipping loopback route that rendered the same committed component with synthetic fixture content. The temporary route and capture code were removed after capture. Chromium at 1440×1000 and 320×900 reported zero automated WCAG 2 A/AA violations in both ready and comparison states and zero browser runtime errors. The development server's optional trace writer failed closed against absent local PostgreSQL; no trace was persisted, and this capture is not live-database evidence. No production data, credential, or model was attached.
+The screenshots and machine-readable audit are stored under `../implementation-artifacts/evidence/epic30-design-4370cac3/`. They were captured from a temporary non-shipping loopback route that rendered the same committed component with synthetic fixture content. The temporary route and capture code were removed after capture. Chromium 153 at 1440×1000 and 320×900 reported zero automated WCAG 2 A/AA violations in both ready and comparison states and zero browser runtime errors. Three scans had no incomplete checks; the 320 px comparison scan retained one manual `color-contrast` review because the fixed dialog overlaps other elements. Real-browser assertions also covered modal bounds, inert background, bidirectional focus containment and post-close focus restoration. The development server's optional trace writer failed closed against absent local PostgreSQL; no trace was persisted, and this capture is not live-database evidence. No production data, credential, or model was attached.
 
 ## Current design
 
@@ -66,9 +66,9 @@ Approval must identify this exact commit and both source hashes, accepted varian
 ```text
 Decision: APPROVE | APPROVE WITH AMENDMENTS | REJECT
 Approver name and role:
-Candidate: 7d657abacd18c9c0aa032243f3e08e92d631aeb6
-Workspace source SHA-256: d24488097c1aecdb2bae50f68fd40eca8b25f8eff90ac64ae9b805abf9c20c05
-Style source SHA-256: c4b238905f71b6ec7cccf1df3a0fd0b445eeade935fd484ee7d400c8fd284569
+Candidate: 4370cac3f77d1ed9a10c069aaebaab470f9e69c7
+Workspace source SHA-256: 7de47369664ae59e067f3b9d9ea17c173c1affab7733a8ef341bea593e1a3639
+Style source SHA-256: c0e5536779a0116305d0c460b98553aebb7972015cb5fcb94197c33d6f3015ba
 Route/scope accepted: /dashboard; explicit non-production synthetic mode only
 Variances accepted or amended:
 Five-person protocol accepted or amended:

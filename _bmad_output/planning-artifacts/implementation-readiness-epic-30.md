@@ -19,10 +19,10 @@ Date: 2026-09-17. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — de
 ## Fresh local evidence
 
 - `bun run typecheck`: PASS.
-- Focused Epic 30 unit and hermetic integration set: PASS, 79 tests across 9 files.
-- Focused Epic 30 unit lane rerun on 2026-09-17 against accessibility candidate `7d657aba`: PASS, 79 tests across 9 files. This reconfirms the explicit non-null department guard, exact-scope row rechecks, ordinary-dashboard preservation, confined 5444 runner contract, owned-process cleanup, responsive comparison behavior, focus restoration, active-state semantics and truthful disabled affordances. It is local hermetic evidence only; it does not replace the pending disposable-PostgreSQL/HTTP lane.
+- Focused Epic 30 unit and hermetic integration set: PASS, 88 tests across 9 files.
+- Focused Epic 30 unit lane rerun on 2026-09-17 against candidate `4370cac3`: PASS, 88 tests across 9 files. This reconfirms the explicit non-null department guard, exact-scope row rechecks, ordinary-dashboard preservation, confined 5444 runner contract, owned-process cleanup, responsive comparison behavior, mobile modal focus/inert lifecycle, prop reconciliation, active-state semantics and truthful disabled affordances. It is local hermetic evidence only; it does not replace the pending disposable-PostgreSQL/HTTP lane.
 - Ordinary-route headless Chromium check at 1440px: HTTP 200, truthful degraded state with the database intentionally unavailable, synthetic workspace absent, zero page errors.
-- The 320px ordinary dashboard shell exhibited pre-existing horizontal overflow. The repaired Epic 30 component now has current 1440/320 px synthetic ready/comparison evidence, component coverage, and zero automated WCAG A/AA violations in both states at both sizes; live restricted-database browser proof, screen-reader proof, and real 200% zoom proof remain pending.
+- The 320px ordinary dashboard shell exhibited pre-existing horizontal overflow. The repaired Epic 30 component now has current 1440/320 px synthetic ready/comparison evidence, real-browser modal/focus checks, component coverage, and zero automated WCAG A/AA violations in both states at both sizes. One mobile-comparison contrast check remains manual because automated overlap geometry was indeterminate; live restricted-database browser proof, screen-reader proof, and real 200% zoom proof remain pending.
 - Workflow/package parsing and missing-prerequisite behavior: PASS; the live runner exits 64 when required settings are absent.
 
 Live PostgreSQL/HTTP verification remains pending by the user's explicit choice. Approved test credentials are unavailable; do not discover credentials or alter configuration. Hosted CI has not run. Five-human usability evidence, publication and release gates remain later Epic completion work; they are not substituted by local tests. The previously reviewed nullable-department, ordinary-route, and 5444-CI wiring defects are repaired and covered locally; their live and hosted execution gates remain open.
@@ -34,7 +34,7 @@ This table tests the full epic rather than treating the current reader slice as 
 | Story | Current authoritative evidence | Evidence still required before completion |
 | --- | --- | --- |
 | 30.1 | Canonical plan, 13-story dependency map and reconciled board receipt exist | Sanctioned planning transition after the 30.2/30.3 decisions; no local status promotion |
-| 30.2 | `7d657aba` source, four hash-bound captures, variance register, protocol and zero automated WCAG A/AA violations | Authorized design/variance decision; screen-reader and actual 200% zoom proof; later five-person execution |
+| 30.2 | `4370cac3` source, four hash-bound captures, real-browser modal/focus checks, variance register, protocol and zero automated WCAG A/AA violations | Authorized design/variance decision; one manual overlay-contrast disposition, screen-reader and actual 200% zoom proof; later five-person execution |
 | 30.3 | Hash-bound authorization contract and adversarial threat matrix exist | Authorized policy decision plus independent security and data-review dispositions |
 | 30.4 | Bounded migration, synthetic fixtures and hermetic contract tests exist | Approved-contract implementation breadth; fresh restricted-role PostgreSQL, RLS, audit, migration and rollback proof |
 | 30.5 | Server-derived local scope and confinement foundations exist | Full legacy inventory/quarantine and timed membership/session/delegation revocation evidence |
@@ -43,7 +43,7 @@ This table tests the full epic rather than treating the current reader slice as 
 | 30.8 | Search is truthfully disabled; no relationship is fabricated | Authorized search, links, backlinks, lineage, timing/leakage and revocation implementation and proof |
 | 30.9 | Ask is truthfully unavailable and sends no governed content | Approved provider no-retention/no-training evidence plus cited read-only Ask implementation and adversarial proof |
 | 30.10 | Messaging affordance is absent, so no unauthorized send occurs | Restricted discovery/contact/channel/invitation/send implementation, audit and revocation receipts |
-| 30.11 | Dedicated workflow and local 79-test lane exist | Frozen exact-SHA hosted CI, full independent reviews and merge-blocked controlled-red privacy regression |
+| 30.11 | Dedicated workflow and local 88-test lane exist | Frozen exact-SHA hosted CI, full independent reviews and merge-blocked controlled-red privacy regression |
 | 30.12 | Hash-bound five-person protocol exists | Five distinct uncoached human sessions meeting every threshold, plus remediation/retest if needed |
 | 30.13 | Local/Notion board reconciliation receipt exists | Authorized publication, origin-main and rollback receipts, full evidence reconciliation and accepted retrospective |
 
