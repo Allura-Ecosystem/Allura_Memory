@@ -1,6 +1,6 @@
 # Epic 30 — Development Readiness
 
-Date: 2026-09-17. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — design, authorization-policy and board approvals remain open.**
+Date: 2026-09-17. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — design and authorization-policy approvals remain open.**
 
 ## Reconciled state
 
@@ -14,6 +14,7 @@ Date: 2026-09-17. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — de
 - The ordinary `/dashboard` overview remains active unless explicit non-production Epic 30 synthetic mode is enabled. Synthetic failure remains unavailable without leaking connection or scope details.
 - A dedicated `.github/workflows/epic-30-evidence.yml` runs the confined PostgreSQL/HTTP lane on pull requests or manual dispatch without uploading dashboard/test payloads.
 - The current Obsidian-inspired Allura workspace candidate and 1440/320 px screenshots are hash-bound in the [design approval packet](./epic-30-design-approval-packet.md). This is an approval request, not approval.
+- The canonical Notion human board now contains one Epic 30 record, all 13 stories, and the optional retrospective record, all `Not Started`, with verified dependency relations. Exact IDs, the schema-safe linkage disposition, and read-back evidence are recorded in the [board reconciliation packet](./epic-30-board-reconciliation-packet.md). No story was advanced.
 
 ## Fresh local evidence
 
@@ -30,7 +31,7 @@ Live PostgreSQL/HTTP verification remains pending by the user's explicit choice.
 
 1. Approve the exact provisional design artifact and declared variances; tabs, authorized search/relationships, real read-only Ask and restricted contractor messaging remain future stories.
 2. Approve or amend the [hash-bound authorization packet](./epic-30-authorization-approval-packet.md) and its [local authorization contract](./epic-30-local-authorization-contract.md); accepted defaults are represented, while production timings and full enforcement still require review.
-3. Reconcile the 13 local backlog stories with the human board using the [hash-bound board reconciliation packet](./epic-30-board-reconciliation-packet.md). Local files do not claim Notion authority.
+3. **Complete:** the 13 local backlog stories, Epic, and optional retrospective are reconciled with the canonical human board; see the [hash-bound receipt](./epic-30-board-reconciliation-packet.md).
 
 ## Next BMAD action
 
