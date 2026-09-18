@@ -19,10 +19,10 @@ Date: 2026-09-17. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — de
 ## Fresh local evidence
 
 - `bun run typecheck`: PASS.
-- Focused Epic 30 unit and hermetic integration set: PASS, 78 tests across 9 files.
-- Focused Epic 30 unit lane rerun on 2026-09-17 against `61205626`: PASS, 78 tests across 9 files. This reconfirms the explicit non-null department guard, exact-scope row rechecks, ordinary-dashboard preservation, confined 5444 runner contract, owned-process cleanup, responsive comparison behavior, and focus restoration. It is local hermetic evidence only; it does not replace the pending disposable-PostgreSQL/HTTP lane.
+- Focused Epic 30 unit and hermetic integration set: PASS, 79 tests across 9 files.
+- Focused Epic 30 unit lane rerun on 2026-09-17 against accessibility candidate `7d657aba`: PASS, 79 tests across 9 files. This reconfirms the explicit non-null department guard, exact-scope row rechecks, ordinary-dashboard preservation, confined 5444 runner contract, owned-process cleanup, responsive comparison behavior, focus restoration, active-state semantics and truthful disabled affordances. It is local hermetic evidence only; it does not replace the pending disposable-PostgreSQL/HTTP lane.
 - Ordinary-route headless Chromium check at 1440px: HTTP 200, truthful degraded state with the database intentionally unavailable, synthetic workspace absent, zero page errors.
-- The 320px ordinary dashboard shell exhibited pre-existing horizontal overflow. The repaired Epic 30 component now has current 1440/320 px synthetic visual evidence plus component coverage; live restricted-database browser proof, screen-reader proof, and real 200% zoom proof remain pending.
+- The 320px ordinary dashboard shell exhibited pre-existing horizontal overflow. The repaired Epic 30 component now has current 1440/320 px synthetic ready/comparison evidence, component coverage, and zero automated WCAG A/AA violations in both states at both sizes; live restricted-database browser proof, screen-reader proof, and real 200% zoom proof remain pending.
 - Workflow/package parsing and missing-prerequisite behavior: PASS; the live runner exits 64 when required settings are absent.
 
 Live PostgreSQL/HTTP verification remains pending by the user's explicit choice. Approved test credentials are unavailable; do not discover credentials or alter configuration. Hosted CI has not run. Five-human usability evidence, publication and release gates remain later Epic completion work; they are not substituted by local tests. The previously reviewed nullable-department, ordinary-route, and 5444-CI wiring defects are repaired and covered locally; their live and hosted execution gates remain open.

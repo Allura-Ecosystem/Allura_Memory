@@ -46,7 +46,7 @@ Approve or amend these exact defaults:
 
 ## Current verification
 
-- Maintained focused Epic 30 unit lane: **78 tests across 9 files passed** on 2026-09-17.
+- Maintained focused Epic 30 unit lane: **79 tests across 9 files passed** on 2026-09-17 against `7d657aba`.
 - Explicit non-null department scope, exact-scope row checks, no admin private override, local target confinement, ordinary-route preservation and owned-process cleanup are covered.
 - Live disposable PostgreSQL/HTTP, hosted CI, full derivatives, immutable audit, timed revocation and provider-policy evidence remain open.
 
