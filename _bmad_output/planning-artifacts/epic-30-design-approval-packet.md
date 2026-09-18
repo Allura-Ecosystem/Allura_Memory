@@ -60,3 +60,19 @@ Record per participant and task: completion, coaching/intervention, critical err
 ## Approval record
 
 Approval must identify this exact commit and both source hashes, accepted variances, production route, synthetic-only scope, and protocol. Until an authorized human records that approval and it is reconciled with the human work board, Story 30.2 remains backlog.
+
+### Reviewer response template
+
+```text
+Decision: APPROVE | APPROVE WITH AMENDMENTS | REJECT
+Approver name and role:
+Candidate: 7d657abacd18c9c0aa032243f3e08e92d631aeb6
+Workspace source SHA-256: d24488097c1aecdb2bae50f68fd40eca8b25f8eff90ac64ae9b805abf9c20c05
+Style source SHA-256: c4b238905f71b6ec7cccf1df3a0fd0b445eeade935fd484ee7d400c8fd284569
+Route/scope accepted: /dashboard; explicit non-production synthetic mode only
+Variances accepted or amended:
+Five-person protocol accepted or amended:
+Notes:
+```
+
+An approval authorizes the design baseline and declared variances only. It does not mark Story 30.2 Done, approve authorization policy, authorize publication, or satisfy later implementation, accessibility, live-database, CI, human-study or release gates.

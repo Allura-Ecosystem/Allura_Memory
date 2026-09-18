@@ -53,3 +53,17 @@ Approve or amend these exact defaults:
 ## Approval record
 
 An authorized human approval must identify the candidate commit and contract hash, record amendments or accepted defaults, name the approver and role, and link the durable board receipt. The board receipt now exists in the [reconciliation packet](./epic-30-board-reconciliation-packet.md). Independent security and data reviewers must still record dispositions for every threat row. Until those approval and review records exist, Story 30.3 remains backlog and dependent implementation stories do not advance.
+
+### Reviewer response template
+
+```text
+Decision: APPROVE | APPROVE WITH AMENDMENTS | REJECT
+Approver name and role:
+Candidate: f08404f0cb5b7ec41a12a1acaf12d1ea45b96fd0
+Authorization contract SHA-256: 0020cfea14a5a6fa18a6e373731982f8d1094cf3f00757e87440342fe48edaa2
+Accepted defaults or amendments:
+Threat-row dispositions or required reviewers:
+Notes:
+```
+
+This decision cannot precede the Story 30.2 design decision and does not substitute for independent security/data review, implementation, live restricted-role proof, hosted CI, human validation, publication or release acceptance.

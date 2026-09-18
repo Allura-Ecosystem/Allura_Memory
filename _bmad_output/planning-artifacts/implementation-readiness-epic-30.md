@@ -27,6 +27,28 @@ Date: 2026-09-17. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — de
 
 Live PostgreSQL/HTTP verification remains pending by the user's explicit choice. Approved test credentials are unavailable; do not discover credentials or alter configuration. Hosted CI has not run. Five-human usability evidence, publication and release gates remain later Epic completion work; they are not substituted by local tests. The previously reviewed nullable-department, ordinary-route, and 5444-CI wiring defects are repaired and covered locally; their live and hosted execution gates remain open.
 
+## Completion audit — 2026-09-17
+
+This table tests the full epic rather than treating the current reader slice as completion. Every story remains `backlog` locally and `Not Started` on the human board.
+
+| Story | Current authoritative evidence | Evidence still required before completion |
+| --- | --- | --- |
+| 30.1 | Canonical plan, 13-story dependency map and reconciled board receipt exist | Sanctioned planning transition after the 30.2/30.3 decisions; no local status promotion |
+| 30.2 | `7d657aba` source, four hash-bound captures, variance register, protocol and zero automated WCAG A/AA violations | Authorized design/variance decision; screen-reader and actual 200% zoom proof; later five-person execution |
+| 30.3 | Hash-bound authorization contract and adversarial threat matrix exist | Authorized policy decision plus independent security and data-review dispositions |
+| 30.4 | Bounded migration, synthetic fixtures and hermetic contract tests exist | Approved-contract implementation breadth; fresh restricted-role PostgreSQL, RLS, audit, migration and rollback proof |
+| 30.5 | Server-derived local scope and confinement foundations exist | Full legacy inventory/quarantine and timed membership/session/delegation revocation evidence |
+| 30.6 | Bounded authorized document read service and exact-scope row rechecks exist | Shared production-grade decisions for relationships, search, citations, derivatives, caches and pagination |
+| 30.7 | Partial My Work shell, ready/empty/unavailable states and responsive comparison exist | Approved design implementation, interactive tabs, all required truth states, screen-reader and 200% zoom evidence |
+| 30.8 | Search is truthfully disabled; no relationship is fabricated | Authorized search, links, backlinks, lineage, timing/leakage and revocation implementation and proof |
+| 30.9 | Ask is truthfully unavailable and sends no governed content | Approved provider no-retention/no-training evidence plus cited read-only Ask implementation and adversarial proof |
+| 30.10 | Messaging affordance is absent, so no unauthorized send occurs | Restricted discovery/contact/channel/invitation/send implementation, audit and revocation receipts |
+| 30.11 | Dedicated workflow and local 79-test lane exist | Frozen exact-SHA hosted CI, full independent reviews and merge-blocked controlled-red privacy regression |
+| 30.12 | Hash-bound five-person protocol exists | Five distinct uncoached human sessions meeting every threshold, plus remediation/retest if needed |
+| 30.13 | Local/Notion board reconciliation receipt exists | Authorized publication, origin-main and rollback receipts, full evidence reconciliation and accepted retrospective |
+
+The first executable gate is the exact 30.2 design decision. The 30.3 policy decision follows because 30.3 depends on 30.2. Neither decision supplies downstream implementation, live proof, human validation, release authorization or Done status.
+
 ## Before implementation stories advance
 
 1. Approve the exact provisional design artifact and declared variances; tabs, authorized search/relationships, real read-only Ask and restricted contractor messaging remain future stories.
