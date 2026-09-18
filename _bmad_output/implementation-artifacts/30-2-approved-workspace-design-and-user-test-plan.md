@@ -10,20 +10,26 @@
 **Dependencies:** 30.1
 
 ## User Story
+
 As a workspace user, I want an approved readable design so that private and department work is clear without excess controls.
 
 ## Acceptance Criteria
+
 - A concrete browser design covers tree, tabs, primary and optional right pane, search, text relationships, collapsed Ask and restricted messaging.
 - Covers all eight truth states, keyboard/focus, screen readers, 320px and 200% zoom.
 - Sabir approves the exact artifact hash, routes, scope and variances; historical screenshots cannot satisfy this gate.
 - Hash-bound test protocol specifies five distinct people, tasks, uncoached success, at least four successes per task, no critical error and no unauthorized disclosure.
 
 ## Required Evidence / Definition of Done
+
 Artifact/hash, human approval receipt, task protocol and accessibility review; apply epic publication and receipt gates. Browser simulations may preflight owner/other-user/admin/department-member/contractor flows but cannot close the human gate.
 
 ## Current Preparation State
 
 2026-09-17: canonical checkout is `main`. The bounded synthetic reader foundation and interrupted repair set are now integrated without the unrelated Epic 29 branch changes. Fresh local evidence is recorded in [current readiness](../planning-artifacts/implementation-readiness-epic-30.md). This story remains backlog: the integrated slice does not implement the full requirement, and no design, authorization-policy, board, live-database, hosted-CI, human-study or release approval is implied. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md) and [completed course correction](../planning-artifacts/sprint-change-proposal-2026-09-17.md).
 
+The current candidate at `e65598e9` now has source-bound 1440 px and 320 px ready/comparison captures, a variance register, and a proposed five-person protocol in the [design approval packet](../planning-artifacts/epic-30-design-approval-packet.md). The packet is an approval request only. Exact human design/variance approval, screen-reader and 200% zoom evidence, live restricted-database browser proof, and the five-person study remain open.
+
 ## Historical Evidence — before repository consolidation
+
 2026-09-17: a provisional synthetic reader exists and has a browser artifact with exact screenshot/source hashes and a proposed five-person task protocol. The candidate has no tabs, live search, verified relationships or real Ask; mobile comparison overflow and keyboard close-focus defects were reproduced. Evidence is in `/mnt/projects/git/Allura-Ecosystem/.dev-readiness/epic30-review-20260917/design-candidate.md`. No design hash, variance or human-test protocol has been approved; no human study is complete. Repair and re-review precede design acceptance. Status remains backlog.
