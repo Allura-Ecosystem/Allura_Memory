@@ -243,7 +243,7 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
             <div className={styles.toolbarMeta}><span>Epic 30</span><span>{documents.length} visible</span></div>
           </header>
 
-          <div className={styles.tabs} aria-label="Open workspace panes" data-comparison-background>
+          <div className={styles.tabs} role="group" aria-label="Open workspace panes" data-comparison-background>
             <div className={styles.activeTab}><FileText aria-hidden="true" /><span>{active.title}</span><i /></div>
             <div><BrainCircuit aria-hidden="true" /><span>{comparison ? "Comparison" : "Context map"}</span></div>
           </div>
