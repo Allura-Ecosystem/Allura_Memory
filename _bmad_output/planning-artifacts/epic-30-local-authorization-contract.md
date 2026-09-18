@@ -2,7 +2,7 @@
 
 # Epic 30 Local Authorization Contract (Provisional v1)
 
-**Status:** settled implementation constraint for the synthetic local read slice; not production authorization approval.  
+**Status:** provisional implementation contract. Accepted defaults are binding; detailed enforcement and timing targets still require review. Not production authorization approval.
 **Applies to:** `/dashboard` My Work reads, future API/MCP/search/link/citation/chat/AI/worker reads, and synthetic PostgreSQL fixtures.  
 **Does not authorize:** production data, migrations, writes, exports, messaging, model calls, publication, or admin private-content override.
 
@@ -48,7 +48,7 @@ Ownership, tenant membership, workspace membership, department membership, admin
 - A department read requires a current, non-revoked membership for the same tenant, workspace, department and principal.
 - A contractor cannot read private or department content merely because the contractor is a tenant member.
 - Future messaging requires both an approved named contractor role and a current invitation to the exact workspace/project channel. Either predicate missing or revoked denies.
-- Dual approval for contractor invitations means one workspace authority approver plus one department/channel owner; the two approvals must be independent durable records.
+- Dual approval for contractor invitations requires the project owner and the workspace membership administrator; the two approvals must be independent durable records. A department/channel owner is not a substitute for the required project-owner authority.
 
 ## 4. Derivative and agent authority
 
@@ -97,7 +97,9 @@ A receipt cannot grant authority. Wrong-scope, replayed, duplicate or unverifiab
 - Migration `docker/postgres-init/71-digital-brain-read-foundation.sql` creates `brain_documents` and `brain_department_memberships`, forces RLS, grants `allura_app` SELECT only and provides no admin override.
 - Fixture `docker/epic30-postgres/99-epic30-synthetic-fixtures.sql` contains only `.invalid` identities and synthetic content.
 - `src/lib/digital-brain/read-service.ts` binds server-derived tenant/workspace/principal parameters, authorizes candidates in SQL and rechecks each returned row.
-- Outside an explicitly configured disposable local database, this slice must show an unavailable state rather than use production data or silently fall back to static content.
+- Outside explicit synthetic local mode, preserve the ordinary governed dashboard overview and its authorization checks. In explicit local mode, failed confinement or reads show an unavailable state; never substitute production data or static content.
+
+These bindings describe the saved candidate, not code integrated into current `main`. Proposed revocation timings are test targets, not measured guarantees or approved production policy. Verify actual enforcement after code reconciliation.
 
 ## 9. Remaining gates
 

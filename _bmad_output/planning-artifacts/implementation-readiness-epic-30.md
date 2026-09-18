@@ -4,11 +4,11 @@ Date: 2026-09-17. Verdict: **FAIL — planning and integration gates remain open
 
 ## Reconciled state
 
-- Canonical checkout: `Allura_Memory`, local branch `codex/epic30-dev-readiness`.
+- Canonical checkout: `Allura_Memory`, local branch `main`, as explicitly requested by the user.
 - BMAD output normalization committed as `e8a32728`; installed tooling remains in `_bmad`.
-- Four Epic 30 planning documents and 13 backlog stories recovered into `_bmad_output`.
+- Four Epic 30 planning documents and 13 backlog stories recovered into `_bmad_output`; consolidated [PRD](./epic-30-prd.md) and [course-correction proposal](./sprint-change-proposal-2026-09-17.md) now document the preparation baseline and proposed integration boundary.
 - User approved preserving all 83 existing tracking entries and adding Epic 30 plus 13 stories as backlog, retrospective optional. Installed BMAD generator/validator confirmed this; metadata and action items preserved.
-- This is a preparation checkpoint, not a release or story acceptance. No push or merge.
+- This is a preparation checkpoint, not a release or story acceptance. `main` was fast-forwarded to preparation commits `e8a32728` and `3d504117`. No push or whole-`develop` merge was performed.
 
 ## Before implementation resumes
 

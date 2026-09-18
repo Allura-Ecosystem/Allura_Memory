@@ -16,10 +16,10 @@ implementation_readiness: blocked
 
 This is the single local Epic 30 planning authority, not an implementation approval or a replacement for the Notion human work board. All stories remain backlog.
 
-- Loop authorization and six accepted defaults: Brain `ea28b0bf-7abf-4eae-a048-6fc32c9822ca`, read back in this run.
-- Approved council: Brain `5c3304f9-93e7-4b85-8d78-216eabb5e537`, read back in this run.
+- Loop authorization and six accepted defaults: Brain `ea28b0bf-7abf-4eae-a048-6fc32c9822ca`, recorded during prior hydration.
+- Approved council: Brain `5c3304f9-93e7-4b85-8d78-216eabb5e537`, recorded during prior hydration.
 - Full source: `/home/ronin704/.hermes/cache/delegation/subagent-summary-0-20260917_020254_310900.txt`, sections Numbered Story Map, Trust Rules, Controlled-Red Proof Families, and Epic Close Gates.
-- Planning baseline: `1934d211c239310d498794ec0c5dbaa532faeeb8`, detached worktree. No branch switch, commit, push, or merge authorized.
+- Historical planning baseline: `1934d211c239310d498794ec0c5dbaa532faeeb8`, formerly a detached worktree. Current user direction authorizes preparation commits on canonical `main`; it does not authorize a push or wholesale `develop` merge. See the [PRD](./epic-30-prd.md), [current readiness](./implementation-readiness-epic-30.md), and [integration proposal](./sprint-change-proposal-2026-09-17.md).
 - [Readiness evidence](./implementation-readiness-epic-30.md). Policy approval does not approve a design hash or settle the detailed authorization contract.
 
 ## Accepted defaults

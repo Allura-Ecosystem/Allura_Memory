@@ -2,7 +2,7 @@
 
 # Epic 30 Provisional Local Design — My Work
 
-**Status:** provisional local-test artifact; not design approval.  
+**Status:** historical provisional local-test artifact; not design approval or an implementation available on current `main`. See [current readiness](./implementation-readiness-epic-30.md).
 **Scope:** `/dashboard` only, synthetic fixture only, no production service or data.
 
 ## Design decision
@@ -21,4 +21,4 @@ The local UI uses semantic `nav`, `article`, headings, labels, buttons and token
 
 ## Deliberate exclusions
 
-No live search, production database connection, organization browsing, real AI, exports, messaging, writes, admin private-content access, graph canvas, autonomous actions, or user-controlled authorization selector are in this slice. The retained local demo does read an explicitly configured disposable synthetic PostgreSQL database through the restricted application role.
+No live search, production database connection, organization browsing, real AI, exports, messaging, writes, admin private-content access, graph canvas, autonomous actions, or user-controlled authorization selector are in this slice. The historical local demo used an explicitly configured disposable synthetic PostgreSQL database through the restricted application role; its availability is not asserted on current `main`.
