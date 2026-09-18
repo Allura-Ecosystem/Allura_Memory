@@ -174,6 +174,7 @@ describe("MyWorkWorkspace", () => {
 
   it("keeps the desktop comparison as an ordinary complementary pane", () => {
     render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    expect(screen.getByRole("group", { name: "Open workspace panes" })).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "Open deployment checklist" }))
     const pane = screen.getByRole("complementary", { name: "Comparison pane" })
     expect(pane.hasAttribute("aria-modal")).toBe(false)
