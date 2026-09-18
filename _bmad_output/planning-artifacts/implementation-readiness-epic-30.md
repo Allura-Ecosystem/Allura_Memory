@@ -30,7 +30,7 @@ Live PostgreSQL/HTTP verification remains pending by the user's explicit choice.
 
 1. Approve the exact provisional design artifact and declared variances; tabs, authorized search/relationships, real read-only Ask and restricted contractor messaging remain future stories.
 2. Approve or amend the [hash-bound authorization packet](./epic-30-authorization-approval-packet.md) and its [local authorization contract](./epic-30-local-authorization-contract.md); accepted defaults are represented, while production timings and full enforcement still require review.
-3. Reconcile the 13 local backlog stories with the human board. Local files do not claim Notion authority.
+3. Reconcile the 13 local backlog stories with the human board using the [hash-bound board reconciliation packet](./epic-30-board-reconciliation-packet.md). Local files do not claim Notion authority.
 
 ## Next BMAD action
 
