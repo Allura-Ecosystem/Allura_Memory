@@ -36,6 +36,6 @@ No organization/project Brain browsing, private sharing/admin override, graph ca
 
 ## Entry and completion gates
 
-Preparation and the bounded reader foundation are integrated on `main`, in the single canonical checkout. Product implementation beyond that foundation requires approved design/variances, reviewed authorization decisions and human-board reconciliation. All 13 stories remain backlog.
+Preparation and the bounded reader foundation are integrated on `main`, in the single canonical checkout. The canonical Notion board is reconciled with one Epic, all 13 stories and the optional retrospective, without advancing status. Product implementation beyond the foundation still requires approved design/variances and reviewed authorization decisions. All 13 stories remain backlog locally and `Not Started` on the human board.
 
 Live tests, verified provider policy, hosted CI, five-human validation, publication and retrospective remain the relevant story/release gates. Live PostgreSQL/HTTP verification is pending by user choice. This PRD claims none of those passes. See [readiness](./implementation-readiness-epic-30.md) and [course correction](./sprint-change-proposal-2026-09-17.md).

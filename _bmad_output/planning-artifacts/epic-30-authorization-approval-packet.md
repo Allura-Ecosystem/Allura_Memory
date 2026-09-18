@@ -52,4 +52,4 @@ Approve or amend these exact defaults:
 
 ## Approval record
 
-An authorized human approval must identify the candidate commit and contract hash, record amendments or accepted defaults, name the approver and role, and link the durable board receipt. Independent security and data reviewers must record dispositions for every threat row. Until those records exist and the human board is reconciled, Story 30.3 remains backlog and dependent implementation stories do not advance.
+An authorized human approval must identify the candidate commit and contract hash, record amendments or accepted defaults, name the approver and role, and link the durable board receipt. The board receipt now exists in the [reconciliation packet](./epic-30-board-reconciliation-packet.md). Independent security and data reviewers must still record dispositions for every threat row. Until those approval and review records exist, Story 30.3 remains backlog and dependent implementation stories do not advance.
