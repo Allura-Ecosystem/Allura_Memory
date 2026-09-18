@@ -41,16 +41,30 @@ async function main() {
       await page.setViewportSize({ width, height: 1000 });
       const opener = workspace.getByRole('button', { name: /^Open / });
       await opener.focus(); await page.keyboard.press('Enter');
-      const pane = workspace.getByRole('complementary', { name: 'Comparison pane' });
+      const paneRole = width <= 760 ? 'dialog' : 'complementary';
+      const pane = workspace.getByRole(paneRole, { name: 'Comparison pane' });
       await pane.waitFor();
       const metrics = await page.evaluate(() => ({ viewport: innerWidth, width: document.documentElement.scrollWidth }));
       assert.ok(metrics.width <= width, JSON.stringify(metrics));
-      if (width <= 640) {
-        const boxes = await workspace.locator('nav, article, aside').evaluateAll(elements => elements.map(element => {
-          const box = element.getBoundingClientRect(); return { x: box.x, y: box.y, bottom: box.bottom };
-        }));
-        assert.equal(boxes[0].x, boxes[1].x); assert.equal(boxes[1].x, boxes[2].x);
-        assert.ok(boxes[1].y >= boxes[0].bottom && boxes[2].y >= boxes[1].bottom);
+      if (width <= 760) {
+        const bounds = await pane.evaluate(element => {
+          const box = element.getBoundingClientRect();
+          return { x: box.x, y: box.y, right: box.right, bottom: box.bottom, viewportWidth: innerWidth, viewportHeight: innerHeight };
+        });
+        assert.ok(bounds.x >= 0 && bounds.y >= 0 && bounds.right <= bounds.viewportWidth && bounds.bottom <= bounds.viewportHeight, JSON.stringify(bounds));
+        assert.equal(await pane.getAttribute('aria-modal'), 'true');
+        assert.equal(await pane.evaluate(element => element.contains(document.activeElement)), true, 'Mobile focus must enter the comparison dialog');
+        assert.equal(await mainDocument.evaluate(element => element.hasAttribute('inert')), true, 'The background document must be inert while the mobile dialog is open');
+
+        const dismiss = pane.getByRole('button', { name: 'Dismiss comparison' });
+        const close = pane.getByRole('button', { name: 'Close pane' });
+        await close.focus(); await page.keyboard.press('Tab');
+        assert.equal(await dismiss.evaluate(element => element === document.activeElement), true, 'Tab must wrap to the first dialog control');
+        await page.keyboard.press('Shift+Tab');
+        assert.equal(await close.evaluate(element => element === document.activeElement), true, 'Shift+Tab must wrap to the last dialog control');
+      } else {
+        assert.equal(await pane.getAttribute('aria-modal'), null, 'Desktop comparison must remain non-modal');
+        assert.equal(await mainDocument.evaluate(element => element.hasAttribute('inert')), false, 'Desktop content must remain interactive beside the comparison pane');
       }
       const file = `comparison-${width}.png`; screenshots.push(file);
       await page.screenshot({ path: path.join(out, file), fullPage: true });

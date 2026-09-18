@@ -13,7 +13,7 @@ import {
   Search,
 } from "lucide-react"
 import Image from "next/image"
-import { useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 
 import styles from "./my-work-workspace.module.css"
 
@@ -35,6 +35,33 @@ export interface MyWorkWorkspaceProps {
   processRunId?: string
 }
 
+const MOBILE_COMPARISON_QUERY = "(max-width: 760px)"
+
+function useMobileComparison(): boolean {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia?.(MOBILE_COMPARISON_QUERY)
+    if (!media) return
+    const update = () => setIsMobile(media.matches)
+    update()
+    if (media.addEventListener) {
+      media.addEventListener("change", update)
+      return () => media.removeEventListener("change", update)
+    }
+    media.addListener?.(update)
+    return () => media.removeListener?.(update)
+  }, [])
+
+  return isMobile
+}
+
+function formatUtcTimestamp(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "Unknown"
+  return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`
+}
+
 function StateFrame({ children, processRunId, label }: { children: React.ReactNode; processRunId?: string; label: string }): React.ReactElement {
   return (
     <section data-epic30-process={processRunId} className={styles.stateFrame} aria-label={label}>
@@ -52,14 +79,78 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
   const [activeId, setActiveId] = useState(documents[0]?.id ?? "")
   const [comparisonId, setComparisonId] = useState<string | null>(null)
   const [askOpen, setAskOpen] = useState(false)
+  const askStatusId = useId()
+  const isMobileComparison = useMobileComparison()
   const comparisonOpener = useRef<HTMLButtonElement | null>(null)
+  const comparisonPane = useRef<HTMLElement | null>(null)
+  const pendingComparisonFocus = useRef(false)
+  const workspace = useRef<HTMLElement | null>(null)
   const mainDocument = useRef<HTMLElement | null>(null)
+  const comparisonExists = comparisonId !== null && documents.some(({ id }) => id === comparisonId)
 
   function closeComparison() {
+    pendingComparisonFocus.current = true
     setComparisonId(null)
+  }
+
+  function selectDocument(id: string) {
+    if (comparisonId === id) setComparisonId(null)
+    setActiveId(id)
+  }
+
+  useEffect(() => {
+    const documentIds = new Set(documents.map(({ id }) => id))
+    if (comparisonId && !documentIds.has(comparisonId)) {
+      pendingComparisonFocus.current = true
+      setComparisonId(null)
+    }
+    if (activeId && !documentIds.has(activeId)) setActiveId(documents[0]?.id ?? "")
+    if (!activeId && documents[0]) setActiveId(documents[0].id)
+  }, [activeId, comparisonId, documents])
+
+  useEffect(() => {
+    if (!comparisonExists || !isMobileComparison) return
+
+    const pane = comparisonPane.current
+    const root = workspace.current
+    if (!pane || !root) return
+    const background = Array.from(root.querySelectorAll<HTMLElement>("[data-comparison-background]"))
+    const inertState = background.map((element) => ({ element, hadInert: element.hasAttribute("inert") }))
+    inertState.forEach(({ element }) => element.setAttribute("inert", ""))
+    pane.querySelector<HTMLElement>("button")?.focus()
+
+    return () => inertState.forEach(({ element, hadInert }) => {
+      if (!hadInert) element.removeAttribute("inert")
+    })
+  }, [comparisonExists, isMobileComparison])
+
+  useEffect(() => {
+    if (comparisonId !== null || !pendingComparisonFocus.current) return
+    pendingComparisonFocus.current = false
     const target = comparisonOpener.current
     if (target?.isConnected) target.focus()
     else mainDocument.current?.focus()
+  }, [comparisonId])
+
+  function containComparisonFocus(event: React.KeyboardEvent<HTMLElement>) {
+    if (!isMobileComparison) return
+    if (event.key === "Escape") {
+      event.preventDefault()
+      closeComparison()
+      return
+    }
+    if (event.key !== "Tab") return
+    const focusable = Array.from(comparisonPane.current?.querySelectorAll<HTMLElement>("button:not([disabled]), [href], [tabindex]:not([tabindex='-1'])") ?? [])
+    if (focusable.length === 0) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
   }
 
   if (dataState === "unavailable") {
@@ -95,8 +186,8 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
   const availableDocument = departmentDocuments.find(({ id }) => id !== active.id)
 
   return (
-    <section data-epic30-process={processRunId} className={styles.workspace} aria-label="My Work synthetic local workspace">
-      <header className={styles.notice}>
+    <section ref={workspace} data-epic30-process={processRunId} className={styles.workspace} aria-label="My Work synthetic local workspace">
+      <header className={styles.notice} data-comparison-background>
         <span className={styles.statusDot} aria-hidden="true" />
         <strong>Synthetic local test data</strong>
         <span>Restricted role · disposable database · no model attached</span>
@@ -104,28 +195,27 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
       </header>
 
       <div className={styles.appShell}>
-        <aside className={styles.iconRail} aria-label="Workspace tools">
+        <aside className={styles.iconRail} aria-label="Workspace tools" data-comparison-background>
           <Image className={styles.lettermark} src="/brand/allura-lettermark-al-figma.png" width={34} height={34} alt="Allura" priority />
           <button className={styles.railActive} aria-label="Documents" aria-current="page"><BookOpenText aria-hidden="true" /></button>
           <button aria-label="Memory map is shown in the current workspace" title="Memory map is shown in the current workspace" disabled><GitBranch aria-hidden="true" /></button>
-          <button aria-label="Ask Allura" onClick={() => setAskOpen((open) => !open)}><MessageSquareText aria-hidden="true" /></button>
+          <button aria-label="Ask Allura" aria-expanded={askOpen} aria-controls={askStatusId} onClick={() => setAskOpen((open) => !open)}><MessageSquareText aria-hidden="true" /></button>
           <button className={styles.railBottom} aria-label="Workspace scope is verified server-side" title="Workspace scope is verified server-side" disabled><LockKeyhole aria-hidden="true" /></button>
         </aside>
 
-        <nav className={styles.tree} aria-label="Authorized synthetic Brain tree">
+        <nav className={styles.tree} aria-label="Authorized synthetic Brain tree" data-comparison-background>
           <div className={styles.brandBlock}><span>ALLURA</span><strong>My Work</strong></div>
           <label className={styles.search}>
             <Search aria-hidden="true" />
             <span className={styles.visuallyHidden}>Search authorized synthetic workspace</span>
             <input placeholder="Search workspace" title="Search is not enabled" disabled />
-            <kbd>⌘ K</kbd>
           </label>
 
           <div className={styles.treeSection}>
             <p className={styles.treeLabel}><ChevronDown aria-hidden="true" /> YOUR BRAIN <span>{privateDocuments.length}</span></p>
             {privateDocuments.length === 0 ? <p className={styles.muted}>No private documents</p> : null}
             {privateDocuments.map((item) => (
-              <button key={item.id} className={active.id === item.id ? styles.selected : ""} aria-current={active.id === item.id ? "page" : undefined} onClick={() => setActiveId(item.id)}>
+              <button key={item.id} className={active.id === item.id ? styles.selected : ""} aria-current={active.id === item.id ? "page" : undefined} onClick={() => selectDocument(item.id)}>
                 <FileText aria-hidden="true" /><span>{item.title}<small>Private</small></span>
               </button>
             ))}
@@ -135,7 +225,7 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
             <p className={styles.treeLabel}><ChevronDown aria-hidden="true" /> APPROVED DEPARTMENTS <span>{departmentDocuments.length}</span></p>
             {departmentDocuments.length === 0 ? <p className={styles.muted}>No approved department documents</p> : null}
             {departmentDocuments.map((item) => (
-              <button key={item.id} className={active.id === item.id ? styles.selected : ""} aria-current={active.id === item.id ? "page" : undefined} onClick={() => setActiveId(item.id)}>
+              <button key={item.id} className={active.id === item.id ? styles.selected : ""} aria-current={active.id === item.id ? "page" : undefined} onClick={() => selectDocument(item.id)}>
                 <FileText aria-hidden="true" /><span>{item.title}<small>{item.departmentId}</small></span>
               </button>
             ))}
@@ -148,22 +238,22 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
         </nav>
 
         <main className={styles.mainArea}>
-          <header className={styles.toolbar}>
+          <header className={styles.toolbar} data-comparison-background>
             <div><p className={styles.eyebrow}>MY WORK / AUTHORIZED VIEW</p><h1>Read, connect, and verify.</h1></div>
             <div className={styles.toolbarMeta}><span>Epic 30</span><span>{documents.length} visible</span></div>
           </header>
 
-          <div className={styles.tabs} aria-label="Open workspace panes">
+          <div className={styles.tabs} aria-label="Open workspace panes" data-comparison-background>
             <div className={styles.activeTab}><FileText aria-hidden="true" /><span>{active.title}</span><i /></div>
-            <div><BrainCircuit aria-hidden="true" /><span>Context map</span></div>
+            <div><BrainCircuit aria-hidden="true" /><span>{comparison ? "Comparison" : "Context map"}</span></div>
           </div>
 
           <div className={styles.workGrid}>
-            <article ref={mainDocument} tabIndex={-1} className={styles.document}>
+            <article ref={mainDocument} tabIndex={-1} className={styles.document} data-comparison-background>
               <div className={styles.breadcrumbs}>My Work <span>/</span> {active.visibility === "private" ? "Private" : active.departmentId} <span>/</span> {active.title}</div>
               <p className={styles.eyebrow}>{active.visibility === "private" ? "Private" : "Department"} · SYNTHETIC DATABASE</p>
               <h2>{active.title}</h2>
-              <p className={styles.detail}>Updated {new Date(active.updatedAt).toLocaleString()}</p>
+              <p className={styles.detail}>Updated {formatUtcTimestamp(active.updatedAt)}</p>
               <div className={styles.rule} />
               <p className={styles.lede}>{active.content}</p>
               <section className={styles.documentSection}>
@@ -181,7 +271,14 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
             </article>
 
             {comparison ? (
-              <aside className={styles.comparison} aria-label="Comparison pane">
+              <aside
+                ref={comparisonPane}
+                className={styles.comparison}
+                aria-label="Comparison pane"
+                role={isMobileComparison ? "dialog" : "complementary"}
+                aria-modal={isMobileComparison ? "true" : undefined}
+                onKeyDown={containComparisonFocus}
+              >
                 <header><p className={styles.eyebrow}>Comparison pane — synthetic database</p><button aria-label="Dismiss comparison" onClick={closeComparison}><PanelRightClose aria-hidden="true" /></button></header>
                 <h2>{comparison.title}</h2>
                 <p className={styles.detail}>{comparison.departmentId ?? "Private"} · Read only</p>
@@ -194,14 +291,14 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
                 <header><div><p className={styles.eyebrow}>CONTEXT MAP</p><h2>Visible scope</h2></div><span>PROXIMITY ONLY</span></header>
                 <div className={styles.mapCanvas}>
                   <div className={styles.mapCore}><BrainCircuit aria-hidden="true" /><span>My Work</span></div>
-                  {documents.slice(0, 6).map((item, index) => <button key={item.id} className={`${styles.mapNode} ${styles[`mapNode${index + 1}`]}`} aria-current={active.id === item.id ? "page" : undefined} onClick={() => setActiveId(item.id)}><i /><span>{item.title}</span></button>)}
+                  {documents.slice(0, 6).map((item, index) => <button key={item.id} className={`${styles.mapNode} ${styles[`mapNode${index + 1}`]}`} aria-current={active.id === item.id ? "page" : undefined} onClick={() => selectDocument(item.id)}><i /><span>{item.title}</span></button>)}
                 </div>
-                <p className={styles.mapCaption}>Documents are co-visible in this authorized scope. Position does not assert a verified relationship.</p>
+                <p className={styles.mapCaption}>Showing {Math.min(documents.length, 6)} of {documents.length} visible documents. Documents are co-visible in this authorized scope. Position does not assert a verified relationship.</p>
               </aside>
             )}
           </div>
 
-          <aside className={styles.inspector} aria-label="Document inspector">
+          <aside className={styles.inspector} aria-label="Document inspector" data-comparison-background>
             <div className={styles.inspectorTabs}><strong>Outline</strong><span>Context</span></div>
             <section><p className={styles.treeLabel}>DOCUMENT</p><div className={styles.inspectorLinks}><strong>Overview</strong><span>Available department document</span></div></section>
             <section>
@@ -211,9 +308,9 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
             <section className={styles.proofNote}><LockKeyhole aria-hidden="true" /><div><strong>Authority boundary</strong><p>Scope comes from the server-owned principal, not browser input.</p></div></section>
           </aside>
 
-          <section className={styles.ask} aria-label="Ask allura">
-            <button aria-label="Ask allura" aria-expanded={askOpen} aria-controls="ask-allura-status" onClick={() => setAskOpen((open) => !open)}><MessageSquareText aria-hidden="true" /><span>Ask allura</span><kbd>⌘ ↵</kbd></button>
-            {askOpen ? <div id="ask-allura-status"><strong>Unavailable in this local fixture</strong><p>External-model retention and training policy evidence has not been verified. No real content is sent, and no answer is generated.</p></div> : <p id="ask-allura-status">Read-only, cited AI is intentionally unavailable until its no-retention policy is verified.</p>}
+          <section className={styles.ask} aria-label="Ask allura" data-comparison-background>
+            <button aria-label="Ask allura" aria-expanded={askOpen} aria-controls={askStatusId} onClick={() => setAskOpen((open) => !open)}><MessageSquareText aria-hidden="true" /><span>Ask allura</span></button>
+            {askOpen ? <div id={askStatusId}><strong>Unavailable in this local fixture</strong><p>External-model retention and training policy evidence has not been verified. No real content is sent, and no answer is generated.</p></div> : <p id={askStatusId}>Read-only, cited AI is intentionally unavailable until its no-retention policy is verified.</p>}
           </section>
         </main>
       </div>
