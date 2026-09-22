@@ -1,6 +1,6 @@
 # Epic 30 — Development Readiness
 
-Date: 2026-09-17. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — design and authorization-policy approvals remain open.**
+Date: 2026-09-17; updated 2026-09-21. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — design decision reconciled, authorization-policy review and Story 30.2 acceptance remain open.**
 
 ## Reconciled state
 
@@ -13,7 +13,7 @@ Date: 2026-09-17. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — de
 - Local `main` is intentionally one commit behind `origin/main`: remote commit `1934d211` changes 266 files and contains the excluded Epic 29/device-pairing baseline. It was inspected but not merged or pushed under this Epic 30-only cleanup authority.
 - The ordinary `/dashboard` overview remains active unless explicit non-production Epic 30 synthetic mode is enabled. Synthetic failure remains unavailable without leaking connection or scope details.
 - A dedicated `.github/workflows/epic-30-evidence.yml` runs the confined PostgreSQL/HTTP lane on pull requests or manual dispatch without uploading dashboard/test payloads.
-- The current Obsidian-inspired Allura workspace candidate and 1440/320 px screenshots are hash-bound in the [design approval packet](./epic-30-design-approval-packet.md). This is an approval request, not approval.
+- The current Obsidian-inspired Allura workspace candidate and 1440/320 px screenshots are hash-bound in the [design approval packet](./epic-30-design-approval-packet.md). Sabir Asheed's self-attested chat approval of the exact design baseline, listed variances and five-person protocol is recorded there and on the human board under Sabir's connected account. Story 30.2 acceptance remains open.
 - The canonical Notion human board now contains one Epic 30 record, all 13 stories, and the optional retrospective record, all `Not Started`, with verified dependency relations. Exact IDs, the schema-safe linkage disposition, and read-back evidence are recorded in the [board reconciliation packet](./epic-30-board-reconciliation-packet.md). No story was advanced.
 
 ## Fresh local evidence
@@ -21,6 +21,7 @@ Date: 2026-09-17. Verdict: **REPOSITORY GATE PASS; STORY ADVANCEMENT HOLD — de
 - `bun run typecheck`: PASS.
 - Focused Epic 30 unit and hermetic integration set: PASS, 88 tests across 9 files.
 - Focused Epic 30 unit lane rerun on 2026-09-17 against candidate `4370cac3`: PASS, 88 tests across 9 files. This reconfirms the explicit non-null department guard, exact-scope row rechecks, ordinary-dashboard preservation, confined 5444 runner contract, owned-process cleanup, responsive comparison behavior, mobile modal focus/inert lifecycle, prop reconciliation, active-state semantics and truthful disabled affordances. It is local hermetic evidence only; it does not replace the pending disposable-PostgreSQL/HTTP lane.
+- Focused Epic 30 unit lane rerun on 2026-09-21 after the bounded design decision: PASS, 88 tests across the same 9 files; `bun run typecheck`: PASS. Source and screenshot/audit hashes still match the design packet. This does not close browser, live-database, hosted-CI or human-study gates.
 - Ordinary-route headless Chromium check at 1440px: HTTP 200, truthful degraded state with the database intentionally unavailable, synthetic workspace absent, zero page errors.
 - The 320px ordinary dashboard shell exhibited pre-existing horizontal overflow. The repaired Epic 30 component now has current 1440/320 px synthetic ready/comparison evidence, real-browser modal/focus checks, component coverage, and zero automated WCAG A/AA violations in both states at both sizes. One mobile-comparison contrast check remains manual because automated overlap geometry was indeterminate; live restricted-database browser proof, screen-reader proof, and real 200% zoom proof remain pending.
 - Workflow/package parsing and missing-prerequisite behavior: PASS; the live runner exits 64 when required settings are absent.
@@ -31,32 +32,32 @@ Live PostgreSQL/HTTP verification remains pending by the user's explicit choice.
 
 This table tests the full epic rather than treating the current reader slice as completion. Every story remains `backlog` locally and `Not Started` on the human board.
 
-| Story | Current authoritative evidence | Evidence still required before completion |
-| --- | --- | --- |
-| 30.1 | Canonical plan, 13-story dependency map and reconciled board receipt exist | Sanctioned planning transition after the 30.2/30.3 decisions; no local status promotion |
-| 30.2 | `4370cac3` source, four hash-bound captures, real-browser modal/focus checks, variance register, protocol and zero automated WCAG A/AA violations | Authorized design/variance decision; one manual overlay-contrast disposition, screen-reader and actual 200% zoom proof; later five-person execution |
-| 30.3 | Hash-bound authorization contract and adversarial threat matrix exist | Authorized policy decision plus independent security and data-review dispositions |
-| 30.4 | Bounded migration, synthetic fixtures and hermetic contract tests exist | Approved-contract implementation breadth; fresh restricted-role PostgreSQL, RLS, audit, migration and rollback proof |
-| 30.5 | Server-derived local scope and confinement foundations exist | Full legacy inventory/quarantine and timed membership/session/delegation revocation evidence |
-| 30.6 | Bounded authorized document read service and exact-scope row rechecks exist | Shared production-grade decisions for relationships, search, citations, derivatives, caches and pagination |
-| 30.7 | Partial My Work shell, ready/empty/unavailable states and responsive comparison exist | Approved design implementation, interactive tabs, all required truth states, screen-reader and 200% zoom evidence |
-| 30.8 | Search is truthfully disabled; no relationship is fabricated | Authorized search, links, backlinks, lineage, timing/leakage and revocation implementation and proof |
-| 30.9 | Ask is truthfully unavailable and sends no governed content | Approved provider no-retention/no-training evidence plus cited read-only Ask implementation and adversarial proof |
-| 30.10 | Messaging affordance is absent, so no unauthorized send occurs | Restricted discovery/contact/channel/invitation/send implementation, audit and revocation receipts |
-| 30.11 | Dedicated workflow and local 88-test lane exist | Frozen exact-SHA hosted CI, full independent reviews and merge-blocked controlled-red privacy regression |
-| 30.12 | Hash-bound five-person protocol exists | Five distinct uncoached human sessions meeting every threshold, plus remediation/retest if needed |
-| 30.13 | Local/Notion board reconciliation receipt exists | Authorized publication, origin-main and rollback receipts, full evidence reconciliation and accepted retrospective |
+| Story | Current authoritative evidence                                                                                                                                                                                  | Evidence still required before completion                                                                            |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 30.1  | Canonical plan, 13-story dependency map and reconciled board receipt exist                                                                                                                                      | Sanctioned planning transition after the 30.2/30.3 decisions; no local status promotion                              |
+| 30.2  | `4370cac3` source, four hash-bound captures, real-browser modal/focus checks, variance register, protocol, zero automated WCAG A/AA violations and bounded Sabir design decision read back from the human board | One manual overlay-contrast disposition, screen-reader and actual 200% zoom proof; later five-person execution       |
+| 30.3  | Hash-bound authorization contract and adversarial threat matrix exist                                                                                                                                           | Authorized policy decision plus independent security and data-review dispositions                                    |
+| 30.4  | Bounded migration, synthetic fixtures and hermetic contract tests exist                                                                                                                                         | Approved-contract implementation breadth; fresh restricted-role PostgreSQL, RLS, audit, migration and rollback proof |
+| 30.5  | Server-derived local scope and confinement foundations exist                                                                                                                                                    | Full legacy inventory/quarantine and timed membership/session/delegation revocation evidence                         |
+| 30.6  | Bounded authorized document read service and exact-scope row rechecks exist                                                                                                                                     | Shared production-grade decisions for relationships, search, citations, derivatives, caches and pagination           |
+| 30.7  | Partial My Work shell, ready/empty/unavailable states and responsive comparison exist                                                                                                                           | Approved design implementation, interactive tabs, all required truth states, screen-reader and 200% zoom evidence    |
+| 30.8  | Search is truthfully disabled; no relationship is fabricated                                                                                                                                                    | Authorized search, links, backlinks, lineage, timing/leakage and revocation implementation and proof                 |
+| 30.9  | Ask is truthfully unavailable and sends no governed content                                                                                                                                                     | Approved provider no-retention/no-training evidence plus cited read-only Ask implementation and adversarial proof    |
+| 30.10 | Messaging affordance is absent, so no unauthorized send occurs                                                                                                                                                  | Restricted discovery/contact/channel/invitation/send implementation, audit and revocation receipts                   |
+| 30.11 | Dedicated workflow and local 88-test lane exist                                                                                                                                                                 | Frozen exact-SHA hosted CI, full independent reviews and merge-blocked controlled-red privacy regression             |
+| 30.12 | Hash-bound five-person protocol exists                                                                                                                                                                          | Five distinct uncoached human sessions meeting every threshold, plus remediation/retest if needed                    |
+| 30.13 | Local/Notion board reconciliation receipt exists                                                                                                                                                                | Authorized publication, origin-main and rollback receipts, full evidence reconciliation and accepted retrospective   |
 
-The first executable gate is the exact 30.2 design decision. The 30.3 policy decision follows because 30.3 depends on 30.2. Neither decision supplies downstream implementation, live proof, human validation, release authorization or Done status.
+The exact 30.2 design decision has been recorded locally and reconciled with the human board; Story 30.2 is not Done. The 30.3 policy decision follows because 30.3 depends on 30.2. Neither decision supplies downstream implementation, live proof, human validation, release authorization or Done status.
 
 ## Before implementation stories advance
 
-1. Approve the exact provisional design artifact and declared variances; tabs, authorized search/relationships, real read-only Ask and restricted contractor messaging remain future stories.
+1. **Design decision and board receipt complete:** Sabir Asheed approved the exact candidate, declared variances and five-person protocol; the Notion Story 30.2 decision was read back with `Not Started` preserved. Tabs, authorized search/relationships, real read-only Ask and restricted contractor messaging remain future stories.
 2. Approve or amend the [hash-bound authorization packet](./epic-30-authorization-approval-packet.md) and its [local authorization contract](./epic-30-local-authorization-contract.md); accepted defaults are represented, while production timings and full enforcement still require review.
 3. **Complete:** the 13 local backlog stories, Epic, and optional retrospective are reconciled with the canonical human board; see the [hash-bound receipt](./epic-30-board-reconciliation-packet.md).
 
 ## Next BMAD action
 
-Course correction and repository integration are complete. Next: obtain the three approvals above, then run **[SP] Sprint Planning — `bmad-sprint-planning`** readiness reconciliation. After that gate passes, use **[BD] Build — `bmad-build`**, one story at a time.
+Course correction, repository integration, the bounded design decision and human-board reconciliation are complete. Next: obtain the separate Story 30.3 authorization decision plus independent security/data dispositions, then run **[SP] Sprint Planning — `bmad-sprint-planning`** readiness reconciliation. The locally installed Sprint Planning skill is older than the repository manifest and would auto-upgrade every existing story file; do not run its generation mode until the version mismatch is resolved without overwriting the 83 preserved tracking entries. After the readiness gate passes, use **[BD] Build — `bmad-build`**, one story at a time.
 
 The [Epic 30 plan](./epic-30-governed-digital-brain-workspace.md) owns requirements and dependencies. Recovered historical evidence is context, not a current pass.
