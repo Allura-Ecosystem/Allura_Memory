@@ -180,7 +180,6 @@ function isDocumentRow(value: unknown): value is DocumentRow {
 function canDisclose(
   row: DocumentRow,
   scope: DigitalBrainReadScope,
-  authorizedDepartmentIds?: ReadonlySet<string>,
 ): boolean {
   if (row.group_id !== scope.tenantId || row.workspace_id !== scope.workspaceId) return false
   if (row.authorized_tenant !== true) return false
@@ -188,9 +187,7 @@ function canDisclose(
   if (row.visibility === "private") return row.owner_id === scope.principalId
   if (!row.department_id) return false
 
-  return authorizedDepartmentIds
-    ? authorizedDepartmentIds.has(row.department_id)
-    : row.authorized_department === true
+  return row.authorized_department === true
 }
 
 function mapDocument(row: DocumentRow): AuthorizedDocument {
@@ -215,7 +212,6 @@ function mapDocument(row: DocumentRow): AuthorizedDocument {
 export async function readAuthorizedDocumentsInRestrictedTransaction(
   scope: DigitalBrainReadEnvelope,
   query: Queryable["query"],
-  authorizedDepartmentIds?: ReadonlySet<string>,
 ): Promise<AuthorizedDocument[]> {
   if (!scope || scope[READ_ENVELOPE_BRAND] !== true || !scope.sessionId?.trim() ||
       !["viewer", "curator", "admin"].includes(scope.role) ||
@@ -229,7 +225,7 @@ export async function readAuthorizedDocumentsInRestrictedTransaction(
 
   return result.rows
     .filter(isDocumentRow)
-    .filter((row) => canDisclose(row, scope, authorizedDepartmentIds))
+    .filter((row) => canDisclose(row, scope))
     .map(mapDocument)
 }
 

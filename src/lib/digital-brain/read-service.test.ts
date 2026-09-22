@@ -118,15 +118,17 @@ describe("readAuthorizedDocuments", () => {
       owner_id: "department-curator",
       department_id: "operations",
       visibility: "department",
+      authorized_department: true,
       title: "Operations runbook",
     })
     const query = vi.fn(async () => ({ rows: [departmentRow] }))
 
     await expect(
-      readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query, new Set(["operations"])),
+      readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query),
     ).resolves.toHaveLength(1)
+    query.mockResolvedValueOnce({ rows: [{ ...departmentRow, authorized_department: false }] })
     await expect(
-      readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query, new Set()),
+      readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query),
     ).resolves.toEqual([])
   })
 
