@@ -103,7 +103,7 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
     const sessionId = "synthetic-e2e-receipt-session"
     const receipt = createAuthorizedReadReceipt({
       scope: { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "owner-user" },
-      sessionId, policyEpoch: 1, documents: [],
+      sessionId, actorRole: "viewer", policyEpoch: 1, documents: [],
       witnessKey: Buffer.from(database.appEnvironment.ALLURA_EPIC30_RECEIPT_KEY, "base64url"),
     })
     const old = new Map<string, string | undefined>()

@@ -17,6 +17,7 @@ const document: AuthorizedDocument = {
 const input: ReadReceiptInput = {
   scope: { tenantId: document.groupId, workspaceId: document.workspaceId, principalId: document.ownerId },
   sessionId: "synthetic-private-session",
+  actorRole: "viewer",
   policyEpoch: 7,
   documents: [document],
   witnessKey: Buffer.alloc(32, 1),
@@ -44,6 +45,7 @@ describe("Epic 30 required read receipt contract", () => {
     for (const patch of [
       { sessionId: "another-session" },
       { policyEpoch: 8 },
+      { actorRole: "admin" as const },
       { scope: { ...input.scope, principalId: "other-user" } },
       { documents: [{ ...document, content: "SYNTHETIC TEST DATA: changed" }, second] },
     ]) {
@@ -56,6 +58,7 @@ describe("Epic 30 required read receipt contract", () => {
     expect(() => createAuthorizedReadReceipt({ ...input, documents: [document, document] })).toThrow(/document refused/)
     expect(() => createAuthorizedReadReceipt({ ...input, documents: [{ ...document, content: undefined as unknown as string }] })).toThrow(/document refused/)
     expect(() => createAuthorizedReadReceipt({ ...input, policyEpoch: 0 })).toThrow(/input refused/)
+    expect(() => createAuthorizedReadReceipt({ ...input, actorRole: "unknown" as "viewer" })).toThrow(/input refused/)
     expect(() => createAuthorizedReadReceipt({ ...input, witnessKey: Buffer.alloc(1) })).toThrow(/input refused/)
     expect(() => createAuthorizedReadReceipt({ ...input, sessionId: "" })).toThrow(/input refused/)
   })
