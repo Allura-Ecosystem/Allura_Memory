@@ -20,10 +20,12 @@ interface VisibilityManifest {
 const fixturePath = path.resolve(process.cwd(), "docker/epic30-postgres/99-epic30-synthetic-fixtures.sql")
 const manifestPath = path.resolve(process.cwd(), "docker/epic30-postgres/epic30-synthetic-visibility-manifest.json")
 const dockerfilePath = path.resolve(process.cwd(), "docker/portfolio-postgres/Dockerfile")
+const provisionerPath = path.resolve(process.cwd(), "scripts/epic30/synthetic-database.ts")
 
 const fixture = readFileSync(fixturePath, "utf8")
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as VisibilityManifest
 const dockerfile = readFileSync(dockerfilePath, "utf8")
+const provisioner = readFileSync(provisionerPath, "utf8")
 
 describe("Epic 30 synthetic fixture contract", () => {
   it("requires a fresh owned receipt before authority-resetting replay", () => {
@@ -87,5 +89,15 @@ describe("Epic 30 synthetic fixture contract", () => {
     expect(dockerfile).not.toContain(
       "COPY docker/epic30-postgres/99-epic30-synthetic-fixtures.sql /docker-entrypoint-initdb.d/98-epic30-synthetic-fixtures.sql",
     )
+  })
+
+  it("gives the per-run receipt writer INSERT only and removes its cluster role on disposal", () => {
+    expect(provisioner).toContain("allura_epic30_receipt_${runId}")
+    expect(provisioner).toContain("NOINHERIT NOBYPASSRLS")
+    expect(provisioner).toContain("ALTER TABLE epic30_local.read_receipts FORCE ROW LEVEL SECURITY")
+    expect(provisioner).toContain("REVOKE ALL ON epic30_local.read_receipts FROM PUBLIC, allura_app")
+    expect(provisioner).toContain("GRANT INSERT ON epic30_local.read_receipts TO ${identifier(receiptRole)}")
+    expect(provisioner).not.toContain("GRANT SELECT ON brain_documents TO ${identifier(receiptRole)}")
+    expect(provisioner).toContain("DROP ROLE ${identifier(receiptRole)}")
   })
 })
