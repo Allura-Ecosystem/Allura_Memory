@@ -23,6 +23,8 @@ Search and relationship adversarial tests, browser/accessibility evidence on app
 
 ## Current Preparation State
 
+2026-09-22: a synthetic one-hop `[[document-id]]` link/backlink candidate now derives edges only from the receipt-gated authorized document reader. Unit and integrated tests omit hidden targets and hidden backlink sources, and make missing versus unauthorized focus non-disclosing. The exact hermetic gate passed typecheck with 133 passing tests and 3 intentionally skipped live-client tests across 13 files. This is not an approved relationship policy, production route, cursor/timing proof, live PostgreSQL proof, or story acceptance. The Notion board remains Not Started.
+
 2026-09-22: commits `5e82e5c1`, `cd8c4f52`, and `c67c708a` add a receipt-gated search candidate over the shared restricted reader, a content-free keyed query digest, a final authority/result recheck, synthetic-only API wiring, and a hidden-match denial test. The exact hermetic gate passed typecheck with 127 passing tests and 3 intentionally skipped live-client tests. Production still returns a generic 503. Links/backlinks, timing and cursor/revocation proof, approved live PostgreSQL, independent review, and story acceptance remain open.
 
 2026-09-22: the older `/api/brain/search` content route is temporarily quarantined with an authenticated, generic 503 response because its tenant-only/client-selected filter cannot enforce Epic 30 workspace, lineage and receipt rules. This is a denial, not an authorized search implementation. The My Work search affordance remains disabled; Story 30.8 stays backlog.
