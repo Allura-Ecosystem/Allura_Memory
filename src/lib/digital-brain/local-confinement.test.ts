@@ -134,13 +134,13 @@ it("denies missing current workspace membership without document SQL", async () 
   expect(mocks.query).toHaveBeenCalledTimes(2)
 })
 
-function mockFourAuthorizedSnapshots(finalRow = ownerRow) {
+function mockFourAuthorizedSnapshots(finalRow = ownerRow, extraRows: unknown[] = []) {
   let documentReads = 0
   mocks.query.mockImplementation(async (sql: string) => {
     if (sql.includes("session_user")) return { rows: [verifiedSession] }
     if (sql.includes("SELECT workspace_membership.policy_epoch")) return { rows: [{ role: "viewer", policy_epoch: "7" }] }
     documentReads += 1
-    return { rows: [documentReads >= 3 ? finalRow : ownerRow] }
+    return { rows: [documentReads >= 3 ? finalRow : ownerRow, ...extraRows] }
   })
 }
 
@@ -155,6 +155,19 @@ it("returns synthetic search names, counts and snippets only after read and sear
   ])
   const searchReceipt = mocks.receipt.mock.calls[1][0]
   expect(JSON.stringify(searchReceipt)).not.toContain(ownerRow.title)
+})
+
+it("does not search or count a matching hidden department document", async () => {
+  mockFourAuthorizedSnapshots(ownerRow, [{ ...ownerRow, id: "hidden-match",
+    visibility: "department", owner_id: "other-user", department_id: "finance",
+    title: "Hidden finance forecast", content: "SYNTHETIC TEST DATA: forecast",
+    authorized_department: false }])
+  const result = await searchAuthorizedDocuments(scope, "forecast")
+  expect(result).toEqual({ total: 0, hits: [] })
+  const searchReceipt = mocks.receipt.mock.calls[1][0]
+  expect(searchReceipt.action).toBe("search_documents")
+  expect(JSON.stringify(searchReceipt)).not.toContain("hidden-match")
+  expect(JSON.stringify(searchReceipt)).not.toContain("Hidden finance forecast")
 })
 
 it("fails closed when the search receipt sink refuses the candidate", async () => {
