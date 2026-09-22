@@ -64,7 +64,9 @@
 .toolbarMeta span { padding: 5px 8px; border: 1px solid var(--line); border-radius: 12px; color: #9aa6af; font: 10px var(--mono, monospace); }
 .toolbarMeta span:first-child { border-color: #315c9b; color: #90b4f3; }
 .tabs { grid-column: 1 / 2; height: 38px; display: flex; align-items: stretch; border-bottom: 1px solid var(--line); background: #0c141c; overflow: hidden; }
-.tabs > div { min-width: 170px; max-width: 280px; padding: 0 12px; display: flex; align-items: center; gap: 7px; border-right: 1px solid var(--line); color: #a3b0ba; font-size: 11px; position: relative; }
+.tabs > button { min-width: 170px; max-width: 280px; padding: 0 12px; display: flex; align-items: center; gap: 7px; border: 0; border-right: 1px solid var(--line); border-radius: 0; background: transparent; color: #a3b0ba; font-size: 11px; position: relative; cursor: pointer; }
+.tabs > button:disabled { cursor: not-allowed; opacity: .6; }
+.tabs > button:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .tabs svg { width: 13px; height: 13px; }
 .tabs span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tabs .activeTab { color: #d5d9dc; background: #141f2a; }

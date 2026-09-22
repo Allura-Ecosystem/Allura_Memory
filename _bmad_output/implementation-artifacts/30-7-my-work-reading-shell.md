@@ -23,6 +23,8 @@ Hash-bound browser comparisons and accepted variances, accessibility tests, owne
 
 ## Current Preparation State
 
+2026-09-22: the two visible pane labels are keyboard-operable focus controls in the synthetic My Work shell. The document and context/comparison panes can be reached directly; the hidden mobile context map is not offered as a focus target. The component lane passed 19/19 tests and typecheck passed. This is a bounded accessibility improvement, not full tabs, state coverage, screen-reader/200% zoom evidence, or Story 30.7 acceptance.
+
 2026-09-17: canonical checkout is `main`. The bounded synthetic reader foundation and interrupted repair set are now integrated without the unrelated Epic 29 branch changes. Fresh local evidence is recorded in [current readiness](../planning-artifacts/implementation-readiness-epic-30.md). This story remains backlog: the integrated slice does not implement the full requirement, and no design, authorization-policy, board, live-database, hosted-CI, human-study or release approval is implied. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md) and [completed course correction](../planning-artifacts/sprint-change-proposal-2026-09-17.md).
 
 ## Historical Evidence — before repository consolidation

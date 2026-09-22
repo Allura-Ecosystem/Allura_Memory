@@ -181,6 +181,26 @@ describe("MyWorkWorkspace", () => {
     expect(screen.getByText("Comparison")).toBeTruthy()
   })
 
+  it("lets keyboard users focus each visible pane without implying a hidden tab panel", () => {
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    fireEvent.click(screen.getByRole("button", { name: "Focus context map" }))
+    expect(document.activeElement).toBe(screen.getByRole("complementary", { name: "Authorized document context map" }))
+    fireEvent.click(screen.getByRole("button", { name: "Focus document: Shipment exception review" }))
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Shipment exception review" }).closest("article"))
+    fireEvent.click(screen.getByRole("button", { name: "Open deployment checklist" }))
+    fireEvent.click(screen.getByRole("button", { name: "Focus comparison pane" }))
+    expect(document.activeElement).toBe(screen.getByRole("complementary", { name: "Comparison pane" }))
+  })
+
+  it("does not offer focus on the hidden mobile map", () => {
+    vi.stubGlobal("matchMedia", vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(max-width: 760px)", media: query,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    })))
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    expect(screen.getByRole("button", { name: "Focus context map" }).hasAttribute("disabled")).toBe(true)
+  })
+
   it("navigates the main document and restores a private selection", () => {
     render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
     expect(screen.getByRole("button", { name: "Shipment exception review Private" }).getAttribute("aria-current")).toBe("page")
