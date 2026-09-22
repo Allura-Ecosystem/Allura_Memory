@@ -26,6 +26,8 @@ Cross-tenant/workspace/private/department tests, admin-without-private-access de
 
 ## Current Preparation State
 
+2026-09-22: removed the low-level mapper's optional caller-supplied department-ID override. Department disclosure now requires the database-reported `authorized_department === true` alongside exact tenant/workspace checks; the regression fixture asserts true and false database decisions. Typecheck and the exact hermetic gate passed (118 tests, 3 intentionally skipped live-client contract tests). This closes one bypass-shaped extension point, not Story 30.6 acceptance or live RLS proof.
+
 2026-09-17: canonical checkout is `main`. The bounded synthetic reader foundation and interrupted repair set are now integrated without the unrelated Epic 29 branch changes. Fresh local evidence is recorded in [current readiness](../planning-artifacts/implementation-readiness-epic-30.md). This story remains backlog: the integrated slice does not implement the full requirement, and no design, authorization-policy, board, live-database, hosted-CI, human-study or release approval is implied. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md) and [completed course correction](../planning-artifacts/sprint-change-proposal-2026-09-17.md).
 
 ## Historical Evidence — before repository consolidation
