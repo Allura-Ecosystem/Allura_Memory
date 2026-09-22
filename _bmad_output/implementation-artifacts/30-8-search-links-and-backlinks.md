@@ -23,6 +23,8 @@ Search and relationship adversarial tests, browser/accessibility evidence on app
 
 ## Current Preparation State
 
+2026-09-22: commits `5e82e5c1`, `cd8c4f52`, and `c67c708a` add a receipt-gated search candidate over the shared restricted reader, a content-free keyed query digest, a final authority/result recheck, synthetic-only API wiring, and a hidden-match denial test. The exact hermetic gate passed typecheck with 127 passing tests and 3 intentionally skipped live-client tests. Production still returns a generic 503. Links/backlinks, timing and cursor/revocation proof, approved live PostgreSQL, independent review, and story acceptance remain open.
+
 2026-09-22: the older `/api/brain/search` content route is temporarily quarantined with an authenticated, generic 503 response because its tenant-only/client-selected filter cannot enforce Epic 30 workspace, lineage and receipt rules. This is a denial, not an authorized search implementation. The My Work search affordance remains disabled; Story 30.8 stays backlog.
 
 2026-09-17: canonical checkout is `main`. The bounded synthetic reader foundation and interrupted repair set are now integrated without the unrelated Epic 29 branch changes. Fresh local evidence is recorded in [current readiness](../planning-artifacts/implementation-readiness-epic-30.md). This story remains backlog: the integrated slice does not implement the full requirement, and no design, authorization-policy, board, live-database, hosted-CI, human-study or release approval is implied. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md) and [completed course correction](../planning-artifacts/sprint-change-proposal-2026-09-17.md).
