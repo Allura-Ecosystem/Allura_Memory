@@ -82,6 +82,8 @@ The reviewable [proposed v2 addendum](./epic-30-authorization-v2-proposed-addend
 
 The [Notion Story 30.3](https://app.notion.com/p/3df1d9be65b3819eb670e4379a263962) Decision Log and Handoff Context were updated with this bounded AI-review outcome and read back on 2026-09-21. Its `Not Started` status and dependencies were preserved; no policy approval was recorded there.
 
+On 2026-09-22, after the exact proposed v2 addendum hash was presented in the Codex task, the user replied “approve full approval.” This is recorded as an approval-intent signal for the proposal as written, not as a completed policy decision: the approver's name and policy role were not supplied, the exact combined-candidate record and durable board receipt have not been updated, and independent human security/data threat-row dispositions remain open. Preserve the v2 addendum hash and Story 30.3 backlog status until those gates are satisfied.
+
 ## Approval record
 
 An authorized human approval must identify the candidate commit and contract hash, record amendments or accepted defaults, name the approver and role, and link the durable board receipt. The board receipt now exists in the [reconciliation packet](./epic-30-board-reconciliation-packet.md). Independent security and data reviewers must still record dispositions for every threat row. Until those approval and review records exist, Story 30.3 remains backlog and dependent implementation stories do not advance.
