@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), health: vi.fn(), principal: vi.fn(), search: vi.fn() }))
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), health: vi.fn(), principal: vi.fn(), search: vi.fn(), read: vi.fn() }))
 vi.mock("@/lib/auth/api-auth", () => ({ withPermission: mocks.auth }))
 vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal: mocks.principal }))
-vi.mock("@/lib/digital-brain/read-service", () => ({ searchAuthorizedDocuments: mocks.search }))
+vi.mock("@/lib/digital-brain/read-service", () => ({ searchAuthorizedDocuments: mocks.search, readAuthorizedDocuments: mocks.read }))
 vi.mock("@/lib/brain-client", () => ({ brainClient: { healthReport: mocks.health } }))
 
 import { GET as listMemories } from "@/app/api/brain/memories/route"
@@ -19,6 +19,8 @@ beforeEach(() => {
     workspaceId: "epic30-local-workspace", sessionId: "synthetic-session", role: "viewer" })
   mocks.search.mockResolvedValue({ total: 1, hits: [{ documentId: "synthetic-owner-note", title: "Synthetic note",
     snippet: "SYNTHETIC TEST DATA", updatedAt: new Date("2026-09-17T00:00:00Z") }] })
+  mocks.read.mockResolvedValue([{ id: "synthetic-owner-note", title: "Synthetic note",
+    content: "SYNTHETIC TEST DATA", updatedAt: new Date("2026-09-17T00:00:00Z") }])
   vi.stubGlobal("fetch", vi.fn())
   vi.stubEnv("ALLURA_BRAIN_URL", "https://mcp.faithmeats.org/mcp")
 })
@@ -85,6 +87,39 @@ describe("Epic 30 legacy Brain content-route quarantine", () => {
     expect(mocks.search).toHaveBeenCalledWith({ tenantId: "allura-epic30-local",
       workspaceId: "epic30-local-workspace", principalId: "owner-user" }, "synthetic")
     expect(JSON.stringify(await response.json())).not.toContain("other-user")
+  })
+
+  it("lists only receipt-gated synthetic documents from server-owned scope", async () => {
+    const run = "a".repeat(32)
+    for (const [key, value] of Object.entries({ NODE_ENV: "development", ALLURA_EPIC30_LOCAL_DB: "enabled",
+      ALLURA_EPIC30_RUN_ID: run, POSTGRES_HOST: "127.0.0.1", POSTGRES_PORT: "5444",
+      POSTGRES_DB: `allura_epic30_read_${run}`, POSTGRES_APP_USER: "allura_app", POSTGRES_APP_OPTIONS: "" })) {
+      vi.stubEnv(key, value)
+    }
+    const request = new NextRequest("http://localhost:3100/api/brain/memories?user_id=other-user&group_id=allura-other")
+    const response = await listMemories(request)
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(mocks.read).toHaveBeenCalledWith({ tenantId: "allura-epic30-local",
+      workspaceId: "epic30-local-workspace", principalId: "owner-user" })
+    const body = await response.json()
+    expect(body).toEqual({ memories: [{ id: "synthetic-owner-note", title: "Synthetic note",
+      content: "SYNTHETIC TEST DATA", updated_at: "2026-09-17T00:00:00.000Z" }], total: 1, has_more: false })
+    expect(JSON.stringify(body)).not.toContain("other-user")
+  })
+
+  it("keeps a synthetic list receipt outage content-free", async () => {
+    const run = "a".repeat(32)
+    for (const [key, value] of Object.entries({ NODE_ENV: "development", ALLURA_EPIC30_LOCAL_DB: "enabled",
+      ALLURA_EPIC30_RUN_ID: run, POSTGRES_HOST: "127.0.0.1", POSTGRES_PORT: "5444",
+      POSTGRES_DB: `allura_epic30_read_${run}`, POSTGRES_APP_USER: "allura_app", POSTGRES_APP_OPTIONS: "" })) {
+      vi.stubEnv(key, value)
+    }
+    mocks.read.mockRejectedValueOnce(new Error("synthetic-session secret sink detail"))
+    const response = await listMemories(new NextRequest("http://localhost:3100/api/brain/memories"))
+    expect(response.status).toBe(503)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(JSON.stringify(await response.json())).not.toContain("synthetic-session")
   })
 
   it("fails closed without leaking backend or session details when synthetic search fails", async () => {
