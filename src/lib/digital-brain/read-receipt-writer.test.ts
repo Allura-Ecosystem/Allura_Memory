@@ -11,7 +11,7 @@ const run = "a".repeat(32)
 const role = `allura_epic30_receipt_${run}`
 const scope = { tenantId: "allura-epic30-local", workspaceId: "epic30-local-workspace", principalId: "owner-user" }
 const receipt = createAuthorizedReadReceipt({
-  scope, sessionId: "synthetic-session", policyEpoch: 1, witnessKey: Buffer.alloc(32, 1),
+  scope, sessionId: "synthetic-session", actorRole: "viewer", policyEpoch: 1, witnessKey: Buffer.alloc(32, 1),
   documents: [], receiptId: "01234567-89ab-4cde-8fab-0123456789ab",
   occurredAt: new Date("2026-09-22T00:00:00Z"),
 })
@@ -38,7 +38,7 @@ describe("Epic 30 separate receipt writer", () => {
     expect(sql).toContain("INSERT INTO epic30_local.read_receipts")
     expect(values).toEqual([
       receipt.receiptId, run, scope.tenantId, scope.workspaceId, scope.principalId,
-      receipt.sessionHash, receipt.policyEpoch, receipt.action, receipt.decision,
+      receipt.actorRole, receipt.sessionHash, receipt.policyEpoch, receipt.action, receipt.decision,
       receipt.reasonCode, receipt.policyVersion, receipt.witnessHash, receipt.occurredAt,
     ])
     expect(JSON.stringify(values)).not.toContain("synthetic-session")

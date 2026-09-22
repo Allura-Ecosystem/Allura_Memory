@@ -1,5 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto"
 
+import type { AuthUser } from "@/lib/auth/types"
 import type { AuthorizedDocument, DigitalBrainReadScope } from "./read-service"
 
 /** A required, content-free decision record. It is not evidence of delivery. */
@@ -12,6 +13,7 @@ export interface AuthorizedReadReceipt {
   tenantId: string
   workspaceId: string
   principalId: string
+  actorRole: AuthUser["role"]
   sessionHash: string
   policyEpoch: number
   witnessHash: string
@@ -21,6 +23,7 @@ export interface AuthorizedReadReceipt {
 export interface ReadReceiptInput {
   scope: DigitalBrainReadScope
   sessionId: string
+  actorRole: AuthUser["role"]
   policyEpoch: number
   documents: readonly AuthorizedDocument[]
   /** Per-run secret; never stored in the receipt table or sent to the browser. */
@@ -38,9 +41,10 @@ function hmac(key: Buffer, domain: string, value: unknown): string {
 }
 
 function assertInput(input: ReadReceiptInput): void {
-  const { scope, sessionId, policyEpoch, documents, witnessKey, receiptId, occurredAt } = input
+  const { scope, sessionId, actorRole, policyEpoch, documents, witnessKey, receiptId, occurredAt } = input
   if (!scope.tenantId?.trim() || !scope.workspaceId?.trim() || !scope.principalId?.trim() ||
-      !sessionId?.trim() || !Number.isSafeInteger(policyEpoch) || policyEpoch <= 0 ||
+      !sessionId?.trim() || !["viewer", "curator", "admin"].includes(actorRole) ||
+      !Number.isSafeInteger(policyEpoch) || policyEpoch <= 0 ||
       !Buffer.isBuffer(witnessKey) || witnessKey.length < 32 ||
       (receiptId !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(receiptId)) ||
       (occurredAt !== undefined && Number.isNaN(occurredAt.getTime()))) {
@@ -64,12 +68,13 @@ function assertInput(input: ReadReceiptInput): void {
 
 export function createAuthorizedReadReceipt(input: ReadReceiptInput): AuthorizedReadReceipt {
   assertInput(input)
-  const { scope, sessionId, policyEpoch, documents, witnessKey } = input
+  const { scope, sessionId, actorRole, policyEpoch, documents, witnessKey } = input
   const sessionHash = hmac(witnessKey, "epic30-session-v1", sessionId)
   const witnessHash = hmac(witnessKey, "epic30-read-v1", {
     tenantId: scope.tenantId,
     workspaceId: scope.workspaceId,
     principalId: scope.principalId,
+    actorRole,
     sessionHash,
     policyEpoch,
     documents: documents.map((document) => ({
@@ -91,6 +96,7 @@ export function createAuthorizedReadReceipt(input: ReadReceiptInput): Authorized
     tenantId: scope.tenantId,
     workspaceId: scope.workspaceId,
     principalId: scope.principalId,
+    actorRole,
     sessionHash,
     policyEpoch,
     witnessHash,

@@ -274,13 +274,13 @@ export async function readAuthorizedDocuments(
       if (membership.rows.length !== 1) return null
       const envelope = issueReadEnvelope(scope, currentPrincipal, membership.rows[0])
       const documents = await readAuthorizedDocumentsInRestrictedTransaction(envelope, client.query.bind(client))
-      return { documents, policyEpoch: envelope.policyEpoch }
+      return { documents, policyEpoch: envelope.policyEpoch, actorRole: envelope.role }
     }, pool)
   }
   const candidate = await readCurrent(principal)
   if (!candidate) return []
   const receipt = await persistAuthorizedReadReceipt({
-    scope, sessionId: principal.sessionId, policyEpoch: candidate.policyEpoch,
+    scope, sessionId: principal.sessionId, actorRole: candidate.actorRole, policyEpoch: candidate.policyEpoch,
     documents: candidate.documents, witnessKey,
   }, { persist: persistSyntheticReadReceipt })
   // Receipt is committed before the second restricted read. Any concurrent
@@ -292,9 +292,9 @@ export async function readAuthorizedDocuments(
     throw new Error("Synthetic read authority changed")
   }
   const current = await readCurrent(refreshedPrincipal)
-  if (!current || current.policyEpoch !== candidate.policyEpoch ||
+  if (!current || current.policyEpoch !== candidate.policyEpoch || current.actorRole !== candidate.actorRole ||
       createAuthorizedReadReceipt({
-        scope, sessionId: refreshedPrincipal.sessionId, policyEpoch: current.policyEpoch,
+        scope, sessionId: refreshedPrincipal.sessionId, actorRole: current.actorRole, policyEpoch: current.policyEpoch,
         documents: current.documents, witnessKey, receiptId: receipt.receiptId,
         occurredAt: new Date(receipt.occurredAt),
       }).witnessHash !== receipt.witnessHash) {

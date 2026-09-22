@@ -78,6 +78,7 @@ export async function provisionSyntheticDatabase(signal?: AbortSignal) {
     await ownerPool.query(`CREATE TABLE epic30_local.read_receipts (
       receipt_id uuid PRIMARY KEY, run_id text NOT NULL CHECK (run_id ~ '^[a-f0-9]{32}$'),
       group_id text NOT NULL, workspace_id text NOT NULL, principal_id text NOT NULL,
+      actor_role text NOT NULL CHECK (actor_role IN ('viewer', 'curator', 'admin')),
       session_hash text NOT NULL CHECK (session_hash ~ '^[a-f0-9]{64}$'),
       policy_epoch bigint NOT NULL CHECK (policy_epoch > 0),
       action text NOT NULL CHECK (action = 'read_documents'),
