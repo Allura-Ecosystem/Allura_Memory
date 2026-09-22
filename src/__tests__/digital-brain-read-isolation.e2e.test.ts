@@ -320,6 +320,44 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
     }
   }, 240_000)
 
+  it("fails the real dashboard closed when the receipt sink loses INSERT authority", async () => {
+    const receiptRole = database.appEnvironment.POSTGRES_RECEIPT_USER
+    expect(receiptRole).toMatch(/^allura_epic30_receipt_[a-f0-9]{32}$/)
+    const safeRole = `"${receiptRole}"`
+    const before = await ownerPool.query("SELECT count(*)::int AS count FROM epic30_local.read_receipts")
+    const documents = await ownerPool.query<{ id: string; title: string; content: string }>(
+      "SELECT id, title, content FROM brain_documents ORDER BY id",
+    )
+    await ownerPool.query(`REVOKE INSERT ON epic30_local.read_receipts FROM ${safeRole}`)
+    let server: Awaited<ReturnType<typeof startOwnedProcess>> | undefined
+    try {
+      server = await startOwnedProcess({
+        command: "node", args: ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "--port", "4100"],
+        cwd: process.cwd(), port: 4100,
+        env: { ...process.env, ...database.appEnvironment,
+          NODE_ENV: "development", ALLURA_EPIC30_LOCAL_DB: "enabled",
+          ALLURA_DEV_AUTH_ENABLED: "true", ALLURA_DEMO_DEV_AUTH_FORCE: "true",
+          ALLURA_DEV_AUTH_GROUP_ID: GROUP, ALLURA_DEV_AUTH_WORKSPACE_ID: WORKSPACE,
+          ALLURA_DEV_AUTH_USER_ID: "owner-user", ALLURA_DEV_AUTH_ROLE: "viewer",
+        },
+      })
+      const response = await fetch(server.url + "/dashboard", { signal: AbortSignal.timeout(30_000) })
+      expect(response.status).toBe(200)
+      const html = await response.text()
+      expect(html).toContain("Local data unavailable")
+      for (const document of documents.rows) {
+        expect(html).not.toContain(document.id)
+        expect(html).not.toContain(document.title)
+        expect(html).not.toContain(document.content)
+      }
+      const after = await ownerPool.query("SELECT count(*)::int AS count FROM epic30_local.read_receipts")
+      expect(after.rows[0].count).toBe(before.rows[0].count)
+    } finally {
+      try { await server?.stop() }
+      finally { await ownerPool.query(`GRANT INSERT ON epic30_local.read_receipts TO ${safeRole}`) }
+    }
+  }, 90_000)
+
   it("launches the same demo command service with verified content and owned cleanup", async () => {
     const demo = await launchSyntheticDemo(false)
     const name = demo.receipt.databaseName
