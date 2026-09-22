@@ -5,6 +5,7 @@ vi.mock("@/lib/postgres/connection", () => ({ getAppPool: mocks.pool }))
 vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal: mocks.principal }))
 vi.mock("./read-receipt-writer", () => ({ persistSyntheticReadReceipt: mocks.receipt }))
 import { readAuthorizedDocuments, searchAuthorizedDocuments } from "./read-service"
+import { readSyntheticDocumentLinks } from "./document-links"
 const scope = { tenantId: "allura-epic30-local", workspaceId: "epic30-local-workspace", principalId: "owner-user" }
 const principal = { id: scope.principalId, groupId: scope.tenantId, workspaceId: scope.workspaceId,
   role: "viewer" as const, sessionId: "dev:owner-user", email: "owner@example.invalid" }
@@ -70,6 +71,27 @@ it("issues an exact read envelope from current membership role and epoch", async
   expect(mocks.transaction).toHaveBeenCalledTimes(2)
   expect(mocks.query.mock.calls[1][0]).toContain("brain_workspace_memberships")
   expect(mocks.query.mock.calls[2][1]).toEqual([scope.tenantId, scope.workspaceId, scope.principalId, 7])
+})
+
+it("derives links and backlinks only from receipt-gated authorized endpoints", async () => {
+  const focus = { ...ownerRow, id: "focus", title: "Focused note",
+    content: "SYNTHETIC TEST DATA: [[visible-target]] [[hidden-target]]" }
+  const visible = { ...ownerRow, id: "visible-target", title: "Visible target",
+    content: "SYNTHETIC TEST DATA: [[focus]]" }
+  const hidden = { ...ownerRow, id: "hidden-target", title: "Hidden target",
+    owner_id: "other-user", visibility: "private", content: "SYNTHETIC TEST DATA: [[focus]]" }
+  mocks.query.mockImplementation(async (sql: string) => {
+    if (sql.includes("session_user")) return { rows: [verifiedSession] }
+    if (sql.includes("SELECT workspace_membership.policy_epoch")) return { rows: [{ role: "viewer", policy_epoch: "7" }] }
+    return { rows: [focus, visible, hidden] }
+  })
+  expect(await readSyntheticDocumentLinks(scope, "focus")).toEqual({
+    documentId: "focus", title: "Focused note",
+    links: [{ documentId: "visible-target", title: "Visible target" }],
+    backlinks: [{ documentId: "visible-target", title: "Visible target" }],
+  })
+  expect(mocks.receipt).toHaveBeenCalledTimes(1)
+  expect(mocks.transaction).toHaveBeenCalledTimes(2)
 })
 it("does not disclose candidates when the separate receipt sink fails", async () => {
   mocks.query.mockReset()

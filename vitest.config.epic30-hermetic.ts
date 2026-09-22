@@ -6,6 +6,7 @@ export default defineConfig({ ...unit, test: { ...unit.test,
   passWithNoTests: false,
   include: [
     "src/lib/digital-brain/ci-contract.test.ts",
+    "src/lib/digital-brain/document-links.test.ts",
     "src/lib/digital-brain/legacy-api-quarantine.test.ts",
     "src/lib/digital-brain/local-confinement.test.ts",
     "src/lib/digital-brain/migration-contract.test.ts",
