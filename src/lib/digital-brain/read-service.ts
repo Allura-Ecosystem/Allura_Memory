@@ -1,6 +1,8 @@
 import { withTenantTransaction } from "@/lib/db/tenant-transaction"
 import { getAppPool } from "@/lib/postgres/connection"
 import type { AuthUser } from "@/lib/auth/types"
+import { createAuthorizedReadReceipt, persistAuthorizedReadReceipt } from "./read-receipt"
+import { persistSyntheticReadReceipt } from "./read-receipt-writer"
 
 const READ_ENVELOPE_BRAND = Symbol("epic30-read-envelope")
 
@@ -258,15 +260,47 @@ export async function readAuthorizedDocuments(
       pool.options.database !== `allura_epic30_read_${run}` || pool.options.user !== "allura_app" || pool.options.options) {
     throw new Error("Synthetic cached pool target refused")
   }
-  return withTenantTransaction(scope, async (client) => {
-    await verifySyntheticSession(client.query.bind(client), run)
-    const membership = await client.query(CURRENT_WORKSPACE_AUTHORITY_SQL, [
-      scope.tenantId, scope.workspaceId, scope.principalId,
-    ])
-    if (membership.rows.length !== 1) return []
-    const envelope = issueReadEnvelope(scope, principal, membership.rows[0])
-    return readAuthorizedDocumentsInRestrictedTransaction(envelope, client.query.bind(client))
-  }, pool)
+  const encodedKey = process.env.ALLURA_EPIC30_RECEIPT_KEY ?? ""
+  const witnessKey = Buffer.from(encodedKey, "base64url")
+  if (witnessKey.length !== 32 || witnessKey.toString("base64url") !== encodedKey) {
+    throw new Error("Synthetic read receipt key refused")
+  }
+  async function readCurrent(currentPrincipal: AuthUser) {
+    return withTenantTransaction(scope, async (client) => {
+      await verifySyntheticSession(client.query.bind(client), run)
+      const membership = await client.query(CURRENT_WORKSPACE_AUTHORITY_SQL, [
+        scope.tenantId, scope.workspaceId, scope.principalId,
+      ])
+      if (membership.rows.length !== 1) return null
+      const envelope = issueReadEnvelope(scope, currentPrincipal, membership.rows[0])
+      const documents = await readAuthorizedDocumentsInRestrictedTransaction(envelope, client.query.bind(client))
+      return { documents, policyEpoch: envelope.policyEpoch }
+    }, pool)
+  }
+  const candidate = await readCurrent(principal)
+  if (!candidate) return []
+  const receipt = await persistAuthorizedReadReceipt({
+    scope, sessionId: principal.sessionId, policyEpoch: candidate.policyEpoch,
+    documents: candidate.documents, witnessKey,
+  }, { persist: persistSyntheticReadReceipt })
+  // Receipt is committed before the second restricted read. Any concurrent
+  // revocation or document change denies instead of disclosing stale candidates.
+  const refreshedPrincipal = await getDashboardPrincipal()
+  if (!refreshedPrincipal || refreshedPrincipal.id !== principal.id ||
+      refreshedPrincipal.groupId !== principal.groupId || refreshedPrincipal.workspaceId !== principal.workspaceId ||
+      refreshedPrincipal.sessionId !== principal.sessionId || refreshedPrincipal.role !== principal.role) {
+    throw new Error("Synthetic read authority changed")
+  }
+  const current = await readCurrent(refreshedPrincipal)
+  if (!current || current.policyEpoch !== candidate.policyEpoch ||
+      createAuthorizedReadReceipt({
+        scope, sessionId: refreshedPrincipal.sessionId, policyEpoch: current.policyEpoch,
+        documents: current.documents, witnessKey, receiptId: receipt.receiptId,
+        occurredAt: new Date(receipt.occurredAt),
+      }).witnessHash !== receipt.witnessHash) {
+    throw new Error("Synthetic read authority changed")
+  }
+  return current.documents
 }
 
 /** Test-only issuer; absent from development and production runtimes. */

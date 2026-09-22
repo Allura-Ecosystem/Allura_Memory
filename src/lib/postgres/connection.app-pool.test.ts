@@ -36,17 +36,40 @@ describe("managed application-role pool", () => {
     password: process.env.POSTGRES_PASSWORD,
     appUser: process.env.POSTGRES_APP_USER,
     appPassword: process.env.POSTGRES_APP_PASSWORD,
+    nodeEnv: process.env.NODE_ENV,
+    localDb: process.env.ALLURA_EPIC30_LOCAL_DB,
+    runId: process.env.ALLURA_EPIC30_RUN_ID,
+    host: process.env.POSTGRES_HOST,
+    port: process.env.POSTGRES_PORT,
+    database: process.env.POSTGRES_DB,
+    receiptUser: process.env.POSTGRES_RECEIPT_USER,
+    receiptPassword: process.env.POSTGRES_RECEIPT_PASSWORD,
   };
 
   afterEach(async () => {
     const { closePool } = await import("./connection");
     await closePool();
+    vi.unstubAllEnvs();
     vi.resetModules();
     vi.clearAllMocks();
 
-    process.env.POSTGRES_PASSWORD = originalEnvironment.password;
-    process.env.POSTGRES_APP_USER = originalEnvironment.appUser;
-    process.env.POSTGRES_APP_PASSWORD = originalEnvironment.appPassword;
+    const restore: Record<string, string | undefined> = {
+      POSTGRES_PASSWORD: originalEnvironment.password,
+      POSTGRES_APP_USER: originalEnvironment.appUser,
+      POSTGRES_APP_PASSWORD: originalEnvironment.appPassword,
+      NODE_ENV: originalEnvironment.nodeEnv,
+      ALLURA_EPIC30_LOCAL_DB: originalEnvironment.localDb,
+      ALLURA_EPIC30_RUN_ID: originalEnvironment.runId,
+      POSTGRES_HOST: originalEnvironment.host,
+      POSTGRES_PORT: originalEnvironment.port,
+      POSTGRES_DB: originalEnvironment.database,
+      POSTGRES_RECEIPT_USER: originalEnvironment.receiptUser,
+      POSTGRES_RECEIPT_PASSWORD: originalEnvironment.receiptPassword,
+    };
+    for (const [key, value] of Object.entries(restore)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
   });
 
   it("ignores a forged owner pool and unconditionally binds workspace work to the managed app pool", async () => {
@@ -114,5 +137,35 @@ describe("managed application-role pool", () => {
     expect(appPool.end).toHaveBeenCalledTimes(1);
     expect(getPool()).toBe(replacementOwnerPool);
     expect(poolConstructor).toHaveBeenCalledTimes(3);
+  });
+
+  it("requires a separate per-run receipt login and never falls back to app or owner credentials", async () => {
+    const run = "a".repeat(32);
+    vi.stubEnv("NODE_ENV", "test");
+    process.env.ALLURA_EPIC30_LOCAL_DB = "enabled";
+    process.env.ALLURA_EPIC30_RUN_ID = run;
+    process.env.POSTGRES_HOST = "127.0.0.1";
+    process.env.POSTGRES_PORT = "5444";
+    process.env.POSTGRES_DB = `allura_epic30_read_${run}`;
+    process.env.POSTGRES_PASSWORD = "owner-password";
+    process.env.POSTGRES_APP_USER = "allura_app";
+    process.env.POSTGRES_APP_PASSWORD = "app-password";
+    delete process.env.POSTGRES_RECEIPT_USER;
+    delete process.env.POSTGRES_RECEIPT_PASSWORD;
+    const { getEpic30ReceiptPool } = await import("./connection");
+    expect(() => getEpic30ReceiptPool()).toThrow(/receipt writer configuration refused/);
+    expect(poolConstructor).not.toHaveBeenCalled();
+
+    process.env.POSTGRES_RECEIPT_USER = `allura_epic30_receipt_${run}`;
+    process.env.POSTGRES_RECEIPT_PASSWORD = "distinct-receipt-password";
+    const receiptPool = makePool();
+    poolConstructor.mockReturnValue(receiptPool);
+    expect(getEpic30ReceiptPool()).toBe(receiptPool);
+    expect(poolConstructor).toHaveBeenCalledWith(expect.objectContaining({
+      host: "127.0.0.1", port: 5444, database: `allura_epic30_read_${run}`,
+      user: `allura_epic30_receipt_${run}`, password: "distinct-receipt-password",
+    }));
+    process.env.POSTGRES_RECEIPT_USER = "allura_app";
+    expect(() => getEpic30ReceiptPool()).toThrow(/receipt writer configuration refused/);
   });
 });

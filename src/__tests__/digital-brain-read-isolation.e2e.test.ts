@@ -9,6 +9,9 @@ import path from "node:path"
 
 import { withTenantTransaction } from "@/lib/db/tenant-transaction"
 import { epic30ReadTestOnly, readAuthorizedDocumentsInRestrictedTransaction } from "@/lib/digital-brain/read-service"
+import { createAuthorizedReadReceipt } from "@/lib/digital-brain/read-receipt"
+import { persistSyntheticReadReceipt } from "@/lib/digital-brain/read-receipt-writer"
+import { closePool } from "@/lib/postgres/connection"
 
 const GROUP = "allura-epic30-local"
 const WORKSPACE = "epic30-local-workspace"
@@ -90,6 +93,35 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
     expect(Number(documents.rows[0]?.count)).toBe(manifest.expectedDocumentCount)
     expect(Number(memberships.rows[0]?.count)).toBe(manifest.expectedMembershipCount)
     expect(Number(workspaceMemberships.rows[0]?.count)).toBe(manifest.expectedWorkspaceMembershipCount)
+  })
+
+  it("keeps the document reader SELECT-only and commits an immutable content-free receipt via a separate role", async () => {
+    await expect(appPool.query("INSERT INTO epic30_local.read_receipts DEFAULT VALUES")).rejects.toMatchObject({ code: "42501" })
+    await expect(database.receiptPool.query("SELECT id FROM brain_documents LIMIT 1")).rejects.toMatchObject({ code: "42501" })
+    await expect(database.receiptPool.query("SELECT * FROM epic30_local.read_receipts LIMIT 1")).rejects.toMatchObject({ code: "42501" })
+
+    const sessionId = "synthetic-e2e-receipt-session"
+    const receipt = createAuthorizedReadReceipt({
+      scope: { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "owner-user" },
+      sessionId, policyEpoch: 1, documents: [],
+      witnessKey: Buffer.from(database.appEnvironment.ALLURA_EPIC30_RECEIPT_KEY, "base64url"),
+    })
+    const old = new Map<string, string | undefined>()
+    const injected = { ...database.appEnvironment, NODE_ENV: "test", ALLURA_EPIC30_LOCAL_DB: "enabled" }
+    for (const [key, value] of Object.entries(injected)) { old.set(key, process.env[key]); process.env[key] = value }
+    try {
+      await expect(persistSyntheticReadReceipt(receipt)).resolves.toEqual({
+        receiptId: receipt.receiptId, witnessHash: receipt.witnessHash,
+      })
+    } finally {
+      await closePool()
+      for (const [key, value] of old) { if (value === undefined) delete process.env[key]; else process.env[key] = value }
+    }
+    const stored = await ownerPool.query("SELECT * FROM epic30_local.read_receipts WHERE receipt_id = $1", [receipt.receiptId])
+    expect(stored.rows).toHaveLength(1)
+    expect(stored.rows[0].witness_hash).toBe(receipt.witnessHash)
+    expect(JSON.stringify(stored.rows[0])).not.toContain(sessionId)
+    await expect(ownerPool.query("UPDATE epic30_local.read_receipts SET reason_code = 'changed' WHERE receipt_id = $1", [receipt.receiptId])).rejects.toThrow()
   })
 
   it.each([null, "", "   "])("rejects malformed department ID %s at the database boundary", async departmentId => {
