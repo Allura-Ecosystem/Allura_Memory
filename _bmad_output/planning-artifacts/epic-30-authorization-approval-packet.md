@@ -78,6 +78,8 @@ These are review questions and implementation boundaries, not amendments to the 
 
 The next reviewer should explicitly accept or amend each item, especially whether workspace membership is independently required and which surfaces require synchronous receipts. Until then, the v1 candidate remains provisional and the two AI preflight FAIL findings stand.
 
+The reviewable [proposed v2 addendum](./epic-30-authorization-v2-proposed-addendum.md) makes the recommended semantics and verification order explicit. Its SHA-256 is `46c4efd01a42f1b08741f8d5cb83a95c8c98d3f0bdb58522fd395ebc4df7ad8d`. It is **not approved** and does not alter the six v1 bound artifact hashes or the Story 30.3 board status; any amendment requires a new hash before an exact combined-candidate decision.
+
 The [Notion Story 30.3](https://app.notion.com/p/3df1d9be65b3819eb670e4379a263962) Decision Log and Handoff Context were updated with this bounded AI-review outcome and read back on 2026-09-21. Its `Not Started` status and dependencies were preserved; no policy approval was recorded there.
 
 ## Approval record
