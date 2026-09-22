@@ -3,7 +3,17 @@ BEGIN;
 -- Epic 30 development candidate. The restricted reader must have an independent,
 -- current workspace membership in addition to tenant and department authority.
 -- No existing tenant membership is inferred or backfilled into this table.
-CREATE TABLE IF NOT EXISTS brain_workspace_memberships (
+-- An unexpected pre-existing table could have weaker keys or approval fields.
+-- Refuse it before replacing any read policy; a controlled upgrade needs review.
+DO $$
+BEGIN
+  IF to_regclass('public.brain_workspace_memberships') IS NOT NULL THEN
+    RAISE EXCEPTION 'brain_workspace_memberships already exists; inspect its shape before migration 072';
+  END IF;
+END
+$$;
+
+CREATE TABLE brain_workspace_memberships (
   group_id TEXT NOT NULL CHECK (group_id ~ '^allura-[a-z0-9-]+$'),
   workspace_id TEXT NOT NULL,
   user_id TEXT NOT NULL CHECK (length(btrim(user_id)) > 0),
