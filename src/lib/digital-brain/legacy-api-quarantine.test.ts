@@ -14,8 +14,9 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.auth.mockResolvedValue({ user: { id: "owner-user" }, groupId: "allura-epic30-local" })
   vi.stubGlobal("fetch", vi.fn())
+  vi.stubEnv("ALLURA_BRAIN_URL", "https://mcp.faithmeats.org/mcp")
 })
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs() })
 
 describe("Epic 30 legacy Brain content-route quarantine", () => {
   it.each([
@@ -52,5 +53,15 @@ describe("Epic 30 legacy Brain content-route quarantine", () => {
     expect(response.headers.get("cache-control")).toBe("no-store")
     expect(await response.json()).toEqual({ error: "Brain health check unavailable", overall_status: "unhealthy" })
     expect(mocks.health).toHaveBeenCalledWith("allura-system")
+  })
+
+  it("never probes a local or unset Allura endpoint from the public health route", async () => {
+    for (const endpoint of [undefined, "http://localhost:5888/mcp", "https://other.example/mcp"]) {
+      vi.stubEnv("ALLURA_BRAIN_URL", endpoint)
+      const response = await brainHealth()
+      expect(response.status).toBe(503)
+      expect(await response.json()).toEqual({ error: "Brain health check unavailable", overall_status: "unhealthy" })
+    }
+    expect(mocks.health).not.toHaveBeenCalled()
   })
 })

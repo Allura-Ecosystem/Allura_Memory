@@ -28,7 +28,7 @@ describe("Epic 30 merge-evidence wiring", () => {
     expect(config).toContain("passWithNoTests: false")
     for (const test of [
       "local-confinement.test.ts", "read-receipt.test.ts", "read-receipt-writer.test.ts",
-      "read-service.test.ts", "connection.app-pool.test.ts", "page.test.tsx",
+      "read-service.test.ts", "connection.app-pool.test.ts", "brain-client.test.ts", "page.test.tsx",
       "my-work-workspace.test.tsx", "ci-contract.test.ts", "legacy-api-quarantine.test.ts",
     ]) expect(config).toContain(test)
   })
