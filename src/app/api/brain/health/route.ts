@@ -23,11 +23,10 @@ export async function GET(): Promise<NextResponse> {
   try {
     const report = await brainClient.healthReport(PROBE_GROUP_ID)
     return NextResponse.json(report)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Brain health check failed"
+  } catch {
     return NextResponse.json(
-      { error: message, overall_status: "unhealthy" as const },
-      { status: 503 }
+      { error: "Brain health check unavailable", overall_status: "unhealthy" as const },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
     )
   }
 }
