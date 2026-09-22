@@ -15,6 +15,10 @@ const scope = {
   workspaceId: "epic30-local-workspace",
   principalId: "owner-user",
 }
+const user = {
+  id: scope.principalId, groupId: scope.tenantId, workspaceId: scope.workspaceId,
+  role: "viewer" as const, sessionId: "dev:owner-user", email: "owner@example.invalid",
+}
 const document = {
   id: "epic30-owner-private", groupId: scope.tenantId, workspaceId: scope.workspaceId,
   ownerId: scope.principalId, departmentId: null, visibility: "private" as const,
@@ -26,7 +30,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.stubEnv("NODE_ENV", "development")
   vi.stubEnv("ALLURA_EPIC30_LOCAL_DB", "enabled")
-  mocks.guard.mockResolvedValue({ scope })
+  mocks.guard.mockResolvedValue({ scope, user })
   mocks.read.mockResolvedValue([document])
   mocks.overview.mockResolvedValue({ state: "live", data: { memories: 12, events: 3, proposals: 2, workItems: 1, graphMemories: 4 }, fetchedAt: "test" })
 })
