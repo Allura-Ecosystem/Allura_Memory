@@ -95,6 +95,8 @@ describe("Epic 30 synthetic fixture contract", () => {
     expect(provisioner).toContain("allura_epic30_receipt_${runId}")
     expect(provisioner).toContain("NOINHERIT NOBYPASSRLS")
     expect(provisioner).toContain("ALTER TABLE epic30_local.read_receipts FORCE ROW LEVEL SECURITY")
+    expect(provisioner).toContain("action IN ('read_documents', 'search_documents')")
+    expect(provisioner).toContain("action = 'search_documents' AND query_hash IS NOT NULL")
     expect(provisioner).toContain("REVOKE ALL ON epic30_local.read_receipts FROM PUBLIC, allura_app")
     expect(provisioner).toContain("GRANT INSERT ON epic30_local.read_receipts TO ${identifier(receiptRole)}")
     expect(provisioner).not.toContain("GRANT SELECT ON brain_documents TO ${identifier(receiptRole)}")

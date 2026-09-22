@@ -10,12 +10,13 @@ export async function persistSyntheticReadReceipt(
 ): Promise<{ receiptId: string; witnessHash: string }> {
   const run = assertSyntheticTarget()
   const scope = { tenantId: receipt.tenantId, workspaceId: receipt.workspaceId, principalId: receipt.principalId }
-  if (!isSyntheticScope(scope) || receipt.action !== "read_documents" ||
+  if (!isSyntheticScope(scope) || !["read_documents", "search_documents"].includes(receipt.action) ||
       receipt.decision !== "allow_candidate" || receipt.reasonCode !== "authorized" ||
       receipt.policyVersion !== "epic30-local-v2" ||
       !["viewer", "curator", "admin"].includes(receipt.actorRole) ||
       !Number.isSafeInteger(receipt.policyEpoch) || receipt.policyEpoch <= 0 ||
-      !/^[a-f0-9]{64}$/.test(receipt.sessionHash) || !/^[a-f0-9]{64}$/.test(receipt.witnessHash)) {
+      !/^[a-f0-9]{64}$/.test(receipt.sessionHash) || !/^[a-f0-9]{64}$/.test(receipt.witnessHash) ||
+      (receipt.action === "search_documents" ? !/^[a-f0-9]{64}$/.test(receipt.queryHash ?? "") : receipt.queryHash !== null)) {
     throw new Error("Synthetic receipt writer input refused")
   }
   const pool = getEpic30ReceiptPool()
@@ -37,11 +38,11 @@ export async function persistSyntheticReadReceipt(
     }
     await client.query(`INSERT INTO epic30_local.read_receipts
       (receipt_id, run_id, group_id, workspace_id, principal_id, actor_role, session_hash,
-       policy_epoch, action, decision, reason_code, policy_version, witness_hash, occurred_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [
+       policy_epoch, action, decision, reason_code, policy_version, witness_hash, query_hash, occurred_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`, [
       receipt.receiptId, run, receipt.tenantId, receipt.workspaceId, receipt.principalId,
       receipt.actorRole, receipt.sessionHash, receipt.policyEpoch, receipt.action, receipt.decision,
-      receipt.reasonCode, receipt.policyVersion, receipt.witnessHash, receipt.occurredAt,
+      receipt.reasonCode, receipt.policyVersion, receipt.witnessHash, receipt.queryHash, receipt.occurredAt,
     ])
     // withTenantTransaction commits before it resolves; no provisional ACK escapes.
     return { receiptId: receipt.receiptId, witnessHash: receipt.witnessHash }

@@ -236,9 +236,15 @@ export async function readAuthorizedDocumentsInRestrictedTransaction(
  * transaction. SQL authorizes candidates before returning them; the row mapper
  * checks the exact scope and resource policy again before disclosure.
  */
-export async function readAuthorizedDocuments(
+interface AuthorizedReadSnapshot {
+  documents: AuthorizedDocument[]
+  principal: AuthUser
+  policyEpoch: number
+}
+
+async function readAuthorizedSnapshot(
   scope: DigitalBrainReadScope,
-): Promise<AuthorizedDocument[]> {
+): Promise<AuthorizedReadSnapshot | null> {
   // Re-read the principal from the server auth provider at the service boundary.
   // Caller-supplied user objects and browser headers cannot issue this envelope.
   const { getDashboardPrincipal } = await import("@/lib/auth/dashboard-principal")
@@ -249,7 +255,7 @@ export async function readAuthorizedDocuments(
   }
   const { assertSyntheticTarget, isSyntheticScope, verifySyntheticSession } = await import("./local-confinement")
   const run = assertSyntheticTarget()
-  if (!isSyntheticScope(scope)) return []
+  if (!isSyntheticScope(scope)) return null
   const pool = getAppPool()
   // A process-global pool may predate this request's environment; inspect its actual target before connect.
   if (pool.options.host !== "127.0.0.1" || pool.options.port !== 5444 ||
@@ -274,7 +280,7 @@ export async function readAuthorizedDocuments(
     }, pool)
   }
   const candidate = await readCurrent(principal)
-  if (!candidate) return []
+  if (!candidate) return null
   const receipt = await persistAuthorizedReadReceipt({
     scope, sessionId: principal.sessionId, actorRole: candidate.actorRole, policyEpoch: candidate.policyEpoch,
     documents: candidate.documents, witnessKey,
@@ -296,7 +302,83 @@ export async function readAuthorizedDocuments(
       }).witnessHash !== receipt.witnessHash) {
     throw new Error("Synthetic read authority changed")
   }
-  return current.documents
+  return { documents: current.documents, principal: refreshedPrincipal, policyEpoch: current.policyEpoch }
+}
+
+export async function readAuthorizedDocuments(
+  scope: DigitalBrainReadScope,
+): Promise<AuthorizedDocument[]> {
+  return (await readAuthorizedSnapshot(scope))?.documents ?? []
+}
+
+export interface AuthorizedSearchHit {
+  documentId: string
+  title: string
+  snippet: string
+  updatedAt: Date
+}
+
+function normalizeSearchQuery(query: string): string {
+  if (typeof query !== "string") throw new Error("Synthetic search query refused")
+  const normalized = query.trim().toLocaleLowerCase("en-US")
+  if (normalized.length < 2 || normalized.length > 120 || /[\x00-\x1f\x7f]/.test(normalized)) {
+    throw new Error("Synthetic search query refused")
+  }
+  return normalized
+}
+
+function searchDocuments(documents: readonly AuthorizedDocument[], query: string) {
+  const matches = documents.filter((document) =>
+    document.title.toLocaleLowerCase("en-US").includes(query) ||
+    document.content.toLocaleLowerCase("en-US").includes(query))
+  const hits: AuthorizedSearchHit[] = matches.map((document) => {
+    const titleMatches = document.title.toLocaleLowerCase("en-US").includes(query)
+    const index = document.content.toLocaleLowerCase("en-US").indexOf(query)
+    const start = index < 0 ? 0 : Math.max(0, index - 60)
+    return {
+      documentId: document.id,
+      title: document.title,
+      snippet: titleMatches && index < 0 ? "" : document.content.slice(start, start + 160),
+      updatedAt: document.updatedAt,
+    }
+  })
+  return { matches, hits }
+}
+
+/** Synthetic-only search candidate; not a production API or policy approval. */
+export async function searchAuthorizedDocuments(
+  scope: DigitalBrainReadScope,
+  rawQuery: string,
+): Promise<{ total: number; hits: AuthorizedSearchHit[] }> {
+  const query = normalizeSearchQuery(rawQuery)
+  const candidate = await readAuthorizedSnapshot(scope)
+  if (!candidate) return { total: 0, hits: [] }
+  const encodedKey = process.env.ALLURA_EPIC30_RECEIPT_KEY ?? ""
+  const witnessKey = Buffer.from(encodedKey, "base64url")
+  if (witnessKey.length !== 32 || witnessKey.toString("base64url") !== encodedKey) {
+    throw new Error("Synthetic search receipt key refused")
+  }
+  const candidateResults = searchDocuments(candidate.documents, query)
+  const receipt = await persistAuthorizedReadReceipt({
+    scope, sessionId: candidate.principal.sessionId!, actorRole: candidate.principal.role,
+    policyEpoch: candidate.policyEpoch, documents: candidateResults.matches, witnessKey,
+    searchQuery: query,
+  }, { persist: persistSyntheticReadReceipt })
+  const current = await readAuthorizedSnapshot(scope)
+  if (!current || current.principal.sessionId !== candidate.principal.sessionId ||
+      current.principal.role !== candidate.principal.role || current.policyEpoch !== candidate.policyEpoch) {
+    throw new Error("Synthetic search authority changed")
+  }
+  const currentResults = searchDocuments(current.documents, query)
+  const currentWitness = createAuthorizedReadReceipt({
+    scope, sessionId: current.principal.sessionId!, actorRole: current.principal.role,
+    policyEpoch: current.policyEpoch, documents: currentResults.matches, witnessKey,
+    searchQuery: query, receiptId: receipt.receiptId, occurredAt: new Date(receipt.occurredAt),
+  })
+  if (currentWitness.witnessHash !== receipt.witnessHash || currentWitness.queryHash !== receipt.queryHash) {
+    throw new Error("Synthetic search authority changed")
+  }
+  return { total: currentResults.hits.length, hits: currentResults.hits }
 }
 
 /** Test-only issuer; absent from development and production runtimes. */

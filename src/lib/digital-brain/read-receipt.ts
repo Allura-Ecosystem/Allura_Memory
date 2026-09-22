@@ -6,7 +6,7 @@ import type { AuthorizedDocument, DigitalBrainReadScope } from "./read-service"
 /** A required, content-free decision record. It is not evidence of delivery. */
 export interface AuthorizedReadReceipt {
   receiptId: string
-  action: "read_documents"
+  action: "read_documents" | "search_documents"
   decision: "allow_candidate"
   reasonCode: "authorized"
   policyVersion: "epic30-local-v2"
@@ -17,6 +17,7 @@ export interface AuthorizedReadReceipt {
   sessionHash: string
   policyEpoch: number
   witnessHash: string
+  queryHash: string | null
   occurredAt: string
 }
 
@@ -26,6 +27,8 @@ export interface ReadReceiptInput {
   actorRole: AuthUser["role"]
   policyEpoch: number
   documents: readonly AuthorizedDocument[]
+  /** Normalized synthetic search query; stored only as a keyed digest. */
+  searchQuery?: string
   /** Per-run secret; never stored in the receipt table or sent to the browser. */
   witnessKey: Buffer
   receiptId?: string
@@ -41,13 +44,15 @@ function hmac(key: Buffer, domain: string, value: unknown): string {
 }
 
 function assertInput(input: ReadReceiptInput): void {
-  const { scope, sessionId, actorRole, policyEpoch, documents, witnessKey, receiptId, occurredAt } = input
+  const { scope, sessionId, actorRole, policyEpoch, documents, witnessKey, receiptId, occurredAt, searchQuery } = input
   if (!scope.tenantId?.trim() || !scope.workspaceId?.trim() || !scope.principalId?.trim() ||
       !sessionId?.trim() || !["viewer", "curator", "admin"].includes(actorRole) ||
       !Number.isSafeInteger(policyEpoch) || policyEpoch <= 0 ||
       !Buffer.isBuffer(witnessKey) || witnessKey.length < 32 ||
       (receiptId !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(receiptId)) ||
-      (occurredAt !== undefined && Number.isNaN(occurredAt.getTime()))) {
+      (occurredAt !== undefined && Number.isNaN(occurredAt.getTime())) ||
+      (searchQuery !== undefined && (searchQuery.length < 2 || searchQuery.length > 120 ||
+        searchQuery !== searchQuery.trim().toLocaleLowerCase("en-US")))) {
     throw new Error("Synthetic read receipt input refused")
   }
   const seen = new Set<string>()
@@ -68,9 +73,13 @@ function assertInput(input: ReadReceiptInput): void {
 
 export function createAuthorizedReadReceipt(input: ReadReceiptInput): AuthorizedReadReceipt {
   assertInput(input)
-  const { scope, sessionId, actorRole, policyEpoch, documents, witnessKey } = input
+  const { scope, sessionId, actorRole, policyEpoch, documents, witnessKey, searchQuery } = input
   const sessionHash = hmac(witnessKey, "epic30-session-v1", sessionId)
-  const witnessHash = hmac(witnessKey, "epic30-read-v1", {
+  const action = searchQuery === undefined ? "read_documents" : "search_documents"
+  const queryHash = searchQuery === undefined ? null : hmac(witnessKey, "epic30-search-query-v1", searchQuery)
+  const witnessHash = hmac(witnessKey, "epic30-read-v2", {
+    action,
+    queryHash,
     tenantId: scope.tenantId,
     workspaceId: scope.workspaceId,
     principalId: scope.principalId,
@@ -89,7 +98,7 @@ export function createAuthorizedReadReceipt(input: ReadReceiptInput): Authorized
   })
   return Object.freeze({
     receiptId: input.receiptId ?? randomUUID(),
-    action: "read_documents" as const,
+    action,
     decision: "allow_candidate" as const,
     reasonCode: "authorized" as const,
     policyVersion: "epic30-local-v2" as const,
@@ -100,6 +109,7 @@ export function createAuthorizedReadReceipt(input: ReadReceiptInput): Authorized
     sessionHash,
     policyEpoch,
     witnessHash,
+    queryHash,
     occurredAt: (input.occurredAt ?? new Date()).toISOString(),
   })
 }
