@@ -1,5 +1,8 @@
 import { withTenantTransaction } from "@/lib/db/tenant-transaction"
 import { getAppPool } from "@/lib/postgres/connection"
+import type { AuthUser } from "@/lib/auth/types"
+
+const READ_ENVELOPE_BRAND = Symbol("epic30-read-envelope")
 
 export interface DigitalBrainReadScope {
   tenantId: string
@@ -7,6 +10,13 @@ export interface DigitalBrainReadScope {
   principalId: string
   /** Administrative roles never widen content authority. */
   roles?: readonly string[]
+}
+
+interface DigitalBrainReadEnvelope extends DigitalBrainReadScope {
+  readonly [READ_ENVELOPE_BRAND]: true
+  sessionId: string
+  role: AuthUser["role"]
+  policyEpoch: number
 }
 
 export interface AuthorizedDocument {
@@ -63,6 +73,7 @@ const AUTHORIZED_DOCUMENTS_SQL = `
         AND workspace_membership.workspace_id = document.workspace_id
         AND workspace_membership.user_id = $3
         AND workspace_membership.revoked_at IS NULL
+        AND workspace_membership.policy_epoch = $4::bigint
     ) AS authorized_workspace,
     EXISTS (
       SELECT 1
@@ -88,6 +99,7 @@ const AUTHORIZED_DOCUMENTS_SQL = `
         AND workspace_membership.workspace_id = document.workspace_id
         AND workspace_membership.user_id = $3
         AND workspace_membership.revoked_at IS NULL
+        AND workspace_membership.policy_epoch = $4::bigint
     )
     AND (
       (document.visibility = 'private' AND document.owner_id = $3)
@@ -106,6 +118,46 @@ const AUTHORIZED_DOCUMENTS_SQL = `
     )
   ORDER BY document.updated_at DESC, document.id
 `
+
+const CURRENT_WORKSPACE_AUTHORITY_SQL = `
+  SELECT workspace_membership.policy_epoch, tenant_membership.role
+  FROM brain_workspace_memberships AS workspace_membership
+  JOIN memberships AS tenant_membership
+    ON tenant_membership.group_id = workspace_membership.group_id
+   AND tenant_membership.user_id = workspace_membership.user_id
+  WHERE workspace_membership.group_id = $1
+    AND workspace_membership.workspace_id = $2
+    AND workspace_membership.user_id = $3
+    AND workspace_membership.revoked_at IS NULL
+    AND tenant_membership.removed_at IS NULL
+`
+
+function issueReadEnvelope(
+  scope: DigitalBrainReadScope,
+  principal: AuthUser,
+  membership: unknown,
+): DigitalBrainReadEnvelope {
+  if (principal.id !== scope.principalId || principal.groupId !== scope.tenantId ||
+      principal.workspaceId !== scope.workspaceId || !principal.sessionId?.trim() ||
+      !["viewer", "curator", "admin"].includes(principal.role)) {
+    throw new Error("Synthetic read authority refused")
+  }
+  if (!membership || typeof membership !== "object") throw new Error("Synthetic read authority refused")
+  const row = membership as Record<string, unknown>
+  const epoch = Number(row.policy_epoch)
+  if (!Number.isSafeInteger(epoch) || epoch <= 0 || row.role !== principal.role) {
+    throw new Error("Synthetic read authority refused")
+  }
+  return Object.freeze({
+    [READ_ENVELOPE_BRAND]: true as const,
+    tenantId: scope.tenantId,
+    workspaceId: scope.workspaceId,
+    principalId: scope.principalId,
+    sessionId: principal.sessionId,
+    role: principal.role,
+    policyEpoch: epoch,
+  })
+}
 
 function isDocumentRow(value: unknown): value is DocumentRow {
   if (!value || typeof value !== "object") return false
@@ -159,14 +211,18 @@ function mapDocument(row: DocumentRow): AuthorizedDocument {
  * use readAuthorizedDocuments(), which establishes that transaction itself.
  */
 export async function readAuthorizedDocumentsInRestrictedTransaction(
-  scope: DigitalBrainReadScope,
+  scope: DigitalBrainReadEnvelope,
   query: Queryable["query"],
   authorizedDepartmentIds?: ReadonlySet<string>,
 ): Promise<AuthorizedDocument[]> {
+  if (!scope || scope[READ_ENVELOPE_BRAND] !== true || !scope.sessionId?.trim() ||
+      !["viewer", "curator", "admin"].includes(scope.role) ||
+      !Number.isSafeInteger(scope.policyEpoch) || scope.policyEpoch <= 0) return []
   const result = await query(AUTHORIZED_DOCUMENTS_SQL, [
     scope.tenantId,
     scope.workspaceId,
     scope.principalId,
+    scope.policyEpoch,
   ])
 
   return result.rows
@@ -185,6 +241,14 @@ export async function readAuthorizedDocumentsInRestrictedTransaction(
 export async function readAuthorizedDocuments(
   scope: DigitalBrainReadScope,
 ): Promise<AuthorizedDocument[]> {
+  // Re-read the principal from the server auth provider at the service boundary.
+  // Caller-supplied user objects and browser headers cannot issue this envelope.
+  const { getDashboardPrincipal } = await import("@/lib/auth/dashboard-principal")
+  const principal = await getDashboardPrincipal()
+  if (!principal || principal.id !== scope.principalId || principal.groupId !== scope.tenantId ||
+      principal.workspaceId !== scope.workspaceId || !principal.sessionId?.trim()) {
+    throw new Error("Synthetic read authority refused")
+  }
   const { assertSyntheticTarget, isSyntheticScope, verifySyntheticSession } = await import("./local-confinement")
   const run = assertSyntheticTarget()
   if (!isSyntheticScope(scope)) return []
@@ -196,6 +260,16 @@ export async function readAuthorizedDocuments(
   }
   return withTenantTransaction(scope, async (client) => {
     await verifySyntheticSession(client.query.bind(client), run)
-    return readAuthorizedDocumentsInRestrictedTransaction(scope, client.query.bind(client))
+    const membership = await client.query(CURRENT_WORKSPACE_AUTHORITY_SQL, [
+      scope.tenantId, scope.workspaceId, scope.principalId,
+    ])
+    if (membership.rows.length !== 1) return []
+    const envelope = issueReadEnvelope(scope, principal, membership.rows[0])
+    return readAuthorizedDocumentsInRestrictedTransaction(envelope, client.query.bind(client))
   }, pool)
 }
+
+/** Test-only issuer; absent from development and production runtimes. */
+export const epic30ReadTestOnly = process.env.NODE_ENV === "test"
+  ? Object.freeze({ issueReadEnvelope })
+  : null

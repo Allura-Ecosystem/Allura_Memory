@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 
 import { withTenantTransaction } from "@/lib/db/tenant-transaction"
-import { readAuthorizedDocumentsInRestrictedTransaction } from "@/lib/digital-brain/read-service"
+import { epic30ReadTestOnly, readAuthorizedDocumentsInRestrictedTransaction } from "@/lib/digital-brain/read-service"
 
 const GROUP = "allura-epic30-local"
 const WORKSPACE = "epic30-local-workspace"
@@ -58,9 +58,14 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
 
   async function readAs(principalId: string, workspaceId = WORKSPACE, tenantId = GROUP) {
     const scope = { tenantId, workspaceId, principalId }
+    const role = principalId === "admin-user" ? "admin" as const : "viewer" as const
+    const authority = epic30ReadTestOnly!.issueReadEnvelope(scope,
+      { id: principalId, groupId: tenantId, workspaceId, role,
+        sessionId: `synthetic-e2e:${principalId}`, email: "synthetic@example.invalid" },
+      { role, policy_epoch: "1" })
     return withTenantTransaction(
       scope,
-      (client) => readAuthorizedDocumentsInRestrictedTransaction(scope, client.query.bind(client)),
+      (client) => readAuthorizedDocumentsInRestrictedTransaction(authority, client.query.bind(client)),
       appPool,
     )
   }
@@ -225,6 +230,18 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
       await expect(rawOwnerIds()).resolves.toEqual([])
     } finally {
       await ownerPool.query(readFileSync(fixturePath, "utf8"))
+    }
+  })
+
+  it("denies a stale read envelope after a membership epoch change without revocation", async () => {
+    await ownerPool.query("UPDATE brain_workspace_memberships SET policy_epoch=2 WHERE group_id=$1 AND workspace_id=$2 AND user_id='owner-user'", [GROUP, WORKSPACE])
+    try {
+      const current = await ownerPool.query("SELECT revoked_at FROM brain_workspace_memberships WHERE group_id=$1 AND workspace_id=$2 AND user_id='owner-user'", [GROUP, WORKSPACE])
+      expect(current.rows).toEqual([{ revoked_at: null }])
+      await expect(readAs("owner-user")).resolves.toEqual([])
+      await expect(rawOwnerIds()).resolves.not.toEqual([])
+    } finally {
+      await ownerPool.query("UPDATE brain_workspace_memberships SET policy_epoch=1 WHERE group_id=$1 AND workspace_id=$2 AND user_id='owner-user'", [GROUP, WORKSPACE])
     }
   })
 

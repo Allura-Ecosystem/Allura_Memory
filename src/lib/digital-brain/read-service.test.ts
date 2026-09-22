@@ -1,12 +1,18 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { type DigitalBrainReadScope, readAuthorizedDocumentsInRestrictedTransaction } from "./read-service"
+import { type DigitalBrainReadScope, epic30ReadTestOnly, readAuthorizedDocumentsInRestrictedTransaction } from "./read-service"
 
 const OWNER_SCOPE: DigitalBrainReadScope = {
   tenantId: "allura-epic30-local",
   workspaceId: "workspace-owner",
   principalId: "owner-user",
 }
+const OWNER_ENVELOPE = epic30ReadTestOnly!.issueReadEnvelope(
+  OWNER_SCOPE,
+  { id: OWNER_SCOPE.principalId, groupId: OWNER_SCOPE.tenantId, workspaceId: OWNER_SCOPE.workspaceId,
+    sessionId: "dev:owner-user", role: "viewer", email: "owner@example.invalid" },
+  { role: "viewer", policy_epoch: "1" },
+)
 
 function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -26,21 +32,34 @@ function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
 }
 
 describe("readAuthorizedDocuments", () => {
+  it("rejects a caller-forged envelope even if its fields look valid", async () => {
+    const query = vi.fn(async () => ({ rows: [row()] }))
+    const forged = { ...OWNER_SCOPE, sessionId: "forged", role: "viewer", policyEpoch: 1 }
+    await expect(readAuthorizedDocumentsInRestrictedTransaction(forged as typeof OWNER_ENVELOPE, query)).resolves.toEqual([])
+    expect(query).not.toHaveBeenCalled()
+  })
+  it.each([
+    { sessionId: "" }, { role: "unknown" }, { policyEpoch: 0 }, { policyEpoch: Number.NaN },
+  ])("refuses incomplete or stale read envelope before querying: %j", async patch => {
+    const query = vi.fn(async () => ({ rows: [row()] }))
+    await expect(readAuthorizedDocumentsInRestrictedTransaction({ ...OWNER_ENVELOPE, ...patch } as typeof OWNER_ENVELOPE, query)).resolves.toEqual([])
+    expect(query).not.toHaveBeenCalled()
+  })
   it.each([true, false, undefined, "true"])("uses strict database department boolean: %s", async authority => {
     const query = vi.fn(async () => ({ rows: [row({ visibility: "department", department_id: "operations", authorized_department: authority })] }))
-    expect(await readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query)).toHaveLength(authority === true ? 1 : 0)
+    expect(await readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query)).toHaveLength(authority === true ? 1 : 0)
   })
   it("denies a removed tenant member even with active department authority", async () => {
     const query = vi.fn(async () => ({ rows: [row({
       visibility: "department", department_id: "operations",
       authorized_department: true, authorized_tenant: false,
     })] }))
-    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query)).resolves.toEqual([])
+    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query)).resolves.toEqual([])
   })
 
   it.each([false, undefined, "true"])('denies without current independent workspace membership: %s', async authority => {
     const query = vi.fn(async () => ({ rows: [row({ authorized_workspace: authority })] }))
-    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query)).resolves.toEqual([])
+    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query)).resolves.toEqual([])
   })
 
   it('denies department reads when workspace membership is revoked', async () => {
@@ -48,7 +67,7 @@ describe("readAuthorizedDocuments", () => {
       visibility: 'department', department_id: 'operations', authorized_department: true,
       authorized_workspace: false,
     })] }))
-    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query)).resolves.toEqual([])
+    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query)).resolves.toEqual([])
   })
 
   it("denies revoked department authority while tenant membership remains active", async () => {
@@ -56,18 +75,18 @@ describe("readAuthorizedDocuments", () => {
       visibility: "department", department_id: "operations",
       authorized_department: false, authorized_tenant: true,
     })] }))
-    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query)).resolves.toEqual([])
+    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query)).resolves.toEqual([])
   })
 
   it.each([false, undefined, "true"])("denies private ownership without verified tenant membership: %s", async (authority) => {
     const query = vi.fn(async () => ({ rows: [row({ authorized_tenant: authority })] }))
-    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query)).resolves.toEqual([])
+    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query)).resolves.toEqual([])
   })
 
   it("binds tenant, workspace, and principal as server-derived query parameters", async () => {
     const query = vi.fn(async () => ({ rows: [row()] }))
 
-    const documents = await readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query)
+    const documents = await readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query)
 
     expect(documents).toHaveLength(1)
     expect(query).toHaveBeenCalledOnce()
@@ -76,6 +95,7 @@ describe("readAuthorizedDocuments", () => {
       OWNER_SCOPE.tenantId,
       OWNER_SCOPE.workspaceId,
       OWNER_SCOPE.principalId,
+      OWNER_ENVELOPE.policyEpoch,
     ])
   })
 
@@ -85,7 +105,7 @@ describe("readAuthorizedDocuments", () => {
     }))
 
     const documents = await readAuthorizedDocumentsInRestrictedTransaction(
-      { ...OWNER_SCOPE, principalId: "admin-user", roles: ["admin"] },
+      { ...OWNER_ENVELOPE, principalId: "admin-user", role: "admin", roles: ["admin"] },
       query,
     )
 
@@ -103,10 +123,10 @@ describe("readAuthorizedDocuments", () => {
     const query = vi.fn(async () => ({ rows: [departmentRow] }))
 
     await expect(
-      readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query, new Set(["operations"])),
+      readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query, new Set(["operations"])),
     ).resolves.toHaveLength(1)
     await expect(
-      readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query, new Set()),
+      readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query, new Set()),
     ).resolves.toEqual([])
   })
 
@@ -119,6 +139,6 @@ describe("readAuthorizedDocuments", () => {
       ],
     }))
 
-    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query)).resolves.toEqual([])
+    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query)).resolves.toEqual([])
   })
 })
