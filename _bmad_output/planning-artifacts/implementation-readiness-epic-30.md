@@ -55,6 +55,7 @@ The exact 30.2 design decision has been recorded locally and reconciled with the
 
 1. **Design decision and board receipt complete:** Sabir Asheed approved the exact candidate, declared variances and five-person protocol; the Notion Story 30.2 decision was read back with `Not Started` preserved. Tabs, authorized search/relationships, real read-only Ask and restricted contractor messaging remain future stories.
 2. Approve or amend the [hash-bound authorization packet](./epic-30-authorization-approval-packet.md) and its [local authorization contract](./epic-30-local-authorization-contract.md); the packet now states the workspace-membership, authority-envelope, receipt-outage, derivative and test-order decisions raised by independent AI preflight. These are proposals, not approval or full enforcement.
+   A separate [proposed v2 addendum](./epic-30-authorization-v2-proposed-addendum.md) binds recommended resolutions for review without changing the v1 candidate or the human-board status.
 3. **Complete:** the 13 local backlog stories, Epic, and optional retrospective are reconciled with the canonical human board; see the [hash-bound receipt](./epic-30-board-reconciliation-packet.md).
 
 ## Next BMAD action
