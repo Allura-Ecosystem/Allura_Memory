@@ -104,6 +104,7 @@
     "ci:evidence": "bun scripts/ci/collect-evidence.ts",
     "ci:live-db": "bash scripts/ci/run-live-db-tests.sh",
     "test:epic30-live": "bash scripts/ci/run-epic30-live-tests.sh",
+    "test:epic30-hermetic": "bun run typecheck && vitest run --config vitest.config.epic30-hermetic.ts",
     "validate:epic30-reader": "bun scripts/epic30/verify-reader.cjs",
     "ci:benchmark": "bash scripts/ci/run-benchmark.sh",
     "validate:tokens": "bash scripts/token-compliance.sh",
