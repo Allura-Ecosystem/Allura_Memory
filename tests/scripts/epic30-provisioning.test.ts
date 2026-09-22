@@ -19,13 +19,17 @@ it.each(["SIGTERM", "SIGINT"])("cleans a database acquired while %s interrupts s
   }), end: vi.fn().mockResolvedValue(undefined) }
   const owner = { query: vi.fn(), end: vi.fn().mockResolvedValue(undefined) }
   const app = { query: vi.fn(), end: vi.fn().mockResolvedValue(undefined) }
-  mocks.pool.mockImplementationOnce(() => root).mockImplementationOnce(() => owner).mockImplementationOnce(() => app)
+  const receipt = { query: vi.fn(), end: vi.fn().mockResolvedValue(undefined) }
+  mocks.pool.mockImplementationOnce(() => root).mockImplementationOnce(() => owner)
+    .mockImplementationOnce(() => app).mockImplementationOnce(() => receipt)
   try { await expect(provisionSyntheticDatabase(cancellation.signal)).rejects.toThrow(/Synthetic/) }
   finally { cancellation.dispose() }
   expect(owner.query).not.toHaveBeenCalled()
   expect(owner.end).toHaveBeenCalledOnce()
   expect(app.end).toHaveBeenCalledOnce()
+  expect(receipt.end).toHaveBeenCalledOnce()
   expect(root.query.mock.calls.some(([sql]) => sql.startsWith("DROP DATABASE \"allura_epic30_read_"))).toBe(true)
+  expect(root.query.mock.calls.some(([sql]) => sql.startsWith("DROP ROLE \"allura_epic30_receipt_"))).toBe(true)
   expect(root.end).toHaveBeenCalledOnce()
   expect(source.listenerCount(signal)).toBe(0)
 })
@@ -40,12 +44,15 @@ it.each(["owner", "drop"])("continues remaining cleanup when %s cleanup fails", 
   }), end: vi.fn().mockResolvedValue(undefined) }
   const owner = { query: vi.fn(), end: failure === "owner" ? vi.fn().mockRejectedValue(new Error("secret")) : vi.fn().mockResolvedValue(undefined) }
   const app = { query: vi.fn(), end: vi.fn().mockResolvedValue(undefined) }
-  mocks.pool.mockImplementationOnce(() => root).mockImplementationOnce(() => owner).mockImplementationOnce(() => app)
+  const receipt = { query: vi.fn(), end: vi.fn().mockResolvedValue(undefined) }
+  mocks.pool.mockImplementationOnce(() => root).mockImplementationOnce(() => owner)
+    .mockImplementationOnce(() => app).mockImplementationOnce(() => receipt)
   await expect(provisionSyntheticDatabase(controller.signal)).rejects.toThrow("Synthetic database cleanup failed")
   expect(root.query.mock.calls.some(([sql]) => sql.startsWith("DROP DATABASE"))).toBe(true)
   expect(root.end).toHaveBeenCalledOnce()
   expect(owner.end).toHaveBeenCalledOnce()
   expect(app.end).toHaveBeenCalledOnce()
+  expect(receipt.end).toHaveBeenCalledOnce()
 })
 it("requires explicitly supplied provisioner identity before any pool creation", async () => {
   vi.stubEnv("POSTGRES_HOST","127.0.0.1"); vi.stubEnv("POSTGRES_PORT","5444")
