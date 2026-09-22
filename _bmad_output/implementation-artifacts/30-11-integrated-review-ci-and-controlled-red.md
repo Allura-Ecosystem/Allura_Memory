@@ -23,6 +23,8 @@ Real check/run IDs, frozen SHAs, review verdicts, clean regression removal, loca
 
 ## Current Preparation State
 
+2026-09-22: the Epic 30 workflow now runs on every pull request and has a separate exact-inventory hermetic authorization/UI job (typecheck plus 108 tests across 10 files) alongside the confined PostgreSQL/HTTP job. A contract test checks the trigger, both jobs, scripts and fail-on-empty inventory. The local hermetic command passed. No hosted run, protected-branch required-check setting, frozen-SHA evidence, controlled-red test, or independent review has been verified; this story remains backlog.
+
 2026-09-17: canonical checkout is `main`. The bounded synthetic reader foundation and interrupted repair set are now integrated without the unrelated Epic 29 branch changes. Fresh local evidence is recorded in [current readiness](../planning-artifacts/implementation-readiness-epic-30.md). This story remains backlog: the integrated slice does not implement the full requirement, and no design, authorization-policy, board, live-database, hosted-CI, human-study or release approval is implied. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md) and [completed course correction](../planning-artifacts/sprint-change-proposal-2026-09-17.md).
 
 ## Historical Evidence — before repository consolidation
