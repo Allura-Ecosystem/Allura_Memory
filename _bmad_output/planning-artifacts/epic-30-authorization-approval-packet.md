@@ -66,6 +66,18 @@ Two real, read-only specialist reviews were run after the Story 30.2 design deci
 
 This preflight validates the packet's explicit open risks; it does not reject the seven proposed defaults as design principles. It does prevent claiming the contract is fully enforced or that Story 30.3 has independent approval. Preserve the review findings when amending the contract and obtaining the authorized policy decision.
 
+### Proposed resolution for the next contract candidate — not approved
+
+These are review questions and implementation boundaries, not amendments to the hash-bound v1 candidate above. Do not advance a dependent story or treat a passing synthetic test as a policy decision.
+
+1. **Workspace membership:** Decide whether Epic 30 requires an independent, current `(group_id, workspace_id, principal_id)` membership record for every private and department read. The existing `memberships` table is tenant-wide; the workspace foreign keys prove a document's workspace exists, not that the reader belongs to it. If the independent predicate is required, add a governed membership model and require it in both RLS and the service before returning either visibility class. Missing, revoked, or conflicting membership must deny without revealing document existence.
+2. **Authority envelope:** Specify the authoritative source and invalidation rule for `session_id`, effective roles, and `policy_epoch` across browser, API, MCP, worker, cache, and cursor surfaces. The current bounded reader passes tenant, workspace, and principal; it must not be described as enforcing the full proposed tuple. A missing or stale required field denies, and tests must show that client-supplied replacements cannot widen scope.
+3. **Required receipts:** Classify each protected disclosure and side effect by whether a durable, content-free allow/deny receipt is mandatory. For a receipt-required allow, persistence must succeed before disclosure or effect; an unavailable sink denies. For a receipt-required deny when the sink is unavailable, return the denial without content and record only bounded operational telemetry if available—never turn audit failure into an allow. The existing fire-and-forget principal audit is not this gate. Define replay, uniqueness, scope binding, and outage tests before integrating a new writer.
+4. **Derivatives and invitations:** Keep search, links, citations, Ask, workers, caches, and contractor messaging unavailable until each surface has an enumerated enforcement point, strict source-lineage propagation, revocation behavior, and the exact dual-approved invitation contract where applicable. Unknown surfaces deny; a UI affordance is not evidence of authority.
+5. **Acceptance order:** First obtain the amended policy decision and independent human security/data dispositions on the exact contract candidate. Then implement schema/authority/receipt slices with hermetic tests, run the restricted-role disposable-PostgreSQL/HTTP matrix and outage/revocation adversarial tests, and finally run hosted exact-SHA CI. No local-only result closes a live or human gate.
+
+The next reviewer should explicitly accept or amend each item, especially whether workspace membership is independently required and which surfaces require synchronous receipts. Until then, the v1 candidate remains provisional and the two AI preflight FAIL findings stand.
+
 The [Notion Story 30.3](https://app.notion.com/p/3df1d9be65b3819eb670e4379a263962) Decision Log and Handoff Context were updated with this bounded AI-review outcome and read back on 2026-09-21. Its `Not Started` status and dependencies were preserved; no policy approval was recorded there.
 
 ## Approval record
