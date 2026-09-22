@@ -1,7 +1,7 @@
 # Epic 30 — Authorization Approval Packet
 
-Date: 2026-09-17  
-Status: **approval requested; not approved**  
+Date: 2026-09-17; independent AI preflight added 2026-09-21
+Status: **review concerns; approval requested; not approved**
 Candidate commit: `f08404f0cb5b7ec41a12a1acaf12d1ea45b96fd0`
 
 This packet turns the provisional authorization contract into one reviewable decision. It does not approve production use, advance a story, or replace independent security/data review.
@@ -47,8 +47,26 @@ Approve or amend these exact defaults:
 ## Current verification
 
 - Maintained focused Epic 30 unit lane: **88 tests across 9 files passed** on 2026-09-17 against `4370cac3`.
+- The same focused lane passed **88 tests across 9 files** again on 2026-09-21; `bun run typecheck` passed. All six bound artifact hashes still match current `main`.
 - Explicit non-null department scope, exact-scope row checks, no admin private override, local target confinement, ordinary-route preservation and owned-process cleanup are covered.
 - Live disposable PostgreSQL/HTTP, hosted CI, full derivatives, immutable audit, timed revocation and provider-policy evidence remain open.
+
+## Independent AI specialist preflight — 2026-09-21
+
+Two real, read-only specialist reviews were run after the Story 30.2 design decision: an agentic-trust-architect security review and a Knuth data/schema/RLS review. Both returned **FAIL for Story 30.3 acceptance**, not a human policy decision or independent human security/data sign-off. They made no code, status, memory, or database changes.
+
+| Decision area                                            | Preflight disposition                         | Required resolution                                                                                                                                                                                                                                                                                                            |
+| -------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Server-derived authority                                 | Concerns                                      | The bounded reader uses a server-owned tenant/workspace/principal tuple, but the proposed session, roles and policy-epoch authority envelope is not yet shared across protected surfaces.                                                                                                                                      |
+| Owner-private and department reads                       | Supported only in the bounded synthetic slice | SQL RLS and service rechecks deny admin private override and require current tenant/department membership. Verify the intended independent workspace-membership predicate; current slice has a workspace FK but no separate workspace-membership table/predicate. Run the live restricted-role matrix.                         |
+| Contractor invitations, derivatives and unknown surfaces | Open                                          | Implement the named-role/dual-approved exact-channel invitation; enumerate every protected enforcement point; enforce source lineage and strictest-authority propagation across search, links, Ask, workers, caches and messaging.                                                                                             |
+| Revocation                                               | Concerns                                      | Current reads re-query inside transactions, but session/epoch invalidation and measured cursor/run/stream bounds are absent. Test the proposed 60-second and 5-second targets live.                                                                                                                                            |
+| Required receipts and audit outage                       | Fail                                          | The Epic 30 slice has no synchronous durable content-free allow/deny receipt gate. Existing generic MCP auth audit is fire-and-forget (`src/lib/auth/principal-audit.ts`), so receipt-required Epic 30 surfaces must not rely on it for fail-closed behavior. Define the surface classification and prove audit-outage denial. |
+| Adversarial and operational proof                        | Open                                          | Confused-deputy, prompt/tool injection, derivative lineage, receipt replay, cache-after-revocation, live outage/rollback and hosted exact-SHA checks are not yet demonstrated.                                                                                                                                                 |
+
+This preflight validates the packet's explicit open risks; it does not reject the seven proposed defaults as design principles. It does prevent claiming the contract is fully enforced or that Story 30.3 has independent approval. Preserve the review findings when amending the contract and obtaining the authorized policy decision.
+
+The [Notion Story 30.3](https://app.notion.com/p/3df1d9be65b3819eb670e4379a263962) Decision Log and Handoff Context were updated with this bounded AI-review outcome and read back on 2026-09-21. Its `Not Started` status and dependencies were preserved; no policy approval was recorded there.
 
 ## Approval record
 
@@ -66,4 +84,4 @@ Threat-row dispositions or required reviewers:
 Notes:
 ```
 
-This decision cannot precede the Story 30.2 design decision and does not substitute for independent security/data review, implementation, live restricted-role proof, hosted CI, human validation, publication or release acceptance.
+The Story 30.2 design decision prerequisite is now recorded and reconciled. Any later Story 30.3 policy decision does not substitute for independent human security/data disposition, implementation, live restricted-role proof, hosted CI, human validation, publication or release acceptance.
