@@ -46,7 +46,9 @@ describe("Epic 30 digital Brain read migration contract", () => {
 describe("Epic 30 independent workspace membership migration contract", () => {
   it("requires current exact workspace authority for private and department reads", () => {
     const sql = readFileSync(workspaceMigrationPath, "utf8")
-    expect(sql).toContain("CREATE TABLE IF NOT EXISTS brain_workspace_memberships")
+    expect(sql).toContain("to_regclass('public.brain_workspace_memberships') IS NOT NULL")
+    expect(sql).toContain("CREATE TABLE brain_workspace_memberships")
+    expect(sql).not.toContain("CREATE TABLE IF NOT EXISTS brain_workspace_memberships")
     expect(sql).toContain("PRIMARY KEY (group_id, workspace_id, user_id)")
     expect(sql).toContain("ALTER TABLE brain_workspace_memberships FORCE ROW LEVEL SECURITY")
     expect(sql).toContain("DROP POLICY IF EXISTS brain_document_read_policy ON brain_documents")
