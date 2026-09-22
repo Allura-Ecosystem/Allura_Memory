@@ -71,3 +71,7 @@ Reconciliation is complete only when an authorized human records all external it
 - Read-back result: 15 scoped records — one Epic, 13 Stories, one optional Task; all `Not Started`; all native `Blocked By` relations match the dependency map.
 - Schema disposition: the board's self-relation permits only one child per parent. No shared schema was changed. Epic-to-story linkage uses bidirectional native page mentions; dependency relations remain native. The retrospective maps local `optional` to board `Not Started` with explicit optional/non-blocking text because the board has no `Optional` lifecycle value.
 - Duplicate check found no pre-existing Epic 30 records. No non-Epic 30 page or property was changed.
+
+## Design-decision addendum — 2026-09-21
+
+Under connected Notion actor Sabir Asheed (`525742f3-6861-4e17-a413-2e496ca70e21`), [Story 30.2](https://app.notion.com/p/3df1d9be65b381d1ad21fd045deb777e) received the bounded design approval for candidate `4370cac3` and its exact source hashes, current variances, synthetic-only `/dashboard` scope, and five-person protocol. The prior `e65598e9` request remains identified as historical. Readback confirmed the new decision content, Decision Log, Handoff Context and unchanged `Not Started` status. The [design packet](./epic-30-design-approval-packet.md) contains the full decision and limitations. Story 30.3 authorization, independent security/data reviews, Story 30.2 acceptance, and every other Epic 30 board status remain unchanged.

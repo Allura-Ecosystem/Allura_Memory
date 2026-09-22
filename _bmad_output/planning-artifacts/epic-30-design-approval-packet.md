@@ -1,11 +1,11 @@
 # Epic 30 My Work — Current Design Approval Packet
 
-Date: 2026-09-17  
-Status: **approval requested; not approved**  
+Date: 2026-09-17; design decision recorded 2026-09-21
+Status: **design baseline approved and reconciled with the human board; Story 30.2 acceptance pending**
 Candidate commit: `4370cac3f77d1ed9a10c069aaebaab470f9e69c7`
 Production route: `/dashboard`, only when explicit non-production Epic 30 synthetic mode is enabled.
 
-This packet replaces the visual candidate at `7d657aba` with its independently reviewed successor at `4370cac3`. It records what exists and the remaining variances; it does not grant design, story, human-study, or release acceptance.
+This packet replaces the visual candidate at `7d657aba` with its independently reviewed successor at `4370cac3`. The design baseline and protocol received the bounded human decision below; this does not grant story, authorization-policy, human-study, or release acceptance.
 
 ## Bound artifacts
 
@@ -33,15 +33,15 @@ The screenshots and machine-readable audit are stored under `../implementation-a
 
 ## Variance record
 
-| Epic expectation                    | Current candidate                                                                                                                | Required disposition                                                                                            |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Memory tabs                         | Tab-like chrome identifies the open document and context pane, but is not an interactive memory-tab system                       | Implement and verify under Story 30.7, or approve a documented variance                                         |
-| Authorized search and relationships | Search is disabled; the context pane shows co-visible records without relationship claims                                        | Implement under Story 30.8                                                                                      |
-| Read-only cited Ask                 | Rail is present and truthfully unavailable; no content is transmitted                                                            | Implement only after Story 30.9 provider and authorization gates                                                |
-| Restricted contractor messaging     | Tool-rail affordance is absent; no messaging is performed                                                                        | Implement under Story 30.10                                                                                     |
-| Eight truth states                  | Ready, empty, and unavailable are implemented                                                                                    | Loading, forbidden, stale, degraded, conflict, and error/complete distinctions require contract-driven coverage |
+| Epic expectation                    | Current candidate                                                                                                                                                              | Required disposition                                                                                            |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Memory tabs                         | Tab-like chrome identifies the open document and context pane, but is not an interactive memory-tab system                                                                     | Implement and verify under Story 30.7, or approve a documented variance                                         |
+| Authorized search and relationships | Search is disabled; the context pane shows co-visible records without relationship claims                                                                                      | Implement under Story 30.8                                                                                      |
+| Read-only cited Ask                 | Rail is present and truthfully unavailable; no content is transmitted                                                                                                          | Implement only after Story 30.9 provider and authorization gates                                                |
+| Restricted contractor messaging     | Tool-rail affordance is absent; no messaging is performed                                                                                                                      | Implement under Story 30.10                                                                                     |
+| Eight truth states                  | Ready, empty, and unavailable are implemented                                                                                                                                  | Loading, forbidden, stale, degraded, conflict, and error/complete distinctions require contract-driven coverage |
 | Accessibility                       | Semantic landmarks, named/current-state controls, visible focus, 44 px targets, focus restoration, responsive 320 px layout, and automated WCAG A/AA scans are locally covered | Screen-reader journey and real 200% browser zoom evidence remain required                                       |
-| Live synthetic proof                | Static synthetic rendering and focused unit tests pass                                                                           | Restricted-role PostgreSQL/HTTP browser proof remains pending approved injected test credentials                |
+| Live synthetic proof                | Static synthetic rendering and focused unit tests pass                                                                                                                         | Restricted-role PostgreSQL/HTTP browser proof remains pending approved injected test credentials                |
 
 ## Proposed five-person protocol
 
@@ -59,7 +59,21 @@ Record per participant and task: completion, coaching/intervention, critical err
 
 ## Approval record
 
-Approval must identify this exact commit and both source hashes, accepted variances, production route, synthetic-only scope, and protocol. Until an authorized human records that approval and it is reconciled with the human work board, Story 30.2 remains backlog.
+Approval must identify this exact commit and both source hashes, accepted variances, production route, synthetic-only scope, and protocol. The chat decision below supplies the design decision and was reconciled with the human work board; the remaining Story 30.2 evidence is still required. Story 30.2 remains backlog.
+
+### Recorded design decision — 2026-09-21
+
+- **Decision:** APPROVE the exact current design baseline and five-person protocol, with no amendments. The user confirmed the candidate, listed variances and protocol, then reiterated “full approval” in this Codex task.
+- **Approver:** Sabir Asheed, the project-configured user and named Story 30.2 design approver. The Codex chat decision was self-attested; the connected Notion account independently identified Sabir Asheed as the actor that recorded the matching board decision, not as a cryptographic signature on the chat.
+- **Candidate:** `4370cac3f77d1ed9a10c069aaebaab470f9e69c7`.
+- **Bound source hashes:** TSX `7de47369664ae59e067f3b9d9ea17c173c1affab7733a8ef341bea593e1a3639`; CSS `c0e5536779a0116305d0c460b98553aebb7972015cb5fcb94197c33d6f3015ba`. Screenshot and audit hashes are in the table above and were rechecked before this record.
+- **Route and scope:** `/dashboard` only under the explicit non-production Epic 30 synthetic mode; no production deployment or live data approved.
+- **Variance disposition:** Accept the candidate's documented present limitations as the design baseline, not as waivers of the epic requirements. Interactive tabs, authorized search/relationships, cited Ask, restricted contractor messaging, remaining truth states, and their authorization/proof gates remain assigned to Stories 30.7–30.10 and the relevant prerequisite stories. The mobile overlay contrast review, screen-reader journey, actual 200% browser zoom, and restricted-database browser proof remain open.
+- **Protocol:** Accept the seven-task, five-distinct-person uncoached protocol above, including at least four successes per task, no critical error and zero unauthorized disclosure. No participant session is claimed complete.
+- **Verification before record:** The maintained local unit/hermetic lane passed 88 tests across nine files and `bun run typecheck` passed on 2026-09-21. These are not live PostgreSQL/HTTP or hosted-CI results.
+- **Human-board reconciliation:** [Notion Story 30.2](https://app.notion.com/p/3df1d9be65b381d1ad21fd045deb777e) was updated under authenticated actor Sabir Asheed (`525742f3-6861-4e17-a413-2e496ca70e21`). Its decision content, Decision Log and Handoff Context name candidate `4370cac3` and preserve the old `e65598e9` request as historical. Readback confirmed the decision section, exact candidate, and `Not Started` status on 2026-09-21. No other board item or lifecycle status was changed.
+
+The approval permits design-baseline planning only. It does not approve the separate Story 30.3 authorization contract or independent security/data dispositions, advance a board status, complete Story 30.2, or authorize release.
 
 ### Reviewer response template
 
