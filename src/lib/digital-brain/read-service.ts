@@ -37,6 +37,7 @@ interface DocumentRow {
   updated_at: Date
   authorized_department: boolean
   authorized_tenant: boolean
+  authorized_workspace: boolean
 }
 
 const AUTHORIZED_DOCUMENTS_SQL = `
@@ -57,6 +58,13 @@ const AUTHORIZED_DOCUMENTS_SQL = `
         AND tenant_membership.removed_at IS NULL
     ) AS authorized_tenant,
     EXISTS (
+      SELECT 1 FROM brain_workspace_memberships AS workspace_membership
+      WHERE workspace_membership.group_id = document.group_id
+        AND workspace_membership.workspace_id = document.workspace_id
+        AND workspace_membership.user_id = $3
+        AND workspace_membership.revoked_at IS NULL
+    ) AS authorized_workspace,
+    EXISTS (
       SELECT 1
       FROM brain_department_memberships AS membership
       WHERE membership.group_id = document.group_id
@@ -73,6 +81,13 @@ const AUTHORIZED_DOCUMENTS_SQL = `
       WHERE tenant_membership.group_id = document.group_id
         AND tenant_membership.user_id = $3
         AND tenant_membership.removed_at IS NULL
+    )
+    AND EXISTS (
+      SELECT 1 FROM brain_workspace_memberships AS workspace_membership
+      WHERE workspace_membership.group_id = document.group_id
+        AND workspace_membership.workspace_id = document.workspace_id
+        AND workspace_membership.user_id = $3
+        AND workspace_membership.revoked_at IS NULL
     )
     AND (
       (document.visibility = 'private' AND document.owner_id = $3)
@@ -115,6 +130,7 @@ function canDisclose(
 ): boolean {
   if (row.group_id !== scope.tenantId || row.workspace_id !== scope.workspaceId) return false
   if (row.authorized_tenant !== true) return false
+  if (row.authorized_workspace !== true) return false
   if (row.visibility === "private") return row.owner_id === scope.principalId
   if (!row.department_id) return false
 

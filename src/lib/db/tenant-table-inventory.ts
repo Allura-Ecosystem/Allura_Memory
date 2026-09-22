@@ -72,6 +72,7 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "governance_receipts_legacy_archive", class: "migration-only", notes: "Quarantined pre-040 receipt envelopes; no application grants" },
   { table: "semantic_projections", class: "tenant-scoped", notes: "Versioned derived workspace semantic projections", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "brain_documents", class: "tenant-scoped", notes: "Epic 30 owner-private or approved-department read documents; restricted app-role SELECT only", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_workspace_memberships", class: "tenant-scoped", notes: "Epic 30 independent current workspace read authority; revoked memberships fail closed", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "brain_department_memberships", class: "tenant-scoped", notes: "Epic 30 current approved department read authority; revoked memberships fail closed", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "mitigation_receipts", class: "tenant-scoped", notes: "Story 26.5 (migration 41): immutable governed mitigation-draft approval/rejection receipts, gated by REQ-GOV-008 approval_ref", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "threat_alerts", class: "tenant-scoped", notes: "Story 26.4 (migration 42): durable, deduplicated exposure alerts; UPDATE restricted to lifecycle_state/updated_at only", workspaceTreatment: "workspace-scoped-new-writes" },

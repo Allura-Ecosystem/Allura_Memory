@@ -6,6 +6,7 @@ interface VisibilityManifest {
   dataset: string
   expectedDocumentCount: number
   expectedMembershipCount: number
+  expectedWorkspaceMembershipCount: number
   principals: Record<string, string[]>
   sentinels: Record<string, {
     id: string
@@ -35,6 +36,13 @@ describe("Epic 30 synthetic fixture contract", () => {
     expect(fixture).toContain("EPIC 30 SYNTHETIC TEST DATA ONLY")
     expect(fixture).not.toMatch(/@[a-z0-9.-]+\.(com|org|net|io|co)'/i)
     expect(fixture.match(/@example\.invalid/g)).toHaveLength(manifest.expectedMembershipCount)
+  })
+
+  it("seeds exact workspace authority without inferring it from tenant membership", () => {
+    const workspaceInsert = fixture.split("INSERT INTO brain_workspace_memberships (")[1]?.split("ON CONFLICT")[0]
+    expect(workspaceInsert).toBeDefined()
+    expect(workspaceInsert?.match(/'synthetic-fixture-owner'/g)).toHaveLength(manifest.expectedWorkspaceMembershipCount)
+    expect(workspaceInsert).toContain("'revoked-user', 'synthetic-fixture-owner', '2026-09-14T00:00:00Z', '2026-09-16T00:00:00Z', 2")
   })
 
   it("declares every expected visible document in the SQL fixture", () => {

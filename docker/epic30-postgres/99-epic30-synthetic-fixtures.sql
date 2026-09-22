@@ -1,6 +1,6 @@
 -- EPIC 30 SYNTHETIC TEST DATA ONLY. No real people, customers, or Brain records.
 -- Apply after ordered docker/postgres-init migrations in an isolated disposable database.
--- Re-applying is authority-resetting: tenant/department revocations are restored.
+-- Re-applying is authority-resetting: tenant/workspace/department revocations are restored.
 -- Only the newly created, receipt-owned local harness database may be replayed.
 
 BEGIN;
@@ -66,6 +66,25 @@ SET email = EXCLUDED.email,
     created_at = EXCLUDED.created_at,
     updated_at = EXCLUDED.updated_at,
     removed_at = EXCLUDED.removed_at;
+
+INSERT INTO brain_workspace_memberships (
+  group_id, workspace_id, user_id, approved_by, approved_at, revoked_at, policy_epoch
+)
+VALUES
+  ('allura-epic30-local', 'epic30-local-workspace', 'owner-user', 'synthetic-fixture-owner', '2026-09-15T00:00:00Z', NULL, 1),
+  ('allura-epic30-local', 'epic30-local-workspace', 'other-user', 'synthetic-fixture-owner', '2026-09-15T00:00:00Z', NULL, 1),
+  ('allura-epic30-local', 'epic30-local-workspace', 'admin-user', 'synthetic-fixture-owner', '2026-09-15T00:00:00Z', NULL, 1),
+  ('allura-epic30-local', 'epic30-local-workspace', 'department-user', 'synthetic-fixture-owner', '2026-09-15T00:00:00Z', NULL, 1),
+  ('allura-epic30-local', 'epic30-local-workspace', 'finance-user', 'synthetic-fixture-owner', '2026-09-15T00:00:00Z', NULL, 1),
+  ('allura-epic30-local', 'epic30-local-workspace', 'contractor-user', 'synthetic-fixture-owner', '2026-09-15T00:00:00Z', NULL, 1),
+  ('allura-epic30-local', 'epic30-local-workspace', 'revoked-user', 'synthetic-fixture-owner', '2026-09-14T00:00:00Z', '2026-09-16T00:00:00Z', 2),
+  ('allura-epic30-local', 'epic30-other-workspace', 'workspace-sentinel-owner', 'synthetic-fixture-owner', '2026-09-15T00:00:00Z', NULL, 1),
+  ('allura-epic30-sentinel', 'epic30-cross-tenant-workspace', 'cross-tenant-sentinel-owner', 'synthetic-fixture-owner', '2026-09-15T00:00:00Z', NULL, 1)
+ON CONFLICT (group_id, workspace_id, user_id) DO UPDATE
+SET approved_by = EXCLUDED.approved_by,
+    approved_at = EXCLUDED.approved_at,
+    revoked_at = EXCLUDED.revoked_at,
+    policy_epoch = EXCLUDED.policy_epoch;
 
 INSERT INTO brain_department_memberships (
   group_id, workspace_id, department_id, user_id, approved_by, approved_at, revoked_at
