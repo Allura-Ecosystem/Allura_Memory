@@ -83,6 +83,7 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
   const isMobileComparison = useMobileComparison()
   const comparisonOpener = useRef<HTMLButtonElement | null>(null)
   const comparisonPane = useRef<HTMLElement | null>(null)
+  const contextMap = useRef<HTMLElement | null>(null)
   const pendingComparisonFocus = useRef(false)
   const workspace = useRef<HTMLElement | null>(null)
   const mainDocument = useRef<HTMLElement | null>(null)
@@ -244,8 +245,8 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
           </header>
 
           <div className={styles.tabs} role="group" aria-label="Open workspace panes" data-comparison-background>
-            <div className={styles.activeTab}><FileText aria-hidden="true" /><span>{active.title}</span><i /></div>
-            <div><BrainCircuit aria-hidden="true" /><span>{comparison ? "Comparison" : "Context map"}</span></div>
+            <button type="button" className={styles.activeTab} aria-label={`Focus document: ${active.title}`} onClick={() => mainDocument.current?.focus()}><FileText aria-hidden="true" /><span>{active.title}</span><i /></button>
+            <button type="button" aria-label={comparison ? "Focus comparison pane" : "Focus context map"} disabled={isMobileComparison && !comparison} onClick={() => (comparison ? comparisonPane.current : contextMap.current)?.focus()}><BrainCircuit aria-hidden="true" /><span>{comparison ? "Comparison" : "Context map"}</span></button>
           </div>
 
           <div className={styles.workGrid}>
@@ -274,6 +275,7 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
               <aside
                 ref={comparisonPane}
                 className={styles.comparison}
+                tabIndex={-1}
                 aria-label="Comparison pane"
                 role={isMobileComparison ? "dialog" : "complementary"}
                 aria-modal={isMobileComparison ? "true" : undefined}
@@ -287,7 +289,7 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
                 <button className={styles.closeButton} onClick={closeComparison}>Close pane</button>
               </aside>
             ) : (
-              <aside className={styles.mapPanel} aria-label="Authorized document context map">
+              <aside ref={contextMap} tabIndex={-1} className={styles.mapPanel} aria-label="Authorized document context map">
                 <header><div><p className={styles.eyebrow}>CONTEXT MAP</p><h2>Visible scope</h2></div><span>PROXIMITY ONLY</span></header>
                 <div className={styles.mapCanvas}>
                   <div className={styles.mapCore}><BrainCircuit aria-hidden="true" /><span>My Work</span></div>
