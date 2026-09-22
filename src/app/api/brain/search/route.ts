@@ -2,8 +2,9 @@
  * GET /api/brain/search — quarantined legacy content route.
  *
  * Tenant-only search and client-selected user filters cannot prove Epic 30
- * workspace, visibility, derivative, or required-receipt authority. Keep
- * authentication active but disclose no content until shared search exists.
+ * workspace, visibility, derivative, or required-receipt authority. Production
+ * discloses no content; the exact disposable synthetic target exercises the
+ * shared receipt-gated reader and search candidate only.
  *
  * Declared in ROUTE_SCOPE_MANIFEST as brain:search:read (viewer).
  */
