@@ -71,4 +71,14 @@ describe("Epic 30 required read receipt contract", () => {
     const exact = vi.fn().mockImplementation(async (receipt) => ({ receiptId: receipt.receiptId, witnessHash: receipt.witnessHash }))
     await expect(persistAuthorizedReadReceipt(input, { persist: exact })).resolves.toMatchObject({ receiptId: input.receiptId })
   })
+
+  it("separates search and read witnesses and never stores the search text", () => {
+    const search = createAuthorizedReadReceipt({ ...input, searchQuery: "synthetic secret" })
+    expect(search.action).toBe("search_documents")
+    expect(search.queryHash).toMatch(/^[a-f0-9]{64}$/)
+    expect(JSON.stringify(search)).not.toContain("synthetic secret")
+    expect(search.witnessHash).not.toBe(createAuthorizedReadReceipt(input).witnessHash)
+    expect(createAuthorizedReadReceipt({ ...input, searchQuery: "other query" }).witnessHash).not.toBe(search.witnessHash)
+    expect(() => createAuthorizedReadReceipt({ ...input, searchQuery: " unnormalized " })).toThrow(/input refused/)
+  })
 })

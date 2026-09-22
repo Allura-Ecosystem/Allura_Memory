@@ -81,11 +81,13 @@ export async function provisionSyntheticDatabase(signal?: AbortSignal) {
       actor_role text NOT NULL CHECK (actor_role IN ('viewer', 'curator', 'admin')),
       session_hash text NOT NULL CHECK (session_hash ~ '^[a-f0-9]{64}$'),
       policy_epoch bigint NOT NULL CHECK (policy_epoch > 0),
-      action text NOT NULL CHECK (action = 'read_documents'),
+      action text NOT NULL CHECK (action IN ('read_documents', 'search_documents')),
       decision text NOT NULL CHECK (decision = 'allow_candidate'),
       reason_code text NOT NULL CHECK (reason_code = 'authorized'),
       policy_version text NOT NULL CHECK (policy_version = 'epic30-local-v2'),
       witness_hash text NOT NULL CHECK (witness_hash ~ '^[a-f0-9]{64}$'),
+      query_hash text CHECK ((action = 'read_documents' AND query_hash IS NULL)
+        OR (action = 'search_documents' AND query_hash IS NOT NULL AND query_hash ~ '^[a-f0-9]{64}$')),
       occurred_at timestamptz NOT NULL,
       recorded_at timestamptz NOT NULL DEFAULT now(),
       UNIQUE (run_id, group_id, workspace_id, principal_id, session_hash, policy_epoch, witness_hash, receipt_id)

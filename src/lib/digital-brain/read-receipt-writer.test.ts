@@ -39,9 +39,21 @@ describe("Epic 30 separate receipt writer", () => {
     expect(values).toEqual([
       receipt.receiptId, run, scope.tenantId, scope.workspaceId, scope.principalId,
       receipt.actorRole, receipt.sessionHash, receipt.policyEpoch, receipt.action, receipt.decision,
-      receipt.reasonCode, receipt.policyVersion, receipt.witnessHash, receipt.occurredAt,
+      receipt.reasonCode, receipt.policyVersion, receipt.witnessHash, null, receipt.occurredAt,
     ])
     expect(JSON.stringify(values)).not.toContain("synthetic-session")
+  })
+
+  it("commits a keyed search query digest without storing query text", async () => {
+    const searchReceipt = createAuthorizedReadReceipt({
+      scope, sessionId: "synthetic-session", actorRole: "viewer", policyEpoch: 1,
+      witnessKey: Buffer.alloc(32, 1), documents: [], searchQuery: "sensitive search term",
+    })
+    await persistSyntheticReadReceipt(searchReceipt)
+    const values = mocks.query.mock.calls[1][1] as unknown[]
+    expect(values).toContain("search_documents")
+    expect(values).toContain(searchReceipt.queryHash)
+    expect(JSON.stringify(values)).not.toContain("sensitive search term")
   })
 
   it("refuses an owner or stale cached pool before connecting", async () => {

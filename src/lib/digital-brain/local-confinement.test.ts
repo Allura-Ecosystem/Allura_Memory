@@ -4,7 +4,7 @@ vi.mock("@/lib/db/tenant-transaction", () => ({ withWorkspaceTransaction: mocks.
 vi.mock("@/lib/postgres/connection", () => ({ getAppPool: mocks.pool }))
 vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal: mocks.principal }))
 vi.mock("./read-receipt-writer", () => ({ persistSyntheticReadReceipt: mocks.receipt }))
-import { readAuthorizedDocuments } from "./read-service"
+import { readAuthorizedDocuments, searchAuthorizedDocuments } from "./read-service"
 const scope = { tenantId: "allura-epic30-local", workspaceId: "epic30-local-workspace", principalId: "owner-user" }
 const principal = { id: scope.principalId, groupId: scope.tenantId, workspaceId: scope.workspaceId,
   role: "viewer" as const, sessionId: "dev:owner-user", email: "owner@example.invalid" }
@@ -132,4 +132,45 @@ it("denies missing current workspace membership without document SQL", async () 
   mocks.query.mockResolvedValueOnce({ rows: [verifiedSession] }).mockResolvedValueOnce({ rows: [] })
   await expect(readAuthorizedDocuments(scope)).resolves.toEqual([])
   expect(mocks.query).toHaveBeenCalledTimes(2)
+})
+
+function mockFourAuthorizedSnapshots(finalRow = ownerRow) {
+  let documentReads = 0
+  mocks.query.mockImplementation(async (sql: string) => {
+    if (sql.includes("session_user")) return { rows: [verifiedSession] }
+    if (sql.includes("SELECT workspace_membership.policy_epoch")) return { rows: [{ role: "viewer", policy_epoch: "7" }] }
+    documentReads += 1
+    return { rows: [documentReads >= 3 ? finalRow : ownerRow] }
+  })
+}
+
+it("returns synthetic search names, counts and snippets only after read and search receipts", async () => {
+  mockFourAuthorizedSnapshots()
+  const result = await searchAuthorizedDocuments(scope, "OWNER")
+  expect(result).toEqual({ total: 1, hits: [{ documentId: ownerRow.id, title: ownerRow.title,
+    snippet: ownerRow.content, updatedAt: ownerRow.updated_at }] })
+  expect(mocks.receipt).toHaveBeenCalledTimes(3)
+  expect(mocks.receipt.mock.calls.map(([receipt]) => receipt.action)).toEqual([
+    "read_documents", "search_documents", "read_documents",
+  ])
+  const searchReceipt = mocks.receipt.mock.calls[1][0]
+  expect(JSON.stringify(searchReceipt)).not.toContain(ownerRow.title)
+})
+
+it("fails closed when the search receipt sink refuses the candidate", async () => {
+  mockFourAuthorizedSnapshots()
+  mocks.receipt.mockImplementationOnce(async receipt => ({ receiptId: receipt.receiptId, witnessHash: receipt.witnessHash }))
+    .mockRejectedValueOnce(new Error("search sink unavailable"))
+  await expect(searchAuthorizedDocuments(scope, "owner")).rejects.toThrow("search sink unavailable")
+  expect(mocks.transaction).toHaveBeenCalledTimes(2)
+})
+
+it("denies search results changed after the search receipt", async () => {
+  mockFourAuthorizedSnapshots({ ...ownerRow, title: "Synthetic changed note", content: "SYNTHETIC TEST DATA: changed" })
+  await expect(searchAuthorizedDocuments(scope, "owner")).rejects.toThrow(/search authority changed/)
+})
+
+it("rejects malformed search text before connecting", async () => {
+  await expect(searchAuthorizedDocuments(scope, "\n")).rejects.toThrow(/query refused/)
+  expect(mocks.transaction).not.toHaveBeenCalled()
 })
