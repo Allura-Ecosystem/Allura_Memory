@@ -22,6 +22,7 @@ interface VisibilityManifest {
   workspaceId: string
   expectedDocumentCount: number
   expectedMembershipCount: number
+  expectedWorkspaceMembershipCount: number
   principals: Record<string, string[]>
   sentinels: Record<string, {
     id: string
@@ -76,9 +77,14 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
       "SELECT count(*)::text AS count FROM memberships WHERE group_id IN ($1, 'allura-epic30-sentinel')",
       [GROUP],
     )
+    const workspaceMemberships = await ownerPool.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM brain_workspace_memberships WHERE group_id IN ($1, 'allura-epic30-sentinel')",
+      [GROUP],
+    )
 
     expect(Number(documents.rows[0]?.count)).toBe(manifest.expectedDocumentCount)
     expect(Number(memberships.rows[0]?.count)).toBe(manifest.expectedMembershipCount)
+    expect(Number(workspaceMemberships.rows[0]?.count)).toBe(manifest.expectedWorkspaceMembershipCount)
   })
 
   it.each([null, "", "   "])("rejects malformed department ID %s at the database boundary", async departmentId => {
@@ -105,6 +111,7 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
     const result = await ownerPool.query(`SELECT
       (SELECT jsonb_agg(to_jsonb(d) ORDER BY id) FROM brain_documents d) AS documents,
       (SELECT jsonb_agg(to_jsonb(m) ORDER BY group_id,user_id) FROM memberships m) AS memberships,
+      (SELECT jsonb_agg(to_jsonb(m) ORDER BY group_id,workspace_id,user_id) FROM brain_workspace_memberships m) AS workspaces,
       (SELECT jsonb_agg(to_jsonb(m) ORDER BY group_id,workspace_id,department_id,user_id) FROM brain_department_memberships m) AS departments`)
     return result.rows
   }
@@ -139,6 +146,7 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
   it("explicitly converges revoked synthetic memberships and exact fixture replay", async () => {
     const before = await snapshot()
     await ownerPool.query("UPDATE memberships SET removed_at=now() WHERE user_id='owner-user'")
+    await ownerPool.query("UPDATE brain_workspace_memberships SET revoked_at=now(), policy_epoch=2 WHERE user_id='owner-user'")
     await ownerPool.query("UPDATE brain_department_memberships SET revoked_at=now() WHERE user_id='owner-user'")
     await ownerPool.query(readFileSync(fixturePath,"utf8"))
     expect(await snapshot()).toEqual(before)
@@ -193,6 +201,30 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
       await expect(rawOwnerIds()).resolves.toEqual(privateIds)
     } finally {
       await ownerPool.query("UPDATE brain_department_memberships SET revoked_at = NULL WHERE group_id = $1 AND workspace_id = $2 AND user_id = 'owner-user'", [GROUP, WORKSPACE])
+    }
+  })
+
+  it("revokes independent workspace membership for both private and department reads", async () => {
+    await ownerPool.query("UPDATE brain_workspace_memberships SET revoked_at=now(), policy_epoch=policy_epoch+1 WHERE group_id=$1 AND workspace_id=$2 AND user_id='owner-user'", [GROUP, WORKSPACE])
+    try {
+      const tenant = await ownerPool.query("SELECT removed_at FROM memberships WHERE group_id=$1 AND user_id='owner-user'", [GROUP])
+      const department = await ownerPool.query("SELECT revoked_at FROM brain_department_memberships WHERE group_id=$1 AND workspace_id=$2 AND user_id='owner-user'", [GROUP, WORKSPACE])
+      expect(tenant.rows).toEqual([{ removed_at: null }])
+      expect(department.rows).toEqual([{ revoked_at: null }])
+      await expect(readAs("owner-user")).resolves.toEqual([])
+      await expect(rawOwnerIds()).resolves.toEqual([])
+    } finally {
+      await ownerPool.query("UPDATE brain_workspace_memberships SET revoked_at=NULL, policy_epoch=1 WHERE group_id=$1 AND workspace_id=$2 AND user_id='owner-user'", [GROUP, WORKSPACE])
+    }
+  })
+
+  it("denies missing workspace membership even while tenant and department records stay current", async () => {
+    await ownerPool.query("DELETE FROM brain_workspace_memberships WHERE group_id=$1 AND workspace_id=$2 AND user_id='owner-user'", [GROUP, WORKSPACE])
+    try {
+      await expect(readAs("owner-user")).resolves.toEqual([])
+      await expect(rawOwnerIds()).resolves.toEqual([])
+    } finally {
+      await ownerPool.query(readFileSync(fixturePath, "utf8"))
     }
   })
 
@@ -254,13 +286,14 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
     const role = await appPool.query(
       `SELECT current_user, session_user, rolbypassrls, rolsuper,
               row_security_active('brain_documents') AS document_rls,
+              row_security_active('brain_workspace_memberships') AS workspace_rls,
               row_security_active('brain_department_memberships') AS department_rls,
               current_database() AS database
        FROM pg_roles WHERE rolname = current_user`,
     )
     expect(role.rows).toEqual([{
       current_user: "allura_app", session_user: "allura_app", rolbypassrls: false,
-      rolsuper: false, document_rls: true, department_rls: true, database: databaseName,
+      rolsuper: false, document_rls: true, workspace_rls: true, department_rls: true, database: databaseName,
     }])
 
     await expect(

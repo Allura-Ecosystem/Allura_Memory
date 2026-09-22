@@ -20,7 +20,9 @@ export function isSyntheticScope(scope: DigitalBrainReadScope): boolean {
 export async function verifySyntheticSession(query: (sql: string, values?: unknown[]) => Promise<{ rows: unknown[] }>, run: string): Promise<void> {
   const result = await query(`SELECT current_user, session_user,
     NOT rolsuper AND NOT rolbypassrls AS restricted,
-    row_security_active('public.brain_documents') AND row_security_active('public.brain_department_memberships') AS rls,
+    row_security_active('public.brain_documents')
+      AND row_security_active('public.brain_workspace_memberships')
+      AND row_security_active('public.brain_department_memberships') AS rls,
     current_database() = $1 AS database_ok,
     epic30_local.verify_dataset($2) AS dataset_ok
     FROM pg_catalog.pg_roles WHERE rolname = current_user`, [`allura_epic30_read_${run}`, run])

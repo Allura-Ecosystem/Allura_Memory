@@ -20,6 +20,7 @@ function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     content: "Synthetic owner-only content",
     updated_at: new Date("2026-09-17T00:00:00.000Z"),
     authorized_tenant: true,
+    authorized_workspace: true,
     ...overrides,
   }
 }
@@ -33,6 +34,19 @@ describe("readAuthorizedDocuments", () => {
     const query = vi.fn(async () => ({ rows: [row({
       visibility: "department", department_id: "operations",
       authorized_department: true, authorized_tenant: false,
+    })] }))
+    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query)).resolves.toEqual([])
+  })
+
+  it.each([false, undefined, "true"])('denies without current independent workspace membership: %s', async authority => {
+    const query = vi.fn(async () => ({ rows: [row({ authorized_workspace: authority })] }))
+    await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query)).resolves.toEqual([])
+  })
+
+  it('denies department reads when workspace membership is revoked', async () => {
+    const query = vi.fn(async () => ({ rows: [row({
+      visibility: 'department', department_id: 'operations', authorized_department: true,
+      authorized_workspace: false,
     })] }))
     await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_SCOPE, query)).resolves.toEqual([])
   })

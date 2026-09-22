@@ -4,6 +4,7 @@
   "workspaceId": "epic30-local-workspace",
   "expectedDocumentCount": 10,
   "expectedMembershipCount": 9,
+  "expectedWorkspaceMembershipCount": 9,
   "principals": {
     "owner-user": [
       "epic30-operations-runbook",
