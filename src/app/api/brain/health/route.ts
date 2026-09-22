@@ -18,15 +18,21 @@ export const dynamic = "force-dynamic"
 
 /** Liveness probes have no principal; the report is not tenant-scoped data. */
 const PROBE_GROUP_ID = "allura-system"
+const CANONICAL_BRAIN_ENDPOINT = "https://mcp.faithmeats.org/mcp"
+
+function unavailable(): NextResponse {
+  return NextResponse.json(
+    { error: "Brain health check unavailable", overall_status: "unhealthy" as const },
+    { status: 503, headers: { "Cache-Control": "no-store" } },
+  )
+}
 
 export async function GET(): Promise<NextResponse> {
+  if (process.env.ALLURA_BRAIN_URL !== CANONICAL_BRAIN_ENDPOINT) return unavailable()
   try {
     const report = await brainClient.healthReport(PROBE_GROUP_ID)
     return NextResponse.json(report)
   } catch {
-    return NextResponse.json(
-      { error: "Brain health check unavailable", overall_status: "unhealthy" as const },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
-    )
+    return unavailable()
   }
 }
