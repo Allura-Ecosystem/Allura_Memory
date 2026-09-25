@@ -428,15 +428,21 @@ Version history for a specific insight (SUPERSEDES chain).
 
 #### `GET /api/memory/graph`
 
-Read-only tenant-scoped knowledge graph visualization.
+Read-only tenant-and-workspace-scoped knowledge graph visualization.
 
-Returns real `graph_memories` rows and edges for the dashboard graph tab. Capped display sample plus `total_edges` count. Performs no mutations.
+The authenticated principal supplies tenant and workspace authority; optional
+selectors are equality assertions only. Structural nodes, edges, counts, and
+the degraded event fallback all run through restricted workspace transactions
+with explicit workspace predicates. The endpoint uses the canonical
+`from_id`/`to_id`/`rel_type` edge schema and does not disclose backend errors.
+It performs no mutations.
 
 **Query parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `group_id` | string | Yes | Tenant scope (required, validated) |
+| `group_id` | string | No | Optional equality assertion against authenticated tenant |
+| `workspace_id` | string | No | Optional equality assertion against authenticated workspace |
 
 **Response:** `MemoryGraphResponse` — `{ nodes: GraphNode[], edges: GraphEdge[], total_edges?: number }`
 
@@ -837,7 +843,7 @@ stateDiagram-v2
 
 **Steps:**
 1. Operator navigates to `/dashboard/graph`
-2. Dashboard calls `GET /api/memory/graph?group_id=allura-system`
+2. Dashboard calls `GET /api/memory/graph`; server-issued identity supplies tenant/workspace authority
 3. API returns `MemoryGraphResponse` with nodes, edges, and `total_edges`
 4. Dashboard renders interactive graph with `GraphSummary` component
 5. Operator clicks a node to see detail in `NodeDetailPanel`
