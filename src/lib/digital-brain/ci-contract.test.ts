@@ -8,6 +8,7 @@ const workflow = parse(readFileSync(path.resolve(root, ".github/workflows/epic-3
 const config = readFileSync(path.resolve(root, "vitest.config.epic30-hermetic.ts"), "utf8")
 const packageJson = JSON.parse(readFileSync(path.resolve(root, "package.json"), "utf8"))
 const controlledRed = readFileSync(path.resolve(root, "scripts/ci/run-epic30-controlled-red.sh"), "utf8")
+const readerVerifier = readFileSync(path.resolve(root, "scripts/epic30/verify-reader.cjs"), "utf8")
 
 describe("Epic 30 merge-evidence wiring", () => {
   it("runs on every pull request, not only selected paths", () => {
@@ -72,5 +73,15 @@ describe("Epic 30 merge-evidence wiring", () => {
     expect(controlledRed).not.toContain("git apply")
     expect(controlledRed).not.toContain("git checkout")
     expect(controlledRed).not.toContain("git reset")
+  })
+
+  it("keeps live reader proof aligned with memory tabs and authorized snapshot search", () => {
+    expect(packageJson.scripts["validate:epic30-reader"]).toBe("bun scripts/epic30/verify-reader.cjs")
+    expect(readerVerifier).toContain("Open memory tabs")
+    expect(readerVerifier).toContain("aria-selected")
+    expect(readerVerifier).toContain("Search authorized synthetic workspace")
+    expect(readerVerifier).toContain("cross-tenant-sentinel")
+    expect(readerVerifier).toContain("No authorized matches.")
+    expect(readerVerifier).toContain("Search proof covers the authorized client snapshot only")
   })
 })

@@ -37,6 +37,29 @@ async function main() {
       assert.equal((await mainDocument.locator('h2').innerText()).trim(), title);
       checks.push({ name: 'tree selection', index, title, passed: true });
     }
+    const tablist = workspace.getByRole('tablist', { name: 'Open memory tabs' });
+    const tabs = tablist.getByRole('tab');
+    assert.ok(await tabs.count() >= 3, 'Expected tree navigation to open multiple memory tabs');
+    await tabs.last().focus(); await page.keyboard.press('Home');
+    assert.equal(await tabs.first().getAttribute('aria-selected'), 'true');
+    assert.equal(await tabs.first().evaluate(element => element === document.activeElement), true);
+    await page.keyboard.press('End');
+    assert.equal(await tabs.last().getAttribute('aria-selected'), 'true');
+    assert.equal(await tabs.last().evaluate(element => element === document.activeElement), true);
+    const panel = workspace.getByRole('tabpanel');
+    assert.equal(await panel.getAttribute('aria-labelledby'), await tabs.last().getAttribute('id'));
+    checks.push({ name: 'memory tab semantics and keyboard navigation', tabCount: await tabs.count(), passed: true });
+
+    const search = workspace.getByRole('searchbox', { name: 'Search authorized synthetic workspace' });
+    await search.fill('cooler reading');
+    assert.equal(await buttons.count(), 1, 'Authorized snapshot search should return only the matching visible document');
+    assert.equal((await buttons.first().innerText()).includes('Operations task queue'), true);
+    await search.fill('cross-tenant-sentinel');
+    assert.equal(await buttons.count(), 0, 'A hidden sentinel must not appear in authorized snapshot search');
+    assert.equal(await workspace.getByText('No authorized matches.', { exact: true }).isVisible(), true);
+    await search.press('Escape');
+    assert.ok(await buttons.count() >= 3, 'Escape should restore the complete authorized navigation snapshot');
+    checks.push({ name: 'authorized snapshot search and hidden-sentinel denial', passed: true });
     for (const width of [1440, 640, 320]) {
       await page.setViewportSize({ width, height: 1000 });
       const opener = workspace.getByRole('button', { name: /^Open / });
@@ -83,7 +106,7 @@ async function main() {
     const artifacts = [];
     for (const file of screenshots) artifacts.push({ file, sha256: sha256(await fs.readFile(path.join(out, file))) });
     const receipt = { capturedAt: new Date().toISOString(), url: page.url(), http: 200, checks, pageErrors: errors, sourceHashes, artifacts,
-      limitations: ['Existing synthetic owner session only; no role matrix, screen reader, actual 200% zoom or human acceptance.', 'No demo restart or reseed. Source hashes identify this checkout, not a remote server deployment.'] };
+      limitations: ['Existing synthetic owner session only; no role matrix, screen reader, actual 200% zoom or human acceptance.', 'Search proof covers the authorized client snapshot only; production search remains quarantined.', 'No demo restart or reseed. Source hashes identify this checkout, not a remote server deployment.'] };
     await fs.writeFile(path.join(out, 'receipt.json'), JSON.stringify(receipt, null, 2) + '\n');
     console.log(JSON.stringify(receipt, null, 2));
   } finally { await browser.close(); }
