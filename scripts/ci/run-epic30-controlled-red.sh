@@ -43,6 +43,8 @@ printf 'Epic 30 controlled-red baseline PASS (%s).\n' "$before_head"
 
 cp src/lib/digital-brain/read-service.ts "$scratch/.read-service.safe"
 cp src/lib/digital-brain/read-receipt.ts "$scratch/.read-receipt.safe"
+cp src/lib/digital-brain/restricted-messaging.ts "$scratch/.restricted-messaging.safe"
+cp src/lib/digital-brain/ask-context.ts "$scratch/.ask-context.safe"
 target='    .filter((row) => canDisclose(row, scope))'
 if [[ "$(grep -Fxc "$target" src/lib/digital-brain/read-service.ts)" != "2" ]]; then
   printf 'Controlled-red mutation precondition FAILED.\n' >&2
@@ -119,6 +121,58 @@ if ! grep -Fq "$expected_revocation_witness" "$mutation_log"; then
   exit 1
 fi
 printf 'Epic 30 controlled-red revocation observed PASS (expected revocation-test failure).\n'
+
+cp "$scratch/.read-service.safe" src/lib/digital-brain/read-service.ts
+unknown_surface_target='request.botId !== undefined || request.attachments !== undefined'
+if ! grep -Fq "$unknown_surface_target" src/lib/digital-brain/restricted-messaging.ts; then
+  printf 'Controlled-red unknown-surface mutation precondition FAILED.\n' >&2
+  exit 1
+fi
+perl -0pi -e 's/request\.botId !== undefined \|\| request\.attachments !== undefined/false || request.attachments !== undefined/' src/lib/digital-brain/restricted-messaging.ts
+unknown_surface_mutation_hash="$(sha256sum src/lib/digital-brain/restricted-messaging.ts | cut -d' ' -f1)"
+printf 'Epic 30 controlled-red mutation permit-unknown-bot-surface (%s).\n' "$unknown_surface_mutation_hash"
+
+set +e
+bunx vitest run --cache=false --config vitest.config.epic30-hermetic.ts --reporter=verbose >"$mutation_log" 2>&1
+unknown_surface_status=$?
+set -e
+
+if [[ "$unknown_surface_status" -eq 0 ]]; then
+  printf 'Epic 30 controlled-red FAILED: unknown-surface regression escaped the gate.\n' >&2
+  exit 1
+fi
+expected_unknown_surface_witness='rejects bots, attachments, mentions, history, broadcasts, and ambiguous targets'
+if ! grep -Fq "$expected_unknown_surface_witness" "$mutation_log"; then
+  printf 'Epic 30 controlled-red FAILED: gate failed without the named unknown-surface witness.\n' >&2
+  exit 1
+fi
+printf 'Epic 30 controlled-red unknown-surface observed PASS (expected capability-test failure).\n'
+
+cp "$scratch/.restricted-messaging.safe" src/lib/digital-brain/restricted-messaging.ts
+prompt_target='  return { sources: uniqueIds.map((documentId) => contextSource(authorizedById.get(documentId)!)) }'
+if [[ "$(grep -Fxc "$prompt_target" src/lib/digital-brain/ask-context.ts)" != "1" ]]; then
+  printf 'Controlled-red prompt-injection mutation precondition FAILED.\n' >&2
+  exit 1
+fi
+perl -0pi -e 's/  return \{ sources: uniqueIds\.map\(\(documentId\) => contextSource\(authorizedById\.get\(documentId\)!\)\) \}/  return { sources: documents.map(contextSource) }/' src/lib/digital-brain/ask-context.ts
+prompt_mutation_hash="$(sha256sum src/lib/digital-brain/ask-context.ts | cut -d' ' -f1)"
+printf 'Epic 30 controlled-red mutation expand-prompt-linked-sources (%s).\n' "$prompt_mutation_hash"
+
+set +e
+bunx vitest run --cache=false --config vitest.config.epic30-hermetic.ts --reporter=verbose >"$mutation_log" 2>&1
+prompt_status=$?
+set -e
+
+if [[ "$prompt_status" -eq 0 ]]; then
+  printf 'Epic 30 controlled-red FAILED: prompt-injection regression escaped the gate.\n' >&2
+  exit 1
+fi
+expected_prompt_witness='keeps prompt-like links inert instead of expanding hidden sources'
+if ! grep -Fq "$expected_prompt_witness" "$mutation_log"; then
+  printf 'Epic 30 controlled-red FAILED: gate failed without the named prompt-injection witness.\n' >&2
+  exit 1
+fi
+printf 'Epic 30 controlled-red prompt-injection observed PASS (expected context-test failure).\n'
 
 cd "$repo_root"
 if [[ "$(git rev-parse HEAD)" != "$before_head" || "$(git status --porcelain=v1 --untracked-files=all)" != "$before_status" ]]; then
