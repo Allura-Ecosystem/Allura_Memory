@@ -36,10 +36,12 @@
 .brandBlock { padding: 0 6px 15px; display: flex; align-items: baseline; gap: 8px; }
 .brandBlock span { color: var(--blue-text); font: 700 11px/1 var(--mono, monospace); letter-spacing: .14em; }
 .brandBlock strong { font-size: 15px; letter-spacing: -.01em; }
-.search { height: 34px; margin: 0 2px 18px; padding: 0 9px; display: flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 7px; background: #0d161e; color: #a3b0ba; }
+.search { min-height: 44px; margin: 0 2px 18px; padding: 0 9px; display: flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 7px; background: #0d161e; color: #a3b0ba; }
 .visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .search svg { width: 14px; }
 .search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #9ba6ae; font-size: 12px; }
+.search:focus-within { outline: 2px solid var(--blue); outline-offset: 2px; }
+.searchStatus { margin: -4px 5px 18px; color: var(--muted); font-size: 12px; }
 .treeSection { margin-bottom: 18px; }
 .treeLabel { margin: 0 5px 7px; display: flex; align-items: center; gap: 5px; color: #a3b0ba; font: 500 10px/1.2 var(--mono, monospace); letter-spacing: .08em; }
 .treeLabel svg { width: 11px; height: 11px; }
