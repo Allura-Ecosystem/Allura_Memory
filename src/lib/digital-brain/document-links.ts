@@ -1,4 +1,5 @@
-import { readAuthorizedDocuments, type AuthorizedDocument, type DigitalBrainReadScope } from "./read-service"
+import { isCanonicalDocumentId } from "./document-id"
+import { type AuthorizedDocument, type DigitalBrainReadScope, readAuthorizedDocuments } from "./read-service"
 
 export interface AuthorizedLinkEndpoint {
   documentId: string
@@ -10,15 +11,6 @@ export interface FocusedDocumentLinks {
   title: string
   links: AuthorizedLinkEndpoint[]
   backlinks: AuthorizedLinkEndpoint[]
-}
-
-const MAX_DOCUMENT_ID_LENGTH = 200
-const CONTROL_CHARACTER_PATTERN = /[\x00-\x1f\x7f]/
-
-function isCanonicalDocumentId(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0 && value.length <= MAX_DOCUMENT_ID_LENGTH &&
-    value.trim() === value && !CONTROL_CHARACTER_PATTERN.test(value) &&
-    !value.includes("|") && !value.includes("[[") && !value.includes("]]" )
 }
 
 /** Explicit ID links only; titles and aliases cannot silently resolve to another record. */

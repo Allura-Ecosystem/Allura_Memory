@@ -354,6 +354,8 @@ it("rejects an explicitly empty page cursor before any restricted transaction", 
 })
 
 describe("production authorized read provider", () => {
+  const productionReceiptWriter = { persist: mocks.receipt }
+
   function useProductionRows(): void {
     mocks.principal.mockResolvedValue(productionPrincipal)
     mocks.query.mockImplementation(async (sql: string, params?: readonly unknown[]) => {
@@ -370,7 +372,7 @@ describe("production authorized read provider", () => {
 
   it("uses server-derived scope and an opaque keyset cursor", async () => {
     useProductionRows()
-    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 7))
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 7), productionReceiptWriter)
     const first = await provider.readDocumentsPage({ pageSize: 1 })
     expect(first.documents.map(({ id }) => id)).toEqual(["z-record"])
     expect(first.hasMore).toBe(true)
@@ -383,12 +385,16 @@ describe("production authorized read provider", () => {
     expect(second.documents.map(({ id }) => id)).toEqual(["a-record"])
     expect(second.hasMore).toBe(false)
     expect(second.nextCursor).toBeNull()
+    expect(mocks.receipt).toHaveBeenCalledTimes(2)
+    expect(mocks.receipt.mock.calls.every(([receipt]) => receipt.policyVersion === "epic30-production-v1")).toBe(true)
+    expect(mocks.receipt.mock.calls[1][0].witnessHash).not.toBe(mocks.receipt.mock.calls[0][0].witnessHash)
     expect(mocks.query.mock.calls.some(([sql]) => String(sql).includes("brain_membership_approvals"))).toBe(true)
+    expect(mocks.query.mock.calls.some(([sql]) => String(sql).includes("approval.policy_epoch = workspace_membership.policy_epoch"))).toBe(true)
   })
 
   it("searches and paginates only rows returned by the restricted transaction", async () => {
     useProductionRows()
-    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 8))
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 8), productionReceiptWriter)
     const first = await provider.searchDocumentsPage("production", { pageSize: 1 })
     expect(first.total).toBe(2)
     expect(first.hits.map(({ documentId }) => documentId)).toEqual(["z-record"])
@@ -401,9 +407,29 @@ describe("production authorized read provider", () => {
     expect(JSON.stringify(first)).not.toContain("clerk-session-production")
   })
 
+  it("escapes SQL wildcard characters so production search remains literal", async () => {
+    useProductionRows()
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 12), productionReceiptWriter)
+    await provider.searchDocumentsPage("%_", { pageSize: 1 })
+
+    const searchCalls = mocks.query.mock.calls.filter(([sql]) => String(sql).includes("LIKE $3"))
+    expect(searchCalls.length).toBeGreaterThan(0)
+    expect(searchCalls.every(([, params]) => (params as readonly unknown[]).includes("%\\%\\_%"))).toBe(true)
+    expect(searchCalls.every(([sql]) => String(sql).includes("ESCAPE E'\\\\'"))).toBe(true)
+  })
+
+  it.each([
+    ["sink outage", async () => { throw new Error("protected backend detail") }],
+    ["mismatched acknowledgement", async () => ({ receiptId: "wrong", witnessHash: "0".repeat(64) })],
+  ])("fails closed before disclosure on %s", async (_label, persist) => {
+    useProductionRows()
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 13), { persist })
+    await expect(provider.readDocumentsPage({ pageSize: 1 })).rejects.toThrow()
+  })
+
   it("rejects an operation-mismatched cursor before querying document rows", async () => {
     useProductionRows()
-    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 11))
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 11), productionReceiptWriter)
     const first = await provider.readDocumentsPage({ pageSize: 1 })
     const documentQueriesBeforeReplay = mocks.query.mock.calls.filter(([sql]) => String(sql).includes("FROM brain_documents")).length
     await expect(provider.searchDocumentsPage("production", { pageSize: 1, cursor: first.nextCursor! }))
@@ -414,7 +440,7 @@ describe("production authorized read provider", () => {
 
   it("derives links, citations, and derivatives only from the current authorized snapshot", async () => {
     useProductionRows()
-    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 9))
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 9), productionReceiptWriter)
     await expect(provider.documentLinks("z-record")).resolves.toEqual({
       documentId: "z-record", title: "Production note",
       links: [{ documentId: "a-record", title: "Operations runbook" }], backlinks: [],
@@ -423,13 +449,16 @@ describe("production authorized read provider", () => {
       { documentId: "z-record", title: "Production note" },
     ])
     await expect(provider.derivativeSources(["z-record", "missing-record"])).resolves.toBeNull()
+    const transactionsBeforeMalformedId = mocks.transaction.mock.calls.length
+    await expect(provider.citations([" z-record "])).rejects.toThrow(/citation IDs refused/)
+    expect(mocks.transaction).toHaveBeenCalledTimes(transactionsBeforeMalformedId)
   })
 
   it("fails closed without a server principal or a cursor key", async () => {
     mocks.principal.mockResolvedValue(null)
-    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 10))
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 10), productionReceiptWriter)
     await expect(provider.readDocumentsPage()).rejects.toThrow(/authority refused/)
     expect(mocks.transaction).not.toHaveBeenCalled()
-    expect(() => new ProductionAuthorizedReadProvider(Buffer.alloc(16))).toThrow(/cursor key refused/)
+    expect(() => new ProductionAuthorizedReadProvider(Buffer.alloc(16), productionReceiptWriter)).toThrow(/cursor key refused/)
   })
 })
