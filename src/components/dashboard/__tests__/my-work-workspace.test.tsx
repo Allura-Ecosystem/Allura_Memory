@@ -193,21 +193,38 @@ describe("MyWorkWorkspace", () => {
     expect(document.activeElement).toBe(screen.getByRole("complementary", { name: "Comparison pane" }))
   })
 
-  it("opens documents as real memory tabs and supports arrow-key navigation", async () => {
+  it("opens documents as unique memory tabs with complete roving-keyboard navigation", async () => {
     render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     expect(screen.getAllByRole("tab")).toHaveLength(1)
+    fireEvent.click(screen.getByRole("button", { name: "Deployment checklist operations" }))
     fireEvent.click(screen.getByRole("button", { name: "Deployment checklist operations" }))
 
     const shipmentTab = screen.getByRole("tab", { name: "Focus document: Shipment exception review" })
     const checklistTab = screen.getByRole("tab", { name: "Focus document: Deployment checklist" })
+    expect(screen.getAllByRole("tab")).toHaveLength(2)
     expect(checklistTab.getAttribute("aria-selected")).toBe("true")
+    expect(checklistTab.tabIndex).toBe(0)
+    expect(shipmentTab.tabIndex).toBe(-1)
     expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe(checklistTab.id)
 
     checklistTab.focus()
-    fireEvent.keyDown(checklistTab, { key: "ArrowLeft" })
+    fireEvent.keyDown(checklistTab, { key: "Home" })
     await waitFor(() => expect(document.activeElement).toBe(shipmentTab))
     expect(shipmentTab.getAttribute("aria-selected")).toBe("true")
+    expect(shipmentTab.tabIndex).toBe(0)
+    expect(checklistTab.tabIndex).toBe(-1)
     expect(screen.getByRole("heading", { name: "Shipment exception review" })).toBeTruthy()
+
+    fireEvent.keyDown(shipmentTab, { key: "End" })
+    await waitFor(() => expect(document.activeElement).toBe(checklistTab))
+    expect(checklistTab.getAttribute("aria-selected")).toBe("true")
+    expect(checklistTab.tabIndex).toBe(0)
+    expect(shipmentTab.tabIndex).toBe(-1)
+
+    fireEvent.keyDown(checklistTab, { key: "ArrowLeft" })
+    await waitFor(() => expect(document.activeElement).toBe(shipmentTab))
+    fireEvent.keyDown(shipmentTab, { key: "ArrowRight" })
+    await waitFor(() => expect(document.activeElement).toBe(checklistTab))
   })
 
   it("does not offer focus on the hidden mobile map", () => {
