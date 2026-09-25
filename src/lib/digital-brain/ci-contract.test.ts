@@ -38,6 +38,7 @@ describe("Epic 30 merge-evidence wiring", () => {
       "memory-graph-authority.test.ts",
       "memory-restore-authority.test.ts",
       "memory-insight-history-authority.test.ts",
+      "memory-user-deletion-authority.test.ts",
     ]) expect(config).toContain(test)
   })
 })

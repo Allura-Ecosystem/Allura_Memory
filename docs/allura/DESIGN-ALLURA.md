@@ -844,6 +844,13 @@ when they conflict with verified authority.
 
 **Requirements:** AD-08, F5
 
+Bulk user-data deletion is an administrator-only workspace operation. The
+handler discovers eligible memories and appends request/completion audit events
+through restricted workspace transactions with explicit workspace
+discriminators. Each canonical delete receives the verified tenant, workspace,
+administrator and session scope; individual backend failures are not disclosed
+to the caller.
+
 ---
 
 ### MEM-UC15: Dashboard displays knowledge graph visualization
