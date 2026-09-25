@@ -327,6 +327,11 @@ Operational metrics for the dashboard overview.
 List memories scoped by tenant. Supports user filtering and pagination.
 The web route treats `group_id` as an equality assertion against the authenticated tenant, not a source of authority. It supplies the server-derived workspace, actor and session scope to the canonical list, search and deleted-list tools. A cross-tenant selector is denied before a tool call.
 
+All routes under `/api/memory/**` are prohibited from importing or calling the
+legacy owner pool directly. An exact Epic 30 regression test recursively scans
+the route tree; protected database access must use a restricted workspace
+transaction or a canonical tool carrying server-derived scope.
+
 **Query parameters:**
 
 | Parameter | Type | Required | Description |
