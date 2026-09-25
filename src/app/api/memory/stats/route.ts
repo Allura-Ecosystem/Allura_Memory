@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth";
-import { getPool } from "@/lib/postgres/connection";
-import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction";
 
 export interface MemoryStats {
   episodic_count: number;
@@ -17,50 +16,47 @@ export async function GET(request: NextRequest) {
   if (!roleCheck.allowed) return forbiddenResponse(roleCheck);
 
   const { searchParams } = new URL(request.url);
-  const rawGroupId = searchParams.get("group_id");
+  const groupId = roleCheck.user.groupId;
+  const workspaceId = roleCheck.user.workspaceId;
+  if (!workspaceId) return unauthorizedResponse("Authenticated workspace scope is required");
+  if ((searchParams.has("group_id") && searchParams.get("group_id") !== groupId)
+      || (searchParams.has("workspace_id") && searchParams.get("workspace_id") !== workspaceId)) {
+    return NextResponse.json({ error: "Forged memory scope is forbidden" }, { status: 403 });
+  }
   const userId = searchParams.get("user_id") || null;
 
-  let groupId: string;
   try {
-    groupId = validateGroupId(rawGroupId);
-  } catch (err) {
-    if (err instanceof GroupIdValidationError) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
-    }
-    throw err;
-  }
-
-  try {
-    const [pgStats, pgIds, graphResult] = await Promise.all([
+    const [pgStats, pgIds, graphResult] = await withWorkspaceTransaction({ tenantId: groupId,
+      workspaceId, principalId: roleCheck.user.id }, (db) => Promise.all([
       // Combined PG aggregation
-      getPool().query<{ episodic_count: string; search_count: string; last_activity: Date | null }>(
+      db.query<{ episodic_count: string; search_count: string; last_activity: Date | null }>(
         `SELECT
            COUNT(*) FILTER (WHERE event_type = 'memory_add')    AS episodic_count,
            COUNT(*) FILTER (WHERE event_type = 'memory_search') AS search_count,
            MAX(created_at)                                       AS last_activity
          FROM events
-         WHERE group_id = $1
-           AND ($2::text IS NULL OR metadata->>'user_id' = $2)`,
-        [groupId, userId],
+         WHERE group_id = $1 AND workspace_id = $2
+           AND ($3::text IS NULL OR metadata->>'user_id' = $3)`,
+        [groupId, workspaceId, userId],
       ),
       // PG memory IDs for dedup
-      getPool().query<{ id: string | null }>(
+      db.query<{ id: string | null }>(
         `SELECT metadata->>'memory_id' AS id
          FROM events
-         WHERE group_id = $1
+         WHERE group_id = $1 AND workspace_id = $2
            AND event_type = 'memory_add'
-           AND ($2::text IS NULL OR metadata->>'user_id' = $2)`,
-        [groupId, userId],
+           AND ($3::text IS NULL OR metadata->>'user_id' = $3)`,
+        [groupId, workspaceId, userId],
       ),
       // graph_memories: active (non-deprecated) memory nodes
-      getPool().query<{ id: string }>(
+      db.query<{ id: string }>(
         `SELECT id FROM graph_memories
-         WHERE group_id = $1
-           AND ($2::text IS NULL OR user_id = $2)
+         WHERE group_id = $1 AND workspace_id = $2
+           AND ($3::text IS NULL OR user_id = $3)
            AND deprecated = false`,
-        [groupId, userId],
+        [groupId, workspaceId, userId],
       ),
-    ]);
+    ]));
 
     const uniqueIds = new Set<string>();
     pgIds.rows.forEach((r) => { if (r.id) uniqueIds.add(r.id); });
