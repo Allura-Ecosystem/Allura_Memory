@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "epic": "30",
+  "overallState": "hold",
+  "canonicalBranch": "main",
+  "verificationCommands": [
+    "bun run test:epic30-hermetic",
+    "bun run test:unit",
+    "bun run test:epic30-controlled-red",
+    "bun run test:epic30-live"
+  ],
+  "stories": [
+    {
+      "id": "30.1",
+      "localState": "prepared",
+      "evidence": ["_bmad_output/planning-artifacts/epic-30-prd.md", "_bmad_output/planning-artifacts/epic-30-board-reconciliation-packet.md"],
+      "remaining": [{ "id": "sanctioned-planning-transition", "kind": "human_approval", "proofRequired": "Authorized board transition read back from the canonical work-item system." }]
+    },
+    {
+      "id": "30.2",
+      "localState": "prepared",
+      "evidence": ["_bmad_output/planning-artifacts/epic-30-design-approval-packet.md"],
+      "remaining": [
+        { "id": "screen-reader-proof", "kind": "human_evidence", "proofRequired": "Recorded screen-reader walkthrough against the frozen candidate." },
+        { "id": "zoom-200-proof", "kind": "human_evidence", "proofRequired": "Actual browser evidence at 200% zoom." },
+        { "id": "five-user-execution", "kind": "human_study", "proofRequired": "Five distinct uncoached sessions meeting the approved thresholds." }
+      ]
+    },
+    {
+      "id": "30.3",
+      "localState": "partial",
+      "evidence": ["_bmad_output/planning-artifacts/epic-30-authorization-approval-packet.md", "_bmad_output/planning-artifacts/epic-30-local-authorization-contract.md"],
+      "remaining": [
+        { "id": "authorization-policy-approval", "kind": "human_approval", "proofRequired": "Exact production authorization policy approved by authorized security and data owners." },
+        { "id": "membership-provenance", "kind": "production_implementation", "proofRequired": "Governed membership grant/revoke lifecycle with verifiable approver provenance." },
+        { "id": "restricted-role-matrix", "kind": "live_verification", "proofRequired": "Approved disposable PostgreSQL restricted-role, receipt and revocation matrix." }
+      ]
+    },
+    {
+      "id": "30.4",
+      "localState": "partial",
+      "evidence": ["docker/postgres-init/71-digital-brain-read-foundation.sql", "docker/postgres-init/72-digital-brain-workspace-membership.sql"],
+      "remaining": [{ "id": "live-migration-rls-rollback", "kind": "live_verification", "proofRequired": "Fresh migration, RLS, audit, rollback and cleanup evidence from the approved disposable database." }]
+    },
+    {
+      "id": "30.5",
+      "localState": "partial",
+      "evidence": ["src/__tests__/memory-route-owner-pool-guard.test.ts", "src/__tests__/epic30-controlled-red-privacy.test.ts"],
+      "remaining": [
+        { "id": "timed-live-revocation", "kind": "live_verification", "proofRequired": "Measured pooled membership, session and delegation revocation evidence." },
+        { "id": "legacy-data-disposition", "kind": "human_approval", "proofRequired": "Approved classification and disposition for legacy records." }
+      ]
+    },
+    {
+      "id": "30.6",
+      "localState": "partial",
+      "evidence": ["src/lib/digital-brain/read-service.ts", "src/lib/digital-brain/document-citations.ts", "src/lib/digital-brain/document-derivatives.ts", "src/lib/digital-brain/ask-context.ts"],
+      "remaining": [{ "id": "production-read-policy-and-services", "kind": "production_implementation", "proofRequired": "Approved production authority and implementations for search, relationships, citations, derivatives, caches and pagination." }]
+    },
+    {
+      "id": "30.7",
+      "localState": "partial",
+      "evidence": ["src/components/dashboard/my-work-workspace.tsx", "src/app/dashboard/page.tsx"],
+      "remaining": [
+        { "id": "approved-production-ui", "kind": "production_implementation", "proofRequired": "Approved design implemented against production provider states." },
+        { "id": "accessibility-proof", "kind": "human_evidence", "proofRequired": "Screen-reader, keyboard and 200% zoom evidence on the frozen candidate." }
+      ]
+    },
+    {
+      "id": "30.8",
+      "localState": "partial",
+      "evidence": ["src/lib/digital-brain/document-links.ts", "src/lib/digital-brain/document-citations.ts"],
+      "remaining": [{ "id": "production-relationship-authority", "kind": "production_implementation", "proofRequired": "Approved relationship/lineage authority, production implementation, timing analysis and live revocation proof." }]
+    },
+    {
+      "id": "30.9",
+      "localState": "partial",
+      "evidence": ["src/lib/digital-brain/ask-context.ts", "_bmad_output/implementation-artifacts/30-9-read-only-ask-allura.md"],
+      "remaining": [
+        { "id": "provider-policy", "kind": "human_approval", "proofRequired": "Verified no-retention/no-training provider contract approved for governed content." },
+        { "id": "cited-read-only-ask", "kind": "production_implementation", "proofRequired": "Grounded, cited, read-only Ask implementation with adversarial and live evidence." }
+      ]
+    },
+    {
+      "id": "30.10",
+      "localState": "not_implemented",
+      "evidence": ["_bmad_output/implementation-artifacts/30-10-restricted-contractor-messaging.md"],
+      "remaining": [{ "id": "restricted-messaging", "kind": "production_implementation", "proofRequired": "Approved discovery, invitation, channel, send, audit, read-back and revocation implementation." }]
+    },
+    {
+      "id": "30.11",
+      "localState": "partial",
+      "evidence": [".github/workflows/epic-30-evidence.yml", "scripts/ci/run-epic30-controlled-red.sh"],
+      "remaining": [
+        { "id": "remaining-controlled-red-families", "kind": "local_verification", "proofRequired": "Explicit remaining unknown-surface and prompt-injection mutation witnesses." },
+        { "id": "hosted-exact-sha-ci", "kind": "hosted_verification", "proofRequired": "Green hosted check/run IDs for the frozen SHA." },
+        { "id": "required-branch-checks", "kind": "hosted_configuration", "proofRequired": "Read-back showing required checks block merge on the protected branch." },
+        { "id": "independent-human-reviews", "kind": "human_approval", "proofRequired": "Security, maintainability, accessibility, migration and deployment reviews with no unresolved BLOCK/HIGH." }
+      ]
+    },
+    {
+      "id": "30.12",
+      "localState": "prepared",
+      "evidence": ["_bmad_output/planning-artifacts/epic-30-design-approval-packet.md"],
+      "remaining": [{ "id": "five-user-study", "kind": "human_study", "proofRequired": "Five distinct uncoached sessions, threshold results, remediation and retest where required." }]
+    },
+    {
+      "id": "30.13",
+      "localState": "prepared",
+      "evidence": ["_bmad_output/planning-artifacts/implementation-readiness-epic-30.md"],
+      "remaining": [
+        { "id": "authorized-release", "kind": "release_authority", "proofRequired": "Authorized publication/deployment receipt for the frozen SHA." },
+        { "id": "origin-and-rollback", "kind": "hosted_verification", "proofRequired": "Origin-main, deployment, rollback and read-back receipts." },
+        { "id": "retrospective", "kind": "human_approval", "proofRequired": "Accepted retrospective or recorded authorized waiver." }
+      ]
+    }
+  ]
+}
