@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), health: vi.fn(), principal: vi.fn(), search: vi.fn(), read: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  auth: vi.fn(), health: vi.fn(), principal: vi.fn(), search: vi.fn(), read: vi.fn(),
+  searchPage: vi.fn(), readPage: vi.fn(),
+}))
 vi.mock("@/lib/auth/api-auth", () => ({ withPermission: mocks.auth }))
 vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal: mocks.principal }))
-vi.mock("@/lib/digital-brain/read-service", () => ({ searchAuthorizedDocuments: mocks.search, readAuthorizedDocuments: mocks.read }))
+vi.mock("@/lib/digital-brain/read-service", () => ({
+  searchAuthorizedDocuments: mocks.search,
+  readAuthorizedDocuments: mocks.read,
+  searchAuthorizedDocumentsPage: mocks.searchPage,
+  readAuthorizedDocumentsPage: mocks.readPage,
+}))
 vi.mock("@/lib/brain-client", () => ({ brainClient: { healthReport: mocks.health } }))
 
 import { GET as listMemories } from "@/app/api/brain/memories/route"
@@ -21,6 +29,12 @@ beforeEach(() => {
     snippet: "SYNTHETIC TEST DATA", updatedAt: new Date("2026-09-17T00:00:00Z") }] })
   mocks.read.mockResolvedValue([{ id: "synthetic-owner-note", title: "Synthetic note",
     content: "SYNTHETIC TEST DATA", updatedAt: new Date("2026-09-17T00:00:00Z") }])
+  mocks.searchPage.mockResolvedValue({ total: 2, hits: [{ documentId: "synthetic-owner-note", title: "Synthetic note",
+    snippet: "SYNTHETIC TEST DATA", updatedAt: new Date("2026-09-17T00:00:00Z") }],
+    nextCursor: "opaque-search-next", hasMore: true })
+  mocks.readPage.mockResolvedValue({ documents: [{ id: "synthetic-owner-note", title: "Synthetic note",
+    content: "SYNTHETIC TEST DATA", updatedAt: new Date("2026-09-17T00:00:00Z") }],
+    nextCursor: "opaque-read-next", hasMore: true })
   vi.stubGlobal("fetch", vi.fn())
   vi.stubEnv("ALLURA_BRAIN_URL", "https://mcp.faithmeats.org/mcp")
 })
@@ -106,6 +120,39 @@ describe("Epic 30 legacy Brain content-route quarantine", () => {
     expect(body).toEqual({ memories: [{ id: "synthetic-owner-note", title: "Synthetic note",
       content: "SYNTHETIC TEST DATA", updated_at: "2026-09-17T00:00:00.000Z" }], total: 1, has_more: false })
     expect(JSON.stringify(body)).not.toContain("other-user")
+  })
+
+  it("paginates only the exact synthetic routes with server-owned scope", async () => {
+    const run = "a".repeat(32)
+    for (const [key, value] of Object.entries({ NODE_ENV: "development", ALLURA_EPIC30_LOCAL_DB: "enabled",
+      ALLURA_EPIC30_RUN_ID: run, POSTGRES_HOST: "127.0.0.1", POSTGRES_PORT: "5444",
+      POSTGRES_DB: `allura_epic30_read_${run}`, POSTGRES_APP_USER: "allura_app", POSTGRES_APP_OPTIONS: "" })) {
+      vi.stubEnv(key, value)
+    }
+    const expectedScope = { tenantId: "allura-epic30-local", workspaceId: "epic30-local-workspace", principalId: "owner-user" }
+
+    const listResponse = await listMemories(new NextRequest(
+      "http://localhost:3100/api/brain/memories?cursor=opaque-read-in&limit=1&user_id=other-user",
+    ))
+    expect(listResponse.status).toBe(200)
+    expect(mocks.readPage).toHaveBeenCalledWith(expectedScope, { cursor: "opaque-read-in", pageSize: 1 })
+    expect(await listResponse.json()).toEqual({
+      memories: [{ id: "synthetic-owner-note", title: "Synthetic note", content: "SYNTHETIC TEST DATA",
+        updated_at: "2026-09-17T00:00:00.000Z" }],
+      total: 1, has_more: true, next_cursor: "opaque-read-next",
+    })
+
+    const searchResponse = await searchMemories(new NextRequest(
+      "http://localhost:3100/api/brain/search?q=synthetic&cursor=opaque-search-in&limit=1&workspace_id=other",
+    ))
+    expect(searchResponse.status).toBe(200)
+    expect(mocks.searchPage).toHaveBeenCalledWith(expectedScope, "synthetic", {
+      cursor: "opaque-search-in", pageSize: 1,
+    })
+    const searchBody = await searchResponse.json()
+    expect(searchBody).toMatchObject({ count: 2, has_more: true, next_cursor: "opaque-search-next" })
+    expect(JSON.stringify(searchBody)).not.toContain("other-user")
+    expect(JSON.stringify(searchBody)).not.toContain("workspace_id")
   })
 
   it("keeps a synthetic list receipt outage content-free", async () => {
