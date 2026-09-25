@@ -2,6 +2,7 @@ import type { Pool } from "pg"
 import { CURRENT_SCHEMA_VERSION } from "@/lib/schema-version"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import { getPool } from "../connection"
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
 
 /**
  * Event status values
@@ -43,12 +44,18 @@ export interface EventInsert {
   schema_version?: number
 }
 
+export interface WorkspaceEventInsert extends EventInsert {
+  workspace_id: string
+  principal_id: string
+}
+
 /**
  * Event record as stored in database
  */
 export interface EventRecord {
   id: number
   group_id: string
+  workspace_id?: string | null
   event_type: string
   created_at: Date
   agent_id: string
@@ -64,6 +71,40 @@ export interface EventRecord {
   confidence: number | null
   evidence_ref: string | null
   schema_version: number
+}
+
+/**
+ * Insert a workspace-bound event through the restricted application role.
+ * Web/API callers must use this path so the workspace GUC and explicit row
+ * discriminator agree at the database boundary.
+ */
+export async function insertWorkspaceEvent(event: WorkspaceEventInsert): Promise<EventRecord> {
+  validateEventInsert(event)
+  if (!event.workspace_id?.trim()) throw new ValidationError("workspace_id is required and cannot be empty")
+  if (!event.principal_id?.trim()) throw new ValidationError("principal_id is required and cannot be empty")
+
+  return withWorkspaceTransaction({
+    tenantId: event.group_id,
+    workspaceId: event.workspace_id,
+    principalId: event.principal_id,
+  }, async (db) => {
+    const result = await db.query<EventRecord>(`
+      INSERT INTO events (
+        group_id, workspace_id, event_type, agent_id, workflow_id, step_id,
+        parent_event_id, metadata, outcome, status, error_message, error_code,
+        confidence, evidence_ref, schema_version
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      RETURNING *
+    `, [
+      event.group_id, event.workspace_id, event.event_type, event.agent_id,
+      event.workflow_id ?? null, event.step_id ?? null, event.parent_event_id ?? null,
+      JSON.stringify(event.metadata ?? {}), JSON.stringify(event.outcome ?? {}),
+      event.status ?? "pending", event.error_message ?? null, event.error_code ?? null,
+      event.confidence ?? null, event.evidence_ref ?? null,
+      event.schema_version ?? CURRENT_SCHEMA_VERSION,
+    ])
+    return result.rows[0]
+  })
 }
 
 /**

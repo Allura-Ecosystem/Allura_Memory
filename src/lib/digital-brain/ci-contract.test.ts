@@ -33,6 +33,8 @@ describe("Epic 30 merge-evidence wiring", () => {
       "memory-root-authority.test.ts",
       "memory-id-authority.test.ts",
       "memory-aggregate-authority.test.ts",
+      "memory-trace-authority.test.ts",
+      "trace-workspace-storage.test.ts",
     ]) expect(config).toContain(test)
   })
 })

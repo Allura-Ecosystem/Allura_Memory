@@ -13,7 +13,7 @@ import { RuVixControlPlane } from "@/control-plane/ruvix"
 import { canonicalizeAgentId } from "@/lib/agents/canonical-identity"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import { getPool } from "./connection"
-import { type EventInsert, type EventRecord, insertEvent } from "./queries/insert-trace"
+import { type EventInsert, type EventRecord, insertEvent, insertWorkspaceEvent } from "./queries/insert-trace"
 import type { QueryTracesOptions, QueryTracesResult } from "./types"
 
 // Re-export types for backward compatibility
@@ -222,7 +222,13 @@ export async function logTrace(trace: TraceLog): Promise<TraceRecord> {
   }
 
   // Insert into PostgreSQL
-  const eventRecord = await insertEvent(eventInsert)
+  const eventRecord = canonicalTrace.workspace_id
+    ? await insertWorkspaceEvent({
+        ...eventInsert,
+        workspace_id: canonicalTrace.workspace_id,
+        principal_id: canonicalTrace.agent_id,
+      })
+    : await insertEvent(eventInsert)
 
   // Return mapped trace record
   return {
