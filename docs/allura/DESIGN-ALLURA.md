@@ -361,6 +361,8 @@ The route requires viewer authority and derives tenant, workspace, actor and ses
 
 #### `GET /api/memory/count`
 
+Returns a protected aggregate for the authenticated tenant and workspace. Tenant/workspace query values are equality assertions only. The handler executes both episodic and semantic queries inside the restricted workspace transaction; aggregate counts never use the legacy owner pool.
+
 Return total count of unique active memories (deduplicated across PostgreSQL (episodic + semantic)).
 
 **Query parameters:**

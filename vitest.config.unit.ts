@@ -100,6 +100,7 @@ export default defineConfig({
       "src/__tests__/auth-roles.test.ts",
       "src/__tests__/memory-root-authority.test.ts",
       "src/__tests__/memory-id-authority.test.ts",
+      "src/__tests__/memory-aggregate-authority.test.ts",
       "src/__tests__/cors-middleware.test.ts",
       "src/__tests__/graph-route.test.ts",
       "src/__tests__/health-metrics.test.ts",
