@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { type DigitalBrainReadScope, epic30ReadTestOnly, readAuthorizedDocumentsInRestrictedTransaction } from "./read-service"
+import { mapAuthorizedWorkspaceProviderState, type DigitalBrainReadScope, epic30ReadTestOnly, readAuthorizedDocumentsInRestrictedTransaction } from "./read-service"
 
 const OWNER_SCOPE: DigitalBrainReadScope = {
   tenantId: "allura-epic30-local",
@@ -32,6 +32,34 @@ function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
 }
 
 describe("readAuthorizedDocuments", () => {
+  it.each([
+    ["forbidden", { state: "forbidden", documents: [{ id: "protected" }] }],
+    ["degraded", { state: "degraded", documents: [{ id: "protected" }] }],
+    ["unavailable", { state: "unavailable", documents: [{ id: "protected" }] }],
+  ] as const)("maps %s provider states without forwarding documents", (state, result) => {
+    expect(mapAuthorizedWorkspaceProviderState(OWNER_SCOPE, result)).toEqual({ state, documents: [] })
+  })
+
+  it("maps a valid provider result only for the server-owned scope", () => {
+    const document = {
+      id: "private-owner-note", groupId: OWNER_SCOPE.tenantId, workspaceId: OWNER_SCOPE.workspaceId,
+      ownerId: OWNER_SCOPE.principalId, departmentId: null, visibility: "private" as const,
+      title: "Owner note", content: "Synthetic owner-only content", updatedAt: new Date("2026-09-17T00:00:00.000Z"),
+    }
+    expect(mapAuthorizedWorkspaceProviderState(OWNER_SCOPE, { state: "complete", documents: [document] })).toEqual({
+      state: "complete", documents: [document],
+    })
+    expect(mapAuthorizedWorkspaceProviderState(OWNER_SCOPE, {
+      state: "complete", documents: [{ ...document, workspaceId: "other-workspace" }],
+    })).toEqual({ state: "unavailable", documents: [] })
+  })
+
+  it.each([
+    null, {}, { state: "loading", documents: [] }, { state: "empty", documents: [{ id: "unexpected" }] },
+  ])("collapses malformed provider output to unavailable: %j", (result) => {
+    expect(mapAuthorizedWorkspaceProviderState(OWNER_SCOPE, result)).toEqual({ state: "unavailable", documents: [] })
+  })
+
   it("rejects a caller-forged envelope even if its fields look valid", async () => {
     const query = vi.fn(async () => ({ rows: [row()] }))
     const forged = { ...OWNER_SCOPE, sessionId: "forged", role: "viewer", policyEpoch: 1 }

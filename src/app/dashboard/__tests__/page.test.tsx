@@ -1,12 +1,15 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const mocks = vi.hoisted(() => ({ guard: vi.fn(), read: vi.fn(), overview: vi.fn() }))
+const mocks = vi.hoisted(() => ({ guard: vi.fn(), read: vi.fn(), overview: vi.fn(), map: vi.fn() }))
 vi.mock("server-only", () => ({}))
 vi.mock("@/components/dashboard/dashboard-shell", () => ({ DashboardShell: ({ children }: { children: React.ReactNode }) => <section>{children}</section> }))
 vi.mock("@/lib/dashboard/read-service", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/dashboard/read-service")>(), getOverview: mocks.overview }))
 vi.mock("@/lib/dashboard/page-guard", () => ({ requireDashboardScope: mocks.guard }))
-vi.mock("@/lib/digital-brain/read-service", () => ({ readAuthorizedWorkspaceState: mocks.read }))
+vi.mock("@/lib/digital-brain/read-service", () => ({
+  readAuthorizedWorkspaceState: mocks.read,
+  mapAuthorizedWorkspaceProviderState: mocks.map,
+}))
 
 import DashboardOverviewPage from "../page"
 
@@ -32,6 +35,7 @@ beforeEach(() => {
   vi.stubEnv("ALLURA_EPIC30_LOCAL_DB", "enabled")
   mocks.guard.mockResolvedValue({ scope, user })
   mocks.read.mockResolvedValue({ state: "complete", documents: [document] })
+  mocks.map.mockImplementation((_scope, result) => result)
   mocks.overview.mockResolvedValue({ state: "live", data: { memories: 12, events: 3, proposals: 2, workItems: 1, graphMemories: 4 }, fetchedAt: "test" })
 })
 afterEach(() => {
@@ -66,6 +70,7 @@ describe("Epic30 dashboard server page", () => {
     expect(mocks.guard).toHaveBeenCalledWith("/dashboard")
     expect(mocks.read).toHaveBeenCalledTimes(1)
     expect(mocks.read).toHaveBeenCalledWith(scope)
+    expect(mocks.map).toHaveBeenCalledWith(scope, { state: "complete", documents: [document] })
     expect(page.props).toEqual({
       dataState: "complete", documents: [{ ...document, updatedAt: document.updatedAt.toISOString() }],
     })
