@@ -27,6 +27,19 @@ describe("grounded read-only Ask boundary", () => {
     }
   })
 
+  it("fails closed without reflecting provider errors or protected context", async () => {
+    const protectedFailure = "provider-token=secret; Authorized detail; backend=internal"
+    const failingProvider: ReadOnlyAskProvider = {
+      policy: { retention: "none", training: "none" },
+      answer: async () => { throw new Error(protectedFailure) },
+    }
+
+    const result = await createGroundedReadOnlyAnswer("Question", context, failingProvider)
+    expect(result).toBeNull()
+    expect(JSON.stringify(result)).not.toContain(protectedFailure)
+    expect(JSON.stringify(result)).not.toContain("Authorized detail")
+  })
+
   it("does not expose context metadata beyond answer and citations", async () => {
     const result = await createGroundedReadOnlyAnswer("Question", context, provider({ answer: "Answer", citationIds: ["doc-b"] }))
     expect(result).toEqual({ answer: "Answer", citations: [{ documentId: "doc-b", title: "Checklist" }] })

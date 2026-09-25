@@ -47,7 +47,12 @@ export async function createGroundedReadOnlyAnswer(
   if (!validText(question, MAX_QUESTION_LENGTH) || !context ||
       !Array.isArray(context.sources) || context.sources.length === 0) return null
   assertProviderPolicy(provider)
-  const result = await provider.answer({ question, sources: context.sources })
+  let result: Awaited<ReturnType<ReadOnlyAskProvider["answer"]>>
+  try {
+    result = await provider.answer({ question, sources: context.sources })
+  } catch {
+    return null
+  }
   if (!validText(result.answer, MAX_ANSWER_LENGTH) || !Array.isArray(result.citationIds) ||
       result.citationIds.length === 0 || result.citationIds.length > MAX_CITATIONS) return null
   const byId = new Map(context.sources.map((source) => [source.documentId, source]))
