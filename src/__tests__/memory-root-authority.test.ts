@@ -32,20 +32,22 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs())
 
 describe("canonical REST memory authority at the web boundary", () => {
-  it("denies a different tenant before any write or read tool call", async () => {
+  it("denies a different tenant before a read tool call and rejects REST writes", async () => {
     const write = await POST(request("/api/memory", "curator", {
       group_id: "allura-other", user_id: "owner-user", content: "SYNTHETIC TEST DATA",
     }))
     const read = await GET(request("/api/memory?group_id=allura-other&query=private"))
     expect(write.status).toBe(403)
     expect(read.status).toBe(403)
-    expect(await write.json()).toEqual({ error: "TENANT_MISMATCH" })
+    expect(await write.json()).toEqual({
+      error: "memory_add requires a verified workspace-bound principal; REST writes are not supported",
+    })
     expect(mocks.add).not.toHaveBeenCalled()
     expect(mocks.search).not.toHaveBeenCalled()
     expect(mocks.list).not.toHaveBeenCalled()
   })
 
-  it("requires curator authority for write and binds its scope to the verified web user", async () => {
+  it("rejects REST writes even for a curator", async () => {
     const viewer = await POST(request("/api/memory", "viewer", {
       group_id: "allura-system", user_id: "owner-user", content: "SYNTHETIC TEST DATA",
     }))
@@ -56,13 +58,11 @@ describe("canonical REST memory authority at the web boundary", () => {
       metadata: { source: "manual", agent_id: "forged-actor" },
       scope: { group_id: "allura-other", workspace_id: "forged-workspace", agent_id: "forged-actor" },
     }))
-    expect(curator.status).toBe(200)
-    expect(mocks.add).toHaveBeenCalledWith(expect.objectContaining({
-      group_id: "allura-system",
-      scope: { group_id: "allura-system", workspace_id: "workspace-a",
-        agent_id: "owner-user", session_id: "verified-session" },
-      metadata: { source: "manual", agent_id: "owner-user" },
-    }))
+    expect(curator.status).toBe(403)
+    expect(await curator.json()).toEqual({
+      error: "memory_add requires a verified workspace-bound principal; REST writes are not supported",
+    })
+    expect(mocks.add).not.toHaveBeenCalled()
   })
 
   it("binds list, search, and deleted-list to the same verified workspace scope", async () => {
