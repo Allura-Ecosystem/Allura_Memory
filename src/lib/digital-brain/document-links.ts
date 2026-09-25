@@ -12,12 +12,21 @@ export interface FocusedDocumentLinks {
   backlinks: AuthorizedLinkEndpoint[]
 }
 
+const MAX_DOCUMENT_ID_LENGTH = 200
+const CONTROL_CHARACTER_PATTERN = /[\x00-\x1f\x7f]/
+
+function isCanonicalDocumentId(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= MAX_DOCUMENT_ID_LENGTH &&
+    value.trim() === value && !CONTROL_CHARACTER_PATTERN.test(value) &&
+    !value.includes("|") && !value.includes("[[") && !value.includes("]]" )
+}
+
 /** Explicit ID links only; titles and aliases cannot silently resolve to another record. */
 function referencedIds(content: string): Set<string> {
   const ids = new Set<string>()
   for (const match of content.matchAll(/\[\[([^\]\r\n]{1,200})\]\]/g)) {
-    const id = match[1].trim()
-    if (id && !id.includes("|")) ids.add(id)
+    const id = match[1]
+    if (isCanonicalDocumentId(id)) ids.add(id)
   }
   return ids
 }
@@ -40,8 +49,7 @@ export async function readSyntheticDocumentLinks(
   scope: DigitalBrainReadScope,
   focusId: string,
 ): Promise<FocusedDocumentLinks | null> {
-  if (typeof focusId !== "string" || !focusId.trim() || focusId.length > 200 ||
-      /[\x00-\x1f\x7f]/.test(focusId)) {
+  if (!isCanonicalDocumentId(focusId)) {
     throw new Error("Synthetic link focus refused")
   }
   const documents = await readAuthorizedDocuments(scope)
