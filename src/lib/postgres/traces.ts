@@ -6,6 +6,7 @@
  */
 
 import { getPool } from './connection';
+import { withWorkspaceTransaction } from '@/lib/db/tenant-transaction';
 
 export interface Trace {
   id: string;
@@ -24,6 +25,30 @@ export interface TraceQuery {
   type?: string;
   startTime?: Date;
   endTime?: Date;
+}
+
+export interface WorkspaceTraceQuery extends TraceQuery {
+  workspace_id: string;
+  principal_id: string;
+}
+
+/** Protected web read: mandatory workspace scope through the restricted app role. */
+export async function queryWorkspaceTraces(query: WorkspaceTraceQuery): Promise<Trace[]> {
+  const { group_id, workspace_id, principal_id, limit = 50, offset = 0, type } = query;
+  return withWorkspaceTransaction({ tenantId: group_id, workspaceId: workspace_id, principalId: principal_id }, async (db) => {
+    const values: Array<string | number> = [group_id, workspace_id];
+    const conditions = ['group_id = $1', 'workspace_id = $2'];
+    if (type) { values.push(type); conditions.push(`event_type = $${values.length}`); }
+    values.push(limit, offset);
+    const result = await db.query(`SELECT id::text, group_id, event_type, agent_id, created_at, metadata
+      FROM events WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC
+      LIMIT $${values.length - 1} OFFSET $${values.length}`, values);
+    return result.rows.map((row: Record<string, unknown>) => ({
+      id: row.id as string, group_id: row.group_id as string, type: row.event_type as string,
+      content: JSON.stringify(row.metadata), agent: row.agent_id as string,
+      timestamp: row.created_at as Date, metadata: (row.metadata as Record<string, unknown>) || {},
+    }));
+  });
 }
 
 /**

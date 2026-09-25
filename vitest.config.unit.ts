@@ -103,6 +103,8 @@ export default defineConfig({
       "src/__tests__/memory-root-authority.test.ts",
       "src/__tests__/memory-id-authority.test.ts",
       "src/__tests__/memory-aggregate-authority.test.ts",
+      "src/__tests__/memory-trace-authority.test.ts",
+      "src/__tests__/trace-workspace-storage.test.ts",
       "src/__tests__/cors-middleware.test.ts",
       "src/__tests__/graph-route.test.ts",
       "src/__tests__/health-metrics.test.ts",

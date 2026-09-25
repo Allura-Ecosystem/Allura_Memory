@@ -376,7 +376,16 @@ Return total count of unique active memories (deduplicated across PostgreSQL (ep
 
 #### `GET /api/memory/traces`
 
-List raw trace events with filtering.
+List raw trace events with filtering. The tenant and workspace are derived from
+the authenticated principal; optional scope selectors are equality assertions
+and forged selectors are rejected before querying. Reads run through the
+restricted workspace transaction with an explicit workspace predicate.
+
+`POST` requires curator authority and binds tenant, workspace and agent to the
+verified principal. Workspace trace inserts use the restricted workspace
+transaction and persist the explicit workspace discriminator. Caller-selected
+agent or scope values cannot replace authenticated authority, and backend
+failure responses contain no configuration details.
 
 **Query parameters:**
 
