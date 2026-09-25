@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-25T15:04:39Z",
+  "repository": "Allura-Ecosystem/Allura_Memory",
+  "branch": "main",
+  "localHead": "390d14e4039279322f58630719997cec4dbe064d",
+  "originHead": "1934d211c239310d498794ec0c5dbaa532faeeb8",
+  "mergeBase": "cc9acd2b1fc1ddbb23999717354cb7eb065789d2",
+  "divergence": { "localAhead": 82, "localBehind": 1 },
+  "epic30Workflow": {
+    "path": ".github/workflows/epic-30-evidence.yml",
+    "remoteLookup": "not_found_on_remote_default_branch",
+    "hostedRunVerified": false
+  },
+  "branchProtection": {
+    "strict": true,
+    "enforceAdmins": true,
+    "requiredConversationResolution": true,
+    "allowForcePushes": false,
+    "allowDeletions": false,
+    "requiredContexts": [
+      "typecheck",
+      "test-unit",
+      "test-e2e",
+      "MCP Runtime Health Tests",
+      "Epic 24 Evidence / Aggregate"
+    ],
+    "epic30EvidenceRequired": false
+  },
+  "remoteIntegration": {
+    "remoteOnlyCommitChangedFileCount": 266,
+    "overlappingLocalPathCount": 14,
+    "reintroducesLegacyBmadPlanningTree": true,
+    "merged": false,
+    "reason": "The remote-only aggregate includes excluded Epic 29/device-pairing work, conflicts with the Epic 30 candidate, and reintroduces the legacy _bmad/bmm planning and stories tree removed by the approved normalization."
+  },
+  "conclusion": {
+    "hostedExactShaCi": "open",
+    "requiredBranchChecks": "open",
+    "originAndRollback": "open"
+  },
+  "limitations": [
+    "This is a read-only hosted-state observation, not a CI run, publication, deployment, rollback, or approval receipt.",
+    "A later GitHub API retry encountered a network connection failure; branch-protection values are from the successful authenticated read earlier in the same session."
+  ]
+}
