@@ -373,8 +373,8 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
     } finally {
       await ownerPool.query("DELETE FROM brain_membership_receipts WHERE receipt_id IN ($1,$2)", [grantReceiptId, revokeReceiptId])
       await ownerPool.query("DELETE FROM brain_workspace_memberships WHERE group_id=$1 AND workspace_id=$2 AND user_id=$3", [GROUP, WORKSPACE, subject])
-      await ownerPool.query("DELETE FROM brain_membership_approvals WHERE approval_id IN ($1,$2,$3)", [actorApprovalId, grantApprovalId, revokeApprovalId])
       await ownerPool.query("UPDATE brain_workspace_memberships SET approval_id=NULL WHERE group_id=$1 AND workspace_id=$2 AND user_id='admin-user'", [GROUP, WORKSPACE])
+      await ownerPool.query("DELETE FROM brain_membership_approvals WHERE approval_id IN ($1,$2,$3)", [actorApprovalId, grantApprovalId, revokeApprovalId])
       await ownerPool.query("DELETE FROM memberships WHERE group_id=$1 AND user_id=$2", [GROUP, subject])
     }
   })
