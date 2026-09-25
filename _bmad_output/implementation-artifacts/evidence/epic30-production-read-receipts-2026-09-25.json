@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "epic": "30",
+  "stories": ["30.3", "30.6"],
+  "recordedAt": "2026-09-25",
+  "baseCommit": "e161bcc1320770c753ebcdbc1ae4bebbafa1221f",
+  "commands": [
+    "bun vitest run src/lib/digital-brain/production-read-receipt-writer.test.ts src/lib/digital-brain/migration-contract.test.ts src/lib/digital-brain/local-confinement.test.ts",
+    "bun run typecheck",
+    "bun run test:epic30-live"
+  ],
+  "database": {
+    "image": "pgvector/pgvector:pg16",
+    "containerName": "allura-epic30-temp-receipts-20260925",
+    "host": "127.0.0.1",
+    "port": 5444,
+    "storage": "container tmpfs only",
+    "productionDatabaseContacted": false
+  },
+  "result": {
+    "status": "passed",
+    "focusedTestsPassed": 63,
+    "typecheckPassed": true,
+    "liveSuitePassed": true
+  },
+  "proved": [
+    "A durable immutable production-candidate read-receipt table exists with forced RLS.",
+    "The restricted application role has no direct receipt-table DML and may record a receipt only through a SECURITY DEFINER function.",
+    "The function validates transaction-local tenant, workspace, principal, current provenance-bearing workspace authority, role, policy epoch, action-specific query hash, and content-free hash fields.",
+    "Direct app-role insertion and a role-mismatched function call were denied in the disposable PostgreSQL suite.",
+    "The writer returns only an exact receipt ID and witness hash acknowledgement before a reader can disclose a candidate page."
+  ],
+  "notProved": [
+    "Production route activation or provider policy approval.",
+    "A hosted production deployment or production database behavior.",
+    "The broader Story 30.6 search, links, citations, derivatives, cache, timing, and human-review gate."
+  ],
+  "cleanup": {
+    "containerRemoved": true,
+    "port5444ListeningAfterRun": false
+  }
+}

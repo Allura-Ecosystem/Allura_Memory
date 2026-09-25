@@ -25,11 +25,11 @@ import type {
   MemorySearchRequest,
 } from "../lib/memory/canonical-contracts";
 import {
-  memory_add as rawMemoryAdd,
   memory_delete,
   memory_get,
   memory_list,
   memory_search,
+  memory_add as rawMemoryAdd,
   resetConnections,
 } from "../mcp/canonical-tools";
 import { closePool, getPool } from "../lib/postgres/connection";
@@ -800,7 +800,7 @@ describe("Canonical Memory Operations", () => {
           const request: MemoryAddRequest = {
             group_id: `allura-test-${RUN_ID}` as any,
             scope: wsScope(`allura-test-${RUN_ID}` as any),
-            user_id: "test-user-error",
+            user_id: TEST_USER_ID,
             content: "Error propagation test",
           };
 

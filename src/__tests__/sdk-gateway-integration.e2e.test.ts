@@ -14,7 +14,11 @@
  * stack). Usage: RUN_E2E_TESTS=true bun vitest run src/__tests__/sdk-gateway-integration.e2e.test.ts
  */
 
-process.env.ALLURA_MCP_TOKEN_SECRET ??= "sdk-gateway-e2e-secret-key-0001";
+// The live-DB inventory is intentionally single-forked and some device tests
+// exercise alternate credential states. This gateway fixture owns the secret
+// used by the already-started test gateway, rather than inheriting a mutated
+// process environment from an earlier file.
+process.env.ALLURA_MCP_TOKEN_SECRET = "sdk-gateway-e2e-secret-key-0001";
 
 import { AlluraClient } from "@allura/sdk";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

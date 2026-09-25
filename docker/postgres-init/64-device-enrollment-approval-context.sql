@@ -99,6 +99,12 @@ CREATE OR REPLACE FUNCTION device_enrollment_approve(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
 DECLARE row_state TEXT; stored_state TEXT; enrollment_expires_at TIMESTAMPTZ;
 BEGIN
+    IF current_setting('app.current_principal', true) IS DISTINCT FROM p_principal_id
+       OR current_setting('app.current_group_id', true) IS DISTINCT FROM p_group_id
+       OR current_setting('app.current_workspace_id', true) IS DISTINCT FROM p_workspace_id THEN
+        RAISE EXCEPTION 'authenticated principal context required';
+    END IF;
+
     SELECT e.state, e.pkce_state, e.expires_at
       INTO row_state, stored_state, enrollment_expires_at
       FROM public.device_enrollments e WHERE e.id = p_id FOR UPDATE;

@@ -52,7 +52,7 @@ describe("TokenInventoryPanel", () => {
           token_prefix: "allura_mcp_abcd1234",
           agent_name: "Sabir desktop",
           scopes: ["memory:read"],
-          token: "allura_mcp_RAW_SHOULD_NEVER_RENDER",
+          token: "allura_mcp_fixture_000000000000000000",
           token_hash: "HASH_SHOULD_NEVER_RENDER",
         }],
       }), { status: 200, headers: { "content-type": "application/json" } }))
@@ -64,7 +64,7 @@ describe("TokenInventoryPanel", () => {
     const { container } = render(createElement(TokenInventoryPanel, { isAdmin: true, workspaceId: "ws_1" }));
 
     await screen.findByText("allura_mcp_abcd1234");
-    expect(container.textContent).not.toContain("allura_mcp_RAW_SHOULD_NEVER_RENDER");
+    expect(container.textContent).not.toContain("allura_mcp_fixture_000000000000000000");
     expect(container.textContent).not.toContain("HASH_SHOULD_NEVER_RENDER");
 
     fireEvent.click(screen.getByRole("button", { name: "Revoke allura_mcp_abcd1234" }));

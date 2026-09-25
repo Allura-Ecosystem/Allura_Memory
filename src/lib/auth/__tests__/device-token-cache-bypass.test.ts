@@ -7,7 +7,7 @@ import { createHttpAuthenticator, resolveHttpAuthConfig } from "../mcp-authentic
 import { hashToken, prefixOf } from "@/lib/mcp-token/hash"
 
 it("always re-reads a paired-device credential even when the non-device cache TTL is enabled", async () => {
-  const raw = "allura_mcp_device-token-000000000000000000"
+  const raw = "allura_mcp_fixture_000000000000000000"
   process.env.ALLURA_MCP_TOKEN_SECRET = "0123456789abcdefghij"
   repository.findByPrefix.mockImplementation(async () => ({
     id: "tok-device",

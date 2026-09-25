@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "epic": "30",
+  "recordedAt": "2026-09-25T18:02:14Z",
+  "repository": "Allura-Ecosystem/Allura_Memory",
+  "run": {
+    "id": 36170672360,
+    "event": "workflow_dispatch",
+    "branch": "codex/epic30-hosted-local-main",
+    "headSha": "7ef1464da6e6360f8797769b58e9d92b7ea8610d",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/36170672360"
+  },
+  "jobs": [
+    {
+      "id": 108189153342,
+      "name": "Epic 30 / Hermetic authorization and UI",
+      "conclusion": "success",
+      "url": "https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/36170672360/job/108189153342"
+    },
+    {
+      "id": 108189153617,
+      "name": "Epic 30 / Confined PostgreSQL and HTTP",
+      "conclusion": "success",
+      "url": "https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/36170672360/job/108189153617",
+      "serviceCleanup": "passed"
+    },
+    {
+      "id": 108189153618,
+      "name": "Check",
+      "conclusion": "success",
+      "url": "https://github.com/Allura-Ecosystem/Allura_Memory/actions/runs/36170672360/job/108189153618"
+    }
+  ],
+  "scope": {
+    "productionDatabaseContacted": false,
+    "protectedMainChanged": false,
+    "branchProtectionBypassed": false
+  },
+  "remaining": [
+    "Epic 30 required-check configuration on protected main",
+    "independent human security, maintainability, accessibility, migration and deployment reviews"
+  ]
+}

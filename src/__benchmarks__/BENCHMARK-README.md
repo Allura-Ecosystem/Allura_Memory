@@ -164,8 +164,8 @@ They are inert: load-test groups are excluded from the curator pipeline.
 | Env var | Purpose | Default |
 |---------|---------|---------|
 | `BENCHMARK_BRAIN_URL` | Gateway URL override (highest priority) | — |
-| `ALLURA_BRAIN_URL` | Gateway URL (shared with `brain-client`) | — |
-| _(neither set)_ | Falls back to | `http://localhost:5888/mcp` |
+| `ALLURA_BRAIN_URL` | Benchmark gateway URL; the dashboard `brain-client` separately requires the canonical `https://mcp.faithmeats.org/mcp` value | — |
+| _(neither set)_ | Benchmark-only local fallback (not used by the dashboard client) | `http://localhost:5888/mcp` |
 
 ---
 

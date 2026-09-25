@@ -291,7 +291,7 @@ if [ -f "${DRIFT_ANALYZER}" ]; then
     LAST_WEEK_STORIES=$(grep "stories" "${LAST_WEEK_LOG}" | tail -1 | grep -oE '[0-9]+' || echo "0")
     
     # Current story count (simplified - would use actual drift analyzer in production)
-    CURRENT_STORIES=$(find "${PROJECT_ROOT}/_bmad-output/implementation-artifacts" -name "story-*.md" 2>/dev/null | wc -l || echo "0")
+    CURRENT_STORIES=$(find "${PROJECT_ROOT}/_bmad_output/implementation-artifacts" -name "story-*.md" 2>/dev/null | wc -l || echo "0")
     
     log_info "Stories: Last week=${LAST_WEEK_STORIES}, Current=${CURRENT_STORIES}"
     
@@ -322,7 +322,7 @@ log_info "Validating encoding across all critical files..."
 CRITICAL_DIRS=(
   "${PROJECT_ROOT}/src"
   "${PROJECT_ROOT}/memory-bank"
-  "${PROJECT_ROOT}/_bmad-output"
+  "${PROJECT_ROOT}/_bmad_output"
   "${PROJECT_ROOT}/.opencode"
 )
 

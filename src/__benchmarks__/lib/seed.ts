@@ -38,7 +38,7 @@ export async function seedCorpus(
       group_id: opts.groupId,
       user_id: opts.userId,
       content: `${doc.text} ${marker}`,
-      metadata: { source: "manual", agent_id: "benchmark" },
+      metadata: { source: "manual", agent_id: opts.userId },
     })
     seeded++
   }

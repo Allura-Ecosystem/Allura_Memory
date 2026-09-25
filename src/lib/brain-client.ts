@@ -1,7 +1,7 @@
 /**
  * Brain MCP Client
  *
- * Server-side utility for calling Allura Brain MCP (Streamable HTTP at localhost:5888).
+ * Server-side utility for calling the canonical Allura Brain MCP endpoint.
  * Handles session management, SSE parsing, and typed responses.
  *
  * Usage:
@@ -102,8 +102,15 @@ export interface BrainGovernanceResult {
 
 // ── Client ───────────────────────────────────────────────────────────────────
 
-const BRAIN_URL = process.env.ALLURA_BRAIN_URL ?? "http://localhost:5888/mcp"
+const CANONICAL_BRAIN_URL = "https://mcp.faithmeats.org/mcp"
 const REQUEST_TIMEOUT_MS = 10_000
+
+function brainUrl(): string {
+  if (process.env.ALLURA_BRAIN_URL !== CANONICAL_BRAIN_URL) {
+    throw new Error("Canonical Allura Brain endpoint is not configured")
+  }
+  return CANONICAL_BRAIN_URL
+}
 
 interface JsonRpcRequest {
   jsonrpc: "2.0"
@@ -133,7 +140,7 @@ async function initSession(): Promise<string> {
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
   try {
-    const res = await fetch(BRAIN_URL, {
+    const res = await fetch(brainUrl(), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -175,7 +182,7 @@ async function callTool<T>(toolName: string, args: Record<string, unknown>): Pro
     }
     if (sessionId) headers["mcp-session-id"] = sessionId
 
-    const res = await fetch(BRAIN_URL, {
+    const res = await fetch(brainUrl(), {
       method: "POST",
       headers,
       body: JSON.stringify({

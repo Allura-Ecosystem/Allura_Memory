@@ -71,6 +71,18 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "governance_receipt_evidence_requests", class: "tenant-scoped", notes: "Immutable FK-backed complete receipt evidence membership", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "governance_receipts_legacy_archive", class: "migration-only", notes: "Quarantined pre-040 receipt envelopes; no application grants" },
   { table: "semantic_projections", class: "tenant-scoped", notes: "Versioned derived workspace semantic projections", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_documents", class: "tenant-scoped", notes: "Epic 30 owner-private or approved-department read documents; restricted app-role SELECT only", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_workspace_memberships", class: "tenant-scoped", notes: "Epic 30 independent current workspace read authority; revoked memberships fail closed", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_department_memberships", class: "tenant-scoped", notes: "Epic 30 current approved department read authority; revoked memberships fail closed", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_membership_approvals", class: "tenant-scoped", notes: "Epic 30 exact-workspace approval provenance; restricted app role is read-only", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_membership_receipts", class: "tenant-scoped", notes: "Epic 30 content-free workspace membership lifecycle receipts; restricted app role is read-only", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_read_receipts", class: "tenant-scoped", notes: "Epic 30 immutable content-free production read receipts; restricted app role records only through a scope-derived function", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_project_contacts", class: "tenant-scoped", notes: "Epic 30 exact-workspace named messaging contacts; restricted app role is read-only", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_messaging_approvals", class: "tenant-scoped", notes: "Epic 30 dual-approval messaging provenance; restricted app role is read-only", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_channel_invitations", class: "tenant-scoped", notes: "Epic 30 exact-channel invitations bound to dual approvals", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_restricted_messages", class: "tenant-scoped", notes: "Epic 30 explicit direct or invited-channel messages; no history/broadcast surface", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_messaging_receipts", class: "tenant-scoped", notes: "Epic 30 content-free restricted messaging receipts", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_messaging_receipt_consumptions", class: "tenant-scoped", notes: "Epic 30 append-only replay consumption for immutable restricted messaging receipts", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "mitigation_receipts", class: "tenant-scoped", notes: "Story 26.5 (migration 41): immutable governed mitigation-draft approval/rejection receipts, gated by REQ-GOV-008 approval_ref", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "threat_alerts", class: "tenant-scoped", notes: "Story 26.4 (migration 42): durable, deduplicated exposure alerts; UPDATE restricted to lifecycle_state/updated_at only", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "inventory_records", class: "tenant-scoped", notes: "Bumblebee Guard (migration 44): persisted, fully-mutable supply-chain inventory reconciled from bun.lock (lockfile) and .github/workflows (ci_workflow)", workspaceTreatment: "workspace-scoped-new-writes" },
@@ -91,6 +103,8 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
 
   // Credential / identity tables
   { table: "mcp_tokens", class: "tenant-scoped-credential", notes: "MCP credentials; lookup by token prefix before tenant resolution" },
+  { table: "paired_devices", class: "tenant-scoped-credential", notes: "Paired device credentials; RLS-scoped by tenant and workspace" },
+  { table: "device_challenges", class: "tenant-scoped-credential", notes: "Short-lived device pairing challenges; RLS-scoped by tenant and workspace" },
   { table: "bumblebee_runner_credentials", class: "tenant-scoped-credential", notes: "Story 26.7 dedicated runner credentials; exclusive bumblebee_runner audience and one-way revocation" },
   { table: "memberships", class: "tenant-scoped-credential", notes: "Tenant membership; may span tenant allowlist" },
 
@@ -101,6 +115,7 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "platform_insights", class: "operational", notes: "Aggregated platform-level insights" },
   { table: "platform_promotion_queue", class: "operational", notes: "Platform-wide promotion queue" },
   { table: "governed_lane_authority", class: "operational", notes: "Migration 54: immutable repository lane-policy projection; authority is joined to RLS-protected branch ledgers" },
+  { table: "device_enrollments", class: "operational", notes: "Pre-approval device enrollment state; access is only through fixed-search-path security-definer functions" },
   { table: "skill_usage_summary", class: "operational", notes: "View over skill_usage_events (which IS FORCE RLS-protected, migration 36). Migration 51 sets security_invoker = true on this view so it evaluates under the querying role's own RLS context rather than the (BYPASSRLS) view owner's -- see docker/postgres-init/51-view-security-invoker-hardening.sql." },
 
   // Migration-only

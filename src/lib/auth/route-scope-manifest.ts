@@ -418,13 +418,13 @@ export const ROUTE_SCOPE_MANIFEST: RouteScopeEntry[] = [
     pattern: "/api/brain/memories",
     requiredRole: "viewer",
     scopeName: "brain:memories:read",
-    description: "List Brain memories for a tenant (returns real memory content)",
+    description: "Legacy Brain memory listing quarantined pending Epic 30 authorization",
   },
   {
     pattern: "/api/brain/search",
     requiredRole: "viewer",
     scopeName: "brain:search:read",
-    description: "Hybrid search over Brain memories (returns real memory content)",
+    description: "Legacy Brain search quarantined pending Epic 30 authorization",
   },
 
   // ── Headless plugins (route handlers enforce server-derived plugin tokens) ──
@@ -739,7 +739,7 @@ export const PUBLIC_ROUTE_MANIFEST: PublicRouteEntry[] = [
     pattern: "/api/brain/health",
     scopeName: "public:brain:health",
     rationale:
-      "Brain liveness report (audit_health_report). Returns subsystem status and queue depth only, no memory content, so it is consistent with the other /api/health/* probes. Story 24.11a AC-4: sibling routes /api/brain/memories and /api/brain/search return real memory content and are declared protected.",
+      "Brain liveness report (audit_health_report). Returns subsystem status and queue depth only, no memory content, so it is consistent with the other /api/health/* probes. Sibling content routes remain authenticated but are quarantined pending Epic 30 authorization.",
   },
 ];
 
