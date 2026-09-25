@@ -1,12 +1,18 @@
 {
   "schemaVersion": 1,
-  "observedAt": "2026-09-25T15:04:39Z",
+  "observedAt": "2026-09-25T16:03:34Z",
   "repository": "Allura-Ecosystem/Allura_Memory",
   "branch": "main",
-  "localHead": "390d14e4039279322f58630719997cec4dbe064d",
+  "localHead": "398e419f7e3bdc652164f6bb4bb0c1ac535757c7",
   "originHead": "1934d211c239310d498794ec0c5dbaa532faeeb8",
   "mergeBase": "cc9acd2b1fc1ddbb23999717354cb7eb065789d2",
-  "divergence": { "localAhead": 82, "localBehind": 1 },
+  "divergence": { "localAhead": 98, "localBehind": 1 },
+  "localVerification": {
+    "hermetic": { "passed": 375, "skipped": 3, "files": 38 },
+    "unit": { "passed": 2937, "skipped": 165, "files": 198 },
+    "controlledRedFamilies": ["disclosure", "receipt", "revocation", "unknown_surface", "prompt_injection"],
+    "controlledRedCleanupVerified": true
+  },
   "epic30Workflow": {
     "path": ".github/workflows/epic-30-evidence.yml",
     "remoteLookup": "not_found_on_remote_default_branch",
@@ -41,6 +47,6 @@
   },
   "limitations": [
     "This is a read-only hosted-state observation, not a CI run, publication, deployment, rollback, or approval receipt.",
-    "A later GitHub API retry encountered a network connection failure; branch-protection values are from the successful authenticated read earlier in the same session."
+    "The authenticated refresh succeeded for remote HEAD, workflow inventory and branch protection; the dedicated Epic 30 workflow lookup returned HTTP 404 as expected because it is absent from the remote default branch."
   ]
 }
