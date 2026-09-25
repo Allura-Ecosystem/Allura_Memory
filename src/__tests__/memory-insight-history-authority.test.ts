@@ -44,8 +44,31 @@ describe("memory insight history authority", () => {
     )
     const [sql, values] = mocks.query.mock.calls[0]
     expect(sql).toContain("m.workspace_id = $3")
+    expect(sql).toContain("WITH RECURSIVE lineage")
+    expect(sql).toContain("FROM graph_supersedes")
     expect(sql).toContain("workspace_scope_state = 'workspace_scoped'")
     expect(sql).not.toContain("'global'")
     expect(values).toEqual(["insight-1", "allura-system", "workspace-a"])
+  })
+
+  it("returns the subject attribution for every history version", async () => {
+    mocks.query.mockResolvedValueOnce({
+      rows: [
+        {
+          id: "insight-1",
+          content: "version",
+          score: 0.9,
+          version: 1,
+          created_at: "2026-09-25T00:00:00.000Z",
+          deprecated: false,
+          provenance: "manual",
+          user_id: "subject-user",
+        },
+      ],
+    })
+    const response = await GET(request(), params)
+    expect(await response.json()).toMatchObject({
+      history: [{ insight_id: "insight-1", user_id: "subject-user" }],
+    })
   })
 })

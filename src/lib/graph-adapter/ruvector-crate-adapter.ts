@@ -447,23 +447,16 @@ export class RuvectorCrateGraphAdapter implements IGraphAdapter {
     return { memories: memories.slice(params.offset, params.offset + params.limit) }
   }
 
-  async getDeprecatedMemories(params: {
+  async getDeprecatedMemories(_params: {
     ids: string[]
     group_id: GroupId
+    workspace_id: string
+    principal_id: string
   }): Promise<Map<string, GraphMemoryNode>> {
-    RuvectorCrateGraphAdapter.assertGroupId(params.group_id)
-    // Honest: scan ALL nodes (not tenantNodes, which drops deprecated) and return the
-    // requested ids that are flagged deprecated. Empty under Option A by construction.
-    const res = await this.db.query(`MATCH (n:${NODE_LABEL}) RETURN n`)
-    const wanted = new Set(params.ids)
-    const out = new Map<string, GraphMemoryNode>()
-    for (const native of res.nodes ?? []) {
-      const n = nodeFromNative(native)
-      if (n.group_id === params.group_id && n.deprecated && wanted.has(n.id)) {
-        out.set(n.id, n)
-      }
-    }
-    return out
+    return RuvectorCrateGraphAdapter.unsupported(
+      "getDeprecatedMemories",
+      "the native crate does not persist the verified workspace discriminator required for deprecated-memory reads."
+    )
   }
 
   async linkMemoryContext(params: {

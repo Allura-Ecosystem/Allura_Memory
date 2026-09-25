@@ -50,6 +50,8 @@ describe("memory user deletion authority", () => {
       })
     const [findSql, findValues] = mocks.query.mock.calls[0]
     expect(findSql).toContain("workspace_id = $2")
+    expect(findSql).toContain("memory_restore")
+    expect(findSql).toContain("ORDER BY lifecycle.created_at DESC, lifecycle.id DESC")
     expect(findValues).toEqual(["allura-system", "workspace-a", "subject-user"])
     for (const call of [mocks.query.mock.calls[1], mocks.query.mock.calls[2]]) {
       expect(call[0]).toContain("group_id, workspace_id, event_type, agent_id")
@@ -60,10 +62,19 @@ describe("memory user deletion authority", () => {
         "verified-admin",
       ])
     }
+    const requestedMetadata = JSON.parse(mocks.query.mock.calls[1][1][5])
+    const completedMetadata = JSON.parse(mocks.query.mock.calls[2][1][5])
+    expect(requestedMetadata.request_id).toMatch(/^[0-9a-f-]{36}$/)
+    expect(completedMetadata.request_id).toBe(requestedMetadata.request_id)
+    expect(requestedMetadata).toMatchObject({ actor_id: "verified-admin", user_id: "subject-user" })
+    expect(completedMetadata).toMatchObject({ actor_id: "verified-admin", user_id: "subject-user" })
+    expect(requestedMetadata.session_hash).toMatch(/^[0-9a-f]{64}$/)
+    expect(completedMetadata.session_hash).toBe(requestedMetadata.session_hash)
+    expect(requestedMetadata.session_hash).not.toContain("verified-session")
     expect(mocks.delete).toHaveBeenCalledWith({
       id: "memory-1",
       group_id: "allura-system",
-      user_id: "verified-admin",
+      user_id: "subject-user",
       scope: {
         group_id: "allura-system",
         workspace_id: "workspace-a",
@@ -77,5 +88,13 @@ describe("memory user deletion authority", () => {
     mocks.delete.mockRejectedValueOnce(new Error("password=secret"))
     const response = await DELETE(request(), params)
     expect(await response.json()).toMatchObject({ deleted_count: 0, failed_count: 1 })
+  })
+
+  it("treats degraded canonical deletion as failure and uses schema-valid audit statuses", async () => {
+    mocks.delete.mockResolvedValueOnce({ deleted: true, meta: { degraded: true } })
+    const response = await DELETE(request(), params)
+    expect(await response.json()).toMatchObject({ deleted_count: 0, failed_count: 1 })
+    expect(mocks.query.mock.calls[1][1][4]).toBe("pending")
+    expect(mocks.query.mock.calls[2][1][4]).toBe("failed")
   })
 })

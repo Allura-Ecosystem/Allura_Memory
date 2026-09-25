@@ -19,6 +19,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { createHash, randomUUID } from "crypto"
 import { DatabaseQueryError, DatabaseUnavailableError } from "@/lib/errors/database-errors"
 import { withPermission } from "@/lib/auth/api-auth"
 import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
@@ -55,6 +56,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   }
 
   const requestedAt = new Date().toISOString()
+  const requestId = randomUUID()
+  const sessionHash = createHash("sha256").update(user.sessionId).digest("hex")
   try {
     // 1. Find all non-deleted memory IDs for this user within the group.
     //    We query the events table for `memory_add` events by this user and
@@ -71,14 +74,16 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         AND metadata->>'user_id' = $3
         AND event_type = 'memory_add'
         AND metadata->>'memory_id' IS NOT NULL
-        AND metadata->>'memory_id' NOT IN (
-          SELECT metadata->>'memory_id'
-          FROM events
-          WHERE group_id = $1
-            AND workspace_id = $2
-            AND event_type = 'memory_delete'
-            AND metadata->>'memory_id' IS NOT NULL
-        )
+        AND COALESCE((
+          SELECT lifecycle.event_type
+          FROM events lifecycle
+          WHERE lifecycle.group_id = events.group_id
+            AND lifecycle.workspace_id = events.workspace_id
+            AND lifecycle.metadata->>'memory_id' = events.metadata->>'memory_id'
+            AND lifecycle.event_type IN ('memory_delete', 'memory_restore')
+          ORDER BY lifecycle.created_at DESC, lifecycle.id DESC
+          LIMIT 1
+        ), 'memory_restore') <> 'memory_delete'
       `,
           [validatedGroupId, user.workspaceId, userId]
         )
@@ -98,9 +103,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             user.workspaceId,
             "user_data_deletion_requested",
             user.id,
-            "in_progress",
+            "pending",
             JSON.stringify({
               user_id: userId,
+              actor_id: user.id,
+              request_id: requestId,
+              session_hash: sessionHash,
               memory_count: ids.length,
               requested_at: requestedAt,
             }),
@@ -119,10 +127,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     for (const memoryId of memoryIds) {
       try {
-        await memory_delete({
+        const deletion = await memory_delete({
           id: memoryId as MemoryId,
           group_id: validatedGroupId as GroupId,
-          user_id: user.id,
+          user_id: userId,
           scope: {
             group_id: validatedGroupId as GroupId,
             workspace_id: user.workspaceId,
@@ -130,7 +138,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             session_id: user.sessionId,
           },
         })
-        results.push({ memory_id: memoryId, success: true })
+        if (deletion.meta?.degraded || !deletion.deleted) {
+          results.push({ memory_id: memoryId, success: false, error: "Deletion failed" })
+        } else {
+          results.push({ memory_id: memoryId, success: true })
+        }
       } catch {
         results.push({ memory_id: memoryId, success: false, error: "Deletion failed" })
       }
@@ -156,9 +168,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             user.workspaceId,
             "user_data_deletion_completed",
             user.id,
-            failedCount === 0 ? "completed" : "partial",
+            failedCount === 0 ? "completed" : "failed",
             JSON.stringify({
               user_id: userId,
+              actor_id: user.id,
+              request_id: requestId,
+              session_hash: sessionHash,
               deleted_count: deletedCount,
               failed_count: failedCount,
               requested_at: requestedAt,
@@ -172,6 +187,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     return NextResponse.json({
       user_id: userId,
       group_id: validatedGroupId,
+      request_id: requestId,
       deleted_count: deletedCount,
       failed_count: failedCount,
       requested_at: requestedAt,
