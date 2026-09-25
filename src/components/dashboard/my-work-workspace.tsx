@@ -128,9 +128,11 @@ function StateFrame({ children, processRunId, label }: { children: React.ReactNo
 
 export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWorkspaceProps): React.ReactElement {
   const [activeId, setActiveId] = useState(documents[0]?.id ?? "")
+  const [openDocumentIds, setOpenDocumentIds] = useState<string[]>(documents[0] ? [documents[0].id] : [])
   const [comparisonId, setComparisonId] = useState<string | null>(null)
   const [askOpen, setAskOpen] = useState(false)
   const askStatusId = useId()
+  const memoryTabsId = useId()
   const isMobileComparison = useMobileComparison()
   const comparisonOpener = useRef<HTMLButtonElement | null>(null)
   const comparisonPane = useRef<HTMLElement | null>(null)
@@ -138,6 +140,7 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
   const pendingComparisonFocus = useRef(false)
   const workspace = useRef<HTMLElement | null>(null)
   const mainDocument = useRef<HTMLElement | null>(null)
+  const memoryTabs = useRef<HTMLDivElement | null>(null)
   const comparisonExists = comparisonId !== null && documents.some(({ id }) => id === comparisonId)
 
   function closeComparison() {
@@ -147,18 +150,34 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
 
   function selectDocument(id: string) {
     if (comparisonId === id) setComparisonId(null)
+    setOpenDocumentIds((current) => current.includes(id) ? current : [...current, id])
     setActiveId(id)
+  }
+
+  function handleMemoryTabKey(event: React.KeyboardEvent<HTMLButtonElement>, id: string) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return
+    const openIds = openDocumentIds.filter((openId) => documents.some((item) => item.id === openId))
+    const index = openIds.indexOf(id)
+    if (index < 0 || openIds.length === 0) return
+    event.preventDefault()
+    const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? openIds.length - 1 :
+      (index + (event.key === "ArrowRight" ? 1 : -1) + openIds.length) % openIds.length
+    selectDocument(openIds[nextIndex])
+    requestAnimationFrame(() => memoryTabs.current?.querySelectorAll<HTMLButtonElement>("[role='tab']")[nextIndex]?.focus())
   }
 
   useEffect(() => {
     const documentIds = new Set(documents.map(({ id }) => id))
+    const reconciledOpenIds = openDocumentIds.filter((id) => documentIds.has(id))
+    const nextOpenIds = reconciledOpenIds.length > 0 ? reconciledOpenIds : documents[0] ? [documents[0].id] : []
+    if (nextOpenIds.join("\0") !== openDocumentIds.join("\0")) setOpenDocumentIds(nextOpenIds)
     if (comparisonId && !documentIds.has(comparisonId)) {
       pendingComparisonFocus.current = true
       setComparisonId(null)
     }
     if (activeId && !documentIds.has(activeId)) setActiveId(documents[0]?.id ?? "")
     if (!activeId && documents[0]) setActiveId(documents[0].id)
-  }, [activeId, comparisonId, documents])
+  }, [activeId, comparisonId, documents, openDocumentIds])
 
   useEffect(() => {
     if (!comparisonExists || !isMobileComparison) return
@@ -242,6 +261,9 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
   const privateDocuments = documents.filter(({ visibility }) => visibility === "private")
   const departmentDocuments = documents.filter(({ visibility }) => visibility === "department")
   const availableDocument = departmentDocuments.find(({ id }) => id !== active.id)
+  const openDocuments = openDocumentIds.map((id) => documents.find((item) => item.id === id)).filter((item): item is WorkspaceDocument => Boolean(item))
+  const activeDocumentIndex = documents.findIndex(({ id }) => id === active.id)
+  const activePanelId = `${memoryTabsId}-panel-${activeDocumentIndex}`
 
   return (
     <section ref={workspace} data-epic30-process={processRunId} className={styles.workspace} aria-label="My Work synthetic local workspace">
@@ -301,13 +323,24 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
             <div className={styles.toolbarMeta}><span>Epic 30</span><span>{documents.length} visible</span></div>
           </header>
 
-          <div className={styles.tabs} role="group" aria-label="Open workspace panes" data-comparison-background>
-            <button type="button" className={styles.activeTab} aria-label={`Focus document: ${active.title}`} onClick={() => mainDocument.current?.focus()}><FileText aria-hidden="true" /><span>{active.title}</span><i /></button>
+          <div className={styles.tabs} data-comparison-background>
+            <div ref={memoryTabs} className={styles.memoryTabs} role="tablist" aria-label="Open memory tabs">
+              {openDocuments.map((item) => {
+                const documentIndex = documents.findIndex(({ id }) => id === item.id)
+                const selected = item.id === active.id
+                return <button key={item.id} type="button" role="tab" id={`${memoryTabsId}-tab-${documentIndex}`}
+                  aria-controls={`${memoryTabsId}-panel-${documentIndex}`} aria-selected={selected} tabIndex={selected ? 0 : -1}
+                  className={selected ? styles.activeTab : ""} aria-label={`Focus document: ${item.title}`}
+                  onClick={() => selectDocument(item.id)} onKeyDown={(event) => handleMemoryTabKey(event, item.id)}>
+                  <FileText aria-hidden="true" /><span>{item.title}</span><i />
+                </button>
+              })}
+            </div>
             <button type="button" aria-label={comparison ? "Focus comparison pane" : "Focus context map"} disabled={isMobileComparison && !comparison} onClick={() => (comparison ? comparisonPane.current : contextMap.current)?.focus()}><BrainCircuit aria-hidden="true" /><span>{comparison ? "Comparison" : "Context map"}</span></button>
           </div>
 
           <div className={styles.workGrid}>
-            <article ref={mainDocument} tabIndex={-1} className={styles.document} data-comparison-background>
+            <article ref={mainDocument} id={activePanelId} role="tabpanel" aria-labelledby={`${memoryTabsId}-tab-${activeDocumentIndex}`} tabIndex={-1} className={styles.document} data-comparison-background>
               <div className={styles.breadcrumbs}>My Work <span>/</span> {active.visibility === "private" ? "Private" : active.departmentId} <span>/</span> {active.title}</div>
               <p className={styles.eyebrow}>{active.visibility === "private" ? "Private" : "Department"} · SYNTHETIC DATABASE</p>
               <h2>{active.title}</h2>
