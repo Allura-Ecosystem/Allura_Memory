@@ -6,6 +6,7 @@ vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal: mocks.
 vi.mock("./read-receipt-writer", () => ({ persistSyntheticReadReceipt: mocks.receipt }))
 import { readAuthorizedDocuments, readAuthorizedDocumentsPage, readAuthorizedWorkspaceState, searchAuthorizedDocuments, searchAuthorizedDocumentsPage } from "./read-service"
 import { readSyntheticDocumentLinks } from "./document-links"
+import { resolveSyntheticAskContext } from "./ask-context"
 const scope = { tenantId: "allura-epic30-local", workspaceId: "epic30-local-workspace", principalId: "owner-user" }
 const principal = { id: scope.principalId, groupId: scope.tenantId, workspaceId: scope.workspaceId,
   role: "viewer" as const, sessionId: "dev:owner-user", email: "owner@example.invalid" }
@@ -89,6 +90,18 @@ it("derives links and backlinks only from receipt-gated authorized endpoints", a
     documentId: "focus", title: "Focused note",
     links: [{ documentId: "visible-target", title: "Visible target" }],
     backlinks: [{ documentId: "visible-target", title: "Visible target" }],
+  })
+  expect(mocks.receipt).toHaveBeenCalledTimes(1)
+  expect(mocks.transaction).toHaveBeenCalledTimes(2)
+})
+it("builds Ask context only after the shared receipt-gated authority recheck", async () => {
+  mocks.query.mockImplementation(async (sql: string) => {
+    if (sql.includes("session_user")) return { rows: [verifiedSession] }
+    if (sql.includes("SELECT workspace_membership.policy_epoch")) return { rows: [{ role: "viewer", policy_epoch: "7" }] }
+    return { rows: [ownerRow] }
+  })
+  await expect(resolveSyntheticAskContext(scope, [ownerRow.id])).resolves.toEqual({
+    sources: [{ documentId: ownerRow.id, title: ownerRow.title, excerpt: ownerRow.content }],
   })
   expect(mocks.receipt).toHaveBeenCalledTimes(1)
   expect(mocks.transaction).toHaveBeenCalledTimes(2)
