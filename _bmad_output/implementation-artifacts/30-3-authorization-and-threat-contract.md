@@ -26,6 +26,8 @@ Reviewed decision matrix and adversarial threat cases including forged scope, co
 
 ## Current Preparation State
 
+2026-09-22: a cross-surface inventory found the legacy `/api/memory` web root accepted a caller-selected tenant for POST and omitted the workspace scope required by canonical list/search tools. The route now asserts the selected tenant equals the authenticated tenant, derives workspace/actor/session scope from the web principal, prevents metadata actor spoofing, and requires curator authority for writes. Hermetic adversarial tests cover cross-tenant denial, forged actor/scope, and list/search/deleted-list binding. This is a legacy REST boundary repair, not approval or implementation of the proposed Epic 30 production authorization contract. The Notion Story 30.3 status remains Not Started; independent policy/security/data review and live proof remain open.
+
 2026-09-17: canonical checkout is `main`. The bounded synthetic reader foundation and interrupted repair set are now integrated without the unrelated Epic 29 branch changes. Fresh local evidence is recorded in [current readiness](../planning-artifacts/implementation-readiness-epic-30.md). The exact Story 30.2 design decision was subsequently approved and reconciled on 2026-09-21, but Story 30.2 remains backlog. This story also remains backlog: the integrated slice does not implement the full authorization requirement, and no authorization-policy, live-database, hosted-CI, human-study or release approval is implied. Follow the [consolidated requirements](../planning-artifacts/epic-30-prd.md) and [completed course correction](../planning-artifacts/sprint-change-proposal-2026-09-17.md).
 
 ## Historical Evidence — before repository consolidation

@@ -325,6 +325,7 @@ Operational metrics for the dashboard overview.
 #### `GET /api/memory`
 
 List memories scoped by tenant. Supports user filtering and pagination.
+The web route treats `group_id` as an equality assertion against the authenticated tenant, not a source of authority. It supplies the server-derived workspace, actor and session scope to the canonical list, search and deleted-list tools. A cross-tenant selector is denied before a tool call.
 
 **Query parameters:**
 
@@ -334,6 +335,12 @@ List memories scoped by tenant. Supports user filtering and pagination.
 | `user_id` | string | No | Filter to specific user |
 | `limit` | integer | No | Max results (default 50) |
 | `offset` | integer | No | Pagination offset |
+
+---
+
+#### `POST /api/memory`
+
+Add an episodic memory through the canonical tool. The web handler requires curator-or-higher authority. `group_id` must equal the authenticated tenant; the server supplies workspace, actor and session scope. Caller metadata cannot replace the verified actor, and a caller-provided scope object is ignored. This boundary does not approve the separate Epic 30 Digital Brain workspace policy.
 
 ---
 
@@ -830,7 +837,7 @@ stateDiagram-v2
 
 ## Important Constraints
 
-1. **Dashboard scoped to `group_id`.** Every API call includes `group_id` for tenant isolation. No cross-tenant data access is possible.
+1. **Dashboard scoped to `group_id`.** Every API call includes `group_id` as an assertion, not authority. The root memory web route derives tenant/workspace/actor/session from the authenticated principal and denies a mismatched tenant before calling canonical tools. No cross-tenant data access is permitted.
 
 2. **Proposals require human approval in `soc2` mode.** `PROMOTION_MODE=soc2` blocks autonomous PostgreSQL (graph_memories) writes. Every promotion goes through the curator queue.
 
