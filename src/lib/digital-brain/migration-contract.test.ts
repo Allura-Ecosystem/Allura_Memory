@@ -10,6 +10,7 @@ const provenanceMigrationPath = path.resolve(process.cwd(), "docker/postgres-ini
 const messagingMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/74-digital-brain-restricted-messaging.sql")
 const membershipWriterMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/75-digital-brain-membership-governed-writer.sql")
 const readReceiptMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/76-digital-brain-production-read-receipts.sql")
+const messagingWriterMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/77-digital-brain-governed-messaging-writers.sql")
 
 describe("Epic 30 digital Brain read migration contract", () => {
   it("rejects null and blank department identifiers explicitly", () => {
@@ -144,5 +145,23 @@ describe("Epic 30 governed production read receipt migration contract", () => {
     expect(sql).toContain("GRANT EXECUTE ON FUNCTION app.record_brain_read_receipt")
     expect(sql).toContain("REVOKE INSERT, UPDATE, DELETE ON brain_read_receipts FROM allura_app")
     expect(sql).not.toMatch(/GRANT\s+(INSERT|UPDATE|DELETE).*ON brain_read_receipts.*TO allura_app/i)
+  })
+})
+
+describe("Epic 30 governed messaging writer migration contract", () => {
+  it("uses append-only receipt consumption and scope-derived atomic mutation functions", () => {
+    const sql = readFileSync(messagingWriterMigrationPath, "utf8")
+    expect(TENANT_TABLE_INVENTORY.some(({ table }) => table === "brain_messaging_receipt_consumptions")).toBe(true)
+    expect(sql).toContain("CREATE TABLE brain_messaging_receipt_consumptions")
+    expect(sql).toContain("ALTER TABLE brain_messaging_receipt_consumptions FORCE ROW LEVEL SECURITY")
+    expect(sql).toContain("CREATE TRIGGER brain_messaging_receipts_immutable")
+    expect(sql).toContain("CREATE OR REPLACE FUNCTION app.record_brain_messaging_receipt(")
+    expect(sql).toContain("CREATE OR REPLACE FUNCTION app.commit_brain_channel_invitation(")
+    expect(sql).toContain("CREATE OR REPLACE FUNCTION app.commit_brain_restricted_message(")
+    expect(sql).toContain("brain_messaging_receipt_consumptions AS consumption")
+    expect(sql).toContain("membership_approval.consumed_at IS NOT NULL")
+    expect(sql).toContain("verification_source = 'trusted_approval_adapter'")
+    expect(sql).toContain("REVOKE INSERT, UPDATE, DELETE ON brain_messaging_approvals, brain_messaging_receipts, brain_messaging_receipt_consumptions")
+    expect(sql).not.toMatch(/GRANT\s+(INSERT|UPDATE|DELETE).*TO allura_app/i)
   })
 })

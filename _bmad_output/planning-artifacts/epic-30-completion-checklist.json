@@ -81,7 +81,7 @@
     {
       "id": "30.10",
       "localState": "partial",
-      "evidence": ["_bmad_output/implementation-artifacts/30-10-restricted-contractor-messaging.md", "src/lib/digital-brain/restricted-messaging.ts", "src/lib/digital-brain/restricted-messaging.test.ts", "docker/postgres-init/74-digital-brain-restricted-messaging.sql", "src/lib/digital-brain/restricted-messaging-production.ts", "src/lib/digital-brain/restricted-messaging-production.test.ts"],
+      "evidence": ["_bmad_output/implementation-artifacts/30-10-restricted-contractor-messaging.md", "src/lib/digital-brain/restricted-messaging.ts", "src/lib/digital-brain/restricted-messaging.test.ts", "docker/postgres-init/74-digital-brain-restricted-messaging.sql", "docker/postgres-init/77-digital-brain-governed-messaging-writers.sql", "src/lib/digital-brain/restricted-messaging-production.ts", "src/lib/digital-brain/restricted-messaging-production.test.ts", "src/lib/digital-brain/restricted-messaging-receipt-writer.ts", "_bmad_output/implementation-artifacts/evidence/epic30-governed-messaging-writers-2026-09-25.json"],
       "remaining": [{ "id": "restricted-messaging", "kind": "production_implementation", "proofRequired": "Approved provider-backed discovery, durable approval provenance, invitation, channel delivery, audit storage, UI/accessibility, live read-back and measured revocation implementation." }]
     },
     {

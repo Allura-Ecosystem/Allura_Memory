@@ -9,6 +9,8 @@ import type {
 
 export interface RestrictedMessagingDb {
   query<T = Record<string, unknown>>(sql: string, params?: readonly unknown[]): Promise<{ rows: T[] }>
+  /** Must be an already server-bound restricted transaction; owner pools are forbidden. */
+  transaction?<T>(work: (tx: Pick<RestrictedMessagingDb, "query">) => Promise<T>): Promise<T>
 }
 
 interface CurrentMessagingAuthorityRow {
@@ -60,6 +62,7 @@ export class RestrictedMessagingProductionStore implements MessagingStore {
         AND tenant_membership.removed_at IS NULL
         AND approval.action='grant'
         AND approval.approver_role='workspace_membership_admin'
+        AND approval.verified_at IS NOT NULL
         AND approval.revoked_at IS NULL`, [scope.tenantId, scope.workspaceId, scope.principalId])
     if (result.rows.length !== 1) return null
     const row = result.rows[0]
@@ -94,6 +97,40 @@ export class RestrictedMessagingProductionStore implements MessagingStore {
     return result.rows[0] ?? null
   }
 
-  async commitInvitationIfAuthorized(): Promise<boolean> { return false }
-  async commitMessageIfAuthorized(): Promise<boolean> { return false }
+  async commitInvitationIfAuthorized(input?: { scope: MessagingScope; invitation: ChannelInvitation }): Promise<boolean> {
+    if (!input) return false
+    const { scope, invitation } = input
+    if (!this.db.transaction || !sameBoundScope(this.boundScope, scope) || scope.role !== "admin" ||
+        invitation.tenantId !== scope.tenantId || invitation.workspaceId !== scope.workspaceId ||
+        invitation.policyEpoch !== scope.policyEpoch || !invitation.projectId || !invitation.channelId || !invitation.inviteeId ||
+        invitation.ownerApprovalId === invitation.membershipAdminApprovalId) return false
+    try {
+      return this.db.transaction(async (tx) => {
+        const result = await tx.query<{ committed: boolean }>(`SELECT app.commit_brain_channel_invitation(
+          $1::uuid,$2::uuid,$3::text,$4::text,$5::text,$6::bigint) AS committed`, [
+          invitation.ownerApprovalId, invitation.membershipAdminApprovalId, invitation.projectId,
+          invitation.channelId, invitation.inviteeId, invitation.policyEpoch,
+        ])
+        return result.rows[0]?.committed === true
+      })
+    } catch { return false }
+  }
+
+  async commitMessageIfAuthorized(input?: { scope: MessagingScope; message: RestrictedMessage }): Promise<boolean> {
+    if (!input) return false
+    const { scope, message } = input
+    if (!this.db.transaction || !sameBoundScope(this.boundScope, scope) || scope.role !== "contractor" ||
+        message.tenantId !== scope.tenantId || message.workspaceId !== scope.workspaceId ||
+        message.senderId !== scope.principalId || !message.messageId || !message.projectId ||
+        !message.body.trim() || message.body.length > 4000 || (message.channelId === null) === (message.recipientId === null)) return false
+    try {
+      return this.db.transaction(async (tx) => {
+        const result = await tx.query<{ committed: boolean }>(`SELECT app.commit_brain_restricted_message(
+          $1::uuid,$2::text,$3::text,$4::text,$5::text,$6::bigint) AS committed`, [
+          message.messageId, message.projectId, message.channelId, message.recipientId, message.body, scope.policyEpoch,
+        ])
+        return result.rows[0]?.committed === true
+      })
+    } catch { return false }
+  }
 }
