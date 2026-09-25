@@ -89,9 +89,8 @@
     {
       "id": "30.11",
       "localState": "partial",
-      "evidence": [".github/workflows/epic-30-evidence.yml", "scripts/ci/run-epic30-controlled-red.sh"],
+      "evidence": [".github/workflows/epic-30-evidence.yml", ".github/workflows/check.yml", "_bmad_output/implementation-artifacts/evidence/epic30-hosted-run-36170672360.json", "scripts/ci/run-epic30-controlled-red.sh"],
       "remaining": [
-        { "id": "hosted-exact-sha-ci", "kind": "hosted_verification", "proofRequired": "Green hosted check/run IDs for the frozen SHA." },
         { "id": "required-branch-checks", "kind": "hosted_configuration", "proofRequired": "Read-back showing required checks block merge on the protected branch." },
         { "id": "independent-human-reviews", "kind": "human_approval", "proofRequired": "Security, maintainability, accessibility, migration and deployment reviews with no unresolved BLOCK/HIGH." }
       ]
