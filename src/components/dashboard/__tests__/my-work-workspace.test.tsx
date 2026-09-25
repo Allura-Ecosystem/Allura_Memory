@@ -174,22 +174,40 @@ describe("MyWorkWorkspace", () => {
 
   it("keeps the desktop comparison as an ordinary complementary pane", () => {
     render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
-    expect(screen.getByRole("group", { name: "Open workspace panes" })).toBeTruthy()
+    expect(screen.getByRole("tablist", { name: "Open memory tabs" })).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "Open deployment checklist" }))
     const pane = screen.getByRole("complementary", { name: "Comparison pane" })
     expect(pane.hasAttribute("aria-modal")).toBe(false)
     expect(screen.getByText("Comparison")).toBeTruthy()
   })
 
-  it("lets keyboard users focus each visible pane without implying a hidden tab panel", () => {
+  it("lets keyboard users focus the document tab and each auxiliary pane", () => {
     render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     fireEvent.click(screen.getByRole("button", { name: "Focus context map" }))
     expect(document.activeElement).toBe(screen.getByRole("complementary", { name: "Authorized document context map" }))
-    fireEvent.click(screen.getByRole("button", { name: "Focus document: Shipment exception review" }))
-    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Shipment exception review" }).closest("article"))
+    const documentTab = screen.getByRole("tab", { name: "Focus document: Shipment exception review" })
+    documentTab.focus()
+    expect(document.activeElement).toBe(documentTab)
     fireEvent.click(screen.getByRole("button", { name: "Open deployment checklist" }))
     fireEvent.click(screen.getByRole("button", { name: "Focus comparison pane" }))
     expect(document.activeElement).toBe(screen.getByRole("complementary", { name: "Comparison pane" }))
+  })
+
+  it("opens documents as real memory tabs and supports arrow-key navigation", async () => {
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
+    expect(screen.getAllByRole("tab")).toHaveLength(1)
+    fireEvent.click(screen.getByRole("button", { name: "Deployment checklist operations" }))
+
+    const shipmentTab = screen.getByRole("tab", { name: "Focus document: Shipment exception review" })
+    const checklistTab = screen.getByRole("tab", { name: "Focus document: Deployment checklist" })
+    expect(checklistTab.getAttribute("aria-selected")).toBe("true")
+    expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe(checklistTab.id)
+
+    checklistTab.focus()
+    fireEvent.keyDown(checklistTab, { key: "ArrowLeft" })
+    await waitFor(() => expect(document.activeElement).toBe(shipmentTab))
+    expect(shipmentTab.getAttribute("aria-selected")).toBe("true")
+    expect(screen.getByRole("heading", { name: "Shipment exception review" })).toBeTruthy()
   })
 
   it("does not offer focus on the hidden mobile map", () => {
