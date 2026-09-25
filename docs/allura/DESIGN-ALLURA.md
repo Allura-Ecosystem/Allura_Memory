@@ -813,7 +813,7 @@ stateDiagram-v2
 
 ### MEM-UC14: User soft-deletes and restores a memory within 30-day window
 
-**Actor:** End User
+**Actor:** Administrator acting for the authenticated workspace
 
 **Precondition:** Memory exists and is not already soft-deleted.
 
@@ -828,6 +828,11 @@ stateDiagram-v2
 8. System calls `POST /api/memory/[id]/restore`
 9. System appends `memory_restore` event to PostgreSQL
 10. System removes `deprecated` flag from PostgreSQL (graph_memories) node
+
+The restore handler derives tenant, workspace, actor and session from the
+authenticated administrator. Optional tenant/workspace/user selectors are
+equality assertions only and are rejected before the canonical restore tool
+when they conflict with verified authority.
 
 **Postcondition:** Memory is either soft-deleted (recoverable within 30 days) or restored to active state.
 
