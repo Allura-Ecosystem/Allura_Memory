@@ -31,7 +31,7 @@ export async function GET(): Promise<NextResponse> {
   if (process.env.ALLURA_BRAIN_URL !== CANONICAL_BRAIN_ENDPOINT) return unavailable()
   try {
     const report = await brainClient.healthReport(PROBE_GROUP_ID)
-    return NextResponse.json(report)
+    return NextResponse.json(report, { headers: { "Cache-Control": "no-store" } })
   } catch {
     return unavailable()
   }

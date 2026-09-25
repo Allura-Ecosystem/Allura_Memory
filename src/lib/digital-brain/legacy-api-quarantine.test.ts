@@ -77,6 +77,15 @@ describe("Epic 30 legacy Brain content-route quarantine", () => {
     expect(mocks.health).toHaveBeenCalledWith("allura-system")
   })
 
+  it("keeps successful canonical Brain health responses non-cacheable", async () => {
+    mocks.health.mockResolvedValueOnce({ overall_status: "healthy", queue_depth: 0 })
+    const response = await brainHealth()
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual({ overall_status: "healthy", queue_depth: 0 })
+    expect(mocks.health).toHaveBeenCalledWith("allura-system")
+  })
+
   it("never probes a local or unset Allura endpoint from the public health route", async () => {
     for (const endpoint of [undefined, "http://localhost:5888/mcp", "https://other.example/mcp"]) {
       vi.stubEnv("ALLURA_BRAIN_URL", endpoint)
