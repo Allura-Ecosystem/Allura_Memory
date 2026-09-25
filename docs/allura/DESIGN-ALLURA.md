@@ -418,11 +418,17 @@ List approved insights with pagination.
 
 Version history for a specific insight (SUPERSEDES chain).
 
+The handler derives tenant and workspace from the authenticated principal,
+rejects conflicting selectors, and reads only `workspace_scoped` versions
+through the restricted workspace transaction. It does not widen the result to
+the legacy `global` group.
+
 **Query parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `group_id` | string | Yes | Tenant scope |
+| `group_id` | string | No | Optional equality assertion against authenticated tenant |
+| `workspace_id` | string | No | Optional equality assertion against authenticated workspace |
 
 ---
 
