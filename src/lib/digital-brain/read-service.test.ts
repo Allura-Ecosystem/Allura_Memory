@@ -143,4 +143,36 @@ describe("readAuthorizedDocuments", () => {
 
     await expect(readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query)).resolves.toEqual([])
   })
+
+  it("uses one bytewise ID order for same-timestamp keyset rows and SQL boundaries", async () => {
+    const sameTimestamp = new Date("2026-09-17T00:00:00.000Z")
+    const query = vi.fn(async () => ({ rows: [
+      row({ id: "a-record", updated_at: sameTimestamp }),
+      row({ id: "Z-record", updated_at: sameTimestamp }),
+      row({ id: "é-record", updated_at: sameTimestamp }),
+    ] }))
+    const claims = {
+      version: 1 as const,
+      operation: "read_documents" as const,
+      tenantId: OWNER_SCOPE.tenantId,
+      workspaceId: OWNER_SCOPE.workspaceId,
+      principalId: OWNER_SCOPE.principalId,
+      sessionHash: "0".repeat(64), actorRole: "viewer" as const, policyEpoch: 1, pageSize: 3,
+      boundary: { updatedAt: sameTimestamp.toISOString(), id: "A-record" },
+      witnessHash: "1".repeat(64), queryHash: null, issuedAt: sameTimestamp.toISOString(),
+    }
+
+    const documents = await readAuthorizedDocumentsInRestrictedTransaction(
+      OWNER_ENVELOPE, query, { pageSize: 3, claims },
+    )
+
+    expect(documents.map(({ id }) => id)).toEqual(["Z-record", "a-record", "é-record"])
+    const [sql, params] = query.mock.calls[0] as unknown as [string, unknown[]]
+    expect(sql).toContain('document.id COLLATE "C"')
+    expect(sql).toContain('(document.id COLLATE "C") > ($6::text COLLATE "C")')
+    expect(params).toEqual([
+      OWNER_SCOPE.tenantId, OWNER_SCOPE.workspaceId, OWNER_SCOPE.principalId, 1,
+      sameTimestamp.toISOString(), "A-record", 4,
+    ])
+  })
 })

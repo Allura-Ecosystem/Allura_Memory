@@ -1,17 +1,17 @@
+import type { AuthUser } from "@/lib/auth/types"
 import { withTenantTransaction } from "@/lib/db/tenant-transaction"
 import { getAppPool } from "@/lib/postgres/connection"
-import type { AuthUser } from "@/lib/auth/types"
 import {
   assertAuthorizedReadCursorMatches,
   AUTHORIZED_READ_PAGE_SIZE_DEFAULT,
   AUTHORIZED_READ_PAGE_SIZE_MAX,
+  type AuthorizedReadCursorClaims,
+  type AuthorizedReadOperation,
   createAuthorizedReadCursor,
   createAuthorizedReadReceipt,
   decodeAuthorizedReadCursor,
   hashAuthorizedSearchQuery,
   persistAuthorizedReadReceipt,
-  type AuthorizedReadCursorClaims,
-  type AuthorizedReadOperation,
 } from "./read-receipt"
 import { persistSyntheticReadReceipt } from "./read-receipt-writer"
 
@@ -173,7 +173,7 @@ const AUTHORIZED_DOCUMENTS_SQL = `
     )
 `
 
-const AUTHORIZED_DOCUMENTS_ORDER_SQL = ` ORDER BY document.updated_at DESC, document.id`
+const AUTHORIZED_DOCUMENTS_ORDER_SQL = ` ORDER BY document.updated_at DESC, document.id COLLATE "C"`
 
 const CURRENT_WORKSPACE_AUTHORITY_SQL = `
   SELECT workspace_membership.policy_epoch, tenant_membership.role
@@ -276,7 +276,8 @@ function buildAuthorizedDocumentsQuery(pagination?: ReadPaginationQuery): { sql:
   const { pageSize, claims } = pagination
   const suffix = claims
     ? ` AND (document.updated_at < $5::timestamptz
-        OR (document.updated_at = $5::timestamptz AND document.id > $6))
+        OR (document.updated_at = $5::timestamptz
+          AND (document.id COLLATE "C") > ($6::text COLLATE "C")))
         ${AUTHORIZED_DOCUMENTS_ORDER_SQL} LIMIT $7`
     : `${AUTHORIZED_DOCUMENTS_ORDER_SQL} LIMIT $5`
   return {
@@ -285,10 +286,14 @@ function buildAuthorizedDocumentsQuery(pagination?: ReadPaginationQuery): { sql:
   }
 }
 
+function compareCanonicalDocumentIds(left: string, right: string): number {
+  return Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))
+}
+
 function sortDocuments(documents: AuthorizedDocument[]): AuthorizedDocument[] {
   return [...documents].sort((left, right) => {
     const byUpdatedAt = right.updatedAt.getTime() - left.updatedAt.getTime()
-    return byUpdatedAt || left.id.localeCompare(right.id)
+    return byUpdatedAt || compareCanonicalDocumentIds(left.id, right.id)
   })
 }
 
@@ -578,7 +583,8 @@ function afterCursor(document: AuthorizedDocument, claims: AuthorizedReadCursorC
   if (!claims) return true
   const boundaryTime = new Date(claims.boundary.updatedAt).getTime()
   const updatedTime = document.updatedAt.getTime()
-  return updatedTime < boundaryTime || (updatedTime === boundaryTime && document.id > claims.boundary.id)
+  return updatedTime < boundaryTime ||
+    (updatedTime === boundaryTime && compareCanonicalDocumentIds(document.id, claims.boundary.id) > 0)
 }
 
 /** Synthetic-only receipt-bound search page; production search remains quarantined. */
