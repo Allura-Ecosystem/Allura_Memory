@@ -7,6 +7,7 @@ import { TENANT_TABLE_INVENTORY } from "@/lib/db/tenant-table-inventory"
 const migrationPath = path.resolve(process.cwd(), "docker/postgres-init/71-digital-brain-read-foundation.sql")
 const workspaceMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/72-digital-brain-workspace-membership.sql")
 const provenanceMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/73-digital-brain-membership-provenance.sql")
+const messagingMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/74-digital-brain-restricted-messaging.sql")
 
 describe("Epic 30 digital Brain read migration contract", () => {
   it("rejects null and blank department identifiers explicitly", () => {
@@ -72,9 +73,37 @@ describe("Epic 30 membership provenance migration contract", () => {
       expect(TENANT_TABLE_INVENTORY.some(({ table: candidate }) => candidate === table)).toBe(true)
     }
     expect(sql).toContain("ADD COLUMN IF NOT EXISTS approval_id UUID REFERENCES brain_membership_approvals")
+    expect(sql).toContain("approval_id UUID NOT NULL REFERENCES brain_membership_approvals")
+    expect(sql).toContain("CREATE POLICY brain_workspace_membership_admin_read_policy")
+    expect(sql).toContain("CREATE OR REPLACE FUNCTION public.brain_has_current_workspace_membership()")
+    expect(sql).toContain("CREATE OR REPLACE FUNCTION public.brain_has_current_workspace_admin()")
+    expect(sql).toContain("workspace_membership.approval_id IS NOT NULL")
+    expect(sql).toContain("public.brain_has_current_workspace_admin()")
+    expect(sql).toContain("rolname='allura_migration' AND rolbypassrls")
+    expect(sql).toContain("ALTER FUNCTION public.brain_has_current_workspace_membership() OWNER TO allura_migration")
+    expect(sql).toContain("approval_id IS NOT NULL")
     expect(sql).toContain("group_id = current_setting('app.current_group_id', true)")
     expect(sql).toContain("workspace_id = current_setting('app.current_workspace_id', true)")
     expect(sql).toContain("REVOKE INSERT, UPDATE, DELETE ON brain_membership_approvals, brain_membership_receipts FROM allura_app")
+    expect(sql).not.toMatch(/GRANT\s+(INSERT|UPDATE|DELETE).*TO allura_app/i)
+  })
+})
+
+describe("Epic 30 restricted messaging migration contract", () => {
+  it("keeps durable messaging exact-scope, provenance-bound, and read-only to the app role", () => {
+    const sql = readFileSync(messagingMigrationPath, "utf8")
+    const tables = ["brain_project_contacts", "brain_messaging_approvals", "brain_channel_invitations", "brain_restricted_messages", "brain_messaging_receipts"]
+    for (const table of tables) expect(TENANT_TABLE_INVENTORY.some(({ table: candidate }) => candidate === table)).toBe(true)
+    expect(sql).toContain("owner_approval_id UUID NOT NULL REFERENCES brain_messaging_approvals")
+    expect(sql).toContain("membership_admin_approval_id UUID NOT NULL REFERENCES brain_messaging_approvals")
+    expect(sql).toContain("verification_source TEXT NOT NULL CHECK (verification_source = 'trusted_approval_adapter')")
+    expect(sql).toContain("provenance_ref TEXT NOT NULL")
+    expect(sql).toContain("invitee_id=current_setting('app.current_principal',true)")
+    expect(sql).toContain("sender_id=current_setting('app.current_principal',true)")
+    expect(sql).toContain("actor_id=current_setting('app.current_principal',true)")
+    expect(sql.match(/public\.brain_has_current_workspace_membership\(\)/g)?.length).toBeGreaterThanOrEqual(5)
+    expect(sql.match(/public\.brain_has_current_workspace_admin\(\)/g)?.length).toBeGreaterThanOrEqual(2)
+    expect(sql).toContain("REVOKE INSERT, UPDATE, DELETE ON brain_project_contacts")
     expect(sql).not.toMatch(/GRANT\s+(INSERT|UPDATE|DELETE).*TO allura_app/i)
   })
 })

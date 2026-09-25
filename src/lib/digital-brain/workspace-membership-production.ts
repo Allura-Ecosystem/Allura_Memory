@@ -29,7 +29,17 @@ export class ProductionMembershipStore implements MembershipLifecycleStore {
   async currentMembership(subject: MembershipSubject): Promise<WorkspaceMembership | null> { return this.read(subject) }
   async readBack(subject: MembershipSubject): Promise<WorkspaceMembership | null> { return this.read(subject) }
   private async read(subject: MembershipSubject): Promise<WorkspaceMembership | null> {
-    const result = await this.db.query<WorkspaceMembership>(`SELECT group_id AS "tenantId", workspace_id AS "workspaceId", user_id AS "userId", approved_by AS "approvedBy", approval_id AS "approvalId", policy_epoch AS "policyEpoch", revoked_at AS "revokedAt" FROM brain_workspace_memberships WHERE group_id=$1 AND workspace_id=$2 AND user_id=$3`, [subject.tenantId, subject.workspaceId, subject.userId])
+    const result = await this.db.query<WorkspaceMembership>(`SELECT membership.group_id AS "tenantId", membership.workspace_id AS "workspaceId", membership.user_id AS "userId", membership.approved_by AS "approvedBy", membership.approval_id AS "approvalId", membership.policy_epoch AS "policyEpoch", membership.revoked_at AS "revokedAt"
+      FROM brain_workspace_memberships AS membership
+      JOIN brain_membership_approvals AS approval
+        ON approval.approval_id=membership.approval_id
+       AND approval.group_id=membership.group_id
+       AND approval.workspace_id=membership.workspace_id
+       AND approval.subject_user_id=membership.user_id
+      WHERE membership.group_id=$1 AND membership.workspace_id=$2 AND membership.user_id=$3
+        AND membership.approval_id IS NOT NULL AND approval.revoked_at IS NULL
+        AND ((membership.revoked_at IS NULL AND approval.action='grant')
+          OR (membership.revoked_at IS NOT NULL AND approval.action='revoke'))`, [subject.tenantId, subject.workspaceId, subject.userId])
     return result.rows[0] ?? null
   }
   async commitGrant(): Promise<boolean> { throw new Error("production membership writes require an approved governed transaction adapter") }

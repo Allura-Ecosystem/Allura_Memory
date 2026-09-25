@@ -33,6 +33,7 @@ describe("Epic 30 merge-evidence wiring", () => {
       "read-service.test.ts", "connection.app-pool.test.ts", "brain-client.test.ts", "page.test.tsx",
       "my-work-workspace.test.tsx", "ci-contract.test.ts", "legacy-api-quarantine.test.ts",
       "restricted-messaging.test.ts",
+      "restricted-messaging-production.test.ts",
       "workspace-membership-lifecycle.test.ts",
       "workspace-membership-production.test.ts",
       "ask-answer.test.ts",

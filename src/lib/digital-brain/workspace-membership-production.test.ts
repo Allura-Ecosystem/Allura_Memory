@@ -22,6 +22,14 @@ describe("production membership provenance adapter", () => {
     await expect(store.commitGrant()).rejects.toThrow(/governed transaction adapter/)
     await expect(store.commitRevoke()).rejects.toThrow(/governed transaction adapter/)
   })
+  it("excludes legacy or mismatched target memberships without approval provenance", async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [] })
+    const store = new ProductionMembershipStore({ query } as never)
+    await expect(store.currentMembership({ tenantId: "allura-test", workspaceId: "workspace-a", userId: "member" })).resolves.toBeNull()
+    expect(query.mock.calls[0][0]).toContain("membership.approval_id IS NOT NULL")
+    expect(query.mock.calls[0][0]).toContain("approval.subject_user_id=membership.user_id")
+    expect(query.mock.calls[0][0]).toContain("approval.action='revoke'")
+  })
   it("does not accept owner-pool or client-authority configuration", () => {
     expect(ProductionMembershipStore.length).toBe(1)
     expect(scope.role).toBe("admin")
