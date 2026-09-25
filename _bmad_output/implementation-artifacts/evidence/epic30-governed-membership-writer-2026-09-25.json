@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "epic": "30",
+  "story": "30.3",
+  "recordedAt": "2026-09-25",
+  "baseCommit": "97570038f554062b5b4e891c71a04a6a9debe009",
+  "commands": [
+    "bun vitest run src/lib/digital-brain/workspace-membership-production.test.ts src/lib/digital-brain/migration-contract.test.ts",
+    "bun run typecheck",
+    "bun run test:epic30-live"
+  ],
+  "database": {
+    "image": "pgvector/pgvector:pg16",
+    "containerName": "allura-epic30-temp-writer-20260925",
+    "host": "127.0.0.1",
+    "port": 5444,
+    "storage": "container tmpfs only",
+    "productionDatabaseContacted": false
+  },
+  "result": {
+    "status": "passed",
+    "focusedTestsPassed": 14,
+    "typecheckPassed": true,
+    "liveSuitePassed": true
+  },
+  "proved": [
+    "The restricted application role invokes one SECURITY DEFINER membership transition function and has no direct membership, approval, or receipt DML grant.",
+    "A server-scoped current admin with a consumed provenance-bearing membership approval can grant or revoke only inside the exact tenant and workspace.",
+    "Each transition requires a verified, unconsumed, action-specific approval plus an exact content-free durable candidate receipt.",
+    "Grant and revoke enforce monotonic expected and target policy epochs, consume their approvals, and reject replay.",
+    "The complete live-style suite passed against the disposable loopback PostgreSQL database."
+  ],
+  "notProved": [
+    "A trusted production approval-control-plane writer or user interface.",
+    "The remaining human authorization-policy approval by the designated security and data owners.",
+    "Production deployment or production database behavior."
+  ],
+  "cleanup": {
+    "containerRemoved": true,
+    "port5444ListeningAfterRun": false
+  }
+}

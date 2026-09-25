@@ -6,6 +6,7 @@ import { provisionSyntheticDatabase } from "../../scripts/epic30/synthetic-datab
 import { verifySyntheticSession } from "@/lib/digital-brain/local-confinement"
 import { readFileSync } from "node:fs"
 import path from "node:path"
+import { randomUUID } from "node:crypto"
 
 import { withTenantTransaction } from "@/lib/db/tenant-transaction"
 import { epic30ReadTestOnly, readAuthorizedDocumentsInRestrictedTransaction } from "@/lib/digital-brain/read-service"
@@ -318,6 +319,63 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
       await expect(rawOwnerIds()).resolves.not.toEqual([])
     } finally {
       await ownerPool.query("UPDATE brain_workspace_memberships SET policy_epoch=1 WHERE group_id=$1 AND workspace_id=$2 AND user_id='owner-user'", [GROUP, WORKSPACE])
+    }
+  })
+
+  it("commits only receipt-bound verified workspace membership transitions", async () => {
+    const actorApprovalId = randomUUID()
+    const grantApprovalId = randomUUID()
+    const revokeApprovalId = randomUUID()
+    const grantReceiptId = randomUUID()
+    const revokeReceiptId = randomUUID()
+    const subject = "governed-member"
+    try {
+      await ownerPool.query("INSERT INTO memberships (group_id,user_id,email,role,created_at,updated_at,removed_at) VALUES ($1,$2,$3,'viewer',now(),now(),NULL)", [GROUP, subject, "governed-member@example.invalid"])
+      await ownerPool.query(`INSERT INTO brain_membership_approvals
+        (approval_id,group_id,workspace_id,subject_user_id,approver_id,approver_role,action,provenance_ref,policy_epoch,verified_at,consumed_at)
+        VALUES ($1,$2,$3,'admin-user','trusted-control-plane','workspace_membership_admin','grant','seed-admin',1,now(),now())`, [actorApprovalId, GROUP, WORKSPACE])
+      await ownerPool.query("UPDATE brain_workspace_memberships SET approval_id=$1 WHERE group_id=$2 AND workspace_id=$3 AND user_id='admin-user'", [actorApprovalId, GROUP, WORKSPACE])
+      await ownerPool.query(`INSERT INTO brain_membership_approvals
+        (approval_id,group_id,workspace_id,subject_user_id,approver_id,approver_role,action,provenance_ref,policy_epoch,verified_at)
+        VALUES ($1,$2,$3,$4,'trusted-control-plane','workspace_membership_admin','grant','grant-governed-member',1,now())`, [grantApprovalId, GROUP, WORKSPACE, subject])
+      await ownerPool.query(`INSERT INTO brain_membership_receipts
+        (receipt_id,action,decision,group_id,workspace_id,actor_id,subject_user_id,approval_id,authority_epoch,target_epoch,witness_hash)
+        VALUES ($1,'membership_grant','allow_candidate',$2,$3,'admin-user',$4,$5,1,1,repeat('a',64))`, [grantReceiptId, GROUP, WORKSPACE, subject, grantApprovalId])
+      const grant = await withTenantTransaction(
+        { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "admin-user" },
+        client => client.query<{ user_id: string; policy_epoch: string; revoked_at: string | null }>("SELECT user_id,policy_epoch,revoked_at FROM app.commit_brain_workspace_membership($1::uuid,'grant',1,0,1)", [grantApprovalId]),
+        appPool,
+      )
+      expect(grant.rows).toEqual([{ user_id: subject, policy_epoch: "1", revoked_at: null }])
+      await expect(withTenantTransaction(
+        { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "admin-user" },
+        client => client.query("SELECT * FROM app.commit_brain_workspace_membership($1::uuid,'grant',1,0,1)", [grantApprovalId]),
+        appPool,
+      )).rejects.toMatchObject({ code: "42501" })
+
+      await ownerPool.query(`INSERT INTO brain_membership_approvals
+        (approval_id,group_id,workspace_id,subject_user_id,approver_id,approver_role,action,provenance_ref,policy_epoch,verified_at)
+        VALUES ($1,$2,$3,$4,'trusted-control-plane','workspace_membership_admin','revoke','revoke-governed-member',1,now())`, [revokeApprovalId, GROUP, WORKSPACE, subject])
+      await ownerPool.query(`INSERT INTO brain_membership_receipts
+        (receipt_id,action,decision,group_id,workspace_id,actor_id,subject_user_id,approval_id,authority_epoch,target_epoch,witness_hash)
+        VALUES ($1,'membership_revoke','allow_candidate',$2,$3,'admin-user',$4,$5,1,2,repeat('b',64))`, [revokeReceiptId, GROUP, WORKSPACE, subject, revokeApprovalId])
+      const revoke = await withTenantTransaction(
+        { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "admin-user" },
+        client => client.query<{ user_id: string; policy_epoch: string; revoked_at: string | null }>("SELECT user_id,policy_epoch,revoked_at FROM app.commit_brain_workspace_membership($1::uuid,'revoke',1,1,2)", [revokeApprovalId]),
+        appPool,
+      )
+      expect(revoke.rows).toHaveLength(1)
+      expect(revoke.rows[0]).toMatchObject({ user_id: subject, policy_epoch: "2" })
+      expect(revoke.rows[0]?.revoked_at).not.toBeNull()
+      const approvals = await ownerPool.query("SELECT approval_id,consumed_at FROM brain_membership_approvals WHERE approval_id IN ($1,$2) ORDER BY approval_id", [grantApprovalId, revokeApprovalId])
+      expect(approvals.rows).toHaveLength(2)
+      expect(approvals.rows.every(row => row.consumed_at !== null)).toBe(true)
+    } finally {
+      await ownerPool.query("DELETE FROM brain_membership_receipts WHERE receipt_id IN ($1,$2)", [grantReceiptId, revokeReceiptId])
+      await ownerPool.query("DELETE FROM brain_workspace_memberships WHERE group_id=$1 AND workspace_id=$2 AND user_id=$3", [GROUP, WORKSPACE, subject])
+      await ownerPool.query("DELETE FROM brain_membership_approvals WHERE approval_id IN ($1,$2,$3)", [actorApprovalId, grantApprovalId, revokeApprovalId])
+      await ownerPool.query("UPDATE brain_workspace_memberships SET approval_id=NULL WHERE group_id=$1 AND workspace_id=$2 AND user_id='admin-user'", [GROUP, WORKSPACE])
+      await ownerPool.query("DELETE FROM memberships WHERE group_id=$1 AND user_id=$2", [GROUP, subject])
     }
   })
 
