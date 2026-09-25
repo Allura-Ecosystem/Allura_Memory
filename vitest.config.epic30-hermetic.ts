@@ -7,6 +7,7 @@ export default defineConfig({ ...unit, test: { ...unit.test,
   include: [
     "src/lib/digital-brain/ci-contract.test.ts",
     "src/__tests__/memory-root-authority.test.ts",
+    "src/__tests__/memory-id-authority.test.ts",
     "src/lib/digital-brain/document-links.test.ts",
     "src/lib/digital-brain/legacy-api-quarantine.test.ts",
     "src/lib/digital-brain/local-confinement.test.ts",

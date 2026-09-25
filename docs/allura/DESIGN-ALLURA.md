@@ -347,8 +347,11 @@ Add an episodic memory through the canonical tool. The web handler requires cura
 #### `GET /api/memory/[id]`
 
 Fetch a single memory by ID with tenant scope.
+The route requires viewer authority and derives tenant, workspace, actor and session scope from the authenticated principal. The query `group_id` is an equality assertion only; cross-tenant selectors are denied before `memory_get` executes.
 
 **Query parameters:**
+
+`PUT` requires curator authority and creates an append-only superseding version. `DELETE` requires administrator authority and performs the governed soft-delete path. Both mutation routes use the verified principal as actor, ignore caller-selected `user_id` authority, prevent metadata actor replacement, and pass server-derived workspace/session scope to the canonical tool.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
