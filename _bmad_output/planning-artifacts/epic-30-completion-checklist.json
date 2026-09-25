@@ -75,7 +75,7 @@
     {
       "id": "30.9",
       "localState": "partial",
-      "evidence": ["src/lib/digital-brain/ask-context.ts", "src/lib/digital-brain/ask-answer.ts", "src/lib/digital-brain/ask-answer.test.ts", "_bmad_output/implementation-artifacts/30-9-read-only-ask-allura.md"],
+      "evidence": ["src/lib/digital-brain/ask-context.ts", "src/lib/digital-brain/ask-answer.ts", "src/lib/digital-brain/ask-answer.test.ts", "src/lib/digital-brain/production-ask.ts", "src/lib/digital-brain/production-ask.test.ts", "src/lib/digital-brain/production-reader.ts", "_bmad_output/implementation-artifacts/30-9-read-only-ask-allura.md"],
       "remaining": [
         { "id": "provider-policy", "kind": "human_approval", "proofRequired": "Verified no-retention/no-training provider contract approved for governed content." },
         { "id": "cited-read-only-ask", "kind": "production_implementation", "proofRequired": "Grounded, cited, read-only Ask implementation with adversarial and live evidence." }
