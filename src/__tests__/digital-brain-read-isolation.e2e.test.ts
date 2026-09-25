@@ -410,6 +410,66 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
     }
   })
 
+  it("commits a dual-approved channel invitation and receipt-bound contractor message", async () => {
+    const adminMembershipApprovalId = randomUUID()
+    const contractorMembershipApprovalId = randomUUID()
+    const ownerApprovalId = randomUUID()
+    const membershipAdminApprovalId = randomUUID()
+    const invitationReceiptId = randomUUID()
+    const messageReceiptId = randomUUID()
+    const messageId = randomUUID()
+    const projectId = "project-governed"
+    const channelId = "channel-ops"
+    try {
+      for (const [approvalId, subject, ref] of [[adminMembershipApprovalId, "admin-user", "seed-messaging-admin"], [contractorMembershipApprovalId, "contractor-user", "seed-messaging-contractor"]] as const) {
+        await ownerPool.query(`INSERT INTO brain_membership_approvals
+          (approval_id,group_id,workspace_id,subject_user_id,approver_id,approver_role,action,provenance_ref,policy_epoch,verified_at,consumed_at)
+          VALUES ($1,$2,$3,$4,'trusted-control-plane','workspace_membership_admin','grant',$5,1,now(),now())`, [approvalId, GROUP, WORKSPACE, subject, ref])
+        await ownerPool.query("UPDATE brain_workspace_memberships SET approval_id=$1 WHERE group_id=$2 AND workspace_id=$3 AND user_id=$4", [approvalId, GROUP, WORKSPACE, subject])
+      }
+      await ownerPool.query(`INSERT INTO brain_messaging_approvals
+        (approval_id,group_id,workspace_id,project_id,channel_id,invitee_id,approver_id,approver_role,provenance_ref,verification_source,policy_epoch,verified_at)
+        VALUES
+        ($1,$2,$3,$4,$5,'contractor-user','project-owner','project_owner','owner-approved','trusted_approval_adapter',1,now()),
+        ($6,$2,$3,$4,$5,'contractor-user','membership-admin','workspace_membership_admin','admin-approved','trusted_approval_adapter',1,now())`,
+      [ownerApprovalId, GROUP, WORKSPACE, projectId, channelId, membershipAdminApprovalId])
+      await expect(appPool.query("INSERT INTO brain_messaging_receipts DEFAULT VALUES")).rejects.toMatchObject({ code: "42501" })
+      await withTenantTransaction(
+        { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "admin-user" },
+        async client => {
+          const receipt = await client.query("SELECT * FROM app.record_brain_messaging_receipt($1::uuid,'invite_channel',$2,1,$3)", [invitationReceiptId, `${projectId}:${channelId}:contractor-user`, "a".repeat(64)])
+          expect(receipt.rows).toHaveLength(1)
+          const invitation = await client.query<{ committed: boolean }>("SELECT app.commit_brain_channel_invitation($1::uuid,$2::uuid,$3,$4,$5,1) AS committed", [ownerApprovalId, membershipAdminApprovalId, projectId, channelId, "contractor-user"])
+          expect(invitation.rows).toEqual([{ committed: true }])
+        }, appPool,
+      )
+      await expect(withTenantTransaction(
+        { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "admin-user" },
+        client => client.query("SELECT app.commit_brain_channel_invitation($1::uuid,$2::uuid,$3,$4,$5,1)", [ownerApprovalId, membershipAdminApprovalId, projectId, channelId, "contractor-user"]),
+        appPool,
+      )).rejects.toMatchObject({ code: "42501" })
+      await withTenantTransaction(
+        { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "contractor-user" },
+        async client => {
+          const receipt = await client.query("SELECT * FROM app.record_brain_messaging_receipt($1::uuid,'send_message',$2,1,$3)", [messageReceiptId, messageId, "b".repeat(64)])
+          expect(receipt.rows).toHaveLength(1)
+          const message = await client.query<{ committed: boolean }>("SELECT app.commit_brain_restricted_message($1::uuid,$2,$3,NULL,$4,1) AS committed", [messageId, projectId, channelId, "Approved test message"])
+          expect(message.rows).toEqual([{ committed: true }])
+        }, appPool,
+      )
+      const stored = await ownerPool.query("SELECT invitation.policy_epoch, message.sender_id, message.channel_id, message.recipient_id, message.body FROM brain_channel_invitations invitation JOIN brain_restricted_messages message ON message.project_id=invitation.project_id AND message.channel_id=invitation.channel_id WHERE invitation.group_id=$1 AND invitation.workspace_id=$2 AND message.message_id=$3", [GROUP, WORKSPACE, messageId])
+      expect(stored.rows).toEqual([{ policy_epoch: "1", sender_id: "contractor-user", channel_id: channelId, recipient_id: null, body: "Approved test message" }])
+      await expect(ownerPool.query("UPDATE brain_messaging_receipts SET witness_hash='c' WHERE receipt_id=$1", [invitationReceiptId])).rejects.toMatchObject({ code: "42501" })
+    } finally {
+      await ownerPool.query("DELETE FROM brain_restricted_messages WHERE message_id=$1", [messageId])
+      await ownerPool.query("DELETE FROM brain_channel_invitations WHERE group_id=$1 AND workspace_id=$2 AND project_id=$3 AND channel_id=$4", [GROUP, WORKSPACE, projectId, channelId])
+      await ownerPool.query("DELETE FROM brain_messaging_receipt_consumptions WHERE receipt_id IN ($1,$2)", [invitationReceiptId, messageReceiptId])
+      await ownerPool.query("DELETE FROM brain_messaging_approvals WHERE approval_id IN ($1,$2)", [ownerApprovalId, membershipAdminApprovalId])
+      await ownerPool.query("UPDATE brain_workspace_memberships SET approval_id=NULL WHERE group_id=$1 AND workspace_id=$2 AND user_id IN ('admin-user','contractor-user')", [GROUP, WORKSPACE])
+      await ownerPool.query("DELETE FROM brain_membership_approvals WHERE approval_id IN ($1,$2)", [adminMembershipApprovalId, contractorMembershipApprovalId])
+    }
+  })
+
   it("proves exact documents through the real dashboard and getAppPool", async () => {
     const fixtureDocuments = await ownerPool.query<{ id: string; content: string }>("SELECT id, content FROM brain_documents ORDER BY id")
     const scenarios = [
