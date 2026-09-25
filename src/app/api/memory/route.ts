@@ -43,8 +43,8 @@ import {
 // ── Error Handling ────────────────────────────────────────────────────────
 
 function handleError(error: unknown, route: string, method: string): NextResponse {
-  captureException(error, { tags: { route, method } })
-  console.error("Memory API error:", error)
+  captureException(new Error("Memory API request failed"), { tags: { route, method } })
+  console.error("Memory API request failed")
 
   if (error instanceof GroupIdValidationError) {
     return NextResponse.json({ error: error.message }, { status: 400 })

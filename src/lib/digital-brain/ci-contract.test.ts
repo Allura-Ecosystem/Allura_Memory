@@ -7,6 +7,7 @@ const root = process.cwd()
 const workflow = parse(readFileSync(path.resolve(root, ".github/workflows/epic-30-evidence.yml"), "utf8"))
 const config = readFileSync(path.resolve(root, "vitest.config.epic30-hermetic.ts"), "utf8")
 const packageJson = JSON.parse(readFileSync(path.resolve(root, "package.json"), "utf8"))
+const controlledRed = readFileSync(path.resolve(root, "scripts/ci/run-epic30-controlled-red.sh"), "utf8")
 
 describe("Epic 30 merge-evidence wiring", () => {
   it("runs on every pull request, not only selected paths", () => {
@@ -30,6 +31,7 @@ describe("Epic 30 merge-evidence wiring", () => {
       "local-confinement.test.ts", "read-receipt.test.ts", "read-receipt-writer.test.ts",
       "read-service.test.ts", "connection.app-pool.test.ts", "brain-client.test.ts", "page.test.tsx",
       "my-work-workspace.test.tsx", "ci-contract.test.ts", "legacy-api-quarantine.test.ts",
+      "epic30-controlled-red-privacy.test.ts",
       "memory-root-authority.test.ts",
       "memory-id-authority.test.ts",
       "memory-aggregate-authority.test.ts",
@@ -44,5 +46,18 @@ describe("Epic 30 merge-evidence wiring", () => {
       "canonical-delete-lifecycle-authority.test.ts",
       "ruvector-workspace-authority.test.ts",
     ]) expect(config).toContain(test)
+  })
+
+  it("keeps the local controlled-red mutation isolated and fail-closed", () => {
+    expect(packageJson.scripts["test:epic30-controlled-red"]).toBe("bash scripts/ci/run-epic30-controlled-red.sh")
+    expect(controlledRed).toContain("git archive --format=tar \"$before_head\"")
+    expect(controlledRed).toContain("mktemp -d /tmp/allura-epic30-controlled-red.XXXXXX")
+    expect(controlledRed).toContain(".filter(() => true)")
+    expect(controlledRed).toContain("privacy regression escaped the gate")
+    expect(controlledRed).toContain("denies a removed tenant member even with active department authority")
+    expect(controlledRed).toContain("canonical repository state changed")
+    expect(controlledRed).not.toContain("git apply")
+    expect(controlledRed).not.toContain("git checkout")
+    expect(controlledRed).not.toContain("git reset")
   })
 })

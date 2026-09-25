@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ count: uniqueIds.size })
   } catch (error) {
-    console.error("memory_count error:", error)
+    console.error("memory_count error")
     return NextResponse.json({ error: "Failed to count memories" }, { status: 500 })
   }
 }

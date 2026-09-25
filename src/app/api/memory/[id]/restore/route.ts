@@ -24,7 +24,6 @@ import type {
   MemoryRestoreRequest,
   UserId,
 } from "@/lib/memory/canonical-contracts"
-import { captureException } from "@/lib/observability/sentry"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import { memory_restore } from "@/mcp/canonical-tools"
 
@@ -125,7 +124,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
 
-    console.error("Memory RESTORE error:", error)
+    console.error("Memory RESTORE error")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
