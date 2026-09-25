@@ -1,6 +1,6 @@
 import { MyWorkWorkspace, type WorkspaceDocument } from "@/components/dashboard/my-work-workspace"
 import { requireDashboardScope } from "@/lib/dashboard/page-guard"
-import { readAuthorizedWorkspaceState } from "@/lib/digital-brain/read-service"
+import { mapAuthorizedWorkspaceProviderState, readAuthorizedWorkspaceState } from "@/lib/digital-brain/read-service"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { SurfaceState } from "@/components/dashboard/surface-state"
 import { emptyWhen, getOverview } from "@/lib/dashboard/read-service"
@@ -32,7 +32,7 @@ export default async function DashboardOverviewPage(): Promise<React.ReactElemen
   }
 
   try {
-    const result = await readAuthorizedWorkspaceState(scope)
+    const result = mapAuthorizedWorkspaceProviderState(scope, await readAuthorizedWorkspaceState(scope))
     const documents: WorkspaceDocument[] = result.documents.map((document) => ({
       ...document,
       updatedAt: document.updatedAt.toISOString(),

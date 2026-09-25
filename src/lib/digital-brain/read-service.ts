@@ -68,6 +68,52 @@ export interface AuthorizedWorkspaceReadResult {
   documents: AuthorizedDocument[]
 }
 
+function isSafeProviderScope(scope: DigitalBrainReadScope): boolean {
+  return Boolean(scope && typeof scope === "object" &&
+    typeof scope.tenantId === "string" && scope.tenantId.length > 0 &&
+    typeof scope.workspaceId === "string" && scope.workspaceId.length > 0 &&
+    typeof scope.principalId === "string" && scope.principalId.length > 0)
+}
+
+function isAuthorizedProviderDocument(value: unknown, scope: DigitalBrainReadScope): value is AuthorizedDocument {
+  if (!value || typeof value !== "object") return false
+  const document = value as Record<string, unknown>
+  const departmentId = document.departmentId
+  return typeof document.id === "string" && document.id.length > 0 &&
+    document.groupId === scope.tenantId && document.workspaceId === scope.workspaceId &&
+    typeof document.ownerId === "string" && document.ownerId.length > 0 &&
+    (departmentId === null || (typeof departmentId === "string" && departmentId.length > 0)) &&
+    (document.visibility === "private" || document.visibility === "department") &&
+    (document.visibility === "private" ? departmentId === null : typeof departmentId === "string") &&
+    typeof document.title === "string" && typeof document.content === "string" &&
+    document.updatedAt instanceof Date && !Number.isNaN(document.updatedAt.getTime())
+}
+
+/**
+ * Map an already-authorized provider result into the My Work read contract.
+ * This seam performs no fetch and accepts no caller-selected scope. Unknown or
+ * malformed provider output becomes an unavailable, content-free state.
+ */
+export function mapAuthorizedWorkspaceProviderState(
+  scope: DigitalBrainReadScope,
+  result: unknown,
+): AuthorizedWorkspaceReadResult {
+  const unavailable = { state: "unavailable" as const, documents: [] }
+  if (!isSafeProviderScope(scope) || !result || typeof result !== "object") return unavailable
+
+  const candidate = result as Record<string, unknown>
+  const state = candidate.state
+  if (![
+    "empty", "complete", "forbidden", "conflict", "degraded", "unavailable",
+  ].includes(state as string) || !Array.isArray(candidate.documents)) return unavailable
+
+  if (state !== "empty" && state !== "complete") return { state: state as AuthorizedWorkspaceReadState, documents: [] }
+  if (!candidate.documents.every((document) => isAuthorizedProviderDocument(document, scope))) return unavailable
+  if (state === "empty" && candidate.documents.length > 0) return unavailable
+  if (candidate.documents.length === 0) return { state: "empty", documents: [] }
+  return { state: "complete", documents: candidate.documents as AuthorizedDocument[] }
+}
+
 class AuthorizedWorkspaceStateError extends Error {
   constructor(
     readonly state: Exclude<AuthorizedWorkspaceReadState, "empty" | "complete" | "degraded">,
