@@ -29,7 +29,7 @@
     {
       "id": "30.3",
       "localState": "partial",
-      "evidence": ["_bmad_output/planning-artifacts/epic-30-authorization-approval-packet.md", "_bmad_output/planning-artifacts/epic-30-local-authorization-contract.md", "src/lib/digital-brain/workspace-membership-lifecycle.ts", "src/lib/digital-brain/workspace-membership-lifecycle.test.ts"],
+      "evidence": ["_bmad_output/planning-artifacts/epic-30-authorization-approval-packet.md", "_bmad_output/planning-artifacts/epic-30-local-authorization-contract.md", "src/lib/digital-brain/workspace-membership-lifecycle.ts", "src/lib/digital-brain/workspace-membership-lifecycle.test.ts", "docker/postgres-init/73-digital-brain-membership-provenance.sql", "src/lib/digital-brain/workspace-membership-production.ts", "src/lib/digital-brain/workspace-membership-production.test.ts"],
       "remaining": [
         { "id": "authorization-policy-approval", "kind": "human_approval", "proofRequired": "Exact production authorization policy approved by authorized security and data owners." },
         { "id": "membership-provenance", "kind": "production_implementation", "proofRequired": "Governed membership grant/revoke lifecycle with verifiable approver provenance." },
@@ -75,7 +75,7 @@
     {
       "id": "30.9",
       "localState": "partial",
-      "evidence": ["src/lib/digital-brain/ask-context.ts", "_bmad_output/implementation-artifacts/30-9-read-only-ask-allura.md"],
+      "evidence": ["src/lib/digital-brain/ask-context.ts", "src/lib/digital-brain/ask-answer.ts", "src/lib/digital-brain/ask-answer.test.ts", "_bmad_output/implementation-artifacts/30-9-read-only-ask-allura.md"],
       "remaining": [
         { "id": "provider-policy", "kind": "human_approval", "proofRequired": "Verified no-retention/no-training provider contract approved for governed content." },
         { "id": "cited-read-only-ask", "kind": "production_implementation", "proofRequired": "Grounded, cited, read-only Ask implementation with adversarial and live evidence." }
