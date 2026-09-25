@@ -164,6 +164,23 @@ describe("Epic 30 legacy Brain content-route quarantine", () => {
     expect(JSON.stringify(searchBody)).not.toContain("workspace_id")
   })
 
+  it.each([
+    ["/api/brain/memories", listMemories],
+    ["/api/brain/search", searchMemories],
+  ])("keeps production pagination quarantined on %s", async (path, handler) => {
+    vi.stubEnv("NODE_ENV", "production")
+    vi.stubEnv("ALLURA_EPIC30_LOCAL_DB", "enabled")
+    const query = path.endsWith("/search") ? "?q=synthetic&cursor=opaque&limit=1" : "?cursor=opaque&limit=1"
+
+    const response = await handler(new NextRequest(`http://localhost:3100${path}${query}`))
+    const body = await response.json()
+
+    expect(response.status).toBe(503)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(JSON.stringify(body)).not.toContain("opaque")
+    expect(path.endsWith("/search") ? mocks.searchPage : mocks.readPage).not.toHaveBeenCalled()
+  })
+
   it("keeps a synthetic list receipt outage content-free", async () => {
     const run = "a".repeat(32)
     for (const [key, value] of Object.entries({ NODE_ENV: "development", ALLURA_EPIC30_LOCAL_DB: "enabled",
