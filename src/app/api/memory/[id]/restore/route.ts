@@ -17,7 +17,13 @@ import {
   MemoryNotFoundError,
   RecoveryWindowExpiredError,
 } from "@/lib/memory/canonical-contracts"
-import type { GroupId, MemoryId, MemoryResponseMeta, MemoryRestoreRequest , UserId } from "@/lib/memory/canonical-contracts"
+import type {
+  GroupId,
+  MemoryId,
+  MemoryResponseMeta,
+  MemoryRestoreRequest,
+  UserId,
+} from "@/lib/memory/canonical-contracts"
 import { captureException } from "@/lib/observability/sentry"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import { memory_restore } from "@/mcp/canonical-tools"
@@ -52,10 +58,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params
     const { searchParams } = new URL(request.url)
 
-    const rawGroupId = searchParams.get("group_id")
-    if (!rawGroupId) {
-      return NextResponse.json({ error: "group_id is required" }, { status: 400 })
-    }
+    const rawGroupId = searchParams.get("group_id") ?? roleCheck.user.groupId
 
     let validatedGroupId: string
     try {
@@ -67,14 +70,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       throw error
     }
 
-    if (!searchParams.get("user_id")) {
-      return NextResponse.json({ error: "user_id is required" }, { status: 400 })
+    if (validatedGroupId !== roleCheck.user.groupId) {
+      return NextResponse.json({ error: "Forged memory scope is forbidden" }, { status: 403 })
+    }
+    if (!roleCheck.user.workspaceId || !roleCheck.user.sessionId) {
+      return unauthorizedResponse("Authenticated workspace and session scope are required")
+    }
+    if (
+      (searchParams.has("workspace_id") && searchParams.get("workspace_id") !== roleCheck.user.workspaceId) ||
+      (searchParams.has("user_id") && searchParams.get("user_id") !== roleCheck.user.id)
+    ) {
+      return NextResponse.json({ error: "Forged memory scope is forbidden" }, { status: 403 })
     }
 
     const restoreRequest: MemoryRestoreRequest = {
       id: id as MemoryId,
       group_id: validatedGroupId as GroupId,
-      user_id: searchParams.get("user_id") as UserId,
+      user_id: roleCheck.user.id as UserId,
+      scope: {
+        group_id: validatedGroupId as GroupId,
+        workspace_id: roleCheck.user.workspaceId,
+        agent_id: roleCheck.user.id,
+        session_id: roleCheck.user.sessionId,
+      },
     }
 
     const response = await memory_restore(restoreRequest)
