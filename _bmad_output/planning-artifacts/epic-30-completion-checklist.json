@@ -44,10 +44,9 @@
     {
       "id": "30.5",
       "localState": "partial",
-      "evidence": ["src/__tests__/memory-route-owner-pool-guard.test.ts", "src/__tests__/epic30-controlled-red-privacy.test.ts"],
+      "evidence": ["src/__tests__/memory-route-owner-pool-guard.test.ts", "src/__tests__/epic30-controlled-red-privacy.test.ts", "_bmad_output/planning-artifacts/epic-30-authorization-approval-packet.md"],
       "remaining": [
-        { "id": "timed-live-revocation", "kind": "live_verification", "proofRequired": "Measured pooled membership, session and delegation revocation evidence." },
-        { "id": "legacy-data-disposition", "kind": "human_approval", "proofRequired": "Approved classification and disposition for legacy records." }
+        { "id": "timed-live-revocation", "kind": "live_verification", "proofRequired": "Measured pooled membership, session and delegation revocation evidence." }
       ]
     },
     {
