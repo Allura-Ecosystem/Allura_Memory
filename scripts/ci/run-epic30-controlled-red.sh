@@ -42,6 +42,7 @@ fi
 printf 'Epic 30 controlled-red baseline PASS (%s).\n' "$before_head"
 
 cp src/lib/digital-brain/read-service.ts "$scratch/.read-service.safe"
+cp src/lib/digital-brain/read-receipt.ts "$scratch/.read-receipt.safe"
 target='    .filter((row) => canDisclose(row, scope))'
 if [[ "$(grep -Fxc "$target" src/lib/digital-brain/read-service.ts)" != "2" ]]; then
   printf 'Controlled-red mutation precondition FAILED.\n' >&2
@@ -92,6 +93,32 @@ if ! grep -Fq "$expected_receipt_witness" "$mutation_log"; then
   exit 1
 fi
 printf 'Epic 30 controlled-red receipt observed PASS (expected receipt-test failure).\n'
+
+cp "$scratch/.read-receipt.safe" src/lib/digital-brain/read-receipt.ts
+revocation_target='  const current = await readCurrent(refreshedPrincipal)'
+if [[ "$(grep -Fxc "$revocation_target" src/lib/digital-brain/read-service.ts)" != "1" ]]; then
+  printf 'Controlled-red revocation mutation precondition FAILED.\n' >&2
+  exit 1
+fi
+perl -0pi -e 's/  const current = await readCurrent\(refreshedPrincipal\)/  const current = candidate/' src/lib/digital-brain/read-service.ts
+revocation_mutation_hash="$(sha256sum src/lib/digital-brain/read-service.ts | cut -d' ' -f1)"
+printf 'Epic 30 controlled-red mutation bypass-final-authority-reread (%s).\n' "$revocation_mutation_hash"
+
+set +e
+bunx vitest run --cache=false --config vitest.config.epic30-hermetic.ts --reporter=verbose >"$mutation_log" 2>&1
+revocation_mutation_status=$?
+set -e
+
+if [[ "$revocation_mutation_status" -eq 0 ]]; then
+  printf 'Epic 30 controlled-red FAILED: revocation regression escaped the gate.\n' >&2
+  exit 1
+fi
+expected_revocation_witness='denies changed policy epoch after the receipt commits'
+if ! grep -Fq "$expected_revocation_witness" "$mutation_log"; then
+  printf 'Epic 30 controlled-red FAILED: gate failed without the named revocation witness.\n' >&2
+  exit 1
+fi
+printf 'Epic 30 controlled-red revocation observed PASS (expected revocation-test failure).\n'
 
 cd "$repo_root"
 if [[ "$(git rev-parse HEAD)" != "$before_head" || "$(git status --porcelain=v1 --untracked-files=all)" != "$before_status" ]]; then
