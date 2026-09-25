@@ -107,6 +107,7 @@ export default defineConfig({
       "src/__tests__/trace-workspace-storage.test.ts",
       "src/__tests__/memory-graph-authority.test.ts",
       "src/__tests__/memory-restore-authority.test.ts",
+      "src/__tests__/memory-insight-history-authority.test.ts",
       "src/__tests__/cors-middleware.test.ts",
       "src/__tests__/graph-route.test.ts",
       "src/__tests__/health-metrics.test.ts",
