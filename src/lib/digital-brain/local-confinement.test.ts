@@ -4,7 +4,7 @@ vi.mock("@/lib/db/tenant-transaction", () => ({ withWorkspaceTransaction: mocks.
 vi.mock("@/lib/postgres/connection", () => ({ getAppPool: mocks.pool }))
 vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal: mocks.principal }))
 vi.mock("./read-receipt-writer", () => ({ persistSyntheticReadReceipt: mocks.receipt }))
-import { readAuthorizedDocuments, readAuthorizedDocumentsPage, searchAuthorizedDocuments, searchAuthorizedDocumentsPage } from "./read-service"
+import { readAuthorizedDocuments, readAuthorizedDocumentsPage, readAuthorizedWorkspaceState, searchAuthorizedDocuments, searchAuthorizedDocumentsPage } from "./read-service"
 import { readSyntheticDocumentLinks } from "./document-links"
 const scope = { tenantId: "allura-epic30-local", workspaceId: "epic30-local-workspace", principalId: "owner-user" }
 const principal = { id: scope.principalId, groupId: scope.tenantId, workspaceId: scope.workspaceId,
@@ -154,6 +154,58 @@ it("denies missing current workspace membership without document SQL", async () 
   mocks.query.mockResolvedValueOnce({ rows: [verifiedSession] }).mockResolvedValueOnce({ rows: [] })
   await expect(readAuthorizedDocuments(scope)).resolves.toEqual([])
   expect(mocks.query).toHaveBeenCalledTimes(2)
+})
+
+it("maps authorized documents and authorized emptiness to explicit workspace states", async () => {
+  mocks.query.mockReset()
+  mocks.query.mockResolvedValueOnce({ rows: [verifiedSession] })
+    .mockResolvedValueOnce({ rows: [{ role: "viewer", policy_epoch: "7" }] })
+    .mockResolvedValueOnce({ rows: [ownerRow] })
+    .mockResolvedValueOnce({ rows: [verifiedSession] })
+    .mockResolvedValueOnce({ rows: [{ role: "viewer", policy_epoch: "7" }] })
+    .mockResolvedValueOnce({ rows: [ownerRow] })
+  await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "complete", documents: [expect.objectContaining({ id: ownerRow.id })] })
+
+  mocks.query.mockReset()
+  mocks.query.mockResolvedValueOnce({ rows: [verifiedSession] })
+    .mockResolvedValueOnce({ rows: [{ role: "viewer", policy_epoch: "7" }] })
+    .mockResolvedValueOnce({ rows: [] })
+    .mockResolvedValueOnce({ rows: [verifiedSession] })
+    .mockResolvedValueOnce({ rows: [{ role: "viewer", policy_epoch: "7" }] })
+    .mockResolvedValueOnce({ rows: [] })
+  await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "empty", documents: [] })
+})
+
+it("maps absent authority to forbidden without disclosing documents", async () => {
+  mocks.query.mockReset()
+  mocks.query.mockResolvedValueOnce({ rows: [verifiedSession] }).mockResolvedValueOnce({ rows: [] })
+  await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "forbidden", documents: [] })
+
+  mocks.principal.mockResolvedValue(null)
+  await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "forbidden", documents: [] })
+})
+
+it("maps invalid local fixture configuration to unavailable", async () => {
+  vi.stubEnv("POSTGRES_HOST", "example.com")
+  await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "unavailable", documents: [] })
+  expect(mocks.transaction).not.toHaveBeenCalled()
+})
+
+it("maps dependency failure and concurrent authority change without leaking candidates", async () => {
+  mocks.query.mockReset()
+  mocks.query.mockResolvedValueOnce({ rows: [verifiedSession] })
+    .mockResolvedValueOnce({ rows: [{ role: "viewer", policy_epoch: "7" }] })
+    .mockResolvedValueOnce({ rows: [ownerRow] })
+  mocks.receipt.mockRejectedValueOnce(new Error("sensitive sink failure"))
+  await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "degraded", documents: [] })
+
+  mocks.receipt.mockImplementation(async receipt => ({ receiptId: receipt.receiptId, witnessHash: receipt.witnessHash }))
+  mocks.query.mockReset()
+  mocks.query.mockResolvedValueOnce({ rows: [verifiedSession] })
+    .mockResolvedValueOnce({ rows: [{ role: "viewer", policy_epoch: "7" }] })
+    .mockResolvedValueOnce({ rows: [ownerRow] })
+  mocks.principal.mockResolvedValueOnce(principal).mockResolvedValueOnce({ ...principal, sessionId: "replacement" })
+  await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "conflict", documents: [] })
 })
 
 function mockFourAuthorizedSnapshots(finalRow = ownerRow, extraRows: unknown[] = []) {

@@ -55,6 +55,30 @@ export interface AuthorizedReadPageOptions {
   pageSize?: number
 }
 
+export type AuthorizedWorkspaceReadState =
+  | "empty"
+  | "complete"
+  | "forbidden"
+  | "conflict"
+  | "degraded"
+  | "unavailable"
+
+export interface AuthorizedWorkspaceReadResult {
+  state: AuthorizedWorkspaceReadState
+  documents: AuthorizedDocument[]
+}
+
+class AuthorizedWorkspaceStateError extends Error {
+  constructor(
+    readonly state: Exclude<AuthorizedWorkspaceReadState, "empty" | "complete" | "degraded">,
+    message: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options)
+    this.name = "AuthorizedWorkspaceStateError"
+  }
+}
+
 export interface AuthorizedSearchPage {
   total: number
   hits: AuthorizedSearchHit[]
@@ -361,21 +385,26 @@ async function readAuthorizedSnapshot(
   const principal = await getDashboardPrincipal()
   if (!principal || principal.id !== scope.principalId || principal.groupId !== scope.tenantId ||
       principal.workspaceId !== scope.workspaceId || !principal.sessionId?.trim()) {
-    throw new Error("Synthetic read authority refused")
+    throw new AuthorizedWorkspaceStateError("forbidden", "Synthetic read authority refused")
   }
   const { assertSyntheticTarget, isSyntheticScope, verifySyntheticSession } = await import("./local-confinement")
-  const run = assertSyntheticTarget()
+  let run: string
+  try {
+    run = assertSyntheticTarget()
+  } catch (error) {
+    throw new AuthorizedWorkspaceStateError("unavailable", "Synthetic read target unavailable", { cause: error })
+  }
   if (!isSyntheticScope(scope)) return null
   const pool = getAppPool()
   // A process-global pool may predate this request's environment; inspect its actual target before connect.
   if (pool.options.host !== "127.0.0.1" || pool.options.port !== 5444 ||
       pool.options.database !== `allura_epic30_read_${run}` || pool.options.user !== "allura_app" || pool.options.options) {
-    throw new Error("Synthetic cached pool target refused")
+    throw new AuthorizedWorkspaceStateError("unavailable", "Synthetic cached pool target refused")
   }
   const encodedKey = process.env.ALLURA_EPIC30_RECEIPT_KEY ?? ""
   const witnessKey = Buffer.from(encodedKey, "base64url")
   if (witnessKey.length !== 32 || witnessKey.toString("base64url") !== encodedKey) {
-    throw new Error("Synthetic read receipt key refused")
+    throw new AuthorizedWorkspaceStateError("unavailable", "Synthetic read receipt key refused")
   }
   const pageSize = options ? normalizePageSize(options.pageSize) : AUTHORIZED_READ_PAGE_SIZE_DEFAULT
   const operation = options?.operation ?? "read_documents"
@@ -395,7 +424,12 @@ async function readAuthorizedSnapshot(
         scope.tenantId, scope.workspaceId, scope.principalId,
       ])
       if (membership.rows.length !== 1) return null
-      const envelope = issueReadEnvelope(scope, currentPrincipal, membership.rows[0])
+      let envelope: DigitalBrainReadEnvelope
+      try {
+        envelope = issueReadEnvelope(scope, currentPrincipal, membership.rows[0])
+      } catch (error) {
+        throw new AuthorizedWorkspaceStateError("forbidden", "Synthetic read authority refused", { cause: error })
+      }
       if (cursorClaims) {
         assertAuthorizedReadCursorMatches(cursorClaims, {
           scope,
@@ -426,7 +460,7 @@ async function readAuthorizedSnapshot(
   if (!refreshedPrincipal || refreshedPrincipal.id !== principal.id ||
       refreshedPrincipal.groupId !== principal.groupId || refreshedPrincipal.workspaceId !== principal.workspaceId ||
       refreshedPrincipal.sessionId !== principal.sessionId || refreshedPrincipal.role !== principal.role) {
-    throw new Error("Synthetic read authority changed")
+    throw new AuthorizedWorkspaceStateError("conflict", "Synthetic read authority changed")
   }
   const current = await readCurrent(refreshedPrincipal)
   if (!current || current.policyEpoch !== candidate.policyEpoch || current.actorRole !== candidate.actorRole ||
@@ -435,7 +469,7 @@ async function readAuthorizedSnapshot(
         documents: current.documents, witnessKey, priorWitnessHash: cursorClaims?.witnessHash, receiptId: receipt.receiptId,
         occurredAt: new Date(receipt.occurredAt),
       }).witnessHash !== receipt.witnessHash) {
-    throw new Error("Synthetic read authority changed")
+    throw new AuthorizedWorkspaceStateError("conflict", "Synthetic read authority changed")
   }
   const nextCursor = current.hasMore && current.documents.length > 0
     ? createAuthorizedReadCursor({
@@ -466,6 +500,29 @@ export async function readAuthorizedDocuments(
 ): Promise<AuthorizedDocument[] | AuthorizedReadPage> {
   if (options !== undefined) return readAuthorizedDocumentsPage(scope, options)
   return (await readAuthorizedSnapshot(scope))?.documents ?? []
+}
+
+/**
+ * Content-free server boundary for the My Work shell. Known authority and
+ * fixture failures are classified without exposing their cause; unexpected
+ * database or receipt failures fail closed as a degraded dependency.
+ */
+export async function readAuthorizedWorkspaceState(
+  scope: DigitalBrainReadScope,
+): Promise<AuthorizedWorkspaceReadResult> {
+  try {
+    const snapshot = await readAuthorizedSnapshot(scope)
+    if (!snapshot) return { state: "forbidden", documents: [] }
+    return {
+      state: snapshot.documents.length === 0 ? "empty" : "complete",
+      documents: snapshot.documents,
+    }
+  } catch (error) {
+    if (error instanceof AuthorizedWorkspaceStateError) {
+      return { state: error.state, documents: [] }
+    }
+    return { state: "degraded", documents: [] }
+  }
 }
 
 export async function readAuthorizedDocumentsPage(

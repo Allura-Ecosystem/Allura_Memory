@@ -6,7 +6,7 @@ vi.mock("server-only", () => ({}))
 vi.mock("@/components/dashboard/dashboard-shell", () => ({ DashboardShell: ({ children }: { children: React.ReactNode }) => <section>{children}</section> }))
 vi.mock("@/lib/dashboard/read-service", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/dashboard/read-service")>(), getOverview: mocks.overview }))
 vi.mock("@/lib/dashboard/page-guard", () => ({ requireDashboardScope: mocks.guard }))
-vi.mock("@/lib/digital-brain/read-service", () => ({ readAuthorizedDocuments: mocks.read }))
+vi.mock("@/lib/digital-brain/read-service", () => ({ readAuthorizedWorkspaceState: mocks.read }))
 
 import DashboardOverviewPage from "../page"
 
@@ -31,7 +31,7 @@ beforeEach(() => {
   vi.stubEnv("NODE_ENV", "development")
   vi.stubEnv("ALLURA_EPIC30_LOCAL_DB", "enabled")
   mocks.guard.mockResolvedValue({ scope, user })
-  mocks.read.mockResolvedValue([document])
+  mocks.read.mockResolvedValue({ state: "complete", documents: [document] })
   mocks.overview.mockResolvedValue({ state: "live", data: { memories: 12, events: 3, proposals: 2, workItems: 1, graphMemories: 4 }, fetchedAt: "test" })
 })
 afterEach(() => {
@@ -88,17 +88,29 @@ describe("Epic30 dashboard server page", () => {
   })
 
   it("renders successful empty reads distinctly from failed reads", async () => {
-    mocks.read.mockResolvedValue([])
+    mocks.read.mockResolvedValue({ state: "empty", documents: [] })
     const html = renderToStaticMarkup(await DashboardOverviewPage())
     expect(html).toContain("No authorized documents")
     expect(html).not.toContain("Local data unavailable")
   })
 
+  it.each(["forbidden", "conflict", "degraded", "unavailable"] as const)(
+    "renders the content-free %s service state without protected material",
+    async (state) => {
+      mocks.read.mockResolvedValue({ state, documents: [] })
+      const html = renderToStaticMarkup(await DashboardOverviewPage())
+      expect(html).toContain(`data-surface-state="${state}"`)
+      expect(html).not.toContain(document.title)
+      expect(html).not.toContain(document.content)
+      expect(html).not.toContain(document.id)
+    },
+  )
+
   it("fails closed without leaking read errors", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {})
     mocks.read.mockRejectedValue(new Error("sensitive connection details"))
     const html = renderToStaticMarkup(await DashboardOverviewPage())
-    expect(html).toContain("Local data unavailable")
+    expect(html).toContain("Workspace unavailable")
     expect(html).not.toContain("sensitive connection details")
     expect(mocks.overview).not.toHaveBeenCalled()
     expect(error).toHaveBeenCalledTimes(1)

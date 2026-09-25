@@ -1,6 +1,6 @@
 import { MyWorkWorkspace, type WorkspaceDocument } from "@/components/dashboard/my-work-workspace"
 import { requireDashboardScope } from "@/lib/dashboard/page-guard"
-import { readAuthorizedDocuments } from "@/lib/digital-brain/read-service"
+import { readAuthorizedWorkspaceState } from "@/lib/digital-brain/read-service"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { SurfaceState } from "@/components/dashboard/surface-state"
 import { emptyWhen, getOverview } from "@/lib/dashboard/read-service"
@@ -32,14 +32,15 @@ export default async function DashboardOverviewPage(): Promise<React.ReactElemen
   }
 
   try {
-    const documents: WorkspaceDocument[] = (await readAuthorizedDocuments(scope)).map((document) => ({
+    const result = await readAuthorizedWorkspaceState(scope)
+    const documents: WorkspaceDocument[] = result.documents.map((document) => ({
       ...document,
       updatedAt: document.updatedAt.toISOString(),
     }))
-    return <MyWorkWorkspace documents={documents} dataState={documents.length === 0 ? "empty" : "complete"} {...(process.env.ALLURA_EPIC30_PROCESS_ID ? { processRunId: process.env.ALLURA_EPIC30_PROCESS_ID } : {})} />
+    return <MyWorkWorkspace documents={documents} dataState={result.state} {...(process.env.ALLURA_EPIC30_PROCESS_ID ? { processRunId: process.env.ALLURA_EPIC30_PROCESS_ID } : {})} />
   } catch {
     // Do not leak connection, schema, scope, or resource details to the browser.
     console.error("[Epic30] synthetic local database read unavailable")
-    return <MyWorkWorkspace documents={[]} dataState="unavailable" processRunId={process.env.ALLURA_EPIC30_PROCESS_ID} />
+    return <MyWorkWorkspace documents={[]} dataState="error" processRunId={process.env.ALLURA_EPIC30_PROCESS_ID} />
   }
 }
