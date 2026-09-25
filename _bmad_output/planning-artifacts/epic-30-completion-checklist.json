@@ -29,18 +29,17 @@
     {
       "id": "30.3",
       "localState": "partial",
-      "evidence": ["_bmad_output/planning-artifacts/epic-30-authorization-approval-packet.md", "_bmad_output/planning-artifacts/epic-30-local-authorization-contract.md", "src/lib/digital-brain/workspace-membership-lifecycle.ts", "src/lib/digital-brain/workspace-membership-lifecycle.test.ts", "docker/postgres-init/73-digital-brain-membership-provenance.sql", "src/lib/digital-brain/workspace-membership-production.ts", "src/lib/digital-brain/workspace-membership-production.test.ts"],
+      "evidence": ["_bmad_output/planning-artifacts/epic-30-authorization-approval-packet.md", "_bmad_output/planning-artifacts/epic-30-local-authorization-contract.md", "_bmad_output/implementation-artifacts/evidence/epic30-live-db-2026-09-25.json", "src/lib/digital-brain/workspace-membership-lifecycle.ts", "src/lib/digital-brain/workspace-membership-lifecycle.test.ts", "docker/postgres-init/73-digital-brain-membership-provenance.sql", "src/lib/digital-brain/workspace-membership-production.ts", "src/lib/digital-brain/workspace-membership-production.test.ts"],
       "remaining": [
         { "id": "authorization-policy-approval", "kind": "human_approval", "proofRequired": "Exact production authorization policy approved by authorized security and data owners." },
-        { "id": "membership-provenance", "kind": "production_implementation", "proofRequired": "Governed membership grant/revoke lifecycle with verifiable approver provenance." },
-        { "id": "restricted-role-matrix", "kind": "live_verification", "proofRequired": "Approved disposable PostgreSQL restricted-role, receipt and revocation matrix." }
+        { "id": "membership-provenance", "kind": "production_implementation", "proofRequired": "Governed membership grant/revoke lifecycle with verifiable approver provenance." }
       ]
     },
     {
       "id": "30.4",
-      "localState": "partial",
-      "evidence": ["docker/postgres-init/71-digital-brain-read-foundation.sql", "docker/postgres-init/72-digital-brain-workspace-membership.sql"],
-      "remaining": [{ "id": "live-migration-rls-rollback", "kind": "live_verification", "proofRequired": "Fresh migration, RLS, audit, rollback and cleanup evidence from the approved disposable database." }]
+      "localState": "complete",
+      "evidence": ["_bmad_output/implementation-artifacts/evidence/epic30-live-db-2026-09-25.json", "docker/postgres-init/71-digital-brain-read-foundation.sql", "docker/postgres-init/72-digital-brain-workspace-membership.sql", "src/__tests__/digital-brain-read-isolation.e2e.test.ts"],
+      "remaining": []
     },
     {
       "id": "30.5",

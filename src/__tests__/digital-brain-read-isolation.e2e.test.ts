@@ -280,11 +280,11 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
   it("proves exact documents through the real dashboard and getAppPool", async () => {
     const fixtureDocuments = await ownerPool.query<{ id: string; content: string }>("SELECT id, content FROM brain_documents ORDER BY id")
     const scenarios = [
-      { principal: "owner-user", tenant: GROUP, workspace: WORKSPACE, role: "viewer", ids: manifest.principals["owner-user"] },
-      { principal: "other-user", tenant: GROUP, workspace: WORKSPACE, role: "viewer", ids: manifest.principals["other-user"] },
-      { principal: "admin-user", tenant: GROUP, workspace: WORKSPACE, role: "admin", ids: [] },
-      { principal: "owner-user", tenant: "allura-wrong", workspace: WORKSPACE, role: "viewer", ids: [] },
-      { principal: "owner-user", tenant: GROUP, workspace: "wrong-workspace", role: "viewer", ids: [] },
+      { principal: "owner-user", tenant: GROUP, workspace: WORKSPACE, role: "viewer", ids: manifest.principals["owner-user"], state: "complete" },
+      { principal: "other-user", tenant: GROUP, workspace: WORKSPACE, role: "viewer", ids: manifest.principals["other-user"], state: "complete" },
+      { principal: "admin-user", tenant: GROUP, workspace: WORKSPACE, role: "admin", ids: [], state: "empty" },
+      { principal: "owner-user", tenant: "allura-wrong", workspace: WORKSPACE, role: "viewer", ids: [], state: "forbidden" },
+      { principal: "owner-user", tenant: GROUP, workspace: "wrong-workspace", role: "viewer", ids: [], state: "forbidden" },
     ]
     for (const scenario of scenarios) {
       const server = await startOwnedProcess({
@@ -312,7 +312,12 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
         for (const document of fixtureDocuments.rows) {
           expect(html.includes(document.content), document.id).toBe(scenario.ids.includes(document.id))
         }
-        expect(html.includes("No authorized documents")).toBe(scenario.ids.length === 0)
+        if (scenario.state === "complete") {
+          expect(html).toContain('aria-label="My Work synthetic local workspace"')
+        } else {
+          expect(html).toContain(`data-surface-state="${scenario.state}"`)
+        }
+        expect(html.includes("No authorized documents")).toBe(scenario.state === "empty")
         console.info("Epic30 HTTP proof", scenario.principal, scenario.tenant, scenario.workspace, JSON.stringify(visibleIds))
       } finally {
         await server.stop()
@@ -344,7 +349,8 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
       const response = await fetch(server.url + "/dashboard", { signal: AbortSignal.timeout(30_000) })
       expect(response.status).toBe(200)
       const html = await response.text()
-      expect(html).toContain("Local data unavailable")
+      expect(html).toContain('data-surface-state="degraded"')
+      expect(html).toContain("Workspace temporarily unavailable")
       for (const document of documents.rows) {
         expect(html).not.toContain(document.id)
         expect(html).not.toContain(document.title)
