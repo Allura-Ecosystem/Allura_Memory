@@ -54,23 +54,18 @@ function exactAuthorizedSources(
   documents: readonly AuthorizedDocument[],
   sourceIds: readonly string[],
   scope: DigitalBrainReadScope,
-): Map<string, AuthorizedDocument> | null {
+): AuthorizedDocument[] | null {
   const scoped = documents.filter(document =>
     document.groupId === scope.tenantId && document.workspaceId === scope.workspaceId)
-  const byId = new Map<string, AuthorizedDocument>()
-  for (const document of scoped) {
-    if (byId.has(document.id)) return null
-    byId.set(document.id, document)
-  }
-  if (sourceIds.some(id => !byId.has(id))) return null
-  return byId
+  if (scoped.some((document, index) => scoped.findIndex(candidate => candidate.id === document.id) !== index)) return null
+  const ordered = sourceIds.map(id => scoped.find(document => document.id === id))
+  return ordered.some(document => document === undefined) ? null : ordered as AuthorizedDocument[]
 }
 
-function contextFor(byId: Map<string, AuthorizedDocument>, sourceIds: readonly string[]): SyntheticAskContext | null {
+function contextFor(documents: readonly AuthorizedDocument[]): SyntheticAskContext | null {
   let total = 0
-  const sources = sourceIds.map(documentId => {
-    const document = byId.get(documentId)!
-    const source = { documentId, title: boundedText(document.title, MAX_TITLE), excerpt: boundedExcerpt(document.content) }
+  const sources = documents.map(document => {
+    const source = { documentId: document.id, title: boundedText(document.title, MAX_TITLE), excerpt: boundedExcerpt(document.content) }
     total += source.documentId.length + source.title.length + source.excerpt.length
     return source
   })
@@ -123,21 +118,21 @@ export async function createProductionAskCandidate(
   if (provider.policy.retention !== "none" || provider.policy.training !== "none") {
     throw new Error("Ask provider policy refused")
   }
-  const uniqueIds = [...new Set(sourceIds)]
+  const uniqueIds = sourceIds.filter((id, index) => sourceIds.indexOf(id) === index)
   if (uniqueIds.length !== sourceIds.length) throw new Error("Production Ask duplicate source IDs refused")
   try {
     const first = await reader.readAuthorizedSnapshot(scope)
     if (!authorityMatchesScope(first, scope)) return null
     const firstById = exactAuthorizedSources(first.documents, uniqueIds, scope)
     if (!firstById) return null
-    const context = contextFor(firstById, uniqueIds)
+    const context = contextFor(firstById)
     if (!context) return null
     const result = await createGroundedReadOnlyAnswer(question, context, provider)
     if (!result) return null
     const second = await reader.readAuthorizedSnapshot(scope, first.authority.receiptWitnessHash)
     if (!authorityMatchesScope(second, scope) || !sameAuthority(first, second)) return null
     const secondById = exactAuthorizedSources(second.documents, uniqueIds, scope)
-    if (!secondById || uniqueIds.some(id => snapshot(firstById.get(id)!) !== snapshot(secondById.get(id)!))) {
+    if (!secondById || firstById.some((document, index) => snapshot(document) !== snapshot(secondById[index]))) {
       return null
     }
     return result
