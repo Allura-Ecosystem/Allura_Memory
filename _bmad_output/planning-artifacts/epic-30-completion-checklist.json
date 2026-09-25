@@ -83,9 +83,9 @@
     },
     {
       "id": "30.10",
-      "localState": "not_implemented",
-      "evidence": ["_bmad_output/implementation-artifacts/30-10-restricted-contractor-messaging.md"],
-      "remaining": [{ "id": "restricted-messaging", "kind": "production_implementation", "proofRequired": "Approved discovery, invitation, channel, send, audit, read-back and revocation implementation." }]
+      "localState": "partial",
+      "evidence": ["_bmad_output/implementation-artifacts/30-10-restricted-contractor-messaging.md", "src/lib/digital-brain/restricted-messaging.ts", "src/lib/digital-brain/restricted-messaging.test.ts"],
+      "remaining": [{ "id": "restricted-messaging", "kind": "production_implementation", "proofRequired": "Approved provider-backed discovery, durable approval provenance, invitation, channel delivery, audit storage, UI/accessibility, live read-back and measured revocation implementation." }]
     },
     {
       "id": "30.11",
