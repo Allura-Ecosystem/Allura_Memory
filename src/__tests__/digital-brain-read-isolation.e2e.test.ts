@@ -59,7 +59,7 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
 
   afterAll(async () => { if (database) await database.close(true) }, 30_000)
 
-  async function readAs(principalId: string, workspaceId = WORKSPACE, tenantId = GROUP) {
+  async function readAs(principalId: string, workspaceId = WORKSPACE, tenantId = GROUP, pool = appPool) {
     const scope = { tenantId, workspaceId, principalId }
     const role = principalId === "admin-user" ? "admin" as const : "viewer" as const
     const authority = epic30ReadTestOnly!.issueReadEnvelope(scope,
@@ -69,7 +69,7 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
     return withTenantTransaction(
       scope,
       (client) => readAuthorizedDocumentsInRestrictedTransaction(authority, client.query.bind(client)),
-      appPool,
+      pool,
     )
   }
 
@@ -207,11 +207,19 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
     }
   })
 
-  async function rawOwnerIds(): Promise<string[]> {
+  async function rawOwnerIds(pool = appPool): Promise<string[]> {
     return withTenantTransaction(
       { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "owner-user" },
       async (client) => (await client.query<{ id: string }>("SELECT id FROM brain_documents ORDER BY id")).rows.map(({ id }) => id),
-      appPool,
+      pool,
+    )
+  }
+
+  async function restrictedBackendPid(pool = appPool): Promise<number> {
+    return withTenantTransaction(
+      { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "owner-user" },
+      async (client) => Number((await client.query<{ pid: number }>("SELECT pg_backend_pid() AS pid")).rows[0]?.pid),
+      pool,
     )
   }
 
@@ -251,6 +259,42 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
       await expect(readAs("owner-user")).resolves.toEqual([])
       await expect(rawOwnerIds()).resolves.toEqual([])
     } finally {
+      await ownerPool.query("UPDATE brain_workspace_memberships SET revoked_at=NULL, policy_epoch=1 WHERE group_id=$1 AND workspace_id=$2 AND user_id='owner-user'", [GROUP, WORKSPACE])
+    }
+  })
+
+  it("measures workspace revocation on a reused and fresh restricted connection", async () => {
+    expect((await readAs("owner-user")).map(({ id }) => id).sort()).toEqual([...manifest.principals["owner-user"]].sort())
+    const reusedBefore = await restrictedBackendPid()
+    const startedAt = performance.now()
+    await ownerPool.query("UPDATE brain_workspace_memberships SET revoked_at=now(), policy_epoch=policy_epoch+1 WHERE group_id=$1 AND workspace_id=$2 AND user_id='owner-user'", [GROUP, WORKSPACE])
+    const reusedDocuments = await readAs("owner-user")
+    const reusedRawIds = await rawOwnerIds()
+    const reusedAfter = await restrictedBackendPid()
+    const reusedElapsedMs = performance.now() - startedAt
+    const freshPool = new Pool({
+      host: database.appEnvironment.POSTGRES_HOST,
+      port: Number(database.appEnvironment.POSTGRES_PORT),
+      database: databaseName,
+      user: database.appEnvironment.POSTGRES_APP_USER,
+      password: database.appEnvironment.POSTGRES_APP_PASSWORD,
+      max: 1,
+      query_timeout: 15_000,
+    })
+    try {
+      const freshDocuments = await readAs("owner-user", WORKSPACE, GROUP, freshPool)
+      const freshRawIds = await rawOwnerIds(freshPool)
+      const freshElapsedMs = performance.now() - startedAt
+      expect(reusedAfter).toBe(reusedBefore)
+      expect(reusedDocuments).toEqual([])
+      expect(reusedRawIds).toEqual([])
+      expect(freshDocuments).toEqual([])
+      expect(freshRawIds).toEqual([])
+      expect(reusedElapsedMs).toBeLessThanOrEqual(60_000)
+      expect(freshElapsedMs).toBeLessThanOrEqual(60_000)
+      console.info("Epic30 measured workspace revocation", JSON.stringify({ reusedBackendPid: reusedAfter, reusedElapsedMs, freshElapsedMs }))
+    } finally {
+      await freshPool.end()
       await ownerPool.query("UPDATE brain_workspace_memberships SET revoked_at=NULL, policy_epoch=1 WHERE group_id=$1 AND workspace_id=$2 AND user_id='owner-user'", [GROUP, WORKSPACE])
     }
   })

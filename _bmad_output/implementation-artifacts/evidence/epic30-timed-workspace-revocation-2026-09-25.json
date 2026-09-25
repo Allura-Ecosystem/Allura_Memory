@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "epic": "30",
+  "recordedAt": "2026-09-25",
+  "baseCommit": "f9cdf8a304ad2c07efc35d64a004005298f998a2",
+  "command": "bun run test:epic30-live",
+  "database": {
+    "image": "pgvector/pgvector:pg16",
+    "containerName": "allura-epic30-temp-revocation-20260925",
+    "host": "127.0.0.1",
+    "port": 5444,
+    "storage": "container tmpfs only",
+    "productionDatabaseContacted": false
+  },
+  "result": {
+    "status": "passed",
+    "testsPassed": 30,
+    "testsFailed": 0,
+    "measuredWorkspaceRevocation": {
+      "reusedRestrictedConnectionMilliseconds": 15.95,
+      "freshRestrictedConnectionMilliseconds": 35.99,
+      "ordinaryReadBoundMilliseconds": 60000,
+      "reusedConnectionDenied": true,
+      "freshConnectionDenied": true,
+      "rawRlsReadDenied": true
+    }
+  },
+  "proved": [
+    "revoked workspace membership denies document disclosure through a reused restricted pooled connection",
+    "revoked workspace membership denies document disclosure through a fresh restricted pooled connection",
+    "both denials occurred within the approved 60-second ordinary-read bound",
+    "the restricted raw RLS query returned no document IDs after revocation"
+  ],
+  "notProved": [
+    "session revocation authority and timing",
+    "delegation revocation authority and timing",
+    "already-open stream termination within five seconds",
+    "production database behavior"
+  ],
+  "cleanup": {
+    "containerRemoved": true,
+    "port5444ListeningAfterRun": false
+  }
+}
