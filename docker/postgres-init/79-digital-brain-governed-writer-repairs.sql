@@ -121,7 +121,7 @@ BEGIN
       (group_id, workspace_id, user_id, approved_by, approved_at, revoked_at, policy_epoch, approval_id)
     VALUES
       (v_group_id, v_workspace_id, v_approval.subject_user_id, v_approval.approver_id, now(), NULL, p_target_epoch, p_approval_id)
-    ON CONFLICT (group_id, workspace_id, user_id) DO UPDATE
+    ON CONFLICT ON CONSTRAINT brain_workspace_memberships_pkey DO UPDATE
       SET approved_by = EXCLUDED.approved_by,
           approved_at = EXCLUDED.approved_at,
           revoked_at = NULL,
