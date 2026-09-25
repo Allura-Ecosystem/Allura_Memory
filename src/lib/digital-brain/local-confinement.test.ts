@@ -1,12 +1,12 @@
-import { beforeEach, afterEach, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({ transaction: vi.fn(), query: vi.fn(), pool: vi.fn(), principal: vi.fn(), receipt: vi.fn() }))
 vi.mock("@/lib/db/tenant-transaction", () => ({ withWorkspaceTransaction: mocks.transaction, withTenantTransaction: mocks.transaction }))
 vi.mock("@/lib/postgres/connection", () => ({ getAppPool: mocks.pool }))
 vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal: mocks.principal }))
 vi.mock("./read-receipt-writer", () => ({ persistSyntheticReadReceipt: mocks.receipt }))
-import { readAuthorizedDocuments, readAuthorizedDocumentsPage, readAuthorizedWorkspaceState, searchAuthorizedDocuments, searchAuthorizedDocumentsPage } from "./read-service"
-import { readSyntheticDocumentLinks } from "./document-links"
 import { resolveSyntheticAskContext } from "./ask-context"
+import { readSyntheticDocumentLinks } from "./document-links"
+import { readAuthorizedDocuments, readAuthorizedDocumentsPage, readAuthorizedWorkspaceState, searchAuthorizedDocuments, searchAuthorizedDocumentsPage } from "./read-service"
 const scope = { tenantId: "allura-epic30-local", workspaceId: "epic30-local-workspace", principalId: "owner-user" }
 const principal = { id: scope.principalId, groupId: scope.tenantId, workspaceId: scope.workspaceId,
   role: "viewer" as const, sessionId: "dev:owner-user", email: "owner@example.invalid" }
@@ -296,6 +296,27 @@ it("paginates synthetic reads with a receipt-bound keyset cursor and reauthorize
   expect(second.nextCursor).toBeNull()
   expect(mocks.receipt).toHaveBeenCalledTimes(2)
   expect(mocks.query.mock.calls.some(([, params]) => (params as unknown[]).includes(ownerRow.id))).toBe(true)
+})
+
+it("does not skip mixed-case IDs across same-timestamp search pages", async () => {
+  const sameTimestamp = new Date("2026-09-17T00:00:00Z")
+  const upper = { ...ownerRow, id: "Z-record", title: "Owner uppercase", updated_at: sameTimestamp }
+  const lower = { ...ownerRow, id: "a-record", title: "Owner lowercase", updated_at: sameTimestamp }
+  mocks.query.mockImplementation(async (sql: string) => {
+    if (sql.includes("session_user")) return { rows: [verifiedSession] }
+    if (sql.includes("SELECT workspace_membership.policy_epoch")) return { rows: [{ role: "viewer", policy_epoch: "7" }] }
+    return { rows: [lower, upper] }
+  })
+
+  const first = await searchAuthorizedDocumentsPage(scope, "owner", { pageSize: 1 })
+  expect(first.hits.map(({ documentId }) => documentId)).toEqual([upper.id])
+  expect(first.hasMore).toBe(true)
+  expect(first.nextCursor).toBeTruthy()
+
+  const second = await searchAuthorizedDocumentsPage(scope, "owner", { pageSize: 1, cursor: first.nextCursor! })
+  expect(second.hits.map(({ documentId }) => documentId)).toEqual([lower.id])
+  expect(second.hasMore).toBe(false)
+  expect(second.nextCursor).toBeNull()
 })
 
 it("rejects a read cursor replayed as a search cursor before document disclosure", async () => {
