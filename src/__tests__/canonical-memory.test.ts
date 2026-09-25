@@ -25,11 +25,11 @@ import type {
   MemorySearchRequest,
 } from "../lib/memory/canonical-contracts";
 import {
-  memory_add as rawMemoryAdd,
   memory_delete,
   memory_get,
   memory_list,
   memory_search,
+  memory_add as rawMemoryAdd,
   resetConnections,
 } from "../mcp/canonical-tools";
 import { closePool, getPool } from "../lib/postgres/connection";
