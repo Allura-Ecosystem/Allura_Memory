@@ -29,7 +29,7 @@
     {
       "id": "30.3",
       "localState": "partial",
-      "evidence": ["_bmad_output/planning-artifacts/epic-30-authorization-approval-packet.md", "_bmad_output/planning-artifacts/epic-30-local-authorization-contract.md"],
+      "evidence": ["_bmad_output/planning-artifacts/epic-30-authorization-approval-packet.md", "_bmad_output/planning-artifacts/epic-30-local-authorization-contract.md", "src/lib/digital-brain/workspace-membership-lifecycle.ts", "src/lib/digital-brain/workspace-membership-lifecycle.test.ts"],
       "remaining": [
         { "id": "authorization-policy-approval", "kind": "human_approval", "proofRequired": "Exact production authorization policy approved by authorized security and data owners." },
         { "id": "membership-provenance", "kind": "production_implementation", "proofRequired": "Governed membership grant/revoke lifecycle with verifiable approver provenance." },
