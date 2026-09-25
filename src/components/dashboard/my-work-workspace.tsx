@@ -131,6 +131,7 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
   const [openDocumentIds, setOpenDocumentIds] = useState<string[]>(documents[0] ? [documents[0].id] : [])
   const [comparisonId, setComparisonId] = useState<string | null>(null)
   const [askOpen, setAskOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
   const askStatusId = useId()
   const memoryTabsId = useId()
   const isMobileComparison = useMobileComparison()
@@ -258,8 +259,12 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
 
   const active = documents.find((item) => item.id === activeId) ?? documents[0]
   const comparison = documents.find((item) => item.id === comparisonId)
-  const privateDocuments = documents.filter(({ visibility }) => visibility === "private")
-  const departmentDocuments = documents.filter(({ visibility }) => visibility === "department")
+  const normalizedSearch = searchQuery.trim().toLocaleLowerCase()
+  const searchDocuments = normalizedSearch.length === 0 ? documents : documents.filter((item) =>
+    item.title.toLocaleLowerCase().includes(normalizedSearch) || item.content.toLocaleLowerCase().includes(normalizedSearch))
+  const privateDocuments = searchDocuments.filter(({ visibility }) => visibility === "private")
+  const departmentDocuments = searchDocuments.filter(({ visibility }) => visibility === "department")
+  const hasSearchMatches = searchDocuments.length > 0
   const availableDocument = departmentDocuments.find(({ id }) => id !== active.id)
   const openDocuments = openDocumentIds.map((id) => documents.find((item) => item.id === id)).filter((item): item is WorkspaceDocument => Boolean(item))
   const activeDocumentIndex = documents.findIndex(({ id }) => id === active.id)
@@ -288,12 +293,16 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
           <label className={styles.search}>
             <Search aria-hidden="true" />
             <span className={styles.visuallyHidden}>Search authorized synthetic workspace</span>
-            <input placeholder="Search workspace" title="Search is not enabled" disabled />
+            <input type="search" autoComplete="off" placeholder="Search workspace" value={searchQuery}
+              onChange={(event) => setSearchQuery(event.currentTarget.value)}
+              onKeyDown={(event) => { if (event.key === "Escape") setSearchQuery("") }} />
           </label>
 
-          <div className={styles.treeSection}>
+          {normalizedSearch && !hasSearchMatches ? <p className={styles.searchStatus} role="status">No authorized matches.</p> : null}
+
+          <div className={styles.treeSection} hidden={Boolean(normalizedSearch) && !hasSearchMatches}>
             <p className={styles.treeLabel}><ChevronDown aria-hidden="true" /> YOUR BRAIN <span>{privateDocuments.length}</span></p>
-            {privateDocuments.length === 0 ? <p className={styles.muted}>No private documents</p> : null}
+            {privateDocuments.length === 0 ? <p className={styles.muted}>{normalizedSearch ? "No private matches" : "No private documents"}</p> : null}
             {privateDocuments.map((item) => (
               <button key={item.id} className={active.id === item.id ? styles.selected : ""} aria-current={active.id === item.id ? "page" : undefined} onClick={() => selectDocument(item.id)}>
                 <FileText aria-hidden="true" /><span>{item.title}<small>Private</small></span>
@@ -301,9 +310,9 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
             ))}
           </div>
 
-          <div className={styles.treeSection}>
+          <div className={styles.treeSection} hidden={Boolean(normalizedSearch) && !hasSearchMatches}>
             <p className={styles.treeLabel}><ChevronDown aria-hidden="true" /> APPROVED DEPARTMENTS <span>{departmentDocuments.length}</span></p>
-            {departmentDocuments.length === 0 ? <p className={styles.muted}>No approved department documents</p> : null}
+            {departmentDocuments.length === 0 ? <p className={styles.muted}>{normalizedSearch ? "No department matches" : "No approved department documents"}</p> : null}
             {departmentDocuments.map((item) => (
               <button key={item.id} className={active.id === item.id ? styles.selected : ""} aria-current={active.id === item.id ? "page" : undefined} onClick={() => selectDocument(item.id)}>
                 <FileText aria-hidden="true" /><span>{item.title}<small>{item.departmentId}</small></span>

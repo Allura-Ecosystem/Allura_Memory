@@ -232,6 +232,37 @@ describe("MyWorkWorkspace", () => {
     expect(screen.getByText("Synthetic owner-only content.")).toBeTruthy()
   })
 
+  it("filters only the authorized document snapshot without making a search request", () => {
+    const fetchSpy = vi.fn()
+    vi.stubGlobal("fetch", fetchSpy)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
+    const search = screen.getByRole("searchbox", { name: "Search authorized synthetic workspace" })
+
+    fireEvent.change(search, { target: { value: "operations" } })
+    expect(screen.getByRole("button", { name: "Deployment checklist operations" })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Shipment exception review Private" })).toBeNull()
+    expect(fetchSpy).not.toHaveBeenCalled()
+
+    fireEvent.change(search, { target: { value: "" } })
+    expect(screen.getByRole("button", { name: "Shipment exception review Private" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Deployment checklist operations" })).toBeTruthy()
+  })
+
+  it("returns a content-free no-match result for records outside the authorized snapshot", () => {
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
+    const search = screen.getByRole("searchbox", { name: "Search authorized synthetic workspace" })
+    fireEvent.change(search, { target: { value: "Payroll investigation" } })
+
+    expect(screen.getByRole("status").textContent).toBe("No authorized matches.")
+    expect(screen.queryByText(/payroll/i)).toBeNull()
+    expect(screen.queryByRole("button", { name: "Shipment exception review Private" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Deployment checklist operations" })).toBeNull()
+
+    fireEvent.keyDown(search, { key: "Escape" })
+    expect((search as HTMLInputElement).value).toBe("")
+    expect(screen.getByRole("button", { name: "Shipment exception review Private" })).toBeTruthy()
+  })
+
   it("falls back to the main document if navigation removed the opener", () => {
     render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     const opener = screen.getByRole("button", { name: "Open deployment checklist" })
