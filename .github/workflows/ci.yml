@@ -83,10 +83,11 @@ jobs:
             psql -v ON_ERROR_STOP=1 -h localhost -U allura -d memory -f "$f"
           done
       - name: Run credential leak scan live-DB tests
-        run: bun run test:live-db -- src/lib/device-pairing/__tests__/credential-leak-scan.live-db.test.ts
+        run: |
+          export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}"
+          bun run test:live-db -- src/lib/device-pairing/__tests__/credential-leak-scan.live-db.test.ts
         env:
           RUN_E2E_TESTS: "true"
-          DATABASE_URL: postgresql://allura:***@localhost:5432/memory
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
           POSTGRES_DB: memory
@@ -213,7 +214,6 @@ jobs:
       - name: Run integration tests
         run: bun run test:integration
         env:
-          DATABASE_URL: postgresql://allura:allura@localhost:5432/memory
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
           POSTGRES_DB: memory
@@ -285,11 +285,11 @@ jobs:
       - name: Run E2E tests
         run: |
           bun x playwright install --with-deps chromium
+          export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}"
           bun run test:e2e
         env:
           RUN_E2E_TESTS: "true"
           ALLURA_E2E_LOCAL_TEST_RUNTIME: "true"
-          DATABASE_URL: postgresql://allura:allura@localhost:5432/memory
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
           POSTGRES_DB: memory

@@ -65,7 +65,7 @@ describe("McpAuthenticator device credential binding", () => {
   });
 
   it("projects paired_device_id from a verified token row into PrincipalContext", async () => {
-    const raw = "allura_mcp_device-token-000000000000000000";
+    const raw = "allura_mcp_fixture_000000000000000000";
     process.env.ALLURA_MCP_TOKEN_SECRET = "0123456789abcdefghij";
     repository.findByPrefix.mockResolvedValue({
       id: "tok_device", group_id: "allura-system", workspace_id: "ws-main",
