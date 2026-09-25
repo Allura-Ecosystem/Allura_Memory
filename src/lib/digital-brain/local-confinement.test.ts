@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({ transaction: vi.fn(), query: vi.fn(), pool: vi.fn(), principal: vi.fn(), receipt: vi.fn() }))
 vi.mock("@/lib/db/tenant-transaction", () => ({ withWorkspaceTransaction: mocks.transaction, withTenantTransaction: mocks.transaction }))
 vi.mock("@/lib/postgres/connection", () => ({ getAppPool: mocks.pool }))
@@ -6,6 +6,7 @@ vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal: mocks.
 vi.mock("./read-receipt-writer", () => ({ persistSyntheticReadReceipt: mocks.receipt }))
 import { resolveSyntheticAskContext } from "./ask-context"
 import { readSyntheticDocumentLinks } from "./document-links"
+import { ProductionAuthorizedReadProvider } from "./production-reader"
 import { readAuthorizedDocuments, readAuthorizedDocumentsPage, readAuthorizedWorkspaceState, searchAuthorizedDocuments, searchAuthorizedDocumentsPage } from "./read-service"
 const scope = { tenantId: "allura-epic30-local", workspaceId: "epic30-local-workspace", principalId: "owner-user" }
 const principal = { id: scope.principalId, groupId: scope.tenantId, workspaceId: scope.workspaceId,
@@ -17,6 +18,17 @@ const ownerRow = { id: "epic30-owner-private", group_id: scope.tenantId, workspa
   owner_id: scope.principalId, department_id: null, visibility: "private", title: "Synthetic owner note",
   content: "SYNTHETIC TEST DATA: owner note", updated_at: new Date("2026-09-17T00:00:00Z"),
   authorized_tenant: true, authorized_workspace: true, authorized_department: false }
+const productionScope = { tenantId: "allura-production", workspaceId: "workspace-production", principalId: "production-user" }
+const productionPrincipal = { id: productionScope.principalId, groupId: productionScope.tenantId,
+  workspaceId: productionScope.workspaceId, role: "viewer" as const, sessionId: "clerk-session-production", email: "" }
+const productionRows = [
+  { id: "z-record", group_id: productionScope.tenantId, workspace_id: productionScope.workspaceId,
+    owner_id: productionScope.principalId, department_id: null, visibility: "private", title: "Production note",
+    content: "Authorized production content", updated_at: new Date("2026-09-17T00:00:00Z") },
+  { id: "a-record", group_id: productionScope.tenantId, workspace_id: productionScope.workspaceId,
+    owner_id: "department-user", department_id: "operations", visibility: "department", title: "Operations runbook",
+    content: "Production deployment runbook", updated_at: new Date("2026-09-16T00:00:00Z") },
+]
 beforeEach(() => {
   vi.clearAllMocks()
   for (const [key,value] of Object.entries({ NODE_ENV: "development", ALLURA_EPIC30_LOCAL_DB: "enabled", POSTGRES_HOST: "127.0.0.1", POSTGRES_PORT: "5444", POSTGRES_DB: `allura_epic30_read_${run}`, ALLURA_EPIC30_RUN_ID: run, POSTGRES_APP_USER: "allura_app", POSTGRES_APP_OPTIONS: "", ALLURA_EPIC30_RECEIPT_KEY: Buffer.alloc(32, 1).toString("base64url") })) vi.stubEnv(key,value)
@@ -339,4 +351,85 @@ it("rejects an explicitly empty page cursor before any restricted transaction", 
   await expect(readAuthorizedDocumentsPage(scope, { pageSize: 1, cursor: "" }))
     .rejects.toThrow(/cursor refused/)
   expect(mocks.transaction).not.toHaveBeenCalled()
+})
+
+describe("production authorized read provider", () => {
+  function useProductionRows(): void {
+    mocks.principal.mockResolvedValue(productionPrincipal)
+    mocks.query.mockImplementation(async (sql: string, params?: readonly unknown[]) => {
+      if (sql.includes("brain_workspace_memberships")) return { rows: [{ role: "viewer", policy_epoch: "9" }] }
+      if (sql.includes("COUNT(*)")) return { rows: [{ total: 2 }] }
+      if (sql.includes("FROM brain_documents")) {
+        const hasBoundary = params?.some((value) => value === productionRows[0].updated_at.toISOString())
+        const rows = productionRows.map((row) => row.id === "z-record" ? { ...row, content: "[[a-record]]" } : row)
+        return { rows: hasBoundary ? [rows[1]] : rows }
+      }
+      return { rows: [] }
+    })
+  }
+
+  it("uses server-derived scope and an opaque keyset cursor", async () => {
+    useProductionRows()
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 7))
+    const first = await provider.readDocumentsPage({ pageSize: 1 })
+    expect(first.documents.map(({ id }) => id)).toEqual(["z-record"])
+    expect(first.hasMore).toBe(true)
+    expect(first.nextCursor).toBeTruthy()
+    expect(first.nextCursor).not.toContain("production")
+    expect(first.nextCursor).not.toContain("clerk-session-production")
+    expect(mocks.transaction).toHaveBeenCalledWith(productionScope, expect.any(Function))
+
+    const second = await provider.readDocumentsPage({ pageSize: 1, cursor: first.nextCursor! })
+    expect(second.documents.map(({ id }) => id)).toEqual(["a-record"])
+    expect(second.hasMore).toBe(false)
+    expect(second.nextCursor).toBeNull()
+    expect(mocks.query.mock.calls.some(([sql]) => String(sql).includes("brain_membership_approvals"))).toBe(true)
+  })
+
+  it("searches and paginates only rows returned by the restricted transaction", async () => {
+    useProductionRows()
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 8))
+    const first = await provider.searchDocumentsPage("production", { pageSize: 1 })
+    expect(first.total).toBe(2)
+    expect(first.hits.map(({ documentId }) => documentId)).toEqual(["z-record"])
+    expect(first.nextCursor).toBeTruthy()
+
+    const second = await provider.searchDocumentsPage("production", { pageSize: 1, cursor: first.nextCursor! })
+    expect(second.hits.map(({ documentId }) => documentId)).toEqual(["a-record"])
+    expect(second.hasMore).toBe(false)
+    expect(second.nextCursor).toBeNull()
+    expect(JSON.stringify(first)).not.toContain("clerk-session-production")
+  })
+
+  it("rejects an operation-mismatched cursor before querying document rows", async () => {
+    useProductionRows()
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 11))
+    const first = await provider.readDocumentsPage({ pageSize: 1 })
+    const documentQueriesBeforeReplay = mocks.query.mock.calls.filter(([sql]) => String(sql).includes("FROM brain_documents")).length
+    await expect(provider.searchDocumentsPage("production", { pageSize: 1, cursor: first.nextCursor! }))
+      .rejects.toThrow(/cursor authority refused/)
+    expect(mocks.query.mock.calls.filter(([sql]) => String(sql).includes("FROM brain_documents")).length)
+      .toBe(documentQueriesBeforeReplay)
+  })
+
+  it("derives links, citations, and derivatives only from the current authorized snapshot", async () => {
+    useProductionRows()
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 9))
+    await expect(provider.documentLinks("z-record")).resolves.toEqual({
+      documentId: "z-record", title: "Production note",
+      links: [{ documentId: "a-record", title: "Operations runbook" }], backlinks: [],
+    })
+    await expect(provider.citations(["z-record", "missing-record"])).resolves.toEqual([
+      { documentId: "z-record", title: "Production note" },
+    ])
+    await expect(provider.derivativeSources(["z-record", "missing-record"])).resolves.toBeNull()
+  })
+
+  it("fails closed without a server principal or a cursor key", async () => {
+    mocks.principal.mockResolvedValue(null)
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 10))
+    await expect(provider.readDocumentsPage()).rejects.toThrow(/authority refused/)
+    expect(mocks.transaction).not.toHaveBeenCalled()
+    expect(() => new ProductionAuthorizedReadProvider(Buffer.alloc(16))).toThrow(/cursor key refused/)
+  })
 })
