@@ -64,7 +64,9 @@ const AUTHORITY_SQL = `
     AND workspace_membership.approval_id IS NOT NULL
     AND approval.action = 'grant'
     AND approval.approver_role = 'workspace_membership_admin'
+    AND approval.verified_at IS NOT NULL
     AND approval.revoked_at IS NULL
+    AND approval.consumed_at IS NOT NULL
     AND tenant_membership.removed_at IS NULL
 `
 

@@ -76,6 +76,7 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "brain_department_memberships", class: "tenant-scoped", notes: "Epic 30 current approved department read authority; revoked memberships fail closed", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "brain_membership_approvals", class: "tenant-scoped", notes: "Epic 30 exact-workspace approval provenance; restricted app role is read-only", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "brain_membership_receipts", class: "tenant-scoped", notes: "Epic 30 content-free workspace membership lifecycle receipts; restricted app role is read-only", workspaceTreatment: "workspace-scoped-new-writes" },
+  { table: "brain_read_receipts", class: "tenant-scoped", notes: "Epic 30 immutable content-free production read receipts; restricted app role records only through a scope-derived function", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "brain_project_contacts", class: "tenant-scoped", notes: "Epic 30 exact-workspace named messaging contacts; restricted app role is read-only", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "brain_messaging_approvals", class: "tenant-scoped", notes: "Epic 30 dual-approval messaging provenance; restricted app role is read-only", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "brain_channel_invitations", class: "tenant-scoped", notes: "Epic 30 exact-channel invitations bound to dual approvals", workspaceTreatment: "workspace-scoped-new-writes" },

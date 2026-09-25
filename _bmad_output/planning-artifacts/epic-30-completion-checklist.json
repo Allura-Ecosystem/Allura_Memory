@@ -51,7 +51,7 @@
     {
       "id": "30.6",
       "localState": "partial",
-      "evidence": ["src/lib/digital-brain/read-service.ts", "src/lib/digital-brain/production-reader.ts", "src/lib/digital-brain/read-receipt.ts", "src/lib/digital-brain/document-citations.ts", "src/lib/digital-brain/document-derivatives.ts", "src/lib/digital-brain/ask-context.ts"],
+      "evidence": ["src/lib/digital-brain/read-service.ts", "src/lib/digital-brain/production-reader.ts", "src/lib/digital-brain/read-receipt.ts", "src/lib/digital-brain/production-read-receipt-writer.ts", "docker/postgres-init/76-digital-brain-production-read-receipts.sql", "_bmad_output/implementation-artifacts/evidence/epic30-production-read-receipts-2026-09-25.json", "src/lib/digital-brain/document-citations.ts", "src/lib/digital-brain/document-derivatives.ts", "src/lib/digital-brain/ask-context.ts"],
       "remaining": [{ "id": "production-read-policy-and-services", "kind": "production_implementation", "proofRequired": "Approved production authority and implementations for search, relationships, citations, derivatives, caches and pagination." }]
     },
     {

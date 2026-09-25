@@ -9,6 +9,7 @@ const workspaceMigrationPath = path.resolve(process.cwd(), "docker/postgres-init
 const provenanceMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/73-digital-brain-membership-provenance.sql")
 const messagingMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/74-digital-brain-restricted-messaging.sql")
 const membershipWriterMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/75-digital-brain-membership-governed-writer.sql")
+const readReceiptMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/76-digital-brain-production-read-receipts.sql")
 
 describe("Epic 30 digital Brain read migration contract", () => {
   it("rejects null and blank department identifiers explicitly", () => {
@@ -125,5 +126,23 @@ describe("Epic 30 governed membership writer migration contract", () => {
     expect(sql).toContain("GRANT EXECUTE ON FUNCTION app.commit_brain_workspace_membership")
     expect(sql).toContain("REVOKE INSERT, UPDATE, DELETE ON brain_workspace_memberships FROM allura_app")
     expect(sql).not.toMatch(/GRANT\s+(INSERT|UPDATE|DELETE).*ON brain_workspace_memberships.*TO allura_app/i)
+  })
+})
+
+describe("Epic 30 governed production read receipt migration contract", () => {
+  it("records immutable content-free receipts only through server-scoped authority", () => {
+    const sql = readFileSync(readReceiptMigrationPath, "utf8")
+    expect(TENANT_TABLE_INVENTORY.some(({ table }) => table === "brain_read_receipts")).toBe(true)
+    expect(sql).toContain("ALTER TABLE brain_read_receipts FORCE ROW LEVEL SECURITY")
+    expect(sql).toContain("CREATE TRIGGER brain_read_receipts_immutable")
+    expect(sql).toContain("CREATE OR REPLACE FUNCTION app.record_brain_read_receipt(")
+    expect(sql).toContain("LANGUAGE plpgsql SECURITY DEFINER")
+    expect(sql).toContain("current_setting('app.current_group_id', true)")
+    expect(sql).toContain("approval.consumed_at IS NOT NULL")
+    expect(sql).toContain("p_session_hash !~ '^[a-f0-9]{64}$'")
+    expect(sql).toContain("p_witness_hash !~ '^[a-f0-9]{64}$'")
+    expect(sql).toContain("GRANT EXECUTE ON FUNCTION app.record_brain_read_receipt")
+    expect(sql).toContain("REVOKE INSERT, UPDATE, DELETE ON brain_read_receipts FROM allura_app")
+    expect(sql).not.toMatch(/GRANT\s+(INSERT|UPDATE|DELETE).*ON brain_read_receipts.*TO allura_app/i)
   })
 })
