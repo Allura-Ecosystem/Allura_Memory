@@ -108,6 +108,8 @@
     "test:epic30-live": "bash scripts/ci/run-epic30-live-tests.sh",
     "test:epic30-hermetic": "bun run typecheck && vitest run --config vitest.config.epic30-hermetic.ts",
     "test:epic30-controlled-red": "bash scripts/ci/run-epic30-controlled-red.sh",
+    "validate:epic30-completion": "bun scripts/epic30/check-completion.ts --verify-manifest",
+    "gate:epic30-completion": "bun scripts/epic30/check-completion.ts --require-complete",
     "validate:epic30-reader": "bun scripts/epic30/verify-reader.cjs",
     "ci:benchmark": "bash scripts/ci/run-benchmark.sh",
     "validate:tokens": "bash scripts/token-compliance.sh",

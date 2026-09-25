@@ -6,6 +6,7 @@ export default defineConfig({ ...unit, test: { ...unit.test,
   passWithNoTests: false,
   include: [
     "src/__tests__/epic30-controlled-red-privacy.test.ts",
+    "tests/scripts/epic30-completion.test.ts",
     "src/lib/digital-brain/ci-contract.test.ts",
     "src/__tests__/memory-root-authority.test.ts",
     "src/__tests__/memory-id-authority.test.ts",
