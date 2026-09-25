@@ -216,11 +216,7 @@ export interface IGraphAdapter {
    * @param content - Exact content to match
    * @returns Duplicate check result
    */
-  checkDuplicate(params: {
-    group_id: GroupId
-    user_id: string | null
-    content: string
-  }): Promise<DuplicateCheckResult>
+  checkDuplicate(params: { group_id: GroupId; user_id: string | null; content: string }): Promise<DuplicateCheckResult>
 
   /**
    * Create a new version of a memory via SUPERSEDES relationship.
@@ -260,6 +256,8 @@ export interface IGraphAdapter {
   softDeleteMemory(params: {
     id: MemoryId
     group_id: GroupId
+    workspace_id?: string
+    principal_id?: string
     deleted_at: string
   }): Promise<GraphDeleteResult>
 
@@ -277,6 +275,8 @@ export interface IGraphAdapter {
   restoreMemory(params: {
     id: MemoryId
     group_id: GroupId
+    workspace_id?: string
+    principal_id?: string
     restored_at: string
   }): Promise<GraphRestoreResult>
 
@@ -290,7 +290,12 @@ export interface IGraphAdapter {
    * @param group_id - Tenant isolation key
    * @returns The memory node, or null if not found
    */
-  getMemory(params: { id: MemoryId; group_id: GroupId; workspace_id: string; principal_id: string }): Promise<GraphGetResult>
+  getMemory(params: {
+    id: MemoryId
+    group_id: GroupId
+    workspace_id: string
+    principal_id: string
+  }): Promise<GraphGetResult>
 
   /**
    * Full-text search for memories.
@@ -332,10 +337,7 @@ export interface IGraphAdapter {
    * @param user_id - User filter (null = all users)
    * @returns Count result
    */
-  countMemories(params: {
-    group_id: GroupId
-    user_id: string | null
-  }): Promise<CountResult>
+  countMemories(params: { group_id: GroupId; user_id: string | null }): Promise<CountResult>
 
   /**
    * Check if a memory is canonical (active, not superseded, not deprecated).
@@ -385,6 +387,8 @@ export interface IGraphAdapter {
   getDeprecatedMemories(params: {
     ids: string[]
     group_id: GroupId
+    workspace_id: string
+    principal_id: string
   }): Promise<Map<string, GraphMemoryNode>>
 
   /**

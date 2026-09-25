@@ -37,10 +37,20 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       { tenantId: group_id, workspaceId: workspace_id, principalId: roleCheck.user.id },
       (db) =>
         db.query(
-          `SELECT m.id, m.group_id, m.content, m.score, m.version, m.created_at,
+          `WITH RECURSIVE lineage(id) AS (
+         VALUES ($1::text)
+         UNION
+         SELECT s.superseded_id
+         FROM graph_supersedes s
+         JOIN lineage l ON s.newer_id = l.id
+         WHERE s.group_id = $2 AND s.workspace_id = $3
+           AND s.workspace_scope_state = 'workspace_scoped'
+       )
+       SELECT m.id, m.group_id, m.content, m.score, m.version, m.created_at,
               m.provenance, m.user_id, m.deprecated
        FROM graph_memories m
-       WHERE m.id = $1
+       JOIN lineage l ON l.id = m.id
+       WHERE true
          AND m.group_id = $2
          AND m.workspace_id = $3
          AND m.workspace_scope_state = 'workspace_scoped'
@@ -57,6 +67,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       created_at: row.created_at,
       status: row.deprecated ? "deprecated" : "active",
       provenance: row.provenance,
+      user_id: row.user_id,
     }))
 
     return NextResponse.json({ history })

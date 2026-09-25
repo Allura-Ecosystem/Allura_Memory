@@ -30,10 +30,11 @@ beforeEach(() => {
 
 describe("memory trace authority", () => {
   it.each(["group_id=allura-other", "workspace_id=workspace-other"])(
-    "denies forged GET scope before querying: %s", async (selector) => {
+    "denies forged GET scope before querying: %s",
+    async (selector) => {
       expect((await GET(request(`/api/memory/traces?${selector}`))).status).toBe(403)
       expect(mocks.queryTraces).not.toHaveBeenCalled()
-    },
+    }
   )
 
   it("queries only the authenticated workspace", async () => {
@@ -49,6 +50,14 @@ describe("memory trace authority", () => {
     })
   })
 
+  it.each(["?limit=0", "?limit=201", "?limit=nope", "?offset=-1", "?type=memory"])(
+    "rejects invalid bounded read input: %s",
+    async (query) => {
+      expect((await GET(request(`/api/memory/traces${query}`))).status).toBe(400)
+      expect(mocks.queryTraces).not.toHaveBeenCalled()
+    }
+  )
+
   it("requires curator authority for trace writes", async () => {
     expect((await POST(request("/api/memory/traces", "viewer", { content: "blocked" }))).status).toBe(403)
     expect(mocks.logTrace).not.toHaveBeenCalled()
@@ -63,20 +72,23 @@ describe("memory trace authority", () => {
   })
 
   it("binds trace tenant, workspace, and actor to authenticated authority", async () => {
-    const response = await POST(request("/api/memory/traces", "curator", {
-      group_id: "allura-system",
-      workspace_id: "workspace-a",
-      agent: "forged-agent",
-      type: "decision",
-      content: "verified content",
-      confidence: 0.8,
-      metadata: { safe: true },
-    }))
+    const response = await POST(
+      request("/api/memory/traces", "curator", {
+        group_id: "allura-system",
+        workspace_id: "workspace-a",
+        agent: "forged-agent",
+        type: "decision",
+        content: "verified content",
+        confidence: 0.8,
+        metadata: { safe: true },
+      })
+    )
     expect(response.status).toBe(200)
     expect(mocks.logTrace).toHaveBeenCalledWith({
       agent_id: "verified-user",
       group_id: "allura-system",
       workspace_id: "workspace-a",
+      session_id: "verified-session",
       trace_type: "decision",
       content: "verified content",
       confidence: 0.8,

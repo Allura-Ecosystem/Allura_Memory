@@ -247,10 +247,16 @@ describe("ruvector-crate adapter — subset parity (Option A)", () => {
   })
 
   describe("getDeprecatedMemories", () => {
-    it("returns empty under Option A (no node is ever deprecated)", async () => {
+    it("refuses deprecated reads because the native store has no workspace discriminator", async () => {
       await adapter.createMemory(seedParams())
-      const map = await adapter.getDeprecatedMemories({ ids: ["mem-001"], group_id: TEST_GROUP_ID })
-      expect(map.size).toBe(0)
+      await expect(
+        adapter.getDeprecatedMemories({
+          ids: ["mem-001"],
+          group_id: TEST_GROUP_ID,
+          workspace_id: "workspace-a",
+          principal_id: "agent-a",
+        })
+      ).rejects.toThrow("[ruvector-crate:getDeprecatedMemories] unsupported:")
     })
   })
 

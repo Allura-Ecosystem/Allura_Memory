@@ -35,11 +35,14 @@ describe("Epic 30 merge-evidence wiring", () => {
       "memory-aggregate-authority.test.ts",
       "memory-trace-authority.test.ts",
       "trace-workspace-storage.test.ts",
+      "trace-receipt-authority.test.ts",
       "memory-graph-authority.test.ts",
       "memory-restore-authority.test.ts",
       "memory-insight-history-authority.test.ts",
       "memory-user-deletion-authority.test.ts",
       "memory-route-owner-pool-guard.test.ts",
+      "canonical-delete-lifecycle-authority.test.ts",
+      "ruvector-workspace-authority.test.ts",
     ]) expect(config).toContain(test)
   })
 })

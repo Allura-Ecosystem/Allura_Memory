@@ -392,6 +392,13 @@ transaction and persist the explicit workspace discriminator. Caller-selected
 agent or scope values cannot replace authenticated authority, and backend
 failure responses contain no configuration details.
 
+Trace reads are limited to `trace.*` events and bounded pagination. Trace
+content round-trips from `outcome.content`, not unrelated memory metadata. Each
+workspace trace persists a content-free authority receipt binding tenant,
+workspace, hashed session, actor, payload hash, control-plane proof-signature
+hash and audit ID. Raw session values and content previews are not stored in
+the receipt.
+
 **Query parameters:**
 
 | Parameter | Type | Required | Description |
