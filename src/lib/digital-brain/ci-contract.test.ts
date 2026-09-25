@@ -37,6 +37,7 @@ describe("Epic 30 merge-evidence wiring", () => {
       "workspace-membership-lifecycle.test.ts",
       "workspace-membership-production.test.ts",
       "ask-answer.test.ts",
+      "production-ask.test.ts",
       "epic30-controlled-red-privacy.test.ts",
       "epic30-completion.test.ts",
       "memory-root-authority.test.ts",

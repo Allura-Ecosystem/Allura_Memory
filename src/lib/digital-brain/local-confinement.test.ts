@@ -7,6 +7,7 @@ vi.mock("./read-receipt-writer", () => ({ persistSyntheticReadReceipt: mocks.rec
 import { resolveSyntheticAskContext } from "./ask-context"
 import { readSyntheticDocumentLinks } from "./document-links"
 import { ProductionAuthorizedReadProvider } from "./production-reader"
+import { createAuthorizedReadReceipt } from "./read-receipt"
 import { readAuthorizedDocuments, readAuthorizedDocumentsPage, readAuthorizedWorkspaceState, searchAuthorizedDocuments, searchAuthorizedDocumentsPage } from "./read-service"
 const scope = { tenantId: "allura-epic30-local", workspaceId: "epic30-local-workspace", principalId: "owner-user" }
 const principal = { id: scope.principalId, groupId: scope.tenantId, workspaceId: scope.workspaceId,
@@ -390,6 +391,40 @@ describe("production authorized read provider", () => {
     expect(mocks.receipt.mock.calls[1][0].witnessHash).not.toBe(mocks.receipt.mock.calls[0][0].witnessHash)
     expect(mocks.query.mock.calls.some(([sql]) => String(sql).includes("brain_membership_approvals"))).toBe(true)
     expect(mocks.query.mock.calls.some(([sql]) => String(sql).includes("approval.policy_epoch = workspace_membership.policy_epoch"))).toBe(true)
+  })
+
+  it("binds the Ask snapshot to server authority and a verified receipt-chain witness", async () => {
+    useProductionRows()
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 14), productionReceiptWriter)
+    const result = await provider.readAuthorizedSnapshot(productionScope)
+    expect(result.documents.map(({ id }) => id)).toEqual(["z-record", "a-record"])
+    expect(result.authority).toEqual({
+      tenantId: productionScope.tenantId,
+      workspaceId: productionScope.workspaceId,
+      principalId: productionScope.principalId,
+      sessionId: productionPrincipal.sessionId,
+      actorRole: "viewer",
+      policyEpoch: 9,
+      receiptWitnessHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      priorReceiptWitnessHash: null,
+      decision: "authorized",
+    })
+    const chained = await provider.readAuthorizedSnapshot(productionScope, result.authority.receiptWitnessHash)
+    expect(chained.authority.priorReceiptWitnessHash).toBe(result.authority.receiptWitnessHash)
+    expect(chained.authority.receiptWitnessHash).toBe(createAuthorizedReadReceipt({
+      scope: productionScope,
+      sessionId: productionPrincipal.sessionId,
+      actorRole: "viewer",
+      policyEpoch: 9,
+      documents: chained.documents,
+      witnessKey: Buffer.alloc(32, 14),
+      priorWitnessHash: result.authority.receiptWitnessHash,
+      policyVersion: "epic30-production-v1",
+    }).witnessHash)
+    const transactionsBeforeMismatch = mocks.transaction.mock.calls.length
+    await expect(provider.readAuthorizedSnapshot({ ...productionScope, principalId: "other" }))
+      .rejects.toThrow(/Ask authority refused/)
+    expect(mocks.transaction).toHaveBeenCalledTimes(transactionsBeforeMismatch)
   })
 
   it("searches and paginates only rows returned by the restricted transaction", async () => {

@@ -2,6 +2,7 @@ import { getDashboardPrincipal } from "@/lib/auth/dashboard-principal"
 import type { AuthUser } from "@/lib/auth/types"
 import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
 import { isCanonicalDocumentId, validateCanonicalDocumentIds } from "./document-id"
+import type { ProductionAuthorizedReadSnapshot } from "./production-ask"
 import {
   assertAuthorizedReadCursorMatches,
   AUTHORIZED_READ_PAGE_SIZE_DEFAULT,
@@ -224,10 +225,16 @@ export class ProductionAuthorizedReadProvider {
     query?: string
     pageSize?: number
     cursor?: string
+    priorWitnessHash?: string
   }): Promise<{ authority: ProductionAuthority; documents: AuthorizedDocumentLike[]; total: number; hasMore: boolean; witnessHash: string }> {
     const pageSize = normalizePageSize(options.pageSize)
     const queryHash = options.query === undefined ? null : hashAuthorizedSearchQuery(this.cursorKey, options.query)
     const cursorClaims = options.cursor === undefined ? null : decodeAuthorizedReadCursor(options.cursor, this.cursorKey)
+    if (cursorClaims && options.priorWitnessHash) throw new Error("Production read witness chain refused")
+    if (options.priorWitnessHash !== undefined && !/^[a-f0-9]{64}$/.test(options.priorWitnessHash)) {
+      throw new Error("Production read witness chain refused")
+    }
+    const priorWitnessHash = cursorClaims?.witnessHash ?? options.priorWitnessHash
     const assertCursor = (authority: ProductionAuthority, currentPrincipal: AuthUser): void => {
       if (!cursorClaims) return
       assertAuthorizedReadCursorMatches(cursorClaims, {
@@ -255,7 +262,7 @@ export class ProductionAuthorizedReadProvider {
       policyEpoch: first.authority.policyEpoch,
       documents: firstPage,
       witnessKey: this.cursorKey,
-      priorWitnessHash: cursorClaims?.witnessHash,
+      priorWitnessHash,
       searchQuery: options.query,
       policyVersion: "epic30-production-v1",
     }, this.receiptWriter)
@@ -275,7 +282,7 @@ export class ProductionAuthorizedReadProvider {
       policyEpoch: current.authority.policyEpoch,
       documents: currentPage,
       witnessKey: this.cursorKey,
-      priorWitnessHash: cursorClaims?.witnessHash,
+      priorWitnessHash,
       searchQuery: options.query,
       policyVersion: "epic30-production-v1",
       receiptId: receipt.receiptId,
@@ -311,6 +318,57 @@ export class ProductionAuthorizedReadProvider {
       cursor = page.nextCursor ?? undefined
     } while (cursor)
     return documents
+  }
+
+  /**
+   * Ask-only adapter that exposes the complete server-derived authority tuple
+   * and the final receipt-chain witness without accepting caller authority.
+   */
+  async readAuthorizedSnapshot(
+    expectedScope: DigitalBrainReadScope,
+    priorReceiptWitnessHash?: string,
+  ): Promise<ProductionAuthorizedReadSnapshot> {
+    const { principal, scope } = await this.principal()
+    if (scope.tenantId !== expectedScope.tenantId || scope.workspaceId !== expectedScope.workspaceId ||
+        scope.principalId !== expectedScope.principalId) throw new Error("Production Ask authority refused")
+    const documents: AuthorizedDocumentLike[] = []
+    let cursor: string | undefined
+    let firstAuthority: ProductionAuthority | null = null
+    let finalWitnessHash = ""
+    do {
+      const result = await this.page(scope, principal, {
+        operation: "read_documents", pageSize: AUTHORIZED_READ_PAGE_SIZE_MAX, cursor,
+        priorWitnessHash: cursor ? undefined : priorReceiptWitnessHash,
+      })
+      if (firstAuthority && (result.authority.actorRole !== firstAuthority.actorRole ||
+          result.authority.policyEpoch !== firstAuthority.policyEpoch)) {
+        throw new Error("Production Ask authority changed")
+      }
+      firstAuthority ??= result.authority
+      documents.push(...result.documents)
+      finalWitnessHash = result.witnessHash
+      cursor = result.hasMore && result.documents.length > 0 ? createAuthorizedReadCursor({
+        scope, sessionId: principal.sessionId!, operation: "read_documents",
+        actorRole: result.authority.actorRole, policyEpoch: result.authority.policyEpoch,
+        pageSize: AUTHORIZED_READ_PAGE_SIZE_MAX,
+        boundary: {
+          updatedAt: result.documents[result.documents.length - 1].updatedAt.toISOString(),
+          id: result.documents[result.documents.length - 1].id,
+        },
+        witnessHash: result.witnessHash, witnessKey: this.cursorKey, queryHash: null,
+      }) : undefined
+    } while (cursor)
+    if (!firstAuthority || !finalWitnessHash) throw new Error("Production Ask receipt witness refused")
+    return {
+      authority: {
+        tenantId: scope.tenantId, workspaceId: scope.workspaceId, principalId: scope.principalId,
+        sessionId: principal.sessionId!, actorRole: firstAuthority.actorRole,
+        policyEpoch: firstAuthority.policyEpoch, receiptWitnessHash: finalWitnessHash,
+        priorReceiptWitnessHash: priorReceiptWitnessHash ?? null,
+        decision: "authorized",
+      },
+      documents,
+    }
   }
 
   async searchDocumentsPage(rawQuery: string, options: AuthorizedReadPageOptions = {}): Promise<AuthorizedSearchPage> {
