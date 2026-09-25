@@ -44,7 +44,7 @@ The department constraint repair applies to newly provisioned synthetic database
 
 ## Existing-demo browser regression
 
-Run `bun run validate:epic30-reader --url=http://127.0.0.1:4100/dashboard --output=<evidence-directory>` against an already-running explicit synthetic demo. Optionally pass `--browser-executable=<chromium-path>` when the Playwright browser is installed outside its default cache. This uses the existing Playwright dependency, measures comparison reflow at 320/640/1440px, checks navigation and keyboard focus, and writes screenshots plus hashes. It does not launch, restart or reseed the demo.
+Run `bun run validate:epic30-reader --url=http://127.0.0.1:4100/dashboard --output=<evidence-directory>` against an already-running explicit synthetic demo. Optionally pass `--browser-executable=<chromium-path>` when the Playwright browser is installed outside its default cache. This uses the existing Playwright dependency, measures comparison reflow at 320/640/1440px, checks tree navigation, ARIA memory-tab keyboard behavior, authorized-snapshot search with hidden-sentinel denial, comparison focus, and honest Ask unavailability, then writes screenshots plus hashes. It does not launch, restart or reseed the demo. Search proof is limited to the already authorized client snapshot; production search remains quarantined.
 
 Fixture replay is authority-resetting, not a general idempotent repair. It restores fixture roles, memberships and removal/revocation state. The SQL requires a matching private ownership receipt and fresh synthetic database identity. It is no longer copied into the general Docker initialization path. Conflicting document authority aborts the transaction; tests verify full rollback of documents and memberships.
 
