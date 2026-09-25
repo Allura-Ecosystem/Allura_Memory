@@ -1,7 +1,6 @@
 name: Epic 30 confined evidence
 
 on:
-  pull_request:
   workflow_dispatch:
 
 permissions:
