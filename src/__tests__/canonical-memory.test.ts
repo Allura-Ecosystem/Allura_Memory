@@ -800,7 +800,7 @@ describe("Canonical Memory Operations", () => {
           const request: MemoryAddRequest = {
             group_id: `allura-test-${RUN_ID}` as any,
             scope: wsScope(`allura-test-${RUN_ID}` as any),
-            user_id: "test-user-error",
+            user_id: TEST_USER_ID,
             content: "Error propagation test",
           };
 

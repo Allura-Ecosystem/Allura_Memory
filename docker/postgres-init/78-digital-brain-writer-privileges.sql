@@ -5,8 +5,17 @@ BEGIN;
 -- that function owner only the exact rows and mutations exercised inside the
 -- SECURITY DEFINER boundaries; allura_app remains direct-DML denied.
 GRANT SELECT ON public.memberships,
-  public.brain_workspace_memberships,
-  public.brain_membership_approvals
+  public.brain_membership_approvals,
+  public.brain_membership_receipts
+TO allura_migration;
+
+-- The governed writer functions take row locks and upsert the confirmed
+-- membership record.  The migration role owns those SECURITY DEFINER
+-- functions; application roles still have no direct table access.
+GRANT SELECT, INSERT, UPDATE ON public.brain_workspace_memberships
+TO allura_migration;
+
+GRANT UPDATE (consumed_at) ON public.brain_membership_approvals
 TO allura_migration;
 
 GRANT INSERT ON public.brain_read_receipts TO allura_migration;
