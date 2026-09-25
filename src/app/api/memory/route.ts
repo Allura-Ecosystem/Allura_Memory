@@ -29,6 +29,7 @@ import type {
  UserId } from "@/lib/memory/canonical-contracts"
 import { captureException } from "@/lib/observability/sentry"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
+import { resolveApiTenant } from "@/lib/auth/web-principal"
 import {
   memory_delete,
   memory_get,
@@ -81,8 +82,8 @@ function handleError(error: unknown, route: string, method: string): NextRespons
 // ── POST /api/memory (memory_add) ─────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  // Auth: require viewer or above role
-  const roleCheck = requireRole(request, "viewer")
+  // A memory write is a curator action; role and tenant come from auth.
+  const roleCheck = requireRole(request, "curator")
   if (!roleCheck.user) {
     return unauthorizedResponse()
   }
@@ -127,6 +128,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "group_id is required" }, { status: 400 })
     }
 
+    if (resolveApiTenant(roleCheck.user, validatedGroupId).status !== "ok") {
+      return NextResponse.json({ error: "TENANT_MISMATCH" }, { status: 403 })
+    }
+    if (!roleCheck.user.workspaceId || !roleCheck.user.sessionId) {
+      return NextResponse.json({ error: "AUTH_MISSING" }, { status: 401 })
+    }
+    const scope = { group_id: validatedGroupId as GroupId, workspace_id: roleCheck.user.workspaceId,
+      agent_id: roleCheck.user.id, session_id: roleCheck.user.sessionId }
+
     // Check if this is a search request
     const query = searchParams.get("query")
     if (query) {
@@ -134,6 +144,7 @@ export async function GET(request: NextRequest) {
       const searchRequest: MemorySearchRequest = {
         query,
         group_id: validatedGroupId as GroupId,
+        scope,
         user_id: searchParams.get("user_id") || undefined,
         limit: searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 10,
         min_score: searchParams.get("min_score") ? parseFloat(searchParams.get("min_score")!) : undefined,
@@ -149,6 +160,7 @@ export async function GET(request: NextRequest) {
     if (status === "deleted") {
       const listDeletedRequest: MemoryListDeletedRequest = {
         group_id: validatedGroupId as GroupId,
+        scope,
         user_id: searchParams.get("user_id") || undefined,
         limit: searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 50,
         offset: searchParams.get("offset") ? parseInt(searchParams.get("offset")!) : 0,
@@ -162,6 +174,7 @@ export async function GET(request: NextRequest) {
     const rawUserId = searchParams.get("user_id")
     const listRequest: MemoryListRequest = {
       group_id: validatedGroupId as GroupId,
+      scope,
       user_id: rawUserId ? (rawUserId as UserId) : undefined,
       limit: searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 50,
       offset: searchParams.get("offset") ? parseInt(searchParams.get("offset")!) : 0,
