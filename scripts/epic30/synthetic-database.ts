@@ -8,6 +8,7 @@ import { verifySyntheticSession } from "../../src/lib/digital-brain/local-confin
 export const fixturePath = path.resolve("docker/epic30-postgres/99-epic30-synthetic-fixtures.sql")
 export const manifest = JSON.parse(readFileSync(path.resolve("docker/epic30-postgres/epic30-synthetic-visibility-manifest.json"), "utf8"))
 const identifier = (s: string) => `"${s.replaceAll('"', '""')}"`
+const delay = (milliseconds: number) => new Promise<void>(resolve => setTimeout(resolve, milliseconds))
 
 /** Existing disposable live lane, shared by tests and the explicitly approved local demo. */
 export async function provisionSyntheticDatabase(signal?: AbortSignal) {
@@ -32,6 +33,23 @@ export async function provisionSyntheticDatabase(signal?: AbortSignal) {
     password: receiptPassword, query_timeout: 15_000, max: 1 })
   let created = false; let receiptRoleCreated = false; let closed = false
   let cleanupFailure: Error | undefined
+  async function waitForOwnedDatabaseDrain() {
+    // Pool#end can resolve just before PostgreSQL has observed the socket close.
+    // Never use DROP ... WITH FORCE here: it would turn that harmless boundary
+    // race into an unhandled connection error in the test process.
+    const deadline = Date.now() + 5_000
+    while (true) {
+      const result = await rootPool.query<{ count: string }>(
+        "SELECT count(*)::text AS count FROM pg_stat_activity WHERE datname = $1",
+        [databaseName],
+      )
+      if (Number(result.rows[0]?.count ?? "0") === 0) return
+      if (Date.now() >= deadline) {
+        throw new Error("Synthetic database still has owned connections after pool shutdown")
+      }
+      await delay(25)
+    }
+  }
   async function close(drop: boolean) {
     if (cleanupFailure) throw cleanupFailure
     if (closed) return
@@ -39,8 +57,10 @@ export async function provisionSyntheticDatabase(signal?: AbortSignal) {
     const ended = await Promise.allSettled([appPool.end(), receiptPool.end(), ownerPool.end()])
     failures.push(...ended.filter(result => result.status === "rejected"))
     try { if (drop && created) {
-      // Name is generated here, never accepted from arbitrary input; CREATE must have succeeded.
-      await rootPool.query(`DROP DATABASE ${identifier(databaseName)} WITH (FORCE)`)
+      // The name is generated here, never accepted from arbitrary input. Drain
+      // our pools before a normal drop so an unrelated connection is never killed.
+      await waitForOwnedDatabaseDrain()
+      await rootPool.query(`DROP DATABASE ${identifier(databaseName)}`)
       const check = await rootPool.query("SELECT datname FROM pg_database WHERE datname=$1", [databaseName])
       if (check.rowCount) throw new Error("Synthetic database cleanup verification failed")
     } } catch { failures.push("database drop failed") }
