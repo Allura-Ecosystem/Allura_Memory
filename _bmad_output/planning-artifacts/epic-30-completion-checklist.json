@@ -60,7 +60,7 @@
     {
       "id": "30.7",
       "localState": "partial",
-      "evidence": ["src/components/dashboard/my-work-workspace.tsx", "src/app/dashboard/page.tsx"],
+      "evidence": ["src/components/dashboard/my-work-workspace.tsx", "src/app/dashboard/page.tsx", "src/lib/digital-brain/read-service.ts", "src/lib/digital-brain/read-service.test.ts"],
       "remaining": [
         { "id": "approved-production-ui", "kind": "production_implementation", "proofRequired": "Approved design implemented against production provider states." },
         { "id": "accessibility-proof", "kind": "human_evidence", "proofRequired": "Screen-reader, keyboard and 200% zoom evidence on the frozen candidate." }
@@ -84,7 +84,7 @@
     {
       "id": "30.10",
       "localState": "partial",
-      "evidence": ["_bmad_output/implementation-artifacts/30-10-restricted-contractor-messaging.md", "src/lib/digital-brain/restricted-messaging.ts", "src/lib/digital-brain/restricted-messaging.test.ts"],
+      "evidence": ["_bmad_output/implementation-artifacts/30-10-restricted-contractor-messaging.md", "src/lib/digital-brain/restricted-messaging.ts", "src/lib/digital-brain/restricted-messaging.test.ts", "docker/postgres-init/74-digital-brain-restricted-messaging.sql", "src/lib/digital-brain/restricted-messaging-production.ts", "src/lib/digital-brain/restricted-messaging-production.test.ts"],
       "remaining": [{ "id": "restricted-messaging", "kind": "production_implementation", "proofRequired": "Approved provider-backed discovery, durable approval provenance, invitation, channel delivery, audit storage, UI/accessibility, live read-back and measured revocation implementation." }]
     },
     {
