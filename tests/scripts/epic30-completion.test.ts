@@ -18,7 +18,8 @@ describe("Epic 30 completion checklist", () => {
     expect(audit.valid).toBe(true)
     expect(audit.complete).toBe(false)
     expect(audit.pendingGateCount).toBeGreaterThan(0)
-    expect(audit.notImplementedStories).toEqual(["30.10"])
+    expect(audit.notImplementedStories).toEqual([])
+    expect(cloneChecklist().stories.find(({ id }) => id === "30.10")?.localState).toBe("partial")
   })
 
   it("rejects a missing or reordered story", () => {
