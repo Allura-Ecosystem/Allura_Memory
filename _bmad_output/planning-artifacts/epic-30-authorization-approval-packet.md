@@ -84,6 +84,64 @@ The [Notion Story 30.3](https://app.notion.com/p/3df1d9be65b3819eb670e4379a26396
 
 On 2026-09-22, after the exact proposed v2 addendum hash was presented in the Codex task, the user replied “approve full approval.” This is recorded as an approval-intent signal for the proposal as written, not as a completed policy decision: the approver's name and policy role were not supplied, the exact combined-candidate record and durable board receipt have not been updated, and independent human security/data threat-row dispositions remain open. Preserve the v2 addendum hash and Story 30.3 backlog status until those gates are satisfied.
 
+### Administrative approval and proposed stakeholder roster — 2026-09-25
+
+Sabir Asheed identified himself as an Allura administrator and confirmed his prior approval intent for the v1 contract plus the exact v2 addendum. Record this as the named administrative approval of the proposed policy defaults, not as independent security review, independent data-owner approval, a production access grant, or Story 30.3 acceptance. The hashes remain:
+
+- v1 authorization contract: `0020cfea14a5a6fa18a6e373731982f8d1094cf3f00757e87440342fe48edaa2`
+- v2 proposed addendum: `46c4efd01a42f1b08741f8d5cb83a95c8c98d3f0bdb58522fd395ebc4df7ad8d`
+
+The proposed human roster is:
+
+| Person | Recorded or proposed role | Current effect |
+| --- | --- | --- |
+| Sabir Asheed | Allura administrator; administrative policy approver | Approval identity recorded; no new runtime access granted |
+| Gabriel Cohen | Designated Epic 30 human security reviewer; Allura-hydrated Faith Meats launch stakeholder and human principal; approved access plan assigns `reviewer`. User-stated: Faith Meats owner, Allura administrator, and works on Measured Course. | Reviewer assignment recorded; runtime-role conflict still requires reconciliation and no access grant is created by this record |
+| Samuel Montgomery | Designated Epic 30 human data reviewer; Allura-hydrated Faith Meats launch stakeholder in the CRM. User-stated: Faith Meats owner. | Reviewer assignment recorded; ownership is not yet confirmed by approved Allura memory and no access grant is created by this record |
+| Tabitha Wells | Future limited marketing and creative stakeholder; public profile verifies founder, brand strategist, and lead designer of Tabitha & Co. | Not currently onboarded; no account or runtime access exists |
+| Future stakeholders | Not yet named | Add through the governed membership and approval process |
+
+Sabir Asheed approved and later clarified the following least-privilege definition for Tabitha Wells's future limited marketing and creative role in the Codex task on 2026-09-25:
+
+- May view approved marketing documents only in her assigned workspace and approved department scope.
+- May use search and citations only over those currently authorized documents.
+- Once onboarded through the governed process, may create and edit SEO, website, social/personal media, and content-writing drafts only in the assigned marketing workspace.
+- Draft creation does not grant publication authority; release or publication requires the designated owner approval.
+- Cannot view another person's private notes.
+- Cannot manage users, memberships, roles, permissions, policy, or audit records.
+- Cannot access another workspace or department without a separate governed grant.
+- Cannot approve contractor invitations or protected messaging channels.
+- Cannot delete or export protected Brain data, or write outside the assigned marketing-draft area.
+- Cannot use production Ask until the provider policy and cited read-only Ask gates are approved; any later use remains limited to her authorized documents.
+- Cannot approve security, data, deployment, release, or retrospective gates.
+
+This is a policy definition, not an account, invitation, membership, or production access grant. The limited marketer role must not inherit administrator, private-owner, security-review, data-owner, membership-administration, contractor-invitation, release, database-write, or cross-workspace authority. Faith Meats ownership does not by itself grant Brain access or satisfy independent security-review, data-review, membership-administration, or release gates. An administrator role never overrides private ownership or workspace/department membership rules. Samuel Montgomery's Faith Meats owner role does not imply an Allura administrator role.
+
+Allura hydration note (2026-09-25): tenant-wide approved-memory searches in `allura-system` corrected the earlier desktop-user-scoped zero-result search.
+
+- Gabriel Cohen is an approved semantic-memory match under IDs `80c61ee0-fd9c-4224-b2c0-f6be55791e52` and `d14cd8ee-d928-497d-822d-49d1b0c2ec91`. The first identifies him as a human principal, assigns planned role `reviewer`, separates his Jeeves agent and credentials, and requires the Bumblebee guard before access. It names isolated Faith Meats, Difference Driven, and personal tenant plans. The second confirms his Faith Meats launch CRM stakeholder record. Approved memory did not confirm an Allura `admin` role or Measured Course assignment, so those remain user-stated and must not widen access until reconciled.
+- Samuel Montgomery matches approved semantic memory `d14cd8ee-d928-497d-822d-49d1b0c2ec91`, which confirms a Faith Meats launch CRM stakeholder record. It does not state his duties, owner status, or Allura role; those details remain pending confirmation.
+- Tabitha Wells returned no approved-memory result, including the `Tabatha` spelling variant and marketing/Faith Meats searches. Sabir described her as one of the first future users, focused on SEO, website design, social/personal media, and content writing. Her public [Tabitha & Co.](https://tabithaandco.com/) site and [About page](https://tabithaandco.com/about-us/) were reviewed on 2026-09-25. The site identifies Tabitha Wells as founder, brand strategist, and lead designer with more than 12 years of experience. It describes SEO-optimized website design, content strategy and messaging, branding and visual identity, acquisition funnels, legal/healthcare-compliant marketing, small-business/local SEO, social media, advertising, photography/video, and marketing automation. It also states that she began as a content writer and has designed and launched hundreds of websites. These are public professional-profile facts, not proof of a Faith Meats role or an Allura access grant. She is not currently present or onboarded, and her limited marketing and creative definition remains a future onboarding policy.
+- Sabir Asheed has approved semantic records identifying him as CEO and an Allura architecture decider. The separate administrative policy approval above remains self-attested in this task.
+
+The earlier conversation-sourced pending memory `e3fba3cd-66af-4e5f-8224-5b18f122cd5a` is not an approved profile. The desktop principal lacked `memory:delete` permission to remove it; correction trace `6a1d4e76-775a-4181-b4a8-c59e283df7d8` records that limitation.
+
+### Approved Epic 30 closure defaults — 2026-09-25
+
+Sabir Asheed approved the recommended closure defaults in the Codex task:
+
+- Gabriel Cohen is the named human security reviewer for Epic 30.
+- Samuel Montgomery is the named human data reviewer for Epic 30.
+- Sabir Asheed is the final release authority.
+- Legacy records remain read-only and quarantined. Only verified records may be migrated, and nothing is deleted automatically.
+- Production Ask remains disabled until a written provider contract proves the required no-training and retention limits and receives approval.
+- Development and verification may use disposable temporary databases only. The live database remains prohibited.
+- Codex may create Epic 30 commits, branches, pull requests, evidence, CI runs, and required GitHub checks within the approved repository scope.
+- Production deployment remains prohibited until Sabir Asheed gives final approval for the frozen release candidate.
+- Five distinct uncoached testers will be named later. Their study cannot be replaced by simulation or automated agents.
+
+These decisions name authorities and constrain execution. They do not count as completed security/data reviews, provider-contract evidence, human-study evidence, release approval, runtime membership, or production access.
+
 ## Approval record
 
 An authorized human approval must identify the candidate commit and contract hash, record amendments or accepted defaults, name the approver and role, and link the durable board receipt. The board receipt now exists in the [reconciliation packet](./epic-30-board-reconciliation-packet.md). Independent security and data reviewers must still record dispositions for every threat row. Until those approval and review records exist, Story 30.3 remains backlog and dependent implementation stories do not advance.
@@ -98,6 +156,19 @@ Authorization contract SHA-256: 0020cfea14a5a6fa18a6e373731982f8d1094cf3f00757e8
 Accepted defaults or amendments:
 Threat-row dispositions or required reviewers:
 Notes:
+```
+
+### Recorded administrative decision — 2026-09-25
+
+```text
+Decision: APPROVE
+Approver name and role: Sabir Asheed, Allura administrator
+Candidate: f08404f0cb5b7ec41a12a1acaf12d1ea45b96fd0
+Authorization contract SHA-256: 0020cfea14a5a6fa18a6e373731982f8d1094cf3f00757e87440342fe48edaa2
+Authorization v2 addendum SHA-256: 46c4efd01a42f1b08741f8d5cb83a95c8c98d3f0bdb58522fd395ebc4df7ad8d
+Accepted defaults or amendments: Accept the seven packet defaults and v2 sections A-E without amendment.
+Threat-row dispositions or required reviewers: Independent human security and data-owner reviews remain required.
+Notes: Administrative approval only. No production access, implementation activation, story advancement or release authority follows from this record. Durable board read-back remains pending.
 ```
 
 The Story 30.2 design decision prerequisite is now recorded and reconciled. Any later Story 30.3 policy decision does not substitute for independent human security/data disposition, implementation, live restricted-role proof, hosted CI, human validation, publication or release acceptance.
