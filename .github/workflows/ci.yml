@@ -155,7 +155,7 @@ jobs:
       - name: Install dependencies
         run: bun install
       - name: Run unit tests
-        run: bun run test:unit
+        run: ALLURA_MCP_TOKEN_SECRET=unit-test-only-mcp-token-secret bun run test:unit
 
   # ── Portfolio Evaluation (Story 24.6) ─────────────────────────────────────
   # Deterministic offline regression gate. Executes every lane declared in
