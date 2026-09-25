@@ -4,7 +4,7 @@ vi.mock("@/lib/db/tenant-transaction", () => ({ withWorkspaceTransaction: mocks.
 vi.mock("@/lib/postgres/connection", () => ({ getAppPool: mocks.pool }))
 vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal: mocks.principal }))
 vi.mock("./read-receipt-writer", () => ({ persistSyntheticReadReceipt: mocks.receipt }))
-import { readAuthorizedDocuments, searchAuthorizedDocuments } from "./read-service"
+import { readAuthorizedDocuments, readAuthorizedDocumentsPage, searchAuthorizedDocuments, searchAuthorizedDocumentsPage } from "./read-service"
 import { readSyntheticDocumentLinks } from "./document-links"
 const scope = { tenantId: "allura-epic30-local", workspaceId: "epic30-local-workspace", principalId: "owner-user" }
 const principal = { id: scope.principalId, groupId: scope.tenantId, workspaceId: scope.workspaceId,
@@ -207,5 +207,50 @@ it("denies search results changed after the search receipt", async () => {
 
 it("rejects malformed search text before connecting", async () => {
   await expect(searchAuthorizedDocuments(scope, "\n")).rejects.toThrow(/query refused/)
+  expect(mocks.transaction).not.toHaveBeenCalled()
+})
+
+it("paginates synthetic reads with a receipt-bound keyset cursor and reauthorizes each page", async () => {
+  const secondRow = { ...ownerRow, id: "epic30-owner-private-2", title: "Synthetic second note",
+    content: "SYNTHETIC TEST DATA: second", updated_at: new Date("2026-09-16T00:00:00Z") }
+  let documentReads = 0
+  mocks.query.mockImplementation(async (sql: string) => {
+    if (sql.includes("session_user")) return { rows: [verifiedSession] }
+    if (sql.includes("SELECT workspace_membership.policy_epoch")) return { rows: [{ role: "viewer", policy_epoch: "7" }] }
+    documentReads += 1
+    return { rows: documentReads <= 2 ? [ownerRow, secondRow] : [secondRow] }
+  })
+  const first = await readAuthorizedDocumentsPage(scope, { pageSize: 1 })
+  expect(first.documents.map(({ id }) => id)).toEqual([ownerRow.id])
+  expect(first.hasMore).toBe(true)
+  expect(first.nextCursor).toBeTruthy()
+  expect(first.nextCursor).not.toContain(ownerRow.id)
+  const second = await readAuthorizedDocumentsPage(scope, { pageSize: 1, cursor: first.nextCursor! })
+  expect(second.documents.map(({ id }) => id)).toEqual([secondRow.id])
+  expect(second.hasMore).toBe(false)
+  expect(second.nextCursor).toBeNull()
+  expect(mocks.receipt).toHaveBeenCalledTimes(2)
+  expect(mocks.query.mock.calls.some(([, params]) => (params as unknown[]).includes(ownerRow.id))).toBe(true)
+})
+
+it("rejects a read cursor replayed as a search cursor before document disclosure", async () => {
+  const secondRow = { ...ownerRow, id: "epic30-owner-private-2", updated_at: new Date("2026-09-16T00:00:00Z") }
+  let documentReads = 0
+  mocks.query.mockImplementation(async (sql: string) => {
+    if (sql.includes("session_user")) return { rows: [verifiedSession] }
+    if (sql.includes("SELECT workspace_membership.policy_epoch")) return { rows: [{ role: "viewer", policy_epoch: "7" }] }
+    documentReads += 1
+    return { rows: documentReads <= 2 ? [ownerRow, secondRow] : [secondRow] }
+  })
+  const first = await readAuthorizedDocumentsPage(scope, { pageSize: 1 })
+  const queryCountBeforeReplay = mocks.query.mock.calls.length
+  await expect(searchAuthorizedDocumentsPage(scope, "owner", { pageSize: 1, cursor: first.nextCursor! }))
+    .rejects.toThrow(/cursor authority refused/)
+  expect(mocks.query.mock.calls.length).toBe(queryCountBeforeReplay)
+})
+
+it("rejects an explicitly empty page cursor before any restricted transaction", async () => {
+  await expect(readAuthorizedDocumentsPage(scope, { pageSize: 1, cursor: "" }))
+    .rejects.toThrow(/cursor refused/)
   expect(mocks.transaction).not.toHaveBeenCalled()
 })

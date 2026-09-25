@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { withPermission } from "@/lib/auth/api-auth"
 import { getDashboardPrincipal } from "@/lib/auth/dashboard-principal"
 import { assertSyntheticTarget, isSyntheticScope } from "@/lib/digital-brain/local-confinement"
-import { searchAuthorizedDocuments } from "@/lib/digital-brain/read-service"
+import { searchAuthorizedDocuments, searchAuthorizedDocumentsPage } from "@/lib/digital-brain/read-service"
 
 export const dynamic = "force-dynamic"
 
@@ -32,6 +32,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const scope = { tenantId: principal.groupId, workspaceId: principal.workspaceId, principalId: principal.id }
     if (!isSyntheticScope(scope)) throw new Error("Synthetic search scope refused")
     const query = request.nextUrl.searchParams.get("q") ?? ""
+    const cursor = request.nextUrl.searchParams.get("cursor") ?? undefined
+    const limit = request.nextUrl.searchParams.get("limit")
+    if (cursor !== undefined || limit !== null) {
+      const page = await searchAuthorizedDocumentsPage(scope, query, {
+        cursor,
+        pageSize: limit === null ? undefined : Number(limit),
+      })
+      return NextResponse.json({ results: page.hits, count: page.total,
+        has_more: page.hasMore, next_cursor: page.nextCursor },
+      { headers: { "Cache-Control": "no-store" } })
+    }
     const result = await searchAuthorizedDocuments(scope, query)
     return NextResponse.json({ results: result.hits, count: result.total },
       { headers: { "Cache-Control": "no-store" } })

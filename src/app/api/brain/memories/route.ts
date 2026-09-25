@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { withPermission } from "@/lib/auth/api-auth"
 import { getDashboardPrincipal } from "@/lib/auth/dashboard-principal"
 import { assertSyntheticTarget, isSyntheticScope } from "@/lib/digital-brain/local-confinement"
-import { readAuthorizedDocuments } from "@/lib/digital-brain/read-service"
+import { readAuthorizedDocuments, readAuthorizedDocumentsPage } from "@/lib/digital-brain/read-service"
 
 export const dynamic = "force-dynamic"
 
@@ -31,6 +31,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
     const scope = { tenantId: principal.groupId, workspaceId: principal.workspaceId, principalId: principal.id }
     if (!isSyntheticScope(scope)) throw new Error("Synthetic list scope refused")
+    const cursor = request.nextUrl.searchParams.get("cursor") ?? undefined
+    const limit = request.nextUrl.searchParams.get("limit")
+    if (cursor !== undefined || limit !== null) {
+      const page = await readAuthorizedDocumentsPage(scope, {
+        cursor,
+        pageSize: limit === null ? undefined : Number(limit),
+      })
+      return NextResponse.json({ memories: page.documents.map((document) => ({
+        id: document.id, title: document.title, content: document.content,
+        updated_at: document.updatedAt.toISOString(),
+      })), total: page.documents.length, has_more: page.hasMore, next_cursor: page.nextCursor },
+      { headers: { "Cache-Control": "no-store" } })
+    }
     const documents = await readAuthorizedDocuments(scope)
     return NextResponse.json({ memories: documents.map((document) => ({
       id: document.id, title: document.title, content: document.content,

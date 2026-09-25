@@ -1,7 +1,18 @@
 import { withTenantTransaction } from "@/lib/db/tenant-transaction"
 import { getAppPool } from "@/lib/postgres/connection"
 import type { AuthUser } from "@/lib/auth/types"
-import { createAuthorizedReadReceipt, persistAuthorizedReadReceipt } from "./read-receipt"
+import {
+  assertAuthorizedReadCursorMatches,
+  AUTHORIZED_READ_PAGE_SIZE_DEFAULT,
+  AUTHORIZED_READ_PAGE_SIZE_MAX,
+  createAuthorizedReadCursor,
+  createAuthorizedReadReceipt,
+  decodeAuthorizedReadCursor,
+  hashAuthorizedSearchQuery,
+  persistAuthorizedReadReceipt,
+  type AuthorizedReadCursorClaims,
+  type AuthorizedReadOperation,
+} from "./read-receipt"
 import { persistSyntheticReadReceipt } from "./read-receipt-writer"
 
 const READ_ENVELOPE_BRAND = Symbol("epic30-read-envelope")
@@ -31,6 +42,24 @@ export interface AuthorizedDocument {
   title: string
   content: string
   updatedAt: Date
+}
+
+export interface AuthorizedReadPage {
+  documents: AuthorizedDocument[]
+  nextCursor: string | null
+  hasMore: boolean
+}
+
+export interface AuthorizedReadPageOptions {
+  cursor?: string
+  pageSize?: number
+}
+
+export interface AuthorizedSearchPage {
+  total: number
+  hits: AuthorizedSearchHit[]
+  nextCursor: string | null
+  hasMore: boolean
 }
 
 interface Queryable {
@@ -118,8 +147,9 @@ const AUTHORIZED_DOCUMENTS_SQL = `
         )
       )
     )
-  ORDER BY document.updated_at DESC, document.id
 `
+
+const AUTHORIZED_DOCUMENTS_ORDER_SQL = ` ORDER BY document.updated_at DESC, document.id`
 
 const CURRENT_WORKSPACE_AUTHORITY_SQL = `
   SELECT workspace_membership.policy_epoch, tenant_membership.role
@@ -204,6 +234,45 @@ function mapDocument(row: DocumentRow): AuthorizedDocument {
   }
 }
 
+interface ReadPaginationQuery {
+  pageSize: number
+  claims: AuthorizedReadCursorClaims | null
+}
+
+function normalizePageSize(value: number | undefined): number {
+  const pageSize = value ?? AUTHORIZED_READ_PAGE_SIZE_DEFAULT
+  if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > AUTHORIZED_READ_PAGE_SIZE_MAX) {
+    throw new Error("Synthetic read page size refused")
+  }
+  return pageSize
+}
+
+function buildAuthorizedDocumentsQuery(pagination?: ReadPaginationQuery): { sql: string; paramsSuffix: unknown[] } {
+  if (!pagination) return { sql: `${AUTHORIZED_DOCUMENTS_SQL}${AUTHORIZED_DOCUMENTS_ORDER_SQL}`, paramsSuffix: [] }
+  const { pageSize, claims } = pagination
+  const suffix = claims
+    ? ` AND (document.updated_at < $5::timestamptz
+        OR (document.updated_at = $5::timestamptz AND document.id > $6))
+        ${AUTHORIZED_DOCUMENTS_ORDER_SQL} LIMIT $7`
+    : `${AUTHORIZED_DOCUMENTS_ORDER_SQL} LIMIT $5`
+  return {
+    sql: `${AUTHORIZED_DOCUMENTS_SQL}${suffix}`,
+    paramsSuffix: claims ? [claims.boundary.updatedAt, claims.boundary.id, pageSize + 1] : [pageSize + 1],
+  }
+}
+
+function sortDocuments(documents: AuthorizedDocument[]): AuthorizedDocument[] {
+  return [...documents].sort((left, right) => {
+    const byUpdatedAt = right.updatedAt.getTime() - left.updatedAt.getTime()
+    return byUpdatedAt || left.id.localeCompare(right.id)
+  })
+}
+
+function pageDocuments(documents: AuthorizedDocument[], pageSize: number): { documents: AuthorizedDocument[]; hasMore: boolean } {
+  const ordered = sortDocuments(documents)
+  return { documents: ordered.slice(0, pageSize), hasMore: ordered.length > pageSize }
+}
+
 /**
  * Execute the disclosure query inside an already established restricted-role
  * transaction. Exported for hermetic and live-RLS tests; application callers
@@ -212,21 +281,51 @@ function mapDocument(row: DocumentRow): AuthorizedDocument {
 export async function readAuthorizedDocumentsInRestrictedTransaction(
   scope: DigitalBrainReadEnvelope,
   query: Queryable["query"],
+  pagination?: ReadPaginationQuery,
 ): Promise<AuthorizedDocument[]> {
   if (!scope || scope[READ_ENVELOPE_BRAND] !== true || !scope.sessionId?.trim() ||
       !["viewer", "curator", "admin"].includes(scope.role) ||
       !Number.isSafeInteger(scope.policyEpoch) || scope.policyEpoch <= 0) return []
-  const result = await query(AUTHORIZED_DOCUMENTS_SQL, [
+  const built = buildAuthorizedDocumentsQuery(pagination)
+  const result = await query(built.sql, [
     scope.tenantId,
     scope.workspaceId,
     scope.principalId,
     scope.policyEpoch,
+    ...built.paramsSuffix,
   ])
 
-  return result.rows
+  const documents = result.rows
     .filter(isDocumentRow)
     .filter((row) => canDisclose(row, scope))
     .map(mapDocument)
+  return pagination ? pageDocuments(documents, pagination.pageSize).documents : documents
+}
+
+async function readAuthorizedDocumentsPageInRestrictedTransaction(
+  scope: DigitalBrainReadEnvelope,
+  query: Queryable["query"],
+  pagination: ReadPaginationQuery,
+): Promise<AuthorizedReadPage> {
+  if (!scope || scope[READ_ENVELOPE_BRAND] !== true || !scope.sessionId?.trim() ||
+      !["viewer", "curator", "admin"].includes(scope.role) ||
+      !Number.isSafeInteger(scope.policyEpoch) || scope.policyEpoch <= 0) {
+    return { documents: [], nextCursor: null, hasMore: false }
+  }
+  const built = buildAuthorizedDocumentsQuery(pagination)
+  const result = await query(built.sql, [
+    scope.tenantId,
+    scope.workspaceId,
+    scope.principalId,
+    scope.policyEpoch,
+    ...built.paramsSuffix,
+  ])
+  const documents = result.rows
+    .filter(isDocumentRow)
+    .filter((row) => canDisclose(row, scope))
+    .map(mapDocument)
+  const page = pageDocuments(documents, pagination.pageSize)
+  return { documents: page.documents, nextCursor: null, hasMore: page.hasMore }
 }
 
 /**
@@ -240,10 +339,21 @@ interface AuthorizedReadSnapshot {
   documents: AuthorizedDocument[]
   principal: AuthUser
   policyEpoch: number
+  hasMore: boolean
+  nextCursor: string | null
+}
+
+interface AuthorizedSnapshotOptions {
+  cursor?: string
+  pageSize?: number
+  operation?: AuthorizedReadOperation
+  queryHash?: string | null
+  keysetDocuments?: boolean
 }
 
 async function readAuthorizedSnapshot(
   scope: DigitalBrainReadScope,
+  options?: AuthorizedSnapshotOptions,
 ): Promise<AuthorizedReadSnapshot | null> {
   // Re-read the principal from the server auth provider at the service boundary.
   // Caller-supplied user objects and browser headers cannot issue this envelope.
@@ -267,6 +377,17 @@ async function readAuthorizedSnapshot(
   if (witnessKey.length !== 32 || witnessKey.toString("base64url") !== encodedKey) {
     throw new Error("Synthetic read receipt key refused")
   }
+  const pageSize = options ? normalizePageSize(options.pageSize) : AUTHORIZED_READ_PAGE_SIZE_DEFAULT
+  const operation = options?.operation ?? "read_documents"
+  const cursorClaims = options && options.cursor !== undefined
+    ? decodeAuthorizedReadCursor(options.cursor, witnessKey)
+    : null
+  if (options && operation === "search_documents" && !options.queryHash) {
+    throw new Error("Synthetic search cursor authority refused")
+  }
+  const pagination = options && options.keysetDocuments
+    ? { pageSize, claims: cursorClaims }
+    : undefined
   async function readCurrent(currentPrincipal: AuthUser) {
     return withTenantTransaction(scope, async (client) => {
       await verifySyntheticSession(client.query.bind(client), run)
@@ -275,15 +396,29 @@ async function readAuthorizedSnapshot(
       ])
       if (membership.rows.length !== 1) return null
       const envelope = issueReadEnvelope(scope, currentPrincipal, membership.rows[0])
-      const documents = await readAuthorizedDocumentsInRestrictedTransaction(envelope, client.query.bind(client))
-      return { documents, policyEpoch: envelope.policyEpoch, actorRole: envelope.role }
+      if (cursorClaims) {
+        assertAuthorizedReadCursorMatches(cursorClaims, {
+          scope,
+          sessionId: currentPrincipal.sessionId!,
+          witnessKey,
+          actorRole: envelope.role,
+          policyEpoch: envelope.policyEpoch,
+          operation,
+          pageSize,
+          queryHash: options?.queryHash,
+        })
+      }
+      const documents = pagination
+        ? await readAuthorizedDocumentsPageInRestrictedTransaction(envelope, client.query.bind(client), pagination)
+        : { documents: await readAuthorizedDocumentsInRestrictedTransaction(envelope, client.query.bind(client)), nextCursor: null, hasMore: false }
+      return { documents: documents.documents, hasMore: documents.hasMore, policyEpoch: envelope.policyEpoch, actorRole: envelope.role }
     }, pool)
   }
   const candidate = await readCurrent(principal)
   if (!candidate) return null
   const receipt = await persistAuthorizedReadReceipt({
     scope, sessionId: principal.sessionId, actorRole: candidate.actorRole, policyEpoch: candidate.policyEpoch,
-    documents: candidate.documents, witnessKey,
+    documents: candidate.documents, witnessKey, priorWitnessHash: cursorClaims?.witnessHash,
   }, { persist: persistSyntheticReadReceipt })
   // Receipt is committed before the second restricted read. Any concurrent
   // revocation or document change denies instead of disclosing stale candidates.
@@ -297,18 +432,55 @@ async function readAuthorizedSnapshot(
   if (!current || current.policyEpoch !== candidate.policyEpoch || current.actorRole !== candidate.actorRole ||
       createAuthorizedReadReceipt({
         scope, sessionId: refreshedPrincipal.sessionId, actorRole: current.actorRole, policyEpoch: current.policyEpoch,
-        documents: current.documents, witnessKey, receiptId: receipt.receiptId,
+        documents: current.documents, witnessKey, priorWitnessHash: cursorClaims?.witnessHash, receiptId: receipt.receiptId,
         occurredAt: new Date(receipt.occurredAt),
       }).witnessHash !== receipt.witnessHash) {
     throw new Error("Synthetic read authority changed")
   }
-  return { documents: current.documents, principal: refreshedPrincipal, policyEpoch: current.policyEpoch }
+  const nextCursor = current.hasMore && current.documents.length > 0
+    ? createAuthorizedReadCursor({
+      scope,
+      sessionId: refreshedPrincipal.sessionId!,
+      actorRole: current.actorRole,
+      policyEpoch: current.policyEpoch,
+      operation,
+      pageSize,
+      boundary: {
+        updatedAt: current.documents[current.documents.length - 1].updatedAt.toISOString(),
+        id: current.documents[current.documents.length - 1].id,
+      },
+      witnessHash: receipt.witnessHash,
+      witnessKey,
+      queryHash: options?.queryHash,
+    })
+    : null
+  return { documents: current.documents, principal: refreshedPrincipal, policyEpoch: current.policyEpoch,
+    hasMore: current.hasMore, nextCursor }
 }
 
+export function readAuthorizedDocuments(scope: DigitalBrainReadScope): Promise<AuthorizedDocument[]>
+export function readAuthorizedDocuments(scope: DigitalBrainReadScope, options: AuthorizedReadPageOptions): Promise<AuthorizedReadPage>
 export async function readAuthorizedDocuments(
   scope: DigitalBrainReadScope,
-): Promise<AuthorizedDocument[]> {
+  options?: AuthorizedReadPageOptions,
+): Promise<AuthorizedDocument[] | AuthorizedReadPage> {
+  if (options !== undefined) return readAuthorizedDocumentsPage(scope, options)
   return (await readAuthorizedSnapshot(scope))?.documents ?? []
+}
+
+export async function readAuthorizedDocumentsPage(
+  scope: DigitalBrainReadScope,
+  options: AuthorizedReadPageOptions = {},
+): Promise<AuthorizedReadPage> {
+  const snapshot = await readAuthorizedSnapshot(scope, {
+    cursor: options.cursor,
+    pageSize: options.pageSize,
+    operation: "read_documents",
+    keysetDocuments: true,
+  })
+  return snapshot
+    ? { documents: snapshot.documents, nextCursor: snapshot.nextCursor, hasMore: snapshot.hasMore }
+    : { documents: [], nextCursor: null, hasMore: false }
 }
 
 export interface AuthorizedSearchHit {
@@ -328,9 +500,9 @@ function normalizeSearchQuery(query: string): string {
 }
 
 function searchDocuments(documents: readonly AuthorizedDocument[], query: string) {
-  const matches = documents.filter((document) =>
+  const matches = sortDocuments(documents.filter((document) =>
     document.title.toLocaleLowerCase("en-US").includes(query) ||
-    document.content.toLocaleLowerCase("en-US").includes(query))
+    document.content.toLocaleLowerCase("en-US").includes(query)))
   const hits: AuthorizedSearchHit[] = matches.map((document) => {
     const titleMatches = document.title.toLocaleLowerCase("en-US").includes(query)
     const index = document.content.toLocaleLowerCase("en-US").indexOf(query)
@@ -345,11 +517,98 @@ function searchDocuments(documents: readonly AuthorizedDocument[], query: string
   return { matches, hits }
 }
 
+function afterCursor(document: AuthorizedDocument, claims: AuthorizedReadCursorClaims | null): boolean {
+  if (!claims) return true
+  const boundaryTime = new Date(claims.boundary.updatedAt).getTime()
+  const updatedTime = document.updatedAt.getTime()
+  return updatedTime < boundaryTime || (updatedTime === boundaryTime && document.id > claims.boundary.id)
+}
+
+/** Synthetic-only receipt-bound search page; production search remains quarantined. */
+export async function searchAuthorizedDocumentsPage(
+  scope: DigitalBrainReadScope,
+  rawQuery: string,
+  options: AuthorizedReadPageOptions = {},
+): Promise<AuthorizedSearchPage> {
+  const query = normalizeSearchQuery(rawQuery)
+  const pageSize = normalizePageSize(options.pageSize)
+  const encodedKey = process.env.ALLURA_EPIC30_RECEIPT_KEY ?? ""
+  const witnessKey = Buffer.from(encodedKey, "base64url")
+  if (witnessKey.length !== 32 || witnessKey.toString("base64url") !== encodedKey) {
+    throw new Error("Synthetic search receipt key refused")
+  }
+  const queryHash = hashAuthorizedSearchQuery(witnessKey, query)
+  const cursorClaims = options.cursor !== undefined ? decodeAuthorizedReadCursor(options.cursor, witnessKey) : null
+  if (cursorClaims && (cursorClaims.operation !== "search_documents" || cursorClaims.queryHash !== queryHash)) {
+    throw new Error("Synthetic search cursor authority refused")
+  }
+  const snapshotOptions: AuthorizedSnapshotOptions = {
+    cursor: options.cursor,
+    pageSize,
+    operation: "search_documents",
+    queryHash,
+    keysetDocuments: false,
+  }
+  const candidate = await readAuthorizedSnapshot(scope, snapshotOptions)
+  if (!candidate) return { total: 0, hits: [], nextCursor: null, hasMore: false }
+  const candidateResults = searchDocuments(candidate.documents.filter((document) => afterCursor(document, cursorClaims)), query)
+  const candidatePage = pageDocuments(candidateResults.matches, pageSize)
+  const receipt = await persistAuthorizedReadReceipt({
+    scope, sessionId: candidate.principal.sessionId!, actorRole: candidate.principal.role,
+    policyEpoch: candidate.policyEpoch, documents: candidatePage.documents, witnessKey, searchQuery: query,
+    priorWitnessHash: cursorClaims?.witnessHash,
+  }, { persist: persistSyntheticReadReceipt })
+  const current = await readAuthorizedSnapshot(scope, snapshotOptions)
+  if (!current || current.principal.sessionId !== candidate.principal.sessionId ||
+      current.principal.role !== candidate.principal.role || current.policyEpoch !== candidate.policyEpoch) {
+    throw new Error("Synthetic search authority changed")
+  }
+  const currentResults = searchDocuments(current.documents.filter((document) => afterCursor(document, cursorClaims)), query)
+  const currentAllResults = searchDocuments(current.documents, query)
+  const currentPage = pageDocuments(currentResults.matches, pageSize)
+  const currentWitness = createAuthorizedReadReceipt({
+    scope, sessionId: current.principal.sessionId!, actorRole: current.principal.role,
+    policyEpoch: current.policyEpoch, documents: currentPage.documents, witnessKey,
+    priorWitnessHash: cursorClaims?.witnessHash, searchQuery: query,
+    receiptId: receipt.receiptId, occurredAt: new Date(receipt.occurredAt),
+  })
+  if (currentWitness.witnessHash !== receipt.witnessHash || currentWitness.queryHash !== receipt.queryHash) {
+    throw new Error("Synthetic search authority changed")
+  }
+  const nextCursor = currentPage.hasMore && currentPage.documents.length > 0
+    ? createAuthorizedReadCursor({
+      scope,
+      sessionId: current.principal.sessionId!,
+      actorRole: current.principal.role,
+      policyEpoch: current.policyEpoch,
+      operation: "search_documents",
+      pageSize,
+      boundary: {
+        updatedAt: currentPage.documents[currentPage.documents.length - 1].updatedAt.toISOString(),
+        id: currentPage.documents[currentPage.documents.length - 1].id,
+      },
+      witnessHash: receipt.witnessHash,
+      witnessKey,
+      queryHash,
+    })
+    : null
+  return {
+    total: currentAllResults.hits.length,
+    hits: currentResults.hits.slice(0, pageSize),
+    nextCursor,
+    hasMore: currentPage.hasMore,
+  }
+}
+
 /** Synthetic-only search candidate; not a production API or policy approval. */
+export function searchAuthorizedDocuments(scope: DigitalBrainReadScope, rawQuery: string): Promise<{ total: number; hits: AuthorizedSearchHit[] }>
+export function searchAuthorizedDocuments(scope: DigitalBrainReadScope, rawQuery: string, options: AuthorizedReadPageOptions): Promise<AuthorizedSearchPage>
 export async function searchAuthorizedDocuments(
   scope: DigitalBrainReadScope,
   rawQuery: string,
-): Promise<{ total: number; hits: AuthorizedSearchHit[] }> {
+  options?: AuthorizedReadPageOptions,
+): Promise<{ total: number; hits: AuthorizedSearchHit[] } | AuthorizedSearchPage> {
+  if (options !== undefined) return searchAuthorizedDocumentsPage(scope, rawQuery, options)
   const query = normalizeSearchQuery(rawQuery)
   const candidate = await readAuthorizedSnapshot(scope)
   if (!candidate) return { total: 0, hits: [] }

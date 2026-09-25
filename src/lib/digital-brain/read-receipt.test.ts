@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from "vitest"
 
 import type { AuthorizedDocument } from "./read-service"
-import { createAuthorizedReadReceipt, persistAuthorizedReadReceipt, type ReadReceiptInput } from "./read-receipt"
+import {
+  assertAuthorizedReadCursorMatches,
+  createAuthorizedReadCursor,
+  createAuthorizedReadReceipt,
+  decodeAuthorizedReadCursor,
+  hashAuthorizedSearchQuery,
+  persistAuthorizedReadReceipt,
+  type ReadReceiptInput,
+} from "./read-receipt"
 
 const document: AuthorizedDocument = {
   id: "synthetic-owner-note",
@@ -80,5 +88,62 @@ describe("Epic 30 required read receipt contract", () => {
     expect(search.witnessHash).not.toBe(createAuthorizedReadReceipt(input).witnessHash)
     expect(createAuthorizedReadReceipt({ ...input, searchQuery: "other query" }).witnessHash).not.toBe(search.witnessHash)
     expect(() => createAuthorizedReadReceipt({ ...input, searchQuery: " unnormalized " })).toThrow(/input refused/)
+  })
+
+  it("creates an opaque receipt-bound keyset cursor without serializing protected values", () => {
+    const priorReceipt = createAuthorizedReadReceipt(input)
+    const cursor = createAuthorizedReadCursor({
+      scope: input.scope,
+      sessionId: input.sessionId,
+      actorRole: input.actorRole,
+      policyEpoch: input.policyEpoch,
+      operation: "read_documents",
+      pageSize: 2,
+      boundary: { updatedAt: document.updatedAt.toISOString(), id: document.id },
+      witnessHash: priorReceipt.witnessHash,
+      witnessKey: input.witnessKey,
+    })
+    expect(cursor.length).toBeLessThanOrEqual(4096)
+    for (const protectedValue of [input.sessionId, document.id, document.title, document.content]) {
+      expect(cursor).not.toContain(protectedValue)
+    }
+    const claims = decodeAuthorizedReadCursor(cursor, input.witnessKey)
+    expect(claims).toMatchObject({
+      operation: "read_documents", pageSize: 2, policyEpoch: input.policyEpoch,
+      boundary: { updatedAt: document.updatedAt.toISOString(), id: document.id },
+      witnessHash: priorReceipt.witnessHash,
+    })
+    const continued = createAuthorizedReadReceipt({ ...input, priorWitnessHash: claims.witnessHash })
+    expect(continued.witnessHash).not.toBe(priorReceipt.witnessHash)
+    expect(createAuthorizedReadReceipt({ ...input, priorWitnessHash: claims.witnessHash }).witnessHash)
+      .toBe(continued.witnessHash)
+    expect(() => createAuthorizedReadReceipt({ ...input, priorWitnessHash: "not-a-digest" }))
+      .toThrow(/input refused/)
+  })
+
+  it("rejects malformed, tampered, expired, cross-operation and cross-scope cursors", () => {
+    const witnessHash = createAuthorizedReadReceipt(input).witnessHash
+    const cursor = createAuthorizedReadCursor({
+      scope: input.scope, sessionId: input.sessionId, actorRole: input.actorRole,
+      policyEpoch: input.policyEpoch, operation: "search_documents", pageSize: 2,
+      boundary: { updatedAt: document.updatedAt.toISOString(), id: document.id }, witnessHash,
+      witnessKey: input.witnessKey, queryHash: hashAuthorizedSearchQuery(input.witnessKey, "secret"),
+      issuedAt: new Date("2026-09-22T00:00:00.000Z"),
+    })
+    expect(() => decodeAuthorizedReadCursor("bad", input.witnessKey)).toThrow(/cursor refused/)
+    expect(() => decodeAuthorizedReadCursor(`${cursor.slice(0, -1)}x`, input.witnessKey)).toThrow(/cursor refused/)
+    expect(() => decodeAuthorizedReadCursor(cursor, Buffer.alloc(32, 2))).toThrow(/cursor refused/)
+    expect(() => decodeAuthorizedReadCursor(cursor, input.witnessKey, new Date("2026-09-22T00:01:01.000Z"))).toThrow(/cursor refused/)
+    const claims = decodeAuthorizedReadCursor(cursor, input.witnessKey, new Date("2026-09-22T00:00:01.000Z"))
+    expect(() => assertAuthorizedReadCursorMatches(claims, {
+      scope: input.scope, sessionId: input.sessionId, witnessKey: input.witnessKey,
+      actorRole: input.actorRole, policyEpoch: input.policyEpoch, operation: "read_documents",
+      pageSize: 2, queryHash: null,
+    })).toThrow(/authority refused/)
+    expect(() => assertAuthorizedReadCursorMatches(claims, {
+      scope: { ...input.scope, workspaceId: "other-workspace" }, sessionId: input.sessionId,
+      witnessKey: input.witnessKey, actorRole: input.actorRole, policyEpoch: input.policyEpoch,
+      operation: "search_documents", pageSize: 2, queryHash: claims.queryHash,
+    })).toThrow(/authority refused/)
   })
 })
