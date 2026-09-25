@@ -31,6 +31,7 @@ describe("Epic 30 merge-evidence wiring", () => {
       "read-service.test.ts", "connection.app-pool.test.ts", "brain-client.test.ts", "page.test.tsx",
       "my-work-workspace.test.tsx", "ci-contract.test.ts", "legacy-api-quarantine.test.ts",
       "memory-root-authority.test.ts",
+      "memory-id-authority.test.ts",
     ]) expect(config).toContain(test)
   })
 })
