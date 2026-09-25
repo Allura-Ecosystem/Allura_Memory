@@ -105,7 +105,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
 
-    console.error("Memory GET error:", error)
+    console.error("Memory GET error")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -162,7 +162,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
 
-    console.error("Memory PUT error:", error)
+    console.error("Memory PUT error")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -200,7 +200,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       )
     }
 
-    console.error("Memory DELETE error:", error)
+    console.error("Memory DELETE error")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

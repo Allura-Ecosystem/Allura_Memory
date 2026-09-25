@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       last_activity: row.last_activity?.toISOString() ?? null,
     } satisfies MemoryStats)
   } catch (error) {
-    console.error("memory_stats error:", error)
+    console.error("memory_stats error")
     return NextResponse.json({ error: "Failed to fetch memory stats" }, { status: 500 })
   }
 }
