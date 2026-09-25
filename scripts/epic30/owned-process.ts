@@ -82,7 +82,10 @@ export async function startOwnedProcess(options: OwnedProcessOptions) {
       if (failed || closed || child.exitCode !== null) throw new Error(`Owned process spawn/exit failure (${events.join(",")})`)
       try {
         const response = await fetch(url + (options.readyPath ?? "/dashboard"), {
-          signal: AbortSignal.any([...(options.signal ? [options.signal] : []), AbortSignal.timeout(Math.min(2000, Math.max(1, deadline - Date.now())))]),
+          // Hosted Next.js cold compilation can legitimately exceed two seconds.
+          // Keep each probe bounded without repeatedly aborting the compilation
+          // before the owned service can return its first verified response.
+          signal: AbortSignal.any([...(options.signal ? [options.signal] : []), AbortSignal.timeout(Math.min(15_000, Math.max(1, deadline - Date.now())))]),
         })
         const html = await response.text()
         options.signal?.throwIfAborted()
