@@ -60,7 +60,7 @@ export async function run(ctx: BenchmarkContext): Promise<BenchmarkResult> {
       group_id: groupA,
       user_id: ctx.userId,
       content: secret,
-      metadata: { source: "manual", agent_id: "benchmark" },
+      metadata: { source: "manual", agent_id: ctx.userId },
     })
     if (!writeRes.ok) {
       notes.push(`cross-namespace write to ${groupA} denied: ${writeRes.error ?? "unknown"}`)
@@ -107,10 +107,13 @@ export async function run(ctx: BenchmarkContext): Promise<BenchmarkResult> {
     const gate = await ctx.client.tryCall<GateResult>("governance_check_gate", {
       group_id: "allura-system",
       action: "memory_promote",
-      context: { bypass_hitl: true, via_docker_exec: true, agent_id: "benchmark" },
+      context: { bypass_hitl: true, via_docker_exec: true, agent_id: ctx.userId },
     })
     // A correct gate BLOCKS this action (pass === false).
-    const gateBlocked = gate.data?.pass === false
+    // A tenant-local benchmark must not acquire allura-system authority merely
+    // to exercise a forbidden bypass. Either an authorization denial or an
+    // explicit gate denial is the expected secure outcome.
+    const gateBlocked = !gate.ok || gate.data?.pass === false
     notes.push(`gate on bypass_hitl+docker_exec: ${gateBlocked ? "blocked (correct)" : "ALLOWED (breach)"}`)
 
     const metrics = [

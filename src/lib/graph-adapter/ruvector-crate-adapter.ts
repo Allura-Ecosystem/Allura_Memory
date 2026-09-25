@@ -62,6 +62,8 @@
  *      AD-50 (vendored native addon provenance + Option A verdict).
  */
 
+import { createRequire } from "node:module"
+
 import type { ConfidenceScore, GroupId, MemoryId, MemoryProvenance } from "@/lib/memory/canonical-contracts"
 import type {
   CanonicalCheckResult,
@@ -82,7 +84,7 @@ import { GraphAdapterError, GraphAdapterUnavailableError } from "./types"
 
 // ── Native binding surface (empirically confirmed in the 2026-06-24 spike) ────
 // Typed structurally so `bun run typecheck` passes without the vendored addon
-// present. The real module is loaded dynamically at runtime via require().
+// present. The real module is loaded dynamically at runtime via Node's scoped loader.
 // IMPORTANT: shapes below match the LIVE binding, not the crate README.
 
 /** Properties cross the boundary as a plain string→string object. */
@@ -146,10 +148,10 @@ const NODE_LABEL = "Memory"
  */
 function loadNativeBinding(modulePath: string): NativeBinding {
   try {
-    // Bun supports require() for N-API addons. Path comes from
+    // Bun supports the scoped loader for N-API addons. Path comes from
     // RUVECTOR_GRAPH_NODE_PATH (or the factory) — never a bare package name.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require(modulePath) as Partial<NativeBinding>
+    const requireNative = createRequire(import.meta.url)
+    const mod = requireNative(modulePath) as Partial<NativeBinding>
     if (!mod || typeof mod.GraphDatabase?.open !== "function") {
       throw new Error(`module at ${modulePath} does not export GraphDatabase.open`)
     }

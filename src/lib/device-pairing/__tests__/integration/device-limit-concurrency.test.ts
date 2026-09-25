@@ -129,6 +129,11 @@ describeMigrationLive("Story 29.19 HIGH-F4 device-limit concurrency against real
       "INSERT INTO memberships (group_id, user_id, email, role) VALUES ($1, $2, $3, 'curator')",
       [groupId, principalId, "device-limit@integration.test"],
     );
+    // Direct SQL below is an integration-fixture stand-in for the request
+    // middleware, which stamps authenticated principal context per session.
+    await db.app.query("SELECT set_config('app.current_principal', $1, false)", [principalId]);
+    await db.app.query("SELECT set_config('app.current_group_id', $1, false)", [groupId]);
+    await db.app.query("SELECT set_config('app.current_workspace_id', $1, false)", [workspaceId]);
   }, 120_000);
 
   afterAll(async () => {

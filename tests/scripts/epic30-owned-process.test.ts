@@ -1,10 +1,10 @@
-import { createServer } from "node:http"
-import { mkdtemp, rm } from "node:fs/promises"
-import { tmpdir } from "node:os"
 import { afterEach, expect, it } from "vitest"
-import { startOwnedProcess, preflightPort } from "../../scripts/epic30/owned-process"
-import { startupCancellation } from "../../scripts/epic30/demo"
 import { EventEmitter } from "node:events"
+import { mkdtemp, rm } from "node:fs/promises"
+import { createServer } from "node:http"
+import { tmpdir } from "node:os"
+import { startupCancellation } from "../../scripts/epic30/demo"
+import { preflightPort, startOwnedProcess } from "../../scripts/epic30/owned-process"
 const dirs: string[] = []
 it("cancels during readiness and releases only its owned child and lock", async () => {
   const o = await options()

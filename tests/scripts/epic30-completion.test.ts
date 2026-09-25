@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest"
 
 import {
   auditEpic30Checklist,
-  loadEpic30Checklist,
   type Epic30CompletionChecklist,
+  loadEpic30Checklist,
 } from "../../scripts/epic30/check-completion"
 
 const root = process.cwd()

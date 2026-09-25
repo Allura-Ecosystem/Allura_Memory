@@ -30,7 +30,9 @@ interface GateResult {
 export async function run(ctx: BenchmarkContext): Promise<BenchmarkResult> {
   const start = performance.now()
   const notes: string[] = []
-  const agentId = `bench-${ctx.runId}`
+  // Actor-selector fields must equal the authenticated MCP principal. The
+  // run-unique marker below still isolates this benchmark's audit events.
+  const agentId = ctx.userId
   const marker = markerFor(ctx.runId, "audit-lifecycle")
   const probeAction = `benchmark_probe_${ctx.runId}`
 

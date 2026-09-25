@@ -1,9 +1,9 @@
-import { expect, it, vi, afterEach } from "vitest"
+import { afterEach, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({ pool: vi.fn() }))
 vi.mock("pg", () => ({ Pool: mocks.pool }))
-import { provisionSyntheticDatabase } from "../../scripts/epic30/synthetic-database"
-import { startupCancellation } from "../../scripts/epic30/demo"
 import { EventEmitter } from "node:events"
+import { startupCancellation } from "../../scripts/epic30/demo"
+import { provisionSyntheticDatabase } from "../../scripts/epic30/synthetic-database"
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks() })
 function provisionerEnvironment() {
   for (const [key, value] of Object.entries({ POSTGRES_HOST: "127.0.0.1", POSTGRES_PORT: "5444", POSTGRES_USER: "test_owner", POSTGRES_PASSWORD: "test-placeholder", POSTGRES_APP_USER: "allura_app", POSTGRES_APP_PASSWORD: "test-placeholder", NODE_ENV: "test" })) vi.stubEnv(key, value)

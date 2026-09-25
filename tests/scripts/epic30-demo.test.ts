@@ -1,7 +1,7 @@
-import { mkdtemp, readFile, readdir, rm, stat, writeFile, rename, unlink } from "node:fs/promises"
-import { tmpdir } from "node:os"
 import { expect, it, vi } from "vitest"
-import { cleanupOwnedResources, replaceReceipt, persistInitialReceipt } from "../../scripts/epic30/demo"
+import { mkdtemp, readdir, readFile, rename, rm, stat, unlink, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { cleanupOwnedResources, persistInitialReceipt, replaceReceipt } from "../../scripts/epic30/demo"
 
 it("attempts database cleanup even when server stop rejects, suppressing secrets", async () => {
   const close = vi.fn().mockResolvedValue(undefined)

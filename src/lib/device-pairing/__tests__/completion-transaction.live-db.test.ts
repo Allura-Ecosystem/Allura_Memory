@@ -51,6 +51,9 @@ describeMigrationLive("Story 29.6 complete transaction live PostgreSQL", () => {
       "INSERT INTO memberships (group_id, user_id, email, role) VALUES ($1, $2, $3, $4)",
       [groupId, principalId, "live@example.test", "curator"],
     );
+    await db.app.query("SELECT set_config('app.current_principal', $1, false)", [principalId]);
+    await db.app.query("SELECT set_config('app.current_group_id', $1, false)", [groupId]);
+    await db.app.query("SELECT set_config('app.current_workspace_id', $1, false)", [workspaceId]);
     await db.app.query(
       `SELECT device_enrollment_create(
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW() + INTERVAL '10 minutes'
@@ -243,6 +246,9 @@ describeMigrationLive("Story 29.6 complete transaction live PostgreSQL", () => {
       "INSERT INTO memberships (group_id, user_id, email, role) VALUES ($1, $2, $3, $4)",
       [groupId, failedPrincipalId, "rollback@example.test", "curator"],
     );
+    await db.app.query("SELECT set_config('app.current_principal', $1, false)", [failedPrincipalId]);
+    await db.app.query("SELECT set_config('app.current_group_id', $1, false)", [groupId]);
+    await db.app.query("SELECT set_config('app.current_workspace_id', $1, false)", [workspaceId]);
     await db.app.query(
       `SELECT device_enrollment_create(
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW() + INTERVAL '10 minutes'
@@ -315,6 +321,9 @@ describeMigrationLive("Story 29.6 complete transaction live PostgreSQL", () => {
       "INSERT INTO memberships (group_id, user_id, email, role) VALUES ($1, $2, $3, $4)",
       [groupId, failedPrincipalId, "audit-rollback@example.test", "curator"],
     );
+    await db.app.query("SELECT set_config('app.current_principal', $1, false)", [failedPrincipalId]);
+    await db.app.query("SELECT set_config('app.current_group_id', $1, false)", [groupId]);
+    await db.app.query("SELECT set_config('app.current_workspace_id', $1, false)", [workspaceId]);
     await db.app.query(
       `SELECT device_enrollment_create($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW() + INTERVAL '10 minutes')`,
       [

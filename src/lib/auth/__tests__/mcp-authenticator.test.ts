@@ -3,19 +3,19 @@ import { describe, expect, it, vi } from "vitest";
 const repository = vi.hoisted(() => ({ findByPrefix: vi.fn(), touchLastUsed: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/mcp-token/repository", () => repository);
 
+import { hashToken, prefixOf } from "@/lib/mcp-token/hash";
 import {
   createDefaultAuthenticatorFromEnvironment,
   createHttpAuthenticator,
   type HttpAuthConfig,
   resolveHttpAuthConfig,
 } from "../mcp-authenticator";
-import { hashToken, prefixOf } from "@/lib/mcp-token/hash";
 
 describe("McpAuthenticator device credential binding", () => {
   it("does not publicly export the default authenticator issuer", async () => {
-    const module = await import("../mcp-authenticator");
+    const authenticatorModule = await import("../mcp-authenticator");
 
-    expect(module).not.toHaveProperty("createDefaultAuthenticator");
+    expect(authenticatorModule).not.toHaveProperty("createDefaultAuthenticator");
   });
 
   it("resolves FromEnvironment to raw, non-capability configuration", async () => {

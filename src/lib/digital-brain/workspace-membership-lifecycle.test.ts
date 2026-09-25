@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
+import { grantWorkspaceMembership, type MembershipScope, readBackWorkspaceMembership, revokeWorkspaceMembership, type VerifiedMembershipApproval } from "./workspace-membership-lifecycle"
 import { WorkspaceMembershipLifecycleFixture } from "./workspace-membership-lifecycle-fixture"
-import { grantWorkspaceMembership, readBackWorkspaceMembership, revokeWorkspaceMembership, type MembershipScope, type VerifiedMembershipApproval } from "./workspace-membership-lifecycle"
 
 const actor: MembershipScope = { tenantId: "allura-test", workspaceId: "workspace-a", principalId: "admin", sessionId: "session-a", role: "admin", policyEpoch: 7 }
 const subject = { tenantId: actor.tenantId, workspaceId: actor.workspaceId, userId: "user-a" }

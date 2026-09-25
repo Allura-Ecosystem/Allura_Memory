@@ -103,6 +103,8 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
 
   // Credential / identity tables
   { table: "mcp_tokens", class: "tenant-scoped-credential", notes: "MCP credentials; lookup by token prefix before tenant resolution" },
+  { table: "paired_devices", class: "tenant-scoped-credential", notes: "Paired device credentials; RLS-scoped by tenant and workspace" },
+  { table: "device_challenges", class: "tenant-scoped-credential", notes: "Short-lived device pairing challenges; RLS-scoped by tenant and workspace" },
   { table: "bumblebee_runner_credentials", class: "tenant-scoped-credential", notes: "Story 26.7 dedicated runner credentials; exclusive bumblebee_runner audience and one-way revocation" },
   { table: "memberships", class: "tenant-scoped-credential", notes: "Tenant membership; may span tenant allowlist" },
 
@@ -113,6 +115,7 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "platform_insights", class: "operational", notes: "Aggregated platform-level insights" },
   { table: "platform_promotion_queue", class: "operational", notes: "Platform-wide promotion queue" },
   { table: "governed_lane_authority", class: "operational", notes: "Migration 54: immutable repository lane-policy projection; authority is joined to RLS-protected branch ledgers" },
+  { table: "device_enrollments", class: "operational", notes: "Pre-approval device enrollment state; access is only through fixed-search-path security-definer functions" },
   { table: "skill_usage_summary", class: "operational", notes: "View over skill_usage_events (which IS FORCE RLS-protected, migration 36). Migration 51 sets security_invoker = true on this view so it evaluates under the querying role's own RLS context rather than the (BYPASSRLS) view owner's -- see docker/postgres-init/51-view-security-invoker-hardening.sql." },
 
   // Migration-only

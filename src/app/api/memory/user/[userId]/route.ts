@@ -20,12 +20,12 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createHash, randomUUID } from "crypto"
-import { DatabaseQueryError, DatabaseUnavailableError } from "@/lib/errors/database-errors"
 import { withPermission } from "@/lib/auth/api-auth"
 import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
-import { memory_delete } from "@/mcp/canonical-tools"
+import { DatabaseQueryError, DatabaseUnavailableError } from "@/lib/errors/database-errors"
 import type { GroupId, MemoryId } from "@/lib/memory/canonical-contracts"
-import { validateGroupId, GroupIdValidationError } from "@/lib/validation/group-id"
+import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
+import { memory_delete } from "@/mcp/canonical-tools"
 
 // ── DELETE /api/memory/user/[userId] ─────────────────────────────────────────
 

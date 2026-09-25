@@ -235,9 +235,9 @@ describe.skipIf(!runLiveE2E)("RuVector Graph Adapter — Live DB E2E", () => {
 
   // ── AC-4: Restore memory ───────────────────────────────────────────────────
 
-  it("AC-4: restoreMemory — retired tenant-only lifecycle fails closed", async () => {
+  it("AC-4: restoreMemory — missing workspace authority fails closed", async () => {
     await expect(adapter.restoreMemory({ id:"retired-restore" as never, group_id:E2E_GROUP as never, restored_at:new Date().toISOString() }))
-      .rejects.toThrow("tenant-only graph lifecycle operation is retired")
+      .rejects.toThrow("verified workspace_id and principal_id are required")
     // First create and supersede another memory
     const restoreOldId = `mem-restore-${Date.now()}`
     const restoreNewId = `mem-restore-${Date.now()}-v2`

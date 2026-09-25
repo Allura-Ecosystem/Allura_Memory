@@ -1,6 +1,6 @@
-import { readFileSync, readdirSync } from "node:fs"
-import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { readdirSync, readFileSync } from "node:fs"
+import path from "node:path"
 
 const mocks = vi.hoisted(() => ({ read: vi.fn() }))
 vi.mock("./read-service", () => ({ readAuthorizedDocuments: mocks.read }))

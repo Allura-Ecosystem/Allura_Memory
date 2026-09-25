@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { mapAuthorizedWorkspaceProviderState, type DigitalBrainReadScope, epic30ReadTestOnly, readAuthorizedDocumentsInRestrictedTransaction } from "./read-service"
+import { type DigitalBrainReadScope, epic30ReadTestOnly, mapAuthorizedWorkspaceProviderState, readAuthorizedDocumentsInRestrictedTransaction } from "./read-service"
 
 const OWNER_SCOPE: DigitalBrainReadScope = {
   tenantId: "allura-epic30-local",

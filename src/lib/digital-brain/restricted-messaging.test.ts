@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest"
 
-import { RestrictedMessagingFixture } from "./restricted-messaging-fixture"
 import {
   createExactChannelInvitation,
   discoverNamedContacts,
-  readBackRestrictedMessage,
-  sendRestrictedMessage,
   type InvitationApproval,
   type MessagingScope,
   type NamedContact,
+  readBackRestrictedMessage,
+  sendRestrictedMessage,
 } from "./restricted-messaging"
+import { RestrictedMessagingFixture } from "./restricted-messaging-fixture"
 
 const scope: MessagingScope = { tenantId: "allura-test", workspaceId: "workspace-a", principalId: "contractor",
   sessionId: "session-a", role: "contractor", policyEpoch: 1 }
