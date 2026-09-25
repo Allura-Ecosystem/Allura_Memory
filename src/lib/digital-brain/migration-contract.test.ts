@@ -6,6 +6,7 @@ import { TENANT_TABLE_INVENTORY } from "@/lib/db/tenant-table-inventory"
 
 const migrationPath = path.resolve(process.cwd(), "docker/postgres-init/71-digital-brain-read-foundation.sql")
 const workspaceMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/72-digital-brain-workspace-membership.sql")
+const provenanceMigrationPath = path.resolve(process.cwd(), "docker/postgres-init/73-digital-brain-membership-provenance.sql")
 
 describe("Epic 30 digital Brain read migration contract", () => {
   it("rejects null and blank department identifiers explicitly", () => {
@@ -60,5 +61,20 @@ describe("Epic 30 independent workspace membership migration contract", () => {
     expect(sql).toContain("REVOKE INSERT, UPDATE, DELETE ON brain_workspace_memberships FROM allura_app")
     expect(sql).not.toMatch(/INSERT INTO brain_workspace_memberships/i)
     expect(TENANT_TABLE_INVENTORY.some(({ table }) => table === "brain_workspace_memberships")).toBe(true)
+  })
+})
+
+describe("Epic 30 membership provenance migration contract", () => {
+  it("adds exact-scope, RLS-forced, read-only approval and receipt ledgers", () => {
+    const sql = readFileSync(provenanceMigrationPath, "utf8")
+    for (const table of ["brain_membership_approvals", "brain_membership_receipts"]) {
+      expect(sql).toContain(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`)
+      expect(TENANT_TABLE_INVENTORY.some(({ table: candidate }) => candidate === table)).toBe(true)
+    }
+    expect(sql).toContain("ADD COLUMN IF NOT EXISTS approval_id UUID REFERENCES brain_membership_approvals")
+    expect(sql).toContain("group_id = current_setting('app.current_group_id', true)")
+    expect(sql).toContain("workspace_id = current_setting('app.current_workspace_id', true)")
+    expect(sql).toContain("REVOKE INSERT, UPDATE, DELETE ON brain_membership_approvals, brain_membership_receipts FROM allura_app")
+    expect(sql).not.toMatch(/GRANT\s+(INSERT|UPDATE|DELETE).*TO allura_app/i)
   })
 })
