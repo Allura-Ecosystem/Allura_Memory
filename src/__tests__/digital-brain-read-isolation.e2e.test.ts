@@ -379,6 +379,37 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
     }
   })
 
+  it("records production-candidate read receipts only through current scoped authority", async () => {
+    const actorApprovalId = randomUUID()
+    const receiptId = randomUUID()
+    const sessionHash = "a".repeat(64)
+    const witnessHash = "b".repeat(64)
+    try {
+      await ownerPool.query(`INSERT INTO brain_membership_approvals
+        (approval_id,group_id,workspace_id,subject_user_id,approver_id,approver_role,action,provenance_ref,policy_epoch,verified_at,consumed_at)
+        VALUES ($1,$2,$3,'admin-user','trusted-control-plane','workspace_membership_admin','grant','seed-read-receipt-admin',1,now(),now())`, [actorApprovalId, GROUP, WORKSPACE])
+      await ownerPool.query("UPDATE brain_workspace_memberships SET approval_id=$1 WHERE group_id=$2 AND workspace_id=$3 AND user_id='admin-user'", [actorApprovalId, GROUP, WORKSPACE])
+      await expect(appPool.query("INSERT INTO brain_read_receipts DEFAULT VALUES")).rejects.toMatchObject({ code: "42501" })
+      const stored = await withTenantTransaction(
+        { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "admin-user" },
+        client => client.query<{ receipt_id: string; witness_hash: string }>("SELECT receipt_id,witness_hash FROM app.record_brain_read_receipt($1::uuid,'read_documents','admin',1,$2,$3,NULL,now())", [receiptId, sessionHash, witnessHash]),
+        appPool,
+      )
+      expect(stored.rows).toEqual([{ receipt_id: receiptId, witness_hash: witnessHash }])
+      await expect(withTenantTransaction(
+        { tenantId: GROUP, workspaceId: WORKSPACE, principalId: "admin-user" },
+        client => client.query("SELECT * FROM app.record_brain_read_receipt($1::uuid,'read_documents','viewer',1,$2,$3,NULL,now())", [randomUUID(), sessionHash, "c".repeat(64)]),
+        appPool,
+      )).rejects.toMatchObject({ code: "42501" })
+      const receipt = await ownerPool.query("SELECT group_id,workspace_id,principal_id,actor_role,session_hash,witness_hash,query_hash FROM brain_read_receipts WHERE receipt_id=$1", [receiptId])
+      expect(receipt.rows).toEqual([{ group_id: GROUP, workspace_id: WORKSPACE, principal_id: "admin-user", actor_role: "admin", session_hash: sessionHash, witness_hash: witnessHash, query_hash: null }])
+      await expect(ownerPool.query("UPDATE brain_read_receipts SET witness_hash='d' WHERE receipt_id=$1", [receiptId])).rejects.toMatchObject({ code: "42501" })
+    } finally {
+      await ownerPool.query("UPDATE brain_workspace_memberships SET approval_id=NULL WHERE group_id=$1 AND workspace_id=$2 AND user_id='admin-user'", [GROUP, WORKSPACE])
+      await ownerPool.query("DELETE FROM brain_membership_approvals WHERE approval_id=$1", [actorApprovalId])
+    }
+  })
+
   it("proves exact documents through the real dashboard and getAppPool", async () => {
     const fixtureDocuments = await ownerPool.query<{ id: string; content: string }>("SELECT id, content FROM brain_documents ORDER BY id")
     const scenarios = [
