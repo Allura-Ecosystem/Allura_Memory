@@ -31,8 +31,59 @@ export interface WorkspaceDocument {
 
 export interface MyWorkWorkspaceProps {
   documents: readonly WorkspaceDocument[]
-  dataState: "ready" | "unavailable"
+  dataState: WorkspaceDataState
   processRunId?: string
+}
+
+export type WorkspaceDataState =
+  | "loading"
+  | "empty"
+  | "forbidden"
+  | "stale"
+  | "degraded"
+  | "conflict"
+  | "error"
+  | "complete"
+  | "unavailable"
+
+type NonContentState = Exclude<WorkspaceDataState, "complete" | "empty">
+
+const NON_CONTENT_STATES: Record<NonContentState, { eyebrow: string; heading: string; detail: string }> = {
+  loading: {
+    eyebrow: "VERIFYING AUTHORITY",
+    heading: "Loading authorized workspace",
+    detail: "Authority and content are being verified. No document content is shown until both checks complete.",
+  },
+  forbidden: {
+    eyebrow: "ACCESS DENIED",
+    heading: "Access not permitted",
+    detail: "This request is not authorized. No document names, counts, snippets, or existence details are disclosed.",
+  },
+  stale: {
+    eyebrow: "AUTHORITY STALE",
+    heading: "Workspace needs refresh",
+    detail: "The verified authority epoch is no longer current. Cached content is hidden until authority is revalidated.",
+  },
+  degraded: {
+    eyebrow: "DEPENDENCY DEGRADED",
+    heading: "Workspace temporarily unavailable",
+    detail: "A required authority or receipt dependency is degraded. The workspace remains closed rather than returning partial content.",
+  },
+  conflict: {
+    eyebrow: "AUTHORITY CONFLICT",
+    heading: "Workspace changed",
+    detail: "Verified scope changed during this request. No content is returned until the current scope is resolved.",
+  },
+  error: {
+    eyebrow: "REQUEST FAILED",
+    heading: "Workspace unavailable",
+    detail: "The request could not be completed safely. No backend, scope, or protected-content details are exposed.",
+  },
+  unavailable: {
+    eyebrow: "FAIL-CLOSED LOCAL MODE",
+    heading: "Local data unavailable",
+    detail: "The explicit disposable Epic 30 database is not enabled or could not prove this principal's scope. No static or production content was substituted.",
+  },
 }
 
 const MOBILE_COMPARISON_QUERY = "(max-width: 760px)"
@@ -154,23 +205,29 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
     }
   }
 
-  if (dataState === "unavailable") {
+  if (dataState !== "complete" && dataState !== "empty") {
+    const state = NON_CONTENT_STATES[dataState]
     return (
-      <StateFrame processRunId={processRunId} label="My Work local data state">
-        <article className={styles.emptyDocument}>
+      <StateFrame processRunId={processRunId} label={`My Work ${dataState} state`}>
+        <article
+          className={styles.emptyDocument}
+          data-surface-state={dataState}
+          role={dataState === "loading" ? "status" : "alert"}
+          aria-live={dataState === "loading" ? "polite" : "assertive"}
+        >
           <LockKeyhole aria-hidden="true" />
-          <p className={styles.eyebrow}>FAIL-CLOSED LOCAL MODE</p>
-          <h1>Local data unavailable</h1>
-          <p>The explicit disposable Epic 30 database is not enabled or could not prove this principal&apos;s scope. No static or production content was substituted.</p>
+          <p className={styles.eyebrow}>{state.eyebrow}</p>
+          <h1>{state.heading}</h1>
+          <p>{state.detail}</p>
         </article>
       </StateFrame>
     )
   }
 
-  if (documents.length === 0) {
+  if (dataState === "empty" || documents.length === 0) {
     return (
       <StateFrame processRunId={processRunId} label="My Work empty authorized state">
-        <article className={styles.emptyDocument}>
+        <article className={styles.emptyDocument} data-surface-state="empty" role="status">
           <FolderClosed aria-hidden="true" />
           <p className={styles.eyebrow}>AUTHORIZED EMPTY STATE</p>
           <h1>No authorized documents</h1>

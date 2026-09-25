@@ -67,7 +67,7 @@ describe("Epic30 dashboard server page", () => {
     expect(mocks.read).toHaveBeenCalledTimes(1)
     expect(mocks.read).toHaveBeenCalledWith(scope)
     expect(page.props).toEqual({
-      dataState: "ready", documents: [{ ...document, updatedAt: document.updatedAt.toISOString() }],
+      dataState: "complete", documents: [{ ...document, updatedAt: document.updatedAt.toISOString() }],
     })
     const html = renderToStaticMarkup(page)
     expect(html).toContain(document.content)

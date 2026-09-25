@@ -36,7 +36,7 @@ export default async function DashboardOverviewPage(): Promise<React.ReactElemen
       ...document,
       updatedAt: document.updatedAt.toISOString(),
     }))
-    return <MyWorkWorkspace documents={documents} dataState="ready" {...(process.env.ALLURA_EPIC30_PROCESS_ID ? { processRunId: process.env.ALLURA_EPIC30_PROCESS_ID } : {})} />
+    return <MyWorkWorkspace documents={documents} dataState={documents.length === 0 ? "empty" : "complete"} {...(process.env.ALLURA_EPIC30_PROCESS_ID ? { processRunId: process.env.ALLURA_EPIC30_PROCESS_ID } : {})} />
   } catch {
     // Do not leak connection, schema, scope, or resource details to the browser.
     console.error("[Epic30] synthetic local database read unavailable")

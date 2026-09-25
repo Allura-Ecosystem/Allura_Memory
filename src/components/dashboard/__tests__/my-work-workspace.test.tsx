@@ -45,7 +45,7 @@ beforeEach(() => {
 
 describe("MyWorkWorkspace", () => {
   it("returns keyboard focus to the comparison opener", () => {
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     const opener = screen.getByRole("button", { name: "Open deployment checklist" })
     fireEvent.click(opener)
     const close = screen.getByRole("button", { name: "Close pane" })
@@ -62,7 +62,7 @@ describe("MyWorkWorkspace", () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     })))
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     const opener = screen.getByRole("button", { name: "Open deployment checklist" })
     fireEvent.click(opener)
 
@@ -94,7 +94,7 @@ describe("MyWorkWorkspace", () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     })))
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     const toolbar = screen.getByRole("heading", { name: "Read, connect, and verify." }).closest("header")!
     toolbar.setAttribute("inert", "")
     fireEvent.click(screen.getByRole("button", { name: "Open deployment checklist" }))
@@ -111,25 +111,25 @@ describe("MyWorkWorkspace", () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     })))
-    const { rerender } = render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    const { rerender } = render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     fireEvent.click(screen.getByRole("button", { name: "Open deployment checklist" }))
     expect(screen.getByRole("dialog", { name: "Comparison pane" })).toBeTruthy()
 
-    rerender(<MyWorkWorkspace documents={[DOCUMENTS[0]]} dataState="ready" />)
+    rerender(<MyWorkWorkspace documents={[DOCUMENTS[0]]} dataState="complete" />)
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Comparison pane" })).toBeNull())
     const article = screen.getByRole("heading", { name: "Shipment exception review" }).closest("article")!
     expect(article.hasAttribute("inert")).toBe(false)
     expect(document.activeElement).toBe(article)
 
-    rerender(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    rerender(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     expect(screen.queryByRole("dialog", { name: "Comparison pane" })).toBeNull()
     expect(screen.getByText("Context map")).toBeTruthy()
   })
 
   it("reconciles an active document removed by a prop update", async () => {
-    const { rerender } = render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    const { rerender } = render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     fireEvent.click(screen.getByRole("button", { name: "Deployment checklist operations" }))
-    rerender(<MyWorkWorkspace documents={[DOCUMENTS[0]]} dataState="ready" />)
+    rerender(<MyWorkWorkspace documents={[DOCUMENTS[0]]} dataState="complete" />)
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Shipment exception review" })).toBeTruthy())
     expect(screen.getByRole("button", { name: "Shipment exception review Private" }).getAttribute("aria-current")).toBe("page")
@@ -144,7 +144,7 @@ describe("MyWorkWorkspace", () => {
       removeEventListener: vi.fn(),
     }
     vi.stubGlobal("matchMedia", vi.fn(() => media))
-    const { unmount } = render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    const { unmount } = render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     fireEvent.click(screen.getByRole("button", { name: "Open deployment checklist" }))
     expect(screen.getByRole("complementary", { name: "Comparison pane" })).toBeTruthy()
 
@@ -163,7 +163,7 @@ describe("MyWorkWorkspace", () => {
       removeListener: vi.fn(),
     }
     vi.stubGlobal("matchMedia", vi.fn(() => media))
-    const { unmount } = render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    const { unmount } = render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     fireEvent.click(screen.getByRole("button", { name: "Open deployment checklist" }))
 
     act(() => { media.matches = true; listener?.() })
@@ -173,7 +173,7 @@ describe("MyWorkWorkspace", () => {
   })
 
   it("keeps the desktop comparison as an ordinary complementary pane", () => {
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     expect(screen.getByRole("group", { name: "Open workspace panes" })).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "Open deployment checklist" }))
     const pane = screen.getByRole("complementary", { name: "Comparison pane" })
@@ -182,7 +182,7 @@ describe("MyWorkWorkspace", () => {
   })
 
   it("lets keyboard users focus each visible pane without implying a hidden tab panel", () => {
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     fireEvent.click(screen.getByRole("button", { name: "Focus context map" }))
     expect(document.activeElement).toBe(screen.getByRole("complementary", { name: "Authorized document context map" }))
     fireEvent.click(screen.getByRole("button", { name: "Focus document: Shipment exception review" }))
@@ -197,12 +197,12 @@ describe("MyWorkWorkspace", () => {
       matches: query === "(max-width: 760px)", media: query,
       addEventListener: vi.fn(), removeEventListener: vi.fn(),
     })))
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     expect(screen.getByRole("button", { name: "Focus context map" }).hasAttribute("disabled")).toBe(true)
   })
 
   it("navigates the main document and restores a private selection", () => {
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     expect(screen.getByRole("button", { name: "Shipment exception review Private" }).getAttribute("aria-current")).toBe("page")
     fireEvent.click(screen.getByRole("button", { name: "Deployment checklist operations" }))
     expect(screen.getByRole("heading", { name: "Deployment checklist" })).toBeTruthy()
@@ -215,7 +215,7 @@ describe("MyWorkWorkspace", () => {
   })
 
   it("falls back to the main document if navigation removed the opener", () => {
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     const opener = screen.getByRole("button", { name: "Open deployment checklist" })
     fireEvent.click(opener)
     opener.remove()
@@ -224,7 +224,7 @@ describe("MyWorkWorkspace", () => {
     expect(document.activeElement?.tagName).toBe("ARTICLE")
   })
   it("keeps the synthetic workspace clearly labeled and opens a second reading pane", () => {
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
 
     expect(screen.getByText("Synthetic local test data")).toBeTruthy()
     expect(screen.getByRole("heading", { name: "Shipment exception review" })).toBeTruthy()
@@ -236,14 +236,14 @@ describe("MyWorkWorkspace", () => {
   })
 
   it("does not invent relationships between co-visible documents", () => {
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     expect(screen.queryByRole("heading", { name: "Linked context" })).toBeNull()
     expect(screen.getByRole("heading", { name: "Available department document" })).toBeTruthy()
     expect(screen.getByText("Available for comparison; no document relationship has been verified.")).toBeTruthy()
   })
 
   it("keeps Ask allura unavailable rather than fabricating an AI response", () => {
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
 
     const askButtons = screen.getAllByRole("button", { name: /ask allura/i })
     const statusId = askButtons[0].getAttribute("aria-controls")
@@ -261,7 +261,7 @@ describe("MyWorkWorkspace", () => {
   })
 
   it("closes comparison before selecting the compared document", () => {
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
     fireEvent.click(screen.getByRole("button", { name: "Open deployment checklist" }))
     fireEvent.click(screen.getByRole("button", { name: "Deployment checklist operations" }))
 
@@ -276,14 +276,14 @@ describe("MyWorkWorkspace", () => {
       id: `doc-${index}`,
       title: `Document ${index}`,
     }))
-    render(<MyWorkWorkspace documents={manyDocuments} dataState="ready" />)
+    render(<MyWorkWorkspace documents={manyDocuments} dataState="complete" />)
 
     expect(screen.getByText(/Showing 6 of 7 visible documents/)).toBeTruthy()
     expect(screen.getByText("Updated 2026-09-16 00:00 UTC")).toBeTruthy()
   })
 
   it("marks unavailable rail actions as disabled rather than interactive", () => {
-    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="ready" />)
+    render(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
 
     expect(screen.getByRole("button", { name: "Documents" }).getAttribute("aria-current")).toBe("page")
     expect(screen.getByRole("button", { name: "Memory map is shown in the current workspace" }).hasAttribute("disabled")).toBe(true)
@@ -295,5 +295,39 @@ describe("MyWorkWorkspace", () => {
 
     expect(screen.getByRole("heading", { name: "Local data unavailable" })).toBeTruthy()
     expect(screen.queryByText("Shipment exception review")).toBeNull()
+  })
+
+  it.each([
+    ["loading", "Loading authorized workspace"],
+    ["forbidden", "Access not permitted"],
+    ["stale", "Workspace needs refresh"],
+    ["degraded", "Workspace temporarily unavailable"],
+    ["conflict", "Workspace changed"],
+    ["error", "Workspace unavailable"],
+    ["unavailable", "Local data unavailable"],
+  ] as const)("renders the %s truth state without protected document disclosure", (state, heading) => {
+    const { container } = render(<MyWorkWorkspace documents={DOCUMENTS} dataState={state} />)
+
+    expect(screen.getByRole("heading", { name: heading })).toBeTruthy()
+    expect(container.querySelector(`[data-surface-state="${state}"]`)).toBeTruthy()
+    expect(screen.queryByText("Shipment exception review")).toBeNull()
+    expect(screen.queryByText("Synthetic owner-only content.")).toBeNull()
+    expect(screen.queryByText("2 visible")).toBeNull()
+    expect(screen.queryByText("allura-epic30-local")).toBeNull()
+    expect(screen.queryByText("epic30-local-workspace")).toBeNull()
+    expect(screen.queryByText("owner-user")).toBeNull()
+    expect(screen.queryByText("department-curator")).toBeNull()
+    expect(screen.queryByText("operations")).toBeNull()
+    expect(screen.queryByText("2026-09-17T00:00:00.000Z")).toBeNull()
+  })
+
+  it("renders explicit empty and complete truth states", () => {
+    const { rerender, container } = render(<MyWorkWorkspace documents={DOCUMENTS} dataState="empty" />)
+    expect(container.querySelector('[data-surface-state="empty"]')).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "No authorized documents" })).toBeTruthy()
+    expect(screen.queryByText("Shipment exception review")).toBeNull()
+
+    rerender(<MyWorkWorkspace documents={DOCUMENTS} dataState="complete" />)
+    expect(screen.getByRole("heading", { name: "Shipment exception review" })).toBeTruthy()
   })
 })
