@@ -29,10 +29,9 @@
     {
       "id": "30.3",
       "localState": "partial",
-      "evidence": ["_bmad_output/planning-artifacts/epic-30-authorization-approval-packet.md", "_bmad_output/planning-artifacts/epic-30-local-authorization-contract.md", "_bmad_output/implementation-artifacts/evidence/epic30-live-db-2026-09-25.json", "src/lib/digital-brain/workspace-membership-lifecycle.ts", "src/lib/digital-brain/workspace-membership-lifecycle.test.ts", "docker/postgres-init/73-digital-brain-membership-provenance.sql", "src/lib/digital-brain/workspace-membership-production.ts", "src/lib/digital-brain/workspace-membership-production.test.ts"],
+      "evidence": ["_bmad_output/planning-artifacts/epic-30-authorization-approval-packet.md", "_bmad_output/planning-artifacts/epic-30-local-authorization-contract.md", "_bmad_output/implementation-artifacts/evidence/epic30-live-db-2026-09-25.json", "_bmad_output/implementation-artifacts/evidence/epic30-governed-membership-writer-2026-09-25.json", "src/lib/digital-brain/workspace-membership-lifecycle.ts", "src/lib/digital-brain/workspace-membership-lifecycle.test.ts", "docker/postgres-init/73-digital-brain-membership-provenance.sql", "docker/postgres-init/75-digital-brain-membership-governed-writer.sql", "src/lib/digital-brain/workspace-membership-production.ts", "src/lib/digital-brain/workspace-membership-production.test.ts"],
       "remaining": [
-        { "id": "authorization-policy-approval", "kind": "human_approval", "proofRequired": "Exact production authorization policy approved by authorized security and data owners." },
-        { "id": "membership-provenance", "kind": "production_implementation", "proofRequired": "Governed membership grant/revoke lifecycle with verifiable approver provenance." }
+        { "id": "authorization-policy-approval", "kind": "human_approval", "proofRequired": "Exact production authorization policy approved by authorized security and data owners." }
       ]
     },
     {

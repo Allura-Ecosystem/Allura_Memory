@@ -42,6 +42,24 @@ export class ProductionMembershipStore implements MembershipLifecycleStore {
           OR (membership.revoked_at IS NOT NULL AND approval.action='revoke'))`, [subject.tenantId, subject.workspaceId, subject.userId])
     return result.rows[0] ?? null
   }
-  async commitGrant(): Promise<boolean> { throw new Error("production membership writes require an approved governed transaction adapter") }
-  async commitRevoke(): Promise<boolean> { throw new Error("production membership writes require an approved governed transaction adapter") }
+  async commitGrant(input: { actor: MembershipScope; subject: MembershipSubject; approval: VerifiedMembershipApproval; expectedEpoch: number; targetEpoch: number }): Promise<boolean> {
+    return this.commit("grant", input)
+  }
+  async commitRevoke(input: { actor: MembershipScope; subject: MembershipSubject; approval: VerifiedMembershipApproval; expectedEpoch: number; targetEpoch: number }): Promise<boolean> {
+    return this.commit("revoke", input)
+  }
+  private async commit(action: "grant" | "revoke", input: { actor: MembershipScope; subject: MembershipSubject; approval: VerifiedMembershipApproval; expectedEpoch: number; targetEpoch: number }): Promise<boolean> {
+    if (input.approval.action !== action || input.approval.tenantId !== input.subject.tenantId ||
+        input.approval.workspaceId !== input.subject.workspaceId || input.approval.subjectUserId !== input.subject.userId ||
+        input.approval.policyEpoch !== input.actor.policyEpoch || input.targetEpoch !== input.expectedEpoch + 1) return false
+    return this.db.transaction(async (tx) => {
+      const result = await tx.query<WorkspaceMembership>(`SELECT tenant_id AS "tenantId", workspace_id AS "workspaceId", user_id AS "userId", approved_by AS "approvedBy", approval_id AS "approvalId", policy_epoch AS "policyEpoch", revoked_at AS "revokedAt"
+        FROM app.commit_brain_workspace_membership($1::uuid,$2::text,$3::bigint,$4::bigint,$5::bigint)`,
+      [input.approval.approvalId, action, input.actor.policyEpoch, input.expectedEpoch, input.targetEpoch])
+      const row = result.rows[0]
+      return Boolean(row && row.tenantId === input.subject.tenantId && row.workspaceId === input.subject.workspaceId &&
+        row.userId === input.subject.userId && row.approvalId === input.approval.approvalId &&
+        Number(row.policyEpoch) === input.targetEpoch && (action === "grant" ? row.revokedAt === null : row.revokedAt !== null))
+    })
+  }
 }
