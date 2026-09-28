@@ -2,7 +2,12 @@
 
 # Informant
 
-> Repo truth for future developers and agents. Read this before trusting older docs, stale plans, or half-migrated surfaces.
+> **Historical context, not a current startup recipe.** For local development,
+> follow `.opencode/DEVELOPMENT-READINESS.md` and
+> `docs/guides/isolated-development.md`. Do not run the destructive root Compose
+> bootstrap below on a host running Allura. It predates the isolated dev lane.
+
+> Historical repo notes for developers and agents; verify against current code.
 
 ## Purpose
 
