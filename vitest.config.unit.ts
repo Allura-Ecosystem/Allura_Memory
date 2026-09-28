@@ -193,6 +193,7 @@ export default defineConfig({
       "src/lib/auth/__tests__/mcp-legacy-route.test.ts",
       "src/lib/memory/memory-add-workspace-scope.test.ts",
       "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
+      "src/lib/auth/__tests__/dashboard-principal-session-authority.test.ts",
       "src/lib/auth/__tests__/principal-audit.test.ts",
       "src/lib/auth/__tests__/budget-scope.test.ts",
       // Story 24.11a AC-7 — withPermission enforces its PermissionAction argument
@@ -298,6 +299,7 @@ export default defineConfig({
       { find: "@allura/types", replacement: path.resolve(__dirname, "./packages/types/src/index.ts") },
       { find: "@allura/rbac", replacement: path.resolve(__dirname, "./packages/rbac/src/index.ts") },
       { find: "@allura/mcp-server", replacement: path.resolve(__dirname, "./packages/mcp-server/src/index.ts") },
+      { find: /^server-only$/, replacement: path.resolve(__dirname, "./scripts/test-stubs/server-only.ts") },
       { find: "@", replacement: path.resolve(__dirname, "./src") },
     ],
   },

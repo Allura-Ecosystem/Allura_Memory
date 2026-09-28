@@ -146,6 +146,25 @@ These decisions name authorities and constrain execution. They do not count as c
 
 An authorized human approval must identify the candidate commit and contract hash, record amendments or accepted defaults, name the approver and role, and link the durable board receipt. The board receipt now exists in the [reconciliation packet](./epic-30-board-reconciliation-packet.md). Independent security and data reviewers must still record dispositions for every threat row. Until those approval and review records exist, Story 30.3 remains backlog and dependent implementation stories do not advance.
 
+## Session authority disposition — provider-delegated (Clerk), 2026-09-28
+
+Admin design direction (Sabir) selected provider-delegated session authority via Clerk for production login convenience. This is an architecture direction, NOT the Story 30.3 security/data approval and NOT deployment authorization.
+
+Implemented local slice (uncommitted WIP, baseline `7d550297`): `getDashboardPrincipal` (`src/lib/auth/dashboard-principal.ts`) requires an active Clerk token status **and** an authoritative `clerkClient().sessions.getSession(sessionId)` lookup on each protected principal resolution. This is a candidate for independent security/data review, not production activation. Contract receipts from the installed SDK (`@clerk/nextjs` 7.0.12 / `@clerk/backend` 3.2.8) via Context7 and type declarations:
+
+- `auth()` yields `sessionId: string` and `sessionStatus: SessionStatusClaim | null` where `SessionStatusClaim = 'active' | 'pending'` (`@clerk/shared/dist/types/index.d.ts:4445,10123`); backend `SessionStatus` values include `'abandoned'|'active'|'ended'|'expired'|'removed'|'replaced'|'revoked'|'pending'` (`:4009`).
+- `clerkClient().sessions.getSession(sessionId)` / `revokeSession(sessionId)` exist on the Backend API (`@clerk/backend/dist/api/endpoints/SessionApi.d.ts:24-29`); the current candidate uses a fresh `getSession` lookup per protected principal resolution. A Clerk Backend API outage denies access rather than falling back to a cached JWT.
+
+Enforcement is fail-closed: `sessionStatus !== 'active'`, absent `userId`/`sessionId`, non-active/mismatched Clerk Backend API session, malformed Allura claim, or a provider outage all yield `null` — no principal, no scope. No caller header is consulted, and no global allow cache was added. RED→GREEN hermetic proof: `src/lib/auth/__tests__/dashboard-principal-session-authority.test.ts` (17/17; second RED receipt: four real-path tests failed when a stale-active JWT paired with revoked/mismatched/backend-unavailable session still produced a principal). The external Clerk boundary is mocked; this does not prove a real tenant revocation event.
+
+**Timing and availability trade-off:** Clerk documents that JWT claims can be stale for up to a minute, so the claim by itself cannot meet a next-request revocation promise. The candidate checks Clerk's Backend API on each protected principal resolution and denies when Clerk is unavailable. This adds network latency and Backend API rate-limit exposure; no measured production latency or live revocation bound is claimed. The security/data owners must review that trade-off and a live Clerk test-instance revoke→read receipt before Story 30.3/30.5 acceptance.
+
+Remaining independent review and evidence before this disposition can count toward Story 30.3/30.5 acceptance:
+
+1. Independent security/data-owner review of the fail-closed enforcement slice, including Backend API latency, rate limits, and provider-outage denial; Troy's code review is not a substitute for the named approver's policy disposition.
+2. Live test-instance proof against a real Clerk development tenant (revoked session actually denied end-to-end through `auth()`), which this environment cannot perform without Clerk test credentials.
+3. The Story 30.3 `authorization-policy-approval` human decision itself — this slice implements an admin direction; it does not approve the policy.
+
 ### Reviewer response template
 
 ```text
