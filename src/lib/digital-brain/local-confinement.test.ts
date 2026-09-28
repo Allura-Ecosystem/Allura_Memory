@@ -357,7 +357,7 @@ it("rejects an explicitly empty page cursor before any restricted transaction", 
 describe("production authorized read provider", () => {
   const productionReceiptWriter = { persist: mocks.receipt }
 
-  function useProductionRows(): void {
+  function setupProductionRows(): void {
     mocks.principal.mockResolvedValue(productionPrincipal)
     mocks.query.mockImplementation(async (sql: string, params?: readonly unknown[]) => {
       if (sql.includes("brain_workspace_memberships")) return { rows: [{ role: "viewer", policy_epoch: "9" }] }
@@ -372,7 +372,7 @@ describe("production authorized read provider", () => {
   }
 
   it("uses server-derived scope and an opaque keyset cursor", async () => {
-    useProductionRows()
+    setupProductionRows()
     const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 7), productionReceiptWriter)
     const first = await provider.readDocumentsPage({ pageSize: 1 })
     expect(first.documents.map(({ id }) => id)).toEqual(["z-record"])
@@ -394,7 +394,7 @@ describe("production authorized read provider", () => {
   })
 
   it("binds the Ask snapshot to server authority and a verified receipt-chain witness", async () => {
-    useProductionRows()
+    setupProductionRows()
     const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 14), productionReceiptWriter)
     const result = await provider.readAuthorizedSnapshot(productionScope)
     expect(result.documents.map(({ id }) => id)).toEqual(["z-record", "a-record"])
@@ -428,7 +428,7 @@ describe("production authorized read provider", () => {
   })
 
   it("searches and paginates only rows returned by the restricted transaction", async () => {
-    useProductionRows()
+    setupProductionRows()
     const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 8), productionReceiptWriter)
     const first = await provider.searchDocumentsPage("production", { pageSize: 1 })
     expect(first.total).toBe(2)
@@ -443,7 +443,7 @@ describe("production authorized read provider", () => {
   })
 
   it("escapes SQL wildcard characters so production search remains literal", async () => {
-    useProductionRows()
+    setupProductionRows()
     const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 12), productionReceiptWriter)
     await provider.searchDocumentsPage("%_", { pageSize: 1 })
 
@@ -457,13 +457,13 @@ describe("production authorized read provider", () => {
     ["sink outage", async () => { throw new Error("protected backend detail") }],
     ["mismatched acknowledgement", async () => ({ receiptId: "wrong", witnessHash: "0".repeat(64) })],
   ])("fails closed before disclosure on %s", async (_label, persist) => {
-    useProductionRows()
+    setupProductionRows()
     const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 13), { persist })
     await expect(provider.readDocumentsPage({ pageSize: 1 })).rejects.toThrow()
   })
 
   it("rejects an operation-mismatched cursor before querying document rows", async () => {
-    useProductionRows()
+    setupProductionRows()
     const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 11), productionReceiptWriter)
     const first = await provider.readDocumentsPage({ pageSize: 1 })
     const documentQueriesBeforeReplay = mocks.query.mock.calls.filter(([sql]) => String(sql).includes("FROM brain_documents")).length
@@ -474,7 +474,7 @@ describe("production authorized read provider", () => {
   })
 
   it("derives links, citations, and derivatives only from the current authorized snapshot", async () => {
-    useProductionRows()
+    setupProductionRows()
     const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 9), productionReceiptWriter)
     await expect(provider.documentLinks("z-record")).resolves.toEqual({
       documentId: "z-record", title: "Production note",
@@ -495,5 +495,91 @@ describe("production authorized read provider", () => {
     await expect(provider.readDocumentsPage()).rejects.toThrow(/authority refused/)
     expect(mocks.transaction).not.toHaveBeenCalled()
     expect(() => new ProductionAuthorizedReadProvider(Buffer.alloc(16), productionReceiptWriter)).toThrow(/cursor key refused/)
+  })
+
+  it("classifies the workspace state truth contract without collapsing failure causes", async () => {
+    setupProductionRows()
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 15), productionReceiptWriter)
+    const complete = await provider.workspaceState()
+    expect(complete.state).toBe("complete")
+    expect(complete.documents.map((document) => [document.id, document.title])).toEqual([["z-record", "Production note"], ["a-record", "Operations runbook"]])
+
+    const completeTransactions = mocks.transaction.mock.calls.length
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (sql.includes("brain_workspace_memberships")) return { rows: [{ role: "viewer", policy_epoch: "9" }] }
+      if (sql.includes("COUNT(*)")) return { rows: [{ total: 0 }] }
+      return { rows: [] }
+    })
+    await expect(provider.workspaceState()).resolves.toEqual({ state: "empty", documents: [] })
+    expect(mocks.transaction.mock.calls.length).toBeGreaterThan(completeTransactions)
+
+    mocks.principal.mockResolvedValue(null)
+    const forbiddenTransactions = mocks.transaction.mock.calls.length
+    await expect(provider.workspaceState()).resolves.toEqual({ state: "forbidden", documents: [] })
+    expect(mocks.transaction).toHaveBeenCalledTimes(forbiddenTransactions)
+
+    setupProductionRows()
+    mocks.receipt.mockRejectedValueOnce(new Error("protected backend detail"))
+    await expect(provider.workspaceState()).resolves.toEqual({ state: "degraded", documents: [] })
+
+    setupProductionRows()
+    let authorityReads = 0
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (sql.includes("brain_workspace_memberships")) {
+        authorityReads += 1
+        return { rows: [{ role: "viewer", policy_epoch: authorityReads <= 2 ? "9" : "10" }] }
+      }
+      if (sql.includes("COUNT(*)")) return { rows: [{ total: 2 }] }
+      if (sql.includes("FROM brain_documents")) {
+        return { rows: productionRows.map((row) => row.id === "z-record" ? { ...row, content: "[[a-record]]" } : row) }
+      }
+      return { rows: [] }
+    })
+    await expect(provider.workspaceState()).resolves.toEqual({ state: "conflict", documents: [] })
+  })
+
+  it("keeps misleading dependency failures degraded instead of classifying by message text", async () => {
+    setupProductionRows()
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 16), productionReceiptWriter)
+
+    for (const misleading of ["receipt refused by backend", "backend changed schema", "authority refused: connection reset"]) {
+      setupProductionRows()
+      mocks.receipt.mockRejectedValueOnce(new Error(misleading))
+      await expect(provider.workspaceState()).resolves.toEqual({ state: "degraded", documents: [] })
+
+      setupProductionRows()
+      mocks.transaction.mockRejectedValueOnce(new Error(misleading))
+      await expect(provider.workspaceState()).resolves.toEqual({ state: "degraded", documents: [] })
+
+      setupProductionRows()
+      mocks.principal.mockRejectedValueOnce(new Error(misleading))
+      await expect(provider.workspaceState()).resolves.toEqual({ state: "degraded", documents: [] })
+    }
+
+    setupProductionRows()
+    mocks.principal.mockResolvedValue(null)
+    await expect(provider.workspaceState()).resolves.toEqual({ state: "forbidden", documents: [] })
+
+    setupProductionRows()
+    let authorityReads = 0
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (sql.includes("brain_workspace_memberships")) {
+        authorityReads += 1
+        return { rows: [{ role: "viewer", policy_epoch: authorityReads <= 2 ? "9" : "10" }] }
+      }
+      if (sql.includes("COUNT(*)")) return { rows: [{ total: 2 }] }
+      if (sql.includes("FROM brain_documents")) {
+        return { rows: productionRows.map((row) => row.id === "z-record" ? { ...row, content: "[[a-record]]" } : row) }
+      }
+      return { rows: [] }
+    })
+    await expect(provider.workspaceState()).resolves.toEqual({ state: "conflict", documents: [] })
+
+    setupProductionRows()
+    mocks.principal.mockResolvedValue(null)
+    await expect(provider.readDocumentsPage({ pageSize: 1 })).rejects.toThrow(/authority refused/)
+    const refusedTransactions = mocks.transaction.mock.calls.length
+    await expect(provider.readDocuments()).rejects.toThrow(/authority refused/)
+    expect(mocks.transaction).toHaveBeenCalledTimes(refusedTransactions)
   })
 })

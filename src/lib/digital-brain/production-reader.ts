@@ -28,6 +28,38 @@ import {
 
 type ProductionCursorClaims = AuthorizedReadCursorClaims
 
+/**
+ * Typed classification for the production read path. The base class is never
+ * raised directly; only the concrete subclasses below are raised, and only at
+ * authority-refusal or post-receipt authority-change enforcement points.
+ * Dependency failures (database, receipt writer, principal provider) keep their
+ * own error types and fail closed as degraded without message inspection.
+ */
+class ProductionReadStateError extends Error {
+  constructor(
+    readonly state: "forbidden" | "conflict",
+    message: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options)
+    this.name = "ProductionReadStateError"
+  }
+}
+
+class ProductionAuthorityRefusalError extends ProductionReadStateError {
+  constructor(message = "Production read authority refused", options?: ErrorOptions) {
+    super("forbidden", message, options)
+    this.name = "ProductionAuthorityRefusalError"
+  }
+}
+
+class ProductionAuthorityChangedError extends ProductionReadStateError {
+  constructor(message = "Production read authority changed", options?: ErrorOptions) {
+    super("conflict", message, options)
+    this.name = "ProductionAuthorityChangedError"
+  }
+}
+
 interface ProductionAuthority {
   actorRole: AuthUser["role"]
   policyEpoch: number
@@ -94,7 +126,7 @@ function normalizeQuery(value: string): string {
 function scopeFor(principal: AuthUser): DigitalBrainReadScope {
   if (!principal.id?.trim() || !principal.groupId?.trim() || !principal.workspaceId?.trim() ||
       !principal.sessionId?.trim() || !role(principal.role)) {
-    throw new Error("Production read authority refused")
+    throw new ProductionAuthorityRefusalError()
   }
   return { tenantId: principal.groupId, workspaceId: principal.workspaceId, principalId: principal.id }
 }
@@ -168,7 +200,7 @@ export class ProductionAuthorizedReadProvider {
 
   private async principal(): Promise<{ principal: AuthUser; scope: DigitalBrainReadScope }> {
     const principal = await getDashboardPrincipal()
-    if (!principal) throw new Error("Production read authority refused")
+    if (!principal) throw new ProductionAuthorityRefusalError()
     return { principal, scope: scopeFor(principal) }
   }
 
@@ -177,7 +209,7 @@ export class ProductionAuthorizedReadProvider {
       const result = await client.query<{ policy_epoch: string | number; role: string }>(AUTHORITY_SQL, [scope.tenantId, scope.workspaceId, scope.principalId])
       const row = result.rows[0]
       if (!row || !role(row.role) || !Number.isSafeInteger(Number(row.policy_epoch)) || Number(row.policy_epoch) <= 0) {
-        throw new Error("Production read authority refused")
+        throw new ProductionAuthorityRefusalError()
       }
       return { actorRole: row.role, policyEpoch: Number(row.policy_epoch) }
     })
@@ -192,7 +224,7 @@ export class ProductionAuthorizedReadProvider {
     return withWorkspaceTransaction(scope, async (client) => {
       const authorityResult = await client.query<{ policy_epoch: string | number; role: string }>(AUTHORITY_SQL, [scope.tenantId, scope.workspaceId, scope.principalId])
       const authorityRow = authorityResult.rows[0]
-      if (!authorityRow || !role(authorityRow.role) || Number(authorityRow.policy_epoch) <= 0) throw new Error("Production read authority refused")
+      if (!authorityRow || !role(authorityRow.role) || Number(authorityRow.policy_epoch) <= 0) throw new ProductionAuthorityRefusalError()
       const authority = { actorRole: authorityRow.role, policyEpoch: Number(authorityRow.policy_epoch) }
       const where = options.query === undefined ? "" : " AND (LOWER(document.title) LIKE $3 ESCAPE E'\\\\' OR LOWER(document.content) LIKE $3 ESCAPE E'\\\\')"
       const boundary = options.boundary
@@ -251,11 +283,11 @@ export class ProductionAuthorizedReadProvider {
       })
     }
     const preflightAuthority = await this.authority(scope)
-    if (preflightAuthority.actorRole !== principal.role) throw new Error("Production read authority refused")
+    if (preflightAuthority.actorRole !== principal.role) throw new ProductionAuthorityRefusalError()
     assertCursor(preflightAuthority, principal)
     const first = await this.candidate(scope, { operation: options.operation, query: options.query, boundary: cursorClaims?.boundary ?? null, pageSize })
     assertCursor(first.authority, principal)
-    if (first.authority.actorRole !== principal.role) throw new Error("Production read authority refused")
+    if (first.authority.actorRole !== principal.role) throw new ProductionAuthorityRefusalError()
     const firstPage = first.documents.slice(0, pageSize)
     const receipt = await persistAuthorizedReadReceipt({
       scope,
@@ -272,7 +304,7 @@ export class ProductionAuthorizedReadProvider {
     if (!refreshedPrincipal || refreshedPrincipal.id !== principal.id ||
         refreshedPrincipal.groupId !== principal.groupId || refreshedPrincipal.workspaceId !== principal.workspaceId ||
         refreshedPrincipal.sessionId !== principal.sessionId || refreshedPrincipal.role !== principal.role) {
-      throw new Error("Production read authority changed")
+      throw new ProductionAuthorityChangedError()
     }
     const current = await this.candidate(scope, { operation: options.operation, query: options.query, boundary: cursorClaims?.boundary ?? null, pageSize })
     assertCursor(current.authority, refreshedPrincipal)
@@ -293,7 +325,7 @@ export class ProductionAuthorizedReadProvider {
     if (current.authority.actorRole !== first.authority.actorRole ||
         current.authority.policyEpoch !== first.authority.policyEpoch || current.total !== first.total ||
         currentReceipt.witnessHash !== receipt.witnessHash || currentReceipt.queryHash !== receipt.queryHash) {
-      throw new Error("Production read authority changed")
+      throw new ProductionAuthorityChangedError()
     }
     return { authority: current.authority, documents: currentPage, total: current.total,
       hasMore: current.documents.length > pageSize, witnessHash: receipt.witnessHash }
@@ -405,8 +437,16 @@ export class ProductionAuthorizedReadProvider {
       const { scope } = await this.principal()
       const documents = await this.readDocuments()
       return mapAuthorizedWorkspaceProviderState(scope, { state: documents.length === 0 ? "empty" : "complete", documents })
-    } catch {
-      return { state: "unavailable", documents: [] }
+    } catch (error) {
+      // Only the typed authority errors raised at the enforcement points above
+      // classify as forbidden/conflict. A dependency failure that merely
+      // contains the words "refused" or "changed" must NOT be reclassified —
+      // every non-authority failure (database, receipt writer, cursor key,
+      // principal provider, input refusal) fails closed as degraded.
+      if (error instanceof ProductionReadStateError) {
+        return { state: error.state, documents: [] }
+      }
+      return { state: "degraded" as const, documents: [] }
     }
   }
 
