@@ -131,7 +131,6 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
   const [openDocumentIds, setOpenDocumentIds] = useState<string[]>(documents[0] ? [documents[0].id] : [])
   const [comparisonId, setComparisonId] = useState<string | null>(null)
   const [askOpen, setAskOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
   const askStatusId = useId()
   const memoryTabsId = useId()
   const isMobileComparison = useMobileComparison()
@@ -259,12 +258,8 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
 
   const active = documents.find((item) => item.id === activeId) ?? documents[0]
   const comparison = documents.find((item) => item.id === comparisonId)
-  const normalizedSearch = searchQuery.trim().toLocaleLowerCase()
-  const searchDocuments = normalizedSearch.length === 0 ? documents : documents.filter((item) =>
-    item.title.toLocaleLowerCase().includes(normalizedSearch) || item.content.toLocaleLowerCase().includes(normalizedSearch))
-  const privateDocuments = searchDocuments.filter(({ visibility }) => visibility === "private")
-  const departmentDocuments = searchDocuments.filter(({ visibility }) => visibility === "department")
-  const hasSearchMatches = searchDocuments.length > 0
+  const privateDocuments = documents.filter(({ visibility }) => visibility === "private")
+  const departmentDocuments = documents.filter(({ visibility }) => visibility === "department")
   const availableDocument = departmentDocuments.find(({ id }) => id !== active.id)
   const openDocuments = openDocumentIds.map((id) => documents.find((item) => item.id === id)).filter((item): item is WorkspaceDocument => Boolean(item))
   const activeDocumentIndex = documents.findIndex(({ id }) => id === active.id)
@@ -284,25 +279,21 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
           <Image className={styles.lettermark} src="/brand/allura-lettermark-al-figma.png" width={34} height={34} alt="Allura" priority />
           <button className={styles.railActive} aria-label="Documents" aria-current="page"><BookOpenText aria-hidden="true" /></button>
           <button aria-label="Memory map is shown in the current workspace" title="Memory map is shown in the current workspace" disabled><GitBranch aria-hidden="true" /></button>
-          <button aria-label="Ask Allura" aria-expanded={askOpen} aria-controls={askStatusId} onClick={() => setAskOpen((open) => !open)}><MessageSquareText aria-hidden="true" /></button>
+          <button aria-label="Ask allura" aria-expanded={askOpen} aria-controls={askStatusId} onClick={() => setAskOpen((open) => !open)}><MessageSquareText aria-hidden="true" /></button>
           <button className={styles.railBottom} aria-label="Workspace scope is verified server-side" title="Workspace scope is verified server-side" disabled><LockKeyhole aria-hidden="true" /></button>
         </aside>
 
         <nav className={styles.tree} aria-label="Authorized synthetic Brain tree" data-comparison-background>
-          <div className={styles.brandBlock}><span>ALLURA</span><strong>My Work</strong></div>
+          <div className={styles.brandBlock}><span>allura</span><strong>My Work</strong></div>
           <label className={styles.search}>
             <Search aria-hidden="true" />
             <span className={styles.visuallyHidden}>Search authorized synthetic workspace</span>
-            <input type="search" autoComplete="off" placeholder="Search workspace" value={searchQuery}
-              onChange={(event) => setSearchQuery(event.currentTarget.value)}
-              onKeyDown={(event) => { if (event.key === "Escape") setSearchQuery("") }} />
+            <input placeholder="Search workspace" title="Search is not enabled" disabled />
           </label>
 
-          {normalizedSearch && !hasSearchMatches ? <p className={styles.searchStatus} role="status">No authorized matches.</p> : null}
-
-          <div className={styles.treeSection} hidden={Boolean(normalizedSearch) && !hasSearchMatches}>
+          <div className={styles.treeSection}>
             <p className={styles.treeLabel}><ChevronDown aria-hidden="true" /> YOUR BRAIN <span>{privateDocuments.length}</span></p>
-            {privateDocuments.length === 0 ? <p className={styles.muted}>{normalizedSearch ? "No private matches" : "No private documents"}</p> : null}
+            {privateDocuments.length === 0 ? <p className={styles.muted}>No private documents</p> : null}
             {privateDocuments.map((item) => (
               <button key={item.id} className={active.id === item.id ? styles.selected : ""} aria-current={active.id === item.id ? "page" : undefined} onClick={() => selectDocument(item.id)}>
                 <FileText aria-hidden="true" /><span>{item.title}<small>Private</small></span>
@@ -310,9 +301,9 @@ export function MyWorkWorkspace({ documents, dataState, processRunId }: MyWorkWo
             ))}
           </div>
 
-          <div className={styles.treeSection} hidden={Boolean(normalizedSearch) && !hasSearchMatches}>
+          <div className={styles.treeSection}>
             <p className={styles.treeLabel}><ChevronDown aria-hidden="true" /> APPROVED DEPARTMENTS <span>{departmentDocuments.length}</span></p>
-            {departmentDocuments.length === 0 ? <p className={styles.muted}>{normalizedSearch ? "No department matches" : "No approved department documents"}</p> : null}
+            {departmentDocuments.length === 0 ? <p className={styles.muted}>No approved department documents</p> : null}
             {departmentDocuments.map((item) => (
               <button key={item.id} className={active.id === item.id ? styles.selected : ""} aria-current={active.id === item.id ? "page" : undefined} onClick={() => selectDocument(item.id)}>
                 <FileText aria-hidden="true" /><span>{item.title}<small>{item.departmentId}</small></span>

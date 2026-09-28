@@ -41,7 +41,6 @@
 .search svg { width: 14px; }
 .search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #9ba6ae; font-size: 12px; }
 .search:focus-within { outline: 2px solid var(--blue); outline-offset: 2px; }
-.searchStatus { margin: -4px 5px 18px; color: var(--muted); font-size: 12px; }
 .treeSection { margin-bottom: 18px; }
 .treeLabel { margin: 0 5px 7px; display: flex; align-items: center; gap: 5px; color: #a3b0ba; font: 500 10px/1.2 var(--mono, monospace); letter-spacing: .08em; }
 .treeLabel svg { width: 11px; height: 11px; }
@@ -65,7 +64,7 @@
 .toolbarMeta { display: flex; gap: 6px; }
 .toolbarMeta span { padding: 5px 8px; border: 1px solid var(--line); border-radius: 12px; color: #9aa6af; font: 10px var(--mono, monospace); }
 .toolbarMeta span:first-child { border-color: #315c9b; color: #90b4f3; }
-.tabs { grid-column: 1 / 2; height: 38px; display: flex; align-items: stretch; border-bottom: 1px solid var(--line); background: #0c141c; overflow: hidden; }
+.tabs { grid-column: 1 / 2; height: 44px; display: flex; align-items: stretch; border-bottom: 1px solid var(--line); background: #0c141c; overflow: hidden; }
 .memoryTabs { min-width: 0; display: flex; overflow-x: auto; scrollbar-width: thin; }
 .tabs button { min-width: 170px; max-width: 280px; padding: 0 12px; display: flex; align-items: center; gap: 7px; border: 0; border-right: 1px solid var(--line); border-radius: 0; background: transparent; color: #a3b0ba; font-size: 11px; position: relative; cursor: pointer; }
 .tabs button:disabled { cursor: not-allowed; opacity: .6; }
