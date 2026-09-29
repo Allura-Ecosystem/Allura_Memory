@@ -96,9 +96,9 @@ export function derivePathname(relPath: string): string {
       .join("/")
       // Strip Next.js route groups: (main), (auth), etc.
       .replace(/\([^/]+\)\//g, "")
-      .replace(/\/route\.ts$/, "")
-      .replace(/\/page\.tsx$/, "")
-      .replace(/\/page\.ts$/, "")
+      .replace(/(^|\/)route\.ts$/, "")
+      .replace(/(^|\/)page\.tsx$/, "")
+      .replace(/(^|\/)page\.ts$/, "")
       .replace(/\[\.\.\.[^\]]+\]/g, ":path*")
       .replace(/\[([^\]]+)\]/g, ":$1");
 
