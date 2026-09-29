@@ -410,7 +410,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_promote",
         description:
-          "Request curator promotion for an episodic memory. Never auto-promotes — always routes through canonical_proposals for HITL approval. Idempotent: returns existing proposal_id if already queued.",
+          "Governed promotion request: always routes through canonical_proposals. In auto mode the auto-curator engine approves score-eligible proposals through the same governed transaction. Idempotent: returns existing proposal_id if already queued.",
         inputSchema: {
           type: "object",
           properties: {
