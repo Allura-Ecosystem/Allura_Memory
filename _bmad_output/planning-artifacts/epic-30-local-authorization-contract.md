@@ -112,27 +112,36 @@ Approved as policy input. It does not supply human test results, external review
 
 ### 10.1 The approved rules
 
-1. The three Faith Meats founders — Sabir Asheed, Gabriel Cohen and Samuel Montgomery — may access all Faith Meats projects.
+1. The three Faith Meats founders — Sabir Asheed, Gabriel Cohen and Samuel Montgomery — may access every Faith Meats project. **Clarified 2026-09-28: this is project eligibility/membership only. Founder status never overrides owner-private document visibility, which stays limited to the owner and specifically approved people. Founder is not a superuser or content-override role.** See §10.2.
 2. Every other human may access only the projects they are explicitly added to.
 3. **Allura and every other AI agent MUST NOT have automatic cross-project access.** An agent is assigned project by project with least privilege. Removal terminates access.
 4. Also approved: the current design for testing, strict zero-retention and zero-training AI privacy, limited contractor messaging, five-person user and accessibility testing, full release gates, and keeping Epic 30 open until evidence is complete.
 
 The fail-closed direction of rule 3 is the binding constraint: **absent an explicit assignment, an agent holds nothing.** Rule 1 must never reach an agent. A founder delegating to an agent does not lend that agent founder reach; §4's intersection rule is necessary but not sufficient, because intersecting with a founder's all-project authority would otherwise produce an all-project agent. An agent's own explicit assignment is an independent, additional requirement.
 
-### 10.2 Unresolved conflict with §2 — founder access must be bounded before it is built
+### 10.2 RESOLVED 2026-09-28 — founder access is project eligibility, never a content override
 
-Rule 1 as written conflicts with already-approved decisions and is therefore **not implemented**:
+The owner resolved the conflict in favour of reading **(a)**:
 
-- §2 of this contract: "Roles, including `admin`, authorize administrative actions only. They do not satisfy private ownership or department membership. Owner-private resources are not shareable in this MVP."
-- Approval packet decision 2: "Owner-private content has no administrator override."
-- Accepted epic default 3: "Private content is owner-only: no private sharing, emergency access, or administrator override in MVP."
+> Faith Meats founders Sabir Asheed, Gabriel Cohen and Samuel Montgomery may access every Faith Meats project, but **founder status NEVER overrides owner-private document visibility**. Owner-private documents remain visible only to the document owner and specifically approved people. Founder status is project eligibility/membership, not a superuser or content-override role.
 
-Two readings are possible and they differ materially:
+This is fully compatible with the decisions it appeared to conflict with, all of which stand unchanged:
 
-- **(a) Project-scope reading.** Founders are implicitly members of every Faith Meats *project*, and therefore see what any project member sees. Owner-private content stays owner-only, including from founders. This preserves every existing decision.
-- **(b) Override reading.** Founders can read all content in Faith Meats projects, including other people's owner-private content. This reverses §2, packet decision 2 and accepted default 3.
+- §2, verbatim: "Roles, including `admin`, authorize administrative actions only. They do not satisfy private ownership or department membership. **Owner-private resources are not shareable in this MVP.**"
+- Approval packet decision 2, verbatim: "Owner-private content has no administrator override and is not shareable in this MVP."
+- Accepted epic default 3, verbatim: "Private content is owner-only: **no private sharing**, emergency access, or administrator override in MVP."
 
-**No founder role, all-access role or override is implemented, and none will be until the owner selects (a) or (b) in writing.** Building (b) by inference would silently remove the owner-only guarantee that the rest of this contract is built on. Recorded as an open decision, not an accepted default.
+**One divergence, stated rather than absorbed.** The approved wording permits owner-private documents to reach "specifically approved people". Accepted default 3 forbids private sharing in MVP and no per-document approval or share mechanism exists, so the stricter owner-only behaviour is what ships. That is a gap between the wording and MVP scope, not an implemented capability; see the §10.4 Gap column.
+
+**No code change was required, because the existing enforcement already implements this.** The general control is the RLS policy in migration `72-digital-brain-workspace-membership.sql`, whose private disjunct is `owner_id = current_setting('app.current_principal', true)` alone; `allura_app` is `NOBYPASSRLS` with `FORCE ROW LEVEL SECURITY` and no SELECT policy for any other role. The admin predicate `brain_has_current_workspace_admin()` exists but is applied only to membership and messaging tables, never to `brain_documents`. On top of that, the synthetic read path re-checks in TypeScript: `canDisclose` (`src/lib/digital-brain/read-service.ts`) resolves a private row purely by `row.owner_id === scope.principalId`, with no role branch, and the envelope annotates roles as administrative-only.
+
+Two precision notes rather than broader claims. `migration-contract.test.ts` regex-checks migration 71 only, for same-line `admin`/`private` co-occurrence — it does not cover migration 72, which owns the live policy. And `src/lib/digital-brain/production-reader.ts` has no owner/visibility predicate of its own and relies entirely on RLS; it has no route, page or MCP consumer today, so this is a pre-existing defence-in-depth gap to close before that module is wired, not something introduced here.
+
+What was added is a **regression guard**, not a new control: `read-service.test.ts` now proves that a principal carrying a `founder` role — including when it also carries `admin` — still reads nothing of another user's owner-private document, while the owner still reads their own. Verified to bite: injecting a `roles`-keyed founder override into `canDisclose` fails all three cases, and removing it restores 35/35.
+
+**Scope of that guard, stated precisely.** `canDisclose` takes a scope with no `role` field, so parameterising over `viewer`/`curator`/`admin` does not vary the function under test; those three collapse onto the pre-existing admin assertion. `roles` is currently dead on the read path — `issueReadEnvelope` never copies it. What the guard genuinely defends is the specific drift this decision invites: someone wiring `roles` into the envelope and branching on a founder value. It is not a proof across the role space.
+
+**The eligibility half is not enforced and is not claimed to be.** Founders being members of every Faith Meats project requires project-grained membership, which does not exist (§10.3). Nothing in this repository grants or denies at project grain today.
 
 ### 10.3 Project grain does not exist yet
 
@@ -148,7 +157,7 @@ The finest authority grain that exists is **tenant (`group_id`) plus workspace (
 | Agents least privilege (3) | A delegated `mcp_token` principal with no verified workspace binding is refused on **every** tool. Previously only `memory_search`, `memory_get` and `memory_list` refused; delete, update, export, restore, promote and the audit and governance readers ran tenant-wide on the absence of an assignment. Those three reads still refuse for every auth method — narrowing that would have removed an existing control and turned an audited deny into an audited allow. | **Open risk, not closed.** The all-tool refusal is scoped to `mcp_token` because widening it breaks the AC-10 shared-token compatibility contract. `dev_local` is fenced out of production, but the **HTTP shared-token `service_identity` path is not**, and such a principal has no workspace binding while `audit_query_events`, `governance_audit_log` and `memory_export` filter on `group_id` alone — tenant-wide audit and export reach. Shared-token tenants also default to `allura-system` and roles to `viewer` with no explicitness required, so the earlier claim that these principals "carry their own explicit tenant allowlists" and are "fenced out of production" was wrong and is withdrawn. |
 | Removal terminates access (3) | Credential revocation is proved live on reused and fresh pooled connections. Registry removal yields no access **after the registry is reloaded**. | Membership and project revocation timing is still an unmeasured target; the registry has no revocation event, and its process-lifetime cache means an edit leaves the stale grant live until reload or restart. A test pins both the reloaded behaviour and the un-reloaded stale grant so the gap is visible rather than implied solved. |
 | Humans explicit only (2) | Workspace and department membership already require a current, non-revoked, approval-backed record. | Project grain absent (§10.3). |
-| Founder all-access (1) | **Nothing.** Deliberately unimplemented pending §10.2. | The (a)/(b) decision. |
+| Founder eligibility (1) | The **non-override half is enforced**: RLS resolves a private row by owner identity alone and the synthetic read path re-checks it, with no role branch anywhere. A regression guard pins it against a `roles`-keyed override, including when the principal also carries `admin`. | Two gaps. (i) The **eligibility half is not enforced**: founders being members of every Faith Meats project needs project-grained membership, which does not exist (§10.3). No founder principal set, role grant, allowlist or flag was added, and none of the three founders is named in any source, schema or config file. (ii) **"Specifically approved people" is not enforced either**: no per-document approval or share mechanism exists and accepted default 3 forbids private sharing in MVP, so owner-only ships. The owner should confirm owner-only is intended or scope sharing as separate work. |
 
 ### 10.5 Cross-tenant grants already present, referred to the owner
 

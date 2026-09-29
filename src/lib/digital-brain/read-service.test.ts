@@ -140,6 +140,37 @@ describe("readAuthorizedDocuments", () => {
     expect(documents).toEqual([])
   })
 
+  // Approved 2026-09-28 (Sabir Asheed), resolving the founder-access ambiguity:
+  // founder status is project ELIGIBILITY/MEMBERSHIP, not a superuser or
+  // content-override role. Owner-private documents stay visible only to the
+  // owner and specifically approved people. This pins the boundary across
+  // every role value so the founder decision can never drift into an
+  // override — the one way this approval could be misread.
+  it.each(["viewer", "curator", "admin"] as const)(
+    "never lets a %s founder-eligible principal read another user's owner-private document",
+    async (role) => {
+      const query = vi.fn(async () => ({
+        rows: [row({ owner_id: "other-user", title: "Other user private note" })],
+      }))
+
+      const documents = await readAuthorizedDocumentsInRestrictedTransaction(
+        { ...OWNER_ENVELOPE, principalId: "founder-user", role, roles: [role, "founder"] },
+        query,
+      )
+
+      expect(documents).toEqual([])
+    },
+  )
+
+  it("still returns the owner their own private document", async () => {
+    // The guard above must deny by ownership, not by denying everything.
+    const query = vi.fn(async () => ({ rows: [row()] }))
+
+    const documents = await readAuthorizedDocumentsInRestrictedTransaction(OWNER_ENVELOPE, query)
+
+    expect(documents.map(({ id }) => id)).toEqual(["private-owner-note"])
+  })
+
   it("returns department content only with a current matching membership", async () => {
     const departmentRow = row({
       id: "department-runbook",

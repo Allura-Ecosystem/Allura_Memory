@@ -64,7 +64,8 @@
     {
       "item": "Founder all-access for the three named founders",
       "reason": "Correction 1 conflicts with three already-approved decisions: contract §2 ('roles, including admin, authorize administrative actions only'), approval-packet decision 2 ('owner-private content has no administrator override') and accepted epic default 3 (no administrator override in MVP). It can be read as founders being implicit members of every Faith Meats project (compatible) or as founders overriding owner-private content (incompatible). Implementing the second reading by inference would silently remove the owner-only guarantee the rest of the contract rests on. Recorded as an open decision in contract §10.2; one written choice from the owner is required.",
-      "ownerAction": "Choose reading (a) project-scope membership or (b) content override, in writing."
+      "ownerAction": "Choose reading (a) project-scope membership or (b) content override, in writing.",
+      "supersededBy": "RESOLVED later the same day. The owner chose reading (a): founder status is project eligibility/membership and never overrides owner-private visibility. The ownerAction recorded alongside this entry is closed. The non-override half needed no code because owner-private already resolves by owner identity with no role branch, and a regression guard now pins it; the eligibility half remains unimplemented pending project-grained membership. See evidence/epic30-founder-eligibility-not-override-2026-09-28.json."
     },
     {
       "item": "Project-grained authority",
