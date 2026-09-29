@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allura.dev/schemas/agent.schema.json",
   "title": "Agent",
-  "description": "AI agent node in Neo4j",
+  "description": "AI agent record in PostgreSQL",
   "type": "object",
   "required": [
     "id", "name", "persona", "team", "category", "type",

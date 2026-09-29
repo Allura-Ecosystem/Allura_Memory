@@ -2,7 +2,7 @@
 /**
  * Backfill Schema Version (FR-1, FR-2, NFR-3)
  *
- * Sets schema_version = 1 on all existing rows (PG) and nodes (Neo4j) where null.
+ * Sets schema_version = 1 on all existing rows where null.
  * This script is idempotent — safe to re-run.
  *
  * Usage:
@@ -11,12 +11,8 @@
  * Environment:
  *   DATABASE_URL       — Main PostgreSQL connection string
  *   RUVECTOR_DATABASE_URL — RuVector PostgreSQL connection string (or same as DATABASE_URL)
- *   NEO4J_URL          — Neo4j bolt URL (e.g., bolt://localhost:7687)
- *   NEO4J_USER         — Neo4j username (default: neo4j)
- *   NEO4J_PASSWORD     — Neo4j password
  */
 
-import neo4j from "neo4j-driver"
 import { Pool } from "pg"
 
 const SCHEMA_VERSION = 1
@@ -56,61 +52,6 @@ async function backfillPostgres(pool: Pool, tableName: string): Promise<number> 
   return updated
 }
 
-async function backfillNeo4j(driver: ReturnType<typeof neo4j.driver>): Promise<{ memories: number; insights: number }> {
-  console.log("[backfill] Checking Neo4j nodes needing schema_version...")
-
-  const session = driver.session()
-
-  try {
-    // Backfill Memory nodes
-    const memoryResult = await session.run(
-      `MATCH (m:Memory) WHERE m.schema_version IS NULL SET m.schema_version = $version`,
-      { version: neo4j.int(SCHEMA_VERSION) }
-    )
-    const memoriesBackfilled = memoryResult.summary.counters.updates().propertiesSet ?? 0
-    console.log(`[backfill] Neo4j Memory nodes: ${memoriesBackfilled} properties set`)
-
-    // Backfill Insight nodes
-    const insightResult = await session.run(
-      `MATCH (i:Insight) WHERE i.schema_version IS NULL SET i.schema_version = $version`,
-      { version: neo4j.int(SCHEMA_VERSION) }
-    )
-    const insightsBackfilled = insightResult.summary.counters.updates().propertiesSet ?? 0
-    console.log(`[backfill] Neo4j Insight nodes: ${insightsBackfilled} properties set`)
-
-    // Also set schema_version = 1 on nodes that have a different version (shouldn't exist yet)
-    const memoryVerify = await session.run(
-      `MATCH (m:Memory) WHERE m.schema_version IS NULL OR NOT EXISTS(m.schema_version) SET m.schema_version = $version RETURN count(m) as count`,
-      { version: neo4j.int(SCHEMA_VERSION) }
-    )
-    const insightVerify = await session.run(
-      `MATCH (i:Insight) WHERE i.schema_version IS NULL OR NOT EXISTS(i.schema_version) SET i.schema_version = $version RETURN count(i) as count`,
-      { version: neo4j.int(SCHEMA_VERSION) }
-    )
-
-    // Verify counts
-    const memoryCount = await session.run(
-      `MATCH (m:Memory) RETURN m.schema_version as sv, count(m) as count ORDER BY sv`
-    )
-    console.log("[backfill] Neo4j Memory verification:", memoryCount.records.map((r: any) => ({
-      schema_version: r.get("sv")?.toNumber?.() ?? r.get("sv"),
-      count: r.get("count").toNumber()
-    })))
-
-    const insightCount = await session.run(
-      `MATCH (i:Insight) RETURN i.schema_version as sv, count(i) as count ORDER BY sv`
-    )
-    console.log("[backfill] Neo4j Insight verification:", insightCount.records.map((r: any) => ({
-      schema_version: r.get("sv")?.toNumber?.() ?? r.get("sv"),
-      count: r.get("count").toNumber()
-    })))
-
-    return { memories: memoriesBackfilled, insights: insightsBackfilled }
-  } finally {
-    await session.close()
-  }
-}
-
 async function main(): Promise<void> {
   console.log("[backfill] Starting schema version backfill...")
   console.log(`[backfill] Target schema_version: ${SCHEMA_VERSION}`)
@@ -142,25 +83,6 @@ async function main(): Promise<void> {
 
   if (ruvectorPool !== mainPool) {
     await ruvectorPool.end()
-  }
-
-  // ── Neo4j: Memory and Insight nodes ───────────────────────────────────────
-  const neo4jUrl = process.env.NEO4J_URL
-  if (neo4jUrl) {
-    const neo4jUser = process.env.NEO4J_USER || "neo4j"
-    const neo4jPassword = process.env.NEO4J_PASSWORD || ""
-
-    const driver = neo4j.driver(neo4jUrl, neo4j.auth.basic(neo4jUser, neo4jPassword))
-
-    try {
-      await backfillNeo4j(driver)
-    } catch (err) {
-      console.error("[backfill] Error backfilling Neo4j:", err)
-    } finally {
-      await driver.close()
-    }
-  } else {
-    console.log("[backfill] Skipping Neo4j backfill: NEO4J_URL not set")
   }
 
   // ── Cleanup ────────────────────────────────────────────────────────────────

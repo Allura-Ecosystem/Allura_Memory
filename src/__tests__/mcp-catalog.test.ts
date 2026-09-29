@@ -50,7 +50,7 @@ describe("MCP Catalog Types", () => {
   describe("validateToolId", () => {
     it("accepts valid tool IDs", () => {
       expect(validateToolId("allura-brain::memory_search")).toBe(true)
-      expect(validateToolId("neo4j-memory::create_entities")).toBe(true)
+      expect(validateToolId("allura-brain::memory_add")).toBe(true)
       expect(validateToolId("database-server::execute_sql")).toBe(true)
     })
 

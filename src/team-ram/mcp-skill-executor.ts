@@ -45,10 +45,10 @@ export interface SkillServerConfig {
  * Points to the skill source files in .opencode/skills/.
  */
 const DEFAULT_SKILL_SERVERS: Record<string, SkillServerConfig> = {
-  "skill-neo4j-memory": {
-    skillName: "skill-neo4j-memory",
+  "skill-ruvector-memory": {
+    skillName: "skill-ruvector-memory",
     command: "bun",
-    args: ["run", ".opencode/skills/skill-neo4j-memory/src/index.ts"],
+    args: ["run", ".opencode/skills/skill-ruvector-memory/src/index.ts"],
     env: {},
   },
   "skill-cypher-query": {
@@ -315,7 +315,7 @@ export class McpSkillExecutor implements SkillExecutor {
  * Create a configured skill executor for Team RAM orchestration.
  *
  * Returns an InProcessSkillExecutor that satisfies the SkillExecutor
- * contract using the repo's own connection layers (PG + Neo4j) instead
+ * contract using the repo's own connection layer (PostgreSQL) instead
  * of spawning stdio child processes.
  *
  * The connection layers read credentials directly from process.env, so

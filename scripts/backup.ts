@@ -3,7 +3,6 @@
  *
  * Usage:
  *   bun run scripts/backup.ts --type postgres
- *   bun run scripts/backup.ts --type neo4j
  *   bun run scripts/backup.ts --type config
  *   bun run scripts/backup.ts --type workspace
  *   bun run scripts/backup.ts --type skills
@@ -62,25 +61,21 @@ Usage:
   bun run scripts/backup.ts [options]
 
 Options:
-  --type, -t <type>  Backup type (postgres|neo4j|config|workspace|skills|full)
+  --type, -t <type>  Backup type (postgres|config|workspace|skills|full)
                      Can be specified multiple times. Default: full
   --help, -h         Show this help
 
 Examples:
   bun run scripts/backup.ts --type postgres
-  bun run scripts/backup.ts --type neo4j --type config
+  bun run scripts/backup.ts --type postgres --type config
   bun run scripts/backup.ts --type full
 
 Environment:
   BACKUP_ENCRYPTION_KEY  Required: AES-256 encryption key (min 8 chars)
   BACKUP_DIR             Optional: Backup directory (default: ./backups)
   POSTGRES_CONTAINER     Optional: Docker container name (default: knowledge-postgres)
-  NEO4J_CONTAINER        Optional: Docker container name (default: knowledge-neo4j)
   POSTGRES_DB            Optional: PostgreSQL database name (default: memory)
-  NEO4J_DATABASE         Optional: Neo4j database name (default: neo4j)
   POSTGRES_USER          Optional: PostgreSQL user (default: ronin4life)
-  NEO4J_USER             Optional: Neo4j user (default: neo4j)
-  NEO4J_PASSWORD         Required for Neo4j backup
 
 `)
 }

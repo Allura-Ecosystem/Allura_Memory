@@ -79,7 +79,7 @@ With `allura-governance` installed, Claude will:
 
 1. **Block** `docker exec` commands
 2. **Block** UPDATE/DELETE on PostgreSQL trace tables
-3. **Block** direct Neo4j node mutation without `SUPERSEDES`
+3. **Block** direct `graph_memories` mutation without `SUPERSEDES`
 4. **Block** `memory_promote` without `curator_approved`
 5. **Block** queries missing `group_id`
 6. **Flag** deprecated `roninclaw-*` group_ids

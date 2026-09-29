@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # migrate-to-laptop.sh — OLD machine side of the Allura Memory laptop migration.
-# Cold-backs up the 3 Docker volumes + carries the 2 secret env files onto a
+# Cold-backs up the Docker volume + carries the 2 secret env files onto a
 # flash drive (or any target dir), with checksums for integrity verification.
 #
 # Usage:
 #   ./scripts/migrate-to-laptop.sh /media/ronin704/<USB-LABEL>
 #   ./scripts/migrate-to-laptop.sh                 # defaults to ./allura-migration-bundle
 #
-# Safe to re-run. Quiesces ONLY the knowledge stack (PG/Neo4j/MCP) for a
+# Safe to re-run. Quiesces ONLY the knowledge stack (PostgreSQL + RuVector / MCP) for a
 # consistent snapshot, then brings it back up. Other containers are untouched.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET="${1:-$REPO_ROOT/allura-migration-bundle}"
-VOLUMES=(memory_postgres_data neo4j_data neo4j_logs)
+VOLUMES=(memory_postgres_data)
 NETWORK="knowledge-network"
 
 say() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
@@ -39,11 +39,11 @@ if docker compose -f "$REPO_ROOT/docker-compose.yml" ps -q 2>/dev/null | grep -q
   RESTART=1
 else
   # Fall back to stopping the known containers by name if compose isn't tracking them
-  docker stop knowledge-postgres knowledge-neo4j allura-memory-mcp >/dev/null 2>&1 && RESTART=1 || true
+  docker stop knowledge-postgres allura-memory-mcp >/dev/null 2>&1 && RESTART=1 || true
 fi
 
 # --- 2. Cold-tar each volume into the target --------------------------------
-say "Backing up volumes (cold)"
+say "Backing up volume (cold)"
 for V in "${VOLUMES[@]}"; do
   echo "  tar  $V -> $TARGET/$V.tar.gz"
   docker run --rm -v "$V":/data:ro -v "$TARGET":/backup alpine \
@@ -84,7 +84,7 @@ say "Writing checksum manifest"
 if [ "$RESTART" = "1" ]; then
   say "Restarting knowledge stack"
   ( cd "$REPO_ROOT" && docker compose start ) 2>/dev/null \
-    || docker start knowledge-postgres knowledge-neo4j allura-memory-mcp >/dev/null 2>&1 || true
+    || docker start knowledge-postgres allura-memory-mcp >/dev/null 2>&1 || true
 fi
 
 say "DONE — bundle ready at: $TARGET"

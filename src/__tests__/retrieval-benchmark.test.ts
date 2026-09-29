@@ -2,15 +2,15 @@
  * Retrieval Benchmark Test Suite — FR-1.2
  *
  * Measures retrieval quality for Allura Memory's federated search.
- * Architecture: PostgreSQL (episodic) + Neo4j (semantic/canonical) + RuVector (primary).
- * The `memory_search` function dispatches through RuVector → Neo4j → PG fallback.
+ * Architecture: PostgreSQL (episodic) + semantic store (semantic/canonical) + RuVector (primary).
+ * The `memory_search` function dispatches through RuVector → semantic store → PG fallback.
  *
  * Benchmarks:
  * 1. Precision@5 ≥ 0.85 — At least 4 of top 5 results relevant
  * 2. Recall@5 ≥ 0.70   — ≥70% of known-relevant memories in top 5
  * 3. MRR ≥ 0.75         — First relevant result in top ~1.3 on average
  * 4. Cross-group isolation — Zero leakage between tenant namespaces
- * 5. Degradation test     — Neo4j down → PG fallback, degraded: true
+ * 5. Degradation test     — semantic store down → PG fallback, degraded: true
  * 6. Empty query handling  — No crash, returns empty array
  *
  * All benchmark scores are stored to Allura Brain via memory_add
@@ -43,14 +43,14 @@ const mockPgPool = {
   })),
 };
 
-// Mock graph adapter (Neo4j semantic search)
+// Mock graph adapter (semantic store semantic search)
 const mockGraphSearchMemories = vi.fn();
 const mockGraphCheckDuplicate = vi.fn();
 const mockGraphCreateMemory = vi.fn();
 const mockGraphLinkMemoryContext = vi.fn();
 
 vi.mock("@/lib/graph-adapter", () => ({
-  getGraphBackend: vi.fn().mockReturnValue("neo4j"),
+  getGraphBackend: vi.fn().mockReturnValue("ruvector"),
   createGraphAdapter: vi.fn().mockImplementation(() => ({
     searchMemories: mockGraphSearchMemories,
     checkDuplicate: mockGraphCheckDuplicate,
@@ -63,22 +63,12 @@ vi.mock("@/lib/graph-adapter", () => ({
 vi.mock("@/mcp/canonical-tools/connection", () => ({
   getConnections: vi.fn().mockImplementation(async () => ({
     pg: mockPgPool,
-    neo4j: {},
   })),
   resetConnections: vi.fn(),
 }));
 
 vi.mock("pg", () => ({
   Pool: vi.fn().mockImplementation(() => mockPgPool),
-}));
-
-vi.mock("neo4j-driver", () => ({
-  default: {
-    driver: vi.fn().mockReturnValue({ close: vi.fn() }),
-    int: (val: number) => ({ toNumber: () => val }),
-    auth: { basic: vi.fn() },
-  },
-  Driver: vi.fn(),
 }));
 
 vi.mock("@/lib/ruvector/bridge", () => ({
@@ -199,11 +189,11 @@ const SEED_MEMORIES: SeedMemory[] = [
   { id: "mem-ui-03", content: "CSS custom properties enable runtime dark mode switching without page reload", score: 0.87, group_id: GROUP_SYSTEM, topic: "dark_mode" },
   { id: "mem-ui-04", content: "Prefers-color-scheme media query detects OS-level dark mode setting", score: 0.84, group_id: GROUP_SYSTEM, topic: "dark_mode" },
 
-  // Topic: Neo4j / graph databases
-  { id: "mem-neo4j-01", content: "Neo4j Cypher MATCH clauses should always include a group_id filter for multi-tenant isolation", score: 0.96, group_id: GROUP_SYSTEM, topic: "neo4j" },
-  { id: "mem-neo4j-02", content: "Neo4j fulltext indexes use Lucene under the hood for semantic-adjacent search", score: 0.91, group_id: GROUP_SYSTEM, topic: "neo4j" },
-  { id: "mem-neo4j-03", content: "SUPERSEDES relationships in Neo4j create immutable version chains for memories", score: 0.88, group_id: GROUP_SYSTEM, topic: "neo4j" },
-  { id: "mem-neo4j-04", content: "Neo4j connection pooling with bolt+routing enables read replicas for search", score: 0.83, group_id: GROUP_SYSTEM, topic: "neo4j" },
+  // Topic: semantic store / graph databases
+  { id: "mem-semantic-01", content: "semantic store Cypher MATCH clauses should always include a group_id filter for multi-tenant isolation", score: 0.96, group_id: GROUP_SYSTEM, topic: "neo4j" },
+  { id: "mem-semantic-02", content: "semantic store fulltext indexes use Lucene under the hood for semantic-adjacent search", score: 0.91, group_id: GROUP_SYSTEM, topic: "neo4j" },
+  { id: "mem-semantic-03", content: "SUPERSEDES relationships in semantic store create immutable version chains for memories", score: 0.88, group_id: GROUP_SYSTEM, topic: "neo4j" },
+  { id: "mem-semantic-04", content: "semantic store connection pooling with bolt+routing enables read replicas for search", score: 0.83, group_id: GROUP_SYSTEM, topic: "neo4j" },
 
   // Off-topic (noise)
   { id: "mem-noise-01", content: "The quick brown fox jumps over the lazy dog", score: 0.50, group_id: GROUP_SYSTEM, topic: "noise" },
@@ -212,7 +202,7 @@ const SEED_MEMORIES: SeedMemory[] = [
   // Cross-group: Durham memories (must NOT appear in allura-system queries)
   { id: "mem-dur-01", content: "TypeScript ESLint rules for the Durham team codebase", score: 0.90, group_id: GROUP_DURHAM, topic: "typescript" },
   { id: "mem-dur-02", content: "Durham dark mode implementation uses CSS-in-JS with styled-components", score: 0.88, group_id: GROUP_DURHAM, topic: "dark_mode" },
-  { id: "mem-dur-03", content: "Durham Neo4j instance runs on port 7688 with custom auth", score: 0.85, group_id: GROUP_DURHAM, topic: "neo4j" },
+  { id: "mem-dur-03", content: "Durham semantic store instance runs on port 7688 with custom auth", score: 0.85, group_id: GROUP_DURHAM, topic: "neo4j" },
 ];
 
 /**
@@ -234,8 +224,8 @@ const JUDGMENTS: RelevanceJudgment[] = [
     relevantIds: ["mem-ui-01", "mem-ui-02", "mem-ui-03", "mem-ui-04"],
   },
   {
-    query: "Neo4j graph database queries and indexing",
-    relevantIds: ["mem-neo4j-01", "mem-neo4j-02", "mem-neo4j-03", "mem-neo4j-04"],
+    query: "semantic store graph database queries and indexing",
+    relevantIds: ["mem-semantic-01", "mem-semantic-02", "mem-semantic-03", "mem-semantic-04"],
   },
 ];
 
@@ -325,7 +315,7 @@ function buildRuVectorResponse(groupId: string, query: string): {
 }
 
 /**
- * Build Graph adapter (Neo4j) mock response — semantic/canonical memories.
+ * Build Graph adapter (semantic store) mock response — semantic/canonical memories.
  * These are promoted memories (score >= 0.85) with keyword overlap.
  */
 function buildGraphResponse(groupId: string, query: string): Array<{
@@ -419,7 +409,7 @@ function configureMocksForQuery(groupId: string, query: string): void {
   // RuVector returns results (primary)
   mockSearchWithFeedback.mockResolvedValue(buildRuVectorResponse(groupId, query));
 
-  // Graph adapter (Neo4j) returns semantic results as fallback
+  // Graph adapter (semantic store) returns semantic results as fallback
   mockGraphSearchMemories.mockResolvedValue(buildGraphResponse(groupId, query));
 
   // PG returns episodic ILIKE results as last fallback
@@ -615,11 +605,11 @@ describe("Retrieval Benchmark — FR-1.2", () => {
     });
   });
 
-  // ── 5. Degradation test — Neo4j unreachable ─────────────────────────────
+  // ── 5. Degradation test — semantic store unreachable ─────────────────────────────
 
-  describe("5. Degradation test (Neo4j unreachable)", () => {
-    it("returns PG results with degraded: true when Neo4j is down", async () => {
-      // RuVector succeeds but returns fewer results than limit (triggers Neo4j fallback)
+  describe("5. Degradation test (semantic store unreachable)", () => {
+    it("returns PG results with degraded: true when semantic store is down", async () => {
+      // RuVector succeeds but returns fewer results than limit (triggers semantic store fallback)
       mockSearchWithFeedback.mockResolvedValue({
         memories: [
           {
@@ -636,8 +626,8 @@ describe("Retrieval Benchmark — FR-1.2", () => {
         shouldLogFeedback: true,
       });
 
-      // Neo4j (graph adapter) throws connection error
-      mockGraphSearchMemories.mockRejectedValue(new Error("Neo4j connection refused"));
+      // semantic store (graph adapter) throws connection error
+      mockGraphSearchMemories.mockRejectedValue(new Error("semantic store connection refused"));
 
       // PG fallback returns results
       mockPgQuery.mockResolvedValue({
@@ -665,7 +655,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       // Should still return results (from RuVector + PG)
       expect(response.results.length).toBeGreaterThan(0);
 
-      // Should have warnings about Neo4j unavailability
+      // Should have warnings about semantic store unavailability
       const warnings = response.meta?.warnings ?? [];
       const hasGraphWarning = warnings.some((w: string) =>
         w.toLowerCase().includes("graph") || w.toLowerCase().includes("neo4j")
@@ -683,12 +673,12 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       expect(response.results.length).toBeGreaterThan(0);
     });
 
-    it("returns degraded response when both RuVector and Neo4j are unreachable", async () => {
+    it("returns degraded response when both RuVector and semantic store are unreachable", async () => {
       // RuVector fails
       mockSearchWithFeedback.mockRejectedValue(new Error("RuVector connection refused"));
 
-      // Neo4j fails
-      mockGraphSearchMemories.mockRejectedValue(new Error("Neo4j connection refused"));
+      // semantic store fails
+      mockGraphSearchMemories.mockRejectedValue(new Error("semantic store connection refused"));
 
       // PG still works (last fallback)
       mockPgQuery.mockResolvedValue({
@@ -716,7 +706,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       // PG fallback should return results
       expect(response.results.length).toBeGreaterThan(0);
 
-      // Should have warnings about both RuVector and Neo4j
+      // Should have warnings about both RuVector and semantic store
       const warnings = response.meta?.warnings ?? [];
       const hasRuvectorWarning = warnings.some((w: string) =>
         w.toLowerCase().includes("ruvector")

@@ -5,7 +5,7 @@
  * (all required dependencies are healthy), 503 otherwise.
  *
  * Required: PostgreSQL, MCP server initialized
- * Optional: Neo4j (degraded mode if down)
+ * Optional: RuVector semantic layer (degraded mode if down)
  *
  * No auth required — this is a health endpoint.
  */

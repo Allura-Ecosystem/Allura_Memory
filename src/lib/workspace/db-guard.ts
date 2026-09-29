@@ -118,7 +118,7 @@ export function assertGroupIdMatch(actual: string, expected: string): void {
 }
 
 /**
- * Wrap a Neo4j Cypher query to ensure it includes a group_id filter.
+ * Wrap a graph query to ensure it includes a group_id filter.
  *
  * @param query - Original Cypher query
  * @param groupId - The group_id to enforce

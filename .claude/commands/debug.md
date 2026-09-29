@@ -18,7 +18,7 @@ This command enforces the 5-phase debugging protocol from `AGENTS.md` section 10
 Search for previous debugging sessions on this issue:
 
 ```javascript
-mcp__MCP_DOCKER__search_memories({ query: "$ARGUMENTS" })
+allura-brain__memory_search({ query: "$ARGUMENTS", group_id: "allura-system" })
 ```
 
 If a prior session exists: read what was tried, what failed, and why.
@@ -82,18 +82,16 @@ Only after root cause is confirmed:
 Log the debugging session to memory:
 
 ```javascript
-mcp__MCP_DOCKER__create_entities({
-  entities: [{
-    name: "Debug Session " + new Date().toISOString(),
-    type: "Episode",
-    observations: [
-      "group_id: allura-system",
-      "issue: $ARGUMENTS",
-      "root_cause: [what caused it]",
-      "fix: [what fixed it]",
-      "lesson: [what to watch for]"
-    ]
-  }]
+allura-brain__memory_add({
+  group_id: "allura-system",
+  user_id: "<agent_id>",
+  content: "Debug session: $ARGUMENTS",
+  metadata: {
+    event_type: "DEBUG_SESSION",
+    root_cause: "[what caused it]",
+    fix: "[what fixed it]",
+    lesson: "[what to watch for]"
+  }
 })
 ```
 

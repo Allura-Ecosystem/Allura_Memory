@@ -184,32 +184,14 @@ if command_exists docker && docker ps | grep -q knowledge-postgres; then
   fi
 fi
 
-# Neo4j maintenance
-if command_exists docker && docker ps | grep -q knowledge-neo4j; then
-  log_info "Running Neo4j maintenance..."
-  
-  # Check Neo4j store size
-  NEO4J_DATA_SIZE=$(docker exec knowledge-neo4j du -sh /data 2>/dev/null | cut -f1 || echo "unknown")
-  log_info "Neo4j data size: ${NEO4J_DATA_SIZE}"
-  
-  # Check transaction logs
-  TX_LOG_SIZE=$(docker exec knowledge-neo4j du -sh /data/transactions 2>/dev/null | cut -f1 || echo "0")
-  
-  if [ "$TX_LOG_SIZE" != "0" ] && [ "$TX_LOG_SIZE" != "unknown" ]; then
-    # Check if tx log size is concerning (> 100MB)
-    if [[ "$TX_LOG_SIZE" == *"M"* ]] || [[ "$TX_LOG_SIZE" == *"G"* ]]; then
-      log_info "Transaction log size: ${TX_LOG_SIZE}"
-      # Note: Neo4j prunes transaction logs automatically, but we log the size
-      log_success "✓ Neo4j transaction logs are manageable"
-      ((CHECKS_PASSED++))
-    else
-      log_success "✓ Neo4j transaction logs are small"
-      ((CHECKS_PASSED++))
-    fi
-  else
-    log_success "✓ Neo4j maintenance not required"
-    ((CHECKS_PASSED++))
-  fi
+# Semantic store (graph_memories / graph_supersedes) footprint
+if command_exists docker && docker ps | grep -q knowledge-postgres; then
+  log_info "Checking semantic store (graph_memories) footprint..."
+
+  SEMANTIC_STORE_SIZE=$(docker exec knowledge-postgres psql -U "${POSTGRES_USER:-ronin4life}" -d memory -t -c "SELECT pg_size_pretty(COALESCE(pg_total_relation_size('graph_memories'),0) + COALESCE(pg_total_relation_size('graph_supersedes'),0));" 2>/dev/null | xargs || echo "unknown")
+  log_info "Semantic store size: ${SEMANTIC_STORE_SIZE:-unknown}"
+  log_success "✓ Semantic store footprint recorded"
+  ((CHECKS_PASSED++))
 fi
 
 # =============================================================================
@@ -468,7 +450,7 @@ log_info "Maintenance Actions: ${MAINTENANCE_ACTIONS}"
 # Generate metrics summary
 log_info "Metrics Summary:"
 log_info "  - Database Size: ${DB_SIZE:-unknown}"
-log_info "  - Neo4j Data Size: ${NEO4J_DATA_SIZE:-unknown}"
+log_info "  - Semantic Store Size: ${SEMANTIC_STORE_SIZE:-unknown}"
 log_info "  - TypeScript Compile Time: ${COMPILE_TIME_MS:-unknown}ms"
 
 if [ "$ERRORS" -gt 0 ]; then

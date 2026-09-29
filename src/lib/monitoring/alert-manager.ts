@@ -26,7 +26,6 @@ export type AlertCategory =
   | 'hydration'         // State hydration failures
   | 'drift'             // Planning drift detection
   | 'database'          // PostgreSQL connection/query errors
-  | 'neo4j'             // Neo4j connection/query errors
   | 'subagent'          // Subagent coordination errors
   | 'validation'        // Data validation errors
   | 'recovery'          // Recovery mechanism failures
@@ -48,7 +47,6 @@ export const AlertDefinitionSchema = z.object({
     'hydration',
     'drift',
     'database',
-    'neo4j',
     'subagent',
     'validation',
     'recovery',

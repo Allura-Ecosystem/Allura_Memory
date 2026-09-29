@@ -2,7 +2,7 @@
  * CONTRIBUTED Relationship Tracker
  * Story 1.5: Track agent knowledge contributions
  *
- * Creates (Agent)-[:CONTRIBUTED]->(Entity) relationships in Neo4j
+ * Creates (Agent)-[:CONTRIBUTED]->(Entity) relationships in the semantic store
  * to track which agents contributed to tasks, decisions, lessons, etc.
  */
 

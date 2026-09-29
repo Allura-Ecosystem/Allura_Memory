@@ -131,12 +131,10 @@ async function hydrateMemory(): Promise<{
  */
 async function verifyInfrastructure(): Promise<{
   postgres: boolean;
-  neo4j: boolean;
   checkpointDir: boolean;
 }> {
   const results = {
     postgres: false,
-    neo4j: false,
     checkpointDir: false,
   };
 

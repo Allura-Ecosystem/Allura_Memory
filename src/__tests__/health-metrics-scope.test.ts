@@ -18,21 +18,6 @@ vi.mock("@/lib/observability/sentry", () => ({
   captureException: vi.fn(),
 }))
 
-vi.mock("neo4j-driver", () => ({
-  driver: () => ({
-    session: () => ({
-      run: vi.fn().mockResolvedValue({
-        records: [{ get: () => ({ toNumber: () => 9 }) }],
-      }),
-      close: vi.fn(),
-    }),
-    close: vi.fn(),
-  }),
-  auth: {
-    basic: vi.fn(),
-  },
-}))
-
 import { GET } from "@/app/api/health/metrics/route"
 
 beforeEach(() => {
@@ -67,11 +52,10 @@ beforeEach(() => {
       return { rows: [{ total: "11" }] }
     }
 
-    if (sql.includes("neo4j_unavailable")) {
+    if (sql.includes("embedding_failure")) {
       return {
         rows: [
           {
-            neo4j_unavailable: "4",
             scope_error: "3",
             embedding_failures: "2",
             promotion_failures_24h: "1",
@@ -109,8 +93,7 @@ describe("health metrics scope", () => {
     const body = await response.json()
     expect(body.queue.pending_count).toBe(7)
     expect(body.storage.postgres.total_memories).toBe(11)
-    expect(body.storage.neo4j.total_nodes).toBeNull()
-    expect(body.storage.neo4j.status).toBe("degraded")
+    expect(body.storage).not.toHaveProperty("neo4j")
     expect(body.degraded.promotion_failures_24h).toBe(1)
     expect(body.skills).toHaveLength(1)
 

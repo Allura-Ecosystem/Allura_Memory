@@ -69,7 +69,7 @@ async function processCuratorDecision(params: {
 
   const decidedAt = new Date().toISOString();
 
-  // For approve: update status (Neo4j promotion handled by route.ts in production)
+  // For approve: update status (the semantic store promotion handled by route.ts in production)
   if (decision === "approve") {
     await pool.query(
       `UPDATE canonical_proposals

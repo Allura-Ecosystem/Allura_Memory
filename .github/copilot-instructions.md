@@ -74,21 +74,21 @@ All harnesses must reference AI-GUIDELINES.md and enforce disclosure requirement
 
 ## Allura Brain
 
-This project uses **Allura Brain** (PostgreSQL + Neo4j) for persistent context. The Brain is the source of truth — not flat files.
+This project uses **Allura Brain** (PostgreSQL + RuVector) for persistent context. The Brain is the source of truth — not flat files.
 
 ### Startup Protocol
 
 At session start:
 
 1. Dispatch Scout to search PostgreSQL events for recent activity and blockers
-2. Query Neo4j for architecture insights and decisions
+2. Query the semantic layer (PostgreSQL `graph_memories`, RuVector hybrid search) for architecture insights and decisions
 3. Synthesize: what's active, what's blocking, what was decided
 
 ### Data Stores
 
 - **PostgreSQL** — Append-only events, temporal traces
-- **Neo4j** — Versioned insights, SUPERSEDES relationships, knowledge graph
-- **RuVector** — 768d embeddings for semantic search (optional, port 5433)
+- **PostgreSQL semantic layer** — Versioned insights in `graph_memories`, SUPERSEDES edges in `graph_supersedes`
+- **RuVector** — 768d embeddings and hybrid search (pgvector, same PostgreSQL instance, port 5432)
 
 ## Brooks as Architect
 
@@ -108,16 +108,16 @@ When in doubt, defer to Brooks.
 All Insights are immutable. Create new versions with SUPERSEDES relationships:
 
 ```
-(v2-insight)-[:SUPERSEDES]->(v1-insight:deprecated)
+graph_supersedes: (v2-insight-id) supersedes (v1-insight-id, deprecated)
 ```
 
 ### group_id Enforcement
 
-Every node MUST have a `group_id` property. Schema constraint rejects nodes without it.
+Every row MUST have a `group_id` value. The schema CHECK constraint rejects rows without it.
 
 ### HITL Knowledge Promotion
 
-Agents CANNOT autonomously promote to Neo4j/Notion. Human approval required.
+Agents CANNOT autonomously promote to the canonical semantic layer/Notion. Human approval required.
 
 ### ADR 5-Layer Framework
 
@@ -134,7 +134,7 @@ Every architectural decision captured with:
 When working on this project, dispatch Scout to hydrate from Allura Brain:
 
 1. Scout recon on PostgreSQL events — recent activity and blockers
-2. Query Neo4j for architecture insights and decisions
+2. Query the semantic layer (PostgreSQL `graph_memories`, RuVector hybrid search) for architecture insights and decisions
 3. Synthesize: what's active, what's blocking, what was decided
 4. `docs/allura/` — canonical architecture and design docs
 
@@ -145,7 +145,7 @@ When working on this project, dispatch Scout to hydrate from Allura Brain:
 3. **Use server actions** for state persistence (pattern in `src/server/`)
 4. **Use group_id** in all database operations for tenant isolation
 5. **Use append-only** for PostgreSQL traces - never mutate
-6. **Use SUPERSEDES** for Neo4j versioning - never edit Insights
+6. **Use SUPERSEDES** (`graph_supersedes`) for semantic versioning - never edit Insights
 7. **Prefer premade MCP servers from `MCP_DOCKER`**; avoid custom wrappers when a catalog server already exists
 8. **Use Bun exclusively** for all package operations — never use `npm` or `npx` (supply chain security)
 
@@ -153,7 +153,7 @@ When working on this project, dispatch Scout to hydrate from Allura Brain:
 
 | File                 | Purpose                                               |
 | -------------------- | ----------------------------------------------------- |
-| `docker-compose.yml` | PostgreSQL and Neo4j containers                       |
+| `docker-compose.yml` | PostgreSQL (with RuVector) container                  |
 | `docs/allura/`       | Canonical architecture, design, and requirements docs |
 
 ## Verification Commands
@@ -162,11 +162,8 @@ When working on this project, dispatch Scout to hydrate from Allura Brain:
 # Check PostgreSQL
 docker exec knowledge-postgres pg_isready -U $POSTGRES_USER -d memory
 
-# Check Neo4j
-curl -s http://localhost:7474 | jq .neo4j_version
-
-# Test Neo4j Cypher (use environment variable for password)
-docker exec knowledge-neo4j cypher-shell -u neo4j -p "$NEO4J_PASSWORD" "RETURN 1 AS test"
+# Check the semantic layer (PostgreSQL graph_memories)
+psql "$DATABASE_URL" -c "SELECT count(*) FROM graph_memories"
 ```
 
 ## Updating Memory Bank

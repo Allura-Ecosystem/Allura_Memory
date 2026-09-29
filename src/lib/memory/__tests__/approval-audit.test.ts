@@ -1,7 +1,7 @@
 /**
  * Approval Audit Logger — Unit Tests
  *
- * Tests the approval audit module that ensures NO Insight enters Neo4j
+ * Tests the approval audit module that ensures NO Insight enters the semantic store
  * without an approval event logged to PostgreSQL.
  *
  * All database connections are mocked — no live DB required.

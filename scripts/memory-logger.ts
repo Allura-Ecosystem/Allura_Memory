@@ -3,7 +3,7 @@
 /**
  * Memory Logger for Superpowers Skills
  * 
- * Logs events and insights to the memory system using MCP_DOCKER tools.
+ * Logs and searches events in the memory system using MCP_DOCKER tools.
  * This script is meant to be invoked via MCP tool execution, not standalone.
  * 
  * Usage via MCP:
@@ -11,9 +11,7 @@
  * 
  * Supported actions:
  *   - log-event: Log raw event to PostgreSQL
- *   - create-insight: Create curated insight in Neo4j
  *   - search-events: Search events by pattern
- *   - search-insights: Search insights by query
  * 
  * Environment:
  *   All database connections handled via MCP_DOCKER tools.
@@ -31,22 +29,12 @@ interface LogEventInput {
   metadata?: Record<string, unknown>;
 }
 
-interface CreateInsightInput {
-  title: string;
-  content: string;
-  category: string;
-  tags?: string[];
-  sourceEventIds?: number[];
-  outcome_id?: number;
-  group_id?: string;
-}
-
 interface SearchInput {
   query: string;
   limit?: number;
 }
 
-type Action = "log-event" | "create-insight" | "search-events" | "search-insights" | "help";
+type Action = "log-event" | "search-events" | "help";
 
 function parseArgs(argv: string[]): { action: Action; data?: string; help?: boolean } {
   const result: { action: Action; data?: string; help?: boolean } = { action: "help" };
@@ -78,9 +66,7 @@ Usage:
 
 Actions:
   log-event       Log a raw event to PostgreSQL
-  create-insight  Create a curated insight in Neo4j
   search-events   Search events by query
-  search-insights Search insights by query
   help            Show this help message
 
 Examples:
@@ -93,19 +79,11 @@ Examples:
     "status": "pending"
   }'
 
-  # Create insight from session
-  bunx tsx scripts/memory-logger.ts --action create-insight --data '{
-    "title": "Design Decision: Superpowers Memory Integration",
-    "content": "Modified brainstorming skill to log events...",
-    "category": "Architecture",
-    "tags": ["superpowers", "memory", "design"]
-  }'
-
   # Search for related events
   bunx tsx scripts/memory-logger.ts --action search-events --data '{"query": "superpowers"}'
 
 Output:
-  JSON response with success flag, event_id/insight_id, and any errors.
+  JSON response with success flag, event_id, and any errors.
 `);
 }
 
@@ -162,25 +140,6 @@ async function logEvent(data: LogEventInput): Promise<{ eventId?: number; succes
   }
 }
 
-async function createInsight(data: CreateInsightInput): Promise<{ insightId?: number; success: boolean; error?: string }> {
-  try {
-    // Use MCP_DOCKER_create_entities for Neo4j insights
-    const result = callMcpDocker("MCP_DOCKER_create_entities", {
-      entities: [
-        {
-          name: data.title,
-          entityType: "Insight",
-          observations: [data.content, ...(data.tags?.map((t) => `tag:${t}`) ?? [])],
-        },
-      ],
-    });
-    
-    return { insightId: (result as any).ids?.[0], success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-}
-
 async function searchEvents(data: SearchInput): Promise<{ events?: unknown[]; success: boolean; error?: string }> {
   try {
     // Use MCP_DOCKER_query_database with natural language
@@ -189,19 +148,6 @@ async function searchEvents(data: SearchInput): Promise<{ events?: unknown[]; su
     });
     
     return { events: result as unknown[], success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-}
-
-async function searchInsights(data: SearchInput): Promise<{ insights?: unknown[]; success: boolean; error?: string }> {
-  try {
-    // Use MCP_DOCKER_search_memories for Neo4j
-    const result = callMcpDocker("MCP_DOCKER_search_memories", {
-      query: data.query,
-    });
-    
-    return { insights: result as unknown[], success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -230,20 +176,14 @@ async function main(): Promise<void> {
     return;
   }
 
-  let result: { success: boolean; error?: string; eventId?: number; insightId?: number; events?: unknown[]; insights?: unknown[] };
+  let result: { success: boolean; error?: string; eventId?: number; events?: unknown[] };
 
   switch (args.action) {
     case "log-event":
       result = await logEvent(data as unknown as LogEventInput);
       break;
-    case "create-insight":
-      result = await createInsight(data as unknown as CreateInsightInput);
-      break;
     case "search-events":
       result = await searchEvents(data as unknown as SearchInput);
-      break;
-    case "search-insights":
-      result = await searchInsights(data as unknown as SearchInput);
       break;
     default:
       console.error(`Unknown action: ${args.action}`);

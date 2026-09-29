@@ -80,7 +80,7 @@ mcp__MCP_DOCKER__mcp-add("server-name")
 | Tool | Use |
 |------|-----|
 | `allura-brain__memory_add` | Governed write — add episodic memory |
-| `allura-brain__memory_search` | Governed search — hybrid PG + Neo4j |
+| `allura-brain__memory_search` | Governed search — hybrid PostgreSQL + RuVector |
 | `allura-brain__memory_get` | Governed read — single memory by ID |
 | `allura-brain__memory_list` | Governed list — filter by user/group |
 | `allura-brain__memory_update` | Governed update — versioned append-only |
@@ -91,10 +91,6 @@ mcp__MCP_DOCKER__mcp-add("server-name")
 | `MCP_DOCKER__query_database` | NL SQL reads (diagnostics) |
 | `MCP_DOCKER__execute_sql` | Raw SQL reads (diagnostics) |
 | `MCP_DOCKER__insert_data` | Append events only (traces) |
-| `MCP_DOCKER__create_entities` | Neo4j entity creation (seeding) |
-| `MCP_DOCKER__search_memories` | Neo4j fulltext search |
-| `MCP_DOCKER__find_memories_by_name` | Neo4j exact name lookup |
-| `MCP_DOCKER__read_graph` | Neo4j full graph read |
 
 ### Notion
 | Tool | Use |

@@ -9,7 +9,7 @@ import { closePool, getAppPool, getConnectionConfig } from "@/lib/postgres/conne
 import { getWorkspaceWatchdogCandidates } from "@/curator/watchdog";
 import { POST as approveProposalRoute } from "@/app/api/curator/approve/route";
 import { retrieveKnowledge } from "@/lib/memory/retrieval-layer";
-import { linkInsightToAgent, promoteToNeo4j } from "@/lib/memory/knowledge-promotion";
+import { linkInsightToAgent, promoteToSemanticStore } from "@/lib/memory/knowledge-promotion";
 import { RuVectorGraphAdapter } from "@/lib/graph-adapter/ruvector-adapter";
 
 const GROUP = "allura-workspace-authority";
@@ -593,8 +593,8 @@ describeLive("workspace subgraph authority", () => {
       notion_page_id: `notion-${RUN_ID}`,
       postgres_trace_id: `trace-${RUN_ID}`,
     };
-    await expect(promoteToNeo4j({ ...baseInsight, id: firstId })).resolves.toBe(firstId);
-    await expect(promoteToNeo4j({ ...baseInsight, id: secondId, supersedes_id: firstId })).resolves.toBe(secondId);
+    await expect(promoteToSemanticStore({ ...baseInsight, id: firstId })).resolves.toBe(firstId);
+    await expect(promoteToSemanticStore({ ...baseInsight, id: secondId, supersedes_id: firstId })).resolves.toBe(secondId);
 
     const memories = await ownerPool.query(
       `SELECT id,group_id,workspace_id,workspace_scope_state,version

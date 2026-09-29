@@ -45,8 +45,8 @@ SKILL_NAME="${1:?Usage: launch-skill.sh <skill-name>}"
 shift
 
 case "$SKILL_NAME" in
-  skill-neo4j-memory)
-    exec bun run /app/skills/skill-neo4j-memory/src/index.ts "$@"
+  skill-ruvector-memory)
+    exec bun run /app/skills/skill-ruvector-memory/src/index.ts "$@"
     ;;
   skill-cypher-query)
     exec bun run /app/skills/skill-cypher-query/src/index.ts "$@"

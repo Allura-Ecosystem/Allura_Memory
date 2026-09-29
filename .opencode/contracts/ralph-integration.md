@@ -149,8 +149,8 @@ When using Ralph with Allura, these rules MUST be enforced:
 2. **Postgres is append-only** — INSERT only, never UPDATE/DELETE on events table
 3. **group_id required** — every DB operation must include group_id with allura-* format
 4. **Control Plane routing** — trace writes go through RuVixControlPlane.syscall('trace'), not direct inserts
-5. **Neo4j versioning** — use SUPERSEDES relationships, never edit existing nodes
-6. **HITL** — never autonomously promote to Neo4j without going through curator flow
+5. **Semantic versioning** — use `graph_supersedes` edges, never edit existing rows
+6. **HITL** — never autonomously promote to the canonical semantic layer without going through curator flow
 7. **MCP_DOCKER tools only** — never docker exec for database operations
 
 These rules should be included in the prompt file passed to Ralph.

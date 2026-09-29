@@ -70,7 +70,7 @@ function generateGroupId() {
 
 function generateContent() {
   const verbs = ["prefers", "always uses", "recommends", "dislikes", "avoids"];
-  const nouns = ["TypeScript", "React", "Next.js", "Bun", "Neo4j", "PostgreSQL", "Docker", "Kubernetes"];
+  const nouns = ["TypeScript", "React", "Next.js", "Bun", "RuVector", "PostgreSQL", "Docker", "Kubernetes"];
   const verb = verbs[Math.floor(Math.random() * verbs.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
   return `I ${verb} ${noun} for all memory operations`;

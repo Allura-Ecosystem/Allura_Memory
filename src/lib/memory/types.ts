@@ -2,7 +2,7 @@
  * Memory System Types
  * 
  * Core types for the unified memory system supporting:
- * - Neo4j graph storage for insights and knowledge
+ * - RuVector graph storage for insights and knowledge
  * - PostgreSQL trace storage for raw events
  * - Multi-tenant isolation via group_id
  */

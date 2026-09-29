@@ -19,7 +19,7 @@ Create tasks with proper structure, metadata, and memory integration.
 
 ```javascript
 // Search Allura Brain
-mcp__MCP_DOCKER__search_memories({ query: "<task topic>" })
+allura-brain__memory_search({ query: "<task topic>", group_id: "allura-system" })
 
 // Find related tasks
 Grep({ pattern: "TASK-", path: "docs/archive/planning-artifacts/" })
@@ -38,13 +38,12 @@ Write({
 ### Phase 3: Link to Memory
 
 ```javascript
-// Create memory link
-mcp__MCP_DOCKER__create_entities({
-  entities: [{
-    name: `TASK-XXX`,
-    entity_type: "task",
-    observations: [...]
-  }]
+// Record the task as an episodic trace (promotion stays HITL-gated)
+allura-brain__memory_add({
+  group_id: "allura-system",
+  user_id: "<agent_id>",
+  content: "TASK-XXX: <summary>",
+  metadata: { event_type: "TASK_CREATED", task_id: "TASK-XXX" }
 })
 ```
 

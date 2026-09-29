@@ -7,11 +7,9 @@
  *
  * Usage:
  *   bun run scripts/e2e-validation-gate.ts
- *   bun run scripts/e2e-validation-gate.ts --skip-neo4j  # Skip Neo4j checks
  *
  * Prerequisites:
- *   - PostgreSQL running (docker compose up -d)
- *   - Neo4j running (docker compose up -d)
+ *   - PostgreSQL + RuVector running (docker compose up -d)
  *   - Environment variables set (.env)
  *
  * Reference: docs/archive/allura/VALIDATION-GATE.md
@@ -21,10 +19,8 @@ import { randomUUID } from "crypto";
 import { curatorScore } from "../src/lib/curator/score";
 import { logApprovalEvent } from "../src/lib/memory/approval-audit";
 import { retrieveKnowledge } from "../src/lib/memory/retrieval-layer";
-import { closeDriver, getDriver } from "./lib/neo4j-stub";
-import { getDualContextSemanticMemory } from "./lib/neo4j-stub";
-import { listInsights, searchInsights } from "./lib/neo4j-stub";
-import { createInsight, createInsightVersion, deprecateInsight, revertInsightVersion } from "./lib/neo4j-stub";
+import { RuVectorGraphAdapter } from "../src/lib/graph-adapter";
+import type { GroupId, MemoryId } from "../src/lib/memory/canonical-contracts";
 import { closePool, getPool } from "../src/lib/postgres/connection";
 import { insertEvent } from "../src/lib/postgres/queries/insert-trace";
 import { validateGroupId } from "../src/lib/validation/group-id";
@@ -45,7 +41,7 @@ const GROUP_ID = "allura-system";
 const WORKSPACE_ID = "workspace-allura-system";
 const VALIDATION_AGENT = "validation-agent";
 const VALIDATION_AGENT_2 = "validation-agent-2";
-const SKIP_NEO4J = process.argv.includes("--skip-neo4j");
+const PRINCIPAL_ID = "validation-curator";
 
 // ── Gate Results ───────────────────────────────────────────────────────────
 
@@ -266,39 +262,43 @@ async function gate05_approvalAuditEvent(): Promise<void> {
   }
 }
 
-// ── Gate 6: Immutable Neo4j Insight Write (AC-06) ─────────────────────────
+// ── Gate 6: Immutable Semantic Insight Write (AC-06) ──────────────────────
 
-async function gate06_neo4jInsightWrite(): Promise<void> {
-  console.log("\n━━━ Gate 6: Immutable Neo4j Insight Write (AC-06) ━━━");
-
-  if (SKIP_NEO4J) {
-    logGate("AC-06", "Immutable Neo4j insight write", false, "Skipped (--skip-neo4j flag)");
-    return;
-  }
+async function gate06_semanticInsightWrite(): Promise<void> {
+  console.log("\n━━━ Gate 6: Immutable Semantic Insight Write (AC-06) ━━━");
 
   try {
-    const insightId = `val_${randomUUID().slice(0, 8)}`;
+    const pool = getPool();
+    const adapter = new RuVectorGraphAdapter(pool);
+    const memoryId = randomUUID() as MemoryId;
     const content = `Validation insight: Postgres must use pgvector:0.7.0-pg16 [${new Date().toISOString()}]`;
 
-    const insight = await createInsight({
-      insight_id: insightId,
-      group_id: GROUP_ID,
+    await adapter.createMemory({
+      id: memoryId,
+      group_id: GROUP_ID as GroupId,
+      workspace_id: WORKSPACE_ID,
+      principal_id: PRINCIPAL_ID,
+      user_id: null,
       content,
-      confidence: 0.93,
-      topic_key: "validation.infra",
-      source_type: "promotion",
-      created_by: "validation-curator",
-      metadata: { validation_run: true },
+      score: 0.93,
+      provenance: "manual",
+      created_at: new Date().toISOString(),
     });
 
-    if (insight && insight.insight_id === insightId && insight.version === 1 && insight.status === "active") {
-      logGate("AC-06", "Immutable Neo4j insight write", true,
-        `Insight ${insightId.slice(0, 12)}... created: version=1, status=active, id=${insight.id.slice(0, 8)}...`);
+    const verify = await pool.query(
+      `SELECT id, version, deprecated FROM graph_memories WHERE id = $1 AND group_id = $2`,
+      [memoryId, GROUP_ID]
+    );
+    const row = verify.rows[0];
+
+    if (row && row.version === 1 && row.deprecated === false) {
+      logGate("AC-06", "Immutable semantic insight write", true,
+        `graph_memories row ${memoryId.slice(0, 8)}... created: version=1, deprecated=false`);
     } else {
-      logGate("AC-06", "Immutable Neo4j insight write", false, "Insight created but fields don't match expected values");
+      logGate("AC-06", "Immutable semantic insight write", false, "Insight created but fields don't match expected values");
     }
   } catch (error) {
-    logGate("AC-06", "Immutable Neo4j insight write", false, "Neo4j write failed", String(error));
+    logGate("AC-06", "Immutable semantic insight write", false, "graph_memories write failed", String(error));
   }
 }
 
@@ -307,47 +307,56 @@ async function gate06_neo4jInsightWrite(): Promise<void> {
 async function gate07_versionLinking(): Promise<void> {
   console.log("\n━━━ Gate 7: Version Linking (AC-07) ━━━");
 
-  if (SKIP_NEO4J) {
-    logGate("AC-07", "Version linking", false, "Skipped (--skip-neo4j flag)");
-    return;
-  }
-
   try {
-    const insightId = `val_${randomUUID().slice(0, 8)}`;
+    const pool = getPool();
+    const adapter = new RuVectorGraphAdapter(pool);
+    const v1Id = randomUUID() as MemoryId;
+    const v2Id = randomUUID() as MemoryId;
+    const now = new Date().toISOString();
 
     // Create v1
-    const v1 = await createInsight({
-      insight_id: insightId,
-      group_id: GROUP_ID,
-      content: `Version linking test v1 [${new Date().toISOString()}]`,
-      confidence: 0.85,
-      topic_key: "validation.versioning",
-      source_type: "promotion",
-      created_by: "validation-curator",
+    await adapter.createMemory({
+      id: v1Id,
+      group_id: GROUP_ID as GroupId,
+      workspace_id: WORKSPACE_ID,
+      principal_id: PRINCIPAL_ID,
+      user_id: null,
+      content: `Version linking test v1 [${now}]`,
+      score: 0.85,
+      provenance: "manual",
+      created_at: now,
     });
 
-    // Create v2 (supersedes v1)
-    const v2 = await createInsightVersion(
-      insightId,
-      `Version linking test v2 (updated) [${new Date().toISOString()}]`,
-      0.90,
-      GROUP_ID,
-      { validation_run: true }
+    // Create v2 (supersedes v1 via graph_supersedes)
+    const result = await adapter.supersedesMemory({
+      prev_id: v1Id,
+      new_id: v2Id,
+      group_id: GROUP_ID as GroupId,
+      workspace_id: WORKSPACE_ID,
+      principal_id: PRINCIPAL_ID,
+      user_id: null,
+      content: `Version linking test v2 (updated) [${now}]`,
+      version: 2,
+      created_at: now,
+    });
+
+    const edge = await pool.query(
+      `SELECT 1 FROM graph_supersedes WHERE newer_id = $1 AND superseded_id = $2 AND group_id = $3`,
+      [v2Id, v1Id, GROUP_ID]
+    );
+    const prev = await pool.query(
+      `SELECT deprecated FROM graph_memories WHERE id = $1 AND group_id = $2`,
+      [v1Id, GROUP_ID]
     );
 
-    if (v2 && v2.version === 2 && v2.status === "active") {
+    const linked = result.success && result.newVersion === 2 && edge.rows.length === 1 && prev.rows[0]?.deprecated === true;
+    if (linked) {
       logGate("AC-07", "Version linking", true,
-        `v2 created: version=${v2.version}, status=${v2.status}. v1 should be superseded.`);
+        `v2 created: version=${result.newVersion}, graph_supersedes edge present, v1 deprecated (row retained)`);
     } else {
-      logGate("AC-07", "Version linking", false, "v2 created but fields don't match", `version=${v2?.version}, status=${v2?.status}`);
+      logGate("AC-07", "Version linking", false, "SUPERSEDES chain incomplete",
+        `success=${result.success}, edge=${edge.rows.length}, v1_deprecated=${prev.rows[0]?.deprecated}`);
     }
-
-    // Test deprecation
-    await deprecateInsight(insightId, GROUP_ID);
-
-    // Test revert — Neo4j is sunset, revertInsightVersion is a no-op stub
-    await revertInsightVersion(insightId, GROUP_ID);
-    console.log("   ✅ Revert stub called successfully");
   } catch (error) {
     logGate("AC-07", "Version linking", false, "Version linking failed", String(error));
   }
@@ -357,11 +366,6 @@ async function gate07_versionLinking(): Promise<void> {
 
 async function gate08_retrievalLayer(): Promise<void> {
   console.log("\n━━━ Gate 8: Retrieval Layer Mediation (AC-08) ━━━");
-
-  if (SKIP_NEO4J) {
-    logGate("AC-08", "Retrieval layer mediation", false, "Skipped (--skip-neo4j flag)");
-    return;
-  }
 
   try {
     const response = await retrieveKnowledge({
@@ -389,11 +393,6 @@ async function gate08_retrievalLayer(): Promise<void> {
 
 async function gate09_scopedRetrieval(): Promise<void> {
   console.log("\n━━━ Gate 9: Scoped Retrieval (AC-09) ━━━");
-
-  if (SKIP_NEO4J) {
-    logGate("AC-09", "Scoped retrieval", false, "Skipped (--skip-neo4j flag)");
-    return;
-  }
 
   try {
     // Project-only scope
@@ -433,11 +432,6 @@ async function gate09_scopedRetrieval(): Promise<void> {
 async function gate10_mixedRetrieval(): Promise<void> {
   console.log("\n━━━ Gate 10: Mixed Retrieval Support (AC-10) ━━━");
 
-  if (SKIP_NEO4J) {
-    logGate("AC-10", "Mixed retrieval support", false, "Skipped (--skip-neo4j flag)");
-    return;
-  }
-
   try {
     // Hybrid retrieval with trace augmentation
     const response = await retrieveKnowledge({
@@ -455,7 +449,7 @@ async function gate10_mixedRetrieval(): Promise<void> {
     const hasTraces = (response.traces?.length ?? 0) > 0;
 
     logGate("AC-10", "Mixed retrieval support", true,
-      `Neo4j insights: ${response.results.length}, Traces: ${response.traces?.length ?? 0}, Has both sources: ${hasInsights || hasTraces}`);
+      `Semantic insights: ${response.results.length}, Traces: ${response.traces?.length ?? 0}, Has both sources: ${hasInsights || hasTraces}`);
   } catch (error) {
     logGate("AC-10", "Mixed retrieval support", false, "Mixed retrieval failed", String(error));
   }
@@ -501,11 +495,6 @@ async function gate11_policyEnforcement(): Promise<void> {
 async function gate12_secondAgentReuse(): Promise<void> {
   console.log("\n━━━ Gate 12: Second-Agent Reuse (AC-12) ━━━");
 
-  if (SKIP_NEO4J) {
-    logGate("AC-12", "Second-agent reuse", false, "Skipped (--skip-neo4j flag)");
-    return;
-  }
-
   try {
     // A second agent retrieves knowledge that was approved earlier
     const response = await retrieveKnowledge({
@@ -537,7 +526,6 @@ async function main() {
   console.log("║   Reference: docs/archive/allura/VALIDATION-GATE.md       ║");
   console.log("╚══════════════════════════════════════════════════════════════╝");
   console.log(`\nGroup: ${GROUP_ID}`);
-  console.log(`Skip Neo4j: ${SKIP_NEO4J}`);
   console.log(`Timestamp: ${new Date().toISOString()}\n`);
 
   // Run all gates sequentially (ordered by dependency)
@@ -546,7 +534,7 @@ async function main() {
   await gate03_curatorProposal();
   await gate04_approvalQueue();
   await gate05_approvalAuditEvent();
-  await gate06_neo4jInsightWrite();
+  await gate06_semanticInsightWrite();
   await gate07_versionLinking();
   await gate08_retrievalLayer();
   await gate09_scopedRetrieval();
@@ -590,9 +578,6 @@ async function main() {
 
   // Cleanup
   await closePool();
-  if (!SKIP_NEO4J) {
-    await closeDriver();
-  }
 
   // Exit code
   process.exit(hardGatesPassed ? 0 : 1);

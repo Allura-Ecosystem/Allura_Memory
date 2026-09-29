@@ -1,7 +1,7 @@
 ---
 description: "Session finalization - MUST run at end of every session"
 argument-hint: "<summary>"
-allowed-tools: ["read", "MCP_DOCKER_create_entities", "MCP_DOCKER_create_relations", "MCP_DOCKER_add_observations", "MCP_DOCKER_search_memories", "MCP_DOCKER_read_graph", "MCP_DOCKER_mcp-config-set", "MCP_DOCKER_mcp-add"]
+allowed-tools: ["read", "allura-brain__memory_add", "allura-brain__memory_search", "allura-brain__memory_list", "MCP_DOCKER_mcp-config-set", "MCP_DOCKER_mcp-add"]
 skill: mcp-docker
 global: false
 ---
@@ -21,71 +21,44 @@ This command persists a durable session reflection and verifies write success us
 ## Required Steps
 
 1. Ensure Allura Brain memory access is configured and reachable
-2. Create a Reflection entity scoped to `group_id='allura-system'`
+2. Write a Reflection memory scoped to `group_id='allura-system'`
 3. Read back to prove durability
 
 ## Canonical Write Template (Using Allura Brain Tools)
 
 ```javascript
-// Step 1: Create Reflection entity
-MCP_DOCKER_create_entities({
-  entities: [{
-    name: "Session Reflection " + new Date().toISOString(),
-    type: "Reflection",
-    observations: [
-      "group_id: allura-system",
-      "agent_id: openagent",
-      "event_type: session_complete",
-      "status: completed",
-      "timestamp: " + new Date().toISOString(),
-      "insights: " + summary
-    ]
-  }]
+// Step 1: Write the Reflection as an episodic memory
+allura-brain__memory_add({
+  group_id: "allura-system",
+  user_id: "openagent",
+  content: "Session Reflection: " + summary,
+  metadata: {
+    event_type: "session_complete",
+    status: "completed",
+    timestamp: new Date().toISOString()
+  }
 });
 
-// Step 2: Link to Memory Master (optional)
-MCP_DOCKER_create_relations({
-  relations: [{
-    source: "Session Reflection " + new Date().toISOString(),
-    target: "Memory Master",
-    relationType: "PERFORMED_BY"
-  }]
-});
-
-// Step 3: Verify by searching
-MCP_DOCKER_search_memories({
-  query: "Session Reflection"
+// Step 2: Verify by searching
+allura-brain__memory_search({
+  query: "Session Reflection",
+  group_id: "allura-system"
 });
 ```
 
 ## Success Criteria
 
-- Reflection entity is created
+- Reflection memory is written
 - Search returns the newly written record
 - Summary includes what changed + why
 
-## Alternative: Add to Memory Master
-
-Instead of creating new Reflection entities, you can add observations to Memory Master:
-
-```javascript
-MCP_DOCKER_add_observations({
-  observations: [{
-    entityName: "Memory Master",
-    observations: [
-      "2026-04-03: Completed session - Fixed Neo4j memory integration"
-    ]
-  }]
-});
-```
-
 ## Never Do This
 
-❌ `MCP_DOCKER_write_neo4j_cypher` (use `create_entities` instead)
+❌ Direct SQL writes to memory tables (use `allura-brain__memory_add` instead)
 ❌ Skip verification step
 
 ## Always Do This
 
 ✅ Use the Allura Brain memory surface and approved MCP write tools
 ✅ Verify by searching or reading back
-✅ Include timestamp and group_id in observations
+✅ Include timestamp and group_id in the write

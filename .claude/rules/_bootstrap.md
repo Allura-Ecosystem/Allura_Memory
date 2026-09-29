@@ -60,6 +60,6 @@ the event pass, not the graph pass.
 
 ## Next Recommended
 > Derived at boot from the hydration batch — do not trust if snapshot is stale.
-1. Team RAM — write the live-DB E2E of the 10-point acceptance gate (replace mocks; run vs Docker Postgres/Neo4j). This is the real "ready" proof.
+1. Team RAM — write the live-DB E2E of the 10-point acceptance gate (replace mocks; run vs Docker Postgres). This is the real "ready" proof.
 2. Hightower — one-line first-run script (auto-create knowledge-network + 3 volumes) + verified fresh deploy; record transcript in INSTALL-DEPLOY-REVIEW.md.
 3. DECIDE — Path A (beta on localhost) vs Path B (full Hermes-style desktop; needs AionUi source restored).

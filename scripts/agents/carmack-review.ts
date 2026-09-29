@@ -24,6 +24,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { basename, extname, join, relative } from "node:path";
 import { gitExec } from "../../src/lib/git/exec";
 
@@ -1495,33 +1496,19 @@ function formatContracts(result: {
 
 interface DbConnections {
   pgPool: { query: (sql: string, params: unknown[]) => Promise<unknown> };
-  neo4jSession: {
-    run: (cypher: string, params: Record<string, unknown>) => Promise<unknown>;
-    close: () => Promise<void>;
-  };
-  closeDriver: () => Promise<void>;
   closePool: () => Promise<void>;
 }
 
 async function getDbConnections(): Promise<DbConnections | null> {
   const postgresUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
-  const neo4jUri = null; // Neo4j sunset
-
   if (!postgresUrl) {
     return null;
   }
 
   const { getPool, closePool } = await import("../../src/lib/postgres/connection");
-  const closeDriver = async () => {};
-
   const pgPool = getPool();
-  // Neo4j sunset — PostgreSQL only
-  const session = null as unknown as { run: () => Promise<never[]>; close: () => Promise<void> };
-
   return {
     pgPool,
-    neo4jSession: session,
-    closeDriver,
     closePool,
   };
 }
@@ -1544,30 +1531,22 @@ async function logToPostgres(
   );
 }
 
+/**
+ * Record an agent insight as an append-only episodic event. Canonical promotion
+ * (graph_memories) is never done here; it goes through curator approval (HITL).
+ */
 async function createInsight(
   db: DbConnections,
   summary: string,
   confidence: number,
   sourceType: string,
 ): Promise<void> {
-  await db.neo4jSession.run(
-    `CREATE (i:Insight {
-      insight_id: 'ins_review_' + randomUUID(),
-      summary: $summary,
-      confidence: $confidence,
-      status: 'active',
-      group_id: $groupId,
-      created_at: datetime(),
-      source_type: $sourceType
-    })
-    RETURN i`,
-    {
-      summary,
-      confidence,
-      groupId: GROUP_ID,
-      sourceType,
-    },
-  );
+  await logToPostgres(db, "insight_recorded", {
+    insight_id: `ins_${randomUUID()}`,
+    summary,
+    confidence,
+    source_type: sourceType,
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1689,7 +1668,7 @@ async function main(): Promise<void> {
   if (!db) {
     console.log("\n[carmack] ⚠️  Database connections not configured");
     console.log("[carmack] Review complete — results shown above (no DB logging)");
-    console.log("[carmack] Set POSTGRES_URL and NEO4J_URI to log findings");
+    console.log("[carmack] Set POSTGRES_URL to log findings");
     process.exit(exitCode);
   }
 
@@ -1700,7 +1679,7 @@ async function main(): Promise<void> {
       agent: AGENT_ID,
     });
 
-    // Create insight in Neo4j
+    // Record insight as an episodic event
     const confidence = findingsForDb.verdict === "fail" ? 0.92 :
                         findingsForDb.verdict === "warn" ? 0.80 : 0.85;
     const summary = `Dijkstra code review (${findingsForDb.subCommand}): ${JSON.stringify(findingsForDb)}`;
@@ -1712,13 +1691,11 @@ async function main(): Promise<void> {
       confidence,
     });
 
-    console.log("\n[carmack] ✅ Review logged to PostgreSQL and Neo4j");
+    console.log("\n[carmack] ✅ Review logged to PostgreSQL");
   } catch (error) {
     console.error("\n[carmack] DB logging failed:", error);
     // Don't change exit code — the review output is still valid
   } finally {
-    await db.neo4jSession.close();
-    await db.closeDriver();
     await db.closePool();
   }
 

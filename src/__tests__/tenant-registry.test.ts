@@ -22,11 +22,6 @@ vi.mock("@/lib/postgres/connection", () => ({
   getPool: vi.fn(() => ({ query: queryMock })),
 }));
 
-vi.mock("@/lib/neo4j/connection", () => ({
-  readTransaction: vi.fn(),
-  writeTransaction: vi.fn(),
-}));
-
 // Import after mocks
 import { assertRegisteredTenant, getTenant, isRegisteredTenant } from "@/lib/config/tenant-existence";
 

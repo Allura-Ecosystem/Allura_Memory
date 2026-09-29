@@ -4,7 +4,7 @@
  * Pure logic only. No database. No Ollama. No Notion. No MCP browser.
  * Pure functions, type validation, scoring, dedup, similarity, etc.
  *
- * If a test needs PostgreSQL, Neo4j, or any external service, it belongs
+ * If a test needs PostgreSQL or any external service, it belongs
  * in the integration lane — NOT here.
  */
 import { config } from "dotenv"
@@ -18,6 +18,7 @@ export default defineConfig({
     environment: "node",
     pool: "forks",
     passWithNoTests: true,
+    setupFiles: ["./tests/setup/unit-env.ts"],
     include: [
       // ── Pure unit tests (no DB, no external services) ──────────────────
       // Benchmark harness metric math (Precision@K, Recall@K, MRR, percentiles)
@@ -178,6 +179,13 @@ export default defineConfig({
       "src/lib/auth/__tests__/principal-context.test.ts",
       "src/lib/auth/__tests__/mcp-legacy-route.test.ts",
       "src/lib/memory/memory-add-workspace-scope.test.ts",
+      // Active-contract guards: memory admission, canonical-only export routing,
+      // and health/invariant parity (all mocked; no DB).
+      "src/lib/memory/admission.test.ts",
+      "src/lib/memory/memory-add-admission.test.ts",
+      "src/lib/memory/memory-export-contract.test.ts",
+      "src/lib/memory/health-invariant-parity.test.ts",
+      "src/lib/memory/__tests__/hitl-promotion-lock-policy.test.ts",
       "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
       "src/lib/auth/__tests__/principal-audit.test.ts",
       "src/lib/auth/__tests__/budget-scope.test.ts",
@@ -240,15 +248,12 @@ export default defineConfig({
       "src/__tests__/notion-projection-sync.test.ts",
       "src/__tests__/mcp-catalog.test.ts",
       "src/__tests__/mcp-streamable-http.test.ts",
-      "src/__tests__/neo4j-writer-errors.test.ts",
       "src/__tests__/generate-agent.test.ts",
       "src/__tests__/knowledge-hub-bridge.test.ts",
       "src/__tests__/parity-test.test.ts",
       "src/lib/ruvector/bridge.test.ts",
       "src/lib/ruvector/retrieval-adapter.test.ts",
-      "src/lib/neo4j/connection.test.ts",
       "src/lib/postgres/connection.test.ts",
-      "src/lib/neo4j/queries/*.test.ts",
       "src/lib/postgres/queries/*.test.ts",
       "src/lib/postgres/trace-logger.test.ts",
       "src/integrations/mcp.client.test.ts",

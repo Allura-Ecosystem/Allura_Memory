@@ -6,5 +6,5 @@
       "timeout": 60000
     }
   },
-  "_note": "When running via MCP_DOCKER toolkit (OpenClaw), allura-brain tools are already available as allura-brain_memory_* tools. This config is for OpenCode or other harnesses that need direct MCP server access. For Docker networking, use container names (knowledge-postgres, knowledge-neo4j). For local dev, use localhost. Environment variables (POSTGRES_PASSWORD, NEO4J_PASSWORD, etc.) must be set in the harness environment — never commit them to this file."
+  "_note": "When running via MCP_DOCKER toolkit (OpenClaw), allura-brain tools are already available as allura-brain_memory_* tools. This config is for OpenCode or other harnesses that need direct MCP server access. For Docker networking, use container names (knowledge-postgres). For local dev, use localhost. Environment variables (POSTGRES_PASSWORD, etc.) must be set in the harness environment — never commit them to this file."
 }

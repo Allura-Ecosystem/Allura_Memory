@@ -128,9 +128,9 @@ describe("ToastItem", () => {
 
   it("renders the optional message when provided", async () => {
     const { ToastItem } = await getComponents()
-    const toast = makeToast({ message: "Stored in Neo4j" })
+    const toast = makeToast({ message: "Stored in the semantic store" })
     render(<ToastItem toast={toast} isVisible={true} />)
-    expect(screen.getByText("Stored in Neo4j")).toBeDefined()
+    expect(screen.getByText("Stored in the semantic store")).toBeDefined()
   })
 
   it("does not render a message paragraph when message is absent", async () => {

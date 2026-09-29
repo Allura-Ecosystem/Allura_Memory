@@ -284,19 +284,19 @@ describe("EnforcedMcpClient", () => {
       );
     });
 
-    it("should enforce group_id for neo4j-search_nodes", async () => {
+    it("should enforce group_id for graph-search_nodes", async () => {
       mockInner.callTool = vi.fn().mockResolvedValue({
         content: [{ type: "text", text: JSON.stringify({ nodes: [] }) }],
       });
 
       const client = new EnforcedMcpClient("allura-default", mockInner);
 
-      await client.callTool("neo4j-search_nodes", {
+      await client.callTool("graph-search_nodes", {
         query: "architecture decisions",
       });
 
       expect(mockInner.callTool).toHaveBeenCalledWith(
-        "neo4j-search_nodes",
+        "graph-search_nodes",
         expect.objectContaining({
           group_id: "allura-default",
         })

@@ -19,7 +19,7 @@ This document describes Allura's system architecture, components, data flow, and
 
 ## System Overview
 
-Allura is built on a **dual-database architecture** that separates raw execution traces (PostgreSQL) from curated knowledge (Neo4j).
+Allura is built on a **PostgreSQL-only architecture** that separates raw execution traces (PostgreSQL) from curated knowledge (PostgreSQL semantic layer with RuVector search).
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -40,7 +40,7 @@ Allura is built on a **dual-database architecture** that separates raw execution
         ┌────────────┼────────────────┐
         ↓            ↓                ↓
   ┌──────────┐ ┌──────────┐  ┌─────────────┐
-  │PostgreSQL│ │  Neo4j   │  │   Curator   │
+  │PostgreSQL│ │PostgreSQL│  │   Curator   │
   │Episodic  │ │ Semantic │  │ (HITL Gate) │
   └──────────┘ └──────────┘  └─────────────┘
 ```
@@ -58,7 +58,7 @@ A **memory** is a unit of information that an AI agent stores about a user or co
    ↓
 2. Pending Review     (score ≥ 0.85, SOC2 mode)
    ↓ [curator approval]
-3. Both Stores        (PostgreSQL + Neo4j)
+3. Both Layers        (episodic events + canonical graph_memories)
 ```
 
 **Confidence Score (0.0–1.0):**
@@ -83,28 +83,29 @@ events (
 
 Every memory write creates one `memory_add` event. If it gets promoted, a separate `memory_promoted` event is appended. Soft-deletes create a `memory_delete` event.
 
-### Semantic Memory (Neo4j)
+### Semantic Memory (PostgreSQL `graph_memories` / `graph_supersedes`)
 
-Curated, versioned knowledge. **All updates create new nodes.**
+Curated, versioned knowledge. **All updates create new rows.**
 
-```cypher
-(m:Memory {
-  id:         "mem_...",
-  group_id:   "allura-myproject",
-  content:    "...",
-  score:      0.92,
-  deprecated: false,
-  created_at: "2026-04-07T06:30:00Z"
-})
+```sql
+graph_memories (
+  id         text,          -- "mem_..."
+  group_id   text,          -- "allura-myproject"
+  content    text,
+  score      real,          -- 0.92
+  version    integer,
+  deprecated boolean,       -- false
+  created_at timestamptz
+)
 
-(v2:Memory)-[:SUPERSEDES]->(v1:Memory)
+graph_supersedes (newer_id, superseded_id, group_id)  -- (v2) supersedes (v1)
 ```
 
 When a memory needs updating:
-1. Create a new `Memory` node
-2. Link `(v2)-[:SUPERSEDES]->(v1)`
-3. Mark v1 as `deprecated: true`
-4. Never edit v1
+1. Insert a new `graph_memories` row (v2)
+2. Insert a `graph_supersedes` edge (`newer_id` = v2, `superseded_id` = v1)
+3. Mark v1 as `deprecated = true`
+4. Never edit v1's content
 
 This provides full versioning history and prevents accidental data loss.
 
@@ -134,9 +135,9 @@ Core business logic:
 
 1. **Scorer**: Computes confidence (0–1) via semantic similarity + agent metadata
 2. **Router**: Determines: episodic-only vs. pending-review vs. both-stores
-3. **Deduplicator**: Prevents duplicate Neo4j nodes (same content, same user, same group)
-4. **Promoter**: Moves high-confidence traces from PostgreSQL to Neo4j (curator-gated)
-5. **Searcher**: Federated search (PostgreSQL full-text + Neo4j semantic), merged by relevance
+3. **Deduplicator**: Prevents duplicate `graph_memories` rows (same content, same user, same group)
+4. **Promoter**: Moves high-confidence traces from episodic events to `graph_memories` (curator-gated)
+5. **Searcher**: Hybrid search (RuVector vector ANN + PostgreSQL full-text, RRF fusion), merged by relevance
 
 ### Curator (`src/curator/`)
 
@@ -144,7 +145,7 @@ HITL approval workflow for promotion:
 
 1. High-confidence traces (score ≥ 0.85) enter `proposals` queue
 2. Curator reviews via dashboard: `/admin/pending`
-3. Curator approves → Memory Engine writes to Neo4j + logs `memory_promoted` event
+3. Curator approves → Memory Engine writes to `graph_memories` + logs `memory_promoted` event
 4. Curator rejects → Event logged, trace stays episodic-only
 
 ### PostgreSQL Client (`src/integrations/postgres.client.ts`)
@@ -153,10 +154,10 @@ HITL approval workflow for promotion:
 - Append-only write guardrails (no UPDATE/DELETE on events table)
 - `group_id` validation at every query boundary
 
-### Neo4j Client (`src/integrations/neo4j.client.ts`)
+### RuVector Bridge (`src/lib/ruvector/bridge.ts`)
 
-- Connection pooling + query parameterization
-- `SUPERSEDES` relationship management
+- Hybrid retrieval (vector ANN + `content_tsv` full-text, RRF fusion) on the same PostgreSQL instance
+- `graph_supersedes` edge management
 - Deprecation flag handling
 
 ---
@@ -190,8 +191,8 @@ INSERT event into PostgreSQL
   - created_at: NOW() (immutable)
   ↓
 [If promotion eligible]
-  Deduplicator checks Neo4j
-    - Query: (m:Memory {group_id, user_id, content})
+  Deduplicator checks graph_memories
+    - Query: graph_memories WHERE group_id, user_id, content match
     - If found + score within threshold → return existing ID, stop
     - Else → proceed to promotion
   ↓
@@ -202,8 +203,8 @@ INSERT event into PostgreSQL
     - status: PENDING
   ↓
 [If auto mode]
-  MERGE Memory node into Neo4j
-    - INSERT (m:Memory) with all properties
+  INSERT into graph_memories
+    - INSERT row with all properties
     - INSERT event: "memory_promoted"
   ↓
 Return to agent
@@ -215,17 +216,17 @@ Return to agent
 ```
 Agent calls memory_search("query", userId, limit)
   ↓
-Parallel: PostgreSQL search + Neo4j search
+Parallel: episodic search + semantic (RuVector hybrid) search
   ↓
 PostgreSQL:
   - Full-text search on events.metadata->>'content'
   - WHERE group_id = ? AND deleted = false
   - LIMIT + OFFSET for pagination
   ↓
-Neo4j:
-  - Semantic embedding query
-  - WHERE m.group_id = ? AND m.deprecated = false
-  - MATCH (m)-[:FOR_USER]->(u {id: userId})
+Semantic (graph_memories + RuVector):
+  - Vector ANN + full-text (content_tsv), RRF fusion
+  - WHERE group_id = ? AND deprecated = false AND deleted_at IS NULL
+  - Filter by user_id
   - Relevance ranking
   ↓
 Merge results
@@ -285,32 +286,24 @@ CREATE TABLE proposals (
 - `group_id` enforced by CHECK constraint
 - Full audit trail is implicit (just read `events`)
 
-### Neo4j (Semantic)
+### PostgreSQL + RuVector (Semantic)
 
-**Node: `Memory`**
+**Table: `graph_memories`**
 
-```cypher
-MERGE (m:Memory {
-  id: apoc.create.uuid(),
-  group_id: "allura-myproject",
-  user_id: "sabir",
-  content: "...",
-  score: 0.92,
-  deprecated: false,
-  created_at: datetime(),
-  promoted_at: datetime()
-})
+```sql
+INSERT INTO graph_memories (id, group_id, user_id, content, score, deprecated, created_at)
+VALUES ('mem_...', 'allura-myproject', 'sabir', '...', 0.92, false, NOW());
 
-// Relationships
-(m)-[:FOR_USER]->(u:User {id: user_id})
-(m2)-[:SUPERSEDES]->(m1)  -- versioning
+-- Versioning edge
+INSERT INTO graph_supersedes (newer_id, superseded_id, group_id)
+VALUES ('mem_v2', 'mem_v1', 'allura-myproject');
 ```
 
 **Invariants:**
-- `deprecated` flag prevents stale node usage
-- `SUPERSEDES` chain provides version history
-- Nodes are never edited; updates create new nodes
-- Queries filter out `deprecated: true` nodes
+- `deprecated` flag prevents stale row usage
+- `graph_supersedes` chain provides version history
+- Rows are never edited; updates create new rows
+- Queries filter out `deprecated = true` rows
 
 ---
 
@@ -332,7 +325,7 @@ Curator dashboard: /admin/pending
   ↓
 Curator clicks APPROVE
   ↓
-MERGE into Neo4j
+INSERT into graph_memories
 INSERT event: memory_promoted
   ↓
 Response to agent: { status: "promoted", stored: "both" }
@@ -348,7 +341,7 @@ Memory created (score 0.92)
 Router: score ≥ 0.85? YES
 Router: PROMOTION_MODE? auto
   ↓
-MERGE into Neo4j immediately
+INSERT into graph_memories immediately
 INSERT event: memory_promoted
   ↓
 Response to agent: { status: "promoted", stored: "both" }
@@ -356,15 +349,14 @@ Response to agent: { status: "promoted", stored: "both" }
 
 ### Deduplication
 
-Before any Neo4j write, query for duplicates:
+Before any `graph_memories` write, query for duplicates:
 
-```cypher
-MATCH (existing:Memory)
-WHERE existing.group_id = $group_id
-  AND existing.user_id = $user_id
-  AND existing.content = $content
-  AND existing.deprecated = false
-RETURN existing.id
+```sql
+SELECT id FROM graph_memories
+WHERE group_id = $1
+  AND user_id = $2
+  AND content = $3
+  AND deprecated = false;
 ```
 
 If found + score within `DUPLICATE_THRESHOLD`: return existing ID, skip write.
@@ -420,16 +412,16 @@ INSERT INTO events (...) VALUES (...);
 SELECT * FROM events WHERE ...;
 ```
 
-### 2. Neo4j Uses SUPERSEDES, Never Edit
+### 2. Semantic Layer Uses SUPERSEDES, Never Edit
 
-```cypher
+```sql
 -- NEVER ALLOW
-MATCH (m:Memory) SET m.content = "..."
+UPDATE graph_memories SET content = '...' WHERE id = ...;
 
 -- ONLY ALLOW
-CREATE (m2:Memory { ... })
-CREATE (m2)-[:SUPERSEDES]->(m1)
-SET m1.deprecated = true
+INSERT INTO graph_memories (id, group_id, content, ...) VALUES ('mem_v2', ...);
+INSERT INTO graph_supersedes (newer_id, superseded_id, group_id) VALUES ('mem_v2', 'mem_v1', ...);
+UPDATE graph_memories SET deprecated = true WHERE id = 'mem_v1' AND group_id = ...;  -- flag only
 ```
 
 ### 3. group_id is Mandatory
@@ -454,8 +446,8 @@ INSERT INTO events (group_id, ...) VALUES (NULL, ...);
 INSERT INTO events (event_type, metadata, ...)
 VALUES ('memory_delete', '{"memory_id": "..."}', ...);
 
--- In Neo4j: mark deprecated
-MATCH (m:Memory {id: ...}) SET m.deprecated = true
+-- In graph_memories: mark deprecated / soft-deleted
+UPDATE graph_memories SET deprecated = true, deleted_at = NOW() WHERE id = ... AND group_id = ...;
 ```
 
 Deleted memories stay in PostgreSQL for audit. Query filters exclude them:
@@ -484,7 +476,7 @@ Memory Engine:
   2. PROMOTION_MODE = "auto" → eligible for immediate promotion
   3. Dedup check → no duplicate found
   4. INSERT into PostgreSQL (event_type: memory_add)
-  5. MERGE into Neo4j (Memory node)
+  5. INSERT into graph_memories
   6. INSERT into PostgreSQL (event_type: memory_promoted)
 
 Response:
@@ -519,12 +511,12 @@ Response:
 Curator clicks APPROVE
   ↓
 System:
-  1. MERGE into Neo4j (Memory node)
+  1. INSERT into graph_memories
   2. INSERT into PostgreSQL (event_type: memory_promoted)
   3. UPDATE proposals (status: approved, curator_id: "curator-1", approved_at: NOW())
 ```
 
-### Example 3: Search (Federated)
+### Example 3: Search (Hybrid)
 
 ```
 Agent: memory_search("dark mode preferences", "sabir", limit=10)
@@ -540,14 +532,13 @@ PostgreSQL:
   ORDER BY created_at DESC
   LIMIT 10
 
-Neo4j:
-  MATCH (m:Memory)
-  WHERE m.group_id = "allura-myproject"
-    AND m.deprecated = false
-  WITH m, apoc.text.distance("dark mode preferences", m.content) as similarity
-  WHERE similarity > 0.7
-  RETURN m.id, m.content, m.score, similarity
-  ORDER BY similarity DESC
+Semantic (graph_memories + RuVector):
+  SELECT id, content, score
+  FROM graph_memories
+  WHERE group_id = "allura-myproject"
+    AND deprecated = false
+    AND deleted_at IS NULL
+  ORDER BY (vector ANN + content_tsv rank, RRF fusion) DESC
   LIMIT 10
 
 Merge results:

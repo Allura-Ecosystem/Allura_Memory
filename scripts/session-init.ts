@@ -13,6 +13,5 @@ console.log("  • MCP_DOCKER_mcp-find      Discover approved servers");
 console.log("  • MCP_DOCKER_mcp-add       Activate a server");
 console.log("  • MCP_DOCKER_execute_sql   Read PostgreSQL safely");
 console.log("  • MCP_DOCKER_insert_data   Append events");
-console.log("  • MCP_DOCKER_read_neo4j_cypher / write_neo4j_cypher   Governed graph access");
 console.log("\nTenant namespace: allura-system");
 console.log("Raw docker exec DB access has been intentionally removed.");

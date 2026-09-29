@@ -349,7 +349,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_search",
         description:
-          "Search memories across both stores (PostgreSQL + Neo4j). Federated search with results merged by relevance.",
+          "Search memories across both stores (PostgreSQL + RuVector). Federated search with results merged by relevance.",
         inputSchema: {
           type: "object",
           properties: {
@@ -396,7 +396,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "memory_delete",
-        description: "Soft-delete a memory. Appends deletion event to PostgreSQL and marks Neo4j node as deprecated.",
+        description: "Soft-delete a memory. Appends deletion event to PostgreSQL and marks the graph_memories node as deprecated.",
         inputSchema: {
           type: "object",
           properties: {
@@ -426,7 +426,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_update",
         description:
-          "Append-only versioned update. Creates new version in Neo4j with SUPERSEDES relationship, marks old version deprecated. Audit event always written to PostgreSQL.",
+          "Append-only versioned update. Creates new version in graph_memories with SUPERSEDES edge (graph_supersedes), marks old version deprecated. Audit event always written to PostgreSQL.",
         inputSchema: {
           type: "object",
           properties: {
@@ -451,13 +451,13 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_export",
         description:
-          "Export memories filtered by group_id and optional canonical status. canonical_only=true returns only Neo4j (semantic) memories; canonical_only=false returns both stores merged and deduplicated.",
+          "Export memories filtered by group_id and optional canonical status. canonical_only=true returns only canonical (semantic) memories and requires a verified workspace scope; canonical_only=false returns both stores merged and deduplicated.",
         inputSchema: {
           type: "object",
           properties: {
             group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
             user_id: { type: "string", description: "Optional: User identifier filter" },
-            canonical_only: { type: "boolean", description: "Optional: Export only canonical (Neo4j) memories (default: false)" },
+            canonical_only: { type: "boolean", description: "Optional: Export only canonical (semantic) memories (default: false)" },
             limit: { type: "number", description: "Optional: Maximum memories to export (default: 1000, max: 10000)" },
             offset: { type: "number", description: "Optional: Pagination offset" },
           },
@@ -467,7 +467,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_restore",
         description:
-          "Restore a soft-deleted memory within the 30-day recovery window. Removes deprecated flag in Neo4j and cleans up SUPERSEDES relationships. Appends restore event to PostgreSQL (append-only).",
+          "Restore a soft-deleted memory within the 30-day recovery window. Removes deprecated flag in graph_memories and cleans up SUPERSEDES relationships. Appends restore event to PostgreSQL (append-only).",
         inputSchema: {
           type: "object",
           properties: {
@@ -635,7 +635,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
         name: "audit_health_report",
         description:
           "Check all Allura Brain subsystem health statuses and return a structured per-subsystem report. " +
-          "Checks: PostgreSQL, Neo4j, embedding backfill, curator queue depth, and MCP tool availability. " +
+          "Checks: PostgreSQL, RuVector, embedding backfill, curator queue depth, and MCP tool availability. " +
           "Read-only — no DB writes.",
         inputSchema: {
           type: "object",
@@ -675,7 +675,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
         description:
           "Validate all 6 Allura governance invariants against live data and report per-check pass/fail " +
           "with violation counts. Checks: group_id constraint, no invalid group_ids, append-only structure, " +
-          "Neo4j SUPERSEDES, HITL promotion compliance, and allura-* namespace. Read-only — no DB writes.",
+          "graph_supersedes SUPERSEDES, HITL promotion compliance, and allura-* namespace. Read-only — no DB writes.",
         inputSchema: {
           type: "object",
           properties: {
@@ -1202,7 +1202,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     return;
   }
 
-  // ── Readiness probe — checks PostgreSQL, Neo4j, MCP initialization ────────
+  // ── Readiness probe — checks PostgreSQL, MCP initialization ────────
   if (url.pathname === "/ready" || url.pathname === "/api/ready") {
     const result = await checkReadiness();
     const statusCode = result.ready ? 200 : 503;
@@ -1255,7 +1255,7 @@ server.listen(PORT, HTTP_HOST, () => {
   console.log("Transports:");
   console.log("  MCP Streamable HTTP:  POST/GET/DELETE /mcp  (primary — OpenAI Agents SDK compatible)");
   console.log("  Health:                GET /health");
-  console.log("  Readiness:            GET /ready  (checks PostgreSQL, Neo4j, MCP)");
+  console.log("  Readiness:            GET /ready  (checks PostgreSQL, MCP)");
   console.log("  Liveness:             GET /live   (process heartbeat)");
   console.log("  Metrics:              GET /metrics (Prometheus format, auth required)");
   console.log("  Admin Reset Budget:   POST /api/admin/reset-budget (auth required, body: {group_id?})");

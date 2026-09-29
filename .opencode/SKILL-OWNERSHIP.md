@@ -10,7 +10,7 @@
 |-------|-------|---------|-----------|---------------|----------|
 | allura-approve-promotion | Brooks | HITL approval | ✅ Yes | allura-propose-promotion | **Keep** — promotion pipeline |
 | allura-design | Durham agents | Brand/design tasks | ⬜ Overlay | huashu-design, figma-* | **Keep** — Allura-specific brand design |
-| allura-graph-debug | Bellard | Neo4j debugging | ⬜ Overlay | none | **Keep** — Neo4j diagnostics |
+| allura-graph-debug | Bellard | Graph memory debugging | ⬜ Overlay | none | **Keep** — graph memory diagnostics |
 | allura-health-observability | Hightower | Health checks | ⬜ Overlay | none | **Keep** — infra monitoring |
 | allura-memory-skill | Scout | Any Brain operation | ✅ Yes | none | **Keep** — mandatory Brain governance |
 | allura-menu | All | Navigation | ⬜ Overlay | none | **Keep** — Brain menu system |

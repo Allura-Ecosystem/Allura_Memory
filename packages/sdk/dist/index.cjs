@@ -297,11 +297,11 @@ var GroupIdSchema = import_zod2.z.string().min(2).max(64).regex(
 );
 var MemoryIdSchema = import_zod2.z.string().uuid({ message: "id must be a valid UUID v4" });
 var ConfidenceScoreSchema = import_zod2.z.number().min(0).max(1);
-var MemoryRetrievalStoreSchema = import_zod2.z.enum(["postgres", "neo4j", "graph", "ruvector"]);
+var MemoryRetrievalStoreSchema = import_zod2.z.enum(["postgres", "graph", "ruvector"]);
 var MemoryResponseMetaSchema = import_zod2.z.object({
   contract_version: import_zod2.z.literal("v1"),
   degraded: import_zod2.z.boolean(),
-  degraded_reason: import_zod2.z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+  degraded_reason: import_zod2.z.enum(["graph_unavailable"]).optional(),
   stores_used: import_zod2.z.array(MemoryRetrievalStoreSchema),
   stores_attempted: import_zod2.z.array(MemoryRetrievalStoreSchema),
   warnings: import_zod2.z.array(import_zod2.z.string()).optional(),
@@ -507,7 +507,7 @@ var MemoryOperations = class {
     return this.request("memory_add", params, MemoryAddResponseSchema);
   }
   /**
-   * Search memories across both stores (PostgreSQL + Neo4j).
+   * Search memories across both stores (PostgreSQL + RuVector).
    * Federated search with results merged by relevance.
    *
    * @param params - Search parameters
@@ -569,7 +569,7 @@ var MemoryOperations = class {
   }
   /**
    * Soft-delete a memory.
-   * Appends deletion event to PostgreSQL and marks Neo4j node as deprecated.
+   * Appends deletion event to PostgreSQL and marks the semantic node as deprecated.
    * Original rows remain for audit trail.
    *
    * @param params - Delete parameters (id, group_id, user_id)

@@ -3,7 +3,7 @@
  *
  * Implements the 4-layer encoding priority:
  * 1. Database (PostgreSQL) - Primary source of truth
- * 2. Serialization (Neo4j) - Curated knowledge
+ * 2. Serialization - Curated knowledge
  * 3. Files (.opencode/state) - Fast recovery
  * 4. Memory Bank - Fallback documentation
  */
@@ -46,7 +46,7 @@ export type SessionState = z.infer<typeof SessionStateSchema>
  */
 export enum StateSource {
   DATABASE = 1, // PostgreSQL - highest priority
-  SERIALIZATION = 2, // Neo4j
+  SERIALIZATION = 2, // Serialization
   FILES = 3, // .opencode/state
 }
 
@@ -60,15 +60,15 @@ export interface StateHydratorConfig {
   planningArtifactsDir: string
   /** Enable database hydration */
   enableDbHydration: boolean
-  /** Enable Neo4j hydration */
-  enableNeo4jHydration: boolean
+  /** Enable serialization hydration */
+  enableSerializationHydration: boolean
 }
 
 const DEFAULT_CONFIG: StateHydratorConfig = {
   stateDir: ".opencode/state",
   planningArtifactsDir: "_bmad-output/planning-artifacts",
   enableDbHydration: true,
-  enableNeo4jHydration: true,
+  enableSerializationHydration: true,
 }
 
 /**
@@ -97,11 +97,11 @@ export class StateHydrator {
       }
     }
 
-    // Try serialization (Neo4j)
-    if (this.config.enableNeo4jHydration) {
-      const neo4jState = await this.tryHydrateFromNeo4j(sessionId, groupId)
-      if (neo4jState) {
-        return { ...neo4jState, loadedFrom: "serialization" }
+    // Try serialization
+    if (this.config.enableSerializationHydration) {
+      const serializedState = await this.tryHydrateFromSerialization(sessionId, groupId)
+      if (serializedState) {
+        return { ...serializedState, loadedFrom: "serialization" }
       }
     }
 
@@ -146,26 +146,25 @@ export class StateHydrator {
   }
 
   /**
-   * Try to hydrate from Neo4j
+   * Try to hydrate from serialization
    */
-  private async tryHydrateFromNeo4j(sessionId: string, groupId: string): Promise<SessionState | null> {
-    // TODO: Implement Neo4j hydration
-    // This will be implemented when we have the Neo4j client available
-    console.log(`[Hydrator] Neo4j hydration not yet implemented for session ${sessionId}`)
+  private async tryHydrateFromSerialization(sessionId: string, groupId: string): Promise<SessionState | null> {
+    // TODO: Implement serialization hydration
+    // This will be implemented when we have the graph client available
+    console.log(`[Hydrator] serialization hydration not yet implemented for session ${sessionId}`)
     return null
 
     // Example implementation:
-    // const result = await neo4jClient.run(
-    //   'MATCH (s:SessionState {session_id: $sessionId, group_id: $groupId}) RETURN s ORDER BY s.created_at DESC LIMIT 1',
-    //   { sessionId, groupId }
+    // const result = await pgClient.query(
+    //   'SELECT * FROM session_state WHERE session_id = $1 AND group_id = $2 ORDER BY created_at DESC LIMIT 1',
+    //   [sessionId, groupId]
     // );
     //
-    // if (result.records.length === 0) {
+    // if (result.rows.length === 0) {
     //   return null;
     // }
     //
-    // const node = result.records[0].get('s').properties;
-    // return SessionStateSchema.parse(node);
+    // return SessionStateSchema.parse(result.rows[0]);
   }
 
   /**

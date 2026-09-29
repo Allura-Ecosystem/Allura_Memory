@@ -79,4 +79,4 @@ Without lingering, the service still starts automatically when you log in.
 | `allura-brain_*` says Not connected | Run `status`, then `recover` |
 | MCP container says healthy but Brain still unavailable | Check gateway `/ready` and MCP logs |
 | Service does not start on reboot | Confirm `systemctl --user` service is enabled and lingering is on |
-| Docker services never become ready | Inspect `docker compose logs` for postgres/neo4j/mcp/http-gateway |
+| Docker services never become ready | Inspect `docker compose logs` for postgres/mcp/http-gateway |

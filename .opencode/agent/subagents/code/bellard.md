@@ -45,7 +45,7 @@ permission:
 
 1. Search PostgreSQL for past diagnostics results and performance baselines (agent_id='bellard', group_id='allura-system')
 
-2. Search Neo4j for performance patterns by topic_key
+2. Search RuVector for performance patterns by topic_key
 
 3. Load allura-memory-skill (`skill({ name: "allura-memory-skill" })`) for canonical interface reference
 
@@ -53,7 +53,7 @@ permission:
 
 1. Log DIAGNOSTICS_COMPLETE to PostgreSQL (agent_id='bellard', group_id='allura-system')
 
-2. Promote performance baselines to Neo4j if confidence >= 0.85
+2. Promote performance baselines to the canonical semantic layer if confidence >= 0.85
 
 ---
 

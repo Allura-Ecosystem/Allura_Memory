@@ -42,7 +42,7 @@ type MemoryLayer = "episodic" | "semantic" | "unknown"
 function layerFromData(data: MemoryData): MemoryLayer {
   const src = data.source ?? data.metadata?.source ?? data.metadata?.layer ?? ""
   if (typeof src === "string") {
-    if (src.includes("neo4j") || src.includes("semantic")) return "semantic"
+    if (src.includes("semantic")) return "semantic"
     if (src.includes("postgres") || src.includes("episodic")) return "episodic"
   }
   return "unknown"

@@ -156,7 +156,6 @@ Design, test, and version agent prompts following the BMAD Agent Prompt Template
 - [ ] Exit Validation
 - [ ] Domain Quick Reference
 - [ ] Context7 Integration
-- [ ] Neo4j MCP Troubleshooting
 - [ ] MCP Tools Reference
 
 ### Domain B: OpenClaw Configuration
@@ -313,35 +312,28 @@ MCP_DOCKER_insert_data({
 })
 ```
 
-### On PROMPT PATTERN only → Neo4j write (one per task, after dedup check):
+### On PROMPT PATTERN only → Brain proposal (one per task, after dedup check):
 
 ```javascript
 // 1. Search first
-MCP_DOCKER_search_nodes({
-  query: "pattern name: '{name}' group_id: 'allura-system'"
+allura-brain__memory_search({
+  query: "pattern name: '{name}'",
+  group_id: "allura-system"
 })
 
-// 2. Only write if no duplicate
-MCP_DOCKER_create_entities({
-  entities: [{
-    name: "{pattern_name}",
-    type: "Pattern",
-    observations: [
-      "Description: {description}",
-      "Domain: prompt-engineering",
-      "Group: allura-system",
-      "Created: {date}",
-      "Discovered by: Willison"
-    ]
-  }]
+// 2. Only write if no duplicate (episodic trace; promotion stays HITL-gated)
+allura-brain__memory_add({
+  group_id: "allura-system",
+  content: "Pattern: {pattern_name}. Description: {description}. Domain: prompt-engineering. Discovered by: Willison",
+  metadata: { type: "Pattern", created: "{date}" }
 })
 ```
 
-### Neo4j Promotion Criteria:
+### Promotion Criteria:
 
 1. Pattern is reusable across ≥2 prompts or configs
 2. Pattern was validated — not just hypothesized
-3. No duplicate exists in Neo4j
+3. No duplicate exists in the semantic layer
 
 ### Reflection Protocol
 
@@ -353,7 +345,7 @@ At the end of every substantive response, emit:
 ├─ Principle Applied: {which Willison principle governed the decision}
 ├─ Test Status: {tested/untested/needs-evaluation}
 ├─ Event Logged: {event_type written to Postgres, or "None"}
-├─ Neo4j Promoted: {Yes/No}
+├─ Pattern Proposed: {Yes/No}
 └─ Confidence: {High / Medium / Low}
 ```
 
@@ -485,7 +477,7 @@ MCP_DOCKER_execute_sql({
 
 ❌ **FAIL:** Zero rows → display: *"No prompt engineering event logged this session. Log one before exit or confirm intentional dismissal."*
 
-If Neo4j unavailable: allow exit with warning logged to Postgres.
+If the Brain semantic layer is unavailable: allow exit with warning logged to Postgres.
 
 ---
 

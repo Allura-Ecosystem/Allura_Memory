@@ -35,7 +35,7 @@ Interactive menu for common Allura Memory workflows.
 
 **What it does:**
 
-- Verifies Neo4j and PostgreSQL connectivity
+- Verifies PostgreSQL and RuVector connectivity
 - Hydrates context from Allura Brain via Scout
 - Searches recent events and insights for blockers and decisions
 - Logs session start
@@ -140,7 +140,7 @@ Interactive menu for common Allura Memory workflows.
 
 **What it does:**
 
-- Proposes promotion from PostgreSQL to Neo4j
+- Proposes promotion from episodic traces to the canonical semantic layer (PostgreSQL graph_memories)
 - Runs HITL governance workflow (draft → evaluating → proposed → approved → promoted)
 - Requires human approval
 - Logs to audit trail
@@ -157,7 +157,7 @@ Interactive menu for common Allura Memory workflows.
 
 **What it does:**
 
-- Persists session reflection to Neo4j
+- Persists session reflection to Allura Brain (PostgreSQL + RuVector)
 - Logs completion to PostgreSQL
 - Archives temporary files
 - Updates progress

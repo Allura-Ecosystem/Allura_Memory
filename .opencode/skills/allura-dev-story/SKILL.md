@@ -156,6 +156,6 @@ At the end of every `allura-dev-story` execution, emit:
 ├─ Action Taken: {story ID} — {summary}
 ├─ Principle Applied: {Brooksian principle}
 ├─ Event Logged: TASK_COMPLETE or BLOCKED
-├─ Neo4j Promoted: {Yes/No}
+├─ Canonical Promoted: {Yes/No}
 └─ Confidence: {High/Medium/Low}
 ```

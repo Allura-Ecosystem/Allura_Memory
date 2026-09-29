@@ -1,6 +1,6 @@
 ---
 name: allura-memory-skill
-description: Use when working with Allura Brain governed memory through MCP — storing, retrieving, curating, promoting, and governing memories with dual-layer PostgreSQL + Neo4j architecture.
+description: Use when working with Allura Brain governed memory through MCP — storing, retrieving, curating, promoting, and governing memories with PostgreSQL + RuVector architecture (single Postgres instance).
 allowed-tools: allura-brain_memory_add, allura-brain_memory_search, allura-brain_memory_get, allura-brain_memory_list, allura-brain_memory_update, allura-brain_memory_delete, allura-brain_memory_promote, allura-brain_memory_export, allura-brain_memory_restore, allura-brain_memory_list_deleted, MCP_DOCKER_execute_sql, MCP_DOCKER_query_database
 ---
 
@@ -27,9 +27,6 @@ Use this entry in your MCP configuration:
         "POSTGRES_USER": "ronin4life",
         "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD}",
         "POSTGRES_DB": "memory",
-        "NEO4J_URI": "bolt://localhost:7687",
-        "NEO4J_USER": "neo4j",
-        "NEO4J_PASSWORD": "${NEO4J_PASSWORD}",
         "PROMOTION_MODE": "soc2",
         "AUTO_APPROVAL_THRESHOLD": "0.85"
       }
@@ -42,7 +39,6 @@ Use this entry in your MCP configuration:
 
 ```bash
 POSTGRES_PASSWORD=your_password
-NEO4J_PASSWORD=your_password
 ```
 
 ## When to use
@@ -55,7 +51,7 @@ Use this skill when:
 - The agent needs to retrieve relevant project or user context before acting
 - The agent must distinguish raw episodic traces from curated semantic knowledge
 - The agent needs to promote, supersede, deprecate, or revoke a memory
-- The agent needs to understand the dual-layer architecture (PG episodic + Neo4j semantic)
+- The agent needs to understand the dual-layer architecture (episodic traces + canonical semantic layer, both in PostgreSQL with RuVector)
 
 ## Core architecture
 
@@ -67,9 +63,9 @@ Allura Brain is a **dual-layer governed memory system**:
    - Every `allura-brain_memory_add` writes here first
    - Never treat raw traces as final truth
 
-2. **Semantic layer (Neo4j)**
-   - Curated, versioned knowledge nodes
-   - Graph relationships (SUPERSEDES, AUTHORED_BY, CONTRIBUTES_TO)
+2. **Semantic layer (PostgreSQL `graph_memories` / `graph_supersedes`)**
+   - Curated, versioned knowledge rows (RuVector hybrid search)
+   - Supersession edges (SUPERSEDES) in `graph_supersedes`
    - Only populated via curator promotion after policy checks
    - This is the canonical truth layer
 
@@ -148,10 +144,10 @@ When a user asks for memory-related work:
 8. **Troubleshoot systematically**
     - Is the MCP server reachable? (`memory` server via `bun run mcp`)
     - Is PostgreSQL accepting connections? (`localhost:5432`)
-    - Is Neo4j reachable? (`localhost:7687`)
+    - Is RuVector available in PostgreSQL? (same instance, `localhost:5432`)
     - Are credentials and `group_id` correct?
     - Is the embedding service (Ollama) running on host?
-    - Check `POSTGRES_PASSWORD` and `NEO4J_PASSWORD` environment variables
+    - Check the `POSTGRES_PASSWORD` environment variable
 
 ## Guardrails
 
@@ -250,7 +246,7 @@ matches = await allura-brain_memory_search({
   min_score: 0.8
 });
 
-// Export canonical-only (Neo4j)
+// Export canonical-only (semantic layer)
 all_memories = await allura-brain_memory_export({
   group_id: "allura-system",
   canonical_only: true,
@@ -269,7 +265,7 @@ all_memories = await allura-brain_memory_export({
 
 - `src/mcp/memory-server.ts` — MCP entry point
 - `src/integrations/postgres.client.ts` — EPISODIC layer
-- `src/integrations/neo4j.client.ts` — SEMANTIC layer
+- `src/lib/ruvector/bridge.ts` — SEMANTIC layer (RuVector hybrid retrieval)
 - `src/curator/` — HITL promotion pipeline
 
 (End of file - total 212 lines)

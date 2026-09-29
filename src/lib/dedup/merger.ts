@@ -27,13 +27,13 @@ const DEFAULT_STRATEGY: MergeStrategy = {
 }
 
 // =============================================================================
-// Neo4j Client Interface
+// Graph Merge Client Interface
 // =============================================================================
 
 /**
- * Neo4j client interface for merge operations
+ * Graph merge client interface for merge operations
  */
-export interface Neo4jClient {
+export interface GraphMergeClient {
   run(query: string, params?: Record<string, unknown>): Promise<{ records: unknown[] }>
   close(): Promise<void>
 }
@@ -184,12 +184,12 @@ const QUERIES = {
  * Handles canonical merge operations with audit trail support.
  */
 export class MergeManager {
-  private client: Neo4jClient | null
+  private client: GraphMergeClient | null
   private strategy: MergeStrategy
   private auditEntries: Map<string, MergeAuditEntry>
 
   constructor(config: {
-    client?: Neo4jClient
+    client?: GraphMergeClient
     strategy?: Partial<MergeStrategy>
   } = {}) {
     this.client = config.client ?? null
@@ -218,8 +218,8 @@ export class MergeManager {
     const propertiesMerged: string[] = []
 
     if (this.client) {
-      // Real Neo4j merge
-      relationshipsUpdated = await this.mergeWithNeo4j(
+      // Real graph merge
+      relationshipsUpdated = await this.mergeWithGraphClient(
         canonicalId,
         duplicateIds,
         request.entityType
@@ -257,9 +257,9 @@ export class MergeManager {
   }
 
   /**
-   * Merge with Neo4j
+   * Merge with graph client
    */
-  private async mergeWithNeo4j(
+  private async mergeWithGraphClient(
     canonicalId: string,
     duplicateIds: string[],
     _entityType: EntityType
@@ -329,7 +329,7 @@ export class MergeManager {
     }
 
     if (this.client) {
-      // Get entities from Neo4j
+      // Get entities from the graph client
       const result = await this.client.run(QUERIES.getEntitiesByIds, {
         ids: [canonicalId, ...duplicateIds],
       })
@@ -512,7 +512,7 @@ export class MergeManager {
         ).id
       
       case 'most-connected':
-        // Would need to query Neo4j for connection count
+        // Would need to query the graph client for connection count
         // For now, return first entity
         return entities[0].id
       
@@ -593,7 +593,7 @@ export class MergeManager {
  * Create a merge manager
  */
 export function createMerger(config: {
-  client?: Neo4jClient
+  client?: GraphMergeClient
   strategy?: Partial<MergeStrategy>
 } = {}): MergeManager {
   return new MergeManager(config)

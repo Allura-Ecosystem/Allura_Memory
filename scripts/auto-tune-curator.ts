@@ -6,7 +6,6 @@
  * Agents: curator_tuner, feedback_validator, decision_analyzer
  */
 
-import { closeDriver, getDriver } from "./lib/neo4j-stub";
 import { closePool, getPool } from "../src/lib/postgres/connection";
 
 interface TuningProposal {
@@ -27,25 +26,24 @@ interface ValidationResult {
 async function curatorTuner(): Promise<TuningProposal[]> {
   console.log("[curator_tuner] Analyzing current scoring rules...\n");
   
-  const neo4jDriver = getDriver();
-  const session = neo4jDriver.session();
-  
+  const pool = getPool();
+
   try {
-    // Analyze historical promotion outcomes
-    const result = await session.run(`
-      MATCH (p:PromotionProposal)-[:PROMOTED_TO]->(i:Insight)
-      WHERE p.group_id = 'allura-system'
-      RETURN p.confidence AS confidence,
-             p.tier AS tier,
-             i.status AS outcome
-    `);
-    
-    const proposals = result.records.map(r => ({
-      confidence: r.get<number>('confidence'),
-      tier: r.get<string>('tier'),
-      outcome: r.get<string>('outcome')
+    // Analyze historical promotion outcomes (decided proposals only)
+    const result = await pool.query(
+      `SELECT score AS confidence, tier, status AS outcome
+         FROM canonical_proposals
+        WHERE group_id = $1
+          AND status IN ('approved', 'rejected')`,
+      ["allura-system"]
+    );
+
+    const proposals = result.rows.map(r => ({
+      confidence: Number(r.confidence),
+      tier: r.tier as string,
+      outcome: r.outcome as string
     }));
-    
+
     console.log(`[curator_tuner] Analyzed ${proposals.length} historical promotions`);
     
     // Identify rule gaps
@@ -53,7 +51,7 @@ async function curatorTuner(): Promise<TuningProposal[]> {
     
     // Check if adoption threshold is too low
     const adoptionProposals = proposals.filter(p => p.tier === 'adoption');
-    const adoptionSuccess = adoptionProposals.filter(p => p.outcome === 'active').length;
+    const adoptionSuccess = adoptionProposals.filter(p => p.outcome === 'approved').length;
     const adoptionRate = adoptionProposals.length > 0 ? adoptionSuccess / adoptionProposals.length : 0;
     
     if (adoptionRate < 0.7) {
@@ -89,8 +87,9 @@ async function curatorTuner(): Promise<TuningProposal[]> {
     
     return proposals_to_tune;
     
-  } finally {
-    await session.close();
+  } catch (error) {
+    console.error("[curator_tuner] Failed to analyze promotion history:", error);
+    throw error;
   }
 }
 
@@ -194,7 +193,6 @@ async function runAutoTune() {
     console.error("[AutoGen] Error:", error);
     process.exit(1);
   } finally {
-    await closeDriver();
     await closePool();
   }
 }

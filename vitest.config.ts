@@ -66,7 +66,6 @@ export default defineConfig({
       "src/__tests__/curator-reject-route.test.ts",
       "src/__tests__/mcp-catalog.test.ts",
       "src/__tests__/mcp-streamable-http.test.ts",
-      "src/__tests__/neo4j-writer-errors.test.ts",
       "src/__tests__/watchdog-sustained.test.ts",
       "src/__tests__/sentry-integration.test.ts",
       "src/__tests__/sentry-wiring.test.ts",
@@ -87,7 +86,6 @@ export default defineConfig({
       "src/lib/ruvector/bridge.test.ts",
       "src/lib/ruvector/retrieval-adapter.test.ts",
       "src/lib/ruvector/embedding-service.test.ts",
-      "src/lib/neo4j/connection.test.ts",
       "src/lib/postgres/connection.test.ts",
       // SDK unit tests (Story 12.3)
       "src/sdk/**/*.test.ts",
@@ -125,7 +123,6 @@ export default defineConfig({
       // canonical-memory — DB-backed integration test, flaky in parallel
       "src/__tests__/canonical-memory.test.ts",
       // DB-backed tests that need live connections — E2E lane
-      "src/lib/neo4j/queries/*.test.ts",
       "src/lib/postgres/queries/*.test.ts",
       "src/lib/postgres/trace-logger.test.ts",
       // DB-backed checkpoint continuation proof — e2e lane only (Story 12.2)

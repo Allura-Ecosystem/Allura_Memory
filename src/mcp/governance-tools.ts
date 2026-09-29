@@ -20,7 +20,7 @@
  * - group_id validated via validateGroupId (^allura-[a-z0-9-]+$ pattern)
  * - All DB ops via getConnections() — never direct exec
  * - All writes are INSERTs into events table (append-only)
- * - No autonomous Neo4j promotion
+ * - No autonomous semantic promotion
  * - Parameterized SQL only
  */
 
@@ -340,14 +340,14 @@ function evaluateInvariants(
         : `Action '${action}' contains a mutation keyword; must use append-only INSERT instead`,
     },
 
-    // 3. Neo4j SUPERSEDES — flag any direct neo4j edit action
+    // 3. SUPERSEDES versioning — flag any direct graph-node edit action
     {
-      invariant: "Neo4j Versioning via SUPERSEDES",
-      invariant_key: "neo4j_supersedes",
-      pass: !/(neo4j.*edit|neo4j.*mutate|set.*node|edit.*node)/i.test(action),
-      reason: !/(neo4j.*edit|neo4j.*mutate|set.*node|edit.*node)/i.test(action)
-        ? "Action does not attempt direct Neo4j node mutation"
-        : `Action '${action}' implies direct Neo4j node mutation; use SUPERSEDES pattern instead`,
+      invariant: "SUPERSEDES Versioning via graph_supersedes",
+      invariant_key: "graph_supersedes",
+      pass: !/(graph.*edit|graph.*mutate|set.*node|edit.*node)/i.test(action),
+      reason: !/(graph.*edit|graph.*mutate|set.*node|edit.*node)/i.test(action)
+        ? "Action does not attempt direct graph node mutation"
+        : `Action '${action}' implies direct graph node mutation; use SUPERSEDES pattern instead`,
     },
 
     // 4. HITL promotion — flag any autonomous_promote or direct semantic write

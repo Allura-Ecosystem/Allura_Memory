@@ -4,7 +4,7 @@
  * POST /api/memory/retrieval - Retrieve approved knowledge through the controlled retrieval layer.
  *
  * This is the sole endpoint agents should use to retrieve knowledge.
- * Agents MUST NOT query PostgreSQL or Neo4j directly (AD-19).
+ * Agents MUST NOT query PostgreSQL or RuVector directly (AD-19).
  *
  * Reference: docs/allura/DESIGN-MEMORY-SYSTEM.md §Retrieval Layer
  */

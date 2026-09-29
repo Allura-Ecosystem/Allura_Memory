@@ -51,7 +51,7 @@ skills:
 
 1. Search PostgreSQL for past implementation decisions (agent_id='woz', group_id='allura-system')
 
-2. Search Neo4j for relevant build patterns and past implementations
+2. Search RuVector for relevant build patterns and past implementations
 
 3. Load allura-memory-skill (`skill({ name: "allura-memory-skill" })`) for canonical interface reference
 
@@ -59,7 +59,7 @@ skills:
 
 1. Log BUILD_COMPLETE to PostgreSQL (agent_id='woz', group_id='allura-system')
 
-2. Create Neo4j entity if new pattern discovered (confidence >= 0.85)
+2. Create canonical semantic entry if new pattern discovered (confidence >= 0.85)
 
 ---
 

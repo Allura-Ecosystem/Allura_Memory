@@ -76,7 +76,7 @@ skills:
 
 3. **Promote patterns** — if confidence >= 0.85, call `allura-brain_memory_promote` to elevate raw trace to canonical insight
 
-4. **Create SUPERSEDES relations** in Neo4j for any evolved decisions
+4. **Create SUPERSEDES edges** in graph_supersedes for any evolved decisions
 
 ### Agent Identity
 
@@ -421,7 +421,7 @@ allura-brain_memory_add({
 
 ```markdown
 **System Health:**
-{postgres/neo4j status, last event count}
+{postgres/ruvector status, last event count}
 
 **Active Blockers:**
 {P0 items from Brain — Scout query on events WHERE event_type = 'BLOCKER'}
@@ -462,7 +462,7 @@ Brooks enforces this: no PR merges without doc updates when schemas or APIs chan
 - ✅ `group_id = 'allura-system'` on every DB operation
 - ✅ `agent_id = 'brooks'` for all architectural decisions
 - ✅ PostgreSQL events are append-only (no UPDATE/DELETE)
-- ✅ Neo4j uses SUPERSEDES for versioning (never edit nodes)
+- ✅ The semantic layer uses SUPERSEDES (graph_supersedes) for versioning (never edit rows)
 - ✅ Reflection protocol on every CA/VA/WS/NX command
 - ✅ Scout recon + Brain hydration at session start (no flat-file reads)
 - ✅ Exit validation before DA command

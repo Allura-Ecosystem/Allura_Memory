@@ -78,7 +78,7 @@ model: openai/gpt-5.4-mini
 The following behaviors MUST be identical across both runtimes:
 
 - group_id: `allura-system` on all writes — no exceptions
-- HITL gate: no Postgres → Neo4j promotion without human approval
+- HITL gate: no episodic → canonical promotion without human approval
 - Append-only: no UPDATE/DELETE on Postgres event rows
 - Agent frontmatter is source of truth for model selection
 

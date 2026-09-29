@@ -83,7 +83,7 @@ describe("McpSkillExecutor", () => {
     ;(executor as any).pool = mockPool
 
     const call: SkillCall = {
-      skillName: "skill-neo4j-memory",
+      skillName: "skill-ruvector-memory",
       toolName: "recall_insight",
       assignedAgent: "scout",
       input: { query: "architecture decisions", groupId: "allura-test-teamram",
@@ -92,7 +92,7 @@ describe("McpSkillExecutor", () => {
 
     const result = await executor.execute(call)
 
-    expect(mockPool.getClient).toHaveBeenCalledWith("skill-neo4j-memory")
+    expect(mockPool.getClient).toHaveBeenCalledWith("skill-ruvector-memory")
     expect(callLog).toHaveLength(1)
     expect(callLog[0].name).toBe("recall_insight")
     expect(callLog[0].args).toEqual({
@@ -114,7 +114,7 @@ describe("McpSkillExecutor", () => {
     ;(executor as any).pool = mockPool
 
     const result = await executor.execute({
-      skillName: "skill-neo4j-memory",
+      skillName: "skill-ruvector-memory",
       toolName: "list_insights",
       assignedAgent: "scout",
       input: { groupId: "allura-test-teamram" },
@@ -146,7 +146,7 @@ describe("McpSkillExecutor", () => {
   it("throws on skill error response", async () => {
     const mockPool = createMockClientPool(() => ({
       success: false,
-      error: "Neo4j connection refused",
+      error: "database connection refused",
     }))
 
     const executor = new McpSkillExecutor()
@@ -154,12 +154,12 @@ describe("McpSkillExecutor", () => {
 
     await expect(
       executor.execute({
-        skillName: "skill-neo4j-memory",
+        skillName: "skill-ruvector-memory",
         toolName: "recall_insight",
         assignedAgent: "scout",
         input: { query: "test", groupId: "allura-test-teamram" },
       }),
-    ).rejects.toThrow("Neo4j connection refused")
+    ).rejects.toThrow("database connection refused")
   })
 
   it("throws on MCP isError flag", async () => {
@@ -206,7 +206,7 @@ describe("McpSkillExecutor", () => {
     ;(executor as any).pool = mockPool
 
     const call: SkillCall = {
-      skillName: "skill-neo4j-memory",
+      skillName: "skill-ruvector-memory",
       toolName: "recall_insight",
       assignedAgent: "scout",
       input: { query: "test", groupId: "allura-test-teamram" },
@@ -226,7 +226,7 @@ describe("McpSkillExecutor", () => {
     ;(executor as any).pool = mockPool
 
     await executor.execute({
-      skillName: "skill-neo4j-memory",
+      skillName: "skill-ruvector-memory",
       toolName: "recall_insight",
       assignedAgent: "scout",
       input: { query: "test", groupId: "allura-test-teamram" },
@@ -247,7 +247,7 @@ describe("McpSkillExecutor", () => {
 
     await expect(
       executor.execute({
-        skillName: "skill-neo4j-memory",
+        skillName: "skill-ruvector-memory",
         toolName: "recall_insight",
         assignedAgent: "scout",
         input: { query: "test", groupId: "allura-test-teamram" },
@@ -265,7 +265,7 @@ describe("McpClientPool", () => {
   it("tracks connected skills", () => {
     const pool = new McpClientPool()
     expect(pool.connectedSkills()).toEqual([])
-    expect(pool.has("skill-neo4j-memory")).toBe(false)
+    expect(pool.has("skill-ruvector-memory")).toBe(false)
   })
 })
 
@@ -279,7 +279,7 @@ describe("createMcpSkillExecutor", () => {
     // createMcpSkillExecutor no longer spawns child processes. Options accepted
     // for backward-compatible call sites but are not forwarded to a pool.
     const executor = createMcpSkillExecutor({
-      extraEnv: { NEO4J_URI: "bolt://custom:7687", CUSTOM_VAR: "yes" },
+      extraEnv: { CUSTOM_ENDPOINT: "http://custom:7687", CUSTOM_VAR: "yes" },
       cwd: process.cwd(),
       poolConnections: true,
     })
@@ -326,7 +326,7 @@ describe("McpSkillExecutor + orchestrator integration", () => {
     expect(result.plan).toHaveLength(3)
     // Staged routing: memory first, then database (for traces), then cypher (for graph)
     const skillNames = result.plan.map((s) => s.skillName)
-    expect(skillNames[0]).toBe("skill-neo4j-memory")
+    expect(skillNames[0]).toBe("skill-ruvector-memory")
     expect(skillNames).toContain("skill-database")
     expect(skillNames).toContain("skill-cypher-query")
 

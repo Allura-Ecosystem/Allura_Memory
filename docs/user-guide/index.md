@@ -29,8 +29,6 @@ docker compose up -d
 
 Services started:
 - `postgres` — PostgreSQL 16 + pgvector (port 5432)
-- `neo4j` — Neo4j 5.26 knowledge graph (ports 7474, 7687)
-- `neo4j-init` — Schema initializer (runs once)
 - `mcp` — MCP HTTP gateway (port 3201 mapped to 5888)
 
 ### 3. Verify

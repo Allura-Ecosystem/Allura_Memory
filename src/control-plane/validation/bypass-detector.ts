@@ -112,7 +112,6 @@ const LEGACY_IMPORTS = {
   ],
   high: [
     /from\s+["'][^"']*postgres[^"']*["']/i,
-    /from\s+["'][^"']*neo4j-driver[^"']*["']/i,
     /require\s*\(\s*["'][^"']*pg["']\s*\)/i,
   ],
   medium: [
@@ -531,7 +530,7 @@ export class BypassDetector {
     const suggestions = [
       "Replace @/lib/mcp/enforced-client with RuVixSDK",
       "Use RuVixControlPlane.syscall for all database operations",
-      "Remove direct pg/neo4j imports",
+      "Remove direct pg imports",
       "Update tests to use controlPlane-backed mocks",
     ];
 

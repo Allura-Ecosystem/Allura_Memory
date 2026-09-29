@@ -7,7 +7,7 @@
 
 ---
 
-## Decision: Dual-Database Architecture (PostgreSQL + Neo4j)
+## Decision: Two-Layer Memory Architecture (PostgreSQL + RuVector)
 
 **Date:** 2026-01-12  
 **Status:** Decided  
@@ -17,23 +17,23 @@
 allura needs both an immutable audit trail and fast semantic search. A single database forces a trade-off between write-once reliability and query-time flexibility.
 
 ### Decision
-PostgreSQL 16 for episodic append-only traces. Neo4j 5.26 for versioned semantic knowledge graph. Both run in the same Docker Compose stack.
+PostgreSQL 16 for episodic append-only traces. PostgreSQL `graph_memories` / `graph_supersedes` with RuVector (pgvector) hybrid search for the versioned semantic layer. Both layers run in the same PostgreSQL instance in the Docker Compose stack.
 
 ### Rationale
 - Postgres = truth: append-only events table, no UPDATE/DELETE ever
-- Neo4j = speed: APOC-powered graph queries, semantic search, SUPERSEDES versioning
-- Two stores enable HITL governance: raw trace → curator review → approved knowledge
+- RuVector hybrid search = speed: vector ANN + BM25 RRF fusion, `graph_supersedes` SUPERSEDES versioning
+- Two layers enable HITL governance: raw trace → curator review → approved knowledge
 
 ### Alternatives Considered
 | Alternative | Pros | Cons | Why Rejected |
 |-------------|------|------|--------------|
-| Single Postgres | Simpler ops | No native graph queries, no semantic versioning | Kills semantic search quality |
-| Single Neo4j | Graph-native | No append-only guarantee, harder audit compliance | Mutability risk for audit trail |
+| Single flat episodic table | Simplest schema | No semantic versioning, no curated canonical layer | Kills semantic search quality |
+| Single mutable semantic store | One model | No append-only guarantee, harder audit compliance | Mutability risk for audit trail |
 
 ### Impact
 - **Positive:** Audit + semantic precision coexist; SOC2-ready by default
-- **Negative:** Two DB services to operate; more complex dev setup
-- **Risk:** Schema drift between PG and Neo4j (mitigated by curator pipeline)
+- **Negative:** Two layers to keep consistent; more complex schema
+- **Risk:** Drift between episodic events and the semantic layer (mitigated by curator pipeline)
 
 ---
 
@@ -47,7 +47,7 @@ PostgreSQL 16 for episodic append-only traces. Neo4j 5.26 for versioned semantic
 Enterprise customers require proof that AI agents cannot autonomously modify canonical knowledge. Without a human gate, allura is indistinguishable from any other memory store.
 
 ### Decision
-`PROMOTION_MODE=soc2` routes high-confidence proposals to a pending queue. No Neo4j write happens until a curator explicitly approves. `PROMOTION_MODE=auto` available for developer tier.
+`PROMOTION_MODE=soc2` routes high-confidence proposals to a pending queue. No semantic-layer write happens until a curator explicitly approves. `PROMOTION_MODE=auto` available for developer tier.
 
 ### Rationale
 - Governance = differentiator vs mem0 (which has no approval flow)
@@ -156,7 +156,7 @@ Bun's lockfile model + supply chain isolation. Faster than Node for scripts. All
 **Owner:** Brooks
 
 ### Context
-The allura dashboard Graph View (screen 03) requires interactive Neo4j graph visualization. Two primary candidates evaluated: `@neo4j-nvl/react` (official Neo4j library, powers Bloom/Aura) and `react-force-graph-2d` (MIT, open source, force-directed).
+The allura dashboard Graph View (screen 03) requires interactive graph visualization. Two primary candidates evaluated: NVL (a commercially licensed vendor graph library) and `react-force-graph-2d` (MIT, open source, force-directed).
 
 ### Decision
 Use `react-force-graph-2d` for the Graph View. Feed data from `/api/memory/graph` (already live). Dynamic import with `{ ssr: false }` for Next.js App Router compatibility.
@@ -170,14 +170,14 @@ Use `react-force-graph-2d` for the Graph View. Feed data from `/api/memory/graph
 ### Alternatives Considered
 | Alternative | Why Rejected |
 |-------------|-------------|
-| `@neo4j-nvl/react` | Commercial license restriction; upgrade path when/if needed |
+| NVL (vendor graph library) | Commercial license restriction; upgrade path when/if needed |
 | Cytoscape.js | Heavier, less React-native; no advantage for this use case |
 | D3 force-directed | Lower-level; more custom work for same result |
 
 ### Impact
 - **Positive:** MIT license, full brand control, lighter bundle
 - **Negative:** Less out-of-box polish vs NVL; requires custom node canvas rendering
-- **Risk:** Visual gap vs NVL's Bloom-quality styling (mitigated by brand-accurate custom rendering)
+- **Risk:** Visual gap vs NVL's polished default styling (mitigated by brand-accurate custom rendering)
 
 ---
 

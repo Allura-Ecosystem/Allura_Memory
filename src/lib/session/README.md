@@ -82,7 +82,7 @@ console.log('Session ready:', result.sessionId);
 │                    PERSISTENCE LAYER                         │
 │                                                              │
 │   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐     │
-│   │ PostgreSQL  │   │   Neo4j     │   │    Files    │     │
+│   │ PostgreSQL  │   │  RuVector   │   │    Files    │     │
 │   │ (Database)  │   │(Knowledge)  │   │(.opencode)  │     │
 │   └─────────────┘   └─────────────┘   └─────────────┘     │
 │                                                              │
@@ -164,7 +164,7 @@ Implements the 4-layer encoding priority for state recovery.
 
 **Hydration Order:**
 1. PostgreSQL (most durable, primary source)
-2. Neo4j (curated knowledge, versioned)
+2. RuVector semantic layer (curated knowledge, versioned)
 3. Files (`.opencode/state`, fast recovery)
 4. Memory Bank (fallback documentation)
 
@@ -245,7 +245,6 @@ Centralized FATAL/WARNING/INFO alert handling.
 - `hydration` - State hydration failures
 - `drift` - Planning drift detection
 - `database` - PostgreSQL errors
-- `neo4j` - Neo4j errors
 - `subagent` - Subagent coordination errors
 
 ```typescript
@@ -305,7 +304,7 @@ Priority 1: PostgreSQL (Database)
            ├── Transaction-safe
            └── Primary source of truth
            
-Priority 2: Neo4j (Serialization)
+Priority 2: Serialization
            ├── Curated knowledge
            ├── Versioned with SUPERSEDES
            └── Knowledge graph structure
@@ -715,7 +714,7 @@ curl http://localhost:3000/api/health
 curl http://localhost:3000/api/health?detailed=true
 
 # Check specific components
-curl http://localhost:3000/api/health?include=postgresql,neo4j
+curl http://localhost:3000/api/health?include=postgresql
 
 # Acknowledge alerts
 curl -X POST http://localhost:3000/api/health \

@@ -2,7 +2,7 @@
  * LEARNED Relationship Tracker
  * Story 1.6: Track agent session learning
  *
- * Creates (Agent)-[:LEARNED]->(Insight|Lesson|Session) relationships in Neo4j
+ * Creates (Agent)-[:LEARNED]->(Insight|Lesson|Session) relationships in the semantic store
  * to track what agents learned during sessions.
  */
 

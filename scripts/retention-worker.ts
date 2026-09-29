@@ -13,7 +13,7 @@
  *   Rows where deleted_at < NOW() - INTERVAL '30 days' are hard-deleted.
  *   This is the final purge after the 30-day recovery window.
  *
- * SAFETY: Canonical (Neo4j) memories are NEVER touched by this worker.
+ * SAFETY: Canonical (graph_memories) memories are NEVER touched by this worker.
  *         Only episodic PG rows in allura_memories are affected.
  *         Semantic/procedural memory_type rows are excluded.
  *

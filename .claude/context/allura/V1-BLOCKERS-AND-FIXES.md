@@ -208,11 +208,6 @@ POSTGRES_DB=memory
 POSTGRES_USER=ronin4life
 POSTGRES_PASSWORD=
 
-# ── Neo4j ────────────────────────────────────────
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=
-
 # ── Port Config ───────────────────────────────────
 ALLURA_DASHBOARD_PORT=3100  # Next.js dashboard dev/start port
 OPENCLAW_PORT=3200       # MCP HTTP gateway port
@@ -359,7 +354,6 @@ Phase 5 — Full Verification Matrix
   bun run mcp:http
   docker compose up
   Apply Postgres migrations on fresh stack
-  Apply Neo4j indexes
   Run canonical round-trip test against live stack
   Run benchmark baseline: bun run benchmark
 ```

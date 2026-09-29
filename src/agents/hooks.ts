@@ -8,7 +8,7 @@
  * - group_id validated on every call (throws GroupIdValidationError on invalid)
  * - ZodError is re-thrown as HookValidationError (no silent drops)
  * - Errors from memory_add propagate uncaught (loud failure)
- * - No direct imports of pg or neo4j-driver
+ * - No direct imports of pg
  */
 
 if (typeof window !== "undefined") {

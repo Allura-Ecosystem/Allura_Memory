@@ -6,7 +6,7 @@
  * GRAPH_BACKEND=ruvector       → RuVectorGraphAdapter (PostgreSQL + pgvector)
  * GRAPH_BACKEND=ruvector-crate  → RuvectorCrateGraphAdapter (native engine, opt-in)
  *
- * Neo4j has been sunset. PostgreSQL + pgvector is the sole graph backend.
+ * PostgreSQL + pgvector is the sole graph backend.
  */
 
 import type { Pool } from "pg"
@@ -25,12 +25,6 @@ export type GraphBackend = "ruvector" | "ruvector-crate"
  */
 export function getGraphBackend(): GraphBackend {
   const value = process.env.GRAPH_BACKEND?.toLowerCase()
-  if (value === "neo4j") {
-    throw new Error(
-      "GRAPH_BACKEND=neo4j is no longer supported. Neo4j has been sunset — " +
-        "use GRAPH_BACKEND=ruvector (default) or GRAPH_BACKEND=ruvector-crate.",
-    )
-  }
   if (value === "ruvector-crate") return "ruvector-crate"
   return "ruvector"
 }
@@ -43,8 +37,6 @@ export function getGraphBackend(): GraphBackend {
  */
 export function createGraphAdapter(connections: {
   pg?: Pool
-  /** @deprecated Neo4j is sunset. Ignored if provided. */
-  neo4j?: unknown
   /** Path B (ruvector-crate): embedder for the vector-first native engine (G5). */
   crate?: { embed: Embedder }
 }): IGraphAdapter {
@@ -83,8 +75,6 @@ export function createGraphAdapter(connections: {
  */
 export function isGraphAdapterAvailable(connections: {
   pg?: Pool
-  /** @deprecated Neo4j is sunset. Ignored if provided. */
-  neo4j?: unknown
   crate?: { embed: Embedder }
 }): boolean {
   const backend = getGraphBackend()

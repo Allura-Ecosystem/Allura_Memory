@@ -203,18 +203,12 @@ async function ralphLoop() {
   // ── Log start to PostgreSQL ────────────────────────────────────────────
 
   const postgresUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
-  const neo4jUri: string | null = null;
   let pgPool: InstanceType<typeof import("pg").Pool> | null = null;
-  let neo4jDriver: { session: () => { run: (q: string, p: Record<string, unknown>) => Promise<{ summary: unknown }>; close: () => Promise<void> } } | null = null;
-
-  // Neo4j is sunset — neo4jDriver stays null; all Neo4j functionality is in PostgreSQL.
-  const getDriver = (): typeof neo4jDriver => null;
 
   if (postgresUrl) {
     try {
       const { getPool } = await import("../../src/lib/postgres/connection");
       pgPool = getPool();
-      neo4jDriver = getDriver();
     } catch (error) {
       console.log("[ralph-harness] DB connections unavailable — proceeding without logging");
     }
@@ -296,37 +290,10 @@ async function ralphLoop() {
     }
   }
 
-  if (neo4jDriver) {
-    const neoSession = neo4jDriver.session();
-    try {
-      await neoSession.run(`
-        CREATE (i:Insight {
-          insight_id: 'ins_ralph_' + randomUUID(),
-          summary: $summary,
-          confidence: $confidence,
-          status: 'active',
-          group_id: 'allura-system',
-          created_at: datetime(),
-          source_type: 'agent_loop'
-        })
-        RETURN i
-      `, {
-        summary: `Ralph loop ${completed ? "completed" : "failed"}: ${config.task}. Agent: ${config.agent}. Iterations: ≤${config.maxIterations}.`,
-        confidence: completed ? 0.80 : 0.30,
-      });
-    } catch (error) {
-      console.error("[ralph-harness] Neo4j log failed:", error);
-    } finally {
-      await neoSession.close();
-    }
-  }
-
   // ── Cleanup ────────────────────────────────────────────────────────────
 
   if (pgPool) {
     const { closePool } = await import("../../src/lib/postgres/connection");
-    const closeDriver = async () => {};
-    await closeDriver();
     await closePool();
   }
 
