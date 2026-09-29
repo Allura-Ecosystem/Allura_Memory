@@ -13,7 +13,7 @@
  * 4. memory_list    - List all memories for a user
  * 5. memory_delete  - Soft-delete a memory
  * 6. memory_update  - Append-only versioned update
- * 7. memory_promote - Request curator promotion
+ * 7. memory_promote - Request curator promotion (governed; auto mode promotes via the auto-curator engine)
  * 8. memory_export  - Export memories
  *
  * Architecture (Slice C - Graph Adapter):
@@ -108,6 +108,9 @@ import {
   toProvenance,
   validateGroupId,
 } from "./canonical-tools/validation-utils"
+import { isAutoPromoteEnabled, requiresHITL, AUTO_CURATOR_PRINCIPAL_ID } from "@/lib/curator/auto-promote"
+import { createPrincipalContext } from "@/lib/auth/principal-context"
+import { approveProposal } from "@/lib/memory/approve-proposal"
 
 // ── Canonical Operations ───────────────────────────────────────────────────
 
@@ -352,15 +355,63 @@ export async function memory_add(request: MemoryAddRequest): Promise<MemoryAddRe
       }
 
       // SOC2 mode: Queue for human approval — circuit-breaker wrapped PG insert
+      const proposalId = randomUUID()
       await withCircuitBreaker("postgres", groupId, "memory_add:insert_proposal", async () =>
         tenantPgQuery(groupId, agentId, pg,
           `INSERT INTO canonical_proposals (
           id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref, created_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-          [randomUUID(), groupId, scope.workspace_id ?? null, request.content, score, reasoning, tier, "pending", eventId, createdAt],
+          [proposalId, groupId, scope.workspace_id ?? null, request.content, score, reasoning, tier, "pending", eventId, createdAt],
           scope.workspace_id
         )
       )
+
+      // Auto mode (Sabir's rule, restored 2026-09-29): score >= threshold and
+      // content is not HITL-held → the auto-curator service principal approves
+      // through the same atomic governed transaction as a human curator.
+      // Agents still never self-promote: segregation of duties is enforced
+      // in-transaction (requester agent_id ≠ auto-curator principal).
+      if (isAutoPromoteEnabled() && agentId !== AUTO_CURATOR_PRINCIPAL_ID) {
+        const holdReason = requiresHITL(request.content)
+        if (!holdReason && scope.workspace_id) {
+          try {
+            const autoCuratorPrincipal = createPrincipalContext({
+              principalId: AUTO_CURATOR_PRINCIPAL_ID,
+              sessionId: `auto-promote-${eventId}`,
+              authMethod: "service_identity",
+              tenantIds: ["*"],
+              roles: ["curator"],
+              scopes: ["review:approve", "memory:read", "memory:write"],
+            })
+            const receipt = await approveProposal({
+              principal: autoCuratorPrincipal,
+              workspaceId: scope.workspace_id,
+              groupId,
+              proposalId,
+              rationale: `Auto-promotion: score ${score} >= threshold ${threshold} (memory_add inline, PROMOTION_MODE=auto)`,
+              idempotencyKey: `auto-promote:${proposalId}`,
+              pool: pg,
+            })
+            console.info(
+              `[memory_add] Auto-promoted proposal=${proposalId} memory_id=${receipt.memory_id} score=${score}`
+            )
+            return {
+              id: receipt.memory_id as MemoryId,
+              stored: "both",
+              score,
+              created_at: createdAt,
+              meta: baseMeta(["postgres", "graph"]),
+            }
+          } catch (autoErr) {
+            // Inline promotion failure is non-blocking: the proposal stays
+            // pending and the batch auto-curator (or a human) picks it up.
+            const msg = autoErr instanceof Error ? autoErr.message : String(autoErr)
+            console.warn(`[memory_add] Inline auto-promotion failed (proposal stays pending): ${msg}`)
+          }
+        } else if (holdReason) {
+          console.info(`[memory_add] Auto mode held proposal=${proposalId} for HITL: ${holdReason}`)
+        }
+      }
 
       return {
         id: memoryId,
@@ -1129,16 +1180,23 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
   const { pg, neo4j: neo4jDriver } = await getConnections()
   const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
 
-  // 1. Check if already canonical in graph layer — fails loudly (no silent fallback)
-  const canonicalResult = await graphAdapter.checkCanonical({ id: request.id, group_id: groupId })
-  if (canonicalResult.isCanonical) {
-    return {
-      id: request.id,
-      proposal_id: "",
-      status: "already_canonical",
-      queued_at: queuedAt,
-      meta: baseMeta(["graph"]),
+  // 1. Check if already canonical when the graph adapter supports this legacy tenant-only lookup.
+  // Workspace-scoped adapters deliberately retire that lookup; promotion must still enqueue
+  // a curator proposal rather than fail before the HITL gate.
+  try {
+    const canonicalResult = await graphAdapter.checkCanonical({ id: request.id, group_id: groupId })
+    if (canonicalResult.isCanonical) {
+      return {
+        id: request.id,
+        proposal_id: "",
+        status: "already_canonical",
+        queued_at: queuedAt,
+        meta: baseMeta(["graph"]),
+      }
     }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (!message.includes("tenant-only graph lifecycle operation is retired")) throw error
   }
 
   // 2. Check for existing pending proposal (idempotency)
@@ -1251,7 +1309,7 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
     groupId, request.curator_id ?? request.user_id, pg,
     `INSERT INTO canonical_proposals
        (id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9)`,
     [proposalId, groupId, request.scope?.workspace_id ?? null, content, scoreResult.confidence, scoreResult.reasoning, scoreResult.tier, event_id, queuedAt],
     request.scope?.workspace_id
   )
