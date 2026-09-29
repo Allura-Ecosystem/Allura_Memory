@@ -95,13 +95,15 @@ export const CANONICAL_POLICIES: readonly GovernancePolicy[] = Object.freeze([
   },
   {
     id: "pol-004",
-    name: "HITL Required for Promotion",
+    name: "Governed Promotion (No Agent Self-Promotion)",
     description:
-      "Agents cannot autonomously promote memories to the Neo4j semantic layer. " +
-      "Eligible memories queue into canonical_proposals for human review. " +
-      "PROMOTION_MODE=auto is retained for backward-compatible env parsing only; " +
-      "canonical promotion is always HITL-gated. " +
-      "This invariant enforces the SOC2 governance posture.",
+      "Agents cannot promote their own memories to the canonical semantic layer. " +
+      "PROMOTION_MODE=soc2 queues eligible memories into canonical_proposals for human review. " +
+      "PROMOTION_MODE=auto (Sabir's rule, restored 2026-09-29) promotes score >= threshold " +
+      "proposals via the auto-curator service principal through the same atomic governed " +
+      "approval transaction (receipt, witness hash, idempotency, segregation of duties: " +
+      "requester != approver). No path — human, agent, or engine — may write directly to " +
+      "the canonical graph outside the governed transaction.",
     severity: "critical",
     invariant_key: "hitl_promotion",
     overridable: false,
