@@ -53,5 +53,8 @@ agents:
     allowed_group_ids:
       - allura-faithmeats
 
-# Fallback group_id for agents not listed in this registry
+# Retained for registry-shape compatibility ONLY. Since 2026-09-28 this is NOT
+# an access grant: an agent absent from the list above is denied every tenant.
+# Approved Epic 30 policy — an AI agent holds only scope it was explicitly
+# assigned, and removal terminates access.
 fallback_group_id: allura-system

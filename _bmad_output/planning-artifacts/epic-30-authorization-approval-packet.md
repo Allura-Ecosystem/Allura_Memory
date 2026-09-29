@@ -179,6 +179,41 @@ Two independent fresh-context reviews of the committed candidate found defects t
 
 **Still not evidenced.** The external Clerk boundary is mocked in every test, so no live tenant revocation event and no measured revocation timing exist. Nothing here is the Story 30.3 `authorization-policy-approval` decision, and nothing here authorises deployment.
 
+## Approval received — Sabir Asheed, 2026-09-28
+
+**Approver:** Sabir Asheed (administrator / approver on the recorded roster). **Candidate commit:** `dbcff18cecdb3e2648c30a404a19cda90bc7d3b4`. **Recorded by:** Codex, as policy input relayed in session.
+
+Approved: the recommended policy package, the current design for testing, strict zero-retention and zero-training AI privacy, limited contractor messaging, five-person user and accessibility testing, full release gates, and keeping Epic 30 open until evidence is complete.
+
+Correction carried with the approval, recorded verbatim in effect:
+
+1. Faith Meats founders Sabir Asheed, Gabriel Cohen and Samuel Montgomery may access all Faith Meats projects.
+2. Every other human may access only projects they are explicitly added to.
+3. Allura and every other AI agent MUST NOT have automatic cross-project access, must be explicitly assigned project by project with least privilege, and removal terminates access.
+
+### What this approval does and does not settle
+
+**Settles:** the policy direction itself. Decisions 1, 3, 5, 6 and 7 in "Decisions requested" stand as written. Decision 4 (contractor messaging) is approved as limited messaging.
+
+**Does NOT settle, and these gates stay open:**
+
+- **Decision 2 is now contradicted by correction 1.** Owner-private content currently has no administrator override, and accepted default 3 forbids one. Correction 1 can be read as founders being implicit members of every Faith Meats project (compatible) or as founders overriding owner-private content (incompatible). Nothing was implemented; see §10.2 of the [local authorization contract](./epic-30-local-authorization-contract.md). **One written choice from the owner is required before any founder access is built.**
+- **Independent security and data reviewer dispositions for every threat row.** The approval record above requires these separately from the approver's decision; they do not exist. Gabriel Cohen (security reviewer) and Samuel Montgomery (data reviewer) are named on the roster but have recorded no disposition. Naming them as founders in correction 1 is not a review disposition.
+- **Project-grained authority does not exist** in the schema, so corrections 1 and 2 cannot be enforced at project grain today. See §10.3.
+- Zero-retention/zero-training is approved as *policy*; the verified provider contract (Story 30.9) is still absent. Approving the requirement is not evidence that a provider meets it.
+- Five-person user and accessibility testing is approved as *plan*; no session has been run and no accessibility receipt exists.
+- Release gates are approved as *gates*; no hosted branch protection, deployment or release receipt exists.
+
+### Enforced in the repository under this approval
+
+The fail-closed half of correction 3 was implemented, because it needs no further decision: absent an explicit assignment, an agent holds nothing. An unlisted agent no longer receives the registry fallback tenant, and a delegated `mcp_token` principal with no verified workspace binding is now refused on every tool rather than only three reads.
+
+Two limits on that claim, recorded after independent review rather than left implied. First, the agent registry module **has no production consumer** — only tests import it — so that half is latent-API hardening, not an enforced control; the live agent-scope grain is the `mcp_tokens` row. Second, the all-tool refusal is scoped to `mcp_token`, and the HTTP shared-token `service_identity` path remains production-reachable, unfenced and workspace-less while `audit_query_events`, `governance_audit_log` and `memory_export` filter on `group_id` alone. **That tenant-wide audit and export reach is an open risk for the owner, not something this change closes.** Details, gaps and referred items are in §10.4 and §10.5 of the contract.
+
+## Prior approval records and templates
+
+These predate the 2026-09-28 approval above and are retained unchanged. The 2026-09-25 record carries its own candidate SHA and contract hash and is **not** a receipt for the 2026-09-28 approval, which was relayed in session with no external system contacted.
+
 ### Reviewer response template
 
 ```text
