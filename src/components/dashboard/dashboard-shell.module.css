@@ -3,6 +3,8 @@
 .brand { display:block; border-radius:10px; background:#f6f4ef; padding:14px 20px; margin:0 8px 28px; }
 .brand img { display:block; width:100%; height:auto; object-fit:contain; }
 .navLabel { color:#a5adb6; font-size:11px; letter-spacing:.14em; padding:0 14px; margin:12px 0; }
+.navToggle { display:none; align-items:center; gap:8px; width:100%; background:#202632; color:#f6f4ef; border:1px solid #353a42; border-radius:8px; padding:11px 14px; font-size:14px; font-family:inherit; cursor:pointer; box-sizing:border-box; }
+.navToggle:hover { background:#2b3340; }
 .navList { list-style:none; padding:0; margin:0; display:grid; gap:6px; }
 .navList a { display:flex; justify-content:space-between; gap:8px; padding:13px 14px; color:#ced1d5; text-decoration:none; font-size:14px; border-radius:8px; min-height:46px; box-sizing:border-box; }
 .navList a:hover { background:#202632; color:white; }
@@ -22,4 +24,19 @@
 .skipLink:focus { top:8px; }
 .shell a:focus-visible { outline:3px solid #ff5a2e; outline-offset:3px; }
 @media(max-width:1050px) { .main { padding:28px 24px 48px; } .sidebar { width:210px; padding:22px 14px; } }
-@media(max-width:760px) { .shell { display:block; } .sidebar { width:100%; padding:14px 18px; } .brand { width:110px; margin:0 0 12px; padding:8px 12px; } .navLabel,.scope { display:none; } .navList { display:flex; overflow-x:auto; gap:4px; } .navList a { white-space:nowrap; font-size:12px; } .topbar { padding:14px 20px; min-height:54px; } .main { padding:26px 18px 44px; } .skipLink { left:16px; } }
+@media(max-width:760px) {
+  .shell { display:block; }
+  .sidebar { width:100%; padding:14px 18px; }
+  .brand { width:110px; margin:0 0 12px; padding:8px 12px; }
+  .navLabel,.scope { display:none; }
+  .navToggle { display:flex; }
+  /* Every route stays reachable: the list is a vertical block, never a
+     horizontally scrolling row that clips routes off-screen. Hidden by
+     default and revealed by the toggle button (aria-expanded/data-open). */
+  .navList { display:none; grid-template-columns:1fr; width:100%; box-sizing:border-box; margin-top:6px; }
+  .navList[data-open="true"] { display:grid; }
+  .navList a { white-space:normal; font-size:14px; }
+  .topbar { padding:14px 20px; min-height:54px; }
+  .main { padding:26px 18px 44px; }
+  .skipLink { left:16px; }
+}

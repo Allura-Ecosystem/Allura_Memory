@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { AuthUser } from "@/lib/auth/types";
+import { DashboardNavList } from "./dashboard-nav-list";
 import styles from "./dashboard-shell.module.css";
 
 export const DASHBOARD_ROUTES = [
@@ -31,15 +32,7 @@ export function DashboardShell({ user, title, activePath, children }: {
         </Link>
         <p className={styles.navLabel}>WORKSPACE</p>
         <nav aria-label="Primary navigation">
-          <ul className={styles.navList}>
-            {DASHBOARD_ROUTES.map((route) => (
-              <li key={route.href}>
-                <Link href={route.href} aria-current={activePath === route.href ? "page" : undefined}>
-                  {route.label}<span aria-hidden="true">{route.href === "/portal" ? "↗" : ""}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <DashboardNavList activePath={activePath} />
         </nav>
         <dl className={styles.scope}>
           <dt>Tenant</dt><dd>{user.groupId}</dd>

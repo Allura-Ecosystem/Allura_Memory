@@ -4,3 +4,4 @@ FROM pgvector/pgvector:pg16
 
 COPY docker/postgres-init/ /docker-entrypoint-initdb.d/
 COPY docker/portfolio-postgres/99-portfolio-demo-workspace.sql /docker-entrypoint-initdb.d/99-portfolio-demo-workspace.sql
+COPY docker/portfolio-postgres/100-founder-demo-seed.sql /docker-entrypoint-initdb.d/100-founder-demo-seed.sql
