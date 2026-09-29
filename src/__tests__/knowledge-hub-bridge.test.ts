@@ -2,7 +2,7 @@
  * Knowledge Hub Bridge Tests (Flow 2)
  *
  * Tests the Knowledge Hub bridge that propagates approved proposals
- * to the Notion Knowledge Hub with full trace IDs (PG event ID + Neo4j insight ID).
+ * to the Notion Knowledge Hub with full trace IDs (PG event ID + the semantic store insight ID).
  *
  * Run with: bun vitest run src/__tests__/knowledge-hub-bridge.test.ts
  */
@@ -41,7 +41,7 @@ const MOCK_KNOWLEDGE_HUB_PARAMS: KnowledgeHubPromotionParams = {
   source: "memory-orchestrator",
   group_id: "allura-roninmemory",
   postgres_trace_id: "evt_12345",
-  neo4j_id: "ins_abc123def456",
+  semantic_id: "ins_abc123def456",
   tier: "mainstream",
   approved_by: "brooks-architect",
   tags: ["architecture", "database"],
@@ -91,8 +91,8 @@ describe("KnowledgeHubPromotionParamsSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("should reject missing neo4j_id", () => {
-    const params = { ...MOCK_KNOWLEDGE_HUB_PARAMS, neo4j_id: "" };
+  it("should reject missing semantic_id", () => {
+    const params = { ...MOCK_KNOWLEDGE_HUB_PARAMS, semantic_id: "" };
     const result = KnowledgeHubPromotionParamsSchema.safeParse(params);
     expect(result.success).toBe(false);
   });
@@ -165,7 +165,7 @@ describe("queryKnowledgeHubBySourceId", () => {
     });
   });
 
-  it("should return entry when Neo4j ID matches", async () => {
+  it("should return entry when Semantic ID matches", async () => {
     const mcpClient = createMockMCPClient();
     (mcpClient.search as ReturnType<typeof vi.fn>).mockResolvedValue([
       {
@@ -173,7 +173,7 @@ describe("queryKnowledgeHubBySourceId", () => {
         title: "group_id enforcement invariant",
         url: "https://notion.so/page-existing-123",
         properties: {
-          "Neo4j ID": "ins_abc123def456",
+          "Semantic ID": "ins_abc123def456",
           "PostgreSQL Trace ID": "evt_12345",
           Status: "Approved",
           group_id: "allura-roninmemory",
@@ -184,12 +184,12 @@ describe("queryKnowledgeHubBySourceId", () => {
     const result = await queryKnowledgeHubBySourceId("ins_abc123def456", mcpClient);
 
     expect(result).not.toBeNull();
-    expect(result!.neo4j_id).toBe("ins_abc123def456");
+    expect(result!.semantic_id).toBe("ins_abc123def456");
     expect(result!.postgres_trace_id).toBe("evt_12345");
     expect(result!.notion_page_id).toBe("page-existing-123");
   });
 
-  it("should return null when Neo4j ID does not match any result", async () => {
+  it("should return null when Semantic ID does not match any result", async () => {
     const mcpClient = createMockMCPClient();
     (mcpClient.search as ReturnType<typeof vi.fn>).mockResolvedValue([
       {
@@ -197,7 +197,7 @@ describe("queryKnowledgeHubBySourceId", () => {
         title: "Some other insight",
         url: "https://notion.so/page-other-456",
         properties: {
-          "Neo4j ID": "ins_different_id",
+          "Semantic ID": "ins_different_id",
           "PostgreSQL Trace ID": "evt_other",
           Status: "Approved",
           group_id: "allura-roninmemory",
@@ -231,7 +231,7 @@ describe("queryKnowledgeHubByPgTraceId", () => {
         title: "group_id enforcement invariant",
         url: "https://notion.so/page-existing-123",
         properties: {
-          "Neo4j ID": "ins_abc123def456",
+          "Semantic ID": "ins_abc123def456",
           "PostgreSQL Trace ID": "evt_12345",
           Status: "Approved",
           group_id: "allura-roninmemory",
@@ -243,7 +243,7 @@ describe("queryKnowledgeHubByPgTraceId", () => {
 
     expect(result).not.toBeNull();
     expect(result!.postgres_trace_id).toBe("evt_12345");
-    expect(result!.neo4j_id).toBe("ins_abc123def456");
+    expect(result!.semantic_id).toBe("ins_abc123def456");
   });
 
   it("should return null when no results found", async () => {
@@ -293,7 +293,7 @@ describe("promoteToKnowledgeHub", () => {
     // Verify properties include trace IDs
     const createCall = (mcpClient.createPages as ReturnType<typeof vi.fn>).mock.calls[0][0];
     const properties = createCall.pages[0].properties;
-    expect(properties["Neo4j ID"]).toBe("ins_abc123def456");
+    expect(properties["Semantic ID"]).toBe("ins_abc123def456");
     expect(properties["PostgreSQL Trace ID"]).toBe("evt_12345");
     expect(properties["group_id"]).toBe("allura-roninmemory");
     expect(properties["Status"]).toBe("Approved");
@@ -301,7 +301,7 @@ describe("promoteToKnowledgeHub", () => {
     expect(properties["Confidence"]).toBe(0.95);
   });
 
-  it("should update existing entry when Neo4j ID already exists (idempotency)", async () => {
+  it("should update existing entry when Semantic ID already exists (idempotency)", async () => {
     const mcpClient = createMockMCPClient();
 
     // Existing entry found
@@ -311,7 +311,7 @@ describe("promoteToKnowledgeHub", () => {
         title: "group_id enforcement invariant",
         url: "https://notion.so/page-existing-123",
         properties: {
-          "Neo4j ID": "ins_abc123def456",
+          "Semantic ID": "ins_abc123def456",
           "PostgreSQL Trace ID": "evt_12345",
           Status: "Approved",
           group_id: "allura-roninmemory",
@@ -502,7 +502,7 @@ describe("validateInsightForPromotion", () => {
 // ── Trace ID Propagation Tests ──────────────────────────────────────────────
 
 describe("Trace ID Propagation", () => {
-  it("should include both PG trace ID and Neo4j ID in Knowledge Hub properties", async () => {
+  it("should include both PG trace ID and Semantic ID in Knowledge Hub properties", async () => {
     const mcpClient = createMockMCPClient();
 
     (mcpClient.search as ReturnType<typeof vi.fn>).mockResolvedValue([]);
@@ -518,7 +518,7 @@ describe("Trace ID Propagation", () => {
       source: "memory-orchestrator",
       group_id: "allura-roninmemory",
       postgres_trace_id: "evt_trace_pg_001",
-      neo4j_id: "ins_trace_neo4j_001",
+      semantic_id: "ins_trace_semantic_001",
       tier: "adoption",
       approved_by: "woz-builder",
     };
@@ -532,26 +532,26 @@ describe("Trace ID Propagation", () => {
 
     // Verify both trace IDs are present
     expect(properties["PostgreSQL Trace ID"]).toBe("evt_trace_pg_001");
-    expect(properties["Neo4j ID"]).toBe("ins_trace_neo4j_001");
+    expect(properties["Semantic ID"]).toBe("ins_trace_semantic_001");
     expect(properties["group_id"]).toBe("allura-roninmemory");
 
     // Verify content includes both trace IDs
     const content = createCall.pages[0].content;
-    expect(content).toContain("ins_trace_neo4j_001");
+    expect(content).toContain("ins_trace_semantic_001");
     expect(content).toContain("evt_trace_pg_001");
   });
 
   it("should update existing Knowledge Hub entry with new trace IDs on re-sync", async () => {
     const mcpClient = createMockMCPClient();
 
-    // Existing entry found with the SAME Neo4j ID (idempotency check matches)
+    // Existing entry found with the SAME Semantic ID (idempotency check matches)
     (mcpClient.search as ReturnType<typeof vi.fn>).mockResolvedValue([
       {
         pageId: "page-existing-trace",
         title: "Trace ID Update Test",
         url: "https://notion.so/page-existing-trace",
         properties: {
-          "Neo4j ID": "ins_new_neo4j_id",
+          "Semantic ID": "ins_new_semantic_id",
           "PostgreSQL Trace ID": "evt_old_pg_id",
           Status: "Draft",
           group_id: "allura-roninmemory",
@@ -568,7 +568,7 @@ describe("Trace ID Propagation", () => {
       source: "memory-architect",
       group_id: "allura-roninmemory",
       postgres_trace_id: "evt_new_pg_id",
-      neo4j_id: "ins_new_neo4j_id",
+      semantic_id: "ins_new_semantic_id",
       tier: "adoption",
     };
 
@@ -583,7 +583,7 @@ describe("Trace ID Propagation", () => {
         page_id: "page-existing-trace",
         command: "update_properties",
         properties: expect.objectContaining({
-          "Neo4j ID": "ins_new_neo4j_id",
+          "Semantic ID": "ins_new_semantic_id",
           "PostgreSQL Trace ID": "evt_new_pg_id",
           Status: "Approved",
         }),
@@ -625,7 +625,7 @@ describe("Error Handling", () => {
         title: "Test",
         url: "https://notion.so/page-existing-123",
         properties: {
-          "Neo4j ID": "ins_abc123def456",
+          "Semantic ID": "ins_abc123def456",
           "PostgreSQL Trace ID": "evt_12345",
           Status: "Approved",
           group_id: "allura-roninmemory",

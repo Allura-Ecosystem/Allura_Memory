@@ -21,7 +21,7 @@
  *   # Exit 0 = clean. Exit 1 = bypasses found.
  *
  * Registered as: "validate:git-exec" in package.json.
- * Does NOT require PostgreSQL or Neo4j — purely static analysis.
+ * Does NOT require PostgreSQL — purely static analysis.
  */
 
 import { readdirSync, readFileSync, statSync } from "fs";

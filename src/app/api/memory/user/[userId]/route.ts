@@ -9,7 +9,7 @@
  * Invariants enforced:
  * - Append-only: the PostgreSQL events table is never mutated. A
  *   `user_data_deletion_requested` event is appended for the audit trail.
- * - Neo4j nodes are marked as deprecated (via existing softDeleteMemory),
+ * - graph_memories nodes are marked as deprecated (via existing softDeleteMemory),
  *   not physically removed.
  * - group_id is derived from auth context (never from query params).
  *
@@ -108,7 +108,7 @@ export async function DELETE(
 
     // 3. Soft-delete each memory — reuses canonical memory_delete which:
     //    - Appends a memory_delete event to PostgreSQL (append-only)
-    //    - Marks the Neo4j node as deprecated (SUPERSEDES / :deprecated label)
+    //    - Marks the graph_memories node as deprecated (SUPERSEDES / :deprecated label)
     //    We iterate sequentially to avoid overwhelming the DB under load.
     const results: { memory_id: string; success: boolean; error?: string }[] = []
 

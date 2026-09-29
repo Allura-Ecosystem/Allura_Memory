@@ -246,7 +246,7 @@ function checkTlsDocumented(): CheckResult {
 
   const source = fs.readFileSync(envExamplePath, "utf-8")
 
-  const tlsMarkers = ["POSTGRES_SSL_MODE", "NEO4J_ENCRYPTION", "ALLURA_ENCRYPTION_KEY"]
+  const tlsMarkers = ["POSTGRES_SSL_MODE", "ALLURA_ENCRYPTION_KEY"]
   const found = tlsMarkers.filter((m) => source.includes(m))
 
   if (found.length === tlsMarkers.length) {

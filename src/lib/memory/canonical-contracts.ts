@@ -10,7 +10,7 @@
  * - group_id is REQUIRED on every operation (enforced by schema)
  * - group_id MUST match ^allura- (CHECK constraint)
  * - PostgreSQL is append-only (no UPDATE/DELETE on events table)
- * - Neo4j uses SUPERSEDES for versioning (never mutate nodes)
+ * - The semantic store uses SUPERSEDES for versioning (never mutate nodes)
  * - Promotion is HITL-only: eligible memories queue proposals; no autonomous semantic promotion
  */
 
@@ -46,7 +46,7 @@ export type ConfidenceScore = number
 /**
  * Storage location indicator
  * - 'episodic': PostgreSQL only (below promotion threshold)
- * - 'semantic': Neo4j (promoted knowledge)
+ * - 'semantic': graph_memories (promoted knowledge)
  * - 'both': Both stores after approved semantic promotion
  */
 export type StorageLocation = "episodic" | "semantic" | "both"
@@ -68,7 +68,7 @@ export type PromotionMode = "auto" | "soc2"
 export type MemoryProvenance = "conversation" | "manual"
 
 /**
- * Memory status in Neo4j
+ * Memory status in the semantic store
  * - 'active': Current version
  * - 'deprecated': Superseded by newer version
  */
@@ -77,9 +77,9 @@ export type MemoryStatus = "active" | "deprecated"
 export interface MemoryResponseMeta {
   contract_version: "v1"
   degraded: boolean
-  degraded_reason?: "neo4j_unavailable" | "graph_unavailable"
-  stores_used: Array<"postgres" | "neo4j" | "ruvector" | "graph">
-  stores_attempted: Array<"postgres" | "neo4j" | "graph">
+  degraded_reason?: "graph_unavailable"
+  stores_used: Array<"postgres" | "ruvector" | "graph">
+  stores_attempted: Array<"postgres" | "ruvector" | "graph">
   warnings?: string[]
   /** RuVector trajectory ID for evidence-gated feedback (present when RuVector was used) */
   ruvector_trajectory_id?: string
@@ -123,7 +123,7 @@ export interface ScopeTuple {
 
 /**
  * Memory status for retrieval filtering
- * - 'approved': Passed curator + approval (active in Neo4j)
+ * - 'approved': Passed curator + approval (active in the semantic store)
  * - 'proposed': Awaiting approval (in canonical_proposals table)
  * - 'deprecated': Superseded or soft-deleted
  * - 'all': Return regardless of status
@@ -191,7 +191,7 @@ export interface MemoryAddResponse {
  * 2. memory_search
  *
  * Search memories across both stores.
- * Federated search: PostgreSQL (episodic) + Neo4j (semantic).
+ * Federated search: PostgreSQL (episodic) + graph_memories (semantic).
  * Results merged by relevance score.
  */
 export interface MemorySearchRequest {
@@ -373,7 +373,7 @@ export interface MemoryListResponse {
  *
  * Soft-delete a memory.
  * - Appends deletion event to PostgreSQL (append-only)
- * - Marks Neo4j node as deprecated (if promoted)
+ * - Marks the graph_memories node as deprecated (if promoted)
  * - Original rows remain for audit trail
  */
 export interface MemoryDeleteRequest {
@@ -409,7 +409,7 @@ export interface MemoryDeleteResponse {
 
 /**
  * 6. memory_update
- * Append-only versioned update. Creates new version in Neo4j via SUPERSEDES.
+ * Append-only versioned update. Creates new version in graph_memories via SUPERSEDES (graph_supersedes).
  * Appends audit event to PostgreSQL. Never mutates existing rows/nodes.
  */
 export interface MemoryUpdateRequest {
@@ -469,7 +469,7 @@ export interface MemoryPromoteResponse {
   id: MemoryId
   /** Created proposal identifier */
   proposal_id: string
-  /** 'queued' = new proposal created; 'already_canonical' = already in Neo4j */
+  /** 'queued' = new proposal created; 'already_canonical' = already in the semantic store */
   status: "queued" | "already_canonical"
   /** Timestamp when queued */
   queued_at: string
@@ -489,7 +489,7 @@ export interface MemoryExportRequest {
   user_id?: UserId
   /** Optional: Scope tuple for governed memory (project/agent/session) */
   scope?: ScopeTuple
-  /** Optional: true = Neo4j canonical only; false/undefined = all stores */
+  /** Optional: true = semantic canonical only; false/undefined = all stores */
   canonical_only?: boolean
   /** Optional: Output format (json only for now) */
   format?: "json"
@@ -506,7 +506,7 @@ export interface MemoryExportResponse {
   count: number
   /** Export timestamp */
   exported_at: string
-  /** How many are canonical (from Neo4j) */
+  /** How many are canonical (from the semantic store) */
   canonical_count: number
   /** How many are episodic-only (from PostgreSQL) */
   episodic_count: number
@@ -650,7 +650,7 @@ export class UnauthorizedError extends Error {
 }
 
 /**
- * Thrown when memory_promote is called on a memory already in Neo4j.
+ * Thrown when memory_promote is called on a memory already in the semantic store.
  */
 export class MemoryAlreadyCanonicalError extends Error {
   constructor(id: string) {
@@ -686,7 +686,7 @@ export class RecoveryWindowExpiredError extends Error {
  *
  * Restore a soft-deleted memory within the recovery window (30 days).
  * - Appends restore event to PostgreSQL (append-only, no UPDATE)
- * - Removes deprecated flag and SUPERSEDES relationship in Neo4j
+ * - Removes deprecated flag and SUPERSEDES edge in graph_memories/graph_supersedes
  * - group_id scoped
  * - Fails if outside recovery window or memory not deleted
  */
@@ -981,7 +981,6 @@ export interface AuditSubsystemStatus {
 export interface AuditHealthReportResponse {
   subsystems: {
     postgres: AuditSubsystemStatus
-    neo4j: AuditSubsystemStatus
     embedding_backfill: AuditSubsystemStatus
     curator_queue: AuditSubsystemStatus & { pending_count?: number }
     mcp_tools: AuditSubsystemStatus & { tool_count?: number }

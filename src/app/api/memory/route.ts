@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
 
 // ── Degraded Response Helper ────────────────────────────────────────────────
 //
-// When a canonical tool returns partial data (e.g. Neo4j unavailable),
+// When a canonical tool returns partial data (e.g. semantic layer unavailable),
 // the response includes meta.degraded = true. We must NOT silently return
 // HTTP 200 — callers need to distinguish "complete results" from "partial results".
 //
@@ -190,7 +190,7 @@ export async function GET(request: NextRequest) {
 // - no meta field           → HTTP 200 OK (backward compat)
 //
 // Issue #14: PostgreSQL errors now propagate as thrown exceptions (503/500).
-// Neo4j degraded mode returns partial data with meta.degraded = true (206).
+// Semantic-layer degraded mode returns partial data with meta.degraded = true (206).
 
 function jsonWithDegradation<T = unknown>(data: T & { meta?: MemoryResponseMeta }): NextResponse<T> {
   const meta = data.meta

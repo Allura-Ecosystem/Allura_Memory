@@ -196,7 +196,7 @@
 
 **Database Operations:**
 ```
-mcp_find(query="neo4j postgres mysql mongodb redis elasticsearch")
+mcp_find(query="postgres mysql mongodb redis elasticsearch")
 ```
 
 **Web Scraping:**

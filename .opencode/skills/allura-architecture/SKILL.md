@@ -178,6 +178,6 @@ At the end of every `allura-architecture` execution, emit:
 ├─ Action Taken: Architecture decision AD-{number} — {title}
 ├─ Principle Applied: Conceptual Integrity (Brooks)
 ├─ Event Logged: ADR_CREATED
-├─ Neo4j Promoted: {Yes/No — only if promotion criteria met}
+├─ Canonical Promoted: {Yes/No — only if promotion criteria met}
 └─ Confidence: {High/Medium/Low}
 ```

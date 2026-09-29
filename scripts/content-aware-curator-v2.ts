@@ -1,7 +1,7 @@
 /**
  * Content-Aware Auto-Curator v2
  * Marks eligible proposals as approved in PostgreSQL.
- * The MCP gateway handles Neo4j promotion separately.
+ * Semantic promotion to graph_memories is handled separately by the MCP gateway / promotion outbox.
  *
  * Usage: bun scripts/content-aware-curator-v2.ts [--group-id allura-system]
  *

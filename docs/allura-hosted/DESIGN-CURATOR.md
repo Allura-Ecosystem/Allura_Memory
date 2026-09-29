@@ -56,7 +56,7 @@ stateDiagram-v2
 
 ## Use Cases
 
-- **CUR-UC1:** Reviewer approves a proposal → new Neo4j version + receipt.
+- **CUR-UC1:** Reviewer approves a proposal → new semantic version (`graph_memories` + `graph_supersedes`) + receipt.
 - **CUR-UC2:** Agent attempts approve → denied (AD-04).
 - **CUR-UC3:** Reviewer requests evidence → status `needs_evidence`; agent supplies; re-queued.
 

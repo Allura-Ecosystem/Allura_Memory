@@ -49,7 +49,7 @@ Dreaming artifacts live under the **Allura memory** Notion project unless the hu
    - Dreaming is the operator bridge.
    - Allura Brain is the governed memory/API layer.
    - RuVector/RuVix/Cognitum is foundational substrate in this stack.
-   - Agents must not bypass Allura Brain governance to write directly to RuVector, Neo4j, or canonical Notion knowledge.
+   - Agents must not bypass Allura Brain governance to write directly to RuVector, PostgreSQL, or canonical Notion knowledge.
 
 6. **Log outcome to Brain**
    - Use `allura-brain_memory_add` before final response.

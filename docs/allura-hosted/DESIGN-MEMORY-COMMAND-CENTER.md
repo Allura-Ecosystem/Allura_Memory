@@ -31,7 +31,7 @@ Primary nav: **Overview · Memories · Curator · Agents · Allura Guard · Audi
 
 | Screen | Shows |
 |--------|-------|
-| **Overview** | Active org/workspace/`group_id`; MCP, Postgres, Neo4j, embeddings health; pending reviews; connected agents; security warnings; recent activity. |
+| **Overview** | Active org/workspace/`group_id`; MCP, Postgres, RuVector, embeddings health; pending reviews; connected agents; security warnings; recent activity. |
 | **Memories** | Search-first; filters by layer/status/source/actor/score/workspace; provenance + evidence + audit-trail drawers; forget/recover. |
 | **Curator** | Pending proposals; confidence; evidence preview; approve/reject/request-evidence; required rationale; promotion history. |
 | **Agents** | Registry; type; token status; scopes; workspace; last seen; recent + denied actions; revoke/rotate. |
@@ -50,7 +50,7 @@ Primary nav: **Overview · Memories · Curator · Agents · Allura Guard · Audi
 
 - **CC-UC1:** Reviewer opens Curator, reviews a proposal with evidence, approves with rationale → promotion + receipt.
 - **CC-UC2:** Admin opens Agents, sees a stale token, rotates it → audit event.
-- **CC-UC3:** Operator opens Overview, sees Neo4j degraded → links to Ops runbook.
+- **CC-UC3:** Operator opens Overview, sees RuVector degraded → links to Ops runbook.
 
 ## Important Constraints
 

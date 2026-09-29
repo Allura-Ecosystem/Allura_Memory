@@ -2,9 +2,9 @@
  * RuVector Primary Backend Tests for memory_search (Slice B)
  *
  * Tests that memory_search uses RuVector as the PRIMARY backend:
- * - Priority: RuVector → Neo4j fallback → PostgreSQL traces
+ * - Priority: RuVector → semantic store fallback → PostgreSQL traces
  * - RuVector is always called first (no feature flag check)
- * - Fail-closed: if RuVector fails, falls back to Neo4j, then PG
+ * - Fail-closed: if RuVector fails, falls back to semantic store, then PG
  * - Evidence-gated feedback: trajectoryId surfaced in metadata
  * - Stores are attempted in priority order, only successful ones in stores_used
  *
@@ -39,7 +39,7 @@ const mockPgPool = {
   })),
 };
 
-// Mock graph adapter for Neo4j fallback path (Step 2: semantic search via graph adapter)
+// Mock graph adapter for semantic store fallback path (Step 2: semantic search via graph adapter)
 const mockGraphSearchMemories = vi.fn();
 
 vi.mock("@/lib/graph-adapter", () => ({
@@ -48,26 +48,16 @@ vi.mock("@/lib/graph-adapter", () => ({
   })),
 }));
 
-// Mock getConnections — memory_search calls this for Neo4j/PG fallback steps
+// Mock getConnections — memory_search calls this for semantic store/PG fallback steps
 vi.mock("@/mcp/canonical-tools/connection", () => ({
   getConnections: vi.fn().mockImplementation(async () => ({
     pg: mockPgPool,
-    neo4j: {},
   })),
   resetConnections: vi.fn(),
 }));
 
 vi.mock("pg", () => ({
   Pool: vi.fn().mockImplementation(() => mockPgPool),
-}));
-
-vi.mock("neo4j-driver", () => ({
-  default: {
-    driver: vi.fn().mockReturnValue({ close: vi.fn() }),
-    int: (val: number) => ({ toNumber: () => val }),
-    auth: { basic: vi.fn() },
-  },
-  Driver: vi.fn(),
 }));
 
 // Mock RuVector bridge (storeMemory used by memory_add, not memory_search — but imported by canonical-tools)
@@ -193,10 +183,10 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
       shouldLogFeedback: true,
     });
 
-    // Default: Graph adapter fallback returns results (Neo4j semantic search)
+    // Default: Graph adapter fallback returns results (semantic store semantic search)
     mockGraphSearchMemories.mockResolvedValue([
       {
-        id: "neo4j-mem-1",
+        id: "semantic-mem-1",
         content: "Semantic knowledge about dark mode",
         score: 0.9,
         provenance: "conversation",
@@ -304,12 +294,12 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
       );
     });
 
-    it("should NOT query Neo4j if RuVector returns sufficient results", async () => {
+    it("should NOT query semantic store if RuVector returns sufficient results", async () => {
       // RuVector returns 2 results, limit is 2
       const request = makeSearchRequest({ limit: 2 });
       await memory_search(request);
 
-      // Neo4j should not be queried when RuVector satisfies the limit
+      // semantic store should not be queried when RuVector satisfies the limit
       expect(mockGraphSearchMemories).not.toHaveBeenCalled();
     });
 
@@ -323,7 +313,7 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
     });
   });
 
-  describe("Neo4j fallback when RuVector returns insufficient results", () => {
+  describe("semantic store fallback when RuVector returns insufficient results", () => {
     beforeEach(() => {
       // RuVector returns only 1 result
       mockSearchWithFeedback.mockResolvedValue({
@@ -343,7 +333,7 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
       });
     });
 
-    it("should query Neo4j when RuVector results < limit", async () => {
+    it("should query semantic store when RuVector results < limit", async () => {
       const request = makeSearchRequest({ limit: 3 });
       await memory_search(request);
 
@@ -357,24 +347,24 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
       expect(response.meta?.stores_used).toContain("graph");
     });
 
-    it("should combine results from RuVector and Neo4j", async () => {
+    it("should combine results from RuVector and semantic store", async () => {
       const response = await memory_search(makeSearchRequest({ limit: 3 }));
 
-      // Should have both RuVector and Neo4j results
+      // Should have both RuVector and semantic store results
       const contents = response.results.map((r) => r.content);
       expect(contents).toContain("RuVector memory about TypeScript");
       expect(contents).toContain("Semantic knowledge about dark mode");
     });
 
-    it("should NOT query PostgreSQL if RuVector + Neo4j satisfy limit", async () => {
-      const request = makeSearchRequest({ limit: 2 }); // 1 RV + 1 Neo4j = 2
+    it("should NOT query PostgreSQL if RuVector + semantic store satisfy limit", async () => {
+      const request = makeSearchRequest({ limit: 2 }); // 1 RV + 1 semantic store = 2
       await memory_search(request);
 
       expect(mockPgQuery).not.toHaveBeenCalled();
     });
   });
 
-  describe("PostgreSQL fallback when RuVector + Neo4j insufficient", () => {
+  describe("PostgreSQL fallback when RuVector + semantic store insufficient", () => {
     beforeEach(() => {
       // RuVector returns empty
       mockSearchWithFeedback.mockResolvedValue({
@@ -386,11 +376,11 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
         shouldLogFeedback: false,
       });
 
-      // Graph adapter returns empty (Neo4j semantic search returns nothing)
+      // Graph adapter returns empty (semantic store semantic search returns nothing)
       mockGraphSearchMemories.mockResolvedValue([]);
     });
 
-    it("should query PostgreSQL when RuVector and Neo4j return no results", async () => {
+    it("should query PostgreSQL when RuVector and semantic store return no results", async () => {
       await memory_search(makeSearchRequest());
 
       expect(mockPgQuery).toHaveBeenCalled();
@@ -399,13 +389,13 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
     it("should include postgres in stores_used (only store with results)", async () => {
       const response = await memory_search(makeSearchRequest());
 
-      // Only postgres returned results (RuVector and Neo4j returned empty)
+      // Only postgres returned results (RuVector and semantic store returned empty)
       expect(response.meta?.stores_used).not.toContain("ruvector");
       expect(response.meta?.stores_used).not.toContain("neo4j");
       expect(response.meta?.stores_used).toContain("postgres");
     });
 
-    it("should still return PG results when RuVector and Neo4j are empty", async () => {
+    it("should still return PG results when RuVector and semantic store are empty", async () => {
       const response = await memory_search(makeSearchRequest());
 
       expect(response.results.length).toBeGreaterThan(0);
@@ -414,7 +404,7 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
     });
   });
 
-  describe("RuVector failure (fail-closed to Neo4j)", () => {
+  describe("RuVector failure (fail-closed to semantic store)", () => {
     beforeEach(() => {
       mockSearchWithFeedback.mockRejectedValue(
         new Error("RuVector connection refused"),
@@ -428,7 +418,7 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
       expect(response.count).toBeGreaterThan(0);
     });
 
-    it("should fallback to Neo4j when RuVector fails", async () => {
+    it("should fallback to semantic store when RuVector fails", async () => {
       await memory_search(makeSearchRequest());
 
       expect(mockGraphSearchMemories).toHaveBeenCalled();
@@ -457,7 +447,7 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
     });
   });
 
-  describe("Neo4j failure (fail-closed to PostgreSQL)", () => {
+  describe("semantic store failure (fail-closed to PostgreSQL)", () => {
     beforeEach(() => {
       // RuVector succeeds but returns insufficient results
       mockSearchWithFeedback.mockResolvedValue({
@@ -469,25 +459,25 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
         shouldLogFeedback: true,
       });
 
-      // Graph adapter fails (Neo4j connection refused)
+      // Graph adapter fails (semantic store connection refused)
       mockGraphSearchMemories.mockRejectedValue(
-        new Error("Neo4j connection refused"),
+        new Error("semantic store connection refused"),
       );
     });
 
-    it("should NOT fail when Neo4j fails", async () => {
+    it("should NOT fail when semantic store fails", async () => {
       const response = await memory_search(makeSearchRequest({ limit: 3 }));
 
       expect(response.results.length).toBeGreaterThan(0);
     });
 
-    it("should fallback to PostgreSQL when Neo4j fails", async () => {
+    it("should fallback to PostgreSQL when semantic store fails", async () => {
       await memory_search(makeSearchRequest({ limit: 3 }));
 
       expect(mockPgQuery).toHaveBeenCalled();
     });
 
-    it("should include ruvector in stores_used but not neo4j when Neo4j fails", async () => {
+    it("should include ruvector in stores_used but not neo4j when semantic store fails", async () => {
       const response = await memory_search(makeSearchRequest({ limit: 3 }));
 
       expect(response.meta?.stores_used).toContain("ruvector");
@@ -520,7 +510,7 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
       expect(response.meta?.stores_used).not.toContain("ruvector");
     });
 
-    it("should fallback to Neo4j when RuVector returns empty", async () => {
+    it("should fallback to semantic store when RuVector returns empty", async () => {
       await memory_search(makeSearchRequest());
 
       expect(mockGraphSearchMemories).toHaveBeenCalled();
@@ -541,7 +531,7 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
 
   describe("result ordering and deduplication", () => {
     beforeEach(() => {
-      // RuVector returns result with same ID as Neo4j (duplication test)
+      // RuVector returns result with same ID as semantic store (duplication test)
       mockSearchWithFeedback.mockResolvedValue({
         memories: [
           { id: "dup-mem-1", content: "RuVector version", memoryType: "episodic", score: 0.9 },
@@ -558,7 +548,7 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
       mockGraphSearchMemories.mockResolvedValue([
         {
           id: "dup-mem-1", // Same ID as RuVector
-          content: "Neo4j version (should be deduped)",
+          content: "semantic store version (should be deduped)",
           score: 0.85,
           provenance: "conversation",
           created_at: new Date().toISOString(),
@@ -567,8 +557,8 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
           tags: [],
         },
         {
-          id: "neo4j-unique",
-          content: "Neo4j unique",
+          id: "semantic-unique",
+          content: "semantic store unique",
           score: 0.7,
           provenance: "conversation",
           created_at: new Date().toISOString(),
@@ -578,7 +568,7 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
         },
       ]);
 
-      // PG returns empty for this test (we're testing RuVector+Neo4j dedup)
+      // PG returns empty for this test (we're testing RuVector+semantic store dedup)
       mockPgQuery.mockResolvedValue({
         rows: [],
       });
@@ -591,7 +581,7 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
       const dupCount = response.results.filter((r) => r.id === "dup-mem-1").length;
       expect(dupCount).toBe(1);
 
-      // Should have 3 unique results: dup-mem-1, rv-unique, neo4j-unique (PG is empty)
+      // Should have 3 unique results: dup-mem-1, rv-unique, semantic-unique (PG is empty)
       expect(response.results.length).toBe(3);
     });
 

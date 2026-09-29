@@ -6,7 +6,7 @@
  *
  * Gated: skips when RUN_E2E_TESTS !== "true" or POSTGRES_PASSWORD is unset.
  *
- * ADR: AD-029 — Graph Adapter Pattern for Neo4j → RuVector Migration
+ * ADR: AD-029 — Graph Adapter Pattern
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest"

@@ -5,7 +5,7 @@
  *
  * Restores a memory within the 30-day recovery window:
  * - Appends event_type='memory_restore' to PostgreSQL (append-only)
- * - Removes deprecated flag/label in Neo4j
+ * - Removes the deprecated flag in graph_memories
  * - Does NOT update any existing row in PostgreSQL
  */
 

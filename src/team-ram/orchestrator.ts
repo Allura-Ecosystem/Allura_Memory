@@ -2,7 +2,7 @@ import { AGENT_MANIFEST } from "@/lib/agents/agent-manifest"
 import { canonicalizeAgentId } from "@/lib/agents/canonical-identity"
 import { validateGroupId } from "@/lib/validation/group-id"
 
-export type TeamRamSkillName = "skill-neo4j-memory" | "skill-cypher-query" | "skill-database"
+export type TeamRamSkillName = "skill-ruvector-memory" | "skill-cypher-query" | "skill-database"
 
 export interface TeamRamTask {
   goal: string
@@ -57,7 +57,7 @@ export interface SkillExecutor {
 }
 
 const SKILL_AGENT_MAP: Record<TeamRamSkillName, string> = {
-  "skill-neo4j-memory": "scout",
+  "skill-ruvector-memory": "scout",
   "skill-cypher-query": "knuth",
   "skill-database": "hightower",
 }
@@ -90,7 +90,7 @@ function dedupePlan(calls: SkillCall[]): SkillCall[] {
 
 /**
  * Select skills for Team RAM task execution with staged memory-first routing:
- * 1. Always prefer skill-neo4j-memory first
+ * 1. Always prefer skill-ruvector-memory first
  * 2. Add skill-database only when evidence/traces/audit details are needed
  * 3. Add skill-cypher-query only when targeted graph traversal/schema/explicit Cypher is needed
  */
@@ -109,9 +109,9 @@ export function selectSkills(task: TeamRamTask): SkillCall[] {
 
   if (wantsMemory) {
     calls.push({
-      skillName: "skill-neo4j-memory",
+      skillName: "skill-ruvector-memory",
       toolName: "recall_insight",
-      assignedAgent: assertKnownAgent(SKILL_AGENT_MAP["skill-neo4j-memory"]),
+      assignedAgent: assertKnownAgent(SKILL_AGENT_MAP["skill-ruvector-memory"]),
       input: {
         query: task.query ?? task.goal,
         groupId,
@@ -154,7 +154,7 @@ export function selectSkills(task: TeamRamTask): SkillCall[] {
   const wantsGraph =
     task.needs?.graph === true ||
     Boolean(task.cypher) ||
-    hasAnyKeyword(text, ["cypher", "neo4j", "graph", "relationship", "node", "traverse"])
+    hasAnyKeyword(text, ["cypher", "graph", "relationship", "node", "traverse"])
 
   if (wantsGraph) {
     calls.push({
@@ -178,9 +178,9 @@ export function selectSkills(task: TeamRamTask): SkillCall[] {
   // STAGE 4: Fallback — if no skills selected, default to memory retrieval
   if (calls.length === 0) {
     calls.push({
-      skillName: "skill-neo4j-memory",
+      skillName: "skill-ruvector-memory",
       toolName: "recall_insight",
-      assignedAgent: assertKnownAgent(SKILL_AGENT_MAP["skill-neo4j-memory"]),
+      assignedAgent: assertKnownAgent(SKILL_AGENT_MAP["skill-ruvector-memory"]),
       input: {
         query: task.goal,
         groupId,
@@ -191,8 +191,8 @@ export function selectSkills(task: TeamRamTask): SkillCall[] {
   }
 
   // STAGE 5: Ensure memory is always first when selected (staged memory-first routing)
-  // Move skill-neo4j-memory to front if it exists
-  const memoryIndex = calls.findIndex((call) => call.skillName === "skill-neo4j-memory")
+  // Move skill-ruvector-memory to front if it exists
+  const memoryIndex = calls.findIndex((call) => call.skillName === "skill-ruvector-memory")
   if (memoryIndex > 0) {
     const [memoryCall] = calls.splice(memoryIndex, 1)
     calls.unshift(memoryCall)
@@ -251,7 +251,7 @@ export function assembleContext(results: SkillResult[]): OrchestrationContext {
       continue
     }
 
-    if (result.skillName === "skill-neo4j-memory") {
+    if (result.skillName === "skill-ruvector-memory") {
       context.memories.push(result.output)
     } else if (result.skillName === "skill-cypher-query") {
       context.graph.push(result.output)
@@ -266,7 +266,7 @@ export function assembleContext(results: SkillResult[]): OrchestrationContext {
 /**
  * True staged execution for Team RAM orchestrator.
  * Skills execute in priority order with retries preserved per call:
- * 1. skill-neo4j-memory (if selected) — always first for context
+ * 1. skill-ruvector-memory (if selected) — always first for context
  * 2. skill-database (if selected) — for evidence/traces
  * 3. skill-cypher-query (if selected) — for graph traversal
  *

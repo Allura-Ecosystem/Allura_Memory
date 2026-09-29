@@ -6,7 +6,6 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
 REQUIRED_VARS=(
     "POSTGRES_PASSWORD:Database password"
-    "NEO4J_PASSWORD:Neo4j password"
     "OLLAMA_API_KEY:Ollama API key"
     "RUVIX_CONTROL_PLANE_SECRET:Secret (min 32 chars)"
 )

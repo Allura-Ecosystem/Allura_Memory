@@ -87,7 +87,7 @@ export class MemoryOperations {
   }
 
   /**
-   * Search memories across both stores (PostgreSQL + Neo4j).
+   * Search memories across both stores (PostgreSQL + RuVector).
    * Federated search with results merged by relevance.
    *
    * @param params - Search parameters
@@ -160,7 +160,7 @@ export class MemoryOperations {
 
   /**
    * Soft-delete a memory.
-   * Appends deletion event to PostgreSQL and marks Neo4j node as deprecated.
+   * Appends deletion event to PostgreSQL and marks the semantic node as deprecated.
    * Original rows remain for audit trail.
    *
    * @param params - Delete parameters (id, group_id, user_id)

@@ -7,7 +7,7 @@
 > AI-generated content may contain inaccuracies or omissions.
 > When in doubt, defer to the source code, JSON schemas, and team consensus.
 
-This document describes Allura's PostgreSQL-only governed memory data model. PostgreSQL holds append-only episodic evidence, canonical proposals, pgvector retrieval, promoted graph tables, receipts, and outbox state. PostgreSQL (graph_memories) is sunset under AD-50; legacy naming is retained only where it describes a historical migration or compatibility record.
+This document describes Allura's PostgreSQL + RuVector governed memory data model. A single PostgreSQL instance holds append-only episodic evidence, canonical proposals, pgvector/RuVector retrieval, the promoted semantic layer (`graph_memories`, `graph_supersedes`), receipts, and outbox state (AD-50).
 
 ---
 
@@ -20,11 +20,11 @@ This document describes Allura's PostgreSQL-only governed memory data model. Pos
 - [Environment Variables](#environment-variables)
 - [RuVix Governance Artifacts](#ruvix-governance-artifacts)
 - [RunRecord (AD-35)](#runrecord-ad-35)
-- [Neo4j: Memory](#neo4j-memory)
-- [Neo4j: Agent](#neo4j-agent)
-- [Neo4j: Team](#neo4j-team)
-- [Neo4j: Project](#neo4j-project)
-- [Neo4j: Relationships](#neo4j-relationships)
+- [Semantic Layer: Memory](#semantic-layer-memory)
+- [Semantic Layer: Agent](#semantic-layer-agent)
+- [Semantic Layer: Team](#semantic-layer-team)
+- [Semantic Layer: Project](#semantic-layer-project)
+- [Semantic Layer: Relationships](#semantic-layer-relationships)
 - [Memory Command Center Adapter Contracts](#memory-command-center-adapter-contracts)
 - [Metadata Payloads](#metadata-payloads)
 
@@ -70,7 +70,7 @@ This document describes Allura's PostgreSQL-only governed memory data model. Pos
 | `hash` | `string` | Yes | Chain hash when available. |
 | `prev_hash` | `string` | Yes | Previous chain hash when available. |
 
-API data rules: every record includes `group_id`; unknown source state renders as unknown, not zero; no fabricated counts; export/copy actions are read-only formatting operations over existing records and must not mutate PostgreSQL or PostgreSQL (graph_memories).
+API data rules: every record includes `group_id`; unknown source state renders as unknown, not zero; no fabricated counts; export/copy actions are read-only formatting operations over existing records and must not mutate PostgreSQL or `graph_memories`.
 
 ---
 
@@ -123,7 +123,7 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `debug:root_cause_found` | Phase 1 complete — root cause identified with evidence (POL-006) |
 | `debug:hypothesis_tested` | Phase 3 — a single hypothesis was minimally tested |
 | `debug:fix_implemented` | Phase 4 — fix shipped after root cause confirmed (requires prior `debug:root_cause_found`) |
-| `graph_memories_unavailable` | Graph backend was unreachable — system degraded gracefully (event name retained for back-compat; PostgreSQL (graph_memories) retired Epic 23) |
+| `graph_memories_unavailable` | Semantic layer (`graph_memories`) was unreachable — system degraded gracefully |
 | `tool_approved` | MCP tool was approved through catalog governance |
 | `tool_denied` | MCP tool was denied through catalog governance |
 | `request_trace` | HTTP request traced by TraceMiddleware (Story 1.2) |
@@ -131,7 +131,7 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `health_check` | System health check performed |
 | `memory_restore` | A soft-deleted memory was restored within the recovery window |
 | `memory_update` | Append-only versioned update (SUPERSEDES chain created) |
-| `memory_promote` | Request promotion to PostgreSQL (graph_memories) (creates proposal) |
+| `memory_promote` | Request promotion to `graph_memories` (creates proposal) |
 | `sync_contract` | Sync contract mapping applied on curator approve or auto-promote — user_id→Agent, group_id→Project relationships wired |
 | `control_plane_rule` | RuVix control plane rule evaluation or rule-anchored audit event |
 | `kernel_rule` | DEPRECATED — pre-2026-08-20 name for `control_plane_rule`. Retained because the events table is append-only and historical rows can never be migrated. Do not emit; readers must still accept it. |
@@ -240,7 +240,7 @@ See `docs/guides/portal-devices-and-profiles.md` for navigation, lifecycle contr
 
 **JSON Schema:** [`json-schema/canonical_proposals.schema.json`](../../json-schema/canonical_proposals.schema.json)
 
-The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to PostgreSQL (graph_memories) as InsightHead/Insight nodes.
+The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to `graph_memories` as InsightHead/Insight rows.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -273,7 +273,7 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 | Value | Description |
 |-------|-------------|
 | `pending` | Awaiting human review and decision. |
-| `approved` | Human approved. Promoted to PostgreSQL (graph_memories) as InsightHead/Insight. |
+| `approved` | Human approved. Promoted to `graph_memories` as InsightHead/Insight. |
 | `rejected` | Human rejected. Not promoted. Retained for audit trail. |
 
 **Indexes**
@@ -325,15 +325,15 @@ All three tables have forced workspace RLS for `allura_app`, using both transact
 ## PostgreSQL: Graph Adapter Tables
 
 **Migrations:** `21-graph-adapter-tables.sql`, `24-graph-structural-context.sql`
-**ADR:** AD-29 — Graph Adapter Pattern for PostgreSQL (graph_memories) → RuVector Migration
+**ADR:** AD-29 — Graph Adapter Pattern (PostgreSQL + RuVector)
 
-These tables replace PostgreSQL (graph_memories) nodes and relationships when `GRAPH_BACKEND=ruvector`. They implement the adjacency list pattern to replicate SUPERSEDES and structural context operations via PostgreSQL.
+These tables hold the semantic layer's nodes and relationships when `GRAPH_BACKEND=ruvector` (the default). They implement the adjacency list pattern for SUPERSEDES and structural context operations via PostgreSQL.
 
 ### `graph_memories`
 
 **Migrations:** `21-graph-adapter-tables.sql`, `40-workspace-subgraph-forward-upgrade.sql`
 
-Stores canonical (promoted) memory nodes equivalent to PostgreSQL (graph_memories)'s Memory label. Used by the RuVectorGraphAdapter when `GRAPH_BACKEND=ruvector`. Soft-deletes are marked via `deprecated=true`; restored memories set `restored_at`.
+Stores canonical (promoted) `Memory` nodes. Used by the RuVectorGraphAdapter when `GRAPH_BACKEND=ruvector`. Soft-deletes are marked via `deprecated=true`; restored memories set `restored_at`.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -353,7 +353,7 @@ Stores canonical (promoted) memory nodes equivalent to PostgreSQL (graph_memorie
 | `created_at` | TIMESTAMPTZ | Yes | Node creation timestamp. Default: `NOW()` |
 | `content_tsv` | tsvector | Yes | Generated tsvector for full-text search (stored) |
 
-**Comments:** `graph_memories` stores canonical memory nodes replacing PostgreSQL (graph_memories) Memory label. Slice C of the 2-Store RuVector Migration.
+**Comments:** `graph_memories` stores canonical memory nodes. Slice C of the RuVector graph adapter.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -373,7 +373,7 @@ Stores canonical (promoted) memory nodes equivalent to PostgreSQL (graph_memorie
 
 **Migration:** `21-graph-adapter-tables.sql`
 
-Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:SUPERSEDES]->(superseded_id)` in PostgreSQL (graph_memories). Append-only: new rows on version update, deletes only for restore.
+Adjacency table for SUPERSEDES relationships. Each row represents `newer_id -[SUPERSEDES]-> superseded_id` between `graph_memories` rows. Append-only: new rows on version update, deletes only for restore.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -382,7 +382,7 @@ Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:
 | `group_id` | TEXT | Yes | Tenant namespace. CHECK: `^allura-[a-z0-9-]+$` |
 | `created_at` | TIMESTAMPTZ | Yes | Relationship timestamp. Default: `NOW()` |
 
-**Comments:** `graph_supersedes` is the SUPERSEDES adjacency table replacing PostgreSQL (graph_memories) SUPERSEDES relationships.
+**Comments:** `graph_supersedes` is the SUPERSEDES adjacency table for `graph_memories`.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -403,7 +403,7 @@ Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:
 
 **Migration:** `24-graph-structural-context.sql`
 
-Structural context nodes replacing PostgreSQL (graph_memories) labeled nodes (Agent, Project, Task, Decision, etc.). Uses JSONB `props` field to store arbitrary node properties. Used when `GRAPH_BACKEND=ruvector` for non-Memory nodes.
+Structural context nodes (Agent, Project, Task, Decision, etc.). Uses JSONB `props` field to store arbitrary node properties. Used when `GRAPH_BACKEND=ruvector` for non-Memory nodes.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -414,7 +414,7 @@ Structural context nodes replacing PostgreSQL (graph_memories) labeled nodes (Ag
 | `created_at` | TIMESTAMPTZ | Yes | Node creation timestamp. Default: `NOW()` |
 | `updated_at` | TIMESTAMPTZ | No | Last update timestamp |
 
-**Comments:** `graph_structural_nodes` stores structural context nodes replacing PostgreSQL (graph_memories) labeled nodes. Slice C of the 2-Store RuVector Migration.
+**Comments:** `graph_structural_nodes` stores structural context nodes. Slice C of the RuVector graph adapter.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -429,7 +429,7 @@ Structural context nodes replacing PostgreSQL (graph_memories) labeled nodes (Ag
 
 **Migration:** `24-graph-structural-context.sql`
 
-Structural context edges replacing PostgreSQL (graph_memories) relationships (CONTRIBUTED, LEARNED, `AUTHORED_BY`, `RELATES_TO`, etc.). Stores directed relationships between structural nodes.
+Structural context edges (CONTRIBUTED, LEARNED, `AUTHORED_BY`, `RELATES_TO`, etc.). Stores directed relationships between structural nodes.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -440,7 +440,7 @@ Structural context edges replacing PostgreSQL (graph_memories) relationships (CO
 | `props` | JSONB | No | Relationship properties |
 | `created_at` | TIMESTAMPTZ | Yes | Edge creation timestamp. Default: `NOW()` |
 
-**Comments:** `graph_structural_edges` stores structural context edges replacing PostgreSQL (graph_memories) relationships.
+**Comments:** `graph_structural_edges` stores structural context edges.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -461,18 +461,16 @@ Structural context edges replacing PostgreSQL (graph_memories) relationships (CO
 **Migrations:** `21-graph-adapter-tables.sql`, `24-graph-structural-context.sql`
 **ADR:** AD-49 — GRAPH_BACKEND Configuration Flag
 
-Controls which graph backend adapter is active for memory and structural operations.
+Controls which graph backend adapter is active for memory and structural operations. Both implemented values run on the single PostgreSQL instance.
 
 | Value | Description | Status |
 |-------|-------------|--------|
-| `PostgreSQL (graph_memories)` | PostgreSQL (graph_memories) backend (legacy, retired Epic 23) | **Retired** |
 | `ruvector` | PostgreSQL graph adapter tables (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) | **Default** |
 | `ruvector-crate` | Native RuVector extension with HNSW and GNN support (not yet implemented) | Planned |
 
-**Current default:** `ruvector` (sole backend since Epic 23; `PostgreSQL (graph_memories)` retired)
+**Current default:** `ruvector` (the sole implemented backend)
 
 **Adapter selection behavior:**
-- `PostgreSQL (graph_memories)`: Uses `PostgreSQL (graph_memories)GraphAdapter` in `src/lib/graph-adapter/ruvector-adapter.ts`
 - `ruvector`: Uses `RuVectorGraphAdapter` in `src/lib/graph-adapter/ruvector-adapter.ts`
 - `ruvector-crate`: Will use `RuVectorCrateGraphAdapter` (Slice E+)
 
@@ -584,19 +582,19 @@ directly.
 
 | Value | Description | When Active |
 |-------|-------------|-------------|
-| `pgvector_bridge` | PG backend only, PostgreSQL (graph_memories) pending cutover | Current baseline |
+| `pgvector_bridge` | PG backend only (pgvector bridge) | Current baseline |
 | `ruvector_graph` | Graph adapter tables active (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) | Slice C+ |
-| `full_ruvector` | Native RuVector extension active, PostgreSQL (graph_memories) fully replaced | Slice E+ |
+| `full_ruvector` | Native RuVector extension active | Slice E+ |
 
 **RuVector native status fields (`ruvector_status` when native mode active):**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `graph_backend` | string | Yes | Target graph adapter: `PostgreSQL (graph_memories)` (legacy), `ruvector` (PG tables), `ruvector-crate` (native extension) |
+| `graph_backend` | string | Yes | Target graph adapter: `ruvector` (PG tables), `ruvector-crate` (native extension) |
 | `native_extension_version` | string | Yes | RuVector extension version string |
 | `hnsw_index_status` | string | Yes | HNSW index state: `disabled`, `creating`, `created`, `optimizing` |
 | `gnn_enabled` | boolean | Yes | Graph neural network processing enabled |
-| `dual_read_mode` | boolean | Yes | True when both PostgreSQL (graph_memories) and RuVector backends are queried |
+| `dual_read_mode` | boolean | Yes | True when both the PG-table and native RuVector backends are queried |
 
 **Current readiness baseline (TALON, 2026-06-02):** `vector_extension_version=0.8.2`, `ruvector_function_count=0`, `allura_memories_count≈3392`, `runtime_readiness=pgvector_bridge`.
 
@@ -661,7 +659,7 @@ idempotency guarantees, and product APIs remain required.
 
 **Persistence direction:** PostgreSQL owns run records, pinned definitions,
 runtime state, and append-only run events. Do not double-write operational run
-state to PostgreSQL (graph_memories). PostgreSQL (graph_memories) may receive approved semantic relationships after the
+state to `graph_memories`. `graph_memories` may receive approved semantic relationships after the
 operational contracts stabilize.
 
 ### `DashboardClaim`
@@ -772,11 +770,11 @@ dashboard adapters must map that durable record rather than publish a second rec
 | `status` | enum | Yes | `fresh`, `stale`, `unknown`, `not_live` |
 | `message` | string | Yes | Plain-language freshness explanation |
 
-## Neo4j: `Memory`
+## Semantic Layer: `Memory`
 
 **JSON Schema:** [`json-schema/memory.schema.json`](../../json-schema/memory.schema.json)
 
-Curated, promoted knowledge. Created via `MERGE`. Never edited after creation. Versioned via `SUPERSEDES` relationships.
+Curated, promoted knowledge. Stored as a `graph_memories` row (inserted at promotion). Never edited after creation. Versioned via `SUPERSEDES` relationships.
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -847,11 +845,11 @@ Curated, promoted knowledge. Created via `MERGE`. Never edited after creation. V
 
 ---
 
-## Neo4j: `Agent`
+## Semantic Layer: `Agent`
 
 **JSON Schema:** [`json-schema/agent.schema.json`](../../json-schema/agent.schema.json)
 
-Structural context node representing an AI agent in the team. Agents are members of Teams, contribute to Projects, and author Memory nodes. Seeded via `scripts/neo4j-seed-agents.cypher`.
+Structural context node (`graph_structural_nodes`, label `Agent`) representing an AI agent in the team. Agents are members of Teams, contribute to Projects, and author Memory nodes.
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -914,11 +912,11 @@ Structural context node representing an AI agent in the team. Agents are members
 
 ---
 
-## Neo4j: `Team`
+## Semantic Layer: `Team`
 
 **JSON Schema:** [`json-schema/team.schema.json`](../../json-schema/team.schema.json)
 
-Structural context node representing a team of agents. Seeded via `scripts/neo4j-seed-agents.cypher`.
+Structural context node (`graph_structural_nodes`, label `Team`) representing a team of agents.
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -930,11 +928,11 @@ Structural context node representing a team of agents. Seeded via `scripts/neo4j
 
 ---
 
-## Neo4j: `Project`
+## Semantic Layer: `Project`
 
 **JSON Schema:** [`json-schema/project.schema.json`](../../json-schema/project.schema.json)
 
-Structural context node representing a project that agents contribute to and memories relate to. Seeded via `scripts/neo4j-seed-agents.cypher`.
+Structural context node (`graph_structural_nodes`, label `Project`) representing a project that agents contribute to and memories relate to.
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -955,34 +953,34 @@ Structural context node representing a project that agents contribute to and mem
 
 ---
 
-## Neo4j: Relationships
+## Semantic Layer: Relationships
 
 | Relationship | Pattern | Cardinality | Description |
 |---|---|---|---|
-| `SUPERSEDES` | `(v2:Memory)-[:SUPERSEDES]->(v1:Memory)` | Many-to-one | v1 must be marked `deprecated: true`. v2 is the current version. Never edit v1. |
-| `AUTHORED_BY` | `(m:Memory)-[:AUTHORED_BY]->(a:Agent)` | Many-to-one | Links a Memory to the Agent that authored it. |
-| `RELATES_TO` | `(m:Memory)-[:RELATES_TO]->(p:Project)` | Many-to-many | Links a Memory to a Project it relates to. |
-| `MEMBER_OF` | `(a:Agent)-[:MEMBER_OF]->(t:Team)` | Many-to-one | Agent is a member of a Team. |
-| `CONTRIBUTES_TO` | `(a:Agent)-[:CONTRIBUTES_TO]->(p:Project)` | Many-to-many | Agent contributes to a Project. |
-| `DELEGATES_TO` | `(a:Agent)-[:DELEGATES_TO]->(b:Agent)` | Many-to-many | Chain of command: Agent a delegates work to Agent b. |
-| `ESCALATES_TO` | `(a:Agent)-[:ESCALATES_TO]->(b:Agent)` | Many-to-many | Escalation path: Agent a escalates to Agent b. |
-| `HANDS_OFF_TO` | `(a:Agent)-[:HANDS_OFF_TO]->(b:Agent)` | Many-to-many | Creative flow handoff (Durham team pattern). |
-| `PROPOSES_TO` | `(a:Agent)-[:PROPOSES_TO]->(b:Agent)` | One-to-one | Curator proposes to Auditor for approval. |
-| `APPROVES_PROMOTION` | `(a:Agent)-[:APPROVES_PROMOTION]->(b:Agent)` | One-to-one | Auditor approves promotion back to Curator. |
+| `SUPERSEDES` | `Memory -[SUPERSEDES]-> Memory` | Many-to-one | v1 must be marked `deprecated: true`. v2 is the current version. Never edit v1. |
+| `AUTHORED_BY` | `Memory -[AUTHORED_BY]-> Agent` | Many-to-one | Links a Memory to the Agent that authored it. |
+| `RELATES_TO` | `Memory -[RELATES_TO]-> Project` | Many-to-many | Links a Memory to a Project it relates to. |
+| `MEMBER_OF` | `Agent -[MEMBER_OF]-> Team` | Many-to-one | Agent is a member of a Team. |
+| `CONTRIBUTES_TO` | `Agent -[CONTRIBUTES_TO]-> Project` | Many-to-many | Agent contributes to a Project. |
+| `DELEGATES_TO` | `Agent -[DELEGATES_TO]-> Agent` | Many-to-many | Chain of command: Agent a delegates work to Agent b. |
+| `ESCALATES_TO` | `Agent -[ESCALATES_TO]-> Agent` | Many-to-many | Escalation path: Agent a escalates to Agent b. |
+| `HANDS_OFF_TO` | `Agent -[HANDS_OFF_TO]-> Agent` | Many-to-many | Creative flow handoff (Durham team pattern). |
+| `PROPOSES_TO` | `Agent -[PROPOSES_TO]-> Agent` | One-to-one | Curator proposes to Auditor for approval. |
+| `APPROVES_PROMOTION` | `Agent -[APPROVES_PROMOTION]-> Agent` | One-to-one | Auditor approves promotion back to Curator. |
 
 **SUPERSEDES invariants:**
-- A node with `deprecated: true` MUST have exactly one incoming `SUPERSEDES` edge
+- A node with `deprecated: true` MUST have exactly one incoming `SUPERSEDES` edge (a `graph_supersedes` row)
 - A node with `deprecated: false` MUST have zero incoming `SUPERSEDES` edges (it is the head)
-- The chain is traversable: `MATCH (head)-[:SUPERSEDES*]->(ancestor)` retrieves full lineage
+- The chain is traversable with a recursive CTE over `graph_supersedes` (`newer_id` -> `superseded_id`) to retrieve full lineage
 
 **AUTHORED_BY invariants:**
 - Every Memory node SHOULD have at least one `AUTHORED_BY` edge to an Agent
 - An Agent may author many Memory nodes
-- The Agent referenced MUST exist as an `Agent` node
+- The Agent referenced MUST exist as an `Agent` structural node
 
 **RELATES_TO invariants:**
 - A Memory node may relate to zero or more Projects
-- The Project referenced MUST exist as a `Project` node
+- The Project referenced MUST exist as a `Project` structural node
 
 **MEMBER_OF invariants:**
 - Every Agent SHOULD belong to exactly one Team
@@ -1012,7 +1010,7 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
   "user_id": "user-123",
   "score": 0.91,
   "stored": "both",           // "episodic" | "both" | "episodic+pending"
-  "PostgreSQL (graph_memories)_id": "uuid",         // present if promoted
+  "graph_memory_id": "uuid",         // present if promoted
   "pending_review": false     // true if SOC2 mode queued
 }
 ```
@@ -1034,7 +1032,7 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
 {
   "memory_id": "uuid",
   "user_id": "user-123",
-  "PostgreSQL (graph_memories)_deprecated": true    // false if memory was episodic-only
+  "graph_deprecated": true    // false if memory was episodic-only
 }
 ```
 
@@ -1043,7 +1041,7 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
 ```jsonc
 {
   "source_event_id": "12345",
-  "PostgreSQL (graph_memories)_id": "uuid",
+  "graph_memory_id": "uuid",
   "score": 0.91,
   "user_id": "user-123",
   "mode": "auto"              // "auto" | "manual"
@@ -1056,19 +1054,19 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
 {
   "source_event_id": "12345",
   "score": 0.91,
-  "error": "PostgreSQL (graph_memories) connection timeout",
+  "error": "PostgreSQL connection timeout",
   "fallback": "episodic_only"
 }
 ```
 
 ### `proposal_approved`
 
-Emitted when a curator approves a proposal and promotes it to PostgreSQL (graph_memories).
+Emitted when a curator approves a proposal and promotes it to `graph_memories`.
 
 ```jsonc
 {
   "proposal_id": "uuid",          // canonical_proposals.id
-  "memory_id": "uuid",           // PostgreSQL (graph_memories) InsightHead insight_id
+  "memory_id": "uuid",           // graph_memories InsightHead insight_id
   "score": "0.85",               // Curator confidence score
   "tier": "mainstream",          // Confidence tier
   "rationale": "High specificity" // Optional human rationale

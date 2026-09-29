@@ -25,7 +25,7 @@ export interface ProofOfIntent {
   /** What operation is being requested (e.g., "mutate", "query", "delete") */
   intent: string;
   
-  /** What resource is being affected (e.g., "postgres:events", "neo4j:Agent") */
+  /** What resource is being affected (e.g., "postgres:events", "ruvector:Agent") */
   subject: string;
   
   /** Who is requesting (agent_id, user_id, or system) */

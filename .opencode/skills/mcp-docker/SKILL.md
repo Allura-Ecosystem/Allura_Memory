@@ -1,6 +1,6 @@
 ---
 name: mcp-docker
-description: Discover, configure, and manage MCP servers from Docker Hub's MCP Catalog using MCP_DOCKER tools. Use this skill when you need to add new MCP tools like Neo4j, PostgreSQL, GitHub, web search, databases, or any containerized MCP server. This skill provides workflows for finding MCP servers with MCP_DOCKER_mcp-find, configuring them with MCP_DOCKER_mcp-config-set, adding them with MCP_DOCKER_mcp-add, and executing their tools with MCP_DOCKER_mcp-exec.
+description: Discover, configure, and manage MCP servers from Docker Hub's MCP Catalog using MCP_DOCKER tools. Use this skill when you need to add new MCP tools like PostgreSQL, GitHub, web search, databases, or any containerized MCP server. This skill provides workflows for finding MCP servers with MCP_DOCKER_mcp-find, configuring them with MCP_DOCKER_mcp-config-set, adding them with MCP_DOCKER_mcp-add, and executing their tools with MCP_DOCKER_mcp-exec.
 ---
 
 # MCP Docker
@@ -23,7 +23,7 @@ This skill enables dynamic discovery and management of MCP (Model Context Protoc
 Use `MCP_DOCKER_mcp-find` to search Docker Hub's MCP catalog:
 
 ```
-MCP_DOCKER_mcp-find --query "neo4j postgres mysql mongodb"
+MCP_DOCKER_mcp-find --query "postgres mysql mongodb"
 MCP_DOCKER_mcp-find --query "browser playwright crawl scrape"
 MCP_DOCKER_mcp-find --query "perplexica brave search web"
 ```
@@ -40,7 +40,7 @@ MCP_DOCKER_mcp-find --query "perplexica brave search web"
 Use `MCP_DOCKER_mcp-config-set` to provide connection details and credentials:
 
 ```
-MCP_DOCKER_mcp-config-set --server neo4j --config '{"url":"bolt://localhost:7687","username":"neo4j","password":"password"}'
+MCP_DOCKER_mcp-config-set --server postgres --config '{"connection_string":"postgresql://<user>:<password>@localhost:5432/<database>"}'
 MCP_DOCKER_mcp-config-set --server perplexica --config '{"url":"http://localhost:7722"}'
 MCP_DOCKER_mcp-config-set --server filesystem --config '{"paths":["/home/user/projects"]}'
 ```
@@ -55,7 +55,7 @@ MCP_DOCKER_mcp-config-set --server filesystem --config '{"paths":["/home/user/pr
 Use `MCP_DOCKER_mcp-add` to register the configured server:
 
 ```
-MCP_DOCKER_mcp-add --name neo4j --activate
+MCP_DOCKER_mcp-add --name postgres --activate
 MCP_DOCKER_mcp-add --name perplexica --activate
 MCP_DOCKER_mcp-add --name filesystem --activate
 ```
@@ -65,31 +65,29 @@ MCP_DOCKER_mcp-add --name filesystem --activate
 Once added, use `MCP_DOCKER_mcp-exec` to call tools from the server:
 
 ```
-MCP_DOCKER_mcp-exec --name neo4j --tool read_neo4j_cypher --arguments '{"query":"MATCH (n) RETURN count(n)"}'
+MCP_DOCKER_mcp-exec --name postgres --tool query --arguments '{"sql":"SELECT 1"}'
 MCP_DOCKER_mcp-exec --name perplexica --tool search --arguments '{"query":"latest TypeScript features"}'
 ```
 
 ## Complete Examples
 
-### Example 1: Adding Neo4j for Knowledge Graph
+### Example 1: Adding PostgreSQL for Read-Only Diagnostics
 
 ```
-# 1. Find Neo4j servers
-MCP_DOCKER_mcp-find --query "neo4j graph database cypher"
+# 1. Find PostgreSQL servers
+MCP_DOCKER_mcp-find --query "postgres sql database"
 
-# 2. Configure with your credentials
-MCP_DOCKER_mcp-config-set --server neo4j --config '{
-  "url": "bolt://knowledge-neo4j:7687",
-  "username": "neo4j",
-  "password": "your-password"
+# 2. Configure with your credentials (use environment variables, never hardcode)
+MCP_DOCKER_mcp-config-set --server postgres --config '{
+  "connection_string": "postgresql://<user>:<password>@localhost:5432/<database>"
 }'
 
 # 3. Add to session
-MCP_DOCKER_mcp-add --name neo4j --activate
+MCP_DOCKER_mcp-add --name postgres --activate
 
-# 4. Execute Cypher queries
-MCP_DOCKER_mcp-exec --name neo4j --tool read_neo4j_cypher --arguments '{
-  "query": "MATCH (n) RETURN count(n) as node_count"
+# 4. Run a read-only, group-scoped query
+MCP_DOCKER_mcp-exec --name postgres --tool query --arguments '{
+  "sql": "SELECT count(*) FROM graph_memories WHERE group_id = '"'"'allura-system'"'"'"
 }'
 ```
 
@@ -131,7 +129,7 @@ docker build -f Dockerfile.mcp -t allura-memory-mcp:latest .
 MCP_DOCKER_mcp-add --name allura-memory-mcp --activate
 
 # Execute tools
-MCP_DOCKER_mcp-exec --name allura-memory-mcp --tool search_memories --arguments '{
+MCP_DOCKER_mcp-exec --name allura-memory-mcp --tool memory_search --arguments '{
   "query": "authentication patterns",
   "group_id": "myproject"
 }'
@@ -143,7 +141,6 @@ MCP_DOCKER_mcp-exec --name allura-memory-mcp --tool search_memories --arguments 
 
 | Server | Description | Required Config |
 |--------|-------------|---------------|
-| `neo4j` | Neo4j graph database | url, username, password |
 | `postgres` | PostgreSQL database | connection_string |
 | `mongodb` | MongoDB & Atlas | connection_string |
 | `redis` | Redis key-value store | host, port, password |

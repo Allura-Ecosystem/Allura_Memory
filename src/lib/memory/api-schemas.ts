@@ -68,9 +68,9 @@ const SortOrderSchema = z.enum([
 const ResponseMetaSchema = z.object({
   contract_version: z.literal("v1"),
   degraded: z.boolean(),
-  degraded_reason: z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
-  stores_used: z.array(z.enum(["postgres", "neo4j", "ruvector", "graph"])),
-  stores_attempted: z.array(z.enum(["postgres", "neo4j", "ruvector", "graph"])).optional(),
+  degraded_reason: z.enum(["graph_unavailable"]).optional(),
+  stores_used: z.array(z.enum(["postgres", "ruvector", "graph"])),
+  stores_attempted: z.array(z.enum(["postgres", "ruvector", "graph"])).optional(),
   warnings: z.array(z.string()).optional(),
   ruvector_trajectory_id: z.string().optional(),
   ruvector_count: z.number().int().min(0).optional(),

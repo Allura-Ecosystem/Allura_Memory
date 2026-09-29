@@ -10,37 +10,31 @@
 - RuVector hybrid search (vector + BM25) for retrieval
 - 237 rows in `allura-system` as of 2026-04-22
 
-### Semantic layer (Neo4j)
-- Node labels: Memory, Agent, Team, Project
-- Relationship types: SUPERSEDES, AUTHORED_BY, CONTRIBUTES_TO, MEMBER_OF, DELEGATES_TO, ESCALATES_TO, HANDS_OFF_TO, PROPOSES_TO, APPROVES_PROMOTION
-- 81 Memory nodes, 19 Agent nodes in `allura-system` as of 2026-04-22
+### Semantic layer (PostgreSQL `graph_memories` / `graph_supersedes`)
+- Table `graph_memories`: versioned canonical memory rows (same Postgres instance, RuVector hybrid search)
+- Table `graph_supersedes`: supersession edges between versions (SUPERSEDES)
+- Provenance (author agent, project scope) is carried in row metadata
 - Only populated via curator promotion pipeline
 - This is the canonical truth layer
 
-## Node types
+## Memory types
 
-| Type | Label | Description |
-|------|-------|-------------|
-| Event | (stored in PG) | Raw session trace, observation |
-| Outcome | :Memory | Result of a task or process |
-| Insight | :Memory | Learned pattern, distilled knowledge |
-| ADR | :Memory | Architecture Decision Record |
-| Entity | :Memory | Fact about a system, person, or thing |
-| Agent | :Agent | Team member with role and routing |
-| Team | :Team | Group of agents |
-| Project | :Project | Project context |
+| Type | Stored in | Description |
+|------|-----------|-------------|
+| Event | `allura_memories` (episodic) | Raw session trace, observation |
+| Outcome | `graph_memories` | Result of a task or process |
+| Insight | `graph_memories` | Learned pattern, distilled knowledge |
+| ADR | `graph_memories` | Architecture Decision Record |
+| Entity | `graph_memories` | Fact about a system, person, or thing |
 
 ## Relationship patterns
 
 ```
-(:Memory)-[:SUPERSEDES]->(:Memory)      // versioned replacement
-(:Memory)-[:AUTHORED_BY]->(:Agent)      // provenance
-(:Memory)-[:CONTRIBUTES_TO]->(:Project) // project scope
-(:Agent)-[:MEMBER_OF]->(:Team)          // team membership
-(:Agent)-[:DELEGATES_TO]->(:Agent)      // task routing
-(:Agent)-[:ESCALATES_TO]->(:Agent)      // escalation path
-(:Memory)-[:APPROVES_PROMOTION]->(:Memory) // promotion audit
+graph_supersedes: (new_version_id) SUPERSEDES (old_version_id)   -- versioned replacement
+graph_memories.metadata: author agent, project scope              -- provenance
 ```
+
+All rows carry `group_id` for tenant isolation.
 
 ## Status guidance
 
@@ -52,8 +46,8 @@ Prefer explicit version/status edges over in-place mutation:
 
 ## Versioning model
 
-`memory_update` creates a new node with SUPERSEDES relationship to the old one.
-The old node is marked deprecated. Both exist in the graph.
+`memory_update` creates a new `graph_memories` version with a `graph_supersedes` edge to the old one.
+The old version is marked deprecated. Both rows remain in the table.
 This preserves full lineage and audit trail.
 
 Never overwrite in place. Always version forward.

@@ -37,7 +37,7 @@ const SIGNATURE_WORDS = new Set([
   "harden",
   "animation",
   "figma",
-  "neo4j",
+  "ruvector",
   "postgres",
   "oauth",
   "refactor",

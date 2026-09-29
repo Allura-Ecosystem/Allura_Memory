@@ -8,7 +8,7 @@
  * proposal_rejected events (append-only) — no manual INSERT needed.
  *
  * Episodic rows remain in PostgreSQL, fully searchable. Rejection only
- * prevents promotion to Neo4j semantic layer.
+ * prevents promotion to the semantic layer (graph_memories).
  *
  * Invariants enforced:
  *   - group_id validated (allura-* pattern)

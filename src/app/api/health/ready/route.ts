@@ -4,7 +4,7 @@
  * Kubernetes readiness check. Returns 200 when all dependencies are healthy
  * and the pod can serve traffic. Returns 503 when any dependency is unhealthy.
  *
- * Checks: PostgreSQL, Neo4j (with 4.5s timeout per dependency).
+ * Checks: PostgreSQL (with 4.5s timeout per dependency).
  * Does NOT check MCP or external services — those are best-effort.
  */
 

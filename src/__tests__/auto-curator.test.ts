@@ -68,9 +68,9 @@ describe("Auto-Curator", () => {
   describe("detectFailurePatterns", () => {
     it("detects repeated failures", () => {
       const events = [
-        makeEvent({ event_type: "promotion_failed", agent_id: "agent-1", metadata: { error: "neo4j_unavailable" } }),
-        makeEvent({ event_type: "promotion_failed", agent_id: "agent-1", metadata: { error: "neo4j_unavailable" } }),
-        makeEvent({ event_type: "promotion_failed", agent_id: "agent-1", metadata: { error: "neo4j_unavailable" } }),
+        makeEvent({ event_type: "promotion_failed", agent_id: "agent-1", metadata: { error: "graph_unavailable" } }),
+        makeEvent({ event_type: "promotion_failed", agent_id: "agent-1", metadata: { error: "graph_unavailable" } }),
+        makeEvent({ event_type: "promotion_failed", agent_id: "agent-1", metadata: { error: "graph_unavailable" } }),
       ]
 
       const candidates = detectFailurePatterns(events)

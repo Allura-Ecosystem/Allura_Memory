@@ -309,7 +309,7 @@ function testHealth() {
 }
 
 /**
- * Test readiness probe — checks PostgreSQL and Neo4j.
+ * Test readiness probe — checks PostgreSQL (episodic + RuVector).
  */
 function testReadiness() {
   var response = http.get(BASE_URL + "/api/ready");

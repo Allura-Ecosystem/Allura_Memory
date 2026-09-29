@@ -33,7 +33,6 @@ export default defineConfig({
       "src/__tests__/cors-middleware.test.ts",
       "src/__tests__/mcp-catalog.test.ts",
       "src/__tests__/mcp-streamable-http.test.ts",
-      "src/__tests__/neo4j-writer-errors.test.ts",
       "src/__tests__/contract-validation.test.ts",
       "src/__tests__/byok-key-manager.test.ts",
       "src/__tests__/generate-agent.test.ts",
@@ -42,7 +41,6 @@ export default defineConfig({
       // DB-backed tests (mocked)
       "src/lib/ruvector/bridge.test.ts",
       "src/lib/ruvector/retrieval-adapter.test.ts",
-      "src/lib/neo4j/connection.test.ts",
       "src/lib/postgres/connection.test.ts",
       // group-governance and trace-ref need live DB — E2E lane
       "src/lib/agents/agent-manifest.test.ts",

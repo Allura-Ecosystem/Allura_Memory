@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # restore-on-laptop.sh — NEW machine side of the Allura Memory laptop migration.
-# Recreates the external network + 3 volumes, restores their data, drops the
+# Recreates the external network + PostgreSQL volume, restores their data, drops the
 # secret env files into the repo, verifies integrity, and brings the Brain up.
 #
 # Prereqs on the new laptop: Docker, Bun, this repo cloned, Ollama reachable.
@@ -12,7 +12,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="${1:-}"
-VOLUMES=(memory_postgres_data neo4j_data neo4j_logs)
+VOLUMES=(memory_postgres_data)
 NETWORK="knowledge-network"
 
 say() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
@@ -31,7 +31,7 @@ else
 fi
 
 # --- 1. Recreate external network + volumes (idempotent) --------------------
-say "Creating external network + volumes (must exist BEFORE first compose up)"
+say "Creating external network + volume (must exist BEFORE first compose up)"
 docker network create "$NETWORK" 2>/dev/null && echo "  created network $NETWORK" || echo "  network $NETWORK already exists"
 for V in "${VOLUMES[@]}"; do
   docker volume create "$V" >/dev/null && echo "  volume  $V ready"

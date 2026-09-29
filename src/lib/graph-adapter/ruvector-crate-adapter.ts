@@ -3,7 +3,7 @@
  *
  * Third IGraphAdapter backend, selected by GRAPH_BACKEND=ruvector-crate.
  * Wraps the ruvnet `ruvector-graph-node` NAPI binding (github.com/ruvnet/RuVector,
- * MIT) — a Rust Cypher + HNSW graph engine — instead of Neo4j or the PG-table
+ * MIT) — a Rust Cypher + HNSW graph engine — instead of the PG-table
  * `ruvector` adapter. Same seam, same 16-method contract.
  *
  * ── Spike status (2026-06-24, Brooks) ──────────────────────────────────────
@@ -16,7 +16,7 @@
  *
  * ── Scope: OPTION A — non-transactional, retrieval-oriented backend ─────────
  * The probe proved three HARD blockers that make this binding UNABLE to be a
- * faithful drop-in for the Neo4j SUPERSEDES model:
+ * faithful drop-in for the SUPERSEDES model:
  *   B1  No transaction atomicity. begin()/rollback() are bookkeeping no-ops —
  *       a node created inside a tx SURVIVES rollback (verified: nodes 2→3, the
  *       rolled-back node still queryable). Multi-step writes cannot be undone.
@@ -31,7 +31,7 @@
  * binding actually supports — create / retrieve / traverse / edge-link — and make
  * every operation that depends on B1 (atomic SUPERSEDES) or B3 (node mutation:
  * soft-delete, restore, deprecation) throw an explicit `unsupported:` error
- * rather than fake success. Default backend stays `neo4j`; this path is opt-in.
+ * rather than fake success. Default backend stays `ruvector`; this path is opt-in.
  *
  * ── Empirically-confirmed native API (differs from the crate README) ────────
  * `GraphDatabase`: static `open(path)`; instance methods are ASYNC (Promise-
@@ -344,7 +344,7 @@ export class RuvectorCrateGraphAdapter implements IGraphAdapter {
       "supersedesMemory",
       "atomic versioned promotion requires real transactions (B1: rollback is a no-op) " +
         "and deprecating the prior node requires updateNode (B3: absent in ruvector-graph). " +
-        "Use GRAPH_BACKEND=neo4j for SUPERSEDES versioning."
+        "Use GRAPH_BACKEND=ruvector for SUPERSEDES versioning."
     )
   }
 
@@ -477,7 +477,7 @@ export class RuvectorCrateGraphAdapter implements IGraphAdapter {
     let authored_by = false
     let relates_to = false
     // Edges are first-class and append-only (createEdge). Skip silently if the
-    // endpoint node isn't present — matches the Neo4j MERGE-skip contract.
+    // endpoint node isn't present — matches the MERGE-skip contract.
     if (params.agent_id) {
       try {
         await this.db.createEdge({

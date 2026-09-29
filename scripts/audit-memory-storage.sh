@@ -3,9 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 POSTGRES_DIR="${ROOT_DIR}/backups/postgres"
-NEO4J_DIR="${ROOT_DIR}/backups/neo4j"
 POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-knowledge-postgres}"
-NEO4J_CONTAINER="${NEO4J_CONTAINER:-knowledge-neo4j}"
 
 echo "Memory Storage Audit"
 echo "===================="
@@ -31,11 +29,6 @@ else
   else
     echo "  - ${POSTGRES_CONTAINER}: missing"
   fi
-  if docker ps --format '{{.Names}}' | grep -Fx "${NEO4J_CONTAINER}" >/dev/null 2>&1; then
-    echo "  - ${NEO4J_CONTAINER}: running"
-  else
-    echo "  - ${NEO4J_CONTAINER}: missing"
-  fi
   echo
 
   echo "Named volumes (memory_*):"
@@ -44,12 +37,10 @@ fi
 
 echo
 echo "Backup artifact directories:"
-mkdir -p "${POSTGRES_DIR}" "${NEO4J_DIR}"
+mkdir -p "${POSTGRES_DIR}"
 echo "  - ${POSTGRES_DIR}"
-echo "  - ${NEO4J_DIR}"
 
 latest_postgres="$(ls -1 "${POSTGRES_DIR}" 2>/dev/null | sort | tail -n 1 || true)"
-latest_neo4j="$(ls -1 "${NEO4J_DIR}" 2>/dev/null | sort | tail -n 1 || true)"
 
 echo
 echo "Latest backup artifacts:"
@@ -57,10 +48,4 @@ if [ -n "${latest_postgres}" ]; then
   echo "  - PostgreSQL: ${latest_postgres}"
 else
   echo "  - PostgreSQL: none"
-fi
-
-if [ -n "${latest_neo4j}" ]; then
-  echo "  - Neo4j: ${latest_neo4j}"
-else
-  echo "  - Neo4j: none"
 fi

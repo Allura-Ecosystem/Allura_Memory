@@ -51,7 +51,7 @@ const E2E_GROUP = "allura-e2e"
 
 // ── Describe block ────────────────────────────────────────────────────────────
 
-describe.skipIf(!runLive)("10-point acceptance gate (live PG+Neo4j)", () => {
+describe.skipIf(!runLive)("10-point acceptance gate (live PG+RuVector)", () => {
   /**
    * Shared state set in beforeAll and consumed by individual it() blocks.
    * Each block reads (never writes) shared values — no fragile mutable state.

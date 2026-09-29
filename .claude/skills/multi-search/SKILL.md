@@ -242,20 +242,21 @@ prompts_chat_improve_prompt(
 ```
 # Step 1: Search our own codebase first
 # Use local grep tool: pattern="ECONNREFUSED" path=/home/ronin704/Projects/allura memory/
-# Use local grep tool: pattern="neo4j.*driver.*session" include="*.ts"
+# Use local grep tool: pattern="pool\.query.*group_id" include="*.ts"
 
 # Step 2: Search for the error message online
-MCP_DOCKER_perplexica_search(query="Neo4j Bolt connection refused ECONNREFUSED TypeScript driver")
+MCP_DOCKER_perplexica_search(query="node-postgres pg Pool connection refused ECONNREFUSED TypeScript")
 
-# Step 3: Check official API docs
+# Step 3: Check official API docs (resolve the library ID first)
+MCP_DOCKER_resolve-library-id(libraryName="node-postgres")
 MCP_DOCKER_get-library-docs(
-  context7CompatibleLibraryID="/neo4j/docs-drivers",
-  topic="connection configuration error handling",
+  context7CompatibleLibraryID="<id from resolve-library-id>",
+  topic="pool connection configuration error handling",
   tokens=3000
 )
 
 # Step 4: Find working implementations on GitHub
-grep-mcp_grep_query(query="Neo4j.*driver.*session", language="TypeScript")
+grep-mcp_grep_query(query="new Pool\\(.*connectionString", language="TypeScript")
 ```
 
 ## Team RAM Dispatch
@@ -292,7 +293,7 @@ MCP_DOCKER_resolve-library-id(libraryName="next.js")
 
 **Parameters:**
 
-- `libraryName` (string, required) — Library name to search for (e.g., "next.js", "zustand", "neo4j")
+- `libraryName` (string, required) — Library name to search for (e.g., "next.js", "zustand", "pgvector")
 
 #### MCP_DOCKER_get-library-docs
 
@@ -480,18 +481,14 @@ These libraries are pre-resolved for Allura's stack. Use their IDs directly — 
 | Library       | Context7 ID                             | Trust | Snippets | Use For                                 |
 | ------------- | --------------------------------------- | ----- | -------- | --------------------------------------- |
 | Next.js       | `/vercel/next.js`                       | 10    | 2,306    | Server actions, App Router, middleware  |
-| Neo4j         | `/websites/neo4j`                       | 10    | 1,090    | General graph DB reference              |
-| Neo4j APOC    | `/websites/neo4j_apoc_current`          | 10    | 1,428    | APOC procedures (SUPERSEDES versioning) |
-| Neo4j Cypher  | `/websites/neo4j_cypher-manual_current` | 10    | 2,772    | Cypher queries                          |
-| Neo4j Drivers | `/neo4j/docs-drivers`                   | 9     | 1,313    | JS/TS driver connections                |
 | Zustand       | `/pmndrs/zustand`                       | 9.6   | 453      | State management patterns               |
 
-**Usage example — fetch Neo4j APOC docs for SUPERSEDES versioning:**
+**Usage example — fetch Next.js server-actions docs:**
 
 ```
 MCP_DOCKER_get-library-docs(
-  context7CompatibleLibraryID="/websites/neo4j_apoc_current",
-  topic="SUPERSEDES versioning",
+  context7CompatibleLibraryID="/vercel/next.js",
+  topic="server actions",
   tokens=5000
 )
 ```

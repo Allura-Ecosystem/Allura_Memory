@@ -26,7 +26,7 @@ For development and testing on your machine.
 - Docker Desktop (includes docker-compose)
 - Bun 1.0+
 - 4GB RAM available
-- Ports 5432, 7687, 3000 available
+- Ports 5432, 3000 available
 
 ### Setup
 
@@ -43,8 +43,6 @@ cp .env.example .env
 
 # Edit .env (optional for local dev, defaults are safe)
 # DATABASE_URL=postgresql://postgres:postgres@localhost:5432/allura
-# NEO4J_URI=neo4j://localhost:7687
-# NEO4J_AUTH=neo4j:password
 
 # Start infrastructure
 docker compose up -d
@@ -77,7 +75,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16  # PostgreSQL 16 + RuVector (pgvector)
     environment:
       POSTGRES_DB: allura
       POSTGRES_USER: allura
@@ -93,28 +91,10 @@ services:
       timeout: 5s
       retries: 5
 
-  neo4j:
-    image: neo4j:5.26-community
-    environment:
-      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
-      NEO4J_PLUGINS: '["apoc"]'
-      NEO4J_dbms_memory_heap_max__size: 2G
-    ports:
-      - "7687:7687"
-    volumes:
-      - neo4j_data:/var/lib/neo4j/data
-    healthcheck:
-      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${NEO4J_PASSWORD}", "RETURN 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   allura-app:
     build: .
     environment:
       DATABASE_URL: postgresql://allura:${POSTGRES_PASSWORD}@postgres:5432/allura
-      NEO4J_URI: neo4j://neo4j:7687
-      NEO4J_AUTH: neo4j:${NEO4J_PASSWORD}
       PROMOTION_MODE: ${PROMOTION_MODE:-soc2}
       AUTO_APPROVAL_THRESHOLD: ${AUTO_APPROVAL_THRESHOLD:-0.85}
       SOFT_DELETE_RETENTION_DAYS: ${SOFT_DELETE_RETENTION_DAYS:-30}
@@ -125,14 +105,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      neo4j:
-        condition: service_healthy
     volumes:
       - ./src:/app/src
 
 volumes:
   postgres_data:
-  neo4j_data:
 ```
 
 ### Setup
@@ -141,7 +118,6 @@ volumes:
 # Create .env file
 cat > .env <<EOF
 POSTGRES_PASSWORD=your-secure-postgres-password
-NEO4J_PASSWORD=your-secure-neo4j-password
 PROMOTION_MODE=soc2
 AUTO_APPROVAL_THRESHOLD=0.85
 JWT_SECRET=your-jwt-secret-key
@@ -169,9 +145,6 @@ curl http://localhost:3000/api/health
 
 # PostgreSQL
 docker compose exec postgres psql -U allura -d allura -c "SELECT 1"
-
-# Neo4j
-docker compose exec neo4j cypher-shell -u neo4j -p $NEO4J_PASSWORD "RETURN 1"
 ```
 
 ---
@@ -218,14 +191,6 @@ postgresql:
   primary:
     persistence:
       enabled: true
-      size: 100Gi  # Adjust based on expected data volume
-
-neo4j:
-  enabled: true
-  auth:
-    password: your-secure-neo4j-password
-  volumes:
-    data:
       size: 100Gi  # Adjust based on expected data volume
 
 allura:
@@ -307,8 +272,6 @@ kubectl get ingress -n allura
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://allura:pass@postgres:5432/allura` |
-| `NEO4J_URI` | Neo4j connection URI | `neo4j://localhost:7687` |
-| `NEO4J_AUTH` | Neo4j credentials | `neo4j:password` |
 | `JWT_SECRET` | JWT signing key | (generate with `openssl rand -base64 32`) |
 | `ENCRYPTION_KEY` | Data encryption key | (generate with `openssl rand -base64 32`) |
 
@@ -334,9 +297,6 @@ openssl rand -hex 32
 
 # PostgreSQL Password
 openssl rand -base64 16
-
-# Neo4j Password
-openssl rand -base64 16
 ```
 
 ### Loading from .env
@@ -345,8 +305,6 @@ openssl rand -base64 16
 # Development
 cat > .env.local <<EOF
 DATABASE_URL=postgresql://allura:password@localhost:5432/allura
-NEO4J_URI=neo4j://localhost:7687
-NEO4J_AUTH=neo4j:password
 JWT_SECRET=$(openssl rand -base64 32)
 ENCRYPTION_KEY=$(openssl rand -hex 32)
 EOF
@@ -402,19 +360,6 @@ CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status);
 CREATE INDEX IF NOT EXISTS idx_proposals_group ON proposals(group_id);
 ```
 
-### Neo4j Initialization
-
-Indexes and constraints are created automatically by the application on startup.
-
-```bash
-# Manual Neo4j setup (if needed)
-docker compose exec neo4j cypher-shell -u neo4j -p $NEO4J_PASSWORD <<'EOF'
-CREATE INDEX IF NOT EXISTS FOR (m:Memory) ON (m.id);
-CREATE INDEX IF NOT EXISTS FOR (m:Memory) ON (m.group_id);
-CREATE INDEX IF NOT EXISTS FOR (m:Memory) ON (m.deprecated);
-EOF
-```
-
 ### Database Migrations
 
 Allura uses schema versioning. Migrations are applied automatically:
@@ -462,7 +407,6 @@ allura_memory_promoted_total
 
 # Database
 allura_postgres_query_duration_seconds
-allura_neo4j_query_duration_seconds
 
 # System
 process_cpu_seconds_total
@@ -511,16 +455,6 @@ docker compose exec postgres pg_dump -U allura allura > backup-$(date +%Y%m%d-%H
 
 # Restore from backup
 cat backup-20260407.sql | docker compose exec -T postgres psql -U allura allura
-```
-
-### Neo4j Backups
-
-```bash
-# Manual backup
-docker compose exec neo4j neo4j-admin database dump neo4j > backup-$(date +%Y%m%d-%H%M%S).dump
-
-# Restore from backup
-docker compose exec neo4j neo4j-admin database restore neo4j backup-20260407.dump
 ```
 
 ### Kubernetes Backup Strategy
@@ -574,13 +508,6 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
-    - to:
-        - podSelector:
-            matchLabels:
-              app: neo4j
-      ports:
-        - protocol: TCP
-          port: 7687
 ```
 
 ### TLS/SSL
@@ -612,8 +539,7 @@ EOF
 kubectl create secret generic allura-secrets \
   --from-literal=JWT_SECRET=$(openssl rand -base64 32) \
   --from-literal=ENCRYPTION_KEY=$(openssl rand -hex 32) \
-  --from-literal=POSTGRES_PASSWORD=$(openssl rand -base64 16) \
-  --from-literal=NEO4J_PASSWORD=$(openssl rand -base64 16)
+  --from-literal=POSTGRES_PASSWORD=$(openssl rand -base64 16)
 
 # Reference in pod
 env:
@@ -653,19 +579,6 @@ docker compose logs postgres
 docker compose exec postgres psql -U allura -d allura -c "SELECT 1"
 ```
 
-### Neo4j Connection Failed
-
-```bash
-# Check connectivity
-docker compose exec allura-app nc -zv neo4j 7687
-
-# Check logs
-docker compose logs neo4j
-
-# Verify auth
-docker compose exec neo4j cypher-shell -u neo4j -p $NEO4J_PASSWORD "RETURN 1"
-```
-
 ### High Memory Usage
 
 ```bash
@@ -673,7 +586,8 @@ docker compose exec neo4j cypher-shell -u neo4j -p $NEO4J_PASSWORD "RETURN 1"
 docker compose stats
 
 # Increase limits
-NEO4J_dbms_memory_heap_max__size=4G docker compose up -d neo4j
+# Raise the allura-app / postgres resource limits in docker-compose.yml, then:
+docker compose up -d
 ```
 
 ### Slow Queries
@@ -695,11 +609,11 @@ docker compose exec postgres psql -U allura -d allura -c \
 | Component | Recommendation |
 |-----------|-----------------|
 | PostgreSQL | Vertical scaling (CPU + RAM); replicas for HA |
-| Neo4j | Horizontal scaling via causal clustering |
+| RuVector (pgvector) | Runs inside PostgreSQL; scale with the PostgreSQL instance (CPU + RAM, replicas for reads) |
 | App servers | Horizontal autoscaling (CPU/memory based) |
 | Load balancer | Round-robin or least-connections |
 
-For >1M memories/month, consider dedicated PostgreSQL managed service (AWS RDS, Google Cloud SQL) and Neo4j AuraDB.
+For >1M memories/month, consider dedicated PostgreSQL managed service (AWS RDS, Google Cloud SQL) with the pgvector extension enabled.
 
 ---
 
@@ -736,5 +650,5 @@ curl http://localhost:3000/api/health
 
 - **Docker Compose Docs:** https://docs.docker.com/compose/
 - **PostgreSQL Docs:** https://www.postgresql.org/docs/16/
-- **Neo4j Docs:** https://neo4j.com/docs/
+- **pgvector Docs:** https://github.com/pgvector/pgvector
 - **Kubernetes Docs:** https://kubernetes.io/docs/

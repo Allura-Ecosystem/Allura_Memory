@@ -4,7 +4,7 @@
  * Provides health probes and Prometheus metrics for Allura Memory.
  *
  * Endpoints:
- * - /ready  → Readiness probe (checks PostgreSQL, Neo4j, MCP)
+ * - /ready  → Readiness probe (checks PostgreSQL, MCP)
  * - /live   → Liveness probe (process heartbeat)
  * - /metrics → Prometheus exposition format metrics
  */

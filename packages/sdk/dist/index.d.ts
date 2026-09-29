@@ -30,12 +30,12 @@ type StorageLocation = "episodic" | "semantic" | "both";
 type PromotionMode = "auto" | "soc2";
 /** Memory provenance */
 type MemoryProvenance = "conversation" | "manual";
-/** Memory status in Neo4j */
+/** Memory status in the semantic store */
 type MemoryStatus = "active" | "deprecated";
 /** Sort order for memory_list */
 type MemorySortOrder = "created_at_desc" | "created_at_asc" | "score_desc" | "score_asc";
 /** Backing stores that can be reported by canonical memory retrieval metadata. */
-type MemoryRetrievalStore = "postgres" | "neo4j" | "graph" | "ruvector";
+type MemoryRetrievalStore = "postgres" | "graph" | "ruvector";
 /** Validates group_id format: ^allura-[a-z0-9-]+$ */
 declare const GroupIdSchema: z.ZodString;
 /** Validates UUID v4 format */
@@ -121,7 +121,7 @@ interface MemoryDeleteParams {
 interface MemoryResponseMeta {
     contract_version: "v1";
     degraded: boolean;
-    degraded_reason?: "neo4j_unavailable" | "graph_unavailable";
+    degraded_reason?: "graph_unavailable";
     stores_used: MemoryRetrievalStore[];
     stores_attempted: MemoryRetrievalStore[];
     warnings?: string[];
@@ -226,27 +226,27 @@ declare const MemoryAddResponseSchema: z.ZodObject<{
     meta: z.ZodOptional<z.ZodObject<{
         contract_version: z.ZodLiteral<"v1">;
         degraded: z.ZodBoolean;
-        degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable", "graph_unavailable"]>>;
-        stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
-        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
+        degraded_reason: z.ZodOptional<z.ZodEnum<["graph_unavailable"]>>;
+        stores_used: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
+        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
         warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
         ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
         ruvector_count: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
     }, {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -263,9 +263,9 @@ declare const MemoryAddResponseSchema: z.ZodObject<{
     meta?: {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -282,9 +282,9 @@ declare const MemoryAddResponseSchema: z.ZodObject<{
     meta?: {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -324,27 +324,27 @@ declare const MemorySearchResponseSchema: z.ZodObject<{
     meta: z.ZodOptional<z.ZodObject<{
         contract_version: z.ZodLiteral<"v1">;
         degraded: z.ZodBoolean;
-        degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable", "graph_unavailable"]>>;
-        stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
-        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
+        degraded_reason: z.ZodOptional<z.ZodEnum<["graph_unavailable"]>>;
+        stores_used: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
+        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
         warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
         ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
         ruvector_count: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
     }, {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -364,9 +364,9 @@ declare const MemorySearchResponseSchema: z.ZodObject<{
     meta?: {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -386,9 +386,9 @@ declare const MemorySearchResponseSchema: z.ZodObject<{
     meta?: {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -434,27 +434,27 @@ declare const MemoryGetResponseSchema: z.ZodObject<{
     meta: z.ZodOptional<z.ZodObject<{
         contract_version: z.ZodLiteral<"v1">;
         degraded: z.ZodBoolean;
-        degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable", "graph_unavailable"]>>;
-        stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
-        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
+        degraded_reason: z.ZodOptional<z.ZodEnum<["graph_unavailable"]>>;
+        stores_used: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
+        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
         warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
         ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
         ruvector_count: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
     }, {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -472,9 +472,9 @@ declare const MemoryGetResponseSchema: z.ZodObject<{
     meta?: {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -509,9 +509,9 @@ declare const MemoryGetResponseSchema: z.ZodObject<{
     meta?: {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -575,27 +575,27 @@ declare const MemoryListResponseSchema: z.ZodObject<{
         meta: z.ZodOptional<z.ZodObject<{
             contract_version: z.ZodLiteral<"v1">;
             degraded: z.ZodBoolean;
-            degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable", "graph_unavailable"]>>;
-            stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
-            stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
+            degraded_reason: z.ZodOptional<z.ZodEnum<["graph_unavailable"]>>;
+            stores_used: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
+            stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
             warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
             ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
             ruvector_count: z.ZodOptional<z.ZodNumber>;
         }, "strip", z.ZodTypeAny, {
             contract_version: "v1";
             degraded: boolean;
-            stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+            stores_used: ("postgres" | "graph" | "ruvector")[];
+            stores_attempted: ("postgres" | "graph" | "ruvector")[];
+            degraded_reason?: "graph_unavailable" | undefined;
             warnings?: string[] | undefined;
             ruvector_trajectory_id?: string | undefined;
             ruvector_count?: number | undefined;
         }, {
             contract_version: "v1";
             degraded: boolean;
-            stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+            stores_used: ("postgres" | "graph" | "ruvector")[];
+            stores_attempted: ("postgres" | "graph" | "ruvector")[];
+            degraded_reason?: "graph_unavailable" | undefined;
             warnings?: string[] | undefined;
             ruvector_trajectory_id?: string | undefined;
             ruvector_count?: number | undefined;
@@ -613,9 +613,9 @@ declare const MemoryListResponseSchema: z.ZodObject<{
         meta?: {
             contract_version: "v1";
             degraded: boolean;
-            stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+            stores_used: ("postgres" | "graph" | "ruvector")[];
+            stores_attempted: ("postgres" | "graph" | "ruvector")[];
+            degraded_reason?: "graph_unavailable" | undefined;
             warnings?: string[] | undefined;
             ruvector_trajectory_id?: string | undefined;
             ruvector_count?: number | undefined;
@@ -650,9 +650,9 @@ declare const MemoryListResponseSchema: z.ZodObject<{
         meta?: {
             contract_version: "v1";
             degraded: boolean;
-            stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+            stores_used: ("postgres" | "graph" | "ruvector")[];
+            stores_attempted: ("postgres" | "graph" | "ruvector")[];
+            degraded_reason?: "graph_unavailable" | undefined;
             warnings?: string[] | undefined;
             ruvector_trajectory_id?: string | undefined;
             ruvector_count?: number | undefined;
@@ -680,27 +680,27 @@ declare const MemoryListResponseSchema: z.ZodObject<{
     meta: z.ZodOptional<z.ZodObject<{
         contract_version: z.ZodLiteral<"v1">;
         degraded: z.ZodBoolean;
-        degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable", "graph_unavailable"]>>;
-        stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
-        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
+        degraded_reason: z.ZodOptional<z.ZodEnum<["graph_unavailable"]>>;
+        stores_used: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
+        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
         warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
         ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
         ruvector_count: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
     }, {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -719,9 +719,9 @@ declare const MemoryListResponseSchema: z.ZodObject<{
         meta?: {
             contract_version: "v1";
             degraded: boolean;
-            stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+            stores_used: ("postgres" | "graph" | "ruvector")[];
+            stores_attempted: ("postgres" | "graph" | "ruvector")[];
+            degraded_reason?: "graph_unavailable" | undefined;
             warnings?: string[] | undefined;
             ruvector_trajectory_id?: string | undefined;
             ruvector_count?: number | undefined;
@@ -749,9 +749,9 @@ declare const MemoryListResponseSchema: z.ZodObject<{
     meta?: {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -770,9 +770,9 @@ declare const MemoryListResponseSchema: z.ZodObject<{
         meta?: {
             contract_version: "v1";
             degraded: boolean;
-            stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-            degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+            stores_used: ("postgres" | "graph" | "ruvector")[];
+            stores_attempted: ("postgres" | "graph" | "ruvector")[];
+            degraded_reason?: "graph_unavailable" | undefined;
             warnings?: string[] | undefined;
             ruvector_trajectory_id?: string | undefined;
             ruvector_count?: number | undefined;
@@ -800,9 +800,9 @@ declare const MemoryListResponseSchema: z.ZodObject<{
     meta?: {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -816,27 +816,27 @@ declare const MemoryDeleteResponseSchema: z.ZodObject<{
     meta: z.ZodOptional<z.ZodObject<{
         contract_version: z.ZodLiteral<"v1">;
         degraded: z.ZodBoolean;
-        degraded_reason: z.ZodOptional<z.ZodEnum<["neo4j_unavailable", "graph_unavailable"]>>;
-        stores_used: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
-        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "neo4j", "graph", "ruvector"]>, "many">;
+        degraded_reason: z.ZodOptional<z.ZodEnum<["graph_unavailable"]>>;
+        stores_used: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
+        stores_attempted: z.ZodArray<z.ZodEnum<["postgres", "graph", "ruvector"]>, "many">;
         warnings: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
         ruvector_trajectory_id: z.ZodOptional<z.ZodString>;
         ruvector_count: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
     }, {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -849,9 +849,9 @@ declare const MemoryDeleteResponseSchema: z.ZodObject<{
     meta?: {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -864,9 +864,9 @@ declare const MemoryDeleteResponseSchema: z.ZodObject<{
     meta?: {
         contract_version: "v1";
         degraded: boolean;
-        stores_used: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        stores_attempted: ("postgres" | "neo4j" | "graph" | "ruvector")[];
-        degraded_reason?: "neo4j_unavailable" | "graph_unavailable" | undefined;
+        stores_used: ("postgres" | "graph" | "ruvector")[];
+        stores_attempted: ("postgres" | "graph" | "ruvector")[];
+        degraded_reason?: "graph_unavailable" | undefined;
         warnings?: string[] | undefined;
         ruvector_trajectory_id?: string | undefined;
         ruvector_count?: number | undefined;
@@ -950,7 +950,7 @@ declare class MemoryOperations {
      */
     add(params: MemoryAddParams): Promise<MemoryAddResponse>;
     /**
-     * Search memories across both stores (PostgreSQL + Neo4j).
+     * Search memories across both stores (PostgreSQL + RuVector).
      * Federated search with results merged by relevance.
      *
      * @param params - Search parameters
@@ -978,7 +978,7 @@ declare class MemoryOperations {
     list(params: MemoryListParams): Promise<MemoryListResponse>;
     /**
      * Soft-delete a memory.
-     * Appends deletion event to PostgreSQL and marks Neo4j node as deprecated.
+     * Appends deletion event to PostgreSQL and marks the semantic node as deprecated.
      * Original rows remain for audit trail.
      *
      * @param params - Delete parameters (id, group_id, user_id)

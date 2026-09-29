@@ -55,7 +55,6 @@ function mockHealthyReport() {
   auditHealthMock.mockResolvedValue({
     subsystems: {
       postgres: { status: "healthy", latency_ms: 5 },
-      neo4j: { status: "healthy", latency_ms: 12 },
       embedding_backfill: { status: "healthy", latency_ms: 3 },
       curator_queue: { status: "healthy", latency_ms: 2, pending_count: 10 },
       mcp_tools: { status: "healthy", latency_ms: 0, tool_count: 6 },
@@ -107,7 +106,6 @@ describe("readSettings", () => {
         groupId: GROUP_ID,
         subsystemHealth: {
           postgres: "healthy",
-          neo4j: "healthy",
           embeddingBackfill: "healthy",
           curatorQueueDepth: "healthy",
           mcpToolAvailability: "healthy",
@@ -206,7 +204,6 @@ describe("readSettings", () => {
       auditHealthMock.mockResolvedValue({
         subsystems: {
           postgres: { status: "healthy", latency_ms: 5 },
-          neo4j: { status: "degraded", latency_ms: 0 },
           embedding_backfill: { status: "degraded", latency_ms: 0 },
           curator_queue: { status: "healthy", latency_ms: 2, pending_count: 10 },
           mcp_tools: { status: "healthy", latency_ms: 0, tool_count: 6 },
@@ -217,7 +214,6 @@ describe("readSettings", () => {
       const outcome = await readSettings(GROUP_ID)
 
       if (outcome === null || outcome.ok === false) throw new Error("expected ok outcome")
-      expect(outcome.data.subsystemHealth.neo4j).toBe("unhealthy")
       expect(outcome.data.subsystemHealth.embeddingBackfill).toBe("unhealthy")
       expect(outcome.data.subsystemHealth.postgres).toBe("healthy")
     } finally {
@@ -237,7 +233,6 @@ describe("readSettings", () => {
       auditHealthMock.mockResolvedValue({
         subsystems: {
           postgres: { status: "unavailable", latency_ms: 0 },
-          neo4j: { status: "degraded", latency_ms: 0 },
           embedding_backfill: { status: "unavailable", latency_ms: 0 },
           curator_queue: { status: "healthy", latency_ms: 2, pending_count: 10 },
           mcp_tools: { status: "healthy", latency_ms: 0, tool_count: 6 },
@@ -271,7 +266,6 @@ describe("readSettings", () => {
       if (outcome === null || outcome.ok === false) throw new Error("expected ok outcome")
       // MCP health failure is non-fatal — subsystem health stays "unknown"
       expect(outcome.data.subsystemHealth.postgres).toBe("unknown")
-      expect(outcome.data.subsystemHealth.neo4j).toBe("unknown")
       // But Postgres data still came through
       expect(outcome.data.policyChanges).toBe(2)
     } finally {
@@ -346,7 +340,6 @@ describe("isSettingsEmpty", () => {
     groupId: GROUP_ID,
     subsystemHealth: {
       postgres: "healthy",
-      neo4j: "healthy",
       embeddingBackfill: "healthy",
       curatorQueueDepth: "healthy",
       mcpToolAvailability: "healthy",

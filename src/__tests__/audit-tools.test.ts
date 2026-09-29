@@ -197,7 +197,7 @@ describe("Audit MCP Tools (Story 9.2)", () => {
 
       expect(response.subsystems).toBeDefined()
       expect(response.subsystems.postgres).toBeDefined()
-      expect(response.subsystems.neo4j).toBeDefined()
+      expect(response.subsystems).not.toHaveProperty("neo4j")
       expect(response.subsystems.embedding_backfill).toBeDefined()
       expect(response.subsystems.curator_queue).toBeDefined()
       expect(response.subsystems.mcp_tools).toBeDefined()
@@ -368,7 +368,7 @@ describe("Audit MCP Tools (Story 9.2)", () => {
       expect(keys).toContain("group_id_constraint")
       expect(keys).toContain("group_id_namespace_compliance")
       expect(keys).toContain("no_updated_at_column")
-      expect(keys).toContain("neo4j_supersedes")
+      expect(keys).toContain("graph_supersedes")
       expect(keys).toContain("hitl_promotion")
       expect(keys).toContain("allura_namespace")
     })

@@ -2,20 +2,19 @@
  * Graph Adapter Types — Slice C Interface Contracts
  *
  * Defines the IGraphAdapter interface that abstracts all graph operations
- * currently performed by inline Neo4j Cypher in canonical-tools.ts.
+ * performed by canonical-tools.ts.
  *
  * Design principle: The adapter captures the 13 Cypher operations as method
- * contracts. Two implementations exist:
- *   1. Neo4jGraphAdapter — wraps existing neo4j-driver (legacy, Slice C)
- *   2. RuVectorGraphAdapter — PostgreSQL tables with adjacency lists (Slice C+)
+ * contracts. Implementations:
+ *   1. RuVectorGraphAdapter — PostgreSQL tables with adjacency lists (default)
+ *   2. RuvectorCrateGraphAdapter — native engine, opt-in retrieval-oriented subset
  *
- * The feature flag GRAPH_BACKEND=neo4j|ruvector selects the implementation.
- * Both adapters MUST produce identical results for the same inputs.
+ * The feature flag GRAPH_BACKEND=ruvector|ruvector-crate selects the implementation.
  *
  * ADR: See docs/allura/RISKS-AND-DECISIONS.md AD-029
  *
  * Key observations driving this design:
- * - Neo4j is used for document storage with versioning, NOT graph traversal
+ * - The graph layer is used for document storage with versioning, NOT graph traversal
  * - SUPERSEDES is the only relationship type
  * - No path queries, no shortestPath, no multi-hop traversals
  * - All queries are single-node lookups or full-text search
@@ -29,7 +28,7 @@ import type { ConfidenceScore, GroupId, MemoryId, MemoryProvenance } from "@/lib
 /**
  * A memory node as stored in the graph layer.
  *
- * Maps to the Neo4j Memory label properties.
+ * Persisted in the graph_memories table.
  * The RuVectorGraphAdapter stores equivalent data in a PG table.
  */
 export interface GraphMemoryNode {

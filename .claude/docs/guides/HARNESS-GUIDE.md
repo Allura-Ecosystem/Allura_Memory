@@ -58,7 +58,6 @@ Harness:
 
   Pending approval:
     - postgresql (Direct PostgreSQL client)
-    - neo4j (Neo4j Cypher executor)
 
 User:
   /mcp-approve postgresql
@@ -152,7 +151,6 @@ Harness:
 
 ```
 /mcp-approve postgresql         # Approve PostgreSQL
-/mcp-approve neo4j              # Approve Neo4j
 ```
 
 **Prerequisites:** Server must be in pending list
@@ -296,7 +294,7 @@ Harness Orchestrator (.opencode/harness/index.ts)
     ↓
 Event Logger → PostgreSQL (append-only)
     ↓
-Neo4j Promotion (curator approval only)
+Canonical Promotion (curator approval only)
 ```
 
 ---

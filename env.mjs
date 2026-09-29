@@ -39,13 +39,6 @@ export const env = createEnv({
     POSTGRES_PASSWORD: z.string().optional(),
     POSTGRES_POOL_MAX: z.coerce.number().default(10),
 
-    // Neo4j (knowledge graph)
-    NEO4J_URI: z.string().default("bolt://localhost:7687"),
-    NEO4J_USER: z.string().default("neo4j"),
-    NEO4J_PASSWORD: z.string().optional(),
-    NEO4J_HEAP_INITIAL: z.string().default("512m"),
-    NEO4J_HEAP_MAX: z.string().default("2G"),
-    NEO4J_PAGECACHE: z.string().default("1G"),
 
     // RuVector (vector + hybrid search, port 5433)
     RUVECTOR_HOST: z.string().default("localhost"),
@@ -96,12 +89,6 @@ export const env = createEnv({
     POSTGRES_USER: process.env.POSTGRES_USER,
     POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD,
     POSTGRES_POOL_MAX: process.env.POSTGRES_POOL_MAX,
-    NEO4J_URI: process.env.NEO4J_URI,
-    NEO4J_USER: process.env.NEO4J_USER,
-    NEO4J_PASSWORD: process.env.NEO4J_PASSWORD,
-    NEO4J_HEAP_INITIAL: process.env.NEO4J_HEAP_INITIAL,
-    NEO4J_HEAP_MAX: process.env.NEO4J_HEAP_MAX,
-    NEO4J_PAGECACHE: process.env.NEO4J_PAGECACHE,
     RUVECTOR_HOST: process.env.RUVECTOR_HOST,
     RUVECTOR_PORT: process.env.RUVECTOR_PORT,
     RUVECTOR_DB: process.env.RUVECTOR_DB,

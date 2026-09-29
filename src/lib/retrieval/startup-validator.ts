@@ -1,7 +1,7 @@
 /**
  * Startup validation for the retrieval gateway.
- * Ensures pgvector, HNSW, Neo4j indexes, and schema labels exist
- * before any queries are served.
+ * Ensures pgvector, the HNSW index, and the semantic-store tables
+ * (graph_memories, graph_supersedes) exist before any queries are served.
  */
 
 import { RetrievalConfig } from './contract';
@@ -28,12 +28,6 @@ async function getPgClient(url: string) {
   const client = new Client({ connectionString: url, connectionTimeoutMillis: 5000 });
   await client.connect();
   return client;
-}
-
-async function getNeo4jDriver(url: string) {
-  const neo4j = await import('neo4j-driver');
-  const driver = neo4j.default.driver(url, undefined, { connectionTimeout: 5000 });
-  return driver;
 }
 
 async function checkPgvector(client: any): Promise<HealthCheck> {
@@ -65,41 +59,21 @@ async function checkHnswIndex(client: any): Promise<HealthCheck> {
   }
 }
 
-async function checkNeo4jMemoryIndex(driver: any): Promise<HealthCheck> {
+async function checkSemanticStore(client: any): Promise<HealthCheck> {
   try {
-    const session = driver.session();
-    const res = await session.run(`
-      SHOW INDEXES YIELD name, type, entityType, labelsOrTypes
-      WHERE name = 'memory_search_index'
-    `);
-    await session.close();
-    if (res.records.length === 0) {
-      return { name: 'neo4j_fulltext_index', status: 'fail', message: 'Neo4j fulltext index memory_search_index does not exist' };
-    }
-    return { name: 'neo4j_fulltext_index', status: 'pass', message: 'Neo4j fulltext index present' };
-  } catch (e: any) {
-    return { name: 'neo4j_fulltext_index', status: 'fail', message: `Neo4j index check error: ${e.message}` };
-  }
-}
-
-async function checkNeo4jSchemaLabels(driver: any): Promise<HealthCheck> {
-  try {
-    const session = driver.session();
-    const labels = ['Memory', 'Agent', 'Project'];
-    const checks = await Promise.all(
-      labels.map(async (label) => {
-        const res = await session.run(`MATCH (n:${label}) RETURN count(n) AS cnt LIMIT 1`);
-        return { label, count: res.records[0]?.get('cnt').toNumber() ?? 0 };
-      })
+    const res = await client.query(
+      "SELECT to_regclass('graph_memories') AS memories, to_regclass('graph_supersedes') AS supersedes"
     );
-    await session.close();
-    const missing = checks.filter((c) => c.count === 0).map((c) => c.label);
+    const row = res.rows[0] ?? {};
+    const missing = ['graph_memories', 'graph_supersedes'].filter(
+      (table) => !row[table === 'graph_memories' ? 'memories' : 'supersedes']
+    );
     if (missing.length > 0) {
-      return { name: 'neo4j_schema_labels', status: 'warn', message: `Neo4j schema labels present but empty: ${missing.join(', ')}`, detail: { labels: checks } };
+      return { name: 'semantic_store_tables', status: 'fail', message: `Semantic store tables missing: ${missing.join(', ')}` };
     }
-    return { name: 'neo4j_schema_labels', status: 'pass', message: 'All required Neo4j labels present and populated', detail: { labels: checks } };
+    return { name: 'semantic_store_tables', status: 'pass', message: 'Semantic store tables present' };
   } catch (e: any) {
-    return { name: 'neo4j_schema_labels', status: 'fail', message: `Neo4j schema check error: ${e.message}` };
+    return { name: 'semantic_store_tables', status: 'fail', message: `Semantic store check error: ${e.message}` };
   }
 }
 
@@ -121,22 +95,11 @@ export async function validateStartup(config: RetrievalConfig, opts?: { force?: 
       pgClient = await getPgClient(config.postgres_url);
       checks.push(await checkPgvector(pgClient));
       checks.push(await checkHnswIndex(pgClient));
+      checks.push(await checkSemanticStore(pgClient));
     } catch (e: any) {
       checks.push({ name: 'postgres_connection', status: 'fail', message: `Could not connect to PostgreSQL: ${e.message}` });
     } finally {
       if (pgClient) await pgClient.end().catch(() => {});
-    }
-
-    // Neo4j checks
-    let driver;
-    try {
-      driver = await getNeo4jDriver(config.neo4j_url);
-      checks.push(await checkNeo4jMemoryIndex(driver));
-      checks.push(await checkNeo4jSchemaLabels(driver));
-    } catch (e: any) {
-      checks.push({ name: 'neo4j_connection', status: 'fail', message: `Could not connect to Neo4j: ${e.message}` });
-    } finally {
-      if (driver) await driver.close().catch(() => {});
     }
 
     const failed = checks.filter((c) => c.status === 'fail');

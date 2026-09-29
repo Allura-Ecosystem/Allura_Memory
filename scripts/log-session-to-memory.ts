@@ -1,10 +1,9 @@
 #!/usr/bin/env bun
 /**
  * Log Session to Memory
- * Records session completion to PostgreSQL events + Neo4j knowledge graph
+ * Records session completion to the PostgreSQL events table (append-only)
  */
 
-import { memory } from "../src/lib/memory/writer";
 import { getPool } from "../src/lib/postgres/connection";
 import { insertEvent } from "../src/lib/postgres/queries/insert-trace";
 
@@ -50,66 +49,6 @@ async function logToPostgres() {
   return event.id;
 }
 
-async function logToNeo4j() {
-  console.log("[SessionLogger] Logging to Neo4j...");
-
-  const mem = memory();
-
-  // Create Session node
-  const { node_id: sessionId } = await mem.createEntity({
-    label: "Session",
-    group_id: sessionData.group_id,
-    props: {
-      session_id: sessionData.session_id,
-      type: "epic_completion",
-      stories_completed: sessionData.stories_completed.length,
-      summary: sessionData.summary,
-      completed_at: sessionData.timestamp,
-    },
-  });
-
-  // Create CONTRIBUTED relationship
-  await mem.createRelationship({
-    fromId: sessionData.agent_id,
-    fromLabel: "Agent",
-    toId: sessionId,
-    toLabel: "Session",
-    type: "CONTRIBUTED",
-    props: {
-      on: sessionData.timestamp,
-      result: "complete",
-    },
-  });
-
-  // Create LEARNED relationships for each story type
-  const storyLearnings = [
-    { entityId: "story-1.1", entityLabel: "Task" as const, relevance: 0.9 },
-    { entityId: "story-1.7", entityLabel: "Task" as const, relevance: 0.85 },
-    { entityId: "story-1.2", entityLabel: "Task" as const, relevance: 0.8 },
-    { entityId: "story-1.5", entityLabel: "Task" as const, relevance: 0.75 },
-    { entityId: "story-1.6", entityLabel: "Task" as const, relevance: 0.75 },
-  ];
-
-  for (const learning of storyLearnings) {
-    await mem.createRelationship({
-      fromId: sessionData.agent_id,
-      fromLabel: "Agent",
-      toId: learning.entityId,
-      toLabel: learning.entityLabel,
-      type: "LEARNED",
-      props: {
-        timestamp: sessionData.timestamp,
-        relevance_score: learning.relevance,
-        context: `Completed story ${learning.entityId}`,
-        session_id: sessionData.session_id,
-      },
-    });
-  }
-
-  console.log(`[SessionLogger] Neo4j Session node created: ${sessionId}`);
-  return sessionId;
-}
-
 async function main() {
   try {
     console.log("=== Session Logger ===");
@@ -120,13 +59,9 @@ async function main() {
     // Log to PostgreSQL
     const eventId = await logToPostgres();
 
-    // Log to Neo4j
-    const sessionNodeId = await logToNeo4j();
-
     console.log("");
     console.log("=== Session Logged Successfully ===");
     console.log(`PostgreSQL Event ID: ${eventId}`);
-    console.log(`Neo4j Session Node: ${sessionNodeId}`);
 
     process.exit(0);
   } catch (error) {

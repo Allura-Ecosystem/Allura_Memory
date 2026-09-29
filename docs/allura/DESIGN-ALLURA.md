@@ -277,7 +277,7 @@ System health check with optional component-level detail.
   },
   "components": [
     { "name": "postgresql", "status": "healthy", "message": "Database connection verified", "latency": 3 },
-    { "name": "graph_memories", "status": "healthy", "message": "Graph database connection verified", "latency": 12 }
+    { "name": "graph_memories", "status": "healthy", "message": "Semantic layer connection verified", "latency": 12 }
   ]
 }
 ```
@@ -599,8 +599,8 @@ The controlled retrieval layer — the sole read path for agents (AD-19). Agents
 
 | Mode | Description | Sources |
 |------|-------------|---------|
-| `semantic` | Content-based search across approved insights | PostgreSQL (graph_memories) `searchInsights()` |
-| `structured` | Filter-based query (status, confidence, date range) | PostgreSQL (graph_memories) `listInsights()` |
+| `semantic` | Content-based search across approved insights | `graph_memories` `searchInsights()` |
+| `structured` | Filter-based query (status, confidence, date range) | `graph_memories` `listInsights()` |
 | `hybrid` | Dual-context: project + global insights merged by confidence | `getDualContextSemanticMemory()` |
 | `traces` | Raw trace retrieval (policy-gated, not default) | PostgreSQL `queryTraces()` |
 
@@ -619,11 +619,11 @@ The following event types are recorded in the PostgreSQL `events` table (append-
 | `memory_get` | Agent retrieves single memory | Memory engine |
 | `memory_delete` | Soft-delete with 30-day recovery | Memory engine |
 | `memory_restore` | Restore from soft-delete within recovery window | Memory engine |
-| `memory_promote` | Request promotion to PostgreSQL (graph_memories) (creates proposal) | Curator |
+| `memory_promote` | Request promotion to `graph_memories` (creates proposal) | Curator |
 | `proposal_created` | Curator creates canonical proposal | Curator scorer |
 | `proposal_approved` | Human approves proposal | Curator approve route |
 | `proposal_rejected` | Human rejects proposal | Curator reject route |
-| `memory_promoted` | Memory written to PostgreSQL (graph_memories) (semantic layer) | Promotion worker |
+| `memory_promoted` | Memory written to `graph_memories` (semantic layer) | Promotion worker |
 | `memory_deprecated` | Old version marked deprecated via SUPERSEDES | Version workflow |
 | `threat_advisory_received` | Allowlisted advisory or approved internal evidence accepted as provisional | Allura downstream threat intake |
 | `threat_evidence_rejected` | Evidence denied for trust, freshness, schema, or scope failure | Allura downstream threat intake |
@@ -680,9 +680,9 @@ stateDiagram-v2
 
 | Rule ID | Rule | Source | Enforcement |
 |---------|------|--------|-------------|
-| AD-04 | `PROMOTION_MODE` governs writes. `soc2` mode requires human approval before PostgreSQL (graph_memories) promotion. `auto` mode promotes immediately if score ≥ threshold. | RISKS-AND-DECISIONS | Environment variable + code path |
-| AD-08 | Soft-delete only. No hard deletes. Deletion records are append-only events, not erasures. | RISKS-AND-DECISIONS | `memory_delete` appends event + sets `deprecated: true` on PostgreSQL (graph_memories) node |
-| AD-09 | PostgreSQL (graph_memories) write failure is non-fatal. PostgreSQL write is truth. PostgreSQL (graph_memories) is a promotion — its failure degrades gracefully (206 + Warning header). | RISKS-AND-DECISIONS | `readJson()` in dashboard client detects 206 status |
+| AD-04 | `PROMOTION_MODE` governs writes. `soc2` mode requires human approval before `graph_memories` promotion. `auto` mode promotes immediately if score ≥ threshold. | RISKS-AND-DECISIONS | Environment variable + code path |
+| AD-08 | Soft-delete only. No hard deletes. Deletion records are append-only events, not erasures. | RISKS-AND-DECISIONS | `memory_delete` appends event + sets `deprecated: true` on `graph_memories` node |
+| AD-09 | `graph_memories` write failure is non-fatal. PostgreSQL write is truth. `graph_memories` is a promotion — its failure degrades gracefully (206 + Warning header). | RISKS-AND-DECISIONS | `readJson()` in dashboard client detects 206 status |
 | AD-19 | Agents MUST NOT query PostgreSQL directly. All reads go through `POST /api/memory/retrieval`. | RISKS-AND-DECISIONS | Code review gate + `direct-access-blocker.ts` |
 | AD-20 | Curator marks events as `promoted` after proposal creation. Without this, the curator re-scores the same traces on every run. | RISKS-AND-DECISIONS | Curator query excludes `status = 'promoted'` |
 | AD-22 | `VALIDATION-GATE.md` is archived in `docs/archive/allura/`, not canonical. Per the canonical surface rule. | RISKS-AND-DECISIONS | Cross-linked from BLUEPRINT, not in `docs/allura/` |
@@ -711,12 +711,12 @@ stateDiagram-v2
 3. Proposals display with confidence badge, reasoning, and source evidence
 4. Curator reviews summary, evidence links, and confidence score
 5. Curator approves: `POST /api/curator/approve` with `decision: "approve"` and rationale
-6. System promotes approved insight to PostgreSQL (graph_memories) as immutable node
+6. System promotes approved insight to `graph_memories` as immutable node
 7. Audit event `proposal_approved` written to PostgreSQL with curator ID and timestamp
 8. Curator rejects: `POST /api/curator/reject` with rationale
 9. System archives rejected proposal; audit event `proposal_rejected` written
 
-**Postcondition:** Proposal transitions to `approved` (promoted to PostgreSQL (graph_memories)) or `rejected` (archived in PG) with full audit trail.
+**Postcondition:** Proposal transitions to `approved` (promoted to `graph_memories`) or `rejected` (archived in PG) with full audit trail.
 
 **Requirements:** F10–F13, F17
 
@@ -752,7 +752,7 @@ stateDiagram-v2
 1. Operator navigates to `/dashboard` (overview)
 2. Dashboard calls `GET /api/health?detailed=true` and `GET /api/health/metrics`
 3. Overview displays: system status, queue depth, recall latency, storage stats, degraded component count
-4. If PostgreSQL (graph_memories) is down, status shows "degraded" with `Warning` header and lost capabilities listed
+4. If `graph_memories` is down, status shows "degraded" with `Warning` header and lost capabilities listed
 5. Operator sees metric cards: total memories, pending proposals, active agents, system uptime
 6. Activity panel shows recent events
 
@@ -771,8 +771,8 @@ stateDiagram-v2
 **Steps:**
 1. Agent calls `POST /api/memory/retrieval` with query, scope, and mode
 2. Retrieval layer validates `group_id` and agent permissions
-3. For `semantic` mode: `searchInsights()` from PostgreSQL (graph_memories)
-4. For `structured` mode: `listInsights()` from PostgreSQL (graph_memories)
+3. For `semantic` mode: `searchInsights()` from `graph_memories`
+4. For `structured` mode: `listInsights()` from `graph_memories`
 5. For `hybrid` mode: `getDualContextSemanticMemory()` merges project + global insights
 6. For `traces` mode (policy-gated): `queryTraces()` from PostgreSQL
 7. Results returned with provenance metadata (proposal ID, approver, approval timestamp)
@@ -795,12 +795,12 @@ stateDiagram-v2
 2. User taps [Forget] (soft-delete)
 3. System calls `DELETE /api/memory/[id]`
 4. System appends `memory_delete` event to PostgreSQL
-5. System marks PostgreSQL (graph_memories) node as `deprecated: true` (if promoted)
+5. System marks `graph_memories` node as `deprecated: true` (if promoted)
 6. Memory appears in "Recently Forgotten" view (`/memory?view=forgotten`)
 7. Within 30 days, user taps [Restore]
 8. System calls `POST /api/memory/[id]/restore`
 9. System appends `memory_restore` event to PostgreSQL
-10. System removes `deprecated` flag from PostgreSQL (graph_memories) node
+10. System removes `deprecated` flag from `graph_memories` node
 
 **Postcondition:** Memory is either soft-deleted (recoverable within 30 days) or restored to active state.
 
@@ -812,7 +812,7 @@ stateDiagram-v2
 
 **Actor:** Operator / Admin
 
-**Precondition:** PostgreSQL (graph_memories) contains Memory, Agent, Team, and Project nodes.
+**Precondition:** `graph_memories` contains Memory, Agent, Team, and Project nodes.
 
 **Steps:**
 1. Operator navigates to `/dashboard/graph`
@@ -832,7 +832,7 @@ stateDiagram-v2
 
 1. **Dashboard scoped to `group_id`.** Every API call includes `group_id` for tenant isolation. No cross-tenant data access is possible.
 
-2. **Proposals require human approval in `soc2` mode.** `PROMOTION_MODE=soc2` blocks autonomous PostgreSQL (graph_memories) writes. Every promotion goes through the curator queue.
+2. **Proposals require human approval in `soc2` mode.** `PROMOTION_MODE=soc2` blocks autonomous `graph_memories` writes. Every promotion goes through the curator queue.
 
 3. **Audit trail is append-only and exportable.** No UPDATE or DELETE on the `events` table. CSV export supports SOC2 compliance requirements.
 
@@ -842,7 +842,7 @@ stateDiagram-v2
 
 6. **Curator marks events as promoted (AD-20).** Without this, the curator re-scores the same traces on every run, creating duplicate proposals.
 
-7. **Agents MUST NOT query PG/PostgreSQL (graph_memories) directly (AD-19).** All retrieval goes through `POST /api/memory/retrieval`. Code review gate checks for direct database imports in agent-facing code.
+7. **Agents MUST NOT query PG/`graph_memories` directly (AD-19).** All retrieval goes through `POST /api/memory/retrieval`. Code review gate checks for direct database imports in agent-facing code.
 
 8. **No direct graph writes outside approved promotion flow.** Services and agents cannot write directly to the semantic store. All writes go through the curator pipeline.
 

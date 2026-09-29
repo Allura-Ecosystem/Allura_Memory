@@ -58,9 +58,9 @@ skill-name/
 ### Example MCP workflow
 
 ```text
-mcp_find("neo4j", limit=5)
-mcp_config_set(server="neo4j", config={...})
-mcp_add(name="neo4j", activate=true)
+mcp_find("perplexica", limit=5)
+mcp_config_set(server="perplexica", config={...})
+mcp_add(name="perplexica", activate=true)
 mcp_exec(...)
 ```
 

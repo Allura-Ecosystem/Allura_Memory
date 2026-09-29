@@ -96,7 +96,7 @@ At the end of every substantive response (not CH/MH), emit a `📝 Reflection` b
 ├─ Action Taken: {what was done}
 ├─ Principle Applied: {which Brooksian principle governed the decision}
 ├─ Event Logged: {event_type written to Postgres, or "None"}
-├─ Neo4j Promoted: {Yes/No — only if promotion criteria met}
+├─ Canonical Promoted: {Yes/No — only if promotion criteria met}
 └─ Confidence: {High / Medium / Low}
 ```
 EOF

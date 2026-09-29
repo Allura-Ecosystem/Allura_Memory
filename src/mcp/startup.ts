@@ -18,13 +18,10 @@ export interface MemoryServerBootstrapDeps {
 
 async function warmConnections(): Promise<void> {
   try {
-    const { pg, neo4j } = await getConnections();
+    const { pg } = await getConnections();
     const tasks: Promise<unknown>[] = [
       pg.query("SELECT 1").catch(() => undefined),
     ];
-    if (neo4j) {
-      tasks.push(neo4j.verifyConnectivity().catch(() => undefined));
-    }
 
     if (isRuVectorEnabled()) {
       tasks.push(getRuVectorPool().query("SELECT 1").catch(() => undefined));

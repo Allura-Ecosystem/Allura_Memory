@@ -61,7 +61,7 @@ describe("brain-client", () => {
 
       // Subsystem shape
       expect(report.subsystems).toHaveProperty("postgres")
-      expect(report.subsystems).toHaveProperty("neo4j")
+      expect(report.subsystems).not.toHaveProperty("neo4j")
       expect(report.subsystems.postgres).toHaveProperty("status")
       expect(report.subsystems.postgres).toHaveProperty("latency_ms")
       expect(typeof report.subsystems.postgres.latency_ms).toBe("number")

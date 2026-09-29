@@ -21,7 +21,7 @@ Agent(
   description="Scout context for task",
   prompt="Search Allura Brain for context relevant to: $ARGUMENTS.
   Query PostgreSQL events for recent activity and blockers.
-  Query Neo4j for architecture insights and decisions.
+  Search RuVector semantic memory for architecture insights and decisions.
   Return: relevant memories, existing patterns, potential conflicts with invariants."
 )
 ```

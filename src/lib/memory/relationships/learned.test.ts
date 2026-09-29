@@ -47,7 +47,7 @@ describe.skipIf(!shouldRunLearnedStrict)("LEARNED Relationship Tracker", () => {
           entityId: "lesson-001",
           entityLabel: "Lesson",
           relevanceScore: 0.85,
-          context: "Learned about Neo4j best practices",
+          context: "Learned about the semantic store best practices",
           sessionId: "session-123",
           timestamp: "2026-04-06T10:00:00Z",
         },
@@ -75,7 +75,7 @@ describe.skipIf(!shouldRunLearnedStrict)("LEARNED Relationship Tracker", () => {
         props: {
           timestamp: "2026-04-06T10:00:00Z",
           relevance_score: 0.85,
-          context: "Learned about Neo4j best practices",
+          context: "Learned about the semantic store best practices",
           session_id: "session-123",
         },
       });

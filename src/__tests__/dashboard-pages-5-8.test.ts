@@ -368,7 +368,6 @@ const BASE_SETTINGS: SettingsSnapshot = {
   groupId: GROUP_ID,
   subsystemHealth: {
     postgres: "unknown",
-    neo4j: "unknown",
     embeddingBackfill: "unknown",
     curatorQueueDepth: "unknown",
     mcpToolAvailability: "unknown",
@@ -470,14 +469,12 @@ describe("Settings page — subsystem health display (Task 7)", () => {
       ...BASE_SETTINGS,
       subsystemHealth: {
         postgres: "healthy",
-        neo4j: "unhealthy",
         embeddingBackfill: "unknown",
         curatorQueueDepth: "healthy",
         mcpToolAvailability: "unknown",
       },
     }
     expect(snapshot.subsystemHealth.postgres).toBe("healthy")
-    expect(snapshot.subsystemHealth.neo4j).toBe("unhealthy")
     expect(snapshot.subsystemHealth.embeddingBackfill).toBe("unknown")
     expect(snapshot.subsystemHealth.curatorQueueDepth).toBe("healthy")
     expect(snapshot.subsystemHealth.mcpToolAvailability).toBe("unknown")

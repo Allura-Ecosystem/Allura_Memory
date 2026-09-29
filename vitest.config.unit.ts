@@ -4,7 +4,7 @@
  * Pure logic only. No database. No Ollama. No Notion. No MCP browser.
  * Pure functions, type validation, scoring, dedup, similarity, etc.
  *
- * If a test needs PostgreSQL, Neo4j, or any external service, it belongs
+ * If a test needs PostgreSQL or any external service, it belongs
  * in the integration lane — NOT here.
  */
 import { config } from "dotenv"
@@ -240,15 +240,12 @@ export default defineConfig({
       "src/__tests__/notion-projection-sync.test.ts",
       "src/__tests__/mcp-catalog.test.ts",
       "src/__tests__/mcp-streamable-http.test.ts",
-      "src/__tests__/neo4j-writer-errors.test.ts",
       "src/__tests__/generate-agent.test.ts",
       "src/__tests__/knowledge-hub-bridge.test.ts",
       "src/__tests__/parity-test.test.ts",
       "src/lib/ruvector/bridge.test.ts",
       "src/lib/ruvector/retrieval-adapter.test.ts",
-      "src/lib/neo4j/connection.test.ts",
       "src/lib/postgres/connection.test.ts",
-      "src/lib/neo4j/queries/*.test.ts",
       "src/lib/postgres/queries/*.test.ts",
       "src/lib/postgres/trace-logger.test.ts",
       "src/integrations/mcp.client.test.ts",

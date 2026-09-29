@@ -331,7 +331,6 @@ describe("epic gate — final invariant: canonical memory cannot change through 
         "@/mcp/canonical-tools",
         "@/lib/graph-adapter",
         "@/control-plane/syscalls",
-        "@/lib/neo4j",
       ]) {
         expect(source).not.toContain(prefix)
       }

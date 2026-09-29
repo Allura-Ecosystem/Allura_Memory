@@ -15,13 +15,13 @@ on:
 #   test:unit   — Pure logic, NO database, NO Ollama, NO Notion
 #   test:curator — Auto-Curator and proposal pipeline only
 #   test:integration — Mocked services and contract tests (DB env provided)
-#   test:e2e    — Live stack tests (PostgreSQL + Neo4j services)
+#   test:e2e    — Live stack tests (PostgreSQL service)
 #   build       — Next.js production build + MCP server build
 #   test:mcp    — MCP browser/static checks
 #
 # Unit tests MUST NOT receive database environment variables.
 # Integration tests get mocked DB env vars.
-# E2E tests get live PostgreSQL + Neo4j service containers.
+# E2E tests get a live PostgreSQL (pgvector) service container.
 
 jobs:
   # ── Credential Leak Scan (Story 29.17 / AC-25) ───────────────────────────
@@ -219,12 +219,9 @@ jobs:
           POSTGRES_DB: memory
           POSTGRES_USER: allura
           POSTGRES_PASSWORD: allura
-          NEO4J_URI: bolt://localhost:7687
-          NEO4J_USER: neo4j
-          NEO4J_PASSWORD: password
 
   # ── E2E Tests ─────────────────────────────────────────────────────────────
-  # Live stack tests. Requires PostgreSQL + Neo4j service containers.
+  # Live stack tests. Requires a PostgreSQL (pgvector) service container.
   # Gated behind RUN_E2E_TESTS=true.
   test-e2e:
     runs-on: ubuntu-latest
@@ -242,20 +239,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-
-      neo4j:
-        image: neo4j:5.26-community
-        env:
-          NEO4J_AUTH: neo4j/password
-          NEO4J_PLUGINS: '["apoc"]'
-        options: >-
-          --health-cmd "cypher-shell -u neo4j -p password 'RETURN 1'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-        ports:
-          - 7687:7687
-          - 7474:7474
 
     steps:
       - uses: actions/checkout@v4
@@ -297,9 +280,6 @@ jobs:
           POSTGRES_PASSWORD: allura
           POSTGRES_APP_USER: allura_app
           POSTGRES_APP_PASSWORD: change-me-in-production
-          NEO4J_URI: bolt://localhost:7687
-          NEO4J_USER: neo4j
-          NEO4J_PASSWORD: password
 
   # ── Build ─────────────────────────────────────────────────────────────────
   build:

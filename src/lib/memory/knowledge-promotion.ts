@@ -1,21 +1,21 @@
 /**
  * Knowledge Promotion Infrastructure
  * 
- * Wires Notion Approval Queue → Neo4j Knowledge Graph → Notion Knowledge Hub
+ * Wires Notion Approval Queue → Semantic Knowledge Graph → Notion Knowledge Hub
  * Implements HITL (Human-in-the-Loop) governance for knowledge promotion.
  * 
  * Flow:
  *   Agent → PostgreSQL (trace) → Notion (Approval Queue)
- *   Human → Notion (Approve) → Neo4j (Knowledge) → Notion (Knowledge Hub)
+ *   Human → Notion (Approve) → Semantic store (Knowledge) → Notion (Knowledge Hub)
  * 
- * Steel Frame Versioning: All Neo4j insights use SUPERSEDES relationships
+ * Steel Frame Versioning: All semantic insights use SUPERSEDES relationships
  * Tenant Isolation: All nodes carry group_id = 'allura-system'
  * 
  * ## Knowledge Hub Bridge (Flow 2)
  * 
- * After a proposal is approved and promoted to Neo4j, it should also be
+ * After a proposal is approved and promoted to the semantic store, it should also be
  * synced to the Notion Knowledge Hub database with full trace IDs
- * (PG event ID + Neo4j insight ID).
+ * (PG event ID + semantic insight ID).
  * 
  * Knowledge Hub DB: 083f40a9210445eaae513557bb1ae1ca
  * Knowledge Hub Data Source: 9efeb76c-809b-440e-a76d-6a6e17bc8e7f
@@ -27,7 +27,7 @@ import { requireApprovalBeforePromotion } from './approval-audit';
 import { withWorkspaceTransaction } from '../db/tenant-transaction';
 import { type EventRecord, insertEvent } from '../postgres/queries/insert-trace';
 
-// ── Error class (replaces deleted neo4j-errors) ─────────────────────────────
+// ── Error class ─────────────────────────────
 
 /**
  * Error thrown when promoting an insight to the knowledge graph fails.
@@ -41,9 +41,6 @@ export class KnowledgePromotionError extends Error {
     this.name = 'KnowledgePromotionError';
   }
 }
-
-/** @deprecated Alias for backward compatibility */
-export const Neo4jPromotionError = KnowledgePromotionError;
 
 // ============================================================================
 // Constants
@@ -77,7 +74,7 @@ const TIER_TO_SOURCE: Record<string, string> = {
 // ============================================================================
 
 /**
- * Knowledge insight from Neo4j
+ * Knowledge insight from the semantic store
  */
 export interface KnowledgeInsight {
   /** Canonical proposal identifier whose approval audit event gates promotion */
@@ -102,8 +99,8 @@ export interface KnowledgeInsight {
   notion_page_id: string;
   /** PostgreSQL trace event ID */
   postgres_trace_id: string;
-  /** Optional: Neo4j node ID after promotion */
-  neo4j_id?: string;
+  /** Optional: semantic node ID after promotion */
+  semantic_id?: string;
   /** Optional: Version number */
   version?: number;
   /** Optional: Previous version to supersede */
@@ -115,7 +112,7 @@ export interface KnowledgeInsight {
  * 
  * Status states:
  *   - Pending: Awaiting human review
- *   - Approved: Human approved, ready for Neo4j promotion
+ *   - Approved: Human approved, ready for semantic promotion
  *   - Rejected: Human rejected, not promoted
  */
 export interface ApprovalQueueItem {
@@ -154,7 +151,7 @@ export interface ApprovalQueueItem {
  */
 export interface PromotionResult {
   success: boolean;
-  neo4j_id?: string;
+  semantic_id?: string;
   notion_page_id?: string;
   knowledge_hub_page_id?: string;
   error?: string;
@@ -166,8 +163,8 @@ export interface PromotionResult {
 export interface KnowledgeHubEntry {
   /** Notion page ID */
   notion_page_id: string;
-  /** Neo4j insight ID */
-  neo4j_id: string;
+  /** semantic insight ID */
+  semantic_id: string;
   /** PostgreSQL trace ID */
   postgres_trace_id: string;
   /** Topic/title */
@@ -196,8 +193,8 @@ export interface KnowledgeHubPromotionParams {
   group_id: string;
   /** PostgreSQL trace event ID */
   postgres_trace_id: string;
-  /** Neo4j insight ID (from promotion) */
-  neo4j_id: string;
+  /** semantic insight ID (from promotion) */
+  semantic_id: string;
   /** Tier (emerging, adoption, mainstream) */
   tier: string;
   /** Optional: Approver */
@@ -221,7 +218,7 @@ export const KnowledgeHubPromotionParamsSchema = z.object({
   source: z.string().min(1, 'Source is required'),
   group_id: z.string().min(1, 'group_id is required'),
   postgres_trace_id: z.string().min(1, 'PostgreSQL trace ID is required'),
-  neo4j_id: z.string().min(1, 'Neo4j insight ID is required'),
+  semantic_id: z.string().min(1, 'semantic insight ID is required'),
   tier: z.enum(['emerging', 'adoption', 'mainstream']),
   approved_by: z.string().optional(),
   tags: z.array(z.string()).optional(),
@@ -443,13 +440,13 @@ export async function queryApprovedInsightById(
 // ============================================================================
 
 /**
- * Query Notion Knowledge Hub by source insight ID (Neo4j ID).
+ * Query Notion Knowledge Hub by source insight ID (Semantic ID).
  * 
  * Searches the Knowledge Hub database for an existing entry with the
- * given Neo4j ID. Used for idempotency checks before creating a new
+ * given Semantic ID. Used for idempotency checks before creating a new
  * Knowledge Hub entry.
  * 
- * @param sourceInsightId - Neo4j source insight ID
+ * @param sourceInsightId - semantic source insight ID
  * @param mcpClient - Notion MCP client (injected for testability)
  * @returns Matching Knowledge Hub entry, or null if not found
  */
@@ -471,15 +468,15 @@ export async function queryKnowledgeHubBySourceId(
       return null;
     }
 
-    // Find the entry whose "Neo4j ID" property matches exactly
+    // Find the entry whose "Semantic ID" property matches exactly
     for (const result of results) {
       const props = result.properties as Record<string, unknown> | undefined;
       if (props) {
-        const neo4jId = props['Neo4j ID'] as string | undefined;
-        if (neo4jId === sourceInsightId) {
+        const semanticId = props['Semantic ID'] as string | undefined;
+        if (semanticId === sourceInsightId) {
           return {
             notion_page_id: result.pageId,
-            neo4j_id: neo4jId,
+            semantic_id: semanticId,
             postgres_trace_id: (props['PostgreSQL Trace ID'] as string) || '',
             topic: result.title,
             status: (props['Status'] as string) || '',
@@ -532,7 +529,7 @@ export async function queryKnowledgeHubByPgTraceId(
         if (traceId === pgTraceId) {
           return {
             notion_page_id: result.pageId,
-            neo4j_id: (props['Neo4j ID'] as string) || '',
+            semantic_id: (props['Semantic ID'] as string) || '',
             postgres_trace_id: traceId,
             topic: result.title,
             status: (props['Status'] as string) || '',
@@ -558,19 +555,19 @@ export async function queryKnowledgeHubByPgTraceId(
  * 
  * Creates or updates a Knowledge Hub entry with full trace IDs:
  *   - PostgreSQL Trace ID (from canonical_proposals.trace_ref)
- *   - Neo4j Insight ID (from the promotion step)
+ *   - Semantic Insight ID (from the promotion step)
  *   - group_id (tenant isolation)
  *   - Category, Confidence, Status, Source
  * 
  * ## Idempotency
  * 
  * Before creating, checks if an entry already exists with the same
- * Neo4j ID. If found, updates it instead of creating a duplicate.
+ * Semantic ID. If found, updates it instead of creating a duplicate.
  * 
  * ## Error Handling (Non-Blocking)
  * 
  * If the Notion MCP call fails, this function returns a failure
- * result but does NOT throw. The Neo4j promotion is already complete
+ * result but does NOT throw. The semantic promotion is already complete
  * and should not be rolled back.
  * 
  * @param params - Knowledge Hub promotion parameters
@@ -596,7 +593,7 @@ export async function promoteToKnowledgeHub(
     confidence,
     group_id,
     postgres_trace_id,
-    neo4j_id,
+    semantic_id,
     tier,
     approved_by,
     tags,
@@ -604,13 +601,13 @@ export async function promoteToKnowledgeHub(
 
   console.log('[knowledge-promotion] Promoting to Knowledge Hub:', {
     topic,
-    neo4j_id,
+    semantic_id,
     pg_trace_id: postgres_trace_id,
     group_id,
   });
 
-  // Idempotency check: search for existing entry by Neo4j ID
-  const existingEntry = await queryKnowledgeHubBySourceId(neo4j_id, mcpClient);
+  // Idempotency check: search for existing entry by Semantic ID
+  const existingEntry = await queryKnowledgeHubBySourceId(semantic_id, mcpClient);
   if (existingEntry) {
     console.log('[knowledge-promotion] Knowledge Hub entry already exists, updating:', existingEntry.notion_page_id);
 
@@ -620,7 +617,7 @@ export async function promoteToKnowledgeHub(
         page_id: existingEntry.notion_page_id,
         command: 'update_properties',
         properties: {
-          'Neo4j ID': neo4j_id,
+          'Semantic ID': semantic_id,
           'PostgreSQL Trace ID': postgres_trace_id,
           Status: 'Approved',
           'date:Last Synced:start': new Date().toISOString().slice(0, 10),
@@ -647,7 +644,7 @@ export async function promoteToKnowledgeHub(
     Confidence: confidence, // Stored as decimal (0.0-1.0), Notion displays as percent
     Source: TIER_TO_SOURCE[tier] || 'memory-orchestrator',
     group_id: group_id,
-    'Neo4j ID': neo4j_id,
+    'Semantic ID': semantic_id,
     'PostgreSQL Trace ID': postgres_trace_id,
     'date:Created:start': new Date().toISOString().slice(0, 10),
     'date:Created:is_datetime': 0,
@@ -663,7 +660,7 @@ export async function promoteToKnowledgeHub(
   // Build page content
   const pageContent = buildKnowledgeHubContent({
     content,
-    neo4j_id,
+    semantic_id,
     postgres_trace_id,
     group_id,
     tier,
@@ -713,18 +710,18 @@ export async function promoteToKnowledgeHub(
  */
 function buildKnowledgeHubContent(params: {
   content: string;
-  neo4j_id: string;
+  semantic_id: string;
   postgres_trace_id: string;
   group_id: string;
   tier: string;
   approved_by?: string;
 }): string {
-  const { content, neo4j_id, postgres_trace_id, group_id, tier, approved_by } = params;
+  const { content, semantic_id, postgres_trace_id, group_id, tier, approved_by } = params;
 
   const lines = [
     `## Knowledge Insight`,
     ``,
-    `**Neo4j ID:** \`${neo4j_id}\``,
+    `**Semantic ID:** \`${semantic_id}\``,
     `**PG Trace ID:** \`${postgres_trace_id}\``,
     `**Group:** ${group_id}`,
     `**Tier:** ${tier}`,
@@ -739,7 +736,7 @@ function buildKnowledgeHubContent(params: {
 }
 
 // ============================================================================
-// Neo4j Promotion Functions
+// Semantic Promotion Functions
 // ============================================================================
 
 /**
@@ -752,7 +749,7 @@ function buildKnowledgeHubContent(params: {
  * @param insight - Knowledge insight to promote
  * @returns Memory node ID
  */
-export async function promoteToNeo4j(insight: KnowledgeInsight): Promise<string> {
+export async function promoteToSemanticStore(insight: KnowledgeInsight): Promise<string> {
   console.log('[knowledge-promotion] Promoting insight to knowledge graph:', {
     id: insight.id,
     topic: insight.topic,
@@ -899,25 +896,25 @@ export async function linkInsightToAgent(
 // ============================================================================
 
 /**
- * Update Notion Knowledge Hub page with Neo4j ID
+ * Update Notion Knowledge Hub page with Semantic ID
  * 
- * After promoting to Neo4j, sync the Neo4j ID back to Notion
+ * After promoting to the semantic store, sync the Semantic ID back to Notion
  * so the knowledge hub can link to the graph.
  * 
  * @param notionPageId - Knowledge Hub page ID
- * @param neo4jId - Neo4j node ID
+ * @param semanticId - semantic node ID
  * @param approvedBy - User who approved
  * @param mcpClient - Notion MCP client (injected for testability)
  */
-export async function updateNotionWithNeo4jId(
+export async function updateNotionWithSemanticId(
   notionPageId: string,
-  neo4jId: string,
+  semanticId: string,
   approvedBy: string,
   mcpClient: NotionMCPClient
 ): Promise<void> {
   console.log('[knowledge-promotion] Updating Notion Knowledge Hub:', {
     notion_page_id: notionPageId,
-    neo4j_id: neo4jId,
+    semantic_id: semanticId,
     approved_by: approvedBy,
   });
 
@@ -926,7 +923,7 @@ export async function updateNotionWithNeo4jId(
       page_id: notionPageId,
       command: 'update_properties',
       properties: {
-        'Neo4j ID': neo4jId,
+        'Semantic ID': semanticId,
         Status: 'Approved',
         'date:Last Synced:start': new Date().toISOString().slice(0, 10),
         'date:Last Synced:is_datetime': 0,
@@ -947,19 +944,19 @@ export async function updateNotionWithNeo4jId(
  * After successful promotion, mark the Approval Queue item as complete.
  * 
  * @param notionPageId - Approval Queue page ID
- * @param neo4jId - Neo4j node ID
+ * @param semanticId - semantic node ID
  * @param approvedBy - User who approved
  * @param mcpClient - Notion MCP client (injected for testability)
  */
 export async function updateApprovalQueueItem(
   notionPageId: string,
-  neo4jId: string,
+  semanticId: string,
   approvedBy: string,
   mcpClient: NotionMCPClient
 ): Promise<void> {
   console.log('[knowledge-promotion] Updating Approval Queue item:', {
     notion_page_id: notionPageId,
-    neo4j_id: neo4jId,
+    semantic_id: semanticId,
     approved_by: approvedBy,
   });
 
@@ -969,7 +966,7 @@ export async function updateApprovalQueueItem(
       command: 'update_properties',
       properties: {
         Status: 'Approved',
-        'Neo4j ID': neo4jId,
+        'Semantic ID': semanticId,
         'Notion Synced': '__YES__',
       },
     });
@@ -994,7 +991,7 @@ export async function updateApprovalQueueItem(
  * @param groupId - Tenant identifier
  * @param agentId - Agent or system performing promotion
  * @param insightId - Insight ID
- * @param neo4jId - Neo4j node ID
+ * @param semanticId - semantic node ID
  * @param notionPageId - Notion page ID
  * @param status - Promotion status
  */
@@ -1002,7 +999,7 @@ export async function logPromotionEvent(
   groupId: string,
   agentId: string,
   insightId: string,
-  neo4jId: string,
+  semanticId: string,
   notionPageId: string,
   status: 'approved' | 'promoted' | 'rejected' | 'failed'
 ): Promise<EventRecord> {
@@ -1019,7 +1016,7 @@ export async function logPromotionEvent(
     agent_id: agentId,
     metadata: {
       insight_id: insightId,
-      neo4j_id: neo4jId,
+      semantic_id: semanticId,
       notion_page_id: notionPageId,
     },
     outcome: {
@@ -1042,9 +1039,9 @@ export async function logPromotionEvent(
  * Batch processes approved items:
  *   1. Query canonical_proposals for Status = 'Approved'
  *   2. For each approved insight:
- *      a. Promote to Neo4j
+ *      a. Promote to the semantic store
  *      b. Promote to Knowledge Hub (Flow 2)
- *      c. Update Notion Knowledge Hub with Neo4j ID
+ *      c. Update Notion Knowledge Hub with Semantic ID
  *      d. Update Approval Queue item status
  *      e. Create CONTRIBUTED relationship to agent
  *      f. Log promotion event to PostgreSQL
@@ -1081,11 +1078,11 @@ export async function processApprovedInsights(
     try {
       console.log('[knowledge-promotion] Processing item:', item.notion_page_id);
 
-      // Step 2: Require approval audit before any Neo4j promotion path.
+      // Step 2: Require approval audit before any semantic promotion path.
       await requireApprovalBeforePromotion(item.proposal_id, item.group_id);
 
-      // Step 3: Promote to Neo4j
-      const neo4jId = await promoteToNeo4j({
+      // Step 3: Promote to the semantic store
+      const semanticId = await promoteToSemanticStore({
         id: item.postgres_trace_id, // Use trace ID as stable insight ID
         proposal_id: item.proposal_id,
         topic: item.topic,
@@ -1112,7 +1109,7 @@ export async function processApprovedInsights(
             source: item.source,
             group_id: item.group_id,
             postgres_trace_id: item.postgres_trace_id,
-            neo4j_id: neo4jId,
+            semantic_id: semanticId,
             tier: 'emerging', // Default tier; could be derived from item
             approved_by: item.approved_by,
           },
@@ -1129,39 +1126,39 @@ export async function processApprovedInsights(
         console.log('[knowledge-promotion] No MCP client provided, skipping Knowledge Hub sync');
       }
 
-      // Step 4: Update Notion Knowledge Hub with Neo4j ID
+      // Step 4: Update Notion Knowledge Hub with Semantic ID
       if (mcpClient && knowledgeHubPageId) {
-        await updateNotionWithNeo4jId(knowledgeHubPageId, neo4jId, item.approved_by || 'system', mcpClient);
+        await updateNotionWithSemanticId(knowledgeHubPageId, semanticId, item.approved_by || 'system', mcpClient);
       }
 
       // Step 5: Update Approval Queue item
       if (mcpClient) {
-        await updateApprovalQueueItem(item.notion_page_id, neo4jId, item.approved_by || 'system', mcpClient);
+        await updateApprovalQueueItem(item.notion_page_id, semanticId, item.approved_by || 'system', mcpClient);
       }
 
       // Step 6: Create CONTRIBUTED relationship
-      await linkInsightToAgent(item.source, neo4jId, item.confidence, item.group_id, item.workspace_id);
+      await linkInsightToAgent(item.source, semanticId, item.confidence, item.group_id, item.workspace_id);
 
       // Step 7: Log promotion event
       await logPromotionEvent(
         item.group_id,
         item.source,
         item.postgres_trace_id,
-        neo4jId,
+        semanticId,
         knowledgeHubPageId || item.notion_page_id,
         'promoted'
       );
 
       results.push({
         success: true,
-        neo4j_id: neo4jId,
+        semantic_id: semanticId,
         notion_page_id: item.notion_page_id,
         knowledge_hub_page_id: knowledgeHubPageId,
       });
 
       console.log('[knowledge-promotion] Successfully promoted:', {
         notion_page_id: item.notion_page_id,
-        neo4j_id: neo4jId,
+        semantic_id: semanticId,
         knowledge_hub_page_id: knowledgeHubPageId,
       });
 
@@ -1207,7 +1204,7 @@ export async function processApprovedInsights(
  * 
  * Used for on-demand promotion after HITL approval.
  * Queries canonical_proposals for the specific proposal, promotes
- * to Neo4j, then syncs to Knowledge Hub.
+ * to the semantic store, then syncs to Knowledge Hub.
  * 
  * @param proposalId - UUID of the canonical_proposals record
  * @param groupId - Tenant identifier
@@ -1237,11 +1234,11 @@ export async function promoteSingleInsight(
   }
 
   try {
-    // Step 2: Require approval audit before any Neo4j promotion path.
+    // Step 2: Require approval audit before any semantic promotion path.
     await requireApprovalBeforePromotion(proposalId, item.group_id);
 
-    // Step 3: Promote to Neo4j
-    const neo4jId = await promoteToNeo4j({
+    // Step 3: Promote to the semantic store
+    const semanticId = await promoteToSemanticStore({
       id: item.postgres_trace_id,
       proposal_id: proposalId,
       topic: item.topic,
@@ -1268,7 +1265,7 @@ export async function promoteSingleInsight(
           source: item.source,
           group_id: item.group_id,
           postgres_trace_id: item.postgres_trace_id,
-          neo4j_id: neo4jId,
+          semantic_id: semanticId,
           tier: 'emerging',
           approved_by: approvedBy,
         },
@@ -1284,28 +1281,28 @@ export async function promoteSingleInsight(
 
     // Step 4: Update Notion pages
     if (mcpClient && knowledgeHubPageId) {
-      await updateNotionWithNeo4jId(knowledgeHubPageId, neo4jId, approvedBy, mcpClient);
+      await updateNotionWithSemanticId(knowledgeHubPageId, semanticId, approvedBy, mcpClient);
     }
     if (mcpClient) {
-      await updateApprovalQueueItem(item.notion_page_id, neo4jId, approvedBy, mcpClient);
+      await updateApprovalQueueItem(item.notion_page_id, semanticId, approvedBy, mcpClient);
     }
 
     // Step 5: Create CONTRIBUTED relationship
-    await linkInsightToAgent(item.source, neo4jId, item.confidence, item.group_id, item.workspace_id);
+    await linkInsightToAgent(item.source, semanticId, item.confidence, item.group_id, item.workspace_id);
 
     // Step 6: Log promotion event
     await logPromotionEvent(
       item.group_id,
       item.source,
       item.postgres_trace_id,
-      neo4jId,
+      semanticId,
       knowledgeHubPageId || item.notion_page_id,
       'promoted'
     );
 
     return {
       success: true,
-      neo4j_id: neo4jId,
+      semantic_id: semanticId,
       notion_page_id: item.notion_page_id,
       knowledge_hub_page_id: knowledgeHubPageId,
     };

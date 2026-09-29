@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allura.dev/schemas/team.schema.json",
   "title": "Team",
-  "description": "Team of agents node in Neo4j",
+  "description": "Team of agents record in PostgreSQL",
   "type": "object",
   "required": ["id", "name", "group_id"],
   "properties": {

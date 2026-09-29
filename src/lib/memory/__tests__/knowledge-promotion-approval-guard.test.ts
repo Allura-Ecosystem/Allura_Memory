@@ -4,7 +4,7 @@
  * These tests prove that promotion cannot proceed unless a matching
  * PostgreSQL approval audit event exists first.
  *
- * Neo4j is sunset — promoteToNeo4j now writes directly to PostgreSQL
+ * promoteToSemanticStore now writes directly to PostgreSQL
  * (graph_memories table) instead of calling createInsight.
  */
 
@@ -23,7 +23,7 @@ import { getPool } from "../../postgres/connection"
 import {
   type KnowledgeInsight,
   linkInsightToAgent,
-  promoteToNeo4j,
+  promoteToSemanticStore,
   queryApprovedInsights,
 } from "../knowledge-promotion"
 
@@ -50,7 +50,7 @@ const APPROVED_INSIGHT: KnowledgeInsight = {
   postgres_trace_id: "trace-001",
 }
 
-describe("promoteToNeo4j approval guard", () => {
+describe("promoteToSemanticStore approval guard", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetPool.mockReturnValue(createApprovalPool())
@@ -63,7 +63,7 @@ describe("promoteToNeo4j approval guard", () => {
     const appClient = { query: vi.fn(async () => ({ rows: [], rowCount: 1 })) }
     mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(appClient))
 
-    await promoteToNeo4j(APPROVED_INSIGHT)
+    await promoteToSemanticStore(APPROVED_INSIGHT)
 
     expect(mockWithWorkspaceTransaction).toHaveBeenCalledWith(
       {
@@ -122,7 +122,7 @@ describe("promoteToNeo4j approval guard", () => {
     const pool = createApprovalPool()
     mockGetPool.mockReturnValue(pool)
 
-    await promoteToNeo4j(APPROVED_INSIGHT)
+    await promoteToSemanticStore(APPROVED_INSIGHT)
 
     // The first query must be the approval check
     expect(pool.query).toHaveBeenCalledWith(
@@ -139,7 +139,7 @@ describe("promoteToNeo4j approval guard", () => {
     // Approval pool returns empty rows (no approval event found)
     mockGetPool.mockReturnValue(createApprovalPool([]))
 
-    await expect(promoteToNeo4j(APPROVED_INSIGHT)).rejects.toThrow(
+    await expect(promoteToSemanticStore(APPROVED_INSIGHT)).rejects.toThrow(
       "Approval required before promotion"
     )
 
@@ -153,7 +153,7 @@ describe("promoteToNeo4j approval guard", () => {
       proposal_id: undefined,
     } as unknown as KnowledgeInsight
 
-    await expect(promoteToNeo4j(missingProposalId)).rejects.toThrow(
+    await expect(promoteToSemanticStore(missingProposalId)).rejects.toThrow(
       "Proposal ID is required for promotion approval"
     )
 

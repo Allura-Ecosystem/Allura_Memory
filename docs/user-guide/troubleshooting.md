@@ -16,13 +16,10 @@ curl http://localhost:3201/health
 # 3. PostgreSQL ready?
 docker exec knowledge-postgres pg_isready -U $POSTGRES_USER -d memory
 
-# 4. Neo4j responding?
-curl -s http://localhost:7474 | jq .neo4j_version
-
-# 5. Ollama running?
+# 4. Ollama running?
 curl http://localhost:11434/api/tags
 
-# 6. Allura tests pass?
+# 5. Allura tests pass?
 bun test
 ```
 
@@ -73,22 +70,6 @@ docker volume rm allura-memory_postgres_data
 docker compose up -d postgres
 ```
 
-### Neo4j connection fails
-
-**Cause:** Neo4j still initializing or wrong credentials.
-
-**Fix:**
-```bash
-# Wait 30s after docker compose up
-sleep 30
-
-# Check Neo4j logs
-docker logs knowledge-neo4j
-
-# Test with cypher-shell
-docker exec knowledge-neo4j cypher-shell -u neo4j -p "$NEO4J_PASSWORD" "RETURN 1 AS test"
-```
-
 ## Memory Issues
 
 ### `group_id` errors
@@ -136,7 +117,7 @@ bun run curator:run
 
 ### Slow memory search
 
-**Cause:** Missing indexes, large unembedded corpus, or Neo4j overload.
+**Cause:** Missing indexes, or a large unembedded corpus.
 
 **Fix:**
 ```bash
@@ -146,18 +127,18 @@ bun run curator:run
 # Run embedding backfill
 bun run backfill:embeddings
 
-# Check Neo4j memory usage
-docker stats knowledge-neo4j
+# Check PostgreSQL resource usage
+docker stats knowledge-postgres
 ```
 
 ### High memory usage
 
-**Cause:** Neo4j graph bloat from duplicate promotions (RK-01).
+**Cause:** `graph_memories` bloat from duplicate promotions (RK-01).
 
 **Fix:**
 - Review curator settings to reduce duplicate promotions
 - Monitor `RK-01` in risk register
-- Consider periodic graph maintenance
+- Consider periodic `graph_memories` maintenance (`VACUUM` / index review)
 
 ## Plugin Issues
 

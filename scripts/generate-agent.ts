@@ -137,7 +137,7 @@ platform: ${config.platform}
 
 ## Memory Access
 - PostgreSQL: {read|write|none}
-- Neo4j: {read|write|none}
+- RuVector: {read|write|none}
 - Notion: {read|write|none}
 
 ## Examples

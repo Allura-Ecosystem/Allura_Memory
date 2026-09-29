@@ -83,7 +83,7 @@
     ".opencode/rules/agent-routing.md",
     ".opencode/rules/documentation-standards.md",
     ".opencode/rules/mcp-integration.md",
-    ".opencode/rules/neo4j-best-practices.md",
+    ".opencode/rules/semantic-graph-best-practices.md",
     ".opencode/rules/postgres-best-practices.md",
     ".opencode/skills/allura-approve-promotion/",
     ".opencode/skills/allura-design/",

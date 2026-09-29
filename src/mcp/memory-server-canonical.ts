@@ -4,7 +4,7 @@
  *
  * Exposes the 10 canonical memory operations via MCP:
  * 1. memory_add - Add a memory (episodic → score → promote/queue)
- * 2. memory_search - Search memories (federated: Postgres + Neo4j)
+ * 2. memory_search - Search memories (federated: Postgres + RuVector)
  * 3. memory_get - Get a single memory by ID
  * 4. memory_list - List all memories for a user
  * 5. memory_delete - Soft-delete a memory
@@ -226,7 +226,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "memory_delete",
-        description: "Soft-delete a memory. Appends deletion event to PostgreSQL and marks Neo4j node as deprecated.",
+        description: "Soft-delete a memory. Appends deletion event to PostgreSQL and marks the graph_memories node as deprecated.",
         inputSchema: {
           type: "object",
           properties: {
@@ -249,7 +249,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_update",
         description:
-          "Append-only versioned update. Creates new version in Neo4j with SUPERSEDES relationship, marks old version deprecated. Audit event always written to PostgreSQL.",
+          "Append-only versioned update. Creates new version in graph_memories with SUPERSEDES edge (graph_supersedes), marks old version deprecated. Audit event always written to PostgreSQL.",
         inputSchema: {
           type: "object",
           properties: {
@@ -327,7 +327,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_export",
         description:
-          "Export memories filtered by group_id and optional canonical status. canonical_only=true returns only Neo4j (semantic) memories; canonical_only=false returns both stores merged and deduplicated.",
+          "Export memories filtered by group_id and optional canonical status. canonical_only=true returns only canonical (semantic) memories; canonical_only=false returns both stores merged and deduplicated.",
         inputSchema: {
           type: "object",
           properties: {
@@ -341,7 +341,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             canonical_only: {
               type: "boolean",
-              description: "Optional: Export only canonical (Neo4j) memories (default: false)",
+              description: "Optional: Export only canonical (semantic) memories (default: false)",
             },
             limit: {
               type: "number",
@@ -358,7 +358,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_restore",
         description:
-          "Restore a soft-deleted memory within the 30-day recovery window. Removes deprecated flag in Neo4j and cleans up SUPERSEDES relationships. Appends restore event to PostgreSQL (append-only).",
+          "Restore a soft-deleted memory within the 30-day recovery window. Removes deprecated flag in graph_memories and cleans up SUPERSEDES relationships. Appends restore event to PostgreSQL (append-only).",
         inputSchema: {
           type: "object",
           properties: {

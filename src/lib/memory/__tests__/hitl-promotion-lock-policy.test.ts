@@ -45,7 +45,7 @@ describe("HITL Promotion Lock policy", () => {
     expect(processor).toMatch(/awaiting HITL review|HITL/i)
   })
 
-  it("knowledge promotion must require approval audit before Neo4j writes", () => {
+  it("knowledge promotion must require approval audit before semantic-store writes", () => {
     const source = readRepoFile("src/lib/memory/knowledge-promotion.ts")
     const batchPromotion = source.slice(
       source.indexOf("export async function processApprovedInsights"),
@@ -59,29 +59,16 @@ describe("HITL Promotion Lock policy", () => {
 
     for (const promotionPath of [batchPromotion, singlePromotion]) {
       const guardIndex = promotionPath.indexOf("requireApprovalBeforePromotion")
-      const neo4jIndex = promotionPath.indexOf("promoteToNeo4j")
+      const semanticIndex = promotionPath.indexOf("promoteToSemanticStore")
 
       expect(guardIndex).toBeGreaterThanOrEqual(0)
-      expect(neo4jIndex).toBeGreaterThanOrEqual(0)
-      expect(guardIndex).toBeLessThan(neo4jIndex)
+      expect(semanticIndex).toBeGreaterThanOrEqual(0)
+      expect(guardIndex).toBeLessThan(semanticIndex)
     }
   })
 
   it("curator approval entrypoints must log approval audit before graph writes", () => {
     const route = readRepoFile("src/app/api/curator/approve/route.ts")
-    const batchScript = readRepoFile("scripts/batch-approve-proposals.ts")
-
-    for (const source of [batchScript]) {
-      const auditIndex = source.indexOf("await logApprovalEvent")
-      const graphWriteIndex = source.indexOf("await createInsight")
-
-      expect(auditIndex).toBeGreaterThanOrEqual(0)
-      expect(graphWriteIndex).toBeGreaterThanOrEqual(0)
-      expect(auditIndex).toBeLessThan(graphWriteIndex)
-      expect(source).toContain('decision: "approved"')
-      expect(source).toContain("memory_id:")
-    }
-
     const routeAuditIndex = route.indexOf("await logApprovalEvent")
     const routePromotionQueueIndex = route.indexOf("await enqueuePromotionSync")
 

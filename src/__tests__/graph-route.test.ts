@@ -4,7 +4,7 @@
  * Tests:
  * - Tenant scoping via x-allura-group-id header (primary) and group_id query param (fallback)
  * - Read-only behavior: POST/PUT/DELETE return 405
- * - Degraded Neo4j handling: 200 + degraded=true + Warning header (not 500)
+ * - Degraded the semantic store handling: 200 + degraded=true + Warning header (not 500)
  * - Schema validation: response shape matches expected contract
  * - Stats parameter: stats=true returns correct shape
  *
@@ -61,11 +61,11 @@ describe("Graph API Route Contract (Story 2.8)", () => {
   it("should include degraded mode flag for error responses", async () => {
     const routeContent = await readRouteFile()
 
-    // Check for degraded flag usage (Neo4j is sunset, errors now return degraded=true)
+    // Check for degraded flag usage (errors now return degraded=true)
     expect(routeContent).toContain("degraded")
   })
 
-  it("should return 200 instead of 500 on Neo4j errors", async () => {
+  it("should return 200 instead of 500 on the semantic store errors", async () => {
     const routeContent = await readRouteFile()
 
     // Check that the catch block returns 200, not 500

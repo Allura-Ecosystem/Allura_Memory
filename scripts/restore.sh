@@ -12,10 +12,8 @@ BACKUP_DIR="$1"
 VERIFY_ONLY="${2:-}"
 
 CONTAINER_PG="${POSTGRES_CONTAINER:-knowledge-postgres}"
-CONTAINER_N4J="${NEO4J_CONTAINER:-knowledge-neo4j}"
 PG_USER="${POSTGRES_USER:-ronin4life}"
 PG_DB="${POSTGRES_DB:-memory}"
-N4J_DB="${NEO4J_DB:-neo4j}"
 
 if [ ! -d "${BACKUP_DIR}" ]; then
   echo "ERROR: Backup directory not found: ${BACKUP_DIR}"
@@ -46,6 +44,8 @@ if [ -f "${BACKUP_DIR}/postgres.dump" ]; then
     docker exec "${CONTAINER_PG}" psql -U "${PG_USER}" -d "${PG_DB}_restore" -c "
       SELECT 'allura_memories' AS t, COUNT(*) AS total, COUNT(*) FILTER (WHERE deleted_at IS NULL) AS active, COUNT(*) FILTER (WHERE deleted_at IS NOT NULL) AS soft_deleted FROM allura_memories
       UNION ALL SELECT 'events', COUNT(*), NULL, NULL FROM events
+      UNION ALL SELECT 'graph_memories', COUNT(*), COUNT(*) FILTER (WHERE deprecated = false AND deleted_at IS NULL), COUNT(*) FILTER (WHERE deleted_at IS NOT NULL) FROM graph_memories
+      UNION ALL SELECT 'graph_supersedes', COUNT(*), NULL, NULL FROM graph_supersedes
       UNION ALL SELECT 'canonical_proposals', COUNT(*), NULL, NULL FROM canonical_proposals;
     " > "${BACKUP_DIR}/pg-restore-counts.txt" 2>/dev/null || true
     
@@ -66,16 +66,7 @@ else
   echo "  ⚠ No postgres.dump found in ${BACKUP_DIR}"
 fi
 
-# ── 2. Neo4j Verify ─────────────────────────────────────────────────────
-if [ -f "${BACKUP_DIR}/neo4j-counts.txt" ]; then
-  echo "Verifying Neo4j backup counts..."
-  cat "${BACKUP_DIR}/neo4j-counts.txt"
-  echo "  ✓ Neo4j counts available for comparison"
-else
-  echo "  ⚠ No neo4j-counts.txt found"
-fi
-
-# ── 3. Compare Counts ───────────────────────────────────────────────────
+# ── 2. Compare Counts ───────────────────────────────────────────────────
 echo ""
 echo "=== Count Comparison ==="
 if [ -f "${BACKUP_DIR}/pg-counts.txt" ]; then

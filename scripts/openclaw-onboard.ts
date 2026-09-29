@@ -6,7 +6,7 @@
  * bun run openclaw:onboard
  * 
  * This will:
- * 1. Check database connections (PostgreSQL + Neo4j)
+ * 1. Check the PostgreSQL connection (episodic, semantic, and RuVector share one instance)
  * 2. Onboard OpenClaw agent into memory system
  * 3. Start OpenClaw HTTP gateway
  */
@@ -27,23 +27,6 @@ async function checkPostgreSQL(): Promise<boolean> {
   } catch (error) {
     console.error("   ✗ PostgreSQL connection failed:", (error as Error).message);
     return false;
-  }
-}
-
-async function checkNeo4j(): Promise<boolean> {
-  try {
-    const neo4jUri = process.env.NEO4J_URI || "bolt://localhost:7687";
-    const neo4jUser = process.env.NEO4J_USER || "neo4j";
-    const neo4jPassword = process.env.NEO4J_PASSWORD || "test1234";
-    
-    // Simple HTTP check for Neo4j
-    const httpPort = parseInt(neo4jUri.split(":")[2] || "7687") - 100; // 7687 -> 7587 (not perfect but close)
-    const response = await fetch(`http://localhost:${httpPort < 1000 ? 7474 : httpPort}`);
-    return response.ok;
-  } catch (error) {
-    // Neo4j might still work even if HTTP check fails
-    console.warn("   ⚠ Neo4j HTTP check failed (Bolt may still work)");
-    return true;
   }
 }
 
@@ -120,15 +103,6 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   console.log("   ✓ PostgreSQL connected\n");
-
-  // Step 2: Check Neo4j
-  console.log("🧠 Checking Neo4j...");
-  const neo4jOk = await checkNeo4j();
-  if (!neo4jOk) {
-    console.warn("   ⚠ Neo4j check failed (Bolt may still work)\n");
-  } else {
-    console.log("   ✓ Neo4j available\n");
-  }
 
   // Step 3: Onboard OpenClaw
   console.log("🤖 Onboarding OpenClaw agent...");

@@ -19,7 +19,7 @@ HITL curator action — "approve this proposal", "promote proposal X", "mark as 
 ## Output Contract
 ```json
 {
-  "memory_id": "string — Neo4j canonical node ID",
+  "memory_id": "string — canonical graph_memories row ID",
   "status": "approved",
   "witness_hash": "string — SHAKE-256 hash for audit trail",
   "group_id": "string — tenant namespace"

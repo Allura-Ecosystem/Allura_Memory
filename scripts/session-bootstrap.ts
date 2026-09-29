@@ -13,7 +13,6 @@
  * 
  * Environment:
  *   POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
- *   NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
  */
 
 import { execSync } from "node:child_process";
@@ -89,7 +88,6 @@ Examples:
 
 Environment:
   POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
-  NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
 
 Note: If running outside Docker, use POSTGRES_HOST=localhost instead of host.docker.internal
 `);

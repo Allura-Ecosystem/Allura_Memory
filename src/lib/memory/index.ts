@@ -2,7 +2,7 @@
  * Memory Module
  * 
  * Unified memory system for AI agents with:
- * - Neo4j graph storage for insights and knowledge
+ * - RuVector graph storage for insights and knowledge
  * - PostgreSQL trace storage for raw events
  * - Multi-tenant isolation via group_id
  */
@@ -38,10 +38,10 @@ export {
   queryApprovedInsightById,
   queryKnowledgeHubBySourceId,
   queryKnowledgeHubByPgTraceId,
-  promoteToNeo4j,
+  promoteToSemanticStore,
   promoteToKnowledgeHub,
   linkInsightToAgent,
-  updateNotionWithNeo4jId,
+  updateNotionWithSemanticId,
   updateApprovalQueueItem,
   logPromotionEvent,
   processApprovedInsights,

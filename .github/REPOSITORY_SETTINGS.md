@@ -44,7 +44,7 @@ audit-trail
 self-hosted
 nextjs
 postgresql
-neo4j
+ruvector
 typescript
 ```
 

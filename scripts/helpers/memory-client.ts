@@ -1,9 +1,4 @@
-import {
-  createInsight,
-  createInsightVersion,
-  type InsightInsert,
-  type InsightRecord,
-} from "../lib/neo4j-stub";
+import type { InsightInsert, InsightRecord } from "../lib/insight-types";
 import { getPool } from "../../src/lib/postgres/connection";
 import { type EventInsert, type EventRecord, insertEvent } from "../../src/lib/postgres/queries/insert-trace";
 
@@ -18,6 +13,24 @@ export interface MemoryClient {
     metadata?: Record<string, unknown>,
   ): Promise<InsightRecord>;
   getLatestEventByType(groupId: string, eventType: string): Promise<EventRecord | null>;
+}
+
+const DIRECT_WRITE_DISABLED =
+  "Direct canonical insight writes are not supported from scripts. " +
+  "Queue a proposal via memory_add and approve it through the curator (HITL): bun run curator:approve";
+
+async function createInsight(_insight: InsightInsert): Promise<InsightRecord> {
+  throw new Error(DIRECT_WRITE_DISABLED);
+}
+
+async function createInsightVersion(
+  _insightId: string,
+  _content: string,
+  _confidence: number,
+  _groupId: string,
+  _metadata?: Record<string, unknown>,
+): Promise<InsightRecord> {
+  throw new Error(DIRECT_WRITE_DISABLED);
 }
 
 export function createMemoryClient(): MemoryClient {

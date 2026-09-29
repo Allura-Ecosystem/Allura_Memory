@@ -1,12 +1,11 @@
 /**
  * Connection Management for Canonical MCP Tools
  *
- * Manages PostgreSQL and Neo4j singleton connections.
+ * Manages the PostgreSQL singleton connection (also hosts the RuVector semantic layer).
  * dotenv config is loaded here since connection setup needs env vars.
  */
 
 import { parse } from "dotenv"
-import type { Driver } from "neo4j-driver"
 
 import { existsSync, readFileSync } from "fs"
 import { join } from "path"
@@ -37,17 +36,13 @@ loadEnvFiles()
 // ── Connection Management ─────────────────────────────────────────────────
 
 let pgPool: import("pg").Pool | null = null
-// Neo4j driver removed — Neo4j has been sunset (AD-49).
 
-export async function getConnections(): Promise<{ pg: import("pg").Pool; neo4j: Driver | null }> {
+export async function getConnections(): Promise<{ pg: import("pg").Pool }> {
   if (!pgPool) {
     pgPool = getAppPool()
   }
 
-  // Neo4j has been sunset (AD-49). PostgreSQL + pgvector is the sole graph backend.
-  // Return null for neo4j unconditionally — the Driver type is kept for backward
-  // compatibility with consumers that destructure { neo4j } and null-check it.
-  return { pg: pgPool, neo4j: null }
+  return { pg: pgPool }
 }
 
 /**

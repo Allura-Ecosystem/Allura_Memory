@@ -95,7 +95,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 // ── PUT /api/memory/[id] (memory_update) ────────────────────────────────────
-// Append-only versioned update. Creates new version in Neo4j via SUPERSEDES.
+// Append-only versioned update. Creates new version in graph_memories via SUPERSEDES (graph_supersedes).
 // Appends audit event to PostgreSQL. Never mutates existing rows/nodes.
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

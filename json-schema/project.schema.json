@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allura.dev/schemas/project.schema.json",
   "title": "Project",
-  "description": "Project node in Neo4j",
+  "description": "Project record in PostgreSQL",
   "type": "object",
   "required": ["id", "name", "group_id", "status"],
   "properties": {

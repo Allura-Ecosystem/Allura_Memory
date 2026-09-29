@@ -159,7 +159,8 @@ export async function audit_query_events(
 
 /**
  * Check all subsystem health statuses and return a structured report.
- * PostgreSQL is required; Neo4j and other subsystems are optional (degraded OK).
+ * PostgreSQL (which also hosts the RuVector semantic layer) is required; other
+ * subsystems degrade independently.
  */
 export async function audit_health_report(
   request: AuditHealthReportRequest
@@ -187,38 +188,6 @@ export async function audit_health_report(
   } catch (err) {
     pgStatus = {
       status: "unavailable",
-      latency_ms: 0,
-      detail: err instanceof Error ? err.message : String(err),
-    }
-  }
-
-  // ── Neo4j check ──────────────────────────────────────────────────────────
-  let neo4jStatus: AuditHealthReportResponse["subsystems"]["neo4j"]
-
-  try {
-    const start = Date.now()
-    const { neo4j } = await getConnections()
-    if (!neo4j) {
-      neo4jStatus = {
-        status: "degraded",
-        latency_ms: 0,
-        detail: "Neo4j disabled (GRAPH_BACKEND=ruvector)",
-      }
-    } else {
-      const session = neo4j.session()
-      try {
-        await session.run("RETURN 1")
-        neo4jStatus = {
-          status: "healthy",
-          latency_ms: Date.now() - start,
-        }
-      } finally {
-        await session.close()
-      }
-    }
-  } catch (err) {
-    neo4jStatus = {
-      status: "degraded",
       latency_ms: 0,
       detail: err instanceof Error ? err.message : String(err),
     }
@@ -318,7 +287,6 @@ export async function audit_health_report(
   // ── Overall status ───────────────────────────────────────────────────────
   const statuses = [
     pgStatus.status,
-    neo4jStatus.status,
     embeddingStatus.status,
     curatorStatus.status,
     mcpStatus.status,
@@ -333,7 +301,6 @@ export async function audit_health_report(
   return {
     subsystems: {
       postgres: pgStatus,
-      neo4j: neo4jStatus,
       embedding_backfill: embeddingStatus,
       curator_queue: curatorStatus,
       mcp_tools: mcpStatus,
@@ -460,7 +427,7 @@ export async function audit_agent_activity(
  * 1. group_id constraint exists on events table
  * 2. No events with invalid group_id (not matching allura-*)
  * 3. No events table updated_at column (events are append-only)
- * 4. Neo4j SUPERSEDES relationships exist (optional — degraded OK)
+ * 4. graph_supersedes versioning edges readable (PostgreSQL semantic layer)
  * 5. No approved proposals without decided_by (unapproved promotions)
  * 6. allura-* namespace compliance (no deprecated group_id prefixes)
  * 7. Approval required for engine mutations (pol-007)
@@ -625,47 +592,46 @@ export async function audit_invariant_check(
     })
   }
 
-  // ── Check 4: Neo4j SUPERSEDES relationships exist (optional) ─────────────
+  // ── Check 4: graph_supersedes versioning edges are readable ───────────────
   {
     let passed = false
     let detail = ""
     let violationCount = 0
 
-    try {
-      const { neo4j } = await getConnections()
-      if (!neo4j) {
+    if (pgAvailable && pg) {
+      try {
+        const result = await withCircuitBreaker(
+          "postgres",
+          groupId,
+          "audit_invariant_check:4_graph_supersedes",
+          async () =>
+            (pg!).query<{ count: string }>(
+              `SELECT COUNT(*) AS count
+               FROM graph_supersedes
+               WHERE group_id = $1`,
+              [groupId]
+            )
+        )
+        const supersededCount = parseInt(result.rows[0]?.count ?? "0", 10)
+        // 0 edges is acceptable on a fresh tenant — the check proves the
+        // append-only versioning table is present and queryable.
+        passed = true
+        violationCount = 0
+        detail = `graph_supersedes readable; ${supersededCount} SUPERSEDES edge(s) found`
+      } catch (err) {
         passed = false
-        detail = "Neo4j disabled (GRAPH_BACKEND=ruvector) — supersede check skipped"
-      } else {
-        const session = neo4j.session()
-        try {
-          const result = await session.run(
-            "MATCH ()-[r:SUPERSEDES]->() RETURN count(r) AS cnt LIMIT 1"
-          )
-          const cnt = result.records[0]?.get("cnt")
-          const supersededCount = typeof cnt === "object" && cnt !== null && "low" in cnt
-            ? (cnt as { low: number }).low
-            : typeof cnt === "number"
-            ? cnt
-            : 0
-          // Acceptable to have 0 (fresh system) — just check Neo4j is reachable
-          passed = true
-          violationCount = 0
-          detail = `Neo4j reachable; ${supersededCount} SUPERSEDES relationship(s) found`
-        } finally {
-          await session.close()
-        }
+        violationCount = 1
+        detail = `graph_supersedes check failed: ${err instanceof Error ? err.message : String(err)}`
       }
-    } catch (err) {
-      // Neo4j is optional — treat as degraded, not a hard failure
-      passed = true  // Not a violation — Neo4j is optional
-      violationCount = 0
-      detail = `Neo4j check skipped (unavailable): ${err instanceof Error ? err.message : String(err)}`
+    } else {
+      passed = false
+      violationCount = 1
+      detail = "PostgreSQL unavailable — cannot verify graph_supersedes"
     }
 
     invariants.push({
-      key: "neo4j_supersedes",
-      name: "Neo4j SUPERSEDES Versioning (Read Check)",
+      key: "graph_supersedes",
+      name: "SUPERSEDES Versioning via graph_supersedes (Read Check)",
       passed,
       violation_count: violationCount,
       detail,

@@ -131,7 +131,7 @@ You MUST complete each phase before proceeding to the next.
 
 1. **Check Memory System**
    - Query events table for previous debugging sessions
-   - Search Neo4j for similar root causes
+   - Search the semantic layer (memory_search) for similar root causes
    - Look for patterns in past fixes
 
 2. **Summarize Context**

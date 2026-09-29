@@ -1,7 +1,7 @@
 /**
  * Approval Audit Logger
  *
- * Ensures that NO Insight enters Neo4j without an approval event logged
+ * Ensures that NO Insight enters the semantic store without an approval event logged
  * to PostgreSQL. This is the audit gate for the HITL promotion pipeline.
  *
  * Invariants:
@@ -270,7 +270,7 @@ export async function logProposalNeedsEvidenceEvent(
 }
 
 /**
- * Guard function: require an approval event before allowing Neo4j promotion.
+ * Guard function: require an approval event before allowing semantic promotion.
  *
  * Queries the events table for a `proposal_approved` event matching
  * the given proposal_id and group_id. Returns true if found.

@@ -171,7 +171,7 @@ describe.skipIf(!shouldRunE2E)("Parity: MCP passthrough vs direct PG", () => {
               created_at: response.created_at,
             })
           } catch {
-            // Memory might not be found via MCP if not in Neo4j
+            // Memory might not be found via MCP if not in the semantic store
             // Record as null for divergence tracking
             mcpResults.set(`${memoryId}:${read}`, {
               id: null,

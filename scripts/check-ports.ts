@@ -11,8 +11,6 @@ const REQUIRED_PORTS = [
   { name: "Allura Dashboard (Next.js)", key: "dashboard" as const },
   { name: "Canonical MCP HTTP Gateway", key: "mcp_http" as const },
   { name: "PostgreSQL", key: "postgres" as const },
-  { name: "Neo4j HTTP", key: "neo4j_http" as const },
-  { name: "Neo4j Bolt", key: "neo4j_bolt" as const },
 ];
 
 async function checkPorts() {

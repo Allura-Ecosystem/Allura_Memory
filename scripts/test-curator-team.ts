@@ -7,7 +7,6 @@
  */
 
 import { curatorScore } from "../src/lib/curator/score";
-import { closeDriver, getDriver } from "./lib/neo4j-stub";
 import { closePool, getPool } from "../src/lib/postgres/connection";
 
 const TRACE_ID = process.argv[2] || "35994";
@@ -30,7 +29,6 @@ async function testCuratorTeam() {
   const contracts: AgentContract[] = [];
 
   const pgPool = getPool();
-  const neo4jDriver = getDriver();
 
   try {
     // Fetch trace from PostgreSQL
@@ -45,6 +43,7 @@ async function testCuratorTeam() {
     }
 
     const trace = traceResult.rows[0];
+    const traceGroupId: string = trace.group_id;
     console.log(`  ✓ Found trace: ${trace.event_type}`);
     console.log(`  Agent: ${trace.agent_id}`);
     console.log(`  Created: ${trace.created_at}`);
@@ -96,72 +95,68 @@ async function testCuratorTeam() {
 
     // Analyst (Liskov) - Find related insights (separate session for parallel)
     const analystPromise = (async () => {
-      const analystSession = neo4jDriver.session();
       const start = Date.now();
-      
-      try {
-        const result = await analystSession.run(`
-          MATCH (i:Insight)
-          WHERE i.group_id = 'allura-system'
-            AND i.summary CONTAINS $category
-          RETURN count(i) as related_count
-        `, { category: trace.event_type });
 
-        const relatedCount = (result.records[0]?.get<number>('related_count') || 0) as number;
+      const result = await pgPool.query(
+        `SELECT count(*)::int AS related_count
+           FROM graph_memories
+          WHERE group_id = $1
+            AND deprecated = false
+            AND deleted_at IS NULL
+            AND content ILIKE '%' || $2 || '%'`,
+        [traceGroupId, trace.event_type]
+      );
 
-        return {
-          agent: "pike (Analyst)",
-          task: "Find related insights",
-          output: {
-            related_insights_found: relatedCount,
-            pattern_detected: relatedCount > 0 ? "similar_events" : "novel_event",
-            confidence: relatedCount > 0 ? 0.85 : 0.70
-          },
-          timestamp: Date.now() - start
-        };
-      } finally {
-        await analystSession.close();
-      }
+      const relatedCount: number = result.rows[0]?.related_count ?? 0;
+
+      return {
+        agent: "pike (Analyst)",
+        task: "Find related insights",
+        output: {
+          related_insights_found: relatedCount,
+          pattern_detected: relatedCount > 0 ? "similar_events" : "novel_event",
+          confidence: relatedCount > 0 ? 0.85 : 0.70
+        },
+        timestamp: Date.now() - start
+      };
     })();
 
-    // Validator (Turing) - Check constraints (separate session for parallel)
+    // Validator (Turing) - Check constraints
     const validatorPromise = (async () => {
-      const validatorSession = neo4jDriver.session();
       const start = Date.now();
-      
-      try {
-        // Check if trace already promoted
-        const existingResult = await validatorSession.run(`
-          MATCH (p:PromotionProposal {event_id: $traceId})
-          RETURN count(p) as exists
-        `, { traceId: TRACE_ID });
 
-        const exists = (existingResult.records[0]?.get<number>('exists') || 0) > 0;
+      // Check if trace already has a promotion proposal
+      const existingResult = await pgPool.query(
+        `SELECT count(*)::int AS proposals
+           FROM canonical_proposals
+          WHERE group_id = $1 AND trace_ref = $2`,
+        [traceGroupId, TRACE_ID]
+      );
 
-        // Check SUPERSEDES chain validity
-        const chainResult = await validatorSession.run(`
-          MATCH (i:Insight)
-          WHERE i.group_id = 'allura-system'
-          RETURN count(i) as total_insights
-        `);
+      const exists = (existingResult.rows[0]?.proposals ?? 0) > 0;
 
-        const totalInsights = chainResult.records[0]?.get<number>('total_insights') || 0;
+      // Check semantic store version chain (graph_memories / graph_supersedes)
+      const chainResult = await pgPool.query(
+        `SELECT count(*)::int AS total_insights
+           FROM graph_memories
+          WHERE group_id = $1 AND deleted_at IS NULL`,
+        [traceGroupId]
+      );
 
-        return {
-          agent: "brooks (Validator)",
-          task: "Check Neo4j constraints",
-          output: {
-            already_promoted: exists,
-            append_only_valid: true,
-            versioning_chain_valid: totalInsights >= 0,
-            total_insights_in_graph: totalInsights,
-            constraints_met: !exists
-          },
-          timestamp: Date.now() - start
-        };
-      } finally {
-        await validatorSession.close();
-      }
+      const totalInsights: number = chainResult.rows[0]?.total_insights ?? 0;
+
+      return {
+        agent: "brooks (Validator)",
+        task: "Check semantic store constraints",
+        output: {
+          already_promoted: exists,
+          append_only_valid: true,
+          versioning_chain_valid: totalInsights >= 0,
+          total_insights_in_graph: totalInsights,
+          constraints_met: !exists
+        },
+        timestamp: Date.now() - start
+      };
     })();
 
     // Wait for both parallel tasks
@@ -238,7 +233,6 @@ async function testCuratorTeam() {
     console.error("Test failed:", error);
     process.exit(1);
   } finally {
-    await closeDriver();
     await closePool();
   }
 }

@@ -17,7 +17,7 @@ Anchor: [BLUEPRINT.md](./BLUEPRINT.md). Risk register: [RISKS-AND-DECISIONS.md](
 - Tenant memory (episodic + semantic) and its provenance.
 - MCP tokens / API keys.
 - Audit log (hash chain).
-- Approved (trusted) knowledge in Neo4j.
+- Approved (trusted) knowledge in the semantic layer (PostgreSQL + RuVector).
 
 ## Trust Boundaries
 

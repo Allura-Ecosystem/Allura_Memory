@@ -88,7 +88,7 @@ describe("Auto-Curator", () => {
 
     it("duplicate events with same error are correctly grouped", () => {
       const events = Array.from({ length: 5 }, () =>
-        makeEvent({ event_type: "promotion_failed", agent_id: "agent-1", metadata: { error: "neo4j_unavailable" } })
+        makeEvent({ event_type: "promotion_failed", agent_id: "agent-1", metadata: { error: "graph_unavailable" } })
       )
 
       const candidates = detectFailurePatterns(events)
@@ -178,7 +178,7 @@ describe("Auto-Curator", () => {
   describe("data integrity", () => {
     it("every candidate has all required fields", () => {
       const events = Array.from({ length: 5 }, () =>
-        makeEvent({ event_type: "promotion_failed", agent_id: "agent-1", metadata: { error: "neo4j_unavailable" } })
+        makeEvent({ event_type: "promotion_failed", agent_id: "agent-1", metadata: { error: "graph_unavailable" } })
       )
 
       const candidates = detectFailurePatterns(events)

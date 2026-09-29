@@ -3,7 +3,7 @@
  * 
  * Regression tests for the 5 canonical memory operations:
  * 1. memory_add - Add a memory (episodic → score → promote/queue)
- * 2. memory_search - Search memories (federated: Postgres + Neo4j)
+ * 2. memory_search - Search memories (federated: Postgres + RuVector)
  * 3. memory_get - Get a single memory by ID
  * 4. memory_list - List all memories for a user
  * 5. memory_delete - Soft-delete a memory
@@ -37,7 +37,7 @@ import {
   authenticateServiceTransport,
 } from "../lib/auth/mcp-authenticator";
 
-// Live-DB gating: skip tests requiring live PostgreSQL/Neo4j unless RUN_E2E_TESTS=true
+// Live-DB gating: skip tests requiring live PostgreSQL/RuVector unless RUN_E2E_TESTS=true
 const itIfE2E = process.env.RUN_E2E_TESTS === "true" ? it : it.skip;
 
 // Test configuration
@@ -188,32 +188,6 @@ describe("Canonical Memory Operations", () => {
          expect(response.created_at).toBeDefined();
        } finally {
          process.env.PROMOTION_MODE = originalMode;
-       }
-     });
-
-     itIfE2E("should not contact Neo4j from memory_add when eligible memory queues for HITL", async () => {
-       const originalMode = process.env.PROMOTION_MODE;
-       const originalNeo4jUri = process.env.NEO4J_URI;
-       process.env.PROMOTION_MODE = "auto";
-       process.env.NEO4J_URI = "bolt://127.0.0.1:1";
-       resetConnections();
-
-       try {
-         const response = await memory_add({
-           group_id: TEST_GROUP_ID,
-           scope: wsScope(TEST_GROUP_ID),
-           user_id: TEST_USER_ID,
-           content: uniqueContent("I always prefer deterministic testing patterns over flaky integration tests in all codebases"),
-           metadata: { source: "conversation" },
-         });
-
-         expect(response.stored).toBe("episodic");
-         expect(response.pending_review).toBe(true);
-         expect(response.meta?.degraded).not.toBe(true);
-       } finally {
-         process.env.PROMOTION_MODE = originalMode;
-         process.env.NEO4J_URI = originalNeo4jUri;
-         resetConnections();
        }
      });
 
@@ -758,7 +732,7 @@ describe("Canonical Memory Operations", () => {
     });
 
     describe("memory_search error propagation", () => {
-      it("should succeed when PostgreSQL is unreachable (RuVector primary, Neo4j fallback)", async () => {
+      it("should succeed when PostgreSQL is unreachable (RuVector primary, semantic fallback)", async () => {
         const originalHost = process.env.POSTGRES_HOST;
         const originalPort = process.env.POSTGRES_PORT;
         process.env.POSTGRES_HOST = "127.0.0.1";
@@ -772,7 +746,7 @@ describe("Canonical Memory Operations", () => {
             scope: wsScope(`allura-test-${RUN_ID}` as any),
           };
 
-          // With Slice B architecture: RuVector is primary, Neo4j is fallback.
+          // With Slice B architecture: RuVector is primary, the semantic layer is fallback.
           // Search should succeed even when PostgreSQL is unreachable.
           const response = await memory_search(request);
           
