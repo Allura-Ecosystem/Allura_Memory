@@ -67,16 +67,21 @@ describe("HITL Promotion Lock policy", () => {
     }
   })
 
-  it("curator approval entrypoints must log approval audit before graph writes", () => {
+  it("curator approval entrypoint promotes only through the atomic approveProposal path", () => {
     const route = readRepoFile("src/app/api/curator/approve/route.ts")
-    const routeAuditIndex = route.indexOf("await logApprovalEvent")
-    const routePromotionQueueIndex = route.indexOf("await enqueuePromotionSync")
+    const atomic = readRepoFile("src/lib/memory/approve-proposal.ts")
 
+    // The route never writes canonical memory itself; it delegates.
     expect(route).not.toContain("await createInsight")
-    expect(routeAuditIndex).toBeGreaterThanOrEqual(0)
-    expect(routePromotionQueueIndex).toBeGreaterThanOrEqual(0)
-    expect(routeAuditIndex).toBeLessThan(routePromotionQueueIndex)
-    expect(route).toContain('decision: "approved"')
-    expect(route).toContain("memory_id:")
+    expect(route).toContain("await approveProposal")
+    expect(route).toContain('decision: "rejected"')
+
+    // The approval transition (whose trigger emits the approval audit event)
+    // must precede the promotion outbox enqueue.
+    const transitionIndex = atomic.indexOf("SET status='approved'")
+    const outboxIndex = atomic.indexOf("INSERT INTO promotion_outbox")
+    expect(transitionIndex).toBeGreaterThanOrEqual(0)
+    expect(outboxIndex).toBeGreaterThanOrEqual(0)
+    expect(transitionIndex).toBeLessThan(outboxIndex)
   })
 })

@@ -80,6 +80,7 @@ import type {
 import { storeMemory } from "@/lib/ruvector/bridge"
 import { searchWithFeedback } from "@/lib/ruvector/retrieval-adapter"
 import { requireTransportMemoryAddAuthority } from "@/lib/auth/mcp-authenticator"
+import { evaluateMemoryAdmission } from "@/lib/memory/admission"
 import {
   checkBudget,
   ensureSession,
@@ -165,6 +166,13 @@ export async function memory_add(request: MemoryAddRequest): Promise<MemoryAddRe
   const agentId = scope.agent_id
   if (request.metadata?.agent_id && request.metadata.agent_id !== agentId) {
     throw new Error("metadata.agent_id must match verified workspace scope")
+  }
+  const admission = evaluateMemoryAdmission({
+    content: request.content,
+    source: request.metadata?.source,
+  })
+  if (!admission.admitted) {
+    throw new Error(`Memory admission rejected (${admission.reason}): content was NOT stored.`)
   }
   const traceType = request.trace_type || "conversation"
   const memoryId = generateMemoryId()
@@ -1298,22 +1306,30 @@ export async function memory_export(request: MemoryExportRequest): Promise<Memor
   const offset = request.offset ?? 0
   const exportedAt = new Date().toISOString()
 
+  // Canonical export requires a verified workspace scope (same authority as
+  // memory_list). Fail closed rather than report an empty canonical set.
+  const scope = request.canonical_only ? requireVerifiedWorkspaceScope(request) : request.scope
+
   const { pg } = await getConnections()
   const graphAdapter = createGraphAdapter({ pg })
 
-  // Canonical memories from graph layer
+  // Canonical memories from the semantic layer
   let canonicalMemories: MemoryGetResponse[] = []
   let graphFailed = false
 
   try {
-    const graphResult = await graphAdapter.exportMemories({
+    const exportScope = requireVerifiedWorkspaceScope({ group_id: groupId, scope })
+    // listMemories is the supported workspace-scoped semantic read; it returns the
+    // full canonical set ordered newest-first, so page it in application code.
+    const graphResult = await graphAdapter.listMemories({
       group_id: groupId,
+      workspace_id: exportScope.workspace_id,
+      principal_id: exportScope.agent_id,
       user_id: request.user_id ?? null,
-      offset,
-      limit,
     })
+    const page = graphResult.memories.slice(offset, offset + limit)
 
-    canonicalMemories = graphResult.memories.map((node) => ({
+    canonicalMemories = page.map((node) => ({
       id: node.id,
       content: node.content,
       score: node.score,
@@ -1330,7 +1346,7 @@ export async function memory_export(request: MemoryExportRequest): Promise<Memor
   } catch (error) {
     if (request.canonical_only) {
       // canonical_only=true: no fallback — fail loudly
-      throw new DatabaseUnavailableError("memory_export:graph", error instanceof Error ? error : undefined)
+      throw new DatabaseUnavailableError("memory_export:semantic", error instanceof Error ? error : undefined)
     }
     console.warn("[degraded] Graph adapter unavailable in memory_export:", error)
     graphFailed = true

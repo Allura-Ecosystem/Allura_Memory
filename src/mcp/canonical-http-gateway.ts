@@ -451,7 +451,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_export",
         description:
-          "Export memories filtered by group_id and optional canonical status. canonical_only=true returns only canonical (semantic) memories; canonical_only=false returns both stores merged and deduplicated.",
+          "Export memories filtered by group_id and optional canonical status. canonical_only=true returns only canonical (semantic) memories and requires a verified workspace scope; canonical_only=false returns both stores merged and deduplicated.",
         inputSchema: {
           type: "object",
           properties: {

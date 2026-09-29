@@ -137,7 +137,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_search",
         description:
-          "Search memories. Defaults to status='approved', which returns ONLY canonical approved insights from the graph store — unpromoted episodic traces are excluded by design, so an empty result does NOT mean no history exists. Pass status='all' to federate across PostgreSQL episodic + graph.",
+          "Search memories. Defaults to status='approved', which returns ONLY canonical approved insights from the semantic store — unpromoted episodic traces are excluded by design, so an empty result does NOT mean no history exists. Pass status='all' to federate across PostgreSQL episodic + semantic.",
         inputSchema: {
           type: "object",
           properties: {
@@ -327,7 +327,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_export",
         description:
-          "Export memories filtered by group_id and optional canonical status. canonical_only=true returns only canonical (semantic) memories; canonical_only=false returns both stores merged and deduplicated.",
+          "Export memories filtered by group_id and optional canonical status. canonical_only=true returns only canonical (semantic) memories and requires a verified workspace scope; canonical_only=false returns both stores merged and deduplicated.",
         inputSchema: {
           type: "object",
           properties: {

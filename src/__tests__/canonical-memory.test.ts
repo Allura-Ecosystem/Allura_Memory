@@ -774,7 +774,9 @@ describe("Canonical Memory Operations", () => {
           const request: MemoryAddRequest = {
             group_id: `allura-test-${RUN_ID}` as any,
             scope: wsScope(`allura-test-${RUN_ID}` as any),
-            user_id: "test-user-error",
+            // Must equal the authenticated principal, otherwise the principal
+            // check rejects the write before the unreachable database is reached.
+            user_id: TEST_USER_ID,
             content: "Error propagation test",
           };
 

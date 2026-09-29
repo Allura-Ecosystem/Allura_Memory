@@ -18,6 +18,7 @@ export default defineConfig({
     environment: "node",
     pool: "forks",
     passWithNoTests: true,
+    setupFiles: ["./tests/setup/unit-env.ts"],
     include: [
       // ── Pure unit tests (no DB, no external services) ──────────────────
       // Benchmark harness metric math (Precision@K, Recall@K, MRR, percentiles)
@@ -178,6 +179,13 @@ export default defineConfig({
       "src/lib/auth/__tests__/principal-context.test.ts",
       "src/lib/auth/__tests__/mcp-legacy-route.test.ts",
       "src/lib/memory/memory-add-workspace-scope.test.ts",
+      // Active-contract guards: memory admission, canonical-only export routing,
+      // and health/invariant parity (all mocked; no DB).
+      "src/lib/memory/admission.test.ts",
+      "src/lib/memory/memory-add-admission.test.ts",
+      "src/lib/memory/memory-export-contract.test.ts",
+      "src/lib/memory/health-invariant-parity.test.ts",
+      "src/lib/memory/__tests__/hitl-promotion-lock-policy.test.ts",
       "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
       "src/lib/auth/__tests__/principal-audit.test.ts",
       "src/lib/auth/__tests__/budget-scope.test.ts",
