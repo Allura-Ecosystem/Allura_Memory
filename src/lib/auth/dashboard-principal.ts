@@ -1,8 +1,10 @@
 import "server-only"
 
 import { unstable_rethrow } from "next/navigation"
+import { headers } from "next/headers"
 
 import { extractAlluraMetadata } from "./clerk"
+import { cloudflareAccessUser, isCloudflareAccessEnabled } from "./cloudflare-access"
 import { isClerkEnabled } from "./config"
 import { getDevUserSync } from "./dev-auth"
 import { PrincipalProviderUnavailableError } from "./principal-errors"
@@ -41,6 +43,9 @@ export { PrincipalProviderUnavailableError } from "./principal-errors"
  * a degraded dependency instead of reporting it as an access denial.
  */
 export async function getDashboardPrincipal(): Promise<AuthUser | null> {
+  if (isCloudflareAccessEnabled()) {
+    return cloudflareAccessUser(await headers())
+  }
   if (isClerkEnabled()) {
     let authResult: Awaited<ReturnType<typeof import("@clerk/nextjs/server").auth>>
     try {

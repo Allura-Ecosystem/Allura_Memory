@@ -27,6 +27,7 @@
 import { type NextFetchEvent, NextRequest, NextResponse } from "next/server"
 
 import { extractAlluraMetadata } from "@/lib/auth/clerk"
+import { cloudflareAccessUser, isCloudflareAccessEnabled } from "@/lib/auth/cloudflare-access"
 import { isClerkEnabled } from "@/lib/auth/config"
 import { getDevUserSync } from "@/lib/auth/dev-auth"
 import { emitGatedAudit } from "@/lib/auth/edge-audit"
@@ -225,6 +226,25 @@ function handleDevAuth(request: NextRequest): NextResponse {
   })
 }
 
+function handleCloudflareAccess(request: NextRequest): NextResponse {
+  const { pathname } = request.nextUrl
+  if (isStaticAsset(pathname)) return nextWithoutAuthHeaders(request)
+  const authority = resolveRouteAuthority(pathname)
+  if (authority.kind === "public") return nextWithoutAuthHeaders(request)
+  const user = cloudflareAccessUser(request.headers)
+  if (!user) return denyUnverified(request)
+  if (!hasPermission(user.role, authority.requiredRole)) return denyInvalidAuthority(request)
+  return nextWithAuthHeaders(request, {
+    userId: user.id,
+    role: user.role,
+    groupId: user.groupId,
+    workspaceId: user.workspaceId,
+    sessionId: user.sessionId,
+    email: user.email,
+    name: user.name,
+  })
+}
+
 // ── Production Clerk Handler ─────────────────────────────────────────────────
 
 let _clerkHandler: ((request: NextRequest, event?: NextFetchEvent) => Promise<NextResponse>) | null = null
@@ -382,6 +402,9 @@ export default async function proxy(
     return nextWithoutAuthHeaders(request)
   }
   if (!isClerkEnabled()) {
+    if (isCloudflareAccessEnabled()) {
+      return handleCloudflareAccess(request)
+    }
     if (process.env.NODE_ENV === "production") {
       return handleKeylessProduction(request)
     }
