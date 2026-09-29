@@ -11,17 +11,17 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { readFileSync, existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
 // Import the canonical tools to verify they're exported and callable
-import { memory_add, memory_search } from "@/mcp/canonical-tools";
-import { validateGroupId, GroupIdValidationError } from "@/lib/validation/group-id";
 import {
+  getAgentAllowedGroupIds,
   getDefaultGroupId,
-  getAllowedGroupIds,
   isAgentAllowedGroupId,
 } from "@/lib/config/group-id-registry";
+import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
+import { memory_add, memory_search } from "@/mcp/canonical-tools";
 
 describe("Story 20.3 — Subagent MCP Tool Access", () => {
   describe("AC-1: memory_search is available and callable", () => {
@@ -63,21 +63,21 @@ describe("Story 20.3 — Subagent MCP Tool Access", () => {
 
     it("a faithmeats agent cannot access allura-system memories (registry enforcement)", () => {
       // The group_id registry limits which tenants each agent can access
-      const faithmeatsDefault = getDefaultGroupId("faithmeats-editor");
+      const faithmeatsDefault = getDefaultGroupId("faithmeats-agent");
       expect(faithmeatsDefault).toBe("allura-faithmeats");
 
-      const faithmeatsAllowed = getAllowedGroupIds("faithmeats-editor");
+      const faithmeatsAllowed = getAgentAllowedGroupIds("faithmeats-agent");
       expect(faithmeatsAllowed).not.toContain("allura-system");
 
       expect(
-        isAgentAllowedGroupId("faithmeats-editor", "allura-system")
+        isAgentAllowedGroupId("faithmeats-agent", "allura-system")
       ).toBe(false);
     });
 
     it("a nonprofit agent is scoped to allura-difference-driven only", () => {
-      expect(isAgentAllowedGroupId("nonprofit-organizer", "allura-system")).toBe(false);
+      expect(isAgentAllowedGroupId("nonprofit-curator", "allura-system")).toBe(false);
       expect(
-        isAgentAllowedGroupId("nonprofit-organizer", "allura-difference-driven")
+        isAgentAllowedGroupId("nonprofit-curator", "allura-difference-driven")
       ).toBe(true);
     });
   });

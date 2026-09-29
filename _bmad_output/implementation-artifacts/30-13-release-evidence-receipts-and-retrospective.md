@@ -1,0 +1,31 @@
+> Reconciliation note (2026-09-17): the bounded candidate and interrupted repairs were integrated into canonical `main`. Earlier test/demo statements remain historical unless repeated in the current readiness record. Integration does not grant story acceptance.
+
+# Story 30.13 — Release Evidence, Receipts, and Retrospective
+
+**Epic:** 30 — Governed Digital Brain Workspace  
+**Status:** backlog  
+**Owner:** Brooks / team  
+**Planning authority:** [Epic 30](../planning-artifacts/epic-30-governed-digital-brain-workspace.md)  
+**Requirement:** E30-R13  
+**Dependencies:** 30.11, 30.12 and all preceding story delivery gates
+
+## User Story
+As the sponsor, I want a reconciled release packet so that done means approved, tested, merged and traceable.
+
+## Acceptance Criteria
+- Reconcile approved design hash/variances, contracts, code/migrations/tests, exact-SHA CI, controlled red, local DB/browser/accessibility proof and five-human results.
+- Verify story/approval/CI/user-test/release receipts by ID, exact origin-main contents and rollback records after explicitly authorized publication.
+- Reconcile Notion human story authority and local evidence; only sanctioned scripts change sprint tracking.
+- Prepare retrospective evidence without prematurely running an epic-completion retrospective. Once all story delivery gates are met, obtain accepted retrospective and owned follow-ups before marking epic/retrospective done.
+
+## Required Evidence / Definition of Done
+One evidence index with real IDs/hashes/paths and no unresolved blocking findings; verified publication, release receipt and retrospective acceptance under epic close gates. Never infer completion from a commit message or local status.
+
+## Current Preparation State
+
+2026-09-25 final local reconciliation: exact committed HEAD `398e419f7e3bdc652164f6bb4bb0c1ac535757c7` passes the 38-file no-cache Epic lane with 375 tests and 3 intentional skips, the 198-file unit lane with 2,937 tests and 165 skips, and all five exact-HEAD controlled-red mutation families with cleanup verified. The completion manifest remains valid and honestly incomplete with 24 pending gates and no not-implemented stories. An independent requirement-by-requirement audit classified all 24 gates as requiring external human approval/evidence, hosted or production authority, approved disposable infrastructure, or the five-person human study; no remaining gate can be truthfully closed by additional local hermetic code. The refreshed hosted-state receipt confirms remote `main`, workflow absence, required contexts and 98-ahead/1-behind divergence. No publication, origin reconciliation, deployment, rollback or retrospective acceptance is claimed.
+
+2026-09-25: canonical checkout is `main`. The [machine-checkable completion checklist](../planning-artifacts/epic-30-completion-checklist.json) reconciles all 13 stories and fails closed against unresolved gates, malformed evidence and contradictory BMAD status. Its validation is currently valid but incomplete: 24 gates remain, with every story classified locally as prepared or partial rather than complete. Exact HEAD `f8934c9de2a171649b4f4eff529a65a95c7035ee` passes typecheck with 355 tests and 3 intentional skips across 37 files; the full unit lane passes 2,917 tests with 165 skips across 197 files; the exact-HEAD controlled-red runner proves disclosure, receipt, revocation, unknown-surface and prompt-injection mutation detection and restores canonical state. Independent review of the new production-candidate membership and messaging boundaries found no remaining BLOCK/HIGH/MEDIUM issue. The loopback browser verifier checks memory tabs and authorized-snapshot search in addition to the existing comparison and honest-Ask behavior, but it has not run against a live demo in this session. The hosted-state receipt proves the workflow is absent from remote `main` and not required by branch protection. `bun run gate:epic30-completion` exits 1 by design. Fresh evidence and every remaining gate are recorded in [current readiness](../planning-artifacts/implementation-readiness-epic-30.md). This story remains backlog: no live-database, hosted-CI, human-study, release, rollback or retrospective approval is implied.
+
+## Historical Evidence — before repository consolidation
+No release, publication authorization, human study or retrospective complete.

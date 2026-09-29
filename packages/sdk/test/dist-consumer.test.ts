@@ -19,7 +19,10 @@ beforeAll(() => {
     ["pack", packageRoot, "--json", "--pack-destination", consumerRoot],
     { cwd: consumerRoot, encoding: "utf8" },
   );
-  const packed = JSON.parse(packOutput) as Array<{ filename: string; files: Array<{ path: string }> }>;
+  type PackedTarball = { filename: string; files: Array<{ path: string }> };
+  // npm >= 12 emits an object keyed by package name; earlier majors emit an array.
+  const packReport = JSON.parse(packOutput) as PackedTarball[] | Record<string, PackedTarball>;
+  const packed = Array.isArray(packReport) ? packReport : Object.values(packReport);
   expect(packed).toHaveLength(1);
   expect(packed[0]!.files.some((file) => file.path === "dist/index.js")).toBe(true);
   expect(packed[0]!.files.some((file) => file.path === "dist/index.cjs")).toBe(true);

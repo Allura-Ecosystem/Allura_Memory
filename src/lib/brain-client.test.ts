@@ -2,9 +2,9 @@
  * Brain MCP Client — Contract Tests
  *
  * These tests verify the data shape contract between the Brain MCP service
- * and the dashboard pages that consume it. They call real Brain MCP at localhost:5888
- * when RUN_E2E_TESTS=true, otherwise they validate the client's type contracts
- * and error handling with mocked responses.
+ * and the dashboard pages that consume it. Live checks require the configured
+ * canonical Brain MCP endpoint when RUN_E2E_TESTS=true; otherwise they validate
+ * the client's type contracts and fail-closed endpoint behavior.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -14,6 +14,8 @@ const isE2E = process.env.RUN_E2E_TESTS === "true"
 // ── Unit tests (always run) ────────────────────────────────────────────────
 
 describe("brain-client", () => {
+  afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals() })
+
   describe("type contracts", () => {
     it("should export brainClient with expected methods", async () => {
       const { brainClient } = await import("./brain-client")
@@ -44,6 +46,17 @@ describe("brain-client", () => {
         // Must be a network/fetch error, not a validation error
         expect((e as Error).constructor.name).not.toBe("GroupIdValidationError")
       }
+    })
+
+    it("refuses unset or local Brain endpoints before making a request", async () => {
+      const request = vi.fn()
+      vi.stubGlobal("fetch", request)
+      const { brainClient } = await import("./brain-client")
+      for (const endpoint of [undefined, "http://localhost:5888/mcp", "https://other.example/mcp"]) {
+        vi.stubEnv("ALLURA_BRAIN_URL", endpoint)
+        await expect(brainClient.healthReport("allura-system")).rejects.toThrow(/Canonical Allura Brain endpoint/)
+      }
+      expect(request).not.toHaveBeenCalled()
     })
   })
 

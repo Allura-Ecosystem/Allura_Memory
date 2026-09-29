@@ -113,7 +113,7 @@ function ensureLoopPreflight() {
 }
 
 function ensureScopeExists(scope: Scope) {
-  const statusPath = path.join(ROOT, "_bmad", "bmm", "stories", "sprint-status.yaml");
+  const statusPath = path.join(ROOT, "_bmad_output", "implementation-artifacts", "sprint-status.yaml");
   const raw = readFileSync(statusPath, "utf8");
   const key = scope.kind === "epic" ? `epic-${scope.value}` : scope.value;
   if (!new RegExp(`^\\s{2}${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}:`, "m").test(raw)) {

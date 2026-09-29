@@ -34,8 +34,8 @@ implemented while its remote CI evidence remains unverified.
 | CI produces one schema-validated, commit-bound evidence manifest | `implemented` | `measured` | `.github/workflows/epic-24-evidence.yml`, `scripts/ci/collect-evidence.ts` | `bun test scripts/ci/collect-evidence.test.ts` | Aggregate manifest in run `31945804098` (`a7f2a236`) and `32369489097` (`10a6324b`) |
 | Changed JavaScript/TypeScript files cannot add ESLint errors | `implemented` | `validated` | `scripts/ci/lint-changed.sh`, `.github/workflows/epic-24-evidence.yml` | `bun run lint:ci --base=<base-sha>` | Ratchet tests; remote CI artifact pending |
 | Numerical benchmark regression policy | `implemented` | `measured` | `evals/suites/portfolio.yaml`, `src/lib/evals/runner.ts` | `bun test scripts/ci/collect-evidence.test.ts` | Story 24.6 Evaluation gates; sha256-indexed suite/baseline/datasets; wired as `test-eval` + Evidence/Evaluation lane |
-| Authenticated principal propagation across every write path | `planned` | `unverified` | `_bmad/bmm/stories/24-2-authenticated-principal-context.md` | Not available until Story 24.2 | None |
-| Reference LangGraph and OpenAI Agents integrations | `planned` | `unverified` | `_bmad/bmm/stories/24-9-reference-integrations-portfolio-demo.md` | Not available until Story 24.9 | None |
+| Authenticated principal propagation across every write path | `planned` | `unverified` | `_bmad_output/implementation-artifacts/24-2-authenticated-principal-context.md` | Not available until Story 24.2 | None |
+| Reference LangGraph and OpenAI Agents integrations | `planned` | `unverified` | `_bmad_output/implementation-artifacts/24-9-reference-integrations-portfolio-demo.md` | Not available until Story 24.9 | None |
 | Formal compliance certification or production-scale performance | `unsupported` | `unverified` | `README.md` claims and limitations | Not applicable | None claimed |
 
 ## CI script inventory

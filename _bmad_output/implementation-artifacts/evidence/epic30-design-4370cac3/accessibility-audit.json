@@ -1,0 +1,141 @@
+{
+  "candidate": "4370cac3",
+  "capturedAt": "2026-09-18T02:42:30.178Z",
+  "route": "http://127.0.0.1:4310/epic30-evidence",
+  "syntheticOnly": true,
+  "browser": "153.0.8010.36",
+  "sourceHashes": [
+    {
+      "file": "src/components/dashboard/my-work-workspace.tsx",
+      "sha256": "7de47369664ae59e067f3b9d9ea17c173c1affab7733a8ef341bea593e1a3639"
+    },
+    {
+      "file": "src/components/dashboard/my-work-workspace.module.css",
+      "sha256": "c0e5536779a0116305d0c460b98553aebb7972015cb5fcb94197c33d6f3015ba"
+    },
+    {
+      "file": "scripts/epic30/verify-reader.cjs",
+      "sha256": "349d3ab1e816149f0cf548193f3cd69ac9990e8f8afbdb2af157a8cfd0fd8f49"
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "desktop-ready.png",
+      "sha256": "3c4c46f313ea165a1ec5b39a1d99592d94d461e21e548c56d6632e84a6feca97"
+    },
+    {
+      "file": "desktop-comparison.png",
+      "sha256": "2189d23b9ec04169c636b29de85ffc9ad8647ec95615025943c1359e015a8dc1"
+    },
+    {
+      "file": "mobile-ready.png",
+      "sha256": "64805345fd418ece7c912275d3dc6bcf60387c1d43bf64c014dcd7ea41279584"
+    },
+    {
+      "file": "mobile-comparison.png",
+      "sha256": "9ecebe42ea750c102dfeb16f117ad82ba36978b9247b57d52be824c79329b45a"
+    }
+  ],
+  "audits": [
+    {
+      "state": "ready",
+      "width": 1440,
+      "tool": "axe-core 4.11.3",
+      "ruleset": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [],
+      "incomplete": [],
+      "passes": 23
+    },
+    {
+      "state": "comparison",
+      "width": 1440,
+      "tool": "axe-core 4.11.3",
+      "ruleset": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [],
+      "incomplete": [],
+      "passes": 23
+    },
+    {
+      "state": "ready",
+      "width": 320,
+      "tool": "axe-core 4.11.3",
+      "ruleset": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [],
+      "incomplete": [],
+      "passes": 19
+    },
+    {
+      "state": "comparison",
+      "width": 320,
+      "tool": "axe-core 4.11.3",
+      "ruleset": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "tags": [
+            "cat.color",
+            "wcag2aa",
+            "wcag143",
+            "TTv5",
+            "TT13.c",
+            "EN-301-549",
+            "EN-9.1.4.3",
+            "ACT",
+            "RGAAv4",
+            "RGAA-3.2.1"
+          ],
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axeAPI",
+          "nodes": [
+            {
+              "any": [
+                {
+                  "id": "color-contrast",
+                  "data": {
+                    "contrastRatio": 0,
+                    "fontSize": "12.0pt (16px)",
+                    "fontWeight": "normal",
+                    "messageKey": "elmPartiallyObscuring",
+                    "expectedContrastRatio": "4.5:1"
+                  },
+                  "relatedNodes": [],
+                  "impact": "serious",
+                  "message": "Element's background color could not be determined because it partially overlaps other elements"
+                }
+              ],
+              "all": [],
+              "none": [],
+              "impact": "serious",
+              "html": "<p class=\"my-work-workspace_lede__Xl9Wg\">Synthetic Operations content for comparison and accessibility verification.</p>",
+              "target": [
+                ".my-work-workspace_comparison__FGHQt > .my-work-workspace_lede__Xl9Wg"
+              ],
+              "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because it partially overlaps other elements"
+            }
+          ]
+        }
+      ],
+      "passes": 18
+    }
+  ],
+  "totalViolations": 0,
+  "limitations": [
+    "Temporary local static fixture route; not live PostgreSQL or hosted CI evidence.",
+    "Automated WCAG scan does not replace screen-reader, actual 200% zoom, human design approval, or five-person testing."
+  ]
+}

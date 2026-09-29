@@ -1,8 +1,9 @@
 import { memory_add, memory_search } from "@/mcp/canonical-tools"
 import { closeConnections } from "@/mcp/canonical-tools/connection"
-import type { MemoryAddRequest, MemorySearchRequest } from "@/lib/memory/canonical-contracts"
+import type { MemorySearchRequest } from "@/lib/memory/canonical-contracts"
 import { closeRuVectorPool } from "@/lib/ruvector/connection"
 import { closePool, getPool } from "@/lib/postgres/connection"
+import { authenticateServiceTransport } from "@/lib/auth/mcp-authenticator"
 
 const groups = {
   raleigh: "allura-factory-smoke-raleigh-loadtest",
@@ -29,7 +30,15 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 async function writeAndFind(group_id: string, user_id: string, marker: string) {
-  const added = await memory_add({
+  // Use the same configured service transport capability as the real MCP
+  // boundary. Direct construction of a memory_add request is intentionally
+  // rejected because it could forge the caller's workspace and actor.
+  process.env.ALLURA_MCP_SERVICE_PRINCIPAL_ID = user_id
+  process.env.ALLURA_MCP_SERVICE_WORKSPACE_ID = `ws-${group_id}`
+  process.env.ALLURA_MCP_SERVICE_TENANTS = group_id
+  process.env.ALLURA_MCP_SERVICE_SCOPES = "memory:write,memory:read"
+  const principal = authenticateServiceTransport(`factory-cross-team-${marker}`)
+  const addRequest = principal.prepareMemoryAdd({
     group_id,
     user_id,
     content: `factory_ci_smoke ${marker}`,
@@ -38,9 +47,9 @@ async function writeAndFind(group_id: string, user_id: string, marker: string) {
       agent_id: user_id,
       conversation_id: `factory-ci-${marker}`,
     },
-    scope: scopeFor(group_id, user_id),
     threshold: 1,
-  } as MemoryAddRequest)
+  }).request
+  const added = await memory_add(addRequest)
 
   assert(added.stored === "episodic", `${group_id}: expected an episodic PostgreSQL write`)
 

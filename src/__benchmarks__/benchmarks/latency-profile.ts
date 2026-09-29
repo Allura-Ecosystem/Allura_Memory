@@ -68,7 +68,7 @@ export async function run(ctx: BenchmarkContext, iters: number): Promise<Benchma
         group_id: ctx.groupId,
         user_id: ctx.userId,
         content: `latency probe ${i} [[BENCH:${ctx.runId}:latency]]`,
-        metadata: { source: "manual", agent_id: "benchmark" },
+        metadata: { source: "manual", agent_id: ctx.userId },
       })
       if (res.ok) addLat.push(res.latencyMs)
       else addFail++

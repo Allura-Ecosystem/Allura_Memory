@@ -8,7 +8,7 @@ One authority per lifecycle stage. No document is editable in two places.
 | Surface | Role | Editable where |
 |---|---|---|
 | Notion | Private drafts, planning, approvals | Notion only |
-| BMAD working area | Temporary execution artifacts | `_bmad-output/` |
+| BMAD working area | Temporary execution artifacts | `_bmad_output/` |
 | Canonical six | Public engineering contracts | GitHub PR |
 | Allura Brain | Decision lineage, evidence | Governed memory tools |
 | Source code / schema | Implementation truth | Git |

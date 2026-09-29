@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "epic": "30",
+  "story": "30.10",
+  "recordedAt": "2026-09-25",
+  "baseCommit": "99ba99ce",
+  "commands": [
+    "bun vitest run src/lib/digital-brain/restricted-messaging-receipt-writer.test.ts src/lib/digital-brain/restricted-messaging-production.test.ts src/lib/digital-brain/restricted-messaging.test.ts src/lib/digital-brain/migration-contract.test.ts",
+    "bun run typecheck",
+    "bun run test:epic30-live"
+  ],
+  "database": {
+    "image": "pgvector/pgvector:pg16",
+    "containerName": "allura-epic30-temp-messaging-20260925",
+    "host": "127.0.0.1",
+    "port": 5444,
+    "storage": "container tmpfs only",
+    "productionDatabaseContacted": false
+  },
+  "result": {
+    "status": "passed",
+    "focusedTestsPassed": 26,
+    "typecheckPassed": true,
+    "liveSuitePassed": true
+  },
+  "proved": [
+    "Messaging receipts are immutable and their replay consumption is recorded separately in an append-only table.",
+    "The restricted role has no direct DML on messaging approvals, receipts, invitations, messages, or receipt consumptions.",
+    "An invitation needs two distinct current trusted approvals, a current receipt, exact workspace authority, and an active invited member.",
+    "A contractor channel message needs a current invitation, its consumed dual approvals, and a fresh receipt bound to its exact message ID.",
+    "The disposable PostgreSQL suite denied direct receipt-table writes, rejected invitation replay, and proved one exact invitation and message flow."
+  ],
+  "notProved": [
+    "A production messaging provider, route, UI, or browser accessibility evidence.",
+    "The identity/session-role mapping that distinguishes contractors from every other non-admin membership at the database boundary.",
+    "Production deployment, measured production revocation, independent human review, or release authority."
+  ],
+  "cleanup": {
+    "containerRemoved": true,
+    "port5444ListeningAfterRun": false
+  }
+}

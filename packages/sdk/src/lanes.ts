@@ -4,8 +4,8 @@ import { z } from "zod";
 import type { RequestFn } from "./memory.js";
 
 const LaneDiffSchema = z.object({
-  added: z.array(z.record(z.unknown())),
-  overridden: z.array(z.record(z.unknown())),
+  added: z.array(z.record(z.string(), z.unknown())),
+  overridden: z.array(z.record(z.string(), z.unknown())),
   deleted: z.array(z.string()),
 });
 const LaneOpenParamsSchema = z.object({
@@ -33,7 +33,7 @@ const LaneSnapshotResponseSchema = z.object({
   lane_id: z.string(), branch_id: z.string(), snapshot_id: z.string(),
   snapshot_hash: z.string(), status: z.literal("active"),
 });
-const LaneReviewResponseSchema = z.record(z.unknown());
+const LaneReviewResponseSchema = z.record(z.string(), z.unknown());
 
 export interface LaneDiff {
   added: Array<Record<string, unknown>>;

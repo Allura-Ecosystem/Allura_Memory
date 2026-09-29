@@ -449,6 +449,13 @@ export interface AppliedPrincipalArgs {
 }
 
 /**
+ * Reads that have always refused a principal with no verified workspace
+ * binding, for every auth method. Keep this list as-is unless the refusal is
+ * being widened: narrowing it removes an existing control.
+ */
+const WORKSPACE_REQUIRED_READ_TOOLS: ReadonlySet<string> = new Set(["memory_search", "memory_get", "memory_list"]);
+
+/**
  * Bind the verified principal onto a tool-call argument object.
  *
  * Guarantees, in order:
@@ -485,11 +492,43 @@ export function applyPrincipalToArgs(
   // 2. Tenant.
   const effectiveTenant = resolveEffectiveTenant(principal, source.group_id);
   args.group_id = effectiveTenant;
-   if (principal.workspaceId && toolName !== "memory_add") {
+  // A delegated agent credential with no verified workspace binding holds
+  // nothing. Refusing only the three read tools left every other tool —
+  // including delete, update, export, restore, promote and the audit and
+  // governance readers — running with a tenant-only scope, i.e. tenant-wide
+  // reach granted by the ABSENCE of an assignment rather than by one.
+  // Approved Epic 30 policy (2026-09-28) is that an AI agent holds only
+  // scope it was explicitly assigned, so for `mcp_token` the absence now
+  // denies every tool. `mcp_tokens.workspace_id` is NOT NULL in the schema,
+  // so a genuinely minted agent credential always carries one; only the
+  // optional TypeScript shape allowed it to go missing.
+  //
+  // The three reads keep refusing for EVERY auth method, exactly as before —
+  // narrowing that to `mcp_token` would have removed an existing refusal and
+  // turned an audited deny into an audited allow for shared-token callers.
+  //
+  // The all-tool refusal is scoped to `mcp_token` only because widening it
+  // breaks the AC-10 shared-token compatibility contract, which is a
+  // different contract than the one approved. That leaves a real, recorded
+  // gap: `dev_local` is fenced out of production, but the HTTP shared-token
+  // `service_identity` path is NOT, and such a principal has no workspace
+  // binding while `audit_query_events`, `governance_audit_log` and
+  // `memory_export` filter on `group_id` alone. That is tenant-wide audit
+  // and export reach and it is an open risk for the policy owner, not
+  // something this change closes.
+  if (!principal.workspaceId &&
+      (principal.authMethod === "mcp_token" || WORKSPACE_REQUIRED_READ_TOOLS.has(toolName))) {
+    throw new PrincipalAuthError("CONFIG_MISSING", `Principal '${principal.principalId}' has no verified workspace binding`);
+  }
+  // Keep the workspaceId conjunct: without it a workspace-less principal that
+  // survives the refusal above (the unfenced HTTP shared-token path) would
+  // receive a PRESENT but workspace-less `scope` object where the key was
+  // previously absent. Every consumer today reads `scope?.workspace_id`, so
+  // it is inert — but the next one that writes `if (request.scope)` to mean
+  // "verified scope present" would get a false positive.
+  if (principal.workspaceId && toolName !== "memory_add") {
     args.workspace_id = principal.workspaceId;
     args.scope = Object.freeze({ group_id: effectiveTenant, workspace_id: principal.workspaceId, agent_id: principal.principalId });
-  } else if (!principal.workspaceId && new Set(["memory_search", "memory_get", "memory_list"]).has(toolName)) {
-    throw new PrincipalAuthError("CONFIG_MISSING", `Principal '${principal.principalId}' has no verified workspace binding`);
   }
 
   // 3/4. Actors.

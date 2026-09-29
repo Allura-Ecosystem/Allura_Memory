@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
-import { getPool } from "@/lib/postgres/connection"
-import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
 
 /**
  * GET /api/memory/insights/[id]/history
@@ -23,35 +22,41 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     const { searchParams } = new URL(request.url)
-    const group_id_param = searchParams.get("group_id")
-
-    if (!group_id_param) {
-      return NextResponse.json(
-        { error: "group_id is required. Provide a valid tenant identifier (format: allura-*)" },
-        { status: 400 }
-      )
-    }
-
-    let group_id: string
-    try {
-      group_id = validateGroupId(group_id_param)
-    } catch (error) {
-      if (error instanceof GroupIdValidationError) {
-        return NextResponse.json({ error: `Invalid group_id: ${error.message}` }, { status: 400 })
-      }
-      throw error
+    const group_id = roleCheck.user.groupId
+    const workspace_id = roleCheck.user.workspaceId
+    if (!workspace_id) return unauthorizedResponse("Authenticated workspace scope is required")
+    if (
+      (searchParams.has("group_id") && searchParams.get("group_id") !== group_id) ||
+      (searchParams.has("workspace_id") && searchParams.get("workspace_id") !== workspace_id)
+    ) {
+      return NextResponse.json({ error: "Forged memory scope is forbidden" }, { status: 403 })
     }
 
     // Query version history from PostgreSQL (graph_memories + graph_supersedes)
-    const pool = getPool()
-    const result = await pool.query(
-      `SELECT m.id, m.group_id, m.content, m.score, m.version, m.created_at,
+    const result = await withWorkspaceTransaction(
+      { tenantId: group_id, workspaceId: workspace_id, principalId: roleCheck.user.id },
+      (db) =>
+        db.query(
+          `WITH RECURSIVE lineage(id) AS (
+         VALUES ($1::text)
+         UNION
+         SELECT s.superseded_id
+         FROM graph_supersedes s
+         JOIN lineage l ON s.newer_id = l.id
+         WHERE s.group_id = $2 AND s.workspace_id = $3
+           AND s.workspace_scope_state = 'workspace_scoped'
+       )
+       SELECT m.id, m.group_id, m.content, m.score, m.version, m.created_at,
               m.provenance, m.user_id, m.deprecated
        FROM graph_memories m
-       WHERE m.id = $1
-         AND (m.group_id = $2 OR m.group_id = 'global')
+       JOIN lineage l ON l.id = m.id
+       WHERE true
+         AND m.group_id = $2
+         AND m.workspace_id = $3
+         AND m.workspace_scope_state = 'workspace_scoped'
        ORDER BY m.version DESC`,
-      [id, group_id]
+          [id, group_id, workspace_id]
+        )
     )
 
     const history = result.rows.map((row: Record<string, unknown>) => ({
@@ -62,11 +67,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       created_at: row.created_at,
       status: row.deprecated ? "deprecated" : "active",
       provenance: row.provenance,
+      user_id: row.user_id,
     }))
 
     return NextResponse.json({ history })
   } catch (error) {
-    console.error("Failed to fetch insight history:", error)
+    console.error("Failed to fetch insight history")
     return NextResponse.json({ error: "Failed to fetch insight history" }, { status: 500 })
   }
 }

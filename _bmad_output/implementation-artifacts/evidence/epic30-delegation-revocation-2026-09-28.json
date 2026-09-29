@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "epic": "30",
+  "story": "30.5",
+  "recordedAt": "2026-09-28",
+  "baseCommit": "5f0793e9b06a0906ac74a64e1d3afdb9735fd9b3",
+  "command": "bash scripts/ci/run-epic30-live-tests.sh",
+  "runnerEnvironment": {
+    "POSTGRES_HOST": "127.0.0.1",
+    "POSTGRES_PORT": "5444",
+    "POSTGRES_POOL_MAX": "1 (pinned by scripts/ci/run-epic30-live-tests.sh as of 2026-09-28; the original run recorded this value although the runner did not yet set it, so the single-connection guarantee was incidental rather than structural)",
+    "ALLURA_MCP_TOKEN_SECRET": "test-only secret. Supplied out of band for the original run; the runner now generates a per-run throwaway value, so the recorded command is self-contained. Value never persisted.",
+    "productionDatabaseContacted": false
+  },
+  "database": {
+    "image": "pgvector/pgvector:pg16",
+    "containerName": "allura-epic30-troy-dev-pg",
+    "host": "127.0.0.1",
+    "port": 5444,
+    "storage": "container tmpfs only (no mounted volumes, no replication)",
+    "isolationVerifiedBeforeWrite": true,
+    "productionDatabaseContacted": false
+  },
+  "result": {
+    "status": "passed",
+    "testsPassed": 35,
+    "testsFailed": 0,
+    "preexistingTestsPassed": 33,
+    "newTestsPassed": 2,
+    "measuredDelegationRevocation": {
+      "reusedPooledConnection": {
+        "denied": true,
+        "backendPidStable": true,
+        "elapsedMs": 2.04
+      },
+      "freshPooledConnection": {
+        "denied": true,
+        "backendPidChanged": true,
+        "elapsedMs": 12.62
+      },
+      "ordinaryReadBoundMs": 60000
+    }
+  },
+  "postRemediationRerun": {
+    "command": "bun vitest run --config vitest.config.epic30-live.ts src/__tests__/epic30-delegation-revocation.e2e.test.ts",
+    "testsPassed": 2,
+    "testsFailed": 0,
+    "measured": {
+      "reusedElapsedMs": 2.87,
+      "freshElapsedMs": 14.72
+    },
+    "notes": "Run after independent-review remediation (import order, unused variable, suite description). Same injected test-only runner environment; isolated 5444 only; production 5432 never contacted."
+  },
+  "proved": [
+    "a revoked delegation credential (real mcp_tokens row minted through the production createToken repository) is denied by the production validateToken path on the same reused pooled connection, with backend-PID equality proving reuse",
+    "the same revoked credential is denied on a freshly created pooled connection, with backend-PID inequality proving freshness",
+    "both denials use the production revokeToken command and complete within the 60-second ordinary-read bound",
+    "the validateToken credential path performs no in-process caching: it re-reads the mcp_tokens row on every call, so denial is immediate on the next validation attempt (measured 2.04ms reused / 12.62ms fresh including pool re-creation)"
+  ],
+  "scopeAccuracy": {
+    "tokenPathWorkspaceTransactionBound": false,
+    "explanation": "The delegation-credential validation path (validateToken -> findByPrefix -> hash verify -> revoked check) resolves principals per request through the credential-lookup pool BEFORE any tool runs; it is not executed inside the restricted workspace transaction. mcp_tokens RLS applies to allura_app; the gateway's credential-lookup role in production is the owner-backed pool. This proves revocation denial on a reused credential-validation pooled connection, not inside a restricted workspace transaction. The restricted read path for documents (proved pooled-revoked in the 2026-09-25 evidence) and this credential-validation path are distinct real paths; both are now timed-verified, on their respective real paths.",
+    "transportSessionTeardownProved": false,
+    "transportSessionTeardownExplanation": "The streamable-HTTP MCP gateway session lifecycle (mcp-session-id -> transport map) was not exercised; only the token validation path was tested.",
+    "gatewayCredentialCacheExercised": false,
+    "gatewayCredentialCacheExplanation": "Correction recorded 2026-09-28. The canonical MCP HTTP gateway does not authenticate through validateToken; it uses HttpAuthenticator.authenticateMcpToken, which has a configurable non-device credential cache (ALLURA_MCP_AUTH_CACHE_TTL_MS, default 0, maximum 60000 ms) with a paired-device bypass. The credential minted here has no paired_device_id, so it is in the cacheable class. That path was NOT exercised: with a non-zero configured TTL, non-device revocation on the gateway may lag by up to the configured TTL. The earlier wording 'no authorization cache exists on the validation path' overstated the tested scope and has been narrowed."
+  },
+  "notProved": [
+    "session revocation authority and timing: no server-owned revocable session registry and no session predicate in the authority SQL exist, and no live-measured revocation timing exists. A provider-delegated Clerk enforcement candidate landed at b13375550 and was corrected on 2026-09-28; it is unapproved and unmeasured against a real tenant. Earlier wording claimed no revoke command exists at all, which was wrong: revokeToken, revokeDeviceTokensForMembershipChange and revokeDeviceTokensForWorkspaceLockChange are real SQL-backed commands. Blocked by the 30.3 authorization-policy-approval human gate.",
+    "already-open stream termination within five seconds",
+    "paired-device delegation revocation via revokeDeviceTokensForMembershipChange (separate live lane exists)",
+    "production database behavior"
+  ],
+  "redReceipt": {
+    "command": "bun vitest run --config vitest.config.epic30-live.ts src/__tests__/epic30-delegation-revocation.e2e.test.ts (before pool rebinding fix)",
+    "result": "2 failed - relation \"mcp_tokens\" does not exist (validation pool initially bound to the unprovisioned bootstrap database)"
+  },
+  "cleanup": {
+    "perRunSyntheticDatabasesDropped": true,
+    "production5432Touched": false,
+    "port5444ListeningAfterRun": false,
+    "containerProvenance": "allura-epic30-troy-dev-pg was operator-provided out of band and has no definition in the repository, so that run was not reproducible from the repository alone. The 2026-09-28 re-proof used allura-epic30-verify-20260928, provisioned and removed within the session; see epic30-state-truthfulness-and-ci-integrity-2026-09-28.json."
+  },
+  "reproofAt20260928": {
+    "command": "bun run test:epic30-live",
+    "head": "b13375550506426ea73013cc8b1a9be9b01fb236 plus the uncommitted state-truthfulness and CI-integrity remediation",
+    "testsPassed": 35,
+    "testsFailed": 0,
+    "measured": {
+      "reusedElapsedMs": 2.19,
+      "reusedBackendPid": 236,
+      "freshElapsedMs": 8.94,
+      "backendPidTransition": [
+        237,
+        238
+      ]
+    },
+    "note": "Run with POSTGRES_POOL_MAX=1 actually pinned by the runner and asserted by the test, so the reused-connection claim is now structural."
+  }
+}

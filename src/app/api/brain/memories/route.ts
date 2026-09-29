@@ -1,9 +1,10 @@
 /**
- * GET /api/brain/memories — list governed memories for the caller's tenant.
+ * GET /api/brain/memories — quarantined legacy content route.
  *
- * Story 24.11a AC-4. This route returns real memory content and previously ran
- * with no authentication and a hardcoded tenant. It now requires an
- * authenticated principal and derives group_id from that principal only.
+ * Tenant-only and client-selected user filters cannot prove Epic 30 workspace,
+ * visibility, derivative, or required-receipt authority. Production discloses
+ * no content; the exact disposable synthetic target can exercise the shared
+ * receipt-gated reader without enabling the production route.
  *
  * Declared in ROUTE_SCOPE_MANIFEST as brain:memories:read (viewer).
  */
@@ -11,33 +12,49 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { withPermission } from "@/lib/auth/api-auth"
-import { brainClient } from "@/lib/brain-client"
+import { getDashboardPrincipal } from "@/lib/auth/dashboard-principal"
+import { assertSyntheticTarget, isSyntheticScope } from "@/lib/digital-brain/local-confinement"
+import { readAuthorizedDocuments, readAuthorizedDocumentsPage } from "@/lib/digital-brain/read-service"
 
 export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const auth = await withPermission(request, "memory:read", "viewer")
   if (auth instanceof NextResponse) return auth
-  const { user, groupId } = auth
-
-  const { searchParams } = new URL(request.url)
-  // Tenant authority is server-derived (groupId above). user_id is a filter
-  // *within* that tenant, and defaults to the calling principal rather than to
-  // a hardcoded account.
-  const userId = searchParams.get("user_id") ?? user.id
-  const limit = Number(searchParams.get("limit")) || 50
-  const offset = Number(searchParams.get("offset")) || 0
-  const sort = searchParams.get("sort") ?? "created_at_desc"
-
   try {
-    const result = await brainClient.listMemories(groupId, userId, {
-      limit,
-      offset,
-      sort,
-    })
-    return NextResponse.json(result)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Brain list failed"
-    return NextResponse.json({ error: message, memories: [], total: 0 }, { status: 502 })
+    // Keep the production content route quarantined pending approved policy.
+    assertSyntheticTarget()
+    const principal = await getDashboardPrincipal()
+    if (!principal?.sessionId || !principal.workspaceId || !principal.groupId ||
+        principal.id !== auth.user.id || principal.groupId !== auth.groupId) {
+      throw new Error("Synthetic list authority refused")
+    }
+    const scope = { tenantId: principal.groupId, workspaceId: principal.workspaceId, principalId: principal.id }
+    if (!isSyntheticScope(scope)) throw new Error("Synthetic list scope refused")
+    const cursor = request.nextUrl.searchParams.get("cursor") ?? undefined
+    const limit = request.nextUrl.searchParams.get("limit")
+    if (cursor !== undefined || limit !== null) {
+      const page = await readAuthorizedDocumentsPage(scope, {
+        cursor,
+        pageSize: limit === null ? undefined : Number(limit),
+      })
+      return NextResponse.json({ memories: page.documents.map((document) => ({
+        id: document.id, title: document.title, content: document.content,
+        updated_at: document.updatedAt.toISOString(),
+      })), total: page.documents.length, has_more: page.hasMore, next_cursor: page.nextCursor },
+      { headers: { "Cache-Control": "no-store" } })
+    }
+    const documents = await readAuthorizedDocuments(scope)
+    return NextResponse.json({ memories: documents.map((document) => ({
+      id: document.id, title: document.title, content: document.content,
+      updated_at: document.updatedAt.toISOString(),
+    })), total: documents.length, has_more: false },
+    { headers: { "Cache-Control": "no-store" } })
+  } catch {
+    // No scope, content, session, or backend error detail crosses the boundary.
   }
+  return NextResponse.json(
+    { error: "Protected Brain read unavailable", memories: [], total: 0, has_more: false },
+    { status: 503, headers: { "Cache-Control": "no-store" } },
+  )
 }

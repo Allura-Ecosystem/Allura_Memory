@@ -3,7 +3,7 @@
  *
  * Reads `.opencode/config/group-id-registry.yaml` and exposes:
  *   - getDefaultGroupId(agentId): string
- *   - getAllowedGroupIds(agentId): string[]
+ *   - getAgentAllowedGroupIds(agentId): string[]  (empty = DENY)
  *
  * Validates every group_id in the registry against ^allura-[a-z0-9-]+$ at load
  * time. Fails closed (throws) on invalid format.
@@ -134,22 +134,53 @@ export function reloadRegistry(registryPath: string = REGISTRY_PATH): GroupIdReg
 
 /**
  * Get the default group_id for an agent.
- * Returns the fallback (allura-system) if the agent is not in the registry.
+ *
+ * Throws when the agent has no explicit assignment. Approved Epic 30 policy
+ * (2026-09-28) is that an AI agent holds only scope it was explicitly
+ * assigned, so there is no correct default to return for an unassigned
+ * agent — inventing one is the automatic access the policy forbids.
  */
+/**
+ * Raised when an agent has no explicit tenant assignment. Typed so that
+ * callers and tests match on the class rather than on message text: a reword
+ * must not silently disable an access-control assertion.
+ */
+export class AgentAssignmentMissingError extends Error {
+  constructor(readonly agentId: string) {
+    super(`[group-id-registry] Agent '${agentId}' has no explicit tenant assignment; refusing to invent one`);
+    this.name = "AgentAssignmentMissingError";
+  }
+}
+
 export function getDefaultGroupId(agentId: string, registryPath?: string): string {
   const registry = loadRegistry(registryPath ?? REGISTRY_PATH);
   const entry = registry.agents.find((a) => a.id === agentId);
-  return entry?.default_group_id ?? registry.fallback_group_id;
+  if (!entry) {
+    throw new AgentAssignmentMissingError(agentId);
+  }
+  return entry.default_group_id;
 }
 
 /**
  * Get all allowed group_ids for an agent.
- * Returns [fallback] if the agent is not in the registry.
+ *
+ * Returns an empty list when the agent has no explicit assignment. This is
+ * the fail-closed direction required by the approved policy: an agent nobody
+ * assigned holds nothing, and removing an agent from the registry terminates
+ * its access rather than downgrading it to a default tenant.
+ *
+ * `fallback_group_id` is retained for registry-shape compatibility and is
+ * deliberately NOT consulted here — it is not an access grant.
+ *
+ * Named `getAgentAllowedGroupIds`, not `getAllowedGroupIds`, because
+ * `src/lib/workspace/boundary.ts` exports a same-named function whose empty
+ * array means ALLOW-ANY. Here an empty array means DENY. Mixing them up
+ * would invert an access decision, so the names must not collide.
  */
-export function getAllowedGroupIds(agentId: string, registryPath?: string): string[] {
+export function getAgentAllowedGroupIds(agentId: string, registryPath?: string): string[] {
   const registry = loadRegistry(registryPath ?? REGISTRY_PATH);
   const entry = registry.agents.find((a) => a.id === agentId);
-  if (!entry) return [registry.fallback_group_id];
+  if (!entry) return [];
   return [...entry.allowed_group_ids];
 }
 
@@ -161,7 +192,7 @@ export function isAgentAllowedGroupId(
   groupId: string,
   registryPath?: string
 ): boolean {
-  return getAllowedGroupIds(agentId, registryPath).includes(groupId);
+  return getAgentAllowedGroupIds(agentId, registryPath).includes(groupId);
 }
 
 /**

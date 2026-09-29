@@ -1,173 +1,147 @@
 /**
  * ControlPlane-backed Trace API
- * 
+ *
  * Replaces the direct PostgreSQL implementation with RuVix controlPlane syscalls.
  * All trace operations now flow through the controlPlane for proof-gated mutation.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { forbiddenResponse, requireRole, unauthorizedResponse } from '@/lib/auth/api-auth';
-import { logTrace, TraceLog } from '@/lib/postgres/trace-logger';
-import { GroupIdValidationError, validateGroupId } from '@/lib/validation/group-id';
+import { NextRequest, NextResponse } from "next/server"
+import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
+import { logTrace, TraceLog } from "@/lib/postgres/trace-logger"
+
+const TRACE_TYPES = ["contribution", "decision", "learning", "error"] as const
 
 /**
  * GET /api/memory/traces
- * 
+ *
  * Query traces with group_id enforcement.
  * Query params:
  * - group_id: Required tenant identifier (format: allura-*)
  * - limit: Max number of traces (default: 50)
  * - offset: Pagination offset (default: 0)
- * - type: Trace type filter (memory | decision | action | prompt)
+ * - type: Trace type filter (contribution | decision | learning | error)
  */
 export async function GET(request: NextRequest) {
   // Auth: require viewer or above role
-  const roleCheck = requireRole(request, "viewer");
+  const roleCheck = requireRole(request, "viewer")
   if (!roleCheck.user) {
-    return unauthorizedResponse();
+    return unauthorizedResponse()
   }
   if (!roleCheck.allowed) {
-    return forbiddenResponse(roleCheck);
+    return forbiddenResponse(roleCheck)
   }
 
   try {
-    const { searchParams } = new URL(request.url);
-    const group_id_param = searchParams.get('group_id');
-    
-    // Validate group_id is provided
-    if (!group_id_param) {
-      return NextResponse.json(
-        { error: 'group_id is required. Provide a valid tenant identifier (format: allura-*)' },
-        { status: 400 }
-      );
+    const { searchParams } = new URL(request.url)
+    const group_id = roleCheck.user.groupId
+    const workspace_id = roleCheck.user.workspaceId
+    if (!workspace_id) return unauthorizedResponse("Authenticated workspace scope is required")
+    if (
+      (searchParams.has("group_id") && searchParams.get("group_id") !== group_id) ||
+      (searchParams.has("workspace_id") && searchParams.get("workspace_id") !== workspace_id)
+    ) {
+      return NextResponse.json({ error: "Forged memory scope is forbidden" }, { status: 403 })
     }
-    
-    // Validate group_id format
-    let group_id: string;
-    try {
-      group_id = validateGroupId(group_id_param);
-    } catch (error) {
-      if (error instanceof GroupIdValidationError) {
-        return NextResponse.json(
-          { error: `Invalid group_id: ${error.message}` },
-          { status: 400 }
-        );
-      }
-      throw error;
-    }
-    
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
-    const type = searchParams.get('type');
 
-    // TEMP: Still using direct query for GET (controlPlane-backed query not implemented)
-    // TODO: Add controlPlane-backed query syscall
-    const { queryTraces } = await import('@/lib/postgres/traces');
-    const traces = await queryTraces({
+    const limit = parseInt(searchParams.get("limit") || "50")
+    const offset = parseInt(searchParams.get("offset") || "0")
+    const type = searchParams.get("type")
+    if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
+      return NextResponse.json({ error: "limit must be an integer between 1 and 200" }, { status: 400 })
+    }
+    if (!Number.isInteger(offset) || offset < 0) {
+      return NextResponse.json({ error: "offset must be a non-negative integer" }, { status: 400 })
+    }
+    if (type !== null && !TRACE_TYPES.includes(type as (typeof TRACE_TYPES)[number])) {
+      return NextResponse.json({ error: `type must be one of: ${TRACE_TYPES.join(", ")}` }, { status: 400 })
+    }
+
+    const { queryWorkspaceTraces } = await import("@/lib/postgres/traces")
+    const traces = await queryWorkspaceTraces({
       group_id,
+      workspace_id,
+      principal_id: roleCheck.user.id,
       limit,
       offset,
-      type: type as 'memory' | 'decision' | 'action' | 'prompt' | undefined
-    });
+      type: type || undefined,
+    })
 
-    return NextResponse.json({ traces });
+    return NextResponse.json({ traces })
   } catch (error) {
-    console.error('Failed to fetch traces:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch traces' },
-      { status: 500 }
-    );
+    console.error("Failed to fetch traces")
+    return NextResponse.json({ error: "Failed to fetch traces" }, { status: 500 })
   }
 }
 
 /**
  * POST /api/memory/traces
- * 
+ *
  * Log a trace with RuVix controlPlane proof-gated mutation.
  * Body:
  * - group_id: Required tenant identifier (format: allura-*)
- * - type: Trace type (memory | decision | action | prompt)
+ * - type: Trace type (contribution | decision | learning | error)
  * - content: Trace content (required)
  * - agent: Agent identifier (default: 'api')
  * - metadata: Optional metadata object
  * - confidence: Confidence score (0.0-1.0, default: 0.5)
  */
 export async function POST(request: NextRequest) {
-  // Auth: require viewer or above role (trace creation is a write but still viewer-level)
-  const roleCheck = requireRole(request, "viewer");
+  const roleCheck = requireRole(request, "curator")
   if (!roleCheck.user) {
-    return unauthorizedResponse();
+    return unauthorizedResponse()
   }
   if (!roleCheck.allowed) {
-    return forbiddenResponse(roleCheck);
+    return forbiddenResponse(roleCheck)
   }
 
   try {
-    const body = await request.json();
-    const { group_id, type, content, agent, metadata, confidence = 0.5 } = body;
-
-    // Validate group_id is provided
-    if (!group_id) {
-      return NextResponse.json(
-        { error: 'group_id is required. Provide a valid tenant identifier (format: allura-*)' },
-        { status: 400 }
-      );
+    const body = await request.json()
+    const { type = "contribution", content, metadata, confidence = 0.5 } = body
+    const validatedGroupId = roleCheck.user.groupId
+    const workspace_id = roleCheck.user.workspaceId
+    if (!workspace_id) return unauthorizedResponse("Authenticated workspace scope is required")
+    if (
+      (body.group_id !== undefined && body.group_id !== validatedGroupId) ||
+      (body.workspace_id !== undefined && body.workspace_id !== workspace_id)
+    ) {
+      return NextResponse.json({ error: "Forged memory scope is forbidden" }, { status: 403 })
     }
 
-    // Validate group_id format
-    let validatedGroupId: string;
-    try {
-      validatedGroupId = validateGroupId(group_id);
-    } catch (error) {
-      if (error instanceof GroupIdValidationError) {
-        return NextResponse.json(
-          { error: `Invalid group_id: ${error.message}` },
-          { status: 400 }
-        );
-      }
-      throw error;
+    if (typeof content !== "string" || !content.trim()) {
+      return NextResponse.json({ error: "content is required" }, { status: 400 })
     }
-
-    if (!content) {
-      return NextResponse.json(
-        { error: 'content is required' },
-        { status: 400 }
-      );
+    if (!TRACE_TYPES.includes(type)) {
+      return NextResponse.json({ error: `type must be one of: ${TRACE_TYPES.join(", ")}` }, { status: 400 })
+    }
+    if (typeof confidence !== "number" || !Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
+      return NextResponse.json({ error: "confidence must be between 0 and 1" }, { status: 400 })
     }
 
     // Build controlPlane-backed trace log
     const traceLog: TraceLog = {
-      agent_id: agent || 'api',
+      agent_id: roleCheck.user.id,
       group_id: validatedGroupId,
-      trace_type: type || 'memory',
+      workspace_id,
+      session_id: roleCheck.user.sessionId,
+      trace_type: type,
       content,
       confidence,
-      metadata: metadata || {},
-    };
+      metadata: metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {},
+    }
 
     // Log through controlPlane (proof-gated)
-    const trace = await logTrace(traceLog);
+    const trace = await logTrace(traceLog)
 
-    return NextResponse.json({ success: true, trace });
+    return NextResponse.json({ success: true, trace })
   } catch (error) {
-    console.error('Failed to log trace via controlPlane:', error);
-    
+    console.error("Failed to log trace via controlPlane")
+
     // Check if it's a controlPlane initialization error
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    if (errorMessage.includes('RUVIX_CONTROL_PLANE_SECRET') || errorMessage.includes('controlPlane')) {
-      return NextResponse.json(
-        { 
-          error: 'ControlPlane not initialized', 
-          details: 'RUVIX_CONTROL_PLANE_SECRET environment variable must be set',
-          hint: 'Add RUVIX_CONTROL_PLANE_SECRET to your .env.local file'
-        },
-        { status: 503 }
-      );
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    if (errorMessage.includes("RUVIX_CONTROL_PLANE_SECRET") || errorMessage.includes("controlPlane")) {
+      return NextResponse.json({ error: "Trace service unavailable" }, { status: 503 })
     }
-    
-    return NextResponse.json(
-      { error: 'Failed to log trace', details: errorMessage },
-      { status: 500 }
-    );
+
+    return NextResponse.json({ error: "Failed to log trace" }, { status: 500 })
   }
 }

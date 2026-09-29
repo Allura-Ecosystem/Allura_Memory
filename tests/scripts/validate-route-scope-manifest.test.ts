@@ -86,6 +86,10 @@ describe("derivePathname", () => {
     );
   });
 
+  it("maps the root page file to the root pathname", () => {
+    expect(derivePathname("page.tsx")).toBe("/");
+  });
+
   it("maps a catch-all segment to the manifest's :path* syntax", () => {
     expect(derivePathname(path.join("api", "proxy", "[...slug]", "route.ts"))).toBe(
       "/api/proxy/:path*",

@@ -9,11 +9,12 @@
  */
 
 import type { Pool } from "pg"
+import { createHash } from "crypto"
 import { RuVixControlPlane } from "@/control-plane/ruvix"
 import { canonicalizeAgentId } from "@/lib/agents/canonical-identity"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import { getPool } from "./connection"
-import { type EventInsert, type EventRecord, insertEvent } from "./queries/insert-trace"
+import { type EventInsert, type EventRecord, insertEvent, insertWorkspaceEvent } from "./queries/insert-trace"
 import type { QueryTracesOptions, QueryTracesResult } from "./types"
 
 // Re-export types for backward compatibility
@@ -34,6 +35,8 @@ export interface TraceLog {
   group_id: string
   /** Workspace authority for workspace-scoped event writes. */
   workspace_id?: string
+  /** Session authority; persisted only as a one-way hash in the receipt. */
+  session_id?: string
   /** Required: Trace classification */
   trace_type: TraceType
   /** Required: Trace content - what happened */
@@ -173,6 +176,19 @@ export async function logTrace(trace: TraceLog): Promise<TraceRecord> {
     },
   }
 
+  const sessionHash = canonicalTrace.session_id
+    ? createHash("sha256").update(canonicalTrace.session_id).digest("hex")
+    : null
+  const payloadHash = createHash("sha256")
+    .update(JSON.stringify({
+      group_id: canonicalTrace.group_id,
+      workspace_id: canonicalTrace.workspace_id ?? null,
+      session_hash: sessionHash,
+      actor: canonicalTrace.agent_id,
+      trace: traceData,
+    }))
+    .digest("hex")
+
   // Call controlPlane trace syscall with proof-of-intent
   const result = await RuVixControlPlane.syscall("trace", traceData, {
     actor: canonicalTrace.agent_id,
@@ -180,7 +196,9 @@ export async function logTrace(trace: TraceLog): Promise<TraceRecord> {
     permission_tier: "plugin",
     audit_context: {
       trace_type: canonicalTrace.trace_type,
-      content_preview: canonicalTrace.content.slice(0, 100), // First 100 chars for audit
+      workspace_id: canonicalTrace.workspace_id ?? null,
+      session_hash: sessionHash,
+      payload_hash: payloadHash,
     },
   })
 
@@ -198,6 +216,18 @@ export async function logTrace(trace: TraceLog): Promise<TraceRecord> {
     logged_at: new Date().toISOString(),
     agent_version: "1.0.0",
     control_plane_audit_id: result.auditId, // Track controlPlane audit ID
+    authority_receipt: {
+      version: 1,
+      group_id: canonicalTrace.group_id,
+      workspace_id: canonicalTrace.workspace_id ?? null,
+      session_hash: sessionHash,
+      actor_id: canonicalTrace.agent_id,
+      payload_hash: payloadHash,
+      proof_signature_hash: result.proof?.signature
+        ? createHash("sha256").update(result.proof.signature).digest("hex")
+        : null,
+      audit_id: result.auditId ?? null,
+    },
   }
 
   // Build outcome with content
@@ -222,7 +252,13 @@ export async function logTrace(trace: TraceLog): Promise<TraceRecord> {
   }
 
   // Insert into PostgreSQL
-  const eventRecord = await insertEvent(eventInsert)
+  const eventRecord = canonicalTrace.workspace_id
+    ? await insertWorkspaceEvent({
+        ...eventInsert,
+        workspace_id: canonicalTrace.workspace_id,
+        principal_id: canonicalTrace.agent_id,
+      })
+    : await insertEvent(eventInsert)
 
   // Return mapped trace record
   return {

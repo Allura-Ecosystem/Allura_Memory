@@ -49,6 +49,7 @@ const DEFAULT_POOL_CONFIG: PoolConfig = {
 // application role so workspace-governed writes cannot fall back to owner credentials.
 let ownerPoolInstance: Pool | null = null;
 let appPoolInstance: Pool | null = null;
+let epic30ReceiptPoolInstance: Pool | null = null;
 
 /**
  * Get connection configuration from environment variables
@@ -138,6 +139,30 @@ export function getAppPool(): Pool {
   return appPoolInstance;
 }
 
+/** Disposable Epic 30 only: a separate INSERT-only receipt role, never the reader or owner. */
+export function getEpic30ReceiptPool(): Pool {
+  const run = env.ALLURA_EPIC30_RUN_ID ?? "";
+  const user = env.POSTGRES_RECEIPT_USER ?? "";
+  const password = env.POSTGRES_RECEIPT_PASSWORD ?? "";
+  if (env.NODE_ENV === "production" || env.ALLURA_EPIC30_LOCAL_DB !== "enabled" ||
+      !/^[a-f0-9]{32}$/.test(run) || env.POSTGRES_HOST !== "127.0.0.1" ||
+      env.POSTGRES_PORT !== "5444" || env.POSTGRES_DB !== `allura_epic30_read_${run}` ||
+      user !== `allura_epic30_receipt_${run}` || !password || env.POSTGRES_RECEIPT_OPTIONS) {
+    throw new Error("Synthetic receipt writer configuration refused");
+  }
+  if (!epic30ReceiptPoolInstance) {
+    epic30ReceiptPoolInstance = new Pool({
+      host: "127.0.0.1", port: 5444, database: `allura_epic30_read_${run}`,
+      user, password, connectionTimeoutMillis: DEFAULT_POOL_CONFIG.connectionTimeoutMillis,
+      idleTimeoutMillis: DEFAULT_POOL_CONFIG.idleTimeoutMillis, max: DEFAULT_POOL_CONFIG.maxConnections,
+    });
+    epic30ReceiptPoolInstance.on("error", (err: Error) => {
+      console.error("[Epic30 Receipt Pool] Unexpected idle-client error:", err.message);
+    });
+  }
+  return epic30ReceiptPoolInstance;
+}
+
 /**
  * Legacy/default runtime pool. Preserve the repository-wide owner-backed
  * behavior; workspace-governed boundaries must opt into getAppPool() through
@@ -152,11 +177,12 @@ export function getPool(): Pool {
  * Call this during graceful shutdown
  */
 export async function closePool(): Promise<void> {
-  const pools = [ownerPoolInstance, appPoolInstance].filter((pool): pool is Pool => pool !== null);
+  const pools = [ownerPoolInstance, appPoolInstance, epic30ReceiptPoolInstance].filter((pool): pool is Pool => pool !== null);
   // Clear both references before awaiting cleanup so a shutdown failure cannot
   // leave a closed/rejected singleton available to the next caller.
   ownerPoolInstance = null;
   appPoolInstance = null;
+  epic30ReceiptPoolInstance = null;
 
   const results = await Promise.allSettled(pools.map((pool) => pool.end()));
   const failed = results.find((result): result is PromiseRejectedResult => result.status === "rejected");

@@ -4,23 +4,23 @@
  * Verifies:
  * - Valid registry loads and returns correct defaults
  * - Invalid group_id format is rejected (fail closed)
- * - Missing agent returns allura-system fallback
+ * - Missing agent is denied (no fallback grant) — Epic 30 policy, 2026-09-28
  * - Cross-tenant agent returns all allowed tenants
  * - isAgentAllowedGroupId enforces tenant boundaries
  */
 
 import { describe, expect, it } from "vitest";
-import { writeFileSync, mkdtempSync } from "fs";
+import { stringify as stringifyYaml } from "yaml";
+import { mkdtempSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { stringify as stringifyYaml } from "yaml";
 
 import {
+  getAgentAllowedGroupIds,
+  getDefaultGroupId,
+  isAgentAllowedGroupId,
   loadRegistry,
   reloadRegistry,
-  getDefaultGroupId,
-  getAllowedGroupIds,
-  isAgentAllowedGroupId,
 } from "@/lib/config/group-id-registry";
 
 // Helper: write a YAML registry to a temp file
@@ -88,7 +88,10 @@ describe("Story 20.1 — Group ID Registry", () => {
     expect(() => loadRegistry(registryPath)).toThrow(/Invalid group_id/);
   });
 
-  it("AC-5: missing agent returns allura-system fallback", () => {
+  // Superseded 2026-09-28 by approved Epic 30 policy: an AI agent holds only
+  // scope it was explicitly assigned, so an unlisted agent gets nothing rather
+  // than the registry fallback. The fallback is no longer an access grant.
+  it("AC-5: missing agent is denied, not given the fallback tenant", () => {
     const registryPath = writeTempRegistry({
       agents: [
         {
@@ -101,10 +104,10 @@ describe("Story 20.1 — Group ID Registry", () => {
     });
 
     loadRegistry(registryPath);
-    expect(getDefaultGroupId("nonexistent-agent", registryPath)).toBe("allura-system");
-    expect(getAllowedGroupIds("nonexistent-agent", registryPath)).toEqual([
-      "allura-system",
-    ]);
+    expect(() => getDefaultGroupId("nonexistent-agent", registryPath)).toThrow(
+      /no explicit tenant assignment/i,
+    );
+    expect(getAgentAllowedGroupIds("nonexistent-agent", registryPath)).toEqual([]);
   });
 
   it("AC-5: cross-tenant agent returns all allowed tenants", () => {
@@ -125,7 +128,7 @@ describe("Story 20.1 — Group ID Registry", () => {
     });
 
     loadRegistry(registryPath);
-    const allowed = getAllowedGroupIds("gilliam", registryPath);
+    const allowed = getAgentAllowedGroupIds("gilliam", registryPath);
     expect(allowed).toHaveLength(4);
     expect(allowed).toContain("allura-system");
     expect(allowed).toContain("allura-faithmeats");
@@ -154,7 +157,7 @@ describe("Story 20.1 — Group ID Registry", () => {
     expect(getDefaultGroupId("nonprofit-organizer", registryPath)).toBe(
       "allura-difference-driven"
     );
-    expect(getAllowedGroupIds("nonprofit-organizer", registryPath)).toEqual([
+    expect(getAgentAllowedGroupIds("nonprofit-organizer", registryPath)).toEqual([
       "allura-difference-driven",
     ]);
     expect(

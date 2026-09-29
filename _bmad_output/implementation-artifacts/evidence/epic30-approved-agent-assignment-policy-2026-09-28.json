@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "epic": "30",
+  "stories": [
+    "30.3",
+    "30.5"
+  ],
+  "recordedAt": "2026-09-28",
+  "baseCommit": "dbcff18cecdb3e2648c30a404a19cda90bc7d3b4",
+  "approval": {
+    "approver": "Sabir Asheed",
+    "role": "administrator / approver on the recorded Epic 30 roster",
+    "channel": "relayed in session and recorded here; no external system was contacted",
+    "kind": "policy_input",
+    "approved": [
+      "the recommended policy package",
+      "current design for testing",
+      "strict zero-retention and zero-training AI privacy",
+      "limited contractor messaging",
+      "five-person user and accessibility testing",
+      "full release gates",
+      "keeping Epic 30 open until evidence is complete"
+    ],
+    "corrections": [
+      "Faith Meats founders Sabir Asheed, Gabriel Cohen and Samuel Montgomery may access all Faith Meats projects.",
+      "Every other human may access only projects they are explicitly added to.",
+      "Allura and every other AI agent MUST NOT have automatic cross-project access, must be explicitly assigned project by project with least privilege, and removal terminates access."
+    ],
+    "explicitlyNotEvidenceOf": [
+      "human test execution",
+      "external or independent security and data reviews",
+      "provider no-retention/no-training contracts",
+      "hosted branch protection configuration",
+      "deployment",
+      "release"
+    ]
+  },
+  "implemented": [
+    {
+      "rule": "An AI agent holds only explicitly assigned scope; removal terminates access.",
+      "file": "src/lib/config/group-id-registry.ts",
+      "before": "getAllowedGroupIds returned [fallback_group_id] for an agent absent from the registry and getDefaultGroupId returned the fallback, so any unlisted agent silently held allura-system. isAgentAllowedGroupId therefore returned true for the fallback tenant.",
+      "after": "An unlisted agent gets an empty allowlist, every isAgentAllowedGroupId check is false, and getDefaultGroupId refuses rather than inventing a tenant. fallback_group_id is retained for registry-shape compatibility and is no longer consulted as a grant.",
+      "red": "4 failed / 3 passed in the registry describe block of src/__tests__/epic30-agent-explicit-assignment.test.ts — exactly the default-allow paths. (An earlier draft of this receipt said 4/2; the shipped block has 7 tests.)",
+      "green": "20/20 in src/__tests__/epic30-agent-explicit-assignment.test.ts.",
+      "productionConsumer": "NONE. Correction recorded after independent review: the registry module's only importers are three test files. No route, MCP tool, middleware, script or plugin consults it for an access decision, so this is latent-API hardening rather than an enforced control, and the previous fallback was likewise never a live grant. The live agent-scope grain is the mcp_tokens row.",
+      "cacheGap": "loadRegistry caches by path for the process lifetime and nothing invalidates it outside tests, so editing the YAML to remove an agent leaves the stale grant live until reload or restart. Two tests pin both directions: removal terminates access after reloadRegistry, and removal without reload does not.",
+      "renamed": "The export is getAgentAllowedGroupIds, not getAllowedGroupIds, because src/lib/workspace/boundary.ts exports a same-named function whose empty array means ALLOW-ANY. Here an empty array means DENY; colliding names could invert an access decision.",
+      "typedRefusal": "getDefaultGroupId raises a typed AgentAssignmentMissingError rather than a bare Error, and the test matches the class, so rewording the message cannot silently disable the assertion."
+    },
+    {
+      "rule": "Least privilege: an agent credential with no assignment reaches nothing.",
+      "file": "src/lib/auth/principal-context.ts",
+      "before": "applyPrincipalToArgs refused a principal with no verified workspace binding for only memory_search, memory_get and memory_list. Every other tool fell through with a tenant-only scope and no injected workspace, so memory_delete, memory_update, memory_export, memory_restore, memory_promote, audit_query_events and governance_audit_log ran tenant-wide on the ABSENCE of an assignment.",
+      "after": "A delegated mcp_token principal with no verified workspace binding is refused on every tool. mcp_tokens.workspace_id is NOT NULL in the schema, so a genuinely minted agent credential always carries one; only the optional TypeScript shape allowed it to go missing.",
+      "scopedDeliberately": "The ALL-TOOL refusal is restricted to authMethod === 'mcp_token' because widening it breaks the AC-10 shared-token compatibility contract in src/__tests__/mcp-auth-adversarial.test.ts. The earlier claim that service_identity and dev_local are 'fenced out of production' and 'carry their own explicit tenant allowlists' was WRONG and is withdrawn: dev_local is fenced, but the HTTP shared-token service_identity path is not, and shared-token tenants default to ['allura-system'] with roles ['viewer'] requiring no explicitness.",
+      "red": "7 tools failed to deny: memory_delete, memory_update, memory_export, memory_restore, memory_promote, audit_query_events, governance_audit_log.",
+      "green": "20/20 in the new policy test; 83/83 with mcp-auth-adversarial included.",
+      "regressionIntroducedAndFixed": "The first attempt gated the refusal solely on authMethod === 'mcp_token', which REMOVED the pre-existing refusal of memory_search/memory_get/memory_list for service_identity and dev_local. Independent review caught it: that turned an audited deny (PrincipalAuthError CONFIG_MISSING, logged as decision 'deny') into an audited allow, with the second-layer requireVerifiedWorkspaceScope throwing an unaudited plain Error. Repaired: those three reads now refuse for EVERY auth method, exactly as before, and the all-tool refusal applies additionally to mcp_token. A regression test pins the restored read refusal.",
+      "scopeObjectGuard": "The workspaceId conjunct on scope construction is retained. Dropping it would have emitted a PRESENT but workspace-less scope object for the unfenced shared-token path where the key was previously absent — inert against every current consumer (all read scope?.workspace_id) but a latent false positive for the next one that treats a truthy scope as verified."
+    }
+  ],
+  "deliberatelyNotImplemented": [
+    {
+      "item": "Founder all-access for the three named founders",
+      "reason": "Correction 1 conflicts with three already-approved decisions: contract §2 ('roles, including admin, authorize administrative actions only'), approval-packet decision 2 ('owner-private content has no administrator override') and accepted epic default 3 (no administrator override in MVP). It can be read as founders being implicit members of every Faith Meats project (compatible) or as founders overriding owner-private content (incompatible). Implementing the second reading by inference would silently remove the owner-only guarantee the rest of the contract rests on. Recorded as an open decision in contract §10.2; one written choice from the owner is required.",
+      "ownerAction": "Choose reading (a) project-scope membership or (b) content override, in writing.",
+      "supersededBy": "RESOLVED later the same day. The owner chose reading (a): founder status is project eligibility/membership and never overrides owner-private visibility. The ownerAction recorded alongside this entry is closed. The non-override half needed no code because owner-private already resolves by owner identity with no role branch, and a regression guard now pins it; the eligibility half remains unimplemented pending project-grained membership. See evidence/epic30-founder-eligibility-not-override-2026-09-28.json."
+    },
+    {
+      "item": "Project-grained authority",
+      "reason": "No project-grained authority exists. The projects table is tenant-scoped with tenant-wide RLS and no workspace_id; project_id is an organising column on lanes, work_items and the messaging tables and carries no authority. There is no project_members table, and no membership, approval or credential table has a principal-type discriminator, so no policy can currently say 'deny because the principal is an agent'. The finest grain that exists is tenant plus workspace, with department membership inside it. Corrections 1 and 2 are therefore enforced at the grain that exists; the project grain is an open implementation gap recorded in contract §10.3.",
+      "ownerAction": "Scope and schedule project-grained authority as its own work; it is not inside the current Epic 30 slice."
+    },
+    {
+      "item": "Reducing the four-tenant grants held by gilliam, troy and openwork",
+      "reason": "These are explicit assignments, so they satisfy the 'never automatic' rule, but four tenants each is unlikely to be least privilege. Reducing them removes access from running agents. Removal is an owner decision and was not taken unilaterally.",
+      "ownerAction": "Confirm or reduce each agent's tenant list."
+    }
+  ],
+  "knownGapsRecorded": [
+    "The agent registry module has no production consumer; it is latent-API hardening, not an enforced control.",
+    "The agent registry is a YAML file, not a governed table: assignment and removal leave no audit trail and terminate no live session, and its process-lifetime cache means an edit does not take effect until reload or restart.",
+    "OPEN RISK, not closed: the HTTP shared-token service_identity path is production-reachable and unfenced, carries no workspace binding, and audit_query_events, governance_audit_log and memory_export filter on group_id alone — tenant-wide audit and export reach. Widening the refusal breaks the AC-10 contract, so this is referred to the policy owner as a blocking risk rather than fixed here.",
+    "Membership and project revocation timing remains an unmeasured target; only credential revocation is proved live."
+  ],
+  "verification": {
+    "focusedPolicyTest": {
+      "command": "bun vitest run --config vitest.config.unit.ts src/__tests__/epic30-agent-explicit-assignment.test.ts",
+      "testsPassed": 20,
+      "files": 1,
+      "exit": 0
+    },
+    "focusedWithAdversarial": {
+      "command": "bun vitest run --config vitest.config.unit.ts src/__tests__/epic30-agent-explicit-assignment.test.ts src/__tests__/mcp-auth-adversarial.test.ts",
+      "testsPassed": 83,
+      "files": 2,
+      "exit": 0
+    },
+    "registryPairDefaultLane": {
+      "command": "bunx vitest run --config vitest.config.ts src/__tests__/group-id-registry.test.ts src/__tests__/subagent-mcp-access.test.ts",
+      "testsPassed": 21,
+      "files": 2,
+      "exit": 0,
+      "note": "Was 19 passed / 2 failed at HEAD dbcff18ce. The two Story 20.3 assertions referenced agent ids absent from the registry ('faithmeats-editor', 'nonprofit-organizer'); they now reference 'faithmeats-agent' and 'nonprofit-curator', which are already registered. No access was granted and no registry entry was added — the cross-tenant-denial evidence now validates a real agent instead of silently passing on a fallback."
+    },
+    "hermetic": {
+      "command": "bun run test:epic30-hermetic",
+      "testsPassed": 409,
+      "skipped": 3,
+      "files": 39,
+      "exit": 0,
+      "includes": "tsc --noEmit"
+    },
+    "typecheck": {
+      "command": "tsc --noEmit",
+      "exit": 0
+    },
+    "unit": {
+      "command": "bun run test:unit",
+      "testsPassed": 3196,
+      "skipped": 165,
+      "files": 230,
+      "filesSkipped": 7,
+      "exit": 0
+    },
+    "defaultLane": {
+      "command": "bunx vitest run (package.json `test`)",
+      "exit": 1,
+      "filesFailed": 11,
+      "testsFailed": 23,
+      "testsPassed": 4293,
+      "skipped": 358,
+      "note": "Red before and after. None of the 11 failing files is touched by this diff; several fail only because the bare default lane does not set ALLURA_MCP_TOKEN_SECRET (which the test:unit script does) and others are live-DB e2e suites. This diff reduces the failing-file count by one: subagent-mcp-access.test.ts now passes. Stated because CLAUDE.md calls `bun test` the primary unit command, so the headline command is red independently of this change."
+    },
+    "liveLane": {
+      "run": false,
+      "rationale": "Not required by the touched paths. The live inventory is digital-brain-read-isolation.e2e.test.ts and epic30-delegation-revocation.e2e.test.ts; neither imports principal-context or the group-id registry. principal-context is reached only from MCP and API route handlers and server-side MCP modules, none of which the live lane exercises, and the live HTTP proof renders /dashboard through the unchanged getDashboardPrincipal."
+    },
+    "controlledRed": {
+      "run": false,
+      "rationale": "scripts/ci/run-epic30-controlled-red.sh git-archives HEAD into a scratch directory, so it cannot observe an uncommitted diff. It passed at HEAD dbcff18ce with all five mutation families detected, and none of the four files it mutates (read-service, read-receipt, restricted-messaging, ask-context) is touched here."
+    },
+    "gitDiffCheck": "clean",
+    "aiFreshContextReview": "Two fresh-context AI security reviews of this diff. Round 1 returned 3 BLOCK, 2 HIGH, 3 MEDIUM, 4 LOW; round 2 returned no BLOCK, 2 HIGH, 3 MEDIUM, 11 LOW. Every BLOCK/HIGH/MEDIUM was repaired or, where repair would change a different approved contract, recorded as an explicit open risk. These are AI reviews and are NOT the independent human security and data reviewer dispositions that Story 30.3 requires; none exist."
+  },
+  "gatesStillOpen": [
+    "30.3 authorization-policy-approval: the policy decision is now given, but independent security and data reviewer dispositions for every threat row do not exist. Gabriel Cohen and Samuel Montgomery are named on the roster and have recorded none. Being named as founders is not a review disposition.",
+    "30.2 and 30.12: five-person study approved as plan; no session run, no participant evidence, no accessibility receipt.",
+    "30.9: zero-retention/zero-training approved as policy; no verified provider contract exists.",
+    "30.11: hosted required-branch-checks and independent human reviews.",
+    "30.13: authorized release, origin and rollback receipts, accepted retrospective.",
+    "Founder access reading (a) or (b), and project-grained authority, both recorded above."
+  ]
+}

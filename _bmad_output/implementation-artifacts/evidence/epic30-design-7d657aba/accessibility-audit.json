@@ -1,0 +1,23 @@
+{
+  "url": "http://127.0.0.1:4123/epic30-visual-fixture",
+  "audits": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "readyViolations": [],
+      "comparisonViolations": [],
+      "runtimeErrors": []
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 900
+      },
+      "readyViolations": [],
+      "comparisonViolations": [],
+      "runtimeErrors": []
+    }
+  ]
+}

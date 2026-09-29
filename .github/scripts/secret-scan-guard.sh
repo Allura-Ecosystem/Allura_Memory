@@ -44,9 +44,10 @@ status=0
 # Lines that are demonstrably not live secrets:
 #   ${VAR} / $VAR  — shell or template interpolation, the value lives elsewhere
 #   <password>     — documentation placeholder
-#   allura_mcp_xxx0000...  — padded test fixtures in the adversarial auth suite;
-#                            real tokens are random and never end in zero runs
-NOT_A_SECRET='\$\{|<password>|<your-|YOUR_|example\.com|allura_mcp_[a-z]+0{6,}'
+#   allura_mcp_(fixture|testfixture|... )0000... — named, padded test fixtures;
+#     the listed prefixes are only used by adversarial test cases and do not occur
+#     in issued credentials.
+NOT_A_SECRET='\$\{|<password>|<your-|YOUR_|example\.com|allura_mcp_(fixture_|testfixture|viewertoken|curatortoken|admintoken|revokedtoken|expiredtoken|unknowntoken|cursoraaa|cursorbbb)0{6,}'
 
 for entry in "${PATTERNS[@]}"; do
   label="${entry%%|*}"

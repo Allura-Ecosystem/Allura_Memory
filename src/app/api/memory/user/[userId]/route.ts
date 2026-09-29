@@ -19,28 +19,29 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { DatabaseQueryError, DatabaseUnavailableError } from "@/lib/errors/database-errors"
+import { createHash, randomUUID } from "crypto"
 import { withPermission } from "@/lib/auth/api-auth"
-import { getPool } from "@/lib/postgres/connection"
-import { memory_delete } from "@/mcp/canonical-tools"
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
+import { DatabaseQueryError, DatabaseUnavailableError } from "@/lib/errors/database-errors"
 import type { GroupId, MemoryId } from "@/lib/memory/canonical-contracts"
-import { validateGroupId, GroupIdValidationError } from "@/lib/validation/group-id"
+import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
+import { memory_delete } from "@/mcp/canonical-tools"
 
 // ── DELETE /api/memory/user/[userId] ─────────────────────────────────────────
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ userId: string }> },
-) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   // Auth: require admin role for user-scoped deletion (GDPR right-to-erasure)
   const authResult = await withPermission(request, "memory:delete", "admin")
   if (authResult instanceof NextResponse) return authResult
 
-  const { groupId } = authResult
+  const { groupId, user } = authResult
   const { userId } = await params
 
   if (!userId || typeof userId !== "string") {
     return NextResponse.json({ error: "userId path parameter is required" }, { status: 400 })
+  }
+  if (!user.workspaceId || !user.sessionId) {
+    return NextResponse.json({ error: "Authenticated workspace and session scope are required" }, { status: 401 })
   }
 
   // Validate group_id (derived from auth — defense-in-depth double-check)
@@ -55,55 +56,67 @@ export async function DELETE(
   }
 
   const requestedAt = new Date().toISOString()
-  const pool = getPool()
-
+  const requestId = randomUUID()
+  const sessionHash = createHash("sha256").update(user.sessionId).digest("hex")
   try {
     // 1. Find all non-deleted memory IDs for this user within the group.
     //    We query the events table for `memory_add` events by this user and
     //    exclude any already-deleted ones.
-    const findResult = await pool.query<{ memory_id: string }>(
-      `
+    const memoryIds = await withWorkspaceTransaction(
+      { tenantId: validatedGroupId, workspaceId: user.workspaceId, principalId: user.id },
+      async (db) => {
+        const findResult = await db.query<{ memory_id: string }>(
+          `
       SELECT DISTINCT metadata->>'memory_id' AS memory_id
       FROM events
       WHERE group_id = $1
-        AND metadata->>'user_id' = $2
+        AND workspace_id = $2
+        AND metadata->>'user_id' = $3
         AND event_type = 'memory_add'
         AND metadata->>'memory_id' IS NOT NULL
-        AND metadata->>'memory_id' NOT IN (
-          SELECT metadata->>'memory_id'
-          FROM events
-          WHERE group_id = $1
-            AND event_type = 'memory_delete'
-            AND metadata->>'memory_id' IS NOT NULL
+        AND COALESCE((
+          SELECT lifecycle.event_type
+          FROM events lifecycle
+          WHERE lifecycle.group_id = events.group_id
+            AND lifecycle.workspace_id = events.workspace_id
+            AND lifecycle.metadata->>'memory_id' = events.metadata->>'memory_id'
+            AND lifecycle.event_type IN ('memory_delete', 'memory_restore')
+          ORDER BY lifecycle.created_at DESC, lifecycle.id DESC
+          LIMIT 1
+        ), 'memory_restore') <> 'memory_delete'
+      `,
+          [validatedGroupId, user.workspaceId, userId]
         )
-      `,
-      [validatedGroupId, userId],
-    )
 
-    const memoryIds = findResult.rows
-      .map((r) => r.memory_id)
-      .filter((id): id is string => Boolean(id))
+        const ids = findResult.rows.map((r) => r.memory_id).filter((id): id is string => Boolean(id))
 
-    // 2. Append a single `user_data_deletion_requested` audit event — append-only.
-    //    This event captures the intent and scope of the erasure request, separate
-    //    from the individual memory_delete events that follow.
-    await pool.query(
-      `
-      INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6)
+        // 2. Append a single `user_data_deletion_requested` audit event — append-only.
+        //    This event captures the intent and scope of the erasure request, separate
+        //    from the individual memory_delete events that follow.
+        await db.query(
+          `
+      INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       `,
-      [
-        validatedGroupId,
-        "user_data_deletion_requested",
-        "gdpr-endpoint",
-        "in_progress",
-        JSON.stringify({
-          user_id: userId,
-          memory_count: memoryIds.length,
-          requested_at: requestedAt,
-        }),
-        requestedAt,
-      ],
+          [
+            validatedGroupId,
+            user.workspaceId,
+            "user_data_deletion_requested",
+            user.id,
+            "pending",
+            JSON.stringify({
+              user_id: userId,
+              actor_id: user.id,
+              request_id: requestId,
+              session_hash: sessionHash,
+              memory_count: ids.length,
+              requested_at: requestedAt,
+            }),
+            requestedAt,
+          ]
+        )
+        return ids
+      }
     )
 
     // 3. Soft-delete each memory — reuses canonical memory_delete which:
@@ -114,15 +127,24 @@ export async function DELETE(
 
     for (const memoryId of memoryIds) {
       try {
-        await memory_delete({
+        const deletion = await memory_delete({
           id: memoryId as MemoryId,
           group_id: validatedGroupId as GroupId,
           user_id: userId,
+          scope: {
+            group_id: validatedGroupId as GroupId,
+            workspace_id: user.workspaceId,
+            agent_id: user.id,
+            session_id: user.sessionId,
+          },
         })
-        results.push({ memory_id: memoryId, success: true })
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        results.push({ memory_id: memoryId, success: false, error: msg })
+        if (deletion.meta?.degraded || !deletion.deleted) {
+          results.push({ memory_id: memoryId, success: false, error: "Deletion failed" })
+        } else {
+          results.push({ memory_id: memoryId, success: true })
+        }
+      } catch {
+        results.push({ memory_id: memoryId, success: false, error: "Deletion failed" })
       }
     }
 
@@ -133,30 +155,39 @@ export async function DELETE(
     //    NOTE: We append a *new* completion event rather than mutating the
     //    in_progress event — maintaining the append-only invariant.
     const completedAt = new Date().toISOString()
-    await pool.query(
-      `
-      INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6)
+    await withWorkspaceTransaction(
+      { tenantId: validatedGroupId, workspaceId: user.workspaceId, principalId: user.id },
+      (db) =>
+        db.query(
+          `
+      INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       `,
-      [
-        validatedGroupId,
-        "user_data_deletion_completed",
-        "gdpr-endpoint",
-        failedCount === 0 ? "completed" : "partial",
-        JSON.stringify({
-          user_id: userId,
-          deleted_count: deletedCount,
-          failed_count: failedCount,
-          requested_at: requestedAt,
-          completed_at: completedAt,
-        }),
-        completedAt,
-      ],
+          [
+            validatedGroupId,
+            user.workspaceId,
+            "user_data_deletion_completed",
+            user.id,
+            failedCount === 0 ? "completed" : "failed",
+            JSON.stringify({
+              user_id: userId,
+              actor_id: user.id,
+              request_id: requestId,
+              session_hash: sessionHash,
+              deleted_count: deletedCount,
+              failed_count: failedCount,
+              requested_at: requestedAt,
+              completed_at: completedAt,
+            }),
+            completedAt,
+          ]
+        )
     )
 
     return NextResponse.json({
       user_id: userId,
       group_id: validatedGroupId,
+      request_id: requestId,
       deleted_count: deletedCount,
       failed_count: failedCount,
       requested_at: requestedAt,
@@ -166,18 +197,18 @@ export async function DELETE(
     if (err instanceof DatabaseUnavailableError) {
       return NextResponse.json(
         { error: `Service temporarily unavailable: ${err.operation}`, operation: err.operation },
-        { status: 503 },
+        { status: 503 }
       )
     }
 
     if (err instanceof DatabaseQueryError) {
       return NextResponse.json(
         { error: `Database query failed: ${err.operation}`, operation: err.operation },
-        { status: 500 },
+        { status: 500 }
       )
     }
 
-    console.error("GDPR user deletion error:", err)
+    console.error("GDPR user deletion error")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

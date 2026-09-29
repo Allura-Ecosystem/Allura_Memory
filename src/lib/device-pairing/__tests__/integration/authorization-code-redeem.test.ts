@@ -21,6 +21,9 @@ describeMigrationLive("29.19 integration authorization-code redemption", () => {
     db = await createLiveDatabase("authorization-code-redeem");
     await db.owner.query("INSERT INTO workspaces (workspace_id, group_id, name) VALUES ($1, $2, 'Code redemption workspace')", [workspaceId, groupId]);
     await db.owner.query("INSERT INTO memberships (group_id, user_id, email, role) VALUES ($1, $2, $3, 'curator')", [groupId, principalId, "code-redeem@integration.test"]);
+    await db.app.query("SELECT set_config('app.current_principal', $1, false)", [principalId]);
+    await db.app.query("SELECT set_config('app.current_group_id', $1, false)", [groupId]);
+    await db.app.query("SELECT set_config('app.current_workspace_id', $1, false)", [workspaceId]);
     await db.app.query(
       "SELECT device_enrollment_create($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW() + INTERVAL '10 minutes')",
       [enrollmentId, "Code redemption device", signingKey.publicKeyPem, signingKey.keyId, "ecdsa-p256", computePkceCodeChallengeS256(pkceVerifier), "S256", "code-redeem-state", "loopback", "http://127.0.0.1:54329/callback"],

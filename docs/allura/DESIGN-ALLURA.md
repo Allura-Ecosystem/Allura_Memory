@@ -325,6 +325,12 @@ Operational metrics for the dashboard overview.
 #### `GET /api/memory`
 
 List memories scoped by tenant. Supports user filtering and pagination.
+The web route treats `group_id` as an equality assertion against the authenticated tenant, not a source of authority. It supplies the server-derived workspace, actor and session scope to the canonical list, search and deleted-list tools. A cross-tenant selector is denied before a tool call.
+
+All routes under `/api/memory/**` are prohibited from importing or calling the
+legacy owner pool directly. An exact Epic 30 regression test recursively scans
+the route tree; protected database access must use a restricted workspace
+transaction or a canonical tool carrying server-derived scope.
 
 **Query parameters:**
 
@@ -337,11 +343,20 @@ List memories scoped by tenant. Supports user filtering and pagination.
 
 ---
 
+#### `POST /api/memory`
+
+Add an episodic memory through the canonical tool. The web handler requires curator-or-higher authority. `group_id` must equal the authenticated tenant; the server supplies workspace, actor and session scope. Caller metadata cannot replace the verified actor, and a caller-provided scope object is ignored. This boundary does not approve the separate Epic 30 Digital Brain workspace policy.
+
+---
+
 #### `GET /api/memory/[id]`
 
 Fetch a single memory by ID with tenant scope.
+The route requires viewer authority and derives tenant, workspace, actor and session scope from the authenticated principal. The query `group_id` is an equality assertion only; cross-tenant selectors are denied before `memory_get` executes.
 
 **Query parameters:**
+
+`PUT` requires curator authority and creates an append-only superseding version. `DELETE` requires administrator authority and performs the governed soft-delete path. Both mutation routes use the verified principal as actor, ignore caller-selected `user_id` authority, prevent metadata actor replacement, and pass server-derived workspace/session scope to the canonical tool.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -350,6 +365,8 @@ Fetch a single memory by ID with tenant scope.
 ---
 
 #### `GET /api/memory/count`
+
+Returns a protected aggregate for the authenticated tenant and workspace. Tenant/workspace query values are equality assertions only. The handler executes both episodic and semantic queries inside the restricted workspace transaction; aggregate counts never use the legacy owner pool.
 
 Return total count of unique active memories (deduplicated across PostgreSQL (episodic + semantic)).
 
@@ -364,7 +381,23 @@ Return total count of unique active memories (deduplicated across PostgreSQL (ep
 
 #### `GET /api/memory/traces`
 
-List raw trace events with filtering.
+List raw trace events with filtering. The tenant and workspace are derived from
+the authenticated principal; optional scope selectors are equality assertions
+and forged selectors are rejected before querying. Reads run through the
+restricted workspace transaction with an explicit workspace predicate.
+
+`POST` requires curator authority and binds tenant, workspace and agent to the
+verified principal. Workspace trace inserts use the restricted workspace
+transaction and persist the explicit workspace discriminator. Caller-selected
+agent or scope values cannot replace authenticated authority, and backend
+failure responses contain no configuration details.
+
+Trace reads are limited to `trace.*` events and bounded pagination. Trace
+content round-trips from `outcome.content`, not unrelated memory metadata. Each
+workspace trace persists a content-free authority receipt binding tenant,
+workspace, hashed session, actor, payload hash, control-plane proof-signature
+hash and audit ID. Raw session values and content previews are not stored in
+the receipt.
 
 **Query parameters:**
 
@@ -397,25 +430,37 @@ List approved insights with pagination.
 
 Version history for a specific insight (SUPERSEDES chain).
 
+The handler derives tenant and workspace from the authenticated principal,
+rejects conflicting selectors, and reads only `workspace_scoped` versions
+through the restricted workspace transaction. It does not widen the result to
+the legacy `global` group.
+
 **Query parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `group_id` | string | Yes | Tenant scope |
+| `group_id` | string | No | Optional equality assertion against authenticated tenant |
+| `workspace_id` | string | No | Optional equality assertion against authenticated workspace |
 
 ---
 
 #### `GET /api/memory/graph`
 
-Read-only tenant-scoped knowledge graph visualization.
+Read-only tenant-and-workspace-scoped knowledge graph visualization.
 
-Returns real `graph_memories` rows and edges for the dashboard graph tab. Capped display sample plus `total_edges` count. Performs no mutations.
+The authenticated principal supplies tenant and workspace authority; optional
+selectors are equality assertions only. Structural nodes, edges, counts, and
+the degraded event fallback all run through restricted workspace transactions
+with explicit workspace predicates. The endpoint uses the canonical
+`from_id`/`to_id`/`rel_type` edge schema and does not disclose backend errors.
+It performs no mutations.
 
 **Query parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `group_id` | string | Yes | Tenant scope (required, validated) |
+| `group_id` | string | No | Optional equality assertion against authenticated tenant |
+| `workspace_id` | string | No | Optional equality assertion against authenticated workspace |
 
 **Response:** `MemoryGraphResponse` — `{ nodes: GraphNode[], edges: GraphEdge[], total_edges?: number }`
 
@@ -786,7 +831,7 @@ stateDiagram-v2
 
 ### MEM-UC14: User soft-deletes and restores a memory within 30-day window
 
-**Actor:** End User
+**Actor:** Administrator acting for the authenticated workspace
 
 **Precondition:** Memory exists and is not already soft-deleted.
 
@@ -802,9 +847,21 @@ stateDiagram-v2
 9. System appends `memory_restore` event to PostgreSQL
 10. System removes `deprecated` flag from PostgreSQL (graph_memories) node
 
+The restore handler derives tenant, workspace, actor and session from the
+authenticated administrator. Optional tenant/workspace/user selectors are
+equality assertions only and are rejected before the canonical restore tool
+when they conflict with verified authority.
+
 **Postcondition:** Memory is either soft-deleted (recoverable within 30 days) or restored to active state.
 
 **Requirements:** AD-08, F5
+
+Bulk user-data deletion is an administrator-only workspace operation. The
+handler discovers eligible memories and appends request/completion audit events
+through restricted workspace transactions with explicit workspace
+discriminators. Each canonical delete receives the verified tenant, workspace,
+administrator and session scope; individual backend failures are not disclosed
+to the caller.
 
 ---
 
@@ -816,7 +873,7 @@ stateDiagram-v2
 
 **Steps:**
 1. Operator navigates to `/dashboard/graph`
-2. Dashboard calls `GET /api/memory/graph?group_id=allura-system`
+2. Dashboard calls `GET /api/memory/graph`; server-issued identity supplies tenant/workspace authority
 3. API returns `MemoryGraphResponse` with nodes, edges, and `total_edges`
 4. Dashboard renders interactive graph with `GraphSummary` component
 5. Operator clicks a node to see detail in `NodeDetailPanel`
@@ -830,7 +887,7 @@ stateDiagram-v2
 
 ## Important Constraints
 
-1. **Dashboard scoped to `group_id`.** Every API call includes `group_id` for tenant isolation. No cross-tenant data access is possible.
+1. **Dashboard scoped to `group_id`.** Every API call includes `group_id` as an assertion, not authority. The root memory web route derives tenant/workspace/actor/session from the authenticated principal and denies a mismatched tenant before calling canonical tools. No cross-tenant data access is permitted.
 
 2. **Proposals require human approval in `soc2` mode.** `PROMOTION_MODE=soc2` blocks autonomous PostgreSQL (graph_memories) writes. Every promotion goes through the curator queue.
 

@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "epic": "30",
+  "stories": [
+    "30.3"
+  ],
+  "recordedAt": "2026-09-28",
+  "baseCommit": "1f8eb5ceea42c140f1d43c3a51211a23715b51ec",
+  "decision": {
+    "approver": "Sabir Asheed",
+    "role": "administrator / approver on the recorded Epic 30 roster",
+    "channel": "relayed in session and recorded here; no external system was contacted",
+    "kind": "policy_input",
+    "resolves": "The founder-access ambiguity recorded as an open owner decision in authorization contract section 10.2, which offered reading (a) project-scope membership or (b) owner-private content override.",
+    "chosen": "(a) project eligibility/membership",
+    "wording": "Faith Meats founders Sabir Asheed, Gabriel Cohen and Samuel Montgomery may access every Faith Meats project, but founder status NEVER overrides owner-private document visibility. Owner-private documents remain visible only to the document owner and specifically approved people. Founder status is project eligibility/membership, not a superuser or content-override role. Allura and every other AI agent still require explicit project-by-project assignment with least privilege and have no automatic cross-project access.",
+    "explicitlyNotEvidenceOf": [
+      "human test execution",
+      "independent human security or data reviewer dispositions",
+      "provider no-retention/no-training contracts",
+      "hosted branch protection configuration",
+      "deployment",
+      "release"
+    ]
+  },
+  "compatibility": {
+    "verdict": "Fully compatible. The chosen reading conflicts with nothing, so no previously approved decision is reversed or weakened.",
+    "decisionsLeftIntact": [
+      "Contract section 2: roles, including admin, authorize administrative actions only and do not satisfy private ownership or department membership.",
+      "Approval packet decision 2: owner-private content has no administrator override.",
+      "Accepted epic default 3: private content is owner-only, with no private sharing, emergency access or administrator override in MVP."
+    ]
+  },
+  "codeChange": {
+    "required": false,
+    "why": "The non-override half is already enforced. The general control is the RLS policy in docker/postgres-init/72-digital-brain-workspace-membership.sql, whose private disjunct is owner_id = current_setting('app.current_principal', true) alone; allura_app is NOBYPASSRLS under FORCE ROW LEVEL SECURITY with no SELECT policy for any other role, and the admin predicate brain_has_current_workspace_admin() is applied only to membership and messaging tables, never to brain_documents. On top of that the synthetic read path re-checks in TypeScript: canDisclose in src/lib/digital-brain/read-service.ts resolves a private row purely by row.owner_id === scope.principalId, with no role branch, and the envelope annotates roles as administrative-only. Implementing anything further would have been unnecessary code.",
+    "productionBehaviourChanged": "None. No production source file was modified by this change.",
+    "precisionNotes": [
+      "migration-contract.test.ts regex-checks migration 71 only, for same-line admin/private co-occurrence. It does not cover migration 72, which owns the live policy. An earlier draft of this receipt overstated it as forbidding admin/private coupling in SQL generally.",
+      "src/lib/digital-brain/production-reader.ts has no owner/visibility predicate of its own and relies entirely on RLS. It has no route, page or MCP consumer today. Pre-existing defence-in-depth gap, not introduced here, to close before that module is wired."
+    ]
+  },
+  "regressionGuardAdded": {
+    "file": "src/lib/digital-brain/read-service.test.ts",
+    "rationale": "Drift into an override is the one way this approval could be misread, so the boundary is pinned rather than trusted. The pre-existing coverage asserted only the single 'admin' role.",
+    "assertions": [
+      "A principal carrying a 'founder' role, including when it also carries 'admin', reads nothing of another user's owner-private document.",
+      "The owner still reads their own private document, so the guard denies by ownership rather than by denying everything."
+    ],
+    "guardProvenToBite": {
+      "method": "Temporarily injected a founder override into canDisclose (private rows additionally disclosed when scope.roles includes 'founder'), ran the suite, then restored the file.",
+      "red": "3 failed / 32 passed — all three founder-role cases disclosed the other user's private note.",
+      "green": "35/35 after restoring; git diff on src/lib/digital-brain/read-service.ts is empty, confirming the mutation left no residue.",
+      "caveat": "The injected mutation was keyed on scope.roles, the field the new test carries, so the red result is correct but demonstrates the guard catching the mutation it was shaped to catch. That is the drift it exists to prevent; it is not evidence of broader coverage."
+    },
+    "scopeOfGuard": "Stated precisely rather than overclaimed: canDisclose takes a scope with no `role` field, so parameterising over viewer/curator/admin does not vary the function under test and those cases collapse onto the pre-existing admin assertion. `roles` is currently dead on the read path — issueReadEnvelope never copies it. What the guard genuinely defends is the specific drift this decision invites: someone wiring `roles` into the envelope and branching on a founder value. It is not a proof across the role space."
+  },
+  "notEnforcedAndNotClaimed": [
+    {
+      "item": "The founder ELIGIBILITY half — founders being members of every Faith Meats project",
+      "reason": "Project-grained membership does not exist. The projects table is tenant-scoped with tenant-wide RLS and no workspace_id; project_id is an organising column on lanes, work_items and the messaging tables and carries no authority; there is no project_members table. Nothing in this repository grants or denies at project grain, so the eligibility half cannot be enforced and is not claimed to be.",
+      "alsoTrue": "No founder principal set, role grant, allowlist or flag was added, and none of the three founders is named in any source, schema or config file. The only pre-existing 'founder' string in src/ is an unrelated test fixture value (owner_agent_id: \"founder\" in src/__tests__/tenants-api.test.ts), which carries no authority. Inventing a founder principal set with no project membership to attach it to would be a new subsystem, which the instruction forbids.",
+      "ownerAction": "Scope project-grained membership as its own work. It is outside the current Epic 30 slice."
+    },
+    {
+      "item": "'Specifically approved people' as a sharing mechanism for owner-private documents",
+      "reason": "The approved wording allows owner-private documents to be visible to the owner AND specifically approved people. No such per-document approval or share mechanism exists: canDisclose resolves private rows by owner identity alone, and accepted epic default 3 states private content has no private sharing in MVP. The stricter behaviour (owner-only) is what ships. This is noted as a divergence between the wording and MVP scope, not silently treated as implemented.",
+      "ownerAction": "Confirm that owner-only is the intended MVP behaviour, or scope per-document sharing as separate work.",
+      "recordedIn": "Disclosed in authorization contract section 10.2 and in the section 10.4 Gap column, not only in this receipt, so an implementer reading the governing contract sees it."
+    }
+  ],
+  "verification": {
+    "focusedGuard": {
+      "command": "bun vitest run --config vitest.config.unit.ts src/lib/digital-brain/read-service.test.ts",
+      "testsPassed": 35,
+      "files": 1,
+      "exit": 0
+    },
+    "mutationProof": {
+      "red": "3 failed / 32 passed with a founder override injected into canDisclose",
+      "restored": "35/35, read-service.ts diff empty"
+    },
+    "hermetic": {
+      "command": "bun run test:epic30-hermetic",
+      "testsPassed": 413,
+      "skipped": 3,
+      "files": 39,
+      "exit": 0,
+      "includes": "tsc --noEmit"
+    },
+    "liveLane": {
+      "run": false,
+      "rationale": "No production source file changed. The only change to a live-lane-adjacent module is a test file. digital-brain-read-isolation.e2e.test.ts already proves owner/other/admin isolation against a disposable database, and nothing this change touches alters that path."
+    },
+    "controlledRed": {
+      "run": false,
+      "rationale": "scripts/ci/run-epic30-controlled-red.sh git-archives HEAD and so cannot observe an uncommitted diff. It passed at HEAD dbcff18ce with all five mutation families detected. Note that its first mutation family already targets the canDisclose disclosure filter this decision protects."
+    },
+    "typecheck": {
+      "command": "tsc --noEmit",
+      "exit": 0
+    },
+    "unit": {
+      "command": "bun run test:unit",
+      "testsPassed": 3200,
+      "skipped": 165,
+      "files": 230,
+      "filesSkipped": 7,
+      "exit": 0
+    },
+    "completionValidator": {
+      "command": "bun run validate:epic30-completion",
+      "valid": true,
+      "complete": false,
+      "pendingGateCount": 19,
+      "exit": 0
+    },
+    "gitDiffCheck": "clean"
+  },
+  "gatesStillOpen": [
+    "30.3 authorization-policy-approval: independent HUMAN security and data reviewer dispositions for every threat row. Gabriel Cohen and Samuel Montgomery are named on the roster and, being named as founders here, have still recorded no review disposition.",
+    "Project-grained membership implementation, which the founder eligibility half depends on.",
+    "30.2 and 30.12: five distinct uncoached users, screen-reader and 200% zoom evidence.",
+    "30.9: verified no-retention/no-training provider contract.",
+    "30.11: hosted required-branch-checks read-back and independent human reviews.",
+    "30.13: authorized release, origin and rollback receipts, accepted retrospective.",
+    "Open risk carried forward: the HTTP shared-token service_identity path is production-reachable, unfenced and workspace-less while audit_query_events, governance_audit_log and memory_export filter on group_id alone."
+  ]
+}

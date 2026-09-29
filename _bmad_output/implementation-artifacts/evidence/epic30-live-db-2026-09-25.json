@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "epic": "30",
+  "recordedAt": "2026-09-25T17:38:38Z",
+  "baseCommit": "9f475b055eb5555c30d7cb3a3280e77d8b578826",
+  "command": "bun run test:epic30-live",
+  "database": {
+    "image": "pgvector/pgvector:pg16",
+    "containerName": "allura-epic30-temp-codex-20260925",
+    "host": "127.0.0.1",
+    "port": 5444,
+    "storage": "container tmpfs only",
+    "productionDatabaseContacted": false
+  },
+  "result": {
+    "status": "passed",
+    "testFiles": 1,
+    "testsPassed": 29,
+    "testsFailed": 0,
+    "durationSeconds": 36.79
+  },
+  "proved": [
+    "fresh owned database provisioning and ordered migration application",
+    "restricted application role and forced-RLS tenant/workspace/document isolation",
+    "owner, other-user, admin, forged-tenant and forged-workspace HTTP states",
+    "content-free immutable receipt persistence and receipt-outage fail-closed behavior",
+    "tenant, department, workspace and policy-epoch revocation denial",
+    "fixture replay rollback and conflicting-authority rollback",
+    "owned demo launch, exact authorized content and database cleanup"
+  ],
+  "cleanup": {
+    "containerRemoved": true,
+    "port5444ListeningAfterRun": false
+  },
+  "notProved": [
+    "timed session or delegation revocation service-level objective",
+    "production database behavior",
+    "hosted exact-SHA CI",
+    "human approvals, accessibility study or release authority"
+  ]
+}
