@@ -1,8 +1,15 @@
 import type { AuthUser } from "./types"
 
+function normalizedEmails(value: string | undefined): Set<string> {
+  return new Set((value ?? "").split(",").map(item => item.trim().toLowerCase()).filter(Boolean))
+}
+
 function normalizedAllowedEmails(): Set<string> {
-  return new Set((process.env.ALLURA_CF_ACCESS_ALLOWED_EMAILS ?? "")
-    .split(",").map(value => value.trim().toLowerCase()).filter(Boolean))
+  return normalizedEmails(process.env.ALLURA_CF_ACCESS_ALLOWED_EMAILS)
+}
+
+function normalizedAdminEmails(): Set<string> {
+  return normalizedEmails(process.env.ALLURA_CF_ACCESS_ADMIN_EMAILS)
 }
 
 export function isCloudflareAccessEnabled(): boolean {
@@ -20,7 +27,7 @@ export function cloudflareAccessUser(headers: Pick<Headers, "get">): AuthUser | 
     id: userId,
     email,
     name: email.split("@", 1)[0],
-    role: "viewer",
+    role: normalizedAdminEmails().has(email) ? "admin" : "viewer",
     groupId: process.env.ALLURA_CF_ACCESS_GROUP_ID ?? "allura-epic30-local",
     workspaceId: process.env.ALLURA_CF_ACCESS_WORKSPACE_ID ?? "epic30-local-workspace",
     sessionId: `cf-access:${userId}`,
