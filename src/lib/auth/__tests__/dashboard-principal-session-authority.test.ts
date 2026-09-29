@@ -21,6 +21,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
  *    `.status: string` and `.userId` (@clerk/backend Session.d.ts:92).
  *  - Official Clerk docs: JWT claims may be up to 60 seconds stale — no
  *    immediate-revocation guarantee is invented here.
+ *  - `sts` is OPTIONAL on the JWT payload
+ *    (@clerk/shared/dist/types/index.d.ts:4347 `sts?: SessionStatusClaim`;
+ *    jwtPayloadParser `const sessionStatus = claims.sts ?? null`), so a valid
+ *    active session can present `sessionStatus: null`. Denying on the absent
+ *    claim would lock out every such user while adding nothing: the
+ *    authoritative Backend API lookup already proves active status, and
+ *    `pending` never arrives here because Clerk's `treatPendingAsSignedOut`
+ *    default returns a signed-out object with no `userId`.
+ *  - A provider that cannot be consulted is an OUTAGE, not a denial. It raises
+ *    `PrincipalProviderUnavailableError` so callers render "degraded" rather
+ *    than "forbidden"; reporting an outage as an access denial is untruthful
+ *    and, at the dashboard guard, produces a login redirect loop.
  */
 
 const mocks = vi.hoisted(() => ({
@@ -31,11 +43,12 @@ const mocks = vi.hoisted(() => ({
   getDevUserSync: vi.fn(),
 }))
 
+vi.mock("server-only", () => ({}))
 vi.mock("@clerk/nextjs/server", async importOriginal => ({ ...(await importOriginal<object>()), auth: mocks.auth, clerkClient: mocks.clerkClient }))
 vi.mock("@/lib/auth/config", async importOriginal => ({ ...(await importOriginal<object>()), isClerkEnabled: mocks.isClerkEnabled }))
 vi.mock("@/lib/auth/dev-auth", async importOriginal => ({ ...(await importOriginal<object>()), getDevUserSync: mocks.getDevUserSync }))
 
-import { getDashboardPrincipal } from "../dashboard-principal"
+import { getDashboardPrincipal, PrincipalProviderUnavailableError } from "../dashboard-principal"
 
 const CLAIM = { allura: { role: "curator", groupId: "allura-test-tenant", workspaceId: "workspace-a" } }
 const SESSION_ID = "sess_clerk_active_001"
@@ -88,15 +101,21 @@ describe("getDashboardPrincipal enforces Clerk session authority (fail closed)",
     await expect(getDashboardPrincipal()).resolves.toBeNull()
   })
 
-  it("denies an unavailable backend session lookup without DevAuth fallback", async () => {
+  it("raises an outage, not a denial, when the backend session lookup is unavailable", async () => {
     mocks.getSession.mockRejectedValue(new Error("Clerk Backend API unavailable"))
-    await expect(getDashboardPrincipal()).resolves.toBeNull()
+    await expect(getDashboardPrincipal()).rejects.toBeInstanceOf(PrincipalProviderUnavailableError)
     expect(mocks.getDevUserSync).not.toHaveBeenCalled()
   })
 
-  it("denies when Clerk returns a client without a session lookup", async () => {
+  it("raises an outage when the backend rate-limits the session lookup", async () => {
+    mocks.getSession.mockRejectedValue(Object.assign(new Error("Too Many Requests"), { status: 429 }))
+    await expect(getDashboardPrincipal()).rejects.toBeInstanceOf(PrincipalProviderUnavailableError)
+    expect(mocks.getDevUserSync).not.toHaveBeenCalled()
+  })
+
+  it("raises an outage when Clerk returns a client without a session lookup", async () => {
     mocks.clerkClient.mockResolvedValue({ sessions: {} })
-    await expect(getDashboardPrincipal()).resolves.toBeNull()
+    await expect(getDashboardPrincipal()).rejects.toBeInstanceOf(PrincipalProviderUnavailableError)
   })
 
   it("fails closed on an unexpected JWT session status", async () => {
@@ -104,8 +123,21 @@ describe("getDashboardPrincipal enforces Clerk session authority (fail closed)",
     await expect(getDashboardPrincipal()).resolves.toBeNull()
   })
 
-  it("fails closed when sessionStatus is missing", async () => {
+  it("defers to the authoritative lookup when the sts claim is absent (null)", async () => {
     mocks.auth.mockResolvedValue(clerkAuth({ sessionStatus: null }))
+    await expect(getDashboardPrincipal()).resolves.toEqual(AUTH_USER)
+    expect(mocks.getSession).toHaveBeenCalledWith(SESSION_ID)
+  })
+
+  it("defers to the authoritative lookup when the sts claim is absent (undefined)", async () => {
+    mocks.auth.mockResolvedValue(clerkAuth({ sessionStatus: undefined }))
+    await expect(getDashboardPrincipal()).resolves.toEqual(AUTH_USER)
+    expect(mocks.getSession).toHaveBeenCalledWith(SESSION_ID)
+  })
+
+  it("still denies an absent sts claim when the backend session is revoked", async () => {
+    mocks.auth.mockResolvedValue(clerkAuth({ sessionStatus: null }))
+    mocks.getSession.mockResolvedValue({ id: SESSION_ID, userId: USER_ID, status: "revoked" })
     await expect(getDashboardPrincipal()).resolves.toBeNull()
   })
 
@@ -129,9 +161,18 @@ describe("getDashboardPrincipal enforces Clerk session authority (fail closed)",
     await expect(getDashboardPrincipal()).resolves.toBeNull()
   })
 
-  it("fails closed when the Clerk provider throws (outage)", async () => {
+  it("raises an outage, not a denial, when the Clerk provider throws", async () => {
     mocks.auth.mockRejectedValue(new Error("Clerk unavailable"))
-    await expect(getDashboardPrincipal()).resolves.toBeNull()
+    await expect(getDashboardPrincipal()).rejects.toBeInstanceOf(PrincipalProviderUnavailableError)
+    expect(mocks.getDevUserSync).not.toHaveBeenCalled()
+  })
+
+  it("keeps an outage distinguishable from a denial so callers can report degraded", async () => {
+    mocks.getSession.mockResolvedValue({ id: SESSION_ID, userId: USER_ID, status: "revoked" })
+    const denial = await getDashboardPrincipal()
+    expect(denial).toBeNull()
+    mocks.auth.mockRejectedValue(new Error("Clerk unavailable"))
+    await expect(getDashboardPrincipal()).rejects.toBeInstanceOf(PrincipalProviderUnavailableError)
   })
 
   it("fails closed when auth() resolves to a signed-out object", async () => {

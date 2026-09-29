@@ -26,6 +26,13 @@ Cross-tenant/workspace/private/department tests, admin-without-private-access de
 
 ## Current Preparation State
 
+### Active Execution Ledger — 2026-09-28 (read-state classification corrections)
+
+- **Baseline:** `b13375550` (clean tree verified). Repository-only; no push, no activation.
+- **Independent review of `5f0793e9` found the typed-error migration incomplete in three places.** (1) The class comment claimed a principal-provider failure "fails closed as degraded", but after the session-authority slice the provider no longer throws on outage — it returned `null`, which is the `forbidden` branch, so a Clerk outage rendered an access denial. Repaired in the provider (see the 30.5 ledger); both read paths now classify the typed outage as `degraded` and still classify a genuinely absent principal as `forbidden`, with explicit regressions. (2) `assertCursor` raised an untyped `Error`, so a policy-epoch change detected mid-pagination surfaced as `degraded` instead of `conflict`; the existing epoch-change tests could never reach it because they paginate at the maximum page size and therefore never mint a cursor. Repaired by rethrowing `ProductionAuthorityChangedError` while preserving the original reason text, with a new test that mints a real page-1 cursor, bumps the epoch, and asserts the `conflict` classification. (3) Two Ask enforcement points still raised untyped errors; they now raise the typed refusal and change errors, so the first caller to classify them cannot silently read an authority refusal as a dependency failure.
+- **Exact receipts:** RED mid-pagination 1 failed (`expected 'Error' to be 'ProductionAuthorityChangedError'`), captured by temporarily reverting only that hunk. GREEN `src/lib/digital-brain/local-confinement.test.ts` 57/57; digital-brain slice 253/253 across 21 files; `bun run test:epic30-hermetic` 387 passed + 3 intentional skips across 38 files, exit 0 (includes `tsc --noEmit`); changed-file `bunx eslint --max-warnings 0` exit 0.
+- **Still open, unchanged:** the `production-read-policy-and-services` gate. This is error-path classification over an unactivated candidate. No approved production read policy, no route or provider activation, no live restricted-database proof of these paths, and no independent human review. Story 30.6 remains backlog.
+
 ### Active Execution Ledger — 2026-09-28
 
 - **Baseline:** `035a11a6d` (pushed, verified local/remote match before this WIP).

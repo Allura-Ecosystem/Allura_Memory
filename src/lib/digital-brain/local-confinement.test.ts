@@ -2,8 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({ transaction: vi.fn(), query: vi.fn(), pool: vi.fn(), principal: vi.fn(), receipt: vi.fn() }))
 vi.mock("@/lib/db/tenant-transaction", () => ({ withWorkspaceTransaction: mocks.transaction, withTenantTransaction: mocks.transaction }))
 vi.mock("@/lib/postgres/connection", () => ({ getAppPool: mocks.pool }))
-vi.mock("@/lib/auth/dashboard-principal", () => ({ getDashboardPrincipal: mocks.principal }))
+vi.mock("server-only", () => ({}))
+vi.mock("@/lib/auth/dashboard-principal", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/auth/dashboard-principal")>()),
+  getDashboardPrincipal: mocks.principal,
+}))
 vi.mock("./read-receipt-writer", () => ({ persistSyntheticReadReceipt: mocks.receipt }))
+import { PrincipalProviderUnavailableError } from "@/lib/auth/dashboard-principal"
 import { resolveSyntheticAskContext } from "./ask-context"
 import { readSyntheticDocumentLinks } from "./document-links"
 import { ProductionAuthorizedReadProvider } from "./production-reader"
@@ -211,6 +216,23 @@ it("maps absent authority to forbidden without disclosing documents", async () =
   await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "forbidden", documents: [] })
 })
 
+it("maps a session-provider outage to degraded, never to forbidden", async () => {
+  // An unreachable identity provider is a dependency failure, not a policy
+  // decision. Reporting it as "forbidden" tells the user and the operator that
+  // access was denied, and at the dashboard guard it produces a login redirect
+  // loop. Both read paths must classify the typed outage as degraded.
+  mocks.query.mockReset()
+  mocks.principal.mockRejectedValueOnce(new PrincipalProviderUnavailableError("Clerk session provider unavailable"))
+  await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "degraded", documents: [] })
+
+
+  // The genuinely-absent principal must still be forbidden, so the outage fix
+  // does not blur a real denial into a dependency failure.
+  mocks.query.mockReset()
+  mocks.principal.mockResolvedValue(null)
+  await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "forbidden", documents: [] })
+})
+
 it("maps invalid local fixture configuration to unavailable", async () => {
   vi.stubEnv("POSTGRES_HOST", "example.com")
   await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "unavailable", documents: [] })
@@ -371,6 +393,17 @@ describe("production authorized read provider", () => {
     })
   }
 
+  it("maps a session-provider outage to degraded, never to forbidden", async () => {
+    setupProductionRows()
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 16), productionReceiptWriter)
+    mocks.principal.mockRejectedValueOnce(new PrincipalProviderUnavailableError("Clerk session lookup unavailable"))
+    await expect(provider.workspaceState()).resolves.toEqual({ state: "degraded", documents: [] })
+
+    setupProductionRows()
+    mocks.principal.mockResolvedValue(null)
+    await expect(provider.workspaceState()).resolves.toEqual({ state: "forbidden", documents: [] })
+  })
+
   it("uses server-derived scope and an opaque keyset cursor", async () => {
     setupProductionRows()
     const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 7), productionReceiptWriter)
@@ -462,13 +495,79 @@ describe("production authorized read provider", () => {
     await expect(provider.readDocumentsPage({ pageSize: 1 })).rejects.toThrow()
   })
 
+  it("prefers refusal over conflict when both scope and authority differ", async () => {
+    // A cursor replayed outside its scope must stay 'forbidden' even when the
+    // authority also moved on. Classifying on the authority delta alone would
+    // report a scope-widening replay as a benign retriable race.
+    let authorityReads = 0
+    mocks.principal.mockResolvedValue(productionPrincipal)
+    mocks.query.mockImplementation(async (sql: string, params?: readonly unknown[]) => {
+      if (sql.includes("brain_workspace_memberships")) {
+        authorityReads += 1
+        return { rows: [{ role: "viewer", policy_epoch: authorityReads <= 4 ? "9" : "10" }] }
+      }
+      if (sql.includes("COUNT(*)")) return { rows: [{ total: 2 }] }
+      if (sql.includes("FROM brain_documents")) {
+        const hasBoundary = params?.some((value) => value === productionRows[0].updated_at.toISOString())
+        return { rows: hasBoundary ? [productionRows[1]] : productionRows }
+      }
+      return { rows: [] }
+    })
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 23), productionReceiptWriter)
+    const first = await provider.readDocumentsPage({ pageSize: 1 })
+    expect(first.nextCursor).toBeTruthy()
+
+    // Replay a read cursor against search: operation mismatch AND epoch change.
+    const failure = await provider.searchDocumentsPage("production", { pageSize: 1, cursor: first.nextCursor! })
+      .then(() => null, (error: unknown) => error as Error)
+    expect(failure!.name).toBe("ProductionAuthorityRefusalError")
+    expect((failure as unknown as { state: string }).state).toBe("forbidden")
+  })
+
+  it("classifies a mid-pagination authority change as conflict, not degraded", async () => {
+    // The cursor is authenticated before the match check, so a mismatch means
+    // the authority pinned into page 1 no longer matches current authority.
+    // That is a conflict; classifying it as degraded would report an authority
+    // change as a dependency outage.
+    let authorityReads = 0
+    mocks.principal.mockResolvedValue(productionPrincipal)
+    mocks.query.mockImplementation(async (sql: string, params?: readonly unknown[]) => {
+      if (sql.includes("brain_workspace_memberships")) {
+        authorityReads += 1
+        return { rows: [{ role: "viewer", policy_epoch: authorityReads <= 4 ? "9" : "10" }] }
+      }
+      if (sql.includes("COUNT(*)")) return { rows: [{ total: 2 }] }
+      if (sql.includes("FROM brain_documents")) {
+        const hasBoundary = params?.some((value) => value === productionRows[0].updated_at.toISOString())
+        return { rows: hasBoundary ? [productionRows[1]] : productionRows }
+      }
+      return { rows: [] }
+    })
+    const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 21), productionReceiptWriter)
+    const first = await provider.readDocumentsPage({ pageSize: 1 })
+    expect(first.nextCursor).toBeTruthy()
+
+    const failure = await provider.readDocumentsPage({ pageSize: 1, cursor: first.nextCursor! })
+      .then(() => null, (error: unknown) => error as Error)
+    expect(failure).toBeInstanceOf(Error)
+    expect(failure!.name).toBe("ProductionAuthorityChangedError")
+    expect((failure as unknown as { state: string }).state).toBe("conflict")
+  })
+
   it("rejects an operation-mismatched cursor before querying document rows", async () => {
     setupProductionRows()
     const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 11), productionReceiptWriter)
     const first = await provider.readDocumentsPage({ pageSize: 1 })
     const documentQueriesBeforeReplay = mocks.query.mock.calls.filter(([sql]) => String(sql).includes("FROM brain_documents")).length
-    await expect(provider.searchDocumentsPage("production", { pageSize: 1, cursor: first.nextCursor! }))
-      .rejects.toThrow(/cursor authority refused/)
+    const replay = await provider.searchDocumentsPage("production", { pageSize: 1, cursor: first.nextCursor! })
+      .then(() => null, (error: unknown) => error as Error)
+    expect(replay).toBeInstanceOf(Error)
+    expect(replay!.message).toMatch(/cursor authority refused/)
+    // A cursor replayed outside the authority it was minted for is a refusal,
+    // not an authority change. Reporting it as "conflict" would present a
+    // scope-widening replay to the operator as a benign retriable race.
+    expect(replay!.name).toBe("ProductionAuthorityRefusalError")
+    expect((replay as unknown as { state: string }).state).toBe("forbidden")
     expect(mocks.query.mock.calls.filter(([sql]) => String(sql).includes("FROM brain_documents")).length)
       .toBe(documentQueriesBeforeReplay)
   })

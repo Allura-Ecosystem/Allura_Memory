@@ -254,13 +254,31 @@ export function assertAuthorizedReadCursorMatches(
     queryHash?: string | null
   },
 ): void {
-  if (claims.tenantId !== input.scope.tenantId || claims.workspaceId !== input.scope.workspaceId ||
-      claims.principalId !== input.scope.principalId || claims.actorRole !== input.actorRole ||
-      claims.policyEpoch !== input.policyEpoch || claims.operation !== input.operation ||
-      claims.pageSize !== input.pageSize ||
-      !sameDigest(claims.sessionHash, hashAuthorizedReadSession(input.witnessKey, input.sessionId)) ||
-      claims.queryHash !== (input.queryHash ?? null)) {
-    throw new Error("Synthetic read cursor authority refused")
+  // Scope fields identify WHICH authority the cursor was minted under; the
+  // authority fields carry WHAT that authority was. A scope mismatch is a
+  // cursor presented outside its authority (a refusal); an authority-only
+  // mismatch is that same authority changing underneath a live pagination (a
+  // conflict). Report which class failed so the caller does not have to
+  // re-derive this comparison and drift from it.
+  const scopeMismatch = claims.tenantId !== input.scope.tenantId ||
+    claims.workspaceId !== input.scope.workspaceId ||
+    claims.principalId !== input.scope.principalId ||
+    claims.operation !== input.operation ||
+    claims.pageSize !== input.pageSize ||
+    !sameDigest(claims.sessionHash, hashAuthorizedReadSession(input.witnessKey, input.sessionId)) ||
+    claims.queryHash !== (input.queryHash ?? null)
+  const authorityMismatch = claims.actorRole !== input.actorRole || claims.policyEpoch !== input.policyEpoch
+  if (scopeMismatch || authorityMismatch) {
+    // Scope takes precedence: when both differ, the cursor is being replayed
+    // outside its scope and must not be softened into a retriable race.
+    throw new AuthorizedReadCursorMismatchError(scopeMismatch ? "scope" : "authority")
+  }
+}
+
+export class AuthorizedReadCursorMismatchError extends Error {
+  constructor(readonly mismatch: "scope" | "authority") {
+    super("Synthetic read cursor authority refused")
+    this.name = "AuthorizedReadCursorMismatchError"
   }
 }
 

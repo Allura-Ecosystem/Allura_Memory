@@ -1,4 +1,7 @@
+import { unstable_rethrow } from "next/navigation"
+
 import { MyWorkWorkspace, type WorkspaceDocument } from "@/components/dashboard/my-work-workspace"
+import { PrincipalProviderUnavailableError } from "@/lib/auth/principal-errors"
 import { requireDashboardScope } from "@/lib/dashboard/page-guard"
 import { mapAuthorizedWorkspaceProviderState, readAuthorizedWorkspaceState } from "@/lib/digital-brain/read-service"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
@@ -13,7 +16,20 @@ function localDatabaseIsExplicitlyEnabled(): boolean {
 
 /** Epic 30 local-only vertical slice. Authority and database scope remain server-derived. */
 export default async function DashboardOverviewPage(): Promise<React.ReactElement> {
-  const { user, scope } = await requireDashboardScope("/dashboard")
+  // An identity-provider outage is a degraded dependency, not an access
+  // decision. Catch only that typed case: every other throw, including the
+  // `redirect()` signal raised for a genuinely absent principal, must keep
+  // propagating.
+  let guarded: Awaited<ReturnType<typeof requireDashboardScope>>
+  try {
+    guarded = await requireDashboardScope("/dashboard")
+  } catch (error) {
+    unstable_rethrow(error)
+    if (!(error instanceof PrincipalProviderUnavailableError)) throw error
+    console.error("[Epic30] session provider unavailable")
+    return <MyWorkWorkspace documents={[]} dataState="degraded" {...(process.env.ALLURA_EPIC30_PROCESS_ID ? { processRunId: process.env.ALLURA_EPIC30_PROCESS_ID } : {})} />
+  }
+  const { user, scope } = guarded
 
   if (!localDatabaseIsExplicitlyEnabled()) {
     const state = emptyWhen(await getOverview(scope), (data) =>

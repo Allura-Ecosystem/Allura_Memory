@@ -8,6 +8,7 @@ import {
   AUTHORIZED_READ_PAGE_SIZE_DEFAULT,
   AUTHORIZED_READ_PAGE_SIZE_MAX,
   type AuthorizedReadCursorClaims,
+  AuthorizedReadCursorMismatchError,
   createAuthorizedReadCursor,
   createAuthorizedReadReceipt,
   decodeAuthorizedReadCursor,
@@ -35,7 +36,7 @@ type ProductionCursorClaims = AuthorizedReadCursorClaims
  * Dependency failures (database, receipt writer, principal provider) keep their
  * own error types and fail closed as degraded without message inspection.
  */
-class ProductionReadStateError extends Error {
+export class ProductionReadStateError extends Error {
   constructor(
     readonly state: "forbidden" | "conflict",
     message: string,
@@ -46,14 +47,14 @@ class ProductionReadStateError extends Error {
   }
 }
 
-class ProductionAuthorityRefusalError extends ProductionReadStateError {
+export class ProductionAuthorityRefusalError extends ProductionReadStateError {
   constructor(message = "Production read authority refused", options?: ErrorOptions) {
     super("forbidden", message, options)
     this.name = "ProductionAuthorityRefusalError"
   }
 }
 
-class ProductionAuthorityChangedError extends ProductionReadStateError {
+export class ProductionAuthorityChangedError extends ProductionReadStateError {
   constructor(message = "Production read authority changed", options?: ErrorOptions) {
     super("conflict", message, options)
     this.name = "ProductionAuthorityChangedError"
@@ -271,16 +272,30 @@ export class ProductionAuthorizedReadProvider {
     const priorWitnessHash = cursorClaims?.witnessHash ?? options.priorWitnessHash
     const assertCursor = (authority: ProductionAuthority, currentPrincipal: AuthUser): void => {
       if (!cursorClaims) return
-      assertAuthorizedReadCursorMatches(cursorClaims, {
-        scope,
-        sessionId: currentPrincipal.sessionId!,
-        witnessKey: this.cursorKey,
-        actorRole: authority.actorRole,
-        policyEpoch: authority.policyEpoch,
-        operation: options.operation,
-        pageSize,
-        queryHash,
-      })
+      try {
+        assertAuthorizedReadCursorMatches(cursorClaims, {
+          scope,
+          sessionId: currentPrincipal.sessionId!,
+          witnessKey: this.cursorKey,
+          actorRole: authority.actorRole,
+          policyEpoch: authority.policyEpoch,
+          operation: options.operation,
+          pageSize,
+          queryHash,
+        })
+      } catch (error) {
+        // The cursor is already authenticated here, so a mismatch is a real
+        // denial rather than a dependency failure. The comparator reports
+        // which class failed: an authority-only delta is that authority
+        // changing underneath a live pagination (conflict); anything else is
+        // a cursor presented outside the scope it was minted for (refusal).
+        // Collapsing both into "conflict" would report a scope-widening
+        // replay as a benign retriable race.
+        const message = error instanceof Error ? error.message : undefined
+        throw error instanceof AuthorizedReadCursorMismatchError && error.mismatch === "authority"
+          ? new ProductionAuthorityChangedError(message, { cause: error })
+          : new ProductionAuthorityRefusalError(message, { cause: error })
+      }
     }
     const preflightAuthority = await this.authority(scope)
     if (preflightAuthority.actorRole !== principal.role) throw new ProductionAuthorityRefusalError()
@@ -364,7 +379,7 @@ export class ProductionAuthorizedReadProvider {
   ): Promise<ProductionAuthorizedReadSnapshot> {
     const { principal, scope } = await this.principal()
     if (scope.tenantId !== expectedScope.tenantId || scope.workspaceId !== expectedScope.workspaceId ||
-        scope.principalId !== expectedScope.principalId) throw new Error("Production Ask authority refused")
+        scope.principalId !== expectedScope.principalId) throw new ProductionAuthorityRefusalError("Production Ask authority refused")
     const documents: AuthorizedDocumentLike[] = []
     let cursor: string | undefined
     let firstAuthority: ProductionAuthority | null = null
@@ -376,7 +391,7 @@ export class ProductionAuthorizedReadProvider {
       })
       if (firstAuthority && (result.authority.actorRole !== firstAuthority.actorRole ||
           result.authority.policyEpoch !== firstAuthority.policyEpoch)) {
-        throw new Error("Production Ask authority changed")
+        throw new ProductionAuthorityChangedError("Production Ask authority changed")
       }
       firstAuthority ??= result.authority
       documents.push(...result.documents)

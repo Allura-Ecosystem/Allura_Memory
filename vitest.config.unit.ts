@@ -299,7 +299,6 @@ export default defineConfig({
       { find: "@allura/types", replacement: path.resolve(__dirname, "./packages/types/src/index.ts") },
       { find: "@allura/rbac", replacement: path.resolve(__dirname, "./packages/rbac/src/index.ts") },
       { find: "@allura/mcp-server", replacement: path.resolve(__dirname, "./packages/mcp-server/src/index.ts") },
-      { find: /^server-only$/, replacement: path.resolve(__dirname, "./scripts/test-stubs/server-only.ts") },
       { find: "@", replacement: path.resolve(__dirname, "./src") },
     ],
   },

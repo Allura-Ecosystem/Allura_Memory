@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 1,
+  "epic": "30",
+  "stories": [
+    "30.5",
+    "30.6",
+    "30.11"
+  ],
+  "recordedAt": "2026-09-28",
+  "baseCommit": "b13375550506426ea73013cc8b1a9be9b01fb236",
+  "summary": "Independent fresh-context review of the three unpushed recovery commits found two BLOCK state-truthfulness defects in the session-authority slice and one shipped CI break in the live lane. All are repaired with RED to GREEN receipts. No policy approval, production activation, deployment or human gate is claimed.",
+  "findingsRepaired": [
+    {
+      "id": "sts-claim-lockout",
+      "severity": "BLOCK",
+      "file": "src/lib/auth/dashboard-principal.ts",
+      "defect": "The guard sessionStatus !== \"active\" denied every principal whose Clerk session token omits the OPTIONAL sts claim. @clerk/shared jwtPayloadParser computes `const sessionStatus = claims.sts ?? null` with no default, and the shared types declare `sts?: SessionStatusClaim` on the base JWT payload, so a valid active session can present sessionStatus: null. Every such user was denied before the authoritative lookup ran.",
+      "securityAnalysis": "The check added no security. Clerk's treatPendingAsSignedOut default is true (verified in the installed @clerk/backend dist: a pending session is converted to a signed-out object), so a pending session never reaches the guard - it is already rejected by the absent userId. The only case the guard added was sessionStatus === null, i.e. the false positive. The authoritative clerkClient().sessions.getSession() check that follows is strictly stronger and is still required.",
+      "fix": "Deny only on an explicitly present non-active claim; an absent claim defers to the authoritative Backend API lookup.",
+      "red": "4 failed / 13 passed in src/lib/auth/__tests__/dashboard-principal-session-authority.test.ts - exactly the four assertions that encoded the defects.",
+      "green": "21/21 under vitest.config.unit.ts and 21/21 under vitest.config.ts."
+    },
+    {
+      "id": "outage-reported-as-denial",
+      "severity": "BLOCK",
+      "file": "src/lib/auth/dashboard-principal.ts",
+      "defect": "Every provider failure (Backend API 5xx, 429 rate limit, DNS or TLS failure, missing or rotated secret key) was swallowed and returned as null. Downstream an absent principal is an authority refusal, so readAuthorizedWorkspaceState and ProductionAuthorizedReadProvider.workspaceState() classified a dependency outage as forbidden, and as conflict when only the post-receipt re-read failed. The dashboard rendered an access denial for an outage, and the page guard redirected to a login the user was already signed in to.",
+      "epicRuleViolated": "Surfaces must expose truthful loading, empty, forbidden, stale, degraded, conflict, error and complete states. An outage is degraded, not a policy denial.",
+      "fix": "Added the exported PrincipalProviderUnavailableError, raised when the provider cannot be consulted at all. null is now reserved for a genuinely absent or invalid principal. The existing untyped-error catches classify the outage as degraded.",
+      "red": "Included in the four failing assertions above; the previous tests asserted that an outage resolves to null.",
+      "green": "New coverage in src/lib/digital-brain/local-confinement.test.ts proves both read paths return degraded for the typed outage and still return forbidden for a genuinely absent principal."
+    },
+    {
+      "id": "mid-pagination-authority-change-misclassified",
+      "severity": "MEDIUM",
+      "file": "src/lib/digital-brain/production-reader.ts",
+      "defect": "assertCursor raised an untyped Error, so a policy-epoch change detected mid-pagination surfaced as degraded rather than conflict. The existing tests never reached it: both epoch-change cases paginate at the maximum page size, so no cursor is ever minted.",
+      "fix": "assertCursor rethrows ProductionAuthorityChangedError, preserving the original reason text so existing cursor-refusal assertions still match.",
+      "red": "1 failed - expected 'Error' to be 'ProductionAuthorityChangedError', captured by temporarily reverting only this hunk.",
+      "green": "57/57 in local-confinement.test.ts, including the new mid-pagination case."
+    },
+    {
+      "id": "untyped-ask-enforcement-points",
+      "severity": "MEDIUM",
+      "file": "src/lib/digital-brain/production-reader.ts",
+      "defect": "Two Ask enforcement points raised untyped Errors while the class documentation claimed all enforcement points are typed. No caller classifies them today, so nothing misclassified yet; the first caller that added classification would have rendered an authority refusal as degraded.",
+      "fix": "Scope mismatch now raises ProductionAuthorityRefusalError; mid-read authority change raises ProductionAuthorityChangedError. Message text preserved.",
+      "green": "253/253 across the digital-brain slice."
+    },
+    {
+      "id": "live-lane-ci-break",
+      "severity": "HIGH",
+      "file": "scripts/ci/run-epic30-live-tests.sh",
+      "defect": "The live inventory registered a delegation-credential proof that throws in beforeAll without ALLURA_MCP_TOKEN_SECRET, but the runner never set it and neither hosted workflow supplies it. The exact recorded command therefore failed in every clean environment, including the pull-request job.",
+      "fix": "The runner generates a per-run throwaway secret when the caller supplies none, mirroring the sibling live runner. The value is generated in process and never persisted.",
+      "red": "bun run test:epic30-live in a clean environment: 1 failed suite | 1 passed, 33 passed | 2 skipped, with 'Epic30 delegation revocation requires a test-only ALLURA_MCP_TOKEN_SECRET'.",
+      "green": "bun run test:epic30-live: 2 files passed, 35/35 passed, exit 0."
+    },
+    {
+      "id": "unreproducible-pool-pinning",
+      "severity": "HIGH",
+      "file": "scripts/ci/run-epic30-live-tests.sh",
+      "defect": "The 2026-09-28 delegation evidence recorded POSTGRES_POOL_MAX=1, but the recorded command never set it and the default is 10. The reused-pooled-connection proof therefore held only because queries happened to run sequentially, and the test asserted backend-PID equality at two observation points without asserting pool size.",
+      "fix": "The runner pins POSTGRES_POOL_MAX=1, overridable by the caller, and the delegation test now fails closed unless it is 1. The recorded environment is reproducible from the repository and the reuse guarantee is structural.",
+      "green": "Full live lane 35/35 with the pinned pool; no starvation or deadlock observed."
+    },
+    {
+      "id": "default-lane-cannot-collect-auth-test",
+      "severity": "MEDIUM",
+      "file": "vitest.config.unit.ts",
+      "defect": "The new auth test was made loadable by a global server-only resolver alias present only in the unit config, so the default vitest lane, whose include pattern also matches the file, failed to collect it.",
+      "fix": "Alias and scripts/test-stubs/server-only.ts removed; the test uses the repository's existing vi.mock(\"server-only\") convention. The real package still resolves in Next builds, so the client-bundle guard is untouched.",
+      "green": "21/21 under vitest.config.unit.ts and 21/21 under vitest.config.ts."
+    },
+    {
+      "id": "sdk-pack-report-shape",
+      "severity": "MEDIUM",
+      "file": "packages/sdk/test/dist-consumer.test.ts",
+      "defect": "The packed-consumer suite parsed npm pack --json as an array. npm 12 emits an object keyed by package name, so the suite failed in beforeAll and bun run test:unit, an Epic 30 verification command, exited 1.",
+      "fix": "Normalise both shapes before asserting. No assertion was weakened.",
+      "red": "1 failed suite, 4 skipped, exit 1.",
+      "green": "4/4, and the full unit lane returns to exit 0."
+    },
+    {
+      "id": "outage-degraded-not-wired-at-callers",
+      "severity": "BLOCK",
+      "file": "src/app/dashboard/page.tsx, src/app/dashboard/device-pairing/approve/route.ts, src/app/dashboard/error.tsx",
+      "defect": "A second independent review found the outage fix only half-implemented. Raising PrincipalProviderUnavailableError corrected classification inside the two read services, but no page or route caller was changed, so at ten dashboard entry points the throw was unhandled. With no error boundary anywhere in the app, a provider outage produced an unhandled 500 - and in development the framework overlay renders the message and the cause chain. The promised degraded surface was never wired up.",
+      "fix": "The Epic 30 /dashboard surface now catches only the typed outage and renders MyWorkWorkspace dataState=degraded. The device-pairing approve POST handler, which has no boundary to fall back to, answers 503 with no-store. A content-free src/app/dashboard/error.tsx boundary covers the remaining entry points so no message, digest, stack or cause reaches the browser. Both catches match on the typed class only, so Next's redirect signal and every other error still propagate - an existing regression test asserts the redirect is not swallowed.",
+      "red": "The page rendered no degraded state; the new test asserting data-surface-state=degraded failed against the unwired page.",
+      "green": "src/app/dashboard/__tests__/page.test.tsx 15/15 using the real error class, asserting degraded, no forbidden, no provider name, no document leak, and that neither read nor overview is attempted."
+    },
+    {
+      "id": "cursor-refusal-vs-conflict-over-broad",
+      "severity": "MEDIUM",
+      "file": "src/lib/digital-brain/production-reader.ts",
+      "defect": "assertAuthorizedReadCursorMatches raises one undifferentiated error for eight conditions, so mapping all of them to ProductionAuthorityChangedError labelled seven denial classes - tenant, workspace, principal, session, operation, page size and query hash mismatch - as conflict. A cursor replayed under a different session or against a different query is a scope-widening attempt, not a benign retriable race.",
+      "fix": "assertCursor now compares the pinned actorRole and policyEpoch explicitly: a delta is ProductionAuthorityChangedError (conflict); every other mismatch is ProductionAuthorityRefusalError (forbidden). The classification error types are also exported so a consumer outside the module can classify them at all.",
+      "green": "Both branches are asserted: the mid-pagination epoch change proves conflict and the operation-mismatched cursor replay proves forbidden, in local-confinement.test.ts 57/57."
+    },
+    {
+      "id": "fail-closed-guards-became-untyped-throws",
+      "severity": "LOW",
+      "file": "src/lib/auth/dashboard-principal.ts",
+      "defect": "The first remediation pass dropped the !authResult guard and moved the session identity comparison outside its try, so a malformed provider response would raise a bare TypeError instead of failing closed.",
+      "fix": "The authResult guard is restored and the session object is shape-checked before comparison; both paths return null."
+    },
+    {
+      "id": "error-class-behind-server-only-guard",
+      "severity": "MEDIUM",
+      "file": "src/lib/auth/principal-errors.ts",
+      "defect": "Declaring the error class in the server-only guarded module made it unimportable from a route handler test, which broke an existing device-pairing suite at collection time.",
+      "fix": "The class moved to a guard-free src/lib/auth/principal-errors.ts and is re-exported from dashboard-principal.ts, so existing imports keep working and callers import the guard-free path. One class, one module, so instanceof stays sound."
+    },
+    {
+      "id": "next-control-flow-signals-swallowed",
+      "severity": "HIGH",
+      "file": "src/lib/auth/dashboard-principal.ts",
+      "defect": "Clerk's auth() reads headers(), so the catch blocks also see Next's dynamic-rendering and control-flow signals, which Clerk deliberately rethrows. Wrapping one in PrincipalProviderUnavailableError makes Next's isDynamicUsageError predicates false: a bail-to-dynamic becomes a prerender failure, and on a page that catches the new type the outage branch would render a degraded surface that Next then caches as static output - a permanently degraded page for every user.",
+      "fix": "unstable_rethrow(error) is now the first statement of both catch blocks in the principal seam and of both caller catches, so control-flow and dynamic-rendering signals propagate untouched and only a genuine provider failure becomes an outage.",
+      "green": "Focused suites 100/100; typecheck exit 0; hermetic 389 passed; unit 3176 passed."
+    },
+    {
+      "id": "cursor-mismatch-precedence-inverted",
+      "severity": "MEDIUM",
+      "file": "src/lib/digital-brain/read-receipt.ts, src/lib/digital-brain/production-reader.ts",
+      "defect": "Classifying the cursor mismatch by re-deriving only actorRole/policyEpoch at the call site inverted precedence when BOTH an authority delta and a scope mismatch were present: a cursor replayed across tenants by a different role was labelled conflict instead of forbidden. It also duplicated the comparator's logic, a drift hazard.",
+      "fix": "assertAuthorizedReadCursorMatches now raises a typed AuthorizedReadCursorMismatchError carrying whether the scope or only the authority differed, with scope taking precedence. production-reader classifies from that reported class instead of re-deriving it.",
+      "green": "local-confinement.test.ts 58/58, including a new regression where operation and epoch both differ and the result must still be forbidden."
+    }
+  ],
+  "verificationAtRemediatedTree": {
+    "typecheck": {
+      "command": "tsc --noEmit via bun run test:epic30-hermetic",
+      "exit": 0
+    },
+    "hermetic": {
+      "command": "bun run test:epic30-hermetic",
+      "testsPassed": 387,
+      "skipped": 3,
+      "files": 38,
+      "exit": 0
+    },
+    "unit": {
+      "command": "bun run test:unit",
+      "testsPassed": 3174,
+      "skipped": 165,
+      "files": 229,
+      "filesSkipped": 7,
+      "exit": 0
+    },
+    "live": {
+      "command": "bun run test:epic30-live",
+      "testsPassed": 35,
+      "files": 2,
+      "exit": 0
+    },
+    "eslintChangedFiles": {
+      "command": "bunx eslint <changed files> --max-warnings 0",
+      "exit": 0
+    },
+    "gitDiffCheck": "clean"
+  },
+  "controlledRed": {
+    "command": "bun run test:epic30-controlled-red",
+    "exit": 0,
+    "hostNote": "The baseline typecheck first aborted with a V8 out-of-memory core dump under the default Node heap on this 3.7 GB host; the run was repeated with NODE_OPTIONS=--max-old-space-size=3072. This is a host resource limit, not a repository defect.",
+    "familiesDetected": [
+      {
+        "mutation": "bypass-row-disclosure-filter",
+        "sha256": "acf0f3fa6fd712344f684a160972c72ac0a4d8bec4fd304637613ed4de057d7c"
+      },
+      {
+        "mutation": "bypass-receipt-acknowledgement",
+        "sha256": "ee91126c2c648b404a3b0dc71136e05577e57b3ff936b323cbae88551a40f537"
+      },
+      {
+        "mutation": "bypass-final-authority-reread",
+        "sha256": "91c4c7a2acbb0910fc442ed9998dc2f066033de860cfb416082f3305a950270c"
+      },
+      {
+        "mutation": "permit-unknown-bot-surface",
+        "sha256": "63a603a1decac5f455232f38a4369b6d81331d9e7d2f1bf050d6cf2ca619e2c9"
+      },
+      {
+        "mutation": "expand-prompt-linked-sources",
+        "sha256": "e943a7ee022d99e188371217559ed2efa39b8beabd88fbf6427a98d33203d485"
+      }
+    ],
+    "cleanupAndCanonicalStateVerified": true
+  },
+  "liveDatabaseIsolation": {
+    "containerName": "allura-epic30-verify-20260928",
+    "image": "pgvector/pgvector:pg16",
+    "host": "127.0.0.1",
+    "port": 5444,
+    "storage": "container tmpfs only",
+    "bindMounts": "none - HostConfig.Binds null and Mounts empty, verified by docker inspect before any test write",
+    "authMethod": "POSTGRES_HOST_AUTH_METHOD=trust",
+    "authMethodDeviation": "Recorded deliberately. The hosted CI service uses password auth; this local container uses trust so that no credential literal is handled in this session. Role privileges, NOBYPASSRLS and forced RLS are unaffected, and no test in this lane asserts password authentication. The role passwords supplied to the client are unused placeholders, not credentials.",
+    "productionDatabaseContacted": false,
+    "productionNote": "The production knowledge-postgres instance on 127.0.0.1:5432 was never contacted. No credential file was read, printed or modified.",
+    "measured": {
+      "workspaceRevocationReusedMs": 25.99,
+      "workspaceRevocationFreshMs": 60.97,
+      "delegationRevocationReusedMs": 2.19,
+      "delegationRevocationReusedBackendPid": 236,
+      "delegationRevocationFreshMs": 8.94,
+      "delegationRevocationBackendPidTransition": [
+        237,
+        238
+      ],
+      "ordinaryReadBoundMs": 60000
+    },
+    "perRunSyntheticDatabasesDropped": true,
+    "perRunCleanupNote": "Each test provisions its own uniquely named database and role and drops both in afterAll, verifying absence against pg_database and pg_roles and throwing if either remains. That cleanup ran and passed.",
+    "containerRemoved": false,
+    "containerRemovalNote": "NOT REMOVED. Removal was attempted and refused by the sandbox: both `docker rm -f allura-epic30-verify-20260928` and `docker stop allura-epic30-verify-20260928` were denied by the tool permission policy, and the denial was not worked around. At the end of the session the container was still Up with 127.0.0.1:5444 listening. It holds container-tmpfs storage only, with no bind mount and no volume, so it retains nothing across a host restart and contains only synthetic fixture data. OPERATOR ACTION REQUIRED: run `docker rm -f allura-epic30-verify-20260928` to reclaim port 5444.",
+    "port5444ListeningAtSessionEnd": true
+  },
+  "notProved": [
+    "Any human approval, accessibility evidence, provider contract, five-person study result, release receipt or production proof.",
+    "Real Clerk tenant behaviour. The external Clerk SDK is mocked, so no live revocation timing is measured. The relaxed sts-claim handling and the outage classification are proven hermetically only.",
+    "Session revocation authority and timing in SQL. There is still no server-owned revocable session registry and no session predicate in the authority SQL. The Clerk candidate is a provider-delegated enforcement path, not an approved policy.",
+    "Production activation of any route, provider, UI or writer."
+  ],
+  "closeoutVerification": {
+    "note": "Second remediation round, verified sequentially on the final tree.",
+    "focusedDiffTests": {
+      "command": "bun vitest run --config vitest.config.unit.ts <4 suites covering the diff>",
+      "testsPassed": 100,
+      "files": 4,
+      "exit": 0
+    },
+    "hermetic": {
+      "command": "bun run test:epic30-hermetic",
+      "testsPassed": 389,
+      "skipped": 3,
+      "files": 38,
+      "exit": 0
+    },
+    "typecheck": {
+      "command": "tsc --noEmit",
+      "exit": 0
+    },
+    "unit": {
+      "command": "bun run test:unit",
+      "testsPassed": 3176,
+      "skipped": 165,
+      "files": 229,
+      "filesSkipped": 7,
+      "exit": 0
+    },
+    "live": {
+      "command": "bun run test:epic30-live",
+      "testsPassed": 35,
+      "files": 2,
+      "exit": 0,
+      "measured": {
+        "workspaceRevocationReusedMs": 26.94,
+        "workspaceRevocationFreshMs": 61.23,
+        "delegationRevocationReusedMs": 2.58,
+        "delegationRevocationFreshMs": 8.99,
+        "ordinaryReadBoundMs": 60000
+      }
+    },
+    "eslint": {
+      "note": "The four import/order warnings on the two touched app files are pre-existing at HEAD; this change introduces no new ESLint finding. Every other changed file reports zero.",
+      "exit": 0
+    },
+    "gitDiffCheck": "clean"
+  },
+  "residualsRoutedToOpenGates": [
+    {
+      "finding": "Only /dashboard renders the truthful degraded surface on a provider outage. The other dashboard entry points fall through to the new content-free error boundary, which reports the error state.",
+      "severity": "MEDIUM",
+      "disposition": "Recorded, not fixed. The boundary cannot distinguish an outage from any other failure: Next sanitises the error before a client boundary sees it in production, leaving only an opaque digest, so error is the truthful label for an unclassified failure. Degrading each remaining surface individually is production-UI work owned by the open Story 30.7 approved-production-ui gate; doing it here would expand scope beyond this slice."
+    },
+    {
+      "finding": "The delegation test asserts process.env.POSTGRES_POOL_MAX rather than the pool's effective max.",
+      "severity": "LOW",
+      "disposition": "Recorded. DEFAULT_POOL_CONFIG is evaluated at import, so the env assertion is a proxy for the effective value. The runner now sets it before process start and an operator overriding it gets a hard failure."
+    },
+    {
+      "finding": "No test covers the new 503 branch in the device-pairing approve route.",
+      "severity": "LOW",
+      "disposition": "Recorded. Typecheck proves the variable is definitely assigned on every path and the catch either returns or rethrows. The route is Epic 29 scope; adding coverage there is outside this slice."
+    }
+  ],
+  "independentReviews": [
+    {
+      "round": 1,
+      "lens": "security and correctness of the three recovery commits",
+      "result": "2 BLOCK, 1 HIGH, 4 MEDIUM, 3 LOW - all BLOCK/HIGH/MEDIUM repaired."
+    },
+    {
+      "round": 1,
+      "lens": "evidence accuracy",
+      "result": "2 BLOCK, 2 HIGH, 3 MEDIUM, 4 LOW - overclaims corrected in the artifacts; the two HIGH were real code and CI defects, repaired."
+    },
+    {
+      "round": 2,
+      "lens": "security and correctness of the remediation diff",
+      "result": "1 BLOCK, 3 MEDIUM, 4 LOW - BLOCK (degraded never wired at callers) and the MEDIUMs repaired."
+    },
+    {
+      "round": 3,
+      "lens": "security and correctness of the final diff",
+      "result": "No BLOCK. 1 HIGH and 2 MEDIUM; the HIGH and the cursor-precedence MEDIUM are repaired, the surface-coverage MEDIUM is recorded as a residual against the open Story 30.7 gate."
+    }
+  ]
+}

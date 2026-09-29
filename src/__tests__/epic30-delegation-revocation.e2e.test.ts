@@ -76,6 +76,13 @@ describe("Epic 30 delegation revocation on reused credential-validation pooled c
     if (!process.env.ALLURA_MCP_TOKEN_SECRET) {
       throw new Error("Epic30 delegation revocation requires a test-only ALLURA_MCP_TOKEN_SECRET")
     }
+    // The reused-pooled-connection claim below is only structurally guaranteed
+    // when the validation pool owns exactly one connection. Assert the runner
+    // actually pinned it instead of relying on incidental sequential
+    // scheduling under the default pool size.
+    if (process.env.POSTGRES_POOL_MAX !== "1") {
+      throw new Error("Epic30 delegation revocation requires POSTGRES_POOL_MAX=1 for the reused-connection proof")
+    }
     // Clear any stale singleton from earlier live files before rebinding.
     await closePool()
     database = await provisionSyntheticDatabase()

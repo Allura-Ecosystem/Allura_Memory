@@ -11,6 +11,7 @@ vi.mock("@/lib/digital-brain/read-service", () => ({
   mapAuthorizedWorkspaceProviderState: mocks.map,
 }))
 
+import { PrincipalProviderUnavailableError } from "@/lib/auth/dashboard-principal"
 import DashboardOverviewPage from "../page"
 
 const scope = {
@@ -126,5 +127,21 @@ describe("Epic30 dashboard server page", () => {
     mocks.guard.mockRejectedValue(new Error("NEXT_REDIRECT:/login"))
     await expect(DashboardOverviewPage()).rejects.toThrow("NEXT_REDIRECT:/login")
     expect(mocks.read).not.toHaveBeenCalled()
+  })
+
+  it("renders degraded, not a denial or a crash, when the session provider is unavailable", async () => {
+    // Uses the real error class, so this fails if the provider ever goes back
+    // to reporting an outage as an absent principal.
+    const error = vi.spyOn(console, "error").mockImplementation(() => {})
+    mocks.guard.mockRejectedValue(new PrincipalProviderUnavailableError("Clerk session lookup unavailable"))
+    const html = renderToStaticMarkup(await DashboardOverviewPage())
+    expect(html).toContain('data-surface-state="degraded"')
+    expect(html).not.toContain('data-surface-state="forbidden"')
+    expect(html).not.toContain("Clerk")
+    expect(html).not.toContain(document.title)
+    expect(html).not.toContain(document.content)
+    expect(mocks.read).not.toHaveBeenCalled()
+    expect(mocks.overview).not.toHaveBeenCalled()
+    expect(error).toHaveBeenCalledWith("[Epic30] session provider unavailable")
   })
 })
