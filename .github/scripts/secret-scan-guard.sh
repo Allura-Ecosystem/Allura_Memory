@@ -24,9 +24,9 @@ PATTERNS=(
 
 # Postgres DSNs carrying credentials, excluding the documented CI test database
 # (postgresql://allura:allura@localhost) which is a fixture, not a secret.
-DSN_PATTERN='postgresql://[^:/@[:space:]]+:[^@[:space:]]+@'
+DSN_PATTERN='postgresql://[^:/@[:space:]]+:[^@[:space:]]+@[^[:space:],;|?]+'
 # Documented fixtures and doc examples — not secrets.
-DSN_ALLOW='postgresql://allura:allura@localhost|postgresql://postgres:postgres@|postgresql://allura:(pass|password)@'
+DSN_ALLOW='postgresql://(allura|ronin4life):(allura|pass|password|<password>|\*+|\$\{[^}]+\})@(localhost|postgres)(:|/|\?|$)|postgresql://(postgres):(postgres|pass|password|<password>|\*+|\$\{[^}]+\})@(localhost|postgres)(:|/|\?|$)|postgresql://\$\{[^}]+\}:(\*+|\$\{[^}]+\})@\$\{[^}]+\}(:|/|\?|$)'
 
 # Historical records legitimately cite retired credentials; never rewrite history.
 # The guard and its workflow contain the patterns by definition.
@@ -41,19 +41,33 @@ EXCLUDES=(
 
 status=0
 
-# Lines that are demonstrably not live secrets:
-#   ${VAR} / $VAR  — shell or template interpolation, the value lives elsewhere
-#   <password>     — documentation placeholder
-#   allura_mcp_xxx0000...  — padded test fixtures in the adversarial auth suite;
-#                            real tokens are random and never end in zero runs
-NOT_A_SECRET='\$\{|<password>|<your-|YOUR_|example\.com|allura_mcp_[a-z]+0{6,}'
+# Safe placeholders are evaluated against each matched token, not whole lines.
+# This prevents a safe fixture from hiding a second unsafe credential on the same line.
+SAFE_PLACEHOLDERS='\$\{|<password>|<your-|YOUR_|example\.com'
+SAFE_ALLURA_FIXTURES='allura_mcp_[a-z]+0{6,}|allura_mcp_device-token-0{12,}|allura_mcp_RAW_SHOULD_NEVER_RENDER'
+SAFE_PRIVATE_KEY_FIXTURE_PATHS='^_bmad/bmm/stories/29-(17-credential-leak-scan|21-platform-secure-store-contracts)\.md:|^src/lib/device-pairing/__tests__/audit-redaction\.test\.ts:'
 
 for entry in "${PATTERNS[@]}"; do
   label="${entry%%|*}"
   regex="${entry#*|}"
   echo "==> scanning for: ${label}"
-  if hits=$(git grep -nE "${regex}" -- . "${EXCLUDES[@]}" 2>/dev/null); then
-    real=$(echo "${hits}" | grep -vE "${NOT_A_SECRET}" || true)
+  if hits=$(git grep -nE -e "${regex}" -- . "${EXCLUDES[@]}" 2>/dev/null); then
+    safe_regex="${SAFE_PLACEHOLDERS}"
+    if [[ "${label}" == "Allura MCP token" ]]; then
+      safe_regex="${safe_regex}|${SAFE_ALLURA_FIXTURES}"
+    fi
+    safe_regex="^(${safe_regex})$"
+    real=''
+    while IFS= read -r line; do
+      if [[ "${label}" == "Private key block" && "${line}" =~ ${SAFE_PRIVATE_KEY_FIXTURE_PATHS} ]]; then
+        continue
+      fi
+      matches=$(printf '%s\n' "${line}" | grep -oE -- "${regex}" || true)
+      unsafe=$(printf '%s\n' "${matches}" | grep -vE "${safe_regex}" || true)
+      if [[ -n "${unsafe}" ]]; then
+        real+="${line}"$'\n'
+      fi
+    done <<< "${hits}"
     if [[ -n "${real}" ]]; then
       echo "${real}"
       echo "    FAIL: a ${label} appears to be committed."
@@ -68,8 +82,14 @@ done
 
 echo "==> scanning for: PostgreSQL DSN with embedded credentials"
 if hits=$(git grep -nE "${DSN_PATTERN}" -- . "${EXCLUDES[@]}" 2>/dev/null); then
-  # Drop the documented CI fixture before deciding.
-  real=$(echo "${hits}" | grep -vE "${NOT_A_SECRET}" | grep -vE "${DSN_ALLOW}" || true)
+  real=''
+  while IFS= read -r line; do
+    matches=$(printf '%s\n' "${line}" | grep -oE -- "${DSN_PATTERN}" || true)
+    unsafe=$(printf '%s\n' "${matches}" | grep -vE "^(${DSN_ALLOW})" || true)
+    if [[ -n "${unsafe}" ]]; then
+      real+="${line}"$'\n'
+    fi
+  done <<< "${hits}"
   if [[ -n "${real}" ]]; then
     echo "${real}"
     echo "    FAIL: a PostgreSQL DSN with embedded credentials is committed."
