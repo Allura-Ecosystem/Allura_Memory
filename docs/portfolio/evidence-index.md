@@ -52,7 +52,7 @@ The portfolio evaluation suite (`evals/suites/portfolio.yaml`) is a deterministi
 offline regression gate. `src/lib/evals/runner.ts` parses the suite's lane
 declarations, executes every lane's dataset fixture, derives each metric from the
 executed case outcomes, and compares it to the declared threshold. It is wired
-into CI as the required `test-eval` job (`.github/workflows/ci.yml`) and as the
+into CI as a separate `test-eval` job (`.github/workflows/ci.yml`) and as the
 `Epic 24 Evidence / Evaluation` lane (`.github/workflows/epic-24-evidence.yml`),
 whose artifact is aggregated into the SHA-bound evidence manifest.
 
