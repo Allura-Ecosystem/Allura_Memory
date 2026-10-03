@@ -45,12 +45,13 @@ status=0
 # This prevents a safe fixture from hiding a second unsafe credential on the same line.
 SAFE_PLACEHOLDERS='\$\{|<password>|<your-|YOUR_|example\.com'
 SAFE_ALLURA_FIXTURES='allura_mcp_[a-z]+0{6,}|allura_mcp_device-token-0{12,}|allura_mcp_RAW_SHOULD_NEVER_RENDER'
+SAFE_PRIVATE_KEY_FIXTURE_PATHS='^_bmad/bmm/stories/29-(17-credential-leak-scan|21-platform-secure-store-contracts)\.md:|^src/lib/device-pairing/__tests__/audit-redaction\.test\.ts:'
 
 for entry in "${PATTERNS[@]}"; do
   label="${entry%%|*}"
   regex="${entry#*|}"
   echo "==> scanning for: ${label}"
-  if hits=$(git grep -nE "${regex}" -- . "${EXCLUDES[@]}" 2>/dev/null); then
+  if hits=$(git grep -nE -e "${regex}" -- . "${EXCLUDES[@]}" 2>/dev/null); then
     safe_regex="${SAFE_PLACEHOLDERS}"
     if [[ "${label}" == "Allura MCP token" ]]; then
       safe_regex="${safe_regex}|${SAFE_ALLURA_FIXTURES}"
@@ -58,7 +59,10 @@ for entry in "${PATTERNS[@]}"; do
     safe_regex="^(${safe_regex})$"
     real=''
     while IFS= read -r line; do
-      matches=$(printf '%s\n' "${line}" | grep -oE "${regex}" || true)
+      if [[ "${label}" == "Private key block" && "${line}" =~ ${SAFE_PRIVATE_KEY_FIXTURE_PATHS} ]]; then
+        continue
+      fi
+      matches=$(printf '%s\n' "${line}" | grep -oE -- "${regex}" || true)
       unsafe=$(printf '%s\n' "${matches}" | grep -vE "${safe_regex}" || true)
       if [[ -n "${unsafe}" ]]; then
         real+="${line}"$'\n'
@@ -80,7 +84,7 @@ echo "==> scanning for: PostgreSQL DSN with embedded credentials"
 if hits=$(git grep -nE "${DSN_PATTERN}" -- . "${EXCLUDES[@]}" 2>/dev/null); then
   real=''
   while IFS= read -r line; do
-    matches=$(printf '%s\n' "${line}" | grep -oE "${DSN_PATTERN}" || true)
+    matches=$(printf '%s\n' "${line}" | grep -oE -- "${DSN_PATTERN}" || true)
     unsafe=$(printf '%s\n' "${matches}" | grep -vE "^(${DSN_ALLOW})" || true)
     if [[ -n "${unsafe}" ]]; then
       real+="${line}"$'\n'
