@@ -35,4 +35,5 @@ jobs:
         run: bun run test:unit
 
       - name: Integration tests
+        if: ${{ !cancelled() }}
         run: bun run test:integration
