@@ -13,6 +13,7 @@
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "crypto";
+import { PrincipalAuthError } from "../lib/auth/principal-context";
 import {
   DatabaseQueryError,
   DatabaseUnavailableError,
@@ -789,7 +790,7 @@ describe("Canonical Memory Operations", () => {
     });
 
     describe("memory_add error propagation", () => {
-      it("should throw DatabaseUnavailableError when PostgreSQL is unreachable", async () => {
+      it("should reject a mismatched actor before checking PostgreSQL availability", async () => {
         const originalHost = process.env.POSTGRES_HOST;
         const originalPort = process.env.POSTGRES_PORT;
         process.env.POSTGRES_HOST = "127.0.0.1";
@@ -804,12 +805,12 @@ describe("Canonical Memory Operations", () => {
             content: "Error propagation test",
           };
 
-          await expect(memory_add(request)).rejects.toThrow();
-          try {
-            await memory_add(request);
-          } catch (error) {
-            expect(error).toBeInstanceOf(DatabaseUnavailableError);
-          }
+          // prepareMemoryAdd checks user_id against canonical-test-agent before
+          // canonical-tools reaches the database. This mismatched actor must fail
+          // authentication even when PostgreSQL is unreachable.
+          const result = memory_add(request);
+          await expect(result).rejects.toBeInstanceOf(PrincipalAuthError);
+          await expect(result).rejects.toMatchObject({ reasonCode: "ACTOR_MISMATCH" });
         } finally {
           process.env.POSTGRES_HOST = originalHost;
           process.env.POSTGRES_PORT = originalPort;
