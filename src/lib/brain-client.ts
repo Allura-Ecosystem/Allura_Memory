@@ -105,11 +105,51 @@ export interface BrainGovernanceResult {
 const CANONICAL_BRAIN_URL = "https://mcp.faithmeats.org/mcp"
 const REQUEST_TIMEOUT_MS = 10_000
 
+type BrainAuthEnv = Record<string, string | undefined>
+
 function brainUrl(): string {
   if (process.env.ALLURA_BRAIN_URL !== CANONICAL_BRAIN_URL) {
     throw new Error("Canonical Allura Brain endpoint is not configured")
   }
   return CANONICAL_BRAIN_URL
+}
+
+/**
+ * Resolve the three credentials required by the public MCP path.
+ *
+ * CF_ACCESS_* are the canonical names. ALLURA_CF_ACCESS_* remains supported
+ * for the protected operator environment. Values are never logged or included
+ * in errors.
+ */
+export function resolveBrainAuthHeaders(env: BrainAuthEnv = process.env): Record<string, string> {
+  if (env.ALLURA_BRAIN_URL !== CANONICAL_BRAIN_URL) {
+    throw new Error("Canonical Allura Brain endpoint is not configured")
+  }
+
+  const bearer = env.ALLURA_MCP_AUTH_TOKEN?.trim()
+  const clientId = env.CF_ACCESS_CLIENT_ID?.trim() || env.ALLURA_CF_ACCESS_CLIENT_ID?.trim()
+  const clientSecret = env.CF_ACCESS_CLIENT_SECRET?.trim() || env.ALLURA_CF_ACCESS_CLIENT_SECRET?.trim()
+  const missing: string[] = []
+  if (!bearer) missing.push("ALLURA_MCP_AUTH_TOKEN")
+  if (!clientId) missing.push("CF_ACCESS_CLIENT_ID")
+  if (!clientSecret) missing.push("CF_ACCESS_CLIENT_SECRET")
+  if (!bearer || !clientId || !clientSecret) {
+    throw new Error(`Canonical Allura Brain authentication is not configured: ${missing.join(", ")}`)
+  }
+
+  return {
+    Authorization: `Bearer ${bearer}`,
+    "CF-Access-Client-Id": clientId,
+    "CF-Access-Client-Secret": clientSecret,
+  }
+}
+
+function brainHeaders(): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    Accept: "application/json, text/event-stream",
+    ...resolveBrainAuthHeaders(),
+  }
 }
 
 interface JsonRpcRequest {
@@ -142,10 +182,7 @@ async function initSession(): Promise<string> {
   try {
     const res = await fetch(brainUrl(), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json, text/event-stream",
-      },
+      headers: brainHeaders(),
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: nextId(),
@@ -177,8 +214,7 @@ async function callTool<T>(toolName: string, args: Record<string, unknown>): Pro
 
   try {
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json, text/event-stream",
+      ...brainHeaders(),
     }
     if (sessionId) headers["mcp-session-id"] = sessionId
 
