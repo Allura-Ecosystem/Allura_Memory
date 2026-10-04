@@ -102,45 +102,71 @@ export interface BrainGovernanceResult {
 
 // ── Client ───────────────────────────────────────────────────────────────────
 
+/**
+ * Exact allowlist of Brain MCP endpoints.
+ *
+ * - Public canonical endpoint: Bearer + CF Access service credentials.
+ * - Internal container endpoint: scoped Bearer only, no Cloudflare headers.
+ *   The internal MCP service verifies the bearer token itself; CF Access
+ *   headers are not present on that network path.
+ */
 const CANONICAL_BRAIN_URL = "https://mcp.faithmeats.org/mcp"
+const INTERNAL_BRAIN_URL = "http://allura-memory-mcp:3201/mcp"
+
 const REQUEST_TIMEOUT_MS = 10_000
 
 type BrainAuthEnv = Record<string, string | undefined>
 
-function brainUrl(): string {
-  if (process.env.ALLURA_BRAIN_URL !== CANONICAL_BRAIN_URL) {
+/** True when env points at an exactly-allowed Brain MCP endpoint. */
+export function isConfiguredBrainEndpoint(
+  env: BrainAuthEnv = process.env,
+): boolean {
+  const url = env.ALLURA_BRAIN_URL
+  return url === CANONICAL_BRAIN_URL || url === INTERNAL_BRAIN_URL
+}
+
+function brainUrl(env: BrainAuthEnv = process.env): string {
+  const url = env.ALLURA_BRAIN_URL
+  if (url !== CANONICAL_BRAIN_URL && url !== INTERNAL_BRAIN_URL) {
     throw new Error("Canonical Allura Brain endpoint is not configured")
   }
-  return CANONICAL_BRAIN_URL
+  return url
 }
 
 /**
- * Resolve the three credentials required by the public MCP path.
+ * Resolve the auth headers required by the configured Brain MCP endpoint.
  *
- * CF_ACCESS_* are the canonical names. ALLURA_CF_ACCESS_* remains supported
- * for the protected operator environment. Values are never logged or included
- * in errors.
+ * Public canonical path requires all three credentials (bearer + CF Access
+ * service identity). The internal container path requires only the scoped
+ * bearer and must not send Cloudflare headers. CF_ACCESS_* are the canonical
+ * names; ALLURA_CF_ACCESS_* remains supported for the protected operator
+ * environment. Values are never logged or included in errors.
  */
 export function resolveBrainAuthHeaders(env: BrainAuthEnv = process.env): Record<string, string> {
-  if (env.ALLURA_BRAIN_URL !== CANONICAL_BRAIN_URL) {
-    throw new Error("Canonical Allura Brain endpoint is not configured")
-  }
+  const url = brainUrl(env)
 
   const bearer = env.ALLURA_MCP_AUTH_TOKEN?.trim()
+  if (!bearer) {
+    throw new Error("Canonical Allura Brain authentication is not configured: ALLURA_MCP_AUTH_TOKEN")
+  }
+
+  if (url === INTERNAL_BRAIN_URL) {
+    return { Authorization: `Bearer ${bearer}` }
+  }
+
   const clientId = env.CF_ACCESS_CLIENT_ID?.trim() || env.ALLURA_CF_ACCESS_CLIENT_ID?.trim()
   const clientSecret = env.CF_ACCESS_CLIENT_SECRET?.trim() || env.ALLURA_CF_ACCESS_CLIENT_SECRET?.trim()
   const missing: string[] = []
-  if (!bearer) missing.push("ALLURA_MCP_AUTH_TOKEN")
   if (!clientId) missing.push("CF_ACCESS_CLIENT_ID")
   if (!clientSecret) missing.push("CF_ACCESS_CLIENT_SECRET")
-  if (!bearer || !clientId || !clientSecret) {
+  if (missing.length > 0) {
     throw new Error(`Canonical Allura Brain authentication is not configured: ${missing.join(", ")}`)
   }
 
   return {
     Authorization: `Bearer ${bearer}`,
-    "CF-Access-Client-Id": clientId,
-    "CF-Access-Client-Secret": clientSecret,
+    "CF-Access-Client-Id": clientId as string,
+    "CF-Access-Client-Secret": clientSecret as string,
   }
 }
 
