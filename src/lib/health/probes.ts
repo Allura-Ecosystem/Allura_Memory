@@ -11,6 +11,7 @@
  */
 
 import { isPoolHealthy } from "@/lib/postgres/connection";
+import { resolveMcpBaseUrl } from "@/lib/config/mcp-url";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -47,12 +48,13 @@ async function checkWithTimeout(
   timeoutMs: number = DEPENDENCY_CHECK_TIMEOUT_MS,
 ): Promise<DependencyCheck> {
   const start = Date.now();
+  let timer: ReturnType<typeof setTimeout> | undefined;
 
   try {
     const result = await Promise.race([
       checkFn(),
       new Promise<boolean>((_resolve, reject) =>
-        setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs),
+        { timer = setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs); },
       ),
     ]);
 
@@ -68,6 +70,8 @@ async function checkWithTimeout(
       latencyMs: Date.now() - start,
       error: error instanceof Error ? error.message : String(error),
     };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -99,16 +103,17 @@ async function isMcpHealthy(): Promise<boolean> {
     return true;
   }
 
-  const baseUrl = process.env.ALLURA_MCP_BASE_URL;
-  if (!baseUrl) {
-    return false;
-  }
+  const baseUrl = resolveMcpBaseUrl();
 
   const response = await fetch(new URL("/ready", baseUrl), {
+    redirect: "error",
+    cache: "no-store",
     signal: AbortSignal.timeout(DEPENDENCY_CHECK_TIMEOUT_MS),
   });
 
-  return response.ok;
+  if (!response.ok) return false;
+  const body: unknown = await response.json();
+  return typeof body === "object" && body !== null && "ready" in body && body.ready === true;
 }
 
 /**
@@ -121,11 +126,11 @@ async function isMcpHealthy(): Promise<boolean> {
 export async function checkReadiness(): Promise<ReadinessResult> {
   const checks: Record<string, DependencyCheck> = {};
 
-  // Check PostgreSQL (required)
-  checks.postgres = await checkWithTimeout("postgres", isPoolHealthy);
-
-  // Check MCP server initialization or configured HTTP gateway (required)
-  checks.mcp = await checkWithTimeout("mcp", isMcpHealthy);
+  // Parallel checks keep the whole probe within the dependency timeout budget.
+  [checks.postgres, checks.mcp] = await Promise.all([
+    checkWithTimeout("postgres", isPoolHealthy),
+    checkWithTimeout("mcp", isMcpHealthy),
+  ]);
 
   // Ready if PostgreSQL and MCP are healthy
   const ready = checks.postgres.healthy && checks.mcp.healthy;
