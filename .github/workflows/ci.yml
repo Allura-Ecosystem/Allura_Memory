@@ -145,6 +145,9 @@ jobs:
   # NO database env vars — unit tests must not touch external services.
   test-unit:
     runs-on: ubuntu-latest
+    env:
+      # Public CI-only test-signing key; never use for production credentials.
+      ALLURA_MCP_TOKEN_SECRET: ci-test-token-secret-0123456789abcdef
     steps:
       - uses: actions/checkout@v4
       - name: Setup Bun
