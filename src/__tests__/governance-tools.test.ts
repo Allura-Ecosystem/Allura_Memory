@@ -26,6 +26,7 @@ import type {
   GroupId,
 } from "../lib/memory/canonical-contracts"
 import {
+  evaluateAppendOnlyEventsInvariant,
   governance_apply_policy_override,
   governance_audit_log,
   governance_check_gate,
@@ -182,6 +183,148 @@ describe("Governance MCP Tools (Story 9.1)", () => {
   // ── 3. governance_check_gate ───────────────────────────────────────────
 
   describe("governance_check_gate", () => {
+    it("allows the exact historical Epic 30 Git-checkpoint request", () => {
+      const check = evaluateAppendOnlyEventsInvariant(
+        "Create a local Git checkpoint commit for the reviewed Epic 30 Clerk-removal diff only, after both independent Astra reviewers return APPROVE. Include source, tests, package metadata, current architecture/supersession docs, and the local evidence receipt. Do not push, merge, deploy, modify DNS/Cloudflare, enable Cloudflare Access, mutate data, or include credentials.",
+        {
+          baseline: "a0f84d540f410b4696dc618f417b5c0aff76278e",
+          branch: "codex/epic30-recovery-20260927",
+          container: "allura-epic30-clerk-removed-test",
+          image: "sha256:b2aec87904419f1f712646a0b656b8d852317697207fa408ad6f7e74ee02ae3f",
+          local_port: "127.0.0.1:3211",
+          push: false,
+          review_gate: "pending Pike and Fowler APPROVE",
+          scope: "Clerk removal and provider-neutral current contracts only",
+        },
+      )
+
+      expect(check.pass).toBe(true)
+      expect(check.reason).toContain("PostgreSQL events rows")
+    })
+
+    it.each(["update", "delete", "overwrite", "mutate"])(
+      "blocks structured %s operations against PostgreSQL events rows",
+      (operation) => {
+        const check = evaluateAppendOnlyEventsInvariant("governance_action", {
+          resource: "postgres.events",
+          operation,
+        })
+
+        expect(check.pass).toBe(false)
+        expect(check.reason).toContain("postgres.events")
+      },
+    )
+
+    it("keeps the legacy delete_events_directly identifier fail-closed", () => {
+      const check = evaluateAppendOnlyEventsInvariant("delete_events_directly", {})
+
+      expect(check.pass).toBe(false)
+    })
+
+    it("blocks a protected target even when another resource field is unrelated", () => {
+      const check = evaluateAppendOnlyEventsInvariant("delete", {
+        resource: "git.repository",
+        target: "postgres.events",
+        operation: "delete",
+      })
+
+      expect(check.pass).toBe(false)
+    })
+
+    it.each(["public.events", "audit.events", "\"public\".\"events\""])(
+      "blocks destructive operations against schema-qualified target %s",
+      (resource) => {
+        const check = evaluateAppendOnlyEventsInvariant("governance_action", {
+          resource,
+          operation: "delete",
+        })
+
+        expect(check.pass).toBe(false)
+      },
+    )
+
+    it.each([undefined, "truncate", "unknown"])(
+      "fails closed for protected events rows with operation %s",
+      (operation) => {
+        const check = evaluateAppendOnlyEventsInvariant("governance_action", {
+          table: "events",
+          operation,
+        })
+
+        expect(check.pass).toBe(false)
+      },
+    )
+
+    it("blocks an explicit SQL-style events deletion without structured context", () => {
+      const check = evaluateAppendOnlyEventsInvariant(
+        "Delete all rows from PostgreSQL events",
+        {},
+      )
+
+      expect(check.pass).toBe(false)
+    })
+
+    it.each([
+      'DELETE FROM "public"."events"',
+      'UPDATE "events" SET status = NULL',
+      'TRUNCATE TABLE "events"',
+      "DELETE FROM ONLY public.events",
+      'UPDATE "public"."events" AS e SET status = NULL',
+      'DELETE/**/FROM "public"."events"',
+      'DELETE FROM ONLY ("public"."events")',
+      'TRUNCATE TABLE event_subscriptions, "public"."events"',
+      'DROP TABLE IF EXISTS "public"."events"',
+      "SELECT true AS no; DELETE FROM events",
+      "SELECT NOT false; DELETE FROM events",
+      "-- '\nDELETE FROM events;\n-- '",
+      'SELECT 1 AS "a\'b"; DELETE FROM events',
+      'SELECT 1 AS "--"; DELETE FROM events',
+      "SELECT E'it\\'s'; DELETE FROM events",
+      "WITH no AS (DELETE FROM events RETURNING *) SELECT * FROM no",
+      "WITH never AS (DELETE FROM events RETURNING *) SELECT * FROM never",
+      "-- comment\rDELETE FROM events",
+      "SELECT $$DELETE FROM events$$ AS example",
+      "Do not delete events; append a new row instead",
+      "SELECT 'DELETE FROM events' AS example",
+      "UPDATE accounts SET last_event_id = (SELECT max(id) FROM events)",
+      "DELETE FROM event_subscriptions WHERE NOT EXISTS (SELECT 1 FROM events)",
+    ])("blocks quoted or qualified SQL mutation: %s", (action) => {
+      const check = evaluateAppendOnlyEventsInvariant(action, {})
+
+      expect(check.pass).toBe(false)
+    })
+
+    it("blocks whitespace-separated quoted structured identifiers", () => {
+      const check = evaluateAppendOnlyEventsInvariant("governance_action", {
+        resource: '"public" . "events"',
+        operation: "delete",
+      })
+
+      expect(check.pass).toBe(false)
+    })
+
+    it.each([
+      'SELECT * FROM "events"',
+      "DELETE FROM event_subscriptions",
+      "SELECT '-- harmless comment marker' AS example",
+    ])("allows non-destructive or unrelated SQL-like action: %s", (action) => {
+      const check = evaluateAppendOnlyEventsInvariant(action, {})
+
+      expect(check.pass).toBe(true)
+    })
+
+    it.each(["read", "select", "insert", "append"])(
+      "allows explicit append-only-safe %s operations on events rows",
+      (operation) => {
+        const check = evaluateAppendOnlyEventsInvariant("governance_action", {
+          resource: "postgres.events",
+          operation,
+        })
+
+        expect(check.pass).toBe(true)
+      },
+    )
+
     it("should reject missing group_id", async () => {
       const req = { group_id: undefined, action: "memory_add" } as unknown as GovernanceCheckGateRequest
       await expect(governance_check_gate(req)).rejects.toThrow()

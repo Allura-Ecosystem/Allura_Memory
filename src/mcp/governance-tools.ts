@@ -310,6 +310,64 @@ export async function governance_check_gate(
   }
 }
 
+function actionAttemptsDirectEventsMutation(action: string): boolean {
+  const tokens = new Set(action.toLowerCase().match(/[a-z0-9_]+/g) ?? [])
+  const destructiveTokens = new Set(["update", "delete", "truncate", "drop", "mutate", "overwrite"])
+  return tokens.has("events") && [...destructiveTokens].some((token) => tokens.has(token))
+}
+
+/**
+ * Evaluate the append-only events invariant without interpreting arbitrary prose.
+ * Structured callers may provide resource, target, or table plus operation. Every
+ * supplied target is inspected so a protected events target cannot be masked by
+ * an unrelated field. Protected targets allow only explicit read/append actions;
+ * missing or unknown operations fail closed. Legacy machine action identifiers
+ * and any unstructured action that combines the exact protected `events`
+ * target with a destructive term fails closed. The gate intentionally does
+ * not parse SQL or infer negation from prose; ambiguous text must be rewritten.
+ */
+export function evaluateAppendOnlyEventsInvariant(
+  action: string,
+  ctx: Record<string, unknown>,
+): GovernanceCheckGateResponse["checks"][number] {
+  const resources = [ctx.resource, ctx.target, ctx.table]
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value
+      .trim()
+      .toLowerCase()
+      .replace(/["`\[\]]/g, "")
+      .replace(/\s*([.:/])\s*/g, "$1"))
+  const operation = typeof ctx.operation === "string"
+    ? ctx.operation.trim().toLowerCase()
+    : ""
+  const targetsEventsRows = resources.some((resource) =>
+    /(?:^|[.:/])events(?:_table)?$/.test(resource)
+  )
+  const isAppendOnlySafeOperation = /^(read|select|query|list|get|insert|append)$/.test(operation)
+  const structuredEventsViolation = targetsEventsRows && !isAppendOnlySafeOperation
+  const isLegacyDirectEventsMutation = /^(?:(?:update|delete|mutate|overwrite)_events(?:_rows?)?(?:_directly)?|events_(?:update|delete|mutate|overwrite)(?:_directly)?)$/i.test(action.trim())
+  const isExplicitSqlEventsMutation = actionAttemptsDirectEventsMutation(action)
+  const attemptsDirectEventsMutation =
+    structuredEventsViolation || isLegacyDirectEventsMutation || isExplicitSqlEventsMutation
+
+  let failureReason: string | null = null
+  if (structuredEventsViolation) {
+    failureReason = operation
+      ? `Operation '${operation}' is not append-only-safe for postgres.events`
+      : "Operation is required when a protected postgres.events target is declared"
+  } else if (isLegacyDirectEventsMutation || isExplicitSqlEventsMutation) {
+    failureReason = `Action attempts a direct mutation of postgres.events; append a new event instead`
+  }
+
+  return {
+    invariant: "Append-Only Events (No UPDATE/DELETE)",
+    invariant_key: "append_only_events",
+    pass: !attemptsDirectEventsMutation,
+    reason: failureReason
+      ?? "Action does not attempt UPDATE, DELETE, mutation, or overwrite of PostgreSQL events rows",
+  }
+}
+
 /**
  * Evaluate all 7 invariants for a given action and context.
  * Returns one check per invariant.
@@ -319,6 +377,8 @@ function evaluateInvariants(
   action: string,
   ctx: Record<string, unknown>
 ): GovernanceCheckGateResponse["checks"] {
+  const appendOnlyEventsCheck = evaluateAppendOnlyEventsInvariant(action, ctx)
+
   return [
     // 1. group_id required — already validated upstream; check context too
     {
@@ -330,15 +390,8 @@ function evaluateInvariants(
         : `group_id '${groupId}' is missing or does not start with 'allura-'`,
     },
 
-    // 2. append-only events — flag any UPDATE/DELETE action keyword
-    {
-      invariant: "Append-Only Events (No UPDATE/DELETE)",
-      invariant_key: "append_only_events",
-      pass: !/(update|delete|mutate|overwrite)/i.test(action) || action.startsWith("governance_apply_policy_override"),
-      reason: !/(update|delete|mutate|overwrite)/i.test(action) || action.startsWith("governance_apply_policy_override")
-        ? "Action does not attempt direct mutation of event rows"
-        : `Action '${action}' contains a mutation keyword; must use append-only INSERT instead`,
-    },
+    // 2. append-only events — scope the prohibition to PostgreSQL events rows.
+    appendOnlyEventsCheck,
 
     // 3. Neo4j SUPERSEDES — flag any direct neo4j edit action
     {
