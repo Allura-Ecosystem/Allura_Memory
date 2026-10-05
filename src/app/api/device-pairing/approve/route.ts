@@ -23,7 +23,6 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getAppPool } from "@/lib/postgres/connection";
 import { getAuthUser } from "@/lib/auth/api-auth";
 import {
   createPrincipalContext,
@@ -32,10 +31,11 @@ import {
   type PrincipalContext,
 } from "@/lib/auth/principal-context";
 import {
-  approveEnrollment,
-  ApprovalError,
   APPROVAL_ERROR_STATUS,
+  ApprovalError,
+  approveEnrollment,
 } from "@/lib/device-pairing/approval-service";
+import { getAppPool } from "@/lib/postgres/connection";
 
 const requestSchema = z.object({
   enrollment_transaction_id: z.string().min(1, "enrollment_transaction_id is required"),

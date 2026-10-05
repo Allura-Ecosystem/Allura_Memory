@@ -2,6 +2,12 @@
 
 # Business Domain — allura Memory
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 > **Purpose**: Understand why allura exists, who it serves, and how it creates value.  
 > **Update When**: Business direction changes, new features shipped, pivot.  
 > **Brand canon**: `docs/branding/deliverables/06_allura-memory_brand-truth.json`

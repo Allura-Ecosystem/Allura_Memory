@@ -34,10 +34,15 @@
  *    token mint (Story 29.6).
  *  - No migrations or live DB mutations.
  */
-import { createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
+import { createHash } from "node:crypto";
 import type { AuthUser } from "@/lib/auth/types";
 import { emitDeviceAudit } from "./audit";
+import {
+  generateAuthorizationCode,
+  generateCompletionNonce,
+  hashAuthorizationCode,
+} from "./authorization-code";
 import {
   getPairingCallbackAllowlist,
 } from "./config";
@@ -46,11 +51,6 @@ import {
   countApprovedDevices,
   getDeviceLimit,
 } from "./device-limit";
-import {
-  generateAuthorizationCode,
-  hashAuthorizationCode,
-  generateCompletionNonce,
-} from "./authorization-code";
 
 /** Completion nonce TTL: 60 seconds (§4.2 step 11, §8.2). */
 const COMPLETION_NONCE_TTL_MS = 60_000;

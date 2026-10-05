@@ -1,5 +1,11 @@
 # Allura Clients UI
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 > Follow-up: the current local `/portal` implementation is now device-first and uses the approved allura brand. See [Devices, clients and profiles](portal-devices-and-profiles.md). The verification below describes the initial Clients-only commit, not a live-deployment receipt.
 
 ## Implemented surface
