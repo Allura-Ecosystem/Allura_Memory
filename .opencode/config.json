@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "openai/gpt-5.5",
+  "model": "ollama-cloud/glm-5.3",
   "instructions": [
     ".opencode/AGENTS.md",
     ".opencode/manifest.json",
@@ -38,7 +38,7 @@
     "brooks": {
       "mode": "primary",
       "path": ".opencode/agent/core/brooks.md",
-      "model": "openai/gpt-5.5",
+      "model": "ollama-cloud/glm-5.3",
       "permission": {
         "task": "allow",
         "skill": {
@@ -49,7 +49,7 @@
     "jobs": {
       "mode": "primary",
       "path": ".opencode/agent/core/jobs.md",
-      "model": "ollama-cloud/deepseek-v4-pro",
+      "model": "ollama-cloud/glm-5.3",
       "permission": {
         "skill": {
           "*": "allow"
@@ -59,7 +59,7 @@
     "scout": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/core/scout.md",
-      "model": "openai/gpt-5.4-mini",
+      "model": "ollama-cloud/glm-5.3",
       "permission": {
         "edit": "allow",
         "write": "allow",
@@ -72,7 +72,7 @@
     "woz": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/code/woz.md",
-      "model": "ollama-cloud/glm-5.3-flash-next",
+      "model": "ollama-cloud/glm-5.3",
       "permission": {
         "task": "allow",
         "skill": {
@@ -83,7 +83,7 @@
     "bellard": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/code/bellard.md",
-      "model": "openai/gpt-5.4-mini",
+      "model": "ollama-cloud/glm-5.3",
       "permission": {
         "skill": {
           "*": "allow"
@@ -93,7 +93,7 @@
     "carmack": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/code/carmack.md",
-      "model": "openai/gpt-5.4-mini",
+      "model": "ollama-cloud/glm-5.3",
       "permission": {
         "skill": {
           "*": "allow"
@@ -103,7 +103,7 @@
     "pike": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/review/pike.md",
-      "model": "openai/gpt-5.4-mini",
+      "model": "ollama-cloud/glm-5.3",
       "permission": {
         "skill": {
           "*": "allow"
@@ -113,7 +113,7 @@
     "fowler": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/review/fowler.md",
-      "model": "openai/gpt-5.5",
+      "model": "ollama-cloud/glm-5.3",
       "permission": {
         "skill": {
           "*": "allow"
@@ -123,7 +123,7 @@
     "knuth": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/infrastructure/knuth.md",
-      "model": "ollama-cloud/glm-5.3-flash-next",
+      "model": "ollama-cloud/glm-5.3",
       "permission": {
         "skill": {
           "*": "allow"
@@ -133,7 +133,7 @@
     "hightower": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/infrastructure/hightower.md",
-      "model": "openai/gpt-5.5",
+      "model": "ollama-cloud/glm-5.3",
       "permission": {
         "skill": {
           "*": "allow"

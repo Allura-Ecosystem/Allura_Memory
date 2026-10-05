@@ -92,7 +92,7 @@ describe("portfolio demo tooling", () => {
 
   it("keeps the checked-in example non-secret and enables the explicit local demo auth mode", () => {
     const example = readFileSync(".env.portfolio.example", "utf8")
-    expect(example).toContain("ALLURA_DEMO_DEV_AUTH_FORCE=true")
+    expect(example).toContain("ALLURA_DEV_AUTH_ENABLED=true")
     expect(example).not.toContain("<required")
     expect(existsSync(".env.portfolio.example")).toBe(true)
   })

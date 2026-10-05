@@ -58,6 +58,146 @@ describe("brain-client", () => {
       }
       expect(request).not.toHaveBeenCalled()
     })
+
+    it("resolves standard public MCP credentials without exposing values", async () => {
+      vi.stubEnv("ALLURA_BRAIN_URL", "https://mcp.faithmeats.org/mcp")
+      vi.stubEnv("ALLURA_MCP_AUTH_TOKEN", "bearer-test-secret")
+      vi.stubEnv("CF_ACCESS_CLIENT_ID", "cf-id-test-secret")
+      vi.stubEnv("CF_ACCESS_CLIENT_SECRET", "cf-secret-test-secret")
+      const { resolveBrainAuthHeaders } = await import("./brain-client")
+
+      expect(resolveBrainAuthHeaders()).toEqual({
+        Authorization: "Bearer bearer-test-secret",
+        "CF-Access-Client-Id": "cf-id-test-secret",
+        "CF-Access-Client-Secret": "cf-secret-test-secret",
+      })
+    })
+
+    it("supports the protected ALLURA Cloudflare credential aliases", async () => {
+      vi.stubEnv("ALLURA_BRAIN_URL", "https://mcp.faithmeats.org/mcp")
+      vi.stubEnv("ALLURA_MCP_AUTH_TOKEN", "bearer-test-secret")
+      vi.stubEnv("CF_ACCESS_CLIENT_ID", "")
+      vi.stubEnv("CF_ACCESS_CLIENT_SECRET", "")
+      vi.stubEnv("ALLURA_CF_ACCESS_CLIENT_ID", "cf-id-test-secret")
+      vi.stubEnv("ALLURA_CF_ACCESS_CLIENT_SECRET", "cf-secret-test-secret")
+      const { resolveBrainAuthHeaders } = await import("./brain-client")
+
+      expect(resolveBrainAuthHeaders()["CF-Access-Client-Id"]).toBe("cf-id-test-secret")
+      expect(resolveBrainAuthHeaders()["CF-Access-Client-Secret"]).toBe("cf-secret-test-secret")
+    })
+
+    it.each([
+      ["ALLURA_MCP_AUTH_TOKEN", "ALLURA_MCP_AUTH_TOKEN"],
+      ["CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_ID"],
+      ["CF_ACCESS_CLIENT_SECRET", "CF_ACCESS_CLIENT_SECRET"],
+    ])("fails closed when %s is missing", async (_label, missing) => {
+      vi.stubEnv("ALLURA_BRAIN_URL", "https://mcp.faithmeats.org/mcp")
+      vi.stubEnv("ALLURA_MCP_AUTH_TOKEN", "bearer-test-secret")
+      vi.stubEnv("CF_ACCESS_CLIENT_ID", "cf-id-test-secret")
+      vi.stubEnv("CF_ACCESS_CLIENT_SECRET", "cf-secret-test-secret")
+      vi.stubEnv("ALLURA_CF_ACCESS_CLIENT_ID", "")
+      vi.stubEnv("ALLURA_CF_ACCESS_CLIENT_SECRET", "")
+      vi.stubEnv(missing, "")
+      const { resolveBrainAuthHeaders } = await import("./brain-client")
+
+      let thrown: unknown
+      try {
+        resolveBrainAuthHeaders()
+      } catch (error) {
+        thrown = error
+      }
+      expect(thrown).toBeInstanceOf(Error)
+      expect((thrown as Error).message).toMatch(new RegExp(missing))
+      expect((thrown as Error).message).not.toMatch(/bearer-test-secret|cf-id-test-secret|cf-secret-test-secret/)
+    })
+
+    it("rejects the wrong endpoint before reading or sending credentials", async () => {
+      vi.stubEnv("ALLURA_BRAIN_URL", "http://allura-memory-mcp:3201")
+      vi.stubEnv("ALLURA_MCP_AUTH_TOKEN", "bearer-test-secret")
+      vi.stubEnv("CF_ACCESS_CLIENT_ID", "cf-id-test-secret")
+      vi.stubEnv("CF_ACCESS_CLIENT_SECRET", "cf-secret-test-secret")
+      const { resolveBrainAuthHeaders } = await import("./brain-client")
+
+      expect(() => resolveBrainAuthHeaders()).toThrow(/Canonical Allura Brain endpoint/)
+    })
+
+    it("adds all public MCP auth headers to initialize requests", async () => {
+      vi.stubEnv("ALLURA_BRAIN_URL", "https://mcp.faithmeats.org/mcp")
+      vi.stubEnv("ALLURA_MCP_AUTH_TOKEN", "bearer-test-secret")
+      vi.stubEnv("CF_ACCESS_CLIENT_ID", "cf-id-test-secret")
+      vi.stubEnv("CF_ACCESS_CLIENT_SECRET", "cf-secret-test-secret")
+      const request = vi.fn(async (url: string, init?: RequestInit) => {
+        expect(url).toBe("https://mcp.faithmeats.org/mcp")
+        expect(new Headers(init?.headers).get("authorization")).toBe("Bearer bearer-test-secret")
+        expect(new Headers(init?.headers).get("cf-access-client-id")).toBe("cf-id-test-secret")
+        expect(new Headers(init?.headers).get("cf-access-client-secret")).toBe("cf-secret-test-secret")
+        return new Response(JSON.stringify({ result: { content: [{ type: "text", text: JSON.stringify({}) }] } }))
+      })
+      vi.stubGlobal("fetch", request)
+      const { brainClient } = await import("./brain-client")
+
+      await brainClient.healthReport("allura-system")
+      expect(request).toHaveBeenCalledTimes(2)
+    })
+
+    it("allows the exact internal MCP endpoint with only a bearer token and no CF headers", async () => {
+      vi.stubEnv("ALLURA_BRAIN_URL", "http://allura-memory-mcp:3201/mcp")
+      vi.stubEnv("ALLURA_MCP_AUTH_TOKEN", "bearer-test-secret")
+      const { resolveBrainAuthHeaders } = await import("./brain-client")
+
+      expect(resolveBrainAuthHeaders()).toEqual({ Authorization: "Bearer bearer-test-secret" })
+    })
+
+    it("fails closed when the bearer token is missing on the internal MCP endpoint", async () => {
+      vi.stubEnv("ALLURA_BRAIN_URL", "http://allura-memory-mcp:3201/mcp")
+      vi.stubEnv("ALLURA_MCP_AUTH_TOKEN", "")
+      const { resolveBrainAuthHeaders } = await import("./brain-client")
+
+      let thrown: unknown
+      try {
+        resolveBrainAuthHeaders()
+      } catch (error) {
+        thrown = error
+      }
+      expect(thrown).toBeInstanceOf(Error)
+      expect((thrown as Error).message).toMatch(/ALLURA_MCP_AUTH_TOKEN/)
+      expect((thrown as Error).message).not.toMatch(/bearer-test-secret/)
+    })
+
+    it("rejects near-miss internal endpoints that are not the exact allowed URL", async () => {
+      const request = vi.fn()
+      vi.stubGlobal("fetch", request)
+      const { brainClient } = await import("./brain-client")
+      for (const endpoint of [
+        "http://allura-memory-mcp:3201",
+        "http://allura-memory-mcp:3200/mcp",
+        "https://allura-memory-mcp:3201/mcp",
+        "http://localhost:6477/mcp",
+        "http://127.0.0.1:6477/mcp",
+      ]) {
+        vi.stubEnv("ALLURA_BRAIN_URL", endpoint)
+        await expect(brainClient.healthReport("allura-system")).rejects.toThrow(/Canonical Allura Brain endpoint/)
+      }
+      expect(request).not.toHaveBeenCalled()
+    })
+
+    it("sends only the bearer header to the internal MCP endpoint on initialize and tool calls", async () => {
+      vi.stubEnv("ALLURA_BRAIN_URL", "http://allura-memory-mcp:3201/mcp")
+      vi.stubEnv("ALLURA_MCP_AUTH_TOKEN", "bearer-test-secret")
+      const request = vi.fn(async (url: string, init?: RequestInit) => {
+        expect(url).toBe("http://allura-memory-mcp:3201/mcp")
+        const headers = new Headers(init?.headers)
+        expect(headers.get("authorization")).toBe("Bearer bearer-test-secret")
+        expect(headers.get("cf-access-client-id")).toBeNull()
+        expect(headers.get("cf-access-client-secret")).toBeNull()
+        return new Response(JSON.stringify({ result: { content: [{ type: "text", text: JSON.stringify({}) }] } }))
+      })
+      vi.stubGlobal("fetch", request)
+      const { brainClient } = await import("./brain-client")
+
+      await brainClient.healthReport("allura-system")
+      expect(request).toHaveBeenCalledTimes(2)
+    })
   })
 
   // ── E2E contract tests (only when Brain MCP is running) ──────────────────

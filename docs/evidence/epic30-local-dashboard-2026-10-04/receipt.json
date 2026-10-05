@@ -1,0 +1,101 @@
+{
+  "base": "http://127.0.0.1:3200",
+  "results": [
+    {
+      "viewport": "desktop",
+      "loginStatus": 200,
+      "loginHeading": "Authentication unavailable",
+      "loginHasUnavailable": true,
+      "interactiveCount": 0,
+      "securityHeaders": {
+        "xFrameOptions": "DENY",
+        "contentTypeOptions": "nosniff",
+        "referrerPolicy": "strict-origin-when-cross-origin"
+      },
+      "redirects": [
+        {
+          "path": "/dashboard",
+          "status": 200,
+          "finalUrl": "http://127.0.0.1:3200/auth/v2/login?redirect_url=%2Fdashboard",
+          "redirectedToLogin": true
+        },
+        {
+          "path": "/dashboard/search",
+          "status": 200,
+          "finalUrl": "http://127.0.0.1:3200/auth/v2/login?redirect_url=%2Fdashboard%2Fsearch",
+          "redirectedToLogin": true
+        },
+        {
+          "path": "/dashboard/kanban",
+          "status": 200,
+          "finalUrl": "http://127.0.0.1:3200/auth/v2/login?redirect_url=%2Fdashboard%2Fkanban",
+          "redirectedToLogin": true
+        },
+        {
+          "path": "/dashboard/teams",
+          "status": 200,
+          "finalUrl": "http://127.0.0.1:3200/auth/v2/login?redirect_url=%2Fdashboard%2Fteams",
+          "redirectedToLogin": true
+        }
+      ],
+      "brain": {
+        "status": 200,
+        "overall_status": "healthy",
+        "keys": [
+          "overall_status"
+        ]
+      },
+      "pageErrors": [],
+      "consoleErrors": [],
+      "externalOriginsBlocked": []
+    },
+    {
+      "viewport": "mobile",
+      "loginStatus": 200,
+      "loginHeading": "Authentication unavailable",
+      "loginHasUnavailable": true,
+      "interactiveCount": 0,
+      "securityHeaders": {
+        "xFrameOptions": "DENY",
+        "contentTypeOptions": "nosniff",
+        "referrerPolicy": "strict-origin-when-cross-origin"
+      },
+      "redirects": [
+        {
+          "path": "/dashboard",
+          "status": 200,
+          "finalUrl": "http://127.0.0.1:3200/auth/v2/login?redirect_url=%2Fdashboard",
+          "redirectedToLogin": true
+        },
+        {
+          "path": "/dashboard/search",
+          "status": 200,
+          "finalUrl": "http://127.0.0.1:3200/auth/v2/login?redirect_url=%2Fdashboard%2Fsearch",
+          "redirectedToLogin": true
+        },
+        {
+          "path": "/dashboard/kanban",
+          "status": 200,
+          "finalUrl": "http://127.0.0.1:3200/auth/v2/login?redirect_url=%2Fdashboard%2Fkanban",
+          "redirectedToLogin": true
+        },
+        {
+          "path": "/dashboard/teams",
+          "status": 200,
+          "finalUrl": "http://127.0.0.1:3200/auth/v2/login?redirect_url=%2Fdashboard%2Fteams",
+          "redirectedToLogin": true
+        }
+      ],
+      "brain": {
+        "status": 200,
+        "overall_status": "healthy",
+        "keys": [
+          "overall_status"
+        ]
+      },
+      "pageErrors": [],
+      "consoleErrors": [],
+      "externalOriginsBlocked": []
+    }
+  ]
+}

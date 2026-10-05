@@ -118,6 +118,10 @@ Ralph may not execute unless this gate passes:
 - Stale context without acknowledgment
 - Missing validation command
 
+## Evidence-First Delivery Gate (MANDATORY)
+
+Every implementation, UX, testing, infrastructure, or release task must load `.opencode/skills/evidence-first-delivery/SKILL.md` and follow `docs/governance/policies/POL-013-EVIDENCE-FIRST-DELIVERY.md`. Local target, runtime configuration, UX interaction evidence, and authorized data flow must be distinguished from candidate or public evidence. A failed or unrun gate blocks push and release.
+
 ## Team RAM
 
 | Agent     | Persona                 | Role                               | Path                        |

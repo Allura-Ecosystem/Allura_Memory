@@ -28,7 +28,7 @@ export function CuratorHandoffContent({ user, issue }: { user: AuthUser; issue?:
 }
 
 export default async function CuratorHandoffPage() {
-  // Server-owned principal only: Clerk session or DevAuthProvider. Raw browser
+  // Server-owned principal only: Cloudflare Access or DevAuthProvider. Raw browser
   // x-allura-* headers are never read here, so they cannot elevate or scope a
   // principal at the dashboard boundary.
   const user = await getDashboardPrincipal();

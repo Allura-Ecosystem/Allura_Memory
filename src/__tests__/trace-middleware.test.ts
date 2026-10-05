@@ -26,8 +26,6 @@ describe("ProxyMiddleware", () => {
     vi.stubEnv("ALLURA_DEV_AUTH_GROUP_ID", "allura-system")
     vi.stubEnv("ALLURA_DEV_AUTH_USER_ID", "dev-user-allura")
     vi.stubEnv("ALLURA_DEV_AUTH_EMAIL", "dev@allura.local")
-    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", undefined)
-    vi.stubEnv("CLERK_SECRET_KEY", undefined)
     clearAuthConfig()
   })
 

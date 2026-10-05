@@ -9,13 +9,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-// ── Mock environment: Clerk disabled for test mode ────────────────────────────
+// ── Mock environment: dev auth enabled for test mode ─────────────────────────
 
 process.env.ALLURA_DEV_AUTH_ENABLED = "true"
 // @ts-expect-error — NODE_ENV is read-only in Next.js types but must be set for tests
 process.env.NODE_ENV = "test"
-delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-delete process.env.CLERK_SECRET_KEY
 
 // ── Mutable mock state — must be declared before vi.mock due to hoisting ──────
 

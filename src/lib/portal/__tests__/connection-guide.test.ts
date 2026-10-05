@@ -3,15 +3,12 @@ import { describe, expect, it } from "vitest";
 import { buildConnectionGuide } from "@/lib/portal/connection-guide";
 
 describe("buildConnectionGuide", () => {
-  it("points humans at the Clerk sign-in the portal actually deploys, not Cloudflare Access", () => {
+  it("points humans at the Cloudflare Access identity gate", () => {
     const guide = buildConnectionGuide("https://mcp.faithmeats.org/mcp");
 
-    // The deployed portal redirects /portal -> Clerk sign-in. Step 1 must
-    // match that reality; "Cloudflare Access" sends partners hunting for
-    // a login flow that does not exist.
     const joined = guide.steps.join(" | ");
     expect(joined).toContain("Sign in with your approved Faith Meats account");
-    expect(joined).not.toContain("Cloudflare Access");
+    expect(joined).toContain("Cloudflare Access");
   });
 
   it("keeps the credential steps and never embeds a secret", () => {

@@ -23,7 +23,10 @@ vi.mock("@/lib/digital-brain/read-service", () => ({
   readAuthorizedDocuments: mocks.read,
   searchAuthorizedDocuments: mocks.search,
 }))
-vi.mock("@/lib/brain-client", () => ({ brainClient: { healthReport: mocks.health } }))
+vi.mock("@/lib/brain-client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/brain-client")>()),
+  brainClient: { healthReport: mocks.health },
+}))
 vi.mock("@/mcp/canonical-tools", () => ({
   memory_list: mocks.memoryList, memory_get: mocks.memoryGet,
   memory_add: vi.fn(), memory_search: vi.fn(), memory_list_deleted: vi.fn(),
@@ -114,6 +117,19 @@ describe("Epic 30 controlled-red privacy regression", () => {
       expect(response.headers.get("cache-control")).toBe("no-store")
       for (const sentinel of Object.values(S)) expect(text).not.toContain(sentinel)
     }
+  })
+
+  it("fails the public health route closed without echoing tenant or backend details for mismatched probe config", async () => {
+    mocks.health.mockResolvedValueOnce({
+      error: { code: "TENANT_MISMATCH", message: `token tenant ${S.tenant} does not match requested group allura-system` },
+    })
+
+    const response = await brainHealth()
+    const text = await jsonText(response)
+    expect(response.status).toBe(503)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(JSON.parse(text)).toEqual({ error: "Brain health check unavailable", overall_status: "unhealthy" })
+    for (const sentinel of Object.values(S)) expect(text).not.toContain(sentinel)
   })
 
   it("rejects forged legacy memory root/id/trace selectors before backend access", async () => {

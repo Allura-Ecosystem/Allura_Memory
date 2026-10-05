@@ -13,7 +13,10 @@ vi.mock("@/lib/digital-brain/read-service", () => ({
   searchAuthorizedDocumentsPage: mocks.searchPage,
   readAuthorizedDocumentsPage: mocks.readPage,
 }))
-vi.mock("@/lib/brain-client", () => ({ brainClient: { healthReport: mocks.health } }))
+vi.mock("@/lib/brain-client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/brain-client")>()),
+  brainClient: { healthReport: mocks.health },
+}))
 
 import { GET as listMemories } from "@/app/api/brain/memories/route"
 import { GET as searchMemories } from "@/app/api/brain/search/route"
@@ -82,12 +85,144 @@ describe("Epic 30 legacy Brain content-route quarantine", () => {
     const response = await brainHealth()
     expect(response.status).toBe(200)
     expect(response.headers.get("cache-control")).toBe("no-store")
-    expect(await response.json()).toEqual({ overall_status: "healthy", queue_depth: 0 })
+    expect(await response.json()).toEqual({ overall_status: "healthy" })
     expect(mocks.health).toHaveBeenCalledWith("allura-system")
+  })
+
+  it("publishes only the allowlisted overall_status from a trusted report, never the raw MCP payload", async () => {
+    mocks.health.mockResolvedValueOnce({
+      overall_status: "degraded",
+      checked_at: "2026-10-04T00:00:00Z",
+      queue_depth: 3,
+      meta: { secret_token: "sentinel-top-level-meta-secret", db_url: "sentinel-meta-db-url" },
+      subsystems: {
+        postgres: { status: "degraded", latency_ms: 42, detail: "sentinel-postgres-exception-detail" },
+        mcp_tools: { status: "healthy", latency_ms: 0, tool_count: 6420, detail: "sentinel-mcp-tool-name" },
+      },
+      unknown_extra_field: "sentinel-unknown-field",
+    })
+    const response = await brainHealth()
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    const body = await response.json()
+    expect(body).toEqual({ overall_status: "degraded" })
+    const text = JSON.stringify(body)
+    for (const sentinel of [
+      "sentinel-top-level-meta-secret", "sentinel-meta-db-url",
+      "sentinel-postgres-exception-detail", "sentinel-mcp-tool-name",
+      "sentinel-unknown-field", "queue_depth", "checked_at", "subsystems", "meta",
+      "latency_ms", "tool_count",
+    ]) {
+      expect(text).not.toContain(sentinel)
+    }
+    expect(mocks.health).toHaveBeenCalledWith("allura-system")
+  })
+
+  it.each(["healthy", "degraded", "unavailable", "unhealthy"])(
+    "returns 200 with a bounded body for exact allowlisted status %s", async (status) => {
+      mocks.health.mockResolvedValueOnce({ overall_status: status, subsystems: { postgres: { status, detail: "sentinel-postgres-exception-detail" } } })
+      const response = await brainHealth()
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({ overall_status: status })
+    },
+  )
+
+  it.each([
+    ["near-miss case", "Healthy"],
+    ["trailing space", "healthy "],
+    ["unknown value", "mostly-healthy"],
+    ["empty string", ""],
+  ])("keeps a non-allowlisted string status (%s) behind the generic 503", async (_label, status) => {
+    mocks.health.mockResolvedValueOnce({ overall_status: status })
+    const response = await brainHealth()
+    expect(response.status).toBe(503)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual({ error: "Brain health check unavailable", overall_status: "unhealthy" })
   })
 
   it("never probes a local or unset Allura endpoint from the public health route", async () => {
     for (const endpoint of [undefined, "http://localhost:5888/mcp", "https://other.example/mcp"]) {
+      vi.stubEnv("ALLURA_BRAIN_URL", endpoint)
+      const response = await brainHealth()
+      expect(response.status).toBe(503)
+      expect(await response.json()).toEqual({ error: "Brain health check unavailable", overall_status: "unhealthy" })
+    }
+    expect(mocks.health).not.toHaveBeenCalled()
+  })
+
+  it("serves the exact internal MCP endpoint from the public health route", async () => {
+    vi.stubEnv("ALLURA_BRAIN_URL", "http://allura-memory-mcp:3201/mcp")
+    mocks.health.mockResolvedValueOnce({ overall_status: "healthy", queue_depth: 0 })
+    const response = await brainHealth()
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual({ overall_status: "healthy" })
+    expect(mocks.health).toHaveBeenCalledWith("allura-system")
+  })
+
+  it("probes the configured ALLURA_BRAIN_PROBE_GROUP_ID when set", async () => {
+    vi.stubEnv("ALLURA_BRAIN_PROBE_GROUP_ID", "allura-faithmeats")
+    mocks.health.mockResolvedValueOnce({ overall_status: "healthy", checked_at: "2026-10-04T00:00:00Z", meta: {}, subsystems: {} })
+    const response = await brainHealth()
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(mocks.health).toHaveBeenCalledWith("allura-faithmeats")
+    expect(mocks.health).not.toHaveBeenCalledWith("allura-system")
+  })
+
+  it("preserves the allura-system default probe group when the env is missing", async () => {
+    mocks.health.mockResolvedValueOnce({ overall_status: "healthy" })
+    const response = await brainHealth()
+    expect(response.status).toBe(200)
+    expect(mocks.health).toHaveBeenCalledTimes(1)
+    expect(mocks.health).toHaveBeenCalledWith("allura-system")
+  })
+
+  it.each([
+    ["uppercase", "Allura-Faithmeats"],
+    ["wrong prefix", "roninclaw-faithmeats"],
+    ["empty", ""],
+    ["whitespace-only", "   "],
+    ["trailing hyphen", "allura-faithmeats-"],
+    ["embedded space", "allura-faith meats"],
+    ["nullish text", "null"],
+  ])("fails closed with 503 and no brain call for invalid probe group (%s)", async (_label, value) => {
+    vi.stubEnv("ALLURA_BRAIN_PROBE_GROUP_ID", value)
+    const response = await brainHealth()
+    expect(response.status).toBe(503)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual({ error: "Brain health check unavailable", overall_status: "unhealthy" })
+    expect(mocks.health).not.toHaveBeenCalled()
+  })
+
+  it("returns a generic 503, never a false 200, for error-shaped tool results", async () => {
+    mocks.health.mockResolvedValueOnce({
+      error: { code: "TENANT_MISMATCH", message: "token tenant does not match requested group allura-system" },
+    })
+    const response = await brainHealth()
+    expect(response.status).toBe(503)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual({ error: "Brain health check unavailable", overall_status: "unhealthy" })
+    expect(mocks.health).toHaveBeenCalledWith("allura-system")
+  })
+
+  it("returns a generic 503 when the report lacks a valid string overall_status", async () => {
+    for (const report of [undefined, {}, { overall_status: null }, { overall_status: 200 }, { checked_at: "2026-10-04T00:00:00Z", subsystems: {} }]) {
+      mocks.health.mockResolvedValueOnce(report)
+      const response = await brainHealth()
+      expect(response.status).toBe(503)
+      expect(response.headers.get("cache-control")).toBe("no-store")
+      expect(await response.json()).toEqual({ error: "Brain health check unavailable", overall_status: "unhealthy" })
+    }
+    expect(mocks.health).toHaveBeenCalledTimes(5)
+  })
+
+  it("never probes a near-miss internal endpoint from the public health route", async () => {
+    for (const endpoint of [
+      "http://allura-memory-mcp:3201",
+      "http://allura-memory-mcp:3200/mcp",
+      "http://localhost:6477/mcp",
+    ]) {
       vi.stubEnv("ALLURA_BRAIN_URL", endpoint)
       const response = await brainHealth()
       expect(response.status).toBe(503)

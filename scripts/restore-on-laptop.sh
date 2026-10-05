@@ -90,12 +90,18 @@ cat <<'POST'
        RUVECTOR_EMBEDDING_BASE_URL=http://host.docker.internal:11434
      For a host-native Ollama, http://localhost:11434 is correct (already set).
 
-  2) CLERK AUTH (only when going to production)
-     Paste real keys into .env.local and flip dev auth off in .env:
-       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
-       CLERK_SECRET_KEY=sk_live_...
+  2) CLOUDFLARE ACCESS (KEEP DISABLED)
+     Clerk was fully removed from the active runtime. Production authority is
+     intended to use Cloudflare Access, but activation is BLOCKED until the
+     server verifies the Access JWT cryptographic signature, issuer, audience,
+     expiration and not-before claims and authenticated browser acceptance
+     passes independent review. Do not enable the current header-presence path.
+     In .env keep:
+       ALLURA_CF_ACCESS_ENABLED=false
+       ALLURA_CF_ACCESS_ALLOWED_EMAILS=you@example.com
+       ALLURA_CF_ACCESS_ADMIN_EMAILS=you@example.com
        ALLURA_DEV_AUTH_ENABLED=false   # in .env
-     See docs/archive/allura/LAPTOP-MIGRATION-AND-CLERK.md (Part B).
+     Without Cloudflare Access, production fails closed (no principal).
 
   Acceptance: a memory_search returns your existing memories (data restored,
   not empty), and `bun run typecheck` passes.

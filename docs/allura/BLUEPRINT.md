@@ -294,7 +294,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | F16 | Approved tab shows all approved knowledge (human + auto-promoted); sortable by date/confidence      |
 | F17 | Tab 1 restricted to authenticated users with `admin` role (engineers only)                          |
 | F18 | Audit log endpoint: `GET /api/audit/events` — returns curator decisions with timestamps             |
-| F19 | Dashboard integrates Clerk for authentication and RBAC (curator, admin, viewer roles)               |
+| F19 | Dashboard integrates Cloudflare Access for authentication and application RBAC (curator, admin, viewer roles) |
 
 #### Infrastructure
 
@@ -398,7 +398,7 @@ As of 2026-08-29 (implementation readiness pass), these BLUEPRINT functional req
 | Neo4j 5.26               | Semantic memory — versioned knowledge graph    | Docker service                                    |
 | Memory Viewer            | `/memory` page — list, search, delete          | `src/app/memory/page.tsx`                         |
 | Curator Dashboard        | `/curator` page — three-tab HITL governance UI | `src/app/curator/page.tsx`                        |
-| Clerk Auth               | Multi-tenant authentication + RBAC             | SaaS (vercel.com)                                 |
+| Cloudflare Access        | Founder/internal authentication boundary        | Cloudflare Zero Trust                             |
 | Sentry Monitor           | Error tracking + alerts                        | SaaS (sentry.io)                                  |
 
 ---

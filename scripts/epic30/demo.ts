@@ -17,7 +17,7 @@ export async function launchSyntheticDemo(retainDatabase = false, port = 4100, s
       signal,
       args: ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)],
       env: { ...process.env, ...database.appEnvironment, NODE_ENV: "development", ALLURA_EPIC30_LOCAL_DB: "enabled",
-        ALLURA_DEV_AUTH_ENABLED: "true", ALLURA_DEMO_DEV_AUTH_FORCE: "true", ALLURA_DEV_AUTH_GROUP_ID: "allura-epic30-local",
+        ALLURA_DEV_AUTH_ENABLED: "true", ALLURA_DEV_AUTH_GROUP_ID: "allura-epic30-local",
         ALLURA_DEV_AUTH_WORKSPACE_ID: "epic30-local-workspace", ALLURA_DEV_AUTH_USER_ID: "owner-user", ALLURA_DEV_AUTH_ROLE: "viewer" },
     })
     const response = await fetch(server.url + "/dashboard", { signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(15_000)]) })

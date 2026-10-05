@@ -18,12 +18,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 process.env.ALLURA_DEV_AUTH_ENABLED = "true";
 // @ts-expect-error — NODE_ENV is read-only in Next.js types but must be set for tests
 process.env.NODE_ENV = "test";
-delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-delete process.env.CLERK_SECRET_KEY;
 
 // ── Mutable mock state ────────────────────────────────────────────────────────
 
-let mockAuthResult: {
+const mockAuthResult: {
   allowed: boolean;
   authenticated: boolean;
   reason?: string;
@@ -72,8 +70,8 @@ vi.mock("@/lib/postgres/connection", () => ({
 
 // ── Import after mocks ─────────────────────────────────────────────────────────
 
-import { POST, GET } from "@/app/api/tenants/route";
 import { GET as GET_SINGLE, PATCH } from "@/app/api/tenants/[group_id]/route";
+import { GET, POST } from "@/app/api/tenants/route";
 import { requireRole } from "@/lib/auth/api-auth";
 
 beforeEach(() => {

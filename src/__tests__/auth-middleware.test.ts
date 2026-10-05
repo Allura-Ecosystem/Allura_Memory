@@ -2,13 +2,11 @@
  * Auth Middleware Tests
  *
  * Tests for the Next.js proxy middleware route protection and RBAC.
- * Uses mocked Clerk to test dev-auth fallback paths.
- *
- * Reference: Phase 7 benchmark — Clerk SSO + RBAC
+ * Uses the nonproduction DevAuth branch to test protected-route behaviour.
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 // ── Mock Environment ────────────────────────────────────────────────────────
 
@@ -21,62 +19,7 @@ process.env.ALLURA_DEV_AUTH_EMAIL = "dev@allura.local"
 // @ts-expect-error — NODE_ENV is read-only in Next.js types but must be set for tests
 process.env.NODE_ENV = "test"
 
-// Clear Clerk keys to force dev auth mode
-delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-delete process.env.CLERK_SECRET_KEY
-
-// ── Mock Clerk ────────────────────────────────────────────────────────────────
-// clerkMiddleware wraps our handler; the mock passes (auth, req) directly so
-// the dev-mode branch executes when Clerk is disabled.
-
-const clerkTestState = vi.hoisted(() => ({
-  throwAtRuntime: false,
-  receivedEvent: undefined as unknown,
-  authResult: {
-    userId: null as string | null,
-    sessionId: null as string | null,
-    sessionClaims: null as Record<string, unknown> | null,
-  },
-}))
-
-vi.mock("@clerk/nextjs/server", () => ({
-  clerkMiddleware: (handler: (
-    auth: () => Promise<{
-      userId: string | null
-      sessionId: string | null
-      sessionClaims: Record<string, unknown> | null
-    }>,
-    req: NextRequest,
-  ) => unknown) => {
-    // Return a function that calls the handler with a mock auth and the request
-    return (req: NextRequest, event: unknown) => {
-      clerkTestState.receivedEvent = event
-      if (clerkTestState.throwAtRuntime) {
-        throw new Error("simulated Clerk runtime failure")
-      }
-      return handler(
-        // Mock auth() — should never be called in dev mode (Clerk disabled)
-        vi.fn().mockResolvedValue(clerkTestState.authResult),
-        req
-      )
-    }
-  },
-  createRouteMatcher: (patterns: string[]) => {
-    // Simple route matcher that converts glob patterns to regex
-    const regexes = patterns.map((p: string) => {
-      const escaped = p.replace(/[.+^${}()|[\]\\]/g, "\\$&")
-      const asRegex = escaped.replace(/\(\.\*\)/g, ".*").replace(/\*/g, "[^/]*")
-      return new RegExp(`^${asRegex}$`)
-    })
-    return (req: { url: string } | NextRequest) => {
-      const pathname =
-        typeof (req as any).nextUrl !== "undefined" ? (req as NextRequest).nextUrl.pathname : new URL(req.url).pathname
-      return regexes.some((r) => r.test(pathname))
-    }
-  },
-}))
-
-// ── Import after env setup and mocks ──────────────────────────────────────────
+// ── Import after env setup ────────────────────────────────────────────────────
 
 import { clearAuthConfig } from "@/lib/auth/config"
 import {
@@ -87,19 +30,13 @@ import {
 } from "@/lib/auth/route-scope-manifest"
 import proxyDefault from "@/proxy"
 
-// vi.mock replaces the real clerkMiddleware with our passthrough, so the
-// default export is actually (req: NextRequest) => Promise<NextResponse>.
-// Cast to a test-friendly type so strict mode doesn't complain about
-// the missing NextFetchEvent arg or nullable return.
+// The proxy default export is (req: NextRequest) => Promise<NextResponse>.
 type TestMiddleware = (req: NextRequest) => Promise<NextResponse>
 const middleware = proxyDefault as unknown as TestMiddleware
 
 describe("Auth Middleware", () => {
   beforeEach(() => {
     clearAuthConfig()
-    clerkTestState.throwAtRuntime = false
-    clerkTestState.receivedEvent = undefined
-    clerkTestState.authResult = { userId: null, sessionId: null, sessionClaims: null }
   })
 
   // ── Public Routes ────────────────────────────────────────────────────────
@@ -310,32 +247,6 @@ describe("Auth Middleware", () => {
     })
   })
 
-  describe("invalid Clerk sessions", () => {
-    afterEach(() => {
-      delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-      delete process.env.CLERK_SECRET_KEY
-      process.env.ALLURA_DEV_AUTH_ENABLED = "true"
-      clearAuthConfig()
-    })
-
-    it("redirects an expired or invalid Clerk session to login", async () => {
-      ;(process.env as Record<string, string | undefined>).NODE_ENV = "test"
-      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_configured"
-      process.env.CLERK_SECRET_KEY = "sk_test_configured"
-      process.env.ALLURA_DEV_AUTH_ENABLED = "true"
-      clearAuthConfig()
-      clerkTestState.authResult = { userId: null, sessionId: null, sessionClaims: null }
-
-      const response = await middleware(
-        new NextRequest(new URL("/dashboard/curator", "http://localhost:3100")),
-      )
-
-      expect(response.status).toBe(307)
-      expect(response.headers.get("location")).toContain("/auth/v2/login")
-      expect(response.headers.get("location")).not.toContain("/unauthorized")
-    })
-  })
-
   // ── Fail Closed (Story 24.11a AC-1 / AC-2 / AC-4) ─────────────────────────
 
   describe("fail closed — undeclared routes are denied", () => {
@@ -364,7 +275,7 @@ describe("Auth Middleware", () => {
     ])(
       "returns 401 and no tenant data for undeclared route %s when unauthenticated",
       async (path) => {
-        // No principal at all: dev auth off, Clerk off.
+        // No principal at all: dev auth off, no provider configured.
         process.env.ALLURA_DEV_AUTH_ENABLED = "false"
         clearAuthConfig()
 
@@ -586,19 +497,18 @@ describe("Auth Middleware", () => {
     })
   })
 
-  // ── Production Clerk branch fails closed too (AC-1 / AC-2) ────────────────
+  // ── Production keyless branch fails closed too (AC-1 / AC-2) ───────────────
 
-  describe("production Clerk branch", () => {
+  describe("production keyless branch", () => {
     beforeEach(() => {
-      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_fail_closed"
-      process.env.CLERK_SECRET_KEY = "sk_test_fail_closed"
+      ;(process.env as Record<string, string | undefined>).NODE_ENV = "production"
+      process.env.ALLURA_DEV_AUTH_ENABLED = "true"
       clearAuthConfig()
     })
 
     afterEach(() => {
-      clerkTestState.throwAtRuntime = false
-      delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-      delete process.env.CLERK_SECRET_KEY
+      ;(process.env as Record<string, string | undefined>).NODE_ENV = "test"
+      process.env.ALLURA_DEV_AUTH_ENABLED = "true"
       clearAuthConfig()
     })
 
@@ -608,7 +518,7 @@ describe("Auth Middleware", () => {
       "/api/tokens",
       "/api/brain/memories",
       "/api/brain/search",
-    ])("denies %s with 401 when Clerk reports no userId", async (path) => {
+    ])("denies %s with 401 when no provider can establish a principal", async (path) => {
       const request = new NextRequest(new URL(path, "http://localhost:3100"))
       const response = await middleware(request)
 
@@ -616,63 +526,7 @@ describe("Auth Middleware", () => {
       expect(response.headers.get("x-middleware-request-x-allura-user-id")).toBeNull()
     })
 
-    it("forwards authority from the canonical allura custom session claim", async () => {
-      clerkTestState.authResult = {
-        userId: "user-clerk",
-        sessionId: "session-clerk",
-        sessionClaims: {
-          allura: {
-            role: "curator",
-            groupId: "allura-acme",
-            workspaceId: "workspace-a",
-          },
-        },
-      }
-
-      const response = await middleware(
-        new NextRequest(new URL("/dashboard/curator", "http://localhost:3100")),
-      )
-
-      expect(response.status).toBe(200)
-      expect(response.headers.get("x-middleware-request-x-allura-user-id")).toBe("user-clerk")
-      expect(response.headers.get("x-middleware-request-x-allura-group-id")).toBe("allura-acme")
-      expect(response.headers.get("x-middleware-request-x-allura-workspace-id")).toBe("workspace-a")
-    })
-
-    it("passes the supplied NextFetchEvent to Clerk middleware", async () => {
-      const event = { waitUntil: vi.fn() }
-
-      await proxyDefault(
-        new NextRequest(new URL("/api/brain/memories", "http://localhost:3100")),
-        event as never,
-      )
-
-      expect(clerkTestState.receivedEvent).toBe(event)
-    })
-
-    it.each([
-      ["missing", null],
-      ["malformed", { allura: { role: "owner", groupId: "not-a-group" } }],
-    ])("returns 403 for an authenticated session with %s authority", async (_case, sessionClaims) => {
-      clerkTestState.authResult = {
-        userId: "user-clerk",
-        sessionId: "session-clerk",
-        sessionClaims,
-      }
-
-      const response = await middleware(
-        new NextRequest(new URL("/api/curator/proposals", "http://localhost:3100")),
-      )
-
-      expect(response.status).toBe(403)
-      expect(await response.json()).toMatchObject({
-        error: "Invalid authenticated authority",
-        statusCode: 403,
-      })
-    })
-
-    it("denies instead of falling back to the dev-admin principal when Clerk fails", async () => {
-      clerkTestState.throwAtRuntime = true
+    it("denies instead of falling back to the dev-admin principal in production", async () => {
       const request = new NextRequest(new URL("/api/curator/proposals", "http://localhost:3100"))
       const response = await middleware(request)
 

@@ -689,7 +689,7 @@ export const PUBLIC_ROUTE_MANIFEST: PublicRouteEntry[] = [
     pattern: "/api/auth/:path*",
     scopeName: "public:auth:api",
     rationale:
-      "Clerk-owned auth API routes; authentication is performed by the provider, not by this gate.",
+      "Identity-provider auth API routes; authentication is performed by the provider, not by this gate.",
   },
   {
     pattern: "/api/health",
@@ -855,7 +855,7 @@ export function getPublicEntry(pathname: string): PublicRouteEntry | null {
 
 /**
  * Resolve the authority for a pathname. This is the single entry point the
- * HTTP gate uses, for both the production (Clerk) and dev-auth branches.
+ * HTTP gate uses, for both the production Cloudflare Access and dev-auth branches.
  *
  * Resolution order is fail-closed:
  *   1. ROUTE_SCOPE_MANIFEST  -> declared, use its role
