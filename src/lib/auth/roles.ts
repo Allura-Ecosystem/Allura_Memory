@@ -76,7 +76,7 @@ export function isValidRole(value: unknown): value is AlluraRole {
 /**
  * Parse a role from unknown input, with fallback.
  *
- * @param value - The value to parse (typically from Clerk metadata or env)
+ * @param value - The value to parse (typically from verified identity metadata or env)
  * @param fallback - Default role if value is invalid (defaults to "viewer")
  */
 export function parseRole(value: unknown, fallback: AlluraRole = "viewer"): AlluraRole {

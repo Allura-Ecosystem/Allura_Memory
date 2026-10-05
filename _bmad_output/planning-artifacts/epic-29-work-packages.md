@@ -1,3 +1,5 @@
+> Superseded identity note (2026-10-04): Clerk-specific B1 work below is retired. Provider-neutral local pairing coverage remains; production Cloudflare Access pairing proof is a separate open gate.
+
 # Epic 29 — Work-Package Task Plan
 
 **Goal:** Complete Epic 29 end to end so an authorized user can pair once with Clerk, reconnect automatically with OS-keystore proof, rotate keys safely, and lose access immediately when authority is revoked.

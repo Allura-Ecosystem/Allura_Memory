@@ -42,7 +42,7 @@ Competitor:        mem0.ai (primary benchmark — 5-tool API parity is a hard re
 |---------|--------------|----------------|-------------|
 | **Primary — Maya** | Urban community organizer, 31, Oakland | Warm, trustworthy AI memory that feels personal and curated | Cold transactional tech; no control over what AI "remembers" |
 | **Secondary — Developer** | AI/ML engineer integrating memory into agents | 5-tool API (`memory_add`, `memory_search`, `memory_get`, `memory_list`, `memory_delete`), MCP-compatible, Docker deployable | mem0 vendor lock-in, no audit trail, no governance |
-| **Tertiary — Enterprise Admin** | Ops / compliance owner at a company | SOC2-grade HITL governance, audit log export, Clerk RBAC | Can't prove what AI "knows"; no approval workflow |
+| **Tertiary — Enterprise Admin** | Ops / compliance owner at a company | SOC2-grade HITL governance, audit log export, reviewed enterprise identity/RBAC | Can't prove what AI "knows"; no approval workflow |
 
 ---
 
@@ -75,7 +75,7 @@ Revenue Model:     Freemium OSS → Enterprise SaaS
 Pricing Strategy:  Self-hosted free (OSS) / Vercel-deployed curator dashboard (SaaS)
 Tiers:
   - Developer:    Docker Compose, auto-promotion mode, open-source
-  - Enterprise:   SOC2 mode, HITL governance, Clerk SSO, Sentry alerts, CSV audit export
+  - Enterprise:   SOC2 mode, HITL governance, reviewed enterprise SSO, Sentry alerts, CSV audit export
 Market Position:   Governed, sovereign alternative to mem0.ai — warm design, self-hosted
 ```
 

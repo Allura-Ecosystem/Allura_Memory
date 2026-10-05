@@ -7,7 +7,7 @@
  * AD-63 (callback allowlist), HIGH-F4 (pg_advisory_xact_lock).
  *
  * Accepts `enrollment_transaction_id` and `pkce_state` from the browser
- * (after Clerk sign-in); resolves the Clerk-authenticated AuthUser via
+ * after interactive sign-in; resolves the middleware-authenticated AuthUser via
  * middleware headers; the server resolves active membership and workspace —
  * the client never supplies tenant authority (AC-02).
  *
@@ -43,7 +43,7 @@ const requestSchema = z.object({
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // §4.2 step 1: Resolve the Clerk-authenticated AuthUser via middleware
+  // §4.2 step 1: Resolve the middleware-authenticated AuthUser via
   // headers. Server resolves authority — client never supplies tenant.
   const authUser = getAuthUser(request);
   if (!authUser) {

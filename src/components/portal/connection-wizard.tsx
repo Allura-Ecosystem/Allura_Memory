@@ -7,7 +7,7 @@ import { TokenInventoryPanel } from "./token-inventory-panel";
 
 const CLIENTS = [
   { id: "chatgpt", name: "ChatGPT", mark: "G", description: "Your conversational workspace", mode: "Authorization setup needed", ready: false,
-    note: "The allura OAuth connector and this ChatGPT account's client support still need verification. A Clerk dashboard login is not MCP OAuth authorization." },
+    note: "The allura OAuth connector and this ChatGPT account's client support still need verification. A Cloudflare Access dashboard session is not MCP OAuth authorization." },
   { id: "claude-desktop", name: "Claude Desktop", mark: "C", description: "allura alongside your conversations", mode: "Adapter setup needed", ready: false,
     note: "A supported remote connector or approved local bridge must be configured first. This portal cannot install a desktop extension or silently change Claude's local files." },
   { id: "hermes", name: "Hermes", mark: "H", description: "Memory for your personal agent", mode: "Guided setup", ready: true,

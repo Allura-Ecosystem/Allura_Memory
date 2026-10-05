@@ -7,7 +7,7 @@
  * SHA-256 only), AD-63 (callback allowlist), HIGH-F4 (pg_advisory_xact_lock).
  *
  * Responsibilities:
- *  - Resolve the Clerk-authenticated AuthUser (server resolves authority;
+ *  - Resolve the web-session AuthUser (server resolves authority;
  *    client never supplies tenant — AC-02, §4.2 step 1, §5.1).
  *  - Fetch the enrollment row (pre-approval state) to get callback_type,
  *    public_key, display_label, key_id, key_algo for audit + callback URL.
@@ -61,7 +61,7 @@ const AUTHORIZATION_CODE_TTL_MS = 60_000;
 const PREHUMAN_GROUP_ID = "allura-system";
 const PREHUMAN_AGENT_ID = "device-enrollment";
 
-/** Approval input — resolved from Clerk identity + request body. */
+/** Approval input — resolved from server-verified identity + request body. */
 export interface ApprovalInput {
   enrollment_transaction_id: string;
   pkce_state: string;
@@ -438,7 +438,7 @@ export async function approveEnrollment(
         group_id: groupId,
         workspace_id: workspaceId,
         key_fingerprint: keyFingerprint(enrollment.public_key),
-        auth_method: "clerk",
+        auth_method: "web_session",
       },
     });
 

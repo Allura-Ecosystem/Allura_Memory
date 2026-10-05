@@ -102,7 +102,7 @@ describe("getGroupIdFromAuth — refusal path via the seam", () => {
 
   it("no identity → seam returns 401 (AUTH_MISSING), no allura-system fallback", () => {
     // The pure seam proves the unauthenticated → 401 mapping deterministically.
-    // On the origin/main lineage getAuthUser returns a dev user in a non-Clerk
+    // On the origin/main lineage getAuthUser returns a dev user in a nonproduction
     // dev environment, so this is asserted at the seam level, not via the wrapper.
     expect(resolveApiTenant(null, "allura-system").status).toBe("unauthenticated");
     expect(resolveApiTenant(null, undefined).status).toBe("unauthenticated");

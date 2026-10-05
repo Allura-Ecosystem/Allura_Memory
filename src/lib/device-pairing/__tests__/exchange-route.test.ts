@@ -100,7 +100,7 @@ describe("Story 29.9 — exchange route", () => {
   it.each([
     [DevicePairingErrorCode.AUTH_EXPIRED, 401, "retry", 0],
     [DevicePairingErrorCode.KEY_EXPIRED, 403, "re_pair", 0],
-    [DevicePairingErrorCode.MEMBERSHIP_INACTIVE, 403, "clerk_required", 0],
+    [DevicePairingErrorCode.MEMBERSHIP_INACTIVE, 403, "interactive_identity_required", 0],
   ] as const)("maps %s to %i with recovery guidance", async (code, status, recoveryAction, retryAfterMs) => {
     const client = { query: vi.fn(), release: vi.fn() };
     mocks.getAppPool.mockReturnValue({ connect: vi.fn(async () => client) });

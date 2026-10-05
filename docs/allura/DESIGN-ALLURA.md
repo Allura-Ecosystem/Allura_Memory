@@ -215,14 +215,14 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 | F14 | Curator dashboard shows three tabs: Traces, Approved, Pending | `/dashboard/curator` |
 | F15 | Pending tab sorts by confidence (descending); shows confidence badge + reasoning + action buttons | `ConfidenceBadge` component |
 | F16 | Approved tab shows all approved knowledge (human + auto); sortable by date/confidence | `/dashboard/curator` approved tab |
-| F17 | Tab 1 (Traces) restricted to authenticated users with `admin` role | Clerk RBAC |
+| F17 | Tab 1 (Traces) restricted to authenticated users with `admin` role | Cloudflare Access + application RBAC |
 
 ### Audit & Health Requirements
 
 | # | Requirement | Satisfied by |
 |---|-------------|-------------|
 | F18 | Audit log endpoint returns all events with filtering and pagination; CSV export for compliance | `GET /api/audit/events` |
-| F19 | Dashboard integrates Clerk for authentication and RBAC (curator, admin, viewer roles) | `src/lib/auth/clerk.ts` |
+| F19 | Dashboard integrates Cloudflare Access for authentication and application RBAC (curator, admin, viewer roles) | `src/lib/auth/cloudflare-access.ts` |
 | F26 | Agent task lifecycle events persisted as append-only traces | `src/lib/postgres/queries/insert-trace.ts` |
 | F27 | Raw trace storage is append-only; no UPDATE/DELETE on events table | Schema enforcement |
 | F28 | Traces preserve provenance linking downstream insights to source evidence | `trace_ref` field |

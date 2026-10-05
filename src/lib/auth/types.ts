@@ -2,9 +2,8 @@
  * Allura Memory Auth Types
  *
  * TypeScript types for the authentication and authorization system.
- * Clerk is the auth provider; DevAuthProvider bypasses in development.
- *
- * Reference: Phase 7 benchmark — Clerk SSO + RBAC
+ * Cloudflare Access is the production authority; DevAuthProvider bypasses
+ * in development only.
  */
 
 // ── Role Definitions ──────────────────────────────────────────────────────
@@ -86,7 +85,7 @@ export const ROLE_LEVEL: Record<AlluraRole, number> = {
  * hardcoded tenant defaults used in UI components.
  */
 export interface AuthUser {
-  /** Unique user ID from Clerk (or dev fallback) */
+  /** Unique user ID from the auth provider (or dev fallback) */
   id: string;
   /** User's email address */
   email: string;
@@ -139,7 +138,7 @@ export interface RouteProtection {
 /**
  * Auth provider interface.
  *
- * ClerkAuthProvider implements this for production.
+ * CloudflareAccessUser implements this for production.
  * DevAuthProvider implements this for local development.
  */
 export interface AuthProvider {
@@ -151,38 +150,13 @@ export interface AuthProvider {
   getGroupId(): Promise<string>;
 }
 
-// ── Clerk Metadata Types ───────────────────────────────────────────────────
-
-/**
- * Shape of Clerk's publicMetadata where we store Allura authority.
- *
- * Stored at: user.publicMetadata.allura
- */
-export interface ClerkAlluraMetadata {
-  /** Primary role for the user */
-  role: AlluraRole;
-  /** Tenant group_id this user belongs to */
-  groupId: string;
-  /** Workspace scope assigned to the authenticated principal. */
-  workspaceId: string;
-  /** Additional roles if user has multiple (optional) */
-  roles?: AlluraRole[];
-}
-
-/**
- * Clerk user's publicMetadata shape.
- */
-export interface ClerkPublicMetadata {
-  allura?: ClerkAlluraMetadata;
-}
-
 // ── Dev Auth Config ────────────────────────────────────────────────────────
 
 /**
  * Development-mode auth configuration.
  *
- * When NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set, the system
- * falls back to DevAuthProvider using these env vars.
+ * Outside production, when ALLURA_DEV_AUTH_ENABLED is set, the system falls
+ * back to DevAuthProvider using these env vars.
  */
 export interface DevAuthConfig {
   /** Whether dev auth bypass is enabled */

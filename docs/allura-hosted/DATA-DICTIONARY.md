@@ -129,7 +129,7 @@ Relationships: `Workspace N—1 group_id` (shared via parent org); `Workspace 1�
 
 ### Physical tables (Phase 1 slice — source of truth)
 
-The conceptual `Organization` lives in **Clerk**, not Postgres, so the physical schema
+The conceptual `Organization` is derived from server-owned tenant/workspace authority, not an identity-provider organization object, so the physical schema
 has no `organizations` table; the org `group_id` is carried directly on the workspace row.
 Primary keys are `TEXT` (app-generated), not `uuid`. Migrations:
 [`27-workspaces.sql`](../../docker/postgres-init/27-workspaces.sql),

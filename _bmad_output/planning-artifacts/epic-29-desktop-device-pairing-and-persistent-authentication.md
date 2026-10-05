@@ -19,6 +19,8 @@ story_count: 21
 ac_coverage: 29/29 lead mappings
 ---
 
+> Superseded identity note (2026-10-04): provider-specific Clerk references below are historical. The active runtime uses provider-neutral `web_session` authority, and Cloudflare Access is the sole production identity target. The retired Clerk B1 gate is not Cloudflare proof; real Cloudflare-authenticated pairing remains unproven.
+
 # Epic 29 — Desktop Device Pairing and Persistent Authentication
 
 ## Outcome

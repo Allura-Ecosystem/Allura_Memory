@@ -9,13 +9,13 @@ import { type EventInsert, insertEvent } from "@/lib/postgres/queries/insert-tra
  *
  * INTENTIONALLY INTERNAL-ONLY — NOT a public API.
  * This route exists solely so the Edge Runtime middleware can fire-and-forget
- * trace writes without importing pg directly. It is NOT protected by Clerk/RBAC
+ * trace writes without importing pg directly. It is NOT protected by browser RBAC
  * because the Edge middleware cannot attach auth headers to its own internal
  * calls. Instead, it is protected by the x-internal-trace: allura-trace-middleware
  * shared secret header. Any request missing that header receives 403.
  *
  * DO NOT add withPermission() or requireRole() guards here — doing so would
- * break the TraceMiddleware which has no mechanism to obtain a Clerk session token.
+ * break the TraceMiddleware, which has no interactive browser session.
  */
 
 interface TracePayload {

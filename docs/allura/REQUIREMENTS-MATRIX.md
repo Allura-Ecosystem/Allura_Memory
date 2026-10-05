@@ -507,7 +507,7 @@ These UI receipts do not close Epic 29 external runtime gates or authorize deplo
 
 | Requirement | Implementation | Evidence / limit |
 |-------------|----------------|------------------|
-| Device-first navigation, allura brand | `/portal`, `DeviceWorkspace`, shared `DashboardShell`; approved wordmark and scoped brand palette | `portal-page.test.ts`, `device-workspace.test.ts`; real-component browser preview, not live Clerk proof |
+| Device-first navigation, allura brand | `/portal`, `DeviceWorkspace`, shared `DashboardShell`; approved wordmark and scoped brand palette | `portal-page.test.ts`, `device-workspace.test.ts`; real-component browser preview, not live Cloudflare Access proof |
 | Scoped inventory and lifecycle controls | Existing principal-only device list; confirmed revoke/mark-lost; API failures retain state | `device-workspace.test.ts`; existing auth/service contracts unchanged; no production mutation during validation |
 | Device-bound versus account credentials | Exact `paired_device_id` UI filtering; expired/revoked rows excluded; unpaired keys shown separately | `token-inventory.test.ts`; no fabricated binding or app-installation claims |
 | Reusable permission profiles | Built-in read-only/read-write presets; server authority remains decisive | `device-workspace.test.ts`; applies to new setup only; no saved custom profile storage |

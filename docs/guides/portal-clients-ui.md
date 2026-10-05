@@ -32,13 +32,13 @@ Results: 47 tests passed in 14 files; TypeScript passed; Next.js 16.2.1 producti
 
 Independent read-only review found a low-severity stale clipboard-status race. It was reproduced with a failing test, fixed with operation invalidation, and cleared on independent delta review. Static added-line scan found no secret patterns, browser credential persistence, eval, or HTML injection.
 
-Playwright exercised the actual UI components in an isolated viewer-fixture preview at 1440x1024 and 390x844: six buttons present, OpenCode setup opens, search filters correctly, unsupported adapter guidance present, no horizontal overflow, zero JavaScript page errors. This preview was not an authenticated Clerk session and did not issue any real credentials.
+Playwright exercised the actual UI components in an isolated viewer-fixture preview at 1440x1024 and 390x844: six buttons present, OpenCode setup opens, search filters correctly, unsupported adapter guidance present, no horizontal overflow, zero JavaScript page errors. This preview was not an authenticated Cloudflare Access session and did not issue any real credentials.
 
 ## Release status and unresolved gates
 
 The live container was NOT replaced during this UI task. The deployment governance check returned `pass:false`: its append-only invariant classified the natural-language deployment description as a mutation. No retry with alternate wording, policy bypass, service change, or database write followed that denial. Resolve the deployment gate through the authorized governance path before publishing.
 
-This code is not proof that any desktop client is connected. Remaining work includes verified client adapters/OAuth and actual per-account sign-in and memory-isolation acceptance. The earlier Clerk test secret shared in chat needs rotation through the owner's secure local workflow; never paste replacement values into chat.
+This code is not proof that any desktop client is connected. Remaining work includes verified client adapters/OAuth and actual per-account sign-in and memory-isolation acceptance. Any retired provider credentials must remain revoked and deleted through the owner's secure workflow; never paste replacement values into chat.
 
 Before any future image build, exclude `.env` and `.env.*` at every depth from the staging context. Next standalone output can copy environment files. Do not blindly relax `.dockerignore` or bake secrets into image layers. Keep the old portal available for rollback and preserve machine MCP.
 
@@ -47,6 +47,6 @@ Before any future image build, exclude `.env` and `.env.*` at every depth from t
 - https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp
 - https://opencode.ai/docs/mcp-servers/
 - https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization
-- https://clerk.com/docs/backend-requests/making/custom-session-token
+- https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/validating-json/
 
-Clerk dashboard sign-in and MCP authorization are distinct. For code consuming `sessionClaims`, customize the **session token** under Clerk Sessions; creating a separately named JWT template does not by itself change session claims. Confirm against the deployed auth reader before configuring the three users.
+Cloudflare Access dashboard identity and MCP authorization are distinct. The dashboard must verify the Access JWT at the server boundary; an Access session never substitutes for an MCP bearer credential. Confirm the deployed auth reader and three-user isolation before production activation.

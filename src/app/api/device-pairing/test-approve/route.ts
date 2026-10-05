@@ -41,7 +41,7 @@ function unavailable(): NextResponse {
 /**
  * Story 29.20 local-E2E approval seam.
  *
- * This handler is intentionally separate from the production Clerk approval
+ * This handler is intentionally separate from the production identity approval
  * route. It is inert outside Vitest's NODE_ENV=test and never accepts caller-
  * supplied identity/tenant context.
  */

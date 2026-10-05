@@ -36,13 +36,13 @@ The current database index `idx_mcp_tokens_one_active_per_device` permits at mos
 
 Device enrollment and token exchange require proof of the device's key through the existing enrollment/approval/completion and challenge/exchange protocols. The generic `/api/tokens` issuer creates unpaired keys; it cannot be relabeled as device enrollment. Device-specific client setup therefore displays an integration gate and does not offer that issuer or a misleading Connected badge.
 
-Before promising one-click device/client setup, implement and verify the local secure-store adapter and choose a reviewed client-installation credential model compatible with device rotation/revocation. Do not remove the uniqueness index or bypass proof to make a button look functional. Native OAuth adapters for hosted clients remain separate from Clerk portal login.
+Before promising one-click device/client setup, implement and verify the local secure-store adapter and choose a reviewed client-installation credential model compatible with device rotation/revocation. Do not remove the uniqueness index or bypass proof to make a button look functional. Native OAuth adapters for hosted clients remain separate from Cloudflare Access dashboard identity.
 
 ## Release and acceptance
 
 This is a local source/UI implementation. The earlier deployment governance denial remains unresolved; the running portal has not been replaced. No production device/token or schema mutations, credential changes, policy changes, dependency installs, or new machine registrations are part of this work.
 
-Tests use explicitly mocked HTTP responses. Browser preview uses actual components with labeled example-device fixtures, not a Clerk session or live pairing. Actual three-account sign-in, device secure-store runtime, end-to-end client connections and memory-isolation acceptance remain external gates. The earlier exposed Clerk secret still requires secure owner-managed rotation.
+Tests use explicitly mocked HTTP responses. Browser preview uses actual components with labeled example-device fixtures, not a Cloudflare Access session or live production pairing. Actual three-account sign-in, device secure-store runtime, end-to-end client connections and memory-isolation acceptance remain external gates. Retired provider credentials must remain revoked and deleted through the owner's secure workflow.
 
 See [execution receipts](portal-devices-execution.md), [initial Clients UI](portal-clients-ui.md), [data dictionary](../allura/DATA-DICTIONARY.md), and [requirements traceability](../allura/REQUIREMENTS-MATRIX.md).
 

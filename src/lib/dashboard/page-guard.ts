@@ -10,7 +10,7 @@ import type { ResolvedWorkspaceScope } from "@/lib/db/workspace-scope"
 import { resolveDashboardScope } from "./read-service"
 
 /**
- * Server-owned dashboard entry guard. Derives the principal from Clerk or the
+ * Server-owned dashboard entry guard. Derives the principal from Cloudflare Access or the
  * DevAuthProvider (never browser headers), then resolves a workspace scope.
  * Missing or incomplete authority redirects to login.
  */

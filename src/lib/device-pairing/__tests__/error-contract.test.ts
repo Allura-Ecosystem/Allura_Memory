@@ -8,9 +8,9 @@ describe("Story 29.11 — device pairing error contract", () => {
   it.each([
     [DevicePairingErrorCode.AUTH_INVALID, "re_pair"],
     [DevicePairingErrorCode.KEY_EXPIRED, "re_pair"],
-    [DevicePairingErrorCode.MEMBERSHIP_INACTIVE, "clerk_required"],
-    [DevicePairingErrorCode.WORKSPACE_LOCKED, "clerk_required"],
-    [DevicePairingErrorCode.WORKSPACE_NOT_FOUND, "clerk_required"],
+    [DevicePairingErrorCode.MEMBERSHIP_INACTIVE, "interactive_identity_required"],
+    [DevicePairingErrorCode.WORKSPACE_LOCKED, "interactive_identity_required"],
+    [DevicePairingErrorCode.WORKSPACE_NOT_FOUND, "interactive_identity_required"],
     [DevicePairingErrorCode.DEVICE_NOT_APPROVED, "re_pair"],
     [DevicePairingErrorCode.AUTH_EXPIRED, "retry"],
     [DevicePairingErrorCode.INVALID_REQUEST, "re_pair"],
@@ -25,7 +25,7 @@ describe("Story 29.11 — device pairing error contract", () => {
     expect(recovery.retry_after_ms).toBeLessThanOrEqual(30_000);
   });
 
-  it("uses retry only for recoverable, non-Clerk failure states", () => {
+  it("uses retry only for recoverable failure states", () => {
     const retryCodes = Object.values(DevicePairingErrorCode).filter(
       (code) => getDevicePairingRecovery(code).recovery_action === "retry",
     );

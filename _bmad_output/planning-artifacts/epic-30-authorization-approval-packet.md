@@ -146,6 +146,8 @@ These decisions name authorities and constrain execution. They do not count as c
 
 An authorized human approval must identify the candidate commit and contract hash, record amendments or accepted defaults, name the approver and role, and link the durable board receipt. The board receipt now exists in the [reconciliation packet](./epic-30-board-reconciliation-packet.md). Independent security and data reviewers must still record dispositions for every threat row. Until those approval and review records exist, Story 30.3 remains backlog and dependent implementation stories do not advance.
 
+> Superseded 2026-10-04 by Sabir's decision to remove Clerk. Cloudflare Access is now the sole production identity target. The historical Clerk analysis below remains evidence of the retired candidate and is not an active implementation direction.
+
 ## Session authority disposition — provider-delegated (Clerk), 2026-09-28
 
 Admin design direction (Sabir) selected provider-delegated session authority via Clerk for production login convenience. This is an architecture direction, NOT the Story 30.3 security/data approval and NOT deployment authorization.

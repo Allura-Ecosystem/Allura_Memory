@@ -195,6 +195,8 @@ export default defineConfig({
       "src/lib/memory/memory-add-workspace-scope.test.ts",
       "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
       "src/lib/auth/__tests__/dashboard-principal-session-authority.test.ts",
+      "src/lib/auth/__tests__/clerk-removal-contract.test.ts",
+      "src/lib/auth/__tests__/story-25-2b-auth-entry.test.ts",
       "src/lib/auth/__tests__/principal-audit.test.ts",
       "src/lib/auth/__tests__/budget-scope.test.ts",
       // Story 24.11a AC-7 — withPermission enforces its PermissionAction argument
@@ -214,8 +216,6 @@ export default defineConfig({
       "src/lib/device-pairing/__tests__/platform/server-contract.test.ts",
       // Story 29.3 — PKCE S256 + authorization code + completion nonce (pure functions, no DB)
       "src/lib/device-pairing/__tests__/pkce.test.ts",
-      // Story 29.20 — hermetic B1 readiness and secret-redaction checks.
-      "src/lib/device-pairing/__tests__/e2e/clerk-test-harness.test.ts",
       "src/lib/device-pairing/__tests__/test-approve-route.test.ts",
       "src/lib/device-pairing/__tests__/authorization-code.test.ts",
       // Story 29.17 — deterministic credential scan for named fixtures/errors/logs.

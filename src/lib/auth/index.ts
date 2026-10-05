@@ -12,8 +12,6 @@ export type {
   AlluraRole,
   AuthUser,
   AuthProvider,
-  ClerkAlluraMetadata,
-  ClerkPublicMetadata,
   DevAuthConfig,
   PermissionProfile,
   PermissionCheckResult,
@@ -56,21 +54,11 @@ export {
   ROLE_DESCRIPTIONS,
 } from "./roles";
 
-// ── Clerk Integration ───────────────────────────────────────────────────────
-export {
-  extractAlluraMetadata,
-  buildAuthUser,
-  isClerkConfigured,
-  getClerkPublishableKey,
-  buildClerkMetadataPayload,
-} from "./clerk";
-
 // ── Configuration ───────────────────────────────────────────────────────────
 export {
   authEnvSchema,
   getAuthConfig,
   clearAuthConfig,
-  isClerkEnabled,
   isDevAuthActive,
   getDevAuthConfig,
   AUTH_ROUTES,

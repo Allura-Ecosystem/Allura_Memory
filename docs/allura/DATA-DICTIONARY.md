@@ -703,7 +703,7 @@ events append-only invariant (POL-002) holds as the trail. Migration: `docker/po
 |-------|------|----------|-------------|
 | `id` | string (uuid) | Yes | Surrogate key |
 | `group_id` | string | Yes | Org tenant boundary; `^allura-[a-z0-9-]+$` (POL-001) |
-| `user_id` | string | Yes | Stable identity (Clerk user id or email) |
+| `user_id` | string | Yes | Stable server-verified identity (normalized email for Cloudflare Access) |
 | `email` | string | No | Display email |
 | `role` | enum | Yes | `admin` \| `curator` \| `viewer` |
 | `invited_by` | string | No | user_id of the admin who added them |
