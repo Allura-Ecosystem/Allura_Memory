@@ -30,7 +30,7 @@ export { PrincipalProviderUnavailableError } from "./principal-errors"
  */
 export async function getDashboardPrincipal(): Promise<AuthUser | null> {
   if (isCloudflareAccessEnabled()) {
-    return cloudflareAccessUser(await headers())
+    return await cloudflareAccessUser(await headers())
   }
 
   // Production without Cloudflare Access has no provider that can establish a

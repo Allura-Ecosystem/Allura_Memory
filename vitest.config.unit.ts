@@ -196,6 +196,7 @@ export default defineConfig({
       "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
       "src/lib/auth/__tests__/dashboard-principal-session-authority.test.ts",
       "src/lib/auth/__tests__/clerk-removal-contract.test.ts",
+      "src/lib/auth/__tests__/cloudflare-access.test.ts",
       "src/lib/auth/__tests__/story-25-2b-auth-entry.test.ts",
       "src/lib/auth/__tests__/principal-audit.test.ts",
       "src/lib/auth/__tests__/budget-scope.test.ts",

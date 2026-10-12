@@ -9,9 +9,9 @@
  */
 
 import { z } from "zod";
-import type { AlluraRole, DevAuthConfig } from "./types";
-import { PUBLIC_ROUTE_MANIFEST, ROUTE_SCOPE_MANIFEST } from "./route-scope-manifest";
 import { AUTH_LOGIN_PATH } from "./redirect-target";
+import { PUBLIC_ROUTE_MANIFEST, ROUTE_SCOPE_MANIFEST } from "./route-scope-manifest";
+import type { AlluraRole, DevAuthConfig } from "./types";
 
 // ── Environment Schema ──────────────────────────────────────────────────────
 
@@ -21,6 +21,24 @@ import { AUTH_LOGIN_PATH } from "./redirect-target";
  * Dev auth variables have safe defaults for local development.
  */
 export const authEnvSchema = z.object({
+  /** Enable production Cloudflare Access authority. */
+  ALLURA_CF_ACCESS_ENABLED: z.preprocess(
+    (val) => val ?? "false",
+    z.string().transform((val) => val === "true")
+  ),
+
+  /** Cloudflare Access team issuer, for example https://team.cloudflareaccess.com. */
+  ALLURA_CF_ACCESS_TEAM_DOMAIN: z.preprocess(
+    (val) => val === "" ? undefined : val,
+    z.string().url().optional(),
+  ),
+
+  /** Audience tag of the Cloudflare Access application protecting this portal. */
+  ALLURA_CF_ACCESS_AUDIENCE: z.preprocess(
+    (val) => val === "" ? undefined : val,
+    z.string().min(1).optional(),
+  ),
+
   /** Enable dev auth bypass. Defaults to true in development. */
   ALLURA_DEV_AUTH_ENABLED: z.preprocess(
     (val) => val ?? (process.env.NODE_ENV !== "production" ? "true" : "false"),
