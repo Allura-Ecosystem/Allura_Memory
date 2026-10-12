@@ -3,7 +3,7 @@
 
 generated: "2026-08-28"
 project: "allura-memory"
-last_updated: "09-17-2026 23:41"
+last_updated: "10-12-2026 15:25"
 owner: brooks
 group_id: allura-system
 
@@ -631,6 +631,34 @@ epic_28:
     - key: "28.8"
       title: "Exit-Gate Closure"
       status: done
+
+epic_31:
+  name: "Governed Dashboard Graph Alignment"
+  status: in-progress
+  retrospective:
+  next_story: "31.1"
+  sequence_note: "Correct Course approved 2026-10-12. AD-64 and the canonical BMAD
+    spec establish the contract; implementation and GRAPH-01..GRAPH-36 evidence remain
+    pending. Epic 30 /dashboard My Work remains separate."
+  stories:
+    - key: "31.1"
+      title: "Focused Subgraph Contract and Architecture Trace"
+      status: in-progress
+      owner: "Brooks + Knuth -> Woz"
+      status_evidence: "AD-64 and SPEC-dashboard-graph-alignment recorded; code contract
+        and tests are not yet implemented."
+    - key: "31.2"
+      title: "Governed Focused-Subgraph Data and API"
+      status: backlog
+      owner: "Knuth + Woz"
+    - key: "31.3"
+      title: "Interactive Knowledge Map and Inspector"
+      status: backlog
+      owner: "Jobs + Woz"
+    - key: "31.4"
+      title: "Independent Review, Evidence, and Human Acceptance"
+      status: backlog
+      owner: "Pike + Fowler + Hightower + Human owner"
 development_status:
   epic-18: done
   18-1-promote-ad49-rk15-to-canon: done
@@ -741,6 +769,13 @@ development_status:
   30-12-five-user-validation-and-remediation: backlog
   30-13-release-evidence-receipts-and-retrospective: backlog
   epic-30-retrospective: optional
+
+  epic-31: in-progress
+  31-1-focused-subgraph-contract-and-architecture-trace: in-progress
+  31-2-governed-focused-subgraph-data-and-api: backlog
+  31-3-interactive-knowledge-map-and-inspector: backlog
+  31-4-independent-review-evidence-and-human-acceptance: backlog
+  epic-31-retrospective: optional
 action_items:
   - id: "epic-25-retro-item-1-update-epic-25-spec-status-lines-25-2a-2"
     epic: 25

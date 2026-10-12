@@ -19,6 +19,7 @@
 | 28 | [Enterprise Documentation Consolidation](./epic-28-enterprise-documentation-consolidation.md) | Done | 28.8 exit-gate closure complete; retrospective pending. |
 
 | 30 | [Governed Digital Brain Workspace](./epic-30-governed-digital-brain-workspace.md) | Backlog | 13 stories recovered; development readiness blocked. |
+| 31 | [Governed Dashboard Graph Alignment](./epic-31-governed-dashboard-graph-alignment.md) | In Progress | Correct Course approved 2026-10-12; AD-64/spec complete; implementation and evidence pending. |
 
 ## Rules
 
