@@ -779,6 +779,7 @@ Canonical service ports. **The 3000–3999 band is banned** (Next.js/React defau
 | Service | Port | Tier |
 | ------- | ---- | ---- |
 | Allura Control Center UI (Next.js) | 4001 | UI (4000+) |
+| Dashboard local/dev portfolio demo (Next.js) | 4100 | UI (4000+) — local-only; no production allocation or routing change |
 | Allura Control Center API (FastAPI) | 6001 | API (6000+) |
 | MCP HTTP gateway | 5888 | infra (exempt) |
 | PostgreSQL | 5432 | infra (exempt) — IGraphAdapter graph ops run here (AD-29, AD-49) |

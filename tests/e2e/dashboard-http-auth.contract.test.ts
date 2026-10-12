@@ -133,7 +133,7 @@ async function stop(child: Child): Promise<void> {
 
 async function withNextServer<T>(env: Record<string, string | undefined>, work: (port: number) => Promise<T>): Promise<T> {
   const port = await freePort()
-  const child = silentChild([process.execPath, NEXT_BIN, "dev", "--webpack", "-p", String(port)], { ...env, PORT: String(port) }, appDirectory)
+  const child = silentChild([process.execPath, NEXT_BIN, "dev", "--webpack", "--hostname", "127.0.0.1", "-p", String(port)], { ...env, PORT: String(port) }, appDirectory)
   try {
     await waitForHttp(port)
     return await work(port)
