@@ -3,7 +3,7 @@
 
 generated: "2026-08-28"
 project: "allura-memory"
-last_updated: "10-12-2026 15:25"
+last_updated: "10-12-2026 18:35"
 owner: brooks
 group_id: allura-system
 
@@ -771,7 +771,7 @@ development_status:
   epic-30-retrospective: optional
 
   epic-31: in-progress
-  31-1-focused-subgraph-contract-and-architecture-trace: in-progress
+  31-1-focused-subgraph-contract-and-architecture-trace: review
   31-2-governed-focused-subgraph-data-and-api: backlog
   31-3-interactive-knowledge-map-and-inspector: backlog
   31-4-independent-review-evidence-and-human-acceptance: backlog

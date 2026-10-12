@@ -144,6 +144,8 @@ export default defineConfig({
       "src/team-ram/mcp-skill-executor.test.ts",
       // Epic 30 — synthetic-only governed read slice and My Work interaction contract.
       "src/lib/digital-brain/**/*.test.ts",
+      // Story 31.1 — pure focused-subgraph contract and fail-closed rollout.
+      "src/lib/subgraph/**/*.test.ts",
       "src/app/dashboard/__tests__/page.test.tsx",
       "src/components/dashboard/__tests__/my-work-workspace.test.tsx",
       // Curator workers
