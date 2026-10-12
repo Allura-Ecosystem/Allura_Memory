@@ -1,10 +1,11 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 
-import { ensurePortfolioEnvironment } from "../../scripts/portfolio-demo-env"
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+
 import { dashboardEvidenceFailures, isSettledDashboardSnapshot } from "../../scripts/dashboard-evidence-contract"
+import { ensurePortfolioEnvironment } from "../../scripts/portfolio-demo-env"
 
 const temporaryDirectories: string[] = []
 
@@ -36,6 +37,24 @@ describe("portfolio demo tooling", () => {
     expect(compose).toContain('"127.0.0.1:${PORTFOLIO_POSTGRES_PORT:-5433}:5432"')
     expect(dockerfile).toContain("COPY docker/postgres-init/ /docker-entrypoint-initdb.d/")
     expect(dockerfile).toContain("COPY docker/portfolio-postgres/99-portfolio-demo-workspace.sql")
+  })
+
+  it("runs the founder seed after the workspace initializer and all numbered base migrations", () => {
+    const dockerfile = readFileSync("docker/portfolio-postgres/Dockerfile", "utf8")
+    const destinations = new Map(
+      [...dockerfile.matchAll(/^COPY docker\/portfolio-postgres\/(\S+) \/docker-entrypoint-initdb\.d\/(\S+)$/gm)]
+        .map((match) => [match[1], match[2]]),
+    )
+    const seed = destinations.get("100-founder-demo-seed.sql")!
+    const workspace = destinations.get("99-portfolio-demo-workspace.sql")!
+    const migrations = readdirSync("docker/postgres-init").filter((name) => /^\d+.*\.sql$/.test(name))
+
+    expect(seed).toBeDefined()
+    expect(workspace).toBeDefined()
+    expect(migrations.length).toBeGreaterThan(0)
+    for (const initializer of [...migrations, workspace]) {
+      expect(initializer < seed, `${initializer} must run before ${seed}`).toBe(true)
+    }
   })
 
   it("recreates the portfolio database rather than preserving a prior container", () => {
