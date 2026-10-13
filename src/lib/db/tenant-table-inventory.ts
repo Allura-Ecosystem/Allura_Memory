@@ -61,6 +61,7 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "graph_structural_edges", class: "tenant-scoped", notes: "Graph edges" },
   { table: "graph_structural_nodes", class: "tenant-scoped", notes: "Graph nodes" },
   { table: "graph_supersedes", class: "tenant-scoped", notes: "Supersedes relationships" },
+  { table: "graph_scope_revisions", class: "tenant-scoped", notes: "Story 31.2 per-workspace graph snapshot revision ledger; restricted app-role read only", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "notion_sync_dlq", class: "tenant-scoped", notes: "Notion sync dead-letter" },
   { table: "ruvector_memory_fallback", class: "tenant-scoped", notes: "RuVector fallback memory" },
   { table: "skill_usage_events", class: "tenant-scoped", notes: "Skill usage events" },

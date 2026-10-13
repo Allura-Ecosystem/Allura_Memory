@@ -22,3 +22,7 @@ location: .github/scripts/docs-backend-residue-guard.sh:165-238
 origin: 2026-08-29 four-layer review
 resolution: `check_links()` strips fenced and inline code before scanning, resolves relative inline/titled links and reference-style definitions, and keeps anchors/external URLs outside scope. The success message names its deliberate multi-line inline-link limitation instead of claiming universal Markdown resolution. Repository guard passed; isolated proof passed valid inline/titled/reference links, ignored code-only links, and rejected a broken reference link.
 remaining_scope: Multi-line inline targets, anchor validation, remote URLs, and a general Markdown parser remain intentionally out of scope.
+
+- source_spec: `_bmad_output/implementation-artifacts/spec-31-2-governed-focused-subgraph-data-and-api.md`
+  summary: The legacy control-plane `memory().query` and `memory().search` read paths remain tenant-scoped rather than workspace/principal-scoped.
+  evidence: These methods predate Story 31.2 and were not changed by its governed focused-subgraph read seam, but `src/lib/memory/writer.ts` still delegates them with tenant-only syscall context.

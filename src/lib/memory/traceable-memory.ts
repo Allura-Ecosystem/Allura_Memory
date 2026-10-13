@@ -79,7 +79,7 @@ export function createTraceableMemory(config: TraceableMemoryConfig): TraceableM
   // Create a minimal MCP tool caller for the TraceMiddleware
   // This bridges the gap between MemoryAPI and MCP tool calling
   const mcpCaller: McpToolCaller = innerClient ?? {
-    async callTool<T>(toolName: string, args: Record<string, unknown>): Promise<T> {
+    async callTool<T>(_toolName: string, _args: Record<string, unknown>): Promise<T> {
       // This is a no-op since MemoryAPI doesn't use MCP tools directly
       // The tracing happens at the memory operation level
       return {} as T;
@@ -110,6 +110,8 @@ export function createTraceableMemory(config: TraceableMemoryConfig): TraceableM
         await tracer.callTool("memory.createEntity", {
           label: input.label,
           group_id: input.group_id,
+          workspace_id: input.workspace_id,
+          principal_id: input.principal_id,
           node_id: result.node_id,
           duration_ms: durationMs,
           success: true,
@@ -124,6 +126,8 @@ export function createTraceableMemory(config: TraceableMemoryConfig): TraceableM
         await tracer.callTool("memory.createEntity", {
           label: input.label,
           group_id: input.group_id,
+          workspace_id: input.workspace_id,
+          principal_id: input.principal_id,
           duration_ms: durationMs,
           success: false,
           error: errorMessage,
@@ -143,6 +147,9 @@ export function createTraceableMemory(config: TraceableMemoryConfig): TraceableM
           type: input.type,
           fromId: input.fromId,
           toId: input.toId,
+          group_id: input.group_id,
+          workspace_id: input.workspace_id,
+          principal_id: input.principal_id,
           duration_ms: durationMs,
           success: true,
         });
@@ -154,6 +161,9 @@ export function createTraceableMemory(config: TraceableMemoryConfig): TraceableM
           type: input.type,
           fromId: input.fromId,
           toId: input.toId,
+          group_id: input.group_id,
+          workspace_id: input.workspace_id,
+          principal_id: input.principal_id,
           duration_ms: durationMs,
           success: false,
           error: errorMessage,

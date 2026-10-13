@@ -1,84 +1,104 @@
+import { NextRequest, NextResponse } from "next/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { NextRequest } from "next/server"
 
-const mocks = vi.hoisted(() => ({ transaction: vi.fn(), query: vi.fn() }))
-vi.mock("@/lib/db/tenant-transaction", () => ({ withWorkspaceTransaction: mocks.transaction }))
+const mocks = vi.hoisted(() => ({ read: vi.fn(), withPermission: vi.fn() }))
+vi.mock("server-only", () => ({}))
+vi.mock("@/lib/auth/api-auth", () => ({ withPermission: mocks.withPermission }))
+vi.mock("@/lib/subgraph/read-service", () => ({
+  focusedSubgraphContinuationSecret: () => Buffer.alloc(32, 7),
+  FocusedSubgraphReadService: class { read = mocks.read },
+}))
 
-import { GET } from "@/app/api/memory/graph/route"
+import { DELETE, GET, parseFocusedSubgraphQuery } from "@/app/api/memory/graph/route"
 
-function request(query = ""): NextRequest {
-  return new NextRequest(`http://localhost:3100/api/memory/graph${query}`, {
-    headers: {
-      "x-allura-user-id": "verified-user",
-      "x-allura-role": "viewer",
-      "x-allura-group-id": "allura-system",
-      "x-allura-workspace-id": "workspace-a",
-      "x-allura-session-id": "verified-session",
-    },
-  })
+const user = {
+  id: "verified-user", email: "viewer@example.test", role: "viewer" as const,
+  groupId: "allura-system", workspaceId: "workspace-a", sessionId: "verified-session",
+}
+function request(query = ""): NextRequest { return new NextRequest(`http://localhost:3100/api/memory/graph${query}`) }
+function result(state: "empty" | "complete" = "empty") {
+  return {
+    contractVersion: "2.0", state,
+    snapshot: { policyEpoch: 1, graphRevision: 0, capturedAt: "2026-10-12T00:00:00.000Z" },
+    budgets: { requested: { nodeLimit: 200, edgeLimit: 400, depth: 0 }, applied: { nodeLimit: 200, edgeLimit: 400, depth: 0 } },
+    nodes: [], edges: [], warnings: [],
+  }
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mocks.transaction.mockImplementation(async (_scope, callback) => callback({ query: mocks.query }))
+  mocks.withPermission.mockResolvedValue({ user, groupId: user.groupId })
+  mocks.read.mockResolvedValue(result())
 })
 
-describe("memory graph authority", () => {
-  it.each(["?group_id=allura-other", "?workspace_id=workspace-other"])(
-    "denies forged scope before querying: %s",
-    async (query) => {
-      expect((await GET(request(query))).status).toBe(403)
-      expect(mocks.transaction).not.toHaveBeenCalled()
-    }
+describe("memory graph authority and transport", () => {
+  it.each([
+    [401, "LOGIN_REQUIRED", "login"],
+    [403, "INSUFFICIENT_ROLE", "request_access"],
+  ])("converts pre-service auth failure %s to a frozen denied response", async (status, reasonCode, action) => {
+    mocks.withPermission.mockResolvedValueOnce(NextResponse.json({ legacy: "do not leak" }, { status }))
+    const response = await GET(request())
+    expect(response.status).toBe(status)
+    expect(await response.json()).toEqual({ contractVersion: "2.0", state: "denied", reasonCode, action })
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(mocks.read).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    "?group_id=allura-other",
+    "?workspace_id=workspace-other",
+    "?group_id=allura-system&group_id=allura-other",
+    "?workspace_id=workspace-a&workspace_id=workspace-other",
+  ])("denies forged scope before graph service access: %s", async (query) => {
+    const response = await GET(request(query))
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ contractVersion: "2.0", state: "denied", reasonCode: "SCOPE_CONFLICT", action: "none" })
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(mocks.read).not.toHaveBeenCalled()
+  })
+
+  it("parses an authority-free focus request and delegates the server principal", async () => {
+    const response = await GET(request("?kind=focus&focusNodeKey=memory%3Aabc&direction=both&depth=2&includeLineage=true&nodeKind=Memory"))
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(mocks.read).toHaveBeenCalledWith(user, {
+      kind: "focus", focusNodeKey: "memory:abc", direction: "both", depth: 2, includeLineage: true,
+      nodeKinds: ["Memory"], relationshipKinds: undefined, nodeLimit: undefined, edgeLimit: undefined, continuation: undefined,
+    })
+  })
+
+  it.each(["?stats=true", "?kind=overview&depth=1", "?kind=focus", "?nodeLimit=1&nodeLimit=2"])(
+    "rejects malformed syntax with 400 and no service access: %s", async (query) => {
+      const response = await GET(request(query))
+      expect(response.status).toBe(400)
+      expect(response.headers.get("cache-control")).toBe("no-store")
+      expect(await response.json()).toMatchObject({ state: "error", code: "MALFORMED_QUERY" })
+      expect(mocks.read).not.toHaveBeenCalled()
+    },
   )
 
-  it("loads graph stats through the verified restricted workspace", async () => {
-    mocks.query.mockResolvedValueOnce({ rows: [{ total: "3" }] }).mockResolvedValueOnce({ rows: [{ total: "4" }] })
-    const response = await GET(request("?stats=true&group_id=allura-system&workspace_id=workspace-a"))
-    expect(await response.json()).toEqual({ nodes: [], edges: [], node_count: 3, total_edges: 4 })
-    expect(mocks.transaction).toHaveBeenCalledWith(
-      { tenantId: "allura-system", workspaceId: "workspace-a", principalId: "verified-user" },
-      expect.any(Function)
-    )
-    for (const [sql, values] of mocks.query.mock.calls) {
-      expect(sql).toContain("workspace_id = $2")
-      expect(values).toEqual(["allura-system", "workspace-a"])
-    }
-  })
-
-  it("uses canonical structural-edge columns and workspace-bound joins", async () => {
-    mocks.query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [{ total: "0" }] })
-    expect((await GET(request())).status).toBe(200)
-    const [edgeSql, edgeValues] = mocks.query.mock.calls[0]
-    expect(edgeSql).toContain("e.from_id")
-    expect(edgeSql).toContain("e.to_id")
-    expect(edgeSql).toContain("e.rel_type")
-    expect(edgeSql).toContain("sn.workspace_id = e.workspace_id")
-    expect(edgeValues).toEqual(["allura-system", "workspace-a"])
-  })
-
-  it("keeps the degraded event fallback inside the same verified scope", async () => {
-    mocks.transaction
-      .mockRejectedValueOnce(new Error("password=secret"))
-      .mockImplementationOnce(async (_scope, callback) => callback({ query: mocks.query }))
-    mocks.query.mockResolvedValueOnce({ rows: [] })
+  it.each([
+    [{ contractVersion: "2.0", state: "denied", reasonCode: "INSUFFICIENT_ROLE", action: "request_access" }, 403],
+    [{ contractVersion: "2.0", state: "error", code: "MALFORMED_CONTINUATION", retryable: false, action: "restart" }, 400],
+    [{ contractVersion: "2.0", state: "error", code: "CONTINUATION_CONFLICT", retryable: false, action: "restart" }, 409],
+    [{ contractVersion: "2.0", state: "error", code: "UNAVAILABLE", retryable: true, action: "retry" }, 503],
+  ])("maps graph truth state to HTTP %s", async (body, status) => {
+    mocks.read.mockResolvedValueOnce(body)
     const response = await GET(request())
-    expect(await response.json()).toMatchObject({ degraded: true, source: "postgres_events" })
-    expect(mocks.transaction).toHaveBeenCalledTimes(2)
-    const [sql, values] = mocks.query.mock.calls[0]
-    expect(sql).toContain("workspace_id = $2")
-    expect(values).toEqual(["allura-system", "workspace-a"])
+    expect(response.status).toBe(status)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual(body)
   })
 
-  it("does not expose backend details when both graph reads fail", async () => {
-    mocks.transaction.mockRejectedValue(new Error("password=secret"))
-    const response = await GET(request())
-    expect(await response.json()).toEqual({
-      nodes: [],
-      edges: [],
-      total_edges: 0,
-      degraded: true,
-      error: "Graph data is temporarily unavailable",
-    })
+  it("returns a non-contract 405 body with Allow and no-store", async () => {
+    const response = await DELETE()
+    expect(response.status).toBe(405)
+    expect(response.headers.get("allow")).toBe("GET")
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual({ error: "method_not_allowed" })
+  })
+
+  it("keeps transport parsing free of authority fields", () => {
+    expect(() => parseFocusedSubgraphQuery(new URLSearchParams("principalId=forged"))).toThrow()
   })
 })

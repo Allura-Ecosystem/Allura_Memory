@@ -772,7 +772,7 @@ development_status:
 
   epic-31: in-progress
   31-1-focused-subgraph-contract-and-architecture-trace: review
-  31-2-governed-focused-subgraph-data-and-api: backlog
+  31-2-governed-focused-subgraph-data-and-api: review
   31-3-interactive-knowledge-map-and-inspector: backlog
   31-4-independent-review-evidence-and-human-acceptance: backlog
   epic-31-retrospective: optional

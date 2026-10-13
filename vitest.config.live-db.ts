@@ -33,6 +33,7 @@ export default defineConfig({
       "src/__tests__/bumblebee-historical-upgrade.e2e.test.ts",
       "src/__tests__/view-security-invoker-hardening.e2e.test.ts",
       "src/__tests__/workspace-subgraph-authority.e2e.test.ts",
+      "src/__tests__/focused-subgraph-live-db.e2e.test.ts",
       "src/__tests__/auto-curator-workspace-authority.e2e.test.ts",
       "src/__tests__/sdk-gateway-integration.e2e.test.ts",
       "src/__tests__/governed-lane-review-boundary.e2e.test.ts",

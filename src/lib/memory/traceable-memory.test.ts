@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TraceMiddleware } from "@/lib/mcp/trace-middleware";
 import { createTraceableMemory, type TraceableMemoryConfig } from "./traceable-memory";
-import { memory, type MemoryAPI } from "./writer";
+import { memory } from "./writer";
 
 // Mock dependencies
 vi.mock("@/lib/mcp/trace-middleware", () => ({
@@ -56,6 +56,7 @@ describe("TraceableMemory", () => {
     workflowId: "workflow-123",
     stepId: "step-456",
   };
+  const verifiedScope = { group_id: "allura-test", workspace_id: "workspace-test", principal_id: "agent-test" };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -149,7 +150,7 @@ describe("TraceableMemory", () => {
       const input = {
         label: "Task" as const,
         props: { title: "Test Task" },
-        group_id: "allura-test",
+        ...verifiedScope,
       };
 
       const result = await traceableMemory.createEntity(input);
@@ -159,7 +160,7 @@ describe("TraceableMemory", () => {
         "memory.createEntity",
         expect.objectContaining({
           label: "Task",
-          group_id: "allura-test",
+          ...verifiedScope,
           node_id: "test-node-123",
           success: true,
           duration_ms: expect.any(Number),
@@ -177,7 +178,7 @@ describe("TraceableMemory", () => {
         traceableMemory.createEntity({
           label: "Task" as const,
           props: { title: "Test" },
-          group_id: "allura-test",
+          ...verifiedScope,
         })
       ).rejects.toThrow("Neo4j connection failed");
 
@@ -206,6 +207,7 @@ describe("TraceableMemory", () => {
         toId: "node-2",
         toLabel: "Decision" as const,
         type: "INFORMED_BY" as const,
+        ...verifiedScope,
       };
 
       await traceableMemory.createRelationship(input);
@@ -235,6 +237,7 @@ describe("TraceableMemory", () => {
           toId: "node-2",
           toLabel: "Decision" as const,
           type: "INFORMED_BY" as const,
+          ...verifiedScope,
         })
       ).rejects.toThrow("Relationship validation failed");
 
@@ -311,9 +314,7 @@ describe("TraceableMemory", () => {
 
       const input = {
         label: "Task" as const,
-        group_id: "allura-test",
-        workspace_id: "workspace-test",
-        principal_id: "agent-test",
+        ...verifiedScope,
         props: { status: "complete" },
       };
 
@@ -437,12 +438,12 @@ describe("TraceableMemory", () => {
       await traceableMemory.createEntity({
         label: "Task" as const,
         props: { title: "Task 1" },
-        group_id: "allura-test",
+        ...verifiedScope,
       });
       await traceableMemory.createEntity({
         label: "Task" as const,
         props: { title: "Task 2" },
-        group_id: "allura-test",
+        ...verifiedScope,
       });
       await traceableMemory.logDecision("Completed batch", 1.0);
       await traceableMemory.endSession();
@@ -459,7 +460,7 @@ describe("TraceableMemory", () => {
       await traceableMemory.createEntity({
         label: "Task" as const,
         props: { title: "Test" },
-        group_id: "allura-test",
+        ...verifiedScope,
       });
 
       const callArgs = mockTraceMiddleware.callTool.mock.calls[0];

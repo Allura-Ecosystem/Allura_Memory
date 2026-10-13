@@ -54,11 +54,18 @@ async function logToNeo4j() {
   console.log("[SessionLogger] Logging to Neo4j...");
 
   const mem = memory();
+  const workspaceId = process.env.ALLURA_WORKSPACE_ID?.trim();
+  if (!workspaceId) throw new Error("ALLURA_WORKSPACE_ID is required for scoped graph writes");
+  const verifiedScope = {
+    group_id: sessionData.group_id,
+    workspace_id: workspaceId,
+    principal_id: sessionData.agent_id,
+  };
 
   // Create Session node
   const { node_id: sessionId } = await mem.createEntity({
     label: "Session",
-    group_id: sessionData.group_id,
+    ...verifiedScope,
     props: {
       session_id: sessionData.session_id,
       type: "epic_completion",
@@ -75,6 +82,7 @@ async function logToNeo4j() {
     toId: sessionId,
     toLabel: "Session",
     type: "CONTRIBUTED",
+    ...verifiedScope,
     props: {
       on: sessionData.timestamp,
       result: "complete",
@@ -97,6 +105,7 @@ async function logToNeo4j() {
       toId: learning.entityId,
       toLabel: learning.entityLabel,
       type: "LEARNED",
+      ...verifiedScope,
       props: {
         timestamp: sessionData.timestamp,
         relevance_score: learning.relevance,

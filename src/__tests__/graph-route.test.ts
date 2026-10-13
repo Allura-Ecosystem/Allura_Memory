@@ -1,28 +1,29 @@
 /**
- * Graph API Route Tests (Story 2.8 — Pike Interface Gate)
+ * Graph API Route Tests (Story 31.2 governed focused-subgraph transport)
  *
  * Tests:
  * - Tenant/workspace scoping from the authenticated principal
  * - Read-only behavior: POST/PUT/DELETE return 405
- * - Degraded Neo4j handling: 200 + degraded=true + Warning header (not 500)
- * - Schema validation: response shape matches expected contract
- * - Stats parameter: stats=true returns correct shape
+ * - Thin transport delegation without route-local SQL
+ * - Frozen truth-state HTTP mapping and strict query parsing
  *
  * Note: Next.js API routes use ES modules and Next.request mocks.
  * These tests verify the route implementation logic without full Next.js context.
  */
 
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
+
+vi.mock("server-only", () => ({}))
 
 /**
  * Test the graph route API contract directly
  * By examining the actual route file, we can verify:
  * - optional group/workspace selectors are assertions, not authority
  * - Non-GET methods return 405
- * - Degraded responses use 200 + Warning header
+ * - Graph-domain failures use the frozen 400/403/409/503 mapping
  */
 
-describe("Graph API Route Contract (Story 2.8)", () => {
+describe("Graph API Route Contract (Story 31.2)", () => {
   const readRouteFile = async () => {
     const { readFileSync } = await import("fs")
     return readFileSync(new URL("../app/api/memory/graph/route.ts", import.meta.url), "utf8")
@@ -37,13 +38,13 @@ describe("Graph API Route Contract (Story 2.8)", () => {
     expect(typeof routeModule.DELETE).toBe("function")
   })
 
-  it("should derive scope from verified auth and use a restricted transaction", async () => {
+  it("derives authority with memory:read and delegates to the focused service", async () => {
     await import("@/app/api/memory/graph/route")
     const routeContent = await readRouteFile()
 
-    expect(routeContent).toContain("roleCheck.user.groupId")
-    expect(routeContent).toContain("roleCheck.user.workspaceId")
-    expect(routeContent).toContain("withWorkspaceTransaction")
+    expect(routeContent).toContain('withPermission(request, "memory:read")')
+    expect(routeContent).toContain("FocusedSubgraphReadService")
+    expect(routeContent).not.toMatch(/\bSELECT\b|\bFROM graph_/)
   })
 
   it("should export POST/PUT/DELETE handlers that return 405", async () => {
@@ -55,27 +56,24 @@ describe("Graph API Route Contract (Story 2.8)", () => {
     expect(DELETE).toBeDefined()
   })
 
-  it("should include degraded mode flag for error responses", async () => {
+  it("strictly rejects legacy and authority-bearing query parameters", async () => {
     const routeContent = await readRouteFile()
-
-    // Check for degraded flag usage (Neo4j is sunset, errors now return degraded=true)
-    expect(routeContent).toContain("degraded")
+    expect(routeContent).toContain("ALLOWED_QUERY_PARAMS")
+    expect(routeContent).not.toContain('"stats"')
+    expect(routeContent).not.toContain('"principalId"')
   })
 
-  it("should return 200 instead of 500 on Neo4j errors", async () => {
+  it("maps malformed, denied, conflict, and unavailable states explicitly", async () => {
     const routeContent = await readRouteFile()
-
-    // Check that the catch block returns 200, not 500
-    expect(routeContent).toContain("status: 200")
-    expect(routeContent).not.toContain("status: 500")
+    expect(routeContent).toContain("return 400")
+    expect(routeContent).toContain("return 409")
+    expect(routeContent).toContain("return 503")
   })
 
-  it("should have degraded mode response with empty arrays", async () => {
+  it("returns sanitized scope conflict and unavailable shapes", async () => {
     const routeContent = await readRouteFile()
-
-    // Check for degraded response with empty arrays
-    expect(routeContent).toContain("nodes: []")
-    expect(routeContent).toContain("edges: []")
-    expect(routeContent).toContain("degraded")
+    expect(routeContent).toContain('reasonCode: "SCOPE_CONFLICT"')
+    expect(routeContent).toContain('code: "UNAVAILABLE"')
+    expect(routeContent).not.toContain("password=secret")
   })
 })

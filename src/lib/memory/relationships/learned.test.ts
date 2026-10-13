@@ -18,6 +18,7 @@ import {
 const mockCreateEntity = vi.fn();
 const mockCreateRelationship = vi.fn();
 const mockQuery = vi.fn();
+const verifiedScope = { group_id: "allura-system", workspace_id: "workspace-a", principal_id: "principal-a" };
 
 vi.mock("../writer", () => ({
   memory: () => ({
@@ -51,13 +52,15 @@ describe.skipIf(!shouldRunLearnedStrict)("LEARNED Relationship Tracker", () => {
           sessionId: "session-123",
           timestamp: "2026-04-06T10:00:00Z",
         },
-        "allura-system"
+        verifiedScope
       );
 
       // Should create Agent node
       expect(mockCreateEntity).toHaveBeenCalledWith({
         label: "Agent",
         group_id: "allura-system",
+        workspace_id: "workspace-a",
+        principal_id: "principal-a",
         props: {
           agent_id: "memory-orchestrator",
           name: "memory orchestrator",
@@ -72,6 +75,9 @@ describe.skipIf(!shouldRunLearnedStrict)("LEARNED Relationship Tracker", () => {
         toId: "lesson-001",
         toLabel: "Lesson",
         type: "LEARNED",
+        group_id: "allura-system",
+        workspace_id: "workspace-a",
+        principal_id: "principal-a",
         props: {
           timestamp: "2026-04-06T10:00:00Z",
           relevance_score: 0.85,
@@ -88,7 +94,7 @@ describe.skipIf(!shouldRunLearnedStrict)("LEARNED Relationship Tracker", () => {
           entityId: "insight-001",
           entityLabel: "Insight",
         },
-        "allura-system"
+        verifiedScope
       );
 
       expect(mockCreateRelationship).toHaveBeenCalledWith(
@@ -116,7 +122,7 @@ describe.skipIf(!shouldRunLearnedStrict)("LEARNED Relationship Tracker", () => {
         },
       ];
 
-      const result = await recordLearningsBatch(learnings, "allura-system");
+      const result = await recordLearningsBatch(learnings, verifiedScope);
 
       expect(result.total).toBe(2);
       expect(result.succeeded).toBe(2);
@@ -131,7 +137,7 @@ describe.skipIf(!shouldRunLearnedStrict)("LEARNED Relationship Tracker", () => {
         { agentId: "agent-2", entityId: "lesson-002", entityLabel: "Lesson" as const },
       ];
 
-      const result = await recordLearningsBatch(learnings, "allura-system");
+      const result = await recordLearningsBatch(learnings, verifiedScope);
 
       expect(result.succeeded).toBe(1);
       expect(result.failed).toBe(1);
@@ -183,12 +189,14 @@ describe.skipIf(!shouldRunLearnedStrict)("LEARNED Relationship Tracker", () => {
       const result = await createLessonWithLearning(
         { learned: "Important lesson", severity: "warning" },
         "memory-orchestrator",
-        "allura-system"
+        verifiedScope
       );
 
       expect(mockCreateEntity).toHaveBeenCalledWith({
         label: "Lesson",
         group_id: "allura-system",
+        workspace_id: "workspace-a",
+        principal_id: "principal-a",
         props: expect.objectContaining({
           learned: "Important lesson",
           severity: "warning",

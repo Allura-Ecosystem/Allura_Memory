@@ -8,7 +8,7 @@
 
 import { canonicalizeAgentId, resolveCanonicalAgentIdentity } from "@/lib/agents/canonical-identity";
 import { memory } from "../writer";
-import type { MemoryLabel } from "../writer";
+import type { MemoryLabel, VerifiedGraphWriteScope } from "../writer";
 
 /**
  * Agent learning input
@@ -42,7 +42,7 @@ export interface AgentLearningInput {
  */
 export async function recordLearning(
   learning: AgentLearningInput,
-  group_id: string
+  scope: VerifiedGraphWriteScope
 ): Promise<void> {
   const mem = memory();
   const canonicalAgent = resolveCanonicalAgentIdentity(learning.agentId);
@@ -50,7 +50,7 @@ export async function recordLearning(
   // Ensure agent node exists
   await mem.createEntity({
     label: "Agent",
-    group_id,
+    ...scope,
     props: {
       agent_id: canonicalAgent.id,
       name: canonicalAgent.name,
@@ -65,6 +65,7 @@ export async function recordLearning(
     toId: learning.entityId,
     toLabel: learning.entityLabel,
     type: "LEARNED",
+    ...scope,
     props: {
       timestamp: learning.timestamp ?? new Date().toISOString(),
       relevance_score: learning.relevanceScore ?? 0.5,
@@ -83,7 +84,7 @@ export async function recordLearning(
  */
 export async function recordLearningsBatch(
   learnings: AgentLearningInput[],
-  group_id: string
+  scope: VerifiedGraphWriteScope
 ): Promise<{
   total: number;
   succeeded: number;
@@ -93,7 +94,7 @@ export async function recordLearningsBatch(
 
   for (const learning of learnings) {
     try {
-      await recordLearning(learning, group_id);
+      await recordLearning(learning, scope);
       results.succeeded++;
     } catch (error) {
       console.error(
@@ -212,7 +213,7 @@ export async function createLessonWithLearning(
     [key: string]: unknown;
   },
   agentId: string,
-  group_id: string
+  scope: VerifiedGraphWriteScope
 ): Promise<{ lessonId: string }> {
   const mem = memory();
   const canonicalAgentId = canonicalizeAgentId(agentId);
@@ -220,7 +221,7 @@ export async function createLessonWithLearning(
   // Create lesson
   const { node_id: lessonId } = await mem.createEntity({
     label: "Lesson",
-    group_id,
+    ...scope,
     props: {
       lesson_id: crypto.randomUUID(),
       ...lessonProps,
@@ -237,7 +238,7 @@ export async function createLessonWithLearning(
       relevanceScore: 0.8,
       context: lessonProps.context,
     },
-    group_id
+    scope
   );
 
   return { lessonId };

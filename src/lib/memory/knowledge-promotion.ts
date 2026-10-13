@@ -857,18 +857,30 @@ export async function linkInsightToAgent(
   try {
     await withWorkspaceTransaction(
       { tenantId: groupId, workspaceId, principalId: agentId },
-      (db) => db.query(
+      async (db) => {
+        const agents = await db.query<{ node_id: string }>(
+          `SELECT node_id FROM graph_structural_nodes
+           WHERE label = 'Agent' AND group_id = $1 AND workspace_id = $2
+             AND workspace_scope_state = 'workspace_scoped' AND props->>'id' = $3
+           ORDER BY node_id COLLATE "C" LIMIT 2`,
+          [groupId, workspaceId, agentId],
+        );
+        if (agents.rows.length !== 1) {
+          throw new Error(`expected exactly one scoped Agent match; found ${agents.rows.length}`);
+        }
+        const inserted = await db.query(
         `INSERT INTO graph_structural_edges
-           (from_id, to_id, rel_type, group_id, workspace_id, workspace_scope_state, props, created_at)
+           (from_id, from_kind, to_id, to_kind, rel_type, group_id, workspace_id, workspace_scope_state, endpoint_state, props, created_at)
          SELECT
-           (SELECT node_id FROM graph_structural_nodes
-             WHERE label = 'Agent' AND group_id = $1 AND workspace_id = $2
-               AND workspace_scope_state = 'workspace_scoped' AND props->>'id' = $3 LIMIT 1),
+           $3,
+           'structural',
            $4,
+           'memory',
            'CONTRIBUTED',
            $1,
            $2,
            'workspace_scoped',
+           'resolved',
            $5::jsonb,
            NOW()
          WHERE EXISTS (
@@ -876,8 +888,10 @@ export async function linkInsightToAgent(
             WHERE id = $4 AND group_id = $1 AND workspace_id = $2
               AND workspace_scope_state = 'workspace_scoped'
          )`,
-        [groupId, workspaceId, agentId, insightId, JSON.stringify({ confidence, linked_at: new Date().toISOString() })],
-      ),
+        [groupId, workspaceId, agents.rows[0]!.node_id, insightId, JSON.stringify({ confidence, linked_at: new Date().toISOString() })],
+        );
+        if (inserted.rowCount !== 1) throw new Error("scoped insight endpoint was not found");
+      },
     );
 
     console.log('[knowledge-promotion] Successfully linked insight to agent:', {
@@ -885,12 +899,12 @@ export async function linkInsightToAgent(
       insight_id: insightId,
     });
   } catch (error) {
-    // Non-fatal: link failure should not block promotion
-    console.error('[knowledge-promotion] Failed to link insight to agent (non-fatal):', {
+    console.error('[knowledge-promotion] Failed to link insight to agent:', {
       agent_id: agentId,
       insight_id: insightId,
       error: error instanceof Error ? error.message : String(error),
     });
+    throw new KnowledgePromotionError(insightId, error instanceof Error ? error : new Error(String(error)));
   }
 }
 

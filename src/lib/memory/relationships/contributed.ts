@@ -8,7 +8,7 @@
 
 import { canonicalizeAgentId, resolveCanonicalAgentIdentity } from "@/lib/agents/canonical-identity";
 import { memory } from "../writer";
-import type { MemoryLabel, RelationshipType } from "../writer";
+import type { MemoryLabel, VerifiedGraphWriteScope } from "../writer";
 
 /**
  * Agent contribution input
@@ -42,7 +42,7 @@ export interface AgentContributionInput {
  */
 export async function recordContribution(
   contribution: AgentContributionInput,
-  group_id: string
+  scope: VerifiedGraphWriteScope
 ): Promise<void> {
   const mem = memory();
   const canonicalAgent = resolveCanonicalAgentIdentity(contribution.agentId);
@@ -50,7 +50,7 @@ export async function recordContribution(
   // Ensure agent node exists
   await mem.createEntity({
     label: "Agent",
-    group_id,
+    ...scope,
     props: {
       agent_id: canonicalAgent.id,
       name: canonicalAgent.name,
@@ -65,6 +65,7 @@ export async function recordContribution(
     toId: contribution.entityId,
     toLabel: contribution.entityLabel,
     type: "CONTRIBUTED",
+    ...scope,
     props: {
       on: contribution.timestamp ?? new Date().toISOString(),
       result: contribution.result ?? "complete",
@@ -83,7 +84,7 @@ export async function recordContribution(
  */
 export async function recordContributionsBatch(
   contributions: AgentContributionInput[],
-  group_id: string
+  scope: VerifiedGraphWriteScope
 ): Promise<{
   total: number;
   succeeded: number;
@@ -93,7 +94,7 @@ export async function recordContributionsBatch(
 
   for (const contribution of contributions) {
     try {
-      await recordContribution(contribution, group_id);
+      await recordContribution(contribution, scope);
       results.succeeded++;
     } catch (error) {
       console.error(
@@ -208,7 +209,7 @@ export async function createTaskWithContribution(
     [key: string]: unknown;
   },
   agentId: string,
-  group_id: string
+  scope: VerifiedGraphWriteScope
 ): Promise<{ taskId: string }> {
   const mem = memory();
   const canonicalAgentId = canonicalizeAgentId(agentId);
@@ -216,7 +217,7 @@ export async function createTaskWithContribution(
   // Create task
   const { node_id: taskId } = await mem.createEntity({
     label: "Task",
-    group_id,
+    ...scope,
     props: {
       task_id: crypto.randomUUID(),
       ...taskProps,
@@ -232,7 +233,7 @@ export async function createTaskWithContribution(
       entityLabel: "Task",
       result: "created",
     },
-    group_id
+    scope
   );
 
   return { taskId };

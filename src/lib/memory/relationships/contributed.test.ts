@@ -17,6 +17,7 @@ import {
 const mockCreateEntity = vi.fn();
 const mockCreateRelationship = vi.fn();
 const mockQuery = vi.fn();
+const verifiedScope = { group_id: "allura-system", workspace_id: "workspace-a", principal_id: "principal-a" };
 
 vi.mock("@/lib/memory/writer", () => ({
   memory: () => ({
@@ -50,13 +51,15 @@ describe.skipIf(!shouldRunContributedStrict)("CONTRIBUTED Relationship Tracker",
           sessionId: "session-123",
           confidence: 0.9,
         },
-        "allura-system"
+        verifiedScope
       );
 
       // Should create Agent node
       expect(mockCreateEntity).toHaveBeenCalledWith({
         label: "Agent",
         group_id: "allura-system",
+        workspace_id: "workspace-a",
+        principal_id: "principal-a",
         props: {
           agent_id: "memory-orchestrator",
           name: "memory orchestrator",
@@ -71,6 +74,9 @@ describe.skipIf(!shouldRunContributedStrict)("CONTRIBUTED Relationship Tracker",
         toId: "task-001",
         toLabel: "Task",
         type: "CONTRIBUTED",
+        group_id: "allura-system",
+        workspace_id: "workspace-a",
+        principal_id: "principal-a",
         props: {
           on: "2026-04-06T10:00:00Z",
           result: "complete",
@@ -87,7 +93,7 @@ describe.skipIf(!shouldRunContributedStrict)("CONTRIBUTED Relationship Tracker",
           entityId: "decision-001",
           entityLabel: "Decision",
         },
-        "allura-system"
+        verifiedScope
       );
 
       expect(mockCreateRelationship).toHaveBeenCalledWith(
@@ -116,7 +122,7 @@ describe.skipIf(!shouldRunContributedStrict)("CONTRIBUTED Relationship Tracker",
         },
       ];
 
-      const result = await recordContributionsBatch(contributions, "allura-system");
+      const result = await recordContributionsBatch(contributions, verifiedScope);
 
       expect(result.total).toBe(2);
       expect(result.succeeded).toBe(2);
@@ -131,7 +137,7 @@ describe.skipIf(!shouldRunContributedStrict)("CONTRIBUTED Relationship Tracker",
         { agentId: "agent-2", entityId: "task-002", entityLabel: "Task" as const },
       ];
 
-      const result = await recordContributionsBatch(contributions, "allura-system");
+      const result = await recordContributionsBatch(contributions, verifiedScope);
 
       expect(result.succeeded).toBe(1);
       expect(result.failed).toBe(1);
@@ -182,12 +188,14 @@ describe.skipIf(!shouldRunContributedStrict)("CONTRIBUTED Relationship Tracker",
       const result = await createTaskWithContribution(
         { goal: "Test task", status: "pending" },
         "memory-orchestrator",
-        "allura-system"
+        verifiedScope
       );
 
       expect(mockCreateEntity).toHaveBeenCalledWith({
         label: "Task",
         group_id: "allura-system",
+        workspace_id: "workspace-a",
+        principal_id: "principal-a",
         props: expect.objectContaining({
           goal: "Test task",
           status: "pending",

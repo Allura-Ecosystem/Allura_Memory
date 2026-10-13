@@ -74,6 +74,7 @@ export default defineConfig({
       "src/lib/memory/writer.test.ts",
       "src/lib/memory/relationships/*.test.ts",
       "src/lib/memory/__tests__/approval-audit.test.ts",
+      "src/lib/memory/__tests__/knowledge-promotion-approval-guard.test.ts",
       "src/lib/memory/traceable-memory.test.ts",
       "src/lib/memory/approve-proposal.test.ts",
       "src/lib/memory/governance-receipt-writer.test.ts",

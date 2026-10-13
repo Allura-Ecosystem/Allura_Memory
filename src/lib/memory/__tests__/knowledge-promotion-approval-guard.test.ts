@@ -100,7 +100,9 @@ describe("promoteToNeo4j approval guard", () => {
   })
 
   it("links an agent through the app-role workspace transaction", async () => {
-    const appClient = { query: vi.fn(async (_sql: string) => ({ rows: [], rowCount: 1 })) }
+    const appClient = { query: vi.fn(async (sql: string) => sql.includes("SELECT node_id")
+      ? { rows: [{ node_id: "scoped-agent" }], rowCount: 1 }
+      : { rows: [], rowCount: 1 }) }
     mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(appClient))
     await (linkInsightToAgent as unknown as (
       agentId: string,
@@ -116,6 +118,17 @@ describe("promoteToNeo4j approval guard", () => {
     const sql = appClient.query.mock.calls.map(([statement]) => String(statement)).join("\n")
     expect(sql).toContain("workspace_id")
     expect(sql).toContain("workspace_scope_state")
+  })
+
+  it("fails closed when an agent props id has multiple scoped matches", async () => {
+    const appClient = { query: vi.fn(async (sql: string) => sql.includes("SELECT node_id")
+      ? { rows: [{ node_id: "agent-1" }, { node_id: "agent-2" }], rowCount: 2 }
+      : { rows: [], rowCount: 1 }) }
+    mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(appClient))
+
+    await expect(linkInsightToAgent("agent-a", "memory-a", 0.9, "allura-system", "workspace-a"))
+      .rejects.toThrow("expected exactly one scoped Agent match")
+    expect(appClient.query).toHaveBeenCalledTimes(1)
   })
 
   it("requires approval before creating an insight", async () => {

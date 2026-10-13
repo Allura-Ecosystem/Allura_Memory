@@ -23,11 +23,12 @@ if (typeof window !== "undefined") {
 
 import type { Pool } from "pg";
 import { randomUUID } from "crypto";
+import { syscall_mutate, syscall_query } from "@/control-plane/syscalls";
+import type { SyscallContext } from "@/control-plane/syscalls";
+import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction";
 import { createGraphAdapter } from "@/lib/graph-adapter";
 import type { IGraphAdapter } from "@/lib/graph-adapter";
 import { validateGroupId } from "@/lib/validation/group-id";
-import { syscall_mutate, syscall_query } from "@/control-plane/syscalls";
-import type { SyscallContext } from "@/control-plane/syscalls";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -70,10 +71,16 @@ export interface CreateRelationshipInput {
   direction?: "out" | "in";
 }
 
-export interface CreateEntityInput {
+export interface VerifiedGraphWriteScope {
+  group_id: string;
+  workspace_id: string;
+  principal_id: string;
+}
+
+export interface CreateEntityInput extends VerifiedGraphWriteScope {
   label: MemoryLabel;
   props: Record<string, unknown>;
-  group_id: string;
+  /** Server-verified scope; never inferred from a default. */
   relationships?: CreateRelationshipInput[];
 }
 
@@ -81,7 +88,7 @@ export interface CreateEntityResult {
   node_id: string;
 }
 
-export interface CreateRelationshipCallInput {
+export interface CreateRelationshipCallInput extends VerifiedGraphWriteScope {
   fromId: string;
   fromLabel: MemoryLabel;
   toId: string;
@@ -126,6 +133,22 @@ function resolveNodeId(props: Record<string, unknown>): string {
   );
 }
 
+function endpointKind(label: MemoryLabel): "memory" | "structural" {
+  return label === "Memory" || label === "Insight" ? "memory" : "structural";
+}
+
+function verifiedScope(input: {
+  group_id: string;
+  workspace_id: string;
+  principal_id: string;
+}): { groupId: string; workspaceId: string; principalId: string } {
+  const groupId = validateGroupId(input.group_id);
+  const workspaceId = typeof input.workspace_id === "string" ? input.workspace_id.trim() : "";
+  const principalId = typeof input.principal_id === "string" ? input.principal_id.trim() : "";
+  if (!workspaceId || !principalId) throw new Error("verified workspace_id and principal_id are required for graph writes");
+  return { groupId, workspaceId, principalId };
+}
+
 // ── PG Pool singleton (for GRAPH_BACKEND=ruvector) ─────────────────────────
 
 let pgPoolInstance: Pool | null = null;
@@ -163,15 +186,17 @@ function getAdapter(): IGraphAdapter {
 
 // ── Adapter Backend (GRAPH_BACKEND=ruvector) ───────────────────────────────
 
-function buildAdapterBackend(): MemoryAPI {
+function _buildAdapterBackend(): MemoryAPI {
   return {
     async createEntity({
       label,
       props,
       group_id,
+      workspace_id,
+      principal_id,
       relationships,
     }: CreateEntityInput): Promise<CreateEntityResult> {
-      const validatedGroupId = validateGroupId(group_id);
+      const { groupId: validatedGroupId, workspaceId, principalId } = verifiedScope({ group_id, workspace_id, principal_id });
       const node_id = resolveNodeId(props);
       const createdAt = (props.created_at as string) ?? new Date().toISOString();
 
@@ -180,12 +205,6 @@ function buildAdapterBackend(): MemoryAPI {
         const content = (props.content as string) ?? (props.summary as string) ?? "";
         const score = (props.score as number) ?? (props.confidence as number) ?? 0.5;
         const provenance = (props.provenance as "conversation" | "manual") ?? "conversation";
-        const workspaceId = String(props.workspace_id ?? "").trim();
-        const principalId = String(props.principal_id ?? props.agent_id ?? props.user_id ?? "").trim();
-        if (!workspaceId || !principalId) {
-          throw new Error("verified workspace_id and principal_id are required for graph memory writes");
-        }
-
         await adapter.createMemory({
           id: node_id as import("@/lib/memory/canonical-contracts").MemoryId,
           group_id: validatedGroupId as import("@/lib/memory/canonical-contracts").GroupId,
@@ -198,30 +217,27 @@ function buildAdapterBackend(): MemoryAPI {
           created_at: createdAt,
         });
       } else {
-        const pool = getPgPool();
-        await pool.query(
-          `INSERT INTO graph_structural_nodes (node_id, label, group_id, props, created_at)
-           VALUES ($1, $2, $3, $4, $5::timestamptz)
-           ON CONFLICT (node_id, group_id) DO UPDATE SET props = EXCLUDED.props, updated_at = NOW()`,
-          [node_id, label, validatedGroupId, JSON.stringify({ ...props, node_id, group_id: validatedGroupId }), createdAt]
-        );
-
-        for (const rel of relationships ?? []) {
-          const relType = rel.type;
-          const relProps = rel.props ? JSON.stringify(rel.props) : null;
-          await pool.query(
-            `INSERT INTO graph_structural_edges (from_id, to_id, rel_type, group_id, props, created_at)
-             VALUES ($1, $2, $3, $4, $5, NOW()::timestamptz)
-             ON CONFLICT (from_id, to_id, rel_type, group_id) DO NOTHING`,
-            [
-              rel.direction === "in" ? rel.targetId : node_id,
-              rel.direction === "in" ? node_id : rel.targetId,
-              relType,
-              validatedGroupId,
-              relProps,
-            ]
+        await withWorkspaceTransaction({ tenantId: validatedGroupId, workspaceId, principalId }, async (db) => {
+          await db.query(
+            `INSERT INTO graph_structural_nodes (node_id,label,group_id,workspace_id,workspace_scope_state,props,created_at)
+             VALUES ($1,$2,$3,$4,'workspace_scoped',$5,$6::timestamptz)
+             ON CONFLICT ON CONSTRAINT graph_structural_nodes_scope_identity_key
+             DO UPDATE SET props=EXCLUDED.props,updated_at=NOW()`,
+            [node_id, label, validatedGroupId, workspaceId, JSON.stringify({ ...props, node_id }), createdAt],
           );
-        }
+          for (const rel of relationships ?? []) {
+            const incoming = rel.direction === "in";
+            await db.query(
+              `INSERT INTO graph_structural_edges
+                 (from_id,from_kind,to_id,to_kind,rel_type,group_id,workspace_id,workspace_scope_state,endpoint_state,props,created_at)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,'workspace_scoped','resolved',$8,NOW())
+               ON CONFLICT ON CONSTRAINT graph_structural_edges_scope_identity_key DO NOTHING`,
+              [incoming ? rel.targetId : node_id, incoming ? endpointKind(rel.targetLabel) : endpointKind(label),
+               incoming ? node_id : rel.targetId, incoming ? endpointKind(label) : endpointKind(rel.targetLabel),
+               rel.type, validatedGroupId, workspaceId, rel.props ? JSON.stringify(rel.props) : null],
+            );
+          }
+        });
       }
 
       return { node_id };
@@ -229,18 +245,24 @@ function buildAdapterBackend(): MemoryAPI {
 
     async createRelationship({
       fromId,
+      fromLabel,
       toId,
+      toLabel,
       type,
+      group_id,
+      workspace_id,
+      principal_id,
       props,
     }: CreateRelationshipCallInput): Promise<void> {
-      const pool = getPgPool();
-      const relProps = props ? JSON.stringify(props) : null;
-      await pool.query(
-        `INSERT INTO graph_structural_edges (from_id, to_id, rel_type, group_id, props, created_at)
-         VALUES ($1, $2, $3, $4, $5, NOW()::timestamptz)
-         ON CONFLICT (from_id, to_id, rel_type, group_id) DO NOTHING`,
-        [fromId, toId, type, process.env.DEFAULT_GROUP_ID ?? "allura-system", relProps]
-      );
+      const { workspaceId, principalId, groupId: validatedGroupId } = verifiedScope({ group_id, workspace_id, principal_id });
+      await withWorkspaceTransaction({ tenantId: validatedGroupId, workspaceId, principalId }, (db) => db.query(
+        `INSERT INTO graph_structural_edges
+           (from_id,from_kind,to_id,to_kind,rel_type,group_id,workspace_id,workspace_scope_state,endpoint_state,props,created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'workspace_scoped','resolved',$8,NOW())
+         ON CONFLICT ON CONSTRAINT graph_structural_edges_scope_identity_key DO NOTHING`,
+        [fromId, endpointKind(fromLabel), toId, endpointKind(toLabel), type,
+         validatedGroupId, workspaceId, props ? JSON.stringify(props) : null],
+      ));
     },
 
     async query<T = Record<string, unknown>>(
@@ -290,9 +312,9 @@ function buildAdapterBackend(): MemoryAPI {
       }
 
       const pool = getPgPool();
-      const conditions: string[] = ["label = $1", "group_id = $2"];
-      const params: unknown[] = [label, validatedGroupId];
-      let paramIdx = 3;
+      const conditions: string[] = ["label = $1", "group_id = $2", "workspace_id = $3", "workspace_scope_state = 'workspace_scoped'"];
+      const params: unknown[] = [label, validatedGroupId, workspace_id];
+      let paramIdx = 4;
 
       if (props) {
         for (const [key, value] of Object.entries(props)) {
@@ -336,8 +358,8 @@ function buildControlPlaneBackend(): MemoryAPI {
   }
 
   return {
-    async createEntity({ label, props, group_id, relationships }: CreateEntityInput): Promise<CreateEntityResult> {
-      const validatedGroupId = validateGroupId(group_id);
+    async createEntity({ label, props, group_id, workspace_id, principal_id, relationships }: CreateEntityInput): Promise<CreateEntityResult> {
+      const { groupId: validatedGroupId, workspaceId, principalId } = verifiedScope({ group_id, workspace_id, principal_id });
       const node_id = resolveNodeId(props);
 
       const result = await syscall_mutate(
@@ -345,10 +367,12 @@ function buildControlPlaneBackend(): MemoryAPI {
           type: "insert",
           target: "neo4j:Entity",
           data: {
+            ...props,
             label,
             node_id,
             group_id: validatedGroupId,
-            ...props,
+            workspace_id: workspaceId,
+            principal_id: principalId,
             created_at: props.created_at ?? new Date().toISOString(),
             updated_at: new Date().toISOString(),
           },
@@ -369,13 +393,17 @@ function buildControlPlaneBackend(): MemoryAPI {
             type: "insert",
             target: "neo4j:Relationship",
             data: {
+              ...(rel.props ?? {}),
               label: rel.targetLabel,
               group_id: validatedGroupId,
+              workspace_id: workspaceId,
+              principal_id: principalId,
               from_id: fromId,
               to_id: toId,
+              from_kind: rel.direction === "in" ? endpointKind(rel.targetLabel) : endpointKind(label),
+              to_kind: rel.direction === "in" ? endpointKind(label) : endpointKind(rel.targetLabel),
               type: rel.type,
               node_id: fromId,
-              ...(rel.props ?? {}),
             },
           },
           ctx(validatedGroupId)
@@ -385,24 +413,27 @@ function buildControlPlaneBackend(): MemoryAPI {
       return { node_id };
     },
 
-    async createRelationship({ fromId, fromLabel, toId, toLabel, type, props }: CreateRelationshipCallInput): Promise<void> {
-      const groupId = (props?.group_id as string) ?? process.env.DEFAULT_GROUP_ID ?? "allura-system";
-      const validatedGroupId = validateGroupId(groupId);
+    async createRelationship({ fromId, fromLabel, toId, toLabel, type, group_id, workspace_id, principal_id, props }: CreateRelationshipCallInput): Promise<void> {
+      const { groupId: validatedGroupId, workspaceId, principalId } = verifiedScope({ group_id, workspace_id, principal_id });
 
       const result = await syscall_mutate(
         {
           type: "insert",
           target: "neo4j:Relationship",
           data: {
+            ...(props ?? {}),
             label: fromLabel,
             group_id: validatedGroupId,
+            workspace_id: workspaceId,
+            principal_id: principalId,
             from_id: fromId,
             to_id: toId,
             from_label: fromLabel,
             to_label: toLabel,
+            from_kind: endpointKind(fromLabel),
+            to_kind: endpointKind(toLabel),
             type,
             node_id: fromId,
-            ...(props ?? {}),
           },
         },
         ctx(validatedGroupId)

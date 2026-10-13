@@ -31,6 +31,7 @@ process.env.RUVIX_CONTROL_PLANE_SECRET = "test-secret-key-for-ruvix-controlPlane
 
 // ── Import under test (after mocks are in place) ─────────────────────────────
 
+import { syscall_mutate, syscall_query } from "@/control-plane/syscalls"
 import { memory } from "./writer"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -48,7 +49,7 @@ vi.mock("@/control-plane/syscalls", () => ({
   }),
 }))
 
-import { syscall_mutate, syscall_query } from "@/control-plane/syscalls"
+const verifiedScope = { workspace_id: "workspace-test", principal_id: "verified-user" } as const
 
 describe("memory() — controlPlane-routed writer", () => {
   beforeEach(() => {
@@ -70,6 +71,7 @@ describe("memory() — controlPlane-routed writer", () => {
   describe("createEntity", () => {
     it("should route through syscall_mutate with neo4j:Entity target", async () => {
       const result = await memory().createEntity({
+        ...verifiedScope,
         label: "Insight",
         group_id: "allura-system",
         props: { summary: "Test insight", confidence: 0.9 },
@@ -88,6 +90,7 @@ describe("memory() — controlPlane-routed writer", () => {
     it("should reject invalid group_id", async () => {
       await expect(
         memory().createEntity({
+          ...verifiedScope,
           label: "Insight",
           group_id: "bad-group",
           props: { summary: "test" },
@@ -99,6 +102,8 @@ describe("memory() — controlPlane-routed writer", () => {
   describe("createRelationship", () => {
     it("should route through syscall_mutate with neo4j:Relationship target", async () => {
       await memory().createRelationship({
+        ...verifiedScope,
+        group_id: "allura-system",
         fromId: "n1",
         fromLabel: "Agent",
         toId: "n2",
@@ -153,6 +158,7 @@ describe("memory() — controlPlane-routed writer", () => {
 
       await expect(
         memory().createEntity({
+          ...verifiedScope,
           label: "Insight",
           group_id: "allura-system",
           props: { summary: "test" },
@@ -168,6 +174,8 @@ describe("memory() — controlPlane-routed writer", () => {
 
       await expect(
         memory().createRelationship({
+          ...verifiedScope,
+          group_id: "allura-system",
           fromId: "n1",
           fromLabel: "Agent",
           toId: "n2",
@@ -176,6 +184,20 @@ describe("memory() — controlPlane-routed writer", () => {
         })
       ).rejects.toThrow("Relationship write denied")
     })
+  })
+
+  it("refuses graph writes without verified workspace and principal scope", async () => {
+    await expect(memory().createEntity({ label: "Task", group_id: "allura-system", props: { title: "unsafe" } } as never)).rejects.toThrow(/verified workspace_id and principal_id/)
+    await expect(memory().createRelationship({ fromId: "a", fromLabel: "Agent", toId: "b", toLabel: "Memory", type: "CONTRIBUTED", group_id: "allura-system" } as never)).rejects.toThrow(/verified workspace_id and principal_id/)
+    await expect(memory().createEntity({
+      label: "Task", group_id: "allura-system",
+      props: { title: "unsafe", workspace_id: "hidden-workspace", principal_id: "hidden-principal" },
+    } as never)).rejects.toThrow(/verified workspace_id and principal_id/)
+    await expect(memory().createRelationship({
+      fromId: "a", fromLabel: "Agent", toId: "b", toLabel: "Memory", type: "CONTRIBUTED", group_id: "allura-system",
+      props: { workspace_id: "hidden-workspace", principal_id: "hidden-principal" },
+    } as never)).rejects.toThrow(/verified workspace_id and principal_id/)
+    expect(syscall_mutate).not.toHaveBeenCalled()
   })
 })
 
@@ -213,14 +235,14 @@ describe("memory() — MEMORY_BYPASS_KERNEL deprecated fallback", () => {
     process.env.MEMORY_BYPASS_KERNEL = "true"
     process.env.MEMORY_BYPASS_CONTROL_PLANE = "false"
     await memory()
-      .createEntity({ label: "Insight", group_id: "allura-system", props: { summary: "new wins" } })
+      .createEntity({ label: "Insight", group_id: "allura-system", ...verifiedScope, props: { summary: "new wins" } })
       .catch(() => undefined)
     expect(syscall_mutate).toHaveBeenCalled()
   })
 
   it("routes through the control plane when neither is set", async () => {
     await memory()
-      .createEntity({ label: "Insight", group_id: "allura-system", props: { summary: "default" } })
+      .createEntity({ label: "Insight", group_id: "allura-system", ...verifiedScope, props: { summary: "default" } })
       .catch(() => undefined)
     expect(syscall_mutate).toHaveBeenCalled()
   })

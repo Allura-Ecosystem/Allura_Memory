@@ -93,6 +93,44 @@ export async function withWorkspaceTransaction<T>(
 }
 
 /**
+ * Execute an authorized graph read on the restricted application pool.
+ *
+ * The isolation and read-only attributes are declared on BEGIN so PostgreSQL
+ * applies them before any statement can observe data. Transaction-local scope
+ * is set with parameterized set_config calls; no authority value is interpolated
+ * into SQL and pooled sessions cannot retain it after COMMIT/ROLLBACK.
+ */
+export async function withRestrictedWorkspaceReadTransaction<T>(
+  scope: ResolvedWorkspaceScope,
+  callback: (client: import("pg").PoolClient) => Promise<T>,
+  pool: import("pg").Pool = getAppPool(),
+): Promise<T> {
+  validateTenantId(scope.tenantId);
+  validateWorkspaceId(scope.workspaceId);
+  validatePrincipalId(scope.principalId);
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+    await client.query(
+      `SELECT set_config('app.current_group_id', $1, true),
+              set_config('app.current_tenant', $1, true),
+              set_config('app.current_workspace_id', $2, true),
+              set_config('app.current_principal', $3, true)`,
+      [scope.tenantId, scope.workspaceId, scope.principalId],
+    );
+    const result = await callback(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Convenience helper for a single query inside a tenant context.
  */
 export async function tenantQuery<T extends import("pg").QueryResultRow = import("pg").QueryResultRow>(
