@@ -1,12 +1,6 @@
 ---
 name: perplexica-search
 description: Use Perplexica for web research and external technical discovery. Trigger for web research, live external discovery, repository research, or self-hosted Perplexica search.
-category: context
-preferred_executor: scout
-mcp:
-  perplexica:
-    command: uvx
-    args: ["perplexica-mcp", "stdio"]
 allowed-tools:
   - perplexica-mcp_search
 ---

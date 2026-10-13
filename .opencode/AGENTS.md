@@ -91,7 +91,7 @@ Context7:
 - finding: <one-line evidence or skip reason>
 ```
 
-No-skip rule: if touching `.opencode/config.json`, `opencode.json`,
+No-skip rule: if touching `opencode.json`,
 `.opencode/agent/**`, `.codex/**`, `.claude/**`, MCP config, model routing,
 provider strings, plugins, or command definitions, Context7 is mandatory before
 proposing or editing.
@@ -271,6 +271,12 @@ tool or subagent invocation happened.
 Codex, OpenCode, and Claude do not load agents the same way. This repo bridges
 them through `.agents/TEAM-RAM-RUNTIME.md`.
 
+Launch OpenCode with `bun run opencode:team-ram -- <args>` so plugin-provided
+and user-global external skills cannot override the governed project catalog.
+
+Launch OpenCode with `bun run opencode:team-ram -- <args>` so plugin-provided
+and user-global external skills cannot override the governed project catalog.
+
 If the user invokes Brooks, Scout, Woz, Team RAM, Ralph, or Allura project work:
 
 ```text
@@ -356,7 +362,7 @@ Brain running → MCP reachable → Scout context loaded → skills resolved →
 
 - `.opencode/manifest.json` — Machine-readable architecture manifest
 - `.opencode/SKILL-OWNERSHIP.md` — Skill ownership matrix
-- `.opencode/config.json` — Top-level OpenCode configuration
+- `opencode.json` — Top-level OpenCode configuration
 - `.opencode/DEVELOPMENT-READINESS.md` — Pre-development readiness checklist
 - `.opencode/agent/` — Active Team RAM agent definitions
 - `.opencode/command/` — Reusable workflow commands

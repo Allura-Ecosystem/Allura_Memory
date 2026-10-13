@@ -4,9 +4,9 @@
     "brooks-architect": [
       "mcp-docker",
       "allura-memory-skill",
-      "allura-hydration-integrity",
-      "allura-promotion-roundtrip",
-      "allura-retrieval-drift-audit",
+      "allura-team-ram",
+      "ai-guidelines",
+      "team-ram-cowork",
       "skill-creator",
       "code-review",
       "party-mode",
@@ -17,86 +17,66 @@
     "knuth-data-architect": [
       "mcp-docker",
       "allura-memory-skill",
-      "allura-hydration-integrity",
-      "allura-promotion-roundtrip",
-      "allura-retrieval-drift-audit",
-      "postgres-best-practices",
-      "next-best-practices"
+      "allura-team-ram",
+      "postgres-best-practices"
     ],
     "woz-builder": [
       "mcp-docker",
       "allura-memory-skill",
-      "allura-hydration-integrity",
-      "allura-promotion-roundtrip",
+      "allura-team-ram",
       "code-review",
       "frontend-craft",
-      "shadcn",
       "task-management",
       "varlock"
     ],
     "jobs-intent-gate": [
       "mcp-docker",
       "allura-memory-skill",
-      "allura-hydration-integrity",
-      "allura-promotion-roundtrip",
+      "allura-team-ram",
       "postgres-best-practices"
     ],
     "hightower-devops": [
       "mcp-docker",
       "allura-memory-skill",
-      "allura-hydration-integrity",
-      "allura-promotion-roundtrip",
-      "allura-retrieval-drift-audit",
-      "next-best-practices",
+      "allura-team-ram",
       "mcp-harness",
       "varlock"
     ],
     "carmack-performance": [
       "mcp-docker",
       "allura-memory-skill",
-      "allura-hydration-integrity",
-      "allura-promotion-roundtrip"
+      "allura-team-ram"
     ],
     "bellard-diagnostics-perf": [
       "mcp-docker",
       "allura-memory-skill",
-      "allura-hydration-integrity",
-      "allura-promotion-roundtrip",
-      "allura-retrieval-drift-audit",
-      "next-best-practices"
+      "allura-team-ram"
     ],
     "fowler-refactor-gate": [
       "mcp-docker",
       "allura-memory-skill",
-      "allura-hydration-integrity",
-      "allura-promotion-roundtrip",
+      "allura-team-ram",
       "code-review"
     ],
     "pike-interface-review": [
       "mcp-docker",
       "allura-memory-skill",
-      "allura-hydration-integrity",
-      "allura-promotion-roundtrip",
+      "allura-team-ram",
       "code-review"
     ],
     "scout-recon": [
       "mcp-docker",
       "allura-memory-skill",
-      "allura-hydration-integrity",
-      "allura-promotion-roundtrip",
-      "allura-retrieval-drift-audit",
+      "allura-team-ram",
       "multi-search"
     ],
     "mizko-ui": [
       "mcp-docker",
       "allura-memory-skill",
-      "allura-hydration-integrity",
-      "allura-promotion-roundtrip",
-      "frontend-design",
+      "allura-team-ram",
       "frontend-craft",
       "allura-design",
-      "huashu-design",
-      "shadcn"
+      "figma-use"
     ]
   }
 }

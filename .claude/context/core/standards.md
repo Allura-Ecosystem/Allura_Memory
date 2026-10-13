@@ -27,7 +27,7 @@ max_age_days: 30
 - All routes return typed Zod-validated responses
 - Error handling: structured error objects, no naked throws
 - Brain tools: `allura-brain__memory_add/search/list/get/promote/update/delete/export`
-- MCP server: stdio transport, registered in `.opencode/config.json`
+- MCP server: stdio transport, registered in `opencode.json`
 
 ## Memory Governance (RuVix)
 - **POL-001:** No direct Neo4j writes from agents — must go through promotion pipeline

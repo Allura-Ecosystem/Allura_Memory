@@ -1,7 +1,6 @@
 ---
 name: allura-code-review
-description: "Allura-governed code review with Pike/Fowler gates, Brain outcome logging, and doc impact checks. Use for governed review, allura code review, or review with gates — not generic code review."
-globs: ["src/**", "docs/allura/**", "guidelines/**"]
+description: Allura-governed code review with Pike/Fowler gates, Brain outcome logging, and doc impact checks. Use for governed review, allura code review, or review with gates — not generic code review.
 ---
 
 # Allura Code Review — Governed Code Review

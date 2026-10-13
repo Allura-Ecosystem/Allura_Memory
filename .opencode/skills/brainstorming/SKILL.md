@@ -1,7 +1,16 @@
 ---
 name: brainstorming
-description: "MUST use before any creative work — creating features, building components, adding functionality. Explores intent, requirements, and design before implementation. Produces spec with B#/F# traceability."
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Agent", "allura-brain__memory_search", "allura-brain__memory_add"]
+description: MUST use before any creative work — creating features, building components, adding functionality. Explores intent, requirements, and design before implementation. Produces spec with B#/F# traceability.
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
+  - Agent
+  - allura-brain__memory_search
+  - allura-brain__memory_add
 ---
 
 # Brainstorming Ideas Into Designs

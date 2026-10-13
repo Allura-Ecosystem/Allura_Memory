@@ -85,6 +85,8 @@
     "registry:dry-run": "bun run scripts/opencode-registry/sync.ts --dry-run",
     "registry:log-audit": "bun run scripts/opencode-registry/log-audit.ts",
     "registry:drift": "bun run scripts/drift-detection.ts",
+    "opencode:team-ram": "bash scripts/team-ram-opencode.sh",
+    "skills:validate": "bun scripts/team-ram-skill-harness.ts",
     "check:skill-governance": "bun scripts/check-skill-governance.ts",
     "validate:codex-gate": "bun scripts/validate-codex-governance-gate.ts",
     "ports:check": "bun scripts/check-ports.ts",

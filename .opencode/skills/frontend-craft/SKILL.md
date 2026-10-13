@@ -1,11 +1,6 @@
 ---
 name: frontend-craft
-description: >
-  Professional-grade frontend development with Brooksian conceptual integrity.
-  Shape → Explore → Select → Systematize → Build → Audit → Polish → Harden.
-  Huashu Design (HTML-native prototypes) meets Impeccable (audit polish harden).
-  Allura Memory variant: Next.js App Router + Tailwind CSS + ForceGraph2D.
-compatibility: opencode
+description: "Professional-grade frontend development with Brooksian conceptual integrity. Shape → Explore → Select → Systematize → Build → Audit → Polish → Harden. Huashu Design (HTML-native prototypes) meets Impeccable (audit polish harden). Allura Memory variant: Next.js App Router + Tailwind CSS + ForceGraph2D."
 metadata:
   audience: frontend-developers
   workflow: frontend-craft

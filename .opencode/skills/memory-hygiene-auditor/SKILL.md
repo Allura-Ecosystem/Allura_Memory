@@ -1,3 +1,8 @@
+---
+name: memory-hygiene-auditor
+description: Audit Allura memory quality for duplication, staleness, missing provenance, unsafe promotion, and retrieval drift without mutating records by default.
+---
+
 # SKILL.md — memory-hygiene-auditor
 
 ## Name

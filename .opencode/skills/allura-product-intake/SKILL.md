@@ -1,7 +1,6 @@
 ---
 name: allura-product-intake
-description: "Allura-governed product intake. Loads allura-team-ram gates with Jobs intent gate, Brain search, and doc impact check. Use when creating PRDs or product requirements in the Allura Memory repo."
-globs: ["src/**", "docs/allura/**", "guidelines/**"]
+description: Allura-governed product intake. Loads allura-team-ram gates with Jobs intent gate, Brain search, and doc impact check. Use when creating PRDs or product requirements in the Allura Memory repo.
 ---
 
 # Allura Product Intake — Governed PRD Creation

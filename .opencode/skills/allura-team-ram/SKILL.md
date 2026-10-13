@@ -1,7 +1,9 @@
 ---
 name: allura-team-ram
-description: "Allura Team RAM operating core — shared governance, routing, memory, and validation gates for all Allura wrapper skills. Load this skill before any allura-* wrapper."
-globs: ["src/**", ".opencode/**", "docs/allura/**", "guidelines/**"]
+description: Allura Team RAM operating core — shared governance, routing, memory, and validation gates for all Allura wrapper skills. Load this skill before any allura-* wrapper.
+metadata:
+  owner: brooks
+  authority: ai-guidelines
 ---
 
 # Allura Team RAM — Shared Operating Core
@@ -12,6 +14,14 @@ globs: ["src/**", ".opencode/**", "docs/allura/**", "guidelines/**"]
 
 
 > **Allura decides. Team RAM owns. Guidelines constrain docs. RuVix validates. Brain remembers.**
+
+`ai-guidelines` is the sole normative authority for repository documentation,
+AI-assistance policy, and the six-file `docs/allura/` surface. Team RAM routes
+work and supplies evidence; it does not create a competing policy layer.
+
+The canonical skill catalog is `.opencode/skills/`. The `.claude/skills/` and
+`.agents/skills/` trees are runtime adapters and must resolve to that catalog
+rather than contain divergent copies.
 
 This skill is the shared foundation for all `allura-*` wrapper skills. It defines the gates, routing, memory, and validation rules that every Allura workflow must follow.
 
@@ -87,20 +97,19 @@ Execute the Allura skill workflow with loaded context:
 - `allura-product-intake` → loads this skill, then executes PRD creation
 - `allura-retrospective` → loads this skill, then executes retrospective
 
-### Gate 5: Notion Board Update
+### Gate 5: Work Tracking
 
-After any status change:
-
-1. Update the relevant Notion work item (Status, Decision Log, Handoff Context)
-2. Notion is the source of truth for sprint status
-3. Local files are evidence only
+Update an external work board only when its connector is available and the task
+is already represented there. A board tracks delivery state; it is not a policy
+or architecture authority. Never block local, approved work solely because a
+board connector is unavailable.
 
 ### Gate 6: Validation Evidence
 
 Before marking any story `Done`:
 
 - [ ] Targeted tests pass (`bun test`, `bun run typecheck`)
-- [ ] Acceptance criteria met (from Notion work item)
+- [ ] Acceptance criteria from the active goal or approved work item are met
 - [ ] Review approved (Pike for interface, Fowler for maintainability)
 - [ ] Evidence artifact created (test output, review notes, screenshots)
 - [ ] No canonical doc impact without update
@@ -141,7 +150,8 @@ Event types: `ADR_CREATED`, `INTERFACE_DEFINED`, `TECH_STACK_DECISION`, `TASK_CO
 
 ## Allura Skill Routing
 
-For Allura Memory repo work, use the `allura-*` skills — they are the canonical workflow skills for this repo.
+For Allura Memory repo work, use the `allura-*` skills as workflow adapters.
+They remain subordinate to `ai-guidelines` and the Team RAM harness invariants.
 
 | Task | Allura Skill | Notes |
 |------|-------------|-------|
@@ -151,7 +161,7 @@ For Allura Memory repo work, use the `allura-*` skills — they are the canonica
 | PRD creation | `allura-product-intake` | Jobs intent gate |
 | Retrospective | `allura-retrospective` | Brooks facilitation |
 | Party/parallel work | `party-mode` / `team-ram-cowork` | Allura-native |
-| Sprint status | Notion board | Notion source of truth |
+| Sprint status | Active goal or connected work board | Tracking evidence only |
 
 ## Canonical Documentation Rule
 

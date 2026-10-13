@@ -1,17 +1,6 @@
 ---
 name: mcp-harness
-description: "Plugin orchestration harness for MCP servers and agent skills. Explicit approval flow, Team RAM delegation, append-only audit trail. No auto-loading. Orchestrator approves before tools load."
-version: 1.0.0
-author: opencode
-type: skill
-category: infrastructure
-tags:
-  - mcp
-  - orchestration
-  - approval
-  - audit
-  - delegation
-  - harness
+description: Plugin orchestration harness for MCP servers and agent skills. Explicit approval flow, Team RAM delegation, append-only audit trail. No auto-loading. Orchestrator approves before tools load.
 ---
 
 # MCP Plugin Harness

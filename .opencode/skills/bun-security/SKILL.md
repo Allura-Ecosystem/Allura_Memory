@@ -1,18 +1,6 @@
 ---
+name: bun-security
 description: Bun security skill. Use when detecting npm vulnerabilities, postinstall hooks, or CanisterWorm indicators. Enforces Bun-only policy.
-mode: subagent
-temperature: 0.1
-permissions:
-  read: allow
-  edit: ask
-  bash:
-    "bun *": allow
-    "grep *": allow
-    "ls -la *": allow
-    "cat *": allow
-    "npm*": deny
-    "npx*": deny
-    "*": ask
 ---
 
 # Bun Security Skill

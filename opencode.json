@@ -262,10 +262,7 @@
   },
   "skills": {
     "paths": [
-      ".opencode/skills",
-      ".claude/skills",
-      "../allura-team-durham/team-durham-plugin/skills",
-      "../allura-team-ram/.opencode/skills"
+      ".opencode/skills"
     ]
   }
 }

@@ -1,7 +1,6 @@
 ---
 name: allura-architecture
-description: "Allura-governed architecture creation. Loads allura-team-ram gates with Brooks gate, Brain search, doc impact check, and ADR logging. Use when creating architecture decisions in the Allura Memory repo."
-globs: ["src/**", "docs/allura/**", "guidelines/**"]
+description: Allura-governed architecture creation. Loads allura-team-ram gates with Brooks gate, Brain search, doc impact check, and ADR logging. Use when creating architecture decisions in the Allura Memory repo.
 ---
 
 # Allura Architecture — Governed Architecture Creation

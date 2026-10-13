@@ -1,6 +1,6 @@
 ---
-name: "source-command-quick-commands"
-description: "Quick slash commands for Allura Memory surgical team"
+name: source-command-quick-commands
+description: Quick slash commands for Allura Memory surgical team
 ---
 
 # source-command-quick-commands

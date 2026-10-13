@@ -1,7 +1,6 @@
 ---
 name: allura-retrospective
-description: "Allura-governed retrospective. Loads allura-team-ram gates with Brooks gate, Brain outcome logging, and Notion board update. Use when running retrospectives in the Allura Memory repo."
-globs: ["src/**", "docs/allura/**", "guidelines/**"]
+description: Allura-governed retrospective. Loads allura-team-ram gates with Brooks gate, Brain outcome logging, and Notion board update. Use when running retrospectives in the Allura Memory repo.
 ---
 
 # Allura Retrospective — Governed Retrospective

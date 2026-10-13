@@ -1,3 +1,8 @@
+---
+name: allura-propose-promotion
+description: Prepare an Allura memory promotion proposal with provenance, evidence, confidence, and policy context; this does not approve promotion.
+---
+
 # Allura Propose Promotion
 
 ## Trigger

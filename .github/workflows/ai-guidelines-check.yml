@@ -106,30 +106,14 @@ jobs:
       - name: Check agent harness sync
         run: |
           echo "🔍 Checking agent harness synchronization..."
-          
-          # Verify all three harnesses reference AI-GUIDELINES
-          HARNESS_COUNT=0
-          
-          if grep -q "AI-GUIDELINES.md" .opencode/config.json 2>/dev/null; then
-            echo "✅ OpenCode references AI-GUIDELINES"
-            HARNESS_COUNT=$((HARNESS_COUNT + 1))
-          fi
-          
-          if grep -q "AI-GUIDELINES.md" .github/copilot-instructions.md 2>/dev/null; then
-            echo "✅ GitHub Copilot references AI-GUIDELINES"
-            HARNESS_COUNT=$((HARNESS_COUNT + 1))
-          fi
-          
-          if grep -q "AI-GUIDELINES" CLAUDE.md 2>/dev/null || grep -q "AI-GUIDELINES" .claude/CLAUDE.md 2>/dev/null; then
-            echo "✅ Claude Code references AI-GUIDELINES"
-            HARNESS_COUNT=$((HARNESS_COUNT + 1))
-          fi
-          
-          if [ $HARNESS_COUNT -lt 2 ]; then
-            echo "⚠️  Only $HARNESS_COUNT/3 harnesses reference AI-GUIDELINES"
-          else
-            echo "✅ $HARNESS_COUNT/3 harnesses synchronized"
-          fi
+
+          test -f .opencode/skills/ai-guidelines/SKILL.md
+          test -L .claude/skills/ai-guidelines
+          test -L .agents/skills/ai-guidelines
+          test "$(readlink .claude/skills/ai-guidelines)" = "../../.opencode/skills/ai-guidelines"
+          test "$(readlink .agents/skills/ai-guidelines)" = "../../.opencode/skills/ai-guidelines"
+
+          echo "✅ OpenCode, Claude, and Codex resolve the canonical ai-guidelines skill"
 
       - name: Check for stale documentation
         run: |

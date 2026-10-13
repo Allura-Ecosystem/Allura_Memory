@@ -1,12 +1,6 @@
 ---
 name: allura-design
-description: >
-  Bridges huashu-design with Allura Brain governed memory.
-  Pre-searches Brain for brand specs, invokes huashu-design workflow,
-  stores design decisions and reviews back to Brain.
-  Triggers on: prototype, mockup, app prototype, slide deck, animation,
-  design review, brand spec, design direction, ui mockup, design exploration,
-  make it look good, create a visual, design a page, design a component.
+description: "Bridges huashu-design with Allura Brain governed memory. Pre-searches Brain for brand specs, invokes huashu-design workflow, stores design decisions and reviews back to Brain. Triggers on: prototype, mockup, app prototype, slide deck, animation, design review, brand spec, design direction, ui mockup, design exploration, make it look good, create a visual, design a page, design a component."
 ---
 
 # Allura-Design · Huashu-Design + Brain Integration

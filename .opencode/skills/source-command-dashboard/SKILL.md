@@ -1,6 +1,6 @@
 ---
-name: "source-command-dashboard"
-description: "Open, read, and update the Ronin Vibe Coding Dashboard in Notion"
+name: source-command-dashboard
+description: Open, read, and update the Ronin Vibe Coding Dashboard in Notion
 ---
 
 # source-command-dashboard

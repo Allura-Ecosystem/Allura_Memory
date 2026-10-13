@@ -58,7 +58,7 @@ memory-bank/bmad-output/*
 artifacts/
 .impeccable/
 .sisyphus/
-skills/
+/skills/
 skills-lock.json
 INSTALLATION-REPORT.md
 UNIVERSAL_MCP_RULE.md
@@ -112,6 +112,8 @@ brand-audit-results.json
 # be .agents/* for the negation below to take effect.
 .agents/*
 !.agents/TEAM-RAM-RUNTIME.md
+!.agents/skills/
+!.agents/skills/**
 .codex/*
 !.codex/config.toml
 !.codex/agents/

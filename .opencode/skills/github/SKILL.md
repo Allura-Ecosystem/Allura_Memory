@@ -1,3 +1,8 @@
+---
+name: github
+description: Work with GitHub repositories, issues, pull requests, workflows, and release metadata when repository-host operations are required.
+---
+
 # GitHub Integration
 
 ## Workflows

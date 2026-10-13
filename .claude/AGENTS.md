@@ -128,7 +128,7 @@ Team RAM personas consume OAC context — they do not replace it.
 
 - `.opencode/manifest.json` — Machine-readable architecture manifest
 - `.opencode/SKILL-OWNERSHIP.md` — Skill ownership matrix
-- `.opencode/config.json` — Top-level OpenCode configuration
+- `opencode.json` — Top-level OpenCode configuration
 - `.opencode/agent/` — Active Team RAM agent definitions
 - `.opencode/command/` — Reusable workflow commands
 - `.opencode/skills/` — Skill definitions and supporting assets

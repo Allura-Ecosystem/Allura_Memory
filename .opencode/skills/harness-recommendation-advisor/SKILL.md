@@ -1,3 +1,8 @@
+---
+name: harness-recommendation-advisor
+description: Evaluate coding-agent harness options and recommend a bounded configuration based on repository needs and verified runtime capabilities.
+---
+
 # SKILL.md — harness-recommendation-advisor
 
 ## Name

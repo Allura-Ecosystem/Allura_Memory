@@ -1,7 +1,7 @@
 # ALLURA BRAIN — MASTER SYSTEM PROMPT
 
 > **Install path:** `.opencode/context/allura/ALLURA-BRAIN-PROMPT.md`
-> **Loaded by:** All agents via `contextPaths` in `.opencode/config.json`
+> **Loaded by:** All agents via `contextPaths` in `opencode.json`
 > **Authority level:** SYSTEM — overrides agent defaults. This is the law of the repo.
 
 ---

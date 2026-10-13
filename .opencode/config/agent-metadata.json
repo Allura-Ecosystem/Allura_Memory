@@ -13,6 +13,7 @@
       "tags": ["architecture", "orchestration", "primary", "conceptual-integrity"],
       "dependencies": [
         "skill:allura-memory-skill",
+        "skill:allura-team-ram",
         "skill:mcp-docker",
         "skill:code-review",
         "skill:skill-creator",
@@ -29,6 +30,7 @@
       "tags": ["intent", "scope", "gate", "primary"],
       "dependencies": [
         "skill:allura-memory-skill",
+        "skill:allura-team-ram",
         "skill:mcp-docker",
         "skill:postgres-best-practices"
       ]
@@ -43,6 +45,7 @@
       "tags": ["builder", "implementation", "shipping"],
       "dependencies": [
         "skill:allura-memory-skill",
+        "skill:allura-team-ram",
         "skill:mcp-docker",
         "skill:code-review"
       ]
@@ -57,6 +60,7 @@
       "tags": ["discovery", "recon", "patterns", "utility"],
       "dependencies": [
         "skill:allura-memory-skill",
+        "skill:allura-team-ram",
         "skill:mcp-docker",
         "skill:context7",
         "skill:multi-search"
@@ -72,6 +76,7 @@
       "tags": ["interface", "simplicity", "api-design", "review"],
       "dependencies": [
         "skill:allura-memory-skill",
+        "skill:allura-team-ram",
         "skill:mcp-docker",
         "skill:code-review"
       ]
@@ -86,6 +91,7 @@
       "tags": ["refactor", "maintainability", "debt-prevention"],
       "dependencies": [
         "skill:allura-memory-skill",
+        "skill:allura-team-ram",
         "skill:mcp-docker",
         "skill:code-review"
       ]
@@ -100,8 +106,9 @@
       "tags": ["diagnostics", "performance", "measurement"],
       "dependencies": [
         "skill:allura-memory-skill",
+        "skill:allura-team-ram",
         "skill:mcp-docker",
-        "skill:next-best-practices"
+        "skill:code-review"
       ]
     },
     "carmack-performance": {
@@ -114,6 +121,7 @@
       "tags": ["performance", "optimization", "realtime"],
       "dependencies": [
         "skill:allura-memory-skill",
+        "skill:allura-team-ram",
         "skill:mcp-docker"
       ]
     },
@@ -127,9 +135,9 @@
       "tags": ["data", "schema", "postgres", "neo4j"],
       "dependencies": [
         "skill:allura-memory-skill",
+        "skill:allura-team-ram",
         "skill:mcp-docker",
-        "skill:postgres-best-practices",
-        "skill:next-best-practices"
+        "skill:postgres-best-practices"
       ]
     },
     "hightower-devops": {
@@ -142,8 +150,9 @@
       "tags": ["infrastructure", "deployment", "ci-cd"],
       "dependencies": [
         "skill:allura-memory-skill",
+        "skill:allura-team-ram",
         "skill:mcp-docker",
-        "skill:next-best-practices"
+        "skill:varlock"
       ]
     }
   }

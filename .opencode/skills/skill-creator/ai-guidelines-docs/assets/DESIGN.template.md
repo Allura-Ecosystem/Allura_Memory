@@ -1,1 +1,0 @@
-../../../templates/DESIGN.template.md

@@ -1,3 +1,8 @@
+---
+name: schema-boundary-guard
+description: Protect schema and API boundaries by checking validation, compatibility, allowlists, and tests at every external input or output edge.
+---
+
 # SKILL.md — schema-boundary-guard
 
 ## Name

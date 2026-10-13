@@ -1,3 +1,8 @@
+---
+name: advanced-elicitation
+description: Run structured elicitation techniques when requirements, risks, assumptions, or stakeholder intent need deeper clarification before implementation.
+---
+
 # Advanced Elicitation
 
 Push the LLM to reconsider, refine, and improve its recent output through structured critique methods.

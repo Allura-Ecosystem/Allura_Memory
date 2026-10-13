@@ -1,7 +1,10 @@
 ---
 name: task-creator
-description: "Create structured tasks with Allura Brain integration. Generates task files with proper metadata and links to memory."
-allowed-tools: ["Write", "Read", "mcp__MCP_DOCKER__*"]
+description: Create structured tasks with Allura Brain integration. Generates task files with proper metadata and links to memory.
+allowed-tools:
+  - Write
+  - Read
+  - mcp__MCP_DOCKER__*
 ---
 
 # Task Creator — Structured Task Generation

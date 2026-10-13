@@ -1,7 +1,11 @@
 ---
 name: allura-menu
-description: "Allura-specific skill. Interactive menu for Allura Brain surgical team. Quick prompts for common Allura workflows. Not part of the generic default surface — requires Allura Brain infrastructure."
-allowed-tools: ["Read", "Grep", "Bash", "mcp__MCP_DOCKER__*"]
+description: Allura-specific skill. Interactive menu for Allura Brain surgical team. Quick prompts for common Allura workflows. Not part of the generic default surface — requires Allura Brain infrastructure.
+allowed-tools:
+  - Read
+  - Grep
+  - Bash
+  - mcp__MCP_DOCKER__*
 ---
 
 # Allura Menu — Quick Prompts

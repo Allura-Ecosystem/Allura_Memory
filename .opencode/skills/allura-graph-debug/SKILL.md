@@ -1,3 +1,8 @@
+---
+name: allura-graph-debug
+description: Diagnose Allura Neo4j graph, lineage, and relationship failures using evidence-first queries and reproducible checks.
+---
+
 # Allura Graph Debug (Read-Only)
 
 ## Trigger

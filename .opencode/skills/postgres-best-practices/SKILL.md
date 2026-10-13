@@ -1,3 +1,8 @@
+---
+name: postgres-best-practices
+description: Apply PostgreSQL schema, query, migration, security, and operational practices when changing or reviewing database work.
+---
+
 # PostgreSQL Best Practices
 
 ## Query Patterns

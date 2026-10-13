@@ -1,3 +1,8 @@
+---
+name: event-payload-sanitizer
+description: Review or implement event payload sanitization at trust boundaries, including allowlists, redaction, schema validation, and tests.
+---
+
 # SKILL.md — event-payload-sanitizer
 
 ## Name

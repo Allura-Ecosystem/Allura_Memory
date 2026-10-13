@@ -1,3 +1,8 @@
+---
+name: allura-approve-promotion
+description: Approve a governed Allura memory promotion after evidence and policy checks pass. Use only for an explicitly authorized promotion decision.
+---
+
 # Allura Approve Promotion
 
 ## Trigger

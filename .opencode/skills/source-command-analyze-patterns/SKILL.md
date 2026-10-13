@@ -1,6 +1,6 @@
 ---
-name: "source-command-analyze-patterns"
-description: "Analyze codebase for patterns and similar implementations"
+name: source-command-analyze-patterns
+description: Analyze codebase for patterns and similar implementations
 ---
 
 # source-command-analyze-patterns

@@ -132,7 +132,7 @@ docker exec -it <pg_container> psql -U postgres -d memory -c "\d canonical_propo
 ```
 
 ```json
-// .claude/settings.json and .opencode/config.json both point to:
+// .claude/settings.json and opencode.json both point to:
 "command": "bun", "args": ["run", "src/mcp/memory-server.ts"]
 // This is the legacy server
 ```
@@ -155,7 +155,7 @@ docker exec -it <pg_container> psql -U postgres -d memory -c "\d canonical_propo
 }
 ```
 
-**Step 3 — Update `.opencode/config.json` _allura.mcpServers.allura-memory:**
+**Step 3 — Update `opencode.json` _allura.mcpServers.allura-memory:**
 ```json
 "allura-memory": {
   "command": "bun",

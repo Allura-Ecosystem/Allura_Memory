@@ -1,3 +1,8 @@
+---
+name: allura-health-observability
+description: Inspect and improve Allura health checks, metrics, logs, and operational observability with measurable acceptance evidence.
+---
+
 # Allura Health & Observability
 
 ## Trigger

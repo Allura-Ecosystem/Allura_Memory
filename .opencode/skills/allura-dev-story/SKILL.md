@@ -1,7 +1,6 @@
 ---
 name: allura-dev-story
-description: "Allura-governed story implementation. Loads allura-team-ram gates with Allura context, Brain search, doc impact check, and outcome logging. Use when implementing stories in the Allura Memory repo."
-globs: ["src/**", "docs/allura/**", "guidelines/**"]
+description: Allura-governed story implementation. Loads allura-team-ram gates with Allura context, Brain search, doc impact check, and outcome logging. Use when implementing stories in the Allura Memory repo.
 ---
 
 # Allura Dev Story — Governed Story Implementation

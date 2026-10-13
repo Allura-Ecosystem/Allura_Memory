@@ -1,3 +1,8 @@
+---
+name: agent-builder
+description: Create or revise Team RAM agent definitions and routing metadata. Use when an agent role, prompt, dependency, or runtime adapter must change.
+---
+
 # Agent Builder
 
 Build AI agents through conversational discovery. The north star: **outcome-driven design** — every capability describes what to achieve, not how. The agent's persona informs HOW; capability prompts only need the WHAT.

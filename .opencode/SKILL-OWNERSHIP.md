@@ -1,10 +1,37 @@
-# Skill Ownership Matrix
+# Team RAM Skill Harness Ownership
 
 > [!NOTE]
 > **AI-Assisted Documentation**
 > Portions of this document were drafted with the assistance of an AI language model.
 > Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
 > When in doubt, defer to code, schemas, and team consensus.
+
+The live catalog is the tracked set of top-level skills under
+`.opencode/skills/`. OpenCode loads only that directory. Claude and Codex use
+relative symlink adapters in `.claude/skills/` and `.agents/skills/`.
+
+`ai-guidelines` is the sole documentation and AI-assistance policy authority.
+This file is an operational routing aid and cannot override that skill.
+
+## Ownership Rules
+
+- Brooks owns catalog architecture, additions, removals, and route conflicts.
+- Scout owns discovery, context, search, and memory-retrieval skills.
+- Woz owns implementation and frontend execution skills.
+- Pike and Fowler own review, interface, and maintainability skills.
+- Knuth owns database and schema skills.
+- Hightower owns infrastructure, security, deployment, and MCP lifecycle skills.
+- Team Durham owns brand/design decisions; Woz implements approved outputs.
+- Unclassified skills route through Brooks until ownership is recorded.
+
+Every active skill must pass `bun run skills:validate`. A skill may not be
+active solely because an ignored directory or machine-local absolute symlink
+happens to exist.
+
+## Historical Triage Snapshot
+
+The table below records earlier keep/remove decisions. It is not a catalog or
+runtime authority; the validated canonical directory is authoritative.
 
 | Skill | Owner | Trigger | Required? | Overlaps With | Decision |
 |-------|-------|---------|-----------|---------------|----------|
@@ -53,7 +80,7 @@
 | allura-product-intake | Jobs | Governed PRD creation | ⬜ Overlay | allura-team-ram | **Keep** — Allura-governed product intake |
 | allura-retrospective | Brooks | Governed retrospective | ⬜ Overlay | allura-team-ram | **Keep** — Allura-governed retrospective |
 
-**Total: 44 skills** — 9 Required (core gates), 35 Overlay (project-specific)
+The historical count below is intentionally not used as a live total.
 
 **Deleted / archived:**
 - `systematic-debugging-memory` — archived to `.opencode/archive/skills-2026-05-07/`
@@ -78,4 +105,4 @@
 - Ralph-related: `ralph.md` is a command, not a skill. Ralph's execution is gated by the ContextScout + skill gate (R5).
 
 ---
-*Generated: 2026-05-07 | Part of Skill Triage Run*
+*Historical snapshot: 2026-05-07. Harness authority updated: 2026-10-13.*

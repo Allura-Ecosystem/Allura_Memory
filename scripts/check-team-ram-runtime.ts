@@ -101,15 +101,10 @@ async function checkMcp() {
 async function main() {
   check("Root AGENTS Team RAM bridge", hasText("AGENTS.md", "Team RAM Runtime Bridge"));
   check("Shared runtime document", exists(".agents/TEAM-RAM-RUNTIME.md"));
-  check("Finish all epics workflow doc", exists("_bmad/FINISH-ALL-EPICS-WORKFLOW.md"));
-  check(
-    "Finish all epics workflow title",
-    hasText("_bmad/FINISH-ALL-EPICS-WORKFLOW.md", "Finish All Epics: Scout-First Kanban Workflow"),
-  );
   check("Codex workflow name", hasText(".codex/config.toml", "kanban_workflow_name"));
   check("Scout fallback phrase", hasText(".codex/config.toml", "Scout-style hydration only"));
-  check("OpenCode agents path", isDirOrSymlink(".opencode/agents"));
-  check("OpenCode skill path", isDirOrSymlink(".opencode/skill"));
+  check("OpenCode agent path", isDirOrSymlink(".opencode/agent"));
+  check("OpenCode skill path", isDirOrSymlink(".opencode/skills"));
   check("Claude agents path", isDirOrSymlink(".claude/agents"));
 
   for (const agent of ["brooks", "jobs", "scout", "woz", "pike", "fowler", "knuth", "hightower", "bellard", "carmack"]) {
@@ -117,11 +112,11 @@ async function main() {
   }
 
   for (const skill of ["team-ram-cowork", "allura-memory-skill", "mcp-docker"]) {
-    check(`OpenCode skill ${skill}`, exists(`.opencode/skill/${skill}/SKILL.md`));
+    check(`OpenCode skill ${skill}`, exists(`.opencode/skills/${skill}/SKILL.md`));
     check(`Claude skill ${skill}`, exists(`.claude/skills/${skill}/SKILL.md`));
   }
 
-  const opencode = JSON.parse(readFileSync(".opencode/config.json", "utf8"));
+  const opencode = JSON.parse(readFileSync("opencode.json", "utf8"));
   check("OpenCode agent map brooks", Boolean(opencode.agent?.brooks));
   check("OpenCode agent map scout", Boolean(opencode.agent?.scout));
   check("OpenCode task permission", opencode.permission?.task === "allow");

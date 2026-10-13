@@ -1,7 +1,12 @@
 ---
 name: party-mode
-description: "Launch multiple Team RAM specialists in parallel. Brooks orchestrates; the team executes."
-allowed-tools: ["Task", "Read", "Grep", "Bash", "mcp__MCP_DOCKER__*"]
+description: Launch multiple Team RAM specialists in parallel. Brooks orchestrates; the team executes.
+allowed-tools:
+  - Task
+  - Read
+  - Grep
+  - Bash
+  - mcp__MCP_DOCKER__*
 ---
 
 # Party Mode — Team RAM Parallel Dispatch
