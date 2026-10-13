@@ -446,7 +446,7 @@ allura-brain_memory_add({
 
 ## Documentation Standards
 
-Follow `guidelines/AI-GUIDELINES.md` for all documentation:
+Follow `.opencode/rules/AI-GUIDELINES.md` for all documentation:
 
 - Blueprint must exist before design work
 - Data Dictionary and Requirements Matrix update in the same PR as schema changes

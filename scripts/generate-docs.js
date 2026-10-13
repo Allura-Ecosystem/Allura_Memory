@@ -7,7 +7,7 @@
  *   node scripts/generate-docs.js [options]
  * 
  * Options:
- *   --output=DIR    Output directory (default: docs/api)
+ *   --output=DIR    Output directory (default: docs/archive/allura/generated/api)
  *   --format=TYPE   Output format: markdown, html (default: markdown)
  */
 
@@ -17,7 +17,7 @@ const path = require("path");
 // Configuration
 const config = {
   srcDir: path.join(__dirname, "..", "src", "lib"),
-  outputDir: path.join(__dirname, "..", "docs", "api"),
+  outputDir: path.join(__dirname, "..", "docs", "archive", "allura", "generated", "api"),
   format: "markdown",
 };
 

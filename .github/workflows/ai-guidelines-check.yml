@@ -21,6 +21,10 @@ jobs:
         run: bash .github/scripts/docs-allura-canonical-guard.sh
         shell: bash
 
+      - name: Check sole documentation authority
+        run: bash .github/scripts/documentation-authority-guard.sh
+        shell: bash
+
       - name: Check runtime adapter surfaces
         run: bash .github/scripts/runtime-adapter-surface-guard.sh
         shell: bash
@@ -93,7 +97,7 @@ jobs:
           fi
           
           # Check for proper deferral to source of truth
-          if ! grep -q "defer to code" AI-GUIDELINES.md 2>/dev/null; then
+          if ! grep -q "source of truth" .opencode/rules/AI-GUIDELINES.md 2>/dev/null; then
             echo "⚠️  AI-GUIDELINES.md missing 'defer to code' language"
           fi
           

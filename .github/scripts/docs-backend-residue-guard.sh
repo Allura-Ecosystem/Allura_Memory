@@ -17,8 +17,8 @@
 #   - AD-49 / AD-50 / RK-32 refs : decision identifiers, not active claims
 #   - "Neo4j sunset" / "sunset"  : statements that the backend was removed
 #
-# The guard scans ACTIVE docs (docs/allura, docs/enterprise, docs/portfolio,
-# README.md) and runtime description surfaces (.opencode, .claude, .agents)
+# The guard scans ACTIVE docs (`docs/allura/` and README.md) and runtime
+# description surfaces (.opencode, .claude, .agents)
 # for Neo4j identifiers used as CURRENT state. It allows only:
 #   - explicit sunset/removal statements
 #   - historical/decision-log context
@@ -32,8 +32,6 @@ STATUS=0
 # architecture. Historical records live under docs/archive/** and are excluded.
 ACTIVE_DOCS=(
   "$ROOT/docs/allura"
-  "$ROOT/docs/enterprise"
-  "$ROOT/docs/portfolio"
   "$ROOT/README.md"
 )
 # Runtime description surfaces — scanned for residue in markdown/config only.

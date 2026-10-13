@@ -1,18 +1,25 @@
 
-# AI Guidelines: Repository Documentation Standards
+# AI Guidelines: Repository Documentation Authority
+
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has not yet been fully reviewed — this is a working governance reference.
+> When in doubt, defer to the source code, JSON schemas, explicit human decisions, and team consensus.
 
 > [!IMPORTANT]
-> This document provides guidelines for using AI assistance (e.g., GitHub Copilot) effectively within this repository. It captures the documentation patterns, required artifacts, and quality standards that every contributor — human or AI-assisted — must follow.
+> This file is the sole repository authority for documentation structure, AI-assisted documentation, and documentation governance. Every contributor — human or AI-assisted — must follow it. Copies, adapters, skills, and tool-specific rules may point here, but they may not redefine or override it.
 
 ---
 
 ## Table of Contents
 
+- [0. Authority and Scope](#0-authority-and-scope)
 - [1. Purpose](#1-purpose)
 - [2. Required Documentation Artifacts](#2-required-documentation-artifacts)
   - [Blueprint](#blueprint)
   - [Solution Architecture](#solution-architecture)
-  - [Design Documents (DESIGN-\*)](#design-documents-design-)
+  - [Design Document (DESIGN-ALLURA)](#design-document-design-allura)
   - [Requirements Traceability Matrix](#requirements-traceability-matrix)
   - [Risks & Decisions Matrix](#risks--decisions-matrix)
   - [Data Dictionary](#data-dictionary)
@@ -33,11 +40,23 @@
 
 ---
 
+## 0. Authority and Scope
+
+The canonical policy is this exact file:
+
+`/.opencode/rules/AI-GUIDELINES.md`
+
+Rules, agent prompts, skills, CI checks, templates, and compatibility files elsewhere in the repository are derived execution aids. If any derived aid conflicts with this file, this file wins and the conflicting aid must be corrected in the same work slice.
+
+The live architecture documentation set is closed. It contains exactly the six files named in the Canonical Surface Rule. Historical material is non-authoritative and belongs under `docs/archive/allura/`; temporary BMAD execution output belongs under `memory-bank/bmad-output/`; reusable templates remain under `guidelines/templates/`.
+
+---
+
 ## 1. Purpose
 
 This repository uses **structured documentation as a first-class engineering artifact**. Before writing code, operators and engineers are expected to define:
 
-- **What** the system does (Blog and Requirements)
+- **What** the system does (Blueprint and Requirements)
 - **Why** design decisions were made (Design docs)
 - **How** data is structured and named (Data Dictionary)
 - **Where** each requirement is satisfied (Requirements Matrix)
@@ -51,7 +70,7 @@ AI assistance (GitHub Copilot, LLMs, etc.) is encouraged for drafting these docu
 ### Blueprint
 
 **File:** `BLUEPRINT.md`  
-**Template:** [`guidelines/templates/BLUEPRINT.template.md`](templates/BLUEPRINT.template.md)
+**Template:** [`guidelines/templates/BLUEPRINT.template.md`](../../guidelines/templates/BLUEPRINT.template.md)
 
 The Blueprint is the **single source of design intent** for the service. It must exist before any Design-* documents are written. All other documents trace back to it.
 
@@ -80,7 +99,7 @@ A complete Blueprint must include:
 ### Solution Architecture
 
 **File:** `SOLUTION-ARCHITECTURE.md`  
-**Template:** [`guidelines/templates/SOLUTION-ARCHITECTURE.template.md`](templates/SOLUTION-ARCHITECTURE.template.md)
+**Template:** [`guidelines/templates/SOLUTION-ARCHITECTURE.template.md`](../../guidelines/templates/SOLUTION-ARCHITECTURE.template.md)
 
 The Solution Architecture document describes **how the system is structured from a topological perspective** — who calls what, how external actors interface with the service, how it avoids coupling to the runtime hot path, and how architectural decisions from `RISKS-AND-DECISIONS.md` shape interaction patterns. It complements the Blueprint's data-and-API view with a system-of-systems view.
 
@@ -94,16 +113,18 @@ A complete Solution Architecture document must include:
 | **Interface Catalogue** | Table of all integration points: direction, channel, payload, and references to governing AD/RK entries |
 | **Risk-Architecture Traceability** | Mapping of each topology section to the AD/RK entries in `RISKS-AND-DECISIONS.md` that it addresses |
 | **Key Architectural Constraints** | Cross-cutting `MUST`/`MUST NOT` constraints that apply to all integrations |
-| **References** | Links to Blueprint, RISKS-AND-DECISIONS.md, Requirements Matrix, and applicable DESIGN-*.md documents |
+| **References** | Links to Blueprint, RISKS-AND-DECISIONS.md, Requirements Matrix, and `DESIGN-ALLURA.md` |
 
 > **Why this matters for AI:** Without a topology document, AI will flatten all interactions into a single synchronous request model and miss async, caching, and federation patterns entirely. The topology sections give the AI the interaction boundaries it needs to generate correct integration code and avoid putting the service on the hot path.
 
 ---
 
-**Files:** `DESIGN-<AREA>.md` (e.g., `DESIGN-SERVICE.md`, `DESIGN-EXECUTE.md`)  
-**Template:** [`guidelines/templates/DESIGN.template.md`](templates/DESIGN.template.md)
+### Design Document (DESIGN-ALLURA)
 
-Each Design document **deep-dives on one functional area**. It translates Blueprint requirements into precise API contracts, state machines, validation rules, and operational constraints.
+**File:** `DESIGN-ALLURA.md`
+**Template:** [`guidelines/templates/DESIGN.template.md`](../../guidelines/templates/DESIGN.template.md)
+
+The Design document **deep-dives on the Allura product surface**. It translates Blueprint requirements into precise API contracts, state machines, validation rules, and operational constraints. Additional `DESIGN-<AREA>.md` files are not allowed on the live canonical surface; fold approved design changes into `DESIGN-ALLURA.md`.
 
 A complete Design document must include:
 
@@ -117,7 +138,7 @@ A complete Design document must include:
 | **Use Cases** | Label-indexed scenarios that verify the design covers intended workflows |
 | **Important Constraints** | Hard limits, security considerations, performance notes |
 
-Each Design document must link back to the Blueprint section it satisfies and forward-link to related Design documents.
+The Design document must link back to every Blueprint section it satisfies and forward-link to the other canonical documents.
 
 > **Why this matters for AI:** Without design docs, AI will invent semantics. Explicit state machines and constraint tables give the AI exact boundaries and prevent it from generating plausible-but-wrong behavior (e.g., wrong HTTP status codes, missing lock releases, incorrect retry logic).
 
@@ -126,7 +147,7 @@ Each Design document must link back to the Blueprint section it satisfies and fo
 ### Requirements Traceability Matrix
 
 **File:** `REQUIREMENTS-MATRIX.md`  
-**Template:** [`guidelines/templates/REQUIREMENTS-MATRIX.template.md`](templates/REQUIREMENTS-MATRIX.template.md)
+**Template:** [`guidelines/templates/REQUIREMENTS-MATRIX.template.md`](../../guidelines/templates/REQUIREMENTS-MATRIX.template.md)
 
 The Requirements Matrix is the **coverage map** for the entire project. It traces every Business Requirement through Functional Requirements to Use Cases, API endpoints, and Design documents.
 
@@ -135,7 +156,7 @@ A complete Requirements Matrix must include:
 | Section | Purpose |
 |---------|---------|
 | **B → F mapping table** | Each Business Requirement row links to its Functional Requirement IDs and Use Case labels |
-| **Functional Requirements Detail** | Grouped `| ID \| Requirement \| Satisfied by |` tables (3-column). The **Satisfied by** column combines the API routes that implement the requirement with links to the `DESIGN-*.md` section (and `RISKS-AND-DECISIONS.md` entry, if applicable) that specifies it. Use `·` as a separator between multiple routes or document links within the same cell. |
+| **Functional Requirements Detail** | Grouped `| ID \| Requirement \| Satisfied by |` tables (3-column). The **Satisfied by** column combines the API routes that implement the requirement with links to the `DESIGN-ALLURA.md` section (and `RISKS-AND-DECISIONS.md` entry, if applicable) that specifies it. Use `·` as a separator between multiple routes or document links within the same cell. |
 | **Use Case Index** | All use cases grouped by domain area with ID labels (e.g., `SVC-UC1`) |
 
 Rules:
@@ -151,7 +172,7 @@ Rules:
 ### Risks & Decisions Matrix
 
 **File:** `RISKS-AND-DECISIONS.md`  
-**Template:** [`guidelines/templates/RISKS-AND-DECISIONS.template.md`](templates/RISKS-AND-DECISIONS.template.md)
+**Template:** [`guidelines/templates/RISKS-AND-DECISIONS.template.md`](../../guidelines/templates/RISKS-AND-DECISIONS.template.md)
 
 The Risks & Decisions Matrix captures **every significant architectural decision and known risk** in the system. It answers *why* the design is the way it is, what alternatives were evaluated, what operators must watch out for, and who owns each mitigation.
 
@@ -175,7 +196,7 @@ Rules:
 ### Data Dictionary
 
 **File:** `DATA-DICTIONARY.md`  
-**Template:** [`guidelines/templates/DATA-DICTIONARY.template.md`](templates/DATA-DICTIONARY.template.md)
+**Template:** [`guidelines/templates/DATA-DICTIONARY.template.md`](../../guidelines/templates/DATA-DICTIONARY.template.md)
 
 The Data Dictionary is the **canonical field-level reference** for every entity, table, and event in the system. It is the source of truth for naming — no field name, enum value, or relationship should appear in code or schema before it appears here.
 
@@ -259,11 +280,11 @@ Required links per document type:
 
 | Document | Must link to |
 |----------|--------------|
-| Blueprint | All DESIGN-*.md files, `SOLUTION-ARCHITECTURE.md`, `RISKS-AND-DECISIONS.md`, all JSON schemas |
-| SOLUTION-ARCHITECTURE.md | `BLUEPRINT.md`, `RISKS-AND-DECISIONS.md`, `REQUIREMENTS-MATRIX.md`, applicable DESIGN-*.md |
-| DESIGN-*.md | `BLUEPRINT.md` (requirement IDs), related DESIGN-*.md, JSON schemas |
-| REQUIREMENTS-MATRIX.md | `BLUEPRINT.md`, all DESIGN-*.md files, `RISKS-AND-DECISIONS.md` (for F# entries that reference AD/RK entries) |
-| RISKS-AND-DECISIONS.md | `BLUEPRINT.md`, applicable DESIGN-*.md, `REQUIREMENTS-MATRIX.md` |
+| Blueprint | `DESIGN-ALLURA.md`, `SOLUTION-ARCHITECTURE.md`, `RISKS-AND-DECISIONS.md`, all JSON schemas |
+| SOLUTION-ARCHITECTURE.md | `BLUEPRINT.md`, `RISKS-AND-DECISIONS.md`, `REQUIREMENTS-MATRIX.md`, `DESIGN-ALLURA.md` |
+| DESIGN-ALLURA.md | `BLUEPRINT.md` (requirement IDs), the other canonical documents, JSON schemas |
+| REQUIREMENTS-MATRIX.md | `BLUEPRINT.md`, `DESIGN-ALLURA.md`, `RISKS-AND-DECISIONS.md` (for F# entries that reference AD/RK entries) |
+| RISKS-AND-DECISIONS.md | `BLUEPRINT.md`, `DESIGN-ALLURA.md`, `REQUIREMENTS-MATRIX.md` |
 | DATA-DICTIONARY.md | All JSON schema files |
 
 ---
@@ -295,7 +316,7 @@ Before merging a documentation PR, verify:
 | Data flow / execution flow | Blueprint | Whenever the system processes multi-step operations |
 | Sequence diagram | Blueprint or Design doc | Whenever async or multi-party interaction exists |
 | ER diagram | Blueprint | Whenever there are two or more related entities |
-| State machine diagram | DESIGN-*.md | Whenever an entity has state transitions |
+| State machine diagram | DESIGN-ALLURA.md | Whenever an entity has state transitions |
 | Event flow diagram | Blueprint | Whenever event-driven architecture is used |
 
 ### Diagram Types & Tools
@@ -330,28 +351,28 @@ erDiagram
 |---|---|---|
 | Blueprint | `BLUEPRINT.md` | `docs/allura/` |
 | Solution Architecture | `SOLUTION-ARCHITECTURE.md` | `docs/allura/` |
-| Design document | `DESIGN-<AREA>.md` (uppercase, hyphenated) | `docs/allura/` |
+| Design document | `DESIGN-ALLURA.md` | `docs/allura/` |
 | Requirements Matrix | `REQUIREMENTS-MATRIX.md` | `docs/allura/` |
 | Risks & Decisions Matrix | `RISKS-AND-DECISIONS.md` | `docs/allura/` |
 | Data Dictionary | `DATA-DICTIONARY.md` | `docs/allura/` |
 | JSON Schema | `<entity>.schema.json` (lowercase, hyphenated) | `json-schema/` |
-| AI Guidelines | `guidelines/AI-GUIDELINES.md` | `guidelines/` |
+| AI Guidelines | `AI-GUIDELINES.md` | `.opencode/rules/` |
 | Document templates | `guidelines/templates/*.template.md` | `guidelines/templates/` |
 
 ---
 
 ## Canonical Surface Rule
 
-No new file may be added to `docs/allura/` unless it is one of the six canonical document types listed above:
+`docs/allura/` must contain exactly these six files and no directories:
 
 - `BLUEPRINT.md`
 - `SOLUTION-ARCHITECTURE.md`
-- `DESIGN-ALLURA.md` (or another approved `DESIGN-<AREA>.md` canonical design doc)
+- `DESIGN-ALLURA.md`
 - `REQUIREMENTS-MATRIX.md`
 - `RISKS-AND-DECISIONS.md`
 - `DATA-DICTIONARY.md`
 
-All other output — reports, deliverables, ADR standalones, validation snapshots, benchmarks, prompts — goes to `docs/archive/allura/`, `memory-bank`, or Allura Brain.
+No `index.md`, extra `DESIGN-*` file, README, story, plan, report, image, or nested directory is permitted there. All other output — reports, deliverables, ADR standalones, validation snapshots, benchmarks, prompts, and retired documentation — goes to `docs/archive/allura/`, `memory-bank`, or Allura Brain.
 
 This rule applies to human contributors and AI agents equally. `docs/allura/` is the only live architecture surface.
 
@@ -359,16 +380,16 @@ This rule applies to human contributors and AI agents equally. `docs/allura/` is
 
 ## 7. Templates
 
-Ready-to-use document templates are provided in [`guidelines/templates/`](templates/):
+Ready-to-use document templates are provided in [`guidelines/templates/`](../../guidelines/templates/):
 
 | Template | Description |
 |---|---|
-| [`BLUEPRINT.template.md`](templates/BLUEPRINT.template.md) | Full Blueprint scaffold with all required sections |
-| [`SOLUTION-ARCHITECTURE.template.md`](templates/SOLUTION-ARCHITECTURE.template.md) | Solution Architecture scaffold with topology, interface catalogue, and risk traceability sections |
-| [`DESIGN.template.md`](templates/DESIGN.template.md) | Design document scaffold for any functional area |
-| [`REQUIREMENTS-MATRIX.template.md`](templates/REQUIREMENTS-MATRIX.template.md) | Requirements traceability matrix scaffold with 3-column Satisfied by format |
-| [`RISKS-AND-DECISIONS.template.md`](templates/RISKS-AND-DECISIONS.template.md) | Architectural decisions and risk register scaffold with summary table and Status fields |
-| [`DATA-DICTIONARY.template.md`](templates/DATA-DICTIONARY.template.md) | Data dictionary scaffold with entity and event sections |
+| [`BLUEPRINT.template.md`](../../guidelines/templates/BLUEPRINT.template.md) | Full Blueprint scaffold with all required sections |
+| [`SOLUTION-ARCHITECTURE.template.md`](../../guidelines/templates/SOLUTION-ARCHITECTURE.template.md) | Solution Architecture scaffold with topology, interface catalogue, and risk traceability sections |
+| [`DESIGN.template.md`](../../guidelines/templates/DESIGN.template.md) | Design document scaffold for `DESIGN-ALLURA.md` |
+| [`REQUIREMENTS-MATRIX.template.md`](../../guidelines/templates/REQUIREMENTS-MATRIX.template.md) | Requirements traceability matrix scaffold with 3-column Satisfied by format |
+| [`RISKS-AND-DECISIONS.template.md`](../../guidelines/templates/RISKS-AND-DECISIONS.template.md) | Architectural decisions and risk register scaffold with summary table and Status fields |
+| [`DATA-DICTIONARY.template.md`](../../guidelines/templates/DATA-DICTIONARY.template.md) | Data dictionary scaffold with entity and event sections |
 
 To start a new document, copy the relevant template and replace all `<!-- placeholders -->` and `[AREA]` tokens with project-specific content.
 
@@ -377,6 +398,8 @@ To start a new document, copy the relevant template and replace all `<!-- placeh
 ## 8. Review & Maintenance
 
 - Documentation PRs require at least one reviewer outside of the original author.
+- Any new documentation policy, skill, or agent instruction must point to this file and must not duplicate its normative rules.
+- CI must reject a missing canonical file, an extra live file, or a second normative AI-guidelines document.
 - Requirements Matrix and Data Dictionary must be updated in the **same PR** as any schema or API change.
 - The Blueprint is the most stable document — changes to it require a separate, focused PR with explicit rationale.
 - AI-disclosure notices are only removed after a full human review sign-off noted in the PR description.

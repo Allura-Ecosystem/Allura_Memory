@@ -13,7 +13,7 @@
  * (GitHub Security Advisories / OSV.dev / npm audit) -- that is a separately
  * scoped follow-up (network fetch of untrusted third-party data is its own
  * security surface, per the approved record in
- * docs/governance/2026-08-27-story-26-4-security-owner-approval.md).
+ * docs/archive/allura/legacy-docs/governance/2026-08-27-story-26-4-security-owner-approval.md).
  *
  * AUTHORITY (AD-57): this module only ever creates alerts and simulated,
  * non-persisted mitigation drafts. It has no code path to activate policy,

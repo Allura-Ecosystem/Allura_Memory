@@ -82,7 +82,7 @@ export function auditEpic30Checklist(checklist: Epic30CompletionChecklist, root:
       }
     }
     const artifactPrefix = `${story.id.replace(".", "-")}-`
-    const artifactDirectory = path.resolve(root, "_bmad_output/implementation-artifacts")
+    const artifactDirectory = path.resolve(root, "memory-bank/bmad-output/implementation-artifacts")
     const storyArtifacts = existsSync(artifactDirectory)
       ? readdirSync(artifactDirectory).filter((name) => name.startsWith(artifactPrefix) && name.endsWith(".md"))
       : []
@@ -109,7 +109,7 @@ export function auditEpic30Checklist(checklist: Epic30CompletionChecklist, root:
 }
 
 export function loadEpic30Checklist(root = process.cwd()): Epic30CompletionChecklist {
-  const checklistPath = path.resolve(root, "_bmad_output/planning-artifacts/epic-30-completion-checklist.json")
+  const checklistPath = path.resolve(root, "memory-bank/bmad-output/planning-artifacts/epic-30-completion-checklist.json")
   return JSON.parse(readFileSync(checklistPath, "utf8")) as Epic30CompletionChecklist
 }
 

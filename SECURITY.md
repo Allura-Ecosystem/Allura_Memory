@@ -23,4 +23,4 @@ unless a current audit proves them.
 ## Completion
 
 A fix is complete only after the relevant validation and release evidence are
-recorded (see [`docs/portfolio/evidence-index.md`](docs/portfolio/evidence-index.md)).
+recorded against [`json-schema/portfolio-evidence.schema.json`](json-schema/portfolio-evidence.schema.json).

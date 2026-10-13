@@ -9,7 +9,7 @@ handler enforces `workspace_id` end to end. This stub provides the tool registry
 and scope-gated exposure only.
 
 Status: **scaffold stub.** See
-[`docs/allura-hosted/DESIGN-MCP-GATEWAY.md`](../../docs/allura-hosted/DESIGN-MCP-GATEWAY.md).
+[`docs/allura/DESIGN-ALLURA.md`](../../docs/allura/DESIGN-ALLURA.md).
 
 ```bash
 bun test

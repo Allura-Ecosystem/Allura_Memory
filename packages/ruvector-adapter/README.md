@@ -25,4 +25,4 @@ bun test packages/ruvector-adapter
 
 See [`docs/RUVECTOR-ADAPTER.md`](./docs/RUVECTOR-ADAPTER.md),
 [`LICENSE.NOTICE.md`](./LICENSE.NOTICE.md), and AD-09 in
-[`docs/allura-hosted/RISKS-AND-DECISIONS.md`](../../docs/allura-hosted/RISKS-AND-DECISIONS.md).
+[`docs/allura/RISKS-AND-DECISIONS.md`](../../docs/allura/RISKS-AND-DECISIONS.md).

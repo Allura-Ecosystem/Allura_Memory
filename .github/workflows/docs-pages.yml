@@ -20,11 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate canonical surface
-        run: bash .github/scripts/docs-allura-canonical-guard.sh
+        run: |
+          bash .github/scripts/documentation-authority-guard.sh
+          bash .github/scripts/docs-allura-canonical-guard.sh
       - name: Copy canonical docs to site root
         run: |
           mkdir -p _site
-          cp docs/index.md _site/index.md
+          cp docs/allura/BLUEPRINT.md _site/index.md
           mkdir -p _site/allura
           cp docs/allura/*.md _site/allura/
       - uses: actions/configure-pages@v5

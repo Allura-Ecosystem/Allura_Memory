@@ -31,7 +31,7 @@
 ---
 
 <p align="center">
-  <a href="https://allura-governed-demo.vercel.app"><img src="docs/portfolio/allura-agentic-framework-harness/assets/dashboard-command-center.png" alt="Allura's deployed Command Center specimen: a review queue, evidence record, explicit human review gate, and receipt trail." width="860" /></a>
+  <a href="https://allura-governed-demo.vercel.app"><img src="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/assets/dashboard-command-center.png" alt="Allura's deployed Command Center specimen: a review queue, evidence record, explicit human review gate, and receipt trail." width="860" /></a>
 </p>
 
 ## Product walkthrough
@@ -48,9 +48,9 @@ Six branded visuals explain the framework, harness, governance, and evidence mod
 
 |  |  |
 | --- | --- |
-| <a href="docs/portfolio/allura-agentic-framework-harness/infographics/png/01-framework-harness-architecture.png"><img src="docs/portfolio/allura-agentic-framework-harness/infographics/png/01-framework-harness-architecture.png" alt="Three developer interfaces feed one governed execution path; the proof field identifies the shared controls." width="420" /></a><br/><sub><strong>Framework and harness architecture</strong></sub> | <a href="docs/portfolio/allura-agentic-framework-harness/infographics/png/02-deterministic-harness.png"><img src="docs/portfolio/allura-agentic-framework-harness/infographics/png/02-deterministic-harness.png" alt="Run the same scenario, inspect the same path, and compare the result." width="420" /></a><br/><sub><strong>Deterministic harness</strong></sub> |
-| <a href="docs/portfolio/allura-agentic-framework-harness/infographics/png/03-enterprise-governance.png"><img src="docs/portfolio/allura-agentic-framework-harness/infographics/png/03-enterprise-governance.png" alt="Controls belong in the execution path, where people can inspect them." width="420" /></a><br/><sub><strong>Enterprise governance</strong></sub> | <a href="docs/portfolio/allura-agentic-framework-harness/infographics/png/04-developer-interfaces.png"><img src="docs/portfolio/allura-agentic-framework-harness/infographics/png/04-developer-interfaces.png" alt="Different engineering workflows share the same governed core." width="420" /></a><br/><sub><strong>Developer interfaces</strong></sub> |
-| <a href="docs/portfolio/allura-agentic-framework-harness/infographics/png/05-governed-memory-lifecycle.png"><img src="docs/portfolio/allura-agentic-framework-harness/infographics/png/05-governed-memory-lifecycle.png" alt="Memory improves over time without erasing where it came from." width="420" /></a><br/><sub><strong>Governed memory lifecycle</strong></sub> | <a href="docs/portfolio/allura-agentic-framework-harness/infographics/png/06-evidence-to-release-chain.png"><img src="docs/portfolio/allura-agentic-framework-harness/infographics/png/06-evidence-to-release-chain.png" alt="A portfolio claim should lead a reviewer back to the proof." width="420" /></a><br/><sub><strong>Evidence to release chain</strong></sub> |
+| <a href="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/01-framework-harness-architecture.png"><img src="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/01-framework-harness-architecture.png" alt="Three developer interfaces feed one governed execution path; the proof field identifies the shared controls." width="420" /></a><br/><sub><strong>Framework and harness architecture</strong></sub> | <a href="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/02-deterministic-harness.png"><img src="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/02-deterministic-harness.png" alt="Run the same scenario, inspect the same path, and compare the result." width="420" /></a><br/><sub><strong>Deterministic harness</strong></sub> |
+| <a href="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/03-enterprise-governance.png"><img src="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/03-enterprise-governance.png" alt="Controls belong in the execution path, where people can inspect them." width="420" /></a><br/><sub><strong>Enterprise governance</strong></sub> | <a href="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/04-developer-interfaces.png"><img src="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/04-developer-interfaces.png" alt="Different engineering workflows share the same governed core." width="420" /></a><br/><sub><strong>Developer interfaces</strong></sub> |
+| <a href="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/05-governed-memory-lifecycle.png"><img src="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/05-governed-memory-lifecycle.png" alt="Memory improves over time without erasing where it came from." width="420" /></a><br/><sub><strong>Governed memory lifecycle</strong></sub> | <a href="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/06-evidence-to-release-chain.png"><img src="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/infographics/png/06-evidence-to-release-chain.png" alt="A portfolio claim should lead a reviewer back to the proof." width="420" /></a><br/><sub><strong>Evidence to release chain</strong></sub> |
 
 ## Why Allura Memory
 
@@ -103,7 +103,7 @@ Allura uses one PostgreSQL engine with two governed logical layers.
 8. Updates create a new version that supersedes the old one.
 
 <p align="center">
-  <a href="https://allura-governed-demo.vercel.app"><img src="docs/portfolio/allura-agentic-framework-harness/assets/dashboard-governance.png" alt="The deployed Governance specimen keeps scope, evidence, policy, and a human decision visibly separate." width="820" /></a>
+  <a href="https://allura-governed-demo.vercel.app"><img src="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/assets/dashboard-governance.png" alt="The deployed Governance specimen keeps scope, evidence, policy, and a human decision visibly separate." width="820" /></a>
 </p>
 
 Rejected or low-confidence content can remain useful evidence without becoming canonical knowledge.
@@ -146,7 +146,7 @@ PostgreSQL 16 + pgvector
 - **Third-party substrate is attributed.** The retrieval accelerator (RuVector, MIT) is credited and scoped in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); the governed memory layer is original. See [Attribution](#attribution).
 
 <p align="center">
-  <a href="https://allura-governed-demo.vercel.app"><img src="docs/portfolio/allura-agentic-framework-harness/assets/dashboard-framework-harness.png" alt="The deployed Framework and Harness specimen presents fail-closed boot, database-enforced policy, deterministic replay, and evaluation lanes." width="820" /></a>
+  <a href="https://allura-governed-demo.vercel.app"><img src="docs/archive/allura/legacy-docs/portfolio/allura-agentic-framework-harness/assets/dashboard-framework-harness.png" alt="The deployed Framework and Harness specimen presents fail-closed boot, database-enforced policy, deterministic replay, and evaluation lanes." width="820" /></a>
 </p>
 
 ### RuVector boundary
@@ -176,15 +176,15 @@ These conceptual visuals explain patterns implemented in the repository. They ar
 
 | | |
 | --- | --- |
-| ![Every action leaves evidence](docs/readme/evidence-explainers/01-every-action-leaves-evidence.png) | ![Context stays within its boundary](docs/readme/evidence-explainers/02-context-stays-within-boundary.png) |
+| ![Every action leaves evidence](docs/archive/allura/legacy-docs/readme/evidence-explainers/01-every-action-leaves-evidence.png) | ![Context stays within its boundary](docs/archive/allura/legacy-docs/readme/evidence-explainers/02-context-stays-within-boundary.png) |
 | Allura preserves episodic evidence before a reviewed promotion path can create canonical knowledge. | Every read and write carries a `group_id` so tenant context stays isolated within its approved boundary. |
 | *Source: Allura_Memory README and architecture documentation.* | *Source: Allura_Memory README and architecture documentation.* |
 | | |
-| ![Review is the boundary before knowledge](docs/readme/evidence-explainers/03-review-before-knowledge.png) | ![History stays connected](docs/readme/evidence-explainers/04-history-stays-connected.png) |
+| ![Review is the boundary before knowledge](docs/archive/allura/legacy-docs/readme/evidence-explainers/03-review-before-knowledge.png) | ![History stays connected](docs/archive/allura/legacy-docs/readme/evidence-explainers/04-history-stays-connected.png) |
 | Promotion through the curator requires governed review before episodic evidence becomes semantic knowledge. | Updates create a new version that supersedes the old one, so history stays connected through `SUPERSEDES` lineage. |
 | *Source: Allura_Memory README and architecture documentation.* | *Source: Allura_Memory README and architecture documentation.* |
 | | |
-| ![Repeat the work. Keep the evidence.](docs/readme/evidence-explainers/05-repeat-the-work-keep-evidence.png) | ![An answer can show its work](docs/readme/evidence-explainers/06-answer-can-show-its-work.png) |
+| ![Repeat the work. Keep the evidence.](docs/archive/allura/legacy-docs/readme/evidence-explainers/05-repeat-the-work-keep-evidence.png) | ![An answer can show its work](docs/archive/allura/legacy-docs/readme/evidence-explainers/06-answer-can-show-its-work.png) |
 | Evaluation runs are repeatable workflows whose results are retained as evidence alongside the decisions they inform. | Retrieved context carries its source reference, review decision, and lifecycle status so an answer can always show its work. |
 | *Source: Allura_Memory README and architecture documentation.* | *Source: Allura_Memory README and architecture documentation.* |
 
@@ -344,7 +344,7 @@ Fresh writes are episodic. They may be searchable for operational workflows, but
 | `audit_health_report` | Check database, semantic adapter, embedding, queue, and MCP health |
 | `audit_invariant_check` | Validate governance invariants against live data |
 
-See [`.github/API-REFERENCE.md`](.github/API-REFERENCE.md) and [`docs/reference/`](docs/reference/) for request and response contracts.
+See [`.github/API-REFERENCE.md`](.github/API-REFERENCE.md) and the canonical [`DATA-DICTIONARY.md`](docs/allura/DATA-DICTIONARY.md) for request and response contracts.
 
 ## Governance
 
@@ -394,7 +394,7 @@ bun run brain:status
 - E2E suites require live infrastructure and are gated by `RUN_E2E_TESTS=true`.
 - Health output is runtime evidence, not a substitute for functional tests.
 - A “done” claim should identify the command, result, and relevant artifact.
-- Required pull-request validation produces a commit-bound evidence manifest; see the [capability matrix](docs/portfolio/capability-matrix.md) and [evidence index](docs/portfolio/evidence-index.md).
+- Required pull-request validation produces a commit-bound evidence manifest checked against [`json-schema/portfolio-evidence.schema.json`](json-schema/portfolio-evidence.schema.json).
 
 ## Repository map
 
@@ -408,7 +408,7 @@ Allura_Memory/
 ├── docker/postgres-init/    schema and migration bootstrap
 ├── scripts/                 operations, validation, recovery, and setup
 ├── docs/allura/             canonical architecture documentation
-└── docs/reference/          API and terminology reference
+└── docs/archive/allura/     historical, non-authoritative material
 ```
 
 ## Documentation
@@ -421,8 +421,6 @@ Allura_Memory/
 | [`docs/allura/DATA-DICTIONARY.md`](docs/allura/DATA-DICTIONARY.md) | Tables, fields, and relationships |
 | [`docs/allura/REQUIREMENTS-MATRIX.md`](docs/allura/REQUIREMENTS-MATRIX.md) | Requirement-to-evidence traceability |
 | [`docs/allura/RISKS-AND-DECISIONS.md`](docs/allura/RISKS-AND-DECISIONS.md) | ADRs, risk posture, and superseded decisions |
-| [`docs/portfolio/capability-matrix.md`](docs/portfolio/capability-matrix.md) | Implemented/planned claims and their independent evidence state |
-| [`docs/portfolio/evidence-index.md`](docs/portfolio/evidence-index.md) | Commit-bound CI evidence and controlled failure proof |
 
 When documentation disagrees, use this authority order: current code and schema → accepted ADRs → canonical architecture docs → operational notes.
 

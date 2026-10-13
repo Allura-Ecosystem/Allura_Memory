@@ -117,7 +117,7 @@ Two governed layers over one PostgreSQL engine (no dual-database split):
   `53-*.sql`).
 - Evidence lanes — CI aggregates unit, build, live-PostgreSQL, benchmark,
   and evaluation artifacts into a schema-checked manifest
-  (`.github/workflows/epic-24-evidence.yml`, `docs/portfolio/evidence-schema.json`).
+  (`.github/workflows/epic-24-evidence.yml`, `json-schema/portfolio-evidence.schema.json`).
 
 ## Where to start reading
 
@@ -125,4 +125,4 @@ Two governed layers over one PostgreSQL engine (no dual-database split):
 2. `docs/allura/SOLUTION-ARCHITECTURE.md` — canonical architecture.
 3. `src/control-plane/syscalls.ts` — the enforcement boundary.
 4. `packages/sdk/src/client.ts` — the developer surface.
-5. `docs/portfolio/principal-engineer-case-study.md` — engineering case study.
+5. `.opencode/rules/AI-GUIDELINES.md` — documentation and AI-governance authority.

@@ -352,7 +352,7 @@ jobs:
           bun run ci:evidence aggregate \
             --input-dir=artifacts/download \
             --output="artifacts/ci/${GITHUB_SHA}/evidence/evidence-manifest.json" \
-            --schema=docs/portfolio/evidence-schema.json \
+            --schema=json-schema/portfolio-evidence.schema.json \
             --expected-lanes=static,unit,build,live-db,benchmark,eval
       - name: Upload aggregate evidence
         if: ${{ always() }}

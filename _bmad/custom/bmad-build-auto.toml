@@ -13,7 +13,7 @@ activation_steps_append = [
 persistent_facts = [
   "file:{project-root}/AGENTS.md",
   "file:{project-root}/.agents/TEAM-RAM-RUNTIME.md",
-  "file:{project-root}/guidelines/AI-GUIDELINES.md",
+  "file:{project-root}/.opencode/rules/AI-GUIDELINES.md",
   "Allura_Memory rule: raw BMad methods are workflow primitives. Team RAM and Allura govern their use. Keep Notion/human board state authoritative for priority; sprint-status.yaml is the Loop queue and reconciliation surface.",
   "Loop rule: this workflow is entered only by an explicit epic or story selector. Never advance to a different story. Never run a global backlog sweep in this repository."
 ]

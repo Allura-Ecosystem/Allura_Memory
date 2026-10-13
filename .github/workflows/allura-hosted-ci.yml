@@ -10,7 +10,7 @@ on:
   push:
     branches: ["**"]
     paths:
-      - "docs/allura-hosted/**"
+      - "docs/allura/**"
       - "packages/**"
       - "src/app/mcp/**"
       - "src/lib/guard/**"
@@ -19,7 +19,7 @@ on:
       - ".github/workflows/allura-hosted-ci.yml"
   pull_request:
     paths:
-      - "docs/allura-hosted/**"
+      - "docs/allura/**"
       - "packages/**"
       - "src/app/mcp/**"
       - "src/lib/guard/**"
@@ -228,12 +228,12 @@ jobs:
       - name: Governance invariants documented
         run: |
           set -u
-          DOCS=docs/allura-hosted
+          DOCS=docs/allura
           ok=true
-          for f in BLUEPRINT.md RISKS-AND-DECISIONS.md DESIGN-CURATOR.md DESIGN-AUDIT.md SECURITY.md; do
+          for f in BLUEPRINT.md RISKS-AND-DECISIONS.md DESIGN-ALLURA.md DATA-DICTIONARY.md SOLUTION-ARCHITECTURE.md; do
             if [ ! -f "$DOCS/$f" ]; then echo "::warning title=Governance Gate::missing $DOCS/$f"; ok=false; fi
           done
-          grep -q "append-only" "$DOCS/DESIGN-AUDIT.md" 2>/dev/null || echo "::warning::audit append-only rule not documented"
+          grep -q "append-only" "$DOCS/DESIGN-ALLURA.md" 2>/dev/null || echo "::warning::audit append-only rule not documented"
           grep -q "cannot approve" "$DOCS/RISKS-AND-DECISIONS.md" 2>/dev/null || echo "::warning::HITL self-approval rule not documented"
           $ok && echo "Governance Gate: core governance docs present."
 
@@ -245,10 +245,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Restore proof documented / scripted
         run: |
-          if [ -f docs/allura-hosted/BACKUP-RESTORE.md ]; then
-            echo "Restore procedure documented."
+          if grep -q "recover" scripts/brain-stack.sh 2>/dev/null; then
+            echo "Restore procedure scripted."
           else
-            echo "::warning title=Governance Gate::BACKUP-RESTORE.md missing"
+            echo "::warning title=Governance Gate::recovery command missing from scripts/brain-stack.sh"
           fi
 
   # ---------------------------------------------------------------------------

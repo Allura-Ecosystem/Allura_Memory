@@ -51,9 +51,9 @@ tsconfig.tsbuildinfo
 .opencode/mcp.json
 
 # Durable BMAD documents are tracked; other generated output is transient.
-_bmad_output/*
-!_bmad_output/planning-artifacts/
-!_bmad_output/implementation-artifacts/
+memory-bank/bmad-output/*
+!memory-bank/bmad-output/planning-artifacts/
+!memory-bank/bmad-output/implementation-artifacts/
 /workspaces/
 artifacts/
 .impeccable/

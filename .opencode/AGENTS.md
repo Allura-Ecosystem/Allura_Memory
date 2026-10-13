@@ -521,9 +521,9 @@ The semantic/knowledge-graph layer is backed by the `IGraphAdapter` seam (`src/l
 
 **Canonical six** in `docs/allura/`: BLUEPRINT, SOLUTION-ARCHITECTURE, DESIGN-ALLURA, REQUIREMENTS-MATRIX, RISKS-AND-DECISIONS, DATA-DICTIONARY. Do not create net-new files there.
 
-**Reference docs** in `docs/reference/`, `docs/user-guide/`, `docs/plugins/`.
+**Archived material** in `docs/archive/allura/` is historical and non-authoritative.
 
-**AI-GUIDELINES** in `guidelines/AI-GUIDELINES.md` — full documentation standards.
+**AI-GUIDELINES** in `.opencode/rules/AI-GUIDELINES.md` — full documentation standards.
 
 ## Port Allocation (AD-45)
 

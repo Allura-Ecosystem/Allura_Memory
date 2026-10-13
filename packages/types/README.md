@@ -8,7 +8,7 @@ context every governed operation carries (`group_id` + `workspace_id` + `actor_i
 + `request_id` + `scopes`), all server-injected by Allura Guard.
 
 Status: **scaffold stub** — types only, no runtime. See
-[`docs/allura-hosted/DATA-DICTIONARY.md`](../../docs/allura-hosted/DATA-DICTIONARY.md).
+[`docs/allura/DATA-DICTIONARY.md`](../../docs/allura/DATA-DICTIONARY.md).
 
 ```bash
 bun test        # type guards

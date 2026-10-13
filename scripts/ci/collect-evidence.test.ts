@@ -14,7 +14,7 @@ import {
   type EvidenceManifest,
   type LaneEvidence,
 } from "./collect-evidence"
-import schema from "../../docs/portfolio/evidence-schema.json"
+import schema from "../../json-schema/portfolio-evidence.schema.json"
 
 function manifest(): EvidenceManifest {
   return {

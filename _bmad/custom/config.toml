@@ -9,15 +9,15 @@
 # Keep durable planning and implementation artifacts under one tracked output
 # root. Other generated output remains ignored. Overrides survive reinstalls.
 [core]
-output_folder = "{project-root}/_bmad_output"
+output_folder = "{project-root}/memory-bank/bmad-output"
 
 [modules.bmm]
-planning_artifacts = "{project-root}/_bmad_output/planning-artifacts"
-implementation_artifacts = "{project-root}/_bmad_output/implementation-artifacts"
+planning_artifacts = "{project-root}/memory-bank/bmad-output/planning-artifacts"
+implementation_artifacts = "{project-root}/memory-bank/bmad-output/implementation-artifacts"
 project_knowledge = "{project-root}/docs"
 
 [modules.tea]
-test_artifacts = "{project-root}/_bmad_output/test-artifacts"
-test_design_output = "_bmad_output/test-artifacts/test-design"
-test_review_output = "_bmad_output/test-artifacts/test-reviews"
-trace_output = "_bmad_output/test-artifacts/traceability"
+test_artifacts = "{project-root}/memory-bank/bmad-output/test-artifacts"
+test_design_output = "memory-bank/bmad-output/test-artifacts/test-design"
+test_review_output = "memory-bank/bmad-output/test-artifacts/test-reviews"
+trace_output = "memory-bank/bmad-output/test-artifacts/traceability"

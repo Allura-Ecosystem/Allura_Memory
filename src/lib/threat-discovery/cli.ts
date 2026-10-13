@@ -7,7 +7,7 @@
  * src/lib/threat-ingestion) -> match + persist + generate simulated drafts
  * (Slice A, ./worker.ts). Run on a schedule via the systemd timer in
  * scripts/systemd/allura-threat-discovery.timer (security-owner-approved
- * cadence: every 6 hours, docs/governance/2026-08-27-story-26-4-security-owner-approval.md).
+ * cadence: every 6 hours, docs/archive/allura/legacy-docs/governance/2026-08-27-story-26-4-security-owner-approval.md).
  *
  * Scope resolution: unlike an HTTP request, a systemd-invoked process has
  * no bearer credential to authenticate. The trust boundary here is the

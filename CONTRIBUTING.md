@@ -37,8 +37,8 @@ Include:
 - E2E suites require live infrastructure and are gated by `RUN_E2E_TESTS=true`;
   say when you did not run them and why.
 
-Required pull-request validation produces a commit-bound evidence manifest;
-see [`docs/portfolio/evidence-index.md`](docs/portfolio/evidence-index.md).
+Required pull-request validation produces a commit-bound evidence manifest governed by
+[`json-schema/portfolio-evidence.schema.json`](json-schema/portfolio-evidence.schema.json).
 
 ## Reporting issues
 

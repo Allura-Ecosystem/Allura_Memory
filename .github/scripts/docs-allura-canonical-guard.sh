@@ -11,6 +11,15 @@ fi
 
 status=0
 
+REQUIRED_FILES=(
+  "BLUEPRINT.md"
+  "SOLUTION-ARCHITECTURE.md"
+  "DESIGN-ALLURA.md"
+  "REQUIREMENTS-MATRIX.md"
+  "RISKS-AND-DECISIONS.md"
+  "DATA-DICTIONARY.md"
+)
+
 is_allowed_file() {
   local rel="$1"
   case "$rel" in
@@ -19,13 +28,24 @@ is_allowed_file() {
     REQUIREMENTS-MATRIX.md) return 0 ;;
     RISKS-AND-DECISIONS.md) return 0 ;;
     DATA-DICTIONARY.md) return 0 ;;
-    DESIGN-*.md) return 0 ;;
-    index.md) return 0 ;;
+    DESIGN-ALLURA.md) return 0 ;;
     *) return 1 ;;
   esac
 }
 
 echo "docs-allura-canonical-guard: checking docs/allura canonical surface"
+
+while IFS= read -r entry; do
+  name="$(basename "$entry")"
+  case "$name" in
+    allura|archive) ;;
+    *)
+      echo "ERROR: unexpected live docs entry: docs/$name"
+      echo "       Keep only docs/allura/ and docs/archive/ at the docs root."
+      status=1
+      ;;
+  esac
+done < <(find "$ROOT/docs" -mindepth 1 -maxdepth 1 -print | sort)
 
 while IFS= read -r path; do
   rel="${path#"$DOCS_DIR/"}"
@@ -39,8 +59,8 @@ while IFS= read -r path; do
 
   if ! is_allowed_file "$rel"; then
     echo "ERROR: non-canonical docs/allura file: $rel"
-    echo "       Allowed: BLUEPRINT.md, SOLUTION-ARCHITECTURE.md, DESIGN-*.md, REQUIREMENTS-MATRIX.md, RISKS-AND-DECISIONS.md, DATA-DICTIONARY.md, index.md."
-    echo "       Move PRDs, epics, reports, gates, benchmarks, and runbooks to _bmad/ or docs/archive/allura/."
+    echo "       Allowed: BLUEPRINT.md, SOLUTION-ARCHITECTURE.md, DESIGN-ALLURA.md, REQUIREMENTS-MATRIX.md, RISKS-AND-DECISIONS.md, DATA-DICTIONARY.md."
+    echo "       Move PRDs, epics, reports, gates, benchmarks, and runbooks to memory-bank/bmad-output/ or docs/archive/allura/."
     status=1
   fi
 done < <(find "$DOCS_DIR" -mindepth 1 -type f | sort)
@@ -51,6 +71,19 @@ while IFS= read -r dir; do
   echo "       Canonical architecture docs must be direct files only."
   status=1
 done < <(find "$DOCS_DIR" -mindepth 1 -type d | sort)
+
+for required in "${REQUIRED_FILES[@]}"; do
+  if [[ ! -f "$DOCS_DIR/$required" ]]; then
+    echo "ERROR: missing required canonical document: $required"
+    status=1
+  fi
+done
+
+file_count="$(find "$DOCS_DIR" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"
+if [[ "$file_count" -ne "${#REQUIRED_FILES[@]}" ]]; then
+  echo "ERROR: docs/allura must contain exactly ${#REQUIRED_FILES[@]} files; found $file_count"
+  status=1
+fi
 
 if [[ "$status" -ne 0 ]]; then
   echo "docs-allura-canonical-guard: FAILED"

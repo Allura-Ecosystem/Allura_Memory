@@ -1,6 +1,6 @@
 [Unit]
 Description=Allura Threat Discovery Worker (polls approved advisory sources, matches inventory, creates alerts + simulated drafts)
-Documentation=https://github.com/Allura-Ecosystem/Allura_Memory/blob/main/docs/governance/2026-08-27-story-26-4-security-owner-approval.md
+Documentation=https://github.com/Allura-Ecosystem/Allura_Memory/blob/main/docs/archive/allura/legacy-docs/governance/2026-08-27-story-26-4-security-owner-approval.md
 After=network-online.target postgresql.service
 Wants=network-online.target
 

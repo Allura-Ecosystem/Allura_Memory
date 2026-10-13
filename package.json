@@ -48,6 +48,7 @@
     "benchmark:db": "bun scripts/benchmark.js --events=1000 --batch=100",
     "eval:portfolio": "bun src/lib/evals/cli.ts",
     "docs": "bun scripts/generate-docs.js",
+    "docs:validate": "bash .github/scripts/documentation-authority-guard.sh && bash .github/scripts/docs-allura-canonical-guard.sh && bash .github/scripts/docs-backend-residue-guard.sh",
     "lint": "bun run typecheck",
     "mcp": "bun src/mcp/memory-server-canonical.ts",
     "mcp:canonical": "bun src/mcp/memory-server-canonical.ts",

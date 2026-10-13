@@ -3,7 +3,7 @@
  *
  * Enumerates verified+fresh inventory package/version pairs for a tenant,
  * queries all three approved advisory sources (per the security-owner
- * approval record, docs/governance/2026-08-27-story-26-4-security-owner-approval.md),
+ * approval record, docs/archive/allura/legacy-docs/governance/2026-08-27-story-26-4-security-owner-approval.md),
  * and hands the merged ThreatAdvisory list to Slice A's runDiscoveryCycle
  * (src/lib/threat-discovery/worker.ts) unchanged -- this module produces
  * inputs for that worker; it does not duplicate its matching/persistence

@@ -12,6 +12,6 @@ substantial portions of such software retain their original license notices.
   `packages/ruvector-adapter`, plus architecture inspiration. RuVector accelerates
   vector search; Allura retains ownership of tenancy (`group_id`/`workspace_id`),
   HITL promotion, `SUPERSEDES` versioning, and audit (see
-  `docs/allura-hosted/RISKS-AND-DECISIONS.md` AD-09 and governed canon ADR-003).
+  [`docs/allura/RISKS-AND-DECISIONS.md`](docs/allura/RISKS-AND-DECISIONS.md)).
 - **Notes:** All copied or modified source files must retain the MIT license
   notice. Full license text: [`LICENSES/ruvector-MIT.txt`](./LICENSES/ruvector-MIT.txt).
