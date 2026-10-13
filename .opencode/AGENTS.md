@@ -163,6 +163,26 @@ Team RAM personas consume OAC context — they do not replace it.
 
 **Scout before build. Skills before Ralph. Validate before done.**
 
+## Goal Completion Policy (MANDATORY)
+
+When the user establishes an active goal and directs the team to continue until
+it is done, story completions, commits, review handoffs, and routine checkpoints
+are intermediate states rather than stopping points.
+
+- Continue with the next approved, safely actionable slice until the goal's
+  objective and acceptance evidence are genuinely complete.
+- Do not stop merely to ask whether to continue when the next action is already
+  within the approved scope.
+- Pause only when progress requires new authority, a destructive or high-risk
+  decision, unavailable credentials or external state, or a genuine blocker
+  after safe alternatives have been exhausted.
+- A continue-until-done directive never expands scope or grants permission to
+  push, merge, deploy, bypass governance, or perform destructive actions.
+- When a pause is mandatory, preserve the working state and report the exact
+  blocker, evidence, and smallest unblock action.
+- Mark the goal complete only when no required work remains and its acceptance
+  conditions are evidenced.
+
 ## Allura Skill Routing
 
 For Allura Memory repo work, use the `allura-*` skills — they enforce governance gates (Scout hydration, doc impact check, Team RAM owner, Brain outcome log).
