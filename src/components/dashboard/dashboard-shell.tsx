@@ -2,6 +2,8 @@ import Link from "next/link"
 
 import type { AuthUser } from "@/lib/auth/types"
 
+import styles from "./dashboard-shell.module.css"
+
 /**
  * Thin server-owned dashboard shell shared by the six canonical live surfaces.
  *
@@ -23,28 +25,31 @@ export const DASHBOARD_ROUTES = [
 export function DashboardShell({
   user,
   title,
+  wide = false,
   children,
 }: {
   user: AuthUser
   title: string
+  wide?: boolean
   children: React.ReactNode
 }): React.ReactElement {
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div data-dashboard-shell className={`${styles.shell}${wide ? ` ${styles.shellWide}` : ""}`}>
       <aside
+        data-dashboard-navigation
+        className={`${styles.navigation}${wide ? ` ${styles.navigationWide}` : ""}`}
         aria-label="Dashboard navigation"
-        style={{ width: 220, borderRight: "1px solid #e5e7eb", padding: 16, flexShrink: 0 }}
       >
-        <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", margin: "0 0 8px" }}>
+        <p className={styles.brand}>
           Allura Memory
         </p>
         <nav aria-label="Primary navigation">
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          <ul className={styles.navigationList}>
             {DASHBOARD_ROUTES.map((route) => (
-              <li key={route.href} style={{ marginBottom: 4 }}>
+              <li key={route.href} className={styles.navigationItem}>
                 <Link
                   href={route.href}
-                  style={{ display: "block", padding: "6px 8px", borderRadius: 6, color: "#111827", textDecoration: "none", fontSize: 14 }}
+                  className={styles.navigationLink}
                 >
                   {route.label}
                 </Link>
@@ -52,17 +57,17 @@ export function DashboardShell({
             ))}
           </ul>
         </nav>
-        <dl style={{ marginTop: 24, fontSize: 12, color: "#6b7280" }}>
-          <dt style={{ fontWeight: 600 }}>Tenant</dt>
-          <dd style={{ margin: "0 0 8px" }}>{user.groupId}</dd>
-          <dt style={{ fontWeight: 600 }}>Workspace</dt>
-          <dd style={{ margin: "0 0 8px" }}>{user.workspaceId}</dd>
-          <dt style={{ fontWeight: 600 }}>Role</dt>
-          <dd style={{ margin: 0 }}>{user.role}</dd>
+        <dl className={styles.scope}>
+          <dt>Tenant</dt>
+          <dd>{user.groupId}</dd>
+          <dt>Workspace</dt>
+          <dd>{user.workspaceId}</dd>
+          <dt>Role</dt>
+          <dd>{user.role}</dd>
         </dl>
       </aside>
-      <main style={{ flex: 1, padding: 32, maxWidth: 960 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 16px" }}>{title}</h1>
+      <main data-dashboard-content className={`${styles.content}${wide ? ` ${styles.contentWide}` : ""}`}>
+        <h1 className={styles.title}>{title}</h1>
         {children}
       </main>
     </div>

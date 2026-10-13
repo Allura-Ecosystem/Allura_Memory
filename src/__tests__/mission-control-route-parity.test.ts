@@ -1,9 +1,9 @@
+import { renderToStaticMarkup } from "react-dom/server"
+import { afterEach, describe, expect, it, vi } from "vitest"
+
 import { existsSync } from "node:fs"
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
-
-import { renderToStaticMarkup } from "react-dom/server"
-import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { LIVE_SURFACE_BY_ROUTE } from "@/components/allura/route-contract-surface"
 
@@ -129,6 +129,8 @@ describe("dashboard page rendering", () => {
       if (route === "/dashboard/curator") {
         expect(markup).toContain('data-shell-state="degraded"')
         expect(markup).toContain("Bumblebee is currently unavailable.")
+      } else if (route === "/dashboard/graph") {
+        expect(markup).toContain('data-graph-state="loading"')
       } else {
         expect(markup, `${route} should render a truthful surface state`).toMatch(/data-surface-state="(live|empty|degraded|error)"/)
       }

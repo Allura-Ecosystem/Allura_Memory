@@ -47,6 +47,10 @@ EXCLUDE_PATTERNS=(
   "src/styles/agency-dashboard.css"
   "src/app/globals.css"
   "src/lib/preferences/theme.ts"
+  # Frozen Epic 30 workspace and pre-token shared shell/state surfaces. They
+  # remain baseline debt; new graph work must not edit or copy their literals.
+  "src/components/dashboard/my-work-workspace.module.css"
+  "src/components/dashboard/surface-state.tsx"
 )
 
 is_excluded() {
@@ -171,13 +175,63 @@ scan_deprecated_tokens() {
   return $deprecated_count
 }
 
+scan_knowledge_map_imports() {
+  log_section "3. Scanning Knowledge Map authority-boundary imports"
+
+  local knowledge_map_dir="$SRC_DIR/components/dashboard/knowledge-map"
+  local browser_client="$SRC_DIR/lib/subgraph/browser-client.ts"
+  local forbidden_count=0
+  local violations_file
+  local scan_output
+  local scan_status
+  local forbidden_pattern
+  local scan_targets=()
+  violations_file=$(mktemp)
+  forbidden_pattern="(?:from\\s+|import\\s*(?:\\(\\s*)?|require\\s*\\(\\s*)[\"'](?:neo4j-driver|pg)(?:/[^\"']*)?[\"']|(?:from\\s+|import\\s*(?:\\(\\s*)?|require\\s*\\(\\s*)[\"'](?:@/|\\.\\.?/)+(?:lib/)?(?:graph-adapter|neo4j|postgres|db)(?:/[^\"']*)?[\"']"
+
+  [[ -d "$knowledge_map_dir" ]] && scan_targets+=("$knowledge_map_dir")
+  [[ -f "$browser_client" ]] && scan_targets+=("$browser_client")
+
+  if [[ ${#scan_targets[@]} -gt 0 ]]; then
+    scan_output=$(rg -n -P --glob '*.ts' --glob '*.tsx' "$forbidden_pattern" "${scan_targets[@]}" 2>&1)
+    scan_status=$?
+    if [[ $scan_status -gt 1 ]]; then
+      log_fail "Knowledge Map authority scanner failed to complete"
+      echo -e "    ${RED}${scan_output}${RESET}"
+      rm -f "$violations_file"
+      return 1
+    fi
+
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      echo "${line#$PROJECT_ROOT/}" >> "$violations_file"
+      ((forbidden_count++))
+    done <<< "$scan_output"
+  fi
+
+  if [[ $forbidden_count -gt 0 ]]; then
+    log_fail "Found $forbidden_count forbidden storage or legacy graph imports in Knowledge Map"
+    sort -u "$violations_file" | while IFS= read -r violation; do
+      echo -e "    ${RED}${violation}${RESET}"
+    done
+  else
+    log_pass "Knowledge Map imports no storage drivers or legacy graph adapters"
+  fi
+
+  rm -f "$violations_file"
+  return $forbidden_count
+}
+
 scan_hex_colors
 HEX_EXIT=$?
 
 scan_deprecated_tokens
 DEPRECATED_EXIT=$?
 
-log_section "3. Compliance Summary"
+scan_knowledge_map_imports
+IMPORT_EXIT=$?
+
+log_section "4. Compliance Summary"
 
 total=$((pass_count + fail_count + warn_count))
 echo -e "  Checks run: ${BOLD}$total${RESET}"

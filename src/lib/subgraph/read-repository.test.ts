@@ -95,6 +95,38 @@ describe("FocusedSubgraphReadRepository", () => {
     expect(withLineage.inspection?.lineage).toEqual([{ newerNodeKey: "memory:a", supersededNodeKey: "memory:old", relationshipKey: "edge:graph_supersedes:ac" }])
   })
 
+  it("includes admitted neighborhood lineage in inspection relationship keys", async () => {
+    const edges = [
+      edge("ab", "a", "b", "RELATES_TO", {
+        fromKind: "memory", toKind: "memory", depth: 1, fromDistance: 0, toDistance: 1,
+      }),
+      edge("b-old", "b", "old", "SUPERSEDES", {
+        fromKind: "memory", toKind: "memory", sourceTable: "graph_supersedes",
+        depth: 2, fromDistance: 1, toDistance: 2,
+      }),
+    ]
+    const nodes = [
+      node("memory", "a"),
+      node("memory", "b", "Memory", { version: 2 }),
+      node("memory", "old", "Memory", { deprecated: true }),
+    ]
+
+    const page = await new FocusedSubgraphReadRepository(client({ edges, nodes })).read(
+      scope,
+      normalizeSubgraphQuery({ kind: "focus", focusNodeKey: "memory:a", depth: 2, includeLineage: true }),
+    )
+
+    expect(page.inspection?.relationshipKeys).toEqual([
+      "edge:graph_structural_edges:ab",
+      "edge:graph_supersedes:b-old",
+    ])
+    expect(page.inspection?.lineage).toEqual([{
+      newerNodeKey: "memory:b",
+      supersededNodeKey: "memory:old",
+      relationshipKey: "edge:graph_supersedes:b-old",
+    }])
+  })
+
   it("applies overview root keysets beyond the response limit", async () => {
     const roots = Array.from({ length: 250 }, (_, index) => root("structural", `root-${String(index).padStart(3, "0")}`))
     const nodes = roots.map((item) => node("structural", item.record_id))

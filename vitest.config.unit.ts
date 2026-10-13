@@ -149,6 +149,8 @@ export default defineConfig({
       "src/lib/subgraph/**/*.test.ts",
       "src/app/dashboard/__tests__/page.test.tsx",
       "src/components/dashboard/__tests__/my-work-workspace.test.tsx",
+      "src/components/dashboard/knowledge-map/**/*.test.ts",
+      "src/components/dashboard/knowledge-map/**/*.test.tsx",
       // Curator workers
       "src/curator/embedding-backfill-worker.test.ts",
       "src/curator/notion-sync.test.ts",
@@ -252,6 +254,7 @@ export default defineConfig({
       ["src/__tests__/inspector-views.test.tsx", "jsdom"],
       ["src/__tests__/bumblebee-surfaces.test.tsx", "jsdom"],
       ["src/__tests__/curator-dashboard.test.tsx", "jsdom"],
+      ["src/components/dashboard/knowledge-map/**/*.test.tsx", "jsdom"],
     ],
   },
   resolve: {

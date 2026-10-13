@@ -413,14 +413,19 @@ export class FocusedSubgraphReadRepository {
     }
 
     const focus = query.kind === "focus" ? loaded.get(query.focusNodeKey) : undefined
-    const focusedRelationships = query.kind === "focus"
-      ? edges.filter((edge) => edge.sourceNodeKey === query.focusNodeKey || edge.targetNodeKey === query.focusNodeKey)
-        .map((edge) => edge.key).sort(compareCodepoints) : []
     const lineage = query.kind === "focus" && query.includeLineage
       ? edges.filter((edge) => edge.kind.name === "SUPERSEDES")
         .map((edge) => ({ newerNodeKey: edge.sourceNodeKey,supersededNodeKey: edge.targetNodeKey,relationshipKey: edge.key }))
         .sort((left,right) => compareCodepoints(left.newerNodeKey,right.newerNodeKey) ||
           compareCodepoints(left.supersededNodeKey,right.supersededNodeKey) || compareCodepoints(left.relationshipKey,right.relationshipKey)) : []
+    const focusedRelationships = query.kind === "focus"
+      ? [...new Set([
+          ...edges
+            .filter((edge) => edge.sourceNodeKey === query.focusNodeKey || edge.targetNodeKey === query.focusNodeKey)
+            .map((edge) => edge.key),
+          ...lineage.map((item) => item.relationshipKey),
+        ])].sort(compareCodepoints)
+      : []
     return {
       nodes,edges,
       ...(query.kind === "focus" && focus ? { inspection: { nodeKey: focus.node.key,

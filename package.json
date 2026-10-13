@@ -109,6 +109,8 @@
     "validate:epic30-completion": "bun scripts/epic30/check-completion.ts --verify-manifest",
     "gate:epic30-completion": "bun scripts/epic30/check-completion.ts --require-complete",
     "validate:epic30-reader": "bun scripts/epic30/verify-reader.cjs",
+    "test:graph:browser": "bash scripts/epic31/run-knowledge-map-browser.sh",
+    "validate:graph:browser": "bun scripts/epic31/verify-knowledge-map.cjs",
     "ci:benchmark": "bash scripts/ci/run-benchmark.sh",
     "validate:tokens": "bash scripts/token-compliance.sh",
     "soc2:evidence": "bun run scripts/soc2-evidence.ts",

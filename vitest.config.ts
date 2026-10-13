@@ -35,6 +35,8 @@ export default defineConfig({
     // Excludes: E2E (needs live stack), MCP browser (needs browser), canonical-memory (flaky in parallel)
     include: [
       "src/lib/**/*.test.ts",
+      "src/components/dashboard/knowledge-map/**/*.test.ts",
+      "src/components/dashboard/knowledge-map/**/*.test.tsx",
       "src/control-plane/**/*.test.ts",
       "src/curator/**/*.test.ts",
       // Benchmark harness — pure metric math (no live stack)
@@ -143,6 +145,9 @@ export default defineConfig({
     testTimeout: 15_000,
     hookTimeout: 30_000,
     teardownTimeout: 10_000,
+    environmentMatchGlobs: [
+      ["src/components/dashboard/knowledge-map/**/*.test.tsx", "jsdom"],
+    ],
 
     // ── Coverage (optional) ──────────────────────────────────────────────
     coverage: {
