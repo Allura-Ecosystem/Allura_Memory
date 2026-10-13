@@ -2,8 +2,8 @@
 
 This file is a non-normative compatibility pointer.
 
-Read and follow the sole repository authority:
-[`../../.opencode/rules/AI-GUIDELINES.md`](../../.opencode/rules/AI-GUIDELINES.md).
+Read and follow the sole repository authority, the
+[`ai-guidelines` skill](../../.opencode/skills/ai-guidelines/SKILL.md).
 
 The executable workflow is summarized in
 [`../../.opencode/rules/documentation-standards.md`](../../.opencode/rules/documentation-standards.md).

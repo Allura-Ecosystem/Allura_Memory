@@ -118,7 +118,7 @@ export function InsightCard({ insight, actions, compact = false, className }: In
 - Record architectural decisions and risks in `RISKS-AND-DECISIONS.md`; no orphan decisions.
 - Include AI-assisted documentation disclosure until human review signs off.
 
-**Reference**: `.opencode/rules/AI-GUIDELINES.md`
+**Reference**: `.opencode/skills/ai-guidelines/SKILL.md`
 
 ## Security Requirements
 - API routes MUST require auth/role checks via `requireRole`; return 401/403 helpers.
@@ -132,7 +132,7 @@ export function InsightCard({ insight, actions, compact = false, className }: In
 **API**: `src/app/api/memory/route.ts`, `src/app/api/audit/events/route.ts`, `src/app/api/permission-profiles/[id]/route.ts`
 **Components**: `src/components/dashboard/InsightCard.tsx`, `src/components/ui/button.tsx`, `src/components/memory/memory-card.tsx`
 **Security**: `src/lib/auth/api-auth.ts`, `src/lib/validation/group-id.ts`, `src/lib/memory/approval-audit.ts`
-**Config/Docs**: `package.json`, `docker-compose.yml`, `.opencode/rules/AI-GUIDELINES.md`
+**Config/Docs**: `package.json`, `docker-compose.yml`, `.opencode/skills/ai-guidelines/SKILL.md`
 
 ## Related Files
 - `business-domain.md` - Business context

@@ -4,6 +4,6 @@ This file is intentionally non-normative.
 
 Canonical guidance lives at:
 
-- [`.opencode/rules/AI-GUIDELINES.md`](rules/AI-GUIDELINES.md)
+- [`.opencode/skills/ai-guidelines/SKILL.md`](skills/ai-guidelines/SKILL.md)
 
-Load the canonical file for documentation, architecture, API, and implementation work. Do not add policy here.
+Load the canonical skill for documentation, architecture, API, and implementation work. Do not add policy here.

@@ -2,7 +2,7 @@
 
 This file is intentionally non-normative.
 
-The sole repository documentation authority is
-[`../../.opencode/rules/AI-GUIDELINES.md`](../../.opencode/rules/AI-GUIDELINES.md).
+The sole repository documentation authority is the
+[`ai-guidelines` skill](../../.opencode/skills/ai-guidelines/SKILL.md).
 
-Do not add policy here. Update the canonical file and its enforcement checks instead.
+Do not add policy here. Update the canonical skill and its enforcement checks instead.

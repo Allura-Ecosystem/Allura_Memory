@@ -523,7 +523,7 @@ The semantic/knowledge-graph layer is backed by the `IGraphAdapter` seam (`src/l
 
 **Archived material** in `docs/archive/allura/` is historical and non-authoritative.
 
-**AI-GUIDELINES** in `.opencode/rules/AI-GUIDELINES.md` — full documentation standards.
+**ai-guidelines skill** in `.opencode/skills/ai-guidelines/SKILL.md` — full documentation standards.
 
 ## Port Allocation (AD-45)
 

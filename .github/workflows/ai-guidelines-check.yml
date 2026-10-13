@@ -97,7 +97,7 @@ jobs:
           fi
           
           # Check for proper deferral to source of truth
-          if ! grep -q "source of truth" .opencode/rules/AI-GUIDELINES.md 2>/dev/null; then
+          if ! grep -q "source of truth" .opencode/skills/ai-guidelines/SKILL.md 2>/dev/null; then
             echo "⚠️  AI-GUIDELINES.md missing 'defer to code' language"
           fi
           

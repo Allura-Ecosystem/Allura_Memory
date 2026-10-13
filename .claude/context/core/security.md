@@ -6,7 +6,7 @@ last_verified: 2026-05-03
 source_files:
   - src/control-plane/RuVixControlPlane.ts
   - docker/docker-compose.yml
-  - .opencode/rules/AI-GUIDELINES.md
+  - .opencode/skills/ai-guidelines/SKILL.md
 max_age_days: 30
 ---
 

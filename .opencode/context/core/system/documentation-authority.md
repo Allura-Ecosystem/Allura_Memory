@@ -2,7 +2,7 @@
 # Documentation Authority Map
 
 This is a non-normative context map. The sole policy authority is
-[`../../../rules/AI-GUIDELINES.md`](../../../rules/AI-GUIDELINES.md).
+[`ai-guidelines` skill](../../../skills/ai-guidelines/SKILL.md).
 One authority exists per lifecycle stage; no document is editable in two places.
 
 ## Authority
