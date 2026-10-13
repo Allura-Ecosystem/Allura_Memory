@@ -8,7 +8,7 @@ export default async function GraphPage() {
   const { user } = await requireDashboardScope("/dashboard/graph")
 
   return (
-    <DashboardShell user={user} title="Graph" wide>
+    <DashboardShell user={user} title="Knowledge Graph" activeHref="/dashboard/graph" wide showTitle={false}>
       <KnowledgeMapWorkspace />
     </DashboardShell>
   )

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withPermission } from "@/lib/auth/api-auth"
+import { captureException } from "@/lib/observability/sentry"
 import type { SubgraphQuery, SubgraphResponse } from "@/lib/subgraph/contract"
 import { focusedSubgraphContinuationSecret, FocusedSubgraphReadService } from "@/lib/subgraph/read-service"
 
@@ -87,6 +88,7 @@ function malformed() {
 }
 
 export async function GET(request: NextRequest) {
+  const correlationId = crypto.randomUUID()
   const permission = await withPermission(request, "memory:read")
   if (permission instanceof NextResponse) {
     return permission.status === 401
@@ -121,13 +123,25 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const service = new FocusedSubgraphReadService({ continuationSecret: focusedSubgraphContinuationSecret() })
+    const service = new FocusedSubgraphReadService({
+      continuationSecret: focusedSubgraphContinuationSecret(),
+      onUnavailable: (error, context) => {
+        captureException(error, {
+          tags: { route: "/api/memory/graph", method: "GET", event: "focused_subgraph_unavailable" },
+          extra: { correlationId, queryKind: context.queryKind, continuation: context.continuation },
+        })
+        console.error(JSON.stringify({ event: "focused_subgraph_unavailable", correlationId, ...context }))
+      },
+    })
     const result = await service.read(user, query)
-    return graphJson(result, responseStatus(result))
-  } catch {
+    return graphJson(result, responseStatus(result), { "X-Request-Id": correlationId })
+  } catch (error) {
+    captureException(error, { tags: { route: "/api/memory/graph", method: "GET", event: "focused_subgraph_route_failure" }, extra: { correlationId } })
+    console.error(JSON.stringify({ event: "focused_subgraph_route_failure", correlationId }))
     return graphJson(
       { contractVersion: "2.0", state: "error", code: "UNAVAILABLE", retryable: true, action: "retry" },
       503,
+      { "X-Request-Id": correlationId },
     )
   }
 }

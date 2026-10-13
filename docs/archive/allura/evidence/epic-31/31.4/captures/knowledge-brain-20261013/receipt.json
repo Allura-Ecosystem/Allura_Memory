@@ -1,0 +1,124 @@
+{
+  "storyId": "31.3",
+  "criterionIds": [],
+  "criterionIdNote": "The frozen Story 31.3 specification defines unnumbered acceptance criteria; no identifier mapping was invented.",
+  "capturedAt": "2026-10-13T14:05:07.922Z",
+  "url": "http://127.0.0.1:31431/dashboard/graph",
+  "contractVersion": "2.0",
+  "graphState": "complete",
+  "snapshot": {
+    "policyEpoch": 1,
+    "graphRevision": 9,
+    "capturedAt": "2026-10-13T14:05:05.574Z"
+  },
+  "checks": [
+    {
+      "id": "REAL_DATA_CORRELATION",
+      "nodes": 3,
+      "edges": 2,
+      "passed": true
+    },
+    {
+      "id": "COMPACT_BRAIN_NODES",
+      "nodes": 3,
+      "recordSummariesInCanvas": 0,
+      "passed": true
+    },
+    {
+      "id": "KEYBOARD_INSPECTOR_FOCUS",
+      "nodeKey": "structural:epic31-agent-woz",
+      "passed": true
+    },
+    {
+      "id": "POINTER_INSPECTOR_CARD_REVEAL",
+      "nodeKey": "structural:epic31-agent-woz",
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_1440",
+      "effectiveZoom": "100%",
+      "viewport": 1440,
+      "page": 1440,
+      "contentTop": 64,
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_900",
+      "effectiveZoom": "100%",
+      "viewport": 900,
+      "page": 900,
+      "contentTop": 64,
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_900_SELECTED_INSPECTOR",
+      "position": "fixed",
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_640",
+      "effectiveZoom": "100%",
+      "viewport": 640,
+      "page": 640,
+      "contentTop": 64,
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_640_SELECTED_INSPECTOR",
+      "position": "static",
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_320",
+      "effectiveZoom": "200%-equivalent reflow from a 640 CSS-pixel baseline",
+      "viewport": 320,
+      "page": 320,
+      "contentTop": 64,
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_320_SELECTED_INSPECTOR",
+      "position": "static",
+      "passed": true
+    }
+  ],
+  "pageErrors": [],
+  "artifacts": [
+    {
+      "file": "knowledge-map-1440-selected-inspector.png",
+      "sha256": "af31bde3a462ead607103fcd923d0f3ccd8c8a06175a84e7c5b6e9cb9b521468"
+    },
+    {
+      "file": "knowledge-map-1440.png",
+      "sha256": "02a4d947cbcd9f187f1813f8f1849ccd12109485a0371b7a6a84f6286598802c"
+    },
+    {
+      "file": "knowledge-map-900.png",
+      "sha256": "9fd085ad95183e440844266328fadb7078d82f76abf8d6533b8d54da64fdba84"
+    },
+    {
+      "file": "knowledge-map-900-selected-inspector.png",
+      "sha256": "3f563f41b1cf310f21fb147ba8422a80bee294a77467d30e14bc0cc70917af10"
+    },
+    {
+      "file": "knowledge-map-640.png",
+      "sha256": "049ea67b8ab46ec21ba7d9b087004e7799aa984279057f86fca84a5fae09a2df"
+    },
+    {
+      "file": "knowledge-map-640-selected-inspector.png",
+      "sha256": "aace4f2f772a190202cc0a7f64e75c666f5c4bd1b3f822fa9588267621ca284b"
+    },
+    {
+      "file": "knowledge-map-320-200-percent-equivalent.png",
+      "sha256": "db7a5803d4c47cf2fb535b9d3e1128995e5a4a9e5793da7a5ccea980e86c61d7"
+    },
+    {
+      "file": "knowledge-map-320-selected-inspector.png",
+      "sha256": "16b765e955caf0954dc0a94c9b39424715441f5b22c74baa2d8d1079d361dc03"
+    }
+  ],
+  "limitations": [
+    "Browser receipt proves the active local principal and returned snapshot only.",
+    "Human acceptance and screen-reader walkthrough remain separate Story 31.4 gates."
+  ]
+}

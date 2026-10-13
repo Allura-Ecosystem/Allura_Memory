@@ -10,7 +10,7 @@ export default async function KanbanPage() {
   const state = emptyWhen(await getWorkItems(scope), (data) => data.length === 0)
 
   return (
-    <DashboardShell user={user} title="Work Board">
+    <DashboardShell user={user} title="Work Board" activeHref="/dashboard/kanban">
       <SurfaceState
         state={state}
         emptyLabel="No work items yet."

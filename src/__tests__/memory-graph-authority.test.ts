@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const mocks = vi.hoisted(() => ({ read: vi.fn(), withPermission: vi.fn() }))
+const mocks = vi.hoisted(() => ({ read: vi.fn(), withPermission: vi.fn(), captureException: vi.fn() }))
 vi.mock("server-only", () => ({}))
 vi.mock("@/lib/auth/api-auth", () => ({ withPermission: mocks.withPermission }))
+vi.mock("@/lib/observability/sentry", () => ({ captureException: mocks.captureException }))
 vi.mock("@/lib/subgraph/read-service", () => ({
   focusedSubgraphContinuationSecret: () => Buffer.alloc(32, 7),
   FocusedSubgraphReadService: class { read = mocks.read },
@@ -96,6 +97,23 @@ describe("memory graph authority and transport", () => {
     expect(response.headers.get("allow")).toBe("GET")
     expect(response.headers.get("cache-control")).toBe("no-store")
     expect(await response.json()).toEqual({ error: "method_not_allowed" })
+  })
+
+  it("correlates and captures an unexpected handled route failure without leaking its cause", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    mocks.read.mockRejectedValueOnce(new Error("postgres password=secret host=db.internal"))
+    const response = await GET(request())
+    const requestId = response.headers.get("x-request-id")
+
+    expect(response.status).toBe(503)
+    expect(requestId).toMatch(/^[0-9a-f-]{36}$/)
+    expect(await response.json()).toEqual({ contractVersion: "2.0", state: "error", code: "UNAVAILABLE", retryable: true, action: "retry" })
+    expect(mocks.captureException).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({
+      tags: { route: "/api/memory/graph", method: "GET", event: "focused_subgraph_route_failure" },
+      extra: { correlationId: requestId },
+    }))
+    expect(log).toHaveBeenCalledWith(JSON.stringify({ event: "focused_subgraph_route_failure", correlationId: requestId }))
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/password|internal|postgres/i)
   })
 
   it("keeps transport parsing free of authority fields", () => {

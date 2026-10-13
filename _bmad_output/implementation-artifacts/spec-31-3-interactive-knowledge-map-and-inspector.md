@@ -3,7 +3,7 @@ title: 'Story 31.3: Interactive Knowledge Map and Inspector'
 type: 'feature'
 created: '2026-10-12'
 status: 'done'
-review_loop_iteration: 0
+review_loop_iteration: 2
 baseline_commit: '37f86b735b27835b5583f588ae490b1bfbe854e7'
 context:
   - '{project-root}/_bmad_output/implementation-artifacts/epic-31-context.md'
@@ -11,6 +11,7 @@ context:
   - '{project-root}/_bmad_output/specs/spec-dashboard-graph-alignment/SPEC.md'
   - '{project-root}/_bmad_output/specs/spec-dashboard-graph-alignment/experience.md'
   - '{project-root}/docs/design/command-center/operator-surface-contract.md'
+  - '{project-root}/docs/design/command-center/project/Allura Memory Command Center.dc.html'
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
@@ -19,13 +20,13 @@ context:
 
 **Problem:** `/dashboard/graph` still substitutes four counters for the preserved interactive Knowledge Map, so operators cannot explore or inspect the governed Story 31.2 graph.
 
-**Approach:** Replace the counter surface with one responsive, accessible rail/map/text/inspector workspace that consumes the frozen focused-subgraph contract and preserves the pinned Command Center interaction intent.
+**Approach:** Restore the preserved Command Center shell and Knowledge Graph composition faithfully, then project the frozen focused-subgraph contract as an owner-directed connected knowledge brain: compact identity nodes and governed relationships in the canvas, with the full record card revealed only after selection in the inspector. Do not change governed data, authentication, or truth-state behavior.
 
 ## Boundaries & Constraints
 
-**Always:** Keep server-derived page/API authority; validate contract-v2 responses; render only real returned nodes/edges; preserve explicit unknown kinds; use identical arrays for canvas and text; use approved CSS tokens and flat Allura styling; expose named controls, visible focus, announcements, deterministic inspector focus/return, reduced motion, and contained panning; distinguish every required truth/evidence state without leaking protected data.
+**Always:** Keep server-derived page/API authority; validate contract-v2 responses; render only real returned nodes/edges; preserve explicit unknown kinds; use identical arrays for canvas and text; reproduce the governing `.dc.html` shell and Graph composition with approved current Allura tokens; preserve the branded 248px navigation, 64px truthful context header, Knowledge Graph hierarchy, 204px filter/relationship rail, flexible warm dotted canvas, 320px evidence inspector, rounded paper surfaces, compact category-accented brain nodes, and inspector card anatomy; expose named controls, visible focus, announcements, deterministic inspector focus/return, reduced motion, and contained panning; distinguish every required truth/evidence state without leaking protected data.
 
-**Ask First:** Any change to the Story 31.1/31.2 contract, API, auth, rollout, taxonomy, pinned hierarchy, required state semantics, or approved omission of unsupported modes; any new graph dependency or material dashboard-shell redesign outside `/dashboard/graph`.
+**Ask First:** Any change to the Story 31.1/31.2 contract, API, auth, rollout, taxonomy, pinned hierarchy, required state semantics, or approved omission of unsupported modes; any new graph dependency or visual variance that changes the preserved Command Center composition rather than restoring it.
 
 **Never:** Restore the deleted page wholesale; import legacy Neo4j mappers, platform seeds, mock production data, database/graph drivers, or authority selectors; simulate Security Path or Methodology/Catalog; add 3D, mutation, edit, policy, promotion, or HITL controls; treat counters, screenshots, or HTTP success as interaction proof.
 
@@ -58,12 +59,14 @@ context:
 **Execution:**
 - [x] `src/lib/subgraph/browser-client.ts`, `src/lib/subgraph/browser-client.test.ts`, `src/test/fixtures/focused-subgraph.ts` -- build an abortable authority-free query client plus schema-valid test-only state fixtures.
 - [x] `src/components/dashboard/knowledge-map/*` -- implement contract view model, filters/legend, React Flow map, text relationships, inspector, controls, continuation/restart, announcements, and exhaustive state presentation.
-- [x] `src/app/dashboard/graph/page.tsx`, `src/components/dashboard/knowledge-map/knowledge-map.module.css` -- mount the guarded workspace and implement desktop hierarchy plus 320px/200%-zoom stacking with approved tokens.
+- [x] `src/components/dashboard/dashboard-shell.tsx`, `dashboard-shell.module.css` -- restore the shared protected Command Center frame, verified brand asset, icon navigation, active orange rail, truthful context header, and cream/paper hierarchy.
+- [x] `src/app/dashboard/graph/page.tsx`, `src/components/dashboard/knowledge-map/*` -- repair the rejected candidate so the guarded workspace faithfully implements the governing Knowledge Graph composition and owner-directed compact knowledge-brain model at desktop and responsive widths.
 - [x] `src/components/dashboard/knowledge-map/__tests__/*`, `vitest.config.unit.ts`, `scripts/token-compliance.sh` -- prove matrix behavior, same-array parity, keyboard/focus, non-leakage, reduced motion, and token/import guards.
 - [x] `playwright.config.ts`, `tests/playwright/knowledge-map.spec.ts`, `scripts/epic31/verify-knowledge-map.cjs`, `package.json` -- add scoped browser, real-data correlation, interaction, responsive, accessibility, screenshot, and evidence-receipt gates for GRAPH-01..31.
 
 **Acceptance Criteria:**
-- Given an authorized response, when the page loads, then the preserved rail/map/text/inspector hierarchy renders real nodes and directed labeled edges with filters, minimap, pan/zoom/fit, selection, clearing, emphasis, and connected-node navigation.
+- Given an authorized response, when the page loads, then the preserved rail/map/text/inspector hierarchy renders real compact identity nodes and directed labeled edges with filters, sparse-aware minimap, pan/zoom/fit, selection, clearing, emphasis, and connected-node navigation; summaries and record metadata remain out of the canvas.
+- Given the governing Command Center prototype and the owner's 2026-10-13 correction, when the repaired page is compared at the same viewport, then shell identity, navigation/header hierarchy, 248px/64px frame, 204px/flexible/320px Graph composition, paper/cream surfaces, connected-brain topology, and evidence inspector match the accepted direction; the prototype's card nodes are superseded by compact circular nodes whose full record card opens in the inspector.
 - Given any approved truth or evidence state, when rendered, then its semantics and action are distinct, accessible, contract-valid, and non-leaking.
 - Given keyboard-only, reduced-motion, 320px, and actual 200% zoom use, when navigating the same payload, then text parity, focus/announcements, contained panning, and zero page-level horizontal overflow hold.
 - Given component, browser, real-data, and visual comparison evidence, when GRAPH-01..31 are audited, then each UI-owned row has a valid proof and unsupported modes remain absent.
@@ -71,10 +74,12 @@ context:
 ## Spec Change Log
 
 - 2026-10-12 — Step 4 review repaired Story 31.2 inspection projection so every admitted lineage edge is represented in `relationshipKeys`; the frozen contract and API shape remain unchanged.
+- 2026-10-13 — Reopened after owner rejection. The earlier implementation weakened the mandatory visual reference into a structural/token-only check. GRAPH-29/30 were reset; the exact Command Center composition is now an explicit acceptance requirement while data/auth contracts remain frozen.
+- 2026-10-13 — Human renegotiation: the canvas must read as a connected knowledge brain, not a board of record cards. Compact icon/label nodes now own the overview; selection reveals the full governed card in the inspector. This supersedes only the prototype's node-card treatment, not its shell, layout, tokens, or inspector authority.
 
 ## Design Notes
 
-Use the pinned 204px rail / flexible map / 320px inspector as a desktop proportion reference, not a fixed viewport contract. Keep the default Knowledge Map calm and editorial: Cream ground, Ink structure, Blue navigation, Orange active review emphasis, Green governed connection, no gradients/shadows/glass. Counts may appear only as secondary context.
+Use `docs/design/command-center/project/Allura Memory Command Center.dc.html` as the shell and composition authority, not merely a loose proportion reference. Preserve its branded paper sidebar, contextual header, Knowledge Graph product hierarchy, separated rounded panels, warm dotted canvas, labeled governed relationships, and evidence-first inspector. The owner's latest direction supersedes the prototype's canvas card anatomy: use compact circular identity nodes and open the full governed record card only in the inspector. Apply the approved current Allura tokens and IBM Plex families; do not invent demo data, unsupported modes, decorative effects, or fields unavailable from the governed contract. Contract/revision metadata is secondary and belongs in compact context or progressive disclosure, never the hero hierarchy.
 
 ## Verification
 

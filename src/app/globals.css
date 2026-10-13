@@ -7,17 +7,21 @@
 :root {
   /* ── Design-handoff tokens (command-center) ──────────────────────────────── */
   /* Canvas / surface */
-  --c-bg: #f6f3ec;
+  --c-bg: #f7f3ee;
   --c-card: #fffdf8;
   --c-border: #d1c7b2;
   --c-border-soft: #e4dccb;
   /* Ink */
-  --c-ink: #1b1d21;
-  --c-muted: #6b6e73;
+  --c-ink: #0f1720;
+  --c-muted: #58616d;
   /* Brand palette */
-  --c-blue: #2961b8;
-  --c-green: #298f57;
-  --c-orange: #f2752e;
+  --c-blue: #0d47a1;
+  --c-green: #148a4b;
+  --c-orange: #ff4d1f;
+  /* Accessible text companions preserve the approved brand hues for marks,
+     borders, and fills while meeting AA contrast at small text sizes. */
+  --c-green-text: #0f703a;
+  --c-orange-text: #b23a0e;
   --c-red: #bf332e;
   --c-purple: #7347bf;
   --c-gold: #c89b3c;
@@ -35,13 +39,13 @@
 
   /* ── Canonical design-system tokens ─────────────────────────────────────── */
   /* (from colors.css — keeping existing names that other pages depend on) */
-  --allura-cream: #f6f3ec;
+  --allura-cream: #f7f3ee;
   --allura-paper: #fffdf8;
-  --allura-charcoal: #1b1d21;
-  --allura-gray-500: #6b6e73;
-  --allura-blue: #2961b8;
-  --allura-orange: #f2752e;
-  --allura-green: #298f57;
+  --allura-charcoal: #0f1720;
+  --allura-gray-500: #58616d;
+  --allura-blue: #0d47a1;
+  --allura-orange: #ff4d1f;
+  --allura-green: #148a4b;
   --allura-gold: #c89b3c;
   --allura-red: #bf332e;
   --dashboard-border: #d1c7b2;
@@ -1287,7 +1291,7 @@ textarea {
 
 .curator-state-complete,
 .curator-status-approved {
-  color: var(--c-green);
+  color: var(--c-green-text);
   background: var(--c-green-soft);
 }
 
@@ -1295,7 +1299,7 @@ textarea {
 .curator-state-partial,
 .curator-state-stale,
 .curator-status-pending {
-  color: var(--c-orange);
+  color: var(--c-orange-text);
   background: var(--c-orange-soft);
 }
 

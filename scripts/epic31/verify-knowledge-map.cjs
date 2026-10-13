@@ -38,7 +38,10 @@ async function main() {
     assert.equal(await workspace.getByRole("list", { name: "Knowledge Map directed relationships" }).getByRole("listitem").count(), payload.edges.length)
     assert.equal(await workspace.locator(".react-flow__node").count(), payload.nodes.length)
     assert.equal(await workspace.locator(".react-flow__edge").count(), payload.edges.length)
+    assert.equal(await workspace.locator('[data-visual="brain-node"]').count(), payload.nodes.length)
+    assert.equal(await workspace.locator('[data-visual="brain-node"] p').count(), 0, "Canvas nodes must not expose record-card summaries")
     checks.push({ id: "REAL_DATA_CORRELATION", nodes: payload.nodes.length, edges: payload.edges.length, passed: true })
+    checks.push({ id: "COMPACT_BRAIN_NODES", nodes: payload.nodes.length, recordSummariesInCanvas: 0, passed: true })
 
     const focusNode = payload.nodes.find((node) => node.entityType !== "memory") || payload.nodes[0]
     const first = workspace.locator(`[data-node-control="text"][data-node-key=${JSON.stringify(focusNode.key)}]`)
@@ -53,22 +56,66 @@ async function main() {
     await inspector.getByRole("heading", { name: focusNode.label, exact: true }).waitFor()
     await inspector.getByText("Technical details", { exact: true }).click()
     await inspector.getByText(focusNode.key, { exact: true }).waitFor()
-    await inspector.getByRole("button", { name: "Clear selection" }).click()
+    await inspector.getByRole("button", { name: "Back to overview" }).click()
     await page.waitForFunction((nodeKey) => {
       const active = document.activeElement
       return active?.getAttribute("data-node-control") === "text" && active.getAttribute("data-node-key") === nodeKey
     }, focusNode.key)
     checks.push({ id: "KEYBOARD_INSPECTOR_FOCUS", nodeKey: focusNode.key, passed: true })
+    assert.equal(await page.locator("#next-logo").count(), 0, "Development tooling must not obscure evidence captures")
+
+    await page.setViewportSize({ width: 1440, height: 1000 })
+    const selectedFocusPromise = page.waitForResponse((response) => response.url().includes("kind=focus") && response.request().method() === "GET")
+    await workspace.locator(`.react-flow__node[data-id=${JSON.stringify(focusNode.key)}]`).click()
+    const selectedFocusResponse = await selectedFocusPromise
+    assert.ok(selectedFocusResponse.ok(), `Pointer focus failed with ${selectedFocusResponse.status()}`)
+    await inspector.getByRole("heading", { name: focusNode.label, exact: true }).waitFor()
+    await page.evaluate(() => window.scrollTo(0, 0))
+    const selectedFile = "knowledge-map-1440-selected-inspector.png"
+    await page.screenshot({ path: path.join(output, selectedFile) })
+    const selectedBytes = await fs.readFile(path.join(output, selectedFile))
+    artifacts.push({ file: selectedFile, sha256: crypto.createHash("sha256").update(selectedBytes).digest("hex") })
+    checks.push({ id: "POINTER_INSPECTOR_CARD_REVEAL", nodeKey: focusNode.key, passed: true })
+    await inspector.getByRole("button", { name: "Back to overview" }).click()
 
     for (const width of [1440, 900, 640, 320]) {
       await page.setViewportSize({ width, height: 1000 })
-      const metrics = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, page: document.documentElement.scrollWidth }))
+      await page.evaluate(() => window.scrollTo(0, 0))
+      const metrics = await page.evaluate(() => ({
+        viewport: document.documentElement.clientWidth,
+        page: document.documentElement.scrollWidth,
+        contentTop: document.querySelector("[data-dashboard-content]")?.getBoundingClientRect().top ?? -1,
+      }))
       assert.ok(metrics.page <= metrics.viewport, JSON.stringify(metrics))
+      assert.ok(metrics.contentTop >= 0 && metrics.contentTop < 300, `Dashboard navigation consumes the initial viewport: ${JSON.stringify(metrics)}`)
+      await page.getByRole("button", { name: "Fit View" }).evaluate((button) => button.click())
+      if (width === 320) {
+        assert.equal(await page.getByRole("link", { name: "Knowledge Graph", exact: true }).isVisible(), true)
+        assert.equal(await workspace.locator(".react-flow__minimap").isVisible(), false)
+      }
       const file = `knowledge-map-${width}${width === 320 ? "-200-percent-equivalent" : ""}.png`
       await page.screenshot({ path: path.join(output, file), fullPage: true })
       const bytes = await fs.readFile(path.join(output, file))
       artifacts.push({ file, sha256: crypto.createHash("sha256").update(bytes).digest("hex") })
       checks.push({ id: `RESPONSIVE_${width}`, effectiveZoom: width === 320 ? "200%-equivalent reflow from a 640 CSS-pixel baseline" : "100%", ...metrics, passed: true })
+
+      if (width !== 1440) {
+        const responsiveFocusPromise = page.waitForResponse((response) => response.url().includes("kind=focus") && response.request().method() === "GET")
+        await workspace.locator(`[data-node-control="text"][data-node-key=${JSON.stringify(focusNode.key)}]`).click()
+        const responsiveFocusResponse = await responsiveFocusPromise
+        assert.ok(responsiveFocusResponse.ok(), `Responsive focus failed with ${responsiveFocusResponse.status()}`)
+        await inspector.getByRole("heading", { name: focusNode.label, exact: true }).waitFor()
+        const inspectorPosition = await inspector.evaluate((element) => getComputedStyle(element).position)
+        assert.equal(inspectorPosition, width === 900 ? "fixed" : "static")
+        await page.evaluate(() => window.scrollTo(0, 0))
+        const selectedResponsiveFile = `knowledge-map-${width}-selected-inspector.png`
+        await page.screenshot({ path: path.join(output, selectedResponsiveFile), fullPage: width <= 640 })
+        const selectedResponsiveBytes = await fs.readFile(path.join(output, selectedResponsiveFile))
+        artifacts.push({ file: selectedResponsiveFile, sha256: crypto.createHash("sha256").update(selectedResponsiveBytes).digest("hex") })
+        checks.push({ id: `RESPONSIVE_${width}_SELECTED_INSPECTOR`, position: inspectorPosition, passed: true })
+        await inspector.getByRole("button", { name: "Back to overview" }).click()
+        await page.evaluate(() => window.scrollTo(0, 0))
+      }
     }
     assert.deepEqual(pageErrors, [])
     const receipt = {

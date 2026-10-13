@@ -30,6 +30,10 @@ import {
 import { graphV2RolloutState } from "./rollout"
 
 export const FOCUSED_SUBGRAPH_ROUTE_POLICY_VERSION = "focused-subgraph-read-v1"
+// Bounds every authority/revision/repository statement in the governed read
+// transaction. PostgreSQL cancels over-budget work and the service maps it to
+// the sanitized, observable UNAVAILABLE contract.
+export const FOCUSED_SUBGRAPH_STATEMENT_TIMEOUT_MS = 5_000
 
 const AUTHORITY_SQL = `
   SELECT workspace_membership.policy_epoch, tenant_membership.role
@@ -64,6 +68,7 @@ export interface FocusedSubgraphReadServiceOptions {
   repositoryFactory?: (client: PoolClient) => {
     read(scope: SubgraphReadScope, query: ReturnType<typeof normalizeSubgraphQuery>, boundary: SubgraphContinuationClaims["boundary"] | null): Promise<FocusedSubgraphRepositoryPage>
   }
+  onUnavailable?: (error: unknown, context: { queryKind: "overview" | "focus"; continuation: boolean }) => void
 }
 
 export class FocusedSubgraphServiceError extends Error {
@@ -92,6 +97,7 @@ export class FocusedSubgraphReadService {
   private readonly transaction: ReadTransaction
   private readonly rolloutValue: () => string | undefined
   private readonly repositoryFactory: NonNullable<FocusedSubgraphReadServiceOptions["repositoryFactory"]>
+  private readonly onUnavailable: NonNullable<FocusedSubgraphReadServiceOptions["onUnavailable"]>
 
   constructor(options: FocusedSubgraphReadServiceOptions) {
     if (!Buffer.isBuffer(options.continuationSecret) || options.continuationSecret.length < 32) {
@@ -103,6 +109,7 @@ export class FocusedSubgraphReadService {
     this.transaction = options.transaction ?? withRestrictedWorkspaceReadTransaction
     this.rolloutValue = options.rolloutValue ?? (() => process.env.ALLURA_GRAPH_V2_ENABLED)
     this.repositoryFactory = options.repositoryFactory ?? ((client) => new FocusedSubgraphReadRepository(client))
+    this.onUnavailable = options.onUnavailable ?? (() => undefined)
   }
 
   async read(principal: AuthUser, rawQuery: SubgraphQuery | unknown): Promise<SubgraphResponse> {
@@ -136,6 +143,7 @@ export class FocusedSubgraphReadService {
       }
 
       return await this.transaction(scope, async (client) => {
+        await client.query("SELECT set_config('statement_timeout',$1,true)", [`${FOCUSED_SUBGRAPH_STATEMENT_TIMEOUT_MS}ms`])
         const authority = await client.query<{ policy_epoch: string | number; role: string }>(AUTHORITY_SQL, [scope.tenantId, scope.workspaceId, scope.principalId])
         const authorityRow = authority.rows[0]
         const policyEpoch = Number(authorityRow?.policy_epoch)
@@ -235,6 +243,7 @@ export class FocusedSubgraphReadService {
         if (error.kind === "snapshot") return { contractVersion: FOCUSED_SUBGRAPH_CONTRACT_VERSION, state: "error", code: "SNAPSHOT_CONFLICT", retryable: false, action: "restart" }
         if (error.kind === "conflict") return { contractVersion: FOCUSED_SUBGRAPH_CONTRACT_VERSION, state: "error", code: "CONTINUATION_CONFLICT", retryable: false, action: "restart" }
       }
+      this.onUnavailable(error, { queryKind: query.kind, continuation: Boolean(query.continuation) })
       return { contractVersion: FOCUSED_SUBGRAPH_CONTRACT_VERSION, state: "error", code: "UNAVAILABLE", retryable: true, action: "retry" }
     }
   }

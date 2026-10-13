@@ -10,7 +10,7 @@ export default async function TeamsPage() {
   const state = emptyWhen(await getTeams(scope), (data) => data.length === 0)
 
   return (
-    <DashboardShell user={user} title="Teams">
+    <DashboardShell user={user} title="Teams" activeHref="/dashboard/teams">
       <SurfaceState
         state={state}
         emptyLabel="No agent activity yet."

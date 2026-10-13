@@ -10,7 +10,7 @@ export default async function SearchPage() {
   const state = emptyWhen(await getRecentMemories(scope), (data) => data.length === 0)
 
   return (
-    <DashboardShell user={user} title="Search">
+    <DashboardShell user={user} title="Search" activeHref="/dashboard/search">
       <SurfaceState
         state={state}
         emptyLabel="No memories yet."

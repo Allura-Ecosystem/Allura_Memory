@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-13T04:29:52.021Z",
+  "target": "http://127.0.0.1:31431/dashboard/graph",
+  "candidate": {
+    "commit": "1bed5b08cf755f837c747e640f4b3570eb9d95cc",
+    "tree": "be52bef367bb6edf228612df41599e7cf170026e"
+  },
+  "classification": "controlled-truth-state-presentation-review; not live authority/data evidence and not human acceptance",
+  "artifacts": [
+    {
+      "id": "empty",
+      "file": "empty.png",
+      "sha256": "f4484a8bd5df0d8d940644904b99b5463be7aa03af8c5d075ed0b6b69850b8a2",
+      "heading": "No governed relationships yet",
+      "source": "exact production component with schema-validated controlled response"
+    },
+    {
+      "id": "partial",
+      "file": "partial.png",
+      "sha256": "112f58dd267a123c61d0e114a317910256d27a7dd0a6a0ba5fafae8f41d6cd3c",
+      "heading": "Knowledge Map",
+      "source": "exact production component with schema-validated controlled response"
+    },
+    {
+      "id": "degraded-ambiguous",
+      "file": "degraded-ambiguous.png",
+      "sha256": "d634a130dc6b6cc98126f1f9848bb2b6f51e61f6a8ea1e6343120bf755bff5ee",
+      "heading": "Graph relationships need review",
+      "source": "exact production component with schema-validated controlled response"
+    },
+    {
+      "id": "denied-login",
+      "file": "denied-login.png",
+      "sha256": "5417aba5eebb8442894132a738203116da99694039fdd127e546d60890d36779",
+      "heading": "Sign in to view the Knowledge Map",
+      "source": "exact production component with schema-validated controlled response"
+    },
+    {
+      "id": "denied-access",
+      "file": "denied-access.png",
+      "sha256": "bd3e9ad6250d7db7448bdfff5cc9fd714165d816c13e563d8d269e596630d162",
+      "heading": "Knowledge Map access not granted",
+      "source": "exact production component with schema-validated controlled response"
+    },
+    {
+      "id": "error-conflict",
+      "file": "error-conflict.png",
+      "sha256": "0dcc690b3ed52c19ff8e5e30c59809b69deb84e97fd35bcaaecea25b17ec4cc0",
+      "heading": "Knowledge Map changed",
+      "source": "exact production component with schema-validated controlled response"
+    },
+    {
+      "id": "error-unavailable",
+      "file": "error-unavailable.png",
+      "sha256": "a6895654fe84eaf44bb80fceca20ac8d61d0f41357b57e4214411619d3051b6f",
+      "heading": "Knowledge Map unavailable",
+      "source": "exact production component with schema-validated controlled response"
+    },
+    {
+      "id": "stale",
+      "file": "stale.png",
+      "sha256": "eff323b952b6d0fe12f09d8f56fd4bd1c45fca74bd0c0a4a33ca4decdc9fd941",
+      "heading": "Previous operating decision",
+      "source": "exact production component with schema-validated controlled response"
+    },
+    {
+      "id": "evidence-absent",
+      "file": "evidence-absent.png",
+      "sha256": "8066dffc97915aa50386bc94cd3543dc406a88c60cbbf40be57c2d51a4802fa0",
+      "heading": "Previous operating decision",
+      "source": "exact production component with schema-validated controlled response"
+    },
+    {
+      "id": "evidence-unavailable",
+      "file": "evidence-unavailable.png",
+      "sha256": "b14b34febe778a2c7aa31763d3714a88874787fa09339ddb558abc9e4f4eddb1",
+      "heading": "Current operating decision",
+      "source": "exact production component with schema-validated controlled response"
+    }
+  ]
+}

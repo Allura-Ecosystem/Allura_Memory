@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "story": "31.4",
+  "candidate": {
+    "commit": "3fb8a4ec3ec9068ce910a1f6990b58a80241e582",
+    "tree": "11f42d59800c985a101a8a857a6e40c440ca4f10",
+    "branchMoved": false,
+    "workingIndexChanged": false
+  },
+  "supersedesRejectedCandidate": {
+    "commit": "1bed5b08cf755f837c747e640f4b3570eb9d95cc",
+    "tree": "be52bef367bb6edf228612df41599e7cf170026e"
+  },
+  "receipt": {
+    "path": "captures/knowledge-brain-20261013/receipt.json",
+    "sha256": "6978b34adade74aebc7b8a28095c2e267ce3a5e21a0eba8b8c318dad9d895dcf",
+    "timestamp": "2026-10-13T14:05:07.922Z",
+    "pageErrors": []
+  },
+  "ownerReceipt": {
+    "path": "receipts/owner-approval-knowledge-brain-20261013.json",
+    "sha256": "8c70da5de3bdabd24e469de1d57c0bbbb4cb5fec2a2c21e93af5c802e11fc9d5",
+    "statement": "APPROVE",
+    "date": "2026-10-13"
+  },
+  "captures": {
+    "knowledge-map-1440.png": "02a4d947cbcd9f187f1813f8f1849ccd12109485a0371b7a6a84f6286598802c",
+    "knowledge-map-1440-selected-inspector.png": "af31bde3a462ead607103fcd923d0f3ccd8c8a06175a84e7c5b6e9cb9b521468",
+    "knowledge-map-900.png": "9fd085ad95183e440844266328fadb7078d82f76abf8d6533b8d54da64fdba84",
+    "knowledge-map-900-selected-inspector.png": "3f563f41b1cf310f21fb147ba8422a80bee294a77467d30e14bc0cc70917af10",
+    "knowledge-map-640.png": "049ea67b8ab46ec21ba7d9b087004e7799aa984279057f86fca84a5fae09a2df",
+    "knowledge-map-640-selected-inspector.png": "aace4f2f772a190202cc0a7f64e75c666f5c4bd1b3f822fa9588267621ca284b",
+    "knowledge-map-320-200-percent-equivalent.png": "db7a5803d4c47cf2fb535b9d3e1128995e5a4a9e5793da7a5ccea980e86c61d7",
+    "knowledge-map-320-selected-inspector.png": "16b765e955caf0954dc0a94c9b39424715441f5b22c74baa2d8d1079d361dc03"
+  },
+  "reviews": {
+    "glaser": "PASS",
+    "munari": "PASS",
+    "pike": "PASS",
+    "hightower": "PASS"
+  },
+  "automatedGates": {
+    "unit": "PASS: 3097 passed, 165 skipped",
+    "build": "PASS: 55 pages",
+    "browser": "PASS: 8/8",
+    "lint": "PASS",
+    "tokens": "PASS: 3/3",
+    "diffCheck": "PASS",
+    "epic31StoryStatus": "PASS: no Epic 31 guard findings",
+    "repositoryStoryStatusGuard": "FAIL: 79 pre-existing findings outside Epic 31"
+  },
+  "humanGates": {
+    "GRAPH-32": "PASS: owner APPROVE 2026-10-13 EDT",
+    "GRAPH-36": "PASS: APPROVE RELEASE PROGRESSION 2026-10-13 EDT"
+  },
+  "evidenceOverlayNotInCandidateTree": true,
+  "releaseAuthorized": true,
+  "releaseExecuted": false
+}

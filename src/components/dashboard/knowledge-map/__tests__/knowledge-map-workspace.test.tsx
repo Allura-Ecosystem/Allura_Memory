@@ -103,6 +103,10 @@ describe("KnowledgeMapWorkspace", () => {
     await waitFor(() => expect(screen.queryByText(/Loading authoritative details/)).toBeNull())
     fireEvent.click(screen.getByRole("checkbox", { name: "Artifact (unknown)" }))
     expect(screen.getByRole("heading", { name: "Select a node" })).toBeTruthy()
+    expect(screen.getByText(/Focused on Unclassified artifact/)).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Back to overview" }))
+    expect(screen.getByText(/Overview\. Governed snapshot/)).toBeTruthy()
+    expect(screen.getByLabelText("Mock map").getAttribute("data-node-count")).toBe("2")
     fireEvent.click(screen.getByRole("checkbox", { name: "Memory (product)" }))
     expect(screen.getByRole("heading", { name: "No nodes match the active filters" })).toBeTruthy()
     fireEvent.click(screen.getAllByRole("button", { name: "Reset filters" })[0])
@@ -131,8 +135,83 @@ describe("KnowledgeMapWorkspace", () => {
     expect(within(inspector).getByText(/memory:current-record/)).toBeTruthy()
     expect(within(inspector).getAllByText("edge:supersedes-current-previous").length).toBeGreaterThan(0)
 
-    fireEvent.click(within(inspector).getByRole("button", { name: "Clear selection" }))
+    fireEvent.click(within(inspector).getByRole("button", { name: "Back to overview" }))
     await waitFor(() => expect(document.activeElement).toBe(opener))
+  })
+
+  it("hides filtered relationships from canvas, text, and every inspector projection", async () => {
+    const client = vi.fn(async () => completeFocusedSubgraph())
+    render(<KnowledgeMapWorkspace initialResponse={completeFocusedSubgraph()} client={client} />)
+    fireEvent.click(nodeControl("memory:current"))
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Directed context" })).toBeTruthy())
+    fireEvent.click(screen.getByText("Technical details"))
+    expect(screen.getAllByText("edge:supersedes-current-previous").length).toBeGreaterThan(0)
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "SUPERSEDES (canonical)" }))
+    expect(within(screen.getByLabelText("Knowledge Map directed relationships")).queryAllByRole("listitem")).toHaveLength(0)
+    expect(within(screen.getByRole("complementary", { name: "Selected node inspector" })).getByText("No admitted relationships in this page.")).toBeTruthy()
+    expect(screen.queryByRole("heading", { name: "Lineage" })).toBeNull()
+    expect(screen.queryByText("edge:supersedes-current-previous")).toBeNull()
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset filters" }))
+    expect(screen.getAllByText("edge:supersedes-current-previous").length).toBeGreaterThan(0)
+  })
+
+  it("labels focused context and restores the exact overview on back", async () => {
+    const client = vi.fn(async () => partialFocusedSubgraph())
+    render(<KnowledgeMapWorkspace initialResponse={completeFocusedSubgraph()} client={client} />)
+    expect(screen.getByText(/Overview\. Governed snapshot/)).toBeTruthy()
+    fireEvent.click(nodeControl("memory:current"))
+    await waitFor(() => expect(screen.getByText(/Focused on Current operating decision/)).toBeTruthy())
+    expect(screen.getByLabelText("Mock map").getAttribute("data-node-count")).toBe("2")
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to overview" }))
+    expect(screen.getByText(/Overview\. Governed snapshot/)).toBeTruthy()
+    expect(screen.getByLabelText("Mock map").getAttribute("data-node-count")).toBe("3")
+    expect(screen.getByLabelText("Mock map").getAttribute("data-edge-count")).toBe("1")
+    expect(client).toHaveBeenCalledTimes(1)
+  })
+
+  it("restores the selected inspector and overview return after a retryable focus response", async () => {
+    const client = vi.fn(async () => {
+      if (client.mock.calls.length === 1) {
+        return SubgraphResponseSchema.parse({ contractVersion: "2.0", state: "error", code: "UNAVAILABLE", retryable: true, action: "retry" })
+      }
+      return completeFocusedSubgraph()
+    })
+    render(<KnowledgeMapWorkspace initialResponse={completeFocusedSubgraph()} client={client} />)
+
+    fireEvent.click(nodeControl("memory:current"))
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Knowledge Map unavailable" })).toBeTruthy())
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Current operating decision" })).toBeTruthy())
+    expect(screen.getByRole("button", { name: "Back to overview" })).toBeTruthy()
+    expect(screen.getByText("Approved operating decision content.")).toBeTruthy()
+  })
+
+  it("returns directly to the cached overview while a focus retry remains unavailable", async () => {
+    const client = vi.fn(async () => SubgraphResponseSchema.parse({
+      contractVersion: "2.0", state: "error", code: "UNAVAILABLE", retryable: true, action: "retry",
+    }))
+    render(<KnowledgeMapWorkspace initialResponse={completeFocusedSubgraph()} client={client} />)
+
+    fireEvent.click(nodeControl("memory:current"))
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Knowledge Map unavailable" })).toBeTruthy())
+    fireEvent.click(screen.getByRole("button", { name: "Back to overview" }))
+
+    expect(screen.getByText(/Overview\. Governed snapshot/)).toBeTruthy()
+    expect(screen.getByLabelText("Mock map").getAttribute("data-node-count")).toBe("3")
+    expect(client).toHaveBeenCalledTimes(1)
+  })
+
+  it("gives relationship navigation its complete directed accessible name", async () => {
+    const client = vi.fn(async () => completeFocusedSubgraph())
+    render(<KnowledgeMapWorkspace initialResponse={completeFocusedSubgraph()} client={client} />)
+    const relationship = screen.getByRole("button", { name: "Current operating decision — supersedes → Previous operating decision" })
+    relationship.focus()
+    fireEvent.click(relationship)
+    await waitFor(() => expect(client).toHaveBeenCalledWith(expect.objectContaining({ focusNodeKey: "memory:previous" }), expect.anything()))
   })
 
   it("requests lineage only for memory nodes", () => {
@@ -149,6 +228,9 @@ describe("KnowledgeMapWorkspace", () => {
     render(<KnowledgeMapWorkspace initialResponse={unavailableEvidenceFocusedSubgraph()} client={client} />)
     fireEvent.click(nodeControl("memory:current"))
     await waitFor(() => expect(screen.getByText(/Evidence service unavailable/).getAttribute("data-evidence-state")).toBe("unavailable"))
+    expect(screen.getByText(/Evidence service unavailable/).textContent).not.toContain("EVIDENCE_BACKEND_UNAVAILABLE")
+    fireEvent.click(within(screen.getByRole("complementary", { name: "Selected node inspector" })).getByText("Technical details"))
+    expect(screen.getByText("EVIDENCE_BACKEND_UNAVAILABLE")).toBeTruthy()
     fireEvent.click(nodeControl("memory:previous"))
     await waitFor(() => expect(screen.getByText("No evidence reference is attached.").getAttribute("data-evidence-state")).toBe("absent"))
     expect(screen.getByLabelText("Knowledge Map directed relationships").querySelector("[data-evidence-state=\"available\"]")).toBeTruthy()
@@ -162,7 +244,7 @@ describe("KnowledgeMapWorkspace", () => {
     await waitFor(() => expect(client).toHaveBeenCalledWith({ ...FOCUS_QUERY, continuation: "page.one" }, expect.objectContaining({ signal: expect.any(AbortSignal) })))
     await waitFor(() => expect(screen.getByLabelText("Mock map").getAttribute("data-edge-count")).toBe("2"))
     expect(screen.getByLabelText("Mock map").getAttribute("data-node-count")).toBe("3")
-    expect(screen.getByText(/FIRST_PAGE, SECOND_PAGE/)).toBeTruthy()
+    expect(screen.getByText(/Additional governed context is available on the next page\. Additional governed context was loaded\./)).toBeTruthy()
     fireEvent.click(nodeControl("memory:current"))
     await waitFor(() => expect(screen.getByText("Approved operating decision content.")).toBeTruthy())
   })
@@ -173,8 +255,26 @@ describe("KnowledgeMapWorkspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "Load next page" }))
     await waitFor(() => expect(screen.getByLabelText("Mock map").getAttribute("data-node-count")).toBe("2"))
     expect(screen.getByLabelText("Mock map").getAttribute("data-edge-count")).toBe("1")
-    expect(screen.getByText(/FIRST_PAGE, TERMINAL_EMPTY_PAGE/)).toBeTruthy()
+    expect(screen.getByText(/Additional governed context is available on the next page\. No additional governed records were returned\./)).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Load next page" })).toBeNull()
+  })
+
+  it("retries a failed continuation as a continuation and retains the accumulated page", async () => {
+    const client = vi.fn(async (_query: SubgraphQuery) => {
+      if (client.mock.calls.length === 1) throw new Error("temporary continuation failure")
+      return continuationFocusedSubgraph()
+    })
+    render(<KnowledgeMapWorkspace initialResponse={partialFocusedSubgraph()} initialQuery={FOCUS_QUERY} client={client} />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Load next page" }))
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Knowledge Map unavailable" })).toBeTruthy())
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+
+    await waitFor(() => expect(screen.getByLabelText("Mock map").getAttribute("data-edge-count")).toBe("2"))
+    expect(screen.getByLabelText("Mock map").getAttribute("data-node-count")).toBe("3")
+    expect(screen.getByText(/Additional governed context is available on the next page\. Additional governed context was loaded\./)).toBeTruthy()
+    expect(client).toHaveBeenCalledTimes(2)
+    for (const [query] of client.mock.calls) expect(query).toEqual({ ...FOCUS_QUERY, continuation: "page.one" })
   })
 
   it.each([
@@ -263,5 +363,21 @@ describe("KnowledgeMapWorkspace", () => {
     render(<KnowledgeMapWorkspace initialResponse={state as SubgraphResponse} />)
     expect(screen.getByRole("heading", { name: heading })).toBeTruthy()
     if (action) expect(screen.getByRole(action === "Sign in" ? "link" : "button", { name: action })).toBeTruthy()
+  })
+
+  it("presents warning codes as plain language with codes confined to technical details", () => {
+    const response = SubgraphResponseSchema.parse({
+      contractVersion: "2.0",
+      state: "degraded",
+      reasonCode: "AMBIGUOUS_ENDPOINTS",
+      retryable: false,
+      action: "none",
+      warnings: ["AMBIGUOUS_ENDPOINTS"],
+    })
+    render(<KnowledgeMapWorkspace initialResponse={response} />)
+
+    expect(screen.getByText(/withheld because their endpoints could not be identified safely/)).toBeTruthy()
+    const rawCode = screen.getByText("AMBIGUOUS_ENDPOINTS")
+    expect(rawCode.closest("details")).toBeTruthy()
   })
 })

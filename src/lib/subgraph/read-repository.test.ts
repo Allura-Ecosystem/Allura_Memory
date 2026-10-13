@@ -187,6 +187,32 @@ describe("FocusedSubgraphReadRepository", () => {
     expect(new Set(pages.flatMap((page) => page.edges.map((item) => item.key))).size).toBe(1_005)
   })
 
+  it("bounds each recursive focus expansion by the response lookahead", async () => {
+    const fake = client({ nodes: [node("structural", "a")] }) as unknown as { query: ReturnType<typeof vi.fn> }
+    const repository = new FocusedSubgraphReadRepository(fake as never)
+    await repository.read(scope, normalizeSubgraphQuery({
+      kind: "focus", focusNodeKey: "structural:a", depth: 2, nodeLimit: 200, edgeLimit: 400,
+    }))
+    const focusCall = fake.query.mock.calls.find(([sql]) => String(sql).includes("WITH RECURSIVE"))
+    expect(String(focusCall?.[0])).toContain("LIMIT $17")
+    expect(focusCall?.[1]).toHaveLength(17)
+    expect(focusCall?.[1]?.[16]).toBe(401)
+  })
+
+  it("fails explicitly instead of issuing a lossy depth-two continuation from a truncated first hop", async () => {
+    const edges = Array.from({ length: 401 }, (_, index) => edge(
+      `focus-${String(index).padStart(4, "0")}`, "a", `leaf-${String(index).padStart(4, "0")}`, "RELATES_TO",
+      { depth: 1, fromDistance: 0, toDistance: 1 },
+    ))
+    const repository = new FocusedSubgraphReadRepository(client({
+      edges,
+      nodes: [node("structural", "a"), ...edges.map((item) => node("structural", item.to_id))],
+    }))
+    await expect(repository.read(scope, normalizeSubgraphQuery({
+      kind: "focus", focusNodeKey: "structural:a", depth: 2, nodeLimit: 200, edgeLimit: 400,
+    }))).rejects.toEqual(expect.objectContaining<Partial<FocusedSubgraphRepositoryError>>({ kind: "complexity" }))
+  })
+
   it("fails closed when one node cannot represent an eligible edge", async () => {
     const repository = new FocusedSubgraphReadRepository(client({
       edges: [edge("ab", "a", "b", "RELATES_TO")], nodes: [node("structural", "a"), node("structural", "b")],

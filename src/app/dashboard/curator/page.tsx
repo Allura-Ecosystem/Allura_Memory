@@ -11,14 +11,14 @@ import { issueCuratorModules } from "@/lib/curator/module-registry";
 export function CuratorHandoffContent({ user, issue }: { user: AuthUser; issue?: CuratorModuleIssue }) {
   if (issue) {
     return (
-      <DashboardShell user={user} title="Curator">
+      <DashboardShell user={user} title="Curator" activeHref="/dashboard/curator">
         <CuratorDashboard user={user} issue={issue} />
       </DashboardShell>
     );
   }
 
   return (
-    <DashboardShell user={user} title="Curator">
+    <DashboardShell user={user} title="Curator" activeHref="/dashboard/curator">
       <p data-testid="authenticated-identity">Signed in as {user.id}</p>
       <p data-testid="authenticated-scope">
         Workspace {user.workspaceId} | Tenant {user.groupId} | Role {user.role}

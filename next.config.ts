@@ -1,6 +1,9 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
+  // Browser evidence is captured from the application surface itself. Keep the
+  // development-only Next.js badge from obscuring governed controls or data.
+  devIndicators: false,
   // The portfolio evidence runner drives the local development server through
   // http://127.0.0.1. Declare that loopback origin explicitly so Next dev does
   // not block HMR/font/client-hydration resources during browser proof.

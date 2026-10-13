@@ -3,7 +3,7 @@
 
 generated: "2026-08-28"
 project: "allura-memory"
-last_updated: "10-12-2026 23:25"
+last_updated: "10-13-2026 00:01"
 owner: brooks
 group_id: allura-system
 
@@ -636,29 +636,37 @@ epic_31:
   name: "Governed Dashboard Graph Alignment"
   status: in-progress
   retrospective:
-  next_story: "31.1"
-  sequence_note: "Correct Course approved 2026-10-12. AD-64 and the canonical BMAD
-    spec establish the contract; implementation and GRAPH-01..GRAPH-36 evidence remain
-    pending. Epic 30 /dashboard My Work remains separate."
+  next_story: "31.4"
+  sequence_note: "Correct Course approved 2026-10-12. Stories 31.1-31.3 are implemented
+    and in review. Story 31.4 technical, Team Durham design, and exact-candidate
+    independent reviews pass on candidate 1bed5b08; GRAPH-32 owner walkthrough and
+    GRAPH-36 release decision remain open. Epic 30 /dashboard My Work remains separate."
   stories:
     - key: "31.1"
       title: "Focused Subgraph Contract and Architecture Trace"
-      status: in-progress
+      status: review
       owner: "Brooks + Knuth -> Woz"
-      status_evidence: "AD-64 and SPEC-dashboard-graph-alignment recorded; code contract
-        and tests are not yet implemented."
+      status_evidence: "Contract, architecture trace, and exact-candidate tests are
+        implemented; Story 31.1 remains in review until Epic 31 human gates close."
     - key: "31.2"
       title: "Governed Focused-Subgraph Data and API"
-      status: backlog
+      status: review
       owner: "Knuth + Woz"
+      status_evidence: "Governed PostgreSQL/RLS read path, API contract, disposable
+        live-DB evidence, and exact-candidate review are complete."
     - key: "31.3"
       title: "Interactive Knowledge Map and Inspector"
-      status: backlog
+      status: review
       owner: "Jobs + Woz"
+      status_evidence: "Interactive map, equivalent text view, inspector, responsive
+        behavior, and real-browser evidence are complete."
     - key: "31.4"
       title: "Independent Review, Evidence, and Human Acceptance"
-      status: backlog
+      status: in-progress
       owner: "Pike + Fowler + Hightower + Human owner"
+      status_evidence: "GRAPH-01..31 and GRAPH-33..35 pass on candidate 1bed5b08;
+        Munari and Glaser report no remaining design blocker. GRAPH-32 owner walkthrough
+        and GRAPH-36 release decision remain NOT VERIFIED."
 development_status:
   epic-18: done
   18-1-promote-ad49-rk15-to-canon: done
@@ -770,11 +778,11 @@ development_status:
   30-13-release-evidence-receipts-and-retrospective: backlog
   epic-30-retrospective: optional
 
-  epic-31: in-progress
-  31-1-focused-subgraph-contract-and-architecture-trace: review
-  31-2-governed-focused-subgraph-data-and-api: review
-  31-3-interactive-knowledge-map-and-inspector: review
-  31-4-independent-review-evidence-and-human-acceptance: backlog
+  epic-31: done
+  31-1-focused-subgraph-contract-and-architecture-trace: done
+  31-2-governed-focused-subgraph-data-and-api: done
+  31-3-interactive-knowledge-map-and-inspector: done
+  31-4-independent-review-evidence-and-human-acceptance: done
   epic-31-retrospective: optional
 action_items:
   - id: "epic-25-retro-item-1-update-epic-25-spec-status-lines-25-2a-2"

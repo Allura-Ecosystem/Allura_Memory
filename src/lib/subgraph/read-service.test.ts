@@ -25,6 +25,7 @@ function harness(options: {
   authority?: boolean; authorityRole?: string; revision?: number; repositoryRead?: ReturnType<typeof vi.fn>; transactionError?: Error
 } = {}) {
   const query = vi.fn(async (sql: string) => {
+    if (sql.includes("set_config('statement_timeout'")) return { rows: [{ set_config: "5000ms" }] }
     if (sql.includes("brain_workspace_memberships")) return { rows: options.authority === false ? [] : [{ policy_epoch: 3, role: options.authorityRole ?? "viewer" }] }
     if (sql.includes("graph_scope_revisions")) return { rows: [{ graph_revision: options.revision ?? 7 }] }
     throw new Error(`unexpected service SQL: ${sql.slice(0, 80)}`)
@@ -66,10 +67,11 @@ describe("FocusedSubgraphReadService", () => {
   })
 
   it("proves relational membership and emits a revision-bound complete page", async () => {
-    const { service, transaction } = harness()
+    const { service, transaction, query } = harness()
     const result = await service.read(principal, { kind: "overview", nodeLimit: 10, edgeLimit: 20 })
     expect(result).toMatchObject({ state: "complete", snapshot: { policyEpoch: 3, graphRevision: 7 }, nodes: [{ key: "memory:a" }] })
     expect(transaction).toHaveBeenCalledWith({ tenantId: "allura-system", workspaceId: "workspace-a", principalId: "viewer-a" }, expect.any(Function))
+    expect(query.mock.calls[0]).toEqual(["SELECT set_config('statement_timeout',$1,true)", ["5000ms"]])
   })
 
   it("denies when active relational membership cannot be proven", async () => {
@@ -79,10 +81,16 @@ describe("FocusedSubgraphReadService", () => {
   })
 
   it("maps backend failures to the sanitized unavailable contract", async () => {
-    const { service } = harness({ transactionError: new Error("postgres password=secret host=db.internal") })
+    const onUnavailable = vi.fn()
+    const transactionError = new Error("postgres password=secret host=db.internal")
+    const { transaction } = harness({ transactionError })
+    const service = new FocusedSubgraphReadService({
+      continuationSecret: Buffer.alloc(32, 21), transaction, rolloutValue: () => "true", onUnavailable,
+    })
     const result = await service.read(principal, { kind: "overview" })
     expect(result).toEqual({ contractVersion: "2.0", state: "error", code: "UNAVAILABLE", retryable: true, action: "retry" })
     expect(JSON.stringify(result)).not.toMatch(/password|internal|postgres/i)
+    expect(onUnavailable).toHaveBeenCalledWith(transactionError, { queryKind: "overview", continuation: false })
   })
 
   it("maps a real repository closure contradiction to MALFORMED_QUERY", async () => {
@@ -92,6 +100,7 @@ describe("FocusedSubgraphReadService", () => {
       edge_depth: 0, traversal_direction: "outgoing", from_distance: 0, to_distance: 0,
     }
     const query = vi.fn(async (sql: string) => {
+      if (sql.includes("set_config('statement_timeout'")) return { rows: [{ set_config: "5000ms" }] }
       if (sql.includes("brain_workspace_memberships")) return { rows: [{ policy_epoch: 3, role: "viewer" }] }
       if (sql.includes("graph_scope_revisions")) return { rows: [{ graph_revision: 7 }] }
       if (sql.includes("endpoint_state IN")) return { rows: [{ present: false }] }

@@ -13,7 +13,7 @@ export default async function MissionControlPage() {
   )
 
   return (
-    <DashboardShell user={user} title="Mission Control">
+    <DashboardShell user={user} title="Mission Control" activeHref="/dashboard/mission-control">
       <SurfaceState
         state={state}
         emptyLabel="No execution activity yet."

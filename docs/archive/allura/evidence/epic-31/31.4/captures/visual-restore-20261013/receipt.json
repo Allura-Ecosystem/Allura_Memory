@@ -1,0 +1,82 @@
+{
+  "storyId": "31.3",
+  "criterionIds": [],
+  "criterionIdNote": "The frozen Story 31.3 specification defines unnumbered acceptance criteria; no identifier mapping was invented.",
+  "capturedAt": "2026-10-13T13:09:00.333Z",
+  "url": "http://127.0.0.1:31431/dashboard/graph",
+  "contractVersion": "2.0",
+  "graphState": "complete",
+  "snapshot": {
+    "policyEpoch": 1,
+    "graphRevision": 9,
+    "capturedAt": "2026-10-13T13:08:59.015Z"
+  },
+  "checks": [
+    {
+      "id": "REAL_DATA_CORRELATION",
+      "nodes": 3,
+      "edges": 2,
+      "passed": true
+    },
+    {
+      "id": "KEYBOARD_INSPECTOR_FOCUS",
+      "nodeKey": "structural:epic31-agent-woz",
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_1440",
+      "effectiveZoom": "100%",
+      "viewport": 1440,
+      "page": 1440,
+      "contentTop": 64,
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_900",
+      "effectiveZoom": "100%",
+      "viewport": 900,
+      "page": 900,
+      "contentTop": 64,
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_640",
+      "effectiveZoom": "100%",
+      "viewport": 640,
+      "page": 640,
+      "contentTop": 64,
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_320",
+      "effectiveZoom": "200%-equivalent reflow from a 640 CSS-pixel baseline",
+      "viewport": 320,
+      "page": 320,
+      "contentTop": 64,
+      "passed": true
+    }
+  ],
+  "pageErrors": [],
+  "artifacts": [
+    {
+      "file": "knowledge-map-1440.png",
+      "sha256": "a9ec182e5162848c209824528ed852f37940877d2b9e638435fcab5ac4ea5d99"
+    },
+    {
+      "file": "knowledge-map-900.png",
+      "sha256": "30cb85327fc4e5ef87336f6eec6c43f230ecf2a61c29ea933bcc6d1bedf75938"
+    },
+    {
+      "file": "knowledge-map-640.png",
+      "sha256": "15b17a4e3daae401a4f6c22eacb2054981563cff60e2665fa7d04867e0665f4f"
+    },
+    {
+      "file": "knowledge-map-320-200-percent-equivalent.png",
+      "sha256": "bb583a7e5967a46f95fff0b4b9aab5ca330e9da32139092f43cf402c38684d70"
+    }
+  ],
+  "limitations": [
+    "Browser receipt proves the active local principal and returned snapshot only.",
+    "Human acceptance and screen-reader walkthrough remain separate Story 31.4 gates."
+  ]
+}

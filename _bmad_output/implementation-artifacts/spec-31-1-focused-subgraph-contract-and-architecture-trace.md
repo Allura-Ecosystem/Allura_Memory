@@ -45,7 +45,7 @@ context:
 - `src/lib/subgraph/rollout.ts` -- new `server-only` Graph V2 flag parser and rollback-state contract.
 - `src/lib/subgraph/contract.test.ts` -- executable request/response invariants, state exclusivity, collision-safe identity, cap, and non-disclosure tests.
 - `src/lib/subgraph/rollout.test.ts` -- fail-closed flag and rollback tests; mock `server-only` as existing dashboard tests do.
-- `docs/allura/FOCUSED-SUBGRAPH-CONTRACT.md` -- tracked protocol, continuation, HTTP mapping, rollout, and later-story implementation boundary.
+- `docs/archive/allura/reference/focused-subgraph-contract.md` -- tracked protocol, continuation, HTTP mapping, rollout, and later-story implementation boundary.
 - `docs/allura/RISKS-AND-DECISIONS.md:76` -- AD-64 is approved; clarify only if executable contract exposes a contradiction.
 - `docs/allura/REQUIREMENTS-MATRIX.md:461` -- REQ-MAP-001..003 already trace to AD-64; keep AD-59 unchanged.
 - `src/lib/graph-adapter/types.ts:170` -- read-only boundary evidence: lifecycle/storage interface must not gain traversal concerns.
@@ -58,7 +58,7 @@ context:
 - [x] `src/lib/subgraph/contract.ts` -- implement strict versioned request/result and continuation-claim schemas plus deterministic normalization -- freeze the shared data/UI seam before implementation.
 - [x] `src/lib/subgraph/rollout.ts` -- implement fail-closed server-only enablement and honest disabled-state metadata -- make rollout reversible without legacy fallback.
 - [x] `src/lib/subgraph/contract.test.ts`, `src/lib/subgraph/rollout.test.ts` -- cover every matrix row and forbidden authority/disclosure field -- prevent permissive schema drift.
-- [x] `docs/allura/FOCUSED-SUBGRAPH-CONTRACT.md` -- publish the approved protocol, HTTP mapping, continuation bindings, and story boundaries -- keep architecture trace reviewable in Git.
+- [x] `docs/archive/allura/reference/focused-subgraph-contract.md` -- publish the approved protocol, HTTP mapping, continuation bindings, and story boundaries -- keep architecture trace reviewable in Git.
 - [x] `docs/allura/RISKS-AND-DECISIONS.md`, `docs/allura/REQUIREMENTS-MATRIX.md` -- verify AD-64 and REQ-MAP-001..003 remain coherent with executable schemas; edit only for discovered contradiction -- preserve accepted traceability.
 
 **Acceptance Criteria:**
@@ -113,7 +113,7 @@ Keep transport parsing separate from server-derived authority. The request schem
   [`rollout.ts:29`](../../src/lib/subgraph/rollout.ts#L29)
 
 - Protocol guidance preserves HTTP truth states, rollback, and accepted architecture trace.
-  [`FOCUSED-SUBGRAPH-CONTRACT.md:57`](../../docs/allura/FOCUSED-SUBGRAPH-CONTRACT.md#L57)
+  [`FOCUSED-SUBGRAPH-CONTRACT.md:57`](../../docs/archive/allura/reference/focused-subgraph-contract.md#L57)
 
 **Executable evidence**
 

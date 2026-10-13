@@ -126,6 +126,7 @@ describe("dashboard page rendering", () => {
     for (const [route, page] of Object.entries(pages)) {
       const markup = renderToStaticMarkup(await page())
       expect(markup, `${route} should render the shared navigation shell`).toContain('aria-label="Dashboard navigation"')
+      expect(markup, `${route} should identify the active dashboard route`).toMatch(new RegExp(`aria-current="page"[^>]+href="${route}"`))
       if (route === "/dashboard/curator") {
         expect(markup).toContain('data-shell-state="degraded"')
         expect(markup).toContain("Bumblebee is currently unavailable.")

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "executedAt": "2026-10-13T04:34:00Z",
+  "classification": "technical-only-agent-assisted-exact-candidate-walkthrough",
+  "candidate": {
+    "commit": "1bed5b08cf755f837c747e640f4b3570eb9d95cc",
+    "tree": "be52bef367bb6edf228612df41599e7cf170026e",
+    "parent": "2522907eae9fb342a84148fa4ac83816af57ed6f"
+  },
+  "environment": {
+    "url": "http://127.0.0.1:31431/dashboard/graph",
+    "database": "allura_graph_walkthrough_20261012_2339",
+    "tenant": "allura-epic31-browser",
+    "workspace": "epic31-browser-workspace",
+    "role": "viewer",
+    "data": "fresh migrations plus scripts/epic31/seed-knowledge-map-browser.sql",
+    "sourceIdentity": "every path changed by the candidate was byte-compared with its candidate blob; mismatch=0"
+  },
+  "observations": [
+    {
+      "step": "overview-parity",
+      "result": "PASS",
+      "evidence": "The live accessibility tree reported 3 nodes and 2 directed relationships in both the map status and text representation; AUTHORED_BY and RELATES_TO labels were exposed."
+    },
+    {
+      "step": "focus-and-inspector",
+      "result": "PASS",
+      "evidence": "Selecting the current governed decision expanded the admitted focus to 4 nodes and 3 relationships and exposed content, freshness, provenance, one authorized evidence reference, version, directed context, lineage, scope identity, and technical details."
+    },
+    {
+      "step": "return-and-filter-parity",
+      "result": "PASS",
+      "evidence": "Back to overview restored the 3-node overview. Disabling RELATES_TO reduced both the map status and text relationship count from 2 to 1; Reset filters remained available."
+    },
+    {
+      "step": "design-repair-surface",
+      "result": "PASS",
+      "evidence": "All dashboard navigation destinations were visible, the Graph destination was exposed as current context, primary content used the repaired Allura palette, and no development badge appeared."
+    },
+    {
+      "step": "responsive-and-zoom",
+      "result": "PASS_WITH_OWNER_LIMIT",
+      "evidence": "The refreshed automated browser receipt proves contained 1440/900/640/320 reflow and zero page-level overflow. This technical rerun does not claim that the owner operated the browser zoom control."
+    }
+  ],
+  "humanGate": {
+    "graph32": "NOT_VERIFIED",
+    "graph36": "NOT_VERIFIED",
+    "reason": "An agent-assisted technical exercise cannot substitute for the owner's screen-reader exercise, perception, judgment, or explicit release decision."
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "storyId": "31.4",
+  "criterionIds": ["GRAPH-01", "GRAPH-02", "GRAPH-04", "GRAPH-05", "GRAPH-23", "GRAPH-24", "GRAPH-29", "GRAPH-30"],
+  "criterionIdNote": "Final-candidate browser evidence for the Story 31.4 acceptance ledger; authority and isolation claims remain backed by the live PostgreSQL receipt.",
+  "candidate": {
+    "commit": "1bed5b08cf755f837c747e640f4b3570eb9d95cc",
+    "tree": "be52bef367bb6edf228612df41599e7cf170026e",
+    "parent": "2522907eae9fb342a84148fa4ac83816af57ed6f"
+  },
+  "capturedAt": "2026-10-13T04:30:58.711Z",
+  "url": "http://127.0.0.1:31431/dashboard/graph",
+  "contractVersion": "2.0",
+  "graphState": "complete",
+  "snapshot": {
+    "policyEpoch": 1,
+    "graphRevision": 9,
+    "capturedAt": "2026-10-13T04:30:57.539Z"
+  },
+  "checks": [
+    {
+      "id": "REAL_DATA_CORRELATION",
+      "nodes": 3,
+      "edges": 2,
+      "passed": true
+    },
+    {
+      "id": "KEYBOARD_INSPECTOR_FOCUS",
+      "nodeKey": "structural:epic31-agent-woz",
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_1440",
+      "effectiveZoom": "100%",
+      "viewport": 1440,
+      "page": 1440,
+      "contentTop": 0,
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_900",
+      "effectiveZoom": "100%",
+      "viewport": 900,
+      "page": 900,
+      "contentTop": 78,
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_640",
+      "effectiveZoom": "100%",
+      "viewport": 640,
+      "page": 640,
+      "contentTop": 139,
+      "passed": true
+    },
+    {
+      "id": "RESPONSIVE_320",
+      "effectiveZoom": "200%-equivalent reflow from a 640 CSS-pixel baseline",
+      "viewport": 320,
+      "page": 320,
+      "contentTop": 173,
+      "passed": true
+    }
+  ],
+  "pageErrors": [],
+  "artifacts": [
+    {
+      "file": "knowledge-map-1440.png",
+      "sha256": "f04c20de2aafb427f5c26246df69bd7b6302834e54f3e20642071f9e7cbdf187"
+    },
+    {
+      "file": "knowledge-map-900.png",
+      "sha256": "34f2439ec086b01d824b8347ee98d5b4987b6312626d5463232326c727b4fae6"
+    },
+    {
+      "file": "knowledge-map-640.png",
+      "sha256": "3a7243a63f3b14ed95c014fbbf6b943c3070d80f1a2b35caf183fd9832a77e95"
+    },
+    {
+      "file": "knowledge-map-320-200-percent-equivalent.png",
+      "sha256": "f8d6998d7406f21b91ec448e27339bb85511a707b1e3bc6c383f9b09d00d1b35"
+    }
+  ],
+  "limitations": [
+    "Browser receipt proves the active local principal and returned snapshot only.",
+    "Human acceptance and screen-reader walkthrough remain separate Story 31.4 gates."
+  ]
+}

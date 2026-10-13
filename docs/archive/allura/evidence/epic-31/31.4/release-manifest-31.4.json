@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.1",
+  "storyId": "31.4",
+  "status": "superseded-by-owner-visual-rejection",
+  "generatedAt": "2026-10-13T04:37:34Z",
+  "candidate": {
+    "commit": "1bed5b08cf755f837c747e640f4b3570eb9d95cc",
+    "tree": "be52bef367bb6edf228612df41599e7cf170026e",
+    "parent": "2522907eae9fb342a84148fa4ac83816af57ed6f",
+    "kind": "unreferenced-local-review-commit",
+    "branchRefMoved": false
+  },
+  "artifacts": [
+    {"path": "GRAPH-ACCEPTANCE-LEDGER.md", "sha256": "30e3d370ca067b411265f2bc4640ab0baf686117a3495287f3b96a3aff3b9106", "role": "requirement-to-evidence-source-of-truth"},
+    {"path": "technical-validation.md", "sha256": "ca8715a31c9cae68a2a20b1ec55983ac9a1374625b6703160aa00a7072cb09ec", "role": "final-candidate-technical-validation"},
+    {"path": "receipts/browser-receipt.json", "sha256": "7df767989f5c889592011be42cd728a61efe590a950d32f590bc516c5572e24e", "role": "final-candidate-real-browser-receipt"},
+    {"path": "receipts/live-db-tests.json", "sha256": "8672c3e2363e125d8c672f0f28be3ae496a551ea0349dd672c56cb906dc022b1", "role": "disposable-live-db-report"},
+    {"path": "receipts/historical-upgrade-tests.json", "sha256": "f14f14d5d9ad1cff357b78a394ac30ec843d4b4080c8d74bd4531621a3084fe2", "role": "historical-upgrade-report"},
+    {"path": "receipts/operator-assisted-walkthrough-final.json", "sha256": "d44a6062c9c81511d72a26b95d2f87b5a5ab48cc97ea811ea0ad5eed9dfc57ba", "role": "technical-only-exact-candidate-walkthrough-not-human-acceptance"},
+    {"path": "captures/truth-states/receipt.json", "sha256": "361a947b9ee0a48c21e2472c0915507567215009b5dc28034b7b21ce6426ce0a", "role": "schema-validated-controlled-truth-state-presentation-receipt"},
+    {"path": "truth-state-gallery.md", "sha256": "c3ffb2dc77b3e74392068bf053c751e0de011fd293d1311049980798552f0953", "role": "owner-review-gallery-not-live-data-or-human-acceptance-evidence"},
+    {"path": "captures/knowledge-map-1440.png", "sha256": "f04c20de2aafb427f5c26246df69bd7b6302834e54f3e20642071f9e7cbdf187", "role": "desktop-capture"},
+    {"path": "captures/knowledge-map-900.png", "sha256": "34f2439ec086b01d824b8347ee98d5b4987b6312626d5463232326c727b4fae6", "role": "tablet-capture"},
+    {"path": "captures/knowledge-map-640.png", "sha256": "3a7243a63f3b14ed95c014fbbf6b943c3070d80f1a2b35caf183fd9832a77e95", "role": "narrow-capture"},
+    {"path": "captures/knowledge-map-320-200-percent-equivalent.png", "sha256": "f8d6998d7406f21b91ec448e27339bb85511a707b1e3bc6c383f9b09d00d1b35", "role": "320-css-pixel-capture-not-owner-browser-zoom"},
+    {"path": "pike-review-final.md", "sha256": "0a40b6b60cde9515187b6377e642d421a0fc7c87c8462de5a4d94b6db5ddcf24", "role": "GRAPH-33-exact-candidate-approval"},
+    {"path": "fowler-review-final.md", "sha256": "16273da3eec85c8354319b078fdf90d013bd64e7c675a1c89d727140eb669fd4", "role": "GRAPH-34-exact-candidate-approval"},
+    {"path": "hightower-review-final.md", "sha256": "dbd2b362402b225566d49fc19c9d82000f8f2f809954a862c3824ea144ade054", "role": "GRAPH-35-exact-candidate-approval"},
+    {"path": "munari-review-final.md", "sha256": "e15bc16f4a8eb32ec9f8759a43d45756f0b8f02798635944b4880983c97e08c3", "role": "GRAPH-29-and-GRAPH-30-final-design-qa"},
+    {"path": "glaser-review-final.md", "sha256": "d5fcf726fd1bebb3ac06f7e6b636bbc5e6d124046bdb3508a1eee57b7ac856ea", "role": "final-visual-fidelity-approval"},
+    {"path": "owner-walkthrough.md", "sha256": "16b47d83c3a7698414ec7688ceb74c81d59dfffa15b2d4e77224c345e5f177a8", "role": "GRAPH-32-owner-only-open-gate"},
+    {"path": "owner-release-decision.md", "sha256": "2e23f0a50d89b64c66c55abfaf93c1ff7ad03f51bc6d85c6ecc90ef2d09bfa34", "role": "GRAPH-36-owner-only-open-gate"}
+  ],
+  "reviews": {
+    "pike": "approved-exact-candidate",
+    "fowler": "approved-exact-candidate",
+    "hightower": "approved-exact-candidate",
+    "munari": "superseded-request-changes",
+    "glaser": "superseded-request-changes"
+  },
+  "humanGates": {"GRAPH-32": "rejected", "GRAPH-36": "not-verified"},
+  "limitations": [
+    "Owner-controlled 200 percent zoom and screen-reader use remain GRAPH-32 checks and cannot be attested by an agent.",
+    "Sufficiently complex depth-two focus requests deliberately fail closed as sanitized UNAVAILABLE rather than emit a lossy continuation.",
+    "The repository-wide story-status validator still reports 79 pre-existing evidence-policy violations in Stories 18 through 28; it reports no Story 31.4 violation.",
+    "Controlled truth-state captures prove presentation only, not live authority.",
+    "Local browser and disposable PostgreSQL evidence is not deployment evidence.",
+    "Deployment requires explicit Graph V2 enablement and a continuation secret of at least 32 bytes.",
+    "The owner rejected this exact candidate for failing the initial mockup and brand; its design reviews and artifact hashes are historical evidence only.",
+    "No release, merge, push, deployment, or Done transition is authorized until a new candidate passes design review and both human gates."
+  ]
+}

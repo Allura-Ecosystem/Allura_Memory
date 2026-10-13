@@ -31,8 +31,10 @@ export interface FocusedSubgraphRepositoryPage {
 }
 
 export class FocusedSubgraphRepositoryError extends Error {
-  constructor(readonly kind: "malformed") {
-    super("Focused subgraph repository query is not representable within the requested closure budget")
+  constructor(readonly kind: "malformed" | "complexity") {
+    super(kind === "complexity"
+      ? "Focused subgraph depth-two frontier exceeds the bounded continuation model"
+      : "Focused subgraph repository query is not representable within the requested closure budget")
     this.name = "FocusedSubgraphRepositoryError"
   }
 }
@@ -221,6 +223,7 @@ walk(node_kind,node_id,distance,path,edge_id,from_id,from_kind,to_id,to_kind,rel
          adjacent.edge_id,adjacent.from_id,adjacent.from_kind,adjacent.to_id,adjacent.to_kind,
          adjacent.rel_type,adjacent.created_at,adjacent.source_table,adjacent.traversal_direction
   FROM walk CROSS JOIN LATERAL (
+    SELECT candidate_edges.* FROM (
     SELECT encode(digest(concat_ws(E'\\x1f',e.from_kind,e.from_id,e.to_kind,e.to_id,e.rel_type),'sha256'),'hex') AS edge_id,
            e.from_id,e.from_kind,e.to_id,e.to_kind,e.rel_type,e.created_at,'graph_structural_edges'::text AS source_table,
            'outgoing'::text AS traversal_direction,e.to_kind AS next_kind,e.to_id AS next_id
@@ -267,6 +270,23 @@ walk(node_kind,node_id,distance,path,edge_id,from_id,from_kind,to_id,to_kind,rel
     WHERE $6::boolean AND $5::text IN ('incoming','both') AND s.group_id=$1 AND s.workspace_id=$2
       AND s.workspace_scope_state='workspace_scoped' AND walk.node_kind='memory' AND s.superseded_id=walk.node_id
       AND (cardinality($8::text[])=0 OR 'SUPERSEDES'=ANY($8::text[]))
+    ) candidate_edges
+    WHERE $10::integer IS NULL OR walk.distance+1<>$10::integer OR (walk.distance+1=$10::integer AND
+      ((CASE upper(candidate_edges.rel_type) WHEN 'CONTRIBUTED' THEN 'CONTRIBUTES_TO' WHEN 'BELONGS_TO' THEN 'MEMBER_OF'
+          WHEN 'PART_OF' THEN 'MEMBER_OF' WHEN 'INFORMED_BY' THEN 'RELATES_TO'
+          ELSE CASE WHEN upper(candidate_edges.rel_type) ~ '^[A-Z][A-Z0-9_.:-]{0,127}$' THEN upper(candidate_edges.rel_type) ELSE 'Unknown' END END) COLLATE "C",
+        candidate_edges.traversal_direction COLLATE "C",(candidate_edges.from_kind||':'||candidate_edges.from_id) COLLATE "C",
+        (candidate_edges.to_kind||':'||candidate_edges.to_id) COLLATE "C",('edge:'||candidate_edges.source_table||':'||candidate_edges.edge_id) COLLATE "C") >
+       ($11::text COLLATE "C",$12::text COLLATE "C",$13::text COLLATE "C",$14::text COLLATE "C",$15::text COLLATE "C"))
+    ORDER BY (CASE upper(candidate_edges.rel_type) WHEN 'CONTRIBUTED' THEN 'CONTRIBUTES_TO' WHEN 'BELONGS_TO' THEN 'MEMBER_OF'
+        WHEN 'PART_OF' THEN 'MEMBER_OF' WHEN 'INFORMED_BY' THEN 'RELATES_TO'
+        ELSE CASE WHEN upper(candidate_edges.rel_type) ~ '^[A-Z][A-Z0-9_.:-]{0,127}$' THEN upper(candidate_edges.rel_type) ELSE 'Unknown' END END) COLLATE "C",
+      candidate_edges.traversal_direction COLLATE "C",(candidate_edges.from_kind||':'||candidate_edges.from_id) COLLATE "C",
+      (candidate_edges.to_kind||':'||candidate_edges.to_id) COLLATE "C",('edge:'||candidate_edges.source_table||':'||candidate_edges.edge_id) COLLATE "C"
+    -- The request lookahead is a hard per-frontier expansion ceiling. With
+    -- depth <= 2 this bounds the recursive working set to 1 + L + L^2 rows,
+    -- while the transaction-local statement timeout is the final runtime guard.
+    LIMIT $17
   ) adjacent
   WHERE walk.distance<$7::integer AND NOT (adjacent.next_kind||':'||adjacent.next_id)=ANY(walk.path)
 ), node_distances AS (
@@ -357,6 +377,7 @@ export class FocusedSubgraphReadRepository {
       query.effectiveBudgets.depth, query.relationshipKinds, query.nodeKinds,boundary?.depth ?? null,
       boundary?.relationshipKind ?? null, boundary?.direction ?? null,boundary?.sourceNodeKey ?? null,
       boundary?.targetNodeKey ?? null,boundary?.edgeKey ?? null,query.effectiveBudgets.edgeLimit + 1,
+      query.effectiveBudgets.edgeLimit + 1,
     ])).rows
   }
 
@@ -383,6 +404,13 @@ export class FocusedSubgraphReadRepository {
       selectedRows.push(row)
     }
     const hasMoreEdges = selectedRows.length < candidateRows.length
+    if (query.kind === "focus" && query.effectiveBudgets.depth === 2 && hasMoreEdges &&
+        Number(selectedRows.at(-1)?.edge_depth) === 1) {
+      // A stateless edge boundary cannot both discard already-returned first-hop
+      // edges and later reconstruct their second-hop frontier. Fail explicitly
+      // instead of issuing a continuation that would silently omit data.
+      throw new FocusedSubgraphRepositoryError("complexity")
+    }
 
     let lastRoot: RootRow | undefined; let hasMoreNodes = false
     if (query.kind === "overview") {

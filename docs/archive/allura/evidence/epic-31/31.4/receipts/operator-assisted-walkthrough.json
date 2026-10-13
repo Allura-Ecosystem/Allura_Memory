@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "executedAt": "2026-10-13T04:01:25Z",
+  "classification": "technical-only-agent-assisted-walkthrough",
+  "supersededBy": "operator-assisted-walkthrough-final.json",
+  "supersededReason": "This receipt exercised candidate d069b972; it is retained as historical evidence and is not evidence for the final candidate.",
+  "candidate": {
+    "commit": "d069b972cdae797748af7b7bf6f15d4740a5ac13",
+    "tree": "6a4a003a3b2f3f89d6b7d1c96dd79232235c697d",
+    "parent": "2522907eae9fb342a84148fa4ac83816af57ed6f"
+  },
+  "environment": {
+    "url": "http://127.0.0.1:31431/dashboard/graph",
+    "database": "allura_graph_walkthrough_20261012_2339",
+    "tenant": "allura-epic31-browser",
+    "workspace": "epic31-browser-workspace",
+    "role": "viewer",
+    "data": "fresh migrations plus scripts/epic31/seed-knowledge-map-browser.sql"
+  },
+  "observations": [
+    {
+      "step": "overview-parity",
+      "result": "PASS",
+      "evidence": "Accessibility tree reported 3 nodes and 2 links in both the map status and text relationship summary; directed AUTHORED_BY and RELATES_TO names were exposed."
+    },
+    {
+      "step": "focus-and-inspector",
+      "result": "PASS",
+      "evidence": "Selecting the current governed decision expanded the admitted focus to 4 nodes and 3 links and exposed content, freshness, provenance, one authorized evidence reference, version, directed context, lineage, scope identity, source record, node key, and relationship keys."
+    },
+    {
+      "step": "relationship-navigation-and-return",
+      "result": "PASS",
+      "evidence": "Activating the full directed SUPERSEDES relationship selected the previous decision; Back to overview restored the original 3-node, 2-link overview."
+    },
+    {
+      "step": "relationship-filter-parity",
+      "result": "PASS",
+      "evidence": "Disabling RELATES_TO reduced overview links from 2 to 1. In focused current-decision context, the canvas/text summary reported 2 visible links and Directed context plus technical relationship keys omitted the filtered RELATES_TO relationship while retaining AUTHORED_BY and SUPERSEDES."
+    },
+    {
+      "step": "keyboard-activation",
+      "result": "PASS",
+      "evidence": "Shift+Tab moved focus from Technical details to the preceding connected-node control; Space activated it and moved selection to the previous decision."
+    },
+    {
+      "step": "browser-zoom",
+      "result": "PASS_WITH_OWNER_LIMIT",
+      "evidence": "The Chromium Ctrl+Plus sequence was applied from the default zoom through five increments (the standard 100% to 200% sequence). The resulting visible layout retained contained graph panning and showed no page-level horizontal scrollbar. Browser zoom was reset and filters were reset before handoff."
+    }
+  ],
+  "humanGate": {
+    "graph32": "NOT_VERIFIED",
+    "graph36": "NOT_VERIFIED",
+    "reason": "Agent-assisted technical exercise cannot substitute for the owner's screen-reader exercise, judgment, or explicit post-walkthrough release decision."
+  }
+}

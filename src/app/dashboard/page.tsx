@@ -18,7 +18,7 @@ export default async function DashboardOverviewPage(): Promise<React.ReactElemen
   if (!localDatabaseIsExplicitlyEnabled()) {
     const state = emptyWhen(await getOverview(scope), (data) =>
       data.memories === 0 && data.events === 0 && data.proposals === 0 && data.workItems === 0 && data.graphMemories === 0)
-    return <DashboardShell user={user} title="Overview">
+    return <DashboardShell user={user} title="Overview" activeHref="/dashboard">
       <SurfaceState state={state} emptyLabel="No governed records yet." render={(data) => (
         <dl style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: "8px 16px", fontSize: 14, color: "#374151" }}>
           <dt style={{ fontWeight: 600 }}>Memories</dt><dd style={{ margin: 0 }}>{data.memories}</dd>

@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page, test } from "@playwright/test"
 
 import { type SubgraphNode, type SubgraphResponse, SubgraphResponseSchema } from "../../src/lib/subgraph/contract"
+import { overviewFocusedSubgraph } from "../../src/test/fixtures/focused-subgraph"
 
 type GraphPayload = Extract<SubgraphResponse, { state: "complete" | "partial" }>
 
@@ -38,29 +39,44 @@ test("correlates real API identities with React Flow and the text view", async (
   await expect(page.getByRole("list", { name: "Knowledge Map directed relationships" }).getByRole("listitem")).toHaveCount(payload.edges.length)
   await expect(canvas.locator(".react-flow__node")).toHaveCount(payload.nodes.length)
   await expect(canvas.locator(".react-flow__edge")).toHaveCount(payload.edges.length)
+  await expect(canvas.locator('[data-visual="brain-node"]')).toHaveCount(payload.nodes.length)
   for (const node of payload.nodes.slice(0, 5)) {
     await expect(exactNodeControl(page, node.key)).toBeVisible()
     await expect(exactCanvasNode(page, node.key)).toBeVisible()
+    await expect(exactCanvasNode(page, node.key).locator("p")).toHaveCount(0)
   }
   await expect(page.getByRole("button", { name: "Fit view" })).toBeVisible()
   await page.getByRole("button", { name: "Zoom in" }).click()
   await page.getByRole("button", { name: "Fit view" }).click()
-  await expect(canvas.locator(".react-flow__minimap")).toBeVisible()
+  await expect(canvas.locator(".react-flow__minimap")).toHaveCount(payload.nodes.length > 8 ? 1 : 0)
   await page.screenshot({ path: testInfo.outputPath("governed-map-desktop.png"), fullPage: true })
 })
 
 test("canvas selection opens authoritative inspector and keyboard clearing restores exact identity", async ({ page }) => {
   const payload = await openGovernedMap(page)
   const candidate: SubgraphNode = payload.nodes.find((node) => node.entityType !== "memory") ?? payload.nodes[0]
+  await exactCanvasNode(page, candidate.key).scrollIntoViewIfNeeded()
+  const initialScrollY = await page.evaluate(() => window.scrollY)
   const focusResponse = waitForSuccessfulFocus(page)
   await exactCanvasNode(page, candidate.key).click()
   await focusResponse
   const inspector = page.getByRole("complementary", { name: "Selected node inspector" })
   await expect(inspector).toBeFocused()
+  expect(await page.evaluate(() => window.scrollY)).toBe(initialScrollY)
+  await expect(exactCanvasNode(page, candidate.key).locator('[data-selected="true"]')).toBeVisible()
   await expect(inspector.getByRole("heading", { name: candidate.label, exact: true })).toBeVisible()
   await inspector.getByText("Technical details", { exact: true }).click()
   await expect(inspector.getByText(candidate.key, { exact: true })).toBeVisible()
-  await inspector.getByRole("button", { name: "Clear selection" }).click()
+  await inspector.getByRole("button", { name: "Back to overview" }).click()
+  await expect(exactCanvasNode(page, candidate.key)).toBeFocused()
+  await expect(exactCanvasNode(page, candidate.key).locator('[data-selected="false"]')).toBeVisible()
+
+  const canvasKeyboardResponse = waitForSuccessfulFocus(page)
+  await exactCanvasNode(page, candidate.key).press("Enter")
+  await canvasKeyboardResponse
+  await expect(inspector).toBeFocused()
+  await expect(exactCanvasNode(page, candidate.key)).toHaveAttribute("aria-pressed", "true")
+  await inspector.getByRole("button", { name: "Back to overview" }).click()
   await expect(exactCanvasNode(page, candidate.key)).toBeFocused()
 
   const textOpener = exactNodeControl(page, candidate.key)
@@ -69,8 +85,10 @@ test("canvas selection opens authoritative inspector and keyboard clearing resto
   await textOpener.press("Space")
   await keyboardResponse
   await expect(inspector).toBeFocused()
-  await inspector.getByRole("button", { name: "Clear selection" }).click()
+  await expect(exactCanvasNode(page, candidate.key).locator('[data-selected="true"]')).toBeVisible()
+  await inspector.getByRole("button", { name: "Back to overview" }).click()
   await expect(textOpener).toBeFocused()
+  await expect(exactCanvasNode(page, candidate.key).locator('[data-selected="false"]')).toBeVisible()
 })
 
 test("connected memory inspection admits its neighborhood lineage relationship", async ({ page }) => {
@@ -108,10 +126,55 @@ test("relationship filters remove edges from canvas and text while retaining nod
   await expect(page.getByRole("list", { name: "Knowledge Map directed relationships" }).getByRole("listitem")).toHaveCount(remainingEdges.length)
 })
 
+test("relationship navigation exposes the complete direction and supports Space", async ({ page }) => {
+  const payload = await openGovernedMap(page)
+  const relationship = payload.edges[0]
+  expect(relationship).toBeTruthy()
+  const source = payload.nodes.find((node) => node.key === relationship.sourceNodeKey)!
+  const target = payload.nodes.find((node) => node.key === relationship.targetNodeKey)!
+  const control = page.getByRole("button", { name: `${source.label} — ${relationship.label} → ${target.label}` })
+  await control.focus()
+  const focusResponse = waitForSuccessfulFocus(page)
+  await control.press("Space")
+  const focused = await focusResponse
+  expect(focused.inspection?.nodeKey).toBe(target.key)
+})
+
+test("fit view remains operable near the node budget with complete text access", async ({ page }) => {
+  const base = overviewFocusedSubgraph()
+  if (base.state !== "complete") throw new Error("fixture contract")
+  const template = base.nodes[0]
+  const nodes = Array.from({ length: 199 }, (_, index) => {
+    const suffix = String(index).padStart(3, "0")
+    return {
+      ...template,
+      key: `memory:budget-${suffix}`,
+      label: `Budget node ${suffix}`,
+      source: { kind: "record" as const, recordType: "memory", recordKey: `budget-${suffix}` },
+      order: { distance: 0, kindRank: 0 },
+    }
+  })
+  const response = SubgraphResponseSchema.parse({ ...base, nodes, edges: [], inspection: undefined })
+  await page.route("**/api/memory/graph?*", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(response) }))
+  await page.goto("/dashboard/graph")
+  await expect(page.getByRole("list", { name: "Knowledge Map nodes" }).getByRole("button")).toHaveCount(199)
+  await expect(page.getByText(/text view preserves complete keyboard access/i)).toBeVisible()
+  await page.getByRole("button", { name: "Fit view" }).click()
+  const canvas = page.getByLabel("Knowledge Map canvas")
+  await expect(canvas.locator(".react-flow__minimap")).toBeVisible()
+  const bounds = await canvas.boundingBox()
+  expect(bounds).not.toBeNull()
+  expect(bounds!.x).toBeGreaterThanOrEqual(0)
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth))
+})
+
 test("reflows without horizontal overflow at shell and 200-percent-equivalent widths", async ({ page }, testInfo) => {
-  await openGovernedMap(page)
+  const payload = await openGovernedMap(page)
+  const candidate = payload.nodes.find((node) => node.entityType !== "memory") ?? payload.nodes[0]
+  const inspector = page.getByRole("complementary", { name: "Selected node inspector" })
   for (const width of [900, 640, 320]) {
     await page.setViewportSize({ width, height: 1000 })
+    await page.getByRole("button", { name: "Fit view" }).click()
     const dimensions = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, page: document.documentElement.scrollWidth }))
     expect(dimensions.page, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(dimensions.viewport)
     const canvas = page.getByLabel("Knowledge Map canvas")
@@ -119,7 +182,24 @@ test("reflows without horizontal overflow at shell and 200-percent-equivalent wi
     expect(bounds).not.toBeNull()
     expect(bounds!.x).toBeGreaterThanOrEqual(0)
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
+    const contentTop = await page.locator("[data-dashboard-content]").evaluate((element) => element.getBoundingClientRect().top)
+    expect(contentTop, `dashboard navigation consumes the initial viewport at ${width}px`).toBeLessThan(300)
+    if (width === 320) {
+      await expect(page.getByRole("link", { name: "Knowledge Graph", exact: true })).toBeVisible()
+      await expect(canvas.locator(".react-flow__minimap")).toBeHidden()
+    }
     await page.screenshot({ path: testInfo.outputPath(`governed-map-${width}${width === 320 ? "-200-percent-equivalent" : ""}.png`), fullPage: true })
+
+    const focusResponse = waitForSuccessfulFocus(page)
+    await exactNodeControl(page, candidate.key).click()
+    await focusResponse
+    await expect(inspector.getByRole("heading", { name: candidate.label, exact: true })).toBeVisible()
+    const inspectorPosition = await inspector.evaluate((element) => getComputedStyle(element).position)
+    expect(inspectorPosition).toBe(width === 900 ? "fixed" : "static")
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page.screenshot({ path: testInfo.outputPath(`governed-map-${width}-selected.png`), fullPage: width <= 640 })
+    await inspector.getByRole("button", { name: "Back to overview" }).click()
+    await page.evaluate(() => window.scrollTo(0, 0))
   }
 })
 

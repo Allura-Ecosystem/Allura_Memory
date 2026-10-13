@@ -47,15 +47,30 @@ EXCLUDE_PATTERNS=(
   "src/styles/agency-dashboard.css"
   "src/app/globals.css"
   "src/lib/preferences/theme.ts"
-  # Frozen Epic 30 workspace and pre-token shared shell/state surfaces. They
-  # remain baseline debt; new graph work must not edit or copy their literals.
-  "src/components/dashboard/my-work-workspace.module.css"
-  "src/components/dashboard/surface-state.tsx"
+)
+
+# Frozen Epic 30 workspace and pre-token shared state debt may remain excluded
+# only while the complete file is byte-for-byte identical to its reviewed
+# baseline. Any edit invalidates the fingerprint and subjects the whole file to
+# the normal scan, preventing these exceptions from becoming permanent blind
+# spots for new literals.
+declare -A FROZEN_EXCLUSION_SHA256=(
+  ["src/components/dashboard/my-work-workspace.module.css"]="eb0612ae5f8345a10ca4dba327d1024aa8fd216833007eb096a93dcdcd92bdc4"
+  ["src/components/dashboard/surface-state.tsx"]="8d9fc66b90989b1f2de2ba56a2d4cf77d543ed5d935d8865261343941e33dc99"
 )
 
 is_excluded() {
   local filepath="$1"
   local rel_path="${filepath#$PROJECT_ROOT/}"
+  local expected_hash="${FROZEN_EXCLUSION_SHA256[$rel_path]:-}"
+
+  if [[ -n "$expected_hash" ]]; then
+    local actual_hash
+    actual_hash=$(sha256sum "$filepath" | cut -d' ' -f1)
+    if [[ "$actual_hash" == "$expected_hash" ]]; then
+      return 0
+    fi
+  fi
   
   for pattern in "${EXCLUDE_PATTERNS[@]}"; do
     if [[ "$rel_path" == *"$pattern"* ]]; then

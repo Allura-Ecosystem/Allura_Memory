@@ -10,7 +10,7 @@ import { FOCUSED_SUBGRAPH_FOCUS_EDGE_SQL, FocusedSubgraphReadRepository } from "
 
 vi.mock("server-only", () => ({}))
 
-import { FocusedSubgraphReadService } from "@/lib/subgraph/read-service"
+import { FOCUSED_SUBGRAPH_STATEMENT_TIMEOUT_MS, FocusedSubgraphReadService } from "@/lib/subgraph/read-service"
 
 const describeLive = process.env.POSTGRES_PASSWORD ? describe : describe.skip
 
@@ -524,7 +524,7 @@ describeLive("focused subgraph live database contract", () => {
       const { rows } = await pool.query<Record<string, string>>(
         `EXPLAIN (FORMAT TEXT) ${FOCUSED_SUBGRAPH_FOCUS_EDGE_SQL}`,
         [group, workspace, "structural", direction === "outgoing" ? agent : project, direction, false, 2, [], [],
-          null, null, null, null, null, null, 401],
+          null, null, null, null, null, null, 401, 401],
       )
       const plan = rows.map((row) => Object.values(row)[0]).join("\n")
       expect(plan).toContain("graph_structural_edges")
@@ -533,5 +533,15 @@ describeLive("focused subgraph live database contract", () => {
       expect(plan).toContain(`workspace_id = '${workspace}'::text`)
       expect(plan).toContain(direction === "outgoing" ? "from_id = walk_1.node_id" : "to_id = walk_1.node_id")
     }
+
+    const startedAt = Date.now()
+    const bounded = await service().read(authUser(), {
+      kind: "focus", focusNodeKey: `structural:${project}`, direction: "outgoing", depth: 2,
+      nodeLimit: 2, edgeLimit: 400,
+    })
+    expect(bounded).toEqual({
+      contractVersion: "2.0", state: "error", code: "UNAVAILABLE", retryable: true, action: "retry",
+    })
+    expect(Date.now() - startedAt).toBeLessThan(FOCUSED_SUBGRAPH_STATEMENT_TIMEOUT_MS)
   })
 })
