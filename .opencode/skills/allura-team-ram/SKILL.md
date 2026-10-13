@@ -27,6 +27,11 @@ This skill is the shared foundation for all `allura-*` wrapper skills. It define
 
 ## When to Use
 
+For end-to-end development or epic delivery, use
+[team-ram-framework](../team-ram-framework/SKILL.md) as the execution method.
+It supplies adaptive planning and completion evidence without changing the
+AI Guidelines or runtime permissions.
+
 Load this skill before any `allura-*` wrapper. It is the mandatory first step for Allura Memory repo work.
 
 Trigger phrases: `allura dev story`, `allura code review`, `allura architecture`, `allura product intake`, `allura retrospective`, `team ram`, `brooks route`, `allura workflow`.
@@ -57,6 +62,11 @@ Before any implementation or review:
    - Architecture decisions (AD-##)
    - Prior outcomes and lessons
 3. Synthesize: what's active, what's blocking, what was decided
+
+When Brain is unavailable, disclose the missing retrieval and continue work
+that is safely supported by local sources. Do not claim memory was searched.
+If a particular acceptance criterion requires Brain, retain that criterion
+as incomplete until it can actually be verified.
 
 If Scout is unavailable, state: `Scout-style hydration only (no subagent).`
 
@@ -110,13 +120,17 @@ Before marking any story `Done`:
 
 - [ ] Targeted tests pass (`bun test`, `bun run typecheck`)
 - [ ] Acceptance criteria from the active goal or approved work item are met
-- [ ] Review approved (Pike for interface, Fowler for maintainability)
+- [ ] Review evidence identifies the actual reviewer and findings (Pike owns interface review; Fowler owns maintainability). Label local self-review; it cannot substitute for an independent reviewer where AI Guidelines or the approved task requires one. A local completion-check pass is not PR approval.
 - [ ] Evidence artifact created (test output, review notes, screenshots)
 - [ ] No canonical doc impact without update
 
 ### Gate 7: Brain Outcome Log
 
 After completing any significant action:
+
+Use the available Brain tool to record the evidenced outcome. If unavailable,
+report that no write occurred; do not block unrelated approved local work or
+invent a successful receipt. Existing promotion authorization is unchanged.
 
 ```
 allura-brain_memory_add({
@@ -174,7 +188,9 @@ The six canonical docs in `docs/allura/` are the only authoritative documentatio
 5. `RISKS-AND-DECISIONS.md`
 6. `DATA-DICTIONARY.md`
 
-No new Markdown files may be added to `docs/allura/` without an approved `AD-##` entry. Evidence, reports, and scratchpads go to `docs/archive/allura/` or Allura Brain.
+Do not add any file to the closed live surface. Follow the canonical
+[AI Guidelines](../ai-guidelines/SKILL.md) for artifact placement; an AD entry
+alone does not override that policy.
 
 ## Reflection Protocol
 

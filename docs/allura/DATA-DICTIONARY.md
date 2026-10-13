@@ -13,6 +13,7 @@ This document describes Allura's PostgreSQL-only governed memory data model. Pos
 
 ## Table of Contents
 
+- [Framework Completion Record](#framework-completion-record)
 - [PostgreSQL: events](#postgresql-events)
 - [PostgreSQL: canonical_proposals](#postgresql-canonical_proposals)
 - [PostgreSQL: Graph Adapter Tables](#postgresql-graph-adapter-tables)
@@ -1453,3 +1454,54 @@ Matchers are evaluated from most specific to most general. A single inventory re
 3. `workflow_reference` — workflow/action reference matches.
 4. `publisher` — publisher matches.
 5. `indicator` — fallback for credential/install-hook/action indicators that do not map to a dedicated type.
+
+## Framework Completion Record
+
+Local v0.1 evidence manifest, not a persisted RunRecord, approval receipt, or
+memory store. [Design](./DESIGN-ALLURA.md#team-ram-framework-v01) and
+[AD-67](./RISKS-AND-DECISIONS.md#ad-67-team-ram-framework-foundation).
+[JSON Schema](../../json-schema/framework-completion.schema.json) is generated
+from the strict Zod model in `src/lib/team-ram-framework/completion.ts`.
+
+All listed keys are required; no additional keys are accepted at any level.
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| version | integer, constant 1 | Yes | Local manifest format |
+| objective | nonblank string | Yes | User-requested outcome |
+| scope | nonempty nonblank string[] | Yes | Authorized work boundary |
+| outOfScope | nonblank string[] | Yes | Exclusions; may be empty |
+| revision | nonblank string | Yes | Tested snapshot identifier, including dirty state |
+| state | enum | Yes | Declared delivery state |
+| acceptance | nonempty Criterion[] | Yes | All acceptance criteria, not only finished ones |
+| checks | Check[] | Yes | Validation/review receipts; may start empty |
+| blockers | nonblank string[] | Yes | Unresolved blockers; empty before done |
+| nextAction | string | Yes | Resume action; blank only when done |
+
+| Criterion field | Type | Required | Meaning |
+|---|---|---|---|
+| id | nonblank string | Yes | Unique criterion ID |
+| text | nonblank string | Yes | Observable success condition |
+| evidenceIds | nonblank string[] | Yes | References Check.id; nonempty for done |
+
+| Check field | Type | Required | Meaning |
+|---|---|---|---|
+| id | nonblank string | Yes | Unique check ID |
+| kind | enum | Yes | Evidence category |
+| status | enum | Yes | Observed result |
+| revision | nonblank string | Yes | Snapshot actually checked |
+| artifact | Artifact or null | Yes | Null while no evidence exists |
+
+| Artifact field | Type | Required | Meaning |
+|---|---|---|---|
+| path | nonblank string | Yes | Local relative file within artifact root |
+| sha256 | string matching `^[a-f0-9]{64}$` | Yes | SHA-256 of exact file bytes |
+
+| Enum | Values and meanings |
+|---|---|
+| state | `active`: work remains; `blocked`: dependency/authority prevents progress; `done`: requests completion check |
+| kind | `test`: executed tests; `review`: labeled human/agent/self-review; `docs`: impact and reconciliation; `acceptance`: other direct acceptance proof |
+| status | `pending`: not verified; `pass`: check met its criterion; `fail`: check failed |
+
+No database tables or events are added. Criterion-to-check relationships are
+many-to-many; the checker rejects dangling references and duplicate IDs.

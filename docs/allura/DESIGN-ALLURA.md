@@ -12,6 +12,7 @@
 
 ## Table of Contents
 
+- [Team RAM Framework v0.1](#team-ram-framework-v01)
 - [Overview](#overview)
 - [Functional Requirements](#functional-requirements)
 - [API Reference](#api-reference)
@@ -985,7 +986,300 @@ async function readJson<T>(path: string, init?: RequestInit): Promise<{ data: T;
 
 ---
 
-## References
+## Team RAM Framework v0.1
+
+An Allura-native delivery method, implemented as a portable skill and a local
+completion checker. This is an execution aid subordinate to
+[AI Guidelines](../../.opencode/skills/ai-guidelines/SKILL.md), not a seventh
+architecture document, new scheduler, or replacement memory engine. It supports
+the existing [run requirements](./BLUEPRINT.md#functional-requirements)
+through [MEM-UC13](./REQUIREMENTS-MATRIX.md#section-5a-evidence-gated-run-records-f49f52).
+See [AD-67](./RISKS-AND-DECISIONS.md#ad-67-team-ram-framework-foundation),
+[topology](./SOLUTION-ARCHITECTURE.md#team-ram-framework-boundary), and
+[record fields](./DATA-DICTIONARY.md#framework-completion-record).
+
+### Delivery loop
+
+```mermaid
+flowchart LR
+  Intent[Intent and acceptance] --> Context[Local truth and scoped memory]
+  Context --> Plan[Smallest safe plan]
+  Plan --> Build[Implement an approved slice]
+  Build --> Verify[Tests and real evidence]
+  Verify --> Review[Review and doc reconciliation]
+  Review --> Gate{All acceptance met?}
+  Gate -->|No, actionable| Build
+  Gate -->|Missing authority or dependency| Blocked[Record blocker and recovery action]
+  Blocked -->|Resolved, revalidate context| Plan
+  Gate -->|Yes| Done[Verified handoff]
+```
+
+Jobs owns intent, Scout context, Brooks architecture, Woz implementation,
+Pike interface review, Fowler maintainability, Knuth data, and Hightower
+operations. These are responsibilities, not evidence that agents were spawned.
+Use actual specialists only when authorized and useful; label self-review.
+
+Choose depth from risk, not a mandatory number of documents: a fix needs scoped
+acceptance and regression evidence; a feature adds contracts and interaction
+checks; an epic adds dependency slices and aggregate acceptance. All use the
+same Guidelines and completion gate. Existing authorization covers routine
+in-scope iteration, not new security/concurrency/failure decisions or deployments.
+
+### Modern capability use
+
+| Capability | Operating behavior | v0.1 enforcement boundary |
+|---|---|---|
+| Progressive context | Load relevant skill/resources and current code, retain source/date/conflicts | Skill guidance; no automatic retriever |
+| Tools and MCP | Inspect available capabilities; treat returned content as data, not instructions | Host permissions remain authoritative |
+| Parallel specialists | Bounded independent tasks, explicit file ownership and handoff evidence | Host delegation only; no dispatcher added |
+| Long-running work | Preserve acceptance, revision, evidence, blocker, next action at handoff | Local record is a snapshot, not a durable journal |
+| Evaluation loops | Test behavior, inspect real UI when relevant, repair within approved bounds | Checker verifies evidence integrity, not test truth |
+| Memory | Search scoped Brain; log evidenced outcomes; retain promotion approval | No automatic memory or semantic promotion |
+| Portability | One canonical skill, existing Codex/Claude/OpenCode adapters | Catalog validation |
+
+### Completion contract and command
+
+`bun run framework:check <record.json> <expected-revision> [artifact-root]`
+reads a strict `FrameworkCompletionRecord` and verifies referenced local files.
+It never executes record text, commands, tools, approvals, or workflows. Root
+defaults to the current directory. Artifacts must be nonempty regular files
+inside that root after symlink resolution, and their SHA-256 must match.
+
+Exit 0 means a declared `done` record passes the local completion check. Exit 1
+means valid input but not complete (including unavailable artifacts); exit 2
+means invalid input or a record-file I/O error.
+An `active` record with all passing checks still needs an explicit done claim.
+The checker rejects duplicate IDs, dangling evidence IDs, any nonpassing check,
+missing test/review/docs categories, stale revisions, blockers, unlinked
+acceptance, and a nonempty next action on a done claim. Every acceptance item
+must reference at least one check. Artifact verification applies to all checks.
+
+The caller supplies the expected revision of the tested snapshot, including a
+worktree fingerprint when dirty; do not use HEAD alone for uncommitted changes.
+This tool cannot establish that the caller's snapshot label is truthful, that
+tests actually ran, that coverage is sufficient, or that a reviewer is independent.
+It is not an authorization, signature, provenance, or RuVix enforcement boundary.
+Use stable local artifacts; concurrent hostile filesystem mutation is outside
+this checker's trust model. It pins the opened file but does not sandbox mutable
+ancestor directories. A passing local review receipt does not waive independent
+review required for documentation PRs under AI Guidelines.
+
+### Use cases and definition of done
+
+- **RAM-UC1 — small fix:** define acceptance, capture regression test, labeled review,
+  and doc-impact evidence; all checks refer to the tested revision.
+- **RAM-UC2 — epic:** keep aggregate acceptance open while child slices pass;
+  iteration continues until all criteria have passing evidence.
+- **RAM-UC3 — stale evidence:** changed revision, missing file, or hash mismatch
+  prevents completion; rerun affected checks before a new claim.
+- **RAM-UC4 — unavailable capability:** record the missing tool and its impact;
+  continue independent authorized work, never fabricate a result.
+
+The framework foundation is done when its skill is discoverable through both
+adapters, schema matches the parser, positive and adversarial checker tests pass,
+the CLI exits correctly, and canonical documentation checks pass. Runtime
+dispatch, automatic budgets, authenticated receipts, durable resume, and dashboard
+integration are future work, not part of this foundation's completion claim.
+
+Research basis (retrieved 2026-10-13): [BMAD's adaptive planning](https://docs.bmad-method.org/),
+[Agent Skills progressive disclosure](https://agentskills.io/specification), and
+[long-running agent harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents).
+These inform the design; they do not replace repository governance.
+
+## Allura Framework Builder — proposed next stage
+
+**Status: First offline builder/compiler slice approved on 2026-10-13 and implemented locally in `../allura-framework`; runtime integration remains proposed.** This
+section extends the request behind [B31 and F49–F52](./BLUEPRINT.md#2-requirements)
+and [AD-67](./RISKS-AND-DECISIONS.md#ad-67-team-ram-framework-foundation).
+It does not change the staged v0.1 implementation or approve a new runtime.
+See [AD-68](./RISKS-AND-DECISIONS.md#ad-68-allura-framework-builder-proposal)
+for the approved offline boundary. AI Guidelines remains the documentation authority.
+
+### Product and options
+
+Create an Allura-owned framework for authoring agents, composing governed
+workflows, and planning/delivering projects. The user confirmed standalone
+framework packaging integrated with Allura Memory on 2026-10-13. The offline contracts/compiler slice is approved; live execution and runtime adoption remain proposed. Team RAM and Team Durham become versioned domain packs rather
+than duplicated orchestration systems. Work continues through Intent → Context →
+Plan → Build → Test → Review → Verified completion, with planning depth sized to
+fix, feature, or epic.
+
+| Option | Benefit | Cost / disposition |
+| --- | --- | --- |
+| Extend the local v0.1 skill only | Smallest change; immediate reuse | Limited agent/module authoring and distribution; retain as foundation |
+| Allura contracts with MetaHarness generation and bounded execution adapters | Own the method; reuse upstream package-generation work and existing Allura execution | Recommended; adapter compatibility must be proven before adoption |
+| Fork Ruflo and make it the central runtime | Broad orchestration surface | Duplicates current journals, scheduling and memory unless migrated; defer |
+
+This is inspired by BMAD's method and module-authoring approach; it does not
+reinstall BMAD or grant upstream prompts authority over Allura policy.
+
+### What to take from ruvnet
+
+Upstream research checked on 2026-10-13; these are documented capabilities, not
+Allura integration test results. The first implementation spike pins `@metaharness/host-codex@0.1.3` and calls its pure `agentsMarkdown()` API under Bun. Repository commit and registry artifact are pinned independently; full generator/runtime adoption is not implied. See [upstream evidence](../../../allura-framework/upstream-locks.json).
+
+| Project | Proposed Allura use | Boundary |
+| --- | --- | --- |
+| [MetaHarness](https://github.com/ruvnet/metaharness) | Candidate generator/library for branded harness packages and host exports | Inspect and pin selected packages; do not adopt default autonomous evolution, memory stores, credentials or deployment hooks |
+| [Ruflo](https://github.com/ruvnet/ruflo) | Optional adapter for a bounded agent task when native host execution is insufficient | One execution owner per run; no nested autonomous scheduler or silent subprocess fallback |
+| [RuVector](https://github.com/ruvnet/RuVector) | Continue through Allura Brain's existing retrieval/graph adapter | No parallel AgentDB/ReasoningBank knowledge store, direct DB bypass, or automatic promotion |
+| [BMAD Builder](https://github.com/bmad-code-org/bmad-builder) and [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) | Reference module composition, agent authoring and work-sized delivery | Allura owns requirements and governance; retain upstream license/attribution if code is reused |
+
+MetaHarness's [architecture](https://github.com/ruvnet/metaharness/blob/main/docs/ARCHITECTURE.md)
+describes separate host adapters and a kernel. Its root package is a private
+workspace, not the package to add blindly as a runtime dependency. The spike must
+identify the actual generator/host exports and audit their defaults. Context7
+retrieval for `/ruvnet/ruflo` found MCP/orchestration documentation, including ADR
+examples; examples are not proof that a deployed tool implements that API.
+Context7 returned no matching MetaHarness library; its official repository and
+architecture/package documents were used instead, with runtime compatibility
+left unverified until the spike.
+
+### External skill catalog input
+
+The user supplied [Awesome Skills](https://github.com/theneoai/awesome-skills)
+as an additional reference. Its README distinguishes persona, tool and workflow
+prompt packs and explicitly describes its historic quality scores as self-scored.
+Use its taxonomy and selected content as candidate inputs to the Allura builder;
+do not treat a catalog entry as an executable agent or validated competence.
+This is a proposed catalog/import capability, not an installed integration.
+
+Proposed import flow: discover → select → pin source revision/path → inspect
+content and dependencies → adapt into Allura's canonical skill format → run
+behavioral evaluations → produce a reviewable domain pack. Preserve source and
+content hashes, license text, attribution and modification notices. Imported
+instructions must not grant permissions, change memory tenancy, replace AI
+Guidelines or install runtime hooks. Export only selected task-relevant skills;
+retain separate namespaces and load supporting references on demand.
+
+The repository's [license](https://github.com/theneoai/awesome-skills/blob/main/LICENSE)
+is labelled MIT with additional attribution requirements, not an unmodified MIT
+text. Preserve those terms when reusing material and inspect separately licensed
+external entries individually. The first evaluation targets remain RAM delivery
+and Durham brand workflows; do not bulk-import the whole catalog. The sampled
+[CEO skill](https://github.com/theneoai/awesome-skills/blob/main/skills/persona/executive/ceo/SKILL.md)
+contains an invented career history and performance targets without accompanying
+validation evidence. Convert such persona claims into responsibilities and require
+measured behavioral evidence; never present fictional credentials as real. Its
+frontmatter also labels the license simply MIT, so import review must reconcile
+metadata with the repository's actual license text. The full catalog and schema
+were not audited; no skill is yet endorsed, imported or declared compatible.
+Catalog authoring/inspection requirements are recorded in Blueprint F59; the implementation inspects local pinned bytes only.
+
+### Components and flow
+
+```mermaid
+flowchart TD
+    User[Project intent] --> Builder[Allura agent and workflow builder]
+    Builder --> Contracts[Validated versioned definitions]
+    Contracts --> Packs[RAM / Durham / project packs]
+    Contracts --> Generator[MetaHarness generation adapter]
+    Generator --> Hosts[Codex / Claude / OpenCode / Hermes packages]
+    Packs --> Planner[Project plan and dependency graph]
+    Planner --> Engine[Allura process engine: one run owner]
+    Engine --> Native[Native host execution adapter]
+    Engine -. optional bounded task .-> Ruflo[Ruflo adapter]
+    Native --> Receipts[Execution and review receipts]
+    Ruflo --> Receipts
+    Receipts --> Verify[Completion checker and run doctor]
+    Verify --> Proposal[Proposed work-item status change]
+    Proposal --> Approval[Existing human authority and board policy]
+    Engine <--> Brain[Allura Brain scoped memory]
+```
+
+1. **Agent builder:** capture outcome, role, required capabilities, selected skills,
+   memory scope, allowed actions, acceptance and evaluation cases. Generate one
+   canonical definition and deterministic host adapters. Persona names remain
+   distinct from authenticated principals. Validate permissions against real host
+   capabilities; fail if required isolation cannot be enforced.
+2. **Workflow builder:** compose typed steps, inputs/outputs, dependencies, owner,
+   approvals, budgets and evidence requirements. Reject cycles, missing producers
+   and unsupported runtime capabilities before execution. Definitions are immutable
+   once referenced by a run. Compile declarative steps through an allowlisted
+   handler registry: serialized data must never become eval/exec or arbitrary
+   imports. Existing executable callbacks are not reconstructible from JSON.
+   Do not introduce a second workflow interpreter.
+3. **Project management:** connect project → epic → story → task, dependencies,
+   owners, blockers, acceptance and handoffs. Reuse work-plane contracts and existing
+   board authority. Plan/status outputs may propose updates; live Notion synchronization
+   and Done/Approved mutations need explicit approval. Do not create a second board.
+4. **Execution and recovery:** adapt validated definitions to the existing process
+   engine. Continue an interrupted run only after checking pinned definition,
+   tenant, authority, workspace and observed external state. Unknown side-effect
+   outcome blocks replay until reconciled; never infer rollback or exactly-once
+   delivery from a local journal alone.
+5. **Evaluation:** preserve the v0.1 checker as an evidence-integrity component.
+   Add actual execution receipts and independent review where required. A hash
+   does not prove an action occurred, a reviewer was independent, or an approval
+   was authentic. Do not equate a passing artifact check with board Done.
+
+The standalone package owns portable definitions, validation and generation. It
+must not import private Allura server files or copy the backend into every plugin.
+A versioned Allura integration adapter will expose the existing execution/work-plane
+services; its transport and endpoints are not yet approved or implemented. Offline
+mode supports authoring, validation and package generation. Connected execution
+requires the configured Allura service and its permissions; unavailable services
+must not trigger a hidden alternative scheduler or local knowledge store.
+
+### Existing foundations and adoption blockers
+
+- `src/lib/team-ram-framework/` supplies the staged completion contract and artifact
+  checks. The reported prior 44-test result is user-supplied context; it was not
+  rerun as part of this design-only proposal.
+- `src/lib/process-engine/` already contains DAG execution, revision/checkpoint and
+  doctor primitives. Audit tenant-bound state access before reuse: Scout found
+  `ProcessStateManager.loadState(processId)` queries without a `group_id` filter.
+  Reuse is conditional on tenant-isolation tests and the required remediation.
+- `src/lib/harness/runner.ts` provides tool-adapter and simulation/record/replay
+  seams; simulation is not a receipt for a live action.
+- `src/lib/work-plane/` and `src/lib/boards/schema.ts` supply work/board contracts.
+  Existing work-item transitions can reach done without mandatory completion
+  evidence; dependency declarations are not yet proof of an enforced dependency
+  service. These are integration blockers, not fulfilled acceptance claims.
+- `src/lib/branch-workflows/workflow-runner.ts` already models RAM/Durham writer and
+  review lanes; preserve its authority boundaries.
+- The current agent-builder skill still names `.claude/agents/` as canonical,
+  conflicting with the nested `.opencode/agent/` authority. Correct that drift before any later live agent-definition installation; the offline compiler does not load that skill or overwrite live definitions.
+
+### Proposed first release and acceptance
+
+The first implementation slice is an offline builder/compiler and compatibility
+spike. It may generate reviewable output under a designated scratch directory;
+installation into live runtime roots is a separate approved operation.
+
+| Slice | Observable acceptance |
+| --- | --- |
+| Contract and generation spike | A minimal agent plus workflow pack is generated deterministically from pinned inputs; it passes schema, reference and native-host manifest checks without changing runtime config |
+| First useful project pack | RAM fix-delivery and Durham brief-to-copy examples have explicit owners, dependencies, approval points, acceptance and handoff records |
+| Runtime adapter proof | One authorized task in a selected host yields a real execution receipt; missing tools fail explicitly; other hosts remain labelled export-only until tested |
+| Process-engine integration | Tenant isolation, pinned definitions, cancellation, bounded retries and interruption/reconciliation tests pass; no duplicate completed side effect on resume |
+| Project-management integration | Dependency eligibility and completion gating are enforced; local proposals cannot silently update Notion or Done/Approved state |
+| Release gate | Stale/altered/failed evidence, cross-tenant context, expired authority and missing independent review prevent a verified-completion claim |
+
+No dashboard, new scheduler, automatic self-modification, training loop or model
+replacement is required for the first slice. Use the configured host model by
+default. Evaluate optional model routing on representative accepted outcomes,
+retries, handoffs, approval wait, elapsed time and cost; upstream performance
+numbers do not establish improvement for Allura. Keep context scoped and load
+only task-relevant skills; simple tasks do not require a full council.
+
+### Requirements traceability and approval decisions
+
+| Existing requirement | Proposed coverage | Current limitation |
+| --- | --- | --- |
+| B31 / F49 | Tenant-scoped runs pinned to immutable workflow definitions | Integration proof required |
+| F50 | Allowed actions, approval breakpoints, budgets and evidence gates | Proposed workflow authoring/compiler |
+| F51 | Existing journals plus explicit resume/reconciliation contract | Tenant access and side-effect semantics require approval and tests |
+| F52 | Compose completion integrity checks with process-level doctor | Existing doctor covers some conditions; full end-to-end gate remains incomplete |
+
+Agent/package generation, reusable module distribution and richer project
+planning are not fully specified by F49–F52. The approved offline contracts now have B33/F57–F59 coverage; connected runtime contracts still require separate requirements. Portable field names/enums live in the standalone [Data Dictionary](../../../allura-framework/docs/allura/DATA-DICTIONARY.md) and schemas together. No new Allura service endpoint is implemented. The [Solution Architecture](./SOLUTION-ARCHITECTURE.md#team-ram-framework-boundary) continues to describe the existing in-repository foundation.
+
+Standalone packaging and the first offline builder/compiler slice were approved by the user on 2026-10-13. [Blueprint B33/F57–F59](./BLUEPRINT.md#2-requirements) and the [Requirements Matrix](./REQUIREMENTS-MATRIX.md#section-5c-standalone-framework-compiler-b33-f57f59) cover the new contracts. The standalone [Data Dictionary](../../../allura-framework/docs/allura/DATA-DICTIONARY.md) is authoritative for those portable definitions. Its [validation record](../../../allura-framework/docs/allura/REQUIREMENTS-MATRIX.md) bounds implementation claims.
+
+The local package validates and compiles RAM/Durham examples, exports guidance for four hosts, and inspects local catalog candidates. No upstream catalog skill was imported. Runtime authorization, per-work-item write ownership, retry/reconciliation semantics, board writes and package installation remain later decisions. The staged v0.1 implementation is preserved; pinned compiler dependencies were installed with lifecycle scripts disabled and optional native packages omitted. No upstream behavior is adopted as Allura policy.
+
+## Related canonical documents
 
 - [BLUEPRINT.md](./BLUEPRINT.md) — requirements this design satisfies
 - [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) — governed memory pipeline design

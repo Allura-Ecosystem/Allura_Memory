@@ -108,6 +108,7 @@
     ".opencode/skills/task-creator/",
     ".opencode/skills/task-management/",
     ".opencode/skills/team-ram-cowork/",
+    ".opencode/skills/team-ram-framework/",
     ".opencode/skills/varlock/",
     ".opencode/tool/env/index.ts",
     "scripts/team-ram-skill-harness.ts",

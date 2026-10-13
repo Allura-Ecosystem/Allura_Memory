@@ -12,6 +12,7 @@ This document covers Allura's deployment topologies, integration interfaces, and
 
 ## Table of Contents
 
+- [Team RAM Framework Boundary](#team-ram-framework-boundary)
 - [1. Architectural Positioning](#1-architectural-positioning)
 - [2. System Boundary and External Actors](#2-system-boundary-and-external-actors)
 - [3. Logical Topologies](#3-logical-topologies)
@@ -690,3 +691,35 @@ stateDiagram-v2
 | Append-only traces | No UPDATE/DELETE contract on events |
 | `trace_ref` integrity in SOC2 | FK and numeric verification |
 | Human gate per slice | Explicit reviewer sign-off before progression |
+
+## Team RAM Framework Boundary
+
+The [v0.1 framework](./DESIGN-ALLURA.md#team-ram-framework-v01) adds a local
+method and completion checker to the existing skill harness, governed by
+[AD-67](./RISKS-AND-DECISIONS.md#ad-67-team-ram-framework-foundation).
+The existing process engine is unchanged. The checker is not a scheduler,
+policy decision point, independent reviewer, or source of durable run state.
+
+```mermaid
+sequenceDiagram
+  actor User
+  participant Harness as Codex / Claude / OpenCode
+  participant Skill as Canonical Team RAM framework skill
+  participant Tools as Available permitted tools
+  participant Check as Local completion checker
+  User->>Harness: Outcome, scope, acceptance
+  Harness->>Skill: Load relevant workflow guidance
+  Harness->>Tools: Perform authorized work and verification
+  Tools-->>Harness: Actual results and artifacts
+  Harness->>Check: Record, expected revision, artifact root
+  Check-->>Harness: Complete or concrete gaps
+  Harness-->>User: Evidence-backed result or blocker
+```
+
+The CLI reads JSON and files only; it performs no network calls, memory writes,
+tool dispatch, command execution, approval changes, or product state transitions.
+The host retains permission and delegation control. Snapshot labels and check
+outcomes are caller assertions; file hashes detect changed evidence, not forgery.
+An eventual authenticated adapter must bind identity, tool receipts, snapshot
+digest, budgets, and process-engine recovery semantics before autonomous release
+claims are possible. That integration remains proposed, not enabled here.

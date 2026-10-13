@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "objective": "Replace with the user-requested outcome",
+  "scope": ["Replace with authorized scope"],
+  "outOfScope": [],
+  "revision": "Replace with tested snapshot identifier",
+  "state": "active",
+  "acceptance": [{ "id": "AC-1", "text": "Replace with observable success", "evidenceIds": [] }],
+  "checks": [],
+  "blockers": [],
+  "nextAction": "Define acceptance and validate the first authorized slice"
+}

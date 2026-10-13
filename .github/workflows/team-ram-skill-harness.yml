@@ -9,6 +9,9 @@ on:
       - "opencode.json"
       - "package.json"
       - "scripts/team-ram-skill-harness.ts"
+      - "scripts/team-ram-framework.ts"
+      - "src/lib/team-ram-framework/**"
+      - "json-schema/framework-completion.schema.json"
       - ".github/workflows/team-ram-skill-harness.yml"
   push:
     branches: [main]
@@ -19,6 +22,9 @@ on:
       - "opencode.json"
       - "package.json"
       - "scripts/team-ram-skill-harness.ts"
+      - "scripts/team-ram-framework.ts"
+      - "src/lib/team-ram-framework/**"
+      - "json-schema/framework-completion.schema.json"
       - ".github/workflows/team-ram-skill-harness.yml"
 
 permissions:
@@ -34,3 +40,4 @@ jobs:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
       - run: bun run skills:validate
+      - run: bun run framework:test

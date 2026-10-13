@@ -87,6 +87,8 @@
     "registry:drift": "bun run scripts/drift-detection.ts",
     "opencode:team-ram": "bash scripts/team-ram-opencode.sh",
     "skills:validate": "bun scripts/team-ram-skill-harness.ts",
+    "framework:check": "bun scripts/team-ram-framework.ts",
+    "framework:test": "vitest run src/lib/team-ram-framework/completion.test.ts",
     "check:skill-governance": "bun scripts/check-skill-governance.ts",
     "validate:codex-gate": "bun scripts/validate-codex-governance-gate.ts",
     "ports:check": "bun scripts/check-ports.ts",

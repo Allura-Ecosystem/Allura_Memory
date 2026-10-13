@@ -257,6 +257,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | B30 | Team RAM agents must integrate with BMAD planning and Allura Brain memory through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth |
 | B31 | Teams must be able to define evidence-gated orchestration runs that map familiar work ceremonies to governed Allura receipts without exposing internal agent-routing details |
 | B32 | Supply-chain threat intelligence must preserve source provenance, tenant/workspace scope, evidence freshness, and human authority while remaining read-only toward inventoried endpoints and external enforcement systems |
+| B33 | Teams must author portable agents, workflows and project packs in a standalone Allura framework integrated through governed Allura Memory boundaries |
 
 ---
 
@@ -327,6 +328,9 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | F39 | A second agent can retrieve approved knowledge and use it correctly in a later task                                |
 | F40 | The full lifecycle from trace capture to knowledge reuse is traceable, auditable, and reversible                   |
 | F56 | Bumblebee V1 may ingest allowlisted advisory evidence, correlate verified exposure, create deduplicated alerts, and prepare simulated mitigation proposals; it must not activate policy, block CI/packages, change schedules, or perform containment |
+| F57 | A standalone offline compiler must validate strict agent, skill, workflow and project contracts, including references, acyclic dependencies, artifact producers, approval descriptions and reviewer separation |
+| F58 | Validated packs must produce deterministic dependency plans and guidance exports for Codex, Claude, OpenCode and Hermes; a pinned MetaHarness API compatibility path must preserve provenance and reject unsupported isolation without runtime configuration changes |
+| F59 | Local skill catalog inspection must verify original byte hashes and path containment and retain source revision, license text, attribution and modifications; inspected content remains untrusted and is not installed, executed or promoted |
 
 #### Declared Disposition — Requirements Without Current Story Coverage
 
