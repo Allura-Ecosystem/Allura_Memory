@@ -12,6 +12,7 @@
 
 ## Table of Contents
 
+- [Simple Enterprise Pilot UX contract](#simple-enterprise-pilot-ux-contract)
 - [Team RAM Framework v0.1](#team-ram-framework-v01)
 - [Overview](#overview)
 - [Functional Requirements](#functional-requirements)
@@ -22,6 +23,76 @@
 - [Important Constraints](#important-constraints)
 
 ---
+
+## Simple Enterprise Pilot UX contract
+
+**2026-10-13 — delivery scope accepted; navigation and copy proposed for a concrete walkthrough.** This contract translates the owner's request for a simple, deployable company second brain and supplied Reddit feedback. The discussion is qualitative input, not representative market research. It does not replace the approved brand identity, AD-64 graph contract, server authorization, or promotion policy. Aggregate acceptance is [SEP-01–10](./REQUIREMENTS-MATRIX.md#simple-enterprise-pilot-acceptance); delivery boundaries are [AD-69](./RISKS-AND-DECISIONS.md#ad-69-simple-enterprise-pilot-delivery-boundary).
+
+Proposed promise to test: **Your team's knowledge and agent work, in one trusted workspace.** The first useful journey is connect an authorized source/agent, perform supported work, return to find relevant knowledge, inspect its evidence, and handle only decisions requiring a person. Ordinary eligible trace capture and authorized recall should not require database or curator expertise. This does not authorize automatic canonical-memory promotion.
+
+| Proposed destination | Everyday task | Required behavior |
+| --- | --- | --- |
+| My Work | Understand what needs attention and resume work | Real authorized activity, clear next action, visible freshness; no synthetic/local-only data in production |
+| Knowledge | Find knowledge and explore its connections | Prominent list/brain-map switch; actual nodes and relationships; selecting a node opens a shared evidence/provenance inspector |
+| Agents & Runs | Understand who is working and what happened | Separate human/agent identities, observed capability and run state; never offer unsupported control |
+| Inbox | Decide only what needs human judgment | Reason, evidence, authority and consequence visible before an action; existing approval gates preserved |
+| Studio / Administration | Configure advanced work or administer access | Secondary but discoverable destinations; role-aware presentation never substitutes for server checks |
+
+The knowledge map is core, not a decorative replacement for evidence. Retain AD-64's bounded authorized response, same-data text alternative, keyboard operation and distinct empty/denied/partial/degraded states. Keep policy, roles, source management and audit discoverable without exposing Team RAM terminology as required daily workflow.
+
+Before UI implementation, review an inspectable prototype using actual Allura assets/tokens and walk through onboarding, capture/recall, search, node inspection, run status and an approval. Record the owner's observations against the prototype revision. Later working-product sessions are a separate gate: initially observe five comparable everyday participants, assess materially different administrator tasks separately, fix serious issues and retest. Proposed success is four of five completing the everyday tasks without assistance; permission mistakes and serious accessibility failures block acceptance regardless of that count. Record help, time, and manual memory-maintenance interventions separately from legitimate approval decisions. Do not fabricate participants or substitute unit tests for observed usability.
+
+Research basis: [progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/) and [small iterative usability studies](https://www.nngroup.com/articles/why-you-only-need-to-test-with-5-users/). Five users is an initial formative sample, not a statistical guarantee. Exact visuals, routes and provider choices remain proposed until the corresponding contract is settled; existing approved work need not be reapproved at every development step.
+
+### Preserved design decisions and limits
+
+The pilot assembles existing experiences; it does not replace every page with the knowledge map. The following historical records support the current contract but are not additional live documentation authorities:
+
+| Experience | Preserved reference | What carries forward |
+| --- | --- | --- |
+| My Work | [September 21 approval packet](../../memory-bank/bmad-output/planning-artifacts/epic-30-design-approval-packet.md#recorded-design-decision--2026-09-21), commit `4370cac3f77d1ed9a10c069aaebaab470f9e69c7` | Compact rail, document tree, reading/comparison workspace, context pane and collapsed Ask rail. Approval is bound to that revision and synthetic-only scope; it does not approve production data access. Current component bytes differ and require comparison, not an assertion of exact fidelity. |
+| Knowledge map | [October 13 owner clarification](../../memory-bank/bmad-output/planning-artifacts/sprint-change-proposal-2026-10-12-dashboard-graph.md#15-owner-directed-visual-clarification--2026-10-13) following the October 12 bounded approval | Compact connected brain nodes on the protected Allura canvas. Selecting a node reveals its full governed record in the inspector. This supersedes full-card graph nodes, not the shell, authorized response, same-data text alternative or release gates. |
+| Human decisions | [Preserved operator surface contract](../archive/allura/legacy-docs/design/command-center/operator-surface-contract.md) | Scope and role → queue → summary → evidence → permitted decision → receipt. Reusing that sequence does not establish approval of a new Inbox layout. |
+
+My Work's `PROXIMITY ONLY` context pane must not be described as verified relationships. Knowledge Map relationships come from its authorized graph response. No single approved revision yet covers the combined pilot navigation, Agents & Runs, Studio and Administration. A walkthrough should focus on those changes and any deviations from the preserved baselines, without requesting approval again for unchanged decisions.
+
+### Proposed screen and journey contract
+
+This is a planning contract for the next concrete preview, not a claim of implemented routes or new authorization semantics. Every action below remains constrained by its existing server contract; missing capabilities are shown as unavailable rather than simulated as successful.
+
+| Journey / acceptance | Initial view and next action | Evidence and completion condition |
+| --- | --- | --- |
+| First useful session — SEP-01, SEP-03 | Show the authorized workspace and one next step: resume accessible work, or connect a supported source/agent if the actor can configure it. Explain missing access without asking the user to understand storage internals. | A real supported connection and authorized record can be followed across sessions. Installation instructions and synthetic fixtures do not satisfy this journey. |
+| Daily work — SEP-03, SEP-09 | Retain the document-centered My Work experience: compact navigation, authorized document tree, primary reading pane, optional comparison and context inspector. Keep advanced configuration out of the primary reading flow. | Resume a permitted document; inspect its source, freshness and access information; return from inspection/comparison without losing the reading context. Ask remains unavailable until provider and authorization gates pass. |
+| Find and inspect — SEP-03, SEP-04 | Search from a prominent entry. Knowledge offers list and map presentations; selection opens evidence without replacing the search context. Filters and selected-result behavior need explicit preview coverage. | Search results and inspector are independently authorized. Show source/provenance, lifecycle and freshness only when supplied by the contract; distinguish missing evidence from verified absence. No inaccessible record names, counts or excerpts may leak through navigation or inspection. |
+| Explore connections — SEP-04, SEP-09 | Open the actual compact-node graph, select a node, inspect its full record, and return to the graph. Provide a text presentation of the same returned nodes and edges. | Retain AD-64 limits and continuation handling. An incomplete graph is labelled partial, not shown as a complete company knowledge inventory. A proximity layout alone is not a relationship assertion. |
+| Understand agent work — SEP-05 | Agents & Runs separates configured identity/capabilities from observed activity and a specific run's state. Show observation time and an evidence link. | An actual adapter must prove any offered inspect, cancel, resume or retry capability. Recent memory activity is not a heartbeat or proof that an agent is running. Hermes support remains unverified until the real integration journey passes. |
+| Handle a decision — SEP-06, SEP-09 | Inbox shows only actionable, authorized decisions with reason, evidence, consequence and allowed actions. Details precede commitment. | Preserve existing human approval requirements. Show the authoritative result/receipt, denial or uncertainty; do not fabricate success or automatically retry a consequential mutation. The unresolved connected-Brain promotion discrepancy prevents a governed-memory acceptance claim. |
+| Configure and administer — SEP-02, SEP-06 | Keep Studio and Administration secondary but discoverable. Explain which connections, roles, policies and audit views are actually available to the actor. | Server authorization remains decisive. Corporate SSO, document ACL management, arbitrary pipelines and agent controls are not enabled merely because a navigation label exists. Provider-specific setup is a separate verified contract. |
+
+**Responsive and accessible preview coverage:** demonstrate the primary reading, search and inspector journeys at desktop and narrow widths; keyboard navigation, visible focus, named controls, close-and-return focus, loading announcements, 200% zoom and a text equivalent for graph exploration. At narrow widths, show one primary task at a time with an explicit return action; the prototype must settle the exact pane/disclosure behavior. Automated scans support, but do not replace, keyboard and screen-reader journeys.
+
+**Truth-state coverage:** preserve loading, authorized-empty, denied, stale, partial/degraded, conflict, unavailable and error distinctions where the endpoint exposes them. A failed query is not an empty workspace. Do not map an uncertain mutation to success or invent rollback/retry behavior. Reuse approved state contracts; any new failure or concurrency rule requires a recorded decision under the AI Guidelines.
+
+### Current implementation boundary — inspected 2026-10-13
+
+These observations are source inspection, not live-user acceptance. They identify reusable implementation and the integration work still required.
+
+| Surface | Existing source | Boundary before pilot acceptance |
+| --- | --- | --- |
+| My Work / Overview | [`dashboard/page.tsx`](../../src/app/dashboard/page.tsx), [`my-work-workspace.tsx`](../../src/components/dashboard/my-work-workspace.tsx) | Rich workspace requires explicit non-production synthetic mode; the ordinary branch is an overview. Do not remove the synthetic guard to claim production support. Compare current component to the hash-bound approved baseline. |
+| Document search | [`brain/search/route.ts`](../../src/app/api/brain/search/route.ts), [`dashboard/search/page.tsx`](../../src/app/dashboard/search/page.tsx) | Protected document search is unavailable in production; the existing Search page lists recent memories rather than implementing that query journey. This does not imply the separate MCP memory-search tool is unavailable. |
+| Graph and inspector | [`knowledge-map-workspace.tsx`](../../src/components/dashboard/knowledge-map/knowledge-map-workspace.tsx), [`memory/graph/route.ts`](../../src/app/api/memory/graph/route.ts) | Reuse bounded graph, filter, continuation and inspector work under AD-64. Verify compact-node fidelity, authorization, states and browser/a11y journeys; existence of code is not the proof. |
+| Activity / runs | [`api/agents/route.ts`](../../src/app/api/agents/route.ts), [`api/runs/route.ts`](../../src/app/api/runs/route.ts) | Existing activity inference and gated run APIs need a scope/capability review before use in the new experience. No observed provider capability or Hermes acceptance follows from these routes. |
+| Decisions / administration | [`dashboard/curator/page.tsx`](../../src/app/dashboard/curator/page.tsx), [`api/members/route.ts`](../../src/app/api/members/route.ts), [`api/tokens/route.ts`](../../src/app/api/tokens/route.ts) | Reuse verified contracts, not placeholder controls. Membership/token endpoints alone do not establish corporate identity, document ACL, offboarding or full administration acceptance. |
+
+The prototype review must bind a revision, screenshots or inspectable artifact, actual assets/tokens, observed deviations, and owner feedback. The implementation review must separately bind real authorized journeys, security tests, recovery and accessibility evidence. Neither a prose contract nor the historical synthetic approvals completes SEP-01–10.
+
+Token administration correction: `POST /api/tokens/[id]/revoke` retains its admin role gate and idempotent `{ ok: true, id }` response. Its database update now binds both the token ID and the authenticated tenant, never a query/body tenant selector. Missing, foreign-tenant and already-revoked IDs remain indistinguishable no-ops. This preserves existing tenant-admin management across selected workspaces; it does not introduce a current-workspace-only policy, new role, audit delivery guarantee or complete offboarding contract. Repository/route regressions use mocked database calls and do not alone prove a live deployment's permissions.
+
+Process-run tenant correction: list/create, detail, events, breakpoints, doctor, cancel and resume retain their existing feature flag, role floors, required fields and same-tenant behavior. After format validation, the request's `group_id` is only an equality assertion against the authenticated identity via `resolveApiTenant`; a mismatch returns 403 before pool acquisition, definition lookup, run/event access or mutation. Required/malformed selectors remain 400 and absent authentication remains 401 when enabled; disabled routes remain 404. This repair does not authenticate the separately supplied `actor_id`/`approved_by`, establish workspace/document permissions, make event/snapshot writes atomic, execute an external agent or certify resume/cancel/retry semantics. Those limits block treating these local records as enterprise-safe Hermes controls.
+
+**Concrete preview status, 2026-10-13:** a local, read-only `command-center-preview` candidate now demonstrates the proposed six-destination navigation and all seven journeys with explicitly synthetic records. It retains a dark My Work reader, proximity-only context, co-visible desktop comparison, an access inspector and unavailable Ask; the separate warm Knowledge canvas has compact directed nodes, filters, keyboard pan/zoom, a same-record list and an evidence inspector. Narrow screens provide a document chooser and single-task comparison/inspection with return focus. Inbox evidence review preserves the unsaved in-memory rationale and returns to the decision; it cannot approve or issue a receipt. Connection, policy and agent controls remain informational or disabled. The combined rail and graph shell/filter/inspector dimensions are proposed deviations from the separate approved baselines, not inherited approval. The preview manifest, screenshots and browser receipt are local review evidence, not shipped application code. It makes no database, identity, model or agent connection and must not replace production guards. Owner feedback, actual 200% browser zoom, screen-reader/human journeys and real-data implementation acceptance remain pending.
 
 ## Overview
 

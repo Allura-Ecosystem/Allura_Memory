@@ -14,6 +14,7 @@ import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth
 import { captureException } from "@/lib/observability/sentry"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import { getPool } from "@/lib/postgres/connection"
+import { resolveApiTenant } from "@/lib/auth/web-principal"
 import { getRun } from "@/lib/process-engine/run-manager"
 
 // ── Feature flag guard ────────────────────────────────────────────────────────
@@ -58,6 +59,12 @@ export async function GET(
       }
       throw error
     }
+
+    const authority = resolveApiTenant(roleCheck.user, validatedGroupId)
+    if (authority.status !== "ok") {
+      return NextResponse.json({ error: "TENANT_MISMATCH" }, { status: 403 })
+    }
+    validatedGroupId = authority.groupId
 
     const pool = getPool()
     const run = await getRun(pool, { id, groupId: validatedGroupId })

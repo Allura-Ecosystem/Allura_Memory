@@ -14,7 +14,7 @@
 # `docker ... create` is guarded so an already-existing resource is a no-op.
 #
 # Usage:
-#   bash scripts/first-run.sh            # brings up the Brain stack (postgres, neo4j, mcp)
+#   bash scripts/first-run.sh            # brings up the Brain stack (postgres, mcp)
 #
 # This script NEVER destroys data. It only CREATES network/volumes and runs
 # `up -d`. It does not call `down`, `rm`, `prune`, or any `-v` teardown.
@@ -49,20 +49,21 @@ else
   echo "WARN: .env.local not found — proceeding with .env only." >&2
 fi
 
-# ---- Step 1: create the external network (idempotent) ----------------------
-NETWORK="knowledge-network"
-echo "==> Ensuring docker network '${NETWORK}' exists"
-if docker network inspect "${NETWORK}" >/dev/null 2>&1; then
-  echo "    network '${NETWORK}' already exists — skipping"
-else
-  docker network create "${NETWORK}"
-  echo "    network '${NETWORK}' created"
-fi
+# ---- Step 1: create both external networks (idempotent) --------------------
+for NETWORK in knowledge-network open-webui-stack_default; do
+  echo "==> Ensuring docker network '${NETWORK}' exists"
+  if docker network inspect "${NETWORK}" >/dev/null 2>&1; then
+    echo "    network '${NETWORK}' already exists — skipping"
+  else
+    docker network create "${NETWORK}"
+    echo "    network '${NETWORK}' created"
+  fi
+done
 
 # ---- Step 2: create the external volumes (idempotent) ----------------------
 # Names MUST match docker-compose.yml volume `name:` fields exactly:
-#   postgres_data -> memory_postgres_data, neo4j_data, neo4j_logs
-for VOL in memory_postgres_data neo4j_data neo4j_logs; do
+#   postgres_data -> memory_postgres_data
+for VOL in memory_postgres_data; do
   echo "==> Ensuring docker volume '${VOL}' exists"
   if docker volume inspect "${VOL}" >/dev/null 2>&1; then
     echo "    volume '${VOL}' already exists — skipping (data preserved)"
@@ -73,14 +74,12 @@ for VOL in memory_postgres_data neo4j_data neo4j_logs; do
 done
 
 # ---- Step 3: bring the stack up --------------------------------------------
-# Base stack only (postgres, neo4j, neo4j-init, mcp). The web dashboard was
-# sunset 2026-06-20 (decision trace 279eaff2); the human surface is now the
-# curator CLI + Allura Brain MCP tools. --remove-orphans clears the old
-# dashboard container if it is still running from a previous boot.
+# Existing engine stack only (postgres, mcp), not the complete workspace pilot.
+# Leave other containers intact; startup is not authority to remove orphans.
 COMPOSE_FILES=(-f docker-compose.yml)
 
-echo "==> Starting Brain stack: docker compose ${COMPOSE_FILES[*]} ${ENV_ARGS[*]} up -d --remove-orphans"
-docker compose "${COMPOSE_FILES[@]}" "${ENV_ARGS[@]}" up -d --remove-orphans
+echo "==> Starting Brain stack: docker compose ${COMPOSE_FILES[*]} ${ENV_ARGS[*]} up -d"
+docker compose "${COMPOSE_FILES[@]}" "${ENV_ARGS[@]}" up -d
 
 # ---- Step 4: report ---------------------------------------------------------
 echo "==> Stack status:"

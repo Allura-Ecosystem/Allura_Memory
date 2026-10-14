@@ -1,0 +1,76 @@
+{
+  "scope": "Separate-experience restoration candidate only; reference geometry and synthetic interactions, not owner design acceptance. No live identity, authority, persistence, agent, performance or human-user acceptance.",
+  "origin": "http://127.0.0.1:38405",
+  "checks": [
+    "Matched 1440x1000 My Work rail52/tree244/header82/inspector250; central proximity anchor; context selects primary, not comparison",
+    "Reading, comparison close/return focus and unavailable Ask",
+    "Matched desktop Knowledge sidebar248/header64/filter204/inspector320; distinct warm paper composition",
+    "Map/list same records and five relationships; selection, evidence gap, filter, clear and keyboard pan/zoom/reset",
+    "Distinct simulated states hide records; denied search announces no counts",
+    "Clear-filter and try-search disclose review search before returning focus",
+    "All proposed destinations inspectable; Inbox evidence round-trip preserves unsaved in-memory rationale and restores focus",
+    "Matched 320x900 comparison fixed modal viewport capture, scroll lock/restoration, inert background, bidirectional focus trap, Escape, focus/inert restoration",
+    "320/390/640/1024/1600 layout bounds; mobile primary document selection; comparison/inspector single-pane return and focus restoration",
+    "Review dialog escape/restored focus; read-only allowlist server; no external requests/runtime errors"
+  ],
+  "errors": [],
+  "requests": [
+    "http://127.0.0.1:38405/",
+    "http://127.0.0.1:38405/preview.css",
+    "http://127.0.0.1:38405/preview.js",
+    "http://127.0.0.1:38405/lettermark.png",
+    "http://127.0.0.1:38405/wordmark.png",
+    "http://127.0.0.1:38405/sans.woff2",
+    "http://127.0.0.1:38405/mono.woff2",
+    "http://127.0.0.1:38405/sans-bold.woff2"
+  ],
+  "audits": [
+    {
+      "name": "desktop-work",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "desktop-knowledge",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "desktop-agents",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "desktop-inbox",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "desktop-studio",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "desktop-admin",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "mobile-work",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "mobile-comparison",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "name": "mobile-knowledge",
+      "violations": [],
+      "incomplete": []
+    }
+  ],
+  "captureScope": "Screenshots are viewport-only; desktop1440x1000 and mobile320x900. Full-document height is not viewport evidence.",
+  "zoom": "Actual 200% browser zoom not tested; viewport checks are not zoom evidence."
+}

@@ -21,11 +21,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # External Docker resources required by docker-compose.yml.
-NETWORK_NAME="knowledge-network"
+NETWORK_NAMES=(knowledge-network open-webui-stack_default)
 VOLUME_NAMES=(
     "memory_postgres_data"  # compose alias: postgres_data
-    "neo4j_data"
-    "neo4j_logs"
 )
 
 echo "Allura First-Run Setup"
@@ -43,14 +41,16 @@ if ! docker info >/dev/null 2>&1; then
     exit 1
 fi
 
-# --- Network (idempotent) -------------------------------------------------
-echo "Network:"
-if docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
-    echo "  EXISTS: $NETWORK_NAME"
-else
-    docker network create "$NETWORK_NAME" >/dev/null
-    echo "  CREATED: $NETWORK_NAME"
-fi
+# --- Networks (idempotent) ------------------------------------------------
+echo "Networks:"
+for network in "${NETWORK_NAMES[@]}"; do
+    if docker network inspect "$network" >/dev/null 2>&1; then
+        echo "  EXISTS: $network"
+    else
+        docker network create "$network" >/dev/null
+        echo "  CREATED: $network"
+    fi
+done
 echo ""
 
 # --- Volumes (idempotent — never recreated, so data is preserved) ---------

@@ -1,0 +1,6 @@
+# Standalone candidate: no root harness preloads or test shims.
+[install]
+exact = true
+
+[test]
+coverage = false

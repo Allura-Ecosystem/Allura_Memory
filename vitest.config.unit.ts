@@ -196,6 +196,7 @@ export default defineConfig({
       "src/__tests__/mcp-auth-adversarial.test.ts",
       // Allura Hosted — admin route auth/shape tests (mocked repos)
       "src/__tests__/hosted-admin-routes.test.ts",
+      "src/__tests__/process-run-tenant-routes.test.ts",
       // Benchmark harness — pure IR-metric math (no live stack)
       "src/__benchmarks__/lib/metrics.test.ts",
       // Graph adapter — ruvector-crate subset parity (fake fixture by default;

@@ -9,9 +9,11 @@
  * NFR-2: Audit events
  */
 
-import { execSync } from "node:child_process"
-import { access, mkdir, readFile, stat } from "node:fs/promises"
-import { homedir, hostname } from "node:os"
+import { execFileSync, execSync } from "node:child_process"
+import { createHash } from "node:crypto"
+import { createReadStream } from "node:fs"
+import { access, lstat, mkdir, mkdtemp, open, readFile, rm, stat } from "node:fs/promises"
+import { homedir, hostname, tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import type {
   BackupInventoryItem,
@@ -103,27 +105,82 @@ function redactSecrets(obj: Record<string, unknown>): Record<string, unknown> {
  */
 function getDiskSpace(path: string): number {
   try {
-    const result = execSync(`df -B1 "${path}" | tail -1 | awk '{print $4}'`, {
+    const result = execFileSync("df", ["-P", "-B1", "--", path], {
       encoding: "utf-8",
+      stdio: ["ignore", "pipe", "pipe"],
       timeout: 5000,
     })
-    return parseInt(result.trim(), 10) || 0
+    return parseInt(result.trim().split("\n").at(-1)!.trim().split(/\s+/)[3], 10) || 0
   } catch {
     return Number.MAX_SAFE_INTEGER // Assume plenty of space if we can't check
   }
 }
 
+function postgresTarget() {
+  return {
+    container: process.env.POSTGRES_CONTAINER || "knowledge-postgres",
+    user: process.env.POSTGRES_USER || "ronin4life",
+    database: process.env.POSTGRES_DB || "memory",
+    scratchParent: tmpdir(),
+  }
+}
+
+function assertPlainPostgresTarget(target: ReturnType<typeof postgresTarget>): void {
+  // psql -d expands conninfo; this API accepts a database name, not a remote URL.
+  if (!target.database || /[=\u0000]/.test(target.database) || /^postgres(?:ql)?:\/\//.test(target.database) ||
+      !target.user || target.user.includes("\u0000") || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(target.container)) {
+    throw new Error("PostgreSQL restore target is invalid")
+  }
+}
+
+function manifestFilenames(manifest: BackupManifest): string[] {
+  const filenames = Object.keys(manifest.checksums || {})
+  // The backup writer records basenames, never paths. Force cannot select outside the archive.
+  if (filenames.some(name => !name || name === "." || name === ".." || /[/\\\u0000]/.test(name))) {
+    throw new Error("Backup manifest contains an unsafe artifact filename")
+  }
+  return filenames
+}
+
+async function postgresArchive(dateDir: string, manifest: BackupManifest): Promise<string> {
+  if (!manifest.types.includes("postgres")) throw new Error("PostgreSQL type not found in backup manifest")
+  const candidates = manifestFilenames(manifest).filter(name => /^postgres-.*\.sql\.gz\.enc$/.test(name))
+  if (candidates.length !== 1) throw new Error("Backup manifest must identify exactly one PostgreSQL archive")
+  const path = resolve(dateDir, candidates[0])
+  try {
+    if (!(await lstat(path)).isFile()) throw new Error("Not a regular file")
+  } catch {
+    throw new Error("PostgreSQL archive must be an existing regular file, not a symlink")
+  }
+  return path
+}
+
 /**
- * Verify a SHA-256 checksum
+ * Verify archive bytes against the manifest's SHA-256 checksum.
+ * Sidecars are optional compatibility metadata, never a substitute for hashing.
  */
 async function verifyChecksum(filePath: string, expectedChecksum: string): Promise<boolean> {
+  if (typeof expectedChecksum !== "string" || !/^[a-f0-9]{64}$/.test(expectedChecksum)) {
+    return false
+  }
+
   try {
-    const checksumPath = `${filePath}.sha256`
-    const storedChecksum = (await readFile(checksumPath, "utf-8")).trim()
-    return storedChecksum === expectedChecksum
+    // Stream large archives instead of buffering a database backup in memory.
+    const hash = createHash("sha256")
+    for await (const chunk of createReadStream(filePath)) {
+      hash.update(chunk)
+    }
+    if (hash.digest("hex") !== expectedChecksum) return false
+
+    try {
+      const storedChecksum = (await readFile(`${filePath}.sha256`, "utf-8")).trim()
+      return storedChecksum === expectedChecksum
+    } catch (error) {
+      // Existing archives without sidecars are valid only after byte verification.
+      return (error as NodeJS.ErrnoException).code === "ENOENT"
+    }
   } catch {
-    // If no .sha256 file, we can't verify
-    return true // Assume valid if no checksum file
+    return false
   }
 }
 
@@ -155,6 +212,13 @@ export async function loadManifest(backupDir: string): Promise<BackupManifest | 
  */
 export async function validateRestore(
   options: RestoreOptions,
+): Promise<RestoreValidationResult> {
+  return validateRestoreForTarget(options, postgresTarget())
+}
+
+async function validateRestoreForTarget(
+  options: RestoreOptions,
+  target: ReturnType<typeof postgresTarget>,
 ): Promise<RestoreValidationResult> {
   const startTime = Date.now()
   const backupDir = options.backupDir || resolve(process.cwd(), "backups")
@@ -206,12 +270,17 @@ export async function validateRestore(
     if (!manifest) {
       throw new Error("Manifest not found")
     }
+    if (!Array.isArray(manifest.types)) throw new Error("Manifest backup types are invalid")
+    manifestFilenames(manifest)
+    const requested = options.types || manifest.types
+    if (requested.includes("postgres")) await postgresArchive(dateDir, manifest)
     checks.push({
       name: "manifest_valid",
       passed: true,
       message: `Manifest loaded: ${manifest.types.length} backup types, version ${manifest.backup_version}`,
     })
   } catch (error) {
+    manifest = null
     const msg = error instanceof Error ? error.message : String(error)
     checks.push({
       name: "manifest_valid",
@@ -315,27 +384,34 @@ export async function validateRestore(
 
   if (needsPostgres) {
     try {
-      execSync("docker ps --format '{{.Names}}' | grep -Fx 'knowledge-postgres'", {
+      assertPlainPostgresTarget(target)
+      const containers = execFileSync("docker", ["ps", "--format", "{{.Names}}"], {
         encoding: "utf-8",
+        stdio: ["ignore", "pipe", "pipe"],
         timeout: 5000,
       })
+      if (!containers.trim().split("\n").includes(target.container)) throw new Error("Target not running")
       checks.push({
         name: "postgres_container_running",
         passed: true,
-        message: "PostgreSQL container (knowledge-postgres) is running",
+        message: `PostgreSQL container (${target.container}) is running`,
       })
     } catch {
       checks.push({
         name: "postgres_container_running",
         passed: false,
-        message: "PostgreSQL container (knowledge-postgres) is not running",
+        message: `PostgreSQL container (${target.container}) is not running`,
       })
       errors.push("PostgreSQL container is not running")
     }
   }
 
   // ── Check 7: Disk space ──────────────────────────────────────────────────
-  const diskSpaceAvailable = getDiskSpace(dateDir)
+  // PostgreSQL plaintext is written to the private temp filesystem, not beside the archive.
+  const onlyPostgres = requestedTypes.length > 0 && requestedTypes.every(type => type === "postgres")
+  const diskSpaceAvailable = onlyPostgres
+    ? getDiskSpace(target.scratchParent)
+    : Math.min(getDiskSpace(dateDir), needsPostgres ? getDiskSpace(target.scratchParent) : Number.MAX_SAFE_INTEGER)
   // Estimate needed space: total backup size * 2 (for decompression + restore)
   const diskSpaceNeeded = totalSize * 2
 
@@ -386,8 +462,8 @@ export async function validateRestore(
  * 1. Validate (unless force is set)
  * 2. For each type:
  *    a. Decrypt backup file
- *    b. Verify checksum
- *    c. Apply restore (docker exec for DB, tar extract for files)
+ *    b. Apply restore (docker exec for DB, tar extract for files)
+ * Checksums are verified by preflight, unless explicitly bypassed with force.
  * 3. Emit audit events
  */
 export async function runRestore(
@@ -407,6 +483,8 @@ export async function runRestore(
 
   const dateDir = resolve(backupDir, targetDate)
   const encryptionKey = process.env.BACKUP_ENCRYPTION_KEY || ""
+  const target = postgresTarget()
+  let manifest: BackupManifest | null = null
 
   if (!encryptionKey) {
     return {
@@ -419,7 +497,7 @@ export async function runRestore(
   // ── Step 1: Validate ─────────────────────────────────────────────────────
   if (!options.force) {
     console.log("Running preflight validation...")
-    const validation = await validateRestore(options)
+    const validation = await validateRestoreForTarget(options, target)
 
     if (!validation.valid) {
       console.error("Validation failed:")
@@ -432,10 +510,11 @@ export async function runRestore(
         errors: validation.errors,
       }
     }
+    manifest = validation.manifest || null
   }
 
   // ── Load manifest ──────────────────────────────────────────────────────
-  const manifest = await loadManifest(dateDir)
+  manifest ??= await loadManifest(dateDir)
   if (!manifest) {
     return {
       success: false,
@@ -445,6 +524,17 @@ export async function runRestore(
   }
 
   const typesToRestore = options.types || manifest.types
+  let postgresPath: string | undefined
+  try {
+    if (!Array.isArray(manifest.types) || !Array.isArray(typesToRestore)) throw new Error("Manifest backup types are invalid")
+    manifestFilenames(manifest)
+    if (typesToRestore.includes("postgres")) {
+      assertPlainPostgresTarget(target)
+      postgresPath = await postgresArchive(dateDir, manifest)
+    }
+  } catch (error) {
+    return { success: false, restored: [], errors: [error instanceof Error ? error.message : "Invalid backup manifest"] }
+  }
 
   // ── Emit start event ────────────────────────────────────────────────────
   await emitAuditEvent(EVENT_RESTORE_STARTED, {
@@ -479,7 +569,7 @@ export async function runRestore(
     try {
       switch (type) {
         case "postgres":
-          await restorePostgres(dateDir, encryptionKey)
+          await restorePostgres(postgresPath!, encryptionKey, target)
           restored.push("postgres")
           break
 
@@ -537,43 +627,56 @@ export async function runRestore(
 
 // ── Individual Restore Functions ────────────────────────────────────────────────
 
-async function restorePostgres(dateDir: string, encryptionKey: string): Promise<void> {
-  // Find the encrypted backup file
-  const files = await execSync(`ls -1 "${dateDir}" | grep '^postgres-.*\.sql\.gz\.enc$'`, {
-    encoding: "utf-8",
-  })
-  const encFile = files.trim().split("\n")[0]
-  if (!encFile) {
-    throw new Error("No PostgreSQL backup file found")
+async function restorePostgres(
+  encPath: string,
+  encryptionKey: string,
+  target: ReturnType<typeof postgresTarget>,
+): Promise<void> {
+  let scratch: string | undefined
+  let stage = "temporary file setup"
+  try {
+    // mkdtemp creates a private directory. Never overwrite neighboring backup files.
+    scratch = await mkdtemp(join(target.scratchParent, "allura-pg-restore-"))
+    const gzipPath = join(scratch, "database.sql.gz")
+    const sqlPath = join(scratch, "database.sql")
+    const gzip = await open(gzipPath, "wx", 0o600)
+    await gzip.close()
+    stage = "decryption"
+    execFileSync("openssl", ["enc", "-d", "-aes-256-cbc", "-pbkdf2", "-iter", "100000",
+      "-in", encPath, "-out", gzipPath, "-pass", "env:ALLURA_RESTORE_PASSPHRASE"], {
+      env: { ...process.env, ALLURA_RESTORE_PASSPHRASE: encryptionKey },
+      stdio: ["ignore", "ignore", "pipe"], timeout: 120_000,
+    })
+    stage = "decompression"
+    const output = await open(sqlPath, "wx", 0o600)
+    try {
+      execFileSync("gunzip", ["-c", gzipPath], { stdio: ["ignore", output.fd, "pipe"], timeout: 120_000 })
+    } finally {
+      await output.close()
+    }
+    stage = "database restore"
+    const input = await open(sqlPath, "r")
+    try {
+      // Fail on SQL errors; this does not roll back statements already committed.
+      execFileSync("docker", ["exec", "-i", target.container, "psql", "-X", "-v", "ON_ERROR_STOP=1",
+        "-U", target.user, "-d", target.database], {
+        stdio: [input.fd, "ignore", "pipe"], timeout: 300_000,
+      })
+    } finally {
+      await input.close()
+    }
+  } catch {
+    // Child diagnostics can contain SQL data or credentials. Report only the failed stage.
+    throw new Error(`PostgreSQL restore failed during ${stage}`)
+  } finally {
+    if (scratch) {
+      try {
+        await rm(scratch, { recursive: true, force: true })
+      } catch {
+        throw new Error("PostgreSQL restore temporary plaintext cleanup failed")
+      }
+    }
   }
-
-  const encPath = resolve(dateDir, encFile)
-  const gzipPath = encPath.replace(".enc", "")
-  const sqlPath = gzipPath.replace(".gz", "")
-
-  // Decrypt
-  execSync(`openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -in "${encPath}" -out "${gzipPath}" -pass pass:"${encryptionKey}"`, {
-    encoding: "utf-8",
-    timeout: 120_000,
-  })
-
-  // Decompress
-  execSync(`gunzip -f "${gzipPath}"`, { encoding: "utf-8", timeout: 120_000 })
-
-  // Restore (requires POSTGRES_PASSWORD and POSTGRES_USER)
-  const container = process.env.POSTGRES_CONTAINER || "knowledge-postgres"
-  const user = process.env.POSTGRES_USER || "ronin4life"
-  const db = process.env.POSTGRES_DB || "memory"
-
-  console.log(`Restoring PostgreSQL database ${db}...`)
-  execSync(`cat "${sqlPath}" | docker exec -i "${container}" psql -U "${user}" "${db}"`, {
-    encoding: "utf-8",
-    timeout: 300_000,
-  })
-
-  // Cleanup
-  execSync(`rm -f "${gzipPath}" "${sqlPath}"`, { encoding: "utf-8" })
-
   console.log("PostgreSQL restore complete")
 }
 

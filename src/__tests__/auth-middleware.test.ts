@@ -10,6 +10,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+// These tests verify routing/authority with mocked providers. Audit payload
+// construction is tested separately; delivery is outside this suite. Never send
+// fixtures to a running local service.
+vi.mock("@/lib/auth/edge-audit", () => ({ emitGatedAudit: vi.fn() }))
+
 // ── Mock Environment ────────────────────────────────────────────────────────
 
 // Set dev auth environment before importing modules

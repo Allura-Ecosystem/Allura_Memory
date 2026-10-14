@@ -15,11 +15,14 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { execSync } from "node:child_process"
-import { randomBytes } from "node:crypto"
-import { mkdir , readFile, rm, writeFile } from "node:fs/promises"
+import { execFileSync, execSync, type ExecFileSyncOptions } from "node:child_process"
+import { createHash, randomBytes } from "node:crypto"
+import { fstatSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs"
+import { access, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join, resolve } from "node:path"
+import { dirname, join, resolve } from "node:path"
+import { gzipSync } from "node:zlib"
+import { insertEvent } from "../lib/postgres/queries/insert-trace"
 import type {
   BackupInventoryItem,
   BackupManifest,
@@ -30,11 +33,12 @@ import type {
   RetentionPolicy,
 } from "../lib/backup"
 import { backupConfig } from "../lib/backup/config"
-import { backupPostgres } from "../lib/backup/postgres"
+import { backupPostgres, type PostgresBackupOptions } from "../lib/backup/postgres"
 import {
   getRetentionSummary,
   listBackups,
   loadManifest,
+  runRestore,
   validateRestore,
 } from "../lib/backup/restore"
 import { backupSkills } from "../lib/backup/skills"
@@ -58,8 +62,14 @@ import { backupWorkspace } from "../lib/backup/workspace"
 // ── Mocks ───────────────────────────────────────────────────────────────────────
 
 vi.mock("node:child_process", () => ({
+  execFileSync: vi.fn(),
   execSync: vi.fn(),
 }))
+
+vi.mock("node:fs/promises", async importOriginal => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>()
+  return { ...actual, rm: vi.fn(actual.rm) }
+})
 
 vi.mock("../lib/postgres/queries/insert-trace", () => ({
   insertEvent: vi.fn().mockResolvedValue({ id: 1 }),
@@ -343,7 +353,438 @@ describe("validateRestore", () => {
   })
 })
 
+describe("restore archive byte integrity (FR-4, FR-7)", () => {
+  let testDir: string
+  let dateDir: string
+  const filename = "config-20260429.tar.gz.enc"
+  const bytes = Buffer.alloc(256 * 1024, 0x61)
+  const digest = createHash("sha256").update(bytes).digest("hex")
+
+  beforeEach(async () => {
+    testDir = createTempDir()
+    dateDir = join(testDir, "20260429")
+    vi.mocked(execSync).mockReset()
+    vi.mocked(execSync).mockReturnValue("1000000000\n")
+    await createMockManifest(dateDir, {
+      types: ["config"], checksums: { [filename]: digest },
+      sizes: { [filename]: bytes.length }, total_size: bytes.length,
+    })
+    await writeFile(join(dateDir, filename), bytes)
+  })
+
+  afterEach(async () => {
+    vi.unstubAllEnvs()
+    await rm(testDir, { recursive: true, force: true })
+  })
+
+  const checksumCheck = (result: RestoreValidationResult) =>
+    result.checks.find(check => check.name === `checksum_${filename}`)
+
+  it.each([false, true])("hashes valid archive bytes with sidecar=%s", async sidecar => {
+    if (sidecar) await writeFile(join(dateDir, `${filename}.sha256`), `${digest}\n`)
+    const result = await validateRestore({ dryRun: true, date: "20260429", backupDir: testDir })
+    expect(result.valid).toBe(true)
+    expect(checksumCheck(result)?.passed).toBe(true)
+    expect(await readFile(join(dateDir, filename))).toEqual(bytes)
+  })
+
+  it.each([false, true])("rejects changed archive bytes with sidecar=%s", async sidecar => {
+    if (sidecar) await writeFile(join(dateDir, `${filename}.sha256`), digest)
+    const changed = Buffer.from(bytes)
+    changed[changed.length - 1] ^= 1
+    await writeFile(join(dateDir, filename), changed)
+    const result = await validateRestore({ dryRun: true, date: "20260429", backupDir: testDir })
+    expect(result.valid).toBe(false)
+    expect(checksumCheck(result)?.passed).toBe(false)
+    expect(result.errors).toContain(`Checksum mismatch: ${filename}`)
+  })
+
+  it("rejects malformed manifest digest even when its sidecar matches", async () => {
+    await createMockManifest(dateDir, { types: ["config"], checksums: { [filename]: "not-sha256" } })
+    await writeFile(join(dateDir, `${filename}.sha256`), "not-sha256")
+    const result = await validateRestore({ dryRun: true, date: "20260429", backupDir: testDir })
+    expect(result.valid).toBe(false)
+    expect(checksumCheck(result)?.passed).toBe(false)
+  })
+
+  it("retains rejection of a conflicting sidecar", async () => {
+    await writeFile(join(dateDir, `${filename}.sha256`), "0".repeat(64))
+    const result = await validateRestore({ dryRun: true, date: "20260429", backupDir: testDir })
+    expect(result.valid).toBe(false)
+    expect(checksumCheck(result)?.passed).toBe(false)
+  })
+
+  it("rejects an unreadable archive even with a matching sidecar", async () => {
+    await rm(join(dateDir, filename))
+    await mkdir(join(dateDir, filename))
+    await writeFile(join(dateDir, `${filename}.sha256`), digest)
+    const result = await validateRestore({ dryRun: true, date: "20260429", backupDir: testDir, force: true })
+    expect(result.valid).toBe(false)
+    expect(checksumCheck(result)?.passed).toBe(false)
+    expect(result.errors).toContain(`Checksum mismatch: ${filename}`)
+  })
+
+  it("normal restore refuses corrupted bytes before decrypt/extract commands", async () => {
+    vi.stubEnv("BACKUP_ENCRYPTION_KEY", "synthetic-integrity-test-key")
+    await writeFile(join(dateDir, filename), "corrupted")
+    await writeFile(join(dateDir, `${filename}.sha256`), digest)
+    const result = await runRestore({ dryRun: false, date: "20260429", backupDir: testDir })
+    expect(result.success).toBe(false)
+    expect(result.restored).toEqual([])
+    expect(result.errors).toContain(`Checksum mismatch: ${filename}`)
+    expect(vi.mocked(execSync).mock.calls.every(([command]) => String(command).startsWith("df -B1 "))).toBe(true)
+  })
+})
+
+describe("PostgreSQL restore execution boundary", () => {
+  let testDir: string
+  let dateDir: string
+  let scratch: string | undefined
+  let failAt: string | undefined
+  const filename = "postgres-memory-20260429.sql.gz.enc"
+  const key = 'synthetic secret ; $(not-a-command) " key'
+  const bytes = "encrypted fixture"
+  const digest = createHash("sha256").update(bytes).digest("hex")
+  const target = "pilot-postgres"
+  const options = () => ({ backupDir: testDir, date: "20260429", types: ["postgres"] as BackupType[], dryRun: false })
+
+  beforeEach(async () => {
+    testDir = join(createTempDir(), 'archive .enc ; $(literal) " directory')
+    dateDir = join(testDir, "20260429")
+    scratch = undefined
+    failAt = undefined
+    vi.stubEnv("BACKUP_ENCRYPTION_KEY", key)
+    vi.stubEnv("POSTGRES_CONTAINER", target)
+    vi.stubEnv("POSTGRES_USER", "pilot_owner")
+    vi.stubEnv("POSTGRES_DB", "pilot_restore")
+    vi.mocked(insertEvent).mockClear()
+    vi.spyOn(console, "log").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.mocked(execSync).mockReset()
+    // Legacy implementation selects this decoy and reports successful shell execution.
+    vi.mocked(execSync).mockImplementation(command => String(command).startsWith("ls ") ? "postgres-old.sql.gz.enc\n" : "1000000000\n")
+    vi.mocked(execFileSync).mockReset()
+    vi.mocked(execFileSync).mockImplementation((file, args, options) => {
+      const argv = args as string[]
+      const settings = options as ExecFileSyncOptions
+      expect(argv.join(" ")).not.toContain(key)
+      if (file === "df") return "Filesystem 1B-blocks Used Available Capacity Mounted on\nfixture 2000000000 1 1000000000 1% /tmp\n"
+      if (file === "docker" && argv[0] === "ps") return `${target}\n`
+      if (file === "openssl") {
+        expect(argv[argv.indexOf("-in") + 1]).toBe(join(dateDir, filename))
+        expect(argv[argv.indexOf("-pass") + 1]).toBe("env:ALLURA_RESTORE_PASSPHRASE")
+        expect(settings.env?.ALLURA_RESTORE_PASSPHRASE).toBe(key)
+        const out = argv[argv.indexOf("-out") + 1]
+        scratch = dirname(out)
+        expect(scratch).not.toBe(dateDir)
+        expect(statSync(scratch).mode & 0o777).toBe(0o700)
+        expect(statSync(out).mode & 0o777).toBe(0o600)
+        writeFileSync(out, "synthetic compressed data")
+      }
+      if (file === "gunzip") {
+        const fd = (settings.stdio as number[])[1]
+        expect(typeof fd).toBe("number")
+        expect(fstatSync(fd).mode & 0o777).toBe(0o600)
+        writeFileSync(fd, "SELECT 'synthetic SQL';")
+      }
+      if (file === "docker" && argv[0] === "exec") {
+        expect(argv).toEqual(["exec", "-i", target, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "pilot_owner", "-d", "pilot_restore"])
+        expect(readFileSync((settings.stdio as number[])[0], "utf8")).toBe("SELECT 'synthetic SQL';")
+        expect((settings.stdio as unknown[])[1]).toBe("ignore")
+      }
+      if (file === failAt || (failAt === "timeout" && file === "docker")) {
+        throw Object.assign(new Error(`child failure: ${key} PRIVATE_SQL_TEXT`), { code: failAt === "timeout" ? "ETIMEDOUT" : undefined })
+      }
+      return ""
+    })
+    await createMockManifest(dateDir, { types: ["postgres"], checksums: { [filename]: digest }, sizes: { [filename]: bytes.length } })
+    await writeFile(join(dateDir, filename), bytes)
+    await writeFile(join(dateDir, "postgres-old.sql.gz.enc"), "decoy")
+    await writeFile(join(dateDir, filename.slice(0, -4)), "existing gzip must survive")
+    await writeFile(join(dateDir, filename.slice(0, -7)), "existing SQL must survive")
+  })
+
+  afterEach(async () => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+    await rm(dirname(testDir), { recursive: true, force: true })
+    if (scratch) await rm(scratch, { recursive: true, force: true })
+  })
+
+  it("restores only the manifest-selected archive, preserving neighboring plaintext", async () => {
+    const result = await runRestore(options())
+    expect(result).toEqual({ success: true, restored: ["postgres"], errors: [] })
+    expect(execSync).not.toHaveBeenCalled()
+    expect(scratch).toBeDefined()
+    await expect(access(scratch!)).rejects.toThrow()
+    expect(await readFile(join(dateDir, filename.slice(0, -4)), "utf8")).toBe("existing gzip must survive")
+    expect(await readFile(join(dateDir, filename.slice(0, -7)), "utf8")).toBe("existing SQL must survive")
+    expect(vi.mocked(insertEvent).mock.calls.some(([event]) => event.event_type === EVENT_RESTORE_COMPLETED)).toBe(true)
+  })
+
+  it.each(["openssl", "gunzip", "docker", "timeout"])("fails and cleans private plaintext after %s failure", async stage => {
+    failAt = stage
+    const result = await runRestore(options())
+    expect(result.success).toBe(false)
+    expect(result.restored).toEqual([])
+    expect(scratch).toBeDefined()
+    await expect(access(scratch!)).rejects.toThrow()
+    expect(vi.mocked(insertEvent).mock.calls.some(([event]) => event.event_type === EVENT_RESTORE_COMPLETED)).toBe(false)
+    expect(vi.mocked(insertEvent).mock.calls.some(([event]) => event.event_type === EVENT_RESTORE_FAILED)).toBe(true)
+    const output = JSON.stringify([result, vi.mocked(console.log).mock.calls, vi.mocked(console.error).mock.calls, vi.mocked(insertEvent).mock.calls])
+    expect(output).not.toContain(key)
+    expect(output).not.toContain("PRIVATE_SQL_TEXT")
+  })
+
+  it.each<Record<string, string>>([{}, { [filename]: digest, "postgres-other.sql.gz.enc": digest },
+    { "../postgres-escape.sql.gz.enc": digest }, { "/tmp/postgres-escape.sql.gz.enc": digest },
+    { "nested\\postgres-escape.sql.gz.enc": digest }, { "postgres-null\u0000.sql.gz.enc": digest }])("rejects missing, ambiguous or unsafe manifest artifacts even with force: %j", async checksums => {
+    await createMockManifest(dateDir, { types: ["postgres"], checksums })
+    const result = await runRestore({ ...options(), force: true })
+    expect(result.success).toBe(false)
+    expect(result.restored).toEqual([])
+    expect(execSync).not.toHaveBeenCalled()
+    expect(execFileSync).not.toHaveBeenCalled()
+  })
+
+  it("does not silently succeed when requested PostgreSQL is absent from manifest types", async () => {
+    await createMockManifest(dateDir, { types: ["config"], checksums: {} })
+    expect((await runRestore({ ...options(), force: true })).success).toBe(false)
+  })
+
+  it("rejects a symlink archive even with force", async () => {
+    await rm(join(dateDir, filename))
+    await symlink(join(dateDir, "postgres-old.sql.gz.enc"), join(dateDir, filename))
+    expect((await runRestore({ ...options(), force: true })).success).toBe(false)
+    expect(execSync).not.toHaveBeenCalled()
+    expect(execFileSync).not.toHaveBeenCalled()
+  })
+
+  it("requires the exact configured running container", async () => {
+    vi.mocked(execFileSync).mockReturnValue(`${target}-other\nknowledge-postgres\n`)
+    const result = await runRestore(options())
+    expect(result.success).toBe(false)
+    expect(result.errors).toContain("PostgreSQL container is not running")
+  })
+
+  it("keeps its target and verified manifest snapshot across asynchronous audit calls", async () => {
+    vi.mocked(insertEvent).mockImplementationOnce(async () => {
+      process.env.POSTGRES_CONTAINER = "unrelated-database"
+      process.env.POSTGRES_USER = "unrelated-owner"
+      process.env.POSTGRES_DB = "unrelated-db"
+      await createMockManifest(dateDir, { types: ["postgres"], checksums: { "postgres-old.sql.gz.enc": digest } })
+      return { id: 1 } as Awaited<ReturnType<typeof insertEvent>>
+    })
+    expect((await runRestore(options())).success).toBe(true)
+    expect(scratch).toBeDefined()
+  })
+
+  it.each(["host=unrelated dbname=other", "postgresql://unrelated/other", "postgres://unrelated/other"])("refuses connection-string restore retargeting even with force: %s", async database => {
+    vi.stubEnv("POSTGRES_DB", database)
+    for (const force of [false, true]) {
+      vi.mocked(execFileSync).mockClear()
+      const result = await runRestore({ ...options(), force })
+      expect(result.success).toBe(false)
+      expect(result.restored).toEqual([])
+      expect(scratch).toBeUndefined()
+      expect(vi.mocked(execFileSync).mock.calls.every(([file]) => file === "df")).toBe(true)
+    }
+    expect(execSync).not.toHaveBeenCalled()
+  })
+
+  it("does not claim success when private plaintext cleanup fails", async () => {
+    vi.mocked(rm).mockRejectedValueOnce(new Error("synthetic cleanup failure"))
+    const result = await runRestore(options())
+    expect(result.success).toBe(false)
+    expect(result.errors).toContain("postgres: PostgreSQL restore temporary plaintext cleanup failed")
+    expect(vi.mocked(insertEvent).mock.calls.some(([event]) => event.event_type === EVENT_RESTORE_COMPLETED)).toBe(false)
+  })
+
+  it("validates safe selection during dry-run without decrypting or applying SQL", async () => {
+    const result = await runRestore({ ...options(), dryRun: true })
+    expect(result.success).toBe(true)
+    expect(scratch).toBeUndefined()
+    expect(vi.mocked(execFileSync).mock.calls.every(([file, args]) => file === "df" || (file === "docker" && args?.[0] === "ps"))).toBe(true)
+  })
+
+  it("preserves explicit force checksum/preflight bypass but still selects the manifest archive", async () => {
+    await writeFile(join(dateDir, filename), "checksum intentionally mismatches")
+    expect((await runRestore({ ...options(), force: true })).success).toBe(true)
+    expect(scratch).toBeDefined()
+    expect(vi.mocked(execFileSync).mock.calls.some(([file, args]) => file === "df" || (file === "docker" && args?.[0] === "ps"))).toBe(false)
+  })
+
+  it.each([0, 1000000000])("checks the actual temporary filesystem for PostgreSQL plaintext: available=%s", async available => {
+    vi.mocked(execFileSync).mockImplementation((file, args) => {
+      if (file === "docker") return `${target}\n`
+      expect(file).toBe("df")
+      expect(args).toEqual(["-P", "-B1", "--", tmpdir()])
+      return `Filesystem 1B-blocks Used Available Capacity Mounted on\nfixture 2000000000 1 ${available} 1% /tmp\n`
+    })
+    const result = await validateRestore(options())
+    expect(result.diskSpaceAvailable).toBe(available)
+    expect(result.valid).toBe(available > 0)
+  })
+
+  it.each(["valid", "wrong key", "invalid gzip"])("real OpenSSL/gunzip compatibility: %s (Docker and audit mocked)", async scenario => {
+    const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process")
+    const sql = "SELECT 'synthetic recovery fixture';\n".repeat(8192)
+    const compressed = scenario === "invalid gzip" ? Buffer.from("not gzip") : gzipSync(sql)
+    const ciphertext = actual.execFileSync("openssl", ["enc", "-aes-256-cbc", "-pbkdf2", "-iter", "100000", "-pass", "env:ALLURA_TEST_PASSPHRASE"], {
+      env: { ...process.env, ALLURA_TEST_PASSPHRASE: key }, input: compressed, stdio: ["pipe", "pipe", "pipe"], timeout: 5000,
+    })
+    const checksum = createHash("sha256").update(ciphertext).digest("hex")
+    await writeFile(join(dateDir, filename), ciphertext)
+    await createMockManifest(dateDir, { types: ["postgres"], checksums: { [filename]: checksum } })
+    if (scenario === "wrong key") vi.stubEnv("BACKUP_ENCRYPTION_KEY", "synthetic incorrect key")
+    let databaseCalls = 0
+    vi.mocked(execFileSync).mockImplementation((file, args, options) => {
+      const argv = args as string[]
+      const settings = options as ExecFileSyncOptions
+      if (file === "docker") {
+        if (argv[0] === "ps") return `${target}\n`
+        databaseCalls++
+        expect(argv).toContain("ON_ERROR_STOP=1")
+        expect(readFileSync((settings.stdio as number[])[0], "utf8")).toBe(sql)
+        return ""
+      }
+      if (file === "openssl") scratch = dirname(argv[argv.indexOf("-out") + 1])
+      return actual.execFileSync(file, argv, settings)
+    })
+    const result = await runRestore(options())
+    expect(result.success).toBe(scenario === "valid")
+    expect(databaseCalls).toBe(scenario === "valid" ? 1 : 0)
+    expect(scratch).toBeDefined()
+    await expect(access(scratch!)).rejects.toThrow()
+    expect(await readFile(join(dateDir, filename))).toEqual(ciphertext)
+    expect(await readFile(join(dateDir, filename.slice(0, -7)), "utf8")).toBe("existing SQL must survive")
+  })
+})
+
 // ── Backup Listing Tests (FR-8) ────────────────────────────────────────────────
+describe("PostgreSQL backup execution safety", () => {
+  let dir: string
+  let scratch: string | undefined
+  let failAt: string | undefined
+  const key = 'literal secret ; $(not-run) " passphrase'
+  const sql = "SELECT 'PRIVATE_SQL_TEXT';\n".repeat(100000)
+  const target = "isolated-pg"
+  const database = 'database space " ; literal'
+  const user = 'owner space " ; literal'
+  const options = (): PostgresBackupOptions => ({ container: target, database, user, outputDir: dir,
+    encryption: { key, cipher: "aes-256-cbc", saltLength: 16 } })
+
+  beforeEach(async () => {
+    dir = join(createTempDir(), 'output space ; " literal')
+    await mkdir(dir, { recursive: true })
+    scratch = undefined; failAt = undefined
+    const actual = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises")
+    vi.mocked(rm).mockReset().mockImplementation(actual.rm)
+    vi.spyOn(console, "log").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.mocked(execSync).mockReset().mockReturnValue("")
+    vi.mocked(execFileSync).mockReset().mockImplementation((file, args, settings) => {
+      const argv = args as string[]
+      const opts = settings as ExecFileSyncOptions
+      expect(argv.join(" ")).not.toContain(key)
+      if (file === "docker" && argv[0] === "info") return ""
+      if (file === "docker" && argv[0] === "ps") return target + "\n"
+      const fd = (opts.stdio as number[])[1]
+      expect(typeof fd).toBe("number")
+      expect(fstatSync(fd).mode & 0o777).toBe(0o600)
+      scratch = join(dir, readdirSync(dir).find(name => name.startsWith(".allura-pg-backup-"))!)
+      expect(statSync(scratch).mode & 0o777).toBe(0o700)
+      if (file === "docker") {
+        expect(argv).toEqual(["exec", target, "pg_dump", "-U", user, "--dbname", database])
+        writeFileSync(fd, sql)
+      } else if (file === "gzip") writeFileSync(fd, "synthetic compressed")
+      else if (file === "openssl") {
+        expect(argv[argv.indexOf("-pass") + 1]).toBe("env:ALLURA_BACKUP_PASSPHRASE")
+        expect(opts.env?.ALLURA_BACKUP_PASSPHRASE).toBe(key)
+        writeFileSync(fd, "synthetic encrypted")
+      } else throw new Error("Unexpected command")
+      if (file === failAt) throw new Error("Child error " + key + " PRIVATE_SQL_TEXT")
+      return ""
+    })
+  })
+  afterEach(async () => {
+    vi.useRealTimers(); vi.restoreAllMocks()
+    const actual = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises")
+    vi.mocked(rm).mockReset().mockImplementation(actual.rm)
+    await actual.rm(dirname(dir), { recursive: true, force: true })
+  })
+  it("dumps once via private file descriptors, encrypts without shell/key argv, hashes bytes and cleans plaintext", async () => {
+    const result = await backupPostgres(options())
+    expect(result.success).toBe(true)
+    expect(execSync).not.toHaveBeenCalled()
+    expect(vi.mocked(execFileSync).mock.calls.filter(([file, args]) => file === "docker" && args?.[0] === "exec")).toHaveLength(1)
+    expect(result.checksum).toBe(createHash("sha256").update("synthetic encrypted").digest("hex"))
+    expect(result.size).toBe(Buffer.byteLength("synthetic encrypted"))
+    expect(await readFile(result.path + ".sha256", "utf8")).toBe(result.checksum)
+    expect(statSync(result.path).mode & 0o777).toBe(0o600)
+    expect(statSync(result.path + ".sha256").mode & 0o777).toBe(0o600)
+    expect((await readdir(dir)).sort()).toEqual([result.path.split("/").at(-1)!, result.path.split("/").at(-1)! + ".sha256"].sort())
+    expect(scratch).toBeDefined()
+    await expect(access(scratch!)).rejects.toThrow()
+  })
+  it.each(["docker", "gzip", "openssl"])("fails safely and removes private files after %s stage failure", async stage => {
+    failAt = stage
+    const result = await backupPostgres(options())
+    expect(result.success).toBe(false)
+    expect(execSync).not.toHaveBeenCalled()
+    expect(await readdir(dir)).toEqual([])
+    const visible = JSON.stringify([result, vi.mocked(console.log).mock.calls, vi.mocked(console.error).mock.calls])
+    expect(visible).not.toContain(key); expect(visible).not.toContain("PRIVATE_SQL_TEXT")
+  })
+  it("refuses an inexact container match before dump", async () => {
+    vi.mocked(execFileSync).mockReturnValue(target + "-other\n")
+    expect((await backupPostgres(options())).success).toBe(false)
+    expect(vi.mocked(execFileSync).mock.calls.some(([, args]) => args?.[0] === "exec")).toBe(false)
+  })
+  it.each(["../other", "nested\\other", "nul\u0000name", "line\nbreak", "line\rbreak", "line\u2028break", "line\u2029break",
+    "host=unrelated dbname=other", "postgresql://unrelated/other", "postgres://unrelated/other"])("rejects unsafe database operands before execution: %s", async name => {
+    const result = await backupPostgres({ ...options(), database: name })
+    expect(result.success).toBe(false)
+    expect(execSync).not.toHaveBeenCalled(); expect(execFileSync).not.toHaveBeenCalled()
+  })
+  it("does not report success when private cleanup fails", async () => {
+    vi.mocked(rm).mockRejectedValueOnce(new Error("synthetic cleanup refusal"))
+    const result = await backupPostgres(options())
+    expect(result.success).toBe(false)
+    expect(result.error).toContain("cleanup")
+  })
+  it("retains target, path and key snapshots across async work", async () => {
+    const original = options()
+    const operation = backupPostgres(original)
+    original.container = "unrelated"; original.database = "unrelated"; original.user = "unrelated"
+    original.outputDir = "/unused"; original.encryption.key = "changed passphrase"
+    expect((await operation).success).toBe(true)
+  })
+  it.each(["archive", "sidecar", "symlink"])("refuses %s collision without overwriting/deleting preexisting files", async collision => {
+    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-10-14T00:00:00.000Z"))
+    const file = join(dir, 'postgres-' + database + '-2026-10-14T00-00-00-000Z.sql.gz.enc')
+    const occupied = collision === "sidecar" ? file + ".sha256" : file
+    const neighbor = join(dir, "neighbor")
+    await writeFile(neighbor, "preserve me")
+    if (collision === "symlink") await symlink(neighbor, occupied)
+    else await writeFile(occupied, "preexisting backup")
+    expect((await backupPostgres(options())).success).toBe(false)
+    expect(await readFile(occupied, "utf8")).toBe(collision === "symlink" ? "preserve me" : "preexisting backup")
+    expect(await readFile(neighbor, "utf8")).toBe("preserve me")
+  })
+  it("keeps existing gzip/OpenSSL format with literal passphrases (Docker mocked)", async () => {
+    const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process")
+    const fake = vi.mocked(execFileSync).getMockImplementation()!
+    vi.mocked(execFileSync).mockImplementation((file, args, opts) => file === "docker" ? fake(file, args, opts) : actual.execFileSync(file, args as string[], opts as ExecFileSyncOptions))
+    const result = await backupPostgres(options())
+    expect(result.success).toBe(true)
+    const compressed = actual.execFileSync("openssl", ["enc", "-d", "-aes-256-cbc", "-pbkdf2", "-iter", "100000", "-in", result.path, "-pass", "env:ALLURA_TEST_BACKUP_KEY"], {
+      env: { ...process.env, ALLURA_TEST_BACKUP_KEY: key }, stdio: ["pipe", "pipe", "pipe"], timeout: 10000, maxBuffer: 8 * 1024 * 1024,
+    })
+    const restored = actual.execFileSync("gunzip", ["-c"], { input: compressed, maxBuffer: 8 * 1024 * 1024, timeout: 10000 })
+    expect(restored.toString()).toBe(sql)
+  })
+})
 
 describe("listBackups", () => {
   let testDir: string

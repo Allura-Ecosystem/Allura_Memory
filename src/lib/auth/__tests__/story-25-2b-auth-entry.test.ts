@@ -5,6 +5,12 @@ import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// This suite renders server components under Vitest, not a browser bundle.
+vi.mock("server-only", () => ({}));
+// Audit payload construction is tested separately; delivery is outside this
+// suite. Auth entry tests must not contact a live app.
+vi.mock("@/lib/auth/edge-audit", () => ({ emitGatedAudit: vi.fn() }));
+
 vi.mock("@clerk/nextjs", () => ({
   ClerkProvider: ({ children }: { children: ReactNode }) => [
     "clerk-provider-mounted",

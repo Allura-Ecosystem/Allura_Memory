@@ -6,7 +6,6 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
 REQUIRED_VARS=(
     "POSTGRES_PASSWORD:Database password"
-    "NEO4J_PASSWORD:Neo4j password"
     "OLLAMA_API_KEY:Ollama API key"
     "RUVIX_CONTROL_PLANE_SECRET:Secret (min 32 chars)"
 )
@@ -18,7 +17,8 @@ trap 'rm -f "$TEMP_ENV"' EXIT
 echo "Allura Brain Environment Validator (v2.2.0)"
 echo "Checking env files..."
 
-for envfile in .env.local .env; do
+# Match the documented Compose precedence: local overrides base.
+for envfile in .env .env.local; do
     if [[ -f "$REPO_ROOT/$envfile" ]]; then
         echo "  Found: $envfile"
         while IFS= read -r line || [[ -n "$line" ]]; do
@@ -27,6 +27,13 @@ for envfile in .env.local .env; do
             if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
                 key="${line%%=*}"
                 value="${line#*=}"
+                # Normalize surrounding whitespace and matching literal quotes.
+                # Never source/eval configuration or expand shell expressions.
+                value="${value#"${value%%[![:space:]]*}"}"
+                value="${value%"${value##*[![:space:]]}"}"
+                if [[ "$value" == \"*\" || "$value" == \'*\' ]]; then
+                    value="${value:1:${#value}-2}"
+                fi
                 [[ -z "$key" ]] && continue
                 echo "${key}=${value}" >> "$TEMP_ENV"
             fi
@@ -45,6 +52,14 @@ echo "Validating required variables..."
 while IFS='=' read -r var value; do
     export "$var"="$value"
 done < "$TEMP_ENV"
+
+# Match the actual graph factory: Neo4j is retired, not a supported fallback.
+# No current runtime implements the old dual-read switch either.
+graph_backend_value="${GRAPH_BACKEND:-ruvector}"
+if [[ "${graph_backend_value,,}" == "neo4j" || "${GRAPH_DUAL_READ:-false}" == "true" ]]; then
+    echo "FAIL: Neo4j/GRAPH_DUAL_READ is retired; use the PostgreSQL graph backend"
+    exit 1
+fi
 
 for entry in "${REQUIRED_VARS[@]}"; do
     IFS=':' read -r var comment <<< "$entry"

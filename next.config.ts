@@ -1,6 +1,8 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
+  // Opt-in packaging candidate; ordinary development/next start is unchanged.
+  output: process.env.ALLURA_WEB_STANDALONE === "1" ? "standalone" : undefined,
   // Browser evidence is captured from the application surface itself. Keep the
   // development-only Next.js badge from obscuring governed controls or data.
   devIndicators: false,

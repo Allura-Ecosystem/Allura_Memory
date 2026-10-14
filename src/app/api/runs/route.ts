@@ -22,6 +22,7 @@ import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth
 import { captureException } from "@/lib/observability/sentry"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 import { getPool } from "@/lib/postgres/connection"
+import { resolveApiTenant } from "@/lib/auth/web-principal"
 import { getDefinition, getLatestDefinition } from "@/lib/process-engine/definition-registry"
 import { createRun, listRuns } from "@/lib/process-engine/run-manager"
 import type { ProcessStatus, ProcessState } from "@/lib/process-engine/types"
@@ -64,6 +65,12 @@ export async function GET(request: NextRequest) {
       }
       throw error
     }
+
+    const authority = resolveApiTenant(roleCheck.user, validatedGroupId)
+    if (authority.status !== "ok") {
+      return NextResponse.json({ error: "TENANT_MISMATCH" }, { status: 403 })
+    }
+    validatedGroupId = authority.groupId
 
     const statusParam = searchParams.get("status")
     const status = statusParam as ProcessStatus | undefined
@@ -123,6 +130,12 @@ export async function POST(request: NextRequest) {
       }
       throw error
     }
+
+    const authority = resolveApiTenant(roleCheck.user, validatedGroupId)
+    if (authority.status !== "ok") {
+      return NextResponse.json({ error: "TENANT_MISMATCH" }, { status: 403 })
+    }
+    validatedGroupId = authority.groupId
 
     const pool = getPool()
 

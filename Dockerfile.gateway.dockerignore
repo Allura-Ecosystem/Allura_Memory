@@ -1,0 +1,23 @@
+# Allowlist build inputs; do not send the repository/harness/dependencies wholesale.
+**
+!tsconfig.json
+!src
+!src/**
+!packages
+!packages/**
+!scripts
+!scripts/build-gateway.ts
+!deploy
+!deploy/gateway
+!deploy/gateway/package.json
+!deploy/gateway/bun.lock
+!deploy/gateway/bunfig.toml
+**/node_modules
+**/.env
+**/.env.*
+**/__tests__
+**/__benchmarks__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx

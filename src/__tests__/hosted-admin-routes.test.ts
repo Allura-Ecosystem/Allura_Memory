@@ -6,12 +6,12 @@ const createToken = vi.fn();
 const listTokensForWorkspace = vi.fn();
 const createWorkspace = vi.fn();
 const listWorkspacesForGroup = vi.fn();
-const revokeToken = vi.fn(async (_id: string) => {});
+const revokeToken = vi.fn(async (..._args: unknown[]) => {});
 
 vi.mock("@/lib/mcp-token/repository", () => ({
   createToken: (...a: unknown[]) => createToken(...a),
   listTokensForWorkspace: (...a: unknown[]) => listTokensForWorkspace(...a),
-  revokeToken: (id: string) => revokeToken(id),
+  revokeToken: (...args: unknown[]) => revokeToken(...args),
 }));
 vi.mock("@/lib/workspace/repository", () => ({
   createWorkspace: (...a: unknown[]) => createWorkspace(...a),
@@ -109,6 +109,20 @@ describe("POST /api/tokens/[id]/revoke", () => {
   it("admin revokes a token", async () => {
     const res = await revokePOST(req("/api/tokens/tok_1/revoke", "admin", {}), { params: Promise.resolve({ id: "tok_1" }) });
     expect(res.status).toBe(200);
-    expect(revokeToken).toHaveBeenCalledWith("tok_1");
+    expect(revokeToken).toHaveBeenCalledWith("tok_1", "allura-test");
+  });
+
+  it("cannot replace authenticated tenant authority with query/body selectors", async () => {
+    const res = await revokePOST(req("/api/tokens/tok_foreign/revoke?group_id=allura-other", "admin",
+      { group_id: "allura-other", workspace_id: "ws_other" }), { params: Promise.resolve({ id: "tok_foreign" }) });
+    expect(res.status).toBe(200);
+    expect(revokeToken).toHaveBeenCalledWith("tok_foreign", "allura-test");
+    expect(await res.json()).toEqual({ ok: true, id: "tok_foreign" });
+  });
+
+  it.each(["viewer", "curator"])("denies %s without revoking", async role => {
+    const res = await revokePOST(req("/api/tokens/tok_1/revoke", role, {}), { params: Promise.resolve({ id: "tok_1" }) });
+    expect(res.status).toBe(403);
+    expect(revokeToken).not.toHaveBeenCalled();
   });
 });

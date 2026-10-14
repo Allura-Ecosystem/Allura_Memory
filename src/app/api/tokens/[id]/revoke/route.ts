@@ -14,7 +14,7 @@ export async function POST(
   if (!rc.allowed) return forbiddenResponse(rc);
   try {
     const { id } = await params;
-    await revokeToken(id);
+    await revokeToken(id, rc.user.groupId);
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     console.error("token revoke error:", error);

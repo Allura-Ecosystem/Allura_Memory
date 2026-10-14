@@ -13,7 +13,8 @@ export async function drainPromotionOutbox(discoveryPool: Pool, opts?: { maxBatc
   const pending = await discoveryPool.query<OutboxRow>(
     `SELECT id,group_id,workspace_id,proposal_id,memory_id,payload,attempts FROM promotion_outbox
      WHERE workspace_scope_state='workspace_scoped' AND workspace_id IS NOT NULL
-       AND status IN('pending','failed') AND attempts<$1 ORDER BY available_at,created_at LIMIT $2`,
+       AND status IN('pending','failed') AND attempts<$1 AND available_at<=NOW()
+     ORDER BY available_at,created_at LIMIT $2`,
     [maxAttempts,maxBatch],
   );
   const appPool=getAppPool();
@@ -24,7 +25,8 @@ export async function drainPromotionOutbox(discoveryPool: Pool, opts?: { maxBatc
       const claimed = await withTenantTransaction(context, async (db) => {
         const claim=await db.query(
           `UPDATE promotion_outbox SET status='processing' WHERE id=$1 AND group_id=$2 AND workspace_id=$3
-             AND status IN('pending','failed') RETURNING id`, [row.id,row.group_id,row.workspace_id],
+             AND status IN('pending','failed') AND attempts<$4 AND available_at<=NOW()
+             RETURNING id`, [row.id,row.group_id,row.workspace_id,maxAttempts],
         );
         if (!claim.rows[0]) return false;
         await db.query(

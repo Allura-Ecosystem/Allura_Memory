@@ -52,6 +52,11 @@ CREATE INDEX IF NOT EXISTS idx_tenants_active
 -- ── Seed existing tenants ───────────────────────────────────────────────────
 -- These tenants already have data in the system; we register them so the
 -- target-resolver validation passes. ON CONFLICT DO NOTHING for idempotency.
+-- Fresh company bundles explicitly suppress historical seed data; existing
+-- installation/migration callers retain the original behavior by default.
+DO $$
+BEGIN
+IF current_setting('allura.fresh_company_install', true) IS DISTINCT FROM 'on' THEN
 INSERT INTO tenants (group_id, name, description, owner_agent_id, config, active)
 VALUES
   ('allura-system',         'Allura System',         'System-internal tenant for governance, architecture decisions, and platform operations.', 'gilliam', '{}'::jsonb, TRUE),
@@ -59,6 +64,8 @@ VALUES
   ('allura-difference-driven', 'Difference Driven',  'Difference Driven nonprofit tenant — community impact, grants, 501c3 operations.', 'brooks',  '{}'::jsonb, TRUE),
   ('allura-coding',         'Coding',                'Coding workspace tenant — development, technical decisions, and engineering workflows.', 'knuth',   '{}'::jsonb, TRUE)
 ON CONFLICT (group_id) DO NOTHING;
+END IF;
+END $$;
 
 -- ── Documentation ───────────────────────────────────────────────────────────
 COMMENT ON TABLE tenants IS

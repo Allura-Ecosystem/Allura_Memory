@@ -1,0 +1,29 @@
+# Explicit source/build allowlist. Do not send private environment or harnesses.
+**
+!package.json
+!bun.lock
+!next.config.ts
+!next-env.d.ts
+!tsconfig.json
+!env.mjs
+!vitest.config.ts
+!eslint.config.mjs
+!src/
+!src/**
+!public/
+!public/**
+!packages/
+!packages/**
+!scripts/
+!scripts/**
+!tests/
+!tests/**
+# Nested generated/private files remain excluded even under allowed directories.
+**/node_modules
+**/.git
+**/.next
+**/.env
+**/.env.*
+**/*.tsbuildinfo
+**/coverage
+**/test-results
