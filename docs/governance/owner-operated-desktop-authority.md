@@ -17,11 +17,13 @@ Platform ownership, tenant membership, and dangerous-action approval are separat
 
 - A direct instruction from Sabir in the current authenticated desktop session authorizes the stated ordinary read or append-only memory write when the target is already in the desktop principal's allowlist.
 - Do not ask Sabir to paste or repeat wording such as “I approve writing …” when his instruction already names the action and destination.
-- Joint Team RAM/Team Durham end-session reflections belong in `allura-system` unless Sabir names another destination. This is a defined system-record type, not a fallback after a denied tenant write.
+- If Sabir explicitly names `allura-system` for an ordinary system-level reflection or decision, the desktop may write it without a second approval phrase when its active credential permits that destination.
+- `allura-system` is not the default home for mixed-team business content and must never be used as a fallback after a denied tenant write.
+- The target home for joint Team RAM/Team Durham reflections is an owner-private aggregation workspace, provisioned only after its identifier, ownership, readers, and source-to-destination transfer rules are verified. `allura-sabir-asheed` is a candidate, not an assumed grant.
 - A reflection may summarize material already present in the current conversation or in sources the active principal was authorized to read. It must not imply that an inaccessible tenant was queried.
 - Every cross-team reflection must record `requested_by`, `principal_id`, `destination_group_id`, `source_tenants`, and whether each source was read live or supplied in-session.
-- Never silently redirect a denied write. If the requested destination is not allowed, report the exact missing grant and offer the authorized route without treating a new phrase as authorization.
-- Never use `allura-system` as a dumping ground for business data. Store only the system-level decision, handoff, reflection, or audit summary needed for cross-team continuity.
+- Read authority in a source plus write authority in a destination does not itself authorize copying. A server-validated transfer envelope must bind owner, executing principal, task, sources, destination, operation, content class, expiry, and request identifier.
+- Never silently redirect a denied write. If the requested destination is not allowed, report the exact missing grant and the administrative remediation path without treating a new phrase as authorization.
 
 ## Explicit owner-delegation model
 
@@ -34,7 +36,7 @@ The target product model is a device-bound, revocable **owner delegation envelop
 - allowed workspaces: explicit per-tenant bindings
 - allowed actions: least-privilege scopes per tenant
 - expiry/revocation: server-enforced and auditable
-- default destination: none, except defined record types such as the joint Team RAM/Durham reflection above
+- default destination: none; once provisioned, defined mixed-team record types may target the owner-private aggregation workspace
 
 The desktop may gain access to additional non-Xterra tenants only through an authenticated grant change. A local username, localhost origin, owner name in a prompt, or client-supplied role never grants authority.
 
@@ -70,19 +72,33 @@ Approval must bind the actor, action, target tenant/workspace, intended effect, 
 
 1. Apply this policy to the owner desktop project instructions immediately.
 2. Keep the existing server tenant check unchanged and fail closed.
-3. Replace single-tenant desktop routing with a signed, device-bound delegation envelope or equivalent server-side per-tenant grant table; do not add wildcard tokens.
-4. Enroll only the non-Xterra tenants Sabir chooses, with explicit per-tenant workspaces and scopes.
-5. Keep Xterra on a separate profile and credential path with no shared cache or manifest.
-6. Add UI that shows current principal, device, tenant, workspace, scopes, and reason for denial.
-7. Remove magic-phrase approval prompts. Use action-specific confirmation only where a real risk gate requires it.
-8. Audit every grant change and every cross-team reflection; verify append-only write/read-back.
+3. Verify and designate an owner-private aggregation workspace, its owner-only readers, and its retention/classification rules.
+4. Replace single-tenant desktop routing with signed, device-bound finite grants plus a bounded cross-workspace transfer envelope; do not add wildcard tokens.
+5. Enroll only the non-Xterra tenants Sabir chooses, with explicit per-tenant workspaces, scopes, and permitted information flows.
+6. Keep Xterra on a separate profile and credential path with no shared cache or manifest.
+7. Add UI that shows current principal, device, tenant, workspace, scopes, transfer authority, and reason for denial.
+8. Remove magic-phrase approval prompts. Use action-specific confirmation only where a real risk gate requires it.
+9. Audit every grant or envelope change and every cross-team reflection; verify append-only write/read-back and idempotency.
+
+## Rollback and write verification
+
+If canary verification fails or authority is broader than intended:
+
+1. Stop new cross-workspace operations and disable the new aggregation route.
+2. Revoke the new finite grants and transfer envelopes, then restore the prior tenant-bound desktop configuration.
+3. Preserve append-only receipts and existing records for audit; rollback does not erase or silently relocate them.
+4. Re-run fail-closed tests for Team RAM, Team Durham, the aggregation workspace, sibling workspaces, and Xterra.
+5. Leave pending writes unresolved and visible. Never redirect them to `allura-system` or another destination during rollback.
+
+Every write uses a task-scoped idempotency key. Success requires read-after-write verification of the destination, executing principal, record identifier, expected content marker or digest, and receipt. A timeout or ambiguous response is `pending/unknown`, not success; any retry reuses the same idempotency key and destination.
 
 ## Acceptance tests
 
 - A Sabir-directed append-only write to an already authorized destination succeeds without a second approval phrase.
-- A joint Team RAM/Durham reflection writes to `allura-system` with source and destination metadata and no claim of unauthorized live reads.
+- A Sabir-directed system-level reflection explicitly naming `allura-system` writes there with source and destination metadata and no second approval phrase.
+- Once provisioned, a joint Team RAM/Durham reflection defaults to the owner-private aggregation workspace only when its source-to-destination transfer is authorized.
 - A direct Team Durham read/write fails until the desktop has an explicit Durham grant.
-- A denied Team Durham action never silently becomes a system write.
+- A denied Team Durham action never silently becomes a system or aggregation write.
 - Gabe/Jeeves cannot use Sabir's owner delegation or retrieve owner-private reflections.
 - Forged owner names, localhost requests, expired/revoked credentials, replayed approvals, and destination tampering fail closed.
 - A newly created non-Xterra tenant is inaccessible until explicitly enrolled.
