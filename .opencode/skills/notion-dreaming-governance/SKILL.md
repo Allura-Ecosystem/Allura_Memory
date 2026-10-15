@@ -54,7 +54,10 @@ Dreaming artifacts live under the **Allura memory** Notion project unless the hu
 6. **Log outcome to Brain**
    - Use `allura-brain_memory_add` before final response.
    - Include what was created/updated, Notion URLs, and any unresolved blockers.
-   - Use `user_id` matching the agent persona, e.g. `brooks-architect`.
+   - Omit `user_id`; authenticated transport owns persisted identity. Optional
+     persona attribution uses `metadata.agent_id` only when workspace validation
+     accepts it.
+   - This is one episodic outcome. Promotion remains a separate human-governed action.
 
 ## Artifact naming
 

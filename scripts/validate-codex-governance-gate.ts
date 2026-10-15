@@ -1,434 +1,235 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const root = process.cwd();
+export const CANONICAL_ROLES = [
+  "brooks",
+  "jobs",
+  "woz",
+  "bellard",
+  "carmack",
+  "scout",
+  "pike",
+  "fowler",
+  "knuth",
+  "hightower",
+].sort();
 
-type Check = {
-  file: string;
-  label: string;
-  needle: string | RegExp;
-};
-
-const checks: Check[] = [
-  {
-    file: "AGENTS.md",
-    label: "Codex gate section",
-    needle: "## Codex Invocation Gate (MANDATORY)",
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "Codex gate section",
-    needle: "## Codex Invocation Gate (MANDATORY)",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Default Codex Startup Role section",
-    needle: "## Default Codex Startup Role",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Brooks default role",
-    needle: "Default role: `BROOKS_ARCHITECT`.",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Brooks primary orchestrator",
-    needle: "Brooks is the primary orchestrator",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Brooks fast hydration contract",
-    needle: "## Brooks Fast Hydration Contract",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "30 second hydration budget",
-    needle: "Target startup budget: 30 seconds",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "budget is not light hydration",
-    needle: "The budget is a cap, not permission to do light hydration.",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Brooks greeting is project work",
-    needle: "A direct\nBrooks, Team RAM, Scout, Woz, Ralph, Allura, status, story, task, memory, or\nproject greeting is not pure casual chat in this repo.",
-  },
-  {
-    file: "AGENTS.md",
-    label: "Root fast hydration budget",
-    needle: "Fast hydration target: first useful answer within 30 seconds.",
-  },
-  {
-    file: "AGENTS.md",
-    label: "Root hydration budget is not thin context",
-    needle: "That target is a budget, not permission to thin the context.",
-  },
-  {
-    file: ".agents/TEAM-RAM-RUNTIME.md",
-    label: "shared fast hydration budget",
-    needle: "## Fast Hydration Budget",
-  },
-  {
-    file: ".agents/TEAM-RAM-RUNTIME.md",
-    label: "shared lessons reflections requirement",
-    needle: "lessons/reflections",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "Kanban team workflow contract",
-    needle: "## Kanban Team Workflow",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "Kanban board source of truth",
-    needle: "Work Board` / `Allura stories Work Items",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "Kanban story flow",
-    needle: "Backlog -> Ready -> In Progress -> Review -> Done",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "BMAD dev story workflow",
-    needle: "bmad-dev-story",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "BMAD code review workflow",
-    needle: "bmad-code-review",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "BMAD retrospective workflow",
-    needle: "bmad-retrospective",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "Story 2.4 first Kanban card",
-    needle: "CARD-2.4-E",
-  },
-  {
-    file: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-    label: "finish all epics workflow doc",
-    needle: "# Finish All Epics: Scout-First Kanban Workflow",
-  },
-  {
-    file: "docs/allura/TEAM-RAM-BMAD-INTEGRATION.md",
-    label: "Allura canon finish all epics workflow",
-    needle: "Finish All Epics: Scout-First Kanban Workflow",
-  },
-  {
-    file: "docs/allura/TEAM-RAM-BMAD-INTEGRATION.md",
-    label: "Allura canon finish all epics workflow artifact",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-    label: "finish all epics order",
-    needle: "Finish E5 Infrastructure Polish",
-  },
-  {
-    file: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-    label: "Scout first real background agent",
-    needle: "Scout is the first real background/recon agent for every epic or story batch.",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "finish all epics workflow reference",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "Scout intake gate",
-    needle: "Scout Intake Gate",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Codex override Kanban workflow",
-    needle: "## Kanban Team Workflow",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Codex override Kanban board source",
-    needle: "Work Board` / `Allura stories Work Items",
-  },
-  {
-    file: ".agents/TEAM-RAM-RUNTIME.md",
-    label: "shared Kanban workflow",
-    needle: "## Kanban Team Workflow",
-  },
-  {
-    file: ".agents/TEAM-RAM-RUNTIME.md",
-    label: "shared Story 2.4 first card",
-    needle: "CARD-2.4-E",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Codex override finish all epics reference",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: ".agents/TEAM-RAM-RUNTIME.md",
-    label: "shared finish all epics reference",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: "AGENTS.md",
-    label: "root finish all epics reference",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "opencode finish all epics reference",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex default agent convention",
-    needle: /default_agent\s*=\s*"BROOKS_ARCHITECT"/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex startup hydration budget",
-    needle: /startup_hydration_budget_sec\s*=\s*30/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex minimum Brain hydration",
-    needle: "allura_brain_search",
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex minimum lessons hydration",
-    needle: "recent_lessons_reflections",
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Kanban source of truth",
-    needle: /kanban_source_of_truth\s*=\s*"notion_work_board"/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Kanban workflow name",
-    needle: /kanban_workflow_name\s*=\s*"Finish All Epics: Scout-First Kanban Workflow"/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Kanban story flow",
-    needle: "Backlog\", \"Ready\", \"In Progress\", \"Review\", \"Done",
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Story 2.4 first card",
-    needle: /story_2_4_first_card\s*=\s*"CARD-2\.4-E"/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex finish all epics workflow",
-    needle: /finish_all_epics_workflow\s*=\s*"_bmad\/FINISH-ALL-EPICS-WORKFLOW\.md"/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex finish all epics order starts with review debt",
-    needle: "current_review_debt",
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Scout first real agent",
-    needle: /scout_first_real_agent\s*=\s*true/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Scout fallback phrase",
-    needle: "Scout-style hydration only",
-  },
-  {
-    file: "AGENTS.md",
-    label: "canonical Brooks source",
-    needle: ".opencode/agent/core/brooks.md",
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "canonical Brooks source",
-    needle: ".opencode/agent/core/brooks.md",
-  },
-  {
-    file: "AGENTS.md",
-    label: "Codex adapter source",
-    needle: ".codex/agents/brooks.toml",
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "Codex adapter source",
-    needle: ".codex/agents/brooks.toml",
-  },
-  {
-    file: "AGENTS.md",
-    label: "team-ram-cowork required",
-    needle: "team-ram-cowork",
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "team-ram-cowork required",
-    needle: "team-ram-cowork",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "team-ram-cowork required",
-    needle: "team-ram-cowork",
-  },
-  {
-    file: "AGENTS.md",
-    label: "allura-memory-skill required",
-    needle: "allura-memory-skill",
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "allura-memory-skill required",
-    needle: "allura-memory-skill",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "allura-memory-skill required",
-    needle: "allura-memory-skill",
-  },
-  {
-    file: "AGENTS.md",
-    label: "allura-system namespace",
-    needle: /group_id\s*=\s*allura-system/,
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "allura-system namespace",
-    needle: /group_id\s*=\s*allura-system/,
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "allura-system namespace",
-    needle: /group_id/,
-  },
-  {
-    file: "AGENTS.md",
-    label: "Brooks receipt",
-    needle: "Brooks active.",
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "Brooks receipt",
-    needle: "Brooks active.",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Brooks receipt",
-    needle: "Brooks active.",
-  },
-  {
-    file: "AGENTS.md",
-    label: "Scout hydration receipt",
-    needle: "Scout hydration:",
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "Scout hydration receipt",
-    needle: "Scout hydration:",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Scout hydration receipt",
-    needle: "Scout hydration:",
-  },
-  {
-    file: "AGENTS.md",
-    label: "RuVix receipt",
-    needle: "RuVix:",
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "RuVix receipt",
-    needle: "RuVix:",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "RuVix receipt",
-    needle: "RuVix:",
-  },
-  {
-    file: ".codex/agents/brooks.toml",
-    label: "canonical Brooks source in adapter",
-    needle: ".opencode/agent/core/brooks.md",
-  },
-  {
-    file: ".codex/agents/brooks.toml",
-    label: "team-ram-cowork in adapter",
-    needle: "team-ram-cowork",
-  },
-  {
-    file: ".codex/agents/brooks.toml",
-    label: "allura-memory-skill in adapter",
-    needle: "allura-memory-skill",
-  },
-  {
-    file: ".codex/agents/brooks.toml",
-    label: "allura-system namespace in adapter",
-    needle: /group_id\s*=\s*allura-system/,
-  },
-  {
-    file: ".codex/agents/brooks.toml",
-    label: "runtime honesty in adapter",
-    needle: "Never claim Scout, Woz, OpenCode, OpenClaw, Claude, or another runtime/subagent actually ran",
-  },
+export const ORDINARY_WORKFLOW_SURFACES = [
+  ".agents/TEAM-RAM-RUNTIME.md",
+  ".opencode/agent/core/brooks.md",
+  ".opencode/agent/subagents/core/scout.md",
+  ".claude/agents/brooks.md",
+  ".claude/agents/scout.md",
+  ".codex/agents/brooks.toml",
+  ".codex/agents/scout.toml",
+  ".opencode/skills/allura-memory-skill/SKILL.md",
+  ".opencode/skills/allura-team-ram/SKILL.md",
+  ".opencode/skills/allura-code-review/SKILL.md",
+  ".opencode/skills/allura-dev-story/SKILL.md",
+  ".opencode/skills/allura-architecture/SKILL.md",
+  ".opencode/skills/allura-product-intake/SKILL.md",
+  ".opencode/skills/allura-retrospective/SKILL.md",
+  ".opencode/skills/allura-design/SKILL.md",
+  ".opencode/skills/brainstorming/SKILL.md",
+  ".opencode/skills/systematic-debugging-memory/SKILL.md",
+  ".opencode/skills/notion-dreaming-governance/SKILL.md",
+  ".opencode/skills/team-ram-cowork/SKILL.md",
+  ".opencode/skills/roundtable/SKILL.md",
+  ".opencode/skills/party-mode/SKILL.md",
+  ".opencode/skills/allura-menu/SKILL.md",
+  ".opencode/skills/multi-search/SKILL.md",
 ];
 
-const ruvixPrimitives = ["mutate", "attest", "verify", "isolate", "sandbox", "audit"];
-for (const primitive of ruvixPrimitives) {
-  checks.push(
-    {
-      file: "AGENTS.md",
-      label: `RuVix primitive in AGENTS: ${primitive}`,
-      needle: new RegExp(`- ${primitive}:`),
-    },
-    {
-      file: ".opencode/AGENTS.md",
-      label: `RuVix primitive in .opencode/AGENTS: ${primitive}`,
-      needle: new RegExp(`- ${primitive}:`),
-    },
-    {
-      file: "AGENTS.override.md",
-      label: `RuVix primitive in AGENTS.override: ${primitive}`,
-      needle: new RegExp(`- ${primitive}:`),
-    },
-    {
-      file: ".codex/agents/brooks.toml",
-      label: `RuVix primitive in Brooks adapter: ${primitive}`,
-      needle: new RegExp(`- ${primitive}:`),
-    },
-  );
+const TENANT_CONTRACT_SURFACES = [
+  ".agents/TEAM-RAM-RUNTIME.md",
+  ".opencode/agent/core/brooks.md",
+  ".claude/agents/brooks.md",
+  ".codex/agents/brooks.toml",
+  ".opencode/skills/allura-memory-skill/SKILL.md",
+];
+
+const HYDRATION_SURFACES = [
+  ".opencode/agent/core/brooks.md",
+  ".opencode/agent/subagents/core/scout.md",
+  ".agents/TEAM-RAM-RUNTIME.md",
+  ".claude/agents/brooks.md",
+  ".claude/agents/scout.md",
+  ".codex/agents/brooks.toml",
+  ".codex/agents/scout.toml",
+];
+
+const ORDINARY_MEMORY_TOOLS = [
+  "allura-brain_memory_add",
+  "allura-brain_memory_get",
+  "allura-brain_memory_list",
+  "allura-brain_memory_search",
+].sort();
+
+const UNSUPPORTED_METADATA_KEYS =
+  /\b(?:confidence|workflow|type|project|step|event_type|story_id|validation)\s*:/i;
+
+function isNegated(content: string, index: number): boolean {
+  const prefix = content.slice(Math.max(0, index - 120), index);
+  const clause = prefix.split(/[.!?\n]/).at(-1) ?? "";
+  return /\b(?:never|do not|must not|cannot|can't|no)\b[^.!?\n]*$/i.test(clause);
 }
 
-const failures: string[] = [];
+export function parseAllowedTools(content: string): string[] {
+  const line = content.match(/^allowed-tools:\s*(.+)$/m)?.[1] ?? "";
+  return line
+    .split(",")
+    .map((tool) => tool.trim())
+    .filter(Boolean)
+    .sort();
+}
 
-for (const check of checks) {
-  const filePath = join(root, check.file);
-  const content = readFileSync(filePath, "utf8");
-  const passed =
-    typeof check.needle === "string"
-      ? content.includes(check.needle)
-      : check.needle.test(content);
+export function analyzeGovernanceSurface(content: string): string[] {
+  const issues: string[] = [];
 
-  if (!passed) {
-    failures.push(`${check.file}: missing ${check.label}`);
+  if (/\buser_id\s*[:=]\s*(["'`])[^"'\n`]+\1/i.test(content)) {
+    issues.push("quoted literal user_id");
   }
-}
 
-if (failures.length > 0) {
-  console.error("Codex governance gate validation failed:");
-  for (const failure of failures) {
-    console.error(`- ${failure}`);
+  for (const match of content.matchAll(/\bmetadata\s*:\s*\{([^}]*)\}/gi)) {
+    if (UNSUPPORTED_METADATA_KEYS.test(match[1])) {
+      issues.push("unsupported memory_add metadata");
+      break;
+    }
   }
-  process.exit(1);
+
+  const unsafeCall =
+    /\b(?:MCP_DOCKER_(?:execute_sql|insert_data)|(?:allura-brain|allura_brain)(?:__|_)?memory_promote)\s*\(/gi;
+  for (const match of content.matchAll(unsafeCall)) {
+    if (!isNegated(content, match.index ?? 0)) {
+      issues.push("unsafe ordinary tool call");
+      break;
+    }
+  }
+
+  const directStorage =
+    /\b(?:create|write|insert|update)\s+(?:an?\s+)?(?:SUPERSEDES\b|directly\s+(?:to|in)\s+(?:Neo4j|PostgreSQL|event tables?|graph storage))/gi;
+  for (const match of content.matchAll(directStorage)) {
+    if (!isNegated(content, match.index ?? 0)) {
+      issues.push("direct storage imperative");
+      break;
+    }
+  }
+
+  return issues;
 }
 
-console.log("Codex governance gate validation passed.");
+export function analyzeCodexGovernance(repoRoot = process.cwd()): string[] {
+  const failures: string[] = [];
+
+  function readRequired(file: string): string {
+    const path = join(repoRoot, file);
+    if (!existsSync(path)) {
+      failures.push(`${file}: missing authoritative surface`);
+      return "";
+    }
+    return readFileSync(path, "utf8");
+  }
+
+  function requirePattern(file: string, label: string, pattern: RegExp): void {
+    const content = readRequired(file);
+    if (content && !pattern.test(content)) failures.push(`${file}: missing ${label}`);
+  }
+
+  requirePattern("AGENTS.md", "Codex invocation gate", /Codex Invocation Gate \(MANDATORY\)/);
+  requirePattern(".opencode/AGENTS.md", "Codex invocation gate mirror", /Codex Invocation Gate \(MANDATORY\)/);
+  requirePattern(".opencode/skills/team-ram-cowork/SKILL.md", "non-mutating Quick boundary", /\*\*Quick\*\*[\s\S]{0,240}non-mutating/i);
+  requirePattern(".opencode/skills/team-ram-cowork/SKILL.md", "honest Scout fallback", /Scout-style hydration only/);
+  requirePattern(".opencode/skills/team-ram-cowork/SKILL.md", "Durham handoff", /Team Durham handoff/i);
+  requirePattern(".opencode/skills/multi-search/SKILL.md", "Tavily current-research boundary", /Tavily[^\n]*(?:only general-current-web|only)/i);
+  requirePattern(".opencode/skills/roundtable/SKILL.md", "native Codex dispatch", /host-native Codex subagent/i);
+  requirePattern(".opencode/skills/party-mode/SKILL.md", "one writer ownership", /one writer owner per file or module/i);
+  requirePattern(".agents/TEAM-RAM-RUNTIME.md", "ten-role runtime contract", /canonical ten-role team/i);
+  requirePattern(".agents/TEAM-RAM-RUNTIME.md", "active allura-system tenant", /allura-system[^\n]*active repository tenant/i);
+  requirePattern(".opencode/skills/allura-memory-skill/SKILL.md", "transport-owned identity", /authenticated transport owns the persisted user identity/i);
+
+  for (const file of ORDINARY_WORKFLOW_SURFACES) {
+    for (const issue of analyzeGovernanceSurface(readRequired(file))) {
+      failures.push(`${file}: ${issue}`);
+    }
+  }
+
+  const safeRetirement = /retired|legacy|deprecated|never[^\n]*use|must not[^\n]*use|do not use/i;
+  for (const file of TENANT_CONTRACT_SURFACES) {
+    const lines = readRequired(file).split(/\r?\n/);
+    for (const [index, line] of lines.entries()) {
+      const context = [lines[index - 1], line, lines[index + 1]].filter(Boolean).join(" ");
+      if (/allura-(?:team-ram|roninmemory)/i.test(line) && !safeRetirement.test(context)) {
+        failures.push(`${file}:${index + 1}: retired tenant appears as active-use wording`);
+      }
+    }
+  }
+
+  const hydrationDrift =
+    /DUAL-PASS|No Flat-File Fallback|no flat-file reads|Search the brain first|Brain context comes first|audit_health_report|audit_query_events|limit:\s*10|Do not derive project state from flat files/i;
+  for (const file of HYDRATION_SURFACES) {
+    const content = readRequired(file);
+    if (!/local (?:repository|evidence|context)/i.test(content)) {
+      failures.push(`${file}: hydration omits local evidence`);
+    }
+    if (!/one focused[\s\S]{0,160}(?:Brain )?`?memory_search`?/i.test(content)) {
+      failures.push(`${file}: hydration does not declare one focused Brain query`);
+    }
+    if (!/limit:\s*5/i.test(content)) {
+      failures.push(`${file}: focused Brain query does not default to limit 5`);
+    }
+    if (hydrationDrift.test(content)) {
+      failures.push(`${file}: contains always-on multi-pass hydration drift`);
+    }
+  }
+
+  const memorySkill = readRequired(".opencode/skills/allura-memory-skill/SKILL.md");
+  const allowedTools = parseAllowedTools(memorySkill);
+  if (JSON.stringify(allowedTools) !== JSON.stringify(ORDINARY_MEMORY_TOOLS)) {
+    failures.push(
+      `.opencode/skills/allura-memory-skill/SKILL.md: ordinary allowed-tools must be ${ORDINARY_MEMORY_TOOLS.join(", ")}`,
+    );
+  }
+
+  const runtime = readRequired(".agents/TEAM-RAM-RUNTIME.md").toLowerCase();
+  for (const role of CANONICAL_ROLES) {
+    if (!runtime.includes(role)) {
+      failures.push(`.agents/TEAM-RAM-RUNTIME.md: missing canonical role ${role}`);
+    }
+  }
+
+  const modelMapPath = join(repoRoot, "tooling/agent-sync/models.map.json");
+  if (!existsSync(modelMapPath)) {
+    failures.push("tooling/agent-sync/models.map.json: missing canonical roster map");
+  } else {
+    const parsed = JSON.parse(readFileSync(modelMapPath, "utf8")) as {
+      agents?: Record<string, unknown>;
+    };
+    const actual = Object.keys(parsed.agents ?? {}).sort();
+    if (JSON.stringify(actual) !== JSON.stringify(CANONICAL_ROLES)) {
+      failures.push(
+        `tooling/agent-sync/models.map.json: expected ${CANONICAL_ROLES.join(", ")}; received ${actual.join(", ")}`,
+      );
+    }
+  }
+
+  for (const [adapter, source] of [
+    [".codex/agents/brooks.toml", ".opencode/agent/core/brooks.md"],
+    [".codex/agents/scout.toml", ".opencode/agent/subagents/core/scout.md"],
+  ] as const) {
+    if (!readRequired(adapter).includes(source)) {
+      failures.push(`${adapter}: missing canonical source attribution`);
+    }
+  }
+
+  return [...new Set(failures)];
+}
+
+if (import.meta.main) {
+  const failures = analyzeCodexGovernance();
+  if (failures.length > 0) {
+    console.error("Codex governance gate validation failed:");
+    for (const failure of failures) console.error(`- ${failure}`);
+    process.exit(1);
+  }
+  console.log("Codex governance gate validation passed.");
+}

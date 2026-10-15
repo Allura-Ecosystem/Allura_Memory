@@ -120,15 +120,8 @@ Log the architecture decision to Allura Brain:
 ```
 allura-brain_memory_add({
   group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "ADR_CREATED: AD-{number} {decision title}; rationale={...}; alternatives={...}; consequences={...}",
-  metadata: {
-    source: "conversation",
-    agent_id: "brooks-architect",
-    confidence: 0.9,
-    adr_id: "AD-{number}",
-    decision_type: "architecture"
-  }
+  content: "ADR_CREATED: AD-{number} {decision title}; rationale={...}; alternatives={...}; consequences={...}; approval={evidence}",
+  metadata: { source: "conversation" }
 })
 ```
 
@@ -177,6 +170,6 @@ At the end of every `allura-architecture` execution, emit:
 ├─ Action Taken: Architecture decision AD-{number} — {title}
 ├─ Principle Applied: Conceptual Integrity (Brooks)
 ├─ Event Logged: ADR_CREATED
-├─ Neo4j Promoted: {Yes/No — only if promotion criteria met}
+├─ Semantic Promotion: Not requested (use separate human approval workflow)
 └─ Confidence: {High/Medium/Low}
 ```

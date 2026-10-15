@@ -130,14 +130,16 @@ After completing any significant action:
 
 Use the available Brain tool to record the evidenced outcome. If unavailable,
 report that no write occurred; do not block unrelated approved local work or
-invent a successful receipt. Existing promotion authorization is unchanged.
+invent a successful receipt. Authenticated transport owns `user_id`; omit it
+unless the verified principal is known and explicitly required. Persona
+attribution is optional `metadata.agent_id` and must be omitted if workspace
+validation rejects it. Ordinary workflows never promote their own outcomes.
 
 ```
 allura-brain_memory_add({
   group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "EVENT_TYPE: what was done; evidence=...; counterfactuals=...",
-  metadata: { source: "conversation", agent_id: "brooks-architect", confidence: 0.85 }
+  content: "EVENT_TYPE: what was done; evidence=...; validation=...; counterfactuals=...",
+  metadata: { source: "conversation" }
 })
 ```
 
@@ -201,6 +203,6 @@ At the end of every substantive Allura workflow response, emit:
 ├─ Action Taken: {what was done}
 ├─ Principle Applied: {which Brooksian principle}
 ├─ Event Logged: {event_type written to Brain, or "None"}
-├─ Neo4j Promoted: {Yes/No}
+├─ Semantic Promotion: Not requested (ordinary workflow)
 └─ Confidence: {High/Medium/Low}
 ```

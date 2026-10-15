@@ -114,15 +114,8 @@ Log the review outcome to Allura Brain:
 ```
 allura-brain_memory_add({
   group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "CODE_REVIEW: {story ID} — {summary}; findings={critical/warning/suggestion counts}; outcome={approved/changes-requested}",
-  metadata: {
-    source: "conversation",
-    agent_id: "brooks-architect",
-    confidence: 0.85,
-    review_type: "pike-fowler",
-    story_id: "{story ID}"
-  }
+  content: "CODE_REVIEW: {story ID} — {summary}; findings={counts}; reviewers={actual reviewers}; outcome={approved/changes-requested}; validation={evidence}",
+  metadata: { source: "conversation" }
 })
 ```
 
@@ -156,6 +149,6 @@ At the end of every `allura-code-review` execution, emit:
 ├─ Action Taken: Code review for {story ID} — {summary}
 ├─ Principle Applied: {Brooksian principle}
 ├─ Event Logged: CODE_REVIEW
-├─ Neo4j Promoted: {Yes/No}
+├─ Semantic Promotion: Not requested (ordinary workflow)
 └─ Confidence: {High/Medium/Low}
 ```

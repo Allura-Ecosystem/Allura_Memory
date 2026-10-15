@@ -5,8 +5,8 @@
 > Drafted with AI assistance (Claude Code) on 2026-08-21 and not yet fully reviewed.
 > Where it conflicts with the source code, schemas, or tests, defer to those.
 
-All eleven Team RAM agent definitions in `.claude/agents/` close with the same
-Claude Bridge sentence:
+The ten canonical Team RAM role definitions mirrored into `.claude/agents/`
+close with the same Claude Bridge sentence:
 
 > For Allura project work, follow `.agents/TEAM-RAM-RUNTIME.md`: Scout hydrates
 > context and Allura Brain before build or status answers, then outcomes are
@@ -19,78 +19,68 @@ each of them cited could not be read. This document is that contract.
 and a reconciliation, not new policy. Each section names its source. Where this
 file and its source disagree, the source wins.
 
+## Canonical ten-role team
+
+Team RAM is exactly: Brooks, Jobs, Woz, Bellard, Carmack, Scout, Pike, Fowler,
+Knuth, and Hightower. Scout is a utility recon role rather than a historical
+persona. Ralph is a bounded validation loop, not an agent or roster member.
+
 ---
 
 ## 1. Hydrate before answering
 
-Scout hydrates from Allura Brain before any build, status, or architecture
-answer. Do not derive project state from flat files when the Brain is reachable.
+Scout hydrates before any implementation, status, or architecture answer. The
+default Allura task packet combines relevant local repository/code/board evidence
+with one focused Brain `memory_search` using `group_id: allura-system` and
+normally `limit: 5`.
 
 *Source: `.claude/rules/_bootstrap.md` (Startup Protocol), `.claude/agents/brooks.md` (Startup Protocol).*
 
-Hydration is one parallel batch, not a sequence:
+Summarize both sources into one ContextPacket and reuse it across specialists.
+Brain supplements local truth; current code, schemas, tests, approved decisions,
+board state, and the user's request remain authoritative. If Brain is unavailable
+or irrelevant, report that plainly and continue with verified local evidence.
 
-| Pass | Call | Purpose |
-|---|---|---|
-| A | `audit_health_report` | subsystem status, curator queue depth |
-| B | `memory_search` | promoted/semantic truth |
-| C | `audit_query_events`, filtered, last 48h | current episodic truth |
-
-**Staleness rule.** If the newest Pass-B hit is older than 7 days, or curator
-queue depth exceeds 100, the report must open with `⚠ graph stale — trusting
-episodic` and derive state from Pass C. Where B and C disagree, C wins.
-
-**Never query events unfiltered at boot** — `process_*` test events drown the
-signal.
-
-**`_bootstrap.md` System State is an untrusted hint.** Never assert it as fact.
-If it diverges from the hydration batch, say so.
-
-### Known hydration failure modes
-
-Verified on 2026-08-21. Treat an empty result as *unrun* until you have checked
-these:
-
-- `memory_search` attempts the **graph store only** while `memory_add` writes to
-  **PostgreSQL**, and the contract reports `degraded: false` either way. An empty
-  search is not evidence of absence. `memory_list` attempts both stores and is
-  the reliable fallback.
-- `audit_health_report` and `audit_query_events` require the `audit:read` scope.
-  A principal lacking it gets `SCOPE_INSUFFICIENT`, not a degraded report.
+Health and audit retrieval are task-specific, not a startup batch. Use them only
+for an operational/status question when they materially change the answer and
+the authorized scope permits it. Emit a compact hydration receipt; do not write
+session-start chatter or repeat the same Brain query per specialist.
 
 ---
 
 ## 2. Identity on every memory operation
 
-`user_id` **must** be the authenticated principal. The runtime rejects anything
-else with `ACTOR_MISMATCH` — Story 24.2 binds `user_id` to the verified principal
-and request parameters cannot override it.
+The authenticated transport owns persisted `user_id`. Omit it unless the
+verified principal is known and the tool explicitly requires that assertion.
+Never send a persona name as `user_id`; a mismatch is rejected with
+`ACTOR_MISMATCH`.
 
-Agent persona goes in `metadata.agent_id`:
+Persona attribution is optional and goes in `metadata.agent_id`, subject to
+verified workspace validation:
 
 ```js
 memory_add({
   group_id: "allura-system",
-  user_id:  "<authenticated principal>",   // NOT the persona
   content:  "...",
-  metadata: { source: "conversation", agent_id: "brooks-architect" },
+  metadata: { source: "conversation" },
 })
 ```
 
+Add `metadata.agent_id` only after that attribution has been accepted by the
+verified workspace. If the workspace rejects it, omit the field, report the
+rejection, and do not retry with a guessed identity.
+
 `group_id` is required on every read and write and must match
 `^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$`.
-`allura-roninmemory` is legacy and must not be used. `allura-team-ram` is the
-active coding-agent tenant; business and operational traces must use their
-authorized tenant instead of being routed there by default.
+`allura-system` is the active repository tenant. `allura-roninmemory` and
+`allura-team-ram` are retired and must never be used for active operations.
 
 *Source: `src/lib/auth/principal-context.ts`, `CLAUDE.md` (Non-Negotiable Invariants),
 `.claude/rules/semantic-graph-best-practices.md`.*
 
-> **Known contract gap.** The Reflection Protocol in `brooks.md` specifies
-> `metadata.principle`, `.reasoning`, `.alternatives`, `.tradeoffs`, and
-> `.confidence`. The `memory_add` tool schema accepts only `source`,
-> `conversation_id`, and `agent_id`. Until reconciled, put structured reflection
-> fields in `content`.
+The `memory_add` metadata contract accepts only `source`, `conversation_id`, and
+optional validated `agent_id`. Put principles, reasoning, alternatives,
+tradeoffs, validation, and confidence in `content`.
 
 ---
 
@@ -123,9 +113,10 @@ written without a successful call.
 
 ## 5. Log outcomes
 
-After substantive work, write an outcome trace to Allura Brain: what was done,
-what was found, what to watch for. Record architectural decisions with the
-principle applied, alternatives considered, and tradeoffs accepted.
+After substantive work, write one outcome trace to Allura Brain: what was done,
+what was found, validation, and what to watch for. Record architectural
+decisions with the principle applied, alternatives considered, and tradeoffs in
+the outcome content.
 
 Corrections are **new rows**, never edits. PostgreSQL events are append-only;
 semantic versioning uses supersession. To correct a prior memory, write a new one

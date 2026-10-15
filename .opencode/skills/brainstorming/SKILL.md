@@ -104,10 +104,14 @@ Commit the spec.
 ```javascript
 allura-brain__memory_add({
   group_id: "allura-system",
-  user_id: "brooks",
-  content: "SPEC: <topic>. Satisfies F12, F14. Approach: <summary>. Saved to docs/superpowers/specs/<file>."
+  content: "SPEC: <topic>. Satisfies F12, F14. Approach: <summary>. Saved to docs/superpowers/specs/<file>.",
+  metadata: { source: "conversation" }
 })
 ```
+
+Authenticated transport owns `user_id`. This ordinary design workflow records
+one episodic outcome and never promotes it; use the separate human-governed
+promotion workflow when durable canon is warranted.
 
 ### 9. Transition to Implementation
 

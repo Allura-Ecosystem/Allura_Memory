@@ -124,16 +124,8 @@ Log the retrospective outcome to Allura Brain:
 ```
 allura-brain_memory_add({
   group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "RETROSPECTIVE: {epic name} — {summary}; lessons={...}; action_items={...}",
-  metadata: {
-    source: "conversation",
-    agent_id: "brooks-architect",
-    confidence: 0.85,
-    epic: "{epic name}",
-    stories_completed: {count},
-    action_items: {count}
-  }
+  content: "RETROSPECTIVE: {epic name} — {summary}; lessons={...}; action_items={...}; evidence={...}",
+  metadata: { source: "conversation" }
 })
 ```
 
@@ -164,6 +156,6 @@ At the end of every `allura-retrospective` execution, emit:
 ├─ Action Taken: Retrospective for {epic name}
 ├─ Principle Applied: Plan to Throw One Away (Brooks)
 ├─ Event Logged: RETROSPECTIVE
-├─ Neo4j Promoted: {Yes/No}
+├─ Semantic Promotion: Not requested (ordinary workflow)
 └─ Confidence: {High/Medium/Low}
 ```

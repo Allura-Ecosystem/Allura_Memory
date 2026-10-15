@@ -25,17 +25,10 @@ Before invoking huashu-design, run this protocol:
 ### Step 2: Decision gate
 - **If brand spec found** → hydrate huashu-design context with it (skip brand asset protocol Steps 1-5).
 - **If design-system found** → pass CSS variables, spacing scale, component patterns to huashu-design.
-- **If nothing found** → allow huashu-design to run its full 5-step Brand Asset Protocol, but prepend an episodic trace noting this is the first design task for this project.
+- **If nothing found** → allow huashu-design to run its full 5-step Brand Asset Protocol and note the missing context in the final outcome.
 
-### Step 3: Session log
-```
-allura-brain_memory_add({
-  group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "Design session started. Brain hydration: found N design assets. Delegated to huashu-design.",
-  metadata: { agent_id: "brooks-architect", workflow: "allura-design", step: "hydration" }
-})
-```
+Do not write a progress memory at session start. Reuse the hydration receipt and
+write one outcome only after verified delivery.
 
 ## Design: Delegate to huashu-design
 
@@ -57,41 +50,23 @@ Load skill: ~/.agents/skills/huashu-design/SKILL.md
 
 ## Post-Design: Memory Storage (MANDATORY)
 
-After huashu-design delivers, store these artifacts:
+After verified delivery, write one episodic outcome containing any new brand
+spec, chosen direction and rejected alternatives, review scores, artifact paths,
+and validation evidence:
 
-### 1. Brand Spec (if new)
 ```
 allura-brain_memory_add({
   group_id: "allura-system",
-  user_id: "woz-builder",
-  content: "Brand spec for [Project]: colors=..., fonts=..., logo path=..., product images=...",
-  metadata: { type: "brand-spec", agent_id: "woz-builder", project: "[project_name]" }
+  content: "DESIGN_OUTCOME: project=...; brand_spec=...; decision=...; alternatives=...; review=...; artifacts=...; validation=...",
+  metadata: { source: "conversation" }
 })
 ```
 
-### 2. Design Decisions
-```
-allura-brain_memory_add({
-  group_id: "allura-system",
-  user_id: "woz-builder",
-  content: "Chose [direction] because [reasoning]. Rejected alternatives: [...]",
-  metadata: { type: "design-decision", agent_id: "woz-builder" }
-})
-```
-
-### 3. Review Scores (if review was run)
-```
-allura-brain_memory_add({
-  group_id: "allura-system",
-  user_id: "pike-interface-review",
-  content: "5-dimension review: Philosophy=8, Hierarchy=7, Details=9, Functionality=8, Innovation=6. Radar chart path: /artifacts/...",
-  metadata: { type: "design-review", project: "[project_name]" }
-})
-```
-
-### 4. Promotion gate
-- If average review score ≥ 8.0 / 10 → call `allura-brain_memory_promote` to elevate from episodic to Neo4j
-- Rationale: "Validated by 5-dimension review, ready as canonical design system"
+Authenticated transport owns `user_id`. Optional persona attribution uses
+`metadata.agent_id` only when verified workspace scope accepts it; otherwise
+omit it and report the rejection. This workflow never promotes its own outcome.
+If durable canon is warranted, route a separate proposal through the
+human-governed promotion workflow.
 
 ## Team RAM Routing
 
@@ -107,10 +82,10 @@ allura-brain_memory_add({
 ## Invariants
 
 1. **Brain search is never skipped** — even if user says "just make it look good"
-2. **No promotion without review** — episodic stays raw until 5-dimension review passes
+2. **Human promotion only** — review evidence may support a later proposal, but this workflow never promotes
 3. **License gate** — if deliverable is for external client, check `LICENSE-NOTICE.md` first
 4. **Group id** — always `allura-system` on every Brain operation
-5. **Agent id** — `woz-builder` for build tasks, `pike-interface-review` for reviews, `brooks-architect` for planning
+5. **Identity** — transport owns `user_id`; optional persona metadata is attribution, not authority
 
 ## License Notice
 
@@ -125,4 +100,4 @@ See `LICENSE-NOTICE.md` in this directory for full details.
 - `~/.agents/skills/huashu-design/SKILL.md` — canonical huashu-design skill
 - `~/.agents/skills/huashu-design/references/` — design styles, animation best practices, critique guides
 - `~/.agents/skills/huashu-design/scripts/` — export tools (MP4, GIF, PPTX)
-- Allura Brain MCP tools: `allura-brain_memory_add`, `allura-brain_memory_search`, `allura-brain_memory_promote`
+- Allura Brain MCP tools: `allura-brain_memory_add`, `allura-brain_memory_search`

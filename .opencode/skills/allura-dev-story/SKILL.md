@@ -111,15 +111,8 @@ Log the outcome to Allura Brain:
 ```
 allura-brain_memory_add({
   group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "TASK_COMPLETE: {story ID} — {summary}; evidence={...}",
-  metadata: {
-    source: "conversation",
-    agent_id: "brooks-architect",
-    confidence: 0.85,
-    story_id: "{story ID}",
-    validation: "passed"
-  }
+  content: "TASK_COMPLETE: {story ID} — {summary}; evidence={...}; validation={passed/failed}; remaining_risk={...}",
+  metadata: { source: "conversation" }
 })
 ```
 
@@ -155,6 +148,6 @@ At the end of every `allura-dev-story` execution, emit:
 ├─ Action Taken: {story ID} — {summary}
 ├─ Principle Applied: {Brooksian principle}
 ├─ Event Logged: TASK_COMPLETE or BLOCKED
-├─ Neo4j Promoted: {Yes/No}
+├─ Semantic Promotion: Not requested (ordinary workflow)
 └─ Confidence: {High/Medium/Low}
 ```

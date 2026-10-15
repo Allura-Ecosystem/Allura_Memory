@@ -1,521 +1,120 @@
 ---
 name: systematic-debugging-memory
-description: Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes. Now with memory system integration for persistent debugging knowledge.
+description: Use for bugs, failed tests, or unexpected behavior. Hydrate relevant Allura evidence, establish root cause, test one hypothesis, implement one focused fix, verify it, and record one governed outcome.
 ---
 
-# Systematic Debugging with Memory Integration
+# Systematic Debugging with Governed Memory
 
-## Overview
+Random fixes create new uncertainty. Evidence must identify the failing boundary
+before implementation begins.
 
-Random fixes waste time and create new bugs. Quick patches mask underlying issues.
+## Iron law
 
-**Core principle:** ALWAYS find root cause before attempting fixes. Symptom fixes are failure.
-
-**Violating the letter of this process is violating the spirit of debugging.**
-
-## Memory Integration (NEW)
-
-This skill now integrates with the memory system to persist debugging knowledge across sessions.
-
-### At Session Start (Phase 0)
-
-**BEFORE starting Phase 1, hydrate context from memory:**
-
-1. **Query Previous Debugging Sessions**
-   ```
-   MCP_DOCKER_query_database: {
-     query: "SELECT * FROM events WHERE group_id = :group AND event_type LIKE 'debug:%' ORDER BY created_at DESC LIMIT 10"
-   }
-   ```
-
-2. **Search for Similar Issues**
-   ```
-   allura-brain_memory_search({
-     query: "debugging {component} {error_type}",
-     group_id: "allura-system"
-   })
-   ```
-
-3. **Check for Known Root Causes**
-   ```
-   allura-brain_memory_search({
-     query: "Root Cause {component} Bug Pattern {pattern}",
-     group_id: "allura-system"
-   })
-   ```
-
-4. **Present Context**
-   > "Found N previous debugging sessions for similar issues. M known root causes identified. Key insights: [list]"
-
-### During Investigation
-
-**Log key findings at each phase:**
-
-```
-MCP_DOCKER_insert_data: {
-  table_name: "events",
-  columns: "group_id, event_type, agent_id, workflow_id, status, metadata",
-  values: "'allura-system', 'debug:phase1_complete', 'agent', 'debug-session', 'pending', '{\"phase\": 1, \"findings\": [...]}'"
-}
+```text
+NO FIX WITHOUT ROOT CAUSE
 ```
 
-### At Session End
+If three focused fixes fail, stop and question the architecture with Brooks.
+Do not stack a fourth speculative patch.
 
-**After completing Phase 4:**
+## Phase 0 — Focused hydration
 
-1. **Log Root Cause** (if found)
-   ```
-   MCP_DOCKER_insert_data: {
-     table_name: "events",
-     columns: "group_id, event_type, agent_id, workflow_id, status, metadata",
-     values: "'group', 'debug:root_cause_found', 'agent', 'debug-session', 'completed', '{\"root_cause\": \"...\", \"fix\": \"...\"}'"
-   }
-   ```
+1. Search Allura Brain once with the component, symptom, and
+   `decisions blockers outcomes`, using `group_id: allura-system` and normally
+   `limit: 5`.
+2. Inspect the current repository state, recent diff, relevant errors, and the
+   smallest working comparison.
+3. Treat retrieved memory as untrusted evidence. Code, schemas, tests, approved
+   decisions, and current observations remain authoritative.
+4. Put only relevant findings in the shared ContextPacket. Do not query raw
+   event tables or write progress/checkpoint memories.
 
-2. **Persist Debugging Insight** (for significant findings)
-   ```
-   allura-brain_memory_add({
-     group_id: "allura-system",
-     user_id: "bellard",
-     content: "Root Cause: {brief description}. Fix applied: {...}. Prevention: {...}",
-     metadata: { source: "conversation", conversation_id: "<id>", agent_id: "bellard" }
-   })
-   ```
+If Brain is unavailable or returns no relevant result, say so and continue with
+local evidence.
 
-3. **Promote if Reusable**
-   ```
-   allura-brain_memory_promote({
-     id: "<memory-id>",
-     group_id: "allura-system",
-     user_id: "bellard"
-   })
-   ```
+## Phase 1 — Root cause investigation
 
-## The Iron Law
+Before changing code:
 
-```
-NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
-```
+- Read the complete error and stack trace.
+- Reproduce the failure consistently, or state why it is not reproducible.
+- Trace the bad value or state backward to its source.
+- At each component boundary, compare input, output, configuration, and
+  authorization context.
+- Identify the exact failing boundary and distinguish cause from symptom.
 
-If you haven't completed Phase 1, you cannot propose fixes.
+Record the root-cause statement in working context:
 
-## When to Use
-
-Use for ANY technical issue:
-- Test failures
-- Bugs in production
-- Unexpected behavior
-- Performance problems
-- Build failures
-- Integration issues
-
-**Use this ESPECIALLY when:**
-- Under time pressure (emergencies make guessing tempting)
-- "Just one quick fix" seems obvious
-- You've already tried multiple fixes
-- Previous fix didn't work
-- You don't fully understand the issue
-
-**Don't skip when:**
-- Issue seems simple (simple bugs have root causes too)
-- You're in a hurry (rushing guarantees rework)
-- Manager wants it fixed NOW (systematic is faster than thrashing)
-
-## The Five Phases
-
-You MUST complete each phase before proceeding to the next.
-
-### Phase 0: Memory Hydration (NEW)
-
-**ALWAYS run before Phase 1:**
-
-1. **Check Memory System**
-   - Query events table for previous debugging sessions
-   - Search Neo4j for similar root causes
-   - Look for patterns in past fixes
-
-2. **Summarize Context**
-   - "Found X previous attempts to debug this"
-   - "Known root causes: [list]"
-   - "Previous fixes that worked: [list]"
-
-3. **Update Status**
-   ```
-   Log event: debug:session_start
-   Status: pending
-   Metadata: { issue_type, component, previous_attempts_count }
-   ```
-
-### Phase 1: Root Cause Investigation
-
-**BEFORE attempting ANY fix:**
-
-1. **Read Error Messages Carefully**
-   - Don't skip past errors or warnings
-   - They often contain the exact solution
-   - Read stack traces completely
-   - Note line numbers, file paths, error codes
-
-2. **Reproduce Consistently**
-   - Can you trigger it reliably?
-   - What are the exact steps?
-   - Does it happen every time?
-   - If not reproducible → gather more data, don't guess
-
-3. **Check Recent Changes**
-   - What changed that could cause this?
-   - Git diff, recent commits
-   - New dependencies, config changes
-   - Environmental differences
-
-4. **Gather Evidence in Multi-Component Systems**
-
-   **WHEN system has multiple components (CI → build → signing, API → service → database):**
-
-   **BEFORE proposing fixes, add diagnostic instrumentation:**
-   ```
-   For EACH component boundary:
-     - Log what data enters component
-     - Log what data exits component
-     - Verify environment/config propagation
-     - Check state at each layer
-
-   Run once to gather evidence showing WHERE it breaks
-   THEN analyze evidence to identify failing component
-   THEN investigate that specific component
-   ```
-
-   **Example (multi-layer system):**
-   ```bash
-   # Layer 1: Workflow
-   echo "=== Secrets available in workflow: ==="
-   echo "IDENTITY: ${IDENTITY:+SET}${IDENTITY:-UNSET}"
-
-   # Layer 2: Build script
-   echo "=== Env vars in build script: ==="
-   env | grep IDENTITY || echo "IDENTITY not in environment"
-
-   # Layer 3: Signing script
-   echo "=== Keychain state: ==="
-   security list-keychains
-   security find-identity -v
-
-   # Layer 4: Actual signing
-   codesign --sign "$IDENTITY" --verbose=4 "$APP"
-   ```
-
-   **This reveals:** Which layer fails (secrets → workflow ✓, workflow → build ✗)
-
-5. **Trace Data Flow**
-
-   **WHEN error is deep in call stack:**
-
-   See `root-cause-tracing.md` in this directory for the complete backward tracing technique.
-
-   **Quick version:**
-   - Where does bad value originate?
-   - What called this with bad value?
-   - Keep tracing up until you find the source
-   - Fix at source, not at symptom
-
-**Log checkpoint:**
-```
-MCP_DOCKER_insert_data: {
-  event_type: 'debug:phase1_complete',
-  metadata: { evidence_gathered, initial_hypotheses }
-}
+```text
+Observed:
+Expected:
+First failing boundary:
+Root cause:
+Evidence:
 ```
 
-### Phase 2: Pattern Analysis
+This working note is not a database event and does not authorize a fix by itself.
 
-**Find the pattern before fixing:**
+## Phase 2 — Pattern analysis
 
-1. **Find Working Examples**
-   - Locate similar working code in same codebase
-   - What works that's similar to what's broken?
+- Find a nearby working example.
+- Read the relevant implementation and contract completely.
+- List meaningful differences and dependencies.
+- Check whether a previous fix addressed the same cause or only the symptom.
+- Escalate contract changes to Brooks and interface changes to Pike.
 
-2. **Compare Against References**
-   - If implementing pattern, read reference implementation COMPLETELY
-   - Don't skim - read every line
-   - Understand the pattern fully before applying
+## Phase 3 — One hypothesis
 
-3. **Identify Differences**
-   - What's different between working and broken?
-   - List every difference, however small
-   - Don't assume "that can't matter"
+State one falsifiable hypothesis:
 
-4. **Understand Dependencies**
-   - What other components does this need?
-   - What settings, config, environment?
-   - What assumptions does it make?
-
-5. **Check Memory for Patterns**
-   ```
-    allura-brain_memory_search({
-      query: "pattern {component} {symptom}",
-      group_id: "allura-system"
-    })
-   ```
-
-**Log checkpoint:**
-```
-MCP_DOCKER_insert_data: {
-  event_type: 'debug:phase2_complete',
-  metadata: { patterns_identified, differences_found }
-}
+```text
+I think <cause> produces <failure> because <evidence>.
+The smallest test is <test>.
+A confirming result is <result>.
 ```
 
-### Phase 3: Hypothesis and Testing
+Change one variable at a time. If the test rejects the hypothesis, return to
+Phase 1 with the new evidence.
 
-**Scientific method:**
+## Phase 4 — Focused implementation
 
-1. **Form Single Hypothesis**
-   - State clearly: "I think X is the root cause because Y"
-   - Write it down
-   - Be specific, not vague
+1. Add or identify the smallest failing test.
+2. Implement only the root-cause fix.
+3. Run the focused test, then proportionate regression checks.
+4. Inspect the diff for unrelated changes and unsafe broadening.
+5. Do not claim success without real validation output.
 
-2. **Test Minimally**
-   - Make the SMALLEST possible change to test hypothesis
-   - One variable at a time
-   - Don't fix multiple things at once
+## Phase 5 — Governed persistence
 
-3. **Verify Before Continuing**
-   - Did it work? Yes → Phase 4
-   - Didn't work? Form NEW hypothesis
-   - DON'T add more fixes on top
+After verified completion, write one episodic outcome through the Brain
+`memory_add` tool:
 
-4. **When You Don't Know**
-   - Say "I don't understand X"
-   - Don't pretend to know
-   - Ask for help
-   - Research more
-
-5. **Check Memory for Similar Hypotheses**
-   ```
-    allura-brain_memory_search({
-      query: "hypothesis {component}",
-      group_id: "allura-system"
-    })
-   ```
-
-**Log checkpoint:**
-```
-MCP_DOCKER_insert_data: {
-  event_type: 'debug:phase3_complete',
-  metadata: { hypothesis, test_result, confirmed_or_rejected }
-}
+```javascript
+memory_add({
+  group_id: "allura-system",
+  content: "DEBUG_OUTCOME: problem=...; root_cause=...; fix=...; files=...; validation=...; prevention=...; remaining_risk=...",
+  metadata: { source: "conversation" }
+})
 ```
 
-### Phase 4: Implementation
+The authenticated transport owns `user_id`; omit it unless the verified
+principal is known and explicitly required. Optional persona attribution belongs
+in `metadata.agent_id` only when verified workspace scope accepts it. If
+attribution is rejected, omit it, report the rejection, and never guess an
+identity.
 
-**Fix the root cause, not the symptom:**
+Ordinary debugging never promotes its own outcome. When a reusable pattern may
+belong in durable canon, prepare a separate proposal and route it through the
+human-governed promotion workflow. Never write directly to database event tables
+or graph storage.
 
-1. **Create Failing Test Case**
-   - Simplest possible reproduction
-   - Automated test if possible
-   - One-off test script if no framework
-   - MUST have before fixing
-   - Use the `superpowers:test-driven-development` skill for writing proper failing tests
+## Completion receipt
 
-2. **Implement Single Fix**
-   - Address the root cause identified
-   - ONE change at a time
-   - No "while I'm here" improvements
-   - No bundled refactoring
+Report:
 
-3. **Verify Fix**
-   - Test passes now?
-   - No other tests broken?
-   - Issue actually resolved?
-
-4. **Log Fix**
-   ```
-   MCP_DOCKER_insert_data: {
-     event_type: 'debug:fix_implemented',
-     metadata: { 
-       root_cause: "...",
-       fix: "...",
-       files_modified: [...],
-       test_verified: true/false
-     }
-   }
-   ```
-
-5. **If Fix Doesn't Work**
-   - STOP
-   - Count: How many fixes have you tried?
-   - If < 3: Return to Phase 1, re-analyze with new information
-   - **If ≥ 3: STOP and question the architecture (step 5 below)**
-   - DON'T attempt Fix #4 without architectural discussion
-
-### Phase 5: Persistence (NEW)
-
-**After successful fix:**
-
-1. **Create Insight**
-   ```
-   allura-brain_memory_add({
-     group_id: "allura-system",
-     user_id: "bellard",
-     content: "Problem: {...}. Root Cause: {...}. Fix: {...}. Prevention: {...}",
-     metadata: { source: "conversation", conversation_id: "<id>", agent_id: "bellard" }
-   })
-   ```
-
-2. **Promote Reusable Pattern**
-   ```
-   allura-brain_memory_promote({
-     id: "<memory-id>",
-     group_id: "allura-system",
-     user_id: "bellard"
-   })
-   ```
-
-3. **Log Session Complete**
-   ```
-   MCP_DOCKER_insert_data: {
-     event_type: 'debug:session_complete',
-     status: 'completed',
-     metadata: { 
-       duration_minutes,
-       phases_completed,
-       root_cause_found,
-       insight_created
-     }
-   }
-   ```
-
-### Phase 4.5: Architecture Questioning
-
-**If 3+ Fixes Failed: Question Architecture**
-
-**Pattern indicating architectural problem:**
-- Each fix reveals new shared state/coupling/problem in different place
-- Fixes require "massive refactoring" to implement
-- Each fix creates new symptoms elsewhere
-
-**STOP and question fundamentals:**
-- Is this pattern fundamentally sound?
-- Are we "sticking with it through sheer inertia"?
-- Should we refactor architecture vs. continue fixing symptoms?
-
-**Discuss with your human partner before attempting more fixes**
-
-This is NOT a failed hypothesis - this is a wrong architecture.
-
-## MCP Tool Mapping for Debugging
-
-| Debugging Task | MCP Tool | Table/Entity |
-|----------------|----------|--------------|
-| Query previous sessions | `MCP_DOCKER_query_database` | `events` table |
-| Search for patterns | `allura-brain_memory_search` | Federated memory |
-| Log session start | `MCP_DOCKER_insert_data` | `events` |
-| Log phase complete | `MCP_DOCKER_insert_data` | `events` |
-| Log root cause found | `MCP_DOCKER_insert_data` | `events` |
-| Create insight | `allura-brain_memory_add` | Episodic memory with metadata |
-| Promote reusable finding | `allura-brain_memory_promote` | Curated graph via HITL |
-| Verify persistence | `MCP_DOCKER_query_database` | Verify by event ID |
-
-## Event Type Naming Convention
-
-- `debug:session_start` - Beginning of debugging session
-- `debug:phase{N}_complete` - Phase N completed
-- `debug:hypothesis_formed` - New hypothesis created
-- `debug:hypothesis_tested` - Hypothesis tested
-- `debug:root_cause_found` - Root cause identified
-- `debug:fix_implemented` - Fix applied
-- `debug:session_complete` - Session finished
-- `debug:architecture_questioned` - 3+ fixes failed
-
-## Red Flags - STOP and Follow Process
-
-If you catch yourself thinking:
-- "Quick fix for now, investigate later"
-- "Just try changing X and see if it works"
-- "Add multiple changes, run tests"
-- "Skip the test, I'll manually verify"
-- "It's probably X, let me fix that"
-- "I don't fully understand but this might work"
-- "Pattern says X but I'll adapt it differently"
-- "Here are the main problems: [lists fixes without investigation]"
-- Proposing solutions before tracing data flow
-- **"One more fix attempt" (when already tried 2+)**
-- **"Each fix reveals new problem in different place"**
-
-**ALL of these mean: STOP. Return to Phase 1.**
-
-**If 3+ fixes failed:** Question the architecture (see Phase 4.5)
-
-## Your Human Partner's Signals You're Doing It Wrong
-
-**Watch for these redirections:**
-- "Is that not happening?" - You assumed without verifying
-- "Will it show us...?" - You should have added evidence gathering
-- "Stop guessing" - You're proposing fixes without understanding
-- "Ultrathink this" - Question fundamentals, not just symptoms
-- "We're stuck?" (frustrated) - Your approach isn't working
-
-**When you see these:** STOP. Return to Phase 1.
-
-## Common Rationalizations
-
-| Excuse | Reality |
-|--------|---------|
-| "Issue is simple, don't need process" | Simple issues have root causes too. Process is fast for simple bugs. |
-| "Emergency, no time for process" | Systematic debugging is FASTER than guess-and-check thrashing. |
-| "Just try this first, then investigate" | First fix sets the pattern. Do it right from the start. |
-| "I'll write test after confirming fix works" | Untested fixes don't stick. Test first proves it. |
-| "Multiple fixes at once saves time" | Can't isolate what worked. Causes new bugs. |
-| "Reference too long, I'll adapt the pattern" | Partial understanding guarantees bugs. Read it completely. |
-| "I see the problem, let me fix it" | Seeing symptoms ≠ understanding root cause. |
-| "One more fix attempt" (after 2+ failures) | 3+ failures = architectural problem. Question pattern, don't fix again. |
-| "I don't need to check memory" | Previous debugging knowledge saves time. Always hydrate. |
-
-## Quick Reference
-
-| Phase | Key Activities | Success Criteria |
-|-------|---------------|------------------|
-| **0. Hydration** | Query memory, summarize context | Know previous attempts and root causes |
-| **1. Root Cause** | Read errors, reproduce, check changes, gather evidence | Understand WHAT and WHY |
-| **2. Pattern** | Find working examples, compare | Identify differences |
-| **3. Hypothesis** | Form theory, test minimally | Confirmed or new hypothesis |
-| **4. Implementation** | Create test, fix, verify | Bug resolved, tests pass |
-| **5. Persistence** | Log events, create insight | Knowledge preserved |
-
-## When Process Reveals "No Root Cause"
-
-If systematic investigation reveals issue is truly environmental, timing-dependent, or external:
-
-1. You've completed the process
-2. Document what you investigated
-3. Log findings to memory system
-4. Implement appropriate handling (retry, timeout, error message)
-5. Add monitoring/logging for future investigation
-
-**But:** 95% of "no root cause" cases are incomplete investigation.
-
-## Supporting Techniques
-
-These techniques are part of systematic debugging and available in this directory:
-
-- **`root-cause-tracing.md`** - Trace bugs backward through call stack to find original trigger
-- **`defense-in-depth.md`** - Add validation at multiple layers after finding root cause
-- **`condition-based-waiting.md`** - Replace arbitrary timeouts with condition polling
-
-**Related skills:**
-- **superpowers:test-driven-development** - For creating failing test case (Phase 4, Step 1)
-- **superpowers:verification-before-completion** - Verify fix worked before claiming success
-- **memory-client** - For querying and logging to memory system
-
-## Real-World Impact
-
-From debugging sessions:
-- Systematic approach: 15-30 minutes to fix
-- Random fixes approach: 2-3 hours of thrashing
-- First-time fix rate: 95% vs 40%
-- New bugs introduced: Near zero vs common
-
-**With memory integration:**
-- Similar issues: 5 minutes (context already available)
-- Pattern recognition: Automatic from previous sessions
-- Knowledge sharing: Persistent across agents
+- Root cause and confirming evidence
+- Files changed
+- Tests and validation actually run
+- Outcome write success, failure, or unavailability
+- Remaining risk
+- Semantic promotion: not requested by this ordinary workflow
