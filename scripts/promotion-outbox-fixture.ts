@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
 import pg from "pg";
 import { drainPromotionOutbox } from "../src/lib/memory/promotion-outbox-worker";
-import { closePool } from "../src/lib/postgres/connection";
+import { closePool, getAppPool } from "../src/lib/postgres/connection";
 
 assert.notEqual(process.getuid?.(), 0);
 const { password, migrations } = JSON.parse(await Bun.stdin.text());
@@ -71,46 +71,112 @@ try {
     assert.equal((await owner.query("SELECT count(*)::int AS n FROM events WHERE metadata->>'outbox_id'=$1", [row.id])).rows[0].n, 0);
   }
   console.log("PASS: scoped claim rechecks retry time and attempt budget after stale discovery");
+  async function simultaneousDrains(id: string) {
+    // Fixture-only owner lock makes BOTH real app-role claims wait. Combined
+    // with the discovery barrier this avoids a timing/sleep-only race test.
+    const blocker = await owner.connect();
+    let arrivals = 0;
+    let release = () => {};
+    let barrierTimer: ReturnType<typeof setTimeout> | undefined;
+    const barrier = new Promise<void>((resolve, reject) => {
+      release = resolve;
+      barrierTimer = setTimeout(() => reject(new Error("Concurrent discovery barrier timed out")), 5000);
+    });
+    const discovery = { query: async (sql: string, values: unknown[]) => {
+      const result = await owner.query(sql, values);
+      if (sql.startsWith("SELECT id,")) {
+        assert(result.rows.some(row => row.id === id));
+        if (++arrivals === 2) release();
+        await barrier;
+      }
+      return result;
+    } } as unknown as pg.Pool;
+    try {
+      await blocker.query("BEGIN");
+      await blocker.query("SELECT id FROM promotion_outbox WHERE id=$1 FOR UPDATE", [id]);
+      // Attach rejection handling immediately, including while observing locks.
+      const pair = Promise.all([drainPromotionOutbox(discovery), drainPromotionOutbox(discovery)])
+        .then(value => ({ value }), (error: unknown) => ({ error }));
+      try {
+        for (let poll = 0; ; poll++) {
+          const waiting = await owner.query(`SELECT count(*)::int AS n FROM pg_stat_activity
+            WHERE datname=current_database() AND usename='allura_app'
+              AND query LIKE 'UPDATE promotion_outbox SET status=''processing''%'
+              AND cardinality(pg_blocking_pids(pid))>0`);
+          if (waiting.rows[0].n === 2) break;
+          assert(poll < 400, "Both app-role claims must be observed waiting before release");
+          await Bun.sleep(10);
+        }
+      } finally { await blocker.query("ROLLBACK"); }
+      const outcome = await pair;
+      if ("error" in outcome) throw outcome.error;
+      assert.equal(arrivals, 2);
+      return outcome.value;
+    } finally {
+      clearTimeout(barrierTimer);
+      await blocker.query("ROLLBACK");
+      blocker.release();
+    }
+  }
   const retry = await seed();
   await owner.query(`CREATE FUNCTION sep_reject_delivery() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.metadata->>'outbox_id'='${retry.id}' THEN RAISE EXCEPTION 'synthetic delivery failure'; END IF; RETURN NEW; END $$`);
   await owner.query("CREATE TRIGGER sep_reject_delivery BEFORE INSERT ON events FOR EACH ROW EXECUTE FUNCTION sep_reject_delivery()");
-  const failed = await drainPromotionOutbox(owner);
-  assert.equal(failed.failed, 1); assert.equal(failed.delivered, 0);
-  const delayed = (await owner.query("SELECT status,attempts,available_at>NOW() AS delayed FROM promotion_outbox WHERE id=$1", [retry.id])).rows[0];
-  assert.deepEqual(delayed, { status: "pending", attempts: 1, delayed: true });
+  const failures = await simultaneousDrains(retry.id);
+  assert.equal(failures.reduce((sum, result) => sum + result.failed, 0), 1);
+  assert.equal(failures.reduce((sum, result) => sum + result.delivered, 0), 0);
+  const delayed = (await owner.query("SELECT status,attempts,available_at>NOW() AS delayed,last_error,delivered_at FROM promotion_outbox WHERE id=$1", [retry.id])).rows[0];
+  assert.deepEqual(delayed, { status: "pending", attempts: 1, delayed: true, last_error: "synthetic delivery failure", delivered_at: null });
   assert.equal((await owner.query("SELECT count(*)::int AS n FROM events WHERE metadata->>'outbox_id'=$1", [retry.id])).rows[0].n, 0);
-  assert.equal((await drainPromotionOutbox(owner)).failed, 0, "Backoff must prevent immediate retry");
+  const backedOff = await drainPromotionOutbox(owner);
+  assert.equal(backedOff.failed, 0, "Backoff must prevent immediate retry");
+  assert.equal(backedOff.delivered, 0);
   await owner.query("DROP TRIGGER sep_reject_delivery ON events");
   await owner.query("UPDATE promotion_outbox SET available_at=NOW()-INTERVAL '1 second' WHERE id=$1", [retry.id]);
-  assert.equal((await drainPromotionOutbox(owner)).delivered, 1);
+  const retries = await simultaneousDrains(retry.id);
+  assert.equal(retries.reduce((sum, result) => sum + result.delivered, 0), 1);
+  assert.equal(retries.reduce((sum, result) => sum + result.failed, 0), 0);
+  assert.deepEqual((await owner.query("SELECT status,attempts FROM promotion_outbox WHERE id=$1", [retry.id])).rows[0], { status: "delivered", attempts: 1 });
+  assert.equal((await owner.query("SELECT count(*)::int AS n FROM events WHERE metadata->>'outbox_id'=$1", [retry.id])).rows[0].n, 1);
   assert.equal((await drainPromotionOutbox(owner)).delivered, 0);
-  console.log("PASS: failed event rolls back; persisted backoff suppresses retry until due; subsequent delivery once");
+  console.log("PASS: simultaneous failed drains commit one failed attempt/backoff and zero events; concurrent due retry emits exactly once");
   const concurrent = await seed();
-  // Both snapshots must contain the same row before either caller can claim it.
-  let arrivals = 0;
-  let release = () => {};
-  let barrierTimer: ReturnType<typeof setTimeout> | undefined;
-  const barrier = new Promise<void>((resolve, reject) => {
-    release = resolve;
-    barrierTimer = setTimeout(() => reject(new Error("Concurrent discovery barrier timed out")), 5000);
-  });
-  const simultaneousDiscovery = { query: async (sql: string, values: unknown[]) => {
-    const result = await owner.query(sql, values);
-    if (sql.startsWith("SELECT id,")) {
-      assert(result.rows.some(row => row.id === concurrent.id));
-      if (++arrivals === 2) release();
-      await barrier;
-    }
-    return result;
-  } } as unknown as pg.Pool;
-  let pair;
-  try { pair = await Promise.all([drainPromotionOutbox(simultaneousDiscovery), drainPromotionOutbox(simultaneousDiscovery)]); }
-  finally { clearTimeout(barrierTimer); }
-  assert.equal(arrivals, 2);
+  const pair = await simultaneousDrains(concurrent.id);
   assert.equal(pair.reduce((sum, result) => sum + result.delivered, 0), 1);
+  assert.equal(pair.reduce((sum, result) => sum + result.failed, 0), 0);
   assert.equal((await owner.query("SELECT count(*)::int AS n FROM events WHERE metadata->>'outbox_id'=$1", [concurrent.id])).rows[0].n, 1);
+
+  // Inject transport acknowledgement loss AFTER a real COMMIT. This is not a
+  // real network fault or an unknown-outcome recovery/replay procedure.
+  const uncertain = await seed();
+  const app = getAppPool();
+  const acknowledgementError = new Error("synthetic acknowledgement loss after real COMMIT");
+  let injected = 0;
+  let restoreQuery = () => {};
+  const intercept = (client: pg.PoolClient) => {
+    const original = client.query;
+    restoreQuery = () => { client.query = original; };
+    client.query = new Proxy(original, {
+      apply(target, thisArg, args) {
+        const result = Reflect.apply(target, thisArg, args);
+        if (args[0] === "COMMIT" && injected === 0) {
+          return Promise.resolve(result).then(() => { injected++; throw acknowledgementError; });
+        }
+        return result;
+      },
+    });
+  };
+  app.once("acquire", intercept);
+  try { await assert.rejects(drainPromotionOutbox(owner), error => error === acknowledgementError); }
+  finally { app.removeListener("acquire", intercept); restoreQuery(); }
+  assert.equal(injected, 1);
+  assert.deepEqual((await owner.query("SELECT status,attempts,last_error FROM promotion_outbox WHERE id=$1", [uncertain.id])).rows[0], { status: "delivered", attempts: 0, last_error: null });
+  assert.equal((await owner.query("SELECT count(*)::int AS n FROM events WHERE metadata->>'outbox_id'=$1", [uncertain.id])).rows[0].n, 1);
+  const afterUnknown = await drainPromotionOutbox(owner);
+  assert.equal(afterUnknown.delivered, 0); assert.equal(afterUnknown.failed, 0);
+  assert.equal((await owner.query("SELECT count(*)::int AS n FROM events WHERE metadata->>'outbox_id'=$1", [uncertain.id])).rows[0].n, 1);
+  console.log("PASS: injected lost acknowledgement after real COMMIT rejects; delivered row/event persist; ordinary subsequent drain does not duplicate");
   assert.equal((await owner.query("SELECT status FROM canonical_proposals WHERE id=$1", [unapproved])).rows[0].status, "pending");
-  for (const row of [future, exhausted, quarantine, ...due, retry, concurrent]) {
+  for (const row of [future, exhausted, quarantine, ...due, retry, concurrent, uncertain]) {
     assert.equal((await owner.query("SELECT status FROM canonical_proposals WHERE id=$1", [row.proposal])).rows[0].status, "approved");
     assert.equal((await owner.query("SELECT content FROM graph_memories WHERE id=$1", [row.memory])).rows[0].content, "synthetic committed fixture");
   }
@@ -119,5 +185,5 @@ try {
   delete process.env.POSTGRES_APP_PASSWORD;
   await assert.rejects(drainPromotionOutbox(owner), /POSTGRES_APP_USER and POSTGRES_APP_PASSWORD are required/);
   console.log("PASS: missing application authority refused; no owner fallback");
-  console.log("LIMIT: retry eligibility regression only; no continuous-service, failure-race fencing, real approval, deployment or full pilot acceptance");
+  console.log("LIMIT: bounded synthetic SQL concurrency and injected acknowledgement-loss checks only; no real network fault, unknown-outcome recovery, continuous-service, real approval, deployment or full pilot acceptance");
 } finally { await closePool(); await owner.end(); }

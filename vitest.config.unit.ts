@@ -75,6 +75,8 @@ export default defineConfig({
       "src/lib/memory/relationships/*.test.ts",
       "src/lib/memory/__tests__/approval-audit.test.ts",
       "src/lib/memory/__tests__/knowledge-promotion-approval-guard.test.ts",
+      // Real worker/tenant helper with scripted transport only; no database.
+      "src/lib/memory/__tests__/promotion-outbox-worker.test.ts",
       "src/lib/memory/traceable-memory.test.ts",
       "src/lib/memory/approve-proposal.test.ts",
       "src/lib/memory/governance-receipt-writer.test.ts",
