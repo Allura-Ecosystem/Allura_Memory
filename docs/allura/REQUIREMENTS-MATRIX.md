@@ -235,7 +235,7 @@ This section traces the governed memory pipeline requirements from business goal
 | B27 | Agents must retrieve approved knowledge through a controlled retrieval layer | F10, F11, F35, F36 | MEM-UC6 |
 | B28 | All reads/writes must pass through controlled APIs with project-level access and audit | F12, F13, F37, F38 | MEM-UC7 |
 | B29 | The full loop from agent execution to knowledge reuse must be demonstrably end-to-end | F14, F15, F39, F40 | MEM-UC8 |
-| B30 | Team RAM agents must integrate with BMAD planning and Allura Brain memory through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth | F41, F42 | MEM-UC10 |
+| B30 | Team RAM agents must follow `guidelines/AI-GUIDELINES.md` and Allura Brain memory through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth | F41, F42 | MEM-UC10 |
 | B31 | Teams must define evidence-gated orchestration runs without exposing internal agent-routing details. | F49, F50, F51, F52 | MEM-UC13 |
 
 ### Section 2: Functional Requirements Detail
@@ -381,12 +381,23 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-GOV-005 | RuVix gates must return `Permit`, `Defer`, or `Deny` and include `gate_reason`. | AD-XX, RULE-010 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-1-ruvix-control plane-governance-contract) · [DATA-DICTIONARY.md](./DATA-DICTIONARY.md#ruvix-governance-artifacts) |
 | REQ-GOV-006 | Runtime readiness labeling must say `pgvector bridge` until RuVector extension/functions and search/feedback health are proven. | AD-32, RK-21 | [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3-4-0-current-ruvector-readiness-boundary) · [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md#ad-32-current-runtime-label-is-pgvector-bridge) |
 
+Retirement validation: `scripts/check-retired-backend.ts` rejects retired backend
+identifiers in active source, tool descriptions, dependencies, compose files, and
+agent instructions (including root aliases and hidden harness directories). The
+Check workflow runs its red/green fixtures and repository scan. Historical work
+items, archives, and the explicitly enumerated prior SQL migrations are preserved;
+negative assertions are allowed only by exact file and line content.
+`audit_health_report` verifies PostgreSQL connectivity, backfill event counts,
+curator queue depth, and registered-tool availability; it does not independently
+prove extension or retrieval health. The separate `graph_supersedes` invariant
+performs a tenant-scoped read and fails when that read is unavailable.
+
 ### Section 6A.2: Agent Factory CI Requirements
 
 | ID | Requirement | Satisfied by |
 | --- | --- | --- |
 | REQ-AF-CI-001 | Factory modules and workflows must be tracked in the canonical `Allura_Memory` repository. | `factory/` · `.github/workflows/factory-ci.yml` · AD-43 |
-| REQ-AF-CI-002 | Every module must pass YAML, roster, tenant, BMad dependency, and Allura governance validation. | `factory/validate.sh` · `.github/workflows/factory-ci.yml` |
+| REQ-AF-CI-002 | Every module must pass YAML, roster, tenant, documentation-authority, and Allura governance validation. | `factory/validate.sh` · `.github/workflows/factory-ci.yml` |
 | REQ-AF-CI-003 | CI must prove PostgreSQL-first writes, own-tenant retrieval, and cross-tenant isolation against live PostgreSQL and `graph_memories`. | `scripts/factory-cross-team-smoke.ts` · `.github/workflows/factory-cross-team-smoke.yml` · RK-31 · [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md#3401-agent-factory-ci-topology) |
 | REQ-AF-CI-004 | CI must preserve the `pgvector bridge` label and block native/upstream claims while required artifacts are absent. | `scripts/check-ruvector-readiness.ts` · `.github/workflows/ruvector-readiness.yml` · AD-32 · RK-21 |
 | REQ-AF-CI-005 | Packaging must require an explicit validated team and produce a commit-addressed artifact. | `.github/workflows/factory-ci.yml` |

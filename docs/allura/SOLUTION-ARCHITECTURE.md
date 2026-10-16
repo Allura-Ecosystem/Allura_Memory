@@ -29,7 +29,7 @@ Allura is a **memory data plane** — it holds no business logic about what an a
 | Consumer Class | Interaction Mode | Notes |
 |---|---|---|
 | AI Agents (Claude, GPT, etc.) | Brooks / Team RAM + skills | Skills enforce memory-first routing to packaged MCP servers |
-| BMAD / Team RAM Planning | `_bmad/` + `_bmad-output/` | BMAD artifacts map intent, PRDs, architecture, epics, and stories to Team RAM owners |
+| Team RAM Work Items | `.opencode/work-items/` | Local evidence and work-item artifacts support the Notion board without becoming an independent authority |
 | DevOps / Admin | Docker Compose + MCP_DOCKER config | Deployment, configuration, and packaged MCP server activation |
 
 Allura Brain does **not** orchestrate agents, run workflows, or make decisions. It stores and retrieves memory. Period. Optional orchestration wrappers may compose Team RAM skills into governed runs, but those wrappers remain outside the memory data plane and may only write receipts, proposals, and evidence through approved API/MCP paths.
@@ -556,7 +556,7 @@ Architecture note: Previous dashboard surfaces (ports 3100, 3334, 6420) are refe
 - [BLUEPRINT.md](./BLUEPRINT.md) — Core data model, API surface, execution rules
 - [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) — Field-level definitions
 - [RISKS-AND-DECISIONS.md](./RISKS-AND-DECISIONS.md) — AD-## and RK-## entries
-- [TEAM-RAM-INTEGRATION.md](../archive/bmad-legacy/TEAM-RAM-INTEGRATION.md) — Team RAM, BMAD, and Allura Brain operating contract (archived)
+- [TEAM-RAM-INTEGRATION.md](../archive/bmad-legacy/TEAM-RAM-INTEGRATION.md) — historical pre-retirement Team RAM workflow record (archived; not operative)
 - `.opencode/skills/allura-memory-skill/` — memory workflow rules
 - `.opencode/skills/memory-client/` — default retrieval behavior
 - `.opencode/skills/mcp-docker-memory-system/` — packaged MCP server discovery/configuration guidance

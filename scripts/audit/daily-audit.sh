@@ -114,10 +114,10 @@ else
 fi
 
 # Check story files for encoding issues
-if [ -d "${PROJECT_ROOT}/_bmad-output/implementation-artifacts" ]; then
+if [ -d "${PROJECT_ROOT}/.opencode/work-items/implementation-artifacts" ]; then
   ENCODING_ISSUES=0
   
-  for file in "${PROJECT_ROOT}/_bmad-output/implementation-artifacts"/*.md; do
+  for file in "${PROJECT_ROOT}/.opencode/work-items/implementation-artifacts"/*.md; do
     if [ -f "$file" ]; then
       if grep -q $'\x00' "$file" 2>/dev/null; then
         log_warning "Encoding issue in: $file (null bytes detected)"

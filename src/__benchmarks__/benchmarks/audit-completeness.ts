@@ -30,7 +30,9 @@ interface GateResult {
 export async function run(ctx: BenchmarkContext): Promise<BenchmarkResult> {
   const start = performance.now()
   const notes: string[] = []
-  const agentId = `bench-${ctx.runId}`
+  // Transport authority determines the persisted agent_id; isolate this run
+  // with the content marker rather than asserting a synthetic actor.
+  const agentId = ctx.userId
   const marker = markerFor(ctx.runId, "audit-lifecycle")
   const probeAction = `benchmark_probe_${ctx.runId}`
 

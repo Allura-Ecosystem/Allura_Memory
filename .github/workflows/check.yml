@@ -15,6 +15,9 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      # Public CI-only test-signing key; never use for production credentials.
+      ALLURA_MCP_TOKEN_SECRET: ci-test-token-secret-0123456789abcdef
     steps:
       - uses: actions/checkout@v4
 
@@ -28,6 +31,11 @@ jobs:
 
       - name: Scan device-pairing credential artifacts (Story 29.17 / AC-25)
         run: bun run scan:credentials
+
+      - name: Retired backend regression gate
+        run: |
+          bun vitest run --config vitest.config.unit.ts tests/scripts/check-retired-backend.test.ts
+          bun scripts/check-retired-backend.ts
 
       - name: Lint check
         run: bun run lint

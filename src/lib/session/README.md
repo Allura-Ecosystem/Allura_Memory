@@ -482,18 +482,18 @@ await bootstrap.shutdown();
 
 ## Integration Points
 
-### With BMad Workflow
+### With AI-GUIDELINES Workflow
 
 ```
-bmad-dev-story          → Bootstrap session, enable budget
+Allura work item        → Bootstrap session, enable budget
     ↓
-bmad-code-review        → Checkpoint before review, detect drift
+Team RAM review         → Checkpoint before review, detect drift
     ↓
-bmad-correct-course     → Analyze drift, update state
+Correct course          → Analyze drift, update state
     ↓
 [ Blood Loop ]          → Run tests, validate encoding, enforce budget
     ↓
-bmad-retrospective      → Analyze epic-level drift, create snapshot
+Retrospective           → Analyze epic-level drift, create snapshot
 ```
 
 ### With Trace Recording (Story 1.1)

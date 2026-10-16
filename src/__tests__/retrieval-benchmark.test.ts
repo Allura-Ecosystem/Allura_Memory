@@ -190,10 +190,10 @@ const SEED_MEMORIES: SeedMemory[] = [
   { id: "mem-ui-04", content: "Prefers-color-scheme media query detects OS-level dark mode setting", score: 0.84, group_id: GROUP_SYSTEM, topic: "dark_mode" },
 
   // Topic: semantic store / graph databases
-  { id: "mem-semantic-01", content: "semantic store Cypher MATCH clauses should always include a group_id filter for multi-tenant isolation", score: 0.96, group_id: GROUP_SYSTEM, topic: "neo4j" },
-  { id: "mem-semantic-02", content: "semantic store fulltext indexes use Lucene under the hood for semantic-adjacent search", score: 0.91, group_id: GROUP_SYSTEM, topic: "neo4j" },
-  { id: "mem-semantic-03", content: "SUPERSEDES relationships in semantic store create immutable version chains for memories", score: 0.88, group_id: GROUP_SYSTEM, topic: "neo4j" },
-  { id: "mem-semantic-04", content: "semantic store connection pooling with bolt+routing enables read replicas for search", score: 0.83, group_id: GROUP_SYSTEM, topic: "neo4j" },
+  { id: "mem-semantic-01", content: "semantic store SQL queries should always include a group_id filter for multi-tenant isolation", score: 0.96, group_id: GROUP_SYSTEM, topic: "ruvector" },
+  { id: "mem-semantic-02", content: "semantic store fulltext indexes use PostgreSQL text search for semantic-adjacent search", score: 0.91, group_id: GROUP_SYSTEM, topic: "ruvector" },
+  { id: "mem-semantic-03", content: "SUPERSEDES relationships in semantic store create immutable version chains for memories", score: 0.88, group_id: GROUP_SYSTEM, topic: "ruvector" },
+  { id: "mem-semantic-04", content: "semantic store PostgreSQL connection pooling supports read replicas for search", score: 0.83, group_id: GROUP_SYSTEM, topic: "ruvector" },
 
   // Off-topic (noise)
   { id: "mem-noise-01", content: "The quick brown fox jumps over the lazy dog", score: 0.50, group_id: GROUP_SYSTEM, topic: "noise" },
@@ -202,7 +202,7 @@ const SEED_MEMORIES: SeedMemory[] = [
   // Cross-group: Durham memories (must NOT appear in allura-system queries)
   { id: "mem-dur-01", content: "TypeScript ESLint rules for the Durham team codebase", score: 0.90, group_id: GROUP_DURHAM, topic: "typescript" },
   { id: "mem-dur-02", content: "Durham dark mode implementation uses CSS-in-JS with styled-components", score: 0.88, group_id: GROUP_DURHAM, topic: "dark_mode" },
-  { id: "mem-dur-03", content: "Durham semantic store instance runs on port 7688 with custom auth", score: 0.85, group_id: GROUP_DURHAM, topic: "neo4j" },
+  { id: "mem-dur-03", content: "Durham semantic store uses tenant-scoped PostgreSQL access", score: 0.85, group_id: GROUP_DURHAM, topic: "ruvector" },
 ];
 
 /**
@@ -658,7 +658,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
       // Should have warnings about semantic store unavailability
       const warnings = response.meta?.warnings ?? [];
       const hasGraphWarning = warnings.some((w: string) =>
-        w.toLowerCase().includes("graph") || w.toLowerCase().includes("neo4j")
+        w.toLowerCase().includes("graph") || w.toLowerCase().includes("ruvector")
       );
 
       console.log(`  Results count: ${response.results.length}`);
@@ -712,7 +712,7 @@ describe("Retrieval Benchmark — FR-1.2", () => {
         w.toLowerCase().includes("ruvector")
       );
       const hasGraphWarning = warnings.some((w: string) =>
-        w.toLowerCase().includes("graph") || w.toLowerCase().includes("neo4j")
+        w.toLowerCase().includes("graph") || w.toLowerCase().includes("ruvector")
       );
 
       console.log(`  Full degradation — Results: ${response.results.length}`);

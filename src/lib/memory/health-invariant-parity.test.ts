@@ -52,5 +52,22 @@ describe("audit reports with all active services healthy", () => {
     expect(text).not.toContain("neo4j")
     expect(report.invariants.length).toBeGreaterThan(0)
     expect(report.invariants.filter((i) => !i.passed)).toEqual([])
+    expect(pgQuery).toHaveBeenCalledWith(
+      expect.stringContaining("FROM graph_supersedes"),
+      [GROUP]
+    )
+  })
+
+  it("fails the semantic versioning read check when its table is unavailable", async () => {
+    pgQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM graph_supersedes")) throw new Error("semantic table unavailable")
+      return { rows: [{ count: /table_constraints/.test(sql) ? "1" : "0" }], rowCount: 1 }
+    })
+    const report = await audit_invariant_check({ group_id: GROUP })
+    expect(report.invariants.find((item) => item.key === "graph_supersedes")).toMatchObject({
+      passed: false,
+      violation_count: 1,
+      detail: "graph_supersedes check failed: semantic table unavailable",
+    })
   })
 })

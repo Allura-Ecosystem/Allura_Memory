@@ -248,7 +248,6 @@ export default defineConfig({
       "src/__tests__/notion-projection-sync.test.ts",
       "src/__tests__/mcp-catalog.test.ts",
       "src/__tests__/mcp-streamable-http.test.ts",
-      "src/__tests__/generate-agent.test.ts",
       "src/__tests__/knowledge-hub-bridge.test.ts",
       "src/__tests__/parity-test.test.ts",
       "src/lib/ruvector/bridge.test.ts",

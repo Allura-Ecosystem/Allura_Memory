@@ -215,7 +215,7 @@ Adaptive hydration applies. Load only what the task requires.
 
 - Tier 0 (always): AGENTS.md, manifest.json, `documentation-authority.md`, worktree state, active-story pointer, Brain health receipt.
 - Tier 1: recent blockers/outcomes (PG), approved architecture decisions (semantic), Notion status when project status is requested.
-- Tier 2 (task-specific): active BMAD epic/story, relevant source, impacted canonical sections, required skills/validation.
+- Tier 2 (task-specific): active work item, relevant source, impacted canonical sections, required skills/validation.
 - Tier 3 (on demand): full documents, archives, prior epics, external research.
 
 Budget: ≤3,000 startup tokens; ≤8,000 cumulative repository/memory task-expansion before action. Full canonical documents load by section or explicit request only.

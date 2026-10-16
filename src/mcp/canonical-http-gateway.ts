@@ -635,7 +635,8 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
         name: "audit_health_report",
         description:
           "Check all Allura Brain subsystem health statuses and return a structured per-subsystem report. " +
-          "Checks: PostgreSQL, RuVector, embedding backfill, curator queue depth, and MCP tool availability. " +
+          "Checks: PostgreSQL connectivity, embedding backfill events, curator queue depth, and MCP tool availability. " +
+          "Does not independently probe RuVector extension or semantic retrieval health. " +
           "Read-only — no DB writes.",
         inputSchema: {
           type: "object",
@@ -673,9 +674,9 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "audit_invariant_check",
         description:
-          "Validate all 6 Allura governance invariants against live data and report per-check pass/fail " +
+          "Validate all 7 Allura governance invariants against live data and report per-check pass/fail " +
           "with violation counts. Checks: group_id constraint, no invalid group_ids, append-only structure, " +
-          "graph_supersedes SUPERSEDES, HITL promotion compliance, and allura-* namespace. Read-only — no DB writes.",
+          "graph_supersedes readability, HITL promotion compliance, allura-* namespace, and engine mutation approval. Read-only — no DB writes.",
         inputSchema: {
           type: "object",
           properties: {
