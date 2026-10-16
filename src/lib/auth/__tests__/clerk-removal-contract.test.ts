@@ -143,7 +143,7 @@ describe("Clerk removal contract — environment surface", () => {
     expect(readProjectFile("scripts/restore-on-laptop.sh")).not.toMatch(CLERK_ENV_KEY)
   })
 
-  it("operator examples keep the unverified Cloudflare path disabled", () => {
+  it("operator examples keep Cloudflare Access opt-in and declare cryptographic verifier settings", () => {
     const envExample = readProjectFile(".env.example")
     const restoreScript = readProjectFile("scripts/restore-on-laptop.sh")
 
@@ -151,7 +151,28 @@ describe("Clerk removal contract — environment surface", () => {
       expect(source).toContain("ALLURA_CF_ACCESS_ENABLED=false")
       expect(source).not.toContain("ALLURA_CF_ACCESS_ENABLED=true")
       expect(source).toMatch(/cryptographic|signature/i)
-      expect(source).toMatch(/blocked|do not enable/i)
+    }
+    expect(envExample).toContain("ALLURA_CF_ACCESS_TEAM_DOMAIN=")
+    expect(envExample).toContain("ALLURA_CF_ACCESS_AUDIENCE=")
+  })
+
+  it("operator env examples document Access and database settings for the portal env_file", () => {
+    const compose = readProjectFile("docker-compose.portal.yml")
+    const envExample = readProjectFile(".env.example")
+
+    expect(compose).toContain('ALLURA_MCP_BASE_URL: "http://allura-memory-mcp:3201"')
+
+    for (const key of [
+      "ALLURA_CF_ACCESS_ENABLED",
+      "ALLURA_CF_ACCESS_TEAM_DOMAIN",
+      "ALLURA_CF_ACCESS_AUDIENCE",
+      "ALLURA_CF_ACCESS_ALLOWED_EMAILS",
+      "ALLURA_CF_ACCESS_ADMIN_EMAILS",
+      "ALLURA_CF_ACCESS_GROUP_ID",
+      "ALLURA_CF_ACCESS_WORKSPACE_ID",
+      "DATABASE_URL",
+    ]) {
+      expect(envExample).toContain(`${key}=`)
     }
   })
 
@@ -160,6 +181,26 @@ describe("Clerk removal contract — environment surface", () => {
     const shape = authEnvSchema.shape as Record<string, unknown>
     const clerkKeys = Object.keys(shape).filter((key) => CLERK_ENV_KEY.test(key))
     expect(clerkKeys).toEqual([])
+  })
+
+  it("the auth env schema declares the Access JWT verifier inputs", async () => {
+    const { authEnvSchema } = await import("@/lib/auth/config")
+    const keys = Object.keys(authEnvSchema.shape)
+
+    expect(keys).toContain("ALLURA_CF_ACCESS_ENABLED")
+    expect(keys).toContain("ALLURA_CF_ACCESS_TEAM_DOMAIN")
+    expect(keys).toContain("ALLURA_CF_ACCESS_AUDIENCE")
+  })
+
+  it("the auth env schema accepts empty verifier settings while Access is disabled", async () => {
+    const { authEnvSchema } = await import("@/lib/auth/config")
+    const parsed = authEnvSchema.safeParse({
+      ALLURA_CF_ACCESS_ENABLED: "false",
+      ALLURA_CF_ACCESS_TEAM_DOMAIN: "",
+      ALLURA_CF_ACCESS_AUDIENCE: "",
+    })
+
+    expect(parsed.success).toBe(true)
   })
 })
 

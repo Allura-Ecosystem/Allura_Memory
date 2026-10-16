@@ -22,6 +22,6 @@ if (loaded.error) throw loaded.error
 
 const command = action === "up"
   ? ["docker", "compose", "--env-file", ".env.portfolio", "-f", "docker-compose.portfolio.yml", "up", "-d", "--build", "--force-recreate"]
-  : ["bun", "run", "dev"]
+  : ["bun", "run", "dev", "--hostname", "127.0.0.1"]
 const child = Bun.spawn({ cmd: command, env: process.env, stdout: "inherit", stderr: "inherit" })
 process.exit(await child.exited)

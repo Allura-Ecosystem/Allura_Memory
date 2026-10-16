@@ -223,12 +223,12 @@ function handleDevAuth(request: NextRequest): NextResponse {
   })
 }
 
-function handleCloudflareAccess(request: NextRequest): NextResponse {
+async function handleCloudflareAccess(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl
   if (isStaticAsset(pathname)) return nextWithoutAuthHeaders(request)
   const authority = resolveRouteAuthority(pathname)
   if (authority.kind === "public") return nextWithoutAuthHeaders(request)
-  const user = cloudflareAccessUser(request.headers)
+  const user = await cloudflareAccessUser(request.headers)
   if (!user) return denyUnverified(request)
   if (!hasPermission(user.role, authority.requiredRole)) return denyInvalidAuthority(request)
   return nextWithAuthHeaders(request, {
@@ -259,7 +259,7 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
     return nextWithoutAuthHeaders(request)
   }
   if (isCloudflareAccessEnabled()) {
-    return handleCloudflareAccess(request)
+    return await handleCloudflareAccess(request)
   }
   if (process.env.NODE_ENV === "production") {
     return handleKeylessProduction(request)

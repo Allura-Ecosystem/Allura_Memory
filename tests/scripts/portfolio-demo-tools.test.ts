@@ -1,10 +1,11 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+
+import { browserDiagnosticErrors, browserSnapshot, dashboardEvidenceFailures, isSettledDashboardSnapshot } from "../../scripts/dashboard-evidence-contract"
 import { ensurePortfolioEnvironment } from "../../scripts/portfolio-demo-env"
-import { dashboardEvidenceFailures, isSettledDashboardSnapshot } from "../../scripts/dashboard-evidence-contract"
 
 const temporaryDirectories: string[] = []
 
@@ -13,6 +14,66 @@ afterEach(() => {
 })
 
 describe("portfolio demo tooling", () => {
+  it("closes only its owned session and captures both explicit viewports", () => {
+    const capture = readFileSync("scripts/agent-browser-dashboard.ts", "utf8")
+    expect(capture).not.toContain('"close", "--all"')
+    expect(capture).toContain('runAgentBrowser(session, ["close"])')
+    expect(capture).toContain('{ name: "desktop", width: 1440, height: 1000 }')
+    expect(capture).toContain('{ name: "mobile", width: 390, height: 844 }')
+    expect(capture).toContain('for (const viewport of VIEWPORTS)')
+    expect(capture).toContain('["set", "viewport", String(viewport.width), String(viewport.height)]')
+    expect(capture).toContain('`${name}-${viewport.name}`')
+    expect(capture).toContain('viewport: viewport.name')
+    expect(capture).toContain('width: viewport.width')
+    expect(capture).toContain('height: viewport.height')
+    expect(capture).toContain('DASHBOARD_ROUTES.length * VIEWPORTS.length')
+    expect(capture).toContain('["snapshot", "--json"]')
+    expect(capture).toContain('["get", "html", "body", "--json"]')
+    expect(capture).toContain('["console", "--json"]')
+    expect(capture).toContain('["errors", "--json"]')
+    expect(capture).not.toContain('"network", "route"')
+  })
+
+  it("reads installed CLI JSON diagnostics without silently dropping errors", () => {
+    const output = (data: unknown): string => JSON.stringify({ success: true, data })
+    expect(browserDiagnosticErrors(output({ messages: [{ type: "log", text: "ready" }, { type: "error", text: "failed fetch" }] }), "console")).toEqual(["failed fetch"])
+    expect(browserDiagnosticErrors(output({ errors: [{ text: "Uncaught TypeError", url: "local", line: 1, column: 2 }] }), "page")).toEqual(["Uncaught TypeError"])
+    expect(browserDiagnosticErrors(output({ messages: [] }), "console")).toEqual([])
+    expect(browserDiagnosticErrors(output({ errors: [] }), "page")).toEqual([])
+    for (const malformed of ["", "not json", '{"success":false,"error":"capture failed"}', output({}), output({ errors: [{}] })]) {
+      expect(() => browserDiagnosticErrors(malformed, "page")).toThrow()
+    }
+  })
+
+  it("rejects failed or empty snapshot responses and visible failure states", () => {
+    expect(browserSnapshot('{"success":true,"data":{"snapshot":"- heading Overview"}}')).toBe("- heading Overview")
+    for (const value of ["", '{"success":false,"error":"snapshot failed"}', '{"success":true,"data":{}}', '{"success":true,"data":{"snapshot":""}}']) {
+      expect(() => browserSnapshot(value)).toThrow()
+    }
+    for (const text of ["", "Data temporarily unavailable.", "This surface could not load."]) {
+      expect(isSettledDashboardSnapshot(text)).toBe(false)
+    }
+  })
+
+  it("uses port 4100 for the supported demo and binds portfolio dev to loopback", () => {
+    expect(readFileSync(".env.portfolio.example", "utf8")).toContain("ALLURA_DASHBOARD_PORT=4100")
+    for (const file of ["scripts/dashboard-doctor.ts", "scripts/agent-browser-dashboard.ts"]) {
+      expect(readFileSync(file, "utf8")).toContain('process.env.ALLURA_DASHBOARD_PORT || "4100"')
+    }
+    const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts
+    expect(scripts.dev).toContain("${ALLURA_DASHBOARD_PORT:-4100}")
+    expect(scripts.start).toContain("${ALLURA_DASHBOARD_PORT:-4100}")
+    expect(readFileSync("scripts/portfolio-demo.ts", "utf8")).toContain('["bun", "run", "dev", "--hostname", "127.0.0.1"]')
+  })
+
+  it("binds the HTTP/auth contract's direct Next launch to loopback", () => {
+    const contract = readFileSync("tests/e2e/dashboard-http-auth.contract.test.ts", "utf8")
+    const launch = contract.match(/silentChild\(\s*(\[process\.execPath,\s*NEXT_BIN,[^\]]*\])/)
+
+    expect(launch).not.toBeNull()
+    expect(launch?.[1]).toMatch(/"--hostname"\s*,\s*"127\.0\.0\.1"/)
+  })
+
   it("creates .env.portfolio from its non-secret example only when absent", () => {
     const directory = mkdtempSync(join(tmpdir(), "allura-portfolio-env-"))
     temporaryDirectories.push(directory)
@@ -36,6 +97,24 @@ describe("portfolio demo tooling", () => {
     expect(compose).toContain('"127.0.0.1:${PORTFOLIO_POSTGRES_PORT:-5433}:5432"')
     expect(dockerfile).toContain("COPY docker/postgres-init/ /docker-entrypoint-initdb.d/")
     expect(dockerfile).toContain("COPY docker/portfolio-postgres/99-portfolio-demo-workspace.sql")
+  })
+
+  it("runs the founder seed after the workspace initializer and all numbered base migrations", () => {
+    const dockerfile = readFileSync("docker/portfolio-postgres/Dockerfile", "utf8")
+    const destinations = new Map(
+      [...dockerfile.matchAll(/^COPY docker\/portfolio-postgres\/(\S+) \/docker-entrypoint-initdb\.d\/(\S+)$/gm)]
+        .map((match) => [match[1], match[2]]),
+    )
+    const seed = destinations.get("100-founder-demo-seed.sql")!
+    const workspace = destinations.get("99-portfolio-demo-workspace.sql")!
+    const migrations = readdirSync("docker/postgres-init").filter((name) => /^\d+.*\.sql$/.test(name))
+
+    expect(seed).toBeDefined()
+    expect(workspace).toBeDefined()
+    expect(migrations.length).toBeGreaterThan(0)
+    for (const initializer of [...migrations, workspace]) {
+      expect(initializer < seed, `${initializer} must run before ${seed}`).toBe(true)
+    }
   })
 
   it("recreates the portfolio database rather than preserving a prior container", () => {

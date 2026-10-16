@@ -2,9 +2,11 @@ services:
   portal:
     build:
       context: .
-      dockerfile: Dockerfile.portal-prebuilt
+      dockerfile: Dockerfile.portal
     container_name: allura-human-portal
     restart: unless-stopped
+    # ALLURA_CF_ACCESS_* and DATABASE_URL come from these files (see .env.example).
+    # Do not shadow them in environment: interpolation ignores service env_file values.
     env_file:
       - .env
       - .env.local
@@ -26,7 +28,7 @@ services:
       test:
         - CMD-SHELL
         - >-
-          node -e "fetch('http://localhost:3200/api/health/live').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+          node -e "fetch('http://localhost:3200/api/health/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 15s
       timeout: 5s
       retries: 5

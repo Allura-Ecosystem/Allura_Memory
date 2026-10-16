@@ -10,6 +10,7 @@
  * Exits non-zero on any failure. Pass --json for machine-readable output.
  */
 
+import { config } from "dotenv"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 
@@ -29,7 +30,6 @@ type AppScope = { groupId: string; workspaceId: string }
 function loadEnv(): void {
   const envPath = process.env.ALLURA_PORTFOLIO_ENV_FILE || join(process.cwd(), ".env.portfolio")
   if (existsSync(envPath)) {
-    const { config } = require("dotenv")
     // The selected demo file is the source of truth for its scoped database
     // proof; inherited shell values must not point doctor at another stack.
     config({ path: envPath, override: true })
@@ -127,7 +127,7 @@ async function checkRls(): Promise<Check> {
 }
 
 async function checkHttp(route: string): Promise<Check> {
-  const port = process.env.ALLURA_DASHBOARD_PORT || "3100"
+  const port = process.env.ALLURA_DASHBOARD_PORT || "4100"
   try {
     const response = await fetch(`http://127.0.0.1:${port}${route}`, {
       redirect: "manual",
