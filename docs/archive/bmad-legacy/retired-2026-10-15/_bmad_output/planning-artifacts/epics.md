@@ -1,6 +1,13 @@
 # BMad Epic Register — Allura Memory
 
 > [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model (GitHub Copilot).
+> Content has not yet been fully reviewed — this is a working design reference, not a final specification.
+> AI-generated content may contain inaccuracies or omissions.
+> When in doubt, defer to the source code, JSON schemas, and team consensus.
+
+> [!NOTE]
 > **Authoritative delivery status:** [`../implementation-artifacts/sprint-status.yaml`](../implementation-artifacts/sprint-status.yaml).
 > This file is navigation only. It must not duplicate acceptance criteria, tests, or status evidence from epic and story files.
 
@@ -19,7 +26,13 @@
 | 28 | [Enterprise Documentation Consolidation](./epic-28-enterprise-documentation-consolidation.md) | Done | 28.8 exit-gate closure complete; retrospective pending. |
 | 29 | [Desktop Device Pairing and Persistent Authentication](./epic-29-desktop-device-pairing-and-persistent-authentication.md) | Done | 21/21 stories implemented; retro accepted-with-open-items 2026-09-13; AC-28/AC-29 runtime acceptance deferred to follow-up epic (B1 Clerk test instance, B2 desktop client repo). |
 
-| 30 | [Governed Digital Brain Workspace](./epic-30-governed-digital-brain-workspace.md) | Backlog | 13 stories recovered; development readiness blocked. |
+| 30 | [Governed Modular Workspace — replacement draft](./epic-30-governed-digital-brain-workspace.md) | Proposed | Council-recommended 30.14–30.22 reset; the existing 30.1–30.13 sprint records remain unchanged until human and canonical reconciliation. |
+
+## Unregistered draft proposals
+
+| Proposed epic | Draft planning artifact | State | Registration boundary |
+| --- | --- | --- | --- |
+| 31 | [Governed Intelligence and Connected Clients](./epic-31-governed-intelligence-and-connected-clients.md) | Proposed / blocked | Eight-story 31.1–31.8 draft only. No sprint-status key, story file, board item, or implementation authority exists until human and canonical reconciliation. |
 
 ## Rules
 

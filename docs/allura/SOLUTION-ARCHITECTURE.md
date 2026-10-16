@@ -29,7 +29,7 @@ Allura is a **memory data plane** — it holds no business logic about what an a
 | Consumer Class | Interaction Mode | Notes |
 |---|---|---|
 | AI Agents (Claude, GPT, etc.) | Brooks / Team RAM + skills | Skills enforce memory-first routing to packaged MCP servers |
-| BMAD / Team RAM Planning | `_bmad/` + `_bmad_output/` | BMAD artifacts map intent, PRDs, architecture, epics, and stories to Team RAM owners |
+| Allura Adaptive Delivery | Sanctioned work board + Allura Brain + Team RAM skills | Risk-scaled intent, ownership, implementation, review, validation, reconciliation, and evidence logging |
 | DevOps / Admin | Docker Compose + MCP_DOCKER config | Deployment, configuration, and packaged MCP server activation |
 
 Allura Brain does **not** orchestrate agents, run workflows, or make decisions. It stores and retrieves memory. Period. Optional orchestration wrappers may compose Team RAM skills into governed runs, but those wrappers remain outside the memory data plane and may only write receipts, proposals, and evidence through approved API/MCP paths.
@@ -454,7 +454,7 @@ sequenceDiagram
 - `RunRecord` is neutral durable state; policy and runtime state remain separate.
 - Corporate-facing surfaces use run/story/review/evidence language and do not expose Team RAM internals unless requested.
 - No yolo/forever modes, hallucination-free claims, foreign process libraries, or unapproved runtime installs are canonical.
-- Notion remains the planning/decision source of truth when reachable; Brain stores append-only receipts and outcomes.
+- Notion remains the sanctioned human planning/status authority. If it is unavailable, status is unknown or unreconciled; authority does not transfer to a local file, native board, or Brain receipt. Brain stores append-only receipts and outcomes.
 
 ---
 
@@ -465,8 +465,8 @@ sequenceDiagram
 | AI Agent via Brooks / Team RAM | Inbound | Skills + packaged MCP servers | `neo4j-memory` first, `database-server` for evidence, `neo4j-cypher` only when needed | AD-23, AD-03 |
 | Dashboard UI | Inbound | REST HTTP | JSON — memory records | AD-05 |
 | Memory Command Center | Inbound | REST HTTP + adapter contracts | Memories, RuVix governance, curator, graph, audit/evidence, settings | AD-31, RK-19 |
-| Native Allura Kanban | Inbound | REST HTTP + PostgreSQL-backed service contract | Default planning/work item source of truth | F43, AD-31 |
-| Board Sync Adapters | Outbound | Provider APIs | Optional Notion, Linear, and GitHub Projects projections of native board state | F43, AD-31 |
+| Native Allura Kanban | Inbound | REST HTTP + PostgreSQL-backed service contract | Planned operational work surface; Notion remains current human status authority | F43, AD-31 |
+| Board Sync Adapters | Outbound | Provider APIs | Planned provider-neutral projections with one explicit upstream authority | F43, AD-31 |
 | Governed Run Layer | Inbound | REST + CLI + Board + Brain receipts | Version-pinned run record, policy, runtime state, append-only events, breakpoints, evidence, doctor findings | AD-35, AD-41, RK-25–RK-30 |
 | Resource Manifest Adapter | Outbound | File or generated endpoint | Skills, agents, MCP servers, containers, cron jobs, drift warnings | F44, AD-31 |
 | Curator Approve CLI | Inbound | CLI (`bun run curator:approve`) | Processes pending proposals from PostgreSQL, promotes approved ones to `graph_memories` via `approveProposal()` | F6, B18, B19 |
@@ -550,7 +550,9 @@ pinned upstream scanner
   → optional Curator display / separately governed host response
 ```
 
-Native Kanban direction: PostgreSQL owns operational board state; PostgreSQL (graph_memories) may project semantic relationships; Allura Brain stores durable decisions/evidence receipts. Notion, Linear, and GitHub Projects are optional sync adapters; Native Allura Kanban is default upstream.
+Native Kanban target: an accepted native-board implementation would persist product operational state in PostgreSQL; the graph may project semantic relationships; Allura Brain stores decisions/evidence receipts. This is future direction, not a claim of a completed board or selected new schema. Notion remains the sanctioned human planning/status authority. A future native-board cutover requires action-specific approval and import, reconciliation, failure recovery, and rollback proof.
+
+The [Epic 30/31 correction](./BLUEPRINT.md#epic-3031-course-correction) proposes a workspace foundation followed by provider-neutral intelligence. The core owns identity, authorization, memory, provenance, audit, and receipts. Plugins consume those contracts and fail independently. Presentation packs do not grant authority. Model/provider connections and external-agent adapters are separate seams; Hermes is optional. No framework, gateway, library, provider, or new data schema is selected by this planning correction. Existing module restrictions (REQ-MOD-001–003) still apply; arbitrary plugin code loading is not authorized.
 
 Governed AI office delivery order: reconcile product truth, finish the run
 control plane, build the PostgreSQL work plane, build the operator workspace, then

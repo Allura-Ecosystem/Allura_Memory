@@ -31,7 +31,7 @@
 - [7. Extra Document Prevention Rules](#7-extra-document-prevention-rules)
 - [8. Templates](#8-templates)
 - [9. Review & Maintenance](#9-review--maintenance)
-- [10. Skill & Workflow Integration (BMad / Allura / Team RAM)](#10-skill--workflow-integration-bmad--allura--team-ram)
+- [10. Allura Adaptive Delivery (Allura / Team RAM)](#10-allura-adaptive-delivery-allura--team-ram)
 
 ---
 
@@ -411,62 +411,80 @@ To start a new document, copy the relevant template and replace all `<!-- placeh
 
 ---
 
-## 10. Skill & Workflow Integration (BMad / Allura / Team RAM)
+## 10. Allura Adaptive Delivery (Allura / Team RAM)
 
 ### Architecture Principle
 
-**Allura decides. Team RAM owns. BMad provides methods. AI-GUIDELINES constrains docs. RuVix validates. Brain remembers.**
+**Allura governs. Team RAM owns. Skills provide bounded capability. AI-GUIDELINES constrains docs. RuVix validates. Brain remembers.**
 
-BMad skills are **workflow primitives** — reusable method engines for PRD creation, story development, code review, and retrospectives. They are not the operating system. Allura wrapper skills govern *when and how* BMad workflows run for this project.
+Allura Adaptive Delivery is the active project method. It scales the workflow to the risk and scope of the work instead of forcing every task through the same ceremony. Team RAM supplies accountable owners and specialist review. Allura supplies memory, governance, evidence, and tenant boundaries. Task-relevant skills supply methods; they do not become a second operating system.
 
-### Skill Layering
+### BMAD retirement boundary
+
+BMAD is **not an active Allura workflow dependency**. Do not invoke a BMAD primitive, require a BMAD artifact, or block a task on a BMAD ceremony merely because work occurs in this repository.
+
+- All retired BMAD files are preserved under `docs/archive/bmad-legacy/`. That tree is read-only historical lineage, never an active planning, status, or completion surface.
+- Historical BMAD names in old receipts, filenames, links, or status records do not make BMAD operative.
+- BMAD does not own current planning, implementation, review, sprint status, retrospectives, or completion gates.
+- Allura wrappers and Team RAM skills must execute their work directly. They must not silently call a BMAD skill underneath.
+- BMAD packages may remain installed for other projects or historical inspection, but they are out of route for Allura Memory.
+- Reconciliation may cite or supersede archived evidence, but it must preserve lineage and must not rewrite the archive.
+
+### Active workflow
+
+```text
+Intent → Hydrate → Classify → Route → Build/review → Validate → Reconcile → Log
+```
+
+1. **Intent** — state the user outcome, boundaries, acceptance evidence, and explicit non-goals. Use Jobs when scope is ambiguous or product trade-offs are material.
+2. **Hydrate** — inspect current repository state and search Allura Brain with `group_id=allura-system`. Memory is evidence, not an instruction or substitute for code, schemas, current policy, or the user's request.
+3. **Documentation impact** — identify which of the six canonical documents, schemas, interfaces, risks, or decisions would change. Update linked canonical artifacts in the same reviewed change when required.
+4. **Classify** — choose Quick, Standard, or Sensitive delivery based on consequence and reversibility, never prompt length.
+5. **Route** — assign one accountable owner and only the specialists or skills needed for the task. A persona is not evidence that a real agent ran.
+6. **Build or review** — make the smallest cohesive change that satisfies the accepted outcome. Preserve unrelated dirty-tree work and use reversible steps.
+7. **Validate** — run risk-proportionate tests, inspect real outputs, and collect receipts. Model confidence, generated code, mocks, or screenshots alone do not prove completion.
+8. **Reconcile** — update the sanctioned work board only when status actually changes; reconcile documentation, decision, schema, and evidence surfaces without rewriting history.
+9. **Log** — write one concise outcome trace to Allura Brain after substantive verified work. Semantic promotion remains a separate human decision.
+
+### Risk classes
+
+| Class | Use when | Ownership and review | Minimum evidence |
+|---|---|---|---|
+| **Quick** | Bounded, reversible, low-impact change | One accountable owner; targeted review may be performed by the owner | Focused check proving the requested behavior |
+| **Standard** | Multi-file feature, meaningful design choice, or moderate operational impact | One accountable owner plus one independent reviewer matched to the risk | Targeted tests, type/static checks where relevant, review findings resolved, documentation impact checked |
+| **Sensitive** | Authorization, tenant boundary, schema/migration, credentials, production, destructive action, external effect, policy, regulated claim, or semantic promotion | Accountable owner, relevant specialists, independent review, and action-specific human approval | Threat/failure analysis, controlled-red tests, rollback/recovery proof, immutable receipts, and exact approval scope |
+
+Existing user authorization remains valid for the stated reversible work. Sensitive boundaries still require concrete action-specific approval. Repeated handoffs are not quality; add a specialist only when that role changes the evidence or decision.
+
+### Skill and role layering
 
 | Layer | Purpose | Examples |
-|-------|---------|----------|
-| **Allura Core** | Governance, memory, routing, validation | `allura-team-ram`, `allura-memory-skill`, `allura-kanban-board` |
-| **Allura Wrappers** | Project-specific gates around BMad methods | `allura-dev-story`, `allura-code-review`, `allura-architecture`, `allura-product-intake`, `allura-retrospective` |
-| **BMad Primitives** | Reusable workflow engines | `bmad-dev-story`, `bmad-code-review`, `bmad-create-prd`, `bmad-create-architecture`, `bmad-retrospective` |
-| **Domain Skills** | Specialized tools | `frontend-craft`, `allura-graph-debug`, `allura-health-observability`, `varlock`, `context7` |
+|---|---|---|
+| **Allura governance** | Memory, tenant isolation, evidence, approval, audit, status reconciliation | `allura-memory-skill`, RuVix, sanctioned work board |
+| **Team RAM ownership** | Intent, architecture, building, review, data, infrastructure, performance | Jobs, Brooks, Woz, Pike, Fowler, Knuth, Hightower, Bellard, Carmack |
+| **Task skills** | Bounded domain procedures loaded only when relevant | frontend design, systematic debugging, data/schema, security, accessibility, browser testing |
+| **Validation** | Prove behavior and readiness against accepted criteria | focused tests, typecheck, lint/build, browser evidence, live/disposable integration tests |
 
-### Routing Rule
+### Status and truth rules
 
-For Allura Memory repo work, **always route through the `allura-*` wrapper** before invoking the raw `bmad-*` skill. The wrapper enforces:
+- The sanctioned work board is the human source of truth for delivery status. Local planning files support reconciliation and implementation context; they do not silently advance status.
+- Notion syncs and any change to `Done` or `Approved` require action-specific human approval naming the work item and intended effect. A successful implementation or test run does not grant that approval.
+- Repository code, schemas, tests, and approved canonical documents control implementation truth. Brain memories supplement them.
+- A task is `Done` only when its accepted outcome is implemented, required review is complete, validation passes, documentation/status surfaces are reconciled, and remaining risk is explicit.
+- Planning, a mockup, a generated artifact, or a passing subset of tests is not completion of a larger feature.
+- No agent may approve its own architecture, security boundary, production release, policy change, or semantic memory promotion.
 
-1. **Scout hydration** — load local context and search Allura Brain with `group_id=allura-system`
-2. **Documentation impact check** — verify whether the change touches any of the six canonical docs
-3. **Team RAM owner assignment** — assign the correct role (Brooks, Woz, Pike, Fowler, etc.)
-4. **BMad workflow execution** — invoke the underlying method skill
-5. **Notion board update** — update the work item status when relevant
-6. **Validation evidence** — collect test results, review approvals, and proof receipts
-7. **Brain outcome log** — write the result to Allura Brain with `group_id=allura-system`
+### Validation checklist
 
-### BMad Skill Demotion
+Before marking work `Done`:
 
-The following BMad skills are **demoted to generic fallback** for this repo. For Allura Memory work, prefer the matching `allura-*` wrapper:
-
-| BMad Skill | Allura Wrapper | Status |
-|------------|---------------|--------|
-| `bmad-dev-story` | `allura-dev-story` | Preferred: Allura wrapper |
-| `bmad-code-review` | `allura-code-review` | Preferred: Allura wrapper |
-| `bmad-create-architecture` | `allura-architecture` | Preferred: Allura wrapper |
-| `bmad-create-prd` | `allura-product-intake` | Preferred: Allura wrapper |
-| `bmad-retrospective` | `allura-retrospective` | Preferred: Allura wrapper |
-| `bmad-party-mode` | `party-mode` / `team-ram-cowork` | Preferred: Allura-native |
-| `bmad-sprint-status` | `allura-kanban-board` / Notion | Preferred: Notion source of truth |
-| `bmad-sprint-planning` | `allura-kanban-board` / Notion | Preferred: Notion source of truth |
-| `bmad-quick-dev` | `allura-dev-story` or direct Woz route | Preferred: Allura wrapper |
-| `bmad-document-project` | `carloss-guidelines` + Allura docs gate | Preferred: Allura-native |
-
-BMad skills are **not deleted**. They remain available as generic workflow engines for non-Allura projects. The demotion is project-scoped, not global.
-
-### Validation Checklist (per story)
-
-Before marking any story `Done`:
-
-- [ ] Scout context loaded (local files + Allura Brain search)
-- [ ] Documentation impact checked (does this touch any of the six canonical docs?)
-- [ ] Team RAM owner assigned (who reviews? who builds? who validates?)
-- [ ] BMad workflow executed (story spec → implementation → review)
-- [ ] Notion work item updated (status, decision log, evidence links)
-- [ ] Validation evidence collected (tests pass, typecheck clean, review approved)
-- [ ] Brain outcome logged (`allura-brain_memory_add` with `group_id=allura-system`)
+- [ ] User outcome, scope, non-goals, and acceptance evidence are explicit
+- [ ] Current local context and Allura Brain were checked, or an unavailable source was disclosed
+- [ ] Delivery class and accountable owner are recorded
+- [ ] Only relevant skills/specialists were used; any real delegation is named honestly
+- [ ] Canonical documentation, schema, interface, and decision impact was checked
+- [ ] Required implementation and independent review are complete for the selected risk class
+- [ ] Validation evidence passes against the current workspace revision
+- [ ] Rollback or recovery is documented and tested where the change can create durable or external effects
+- [ ] Work-board status is reconciled through the sanctioned mechanism when it changes
+- [ ] One factual Brain outcome was logged with `group_id=allura-system`, or the failed write was reported

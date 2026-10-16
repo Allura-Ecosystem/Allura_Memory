@@ -7,7 +7,7 @@
  * the finding came from the mutation rather than from the fixture being broken.
  *
  * Fixtures are written to a temp directory and the guard is pointed at them with
- * STORY_STATUS_GUARD_ROOT. The real `_bmad/` tree is never read or mutated by these
+ * STORY_STATUS_GUARD_ROOT. The real work-item state tree is never read or mutated by these
  * tests.
  */
 import { afterEach, describe, expect, it } from "vitest"
@@ -102,7 +102,7 @@ interface FixtureOptions {
 function fixture(specs: StorySpec[], options: FixtureOptions = {}): string {
   const root = mkdtempSync(join(tmpdir(), "story-status-guard-"))
   scratch.push(root)
-  const stories = join(root, "_bmad_output/implementation-artifacts")
+  const stories = join(root, ".opencode/state/work-items")
   mkdirSync(stories, { recursive: true })
 
   for (const spec of specs) {

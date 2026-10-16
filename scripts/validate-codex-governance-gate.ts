@@ -21,39 +21,39 @@ const checks: Check[] = [
     needle: "## Codex Invocation Gate (MANDATORY)",
   },
   {
-    file: "AGENTS.override.md",
-    label: "Default Codex Startup Role section",
-    needle: "## Default Codex Startup Role",
+    file: "AGENTS.md",
+    label: "Codex startup role section",
+    needle: "## Codex Invocation Gate (MANDATORY)",
   },
   {
-    file: "AGENTS.override.md",
+    file: ".codex/agents/brooks.toml",
     label: "Brooks default role",
-    needle: "Default role: `BROOKS_ARCHITECT`.",
+    needle: "name = \"brooks\"",
   },
   {
-    file: "AGENTS.override.md",
+    file: "AGENTS.md",
     label: "Brooks primary orchestrator",
-    needle: "Brooks is the primary orchestrator",
+    needle: "Codex treats `.opencode/agent/core/brooks.md` as the canonical Brooks behavior.",
   },
   {
-    file: "AGENTS.override.md",
+    file: "AGENTS.md",
     label: "Brooks fast hydration contract",
-    needle: "## Brooks Fast Hydration Contract",
+    needle: "Fast hydration target: first useful answer within 30 seconds.",
   },
   {
-    file: "AGENTS.override.md",
+    file: "AGENTS.md",
     label: "30 second hydration budget",
-    needle: "Target startup budget: 30 seconds",
+    needle: "Fast hydration target: first useful answer within 30 seconds.",
   },
   {
-    file: "AGENTS.override.md",
+    file: "AGENTS.md",
     label: "budget is not light hydration",
-    needle: "The budget is a cap, not permission to do light hydration.",
+    needle: "That target is a budget, not permission to thin the context.",
   },
   {
-    file: "AGENTS.override.md",
+    file: "AGENTS.md",
     label: "Brooks greeting is project work",
-    needle: "A direct\nBrooks, Team RAM, Scout, Woz, Ralph, Allura, status, story, task, memory, or\nproject greeting is not pure casual chat in this repo.",
+    needle: "Codex must run this gate before answering or routing when Ronin invokes Brooks",
   },
   {
     file: "AGENTS.md",
@@ -68,182 +68,37 @@ const checks: Check[] = [
   {
     file: ".agents/TEAM-RAM-RUNTIME.md",
     label: "shared fast hydration budget",
-    needle: "## Fast Hydration Budget",
+    needle: "## 1. Hydrate before answering",
   },
   {
     file: ".agents/TEAM-RAM-RUNTIME.md",
     label: "shared lessons reflections requirement",
-    needle: "lessons/reflections",
+    needle: "## 5. Log outcomes",
   },
   {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "Kanban team workflow contract",
-    needle: "## Kanban Team Workflow",
+    file: "guidelines/AI-GUIDELINES.md",
+    label: "Allura Adaptive Delivery contract",
+    needle: "## 10. Allura Adaptive Delivery (Allura / Team RAM)",
   },
   {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "Kanban board source of truth",
-    needle: "Work Board` / `Allura stories Work Items",
+    file: "guidelines/AI-GUIDELINES.md",
+    label: "Adaptive Delivery sequence",
+    needle: "Intent → Hydrate → Classify → Route → Build/review → Validate → Reconcile → Log",
   },
   {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "Kanban story flow",
-    needle: "Backlog -> Ready -> In Progress -> Review -> Done",
+    file: "guidelines/AI-GUIDELINES.md",
+    label: "retired methodology boundary",
+    needle: "not an active Allura workflow dependency",
   },
   {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "BMAD dev story workflow",
-    needle: "bmad-dev-story",
+    file: "guidelines/AI-GUIDELINES.md",
+    label: "read-only legacy archive",
+    needle: "read-only historical lineage",
   },
   {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "BMAD code review workflow",
-    needle: "bmad-code-review",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "BMAD retrospective workflow",
-    needle: "bmad-retrospective",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "Story 2.4 first Kanban card",
-    needle: "CARD-2.4-E",
-  },
-  {
-    file: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-    label: "finish all epics workflow doc",
-    needle: "# Finish All Epics: Scout-First Kanban Workflow",
-  },
-  {
-    file: "docs/allura/TEAM-RAM-BMAD-INTEGRATION.md",
-    label: "Allura canon finish all epics workflow",
-    needle: "Finish All Epics: Scout-First Kanban Workflow",
-  },
-  {
-    file: "docs/allura/TEAM-RAM-BMAD-INTEGRATION.md",
-    label: "Allura canon finish all epics workflow artifact",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-    label: "finish all epics order",
-    needle: "Finish E5 Infrastructure Polish",
-  },
-  {
-    file: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-    label: "Scout first real background agent",
-    needle: "Scout is the first real background/recon agent for every epic or story batch.",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "finish all epics workflow reference",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: "_bmad/TEAM-RAM-INTEGRATION.md",
-    label: "Scout intake gate",
-    needle: "Scout Intake Gate",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Codex override Kanban workflow",
-    needle: "## Kanban Team Workflow",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Codex override Kanban board source",
-    needle: "Work Board` / `Allura stories Work Items",
-  },
-  {
-    file: ".agents/TEAM-RAM-RUNTIME.md",
-    label: "shared Kanban workflow",
-    needle: "## Kanban Team Workflow",
-  },
-  {
-    file: ".agents/TEAM-RAM-RUNTIME.md",
-    label: "shared Story 2.4 first card",
-    needle: "CARD-2.4-E",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Codex override finish all epics reference",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: ".agents/TEAM-RAM-RUNTIME.md",
-    label: "shared finish all epics reference",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: "AGENTS.md",
-    label: "root finish all epics reference",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "opencode finish all epics reference",
-    needle: "_bmad/FINISH-ALL-EPICS-WORKFLOW.md",
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex default agent convention",
-    needle: /default_agent\s*=\s*"BROOKS_ARCHITECT"/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex startup hydration budget",
-    needle: /startup_hydration_budget_sec\s*=\s*30/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex minimum Brain hydration",
-    needle: "allura_brain_search",
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex minimum lessons hydration",
-    needle: "recent_lessons_reflections",
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Kanban source of truth",
-    needle: /kanban_source_of_truth\s*=\s*"notion_work_board"/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Kanban workflow name",
-    needle: /kanban_workflow_name\s*=\s*"Finish All Epics: Scout-First Kanban Workflow"/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Kanban story flow",
-    needle: "Backlog\", \"Ready\", \"In Progress\", \"Review\", \"Done",
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Story 2.4 first card",
-    needle: /story_2_4_first_card\s*=\s*"CARD-2\.4-E"/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex finish all epics workflow",
-    needle: /finish_all_epics_workflow\s*=\s*"_bmad\/FINISH-ALL-EPICS-WORKFLOW\.md"/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex finish all epics order starts with review debt",
-    needle: "current_review_debt",
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Scout first real agent",
-    needle: /scout_first_real_agent\s*=\s*true/,
-  },
-  {
-    file: ".codex/config.toml",
-    label: "Codex Scout fallback phrase",
-    needle: "Scout-style hydration only",
+    file: "guidelines/AI-GUIDELINES.md",
+    label: "status approval boundary",
+    needle: "Notion syncs and any change to `Done` or `Approved` require action-specific human approval",
   },
   {
     file: "AGENTS.md",
@@ -266,8 +121,8 @@ const checks: Check[] = [
     needle: ".codex/agents/brooks.toml",
   },
   {
-    file: "AGENTS.md",
-    label: "team-ram-cowork required",
+    file: ".opencode/agent/core/brooks.md",
+    label: "team-ram-cowork in canonical Brooks runtime",
     needle: "team-ram-cowork",
   },
   {
@@ -276,13 +131,13 @@ const checks: Check[] = [
     needle: "team-ram-cowork",
   },
   {
-    file: "AGENTS.override.md",
+    file: "AGENTS.md",
     label: "team-ram-cowork required",
     needle: "team-ram-cowork",
   },
   {
-    file: "AGENTS.md",
-    label: "allura-memory-skill required",
+    file: ".opencode/agent/core/brooks.md",
+    label: "allura-memory-skill in canonical Brooks runtime",
     needle: "allura-memory-skill",
   },
   {
@@ -291,7 +146,7 @@ const checks: Check[] = [
     needle: "allura-memory-skill",
   },
   {
-    file: "AGENTS.override.md",
+    file: "AGENTS.md",
     label: "allura-memory-skill required",
     needle: "allura-memory-skill",
   },
@@ -306,43 +161,43 @@ const checks: Check[] = [
     needle: /group_id\s*=\s*allura-system/,
   },
   {
-    file: "AGENTS.override.md",
-    label: "allura-system namespace",
-    needle: /group_id/,
+    file: ".codex/agents/brooks.toml",
+    label: "allura-system namespace in Codex adapter",
+    needle: /group_id:\s*"allura-system"/,
   },
   {
-    file: "AGENTS.md",
-    label: "Brooks receipt",
-    needle: "Brooks active.",
-  },
-  {
-    file: ".opencode/AGENTS.md",
-    label: "Brooks receipt",
-    needle: "Brooks active.",
-  },
-  {
-    file: "AGENTS.override.md",
-    label: "Brooks receipt",
-    needle: "Brooks active.",
-  },
-  {
-    file: "AGENTS.md",
-    label: "Scout hydration receipt",
-    needle: "Scout hydration:",
+    file: ".opencode/agent/core/brooks.md",
+    label: "Adaptive Delivery in canonical Brooks runtime",
+    needle: "## Allura Adaptive Delivery Runtime",
   },
   {
     file: ".opencode/AGENTS.md",
-    label: "Scout hydration receipt",
-    needle: "Scout hydration:",
+    label: "Brooks receipt",
+    needle: "Brooks active.",
   },
   {
-    file: "AGENTS.override.md",
+    file: "AGENTS.md",
+    label: "Brooks receipt",
+    needle: "Brooks active.",
+  },
+  {
+    file: ".agents/TEAM-RAM-RUNTIME.md",
+    label: "Scout hydration in shared runtime",
+    needle: "Scout hydrates from Allura Brain",
+  },
+  {
+    file: ".opencode/AGENTS.md",
     label: "Scout hydration receipt",
     needle: "Scout hydration:",
   },
   {
     file: "AGENTS.md",
-    label: "RuVix receipt",
+    label: "Scout hydration receipt",
+    needle: "Scout hydration:",
+  },
+  {
+    file: ".opencode/agent/core/brooks.md",
+    label: "RuVix receipt in canonical Brooks runtime",
     needle: "RuVix:",
   },
   {
@@ -351,7 +206,7 @@ const checks: Check[] = [
     needle: "RuVix:",
   },
   {
-    file: "AGENTS.override.md",
+    file: "AGENTS.md",
     label: "RuVix receipt",
     needle: "RuVix:",
   },
@@ -373,12 +228,12 @@ const checks: Check[] = [
   {
     file: ".codex/agents/brooks.toml",
     label: "allura-system namespace in adapter",
-    needle: /group_id\s*=\s*allura-system/,
+    needle: /group_id:\s*"allura-system"/,
   },
   {
     file: ".codex/agents/brooks.toml",
     label: "runtime honesty in adapter",
-    needle: "Never claim Scout, Woz, OpenCode, OpenClaw, Claude, or another runtime/subagent actually ran",
+    needle: "Never claim a runtime, subagent, search, test, or memory operation occurred",
   },
 ];
 
@@ -396,13 +251,13 @@ for (const primitive of ruvixPrimitives) {
       needle: new RegExp(`- ${primitive}:`),
     },
     {
-      file: "AGENTS.override.md",
-      label: `RuVix primitive in AGENTS.override: ${primitive}`,
+      file: ".opencode/agent/core/brooks.md",
+      label: `RuVix primitive in canonical Brooks runtime: ${primitive}`,
       needle: new RegExp(`- ${primitive}:`),
     },
     {
       file: ".codex/agents/brooks.toml",
-      label: `RuVix primitive in Brooks adapter: ${primitive}`,
+      label: `RuVix primitive in Codex adapter: ${primitive}`,
       needle: new RegExp(`- ${primitive}:`),
     },
   );

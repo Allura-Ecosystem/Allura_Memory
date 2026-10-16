@@ -20,6 +20,8 @@ const eslintIgnore = [
   "build/",
   "coverage/",
   "archive/",
+  // Retired source snapshots are historical evidence, not executable code.
+  "docs/archive/bmad-legacy/**",
   "benchmark/",
   "docker/",
   "k6/",

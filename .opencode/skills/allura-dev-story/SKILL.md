@@ -21,7 +21,7 @@ Trigger phrases: `allura dev story`, `implement story`, `dev story`, `allura imp
 
 ## Prerequisites
 
-This skill requires `allura-team-ram` to be loaded first. It enforces all seven gates defined there.
+This skill requires `allura-team-ram` to be loaded first. It uses the risk-scaled Adaptive Delivery stages defined there.
 
 ## Execution Protocol
 
@@ -65,16 +65,16 @@ If any doc is impacted, plan the update in the same PR.
 
 ### Step 4: Team RAM Owner Assignment (Gate 3)
 
-Assign roles for this story:
+Classify the story as Quick, Standard, or Sensitive, name one accountable owner, and add only roles whose specialty changes the evidence or decision:
 
 | Role | Agent | Responsibility |
 |------|-------|---------------|
 | Intent Gate | Jobs | Acceptance criteria, scope |
 | Architect | Brooks | Contracts, boundaries |
 | Builder | Woz | Implementation |
-| Interface Review | Pike | API surface, simplicity |
-| Refactor Review | Fowler | Maintainability |
-| Validation Execution | Ralph Loop | Bounded execution evidence; not final authority |
+| Interface Review | Pike | When API surface or interface simplicity is at risk |
+| Refactor Review | Fowler | When maintainability or boundaries are at risk |
+| Validation Execution | Ralph Loop | Optional bounded execution evidence; never final authority |
 
 ### Step 5: Execute (Gate 4)
 
@@ -88,7 +88,7 @@ Execute story implementation with Allura context loaded:
 
 ### Step 6: Notion Board Update (Gate 5)
 
-After implementation:
+After implementation, and only with action-specific approval for the named work item and intended status effect:
 
 1. Update Notion work item status
 2. Add evidence links to Decision Log
@@ -101,7 +101,7 @@ Collect and verify:
 - [ ] `bun test` passes for affected test files
 - [ ] `bun run typecheck` clean
 - [ ] Acceptance criteria met (from story spec)
-- [ ] Review approved (Pike for interface, Fowler for maintainability)
+- [ ] Review depth matches the selected risk class and actual changed surface
 - [ ] No canonical doc impact without update
 - [ ] Evidence artifact created
 
@@ -112,7 +112,6 @@ Log the outcome to Allura Brain:
 ```
 allura-brain_memory_add({
   group_id: "allura-system",
-  user_id: "brooks-architect",
   content: "TASK_COMPLETE: {story ID} — {summary}; evidence={...}",
   metadata: {
     source: "conversation",
@@ -143,7 +142,7 @@ allura-brain_memory_add({
 |---------|----------|
 | Allura Brain unavailable | Warn and continue with local context only. Never pretend hydration happened. |
 | Scout subagent unavailable | Perform Scout protocol manually. State: `Scout delegation unavailable; manual hydration.` |
-| Notion MCP unavailable | Log warning. Continue with local sprint status. Flag for manual update. |
+| Notion MCP unavailable | Log warning. Preserve status as unknown; do not infer or advance it locally. |
 | Canonical doc impact detected | Plan doc update in same PR. Do not skip. |
 | Validation fails | Do not mark story Done. Log blocker to Brain. |
 

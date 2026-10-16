@@ -49,10 +49,6 @@ tsconfig.tsbuildinfo
 .claude/mcp.json
 .opencode/mcp.json
 
-# Durable BMAD documents are tracked; other generated output is transient.
-_bmad_output/*
-!_bmad_output/planning-artifacts/
-!_bmad_output/implementation-artifacts/
 /workspaces/
 artifacts/
 .impeccable/
@@ -123,7 +119,3 @@ brand-audit-results.json
 
 # Build artifacts
 allura-app/dist/
-.bmad-loop/runs/
-.bmad-loop/cache/
-.bmad-loop/policy.toml
-_bmad/render/

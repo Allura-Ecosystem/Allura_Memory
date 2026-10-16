@@ -84,8 +84,8 @@ Supply-chain security requires knowing what packages are installed across develo
 | API routes | `src/app/api/plugins/bumblebee/{runs,ingest}/` |
 | Curator UI surfaces | `src/components/bumblebee/surfaces.tsx` |
 | Tests | `src/lib/bumblebee/__tests__/` (17 test files) |
-| Planning docs | `_bmad_output/planning-artifacts/epic-26-*.md` |
-| Sprint status | `_bmad_output/implementation-artifacts/sprint-status.yaml` (Epic 26 = done) |
+| Historical planning docs | `docs/archive/bmad-legacy/retired-2026-10-15/_bmad_output/planning-artifacts/epic-26-*.md` (read-only) |
+| Historical sprint receipt | `docs/archive/bmad-legacy/retired-2026-10-15/_bmad_output/implementation-artifacts/sprint-status.yaml` (read-only evidence; not current status authority) |
 
 ## Source Files at a Glance
 

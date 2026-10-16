@@ -8,7 +8,7 @@ One authority per lifecycle stage. No document is editable in two places.
 | Surface | Role | Editable where |
 |---|---|---|
 | Notion | Private drafts, planning, approvals | Notion only |
-| BMAD working area | Temporary execution artifacts | `_bmad_output/` |
+| Historical BMAD archive | Read-only lineage and evidence; never current planning or status authority | `docs/archive/bmad-legacy/` |
 | Canonical six | Public engineering contracts | GitHub PR |
 | Allura Brain | Decision lineage, evidence | Governed memory tools |
 | Source code / schema | Implementation truth | Git |
@@ -16,7 +16,9 @@ One authority per lifecycle stage. No document is editable in two places.
 
 ## Lifecycle
 
-Notion draft/approve → sanitize → GitHub PR (lint + links + metadata) → named-owner approval → versioned receipt in Brain → GitHub Pages render.
+User intent / sanctioned work board → scoped change → GitHub PR (lint + links + metadata) → named-owner approval → versioned receipt in Brain → GitHub Pages render.
+
+Notion syncs and any `Done` or `Approved` status change require action-specific human approval naming the target and intended effect.
 
 ## Canonical Six (only files allowed in docs/allura/)
 
