@@ -395,8 +395,16 @@ tooling, templates and schemas. See [DATA-DICTIONARY.md](./DATA-DICTIONARY.md).
 connectivity plus semantic schema/RLS catalog evidence, scoped backfill/queue
 counts. Tool catalog completeness/execution and retrieval freshness remain
 explicitly unverified, so the overall report stays degraded rather than claiming
-full health. Seven
-invariants report bounded evidence: tenant constraints, visible namespace rows,
+full health.
+
+Semantic catalog acceptance requires the exact supported migration 36/40 policy
+model on both graph tables: permissive tenant and restrictive workspace policies,
+`FOR ALL`, applicable `allura_app` role, and matching `USING`/`WITH CHECK`
+expressions. Schema/table privileges must support reads and inserts plus memory
+flag updates; no edge UPDATE or DELETE privilege is required. Unknown policy
+drift fails closed. Migration 71's three archived tables are excluded from the
+active public inventory; missing active tables still fail validation.
+Seven invariants report bounded evidence: tenant constraints, visible namespace rows,
 ledger rejection trigger/role, lineage endpoints/version steps, approved semantic
 roots with proposal/receipt/event evidence, namespace drift, and policy registration.
 Unavailable evidence fails closed; empty scoped counts are not claims of global

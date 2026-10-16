@@ -30,7 +30,7 @@ import { getConnections } from "./canonical-tools/connection"
 import { validateGroupId } from "./canonical-tools/validation-utils"
 import { withCircuitBreaker } from "./canonical-tools/budget-circuit"
 import { tenantQuery } from "@/lib/db/tenant-transaction"
-import { SEMANTIC_SCHEMA_EVIDENCE, LEDGER_EVIDENCE, LINEAGE_VIOLATIONS, APPROVAL_VIOLATIONS } from "@/lib/memory/audit-evidence"
+import { SEMANTIC_SCHEMA_EVIDENCE, verifySemanticSchemaEvidence, LEDGER_EVIDENCE, LINEAGE_VIOLATIONS, APPROVAL_VIOLATIONS } from "@/lib/memory/audit-evidence"
 
 function scopedAuditPool(pg: import("pg").Pool, request: AuditInvariantCheckRequest): Pick<import("pg").Pool, "query"> {
   const scope = request.scope
@@ -193,8 +193,8 @@ export async function audit_health_report(
     await withCircuitBreaker("postgres", groupId, "audit_health_report:pg_check", async () =>
       pg.query("SELECT 1")
     )
-    const evidence = await pgInstance.query<{ verified: boolean }>(SEMANTIC_SCHEMA_EVIDENCE)
-    if (evidence.rows[0]?.verified !== true) throw new Error("Semantic schema/RLS evidence unavailable")
+    const evidence = await pgInstance.query(SEMANTIC_SCHEMA_EVIDENCE)
+    if (!verifySemanticSchemaEvidence(evidence.rows)) throw new Error("Semantic schema/RLS evidence unavailable")
     pgStatus = {
       status: "healthy",
       latency_ms: Date.now() - start,
@@ -459,8 +459,8 @@ export async function audit_invariant_check(
   try {
     const connections = await getConnections()
     pg = scopedAuditPool(connections.pg, request)
-    const evidence = await pg.query<{ verified: boolean }>(SEMANTIC_SCHEMA_EVIDENCE)
-    if (evidence.rows[0]?.verified !== true) throw new Error("Semantic schema/RLS evidence unavailable")
+    const evidence = await pg.query(SEMANTIC_SCHEMA_EVIDENCE)
+    if (!verifySemanticSchemaEvidence(evidence.rows)) throw new Error("Semantic schema/RLS evidence unavailable")
     pgAvailable = true
   } catch (_err) {
     // PG unavailable — all checks will fail with detail

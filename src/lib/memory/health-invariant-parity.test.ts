@@ -4,6 +4,8 @@
  * retrieval/tool behavior; no retired component may appear in either.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { supportedSemanticCatalog } from "../../../tests/fixtures/semantic-catalog"
+import { SEMANTIC_SCHEMA_EVIDENCE } from "./audit-evidence"
 
 const pgQuery = vi.fn()
 
@@ -27,6 +29,7 @@ const GROUP = "allura-test-health" as GroupId
 const request = { group_id: GROUP, scope: { group_id: GROUP, workspace_id: "workspace-a", agent_id: "auditor" } }
 
 function evidenceRows(sql: string) {
+  if (sql === SEMANTIC_SCHEMA_EVIDENCE) return { rows: supportedSemanticCatalog(), rowCount: 2 }
   if (sql.includes("AS verified")) return { rows: [{ verified: true }], rowCount: 1 }
   if (sql.includes("pg_constraint")) return { rows: [{ count: "1" }], rowCount: 1 }
   if (sql.includes("COUNT(*)")) return { rows: [{ count: "0" }], rowCount: 1 }
@@ -80,7 +83,9 @@ describe("audit reports with bounded active-store evidence", () => {
   })
 
   it("does not report schema health from a successful connectivity query", async () => {
-    pgQuery.mockImplementation(async (sql: string) => sql.includes("AS verified") ? { rows: [{ verified: false }] } : evidenceRows(sql))
+    pgQuery.mockImplementation(async (sql: string) => sql === SEMANTIC_SCHEMA_EVIDENCE
+      ? { rows: supportedSemanticCatalog().map((row) => ({ ...row, schema_verified: false })) }
+      : evidenceRows(sql))
     expect((await audit_health_report(request)).overall_status).toBe("unavailable")
     expect((await audit_invariant_check(request)).overall_passed).toBe(false)
   })

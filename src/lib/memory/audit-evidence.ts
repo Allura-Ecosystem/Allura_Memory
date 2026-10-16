@@ -1,17 +1,61 @@
 // Catalog evidence is necessary, not proof of live retrieval freshness or every write path.
-export const SEMANTIC_SCHEMA_EVIDENCE = `SELECT
-  (SELECT count(*)=2 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-   WHERE n.nspname='public' AND c.relname IN ('graph_memories','graph_supersedes')
-     AND c.relrowsecurity AND c.relforcerowsecurity
+export const SEMANTIC_SCHEMA_EVIDENCE = `SELECT c.relname AS table_name,
+     (c.relkind='r' AND c.relrowsecurity AND c.relforcerowsecurity
+     AND has_schema_privilege(current_user,n.oid,'USAGE')
      AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attname='workspace_id' AND NOT a.attisdropped)
      AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attname='workspace_scope_state' AND NOT a.attisdropped)
      AND NOT EXISTS (SELECT 1 FROM unnest(CASE WHEN c.relname='graph_memories'
        THEN ARRAY['id','group_id','content','version','deprecated','deleted_at','restored_at','content_tsv']
        ELSE ARRAY['newer_id','superseded_id','group_id','created_at'] END) required(name)
        WHERE NOT EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attname=required.name AND NOT a.attisdropped))
-     AND EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid=c.oid AND NOT p.polpermissive))
-  AND EXISTS (SELECT 1 FROM pg_roles WHERE rolname=current_user AND NOT rolsuper AND NOT rolbypassrls)
-  AS verified`
+     AND EXISTS (SELECT 1 FROM pg_roles WHERE rolname=current_user AND NOT rolsuper AND NOT rolbypassrls)) AS schema_verified,
+     has_table_privilege(current_user,c.oid,'SELECT') AS can_select,
+     has_table_privilege(current_user,c.oid,'INSERT') AS can_insert,
+     has_table_privilege(current_user,c.oid,'UPDATE') AS can_update,
+     COALESCE((SELECT jsonb_agg(jsonb_build_object(
+       'name',p.polname,'permissive',p.polpermissive,'command',p.polcmd,
+       'roles',ARRAY(SELECT CASE WHEN role_oid=0 THEN 'PUBLIC' ELSE pg_get_userbyid(role_oid)::text END
+         FROM unnest(p.polroles) roles(role_oid) ORDER BY role_oid),
+       'applicable',EXISTS(SELECT 1 FROM unnest(p.polroles) roles(role_oid)
+         WHERE CASE WHEN role_oid=0 THEN true ELSE pg_has_role(current_user,role_oid,'USAGE') END),
+       'using_expression',pg_get_expr(p.polqual,p.polrelid),
+       'check_expression',pg_get_expr(p.polwithcheck,p.polrelid)
+     ) ORDER BY p.polname) FROM pg_policy p WHERE p.polrelid=c.oid),'[]'::jsonb) AS policies
+ FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+ WHERE n.nspname='public' AND c.relname IN ('graph_memories','graph_supersedes')`
+
+// Exact PostgreSQL 16 deparse of the supported TEXT-column policy model shipped
+// by migrations 36/40 (columns from 21/40). Do not normalize away literal content
+// or accept equivalent-looking arbitrary expressions. Catalog drift needs review.
+const TENANT_EXPRESSION = "(group_id = current_setting('app.current_group_id'::text, true))"
+const WORKSPACE_EXPRESSION = "((group_id = current_setting('app.current_group_id'::text, true)) AND (workspace_id = current_setting('app.current_workspace_id'::text, true)) AND (workspace_scope_state = 'workspace_scoped'::text))"
+
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+/** Strict supported catalog evidence, not proof of arbitrary live query semantics. */
+export function verifySemanticSchemaEvidence(rows: readonly unknown[]): boolean {
+  if (rows.length !== 2) return false
+  return ["graph_memories", "graph_supersedes"].every((name) => {
+    const table = rows.find((row) => record(row) && row.table_name === name)
+    if (!record(table) || table.schema_verified !== true || table.can_select !== true || table.can_insert !== true) return false
+    // Memory flags are mutable; lineage edges are append-only. Neither requires DELETE.
+    if (name === "graph_memories" && table.can_update !== true) return false
+    if (!Array.isArray(table.policies) || table.policies.length !== 2) return false
+    const policies: unknown[] = table.policies
+    return [
+      { name: "tenant_isolation_policy", permissive: true, expression: TENANT_EXPRESSION },
+      { name: "workspace_scope_restrictive_policy", permissive: false, expression: WORKSPACE_EXPRESSION },
+    ].every((expected) => {
+      const policy = policies.find((entry) => record(entry) && entry.name === expected.name)
+      return record(policy) && policy.permissive === expected.permissive && policy.command === "*"
+        && policy.applicable === true && Array.isArray(policy.roles)
+        && policy.roles.length === 1 && policy.roles[0] === "allura_app"
+        && policy.using_expression === expected.expression && policy.check_expression === expected.expression
+    })
+  })
+}
 
 export const LEDGER_EVIDENCE = `SELECT EXISTS (
   SELECT 1 FROM pg_trigger t JOIN pg_proc p ON p.oid=t.tgfoid JOIN pg_namespace n ON n.oid=p.pronamespace
