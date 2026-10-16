@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { assessHydration, brooksReceipt, DEFAULT_TOPIC, gitReceipt, mergeConfig, resolveReferences, sanitizeSession, sessionFromEvents, synthesisConfig, tokenUsage } from "../../scripts/hydrate-opencode";
-import type { Session } from "../../scripts/hydrate-opencode";
+import { assessHydration, brooksReceipt, createLocalReceipt, DEFAULT_TOPIC, gitReceipt, hydrationRoute, localModelPacket, mergeConfig, resolveReferences, sanitizeSession, sessionFromEvents, synthesisConfig, tokenUsage, validLocalReceipt, validSessionUsage } from "../../scripts/hydrate-opencode";
+import type { LocalReceipt, Session } from "../../scripts/hydrate-opencode";
 import { resolve } from "node:path";
 
 const tool = (name: string, input = {}, output = "{}") => ({ type: "tool", tool: name, state: { status: "completed", input, output } });
@@ -8,6 +8,9 @@ const brainInput = { group_id: "allura-system", limit: 5, query: DEFAULT_TOPIC }
 const brainOutput = JSON.stringify({ results: [], count: 0, meta: { degraded: false } });
 const repoRoot = resolve(import.meta.dir, "../..");
 const GOOD_RECEIPT = "HYDRATION_COMPLETE. Startup local navigation and revision verified. Brain allura-system returned five historical results. Configured task pointer target was not read. Next route is Brooks scope review before implementation.";
+function launcherReceipt(): LocalReceipt {
+  return { source: "launcher", files: [".opencode/context/navigation.md", ".opencode/runtime-contract.json"].map(path => ({ path: resolve(repoRoot, path), nonempty: true, sha256: "a".repeat(64) })), navigationEvidence: "# Context navigation", taskPointer: { canonical_plan_path: "ralph/PROMPT_plan.md", canonical_plan_id: "plan123" }, git: [{ command: ["git", "status", "--short"], exit: 0, output: "" }, { command: ["git", "rev-parse", "HEAD"], exit: 0, output: "a".repeat(40) }] };
+}
 function eventStream(session: Session): string {
   const sessionID = "ses_fixture123";
   return session.messages.flatMap((message, i) => {
@@ -21,8 +24,8 @@ function eventStream(session: Session): string {
   }).map(record => JSON.stringify(record)).join("\n");
 }
 function fixtures(): { parent: Session; child: Session } {
-  const parent = { info: { id: "parent" }, messages: [{ info: { id: "p1", role: "assistant", tokens: { input: 10, output: 4, reasoning: 2, cache: { read: 30 } } }, parts: [{ type: "text", text: GOOD_RECEIPT }, tool("task", { subagent_type: "scout" })] }] };
-  const child = { info: { id: "child", parentID: "parent" }, messages: [{ info: { id: "c1", role: "assistant", tokens: { total: 25, input: 20, output: 5 } }, parts: [
+  const parent = { info: { id: "parent" }, messages: [{ info: { id: "p1", role: "assistant", finish: "stop", tokens: { input: 10, output: 4, reasoning: 2, cache: { read: 30, write: 0 } } }, parts: [{ type: "text", text: GOOD_RECEIPT }, tool("task", { subagent_type: "scout" })] }] };
+  const child = { info: { id: "child", parentID: "parent" }, messages: [{ info: { id: "c1", role: "assistant", finish: "stop", tokens: { total: 25, input: 20, output: 5, reasoning: 0, cache: { read: 0, write: 0 } } }, parts: [
     tool("read", { filePath: resolve(repoRoot, ".opencode/context/navigation.md") }, "navigation"), tool("read", { filePath: resolve(repoRoot, ".opencode/runtime-contract.json") }, "runtime"),
     tool("bash", { command: "git status --short" }, ""), tool("bash", { command: "git rev-parse HEAD" }, "a".repeat(40)),
     tool("allura-brain_memory_search", brainInput, brainOutput),
@@ -30,6 +33,93 @@ function fixtures(): { parent: Session; child: Session } {
   return { parent, child };
 }
 describe("hydration launcher", () => {
+  test("export accounting requires complete coherent finite usage for every finished assistant inference", () => {
+    const { parent, child } = fixtures();
+    expect(validSessionUsage(parent)).toBe(true);
+    expect(validSessionUsage(child)).toBe(true);
+    expect(tokenUsage([parent]).total).toBe(46);
+    for (const mutate of [
+      (s: Session) => { delete s.messages[0].info.tokens; },
+      (s: Session) => { delete s.messages[0].info.tokens!.cache!.write; },
+      (s: Session) => { s.messages[0].info.tokens!.total = 999; },
+      (s: Session) => { s.messages[0].info.tokens!.input = NaN; },
+      (s: Session) => { s.messages[0].info.tokens!.output = -1; },
+      (s: Session) => { s.messages[0].info.tokens!.cache!.read = Infinity; },
+    ]) { const bad = fixtures().parent; mutate(bad); expect(validSessionUsage(bad)).toBe(false); expect(() => tokenUsage([bad])).toThrow(); }
+    delete child.messages[0].info.finish;
+    expect(validSessionUsage(child)).toBe(false);
+    parent.messages.push({ info: { id: "missing-second", role: "assistant", finish: "stop" }, parts: [] });
+    expect(validSessionUsage(parent)).toBe(false);
+  });
+  test("default route runs only real Brooks with owner Brain evidence and zero Scout sessions", () => {
+    expect(hydrationRoute()).toEqual({ route: "brooks-direct", agents: ["brooks"], scoutOptional: true });
+    expect(hydrationRoute(true)).toEqual({ route: "scout-brooks", agents: ["scout", "brooks"], scoutOptional: true });
+    const { parent } = fixtures();
+    parent.messages[0].parts = [{ type: "text", text: GOOD_RECEIPT }];
+    parent.messages.unshift({ info: { id: "owner-tool", role: "assistant", tokens: { total: 12, input: 10, output: 2, reasoning: 0, cache: { read: 0, write: 0 } } }, parts: [tool("allura-brain_memory_search", brainInput, brainOutput)] });
+    const result = assessHydration([parent], "parent", undefined, DEFAULT_TOPIC, repoRoot, launcherReceipt());
+    expect(result).toMatchObject({ complete: true, brainOwner: "brooks", scoutSessions: 0, successfulBrain: true });
+    expect(tokenUsage([parent]).inferences).toBe(2);
+    expect(assessHydration([parent, { info: { id: "extra-scout" }, messages: [] }], "parent", undefined, DEFAULT_TOPIC, repoRoot, launcherReceipt()).complete).toBe(false);
+  });
+  test("direct Brooks route rejects absent, failed or fake Brain, invalid local receipts and extra tools", () => {
+    for (const parts of [[], [tool("allura-brain_memory_search", brainInput, "{}")], [tool("allura-brain_memory_search", { ...brainInput, group_id: "allura-other" }, brainOutput)], [tool("allura-brain_memory_search", brainInput, brainOutput), tool("task", { subagent_type: "scout" })], [tool("allura-brain_memory_search", brainInput, brainOutput), tool("read", { filePath: resolve(repoRoot, ".opencode/context/navigation.md") }, "extra")]]) {
+      const { parent } = fixtures(); parent.messages[0].parts = [{ type: "text", text: GOOD_RECEIPT }, ...parts];
+      expect(assessHydration([parent], "parent", undefined, DEFAULT_TOPIC, repoRoot, launcherReceipt()).complete).toBe(false);
+    }
+    const { parent } = fixtures(); parent.messages[0].parts = [{ type: "text", text: GOOD_RECEIPT }, tool("allura-brain_memory_search", brainInput, brainOutput)];
+    expect(assessHydration([parent], "parent", undefined, DEFAULT_TOPIC, repoRoot, null).complete).toBe(false);
+    parent.messages[0].parts[1].state!.status = "error";
+    expect(assessHydration([parent], "parent", undefined, DEFAULT_TOPIC, repoRoot, launcherReceipt()).complete).toBe(false);
+  });
+  test("launcher evidence is separate from actual Scout Brain tools and invalid receipts fail closed", () => {
+    const { parent, child } = fixtures();
+    parent.messages[0].parts = [{ type: "text", text: GOOD_RECEIPT }];
+    child.messages[0].parts = [tool("allura-brain_memory_search", brainInput, brainOutput)];
+    const receipt = launcherReceipt();
+    expect(validLocalReceipt(receipt, repoRoot)).toBe(true);
+    expect(assessHydration([parent, child], "parent", "child", DEFAULT_TOPIC, repoRoot, receipt).complete).toBe(true);
+    expect(assessHydration([parent, child], "parent", "child", DEFAULT_TOPIC, repoRoot, null).complete).toBe(false);
+    expect(child.messages[0].parts.every(part => part.tool === "allura-brain_memory_search")).toBe(true);
+    for (const mutate of [
+      (r: LocalReceipt) => { r.files.pop(); }, (r: LocalReceipt) => { r.files[0].nonempty = false; },
+      (r: LocalReceipt) => { r.files[0].path = "/other/context/navigation.md"; },
+      (r: LocalReceipt) => { r.git[0].exit = 1; }, (r: LocalReceipt) => { r.git[1].output = "invalid"; },
+      (r: LocalReceipt) => { r.git[0].command.push("&& env"); },
+    ]) { const bad = launcherReceipt(); mutate(bad); expect(assessHydration([parent, child], "parent", "child", DEFAULT_TOPIC, repoRoot, bad).complete).toBe(false); }
+    child.messages[0].parts.push(tool("read", { filePath: receipt.files[0].path }, "extra read"));
+    expect(assessHydration([parent, child], "parent", "child", DEFAULT_TOPIC, repoRoot, receipt).complete).toBe(false);
+  });
+  test("model packet includes only approved bounded navigation, task-pointer and git evidence", () => {
+    const secret = "DO_NOT_SEND_RUNTIME_SECRET";
+    const receipt = createLocalReceipt(repoRoot, "# Navigation\n## Routes\n`core/navigation.md`\n" + secret, JSON.stringify({ canonical_plan_id: "approved_id", canonical_plan_path: "ralph/PROMPT_plan.md", secret, notion_url: "https://private.example/" + secret, matrix: { secret } }), launcherReceipt().git);
+    expect(validLocalReceipt(receipt, repoRoot)).toBe(true);
+    const packet = JSON.stringify(localModelPacket(receipt));
+    expect(packet).toContain("core/navigation.md");
+    expect(packet).toContain("approved_id");
+    expect(packet).not.toContain(secret);
+    expect(packet).not.toContain("notion_url");
+    expect(packet).not.toContain("matrix");
+    expect(JSON.stringify(receipt)).not.toContain(secret);
+    expect(receipt.files.every(file => /^[a-f0-9]{64}$/.test(file.sha256))).toBe(true);
+    expect(createLocalReceipt(repoRoot, ("# Heading\n").repeat(1000), "{}", launcherReceipt().git).navigationEvidence.length).toBeLessThanOrEqual(3000);
+  });
+  test("dirty status is bounded by both line and character limits with truthful truncation metadata", () => {
+    for (const raw of [Array.from({ length: 100 }, (_, index) => `?? file-${index}`).join("\n") + "\n", "?? " + "x".repeat(5000) + "\n"]) {
+      const receipt = launcherReceipt(); receipt.git[0].output = raw;
+      const packet = localModelPacket(receipt);
+      expect(packet.status.length).toBeLessThanOrEqual(2000);
+      expect(packet.status.split("\n").length).toBeLessThanOrEqual(40);
+      expect(packet.statusTruncated).toBe(true);
+      expect(packet.statusTotalLines).toBe(raw.trimEnd().split("\n").length);
+      expect(receipt.git[0].output).toBe(raw);
+      expect(validLocalReceipt(receipt, repoRoot)).toBe(true);
+    }
+    const clean = localModelPacket(launcherReceipt());
+    expect(clean.status).toBe(""); expect(clean.statusTruncated).toBe(false); expect(clean.statusTotalLines).toBe(0);
+    const small = launcherReceipt(); small.git[0].output = " M file.ts\n";
+    expect(localModelPacket(small)).toMatchObject({ status: " M file.ts", statusTruncated: false, statusTotalLines: 1 });
+  });
   test("accepts only the exact combined git command and extracts clean or dirty status before HEAD", () => {
     for (const status of ["", " M scripts/file.ts\n?? new-file\n"]) {
       const { parent, child } = fixtures();
@@ -168,5 +258,10 @@ describe("hydration launcher", () => {
     }
     expect(JSON.stringify(profile)).not.toContain("Authorization");
     expect(JSON.stringify(profile)).not.toContain("{file:/");
+    expect(profile.agent.scout.tools.read).toBe(false);
+    expect(profile.agent.scout.tools.bash).toBe(false);
+    expect(profile.agent.brooks.tools.read).toBe(false);
+    expect(profile.agent.brooks.tools.bash).toBe(false);
+    expect(profile.agent.brooks.tools.task).toBe(false);
   });
 });

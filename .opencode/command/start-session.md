@@ -1,5 +1,5 @@
 ---
-description: "Hydrate Team RAM with real Scout, scoped Allura Brain, and Brooks synthesis"
+description: "Hydrate Team RAM directly with Brooks and scoped Allura Brain; Scout optional"
 allowed-tools: ["Bash", "Read"]
 ---
 
@@ -12,15 +12,19 @@ For this declared Team RAM project, run the measured read-only startup path:
 ```
 
 Use the current user objective; do not invent an active story. The launcher loads
-the full Scout and Brooks personas and their required governed skill contracts,
+the full selected persona and its required governed skill contracts,
 runs the actual configured OpenAI models, and shares one verified ContextPacket.
 
-Scout reads local navigation, Git status/revision, and the configured task pointer,
-then performs exactly one authenticated Brain search in `allura-system`.
-The launcher checks the tool receipts before Brooks synthesizes the packet.
+The launcher preloads bounded navigation headings/path references, Git
+status/revision, and only the canonical runtime task-pointer path/ID as
+untrusted evidence into the real Brooks, never the full runtime configuration.
+Brooks performs exactly one authenticated Brain search in `allura-system` and
+returns the receipt without a Scout handoff. Add `--with-scout` only when the
+optional real Scout → Brooks route is wanted. Report launcher-assisted local
+hydration honestly; do not label deterministic reads as model tool calls.
 Brain unavailability or failed evidence produces `HYDRATION_DEGRADED`.
 
-Report actual elapsed time and reported aggregate tokens from both sessions.
+Report actual elapsed time and aggregate tokens from every participating session.
 Do not substitute a local file bank for Brain, discover substitute memory servers,
 write startup chatter, reload skill inventories, or call unrelated services.
 

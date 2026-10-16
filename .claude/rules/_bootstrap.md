@@ -21,24 +21,21 @@ User: Sabir Asheed | Domain: Allura Agent-OS
 
 **Token-Efficient Navigation**: Every category has navigation.md with ASCII tree, quick routes, and by-type sections.
 
-## Startup Protocol — FAST PATH (Brain-First, ONE parallel batch)
+## Startup Protocol — Verified context, Scout optional
 
-> **Invariant:** Startup must complete quickly, but Allura Brain is the primary context
-> source. Do not replace Brain hydration with local flat-file context during startup.
-> Budget is ONE round-trip batch (parallel calls), not a call count. (Amended 2026-06-12:
-> the old "≤2 queries" rule caused graph-only hydration and 7-week-stale state.)
+Follow `.opencode/STARTUP.md` and `.agents/TEAM-RAM-RUNTIME.md`.
+The selected owner verifies relevant local context and searches Allura Brain
+directly with `group_id: allura-system`; no mandatory Scout process or extra
+runtime handoff. Scout remains available for broad unfamiliar-repository or
+independent recon. Load only the selected full persona and required skills.
 
-### Essential (run at boot, ALL IN PARALLEL — one batch)
-1. `audit_health_report` — subsystem status + curator queue depth (promotion-stall early warning)
-2. `memory_search` (semantic/graph) — promoted truth
-3. `audit_query_events` (episodic, last 48h) — current truth; filter to
-   `memory_add` / `ARCHITECTURE_DECISION` / `BLOCKER` / `governance_gate_checked`;
-   never unfiltered (process_* test events drown the signal)
-
-### Staleness rule (MANDATORY)
-If newest semantic hit is older than 7 days OR curator queue depth > 100:
-boot report MUST state **"graph stale — trusting episodic"** and derive state from
-the event pass, not the graph pass.
+Use one focused search and share its scoped receipt. Brain supplements local
+code, schemas and tests; neither replaces the other. Health/audit/reputation
+calls are error-, status-, or task-driven, not routine startup requirements.
+For project status reconcile current task/board evidence and recent outcomes;
+if memory is stale or conflicting, retrieve filtered current episodic evidence
+when authorized. Historical hits alone never establish current state.
+Use Tavily only when current external research is needed.
 
 ### Deferred (run ONLY when a specific command is invoked)
 - Notion search → only on `BP` / `CR` commands

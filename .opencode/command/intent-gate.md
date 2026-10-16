@@ -10,7 +10,7 @@ Classify the user's request before acting. IntentGate is a routing gate, not an 
 ## Required sequence
 
 1. Search Allura Brain for prior blockers/decisions/outcomes relevant to the request.
-2. If implementation may be required, dispatch Scout or require existing Scout context.
+2. If implementation may be required, verify local context directly or reuse a fresh packet. Scout is optional for broad unfamiliar-repository or independent recon.
 3. Classify the request into one intent.
 4. Route to Brooks for architecture approval when the route changes contracts, commands, agents, skills, MCPs, or guidelines.
 
@@ -37,9 +37,9 @@ needs-clarification
 
 | Intent | Route |
 |---|---|
-| research | Scout |
+| research | Selected owner; Tavily only for current external research; Scout optional |
 | architecture | Brooks |
-| implementation | Scout → Woz |
+| implementation | Verified context + Brain → Woz; Scout optional |
 | debugging | systematic-debugging → Bellard/Carmack/Woz |
 | frontend-design | frontend-design/allura-design → Woz |
 | documentation | quick-update/readme-memory |

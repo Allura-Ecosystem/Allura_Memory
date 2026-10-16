@@ -45,16 +45,16 @@ delegated specialists grouped by domain.
         └── hightower.md           ← DevOps
 ```
 
-## ContextScout First Gate (MANDATORY)
+## Verified Context First Gate (MANDATORY; Scout optional)
 
 Every implementation task must follow this execution sequence:
 
 ```
 User task
   ↓
-① Scout loads local .opencode/context files
+① Selected owner loads relevant local context (Scout may assist on demand)
   ↓
-② Scout searches Allura Brain for prior decisions/blockers
+② Owner searches Allura Brain for prior decisions/blockers
   ↓
 ③ Skill resolver identifies required skills
   ↓
@@ -63,8 +63,10 @@ User task
 ⑤ Validation passes before done
 ```
 
-**No agent may skip step ①.** Ralph, Woz, and all builders must have Scout context
-loaded before writing implementation code.
+**No agent may skip step ①.** Ralph, Woz, and all builders require verified local
+context and a scoped Brain receipt before implementation. A separate Scout run
+is optional: use it for broad unfamiliar-repository discovery, independent recon,
+or an explicit request. Local evidence and Brain recall are not optional.
 
 ## Context7 Gate (MANDATORY)
 
@@ -113,7 +115,7 @@ Ralph may not execute unless this gate passes:
 
 **Failure conditions (Ralph MUST refuse):**
 
-- No Scout context loaded
+- No verified local context loaded
 - Missing required skill
 - Stale context without acknowledgment
 - Missing validation command
@@ -161,11 +163,11 @@ Team RAM personas consume OAC context — they do not replace it.
 
 ## Execution Rule
 
-**Scout before build. Skills before Ralph. Validate before done.**
+**Verified context before build. Scout on demand. Skills before Ralph. Validate before done.**
 
 ## Allura Skill Routing
 
-For Allura Memory repo work, use the `allura-*` skills — they enforce governance gates (Scout hydration, doc impact check, Team RAM owner, Brain outcome log).
+For Allura Memory repo work, use the `allura-*` skills — they enforce governance gates (verified context, doc impact check, Team RAM owner, Brain outcome log).
 
 | Task | Allura Skill | Notes |
 |------|-------------|-------|
@@ -196,7 +198,7 @@ Apply team-ram-cowork
   ↓
 Apply allura-memory-skill
   ↓
-Scout local context hydration
+Owner local context hydration (Scout optional)
   ↓
 Allura Brain search with group_id = allura-system
   ↓
@@ -218,7 +220,7 @@ Before Brooks answers, Codex must show this receipt shape:
 ```text
 Brooks active.
 Skills: team-ram-cowork, allura-memory-skill, <task skills>
-Scout hydration:
+Context hydration (name the actual owner; Scout optional):
 - Local context: <files checked>
 - Brain: <query, group_id, status>
 Context7:
@@ -254,7 +256,7 @@ them through `.agents/TEAM-RAM-RUNTIME.md`.
 If the user invokes Brooks, Scout, Woz, Team RAM, Ralph, or Allura project work:
 
 ```text
-Scout → Allura Brain → Skills → Brooks route → Build/review → Log outcome
+Selected owner → Local context + Allura Brain → Skills → Brooks route → Build/review → Log outcome
 ```
 
 Kanban team workflow:
@@ -286,8 +288,8 @@ the epic is `Done`, unless Ronin explicitly asks for a partial retrospective.
 
 Team RAM board ownership:
 
-- Scout: first real background/recon agent for every epic or story batch. If a
-  real Scout agent is not spawned, say `Scout-style hydration only`.
+- Scout: optional real recon agent for unfamiliar or broad work. Routine owner-led
+  hydration does not require a Scout process; name the actual context source.
 - Jobs: intent, scope, acceptance criteria before `Ready`.
 - Brooks: architecture, contracts, and route approval.
 - Woz: implementation through `allura-dev-story`.
@@ -317,9 +319,9 @@ Expected behavior:
 
 - Say which role is active.
 - Use `allura-memory-skill` for governed memory work.
-- Scout loads local context and searches Allura Brain with `group_id: allura-system`.
+- The selected owner loads local context and searches Brain with `group_id: allura-system`; Scout may assist on demand.
 - Brooks summarizes status and routes work.
-- Woz builds only after Scout context and skills are loaded.
+- Woz builds only after verified local context, scoped Brain recall, and skills are loaded.
 - Important outcomes are logged back to Allura Brain.
 
 ## Development Readiness
@@ -329,7 +331,7 @@ Before feature development, use `.opencode/DEVELOPMENT-READINESS.md`.
 The short gate is:
 
 ```text
-Brain running → MCP reachable → Scout context loaded → skills resolved → validation chosen
+Brain running → MCP reachable → verified local context loaded → skills resolved → validation chosen
 ```
 
 ## Source of Truth

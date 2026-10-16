@@ -147,7 +147,7 @@
     "validation"
   ],
   "invariants": [
-    "Scout before build",
+    "Verified local context and scoped Brain recall before build; Scout optional",
     "Context before code",
     "Skills before Ralph",
     "Validation before done",

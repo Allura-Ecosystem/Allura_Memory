@@ -68,7 +68,7 @@ check_file "$OPENCODE/contracts/ralph-integration.md"
 check_file "$REPO/scripts/agents/ralph-loop.ts"
 check_contains "$OPENCODE/command/goal.md" --max-iterations\ 1 'goal execution has an explicit iteration bound'
 check_contains "$OPENCODE/command/ultra.md" --max-iterations\ 1 'Ultra declares an explicit iteration bound'
-check_contains "$OPENCODE/command/ultra.md" '^4\. Hydrate local context and search Allura Brain before editing$' 'Ultra requires Scout hydration'
+check_contains "$OPENCODE/command/ultra.md" '^4\. Hydrate local context and search Allura Brain before editing$' 'Ultra requires local context and Brain recall'
 check_contains "$OPENCODE/command/ultra.md" '^5\. Resolve required skills before implementation$' 'Ultra resolves skills'
 check_contains "$OPENCODE/command/ultra.md" '^7\. Validate with the lightest meaningful checks$' 'Ultra requires validation'
 if rg -q 'user_id: "brooks-architect"|agent_id: "brooks-architect"' "$OPENCODE/command/goal.md"; then

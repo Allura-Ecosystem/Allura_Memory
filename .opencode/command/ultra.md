@@ -45,7 +45,7 @@ Default mode is **work**.
 
 ## Loop Rules
 
-- Scout-first is mandatory.
+- Verified local context and scoped Brain recall are mandatory; Scout is optional.
 - Validation happens before declaring done.
 - Stop on destructive risk, secret risk, or an unclear irreversible change.
 - Keep changes minimal and reversible.

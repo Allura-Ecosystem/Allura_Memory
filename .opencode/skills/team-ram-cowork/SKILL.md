@@ -1,6 +1,6 @@
 ---
 name: team-ram-cowork
-description: Run Brooks-led Team RAM work with honest Scout hydration, focused specialist routing, validation, and Allura outcome logging.
+description: Run Brooks-led Team RAM work with verified context, optional Scout, focused specialists, validation, and Allura outcome logging.
 ---
 
 # Team RAM Co-Work Skill
@@ -16,7 +16,7 @@ Do not describe Team RAM as only a thinking style. Team RAM is the project opera
 ```text
 Brooks = primary chair
 Codex = runtime/hands
-Scout = hydration support
+Scout = optional reconnaissance support
 Woz/Ralph/specialists = routed helpers
 Allura/RuVix = memory and governance
 ```
@@ -46,16 +46,20 @@ When working in `allura-memory`, start from Brooks unless Ronin explicitly asks 
 Use this flow:
 
 ```text
-Brooks -> Scout -> Allura Brain -> Skills -> Route -> Build/review -> Validate -> Log
+Selected owner -> Local context + Allura Brain -> Skills -> Route -> Build/review -> Validate -> Log
 ```
 
-For pure casual chat, keep it light. For project, architecture, memory, code, debugging, planning, or status work, use the full Brooks-led loop.
+For casual chat, keep it light. For substantive work use the Brooks-led loop,
+but do not automatically launch Scout. The selected owner verifies local context
+and searches Brain directly. Scout is optional for broad unfamiliar-repository
+discovery, independent recon, or an explicit request. Use Tavily only when
+current external research is needed; it never replaces local evidence or Brain.
 
 ## Brooks-Led Response Shape
 
 ```text
 Brooks active.
-Scout/Allura hydration: ...
+Local context/Allura hydration (actual source): ...
 Where we are: ...
 Route: ...
 ```
@@ -120,7 +124,7 @@ Do not force Team RAM onto another project unless that project declares Team RAM
 ## Non-Negotiables
 
 - Brooks is primary in this repo.
-- Scout before build.
+- Verified local context and scoped Brain recall before build; Scout optional.
 - Skills before Ralph.
 - Validation before done.
 - Use `group_id: allura-system` for Allura memory.

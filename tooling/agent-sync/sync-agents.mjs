@@ -32,7 +32,7 @@ const APPLY = process.argv.includes("--apply");
 const CI = process.argv.includes("--check");
 
 const BRIDGE = (srcRel) =>
-  `## Claude Bridge\n\nThis agent is mirrored from ${srcRel}. Use the listed skills at startup when the task matches this agent. For Allura project work, follow .agents/TEAM-RAM-RUNTIME.md: Scout hydrates context and Allura Brain before build or status answers, then outcomes are logged to Allura Brain.\n`;
+  `## Runtime Bridge\n\nThis agent is mirrored from ${srcRel}. Preserve its full persona reasoning and voice as an inspired AI role, not a historical identity. Follow .agents/TEAM-RAM-RUNTIME.md: the selected owner verifies local context and scoped Allura Brain recall before work; Scout is optional. Log one validated substantive outcome through Brain.\n`;
 
 let drift = 0;
 const log = (...a) => console.log(...a);
@@ -86,6 +86,16 @@ for (const [name, spec] of Object.entries(MAP.agents)) {
   const mirFm = fmSet(mir.fm, "model", tier.claude);
   const body = src.body.replace(/\s*$/, "\n");
   writeOrCheck(mirPath, `---\n${mirFm}\n---\n${body}\n${BRIDGE(spec.source)}`, `.claude/agents/${name}.md`);
+
+  // Existing native adapters share the same complete canonical role. Preserve
+  // their name/description; JSON string escaping is valid TOML basic-string syntax.
+  const nativePath = join(ROOT, ".codex", "agents", `${name}.toml`);
+  if (existsSync(nativePath)) {
+    const native = readFileSync(nativePath, "utf8");
+    const prefix = native.slice(0, native.indexOf("developer_instructions ="));
+    if (!prefix || !native.includes("developer_instructions =")) throw new Error(`Invalid native adapter ${name}`);
+    writeOrCheck(nativePath, `${prefix}developer_instructions = ${JSON.stringify(`${body}\n${BRIDGE(spec.source)}`)}\n`, `.codex/agents/${name}.toml`);
+  }
 }
 
 // Keep the root runtime and compatibility config aligned with the tier map.
@@ -112,6 +122,6 @@ for (const configRel of ["opencode.json", ".opencode/config.json"]) {
 }
 
 const verb = APPLY ? "updated" : (CI ? "out of sync" : "would change");
-log(`\n${drift === 0 ? "✓ opencode and claude in sync" : `${drift} file(s) ${verb}`}`);
+log(`\n${drift === 0 ? "✓ OpenCode, Claude and Codex adapters in sync" : `${drift} file(s) ${verb}`}`);
 if (!APPLY && !CI) log("Dry run — re-run with --apply to write.");
 process.exit(CI && drift > 0 ? 1 : 0);

@@ -13,10 +13,17 @@ For an explicit startup/rehydrate request, run:
 ```
 
 This uses the session-only `.opencode/hydration-profile.json`. The launcher
-dispatches real Scout deterministically, verifies its local and Brain tool
-receipts, then passes a compact packet to real Brooks for synthesis. The full
-personas and two required skill contracts are preloaded. It reports elapsed
-time and aggregate usage from both actual sessions, including cached tokens.
+reads only local navigation, runtime task-pointer declaration and Git state,
+then preloads bounded navigation headings/path references, Git state, and only
+the canonical task-pointer path/ID as explicitly untrusted evidence into real
+Brooks. Git status is capped at 40 lines/2,000 characters with explicit truncation
+metadata. It does not forward the full runtime configuration. Brooks makes
+the authenticated Brain search and returns a concise receipt in the same session.
+A separate Scout run is optional: add `--with-scout` for the real Scout → Brooks
+route, or invoke Scout for broad unfamiliar-repository or independent recon. No
+launcher read is misrepresented as a model tool call. The full
+selected persona and two required skill contracts are preloaded. It reports elapsed
+time and aggregate usage from every actual session, including cached tokens.
 The ordinary work profile and all registered roles remain available afterward.
 No skill catalog, unrelated MCP schemas, recursive delegation, or redundant
 model-generated dispatch is needed for this fixed startup operation.
@@ -28,10 +35,13 @@ The time target is measured, not promised; an over-budget result is explicit.
 - Target a useful first response within 30 seconds. Budget additional retrieved
   startup context to 3,000 tokens; task expansion to 8,000. These are targets,
   not measured usage claims or reasons to omit required evidence.
-- Scout reads local navigation, worktree state, and the active task pointer when
-  configured, then relevant source sections. Read files once; never preload the
+- The selected owner loads local navigation, worktree state, and the active task pointer when
+  configured, then relevant source sections. The fixed hydration launcher
+  preloads only approved navigation/Git/task-pointer evidence before Scout's
+  owner's Brain search; full runtime configuration is not forwarded.
+  Read files once; never preload the
   full manifest, skill matrix, both orchestrators, archives, or all skills.
-- Scout makes one Brain search: topic + `decisions blockers outcomes`,
+- The selected owner makes one Brain search: topic + `decisions blockers outcomes`,
   `group_id: allura-system`, `limit: 5`. Reuse its receipt across specialists for
   the same objective, workspace revision, tenant, and authority state.
 - For project status, also retrieve current task/board state and recent blockers,
@@ -61,6 +71,6 @@ models and both configs; use `--check` to detect drift.
 Flat `.opencode/agents/*.md` adapters are generated from the nested canonical
 sources so repository personas override same-named global agents.
 
-Scout before build; validation before completion. Claim a real agent, memory
+Verified context before build; Scout optional; validation before completion. Claim a real agent, memory
 call, token count, or test only with an actual receipt. Use `rg` for local facts,
 Context7/official docs for APIs, and Tavily for current external research.

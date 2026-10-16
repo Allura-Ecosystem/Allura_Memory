@@ -8,7 +8,7 @@ Use this before starting development or dispatching a `Ralph Loop`.
    - Check: `bun run brain:status`
 2. MCP is reachable.
    - Check: `curl http://localhost:5888/health`
-3. Scout context is loaded.
+3. Verified local context is loaded by the selected owner; Scout is optional.
    - Read: `.opencode/context/index.md`
 4. Skills are chosen.
     - Required for memory work: `allura-memory-skill`
