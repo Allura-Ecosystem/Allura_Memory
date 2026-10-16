@@ -27,6 +27,9 @@ jobs:
   # ── Credential Leak Scan (Story 29.17 / AC-25) ───────────────────────────
   credential-leak-scan:
     runs-on: ubuntu-latest
+    env:
+      # This static scanner does not execute browser tests; avoid flaky downloads.
+      PUPPETEER_SKIP_DOWNLOAD: "true"
     steps:
       - uses: actions/checkout@v4
       - name: Setup Bun

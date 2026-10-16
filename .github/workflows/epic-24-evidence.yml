@@ -16,6 +16,8 @@ env:
   BUN_VERSION: "1.3.14"
   ARTIFACT_RETENTION_DAYS: "14"
   CI_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  # Evidence lanes do not execute browser tests; avoid external browser downloads.
+  PUPPETEER_SKIP_DOWNLOAD: "true"
 
 jobs:
   epic24-static:
