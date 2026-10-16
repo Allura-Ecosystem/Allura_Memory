@@ -10,6 +10,7 @@
  * 
  * Reference: docs/allura/BLUEPRINT.md
  */
+/* eslint-disable sort-imports -- raw MCP tool aliases intentionally mirror public wrappers. */
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "crypto";
