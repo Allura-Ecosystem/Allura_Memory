@@ -41,7 +41,7 @@ export async function run(ctx: BenchmarkContext): Promise<BenchmarkResult> {
         group_id: ctx.groupId,
         user_id: ctx.userId,
         content: `${ex.text} [[BENCH:${ctx.runId}:curation]]`,
-        metadata: { source: "manual", agent_id: "benchmark" },
+        metadata: { source: "manual", agent_id: ctx.userId },
       })
       const score = typeof res.data?.score === "number" ? res.data.score : undefined
       if (score === undefined) {
