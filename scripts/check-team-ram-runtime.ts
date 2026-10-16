@@ -101,11 +101,7 @@ async function checkMcp() {
 async function main() {
   check("Root AGENTS Team RAM bridge", hasText("AGENTS.md", "Team RAM Runtime Bridge"));
   check("Shared runtime document", exists(".agents/TEAM-RAM-RUNTIME.md"));
-  check("Finish all epics workflow doc", exists("_bmad/FINISH-ALL-EPICS-WORKFLOW.md"));
-  check(
-    "Finish all epics workflow title",
-    hasText("_bmad/FINISH-ALL-EPICS-WORKFLOW.md", "Finish All Epics: Scout-First Kanban Workflow"),
-  );
+  check("AI Guidelines workflow authority", hasText("guidelines/AI-GUIDELINES.md", "sole repository workflow authority"));
   check("Codex workflow name", hasText(".codex/config.toml", "kanban_workflow_name"));
   check("Scout fallback phrase", hasText(".codex/config.toml", "Scout-style hydration only"));
   check("OpenCode agents path", isDirOrSymlink(".opencode/agents"));

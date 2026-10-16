@@ -84,8 +84,8 @@ Supply-chain security requires knowing what packages are installed across develo
 | API routes | `src/app/api/plugins/bumblebee/{runs,ingest}/` |
 | Curator UI surfaces | `src/components/bumblebee/surfaces.tsx` |
 | Tests | `src/lib/bumblebee/__tests__/` (17 test files) |
-| Planning docs | `_bmad/bmm/planning/epic-26-*.md` |
-| Sprint status | `_bmad/bmm/stories/sprint-status.yaml` (Epic 26 = done) |
+| Planning docs | `.opencode/work-items/planning-artifacts/epic-26-*.md` |
+| Sprint status | `.opencode/work-items/implementation-artifacts/sprint-status.yaml` (local evidence; Notion remains authoritative) |
 
 ## Source Files at a Glance
 
