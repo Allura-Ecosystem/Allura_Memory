@@ -89,7 +89,7 @@ function classify(content: string): Batch {
   // J — planning ephemera
   if (/^(NX_STEPS|NX\b|NEXT_(STEPS_REVIEW|ACTION)|PLAN\b|FINISH_PLAN|FOLLOWUP_STATUS)/i.test(c)) return "J"
   // M — infra/config ops
-  if (/^(MCP_(DOCKER|LOADED)|MCP\b|HARNESS_CONFIG|SKILLS?_CREATED|BMAD|REPO_CREATED|ORG_PROVISIONED)/i.test(c)) return "M"
+  if (/^(MCP_(DOCKER|LOADED)|MCP\b|HARNESS_CONFIG|SKILLS?_CREATED|LEGACY_WORKFLOW|REPO_CREATED|ORG_PROVISIONED)/i.test(c)) return "M"
   // N — date-prefixed session notes, debug: traces
   if (/^(2026-\d{2}|debug:)/i.test(c)) return "N"
   // O — operational traces (outcomes, phases, goals, canonical, receipts, corrections, etc.)

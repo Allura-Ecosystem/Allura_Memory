@@ -1,7 +1,7 @@
 /**
  * Story 25.3b — Executing test for the production /dashboard/curator page.
  *
- * Verification-gap review (bmad-code-review, 2026-08-28): the issuance→shell
+ * Verification-gap review (2026-08-28): the issuance→shell
  * wiring in `CuratorHandoffPage` had no executing test — a wiring regression
  * would ship the legacy static console with every lane green. This test
  * executes the real default export and pins the emitted shell state, plus the

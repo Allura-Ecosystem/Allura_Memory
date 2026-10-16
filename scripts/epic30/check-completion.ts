@@ -82,20 +82,20 @@ export function auditEpic30Checklist(checklist: Epic30CompletionChecklist, root:
       }
     }
     const artifactPrefix = `${story.id.replace(".", "-")}-`
-    const artifactDirectory = path.resolve(root, "_bmad_output/implementation-artifacts")
+    const artifactDirectory = path.resolve(root, ".opencode/work-items/implementation-artifacts")
     const storyArtifacts = existsSync(artifactDirectory)
       ? readdirSync(artifactDirectory).filter((name) => name.startsWith(artifactPrefix) && name.endsWith(".md"))
       : []
     if (storyArtifacts.length !== 1) {
-      errors.push(`${story.id}: exactly one BMAD story artifact is required`)
+      errors.push(`${story.id}: exactly one work-item artifact is required`)
     } else {
       const storySource = readFileSync(path.join(artifactDirectory, storyArtifacts[0]), "utf8")
       const trackedStatus = /^\*\*Status:\*\*\s+([^\s]+)/m.exec(storySource)?.[1]?.toLowerCase()
       if (story.localState === "complete" && trackedStatus !== "done") {
-        errors.push(`${story.id}: completed evidence requires BMAD status done`)
+        errors.push(`${story.id}: completed evidence requires work-item status done`)
       }
       if (story.localState !== "complete" && trackedStatus === "done") {
-        errors.push(`${story.id}: BMAD status done contradicts remaining completion gates`)
+        errors.push(`${story.id}: work-item status done contradicts remaining completion gates`)
       }
     }
   }
@@ -109,7 +109,7 @@ export function auditEpic30Checklist(checklist: Epic30CompletionChecklist, root:
 }
 
 export function loadEpic30Checklist(root = process.cwd()): Epic30CompletionChecklist {
-  const checklistPath = path.resolve(root, "_bmad_output/planning-artifacts/epic-30-completion-checklist.json")
+  const checklistPath = path.resolve(root, ".opencode/work-items/planning-artifacts/epic-30-completion-checklist.json")
   return JSON.parse(readFileSync(checklistPath, "utf8")) as Epic30CompletionChecklist
 }
 

@@ -54,10 +54,10 @@ describe("Epic 30 completion checklist", () => {
     )
   })
 
-  it("keeps every incomplete story out of BMAD done status", () => {
+  it("keeps every incomplete story out of work-item done status", () => {
     const checklist = cloneChecklist()
     const audit = auditEpic30Checklist(checklist, root)
-    expect(audit.errors.filter((error) => error.includes("BMAD status done"))).toEqual([])
+    expect(audit.errors.filter((error) => error.includes("work-item status done"))).toEqual([])
   })
 
   it("requires the exact four verification commands", () => {

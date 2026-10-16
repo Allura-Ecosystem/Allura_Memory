@@ -66,7 +66,7 @@ export interface StateHydratorConfig {
 
 const DEFAULT_CONFIG: StateHydratorConfig = {
   stateDir: ".opencode/state",
-  planningArtifactsDir: "_bmad_output/planning-artifacts",
+  planningArtifactsDir: ".opencode/work-items/planning-artifacts",
   enableDbHydration: true,
   enableNeo4jHydration: true,
 }

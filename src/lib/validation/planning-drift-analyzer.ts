@@ -100,8 +100,8 @@ export interface DriftAnalyzerConfig {
 }
 
 const DEFAULT_CONFIG: DriftAnalyzerConfig = {
-  storiesDir: '_bmad_output/implementation-artifacts',
-  epicsFile: '_bmad_output/planning-artifacts/epics.md',
+  storiesDir: '.opencode/work-items/implementation-artifacts',
+  epicsFile: '.opencode/work-items/planning-artifacts/epics.md',
   timelineDriftTolerance: 7, // 7 days
   strictAcValidation: true,
 };
