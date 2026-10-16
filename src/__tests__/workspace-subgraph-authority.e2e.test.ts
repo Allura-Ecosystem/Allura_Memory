@@ -572,7 +572,7 @@ describeLive("workspace subgraph authority", () => {
     expect(audit.rows).toEqual([{workspace_id:WORKSPACE_A}]);
   });
 
-  it("promotes and supersedes knowledge through the app-role workspace boundary", async () => {
+  it("rejects bare approval-event reuse and keeps structural linking workspace-bound", async () => {
     const firstId = `promotion-${RUN_ID}`;
     const secondId = `promotion-v2-${RUN_ID}`;
     await ownerPool.query(
@@ -593,30 +593,28 @@ describeLive("workspace subgraph authority", () => {
       notion_page_id: `notion-${RUN_ID}`,
       postgres_trace_id: `trace-${RUN_ID}`,
     };
-    await expect(promoteToSemanticStore({ ...baseInsight, id: firstId })).resolves.toBe(firstId);
-    await expect(promoteToSemanticStore({ ...baseInsight, id: secondId, supersedes_id: firstId })).resolves.toBe(secondId);
+    await expect(promoteToSemanticStore({ ...baseInsight, id: firstId }, PRINCIPAL)).rejects.toThrow(/Approval required/);
+    await expect(promoteToSemanticStore({ ...baseInsight, id: secondId, supersedes_id: firstId }, PRINCIPAL)).rejects.toThrow(/Approval required/);
 
     const memories = await ownerPool.query(
       `SELECT id,group_id,workspace_id,workspace_scope_state,version
        FROM graph_memories WHERE id=ANY($1::text[]) ORDER BY version`,
       [[firstId, secondId]],
     );
-    expect(memories.rows).toEqual([
-      { id:firstId, group_id:GROUP, workspace_id:WORKSPACE_A, workspace_scope_state:"workspace_scoped", version:1 },
-      { id:secondId, group_id:GROUP, workspace_id:WORKSPACE_A, workspace_scope_state:"workspace_scoped", version:2 },
-    ]);
+    expect(memories.rows).toEqual([]);
     const supersedes = await ownerPool.query(
       `SELECT newer_id,superseded_id,group_id,workspace_id,workspace_scope_state
        FROM graph_supersedes WHERE newer_id=$1`,
       [secondId],
     );
-    expect(supersedes.rows).toEqual([{
-      newer_id:secondId,
-      superseded_id:firstId,
-      group_id:GROUP,
-      workspace_id:WORKSPACE_A,
-      workspace_scope_state:"workspace_scoped",
-    }]);
+    expect(supersedes.rows).toEqual([]);
+
+    // Independent structural-link fixture; not evidence of approved promotion.
+    await ownerPool.query(
+      `INSERT INTO graph_memories(id,group_id,workspace_id,workspace_scope_state,content,score,provenance)
+       VALUES($1,$2,$3,'workspace_scoped','link fixture',0.94,'manual')`,
+      [secondId, GROUP, WORKSPACE_A],
+    );
 
     const agentNodeId = `agent-${RUN_ID}`;
     await ownerPool.query(

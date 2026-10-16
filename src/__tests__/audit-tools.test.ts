@@ -215,13 +215,12 @@ describe("Audit MCP Tools (Story 9.2)", () => {
       expect(response.subsystems.postgres.latency_ms).toBeGreaterThanOrEqual(0)
     })
 
-    itIfE2E("should report MCP tools with a tool count", async () => {
+    itIfE2E("does not invent MCP catalog health or a tool count", async () => {
       const req: AuditHealthReportRequest = { group_id: VALID_GROUP }
       const response = await audit_health_report(req)
 
-      expect(response.subsystems.mcp_tools.status).toBe("healthy")
-      expect(typeof response.subsystems.mcp_tools.tool_count).toBe("number")
-      expect(response.subsystems.mcp_tools.tool_count).toBeGreaterThan(0)
+      expect(response.subsystems.mcp_tools.status).toBe("degraded")
+      expect(response.subsystems.mcp_tools.tool_count).toBeUndefined()
     })
 
     itIfE2E("should report curator queue with pending_count", async () => {

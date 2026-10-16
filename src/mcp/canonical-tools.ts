@@ -81,6 +81,7 @@ import { storeMemory } from "@/lib/ruvector/bridge"
 import { searchWithFeedback } from "@/lib/ruvector/retrieval-adapter"
 import { requireTransportMemoryAddAuthority } from "@/lib/auth/mcp-authenticator"
 import { evaluateMemoryAdmission } from "@/lib/memory/admission"
+import { mutateWorkspaceMemory } from "@/lib/memory/workspace-lifecycle"
 import {
   checkBudget,
   ensureSession,
@@ -942,50 +943,19 @@ export async function memory_list(request: MemoryListRequest): Promise<MemoryLis
 export async function memory_delete(request: MemoryDeleteRequest): Promise<MemoryDeleteResponse> {
   // Validate
   const groupId = validateGroupId(request.group_id)
+  const scope = requireVerifiedWorkspaceScope(request)
   const deletedAt = new Date().toISOString()
   const startTime = Date.now()
 
   try {
-    const { pg } = await getConnections()
+    // Fail closed before recording a completed deletion if semantic state cannot be read/mutated.
+    await withCircuitBreaker("postgres", groupId, "memory_delete:workspace_mutation", () =>
+      mutateWorkspaceMemory({ id: request.id, groupId, workspaceId: scope.workspace_id,
+        principalId: scope.agent_id, operation: "delete", at: deletedAt }))
 
-    // 1. Append deletion event to PostgreSQL — circuit-breaker wrapped
-    await withCircuitBreaker("postgres", groupId, "memory_delete:insert_event", async () =>
-      tenantPgQuery(groupId, request.user_id, pg,
-        `INSERT INTO events (
-        group_id, workspace_id, event_type, agent_id, status, metadata, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          groupId,
-          request.scope?.workspace_id ?? null,
-          "memory_delete",
-          request.user_id,
-          "completed",
-          JSON.stringify({
-            memory_id: request.id,
-            user_id: request.user_id,
-          }),
-          deletedAt,
-        ],
-        request.scope?.workspace_id
-      )
-    )
+    const deleteMeta = baseMeta(["postgres", "graph"])
 
-    // 2. Mark graph node as deprecated (if exists) — secondary store, degradation acceptable
-    let deleteMeta = baseMeta(["postgres", "graph"])
-    try {
-      const graphAdapter = createGraphAdapter({ pg })
-      await withCircuitBreaker("graph", groupId, "memory_delete:mark_deprecated", async () =>
-        graphAdapter.softDeleteMemory({ id: request.id, group_id: groupId, deleted_at: deletedAt })
-      )
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith("Circuit breaker open")) {
-        throw error
-      }
-      console.warn("[degraded] Graph adapter unavailable in memory_delete:", error)
-      deleteMeta = degradedMeta(["postgres"])
-    }
-
-    recordToolCall(groupId, request.user_id, "memory_delete", Date.now() - startTime, true)
+    recordToolCall(groupId, scope.agent_id, "memory_delete", Date.now() - startTime, true)
 
     return {
       id: request.id,
@@ -1011,16 +981,16 @@ export async function memory_delete(request: MemoryDeleteRequest): Promise<Memor
  * Append-only versioned update.
  * - Appends audit event to PostgreSQL (always, append-only)
  * - If memory exists in graph_memories: creates new node + SUPERSEDES relationship, marks old deprecated
- * - If episodic-only or semantic store unavailable: returns stored='episodic' with degradedMeta
- * - PG errors fail loudly; semantic-store errors degrade gracefully
+ * - Episodic-only updates remain episodic; semantic failures fail closed.
  */
 export async function memory_update(request: MemoryUpdateRequest): Promise<MemoryUpdateResponse> {
   const groupId = validateGroupId(request.group_id)
   const scope = requireVerifiedWorkspaceScope(request)
   const newId = generateMemoryId()
   const updatedAt = new Date().toISOString()
-  const agentId = String(request.metadata?.agent_id ?? request.user_id)
+  const agentId = scope.agent_id
   const startTime = Date.now()
+  let succeeded = false
 
   try {
     const { pg } = await getConnections()
@@ -1035,7 +1005,7 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
           request.scope?.workspace_id ?? null,
           "memory_update",
           agentId,
-          "completed",
+          "pending",
           JSON.stringify({
             new_memory_id: newId,
             previous_memory_id: request.id,
@@ -1052,12 +1022,18 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
 
     // 2. Attempt graph adapter SUPERSEDES versioning — circuit-breaker wrapped
     try {
-      return await withCircuitBreaker("graph", groupId, "memory_update:supersedes", async () => {
+      const result = await withCircuitBreaker("graph", groupId, "memory_update:supersedes", async () => {
         const graphAdapter = createGraphAdapter({ pg })
 
-        const versionResult = await graphAdapter.getVersion({ id: request.id as MemoryId, group_id: groupId })
+        const previous = await graphAdapter.getMemory({ id: request.id as MemoryId, group_id: groupId,
+          workspace_id: scope.workspace_id, principal_id: scope.agent_id })
 
-        if (!versionResult.exists) {
+        if (!previous.node) {
+          const episodic = await tenantPgQuery(groupId, scope.agent_id, pg,
+            `SELECT id FROM events WHERE group_id=$1 AND workspace_id=$2
+             AND event_type='memory_add' AND metadata->>'memory_id'=$3 LIMIT 1`,
+            [groupId, scope.workspace_id, request.id], scope.workspace_id)
+          if (!episodic.rows.length) throw new MemoryNotFoundError(request.id)
           return {
             id: newId,
             previous_id: request.id as MemoryId,
@@ -1068,10 +1044,10 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
           }
         }
 
-        const prevVersion = versionResult.version ?? 1
+        const prevVersion = previous.node.version ?? 1
         const newVersion = prevVersion + 1
 
-        await graphAdapter.supersedesMemory({
+        const superseded = await graphAdapter.supersedesMemory({
           prev_id: request.id as MemoryId,
           new_id: newId,
           group_id: groupId,
@@ -1082,6 +1058,7 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
           version: newVersion,
           created_at: updatedAt,
         })
+        if (!superseded.success) throw new Error("Semantic version was not created")
 
         return {
           id: newId,
@@ -1092,20 +1069,15 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
           meta: baseMeta(["postgres", "graph"]),
         }
       })
+      await tenantPgQuery(groupId, scope.agent_id, pg,
+        `INSERT INTO events (group_id,workspace_id,event_type,agent_id,status,metadata,created_at)
+         VALUES ($1,$2,'memory_update_completed',$3,'completed',$4,$5)`,
+        [groupId, scope.workspace_id, scope.agent_id, JSON.stringify({ previous_memory_id: request.id,
+          new_memory_id: newId, stored: result.stored, version: result.version }), updatedAt], scope.workspace_id)
+      succeeded = true
+      return result
     } catch (error) {
-      if (error instanceof Error && error.message.startsWith("Circuit breaker open")) {
-        throw error
-      }
-      console.warn("[degraded] Graph adapter unavailable in memory_update:", error)
-      recordToolCall(groupId, agentId, "memory_update", Date.now() - startTime, true)
-      return {
-        id: newId,
-        previous_id: request.id as MemoryId,
-        stored: "episodic",
-        version: 1,
-        updated_at: updatedAt,
-        meta: degradedMeta(["postgres"]),
-      }
+      throw error
     }
   } catch (error) {
     if (error instanceof DatabaseUnavailableError || error instanceof DatabaseQueryError) {
@@ -1116,7 +1088,7 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
     }
     throw error
   } finally {
-    recordToolCall(groupId, agentId, "memory_update", Date.now() - startTime, true)
+    recordToolCall(groupId, agentId, "memory_update", Date.now() - startTime, succeeded)
   }
 }
 
@@ -1130,14 +1102,16 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
  */
 export async function memory_promote(request: MemoryPromoteRequest): Promise<MemoryPromoteResponse> {
   const groupId = validateGroupId(request.group_id)
+  const scope = requireVerifiedWorkspaceScope(request)
   const queuedAt = new Date().toISOString()
 
   const { pg } = await getConnections()
   const graphAdapter = createGraphAdapter({ pg })
 
   // 1. Check if already canonical in graph layer — fails loudly (no silent fallback)
-  const canonicalResult = await graphAdapter.checkCanonical({ id: request.id, group_id: groupId })
-  if (canonicalResult.isCanonical) {
+  const canonicalResult = await graphAdapter.getMemory({ id: request.id, group_id: groupId,
+    workspace_id: scope.workspace_id, principal_id: scope.agent_id })
+  if (canonicalResult.node) {
     return {
       id: request.id,
       proposal_id: "",
@@ -1149,13 +1123,14 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
 
   // 2. Check for existing pending proposal (idempotency)
   const existingProposal = await tenantPgQuery<{ id: string }>(
-    groupId, request.curator_id ?? request.user_id, pg,
+    groupId, scope.agent_id, pg,
     `SELECT id FROM canonical_proposals
-     WHERE group_id = $1
-       AND status = 'pending'
-       AND content LIKE '%' || $2 || '%'
+      WHERE group_id = $1 AND workspace_id = $3
+        AND status = 'pending'
+        AND trace_ref IN (SELECT id FROM events WHERE group_id=$1 AND workspace_id=$3
+          AND event_type='memory_add' AND metadata->>'memory_id'=$2)
      LIMIT 1`,
-    [groupId, request.id],
+    [groupId, request.id, scope.workspace_id],
     request.scope?.workspace_id
   )
   if (existingProposal.rows.length > 0) {
@@ -1174,7 +1149,7 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
 
   // 4. Fetch memory content from PG
   const memoryRow = await tenantPgQuery<{ id: string; content: string; event_id: string }>(
-    groupId, request.curator_id ?? request.user_id, pg,
+    groupId, scope.agent_id, pg,
     `SELECT metadata->>'memory_id' AS id,
             metadata->>'content' AS content,
             id AS event_id
@@ -1210,7 +1185,7 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
       score: number
       status: string
       created_at: string
-    }>(groupId, request.curator_id ?? request.user_id, pg,
+    }>(groupId, scope.agent_id, pg,
       `SELECT id, content, score, status, created_at
        FROM canonical_proposals
        WHERE group_id = $1
@@ -1254,24 +1229,24 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
   // 5. Insert proposal
   const proposalId = randomUUID()
   await tenantPgQuery(
-    groupId, request.curator_id ?? request.user_id, pg,
+    groupId, scope.agent_id, pg,
     `INSERT INTO canonical_proposals
        (id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9)`,
     [proposalId, groupId, request.scope?.workspace_id ?? null, content, scoreResult.confidence, scoreResult.reasoning, scoreResult.tier, event_id, queuedAt],
     request.scope?.workspace_id
   )
 
   // 6. Append audit event
   await tenantPgQuery(
-    groupId, request.curator_id ?? request.user_id, pg,
+    groupId, scope.agent_id, pg,
     `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [
       groupId,
       request.scope?.workspace_id ?? null,
       "memory_promote_requested",
-      request.curator_id ?? request.user_id,
+      scope.agent_id,
       "completed",
       JSON.stringify({
         memory_id: request.id,
@@ -1421,18 +1396,19 @@ export async function memory_export(request: MemoryExportRequest): Promise<Memor
  *
  * Flow:
  * 1. Find delete event in PostgreSQL within recovery window
- * 2. Remove deprecated flag + SUPERSEDES edge in graph_supersedes
+ * 2. Remove soft-deletion flag only; reject restoration of superseded versions
  * 3. Append restore event to PostgreSQL (append-only, no UPDATE)
  * 4. Return restore confirmation
  *
  * Constraints:
  * - No UPDATE on PostgreSQL events table (append-only)
  * - RESTORE appends event_type='memory_restore' row
- * - Graph adapter: remove deprecated flag, remove SUPERSEDES relationships
+ * - Immutable SUPERSEDES relationships are retained
  * - group_id scoped on every query
  */
 export async function memory_restore(request: MemoryRestoreRequest): Promise<MemoryRestoreResponse> {
   const groupId = validateGroupId(request.group_id)
+  const scope = requireVerifiedWorkspaceScope(request)
   const restoredAt = new Date().toISOString()
   const startTime = Date.now()
 
@@ -1446,7 +1422,7 @@ export async function memory_restore(request: MemoryRestoreRequest): Promise<Mem
       "memory_restore:find_delete_event",
       async () =>
         tenantPgQuery<{ id: string; created_at: string; metadata: Record<string, unknown> }>(
-          groupId, request.user_id, pg,
+          groupId, scope.agent_id, pg,
           `SELECT id, created_at, metadata
          FROM events
          WHERE group_id = $1
@@ -1468,7 +1444,7 @@ export async function memory_restore(request: MemoryRestoreRequest): Promise<Mem
         "memory_restore:find_any_delete",
         async () =>
           tenantPgQuery<{ id: string }>(
-            groupId, request.user_id, pg,
+            groupId, scope.agent_id, pg,
             `SELECT id FROM events WHERE group_id = $1 AND event_type = 'memory_delete' AND metadata->>'memory_id' = $2 LIMIT 1`,
             [groupId, request.id],
             request.scope?.workspace_id
@@ -1481,44 +1457,13 @@ export async function memory_restore(request: MemoryRestoreRequest): Promise<Mem
       throw new RecoveryWindowExpiredError(request.id)
     }
 
-    // 2. Restore in graph layer — remove deprecated flag and SUPERSEDES relationships
-    let restoreMeta = baseMeta(["postgres", "graph"])
-    try {
-      const graphAdapter = createGraphAdapter({ pg })
-      await withCircuitBreaker("graph", groupId, "memory_restore:restore_node", async () =>
-        graphAdapter.restoreMemory({ id: request.id, group_id: groupId, restored_at: restoredAt })
-      )
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith("Circuit breaker open")) {
-        throw error
-      }
-      console.warn("[degraded] Graph adapter unavailable in memory_restore:", error)
-      restoreMeta = degradedMeta(["postgres"])
-    }
+    // Restore only soft deletion, preserving immutable SUPERSEDES lineage.
+    await withCircuitBreaker("postgres", groupId, "memory_restore:workspace_mutation", () =>
+      mutateWorkspaceMemory({ id: request.id, groupId, workspaceId: scope.workspace_id,
+        principalId: scope.agent_id, operation: "restore", at: restoredAt }))
+    const restoreMeta = baseMeta(["postgres", "graph"])
 
-    // 3. Append restore event to PostgreSQL (append-only)
-    await withCircuitBreaker("postgres", groupId, "memory_restore:insert_event", async () =>
-      tenantPgQuery(groupId, request.user_id, pg,
-        `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          groupId,
-          request.scope?.workspace_id ?? null,
-          "memory_restore",
-          request.user_id,
-          "completed",
-          JSON.stringify({
-            memory_id: request.id,
-            user_id: request.user_id,
-            deleted_at: deleteEventResult.rows[0].created_at,
-          }),
-          restoredAt,
-        ],
-        request.scope?.workspace_id
-      )
-    )
-
-    recordToolCall(groupId, request.user_id, "memory_restore", Date.now() - startTime, true)
+    recordToolCall(groupId, scope.agent_id, "memory_restore", Date.now() - startTime, true)
 
     return {
       id: request.id,

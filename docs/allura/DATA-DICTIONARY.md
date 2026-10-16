@@ -9,6 +9,26 @@
 
 This document describes Allura's PostgreSQL + RuVector governed memory data model. A single PostgreSQL instance holds append-only episodic evidence, canonical proposals, pgvector/RuVector retrieval, the promoted semantic layer (`graph_memories`, `graph_supersedes`), receipts, and outbox state (AD-50).
 
+### Retirement forward migration (71)
+
+`71-retired-storage-quarantine.sql` moves `design_sync_status`, `sync_drift_log`,
+and `ruvector_memory_fallback` from `public` to `retired_storage` without dropping
+tables, columns, or rows. Their historical identifiers and foreign-key relations
+are retained as archived data. `PUBLIC` and `allura_app` lose schema/table access;
+no replay or design-sync runtime consumer remains. An archive collision aborts
+rather than choosing or overwriting either copy. Shipped SQL files remain
+byte-identical and are digest-checked by the retirement guard. Apply all migrations
+in order for a fresh bootstrap; an existing installation needs forward migrations,
+not a replay of bootstrap history. This candidate has not been applied to production.
+Disposable-database schema proof is defined in
+`src/lib/db/__tests__/retirement-bootstrap.e2e.test.ts`; execution remains a release gate.
+
+`approveProposal` remains the sole atomic human-approval writer. Knowledge Hub
+projection resolves its approved proposal, exact workspace, source trace,
+governance receipt, payload and semantic identity; a bare approval event cannot
+authorize another semantic write. Lifecycle restoration preserves version edges
+and rejects restoring a superseded version. See [REQUIREMENTS-MATRIX.md](./REQUIREMENTS-MATRIX.md).
+
 ---
 
 ## Table of Contents

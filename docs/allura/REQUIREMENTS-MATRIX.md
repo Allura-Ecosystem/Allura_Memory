@@ -386,11 +386,21 @@ identifiers in active source, tool descriptions, dependencies, compose files, an
 agent instructions (including root aliases and hidden harness directories). The
 Check workflow runs its red/green fixtures and repository scan. Historical work
 items, archives, and the explicitly enumerated prior SQL migrations are preserved;
-negative assertions are allowed only by exact file and line content.
-`audit_health_report` verifies PostgreSQL connectivity, backfill event counts,
-curator queue depth, and registered-tool availability; it does not independently
-prove extension or retrieval health. The separate `graph_supersedes` invariant
-performs a tenant-scoped read and fails when that read is unavailable.
+negative assertions are allowed only by exact file and line content. Shipped SQL
+exceptions are SHA-256 pinned, and forward migration 71 quarantines unused
+sync/replay tables outside the live public schema without deleting their data.
+Ingress coverage includes hooks, editor tasks, loop instructions, examples,
+tooling, templates and schemas. See [DATA-DICTIONARY.md](./DATA-DICTIONARY.md).
+`audit_health_report` requires authenticated workspace authority and verifies
+connectivity plus semantic schema/RLS catalog evidence, scoped backfill/queue
+counts. Tool catalog completeness/execution and retrieval freshness remain
+explicitly unverified, so the overall report stays degraded rather than claiming
+full health. Seven
+invariants report bounded evidence: tenant constraints, visible namespace rows,
+ledger rejection trigger/role, lineage endpoints/version steps, approved semantic
+roots with proposal/receipt/event evidence, namespace drift, and policy registration.
+Unavailable evidence fails closed; empty scoped counts are not claims of global
+enforcement. Live database proof remains pending for this code-only candidate.
 
 ### Section 6A.2: Agent Factory CI Requirements
 

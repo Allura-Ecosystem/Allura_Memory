@@ -970,6 +970,7 @@ export interface AuditQueryEventsResponse {
 export interface AuditHealthReportRequest {
   /** Required: Tenant namespace (format: allura-*) */
   group_id: GroupId
+  scope?: ScopeTuple
 }
 
 export interface AuditSubsystemStatus {
@@ -1025,6 +1026,7 @@ export interface AuditAgentActivityResponse {
 export interface AuditInvariantCheckRequest {
   /** Required: Tenant namespace (format: allura-*) */
   group_id: GroupId
+  scope?: ScopeTuple
 }
 
 export interface AuditInvariantResult {

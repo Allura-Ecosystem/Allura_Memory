@@ -23,7 +23,7 @@
  */
 
 import { z } from 'zod';
-import { requireApprovalBeforePromotion } from './approval-audit';
+import { resolveApprovedProjection } from './approved-projection';
 import { withWorkspaceTransaction } from '../db/tenant-transaction';
 import { type EventRecord, insertEvent } from '../postgres/queries/insert-trace';
 
@@ -370,10 +370,10 @@ export async function queryApprovedInsights(
       content: row.content as string,
       source: (row.decided_by as string) || 'system',
       status: 'Approved' as const,
-      confidence: Number(row.score) || 0.5,
+      confidence: Number(row.score),
       group_id: row.group_id as string,
       workspace_id: row.workspace_id as string,
-      postgres_trace_id: (row.trace_ref as string) || (row.id as string),
+      postgres_trace_id: String(row.trace_ref ?? row.id),
       category,
       approved_by: (row.decided_by as string) || undefined,
       approved_at: (row.decided_at as string) || undefined,
@@ -425,10 +425,10 @@ export async function queryApprovedInsightById(
     content: row.content as string,
     source: (row.decided_by as string) || 'system',
     status: 'Approved' as const,
-    confidence: Number(row.score) || 0.5,
+    confidence: Number(row.score),
     group_id: row.group_id as string,
     workspace_id: row.workspace_id as string,
-    postgres_trace_id: (row.trace_ref as string) || (row.id as string),
+    postgres_trace_id: String(row.trace_ref ?? row.id),
     category,
     approved_by: (row.decided_by as string) || undefined,
     approved_at: (row.decided_at as string) || undefined,
@@ -742,14 +742,13 @@ function buildKnowledgeHubContent(params: {
 /**
  * Promote an insight to the knowledge graph (PostgreSQL + pgvector).
  *
- * Creates a memory node with Steel Frame versioning:
- *   - If new: Creates version 1
- *   - If update: Creates new version with SUPERSEDES relationship
+ * Resolves the semantic node already created by the atomic human approval flow.
+ * This projection path cannot mint a second node or reuse approval for new content.
  *
  * @param insight - Knowledge insight to promote
  * @returns Memory node ID
  */
-export async function promoteToSemanticStore(insight: KnowledgeInsight): Promise<string> {
+export async function promoteToSemanticStore(insight: KnowledgeInsight, principalId?: string): Promise<string> {
   console.log('[knowledge-promotion] Promoting insight to knowledge graph:', {
     id: insight.id,
     topic: insight.topic,
@@ -764,60 +763,16 @@ export async function promoteToSemanticStore(insight: KnowledgeInsight): Promise
     throw new Error('Workspace ID is required for promotion');
   }
 
-  await requireApprovalBeforePromotion(insight.proposal_id, insight.group_id);
-
-  const createdAt = new Date().toISOString();
-  // graph_memories constrains provenance to conversation|manual. A curator-
-  // approved HITL promotion is the governed manual path.
-  const provenance = 'manual' as const;
+  if (!principalId) throw new Error('Authenticated principal is required for approved projection');
 
   try {
     return await withWorkspaceTransaction(
       {
         tenantId: insight.group_id,
         workspaceId: insight.workspace_id,
-        principalId: insight.source,
+        principalId,
       },
-      async (client) => {
-        let version = 1;
-        if (insight.supersedes_id) {
-          console.log('[knowledge-promotion] Creating new version superseding:', insight.supersedes_id);
-          const prevResult = await client.query<{ version: number }>(
-            `SELECT version FROM graph_memories
-             WHERE id = $1 AND group_id = $2 AND workspace_id = $3
-               AND workspace_scope_state = $4`,
-            [insight.supersedes_id, insight.group_id, insight.workspace_id, 'workspace_scoped']
-          );
-          const previous = prevResult.rows[0];
-          if (!previous) {
-            throw new KnowledgePromotionError(insight.id, new Error(`Previous insight not found: ${insight.supersedes_id}`));
-          }
-          version = (previous.version ?? 1) + 1;
-        }
-
-        await client.query(
-          `INSERT INTO graph_memories
-             (id, group_id, workspace_id, workspace_scope_state, user_id, content, score, provenance, version, created_at, deprecated)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::timestamptz, false)`,
-          [insight.id, insight.group_id, insight.workspace_id, 'workspace_scoped', insight.source, insight.content, insight.confidence, provenance, version, createdAt]
-        );
-
-        if (insight.supersedes_id) {
-          await client.query(
-            `INSERT INTO graph_supersedes
-               (newer_id, superseded_id, group_id, workspace_id, workspace_scope_state, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6::timestamptz)`,
-            [insight.id, insight.supersedes_id, insight.group_id, insight.workspace_id, 'workspace_scoped', createdAt]
-          );
-        }
-
-        console.log('[knowledge-promotion] Promotion complete:', {
-          insight_id: insight.id,
-          workspace_id: insight.workspace_id,
-          version,
-        });
-        return insight.id;
-      }
+      (client) => resolveApprovedProjection(client, insight)
     );
   } catch (err) {
     if (err instanceof KnowledgePromotionError) throw err;
@@ -1078,9 +1033,6 @@ export async function processApprovedInsights(
     try {
       console.log('[knowledge-promotion] Processing item:', item.notion_page_id);
 
-      // Step 2: Require approval audit before any semantic promotion path.
-      await requireApprovalBeforePromotion(item.proposal_id, item.group_id);
-
       // Step 3: Promote to the semantic store
       const semanticId = await promoteToSemanticStore({
         id: item.postgres_trace_id, // Use trace ID as stable insight ID
@@ -1095,7 +1047,7 @@ export async function processApprovedInsights(
         notion_page_id: item.notion_page_id,
         postgres_trace_id: item.postgres_trace_id,
         supersedes_id: item.supersedes_id,
-      });
+      }, principalId);
 
       // Step 3: Promote to Knowledge Hub (Flow 2)
       let knowledgeHubPageId: string | undefined;
@@ -1234,9 +1186,6 @@ export async function promoteSingleInsight(
   }
 
   try {
-    // Step 2: Require approval audit before any semantic promotion path.
-    await requireApprovalBeforePromotion(proposalId, item.group_id);
-
     // Step 3: Promote to the semantic store
     const semanticId = await promoteToSemanticStore({
       id: item.postgres_trace_id,
@@ -1251,7 +1200,7 @@ export async function promoteSingleInsight(
       notion_page_id: item.notion_page_id,
       postgres_trace_id: item.postgres_trace_id,
       supersedes_id: item.supersedes_id,
-    });
+    }, principalId);
 
     // Step 3: Promote to Knowledge Hub (Flow 2)
     let knowledgeHubPageId: string | undefined;

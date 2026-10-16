@@ -45,7 +45,7 @@ describe("HITL Promotion Lock policy", () => {
     expect(processor).toMatch(/awaiting HITL review|HITL/i)
   })
 
-  it("knowledge promotion must require approval audit before semantic-store writes", () => {
+  it("knowledge projection resolves atomic approval evidence and cannot mint semantic memory", () => {
     const source = readRepoFile("src/lib/memory/knowledge-promotion.ts")
     const batchPromotion = source.slice(
       source.indexOf("export async function processApprovedInsights"),
@@ -55,15 +55,18 @@ describe("HITL Promotion Lock policy", () => {
       source.indexOf("export async function promoteSingleInsight")
     )
 
-    expect(source).toContain("import { requireApprovalBeforePromotion }")
+    const resolver = readRepoFile("src/lib/memory/approved-projection.ts")
+    const projection = source.slice(source.indexOf("export async function promoteToSemanticStore"), source.indexOf("export async function linkInsightToAgent"))
+    expect(projection).toContain("resolveApprovedProjection(client, insight)")
+    expect(projection).not.toContain("INSERT INTO graph_memories")
+    expect(resolver).toContain("JOIN governance_receipts")
+    expect(resolver).toContain("p.workspace_id=$3")
 
     for (const promotionPath of [batchPromotion, singlePromotion]) {
-      const guardIndex = promotionPath.indexOf("requireApprovalBeforePromotion")
       const semanticIndex = promotionPath.indexOf("promoteToSemanticStore")
 
-      expect(guardIndex).toBeGreaterThanOrEqual(0)
       expect(semanticIndex).toBeGreaterThanOrEqual(0)
-      expect(guardIndex).toBeLessThan(semanticIndex)
+      expect(promotionPath).toContain("}, principalId)")
     }
   })
 

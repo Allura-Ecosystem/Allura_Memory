@@ -358,7 +358,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_restore",
         description:
-          "Restore a soft-deleted memory within the 30-day recovery window. Removes deprecated flag in graph_memories and cleans up SUPERSEDES relationships. Appends restore event to PostgreSQL (append-only).",
+          "Restore a soft-deleted memory within the 30-day recovery window and authenticated workspace. Preserves SUPERSEDES lineage; superseded versions cannot be restored. Appends restore event to PostgreSQL.",
         inputSchema: {
           type: "object",
           properties: {

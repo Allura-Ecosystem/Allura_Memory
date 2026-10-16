@@ -62,7 +62,6 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "graph_structural_nodes", class: "tenant-scoped", notes: "Graph nodes" },
   { table: "graph_supersedes", class: "tenant-scoped", notes: "Supersedes relationships" },
   { table: "notion_sync_dlq", class: "tenant-scoped", notes: "Notion sync dead-letter" },
-  { table: "ruvector_memory_fallback", class: "tenant-scoped", notes: "RuVector fallback memory" },
   { table: "skill_usage_events", class: "tenant-scoped", notes: "Skill usage events" },
   { table: "promotion_outbox", class: "tenant-scoped", notes: "Migration 40 workspace-scoped delivery; legacy NULL-workspace rows are quarantined", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "promotion_idempotency", class: "tenant-scoped", notes: "Migration 40 workspace-scoped replay identity; legacy NULL-workspace rows are quarantined", workspaceTreatment: "workspace-scoped-new-writes" },

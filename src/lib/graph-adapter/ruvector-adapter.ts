@@ -173,15 +173,17 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
       return await withWorkspaceTransaction(
         { tenantId: params.group_id, ...scope },
         async (db) => {
-          const prevResult = await db.query<{ score: number; provenance: string }>(
-            `SELECT score, provenance FROM graph_memories
+          const prevResult = await db.query<{ score: number; provenance: string; version: number }>(
+            `SELECT score, provenance, version FROM graph_memories m
              WHERE id = $1 AND group_id = $2 AND workspace_id = $3
-               AND workspace_scope_state = $4
+               AND workspace_scope_state = $4 AND deprecated=false
+               AND NOT EXISTS (SELECT 1 FROM graph_supersedes s WHERE s.superseded_id=m.id
+                 AND s.group_id=m.group_id AND s.workspace_id=m.workspace_id)
              FOR UPDATE`,
             [params.prev_id, params.group_id, scope.workspaceId, "workspace_scoped"],
           )
           const previous = prevResult.rows[0]
-          if (!previous) return { newId: params.new_id, newVersion: params.version, success: false }
+          if (!previous || previous.version + 1 !== params.version) return { newId: params.new_id, newVersion: params.version, success: false }
 
           await db.query(
             `INSERT INTO graph_memories

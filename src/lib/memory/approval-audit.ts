@@ -270,7 +270,11 @@ export async function logProposalNeedsEvidenceEvent(
 }
 
 /**
- * Guard function: require an approval event before allowing semantic promotion.
+ * Historical approval-event presence check, retained for audit diagnostics.
+ * This tenant-only predicate MUST NOT authorize semantic writes: it does not
+ * bind workspace, payload, proposal version or canonical identity. Mutation
+ * authority belongs to approveProposal's atomic transaction; projection uses
+ * resolveApprovedProjection's workspace-bound proposal/receipt evidence.
  *
  * Queries the events table for a `proposal_approved` event matching
  * the given proposal_id and group_id. Returns true if found.

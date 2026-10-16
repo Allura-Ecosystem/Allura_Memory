@@ -467,7 +467,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "memory_restore",
         description:
-          "Restore a soft-deleted memory within the 30-day recovery window. Removes deprecated flag in graph_memories and cleans up SUPERSEDES relationships. Appends restore event to PostgreSQL (append-only).",
+          "Restore a soft-deleted memory within the 30-day recovery window and authenticated workspace. Preserves SUPERSEDES lineage; superseded versions cannot be restored. Appends restore event to PostgreSQL.",
         inputSchema: {
           type: "object",
           properties: {
@@ -635,7 +635,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
         name: "audit_health_report",
         description:
           "Check all Allura Brain subsystem health statuses and return a structured per-subsystem report. " +
-          "Checks: PostgreSQL connectivity, embedding backfill events, curator queue depth, and MCP tool availability. " +
+          "Checks: PostgreSQL connectivity and semantic schema/RLS catalog evidence, workspace-scoped backfill events, and curator queue depth. Tool catalog/execution remain unverified. " +
           "Does not independently probe RuVector extension or semantic retrieval health. " +
           "Read-only — no DB writes.",
         inputSchema: {
@@ -676,7 +676,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
         description:
           "Validate all 7 Allura governance invariants against live data and report per-check pass/fail " +
           "with violation counts. Checks: group_id constraint, no invalid group_ids, append-only structure, " +
-          "graph_supersedes readability, HITL promotion compliance, allura-* namespace, and engine mutation approval. Read-only — no DB writes.",
+          "semantic lineage integrity, approval receipts, allura-* namespace, and engine mutation policy registration. Workspace-scoped evidence with explicit limitations; not proof of all mutation paths. Read-only.",
         inputSchema: {
           type: "object",
           properties: {

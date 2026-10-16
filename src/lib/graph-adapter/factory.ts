@@ -24,9 +24,10 @@ export type GraphBackend = "ruvector" | "ruvector-crate"
  * opt-in only — never the default. See docs/archive/allura/AD-49-ruvector-graph-cutover.md.
  */
 export function getGraphBackend(): GraphBackend {
-  const value = process.env.GRAPH_BACKEND?.toLowerCase()
+  const value = process.env.GRAPH_BACKEND
+  if (value === undefined || value === "" || value === "ruvector") return "ruvector"
   if (value === "ruvector-crate") return "ruvector-crate"
-  return "ruvector"
+  throw new Error("Unsupported graph backend configuration")
 }
 
 /**
