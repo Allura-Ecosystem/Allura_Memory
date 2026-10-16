@@ -26,7 +26,10 @@ server_version_report="${artifact_dir}/postgres-server-version.txt"
 gateway_log="${artifact_dir}/gateway.log"
 historical_upgrade_report="${artifact_dir}/historical-upgrade-tests.json"
 gateway_port="${ALLURA_MCP_HTTP_PORT:-5888}"
-gateway_token_secret="${ALLURA_MCP_TOKEN_SECRET:-sdk-gateway-e2e-secret-key-0001}"
+# The disposable gateway and its Vitest client must use one deterministic
+# fixture secret. Do not inherit a process-global test secret: other live-DB
+# files can mutate their environment while this single-fork inventory runs.
+gateway_token_secret="sdk-gateway-e2e-secret-key-0001"
 historical_upgrade_db="allura_historical_upgrade_$$"
 gateway_pid=""
 
