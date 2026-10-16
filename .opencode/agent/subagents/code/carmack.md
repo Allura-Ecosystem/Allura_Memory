@@ -9,7 +9,7 @@ path: subagents/code
 scope: harness
 platform: Both
 status: active
-model: ollama/glm-5.3-flash-next:cloud
+model: openai/gpt-6-luna
 permission:
   edit: allow
   bash: allow

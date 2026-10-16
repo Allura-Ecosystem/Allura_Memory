@@ -1,5 +1,5 @@
 #!/bin/bash
-# validate-oac-core.sh — Verify current flat Team RAM + Ultra harness assets
+# validate-oac-core.sh — Verify the active Team RAM startup and bounded workflow
 
 set -euo pipefail
 
@@ -14,7 +14,7 @@ REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
 OPENCODE="$REPO/.opencode"
 
 echo "=========================================="
-echo " Flat Team RAM + Ultra Validation"
+echo " Team RAM Startup + Bounded Workflow Validation"
 echo "=========================================="
 echo ""
 
@@ -31,7 +31,7 @@ check_contains() {
   local path="$1"
   local needle="$2"
   local label="$3"
-  if grep -q "$needle" "$path" 2>/dev/null; then
+  if rg -q -- "$needle" "$path" 2>/dev/null; then
     green "$label"
   else
     red "$label"
@@ -42,9 +42,9 @@ echo "--- Core harness files ---"
 check_file "$OPENCODE/AI-GUIDELINES.md"
 check_file "$REPO/opencode.json"
 check_file "$OPENCODE/command/ultra.md"
-check_file "$OPENCODE/command/ulw.md"
-check_file "$OPENCODE/command/ralph.md"
-check_file "$OPENCODE/command/quick-commands.md"
+check_file "$OPENCODE/STARTUP.md"
+check_file "$OPENCODE/command/goal.md"
+check_file "$REPO/tooling/agent-sync/models.map.json"
 
 echo ""
 echo "--- Flat Team RAM agents ---"
@@ -63,11 +63,32 @@ for f in \
 done
 
 echo ""
-echo "--- Ultra loop artifacts ---"
-check_file "$OPENCODE/ralph/PROMPT_ultra.md"
-check_file "$OPENCODE/ralph/loop-runner.md"
-check_contains "$OPENCODE/command/quick-commands.md" '/ultra' 'quick-commands includes /ultra'
-check_contains "$OPENCODE/command/quick-commands.md" '/ulw-loop' 'quick-commands includes /ulw-loop'
+echo "--- Active bounded workflow ---"
+check_file "$OPENCODE/contracts/ralph-integration.md"
+check_file "$REPO/scripts/agents/ralph-loop.ts"
+check_contains "$OPENCODE/command/goal.md" --max-iterations\ 1 'goal execution has an explicit iteration bound'
+check_contains "$OPENCODE/command/ultra.md" --max-iterations\ 1 'Ultra declares an explicit iteration bound'
+check_contains "$OPENCODE/command/ultra.md" '^4\. Hydrate local context and search Allura Brain before editing$' 'Ultra requires Scout hydration'
+check_contains "$OPENCODE/command/ultra.md" '^5\. Resolve required skills before implementation$' 'Ultra resolves skills'
+check_contains "$OPENCODE/command/ultra.md" '^7\. Validate with the lightest meaningful checks$' 'Ultra requires validation'
+if rg -q 'user_id: "brooks-architect"|agent_id: "brooks-architect"' "$OPENCODE/command/goal.md"; then
+  red 'goal asserts an unverified persona identity'
+else
+  green 'goal does not assert a persona identity'
+fi
+if rg -q '\.opencode/ralph/|/ulw-loop' "$OPENCODE/command/ultra.md"; then
+  red 'Ultra references retired runtime files or commands'
+else
+  green 'Ultra uses current workflow references'
+fi
+
+echo ""
+echo "--- Generated routing and adapters ---"
+if bun "$REPO/tooling/agent-sync/sync-agents.mjs" --check; then
+  green 'canonical agents, runtime adapters, Claude mirrors, and configs agree'
+else
+  red 'generated agent/model/config drift'
+fi
 
 echo ""
 echo "--- JSON sanity ---"

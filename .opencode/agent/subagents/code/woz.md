@@ -9,8 +9,7 @@ path: subagents/code
 scope: harness
 platform: Both
 status: active
-model: ollama/glm-5.3-flash-next:cloud
-fallback_model: ollama/glm-5.1:cloud
+model: openai/gpt-6.1-sol
 permission:
   skill:
     "*": allow

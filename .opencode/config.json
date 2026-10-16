@@ -1,17 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "openai/gpt-5.5",
+  "model": "openai/gpt-6.1-sol",
   "instructions": [
-    ".opencode/AGENTS.md",
-    ".opencode/manifest.json",
-    ".opencode/SKILL-OWNERSHIP.md",
-    ".opencode/context/core/context-system.md",
-    ".opencode/context/navigation.md",
-    ".opencode/agent/core/brooks.md",
-    ".opencode/agent/core/jobs.md",
-    ".opencode/runtime-contract.json",
-    ".agents/TEAM-RAM-RUNTIME.md",
-    ".opencode/COWORK.md"
+    ".opencode/STARTUP.md",
+    ".opencode/context/navigation.md"
   ],
   "mcp": {
     "allura-brain": {
@@ -38,28 +30,30 @@
     "brooks": {
       "mode": "primary",
       "path": ".opencode/agent/core/brooks.md",
-      "model": "openai/gpt-5.5",
+      "model": "openai/gpt-6.1-sol",
       "permission": {
         "task": "allow",
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./agent/core/brooks.md}"
     },
     "jobs": {
       "mode": "primary",
       "path": ".opencode/agent/core/jobs.md",
-      "model": "ollama-cloud/deepseek-v4-pro",
+      "model": "openai/gpt-6.1-sol",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./agent/core/jobs.md}"
     },
     "scout": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/core/scout.md",
-      "model": "openai/gpt-5.4-mini",
+      "model": "openai/gpt-6-luna",
       "permission": {
         "edit": "allow",
         "write": "allow",
@@ -67,78 +61,87 @@
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./agent/subagents/core/scout.md}"
     },
     "woz": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/code/woz.md",
-      "model": "ollama-cloud/glm-5.3-flash-next",
+      "model": "openai/gpt-6.1-sol",
       "permission": {
         "task": "allow",
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./agent/subagents/code/woz.md}"
     },
     "bellard": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/code/bellard.md",
-      "model": "openai/gpt-5.4-mini",
+      "model": "openai/gpt-6-luna",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./agent/subagents/code/bellard.md}"
     },
     "carmack": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/code/carmack.md",
-      "model": "openai/gpt-5.4-mini",
+      "model": "openai/gpt-6-luna",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./agent/subagents/code/carmack.md}"
     },
     "pike": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/review/pike.md",
-      "model": "openai/gpt-5.4-mini",
+      "model": "openai/gpt-6-luna",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./agent/subagents/review/pike.md}"
     },
     "fowler": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/review/fowler.md",
-      "model": "openai/gpt-5.5",
+      "model": "openai/gpt-6-luna",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./agent/subagents/review/fowler.md}"
     },
     "knuth": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/infrastructure/knuth.md",
-      "model": "ollama-cloud/glm-5.3-flash-next",
+      "model": "openai/gpt-6-luna",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./agent/subagents/infrastructure/knuth.md}"
     },
     "hightower": {
       "mode": "subagent",
       "path": ".opencode/agent/subagents/infrastructure/hightower.md",
-      "model": "openai/gpt-5.5",
+      "model": "openai/gpt-6-luna",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./agent/subagents/infrastructure/hightower.md}"
     }
-  }
+  },
+  "small_model": "openai/gpt-6-luna"
 }

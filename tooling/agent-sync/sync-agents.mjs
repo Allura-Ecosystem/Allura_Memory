@@ -69,14 +69,46 @@ for (const [name, spec] of Object.entries(MAP.agents)) {
 
   // 1) SOURCE — align model to tier (rest of source frontmatter untouched).
   const src = split(readFileSync(srcPath, "utf8"));
-  const srcFm = fmSet(src.fm, "model", tier.opencode);
+  const srcFm = fmSet(src.fm, "model", tier.opencode)
+    .replace(/^fallback_model:.*\n?/gm, "");
   writeOrCheck(srcPath, `---\n${srcFm}\n---\n${src.body}`, spec.source);
+
+  // Flat runtime adapters override same-named global agents. Nested canonical
+  // sources remain the only authored definitions; these files are generated.
+  const adapterPath = join(ROOT, ".opencode", "agents", `${name}.md`);
+  const adapterFm = fmSet(srcFm, "name", name);
+  writeOrCheck(adapterPath,
+    `---\n${adapterFm}\n---\n<!-- GENERATED from ${spec.source}; edit the canonical source. -->\n${src.body}`,
+    `.opencode/agents/${name}.md`);
 
   // 2) MIRROR — keep runtime frontmatter, set model, regenerate body + bridge.
   const mir = split(readFileSync(mirPath, "utf8"));
   const mirFm = fmSet(mir.fm, "model", tier.claude);
   const body = src.body.replace(/\s*$/, "\n");
   writeOrCheck(mirPath, `---\n${mirFm}\n---\n${body}\n${BRIDGE(spec.source)}`, `.claude/agents/${name}.md`);
+}
+
+// Keep the root runtime and compatibility config aligned with the tier map.
+// Preserve unrelated MCP, permissions, plugins, and provider options.
+for (const configRel of ["opencode.json", ".opencode/config.json"]) {
+  const path = join(ROOT, configRel);
+  if (!existsSync(path)) { log(`! missing config ${configRel}`); drift++; continue; }
+  const config = JSON.parse(readFileSync(path, "utf8"));
+  config.model = MAP.tiers.ultrabrain.opencode;
+  config.small_model = MAP.tiers.cheap.opencode;
+  config.instructions = [".opencode/STARTUP.md", ".opencode/context/navigation.md"];
+  for (const [name, spec] of Object.entries(MAP.agents)) {
+    if (!config.agent?.[name]) { log(`! missing ${configRel} agent ${name}`); drift++; continue; }
+    config.agent[name].model = MAP.tiers[spec.tier].opencode;
+    // OpenCode's documented prompt field loads the canonical body; `path` alone
+    // is metadata and can leave a global agent's prompt active.
+    const sourceRel = configRel.startsWith(".opencode/")
+      ? spec.source.replace(/^\.opencode\//, "./")
+      : `./${spec.source}`;
+    config.agent[name].prompt = `{file:${sourceRel}}`;
+    delete config.agent[name].fallback_model;
+  }
+  writeOrCheck(path, `${JSON.stringify(config, null, 2)}\n`, configRel);
 }
 
 const verb = APPLY ? "updated" : (CI ? "out of sync" : "would change");

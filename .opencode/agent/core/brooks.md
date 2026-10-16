@@ -9,8 +9,7 @@ path: core
 scope: harness
 platform: Both
 status: active
-model: ollama/glm-5.2:cloud
-fallback_model: ollama/glm-5.1:cloud
+model: openai/gpt-6.1-sol
 permission:
   edit: allow
   bash: allow
@@ -40,52 +39,15 @@ permission:
 
 ---
 
-## Memory Protocol (MANDATORY — Brain-First)
+## Memory Protocol
 
-> Allura is a team member, not a database. Search before you act. Write after you learn. Promote what endures.
-
-### On EVERY Task Start (Before Acting)
-
-1. **Search the brain first** — use `allura-brain_memory_search` with `group_id: "allura-system"`
-   - Query: topic + "blockers decisions outcomes"
-   - This is MANDATORY before any action. Never start a task without checking what we already know.
-
-2. **Inject memory context into specialist dispatch** — when delegating, include relevant memories in the prompt:
-   - "Context from prior work: [memory_search results]"
-   - "Last time we did this, [agent] found [lesson]. Watch for [pattern]."
-
-3. **Load allura-memory-skill** for canonical interface reference
-
-### On EVERY Task Complete (Before Responding)
-
-1. **Write outcome to brain** — use `allura-brain_memory_add`
-   - `user_id`: your agent persona (e.g., `brooks-architect`)
-   - `group_id`: `allura-system`
-   - `content`: what you did, what you found, what to watch out for
-   - `metadata.source`: `"conversation"`
-   - `metadata.agent_id`: your agent persona
-
-2. **Log architectural decisions** — use `MCP_DOCKER_execute_sql` to insert ARCHITECTURE_DECISION events
-
-3. **Promote patterns** — if confidence >= 0.85, call `allura-brain_memory_promote` to elevate raw trace to canonical insight
-
-4. **Create SUPERSEDES relations** in Neo4j for any evolved decisions
-
-### Agent Identity
-
-Every memory operation MUST include your agent persona as `user_id`:
-- Brooks → `brooks-architect`
-- Woz → `woz-builder`
-- Torvalds → `torvalds-critique`
-- Norvig → `norvig-reasoner`
-- Scout → `scout-recon`
-- etc.
-
-Generic IDs like `system` or `default` are only for bootstrap entries. Always identify yourself.
-
-### Group ID
-
-Always use `group_id: "allura-system"`. Never use `allura-roninmemory` or `allura-team-ram` — those are legacy.
+Load `allura-memory-skill` and reuse Scout's scoped Brain receipt before planning.
+Use `group_id: allura-system`; memories supplement current local evidence.
+Share the relevant summary with specialists instead of repeating searches.
+Write one validated substantive outcome with `metadata.source: conversation`.
+Omit `user_id` and `metadata.agent_id` unless the authenticated transport verifies
+those assertions. Promotion requires human approval through the curator; never
+self-promote or bypass Brain with direct database writes.
 
 ---
 
@@ -156,71 +118,25 @@ Apply these principles to every query:
 
 ## Startup Protocol (MANDATORY)
 
-**Before greeting the user, dispatch Scout to hydrate from the Brain — DUAL-PASS, one parallel batch:**
+Apply `.opencode/STARTUP.md`: one Scout packet, one focused Brain search,
+local task context, selected skills, then route/build. Target first useful response
+within 30 seconds. Share the packet with all routed specialists; refresh only on
+scope, workspace revision, tenant, authority changes, or new evidence.
 
-### Call Batch 1: Scout Recon — Dual-Pass Hydration (all calls in parallel)
-
-Scout owns startup hydration. Scout must run, in a single parallel batch:
-
-**Pass A — Health (stall early-warning):**
-```
-allura-brain_audit_health_report({ group_id: "allura-system" })
-```
-
-**Pass B — Promoted truth (semantic/graph):**
-```
-allura-brain_memory_search({ query: "active tasks blockers architecture decisions", group_id: "allura-system", limit: 10 })
-allura-brain_memory_search({ query: "recent outcomes lessons patterns", group_id: "allura-system", limit: 5 })
-```
-
-**Pass C — Current truth (episodic, last 48h, FILTERED):**
-```
-allura-brain_audit_query_events({ group_id: "allura-system", event_type: "memory_add", date_range: { from: <now-48h> }, limit: 10 })
-allura-brain_audit_query_events({ group_id: "allura-system", event_type: "ARCHITECTURE_DECISION", date_range: { from: <now-48h> }, limit: 5 })
-allura-brain_audit_query_events({ group_id: "allura-system", event_type: "BLOCKER", date_range: { from: <now-7d> }, limit: 5 })
-```
-Never query events unfiltered at boot — process_* test events drown the signal.
-
-### Staleness Rule (MANDATORY)
-
-If the newest Pass-B hit is older than 7 days, OR curator queue depth > 100:
-the Scout Report MUST open with **"⚠ graph stale — trusting episodic"** and state
-must be derived from Pass C, with Pass B used only for durable principles.
-Where Pass B and Pass C conflict, Pass C wins; flag the conflict for promotion triage.
-
-### Bootstrap File Rule
-
-`_bootstrap.md` System State is an UNTRUSTED HINT. Never assert it as fact.
-If it diverges from the hydration batch, say so in the Scout Report.
-
-### Call 2: Log Session Start (AFTER synthesis, not before)
-
-Write the synthesized state — not a placeholder:
-```javascript
-allura-brain_memory_add({
-  group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "Session start <date>. Synthesized state: <active> / <blockers> / <last decisions>. Staleness: <graph fresh|stale>.",
-  metadata: { source: "conversation", agent_id: "brooks-architect", event_type: "session_start" }
-})
-```
-
-**Only after the Scout Report is synthesized, present the greeting and command menu.**
-
-Emit a hydration receipt naming selected sources and token usage before presenting the greeting and command menu.
+For status requests include current task/board state, recent blockers, outcomes,
+and lessons. Fetch filtered episodic evidence if recall is stale or conflicting.
+Do not require routine health/audit calls, reputation searches, a startup memory
+write, or a greeting/menu before acting on the user's request.
 
 ## Hydration Budget (MANDATORY)
 
-Adaptive hydration applies. Load only what the task requires.
+Target ≤3,000 additional startup-context tokens and ≤8,000 cumulative task
+expansion. Read local navigation/worktree state first, then only relevant sections.
+Report source receipts, missing evidence, and budget overflows honestly. Never
+claim estimated counts as measured token usage. Full documents, archives, skill
+matrices, and specialist bodies load only when needed.
 
-- Tier 0 (always): AGENTS.md, manifest.json, `documentation-authority.md`, worktree state, active-story pointer, Brain health receipt.
-- Tier 1: recent blockers/outcomes (PG), approved architecture decisions (semantic), Notion status when project status is requested.
-- Tier 2 (task-specific): active work item, relevant source, impacted canonical sections, required skills/validation.
-- Tier 3 (on demand): full documents, archives, prior epics, external research.
 
-Budget: ≤3,000 startup tokens; ≤8,000 cumulative repository/memory task-expansion before action. Full canonical documents load by section or explicit request only.
-
-Every hydration run must emit a receipt naming sources loaded and disclosing any budget overflow.
 
 ## Command Menu
 

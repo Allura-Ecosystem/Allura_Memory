@@ -2,98 +2,97 @@
   "$schema": "https://opencode.ai/config.json",
   "agent": {
     "bellard": {
-      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/glm-5.3-flash-next:cloud",
+      "model": "openai/gpt-6-luna",
       "path": ".opencode/agent/subagents/code/bellard.md",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./.opencode/agent/subagents/code/bellard.md}"
     },
     "brooks": {
-      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "primary",
-      "model": "ollama/glm-5.2:cloud",
+      "model": "openai/gpt-6.1-sol",
       "path": ".opencode/agent/core/brooks.md",
       "permission": {
         "skill": {
           "*": "allow"
         },
         "task": "allow"
-      }
+      },
+      "prompt": "{file:./.opencode/agent/core/brooks.md}"
     },
     "carmack": {
-      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/glm-5.3-flash-next:cloud",
+      "model": "openai/gpt-6-luna",
       "path": ".opencode/agent/subagents/code/carmack.md",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./.opencode/agent/subagents/code/carmack.md}"
     },
     "fowler": {
-      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/glm-5.3-flash-next:cloud",
+      "model": "openai/gpt-6-luna",
       "path": ".opencode/agent/subagents/review/fowler.md",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./.opencode/agent/subagents/review/fowler.md}"
     },
     "hightower": {
-      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/glm-5.3-flash-next:cloud",
+      "model": "openai/gpt-6-luna",
       "path": ".opencode/agent/subagents/infrastructure/hightower.md",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./.opencode/agent/subagents/infrastructure/hightower.md}"
     },
     "jobs": {
-      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "primary",
-      "model": "ollama/glm-5.2:cloud",
+      "model": "openai/gpt-6.1-sol",
       "path": ".opencode/agent/core/jobs.md",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./.opencode/agent/core/jobs.md}"
     },
     "knuth": {
-      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/glm-5.3-flash-next:cloud",
+      "model": "openai/gpt-6-luna",
       "path": ".opencode/agent/subagents/infrastructure/knuth.md",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./.opencode/agent/subagents/infrastructure/knuth.md}"
     },
     "pike": {
-      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/glm-5.3-flash-next:cloud",
+      "model": "openai/gpt-6-luna",
       "path": ".opencode/agent/subagents/review/pike.md",
       "permission": {
         "skill": {
           "*": "allow"
         }
-      }
+      },
+      "prompt": "{file:./.opencode/agent/subagents/review/pike.md}"
     },
     "scout": {
-      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/nemotron-3-super:cloud",
+      "model": "openai/gpt-6-luna",
       "path": ".opencode/agent/subagents/core/scout.md",
       "permission": {
         "edit": "allow",
@@ -102,33 +101,26 @@
         },
         "task": "allow",
         "write": "allow"
-      }
+      },
+      "prompt": "{file:./.opencode/agent/subagents/core/scout.md}"
     },
     "woz": {
-      "fallback_model": "ollama/glm-5.1:cloud",
       "mode": "subagent",
-      "model": "ollama/kimi-k2.7-code:cloud",
+      "model": "openai/gpt-6.1-sol",
       "path": ".opencode/agent/subagents/code/woz.md",
       "permission": {
         "skill": {
           "*": "allow"
         },
         "task": "allow"
-      }
+      },
+      "prompt": "{file:./.opencode/agent/subagents/code/woz.md}"
     }
   },
   "default_agent": "brooks",
   "instructions": [
-    ".opencode/AGENTS.md",
-    ".opencode/manifest.json",
-    ".opencode/SKILL-OWNERSHIP.md",
-    ".opencode/context/core/context-system.md",
-    ".opencode/context/navigation.md",
-    ".opencode/agent/core/brooks.md",
-    ".opencode/agent/core/jobs.md",
-    ".opencode/runtime-contract.json",
-    ".agents/TEAM-RAM-RUNTIME.md",
-    ".opencode/COWORK.md"
+    ".opencode/STARTUP.md",
+    ".opencode/context/navigation.md"
   ],
   "mcp": {
     "mcp-docker": {
@@ -151,7 +143,7 @@
       "type": "local"
     }
   },
-  "model": "ollama/glm-5.1:cloud",
+  "model": "openai/gpt-6.1-sol",
   "permission": {
     "bash": "allow",
     "edit": "allow",
@@ -176,83 +168,6 @@
     "opencode-scheduler"
   ],
   "provider": {
-    "ollama": {
-      "models": {
-        "deepseek-v3.2:cloud": {
-          "name": "deepseek-v3.2:cloud"
-        },
-        "deepseek-v4-flash:cloud": {
-          "name": "deepseek-v4-flash:cloud"
-        },
-        "deepseek-v4-pro:cloud": {
-          "name": "deepseek-v4-pro:cloud"
-        },
-        "gemma4:31b-cloud": {
-          "name": "gemma4:31b-cloud"
-        },
-        "glm-5.1:cloud": {
-          "name": "glm-5.1:cloud"
-        },
-        "glm-5:cloud": {
-          "name": "glm-5:cloud"
-        },
-        "gpt-oss:120b-cloud": {
-          "name": "gpt-oss:120b-cloud"
-        },
-        "kimi-k2.5:cloud": {
-          "name": "kimi-k2.5:cloud"
-        },
-        "kimi-k2.6:cloud": {
-          "name": "kimi-k2.6:cloud"
-        },
-        "kimi-k2.7-code:cloud": {
-          "name": "kimi-k2.7-code:cloud"
-        },
-        "minimax-m2.5:cloud": {
-          "name": "minimax-m2.5:cloud"
-        },
-        "minimax-m2.7:cloud": {
-          "name": "minimax-m2.7:cloud"
-        },
-        "ministral-3:8b-cloud": {
-          "name": "ministral-3:8b-cloud"
-        },
-        "nemotron-3-super:cloud": {
-          "name": "nemotron-3-super:cloud"
-        },
-        "nomic-embed-text:latest": {
-          "name": "nomic-embed-text:latest"
-        },
-        "glm-5.3-flash-next:cloud": {
-          "name": "glm-5.3-flash-next:cloud"
-        },
-        "glm-5.3-flash:480b-cloud": {
-          "name": "glm-5.3-flash:480b-cloud"
-        },
-        "qwen3-embedding:8b": {
-          "name": "qwen3-embedding:8b"
-        },
-        "qwen3-vl:235b-cloud": {
-          "name": "qwen3-vl:235b-cloud"
-        },
-        "qwen3.5:397b-cloud": {
-          "name": "qwen3.5:397b-cloud"
-        },
-        "qwen3:0.6b": {
-          "name": "qwen3:0.6b"
-        },
-        "glm-5.2:cloud": {
-          "name": "glm-5.2:cloud"
-        }
-      },
-      "name": "Ollama",
-      "npm": "@ai-sdk/openai-compatible",
-      "options": {
-        "baseURL": "http://127.0.0.1:11434/v1",
-        "chunkTimeout": 60000,
-        "timeout": 600000
-      }
-    },
     "openai": {
       "options": {
         "chunkTimeout": 60000,
@@ -267,5 +182,6 @@
       "../allura-team-durham/team-durham-plugin/skills",
       "../allura-team-ram/.opencode/skills"
     ]
-  }
+  },
+  "small_model": "openai/gpt-6-luna"
 }

@@ -5,7 +5,7 @@ allowed-tools: ["Read", "Bash", "Glob", "Grep", "Edit", "Write", "mcp__MCP_DOCKE
 
 # Ultra Work-Until-Done (`ultra`)
 
-`ultra` is the canonical bounded loop for finishing concrete work. `ulw` remains a legacy alias.
+`ultra` coordinates bounded work using the current `/goal` lifecycle.
 
 ## Mode: `$ARGUMENTS`
 
@@ -20,17 +20,20 @@ Default mode is **work**.
 ### If Mode is `work`
 
 1. Read `.opencode/AI-GUIDELINES.md`
-2. Read `.opencode/ralph/PROMPT_ultra.md`
-3. Read `.opencode/ralph/loop-runner.md`
+2. Read `.opencode/STARTUP.md`
+3. Read `.opencode/command/goal.md` and the approved task's completion criteria
 4. Hydrate local context and search Allura Brain before editing
 5. Resolve required skills before implementation
 6. Implement the smallest valid slice
 7. Validate with the lightest meaningful checks
-8. Repeat until the task is complete or a hard blocker is reached
+8. For an approved active goal, use `/goal run [goal-id]` for one iteration
+   (`--max-iterations 1`). Recheck validation after each iteration; stop when done,
+   blocked, or the user-specified iteration/time/token budget is reached. Require
+   an explicit finite bound before continuing; never start an unbounded loop.
 
 ### If Mode is `plan`
 
-1. Read `.opencode/ralph/PROMPT_ultra.md`
+1. Read `.opencode/STARTUP.md` and `.opencode/command/goal.md`
 2. Review current repo state and identify the next bounded slice
 3. Update the loop plan only
 4. Do not implement

@@ -8,6 +8,13 @@ allowed-tools: ["Read", "Write", "Bash", "Glob", "Grep", "allura-brain__memory_a
 
 You are operating in **Goal Mode** — a long-horizon execution loop that persists state in Allura Brain, decomposes objectives into Ralph-ready tasks, and drives autonomous work without constant human intervention.
 
+Load `allura-memory-skill` and use the tool names/schema exposed by the active
+host. Writes omit identity assertions. `memory_list` currently requires `user_id`:
+resolve it from verified authenticated workspace context before listing; never
+substitute a persona or infer identity from a memory. If unavailable, report the
+blocked lookup. Goal fields belong in structured `content`, with metadata limited
+to supported fields; fold state from content, not unsupported metadata keys.
+
 ## Parse Arguments
 
 `$ARGUMENTS` is one of:
@@ -22,7 +29,7 @@ You are operating in **Goal Mode** — a long-horizon execution loop that persis
 
 ## Subcommand: `status`
 
-1. List recent Brain entries: `allura-brain__memory_list({ group_id: "allura-system", user_id: "brooks-architect", limit: 50, sort: "created_at_desc" })`
+1. List recent Brain entries: `allura-brain__memory_list({ group_id: "allura-system", user_id: "<verified authenticated principal>", limit: 50, sort: "created_at_desc" })`
 2. Filter results where `content` starts with `GOAL_` — memory_search only hits the semantic store; newly created goals are episodic and only appear via memory_list
 3. Display:
 
@@ -30,7 +37,7 @@ You are operating in **Goal Mode** — a long-horizon execution loop that persis
 ━━━ Active Goals ━━━
 [goal-id]  [state]  [created]
   Objective: [content]
-  Stopping condition: [from metadata]
+  Stopping condition: [from structured content]
   Ralph plan: [ralph_plan path]
 ━━━━━━━━━━━━━━━━━━━
 ```
@@ -47,16 +54,8 @@ You are operating in **Goal Mode** — a long-horizon execution loop that persis
 ```
 allura-brain__memory_add({
   group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "GOAL_PAUSED [original goal_id] state:paused objective: [original objective]",
-  metadata: {
-    source: "conversation",
-    agent_id: "brooks-architect",
-    event_type: "GOAL_PAUSED",
-    goal_id: [original goal_id],
-    state: "paused",
-    paused_at: [ISO timestamp]
-  }
+  content: "GOAL_PAUSED goal_id:[original goal_id] state:paused objective:[original objective] paused_at:[ISO timestamp]",
+  metadata: { source: "conversation" }
 })
 ```
 
@@ -72,8 +71,9 @@ allura-brain__memory_add({
 
 ```
 allura-brain__memory_add({
-  ...
-  metadata: { event_type: "GOAL_RESUMED", state: "active", resumed_at: [timestamp] }
+  group_id: "allura-system",
+  content: "GOAL_RESUMED goal_id:[goal_id] state:active resumed_at:[ISO timestamp]",
+  metadata: { source: "conversation" }
 })
 ```
 
@@ -107,7 +107,7 @@ allura-brain__memory_add({
 ### Step 1 — Conflict Check
 List recent Brain entries and fold by goal ID. Do not use semantic search for active-goal detection because newly created goals are episodic:
 ```
-allura-brain__memory_list({ group_id: "allura-system", user_id: "brooks-architect", limit: 50, sort: "created_at_desc" })
+allura-brain__memory_list({ group_id: "allura-system", user_id: "<verified authenticated principal>", limit: 50, sort: "created_at_desc" })
 ```
 If one exists, warn the user:
 > "Active goal already running: [objective]. Pause it first with `/goal pause` or provide a different scope."
@@ -144,19 +144,8 @@ Generate a goal ID: `goal-[YYYYMMDD-HHMM]`
 ```
 allura-brain__memory_add({
   group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "GOAL_SET [goal-id] state:active objective: [objective]",
-  metadata: {
-    source: "conversation",
-    agent_id: "brooks-architect",
-    event_type: "GOAL_SET",
-    goal_id: "[goal-id]",
-    state: "active",
-    stopping_condition: "[stopping condition]",
-    guardrails: ["[guardrail 1]", "..."],
-    ralph_plan: "ralph/goals/[goal-id].md",
-    created_at: "[ISO timestamp]"
-  }
+  content: "GOAL_SET goal_id:[goal-id] state:active objective:[objective] stopping_condition:[stopping condition] guardrails:[guardrails] ralph_plan:ralph/goals/[goal-id].md created_at:[ISO timestamp]",
+  metadata: { source: "conversation" }
 })
 ```
 
@@ -212,7 +201,7 @@ Goal [goal-id] active. Plan written to ralph/goals/[goal-id].md.
 These apply regardless of subcommand:
 
 1. `group_id = "allura-system"` on every Brain operation
-2. `user_id = "brooks-architect"` for goal entries
+2. Writes use transport-derived identity; list reads use only a verified authenticated principal
 3. Never mutate Brain entries — always add superseding entries for state transitions
 4. Ralph never modifies task descriptions — only marks tasks `[x]`
 5. Stopping condition must be verifiable — binary yes/no, not "looks good"
