@@ -30,6 +30,10 @@ This document describes Allura's PostgreSQL-only governed memory data model. Pos
 
 ---
 
+## Epic 30/31 planning boundary
+
+The [course correction](./BLUEPRINT.md#epic-3031-course-correction) changes planning direction only. It adds no persisted field, enum, endpoint, migration, credential, or plugin permission. Before any future plugin manifest, provider secret reference, agent connection, conversation, action, or notification schema is implemented, reconcile its existing definitions, scope, retention, and source schemas here through the applicable review. Archived draft TypeScript interfaces are not accepted data contracts. Product work-item state does not replace Notion's human delivery-status authority.
+
 ## API Response Contracts
 
 ### `ApiResult<T>`
