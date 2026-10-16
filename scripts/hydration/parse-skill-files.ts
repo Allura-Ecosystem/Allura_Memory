@@ -19,7 +19,6 @@ export interface ParsedSkill {
 // Categorization rules based on skill name patterns
 const SKILL_CATEGORY_MAP: Record<string, ParsedSkill['category']> = {
   'memory-': 'context',
-  'bmad-': 'governance',
   'wds-': 'governance',
   'context7': 'context',
   'multi-search': 'research',

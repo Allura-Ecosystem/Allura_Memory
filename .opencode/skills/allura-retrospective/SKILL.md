@@ -18,7 +18,7 @@ Trigger phrases: `allura retrospective`, `run retrospective`, `retro the epic`, 
 
 ## Prerequisites
 
-This skill requires `allura-team-ram` to be loaded first. It enforces all seven gates defined there.
+This skill requires `allura-team-ram` to be loaded first. It uses the risk-scaled Adaptive Delivery stages defined there.
 
 ## Retrospective Authority
 
@@ -28,7 +28,7 @@ This skill requires `allura-team-ram` to be loaded first. It enforces all seven 
 | Builder | Woz | Implementation lessons, what worked, what didn't |
 | Reviewer | Pike/Fowler | Review process lessons, what to improve |
 
-Brooks facilitates. The retrospective is about systems and processes, not blame.
+One accountable facilitator is required. Brooks is preferred for architecture-heavy work but is not a blocking dependency. The retrospective is about systems and processes, not blame.
 
 ## Execution Protocol
 
@@ -53,7 +53,7 @@ Load `allura-team-ram` skill. This provides:
 5. Synthesize: what was accomplished, what was blocked, what was learned
 ```
 
-**Critical:** Do not run retrospective until all stories in the epic are `Done` in Notion.
+**Critical:** A full completion retrospective requires completion evidence. A partial retrospective may run when the user asks, and must be labeled partial without advancing status.
 
 ### Step 3: Documentation Impact Check (Gate 2)
 
@@ -68,11 +68,11 @@ Retrospectives often produce lessons that should update canonical docs:
 | `RISKS-AND-DECISIONS.md` | **Always** — new risks or decisions from retrospective |
 | `DATA-DICTIONARY.md` | New fields/entities discovered during implementation |
 
-Retrospectives **should** produce at least one `RK-##` entry in `RISKS-AND-DECISIONS.md`.
+Create or update an `RK-##` only when evidence changes a canonical risk. Do not manufacture one to satisfy ceremony.
 
 ### Step 4: Team RAM Owner Assignment (Gate 3)
 
-Assign retrospective roles:
+Assign one facilitator and only the contributors needed for the evidence under review:
 
 | Role | Agent | Responsibility |
 |------|-------|---------------|
@@ -100,7 +100,7 @@ Execute retrospective with Allura context loaded:
 
 ### Step 6: Notion Board Update (Gate 5)
 
-After retrospective:
+After the retrospective, and only with action-specific approval for the named targets and intended status effects:
 
 1. Update Notion epic status
 2. Create action items as new work items
@@ -114,9 +114,9 @@ Collect and verify:
 - [ ] All stories in the epic are `Done` in Notion
 - [ ] Lessons extracted are specific and actionable
 - [ ] Action items have clear ownership and timeline
-- [ ] At least one `RK-##` entry created in `RISKS-AND-DECISIONS.md`
+- [ ] Canonical risks or decisions updated only when supported by evidence
 - [ ] No canonical doc impact without planned update
-- [ ] Brooks approval obtained (conceptual integrity check)
+- [ ] Required review matches the risk and scope of the retrospective
 
 ### Step 8: Brain Outcome Log (Gate 7)
 
@@ -125,7 +125,6 @@ Log the retrospective outcome to Allura Brain:
 ```
 allura-brain_memory_add({
   group_id: "allura-system",
-  user_id: "brooks-architect",
   content: "RETROSPECTIVE: {epic name} — {summary}; lessons={...}; action_items={...}",
   metadata: {
     source: "conversation",
@@ -153,7 +152,7 @@ allura-brain_memory_add({
 |---------|----------|
 | Allura Brain unavailable | Warn and continue with local context only |
 | Stories not all Done | Do not run retrospective. Flag which stories are incomplete. |
-| Brooks unavailable | Postpone retrospective. Brooks must facilitate. |
+| Preferred facilitator unavailable | Name another accountable facilitator and disclose the substitution. |
 | No lessons extracted | This is a failure. Every retrospective must produce at least one lesson. |
 
 ## Reflection

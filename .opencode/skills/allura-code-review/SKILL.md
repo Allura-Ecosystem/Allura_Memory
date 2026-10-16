@@ -1,12 +1,12 @@
 ---
 name: allura-code-review
-description: "Allura-governed code review with Pike/Fowler gates, Brain outcome logging, and doc impact checks. Use for governed review, allura code review, or review with gates — not generic code review."
+description: "Allura-governed, risk-scaled code review with Brain outcome logging and canonical-doc impact checks."
 globs: ["src/**", "docs/allura/**", "guidelines/**"]
 ---
 
 # Allura Code Review — Governed Code Review
 
-> **Allura-governed code review.** Enforces Pike/Fowler review gates, Brain outcome logging, and canonical doc impact checks before and after review.
+> **Allura-governed code review.** Routes review to the smallest independent, risk-matched set of reviewers and records truthful evidence.
 
 ## When to Use
 
@@ -25,7 +25,7 @@ This skill requires `allura-team-ram` to be loaded first. It enforces all seven 
 | Pike | Interface simplicity, API surface, source-of-truth clarity | Interface Gate |
 | Fowler | Maintainability, token use, component boundaries | Refactor Gate |
 
-Both reviewers must approve before the story can be marked Done.
+Quick work may receive targeted owner review. Standard work requires one independent reviewer matched to the changed risk. Sensitive work requires relevant specialists, independent review, exact human approval, and rollback or recovery evidence.
 
 ## Execution Protocol
 
@@ -66,7 +66,7 @@ If any doc is impacted, flag it in the review. Doc updates must be in the same P
 
 ### Step 4: Team RAM Owner Assignment (Gate 3)
 
-Assign review roles:
+Assign only relevant review roles:
 
 | Role | Agent | Responsibility |
 |------|-------|---------------|
@@ -91,7 +91,7 @@ Execute code review with Allura context loaded:
 
 ### Step 6: Notion Board Update (Gate 5)
 
-After review:
+After review, and only with action-specific approval for the named work item and intended status effect:
 
 1. Update Notion work item with review status
 2. Add review findings to Decision Log
@@ -115,7 +115,6 @@ Log the review outcome to Allura Brain:
 ```
 allura-brain_memory_add({
   group_id: "allura-system",
-  user_id: "brooks-architect",
   content: "CODE_REVIEW: {story ID} — {summary}; findings={critical/warning/suggestion counts}; outcome={approved/changes-requested}",
   metadata: {
     source: "conversation",
@@ -144,7 +143,7 @@ allura-brain_memory_add({
 | Failure | Response |
 |---------|----------|
 | Allura Brain unavailable | Warn and continue with local context only |
-| Pike/Fowler unavailable | Note in review. Do not mark as approved without review. |
+| Required risk-matched reviewer unavailable | Note the gap and do not claim the required independent approval. |
 | Canonical doc impact detected | Flag in review. Require doc update in same PR. |
 | Critical findings | Do not approve. Require fix before merge. |
 

@@ -1,6 +1,6 @@
 ---
 name: allura-team-ram
-description: "Allura Team RAM operating core — shared governance, routing, memory, and validation gates for all Allura wrapper skills. Load this skill before any allura-* wrapper."
+description: "Allura Adaptive Delivery core — shared risk-scaled governance, routing, memory, and validation for Allura wrapper skills."
 globs: ["src/**", ".opencode/**", "docs/allura/**", "guidelines/**"]
 ---
 
@@ -35,7 +35,9 @@ Allura Core Layer (shared governance)
   └── allura-team-ram (THIS SKILL)
 ```
 
-## Mandatory Gates (Every Allura Workflow)
+## Adaptive Delivery Stages
+
+Use `Intent → Hydrate → Classify → Route → Build/review → Validate → Reconcile → Log`. Scale participation and evidence to Quick, Standard, or Sensitive risk; do not force every task through every role.
 
 ### Gate 1: Scout Hydration
 
@@ -63,7 +65,9 @@ Before touching any code, check whether the change impacts any of the six canoni
 
 If the change touches any canonical doc, update it in the same PR.
 
-### Gate 3: Team RAM Owner Assignment
+### Gate 3: Risk Classification and Owner Routing
+
+Choose one accountable owner. Add only specialists whose perspective changes the evidence or decision.
 
 | Phase | Owner | Role |
 |-------|-------|------|
@@ -87,13 +91,15 @@ Execute the Allura skill workflow with loaded context:
 - `allura-product-intake` → loads this skill, then executes PRD creation
 - `allura-retrospective` → loads this skill, then executes retrospective
 
-### Gate 5: Notion Board Update
+### Gate 5: Status Reconciliation
 
-After any status change:
+After an authorized status change:
 
 1. Update the relevant Notion work item (Status, Decision Log, Handoff Context)
 2. Notion is the source of truth for sprint status
 3. Local files are evidence only
+
+A Notion sync or any move to `Done` or `Approved` requires action-specific human approval naming the target and intended effect.
 
 ### Gate 6: Validation Evidence
 
@@ -101,18 +107,17 @@ Before marking any story `Done`:
 
 - [ ] Targeted tests pass (`bun test`, `bun run typecheck`)
 - [ ] Acceptance criteria met (from Notion work item)
-- [ ] Review approved (Pike for interface, Fowler for maintainability)
+- [ ] Review depth matches the risk class: targeted owner review for Quick, one independent risk-matched reviewer for Standard, and relevant specialists plus explicit approval for Sensitive
 - [ ] Evidence artifact created (test output, review notes, screenshots)
 - [ ] No canonical doc impact without update
 
 ### Gate 7: Brain Outcome Log
 
-After completing any significant action:
+After completing substantive verified work:
 
 ```
 allura-brain_memory_add({
   group_id: "allura-system",
-  user_id: "brooks-architect",
   content: "EVENT_TYPE: what was done; evidence=...; counterfactuals=...",
   metadata: { source: "conversation", agent_id: "brooks-architect", confidence: 0.85 }
 })
@@ -145,8 +150,8 @@ For Allura Memory repo work, use the `allura-*` skills — they are the canonica
 
 | Task | Allura Skill | Notes |
 |------|-------------|-------|
-| Story implementation | `allura-dev-story` | Full governance gates |
-| Code review | `allura-code-review` | Pike/Fowler review gates |
+| Story implementation | `allura-dev-story` | Risk-scaled Adaptive Delivery |
+| Code review | `allura-code-review` | Risk-matched review |
 | Architecture decisions | `allura-architecture` | Brooks gate + ADR logging |
 | PRD creation | `allura-product-intake` | Jobs intent gate |
 | Retrospective | `allura-retrospective` | Brooks facilitation |

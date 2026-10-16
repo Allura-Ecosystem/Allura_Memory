@@ -483,18 +483,18 @@ await bootstrap.shutdown();
 
 ## Integration Points
 
-### With BMad Workflow
+### With Allura Adaptive Delivery
 
 ```
-bmad-dev-story          → Bootstrap session, enable budget
+Intent + Hydrate        → Bootstrap session, enable budget
     ↓
-bmad-code-review        → Checkpoint before review, detect drift
+Classify + Route        → Select risk-matched ownership and review
     ↓
-bmad-correct-course     → Analyze drift, update state
+Build/review            → Checkpoint before validation, detect drift
     ↓
 [ Blood Loop ]          → Run tests, validate encoding, enforce budget
     ↓
-bmad-retrospective      → Analyze epic-level drift, create snapshot
+Reconcile + Log         → Preserve evidence and create snapshot
 ```
 
 ### With Trace Recording (Story 1.1)

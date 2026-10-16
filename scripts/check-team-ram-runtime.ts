@@ -101,13 +101,13 @@ async function checkMcp() {
 async function main() {
   check("Root AGENTS Team RAM bridge", hasText("AGENTS.md", "Team RAM Runtime Bridge"));
   check("Shared runtime document", exists(".agents/TEAM-RAM-RUNTIME.md"));
-  check("Finish all epics workflow doc", exists("_bmad/FINISH-ALL-EPICS-WORKFLOW.md"));
+  check("Adaptive Delivery guideline", hasText("guidelines/AI-GUIDELINES.md", "## 10. Allura Adaptive Delivery"));
   check(
-    "Finish all epics workflow title",
-    hasText("_bmad/FINISH-ALL-EPICS-WORKFLOW.md", "Finish All Epics: Scout-First Kanban Workflow"),
+    "Retired methodology boundary",
+    hasText("guidelines/AI-GUIDELINES.md", "not an active Allura workflow dependency"),
   );
-  check("Codex workflow name", hasText(".codex/config.toml", "kanban_workflow_name"));
-  check("Scout fallback phrase", hasText(".codex/config.toml", "Scout-style hydration only"));
+  check("Risk-scaled workflow", hasText("guidelines/AI-GUIDELINES.md", "Quick, Standard, or Sensitive"));
+  check("Status approval boundary", hasText("guidelines/AI-GUIDELINES.md", "Notion syncs and any change to `Done` or `Approved`"));
   check("OpenCode agents path", isDirOrSymlink(".opencode/agents"));
   check("OpenCode skill path", isDirOrSymlink(".opencode/skill"));
   check("Claude agents path", isDirOrSymlink(".claude/agents"));
