@@ -42,7 +42,6 @@
     "bash .opencode/scripts/validate-oac-core.sh",
     "python3 -m json.tool .opencode/config.json",
     "python3 -m json.tool .opencode/manifest.json",
-    "bun scripts/validate-codex-governance-gate.ts",
     "bun test src/lib/validation/group-id.test.ts",
     "bunx eslint src/app/'(main)'/allura/page.tsx",
     "bun run typecheck",

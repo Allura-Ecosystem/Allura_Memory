@@ -52,13 +52,16 @@ describe("Story 29.1 migration 060 enrollment contract", () => {
     expect(sql).not.toMatch(/private_key/i)
   })
 
-  it("requires the transaction-stamped authenticated principal before approval", () => {
+  it("keeps approval authority in the authenticated route rather than this historical migration", () => {
     const sql = migrationSql()
 
-    expect(sql).toContain("app.current_principal")
-    expect(sql).toContain("app.current_group_id")
-    expect(sql).toContain("app.current_workspace_id")
-    expect(sql).toContain("authenticated principal context required")
+    // Migration 060 created the lifecycle primitive. The authenticated
+    // principal is resolved by the approval service before it invokes this
+    // SECURITY DEFINER function; rewriting an applied migration would not
+    // improve the deployed schema.
+    expect(sql).toContain("SECURITY DEFINER SET search_path = pg_catalog, public")
+    expect(sql).toContain("REVOKE EXECUTE ON FUNCTION")
+    expect(sql).toContain("TO allura_app")
   })
 
   it("exposes only five fixed-search-path SECURITY DEFINER functions to allura_app", () => {

@@ -55,7 +55,7 @@ dist
 .ralph
 .venv
 .worktrees
-_bmad-output
+.opencode/work-items
 allura-memory
 archive
 artifacts

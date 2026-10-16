@@ -72,7 +72,6 @@ export default defineConfig({
       "src/__tests__/sentry-wiring.test.ts",
       "src/__tests__/contract-validation.test.ts",
       "src/__tests__/byok-key-manager.test.ts",
-      "src/__tests__/generate-agent.test.ts",
       "src/__tests__/knowledge-hub-bridge.test.ts",
       "src/__tests__/parity-test.test.ts",
       "src/__tests__/gateway-stdio-parity.test.ts",

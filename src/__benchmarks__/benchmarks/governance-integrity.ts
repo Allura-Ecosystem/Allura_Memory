@@ -60,7 +60,7 @@ export async function run(ctx: BenchmarkContext): Promise<BenchmarkResult> {
       group_id: groupA,
       user_id: ctx.userId,
       content: secret,
-      metadata: { source: "manual", agent_id: "benchmark" },
+      metadata: { source: "manual", agent_id: ctx.userId },
     })
     if (!writeRes.ok) {
       notes.push(`cross-namespace write to ${groupA} denied: ${writeRes.error ?? "unknown"}`)
@@ -91,7 +91,7 @@ export async function run(ctx: BenchmarkContext): Promise<BenchmarkResult> {
     let invariantsPassed = 0
     let invariantsTotal = 0
     const inv = await ctx.client.tryCall<InvariantCheckResult>("audit_invariant_check", {
-      group_id: "allura-system",
+      group_id: ctx.groupId,
     })
     if (inv.data?.invariants) {
       invariantsTotal = inv.data.invariants.length
@@ -105,9 +105,9 @@ export async function run(ctx: BenchmarkContext): Promise<BenchmarkResult> {
 
     // ── D. Gate enforcement ───────────────────────────────────────────────────
     const gate = await ctx.client.tryCall<GateResult>("governance_check_gate", {
-      group_id: "allura-system",
+      group_id: ctx.groupId,
       action: "memory_promote",
-      context: { bypass_hitl: true, via_docker_exec: true, agent_id: "benchmark" },
+      context: { bypass_hitl: true, via_docker_exec: true, agent_id: ctx.userId },
     })
     // A correct gate BLOCKS this action (pass === false).
     const gateBlocked = gate.data?.pass === false

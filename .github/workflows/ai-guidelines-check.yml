@@ -34,7 +34,9 @@ jobs:
           echo "🔍 Validating AI-Assisted documentation..."
           
           # Find files changed in this PR that might be AI-generated
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.md$' || true)
+          # Historical work items are retained execution evidence, not maintained
+          # documentation; validate authored docs rather than every archived record.
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^(docs/|guidelines/).*\.md$' || true)
           
           if [ -z "$CHANGED_FILES" ]; then
             echo "✅ No documentation files changed"
