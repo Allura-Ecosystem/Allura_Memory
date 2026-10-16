@@ -5,7 +5,7 @@ Scope: user-approved allura-branded device-first portal, clients, reusable built
 - Baseline: `5509b07c` on `feat/portal-clients-ui`.
 - State: local source/UI validation complete; production release held.
 - Commit scope: source/tests/docs only; Allura commit governance passed (`audit_logged: false`). The local commit carrying this ledger is identified in git history.
-- Next release gate: resolve the documented Clerk/security and device-client integration gates before production deployment; none are waived by this local delivery.
+- Next release gate: complete signed Cloudflare Access JWT verification and the documented device-client integration gates before production deployment; none are waived by this local delivery.
 - Guard: no push, deployment, secret change, runtime permission change or production device/token/schema mutation.
 
 ## Verified receipts
@@ -17,7 +17,7 @@ Scope: user-approved allura-branded device-first portal, clients, reusable built
 | Production build | `NODE_OPTIONS=--max-old-space-size=1536 bun run build`, exit 0; compiled, TypeScript finished, 69/69 static pages generated |
 | Independent review | Initial findings reproduced with RED tests and remediated; delta review passed with no security concerns or logic errors. See [verdict](portal-devices-review.json). |
 | Real-component browser preview | 1440×1024 desktop and 390×844 mobile; approved logo loaded, two example devices, six client choices, no page errors or page-level horizontal overflow |
-| Browser authority boundary | Device-specific setup showed the adapter gate and no unbound issuer; zero non-GET requests sent. These are HTTP fixtures, not live Clerk/device proof. |
+| Browser authority boundary | Device-specific setup showed the adapter gate and no unbound issuer; zero non-GET requests sent. These are HTTP fixtures, not live Cloudflare Access/device proof. |
 | Documentation | User guide, initial Clients guide, requirements matrix and data dictionary synchronized |
 
 Focused command:
@@ -47,4 +47,4 @@ The UI reuses `GET /api/device-pairing/devices`, confirmed `POST /api/device-pai
 
 Device-bound enrollment still requires the target computer's key proof. Native adapters and independent per-client device credentials remain unimplemented; the existing one-active-token-per-device index is preserved. Profiles are built-in permission presets, not persisted custom profile records.
 
-The prior deployment denial remains in force. Clerk secret rotation, three-user sign-in/isolation acceptance, actual secure-store/device runtime, per-client integration and production release remain open gates. The running portal has not been replaced by this work.
+The prior deployment denial remains in force. Signed Cloudflare Access JWT verification, three-user sign-in/isolation acceptance, actual secure-store/device runtime, per-client integration and production release remain open gates. The running portal has not been replaced by this work.

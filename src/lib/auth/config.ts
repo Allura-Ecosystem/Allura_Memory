@@ -4,7 +4,8 @@
  * Centralizes auth-related environment variable validation and defaults.
  * Uses Zod for env validation at boundaries (per project convention).
  *
- * Reference: Phase 7 benchmark — Clerk auth integration
+ * Production authority is Cloudflare Access only, and an explicitly enabled
+ * DevAuthProvider remains available exclusively outside production.
  */
 
 import { z } from "zod";
@@ -17,28 +18,12 @@ import { AUTH_LOGIN_PATH } from "./redirect-target";
 /**
  * Zod schema for auth-related environment variables.
  *
- * Clerk keys are optional — when absent, DevAuthProvider is used.
  * Dev auth variables have safe defaults for local development.
  */
 export const authEnvSchema = z.object({
-  /** Clerk publishable key (client-side). Required for production. */
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
-
-  /** Clerk secret key (server-side). Required for production. */
-  CLERK_SECRET_KEY: z.string().min(1).optional(),
-
   /** Enable dev auth bypass. Defaults to true in development. */
   ALLURA_DEV_AUTH_ENABLED: z.preprocess(
     (val) => val ?? (process.env.NODE_ENV !== "production" ? "true" : "false"),
-    z.string().transform((val) => val === "true")
-  ),
-
-  /**
-   * Portfolio-only local override. It can select DevAuth over configured Clerk
-   * credentials during a non-production demo, but production always ignores it.
-   */
-  ALLURA_DEMO_DEV_AUTH_FORCE: z.preprocess(
-    (val) => val ?? "false",
     z.string().transform((val) => val === "true")
   ),
 
@@ -148,39 +133,20 @@ export function clearAuthConfig(): void {
 // ── Derived Configuration ───────────────────────────────────────────────────
 
 /**
- * Check if Clerk is properly configured (both keys present).
- */
-export function isClerkEnabled(config?: AuthEnvConfig): boolean {
-  const c = config ?? getAuthConfig();
-  if (c.NODE_ENV !== "production" && c.ALLURA_DEMO_DEV_AUTH_FORCE) return false;
-  return (
-    typeof c.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY === "string" &&
-    c.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.length > 0 &&
-    typeof c.CLERK_SECRET_KEY === "string" &&
-    c.CLERK_SECRET_KEY.length > 0
-  );
-}
-
-/**
  * Check if dev auth bypass is active.
  *
- * Dev auth is NEVER active in production. This is unconditional and is checked
- * first: no combination of ALLURA_DEV_AUTH_ENABLED, missing Clerk keys, or role
- * configuration can re-enable it. Outside production, dev auth is active only
- * when explicitly enabled AND Clerk is not configured. The supported portfolio
- * demo may explicitly select DevAuth in non-production even if a developer's
- * `.env.local` contains Clerk credentials.
+ * Dev auth is NEVER active in production. This is unconditional: no
+ * combination of ALLURA_DEV_AUTH_ENABLED or role configuration can re-enable
+ * it there. Outside production, dev auth is active only when explicitly
+ * enabled.
  *
- * The previous form was:
- *   ALLURA_DEV_AUTH_ENABLED && (!isClerkEnabled(c) || c.NODE_ENV !== "production")
- * where the `||` made "Clerk not configured" sufficient on its own, so a
- * production deployment without Clerk and with ALLURA_DEV_AUTH_ENABLED=true
- * granted an authenticated principal with ALLURA_DEV_AUTH_ROLE (default "admin").
+ * The unconditional production short-circuit prevents a missing identity
+ * provider from activating the development principal.
  */
 export function isDevAuthActive(config?: AuthEnvConfig): boolean {
   const c = config ?? getAuthConfig();
   if (c.NODE_ENV === "production") return false;
-  return c.ALLURA_DEV_AUTH_ENABLED && (!isClerkEnabled(c) || c.ALLURA_DEMO_DEV_AUTH_FORCE);
+  return c.ALLURA_DEV_AUTH_ENABLED;
 }
 
 /**

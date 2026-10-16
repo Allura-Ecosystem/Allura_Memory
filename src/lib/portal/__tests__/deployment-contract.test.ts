@@ -7,7 +7,10 @@ const root = resolve(__dirname, "../../../..");
 describe("portal deployment contract", () => {
   it("defines an isolated loopback portal service with production auth safeguards", () => {
     const composePath = resolve(root, "docker-compose.portal.yml");
-    const dockerfilePath = resolve(root, "Dockerfile.portal");
+    const manifest = readFileSync(composePath, "utf8");
+    const selected = manifest.match(/dockerfile:\s*(\S+)/)?.[1];
+    expect(selected).toBe("Dockerfile.portal-prebuilt");
+    const dockerfilePath = resolve(root, selected!);
 
     expect(existsSync(composePath)).toBe(true);
     expect(existsSync(dockerfilePath)).toBe(true);
@@ -25,7 +28,10 @@ describe("portal deployment contract", () => {
     expect(dockerignore).toContain(".claude");
 
     const dockerfile = readFileSync(dockerfilePath, "utf8");
-    expect(dockerfile).toContain("bun run build");
+    expect(compose).toContain('ALLURA_MCP_BASE_URL: "http://allura-memory-mcp:3201"');
+    expect(dockerfile).toContain("COPY public ./public");
+    expect(dockerfile).toContain("COPY .next/static ./.next/static");
+    expect(dockerfile).toContain("COPY .next/standalone ./");
     expect(dockerfile).toContain("server.js");
     expect(dockerfile).toContain("EXPOSE 3200");
   });

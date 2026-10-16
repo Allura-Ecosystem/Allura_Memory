@@ -1,3 +1,5 @@
+> Supersession note (2026-10-04): Sabir retired Clerk from the active runtime. Cloudflare Access is the sole production identity target; DevAuth remains nonproduction-only. Cloudflare activation is still blocked until signed JWT verification and real authenticated browser evidence pass. Provider-specific statements below are historical where they conflict with this note.
+>
 > Reconciliation note (2026-09-17): the bounded candidate and interrupted repairs were integrated into canonical `main`. Earlier test/demo statements remain historical unless repeated in the current readiness record. Integration does not grant story acceptance.
 
 # Epic 30 Local Authorization Contract (Provisional v1)
@@ -14,7 +16,7 @@ Every protected decision receives one server-derived tuple:
 principal_id + group_id + workspace_id + session_id + role_ids + policy_epoch
 ```
 
-Clerk server claims are the production source. Non-production DevAuth is allowed only when Clerk is disabled and the runtime is not production. Request headers, query strings, request bodies, UI selectors, model text, tool arguments, route parameters and cached client state are assertions only; they never create or widen authority.
+Cryptographically verified Cloudflare Access identity is the production source. Non-production DevAuth is allowed only outside production. Request headers, query strings, request bodies, UI selectors, model text, tool arguments, route parameters and cached client state are assertions only; they never create or widen authority. The current header-presence implementation is not approved for activation until the signed-JWT verifier lands and is independently reviewed.
 
 A resource carries:
 

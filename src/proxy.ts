@@ -13,22 +13,19 @@
  * serves an unmatched path without a principal.
  *
  * Auth strategy:
- *  - Production: Clerk middleware (SSO + RBAC) — dynamically loaded
- *  - Development: DevAuthProvider fallback (no Clerk needed)
- *
- * Clerk's server middleware is imported dynamically only after configuration
- * is validated. Import or runtime failures deny the request and never select
- * DevAuthProvider in production.
+ *  - Route handlers with their own token gates bypass first
+ *  - Production: Cloudflare Access identity headers (when enabled);
+ *    otherwise fail closed with no principal
+ *  - Development: DevAuthProvider fallback (explicitly enabled, never in
+ *    production)
  *
  * Route authority lives in src/lib/auth/route-scope-manifest.ts (single source).
  * Role helpers live in src/lib/auth/roles.ts.
  */
 
-import { type NextFetchEvent, NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
-import { extractAlluraMetadata } from "@/lib/auth/clerk"
 import { cloudflareAccessUser, isCloudflareAccessEnabled } from "@/lib/auth/cloudflare-access"
-import { isClerkEnabled } from "@/lib/auth/config"
 import { getDevUserSync } from "@/lib/auth/dev-auth"
 import { emitGatedAudit } from "@/lib/auth/edge-audit"
 import { AUTH_LOGIN_PATH } from "@/lib/auth/redirect-target"
@@ -245,154 +242,14 @@ function handleCloudflareAccess(request: NextRequest): NextResponse {
   })
 }
 
-// ── Production Clerk Handler ─────────────────────────────────────────────────
-
-let _clerkHandler: ((request: NextRequest, event?: NextFetchEvent) => Promise<NextResponse>) | null = null
-
-async function handleClerkAuth(
-  request: NextRequest,
-  event?: NextFetchEvent,
-): Promise<NextResponse> {
-  // Dynamic import — only loads Clerk when needed.
-  // This avoids the import-time crash when publishableKey is missing.
-  if (!_clerkHandler) {
-    try {
-      const { clerkMiddleware } = await import("@clerk/nextjs/server")
-      type ClerkAlluraMetadata = import("@/lib/auth/types").ClerkAlluraMetadata
-
-      // Story 24.11a AC-2: the hardcoded ROLE_GATES table that used to live here
-      // is deleted. It covered 13 matchers across 8 route families while the
-      // manifest declared 46 entries, and every path it did not match fell
-      // through to nextWithoutAuthHeaders — served fully unauthenticated in
-      // production. Authority now comes from resolveRouteAuthority() only, the
-      // same call the dev-auth branch makes.
-
-      const clerkInstance = clerkMiddleware(async (auth, req) => {
-        const { pathname } = req.nextUrl
-
-        // Static assets and Next.js internals — files, not routes.
-        if (isStaticAsset(pathname)) {
-          return nextWithoutAuthHeaders(req)
-        }
-
-        // Single source of route authority — same call as the dev-auth branch.
-        const authority = resolveRouteAuthority(pathname)
-
-        // Explicitly declared public route — pass through, headers stripped.
-        if (authority.kind === "public") {
-          return nextWithoutAuthHeaders(req)
-        }
-
-        // Declared or undeclared: either way a principal is required. There is
-        // no fall-through that serves an unmatched path unauthenticated.
-        const requiredRole: AlluraRole = authority.requiredRole
-        const clerkScopeName: string = authority.scopeName
-
-        // Require auth
-        const { userId, sessionId, sessionClaims } = await auth()
-
-        if (!userId || !sessionId) {
-          emitGatedAudit(req, clerkScopeName, "unauthorized", "unauthenticated", "none")
-          if (pathname.startsWith("/api/")) {
-            return NextResponse.json({ error: "Authentication required", statusCode: 401 }, { status: 401 })
-          }
-          const loginUrl = new URL(AUTH_LOGIN_PATH, req.url)
-          loginUrl.searchParams.set("redirect_url", pathname)
-          return NextResponse.redirect(loginUrl)
-        }
-
-        const claims = sessionClaims as { allura?: ClerkAlluraMetadata } | null | undefined
-        let authorityClaim: ReturnType<typeof extractAlluraMetadata>
-        try {
-          authorityClaim = extractAlluraMetadata(claims?.allura)
-        } catch {
-          emitGatedAudit(req, clerkScopeName, "forbidden", "authenticated", "none")
-          return denyInvalidAuthority(req)
-        }
-        const { role, groupId, workspaceId } = authorityClaim
-
-        if (!hasPermission(role, requiredRole)) {
-          emitGatedAudit(req, clerkScopeName, "forbidden", "authenticated", role)
-          if (pathname.startsWith("/api/")) {
-            return NextResponse.json(
-              {
-                error: "Insufficient permissions",
-                statusCode: 403,
-                required: requiredRole,
-                actual: role,
-              },
-              { status: 403 }
-            )
-          }
-          const url = new URL("/unauthorized", req.url)
-          url.searchParams.set("required", requiredRole)
-          url.searchParams.set("actual", role)
-          return NextResponse.redirect(url)
-        }
-
-        // Authenticated and authorized — forward auth context to route handlers.
-        emitGatedAudit(req, clerkScopeName, "authorized", "authenticated", role)
-        return nextWithAuthHeaders(req, {
-          userId,
-          role,
-          groupId,
-          workspaceId,
-          sessionId,
-        })
-      })
-
-      // Wrap clerkInstance to match our handler signature.
-      // clerkMiddleware returns a Next.js middleware function;
-      // we call it with (request, evt) to get a Response.
-      _clerkHandler = async (req: NextRequest, clerkEvent?: NextFetchEvent) => {
-        try {
-          // clerkMiddleware returns a function that Next.js calls with (req, evt).
-          // In dynamic context, we call it directly.
-          const invokeClerk = clerkInstance as unknown as (
-            request: NextRequest,
-            event: unknown,
-          ) => Promise<unknown>
-          const result = await invokeClerk(req, clerkEvent ?? {})
-          // If result is a Response, wrap it; if it's already a NextResponse, return it
-          if (result instanceof NextResponse) {
-            return result
-          }
-          if (result instanceof Response) {
-            return new NextResponse(result.body, {
-              status: result.status,
-              statusText: result.statusText,
-              headers: result.headers,
-            })
-          }
-          // Unexpected return shape from Clerk. Fail closed (Story 24.11a):
-          // an unrecognised result is not evidence of a verified principal.
-          console.error("[proxy] Clerk handler returned an unexpected result shape; denying")
-          return denyUnverified(req)
-        } catch (err) {
-          console.error("[proxy] Clerk handler error; denying request:", err)
-          return denyUnverified(req)
-        }
-      }
-    } catch (err) {
-      console.error("[proxy] Clerk dynamic import failed; denying requests:", err)
-      _clerkHandler = async (req: NextRequest) => denyUnverified(req)
-    }
-  }
-  return _clerkHandler!(request, event)
-}
-
 // ── Proxy Export ─────────────────────────────────────────────────────────────
 
 /**
- * Next.js 16 Proxy — conditionally routes to Clerk or DevAuthProvider.
- *
- * Clerk is loaded dynamically to avoid import-time crashes when
- * NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not configured.
+ * Next.js 16 Proxy — routes to Cloudflare Access (production), the keyless
+ * fail-closed gate (production without CF Access), or DevAuthProvider
+ * (non-production, explicitly enabled).
  */
-export default async function proxy(
-  request: NextRequest,
-  event?: NextFetchEvent,
-): Promise<NextResponse> {
+export default async function proxy(request: NextRequest): Promise<NextResponse> {
   const routeAuthority = resolveRouteAuthority(request.nextUrl.pathname)
   if (
     routeAuthority.kind === "declared" &&
@@ -401,16 +258,13 @@ export default async function proxy(
   ) {
     return nextWithoutAuthHeaders(request)
   }
-  if (!isClerkEnabled()) {
-    if (isCloudflareAccessEnabled()) {
-      return handleCloudflareAccess(request)
-    }
-    if (process.env.NODE_ENV === "production") {
-      return handleKeylessProduction(request)
-    }
-    return handleDevAuth(request)
+  if (isCloudflareAccessEnabled()) {
+    return handleCloudflareAccess(request)
   }
-  return handleClerkAuth(request, event)
+  if (process.env.NODE_ENV === "production") {
+    return handleKeylessProduction(request)
+  }
+  return handleDevAuth(request)
 }
 
 export const config = {

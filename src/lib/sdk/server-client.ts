@@ -19,6 +19,7 @@
  */
 
 import { AlluraClient } from "./index";
+import { resolveMcpBaseUrl } from "@/lib/config/mcp-url";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,9 +56,7 @@ if (typeof window !== "undefined") {
  * @returns Configured AlluraClient instance
  */
 export function createServerClient(overrides?: ServerClientConfig): AlluraClient {
-  const baseUrl = overrides?.baseUrl
-    ?? process.env.ALLURA_MCP_BASE_URL
-    ?? "http://localhost:3201";
+  const baseUrl = resolveMcpBaseUrl(overrides?.baseUrl);
 
   const authToken = overrides?.authToken
     ?? process.env.ALLURA_MCP_AUTH_TOKEN

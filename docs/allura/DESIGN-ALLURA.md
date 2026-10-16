@@ -43,6 +43,14 @@ AD-35 adds a proposed run-inspection responsibility for future operator surfaces
 
 The Command Center is optional: MCP tools, API routes, and CLI scripts remain the primary engine path. The UI surfaces real data from Allura Brain (PostgreSQL (episodic + semantic)), not mocks. Every component consumes mapped UI contracts from `src/lib/dashboard/`; raw Brain API shapes stay behind `api.ts`, `queries.ts`, and `mappers.ts` (AD-26).
 
+### Epic 30/31 design correction
+
+Follow the [current planning disposition](./BLUEPRINT.md#epic-3031-course-correction). Use approved Allura assets and measured brand tokens, bright warm surfaces, rounded controls, and welcoming plain-language copy. Studio is a layout/component reference; Obsidian informs the connected workspace and graph interaction. Neither reference replaces Allura's identity. Exact visual acceptance remains pending review of the actual implementation against the selected design.
+
+Treat the broad menu as a capability catalog. Show enabled, authorized features; show useful setup/unavailable states for incomplete connections. Chat supports explicit provider/agent choice, scoped context, stop/retry, health and usage disclosure. Hermes is an optional personal integration. Graph needs real authorized relationships, motion controls, an evidence inspector, and an equivalent accessible list. A card layout or static mock does not satisfy the interactive graph requirement.
+
+The committed shell registers `/dashboard`, `/portal`, `/dashboard/mission-control`, `/dashboard/kanban`, `/dashboard/search`, `/dashboard/teams`, `/dashboard/graph`, and `/dashboard/curator`. The local admin candidate is excluded from this planning change. The broader core-surface and parity tables describe target capabilities, not delivered pages. New or changed UI must prove route behavior, source/freshness, permission and failure states, keyboard/mobile use, and recovery before acceptance.
+
 ### Memory Lifecycle and Done Gate
 
 Agents and Team RAM lanes must read before work, write receipts after substantive action, and keep dashboard/operator views behind MCP/API contracts. The required flow is:
@@ -147,7 +155,7 @@ The Memory Command Center is the approved operator surface for Allura memory gov
 | Trace logs | `/dashboard/audit` | PostgreSQL append-only events through controlled API |
 | Provenance | `/dashboard/audit` and evidence drawer | Trace → proposal → approval → graph evidence chain |
 | Extracted | `/dashboard/memories` | Allura extraction/memory APIs |
-| Approvals | `/dashboard/curator` | Curator proposals + Native Allura Kanban work state; Notion/Linear/GitHub Projects optional adapters |
+| Approvals | `/dashboard/curator` | Curator proposals; Notion remains the sanctioned human delivery-status authority |
 | Governance | `/dashboard/governance` | RuVix control plane rules, policy mode, thresholds, isolation, drift |
 | Settings | `/dashboard/settings` | Resource manifest + dashboard configuration |
 | Search | Memory search surface | Allura retrieval layer |
@@ -190,7 +198,7 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 | F19 | System Health Dashboard — view service status, metrics, and degradation warnings | `/dashboard` (overview) · `GET /api/health?detailed=true` · `GET /api/health/metrics` |
 | F41 | Memory Command Center route shell — `/dashboard`, `/dashboard/memories`, `/dashboard/curator`, `/dashboard/governance`, `/dashboard/graph`, `/dashboard/audit`, `/dashboard/settings` | Governed operator surface over MCP/API contracts; launch only after gates pass |
 | F42 | `/dashboard/memories` preserves useful reference memory capabilities | Memories, insights, traces, provenance, extracted facts, and approvals mapped into governed dashboard routes |
-| F43 | `/work-board` uses Native Allura Kanban as the default planning source of truth | Native board model; Notion, Linear, and GitHub Projects are optional sync adapters |
+| F43 | Notion remains the sanctioned human planning/status authority | Native Kanban is a planned operational surface until a separately approved migration proves import, reconciliation, and rollback |
 | F44 | `/resources` reads resource inventory from manifest endpoint or `RESOURCE-MANIFEST.md` | Resource Manifest adapter |
 | F45 | `/agents` distinguishes TALON/IRIS from Team RAM/Durham/external agents | Agent adapter + canonical agent taxonomy |
 | F46 | `/telemetry` reports real/unknown metrics honestly | Telemetry adapter with degraded/unknown state |
@@ -215,14 +223,14 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 | F14 | Curator dashboard shows three tabs: Traces, Approved, Pending | `/dashboard/curator` |
 | F15 | Pending tab sorts by confidence (descending); shows confidence badge + reasoning + action buttons | `ConfidenceBadge` component |
 | F16 | Approved tab shows all approved knowledge (human + auto); sortable by date/confidence | `/dashboard/curator` approved tab |
-| F17 | Tab 1 (Traces) restricted to authenticated users with `admin` role | Clerk RBAC |
+| F17 | Tab 1 (Traces) restricted to authenticated users with `admin` role | Cloudflare Access + application RBAC |
 
 ### Audit & Health Requirements
 
 | # | Requirement | Satisfied by |
 |---|-------------|-------------|
 | F18 | Audit log endpoint returns all events with filtering and pagination; CSV export for compliance | `GET /api/audit/events` |
-| F19 | Dashboard integrates Clerk for authentication and RBAC (curator, admin, viewer roles) | `src/lib/auth/clerk.ts` |
+| F19 | Dashboard integrates Cloudflare Access for authentication and application RBAC (curator, admin, viewer roles) | `src/lib/auth/cloudflare-access.ts` |
 | F26 | Agent task lifecycle events persisted as append-only traces | `src/lib/postgres/queries/insert-trace.ts` |
 | F27 | Raw trace storage is append-only; no UPDATE/DELETE on events table | Schema enforcement |
 | F28 | Traces preserve provenance linking downstream insights to source evidence | `trace_ref` field |

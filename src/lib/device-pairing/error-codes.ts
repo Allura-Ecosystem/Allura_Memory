@@ -12,7 +12,7 @@ export enum DevicePairingErrorCode {
   INTERNAL_ERROR = "INTERNAL_ERROR",
 }
 
-export type DevicePairingRecoveryAction = "retry" | "re_pair" | "clerk_required";
+export type DevicePairingRecoveryAction = "retry" | "re_pair" | "interactive_identity_required";
 
 export interface DevicePairingRecovery {
   recovery_action: DevicePairingRecoveryAction;
@@ -24,9 +24,9 @@ const retryAfterMs = 1_000;
 const recoveryByCode: Record<DevicePairingErrorCode, DevicePairingRecovery> = {
   [DevicePairingErrorCode.AUTH_INVALID]: { recovery_action: "re_pair", retry_after_ms: 0 },
   [DevicePairingErrorCode.KEY_EXPIRED]: { recovery_action: "re_pair", retry_after_ms: 0 },
-  [DevicePairingErrorCode.MEMBERSHIP_INACTIVE]: { recovery_action: "clerk_required", retry_after_ms: 0 },
-  [DevicePairingErrorCode.WORKSPACE_LOCKED]: { recovery_action: "clerk_required", retry_after_ms: 0 },
-  [DevicePairingErrorCode.WORKSPACE_NOT_FOUND]: { recovery_action: "clerk_required", retry_after_ms: 0 },
+  [DevicePairingErrorCode.MEMBERSHIP_INACTIVE]: { recovery_action: "interactive_identity_required", retry_after_ms: 0 },
+  [DevicePairingErrorCode.WORKSPACE_LOCKED]: { recovery_action: "interactive_identity_required", retry_after_ms: 0 },
+  [DevicePairingErrorCode.WORKSPACE_NOT_FOUND]: { recovery_action: "interactive_identity_required", retry_after_ms: 0 },
   [DevicePairingErrorCode.DEVICE_NOT_APPROVED]: { recovery_action: "re_pair", retry_after_ms: 0 },
   [DevicePairingErrorCode.AUTH_EXPIRED]: { recovery_action: "retry", retry_after_ms: 0 },
   [DevicePairingErrorCode.INVALID_REQUEST]: { recovery_action: "re_pair", retry_after_ms: 0 },

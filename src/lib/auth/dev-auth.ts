@@ -1,14 +1,11 @@
 /**
  * DevAuthProvider — Development-mode auth bypass
  *
- * When Clerk is not configured (no NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY),
+ * Outside production, when explicitly enabled via ALLURA_DEV_AUTH_ENABLED,
  * this provider returns a synthetic authenticated user from env vars.
  *
- * This allows local development and testing without Clerk setup.
+ * This allows local development and testing without any auth provider setup.
  * It is NEVER active in production.
- *
- * Reference: Phase 7 benchmark — "The middleware should work in dev mode
- * without Clerk (fallback to env-based auth)"
  */
 
 import { getDevAuthConfig, isDevAuthActive } from "./config";
@@ -25,10 +22,8 @@ import type { AlluraRole, AuthProvider, AuthUser } from "./types";
  * - ALLURA_DEV_AUTH_EMAIL (default: "dev@allura.local")
  *
  * ⚠️ This provider is ONLY active when:
- *   1. ALLURA_DEV_AUTH_ENABLED=true (default)
- *   2. Clerk is NOT configured, unless the non-production portfolio demo
- *      explicitly selects DevAuth
- *   3. NODE_ENV !== "production"
+ *   1. ALLURA_DEV_AUTH_ENABLED=true (default outside production)
+ *   2. NODE_ENV !== "production"
  */
 export class DevAuthProvider implements AuthProvider {
   async getCurrentUser(): Promise<AuthUser | null> {
@@ -72,7 +67,7 @@ export const devAuthProvider = new DevAuthProvider();
 /**
  * Check if dev auth is currently active.
  *
- * Useful in middleware to decide whether to use Clerk or DevAuthProvider.
+ * Useful in middleware to decide whether DevAuthProvider applies.
  */
 export function isDevAuthEnabled(): boolean {
   return isDevAuthActive();

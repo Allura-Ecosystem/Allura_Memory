@@ -133,11 +133,11 @@ describe("Epic30 dashboard server page", () => {
     // Uses the real error class, so this fails if the provider ever goes back
     // to reporting an outage as an absent principal.
     const error = vi.spyOn(console, "error").mockImplementation(() => {})
-    mocks.guard.mockRejectedValue(new PrincipalProviderUnavailableError("Clerk session lookup unavailable"))
+    mocks.guard.mockRejectedValue(new PrincipalProviderUnavailableError("Identity provider lookup unavailable"))
     const html = renderToStaticMarkup(await DashboardOverviewPage())
     expect(html).toContain('data-surface-state="degraded"')
     expect(html).not.toContain('data-surface-state="forbidden"')
-    expect(html).not.toContain("Clerk")
+    expect(html).not.toContain("Identity provider lookup unavailable")
     expect(html).not.toContain(document.title)
     expect(html).not.toContain(document.content)
     expect(mocks.read).not.toHaveBeenCalled()

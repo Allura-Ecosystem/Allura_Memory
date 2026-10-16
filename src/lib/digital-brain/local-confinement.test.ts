@@ -222,7 +222,7 @@ it("maps a session-provider outage to degraded, never to forbidden", async () =>
   // access was denied, and at the dashboard guard it produces a login redirect
   // loop. Both read paths must classify the typed outage as degraded.
   mocks.query.mockReset()
-  mocks.principal.mockRejectedValueOnce(new PrincipalProviderUnavailableError("Clerk session provider unavailable"))
+  mocks.principal.mockRejectedValueOnce(new PrincipalProviderUnavailableError("Identity session provider unavailable"))
   await expect(readAuthorizedWorkspaceState(scope)).resolves.toEqual({ state: "degraded", documents: [] })
 
 
@@ -396,7 +396,7 @@ describe("production authorized read provider", () => {
   it("maps a session-provider outage to degraded, never to forbidden", async () => {
     setupProductionRows()
     const provider = new ProductionAuthorizedReadProvider(Buffer.alloc(32, 16), productionReceiptWriter)
-    mocks.principal.mockRejectedValueOnce(new PrincipalProviderUnavailableError("Clerk session lookup unavailable"))
+    mocks.principal.mockRejectedValueOnce(new PrincipalProviderUnavailableError("Identity session lookup unavailable"))
     await expect(provider.workspaceState()).resolves.toEqual({ state: "degraded", documents: [] })
 
     setupProductionRows()

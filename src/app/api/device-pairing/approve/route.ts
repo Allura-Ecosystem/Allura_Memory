@@ -7,7 +7,7 @@
  * AD-63 (callback allowlist), HIGH-F4 (pg_advisory_xact_lock).
  *
  * Accepts `enrollment_transaction_id` and `pkce_state` from the browser
- * (after Clerk sign-in); resolves the Clerk-authenticated AuthUser via
+ * after interactive sign-in; resolves the middleware-authenticated AuthUser via
  * middleware headers; the server resolves active membership and workspace —
  * the client never supplies tenant authority (AC-02).
  *
@@ -23,7 +23,6 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getAppPool } from "@/lib/postgres/connection";
 import { getAuthUser } from "@/lib/auth/api-auth";
 import {
   createPrincipalContext,
@@ -32,10 +31,11 @@ import {
   type PrincipalContext,
 } from "@/lib/auth/principal-context";
 import {
-  approveEnrollment,
-  ApprovalError,
   APPROVAL_ERROR_STATUS,
+  ApprovalError,
+  approveEnrollment,
 } from "@/lib/device-pairing/approval-service";
+import { getAppPool } from "@/lib/postgres/connection";
 
 const requestSchema = z.object({
   enrollment_transaction_id: z.string().min(1, "enrollment_transaction_id is required"),
@@ -43,7 +43,7 @@ const requestSchema = z.object({
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // §4.2 step 1: Resolve the Clerk-authenticated AuthUser via middleware
+  // §4.2 step 1: Resolve the middleware-authenticated AuthUser via
   // headers. Server resolves authority — client never supplies tenant.
   const authUser = getAuthUser(request);
   if (!authUser) {

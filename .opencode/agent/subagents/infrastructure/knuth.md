@@ -9,8 +9,8 @@ path: subagents/infrastructure
 scope: harness
 platform: Both
 status: active
-model: ollama/glm-5.3-flash-next:cloud
-fallback_model: ollama/glm-5.1:cloud
+model: ollama/glm-5.3:cloud
+fallback_model: ollama/glm-5.3:cloud
 permission:
   edit: allow
   bash: allow

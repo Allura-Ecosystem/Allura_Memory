@@ -69,7 +69,7 @@ export function resolveApiTenant(user: AuthUser | null, selector: unknown): ApiT
 }
 
 /**
- * Adapts a middleware-verified Clerk/dev identity to the shared approval
+ * Adapts a middleware-verified Cloudflare Access/dev identity to the shared approval
  * principal contract. The tenant comes exclusively from AuthUser.groupId;
  * request bodies never participate in this authority decision.
  */

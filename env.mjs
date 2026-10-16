@@ -69,7 +69,7 @@ export const env = createEnv({
     // Multi-tenancy
     DEFAULT_GROUP_ID: z.string().default("allura-default"),
 
-    // Dev auth (no Clerk needed locally)
+    // Dev auth (local development only — never active in production)
     ALLURA_DEV_AUTH_ENABLED: z
       .enum(["true", "false"])
       .default("true")
@@ -83,10 +83,7 @@ export const env = createEnv({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   },
 
-  client: {
-    // Clerk (optional — production only)
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().optional(),
-  },
+  client: {},
 
   runtimeEnv: {
     ANALYZE: process.env.ANALYZE,
@@ -119,7 +116,6 @@ export const env = createEnv({
     ALLURA_DEV_AUTH_USER_ID: process.env.ALLURA_DEV_AUTH_USER_ID,
     ALLURA_DEV_AUTH_EMAIL: process.env.ALLURA_DEV_AUTH_EMAIL,
     NODE_ENV: process.env.NODE_ENV,
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

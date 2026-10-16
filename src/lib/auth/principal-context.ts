@@ -17,7 +17,7 @@
  * `src/mcp/memory-server-canonical.ts` (stdio/service boundary).
  *
  * NOTE: this is the *MCP transport* principal. It is intentionally separate
- * from the Next.js/Clerk web-app auth in `src/lib/auth/api-auth.ts` and from
+ * from the Cloudflare Access web-app auth in `src/lib/auth/api-auth.ts` and from
  * the approval-workflow `role` union in `src/control-plane/policy.ts`.
  */
 

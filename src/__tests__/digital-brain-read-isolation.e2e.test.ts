@@ -486,7 +486,7 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
         env: {
           ...process.env, ...database.appEnvironment,
           NODE_ENV: "development", ALLURA_EPIC30_LOCAL_DB: "enabled",
-          ALLURA_DEV_AUTH_ENABLED: "true", ALLURA_DEMO_DEV_AUTH_FORCE: "true",
+          ALLURA_DEV_AUTH_ENABLED: "true",
           ALLURA_DEV_AUTH_GROUP_ID: scenario.tenant, ALLURA_DEV_AUTH_WORKSPACE_ID: scenario.workspace,
           ALLURA_DEV_AUTH_USER_ID: scenario.principal, ALLURA_DEV_AUTH_ROLE: scenario.role,
         },
@@ -534,7 +534,7 @@ describeLive("Epic 30 restricted-role synthetic read isolation", () => {
         cwd: process.cwd(), port: 4100,
         env: { ...process.env, ...database.appEnvironment,
           NODE_ENV: "development", ALLURA_EPIC30_LOCAL_DB: "enabled",
-          ALLURA_DEV_AUTH_ENABLED: "true", ALLURA_DEMO_DEV_AUTH_FORCE: "true",
+          ALLURA_DEV_AUTH_ENABLED: "true",
           ALLURA_DEV_AUTH_GROUP_ID: GROUP, ALLURA_DEV_AUTH_WORKSPACE_ID: WORKSPACE,
           ALLURA_DEV_AUTH_USER_ID: "owner-user", ALLURA_DEV_AUTH_ROLE: "viewer",
         },

@@ -33,8 +33,9 @@ jobs:
         run: |
           echo "🔍 Validating AI-Assisted documentation..."
           
-          # Find files changed in this PR that might be AI-generated
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.md$' || true)
+          # Check content changes; preserve exact unchanged renames and skip deletions.
+          # At 100% similarity, a renamed file with edits is an addition and stays checked.
+          CHANGED_FILES=$(git diff -M100% --diff-filter=ACMT --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.md$' || true)
           
           if [ -z "$CHANGED_FILES" ]; then
             echo "✅ No documentation files changed"

@@ -2,8 +2,6 @@ import type { Metadata } from "next"
 import type { ReactNode } from "react"
 
 import { APP_CONFIG } from "@/config/app-config"
-import { isClerkEnabled } from "@/lib/auth/config"
-import { ClerkProviderShell } from "./clerk-provider"
 
 import "./globals.css"
 
@@ -13,9 +11,6 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const clerkEnabled = isClerkEnabled()
-  const content = clerkEnabled ? <ClerkProviderShell>{children}</ClerkProviderShell> : children
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -26,7 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }}
         />
       </head>
-      <body>{content}</body>
+      <body>{children}</body>
     </html>
   )
 }

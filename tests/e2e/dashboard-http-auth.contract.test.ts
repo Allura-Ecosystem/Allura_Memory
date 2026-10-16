@@ -70,7 +70,6 @@ async function freePort(): Promise<number> {
 
 function contractEnvironment(overrides: Record<string, string>): Record<string, string | undefined> {
   const environment = { ...process.env }
-  for (const key of ["NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "CLERK_SECRET_KEY"]) delete environment[key]
   return {
     ...environment,
     NODE_ENV: "development",
@@ -175,7 +174,7 @@ afterAll(async () => {
 
 describe("dashboard HTTP/auth contract", () => {
   it("returns 200 without redirects for all seven routes with explicit DevAuth", async () => {
-    await withNextServer(contractEnvironment({ ALLURA_DEV_AUTH_ENABLED: "true", ALLURA_DEMO_DEV_AUTH_FORCE: "true" }), async (port) => {
+    await withNextServer(contractEnvironment({ ALLURA_DEV_AUTH_ENABLED: "true" }), async (port) => {
       for (const route of DASHBOARD_ROUTES) {
         const response = await fetch(`http://127.0.0.1:${port}${route}`, { redirect: "manual", signal: AbortSignal.timeout(30_000) })
         expect(response.status, route).toBe(200)
@@ -185,7 +184,7 @@ describe("dashboard HTTP/auth contract", () => {
   }, 180_000)
 
   it("redirects or denies every protected route when DevAuth is disabled", async () => {
-    await withNextServer(contractEnvironment({ ALLURA_DEV_AUTH_ENABLED: "false", ALLURA_DEMO_DEV_AUTH_FORCE: "false" }), async (port) => {
+    await withNextServer(contractEnvironment({ ALLURA_DEV_AUTH_ENABLED: "false" }), async (port) => {
       for (const route of DASHBOARD_ROUTES) {
         const response = await fetch(`http://127.0.0.1:${port}${route}`, { redirect: "manual", signal: AbortSignal.timeout(30_000) })
         expect(response.status, route).not.toBe(200)

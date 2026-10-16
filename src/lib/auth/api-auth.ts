@@ -79,8 +79,8 @@ function isValidAuthorityIdentifier(value: string | null): value is string {
 /**
  * Get the authenticated user from the request.
  *
- * In production with Clerk: reads from middleware-injected headers.
- * In development without Clerk: returns the dev user.
+ * In production with Cloudflare Access: reads from middleware-injected headers.
+ * In development: returns the explicitly enabled dev user.
  *
  * Returns null if no authenticated user is found.
  */
@@ -236,7 +236,7 @@ export function forbiddenResponse(
  * `resolveApiTenant` in `web-principal.ts`.
  *
  * Resolution order (highest precedence first):
- * 1. AuthUser.groupId — from Clerk or dev-auth (always trusted)
+ * 1. AuthUser.groupId — from Cloudflare Access or dev-auth (always trusted)
  * 2. fallbackGroupId parameter — caller-supplied explicit override
  *
  * SECURITY: There is NO hard-coded "allura-system" fallback for protected

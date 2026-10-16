@@ -32,7 +32,7 @@ while IFS= read -r path; do
   if [[ "$rel" == */* ]]; then
     top="${rel%%/*}"
     echo "ERROR: docs/allura contains nested non-canonical path: $rel"
-    echo "       Move execution artifacts to _bmad/ or docs/archive/allura/."
+    echo "       Move execution artifacts to docs/archive/allura/."
     status=1
     continue
   fi
@@ -40,7 +40,7 @@ while IFS= read -r path; do
   if ! is_allowed_file "$rel"; then
     echo "ERROR: non-canonical docs/allura file: $rel"
     echo "       Allowed: BLUEPRINT.md, SOLUTION-ARCHITECTURE.md, DESIGN-*.md, REQUIREMENTS-MATRIX.md, RISKS-AND-DECISIONS.md, DATA-DICTIONARY.md, index.md."
-    echo "       Move PRDs, epics, reports, gates, benchmarks, and runbooks to _bmad/ or docs/archive/allura/."
+    echo "       Move PRDs, epics, reports, gates, benchmarks, and runbooks to docs/archive/allura/."
     status=1
   fi
 done < <(find "$DOCS_DIR" -mindepth 1 -type f | sort)

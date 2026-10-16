@@ -154,7 +154,7 @@ This cutover removes the per-person Neo4j Community license limit (1 user), coll
 
 ### Agent Factory Delivery Boundary
 
-The Allura Agent Factory uses BMad Builder as an authoring and packaging layer while Allura remains the governance and memory authority. Factory modules, validators, and CI workflows live in this canonical repository so GitHub can execute the gates that protect them. A module is shippable only after structural validation, roster and tenant consistency checks, live tenant-isolation smoke evidence, and explicit packaging of a named team.
+The Allura Agent Factory uses Allura Adaptive Delivery as its authoring and packaging method while Allura remains the governance and memory authority. Factory modules, validators, and CI workflows live in this canonical repository so GitHub can execute the gates that protect them. A module is shippable only after structural validation, roster and tenant consistency checks, live tenant-isolation smoke evidence, and explicit packaging of a named team.
 
 Factory CI does not imply native RuVector or an upstream governance package exists. Those claims remain blocked until native extension, smoke-test, and package source artifacts are present and independently verified.
 
@@ -254,7 +254,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | B27 | Agents must retrieve approved knowledge through a controlled retrieval layer |
 | B28 | All reads/writes must pass through controlled APIs with project-level access and audit |
 | B29 | The full loop from agent execution to knowledge reuse must be demonstrably end-to-end |
-| B30 | Team RAM agents must integrate with BMAD planning and Allura Brain memory through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth |
+| B30 | Team RAM agents must integrate Allura Adaptive Delivery with Allura Brain memory through a documented, risk-scaled workflow, preserving `.opencode/agent/` as the live agent source of truth |
 | B31 | Teams must be able to define evidence-gated orchestration runs that map familiar work ceremonies to governed Allura receipts without exposing internal agent-routing details |
 | B32 | Supply-chain threat intelligence must preserve source provenance, tenant/workspace scope, evidence freshness, and human authority while remaining read-only toward inventoried endpoints and external enforcement systems |
 
@@ -294,7 +294,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | F16 | Approved tab shows all approved knowledge (human + auto-promoted); sortable by date/confidence      |
 | F17 | Tab 1 restricted to authenticated users with `admin` role (engineers only)                          |
 | F18 | Audit log endpoint: `GET /api/audit/events` — returns curator decisions with timestamps             |
-| F19 | Dashboard integrates Clerk for authentication and RBAC (curator, admin, viewer roles)               |
+| F19 | Dashboard integrates Cloudflare Access for authentication and application RBAC (curator, admin, viewer roles) |
 
 #### Infrastructure
 
@@ -348,13 +348,26 @@ As of 2026-08-29 (implementation readiness pass), these BLUEPRINT functional req
 
 **Policy:** No FR is silently dropped. Each entry above declares its disposition. Any future epic must either address one of these FRs or update this table.
 
+#### Epic 30/31 Course Correction
+
+**Planning disposition: blocked proposals. Board status: unverified.** Sabir approved this documentation correction on 2026-10-15. That approval does not approve implementation, a board transition, or release. Archived BMAD story numbers and tests remain historical evidence; they cannot establish current readiness.
+
+| Proposed delivery | Outcome | Entry and exit evidence |
+| --- | --- | --- |
+| Epic 30 — Governed Modular Workspace | A welcoming Allura shell, modular navigation, role-aware controls, authorized graph and source inspection, and usable device integration | Reconcile existing implementation to accepted requirements first. Then prove one complete user flow, visual fidelity with real brand assets, keyboard/mobile use, permission denials, performance, and recovery. Preserve separate Epic 29 client gates. |
+| Epic 31 — Governed Intelligence and Connected Clients | Provider-neutral Ask/chat, BYOK/BYOA connections, governed actions, and separately gated notifications | Consume accepted Epic 30 interfaces. Prove provider/agent replacement, disconnect/revocation, cited answers, stop/retry, disclosed cost, and approval/receipt behavior before release. |
+
+Hermes is Sabir's optional test agent, not a product default. An unconfigured workspace has no connected provider or agent. Graph is a requested plugin; commerce/CRM, Shopify, mortgage, and other domain modules remain separately scoped options. A menu catalog is not evidence that its features are delivered.
+
+Next steps under [Adaptive Delivery](../../guidelines/AI-GUIDELINES.md#10-allura-adaptive-delivery-allura--team-ram): reconcile the sanctioned board and existing code; select one bounded workspace flow and its acceptance checks; review the exact design/contract; build and test that slice; reconcile evidence before the next slice. Sensitive changes retain their action-specific approval gates. The proposed split creates no new story registration by itself.
+
 #### Memory Command Center
 
 | #   | Requirement |
 | --- | ----------- |
-| F41 | Memory Command Center exposes `/dashboard` (new chat), `/dashboard/search` (memory search), `/dashboard/scheduled-tasks` (dreams), `/dashboard/governance` (policy gates), `/dashboard/kanban` (work board), `/dashboard/graph` (knowledge graph), `/dashboard/mission-control` (ops console), and `/dashboard/settings` as the governed operator surface |
-| F42 | `/dashboard/memories` preserves useful reference memory capabilities: memory search/list, insights, trace logs, provenance, extracted facts, and approval queue |
-| F43 | `/work-board` uses Native Allura Kanban as the default planning source of truth; Notion, Linear, and GitHub Projects are optional sync adapters |
+| F41 | Governed operator navigation must link to implemented routes. The committed shell inventory is `/dashboard`, `/portal`, `/dashboard/mission-control`, `/dashboard/kanban`, `/dashboard/search`, `/dashboard/teams`, `/dashboard/graph`, and `/dashboard/curator`; route presence alone does not prove acceptance. The local admin candidate is excluded from this planning change. |
+| F42 | Preserve memory search/list, insights, traces, provenance, extracted facts, and approval capabilities through governed routes. Proposed memory, audit, governance, settings, and chat pages must not be represented as implemented without current route and API evidence. |
+| F43 | Notion remains the sanctioned human planning/status authority. Native Allura Kanban is a planned operational surface; replacing Notion requires a separately approved migration with import, reconciliation, and rollback evidence. |
 | F44 | `/resources` reads skills, agents, MCP servers, containers, cron jobs, and drift warnings from a declared Resource Manifest or generated manifest endpoint |
 | F45 | `/agents` distinguishes TALON/IRIS native subagents from Team RAM/Durham CLI harness agents and external runtime agents |
 | F46 | `/telemetry` surfaces model, prompt, tool, retry, rate-limit, failure, and degraded-state metrics without inventing missing measurements |
@@ -391,14 +404,14 @@ As of 2026-08-29 (implementation readiness pass), these BLUEPRINT functional req
 | Budget Admin API | `POST /api/admin/reset-budget` — reset halted sessions per group or globally | `src/mcp/canonical-http-gateway.ts` |
 | Memory Command Center Shell | Approved governed dashboard for memories, curator work, RuVix governance, graph exploration, audit evidence, and settings | Launches only after source-of-truth, no-fabricated-data, auth, accessibility, route-smoke, and rollback gates pass |
 | Allura Memory Reference Surface | Visual/product reference for the desired memory dashboard experience | `localhost:6420`; preserve capabilities in `/allura` |
-| Native Allura Kanban | Default planning and execution board surfaced near the Memory Command Center when needed | Source of truth by default; external boards are adapters unless explicitly configured upstream |
-| Board Sync Adapters | Optional Notion, Linear, and GitHub Projects projections | Mirror native Allura state by default; provider-neutral mapping into the internal card/project/lane model |
+| Native Allura Kanban | Planned operational board surfaced near the Memory Command Center | Notion remains current human status authority; any authority migration requires separate approval and reconciliation/rollback proof |
+| Board Sync Adapters | Planned provider-neutral board integrations | Preserve one named upstream authority; no implicit switch from Notion or conflicting status writers |
 | Resource Manifest Adapter | Resource inventory adapter for skills, agents, MCP servers, containers, cron jobs, and drift warnings | `RESOURCE-MANIFEST.md` or generated manifest endpoint |
 | PostgreSQL 16            | Episodic memory + audit trail + proposals      | Docker service                                    |
 | Neo4j 5.26               | Semantic memory — versioned knowledge graph    | Docker service                                    |
 | Memory Viewer            | `/memory` page — list, search, delete          | `src/app/memory/page.tsx`                         |
 | Curator Dashboard        | `/curator` page — three-tab HITL governance UI | `src/app/curator/page.tsx`                        |
-| Clerk Auth               | Multi-tenant authentication + RBAC             | SaaS (vercel.com)                                 |
+| Cloudflare Access        | Founder/internal authentication boundary        | Cloudflare Zero Trust                             |
 | Sentry Monitor           | Error tracking + alerts                        | SaaS (sentry.io)                                  |
 
 ---

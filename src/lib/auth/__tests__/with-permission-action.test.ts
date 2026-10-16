@@ -15,8 +15,6 @@ import { beforeEach, describe, expect, it } from "vitest"
 process.env.ALLURA_DEV_AUTH_ENABLED = "true"
 // @ts-expect-error — NODE_ENV is read-only in Next.js types but must be set for tests
 process.env.NODE_ENV = "test"
-delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-delete process.env.CLERK_SECRET_KEY
 
 import { minimumRoleForAction, withPermission } from "@/lib/auth/api-auth"
 import { clearAuthConfig } from "@/lib/auth/config"

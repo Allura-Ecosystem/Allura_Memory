@@ -17,7 +17,7 @@
 CREATE TABLE IF NOT EXISTS memberships (
     id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     group_id    TEXT NOT NULL,
-    user_id     TEXT NOT NULL,            -- stable identity (Clerk user id or email)
+    user_id     TEXT NOT NULL,            -- stable server-verified identity
     email       TEXT,
     role        TEXT NOT NULL DEFAULT 'viewer'
                   CHECK (role IN ('admin', 'curator', 'viewer')),

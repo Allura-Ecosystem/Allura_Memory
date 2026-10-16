@@ -617,7 +617,7 @@ describe("Story 29.5 — POST /api/device-pairing/approve", () => {
       expect(metadata.principal_id).toBe(PRINCIPAL_ID);
       expect(metadata.group_id).toBe(GROUP_ID);
       expect(metadata.workspace_id).toBe(WORKSPACE_ID);
-      expect(metadata.auth_method).toBe("clerk");
+      expect(metadata.auth_method).toBe("web_session");
       expect(metadata.key_fingerprint).toBeDefined();
     });
   });

@@ -169,7 +169,7 @@ async function recordOutcomeOrUnavailable(scope: Scope, decision: Exclude<Decisi
 /**
  * Server-only authenticated entry. It accepts a server-derived principal, never
  * a request; scope and role come only from the canonical server auth resolver
- * (Clerk session or DevAuthProvider), never from browser-supplied headers.
+ * (Cloudflare Access or DevAuthProvider), never from browser-supplied headers.
  * Available issuance commits the exact summary snapshot and ledger event in one
  * managed app-role transaction. A failed read rolls back that transaction, then
  * writes a separate failed outcome (no issuance snapshot was emitted to replay).

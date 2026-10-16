@@ -20,7 +20,7 @@
  *    verifier is never in the URL (AD-65, §4.1 step 5).
  *
  * Non-goals (Story 29.4 scope):
- *  - No `/approve`, `/complete`, Clerk integration, or device limit check.
+ *  - No `/approve`, `/complete`, interactive identity integration, or device limit check.
  */
 import type { Pool } from "pg";
 import { createHash, randomUUID } from "node:crypto";

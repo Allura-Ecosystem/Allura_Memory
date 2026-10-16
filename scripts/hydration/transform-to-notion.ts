@@ -2,7 +2,6 @@
 // Property transformation layer for Notion schemas
 
 import { DEFAULT_NOTION_GROUP_ID } from './agent-identity';
-import { Story } from './parse-epic-stories';
 
 
 /**

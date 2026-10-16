@@ -1,5 +1,11 @@
 # Agent Directory
 
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Content has been reviewed against architectural principles and should be kept in sync with source-of-truth docs.
+> When in doubt, defer to code, schemas, and team consensus.
+
 This file defines the **live agent surface** for the Team RAM OpenCode Harness,
 restored on the **OAC Core + Allura Overlay** architecture.
 
@@ -81,6 +87,10 @@ Ralph may not execute unless this gate passes:
 - Stale context without acknowledgment
 - Missing validation command
 
+## Evidence-First Delivery Gate (MANDATORY)
+
+Every implementation, UX, testing, infrastructure, or release task must load `.claude/skills/evidence-first-delivery/SKILL.md` and follow `docs/governance/policies/POL-013-EVIDENCE-FIRST-DELIVERY.md`. Local target, runtime configuration, UX interaction evidence, and authorized data flow must be distinguished from candidate or public evidence. A failed or unrun gate blocks push and release.
+
 ## Team RAM
 
 | Agent | Persona | Role | Path |
@@ -113,7 +123,7 @@ Team RAM personas consume OAC context — they do not replace it.
 
 | Owner / Path | Required skills | Optional / routed skills | Notes |
 | --- | --- | --- | --- |
-| All agents | `allura-memory-skill` | `systematic-debugging`, `code-review` | Memory governance is mandatory. |
+| All agents | `allura-memory-skill`, `evidence-first-delivery` | `systematic-debugging`, `code-review` | Memory governance and evidence gates are mandatory. |
 | Brooks | `party-mode`, `skill-creator`, `mcp-harness` | `task-creator`, UI/design skills for routing | Brooks orchestrates; he routes, doesn't hoard. |
 | Scout | `allura-memory-skill`, `multi-search`, `perplexica-mcp`, `mcp-docker` | `context7` via MCP Docker | Scout owns Brain/search recon and context discovery. |
 | Woz | `frontend-craft`, `shadcn`, `task-management`, `varlock`, `code-review` | `frontend-design` when implementing approved UI | Woz builds with loaded context. |

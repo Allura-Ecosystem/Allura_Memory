@@ -20,7 +20,7 @@ const PREHUMAN = {
 
 const EVENT_CASES = [
   ["DEVICE_ENROLL_REQUESTED", PREHUMAN, { enrollment_transaction_id: "enroll_1", device_label: "MacBook", key_fingerprint: "a".repeat(16), callback_type: "deep_link", key_algorithm: "ecdsa-p256" }],
-  ["DEVICE_ENROLL_APPROVED", POSTHUMAN, { enrollment_transaction_id: "enroll_1", principal_id: "principal-audit-test", group_id: "allura-audit-test", workspace_id: "ws-audit-test", key_fingerprint: "a".repeat(16), auth_method: "clerk" }],
+  ["DEVICE_ENROLL_APPROVED", POSTHUMAN, { enrollment_transaction_id: "enroll_1", principal_id: "principal-audit-test", group_id: "allura-audit-test", workspace_id: "ws-audit-test", key_fingerprint: "a".repeat(16), auth_method: "web_session" }],
   ["DEVICE_ENROLL_DENIED", PREHUMAN, { enrollment_transaction_id: "enroll_1", reason_code: "STATE_MISMATCH" }],
   ["DEVICE_ENROLL_EXPIRED", PREHUMAN, { enrollment_transaction_id: "enroll_1", reason_code: "CODE_EXPIRED" }],
   ["DEVICE_PAIRING_COMPLETE", POSTHUMAN, { enrollment_transaction_id: "enroll_1", paired_device_id: "dev_1" }],
