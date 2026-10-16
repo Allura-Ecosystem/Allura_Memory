@@ -3,6 +3,14 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+
+# Read-only hydration uses the existing authenticated Brain wrapper. It does
+# not require loading application/database secrets or starting unrelated tools.
+if [ "${1:-}" = "--hydrate" ]; then
+  shift
+  exec bun "$REPO_ROOT/scripts/hydrate-opencode.ts" "$@"
+fi
+
 ENV_FILE="$REPO_ROOT/.env"
 
 read_env_value() {

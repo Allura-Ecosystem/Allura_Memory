@@ -6,6 +6,25 @@ host system/developer instructions take precedence over repository guidance.
 
 ## Focused hydration
 
+For an explicit startup/rehydrate request, run:
+
+```bash
+./scripts/start-opencode.sh --hydrate --topic "<task> decisions blockers outcomes"
+```
+
+This uses the session-only `.opencode/hydration-profile.json`. The launcher
+dispatches real Scout deterministically, verifies its local and Brain tool
+receipts, then passes a compact packet to real Brooks for synthesis. The full
+personas and two required skill contracts are preloaded. It reports elapsed
+time and aggregate usage from both actual sessions, including cached tokens.
+The ordinary work profile and all registered roles remain available afterward.
+No skill catalog, unrelated MCP schemas, recursive delegation, or redundant
+model-generated dispatch is needed for this fixed startup operation.
+
+A successful hydration requires the real scoped Brain call and local evidence;
+an unavailable service must be reported as degraded, never converted to success.
+The time target is measured, not promised; an over-budget result is explicit.
+
 - Target a useful first response within 30 seconds. Budget additional retrieved
   startup context to 3,000 tokens; task expansion to 8,000. These are targets,
   not measured usage claims or reasons to omit required evidence.
