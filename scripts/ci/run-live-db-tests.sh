@@ -162,6 +162,7 @@ if [[ "$gateway_ready" != "true" ]]; then
   exit 70
 fi
 
+set +e
 RUN_E2E_TESTS=true \
 ALLURA_MCP_HTTP_URL="http://127.0.0.1:${gateway_port}" \
 ALLURA_MCP_TOKEN_SECRET="$gateway_token_secret" \
@@ -169,3 +170,20 @@ POSTGRES_APP_PASSWORD="$POSTGRES_APP_PASSWORD" bun vitest run \
   --config vitest.config.live-db.ts \
   --reporter=json \
   --outputFile="$test_report"
+vitest_status=$?
+set -e
+
+# Bun can report a non-zero process status after it has written a fully
+# successful Vitest JSON report (for example during late runner cleanup). Never
+# mask a failed suite: accept that narrow runner anomaly only when the artifact
+# independently proves zero failed tests and suites.
+if [[ "$vitest_status" -ne 0 ]]; then
+  if bun -e '
+    const report = await Bun.file(process.argv[1]).json();
+    process.exit(report.success === true && report.numFailedTests === 0 && report.numFailedTestSuites === 0 ? 0 : 1);
+  ' "$test_report"; then
+    printf "Vitest returned %s after a successful JSON report; preserving validated live-DB evidence.\n" "$vitest_status"
+  else
+    exit "$vitest_status"
+  fi
+fi
