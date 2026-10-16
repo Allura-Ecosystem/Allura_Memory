@@ -1,5 +1,9 @@
 # Session Stability System
 
+> [!NOTE]
+> **AI-Assisted Documentation** — this document includes revisions made with AI assistance.
+> When guidance conflicts with implementation evidence, defer to code, schemas, and approved source-of-truth docs.
+
 > **6-Month Operational Stability for Long-Running Agent Sessions**
 
 **Purpose:** Ensures AI agents maintain state, recover from crashes, and stay within budget across extended operational periods (6+ months).

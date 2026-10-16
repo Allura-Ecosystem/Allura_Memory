@@ -1,11 +1,19 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs"
-import path from "node:path"
+import { ESLint } from "eslint"
 import { describe, expect, it } from "vitest"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
+import path from "node:path"
 
 const root = process.cwd()
 const read = (relativePath: string) => readFileSync(path.join(root, relativePath), "utf8")
 
 describe("Allura Adaptive Delivery retirement boundary", () => {
+  it("excludes archived scripts from active lint without excluding application tests", async () => {
+    const eslint = new ESLint({ cwd: root })
+    expect(await eslint.isPathIgnored(path.join(root, "docs/archive/bmad-legacy/retired-2026-10-15/scripts/hydration-runner.ts"))).toBe(true)
+    expect(await eslint.isPathIgnored(path.join(root, "tests/scripts/epic30-completion.test.ts"))).toBe(false)
+    expect(await eslint.isPathIgnored(path.join(root, "src/lib/session/state-hydrator.ts"))).toBe(false)
+  })
+
   it("keeps the retired methodology out of active runtime paths", () => {
     expect(existsSync(path.join(root, "_bmad"))).toBe(false)
     expect(existsSync(path.join(root, "_bmad_output"))).toBe(false)

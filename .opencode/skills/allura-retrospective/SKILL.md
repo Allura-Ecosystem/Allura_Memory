@@ -6,6 +6,10 @@ globs: ["src/**", "docs/allura/**", "guidelines/**"]
 
 # Allura Retrospective — Governed Retrospective
 
+> [!NOTE]
+> **AI-Assisted Documentation** — this document includes revisions made with AI assistance.
+> When guidance conflicts with implementation evidence, defer to code, schemas, and approved source-of-truth docs.
+
 > **Allura-governed retrospectives.** Enforces Brooks gate, Brain outcome logging, Notion board update, and canonical doc impact checks.
 
 ## When to Use

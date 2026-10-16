@@ -6,6 +6,10 @@ globs: ["src/**", "docs/allura/**", "guidelines/**"]
 
 # Allura Code Review — Governed Code Review
 
+> [!NOTE]
+> **AI-Assisted Documentation** — this document includes revisions made with AI assistance.
+> When guidance conflicts with implementation evidence, defer to code, schemas, and approved source-of-truth docs.
+
 > **Allura-governed code review.** Routes review to the smallest independent, risk-matched set of reviewers and records truthful evidence.
 
 ## When to Use
