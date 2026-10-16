@@ -45,7 +45,7 @@ status=0
 # This prevents a safe fixture from hiding a second unsafe credential on the same line.
 SAFE_PLACEHOLDERS='\$\{|<password>|<your-|YOUR_|example\.com'
 SAFE_ALLURA_FIXTURES='allura_mcp_[a-z]+0{6,}|allura_mcp_device-token-0{12,}|allura_mcp_RAW_SHOULD_NEVER_RENDER'
-SAFE_PRIVATE_KEY_FIXTURE_PATHS='^_bmad/bmm/stories/29-(17-credential-leak-scan|21-platform-secure-store-contracts)\.md:|^src/lib/device-pairing/__tests__/audit-redaction\.test\.ts:'
+SAFE_PRIVATE_KEY_FIXTURE_PATHS='^\.opencode/work-items/implementation-artifacts/29-(17-credential-leak-scan|21-platform-secure-store-contracts)\.md:|^src/lib/device-pairing/__tests__/audit-redaction\.test\.ts:'
 
 for entry in "${PATTERNS[@]}"; do
   label="${entry%%|*}"
