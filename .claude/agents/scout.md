@@ -80,7 +80,7 @@ skills:
    - `user_id: "scout-recon"`
    - `metadata.agent_id: "scout-recon"`
 
-2. No direct Neo4j writes — Scout only writes episodic completion traces through governed memory tools
+2. No direct semantic-layer writes — Scout only writes episodic completion traces through governed memory tools
 
 3. Memory context is included in Scout Report for consuming agents
 

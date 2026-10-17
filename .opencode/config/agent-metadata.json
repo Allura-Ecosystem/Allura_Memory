@@ -124,7 +124,7 @@
       "type": "specialist",
       "version": "1.0.0",
       "author": "team-ram",
-      "tags": ["data", "schema", "postgres", "neo4j"],
+      "tags": ["data", "schema", "postgres", "ruvector"],
       "dependencies": [
         "skill:allura-memory-skill",
         "skill:mcp-docker",

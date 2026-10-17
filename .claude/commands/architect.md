@@ -25,8 +25,8 @@ Read existing code in the affected area. Identify:
 - Which invariants are load-bearing for this change:
   - `group_id` on all DB paths
   - PostgreSQL append-only traces
-  - Neo4j `SUPERSEDES` versioning
-  - HITL approval before Neo4j promotion
+  - `graph_supersedes` versioning (SUPERSEDES edges)
+  - HITL approval before canonical promotion
 
 ## Step 2: Design the Architecture
 
@@ -42,7 +42,7 @@ Produce a design document covering:
 - Input: [what it accepts, validation rules]
 - Output: [what it returns]
 - Invariants: [what must always be true]
-- Side effects: [what it writes to Postgres/Neo4j/Notion]
+- Side effects: [what it writes to Postgres/RuVector/Notion]
 
 ### Dependencies
 - Calls: [other modules]

@@ -19,6 +19,7 @@ export default defineConfig({
     pool: "forks",
     passWithNoTests: true,
     include: [
+      "src/lib/db/__tests__/retirement-bootstrap.e2e.test.ts",
       "src/__tests__/e2e-integration.test.ts",
       "src/__tests__/curator-pipeline.e2e.test.ts",
       "src/__tests__/ruvector-e2e.test.ts",

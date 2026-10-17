@@ -33,7 +33,7 @@ This Blueprint is the single source of design intent. All `DESIGN-*`, `SOLUTION-
 | **Workspace** | A sub-scope *within* an organization (its own `workspace_id` + optional `metadata.team`). Shares the org `group_id`; **not** a separate tenant boundary. Holds users, roles, agents, tokens, memories, audit events. |
 | **group_id** | Server-generated **organization** scope key (pattern `^allura-[a-z0-9-]+$`, e.g. `allura-faithmeats`). Enforced on every read/write; never client-supplied. `allura-system` is platform-tier only. |
 | **workspace_id** | Sub-tenant scope inside a `group_id`. Workspace isolation is enforced at the API/CHECK layer, not by minting a new `group_id` per workspace. |
-| **Memory** | A governed unit of knowledge. Episodic (raw trace, PostgreSQL) or semantic (approved knowledge, Neo4j). |
+| **Memory** | A governed unit of knowledge. Episodic (raw trace, PostgreSQL) or semantic (approved knowledge, PostgreSQL + RuVector). |
 | **Curator** | The review queue where proposed memories await human approval before promotion. |
 | **Allura Guard** | The policy gate in front of all MCP/API actions: auth, RBAC, scope, rate limits, group_id injection, audit. |
 | **Bumblebee plugin** *(planned — not built)* | Allura plugin around pinned upstream `perplexityai/bumblebee` `v0.1.2` / `cc57710eeaf685e7b89924a36c8583cad0a378fe`. The upstream binary performs read-only endpoint metadata scans; the plugin adds server-issued source/population leases, separate runner/ingest credentials, HTTPS NDJSON receiver, sanitized snapshot state, and downstream Allura exposure handoff. Distinct from Allura Guard, which gates live requests. |
@@ -98,7 +98,7 @@ Grouped by domain area. Each maps to one or more `B#`.
 |----|-------------|
 | **F16** | Memory supports add, search, get, list, delete — all scoped by `group_id`. |
 | **F17** | Episodic traces are append-only in PostgreSQL. |
-| **F18** | Semantic knowledge is versioned in Neo4j via `SUPERSEDES`, never mutated. |
+| **F18** | Semantic knowledge is versioned in PostgreSQL (`graph_memories` / `graph_supersedes`) via `SUPERSEDES`, never mutated. |
 | **F19** | Every memory record preserves provenance, source, actor, confidence, review status. |
 
 ### Curator (→ B4, B5)
@@ -145,7 +145,7 @@ Grouped by domain area. Each maps to one or more `B#`.
 
 ```
 Allura Platform
-├── Allura Memory Engine      — PostgreSQL episodic · Neo4j semantic · Curator queue · Audit receipts
+├── Allura Memory Engine      — PostgreSQL episodic · PostgreSQL + RuVector semantic · Curator queue · Audit receipts
 ├── Allura Guard Security Gateway — login · RBAC · MCP/API auth · group_id enforcement · rate limits · secret scan · audit
 ├── MCP Gateway               — Claude · Codex · OpenCode · Cursor · custom agents
 ├── Memory Command Center      — Overview · Memories · Curator · Agents · Allura Guard · Audit · Workflows · SDK/MCP · Settings
@@ -169,10 +169,10 @@ graph TD
   GW --> BB
   BB --> ME[Allura Memory Engine]
   ME --> PG[(PostgreSQL — episodic)]
-  ME --> NEO[(Neo4j — semantic)]
+  ME --> SEM[(PostgreSQL + RuVector — semantic)]
   ME --> CUR[Curator Queue]
   BB --> AUD[(Audit / Receipts)]
-  CUR -->|HITL approve| NEO
+  CUR -->|HITL approve| SEM
 ```
 
 ### Agent request flow
@@ -279,7 +279,7 @@ High-level grouping (full contracts in the `DESIGN-*` docs):
 |-------|----------|----------|
 | `memory.added` | Memory Engine | Curator, Audit |
 | `curator.proposed` | Curator | Command Center, Audit |
-| `curator.approved` / `curator.rejected` | Reviewer (HITL) | Memory Engine (Neo4j promote), Audit |
+| `curator.approved` / `curator.rejected` | Reviewer (HITL) | Memory Engine (semantic promote), Audit |
 | `token.revoked` / `token.rotated` | Allura Guard | MCP Gateway, Audit |
 | `dream.completed` | Dream Engine | Curator, Audit |
 

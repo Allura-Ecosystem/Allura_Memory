@@ -87,7 +87,7 @@ export async function approveAdr001(): Promise<ApprovalResult> {
   console.log(`Approved At: ${result.approvedAt}`);
   console.log();
   console.log('Next Steps:');
-  console.log('1. Promote ADR-001 to Neo4j as Insight');
+  console.log('1. Promote ADR-001 to the semantic store (graph_memories) as an Insight');
   console.log('2. Update memory-bank/systemPatterns.md');
   console.log('3. Begin implementation of FR1, FR3, FR4, FR6, FR7');
   console.log();

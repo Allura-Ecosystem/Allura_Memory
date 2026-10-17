@@ -4,7 +4,7 @@
  * Usage:
  *   bun run scripts/restore.ts --dry-run --date 20260429
  *   bun run scripts/restore.ts --date 20260429 --type postgres
- *   bun run scripts/restore.ts --date 20260429 --type neo4j --type config
+ *   bun run scripts/restore.ts --date 20260429 --type postgres --type config
  *   bun run scripts/restore.ts --date 20260429 --force
  *
  * FR-4: Restore with dry-run mode
@@ -67,7 +67,7 @@ Usage:
 
 Options:
   --date, -d <YYYYMMDD>  Required: Backup date to restore
-  --type, -t <type>      Backup type to restore (postgres|neo4j|config|workspace|skills)
+  --type, -t <type>      Backup type to restore (postgres|config|workspace|skills)
                           Can be specified multiple times. Default: all in manifest
   --dry-run, -n          Validate without modifying state
   --force, -f            Skip validation and proceed
@@ -77,17 +77,13 @@ Options:
 Examples:
   bun run scripts/restore.ts --dry-run --date 20260429
   bun run scripts/restore.ts --date 20260429 --type postgres
-  bun run scripts/restore.ts --date 20260429 --type neo4j --type config
+  bun run scripts/restore.ts --date 20260429 --type postgres --type config
 
 Environment:
   BACKUP_ENCRYPTION_KEY  Required: AES-256 encryption key (must match backup)
   POSTGRES_CONTAINER     Optional: Docker container name (default: knowledge-postgres)
-  NEO4J_CONTAINER        Optional: Docker container name (default: knowledge-neo4j)
   POSTGRES_DB            Optional: PostgreSQL database name (default: memory)
-  NEO4J_DATABASE         Optional: Neo4j database name (default: neo4j)
   POSTGRES_USER          Optional: PostgreSQL user (default: ronin4life)
-  NEO4J_USER             Optional: Neo4j user (default: neo4j)
-  NEO4J_PASSWORD         Required for Neo4j restore
 
 `)
 }

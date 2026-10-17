@@ -72,7 +72,7 @@ class SessionBootstrapper {
   }
 
   private async verifyDatabases(): Promise<void> {
-    console.log("\n🔌 Verifying Database Connections...");
+    console.log("\n🔌 Verifying PostgreSQL Connection...");
     
     // Check PostgreSQL
     try {
@@ -80,14 +80,6 @@ class SessionBootstrapper {
       console.log("  ✓ PostgreSQL - Connected");
     } catch (error) {
       console.log("  ⚠ PostgreSQL - Connection failed");
-    }
-
-    // Check Neo4j
-    try {
-      const neo4jResult = await this.queryNeo4j("RETURN 1 as test");
-      console.log("  ✓ Neo4j - Connected");
-    } catch (error) {
-      console.log("  ⚠ Neo4j - Connection failed");
     }
   }
 
@@ -134,11 +126,6 @@ class SessionBootstrapper {
 
   private async queryPostgres(query: string): Promise<any[]> {
     // Placeholder - would use actual PostgreSQL client
-    return [];
-  }
-
-  private async queryNeo4j(query: string): Promise<any[]> {
-    // Placeholder - would use actual Neo4j driver
     return [];
   }
 }

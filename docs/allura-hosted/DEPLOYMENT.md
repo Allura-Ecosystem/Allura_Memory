@@ -18,8 +18,7 @@ Docker Compose stack:
 
 | Service | Role | Port |
 |---------|------|------|
-| PostgreSQL 16 | Episodic memory + vector (RuVector) | 5432 / 5433 |
-| Neo4j 5.26 | Semantic knowledge | 7687 |
+| PostgreSQL 16 | Episodic memory + semantic knowledge + vector (RuVector) | 5432 / 5433 |
 | Allura Brain (MCP) | Streamable HTTP gateway | 5888 |
 | Command Center (Next.js) | Control plane UI | 4000+ (3000–3999 band banned) |
 | API | REST + OpenAPI | 6000+ |
@@ -30,7 +29,7 @@ Runtime/package manager: **Bun only** (npm/npx banned per repo policy).
 
 ```bash
 bun install
-bun run brain:up          # start PG + Neo4j + MCP
+bun run brain:up          # start PG (RuVector) + MCP
 bun run brain:status      # health check
 bun run dev               # Command Center (ALLURA_DASHBOARD_PORT, default 3100 — to be moved to 4000+ band)
 ```
@@ -53,7 +52,7 @@ Validates a local agent's MCP connection: token validity, `/mcp` reachability, r
 
 ## Ports (AD-45)
 
-3000–3999 band is banned. UI 4000+, API 6000+, tools 7000+. Infra exempt (PG 5432, Neo4j 7687, Brain 5888).
+3000–3999 band is banned. UI 4000+, API 6000+, tools 7000+. Infra exempt (PG 5432, Brain 5888).
 
 ## References
 

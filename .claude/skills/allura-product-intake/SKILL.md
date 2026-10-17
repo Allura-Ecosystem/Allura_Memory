@@ -162,7 +162,7 @@ At the end of every `allura-product-intake` execution, emit:
 ├─ Action Taken: PRD created — {title}
 ├─ Principle Applied: {Brooksian principle}
 ├─ Event Logged: PRD_CREATED
-├─ Neo4j Promoted: {Yes/No}
+├─ Canonical Promoted: {Yes/No}
 └─ Confidence: {High/Medium/Low}
 ```
 

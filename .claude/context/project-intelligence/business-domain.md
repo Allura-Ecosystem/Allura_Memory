@@ -57,7 +57,7 @@ Competitor:        mem0.ai (primary benchmark — 5-tool API parity is a hard re
 **For Developers:**
 - Drop-in mem0 replacement with `docker compose up`
 - MCP-native: works with Claude Code, OpenClaw, any MCP-compatible agent
-- Dual-database reliability: PostgreSQL (episodic) + Neo4j (semantic)
+- Single-database reliability: PostgreSQL (episodic) + PostgreSQL/RuVector (semantic)
 - Full audit trail by default — no extra code
 
 **For Business:**
@@ -87,7 +87,7 @@ Market Position:   Governed, sovereign alternative to mem0.ai — warm design, s
 |--------|------------|--------|
 | API parity | All 5 mem0 tools implemented | 5/5 |
 | Audit coverage | % of memory ops with Postgres trace | 100% |
-| HITL gate | No autonomous Neo4j write without approval (SOC2 mode) | 0 bypasses |
+| HITL gate | No autonomous semantic-layer write without approval (SOC2 mode) | 0 bypasses |
 | Consumer usability | Maya can find/forget a memory in <2 min | Pass Sarah's Law |
 | Deploy simplicity | Single `docker compose up` for core infra | ≤1 command |
 
@@ -110,7 +110,7 @@ Market Position:   Governed, sovereign alternative to mem0.ai — warm design, s
 - **Bun only** — npm/npx banned (zero-trust supply chain policy)
 - **`group_id` on every DB operation** — enforced by PostgreSQL CHECK constraint, not policy
 - **Append-only traces** — no UPDATE/DELETE on events table, ever
-- **HITL required in SOC2 mode** — no autonomous Neo4j promotion
+- **HITL required in SOC2 mode** — no autonomous semantic-layer promotion
 - **`allura-*` tenant namespace** — `roninclaw-*` group_ids deprecated
 
 ---

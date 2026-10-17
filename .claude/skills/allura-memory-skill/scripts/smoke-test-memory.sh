@@ -11,10 +11,17 @@ echo "Testing PostgreSQL..."
 PG_COUNT=$(docker exec knowledge-postgres psql -U ronin4life -d memory -t -c "SELECT count(*) FROM allura_memories;" 2>/dev/null | tr -d ' ')
 echo "  PG memories: $PG_COUNT"
 
-# Test Neo4j
-echo "Testing Neo4j..."
-NEO4J_COUNT=$(docker exec knowledge-neo4j cypher-shell -u neo4j -p "${NEO4J_PASSWORD:?set NEO4J_PASSWORD (see .env in the allura-memory stack)}" "MATCH (m:Memory) RETURN count(m)" 2>/dev/null | tail -2 | head -1 | tr -d ' ')
-echo "  Neo4j Memory nodes: $NEO4J_COUNT"
+# Test semantic layer (PostgreSQL graph_memories / graph_supersedes)
+echo "Testing semantic layer..."
+GM_COUNT=$(docker exec knowledge-postgres psql -U ronin4life -d memory -t -c "SELECT count(*) FROM graph_memories;" 2>/dev/null | tr -d ' ')
+echo "  graph_memories rows: $GM_COUNT"
+GS_COUNT=$(docker exec knowledge-postgres psql -U ronin4life -d memory -t -c "SELECT count(*) FROM graph_supersedes;" 2>/dev/null | tr -d ' ')
+echo "  graph_supersedes edges: $GS_COUNT"
+
+# Test RuVector (pgvector in the same PostgreSQL instance)
+echo "Testing RuVector..."
+VEC_EXT=$(docker exec knowledge-postgres psql -U ronin4life -d memory -t -c "SELECT count(*) FROM pg_extension WHERE extname IN ('vector','ruvector');" 2>/dev/null | tr -d ' ')
+echo "  vector extensions installed: $VEC_EXT"
 
 # Test Ollama
 echo "Testing Ollama..."

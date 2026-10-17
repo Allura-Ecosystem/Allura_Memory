@@ -59,7 +59,7 @@ export async function searchKeys(
     group_id: opts.groupId,
     limit: opts.k,
     // status:"all" includes episodic stores; the default "approved" returns only
-    // canonical Neo4j insights, which freshly-seeded fixtures never are.
+    // canonical semantic insights, which freshly-seeded fixtures never are.
     status: "all",
   })
   const results = res.data?.results ?? []

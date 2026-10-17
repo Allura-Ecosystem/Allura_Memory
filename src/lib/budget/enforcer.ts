@@ -46,6 +46,7 @@ export interface EnforcerConfig {
   onPreCheck?: PreCheckCallback;
   /** Enable/disable enforcement (default: true) */
   enabled: boolean;
+  timeAccounting?: "wall-clock" | "recorded-duration";
 }
 
 /**
@@ -90,11 +91,13 @@ export class BudgetEnforcer {
       onHalt: config?.onHalt,
       onPreCheck: config?.onPreCheck,
       enabled: config?.enabled ?? true,
+      timeAccounting: config?.timeAccounting ?? "wall-clock",
     };
     this.haltTtlMs = config?.haltTtlMs ?? DEFAULT_HALT_TTL_MS;
 
     this.monitor = createBudgetMonitor({
       budgetConfig: this.config.budgetConfig,
+      timeAccounting: this.config.timeAccounting,
       onBreach: (sessionId, category, consumed, limit) => {
         this.handleBreach(sessionId, category, consumed, limit);
       },
@@ -114,29 +117,31 @@ export class BudgetEnforcer {
   }
 
   /**
-   * Reset a specific halted session so it can resume operations.
-   * Returns true if the session was halted and has been un-halted.
+   * Reset only a time-only halt. Non-time consumption and history are preserved;
+   * any non-time exhaustion or non-time halt refuses the reset.
+   * Returns true only when the session was actually released.
    */
   resetHaltedSession(sessionId: SessionId): boolean {
     const key = this.sessionKey(sessionId);
-    const wasHalted = this.haltedSessions.has(key);
-    if (wasHalted) {
-      this.haltedSessions.delete(key);
-      const state = this.monitor.getSessionState(sessionId);
-      if (state) {
-        state.haltedAt = undefined as any;
-        state.haltReason = undefined;
-      }
-    }
-    return wasHalted;
+    const state = this.monitor.getSessionState(sessionId);
+    if (!this.haltedSessions.has(key) || !state || state.haltReason?.type !== "time_limit") return false;
+    const breaches = this.monitor.hasBreachedLimit(sessionId).categories;
+    if (breaches.some((category) => category !== "time_ms") || state.currentStep >= state.budgetStatus.limits.maxSteps) return false;
+    if (!this.monitor.resetTimeBudget(sessionId)) return false;
+    this.haltedSessions.delete(key);
+    state.haltedAt = undefined;
+    state.haltReason = undefined;
+    return true;
   }
 
   /**
-   * Reset all halted sessions. Returns count of sessions that were un-halted.
+   * Attempt time-only resets; count only sessions actually released.
    */
   resetAllHaltedSessions(): number {
-    const count = this.haltedSessions.size;
-    this.haltedSessions.clear();
+    let count = 0;
+    for (const sessionId of this.monitor.getSessionIds()) {
+      if (this.resetHaltedSession(sessionId)) count++;
+    }
     return count;
   }
 
@@ -229,7 +234,7 @@ export class BudgetEnforcer {
     this.checkCategory("cost_usd", consumption.costUsd, limits.maxCostUsd, state, warnings, breaches);
 
     // Check Kmax (steps)
-    const totalSteps = state.currentStep;
+    const totalSteps = Math.max(state.currentStep, consumption.steps);
     if (totalSteps >= limits.maxSteps) {
       breaches.push({
         category: "steps",
@@ -566,7 +571,7 @@ export class BudgetEnforcer {
       case "cost_usd":
         return { type: "cost_limit", consumedUsd: breach.consumed, limitUsd: breach.limit };
       case "steps":
-        return { type: "kmax_exceeded", currentStep: state.currentStep, maxSteps: breach.limit };
+        return { type: "kmax_exceeded", currentStep: breach.consumed, maxSteps: breach.limit };
       default:
         return { type: "critical_error", error: `Unknown breach: ${breach.category}` };
     }

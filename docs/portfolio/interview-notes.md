@@ -48,9 +48,9 @@ memory storage performs worse than no memory at all.
 
 ## Architecture decisions worth defending
 
-1. **PostgreSQL-only** (AD-50) — Neo4j sunset 2026-07-17; pgvector/RuVector
-   provides equivalent HNSW + BM25 without the per-person Community license
-   limit or a second store to keep consistent.
+1. **PostgreSQL-only** (AD-50) — pgvector/RuVector provides HNSW + BM25 in
+   the same PostgreSQL instance, with no per-person license limit and no
+   second store to keep consistent.
 2. **API/MCP-first** — the engine is usable without a browser; the Memory
    Command Center is an optional governed operator surface, never a bypass.
 3. **Fail-closed web authority** — one route-scope manifest is the single

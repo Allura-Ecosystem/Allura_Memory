@@ -18,7 +18,7 @@ Context-first, plan-first, validation-first.
 Project-specific extensions on top of OAC core.
 
 - **Team RAM** — 10 persona-driven agents (Brooks, Woz, Scout, Pike, Fowler, etc.)
-- **Brain memory** — Allura Brain (PostgreSQL + Neo4j) for episodic + semantic memory
+- **Brain memory** — Allura Brain (PostgreSQL + RuVector) for episodic + semantic memory
 - **Brooks orchestration** — Architecture-first orchestration via Frederick Brooks persona
 - **HITL / curator / governance** — Promotion pipeline with human-in-the-loop approval
 - **RuVix control plane** — Policy enforcement gate for all memory operations

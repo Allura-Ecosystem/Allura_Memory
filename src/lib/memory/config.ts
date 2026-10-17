@@ -20,11 +20,6 @@ export interface AlluraMemoryConfig {
   postgresPassword: string;
   postgresPoolMax: number;
   
-  // Neo4j (Promoted Insights)
-  neo4jUri: string;
-  neo4jUser: string;
-  neo4jPassword: string;
-  
   // Multi-tenant
   defaultGroupId: string;
   
@@ -77,16 +72,6 @@ export function getConfig(): AlluraMemoryConfig {
     );
   }
   
-  // Neo4j - required
-  const neo4jUri = process.env.NEO4J_URI;
-  const neo4jPassword = process.env.NEO4J_PASSWORD;
-  
-  if (!neo4jUri || !neo4jPassword) {
-    throw new Error(
-      'Neo4j configuration required. Set NEO4J_URI and NEO4J_PASSWORD in .env.local'
-    );
-  }
-  
   // Build connection URL if not provided
   const postgresUser = process.env.POSTGRES_USER || 'allura';
   const postgresDb = process.env.POSTGRES_DB || 'memory';
@@ -100,11 +85,6 @@ export function getConfig(): AlluraMemoryConfig {
     postgresUser,
     postgresPassword,
     postgresPoolMax: parseInt(process.env.POSTGRES_POOL_MAX || '10', 10),
-    
-    // Neo4j
-    neo4jUri,
-    neo4jUser: process.env.NEO4J_USER || 'neo4j',
-    neo4jPassword,
     
     // Multi-tenant
     defaultGroupId: process.env.DEFAULT_GROUP_ID || 'allura-system',
@@ -191,7 +171,6 @@ export function validateConfig(): void {
   
   console.log('✓ Allura Memory Configuration:');
   console.log(`  PostgreSQL: ${config.postgresHost}:${config.postgresPort}/${config.postgresDb}`);
-  console.log(`  Neo4j: ${config.neo4jUri}`);
   console.log(`  Group ID: ${config.defaultGroupId}`);
   console.log(`  Embedding: ${config.embeddingProvider}/${config.embeddingModel}`);
   console.log(`  LLM: ${config.opencodeProvider}/${config.opencodeModel}`);
@@ -219,11 +198,6 @@ POSTGRES_PORT=5432
 POSTGRES_DB=memory
 POSTGRES_USER=allura
 POSTGRES_PASSWORD=your-password-here
-
-# Neo4j (Promoted Insights)
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=your-password-here
 
 # Multi-tenant
 DEFAULT_GROUP_ID=allura-system

@@ -12,7 +12,7 @@ The `allura-governance` plugin blocks invariant violations before they reach the
 |---|-----------|------|--------|
 | 1 | `group_id` on every DB read/write | `preToolCall` | BLOCK if missing |
 | 2 | PostgreSQL events are append-only | `preToolCall` | BLOCK UPDATE/DELETE on `events`/`traces` |
-| 3 | Neo4j versioning via `SUPERSEDES` | `preToolCall` | BLOCK direct node mutation |
+| 3 | Semantic versioning via `SUPERSEDES` (`graph_supersedes`) | `preToolCall` | BLOCK direct mutation of `graph_memories` rows |
 | 4 | HITL required for promotion | `preToolCall` | BLOCK `memory_promote` without `curator_approved` |
 | 5 | DB ops via MCP_DOCKER tools only | `preToolCall` | BLOCK `docker exec` |
 | 6 | `allura-*` tenant namespace | `preToolCall` | BLOCK `roninclaw-*` group_ids |
@@ -77,7 +77,7 @@ When a violation is detected:
 
 ## Context Injection
 
-When prompts contain keywords like "database", "memory", "Neo4j", "PostgreSQL", "promote", or "curator":
+When prompts contain keywords like "database", "memory", "RuVector", "PostgreSQL", "promote", or "curator":
 
 1. Governance rules are **prepended** to the prompt context
 2. Agent sees the 6 invariants before responding

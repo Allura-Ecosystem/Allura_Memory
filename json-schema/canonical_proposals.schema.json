@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allura.dev/schemas/canonical_proposals.schema.json",
   "title": "Canonical Proposal",
-  "description": "HITL (Human-in-the-Loop) promotion queue entry in PostgreSQL. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to Neo4j as InsightHead/Insight nodes.",
+  "description": "HITL (Human-in-the-Loop) promotion queue entry in PostgreSQL. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to the canonical semantic layer (PostgreSQL graph_memories / graph_supersedes) as versioned insight records.",
   "type": "object",
   "required": ["id", "group_id", "content", "score", "status", "created_at"],
   "properties": {

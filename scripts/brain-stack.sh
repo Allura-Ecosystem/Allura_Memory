@@ -7,7 +7,7 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
 GATEWAY_READY_URL="http://127.0.0.1:5888/ready"
 
-SERVICES=(postgres neo4j mcp)
+SERVICES=(postgres mcp)
 
 # External resources declared in docker-compose.yml as `external: true`.
 # These names MUST match the compose `name:` fields exactly — see the
@@ -19,7 +19,7 @@ SERVICES=(postgres neo4j mcp)
 # will NOT create them. On a fresh machine a missing one aborts `up` before any
 # container starts — which is exactly how open-webui-stack_default broke setup.
 EXTERNAL_NETWORKS=(knowledge-network open-webui-stack_default)
-EXTERNAL_VOLUMES=(memory_postgres_data neo4j_data neo4j_logs)
+EXTERNAL_VOLUMES=(memory_postgres_data)
 
 # --env-file args (G4): the stack needs BOTH .env (base) and .env.local (secrets)
 # for YAML ${VAR} substitution. Passing them here means every `compose` call is
@@ -156,7 +156,7 @@ cmd_down() {
 
 cmd_restart() {
   require_docker
-  compose restart postgres neo4j mcp
+  compose restart postgres mcp
   wait_ready 120
 }
 

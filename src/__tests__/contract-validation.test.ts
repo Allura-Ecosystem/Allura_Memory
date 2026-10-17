@@ -65,7 +65,7 @@ const VALID_META: MemoryResponseMeta = {
   contract_version: "v1",
   degraded: false,
   stores_used: ["postgres"],
-  stores_attempted: ["postgres", "neo4j"],
+  stores_attempted: ["postgres", "graph"],
 }
 
 /**
@@ -422,13 +422,13 @@ describe("Contract Validation Suite", () => {
   // ── Degraded Mode Contract ───────────────────────────────────────────
 
   describe("degraded mode contract", () => {
-    it("degraded meta includes degraded_reason when Neo4j unavailable", async () => {
+    it("degraded meta includes degraded_reason when semantic layer unavailable", async () => {
       const degradedMeta: MemoryResponseMeta = {
         contract_version: "v1",
         degraded: true,
-        degraded_reason: "neo4j_unavailable",
+        degraded_reason: "graph_unavailable",
         stores_used: ["postgres"],
-        stores_attempted: ["postgres", "neo4j"],
+        stores_attempted: ["postgres", "graph"],
         warnings: ["semantic layer unavailable; returned episodic results only"],
       }
 
@@ -446,7 +446,7 @@ describe("Contract Validation Suite", () => {
       })
 
       expect(result.meta?.degraded).toBe(true)
-      expect(result.meta?.degraded_reason).toBe("neo4j_unavailable")
+      expect(result.meta?.degraded_reason).toBe("graph_unavailable")
       expect(result.meta?.warnings).toBeDefined()
       expect(result.meta?.warnings!.length).toBeGreaterThan(0)
     })

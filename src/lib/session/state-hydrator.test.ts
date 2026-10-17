@@ -23,7 +23,7 @@ describe.skipIf(!shouldRunE2E)("StateHydrator", () => {
       stateDir: testStateDir,
       planningArtifactsDir: testPlanningDir,
       enableDbHydration: false,
-      enableNeo4jHydration: false,
+      enableSerializationHydration: false,
     })
 
     // Create test directories

@@ -24,8 +24,6 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 NETWORK_NAME="knowledge-network"
 VOLUME_NAMES=(
     "memory_postgres_data"  # compose alias: postgres_data
-    "neo4j_data"
-    "neo4j_logs"
 )
 
 echo "Allura First-Run Setup"

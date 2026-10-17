@@ -33,7 +33,7 @@ Type these directly in your IDE for fast access to Allura Memory workflows.
 
 | Command            | Action       | Equivalent                         |
 | ------------------ | ------------ | ---------------------------------- |
-| `/query <term>`    | Memory query | `mcp__MCP_DOCKER__search_memories` |
+| `/query <term>`    | Memory query | `allura-brain__memory_search`      |
 | `/update <target>` | Memory sync | `memory-client`                   |
 | `/party <task>`    | Party mode   | `party-mode`                       |
 

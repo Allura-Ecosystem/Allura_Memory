@@ -24,7 +24,7 @@
 
 ```
 Next.js 16 + TypeScript 5.9 (strict) + Bun 1.3
-PostgreSQL 16 (events) + Neo4j 5.26 (knowledge) + RuVector (vectors)
+PostgreSQL 16 (events + `graph_memories` knowledge) + RuVector (vectors, hybrid search)
 OpenCode 1.4.3 (agent runtime) + MCP (tool protocol)
 ```
 
@@ -32,8 +32,8 @@ OpenCode 1.4.3 (agent runtime) + MCP (tool protocol)
 
 - ✅ `group_id` on every database write (tenant isolation)
 - ✅ PostgreSQL = append-only raw traces
-- ✅ Neo4j = curated knowledge with SUPERSEDES
-- ✅ No agent writes to Neo4j without human approval
+- ✅ Semantic layer = curated knowledge with SUPERSEDES (`graph_supersedes`)
+- ✅ No agent writes to the semantic layer without human approval
 
 ## Quick Commands
 

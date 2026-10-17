@@ -2,7 +2,7 @@
  * Platform Hive — built-in seed dataset.
  *
  * This represents the Allura Platform architecture as a knowledge graph.
- * It is always available even when Neo4j is sparse or offline.
+ * It is always available even when the semantic layer is sparse or offline.
  * The Policy node directly addresses the user feedback about not being
  * able to set or inspect policies.
  */
@@ -40,7 +40,7 @@ export const PLATFORM_NODES: GraphNode[] = [
     riskLevel: "low",
     qualityScore: 0.92,
     owner: "woz",
-    summary: "Stores what your agents learn. Keeps a fast log (Postgres) and a smart graph (Neo4j) in sync.",
+    summary: "Stores what your agents learn. Keeps a fast log and a smart graph in one PostgreSQL + RuVector store.",
     docLinks: ["docs/allura/BLUEPRINT.md"],
     connected: 5,
   },
@@ -78,8 +78,8 @@ export const PLATFORM_NODES: GraphNode[] = [
     connected: 2,
   },
   {
-    id: "neo4j-semantic",
-    label: "Neo4j Semantic",
+    id: "ruvector-semantic",
+    label: "RuVector Semantic",
     type: "ops",
     status: "built",
     riskLevel: "low",
@@ -227,10 +227,10 @@ export const PLATFORM_EDGES: GraphEdge[] = [
 
   // Memory Engine stores in both databases
   { id: "e-store-pg",    source: "allura-memory-engine", target: "postgres-episodic",     relationship: "STORES" },
-  { id: "e-store-neo",   source: "allura-memory-engine", target: "neo4j-semantic",        relationship: "STORES" },
+  { id: "e-store-neo",   source: "allura-memory-engine", target: "ruvector-semantic",        relationship: "STORES" },
 
   // Curator approves things into the semantic graph
-  { id: "e-approves",    source: "curator-queue",        target: "neo4j-semantic",        relationship: "APPROVES" },
+  { id: "e-approves",    source: "curator-queue",        target: "ruvector-semantic",        relationship: "APPROVES" },
 
   // Governance receipt is generated for promotions
   { id: "e-gen-receipt", source: "curator-queue",        target: "governance-receipt",    relationship: "GENERATES" },

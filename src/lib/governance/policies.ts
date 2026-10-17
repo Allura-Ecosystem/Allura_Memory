@@ -17,7 +17,7 @@ export type PolicySeverity = "critical" | "high" | "medium" | "low"
 export type InvariantKey =
   | "group_id_required"
   | "append_only_events"
-  | "neo4j_supersedes"
+  | "graph_supersedes"
   | "hitl_promotion"
   | "db_connection_only"
   | "allura_namespace"
@@ -80,15 +80,15 @@ export const CANONICAL_POLICIES: readonly GovernancePolicy[] = Object.freeze([
   },
   {
     id: "pol-003",
-    name: "Neo4j Versioning via SUPERSEDES",
+    name: "SUPERSEDES Versioning via graph_supersedes",
     description:
-      "Neo4j knowledge nodes are never mutated in-place. " +
+      "Semantic knowledge nodes are never mutated in-place. " +
       "All updates create a new node and link it with a SUPERSEDES relationship: " +
       "(v2)-[:SUPERSEDES]->(v1:deprecated). " +
       "The old node is marked :deprecated but never deleted. " +
       "This preserves full lineage for audit trails.",
     severity: "critical",
-    invariant_key: "neo4j_supersedes",
+    invariant_key: "graph_supersedes",
     overridable: false,
     version: 1,
     updated_at: "2026-06-06T00:00:00.000Z",
@@ -97,7 +97,7 @@ export const CANONICAL_POLICIES: readonly GovernancePolicy[] = Object.freeze([
     id: "pol-004",
     name: "HITL Required for Promotion",
     description:
-      "Agents cannot autonomously promote memories to the Neo4j semantic layer. " +
+      "Agents cannot autonomously promote memories to the semantic layer. " +
       "Eligible memories queue into canonical_proposals for human review. " +
       "PROMOTION_MODE=auto is retained for backward-compatible env parsing only; " +
       "canonical promotion is always HITL-gated. " +

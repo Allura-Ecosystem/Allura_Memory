@@ -66,8 +66,6 @@ export interface RetrievalConfig {
   max_results: number;
   /** Minimum score threshold below which results are discarded */
   min_score_threshold: number;
-  /** Neo4j connection string */
-  neo4j_url: string;
   /** PostgreSQL connection string */
   postgres_url: string;
   /** Contract semver */

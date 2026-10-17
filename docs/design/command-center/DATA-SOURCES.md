@@ -12,10 +12,10 @@
 | Surface | Route | Data source | Verdict |
 |---------|-------|-------------|---------|
 | Overview — KPIs | `/dashboard/overview` | PG live `COUNT(*)` on `allura_memories` / `canonical_proposals` / `mcp_tokens` / `workspaces`, group_id-scoped | ✅ LIVE |
-| Overview — System health | same | Memory store + Curator from `isPoolHealthy()`; Knowledge graph via `isDriverHealthy()` (Neo4j); Allura Brain via `brainClient.healthReport()` — both bounded 2.5s, honest Healthy/Unreachable/Unknown | ✅ LIVE |
+| Overview — System health | same | Memory store + Curator from `isPoolHealthy()`; Knowledge graph via the semantic-layer health probe (PostgreSQL `graph_memories`); Allura Brain via `brainClient.healthReport()` — both bounded 2.5s, honest Healthy/Unreachable/Unknown | ✅ LIVE |
 | Overview — Recent receipts | same | Live read of last 5 `events` rows for the group; honest empty / degraded states | ✅ LIVE |
 | Memory (Search) | `/dashboard/search` | `unifiedSearch` server action → live hybrid search | ✅ LIVE |
-| Knowledge Graph — Live Memory | `/dashboard/knowledge-graph` | `GET /api/memory/graph?group_id=…` (Neo4j) | ✅ LIVE |
+| Knowledge Graph — Live Memory | `/dashboard/knowledge-graph` | `GET /api/memory/graph?group_id=…` (PostgreSQL `graph_memories`) | ✅ LIVE |
 | Knowledge Graph — Platform Hive | same | `PLATFORM_NODES/EDGES` seed — Allura's own architecture map, **explicitly labeled via mode toggle** (documentation, not faked tenant data) | ✅ HONEST |
 | Agents | `/dashboard/agents` | `listTenantAgents(pool, groupId)` → `mcp_tokens` | ✅ LIVE |
 | Approvals | `/dashboard/approvals` | PG `getPool()`, group_id-scoped | ✅ LIVE |

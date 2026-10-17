@@ -3,7 +3,7 @@
  * Standalone Checkpoint Tool - No Brain, No MCP, No Skills
  * 
  * Simple file-based session checkpoints for local development.
- * No PostgreSQL, No Neo4j, No MCP Docker, No Skills required.
+ * No PostgreSQL, No MCP Docker, No Skills required.
  * 
  * Usage:
  *   bun run scripts/checkpoint.ts create --story "Fix login bug"

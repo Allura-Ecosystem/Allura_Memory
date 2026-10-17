@@ -48,11 +48,9 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "audit_documents", class: "tenant-scoped", notes: "Audit documents" },
   { table: "curator_config", class: "tenant-scoped", notes: "Curator configuration" },
   { table: "curator_stats", class: "tenant-scoped", notes: "Curator statistics" },
-  { table: "design_sync_status", class: "tenant-scoped", notes: "Design sync state" },
   { table: "coherence_conflicts", class: "tenant-scoped", notes: "Coherence conflicts" },
   { table: "recovery_events", class: "tenant-scoped", notes: "Recovery events" },
   { table: "suspicious_decisions", class: "tenant-scoped", notes: "Flagged decisions" },
-  { table: "sync_drift_log", class: "tenant-scoped", notes: "Drift log" },
   { table: "witness_logs", class: "tenant-scoped", notes: "Witness logs" },
   { table: "adas_runs", class: "tenant-scoped", notes: "ADAS execution records" },
   { table: "agent_trajectories", class: "tenant-scoped", notes: "Agent interaction history" },
@@ -62,7 +60,6 @@ export const TENANT_TABLE_INVENTORY: readonly TableClassification[] = [
   { table: "graph_structural_nodes", class: "tenant-scoped", notes: "Graph nodes" },
   { table: "graph_supersedes", class: "tenant-scoped", notes: "Supersedes relationships" },
   { table: "notion_sync_dlq", class: "tenant-scoped", notes: "Notion sync dead-letter" },
-  { table: "ruvector_memory_fallback", class: "tenant-scoped", notes: "RuVector fallback memory" },
   { table: "skill_usage_events", class: "tenant-scoped", notes: "Skill usage events" },
   { table: "promotion_outbox", class: "tenant-scoped", notes: "Migration 40 workspace-scoped delivery; legacy NULL-workspace rows are quarantined", workspaceTreatment: "workspace-scoped-new-writes" },
   { table: "promotion_idempotency", class: "tenant-scoped", notes: "Migration 40 workspace-scoped replay identity; legacy NULL-workspace rows are quarantined", workspaceTreatment: "workspace-scoped-new-writes" },
@@ -122,12 +119,11 @@ export const TABLES_WITH_GROUP_ID: readonly string[] = TENANT_TABLE_INVENTORY
  * Validate that every table in the public schema is classified and that every
  * tenant-scoped table has RLS enabled. Returns a structured report.
  */
-export async function validateTenantTableInventory(): Promise<{
+export async function validateTenantTableInventory(pool = getPool()): Promise<{
   unclassifiedTables: string[];
   missingRlsTables: string[];
   ok: boolean;
 }> {
-  const pool = getPool();
   const { rows: tables } = await pool.query<{ table_name: string } >(
     `SELECT table_name
      FROM information_schema.tables

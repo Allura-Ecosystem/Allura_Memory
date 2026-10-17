@@ -34,7 +34,7 @@ behavior:
       
       storage_policy:
         raw_traces: postgresql
-        curated_knowledge: neo4j
+        curated_knowledge: ruvector
         versioning: steel_frame
     
     lifecycle_hooks:

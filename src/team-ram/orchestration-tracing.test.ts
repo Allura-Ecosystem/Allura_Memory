@@ -35,7 +35,7 @@ describe("orchestration-tracing", () => {
   describe("traceOrchestrationStart", () => {
     it("emits a decision trace with plan skills", async () => {
       await traceOrchestrationStart(defaultConfig, "Investigate architecture", [
-        "skill-neo4j-memory",
+        "skill-ruvector-memory",
         "skill-cypher-query",
       ])
 
@@ -45,7 +45,7 @@ describe("orchestration-tracing", () => {
       expect(call.content).toBe("orchestration_start")
       expect(call.confidence).toBe(1.0)
       expect(call.metadata?.skills_selected).toEqual([
-        "skill-neo4j-memory",
+        "skill-ruvector-memory",
         "skill-cypher-query",
       ])
     })
@@ -54,7 +54,7 @@ describe("orchestration-tracing", () => {
       await traceOrchestrationStart(
         { ...defaultConfig, enabled: false },
         "test",
-        ["skill-neo4j-memory"],
+        ["skill-ruvector-memory"],
       )
       expect(mockLogTrace).not.toHaveBeenCalled()
     })
@@ -63,7 +63,7 @@ describe("orchestration-tracing", () => {
   describe("traceSkillResult", () => {
     it("emits contribution trace on success", async () => {
       const result: SkillResult = {
-        skillName: "skill-neo4j-memory",
+        skillName: "skill-ruvector-memory",
         toolName: "recall_insight",
         assignedAgent: "scout",
         ok: true,
@@ -75,7 +75,7 @@ describe("orchestration-tracing", () => {
       expect(mockLogTrace).toHaveBeenCalledTimes(1)
       const call = mockLogTrace.mock.calls[0]![0]
       expect(call.trace_type).toBe("contribution")
-      expect(call.content).toContain("skill-neo4j-memory/recall_insight")
+      expect(call.content).toContain("skill-ruvector-memory/recall_insight")
       expect(call.metadata?.ok).toBe(true)
     })
 
@@ -105,7 +105,7 @@ describe("orchestration-tracing", () => {
         task: { goal: "test", groupId: "allura-test-teamram", workspaceId: "workspace-teamram" },
         plan: [],
         results: [
-          { skillName: "skill-neo4j-memory", toolName: "recall_insight", assignedAgent: "scout", ok: true, attempts: 1 },
+          { skillName: "skill-ruvector-memory", toolName: "recall_insight", assignedAgent: "scout", ok: true, attempts: 1 },
           { skillName: "skill-database", toolName: "query_traces", assignedAgent: "hightower", ok: false, error: "db down", attempts: 2 },
         ],
         context: {
@@ -133,7 +133,7 @@ describe("orchestration-tracing", () => {
         task: { goal: "test", groupId: "allura-test-teamram", workspaceId: "workspace-teamram" },
         plan: [],
         results: [
-          { skillName: "skill-neo4j-memory", toolName: "recall_insight", assignedAgent: "scout", ok: true, attempts: 1 },
+          { skillName: "skill-ruvector-memory", toolName: "recall_insight", assignedAgent: "scout", ok: true, attempts: 1 },
         ],
         context: { memories: [{}], graph: [], traces: [], failures: [] },
       }

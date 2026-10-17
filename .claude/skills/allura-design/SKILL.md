@@ -96,7 +96,7 @@ allura-brain_memory_add({
 ```
 
 ### 4. Promotion gate
-- If average review score ≥ 8.0 / 10 → call `allura-brain_memory_promote` to elevate from episodic to Neo4j
+- If average review score ≥ 8.0 / 10 → call `allura-brain_memory_promote` to elevate from episodic to the canonical semantic layer
 - Rationale: "Validated by 5-dimension review, ready as canonical design system"
 
 ## Team RAM Routing

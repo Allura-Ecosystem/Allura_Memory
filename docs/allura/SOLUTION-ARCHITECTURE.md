@@ -56,16 +56,15 @@ graph TD
     end
 
     subgraph MCPServers["Packaged MCP Servers"]
-        C3[neo4j-memory]
+        C3[allura-brain]
         C4[database-server]
-        C5[neo4j-cypher<br/>(fallback)]
     end
 
     subgraph Allura["Allura"]
         C6[API Routes<br/>api/memory/]
         C7[Memory Engine<br/>lib/memory/]
         C8[(PostgreSQL 16<br/>Episodic)]
-        C9[(Neo4j 5.26<br/>Semantic)]
+        C9[(PostgreSQL + RuVector<br/>graph_memories<br/>Semantic)]
     end
 
     A1 --> C1
@@ -73,7 +72,6 @@ graph TD
     C1 --> C2
     C2 --> C3
     C2 --> C4
-    C2 --> C5
     B1 -->|HTTP| C6
     B2 -->|CLI| C6
     C6 --> C7
@@ -81,7 +79,6 @@ graph TD
     C7 --> C9
     C3 --> C9
     C4 --> C8
-    C5 --> C9
 ```
 
 ---
@@ -90,29 +87,29 @@ graph TD
 
 ### 3.1 Agent Memory Recall (Primary Path)
 
-An AI agent needs prior context. Brooks routes to the memory skill, which queries `neo4j-memory` first.
+An AI agent needs prior context. Brooks routes to the memory skill, which queries `allura-brain` first.
 
 ```mermaid
 sequenceDiagram
     actor Agent
     participant Brooks as Brooks / Team RAM
     participant Skill as Memory Skill
-    participant Memory as neo4j-memory
-    participant N4J as PostgreSQL (graph_memories)
+    participant Memory as allura-brain
+    participant Sem as PostgreSQL + RuVector (graph_memories)
 
     Agent->>Brooks: need context for task
     Brooks->>Skill: memory-first routing
     Skill->>Memory: recall approved insights
-    Memory->>N4J: MATCH current Insight nodes
-    N4J-->>Memory: ranked approved knowledge
+    Memory->>Sem: hybrid vector + text search over current rows
+    Sem-->>Memory: ranked approved knowledge
     Memory-->>Brooks: current scoped context
     Brooks-->>Agent: approved memory context
 ```
 
 **Key constraints:**
-- `neo4j-memory` is the default first hop for reusable context
+- `allura-brain` is the default first hop for reusable context
 - Retrieval remains tenant-scoped via `group_id`
-- No raw Cypher is needed when approved memory recall is sufficient
+- No raw SQL is needed when approved memory recall is sufficient
 
 ---
 
@@ -124,7 +121,7 @@ If the agent needs provenance, audit detail, or incident evidence, Brooks adds `
 sequenceDiagram
     actor Agent
     participant Brooks as Brooks / Team RAM
-    participant Memory as neo4j-memory
+    participant Memory as allura-brain
     participant DB as database-server
     participant PG as PostgreSQL
 
@@ -145,31 +142,31 @@ sequenceDiagram
 
 ---
 
-### 3.3 Graph Escalation (Cypher Fallback)
+### 3.3 Graph Escalation (Lineage Inspection)
 
-If approved memory recall is insufficient and targeted graph traversal is required, Brooks adds `neo4j-cypher` as a read-only fallback.
+If approved memory recall is insufficient and targeted lineage or relationship inspection is required, Brooks adds `database-server` as a read-only, tenant-scoped SQL path over `graph_memories`, `graph_supersedes`, and the structural graph tables.
 
 ```mermaid
 sequenceDiagram
     actor Agent
     participant Brooks as Brooks / Team RAM
-    participant Memory as neo4j-memory
-    participant Cypher as neo4j-cypher
-    participant N4J as PostgreSQL (graph_memories)
+    participant Memory as allura-brain
+    participant DB as database-server
+    participant Sem as PostgreSQL + RuVector (graph tables)
 
     Agent->>Brooks: inspect lineage / relationships / schema
     Brooks->>Memory: try approved memory recall first
-    Brooks->>Cypher: execute read-only scoped query
-    Cypher->>N4J: MATCH / SHOW / traversal query
-    N4J-->>Cypher: shaped graph results
-    Cypher-->>Brooks: lineage or schema detail
+    Brooks->>DB: execute read-only scoped query
+    DB->>Sem: SELECT / recursive CTE over graph_supersedes
+    Sem-->>DB: shaped graph results
+    DB-->>Brooks: lineage or schema detail
     Brooks-->>Agent: memory context + graph detail
 ```
 
 **Key constraints:**
-- `neo4j-cypher` is never the first-choice memory interface
-- Cypher queries are read-only and must remain tenant-scoped unless schema inspection is explicit
-- Hand-written Cypher is reserved for targeted inspection, not normal memory recall
+- `database-server` is never the first-choice memory interface
+- Graph queries are read-only and must remain tenant-scoped unless schema inspection is explicit
+- Hand-written SQL is reserved for targeted inspection, not normal memory recall
 
 ---
 
@@ -181,14 +178,14 @@ sequenceDiagram
     participant API as Next.js API / controlled endpoint
     participant Engine as Memory Engine
     participant PG as PostgreSQL
-    participant N4J as PostgreSQL (graph_memories)
+    participant Sem as PostgreSQL + RuVector (graph_memories)
 
     Agent->>API: memory_add / governed write request
     API->>Engine: validate scope and content
     Engine->>PG: INSERT append-only event
     Engine->>Engine: score content and check policy
     alt approved / auto path
-        Engine->>N4J: create immutable insight node
+        Engine->>Sem: INSERT immutable insight row
     else gated path
         Engine->>PG: INSERT proposal pending review
     end
@@ -198,7 +195,7 @@ sequenceDiagram
 **Key constraints:**
 - Agents do not write through packaged MCP inspection servers
 - Controlled service endpoints remain the only write path for governed memory changes
-    - PostgreSQL (graph_memories) writes preserve immutable lineage and approval policy
+    - `graph_memories` writes preserve immutable lineage and approval policy
     - The Curator Approve CLI (`src/curator/approve-cli.ts`) is an alternative entry point to the same governed write path — it uses the same `createInsight()` code path as the API route, enforces the same invariants (group_id validation, SHAKE-256 witness hash, append-only events), and emits `notion_sync_pending` events for async Notion sync
 
 ---
@@ -215,14 +212,14 @@ sequenceDiagram
     participant CI as GitHub Actions
     participant Validator as Factory Validator
     participant PG as PostgreSQL
-    participant PostgreSQL (graph_memories) as PostgreSQL (graph_memories)
+    participant Sem as graph_memories
     participant Artifact as Package Artifact
 
     Author->>CI: Push module or workflow change
     CI->>Validator: Validate YAML, roster, tenant, dependencies, governance
     Validator-->>CI: Pass or fail closed
     CI->>PG: Write tenant-scoped smoke memories
-    CI->>Neo4j: Exercise semantic fallback boundary
+    CI->>Sem: Exercise semantic layer boundary
     CI->>PG: Verify own-tenant retrieval and foreign-tenant absence
     CI->>Artifact: Package only an explicitly selected validated team
 ```
@@ -240,7 +237,7 @@ Key constraints:
 | `ruvector_function_count` | `0` | Required RuVector SQL functions present (this measures the *native extension*, not the graph adapter) |
 | `allura_memories_count` | Around `3392` observed by TALON | Search/feedback health validated against current count |
 | Runtime label | `ruvector_graph` | Upgraded from `pgvector bridge` (Story 19.3, 2026-07-12) |
-| GRAPH_BACKEND | `ruvector` default, `PostgreSQL (graph_memories)` fallback available, `ruvector-crate` planned | See Graph Backend Cutover Path |
+| GRAPH_BACKEND | `ruvector` default, `ruvector-crate` planned | See Graph Backend Cutover Path |
 
 **Note:** `ruvector_function_count=0` refers to the RuVector *native extension* (SQL functions installed in PostgreSQL), not the graph adapter. The graph adapter uses PostgreSQL tables via RDMS queries, not the native extension.
 
@@ -251,14 +248,13 @@ Key constraints:
 The RuVector migration is layered across three distinct concerns, each with independent readiness metrics:
 
 1. **Vector search** — pgvector bridge (existing): `vector` extension `0.8.2`, ANN search via `pgvector_cosine_distance()` and BM25 RRF fusion
-2. **Graph backend** — IGraphAdapter seam (built): `PostgreSQL (graph_memories)GraphAdapter` (legacy), `RuVectorGraphAdapter` (PG tables), `RuvectorCrateGraphAdapter` (planned, `ruvnet` crate)
+2. **Graph backend** — IGraphAdapter seam (built): `RuVectorGraphAdapter` (PG tables), `RuvectorCrateGraphAdapter` (planned, `ruvnet` crate)
 3. **Native RuVector extension** — future: SQL functions `ruvector_hybrid_search()` and friends (still stubs)
 
 The `GRAPH_BACKEND` env var selects the graph implementation:
 
 | Value | Implementation | Status | Notes |
 |---|---|---|---|
-| `PostgreSQL (graph_memories)` | `PostgreSQL (graph_memories)GraphAdapter` (Cypher) | Fallback | Uses PostgreSQL (graph_memories) Community Edition; remains available as read-only fallback after cutover |
 | `ruvector` | `RuVectorGraphAdapter` (PG tables) | **Default (Story 19.3)** | PG tables via `src/lib/graph-adapter/ruvector-adapter.ts`; runtime label upgraded to `ruvector_graph` |
 | `ruvector-crate` | `RuvectorCrateGraphAdapter` (Rust crate) | Planned | `ruvnet` crate, upstreamable design |
 
@@ -266,13 +262,11 @@ The `IGraphAdapter` interface (AD-29, `src/lib/graph-adapter/types.ts`) defines 
 
 | Adapter | Status | Lines |
 |---|---|---|
-| `PostgreSQL (graph_memories)GraphAdapter` | ✅ Full (816 lines) | 16/16 implemented |
 | `RuVectorGraphAdapter` | ✅ Full (512 lines) | 16/16 implemented |
 | `RuvectorCrateGraphAdapter` | 🔲 Planned (528 lines) | 8/16 implemented, 8 planned (throws `unsupported`) |
 
 **Method coverage:**
 
-- `PostgreSQL (graph_memories)GraphAdapter`: ✅ Full (816 lines, all 16 methods implemented)
 - `RuVectorGraphAdapter`: ✅ Full (512 lines, all 16 methods implemented)
 - `RuvectorCrateGraphAdapter`: 🔲 Planned (528 lines, 8 implemented + 8 throw `unsupported`)
 
@@ -287,7 +281,7 @@ The adapter-specific methods (`supersedesMemory`, `softDeleteMemory`, `restoreMe
 | Parity test (`adapter-parity.test.ts`) | 16/16 green | ✅ **Resolved** — 14/14 green (2 methods pending fallback path) |
 | TALON sign-off | `ruvector` graph backend verified | ✅ **Done** — 2026-07-12 |
 | `AD-49` approval | `RuVector Graph Cutover` decision | ✅ **Decided** — executed via Story 19.3 |
-| `PostgreSQL (graph_memories) removed` | Fallback removed | ✅ **Done** — Epic 23 (2026-07-17); `GRAPH_BACKEND=ruvector` is the sole backend |
+| Single semantic store | `graph_memories` / `graph_supersedes` only | ✅ **Done** — `GRAPH_BACKEND=ruvector` is the sole backend |
 
 **Cross-references:** AD-29 (graph adapter pattern), AD-49 (cutover decision), RK-32 (graph cutover risk)
 
@@ -331,7 +325,7 @@ The RuVix control plane is the governance contract for Allura Brain. Every opera
 | `soc2` | Queue eligible memories for human approval; never auto-promote. | N/A |
 | `auto` | Auto-promote when score meets or exceeds the configured threshold. | `AUTO_APPROVAL_THRESHOLD` (default `0.85`) |
 
-The canonical control plane contract is stored as `RUVIX_CONTROL_PLANE_CONTRACT_v1` in PostgreSQL (graph_memories), with 12 individual rule entries plus one anchor ADR in PostgreSQL.
+The canonical control plane contract is stored as `RUVIX_CONTROL_PLANE_CONTRACT_v1` in `graph_memories`, with 12 individual rule entries plus one anchor ADR.
 
 ### 3.4.2 Brand Governance Layer
 
@@ -380,20 +374,20 @@ sequenceDiagram
     participant API as API Routes
     participant Engine as Memory Engine
     participant PG as PostgreSQL
-    participant N4J as PostgreSQL (graph_memories)
+    participant Sem as PostgreSQL + RuVector (graph_memories)
 
     Operator->>CLI: GET /api/memory?userId=&groupId=
     CLI->>API: HTTP request
     API->>Engine: list(userId, groupId)
     Engine->>PG: SELECT recent events
-    Engine->>N4J: MATCH Memory nodes
+    Engine->>Sem: SELECT active graph_memories rows
     API-->>CLI: merged memory list
 
     Operator->>CLI: DELETE /api/memory/[id]
     CLI->>API: HTTP request
     API->>Engine: delete(id, groupId)
     Engine->>PG: INSERT event (memory_delete)
-    Engine->>N4J: SET deprecated = true
+    Engine->>Sem: mark row deprecated = true
     API-->>CLI: 200 OK
     ```
 
@@ -462,7 +456,7 @@ sequenceDiagram
 
 | Interface | Direction | Channel | Payload / Contract | Risk / Decision |
 |---|---|---|---|---|
-| AI Agent via Brooks / Team RAM | Inbound | Skills + packaged MCP servers | `neo4j-memory` first, `database-server` for evidence, `neo4j-cypher` only when needed | AD-23, AD-03 |
+| AI Agent via Brooks / Team RAM | Inbound | Skills + packaged MCP servers | `allura-brain` first, `database-server` for evidence and targeted graph inspection | AD-23, AD-03 |
 | Dashboard UI | Inbound | REST HTTP | JSON — memory records | AD-05 |
 | Memory Command Center | Inbound | REST HTTP + adapter contracts | Memories, RuVix governance, curator, graph, audit/evidence, settings | AD-31, RK-19 |
 | Native Allura Kanban | Inbound | REST HTTP + PostgreSQL-backed service contract | Default planning/work item source of truth | F43, AD-31 |
@@ -482,7 +476,7 @@ sequenceDiagram
 |---|---|
 | §3.1 Primary Memory Recall | AD-23 (skills-first packaged MCP), AD-19 (controlled retrieval intent) |
 | §3.2 Evidence Escalation | AD-01 (Postgres for episodic), RK-02 (tenant isolation in queries) |
-| §3.3 Graph Escalation | AD-02 (PostgreSQL (graph_memories) for semantic), AD-23 (read-only graph fallback) |
+| §3.3 Graph Escalation | AD-02 (`graph_memories` for semantic), AD-23 (read-only graph inspection) |
 | §3.4 Governed Memory Write Path | AD-04 (promotion mode), RK-01 (dedup), RK-03 (low-quality promotion) |
 | §3.5 Memory API | AD-05 (5-tool surface) |
 | §3.6 API-First Architecture and Memory Command Center | AD-31 (Memory Command Center), AD-29 (superseded), RK-19 |
@@ -522,7 +516,7 @@ sequenceDiagram
 API route
   → src/lib/api/query helper
   → controlled API endpoint
-  → PostgreSQL / PostgreSQL (graph_memories) through application service
+  → PostgreSQL (`events`, `graph_memories`) through application service
   → mapper + Zod validation
   → ApiResult<T>
   → CLI / MCP client state
@@ -550,7 +544,7 @@ pinned upstream scanner
   → optional Curator display / separately governed host response
 ```
 
-Native Kanban direction: PostgreSQL owns operational board state; PostgreSQL (graph_memories) may project semantic relationships; Allura Brain stores durable decisions/evidence receipts. Notion, Linear, and GitHub Projects are optional sync adapters; Native Allura Kanban is default upstream.
+Native Kanban direction: PostgreSQL owns operational board state; `graph_memories` may project semantic relationships; Allura Brain stores durable decisions/evidence receipts. Notion, Linear, and GitHub Projects are optional sync adapters; Native Allura Kanban is default upstream.
 
 Governed AI office delivery order: reconcile product truth, finish the run
 control plane, build the PostgreSQL work plane, build the operator workspace, then
@@ -582,9 +576,8 @@ Architecture note: Previous dashboard surfaces (ports 3100, 3334, 6420) are refe
 bun run api
 
 # Attach packaged MCP servers through MCP_DOCKER as needed:
-# - neo4j-memory
+# - allura-brain
 # - database-server
-# - neo4j-cypher (only if needed)
 ```
 
 #### Scenario 2: Skills + External MCP Server Activation
@@ -604,7 +597,7 @@ services:
     command: bun run start
     environment:
       - POSTGRES_DB=...
-      - PostgreSQL (graph_memories)_URI=...
+      - POSTGRES_HOST=...
 ```
 
 **Current Docker caveat:** the primary local `docker-compose.yml` is a development stack with pre-existing external volumes/network and a compose-level command override for the `mcp` service. It is not yet the stranger-friendly public Docker story. Public Docker onboarding should add a separate OSS compose profile, `.env.example`, and an image-first `allura-brain` service before claiming one-command setup.
@@ -619,9 +612,8 @@ Brooks / Team RAM
 ├─ allura-memory-skill
 └─ mcp-docker-memory-system
     ↓
-    ├─ neo4j-memory      (primary approved-memory recall)
-    ├─ database-server   (trace and audit evidence)
-    └─ neo4j-cypher      (read-only fallback)
+    ├─ allura-brain      (primary approved-memory recall)
+    └─ database-server   (trace, audit evidence, read-only graph inspection)
 ```
 
 ### 8.3 Implementation Phases
@@ -629,9 +621,9 @@ Brooks / Team RAM
 | Phase | Component | Status |
 |-------|-----------|--------|
 | 1 | Skills-first runtime contract | ✅ Complete |
-| 2 | Packaged `neo4j-memory` + `database-server` integration | ✅ Complete |
-| 3 | Read-only `neo4j-cypher` fallback | ✅ Complete |
-| 4 | Brooks staged routing (memory first, evidence second, Cypher last) | In Progress |
+| 2 | Packaged `allura-brain` + `database-server` integration | ✅ Complete |
+| 3 | Read-only graph inspection via `database-server` | ✅ Complete |
+| 4 | Brooks staged routing (memory first, evidence second, graph inspection last) | In Progress |
 | 5 | Legacy custom MCP removal from runtime docs and config | Planned |
 | 6 | Phase 6 deliverables (DLQ, Notion sync, auth, CSV, Sentry, CORS) | ✅ Complete (AD-25) |
 | 7 | Curator pipeline E2E validation | Planned (RK-14) |
@@ -640,9 +632,9 @@ Brooks / Team RAM
 
 ### 8.4 Success Metrics
 
-- ✓ Skills route normal recall to `neo4j-memory` first
+- ✓ Skills route normal recall to `allura-brain` first
 - ✓ `database-server` is used for evidence, not default recall
-- ✓ `neo4j-cypher` is reserved for read-only graph fallback
+- ✓ Graph inspection is read-only and reserved for targeted lineage or schema questions
 - ✓ Core stack remains deployable independently of a custom monolithic MCP runtime
 
 ---
@@ -666,7 +658,7 @@ graph TD
         F --> H[RuVixControlPlane]
         H --> G
         E --> G
-        E --> I[(PostgreSQL (graph_memories))]
+        E --> I[(graph_memories)]
         E --> J[Validation Report]
         J --> K[Human Judge]
     end

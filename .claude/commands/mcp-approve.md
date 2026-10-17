@@ -12,7 +12,6 @@ Request approval for a pending MCP server (Brooks only).
 
 ```
 /mcp-approve postgresql         # Approve PostgreSQL client
-/mcp-approve neo4j              # Approve Neo4j Cypher executor
 /mcp-approve github             # Approve GitHub integration
 ```
 

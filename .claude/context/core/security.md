@@ -14,9 +14,9 @@ max_age_days: 30
 
 ## Access Control
 - **RuVix Control Plane** (`src/control-plane/`) enforces all database access policies
-- No agent may write directly to Neo4j — must go through promotion pipeline
+- No agent may write directly to the semantic layer (`graph_memories`, `graph_supersedes`) — must go through promotion pipeline
 - `POL-004`: Rejects non-canonical agent IDs in trace calls — graceful degradation
-- `POL-001`: Direct Neo4j writes are blocked at the control plane level
+- `POL-001`: Direct semantic-layer writes are blocked at the control plane level
 
 ## Credential Management
 - `CREDENTIALS_DIR` must be chmod 700 (was world-writable — fixed 2026-04-28)
@@ -29,8 +29,7 @@ max_age_days: 30
 - Structured error responses — no stack traces or internal details in production
 
 ## Container Security
-- Neo4j: HEAP_MAX=512m, PAGECACHE=256m (container limit 2GB, was crash-looping)
-- All 6 containers healthy as of 2026-05-03
+- All 5 containers healthy
 - `EMBEDDING_BASE_URL=http://host.docker.internal:11434` for container → host Ollama
 
 ## Memory Security
@@ -45,7 +44,7 @@ max_age_days: 30
 - `.opencode/rules/mcp-integration.md` defines routing rules
 
 ## Anti-Patterns (DO NOT)
-- ❌ Direct Neo4j writes from agent code
+- ❌ Direct semantic-layer writes from agent code
 - ❌ Hardcoded secrets or credentials
 - ❌ Raw SQL from agent surfaces (use MCP tools)
 - ❌ `web_fetch` on Notion URLs (use Notion API)

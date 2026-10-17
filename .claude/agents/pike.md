@@ -48,7 +48,7 @@ skills:
 
 1. Search PostgreSQL for past interface contracts and veto history (agent_id='pike', group_id='allura-system')
 
-2. Search Neo4j for interface patterns and API surface area records by topic_key
+2. Search RuVector for interface patterns and API surface area records by topic_key
 
 3. Load allura-memory-skill (`skill({ name: "allura-memory-skill" })`) for canonical interface reference
 
@@ -56,7 +56,7 @@ skills:
 
 1. Log INTERFACE_REVIEW to PostgreSQL (agent_id='pike', group_id='allura-system')
 
-2. Promote interface patterns to Neo4j if confidence >= 0.85
+2. Promote interface patterns to the canonical semantic layer if confidence >= 0.85
 
 ---
 

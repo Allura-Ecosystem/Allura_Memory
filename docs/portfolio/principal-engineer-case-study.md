@@ -37,10 +37,10 @@ human accountability.
 
 ## Rejected Alternatives
 
-1. **Neo4j as semantic store** — replaced: migrated FROM Neo4j to RuVector in
-   Epic 19 (2026-07-17) to remove RAM cost on 4GB laptops and vendor lock-in.
-   PostgreSQL pgvector provides equivalent HNSW + BM25 search. Neo4j was
-   fully removed in Epic 23 (2026-07-17); no fallback remains.
+1. **Separate graph database as semantic store** — rejected to avoid RAM cost
+   on 4GB laptops, vendor lock-in, and a second store to keep consistent.
+   PostgreSQL pgvector provides equivalent HNSW + BM25 search, and the
+   semantic layer lives in PostgreSQL `graph_memories` / `graph_supersedes`.
 2. **Auto-promotion without HITL** — rejected because regulated credit
    decisions (ECOA adverse action, HMDA reporting, TRID disclosure timing)
    carry legal liability and must always be human-approved.
@@ -67,16 +67,15 @@ human accountability.
 
 ## Migration Strategy
 
-Allura migrated from Neo4j to PostgreSQL-only in Epic 19 (2026-07-17).
-The migration exported 4,235 nodes and 2,206 relationships to PostgreSQL
+Allura's semantic layer moved to PostgreSQL-only in Epic 19 (2026-07-17).
+The migration loaded 4,235 nodes and 2,206 relationships into PostgreSQL
 `graph_memories` and `graph_supersedes` tables. The process was:
 1. Dual-read validation (Story 19.2)
 2. Flip default to ruvector (Story 19.3)
-3. Neo4j sunset (Epic 23)
+3. Single-store cleanup (Epic 23)
 
-The semantic/graph layer now runs entirely on RuVector/pgvector
-(`GRAPH_BACKEND=ruvector` is the production default). No Neo4j dependency
-remains in the active path.
+The semantic/graph layer runs entirely on RuVector/pgvector
+(`GRAPH_BACKEND=ruvector` is the production default).
 
 ## Developer Experience
 

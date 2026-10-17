@@ -45,7 +45,7 @@ describe("HITL Promotion Lock policy", () => {
     expect(processor).toMatch(/awaiting HITL review|HITL/i)
   })
 
-  it("knowledge promotion must require approval audit before Neo4j writes", () => {
+  it("knowledge projection resolves atomic approval evidence and cannot mint semantic memory", () => {
     const source = readRepoFile("src/lib/memory/knowledge-promotion.ts")
     const batchPromotion = source.slice(
       source.indexOf("export async function processApprovedInsights"),
@@ -55,41 +55,36 @@ describe("HITL Promotion Lock policy", () => {
       source.indexOf("export async function promoteSingleInsight")
     )
 
-    expect(source).toContain("import { requireApprovalBeforePromotion }")
+    const resolver = readRepoFile("src/lib/memory/approved-projection.ts")
+    const projection = source.slice(source.indexOf("export async function promoteToSemanticStore"), source.indexOf("export async function linkInsightToAgent"))
+    expect(projection).toContain("resolveApprovedProjection(client, insight)")
+    expect(projection).not.toContain("INSERT INTO graph_memories")
+    expect(resolver).toContain("JOIN governance_receipts")
+    expect(resolver).toContain("p.workspace_id=$3")
 
     for (const promotionPath of [batchPromotion, singlePromotion]) {
-      const guardIndex = promotionPath.indexOf("requireApprovalBeforePromotion")
-      const neo4jIndex = promotionPath.indexOf("promoteToNeo4j")
+      const semanticIndex = promotionPath.indexOf("promoteToSemanticStore")
 
-      expect(guardIndex).toBeGreaterThanOrEqual(0)
-      expect(neo4jIndex).toBeGreaterThanOrEqual(0)
-      expect(guardIndex).toBeLessThan(neo4jIndex)
+      expect(semanticIndex).toBeGreaterThanOrEqual(0)
+      expect(promotionPath).toContain("}, principalId)")
     }
   })
 
-  it("curator approval entrypoints must log approval audit before graph writes", () => {
+  it("curator approval entrypoint promotes only through the atomic approveProposal path", () => {
     const route = readRepoFile("src/app/api/curator/approve/route.ts")
-    const batchScript = readRepoFile("scripts/batch-approve-proposals.ts")
+    const atomic = readRepoFile("src/lib/memory/approve-proposal.ts")
 
-    for (const source of [batchScript]) {
-      const auditIndex = source.indexOf("await logApprovalEvent")
-      const graphWriteIndex = source.indexOf("await createInsight")
-
-      expect(auditIndex).toBeGreaterThanOrEqual(0)
-      expect(graphWriteIndex).toBeGreaterThanOrEqual(0)
-      expect(auditIndex).toBeLessThan(graphWriteIndex)
-      expect(source).toContain('decision: "approved"')
-      expect(source).toContain("memory_id:")
-    }
-
-    const routeAuditIndex = route.indexOf("await logApprovalEvent")
-    const routePromotionQueueIndex = route.indexOf("await enqueuePromotionSync")
-
+    // The route never writes canonical memory itself; it delegates.
     expect(route).not.toContain("await createInsight")
-    expect(routeAuditIndex).toBeGreaterThanOrEqual(0)
-    expect(routePromotionQueueIndex).toBeGreaterThanOrEqual(0)
-    expect(routeAuditIndex).toBeLessThan(routePromotionQueueIndex)
-    expect(route).toContain('decision: "approved"')
-    expect(route).toContain("memory_id:")
+    expect(route).toContain("await approveProposal")
+    expect(route).toContain('decision: "rejected"')
+
+    // The approval transition (whose trigger emits the approval audit event)
+    // must precede the promotion outbox enqueue.
+    const transitionIndex = atomic.indexOf("SET status='approved'")
+    const outboxIndex = atomic.indexOf("INSERT INTO promotion_outbox")
+    expect(transitionIndex).toBeGreaterThanOrEqual(0)
+    expect(outboxIndex).toBeGreaterThanOrEqual(0)
+    expect(transitionIndex).toBeLessThan(outboxIndex)
   })
 })

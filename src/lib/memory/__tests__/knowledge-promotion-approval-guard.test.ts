@@ -2,10 +2,10 @@
  * Knowledge promotion approval guard tests.
  *
  * These tests prove that promotion cannot proceed unless a matching
- * PostgreSQL approval audit event exists first.
+ * exact approved proposal/receipt exists in the authenticated workspace.
  *
- * Neo4j is sunset — promoteToNeo4j now writes directly to PostgreSQL
- * (graph_memories table) instead of calling createInsight.
+ * Only approveProposal may create the approved semantic object; this path
+ * verifies that result rather than minting a second object from caller data.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -23,7 +23,7 @@ import { getPool } from "../../postgres/connection"
 import {
   type KnowledgeInsight,
   linkInsightToAgent,
-  promoteToNeo4j,
+  promoteToSemanticStore,
   queryApprovedInsights,
 } from "../knowledge-promotion"
 
@@ -49,33 +49,39 @@ const APPROVED_INSIGHT: KnowledgeInsight = {
   notion_page_id: "notion-page-001",
   postgres_trace_id: "trace-001",
 }
+const approvedRow = {
+  approved_memory_id: "approved-semantic-id", content: APPROVED_INSIGHT.content,
+  semantic_content: APPROVED_INSIGHT.content, score: APPROVED_INSIGHT.confidence,
+  trace_ref: APPROVED_INSIGHT.postgres_trace_id, source: APPROVED_INSIGHT.source,
+  group_id: APPROVED_INSIGHT.group_id, workspace_id: APPROVED_INSIGHT.workspace_id,
+}
 
-describe("promoteToNeo4j approval guard", () => {
+describe("promoteToSemanticStore approval guard", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetPool.mockReturnValue(createApprovalPool())
     mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) =>
-      callback({ query: vi.fn(async () => ({ rows: [], rowCount: 1 })) })
+      callback({ query: vi.fn(async () => ({ rows: [approvedRow], rowCount: 1 })) })
     )
   })
 
-  it("writes a promoted memory through the app-role workspace transaction", async () => {
-    const appClient = { query: vi.fn(async () => ({ rows: [], rowCount: 1 })) }
+  it("resolves approved memory through the app-role workspace transaction without a second write", async () => {
+    const appClient = { query: vi.fn(async () => ({ rows: [approvedRow], rowCount: 1 })) }
     mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(appClient))
 
-    await promoteToNeo4j(APPROVED_INSIGHT)
+    expect(await promoteToSemanticStore(APPROVED_INSIGHT, "authenticated-reader")).toBe("approved-semantic-id")
 
     expect(mockWithWorkspaceTransaction).toHaveBeenCalledWith(
       {
         tenantId: "allura-system",
         workspaceId: "workspace-a",
-        principalId: "brooks-architect",
+        principalId: "authenticated-reader",
       },
       expect.any(Function)
     )
     expect(appClient.query).toHaveBeenCalledWith(
-      expect.stringMatching(/INSERT INTO graph_memories[\s\S]*workspace_id[\s\S]*workspace_scope_state/),
-      expect.arrayContaining(["allura-system", "workspace-a", "workspace_scoped"])
+      expect.stringContaining("JOIN governance_receipts"),
+      ["prop-001", "allura-system", "workspace-a"]
     )
   })
 
@@ -118,33 +124,29 @@ describe("promoteToNeo4j approval guard", () => {
     expect(sql).toContain("workspace_scope_state")
   })
 
-  it("requires approval before creating an insight", async () => {
+  it("does not consult an owner-pool approval event as promotion authority", async () => {
     const pool = createApprovalPool()
     mockGetPool.mockReturnValue(pool)
 
-    await promoteToNeo4j(APPROVED_INSIGHT)
+    await promoteToSemanticStore(APPROVED_INSIGHT, "authenticated-reader")
 
     // The first query must be the approval check
-    expect(pool.query).toHaveBeenCalledWith(
-      expect.stringContaining("metadata->>'proposal_id' = $3"),
-      ["allura-system", "proposal_approved", "prop-001"]
-    )
     // The owner-backed pool performs only the approval read. The write must
     // cross the restricted app-role workspace transaction boundary.
-    expect(pool.query).toHaveBeenCalledTimes(1)
+    expect(pool.query).not.toHaveBeenCalled()
     expect(mockWithWorkspaceTransaction).toHaveBeenCalledTimes(1)
   })
 
   it("does not create an insight when approval is missing", async () => {
     // Approval pool returns empty rows (no approval event found)
-    mockGetPool.mockReturnValue(createApprovalPool([]))
+    mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(createApprovalPool([])))
 
-    await expect(promoteToNeo4j(APPROVED_INSIGHT)).rejects.toThrow(
+    await expect(promoteToSemanticStore(APPROVED_INSIGHT, "authenticated-reader")).rejects.toThrow(
       "Approval required before promotion"
     )
 
     // Only the approval check query should have been made, no INSERT
-    expect(mockGetPool).toHaveBeenCalledTimes(1)
+    expect(mockGetPool).not.toHaveBeenCalled()
   })
 
   it("requires an explicit proposal_id instead of falling back to insight id", async () => {
@@ -153,7 +155,7 @@ describe("promoteToNeo4j approval guard", () => {
       proposal_id: undefined,
     } as unknown as KnowledgeInsight
 
-    await expect(promoteToNeo4j(missingProposalId)).rejects.toThrow(
+    await expect(promoteToSemanticStore(missingProposalId)).rejects.toThrow(
       "Proposal ID is required for promotion approval"
     )
 

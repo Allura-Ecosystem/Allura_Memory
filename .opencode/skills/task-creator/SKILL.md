@@ -61,7 +61,7 @@ Links to relevant insights from Allura Brain.
 
 ```javascript
 // Search Allura Brain for related insights
-mcp__MCP_DOCKER__search_memories({ query: "<task topic>" })
+allura-brain__memory_search({ query: "<task topic>", group_id: "allura-<project>" })
 
 // Find related tasks
 Grep({ pattern: "TASK-", path: "docs/archive/planning-artifacts/" })
@@ -89,18 +89,18 @@ Write({
 ### Phase 4: Link to Memory
 
 ```javascript
-// Create memory link
-mcp__MCP_DOCKER__create_entities({
-  entities: [{
-    name: taskId,
+// Record the task as an episodic trace in Allura Brain (PostgreSQL + RuVector)
+allura-brain__memory_add({
+  group_id: "allura-<project>",
+  content: `${taskId} created`,
+  metadata: {
     entity_type: "task",
-    observations: [
-      `Created: ${new Date().toISOString()}`,
-      `Status: pending`,
-      `Priority: ${priority}`,
-      `Linked to: ${insightId}`
-    ]
-  }]
+    task_id: taskId,
+    created_at: new Date().toISOString(),
+    status: "pending",
+    priority,
+    linked_to: insightId
+  }
 })
 ```
 

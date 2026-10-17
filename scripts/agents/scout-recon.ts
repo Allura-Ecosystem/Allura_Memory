@@ -18,10 +18,11 @@
  *
  * Gracefully handles missing DB connections (for CI environments)
  * When no DB, does real filesystem work and prints results.
- * When DB available, logs real findings to PostgreSQL and Neo4j.
+ * When DB available, logs real findings to PostgreSQL.
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { basename, extname, join, relative } from "node:path";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -408,11 +409,6 @@ function cmdRisks(): RiskResult {
       message: "Hardcoded PostgreSQL port (use env var)",
       severity: "warn" as const,
     },
-    {
-      pattern: "localhost:7687",
-      message: "Hardcoded Neo4j port (use env var)",
-      severity: "warn" as const,
-    },
   ];
 
   // Only scan source files for drift patterns (not node_modules, already excluded by walkDir)
@@ -672,33 +668,19 @@ function formatReport(report: ScoutReport): string {
 
 interface DbConnections {
   pgPool: { query: (sql: string, params: unknown[]) => Promise<unknown> };
-  neo4jSession: {
-    run: (cypher: string, params: Record<string, unknown>) => Promise<unknown>;
-    close: () => Promise<void>;
-  };
-  closeDriver: () => Promise<void>;
   closePool: () => Promise<void>;
 }
 
 async function getDbConnections(): Promise<DbConnections | null> {
   const postgresUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
-  const neo4jUri = null; // Neo4j sunset
-
   if (!postgresUrl) {
     return null;
   }
 
   const { getPool, closePool } = await import("../../src/lib/postgres/connection");
-  const closeDriver = async () => {};
-
   const pgPool = getPool();
-  // Neo4j sunset — PostgreSQL only
-  const session = null as unknown as { run: () => Promise<never[]>; close: () => Promise<void> };
-
   return {
     pgPool,
-    neo4jSession: session,
-    closeDriver,
     closePool,
   };
 }
@@ -721,30 +703,22 @@ async function logToPostgres(
   );
 }
 
+/**
+ * Record an agent insight as an append-only episodic event. Canonical promotion
+ * (graph_memories) is never done here; it goes through curator approval (HITL).
+ */
 async function createInsight(
   db: DbConnections,
   summary: string,
   confidence: number,
   sourceType: string,
 ): Promise<void> {
-  await db.neo4jSession.run(
-    `CREATE (i:Insight {
-      insight_id: 'ins_recon_' + randomUUID(),
-      summary: $summary,
-      confidence: $confidence,
-      status: 'active',
-      group_id: $groupId,
-      created_at: datetime(),
-      source_type: $sourceType
-    })
-    RETURN i`,
-    {
-      summary,
-      confidence,
-      groupId: GROUP_ID,
-      sourceType,
-    },
-  );
+  await logToPostgres(db, "insight_recorded", {
+    insight_id: `ins_${randomUUID()}`,
+    summary,
+    confidence,
+    source_type: sourceType,
+  });
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -854,7 +828,7 @@ async function main(): Promise<void> {
   if (!db) {
     console.log("\n[scout] ⚠️  Database connections not configured");
     console.log("[scout] Recon complete — results shown above (no DB logging)");
-    console.log("[scout] Set POSTGRES_URL and NEO4J_URI to log findings");
+    console.log("[scout] Set POSTGRES_URL to log findings");
     process.exit(0);
   }
 
@@ -865,7 +839,7 @@ async function main(): Promise<void> {
       agent: AGENT_ID,
     });
 
-    // Create insight in Neo4j
+    // Record insight as an episodic event
     const confidence = subCommand === "risks" ? 0.85 : 0.75;
     const summary = `Scout recon (${subCommand || "search"}): ${JSON.stringify(findingsForDb)}`;
     await createInsight(db, summary, confidence, "agent_recon");
@@ -876,13 +850,11 @@ async function main(): Promise<void> {
       confidence,
     });
 
-    console.log("\n[scout] ✅ Recon logged to PostgreSQL and Neo4j");
+    console.log("\n[scout] ✅ Recon logged to PostgreSQL");
   } catch (error) {
     console.error("\n[scout] DB logging failed:", error);
     // Don't exit with error — the recon output is still valid
   } finally {
-    await db.neo4jSession.close();
-    await db.closeDriver();
     await db.closePool();
   }
 }

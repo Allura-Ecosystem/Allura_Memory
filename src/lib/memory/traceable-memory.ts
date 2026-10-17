@@ -2,7 +2,7 @@
  * Traceable Memory API - Story 1.2
  *
  * Wraps MemoryAPI with TraceMiddleware to automatically trace all
- * Neo4j write operations to PostgreSQL.
+ * semantic write operations to PostgreSQL.
  *
  * Usage:
  *   const memory = createTraceableMemory({
@@ -62,7 +62,7 @@ export interface TraceableMemoryAPI extends MemoryAPI {
 }
 
 /**
- * Create a traceable memory API that wraps all Neo4j operations with
+ * Create a traceable memory API that wraps all semantic operations with
  * automatic PostgreSQL tracing.
  */
 export function createTraceableMemory(config: TraceableMemoryConfig): TraceableMemoryAPI {

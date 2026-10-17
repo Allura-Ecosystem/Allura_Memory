@@ -3,7 +3,7 @@
  *
  * Verifies the response shape of Allura Brain's canonical memory tools is
  * stable. Imports tools directly from src/mcp/canonical-tools.ts — no mocks,
- * no HTTP overhead. Requires a live PostgreSQL and (optionally) Neo4j stack.
+ * no HTTP overhead. Requires a live PostgreSQL (with RuVector) stack.
  *
  * Run:
  *   bun run test:integration
@@ -59,13 +59,13 @@ const ResponseMetaSchema = z.object({
   contract_version: z.literal("v1"),
   degraded: z.boolean(),
   degraded_reason: z
-    .enum(["neo4j_unavailable", "graph_unavailable"])
+    .enum(["graph_unavailable"])
     .optional(),
   stores_used: z.array(
-    z.enum(["postgres", "neo4j", "ruvector", "graph"])
+    z.enum(["postgres", "ruvector", "graph"])
   ),
   stores_attempted: z
-    .array(z.enum(["postgres", "neo4j", "ruvector", "graph"]))
+    .array(z.enum(["postgres", "ruvector", "graph"]))
     .optional(),
   warnings: z.array(z.string()).optional(),
   ruvector_trajectory_id: z.string().optional(),
@@ -75,7 +75,7 @@ const ResponseMetaSchema = z.object({
 /**
  * KNOWN DRIFT (2026-06-15): The canonical-contracts.ts TypeScript type declares
  * `created_at: string`, but the memory_list and memory_get implementations
- * return a raw Date object from the PostgreSQL driver for Neo4j-sourced
+ * return a raw Date object from the PostgreSQL driver for semantic-store
  * memories. memory_search already coerces to ISO string.
  *
  * The schema below accepts both to document current reality. Fix: coerce all

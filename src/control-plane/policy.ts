@@ -1005,7 +1005,7 @@ function isEmailActionOperation(context: PolicyContext): boolean {
   const resource = String(context.resource ?? "");
 
   return /send|reply|forward|open|download|click|visit|connect|login|reset|delete|write|update|create|mutate|execute|run|promote/i.test(operation) ||
-    /attachment|link|url|credential|secret|config|neo4j|canonical/i.test(resource);
+    /attachment|link|url|credential|secret|config|ruvector|canonical/i.test(resource);
 }
 
 function hasCaptainApproval(context: PolicyContext): boolean {
@@ -1092,7 +1092,7 @@ export const POLICY_HIGH_RISK_EMAIL_QUARANTINE: Policy = {
  * POL-EMAIL-004: Email Memory Promotion Requires HITL
  *
  * Email-derived facts may be stored as raw episodic traces. Promotion into
- * canonical Neo4j memory requires curator/HITL approval.
+ * canonical semantic memory requires curator/HITL approval.
  */
 export const POLICY_EMAIL_MEMORY_PROMOTION_REQUIRES_HITL: Policy = {
   id: "POL-EMAIL-004",
@@ -1104,7 +1104,7 @@ export const POLICY_EMAIL_MEMORY_PROMOTION_REQUIRES_HITL: Policy = {
 
     const operation = String(context.operation ?? "");
     const resource = String(context.resource ?? "");
-    const isPromotion = /promote|canonical|semantic|neo4j/i.test(operation) || /canonical|semantic|neo4j/i.test(resource);
+    const isPromotion = /promote|canonical|semantic|ruvector/i.test(operation) || /canonical|semantic|ruvector/i.test(resource);
 
     if (!isPromotion) {
       return true;

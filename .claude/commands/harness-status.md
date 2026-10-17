@@ -26,7 +26,7 @@ Show the harness health, loaded servers, and available skills.
     "postgres_available": true
   },
   "loaded_servers": ["allura-brain", "perplexica", "context7"],
-  "approved_pending": ["postgresql", "neo4j"],
+  "approved_pending": ["postgresql"],
   "available_skills": [
     {"name": "code-review", "executor": "pike-interface-review"},
     {"name": "postgres-optimization", "executor": "woz-builder"}

@@ -13,8 +13,6 @@ import { randomInt } from "crypto";
  * - Allura Dashboard (Next.js): 3100-3199
  * - Allura MCP HTTP Gateway: 3200-3299
  * - PostgreSQL: 5432 (standard, configurable)
- * - Neo4j HTTP: 7474 (standard, configurable)
- * - Neo4j Bolt: 7687 (standard, configurable)
  * - Dozzle (logs): 8088 (standard, configurable)
  */
 export const PORT_RANGES = {
@@ -22,8 +20,6 @@ export const PORT_RANGES = {
   openclaw: { min: 3200, max: 3299, default: 3200 },
   mcp_http: { min: 3200, max: 3299, default: 3201 },
   postgres: { min: 5400, max: 5499, default: 5432 },
-  neo4j_http: { min: 7470, max: 7479, default: 7474 },
-  neo4j_bolt: { min: 7680, max: 7689, default: 7687 },
   dozzle: { min: 8080, max: 8089, default: 8088 },
 } as const;
 
@@ -85,8 +81,6 @@ export interface PortConfig {
   openclaw: number;
   mcp_http: number;
   postgres: number;
-  neo4j_http: number;
-  neo4j_bolt: number;
   dozzle: number;
 }
 
@@ -105,8 +99,6 @@ export function getPortConfig(randomize: boolean = false): PortConfig {
       ? getRandomPort(PORT_RANGES.mcp_http.min, PORT_RANGES.mcp_http.max)
       : getPort("mcp_http", "ALLURA_MCP_HTTP_PORT"),
     postgres: getPort("postgres", "POSTGRES_PORT"),
-    neo4j_http: getPort("neo4j_http", "NEO4J_HTTP_PORT"),
-    neo4j_bolt: getPort("neo4j_bolt", "NEO4J_BOLT_PORT"),
     dozzle: getPort("dozzle", "DOZZLE_PORT"),
   };
 }
@@ -119,8 +111,6 @@ export function getServiceUrls(ports?: Partial<PortConfig>): {
   openclaw: string;
   mcp_http: string;
   postgres: string;
-  neo4j_http: string;
-  neo4j_bolt: string;
   dozzle: string;
 } {
   const config = ports ? { ...getPortConfig(), ...ports } : getPortConfig();
@@ -130,8 +120,6 @@ export function getServiceUrls(ports?: Partial<PortConfig>): {
     openclaw: `http://localhost:${config.openclaw}`,
     mcp_http: `http://localhost:${config.mcp_http}`,
     postgres: `postgresql://${process.env.POSTGRES_USER || "allura"}:${process.env.POSTGRES_PASSWORD || "password"}@localhost:${config.postgres}/${process.env.POSTGRES_DB || "memory"}`,
-    neo4j_http: `http://localhost:${config.neo4j_http}`,
-    neo4j_bolt: `bolt://localhost:${config.neo4j_bolt}`,
     dozzle: `http://localhost:${config.dozzle}`,
   };
 }
@@ -144,8 +132,6 @@ export const PORT_ENV_VARS = {
   openclaw: "OPENCLAW_PORT",
   mcp_http: "ALLURA_MCP_HTTP_PORT",
   postgres: "POSTGRES_PORT",
-  neo4j_http: "NEO4J_HTTP_PORT",
-  neo4j_bolt: "NEO4J_BOLT_PORT",
   dozzle: "DOZZLE_PORT",
 } as const;
 
@@ -163,8 +149,6 @@ ALLURA_DASHBOARD_PORT=${config.dashboard}
 OPENCLAW_PORT=${config.openclaw}
 ALLURA_MCP_HTTP_PORT=${config.mcp_http}
 POSTGRES_PORT=${config.postgres}
-NEO4J_HTTP_PORT=${config.neo4j_http}
-NEO4J_BOLT_PORT=${config.neo4j_bolt}
 DOZZLE_PORT=${config.dozzle}
 
 # Derived URLs

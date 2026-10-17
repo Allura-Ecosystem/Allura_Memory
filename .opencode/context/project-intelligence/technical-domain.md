@@ -21,14 +21,14 @@
 | Language | TypeScript | 5.9 strict | Type safety for memory operations |
 | Runtime | Bun | 1.3.11 | Faster than Node for scripts |
 | Database (Events) | PostgreSQL | 16 | Append-only raw traces |
-| Database (Knowledge) | Neo4j | 5.26 + APOC | Versioned knowledge graph |
+| Database (Knowledge) | PostgreSQL | 16 | Versioned knowledge graph (`graph_memories`, `graph_supersedes`) |
 | Database (Vectors) | RuVector | latest | Vector embeddings |
 | Styling | Tailwind | v4 | Utility-first CSS |
 | UI Components | shadcn/ui | latest | Accessible, composable |
 | State | Zustand | latest | Client state management |
 | Validation | Zod | latest | Runtime type validation |
 | Agent Framework | OpenCode | 1.4.3 | AI agent runtime |
-| Graph Visualization | react-force-graph-2d | latest | MIT, canvas-based, Neo4j graph view — dynamic import `{ssr:false}` |
+| Graph Visualization | react-force-graph-2d | latest | MIT, canvas-based, graph view — dynamic import `{ssr:false}` |
 | Font | IBM Plex Sans (@fontsource) | latest | Canonical brand font — replaces Outfit/Inter |
 
 ## Architecture: 5-Layer Agent-OS
@@ -40,7 +40,7 @@
 ├─────────────────────────────────────────────┤
 │ Layer 3: Agent Runtime (OpenCode)            │
 ├─────────────────────────────────────────────┤
-│ Layer 2: PostgreSQL + Neo4j + RuVector       │
+│ Layer 2: PostgreSQL + RuVector               │
 ├─────────────────────────────────────────────┤
 │ Layer 1: RuVix Control Plane (Proof-gated mutation)│
 └─────────────────────────────────────────────┘
@@ -54,7 +54,7 @@ src/
 ├── lib/
 │   ├── memory/    # Embedding providers, config
 │   ├── postgres/  # PostgreSQL connection
-│   ├── neo4j/     # Neo4j connection
+│   ├── graph-adapter/ # Semantic-layer adapter (IGraphAdapter)
 │   ├── ruvector/  # Vector DB connection
 │   └── dedup/     # Duplicate detection
 ├── mcp/           # MCP tools and server
@@ -124,7 +124,7 @@ export function InsightCard({ insight, actions, compact = false, className }: In
 - API routes MUST require auth/role checks via `requireRole`; return 401/403 helpers.
 - Every DB and graph operation MUST validate and filter by `group_id` (`^allura-[a-z0-9-]+$`).
 - PostgreSQL events are append-only; use parameterized queries and never string interpolation.
-- Neo4j knowledge changes MUST be approval-gated and versioned with `SUPERSEDES`.
+- Semantic-layer knowledge changes MUST be approval-gated and versioned with `SUPERSEDES`.
 - Do not log or document secrets, credentials, clear PII, or raw tokens.
 - AI/security-boundary changes require human review; AI must not decide auth, redaction, or breaking schemas alone.
 

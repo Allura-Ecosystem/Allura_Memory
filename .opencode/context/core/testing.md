@@ -36,7 +36,7 @@ bash scripts/test-brain-integration.sh  # Validate Brain integration
 ## What to Test
 1. **Brain tools** — every `allura-brain__*` tool must round-trip correctly
 2. **RuVix enforcement** — POL-001 through POL-006 must block violations
-3. **Promotion pipeline** — curator events, HITL approval, Neo4j write
+3. **Promotion pipeline** — curator events, HITL approval, semantic-layer write
 4. **Vector search** — embedding dimensionality (1024d), HNSW index validity
 5. **Budget enforcement** — BudgetEnforcer must halt on breach
 6. **Zod validation** — all API boundary schemas must reject invalid input

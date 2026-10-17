@@ -2,7 +2,7 @@
  * API Degradation Response Tests
  *
  * Issue #14: PostgreSQL errors must propagate, never silently return [].
- * Issue #14 (extended): When Neo4j is degraded, API returns 206 + Warning header
+ * Issue #14 (extended): When the semantic layer is degraded, API returns 206 + Warning header
  * instead of silently returning 200 with partial data.
  *
  * Tests the jsonWithDegradation helper and handleError classification
@@ -47,8 +47,8 @@ describe("API Degradation Response Handling", () => {
         meta: {
           contract_version: "v1" as const,
           degraded: false,
-          stores_used: ["postgres", "neo4j"] as Array<"postgres" | "neo4j">,
-          stores_attempted: ["postgres", "neo4j"] as Array<"postgres" | "neo4j">,
+          stores_used: ["postgres", "graph"] as Array<"postgres" | "graph">,
+          stores_attempted: ["postgres", "graph"] as Array<"postgres" | "graph">,
           warnings: [],
         },
       };
@@ -63,9 +63,9 @@ describe("API Degradation Response Handling", () => {
         meta: {
           contract_version: "v1" as const,
           degraded: true,
-          degraded_reason: "neo4j_unavailable" as const,
-          stores_used: ["postgres"] as Array<"postgres" | "neo4j">,
-          stores_attempted: ["postgres", "neo4j"] as Array<"postgres" | "neo4j">,
+          degraded_reason: "graph_unavailable" as const,
+          stores_used: ["postgres"] as Array<"postgres" | "graph">,
+          stores_attempted: ["postgres", "graph"] as Array<"postgres" | "graph">,
           warnings: ["semantic layer unavailable; returned episodic results only"],
         },
       };
@@ -80,15 +80,15 @@ describe("API Degradation Response Handling", () => {
         meta: {
           contract_version: "v1" as const,
           degraded: true,
-          degraded_reason: "neo4j_unavailable" as const,
-          stores_used: ["postgres"] as Array<"postgres" | "neo4j">,
-          stores_attempted: ["postgres", "neo4j"] as Array<"postgres" | "neo4j">,
+          degraded_reason: "graph_unavailable" as const,
+          stores_used: ["postgres"] as Array<"postgres" | "graph">,
+          stores_attempted: ["postgres", "graph"] as Array<"postgres" | "graph">,
           warnings: ["semantic layer unavailable"],
         },
       };
       const response = jsonWithDegradation(data);
       expect(response.headers.get("Warning")).toBe(
-        '299 Allura "neo4j_unavailable"',
+        '299 Allura "graph_unavailable"',
       );
     });
 
@@ -99,8 +99,8 @@ describe("API Degradation Response Handling", () => {
         meta: {
           contract_version: "v1" as const,
           degraded: true,
-          stores_used: ["postgres"] as Array<"postgres" | "neo4j">,
-          stores_attempted: ["postgres", "neo4j"] as Array<"postgres" | "neo4j">,
+          stores_used: ["postgres"] as Array<"postgres" | "graph">,
+          stores_attempted: ["postgres", "graph"] as Array<"postgres" | "graph">,
           warnings: [],
         },
       };
@@ -117,8 +117,8 @@ describe("API Degradation Response Handling", () => {
         meta: {
           contract_version: "v1" as const,
           degraded: undefined as unknown as boolean,
-          stores_used: ["postgres", "neo4j"] as Array<"postgres" | "neo4j">,
-          stores_attempted: ["postgres", "neo4j"] as Array<"postgres" | "neo4j">,
+          stores_used: ["postgres", "graph"] as Array<"postgres" | "graph">,
+          stores_attempted: ["postgres", "graph"] as Array<"postgres" | "graph">,
           warnings: [],
         },
       };
@@ -136,23 +136,23 @@ describe("API Degradation Response Handling", () => {
         meta: {
           contract_version: "v1" as const,
           degraded: false,
-          stores_used: ["postgres", "neo4j"] as Array<"postgres" | "neo4j">,
-          stores_attempted: ["postgres", "neo4j"] as Array<"postgres" | "neo4j">,
+          stores_used: ["postgres", "graph"] as Array<"postgres" | "graph">,
+          stores_attempted: ["postgres", "graph"] as Array<"postgres" | "graph">,
           warnings: [],
         },
       });
       expect(emptyResponse.status).toBe(200);
 
-      // Degraded result → 206 (partial data, Neo4j down)
+      // Degraded result → 206 (partial data, semantic layer down)
       const degradedResponse = jsonWithDegradation({
         memories: [],
         total: 0,
         meta: {
           contract_version: "v1" as const,
           degraded: true,
-          degraded_reason: "neo4j_unavailable" as const,
-          stores_used: ["postgres"] as Array<"postgres" | "neo4j">,
-          stores_attempted: ["postgres", "neo4j"] as Array<"postgres" | "neo4j">,
+          degraded_reason: "graph_unavailable" as const,
+          stores_used: ["postgres"] as Array<"postgres" | "graph">,
+          stores_attempted: ["postgres", "graph"] as Array<"postgres" | "graph">,
           warnings: ["semantic layer unavailable"],
         },
       });

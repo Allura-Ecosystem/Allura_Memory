@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allura.dev/schemas/memory.schema.json",
   "title": "Memory",
-  "description": "Curated, promoted knowledge node in Neo4j",
+  "description": "Curated, promoted knowledge record in PostgreSQL (RuVector semantic layer)",
   "type": "object",
   "required": [
     "id", "name", "group_id", "category", "type", "confidence",

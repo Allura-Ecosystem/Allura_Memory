@@ -14,7 +14,7 @@
  * Auto group_id injection: All write operations require group_id and auto-inject it
  * into props if not present.
  *
- * ADR: AD-029 — Graph Adapter Pattern for Neo4j → RuVector Migration
+ * ADR: AD-029 — Graph Adapter Pattern
  */
 
 if (typeof window !== "undefined") {
@@ -343,7 +343,7 @@ function buildControlPlaneBackend(): MemoryAPI {
       const result = await syscall_mutate(
         {
           type: "insert",
-          target: "neo4j:Entity",
+          target: "ruvector:Entity",
           data: {
             label,
             node_id,
@@ -367,7 +367,7 @@ function buildControlPlaneBackend(): MemoryAPI {
         await syscall_mutate(
           {
             type: "insert",
-            target: "neo4j:Relationship",
+            target: "ruvector:Relationship",
             data: {
               label: rel.targetLabel,
               group_id: validatedGroupId,
@@ -392,7 +392,7 @@ function buildControlPlaneBackend(): MemoryAPI {
       const result = await syscall_mutate(
         {
           type: "insert",
-          target: "neo4j:Relationship",
+          target: "ruvector:Relationship",
           data: {
             label: fromLabel,
             group_id: validatedGroupId,
@@ -418,7 +418,7 @@ function buildControlPlaneBackend(): MemoryAPI {
 
       const result = await syscall_query(
         {
-          target: "neo4j:Query",
+          target: "ruvector:Query",
           query: { group_id: groupId, label: "Memory", cypher, ...params },
           limit: (params?.limit as number) ?? 100,
         },
@@ -433,7 +433,7 @@ function buildControlPlaneBackend(): MemoryAPI {
 
       const result = await syscall_query(
         {
-          target: "neo4j:Query",
+          target: "ruvector:Query",
           query: {
             group_id: validatedGroupId,
             label,

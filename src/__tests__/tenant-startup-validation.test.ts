@@ -37,11 +37,6 @@ vi.mock("@/lib/ruvector/embedding-service", () => ({
   warmupEmbedding: vi.fn(() => Promise.resolve(true)),
 }));
 
-vi.mock("@/lib/neo4j/connection", () => ({
-  readTransaction: vi.fn(),
-  writeTransaction: vi.fn(),
-}));
-
 // ── Import after mocks ─────────────────────────────────────────────────────────
 
 import {

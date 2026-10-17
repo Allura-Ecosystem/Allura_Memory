@@ -25,7 +25,7 @@ Current mode: `soc2` (set in `PROMOTION_MODE` env var)
 
 | Outcome | Meaning |
 |---------|---------|
-| `promoted` | Memory elevated to canonical Neo4j node |
+| `promoted` | Memory elevated to canonical `graph_memories` row |
 | `duplicate` | Matches existing canonical memory — not promoted |
 | `related_context` | Related but not the same — linked, not promoted |
 | `possible_supersede` | Contradicts existing — use `memory_update` instead |
@@ -44,13 +44,13 @@ Curator evaluates:
   - Duplicate detection (semantic similarity)
   - Policy check (RuVix)
     ↓
-Approved → Neo4j :Memory node created
+Approved → `graph_memories` row created
 Rejected → Stays in PG as raw trace
 ```
 
 ## Critical rules
 
-- Never promote without calling `allura-brain_memory_promote` — direct Neo4j writes bypass governance
+- Never promote without calling `allura-brain_memory_promote` — direct `graph_memories` writes bypass governance
 - Never auto-approve in production — `soc2` mode exists for a reason
 - If promotion is rejected, the raw trace still exists in PG — nothing is lost
 - Promoted memories carry their `group_id` for tenant isolation

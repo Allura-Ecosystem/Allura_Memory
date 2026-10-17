@@ -34,7 +34,7 @@ allowed-tools: ["Read", "Grep", "Bash", "mcp__MCP_DOCKER__*"]
 **Trigger:** `start-session`
 
 **What it does:**
-- Verifies Neo4j and PostgreSQL connectivity
+- Verifies PostgreSQL and RuVector connectivity
 - Hydrates context from Allura Brain
 - Reads memory-bank files in order
 - Logs session start
@@ -132,7 +132,7 @@ allowed-tools: ["Read", "Grep", "Bash", "mcp__MCP_DOCKER__*"]
 **Trigger:** `curator-team-promote`
 
 **What it does:**
-- Proposes promotion from PostgreSQL to Neo4j
+- Proposes promotion from episodic traces to the canonical semantic layer (PostgreSQL graph_memories)
 - Runs curator team workflow
 - Requires HITL approval
 - Logs to audit trail
@@ -148,7 +148,7 @@ allowed-tools: ["Read", "Grep", "Bash", "mcp__MCP_DOCKER__*"]
 **Trigger:** `end-session`
 
 **What it does:**
-- Persists session reflection to Neo4j
+- Persists session reflection to Allura Brain (PostgreSQL + RuVector)
 - Logs completion to PostgreSQL
 - Archives temporary files
 - Updates progress

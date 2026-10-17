@@ -139,9 +139,7 @@ Team RAM personas consume OAC context — they do not replace it.
 The semantic/knowledge-graph layer runs on PostgreSQL tables behind the `IGraphAdapter` seam.
 
 - **`GRAPH_BACKEND=ruvector` is the production default** — PG tables (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`)
-- **Neo4j 5.26 is fallback** — `GRAPH_BACKEND=neo4j` still works, read-only for one release
 - **Runtime label:** `ruvector_graph` (upgraded from `pgvector_bridge` per RK-21 Stage 1)
-- **Dual-read mode:** `GRAPH_DUAL_READ=true` wraps both backends, compares results, logs divergence
 - **Factory:** `src/lib/graph-adapter/factory.ts` — `getGraphBackend()` returns `ruvector`
 - **Tests:** 14/14 live-DB E2E pass, 14/14 parity pass, 7/7 dual-read pass, 20/20 crate adapter pass
 - **Crate adapter (Path B):** `GRAPH_BACKEND=ruvector-crate` — 13/16 methods, 3 throw unsupported (G1/B3). Upstream issues: [ruvnet/RuVector#666](https://github.com/ruvnet/RuVector/issues/666), [#667](https://github.com/ruvnet/RuVector/issues/667), [#668](https://github.com/ruvnet/RuVector/issues/668)

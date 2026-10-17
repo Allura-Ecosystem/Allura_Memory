@@ -34,15 +34,9 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 export POSTGRES_PASSWORD="$(read_env_value POSTGRES_PASSWORD)"
-export NEO4J_PASSWORD="$(read_env_value NEO4J_PASSWORD)"
 
 if [ -z "${POSTGRES_PASSWORD:-}" ]; then
   printf 'Error: POSTGRES_PASSWORD is not set after loading .env\n' >&2
-  exit 1
-fi
-
-if [ -z "${NEO4J_PASSWORD:-}" ]; then
-  printf 'Error: NEO4J_PASSWORD is not set after loading .env\n' >&2
   exit 1
 fi
 

@@ -13,7 +13,7 @@ import {
   type SnapshotIngestionMetadata,
   type SnapshotIngestionMetadataHistoryFile,
 } from "./helpers/snapshot-types";
-import { type InsightRecord, InsightValidationError } from "./lib/neo4j-stub";
+import { type InsightRecord, InsightValidationError } from "./lib/insight-types";
 import type { EventRecord } from "../src/lib/postgres/queries/insert-trace";
 import { validateGroupId } from "../src/lib/validation/group-id";
 

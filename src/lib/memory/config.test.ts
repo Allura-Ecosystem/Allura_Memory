@@ -25,8 +25,6 @@ describe("Allura Memory Configuration", () => {
     // Set minimal required env vars for most tests
     process.env.POSTGRES_HOST = "localhost";
     process.env.POSTGRES_PASSWORD = "test-password";
-    process.env.NEO4J_URI = "bolt://localhost:7687";
-    process.env.NEO4J_PASSWORD = "test-password";
   });
 
   afterEach(() => {
@@ -43,8 +41,6 @@ describe("Allura Memory Configuration", () => {
       
       expect(config.postgresHost).toBe("localhost");
       expect(config.postgresPassword).toBe("test-password");
-      expect(config.neo4jUri).toBe("bolt://localhost:7687");
-      expect(config.neo4jPassword).toBe("test-password");
     });
 
     it("should use default values for optional env vars", async () => {
@@ -53,7 +49,6 @@ describe("Allura Memory Configuration", () => {
       delete process.env.POSTGRES_DB;
       delete process.env.POSTGRES_USER;
       delete process.env.POSTGRES_POOL_MAX;
-      delete process.env.NEO4J_USER;
       delete process.env.DEFAULT_GROUP_ID;
       delete process.env.EMBEDDING_PROVIDER;
       delete process.env.EMBEDDING_MODEL;
@@ -68,8 +63,6 @@ describe("Allura Memory Configuration", () => {
       expect(config.postgresUser).toBe("allura");
       expect(config.postgresPoolMax).toBe(10);
       
-      // Neo4j defaults
-      expect(config.neo4jUser).toBe("neo4j");
       
       // Multi-tenant defaults
       expect(config.defaultGroupId).toBe("allura-system");
@@ -97,26 +90,6 @@ describe("Allura Memory Configuration", () => {
       
       expect(() => getConfig()).toThrow(
         "PostgreSQL configuration required. Set POSTGRES_HOST and POSTGRES_PASSWORD in .env.local"
-      );
-    });
-
-    it("should throw error when NEO4J_URI is missing", async () => {
-      delete process.env.NEO4J_URI;
-      
-      const { getConfig } = await import("./config");
-      
-      expect(() => getConfig()).toThrow(
-        "Neo4j configuration required. Set NEO4J_URI and NEO4J_PASSWORD in .env.local"
-      );
-    });
-
-    it("should throw error when NEO4J_PASSWORD is missing", async () => {
-      delete process.env.NEO4J_PASSWORD;
-      
-      const { getConfig } = await import("./config");
-      
-      expect(() => getConfig()).toThrow(
-        "Neo4j configuration required. Set NEO4J_URI and NEO4J_PASSWORD in .env.local"
       );
     });
 
@@ -285,9 +258,6 @@ describe("Allura Memory Configuration", () => {
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining("PostgreSQL:")
       );
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Neo4j:")
-      );
       
       consoleSpy.mockRestore();
     });
@@ -321,15 +291,6 @@ describe("Allura Memory Configuration", () => {
       expect(config.postgresDb).toBe("memory");
       expect(config.postgresUser).toBe("allura");
       expect(config.postgresPoolMax).toBe(10);
-    });
-
-    it("should match documented defaults for Neo4j", async () => {
-      delete process.env.NEO4J_USER;
-      
-      const { getConfig } = await import("./config");
-      const config = getConfig();
-      
-      expect(config.neo4jUser).toBe("neo4j");
     });
 
     it("should match documented defaults for embedding provider", async () => {
@@ -465,24 +426,11 @@ describe("Allura Memory Configuration", () => {
 
     it("should handle partial required config (missing POSTGRES_HOST)", async () => {
       process.env.POSTGRES_PASSWORD = "test-password";
-      process.env.NEO4J_URI = "bolt://localhost:7687";
-      process.env.NEO4J_PASSWORD = "test-password";
       delete process.env.POSTGRES_HOST;
       
       const { getConfig } = await import("./config");
       
       expect(() => getConfig()).toThrow("PostgreSQL configuration required");
-    });
-
-    it("should handle partial required config (missing NEO4J_PASSWORD)", async () => {
-      process.env.POSTGRES_HOST = "localhost";
-      process.env.POSTGRES_PASSWORD = "test-password";
-      process.env.NEO4J_URI = "bolt://localhost:7687";
-      delete process.env.NEO4J_PASSWORD;
-      
-      const { getConfig } = await import("./config");
-      
-      expect(() => getConfig()).toThrow("Neo4j configuration required");
     });
 
     it("should handle all env vars set with custom values", async () => {
@@ -494,9 +442,6 @@ describe("Allura Memory Configuration", () => {
       process.env.POSTGRES_PASSWORD = "custom-password";
       process.env.POSTGRES_POOL_MAX = "50";
       
-      process.env.NEO4J_URI = "bolt://custom-host:7687";
-      process.env.NEO4J_USER = "custom-neo4j";
-      process.env.NEO4J_PASSWORD = "custom-neo4j-password";
       
       process.env.DEFAULT_GROUP_ID = "custom-group";
       
@@ -537,9 +482,6 @@ describe("Allura Memory Configuration", () => {
       expect(config.postgresPassword).toBe("custom-password");
       expect(config.postgresPoolMax).toBe(50);
       
-      expect(config.neo4jUri).toBe("bolt://custom-host:7687");
-      expect(config.neo4jUser).toBe("custom-neo4j");
-      expect(config.neo4jPassword).toBe("custom-neo4j-password");
       
       expect(config.defaultGroupId).toBe("custom-group");
       

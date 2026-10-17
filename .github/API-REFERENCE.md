@@ -124,7 +124,7 @@ const mem2 = await memory_add({
 
 ### `memory_search`
 
-Federated search across both PostgreSQL (episodic) and Neo4j (semantic). Semantic results take precedence.
+Hybrid search across PostgreSQL episodic events and the semantic layer (`graph_memories` with RuVector vector + full-text retrieval). Semantic results take precedence.
 
 **Signature**
 ```typescript
@@ -159,7 +159,7 @@ Array of memories, sorted by relevance (semantic > episodic):
   {
     id: "mem_7f9e2c3a1b5d",
     content: "Sabir prefers dark mode",
-    source: "semantic",      // queried from Neo4j
+    source: "semantic",      // queried from graph_memories (RuVector hybrid)
     score: 0.96,             // semantic relevance
     created: "2 hours ago",  // human-readable
     used_count: 3            // how many times agent has used this
@@ -361,7 +361,6 @@ System health check. **No authentication required.**
 {
   "status": "ok",
   "postgres": "connected",
-  "neo4j": "connected",
   "uptime_seconds": 3600
 }
 ```
@@ -726,7 +725,6 @@ SKIP_AUTH=true npm run dev
 | `FORBIDDEN` | 403 | User lacks permission (e.g., curator action by non-curator) |
 | `CONTENT_TOO_LARGE` | 413 | Content > 10KB |
 | `POSTGRES_ERROR` | 500 | Database error |
-| `NEO4J_ERROR` | 500 | Graph database error |
 
 ---
 

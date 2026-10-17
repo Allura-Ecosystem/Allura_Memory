@@ -5,8 +5,8 @@
  * handlers using the repo's own connection layers. This implements the three
  * Team RAM skills without spawning child processes:
  *
- *   skill-neo4j-memory  → recall_insight via Neo4j readTransaction (read-only)
- *   skill-cypher-query  → get_schema_info / execute_cypher via Neo4j (read-only)
+ *   skill-ruvector-memory  → recall_insight over graph_memories via PostgreSQL (read-only)
+ *   skill-cypher-query     → get_schema_info / execute_cypher via PostgreSQL (read-only)
  *   skill-database      → query_traces / execute_sql via PostgreSQL (SELECT-only)
  *
  * Design decisions:
@@ -15,7 +15,7 @@
  *     DROP, DETACH).
  *   - group_id validated on every call via validateGroupId.
  *   - No new npm dependencies — uses only existing connection layers.
- *   - Neo4j connections use the shared driver pool (no new connections per call).
+ *   - No new connections per call.
  *   - PostgreSQL uses the shared singleton Pool from connection.ts.
  *
  * Standing ADR: Allura Brain (localhost:5888/mcp, Streamable HTTP) is the
@@ -54,7 +54,7 @@ function workspaceScope(input: Record<string, unknown>) {
 
 // ── Tool Handlers ─────────────────────────────────────────────────────────────
 
-// --- skill-neo4j-memory / recall_insight ---
+// --- skill-ruvector-memory / recall_insight ---
 
 /**
  * Search graph_memories for insights whose content matches the query term,
@@ -215,7 +215,7 @@ async function executeSql(input: Record<string, unknown>): Promise<{
 type ToolHandler = (input: Record<string, unknown>) => Promise<unknown>
 
 const TOOL_HANDLERS: Record<TeamRamSkillName, Record<string, ToolHandler>> = {
-  "skill-neo4j-memory": {
+  "skill-ruvector-memory": {
     recall_insight: recallInsight,
   },
   "skill-cypher-query": {
@@ -232,7 +232,7 @@ const TOOL_HANDLERS: Record<TeamRamSkillName, Record<string, ToolHandler>> = {
 
 /**
  * Implements SkillExecutor by routing tool calls to in-process handlers
- * backed by the repo's own PostgreSQL and Neo4j connection layers.
+ * backed by the repo's own PostgreSQL connection layer.
  *
  * Replaces the phantom stdio MCP skill servers that were registered in
  * DEFAULT_SKILL_SERVERS (introduced in 7ddab5a7) but whose source paths
@@ -274,7 +274,7 @@ export class InProcessSkillExecutor implements SkillExecutor {
    * Mark this executor as destroyed.
    *
    * In-process executors hold no persistent child processes. DB connections
-   * are managed by the shared singleton pools (PG Pool, Neo4j Driver) which
+   * are managed by the shared singleton pools (PG Pool) which
    * are closed by the application lifecycle, not by individual executors.
    */
   async destroy(): Promise<void> {

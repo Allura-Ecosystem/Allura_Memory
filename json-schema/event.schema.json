@@ -37,7 +37,6 @@
         "debug:root_cause_found",
         "debug:hypothesis_tested",
         "debug:fix_implemented",
-        "neo4j_unavailable",
         "tool_approved",
         "tool_denied",
         "request_trace",

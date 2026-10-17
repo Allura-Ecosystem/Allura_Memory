@@ -21,7 +21,7 @@ An action that requires explicit human approval before execution. Defined in AD-
 ## C
 
 **Canonical Memory**
-Knowledge that has passed through the curator gate and been promoted to Neo4j. The "source of truth" for long-term retrieval.
+Knowledge that has passed through the curator gate and been promoted to the semantic layer (PostgreSQL `graph_memories`). The "source of truth" for long-term retrieval.
 
 **Capture**
 Stage 1 of the memory pipeline — an agent writes a memory via `memory_add`, which is stored in PostgreSQL.
@@ -38,10 +38,10 @@ Memories that have scored above threshold and are awaiting human review.
 ## D
 
 **Deprecated Node**
-A Neo4j node that has been superseded by a newer version. Marked with the `:deprecated` label but never deleted.
+A `graph_memories` row that has been superseded by a newer version. Marked `deprecated = true` but never deleted.
 
 **Dual-Layer Architecture**
-Allura's two-store design: PostgreSQL for episodic traces and Neo4j for semantic knowledge.
+Allura's two-layer design on a single PostgreSQL instance: append-only `events` for episodic traces and `graph_memories` / `graph_supersedes` (with RuVector hybrid search) for semantic knowledge.
 
 ## E
 
@@ -91,8 +91,8 @@ The operator dashboard for managing memories, curator decisions, audit evidence,
 
 ## N
 
-**Neo4j**
-The graph database used for semantic memory. Stores curated knowledge with `SUPERSEDES` versioning relationships.
+**RuVector**
+The PostgreSQL-native vector and graph layer (pgvector, same PostgreSQL instance) used for semantic memory. Stores curated knowledge in `graph_memories` with `SUPERSEDES` versioning edges in `graph_supersedes`.
 
 ## P
 
@@ -100,7 +100,7 @@ The graph database used for semantic memory. Stores curated knowledge with `SUPE
 The relational database used for episodic memory. Append-only events table with pgvector extension for embeddings.
 
 **Promotion**
-Moving a memory from the episodic layer (PostgreSQL) to the semantic layer (Neo4j) after curator approval.
+Moving a memory from the episodic layer (PostgreSQL) to the semantic layer (PostgreSQL `graph_memories`) after curator approval.
 
 **Promotion Mode**
 `soc2` (review-gated) or `auto` (automatic). Governs whether high-scoring memories enter the curator queue or promote immediately.
@@ -122,7 +122,7 @@ Allura's control plane governance layer — 12 rules that enforce HITL approval,
 ## S
 
 **Semantic Memory**
-Curated knowledge in Neo4j. Versioned, relationship-rich, and promotion-gated. The long-term memory store.
+Curated knowledge in `graph_memories`. Versioned, relationship-rich, and promotion-gated. The long-term memory store.
 
 **Skill**
 A reusable pattern documented in a `SKILL.md` file. Skills encode routing and guardrails for common workflows.
@@ -131,7 +131,7 @@ A reusable pattern documented in a `SKILL.md` file. Skills encode routing and gu
 Marking a memory as deleted without removing it. Recoverable within 30 days via `memory_restore`.
 
 **SUPERSEDES**
-A Neo4j relationship linking a new memory version to the old version. Old versions are marked `:deprecated`, never deleted.
+A `graph_supersedes` edge linking a new memory version to the old version. Old versions are marked `deprecated`, never deleted.
 
 ## T
 

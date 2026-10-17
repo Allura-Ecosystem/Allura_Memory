@@ -1,21 +1,21 @@
 /**
  * RuVector Graph Adapter — PostgreSQL Implementation (Slice C)
  *
- * Replaces Neo4j with PostgreSQL tables for graph-layer operations.
+ * PostgreSQL tables implement the graph-layer operations.
  * Uses two tables:
- *   1. graph_memories — stores Memory nodes (equivalent to Neo4j Memory label)
+ *   1. graph_memories — stores Memory nodes
  *   2. graph_supersedes — adjacency table for SUPERSEDES relationships
  *
  * Why this works:
- * - Neo4j uses SUPERSEDES as a singly-linked list (no multi-hop traversals)
+ * - SUPERSEDES is a singly-linked list (no multi-hop traversals)
  * - All queries are single-node lookups or full-text search
  * - No path queries, no shortestPath, no relationship diversity
- * - This is table work — PG with tsvector FTS replaces Neo4j fulltext index
+ * - This is table work — PG with tsvector FTS covers full-text search
  *
  * Feature flag GRAPH_BACKEND=ruvector selects this adapter.
  * After Slice E, this becomes the only adapter and the flag is removed.
  *
- * ADR: AD-029 — Graph Adapter Pattern for Neo4j → RuVector Migration
+ * ADR: AD-029 — Graph Adapter Pattern
  */
 
 import type { Pool } from "pg"
@@ -173,15 +173,17 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
       return await withWorkspaceTransaction(
         { tenantId: params.group_id, ...scope },
         async (db) => {
-          const prevResult = await db.query<{ score: number; provenance: string }>(
-            `SELECT score, provenance FROM graph_memories
+          const prevResult = await db.query<{ score: number; provenance: string; version: number }>(
+            `SELECT score, provenance, version FROM graph_memories m
              WHERE id = $1 AND group_id = $2 AND workspace_id = $3
-               AND workspace_scope_state = $4
+               AND workspace_scope_state = $4 AND deprecated=false
+               AND NOT EXISTS (SELECT 1 FROM graph_supersedes s WHERE s.superseded_id=m.id
+                 AND s.group_id=m.group_id AND s.workspace_id=m.workspace_id)
              FOR UPDATE`,
             [params.prev_id, params.group_id, scope.workspaceId, "workspace_scoped"],
           )
           const previous = prevResult.rows[0]
-          if (!previous) return { newId: params.new_id, newVersion: params.version, success: false }
+          if (!previous || previous.version + 1 !== params.version) return { newId: params.new_id, newVersion: params.version, success: false }
 
           await db.query(
             `INSERT INTO graph_memories
@@ -246,7 +248,7 @@ export class RuVectorGraphAdapter implements IGraphAdapter {
         [params.restored_at, params.id, params.group_id]
       )
 
-      // Remove incoming SUPERSEDES relationships (equivalent to DELETE r in Neo4j)
+      // Remove incoming SUPERSEDES relationships (restore drops the deprecation edge)
       await client.query(
         `DELETE FROM graph_supersedes
          WHERE superseded_id = $1 AND group_id = $2`,

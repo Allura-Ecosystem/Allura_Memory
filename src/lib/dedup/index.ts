@@ -62,7 +62,7 @@ export {
   createMerger,
   createMergerWithStrategy,
 } from './merger'
-export type { Neo4jClient } from './merger'
+export type { GraphMergeClient } from './merger'
 
 // Proposal Dedup
 export {

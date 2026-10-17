@@ -317,7 +317,7 @@ describe("HandoffView", () => {
 describe("MemoryView", () => {
   const mockMemory = {
     id: "mem-test-01",
-    content: "Allura uses dual-layer memory: episodic PostgreSQL + semantic Neo4j",
+    content: "Allura uses dual-layer memory: episodic PostgreSQL + semantic RuVector",
     score: 0.9423,
     source: "postgres_episodic",
     provenance: { agent_id: "agent-brooks", tags: ["architecture"] },
@@ -362,8 +362,8 @@ describe("MemoryView", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toBeDefined())
   })
 
-  it("renders semantic layer badge for neo4j source", async () => {
-    vi.stubGlobal("fetch", makeFetch({ ...mockMemory, source: "neo4j_semantic" }))
+  it("renders semantic layer badge for semantic source", async () => {
+    vi.stubGlobal("fetch", makeFetch({ ...mockMemory, source: "ruvector_semantic" }))
     render(<MemoryView entityId="mem-semantic-01" />)
 
     await waitFor(() => {

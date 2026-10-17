@@ -30,7 +30,7 @@ describe("team-ram orchestrator", () => {
 
     // Staged routing: memory_first, database (traces), cypher (graph)
     const skillNames = plan.map((entry) => entry.skillName)
-    expect(skillNames[0]).toBe("skill-neo4j-memory")
+    expect(skillNames[0]).toBe("skill-ruvector-memory")
     expect(skillNames).toContain("skill-database")
     expect(skillNames).toContain("skill-cypher-query")
     expect(skillNames).toHaveLength(3)
@@ -44,7 +44,7 @@ describe("team-ram orchestrator", () => {
     })
 
     expect(plan).toHaveLength(1)
-    expect(plan[0]?.skillName).toBe("skill-neo4j-memory")
+    expect(plan[0]?.skillName).toBe("skill-ruvector-memory")
   })
 
   it("dispatches calls sequentially through injected executor and assembles context", async () => {
@@ -68,7 +68,7 @@ describe("team-ram orchestrator", () => {
 
     // Calls executed in staged order: memory first, then database
     expect(calls).toHaveLength(2)
-    expect(calls[0]?.skillName).toBe("skill-neo4j-memory")
+    expect(calls[0]?.skillName).toBe("skill-ruvector-memory")
     expect(calls[1]?.skillName).toBe("skill-database")
 
     expect(result.context.memories).toHaveLength(1)
@@ -76,14 +76,14 @@ describe("team-ram orchestrator", () => {
     expect(result.context.failures).toHaveLength(0)
   })
 
-  it("prefers skill-neo4j-memory first when no special hints exist", () => {
+  it("prefers skill-ruvector-memory first when no special hints exist", () => {
     const plan = selectSkills({
       goal: "Search for context about a topic",
       groupId: "allura-test-teamram",
       workspaceId: "workspace-a",
     })
     expect(plan).toHaveLength(1)
-    expect(plan[0]?.skillName).toBe("skill-neo4j-memory")
+    expect(plan[0]?.skillName).toBe("skill-ruvector-memory")
   })
 
   it("adds skill-database only when evidence/traces/audit details are needed", () => {
@@ -94,7 +94,7 @@ describe("team-ram orchestrator", () => {
       needs: { traces: true },
     })
     const skillNames = plan.map((entry) => entry.skillName)
-    expect(skillNames[0]).toBe("skill-neo4j-memory")
+    expect(skillNames[0]).toBe("skill-ruvector-memory")
     expect(skillNames).toContain("skill-database")
   })
 
@@ -121,7 +121,7 @@ describe("team-ram orchestrator", () => {
     })
     // Memory should be first when explicit memory + graph are requested
     const skillNames = plan.map((entry) => entry.skillName)
-    expect(skillNames[0]).toBe("skill-neo4j-memory")
+    expect(skillNames[0]).toBe("skill-ruvector-memory")
     expect(skillNames).toContain("skill-cypher-query")
   })
 
@@ -185,18 +185,18 @@ describe("team-ram orchestrator", () => {
 
     // Verify plan order matches staged priority
     const planOrder = result.plan.map((c) => c.skillName)
-    expect(planOrder[0]).toBe("skill-neo4j-memory")
+    expect(planOrder[0]).toBe("skill-ruvector-memory")
     expect(planOrder).toContain("skill-database")
     expect(planOrder).toContain("skill-cypher-query")
 
     // Verify actual execution order matches staged priority
-    expect(executionOrder).toEqual(["skill-neo4j-memory", "skill-database", "skill-cypher-query"])
+    expect(executionOrder).toEqual(["skill-ruvector-memory", "skill-database", "skill-cypher-query"])
   })
 
   it("preserves per-call retry logic during staged execution", async () => {
     // Track execution order to verify retry logic works per skill in sequence
     const executionState: Record<string, { attempts: number; alwaysFail?: boolean }> = {
-      "skill-neo4j-memory": { attempts: 0 },
+      "skill-ruvector-memory": { attempts: 0 },
       "skill-database": { attempts: 0, alwaysFail: true },
       "skill-cypher-query": { attempts: 0 },
     }
@@ -227,8 +227,8 @@ describe("team-ram orchestrator", () => {
     )
 
     // Memory (first) should succeed with 1 attempt
-    expect(executionState["skill-neo4j-memory"].attempts).toBe(1)
-    expect(result.results.find((r) => r.skillName === "skill-neo4j-memory")?.ok).toBe(true)
+    expect(executionState["skill-ruvector-memory"].attempts).toBe(1)
+    expect(result.results.find((r) => r.skillName === "skill-ruvector-memory")?.ok).toBe(true)
 
     // Database (middle) should exhaust retries (2 attempts with maxRetriesPerSkill=1)
     expect(executionState["skill-database"].attempts).toBe(2)

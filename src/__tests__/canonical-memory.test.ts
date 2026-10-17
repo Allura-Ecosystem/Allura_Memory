@@ -3,7 +3,7 @@
  * 
  * Regression tests for the 5 canonical memory operations:
  * 1. memory_add - Add a memory (episodic → score → promote/queue)
- * 2. memory_search - Search memories (federated: Postgres + Neo4j)
+ * 2. memory_search - Search memories (federated: Postgres + RuVector)
  * 3. memory_get - Get a single memory by ID
  * 4. memory_list - List all memories for a user
  * 5. memory_delete - Soft-delete a memory
@@ -31,6 +31,7 @@ import {
   memory_delete,
   memory_get,
   memory_list,
+  memory_promote,
   memory_search,
   resetConnections,
 } from "../mcp/canonical-tools";
@@ -39,7 +40,7 @@ import {
   authenticateServiceTransport,
 } from "../lib/auth/mcp-authenticator";
 
-// Live-DB gating: skip tests requiring live PostgreSQL/Neo4j unless RUN_E2E_TESTS=true
+// Live-DB gating: skip tests requiring live PostgreSQL/RuVector unless RUN_E2E_TESTS=true
 const itIfE2E = process.env.RUN_E2E_TESTS === "true" ? it : it.skip;
 
 // Test configuration
@@ -109,6 +110,50 @@ describe("Canonical Memory Operations", () => {
 
   afterAll(async () => {
     await closePool();
+  });
+
+  describe("preservation integration", () => {
+    for (const source of ["manual", "conversation"] as const) {
+      itIfE2E(`preserves creation-equivalent ${source} scoring on episodic get/list`, async () => {
+        const created = await memory_add({ group_id: TEST_GROUP_ID, user_id: TEST_USER_ID,
+          content: uniqueContent("Keep technical answers concise and evidence based"), metadata: { source }, threshold: 1 });
+        const request = { group_id: TEST_GROUP_ID, user_id: TEST_USER_ID, scope: wsScope(TEST_GROUP_ID) };
+        const fetched = await memory_get({ ...request, id: created.id });
+        const listed = await memory_list({ ...request, limit: 10000 });
+        expect(fetched.source).toBe("episodic");
+        expect(fetched.provenance).toBe(source);
+        expect(fetched.score).toBe(created.score);
+        expect(listed.memories.find((memory) => memory.id === created.id)?.score).toBe(created.score);
+      });
+    }
+
+    itIfE2E("concurrent promote requests converge on one pending source without human approval in auto mode", async () => {
+      const originalMode = process.env.PROMOTION_MODE;
+      try {
+        process.env.PROMOTION_MODE = "auto";
+        // A low-score source with threshold 1 stays episodic until explicitly queued.
+        const content = uniqueContent("Concurrent preservation source");
+        const created = await memory_add({ group_id: TEST_GROUP_ID, user_id: TEST_USER_ID,
+          content, metadata: { source: "manual" }, threshold: 1 });
+        expect(created.pending_review).toBeUndefined();
+        const request = { id: created.id, group_id: TEST_GROUP_ID, user_id: TEST_USER_ID, scope: wsScope(TEST_GROUP_ID) };
+        const results = await Promise.all([memory_promote(request), memory_promote(request)]);
+        expect(results.every((result) => result.status === "queued")).toBe(true);
+        expect(results[0].proposal_id).toBe(results[1].proposal_id);
+        const pool = getPool();
+        const proposals = await pool.query(
+          `SELECT p.id,p.status,p.approved_memory_id FROM canonical_proposals p JOIN events e ON e.id=p.trace_ref
+           WHERE p.group_id=$1 AND p.workspace_id=$2 AND e.group_id=$1 AND e.workspace_id=$2
+             AND e.metadata->>'memory_id'=$3`,
+          [TEST_GROUP_ID, wsScope(TEST_GROUP_ID).workspace_id, created.id],
+        );
+        expect(proposals.rows).toEqual([{ id: results[0].proposal_id, status: "pending", approved_memory_id: null }]);
+        expect((await pool.query(`SELECT id FROM governance_receipts WHERE group_id=$1 AND workspace_id=$2 AND proposal_id=$3`,
+          [TEST_GROUP_ID, wsScope(TEST_GROUP_ID).workspace_id, results[0].proposal_id])).rows).toEqual([]);
+        expect((await pool.query(`SELECT id FROM graph_memories WHERE group_id=$1 AND workspace_id=$2 AND content=$3`,
+          [TEST_GROUP_ID, wsScope(TEST_GROUP_ID).workspace_id, content])).rows).toEqual([]);
+      } finally { process.env.PROMOTION_MODE = originalMode; }
+    });
   });
 
   describe("1. memory_add", () => {
@@ -190,32 +235,6 @@ describe("Canonical Memory Operations", () => {
          expect(response.created_at).toBeDefined();
        } finally {
          process.env.PROMOTION_MODE = originalMode;
-       }
-     });
-
-     itIfE2E("should not contact Neo4j from memory_add when eligible memory queues for HITL", async () => {
-       const originalMode = process.env.PROMOTION_MODE;
-       const originalNeo4jUri = process.env.NEO4J_URI;
-       process.env.PROMOTION_MODE = "auto";
-       process.env.NEO4J_URI = "bolt://127.0.0.1:1";
-       resetConnections();
-
-       try {
-         const response = await memory_add({
-           group_id: TEST_GROUP_ID,
-           scope: wsScope(TEST_GROUP_ID),
-           user_id: TEST_USER_ID,
-           content: uniqueContent("I always prefer deterministic testing patterns over flaky integration tests in all codebases"),
-           metadata: { source: "conversation" },
-         });
-
-         expect(response.stored).toBe("episodic");
-         expect(response.pending_review).toBe(true);
-         expect(response.meta?.degraded).not.toBe(true);
-       } finally {
-         process.env.PROMOTION_MODE = originalMode;
-         process.env.NEO4J_URI = originalNeo4jUri;
-         resetConnections();
        }
      });
 
@@ -760,7 +779,7 @@ describe("Canonical Memory Operations", () => {
     });
 
     describe("memory_search error propagation", () => {
-      it("should succeed when PostgreSQL is unreachable (RuVector primary, Neo4j fallback)", async () => {
+      it("should succeed when PostgreSQL is unreachable (RuVector primary, semantic fallback)", async () => {
         const originalHost = process.env.POSTGRES_HOST;
         const originalPort = process.env.POSTGRES_PORT;
         process.env.POSTGRES_HOST = "127.0.0.1";
@@ -774,7 +793,7 @@ describe("Canonical Memory Operations", () => {
             scope: wsScope(`allura-test-${RUN_ID}` as any),
           };
 
-          // With Slice B architecture: RuVector is primary, Neo4j is fallback.
+          // With Slice B architecture: RuVector is primary, the semantic layer is fallback.
           // Search should succeed even when PostgreSQL is unreachable.
           const response = await memory_search(request);
           
@@ -802,7 +821,9 @@ describe("Canonical Memory Operations", () => {
           const request: MemoryAddRequest = {
             group_id: `allura-test-${RUN_ID}` as any,
             scope: wsScope(`allura-test-${RUN_ID}` as any),
-            user_id: "test-user-error",
+            // Must equal the authenticated principal, otherwise the principal
+            // check rejects the write before the unreachable database is reached.
+            user_id: TEST_USER_ID,
             content: "Error propagation test",
           };
 

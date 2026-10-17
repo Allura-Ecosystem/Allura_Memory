@@ -69,7 +69,7 @@ describe.skipIf(!shouldRunE2E)("Watchdog Sustained Validation", () => {
         WORKSPACE_ID,
         JSON.stringify({ content: "I always prefer TypeScript with strict mode and explicit return types for production code", source: "conversation" }),
         JSON.stringify({ content: "I never deploy on Fridays without a rollback plan and a monitoring dashboard", source: "conversation" }),
-        JSON.stringify({ content: "We always use PostgreSQL for raw traces and Neo4j for promoted knowledge graph", source: "conversation" }),
+        JSON.stringify({ content: "We always use PostgreSQL for raw traces and RuVector for the promoted knowledge graph", source: "conversation" }),
       ]
     );
   }, E2E_TIMEOUT);

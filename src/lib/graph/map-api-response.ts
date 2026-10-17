@@ -1,5 +1,5 @@
 /**
- * Maps the /api/memory/graph response into GraphNode + GraphEdge arrays
+ * Maps the backend-independent /api/memory/graph response into GraphNode + GraphEdge arrays
  * for the Knowledge Hive canvas.
  *
  * The API can return different node types (agent, project, insight, event, system, memory).

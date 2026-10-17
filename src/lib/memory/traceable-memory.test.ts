@@ -2,7 +2,7 @@
  * Traceable Memory Tests - Story 1.2
  *
  * Tests for the TraceMiddleware + memory() integration.
- * Verifies that all Neo4j operations are automatically traced to PostgreSQL.
+ * Verifies that all the semantic store operations are automatically traced to PostgreSQL.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -169,7 +169,7 @@ describe("TraceableMemory", () => {
     });
 
     it("should trace failed createEntity calls", async () => {
-      mockMemory.createEntity.mockRejectedValue(new Error("Neo4j connection failed"));
+      mockMemory.createEntity.mockRejectedValue(new Error("the semantic store connection failed"));
 
       const traceableMemory = createTraceableMemory(validConfig);
 
@@ -179,13 +179,13 @@ describe("TraceableMemory", () => {
           props: { title: "Test" },
           group_id: "allura-test",
         })
-      ).rejects.toThrow("Neo4j connection failed");
+      ).rejects.toThrow("the semantic store connection failed");
 
       expect(mockTraceMiddleware.callTool).toHaveBeenCalledWith(
         "memory.createEntity",
         expect.objectContaining({
           success: false,
-          error: "Neo4j connection failed",
+          error: "the semantic store connection failed",
           duration_ms: expect.any(Number),
         })
       );

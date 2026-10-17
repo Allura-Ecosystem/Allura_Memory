@@ -170,7 +170,7 @@ At the end of every substantive Allura workflow response, emit:
 ├─ Action Taken: {what was done}
 ├─ Principle Applied: {which Brooksian principle}
 ├─ Event Logged: {event_type written to Brain, or "None"}
-├─ Neo4j Promoted: {Yes/No}
+├─ Canonical Promoted: {Yes/No}
 └─ Confidence: {High/Medium/Low}
 ```
 

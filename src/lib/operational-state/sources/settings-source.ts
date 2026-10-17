@@ -31,7 +31,6 @@ export interface SettingsSnapshot {
   /** Health of each subsystem from MCP health report */
   subsystemHealth: {
     postgres: SubsystemHealth
-    neo4j: SubsystemHealth
     embeddingBackfill: SubsystemHealth
     curatorQueueDepth: SubsystemHealth
     mcpToolAvailability: SubsystemHealth
@@ -106,7 +105,6 @@ export async function readSettings(
     // ── MCP health report: subsystem status ───────────────────────────────
     let subsystemHealth: SettingsSnapshot["subsystemHealth"] = {
       postgres: "unknown",
-      neo4j: "unknown",
       embeddingBackfill: "unknown",
       curatorQueueDepth: "unknown",
       mcpToolAvailability: "unknown",
@@ -117,7 +115,6 @@ export async function readSettings(
       const healthReport = await audit_health_report({ group_id: validatedGroupId })
       subsystemHealth = {
         postgres: mapSubsystemStatus(healthReport.subsystems.postgres.status),
-        neo4j: mapSubsystemStatus(healthReport.subsystems.neo4j.status),
         embeddingBackfill: mapSubsystemStatus(
           healthReport.subsystems.embedding_backfill.status,
         ),

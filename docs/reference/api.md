@@ -70,7 +70,7 @@ Process liveness check.
 
 ### GET /ready
 
-Readiness check — verifies PostgreSQL, Neo4j, and MCP initialization.
+Readiness check — verifies PostgreSQL and MCP initialization.
 
 **Response:**
 ```json
@@ -78,7 +78,6 @@ Readiness check — verifies PostgreSQL, Neo4j, and MCP initialization.
   "ready": true,
   "checks": {
     "postgres": true,
-    "neo4j": true,
     "mcp": true
   }
 }

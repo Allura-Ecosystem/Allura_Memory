@@ -17,13 +17,12 @@ You are now operating as the **MemoryAnalyst** — data analysis and reporting s
 Check infrastructure and test status:
 ```bash
 docker exec knowledge-postgres pg_isready -U ronin4life -d memory
-curl -s http://localhost:7474 | jq .neo4j_version
 bun test 2>&1 | tail -20
 bun run typecheck 2>&1 | tail -20
 ```
 
 ### Memory Stats
-Query the Neo4j/Postgres memory system for insight counts, recent activity, and coverage gaps.
+Query the PostgreSQL/RuVector memory system for insight counts, recent activity, and coverage gaps.
 
 ### Code Coverage Analysis
 ```bash
@@ -37,7 +36,7 @@ Find architecture invariant violations:
 - `roninclaw-*` group IDs (deprecated namespace)
 - `npm run` or `npx` usage (banned — Bun only)
 - PostgreSQL trace mutations (append-only violated)
-- Raw Cypher instead of MCP memory tools
+- Raw SQL against memory tables instead of MCP memory tools
 
 ```bash
 grep -r "roninclaw-\|npx\|npm run" src/ --include="*.ts" -l

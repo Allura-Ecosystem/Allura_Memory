@@ -29,10 +29,23 @@ import { baseMeta, degradedMeta } from "./canonical-tools/validation-utils"
 import { getConnections } from "./canonical-tools/connection"
 import { validateGroupId } from "./canonical-tools/validation-utils"
 import { withCircuitBreaker } from "./canonical-tools/budget-circuit"
+import { tenantQuery } from "@/lib/db/tenant-transaction"
+import { SEMANTIC_SCHEMA_EVIDENCE, verifySemanticSchemaEvidence, LEDGER_EVIDENCE, LINEAGE_VIOLATIONS, APPROVAL_VIOLATIONS } from "@/lib/memory/audit-evidence"
 
-// Static count of MCP tools registered in the gateway (5 memory + 5 governance + 4 audit).
-// UPDATE THIS when adding new tools to the ListToolsRequestSchema handler in canonical-http-gateway.ts.
-const MCP_TOOL_COUNT = 14
+function scopedAuditPool(pg: import("pg").Pool, request: AuditInvariantCheckRequest): Pick<import("pg").Pool, "query"> {
+  const scope = request.scope
+  if (!scope?.workspace_id || !scope.agent_id || scope.group_id !== request.group_id) {
+    throw new Error("Verified workspace authority required; tenant-wide data verification is unavailable")
+  }
+  return { query: ((sql: string, values?: unknown[]) => tenantQuery(
+    { tenantId: request.group_id, workspaceId: scope.workspace_id!, principalId: scope.agent_id! }, sql, values, pg,
+  )) as import("pg").Pool["query"] }
+}
+
+function violationEvidence(value: unknown): number {
+  const count = typeof value === "string" || typeof value === "number" ? Number(value) : NaN
+  return Number.isSafeInteger(count) && count >= 0 ? count : 1
+}
 
 // Deprecated namespace prefix — stored as a variable so the governance
 // hook does not mistake this detection query for an actual use of the namespace.
@@ -159,7 +172,8 @@ export async function audit_query_events(
 
 /**
  * Check all subsystem health statuses and return a structured report.
- * PostgreSQL is required; Neo4j and other subsystems are optional (degraded OK).
+ * PostgreSQL (which also hosts the RuVector semantic layer) is required; other
+ * subsystems degrade independently.
  */
 export async function audit_health_report(
   request: AuditHealthReportRequest
@@ -170,55 +184,26 @@ export async function audit_health_report(
   // ── PostgreSQL check ─────────────────────────────────────────────────────
   let pgStatus: AuditHealthReportResponse["subsystems"]["postgres"]
   let pgAvailable = false
-  let pgInstance: Awaited<ReturnType<typeof getConnections>>["pg"] | null = null
+  let pgInstance: Pick<import("pg").Pool, "query"> | null = null
 
   try {
     const start = Date.now()
     const { pg } = await getConnections()
-    pgInstance = pg
+    pgInstance = scopedAuditPool(pg, request)
     await withCircuitBreaker("postgres", groupId, "audit_health_report:pg_check", async () =>
       pg.query("SELECT 1")
     )
+    const evidence = await pgInstance.query(SEMANTIC_SCHEMA_EVIDENCE)
+    if (!verifySemanticSchemaEvidence(evidence.rows)) throw new Error("Semantic schema/RLS evidence unavailable")
     pgStatus = {
       status: "healthy",
       latency_ms: Date.now() - start,
+      detail: "Connectivity and semantic schema/RLS catalog evidence only; retrieval freshness and mutation behavior unverified",
     }
     pgAvailable = true
   } catch (err) {
     pgStatus = {
       status: "unavailable",
-      latency_ms: 0,
-      detail: err instanceof Error ? err.message : String(err),
-    }
-  }
-
-  // ── Neo4j check ──────────────────────────────────────────────────────────
-  let neo4jStatus: AuditHealthReportResponse["subsystems"]["neo4j"]
-
-  try {
-    const start = Date.now()
-    const { neo4j } = await getConnections()
-    if (!neo4j) {
-      neo4jStatus = {
-        status: "degraded",
-        latency_ms: 0,
-        detail: "Neo4j disabled (GRAPH_BACKEND=ruvector)",
-      }
-    } else {
-      const session = neo4j.session()
-      try {
-        await session.run("RETURN 1")
-        neo4jStatus = {
-          status: "healthy",
-          latency_ms: Date.now() - start,
-        }
-      } finally {
-        await session.close()
-      }
-    }
-  } catch (err) {
-    neo4jStatus = {
-      status: "degraded",
       latency_ms: 0,
       detail: err instanceof Error ? err.message : String(err),
     }
@@ -309,16 +294,14 @@ export async function audit_health_report(
 
   // ── MCP tool availability ────────────────────────────────────────────────
   const mcpStatus: AuditHealthReportResponse["subsystems"]["mcp_tools"] = {
-    status: "healthy",
+    status: "degraded",
     latency_ms: 0,
-    tool_count: MCP_TOOL_COUNT,
-    detail: `${MCP_TOOL_COUNT} tools registered in MCP gateway`,
+    detail: "Audit handler reachable; catalog count and per-tool execution unverified. Retrieval freshness is not tested by this report.",
   }
 
   // ── Overall status ───────────────────────────────────────────────────────
   const statuses = [
     pgStatus.status,
-    neo4jStatus.status,
     embeddingStatus.status,
     curatorStatus.status,
     mcpStatus.status,
@@ -333,14 +316,13 @@ export async function audit_health_report(
   return {
     subsystems: {
       postgres: pgStatus,
-      neo4j: neo4jStatus,
       embedding_backfill: embeddingStatus,
       curator_queue: curatorStatus,
       mcp_tools: mcpStatus,
     },
     overall_status: overallStatus,
     checked_at: checkedAt,
-    meta: pgAvailable ? baseMeta(["postgres"]) : degradedMeta([]),
+    meta: overallStatus === "healthy" ? baseMeta(["postgres"]) : degradedMeta(pgAvailable ? ["postgres"] : []),
   }
 }
 
@@ -460,7 +442,7 @@ export async function audit_agent_activity(
  * 1. group_id constraint exists on events table
  * 2. No events with invalid group_id (not matching allura-*)
  * 3. No events table updated_at column (events are append-only)
- * 4. Neo4j SUPERSEDES relationships exist (optional — degraded OK)
+ * 4. graph_supersedes versioning edges readable (PostgreSQL semantic layer)
  * 5. No approved proposals without decided_by (unapproved promotions)
  * 6. allura-* namespace compliance (no deprecated group_id prefixes)
  * 7. Approval required for engine mutations (pol-007)
@@ -471,12 +453,14 @@ export async function audit_invariant_check(
   const groupId = validateGroupId(request.group_id)
   const checkedAt = new Date().toISOString()
 
-  let pg: Awaited<ReturnType<typeof getConnections>>["pg"] | null = null
+  let pg: Pick<import("pg").Pool, "query"> | null = null
   let pgAvailable = false
 
   try {
     const connections = await getConnections()
-    pg = connections.pg
+    pg = scopedAuditPool(connections.pg, request)
+    const evidence = await pg.query(SEMANTIC_SCHEMA_EVIDENCE)
+    if (!verifySemanticSchemaEvidence(evidence.rows)) throw new Error("Semantic schema/RLS evidence unavailable")
     pgAvailable = true
   } catch (_err) {
     // PG unavailable — all checks will fail with detail
@@ -499,10 +483,9 @@ export async function audit_invariant_check(
           "audit_invariant_check:1_constraint",
           async () =>
             (pg!).query<{ count: string }>(
-              `SELECT COUNT(*) AS count
-               FROM information_schema.table_constraints
-               WHERE table_name = 'events'
-                 AND constraint_type = 'CHECK'`,
+               `SELECT COUNT(*) AS count FROM pg_constraint
+                WHERE conrelid='public.events'::regclass AND contype='c' AND convalidated
+                  AND pg_get_constraintdef(oid) LIKE '%group_id%' AND pg_get_constraintdef(oid) LIKE '%allura-%'`,
               []
             )
         )
@@ -510,7 +493,7 @@ export async function audit_invariant_check(
         passed = constraintCount > 0
         violationCount = passed ? 0 : 1
         detail = passed
-          ? `${constraintCount} CHECK constraint(s) found on events table`
+           ? `${constraintCount} validated tenant CHECK constraint(s) found; catalog evidence only`
           : "No CHECK constraints found on events table — group_id constraint may be missing"
       } catch (err) {
         passed = false
@@ -552,10 +535,10 @@ export async function audit_invariant_check(
               []
             )
         )
-        violationCount = parseInt(result.rows[0]?.count ?? "0", 10)
+        violationCount = violationEvidence(result.rows[0]?.count)
         passed = violationCount === 0
         detail = passed
-          ? "All events have valid allura-* group_id"
+           ? "No invalid identifiers visible in the authenticated workspace; not a cross-tenant audit"
           : `${violationCount} event(s) found with invalid group_id (not matching allura-*)`
       } catch (err) {
         passed = false
@@ -590,21 +573,16 @@ export async function audit_invariant_check(
           groupId,
           "audit_invariant_check:3_no_updated_at",
           async () =>
-            (pg!).query<{ count: string }>(
-              `SELECT COUNT(*) AS count
-               FROM information_schema.columns
-               WHERE table_name = 'events'
-                 AND column_name = 'updated_at'`,
+            (pg!).query<{ verified: boolean }>(
+              LEDGER_EVIDENCE,
               []
             )
         )
-        const updatedAtCount = parseInt(result.rows[0]?.count ?? "0", 10)
-        // Append-only: events table should NOT have updated_at
-        passed = updatedAtCount === 0
-        violationCount = updatedAtCount
+        passed = result.rows[0]?.verified === true
+        violationCount = passed ? 0 : 1
         detail = passed
-          ? "Events table has no updated_at column — append-only invariant is structurally enforced"
-          : "Events table has an updated_at column — this violates the append-only invariant"
+          ? "Mutation-rejection trigger enabled for UPDATE/DELETE and current role cannot bypass RLS; catalog evidence, not a mutation test"
+          : "Ledger trigger/role evidence missing or unsafe"
       } catch (err) {
         passed = false
         violationCount = 1
@@ -617,55 +595,49 @@ export async function audit_invariant_check(
     }
 
     invariants.push({
-      key: "no_updated_at_column",
-      name: "Events Table Has No updated_at (Append-Only Structural Check)",
+      key: "append_only_events",
+      name: "Append-Only Ledger Trigger and Role Evidence",
       passed,
       violation_count: violationCount,
       detail,
     })
   }
 
-  // ── Check 4: Neo4j SUPERSEDES relationships exist (optional) ─────────────
+  // ── Check 4: graph_supersedes versioning edges are readable ───────────────
   {
     let passed = false
     let detail = ""
     let violationCount = 0
 
-    try {
-      const { neo4j } = await getConnections()
-      if (!neo4j) {
+    if (pgAvailable && pg) {
+      try {
+        const result = await withCircuitBreaker(
+          "postgres",
+          groupId,
+          "audit_invariant_check:4_graph_supersedes",
+          async () =>
+            (pg!).query<{ count: string }>(
+              LINEAGE_VIOLATIONS,
+              [groupId]
+            )
+        )
+        violationCount = violationEvidence(result.rows[0]?.count)
+        passed = Number.isFinite(violationCount) && violationCount === 0
+        detail = `${violationCount} invalid lineage row(s) visible in authenticated workspace; does not prove all writers enforce versioning`
+      } catch (err) {
         passed = false
-        detail = "Neo4j disabled (GRAPH_BACKEND=ruvector) — supersede check skipped"
-      } else {
-        const session = neo4j.session()
-        try {
-          const result = await session.run(
-            "MATCH ()-[r:SUPERSEDES]->() RETURN count(r) AS cnt LIMIT 1"
-          )
-          const cnt = result.records[0]?.get("cnt")
-          const supersededCount = typeof cnt === "object" && cnt !== null && "low" in cnt
-            ? (cnt as { low: number }).low
-            : typeof cnt === "number"
-            ? cnt
-            : 0
-          // Acceptable to have 0 (fresh system) — just check Neo4j is reachable
-          passed = true
-          violationCount = 0
-          detail = `Neo4j reachable; ${supersededCount} SUPERSEDES relationship(s) found`
-        } finally {
-          await session.close()
-        }
+        violationCount = 1
+        detail = `graph_supersedes check failed: ${err instanceof Error ? err.message : String(err)}`
       }
-    } catch (err) {
-      // Neo4j is optional — treat as degraded, not a hard failure
-      passed = true  // Not a violation — Neo4j is optional
-      violationCount = 0
-      detail = `Neo4j check skipped (unavailable): ${err instanceof Error ? err.message : String(err)}`
+    } else {
+      passed = false
+      violationCount = 1
+      detail = "PostgreSQL unavailable — cannot verify graph_supersedes"
     }
 
     invariants.push({
-      key: "neo4j_supersedes",
-      name: "Neo4j SUPERSEDES Versioning (Read Check)",
+      key: "graph_supersedes",
+      name: "SUPERSEDES Endpoint and Version Integrity",
       passed,
       violation_count: violationCount,
       detail,
@@ -686,19 +658,13 @@ export async function audit_invariant_check(
           "audit_invariant_check:5_unapproved_promotions",
           async () =>
             (pg!).query<{ count: string }>(
-              `SELECT COUNT(*) AS count
-               FROM canonical_proposals
-               WHERE group_id = $1
-                 AND status = 'approved'
-                 AND (decided_by IS NULL OR decided_by = '')`,
+              APPROVAL_VIOLATIONS,
               [groupId]
             )
         )
-        violationCount = parseInt(result.rows[0]?.count ?? "0", 10)
-        passed = violationCount === 0
-        detail = passed
-          ? "All approved proposals have decided_by set — no unapproved promotions detected"
-          : `${violationCount} approved proposal(s) found without decided_by — HITL requirement may have been bypassed`
+        violationCount = violationEvidence(result.rows[0]?.count)
+        passed = Number.isFinite(violationCount) && violationCount === 0
+        detail = `${violationCount} semantic roots without matching approved proposal, receipt and approval event in authenticated workspace; historical unreceipted roots require review`
       } catch (err) {
         passed = false
         violationCount = 1
@@ -743,10 +709,10 @@ export async function audit_invariant_check(
               [deprecatedPattern]
             )
         )
-        violationCount = parseInt(result.rows[0]?.count ?? "0", 10)
+        violationCount = violationEvidence(result.rows[0]?.count)
         passed = violationCount === 0
         detail = passed
-          ? "All events use allura-* namespace — no deprecated group_id prefixes found"
+          ? "No deprecated prefixes visible in authenticated workspace; not a cross-tenant audit"
           : `${violationCount} event(s) found with non-compliant group_id (deprecated or non-allura namespace)`
       } catch (err) {
         passed = false
@@ -783,10 +749,10 @@ export async function audit_invariant_check(
       const { CANONICAL_POLICIES } = await import("@/lib/governance/policies")
       const hasPolicy = CANONICAL_POLICIES.some((p) => p.id === "pol-007" && p.invariant_key === "approval_required_for_mutations")
 
-      passed = hasKinds && hasPolicy
+      passed = pgAvailable && hasKinds && hasPolicy
       violationCount = passed ? 0 : 1
       detail = passed
-        ? `pol-007 wired: ${APPROVAL_REQUIRED_KINDS.length} approval-required kind(s) registered`
+        ? `pol-007 registry evidence: ${APPROVAL_REQUIRED_KINDS.length} approval-required kind(s); static registration only, execution enforcement unverified`
         : "pol-007 not wired — approval-required gate may be disabled"
     } catch (err) {
       passed = false

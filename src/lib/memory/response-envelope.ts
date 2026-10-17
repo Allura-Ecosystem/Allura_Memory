@@ -16,7 +16,7 @@ export interface EnvelopeMeta {
   tool: string
   group_id: string
   latency_ms: number
-  stores_used: Array<"postgres" | "neo4j" | "ruvector" | "graph">
+  stores_used: Array<"postgres" | "ruvector" | "graph">
   degraded: boolean
   degraded_reason?: string
   warnings?: string[]

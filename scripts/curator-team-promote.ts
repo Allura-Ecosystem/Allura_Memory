@@ -8,7 +8,6 @@
 
 import { spawn } from "child_process";
 import { curatorScore } from "../src/lib/curator/score";
-import { closeDriver, getDriver } from "./lib/neo4j-stub";
 import { closePool, getPool } from "../src/lib/postgres/connection";
 
 const TRACE_ID = process.argv[2];
@@ -50,7 +49,6 @@ async function curatorTeamPromote(traceId: string) {
   console.log();
 
   const pgPool = getPool();
-  const neo4jDriver = getDriver();
   const startTime = Date.now();
 
   try {
@@ -66,6 +64,7 @@ async function curatorTeamPromote(traceId: string) {
     }
 
     const trace = traceResult.rows[0];
+    const traceGroupId: string = trace.group_id;
     console.log(`✅ Mission: Promote trace ${traceId} (${trace.event_type})`);
     console.log();
 
@@ -113,54 +112,47 @@ async function curatorTeamPromote(traceId: string) {
     const [analystResult, validatorResult] = await Promise.all([
       // Analyst (Liskov) - Find patterns
       (async () => {
-        const session = neo4jDriver.session();
-        try {
-          const result = await session.run(`
-            MATCH (i:Insight)
-            WHERE i.group_id = 'allura-system'
-            RETURN count(i) as total
-          `);
-          
-          const total = result.records[0]?.get<number>('total');
-          
-          return {
-            agent: "pike (Analyst)",
-            task: "Pattern analysis",
-            output: {
-              total_insights: total,
-              pattern_detected: total! > 10 ? "established_knowledge" : "emerging",
-              recommendation: total! > 10 ? "link_to_existing" : "create_new"
-            }
-          };
-        } finally {
-          await session.close();
-        }
+        const result = await pgPool.query(
+          `SELECT count(*)::int AS total
+             FROM graph_memories
+            WHERE group_id = $1 AND deprecated = false AND deleted_at IS NULL`,
+          [traceGroupId]
+        );
+
+        const total: number = result.rows[0]?.total ?? 0;
+
+        return {
+          agent: "pike (Analyst)",
+          task: "Pattern analysis",
+          output: {
+            total_insights: total,
+            pattern_detected: total > 10 ? "established_knowledge" : "emerging",
+            recommendation: total > 10 ? "link_to_existing" : "create_new"
+          }
+        };
       })(),
 
       // Validator (Turing) - Check constraints
       (async () => {
-        const session = neo4jDriver.session();
-        try {
-          const result = await session.run(`
-            MATCH (p:PromotionProposal {event_id: $traceId})
-            RETURN count(p) as exists
-          `, { traceId });
+        const result = await pgPool.query(
+          `SELECT count(*)::int AS proposals
+             FROM canonical_proposals
+            WHERE group_id = $1 AND trace_ref = $2`,
+          [traceGroupId, traceId]
+        );
 
-          const exists = (result.records[0]?.get<number>('exists') || 0) > 0;
+        const exists = (result.rows[0]?.proposals ?? 0) > 0;
 
-          return {
-            agent: "brooks (Validator)",
-            task: "Constraint validation",
-            output: {
-              already_promoted: exists,
-              append_only_valid: true,
-              versioning_chain_valid: true,
-              constraints_met: !exists
-            }
-          };
-        } finally {
-          await session.close();
-        }
+        return {
+          agent: "brooks (Validator)",
+          task: "Constraint validation",
+          output: {
+            already_promoted: exists,
+            append_only_valid: true,
+            versioning_chain_valid: true,
+            constraints_met: !exists
+          }
+        };
       })()
     ]);
 
@@ -244,7 +236,6 @@ async function curatorTeamPromote(traceId: string) {
     console.error("❌ Curator team failed:", error);
     process.exit(1);
   } finally {
-    await closeDriver();
     await closePool();
   }
 }

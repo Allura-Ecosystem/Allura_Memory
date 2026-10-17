@@ -48,12 +48,12 @@ export const RETRIEVAL_CORPUS: CorpusDoc[] = [
   {
     key: "arch-dual-db",
     topic: "architecture",
-    text: "Allura uses a dual-database architecture: PostgreSQL stores append-only episodic execution traces and Neo4j stores the versioned semantic knowledge graph.",
+    text: "Allura uses a two-layer architecture on PostgreSQL: append-only episodic execution traces plus a versioned semantic knowledge graph (graph_memories and graph_supersedes with RuVector search).",
   },
   {
     key: "arch-supersedes",
     topic: "architecture",
-    text: "Neo4j knowledge is versioned with SUPERSEDES relationships; nodes are never edited in place, a new version supersedes the deprecated one.",
+    text: "Semantic knowledge is versioned with SUPERSEDES relationships; nodes are never edited in place, a new version supersedes the deprecated one.",
   },
   {
     key: "arch-mcp-surface",
@@ -85,7 +85,7 @@ export const RETRIEVAL_CORPUS: CorpusDoc[] = [
   {
     key: "gov-hitl",
     topic: "governance",
-    text: "Promotion to the semantic graph requires human-in-the-loop approval; agents cannot autonomously promote memories to Neo4j.",
+    text: "Promotion to the semantic graph requires human-in-the-loop approval; agents cannot autonomously promote memories to the semantic layer.",
   },
   {
     key: "gov-tenant",
@@ -136,7 +136,7 @@ export const CURATION_EXAMPLES: CurationExample[] = [
   {
     label: "architectural-decision",
     shouldPromote: true,
-    text: "Decision: Allura adopts a dual-database design — PostgreSQL for episodic traces, Neo4j for the semantic graph, versioned via SUPERSEDES. Rationale: append-only auditability plus queryable relationships.",
+    text: "Decision: Allura adopts a two-layer design on PostgreSQL — episodic traces plus a semantic graph with RuVector search, versioned via SUPERSEDES. Rationale: append-only auditability plus queryable relationships.",
   },
   {
     label: "operational-invariant",

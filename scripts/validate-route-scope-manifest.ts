@@ -21,7 +21,7 @@
  *   # Exit code 0 = all routes covered and no weak declarations. 1 = failure.
  *
  * Runs in CI as a build gate (.github/workflows/epic-24-evidence.yml,
- * .github/workflows/ci.yml). Does NOT require PostgreSQL or Neo4j — purely
+ * .github/workflows/ci.yml). Does NOT require PostgreSQL — purely
  * static analysis.
  *
  * The manifest is the single source of route authority. This script must never

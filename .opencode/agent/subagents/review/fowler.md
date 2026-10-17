@@ -46,7 +46,7 @@ permission:
 
 1. Search PostgreSQL for past refactor decisions and design drift records (agent_id='fowler', group_id='allura-system')
 
-2. Search Neo4j for code review outcomes and debt patterns by topic_key
+2. Search RuVector for code review outcomes and debt patterns by topic_key
 
 3. Load allura-memory-skill (`skill({ name: "allura-memory-skill" })`) for canonical interface reference
 
@@ -54,7 +54,7 @@ permission:
 
 1. Log REFACTOR_REVIEW to PostgreSQL (agent_id='fowler', group_id='allura-system')
 
-2. Promote refactor patterns to Neo4j if confidence >= 0.85
+2. Promote refactor patterns to the canonical semantic layer if confidence >= 0.85
 
 ---
 

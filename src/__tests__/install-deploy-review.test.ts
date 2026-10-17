@@ -29,7 +29,7 @@ describe("install deploy review", () => {
   it("ties deploy readiness to the environment validator", () => {
     expect(review).toContain("bash scripts/validate-env.sh")
     expect(envValidator).toContain("POSTGRES_PASSWORD")
-    expect(envValidator).toContain("NEO4J_PASSWORD")
+    expect(envValidator).not.toContain("NEO4J_PASSWORD")
     expect(envValidator).toContain("OLLAMA_API_KEY")
     expect(envValidator).toContain("RUVIX_CONTROL_PLANE_SECRET")
     expect(envValidator).toContain("missing=$((missing + 1))")

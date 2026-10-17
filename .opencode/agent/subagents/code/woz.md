@@ -16,11 +16,9 @@ permission:
     "*": allow
   edit: allow
   bash: allow
-  MCP_DOCKER_search_nodes: allow
   MCP_DOCKER_query_database: allow
   MCP_DOCKER_execute_sql: allow
   MCP_DOCKER_insert_data: allow
-  MCP_DOCKER_create_entities: allow
   MCP_DOCKER_mcp-find: allow
   MCP_DOCKER_mcp-add: allow
   webfetch: allow
@@ -53,7 +51,7 @@ permission:
 
 1. Search PostgreSQL for past implementation decisions (agent_id='woz', group_id='allura-system')
 
-2. Search Neo4j for relevant build patterns and past implementations
+2. Search RuVector for relevant build patterns and past implementations
 
 3. Load allura-memory-skill (`skill({ name: "allura-memory-skill" })`) for canonical interface reference
 
@@ -61,7 +59,7 @@ permission:
 
 1. Log BUILD_COMPLETE to PostgreSQL (agent_id='woz', group_id='allura-system')
 
-2. Create Neo4j entity if new pattern discovered (confidence >= 0.85)
+2. Create canonical semantic entry if new pattern discovered (confidence >= 0.85)
 
 ---
 

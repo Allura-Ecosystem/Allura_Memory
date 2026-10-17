@@ -24,22 +24,6 @@
       ],
       "rationale": "Core governed memory system. All agents must search before acting and write after completing. memory_cleanup resets halted budget sessions for admin recovery."
     },
-    "neo4j-memory": {
-      "status": "approved",
-      "approved_at": "2026-04-22T00:00:00Z",
-      "approved_by": "brooks-architect",
-      "category": "database",
-      "essential": true,
-      "rationale": "Semantic memory (Neo4j graph). Knowledge retrieval and relationship queries via MCP_DOCKER toolkit."
-    },
-    "neo4j-cypher": {
-      "status": "approved",
-      "approved_at": "2026-04-22T00:00:00Z",
-      "approved_by": "brooks-architect",
-      "category": "database",
-      "essential": false,
-      "rationale": "Ad-hoc Cypher queries. Debug and diagnostic use only."
-    },
     "database-server": {
       "status": "approved",
       "approved_at": "2026-04-22T00:00:00Z",
@@ -64,11 +48,11 @@
     "category": "diagnostics",
     "essential": false,
     "tools": [
-      "MCP_DOCKER__find_memories_by_name",
-      "MCP_DOCKER__search_memories",
-      "MCP_DOCKER__read_graph"
+      "allura-brain__memory_search",
+      "allura-brain__memory_get",
+      "allura-brain__memory_list"
     ],
-    "rationale": "Read-only graph debugging. No writes permitted."
+    "rationale": "Read-only graph memory debugging through governed Brain tools. No writes permitted."
   },
   "allura-propose-promotion": {
     "status": "approved",
@@ -81,7 +65,7 @@
       "allura-brain__memory_search",
       "allura-brain__memory_get"
     ],
-    "rationale": "Propose memories for canonical promotion. Does not approve \u2014 that requires allura-approve-promotion."
+    "rationale": "Propose memories for canonical promotion. Does not approve — that requires allura-approve-promotion."
   },
   "allura-approve-promotion": {
     "status": "approved",
@@ -105,7 +89,7 @@
     "tools": [
       "allura-brain__memory_search",
       "MCP_DOCKER__execute_sql",
-      "MCP_DOCKER__search_memories"
+      "allura-brain__memory_list"
     ],
     "rationale": "System health and queue observability. Read-only diagnostics."
   },

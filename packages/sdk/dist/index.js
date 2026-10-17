@@ -240,11 +240,11 @@ var GroupIdSchema = z2.string().min(2).max(64).regex(
 );
 var MemoryIdSchema = z2.string().uuid({ message: "id must be a valid UUID v4" });
 var ConfidenceScoreSchema = z2.number().min(0).max(1);
-var MemoryRetrievalStoreSchema = z2.enum(["postgres", "neo4j", "graph", "ruvector"]);
+var MemoryRetrievalStoreSchema = z2.enum(["postgres", "graph", "ruvector"]);
 var MemoryResponseMetaSchema = z2.object({
   contract_version: z2.literal("v1"),
   degraded: z2.boolean(),
-  degraded_reason: z2.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+  degraded_reason: z2.enum(["graph_unavailable"]).optional(),
   stores_used: z2.array(MemoryRetrievalStoreSchema),
   stores_attempted: z2.array(MemoryRetrievalStoreSchema),
   warnings: z2.array(z2.string()).optional(),
@@ -450,7 +450,7 @@ var MemoryOperations = class {
     return this.request("memory_add", params, MemoryAddResponseSchema);
   }
   /**
-   * Search memories across both stores (PostgreSQL + Neo4j).
+   * Search memories across both stores (PostgreSQL + RuVector).
    * Federated search with results merged by relevance.
    *
    * @param params - Search parameters
@@ -512,7 +512,7 @@ var MemoryOperations = class {
   }
   /**
    * Soft-delete a memory.
-   * Appends deletion event to PostgreSQL and marks Neo4j node as deprecated.
+   * Appends deletion event to PostgreSQL and marks the semantic node as deprecated.
    * Original rows remain for audit trail.
    *
    * @param params - Delete parameters (id, group_id, user_id)

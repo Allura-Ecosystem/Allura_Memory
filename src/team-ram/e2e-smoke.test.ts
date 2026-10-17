@@ -2,7 +2,7 @@
  * End-to-end Smoke Tests — Team RAM → Live Skills → Real Databases
  *
  * These tests validate the full orchestration stack against actual
- * PostgreSQL and Neo4j instances. They are gated behind the
+ * PostgreSQL instance. They are gated behind the
  * RUN_E2E_TESTS environment variable to avoid breaking CI.
  *
  * Run: RUN_E2E_TESTS=true bun vitest run src/team-ram/e2e-smoke.test.ts
@@ -69,7 +69,7 @@ describeE2E("Team RAM e2e smoke", () => {
           workspaceId: "workspace-teamram",
       })
       expect(plan).toHaveLength(1)
-      expect(plan[0]?.skillName).toBe("skill-neo4j-memory")
+      expect(plan[0]?.skillName).toBe("skill-ruvector-memory")
     })
 
     it("selects graph skill for cypher queries", () => {
@@ -104,7 +104,7 @@ describeE2E("Team RAM e2e smoke", () => {
       })
       // Documented stage order: memory (1) → traces/database (2) → graph/cypher (3)
       expect(plan.map((c) => c.skillName)).toEqual([
-        "skill-neo4j-memory",
+        "skill-ruvector-memory",
         "skill-database",
         "skill-cypher-query",
       ])
@@ -113,7 +113,7 @@ describeE2E("Team RAM e2e smoke", () => {
 
   // ── Live Skill Dispatch ──────────────────────────────────────────────
 
-  describe("skill-neo4j-memory (live)", () => {
+  describe("skill-ruvector-memory (live)", () => {
     it("recall_insight returns structured results or empty array", async () => {
       const result = await orchestrateTeamRamTask(
         {
@@ -127,7 +127,7 @@ describeE2E("Team RAM e2e smoke", () => {
       )
 
       expect(result.results).toHaveLength(1)
-      expect(result.results[0]?.skillName).toBe("skill-neo4j-memory")
+      expect(result.results[0]?.skillName).toBe("skill-ruvector-memory")
       expect(result.results[0]?.ok).toBe(true)
       expect(result.results[0]?.attempts).toBeGreaterThanOrEqual(1)
 
@@ -286,7 +286,7 @@ describeE2E("Team RAM e2e smoke", () => {
 
     it("emits traces without throwing", async () => {
       // Start trace
-      await traceOrchestrationStart(traceConfig, "e2e test goal", ["skill-neo4j-memory"])
+      await traceOrchestrationStart(traceConfig, "e2e test goal", ["skill-ruvector-memory"])
 
       // Run orchestration
       const result = await orchestrateTeamRamTask(

@@ -36,17 +36,17 @@ Every operation requires:
 | Store | Technology | Role | Write Pattern |
 |-------|-----------|------|---------------|
 | Episodic | PostgreSQL 16 + pgvector | Raw events, audit trail | Append-only |
-| Semantic | Neo4j 5.26 | Curated knowledge graph | SUPERSEDES versioning |
+| Semantic | PostgreSQL 16 + RuVector (`graph_memories`, `graph_supersedes`) | Curated knowledge graph | SUPERSEDES versioning |
 
 ### Key Concepts
 
 | Term | Definition |
 |------|------------|
 | **Episodic memory** | Raw event capture in PostgreSQL — immutable, append-only |
-| **Semantic memory** | Curated knowledge in Neo4j — versioned, relationship-rich |
+| **Semantic memory** | Curated knowledge in `graph_memories` — versioned, relationship-rich |
 | **Promotion** | Moving a memory from episodic to semantic after review |
 | **Curator** | Human reviewer who approves/rejects promotion proposals |
-| **SUPERSEDES** | Neo4j relationship linking new version to old version |
+| **SUPERSEDES** | `graph_supersedes` edge linking new version to old version |
 | **group_id** | Tenant isolation boundary — schema-enforced |
 | **HITL** | Human-in-the-loop — required for canonical promotion |
 

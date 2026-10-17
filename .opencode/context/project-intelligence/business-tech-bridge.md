@@ -14,17 +14,17 @@
 | Full audit trail for compliance | Append-only PostgreSQL events table (no UPDATE/DELETE) | Mutating records destroys audit chain | SOC2-ready; every write is permanent and traceable |
 | AI memory that "shows its work" | Memory provenance tracked: source, created_at, conversation_id | People ask "how did it learn this?" — answer must be on demand | Trust through transparency |
 | Warm consumer experience vs cold dashboards | No sidebar, search dominant, "Forget" not "Delete", provenance on expand | Sarah's Law: 2 minutes, no questions | Consumer adoption without onboarding docs |
-| Enterprise SOC2 gate | HITL curator approval before any Neo4j promotion | Agents cannot be trusted to autonomously update canonical knowledge | Compliance without custom code |
+| Enterprise SOC2 gate | HITL curator approval before any semantic-layer promotion | Agents cannot be trusted to autonomously update canonical knowledge | Compliance without custom code |
 | Instant AI agent integration | 5-tool MCP API (`memory_add/search/get/list/delete`) matching mem0 UX | Agents already know mem0's contract; zero migration cost | Developer adoption without docs |
-| Reversible memory (undo forget) | Soft-delete: append `memory_delete` event + `deprecated: true` on Neo4j node | Postgres is append-only; nothing is truly deleted | 30-day recovery; no fat-finger fear |
-| Knowledge that survives corrections | Neo4j versioning via SUPERSEDES (new node, old node deprecated) | In-place edits destroy history | Auditable, reversible knowledge evolution |
+| Reversible memory (undo forget) | Soft-delete: append `memory_delete` event + `deprecated: true` on the `graph_memories` row | Postgres is append-only; nothing is truly deleted | 30-day recovery; no fat-finger fear |
+| Knowledge that survives corrections | Versioning via SUPERSEDES edges in `graph_supersedes` (new version row, old version deprecated) | In-place edits destroy history | Auditable, reversible knowledge evolution |
 | Prevent runaway agent writes | Budget + Circuit Breaker (`src/lib/budget/`, `src/lib/circuit-breaker/`) | Agents can loop; hard limits enforce safety | Cost control + data integrity |
 
 ---
 
 ## Feature Mapping
 
-### Feature: Dual Database (PostgreSQL + Neo4j)
+### Feature: Two-Layer Memory (PostgreSQL + RuVector)
 
 **Business Context:**
 - Users need: persistent, searchable memory that is both fast and precise
@@ -33,10 +33,10 @@
 
 **Technical Implementation:**
 - PostgreSQL 16: append-only episodic traces (`events` table), raw audit log
-- Neo4j 5.26: versioned semantic knowledge graph (promoted, curated, SUPERSEDES)
-- Wozniak mental model: Postgres = truth, Neo4j = speed
+- PostgreSQL `graph_memories` / `graph_supersedes` + RuVector hybrid search: versioned semantic layer (promoted, curated, SUPERSEDES)
+- Wozniak mental model: append-only events = truth, RuVector hybrid search = speed
 
-**Connection:** Without two stores, you can't have both audit immutability (Postgres) and fast semantic search (Neo4j). A single DB forces you to trade one for the other.
+**Connection:** Without two layers, you can't have both audit immutability (append-only episodic events) and fast semantic search (versioned semantic layer with RuVector hybrid search). A single layer forces you to trade one for the other.
 
 ---
 
@@ -48,7 +48,7 @@
 - Priority: table stakes for enterprise tier
 
 **Technical Implementation:**
-- `PROMOTION_MODE=soc2` → scores >= threshold go to `proposals` table, not Neo4j
+- `PROMOTION_MODE=soc2` → scores >= threshold go to `proposals` table, not the semantic layer
 - Curator dashboard: 3-tab workflow (Traces / Pending / Approved)
 - Every approval/rejection logged to audit trail with curator ID + timestamp
 
@@ -89,7 +89,7 @@
 
 | Misalignment | Warning Signs | Resolution |
 |--------------|---------------|------------|
-| Agent writes directly to Neo4j (bypass HITL) | `write_neo4j_cypher` called without curator flow | Route through `curator:approve`; never write Neo4j from agent context in SOC2 mode |
+| Agent writes directly to the semantic layer (bypass HITL) | Direct INSERT into `graph_memories` / `graph_supersedes` outside the curator flow | Route through `curator:approve`; never write the semantic layer from agent context in SOC2 mode |
 | Consumer UI exposes `group_id`/`user_id` | Template fields visible in memory cards | Server Components inject these; never surface in consumer-facing markup |
 | Treating Postgres events as mutable | UPDATE/DELETE on events table | Hard blocked by schema; if it appears in code, it's a bug |
 | Dashboard routes with `/dashboard/paperclip` | Old Paperclip naming in routes | Real dashboard is `src/app/(main)/dashboard` on port 3100 — no `/paperclip` path exists |

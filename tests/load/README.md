@@ -268,7 +268,7 @@ Add to your CI pipeline:
                     ┌──────────────┼──────────────┐
                     │              │              │
               ┌─────▼─────┐ ┌─────▼─────┐ ┌─────▼─────┐
-              │ PostgreSQL │ │   Neo4j   │ │  Sentry   │
+              │ PostgreSQL │ │ RuVector  │ │  Sentry   │
               │ (episodic) │ │ (semantic)│ │ (metrics) │
               └───────────┘ └───────────┘ └───────────┘
 ```
@@ -284,8 +284,8 @@ lsof -i :3201
 # Check PostgreSQL
 docker exec knowledge-postgres pg_isready -U ronin4life -d memory
 
-# Check Neo4j
-curl -s http://localhost:7474 | jq .neo4j_version
+# Check RuVector (pgvector extension in the same PostgreSQL instance)
+docker exec knowledge-postgres psql -U ronin4life -d memory -c "SELECT extversion FROM pg_extension WHERE extname = 'vector';"
 ```
 
 ### k6 Installation Issues

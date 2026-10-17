@@ -13,7 +13,7 @@
 
 ## Description
 
-Invoke **Scout** (Grace Hopper persona) to search Allura Brain memory. Scout retrieves past decisions, learned patterns, and recurring blockers from both PostgreSQL (episodic traces) and Neo4j (semantic insights).
+Invoke **Scout** (Grace Hopper persona) to search Allura Brain memory. Scout retrieves past decisions, learned patterns, and recurring blockers from both PostgreSQL (episodic traces) and RuVector (semantic insights).
 
 ## Query Patterns
 
@@ -48,7 +48,7 @@ Invoke **Scout** (Grace Hopper persona) to search Allura Brain memory. Scout ret
 ## How It Works
 
 1. **Query Analysis** — Scout parses your natural language query
-2. **Dual Search** — Searches both PostgreSQL (traces) and Neo4j (insights)
+2. **Dual Search** — Searches both PostgreSQL (traces) and RuVector (insights)
 3. **Synthesis** — Combines results into actionable summary
 4. **Logging** — Records query as `SCOUT_QUERY` event for audit trail
 
@@ -57,7 +57,6 @@ Invoke **Scout** (Grace Hopper persona) to search Allura Brain memory. Scout ret
 Scout uses read-only tools:
 - `mcp__MCP_DOCKER__query_database` — Natural language SQL
 - `mcp__MCP_DOCKER__execute_sql` — Raw SQL queries
-- `mcp__MCP_DOCKER__read_neo4j_cypher` — Neo4j graph queries
 
 ## Limitations
 
@@ -75,7 +74,7 @@ Scout uses read-only tools:
 - ADR-015: Session Management (2026-04-03)
 - ADR-023: OAuth2 Integration (2026-04-05)
 
-**Neo4j Insights:**
+**Semantic Insights (RuVector):**
 - Decision: "Use proof-gated mutation for auth"
 - Principle: Conceptual Integrity
 - Confidence: 0.92

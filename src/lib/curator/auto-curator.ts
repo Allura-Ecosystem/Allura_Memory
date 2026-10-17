@@ -3,9 +3,9 @@
  *
  * Reads recent raw_memory_event windows from PostgreSQL,
  * detects repeated patterns, and proposes candidate insights
- * WITHOUT writing truth directly to Neo4j or Notion.
+ * WITHOUT writing truth directly to the semantic store or Notion.
  *
- * Law: Curator proposes. Dashboard approves. Neo4j remembers. Notion explains.
+ * Law: Curator proposes. Dashboard approves. RuVector remembers. Notion explains.
  *
  * Reference: Sprint 9 P4 — Auto-Curator
  */
@@ -40,7 +40,7 @@ export interface CandidateInsight {
   impact: ImpactLevel
   /** How many events contributed to this pattern */
   frequency: number
-  /** Novelty score relative to existing Neo4j knowledge (0.0–1.0) */
+  /** Novelty score relative to existing semantic knowledge (0.0–1.0) */
   novelty_score: number
   /** Why this matters */
   reasoning: string
@@ -331,7 +331,7 @@ export function classifySimilarity(
  * Analyzes recent events and proposes candidate insights.
  *
  * This function READS from Postgres and PROPOSES to canonical_proposals.
- * It does NOT write to Neo4j or Notion directly.
+ * It does NOT write to the semantic store or Notion directly.
  */
 export async function autoCurate(
   scope: ResolvedWorkspaceScope,

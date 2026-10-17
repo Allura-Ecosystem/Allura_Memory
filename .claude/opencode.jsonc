@@ -2,8 +2,6 @@
   "permissions": {
     "allow": [
       "mcp__MCP_DOCKER__insert_data",
-      "mcp__MCP_DOCKER__read_neo4j_cypher",
-      "mcp__MCP_DOCKER__write_neo4j_cypher",
 
       "mcp__MCP_DOCKER__get-library-docs",
       "mcp__MCP_DOCKER__scrape_webpage",
@@ -11,7 +9,6 @@
       "mcp__MCP_DOCKER__mcp-exec",
       "mcp__MCP_DOCKER__mcp-add",
       "mcp__MCP_DOCKER__mcp-config-set",
-      "mcp__MCP_DOCKER__search_memories",
       "mcp__MCP_DOCKER__API-post-search",
       "Bash(git mv:*)",
 "Skill(end-session)",

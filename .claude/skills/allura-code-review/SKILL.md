@@ -157,7 +157,7 @@ At the end of every `allura-code-review` execution, emit:
 ├─ Action Taken: Code review for {story ID} — {summary}
 ├─ Principle Applied: {Brooksian principle}
 ├─ Event Logged: CODE_REVIEW
-├─ Neo4j Promoted: {Yes/No}
+├─ Canonical Promoted: {Yes/No}
 └─ Confidence: {High/Medium/Low}
 ```
 

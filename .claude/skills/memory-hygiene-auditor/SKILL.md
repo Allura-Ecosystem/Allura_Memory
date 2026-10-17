@@ -33,7 +33,7 @@ Automated detection of memory quality issues: duplicates, stale facts, bad group
 
 ## Steps
 1. Query PostgreSQL for memory inventory
-2. Query Neo4j for semantic store state (if available)
+2. Query RuVector and `graph_memories` / `graph_supersedes` for semantic store state (if available)
 3. Run checks in parallel where safe
 4. Cross-reference with `events` table for recall patterns
 5. Output report with `memory_id` + `recommendation`
@@ -41,7 +41,7 @@ Automated detection of memory quality issues: duplicates, stale facts, bad group
 ## Rules
 - READ-ONLY by default — never delete or promote without explicit approval
 - Log all findings to Allura Brain as `memory-hygiene` events
-- If Neo4j is unreachable, skip graph checks and note degradation
+- If the RuVector or semantic-layer queries fail, skip graph checks and note degradation
 - Respect `PERMISSION-LADDER.md` — retention deletion needs Captain approval
 
 ## Example

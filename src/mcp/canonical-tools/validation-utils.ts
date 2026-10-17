@@ -15,37 +15,6 @@ import type {
 } from "@/lib/memory/canonical-contracts"
 import { validateGroupId as canonicalValidateGroupId } from "@/lib/validation/group-id"
 
-// ── Neo4j DateTime → ISO string ──────────────────────────────────────────
-// Neo4j driver returns temporal types as neo4j.DateTime objects, not ISO strings.
-// Convert them so the API always returns plain strings.
-export function neo4jDateToISO(value: unknown): string {
-  if (typeof value === "string") return value
-  if (value && typeof value === "object" && "year" in value) {
-    // neo4j.DateTime — use the driver's toString() which produces ISO format
-    if (typeof (value as { toString?: () => string }).toString === "function") {
-      const str = (value as { toString: () => string }).toString()
-      const parsed = new Date(str)
-      if (!isNaN(parsed.getTime())) return parsed.toISOString()
-    }
-    // Fallback: manually construct from neo4j integer fields
-    const d = value as Record<string, { low: number; high?: number }>
-    const get = (field: string): number => d[field]?.low ?? 0
-    return new Date(
-      Date.UTC(
-        get("year"),
-        get("month") - 1,
-        get("day"),
-        get("hour"),
-        get("minute"),
-        get("second"),
-        Math.floor(get("nanosecond") / 1_000_000)
-      )
-    ).toISOString()
-  }
-  // Last resort
-  return new Date(value as string | number).toISOString()
-}
-
 export interface EpisodicMemoryRow {
   id: string
   content: string
@@ -119,7 +88,7 @@ export async function getRecentUsageCount(pg: Pool, groupId: string, memoryId: s
   }
 }
 
-export function baseMeta(storesUsed: Array<"postgres" | "neo4j" | "graph">, degraded: boolean = false): MemoryResponseMeta {
+export function baseMeta(storesUsed: Array<"postgres" | "ruvector" | "graph">, degraded: boolean = false): MemoryResponseMeta {
   return {
     contract_version: "v1",
     degraded,
@@ -129,7 +98,7 @@ export function baseMeta(storesUsed: Array<"postgres" | "neo4j" | "graph">, degr
   }
 }
 
-export function degradedMeta(storesUsed: Array<"postgres" | "neo4j" | "graph">): MemoryResponseMeta {
+export function degradedMeta(storesUsed: Array<"postgres" | "ruvector" | "graph">): MemoryResponseMeta {
   return {
     ...baseMeta(storesUsed, true),
     degraded_reason: "graph_unavailable",

@@ -94,7 +94,7 @@ bun add @fontsource/ibm-plex-sans
 |-----------|--------|-------|
 | `allura memory` | Primary product | Memory storage and retrieval |
 | `allura insights` | Knowledge surface | Curator-approved semantic insights |
-| `allura graph` | Graph view | Neo4j knowledge graph visualization |
+| `allura graph` | Graph view | Knowledge graph visualization |
 
 **Monogram:** AL (stacked, tricolor — Blue/Green/Orange)  
 **App icon:** Dark background with AL monogram  

@@ -117,8 +117,8 @@ export async function getMemoryHealth(groupId: string): Promise<MemoryHealthRepo
   // Health / degraded events
   const healthEvents = await pool.query(
     `SELECT
-      COUNT(*) FILTER (WHERE event_type = 'neo4j_unavailable' OR (metadata->>'degraded')::boolean = true) as degraded,
-      COUNT(*) FILTER (WHERE event_type = 'neo4j_unavailable' OR (metadata->>'backend_unavailable')::boolean = true) as backend_unavailable,
+      COUNT(*) FILTER (WHERE (metadata->>'degraded')::boolean = true) as degraded,
+      COUNT(*) FILTER (WHERE (metadata->>'backend_unavailable')::boolean = true) as backend_unavailable,
       COUNT(*) FILTER (WHERE (metadata->>'scope_error')::boolean = true) as scope_errors
     FROM events
     WHERE group_id = $1 AND created_at > NOW() - INTERVAL '1 day'`,

@@ -18,19 +18,19 @@ max_age_days: 30
 ## Stack
 - **Framework:** Next.js 15 + TypeScript + Bun
 - **Database:** PostgreSQL (pgvector 0.8.2, HNSW index, 1024d qwen3-embedding:8b)
-- **Graph:** Neo4j 5.26 (semantic/canonical store)
+- **Graph:** PostgreSQL `graph_memories` / `graph_supersedes` + RuVector hybrid search (semantic/canonical store, same Postgres instance)
 - **Embeddings:** qwen3-embedding:8b (1024d Matryoshka, Ollama)
-- **Runtime:** Docker Compose (6 containers: app, postgres, neo4j, ollama, knowledge, mcp)
+- **Runtime:** Docker Compose (5 containers: app, postgres, ollama, knowledge, mcp)
 
 ## 5-Layer Architecture
 1. **RuVix Control Plane** (`src/control-plane/`) — Enforcement gate, policy engine, direct-access blocker
 2. **PostgreSQL** — Episodic store (all memory_add events), vector search via pgvector
-3. **Neo4j** — Semantic/canonical store (promoted memories, Agent/Team/Project nodes)
+3. **Semantic layer (PostgreSQL + RuVector)** — Canonical store (`graph_memories`, `graph_supersedes`, structural node/edge tables for Agent/Team/Project nodes)
 4. **Agent Runtime** (`src/agents/`, `src/team-ram/`) — Team RAM + Durham personas
 5. **Workflow/DAGs** (`src/curator/`, `ralph/`) — Promotion pipeline, HITL approval
 
 ## Key Patterns
-- **Dual-store write:** memory_add → PG (always) → Neo4j (on promotion only)
+- **Two-layer write:** memory_add → episodic PG (always) → semantic layer `graph_memories` (on promotion only)
 - **Scout-first:** ContextScout loads local .opencode/context before any build task
 - **Brain supplements context:** Allura Brain search provides historical decisions/blockers, never replaces deterministic project context
 - **RuVix POL-004:** Rejects non-canonical agent IDs in trace calls — tracing gracefully degrades

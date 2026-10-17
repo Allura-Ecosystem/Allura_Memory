@@ -117,7 +117,7 @@ describe("dedup layer", () => {
   it("does not merge clearly distinct sentences", () => {
     const input =
       "Allura stores episodic memory in PostgreSQL. " +
-      "Neo4j holds the semantic knowledge graph. " +
+      "The semantic layer holds the semantic knowledge graph. " +
       "RuVector provides hybrid search with BM25 and ANN."
     const { output, result } = applyDedupLayer(input)
     expect(result.itemsRemoved).toBe(0)

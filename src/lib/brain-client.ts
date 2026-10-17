@@ -25,7 +25,6 @@ export interface BrainHealthSubsystem {
 export interface BrainHealthReport {
   subsystems: {
     postgres: BrainHealthSubsystem
-    neo4j: BrainHealthSubsystem
     embedding_backfill: BrainHealthSubsystem
     curator_queue: BrainHealthSubsystem
     mcp_tools: BrainHealthSubsystem
@@ -238,7 +237,7 @@ export const brainClient = {
   },
 
   /**
-   * Search memories across PG + Neo4j.
+   * Search memories across PG + RuVector.
    */
   async searchMemories(
     query: string,

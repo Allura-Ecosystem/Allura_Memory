@@ -1,7 +1,7 @@
 /**
  * RuVix ControlPlane Phase 3 - Direct Access Blocker
  *
- * Detects and blocks direct PostgreSQL/Neo4j connections that bypass the controlPlane.
+ * Detects and blocks direct PostgreSQL/RuVector connections that bypass the controlPlane.
  * Enforces 100% controlPlane-only database access policy.
  *
  * STRATEGY:
@@ -25,7 +25,7 @@ export interface DirectAccessAttempt {
   timestamp: number;
 
   /** Type of database accessed */
-  databaseType: "postgresql" | "neo4j" | "unknown";
+  databaseType: "postgresql" | "unknown";
 
   /** Connection method used */
   connectionMethod: string;
@@ -82,12 +82,6 @@ const DIRECT_ACCESS_PATTERNS = {
     /pg\./i,
     / drizzle\s*\(/i,
     /prisma\./i,
-  ],
-  neo4j: [
-    /neo4j\.driver\s*\(/i,
-    /Driver\s*\(/i,
-    /Session\s*\(/i,
-    /graph\.db\s*\(/i,
   ],
 };
 
@@ -148,11 +142,11 @@ export class DirectAccessBlocker {
   /**
    * Detect database type from code patterns
    */
-  private detectDatabaseType(code: string): "postgresql" | "neo4j" | "unknown" {
+  private detectDatabaseType(code: string): "postgresql" | "unknown" {
     for (const [type, patterns] of Object.entries(DIRECT_ACCESS_PATTERNS)) {
       for (const pattern of patterns) {
         if (pattern.test(code)) {
-          return type as "postgresql" | "neo4j";
+          return type as "postgresql";
         }
       }
     }

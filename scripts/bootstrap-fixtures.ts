@@ -8,7 +8,7 @@
  *
  * Prerequisites:
  * - PostgreSQL running with allura_memories table
- * - Neo4j running with schema applied
+ * - graph_memories / graph_supersedes tables applied (docker/postgres-init)
  * - MCP server environment (.env loaded)
  */
 
@@ -26,7 +26,7 @@ const USER_ID = "bootstrap-fixture"
 // 100 fixture memories covering different domains
 const FIXTURES = [
   // Architecture decisions (5 — these will be approved)
-  "Architecture decision: Allura uses dual-layer storage — PostgreSQL for episodic traces, Neo4j for canonical semantic insights. No direct agent writes to Neo4j.",
+  "Architecture decision: Allura uses dual-layer storage — PostgreSQL for episodic traces and canonical semantic memory (graph_memories), with RuVector (pgvector) for retrieval. No direct agent writes to the canonical tables.",
   "Architecture decision: Memory promotion follows SOC2 mode — all insights must pass curator scoring and human approval before activation in the graph.",
   "Architecture decision: RuVector serves as the primary retrieval backend for episodic memory with hybrid vector + BM25 search.",
   "Architecture decision: Scope resolution is implicit — every memory call carries tenant, group, project, agent, and session identity.",
@@ -34,12 +34,12 @@ const FIXTURES = [
 
   // Project context (15)
   "Allura Memory project is located at /home/ronin704/Projects/allura memory",
-  "The tech stack is Next.js + Bun + TypeScript with PostgreSQL and Neo4j",
+  "The tech stack is Next.js + Bun + TypeScript with PostgreSQL and RuVector",
   "RuVix is the controlPlane enforcement gate that blocks direct database access from agents",
-  "Docker compose runs PostgreSQL, Neo4j, and the MCP server container",
+  "Docker compose runs PostgreSQL (with RuVector) and the MCP server container",
   "The MCP server exposes 10 canonical memory operations via stdio transport",
   "Canonical proposals are stored in the canonical_proposals PostgreSQL table",
-  "Neo4j schema is initialized by docker/neo4j-init/00-schema.cypher on container start",
+  "The graph_memories and graph_supersedes schema is initialized by docker/postgres-init/21-graph-adapter-tables.sql on container start",
   "Circuit breakers wrap all database operations to prevent cascade failures",
   "Budget enforcement limits write operations per agent per group per time window",
   "The curator scoring function weighs source type, usage count, and age",
@@ -54,7 +54,7 @@ const FIXTURES = [
   "OpenClaw workspace is at /home/ronin704/.openclaw/workspace",
   "The host machine is ronin704-MS-7B86 running Linux 6.17.0-20-generic",
   "Node.js version is v24.14.0 with OpenClaw installed globally",
-  "Neo4j runs on bolt://localhost:7687 with auth neo4j/testpassword",
+  "RuVector runs inside the same PostgreSQL instance on localhost:5432",
   "PostgreSQL runs on localhost:5432 with database allura_memory",
   "RuVector bridge uses the ruvector Docker service for embedding and search",
   "The pgvector extension is installed for vector(768) column type",
@@ -65,8 +65,8 @@ const FIXTURES = [
   "The canonical-contracts.ts file defines all request/response types for MCP tools",
   "Memory coordinator pattern routes tool calls to canonical-tools.ts implementations",
   "SOC2 promotion mode queues insights for human approval; auto mode promotes immediately",
-  "Graph adapter abstraction supports both Neo4j and RuVector backends",
-  "Full-text search indexes in Neo4j support memory_search_index and search indexes",
+  "Graph adapter abstraction supports the RuVector (pgvector) and ruvector-crate backends",
+  "Full-text search on graph_memories uses the generated content_tsv column with a GIN index",
   "The embedding-backfill-worker handles bulk embedding generation for existing events",
   "Notion sync worker imports memories from Notion databases",
   "The watchdog process monitors system health and reports anomalies",
@@ -76,7 +76,7 @@ const FIXTURES = [
   "Scope error responses include session metadata dump for debugging",
   "Cron jobs should include job_name, run_id, scheduled_for, and attempt in metadata",
   "Memory search with no approved results returns explicit no_approved_memory status",
-  "Agent should never write directly to Neo4j — all writes go through memory_add",
+  "Agent should never write directly to canonical tables — all writes go through memory_add",
   "The retrieve-before-plan pattern requires memory_search before any substantive response",
   "Trace-after-execution pattern requires memory_add after completing non-trivial tasks",
   "Unapproved or proposed insights must not be used as authoritative knowledge",
@@ -88,16 +88,16 @@ const FIXTURES = [
   "Episodic-only storage returns when score is below promotion threshold",
   "The curator score function returns confidence, reasoning, and tier",
   "Memory export supports both canonical-only and merged store modes",
-  "Soft-delete appends deletion event and marks Neo4j node as deprecated",
-  "Restore removes deprecated flag and cleans up SUPERSEDES relationships",
-  "Version chain follows SUPERSEDES relationships from newest to oldest",
+  "Soft-delete appends deletion event and marks the graph_memories row as deprecated",
+  "Restore removes deprecated flag and cleans up graph_supersedes edges",
+  "Version chain follows graph_supersedes edges from newest to oldest",
   "The memory_list operation supports sort by created_at or score in ascending/descending order",
   "Memory content is always stored as plain text, never structured data",
   "Tags are parsed from episodic metadata as comma-separated strings",
   "Provenance maps between conversation and manually_added source types",
   "The canonical proposals table has group_id, content, score, reasoning, tier, status, and trace_ref columns",
   "Load-test group IDs ending in -loadtest skip the proposal queue",
-  "Memory search fallback chain is RuVector then Neo4j then PostgreSQL ILIKE",
+  "Memory search fallback chain is RuVector hybrid, then text search, then PostgreSQL ILIKE",
   "RuVector search uses a lower threshold of 0.3 for better recall",
   "Episodic results without embeddings score at 0.5 confidence",
   "Semantic results include relevance and usage_count fields",
@@ -130,9 +130,9 @@ const FIXTURES = [
   "2026-04-19: RuVector bridge patched to use vector type casts instead of ruvector type",
   "2026-04-19: memory_add now projects to allura_memories with nomic-embed-text embeddings",
   "2026-04-19: memory_search returns results via RuVector hybrid search",
-  "2026-04-20: Neo4j graph adapter connected and working",
-  "2026-04-20: Applied full schema from neo4j-memory-indexes.cypher — all 9 indexes plus 1 constraint",
-  "2026-04-20: Added docker/neo4j-init/00-schema.cypher and neo4j-init compose service for persistent schema",
+  "2026-04-20: RuVector graph adapter connected and working",
+  "2026-04-20: Applied graph_memories and graph_supersedes schema with GIN full-text and tenant indexes",
+  "2026-04-20: Added docker/postgres-init/21-graph-adapter-tables.sql for persistent semantic-store schema",
   "2026-04-20: OpenClaw Allura integration PRD created with 7 milestones",
   "2026-04-20: M1 started — scope resolution, approved-only retrieval, bootstrap fixtures",
   "2026-04-20: allura-memory-core skill written as behavioral contract for governed memory",

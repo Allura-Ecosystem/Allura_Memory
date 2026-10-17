@@ -5,7 +5,7 @@
  * of the Allura Memory write wrapper (src/lib/memory/writer.ts).
  *
  * ControlPlane tests: verify syscall routing when MEMORY_BYPASS_CONTROL_PLANE is not set
- * (default path). Neo4j fallback tests have been removed — Neo4j is sunset.
+ * (default path). Legacy fallback tests have been removed.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -68,7 +68,7 @@ describe("memory() — controlPlane-routed writer", () => {
   })
 
   describe("createEntity", () => {
-    it("should route through syscall_mutate with neo4j:Entity target", async () => {
+    it("should route through syscall_mutate with ruvector:Entity target", async () => {
       const result = await memory().createEntity({
         label: "Insight",
         group_id: "allura-system",
@@ -79,7 +79,7 @@ describe("memory() — controlPlane-routed writer", () => {
       expect(syscall_mutate).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "insert",
-          target: "neo4j:Entity",
+          target: "ruvector:Entity",
         }),
         expect.objectContaining({ group_id: "allura-system" })
       )
@@ -97,7 +97,7 @@ describe("memory() — controlPlane-routed writer", () => {
   })
 
   describe("createRelationship", () => {
-    it("should route through syscall_mutate with neo4j:Relationship target", async () => {
+    it("should route through syscall_mutate with ruvector:Relationship target", async () => {
       await memory().createRelationship({
         fromId: "n1",
         fromLabel: "Agent",
@@ -107,14 +107,14 @@ describe("memory() — controlPlane-routed writer", () => {
       })
 
       expect(syscall_mutate).toHaveBeenCalledWith(
-        expect.objectContaining({ target: "neo4j:Relationship" }),
+        expect.objectContaining({ target: "ruvector:Relationship" }),
         expect.objectContaining({ actor: "system" })
       )
     })
   })
 
   describe("search", () => {
-    it("should route through syscall_query with neo4j:Query target", async () => {
+    it("should route through syscall_query with ruvector:Query target", async () => {
       const results = await memory().search({
         label: "Insight",
         group_id: "allura-system",
@@ -126,7 +126,7 @@ describe("memory() — controlPlane-routed writer", () => {
 
       expect(results).toHaveLength(1)
       expect(syscall_query).toHaveBeenCalledWith(
-        expect.objectContaining({ target: "neo4j:Query" }),
+        expect.objectContaining({ target: "ruvector:Query" }),
         expect.objectContaining({ group_id: "allura-system" })
       )
     })

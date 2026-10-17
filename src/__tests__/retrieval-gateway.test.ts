@@ -17,7 +17,6 @@ import { clearStartupCache, validateStartup } from '../lib/retrieval/startup-val
 
 const TEST_CONFIG: RetrievalConfig = {
   ...DEFAULT_RETRIEVAL_CONFIG,
-  neo4j_url: 'bolt://localhost:7687',
   postgres_url: 'postgresql://localhost:5432/test',
   max_results: 10,
   min_score_threshold: 0.85,
@@ -100,15 +99,13 @@ describe('Retrieval Gateway', () => {
     const badConfig: RetrievalConfig = {
       ...TEST_CONFIG,
       postgres_url: 'postgresql://invalid_host:9999/bad',
-      neo4j_url: 'bolt://invalid_host:9999',
     };
     const report = await validateStartup(badConfig, { force: true });
 
     expect(report.degraded).toBe(true);
     expect(report.healthy).toBe(false);
     const hasPgFail = report.checks.some((c) => c.name === 'postgres_connection' && c.status === 'fail');
-    const hasNeo4jFail = report.checks.some((c) => c.name === 'neo4j_connection' && c.status === 'fail');
-    expect(hasPgFail || hasNeo4jFail).toBe(true);
+    expect(hasPgFail).toBe(true);
   });
 
   // ------------------------------------------------------------------
@@ -118,7 +115,6 @@ describe('Retrieval Gateway', () => {
     const badConfig: RetrievalConfig = {
       ...TEST_CONFIG,
       postgres_url: 'postgresql://invalid_host:9999/bad',
-      neo4j_url: 'bolt://invalid_host:9999',
     };
     const gw = makeGateway(badConfig);
     const res = await gw.search({
@@ -232,7 +228,6 @@ describe('Retrieval Gateway', () => {
       const badConfig: RetrievalConfig = {
         ...TEST_CONFIG,
         postgres_url: 'postgresql://invalid_host:9999/bad',
-        neo4j_url: 'bolt://invalid_host:9999',
       };
       const r1 = await validateStartup(badConfig, { force: true });
       const r2 = await validateStartup(badConfig);

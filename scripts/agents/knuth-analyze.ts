@@ -20,6 +20,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { basename, extname, join, relative } from "node:path";
 import { gitExec } from "../../src/lib/git/exec";
 
@@ -154,7 +155,7 @@ const MAX_FILE_COMPLEXITY = 50;
  * Classify a file path into the 5-layer Allura architecture model.
  *
  * L1: src/control-plane/ (RuVix ControlPlane)
- * L2: src/lib/postgres/, src/lib/neo4j/, src/lib/ruvector/ (Data Layer)
+ * L2: src/lib/postgres/, src/lib/ruvector/ (Data Layer)
  * L3: src/mcp/, src/lib/agents/, src/lib/config/ (Agent Runtime)
  * L4: src/app/api/, src/lib/memory/ (Workflow/API)
  * L5: src/app/ (excluding api/), src/components/, src/lib/ui/ (UI)
@@ -169,7 +170,6 @@ function classifyLayer(filePath: string): ArchitecturalLayer {
   // L2: Data Layer (must check before L4/L5 since lib/postgres etc. are under src/lib/)
   if (
     normalized.startsWith("src/lib/postgres/") ||
-    normalized.startsWith("src/lib/neo4j/") ||
     normalized.startsWith("src/lib/ruvector/")
   ) {
     return "L2";
@@ -1128,33 +1128,19 @@ function formatLayers(layerMap: LayerMap): string {
 
 interface DbConnections {
   pgPool: { query: (sql: string, params: unknown[]) => Promise<unknown> };
-  neo4jSession: {
-    run: (cypher: string, params: Record<string, unknown>) => Promise<unknown>;
-    close: () => Promise<void>;
-  };
-  closeDriver: () => Promise<void>;
   closePool: () => Promise<void>;
 }
 
 async function getDbConnections(): Promise<DbConnections | null> {
   const postgresUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
-  const neo4jUri: string | null = null;
-
   if (!postgresUrl) {
     return null;
   }
 
   const { getPool, closePool } = await import("../../src/lib/postgres/connection");
-  const closeDriver = async () => {};
-
   const pgPool = getPool();
-  // Neo4j sunset — PostgreSQL only
-  const session = null as unknown as { run: () => Promise<never[]>; close: () => Promise<void> };
-
   return {
     pgPool,
-    neo4jSession: session,
-    closeDriver,
     closePool,
   };
 }
@@ -1177,30 +1163,22 @@ async function logToPostgres(
   );
 }
 
+/**
+ * Record an agent insight as an append-only episodic event. Canonical promotion
+ * (graph_memories) is never done here; it goes through curator approval (HITL).
+ */
 async function createInsight(
   db: DbConnections,
   summary: string,
   confidence: number,
   sourceType: string,
 ): Promise<void> {
-  await db.neo4jSession.run(
-    `CREATE (i:Insight {
-      insight_id: 'ins_analysis_' + randomUUID(),
-      summary: $summary,
-      confidence: $confidence,
-      status: 'active',
-      group_id: $groupId,
-      created_at: datetime(),
-      source_type: $sourceType
-    })
-    RETURN i`,
-    {
-      summary,
-      confidence,
-      groupId: GROUP_ID,
-      sourceType,
-    },
-  );
+  await logToPostgres(db, "insight_recorded", {
+    insight_id: `ins_${randomUUID()}`,
+    summary,
+    confidence,
+    source_type: sourceType,
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1308,7 +1286,7 @@ async function main(): Promise<void> {
   if (!db) {
     console.log("\n[knuth] \u26A0\uFE0F  Database connections not configured");
     console.log("[knuth] Analysis complete \u2014 results shown above (no DB logging)");
-    console.log("[knuth] Set POSTGRES_URL and NEO4J_URI to log findings");
+    console.log("[knuth] Set POSTGRES_URL to log findings");
     process.exit(exitCode);
   }
 
@@ -1319,7 +1297,7 @@ async function main(): Promise<void> {
       agent: AGENT_ID,
     });
 
-    // Create insight in Neo4j
+    // Record insight as an episodic event
     const confidence = findingsForDb.findingCount
       ? ((findingsForDb.findingCount as number) > 5 ? 0.92 : 0.80)
       : 0.85;
@@ -1332,13 +1310,11 @@ async function main(): Promise<void> {
       confidence,
     });
 
-    console.log("\n[knuth] \u2705 Analysis logged to PostgreSQL and Neo4j");
+    console.log("\n[knuth] \u2705 Analysis logged to PostgreSQL");
   } catch (error) {
     console.error("\n[knuth] DB logging failed:", error);
     // Don't change exit code — the analysis output is still valid
   } finally {
-    await db.neo4jSession.close();
-    await db.closeDriver();
     await db.closePool();
   }
 

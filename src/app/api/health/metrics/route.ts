@@ -40,14 +40,8 @@ export interface MetricsResponse {
       latency_ms: number
       total_memories: number
     }
-    neo4j: {
-      status: "healthy" | "degraded" | "unhealthy"
-      latency_ms: number | null
-      total_nodes: number | null
-    }
   }
   degraded: {
-    neo4j_unavailable: number
     scope_error: number
     embedding_failures: number
     promotion_failures_24h: number
@@ -143,46 +137,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
     const pgLatency = Date.now() - pgStart
 
-    // Storage metrics — Neo4j (degradable)
-    let neo4jStatus: "healthy" | "degraded" | "unhealthy" = groupId ? "degraded" : "unhealthy"
-    let neo4jLatency: number | null = null
-    let neo4jNodes: number | null = null
-
-    if (groupId) {
-      neo4jNodes = null
-      neo4jStatus = "degraded"
-    } else {
-      try {
-        const neo4j = await import("neo4j-driver")
-        const driver = neo4j.driver(
-          process.env.NEO4J_URI || "bolt://localhost:7687",
-          neo4j.auth.basic(process.env.NEO4J_USER || "neo4j", process.env.NEO4J_PASSWORD || "password")
-        )
-        const session = driver.session()
-        const neo4jStart = Date.now()
-        const result = await session.run("MATCH (n:Memory) RETURN count(n) AS total")
-        neo4jLatency = Date.now() - neo4jStart
-        neo4jNodes = result.records[0]?.get("total")?.toNumber() ?? null
-        neo4jStatus = "healthy"
-        await session.close()
-        await driver.close()
-      } catch {
-        neo4jStatus = "unhealthy"
-      }
-    }
-
     // Degraded mode counters from events table
     const degradedMetrics = await pg.query(`
       SELECT
-        (SELECT count(*) FROM events
-         WHERE event_type = 'neo4j_unavailable' AND created_at >= now() - interval '24 hours'${eventGroupFilter}) as neo4j_unavailable,
         (SELECT count(*) FROM events
          WHERE event_type = 'scope_error' AND created_at >= now() - interval '24 hours'${eventGroupFilter}) as scope_error,
         (SELECT count(*) FROM events
          WHERE event_type = 'embedding_failure' AND created_at >= now() - interval '24 hours'${eventGroupFilter}) as embedding_failures,
         (SELECT count(*) FROM events
-         WHERE event_type = 'proposal_approved'
-          AND metadata::text LIKE '%"neo4j_error"%'
+         WHERE event_type = 'promotion_failed'
           AND created_at >= now() - interval '24 hours'${eventGroupFilter}) as promotion_failures_24h
     `, eventQueryArgs)
 
@@ -268,14 +231,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           latency_ms: pgLatency,
           total_memories: parseInt(pgHealthResult.rows[0]?.total) || 0,
         },
-        neo4j: {
-          status: neo4jStatus,
-          latency_ms: neo4jLatency,
-          total_nodes: neo4jNodes,
-        },
       },
       degraded: {
-        neo4j_unavailable: parseInt(degraded.neo4j_unavailable) || 0,
         scope_error: parseInt(degraded.scope_error) || 0,
         embedding_failures: parseInt(degraded.embedding_failures) || 0,
         promotion_failures_24h: parseInt(degraded.promotion_failures_24h) || 0,
@@ -283,11 +240,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       skills,
     }
 
-    const response = NextResponse.json(metrics)
-    if (groupId) {
-      response.headers.set("Warning", "299 allura \"tenant-scoped Neo4j node count hidden\"")
-    }
-    return response
+    return NextResponse.json(metrics)
   } catch (error) {
     captureException(error, { tags: { route: "/api/health/metrics", method: "GET" } })
 
@@ -298,10 +251,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         recall: { search_available: false, last_latency_ms: null },
         storage: {
           postgres: { status: "unhealthy" as const, latency_ms: 0, total_memories: 0 },
-          neo4j: { status: "unhealthy" as const, latency_ms: null, total_nodes: null },
         },
         degraded: {
-          neo4j_unavailable: 0,
           scope_error: 0,
           embedding_failures: 0,
           promotion_failures_24h: 0,

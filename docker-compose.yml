@@ -42,12 +42,12 @@
 #   3. Explicit environment variables override both
 #
 # Why this matters:
-#   - .env.local can hold local PG password and Neo4j credential overrides
+#   - .env.local can hold local PG password and credential overrides
 #   - Docker builds with --no-cache ensure env_file paths are current
 #   - Container restarts trigger env_file re-evaluation
 #
 # To verify env loading in MCP container:
-#   docker compose --env-file .env --env-file .env.local exec mcp env | grep -E '(POSTGRES|NEO4J|OLLAMA|RUVIX)'
+#   docker compose --env-file .env --env-file .env.local exec mcp env | grep -E '(POSTGRES|OLLAMA|RUVIX)'
 #
 # To verify secrets are NOT in .env (committed file):
 #   grep -E '(PASSWORD|SECRET|API_KEY)' .env  # Should only show placeholders
@@ -86,9 +86,8 @@ services:
       retries: 10
       start_period: 30s
 
-  # Neo4j REMOVED 2026-07-17 — AD-49 executed. GRAPH_BACKEND=ruvector (PostgreSQL).
-  # Semantic graph now lives in graph_memories + graph_supersedes tables.
-  # Backup at ~/backups/neo4j-sunset-2026-07-17/
+  # Semantic graph lives in the graph_memories + graph_supersedes tables
+  # (GRAPH_BACKEND=ruvector, PostgreSQL + pgvector).
 
   # Web frontend (Next.js)
   mcp:
@@ -152,7 +151,7 @@ services:
   # The Next.js web dashboard (port 3100) was removed: ~85% static shells, no
   # value. Human surface is now the curator CLI (`bun run curator:approve`) and
   # the Allura Brain MCP tools (allura-brain__memory_* incl. memory_promote).
-  # The brain (allura-memory-mcp on 5888), Postgres, Neo4j, and curator are
+  # The brain (allura-memory-mcp on 5888), Postgres, and curator are
   # unaffected. To restore: `git revert`/`git checkout` this file + src/app/dashboard.
   # =============================================================================
 
@@ -161,8 +160,8 @@ services:
 # =============================================================================
 # Volume + Network Definitions — WHY external:true, and WHERE bootstrap happens
 # =============================================================================
-# The network (knowledge-network) and volumes (memory_postgres_data, neo4j_data,
-# neo4j_logs) are declared `external: true` on purpose. This pins them to fixed,
+# The network (knowledge-network) and volume (memory_postgres_data)
+# is declared `external: true` on purpose. This pins them to fixed,
 # unprefixed names so the LIVE stack on the primary machine keeps binding the
 # exact same data no matter which compose project name is used. If these were
 # compose-managed, `docker compose -p <anything> up` would create fresh empty
@@ -185,7 +184,7 @@ services:
 # same and remains as a standalone entrypoint.)
 #
 # KNOWN LIMITATION (G3, deferred): each service pins a hardcoded container_name
-# (knowledge-postgres, knowledge-neo4j, allura-neo4j-init, allura-memory-mcp).
+# (knowledge-postgres, allura-memory-mcp).
 # The live stack and scripts/brain-stack.sh reference these names, so
 # side-by-side / project-prefixed isolated deploys collide on them. Removing
 # container_name is a breaking change (out of scope 2026-07-02); a future
@@ -194,8 +193,6 @@ services:
 #
 # Volume name mapping (compose key -> external name):
 #   - postgres_data -> memory_postgres_data
-#   - neo4j_data     -> neo4j_data
-#   - neo4j_logs     -> neo4j_logs
 # =============================================================================
 volumes:
   # PostgreSQL data volume - pinned to existing database
@@ -203,7 +200,6 @@ volumes:
     external: true
     name: memory_postgres_data
 
-  # Neo4j volumes REMOVED 2026-07-17 — Neo4j sunset.
 
 # =============================================================================
 # Network Configuration

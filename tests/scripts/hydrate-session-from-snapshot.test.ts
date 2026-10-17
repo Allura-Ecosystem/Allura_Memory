@@ -9,8 +9,8 @@ import {
   hydrateSessionFromSnapshot,
   runHydrationCli,
 } from "../../scripts/hydrate-session-from-snapshot";
-import type { InsightRecord } from "../../scripts/lib/neo4j-stub";
-import { InsightValidationError } from "../../scripts/lib/neo4j-stub";
+import type { InsightRecord } from "../../scripts/lib/insight-types";
+import { InsightValidationError } from "../../scripts/lib/insight-types";
 import type { EventRecord } from "../../src/lib/postgres/queries/insert-trace";
 
 // Pre-Phase-4 baseline — tracked in docs/deferred/pre-existing-failures.md

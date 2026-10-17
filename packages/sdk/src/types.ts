@@ -40,7 +40,7 @@ export type PromotionMode = "auto" | "soc2";
 /** Memory provenance */
 export type MemoryProvenance = "conversation" | "manual";
 
-/** Memory status in Neo4j */
+/** Memory status in the semantic store */
 export type MemoryStatus = "active" | "deprecated";
 
 /** Sort order for memory_list */
@@ -51,7 +51,7 @@ export type MemorySortOrder =
   | "score_asc";
 
 /** Backing stores that can be reported by canonical memory retrieval metadata. */
-export type MemoryRetrievalStore = "postgres" | "neo4j" | "graph" | "ruvector";
+export type MemoryRetrievalStore = "postgres" | "graph" | "ruvector";
 
 // ── Zod Schemas ────────────────────────────────────────────────────────────
 
@@ -162,7 +162,7 @@ export interface MemoryDeleteParams {
 export interface MemoryResponseMeta {
   contract_version: "v1";
   degraded: boolean;
-  degraded_reason?: "neo4j_unavailable" | "graph_unavailable";
+  degraded_reason?: "graph_unavailable";
   stores_used: MemoryRetrievalStore[];
   stores_attempted: MemoryRetrievalStore[];
   warnings?: string[];
@@ -268,12 +268,12 @@ export interface HealthResponse {
 
 // ── Zod Response Schemas ────────────────────────────────────────────────────
 
-const MemoryRetrievalStoreSchema = z.enum(["postgres", "neo4j", "graph", "ruvector"]);
+const MemoryRetrievalStoreSchema = z.enum(["postgres", "graph", "ruvector"]);
 
 const MemoryResponseMetaSchema = z.object({
   contract_version: z.literal("v1"),
   degraded: z.boolean(),
-  degraded_reason: z.enum(["neo4j_unavailable", "graph_unavailable"]).optional(),
+  degraded_reason: z.enum(["graph_unavailable"]).optional(),
   stores_used: z.array(MemoryRetrievalStoreSchema),
   stores_attempted: z.array(MemoryRetrievalStoreSchema),
   warnings: z.array(z.string()).optional(),

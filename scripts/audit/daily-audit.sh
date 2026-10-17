@@ -159,24 +159,6 @@ else
   ((WARNINGS++))
 fi
 
-# Check Neo4j status
-if command_exists docker && docker ps | grep -q knowledge-neo4j; then
-  log_success "✓ Neo4j container is running"
-  ((CHECKS_PASSED++))
-  
-  # Check Neo4j HTTP endpoint
-  if command_exists curl && curl -s "http://localhost:7474" >/dev/null 2>&1; then
-    log_success "✓ Neo4j HTTP endpoint is accessible"
-    ((CHECKS_PASSED++))
-  else
-    log_warning "Neo4j HTTP endpoint not accessible (may not be critical)"
-    ((WARNINGS++))
-  fi
-else
-  log_warning "Neo4j container not found (may be intentional in dev)"
-  ((WARNINGS++))
-fi
-
 # =============================================================================
 # SECTION 3: State Directory Health
 # =============================================================================

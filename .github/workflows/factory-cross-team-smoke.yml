@@ -40,18 +40,6 @@ jobs:
           --health-retries 10
         ports:
           - 5432:5432
-      neo4j:
-        image: neo4j:5.26-community
-        env:
-          NEO4J_AUTH: neo4j/password
-        options: >-
-          --health-cmd "cypher-shell -u neo4j -p password 'RETURN 1'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 12
-        ports:
-          - 7474:7474
-          - 7687:7687
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -81,9 +69,6 @@ jobs:
           POSTGRES_PASSWORD: allura
           POSTGRES_APP_USER: allura_app
           POSTGRES_APP_PASSWORD: change-me-in-production
-          NEO4J_URI: bolt://localhost:7687
-          NEO4J_USER: neo4j
-          NEO4J_PASSWORD: password
           EMBEDDING_BASE_URL: http://127.0.0.1:9
           RUVIX_CONTROL_PLANE_SECRET: factory-ci-test-secret-at-least-32-characters
         run: bun scripts/factory-cross-team-smoke.ts

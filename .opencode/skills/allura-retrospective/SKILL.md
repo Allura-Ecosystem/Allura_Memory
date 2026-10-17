@@ -165,6 +165,6 @@ At the end of every `allura-retrospective` execution, emit:
 ├─ Action Taken: Retrospective for {epic name}
 ├─ Principle Applied: Plan to Throw One Away (Brooks)
 ├─ Event Logged: RETROSPECTIVE
-├─ Neo4j Promoted: {Yes/No}
+├─ Canonical Promoted: {Yes/No}
 └─ Confidence: {High/Medium/Low}
 ```

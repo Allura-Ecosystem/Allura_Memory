@@ -57,8 +57,6 @@ mcp__MCP_DOCKER__mcp-add("server-name")
 | `mcp__MCP_DOCKER__query_database` | NL SQL reads |
 | `mcp__MCP_DOCKER__execute_sql` | Raw SQL reads |
 | `mcp__MCP_DOCKER__insert_data` | Append events only |
-| `mcp__MCP_DOCKER__read_neo4j_cypher` | Neo4j reads |
-| `mcp__MCP_DOCKER__write_neo4j_cypher` | Neo4j writes (SUPERSEDES) |
 
 ## Allura Memory MCP Server (src/mcp/memory-server.ts)
 - Transport: stdio

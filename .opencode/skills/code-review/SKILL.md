@@ -35,7 +35,7 @@ Always check for these repository invariants:
 
 - Enforce `group_id` on DB read and write paths
 - Preserve append-only PostgreSQL trace behavior
-- Preserve Neo4j lineage via `SUPERSEDES` instead of mutation
+- Preserve lineage via `graph_supersedes` (SUPERSEDES) edges instead of mutation
 - Require HITL for behavior-changing promotion flows
 - Validate external boundaries with Zod
 - Prevent server-only modules from being imported into client code

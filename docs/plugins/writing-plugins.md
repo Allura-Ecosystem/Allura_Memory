@@ -147,7 +147,7 @@ import sys
 def main():
     prompt = json.loads(sys.stdin.read()).get("prompt", "")
 
-    keywords = ["database", "memory", "neo4j", "postgres", "promote", "curator"]
+    keywords = ["database", "memory", "ruvector", "postgres", "promote", "curator"]
     if any(kw in prompt.lower() for kw in keywords):
         print(json.dumps({
             "inject": True,

@@ -2,7 +2,7 @@
  * Curator Governance - Manages promotion workflow for high-value insights
  * 
  * This module handles the human-in-the-loop approval process
- * for promoting insights from episodic (PostgreSQL) to semantic (Neo4j) memory.
+ * for promoting insights from episodic (PostgreSQL) to semantic (PostgreSQL + RuVector) memory.
  */
 
 import { memory_add } from 'mcp:allura-memory';
@@ -16,7 +16,7 @@ interface PromotionProposal {
 }
 
 /**
- * Propose an insight for promotion to Neo4j
+ * Propose an insight for promotion to the canonical semantic layer
  * 
  * If confidence ≥ 0.85 and PROMOTION_MODE = 'auto': promoted immediately
  * If confidence < 0.85 or PROMOTION_MODE = 'soc2': queued for curator approval
@@ -47,7 +47,7 @@ export async function proposePromotion(params: PromotionProposal): Promise<void>
 /**
  * Approve a promotion proposal (curator action)
  * 
- * This creates a memory_promoted event and triggers Neo4j write
+ * This creates a memory_promoted event and triggers the canonical semantic write
  */
 export async function approvePromotion(params: {
   proposalId: string;

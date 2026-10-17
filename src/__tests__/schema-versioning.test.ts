@@ -364,7 +364,7 @@ describe('Backfill Logic', () => {
   });
 
   it('backfill script handles null schema_version gracefully', () => {
-    // Simulate Neo4j nodes where schema_version might be null
+    // Simulate the semantic store nodes where schema_version might be null
     const nodeWithNull = { id: '1', content: 'test', schema_version: null as number | null };
 
     // Backfill: set null → CURRENT_SCHEMA_VERSION

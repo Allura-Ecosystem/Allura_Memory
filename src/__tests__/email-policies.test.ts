@@ -98,7 +98,7 @@ describe("POL-EMAIL-004: Email Memory Promotion Requires HITL", () => {
     const result = evaluatePolicies(baseClaims, {
       ...baseEmailContext,
       operation: "memory:promote",
-      resource: "neo4j:canonical:memory",
+      resource: "ruvector:canonical:memory",
     }, [POLICY_EMAIL_MEMORY_PROMOTION_REQUIRES_HITL]);
 
     expect(result.passed).toBe(false);
@@ -109,7 +109,7 @@ describe("POL-EMAIL-004: Email Memory Promotion Requires HITL", () => {
     const result = evaluatePolicies(baseClaims, {
       ...baseEmailContext,
       operation: "memory:promote",
-      resource: "neo4j:canonical:memory",
+      resource: "ruvector:canonical:memory",
       hitlApproved: true,
     }, [POLICY_EMAIL_MEMORY_PROMOTION_REQUIRES_HITL]);
 

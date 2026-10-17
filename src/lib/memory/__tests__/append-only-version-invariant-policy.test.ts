@@ -32,7 +32,8 @@ describe("Append-only version invariant policy", () => {
       source.indexOf("/**\n * 7. memory_promote")
     )
 
-    expect(memoryUpdate).toContain("graphAdapter.getVersion")
+    expect(memoryUpdate).toContain("graphAdapter.getMemory")
+    expect(memoryUpdate).toContain("workspace_id: scope.workspace_id")
     expect(memoryUpdate).toContain("graphAdapter.supersedesMemory")
     expect(memoryUpdate).toContain("prev_id")
     expect(memoryUpdate).toContain("new_id")

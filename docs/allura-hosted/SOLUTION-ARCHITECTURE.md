@@ -133,12 +133,12 @@ sequenceDiagram
   participant ME as Memory Engine
   participant CUR as Curator
   participant R as Reviewer
-  participant NEO as Neo4j
+  participant SEM as PostgreSQL + RuVector (semantic)
   participant AUD as Audit
   ME->>CUR: memory.added (proposed)
   CUR->>R: surfaces in queue
   R->>CUR: approve (rationale)
-  CUR->>NEO: create version, SUPERSEDES prior
+  CUR->>SEM: create version, SUPERSEDES prior
   CUR->>AUD: curator.approved receipt
 ```
 Constraints: agents cannot approve (AD-04); promotion serialized; supersession only (AD-06).
@@ -153,7 +153,7 @@ Constraints: agents cannot approve (AD-04); promotion serialized; supersession o
 | I2 | Agent → MCP Gateway | Streamable HTTP (SSE+JSON-RPC) | MCP tool calls | AD-02, AD-07, RK-03 |
 | I3 | SDK/CLI → REST API | HTTPS+OpenAPI | typed requests | AD-07 |
 | I4 | Allura Guard → Memory Engine | internal | scoped queries | AD-01, RK-01 |
-| I5 | Curator → Neo4j | internal | versioned writes | AD-06 |
+| I5 | Curator → semantic layer (PostgreSQL + RuVector) | internal | versioned writes | AD-06 |
 | I6 | Any → Audit | internal | append-only events | AD-05, RK-06 |
 | I7 | Dream Engine → Curator | internal queue | candidates | AD-10, RK-02 |
 

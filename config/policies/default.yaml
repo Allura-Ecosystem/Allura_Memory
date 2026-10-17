@@ -42,20 +42,20 @@ roles:
       - action: "execute"
         resource: "tool:postgres.query"
       - action: "execute"
-        resource: "tool:neo4j.query"
+        resource: "tool:ruvector.query"
       - action: "execute"
         resource: "tool:search.query"
       - action: "read"
         resource: "database:postgres"
       - action: "read"
-        resource: "database:neo4j"
+        resource: "database:ruvector"
 
   - role: "viewer"
     permissions:
       - action: "read"
         resource: "database:postgres"
       - action: "read"
-        resource: "database:neo4j"
+        resource: "database:ruvector"
 
   - role: "guest"
     permissions: []
@@ -124,7 +124,7 @@ rules:
       - "execute"
     resources:
       - "tool:postgres.mutate"
-      - "tool:neo4j.mutate"
+      - "tool:ruvector.mutate"
       - "tool:file.write"
       - "tool:api.external"
     conditions:
@@ -157,7 +157,7 @@ rules:
       - "execute"
     resources:
       - "tool:postgres.query"
-      - "tool:neo4j.query"
+      - "tool:ruvector.query"
       - "tool:search.query"
     conditions:
       - field: "role"

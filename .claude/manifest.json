@@ -97,7 +97,7 @@
     ".opencode/rules/BROOKS-TRACKING.md",
     ".opencode/rules/documentation-standards.md",
     ".opencode/rules/mcp-integration.md",
-    ".opencode/rules/neo4j-best-practices.md",
+    ".opencode/rules/semantic-graph-best-practices.md",
     ".opencode/rules/postgres-best-practices.md",
     ".opencode/governance/curator.ts",
     ".opencode/contracts/harness-v1.md",

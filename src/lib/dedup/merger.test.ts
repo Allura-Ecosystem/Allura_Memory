@@ -168,7 +168,7 @@ describe('MergeManager', () => {
         createTestEntity({ id: 'second' }),
       ]
 
-      // Most-connected would require Neo4j query; simplified returns first
+      // Most-connected would require the semantic store query; simplified returns first
       const canonicalId = manager.selectCanonical(entities, 'most-connected')
       expect(canonicalId).toBe('first')
     })

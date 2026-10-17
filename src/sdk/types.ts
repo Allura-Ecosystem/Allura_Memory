@@ -18,7 +18,7 @@ export interface MemoryResult {
   groupId: string
   /** Relevance score when returned from search (0–1) */
   score?: number
-  /** Data source: "postgres", "neo4j", "ruvector", or "merged" */
+  /** Data source: "postgres", "ruvector", or "merged" */
   source?: string
   /** Memory lifecycle status */
   status?: string

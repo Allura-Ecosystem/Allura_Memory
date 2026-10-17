@@ -59,7 +59,7 @@ function deriveActionFromEventType(eventType: string): string | undefined {
  * Derives actor_type from event_type (memory_* → agent, user_* → user, system events → system)
  */
 function deriveActorTypeFromEventType(eventType: string): AuditEventExport['actor_type'] {
-  if (eventType.startsWith('memory_') || eventType.startsWith('promotion_') || eventType.startsWith('neo4j_')) {
+  if (eventType.startsWith('memory_') || eventType.startsWith('promotion_')) {
     return 'agent';
   }
   if (eventType.startsWith('user_') || eventType.startsWith('proposal_') || eventType.startsWith('notion_')) {

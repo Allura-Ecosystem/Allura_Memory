@@ -42,7 +42,7 @@ allura-brain_memory_search({ query: "<error or symptom>", group_id: "allura-syst
 ## Search priority
 
 1. Semantic similarity (vector search via RuVector)
-2. Graph traversal (Neo4j relationships)
+2. Supersession lineage (`graph_supersedes` edges)
 3. Recency (timestamp ordering)
 4. Status (prefer `active` over `deprecated`)
 

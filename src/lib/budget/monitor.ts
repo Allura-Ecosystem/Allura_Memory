@@ -55,6 +55,8 @@ export interface MonitorConfig {
   onBreach?: BreachCallback;
   /** Enable time-based tracking */
   trackTime: boolean;
+  /** Wall-clock by default; MCP accounts only recorded operation durations. */
+  timeAccounting?: "wall-clock" | "recorded-duration";
   /** Interval for time updates (ms) */
   timeUpdateIntervalMs: number;
 }
@@ -88,6 +90,7 @@ export class BudgetMonitor {
       onWarning: config?.onWarning,
       onBreach: config?.onBreach,
       trackTime: config?.trackTime ?? true,
+      timeAccounting: config?.timeAccounting ?? "wall-clock",
       timeUpdateIntervalMs: config?.timeUpdateIntervalMs ?? 1000,
     };
 
@@ -125,7 +128,7 @@ export class BudgetMonitor {
     };
 
     // Start time tracking if enabled
-    if (this.config.trackTime) {
+    if (this.config.trackTime && this.config.timeAccounting === "wall-clock") {
       const interval = setInterval(() => {
         this.updateTime(sessionId);
       }, this.config.timeUpdateIntervalMs);
@@ -150,7 +153,9 @@ export class BudgetMonitor {
     }
 
     // Final time update
-    session.state.budgetStatus.consumption.timeMs = Date.now() - session.startTime;
+    if (this.config.timeAccounting === "wall-clock") {
+      session.state.budgetStatus.consumption.timeMs = Date.now() - session.startTime;
+    }
     session.state.haltedAt = new Date();
 
     const finalState = session.state;
@@ -264,6 +269,21 @@ export class BudgetMonitor {
     return this.sessions.has(this.sessionKey(sessionId));
   }
 
+  getSessionIds(): SessionId[] {
+    return Array.from(this.sessions.values(), ({ state }) => ({ ...state.id }));
+  }
+
+  /** Reset time accounting only. Histories and all non-time counters survive. */
+  resetTimeBudget(sessionId: SessionId): boolean {
+    const session = this.getSession(sessionId);
+    if (!session) return false;
+    session.startTime = Date.now();
+    session.state.budgetStatus.consumption.timeMs = 0;
+    session.state.budgetStatus.utilization.timeMs = 0;
+    session.state.budgetStatus.warnings.timeMs = { warning80: false, warning90: false };
+    return true;
+  }
+
   /**
    * Get current budget consumption
    */
@@ -375,6 +395,7 @@ export class BudgetMonitor {
   }
 
   private updateTime(sessionId: SessionId): void {
+    if (this.config.timeAccounting !== "wall-clock") return;
     const session = this.getSession(sessionId);
     if (!session) return;
 

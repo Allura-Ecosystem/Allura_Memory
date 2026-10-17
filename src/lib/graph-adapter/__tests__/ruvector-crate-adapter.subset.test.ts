@@ -263,7 +263,7 @@ describe("ruvector-crate adapter — subset parity (Option A)", () => {
   // ── Unsupported under Option A — B1 (no atomicity) / B3 (no node mutation) ──
   // These are explicit refusals, NOT skipped behavior. Faking success would
   // silently violate the SUPERSEDES/soft-delete invariants. For real versioning
-  // and lifecycle, GRAPH_BACKEND=neo4j is the supported path.
+  // and lifecycle, GRAPH_BACKEND=ruvector is the supported path.
 
   describe("unsupported operations refuse honestly", () => {
     it("supersedesMemory throws unsupported: (B1 + B3)", async () => {

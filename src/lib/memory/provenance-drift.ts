@@ -23,7 +23,7 @@ export interface ProvenanceDriftReport {
 export const PROVENANCE_BASELINE_MAPPINGS: readonly ProvenanceBaselineMapping[] = [
   {
     label: "Memory ID",
-    dictionaryRefs: ["Neo4j: Memory.id", "Retrieval Gateway Contract: MemoryResult.id"],
+    dictionaryRefs: ["Semantic: Memory.id", "Retrieval Gateway Contract: MemoryResult.id"],
     derivedFrom: [],
     required: true,
     missingSeverity: "major",
@@ -31,7 +31,7 @@ export const PROVENANCE_BASELINE_MAPPINGS: readonly ProvenanceBaselineMapping[] 
   },
   {
     label: "Content",
-    dictionaryRefs: ["Neo4j: Memory.content", "Retrieval Gateway Contract: MemoryResult.content"],
+    dictionaryRefs: ["Semantic: Memory.content", "Retrieval Gateway Contract: MemoryResult.content"],
     derivedFrom: [],
     required: true,
     missingSeverity: "major",
@@ -39,7 +39,7 @@ export const PROVENANCE_BASELINE_MAPPINGS: readonly ProvenanceBaselineMapping[] 
   },
   {
     label: "Source",
-    dictionaryRefs: ["Neo4j: Memory.source", "Retrieval Gateway Contract: MemoryResult.source"],
+    dictionaryRefs: ["Semantic: Memory.source", "Retrieval Gateway Contract: MemoryResult.source"],
     derivedFrom: [],
     required: true,
     missingSeverity: "major",
@@ -47,7 +47,7 @@ export const PROVENANCE_BASELINE_MAPPINGS: readonly ProvenanceBaselineMapping[] 
   },
   {
     label: "Provenance",
-    dictionaryRefs: ["PostgreSQL: events.metadata.source", "Neo4j: Memory.source"],
+    dictionaryRefs: ["PostgreSQL: events.metadata.source", "Semantic: Memory.source"],
     derivedFrom: ["UI label distinguishing conversation/manual provenance from storage source"],
     required: false,
     missingSeverity: "major",
@@ -55,7 +55,7 @@ export const PROVENANCE_BASELINE_MAPPINGS: readonly ProvenanceBaselineMapping[] 
   },
   {
     label: "Actor",
-    dictionaryRefs: ["PostgreSQL: events.agent_id", "AuditEvent.actor_id", "Neo4j: AUTHORED_BY"],
+    dictionaryRefs: ["PostgreSQL: events.agent_id", "AuditEvent.actor_id", "Semantic: AUTHORED_BY"],
     derivedFrom: ["user_id/agent identity when canonical actor is unavailable"],
     required: false,
     missingSeverity: "major",
@@ -87,7 +87,7 @@ export const PROVENANCE_BASELINE_MAPPINGS: readonly ProvenanceBaselineMapping[] 
   },
   {
     label: "Timestamp",
-    dictionaryRefs: ["PostgreSQL: events.created_at", "Neo4j: Memory.created_at", "AuditEvent.timestamp"],
+    dictionaryRefs: ["PostgreSQL: events.created_at", "Semantic: Memory.created_at", "AuditEvent.timestamp"],
     derivedFrom: ["created_at displayed as Timestamp for operator readability"],
     required: true,
     missingSeverity: "major",
@@ -95,7 +95,7 @@ export const PROVENANCE_BASELINE_MAPPINGS: readonly ProvenanceBaselineMapping[] 
   },
   {
     label: "Tenant scope",
-    dictionaryRefs: ["PostgreSQL: events.group_id", "Neo4j: Memory.group_id", "Retrieval Gateway Contract: MemoryResult.group_id"],
+    dictionaryRefs: ["PostgreSQL: events.group_id", "Semantic: Memory.group_id", "Retrieval Gateway Contract: MemoryResult.group_id"],
     derivedFrom: ["group_id displayed as Tenant scope for operator readability"],
     required: true,
     missingSeverity: "critical",
@@ -103,7 +103,7 @@ export const PROVENANCE_BASELINE_MAPPINGS: readonly ProvenanceBaselineMapping[] 
   },
   {
     label: "Status",
-    dictionaryRefs: ["PostgreSQL: events.status", "PostgreSQL: canonical_proposals.status", "Neo4j: Memory.status"],
+    dictionaryRefs: ["PostgreSQL: events.status", "PostgreSQL: canonical_proposals.status", "Semantic: Memory.status"],
     derivedFrom: [],
     required: true,
     missingSeverity: "major",
@@ -111,7 +111,7 @@ export const PROVENANCE_BASELINE_MAPPINGS: readonly ProvenanceBaselineMapping[] 
   },
   {
     label: "Confidence",
-    dictionaryRefs: ["Neo4j: Memory.confidence", "Neo4j: Memory.score", "Retrieval Gateway Contract: MemoryResult.score"],
+    dictionaryRefs: ["Semantic: Memory.confidence", "Semantic: Memory.score", "Retrieval Gateway Contract: MemoryResult.score"],
     derivedFrom: ["score displayed as Confidence when confidence is unavailable"],
     required: false,
     missingSeverity: "major",
@@ -119,7 +119,7 @@ export const PROVENANCE_BASELINE_MAPPINGS: readonly ProvenanceBaselineMapping[] 
   },
   {
     label: "Evidence",
-    dictionaryRefs: ["AuditEvent.evidence_ids", "Neo4j: Memory.source_event_id", "PostgreSQL: canonical_proposals.trace_ref"],
+    dictionaryRefs: ["AuditEvent.evidence_ids", "Semantic: Memory.source_event_id", "PostgreSQL: canonical_proposals.trace_ref"],
     derivedFrom: ["source_event_id/proposal_id/trace_ref rendered as evidence rows"],
     required: true,
     missingSeverity: "major",

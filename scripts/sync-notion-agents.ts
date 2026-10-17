@@ -5,7 +5,6 @@
  * Updates the Agent Harness Team database in Notion with current status.
  */
 
-import { closeDriver, getDriver } from "./lib/neo4j-stub";
 import { closePool, getPool } from "../src/lib/postgres/connection";
 
 const AGENTS = [
@@ -28,8 +27,6 @@ async function syncNotionAgents() {
   console.log();
   
   const pgPool = getPool();
-  const neo4jDriver = getDriver();
-  const session = neo4jDriver.session();
   
   try {
     // Get agent stats from PostgreSQL
@@ -43,15 +40,16 @@ async function syncNotionAgents() {
     
     const agentStats = new Map(pgResult.rows.map(r => [r.agent_id, r]));
     
-    // Get agent insights from Neo4j
-    console.log('[sync] Fetching agent insights from Neo4j...');
-    const neo4jResult = await session.run(`
-      MATCH (i:Insight)
-      WHERE i.group_id = 'allura-system'
-      RETURN count(i) as insight_count
-    `);
+    // Get promoted insight count from the semantic store (PostgreSQL graph_memories)
+    console.log('[sync] Fetching agent insights from graph_memories...');
+    const insightResult = await pgPool.query(
+      `SELECT count(*)::int AS insight_count
+         FROM graph_memories
+        WHERE group_id = $1 AND deprecated = false AND deleted_at IS NULL`,
+      ['allura-system']
+    );
     
-    const insightCount = neo4jResult.records[0]?.get<number>('insight_count') || 0;
+    const insightCount: number = insightResult.rows[0]?.insight_count ?? 0;
     
     // Display sync data
     console.log('\nAgent Sync Data:');
@@ -89,8 +87,6 @@ async function syncNotionAgents() {
     console.error('[sync] Failed:', error);
     process.exit(1);
   } finally {
-    await session.close();
-    await closeDriver();
     await closePool();
   }
 }

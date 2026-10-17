@@ -401,7 +401,6 @@ describe("promotion adapter — no direct canonical mutation", () => {
       "@/mcp/canonical-tools",
       "@/lib/graph-adapter",
       "@/control-plane/syscalls",
-      "@/lib/neo4j",
     ]
     for (const prefix of forbiddenImports) {
       expect(source).not.toContain(prefix)

@@ -2,24 +2,22 @@
 
 > **AI-Assisted Documentation** — maintained with AI assistance. Defer to code, schemas, and tests when in doubt.
 
-## Status: Production Default (AD-49 Cutover Complete 2026-07-12)
+## Status: Production Default (AD-49)
 
-The semantic/knowledge-graph layer runs on PostgreSQL tables behind the `IGraphAdapter` seam. Neo4j 5.26 is the read-only fallback for one release.
+The semantic/knowledge-graph layer runs on PostgreSQL tables behind the `IGraphAdapter` seam, with RuVector (pgvector, same Postgres instance) providing hybrid search.
 
 ## Key Facts
 
 - **`GRAPH_BACKEND=ruvector`** is the production default
-- **`GRAPH_BACKEND=neo4j`** is the fallback (still works)
 - **`GRAPH_BACKEND=ruvector-crate`** is an opt-in spike (Path B, 13/16 methods)
-- **`GRAPH_DUAL_READ=true`** wraps both backends, compares results, logs divergence
 - **Runtime label:** `ruvector_graph` (upgraded from `pgvector_bridge` per RK-21 Stage 1)
 
 ## Tables (PG, port 5432)
 
 | Table | Purpose |
 |-------|---------|
-| `graph_memories` | Memory nodes (replaces Neo4j Memory label) |
-| `graph_supersedes` | SUPERSEDES relationships (adjacency table) |
+| `graph_memories` | Memory nodes (versioned, `deprecated` flag) |
+| `graph_supersedes` | SUPERSEDES edges (adjacency table) |
 | `graph_structural_nodes` | Agent/Project/Task/Decision nodes (JSONB) |
 | `graph_structural_edges` | Directed relationships between structural nodes |
 
@@ -31,12 +29,11 @@ The semantic/knowledge-graph layer runs on PostgreSQL tables behind the `IGraphA
 
 ## Tests
 
-| Test | Count | Gate |
-|------|-------|------|
-| `adapter-parity.test.ts` | 14/14 | Always |
-| `adapter-live-db-e2e.test.ts` | 14/14 | `RUN_E2E_TESTS=true` |
-| `dual-read.test.ts` | 7/7 | `RUN_E2E_TESTS=true` + `GRAPH_DUAL_READ=true` |
-| `ruvector-crate-adapter.subset.test.ts` | 20/20 | Always |
+| Test | Gate |
+|------|------|
+| `adapter-live-db-e2e.test.ts` | `RUN_E2E_TESTS=true` (live PostgreSQL) |
+| `ruvector-crate-adapter.subset.test.ts` | Always |
+| `ruvector-workspace-authority.test.ts` | Always |
 
 ## Key Docs
 

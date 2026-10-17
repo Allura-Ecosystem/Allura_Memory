@@ -1,10 +1,10 @@
 /**
  * Curator Pipeline E2E Tests
- * Proves the full curator pipeline: memory_add → score → canonical_proposals → approve → Neo4j Insight
+ * Proves the full curator pipeline: memory_add → score → canonical_proposals → approve → the semantic store Insight
  *
  * Prerequisites:
  * - PostgreSQL accessible via DATABASE_URL or POSTGRES_* env vars
- * - Neo4j accessible via NEO4J_URI or NEO4J_* env vars
+ * - PostgreSQL (graph_memories) reachable via POSTGRES_* env vars
  * - Environment variables set (see .env.production.example)
  *
  * Run with: RUN_E2E_TESTS=true bun vitest run src/__tests__/curator-pipeline.e2e.test.ts
@@ -21,9 +21,9 @@ import {
   authenticateServiceTransport,
 } from "../lib/auth/mcp-authenticator";
 
-// Neo4j is sunset — mock the old insert-insight module locally
+// Mock the insert-insight module locally
 const createInsight = vi.fn(async (_payload: Record<string, unknown>) => ({
-  id: `neo4j-stub-${randomUUID().slice(0, 8)}`,
+  id: `stub-${randomUUID().slice(0, 8)}`,
   insight_id: _payload.insight_id as string,
   version: 1,
   status: "active",
@@ -35,7 +35,7 @@ const createInsightVersion = vi.fn(async (
   _confidence: number,
   _groupId: string,
 ) => ({
-  id: `neo4j-stub-${randomUUID().slice(0, 8)}`,
+  id: `stub-${randomUUID().slice(0, 8)}`,
   insight_id: _insightId,
   version: 2,
   status: "active",
@@ -250,7 +250,7 @@ describe.skipIf(!shouldRunE2E)("Curator Pipeline E2E", () => {
   // ── Test 5 ────────────────────────────────────────────────────────────────
 
   it(
-    "full pipeline — memory_add → proposal → createInsight → Neo4j",
+    "full pipeline — memory_add → proposal → createInsight → the semantic store",
     async () => {
       process.env.PROMOTION_MODE = "soc2";
       process.env.AUTO_APPROVAL_THRESHOLD = "0.5";
@@ -269,7 +269,7 @@ describe.skipIf(!shouldRunE2E)("Curator Pipeline E2E", () => {
       const proposal = proposalResult.rows[0];
       expect(proposal.status).toBe("pending");
 
-      // Step 3: Promote proposal to Neo4j as an Insight
+      // Step 3: Promote proposal to the semantic store as an Insight
       const insightId = `ins-pipeline-${RUN_ID}`;
       const record = await createInsight({
         insight_id: insightId,
