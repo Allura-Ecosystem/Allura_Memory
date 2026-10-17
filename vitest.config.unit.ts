@@ -186,6 +186,8 @@ export default defineConfig({
       "src/lib/memory/memory-export-contract.test.ts",
       "src/lib/memory/health-invariant-parity.test.ts",
       "src/lib/memory/semantic-catalog-evidence.test.ts",
+      "src/lib/memory/preservation-routing.test.ts",
+      "src/lib/memory/budget-preservation.test.ts",
       "src/lib/db/__tests__/retirement-inventory.test.ts",
       "src/lib/memory/lifecycle-routing.test.ts",
       "src/lib/memory/approved-projection.test.ts",

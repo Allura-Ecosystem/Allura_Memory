@@ -31,6 +31,7 @@ import {
   memory_delete,
   memory_get,
   memory_list,
+  memory_promote,
   memory_search,
   resetConnections,
 } from "../mcp/canonical-tools";
@@ -109,6 +110,50 @@ describe("Canonical Memory Operations", () => {
 
   afterAll(async () => {
     await closePool();
+  });
+
+  describe("preservation integration", () => {
+    for (const source of ["manual", "conversation"] as const) {
+      itIfE2E(`preserves creation-equivalent ${source} scoring on episodic get/list`, async () => {
+        const created = await memory_add({ group_id: TEST_GROUP_ID, user_id: TEST_USER_ID,
+          content: uniqueContent("Keep technical answers concise and evidence based"), metadata: { source }, threshold: 1 });
+        const request = { group_id: TEST_GROUP_ID, user_id: TEST_USER_ID, scope: wsScope(TEST_GROUP_ID) };
+        const fetched = await memory_get({ ...request, id: created.id });
+        const listed = await memory_list({ ...request, limit: 10000 });
+        expect(fetched.source).toBe("episodic");
+        expect(fetched.provenance).toBe(source);
+        expect(fetched.score).toBe(created.score);
+        expect(listed.memories.find((memory) => memory.id === created.id)?.score).toBe(created.score);
+      });
+    }
+
+    itIfE2E("concurrent promote requests converge on one pending source without human approval in auto mode", async () => {
+      const originalMode = process.env.PROMOTION_MODE;
+      try {
+        process.env.PROMOTION_MODE = "auto";
+        // A low-score source with threshold 1 stays episodic until explicitly queued.
+        const content = uniqueContent("Concurrent preservation source");
+        const created = await memory_add({ group_id: TEST_GROUP_ID, user_id: TEST_USER_ID,
+          content, metadata: { source: "manual" }, threshold: 1 });
+        expect(created.pending_review).toBeUndefined();
+        const request = { id: created.id, group_id: TEST_GROUP_ID, user_id: TEST_USER_ID, scope: wsScope(TEST_GROUP_ID) };
+        const results = await Promise.all([memory_promote(request), memory_promote(request)]);
+        expect(results.every((result) => result.status === "queued")).toBe(true);
+        expect(results[0].proposal_id).toBe(results[1].proposal_id);
+        const pool = getPool();
+        const proposals = await pool.query(
+          `SELECT p.id,p.status,p.approved_memory_id FROM canonical_proposals p JOIN events e ON e.id=p.trace_ref
+           WHERE p.group_id=$1 AND p.workspace_id=$2 AND e.group_id=$1 AND e.workspace_id=$2
+             AND e.metadata->>'memory_id'=$3`,
+          [TEST_GROUP_ID, wsScope(TEST_GROUP_ID).workspace_id, created.id],
+        );
+        expect(proposals.rows).toEqual([{ id: results[0].proposal_id, status: "pending", approved_memory_id: null }]);
+        expect((await pool.query(`SELECT id FROM governance_receipts WHERE group_id=$1 AND workspace_id=$2 AND proposal_id=$3`,
+          [TEST_GROUP_ID, wsScope(TEST_GROUP_ID).workspace_id, results[0].proposal_id])).rows).toEqual([]);
+        expect((await pool.query(`SELECT id FROM graph_memories WHERE group_id=$1 AND workspace_id=$2 AND content=$3`,
+          [TEST_GROUP_ID, wsScope(TEST_GROUP_ID).workspace_id, content])).rows).toEqual([]);
+      } finally { process.env.PROMOTION_MODE = originalMode; }
+    });
   });
 
   describe("1. memory_add", () => {

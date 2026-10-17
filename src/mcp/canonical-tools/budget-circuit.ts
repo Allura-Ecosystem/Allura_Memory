@@ -40,6 +40,7 @@ export function getBudgetEnforcer(): BudgetEnforcer | null {
           },
         },
         enabled: true,
+        timeAccounting: "recorded-duration",
       })
     }
     return budgetEnforcer
@@ -110,10 +111,9 @@ export async function checkBudget(
   try {
     const budgetCheck = checkBudgetBeforeCall(enforcer, sessionId)
     if (!budgetCheck.allowed) {
-      const halt = budgetCheck.haltReason
-      const retryAfter = halt?.type === "time_limit" ? Math.ceil((halt.limitMs - halt.elapsedMs) / 1000) : undefined
       console.warn(`[budget] Budget exceeded for ${groupId}/${agentId} on ${toolName}: ${budgetCheck.reason}`)
-      return { allowed: false, reason: budgetCheck.reason, retryAfter }
+      // Accumulated runtime is not a window that replenishes by waiting.
+      return { allowed: false, reason: budgetCheck.reason }
     }
     return { allowed: true }
   } catch (error) {
@@ -182,9 +182,9 @@ export function resetBudgetState(): void {
 }
 
 /**
- * Admin: Reset halted sessions for a specific group.
- * If groupId is provided, only sessions matching that group prefix are reset.
- * If omitted, ALL halted sessions are reset.
+ * Admin: Reset time-only halted sessions for a specific group.
+ * If groupId is provided, only sessions with that exact structured group are reset.
+ * If omitted, attempt time-only resets across all groups.
  * Returns count of sessions that were un-halted.
  */
 export function resetHaltedGroup(groupId?: string): number {
@@ -195,17 +195,9 @@ export function resetHaltedGroup(groupId?: string): number {
     return enforcer.resetAllHaltedSessions()
   }
 
-  // Halted session keys are formatted as "groupId:agentId:sessionId"
-  const haltedKeys = enforcer.getHaltedSessionKeys()
   let count = 0
-  for (const key of haltedKeys) {
-    if (key.startsWith(`${groupId}:`)) {
-      // Reconstruct a SessionId-like object to reset this specific session
-      const parts = key.split(':')
-      const fakeSessionId = { groupId: parts[0] ?? '', agentId: parts[1] ?? '', sessionId: parts.slice(2).join(':') }
-      enforcer.resetHaltedSession(fakeSessionId)
-      count++
-    }
+  for (const session of enforcer.getMonitor().getSessionIds()) {
+    if (session.groupId === groupId && enforcer.resetHaltedSession(session)) count++
   }
   return count
 }
@@ -216,6 +208,9 @@ export function resetHaltedGroup(groupId?: string): number {
 export function getHaltedSessions(groupId?: string): string[] {
   const enforcer = getBudgetEnforcer()
   if (!enforcer) return []
-  const halted = enforcer.getHaltedSessionKeys()
-  return groupId ? halted.filter((key) => key.startsWith(`${groupId}:`)) : halted
+  const halted = new Set(enforcer.getHaltedSessionKeys())
+  return enforcer.getMonitor().getSessionIds()
+    .filter((session) => groupId === undefined || session.groupId === groupId)
+    .map((session) => `${session.groupId}:${session.agentId}:${session.sessionId}`)
+    .filter((key) => halted.has(key))
 }

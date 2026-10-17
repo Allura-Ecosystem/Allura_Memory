@@ -410,6 +410,19 @@ roots with proposal/receipt/event evidence, namespace drift, and policy registra
 Unavailable evidence fails closed; empty scoped counts are not claims of global
 enforcement. Live database proof remains pending for this code-only candidate.
 
+Preserved runtime repairs: MCP budgets account for recorded operation duration;
+other monitor callers retain wall-clock defaults. Authorized time resets preserve
+non-time counters/history and refuse non-time exhaustion. TTL expiry does not
+renew consumed capacity, and group reset uses exact structured tenant identity.
+PostgreSQL episodic fallback scores in search, and episodic list/get scores, are
+recomputed with creation-equivalent inputs
+using current curator rules and original provenance; they are not newly persisted
+historical scores. Historical validation failures yield zero; operational scorer
+failures propagate. Promotion remains human-only even in auto mode. A known
+unique-source insertion conflict triggers one authenticated workspace/source winner
+read: pending returns the existing queued proposal; a terminal decision raises an
+existing-contract error without creating a replacement proposal or approval.
+
 ### Section 6A.2: Agent Factory CI Requirements
 
 | ID | Requirement | Satisfied by |

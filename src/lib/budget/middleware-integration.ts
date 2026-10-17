@@ -104,6 +104,22 @@ export function checkBudgetBeforeCall(
   // Get remaining budget
   const remaining = enforcer.getRemainingBudget(sessionId);
 
+  // A halt TTL expires only the latch, never consumed capacity. Recheck every
+  // dimension synchronously before admitting a tool, including manual updates.
+  const { consumption, limits } = state.budgetStatus;
+  let exhausted: HaltReason | undefined;
+  if (consumption.tokens >= limits.maxTokens) exhausted = { type: "token_limit", consumed: consumption.tokens, limit: limits.maxTokens };
+  else if (consumption.toolCalls >= limits.maxToolCalls) exhausted = { type: "tool_call_limit", consumed: consumption.toolCalls, limit: limits.maxToolCalls };
+  else if (consumption.timeMs >= limits.maxTimeMs) exhausted = { type: "time_limit", elapsedMs: consumption.timeMs, limitMs: limits.maxTimeMs };
+  else if (consumption.costUsd >= limits.maxCostUsd) exhausted = { type: "cost_limit", consumedUsd: consumption.costUsd, limitUsd: limits.maxCostUsd };
+  else if (Math.max(consumption.steps, state.currentStep) >= limits.maxSteps) exhausted = { type: "kmax_exceeded", currentStep: Math.max(consumption.steps, state.currentStep), maxSteps: limits.maxSteps };
+  if (exhausted) {
+    // haltSession sets its latch before invoking any asynchronous callback.
+    void enforcer.haltSession(sessionId, exhausted);
+    return { allowed: false, remainingTokens: remaining.tokens, exceeded: true,
+      reason: `Budget exhausted: ${exhausted.type}. Consumed capacity is not renewed by waiting.`, haltReason: exhausted };
+  }
+
   // Hard stop if remaining < MIN_TURN_TOKENS
   if (remaining.tokens < MIN_TURN_TOKENS) {
     const haltReason: HaltReason = {
