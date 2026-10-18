@@ -8,7 +8,7 @@
 # Technical Domain
 
 **Purpose**: Tech stack, architecture, development patterns for Allura Memory.
-**Last Updated**: 2026-05-16
+**Backend reconciliation**: 2026-10-18, inspected `src/lib/graph-adapter/factory.ts` and the six canonical documents. Other stack versions below retain their prior verification dates.
 
 ## Quick Reference
 **Update Triggers**: Tech stack changes | New patterns | Architecture decisions
@@ -21,14 +21,14 @@
 | Language | TypeScript | 5.9 strict | Type safety for memory operations |
 | Runtime | Bun | 1.3.11 | Faster than Node for scripts |
 | Database (Events) | PostgreSQL | 16 | Append-only raw traces |
-| Database (Knowledge) | Neo4j | 5.26 + APOC | Versioned knowledge graph |
-| Database (Vectors) | RuVector | latest | Vector embeddings |
+| Database (Knowledge) | PostgreSQL graph tables | Same durable database | `graph_memories` versions and `graph_supersedes` lineage |
+| Retrieval | PostgreSQL pgvector / RuVector adapter | Verify deployed extension separately | Vector embeddings and hybrid retrieval in PostgreSQL |
 | Styling | Tailwind | v4 | Utility-first CSS |
 | UI Components | shadcn/ui | latest | Accessible, composable |
 | State | Zustand | latest | Client state management |
 | Validation | Zod | latest | Runtime type validation |
 | Agent Framework | OpenCode | 1.4.3 | AI agent runtime |
-| Graph Visualization | react-force-graph-2d | latest | MIT, canvas-based, Neo4j graph view — dynamic import `{ssr:false}` |
+| Graph Visualization | react-force-graph-2d | latest | MIT, canvas-based, PostgreSQL graph view — dynamic import `{ssr:false}` |
 | Font | IBM Plex Sans (@fontsource) | latest | Canonical brand font — replaces Outfit/Inter |
 
 ## Architecture: 5-Layer Agent-OS
@@ -40,7 +40,7 @@
 ├─────────────────────────────────────────────┤
 │ Layer 3: Agent Runtime (OpenCode)            │
 ├─────────────────────────────────────────────┤
-│ Layer 2: PostgreSQL + Neo4j + RuVector       │
+│ Layer 2: PostgreSQL events, graph, vectors   │
 ├─────────────────────────────────────────────┤
 │ Layer 1: RuVix Control Plane (Proof-gated mutation)│
 └─────────────────────────────────────────────┘
@@ -54,8 +54,8 @@ src/
 ├── lib/
 │   ├── memory/    # Embedding providers, config
 │   ├── postgres/  # PostgreSQL connection
-│   ├── neo4j/     # Neo4j connection
-│   ├── ruvector/  # Vector DB connection
+│   ├── graph-adapter/ # PostgreSQL default; native crate opt-in
+│   ├── ruvector/  # PostgreSQL retrieval adapter
 │   └── dedup/     # Duplicate detection
 ├── mcp/           # MCP tools and server
 ├── control plane/        # RuVix control plane (proof system)
@@ -124,7 +124,8 @@ export function InsightCard({ insight, actions, compact = false, className }: In
 - API routes MUST require auth/role checks via `requireRole`; return 401/403 helpers.
 - Every DB and graph operation MUST validate and filter by `group_id` (`^allura-[a-z0-9-]+$`).
 - PostgreSQL events are append-only; use parameterized queries and never string interpolation.
-- Neo4j knowledge changes MUST be approval-gated and versioned with `SUPERSEDES`.
+- Semantic changes MUST be human-approval-gated, create new `graph_memories` rows, and preserve immutable `graph_supersedes` lineage.
+- `GRAPH_BACKEND=ruvector` is the PostgreSQL default; `ruvector-crate` is opt-in. The retired Neo4j selector is rejected by the factory.
 - Do not log or document secrets, credentials, clear PII, or raw tokens.
 - AI/security-boundary changes require human review; AI must not decide auth, redaction, or breaking schemas alone.
 
