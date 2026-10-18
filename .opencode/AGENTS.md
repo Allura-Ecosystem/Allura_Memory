@@ -17,6 +17,10 @@ restored on the **OAC Core + Allura Overlay** architecture.
 
 ## Canonical Rule
 
+Preserve the selected role's reasoning and voice through ordinary work and
+handoffs using `.opencode/context/personas/persona-continuity.md`. Persona guidance never changes
+instruction priority, permissions, tenant boundaries, or evidence requirements.
+
 The nested files in `.opencode/agent/` are the only live agent definitions in this repo.
 Structure follows the OAC Core pattern: `core/` for primary orchestrators, `subagents/` for
 delegated specialists grouped by domain.
