@@ -2,13 +2,21 @@
 
 # Living Notes — allura Memory
 
-> Active issues, technical debt, open questions, and current sprint state.  
-> **Update:** When status changes or at session start.  
-> **Archive:** Move resolved items to bottom with resolution date.
+> This file preserves dated 2026-04/05 observations, not current sprint or deployment status.
+> Backend guidance reconciled 2026-10-18 against `src/lib/graph-adapter/factory.ts`.
+> Use the live work board and six canonical documents for current work.
+
+## Current backend boundary — 2026-10-18
+
+PostgreSQL is the durable store for events, semantic records and lineage.
+The default `ruvector` graph adapter uses `graph_memories` and `graph_supersedes`;
+`ruvector-crate` is opt-in. The retired Neo4j selector is rejected.
+Human approval is required in every promotion mode. Use governed Brain tools for
+memory access; the old cleanup commands below are withdrawn, not a current workaround.
 
 ---
 
-## Current Sprint State (as of 2026-05-05)
+## Historical Sprint Snapshot — 2026-05-05
 
 **Epic:** 1 — Persistent Knowledge Capture  
 **Active Story:** 1.2 — TraceMiddleware Integration `[IN PROGRESS]`  
@@ -20,13 +28,13 @@
 |-------|-------------|-------------|-------------|-----------|
 | **1.1** — RuVix Security Hardening | Proof-gated mutation layer; 28/28 tests | F12 · F13 | B6 · B28 | MEM-UC7 |
 | **1.2** — TraceMiddleware Integration | Full HTTP request tracing for agent operations | F1 · F2 · F3 · F26 · F27 · F28 | B1 · B23 | MEM-UC1 · MEM-UC2 |
-| **Issue #25** — Real-data Dashboard | Live Neo4j wired, mock removed | F10 · F11 · F35 · F36 | B5 · B27 | MEM-UC6 · MEM-UC10 |
+| **Issue #25** — Real-data Dashboard | Historical (2026-04-26): live Neo4j wired, mock removed | F10 · F11 · F35 · F36 | B5 · B27 | MEM-UC6 · MEM-UC10 |
 
 **Canonical source:** [`docs/allura/REQUIREMENTS-MATRIX.md`](../../../../docs/allura/REQUIREMENTS-MATRIX.md#governed-memory-pipeline-–-business-→-functional-traceability) — B1–B29, F1–F40 with full Satisfied-by evidence.
 
 **Issue #25 — Real-Data Dashboard (COMPLETED 2026-04-26 06:02)**
 - Branch: `feature/real-data-dashboard-25`
-- `/api/memory/graph` wired to live Neo4j data
+- Historical (2026-04-26): `/api/memory/graph` wired to live Neo4j data
 - Mock data removed from all runtime paths
 - AI-GUIDELINES.md compliance gate cleared
 - Commits: `93e25582`, `db80a5d4`, `abb5464e`, `c365cf66`, `c91a045a`
@@ -38,15 +46,15 @@
 
 ---
 
-## Technical Debt
+## Historical Technical Debt — 2026-05-05
 
 | Item | Impact | Priority | Status |
 |------|--------|----------|--------|
 | `memory()` wrapper PENDING | Primary write-back blocker; agents can't log to Brain mid-task | High | Acknowledged |
-| Neo4j memory graph dirty data | `search_memories` / `read_graph` blocked by malformed entities | High | Known |
+| Historical Neo4j memory graph dirty data | `search_memories` / `read_graph` blocked by malformed entities | High | Known |
 | RuVector stubs | `ruvector_hybrid_search()` and other learning/agent functions are stubs; don't call them | Med | Deferred |
 
-### Technical Debt Details
+### Historical Technical Debt — 2026-05-05 Details
 
 **`memory()` wrapper PENDING**  
 *Priority:* High  
@@ -55,13 +63,13 @@
 *Proposed Solution:* Implement memory() wrapper in control plane layer, expose via MCP  
 *Status:* Acknowledged — Story 1.2 dependency
 
-**Neo4j Memory Graph — Dirty Entities**  
+**Historical: Neo4j Memory Graph — Dirty Entities (2026-05)**
 *Priority:* High  
 *Impact:* `mcp__MCP_DOCKER__read_graph` and `mcp__MCP_DOCKER__search_memories` both fail with Pydantic validation errors  
 *Root Cause:* Entities `Spec-Driven System` and `Prompt System` have spaces in their `type` field (violates `^[A-Za-z_][A-Za-z0-9_]*$` pattern) and null `observations`  
-*Workaround:* Use `mcp__MCP_DOCKER__execute_sql` for Postgres reads; avoid neo4j-memory graph search until cleaned  
-*Fix Plan:* Cypher query to delete or fix the malformed entities  
-*Status:* Known — blocking session memory hydration
+*Withdrawn workaround:* The old direct-SQL/graph-search workaround is historical. Use the authenticated governed Brain interface; this record grants no database access.
+*Withdrawn fix plan:* The old destructive graph-cleanup proposal is not current work or authorization.
+*Historical status:* Reported as blocking in 2026-05; not evidence of a current hydration failure.
 
 **RuVector Stubs**  
 *Priority:* Med  
@@ -72,21 +80,21 @@
 
 ---
 
-## Open Questions
+## Historical Open Questions — 2026-05-05
 
 | Question | Stakeholders | Status | Next Action |
 |----------|--------------|--------|-------------|
 | When does `memory()` wrapper land? | Brooks, Woz | Open | Scope into Story 1.2 or create Story 1.3 |
-| Neo4j graph cleanup — safe to delete dirty entities? | Brooks | Open | Run read-only Cypher to audit scope first |
+| Historical Neo4j graph-cleanup question | Brooks | Superseded by retirement | No current cleanup action authorized by this note |
 | RuVector stubs — promote to real or remove? | Brooks, Bellard | Deferred | Post-Epic-1 decision |
 
 ---
 
-## Known Issues
+## Historical Known Issues — 2026-05-05
 
 | Issue | Severity | Workaround | Status |
 |-------|----------|------------|--------|
-| Neo4j memory search blocked | High | Use Postgres SQL via execute_sql | Known |
+| Historical Neo4j memory search failure | High in 2026-05 | Old workaround withdrawn; use governed Brain tools | Superseded by retirement |
 | `test:mcp` needs live dev server | Med | Run `bun run dev` first; `USE_REAL_MCP_DOCKER=true` for full validation | Known (by design) |
 | ADAS test runs not completing | Med | See V1-BLOCKERS-AND-FIXES.md | In Progress |
 
@@ -94,12 +102,12 @@
 
 ## Patterns Worth Preserving
 
-- **`group_id` on every DB operation** — enforced at PostgreSQL CHECK constraint, not application layer. This is the invariant that keeps multi-tenancy safe.
+- **`group_id` on every DB operation** — CHECK constraints validate namespace format. Authenticated scope checks on every read/write and applicable workspace RLS enforce tenant access; format validation alone grants no authority.
 - **Append-only traces** — never UPDATE/DELETE on `events` table. Everything is recoverable.
-- **Curator approve before Neo4j write** — `bun run curator:approve` is the only sanctioned promotion path in SOC2 mode.
+- **Human approval before semantic writes** — every mode requires the governed curator approval path; PostgreSQL versions use `graph_memories` and `graph_supersedes`.
 - **`retrieveMemories()` for hybrid search** — `src/lib/ruvector/bridge.ts` two-pass RRF fusion (vector ANN + BM25). This works; the extension stubs do not.
 
-## Gotchas for Maintainers
+## Historical Maintainer Notes — 2026-05
 
 - `test:mcp` requires a running Next.js dev server (`bun run dev`) — absence gives a precondition warning, not a protocol failure
 - `USE_REAL_MCP_DOCKER=true` is required to test actual Docker MCP integration (off by default)
@@ -108,14 +116,14 @@
 
 ---
 
-## Active Projects
+## Historical Project Snapshot — 2026-05-05
 
 | Project | Goal | Owner | Status |
 |---------|------|-------|--------|
 | Story 1.2 TraceMiddleware | Full HTTP request tracing for agent operations | Woz | In Progress |
-| Graph View UI | Implement `/dashboard/graph` with react-force-graph-2d + live Neo4j | Woz | Queued — PRD sent to Team Durham |
+| Graph View UI | Historical (2026-05): proposed `/dashboard/graph` with react-force-graph-2d + live Neo4j | Woz | Queued — PRD sent to Team Durham |
 | Design system — Penpot delivery | Token file, component library, 5 screen specs from design team | Design | Waiting on design |
-| Neo4j graph cleanup | Fix dirty entities blocking memory search | Brooks | Queued |
+| Historical Neo4j graph cleanup | Past dirty-entity work item | Brooks | Superseded by retirement; not queued current work |
 | Brand docs alignment | Sync all planning/context docs to finalized brand | Brooks | ✅ Done 2026-04-26 |
 
 ---

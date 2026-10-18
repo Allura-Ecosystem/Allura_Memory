@@ -4,10 +4,16 @@
 > **AI-Assisted Documentation**
 > Portions of this document were drafted with the assistance of an AI language model.
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
-> When in doubt, defer to the source code, schemas, and team consensus.
+> Code and schemas evidence implementation; approved product decisions establish intent. Record disagreement for the owning decision rather than silently changing either.
 
 > **Visual identity** (colors, typography, shadows, spacing, iconography) lives in [BLUEPRINT.md](./BLUEPRINT.md#0-brand-identity). The Memory Command Center must use real Allura brand assets and tokens only; generated logos and unrelated project tokens are forbidden.
 
+
+## Review status — 2026-10-18
+
+This correction specifies one bounded journey and distinguishes intended → specified → implemented → verified → released claims. Sabir approved the DOC-06 stale-review rejection and DOC-07 confirmed remote sync/immutable receipt decisions in the current session on 2026-10-18. The intended contracts below are approved; missing API, schema, worker and acceptance evidence remains explicit. This edit does not claim product implementation, select a visual reference, or mark historical routes released.
+
+**Publication authority (DOC-01):** GitHub’s six versioned engineering specifications govern engineering. Notion holds private planning and approvals and links to the specifications; it is not a competing engineering specification. Sabir approved this direction on 2026-10-18. Use the bounded journey and linked acceptance matrix; other unresolved decisions remain in Risks & Decisions.
 ---
 
 ## Table of Contents
@@ -53,7 +59,7 @@ Agents and Team RAM lanes must read before work, write receipts after substantiv
 4. **Receipt write-back** — record `receipt_id`, actor, source evidence, validation, and audit event.
 5. **Done gate** — completion is evidence-backed only; Brain receipts support audit but do not prove Done by themselves.
 
-Current runtime evidence must be displayed as **pgvector bridge** until readiness checks prove full RuVector (`vector` extension 0.8.2 is present; `ruvector_function_count` was 0 in TALON evidence; memory count was around 3392). Operator surfaces may show readiness fields, but may not upgrade the label without approval.
+Display runtime labels from a dated health receipt. The TALON `pgvector bridge` observation (2026-06-02) is historical, while the source default graph adapter is `ruvector`. Neither proves native RuVector readiness or current production health. Unknown health remains unknown until checked.
 
 ### Dashboard v2 condensed UX contract
 
@@ -84,7 +90,7 @@ interface DashboardGovernanceActions {
 }
 ```
 
-`requestChanges` is a UX label in Phase 1. It maps to `POST /api/curator/reject` with a rationale prefix of `Needs evidence: `. Phase 2 may add a real `changes_requested` state.
+`requestChanges` in the earlier interface sketch is a historical UI idea, not the current decision mapping. The current dashboard submits `decision: request_evidence` to `POST /api/curator/approve`; that path creates an evidence request and leaves the proposal pending. Terminal `reject` is a separate decision. The old rationale-prefix/reject mapping must not be implemented as a substitute for requesting evidence. Sources: `src/components/curator/types.ts`, `src/components/curator/curator-dashboard.tsx`, and `src/app/api/curator/approve/route.ts`.
 
 Truthfulness rules: no fabricated live data, no “healthy” without verification, no “done” without evidence, no “live” without active polling/streaming and visible freshness, unknown is a first-class state, and Brain receipts are audit traces rather than proof of completion.
 
@@ -147,7 +153,7 @@ The Memory Command Center is the approved operator surface for Allura memory gov
 | Trace logs | `/dashboard/audit` | PostgreSQL append-only events through controlled API |
 | Provenance | `/dashboard/audit` and evidence drawer | Trace → proposal → approval → graph evidence chain |
 | Extracted | `/dashboard/memories` | Allura extraction/memory APIs |
-| Approvals | `/dashboard/curator` | Curator proposals + Native Allura Kanban work state; Notion/Linear/GitHub Projects optional adapters |
+| Approvals | `/dashboard/curator` | Curator proposals are governed decision data. Work-board authority and adapter direction remain unresolved under DOC-09; the prior Native Kanban/default-adapter plan is not current implementation authority |
 | Governance | `/dashboard/governance` | RuVix control plane rules, policy mode, thresholds, isolation, drift |
 | Settings | `/dashboard/settings` | Resource manifest + dashboard configuration |
 | Search | Memory search surface | Allura retrieval layer |
@@ -181,66 +187,70 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 
 ## Functional Requirements
 
+`DS-Fn` identifies Design-owned requirements. Blueprint uses `BP-Fn`; the Requirements Matrix records explicit mappings. Local IDs do not inherit meaning from another document merely because their numbers match. Historical implementation/path claims below require endpoint-specific validation; the DOC-J journey is the current bounded acceptance scope.
+
 ### Dashboard Requirements
 
 | # | Requirement | Satisfied by |
 |---|-------------|-------------|
-| F17 | Curator Dashboard — view pending proposals, approve/reject with rationale | `/dashboard/curator` · `GET /api/curator/proposals` · `POST /api/curator/approve` · `POST /api/curator/reject` |
-| F18 | Audit Log — view all memory events with filtering and CSV export | `/dashboard/audit` · `GET /api/audit/events` |
-| F19 | System Health Dashboard — view service status, metrics, and degradation warnings | `/dashboard` (overview) · `GET /api/health?detailed=true` · `GET /api/health/metrics` |
-| F41 | Memory Command Center route shell — `/dashboard`, `/dashboard/memories`, `/dashboard/curator`, `/dashboard/governance`, `/dashboard/graph`, `/dashboard/audit`, `/dashboard/settings` | Governed operator surface over MCP/API contracts; launch only after gates pass |
-| F42 | `/dashboard/memories` preserves useful reference memory capabilities | Memories, insights, traces, provenance, extracted facts, and approvals mapped into governed dashboard routes |
-| F43 | `/work-board` uses Native Allura Kanban as the default planning source of truth | Native board model; Notion, Linear, and GitHub Projects are optional sync adapters |
-| F44 | `/resources` reads resource inventory from manifest endpoint or `RESOURCE-MANIFEST.md` | Resource Manifest adapter |
-| F45 | `/agents` distinguishes TALON/IRIS from Team RAM/Durham/external agents | Agent adapter + canonical agent taxonomy |
-| F46 | `/telemetry` reports real/unknown metrics honestly | Telemetry adapter with degraded/unknown state |
-| F47 | Every route displays source-of-truth and degraded behavior | Adapter registry UI contract |
-| F48 | `3100` cutover has parity, smoke, auth, and rollback gates | Cutover validation checklist |
-| F49 | Governed RunRecord captures tenant, owner, reviewer, goal, status, pinned definition revision, journal path, and timestamps | Partial implementation · AD-35 · `RunRecord` in `DATA-DICTIONARY.md` |
-| F50 | Run policy declares allowed actions, approval breakpoints, measured quality gates, bounded attempts, and required evidence | Partial implementation · Epic 14 |
-| F51 | Run journal records plan, steps, checks, approvals, failures, continuation state, and final evidence | Partial implementation · Story 12.2 correction |
-| F52 | Doctor checks report stale, failed, incomplete, definition-drifted, unrecoverable, or approval-blocked runs before Done | Planned · Epic 14.3 · `/dashboard/runs` |
-| F53 | PostgreSQL-backed projects and work items link operational work to runs, handoffs, evidence, and memory receipts | Planned · Epic 15 |
-| F54 | Operator workspace uses mission-first navigation, Command Center, central work surface, and right evidence inspector | Planned · Epic 16 |
-| F55 | One governed desktop shell provides secure connections, runtime supervision, deep links, updates, and reconnect behavior | Planned · Epic 17 |
+| DS-F17 | Curator Dashboard — view pending proposals, approve/reject with rationale | `/dashboard/curator` · `GET /api/curator/proposals` · `POST /api/curator/approve` · `POST /api/curator/reject` |
+| DS-F18 | Audit Log — view all memory events with filtering and CSV export | `/dashboard/audit` · `GET /api/audit/events` |
+| DS-F19 | System Health Dashboard — view service status, metrics, and degradation warnings | `/dashboard` (overview) · `GET /api/health?detailed=true` · `GET /api/health/metrics` |
+| DS-F41 | Memory Command Center route shell — `/dashboard`, `/dashboard/memories`, `/dashboard/curator`, `/dashboard/governance`, `/dashboard/graph`, `/dashboard/audit`, `/dashboard/settings` | Governed operator surface over MCP/API contracts; launch only after gates pass |
+| DS-F42 | `/dashboard/memories` preserves useful reference memory capabilities | Memories, insights, traces, provenance, extracted facts, and approvals mapped into governed dashboard routes |
+| DS-F43 | Historical plan: `/work-board` uses Native Allura Kanban as the default planning source, conflicting with the Notion work-board rule | DOC-09 requires a separate work-board authority decision. Neither plan becomes authoritative through DOC-01, which governs engineering documents |
+| DS-F44 | `/resources` reads resource inventory from manifest endpoint or `RESOURCE-MANIFEST.md` | Resource Manifest adapter |
+| DS-F45 | `/agents` distinguishes TALON/IRIS from Team RAM/Durham/external agents | Agent adapter + canonical agent taxonomy |
+| DS-F46 | `/telemetry` reports real/unknown metrics honestly | Telemetry adapter with degraded/unknown state |
+| DS-F47 | Every route displays source-of-truth and degraded behavior | Adapter registry UI contract |
+| DS-F48 | `3100` cutover has parity, smoke, auth, and rollback gates | Cutover validation checklist |
+| DS-F49 | Governed RunRecord captures tenant, owner, reviewer, goal, status, pinned definition revision, journal path, and timestamps | Partial implementation · AD-35 · `RunRecord` in `DATA-DICTIONARY.md` |
+| DS-F50 | Run policy declares allowed actions, approval breakpoints, measured quality gates, bounded attempts, and required evidence | Partial implementation · Epic 14 |
+| DS-F51 | Run journal records plan, steps, checks, approvals, failures, continuation state, and final evidence | Partial implementation · Story 12.2 correction |
+| DS-F52 | Doctor checks report stale, failed, incomplete, definition-drifted, unrecoverable, or approval-blocked runs before Done | Planned · Epic 14.3 · `/dashboard/runs` |
+| DS-F53 | PostgreSQL-backed projects and work items link operational work to runs, handoffs, evidence, and memory receipts | Planned · Epic 15 |
+| DS-F54 | Operator workspace uses mission-first navigation, Command Center, central work surface, and right evidence inspector | Planned · Epic 16 |
+| DS-F55 | One governed desktop shell provides secure connections, runtime supervision, deep links, updates, and reconnect behavior | Planned · Epic 17 |
 
 ### Curator Requirements
 
 | # | Requirement | Satisfied by |
 |---|-------------|-------------|
-| F10 | `POST /api/curator/score` — score proposal, return confidence + reasoning + tier | `src/lib/curator/score.ts` |
-| F11 | `POST /api/curator/approve` — approve proposal, promote to `graph_memories` | `src/app/api/curator/approve/route.ts` |
-| F12 | `POST /api/curator/reject` — reject proposal, archive with rationale | `src/app/api/curator/reject/route.ts` |
-| F13 | `GET /api/curator/proposals` — list pending proposals (emerging + adoption tiers) | `src/app/api/curator/proposals/route.ts` |
-| F14 | Curator dashboard shows three tabs: Traces, Approved, Pending | `/dashboard/curator` |
-| F15 | Pending tab sorts by confidence (descending); shows confidence badge + reasoning + action buttons | `ConfidenceBadge` component |
-| F16 | Approved tab shows all approved knowledge (human + auto); sortable by date/confidence | `/dashboard/curator` approved tab |
-| F17 | Tab 1 (Traces) restricted to authenticated users with `admin` role | Clerk RBAC |
+| DS-F10 | `POST /api/curator/score` — score proposal, return confidence + reasoning + tier | `src/lib/curator/score.ts` |
+| DS-F11 | `POST /api/curator/approve` — approve proposal, promote to `graph_memories` | `src/app/api/curator/approve/route.ts` |
+| DS-F12 | Current compatibility route `POST /api/curator/reject` delegates to the governed decision route with `decision: reject`; it records the rejected state, rationale, event and immutable receipt. The earlier archive/7-day undo expectation is an unimplemented historical requirement, not current behavior | `src/app/api/curator/reject/route.ts`; `src/app/api/curator/approve/route.ts` |
+| DS-F13 | Current `GET /api/curator/proposals` filters by `pending`, `approved`, `rejected` or `all`, without a tier filter. Restriction to emerging/adoption tiers remains an unimplemented historical requirement requiring a bounded product decision before reuse | `src/app/api/curator/proposals/route.ts` |
+| DS-F14 | Curator dashboard shows three tabs: Traces, Approved, Pending | `/dashboard/curator` |
+| DS-F15 | Pending tab sorts by confidence (descending); shows confidence badge + reasoning + action buttons | `ConfidenceBadge` component |
+| DS-F16 | Approved tab shows current human-approved knowledge; any historical automated decision is labeled historical and cannot authorize new promotion; sortable by date/confidence | `/dashboard/curator` approved tab |
+| DS-F56 | Tab 1 (Traces) restricted to authenticated users with `admin` role | Clerk RBAC |
 
 ### Audit & Health Requirements
 
 | # | Requirement | Satisfied by |
 |---|-------------|-------------|
-| F18 | Audit log endpoint returns all events with filtering and pagination; CSV export for compliance | `GET /api/audit/events` |
-| F19 | Dashboard integrates Clerk for authentication and RBAC (curator, admin, viewer roles) | `src/lib/auth/clerk.ts` |
-| F26 | Agent task lifecycle events persisted as append-only traces | `src/lib/postgres/queries/insert-trace.ts` |
-| F27 | Raw trace storage is append-only; no UPDATE/DELETE on events table | Schema enforcement |
-| F28 | Traces preserve provenance linking downstream insights to source evidence | `trace_ref` field |
-| F32 | Every approval, rejection, or policy decision recorded as audit event with actor and timestamp | `proposal_approved` / `proposal_rejected` event types |
+| DS-F58 | Audit log endpoint returns all events with filtering and pagination; CSV export for compliance | `GET /api/audit/events` |
+| DS-F57 | Dashboard integrates Clerk for authentication and RBAC (curator, admin, viewer roles) | `src/lib/auth/clerk.ts` |
+| DS-F26 | Agent task lifecycle events persisted as append-only traces | `src/lib/postgres/queries/insert-trace.ts` |
+| DS-F27 | Raw trace storage is append-only; no UPDATE/DELETE on events table | Schema enforcement |
+| DS-F28 | Traces preserve provenance linking downstream insights to source evidence | `trace_ref` field |
+| DS-F32 | Every approval, rejection, or policy decision recorded as audit event with actor and timestamp | `proposal_approved` / `proposal_rejected` event types |
 
 ### Governance Requirements
 
 | # | Requirement | Satisfied by |
 |---|-------------|-------------|
-| F6 | `PROMOTION_MODE=soc2` — score ≥ threshold queues for human approval | Environment variable |
-| F7 | `PROMOTION_MODE=auto` — score ≥ threshold promotes immediately | Environment variable |
-| F34 | Changed insights create new nodes linked with `SUPERSEDES`/`DEPRECATED`/`REVERTED` | `createInsightVersion()` · `deprecateInsight()` |
-| F37 | All knowledge-system reads/writes pass through controlled endpoints | RBAC middleware |
-| F38 | Agent permissions enforced and all access audited | Auth middleware + event logging |
+| DS-F6 | `PROMOTION_MODE=soc2` — score ≥ threshold queues for human approval | Environment variable |
+| DS-F7 | Both `soc2` and legacy `auto` settings require human promotion approval | `src/lib/curator/auto-promote.ts` |
+| DS-F34 | Changed insights create new nodes linked with `SUPERSEDES`/`DEPRECATED`/`REVERTED` | `createInsightVersion()` · `deprecateInsight()` |
+| DS-F37 | All knowledge-system reads/writes pass through controlled endpoints | RBAC middleware |
+| DS-F38 | Agent permissions enforced and all access audited | Auth middleware + event logging |
 
 ---
 
 ## API Reference
+
+The approval endpoint below was inspected for this bounded repair. Other examples retain prior design contracts and require endpoint-specific verification before use as current response evidence; example counts and health values are not live observations.
 
 ### Health & Metrics
 
@@ -282,7 +292,7 @@ System health check with optional component-level detail.
 }
 ```
 
-**Degraded mode:** When graph_memories is unavailable, `status` returns `"degraded"` and `capabilities_lost` lists lost semantic capabilities. HTTP status remains `200` for degraded state; `503` for unhealthy (PostgreSQL down).
+**Prior health endpoint contract, verification required:** a degraded health response may retain HTTP `200` while listing lost capabilities; unhealthy durable storage may use `503`. These health semantics do not prescribe approval errors or every retrieval response. PostgreSQL hosts both evidence and semantic tables in the default topology.
 
 ---
 
@@ -439,44 +449,46 @@ List proposed insights awaiting review.
 
 #### `POST /api/curator/approve`
 
-Approve a proposed insight. Promotes to `graph_memories` as immutable knowledge row.
+Authenticated decision boundary. The route accepts `approve`, `reject` or `request_evidence`; approval delegates to the atomic service. Principal and workspace come from the web session; the supplied group is checked against that authority. A client-supplied `curator_id` cannot grant reviewer identity.
 
-**Request body:**
+**Approved intended request body (DOC-06; version precondition not yet implemented):**
 
 ```json
 {
   "proposal_id": "uuid",
   "group_id": "allura-system",
+  "expected_proposal_version": "3",
   "decision": "approve",
-  "curator_id": "human_reviewer",
-  "rationale": "Validated against runtime evidence."
+  "rationale": "Validated against source evidence.",
+  "evidence_request_ids": []
 }
 ```
 
-**Response** (`200 OK`):
+For approval, send a stable `Idempotency-Key` header. The current implementation otherwise derives a key from proposal ID, action and authenticated user. Same scope/key/proposal replays the original decision receipt; changed rationale or evidence does not amend it.
 
-```json
-{
-  "success": true,
-  "memory_id": "uuid",
-  "decided_at": "2026-04-28T12:00:00Z",
-  "notion_sync": "pending"
-}
-```
+**Approved revision rule (DOC-06):** a new approval carries `expected_proposal_version`, the positive decimal string for the exact proposal version shown during review. After authenticating and resolving tenant/workspace, the service locks the scoped proposal, validates successful replay first, and for a new decision compares the supplied version with the locked version before durable approval writes. Missing/malformed preconditions fail with `400`; a version mismatch fails with `409` (`PROPOSAL_VERSION_CONFLICT`) and no new semantic/proposal/outbox/receipt/replay writes. The UI reloads the proposal and requires review and explicit approval of that new version; it must not silently replace the expected version and retry. Two reviewers of the same version cannot both create a new approval. A successful same-key replay returns the original receipt, even though the approval transition has since advanced the proposal version; it does not authorize new content.
 
-**Error responses:**
+**Decision evidence:** retain the accepted pre-transition version as `reviewed_proposal_version` in the immutable decision evidence, distinct from current `proposal_version`, which records the post-transition version. The intended field is not present in the inspected receipt schema. The reviewed-version precondition and evidence must be implemented together.
 
-| Status | Condition |
-|--------|-----------|
-| `404` | Proposal not found |
-| `409` | Proposal already decided or insight already promoted |
-| `503` | Graph backend unavailable — proposal queued but not promoted |
+**Current implementation gap:** the route/service accepts no expected review version and locks whichever revision exists at submission. Its internal version predicate protects the already locked transition, not the human’s earlier review. The current API may ignore the new request field; callers must not treat sending it as enforcement. DOC-06 remains blocked for implementation acceptance until stale-review and successful-replay tests pass.
+
+**Current response:** `200 OK` returns the persisted `GovernanceReceipt` directly, including receipt ID, tenant/workspace, proposal/post-transition version, actor, policy, evidence identity, memory identity and decision-time outbox state. Data Dictionary owns the complete receipt shape and the intended reviewed-version extension. The original approval receipt is immutable and remains `queued` after later delivery. A separate delivery observation must include read-back matching the authorized destination, remote page/record, and intended source revision/content before showing Notion `synced` (DOC-07); neither local outbox `delivered` nor a successful approval response proves it.
+
+| Status | Implemented condition |
+|---|---|
+| `400` | Invalid request/evidence, or idempotency key already bound to a different proposal |
+| `401` / `403` | Missing authentication, insufficient role/scope, tenant mismatch, unresolved workspace, or requester self-approval |
+| `404` | Proposal not found in resolved scope |
+| `409` | Approval of an already-decided proposal |
+| `500` | Unexpected decision failure; approval transaction rolls back |
+
+**Evidence inspected 2026-10-18:** `src/app/api/curator/approve/route.ts`, `src/lib/memory/approve-proposal.ts`. Error mapping for rejection/evidence requests is separate in that route; approval replay semantics must not be assumed for other decisions.
 
 ---
 
 #### `POST /api/curator/reject`
 
-Reject a proposed insight. Archives with rationale.
+Compatibility shim: delegates to `POST /api/curator/approve` with `decision: reject`, preserving the authenticated request headers. The scoped decision records the rejected state, rationale, event and immutable receipt. It does not implement a 7-day archive/undo mechanism. Reviewer identity comes from authentication; a client `curator_id` cannot assign authority. Requesting more evidence uses the separate `request_evidence` decision and does not reject the proposal.
 
 **Request body:**
 
@@ -484,7 +496,6 @@ Reject a proposed insight. Archives with rationale.
 {
   "proposal_id": "uuid",
   "group_id": "allura-system",
-  "curator_id": "human_reviewer",
   "rationale": "Duplicate of existing knowledge."
 }
 ```
@@ -599,8 +610,8 @@ The controlled retrieval layer — the sole read path for agents (AD-19). Agents
 
 | Mode | Description | Sources |
 |------|-------------|---------|
-| `semantic` | Content-based search across approved insights | PostgreSQL (graph_memories) `searchInsights()` |
-| `structured` | Filter-based query (status, confidence, date range) | PostgreSQL (graph_memories) `listInsights()` |
+| `semantic` | Content-based search across approved insights | PostgreSQL semantic tables `searchInsights()` |
+| `structured` | Filter-based query (status, confidence, date range) | PostgreSQL semantic tables `listInsights()` |
 | `hybrid` | Dual-context: project + global insights merged by confidence | `getDualContextSemanticMemory()` |
 | `traces` | Raw trace retrieval (policy-gated, not default) | PostgreSQL `queryTraces()` |
 
@@ -619,11 +630,11 @@ The following event types are recorded in the PostgreSQL `events` table (append-
 | `memory_get` | Agent retrieves single memory | Memory engine |
 | `memory_delete` | Soft-delete with 30-day recovery | Memory engine |
 | `memory_restore` | Restore from soft-delete within recovery window | Memory engine |
-| `memory_promote` | Request promotion to PostgreSQL (graph_memories) (creates proposal) | Curator |
+| `memory_promote` | Request promotion to PostgreSQL semantic tables (creates proposal) | Curator |
 | `proposal_created` | Curator creates canonical proposal | Curator scorer |
 | `proposal_approved` | Human approves proposal | Curator approve route |
 | `proposal_rejected` | Human rejects proposal | Curator reject route |
-| `memory_promoted` | Memory written to PostgreSQL (graph_memories) (semantic layer) | Promotion worker |
+| `memory_promoted` | Historical promotion event vocabulary; current approval result is GovernanceReceipt | Compatibility producer mapping requires verification |
 | `memory_deprecated` | Old version marked deprecated via SUPERSEDES | Version workflow |
 | `threat_advisory_received` | Allowlisted advisory or approved internal evidence accepted as provisional | Allura downstream threat intake |
 | `threat_evidence_rejected` | Evidence denied for trust, freshness, schema, or scope failure | Allura downstream threat intake |
@@ -638,41 +649,31 @@ They do not define the upstream scanner transport or snapshot ledger.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> raw_event : agent writes episodic trace
-  raw_event --> scored : auto-curator scores content
-  scored --> proposed : score >= threshold creates proposal
-  scored --> episodic_only : score < threshold
-  proposed --> approved : human approves via dashboard/API
-  proposed --> rejected : human rejects via dashboard/API
-  approved --> promoted : graph write succeeds
-  approved --> promotion_failed : graph unavailable (degraded)
-  promotion_failed --> promoted : retry succeeds
-  promoted --> deprecated : newer version supersedes it
-  promoted --> reverted : governance rollback
-  rejected --> archived : stays in PG only
-  episodic_only --> [*]
-  archived --> [*]
-  deprecated --> [*]
-  reverted --> superseded : new version created
-  superseded --> [*]
+    [*] --> episodic : append evidence
+    episodic --> pending : create eligible proposal
+    pending --> approved : independent human decision and atomic commit
+    pending --> rejected : governed human rejection
+    pending --> pending : stale review rejected or approval transaction rolls back
+    approved --> approved : same scoped idempotency key replays receipt
 ```
 
-**State descriptions:**
+`pending`, `approved` and `rejected` are proposal states. The stale-review transition is approved intended behavior under DOC-06, not current implementation evidence. Semantic retrieval, local outbox delivery, remote projection and request completion are separate states: a failed Notion projection does not undo committed approval; a request timeout does not prove rollback. Supersession creates a new content version. Restore/rollback behavior is excluded from this bounded journey until DOC-03 is resolved.
 
-| State | Entry Trigger | Next States | Description |
-|-------|--------------|-------------|-------------|
-| `raw_event` | Agent calls `memory_add` | `scored` | Episodic trace in PostgreSQL |
-| `scored` | Curator scorer evaluates content | `proposed`, `episodic_only` | Content has confidence score |
-| `proposed` | Score ≥ threshold, proposal created in `canonical_proposals` | `approved`, `rejected` | Awaiting human review |
-| `approved` | Human approves via curator dashboard | `promoted`, `promotion_failed` | Cleared for semantic write |
-| `rejected` | Human rejects with rationale | `archived` | Denied, stays in PG only |
-| `promoted` | `graph_memories` write succeeds | `deprecated`, `reverted` | Active semantic knowledge |
-| `promotion_failed` | Graph backend unavailable | `promoted` (retry) | Degraded mode |
-| `deprecated` | Newer version supersedes | — (terminal) | Historical record only |
-| `archived` | Rejected proposal | — (terminal) | Kept for audit |
-| `episodic_only` | Score below threshold | — (terminal) | PG trace, no promotion |
-| `reverted` | Governance rollback | `superseded` | Replaced by earlier version |
-| `superseded` | New version created | — (terminal) | Old version replaced |
+### Bounded memory journey
+
+**Purpose:** preserve an authorized observation as evidence, let a different authorized human approve reusable knowledge, and retrieve the resulting knowledge only within its permitted scope.
+
+| Step | Observable contract | Failure / retry / evidence |
+|---|---|---|
+| Capture | Server resolves principal, tenant and workspace; appends episodic evidence; eligible content may become a pending proposal | Denied scope must not cause a write. A pending/timeout response is unconfirmed. Do not assume approval idempotency applies to `memory_add`; its retry contract requires transport-specific verification. |
+| Review | Show exact proposal identity/version, source event, scope, content, reviewer permissions and rationale; submit that version as `expected_proposal_version` | DOC-06 rejects a changed version and requires renewed human review; enforcement is not yet implemented. Missing/out-of-scope evidence and requester self-approval fail closed. Score is assistance, not permission. |
+| Approve | Authorized curator/admin with `review:approve` commits semantic row, proposal transition, audit, outbox, receipt and replay record in one transaction | Same scoped key and proposal replays the original receipt even if rationale/evidence differ; it does not amend that decision. Key reused for another proposal conflicts; already-decided proposals cannot be decided again with a new key. New approvals must satisfy DOC-06’s reviewed-version precondition (implementation pending). Rollback leaves no partial approval. |
+| Retrieve | Same-scope request returns current permitted content and provenance | Deleted/superseded content must not appear as current knowledge; foreign scope is denied/excluded. Search success is not write or release authority. |
+| Project | Intended remote Notion projection follows durable approval and authorized delivery; current promotion worker only appends a local event | DOC-07: remote `synced` requires read-back matching authorized destination/page and intended source revision/content; HTTP success or a page ID alone is insufficient. Local `delivered` is not sync. Keep original approval receipt immutable; expose separate delivery observation. Ambiguous remote results remain unknown and require reconciliation before retry. |
+
+**Source evidence, inspected 2026-10-18:** `src/lib/memory/approve-proposal.ts`, `src/lib/curator/auto-promote.ts`, `src/curator/approve-cli.ts`, `src/lib/graph-adapter/ruvector-adapter.ts`, `src/lib/memory/promotion-outbox-worker.ts`, `src/curator/notion-sync-worker.ts`. **Claim state:** approved intended contracts are distinct from source-inspected current behavior. The outbox emits `canonical_memory_promoted`; the Notion worker consumes `notion_sync_pending`, so this path has no established remote handoff. DOC-06 version binding and DOC-07 confirmed delivery remain implementation gaps. Full journey verification and release remain pending current-revision receipts (Requirements Matrix).
+
+**Visual acceptance boundary:** the exact approved screen/design revision, assets and state references for this journey have not been established by this repair. DOC-02 is **Needs a decision** for Sabir and Durham. Existing broad Command Center sections and brand tokens are supporting references, not proof of an approved current screen. Before a UI story is Ready, name its exact approved reference plus loading, empty, denied, conflict, timeout/unknown, success, keyboard and responsive states. RAM reviews behavior; Durham independently reviews fidelity; the builder cannot approve either result alone.
 
 ---
 
@@ -680,20 +681,20 @@ stateDiagram-v2
 
 | Rule ID | Rule | Source | Enforcement |
 |---------|------|--------|-------------|
-| AD-04 | `PROMOTION_MODE` governs writes. `soc2` mode requires human approval before PostgreSQL (graph_memories) promotion. `auto` mode promotes immediately if score ≥ threshold. | RISKS-AND-DECISIONS | Environment variable + code path |
-| AD-08 | Soft-delete only. No hard deletes. Deletion records are append-only events, not erasures. | RISKS-AND-DECISIONS | `memory_delete` appends event + sets `deprecated: true` on PostgreSQL (graph_memories) node |
-| AD-09 | PostgreSQL (graph_memories) write failure is non-fatal. PostgreSQL write is truth. PostgreSQL (graph_memories) is a promotion — its failure degrades gracefully (206 + Warning header). | RISKS-AND-DECISIONS | `readJson()` in dashboard client detects 206 status |
-| AD-19 | Agents MUST NOT query PostgreSQL directly. All reads go through `POST /api/memory/retrieval`. | RISKS-AND-DECISIONS | Code review gate + `direct-access-blocker.ts` |
-| AD-20 | Curator marks events as `promoted` after proposal creation. Without this, the curator re-scores the same traces on every run. | RISKS-AND-DECISIONS | Curator query excludes `status = 'promoted'` |
+| AD-04 | Legacy mode configuration does not authorize promotion. Human approval is required. | RISKS-AND-DECISIONS | `src/lib/curator/auto-promote.ts` and `approve-proposal.ts` |
+| AD-08 | Soft-delete only. No hard deletes. Deletion records are append-only events, not erasures. | RISKS-AND-DECISIONS | `memory_delete` appends event + sets `deprecated: true` on PostgreSQL semantic tables node |
+| AD-09 | Historical two-store degradation decision, superseded by AD-50. Current approval is one PostgreSQL transaction; failure rolls it back. | RISKS-AND-DECISIONS | `src/lib/memory/approve-proposal.ts` |
+| AD-19 | Agents MUST NOT query PostgreSQL directly. Reads use authenticated governed interfaces: canonical MCP `memory_search` or the applicable controlled retrieval API. | RISKS-AND-DECISIONS | Code review gate + `direct-access-blocker.ts` |
+| AD-20 | Historical event-status marking is obsolete. Watchdog deduplicates by an existing same-scope proposal referencing the source event. | RISKS-AND-DECISIONS | `src/curator/watchdog.ts` `NOT EXISTS` proposal check; no historical event mutation |
 | AD-22 | `VALIDATION-GATE.md` is archived in `docs/archive/allura/`, not canonical. Per the canonical surface rule. | RISKS-AND-DECISIONS | Cross-linked from BLUEPRINT, not in `docs/allura/` |
 | — | `group_id` must match `^allura-` pattern. Enforced by PostgreSQL CHECK constraint. | BLUEPRINT §7 | Schema-level, not application-level |
-| — | 30-day recovery window for soft-deleted memories. After 30 days, memories are permanently gone. | BLUEPRINT §11 | `memory_restore` validates recovery window |
+| — | Historical 30-day recovery UI expectation; expiry does not authorize erasing evidence. Restore semantics remain blocked under DOC-03. | BLUEPRINT §11 | `memory_restore` validates recovery window |
 | — | Append-only events table. No UPDATE or DELETE mutations on `events`. | BLUEPRINT §7 | No UPDATE/DELETE code paths in application |
-| — | Proposals require human approval in `soc2` mode. In `auto` mode, proposals above threshold auto-promote. | BLUEPRINT §2 F6/F7 | `PROMOTION_MODE` environment variable |
-| — | Audit trail is append-only and exportable as CSV. | BLUEPRINT §9 F18 | `GET /api/audit/events?format=csv` |
-| — | `DashboardResult<T>` wraps all API responses with `{ data, error, degraded, warnings }`. | Dashboard architecture | `src/lib/dashboard/types.ts` |
+| — | Proposals require independent human approval; a threshold or legacy mode does not approve them. | BLUEPRINT §2 BP-F6/BP-F7 | `PROMOTION_MODE` environment variable |
+| — | Audit trail is append-only and exportable as CSV. | BLUEPRINT §9 BP-F18 | `GET /api/audit/events?format=csv` |
+| — | `DashboardResult<T>` wraps dashboard adapter results with `{ data, error, degraded, warnings }`; endpoint-specific responses such as `GovernanceReceipt` retain their own contract. | Dashboard architecture | `src/lib/dashboard/types.ts` |
 | — | Dashboard scoped to `group_id` (tenant isolation). All API calls include `group_id`. | Tenant isolation | `withGroupId()` in dashboard client |
-| — | Degraded mode returns HTTP 206 + `Warning` header when graph backend unavailable. | AD-09 | Dashboard client checks `response.status === 206` |
+| — | Report degraded/unknown state according to the specific endpoint contract; do not infer success from partial availability. | Bounded journey | Approval failures roll back; health and retrieval status codes require their own evidence |
 
 ---
 
@@ -703,22 +704,22 @@ stateDiagram-v2
 
 **Actor:** Curator (authenticated with `admin` or `curator` role)
 
-**Precondition:** At least one proposal exists in `pending` status.
+**Precondition:** At least one proposal exists in `pending` status. Score is review assistance; the approval service does not enforce a minimum score. Capture/watchdog eligibility thresholds are separate producer rules and cannot grant approval authority.
 
 **Steps:**
 1. Curator navigates to `/dashboard/curator`
 2. Dashboard calls `GET /api/curator/proposals?status=pending`
 3. Proposals display with confidence badge, reasoning, and source evidence
-4. Curator reviews summary, evidence links, and confidence score
-5. Curator approves: `POST /api/curator/approve` with `decision: "approve"` and rationale
-6. System promotes approved insight to PostgreSQL (graph_memories) as immutable node
+4. Curator reviews the exact proposal version, summary, evidence links, and confidence score
+5. Curator approves: `POST /api/curator/approve` with `decision: "approve"`, rationale and the reviewed `expected_proposal_version`; DOC-06 requires conflict/re-review if the version changed (not yet implemented)
+6. System promotes approved insight to PostgreSQL semantic tables as an immutable content row within the atomic approval transaction
 7. Audit event `proposal_approved` written to PostgreSQL with curator ID and timestamp
 8. Curator rejects: `POST /api/curator/reject` with rationale
 9. System archives rejected proposal; audit event `proposal_rejected` written
 
-**Postcondition:** Proposal transitions to `approved` (promoted to PostgreSQL (graph_memories)) or `rejected` (archived in PG) with full audit trail.
+**Postcondition:** A valid decision transitions the proposal to `approved` (promoted to PostgreSQL semantic tables) or `rejected` (retained in PG) with audit evidence. A stale-review approval must leave it undecided and require new review under DOC-06; that implementation/acceptance gap blocks this use case from being called verified.
 
-**Requirements:** F10–F13, F17
+**Requirements:** DS-F10–DS-F13, DS-F17
 
 ---
 
@@ -738,7 +739,7 @@ stateDiagram-v2
 
 **Postcondition:** Admin has a complete, filtered audit trail in JSON or CSV format.
 
-**Requirements:** F18
+**Requirements:** DS-F18
 
 ---
 
@@ -752,13 +753,13 @@ stateDiagram-v2
 1. Operator navigates to `/dashboard` (overview)
 2. Dashboard calls `GET /api/health?detailed=true` and `GET /api/health/metrics`
 3. Overview displays: system status, queue depth, recall latency, storage stats, degraded component count
-4. If PostgreSQL (graph_memories) is down, status shows "degraded" with `Warning` header and lost capabilities listed
+4. If a graph operation fails while other reads remain available, show its actual lost capabilities and receipt. If PostgreSQL is unavailable, report durable-storage failure rather than implying a second healthy store.
 5. Operator sees metric cards: total memories, pending proposals, active agents, system uptime
 6. Activity panel shows recent events
 
 **Postcondition:** Operator has full visibility into system health, including degradation state.
 
-**Requirements:** F19
+**Requirements:** DS-F19
 
 ---
 
@@ -771,8 +772,8 @@ stateDiagram-v2
 **Steps:**
 1. Agent calls `POST /api/memory/retrieval` with query, scope, and mode
 2. Retrieval layer validates `group_id` and agent permissions
-3. For `semantic` mode: `searchInsights()` from PostgreSQL (graph_memories)
-4. For `structured` mode: `listInsights()` from PostgreSQL (graph_memories)
+3. For `semantic` mode: `searchInsights()` from PostgreSQL semantic tables
+4. For `structured` mode: `listInsights()` from PostgreSQL semantic tables
 5. For `hybrid` mode: `getDualContextSemanticMemory()` merges project + global insights
 6. For `traces` mode (policy-gated): `queryTraces()` from PostgreSQL
 7. Results returned with provenance metadata (proposal ID, approver, approval timestamp)
@@ -780,11 +781,13 @@ stateDiagram-v2
 
 **Postcondition:** Agent receives scoped, policy-controlled memory context. No direct database access occurred.
 
-**Requirements:** AD-19, F10, F26–F40
+**Requirements:** AD-19, DS-F28, DS-F37, DS-F38, DOC-J06
 
 ---
 
 ### MEM-UC14: User soft-deletes and restores a memory within 30-day window
+
+**Blocked for implementation/acceptance:** this prior use case is not ready until DOC-03 resolves restore lineage semantics. The steps below are historical intended behavior, not permission to delete lineage.
 
 **Actor:** End User
 
@@ -795,16 +798,16 @@ stateDiagram-v2
 2. User taps [Forget] (soft-delete)
 3. System calls `DELETE /api/memory/[id]`
 4. System appends `memory_delete` event to PostgreSQL
-5. System marks PostgreSQL (graph_memories) node as `deprecated: true` (if promoted)
+5. System marks PostgreSQL semantic tables node as `deprecated: true` (if promoted)
 6. Memory appears in "Recently Forgotten" view (`/memory?view=forgotten`)
 7. Within 30 days, user taps [Restore]
 8. System calls `POST /api/memory/[id]/restore`
 9. System appends `memory_restore` event to PostgreSQL
-10. System removes `deprecated` flag from PostgreSQL (graph_memories) node
+10. System removes `deprecated` flag from PostgreSQL semantic tables node
 
 **Postcondition:** Memory is either soft-deleted (recoverable within 30 days) or restored to active state.
 
-**Requirements:** AD-08, F5
+**Requirements:** AD-08, BP-F5, DOC-03
 
 ---
 
@@ -812,7 +815,7 @@ stateDiagram-v2
 
 **Actor:** Operator / Admin
 
-**Precondition:** PostgreSQL (graph_memories) contains Memory, Agent, Team, and Project nodes.
+**Precondition:** PostgreSQL semantic tables contains Memory, Agent, Team, and Project nodes.
 
 **Steps:**
 1. Operator navigates to `/dashboard/graph`
@@ -824,7 +827,7 @@ stateDiagram-v2
 
 **Postcondition:** Operator has visual understanding of knowledge graph structure and relationships.
 
-**Requirements:** F17 (dashboard scope), AD-24 (structural context layer)
+**Requirements:** DS-F41 (dashboard route scope), AD-24 (structural context layer)
 
 ---
 
@@ -832,19 +835,19 @@ stateDiagram-v2
 
 1. **Dashboard scoped to `group_id`.** Every API call includes `group_id` for tenant isolation. No cross-tenant data access is possible.
 
-2. **Proposals require human approval in `soc2` mode.** `PROMOTION_MODE=soc2` blocks autonomous PostgreSQL (graph_memories) writes. Every promotion goes through the curator queue.
+2. **Proposals require independent human approval.** Both configured modes preserve HITL; every semantic promotion goes through the governed approval service.
 
 3. **Audit trail is append-only and exportable.** No UPDATE or DELETE on the `events` table. CSV export supports SOC2 compliance requirements.
 
-4. **Degraded mode returns 206 + Warning header.** When graph_memories is unavailable, the system continues serving episodic data from PostgreSQL. API responses include `degraded: true` and a `Warning` header. `DashboardResult<T>` surfaces this to components.
+4. **Degradation is endpoint-specific.** A partial retrieval may report degraded data; an unhealthy storage service may fail the request. Neither implies a separate healthy semantic/evidence database. Approval errors roll back their transaction, and timeout remains unconfirmed. Verify the endpoint status/envelope rather than imposing a universal HTTP 206 rule.
 
 5. **`DashboardResult<T>` wraps all responses.** Every dashboard API call returns `{ data: T | null, error: string | null, degraded: boolean, warnings: DashboardWarning[] }`. Components handle null data and degraded state explicitly.
 
-6. **Curator marks events as promoted (AD-20).** Without this, the curator re-scores the same traces on every run, creating duplicate proposals.
+6. **Curator deduplicates without changing evidence (AD-20).** The watchdog excludes a source event when a same-tenant/workspace proposal already references it. Historical events remain append-only.
 
-7. **Agents MUST NOT query PG/PostgreSQL (graph_memories) directly (AD-19).** All retrieval goes through `POST /api/memory/retrieval`. Code review gate checks for direct database imports in agent-facing code.
+7. **Agents MUST NOT query PG/PostgreSQL semantic tables directly (AD-19).** All retrieval goes through `POST /api/memory/retrieval`. Code review gate checks for direct database imports in agent-facing code.
 
-8. **No direct graph writes outside approved promotion flow.** Services and agents cannot write directly to the semantic store. All writes go through the curator pipeline.
+8. **Semantic promotion requires the governed human decision flow.** Content promotion cannot bypass the curator approval service; lifecycle and structural operations require their own authorized contracts and must not be inferred from promotion permission.
 
 9. **Immutable insight rows.** `graph_memories` rows are never updated in place. Any change requires a new proposal → approval → new row with `SUPERSEDES` edge.
 

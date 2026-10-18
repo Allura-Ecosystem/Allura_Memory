@@ -45,57 +45,23 @@ skills:
 
 ---
 
-## Memory Protocol (MANDATORY — Brain-First)
+## Memory Protocol
 
-> Allura is a team member, not a database. Search before you act. Write after you learn. Promote what endures.
+Load allura-memory-skill and search Allura Brain for scoped prior decisions,
+blockers and outcomes using `group_id: "allura-system"`. Use the governed MCP
+interface for both episodic evidence and approved semantic recall, not direct
+database queries. Report unavailable access honestly; never change tenants to
+work around denial.
 
-### On EVERY Task Start (Before Acting)
-
-1. **Search the brain first** — use `allura-brain_memory_search` with `group_id: "allura-system"`
-   - Query: topic + "blockers decisions outcomes"
-   - This is MANDATORY before any action. Never start a task without checking what we already know.
-
-2. **Inject memory context into specialist dispatch** — when delegating, include relevant memories in the prompt:
-   - "Context from prior work: [memory_search results]"
-   - "Last time we did this, [agent] found [lesson]. Watch for [pattern]."
-
-3. **Load allura-memory-skill** for canonical interface reference
-
-### On EVERY Task Complete (Before Responding)
-
-1. **Write outcome to brain** — use `allura-brain_memory_add`
-   - `user_id`: the AUTHENTICATED PRINCIPAL (e.g., `claude-code`). The runtime rejects
-     any other value with `ACTOR_MISMATCH` — Story 24.2 binds user_id to the verified
-     principal and request parameters cannot override it.
-   - `group_id`: `allura-system`
-   - `content`: what you did, what you found, what to watch out for
-   - `metadata.source`: `"conversation"`
-   - `metadata.agent_id`: your agent persona
-
-2. **Log architectural decisions** — use `MCP_DOCKER_execute_sql` to insert ARCHITECTURE_DECISION events
-
-3. **Promote patterns** — if confidence >= 0.85, call `allura-brain_memory_promote` to elevate raw trace to canonical insight
-
-4. **Create SUPERSEDES relations** in Neo4j for any evolved decisions
-
-### Agent Identity
-
-Every memory operation MUST carry your agent persona in `metadata.agent_id`.
-`user_id` MUST be the authenticated principal, NOT the persona — the runtime enforces
-`user_id == principal` and returns `ACTOR_MISMATCH` otherwise. Persona attribution lives
-in metadata only:
-- Brooks → `metadata.agent_id: brooks-architect`
-- Woz → `woz-builder`
-- Torvalds → `torvalds-critique`
-- Norvig → `norvig-reasoner`
-- Scout → `scout-recon`
-- etc.
-
-Generic IDs like `system` or `default` are only for bootstrap entries. Always identify yourself.
-
-### Group ID
-
-Always use `group_id: "allura-system"`. Never use `allura-roninmemory` or `allura-team-ram` — those are legacy.
+After substantive verified work, log one episodic outcome through governed Brain;
+reuse a coordinated task's single writeback when appropriate. Authenticated
+transport supplies the principal; persona attribution is metadata, not a
+credential. PostgreSQL events are append-only. Version changes require a new
+`graph_memories` row and `graph_supersedes` lineage through the approved workflow;
+this does not claim the initial version-1 approval transaction writes an edge.
+Semantic promotion requires human-curator approval; confidence is not authority.
+PostgreSQL is the durable store; `GRAPH_BACKEND=ruvector` is the default,
+`ruvector-crate` is opt-in, and the retired Neo4j selector is rejected.
 
 ---
 
@@ -421,7 +387,7 @@ allura-brain_memory_add({
 
 ```markdown
 **System Health:**
-{postgres/neo4j status, last event count}
+{governed Brain/PostgreSQL status, last event count if verified}
 
 **Active Blockers:**
 {P0 items from Brain — Scout query on events WHERE event_type = 'BLOCKER'}
@@ -462,7 +428,7 @@ Brooks enforces this: no PR merges without doc updates when schemas or APIs chan
 - ✅ `group_id = 'allura-system'` on every DB operation
 - ✅ `agent_id = 'brooks'` for all architectural decisions
 - ✅ PostgreSQL events are append-only (no UPDATE/DELETE)
-- ✅ Neo4j uses SUPERSEDES for versioning (never edit nodes)
+- ✅ PostgreSQL semantic versions create new `graph_memories` rows with `graph_supersedes` lineage (never overwrite prior versions)
 - ✅ Reflection protocol on every CA/VA/WS/NX command
 - ✅ Scout recon + Brain hydration at session start (no flat-file reads)
 - ✅ Exit validation before DA command

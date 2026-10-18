@@ -4,10 +4,16 @@
 > **AI-Assisted Documentation**
 > Portions of this document were drafted with the assistance of an AI language model.
 > Content has not yet been fully reviewed. This is a working design reference, not a final specification.
-> When in doubt, defer to the source code, schemas, and team consensus.
+> Code and schemas evidence implementation; approved product decisions establish intent. Record disagreement for the owning decision rather than silently changing either.
 
-This document covers Allura's deployment topologies, integration interfaces, and architectural constraints. The data model and API surface are defined in [BLUEPRINT.md](./BLUEPRINT.md).
+This document covers Allura's deployment topologies, integration interfaces, and architectural constraints. The physical data contract is owned by [DATA-DICTIONARY.md](./DATA-DICTIONARY.md); behavior and API contracts are owned by [DESIGN-ALLURA.md](./DESIGN-ALLURA.md).
 
+
+## Evidence and publication status — 2026-10-18
+
+**Claim state:** specified with source-inspected implementation evidence for the bounded capture → review/promotion → retrieval journey; no fresh end-to-end or release receipt is claimed here. Blueprint DOC-01 records Sabir’s 2026-10-18 reconfirmation: GitHub owns the six versioned engineering specifications; Notion holds private planning/approval records and links. DOC-06 and DOC-07 record approved specification decisions with implementation gaps. This repair does not adopt the proposed Agreement Before Implementation policy wholesale.
+
+The main boundary is stable: authenticated scope enters governed services; append-only evidence, mutable proposal workflow state, immutable semantic content versions and asynchronous projections have distinct responsibilities. Physical fields belong to Data Dictionary and observable failure/retry behavior belongs to Design.
 ---
 
 ## Table of Contents
@@ -24,7 +30,7 @@ This document covers Allura's deployment topologies, integration interfaces, and
 
 ## 1. Architectural Positioning
 
-Allura is a **memory data plane** — it holds no business logic about what an agent does, only what an agent remembers. It is the authoritative source of truth for all agent memory within a tenant namespace. Its current retrieval substrate is a **pgvector bridge**, not full RuVector: TALON observed PostgreSQL `vector` extension `0.8.2`, `ruvector_function_count=0`, and `allura_memories_count` around `3392` on 2026-06-02.
+Allura is a **memory data plane** — it holds no business logic about what an agent does, only what an agent remembers. It is the authoritative source of truth for all agent memory within a tenant namespace. The default graph adapter persists semantic relationships in PostgreSQL; vector retrieval uses pgvector. The dated TALON observation from 2026-06-02 is historical evidence, not a current deployment health claim. Native capability and released readiness require separate receipts.
 
 | Consumer Class | Interaction Mode | Notes |
 |---|---|---|
@@ -39,257 +45,81 @@ Allura Brain does **not** orchestrate agents, run workflows, or make decisions. 
 ## 2. System Boundary and External Actors
 
 ```mermaid
-graph TD
-    subgraph Agents["AI Agents"]
-        A1[Claude]
-        A2[GPT / Any MCP Client]
-    end
-
-    subgraph Clients["API Clients"]
-        B1[MCP HTTP Gateway<br/>/mcp]
-        B2[CLI / Scripts]
-    end
-
-    subgraph Orchestration["Brooks / Team RAM"]
-        C1[Brooks]
-        C2[Memory Skills]
-    end
-
-    subgraph MCPServers["Packaged MCP Servers"]
-        C3[neo4j-memory]
-        C4[database-server]
-        C5[neo4j-cypher<br/>(fallback)]
-    end
-
-    subgraph Allura["Allura"]
-        C6[API Routes<br/>api/memory/]
-        C7[Memory Engine<br/>lib/memory/]
-        C8[(PostgreSQL 16<br/>Episodic)]
-        C9[(Neo4j 5.26<br/>Semantic)]
-    end
-
-    A1 --> C1
-    A2 --> C1
-    C1 --> C2
-    C2 --> C3
-    C2 --> C4
-    C2 --> C5
-    B1 -->|HTTP| C6
-    B2 -->|CLI| C6
-    C6 --> C7
-    C7 --> C8
-    C7 --> C9
-    C3 --> C9
-    C4 --> C8
-    C5 --> C9
+flowchart LR
+    Agent[Agent / MCP client] --> Gateway[Authenticated Allura MCP boundary]
+    Human[Human curator] --> Review[Authenticated review API or CLI]
+    Gateway --> Scope[Tenant + workspace + principal authority]
+    Review --> Scope
+    Scope --> Capture[Memory capture / retrieval service]
+    Scope --> Approval[Atomic approval service]
+    Capture --> PG[(PostgreSQL: evidence, proposals, semantic graph)]
+    Approval --> PG
+    PG --> Outbox[Projection outbox]
+    Outbox --> Notion[Notion projection]
 ```
 
----
+The client cannot mint tenant, workspace, or reviewer authority from request fields. Intended Notion projection follows the durable decision; it does not authorize promotion. The inspected outbox worker confirms local event delivery only, and the handoff to confirmed remote Notion delivery is an implementation gap (DOC-07). Orchestration and UI sit outside the memory data plane.
 
 ## 3. Logical Topologies
 
 ### 3.1 Agent Memory Recall (Primary Path)
 
-An AI agent needs prior context. Brooks routes to the memory skill, which queries `neo4j-memory` first.
-
-```mermaid
-sequenceDiagram
-    actor Agent
-    participant Brooks as Brooks / Team RAM
-    participant Skill as Memory Skill
-    participant Memory as neo4j-memory
-    participant N4J as PostgreSQL (graph_memories)
-
-    Agent->>Brooks: need context for task
-    Brooks->>Skill: memory-first routing
-    Skill->>Memory: recall approved insights
-    Memory->>N4J: MATCH current Insight nodes
-    N4J-->>Memory: ranked approved knowledge
-    Memory-->>Brooks: current scoped context
-    Brooks-->>Agent: approved memory context
-```
-
-**Key constraints:**
-- `neo4j-memory` is the default first hop for reusable context
-- Retrieval remains tenant-scoped via `group_id`
-- No raw Cypher is needed when approved memory recall is sufficient
-
----
+Discover and use the authenticated Allura Brain `memory_search` interface for the permitted tenant. Retrieval applies server-resolved workspace scope and returns content with source/provenance. A successful search does not prove write authority, promotion, or release readiness. Source: `src/mcp/canonical-tools.ts` and the retrieval contracts under `src/lib/retrieval/`.
 
 ### 3.2 Evidence Escalation (Trace Verification)
 
-If the agent needs provenance, audit detail, or incident evidence, Brooks adds `database-server` after memory recall.
+Use governed audit/read tools for the same authorized tenant and workspace when a recalled result requires source evidence. Append-only events remain the historical record. Read authority does not grant cross-workspace copying or mutation. A tool timeout leaves that request unconfirmed; it is not proof that the backend is unavailable.
 
-```mermaid
-sequenceDiagram
-    actor Agent
-    participant Brooks as Brooks / Team RAM
-    participant Memory as neo4j-memory
-    participant DB as database-server
-    participant PG as PostgreSQL
+### 3.3 Graph Inspection (Read-only)
 
-    Agent->>Brooks: explain why / show evidence
-    Brooks->>Memory: recall approved insight
-    Brooks->>DB: query traces for same tenant/window
-    DB->>PG: SELECT append-only events
-    PG-->>DB: raw evidence rows
-    Memory-->>Brooks: approved context
-    DB-->>Brooks: trace evidence
-    Brooks-->>Agent: merged context + provenance
-```
-
-**Key constraints:**
-- `database-server` is for evidence and trace validation, not as the default memory interface
-- PostgreSQL remains append-only and tenant-scoped
-- Raw evidence may refine or contradict approved memory, but does not silently mutate it
-
----
-
-### 3.3 Graph Escalation (Cypher Fallback)
-
-If approved memory recall is insufficient and targeted graph traversal is required, Brooks adds `neo4j-cypher` as a read-only fallback.
-
-```mermaid
-sequenceDiagram
-    actor Agent
-    participant Brooks as Brooks / Team RAM
-    participant Memory as neo4j-memory
-    participant Cypher as neo4j-cypher
-    participant N4J as PostgreSQL (graph_memories)
-
-    Agent->>Brooks: inspect lineage / relationships / schema
-    Brooks->>Memory: try approved memory recall first
-    Brooks->>Cypher: execute read-only scoped query
-    Cypher->>N4J: MATCH / SHOW / traversal query
-    N4J-->>Cypher: shaped graph results
-    Cypher-->>Brooks: lineage or schema detail
-    Brooks-->>Agent: memory context + graph detail
-```
-
-**Key constraints:**
-- `neo4j-cypher` is never the first-choice memory interface
-- Cypher queries are read-only and must remain tenant-scoped unless schema inspection is explicit
-- Hand-written Cypher is reserved for targeted inspection, not normal memory recall
-
----
+Inspect lineage and structural context through controlled API/MCP services backed by `IGraphAdapter`. The PostgreSQL default stores semantic content in `graph_memories`, lineage in `graph_supersedes`, and structural context in `graph_structural_nodes`/`graph_structural_edges`. Historical Neo4j inspection servers and Cypher fallbacks are retired from this current route. No direct database access is implied for an agent.
 
 ### 3.4 Governed Memory Write Path
 
 ```mermaid
 sequenceDiagram
-    actor Agent
-    participant API as Next.js API / controlled endpoint
-    participant Engine as Memory Engine
+    participant Client as Authenticated client
+    participant Capture as Memory service
     participant PG as PostgreSQL
-    participant N4J as PostgreSQL (graph_memories)
-
-    Agent->>API: memory_add / governed write request
-    API->>Engine: validate scope and content
-    Engine->>PG: INSERT append-only event
-    Engine->>Engine: score content and check policy
-    alt approved / auto path
-        Engine->>N4J: create immutable insight node
-    else gated path
-        Engine->>PG: INSERT proposal pending review
-    end
-    API-->>Agent: write accepted with status metadata
+    actor Reviewer as Independent human curator
+    participant Approval as Approval service
+    Client->>Capture: Capture evidence with resolved scope
+    Capture->>PG: Append event; eligible content becomes pending proposal
+    Capture-->>Client: Episodic / pending result
+    Reviewer->>Approval: Intended approval: reviewed version, rationale, idempotency key
+    Approval->>PG: Lock scope; validate evidence and actor separation
+    Note over Approval,PG: Reviewed-version comparison is specified but not implemented (DOC-06)
+    Approval->>PG: Atomic memory + proposal + audit + outbox + receipt + replay record
+    Approval-->>Reviewer: Durable governance receipt after commit
+    Client->>Capture: Search within the same authorized scope
+    Capture->>PG: Retrieve current permitted content with provenance
+    Capture-->>Client: Results or explicit unknown/degraded/error state
 ```
 
-**Key constraints:**
-- Agents do not write through packaged MCP inspection servers
-- Controlled service endpoints remain the only write path for governed memory changes
-    - PostgreSQL (graph_memories) writes preserve immutable lineage and approval policy
-    - The Curator Approve CLI (`src/curator/approve-cli.ts`) is an alternative entry point to the same governed write path — it uses the same `createInsight()` code path as the API route, enforces the same invariants (group_id validation, SHAKE-256 witness hash, append-only events), and emits `notion_sync_pending` events for async Notion sync
+**Implemented boundary, inspected 2026-10-18:** `src/lib/memory/approve-proposal.ts` requires curator/admin authority plus `review:approve`, validates the same-scope source event, and rejects requester self-approval. A failed approval transaction rolls back its durable writes. Replaying the same scoped key and proposal returns the original stored receipt, even if the retry supplies different rationale/evidence; binding that key to another proposal conflicts. The CLI delegates to this same service (`src/curator/approve-cli.ts`). Neither score nor the legacy `auto` configuration substitutes for human approval (`src/lib/curator/auto-promote.ts`). This is source evidence, not a new live acceptance receipt.
 
----
+**Approved specification gaps (Sabir, 2026-10-18, current chat):**
+
+- **DOC-06 — stale review:** a new approval compares the reviewed proposal version with the locked current version. A mismatch fails without approval writes and requires refreshed human review. The inspected route/service supplies no expected reviewed version, so current locking alone does not satisfy this contract. A replay of an already committed same scoped operation returns its original immutable receipt rather than making another decision.
+- **DOC-07 — projection truth:** preserve the original decision receipt, including its decision-time outbox state. Current projection status is a separate read model. Local outbox `delivered` is not remote `synced`; use `synced` only after confirmed Notion delivery with destination/record/read-back evidence. `promotion-outbox-worker.ts` emits `canonical_memory_promoted`, while the Notion worker consumes `notion_sync_pending`; the verified end-to-end handoff is missing.
 
 ### 3.4.0 Current RuVector Readiness Boundary
 
-The runtime currently uses PostgreSQL with pgvector-compatible memory data as the bridge substrate. Full RuVector-Postgres remains a planned migration target and requires separate approval before database migration, extension installation, function creation, or feedback-loop activation.
+Name the semantic layer independently of its implementation. The graph adapter default and the native vector/graph capability are different claims. Historical extension versions, counts, and parity results do not establish current production health.
 
 ### 3.4.0.1 Agent Factory CI Topology
 
-```mermaid
-sequenceDiagram
-    participant Author as Team Module Author
-    participant CI as GitHub Actions
-    participant Validator as Factory Validator
-    participant PG as PostgreSQL
-    participant PostgreSQL (graph_memories) as PostgreSQL (graph_memories)
-    participant Artifact as Package Artifact
-
-    Author->>CI: Push module or workflow change
-    CI->>Validator: Validate YAML, roster, tenant, dependencies, governance
-    Validator-->>CI: Pass or fail closed
-    CI->>PG: Write tenant-scoped smoke memories
-    CI->>Neo4j: Exercise semantic fallback boundary
-    CI->>PG: Verify own-tenant retrieval and foreign-tenant absence
-    CI->>Artifact: Package only an explicitly selected validated team
-```
-
-Key constraints:
-
-- Factory workflows must be tracked by the canonical `Allura_Memory` repository; an ecosystem-local untracked workflow is not executable evidence.
-- Smoke writes use isolated `allura-factory-smoke-*-loadtest` groups so proposal creation remains disabled.
-- The RuVector readiness lane reports the current `pgvector bridge` state and fails a forced native claim unless native extension, native smoke, and governance package artifacts all exist.
-- CI may validate and package, but it does not publish or promote canonical knowledge without separate approval.
-
-| Readiness signal | Current evidence | Required for full RuVector claim |
-|---|---|---|
-| `vector` extension | `0.8.2` observed by TALON | Present and healthy |
-| `ruvector_function_count` | `0` | Required RuVector SQL functions present (this measures the *native extension*, not the graph adapter) |
-| `allura_memories_count` | Around `3392` observed by TALON | Search/feedback health validated against current count |
-| Runtime label | `ruvector_graph` | Upgraded from `pgvector bridge` (Story 19.3, 2026-07-12) |
-| GRAPH_BACKEND | `ruvector` default, `PostgreSQL (graph_memories)` fallback available, `ruvector-crate` planned | See Graph Backend Cutover Path |
-
-**Note:** `ruvector_function_count=0` refers to the RuVector *native extension* (SQL functions installed in PostgreSQL), not the graph adapter. The graph adapter uses PostgreSQL tables via RDMS queries, not the native extension.
-
----
+Factory validation must evidence scope isolation, schema/contract compatibility, and honest readiness labels against the selected deployment. A CI check is not a production rollout or permission to publish/promote. Historical two-store fallback smoke tests are not the current topology. Current test coverage and release status must be linked to the reviewed revision before a story is marked verified or released.
 
 ### 3.4.0.2 Graph Backend Cutover Path
 
-The RuVector migration is layered across three distinct concerns, each with independent readiness metrics:
-
-1. **Vector search** — pgvector bridge (existing): `vector` extension `0.8.2`, ANN search via `pgvector_cosine_distance()` and BM25 RRF fusion
-2. **Graph backend** — IGraphAdapter seam (built): `PostgreSQL (graph_memories)GraphAdapter` (legacy), `RuVectorGraphAdapter` (PG tables), `RuvectorCrateGraphAdapter` (planned, `ruvnet` crate)
-3. **Native RuVector extension** — future: SQL functions `ruvector_hybrid_search()` and friends (still stubs)
-
-The `GRAPH_BACKEND` env var selects the graph implementation:
-
-| Value | Implementation | Status | Notes |
-|---|---|---|---|
-| `PostgreSQL (graph_memories)` | `PostgreSQL (graph_memories)GraphAdapter` (Cypher) | Fallback | Uses PostgreSQL (graph_memories) Community Edition; remains available as read-only fallback after cutover |
-| `ruvector` | `RuVectorGraphAdapter` (PG tables) | **Default (Story 19.3)** | PG tables via `src/lib/graph-adapter/ruvector-adapter.ts`; runtime label upgraded to `ruvector_graph` |
-| `ruvector-crate` | `RuvectorCrateGraphAdapter` (Rust crate) | Planned | `ruvnet` crate, upstreamable design |
-
-The `IGraphAdapter` interface (AD-29, `src/lib/graph-adapter/types.ts`) defines 16 methods. Implementation status by adapter:
-
-| Adapter | Status | Lines |
+| Selector | Implemented behavior | Evidence / limit |
 |---|---|---|
-| `PostgreSQL (graph_memories)GraphAdapter` | ✅ Full (816 lines) | 16/16 implemented |
-| `RuVectorGraphAdapter` | ✅ Full (512 lines) | 16/16 implemented |
-| `RuvectorCrateGraphAdapter` | 🔲 Planned (528 lines) | 8/16 implemented, 8 planned (throws `unsupported`) |
+| `ruvector` | Default `RuVectorGraphAdapter`, PostgreSQL tables | `src/lib/graph-adapter/factory.ts`; no native-extension claim |
+| `ruvector-crate` | Opt-in `RuvectorCrateGraphAdapter` | Requires configured native addon, storage path, embedder; deployment acceptance remains separate |
+| `neo4j` | Historical retired selector; throws an error | No supported fallback in the factory |
 
-**Method coverage:**
-
-- `PostgreSQL (graph_memories)GraphAdapter`: ✅ Full (816 lines, all 16 methods implemented)
-- `RuVectorGraphAdapter`: ✅ Full (512 lines, all 16 methods implemented)
-- `RuvectorCrateGraphAdapter`: 🔲 Planned (528 lines, 8 implemented + 8 throw `unsupported`)
-
-The adapter-specific methods (`supersedesMemory`, `softDeleteMemory`, `restoreMemory`) require mutation capabilities (`updateNode`) not yet available in the `ruvnet` crate binding (B3, B1), so they throw `GraphAdapterError` with descriptive messages. See `src/lib/graph-adapter/ruvector-crate-adapter.ts` lines 331-372.
-
-**Graduation criteria for `GRAPH_BACKEND=ruvector` cutover (Story 19.3 completed 2026-07-12):**
-
-| Criterion | Target | Status |
-|---|---|---|
-| Live-DB E2E passes | `GRAPH_BACKEND=ruvector` | ✅ **Resolved** — 14/14 green |
-| Dual-read validation clean | One full release cycle | ✅ **Resolved** — validated during transition |
-| Parity test (`adapter-parity.test.ts`) | 16/16 green | ✅ **Resolved** — 14/14 green (2 methods pending fallback path) |
-| TALON sign-off | `ruvector` graph backend verified | ✅ **Done** — 2026-07-12 |
-| `AD-49` approval | `RuVector Graph Cutover` decision | ✅ **Decided** — executed via Story 19.3 |
-| `PostgreSQL (graph_memories) removed` | Fallback removed | ✅ **Done** — Epic 23 (2026-07-17); `GRAPH_BACKEND=ruvector` is the sole backend |
-
-**Cross-references:** AD-29 (graph adapter pattern), AD-49 (cutover decision), RK-32 (graph cutover risk)
+AD-49 records the graph cutover and AD-50 the retirement decision. Their historical rollout receipts are distinct from this source inspection and from current live verification. See Data Dictionary for physical tables and Risks & Decisions for unresolved restore-lineage behavior.
 
 ### 3.4.1 RuVix Control Plane Governance Contract
 
@@ -329,9 +159,9 @@ The RuVix control plane is the governance contract for Allura Brain. Every opera
 | Mode | Behavior | Threshold |
 |---|---|---|
 | `soc2` | Queue eligible memories for human approval; never auto-promote. | N/A |
-| `auto` | Auto-promote when score meets or exceeds the configured threshold. | `AUTO_APPROVAL_THRESHOLD` (default `0.85`) |
+| `auto` | Legacy compatibility setting; eligible proposals still require curator/HITL approval | Score is not authority |
 
-The canonical control plane contract is stored as `RUVIX_CONTROL_PLANE_CONTRACT_v1` in PostgreSQL (graph_memories), with 12 individual rule entries plus one anchor ADR in PostgreSQL.
+The canonical control plane contract is stored as `RUVIX_CONTROL_PLANE_CONTRACT_v1` in PostgreSQL semantic tables, with 12 individual rule entries plus one anchor ADR in PostgreSQL.
 
 ### 3.4.2 Brand Governance Layer
 
@@ -380,20 +210,20 @@ sequenceDiagram
     participant API as API Routes
     participant Engine as Memory Engine
     participant PG as PostgreSQL
-    participant N4J as PostgreSQL (graph_memories)
+    participant Semantic as PostgreSQL semantic tables
 
     Operator->>CLI: GET /api/memory?userId=&groupId=
     CLI->>API: HTTP request
     API->>Engine: list(userId, groupId)
-    Engine->>PG: SELECT recent events
-    Engine->>N4J: MATCH Memory nodes
+    Engine->>PG: Query recent events within authenticated tenant/workspace
+    Engine->>Semantic: Query graph_memories within authenticated tenant/workspace
     API-->>CLI: merged memory list
 
     Operator->>CLI: DELETE /api/memory/[id]
     CLI->>API: HTTP request
     API->>Engine: delete(id, groupId)
     Engine->>PG: INSERT event (memory_delete)
-    Engine->>N4J: SET deprecated = true
+    Engine->>Semantic: SET deprecated = true
     API-->>CLI: 200 OK
     ```
 
@@ -415,7 +245,7 @@ Allura is MCP/API-first. The MCP HTTP gateway (port 3201), API routes, and CLI s
 | Route | Backing Source of Truth | Write Policy |
 |-----------------------|-------------------------|--------------|
 | `/api/memory` | Allura Brain APIs | Governed reads/inspection only; `POST` write is fail-closed pending an equivalent verified transport boundary |
-| `/api/curator/approve` | PostgreSQL proposals | Curator approval required; auto-promote >85% configurable |
+| `/api/curator/approve` | PostgreSQL proposals | Independent curator approval required; score does not authorize promotion |
 | `/api/audit/events` | PostgreSQL events | Read-only audit trail |
 | `/dashboard/governance` | RuVix control plane and policy APIs | Governed settings only; all mutations require receipt |
 
@@ -454,7 +284,7 @@ sequenceDiagram
 - `RunRecord` is neutral durable state; policy and runtime state remain separate.
 - Corporate-facing surfaces use run/story/review/evidence language and do not expose Team RAM internals unless requested.
 - No yolo/forever modes, hallucination-free claims, foreign process libraries, or unapproved runtime installs are canonical.
-- Notion remains the planning/decision source of truth when reachable; Brain stores append-only receipts and outcomes.
+- Notion holds private planning and approval records under DOC-01; Brain stores append-only receipts and outcomes. The authoritative operational work board and sync direction are unresolved under DOC-09, independent of engineering-document publication.
 
 ---
 
@@ -462,14 +292,14 @@ sequenceDiagram
 
 | Interface | Direction | Channel | Payload / Contract | Risk / Decision |
 |---|---|---|---|---|
-| AI Agent via Brooks / Team RAM | Inbound | Skills + packaged MCP servers | `neo4j-memory` first, `database-server` for evidence, `neo4j-cypher` only when needed | AD-23, AD-03 |
+| AI Agent via Brooks / Team RAM | Inbound | Authenticated Allura MCP | Governed memory search/capture with explicit authorized scope | AD-03, AD-50 |
 | Dashboard UI | Inbound | REST HTTP | JSON — memory records | AD-05 |
 | Memory Command Center | Inbound | REST HTTP + adapter contracts | Memories, RuVix governance, curator, graph, audit/evidence, settings | AD-31, RK-19 |
-| Native Allura Kanban | Inbound | REST HTTP + PostgreSQL-backed service contract | Default planning/work item source of truth | F43, AD-31 |
-| Board Sync Adapters | Outbound | Provider APIs | Optional Notion, Linear, and GitHub Projects projections of native board state | F43, AD-31 |
+| Native Allura Kanban (proposed) | Inbound | Proposed REST HTTP + PostgreSQL-backed service contract | Backlog; authoritative work-board selection unresolved | BP-F43, DOC-09 |
+| Board Sync Adapters (proposed) | Unresolved | Provider APIs | Backlog; upstream ownership, conflict rules and sync direction unresolved | BP-F43, DOC-09 |
 | Governed Run Layer | Inbound | REST + CLI + Board + Brain receipts | Version-pinned run record, policy, runtime state, append-only events, breakpoints, evidence, doctor findings | AD-35, AD-41, RK-25–RK-30 |
-| Resource Manifest Adapter | Outbound | File or generated endpoint | Skills, agents, MCP servers, containers, cron jobs, drift warnings | F44, AD-31 |
-| Curator Approve CLI | Inbound | CLI (`bun run curator:approve`) | Processes pending proposals from PostgreSQL, promotes approved ones to `graph_memories` via `approveProposal()` | F6, B18, B19 |
+| Resource Manifest Adapter | Outbound | File or generated endpoint | Skills, agents, MCP servers, containers, cron jobs, drift warnings | BP-F44, AD-31 |
+| Curator Approve CLI | Inbound | CLI (`bun run curator:approve`) | Processes pending proposals from PostgreSQL, promotes approved ones to `graph_memories` via `approveProposal()` | GM-F6, B18, B19 |
 | PostgreSQL 16 | Outbound | TCP (pg driver) | SQL — append-only INSERTs + SELECTs | AD-01, RK-02 |
 | RuVector graph (PG tables) | Outbound | TCP (pg driver) | Approved memory recall + governed writes via `graph_memories` | AD-29, AD-49, RK-32 |
 | Bumblebee plugin (accepted Correct Course plan) | Inbound | Pinned upstream endpoint scanner → server-issued lease → HTTPS NDJSON receiver | Sanitized package/finding/summary evidence, complete bound-population state, downstream exposure handoff | AD-57, AD-60; read-only scanning, no execution or enforcement authority |
@@ -482,7 +312,7 @@ sequenceDiagram
 |---|---|
 | §3.1 Primary Memory Recall | AD-23 (skills-first packaged MCP), AD-19 (controlled retrieval intent) |
 | §3.2 Evidence Escalation | AD-01 (Postgres for episodic), RK-02 (tenant isolation in queries) |
-| §3.3 Graph Escalation | AD-02 (PostgreSQL (graph_memories) for semantic), AD-23 (read-only graph fallback) |
+| §3.3 Graph Inspection | AD-49 / AD-50 (PostgreSQL graph adapter; retired legacy fallback) |
 | §3.4 Governed Memory Write Path | AD-04 (promotion mode), RK-01 (dedup), RK-03 (low-quality promotion) |
 | §3.5 Memory API | AD-05 (5-tool surface) |
 | §3.6 API-First Architecture and Memory Command Center | AD-31 (Memory Command Center), AD-29 (superseded), RK-19 |
@@ -495,11 +325,11 @@ sequenceDiagram
 
 | Constraint | Rationale |
 |---|---|
-| Every operation MUST include a valid `group_id` matching `^allura-` | Tenant isolation enforced at schema level — AD-06 |
-| Postgres rows MUST NOT be updated or deleted | Append-only audit trail — AD-01 |
-| `graph_memories` rows MUST NOT be edited in place | SUPERSEDES versioning preserves full lineage — AD-29 |
-| `graph_memories` writes MUST be preceded by a dedup check | Prevents knowledge graph bloat — RK-01 |
-| `PROMOTION_MODE=soc2` MUST prevent all autonomous semantic writes | Regulatory compliance gate — AD-04 |
+| Every operation MUST enforce authenticated tenant and applicable workspace scope; `group_id` must match `^allura-` | AD-06 CHECK validates format only. Authentication, scoped authorization and applicable RLS enforce access; cross-scope denial requires tests |
+| Historical `events` rows MUST NOT be updated or deleted | Append-only evidence; proposal and outbox workflow rows have governed lifecycle transitions |
+| Semantic content MUST NOT be overwritten in place | New content version and lineage preserve history; lifecycle flags and unresolved restore behavior are distinct (DOC-03) |
+| Duplicate-knowledge protection requires a scoped, operation-specific contract | Capture similarity, watchdog source dedup and approval replay are different mechanisms; cross-proposal semantic duplicate policy remains DOC-05 |
+| Both `soc2` and legacy `auto` modes require independent human approval for semantic promotion | Score and mode cannot grant approval — AD-04 |
 | Circuit breaker MUST trip before budget exhaustion | Prevents agent runaway — control plane/circuit-breaker |
 | Memory Command Center MUST use API/MCP contracts and never write directly to substrates | Prevents governance bypass and UI drift — AD-31 |
 | RunRecord wrappers MUST remain outside the memory data plane | Preserves Allura Brain's memory-only boundary — AD-35 |
@@ -520,15 +350,15 @@ sequenceDiagram
 
 ```text
 API route
-  → src/lib/api/query helper
+  → authenticated route and query/mapper boundary
   → controlled API endpoint
-  → PostgreSQL / PostgreSQL (graph_memories) through application service
+  → PostgreSQL / PostgreSQL semantic tables through application service
   → mapper + Zod validation
   → ApiResult<T>
   → CLI / MCP client state
 ```
 
-Authoritative implementation boundary: `src/lib/api/api.ts`, `src/lib/api/queries.ts`, `src/lib/api/mappers.ts`, `src/lib/api/schemas.ts`, and `src/lib/api/types.ts`.
+The former `src/lib/api/` module list is historical and absent from the inspected tree. For the bounded journey, current implementation evidence is `src/app/api/curator/approve/route.ts`, `src/lib/memory/approve-proposal.ts`, `src/lib/memory/retrieval-layer.ts`, and `src/mcp/canonical-tools.ts`. No broader API-module migration is claimed by this repair.
 
 Curator action topology:
 
@@ -550,7 +380,7 @@ pinned upstream scanner
   → optional Curator display / separately governed host response
 ```
 
-Native Kanban direction: PostgreSQL owns operational board state; PostgreSQL (graph_memories) may project semantic relationships; Allura Brain stores durable decisions/evidence receipts. Notion, Linear, and GitHub Projects are optional sync adapters; Native Allura Kanban is default upstream.
+Proposed board integration: internal operational board state belongs in PostgreSQL, with semantic relationships and durable Brain evidence separate. This storage responsibility does not choose the authoritative planning board. Native Allura Kanban versus external upstream ownership, sync direction and conflict handling remain DOC-09; these integration stories stay in backlog until resolved.
 
 Governed AI office delivery order: reconcile product truth, finish the run
 control plane, build the PostgreSQL work plane, build the operator workspace, then
@@ -573,77 +403,32 @@ Architecture note: Previous dashboard surfaces (ports 3100, 3334, 6420) are refe
 
 ## 8. Integration Plan
 
-### 8.1 Deployment Scenarios
+### 8.1 Deployment Boundary
 
-#### Scenario 1: Local Development (Packaged MCP Servers)
+Supporting history: [portal deployment runbook, 2026-09-15](../archive/allura/PORTAL-DEPLOYMENT.md). It is not current release proof, an approved endpoint/port configuration, or a seventh governing specification.
 
-```bash
-# Terminal 1: API server
-bun run api
+Deployment configuration is owned by the reviewed compose/environment manifests, not a second abbreviated configuration copied into this document. The default graph implementation requires PostgreSQL; the optional native addon requires its own explicit configuration and validation. Do not restore a retired graph endpoint from an old documentation example.
 
-# Attach packaged MCP servers through MCP_DOCKER as needed:
-# - neo4j-memory
-# - database-server
-# - neo4j-cypher (only if needed)
-```
-
-#### Scenario 2: Skills + External MCP Server Activation
-
-```bash
-Use `MCP_DOCKER_mcp-find`, `MCP_DOCKER_mcp-config-set`, and `MCP_DOCKER_mcp-add`
-to activate the packaged server set required for the current task.
-```
-
-#### Scenario 3: Containerized Core Stack
-
-```yaml
-# docker-compose.yml
-services:
-  web:
-    build: .
-    command: bun run start
-    environment:
-      - POSTGRES_DB=...
-      - PostgreSQL (graph_memories)_URI=...
-```
-
-**Current Docker caveat:** the primary local `docker-compose.yml` is a development stack with pre-existing external volumes/network and a compose-level command override for the `mcp` service. It is not yet the stranger-friendly public Docker story. Public Docker onboarding should add a separate OSS compose profile, `.env.example`, and an image-first `allura-brain` service before claiming one-command setup.
+The primary local compose stack depends on existing volumes/network. This documentation pass does not prove clean-machine setup, live service health, or a production release.
 
 ### 8.2 Runtime Layers
 
-**Brooks orchestrates. Skills decide. Packaged MCP servers execute.**
-
-```
-Brooks / Team RAM
-├─ memory-client
-├─ allura-memory-skill
-└─ mcp-docker-memory-system
-    ↓
-    ├─ neo4j-memory      (primary approved-memory recall)
-    ├─ database-server   (trace and audit evidence)
-    └─ neo4j-cypher      (read-only fallback)
+```text
+Agent / operator
+  → authenticated MCP or review API / CLI
+  → resolved principal, tenant and workspace
+  → governed memory / approval / retrieval services
+  → PostgreSQL evidence + semantic tables
+  → optional asynchronous Notion projection
 ```
 
-### 8.3 Implementation Phases
+### 8.3 Implementation and Verification
 
-| Phase | Component | Status |
-|-------|-----------|--------|
-| 1 | Skills-first runtime contract | ✅ Complete |
-| 2 | Packaged `neo4j-memory` + `database-server` integration | ✅ Complete |
-| 3 | Read-only `neo4j-cypher` fallback | ✅ Complete |
-| 4 | Brooks staged routing (memory first, evidence second, Cypher last) | In Progress |
-| 5 | Legacy custom MCP removal from runtime docs and config | Planned |
-| 6 | Phase 6 deliverables (DLQ, Notion sync, auth, CSV, Sentry, CORS) | ✅ Complete (AD-25) |
-| 7 | Curator pipeline E2E validation | Planned (RK-14) |
-| 8 | Graph-Notion sync hardening | Planned (RK-16) |
-| 9 | API shape validation (Zod + mapper tests) | Planned (RK-17, archived) |
+Source evidence: `src/lib/graph-adapter/factory.ts`, `src/lib/memory/approve-proposal.ts`, `src/curator/approve-cli.ts`. The bounded journey and acceptance evidence live in Requirements Matrix, rather than a competing table of unchecked completion claims.
 
-### 8.4 Success Metrics
+### 8.4 Success Evidence
 
-- ✓ Skills route normal recall to `neo4j-memory` first
-- ✓ `database-server` is used for evidence, not default recall
-- ✓ `neo4j-cypher` is reserved for read-only graph fallback
-- ✓ Core stack remains deployable independently of a custom monolithic MCP runtime
+A successful slice requires capture read-back, independent human decision, committed receipt, same-scope retrieval, denied out-of-scope retrieval, replay/conflict checks, and a revision-pinned test result. Notion projection status is reported separately from canonical promotion.
 
 ---
 
@@ -666,7 +451,7 @@ graph TD
         F --> H[RuVixControlPlane]
         H --> G
         E --> G
-        E --> I[(PostgreSQL (graph_memories))]
+        E --> I[(PostgreSQL semantic tables)]
         E --> J[Validation Report]
         J --> K[Human Judge]
     end
