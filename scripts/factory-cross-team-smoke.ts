@@ -41,9 +41,8 @@ function startup(args: readonly string[]) {
 }
 
 async function loadBindings(): Promise<SmokeBindings> {
-  const [tools, connections, vector, postgres] = await Promise.all([
+  const [tools, vector, postgres] = await Promise.all([
     import("@/mcp/canonical-tools"),
-    import("@/mcp/canonical-tools/connection"),
     import("@/lib/ruvector/connection"),
     import("@/lib/postgres/connection"),
   ])
@@ -58,7 +57,8 @@ async function loadBindings(): Promise<SmokeBindings> {
     },
     add: tools.memory_add,
     search: tools.memory_search,
-    cleanup: [connections.closeConnections, vector.closeRuVectorPool, postgres.closePool],
+    // closePool owns both owner and app pools, including canonical-tools' alias.
+    cleanup: [vector.closeRuVectorPool, postgres.closePool],
   }
 }
 
@@ -101,11 +101,13 @@ export async function runTenantSmoke(args: readonly string[], bind: () => Promis
       : result.results.every((item) => !String(item.content).includes(marker)),
     plan.write ? "exact saved marker was not discoverable" : "cross-tenant marker leaked into search results")
   } catch (error) {
+    console.error("Factory tenant smoke operation or assertion failed")
     failed = true
     failure = error
   } finally {
     for (const close of bindings.cleanup) {
       try { await close() } catch (error) {
+        console.error("Factory tenant smoke resource cleanup failed")
         if (!failed) { failed = true; failure = error }
       }
     }
