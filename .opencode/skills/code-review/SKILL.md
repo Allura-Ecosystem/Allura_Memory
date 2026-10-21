@@ -5,6 +5,9 @@ description: Review code changes for correctness, regressions, security, contrac
 
 # Code Review
 
+> [!NOTE]
+> **AI-Assisted Documentation** — reconciled with the existing PostgreSQL lineage contract; full human document review remains pending.
+
 Use this skill when the user asks for a code review, PR review, risk audit, architecture review of changes, or pre-merge assessment.
 
 ## Purpose
@@ -35,7 +38,7 @@ Always check for these repository invariants:
 
 - Enforce `group_id` on DB read and write paths
 - Preserve append-only PostgreSQL trace behavior
-- Preserve Neo4j lineage via `SUPERSEDES` instead of mutation
+- Preserve immutable PostgreSQL semantic versions with new `graph_memories` rows and `graph_supersedes` lineage instead of overwriting content
 - Require HITL for behavior-changing promotion flows
 - Validate external boundaries with Zod
 - Prevent server-only modules from being imported into client code

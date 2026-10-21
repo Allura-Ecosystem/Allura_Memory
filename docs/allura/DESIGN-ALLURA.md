@@ -2,12 +2,17 @@
 
 > [!NOTE]
 > **AI-Assisted Documentation**
-> Portions of this document were drafted with the assistance of an AI language model.
+> Portions of this document were drafted with AI assistance; Codex prepared the 2026-10-20 development-readiness additions and React store-preview alignment.
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
+> AI-generated content may contain inaccuracies or omissions.
 > Code and schemas evidence implementation; approved product decisions establish intent. Record disagreement for the owning decision rather than silently changing either.
 
 > **Visual identity** (colors, typography, shadows, spacing, iconography) lives in [BLUEPRINT.md](./BLUEPRINT.md#0-brand-identity). The Memory Command Center must use real Allura brand assets and tokens only; generated logos and unrelated project tokens are forbidden.
 
+
+**Integration evidence boundary — 2026-10-21:** This revision consolidates specifications and source-local assessments from `28d90e843` plus the dirty-file snapshot identified in the [source manifest](../reference/development-readiness-20261021/source-manifest.json), onto main base `c720aca2e` (PR #169 content head `51e421ca0`). Dashboard, Cloudflare authentication and preview implementation changes are excluded. Their “implemented” or test-count statements below are dated source-local observations, not verification of this branch, current main or deployment. Missing local receipts remain [unavailable supporting evidence](../reference/development-readiness-20261021/unavailable-evidence.md). [Story packets](../reference/development-readiness-20261021/story-packets.md) operationalize the canonical gates without approving proposed decisions.
+
+**Approved intended authentication migration (source-local implementation):** [Cloudflare Access security contract](#cloudflare-access-security-contract). The approved provider change is Cloudflare Access under [AD-69](RISKS-AND-DECISIONS.md#AD-69-cloudflare-access-replaces-clerk); the provider implementation remains a separate unmerged source-local change and is not current-main or deployment evidence.
 
 ## Review status — 2026-10-18
 
@@ -16,8 +21,25 @@ This correction specifies one bounded journey and distinguishes intended → spe
 **Publication authority (DOC-01):** GitHub’s six versioned engineering specifications govern engineering. Notion holds private planning and approvals and links to the specifications; it is not a competing engineering specification. Sabir approved this direction on 2026-10-18. Use the bounded journey and linked acceptance matrix; other unresolved decisions remain in Risks & Decisions.
 ---
 
+## Enterprise dashboard visual/read slice — 2026-10-19
+
+**Portfolio positioning:** Sabir clarified that Allura is a portfolio project aiming toward SOC 2 readiness. The dashboard must not claim SOC 2 compliance, a completed examination or an issued SOC 2 report. Proposed controls and illustrative evidence remain explicitly distinct from verified operating controls.
+
+The portfolio preview includes Security & Trust and a local Work Board. A control can create a linked sample task; tasks support creation, editing, filtering, stage changes and illustrative independent review. Task state remains in browser memory across preview navigation and resets on reload. This demonstration does not grant authority, approve knowledge, verify a security control or create an audit receipt. Implementation stage and evidence-review state are separate fields. The visual direction is warm and inviting: Cream ground, rounded controls, restrained Blue/Orange accents, one navigation system, and the unchanged official compact AL lettermark in the dashboard shell. Preview source remains isolated under `artifacts/enterprise-dashboard/visual-fixture/`.
+
+Sabir supplied the business-memory graph composition reference and explicitly required the approved Allura palette, unchanged official Allura assets and Cream-dominant treatment. The current reference is the in-session Allura graph image (`codex-clipboard-72e359fd-9b7c-4f41-869f-9442efa59c70.png`), interpreted through the current branding instructions; a completed implementation still requires independent Durham review and Sabir's acceptance.
+
+Shared semantic tokens live in `src/components/dashboard/brand-tokens.module.css`. Navigation, read surfaces, graph/inspector and access denial consume them. Use Aeonik for headings when available, a neutral sans fallback, and IBM Plex Mono only for technical labels. No generated logo, gradients, glow, glass or drop shadows. Orange selection has an Ink outline plus a textual selected state; Green must not imply approval without source evidence. Contrast is checked per actual foreground/background pair.
+
+The implemented memory screen is `/dashboard/search` (the historical `/dashboard/memories` name below remains intended vocabulary). It supports approved/retained filtering, literal content search, 50-result pages and a disclosure inspector. Unknown version/provenance is explicit. Search is not semantic retrieval. The graph is an interactive node/edge canvas with selection, inspector, pan, zoom, fit, relationship filter, list alternative and a new bounded neighborhood read. Layout distance is not embedding similarity. Loaded scope and truncation remain visible.
+
+Desktop uses sidebar/canvas/inspector; smaller widths stack the inspector and collapse navigation. Phone graph text and hit targets must remain usable after SVG scaling. Fixtures used for visual verification are labeled synthetic and isolated from sign-in and backend reads. They cannot establish access control, live data or the complete enterprise journey.
+
+Sabir initially requested an HTML design preview on 2026-10-19, with no sign-in required. On 2026-10-20, the current Store overview reference became the corrected React/Vite preview at [`http://127.0.0.1:4008/index.html#ecommerce`](http://127.0.0.1:4008/index.html#ecommerce), sourced from `artifacts/enterprise-dashboard/visual-fixture/`. The portable single-file HTML predates the final tablet grid correction and awaits repackaging after a local governance-hook load failure; it is not equivalent to the corrected React build. The [commerce receipt — source-local receipt unavailable](../reference/development-readiness-20261021/unavailable-evidence.md) distinguishes the artifacts and their verification. Administration, embedding evidence, device inventory and audit/recovery remain live implementation gaps; populated preview examples do not close those gaps. This updates the preview reference, not the enterprise security or acceptance contracts.
+
 ## Table of Contents
 
+- [Studio source reuse and shared preview journeys](#portfolio-preview-studio-source-reuse-and-shared-journeys)
 - [Overview](#overview)
 - [Functional Requirements](#functional-requirements)
 - [API Reference](#api-reference)
@@ -25,6 +47,8 @@ This correction specifies one bounded journey and distinguishes intended → spe
 - [Business Rules](#business-rules)
 - [Use Cases](#use-cases)
 - [Important Constraints](#important-constraints)
+- [Development readiness design](#development-readiness-design--2026-10-20)
+
 
 ---
 
@@ -223,14 +247,14 @@ The rebuilt dashboard may not replace `3100` until route parity, visual parity, 
 | DS-F14 | Curator dashboard shows three tabs: Traces, Approved, Pending | `/dashboard/curator` |
 | DS-F15 | Pending tab sorts by confidence (descending); shows confidence badge + reasoning + action buttons | `ConfidenceBadge` component |
 | DS-F16 | Approved tab shows current human-approved knowledge; any historical automated decision is labeled historical and cannot authorize new promotion; sortable by date/confidence | `/dashboard/curator` approved tab |
-| DS-F56 | Tab 1 (Traces) restricted to authenticated users with `admin` role | Clerk RBAC |
+| DS-F56 | Tab 1 (Traces) restricted to authenticated users with `admin` role | Current Allura membership RBAC; verified Access identity |
 
 ### Audit & Health Requirements
 
 | # | Requirement | Satisfied by |
 |---|-------------|-------------|
 | DS-F58 | Audit log endpoint returns all events with filtering and pagination; CSV export for compliance | `GET /api/audit/events` |
-| DS-F57 | Dashboard integrates Clerk for authentication and RBAC (curator, admin, viewer roles) | `src/lib/auth/clerk.ts` |
+| DS-F57 | Dashboard verifies Cloudflare Access identity and resolves current Allura membership roles (curator, admin, viewer) | `src/lib/auth/cloudflare-access.ts`, `cloudflare-authority.ts`; AD-69 |
 | DS-F26 | Agent task lifecycle events persisted as append-only traces | `src/lib/postgres/queries/insert-trace.ts` |
 | DS-F27 | Raw trace storage is append-only; no UPDATE/DELETE on events table | Schema enforcement |
 | DS-F28 | Traces preserve provenance linking downstream insights to source evidence | `trace_ref` field |
@@ -939,6 +963,248 @@ async function readJson<T>(path: string, init?: RequestInit): Promise<{ data: T;
 - [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) — system topology and deployment
 - [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) — canonical field and entity definitions
 - [BLUEPRINT.md](./BLUEPRINT.md#0-brand-identity) — visual identity, wireframes, and design rules
+
+### Portfolio preview: nontechnical navigation (2026-10-19)
+
+The preview leads with Home document search, Company Knowledge, Work Board and Review changes. Security & Trust and Administration form the organization section. Technical search details appear only within Administration → Search settings → Advanced details for IT. Related-information visualization is contextual to documents. Search is explicitly local keyword matching over fictional documents; it does not claim generated answers or live permission enforcement. The team selector filters document results, and empty results clear document details. These are preview interactions, not production acceptance evidence.
+
+### Portfolio preview: Apps and update management (2026-10-19)
+
+The user-facing entry is **Apps**, with Mortgage and Bumblebee as separate sample work areas using the same Allura shell, AL icon, Cream palette and shared Work Board. The employee should understand the task before seeing any plugin terminology. Administration → Manage apps owns the sample update walkthrough. No installation, real scan, external call, permission change or database migration is part of this HTML design scope.
+
+- Mortgage demonstrates a fictional case-document checklist, missing-document follow-up and a request for document review. It does not demonstrate automated underwriting, a lending/credit decision or compliance certification.
+- Bumblebee demonstrates a fictional reported concern, source/evidence details and a simulated response proposed for review. It does not perform scanning, blocking, containment or other device changes.
+- Both apps may create clearly attributed local follow-up tasks linked back to the originating app. Completing a Work Board task is not a mortgage decision, real remediation or app-domain approval.
+- Manage apps explains the app owner, sample current/new version, changes and access impact in plain language. The walkthrough must distinguish a compatible update, an incompatible update that cannot proceed, a failed update that preserves the prior version, and a tested-example restore. Independent app state and task history must not silently disappear when changing a sample version.
+- Reader/editor personas can inspect management information; update controls belong to the fictional Administrator demonstration. The selector is not authentication. Disabling an app in the demonstration must show an unavailable state on direct navigation without disabling unrelated apps.
+- App data remains only in browser memory, survives navigation and resets on reload. Reset controls must describe their scope; they must not imply deleting live records.
+
+Runtime implementation and acceptance remain separate: REQ-MOD-001–006 and REQ-MTG-001–002 still govern intended system behavior; preview evidence does not establish compatibility enforcement, authorization, migration safety or production readiness.
+
+
+### Portfolio preview: Studio source reuse and shared journeys
+
+**Direction recorded 2026-10-19:** Sabir selected [Studio Admin Base UI](https://github.com/arhamkhnz/next-shadcn-admin-dashboard-baseui) as the reusable source for existing dashboard page patterns. Reuse actual page/widget compositions, not just controls beneath a rebuilt page. This is a bounded visual-preview choice, not adoption of the full template framework, a plugin runtime or production authorization. [AI-GUIDELINES §11](../../guidelines/AI-GUIDELINES.md#11-allura-dashboard-and-portfolio-preview) governs future AI execution of this direction.
+
+The source pin is `62b1b3e3c4af7a1abf055298b01b4af020bd0f8b`. Current adaptations use the File Manager folder/grid/list compositions; Kanban task/column/toolbar compositions with Board/List/Table and search; and five e-commerce widgets: **KpiStrip**, **StoreTraffic**, **TopProducts**, **Inventory**, and **RecentOrders**. Profiles, People, Teams and Roles remain existing preview components. Keep the unchanged official compact AL mark, Cream-dominant shared semantic tokens, and a familiar nontechnical vocabulary. Preserve source license and hashes; record adapter/compatibility changes. Evidence: [source manifest — source-local receipt unavailable](../reference/development-readiness-20261021/unavailable-evidence.md), [initial preview receipt — source-local receipt unavailable](../reference/development-readiness-20261021/unavailable-evidence.md), [commerce provenance — source-local receipt unavailable](../reference/development-readiness-20261021/unavailable-evidence.md) and [commerce verification receipt — source-local receipt unavailable](../reference/development-readiness-20261021/unavailable-evidence.md). Those receipts report bounded source and browser checks, not a complete design acceptance or production release.
+
+**Store overview at `#ecommerce`:** the React page provides order-number/customer search, status filters, numeric total/date sorting, five-row pagination and an explicit empty result. Product/order controls open sample details and preserve keyboard focus, including returning focus when closed. The 34 fictional order rows are an illustrative subset, not the ledger behind the 379-order monthly summary. Missing customer contacts, order item details and individual stock counts are disclosed rather than invented. Product shares and the October/September sales comparison derive from the displayed sample values. Revenue and profit share a dollar scale with a legend and monthly data table; chart periods and sample labels remain explicit. Keep the responsive grid, a labeled inner scroll region for the phone order table, and reduced-motion behavior.
+
+The 2026-10-20 commerce receipt records desktop 1440px, tablet 820px, phone 390px and keyboard checks, plus Munari's scoped review of the corrected direct React build. Its portable HTML digest and earlier packaging checks describe an older artifact; the final review explicitly excludes that artifact. Future edits require checks against their own candidate. No accessibility certification, live store access or production acceptance is established.
+
+Shared local providers connect people/team membership, task owners, source files and app-originated work. Files link both ways with Work Board tasks; a task owner links to a profile. A file link does not grant read access. Evidence changes reset the sample review, and the existing Done guard remains applicable to all stage-change controls, including drag handlers. Source review covered the drag handler; the native drag gesture itself is not claimed as browser-tested in this receipt. Reader disables edit/drag controls; Administrator demonstrates management controls without authenticating or conferring automatic department access. State is browser-memory-only and resets on reload.
+
+The Shopify sample demonstrates read-only product/inventory access review and fictional import/pause/disconnect behavior without credentials or external requests. Store overview uses separate fixed fictional metrics. Importing sample files does not populate those charts or establish live customer, order or payment access. Real connector/authentication/authorization contracts and production evidence remain open.
+
+**Proposed next slices, not implemented by this documentation update:** Search everything; My day; Inbox; understandable sharing/access requests; a guided policy → source → task → file → review → outcome journey. Existing local document search is not cross-resource search or generated answers. After the approved reliability work below, suggested feature priority is Search + My day and one coherent end-to-end journey. Each slice needs bounded data/behavior contracts, acceptance and named reviewers before implementation. Product approval, preview verification and production release are separate claims.
+
+### Approved preview reliability direction — 2026-10-20
+
+Sabir approved the repair priorities for documentation: reproducible source/build/test ownership, crash containment, then bounded data loading before feature expansion. These are open implementation obligations. [AI Guidelines](../../guidelines/AI-GUIDELINES.md#approved-reliability-priorities--2026-10-20), [PV-AC01–05](REQUIREMENTS-MATRIX.md#preview-reliability-acceptance--2026-10-20) and [RK-42–44](RISKS-AND-DECISIONS.md#preview-reliability-risks--2026-10-20) govern this work.
+
+Maintain the React application, adapters, licensed source, dependencies and tests in a tracked application location selected after import/build inventory. Generated bundles and evidence remain separate. A clean checkout must build and run required tests without ignored inputs or a workstation-specific export path; moving files alone does not establish reproducibility.
+
+Search settings currently clamps its numeric URL parameter without requiring an integer. `record=0.5` reached `records[selected].title` and blanked the React root; a later hash change did not recover it until reload. Validate before array access and contain screen failures while preserving the shell/shared work. Cover invalid routes and a deliberate render error through the actual entrypoint.
+
+Connections calculates full layout before selecting List/Flat/3D. Replace repeated scans with adjacency/degree indexes, cache stable model/layout work, skip layout for List and bound graph neighborhoods. Establish device/browser, density, warm/cold, memory and input-response baselines before setting budgets. The isolated 5,000-node CPU result is diagnostic, not a browser benchmark or capacity guarantee. Large orders require bounded server queries when real data is introduced; display pagination alone is insufficient.
+
+Real persistence, authorization, concurrency and retries follow existing development-readiness contracts and decision gates. Test interrupted saves, competing edits, duplicate/out-of-order events and revoked access before claiming a live journey. This direction changes no DTO, schema, credential, promotion or deployment authority.
+
+
+### Portfolio preview: Connections graph — 2026-10-20
+
+Sabir requested a **Connections** navigation entry and a graph of the existing sample files, tasks, people and apps. The preview route is `#graph`. The Shopify setup demonstration remains `#connections`, labeled **Connected tools**, to distinguish integration setup from browsing related work. Existing sample-knowledge graph links remain available at `#memory-graph`; old `#graph?focusNodeId=...` knowledge links retain their meaning. These are portable-preview routes, not backend endpoints.
+
+Connections derives its view from the same local Files, Work, Organization and Apps providers as the original screens. Node identity is namespaced by resource type and original ID. Relationships represent explicit file owners, task assignees, file/task attachments, app owners and the originating app recorded on a task route. Matching department names or layout proximity must not manufacture relationships. Show isolated records and missing relationships honestly; never invent a connection merely to fill the canvas. Current file/app versions and captured task/attachment versions must remain distinguishable.
+
+Employees can search and filter by familiar item type, select an item to read its relationships, switch Graph/List, and open the original File Manager task, profile or app. Original item views provide See connections links. Allura Cream remains dominant, nodes use Blue, and selection uses Orange with Ink outline and a text indicator. Types are labeled and distinguished beyond color. Fit/zoom, readable labels, keyboard navigation and a list alternative support smaller screens. The graph does not grant access, authenticate a role, verify knowledge, calculate embedding similarity or connect a real account. Local mutations are reflected without a second fixture store; reload resets all sample state.
+
+Verification is bounded to the local preview and recorded with its artifact receipt; no production implementation, acceptance or release is implied.
+
+#### Approved direction: 3D network and scorecards
+
+Sabir subsequently requested an animated, brain-like 3D network inspired by Obsidian's node-and-link interaction. This explicitly changes the earlier flat/static graph direction for the **Connections preview only**. Preserve Allura Cream, the official AL mark and legible Blue/Ink/Orange semantics. A spatial arrangement communicates navigation context, not measured similarity, verified knowledge or additional relationships.
+
+Selecting a node opens a scorecard with its recorded facts and related work. A scorecard is a profile summary, not an invented numerical rating. The requested Gabriel/COO example is a clearly labeled fictional portfolio person; job title does not establish an application permission. Vendor examples show explicitly fictional contact details, source identity and recorded relationships. Do not copy private stakeholder details into the portfolio or infer real contact information.
+
+The intended interaction includes manual rotation, zoom, reset, a visible pause control, stopping automatic motion when inspecting a node, and reduced-motion support. Preserve an accessible list and readable scorecards when 3D rendering is unavailable or unsuitable for the device. Existing Files, Work, People and Apps state remains shared. Any additional sample entity and relationship must have an explicit local source; visual density must not be manufactured with false record nodes or edges. Verification of this direction is recorded separately from its authorization.
+
+Sabir approved adopting the MIT-licensed `vasturiano/react-force-graph` project's React 3D package for this preview. Reuse its graph engine behind Allura's shared record model rather than maintaining a bespoke 3D layout. Preserve the Gabriel → company → contact scorecard journey, original-record navigation, and explicit relationship evidence. Focused exploration may show direct connections or one further step; filters must never create relationships. Physics positions are presentation, not similarity or authority. Record the pinned dependency, upstream attribution, license, compatibility checks and observed behavior with the preview artifact. This approval does not establish production scale or security readiness.
+
+## Development readiness design — 2026-10-20
+
+**AI-assisted proposed design, not implemented acceptance.** Traces [BP-F59–BP-F70](BLUEPRINT.md#proposed-functional-requirements). Existing invariants and approved DOC-06/DOC-07 continue to apply; new contract naming, failure and concurrency choices below require [AD-65–AD-68](RISKS-AND-DECISIONS.md#development-readiness-decisions--2026-10-20). [Data Dictionary](DATA-DICTIONARY.md#proposed-development-contracts--2026-10-20) owns proposed DTO fields; [Requirements Matrix](REQUIREMENTS-MATRIX.md#development-readiness-traceability--2026-10-20) owns acceptance and readiness. No API/schema is changed by this specification draft.
+
+### Functional ownership
+
+| Requirement | Owning design section | Use case / acceptance |
+|---|---|---|
+| BP-F59 | [Retry-safe capture](#retry-safe-capture-proposal) | DEV-UC01 / DEV-AC01 |
+| BP-F60 | [Workspace vector seam](#workspace-vector-seam-proposal) | DEV-UC02 / DEV-AC02 |
+| BP-F61 | [Governed semantic correction](#governed-semantic-correction-proposal) | DEV-UC03 / DEV-AC03 |
+| BP-F62 | [Reviewed revision](#reviewed-revision-and-delivery-extensions) | DEV-UC04 / DEV-AC04 |
+| BP-F63 | [Remote delivery](#reviewed-revision-and-delivery-extensions) | DEV-UC05 / DEV-AC05 |
+| BP-F64 | [Behavioral evidence](#quality-operations-and-maintenance-contracts) | DEV-UC06 / DEV-AC06 |
+| BP-F65 | [Reproducible CI](#quality-operations-and-maintenance-contracts) | DEV-UC07 / DEV-AC07 |
+| BP-F66 | [Operational truth](#quality-operations-and-maintenance-contracts) | DEV-UC08 / DEV-AC08 |
+| BP-F67 | [Retrieval evaluation](#quality-operations-and-maintenance-contracts) | DEV-UC09 / DEV-AC09 |
+| BP-F68 | [Dashboard acceptance](#quality-operations-and-maintenance-contracts) | DEV-UC10 / DEV-AC10 |
+| BP-F69 | [Compatibility cleanup](#quality-operations-and-maintenance-contracts) | DEV-UC11 / DEV-AC11 |
+| BP-F70 | [Capability and usage guidance](#capability-and-usage-guidance) | DEV-UC12 / DEV-AC12 |
+
+### Retry-safe capture proposal
+
+**Current discrepancy:** `src/lib/memory/canonical-contracts.ts` has no capture operation key; `src/mcp/canonical-tools.ts` generates a fresh memory ID per call. Capture deduplication by content marker is not server-enforced idempotency. Existing approval replay is separate and must not be reused as capture identity.
+
+**Proposed MCP request:** extend `memory_add` with `idempotency_key: string` (1–128 ASCII characters from `[A-Za-z0-9._:-]`), while preserving `group_id`, `content`, optional effective `threshold` and accepted provenance metadata. The typed internal request supports `trace_type`; exposed transport support must be inventoried separately. Proposed vNext explicitly validates `run|tool|failure|cron|conversation` when accepted and otherwise uses the transport-defined default; reject unsupported input rather than silently dropping it. Do not claim the field is already exposed by every live transport. `user_id` remains legacy untrusted input, not permission or the receipt actor. Resolve effective principal/workspace in the authenticated transport, verify group access and bind the request through the existing non-serializable capability. HTTP adapters, where present, accept `Idempotency-Key`; conflicting header/body keys fail validation. Do not invent a second capture endpoint.
+
+New contract-version clients require a key. Legacy clients need an explicitly reviewed compatibility/deprecation plan before enforcement; they must not be advertised as retry-safe. The compatibility activation and exact key constraint are Proposed, not a silent breaking change.
+
+Canonicalization candidate `capture-v1`: SHA-256 of a UTF-8 JSON tuple containing operation kind, effective tenant, workspace and principal, content verbatim (no trimming/Unicode rewrite), effective trace type, effective threshold override and every accepted behavior-affecting field including accepted provenance metadata. Sort object keys recursively, preserve array order and reject non-JSON values/unknown authority fields before hashing. Exclude the operation key, timestamps, correlation IDs and ignored legacy identity fields. Version the algorithm; test metadata ordering and default normalization explicitly. Metadata allowlist and limits require the API owner's acceptance; do not hash one payload and persist another.
+
+**Transaction:** authorize first; look up key under `(group_id, workspace_id, principal_id, operation_kind, idempotency_key)`. Same digest replays the exact immutable receipt. A differing digest conflicts. For a new key, commit the event, receipt, replay binding and durable index intent atomically, with one generated memory identity. Unique-key races roll back the losing candidate before reading the winner; never publish an uncommitted candidate receipt. Provider calls occur after commit through the durable worker. No expiry/deletion of replay evidence is proposed. Admission/rate-limit accounting must distinguish replay from a new durable capture and must not perform another content write on replay; its quota policy remains an AD-65 decision.
+
+**Proposed response:** retain compatible existing fields, adding `receipt: CaptureReceiptV1`. `stored`, score, pending-review and embedding state must not overstate projections; score may require a versioned response change if asynchronous scoring cannot satisfy the old field. Clients verify `receipt_id`, tenant/workspace, authenticated principal, record/event IDs, digest version/value and commit timestamp through same-scope `memory_get` receipt read-back. If extending that reader cannot be compatible, stop for API review rather than adding an unreviewed tool.
+
+| Proposed error / HTTP mapping | Meaning and client behavior |
+|---|---|
+| `INVALID_CAPTURE_REQUEST` / 400 | Missing/invalid required key or content/metadata; correct input before retry |
+| Existing auth codes / 401 or 403 | Unauthenticated, denied tenant/workspace/action, unresolved required workspace; no broader retry |
+| `CAPTURE_KEY_CONFLICT` / 409 | Same scoped actor/key, different canonical digest; no new event; investigate client operation identity |
+| `CAPTURE_NOT_FOUND` / 404 | Read-back has no visible receipt; never reveal another scope's existence |
+| `CAPTURE_TEMPORARILY_UNAVAILABLE` / 503 | Transaction cannot confirm commit; safe error reference, same-key reconciliation required |
+| Transport timeout / no application status | `pending/unknown` at the client; no claim that persistence failed or Brain disconnected |
+
+MCP returns the same stable application error code in its error payload; HTTP mappings do not assume MCP itself uses those statuses. Read-back must also reauthorize, not merely trust possession of an ID or key. Durable event success and projection failure coexist without changing the original capture receipt.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Validated
+    Validated --> Replayed: matching durable key and digest
+    Validated --> Conflict: key has another digest
+    Validated --> Committed: atomic event receipt replay and intent
+    Validated --> Rejected: denied or invalid
+    Committed --> [*]
+    Replayed --> [*]
+    Conflict --> [*]
+    Rejected --> [*]
+```
+
+`pending/unknown` is a caller observation after lost acknowledgement, not proof of a persisted server state. Index intent states are independently `queued → processing → succeeded` or `retry_wait/failed`; ambiguous worker acknowledgement reconciles the same source event and scoped index identity. Retry timing/claim leases require AD-65/66 review.
+
+### Workspace vector seam proposal
+
+**Observed gap:** `src/lib/ruvector/bridge.ts` insertion and `src/lib/ruvector/retrieval-adapter.ts` search use tenant-only plumbing where migration 40 requires scoped new rows. Deployment applicability must first be established read-only; no live isolation breach was demonstrated.
+
+Replace tenant-as-`userId` internal calls with `captureIndex(authority, sourceEventId, vectorPayload)` and `searchIndex(authority, queryOptions)`, where `authority` is an opaque verified server capability yielding group, workspace, principal and permitted action. These are proposed internal signatures, not new public MCP tools. Public request fields never construct that capability. Use one restricted connection/transaction context to set and enforce tenant, workspace and principal; pooled connection reuse must clear transaction-local context. A namespace CHECK alone is insufficient isolation.
+
+`vectorPayload` binds source memory/event IDs, content digest, embedding model/revision, dimensions and indexing version. Validate dimensions/model before insertion. `queryOptions` contains query, bounded limit/threshold, `approved|all` public status (the common bounded contract; internal lifecycle exclusions do not add public enum values) and `hybrid|vector|text` mode; authorize requested status separately. Current-knowledge mode excludes deprecated/superseded content; trace/history access requires its own permission and labeling. Federated search does not convert raw traces into approved knowledge.
+
+Missing workspace is a denial, never null/default/global repair. Existing legacy-null rows remain quarantined until an explicitly approved provenance-based migration. Feature-off, provider timeout and index failure may use an already permitted lexical path under exactly the same scope/status filters, returning `degraded=true`, attempted/used stores and a bounded reason. Authority failure cannot enter fallback. Keep embedding intent and append-only raw evidence when indexing fails; never mark vector-ready from non-null embedding counts alone.
+
+### Governed semantic correction proposal
+
+Keep the existing `memory_update` entrypoint only after auditing its current exposed transport contracts. Proposed vNext request adds `base_memory_id`, `expected_base_version` (positive decimal string), `content`, `rationale`, `evidence_refs`, and a stable operation key. Preserve legacy aliases only through an explicit mapping/consumer plan. Effective group/workspace/principal derive from authority; raw caller identity does not grant access.
+
+Resolve a visible immutable base and append correction evidence plus a linked pending proposal atomically. Proposed response is `{ proposal_id, base_memory_id, expected_base_version, status: "pending_review", submission_receipt_id }`, where the receipt is scoped correction-submission evidence, not a promotion receipt. Same key/digest replays submission; changed content conflicts. Missing/foreign bases return indistinguishable scoped not-found, invalid versions fail validation, stale current head returns `SEMANTIC_BASE_VERSION_CONFLICT`/409 without a new proposal. Approval rechecks the expected base head and DOC-06 review version atomically before creating the new semantic row and `graph_supersedes` edge. Concurrent corrections to the same head cannot both become the new head; the losing proposal needs updated evidence and human re-review, never automatic rebase.
+
+Failure at evidence, proposal, version, lineage, audit, outbox or receipt boundary leaves no partial successful transaction. Existing version/trace rows remain immutable. New-version approval does not delete historical supersession edges. Restore/rollback semantics remain blocked by DOC-03 and canonical duplicate policy by DOC-05; this proposal does not resolve either. The retired `getVersion`/write adapter path must be removed from this call chain only after equivalent production-bound tests and consumers are accounted for.
+
+### Reviewed revision and delivery extensions
+
+**DOC-06 is already approved.** Implement the existing [approval contract](#post-apicuratorapprove), including `expected_proposal_version` and durable `reviewed_proposal_version`; do not replace its replay-first semantics or introduce a different approval authority. Required regression: successful replay after the transition still returns the original receipt; new stale approval returns `PROPOSAL_VERSION_CONFLICT` without semantic/proposal/outbox/receipt/replay mutation. Fresh-review UX requires explicit human action and cannot auto-retry a new version.
+
+**DOC-07 is already approved.** Follow the [outbox and remote-delivery contract](DATA-DICTIONARY.md#promotion_outbox). Proposed implementation uses an explicit bridge between `canonical_memory_promoted` and `notion_sync_pending`, a stable delivery identity and separate `RemoteDeliveryObservationV1`. Worker claims must filter actual retry eligibility; persistence of the bridging intent is atomic and retry-safe. Reconcile unknown remote results by scoped authorized read-back before creating or resending; changed source revision/digest or destination conflicts. Permission revocation stops new delivery and preserves evidence; destination authorization must cover the transfer, not only access to a Notion page.
+
+The transport/read route for current delivery observations and exact retry policy remain Proposed under AD-68. Consumers may show `queued`, `synced`, `failed` or `unknown`; `synced` requires remote destination, record/page identity, intended source revision/digest, observer and observed time. The immutable approval receipt remains its decision-time snapshot.
+
+### Quality, operations and maintenance contracts
+
+- **Behavioral evidence:** inventory critical suites and test-lane inclusion before editing tests. Exercise production public adapters/services with boundary dependencies mocked or a disposable scoped integration database, rather than a parallel local policy fixture. Inject failure at every durable approval boundary including receipt/replay. Assert state, record counts, denial and original-receipt equality. Replace stale source-text expectations only after behavioral equivalence is covered. An expected critical suite collected as zero is a failure, even if another lane passes.
+- **CI:** select the authoritative main path explicitly; execute ESLint as lint, TypeScript as typecheck and declared critical lanes with file/test discovery assertions. Pin Bun to the reviewed manifest (`1.3.14` in the assessment), use frozen install, record lockfile/runtime digests and fail if installation changes the lock. A CI-pin change needs its own authorization; current docs do not install it. Existing Epic 24 changed-file lint is retained until intentional consolidation.
+- **Operational truth:** use `OperationObservationV1` to distinguish `succeeded|failed|partial|unknown`. Emit success only after its boundary succeeds; a `finally` block cannot unconditionally set success. A capture committed while indexing fails is partial for the overall workflow, successful at its capture boundary. Use opaque correlation IDs for user-visible errors; logs contain scope-safe error codes/timing, no raw content, query text, secrets or unrelated-scope identifiers. Verify that dashboard error redaction keeps the same safe reference. Metric dimensions are bounded (`operation`, `outcome`, `stage`, `reason`); do not use principal/content/correlation as metric labels.
+- **Retrieval evaluation:** freeze scoped, access-authorized fixture corpus/revision and human-reviewed current/history questions with relevant IDs and as-of labels. Compare approved-only and permitted federated paths separately; explicitly label lexical-only results. Include stale contradictory memory, history-only, no-answer and foreign-workspace fixtures. Record precision/recall@k, reciprocal rank, current-answer correctness/freshness, zero unauthorized results, p50/p95 total/provider/database time and fallback reasons. Record sample count, warm/cold conditions, timeout/censoring and backend/model/index versions. One slow sample is not a latency target. Set regression/latency budgets only after an accepted baseline; never tune on the holdout set or autonomously promote evaluation feedback.
+- **Dashboard:** distinguish local synthetic preview, implemented source, authenticated scoped acceptance and released deployment. Full journey is capture → proposal → independent human decision → receipt → authorized current retrieval → separately confirmed remote status if enabled. Work items remain unavailable until ownership and DOC-09 board authority are resolved. ENT-01–ENT-05 and exact visual reference DOC-02 still gate affected stories; read-only reader tests cannot close authentication/approval/release gates.
+- **Dependency/SDK cleanup:** inventory root SDK versus `packages/sdk`, CLI/transport exports, actual imports and packed consumers before choosing consolidation. Record package/version, owner, compatibility window and deprecation mapping. Stage Next/ESLint alignment separately from Vitest convergence and runtime upgrades. Confirm current official release/advisory/runtime documentation at implementation time; the assessment's versions are historical input, not automatic latest or vulnerability findings. Remove an unused export/adapter only after import, generated-output, CLI, packed-consumer/build and integration checks. Preserve historical migrations and intentional fail-closed compatibility stubs. Extract cohesive services after behavior is pinned; no wholesale rewrite is proposed.
+
+### Verification command starting points
+
+These commands are story preparation examples from the current package scripts, not a claim they ran for this documentation edit. Confirm each file is collected in the chosen lane and record counts/exit status; no-tests success is a failed critical check. Dashboard-specific tests in the separate source-local slice are excluded from this integration and must be selected only after that source is integrated.
+
+```bash
+bun run test:unit src/__tests__/mcp-auth-adversarial.test.ts src/lib/auth/__tests__/principal-context.test.ts src/lib/memory/retrieval-authority.test.ts
+bun run test src/lib/graph-adapter/__tests__/ruvector-workspace-authority.test.ts
+bun run typecheck --incremental false --pretty false
+bun run lint:eslint --no-fix
+bash .github/scripts/docs-allura-canonical-guard.sh
+bash .github/scripts/docs-backend-residue-guard.sh --docs-only
+```
+
+The current `lint` alias invokes typecheck; it is not evidence ESLint ran. `test:all` is not sufficient proof of suite discovery. Atomic promotion and outbox suites (`src/lib/memory/__tests__/atomic-promotion.e2e.test.ts`, `promotion-outbox-worker.e2e.test.ts`) require an explicitly configured disposable scoped database with the story's migration/role inventory; determine their correct current lane before running them. Do not point mutation tests, benchmark/load scripts or stack-control commands at production. Live acceptance uses authenticated governed MCP checks at the canonical endpoint with `group_id=allura-system`, no credential printing and no alternate-endpoint workaround. Capability discovery and a read result never authorize a write or grant change.
+
+### Capability and usage guidance
+
+Use the following evidence classes in operator guidance. `intended → specified → implemented → verified → released` is not automatic progression; each claim carries its source revision/date, exact scope, check and limitation. An installed agent/tool/connector establishes availability for invocation, not successful authentication or use. A registered specialist is not evidence it ran.
+
+| Workflow | Useful request | Evidence and limits to disclose |
+|---|---|---|
+| Project hydration | “Refresh this project from its handoff and one scoped Brain search; show stale decisions and next action.” | Current handoff/revision plus scoped result; access denial or old memories stays explicit |
+| Bounded planning | “Brooks, scope the smallest useful slice with acceptance checks.” | Existing coordination; new contract choices require owning decisions |
+| Code review | “Fowler, inspect this module read-only and propose reversible cleanup.” | Actual invocation and cited findings; source suspicion is not proven dead code |
+| Memory curation | “Bahari, prepare a small authorized curation packet with contradictory sources; leave approval to the human.” | Role availability does not grant new tenant access or promotion authority |
+| Diagnostics | “Measure retrieval stages and fallback reasons before proposing a fix.” | Current timings and sample size, not a guessed provider cause |
+| Handoff/close | “Summarize objective, revision, result, checks and risks; persist only if the receipt contract can be met.” | Handoff does not mean another runtime ran; missing idempotency/read-back means persistence unconfirmed |
+
+SDK, CLI, harness/replay and evaluation code exist locally; production enrollment and end-to-end operation need their own checks. Bumblebee remains default-off unless authorized and verified. Notion projection is incomplete under DOC-07. The public walkthrough is synthetic. Do not label any capability “underused” as a measured personal fact without usage evidence. Review the 80-proposal count as a dated curation opportunity, not a bulk-approval instruction. A scheduled review is optional future work requiring its own request.
+
+### Use Cases
+
+| Label | Scenario and required result |
+|---|---|
+| DEV-UC01 | A lost capture acknowledgement is retried concurrently with the same scoped key/digest: one event and original receipt; changed digest conflicts |
+| DEV-UC02 | Two workspaces share one tenant and query text: only authorized eligible rows return on vector and lexical paths; denied/legacy scope never widens |
+| DEV-UC03 | Two corrections race on one semantic head: independent human approval produces one new head, loser conflicts, old content/lineage remains unchanged |
+| DEV-UC04 | Human reviews proposal v3, proposal becomes v4, then submits v3: conflict and explicit fresh review; successful existing replay remains original |
+| DEV-UC05 | Remote write acknowledgement is lost: delivery becomes unknown, scoped read-back reconciles the original destination, no duplicate page or changed decision receipt |
+| DEV-UC06 | A required authentication/governance suite is excluded by a lane: CI fails collection; production-bound denial and rollback tests expose the real boundary |
+| DEV-UC07 | Clean runner uses declared Bun/frozen lock and actual lint: reproducible dependency graph, separate lint/typecheck results and no unexpected zero critical tests |
+| DEV-UC08 | Capture commits but embedding fails: user sees capture receipt plus pending/failed indexing; metrics report truthful stage outcomes and safe correlation |
+| DEV-UC09 | A current architecture question returns an outdated memory: labeled evaluation counts freshness error and identifies retrieval path, rather than claiming embedding coverage means quality |
+| DEV-UC10 | Viewer accesses dashboard and work items: authorized read data only; unavailable ownership and synthetic preview states are explicit; no release claim from screenshots |
+| DEV-UC11 | A legacy SDK export appears unused: packed consumer/import evidence decides retention/deprecation before removal; upgrades are staged and compatibility tested |
+| DEV-UC12 | Sabir selects hydration/curation/review: guidance shows available roles, access boundaries, evidence class/date and a useful request without fabricating execution |
+
+## Cloudflare Access security contract
+
+**Unsafe browser requests:** For Access-authenticated human POST/PUT/PATCH/DELETE requests, require an exact same-origin `Origin` and reject cross-site Fetch Metadata before forwarding. Missing, opaque or foreign origins deny without mutation. Signed identity alone is not CSRF protection because Access cookies are sent automatically. Machine routes using their own route-handler bearer/device authentication remain separate. Deployment must set appropriate HttpOnly/SameSite cookie policy and protect the origin; these controls supplement the application check.
+
+
+**Scope:** BP-F71–BP-F74 and AD-69, replacing Clerk for human web authentication only. The source-local instruction dated 2026-10-20 authorized that separate source migration under AD-69; this documentation consolidation grants no new migration authority. Actual grants, account policies, secrets and release remain separately scoped operations. This section supersedes current-provider references in older Clerk setup descriptions, not their historical evidence.
+
+| Requirement | Contract in this section | Use cases / acceptance |
+|---|---|---|
+| BP-F71 | JWT verification before human identity; signed-browser request protections | CF-UC01/02; CF-AC01/02 |
+| BP-F72 | Explicit stable-principal binding and current membership/workspace authority | CF-UC01/03; CF-AC03 |
+| BP-F73 | Provider replacement, login continuity and separate machine authentication | CF-UC04; CF-AC04 |
+| BP-F74 | Negative identity/authority/navigation tests and independently verified release boundary | CF-UC01–04; CF-AC01–05 |
+
+- **Configuration:** `ALLURA_CF_ACCESS_ISSUER` is an HTTPS Cloudflare team origin, `ALLURA_CF_ACCESS_AUD` is the exact application audience, and server-only `ALLURA_CF_ACCESS_BINDINGS` is the explicit migration binding array specified in the Data Dictionary. Partial or malformed configuration denies protected access; it never selects DevAuth. No identity binding is supplied by the browser or defaulted to admin/allura-system.
+- **JWT:** accept `Cf-Access-Jwt-Assertion` or the application `CF_Authorization` cookie; ambiguous conflicting tokens deny. Restrict RS256 and issuer-owned JWKS. Validate issuer, audience, expiry, issuance time, app token type and a nonempty human subject/email. Empty-subject service tokens, unsigned tokens, attacker key URLs, malformed/oversized tokens and invalid/missing claims deny. Never log raw JWTs or credentials. Tests use local signing keys and injected key/authority resolvers, not live credentials.
+- **Authority:** bind verified issuer/subject to configured `userId`, `groupId`, `workspaceId`; preserve the previous stable Allura user ID. Query active membership and matching workspace through the restricted scoped transaction on every resolution, derive role from the current row, and reject missing/removed membership, invalid roles, foreign/nonexistent workspace and full lockdown. Email is display identity, never an auto-link or access grant. Binding provisioning requires an authorized operator and is not performed by this change.
+- **Entry boundaries:** proxy strips caller x-allura-* headers, then applies the existing route/action manifest and injects verified scope. Dashboard server components independently resolve the signed token and binding. Missing/invalid identity returns 401 on protected APIs; verified identity without Allura authority is denied (403 where distinguishable). Browser denial uses existing login/unauthorized surfaces without leaking provider errors. Unclassified routes retain the existing admin-only fallback; CI requires manifest coverage for declared API surfaces. Existing handler-authenticated MCP/device routes retain their own credentials and strip browser scope assertions.
+- **Development:** DevAuth remains explicit local-only and cannot activate in production under any flag/key/config combination. When a Cloudflare config is present or invalid, never silently use local DevAuth. No actual environment secret is read or changed to make tests pass.
+- **Login:** retain `/auth/v2/login` and existing sanitized return targets; render an Access continuation action instead of Clerk widgets. The continuation visits the protected relative destination and relies on the deployed Access application to authenticate. Reject absolute/protocol-relative, backslash/control-character and authentication-loop destinations. Without a configured provider show an honest unavailable/local-development state.
+- **Device contract:** newly emitted approval evidence uses `auth_method: "cloudflare_access"`; recovery action is provider-neutral `sign_in_required`. Preserve historical audit/token redaction, stable device ownership, transactional membership/lock checks and nonproduction test-only gates. E2E Access mode consumes an explicitly supplied test JWT without printing it.
+- **Release:** local cryptographic tests prove verifier behavior only. Live acceptance must prove issuer/AUD policy match, Access origin protection and revocation, current membership behavior and preserved machine access. A deployment failure preserves existing data and refuses unauthenticated traffic; never enable a bypass to repair availability.
+
+| Use case | Required result |
+|---|---|
+| CF-UC01 | Valid signed and bound subject resolves the same existing Allura principal and current membership role |
+| CF-UC02 | Forged headers, wrong signature/issuer/AUD, expiry, missing claims, conflicting tokens or service token yield no human authority |
+| CF-UC03 | Membership removal/demotion or workspace mismatch/lock is effective on the next authority lookup |
+| CF-UC04 | Login, dashboard and pairing preserve role/action checks, safe navigation and separate machine credentials after dependency removal |
+
+Official references: [Access application tokens](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/), [JWT validation](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/), [sessions and revocation](https://developers.cloudflare.com/cloudflare-one/access-controls/access-settings/session-management/), [Access cookies and CSRF](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/). Source and current-revision test receipts determine implementation state.
 
 ## First-use disclosure and review labels — 2026-10-20
 

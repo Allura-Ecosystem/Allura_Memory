@@ -2,10 +2,17 @@
 
 > [!NOTE]
 > **AI-Assisted Documentation**
-> Portions of this document were drafted with the assistance of an AI language model.
+> Portions of this document were drafted with AI assistance; Codex prepared the 2026-10-20 development-readiness additions.
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
+> AI-generated content may contain inaccuracies or omissions.
 > Code and schemas evidence implementation; approved product decisions establish intent. Record disagreement for the owning decision rather than silently changing either.
 
+
+**Integration evidence boundary — 2026-10-21:** This revision consolidates specifications and source-local assessments from `28d90e843` plus the dirty-file snapshot identified in the [source manifest](../reference/development-readiness-20261021/source-manifest.json), onto main base `c720aca2e` (PR #169 content head `51e421ca0`). Dashboard, Cloudflare authentication and preview implementation changes are excluded. Their “implemented” or test-count statements below are dated source-local observations, not verification of this branch, current main or deployment. Missing local receipts remain [unavailable supporting evidence](../reference/development-readiness-20261021/unavailable-evidence.md). [Story packets](../reference/development-readiness-20261021/story-packets.md) operationalize the canonical gates without approving proposed decisions.
+
+**Development navigation:** [Proposed AD-65–AD-68 and open RK-36–RK-40](#development-readiness-decisions--2026-10-20).
+
+**Reliability review:** [Preview RK-42–44](#preview-reliability-risks--2026-10-20) · [Backend RK-45–49](#backend-adversarial-risks--2026-10-20). New findings and revalidated existing risks remain open.
 
 ## Documentation reconciliation decisions — 2026-10-18
 
@@ -25,6 +32,8 @@
 
 **Rejected repair approaches:** global vendor-name replacement (corrupts field names, selectors, classes and historical decisions); erasing migration history; treating old test counts as current proof; automatically adopting the quoted governance proposal. The chosen repair keeps explicit historical/compatibility names, replaces active stale instructions, and separates intended → specified → implemented → verified → released evidence.
 ---
+
+**Source-local approved migration intent:** [AD-69: Cloudflare Access replaces Clerk](#AD-69-cloudflare-access-replaces-clerk); [RK-41: origin bypass and identity mapping](#rk-41). Historical provider incidents remain historical.
 
 ## Architectural Decisions
 
@@ -74,7 +83,7 @@
 | AD-39 | Allura Scout context-packet plugin before vertical workflow templates | Decided | Add Allura Scout as a public read-only context discovery plugin before building mortgage/HACCP/medical billing workflow templates. Scout reduces token cost and context drift by returning a compact `ContextPacket` with goal, summary, relevant files, relevant memories, risks, token budget, and recommended route. Mortgage remains paused by Ronin direction. |
 | AD-40 | Control Plane as single write gate for all DB operations | Decided | syscall_mutate and syscall_query are now the only path to PostgreSQL and PostgreSQL semantic tables. agentMemory (MCP) and memory() (internal graph) both route through the control plane's proof→policy→audit pipeline. Direct DB backends available via MEMORY_BYPASS_CONTROL_PLANE=true for migration (renamed 2026-08-20 from MEMORY_BYPASS_KERNEL, which is still read as a deprecated fallback with a warning). Target resolver enforces append-only on pg:events, group_id on all ops, label allowlist on PostgreSQL semantic tables. Satisfies GM-F1, GM-F8, GM-F26, GM-F27, GM-F33, GM-F35, GM-F37, GM-F38. |
 | AD-41 | Governed AI office delivery sequence | Accepted | Deliver product truth, production run control plane, PostgreSQL work plane, operator workspace, then one desktop shell. This keeps Allura Brain as the memory/evidence layer and prevents packaging placeholder state or unstable contracts. |
-| AD-42 | Governed API middleware — identity, scope, per-request audit | Decided | HTTP-plane counterpart of AD-40's control plane write gate: every dashboard/API route passes governed middleware. Contract: (1) no identity → 401; (2) insufficient role/scope → 403 (admin > curator > viewer via Clerk RBAC, DevAuthProvider in dev); (3) exactly one append-only `api_request_gated` audit event per gated request (group_id stamped and allura-* validated; no payload bodies logged); (4) every route declares its required scope in a static route-scope manifest — CI fails any route missing a declaration, so an unguarded route is a build error, not a runtime discovery. Alternatives rejected: per-route ad-hoc checks (drift-prone, unauditable); gateway-only enforcement (bypassable in dev, no per-request evidence). Consequence: blocks Phase 0 surfaces (Scheduled Tasks, Settings, Teams, Dreams) until implemented; satisfies release criterion 2. Owner: Sabir (sign-off), Woz (implement), Pike (review). |
+| AD-42 | Governed API middleware — identity, scope, per-request audit | Decided | HTTP-plane counterpart of AD-40's control plane write gate: every dashboard/API route passes governed middleware. Contract: (1) no identity → 401; (2) insufficient role/scope → 403 (admin > curator > viewer via current Allura membership; Cloudflare Access identity per AD-69, explicit DevAuthProvider in dev); (3) exactly one append-only `api_request_gated` audit event per gated request (group_id stamped and allura-* validated; no payload bodies logged); (4) every route declares its required scope in a static route-scope manifest — CI fails any route missing a declaration, so an unguarded route is a build error, not a runtime discovery. Alternatives rejected: per-route ad-hoc checks (drift-prone, unauditable); gateway-only enforcement (bypassable in dev, no per-request evidence). Consequence: blocks Phase 0 surfaces (Scheduled Tasks, Settings, Teams, Dreams) until implemented; satisfies release criterion 2. Owner: Sabir (sign-off), Woz (implement), Pike (review). |
 | AD-43 | Agent Factory CI belongs in canonical `Allura_Memory` repository | Decided | Factory validators and workflows must be tracked by the repository whose GitHub Actions are expected to execute them. The prior ecosystem-root draft was outside the canonical Git boundary and could not provide CI evidence. The canonical workflow validates module structure, roster, tenant scope, documentation authority, and Allura governance; live smoke proves tenant isolation; packaging requires an explicit team. RuVector readiness remains fail-closed and does not imply native migration or upstream publication. Alternatives rejected: retain untracked ecosystem workflow; duplicate CI across repositories; claim native/upstream readiness from placeholder jobs. |
 | AD-44 | GIT-EXEC-001 — gitdir-contamination guardrail on git-exec wrapper and ralph cwd guard | Decided | Any `git` subprocess spawned by the harness or Ralph must have its `GIT_DIR` constrained to the project root. Unconstrained git commands can read or write to a parent `.git` directory when invoked from a nested working directory, silently corrupting history. The guardrail is a single git-exec choke point (`src/lib/git/exec.ts`) all agents route through: it refuses any working-tree git command when (A) the resolved cwd contains `/.git/`, or (B) `git rev-parse --git-dir` equals `--show-toplevel` (gitdir == worktree). Every invocation is stamped with a `GIT_EXEC_WRAPPER` trace token, and a static CI scanner (`scripts/validate-git-exec-choke-point.ts`, wired into the lint job) fails the build if any bare `git` call exists outside the wrapper — making the invariant's absence detectable. `scripts/agents/ralph-loop.ts` imports the cwd assertion before spawning the external ralph loop. Alternatives rejected: rely on operator discipline — rejected because git contamination is silent and catastrophic; whitelist specific commands — rejected because the attack surface is the path, not the command. Satisfies GM-F57 (Git-execution safety) and REQ-AF-CI-001 (canonical repo boundary). |
 | AD-45 | Port Allocation Policy — canonical port registry for all Allura services | Decided | Each service running in the Docker Compose stack or as a dev server must register a port in a canonical table rather than picking one ad hoc. Collisions produce silent service failures that are hard to diagnose. Port-band policy: the entire 3000–3999 band is BANNED (Next.js/React default — caused repeated 3100 collisions and orphaned containers). Allocate by tier, incrementing +1 per new service: UI/frontends 4000+ (Allura Control Center UI = 4001), APIs/backends 6000+ (Control Center API = 6001), tools/workers/aux 7000+. Existing infrastructure is unchanged and exempt: PostgreSQL 5432, RuVector PG 5433, MCP HTTP gateway 5888, historical retired Neo4j bolt 7687 and HTTP 7474. The legacy dashboard on 3100 is sunset and its port retired with the band. New services must claim a port via a PR that updates `docs/allura/BLUEPRINT.md` §8 and `docker-compose.yml` before the service is deployed. Alternatives rejected: runtime port discovery — rejected because it requires coordination across all harness scripts and increases cold-start complexity; no policy — rejected because port collisions have already caused incorrect service routing in prior development cycles. |
@@ -148,13 +157,19 @@
 | RK-26 | Corporate users see Team RAM internals and bounce | Medium | Active |
 | RK-27 | Agents claim Done without evidence gates | High | Active |
 | RK-28 | Run journals drift from Brain/Notion state | Medium | Active |
-| RK-29 | Work-item/Notion status drift causes false Done or false backlog | Medium | Active |
+| RK-29 | Work-item/Notion status drift causes false Done or false backlog | Medium | Epic 7 retrospective found local story files still marked `backlog` after prior completion evidence, while that historical workflow treated Notion as its canonical board, unavailable in that runtime. This does not resolve current board authority (DOC-09). Require Scout reconciliation before dev/review/retro: check Notion when available, Brain outcome memories, local work-item artifacts, and validation evidence; record any source mismatch as a blocker or explicit caveat before marking Done. | Active |
 | RK-30 | Resume against changed definitions repeats or corrupts work | High | Active |
 | RK-31 | Factory CI outside canonical Git boundary creates false green status | High | Mitigated |
 | RK-32 | Graph cutover and readiness evidence drift | Medium | Current verification pending |
 | RK-33 | Dev-auth flags remain in the production runtime env | Medium | Mitigated in code by AD-56; the flags are now inert but still present. Remove `ALLURA_DEV_AUTH_ENABLED` and `ALLURA_DEV_AUTH_ROLE` from the deployment environment for defence in depth |
 | RK-34 | Default test config omits the adversarial auth suite | High | Active — `src/__tests__/mcp-auth-adversarial.test.ts` (61 tests) is not collected by the default vitest config, which backs the `test` npm script, so `bun run test` reports green without executing it. It runs only under `vitest.config.unit.ts`. Same false-green family as RK-31 |
 | RK-35 | Serializable memory-write scope could be replayed or forged | High | Mitigated — raw `memory_add` rejects plain scope and only authenticated transport-local capability code can bind a request. Regression coverage rejects forged principals plus JSON and object-spread copies of a prepared request. |
+| [RK-36](#rk-36) | Capture retries duplicate evidence or misreport partial success | High | 🔴 Open |
+| [RK-37](#rk-37) | Vector workspace propagation differs from deployed schema/authority | High | 🔴 Open |
+| [RK-38](#rk-38) | Corrections or stale approvals accept unreviewed semantic versions | High | 🔴 Open |
+| [RK-39](#rk-39) | Local projection/retry state overclaims remote persistence | High | 🔴 Open |
+| [RK-40](#rk-40) | Green checks, old claims or embedding counts conceal missing acceptance | High | 🔴 Open |
+| [RK-41](#rk-41) | Access origin bypass, identity mapping or stale session evidence | High | 🔴 Open |
 
 ### Risk Detail
 
@@ -313,7 +328,7 @@
 **Alternatives considered:**
 
 - **Adopt Babysitter process library directly:** rejected because it makes an external process library canonical and brings runtime/security/licensing uncertainty.
-- **Adopt an external workflow builder as the workflow layer:** rejected because it creates a parallel ecosystem and runtime dependency that conflicts with the AI-GUIDELINES-only direction.
+- **Adopt BMAD workflow builder as the workflow layer:** rejected because it creates a parallel ecosystem and Python/uv dependency that conflicts with the one-runtime direction.
 - **Build full methodology runtime immediately:** deferred because templates and receipt discipline must prove value before execution machinery is added.
 
 **Consequences:**
@@ -440,8 +455,8 @@ into a desktop application.
   `membership_role_changed` / `membership_removed`). The admin manages members and roles
   entirely from the dashboard UI (`/api/members`), never via code/CLI.
 - **Rationale**: Consistent with the existing Postgres-native, group_id-scoped Hosted tables
-  (`workspaces`, `mcp_tokens`); works in dev (DevAuthProvider) and prod (Clerk); keeps the
-  tenant boundary on `group_id` rather than coupling membership to a Clerk org. Satisfies the
+  (`workspaces`, `mcp_tokens`); uses explicit DevAuthProvider locally and verified Cloudflare Access identity in production (AD-69); keeps the
+  tenant boundary on `group_id` rather than coupling membership to an external provider organization. Satisfies the
   non-coder-admin requirement (Gabe) without weakening governance: the events audit trail
   preserves the append-only invariant (POL-002).
 - **Alternatives considered**: Clerk Organizations (rejected — couples membership to the auth
@@ -520,6 +535,20 @@ Proven by controlled red: 3 of 7 fail against the vulnerable condition, 7/7 pass
 the adversarial auth suite).
 
 
+## Enterprise dashboard open contracts — 2026-10-19
+
+**Delivery clarification:** Sabir clarified that the current deliverable is an HTML design preview. Sign-in and live backend integration are not required for this preview. Sample identities, roles, graphs, embeddings and review states demonstrate intended interfaces only; they do not establish implemented authorization or approval. The full enterprise contracts below remain open.
+
+| Reference | Gap / risk | Owner and next evidence |
+|---|---|---|
+| ENT-01 | Existing tenant-level viewer/curator/admin hierarchy and one active workspace do not yet demonstrate different roles per workspace or confidential-content separation from organization administration | Brooks defines the compatible membership/action contract; Sabir accepts product behavior before role/grant changes |
+| ENT-02 | New read pages are scoped in source, but unit mocks do not prove installed migrations, restricted database role or live RLS isolation; legacy memory/graph endpoints remain outside this slice | RAM verifies isolated HR/Sales/shared test identities and independent review before readiness |
+| ENT-03 | Per-memory embedding evidence, complete administration, device lifecycle and audit/recovery flows remain incomplete | RAM inspects existing source contracts; unknown data must stay unknown |
+| ENT-04 | Local sign-in form renders with Clerk development configuration; MFA, expiry, revocation and production provider configuration remain unverified | Authorized operator supplies test-session/provider evidence; no credentials or configuration are changed by this slice |
+| ENT-05 | Visual fixtures demonstrate rendering only; phone SVG scaling can undermine otherwise accessible source styles | Durham reviews actual responsive screenshots and interactions; fixture results never substitute for live authorization evidence |
+
+The full enterprise brief remains active. No governance policy adoption, production release, broadened grant, schema promotion, external publication or Brain persistence is implied by this implementation record.
+
 ## References
 
 - **Architecture Canon**: `docs/allura/BLUEPRINT.md`
@@ -530,9 +559,119 @@ the adversarial auth suite).
 - **Operational Agent Access**: Authenticated Allura MCP/API services and governed audit tools with explicit tenant/workspace authority
 - **Durable Stores**: PostgreSQL (events/traces) + PostgreSQL semantic tables (semantic graph) accessed through controlled services
 
+## Development readiness decisions — 2026-10-20
+
+**AI-assisted proposals for Sabir's requested engineering preparation.** Existing scope/HITL/append-only/versioning invariants and approved DOC-06/DOC-07 remain binding. New operation naming, request compatibility, transaction/concurrency/failure policies and storage contracts below are Proposed, not silently adopted. [Intent](BLUEPRINT.md#13-development-readiness-backlog--2026-10-20), [Design](DESIGN-ALLURA.md#development-readiness-design--2026-10-20), [delivery/readiness](REQUIREMENTS-MATRIX.md#development-slices-and-handoff-gates) and [data definitions](DATA-DICTIONARY.md#proposed-development-contracts--2026-10-20) are one review packet.
+
+New-entry navigation: [AD-65](#ad-65-capture-replay-and-projection-boundary), [AD-66](#ad-66-workspace-authority-through-vector-paths), [AD-67](#ad-67-governed-correction-and-semantic-head-concurrency), [AD-68](#ad-68-readiness-evidence-and-maintenance-plan), [RK-36–RK-40](#development-readiness-risk-register).
+
+### AD-65: Capture replay and projection boundary
+
+- **Status:** Proposed.
+- **Decision:** Adopt the proposed `capture-v1` key scope/canonical digest, atomic event/receipt/replay/index-intent transaction and same-key read-back. Separate asynchronous indexing/scoring from durable capture, with compatible legacy-client migration before key enforcement.
+- **Rationale:** The inspected capture path generates a new ID per attempt; unknown acknowledgements cannot safely be retried with a new operation identity. A transaction receipt settles capture without pretending downstream work succeeded.
+- **Alternatives considered:** Content-marker dedup (not server-enforced replay); content-only dedup (conflates distinct intentional captures); synchronous embedding transaction (provider availability couples to durable capture); reuse approval replay (different identity and authority).
+- **Consequences / decisions needed:** Sabir approves user-facing retry/failure/compatibility behavior; Brooks/Pike settle key syntax, digest metadata allowlist and versioned response scoring; Knuth reviews storage/uniqueness/atomicity; Hightower reviews bounded worker retry/claim policy. Decide admission accounting, key retention and old-reader behavior explicitly. No retention deletion or unlimited retry is authorized.
+- **Owner:** Brooks owns proposal; Sabir owns product/approval boundary; Woz implementation after decisions; independent Pike/Knuth review.
+- **References:** [capture design](DESIGN-ALLURA.md#retry-safe-capture-proposal), [data contract](DATA-DICTIONARY.md#capturereceiptv1-and-capture-replay-binding--proposed), DEV-AC01; `src/mcp/canonical-tools.ts`, `src/lib/memory/canonical-contracts.ts`.
+
+### AD-66: Workspace authority through vector paths
+
+- **Status:** Proposed.
+- **Decision:** Carry opaque verified tenant/workspace/principal/action authority through bridge insert/search, use restricted scoped transactions and preserve quarantined legacy rows. Permit only equivalently scoped lexical degradation for operational failures; scope denial fails closed.
+- **Rationale:** Migration 40 requires workspace-scoped new vectors while inspected bridge paths omit workspace. This is a source/schema mismatch conditional on deployed migration, not a demonstrated live leak.
+- **Alternatives considered:** Tenant-only filters (insufficient workspace boundary); infer a default workspace (fabricates authority); restore retired backend fallback (contradicts current architecture); repair null-workspace rows automatically (unapproved data migration).
+- **Consequences / decisions needed:** Knuth/Pike approve internal signatures, role/RLS proof and index intent/model validation; Hightower confirms deployed migration inventory and approved worker retry/lease behavior. No scope broadening, grants or quarantine migration are authorized here.
+- **Owner:** Brooks + Knuth; independent Pike review; Sabir approves any security/schema/production changes before execution.
+- **References:** [vector design](DESIGN-ALLURA.md#workspace-vector-seam-proposal), [topology](SOLUTION-ARCHITECTURE.md#scoped-capture-replay-and-asynchronous-indexing), DEV-AC02; migration `40-workspace-subgraph-forward-upgrade.sql`, `src/lib/ruvector/bridge.ts` and `retrieval-adapter.ts`.
+
+### AD-67: Governed correction and semantic-head concurrency
+
+- **Status:** Proposed.
+- **Decision:** Replace the retired canonical update call chain with a scoped correction-submission service; recheck base head plus DOC-06 human-reviewed proposal version during atomic new-version approval. Conflicts require explicit human re-review; preserve content and lineage.
+- **Rationale:** Current `memory_update` invokes retired `getVersion` behavior and degrades to episodic output. Immutable versioning needs one coherent pending→approved lineage contract.
+- **Alternatives considered:** In-place semantic edit (violates invariant); silent episodic fallback presented as semantic success (misreports capability); automatic rebase (approves material not reviewed); deleting supersession edges on restore (unresolved DOC-03).
+- **Consequences / decisions needed:** Sabir accepts correction UX/conflict behavior; Brooks/Pike approve compatible public mapping; Knuth reviews pending proposal/base fields and single-head concurrency implementation. DOC-03 restore and DOC-05 duplicate policy stay unresolved and block only their affected stories. Human approval remains mandatory.
+- **Owner:** Brooks + Knuth; Woz implementation after decisions; independent Pike correctness review.
+- **References:** [correction design](DESIGN-ALLURA.md#governed-semantic-correction-proposal), [correction fields](DATA-DICTIONARY.md#semanticcorrectionv1--proposed), DEV-AC03/04; `src/mcp/canonical-tools.ts`, `src/lib/graph-adapter/ruvector-adapter.ts`.
+
+### AD-68: Readiness evidence and maintenance plan
+
+- **Status:** Proposed.
+- **Decision:** Use the traced DEV slices, production-bound behavioral tests, explicit required-suite discovery, reproducible CI, truthful operational observations and human-labeled retrieval baseline before tuning/cleanup/release claims. Implement DOC-07 through a durable handoff and separate delivery observations.
+- **Rationale:** Assessment exposed a zero-test green lane, one obsolete assertion, unconditional success telemetry, stale retrieval, toolchain skew and unfinished dashboard/delivery acceptance. Small independent slices reduce the chance of certifying scaffolding as working behavior.
+- **Alternatives considered:** Rewrite or add agents first (does not repair seams); source-text-only policy tests (can pass without enforcing behavior); latest-everything upgrade (couples unrelated migrations); score/embedding counts as quality (does not measure current-answer correctness); local delivery as synced (contradicts DOC-07).
+- **Consequences / decisions needed:** Hightower/Fowler select authoritative CI lanes and runtime/config changes; Sabir approves upgrades/deprecations and product acceptance budgets after baseline; Brooks/Pike settle delivery-read route/digest normalization and telemetry naming/redaction; owner approves retention/destination policy if changed. DOC-02/09 and ENT contracts still gate full dashboard/work items. Usage guidance/inventory can be prepared without those decisions.
+- **Owner:** Brooks coordinates; Hightower/Fowler own tooling, Bellard/Carmack measurements, Knuth delivery/data; independent reviewer for each actual slice.
+- **References:** [quality and maintenance](DESIGN-ALLURA.md#quality-operations-and-maintenance-contracts), [usage](DESIGN-ALLURA.md#capability-and-usage-guidance), [acceptance and slices](REQUIREMENTS-MATRIX.md#acceptance-evidence-and-use-case-index), DEV-AC05–12.
+
+### Development readiness risk register
+
+| ID | Title | Severity | Status |
+|---|---|---|---|
+| <a id="rk-36"></a>RK-36 | Capture retries duplicate evidence or misreport partial success | High | 🔴 Open |
+| <a id="rk-37"></a>RK-37 | Vector workspace propagation differs from deployed schema/authority | High | 🔴 Open |
+| <a id="rk-38"></a>RK-38 | Corrections or stale approvals accept unreviewed semantic versions | High | 🔴 Open |
+| <a id="rk-39"></a>RK-39 | Local projection/retry state overclaims remote persistence | High | 🔴 Open |
+| <a id="rk-40"></a>RK-40 | Green checks, old claims or embedding counts conceal missing acceptance | High | 🔴 Open |
+
+| Risk | Likelihood / description | Mitigation / owner / related decision |
+|---|---|---|
+| RK-36 | Plausible on lost responses; current new-ID-per-call path has no enforced capture key | DEV-AC01 atomic replay/conflict/failure tests; Woz + Knuth; AD-65 |
+| RK-37 | Source mismatch confirmed; deployed impact unverified; tenant-only plumbing may fail schema or scope expectations | Read-only migration/role baseline, restricted-role cross-workspace/pool-reuse tests, no broad fallback; Knuth + Pike; AD-66 |
+| RK-38 | Correction degradation observed; reviewed-version comparison still absent; no live bad promotion alleged | DEV-AC03/04 and approval-boundary injections; Woz + independent data reviewer; AD-67, approved DOC-06 |
+| RK-39 | Incomplete event handoff and scheduling eligibility inspected; ambiguous remote outcome can duplicate pages | Stable identity, eligible claims and scoped read-back, decision receipt immutability; Hightower + Knuth; AD-68, approved DOC-07 |
+| RK-40 | Zero-test lane and stale source-text failure observed; old guarantees and dependency skew remain reconciliation debt | DEV-AC06–12, evidence classes, source-bound claims, staged consumer-verified cleanup; Fowler + Hightower + Brooks; AD-68 |
+
+No new risk is marked mitigated by this documentation update. Existing RK-02 isolation mitigation is not a substitute for workspace vector acceptance. The registry supplements RK-07/14/17/27/32/34 without changing historical evidence. New product/security/failure/concurrency/breaking-change policies require the responsible human decision, not the authoring role's confidence.
+
+<a id="AD-69-cloudflare-access-replaces-clerk"></a>
+### AD-69: Cloudflare Access replaces Clerk
+
+- **Status:** Decided — provider selection and repository migration, as recorded in the supplied source-local documentation for Sabir's 2026-10-20 instruction to purge Clerk and replace it with Cloudflare.
+- **Decision:** Use Cloudflare Access for human web identity; retain Allura's stable principal IDs, current membership roles, workspace authorization and independent approval gates. Remove the active Clerk dependency/UI/runtime adapter and setup requirements.
+- **Rationale:** One access provider matches the requested internal deployment. Identity verification and resource authorization retain separate ownership so edge admission cannot grant application privileges.
+- **Alternatives considered:** Keep Clerk behind Access (duplicates provider configuration and conflicts with requested purge); trust an email/header or auto-provision roles (rejects required identity/scope boundary); replace machine tokens with human Access JWTs (breaks separate authenticated client contracts).
+- **Consequences:** Implement the shared RS256 issuer/audience/time verifier, explicit server-owned subject→existing-user/tenant/workspace bindings, and live restricted membership/workspace resolution. No schema migration, email auto-link, live binding/grant creation, Cloudflare account mutation or production release is authorized by source edits. Deployment must prevent origin bypass and prove session revocation separately from offline JWT verification. Unknown config/identity/membership denies access.
+- **Owner:** Brooks delivery; Woz implementation; independent Pike/Fowler review; Sabir/operator owns actual identity bindings and release/account configuration.
+- **References:** [Blueprint BP-B36](BLUEPRINT.md#bp-b36), [Design](DESIGN-ALLURA.md#cloudflare-access-security-contract), [Data Dictionary](DATA-DICTIONARY.md#cloudflare-access-identity-contract), [acceptance](REQUIREMENTS-MATRIX.md#cloudflare-access-migration-acceptance). Earlier AD-42/current-provider wording used Clerk; its route/scope/audit rules remain, while AD-69 replaces the provider choice.
+
+<a id="rk-41"></a>
+### RK-41: Authentication cutover breaks identity continuity or bypasses application authority
+
+- **Severity:** High. **Likelihood:** Plausible until deployment and role/identity evidence exists. **Status:** 🔴 Open.
+- **Description:** Trusting Access header/email without signature and explicit binding, using a new sub as an existing user ID, stale membership grants, origin bypass or fallback to DevAuth could expose protected content or break ownership/device approval continuity.
+- **Mitigation:** CF-AC01–05; preserve stable IDs; re-read active membership under scoped restricted authority; reject unknown/ambiguous mappings and service JWTs; test prod bypass refusal, revocation and machine-client continuity; preserve historical data during rollback.
+- **Owner:** Woz implementation, Pike security review, Hightower deployment evidence. **Related decision:** AD-69. No mitigation/release claim is made until the required evidence exists.
+
+
+## Preview reliability risks — 2026-10-20
+
+Sabir approved documenting the preview repair priorities: reproducibility, crash containment, then bounded data loading before feature growth. This is approval of direction, not implementation acceptance. See [Design](DESIGN-ALLURA.md#approved-preview-reliability-direction--2026-10-20), [PV acceptance](REQUIREMENTS-MATRIX.md#preview-reliability-acceptance--2026-10-20) and [review evidence](../archive/allura/backend-adversarial-review-2026-10-20.md#preview-findings-carried-forward).
+
+| ID | Severity / status | Observation and likelihood | Mitigation / owner |
+|---|---|---|---|
+| <a id="rk-42"></a>RK-42 | High / Open | Preview source/tests under ignored artifacts/ are not in git ls-files; a clean Git checkout cannot recover them from this repository alone. External backups were not assessed. | PV-AC01 tracked application and reproducible build/test lane; Hightower + Woz |
+| <a id="rk-43"></a>RK-43 | High / Open | Fractional record URL blanks React UI; normal hash navigation does not recover until reload. Browser reproduction confirmed. | PV-AC02 validation and screen failure containment; Woz + Pike |
+| <a id="rk-44"></a>RK-44 | Medium / Open | Repeated full-edge scans/layout run even for List/search. CPU-only 5,000-node star fixture took 440–448ms before rendering; deployed workload/device limits unmeasured. | PV-AC03/04 indexed/cached/bounded data and browser/load baseline; Carmack + Knuth |
+
+## Backend adversarial risks — 2026-10-20
+
+The [backend review](../archive/allura/backend-adversarial-review-2026-10-20.md) records source and hermetic findings on the dirty checkout, with exact hashes and coverage. No production exploitation, outage, restore, live cross-tenant access or remediation is claimed. [BE acceptance](REQUIREMENTS-MATRIX.md#backend-adversarial-acceptance--2026-10-20) defines closure evidence. New security/schema/deployment/retry choices remain subject to existing action-specific approval; the request authorizes this review and documentation.
+
+| ID | Severity / status | Observation and exposure qualification | Mitigation / owner |
+|---|---|---|---|
+| <a id="rk-45"></a>RK-45 | High / Open | Authenticated audit/settings/runs handlers pass foreign tenant selectors to storage; runs also forwards supplied actor. Public isolation diagnostic exposes detailed violation context. Mocks/source confirm application-layer gaps; deployed role/RLS and feature flags determine actual exposure. | BE-AC01; Pike + Woz; preserves AD-69 authority separation |
+| <a id="rk-46"></a>RK-46 | High / Open | MCP body buffering precedes authentication without byte ceiling; forwarding-header-based quotas can be evaded if headers reach origin unchecked; retrieval forwards excessive limits. Bounded probes confirm missing guards, not production load failure. | BE-AC02; Hightower + Pike; agree budgets and trusted ingress contract |
+| <a id="rk-47"></a>RK-47 | High / Open | Default hybrid retrieval API ignores query text and returns confidence-ordered rows. Distinct-query probe generates identical SQL; successful response does not establish relevance. This is distinct from canonical MCP search. | BE-AC03, DEV-AC09; Knuth + relevance reviewer |
+| <a id="rk-48"></a>RK-48 | High / Open | Backup's discarded first dump can exceed subprocess buffer; restore compares sidecar text without hashing archive and may select older same-day archive instead of manifest artifact. Offline reproductions; actual backup/deployment schedule unverified. | BE-AC07/08, authorized disposable restore drills; Hightower + Knuth |
+| <a id="rk-49"></a>RK-49 | Medium / Open | Parallel engine ignores rejected settlements and can report completed with an unexecuted running step. Exact-source mocked reproduction; no non-test production runParallel caller found. | BE-AC09; Woz + Pike; verify reachability |
+
+Existing risks remain open and are refreshed rather than duplicated: **RK-36 / AD-65** capture retry duplicates (BE-07, BE-AC04); **RK-37 / AD-66** vector workspace propagation (BE-08, BE-AC05); **RK-39 / DOC-07** outbox retry eligibility and delivered-state regression (BE-09, BE-AC06). Recording these tests does not approve the unresolved implementation policies in AD-65–68 or close RK-40's broader evidence gap.
+
 ## Reddit-remediation evidence and open decisions — 2026-10-20
 
-The current user goal authorizes factual documentation repair, first-use verification and educational visual drafts. It does not establish a new locked brand strategy, human research results, production readiness, or publication approval. These records track delivery risks; they preserve approved DOC decisions. The separately scoped AD-70/AD-71 decisions below define local source work and retain their explicit execution limits.
+The current user goal authorizes factual documentation repair, first-use verification and educational visual drafts. It does not establish a new locked brand strategy, human research results, production readiness, or publication approval. These records track delivery risks; they do not silently amend approved DOC decisions or introduce a new architectural decision.
 
 | Record | Current evidence / risk | Required next evidence |
 |---|---|---|
@@ -556,7 +695,7 @@ The current user goal authorizes factual documentation repair, first-use verific
 - **Review clarification:** Pike found that the all-mode response could report `degraded: false` alongside unavailable-store warnings. The bounded repair must make that flag reflect source failures and report the stores actually attempted; add partial- and all-store-failure assertions. This corrects this response's truthfulness without redefining service-wide health or permitting runtime changes.
 - **Budget clarification:** Fowler found that a normalized request number was not a validated finite bound. Brooks accepted the explicit all-mode 1..100 input contract above before the budget correction. Independent batches can do more work than the former early-exit path; latency remains unmeasured. General fusion, per-store quotas and changes to other lifecycle modes remain outside this repair.
 - **CI score-preservation clarification (2026-10-21):** The unchanged 13-case retrieval benchmark passes on the public base but regresses in the initial draft because identical-content PG dedup replaces an existing retrieval score with the raw-event default. For eligible same-ID, byte-identical RuVector/event candidates, retain the existing RuVector score while enriching durable provenance, creation time and tags; mark the internal metadata owner as PostgreSQL so an older identical row cannot replace the newest metadata. Apply each candidate's `min_score` filter before enrichment. Raw-only rows retain their own score, and differing-content literal selection is unchanged. No new fusion/rank field or lowered acceptance threshold is permitted. Verify the unchanged benchmark and focused score/metadata regressions; [first-use evidence](../reference/reddit-remediation/first-use-evidence.md) records the observed results.
-- **References:** [source recon](../reference/reddit-remediation/search-boundary-recon.md), [Pike consultation](../reference/reddit-remediation/technical-review.md), [UX-R02](REQUIREMENTS-MATRIX.md#proposed-documentation-and-first-use-acceptance--2026-10-20), [search design](DESIGN-ALLURA.md#fresh-evidence-candidate-eligibility).
+- **References:** [source recon](../reference/reddit-remediation/search-boundary-recon.md), [Pike consultation](../reference/reddit-remediation/technical-review.md), [BE-AC03](REQUIREMENTS-MATRIX.md#backend-adversarial-acceptance--2026-10-20), [search design](DESIGN-ALLURA.md#fresh-evidence-candidate-eligibility).
 
 ### AD-71: Guarded isolated first-use evaluation preparation
 

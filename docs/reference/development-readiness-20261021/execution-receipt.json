@@ -1,0 +1,237 @@
+{
+  "base_revision": "c720aca2ed09ac7d51776dacf3ed6f5867587fac",
+  "checked_at_utc": "2026-10-21T13:10:21.798000+00:00",
+  "checks": [
+    {
+      "command": "bun install --frozen-lockfile --ignore-scripts",
+      "exit_code": 0,
+      "runtime": "bun 1.3.14",
+      "note": "1199 packages; no lockfile change; lifecycle scripts disabled"
+    },
+    {
+      "command": "bun run test:unit src/__tests__/docs-backend-residue-guard.test.ts --maxWorkers=1 --minWorkers=1",
+      "exit_code": 0,
+      "tests_passed": 71,
+      "tests_failed": 0,
+      "test_files_passed": 1,
+      "note": "permitted outside process sandbox; initial sandbox run failed at git fixture process creation before assertions"
+    },
+    {
+      "command": "bun run typecheck",
+      "exit_code": 0
+    },
+    {
+      "command": "bun node_modules/eslint/bin/eslint.js src/__tests__/docs-backend-residue-guard.test.ts",
+      "exit_code": 0,
+      "note": "bun exec eslint could not resolve command; exact installed entrypoint succeeded"
+    },
+    {
+      "command": "bash .github/scripts/docs-allura-canonical-guard.sh",
+      "exit_code": 0
+    },
+    {
+      "command": "bash .github/scripts/docs-backend-residue-guard.sh",
+      "exit_code": 0
+    },
+    {
+      "command": "bash .github/scripts/runtime-adapter-surface-guard.sh",
+      "exit_code": 0,
+      "notices": [
+        "existing authority wording .claude/AGENTS.md",
+        ".agents/TEAM-RAM-RUNTIME.md"
+      ]
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 /tmp/allura-doc-anchor-check.py",
+      "exit_code": 0,
+      "scope": "ephemeral independent changed-Markdown inline local paths and heading/explicit-ID anchors; fenced and inline samples excluded; not a renderer or external URL check",
+      "anchors_checked": 382,
+      "broken": 0,
+      "missing_disclosures": 0
+    }
+  ],
+  "context7": {
+    "required": true,
+    "library": "/modelcontextprotocol/modelcontextprotocol",
+    "topic": "tools/list, tools/call, inputSchema",
+    "finding": "discover actual tool names/input schema; do not assume aliases or unsupported arguments",
+    "source": "https://github.com/modelcontextprotocol/modelcontextprotocol"
+  },
+  "ruvix": {
+    "mutate": "isolated docs/workflow/guard integration and authorized scoped GitHub merges",
+    "attest": "source snapshot hashes, exact-head hosted checks and real independent reviews",
+    "verify": "local checks above plus required hosted checks before merge",
+    "isolate": "repository work only; allura-system; no other tenant reads/writes",
+    "sandbox": "temporary isolated worktree, no product dotenv or production DB",
+    "audit": "task receipts; Brain outcome unmet because required MCP_DOCKER route lacks tool"
+  },
+  "pr169": {
+    "url": "https://github.com/Allura-Ecosystem/Allura_Memory/pull/169",
+    "reviewed_head": "51e421ca065337ab3e6a5f804dc970447d5eed15",
+    "merged_sha": "c720aca2ed09ac7d51776dacf3ed6f5867587fac",
+    "required_checks": [
+      "typecheck",
+      "test-unit",
+      "test-e2e",
+      "MCP Runtime Health Tests",
+      "Epic 24 Evidence / Aggregate"
+    ],
+    "required_checks_all_passed": true,
+    "all_check_counts": {
+      "success": 50,
+      "skipped": 2
+    },
+    "human_participant_acceptance": "open; no full product acceptance claim"
+  },
+  "memory": {
+    "group_id": "allura-system",
+    "route": "MCP_DOCKER",
+    "search_result": "tool not found",
+    "search_receipt": null,
+    "outcome_write": "not issued; required route unavailable and no verified server-supported idempotency contract exposed through that route",
+    "persistence": "unconfirmed; no write claimed",
+    "semantic_promotion": "none"
+  },
+  "notion": {
+    "read_only": true,
+    "engine_board": "4c23162d-587f-479a-983f-3282026a7cf4",
+    "data_source": "c0c26620-f2a7-4099-9147-084032a17c2e",
+    "DEV_item_status": "unverified; scoped search returned related titles but no exact DEV item",
+    "updated": false,
+    "DOC09": "still unresolved; read does not adopt a new work-board policy"
+  },
+  "limitations": [
+    "No product source changes in this integration",
+    "No local production build or live DB run required for docs/guard-only delta; hosted checks assess their separate lanes",
+    "No production deployment, grants, policy adoption or promotion",
+    "Required hosted results for the new PR must be verified at its final head before merge"
+  ],
+  "files": [
+    {
+      "path": ".github/copilot-instructions.md",
+      "sha256": "31154cb3e3d8062bde9634336406371edd68a5388d7967a49d9fc3356dede90c"
+    },
+    {
+      "path": ".github/scripts/docs-backend-residue-guard.sh",
+      "sha256": "cf87eafca9715eec76c9bf48718a22ddd2d88c621fb16967ca5d0c583a5821f7"
+    },
+    {
+      "path": ".opencode/DEVELOPMENT-READINESS.md",
+      "sha256": "7b591e554a8fdf1a1371fa5c2fbc5424148b4aaede6f473d0c796385bb1c27cb"
+    },
+    {
+      "path": ".opencode/skills/allura-architecture/SKILL.md",
+      "sha256": "9737e365c8b7ef8a480fc355d435ef548e4f57cd52b94822a3c43869ca434e70"
+    },
+    {
+      "path": ".opencode/skills/allura-code-review/SKILL.md",
+      "sha256": "a3e305310ec293fc47e7029721362888aa52ee09d4c2d98746ed5992510230d9"
+    },
+    {
+      "path": ".opencode/skills/allura-dev-story/SKILL.md",
+      "sha256": "d00bea5f792a9e24943cda71dadbd94b0c846a3942545b71b97ae6194732f243"
+    },
+    {
+      "path": ".opencode/skills/allura-memory-skill/SKILL.md",
+      "sha256": "45e0ee87e2b93b3d4e43df33f73f29b496815d3c702a86e0af7e39fb3b992de8"
+    },
+    {
+      "path": ".opencode/skills/allura-product-intake/SKILL.md",
+      "sha256": "89cb5f91408a1b9ad458764544ff1d3fa7d52db69fa250889d70333f5ea6219b"
+    },
+    {
+      "path": ".opencode/skills/allura-retrospective/SKILL.md",
+      "sha256": "af4aad77d95b6be6aad2afc3ae7bfc26131698eb417b1410569e530cc72d30de"
+    },
+    {
+      "path": ".opencode/skills/allura-team-ram/SKILL.md",
+      "sha256": "9fbe67e605461a41310f03eaed8b8afb5030ceb078b7a19dad2df7fcc3c52afc"
+    },
+    {
+      "path": ".opencode/skills/code-review/SKILL.md",
+      "sha256": "7cdd78c062b54143d442055d4b55c0b140a9ad48644fbff2183d5c09761dc1c3"
+    },
+    {
+      "path": ".opencode/skills/systematic-debugging-memory/SKILL.md",
+      "sha256": "3eabd70631e7694f7f7e2c52b289e77966fab6f2c1ffe7299799e25cb629d409"
+    },
+    {
+      "path": "docs/allura/BLUEPRINT.md",
+      "sha256": "40c911a562f62620d59ec2834b6a75baca9573d732a974caa56567cad5341cc6"
+    },
+    {
+      "path": "docs/allura/DATA-DICTIONARY.md",
+      "sha256": "9bb34c2347a3a8349c9b501ddcab49d2cbbf3ae77dfe4601970874f005935fd0"
+    },
+    {
+      "path": "docs/allura/DESIGN-ALLURA.md",
+      "sha256": "5a1c483ab694fcb4b0dc200f991970d7659d9bb6cf7839ec686a221326cb1a38"
+    },
+    {
+      "path": "docs/allura/REQUIREMENTS-MATRIX.md",
+      "sha256": "69fb68e83399e1e6e9035f2c88e262e07ed4e0757861ff1f16e6246ae8eb5709"
+    },
+    {
+      "path": "docs/allura/RISKS-AND-DECISIONS.md",
+      "sha256": "c14108a09d7115618573c11e1e4089c2828de48adb70d4394c7f28dc26fdaf26"
+    },
+    {
+      "path": "docs/allura/SOLUTION-ARCHITECTURE.md",
+      "sha256": "a99bad0d5c57d8042ed097c7cf91b5b50bd9e598f60600037681cfe743385690"
+    },
+    {
+      "path": "docs/archive/allura/backend-adversarial-review-2026-10-20.md",
+      "sha256": "2ec4f1f63451ec620e4598b08a797a1582979bc44497099d40deed416e013553"
+    },
+    {
+      "path": "docs/reference/development-readiness-20261021/integration-inventory.md",
+      "sha256": "bca844b8d3bb5bb073f7a86a2ae8db806a1b42d08229455941f2e5c69f0c30d4"
+    },
+    {
+      "path": "docs/reference/development-readiness-20261021/producer-checks.json",
+      "sha256": "188d13d7e4a128604355dd8ae2b9bdb339726d4880f43513d516fb85ff56d894"
+    },
+    {
+      "path": "docs/reference/development-readiness-20261021/source-manifest.json",
+      "sha256": "3406671d01ca40ad37d223b8bb482a4fc5537f14c18fb68b4d00e5acd6e4f88c"
+    },
+    {
+      "path": "docs/reference/development-readiness-20261021/story-packets.md",
+      "sha256": "bf272dec1b7eca93432be426b3b92251191d881b9158979bee3f36b828df80f0"
+    },
+    {
+      "path": "docs/reference/development-readiness-20261021/unavailable-evidence.md",
+      "sha256": "2d42ee3238d13262871c8e5849f1afe8b9aba33427896529022b1ba131850ea0"
+    },
+    {
+      "path": "guidelines/AI-GUIDELINES.md",
+      "sha256": "0f2a0a55528c34e3cd1d1cdb49cda8fec2a48f0e67b08aab9531c641b3343f0b"
+    },
+    {
+      "path": "src/__tests__/docs-backend-residue-guard.test.ts",
+      "sha256": "409b37670c9aa40775692c7f8eb1ca0fc09749605f472773e29e390a26009fde"
+    }
+  ],
+  "independent_reviews": [
+    {
+      "role": "Pike",
+      "scope": "six canonical docs, guidelines, Copilot, backend assessment, all12 story packets and supporting evidence",
+      "verdict": "approve after corrections",
+      "base": "c720aca2ed09ac7d51776dacf3ed6f5867587fac",
+      "tracked_diff_sha256": "041292b3a6b1d07b0b4ef9181eecf466942201a6b340c28912a455f52d3f031a",
+      "limitations": "AI scoped review; own test execution blocked before assertions; no human product acceptance"
+    },
+    {
+      "role": "Fowler",
+      "scope": "shared memory plus wrappers, review/debugging support, readiness and backend guard/test changes",
+      "verdict": "approve after corrections",
+      "base": "c720aca2ed09ac7d51776dacf3ed6f5867587fac",
+      "tracked_diff_sha256": "c5af01077700469b4f40040ef82bfabd0e56b871fb13758fc13c56fb30073736",
+      "limitations": "AI scoped review; executable test result supplied separately by parent"
+    }
+  ]
+}

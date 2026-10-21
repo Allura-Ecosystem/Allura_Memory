@@ -1,0 +1,80 @@
+{
+  "scope": "documentation producer checks refreshed by parent after independent-review corrections; no product acceptance, deployment, human approval, remote tracker update or Brain write",
+  "checked_at_utc": "2026-10-21T13:11:58.896259+00:00",
+  "base_revision": "c720aca2ed09ac7d51776dacf3ed6f5867587fac",
+  "checks": [
+    {
+      "command": "bash .github/scripts/docs-allura-canonical-guard.sh",
+      "exit_code": 0
+    },
+    {
+      "command": "bash .github/scripts/docs-backend-residue-guard.sh",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "source_files": [
+    {
+      "path": "docs/allura/BLUEPRINT.md",
+      "sha256": "40c911a562f62620d59ec2834b6a75baca9573d732a974caa56567cad5341cc6"
+    },
+    {
+      "path": "docs/allura/DATA-DICTIONARY.md",
+      "sha256": "9bb34c2347a3a8349c9b501ddcab49d2cbbf3ae77dfe4601970874f005935fd0"
+    },
+    {
+      "path": "docs/allura/DESIGN-ALLURA.md",
+      "sha256": "5a1c483ab694fcb4b0dc200f991970d7659d9bb6cf7839ec686a221326cb1a38"
+    },
+    {
+      "path": "docs/allura/REQUIREMENTS-MATRIX.md",
+      "sha256": "69fb68e83399e1e6e9035f2c88e262e07ed4e0757861ff1f16e6246ae8eb5709"
+    },
+    {
+      "path": "docs/allura/RISKS-AND-DECISIONS.md",
+      "sha256": "c14108a09d7115618573c11e1e4089c2828de48adb70d4394c7f28dc26fdaf26"
+    },
+    {
+      "path": "docs/allura/SOLUTION-ARCHITECTURE.md",
+      "sha256": "a99bad0d5c57d8042ed097c7cf91b5b50bd9e598f60600037681cfe743385690"
+    },
+    {
+      "path": "guidelines/AI-GUIDELINES.md",
+      "sha256": "0f2a0a55528c34e3cd1d1cdb49cda8fec2a48f0e67b08aab9531c641b3343f0b"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "sha256": "31154cb3e3d8062bde9634336406371edd68a5388d7967a49d9fc3356dede90c"
+    },
+    {
+      "path": "docs/archive/allura/backend-adversarial-review-2026-10-20.md",
+      "sha256": "2ec4f1f63451ec620e4598b08a797a1582979bc44497099d40deed416e013553"
+    },
+    {
+      "path": "docs/reference/development-readiness-20261021/integration-inventory.md",
+      "sha256": "bca844b8d3bb5bb073f7a86a2ae8db806a1b42d08229455941f2e5c69f0c30d4"
+    },
+    {
+      "path": "docs/reference/development-readiness-20261021/source-manifest.json",
+      "sha256": "3406671d01ca40ad37d223b8bb482a4fc5537f14c18fb68b4d00e5acd6e4f88c"
+    },
+    {
+      "path": "docs/reference/development-readiness-20261021/story-packets.md",
+      "sha256": "bf272dec1b7eca93432be426b3b92251191d881b9158979bee3f36b828df80f0"
+    },
+    {
+      "path": "docs/reference/development-readiness-20261021/unavailable-evidence.md",
+      "sha256": "2d42ee3238d13262871c8e5849f1afe8b9aba33427896529022b1ba131850ea0"
+    }
+  ],
+  "memory_status": "MCP_DOCKER memory tool not found; no successful search/write receipt",
+  "remaining_gates": [
+    "Parent independent review of final candidate and exact-head hosted checks",
+    "AD-65\u201368 and DOC-02/09/ENT decisions for affected implementation",
+    "Source-local dashboard/auth/preview implementation and unavailable receipts are not integrated",
+    "Story tracker item reconciliation and governed outcome read-back pending"
+  ]
+}

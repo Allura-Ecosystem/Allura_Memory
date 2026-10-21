@@ -23,6 +23,17 @@ Trigger phrases: `allura dev story`, `implement story`, `dev story`, `allura imp
 
 This skill requires `allura-team-ram` to be loaded first. It enforces all seven gates defined there.
 
+## Story readiness before implementation
+
+Use [the canonical development gates](../../../docs/allura/REQUIREMENTS-MATRIX.md#development-slices-and-handoff-gates).
+A packet must identify objective/non-goals, requirement and acceptance IDs, exact
+source SHA and relevant dirty-diff digest, dependencies and approved/proposed
+decisions, one writer, actual independent reviewers, authorized environment,
+positive/negative/failure tests, receipts/read-back, rollback and completion gates.
+Use **Ready**, **Needs a decision**, or **Blocked**, with the affected scope and
+reason. Ready for inventory/preparation does not mean ready for implementation.
+Do not advance unresolved AD-65–AD-68 proposals to approved decisions.
+
 ## Execution Protocol
 
 ### Step 1: Load Allura Core
@@ -84,21 +95,21 @@ Execute story implementation with Allura context loaded:
 2. Load all context identified by Scout
 3. Implement following the story spec
 4. Write tests for acceptance criteria
-5. Run validation (`bun test`, `bun run typecheck`)
+5. Select and run the actual package-script test lane and `bun run typecheck`; verify nonzero discovery and report pass/fail/skip counts and exit codes. `bun test` is Bun’s native runner and is not the repository Vitest lane.
 
 ### Step 6: Notion Board Update (Gate 5)
 
 After implementation:
 
-1. Update Notion work item status
-2. Add evidence links to Decision Log
-3. Update Handoff Context with what was done
+1. Verify the actual board/work-item identity and current status; do not guess between similarly named boards.
+2. Within existing authorization, attach evidence and update the relevant handoff.
+3. Done/Approved transitions and Notion sync retain their separate approval gates. If access or authority is missing, report the exact pending update; local packets are not live board status.
 
 ### Step 7: Validation Evidence (Gate 6)
 
 Collect and verify:
 
-- [ ] `bun test` passes for affected test files
+- [ ] Appropriate `bun run test:unit` / integration / curator / authorized live lane passes for affected tests; nonzero discovery verified
 - [ ] `bun run typecheck` clean
 - [ ] Acceptance criteria met (from story spec)
 - [ ] Review approved (Pike for interface, Fowler for maintainability)
@@ -109,20 +120,14 @@ Collect and verify:
 
 Log the outcome to Allura Brain:
 
-```
-allura-brain_memory_add({
-  group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "TASK_COMPLETE: {story ID} — {summary}; evidence={...}",
-  metadata: {
-    source: "conversation",
-    agent_id: "brooks-architect",
-    confidence: 0.85,
-    story_id: "{story ID}",
-    validation: "passed"
-  }
-})
-```
+Use the [shared governed memory contract](../allura-memory-skill/SKILL.md).
+Discover the actual host schema, omit persona identity assertions and unsupported
+metadata, and append one verified outcome only within authorized scope. Preserve
+one server-supported idempotency key across retries; verify destination, principal,
+record, content and receipt by read-back. If that contract cannot be met, report
+the unmet gate and retain sanitized task evidence without claiming a Brain write.
+Do not autonomously promote the result. Ordinary workflow execution grants no
+production, configuration, tenant-transfer or semantic-promotion authority.
 
 ## Story-Specific Routing
 
@@ -130,7 +135,7 @@ allura-brain_memory_add({
 |-------|--------------|------------|
 | DASH-12 Memory Lineage | `allura-dev-story` | `allura-graph-debug` |
 | 2.3 Token Alias | `allura-dev-story` | `varlock`, `frontend-craft` |
-| 2.6 Memory API Dedup | `allura-dev-story` | `systematic-debugging` |
+| 2.6 Memory API Dedup | `allura-dev-story` | `systematic-debugging-memory` |
 | 2.8 Pike Gate / Zod | `allura-dev-story` | `allura-code-review` |
 | E2.1–E2.5 Dashboard Quality | `allura-dev-story` | `frontend-craft`, `allura-health-observability` |
 | E3.1–E3.5 Hardening | `allura-dev-story` | `allura-code-review` |
@@ -141,7 +146,7 @@ allura-brain_memory_add({
 
 | Failure | Response |
 |---------|----------|
-| Allura Brain unavailable | Warn and continue with local context only. Never pretend hydration happened. |
+| Brain operation unavailable or pending | Report the observed operation/layer; continue independent local work without claiming successful hydration. |
 | Scout subagent unavailable | Perform Scout protocol manually. State: `Scout delegation unavailable; manual hydration.` |
 | Notion MCP unavailable | Log warning. Continue with local sprint status. Flag for manual update. |
 | Canonical doc impact detected | Plan doc update in same PR. Do not skip. |
@@ -149,13 +154,12 @@ allura-brain_memory_add({
 
 ## Reflection
 
-At the end of every `allura-dev-story` execution, emit:
+End every substantive final reply with this rendered Markdown footer. Fill fields
+from actual evidence; no write or promotion is implied by reporting them.
 
-```
-📝 Reflection
-├─ Action Taken: {story ID} — {summary}
-├─ Principle Applied: {Brooksian principle}
-├─ Event Logged: TASK_COMPLETE or BLOCKED
-├─ Neo4j Promoted: {Yes/No}
-└─ Confidence: {High/Medium/Low}
-```
+**📝 Reflection**\
+├─ **Action Taken:** Actual work and scope.\
+├─ **Principle Applied:** The selected role's relevant judgment.\
+├─ **Event Logged:** None, pending/unconfirmed, or verified event and receipt.\
+├─ **Semantic Promotion:** None, pending/unconfirmed, or human-approved verified promotion.\
+└─ **Confidence:** High/Medium/Low, with evidence and material limitations.
