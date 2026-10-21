@@ -1,61 +1,35 @@
-# Regulated Document-Quality Workflow — Reference Integration
+# Document-quality scenario fixtures
 
-## Scenario
+For engineers inspecting a synthetic document workflow with declared scope, review and audit cases.
 
-A regulated document-quality workflow uses synthetic documents, tenant
-isolation, human approval, canonical promotion, and audit export. **Human
-final authority is preserved** — generated output is never presented as an
-autonomous decision.
+**Start with the [shared first-use guide](../../docs/user-guide/getting-started.md)** if your goal is to save and retrieve a real project decision. This directory is a scenario-harness reference, not that first-use integration.
 
-## Principal/Tenant Fixture
+## What is simulated
 
-- Principal: `doc-curator` (role: curator)
-- Tenant: `allura-regulated-docs`
+The JSON files declare `tool_fixtures`, `principal_fixture`, expected outcomes and, where applicable, `approval_breakpoints`. The [CLI](../../scripts/harness.ts) defaults to `simulate`; the [runner](../../src/lib/harness/runner.ts) consumes those fixtures. A predeclared approval is not an observed human decision. Fixture principal and tenant labels are not credentials or access grants.
 
-## Tools
+The runner still has backing-service dependencies. Simulated tool responses do not mean the entire process is independent of infrastructure.
 
-- `memory_search` — retrieve synthetic documents
-- `governance_proposal_approve` — human-gated approval (POL-004)
-- `audit_export` — compliance evidence export
+## Inspect a case
 
-## Policies
+| Fixture | Declared scenario outcome |
+|---|---|
+| [cross-tenant-denial](scenarios/cross-tenant-denial.json) | `failed` |
+| [recovery](scenarios/recovery.json) | `completed` |
+| [success](scenarios/success.json) | `completed` |
 
-- `pol-004` — approval requires curator/admin role
-- `pol-001` — cross-tenant access denied
-
-## Scenarios (runnable)
-
-| File | Case | Expected |
-|------|------|----------|
-| `scenarios/success.json` | Success: synthetic doc approved by human, promoted, audit exported | `completed` |
-| `scenarios/cross-tenant-denial.json` | Security failure: cross-tenant access denied | `failed` (POLICY_DENIED — TENANT_MISMATCH in message) |
-| `scenarios/recovery.json` | Recovery: transient approval-service failure retried | `completed` |
-
-## Run
+After provisioning the runner's authorized evaluation dependencies, invoke a case from the repository root:
 
 ```bash
-# From the repo root, with the local stack up:
-# (bun packages/cli/src/index.ts init creates .env.portfolio.example with
-# non-secret defaults; copy it to .env.local and set your secrets first)
-set -a && source .env.local && set +a
 bun run scripts/harness.ts examples/regulated-document-quality/scenarios/success.json
-bun run scripts/harness.ts examples/regulated-document-quality/scenarios/cross-tenant-denial.json
-bun run scripts/harness.ts examples/regulated-document-quality/scenarios/recovery.json
 ```
 
-## Expected Evidence
+The CLI writes a local receipt and prints the scenario status. Check both the receipt and the expected scenario outcome; a command exit alone is not proof of the behavior. A fixture's `cleanup: true` is declared intent, not verified deletion authority or a receipt that cleanup happened. Preserve append-only events.
 
-- One success case: human-approved promotion with audit export
-- One policy failure: cross-tenant access denied (POLICY_DENIED — TENANT_MISMATCH in message)
-- One recovery case: transient failure retried via checkpoint resume
+## Current execution evidence
 
-## Human Authority
+On 2026-10-20, all three cases in this directory were attempted at working revision `28d90e843` plus current edits. Each stopped with `ECONNREFUSED 127.0.0.1:5432` before producing a scenario result. No live approval, successful recovery, cross-tenant enforcement or completed scenario is claimed from those attempts. The [README disposition receipt](../../docs/reference/reddit-remediation/readme-disposition.md) records the scope and limitations.
 
-This workflow is a **reference implementation**, not a customer deployment
-or a claim of institutional approval. Every promotion requires an explicit human
-approval breakpoint; no generated output is presented as an autonomous
-decision.
+Do not switch tenant or invent an identity to make a case pass. Establish the intended isolated dependencies and rerun before recommending the example as verified.
 
-## Cleanup
-
-All test data is cleaned after the scenario completes (`tenant_fixture.cleanup: true`).
+*AI-assisted editorial revision, 2026-10-20. Fixture expectations remain distinct from observed outcomes.*

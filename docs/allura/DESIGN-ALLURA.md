@@ -939,3 +939,21 @@ async function readJson<T>(path: string, init?: RequestInit): Promise<{ data: T;
 - [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) — system topology and deployment
 - [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) — canonical field and entity definitions
 - [BLUEPRINT.md](./BLUEPRINT.md#0-brand-identity) — visual identity, wireframes, and design rules
+
+## First-use disclosure and review labels — 2026-10-20
+
+The Reddit-remediation journey begins with one useful task: save the PostgreSQL decision and find its reason in a later connected session. Show one primary starting action. Provide architecture, operations and portfolio material through task-specific links; do not require a gallery or full dashboard tour before the task.
+
+Use the [shared terminology](../reference/reddit-remediation/brief.md#shared-vocabulary): saved evidence, eligible proposal, human decision and approved knowledge. A successful save, confidence score, graph storage label or search match is insufficient to display “human approved.” Display the returned review state and source; where the response lacks that state, say unknown and retain the save receipt as a separate observation. Do not infer current approval from an earlier pending-review receipt.
+
+Empty search, service failure, missing source, authorization denial and unknown review state must lead to an explicit result and a next diagnostic action. Never silently broaden tenant/workspace scope or report a demonstration as passed when the exact saved record was not found. Capture manual choices and recovery effort in the first-use receipt.
+
+Three explanatory storyboards are specified in [Kotler's brief](../reference/reddit-remediation/brief.md#three-infographic-storyboards). They are educational drafts with visible limitations; no operational UI or global strategy approval is implied. Independent rendered-asset QA and [human observation](../reference/reddit-remediation/usability-study.md) are separate evidence gates.
+
+### Fresh-evidence candidate eligibility
+
+[AD-70](RISKS-AND-DECISIONS.md#ad-70-bounded-candidate-eligibility-for-fresh-evidence-search) specifies a bounded local repair for explicit all-mode retrieval. Each existing authorized source contributes a bounded candidate set even when an earlier source fills the output limit. Explicit confidence filtering runs before selection; exact or literal content matches do not override `min_score` and do not change returned score values. Selection prefers normalized whole-content equality, then literal query-in-content, then existing score order. Empty queries receive no match bonus. ID deduplication retains an exact/literal matching representation; identical-content event/projection duplicates prefer the durable event's actual provenance/time. Approved-only behavior and verified workspace access remain separate and unchanged.
+
+For explicit all-mode, an omitted limit defaults to 10. A supplied limit must be a finite number in 1..100 before floor normalization; invalid values fail before store access. Each store and the final response use the resulting integer bound. This reuses the SDK ceiling while preserving existing fractional normalization within the accepted range; it does not redefine other status paths. Candidate eligibility can increase calls relative to the former early-exit behavior, so no latency improvement is claimed.
+
+The output remains at most the requested limit. Partial store failures remain visible. Tests must show that unrelated high-confidence graph results cannot suppress an eligible matching fresh event, and that a below-threshold event cannot bypass an explicit filter. This repair does not supply general semantic-relevance calibration, current human approval, a remote deployment receipt or the full BE-AC03 corpus/latency baseline.

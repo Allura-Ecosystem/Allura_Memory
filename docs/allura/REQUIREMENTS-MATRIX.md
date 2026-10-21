@@ -606,3 +606,23 @@ Detailed behavior and release limits: `docs/guides/portal-devices-and-profiles.m
 ---
 
 *This document was compiled from COMPETITIVE-ANALYSIS.md (archived 2026-04-08). Governed pipeline traceability added 2026-04-19. GM-F17–GM-F40 and B12–B23 detail rows added 2026-04-28. Benchmark results updated with actual scores 2026-05-01.*
+
+## Proposed documentation and first-use acceptance — 2026-10-20
+
+AI-assisted response to Sabir's Reddit-feedback review. These proposed checks extend REQ-UX-001; they are not approved product requirements or completed user research. The [audit and complete README/visual inventory](../reference/reddit-feedback-remediation-20261020.md) records the evidence, audience conflict, proposed ownership and rollout. Notion work-item state has not changed.
+
+| ID | Proposed demonstration | Evidence state |
+|---|---|---|
+| UX-R01 | Four of five unfamiliar intended readers explain purpose, audience and next step after 30 seconds, without coaching | Open — human study not run |
+| UX-R02 | Four of five intended evaluators complete setup, authenticated save and retrieval without facilitator help; retain time, errors and help requests | Open — shared guide repaired for a provisioned endpoint; clean-install and live round-trip tests not run |
+| UX-R03 | All five distinguish saved evidence from approved knowledge and identify the human promotion decision | Open — misunderstanding requires revision and retest |
+| UX-R04 | Root README has one primary action and at most one explanatory image; technical depth is reachable by task | Local task-focused README prepared; comprehension and publication pending |
+| UX-R05 | Every retained graphic answers one named question and is legible at desktop and 390px phone width, with meaningful text equivalent | Independent QA passes for three new desktop/phone educational drafts; legacy assets dispositioned, human comprehension open |
+| UX-R06 | Observe and report manual setup, operating/review effort and failure recovery; assign agent/service/human responsibilities explicitly | Open — no self-management or productivity claim established |
+| UX-R07 | Current claim sources and revision states agree across README, source graphics, exports and demo; verify published links without credentials | Local source/export/link checks and scoped review recorded; published-revision check remains open |
+
+Five participants provide formative usability evidence, not statistical proof of productivity gains. Agent reviews do not substitute for those people. Existing functional, tenant-boundary, human-approval and release requirements remain in force.
+
+### Fresh-evidence search repair checks
+
+[AD-70](RISKS-AND-DECISIONS.md#ad-70-bounded-candidate-eligibility-for-fresh-evidence-search) adds a bounded source repair under UX-R02. Required offline regressions: full graph or vector candidate capacity still queries authorized raw events; matching event survives final truncation without score inflation; explicit minimum-confidence filter applies; ID/content duplicate resolution retains durable metadata; empty queries get no literal bonus; approved-only retrieval excludes raw events; final limit/workspace scope remain enforced; source-failure warnings, attempted stores and the response's degraded flag agree. Explicit all-mode defaults an omitted limit to 10, validates a supplied finite number in 1..100 before floor normalization, and rejects invalid input before any store call. State: **implemented and independently reviewed locally**. Producer verification: 66 search plus 17 contract tests pass; Pike and Fowler each independently reran 66/66 search tests and verified their findings corrected. The [review](../reference/reddit-remediation/technical-review.md) and [maintainability receipt](../reference/reddit-remediation/maintainability-review.md) identify final source hashes and process limitations. This response check is not a service-wide health guarantee. Configured-service exact-record search, two-session proof and the broader human-labeled relevance baseline remain open regardless of offline results.

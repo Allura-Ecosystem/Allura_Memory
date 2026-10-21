@@ -1,6 +1,8 @@
 # Allura Memory — Benchmark Harness
 
-A **black-box** benchmark suite that drives the live Allura Brain MCP gateway
+For maintainers measuring a provisioned, authorized evaluation environment. Start with the [shared first-use guide](../../docs/user-guide/getting-started.md) before running a workload. The suite can write seed records; a generated namespace does not grant authority. No benchmark was executed for this editorial revision.
+
+A **black-box** benchmark suite designed to drive the Allura Brain MCP gateway
 (Streamable HTTP, default `http://localhost:5888/mcp`) exactly as a real agent
 would, and scores five dimensions of memory-engine quality.
 
@@ -17,11 +19,11 @@ a genuine acceptance gate rather than a unit test in disguise.
 ## Quick start
 
 ```bash
-# 1. Bring up the Brain stack (PostgreSQL + RuVector + MCP gateway)
-bun run brain:up
-bun run brain:status        # confirm healthy
+# Prerequisite: an authorized disposable benchmark environment is provisioned.
+# Inspect scripts/ci/benchmark-contract.ts for its exact principal/workspace contract.
+# Supply BENCHMARK_BRAIN_URL and BENCHMARK_AUTH_TOKEN through your secure environment.
 
-# 2. Run every benchmark
+# Run every benchmark
 bun run benchmark
 
 # 3. Run a subset
@@ -69,11 +71,10 @@ works across the episodic/semantic split.
 ### 2. Curation accuracy (`curation-accuracy`)
 
 Sends labeled examples through `memory_add` and reads the curator `score`. A
-score clearing the promotion threshold (`0.85`) is treated as "system would
-promote". Compared to the ground-truth label:
+score clearing the threshold (`0.85`) is treated by this benchmark as a positive classification. It does not prove that a proposal was created, a human approved it, or canonical materialization occurred. The source currently names this flag `wouldPromote`; interpret it as threshold classification only. Compared to the ground-truth label:
 
-- **False positive** = noise the curator would promote (lower is better).
-- **False negative** = durable knowledge it would drop (lower is better).
+- **False positive** = noise classified above the threshold (lower is better).
+- **False negative** = labeled durable knowledge classified below the threshold (lower is better).
 
 ### 3. Governance integrity (`governance-integrity`)
 
@@ -113,8 +114,8 @@ proves every stage left a queryable, append-only trace:
 bun src/__benchmarks__/run.ts [flags]
 
 --only=<ids>        Comma-separated benchmark ids (default: all)
---group=<id>        Seed tenant; must match ^allura-[a-z0-9-]+$
-                    (default: a run-specific allura-bench-*-loadtest tenant)
+--group=<id>        Must match the provisioned benchmark credential tenant
+                    (current source: allura-bench-ci-loadtest)
 --iters=N           Iterations per operation in the latency profile (default: 20)
 --json=<path>       Write the full machine-readable report to <path>
 --require-gateway   Exit non-zero when the gateway is unreachable or a benchmark skips
@@ -139,23 +140,13 @@ honest trend tracking. Story 24.6 owns numerical regression enforcement.
 
 ## Governance & data hygiene
 
-- The default seed tenant is run-specific under **`allura-bench-*-loadtest`**. The `-loadtest`
-  suffix makes `memory_add` store writes **directly as episodic**, skipping the
-  HITL proposal queue (see `memory_add` in `src/mcp/canonical-tools.ts`). The
-  harness therefore **never pollutes the curator queue**.
-- All seeded content carries a `[[BENCH:<runId>:<key>]]` marker so reruns never
-  collide and fixtures are easy to identify/clean.
-- Writes honour the `group_id` invariant (`^allura-[a-z0-9-]+$`); the harness
-  refuses a `--group` that doesn't match.
-- The suite is **read-mostly** on production tenants: invariant and gate checks
-  run against `allura-system` but only call read-only / append-only tools.
+The [benchmark credential contract](../../scripts/ci/benchmark-contract.ts) currently fixes group `allura-bench-ci-loadtest`, workspace `benchmark-ci`, and actor `epic-24-ci-benchmark`. Those are source contract values, not credentials or authority to provision them. The runner rejects a different explicit group; its generated content marker separates runs within the authorized group.
 
-### Cleaning up seeded events
+The canonical add source has a `-loadtest` proposal-queue exclusion. That is not permission to invent a new tenant, bypass authorization, or equate a threshold result with approval. Before a live run, verify the provisioned credential and intended disposable environment. Do not run this suite against production by following this document alone.
 
-PostgreSQL events are append-only by invariant, so benchmark seed events persist
-under the load-test groups. To purge them, drop the load-test `group_id`s
-through your normal DB-maintenance path (MCP_DOCKER tools) — never `docker exec`.
-They are inert: load-test groups are excluded from the curator pipeline.
+### Retaining seeded evidence
+
+PostgreSQL events are append-only. Seed records remain part of the authorized evaluation history; this README does not authorize deleting rows or dropping tenant data. Use a preapproved disposable environment and retention policy. A namespace suffix and fixture-cleanup flag alone do not establish either authorization or successful cleanup.
 
 ---
 
@@ -164,7 +155,8 @@ They are inert: load-test groups are excluded from the curator pipeline.
 | Env var | Purpose | Default |
 |---------|---------|---------|
 | `BENCHMARK_BRAIN_URL` | Gateway URL override (highest priority) | — |
-| `ALLURA_BRAIN_URL` | Gateway URL (shared with `brain-client`) | — |
+| `ALLURA_BRAIN_URL` | Gateway URL fallback | — |
+| `BENCHMARK_AUTH_TOKEN` | Existing authorized benchmark bearer credential; never print it | — |
 | _(neither set)_ | Falls back to | `http://localhost:5888/mcp` |
 
 ---

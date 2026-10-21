@@ -1,12 +1,12 @@
 /**
  * RuVector Primary Backend Tests for memory_search (Slice B)
  *
- * Tests that memory_search uses RuVector as the PRIMARY backend:
- * - Priority: RuVector → Neo4j fallback → PostgreSQL traces
+ * Tests the existing RuVector path and AD-70 explicit all-mode selection:
+ * - Each authorized store gets a bounded candidate budget under status all
  * - RuVector is always called first (no feature flag check)
  * - Fail-closed: if RuVector fails, falls back to Neo4j, then PG
  * - Evidence-gated feedback: trajectoryId surfaced in metadata
- * - Stores are attempted in priority order, only successful ones in stores_used
+ * - Stores are attempted in order, with successful candidate sources in stores_used
  *
  * Architecture change (Slice B): RuVector moved from "conditional enrichment"
  * to "primary backend" for episodic retrieval.
@@ -227,6 +227,236 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
     vi.clearAllMocks();
   });
 
+  describe("AD-70 bounded fresh-evidence candidate selection", () => {
+    const event = (id: string, content: string) => ({
+      id, content, provenance: "manual", created_at: "2026-10-20T22:00:00Z", tags: "durable",
+    });
+    const graph = (id: string, content: string, score = 0.85) => ({
+      id, content, score, provenance: "conversation", created_at: "2026-10-19T00:00:00Z",
+      usage_count: 2, relevance: score, tags: [],
+    });
+    const vector = (id: string, content: string, score = 0.9) => ({ id, content, memoryType: "episodic", score });
+    const setVector = (memories: ReturnType<typeof vector>[]) => {
+      mockSearchWithFeedback.mockResolvedValue({ memories, trajectoryId: "ad70-trajectory" });
+    };
+    const eventQueries = () => mockPgQuery.mock.calls.filter(([sql]) => typeof sql === "string" && sql.includes("FROM events"));
+
+    it.each([0, -1, 0.5, 100.1, 101, NaN, Infinity, -Infinity, "2", null, true, {}])(
+      "rejects an invalid explicit all-mode limit %s before any store call",
+      async (rawLimit) => {
+        await expect(memory_search(makeSearchRequest({ limit: rawLimit as number })))
+          .rejects.toThrow("limit must be a finite number between 1 and 100");
+        expect(mockSearchWithFeedback).not.toHaveBeenCalled();
+        expect(mockGraphSearchMemories).not.toHaveBeenCalled();
+        expect(mockPgQuery).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([[undefined, 10], [1, 1], [100, 100], [2.9, 2]] as const)(
+      "bounds every source and final output for supplied limit %s",
+      async (requestedLimit, expectedLimit) => {
+        setVector(Array.from({ length: expectedLimit + 1 }, (_, i) => vector(`rv-${i}`, `vector record ${i}`)));
+        mockGraphSearchMemories.mockResolvedValue(Array.from({ length: expectedLimit + 1 }, (_, i) => graph(`g-${i}`, `graph record ${i}`)));
+        mockPgQuery.mockResolvedValue({ rows: Array.from({ length: expectedLimit + 1 }, (_, i) => event(`p-${i}`, `event record ${i}`)) });
+        const response = await memory_search(makeSearchRequest({ limit: requestedLimit }));
+        expect(mockSearchWithFeedback).toHaveBeenCalledWith(VALID_GROUP_ID, "test query", expect.objectContaining({ limit: expectedLimit }));
+        expect(mockGraphSearchMemories).toHaveBeenCalledWith(expect.objectContaining({ limit: expectedLimit }));
+        expect(eventQueries()[0][1]).toEqual([VALID_GROUP_ID, null, "test query", expectedLimit]);
+        expect(response.count).toBe(expectedLimit);
+        expect(response.results).toHaveLength(expectedLimit);
+      },
+    );
+
+    it.each([undefined, "approved"] as const)("preserves existing %s approved-only limit handling", async (status) => {
+      await memory_search(makeSearchRequest({ status, limit: 101 }));
+      expect(mockGraphSearchMemories).toHaveBeenCalledWith(expect.objectContaining({ limit: 101 }));
+      expect(mockSearchWithFeedback).not.toHaveBeenCalled();
+      expect(mockPgQuery).not.toHaveBeenCalled();
+    });
+
+    it.each(["proposed", "deprecated"] as const)("does not add the all-mode input guard to internal status %s", async (status) => {
+      await memory_search(makeSearchRequest({ status, limit: 101 }));
+      expect(mockSearchWithFeedback).toHaveBeenCalledWith(VALID_GROUP_ID, "test query", expect.objectContaining({ limit: 101 }));
+    });
+
+    it("considers a fresh exact event when unrelated graph candidates fill the limit", async () => {
+      setVector([]);
+      mockGraphSearchMemories.mockResolvedValue([graph("old-1", "Historical unrelated work"), graph("old-2", "Another historical record")]);
+      mockPgQuery.mockResolvedValue({ rows: [event("fresh", "PostgreSQL marker")] });
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 2 }));
+      expect(eventQueries()).toHaveLength(1);
+      expect(response.results[0]).toMatchObject({ id: "fresh", score: 0.5, source: "episodic", provenance: "manual" });
+      expect(response.results).toHaveLength(2);
+      expect(response.meta).toMatchObject({ degraded: false, stores_attempted: ["ruvector", "graph", "postgres"] });
+    });
+
+    it("queries both authorized later stores even when RuVector fills the limit", async () => {
+      setVector([vector("rv-1", "Unrelated one"), vector("rv-2", "Unrelated two")]);
+      mockGraphSearchMemories.mockResolvedValue([]);
+      mockPgQuery.mockResolvedValue({ rows: [event("fresh", "PostgreSQL marker")] });
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 2 }));
+      expect(mockGraphSearchMemories).toHaveBeenCalledWith(expect.objectContaining({ limit: 2 }));
+      expect(eventQueries()).toHaveLength(1);
+      expect(response.results[0].id).toBe("fresh");
+    });
+
+    it("selects trimmed case-insensitive equality, then literal containment, without inflating scores", async () => {
+      setVector([vector("unrelated", "High-confidence unrelated record", 0.99)]);
+      mockGraphSearchMemories.mockResolvedValue([graph("literal", "A PostgreSQL marker appears here", 0.95)]);
+      mockPgQuery.mockResolvedValue({ rows: [event("exact", "PostgreSQL marker")] });
+      const response = await memory_search(makeSearchRequest({ query: "  POSTGRESQL MARKER  ", limit: 2 }));
+      expect(response.results.map(({ id, score }) => ({ id, score }))).toEqual([{ id: "exact", score: 0.5 }, { id: "literal", score: 0.95 }]);
+    });
+
+    it("applies an explicit confidence minimum before choosing a duplicate representation", async () => {
+      setVector([vector("same", "PostgreSQL marker", 0.8)]);
+      mockGraphSearchMemories.mockResolvedValue([]);
+      mockPgQuery.mockResolvedValue({ rows: [event("same", "PostgreSQL marker")] });
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 1, min_score: 0.6 }));
+      expect(eventQueries()).toHaveLength(1);
+      expect(response.results).toHaveLength(1);
+      expect(response.results[0]).toMatchObject({ id: "same", score: 0.8, provenance: "conversation" });
+    });
+
+    it("does not let an exact event bypass an explicit confidence filter", async () => {
+      setVector([]);
+      mockGraphSearchMemories.mockResolvedValue([graph("old", "Unrelated history")]);
+      mockPgQuery.mockResolvedValue({ rows: [event("fresh", "PostgreSQL marker")] });
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 2, min_score: 0.6 }));
+      expect(response.results.map(({ id }) => id)).toEqual(["old"]);
+    });
+
+    it("retains a matching representation of a duplicated ID", async () => {
+      setVector([vector("same", "Unrelated vector projection", 0.99)]);
+      mockGraphSearchMemories.mockResolvedValue([]);
+      mockPgQuery.mockResolvedValue({ rows: [event("same", "PostgreSQL marker")] });
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 1 }));
+      expect(response.results).toHaveLength(1);
+      expect(response.results[0]).toMatchObject({ id: "same", content: "PostgreSQL marker", score: 0.5 });
+    });
+
+    it("enriches identical event and vector content without discarding the retrieval score", async () => {
+      setVector([vector("same", "PostgreSQL marker", 0.99)]);
+      mockGraphSearchMemories.mockResolvedValue([]);
+      mockPgQuery.mockResolvedValue({ rows: [event("same", "PostgreSQL marker")] });
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 1 }));
+      expect(response.results[0]).toMatchObject({ id: "same", score: 0.99, provenance: "manual", created_at: "2026-10-20T22:00:00Z", tags: ["durable"] });
+    });
+
+    it("preserves nonliteral retrieval ordering when a duplicate supplies durable metadata", async () => {
+      const content = "TypeScript supports strict compiler checks";
+      setVector([vector("relevant", content, 0.95), vector("other", "A dark interface preference", 0.9)]);
+      mockGraphSearchMemories.mockResolvedValue([]);
+      mockPgQuery.mockResolvedValue({ rows: [event("relevant", content)] });
+      const response = await memory_search(makeSearchRequest({ query: "Which compiler options are needed?", limit: 2 }));
+      expect(response.results.map(({ id, score }) => ({ id, score })))
+        .toEqual([{ id: "relevant", score: 0.95 }, { id: "other", score: 0.9 }]);
+      expect(response.results[0]).toMatchObject({ provenance: "manual", created_at: "2026-10-20T22:00:00Z", tags: ["durable"] });
+    });
+
+    it("retains the newest durable metadata when older identical raw duplicates follow", async () => {
+      setVector([vector("same", "PostgreSQL marker", 0.99)]);
+      mockGraphSearchMemories.mockResolvedValue([]);
+      mockPgQuery.mockResolvedValue({ rows: [
+        { ...event("same", "PostgreSQL marker"), tags: "newest" },
+        { ...event("same", "PostgreSQL marker"), provenance: "conversation", created_at: "2026-10-19T00:00:00Z", tags: "older" },
+      ] });
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 2 }));
+      expect(response.results).toHaveLength(1);
+      expect(response.results[0]).toMatchObject({ id: "same", score: 0.99, provenance: "manual", created_at: "2026-10-20T22:00:00Z", tags: ["newest"] });
+    });
+
+    it("never lends an indexed result's score to a raw-only ID or bypasses its confidence filter", async () => {
+      setVector([vector("indexed", "PostgreSQL marker", 0.99)]);
+      mockGraphSearchMemories.mockResolvedValue([]);
+      mockPgQuery.mockResolvedValue({ rows: [event("raw-only", "PostgreSQL marker")] });
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 2 }));
+      expect(response.results.map(({ id, score }) => ({ id, score })))
+        .toEqual([{ id: "indexed", score: 0.99 }, { id: "raw-only", score: 0.5 }]);
+      const filtered = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 2, min_score: 0.6 }));
+      expect(filtered.results.map(({ id, score }) => ({ id, score }))).toEqual([{ id: "indexed", score: 0.99 }]);
+    });
+
+    it("does not give an empty query literal-match priority", async () => {
+      setVector([vector("highest", "Unrelated content", 0.9)]);
+      mockGraphSearchMemories.mockResolvedValue([graph("next", "Other content", 0.8)]);
+      mockPgQuery.mockResolvedValue({ rows: [event("empty", "")] });
+      const response = await memory_search(makeSearchRequest({ query: "  ", limit: 2 }));
+      expect(eventQueries()).toHaveLength(1);
+      expect(response.results.map(({ id }) => id)).toEqual(["highest", "next"]);
+    });
+
+    it("uses the normalized per-store budget and verified workspace without expanding output", async () => {
+      setVector([vector("rv1", "first", 0.9), vector("rv2", "second", 0.8), vector("rv-over-budget", "PostgreSQL marker", 1)]);
+      mockGraphSearchMemories.mockResolvedValue([graph("g1", "third", 0.7), graph("g2", "fourth", 0.6), graph("g-over-budget", "PostgreSQL marker", 1)]);
+      mockPgQuery.mockResolvedValue({ rows: [event("p1", "fifth"), event("p2", "sixth"), event("p-over-budget", "PostgreSQL marker")] });
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 2.9 }));
+      expect(mockSearchWithFeedback).toHaveBeenCalledWith(VALID_GROUP_ID, "PostgreSQL marker", expect.objectContaining({ limit: 2 }));
+      expect(mockGraphSearchMemories).toHaveBeenCalledWith(expect.objectContaining({ group_id: VALID_GROUP_ID, workspace_id: "workspace-test", principal_id: "integration-test-agent", limit: 2 }));
+      expect(eventQueries()[0][1]).toEqual([VALID_GROUP_ID, null, "PostgreSQL marker", 2]);
+      expect(mockPgQuery).toHaveBeenCalledWith("SET LOCAL app.current_workspace_id = 'workspace-test'");
+      expect(response.results.map(({ id }) => id)).toEqual(["rv1", "rv2"]);
+      expect(response.results).toHaveLength(2);
+    });
+
+    it.each([undefined, "approved"] as const)("keeps %s approved-only search separate from episodic evidence", async (status) => {
+      const response = await memory_search(makeSearchRequest({ status }));
+      expect(response.results.every(({ source }) => source === "semantic")).toBe(true);
+      expect(mockSearchWithFeedback).not.toHaveBeenCalled();
+      expect(mockPgQuery).not.toHaveBeenCalled();
+      expect(response.meta?.stores_attempted).toEqual(["graph"]);
+    });
+
+    it("rejects missing verified workspace scope before any candidate search", async () => {
+      await expect(memory_search(makeSearchRequest({ scope: undefined }))).rejects.toThrow("verified MCP workspace scope is required");
+      expect(mockSearchWithFeedback).not.toHaveBeenCalled();
+      expect(mockGraphSearchMemories).not.toHaveBeenCalled();
+      expect(mockPgQuery).not.toHaveBeenCalled();
+    });
+
+    it("preserves partial-store warnings even when RuVector fills the limit", async () => {
+      setVector([vector("rv", "PostgreSQL marker")]);
+      mockGraphSearchMemories.mockRejectedValue(new Error("graph unavailable"));
+      mockPgQuery.mockRejectedValue(new Error("postgres unavailable"));
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 1 }));
+      expect(response.results.map(({ id }) => id)).toEqual(["rv"]);
+      expect(response.meta?.warnings).toEqual(expect.arrayContaining(["graph_unavailable", "postgres_unavailable"]));
+      expect(response.meta?.stores_used).toEqual(["ruvector"]);
+      expect(response.meta?.degraded).toBe(true);
+      expect(response.meta?.stores_attempted).toEqual(["ruvector", "graph", "postgres"]);
+    });
+
+    it("treats punctuation as literal content rather than a match pattern", async () => {
+      setVector([vector("pattern-only", "aXb", 0.99)]);
+      mockGraphSearchMemories.mockResolvedValue([graph("literal", "prefix a.b suffix", 0.7)]);
+      mockPgQuery.mockResolvedValue({ rows: [] });
+      const response = await memory_search(makeSearchRequest({ query: "a.b", limit: 1 }));
+      expect(response.results[0]).toMatchObject({ id: "literal", score: 0.7 });
+    });
+
+    it("keeps every store failure visible when no candidate source succeeds", async () => {
+      mockSearchWithFeedback.mockRejectedValue(new Error("vector unavailable"));
+      mockGraphSearchMemories.mockRejectedValue(new Error("graph unavailable"));
+      mockPgQuery.mockRejectedValue(new Error("postgres unavailable"));
+      const response = await memory_search(makeSearchRequest({ limit: 1 }));
+      expect(response.results).toEqual([]);
+      expect(response.count).toBe(0);
+      expect(response.meta?.stores_used).toEqual([]);
+      expect(response.meta?.degraded).toBe(true);
+      expect(response.meta?.stores_attempted).toEqual(["ruvector", "graph", "postgres"]);
+      expect(response.meta?.warnings).toEqual(expect.arrayContaining([expect.stringContaining("ruvector_unavailable"), "graph_unavailable", "postgres_unavailable"]));
+    });
+
+    it("preserves approved-only degradation without falling through to raw evidence", async () => {
+      mockGraphSearchMemories.mockRejectedValue(new Error("graph unavailable"));
+      const response = await memory_search(makeSearchRequest({ status: "approved" }));
+      expect(response.results).toEqual([]);
+      expect(response.meta).toMatchObject({ degraded: true, degraded_reason: "graph_unavailable", stores_attempted: ["graph"] });
+      expect(mockSearchWithFeedback).not.toHaveBeenCalled();
+      expect(mockPgQuery).not.toHaveBeenCalled();
+    });
+  });
+
   describe("RuVector as PRIMARY (default)", () => {
     it("should ALWAYS call searchWithFeedback (no feature flag check)", async () => {
       await memory_search(makeSearchRequest());
@@ -304,22 +534,20 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
       );
     });
 
-    it("should NOT query Neo4j if RuVector returns sufficient results", async () => {
+    it("still queries graph candidates in all-mode when RuVector fills the limit", async () => {
       // RuVector returns 2 results, limit is 2
       const request = makeSearchRequest({ limit: 2 });
       await memory_search(request);
 
-      // Neo4j should not be queried when RuVector satisfies the limit
-      expect(mockGraphSearchMemories).not.toHaveBeenCalled();
+      expect(mockGraphSearchMemories).toHaveBeenCalledWith(expect.objectContaining({ limit: 2 }));
     });
 
-    it("should NOT query PostgreSQL if RuVector returns sufficient results", async () => {
+    it("still queries raw events in all-mode when RuVector fills the limit", async () => {
       // RuVector returns 2 results, limit is 2
       const request = makeSearchRequest({ limit: 2 });
       await memory_search(request);
 
-      // PG should not be queried when RuVector satisfies the limit
-      expect(mockPgQuery).not.toHaveBeenCalled();
+      expect(mockPgQuery.mock.calls.some(([sql]) => String(sql).includes("FROM events"))).toBe(true);
     });
   });
 
@@ -366,11 +594,11 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
       expect(contents).toContain("Semantic knowledge about dark mode");
     });
 
-    it("should NOT query PostgreSQL if RuVector + Neo4j satisfy limit", async () => {
+    it("still queries raw events when vector and graph candidates fill the limit", async () => {
       const request = makeSearchRequest({ limit: 2 }); // 1 RV + 1 Neo4j = 2
       await memory_search(request);
 
-      expect(mockPgQuery).not.toHaveBeenCalled();
+      expect(mockPgQuery.mock.calls.some(([sql]) => String(sql).includes("FROM events"))).toBe(true);
     });
   });
 

@@ -1,0 +1,17 @@
+# Only the repository's schema initialization SQL enters this image context.
+**
+!docker/
+!docker/postgres-init/
+!docker/postgres-init/*.sql
+**/node_modules
+**/node_modules/**
+**/.env*
+**/*.env
+**/.allura
+**/.allura/**
+**/secrets
+**/secrets/**
+**/private-fixtures
+**/private-fixtures/**
+**/*.pem
+**/*.key

@@ -2,71 +2,30 @@
   <img src="assets/allura-wordmark.png" alt="Allura" width="190" />
 </p>
 
-<h1 align="center">Agentic AI Framework &amp; Harness — Portfolio</h1>
+# Allura engineering portfolio
 
-<p align="center">
-  <strong>An evidence-first case study of the Allura governed control plane.</strong><br/>
-  Reusable agent framework, deterministic harness, policy hooks, governed memory, and measured evaluation — each claim resolves to a committed artifact.
-</p>
+This case study is for reviewers who want to inspect Allura's framework, harness, and governance work. Start with the synthetic review walkthrough, then follow the evidence for the engineering claim you want to assess.
 
-<p align="center">
-  <a href="https://allura-governed-demo.vercel.app"><strong>▶ Open the live interactive demo</strong></a>
-</p>
+**[Open the example walkthrough](https://allura-governed-demo.vercel.app).**
 
----
+The walkthrough uses a synthetic enterprise review case. It is not connected to your project, does not demonstrate the first-memory setup task, and does not establish production readiness or institutional endorsement. For the memory-service evaluation path, use [Getting started](../../user-guide/getting-started.md).
 
-## Live interactive demo
+## Inspect one question
 
-A self-contained, self-guided walkthrough of the governed operator surface — no install, no Docker, one link.
+| Question | Reference |
+|---|---|
+| What does the specimen demonstrate? | [Interactive demo source and limits](interactive-demo/README.md) |
+| What supports a technical claim? | [Evidence pack](../DEMO-EVIDENCE-PACK.md) and [case study](../principal-engineer-case-study.md) |
+| How are framework components related? | [Framework reference](../../../FRAMEWORK.md) |
+| What did the portfolio package contain? | [Source map](SOURCES.md), [role mapping](ROLE-MAPPING.md), and [alt text](ALT-TEXT.md) |
+| Where are the detailed engineering illustrations? | [Evidence infographic collection](evidence-infographics/README.md) and [architecture SVGs](infographics/svg/) |
 
-<p align="center">
-  <a href="https://allura-governed-demo.vercel.app"><img src="assets/dashboard-command-center.png" alt="Allura governed operator dashboard — the Command Center review queue, evidence panel, and rationale-required human-review gate." width="860" /></a>
-</p>
+The illustrations and screenshots remain available as supporting references. Reading a gallery is not a prerequisite for evaluating the core memory task.
 
-- **Nine surfaces, one shell** — Command Center, Framework &amp; Harness, Governance, Evidence, Receipts, Module Registry, Mortgage Approval Gate, Organization Admin, Platform Settings.
-- **Guided tour** — a 14-stop coached walkthrough (dim + spotlight + popover) that opens the Framework view, walks each surface, and runs a live review case. Auto-runs once, replayable via **Take the tour**; hover any control for a one-line hint.
-- **Framework &amp; Harness view** — the engineering case: fail-closed boot, database-enforced policy denial, deterministic replay, nine live evaluation lanes, and the Bumblebee promote-or-held pipeline.
+## Presentation and evidence boundaries
 
-<p align="center">
-  <a href="https://allura-governed-demo.vercel.app"><img src="assets/dashboard-framework-harness.png" alt="The deployed Framework &amp; Harness specimen presents fail-closed boot, database-enforced policy, deterministic replay, and the nine measured evaluation lanes." width="860" /></a>
-</p>
+The [portfolio brand release review](qa/BRAND-RELEASE-GATE.md) applies to the package and revision it inspected. It is not a current first-use, live-service, or five-person usability receipt. See the [capability matrix](../capability-matrix.md) for the distinction between implementation and recorded evidence, and the [current remediation brief](../../reference/reddit-remediation/brief.md) for the simpler memory explanation.
 
-<p align="center">
-  <a href="https://allura-governed-demo.vercel.app"><img src="assets/dashboard-governance.png" alt="The deployed Governance specimen keeps scope, evidence, policy, and a human decision visibly separate." width="860" /></a>
-</p>
+The [brand-source resolution](BRAND-SOURCE-RESOLUTION.md) records prior visual-policy conflicts. This editorial revision changes the reading path; it does not silently adopt a new brand strategy or authorize publication.
 
-> The demo uses synthetic specimen data only. It makes no claim of affiliation with, deployment by, or endorsement from any organization.
-
-## Evidence infographics
-
-Six editable visuals explaining how Allura turns captured context into trusted intelligence. Each links to its full-size PNG; editable SVGs and full descriptions are in the [evidence infographic set](evidence-infographics/README.md).
-
-|  |  |
-| --- | --- |
-| <a href="evidence-infographics/png/01-every-action-leaves-proof.png"><img src="evidence-infographics/png/01-every-action-leaves-proof.png" alt="A request, a review, and a durable record are connected; source, decision, and result stay linked." width="420" /></a><br/><sub><strong>Every action leaves proof</strong></sub> | <a href="evidence-infographics/png/02-access-has-boundaries.png"><img src="evidence-infographics/png/02-access-has-boundaries.png" alt="Two labeled workspaces are separated by a policy boundary lock." width="420" /></a><br/><sub><strong>Access has boundaries</strong></sub> |
-| <a href="evidence-infographics/png/03-people-review-important-changes.png"><img src="evidence-infographics/png/03-people-review-important-changes.png" alt="A review module links a proposed change, policy check, and recorded decision." width="420" /></a><br/><sub><strong>People review important changes</strong></sub> | <a href="evidence-infographics/png/04-memory-keeps-its-history.png"><img src="evidence-infographics/png/04-memory-keeps-its-history.png" alt="Saved context, review, and approved memory stay connected across time." width="420" /></a><br/><sub><strong>Memory keeps its history</strong></sub> |
-| <a href="evidence-infographics/png/05-test-before-release.png"><img src="evidence-infographics/png/05-test-before-release.png" alt="A loop links a scenario, run, result review, and saved proof." width="420" /></a><br/><sub><strong>Test before release</strong></sub> | <a href="evidence-infographics/png/06-an-answer-can-show-its-work.png"><img src="evidence-infographics/png/06-an-answer-can-show-its-work.png" alt="An answer points to factual source, review decision, and approved context." width="420" /></a><br/><sub><strong>An answer can show its work</strong></sub> |
-
-## Deliverables
-
-| Artifact | What it is |
-| --- | --- |
-| [`interactive-demo/`](interactive-demo/) | The self-contained dashboard demo ([live](https://allura-governed-demo.vercel.app)) — see its [README](interactive-demo/README.md). |
-| `evidence-infographics/` | Six editable SVG infographics (+ PNG renders) with embedded accessibility metadata. |
-| `deck/Allura-Agentic-AI-Framework-Harness-Portfolio.pptx` | A ten-slide presentation with speaker-note sources. |
-| [`ROLE-MAPPING.md`](ROLE-MAPPING.md) | Role requirements mapped to inspectable Allura evidence. |
-| [`SOURCES.md`](SOURCES.md) · [`ALT-TEXT.md`](ALT-TEXT.md) | Provenance and accessible descriptions. |
-| [`BRAND-AUDIT.md`](BRAND-AUDIT.md) · [`BRAND-SOURCE-RESOLUTION.md`](BRAND-SOURCE-RESOLUTION.md) · [`qa/BRAND-RELEASE-GATE.md`](qa/BRAND-RELEASE-GATE.md) | The remediation decision and release review. |
-
-## How each claim is grounded
-
-Every figure in the demo and deck resolves to a committed artifact:
-
-- Framework &amp; harness architecture — [`FRAMEWORK.md`](../../../FRAMEWORK.md)
-- Captured demo runs — [`DEMO-EVIDENCE-PACK.md`](../DEMO-EVIDENCE-PACK.md)
-- Reproduction commands and generated-output locations — [`DEMO-EVIDENCE-PACK.md`](../DEMO-EVIDENCE-PACK.md)
-- Case study — [`principal-engineer-case-study.md`](../principal-engineer-case-study.md)
-
-## Presentation boundary
-
-This is a role-aligned technical case study. It makes no claim that Allura is in use by, endorsed by, or associated with any specific employer. Retrieval in the demo is lexical over a small synthetic corpus — no scaled-performance claim is made. Quantitative statements are limited to the cited evidence artifacts.
+*AI-Assisted Documentation: editorial revision, 2026-10-20. Human comprehension and published-revision checks remain open.*

@@ -1,0 +1,147 @@
+# AD-71 preparation only. No verified live database/bootstrap adapter exists.
+# DO NOT use as a supported install or run it without reviewed runtime authority.
+name: ${FIRST_USE_PROJECT:?unique allura-first-use project required}
+
+x-allura-first-use:
+  state: preparation_only
+  bootstrap: blocked_no_verified_mcp_database_adapter
+  schema_alignment: blocked_pending_verified_exact_target
+  live_search: unverified
+
+x-mcp-build: &mcp-build
+  context: .
+  dockerfile: docker/first-use/Dockerfile.mcp
+
+services:
+  postgres:
+    profiles: [prepare, provisioned]
+    build:
+      context: .
+      dockerfile: docker/first-use/Dockerfile.postgres
+      args:
+        POSTGRES_IMAGE: ${FIRST_USE_POSTGRES_IMAGE:?reviewed pgvector image digest required}
+    environment:
+      POSTGRES_DB: ${FIRST_USE_DATABASE:?unique allura_first_use database required}
+      POSTGRES_USER: first_use_owner
+      POSTGRES_PASSWORD_FILE: /run/secrets/first_use_postgres
+    secrets: [first_use_postgres]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [trial]
+    cpus: 1.0
+    mem_limit: 1g
+    pids_limit: 128
+    healthcheck:
+      # TCP excludes the official image's temporary socket-only init server.
+      # This is process readiness, not schema/auth/provider/journey acceptance.
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U first_use_owner -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  embedding:
+    profiles: [prepare, provisioned]
+    image: ${FIRST_USE_OLLAMA_IMAGE:?reviewed ollama image digest required}
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    volumes:
+      - model_data:/root/.ollama
+    networks: [trial]
+    cpus: 2.0
+    mem_limit: 4g
+    pids_limit: 128
+    healthcheck:
+      test: [CMD, ollama, list]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  model-pull:
+    profiles: [prepare, provisioned]
+    image: ${FIRST_USE_OLLAMA_IMAGE:?reviewed ollama image digest required}
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - 'test "$$FIRST_USE_ALLOW_MODEL_PULL" = "yes" || { echo "Model pull allowance missing" >&2; exit 1; }; exec ollama pull "$$FIRST_USE_EMBEDDING_MODEL"'
+    environment:
+      OLLAMA_HOST: http://embedding:11434
+      FIRST_USE_ALLOW_MODEL_PULL: ${FIRST_USE_ALLOW_MODEL_PULL:-no}
+      FIRST_USE_EMBEDDING_MODEL: qwen3-embedding:0.6b
+    depends_on:
+      embedding: {condition: service_healthy}
+    networks: [trial]
+    cpus: 0.5
+    mem_limit: 256m
+    pids_limit: 64
+
+  embedding-ready:
+    profiles: [prepare, provisioned]
+    build: *mcp-build
+    command:
+      - bun
+      - -e
+      - |
+        import { assertFirstUseEmbeddingResponse, assertFirstUseModelIdentity } from './scripts/first-use-local-fixture.ts';
+        const model = 'qwen3-embedding:0.6b';
+        const expected = process.env.FIRST_USE_MODEL_DIGEST;
+        if (!/^sha256:[a-f0-9]{64}$/.test(expected || '')) throw Error('Reviewed model digest required');
+        const tags = await fetch('http://embedding:11434/api/tags', {signal: AbortSignal.timeout(10000)});
+        if (!tags.ok) throw Error('Model inventory unavailable');
+        assertFirstUseModelIdentity(await tags.json(), {name:model, digest:expected});
+        const response = await fetch('http://embedding:11434/v1/embeddings', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({model, input:'Synthetic first-use provider readiness', dimensions:1024}), signal: AbortSignal.timeout(60000)});
+        if (!response.ok) throw Error('Embedding provider unavailable');
+        assertFirstUseEmbeddingResponse(await response.json());
+        console.log('provider_shape_passed; database schema and authenticated journey remain unverified');
+    environment:
+      FIRST_USE_MODEL_DIGEST: ${FIRST_USE_MODEL_DIGEST:?reviewed resolved model digest required}
+    depends_on:
+      model-pull: {condition: service_completed_successfully}
+    networks: [trial]
+    cpus: 1.0
+    mem_limit: 512m
+    pids_limit: 64
+
+  mcp:
+    # Explicitly unavailable as a supported path until target/schema/fixture
+    # provisioning is verified through a permitted database adapter.
+    profiles: [provisioned]
+    build: *mcp-build
+    environment:
+      NODE_ENV: production
+      ALLURA_ENV: first-use-evaluation
+      ALLURA_MCP_HTTP_HOST: 0.0.0.0
+      ALLURA_MCP_HTTP_PORT: 6487
+      ALLURA_MCP_AUTH_CACHE_TTL_MS: 0
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${FIRST_USE_DATABASE:?unique trial database required}
+      POSTGRES_USER: allura_app
+      POSTGRES_APP_USER: allura_app
+      GRAPH_BACKEND: ruvector
+      RUVECTOR_EMBEDDING_BASE_URL: http://embedding:11434
+      RUVECTOR_EMBEDDING_MODEL: qwen3-embedding:0.6b
+      RUVECTOR_EMBEDDING_SEND_DIMENSIONS: "true"
+    secrets: [first_use_mcp]
+    ports: ["127.0.0.1:6487:6487"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      embedding-ready: {condition: service_completed_successfully}
+    networks: [trial]
+    cpus: 1.0
+    mem_limit: 1g
+    pids_limit: 128
+    healthcheck:
+      test: [CMD, bun, -e, "fetch('http://127.0.0.1:6487/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  postgres_data: {}
+  model_data: {}
+networks:
+  trial: {}
+secrets:
+  first_use_postgres:
+    file: ${FIRST_USE_POSTGRES_SECRET_FILE:?private trial-only owner password file required}
+  first_use_mcp:
+    file: ${FIRST_USE_MCP_SECRET_FILE:?private trial-only app and signing JSON required}

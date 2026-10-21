@@ -59,8 +59,8 @@ interface AlluraClientConfig {
 interface MemoryAddParams {
     /** Required: Tenant namespace (format: allura-*) */
     group_id: GroupId;
-    /** Required: User identifier within tenant */
-    user_id: UserId;
+    /** Optional identity assertion; must match the authenticated principal when supplied. */
+    user_id?: UserId;
     /** Required: Memory content text */
     content: MemoryContent;
     /** Optional: Metadata */
@@ -87,6 +87,8 @@ interface MemorySearchParams {
     min_score?: ConfidenceScore;
     /** Optional: Include global memories (default: true) */
     include_global?: boolean;
+    /** Approved knowledge only (default), or all accessible evidence including fresh saves. */
+    status?: "approved" | "all";
 }
 /** Parameters for memory_get */
 interface MemoryGetParams {
@@ -950,8 +952,8 @@ declare class MemoryOperations {
      */
     add(params: MemoryAddParams): Promise<MemoryAddResponse>;
     /**
-     * Search memories across both stores (PostgreSQL + Neo4j).
-     * Federated search with results merged by relevance.
+     * Search approved knowledge by default, or include accessible episodic
+     * evidence with status: "all". A saved result does not imply human approval.
      *
      * @param params - Search parameters
      * @returns Search results with relevance scores

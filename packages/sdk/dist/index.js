@@ -450,8 +450,8 @@ var MemoryOperations = class {
     return this.request("memory_add", params, MemoryAddResponseSchema);
   }
   /**
-   * Search memories across both stores (PostgreSQL + Neo4j).
-   * Federated search with results merged by relevance.
+   * Search approved knowledge by default, or include accessible episodic
+   * evidence with status: "all". A saved result does not imply human approval.
    *
    * @param params - Search parameters
    * @returns Search results with relevance scores
@@ -459,6 +459,11 @@ var MemoryOperations = class {
    */
   async search(params) {
     validateGroupId(params.group_id);
+    if (params.status !== void 0 && params.status !== "approved" && params.status !== "all") {
+      throw new ValidationError("status must be approved or all", {
+        status: ["status must be approved or all"]
+      });
+    }
     if (!params.query || params.query.trim().length === 0) {
       throw new ValidationError("query must not be empty", {
         query: ["query is required and must not be empty"]

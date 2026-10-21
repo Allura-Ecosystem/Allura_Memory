@@ -1,52 +1,29 @@
-# Allura — Interactive Governed-Control-Plane Demo
+# Allura synthetic review walkthrough
 
-A single self-contained HTML file that presents the Allura governed operator surface as a
-clickable product. No install, no Docker, no external dependencies — open it and explore.
+For people evaluating the portfolio's human-review concept. **[Open the example walkthrough](https://allura-governed-demo.vercel.app)**, inspect one review case, then look for the evidence and recorded decision.
 
-**Live:** https://allura-governed-demo.vercel.app
+This is a static specimen using synthetic data. It does not connect an agent to your own memories, demonstrate a real human approval in the service, or establish that the operational dashboard matches it. For the real memory-service evaluation, use [Getting started](../../../user-guide/getting-started.md).
 
-<p align="center">
-  <a href="https://allura-governed-demo.vercel.app"><img src="../assets/dashboard-command-center.png" alt="Command Center — review queue, evidence panel, and rationale-required human-review gate." width="820" /></a>
-</p>
+## What to inspect
 
-## What's inside
+1. Open the Command Center example and inspect the case's source material.
+2. Compare the proposed decision with the evidence shown.
+3. Follow the specimen's review and receipt steps. The displayed action is illustrative; it does not grant authority in a deployed service.
 
-A full dashboard shell with a persistent nav across nine surfaces:
+The other navigation surfaces provide engineering and administration context. The source includes a guided tour and hints; their presence does not establish that newcomers can complete the task unaided. The [first-use study](../../../reference/reddit-remediation/usability-study.md) records the separate human evaluation protocol.
 
-| Surface | Shows |
-| --- | --- |
-| **Command Center** | The evidence desk — review queue → evidence → human review → receipt, with a guided mortgage case. |
-| **Framework &amp; Harness** | The engineering case: fail-closed boot, DB-enforced policy denial (forced RLS), deterministic replay, nine live evaluation lanes, and the Bumblebee promote-or-held pipeline. |
-| **Governance / Evidence / Receipts** | How a decision is curated, sourced (source vs OCR derivative), and recorded on a server-owned append-only receipt. |
-| **Module Registry / Mortgage Approval Gate** | First-party signed modules; a domain add-on that is *declared, not privileged*. |
-| **Organization Admin / Platform Settings** | Enablement, lifecycle, and inherited typed configuration. |
+## Source and evidence
 
-## Guided walkthrough
+- [Self-contained HTML specimen](index.html) — inspect or open the local static file.
+- [Recorded evidence pack](../../DEMO-EVIDENCE-PACK.md) — sources and reproduction details for historical engineering claims.
+- [Portfolio overview](../README.md) — choose the engineering question you want to inspect.
 
-- **Guided tour** — a 14-stop coached walkthrough (dim backdrop + spotlight + popover with Back / Next / Skip and progress dots) that drives the app as it narrates. It auto-runs once on first visit and is replayable anytime via the **Take the tour** button.
-- **Hover hints** — hover, tap, or keyboard-focus any nav item, tab, or control for a one-line explanation.
-- Keyboard-driven (←/→/Esc); honors `prefers-reduced-motion`.
+The specimen's source uses embedded assets and styles. Any hosted behavior or optional analytics added by a hosting provider must be checked on the actual published revision; the local file alone does not verify it.
 
-## Design &amp; provenance
+## Publication boundary
 
-- Conforms to the Epic 25 brand-locked authority: paper canvas, IBM Plex Sans + IBM Plex Mono, blue for structure / orange for action, canonical Allura wordmark.
-- **Self-contained**: CSS inlined, wordmark and lettermark embedded as `data:` URIs, tour engine is ~120 lines of vanilla JS. No CDN, no runtime fetch.
-- Every figure resolves to committed evidence or a documented reproducible run — see [`DEMO-EVIDENCE-PACK.md`](../../DEMO-EVIDENCE-PACK.md).
+A release owner should use the approved static-hosting process after reviewing the exact file and obtaining applicable publication authority. This README is not a deployment instruction or a new release receipt.
 
-## Deploy
+No affiliation with, deployment by, or endorsement from an organization is claimed. No live underwriting or compliance certification is demonstrated.
 
-It is one static file. To host it anywhere:
-
-```bash
-# Vercel (static, no build step)
-vercel deploy --prod
-```
-
-Optional Vercel Web Analytics: enable it on the project, and the page's built-in
-`/_vercel/insights/script.js` beacon (added at deploy time) begins recording page views
-and which tour stops are reached. The beacon is kept out of the committed source.
-
-## Boundary
-
-Synthetic specimen data only. No affiliation with, deployment by, or endorsement from any
-organization is claimed; no live underwriting, and Bumblebee is default-off.
+*AI-Assisted Documentation: editorial revision, 2026-10-20; task comprehension and current public deployment remain unverified.*

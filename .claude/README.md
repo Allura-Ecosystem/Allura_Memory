@@ -1,91 +1,18 @@
-# Allura Memory — OpenCode Config
+# Claude adapter reference for Allura Memory
 
-OAC Core + Allura Overlay architecture.
+This directory contains Claude-facing adapters and workflow material for contributors. The repository's [agent instructions](../AGENTS.md) and [Team RAM runtime bridge](../.agents/TEAM-RAM-RUNTIME.md) establish project coordination. The local [.opencode agent definitions](../.opencode/agent/) own Team RAM behavior; an adapter or roster is not evidence that an agent ran.
 
-## Architecture
+For the product's first task, use the shared [save-and-retrieve guide](../docs/user-guide/getting-started.md). It currently evaluates an existing authorized gateway; it does not establish a fresh self-hosted installation.
 
-This directory implements the **OpenAgentsControl (OAC) core** with an **Allura overlay**.
+## Contributor path
 
-### OAC Core
-Context-first, plan-first, validation-first.
+1. Load the task's applicable local context and governed Brain evidence.
+2. Resolve the required skills and validation before implementation.
+3. Make a bounded change and record actual review/test evidence.
+4. Log meaningful outcomes through the governed Brain interface.
 
-- **ContextScout** — Navigation-driven discovery of project standards and patterns
-- **`.opencode/context/`** — Deterministic project context (the source of truth for implementation)
-- **Command lifecycle** — Scout → Skill resolve → Build → Validate
-- **Validation/review gates** — No code ships without passing validation
+The memory service uses PostgreSQL and the RuVector graph adapter by default. Neo4j is retired. Use the authorized `allura-system` project scope; role selection does not grant another tenant, credential, or human-promotion authority.
 
-### Allura Overlay
-Project-specific extensions on top of OAC core.
+See the [OpenCode/OAC harness reference](../.opencode/README.md) for the canonical local directory map. Older copied instructions and plugin examples must be reconciled with current project rules and source before execution. Configuration and permissions remain separate from explanatory README text.
 
-- **Team RAM** — 10 persona-driven agents (Brooks, Woz, Scout, Pike, Fowler, etc.)
-- **Brain memory** — Allura Brain (PostgreSQL + Neo4j) for episodic + semantic memory
-- **Brooks orchestration** — Architecture-first orchestration via Frederick Brooks persona
-- **HITL / curator / governance** — Promotion pipeline with human-in-the-loop approval
-- **RuVix control plane** — Policy enforcement gate for all memory operations
-
-## Execution Rule
-
-**Scout before build. Skills before Ralph. Validate before done.**
-
-```
-User task
-  ↓
-① Scout loads local .opencode/context files
-  ↓
-② Scout searches Allura Brain for prior decisions/blockers
-  ↓
-③ Skill resolver identifies required skills
-  ↓
-④ Builder executes with loaded context + skills
-  ↓
-⑤ Validation passes before done
-```
-
-## Directory Structure
-
-| Path | Class | Purpose |
-|------|-------|---------|
-| `context/core/` | OAC Core | Standards, workflows, system guides |
-| `context/development/` | OAC Core | Frontend, backend, infra, data patterns |
-| `context/openagents-repo/` | OAC Core | OAC framework documentation |
-| `context/project-intelligence/` | OAC Core | Business/technical domain context |
-| `context/allura/` | Allura Overlay | Brain prompt, brand identity, blockers |
-| `context/ui/` | OAC Core | UI/animation/design patterns |
-| `agent/` | Allura Overlay | Team RAM persona definitions |
-| `command/` | Mixed | OAC core + Allura overlay commands |
-| `skills/` | Mixed | Allura-specific + OAC tool skills |
-| `rules/` | Allura Overlay | Operational routing and guidelines |
-| `governance/` | Allura Overlay | Curator and HITL |
-| `contracts/` | Allura Overlay | Harness and Ralph integration contracts |
-| `config/` | Mixed | Agent metadata, skills, harness config |
-| `archive/` | Archive | Pruned directories (hooks, routing, state, migrations) |
-| `tool/` | Allura Overlay | Env validation |
-| `manifest.json` | OAC Core | Machine-readable architecture manifest |
-| `SKILL-OWNERSHIP.md` | OAC Core | Skill ownership matrix |
-
-## Invariants
-
-1. Scout before build
-2. Context before code
-3. Skills before Ralph
-4. Validation before done
-5. Memory supplements context; it does not replace it
-6. No decorative architecture
-
-## Source of Truth
-
-- `opencode.json` — Top-level OpenCode configuration
-- `.opencode/agent/` — Active Team RAM agent definitions
-- `.opencode/command/` — Reusable workflow commands
-- `.opencode/skills/` — Skill definitions and supporting assets
-- `.opencode/manifest.json` — Architecture manifest (machine-readable)
-- `.opencode/SKILL-OWNERSHIP.md` — Skill ownership matrix
-- `.opencode/config/` — Registry and harness metadata
-
-## Notes
-
-- Team RAM is the primary active agent set
-- Team RAM consumes OAC context; it does not replace it
-- Keep agent permissions and boundaries in agent frontmatter and instructions
-- Avoid reintroducing stale legacy naming when current Team RAM names are the intended surface
-- Treat memory integration as supporting infrastructure, not as the identity of the harness
+*AI-assisted factual correction, 2026-10-20. No runtime settings or agent definitions changed.*

@@ -1,52 +1,35 @@
-# Controlled Research Agent — Reference Integration
+# Controlled research scenario fixtures
 
-## Scenario
+For engineers inspecting how a research workflow handles fixture tool responses, a simulated injection failure and recovery.
 
-A controlled research agent uses multiple mocked tools, blocks untrusted
-instructions from becoming authority, and demonstrates fault injection/replay.
+**Start with the [shared first-use guide](../../docs/user-guide/getting-started.md)** if your goal is to save and retrieve a real project decision. This directory is a scenario-harness reference, not that first-use integration.
 
-## Principal/Tenant Fixture
+## What is simulated
 
-- Principal: `research-agent` (role: viewer)
-- Tenant: `allura-controlled-research`
+The JSON files declare `tool_fixtures`, `principal_fixture`, expected outcomes and, where applicable, `approval_breakpoints`. The [CLI](../../scripts/harness.ts) defaults to `simulate`; the [runner](../../src/lib/harness/runner.ts) consumes those fixtures. A predeclared approval is not an observed human decision. Fixture principal and tenant labels are not credentials or access grants.
 
-## Tools
+The runner still has backing-service dependencies. Simulated tool responses do not mean the entire process is independent of infrastructure.
 
-- `memory_search` — query existing knowledge
-- `web_search` — mocked external source (no real network in simulate mode)
-- `memory_add` — record findings (blocked: viewer role)
+## Inspect a case
 
-## Policies
+| Fixture | Declared scenario outcome |
+|---|---|
+| [prompt-injection](scenarios/prompt-injection.json) | `failed` |
+| [recovery](scenarios/recovery.json) | `completed` |
+| [success](scenarios/success.json) | `completed` |
 
-- `pol-004` — viewer role cannot write memories
-- `pol-001` — untrusted instructions never become authority
-
-## Scenarios (runnable)
-
-| File | Case | Expected |
-|------|------|----------|
-| `scenarios/success.json` | Success: read-only research completes with mocked tools | `completed` |
-| `scenarios/prompt-injection.json` | Security failure: embedded instruction in tool output blocked | `failed` (UNTRUSTED_INSTRUCTION) |
-| `scenarios/recovery.json` | Recovery: transient source failure retried via checkpoint | `completed` |
-
-## Run
+After provisioning the runner's authorized evaluation dependencies, invoke a case from the repository root:
 
 ```bash
-# From the repo root, with the local stack up:
-# (bun packages/cli/src/index.ts init creates .env.portfolio.example with
-# non-secret defaults; copy it to .env.local and set your secrets first)
-set -a && source .env.local && set +a
 bun run scripts/harness.ts examples/controlled-research-agent/scenarios/success.json
-bun run scripts/harness.ts examples/controlled-research-agent/scenarios/prompt-injection.json
-bun run scripts/harness.ts examples/controlled-research-agent/scenarios/recovery.json
 ```
 
-## Expected Evidence
+The CLI writes a local receipt and prints the scenario status. Check both the receipt and the expected scenario outcome; a command exit alone is not proof of the behavior. A fixture's `cleanup: true` is declared intent, not verified deletion authority or a receipt that cleanup happened. Preserve append-only events.
 
-- One success case: research completes with read-only access
-- One policy failure: untrusted instruction in tool output blocked (UNTRUSTED_INSTRUCTION)
-- One recovery case: transient failure retried via checkpoint resume
+## Current execution evidence
 
-## Cleanup
+On 2026-10-20, all three cases in this directory were attempted at working revision `28d90e843` plus current edits. Each stopped with `ECONNREFUSED 127.0.0.1:5432` before producing a scenario result. No live approval, successful recovery, cross-tenant enforcement or completed scenario is claimed from those attempts. The [README disposition receipt](../../docs/reference/reddit-remediation/readme-disposition.md) records the scope and limitations.
 
-All test data is cleaned after the scenario completes (`tenant_fixture.cleanup: true`).
+Do not switch tenant or invent an identity to make a case pass. Establish the intended isolated dependencies and rerun before recommending the example as verified.
+
+*AI-assisted editorial revision, 2026-10-20. Fixture expectations remain distinct from observed outcomes.*
