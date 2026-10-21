@@ -99,10 +99,10 @@ sequenceDiagram
     actor Reviewer as Independent human curator
     participant Approval as Approval service
     Client->>Capture: Capture evidence with resolved scope
-    Capture->>PG: Append event; eligible content becomes pending proposal
+    Capture->>PG: Append event and queue eligible content as pending proposal
     Capture-->>Client: Episodic / pending result
     Reviewer->>Approval: Intended approval: reviewed version, rationale, idempotency key
-    Approval->>PG: Lock scope; validate evidence and actor separation
+    Approval->>PG: Lock scope and validate evidence and actor separation
     Note over Approval,PG: Reviewed-version comparison is specified but not implemented (DOC-06)
     Approval->>PG: Atomic memory + proposal + audit + outbox + receipt + replay record
     Approval-->>Reviewer: Durable governance receipt after commit

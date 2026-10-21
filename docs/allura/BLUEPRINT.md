@@ -752,8 +752,7 @@ graph LR
         G[TraceMiddleware]
     end
 
-    subgraph Bus[(PostgreSQL events table\nappend-only)]
-    end
+    Bus[("PostgreSQL events table<br/>append-only")]
 
     subgraph Consumers
         H[Dashboard UI]

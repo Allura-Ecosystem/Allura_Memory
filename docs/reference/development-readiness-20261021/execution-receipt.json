@@ -1,6 +1,6 @@
 {
   "base_revision": "c720aca2ed09ac7d51776dacf3ed6f5867587fac",
-  "checked_at_utc": "2026-10-21T13:10:21.798000+00:00",
+  "checked_at_utc": "2026-10-21T13:14:15.594295+00:00",
   "checks": [
     {
       "command": "bun install --frozen-lockfile --ignore-scripts",
@@ -161,7 +161,7 @@
     },
     {
       "path": "docs/allura/BLUEPRINT.md",
-      "sha256": "40c911a562f62620d59ec2834b6a75baca9573d732a974caa56567cad5341cc6"
+      "sha256": "6aaed2c5abdfbf17f1e9318cabcc377e1026f245456dcc08f014427683ce855d"
     },
     {
       "path": "docs/allura/DATA-DICTIONARY.md",
@@ -181,7 +181,7 @@
     },
     {
       "path": "docs/allura/SOLUTION-ARCHITECTURE.md",
-      "sha256": "a99bad0d5c57d8042ed097c7cf91b5b50bd9e598f60600037681cfe743385690"
+      "sha256": "4d5fca0fffed472df0aeadbf1351620bf6bafe9518a0c09e18fba84fd7868687"
     },
     {
       "path": "docs/archive/allura/backend-adversarial-review-2026-10-20.md",
@@ -193,7 +193,7 @@
     },
     {
       "path": "docs/reference/development-readiness-20261021/producer-checks.json",
-      "sha256": "188d13d7e4a128604355dd8ae2b9bdb339726d4880f43513d516fb85ff56d894"
+      "sha256": "947efbc7964deb24b6669a1f3b9c3bed106ff0f72979a55649a5b26b447c42cc"
     },
     {
       "path": "docs/reference/development-readiness-20261021/source-manifest.json",
@@ -233,5 +233,92 @@
       "tracked_diff_sha256": "c5af01077700469b4f40040ef82bfabd0e56b871fb13758fc13c56fb30073736",
       "limitations": "AI scoped review; executable test result supplied separately by parent"
     }
-  ]
+  ],
+  "mermaid_syntax_validation": {
+    "parser": "mermaid@11.12.1",
+    "scope": "all mermaid fenced blocks in six canonical Markdown files; syntax only, no rendered layout assurance",
+    "results": [
+      {
+        "file": "BLUEPRINT.md",
+        "line": 448,
+        "ok": true,
+        "type": "flowchart-v2"
+      },
+      {
+        "file": "BLUEPRINT.md",
+        "line": 464,
+        "ok": true,
+        "type": "er"
+      },
+      {
+        "file": "BLUEPRINT.md",
+        "line": 743,
+        "ok": true,
+        "type": "flowchart-v2"
+      },
+      {
+        "file": "SOLUTION-ARCHITECTURE.md",
+        "line": 62,
+        "ok": true,
+        "type": "flowchart-v2"
+      },
+      {
+        "file": "SOLUTION-ARCHITECTURE.md",
+        "line": 94,
+        "ok": true,
+        "type": "sequence"
+      },
+      {
+        "file": "SOLUTION-ARCHITECTURE.md",
+        "line": 221,
+        "ok": true,
+        "type": "sequence"
+      },
+      {
+        "file": "SOLUTION-ARCHITECTURE.md",
+        "line": 278,
+        "ok": true,
+        "type": "sequence"
+      },
+      {
+        "file": "SOLUTION-ARCHITECTURE.md",
+        "line": 456,
+        "ok": true,
+        "type": "flowchart-v2"
+      },
+      {
+        "file": "SOLUTION-ARCHITECTURE.md",
+        "line": 477,
+        "ok": true,
+        "type": "stateDiagram"
+      },
+      {
+        "file": "SOLUTION-ARCHITECTURE.md",
+        "line": 522,
+        "ok": true,
+        "type": "sequence"
+      },
+      {
+        "file": "SOLUTION-ARCHITECTURE.md",
+        "line": 580,
+        "ok": true,
+        "type": "flowchart-v2"
+      },
+      {
+        "file": "DESIGN-ALLURA.md",
+        "line": 674,
+        "ok": true,
+        "type": "stateDiagram"
+      },
+      {
+        "file": "DESIGN-ALLURA.md",
+        "line": 1080,
+        "ok": true,
+        "type": "stateDiagram"
+      }
+    ],
+    "command": "bun /tmp/allura-mermaid-check/check.mjs",
+    "exit_code": 0,
+    "repairs": "Pre-existing event-bus subgraph shape and semicolon sequence-label parsing corrected without changing flow or contract; all13blocks pass. Tooling installed separately, repository dependencies unchanged."
+  }
 }

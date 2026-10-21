@@ -1,6 +1,6 @@
 {
   "scope": "documentation producer checks refreshed by parent after independent-review corrections; no product acceptance, deployment, human approval, remote tracker update or Brain write",
-  "checked_at_utc": "2026-10-21T13:11:58.896259+00:00",
+  "checked_at_utc": "2026-10-21T13:14:15.576064+00:00",
   "base_revision": "c720aca2ed09ac7d51776dacf3ed6f5867587fac",
   "checks": [
     {
@@ -19,7 +19,7 @@
   "source_files": [
     {
       "path": "docs/allura/BLUEPRINT.md",
-      "sha256": "40c911a562f62620d59ec2834b6a75baca9573d732a974caa56567cad5341cc6"
+      "sha256": "6aaed2c5abdfbf17f1e9318cabcc377e1026f245456dcc08f014427683ce855d"
     },
     {
       "path": "docs/allura/DATA-DICTIONARY.md",
@@ -39,7 +39,7 @@
     },
     {
       "path": "docs/allura/SOLUTION-ARCHITECTURE.md",
-      "sha256": "a99bad0d5c57d8042ed097c7cf91b5b50bd9e598f60600037681cfe743385690"
+      "sha256": "4d5fca0fffed472df0aeadbf1351620bf6bafe9518a0c09e18fba84fd7868687"
     },
     {
       "path": "guidelines/AI-GUIDELINES.md",
