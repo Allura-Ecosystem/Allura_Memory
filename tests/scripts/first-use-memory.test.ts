@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { MemoryAddParams } from "@allura/sdk";
 
-import { FirstUseFailure, firstUseMain, runFirstUse, validateFirstUseConfig, type FirstUseSession } from "../../scripts/first-use-memory";
+import { FirstUseFailure, firstUseMain, type FirstUseSession, runFirstUse, validateFirstUseConfig } from "../../scripts/first-use-memory";
 import { QuickstartFailure, runQuickstart } from "../../examples/quickstart/index";
 
 const config = { baseUrl: "http://localhost:6477", groupId: "allura-test", token: "test-only-token" };

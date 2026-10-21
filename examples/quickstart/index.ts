@@ -1,8 +1,8 @@
 /** A provisioned-endpoint example using the public @allura/sdk package. */
 import {
   AlluraClient,
-  GroupIdSchema,
   type AlluraClientConfig,
+  GroupIdSchema,
   type MemoryAddParams,
   type MemoryAddResponse,
   type MemorySearchParams,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { assessFirstUseObservation, assertFirstUseEmbeddingResponse, assertFirstUseModelIdentity, buildFirstUseFixturePlan, parseFirstUseRuntimeSecrets } from "../../scripts/first-use-local-fixture"
+import { assertFirstUseEmbeddingResponse, assertFirstUseModelIdentity, assessFirstUseObservation, buildFirstUseFixturePlan, parseFirstUseRuntimeSecrets } from "../../scripts/first-use-local-fixture"
 
 const now = new Date("2026-10-20T12:00:00Z")
 

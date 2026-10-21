@@ -360,11 +360,11 @@
     },
     {
       "path": "docs/reference/reddit-remediation/first-use-evidence.md",
-      "sha256": "378e08f048995d9acbcc95f225b4534771af9f59883e0a56bf4496f311a7efef",
+      "sha256": "9b08a282a36a44e6758b2d97fcb9a18f6f38ddd66ce875d19e74c6fad45e5475",
       "input_sha256": "af00dac60e6b0bedbb7ddf7fc8b7c276940c16ad715bcf0f8ff5ecfb727228ed",
       "method": "new goal-owned artifact",
       "initial_candidate_sha256": "af00dac60e6b0bedbb7ddf7fc8b7c276940c16ad715bcf0f8ff5ecfb727228ed",
-      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
+      "followup_method": "bounded goal-owned CI correction/evidence; named-import-only where applicable; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/goal-audit.md",
@@ -514,9 +514,11 @@
     },
     {
       "path": "examples/quickstart/index.ts",
-      "sha256": "8426cccd990937264aa29271ccc43936b7876eb7541030f920b9bb9976d3a13d",
+      "sha256": "8e89c9b28d30585ed39ff2887566e4ac926a75b25fa79d1c149aa250a2932ddf",
       "input_sha256": "8426cccd990937264aa29271ccc43936b7876eb7541030f920b9bb9976d3a13d",
-      "method": "zero-exit 3-way goal delta onto verified public"
+      "method": "zero-exit 3-way goal delta onto verified public",
+      "initial_candidate_sha256": "8426cccd990937264aa29271ccc43936b7876eb7541030f920b9bb9976d3a13d",
+      "followup_method": "bounded goal-owned CI correction/evidence; named-import-only where applicable; original method retained"
     },
     {
       "path": "examples/regulated-document-quality/README.md",
@@ -662,15 +664,19 @@
     },
     {
       "path": "tests/scripts/first-use-local-fixture.test.ts",
-      "sha256": "9f30c5b751b08d475bd7c05f399dbd78dba493009a78110bd487f3f8a0613963",
+      "sha256": "43b1c1733b8dbbe930403b86a613a7da9d6f3f20e5ac0c82fccf7739d9afa548",
       "input_sha256": "9f30c5b751b08d475bd7c05f399dbd78dba493009a78110bd487f3f8a0613963",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "9f30c5b751b08d475bd7c05f399dbd78dba493009a78110bd487f3f8a0613963",
+      "followup_method": "bounded goal-owned CI correction/evidence; named-import-only where applicable; original method retained"
     },
     {
       "path": "tests/scripts/first-use-memory.test.ts",
-      "sha256": "a17b09143b5ad142ec4a8d886a67236b6a3061503f873b382e5ead29a15a3bd5",
+      "sha256": "555e8b4ffa78cdd830e58865c8bbc7aff9d9588c7ba73996111341afbf98710f",
       "input_sha256": "a17b09143b5ad142ec4a8d886a67236b6a3061503f873b382e5ead29a15a3bd5",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "a17b09143b5ad142ec4a8d886a67236b6a3061503f873b382e5ead29a15a3bd5",
+      "followup_method": "bounded goal-owned CI correction/evidence; named-import-only where applicable; original method retained"
     },
     {
       "path": "tests/scripts/first-use-profile.test.ts",
@@ -701,5 +707,14 @@
       "Fowler"
     ],
     "remote_ci": "not yet observed for follow-up commit"
+  },
+  "import_sort_followup": {
+    "scope": "Named members only in three preselected import declarations; no declaration/module/binding/type-modifier/non-import change",
+    "lint_errors_before": 3,
+    "lint_errors_after": 0,
+    "first_use_tests_pass": 64,
+    "typecheck_exit": 0,
+    "root_cause_receipt": "1d27717f-cf03-427d-b522-3a474ca33f59",
+    "inherited_tenant_smoke": "PRINCIPAL_MISSING remains open; guard/harness/workflow/memory_add unchanged from public base; no local DB smoke executed"
   }
 }
