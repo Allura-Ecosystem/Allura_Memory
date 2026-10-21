@@ -15,6 +15,34 @@ await fs.writeFile(path.join(root, 'assets/allura-wordmark-original.png'), origi
 const trimmed = await sharp(original).trim().png().toBuffer();
 const mark = trimmed.toString('base64');
 const C = { cream:'#F7F3EE', ink:'#0F1720', blue:'#0D47A1', orange:'#FF4D1F', green:'#148A4B' };
+// Frame the exact original bytes on a stable ground for light and dark READMEs.
+// Inspect alpha only: the source artwork is never re-encoded or recolored.
+const { data: pixels, info: sourceInfo } = await sharp(original).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+let left=sourceInfo.width, top=sourceInfo.height, right=0, bottom=0;
+for(let y=0;y<sourceInfo.height;y++){
+ for(let x=0;x<sourceInfo.width;x++){
+  if(pixels[(y*sourceInfo.width+x)*sourceInfo.channels+sourceInfo.channels-1]===0)continue;
+  left=Math.min(left,x); top=Math.min(top,y); right=Math.max(right,x+1); bottom=Math.max(bottom,y+1);
+ }
+}
+if(right<=left||bottom<=top)throw new Error('Official wordmark contains no visible artwork');
+const clearSpace=80;
+const wordmarkFrame={
+ file:'assets/allura-wordmark-on-cream.svg',
+ export_file:'assets/allura-wordmark-on-cream.png',
+ source:'assets/allura-wordmark-original.png',
+ embedded_source_sha256:crypto.createHash('sha256').update(original).digest('hex'),
+ source_dimensions:[sourceInfo.width,sourceInfo.height],
+ visible_bounds:[left,top,right,bottom],
+ view_box:[left-clearSpace,top-clearSpace,right-left+2*clearSpace,bottom-top+2*clearSpace],
+ clear_space:clearSpace,
+ background:C.cream,
+ display_width:280
+};
+const [frameX,frameY,frameWidth,frameHeight]=wordmarkFrame.view_box;
+const wordmarkSvg=`<svg xmlns="http://www.w3.org/2000/svg" width="${frameWidth}" height="${frameHeight}" viewBox="${wordmarkFrame.view_box.join(' ')}" role="img" aria-labelledby="title desc"><title id="title">Allura Memory</title><desc id="desc">Official Allura wordmark on a Cream ground. Original artwork, proportions and colors are unchanged.</desc><rect x="${frameX}" y="${frameY}" width="${frameWidth}" height="${frameHeight}" fill="${C.cream}"/><image x="0" y="0" width="${sourceInfo.width}" height="${sourceInfo.height}" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,${original.toString('base64')}"/></svg>\n`;
+await fs.writeFile(path.join(root,wordmarkFrame.file),wordmarkSvg);
+await sharp(Buffer.from(wordmarkSvg)).png().toFile(path.join(root,wordmarkFrame.export_file));
 const esc = (v) => String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const text = (x,y,lines,size=28,color=C.ink,weight=400,lineHeight=1.35) => `<text x="${x}" y="${y}" fill="${color}" font-family="Noto Sans,Arial,sans-serif" font-size="${size}" font-weight="${weight}">${(Array.isArray(lines)?lines:[lines]).map((v,i)=>`<tspan x="${x}" dy="${i?size*lineHeight:0}">${esc(v)}</tspan>`).join('')}</text>`;
 const box = (x,y,w,h,color=C.ink) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="24" fill="${C.cream}" stroke="${color}" stroke-width="2"/>`;
@@ -117,7 +145,7 @@ for(const p of pages){
   if(mobile)await sharp(target).resize({width:390}).png().toFile(path.join(root,'png',stem+'-390.png'));
  }
 }
-await fs.writeFile(path.join(root,'manifest.json'),JSON.stringify({status:'educational draft; independent QA and live verification pending',official_wordmark_sha256:crypto.createHash('sha256').update(original).digest('hex'),font:'Noto Sans fallback (Aeonik unavailable); no generated lettering',outputs},null,2)+'\n');
+await fs.writeFile(path.join(root,'manifest.json'),JSON.stringify({status:'educational draft; independent QA and live verification pending',official_wordmark_sha256:crypto.createHash('sha256').update(original).digest('hex'),wordmark_frame:wordmarkFrame,font:'Noto Sans fallback (Aeonik unavailable); no generated lettering',outputs},null,2)+'\n');
 const articles=pages.map(p=>`<article id="${p.id}"><h2>${esc(p.desktopTitle)}</h2><picture><source media="(max-width: 1199px)" srcset="png/${p.id}-mobile.png"><img src="png/${p.id}.png" alt="${esc(p.alt)}" width="1440" height="900"></picture><details><summary>Text explanation and sources</summary><p>${esc(p.alt)}</p><p>Source-inspected explanation: <a href="../../allura/BLUEPRINT.md">Blueprint</a>, <a href="../../allura/DATA-DICTIONARY.md">Data Dictionary</a>, <a href="../../allura/DESIGN-ALLURA.md">Design</a>. <a href="../../reference/reddit-remediation/strategy-receipt.md">Scope and authority receipt</a>. No live journey or human-study pass is claimed.</p></details><p class="downloads"><a href="svg/${p.id}.svg">Desktop SVG</a> · <a href="svg/${p.id}-mobile.svg">Phone SVG</a> · <a href="png/${p.id}.png">Desktop PNG</a> · <a href="png/${p.id}-mobile.png">Phone PNG</a></p></article>`).join('\n');
 await fs.writeFile(path.join(root,'preview.html'),`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Allura Memory — three first-use explanations</title><style>body{margin:0;background:#F7F3EE;color:#0F1720;font:18px/1.55 "Noto Sans",Arial,sans-serif}main{max-width:1440px;margin:auto;padding:24px}h1{font-size:clamp(28px,4vw,48px);line-height:1.12}h2{font-size:28px}article{margin:64px 0}img{display:block;max-width:100%;height:auto}a{color:#0D47A1}details{padding:20px 0}summary{cursor:pointer;font-weight:bold}.downloads{font-size:16px}@media(max-width:600px){main{padding:0}header,article>h2,details,.downloads{margin-left:16px;margin-right:16px}article{margin:32px 0}img{width:100%}}</style><main><header><h1>Three questions about project memory</h1><p>Educational drafts for the existing memory journey. These diagrams are illustrative: the live first-use demonstration, independent QA and human usability study remain open.</p><nav><a href="#01-remember-a-decision">Remember a decision</a> · <a href="#02-who-does-what">Who acts?</a> · <a href="#03-saved-versus-approved">Saved or approved?</a></nav></header>${articles}</main></html>`);
 console.log(JSON.stringify({rendered:outputs.length,phone_inspection_renders:3,outputs},null,2));

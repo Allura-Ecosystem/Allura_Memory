@@ -1,5 +1,5 @@
 {
-  "scope": "Review-branch candidate after bounded CI follow-up; own hash excluded; not shared initial-tree delta",
+  "scope": "Review branch after CI and independently reviewed README presentation followups; own hash excluded; not shared initial-tree delta",
   "public_base": "fa396a20258100cb5496b46142e9a1c1ef86526f",
   "files": [
     {
@@ -28,7 +28,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "da50837edbeeb1744700a5b40009cf6243659cb16fbb0b338226086da16c322f",
+      "sha256": "8c87bcea2c2b12349b72c02e53a167fe81f4da9136a7fb8a045d75d404dba8ab",
       "input_sha256": "da50837edbeeb1744700a5b40009cf6243659cb16fbb0b338226086da16c322f",
       "method": "whole task-owned reader-path/audit rewrite"
     },
@@ -152,7 +152,7 @@
     },
     {
       "path": "docs/readme/first-use/README.md",
-      "sha256": "64ff9454322cff1a36d8435d222a16f0bd815200ff23606141a6be53a357db46",
+      "sha256": "07f349bcd1c1802ae929e2f4cfe3af0cd1642bcc67d86c1dd03d9f10b2d93069",
       "input_sha256": "5cf55d02077df6334ce05a96fdbeb524152351f014c0ee3870e9e1a4876ef747",
       "method": "new goal-owned artifact",
       "initial_candidate_sha256": "5cf55d02077df6334ce05a96fdbeb524152351f014c0ee3870e9e1a4876ef747",
@@ -160,11 +160,23 @@
     },
     {
       "path": "docs/readme/first-use/SOURCES.md",
-      "sha256": "5f9d1802e696f8b91b0e11f006fdb7f957e28afce0118bf61cfec6a3bdc3a95a",
+      "sha256": "24a322d4ba600d2af8b0a36fdc7ffde6e2999dd47ab019710c2c47c5f15d94cf",
       "input_sha256": "db1e05ce08b2419ffcc34ab9b0010789f6e350969d5f41959563c9197bab6948",
       "method": "new goal-owned artifact",
       "initial_candidate_sha256": "db1e05ce08b2419ffcc34ab9b0010789f6e350969d5f41959563c9197bab6948",
       "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
+    },
+    {
+      "path": "docs/readme/first-use/assets/allura-wordmark-on-cream.png",
+      "sha256": "23a1750d09d35fc316a164de3905ef3ae307e6a6de3c6b03ac68e27f1fa64ef6",
+      "input_sha256": "23a1750d09d35fc316a164de3905ef3ae307e6a6de3c6b03ac68e27f1fa64ef6",
+      "method": "bounded README presentation source/export followup; original official PNG unchanged"
+    },
+    {
+      "path": "docs/readme/first-use/assets/allura-wordmark-on-cream.svg",
+      "sha256": "9752eb4ecb766f513784fbd49cf5a9e12490d6d8b286aed1c92f8beb8277706e",
+      "input_sha256": "9752eb4ecb766f513784fbd49cf5a9e12490d6d8b286aed1c92f8beb8277706e",
+      "method": "bounded README presentation source/export followup; original official PNG unchanged"
     },
     {
       "path": "docs/readme/first-use/assets/allura-wordmark-original.png",
@@ -174,13 +186,13 @@
     },
     {
       "path": "docs/readme/first-use/build.mjs",
-      "sha256": "af671dd1c659b2895b72b60d5ad58364327ce22a730a0ac402d015855f0103fb",
+      "sha256": "653615fc47f6c1609cd24889e89600e9ac9c7bf397995d3beab399a45d95a677",
       "input_sha256": "af671dd1c659b2895b72b60d5ad58364327ce22a730a0ac402d015855f0103fb",
       "method": "new goal-owned artifact"
     },
     {
       "path": "docs/readme/first-use/manifest.json",
-      "sha256": "39a227c68a6786190e3e4b9631ede812ddec1cecdc6b4653a0d0d88313e47fdb",
+      "sha256": "97a36ad10d2e5e54e9b9b20f6ddba37d5749da47ce85f0aff343d4b2dc2a5a34",
       "input_sha256": "39a227c68a6786190e3e4b9631ede812ddec1cecdc6b4653a0d0d88313e47fdb",
       "method": "new goal-owned artifact"
     },
@@ -417,6 +429,14 @@
       "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
+      "path": "docs/reference/reddit-remediation/publication-refresh.md",
+      "sha256": "55e3378c4a56c852234722dad4ec61bd64d309d033a8c24fc973054cb5beb00f",
+      "input_sha256": "8055c0984088da929eca6724a243ca113cb697afb05e1e3f3042398a8891cba9",
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "8055c0984088da929eca6724a243ca113cb697afb05e1e3f3042398a8891cba9",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
+    },
+    {
       "path": "docs/reference/reddit-remediation/readme-disposition.md",
       "sha256": "03d254062e17f4f33dcfbcaa0e71d8967cbba1b986fd73eb697db60ab977f4c1",
       "input_sha256": "e472c7bac42932a736fe7c237c6f8426f6cfd9c2bd49cf369d078ae3f25f6581",
@@ -480,7 +500,7 @@
     },
     {
       "path": "docs/reference/reddit-remediation/visual-qa.md",
-      "sha256": "7bd89e3a7b133f13e7bcce7f533208a9fc17cabe0279648e60c1eda61e034698",
+      "sha256": "f594e3992d77b3f6325adca44a51f3f43e2ecfd4f1fa7debcdf64754ba71dbb5",
       "input_sha256": "927376982aa493b9daecbc2c47810d0deab94e807114b7c597c574223c4a8fcc",
       "method": "new goal-owned artifact",
       "initial_candidate_sha256": "927376982aa493b9daecbc2c47810d0deab94e807114b7c597c574223c4a8fcc",
@@ -683,14 +703,6 @@
       "sha256": "210388d5899d61bbc2e05d5dd8bce242a3d6d3b918465ef8274c10f11eb00f5f",
       "input_sha256": "210388d5899d61bbc2e05d5dd8bce242a3d6d3b918465ef8274c10f11eb00f5f",
       "method": "new goal-owned artifact"
-    },
-    {
-      "path": "docs/reference/reddit-remediation/publication-refresh.md",
-      "sha256": "55e3378c4a56c852234722dad4ec61bd64d309d033a8c24fc973054cb5beb00f",
-      "input_sha256": "8055c0984088da929eca6724a243ca113cb697afb05e1e3f3042398a8891cba9",
-      "method": "new goal-owned artifact",
-      "initial_candidate_sha256": "8055c0984088da929eca6724a243ca113cb697afb05e1e3f3042398a8891cba9",
-      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     }
   ],
   "initial_review_commit": "dd9a9705cc4e93efcdaad9d7bb12eca64af7ddfc",
@@ -716,5 +728,34 @@
     "typecheck_exit": 0,
     "root_cause_receipt": "1d27717f-cf03-427d-b522-3a474ca33f59",
     "inherited_tenant_smoke": "PRINCIPAL_MISSING remains open; guard/harness/workflow/memory_add unchanged from public base; no local DB smoke executed"
+  },
+  "presentation_followup": {
+    "scope": "Five producer files plus exact-source Cream frame SVG/PNG and existing independent QA appendix; two newly selected source/export paths,106 total PR paths including this manifest",
+    "producer": "Rand",
+    "independent_reviewer": "Munari",
+    "root_cause_receipt": "0f07aff4-32cb-48e4-8dfc-71b3090ce24f",
+    "prior_six_svg_nine_png_preview_unchanged": true,
+    "original_png_unchanged": true,
+    "source_embedded_exact": true,
+    "opaque_export_dimensions": [
+      933,
+      416
+    ],
+    "independent_applicable_passes": 4,
+    "whole_brand_pass": false,
+    "context7": [
+      "/github/docs",
+      "/lovell/sharp"
+    ],
+    "local_browser": "file protocol denied; no workaround",
+    "published_browser": "pending for this followup",
+    "previous_head_ci": {
+      "commit": "0b8364547c5def7340529dd0b62cf57078a3578f",
+      "success": 47,
+      "failure": 1,
+      "pending": 0,
+      "failure_reason": "inherited PRINCIPAL_MISSING tenant smoke"
+    },
+    "remote_ci": "pending for this followup; earlier dated local/source evidence is not new CI"
   }
 }

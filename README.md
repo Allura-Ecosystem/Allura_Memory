@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/readme/allura-wordmark.png" alt="Allura Memory" width="190" />
+  <img src="docs/readme/first-use/assets/allura-wordmark-on-cream.png" alt="Allura Memory" width="280" />
 </p>
 
 # Project memory your AI agents can return to

@@ -1,6 +1,31 @@
 {
   "status": "educational draft; independent QA and live verification pending",
   "official_wordmark_sha256": "37617ec2d15503a2d0bbe9b7bf8a9693813b468b0b850b2b97979ab08ce1a733",
+  "wordmark_frame": {
+    "file": "assets/allura-wordmark-on-cream.svg",
+    "export_file": "assets/allura-wordmark-on-cream.png",
+    "source": "assets/allura-wordmark-original.png",
+    "embedded_source_sha256": "37617ec2d15503a2d0bbe9b7bf8a9693813b468b0b850b2b97979ab08ce1a733",
+    "source_dimensions": [
+      1583,
+      1024
+    ],
+    "visible_bounds": [
+      405,
+      369,
+      1178,
+      625
+    ],
+    "view_box": [
+      325,
+      289,
+      933,
+      416
+    ],
+    "clear_space": 80,
+    "background": "#F7F3EE",
+    "display_width": 280
+  },
   "font": "Noto Sans fallback (Aeonik unavailable); no generated lettering",
   "outputs": [
     {
