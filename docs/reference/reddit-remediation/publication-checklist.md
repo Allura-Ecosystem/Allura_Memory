@@ -1,6 +1,6 @@
 # Publication handoff: Reddit remediation
 
-AI-assisted delivery checklist, 2026-10-20. This is preparation, not publication authority or a release receipt. The [goal audit](goal-audit.md) retains all live and human acceptance requirements.
+AI-Assisted Documentation: delivery checklist, 2026-10-20. This is preparation, not publication authority or a release receipt. The [goal audit](goal-audit.md) retains all live and human acceptance requirements.
 
 ## Verified public baseline
 
@@ -50,3 +50,9 @@ https://raw.githubusercontent.com/Allura-Ecosystem/Allura_Memory/<published-comm
 ```
 
 Publication status: no push, pull request, merge, deployment, public settings change or external status move was performed by this handoff.
+
+## Draft review publication — 2026-10-21 UTC
+
+Sabir explicitly approved publishing the reviewed branch and opening a draft PR. [PR #169](https://github.com/Allura-Ecosystem/Allura_Memory/pull/169) was created from the exact initial 104-file candidate at `dd9a9705cc4e93efcdaad9d7bb12eca64af7ddfc`, then attached to this chat. Public unauthenticated requests verified all 104 immutable-commit files against their candidate bytes and the API reported open/draft/unmerged. The default-branch README remains the older 463-line version. This supersedes the earlier no-publication status as a dated observation, without turning draft review into a release.
+
+CI follow-through identified two bounded issues: exact AI-assisted disclosure labels and same-content dedup replacing an existing retrieval score. Corrections must preserve the workflow, benchmark threshold, per-store eligibility, min-score filters and human/live boundaries; actual follow-up results belong in the first-use evidence and independent technical review. Merge, deployment, real journey proof and participant sessions remain separate open gates.

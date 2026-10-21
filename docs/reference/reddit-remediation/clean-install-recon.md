@@ -1,6 +1,6 @@
 # Clean-install boundary recon
 
-> AI-assisted read-only deployment reconnaissance, 2026-10-20. Only this report is written. Source analysis and offline parsing are not a clean-install receipt. The configured connected-agent path remains primary and is separate from a future self-hosted installation.
+> AI-Assisted Documentation: read-only deployment reconnaissance, 2026-10-20. Only this report is written. Source analysis and offline parsing are not a clean-install receipt. The configured connected-agent path remains primary and is separate from a future self-hosted installation.
 
 ## Context and boundaries
 

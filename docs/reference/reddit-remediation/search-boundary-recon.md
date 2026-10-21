@@ -1,6 +1,6 @@
 # Fresh-evidence search boundary recon
 
-> AI-assisted source diagnosis, 2026-10-20. This report changes documentation only. It does not authorize a runtime repair, credential change, database query or deployment.
+> AI-Assisted Documentation: source diagnosis, 2026-10-20. This report changes documentation only. It does not authorize a runtime repair, credential change, database query or deployment.
 
 ## Scope and hydration
 

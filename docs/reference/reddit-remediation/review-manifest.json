@@ -1,5 +1,5 @@
 {
-  "scope": "Refreshed isolated public-base candidate, own hash excluded; not shared initial-tree delta",
+  "scope": "Review-branch candidate after bounded CI follow-up; own hash excluded; not shared initial-tree delta",
   "public_base": "fa396a20258100cb5496b46142e9a1c1ef86526f",
   "files": [
     {
@@ -94,9 +94,11 @@
     },
     {
       "path": "docs/allura/RISKS-AND-DECISIONS.md",
-      "sha256": "d7ea6e2a3333d0349778060798d9517532ed240761fb00352d33d76cf74bbf42",
+      "sha256": "8c9fa46de7e2eb3e4f315f089e6c7375915cae60171d6b510af8e5dc72ae236e",
       "input_sha256": "e7cb9940ae9e6c59690516cd49d147cd9f4c38d51b707903de62cd6b973a72e1",
-      "method": "goal-owned section extraction onto exact published text; audience notice only in Blueprint"
+      "method": "goal-owned section extraction onto exact published text; audience notice only in Blueprint",
+      "initial_candidate_sha256": "d7ea6e2a3333d0349778060798d9517532ed240761fb00352d33d76cf74bbf42",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/allura/SOLUTION-ARCHITECTURE.md",
@@ -106,9 +108,11 @@
     },
     {
       "path": "docs/design/command-center/README.md",
-      "sha256": "2fda3d77b7e40817bf78b87b1cbed47677f8f62068112707167e5616918ca9ff",
+      "sha256": "357677d31e835ea2cc0baa737d663313a58839104529c454b76a58dd176a24bb",
       "input_sha256": "2fda3d77b7e40817bf78b87b1cbed47677f8f62068112707167e5616918ca9ff",
-      "method": "zero-exit 3-way goal delta onto verified public"
+      "method": "zero-exit 3-way goal delta onto verified public",
+      "initial_candidate_sha256": "2fda3d77b7e40817bf78b87b1cbed47677f8f62068112707167e5616918ca9ff",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/plugins/bumblebee/README.md",
@@ -118,21 +122,27 @@
     },
     {
       "path": "docs/portfolio/allura-agentic-framework-harness/README.md",
-      "sha256": "e03d180af6b6f37cf801161f7355e798d7e0ae2fcff3bab56f9c69b6ba40d94e",
+      "sha256": "2694818764e6cd82cbd5115f76fc66160404ca16b8ddb31d928a6e4f28fc5170",
       "input_sha256": "e03d180af6b6f37cf801161f7355e798d7e0ae2fcff3bab56f9c69b6ba40d94e",
-      "method": "zero-exit 3-way goal delta onto verified public"
+      "method": "zero-exit 3-way goal delta onto verified public",
+      "initial_candidate_sha256": "e03d180af6b6f37cf801161f7355e798d7e0ae2fcff3bab56f9c69b6ba40d94e",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/portfolio/allura-agentic-framework-harness/evidence-infographics/README.md",
-      "sha256": "1fa09e1b690db7ece64224082f55675c84ad84b388b9ce9e2fc32d8f1c061919",
+      "sha256": "4eee8b20e364948772cb1d2d066644904b75ce162cfcfb7feb0f09ea7d397cbf",
       "input_sha256": "1fa09e1b690db7ece64224082f55675c84ad84b388b9ce9e2fc32d8f1c061919",
-      "method": "zero-exit 3-way goal delta onto verified public"
+      "method": "zero-exit 3-way goal delta onto verified public",
+      "initial_candidate_sha256": "1fa09e1b690db7ece64224082f55675c84ad84b388b9ce9e2fc32d8f1c061919",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/portfolio/allura-agentic-framework-harness/interactive-demo/README.md",
-      "sha256": "1aa6946c864ca1688e9ce1d977368cc2c91b7eaf2b3eb7fc4813d33cce40cb78",
+      "sha256": "d5b31359c792c9179071d5b1e8d80fc6fe8c6c5f9f6364c78eaf6fa64fb40eb3",
       "input_sha256": "1aa6946c864ca1688e9ce1d977368cc2c91b7eaf2b3eb7fc4813d33cce40cb78",
-      "method": "zero-exit 3-way goal delta onto verified public"
+      "method": "zero-exit 3-way goal delta onto verified public",
+      "initial_candidate_sha256": "1aa6946c864ca1688e9ce1d977368cc2c91b7eaf2b3eb7fc4813d33cce40cb78",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/readme/first-use/ALT-TEXT.md",
@@ -142,15 +152,19 @@
     },
     {
       "path": "docs/readme/first-use/README.md",
-      "sha256": "5cf55d02077df6334ce05a96fdbeb524152351f014c0ee3870e9e1a4876ef747",
+      "sha256": "64ff9454322cff1a36d8435d222a16f0bd815200ff23606141a6be53a357db46",
       "input_sha256": "5cf55d02077df6334ce05a96fdbeb524152351f014c0ee3870e9e1a4876ef747",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "5cf55d02077df6334ce05a96fdbeb524152351f014c0ee3870e9e1a4876ef747",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/readme/first-use/SOURCES.md",
-      "sha256": "db1e05ce08b2419ffcc34ab9b0010789f6e350969d5f41959563c9197bab6948",
+      "sha256": "5f9d1802e696f8b91b0e11f006fdb7f957e28afce0118bf61cfec6a3bdc3a95a",
       "input_sha256": "db1e05ce08b2419ffcc34ab9b0010789f6e350969d5f41959563c9197bab6948",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "db1e05ce08b2419ffcc34ab9b0010789f6e350969d5f41959563c9197bab6948",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/readme/first-use/assets/allura-wordmark-original.png",
@@ -232,9 +246,11 @@
     },
     {
       "path": "docs/readme/first-use/producer-checks.md",
-      "sha256": "54dcba63b64099ac8724a8ae520de1440c869879c09d2d5500740dc69dbf1697",
+      "sha256": "ff8efcef675a0aed5e2e23a379f777c3235f7a8a0025623dc203b10cb567841b",
       "input_sha256": "54dcba63b64099ac8724a8ae520de1440c869879c09d2d5500740dc69dbf1697",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "54dcba63b64099ac8724a8ae520de1440c869879c09d2d5500740dc69dbf1697",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/readme/first-use/svg/01-remember-a-decision-mobile.svg",
@@ -274,45 +290,59 @@
     },
     {
       "path": "docs/reference/reddit-feedback-remediation-20261020.md",
-      "sha256": "04327f43e0c9be131ec74af14fb06ff2ef28b5fc09969b96d819dce053d48c93",
+      "sha256": "3240fba52932380c92b74327d2420cee1ad68eec46eeb1c6c6c9365f1397245d",
       "input_sha256": "04327f43e0c9be131ec74af14fb06ff2ef28b5fc09969b96d819dce053d48c93",
-      "method": "whole task-owned reader-path/audit rewrite"
+      "method": "whole task-owned reader-path/audit rewrite",
+      "initial_candidate_sha256": "04327f43e0c9be131ec74af14fb06ff2ef28b5fc09969b96d819dce053d48c93",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/brief.md",
-      "sha256": "996531964f1a11bed749a2d4af775a5503295d42083d60b910b26c2c3b1bfd2e",
+      "sha256": "d8c09d641263e93b2b278cbffe694bef624883fcf75b4f95ee06fec394a255a5",
       "input_sha256": "996531964f1a11bed749a2d4af775a5503295d42083d60b910b26c2c3b1bfd2e",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "996531964f1a11bed749a2d4af775a5503295d42083d60b910b26c2c3b1bfd2e",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/clean-install-db-contract.md",
-      "sha256": "adc74732073eb720141591cd3a76dec44e818e2836fecc2145c19f4ed5004b49",
+      "sha256": "a23ca95f8e0da2091295ea42816146f846df2b98322be62056be40f575eabc39",
       "input_sha256": "adc74732073eb720141591cd3a76dec44e818e2836fecc2145c19f4ed5004b49",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "adc74732073eb720141591cd3a76dec44e818e2836fecc2145c19f4ed5004b49",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/clean-install-handoff.md",
-      "sha256": "7816e2a44f75b3d8c31da2a498ac2d19c8326e7b8e52fa3f4a13fbab7ce6328e",
+      "sha256": "cc952d9cfa080d6efc87ac8b4c7a0e8ff62b8601adaaa019030df9315f83eb59",
       "input_sha256": "7816e2a44f75b3d8c31da2a498ac2d19c8326e7b8e52fa3f4a13fbab7ce6328e",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "7816e2a44f75b3d8c31da2a498ac2d19c8326e7b8e52fa3f4a13fbab7ce6328e",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/clean-install-interface-review.md",
-      "sha256": "1fc9dc806231976a0607a0d92cc57ccceeec44112587b99254c609585d4478d3",
+      "sha256": "1e4d0aba98551328266e6ea1fce0ef2322d85f7ef3a8263d3ae646c06a4cf575",
       "input_sha256": "1fc9dc806231976a0607a0d92cc57ccceeec44112587b99254c609585d4478d3",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "1fc9dc806231976a0607a0d92cc57ccceeec44112587b99254c609585d4478d3",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/clean-install-preparation.md",
-      "sha256": "a36ae41b03f38b8a4556774eb3bcec5299e2bed9cab0900b772b6c78c3abc2dc",
+      "sha256": "645006e04258814b50c7e2a6b8fa2162448a1f68f057fc7e344644776fb25aaf",
       "input_sha256": "a36ae41b03f38b8a4556774eb3bcec5299e2bed9cab0900b772b6c78c3abc2dc",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "a36ae41b03f38b8a4556774eb3bcec5299e2bed9cab0900b772b6c78c3abc2dc",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/clean-install-recon.md",
-      "sha256": "b6d74e43b93b4b6f2685b3bafbee9dd7c0e73c4a1eed33247fa88baa56000817",
+      "sha256": "b28756646568ef731f0c14d15e40c7760aca8b8650b3be7aed2ea9c0603941b0",
       "input_sha256": "b6d74e43b93b4b6f2685b3bafbee9dd7c0e73c4a1eed33247fa88baa56000817",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "b6d74e43b93b4b6f2685b3bafbee9dd7c0e73c4a1eed33247fa88baa56000817",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/connector-evidence.json",
@@ -322,21 +352,27 @@
     },
     {
       "path": "docs/reference/reddit-remediation/execution-checklist.md",
-      "sha256": "102b2d745f85ef9bcb08fad1583be43aed33341bbbd2bf6c817a78fd50ef2053",
+      "sha256": "f211eb96663800bc72ff91ae880900de79d9634450e1f9e112bc3a488ca6d6b8",
       "input_sha256": "102b2d745f85ef9bcb08fad1583be43aed33341bbbd2bf6c817a78fd50ef2053",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "102b2d745f85ef9bcb08fad1583be43aed33341bbbd2bf6c817a78fd50ef2053",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/first-use-evidence.md",
-      "sha256": "af00dac60e6b0bedbb7ddf7fc8b7c276940c16ad715bcf0f8ff5ecfb727228ed",
+      "sha256": "378e08f048995d9acbcc95f225b4534771af9f59883e0a56bf4496f311a7efef",
       "input_sha256": "af00dac60e6b0bedbb7ddf7fc8b7c276940c16ad715bcf0f8ff5ecfb727228ed",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "af00dac60e6b0bedbb7ddf7fc8b7c276940c16ad715bcf0f8ff5ecfb727228ed",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/goal-audit.md",
-      "sha256": "9cb539f2d5d57c2881eeb44e27ce3df85063d0af40a69435644446fc15530969",
+      "sha256": "857b40979a5decb1370c0703b844d81a8227a2e232ce7ee007e00c40bbec17a2",
       "input_sha256": "9cb539f2d5d57c2881eeb44e27ce3df85063d0af40a69435644446fc15530969",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "9cb539f2d5d57c2881eeb44e27ce3df85063d0af40a69435644446fc15530969",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/local-checks.json",
@@ -346,9 +382,11 @@
     },
     {
       "path": "docs/reference/reddit-remediation/maintainability-review.md",
-      "sha256": "9e03602746beb09d49b7a086757c29878f7a899a7abb08500769c0595bf0cb78",
+      "sha256": "1b8cde458b07b6ae362739e1322ddc63225dc4d1fff465ed1c56a1d8f59607e0",
       "input_sha256": "9e03602746beb09d49b7a086757c29878f7a899a7abb08500769c0595bf0cb78",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "9e03602746beb09d49b7a086757c29878f7a899a7abb08500769c0595bf0cb78",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/participant-task.md",
@@ -364,57 +402,75 @@
     },
     {
       "path": "docs/reference/reddit-remediation/publication-checklist.md",
-      "sha256": "f408ebd9c5e5d2257c630c7c9103ce72cd29f0ef690069eec27eaa2513983452",
+      "sha256": "b50c3edf6c40a14b6d0e64e1af279f516da502486b5f00f36d3d9f3e8e9ca412",
       "input_sha256": "f408ebd9c5e5d2257c630c7c9103ce72cd29f0ef690069eec27eaa2513983452",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "f408ebd9c5e5d2257c630c7c9103ce72cd29f0ef690069eec27eaa2513983452",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/publication-isolation.md",
-      "sha256": "a6f11d57b8f70946e7214a37e5cf02e5eb1b46e5699e3497434f5a5a904215ed",
+      "sha256": "a1d2c9d62b3c1ba890c674f7cf4da15d410e5558b7dbc7662f80c384791cc994",
       "input_sha256": "a6f11d57b8f70946e7214a37e5cf02e5eb1b46e5699e3497434f5a5a904215ed",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "a6f11d57b8f70946e7214a37e5cf02e5eb1b46e5699e3497434f5a5a904215ed",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/readme-disposition.md",
-      "sha256": "e472c7bac42932a736fe7c237c6f8426f6cfd9c2bd49cf369d078ae3f25f6581",
+      "sha256": "03d254062e17f4f33dcfbcaa0e71d8967cbba1b986fd73eb697db60ab977f4c1",
       "input_sha256": "e472c7bac42932a736fe7c237c6f8426f6cfd9c2bd49cf369d078ae3f25f6581",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "e472c7bac42932a736fe7c237c6f8426f6cfd9c2bd49cf369d078ae3f25f6581",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/search-boundary-recon.md",
-      "sha256": "3985b2f2107a579e3c559d03ccb6e79fd7b4b9c881ce1a7107639eec3b2a6b83",
+      "sha256": "0a97a656fb2ccf0d3a4fae8543fd27a4665568cc7492dc24f88be873f0a04ee0",
       "input_sha256": "3985b2f2107a579e3c559d03ccb6e79fd7b4b9c881ce1a7107639eec3b2a6b83",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "3985b2f2107a579e3c559d03ccb6e79fd7b4b9c881ce1a7107639eec3b2a6b83",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/skill-evaluation.md",
-      "sha256": "ca02581da32ee510341bec35f8c601615b9c842902c1a66109cd8c6165952add",
+      "sha256": "931a9d73b537cce0bd9969adbfa1d933eac7d9562e32da0c322970bb62a6d600",
       "input_sha256": "ca02581da32ee510341bec35f8c601615b9c842902c1a66109cd8c6165952add",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "ca02581da32ee510341bec35f8c601615b9c842902c1a66109cd8c6165952add",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/strategy-receipt.md",
-      "sha256": "fdb88808228da25b29b2988530f722b8dafe80220f91d609b370f2abf17abb7a",
+      "sha256": "42352cf30dafdfce6c8b5963ddee886e7e834f4725a26f973ad800c696523f29",
       "input_sha256": "fdb88808228da25b29b2988530f722b8dafe80220f91d609b370f2abf17abb7a",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "fdb88808228da25b29b2988530f722b8dafe80220f91d609b370f2abf17abb7a",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/technical-review.md",
-      "sha256": "963e4b46994bcda209ee92d74f991d582906addf906d81ddbb174485258ba80f",
+      "sha256": "43309c5f56af9651800a040bd213d9054a395319139ad2944d909198bb832f21",
       "input_sha256": "963e4b46994bcda209ee92d74f991d582906addf906d81ddbb174485258ba80f",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "963e4b46994bcda209ee92d74f991d582906addf906d81ddbb174485258ba80f",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/usability-study.md",
-      "sha256": "82285c73076a26938fe1070a919730b6de5762dea1b28bacda940f3a9f924a2a",
+      "sha256": "46977992bdbc1f3bb6e99cd92ab5cc829de5872cffbc7dd5307bc2225c59cf3a",
       "input_sha256": "82285c73076a26938fe1070a919730b6de5762dea1b28bacda940f3a9f924a2a",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "82285c73076a26938fe1070a919730b6de5762dea1b28bacda940f3a9f924a2a",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/visual-disposition.md",
-      "sha256": "02f244e81abfd859c0897655d7028c7e5c48ff661aac949d3cf7ca38f515c9cf",
+      "sha256": "1b7550410e462dbff8f79fe1b9122417846827c3310e5ec77b378e1941b54c52",
       "input_sha256": "02f244e81abfd859c0897655d7028c7e5c48ff661aac949d3cf7ca38f515c9cf",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "02f244e81abfd859c0897655d7028c7e5c48ff661aac949d3cf7ca38f515c9cf",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/reference/reddit-remediation/visual-qa.json",
@@ -424,15 +480,19 @@
     },
     {
       "path": "docs/reference/reddit-remediation/visual-qa.md",
-      "sha256": "927376982aa493b9daecbc2c47810d0deab94e807114b7c597c574223c4a8fcc",
+      "sha256": "7bd89e3a7b133f13e7bcce7f533208a9fc17cabe0279648e60c1eda61e034698",
       "input_sha256": "927376982aa493b9daecbc2c47810d0deab94e807114b7c597c574223c4a8fcc",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "927376982aa493b9daecbc2c47810d0deab94e807114b7c597c574223c4a8fcc",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "docs/user-guide/getting-started.md",
-      "sha256": "991aeaff9848237120bddad30fd0e0df9db92e805ca335fa595b9996b6459bdd",
+      "sha256": "f22d6a35c6a2cd13b3b1b5362f562fb7ec622a1212855b3ca9392dd19dbcae2e",
       "input_sha256": "991aeaff9848237120bddad30fd0e0df9db92e805ca335fa595b9996b6459bdd",
-      "method": "whole task-owned reader-path/audit rewrite"
+      "method": "whole task-owned reader-path/audit rewrite",
+      "initial_candidate_sha256": "991aeaff9848237120bddad30fd0e0df9db92e805ca335fa595b9996b6459bdd",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "examples/controlled-research-agent/README.md",
@@ -568,9 +628,11 @@
     },
     {
       "path": "src/__tests__/memory-search-ruvector.test.ts",
-      "sha256": "5e1c462391283f7c2546eb5c02445a161a84192345c1319f5e640983e96fa1b9",
+      "sha256": "71e50e7e2a11099e861fbdcc4381f55a30d74e944cb747921ded9c5ac76cc7fd",
       "input_sha256": "5e1c462391283f7c2546eb5c02445a161a84192345c1319f5e640983e96fa1b9",
-      "method": "zero-exit 3-way goal delta onto verified public"
+      "method": "zero-exit 3-way goal delta onto verified public",
+      "initial_candidate_sha256": "5e1c462391283f7c2546eb5c02445a161a84192345c1319f5e640983e96fa1b9",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "src/lib/memory/canonical-contracts.ts",
@@ -586,9 +648,11 @@
     },
     {
       "path": "src/mcp/canonical-tools.ts",
-      "sha256": "84b1ada868d28e8d759873705c5a5a1c949aab053657fba8794b5b683499f835",
+      "sha256": "019124a48382f4f8e55c94de182a284b5cad2242d9cf061ce340580e8eabe68a",
       "input_sha256": "84b1ada868d28e8d759873705c5a5a1c949aab053657fba8794b5b683499f835",
-      "method": "zero-exit 3-way goal delta onto verified public"
+      "method": "zero-exit 3-way goal delta onto verified public",
+      "initial_candidate_sha256": "84b1ada868d28e8d759873705c5a5a1c949aab053657fba8794b5b683499f835",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     },
     {
       "path": "tests/load/README.md",
@@ -616,9 +680,26 @@
     },
     {
       "path": "docs/reference/reddit-remediation/publication-refresh.md",
-      "sha256": "8055c0984088da929eca6724a243ca113cb697afb05e1e3f3042398a8891cba9",
+      "sha256": "55e3378c4a56c852234722dad4ec61bd64d309d033a8c24fc973054cb5beb00f",
       "input_sha256": "8055c0984088da929eca6724a243ca113cb697afb05e1e3f3042398a8891cba9",
-      "method": "new goal-owned artifact"
+      "method": "new goal-owned artifact",
+      "initial_candidate_sha256": "8055c0984088da929eca6724a243ca113cb697afb05e1e3f3042398a8891cba9",
+      "followup_method": "bounded goal-owned CI correction or evidence update; original method retained"
     }
-  ]
+  ],
+  "initial_review_commit": "dd9a9705cc4e93efcdaad9d7bb12eca64af7ddfc",
+  "initial_approved_patch_sha256": "97290868508c181eee43adb187465708cf6d5ca33d749a795fb77b7056ad623a",
+  "followup_scope": "Same selected paths: literal disclosure labels, score-preserving metadata enrichment and regressions, bounded AD-70 clarification, independent review/evidence and unconfirmed recruitment status; no benchmark threshold/workflow/dependency/permission/runtime change",
+  "followup_validation": {
+    "focused_tests": 216,
+    "typecheck_exit": 0,
+    "benchmark_cases": 13,
+    "benchmark_mrr": 0.8333333333333333,
+    "benchmark_threshold": 0.75,
+    "independent_source_reviews": [
+      "Pike",
+      "Fowler"
+    ],
+    "remote_ci": "not yet observed for follow-up commit"
+  }
 }

@@ -1,6 +1,6 @@
 # Reddit feedback: documentation and first-use repair
 
-> AI-assisted initial audit and delivery packet, 2026-10-20. The baseline findings below describe the initial inspection. Current changes and remaining evidence are tracked in the [execution checklist](reddit-remediation/execution-checklist.md), [README disposition](reddit-remediation/readme-disposition.md), [visual disposition](reddit-remediation/visual-disposition.md), and [new educational explainers](../readme/first-use/README.md). Local drafts are not release receipts. Notion has not been synced.
+> AI-Assisted Documentation: initial audit and delivery packet, 2026-10-20. The baseline findings below describe the initial inspection. Current changes and remaining evidence are tracked in the [execution checklist](reddit-remediation/execution-checklist.md), [README disposition](reddit-remediation/readme-disposition.md), [visual disposition](reddit-remediation/visual-disposition.md), and [new educational explainers](../readme/first-use/README.md). Local drafts are not release receipts. Notion has not been synced.
 
 ## What the feedback requires
 

@@ -1,6 +1,6 @@
 # Isolated first-use preparation — AD-71
 
-> AI-assisted implementation evidence, 2026-10-20. Owner: Hightower. Local preparation only: **not a supported runnable install, clean-install result, runtime approval or release receipt**. The [connected-agent guide](../../user-guide/getting-started.md) remains the primary reader path.
+> AI-Assisted Documentation: implementation evidence, 2026-10-20. Owner: Hightower. Local preparation only: **not a supported runnable install, clean-install result, runtime approval or release receipt**. The [connected-agent guide](../../user-guide/getting-started.md) remains the primary reader path.
 
 ## What exists now
 

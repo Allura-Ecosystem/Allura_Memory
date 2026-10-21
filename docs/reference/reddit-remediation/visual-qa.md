@@ -1,6 +1,6 @@
 # Independent visual QA — first-use educational drafts
 
-AI-assisted review, 2026-10-20. Reviewer: Munari. Project: `allura-system`. **PASS for the scoped educational draft review.** The evidence-ledger issue was corrected by the main owner and independently rechecked. The six new image layouts have no blocking visual defect in this inspection. This is draft readiness, not production publication approval, a global brand-strategy lock, a live-service result or human usability evidence.
+AI-Assisted Documentation: review, 2026-10-20. Reviewer: Munari. Project: `allura-system`. **PASS for the scoped educational draft review.** The evidence-ledger issue was corrected by the main owner and independently rechecked. The six new image layouts have no blocking visual defect in this inspection. This is draft readiness, not production publication approval, a global brand-strategy lock, a live-service result or human usability evidence.
 
 ## Findings
 

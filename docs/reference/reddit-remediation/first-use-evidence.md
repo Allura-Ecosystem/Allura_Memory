@@ -1,6 +1,6 @@
 # First-use evidence and limitations
 
-AI-assisted receipt, 2026-10-20. Source base `28d90e843` plus the reviewed working changes. This separates an actual configured-connector observation from offline runner tests and missing end-to-end evidence.
+AI-Assisted Documentation: receipt, 2026-10-20. Source base `28d90e843` plus the reviewed working changes. This separates an actual configured-connector observation from offline runner tests and missing end-to-end evidence.
 
 ## Actual configured-connector observation
 
@@ -75,3 +75,15 @@ The current canonical guard and docs-only backend/link guard both pass: `bash .g
 A separately attempted regression-harness run, `bun run test:unit src/__tests__/docs-backend-residue-guard.test.ts --reporter=dot --silent`, failed all 66 cases during temporary-repository setup with the exact error `spawnSync git EPERM`. Its fixtures could not initialize; no regression pass is claimed. The actual docs-only shell scan above completed successfully. These are local validation observations, separate from working Allura Brain access and trial-resource authority.
 
 The coordinated continuation outcome was written through the existing connection as `cb5ce47e-8652-487d-82da-ba40077f6438` in `allura-system`, at 2026-10-20T23:57:13.503Z. Write reported episodic/pending review; exact-ID readback verified episodic source and the expected marker. Neither operation returned a tool error. No credential retrieval, trial runtime action or semantic promotion was involved.
+
+## Draft PR CI correction — 2026-10-21 UTC
+
+The exact initial 104-file candidate was published with Sabir's approval as [draft PR #169](https://github.com/Allura-Ecosystem/Allura_Memory/pull/169), initial commit `dd9a9705cc4e93efcdaad9d7bb12eca64af7ddfc`. All 104 immutable-commit files were verified without credentials; public main still has the older README. Initial CI exposed a real dedup score regression, so the earlier narrow 66-test success did not establish the unchanged benchmark's quality gate.
+
+Bellard measured the same unchanged 13-case benchmark on isolated public-base and candidate exports with identical installed dependencies: base 13/13, MRR 0.833333; candidate 12/13, MRR 0.566667. Integration failed that same assertion. The identical-content PG replacement discarded actual RuVector scores and substituted the raw default 0.5. The bounded correction retains the existing eligible scored representation while enriching matching durable provenance/time/tags and marking its metadata owner to prevent an older identical raw row from overwriting the newest metadata. Raw-only scores, per-candidate min-score filters and differing-content/literal rules remain intact.
+
+Before corrective edits, parent root-cause receipts `28b03768-d2a0-49a0-8e17-b46f3c9e1e3e` (disclosure labels) and `46da5e6f-6eff-4df6-970e-c239204035d0` (score loss) were written and exact-marker read back. This timing applies to these follow-up corrections; it does not rewrite the earlier initial implementation's separate process record. Storage labels do not establish human approval.
+
+Woz's RED checks reproduced three failing assertions among 69 search cases and one failing unchanged benchmark assertion. GREEN passes 69 search plus 13 benchmark and 17 contract tests (99 total), restoring mocked MRR to 0.833333 without lowering its 0.75 threshold. Parent repeated the corrected source inside the isolated review worktree: 69 search, 94 benchmark/contract/trial/runner and 53 SDK checks pass (216 total), with typecheck exit 0. No clean dependency install, image, live provider/database or production relevance result follows.
+
+The first managed-worktree SDK/typecheck attempts failed on temporary files with `EROFS: read-only file system` and TypeScript `TS5033`; approved reruns with write access to those temporary artifacts passed. These filesystem errors are distinct from Allura access or trial-resource authority. The separate exact-label disclosure rule produced 30 failures before and zero after the independently reviewed label-only correction; no workflow or acceptance check was weakened. Independent final source fingerprints and scoped review results are retained in the technical and maintainability reviews. Remote follow-up CI, deployment, actual separate-session discovery, clean installation/recovery, independent human review and all five participant sessions remain separate gates.

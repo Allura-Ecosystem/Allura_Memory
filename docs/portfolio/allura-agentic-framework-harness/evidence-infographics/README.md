@@ -12,4 +12,4 @@ For the practical save-and-retrieve task, start with [Getting started](../../../
 
 These are explanatory patterns, not live system views, proof that every implementation path satisfies the pattern, or formal compliance/certification claims. The historical brand review does not establish newcomer comprehension. Superseded or redundant messages are tracked in the remediation inventory; binaries remain available while incoming references are reconciled.
 
-*AI-assisted editorial revision, 2026-10-20.*
+*AI-Assisted Documentation: editorial revision, 2026-10-20.*

@@ -604,8 +604,19 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
     if (!includeAllEvidence) continue
     const rankDifference = literalRank(candidate.memory.content) - literalRank(previous.memory.content)
     const sameContent = candidate.memory.content === previous.memory.content
-    const preferDurableEvent = sameContent && candidate.store === "postgres" && previous.store === "ruvector"
-    if (rankDifference > 0 || (rankDifference === 0 && preferDurableEvent)) {
+    if (sameContent && candidate.store === "postgres" && previous.store === "ruvector") {
+      // Enrich the already-scored result; raw metadata must not erase its score.
+      // PG owns metadata after this first/newest event, preventing older overwrites.
+      byId.set(candidate.memory.id, {
+        ...candidate,
+        memory: {
+          ...previous.memory,
+          provenance: candidate.memory.provenance,
+          created_at: candidate.memory.created_at,
+          tags: candidate.memory.tags,
+        },
+      })
+    } else if (rankDifference > 0) {
       byId.set(candidate.memory.id, candidate)
     }
   }

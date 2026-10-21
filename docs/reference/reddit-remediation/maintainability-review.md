@@ -1,6 +1,6 @@
 # Independent maintainability review: first-use slice
 
-AI-assisted Fowler review, 2026-10-20. **Scoped offline review: no blocking maintainability finding.** This is not live persistence, clean-install, independent human-promotion, usability, or release approval. Only this report is owned/changed by the reviewer.
+AI-Assisted Documentation: Fowler review, 2026-10-20. **Scoped offline review: no blocking maintainability finding.** This is not live persistence, clean-install, independent human-promotion, usability, or release approval. Only this report is owned/changed by the reviewer.
 
 ## Reviewed behavior and scope
 
@@ -93,3 +93,43 @@ Scoped Brain search returned three unrelated/historical records; none establishe
 **Scoped maintainability pass:** bounded, reversible local correction with meaningful regression coverage and no remaining implementation blocker found. Preserve the explicit-marker timing limitation above. This verdict does not close remote deployment, configured-connector exact search, two distinct live sessions, clean installation, independent human review, or five-user acceptance. The old missing-local-endpoint observation in the earlier SDK review is historical; a configured connector now exists, but its deployment/source attribution and repaired live behavior remain unverified.
 
 AD-70 review outcome `73820aa2-436b-46d8-83a1-7652b5a156b5` was written and read back in `allura-system`; write response reported `stored: both`. No human approval or semantic promotion was requested or verified by this reviewer.
+
+
+## AD-70 CI follow-up: preserve retrieval scores during metadata enrichment — 2026-10-21
+
+AI-Assisted Documentation: independent Fowler maintainability review of the bounded correction following draft PR 169's CI failure. **No blocking maintainability finding in this fingerprinted two-file slice.** The earlier 66-case review and its source fingerprints are historical evidence; they do not certify this correction. No implementation, benchmark, threshold, workflow, Git, candidate-export, runtime, database or credential state was changed by this reviewer.
+
+### Scope, root cause and smallest correction
+
+The [CI diagnosis](first-use-evidence.md#draft-pr-ci-correction--2026-10-21-utc) establishes a behavior regression: same-ID, byte-identical raw PostgreSQL metadata replaced an eligible scored RuVector representation wholesale, losing its query score. The unchanged benchmark exposed the lost ordering. This follow-up restores score preservation at the existing deduplication boundary rather than adding a fusion mechanism, a new API field or a second metadata map.
+
+The correction keeps `previous.memory` as the scored representation and copies only the eligible raw event's provenance, creation time and tags. The map entry's internal store becomes PostgreSQL, so the first/newest event metadata is not overwritten by a later identical raw duplicate. The existing SQL already orders events newest first. This makes metadata ownership explicit without changing the public result shape. The byte-identical-content guard prevents a score from being transferred to different content; the earlier per-candidate minimum-confidence filter prevents rejected raw rows from donating metadata. Raw-only events keep 0.5, and literal priority, independent finite budgets, non-all modes and verified scope remain unchanged.
+
+The added regressions check the behavior that caused CI to fail: nonliteral ordering survives enrichment, genuine vector score and durable fields coexist, older raw duplicates cannot replace the first/newest metadata, and raw-only records cannot borrow a score or bypass their filter. Existing differing-content, confidence, budget, approved-mode and degradation cases remain selected. The change is small enough to revert independently; no further extraction is needed for this single merge boundary.
+
+### Independent verification
+
+| Command/check | Actual result |
+|---|---|
+| `bun vitest run src/__tests__/memory-search-ruvector.test.ts --reporter=dot` | 69/69 pass, exit 0; selected through default Vitest because the unit configuration excludes this file |
+| `bun run test:unit src/__tests__/retrieval-benchmark.test.ts --reporter=verbose` | Unchanged benchmark: 13/13 pass, exit 0; logged MRR 0.8333 against unchanged 0.75 threshold, Precision@5 0.8667 and Recall@5 0.9333 |
+| `git diff --check -- src/mcp/canonical-tools.ts src/__tests__/memory-search-ruvector.test.ts` | Exit 0 |
+| Source inspection against diagnosed draft export | Implementation delta confined to the dedup enrichment branch: 13 inserted lines, 2 removed lines; no independent API, policy or budget change |
+| Fingerprint recheck after tests | Both changed files and unchanged benchmark match the supplied stable set below |
+
+These 82 selected offline tests are this reviewer's actual reruns. Producer contract/typecheck results are separate evidence; no wider test, real SQL, relevance-corpus, runtime, remote-CI or deployment pass is inferred. Logs are retained locally at `/tmp/allura-reddit-ci-review/fowler-search.log` and `fowler-benchmark.log`.
+
+| Reviewed artifact | SHA-256 |
+|---|---|
+| `src/mcp/canonical-tools.ts` | `019124a48382f4f8e55c94de182a284b5cad2242d9cf061ce340580e8eabe68a` |
+| `src/__tests__/memory-search-ruvector.test.ts` | `71e50e7e2a11099e861fbdcc4381f55a30d74e944cb747921ded9c5ac76cc7fd` |
+| Unchanged `src/__tests__/retrieval-benchmark.test.ts` | `995c3c951202defa21056c2c3ad14feb76d145d38fda5ca836c69bbef33756e6` |
+| Producer two-file patch | `b23efa695a6ebf254ded92ef4e649515100728643f130a97406f1af5cad1f563` |
+
+### Evidence boundary and remaining work
+
+The existing Allura Brain connection's scoped search completed with three historical records (trajectory `fa5a66dc-53cd-4640-a58f-3d6bbf5899d0`); those records did not establish this correction. Exact-ID readback of `46da5e6f-6eff-4df6-970e-c239204035d0`, created 2026-10-21T00:18:52.848Z, verified the explicit `debug:root_cause_found REDDIT_PR169_MRR_DEDUP_20261021 before corrective implementation` marker and bounded contract. The parent recorded that marker before authorizing this follow-up's corrective edits. This does not retrospectively repair the earlier first-edit marker timing limitation recorded above. Readback reported semantic storage; that label is not independent human approval.
+
+Context7 is not newly required for this review slice: no external API, CLI/configuration, provider, dependency or framework behavior is proposed or changed; the correction uses the existing local typed result/map contract. No alternate endpoint, tenant or credentials were tried. Parent coordinates the single outcome write/readback; this reviewer wrote no duplicate event and requested no promotion.
+
+**Scoped verdict:** maintainability pass for this bounded score-preserving correction and its regression tests. Remote CI on the updated PR must still be observed. Configured-service discovery, distinct live sessions, clean installation, independent human review, five actual participants, merge and deployment remain separate unproven gates.

@@ -1,6 +1,6 @@
 # First-use study: Allura Memory
 
-AI-assisted study kit, 2026-10-20. **Not run: 0/5 participants observed.** This document contains the protocol and blank recording fields, not research findings. Agent reviews and automated checks are recorded elsewhere.
+AI-Assisted Documentation: study kit, 2026-10-20. **Not run: 0/5 participants observed.** This document contains the protocol and blank recording fields, not research findings. Agent reviews and automated checks are recorded elsewhere.
 
 ## Purpose and audience
 
@@ -70,3 +70,17 @@ The user-provided remediation goal specifies these 4/5, 4/5 and 5/5 evaluation t
 ## Current evidence
 
 Participants observed: **0**. Task outcomes, comprehension rates, time-to-first-memory, and reviewer effort: **unmeasured**. Recruitment, consent, sessions, revision, and retesting remain open.
+
+## Recruitment clarification — 2026-10-21 UTC
+
+Sabir clarified that the ability to arrange participants was a recruitment dependency, not five booked people. No facilitator or availability is confirmed. The five codes below identify unfilled study slots, not actual sessions or observations; recruitment and consent remain open.
+
+| Participant code | Facilitator | Availability |
+|---|---|---|
+| P01 | Unassigned | Unconfirmed |
+| P02 | Unassigned | Unconfirmed |
+| P03 | Unassigned | Unconfirmed |
+| P04 | Unassigned | Unconfirmed |
+| P05 | Unassigned | Unconfirmed |
+
+One human facilitator can use the same protocol across sessions. An agent can organize evidence and preparation, but simulations cannot count toward the required five humans or the independent human-review decision. Record actual revisions, environment, consent, failures and interventions when each session occurs.

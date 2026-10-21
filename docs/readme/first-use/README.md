@@ -24,4 +24,4 @@ The generator reads the repository's official wordmark, copies the exact origina
 
 [Source and claim map](SOURCES.md) records the inspected contracts and limitations. [Producer checks](producer-checks.md) record render inspection; independent Munari QA, live demonstration and human study remain separate gates. The [first-use guide](../../user-guide/getting-started.md) owns the actual setup steps.
 
-AI-assisted production, 2026-10-20. Identity and palette follow the supplied Allura reference; these drafts do not establish a new strategy lock or publication approval.
+AI-Assisted Documentation: production, 2026-10-20. Identity and palette follow the supplied Allura reference; these drafts do not establish a new strategy lock or publication approval.

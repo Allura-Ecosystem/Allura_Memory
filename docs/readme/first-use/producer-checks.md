@@ -1,6 +1,6 @@
 # Glaser producer checks
 
-AI-assisted producer record, 2026-10-20. This is **not independent QA, production approval, live workflow proof, or human usability evidence**.
+AI-Assisted Documentation: producer record, 2026-10-20. This is **not independent QA, production approval, live workflow proof, or human usability evidence**.
 
 ## Scope
 

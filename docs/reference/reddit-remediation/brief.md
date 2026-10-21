@@ -1,6 +1,6 @@
 # Allura Memory: Reddit remediation brief
 
-> AI-assisted execution brief, 2026-10-20. Owner: Kotler. Technical delivery: Brooks/Team RAM. Scope: Allura_Memory only. This is a reviewable local coordination artifact, not a new brand strategy lock, deployment receipt, or human-research result. See [strategy receipt](strategy-receipt.md) for authority and limitations.
+> AI-Assisted Documentation: execution brief, 2026-10-20. Owner: Kotler. Technical delivery: Brooks/Team RAM. Scope: Allura_Memory only. This is a reviewable local coordination artifact, not a new brand strategy lock, deployment receipt, or human-research result. See [strategy receipt](strategy-receipt.md) for authority and limitations.
 
 ## The useful choice
 

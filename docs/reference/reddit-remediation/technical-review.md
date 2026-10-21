@@ -1,6 +1,6 @@
 # First-use technical review — Pike
 
-AI-assisted independent, read-only source review, 2026-10-20. Base commit `28d90e843` plus current working changes. This review owns this report only; no source, runtime, credentials, database, or board state was changed. Final scoped review result: **no blocking findings after the recovery fixes below**. The initial findings are preserved with their disposition; no live first-use approval is implied.
+AI-Assisted Documentation: independent, read-only source review, 2026-10-20. Base commit `28d90e843` plus current working changes. This review owns this report only; no source, runtime, credentials, database, or board state was changed. Final scoped review result: **no blocking findings after the recovery fixes below**. The initial findings are preserved with their disposition; no live first-use approval is implied.
 
 ## Findings
 
@@ -213,3 +213,48 @@ The previous candidate selection, score/filter, durable metadata and failure-rep
 | `src/lib/memory/canonical-contracts.ts` | `1cdb6e7744e3cf6b30ede91b7c248f49020223aa2779d3f1fffd9c22c9c78156` |
 
 Budget-bound final review trace: `29a62122-f1e9-4282-b719-03aa6e63cfaf`, 2026-10-20T23:01:13.516Z; stored episodic, pending review, and read back by matching ID/source in `allura-system`. No semantic promotion or deployment approval was requested.
+
+
+## AD-70 CI score-preservation review — 2026-10-21 UTC
+
+**Findings: no blocking interface/correctness finding in the bounded two-file correction.** This verdict concerns the current fingerprints below. Earlier dated reviews, their hashes and the prior identical-content score expectation describe historical revisions; they are preserved rather than silently recertified. In particular, the prior green 66-case suite did not expose the unchanged benchmark's ordering regression. The current review includes that benchmark and the corrected score/metadata contract.
+
+### Root cause and repaired boundary
+
+Bellard's [CI diagnosis](first-use-evidence.md#draft-pr-ci-correction--2026-10-21-utc) establishes that the initial draft's same-ID, byte-identical raw-event replacement discarded a genuine RuVector score in favor of the raw default `0.5`. That could move relevant indexed results behind unrelated results even though the relevant IDs remained available. Brooks recorded the bounded score-preservation clarification in AD-70 and pre-edit root-cause receipt `46da5e6f-6eff-4df6-970e-c239204035d0` before Woz changed source.
+
+The current merge enriches an already eligible same-ID, byte-identical RuVector result with PG provenance, creation time and tags while retaining its original content, score, source and other response fields (`src/mcp/canonical-tools.ts:607`). Setting the internal owner to PG ensures the first/newest raw event remains the metadata owner when an older identical raw row follows. That owner is internal; no public field or API is added. The raw query's existing descending creation-time order supplies the newest-first precondition.
+
+Reviewed branch boundaries:
+
+- Each candidate is filtered by explicit `min_score` before entering deduplication. A filtered raw event cannot donate metadata or borrow an eligible indexed score; the existing same-ID minimum-score test checks retained vector provenance.
+- Raw-only IDs remain scored `0.5`. A different-content representation may replace the earlier one only through the existing stronger literal-match rule, retaining its own score rather than copying the old content's score.
+- Equality for metadata enrichment is byte-identical content, not merely normalized/literal similarity. Empty queries, literal priorities, graph selection, finite independent source budgets, output limits and attempted/degraded metadata are unchanged by this patch.
+- Approved/default retrieval exits through its existing separate path; other non-all statuses skip the all-mode deduplication branch. Scope validation, workspace/principal arguments and the tenant query boundary are unchanged. Mocked scope tests are not real RLS or deployment proof.
+- AD-70's current canonical clarification covers the correction. No new schema, transport, identity, fusion algorithm or acceptance threshold is introduced.
+
+### Independent validation and exact scope
+
+```sh
+bun vitest run src/__tests__/memory-search-ruvector.test.ts --reporter=dot
+bun run test:unit src/__tests__/retrieval-benchmark.test.ts --reporter=verbose
+```
+
+Observed **69/69 focused mocked-store tests** and **13/13 unchanged benchmark tests**, both exit 0. Logs: `/tmp/pike-ci-search-final.log` and `/tmp/pike-ci-benchmark-final.log`. The search file was selected through the default Vitest configuration because the unit lane excludes it. No unselected test run is counted.
+
+The unchanged mocked benchmark reports MRR **0.8333**, Precision@5 **0.8667**, Recall@5 **0.9333**, retaining the existing MRR threshold of 0.75. These figures are printed to four decimals by this suite; they are not measured production relevance. Source inspection confirms meaningful direct assertions for score plus durable metadata, nonliteral duplicate ranking, first/newest raw metadata, raw-only scores, per-candidate filtering and differing-content selection. Budget, scope, other-status and degradation assertions remain present in the same green focused suite.
+
+An independent byte diff against `/tmp/allura-reddit-ci-diagnosis/candidate/` exactly matches the provided two-file patch. Its added lines have zero trailing-whitespace violations. No benchmark assertion, configuration, workflow, managed worktree, Git/index/remote, runtime, database or credential was changed by this reviewer. The only authored change is this append; the existing disclosure-label correction and all prior report bytes are retained. Producer-reported contract tests and typecheck are separate evidence, not independently rerun here.
+
+| Reviewed artifact | SHA-256 |
+|---|---|
+| `src/mcp/canonical-tools.ts` | `019124a48382f4f8e55c94de182a284b5cad2242d9cf061ce340580e8eabe68a` |
+| `src/__tests__/memory-search-ruvector.test.ts` | `71e50e7e2a11099e861fbdcc4381f55a30d74e944cb747921ded9c5ac76cc7fd` |
+| Unchanged `src/__tests__/retrieval-benchmark.test.ts` | `995c3c951202defa21056c2c3ad14feb76d145d38fda5ca836c69bbef33756e6` |
+| `/tmp/allura-reddit-ci-fix/woz-dedup-followup.patch` | `b23efa695a6ebf254ded92ef4e649515100728643f130a97406f1af5cad1f563` |
+
+### Hydration, ownership and remaining gates
+
+Pike reloaded the full local role, Allura review/core and governed memory skills, current AD-70 clarification, diagnosis, source and focused assertions. Existing-connection Brain search used `group_id: allura-system`, `status: all`, limit 3; it succeeded with trajectory `c15e19a7-5a3f-4e4d-849e-cf629ef0715c` but returned three older May/June records, not evidence for the current fix. No alternate connection, identity or credential was requested. Parent coordinates the single final outcome write/readback; no child event or semantic approval is claimed.
+
+Remote CI for the follow-up remains unverified by this review. Source deployment attribution, actual separate-session discovery, live relevance, clean installation/recovery, independent human review and the five-person study remain open. This correction does not authorize merge, deployment or goal completion. Existing Brain access supplies scoped memory evidence only; it grants no trial database/runtime authority.

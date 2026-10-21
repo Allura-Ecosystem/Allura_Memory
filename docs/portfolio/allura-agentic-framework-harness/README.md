@@ -28,4 +28,4 @@ The [portfolio brand release review](qa/BRAND-RELEASE-GATE.md) applies to the pa
 
 The [brand-source resolution](BRAND-SOURCE-RESOLUTION.md) records prior visual-policy conflicts. This editorial revision changes the reading path; it does not silently adopt a new brand strategy or authorize publication.
 
-*AI-assisted editorial revision, 2026-10-20. Human comprehension and published-revision checks remain open.*
+*AI-Assisted Documentation: editorial revision, 2026-10-20. Human comprehension and published-revision checks remain open.*

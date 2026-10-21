@@ -1,6 +1,6 @@
 # README disposition and copy receipt
 
-AI-assisted review, 2026-10-20. Owner: Ogilvy; independent production QA remains open. Original inventory: all 29 tracked README.md documents plus BENCHMARK-README.md, at base `28d90e843` with existing working edits. The inventory is complete; remediation is not equivalent to inventory completion.
+AI-Assisted Documentation: review, 2026-10-20. Owner: Ogilvy; independent production QA remains open. Original inventory: all 29 tracked README.md documents plus BENCHMARK-README.md, at base `28d90e843` with existing working edits. The inventory is complete; remediation is not equivalent to inventory completion.
 
 The [Kotler brief](brief.md) and [Aaker strategy boundary](strategy-receipt.md) support task-specific factual copy and the existing memory-layer identity. This sweep does not assert a new strategy lock or market-positioning approval. Shared setup is maintained in [Getting started](../../user-guide/getting-started.md); code and tests have separate owners.
 

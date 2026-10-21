@@ -1,6 +1,6 @@
 # Visual disposition and incoming references
 
-AI-assisted source/reference inventory, 2026-10-20. No legacy binary was deleted or redrawn in this pass. Dimensions and resolved literal references are direct observations; this inventory does not claim independent visual or human-comprehension acceptance. The new first-use set is a separate educational draft, not a replacement of technical/portfolio history.
+AI-Assisted Documentation: source/reference inventory, 2026-10-20. No legacy binary was deleted or redrawn in this pass. Dimensions and resolved literal references are direct observations; this inventory does not claim independent visual or human-comprehension acceptance. The new first-use set is a separate educational draft, not a replacement of technical/portfolio history.
 
 | Asset | Observed size | Resolved literal reference files | Disposition and evidence boundary |
 |---|---|---|---|

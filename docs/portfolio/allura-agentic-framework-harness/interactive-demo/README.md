@@ -26,4 +26,4 @@ A release owner should use the approved static-hosting process after reviewing t
 
 No affiliation with, deployment by, or endorsement from an organization is claimed. No live underwriting or compliance certification is demonstrated.
 
-*AI-assisted editorial revision, 2026-10-20; task comprehension and current public deployment remain unverified.*
+*AI-Assisted Documentation: editorial revision, 2026-10-20; task comprehension and current public deployment remain unverified.*

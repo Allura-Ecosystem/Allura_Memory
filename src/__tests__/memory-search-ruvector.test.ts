@@ -335,12 +335,46 @@ describe("memory_search RuVector PRIMARY backend (Slice B)", () => {
       expect(response.results[0]).toMatchObject({ id: "same", content: "PostgreSQL marker", score: 0.5 });
     });
 
-    it("prefers durable metadata for identical event and vector content", async () => {
+    it("enriches identical event and vector content without discarding the retrieval score", async () => {
       setVector([vector("same", "PostgreSQL marker", 0.99)]);
       mockGraphSearchMemories.mockResolvedValue([]);
       mockPgQuery.mockResolvedValue({ rows: [event("same", "PostgreSQL marker")] });
       const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 1 }));
-      expect(response.results[0]).toMatchObject({ id: "same", score: 0.5, provenance: "manual", created_at: "2026-10-20T22:00:00Z", tags: ["durable"] });
+      expect(response.results[0]).toMatchObject({ id: "same", score: 0.99, provenance: "manual", created_at: "2026-10-20T22:00:00Z", tags: ["durable"] });
+    });
+
+    it("preserves nonliteral retrieval ordering when a duplicate supplies durable metadata", async () => {
+      const content = "TypeScript supports strict compiler checks";
+      setVector([vector("relevant", content, 0.95), vector("other", "A dark interface preference", 0.9)]);
+      mockGraphSearchMemories.mockResolvedValue([]);
+      mockPgQuery.mockResolvedValue({ rows: [event("relevant", content)] });
+      const response = await memory_search(makeSearchRequest({ query: "Which compiler options are needed?", limit: 2 }));
+      expect(response.results.map(({ id, score }) => ({ id, score })))
+        .toEqual([{ id: "relevant", score: 0.95 }, { id: "other", score: 0.9 }]);
+      expect(response.results[0]).toMatchObject({ provenance: "manual", created_at: "2026-10-20T22:00:00Z", tags: ["durable"] });
+    });
+
+    it("retains the newest durable metadata when older identical raw duplicates follow", async () => {
+      setVector([vector("same", "PostgreSQL marker", 0.99)]);
+      mockGraphSearchMemories.mockResolvedValue([]);
+      mockPgQuery.mockResolvedValue({ rows: [
+        { ...event("same", "PostgreSQL marker"), tags: "newest" },
+        { ...event("same", "PostgreSQL marker"), provenance: "conversation", created_at: "2026-10-19T00:00:00Z", tags: "older" },
+      ] });
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 2 }));
+      expect(response.results).toHaveLength(1);
+      expect(response.results[0]).toMatchObject({ id: "same", score: 0.99, provenance: "manual", created_at: "2026-10-20T22:00:00Z", tags: ["newest"] });
+    });
+
+    it("never lends an indexed result's score to a raw-only ID or bypasses its confidence filter", async () => {
+      setVector([vector("indexed", "PostgreSQL marker", 0.99)]);
+      mockGraphSearchMemories.mockResolvedValue([]);
+      mockPgQuery.mockResolvedValue({ rows: [event("raw-only", "PostgreSQL marker")] });
+      const response = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 2 }));
+      expect(response.results.map(({ id, score }) => ({ id, score })))
+        .toEqual([{ id: "indexed", score: 0.99 }, { id: "raw-only", score: 0.5 }]);
+      const filtered = await memory_search(makeSearchRequest({ query: "PostgreSQL marker", limit: 2, min_score: 0.6 }));
+      expect(filtered.results.map(({ id, score }) => ({ id, score }))).toEqual([{ id: "indexed", score: 0.99 }]);
     });
 
     it("does not give an empty query literal-match priority", async () => {

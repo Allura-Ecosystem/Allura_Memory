@@ -1,6 +1,6 @@
 # Claim and source map
 
-AI-assisted inspection, 2026-10-20. Base commit `28d90e843` plus existing working edits. These sources establish intended concepts and source-inspected behavior; they do not establish current deployment or a passed end-to-end test.
+AI-Assisted Documentation: inspection, 2026-10-20. Base commit `28d90e843` plus existing working edits. These sources establish intended concepts and source-inspected behavior; they do not establish current deployment or a passed end-to-end test.
 
 | Explanation | Claim supported | Source | Boundary |
 |---|---|---|---|

@@ -1,6 +1,6 @@
 # Clean-install operator handoff
 
-> AI-assisted infrastructure proposal, 2026-10-20. Owner: Hightower; architecture decision: Brooks. This is a correction specification and operator handoff, not a runnable installation recipe or deployment approval. Only this document changed.
+> AI-Assisted Documentation: infrastructure proposal, 2026-10-20. Owner: Hightower; architecture decision: Brooks. This is a correction specification and operator handoff, not a runnable installation recipe or deployment approval. Only this document changed.
 
 The connected-agent guide continues to use the already provisioned Allura connection. A clean-install trial is a separate test: a newly initialized memory service, an explicitly authorized client, a compatible embedding provider, two client sessions, and an inspectable result. Do not reuse production integration credentials to make that trial pass.
 

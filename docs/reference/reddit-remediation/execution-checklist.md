@@ -1,6 +1,6 @@
 # Reddit remediation execution checklist
 
-AI-assisted execution record, 2026-10-20. Goal remains active. A checked item identifies completed work within its stated scope; it does not imply product release, approved strategy, or successful human testing. Base commit: `28d90e843` with pre-existing unrelated edits preserved. Full objective: the user-supplied “Resolve Allura Memory's Reddit feedback” goal; the earlier [audit](../reddit-feedback-remediation-20261020.md) supplies the initial inventory.
+AI-Assisted Documentation: execution record, 2026-10-20. Goal remains active. A checked item identifies completed work within its stated scope; it does not imply product release, approved strategy, or successful human testing. Base commit: `28d90e843` with pre-existing unrelated edits preserved. Full objective: the user-supplied “Resolve Allura Memory's Reddit feedback” goal; the earlier [audit](../reddit-feedback-remediation-20261020.md) supplies the initial inventory.
 
 ## Scope and evidence
 
@@ -36,6 +36,8 @@ AI-assisted execution record, 2026-10-20. Goal remains active. A checked item id
 - [x] Pike consults on candidate eligibility versus confidence sorting; Brooks records bounded [AD-70](../../allura/RISKS-AND-DECISIONS.md#ad-70-bounded-candidate-eligibility-for-fresh-evidence-search) before local implementation. No global fusion or deployment decision implied.
 - [x] Add regression and implement the bounded all-mode candidate/selection repair with no scope or approval broadening. Producer validation passes 66 search plus 17 contract tests; metadata and finite-budget review findings have regression-backed corrections.
 - [x] Independently review final source/tests: Pike and Fowler each reran 66/66 and verified their findings corrected, with final fingerprints and explicit local/live/process boundaries in their reports.
+- [x] Reproduce and correct draft PR #169's disclosure-label and dedup-score CI failures. Thirty existing labels now meet the unchanged literal rule; Woz's RED/GREEN correction passes 69 search, 13 unchanged benchmark and 17 contract tests. Pike and Fowler independently pass 69+13 each; parent managed-worktree checks pass 216 total plus typecheck. [Evidence](first-use-evidence.md#draft-pr-ci-correction--2026-10-21-utc) preserves the initial failure and scope limits.
+- [ ] Observe remote CI for the corrected draft head; local passes do not substitute for its result.
 - [ ] Verify an authorized deployed revision and repeat the configured-service discovery task; do not infer remote success from local tests.
 
 ## Documentation and visual production
@@ -83,9 +85,11 @@ AI-assisted execution record, 2026-10-20. Goal remains active. A checked item id
 ## Packaging and publication
 
 - [x] Prepare the local [goal audit](goal-audit.md), evidence reports, source manifest and a delta package against the initial working tree; full acceptance remains open.
-- [ ] Obtain missing publication authority for the affected external actions after reviewable artifacts exist. The documentation audience decision is already accepted.
-- [ ] Publish the approved revision through the authorized path.
-- [ ] Verify exact public links and assets without repository credentials.
+- [x] Obtain Sabir's explicit approval to publish the reviewed 104-file review branch and open a draft PR. This authorizes that review publication; merge, deployment and full acceptance remain separate.
+- [x] Publish the approved initial candidate at `dd9a9705cc4e93efcdaad9d7bb12eca64af7ddfc` and open [draft PR #169](https://github.com/Allura-Ecosystem/Allura_Memory/pull/169). It is open/draft/unmerged; CI follow-through remains required.
+- [ ] Obtain missing authority for default-branch merge/publication after the required reviews and checks; no merge or deployment is authorized by the draft-PR decision.
+- [x] Verify all 104 initial review-branch files without credentials against the immutable published commit; all bytes match the approved candidate. Public API verifies open/draft/unmerged. This does not verify a default-branch release.
+- [ ] Verify the eventual default-branch revision, rendered reader paths and assets without repository credentials; current `main` still returns the older 463-line README.
 - [ ] Complete the requirement-by-requirement goal audit; keep the goal active while any required evidence remains missing.
 
 ## Current dependencies
@@ -95,8 +99,8 @@ AI-assisted execution record, 2026-10-20. Goal remains active. A checked item id
 | Live evidence scope | Use the existing `allura-brain` MCP connection. Gilliam receipt `d6db87ea-9386-4e5d-848d-ea2072bbd798` reports configured-launcher/search/write success; fresh parent exact-ID readback succeeded in `allura-system`. Do not request a production token or retrieve credentials for the trial. Report exact tool errors separately from trial-resource authority. Separate-session/specimen discovery and fresh installation remain distinct unproven checks. |
 | Clean-install infrastructure | Main Compose references external volume/networks. AD-71 standalone sources are prepared with nonexecuting bootstrap plans; no verified permitted live database adapter or isolated clean-stack demonstration has passed. Runtime/resource authority is separate from working Allura Brain access. Do not present an existing-database start or offline test as a fresh install. |
 | Documentation audience | Accepted explicitly by Sabir and applied to the prepared materials. A new whole-brand strategy lock is outside this decision and does not block the accepted documentation hierarchy. |
-| Participant sessions | Sabir can arrange five people. Actual consent, sessions, observations, fixes and retests remain outstanding. |
-| Publication | All changes are local drafts until authorized publication and unauthenticated verification. |
+| Participant sessions | Sabir can arrange five people. No facilitator or participant availability is confirmed. Actual recruitment, consent, sessions, observations, fixes and retests remain outstanding. |
+| Publication | Initial approved review candidate is public in draft PR #169 and all 104 files were verified without credentials. CI corrections/review, separate merge authority and default-branch publication remain open; no runtime deployment or goal completion follows. |
 
 ## Governance receipt
 

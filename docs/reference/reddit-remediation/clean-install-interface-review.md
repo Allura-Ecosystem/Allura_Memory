@@ -1,6 +1,6 @@
 # AD-71 clean-install preparation: interface review
 
-AI-assisted independent Pike review, 2026-10-20. Only this report is authored by this reviewer. The producer owns the nine source/test files below; Knuth separately owns the [database contract review](clean-install-db-contract.md). Review scope is AD-71 local preparation in [RISKS-AND-DECISIONS](../../allura/RISKS-AND-DECISIONS.md), with the [trial handoff](clean-install-handoff.md). This review grants no execution, merge, provisioning or publication authority.
+AI-Assisted Documentation: independent Pike review, 2026-10-20. Only this report is authored by this reviewer. The producer owns the nine source/test files below; Knuth separately owns the [database contract review](clean-install-db-contract.md). Review scope is AD-71 local preparation in [RISKS-AND-DECISIONS](../../allura/RISKS-AND-DECISIONS.md), with the [trial handoff](clean-install-handoff.md). This review grants no execution, merge, provisioning or publication authority.
 
 ## Findings and disposition
 

@@ -1,6 +1,6 @@
 # Refreshed publication candidate
 
-AI-assisted Fowler preparation, 2026-10-21 UTC. **This is a local, reviewable candidate; no commit, push, pull request, merge, deployment or publication was performed.** It supersedes the scope freeze in [the earlier isolation report](publication-isolation.md), while preserving that report as dated evidence. It does not close the [full goal audit](goal-audit.md).
+AI-Assisted Documentation: Fowler preparation, 2026-10-21 UTC. **This is a local, reviewable candidate; no commit, push, pull request, merge, deployment or publication was performed.** It supersedes the scope freeze in [the earlier isolation report](publication-isolation.md), while preserving that report as dated evidence. It does not close the [full goal audit](goal-audit.md).
 
 ## Scope and inputs
 

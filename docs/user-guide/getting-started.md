@@ -127,4 +127,4 @@ The [public SDK example](../../examples/quickstart/README.md) offers the same bo
 
 For service boundaries, read [Architecture](../allura/SOLUTION-ARCHITECTURE.md). The [requirements matrix](../allura/REQUIREMENTS-MATRIX.md) and [five-person study protocol](../reference/reddit-remediation/usability-study.md) track the remaining acceptance checks. A fresh self-hosted installation still needs its own reviewed deployment recipe, isolated infrastructure, authorized principal/workspace provisioning, round-trip evidence and recovery checks.
 
-*AI-assisted editorial revision, 2026-10-20. Connected-agent instructions, developer checks, clean installation, human review and usability evidence are separate scopes.*
+*AI-Assisted Documentation: editorial revision, 2026-10-20. Connected-agent instructions, developer checks, clean installation, human review and usability evidence are separate scopes.*

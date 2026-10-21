@@ -1,6 +1,6 @@
 # Strategy and authority receipt: Reddit remediation
 
-> AI-assisted scoped evidence receipt, 2026-10-20. Owner: Kotler. Project tenant: `allura-system`. Base commit `28d90e843` plus pre-existing working-tree edits. This receipt identifies what is supported, what remains proposed, and which production work can proceed; it does not manufacture a strategy lock or human approval.
+> AI-Assisted Documentation: scoped evidence receipt, 2026-10-20. Owner: Kotler. Project tenant: `allura-system`. Base commit `28d90e843` plus pre-existing working-tree edits. This receipt identifies what is supported, what remains proposed, and which production work can proceed; it does not manufacture a strategy lock or human approval.
 
 ## Evidence inspected
 

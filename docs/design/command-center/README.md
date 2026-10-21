@@ -8,4 +8,4 @@ Use the current [Design document](../../allura/DESIGN-ALLURA.md) and [open decis
 
 For the memory service's first-use task, use [Getting started](../../user-guide/getting-started.md). The [remediation brief](../../reference/reddit-remediation/brief.md) explains why the memory journey and a portfolio dashboard specimen have separate purposes.
 
-*AI-assisted editorial revision, 2026-10-20. Original design-export provenance retained; no new design approval is asserted.*
+*AI-Assisted Documentation: editorial revision, 2026-10-20. Original design-export provenance retained; no new design approval is asserted.*

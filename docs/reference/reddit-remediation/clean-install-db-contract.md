@@ -1,6 +1,6 @@
 # Clean-install fixture and database-tool contract
 
-AI-assisted read-only Knuth review, 2026-10-20. Only this report is written. No database, container, credential, MCP configuration or source implementation was changed. [Hightower's handoff](clean-install-handoff.md) supplies the trial boundary; this review identifies the database conditions it must satisfy.
+AI-Assisted Documentation: read-only Knuth review, 2026-10-20. Only this report is written. No database, container, credential, MCP configuration or source implementation was changed. [Hightower's handoff](clean-install-handoff.md) supplies the trial boundary; this review identifies the database conditions it must satisfy.
 
 ## Invariant and schema
 

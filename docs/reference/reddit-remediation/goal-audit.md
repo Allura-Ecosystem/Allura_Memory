@@ -1,6 +1,6 @@
 # Goal completion audit: Reddit remediation
 
-AI-assisted current-state audit, 2026-10-20. **Full goal not achieved; leave active.** Local documentation, infographic and client-validation work is reviewable, but uncertain or missing evidence is not counted as success.
+AI-Assisted Documentation: current-state audit, 2026-10-20. **Full goal not achieved; leave active.** Local documentation, infographic and client-validation work is reviewable, but uncertain or missing evidence is not counted as success.
 
 | Goal requirement | Current authoritative evidence | Verdict / remaining dependency |
 |---|---|---|
@@ -18,10 +18,10 @@ AI-assisted current-state audit, 2026-10-20. **Full goal not achieved; leave act
 | Existing visual disposition |38 individual legacy PNG/SVG assets, resolved literal incoming references, dynamic source/deck caveats | Retained/relocated reading-path decisions documented; historical binaries preserved. No claim of current universal legacy-asset acceptance. |
 | Independent visual and technical QA | Munari draft QA28 applicable passes/32N/A; SDK/runner findings corrected/rechecked; final AD-70 Pike/Fowler reports with source hashes and 66/66 independently passing search tests each | Scoped reviews pass after degraded-metadata and finite-budget corrections. They do not establish deployment, legal compliance, live behavior or human usability. The explicit debug marker followed initial edits; no retrospective timing pass claimed. |
 | Source explanation for the search miss | `search-boundary-recon.md`, AD-70 implementation and final independent reviews; 83/83 producer search+contract tests and typecheck pass | Bounded local source repair reviewed. The configured service's deployed revision and cause remain unverified; observed connector misses remain failures. |
-| Five-person study and retest | Facilitator script/blank records prepared; Sabir can arrange5; observed0/5 | Not achieved: consent, sessions, observations, revisions and retesting required. |
+| Five-person study and retest | Facilitator script/blank records prepared; Recruitment dependency confirmed; facilitator/availability unconfirmed; observed0/5 | Not achieved: consent, sessions, observations, revisions and retesting required. |
 | Validation skill if warranted | Repository-local skill, static validator pass, four-case independent synthetic evaluation; minor wording clarification | Created/tested for bounded evidence decisions; no global installation or product result inferred. |
 | Local checks and reviewable package | Initial-tree delta plus refreshed 104-file public-base selection; `publication-refresh.md` and its external manifest/validation receipt supersede the earlier 91-file freeze | Fresh candidate typecheck and AD-71+runner64/search66/SDK53 pass; final links/patch/apply are recorded in its validation receipt. Nine AD-71 fingerprints match both independent reviews. No unrelated dirty work or published canonical deletion is selected; no publication is implied. |
-| Publication and public 404 verification | Fresh unauthenticated main/immutable README fetch: `fa396a20258100cb5496b46142e9a1c1ef86526f`, HTTP200/463 lines; `public-baseline.json` and publication checklist | Dated baseline verified; rewrite not published by this work. Goal still requires the final candidate acceptance, publication authority, actual publication and credential-free checks of that resulting revision. Historical Reddit 404 cause unknown. |
+| Publication and public 404 verification | Approved initial 104-file candidate published as open/unmerged [draft PR #169](https://github.com/Allura-Ecosystem/Allura_Memory/pull/169) at `dd9a9705cc4e93efcdaad9d7bb12eca64af7ddfc`; unauthenticated raw/API checks match all 104 files. Main still returns HTTP200/463 lines and original digest | Review publication achieved. Initial CI exposed literal disclosure and dedup-score regressions requiring correction/review. Default-branch merge/publication authority and rendered public checks remain open. Draft publication does not close full acceptance; historical Reddit 404 cause unknown. |
 
 ## Next work that changes the goal state
 

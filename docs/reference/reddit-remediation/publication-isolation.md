@@ -1,6 +1,6 @@
 # Publication candidate isolation
 
-AI-assisted Fowler isolation preparation, 2026-10-20. **A concrete local candidate is prepared; nothing has been committed, pushed or published.** Only this report and `/tmp/allura-reddit-public-candidate/` were written by this preparation task. Shared source files and other agents' reports were not changed.
+AI-Assisted Documentation: Fowler isolation preparation, 2026-10-20. **A concrete local candidate is prepared; nothing has been committed, pushed or published.** Only this report and `/tmp/allura-reddit-public-candidate/` were written by this preparation task. Shared source files and other agents' reports were not changed.
 
 ## Authoritative base and scope
 
