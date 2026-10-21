@@ -2,6 +2,8 @@
 
 OAC Core + Allura Overlay architecture.
 
+For the product task, use the shared [first-use guide](../docs/user-guide/getting-started.md). This harness reference is for contributors; directory structure and agent definitions do not prove live memory behavior.
+
 ## Architecture
 
 This directory implements the **OpenAgentsControl (OAC) core** with an **Allura overlay**.
@@ -18,7 +20,7 @@ Context-first, plan-first, validation-first.
 Project-specific extensions on top of OAC core.
 
 - **Team RAM** — 10 persona-driven agents (Brooks, Woz, Scout, Pike, Fowler, etc.)
-- **Brain memory** — Allura Brain (PostgreSQL + Neo4j) for episodic + semantic memory
+- **Brain memory** — Allura Brain (PostgreSQL with the RuVector graph adapter) for episodic evidence and governed semantic memory; Neo4j is retired
 - **Brooks orchestration** — Architecture-first orchestration via Frederick Brooks persona
 - **HITL / curator / governance** — Promotion pipeline with human-in-the-loop approval
 - **RuVix control plane** — Policy enforcement gate for all memory operations
@@ -89,3 +91,5 @@ User task
 - Keep agent permissions and boundaries in agent frontmatter and instructions
 - Avoid reintroducing stale legacy naming when current Team RAM names are the intended surface
 - Treat memory integration as supporting infrastructure, not as the identity of the harness
+
+*AI-assisted factual correction, 2026-10-20. No configuration or permissions changed.*

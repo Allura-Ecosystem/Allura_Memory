@@ -1,90 +1,37 @@
 # @allura/sdk
 
-Typed TypeScript client for the Allura Memory MCP gateway: governed memory
-operations, deterministic scenario harness, and governed agent lanes.
+For TypeScript developers connecting an agent or application to an existing Allura Memory gateway. The client exposes memory operations, scenario-harness operations, and governed lanes through MCP Streamable HTTP.
 
-The SDK speaks the Model Context Protocol over authenticated Streamable
-HTTP. Authority is derived from the gateway-verified principal — the client
-sends resource selectors, never authority claims.
+**Start with the shared [first-use guide](../../docs/user-guide/getting-started.md).** It explains the authorized endpoint, credential and workspace prerequisites, plus the save-and-retrieve demonstration. A token's authenticated scope supplies authority; choosing a group name does not grant access.
 
-## Install
+## Use the client
 
-```bash
-bun add @allura/sdk
-# or
-npm install @allura/sdk
-```
+The [client configuration](src/types.ts) uses `baseUrl` and `authToken`. Supply your provisioned gateway base URL and credential; do not copy a fictional user or tenant identity. Fresh saved evidence requires an explicit search mode that includes it; the canonical default is approved knowledge. Inspect the returned source and available review state rather than treating a successful save as approval.
 
-`zod` is bundled, so the package installs and type-checks offline.
+The [quickstart source](../../examples/quickstart/index.ts) and its [instructions](../../examples/quickstart/README.md) are the maintained example. Their live execution state is recorded separately from source and contract checks.
 
-## Usage
+## Choose an operation
 
-```ts
-import { AlluraClient } from "@allura/sdk";
+| Task | Source |
+|---|---|
+| Save, search, inspect or list memories | [Memory operations](src/memory.ts) and [public types](src/types.ts) |
+| Run or replay a scenario; inspect evaluation evidence | [Harness operations](src/harness.ts) |
+| Open a lane, submit a snapshot or request lane review | [Lane operations](src/lanes.ts) |
+| Understand transport, session and error handling | [Client](src/client.ts) and [errors](src/errors.ts) |
 
-const client = new AlluraClient({
-  baseUrl: "https://allura.example.com/mcp",
-  token: process.env.ALLURA_TOKEN!,
-});
-
-// Governed memory
-const search = await client.memory.search({
-  query: "deployment policy",
-  group_id: "allura-system",
-});
-
-// Deterministic harness
-const run = await client.harness.run({
-  scenario: "examples/engineering-review-agent/scenarios/success.json",
-});
-const replay = await client.harness.replay({
-  scenario: "examples/engineering-review-agent/scenarios/success.json",
-  receipt: run.receipt_path,
-});
-
-// Governed agent lanes (open → snapshot → review)
-const lane = await client.lanes.open({
-  group_id: "allura-system",
-  lane_id: "agent-lane-woz",
-  base_revision: "base-1",
-});
-const snapshot = await client.lanes.snapshot({
-  ...laneArgs,
-  diff: { added: [...], overridden: [], deleted: [] },
-  evidence_refs: ["event:1"],
-});
-await client.lanes.review({
-  ...laneArgs,
-  snapshot_id: snapshot.snapshot_id,
-  verdict: "approved",
-  reason: "evidence verified",
-});
-```
-
-## Surface
-
-| Operation | Transport tool | Notes |
-|---|---|---|
-| `client.memory.*` | `memory_add` / `memory_search` / `memory_get` / `memory_list` / `memory_delete` | Governed memory with tenant scope |
-| `client.harness.run / replay` | `scenario_run` / `scenario_replay` | Deterministic scenario execution and receipt comparison |
-| `client.harness.eval / inspect` | `eval_run` / `evidence_inspect` | Evaluation runs and evidence listing |
-| `client.lanes.open / snapshot / review` | `governed_lane_open` / `governed_lane_snapshot` / `governed_lane_review` | Durable, tenant-scoped agent lanes; review requires curator role |
-
-## Package guarantees
-
-- Dual-format build: ESM (`dist/index.js`) and CJS (`dist/index.cjs`).
-- NodeNext declarations: `dist/index.d.ts` (import) and `dist/index.d.cts`
-  (require).
-- Zod request/response validation on lane operations — malformed gateway
-  responses are rejected, not cast.
-- Packed-tarball consumer tests verify `npm pack` → clean install →
-  package-name resolution for both module systems, offline
-  (`test/dist-consumer.test.ts`).
+Lane review and memory promotion are different operations. Client code cannot grant itself a reviewer role or establish a human decision.
 
 ## Development
 
+From this package directory, use Bun to install dependencies and run the scripts defined in [package.json](package.json):
+
 ```bash
 bun install
-bun run build   # tsup: ESM + CJS + dts
-bun test        # contract tests, envelope forwarding, packed-consumer proof
+bun run build
+bun run typecheck
+bun run test
 ```
+
+The package declares ESM/CJS exports and declaration files. [Contract tests](test/contract.test.ts) and [consumer tests](test/dist-consumer.test.ts) check their specific package contracts; a passing package test is not a live persistence or usability result. Registry publication and a clean installation of the current package require their own evidence.
+
+*AI-assisted editorial revision, 2026-10-20. Read the current source and validation receipts before relying on a capability claim.*

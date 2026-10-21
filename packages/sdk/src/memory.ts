@@ -87,8 +87,8 @@ export class MemoryOperations {
   }
 
   /**
-   * Search memories across both stores (PostgreSQL + Neo4j).
-   * Federated search with results merged by relevance.
+   * Search approved knowledge by default, or include accessible episodic
+   * evidence with status: "all". A saved result does not imply human approval.
    *
    * @param params - Search parameters
    * @returns Search results with relevance scores
@@ -96,6 +96,12 @@ export class MemoryOperations {
    */
   async search(params: MemorySearchParams): Promise<MemorySearchResponse> {
     validateGroupId(params.group_id);
+
+    if (params.status !== undefined && params.status !== "approved" && params.status !== "all") {
+      throw new ValidationError("status must be approved or all", {
+        status: ["status must be approved or all"],
+      });
+    }
 
     if (!params.query || params.query.trim().length === 0) {
       throw new ValidationError("query must not be empty", {

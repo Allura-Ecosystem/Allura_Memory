@@ -93,8 +93,8 @@ export interface AlluraClientConfig {
 export interface MemoryAddParams {
   /** Required: Tenant namespace (format: allura-*) */
   group_id: GroupId;
-  /** Required: User identifier within tenant */
-  user_id: UserId;
+  /** Optional identity assertion; must match the authenticated principal when supplied. */
+  user_id?: UserId;
   /** Required: Memory content text */
   content: MemoryContent;
   /** Optional: Metadata */
@@ -122,6 +122,8 @@ export interface MemorySearchParams {
   min_score?: ConfidenceScore;
   /** Optional: Include global memories (default: true) */
   include_global?: boolean;
+  /** Approved knowledge only (default), or all accessible evidence including fresh saves. */
+  status?: "approved" | "all";
 }
 
 /** Parameters for memory_get */

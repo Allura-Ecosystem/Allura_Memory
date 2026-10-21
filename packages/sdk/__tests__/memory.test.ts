@@ -110,6 +110,12 @@ describe("MemoryOperations", () => {
   });
 
   describe("memory.add", () => {
+    it("allows transport-owned identity without adding a caller assertion", async () => {
+      await client.memory.add({ group_id: "allura-test", content: "Database decision" });
+      const body = JSON.parse(mockFetch.mock.calls[1][1].body);
+      expect(body.params.arguments).not.toHaveProperty("user_id");
+    });
+
     it("should add a memory successfully", async () => {
       mockFetch = createMockFetch(MOCK_ADD_RESPONSE);
       client = new AlluraClient({
@@ -202,6 +208,27 @@ describe("MemoryOperations", () => {
   });
 
   describe("memory.search", () => {
+    it("rejects an unsupported retrieval status before sending a request", async () => {
+      await expect(client.memory.search({
+        query: "database decision",
+        group_id: "allura-test",
+        status: "pending" as "all",
+      })).rejects.toThrow(ValidationError);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("can retrieve fresh evidence explicitly without changing the default", async () => {
+      const requests: Record<string, unknown>[] = [];
+      const operations = new MemoryOperations(async (_method, params, schema) => {
+        requests.push(params);
+        return schema.parse(MOCK_SEARCH_RESPONSE);
+      });
+      await operations.search({ query: "database decision", group_id: "allura-test", status: "all" });
+      await operations.search({ query: "database decision", group_id: "allura-test" });
+      expect(requests[0].status).toBe("all");
+      expect(requests[1]).not.toHaveProperty("status");
+    });
+
     it("should search memories successfully", async () => {
       mockFetch = createMockFetch(MOCK_SEARCH_RESPONSE);
       client = new AlluraClient({

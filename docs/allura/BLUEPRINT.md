@@ -47,6 +47,8 @@ This bounded reconciliation covers memory capture → human review/promotion →
 
 ## 0) Brand Identity
 
+**Documentation audience decision, 2026-10-20:** Sabir accepted developers and teams using connected AI agents as primary readers, with operators and human reviewers supporting them and the enterprise dashboard optional. Keep the Allura name and visual identity. The older community positioning and organizer persona below are historical context, not the current public-documentation audience; [decision receipt](../reference/reddit-remediation/strategy-receipt.md#documentation-audience-decision--accepted-2026-10-20).
+
 **Name:** allura (always lowercase in copy) / Allura Memory (legal / title context)  
 **Tagline:** MEMORY THAT SHOWS ITS WORK  
 **Positioning:** Warm + Connected — the AI memory layer for real life  
@@ -876,3 +878,13 @@ The five core memory tools registered in `src/mcp/memory-server-canonical.ts` ar
 **Source-inspected 2026-10-18:** tool registration and input schemas exist; this is not an authenticated live-tool or release receipt. The former convenience names `memory_retrieve`, `memory_write` and `memory_propose_insight` are unregistered legacy documentation aliases and must not be used as current tool names. No new interface is specified by removing those aliases.
 
 See [the API boundary](./SOLUTION-ARCHITECTURE.md#35-memory-api) for authenticated scope and [Design](./DESIGN-ALLURA.md#bounded-memory-journey) for behavior.
+
+## First-use explanation scope — 2026-10-20
+
+Sabir's Reddit-remediation goal supplies a task-specific reader: a developer or team member evaluating persistent project context for connected agents. The shared example is saving the PostgreSQL decision and its reason, then retrieving it in a later session with source and review state. This explains the existing capture → review → retrieval scope; it does not establish a new whole-market strategy or prove the example works on the current revision.
+
+The memory engine handles authorized persistence and retrieval. The integration decides when to call it. An operator supplies hosting and configuration. An independent human decides promotion. Routine saves and searches should not require a person to navigate an operator dashboard. The dashboard and portfolio specimen remain optional paths with different purposes.
+
+Sabir accepted the documentation audience in this chat on 2026-10-20: developers and teams using connected agents are primary, operators and human reviewers support them, and the enterprise dashboard is optional. The older community promise and Maya persona in Section 0 remain **historical context**. [Kotler's brief](../reference/reddit-remediation/brief.md) and the [authority receipt](../reference/reddit-remediation/strategy-receipt.md#documentation-audience-decision--accepted-2026-10-20) record that human decision. The Allura name and visual identity remain; no new whole-brand strategy lock or publication approval is inferred.
+
+Completion requires a real setup/save/later-session retrieval receipt, accurate source/review labels, task-focused documentation and actual participant observations under [UX-R01–07](REQUIREMENTS-MATRIX.md#proposed-documentation-and-first-use-acceptance--2026-10-20). No clean-install, productivity, automatic-capture or release claim follows from a shortened README.

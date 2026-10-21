@@ -79,7 +79,7 @@ export interface MemoryResponseMeta {
   degraded: boolean
   degraded_reason?: "neo4j_unavailable" | "graph_unavailable"
   stores_used: Array<"postgres" | "neo4j" | "ruvector" | "graph">
-  stores_attempted: Array<"postgres" | "neo4j" | "graph">
+  stores_attempted: Array<"postgres" | "neo4j" | "ruvector" | "graph">
   warnings?: string[]
   /** RuVector trajectory ID for evidence-gated feedback (present when RuVector was used) */
   ruvector_trajectory_id?: string

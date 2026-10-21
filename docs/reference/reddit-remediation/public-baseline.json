@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-20T23:10:52.229657+00:00",
+  "source_commit": "fa396a20258100cb5496b46142e9a1c1ef86526f",
+  "commit_url": "https://github.com/Allura-Ecosystem/Allura_Memory/commit/fa396a20258100cb5496b46142e9a1c1ef86526f",
+  "readme_url": "https://raw.githubusercontent.com/Allura-Ecosystem/Allura_Memory/fa396a20258100cb5496b46142e9a1c1ef86526f/README.md",
+  "http_status": 200,
+  "http_date": "Tue, 20 Oct 2026 23:10:52 GMT",
+  "bytes": 22571,
+  "lines": 463,
+  "sha256": "e319b33acff3d89cd00a3d995c7a35763d6ad707b7ece5f2d87da235383cd40b",
+  "contains_new_heading": false,
+  "authentication": "none; no repository credentials/cookies/proxy credentials",
+  "scope": "Dated pre-publication baseline only; local rewrite and infographics not published by this check",
+  "local_git_object_checks": {
+    "commit": "fa396a20258100cb5496b46142e9a1c1ef86526f",
+    "note": "Local immutable Git object at the commit independently resolved by unauthenticated HTTPS; these are tree checks, not HTTP asset requests.",
+    "new_explainer_paths": [
+      {
+        "path": "docs/readme/first-use/README.md",
+        "exists_in_verified_public_commit": false
+      },
+      {
+        "path": "docs/readme/first-use/png/01-remember-a-decision.png",
+        "exists_in_verified_public_commit": false
+      },
+      {
+        "path": "docs/readme/first-use/png/02-who-does-what.png",
+        "exists_in_verified_public_commit": false
+      },
+      {
+        "path": "docs/readme/first-use/png/03-saved-versus-approved.png",
+        "exists_in_verified_public_commit": false
+      }
+    ]
+  }
+}

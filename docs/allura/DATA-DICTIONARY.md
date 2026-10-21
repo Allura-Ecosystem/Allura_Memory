@@ -1627,3 +1627,28 @@ Matchers are evaluated from most specific to most general. A single inventory re
 3. `workflow_reference` — workflow/action reference matches.
 4. `publisher` — publisher matches.
 5. `indicator` — fallback for credential/install-hook/action indicators that do not map to a dedicated type.
+
+## First-use terminology and evidence interpretation — 2026-10-20
+
+These display terms explain the existing bounded journey; they introduce no new table, persisted status or schema field.
+
+| Reader-facing term | Evidence required / interpretation |
+|---|---|
+| Saved evidence | A successful governed capture receipt and record identity; storage alone does not establish human approval |
+| Proposal | A candidate in the governed proposal lifecycle; a save does not guarantee proposal eligibility or creation |
+| Approved knowledge | An authorized independent human decision and canonical materialization; a score or storage backend label is insufficient |
+| Source/provenance | The actual returned or inspected source reference; preserve unknown rather than inventing origin |
+| Review state | The explicitly returned lifecycle/decision state; distinguish current state from the earlier save receipt's pending flag |
+| First-use receipt | A sanitized evaluation artifact naming source revision, endpoint category, separate client sessions, exact saved/retrieved identity, checks and limitations; it is not a human approval receipt |
+
+The [first-use guide](../user-guide/getting-started.md), [communication brief](../reference/reddit-remediation/brief.md#shared-vocabulary), and [UX acceptance](REQUIREMENTS-MATRIX.md#proposed-documentation-and-first-use-acceptance--2026-10-20) consume these terms. Endpoint omissions remain implementation/evidence gaps, not permission to fabricate a field.
+
+### Search response metadata alignment
+
+[AD-70](RISKS-AND-DECISIONS.md#ad-70-bounded-candidate-eligibility-for-fresh-evidence-search) aligns the TypeScript `MemoryResponseMeta.stores_attempted` declaration with the existing runtime schema's accepted store labels, including its historical compatibility vocabulary; it adds no wire field or database schema. In repaired explicit all-mode, attempted sources reflect actual calls, used sources reflect available returned candidates, and unavailable-source warnings set `degraded: true`. A successful empty search can remain nondegraded. These fields describe that request, not service-wide health, review approval, corpus completeness or deployed-revision proof. Local implementation and final review evidence are tracked in the [first-use receipt](../reference/reddit-remediation/first-use-evidence.md).
+
+### Fresh-initialization dimension boundary
+
+Knuth's [source-order review](../reference/reddit-remediation/clean-install-db-contract.md#fresh-init-embedding-mismatch) found that the current client requests 1024 dimensions and the bridge uses `allura_memories.embedding`, while init22 changes that original column to `vector(4096)`; init20's separate `embedding_1024` column is not the bridge target. This predicts a fresh-initialization mismatch if the scripts complete; it is not an observation of the deployed schema or a completed clean install. Older 768-dimensional descriptions are not evidence of this path's current contract.
+
+[AD-71](RISKS-AND-DECISIONS.md#ad-71-guarded-isolated-first-use-evaluation-preparation) permits preparing a guarded trial-only empty-table alignment, with actual target/type/index and finite 1024-value provider response checks still required. The correction is not automatically applied and does not authorize altering existing data or shared migrations. Provider success, initialized column compatibility and authenticated retrieval remain separate checks.

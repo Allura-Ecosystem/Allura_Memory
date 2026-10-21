@@ -1,0 +1,43 @@
+{
+  "status": "educational draft; independent QA and live verification pending",
+  "official_wordmark_sha256": "37617ec2d15503a2d0bbe9b7bf8a9693813b468b0b850b2b97979ab08ce1a733",
+  "font": "Noto Sans fallback (Aeonik unavailable); no generated lettering",
+  "outputs": [
+    {
+      "file": "png/01-remember-a-decision.png",
+      "width": 1440,
+      "height": 900,
+      "min_body_at_390": null
+    },
+    {
+      "file": "png/01-remember-a-decision-mobile.png",
+      "width": 780,
+      "height": 1640,
+      "min_body_at_390": 16
+    },
+    {
+      "file": "png/02-who-does-what.png",
+      "width": 1440,
+      "height": 900,
+      "min_body_at_390": null
+    },
+    {
+      "file": "png/02-who-does-what-mobile.png",
+      "width": 780,
+      "height": 1830,
+      "min_body_at_390": 16
+    },
+    {
+      "file": "png/03-saved-versus-approved.png",
+      "width": 1440,
+      "height": 900,
+      "min_body_at_390": null
+    },
+    {
+      "file": "png/03-saved-versus-approved-mobile.png",
+      "width": 780,
+      "height": 1640,
+      "min_body_at_390": 16
+    }
+  ]
+}

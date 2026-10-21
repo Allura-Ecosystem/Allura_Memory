@@ -1,28 +1,19 @@
 # @allura/ruvector-adapter
 
-Optional, governed search adapter around **RuVector**.
+For developers inspecting an optional governed-search scaffold. It is disabled by default and is distinct from the production PostgreSQL/RuVector graph adapter in the main service.
 
-> RuVector = speed and smart search. Allura = rules, trust, memory, proof.
+**Start with [the package design](docs/RUVECTOR-ADAPTER.md)** and [exports](src/index.ts). For the memory service's operating boundary, see [Solution Architecture](../../docs/allura/SOLUTION-ARCHITECTURE.md); for first use, follow [Getting started](../../docs/user-guide/getting-started.md).
 
-Every call passes through `assertScope()` (org `group_id` + `workspace_id` +
-`actor_id` + `request_id`, ADR-001), returns provenance, and emits an audit
-context. Feedback never auto-promotes (AD-04). The adapter is **disabled by
-default** so base Allura boot never depends on it (AD-09).
+## Source contract
 
-Status: **scaffold stub** — no vendored RuVector source; idea/dependency level.
+| Surface | What this package declares |
+|---|---|
+| [Policy](src/policy.ts) | Requires scoped context before an operation |
+| [Search](src/search.ts) | Checks read scope and supplied hit provenance |
+| [Feedback](src/feedback.ts) | Returns a proposal marked as requiring human approval |
+| [Snapshot](src/snapshot.ts) | Returns scoped snapshot/restore receipts |
+| [Client](src/client.ts) | Explicit opt-in configuration |
 
-## Surface
+These helpers and receipts do not prove live search quality, durable restoration, or a completed human approval. Inspect their implementations and tests before building a deployment claim around them. Preserve [the dependency attribution](LICENSE.NOTICE.md).
 
-| Function | Guarantee |
-|----------|-----------|
-| `search(scope, query, hits)` | scoped; requires `memory:read`; rejects provenance-free hits |
-| `recordFeedback(scope, id, signal)` | returns a proposal; `requires_human_approval: true` |
-| `snapshot(scope)` / `restore(scope, id)` | scoped; returns receipts |
-
-```bash
-bun test packages/ruvector-adapter
-```
-
-See [`docs/RUVECTOR-ADAPTER.md`](./docs/RUVECTOR-ADAPTER.md),
-[`LICENSE.NOTICE.md`](./LICENSE.NOTICE.md), and AD-09 in
-[`docs/allura-hosted/RISKS-AND-DECISIONS.md`](../../docs/allura-hosted/RISKS-AND-DECISIONS.md).
+*AI-assisted editorial revision, 2026-10-20; scaffold and production adapter kept distinct.*

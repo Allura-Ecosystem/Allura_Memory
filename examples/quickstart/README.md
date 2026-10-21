@@ -1,50 +1,28 @@
-# Minimal Allura integration example
-# Story 24.7 AC-6: smallest supported integration
+# Retrieve a decision in another session
 
-This example uses the **public** `@allura/sdk` contract (Story 24.7 AC-1):
-typed clients for health/readiness and governed memory, without importing any
-server internals.
+This developer example uses the public `@allura/sdk` package to save a PostgreSQL decision, start a new client session, and search for the exact saved record.
 
-```typescript
-import { AlluraClient } from "@allura/sdk";
+Use the [shared getting-started guide](../../docs/user-guide/getting-started.md) first. You need an existing authenticated gateway and an authorized tenant/workspace. This example does not install the service or create credentials.
 
-// The SDK client is configured with a config object (baseUrl + optional auth).
-const client = new AlluraClient({
-  baseUrl: "http://localhost:3201",
-  authToken: process.env.ALLURA_AUTH_TOKEN, // optional in dev mode
-});
-
-// Health / readiness (read-only)
-const health = await client.health();
-console.log("Allura ready:", health.status, "mode:", health.mode);
-
-// Add a governed memory
-const added = await client.memory.add({
-  group_id: "allura-my-project",
-  user_id: "developer",
-  content: "Project started with Allura SDK",
-});
-console.log("Stored memory id:", added.id);
-
-// Search governed memories
-const results = await client.memory.search({
-  group_id: "allura-my-project",
-  query: "project",
-  include_global: false,
-  limit: 10,
-});
-console.log(`Found ${results.results.length} memories`);
-```
-
-## Running it
-
-From the repo root:
+From the repository root:
 
 ```bash
 bun install
-bun run build --filter @allura/sdk   # or: cd packages/sdk && bun run build
-bun run examples/quickstart/index.ts
+(cd packages/sdk && bun run build)
 ```
 
-> The SDK must be built first (`packages/sdk/dist`) so the package `exports`
-> resolve to the compiled ESM/CJS output.
+Supply `ALLURA_BASE_URL`, `ALLURA_AUTH_TOKEN`, and `ALLURA_GROUP_ID` through your approved local secret/environment tooling. Use the gateway's base origin, such as `http://localhost:6477` only when an operator has actually provisioned it there. The token must already bind an authorized principal and workspace. A valid group name alone grants no access.
+
+Run:
+
+```bash
+bun run examples/quickstart/index.ts --allow-write
+```
+
+The example appends one record and does not automatically retry the save. It fails unless the later session retrieves the same ID and content. A successful run prints the saved ID, reported pending-review value, retrieval source and provenance. An omitted review value remains `not_reported`; neither storage location nor search score is approval.
+
+For a sanitized machine-readable receipt and explicit MCP session checks, use the [first-use runner](../../scripts/first-use-memory.ts) described in the shared guide.
+
+Status: source and offline contract checks are available. A successful live run, independent human-review demonstration, clean installation and human usability study require their own evidence.
+
+*AI-assisted correction, 2026-10-20; no live success is implied by this example.*

@@ -1,0 +1,7 @@
+# No image tag is guessed. The reviewed digest is a required build input.
+ARG POSTGRES_IMAGE
+FROM ${POSTGRES_IMAGE}
+COPY docker/postgres-init/ /docker-entrypoint-initdb.d/
+# Active embedding alignment and scoped fixture execution remain blocked until
+# a permitted database adapter verifies the exact trial target. Do not place
+# an unverified automatic repair in docker-entrypoint-initdb.d.

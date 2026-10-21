@@ -1,3 +1,18 @@
+# Session bootstrap and recovery reference
+
+For maintainers inspecting session initialization, checkpoints and hydration helpers. **Start with [session-bootstrap.ts](session-bootstrap.ts)**, then inspect [checkpoint management](checkpoint-manager.ts), [persistence](persistence.ts), and [state hydration](state-hydrator.ts) for the particular behavior under review.
+
+This subsystem does not establish a six-month reliability guarantee. The retained design notes below include retired Neo4j terminology, old ports and planned behavior. Source inspection and targeted tests are needed before using any of those recipes; they are not the current installation path.
+
+For connected-agent setup and the first save/retrieve task, use [Getting started](../../../docs/user-guide/getting-started.md). The current memory backend and unresolved contracts are described in [Solution Architecture](../../../docs/allura/SOLUTION-ARCHITECTURE.md) and [Risks and Decisions](../../../docs/allura/RISKS-AND-DECISIONS.md).
+
+Relevant local checks are [checkpoint tests](checkpoint-manager.test.ts), [persistence tests](persistence.test.ts), and [hydration tests](state-hydrator.test.ts). Their presence is not proof of a current passing run or long-duration operation.
+
+*AI-assisted editorial revision, 2026-10-20. Historical notes preserved below for lineage.*
+
+<details>
+<summary>Historical session-system design notes — not current setup instructions</summary>
+
 # Session Stability System
 
 > **6-Month Operational Stability for Long-Running Agent Sessions**
@@ -779,3 +794,6 @@ The Session Stability system provides the infrastructure for Story 1.1. Next ste
 ## License
 
 MIT © [ronin4life](https://github.com/Charitablebusinessronin)
+
+
+</details>

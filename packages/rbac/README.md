@@ -1,15 +1,15 @@
 # @allura/rbac
 
-Shared role → scope mapping and permission checks for the Allura Hosted Platform.
+For developers using the hosted-platform role-to-scope helpers. This package is pure permission logic; it does not authenticate callers or apply database access controls.
 
-- `scopesForRole(role)` — canonical scopes per role (owner/admin/reviewer/employee/viewer/auditor/agent).
-- `hasScope(granted, required)` — exact scope check.
-- `canApprove(role, granted)` — enforces **AD-04**: agents can never approve, regardless of granted scopes.
+**Next step:** inspect [the role map and helpers](src/index.ts), using the shared [scope types](../types/src/index.ts).
 
-Status: **scaffold stub.** Pure logic, no I/O. Consumes types from
-[`@allura/types`](../types) (type-only import). See
-[`docs/allura-hosted/DESIGN-GUARD.md`](../../docs/allura-hosted/DESIGN-GUARD.md).
+- `scopesForRole(role)` returns the package's configured role scopes.
+- `hasScope(granted, required)` checks membership in a supplied scope list.
+- `canApprove(role, granted)` rejects the `agent` role and otherwise requires `review:approve`.
 
-```bash
-bun test
-```
+The last helper is not proof of a human identity or a completed human review. Runtime authentication, actor separation and route-level enforcement require their own checks. See [the data contract](../../docs/allura/DATA-DICTIONARY.md) and [requirements](../../docs/allura/REQUIREMENTS-MATRIX.md).
+
+For a memory-service evaluation, use [Getting started](../../docs/user-guide/getting-started.md).
+
+*AI-assisted editorial revision, 2026-10-20; package scope verified against source, live enforcement not established here.*

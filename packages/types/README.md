@@ -1,15 +1,11 @@
 # @allura/types
 
-Shared TypeScript types for the Allura Hosted Platform.
+For developers sharing hosted-platform scope and lifecycle types. **Start with [the exported types](src/index.ts).** Types describe a contract; they do not authenticate a request or enforce runtime isolation.
 
-**Tenancy (ADR-001):** `GroupId` identifies the **organization** — the only tenant
-boundary. `WorkspaceId` is a sub-scope *within* a `group_id`. `AlluraScope` is the
-context every governed operation carries (`group_id` + `workspace_id` + `actor_id`
-+ `request_id` + `scopes`), all server-injected by Allura Guard.
+`GroupId` represents an organization tenant key. `WorkspaceId` represents a sub-scope within it. `AlluraScope` carries group, workspace, actor, request and granted-scope fields. Runtime services must derive and verify authority and apply the appropriate scoped transaction path.
 
-Status: **scaffold stub** — types only, no runtime. See
-[`docs/allura-hosted/DATA-DICTIONARY.md`](../../docs/allura-hosted/DATA-DICTIONARY.md).
+The package also declares roles, locks, memory states and token metadata. A string matching the group pattern is a valid format, not an access grant.
 
-```bash
-bun test        # type guards
-```
+See the current [data dictionary](../../docs/allura/DATA-DICTIONARY.md) for persistence and identity semantics. For the practical connected-agent task, use [Getting started](../../docs/user-guide/getting-started.md).
+
+*AI-assisted editorial revision, 2026-10-20.*

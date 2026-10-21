@@ -484,3 +484,11 @@ stateDiagram-v2
 | Append-only traces | No UPDATE/DELETE contract on events |
 | `trace_ref` integrity in SOC2 | FK and numeric verification |
 | Human gate per slice | Explicit reviewer sign-off before progression |
+
+## First-use path and evidence boundary — 2026-10-20
+
+For the Reddit-remediation evaluation, follow one path: an existing authorized agent client submits a project decision; that client session ends; another client session searches the same authorized scope for the decision; the evaluator inspects record identity, source and review state. Transport reconnection is evidence of a new client session only when the run records it. A mock response, synthetic portfolio screen or health endpoint cannot establish persistence across sessions.
+
+Keep the service boundary explicit: an integration chooses save/search calls; the memory service applies identity/scope and persistence/retrieval rules; an operator provisions the environment; an independent authorized human reviews promotion. A caller-supplied group string grants no access. Missing authorization must fail without trying another tenant or principal. A save is not a promotion decision.
+
+The current primary Compose deployment assumes external infrastructure. A successful run against a provisioned gateway must be labeled that way; it is not clean-install evidence. The [shared first-use guide](../user-guide/getting-started.md) owns the supported reader path, while [execution evidence](../reference/reddit-remediation/execution-checklist.md) distinguishes source checks, offline tests, live runs and human observation. This explanation adds no new runtime, schema or authorization contract.
