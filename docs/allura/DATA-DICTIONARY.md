@@ -2,13 +2,17 @@
 
 > [!NOTE]
 > **AI-Assisted Documentation**
-> Portions of this document were drafted with the assistance of an AI language model (GitHub Copilot).
+> Portions were drafted with GitHub Copilot assistance; Codex prepared the 2026-10-20 development-readiness additions.
 > Content has not yet been fully reviewed - this is a working design reference, not a final specification.
 > AI-generated content may contain inaccuracies or omissions.
 > Code and schemas evidence implementation; approved product decisions establish intent. Record disagreement for the owning decision rather than silently changing either.
 
+**Integration evidence boundary — 2026-10-21:** This revision consolidates specifications and source-local assessments from `28d90e843` plus the dirty-file snapshot identified in the [source manifest](../reference/development-readiness-20261021/source-manifest.json), onto main base `c720aca2e` (PR #169 content head `51e421ca0`). Dashboard, Cloudflare authentication and preview implementation changes are excluded. Their “implemented” or test-count statements below are dated source-local observations, not verification of this branch, current main or deployment. Missing local receipts remain [unavailable supporting evidence](../reference/development-readiness-20261021/unavailable-evidence.md). [Story packets](../reference/development-readiness-20261021/story-packets.md) operationalize the canonical gates without approving proposed decisions.
+
 This document describes Allura's PostgreSQL-only governed memory data model. PostgreSQL holds append-only episodic evidence, canonical proposals, pgvector retrieval, promoted graph tables, receipts, and outbox state. Historical: Neo4j is sunset under AD-50; legacy naming is retained only where it describes a historical migration or compatibility record.
 
+
+**Approved intended authentication migration (source-local implementation):** [Cloudflare Access identity contract](#cloudflare-access-identity-contract). The approved provider change is Cloudflare Access under [AD-69](RISKS-AND-DECISIONS.md#AD-69-cloudflare-access-replaces-clerk); the provider implementation remains a separate unmerged source-local change and is not current-main or deployment evidence.
 
 ## Bounded memory journey data contract
 
@@ -31,6 +35,20 @@ Evidence: `src/lib/memory/approve-proposal.ts` and the detailed tables below. Ap
 Logical graph vocabulary below describes mapping concepts, not extra physical columns. Physical table sections own persistence. The exact capture/review/retrieval behavior belongs to Design; acceptance evidence belongs to Requirements Matrix.
 ---
 
+## Enterprise dashboard read DTOs — 2026-10-19
+
+These DTOs describe the source-local bounded read slice (not included in this integration) (`src/lib/dashboard/read-model.ts`); they add no persistence schema.
+
+| DTO | Identity / data | Scope and lifecycle |
+|---|---|---|
+| `LibraryMemory` | Record ID, content, memory type, creation time, source table, nullable version/provenance | Approved current `graph_memories` or retained `allura_memories`, selected explicitly; missing metadata stays unknown |
+| `MemoryPage` | Items, query, kind, page, page size, `hasMore`, `pageLimitReached` | 50 records, literal content query bounded to 300 characters, pages 1–10000; a capped page asks for a narrower query |
+| `KnowledgeNode` | Store-qualified ID (`memory:` or `structural:`), record ID, kind, label, content, nullable version/provenance, active/superseded/null lifecycle | At most 50 authorized endpoints; source qualification prevents identifier collisions |
+| `KnowledgeEdge` | ID, source/target node IDs, relationship type, creation time, source table | At most 100 stored `graph_supersedes` or `graph_structural_edges` relationships; both endpoints must resolve in the same authorized scope |
+| `KnowledgeGraph` | Nodes, edges, limits/truncation and optional focused node ID | Workspace view or bounded one-hop neighborhood; inaccessible and missing focus both return empty |
+
+Current search excludes superseded content. Graph lineage may include a prior nondeleted version only when a same-scope nondeleted replacement proves the supersession; its lifecycle is explicitly labeled. Unresolvable or ambiguous legacy structural endpoints are omitted, not guessed. No embedding vector, model, similarity score, verified state or operational health is inferred from memory presence. The DTO does not prove installed migrations or live RLS behavior.
+
 ## Table of Contents
 
 - [PostgreSQL: events](#postgresql-events)
@@ -47,6 +65,8 @@ Logical graph vocabulary below describes mapping concepts, not extra physical co
 - [Logical graph: Relationships](#logical-graph-relationships)
 - [Memory Command Center Adapter Contracts](#memory-command-center-adapter-contracts)
 - [Metadata Payloads](#metadata-payloads)
+- [Proposed development contracts](#proposed-development-contracts--2026-10-20)
+
 
 ---
 
@@ -762,7 +782,7 @@ events append-only invariant (POL-002) holds as the trail. Migration: `docker/po
 |-------|------|----------|-------------|
 | `id` | string (uuid) | Yes | Surrogate key |
 | `group_id` | string | Yes | Org tenant boundary; `^allura-[a-z0-9-]+$` (POL-001) |
-| `user_id` | string | Yes | Stable identity (Clerk user id or email) |
+| `user_id` | string | Yes | Stable Allura principal ID; preserve existing IDs when changing providers (AD-69); never derive authority from email |
 | `email` | string | No | Display email |
 | `role` | enum | Yes | `admin` \| `curator` \| `viewer` |
 | `invited_by` | string | No | user_id of the admin who added them |
@@ -1627,6 +1647,100 @@ Matchers are evaluated from most specific to most general. A single inventory re
 3. `workflow_reference` — workflow/action reference matches.
 4. `publisher` — publisher matches.
 5. `indicator` — fallback for credential/install-hook/action indicators that do not map to a dedicated type.
+
+## Proposed development contracts — 2026-10-20
+
+**AI-assisted logical contract proposals only.** No table, field, JSON schema, endpoint or migration below is implemented by this documentation change. These types must receive the [AD-65–AD-68 decisions](RISKS-AND-DECISIONS.md#development-readiness-decisions--2026-10-20), schema review and same-story JSON schemas under `json-schema/` before schema/API implementation. Missing schema counterparts are an explicit readiness gate, not evidence that a current schema contains these fields. [Design](DESIGN-ALLURA.md#development-readiness-design--2026-10-20) owns validation/replay/failure semantics; [traceability](REQUIREMENTS-MATRIX.md#development-readiness-traceability--2026-10-20) owns acceptance. Existing DOC-06/DOC-07 definitions above remain authoritative.
+
+### `CaptureReceiptV1` and capture replay binding — Proposed
+
+| Field | Type / required | Meaning |
+|---|---|---|
+| `contract_version` | literal `capture-v1`; yes | Algorithm/shape version; not the semantic-memory version |
+| `receipt_id` | UUID string; yes | Immutable capture receipt identity |
+| `group_id` | tenant string; yes | Verified authorized tenant matching `^allura-[a-z0-9-]+$` |
+| `workspace_id` | nonempty string; yes | Effective verified workspace, never inferred from null/default |
+| `principal_id` | nonempty string; yes | Authenticated executing principal; never a persona label or caller assertion |
+| `operation_kind` | literal `memory_add`; yes | Separates capture keys from approval/correction keys |
+| `idempotency_key` | constrained string; yes | Task-stable operation key; same value for retry/read-back |
+| `request_digest` | 64 lowercase hexadecimal characters; yes | SHA-256 of versioned canonical accepted request plus effective scope/actor |
+| `memory_id` | canonical memory ID string; yes | Stable memory identity produced once |
+| `event_id` | positive decimal string; yes | PostgreSQL `events.id` BIGSERIAL (`00-traces.sql`) serialized without JS precision loss |
+| `committed_at` | RFC3339 UTC timestamp; yes | Durable transaction time, not a client timestamp |
+| `capture_state` | literal `committed`; yes | Success at capture boundary only; no promotion/delivery assertion |
+
+Logical replay binding contains the same scope/principal/kind/key plus digest and immutable receipt reference/result. Proposed uniqueness is `(group_id, workspace_id, principal_id, operation_kind, idempotency_key)`; conflicting payload produces no new write. Key syntax/digest metadata allowlist and compatibility plan remain AD-65 decisions. No TTL or deletion rule is adopted. Storage table names, indexes, grants and receipt-reader schema must be chosen in the reviewed migration/story; do not reuse `promotion_idempotency` without a separately reviewed compatibility decision.
+
+### `IndexIntentV1` and `VectorScopeV1` — Proposed
+
+| Field | Type / required | Meaning |
+|---|---|---|
+| `intent_id` | UUID; yes | Stable index-work identity; scoped source uniqueness prevents retry duplication |
+| `group_id`, `workspace_id`, `principal_id` | strings; yes | Source authority; worker reauthorizes permitted action, not just possession of strings |
+| `source_event_id`, `memory_id`, `content_digest` | strings; yes | Exact captured source and content identity |
+| `embedding_model`, `model_revision` | strings; yes before success | Provider/model provenance; unknown is not invented |
+| `dimensions`, `index_version` | positive integer/string; yes before success | Validation and compatibility checks |
+| `status` | `queued`, `processing`, `retry_wait`, `succeeded`, `failed`; yes | Mutable work-state projection, separate from immutable evidence |
+| `attempt`, `available_at`, `last_error_code` | nonnegative integer / timestamp / nullable bounded code | Retry eligibility and safe error; raw provider payload excluded |
+
+`VectorScopeV1` names the internal verified tenant/workspace/principal/action capability, not a public serializable authorization DTO. Current bridge `userId` must not be mistaken for authenticated principal: its historical use is the tenant key. New scoped vector rows require non-null workspace; migration 40's legacy-quarantined rows remain excluded absent explicit migration authority. Table/lease/dedupe/claim details remain AD-66 decisions. Embedding intent success means an eligible scoped index row is confirmed, not that current-answer quality or native RuVector readiness is proven.
+
+### `SemanticCorrectionV1` — Proposed
+
+| Field | Type / required | Meaning |
+|---|---|---|
+| `base_memory_id` | memory ID string; yes | Visible scoped immutable base |
+| `expected_base_version` | positive decimal string; yes | Version the requester used; checked again at approval against current head |
+| `content`, `rationale` | nonempty strings; yes | Proposed replacement and evidence-based reason |
+| `evidence_refs` | array of scoped evidence identities; yes | Existing evidence access/eligibility checks apply; empty-array eligibility needs review |
+| `idempotency_key` | constrained string; request | Task-stable submission operation key, distinct from later approval key |
+| `request_digest` | digest string; server-derived storage | Canonical validated submission plus effective authority; never trusted caller input |
+| `proposal_id`, `submission_receipt_id` | UUID strings; response | Pending correction and append-only submission proof |
+| `status` | literal `pending_review`; response | Human decision still required |
+
+Effective authority binds the proposal to tenant/workspace/requester and base head. Proposed new-version approval inserts an immutable semantic row and `graph_supersedes` edge atomically with audit/decision/outbox/replay; it never overwrites old content or deletes history. Required proposal/schema fields and semantic-head uniqueness implementation remain AD-67 decisions. `expected_proposal_version` and `reviewed_proposal_version` are the distinct DOC-06 fields already specified in the [approval replay contract](#promotion_idempotency); base version is not a substitute for proposal review version.
+
+### `RemoteDeliveryObservationV1` — Proposed implementation of DOC-07
+
+| Field | Type / required | Meaning |
+|---|---|---|
+| `observation_id`, `delivery_id` | UUID strings; yes | Append-only observation ID and stable operation identity |
+| `group_id`, `workspace_id` | strings; yes | Authorized source scope |
+| `decision_receipt_id`, `source_revision`, `source_digest` | strings; yes | Exact immutable decision and projected source |
+| `destination_ref` | authorized opaque reference; yes | Approved destination/transfer binding, not credentials or page content |
+| `status` | `queued`, `synced`, `failed`, `unknown`; yes | Current observation; local delivery alone cannot produce synced |
+| `remote_record_id` | string; required for synced | Confirmed destination page/record |
+| `readback_digest`, `observed_at`, `observer_principal_id` | digest / timestamp / string; required for synced | Scoped verification against intended remote revision/content and executing observer |
+| `error_code`, `correlation_id` | nullable bounded strings | Safe failure/reconciliation reference |
+
+The stable delivery binding uniquely identifies source decision/revision/digest and authorized destination; altered source/destination conflicts. Observations append rather than edit decision evidence. Retry policy, access-controlled delivery-read route, digest normalization across Notion block representation and JSON-schema/storage names require AD-68 review. A remote digest must derive from normalized read-back content, not the outbound payload. Preserve the original `GovernanceReceipt.outbox_state`; it is never updated to reflect this read model.
+
+### `OperationObservationV1` and `RetrievalEvaluationV1` — Proposed
+
+`OperationObservationV1` carries `operation`, `stage`, `outcome` (`succeeded|failed|partial|unknown`), bounded `reason_code`, `correlation_id`, authorized scope reference, `started_at`, `duration_ms` and optional durable receipt reference. A success is bound to one stated boundary. Logs redact content/secrets and do not expose foreign-scope identifiers; high-cardinality identifiers are not metric labels. Storage/retention and external error-reporting destinations need existing approved policy or an explicit decision.
+
+`RetrievalEvaluationV1` carries `evaluation_id`, source/corpus/fixture digests, as-of time, authorized tenant/workspace, query-label-set revision, relevant record IDs, current/history intent, mode/status filters, attempted/used stores, fallback reason, provider/model/index versions, sample count, warm/cold condition, timeout counts and per-stage latencies. Aggregate results include precision/recall@k, MRR, current-answer/freshness error rate and p50/p95. Raw query/content is not placed in general telemetry. Fixture access and holdout ownership must be explicit; approved-only, lexical-only and federated results must be distinguishable. No metric automatically approves knowledge or establishes compliance.
+
+## Cloudflare Access identity contract
+
+[AD-69](RISKS-AND-DECISIONS.md#AD-69-cloudflare-access-replaces-clerk) replaces the external identity provider without a database schema migration. Existing `AuthUser`, memberships, workspaces, principals and historical events retain their field identities. [Design](DESIGN-ALLURA.md#cloudflare-access-security-contract) owns failure behavior and validation; the runtime Zod schemas must match this bounded configuration contract.
+
+| Configuration | Type | Meaning |
+|---|---|---|
+| `ALLURA_CF_ACCESS_ISSUER` | HTTPS team origin string | Explicit trusted `https://<team>.cloudflareaccess.com` issuer; no arbitrary URL/path/query/userinfo or token-supplied authority |
+| `ALLURA_CF_ACCESS_AUD` | nonempty string | Exact protected human application's AUD; machine authorization remains separate |
+| `ALLURA_CF_ACCESS_BINDINGS` | server-only JSON array | Explicit identities and existing resource authorization bindings; no default binding or grant |
+
+| Binding field | Type / required | Meaning |
+|---|---|---|
+| `subject` | nonempty string / yes | Verified Access JWT sub under the configured issuer; duplicate/ambiguous subjects deny |
+| `userId` | nonempty stable string / yes | Existing Allura principal/membership user_id, retained across provider migration |
+| `groupId` | authorized allura-* tenant / yes | Scope selector for active membership lookup, never a new tenant grant |
+| `workspaceId` | nonempty string / yes | Explicit workspace binding; verify group ownership and current lock state |
+
+JWT identity requires issuer/AUD, `exp`, `iat`, `type: "app"`, nonempty human `sub` and `email`; no role/tenant/workspace claim is accepted as an Allura grant. The role is read from active `memberships` and the stable ID is copied from the explicit binding. Token/service secrets are not fields of this configuration DTO. A future persistent identity-binding table needs its own reviewed migration, not silent provisioning by the authentication resolver.
+
+New device-approval evidence uses `auth_method: "cloudflare_access"`; device recovery uses `sign_in_required` alongside existing retry/re-pair actions. Historical provider values remain historical; no event-row rewriting is authorized. Audit sanitizers continue to reject legacy token names and now reject Access JWTs, authorization cookies and service-token secrets. Local DevAuth configuration is retained solely for explicitly enabled nonproduction development.
 
 ## First-use terminology and evidence interpretation — 2026-10-20
 

@@ -6,6 +6,10 @@ globs: ["src/**", "docs/allura/**", "guidelines/**"]
 
 # Allura Code Review — Governed Code Review
 
+> [!NOTE]
+> **AI-Assisted Documentation** — workflow corrections follow the existing project authority contract; full human document review remains pending.
+
+
 > **Allura-governed code review.** Enforces Pike/Fowler review gates, Brain outcome logging, and canonical doc impact checks before and after review.
 
 ## When to Use
@@ -93,16 +97,16 @@ Execute code review with Allura context loaded:
 
 After review:
 
-1. Update Notion work item with review status
-2. Add review findings to Decision Log
-3. Update Handoff Context with review outcome
+1. Follow shared Gate 5: verify the board/work-item identity and existing update authority.
+2. Attach actual findings and evidence within that scope; report missing access or approval.
+3. Done/Approved status moves and Notion sync retain their separate approval gates; do not equate local review with live board status.
 
 ### Step 7: Validation Evidence (Gate 6)
 
 Collect and verify:
 
 - [ ] All 🔴 Critical findings addressed or explicitly deferred with rationale
-- [ ] `bun test` passes for affected test files
+- [ ] Appropriate package-script Vitest lane passes for affected files with nonzero discovery, pass/fail/skip counts and exit codes; native `bun test` is not equivalent
 - [ ] `bun run typecheck` clean
 - [ ] No canonical doc impact without planned update
 - [ ] Review approval from Pike (interface) and/or Fowler (maintainability)
@@ -112,20 +116,14 @@ Collect and verify:
 
 Log the review outcome to Allura Brain:
 
-```
-allura-brain_memory_add({
-  group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "CODE_REVIEW: {story ID} — {summary}; findings={critical/warning/suggestion counts}; outcome={approved/changes-requested}",
-  metadata: {
-    source: "conversation",
-    agent_id: "brooks-architect",
-    confidence: 0.85,
-    review_type: "pike-fowler",
-    story_id: "{story ID}"
-  }
-})
-```
+Use the [shared governed memory contract](../allura-memory-skill/SKILL.md).
+Discover the actual host schema, omit persona identity assertions and unsupported
+metadata, and append one verified outcome only within authorized scope. Preserve
+one server-supported idempotency key across retries; verify destination, principal,
+record, content and receipt by read-back. If that contract cannot be met, report
+the unmet gate and retain sanitized task evidence without claiming a Brain write.
+Do not autonomously promote the result. Ordinary workflow execution grants no
+production, configuration, tenant-transfer or semantic-promotion authority.
 
 ## Review-Specific Routing
 
@@ -143,20 +141,19 @@ allura-brain_memory_add({
 
 | Failure | Response |
 |---------|----------|
-| Allura Brain unavailable | Warn and continue with local context only |
+| Brain operation unavailable or pending | Report the observed operation/layer; continue independent local work; do not infer disconnection |
 | Pike/Fowler unavailable | Note in review. Do not mark as approved without review. |
 | Canonical doc impact detected | Flag in review. Require doc update in same PR. |
 | Critical findings | Do not approve. Require fix before merge. |
 
 ## Reflection
 
-At the end of every `allura-code-review` execution, emit:
+End every substantive final reply with this rendered Markdown footer. Fill fields
+from actual evidence; no write or promotion is implied by reporting them.
 
-```
-📝 Reflection
-├─ Action Taken: Code review for {story ID} — {summary}
-├─ Principle Applied: {Brooksian principle}
-├─ Event Logged: CODE_REVIEW
-├─ Neo4j Promoted: {Yes/No}
-└─ Confidence: {High/Medium/Low}
-```
+**📝 Reflection**\
+├─ **Action Taken:** Actual work and scope.\
+├─ **Principle Applied:** The selected role's relevant judgment.\
+├─ **Event Logged:** None, pending/unconfirmed, or verified event and receipt.\
+├─ **Semantic Promotion:** None, pending/unconfirmed, or human-approved verified promotion.\
+└─ **Confidence:** High/Medium/Low, with evidence and material limitations.

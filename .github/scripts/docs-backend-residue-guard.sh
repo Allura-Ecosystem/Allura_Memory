@@ -32,6 +32,9 @@ ACTIVE_DOCS=(
   "$ROOT/docs/enterprise"
   "$ROOT/docs/portfolio"
   "$ROOT/README.md"
+  "$ROOT/guidelines/AI-GUIDELINES.md"
+  "$ROOT/CLAUDE.md"
+  "$ROOT/.github/copilot-instructions.md"
 )
 # Runtime description surfaces — scanned for residue in markdown/config only.
 # Kept narrow so the guard stays fast; deep scans belong to the canonical guard.
@@ -42,6 +45,16 @@ RUNTIME_SURFACES=(
   "$ROOT/.opencode/context/project-intelligence/technical-domain.md"
   "$ROOT/.opencode/context/project-intelligence/living-notes.md"
   "$ROOT/.agents"
+  "$ROOT/.opencode/DEVELOPMENT-READINESS.md"
+  "$ROOT/.opencode/skills/allura-memory-skill/SKILL.md"
+  "$ROOT/.opencode/skills/allura-team-ram/SKILL.md"
+  "$ROOT/.opencode/skills/allura-dev-story/SKILL.md"
+  "$ROOT/.opencode/skills/allura-code-review/SKILL.md"
+  "$ROOT/.opencode/skills/allura-architecture/SKILL.md"
+  "$ROOT/.opencode/skills/allura-product-intake/SKILL.md"
+  "$ROOT/.opencode/skills/allura-retrospective/SKILL.md"
+  "$ROOT/.opencode/skills/code-review/SKILL.md"
+  "$ROOT/.opencode/skills/systematic-debugging-memory/SKILL.md"
 )
 
 SNAPSHOTS=()

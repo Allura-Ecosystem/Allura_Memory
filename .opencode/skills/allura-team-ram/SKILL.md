@@ -91,15 +91,15 @@ Execute the Allura skill workflow with loaded context:
 
 After any status change:
 
-1. Update the relevant Notion work item (Status, Decision Log, Handoff Context)
-2. Notion is the source of truth for sprint status
-3. Local files are evidence only
+1. Verify the actual board/work item before an authorized update (Status, Decision Log, Handoff Context).
+2. Existing Notion sprint tracking does not settle the unresolved operational-board choice DOC-09.
+3. Local packets are preparation evidence, not live board status. Done/Approved moves and sync retain their approval gates; report pending updates when access or authorization is absent.
 
 ### Gate 6: Validation Evidence
 
 Before marking any story `Done`:
 
-- [ ] Targeted tests pass (`bun test`, `bun run typecheck`)
+- [ ] Appropriate package-script test lane has nonzero discovery and passes; `bun run typecheck` passes
 - [ ] Acceptance criteria met (from Notion work item)
 - [ ] Review approved (Pike for interface, Fowler for maintainability)
 - [ ] Evidence artifact created (test output, review notes, screenshots)
@@ -109,14 +109,14 @@ Before marking any story `Done`:
 
 After completing any significant action:
 
-```
-allura-brain_memory_add({
-  group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "EVENT_TYPE: what was done; evidence=...; counterfactuals=...",
-  metadata: { source: "conversation", agent_id: "brooks-architect", confidence: 0.85 }
-})
-```
+Use the [shared governed memory contract](../allura-memory-skill/SKILL.md).
+Discover the actual host schema, omit persona identity assertions and unsupported
+metadata, and append one verified outcome only within authorized scope. Preserve
+one server-supported idempotency key across retries; verify destination, principal,
+record, content and receipt by read-back. If that contract cannot be met, report
+the unmet gate and retain sanitized task evidence without claiming a Brain write.
+Do not autonomously promote the result. Ordinary workflow execution grants no
+production, configuration, tenant-transfer or semantic-promotion authority.
 
 Event types: `ADR_CREATED`, `INTERFACE_DEFINED`, `TECH_STACK_DECISION`, `TASK_COMPLETE`, `BLOCKED`, `LESSON_LEARNED`
 
@@ -127,7 +127,7 @@ Event types: `ADR_CREATED`, `INTERFACE_DEFINED`, `TECH_STACK_DECISION`, `TASK_CO
 | DASH-12 Memory Lineage | `allura-dev-story` | `allura-graph-debug` |
 | Story 2.3 Token Alias | `allura-dev-story` | `varlock`, `frontend-craft` |
 | Story 2.4 Brand Polish | `frontend-craft` | `figma-use` |
-| Story 2.6 Memory API Dedup | `allura-dev-story` | `systematic-debugging` |
+| Story 2.6 Memory API Dedup | `allura-dev-story` | `systematic-debugging-memory` |
 | Story 2.8 Pike Gate / Zod | `allura-dev-story` | `allura-code-review` |
 | E2.1 WCAG Contrast | `frontend-craft` | — |
 | E2.2 Promote Button | `allura-dev-story` | — |
@@ -166,15 +166,14 @@ The six canonical docs in `docs/allura/` are the only authoritative documentatio
 
 No new Markdown files may be added to `docs/allura/` without an approved `AD-##` entry. Evidence, reports, and scratchpads go to `docs/archive/allura/` or Allura Brain.
 
-## Reflection Protocol
+## Reflection
 
-At the end of every substantive Allura workflow response, emit:
+End every substantive final reply with this rendered Markdown footer. Fill fields
+from actual evidence; no write or promotion is implied by reporting them.
 
-```
-📝 Reflection
-├─ Action Taken: {what was done}
-├─ Principle Applied: {which Brooksian principle}
-├─ Event Logged: {event_type written to Brain, or "None"}
-├─ Neo4j Promoted: {Yes/No}
-└─ Confidence: {High/Medium/Low}
-```
+**📝 Reflection**\
+├─ **Action Taken:** Actual work and scope.\
+├─ **Principle Applied:** The selected role's relevant judgment.\
+├─ **Event Logged:** None, pending/unconfirmed, or verified event and receipt.\
+├─ **Semantic Promotion:** None, pending/unconfirmed, or human-approved verified promotion.\
+└─ **Confidence:** High/Medium/Low, with evidence and material limitations.

@@ -2,12 +2,17 @@
 
 > [!NOTE]
 > **AI-Assisted Documentation**
-> Portions of this document were drafted with the assistance of an AI language model.
+> Portions of this document were drafted with AI assistance; Codex prepared the 2026-10-20 development-readiness additions.
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
+> AI-generated content may contain inaccuracies or omissions.
 > Code and schemas evidence implementation; approved product decisions establish intent. Record disagreement for the owning decision rather than silently changing either.
+
+**Integration evidence boundary — 2026-10-21:** This revision consolidates specifications and source-local assessments from `28d90e843` plus the dirty-file snapshot identified in the [source manifest](../reference/development-readiness-20261021/source-manifest.json), onto main base `c720aca2e` (PR #169 content head `51e421ca0`). Dashboard, Cloudflare authentication and preview implementation changes are excluded. Their “implemented” or test-count statements below are dated source-local observations, not verification of this branch, current main or deployment. Missing local receipts remain [unavailable supporting evidence](../reference/development-readiness-20261021/unavailable-evidence.md). [Story packets](../reference/development-readiness-20261021/story-packets.md) operationalize the canonical gates without approving proposed decisions.
 
 Allura is a sovereign AI memory engine — a self-hosted, governed alternative to mem0.ai. It gives AI agents persistent, auditable, multi-tenant memory backed by a unified PostgreSQL architecture (append-only relational evidence, relational semantic graph tables, and pgvector retrieval — Neo4j sunset 2026-07, see AD-50). Tenant isolation, append-only history and versioned knowledge are invariants implemented across authenticated services, scoped transactions and schema constraints; their coverage requires verification.
 
+
+**Approved intended authentication migration (source-local implementation):** [Cloudflare Access authentication migration](#cloudflare-access-authentication-migration--2026-10-20). The approved provider change is Cloudflare Access under [AD-69](RISKS-AND-DECISIONS.md#AD-69-cloudflare-access-replaces-clerk); the provider implementation remains a separate unmerged source-local change and is not current-main or deployment evidence.
 
 ## Documentation repair scope — 2026-10-18
 
@@ -27,6 +32,14 @@ This bounded reconciliation covers memory capture → human review/promotion →
 **Audience and boundary:** agents capture/retrieve scoped evidence; independent human curators decide semantic promotion; operators inspect receipts and health. Agent orchestration, domain decisions, and optional external projections are outside the memory engine's responsibility. No unrelated dashboard redesign or schema change is part of this repair.
 ---
 
+## Enterprise dashboard scope — 2026-10-19
+
+Sabir's current dashboard brief adds an optional enterprise interface for approximately 100 people across HR, Marketing, IT, Sales and Company Knowledge, with explicit shared workspaces. Desktop, tablet and phone are viewing devices; managed devices and agent principals are separate entities. This extends the earlier documentation-repair scope; it does not change the memory engine into an orchestrator.
+
+The intended journey is sign in → resolve workspace and effective permissions → search/inspect authorized memories and relationships → propose a change → independent human review → inspect the immutable receipt. Department membership is not a role. Organization administration must not imply access to confidential content. Workspace-specific role resolution and that separation remain contract gaps, tracked in Risks & Decisions.
+
+The separately maintained source-local implementation slice is read-only overview, bounded memory search, stored relationships and shared branding. It does not establish enterprise readiness or release approval. Administration, embeddings, full review delivery, device enrollment and operational recovery remain required work. The authoritative palette for this brief is Cream `#F7F3EE`, Ink `#0F1720`, Blue `#0D47A1`, Green `#148A4B`, Orange `#FF4D1F`; Cream dominates every surface. Design owns the visual and interaction contract; Requirements Matrix owns verification.
+
 ## Table of Contents
 
 - [0) Brand Identity](#0-brand-identity)
@@ -42,6 +55,8 @@ This bounded reconciliation covers memory capture → human review/promotion →
 - [10) Admin Workflow](#10-admin-workflow)
 - [11) References](#11-references)
 - [12) Documentation Authority & Sync Contract](#12-documentation-authority--sync-contract)
+- [Development readiness backlog](#13-development-readiness-backlog--2026-10-20)
+
 
 ---
 
@@ -318,7 +333,7 @@ Identifiers in this document use **BP-Fn** (Blueprint namespace, mapping revisio
 | <a id="bp-f16"></a>BP-F16 | Approved tab shows human-approved knowledge with provenance; sortable by date/confidence |
 | <a id="bp-f17"></a>BP-F17 | Tab 1 restricted to authenticated users with `admin` role (engineers only)                          |
 | <a id="bp-f18"></a>BP-F18 | Audit log endpoint: `GET /api/audit/events` — returns curator decisions with timestamps             |
-| <a id="bp-f19"></a>BP-F19 | Dashboard integrates Clerk for authentication and RBAC (curator, admin, viewer roles)               |
+| <a id="bp-f19"></a>BP-F19 | Dashboard verifies Cloudflare Access identity and resolves current Allura membership roles (curator, admin, viewer; AD-69)               |
 
 #### Infrastructure
 
@@ -421,7 +436,7 @@ As of 2026-08-29 (implementation readiness pass), these BLUEPRINT functional req
 | PostgreSQL semantic graph | Promoted content, immutable lineage and structural context | `src/lib/graph-adapter/ruvector-adapter.ts` |
 | Memory Viewer            | `/memory` page — list, search, delete          | `src/app/memory/page.tsx`                         |
 | Curator Dashboard        | `/curator` page — three-tab HITL governance UI | `src/app/curator/page.tsx`                        |
-| Clerk Auth               | Multi-tenant authentication + RBAC             | SaaS (vercel.com)                                 |
+| Cloudflare Access | Human web identity; Allura membership supplies RBAC | Cloudflare Zero Trust (AD-69) |
 | Sentry Monitor           | Error tracking + alerts                        | SaaS (sentry.io)                                  |
 
 ---
@@ -737,8 +752,7 @@ graph LR
         G[TraceMiddleware]
     end
 
-    subgraph Bus[(PostgreSQL events table\nappend-only)]
-    end
+    Bus[("PostgreSQL events table<br/>append-only")]
 
     subgraph Consumers
         H[Dashboard UI]
@@ -878,6 +892,64 @@ The five core memory tools registered in `src/mcp/memory-server-canonical.ts` ar
 **Source-inspected 2026-10-18:** tool registration and input schemas exist; this is not an authenticated live-tool or release receipt. The former convenience names `memory_retrieve`, `memory_write` and `memory_propose_insight` are unregistered legacy documentation aliases and must not be used as current tool names. No new interface is specified by removing those aliases.
 
 See [the API boundary](./SOLUTION-ARCHITECTURE.md#35-memory-api) for authenticated scope and [Design](./DESIGN-ALLURA.md#bounded-memory-journey) for behavior.
+
+## 13) Development readiness backlog — 2026-10-20
+
+**AI-assisted proposal, prepared by Brooks in Codex under Allura Cowork.** Sabir requested development-ready documentation of the 2026-10-20 assessment; this authorizes specification preparation, not adoption of new policy, schema/API changes, dependency updates, production release, semantic promotion or a Done status. This section proposes incremental repairs to the existing PostgreSQL architecture. It does not replace approved DOC-06/DOC-07 or resolve DOC-02/03/05/08/09.
+
+**Evidence boundary:** assessment of commit `28d90e843` plus the then-existing dirty working tree, dated 2026-10-20; deployed revision and migration inventory remain unknown. The assessment recorded one 45.8-second search, 6,267/6,267 eligible memories with embeddings, 80 pending proposals, and 200 passing/one failing focused tests. These are dated observations, not service targets, a complete test run, embedding-quality proof or release acceptance. A fresh scoped Brain refresh returned older May records and no new implementation facts (trajectory `eec2c237-8167-4dcd-a161-20035d0d5e0c`); current code, schemas and approved intent take precedence. No other tenant or excluded project content is part of this backlog.
+
+### Proposed business requirements
+
+| ID | User outcome | Maps to |
+|---|---|---|
+| <a id="bp-b33"></a>BP-B33 | An authorized user can capture, retry, retrieve and correct knowledge with truthful receipts, preserved history and scope isolation | BP-F59–BP-F63, BP-F66–BP-F67 |
+| <a id="bp-b34"></a>BP-B34 | Developers can demonstrate real correctness on a reproducible revision before making availability, quality or release claims | BP-F64–BP-F65, BP-F68–BP-F69 |
+| <a id="bp-b35"></a>BP-B35 | Sabir can select useful existing Allura workflows from evidence-backed capability guidance without confusing a preview, an installed tool or a proposal with a working deployment | BP-F70 |
+
+### Proposed functional requirements
+
+The existing identifiers remain unchanged. Each identifier below is owned by exactly one [Design specification](DESIGN-ALLURA.md#development-readiness-design--2026-10-20) section and traced in the [Requirements Matrix](REQUIREMENTS-MATRIX.md#development-readiness-traceability--2026-10-20).
+
+| ID | Requirement | Business trace |
+|---|---|---|
+| <a id="bp-f59"></a>BP-F59 | Retry-safe capture binds an operation key, authenticated tenant/workspace/principal and canonical request digest to one durable capture event and immutable receipt | BP-B33 |
+| <a id="bp-f60"></a>BP-F60 | Vector insert/search carries verified workspace authority end to end; scope denial never triggers broader fallback | BP-B33 |
+| <a id="bp-f61"></a>BP-F61 | Semantic correction submits a reviewed new-version proposal and preserves existing versions and supersession lineage | BP-B33 |
+| <a id="bp-f62"></a>BP-F62 | Approval applies to the exact proposal revision the independent human reviewed, preserving successful replay under DOC-06 | BP-B33 |
+| <a id="bp-f63"></a>BP-F63 | Remote delivery reports confirmed Notion persistence separately from the immutable decision receipt under DOC-07 | BP-B33 |
+| <a id="bp-f64"></a>BP-F64 | Required behavioral tests exercise production boundaries and fail when expected critical suites are not discovered | BP-B34 |
+| <a id="bp-f65"></a>BP-F65 | Authoritative CI uses the declared pinned runtime, frozen dependency install and actual lint; typecheck is reported separately | BP-B34 |
+| <a id="bp-f66"></a>BP-F66 | Operational outcomes distinguish failed, partial and successful work, with safe correlation and no false persistence/connection claims | BP-B33 |
+| <a id="bp-f67"></a>BP-F67 | Labeled retrieval evaluations measure relevance, freshness, isolation, fallback and p50/p95 against an explicit revision-bound baseline | BP-B33 |
+| <a id="bp-f68"></a>BP-F68 | Dashboard capability and work-item availability follow authenticated acceptance evidence and unresolved workspace ownership | BP-B34 |
+| <a id="bp-f69"></a>BP-F69 | Dependency, SDK and compatibility cleanup follows consumer inventory and staged verification; historical migrations and live compatibility paths are preserved | BP-B34 |
+| <a id="bp-f70"></a>BP-F70 | Capability/usage guidance identifies intended, specified, implemented, verified and released status with source dates, limitations and examples | BP-B35 |
+
+### Execution and authority boundaries
+
+Capture success means the event and its receipt are committed, not that embedding, promotion or remote projection succeeded. A transport timeout means the operation is unknown until same-key reconciliation. Human promotion remains separately authorized through the curator path. The proposed capture transaction, vector scope handoff, error taxonomy and correction interface need the decisions in [AD-65–AD-68](RISKS-AND-DECISIONS.md#development-readiness-decisions--2026-10-20) before implementation; inherited invariants are not new proposals.
+
+Start with the read-only deployed revision/migration inventory, test-discovery baseline, consumer inventory and capability guidance. Follow the [slice order and readiness gates](REQUIREMENTS-MATRIX.md#development-slices-and-handoff-gates), one bounded implementation story at a time through Allura wrappers. Ready means ready for the stated bounded slice; it never authorizes the whole backlog. Current access remains `allura-system`; no endpoint, credential, runtime, grant, scheduled job or cross-workspace transfer change follows from this document.
+
+Data fields and proposed schema ownership are defined in the [Data Dictionary](DATA-DICTIONARY.md#proposed-development-contracts--2026-10-20); asynchronous boundaries and rollback are in the [Solution Architecture](SOLUTION-ARCHITECTURE.md#development-readiness-topology--2026-10-20). No seventh canonical document is required.
+
+## Cloudflare Access authentication migration — 2026-10-20
+
+Sabir explicitly directed removal of Clerk and replacement with Cloudflare Access in the current conversation. This authorizes the repository migration and compatible dependency/configuration-example updates; it does not create memberships, alter live Cloudflare policies, rotate secrets or authorize deployment. [AD-69](RISKS-AND-DECISIONS.md#AD-69-cloudflare-access-replaces-clerk) owns provider selection. The existing PostgreSQL memory, scope and human-approval invariants remain unchanged.
+
+| ID | Business outcome | Functional trace |
+|---|---|---|
+| <a id="bp-b36"></a>BP-B36 | People enter the internal Allura application through one verified Cloudflare Access identity while retaining their existing Allura ownership and permissions | BP-F71–BP-F74 |
+
+| ID | Requirement | Business trace |
+|---|---|---|
+| <a id="bp-f71"></a>BP-F71 | Verify human Access application JWTs before any protected web identity is established; deny forged, expired, wrong-issuer/audience and machine tokens | BP-B36 |
+| <a id="bp-f72"></a>BP-F72 | Resolve a verified subject through an explicit server-owned stable-user/tenant/workspace binding; read current active membership and workspace authority without provisioning grants | BP-B36 |
+| <a id="bp-f73"></a>BP-F73 | Remove the Clerk dependency, provider UI, runtime adapter and active setup instructions; retain existing public login URL and separate MCP/device authentication | BP-B36 |
+| <a id="bp-f74"></a>BP-F74 | Prove denial, current-role/removal behavior, scope preservation, safe return navigation and production DevAuth refusal before release | BP-B36 |
+
+[Design](DESIGN-ALLURA.md#cloudflare-access-security-contract), [Architecture](SOLUTION-ARCHITECTURE.md#cloudflare-access-web-authentication), [Data Dictionary](DATA-DICTIONARY.md#cloudflare-access-identity-contract), and [acceptance](REQUIREMENTS-MATRIX.md#cloudflare-access-migration-acceptance) specify this bounded migration. Existing Clerk references describing previous evidence are historical after AD-69, not the current provider contract. No completed browser/deployment acceptance is inferred from source changes.
 
 ## First-use explanation scope — 2026-10-20
 

@@ -74,6 +74,28 @@ describe("docs-backend-residue-guard Markdown link coverage (DW-2)", () => {
 
 describe("docs-backend-residue-guard architecture consistency", () => {
   it.each([
+    "guidelines/AI-GUIDELINES.md",
+    "CLAUDE.md",
+    ".github/copilot-instructions.md",
+    ".opencode/DEVELOPMENT-READINESS.md",
+    ".opencode/skills/allura-memory-skill/SKILL.md",
+    ".opencode/skills/allura-dev-story/SKILL.md",
+    ".opencode/skills/code-review/SKILL.md",
+    ".opencode/skills/systematic-debugging-memory/SKILL.md",
+  ])("checks backend drift in the active workflow entry point %s", (file) => {
+    const root = makeGuardRepo();
+    const target = join(root, file);
+    mkdirSync(join(target, ".."), { recursive: true });
+    writeFileSync(target, "Query Neo4j for current architecture insights.\n");
+    execFileSync("git", ["add", "--", file], { cwd: root });
+    const result = runGuard(root);
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(`${file}:1`);
+    writeFileSync(target, "Use authenticated MCP tools for PostgreSQL semantic retrieval.\n");
+    expect(runGuard(root)).toMatchObject({ status: 0 });
+  });
+
+  it.each([
     "## Neo4j: Memory",
     '  "neo4j_id": "uuid", // historical compatibility key; current data stored in Neo4j',
     "Graph selector defaults to `neo4j`; historical `neo4j` selector is rejected.",

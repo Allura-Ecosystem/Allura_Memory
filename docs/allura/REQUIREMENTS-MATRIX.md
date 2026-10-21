@@ -2,10 +2,19 @@
 
 > [!NOTE]
 > **AI-Assisted Documentation**
-> Portions of this document were drafted with the assistance of an AI language model.
+> Portions of this document were drafted with AI assistance; Codex prepared the 2026-10-20 development-readiness additions.
 > Content has not yet been fully reviewed — this is a working design reference, not a final specification.
+> AI-generated content may contain inaccuracies or omissions.
 > Code and schemas evidence implementation; approved product decisions establish intent. Record disagreement for the owning decision rather than silently changing either.
 
+
+**Integration evidence boundary — 2026-10-21:** This revision consolidates specifications and source-local assessments from `28d90e843` plus the dirty-file snapshot identified in the [source manifest](../reference/development-readiness-20261021/source-manifest.json), onto main base `c720aca2e` (PR #169 content head `51e421ca0`). Dashboard, Cloudflare authentication and preview implementation changes are excluded. Their “implemented” or test-count statements below are dated source-local observations, not verification of this branch, current main or deployment. Missing local receipts remain [unavailable supporting evidence](../reference/development-readiness-20261021/unavailable-evidence.md). [Story packets](../reference/development-readiness-20261021/story-packets.md) operationalize the canonical gates without approving proposed decisions.
+
+**Development navigation:** [Development readiness traceability](#development-readiness-traceability--2026-10-20) · [acceptance and use cases](#acceptance-evidence-and-use-case-index) · [slices and handoff gates](#development-slices-and-handoff-gates).
+
+**Reliability review:** [Preview acceptance PV-AC01–05](#preview-reliability-acceptance--2026-10-20) · [Backend acceptance BE-AC01–09](#backend-adversarial-acceptance--2026-10-20). All remain open; documentation validation is not remediation.
+
+**Approved intended authentication migration (source-local implementation):** [Cloudflare Access migration acceptance](#cloudflare-access-migration-acceptance). The approved provider change is Cloudflare Access under [AD-69](RISKS-AND-DECISIONS.md#AD-69-cloudflare-access-replaces-clerk); the provider implementation remains a separate unmerged source-local change and is not current-main or deployment evidence.
 
 ## Bounded journey acceptance — 2026-10-18
 
@@ -25,6 +34,19 @@ This matrix demonstrates the repair's first vertical slice. **Intended** describ
 
 No row is marked released by this repair. Verify the read-back of each Notion edit separately; a local script result does not prove a remote page changed. The source file and verification receipt belong to the row they support.
 ---
+
+## Enterprise dashboard slice evidence — 2026-10-19
+
+| ID | Demonstration | Current evidence / remaining gate |
+|---|---|---|
+| ENT-READ-01 | Server-scoped bounded search and unknown metadata | Source-local implementation reported; 32 read-service unit tests plus page integration tests cover query bounds, scope inputs, escaping, pagination and error redaction. Live SQL/RLS and HR/Sales/shared identities pending |
+| ENT-GRAPH-01 | Stored relationships, lineage and interactive inspection | Source-local implementation reported; graph interaction tests cover selection/filter/list/keyboard/pan/zoom/self-edge; independent Pike source review resolved lineage and indistinct-label findings. Live graph result verification pending |
+| ENT-BRAND-01 | Cream semantic tokens, official mark, desktop/tablet/phone and denial states | Source-local implementation reported in bounded read surfaces and denial; isolated HTML design preview includes administration and embedding examples. Munari's read-only review returned Ready for design preview after link, border, navigation and phone administration fixes. Screenshots under `artifacts/enterprise-dashboard/screenshots/preview-final/`; this does not verify all live application screens |
+| ENT-AUTH-01 | Real individual sign-in, permissions, revocation and isolation | Local Clerk development sign-in rendered after hostname correction; no authenticated multi-user walkthrough or production provider settings verified |
+| ENT-JOURNEY-01 | Proposal → independent human review → immutable receipt | Intended full acceptance journey remains incomplete; reader tests do not demonstrate approval |
+| ENT-OPS-01 | Embeddings, administration, authorized device/agent inventory and audit/recovery | Live implementation and evidence remain incomplete. Clearly labeled local examples are permitted in the HTML design preview requested on 2026-10-19; they do not prove real state or security |
+
+The evidence tracker is `artifacts/enterprise-dashboard/acceptance-audit.json`. It is a delivery record, not a seventh governing specification. All rows remain unreleased. The current dirty working tree requires a final revision-bound receipt after integration.
 
 ## Executive Summary
 
@@ -508,7 +530,7 @@ This section traces the governed memory pipeline requirements from business goal
 |----|-------------|-------|--------|
 | REQ-CUR-001 | Intended initial browser route is `/dashboard/curator`; rendered navigation targets need route-smoke validation | Epic 25 planning reference; approved curator-first decision source unresolved (DOC-08). AD-57 is not authority | Planned; decision provenance missing |
 | REQ-CUR-002 | Proposal and retrieval scope is durably enforced by server-derived tenant/workspace identity; conflicting caller `group_id` or workspace assertion receives `403`. Migrations 39/40 preserve earlier policy predicates and add restrictive app-role workspace policies; legacy unscoped retained/promotion rows are quarantined. | 24.2, 24.3, 25.2a, 25.2 | Foundation Done (25.2a); downstream read contract dependency-blocked |
-| REQ-CUR-002a | `memory_add` authority is minted only inside authenticated MCP/stdio transport code after verified principal resolution. `user_id` is derived from that principal when omitted; mismatch, raw direct calls, plain `scope`, JSON copies, and object-spread copies fail closed. `POST /api/memory` remains a documented `403` fail-closed write endpoint. | 24.2 | Implemented; transport-bound regression coverage required |
+| REQ-CUR-002a | `memory_add` authority is minted only inside authenticated MCP/stdio transport code after verified principal resolution. `user_id` is derived from that principal when omitted; mismatch, raw direct calls, plain `scope`, JSON copies, and object-spread copies fail closed. `POST /api/memory` remains a documented `403` fail-closed write endpoint. | 24.2 | Source-local implementation reported; transport-bound regression coverage required |
 | REQ-CUR-003 | Queue/detail responses include a durable queryable evidence-request lifecycle, evidence version, source, freshness, degraded state, and server-derived allowed actions. | 25.2a, 25.2, 25.4, `ReviewItem` | Durable lifecycle foundation Done (25.2a); queue response planned |
 | REQ-CUR-004 | A failed, forbidden, stale, degraded, empty, or conflict state is never represented as another state. | 25.3, 25.4 | Planned |
 | REQ-CUR-005 | Only approve, reject, and request-evidence decisions exist; all require nonblank rationale and server receipt. | 24.4, 25.2a, 25.5 | Receipt/evidence foundation Done; decision release blocked by 24.4 |
@@ -529,6 +551,9 @@ This section traces the governed memory pipeline requirements from business goal
 | REQ-MOD-001 | `/dashboard/curator` is a stable shell that receives a server-issued, allow-listed, versioned module registry and renders workflow modules only through approved shared intake/evidence/map/policy/review/receipt components. | AD-63, canonical 25.3b | Implemented in merged PR #124; independent acceptance/status reconciliation remains pending |
 | REQ-MOD-002 | Workflow modules may define presentation and typed workflow descriptors but cannot load arbitrary client code, query storage, select scope, map identity, authorize, evaluate policy, mutate state, issue receipts, or redefine standard truth states. | AD-63, canonical 25.3b | Implemented in merged PR #124; independent acceptance/status reconciliation remains pending |
 | REQ-MOD-003 | Unknown, duplicate, incompatible, untrusted, capability-missing, disabled, or failed modules fail closed and are independently rollbackable without affecting the shell, other modules, engine, SDK, API, MCP, CLI, or external host adapters. | AD-63, canonical 25.3b, 25.6 | Implemented in merged PR #124; independent acceptance/status reconciliation remains pending |
+| REQ-MOD-004 | App releases declare identity/version, compatible core contracts, dependencies and requested capabilities; adding a conforming app uses the registry/shared components without changing unrelated apps. | Sabir modularity requirement, 2026-10-19; Architecture modular dashboard section | Intended; demonstrate two fixture apps, compatible upgrade and incompatible-version rejection before implementation acceptance |
+| REQ-MOD-005 | Updates preserve configuration and data, expose permission differences, and have tested recovery appropriate to schema compatibility; no silent authority expansion or rewriting append-only evidence. | Sabir upgradeability requirement, 2026-10-19; extends REQ-MOD-003 | Intended; validate upgrade, failure and recovery with representative retained records; migration contract and engineering review outstanding |
+| REQ-MOD-006 | Employees see task-oriented Apps; administrators see plain-language owner/version/compatibility/update-impact information. One failed app leaves other permitted apps and the shell usable. | Sabir nontechnical UX and modularity requirements, 2026-10-19 | Intended; preview and keyboard/responsive failure-state review required; no live isolation or upgrade proof claimed |
 | REQ-MAP-001 | The 2D Knowledge Map uses one server-owned focused `SubgraphQuery`/`SubgraphResponse` contract. Scope is server-derived; nodes and edges carry evidence or versioned derived-rule references; empty, denied, partial, degraded, and complete are distinct states. | AD-59, 25.2, 25.3 | Dependency-blocked |
 | REQ-MAP-002 | Subgraph traversal uses relational authorization first, deterministic ordering, signed opaque continuation bound to scope/query/policy/snapshot, and explicit budgets. Initial 200-node/400-edge/depth-2 limits are safety caps, not scale claims. | AD-59, 25.2, 25.6 | Dependency-blocked |
 | REQ-MAP-003 | The map has an adjacent same-data text relationship list and complete keyboard/screen-reader interaction. 3D, if enabled later, is opt-in, flagged, rollbackable, and consumes the identical authorized response. | AD-59, 25.3, 25.3a, 25.6 | Planned |
@@ -607,6 +632,136 @@ Detailed behavior and release limits: `docs/guides/portal-devices-and-profiles.m
 
 *This document was compiled from COMPETITIVE-ANALYSIS.md (archived 2026-04-08). Governed pipeline traceability added 2026-04-19. GM-F17–GM-F40 and B12–B23 detail rows added 2026-04-28. Benchmark results updated with actual scores 2026-05-01.*
 
+## Development readiness traceability — 2026-10-20
+
+**AI-assisted delivery specification draft; no implementation or release status advanced.** Source: 2026-10-20 assessment of `28d90e843` plus dirty files. Exact current source/diff and test evidence must be refreshed per story. [Blueprint intent](BLUEPRINT.md#13-development-readiness-backlog--2026-10-20), [Design](DESIGN-ALLURA.md#development-readiness-design--2026-10-20), [Data Dictionary](DATA-DICTIONARY.md#proposed-development-contracts--2026-10-20) and [decisions](RISKS-AND-DECISIONS.md#development-readiness-decisions--2026-10-20) form one contract; the assessment is supporting evidence, not a seventh canonical specification.
+
+### Business coverage
+
+| Business requirement | Functional requirements | Use cases |
+|---|---|---|
+| [BP-B33](BLUEPRINT.md#bp-b33) | BP-F59–BP-F63, BP-F66–BP-F67 | DEV-UC01–05, DEV-UC08–09 |
+| [BP-B34](BLUEPRINT.md#bp-b34) | BP-F64–BP-F65, BP-F68–BP-F69 | DEV-UC06–07, DEV-UC10–11 |
+| [BP-B35](BLUEPRINT.md#bp-b35) | BP-F70 | DEV-UC12 |
+
+### Functional coverage
+
+| ID | Requirement | Satisfied by |
+|---|---|---|
+| [BP-F59](BLUEPRINT.md#bp-f59) | Retry-safe scoped capture | Proposed MCP `memory_add` / compatible `memory_get` receipt read-back · [capture design](DESIGN-ALLURA.md#retry-safe-capture-proposal) · [AD-65](RISKS-AND-DECISIONS.md#ad-65-capture-replay-and-projection-boundary) |
+| [BP-F60](BLUEPRINT.md#bp-f60) | Workspace vector insert/search | Internal bridge and MCP `memory_search` / governed retrieval API · [vector seam](DESIGN-ALLURA.md#workspace-vector-seam-proposal) · [AD-66](RISKS-AND-DECISIONS.md#ad-66-workspace-authority-through-vector-paths) |
+| [BP-F61](BLUEPRINT.md#bp-f61) | Governed immutable correction | Proposed `memory_update` vNext + existing approval service · [correction design](DESIGN-ALLURA.md#governed-semantic-correction-proposal) · [AD-67](RISKS-AND-DECISIONS.md#ad-67-governed-correction-and-semantic-head-concurrency) |
+| [BP-F62](BLUEPRINT.md#bp-f62) | Reviewed revision precondition | `POST /api/curator/approve` · [review extension](DESIGN-ALLURA.md#reviewed-revision-and-delivery-extensions) · [DOC-06](RISKS-AND-DECISIONS.md#documentation-reconciliation-decisions--2026-10-18) |
+| [BP-F63](BLUEPRINT.md#bp-f63) | Confirmed remote delivery | Outbox/Notion bridge + proposed observation reader · [delivery extension](DESIGN-ALLURA.md#reviewed-revision-and-delivery-extensions) · [DOC-07](RISKS-AND-DECISIONS.md#documentation-reconciliation-decisions--2026-10-18) · [AD-68](RISKS-AND-DECISIONS.md#ad-68-readiness-evidence-and-maintenance-plan) |
+| [BP-F64](BLUEPRINT.md#bp-f64) | Behavioral tests and required discovery | Current package test lanes plus explicit suite inventory · [quality contracts](DESIGN-ALLURA.md#quality-operations-and-maintenance-contracts) · [RK-40](RISKS-AND-DECISIONS.md#rk-40) |
+| [BP-F65](BLUEPRINT.md#bp-f65) | Reproducible lint/typecheck/test CI | Existing main/epic workflows and package scripts · [quality contracts](DESIGN-ALLURA.md#quality-operations-and-maintenance-contracts) · [AD-68](RISKS-AND-DECISIONS.md#ad-68-readiness-evidence-and-maintenance-plan) |
+| [BP-F66](BLUEPRINT.md#bp-f66) | Truthful outcomes and safe correlation | Canonical memory tools, dashboard reader and metrics · [quality contracts](DESIGN-ALLURA.md#quality-operations-and-maintenance-contracts) · [AD-68](RISKS-AND-DECISIONS.md#ad-68-readiness-evidence-and-maintenance-plan) |
+| [BP-F67](BLUEPRINT.md#bp-f67) | Labeled retrieval baseline | Existing evaluation/replay harness + proposed labeled set · [quality contracts](DESIGN-ALLURA.md#quality-operations-and-maintenance-contracts) · [AD-68](RISKS-AND-DECISIONS.md#ad-68-readiness-evidence-and-maintenance-plan) |
+| [BP-F68](BLUEPRINT.md#bp-f68) | Authenticated dashboard acceptance | Existing read pages and full journey · [quality contracts](DESIGN-ALLURA.md#quality-operations-and-maintenance-contracts) · [ENT-01–ENT-05](RISKS-AND-DECISIONS.md#enterprise-dashboard-open-contracts--2026-10-19) / [DOC-02 and DOC-09](RISKS-AND-DECISIONS.md#documentation-reconciliation-decisions--2026-10-18) |
+| [BP-F69](BLUEPRINT.md#bp-f69) | Dependency/SDK/dead-code cleanup | Root/public SDK and CLI consumers, package tooling · [quality contracts](DESIGN-ALLURA.md#quality-operations-and-maintenance-contracts) · [AD-68](RISKS-AND-DECISIONS.md#ad-68-readiness-evidence-and-maintenance-plan) |
+| [BP-F70](BLUEPRINT.md#bp-f70) | Evidence-backed capabilities and usage | Existing agent/Cowork workflows and canonical guidance · [usage design](DESIGN-ALLURA.md#capability-and-usage-guidance) · [AD-68](RISKS-AND-DECISIONS.md#ad-68-readiness-evidence-and-maintenance-plan) |
+
+### Acceptance evidence and use-case index
+
+All DEV-UC labels are defined in [Design Use Cases](DESIGN-ALLURA.md#use-cases-1). The following acceptance criteria specify future evidence, not checks executed by this documentation update.
+
+| Acceptance ID | Use case / requirement | Required positive and negative evidence |
+|---|---|---|
+| DEV-AC01 | DEV-UC01 / BP-F59 | Public transport concurrent same-key replay yields one `memory_add` event, one receipt and one index intent; changed payload conflicts; other principal/workspace cannot replay/read; crash before commit writes none, lost acknowledgement reconciles same receipt; provider outage leaves durable capture and retryable indexing |
+| DEV-AC02 | DEV-UC02 / BP-F60 | Restricted-role integration vector and lexical queries isolate two workspaces; denied/missing/forged/legacy scope fails closed; pool reuse cannot retain authority; dimensions mismatch and provider timeout remain observable; superseded/deprecated absent from current results |
+| DEV-AC03 | DEV-UC03 / BP-F61 | Correction enters pending review; self-approval denied; concurrent approved corrections create one current head; old content/edges preserved; stale base conflicts; inject each durable-write failure and prove rollback/replay through production service |
+| DEV-AC04 | DEV-UC04 / BP-F62 | DOC-06 missing/malformed version fails; v3 review versus v4 conflicts with no new writes; original same-key successful replay remains byte-equivalent; persisted reviewed and resulting versions are distinct and accurate |
+| DEV-AC05 | DEV-UC05 / BP-F63 | DOC-07 local delivered/HTTP success cannot show synced; eligible bridge enqueues once; retry-before-available is not claimed; timeout reconciles same destination and read-back digest; changed source/destination conflicts; revoked transfer stops; immutable decision receipt unchanged |
+| DEV-AC06 | DEV-UC06 / BP-F64 | Inventory names each critical test file and lane; deliberate exclusion causes nonzero failure; real auth/approval/retrieval entrypoints deny foreign scope, requester approval and missing evidence; receipt-boundary failure is covered; replace obsolete source-text assertion with behavior |
+| DEV-AC07 | DEV-UC07 / BP-F65 | Clean runner logs pinned runtime and lock digest, frozen install makes no lock change, actual ESLint and separate typecheck run, required suite counts are nonzero; induced lint/discovery failures fail main CI |
+| DEV-AC08 | DEV-UC08 / BP-F66 | Inject write failure, partial indexing and dashboard error; correct stage/outcome counts and safe correlation join; no raw content/credentials/foreign scope in logs or high-cardinality metric labels; timeout reports unknown rather than disconnected |
+| DEV-AC09 | DEV-UC09 / BP-F67 | Human-reviewed versioned current/history/no-answer/foreign-scope set; mode-labeled baseline with sample sizes, freshness and relevance metrics, p50/p95 and timeouts/fallback stages; zero unauthorized results; agreed budgets and holdout evaluation before tuning acceptance |
+| DEV-AC10 | DEV-UC10 / BP-F68 | Authorized multi-user capture/review/receipt/retrieval journey plus denial, revocation, stale review and responsive/accessibility evidence; synthetic preview unmistakable; work items unavailable until ownership/board decision; deployment revision/target acceptance before released |
+| DEV-AC11 | DEV-UC11 / BP-F69 | Import/export/runtime consumer inventory; Next/ESLint compatibility evidence, Vitest lane migration evidence and packed SDK/CLI smoke tests; removed code proven unused; historical migrations/fail-closed stubs preserved; official version/advisory evidence dated at implementation |
+| DEV-AC12 | DEV-UC12 / BP-F70 | Capability table includes owner, source revision/date, evidence class, limitations and example requests; SDK/CLI/Notion/Bumblebee not overclaimed; no unmeasured usage claim; active unverifiable benchmarks/compliance/stability guarantees qualified and linked to evidence |
+
+### Development slices and handoff gates
+
+Execution packets: [DEV-00–10 handoffs and decision proposals](../reference/development-readiness-20261021/story-packets.md). These supporting packets preserve the canonical acceptance below; the integration inventory and source manifest identify exclusions and revision limits.
+
+
+**Readiness vocabulary:** Ready = bounded story can be prepared/executed under already authorized scope and stated prerequisites; Needs a decision = owner must approve a listed proposal before the affected implementation; Blocked = concrete missing authority/evidence prevents that work. This documentation request authorizes preparation only; “Ready” below is not permission to mutate code/config/schema or publish. No row is Done, Approved or released.
+
+| Slice / order | Concrete deliverable and requirement | Readiness and dependency | Accountable implementation owner / independent review |
+|---|---|---|---|
+| DEV-00 / A | Read-only deployment/migration/restricted-role inventory, active transport/tool catalogue, current diff manifest | Ready for accessible read-only evidence; deployed facts Blocked where operator access absent | Hightower with Scout evidence / Knuth + Brooks |
+| DEV-01 / A | Critical suite discovery and production-behavior regression plan; BP-F64, DEV-AC06 | Ready for inventory/test-story preparation; actual DB mutation uses disposable environment only | Woz / Pike + Fowler |
+| DEV-02 / A | Main CI pin/frozen install/real lint story; BP-F65, DEV-AC07 | Needs a decision: AD-68 authoritative lanes/runtime and config-change approval; depends DEV-01 | Hightower / Fowler |
+| DEV-03 / B | Capture service/replay/receipt/index-intent; BP-F59, DEV-AC01 | Needs a decision: AD-65 API compatibility, canonicalization, transactional storage and retry policy; schema approval and DEV-00/01 | Woz / Knuth + Pike |
+| DEV-04 / B | Workspace-authorized vector seam and failure-aware indexing; BP-F60, DEV-AC02 | Needs a decision: AD-66; deployed migration/role inventory, scoped fixtures and DEV-03 integration contract | Woz / Knuth + Pike |
+| DEV-05A / B | Governed correction/new-head concurrency; BP-F61, DEV-AC03 | Needs a decision: AD-67; no restore or duplicate-policy work without DOC-03/05 decisions; DEV-03/04 | Woz / Knuth + Pike |
+| DEV-05B / B | DOC-06 reviewed-version request/receipt implementation; BP-F62, DEV-AC04 | Ready for bounded story against approved behavior; additive schema/API details need ordinary review/approval; DEV-01, independent acceptance required | Woz / Knuth + Pike |
+| DEV-06 / B | DOC-07 durable handoff, eligible retries and remote read-back; BP-F63, DEV-AC05 | Needs a decision: AD-68 implementation details and verified destination/transfer authority; absent grant blocks remote writes, not local design | Woz / Hightower + Knuth |
+| DEV-07 / A then C | Outcome correctness diagnostics then proposed safe correlation; BP-F66, DEV-AC08 | Ready for read-only failure-path inventory; Needs a decision for new telemetry fields/retention/destinations under AD-68 | Woz / Hightower + Pike |
+| DEV-08 / C | Labeled retrieval baseline then bounded tuning; BP-F67, DEV-AC09 | Ready for authorized fixture/label planning; Needs a decision for budgets under AD-68; tuning depends DEV-04 and accepted baseline | Bellard or Carmack / Knuth + human label reviewer |
+| DEV-09 / C | Dependency/SDK/dead-code/claims cleanup and usage guide; BP-F69/70, DEV-AC11/12 | Ready for consumer inventory and canonical guidance drafting; Needs a decision for upgrades/removal/deprecations under AD-68 | Fowler + Woz / Pike + Hightower; Brooks owns claims |
+| DEV-10 / C | Authenticated full dashboard journey; BP-F68, DEV-AC10 | Blocked for work-item stories by workspace ownership/DOC-09; Needs a decision for DOC-02/ENT contracts; memory acceptance depends DEV-03–06 | Woz / Pike + Munari (actual scoped invocation only) |
+
+**Three highest-value implementation packets:** DEV-03/04 (capture-to-retrieval correctness), DEV-05A/05B (governed correction and reviewed approval), then DEV-01/02/07/08 (trustworthy checks and operational evidence). Phase A read-only/inventory slices can proceed while new design choices are reviewed; Phase B supplies disposable-environment contract evidence; Phase C tunes and completes daily-use surfaces after core correctness.
+
+Every implementation handoff includes objective/non-goals, source SHA plus dirty-diff digest, tenant/workspace and authority provenance, owning B/F/UC/AC IDs, Proposed/approved decision references, exact touched files/schema versions, one writer and independent reviewers, test commands/lane inventory, negative cases, receipt/read-back expectations, rollback plan and approval boundary. Use the repository-owned `allura-dev-story` for implementation and `allura-code-review` for the reviewed actual diff, under AI-GUIDELINES workflow authority; retired methodology artifacts do not govern execution. Assigned roles are future responsibilities, not claims that specialists ran. Local `.opencode/DEVELOPMENT-READINESS.md` examples with old endpoints/adapters or completion markers are reconciliation debt, not current acceptance authority; use the canonical authenticated MCP endpoint and current package scripts.
+
+**Evidence to collect per story:** current revision/diff, runtime/lockfile versions, exact package-script commands, discovered suite counts, pass/fail/skip counts and exit codes, scoped disposable-DB fixtures/migrations/role, injected failure results, actual reviewer verdict, permitted live read-back and separately authorized deployment evidence. Store logs/receipts/screenshots outside `docs/allura/`. Prior 200-pass/one-fail assessment numbers and source existence are baseline only. No code tests, production writes or release verification are implied by a documentation guard pass.
+
+## Cloudflare Access migration acceptance
+
+Sabir selected Clerk removal and Cloudflare Access replacement on 2026-10-20 ([AD-69](RISKS-AND-DECISIONS.md#AD-69-cloudflare-access-replaces-clerk)). The provider decision is accepted for repository implementation; live Access policy, grants, credentials and release are not changed by this decision. BP-B36 maps to BP-F71–BP-F74 and CF-UC01–04 in [Design](DESIGN-ALLURA.md#cloudflare-access-security-contract).
+
+| ID | Requirement | Satisfied by |
+|---|---|---|
+| BP-F71 | Signed human Access identity | Shared Cloudflare verifier in proxy and server dashboard boundary; CF-AC01/02 |
+| BP-F72 | Stable principal and live resource authority | Explicit issuer/subject binding plus restricted membership/workspace lookup; CF-AC03 |
+| BP-F73 | Complete active provider replacement | Login/layout, source exports, device copy/harness, package/lock, example setup and canonical docs; CF-AC04 |
+| BP-F74 | Security and compatibility acceptance | Current-revision cryptographic/authority/route/login/device regressions and independent review; CF-AC01–05 |
+
+| Acceptance | Evidence required |
+|---|---|
+| CF-AC01 | Real local-key JWT tests: correct RS256 signature, issuer/AUD/time/app/human claims accepted; forged/unsigned/wrong key or audience, expiry/future issuance, missing claims, token conflict and service identity denied |
+| CF-AC02 | Forged x-allura-* or email headers confer no authority; keyless/partial/invalid config and all production DevAuth flag combinations fail closed; same scope/action manifest continues to enforce 401/403; signed human unsafe requests with foreign/missing/opaque Origin or cross-site Fetch Metadata deny, exact same-origin succeeds; machine route authentication remains independent |
+| CF-AC03 | Bound subject retains stable user ID; missing/removed membership, demotion, foreign/missing/locked workspace and lookup failure deny or reduce access on next resolution; no email linking/default grants |
+| CF-AC04 | No active Clerk runtime dependency/import/widget/setup path; sanitized login return and no auth loop; provider-neutral pairing recovery and Access evidence; existing negative auth/device/MCP tests retained |
+| CF-AC05 | Separately authorized live walkthrough proves Access application/issuer/AUD/bindings, origin protection, MFA/session policy and revocation, workspace isolation and human/device/MCP continuity on deployed revision |
+
+**Readiness — historical source-local verification 2026-10-20:** Reported implemented and locally verified in the dirty source checkout, not this integrated revision for CF-AC01–04: signed JWT/authority/CSRF/auth regression suite 372 passing; full unit lane, production build, standalone typecheck, manifest and canonical-document guards passed. The unit lane uses a synthetic test-only secret and mocked/local services; skipped/live lanes are not release evidence. Pike found a cross-site mutation gap, now corrected and independently rechecked; Fowler found stale environment fixtures and fallback wording, now corrected. Exact final counts, source digests, commands, reviews and logs are in `artifacts/cloudflare-access-migration-20261020/receipt.json`. No deployed claim follows. Live release remains Blocked until CF-AC05 and actual operator configuration evidence. Brooks owns delivery; Woz built the authentication seam; Pike reviewed identity/interface/security boundaries; Fowler reviewed removal/compatibility.
+
+
+## Preview reliability acceptance — 2026-10-20
+
+**Approved documentation direction; implementation open.** These acceptance cases specialize existing [BP-F64/65](BLUEPRINT.md#bp-f64) quality/reproducibility and [BP-F68](BLUEPRINT.md#bp-f68) dashboard intent, alongside Sabir's direct preview-hardening approval. They do not approve unresolved backend contracts. See [Design](DESIGN-ALLURA.md#approved-preview-reliability-direction--2026-10-20), [AI Guidelines](../../guidelines/AI-GUIDELINES.md#approved-reliability-priorities--2026-10-20) and [RK-42–44](RISKS-AND-DECISIONS.md#preview-reliability-risks--2026-10-20).
+
+| ID | Required evidence | Status / owner |
+|---|---|---|
+| PV-AC01 | Tracked app/adapters/assets/license/dependency/test inventory; clean checkout and frozen install build; actual critical tests discovered; deliberate missing-suite failure; independently verified React/HTML artifact identity | Open; Hightower + Woz, independent Fowler review |
+| PV-AC02 | Actual route tests for fractional/negative/nonfinite/oversized/non-numeric record values and unknown IDs; injected render failure shows recoverable screen while shell/navigation and shared work remain usable | Open; Woz, independent Pike review |
+| PV-AC03 | Indexed/cached graph model; List skips layout; search/selection do not rebuild unchanged layout; bounded expansion; paused/hidden behavior measured; browser CPU/memory/input timings on declared 100/500/2,000/5,000-node fixtures and device/network conditions against agreed budgets | Open; Woz + Carmack, independent review |
+| PV-AC04 | With an approved real-data contract: server-enforced page/type/response bounds and filtering/sorting; 100,000-order disposable fixture; representative concurrent requests and slow-device measurements; no whole-dataset client fetch disguised as pagination | Open; Knuth + Woz; backend decision/release gates remain |
+| PV-AC05 | With approved persistence/auth contracts: conflicting two-session edits, save acknowledgement loss and same-operation retry, duplicate/out-of-order connector delivery, access revocation and reload/recovery preserve scope and durable state; evidence distinguishes sample and real behavior | Open; Woz + Knuth/Pike; reuse DEV-AC01/02/04/05/10 |
+
+Record measured acceptance budgets before marking PV-AC03/04 passed. The earlier isolated 5,000-node timing and 34-row store demo are baselines, not acceptance at scale. The documentation authoring/validation pass closes none of these rows.
+
+## Backend adversarial acceptance — 2026-10-20
+
+**Assessment and regression targets, not completed remediation or automatic approval of new security/schema/retry policy.** [Review evidence](../archive/allura/backend-adversarial-review-2026-10-20.md) records current-source probes and deployment uncertainty. Follow [AI Guidelines §12](../../guidelines/AI-GUIDELINES.md#12-reliability-and-backend-adversarial-review) and existing DEV/CF acceptance; the backend scope includes web/MCP ingress, authority, capture/retrieval, projections, workers, backup/restore and operational execution.
+
+| ID | Review finding(s) | Required evidence before closure | Existing trace / owner |
+|---|---|---|---|
+| BE-AC01 | BE-01, BE-04 | Foreign tenant/workspace/actor selectors rejected before storage or replaced by server-issued authority; test each reachable web/server-action/MCP route; anonymous health returns only intended coarse status; restricted-role integration plus deployment origin/revocation proof | DEV-AC06/10, CF-AC02/03/05; Pike + Woz |
+| BE-AC02 | BE-02, BE-03, BE-06 | Agree finite body/response/query/concurrency budgets; preauth oversized/chunked/slow requests rejected within bounds; forwarding headers cannot reset quotas outside an explicitly trusted proxy contract; limits reject invalid/negative/excessive inputs; large disposable fixture and memory/latency evidence | DEV-AC06/08/09; Hightower + Pike |
+| BE-AC03 | BE-05 | Default and each supported retrieval mode tested with relevant/unrelated/no-answer queries and filters; distinguish confidence from query relevance; current/history and foreign-workspace fixtures; ranking/no-match semantics and p50/p95 baseline | DEV-AC02/09; Knuth + human relevance reviewer |
+| BE-AC04 | BE-07 | Inject failure after durable capture and lost response; same approved operation key returns original identity/receipt, changed payload conflicts; projection/scoring status separate from persistence; test actual transaction boundary after AD-65 decisions | DEV-AC01, AD-65/RK-36; Knuth + Woz |
+| BE-AC05 | BE-08 | Verified tenant/workspace/principal carried through all vector insert/search paths; migration/role inventory; restricted-role same-tenant foreign-workspace, missing-context and pooled-reuse negatives; denied scope never broadens fallback | DEV-AC02, AD-66/RK-37; Knuth + Pike |
+| BE-AC06 | BE-09 | Future available_at rows not claimed; claims obey attempt/ownership policy; failure bookkeeping cannot reopen delivered work; deterministic two-worker rollback/success interleaving and restart tests; no duplicate delivery receipt | DEV-AC05, DOC-07/RK-39; Knuth + Hightower |
+| BE-AC07 | BE-10 | One bounded streaming dump pipeline; non-secret command evidence; output above prior buffer threshold and representative DB sizes; partial-file/timeout cleanup and failure status; authorized disposable restore confirms usable output | DEV-AC08, existing recovery requirements; Hightower |
+| BE-AC08 | BE-11, BE-12 | Hash actual selected archive bytes; reject missing/mismatching integrity evidence; immutable per-run identity; restore exactly the verified manifest artifact; two same-day backups with distinct data restore intended revision in disposable environment | Existing recovery requirements, RK-48; Hightower + Knuth |
+| BE-AC09 | BE-13 | Step-start/persistence/handler rejection cannot produce completed run; allSettled rejection and terminal-state checks; bounded concurrency/cancellation evidence; confirm actual runtime callers before claiming deployed impact or remediation | DEV-AC06/08, RK-49; Woz + Pike |
+
+All BE acceptance rows remain **Open**. Mock/offline reproductions establish the stated source behavior only; they do not prove an active production exploit, deployed database grants, backup recoverability, or live workload capacity.
+
 ## Proposed documentation and first-use acceptance — 2026-10-20
 
 AI-assisted response to Sabir's Reddit-feedback review. These proposed checks extend REQ-UX-001; they are not approved product requirements or completed user research. The [audit and complete README/visual inventory](../reference/reddit-feedback-remediation-20261020.md) records the evidence, audience conflict, proposed ownership and rollout. Notion work-item state has not changed.
@@ -625,4 +780,4 @@ Five participants provide formative usability evidence, not statistical proof of
 
 ### Fresh-evidence search repair checks
 
-[AD-70](RISKS-AND-DECISIONS.md#ad-70-bounded-candidate-eligibility-for-fresh-evidence-search) adds a bounded source repair under UX-R02. Required offline regressions: full graph or vector candidate capacity still queries authorized raw events; matching event survives final truncation without score inflation; explicit minimum-confidence filter applies; ID/content duplicate resolution retains durable metadata; empty queries get no literal bonus; approved-only retrieval excludes raw events; final limit/workspace scope remain enforced; source-failure warnings, attempted stores and the response's degraded flag agree. Explicit all-mode defaults an omitted limit to 10, validates a supplied finite number in 1..100 before floor normalization, and rejects invalid input before any store call. State: **implemented and independently reviewed locally**. Producer verification: 66 search plus 17 contract tests pass; Pike and Fowler each independently reran 66/66 search tests and verified their findings corrected. The [review](../reference/reddit-remediation/technical-review.md) and [maintainability receipt](../reference/reddit-remediation/maintainability-review.md) identify final source hashes and process limitations. This response check is not a service-wide health guarantee. Configured-service exact-record search, two-session proof and the broader human-labeled relevance baseline remain open regardless of offline results.
+[AD-70](RISKS-AND-DECISIONS.md#ad-70-bounded-candidate-eligibility-for-fresh-evidence-search) adds a bounded source repair under UX-R02/BE-AC03. Required offline regressions: full graph or vector candidate capacity still queries authorized raw events; matching event survives final truncation without score inflation; explicit minimum-confidence filter applies; ID/content duplicate resolution retains durable metadata; empty queries get no literal bonus; approved-only retrieval excludes raw events; final limit/workspace scope remain enforced; source-failure warnings, attempted stores and the response's degraded flag agree. Explicit all-mode defaults an omitted limit to 10, validates a supplied finite number in 1..100 before floor normalization, and rejects invalid input before any store call. State: **implemented and independently reviewed locally**. Producer verification: 66 search plus 17 contract tests pass; Pike and Fowler each independently reran 66/66 search tests and verified their findings corrected. The [review](../reference/reddit-remediation/technical-review.md) and [maintainability receipt](../reference/reddit-remediation/maintainability-review.md) identify final source hashes and process limitations. This response check is not a service-wide health guarantee. Configured-service exact-record search, two-session proof and the broader human-labeled relevance baseline remain open regardless of offline results.

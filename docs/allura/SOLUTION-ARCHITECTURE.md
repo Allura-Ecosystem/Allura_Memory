@@ -2,12 +2,17 @@
 
 > [!NOTE]
 > **AI-Assisted Documentation**
-> Portions of this document were drafted with the assistance of an AI language model.
+> Portions of this document were drafted with AI assistance; Codex prepared the 2026-10-20 development-readiness additions.
 > Content has not yet been fully reviewed. This is a working design reference, not a final specification.
+> AI-generated content may contain inaccuracies or omissions.
 > Code and schemas evidence implementation; approved product decisions establish intent. Record disagreement for the owning decision rather than silently changing either.
+
+**Integration evidence boundary — 2026-10-21:** This revision consolidates specifications and source-local assessments from `28d90e843` plus the dirty-file snapshot identified in the [source manifest](../reference/development-readiness-20261021/source-manifest.json), onto main base `c720aca2e` (PR #169 content head `51e421ca0`). Dashboard, Cloudflare authentication and preview implementation changes are excluded. Their “implemented” or test-count statements below are dated source-local observations, not verification of this branch, current main or deployment. Missing local receipts remain [unavailable supporting evidence](../reference/development-readiness-20261021/unavailable-evidence.md). [Story packets](../reference/development-readiness-20261021/story-packets.md) operationalize the canonical gates without approving proposed decisions.
 
 This document covers Allura's deployment topologies, integration interfaces, and architectural constraints. The physical data contract is owned by [DATA-DICTIONARY.md](./DATA-DICTIONARY.md); behavior and API contracts are owned by [DESIGN-ALLURA.md](./DESIGN-ALLURA.md).
 
+
+**Approved intended authentication migration (source-local implementation):** [Cloudflare Access web authentication](#cloudflare-access-web-authentication). The approved provider change is Cloudflare Access under [AD-69](RISKS-AND-DECISIONS.md#AD-69-cloudflare-access-replaces-clerk); the provider implementation remains a separate unmerged source-local change and is not current-main or deployment evidence.
 
 ## Evidence and publication status — 2026-10-18
 
@@ -15,6 +20,14 @@ This document covers Allura's deployment topologies, integration interfaces, and
 
 The main boundary is stable: authenticated scope enters governed services; append-only evidence, mutable proposal workflow state, immutable semantic content versions and asynchronous projections have distinct responsibilities. Physical fields belong to Data Dictionary and observable failure/retry behavior belongs to Design.
 ---
+
+## Enterprise dashboard read boundary — 2026-10-19
+
+Source-local implementation path (not included in this integration): authenticated page → `requireDashboardScope` → server-only `src/lib/dashboard/read-service.ts` → `withWorkspaceTransaction` using the restricted application role and transaction-local tenant/workspace/principal scope. Client presentation receives DTOs from `read-model.ts`, never a database credential or a caller-selected tenant. This is application server behavior, not authorization for an agent to query the database directly.
+
+In that source-local slice, `/dashboard/search` uses the bounded memory reader; `/dashboard/graph` uses actual stored lineage and structural edges. The new pages do not call the legacy `/api/memory/graph` route. That legacy route and other historical readers require separate isolation review; this slice does not endorse them. Read errors are redacted to stable unavailable states. Work-item counts are unavailable because the current table lacks the required workspace contract.
+
+Unit tests verify scoped query construction and page wiring; live database role, RLS and multi-user isolation still need acceptance evidence. A local Next/Clerk origin mismatch was reproduced when the development server bound `127.0.0.1`: Next normalizes the URL to `localhost`, making a Clerk rewrite appear external. Binding the local server to `localhost` restored the sign-in form without enabling development authentication or changing credentials. This is local development evidence only.
 
 ## Table of Contents
 
@@ -25,6 +38,8 @@ The main boundary is stable: authenticated scope enters governed services; appen
 - [5. Risk-Architecture Traceability](#5-risk-architecture-traceability)
 - [6. Key Architectural Constraints](#6-key-architectural-constraints)
 - [7. References](#7-references)
+- [Development readiness topology](#development-readiness-topology--2026-10-20)
+
 
 ---
 
@@ -84,10 +99,10 @@ sequenceDiagram
     actor Reviewer as Independent human curator
     participant Approval as Approval service
     Client->>Capture: Capture evidence with resolved scope
-    Capture->>PG: Append event; eligible content becomes pending proposal
+    Capture->>PG: Append event and queue eligible content as pending proposal
     Capture-->>Client: Episodic / pending result
     Reviewer->>Approval: Intended approval: reviewed version, rationale, idempotency key
-    Approval->>PG: Lock scope; validate evidence and actor separation
+    Approval->>PG: Lock scope and validate evidence and actor separation
     Note over Approval,PG: Reviewed-version comparison is specified but not implemented (DOC-06)
     Approval->>PG: Atomic memory + proposal + audit + outbox + receipt + replay record
     Approval-->>Reviewer: Durable governance receipt after commit
@@ -225,7 +240,7 @@ sequenceDiagram
     Engine->>PG: INSERT event (memory_delete)
     Engine->>Semantic: SET deprecated = true
     API-->>CLI: 200 OK
-    ```
+```
 
 ---
 
@@ -484,6 +499,101 @@ stateDiagram-v2
 | Append-only traces | No UPDATE/DELETE contract on events |
 | `trace_ref` integrity in SOC2 | FK and numeric verification |
 | Human gate per slice | Explicit reviewer sign-off before progression |
+
+## Modular dashboard and app upgrades — product intent, 2026-10-19
+
+Sabir requires the dashboard and system to be modular and easy to upgrade. This extends Requirements Matrix REQ-MOD-001–003; it does not replace their restricted module contract or claim that the portfolio HTML implements the runtime. The existing matrix reports merged implementation with independent acceptance/status reconciliation pending; no new verification of that claim occurred here.
+
+- **Shared foundation:** Allura owns identity, server-derived workspace scope, authorization, review/receipt contracts, common navigation and brand components. Apps consume these services through explicit contracts; they cannot substitute their own authority.
+- **Bounded apps:** Mortgage and Bumblebee contribute their own permitted workflows and domain views through the approved module registry. They may link authorized work and review items into shared surfaces. They do not share private records merely because they are installed together. Bumblebee retains its read-only/proposal-only ceiling; Mortgage retains REQ-MTG-002 limitations.
+- **Compatibility:** Each app release declares its identity, version, supported core-contract versions, dependencies and requested capabilities. Validate these before activation. Unknown, incompatible or disabled modules remain unavailable without breaking the shell. Display a useful unavailable state and a recovery path. Runtime packaging and the exact manifest schema still require a bounded design and independent review.
+- **Independent change:** Keep app-specific screens, tests and adapters separate from shared components. Adding a conforming app should not require editing unrelated apps or duplicating the shell. A modular deployment does not require one service per app; choose process isolation only when trust or operational needs justify it. Never load arbitrary plugin code into the browser under this contract.
+- **Safe upgrades:** Check compatibility and changed permissions, test with representative fixtures in a nonproduction environment, and record the reviewed version. App updates must not silently expand access. Preserve existing configuration and records; incompatible data changes require an explicit migration and recovery plan. A previous app version is a recovery option only when its data compatibility has been demonstrated. Append-only events and immutable semantic versions remain intact.
+- **User experience:** Employees open familiar Apps and continue their work. Administration shows app owner, installed version, compatibility, update impact and actionable failures in plain language. Hide technical release details behind an advanced disclosure. The HTML preview now demonstrates local sample update controls; compatibility enforcement, deployment, migrations and recovery remain intended runtime requirements without proof from this simulation.
+
+Acceptance and release evidence belong in REQ-MOD-004–006. No plugin installation, permission change, database migration or production release is authorized by this documentation update.
+
+## Development readiness topology — 2026-10-20
+
+**AI-assisted proposed topology.** Implements the intent of [BP-B33–BP-B35](BLUEPRINT.md#proposed-business-requirements); contract details belong to [Design](DESIGN-ALLURA.md#development-readiness-design--2026-10-20), fields to the [Data Dictionary](DATA-DICTIONARY.md#proposed-development-contracts--2026-10-20), delivery gates to the [Requirements Matrix](REQUIREMENTS-MATRIX.md#development-slices-and-handoff-gates). New choices remain Proposed under [AD-65–AD-68](RISKS-AND-DECISIONS.md#development-readiness-decisions--2026-10-20). DOC-06 and DOC-07 retain their existing approved meanings.
+
+### Scoped capture, replay and asynchronous indexing
+
+```mermaid
+sequenceDiagram
+    participant C as MCP or API client
+    participant T as Authenticated transport
+    participant S as Capture service
+    participant P as PostgreSQL scoped transaction
+    participant I as Index worker
+    C->>T: Capture content and stable operation key
+    T->>T: Resolve principal, tenant, workspace and permission
+    T->>S: Opaque authority plus validated request
+    S->>P: Resolve scoped key and canonical digest
+    alt Existing matching operation
+        P-->>S: Original immutable receipt
+    else Key bound to another payload
+        P-->>S: Conflict, no new event
+    else New operation
+        S->>P: Atomic event, receipt and index intent
+        P-->>S: Commit receipt
+    end
+    S-->>C: Durable capture result
+    I->>P: Claim authorized eligible intent
+    I->>I: Embed outside capture transaction
+    I->>P: Scope-bound vector insert and status observation
+```
+
+The proposed service owns the transaction; transport adapters remain thin. Neither user-supplied identity nor a serialized scope tuple is authority. Index work is asynchronous so provider failure cannot turn a durable capture into a reported failure or duplicate event. The restricted worker revalidates scope and eligibility when claiming, not merely at enqueue time. Retries use the same durable intent identity; failed/unknown indexing does not approve knowledge or alter raw events. A read fallback retains the same effective authority and records its reason. Missing workspace, denial and invalid credentials fail closed before fallback.
+
+### Correction, review and remote projection
+
+A correction service resolves the scoped immutable base version, creates a proposal and source evidence atomically, then hands it to the existing human-review flow. On approval, compare the reviewed proposal version (DOC-06) and current lineage head before inserting the new version and supersession edge. A competing approved correction requires refreshed review, not silent rebasing. Existing approval, audit, outbox, receipt and replay writes remain atomic. No retired adapter method or raw direct semantic write is a substitute.
+
+Remote projection consumes the committed outbox through an explicit scoped handoff to Notion delivery, with the same source decision/revision/content identity throughout. A timeout leaves remote state unknown; reconciliation reads the authorized destination before deciding whether it exists. The decision receipt remains unchanged. A separately authorized delivery observation supplies current state (DOC-07). Local enqueue/event delivery is not remote acknowledgement. Worker eligibility must enforce `available_at <= current time`; backoff and retry limits are specified and tested in the owning story, not inferred from ordering.
+
+### Interface and risk catalogue
+
+| Interface | Direction / payload | Authority and governing references |
+|---|---|---|
+| Capture transport → service | Inbound MCP `memory_add` and any existing HTTP adapter; stable key, content, trace metadata | Authenticated transport capability; AD-65, RK-36; existing caller fields cannot manufacture identity |
+| Service → PostgreSQL | Scoped event, receipt, operation replay and durable index intent | Same transaction and effective scope; AD-65/AD-66, RK-36/RK-37 |
+| Search adapter → vector/lexical readers | Opaque authority plus validated query, status and bounded options | No tenant-only workspace path; AD-66, RK-37 |
+| Correction → approval | Scoped base identity/version, correction proposal, evidence and expected review version | Existing independent human gate; AD-67, DOC-06, RK-38 |
+| Approval outbox → remote delivery | Decision/source identity, authorized destination, revision/digest | DOC-07, RK-39; promotion permission does not imply transfer permission |
+| CI/evaluation → evidence | Test inventory, exact commands/results, runtime/lockfile and source digests | AD-68, RK-40; artifacts remain outside `docs/allura/` |
+| Read/dashboard → user | Source, freshness, unavailable/degraded/unknown states and safe error reference | BP-F66/BP-F68; ENT-01–ENT-05, DOC-02/09 remain open |
+
+### Incremental rollout and rollback constraints
+
+1. Inventory deployed revision, migrations, restricted database role and enabled retrieval path read-only. No current production claim can be inferred from local dirty files or health counters.
+2. In a disposable integration environment, add forward-compatible data contracts and adapters only after their decisions/schema approvals. Exercise MCP/HTTP/CLI/SDK consumers actually supported by that story. Do not remove the old accepted interface before a compatibility plan and consumer evidence exist.
+3. Release requires a separately authorized target, current-SHA CI and scoped live acceptance. Rollback may disable the newly authorized path or restore compatible application code; it must preserve committed events, receipts, semantic versions, supersession edges and unknown remote operations. No destructive down migration or automatic broad fallback is an acceptable rollback.
+4. If a new scoped path cannot enforce isolation, stop that path and retain evidence. Do not change tenant, endpoint, credentials or grants to make a canary pass. Confirm fail-closed behavior and reconcile same-key pending operations before resuming.
+
+Rollback drills prove replay survives an application rollback, old readers tolerate additive records, denied work leaves no accepted capture, and unknown remote delivery never creates a second page automatically. Deployment, schema, permission and transfer approvals remain distinct from documentation review.
+
+## Cloudflare Access web authentication
+
+AD-69 replaces the previous Clerk production-provider branch. Cloudflare Access supplies human identity at ingress; Allura retains resource authorization and the membership ledger. Machine MCP/device bearer routes continue their own authenticated handler paths. No Cloudflare service token or caller-supplied email is promoted into a human reviewer.
+
+```mermaid
+flowchart LR
+    Person[Person] --> Access[Cloudflare Access policy]
+    Access --> Proxy[Next.js proxy]
+    Proxy --> Verify[Shared JWT verifier]
+    Page[Dashboard server page] --> Verify
+    Verify --> Binding[Server-owned subject binding]
+    Binding --> Membership[Restricted scoped membership and workspace read]
+    Membership --> Authority[Stable Allura identity and current role]
+    Authority --> RBAC[Route action and workspace authorization]
+```
+
+The JWT verifier uses only the configured team issuer's JWKS, RS256, exact issuer/audience and mandatory temporal/human-identity claims. It does not fetch keys from a token-supplied URL. Proxy removes caller x-allura-* assertions before adding verified authority; server pages independently use the same resolver. The resolver binds a restricted transaction to the configured group/workspace/stable principal, requires active membership and matching workspace ownership, reads the current role and denies full workspace lockdown. Membership or configuration failures deny access. No cached role survives membership removal.
+
+Login stays `/auth/v2/login`. Its branded continuation link targets a sanitized protected relative application path so Cloudflare Access at ingress handles authentication. It creates no local password/account flow and no open redirect. Direct-origin requests still require a valid JWT; the deployment must also prevent bypass of Access so session revocation/policy enforcement remains effective. Offline JWT validation alone does not query Cloudflare's live revocation state. Signed human identity and Allura membership are separate checks.
+
+User-supplied credentials and actual Cloudflare account policies are not changed by repository edits. Operator deployment evidence must establish application AUD, team issuer, explicit bindings, restricted-role migration compatibility, origin protection, session expiry/revocation and human/browser/device/MCP regression checks. Preserve stable principal IDs; no automatic email linkage or rewriting of append-only history is allowed.
 
 ## First-use path and evidence boundary — 2026-10-20
 

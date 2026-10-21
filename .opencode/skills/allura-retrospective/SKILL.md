@@ -6,6 +6,10 @@ globs: ["src/**", "docs/allura/**", "guidelines/**"]
 
 # Allura Retrospective — Governed Retrospective
 
+> [!NOTE]
+> **AI-Assisted Documentation** — workflow corrections follow the existing project authority contract; full human document review remains pending.
+
+
 > **Allura-governed retrospectives.** Enforces Brooks gate, Brain outcome logging, Notion board update, and canonical doc impact checks.
 
 ## When to Use
@@ -122,21 +126,14 @@ Collect and verify:
 
 Log the retrospective outcome to Allura Brain:
 
-```
-allura-brain_memory_add({
-  group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "RETROSPECTIVE: {epic name} — {summary}; lessons={...}; action_items={...}",
-  metadata: {
-    source: "conversation",
-    agent_id: "brooks-architect",
-    confidence: 0.85,
-    epic: "{epic name}",
-    stories_completed: {count},
-    action_items: {count}
-  }
-})
-```
+Use the [shared governed memory contract](../allura-memory-skill/SKILL.md).
+Discover the actual host schema, omit persona identity assertions and unsupported
+metadata, and append one verified outcome only within authorized scope. Preserve
+one server-supported idempotency key across retries; verify destination, principal,
+record, content and receipt by read-back. If that contract cannot be met, report
+the unmet gate and retain sanitized task evidence without claiming a Brain write.
+Do not autonomously promote the result. Ordinary workflow execution grants no
+production, configuration, tenant-transfer or semantic-promotion authority.
 
 ## Retrospective-Specific Routing
 
@@ -151,20 +148,19 @@ allura-brain_memory_add({
 
 | Failure | Response |
 |---------|----------|
-| Allura Brain unavailable | Warn and continue with local context only |
+| Brain operation unavailable or pending | Report the observed operation/layer; continue independent local work; do not infer disconnection |
 | Stories not all Done | Do not run retrospective. Flag which stories are incomplete. |
 | Brooks unavailable | Postpone retrospective. Brooks must facilitate. |
 | No lessons extracted | This is a failure. Every retrospective must produce at least one lesson. |
 
 ## Reflection
 
-At the end of every `allura-retrospective` execution, emit:
+End every substantive final reply with this rendered Markdown footer. Fill fields
+from actual evidence; no write or promotion is implied by reporting them.
 
-```
-📝 Reflection
-├─ Action Taken: Retrospective for {epic name}
-├─ Principle Applied: Plan to Throw One Away (Brooks)
-├─ Event Logged: RETROSPECTIVE
-├─ Neo4j Promoted: {Yes/No}
-└─ Confidence: {High/Medium/Low}
-```
+**📝 Reflection**\
+├─ **Action Taken:** Actual work and scope.\
+├─ **Principle Applied:** The selected role's relevant judgment.\
+├─ **Event Logged:** None, pending/unconfirmed, or verified event and receipt.\
+├─ **Semantic Promotion:** None, pending/unconfirmed, or human-approved verified promotion.\
+└─ **Confidence:** High/Medium/Low, with evidence and material limitations.
