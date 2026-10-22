@@ -1,0 +1,40 @@
+/* Allura theme boundary for the pinned Studio Base UI page components. */
+.studio-source {
+ --background:var(--allura-cream); --foreground:var(--allura-ink);
+ --card:var(--allura-cream); --card-foreground:var(--allura-ink);
+ --primary:var(--allura-blue); --primary-foreground:var(--allura-cream);
+ --muted:var(--surface-quiet); --muted-foreground:var(--surface-muted);
+ --border:var(--surface-border); --ring:var(--allura-blue);
+ --secondary:var(--surface-blue-soft); --secondary-foreground:var(--allura-blue);
+ --chart-1:var(--allura-blue); --chart-2:var(--allura-orange); --chart-3:var(--allura-ink);
+ --radius:.75rem; min-width:0; color:var(--allura-ink);
+ font-family:var(--surface-font-body,'IBM Plex Sans',Arial,sans-serif);
+}
+:where(.studio-source *, .studio-source *::before, .studio-source *::after) { box-sizing:border-box; border-style:solid; border-width:0; border-color:var(--surface-border); }
+.studio-source :is(h1,h2,h3,h4,p) { margin:0; }
+.studio-source :is(button,input,select,textarea) { font:inherit; }
+.studio-source button { cursor:pointer; }
+.studio-source button:disabled { cursor:not-allowed; }
+.studio-source :is(button,a,input,select,textarea):focus-visible { outline:3px solid var(--allura-blue); outline-offset:3px; }
+.studio-source [data-slot=button] { min-height:44px; }
+.studio-source [data-slot=card] { box-shadow:none; border:1px solid var(--surface-border); background:var(--allura-cream); }
+.studio-source [data-slot=card-header] { min-width:0; }
+.studio-source [data-slot=card-action] { margin:0; }
+.studio-source [data-slot=button] svg { width:16px; height:16px; flex:none; }
+.studio-source svg { max-width:100%; }
+.studio-source [data-slot=avatar-fallback] { color:var(--allura-blue); background:var(--surface-blue-soft); }
+.studio-source [data-slot=badge] { box-shadow:none; }
+.studio-source [data-slot=chart] { --color-revenue:var(--allura-blue); --color-profit:var(--allura-orange); }
+.studio-source [class*=shadow],.studio-source [class*=ring-] { box-shadow:none; }
+@media(prefers-reduced-motion:reduce) { .studio-source * { transition:none!important; animation:none!important; } }
+
+.studio-source [data-slot=input] { background:var(--allura-cream); border:1px solid var(--surface-control-border); color:var(--allura-ink); min-height:44px; }
+/* Base UI's source Button encodes variants as classes, rather than data-variant. */
+.studio-source [data-slot=button]:not(.bg-primary) { color:var(--allura-blue); background:transparent; }
+.studio-source [data-slot=button].bg-background { background:var(--allura-cream); border:1px solid var(--surface-control-border); }
+.studio-source [data-slot=button][aria-pressed=true] { color:var(--allura-cream); background:var(--allura-blue); border-color:var(--allura-blue); }
+/* The imported page supplies its own visible title; keep one accessible page h1. */
+:is(.portfolio-route-files,.portfolio-route-ecommerce) > .portfolio-heading { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+.studio-source [data-slot=button]:is(.size-6,.size-7,.size-8,.size-9) { width:44px; height:44px; min-width:44px; padding:10px; }
+.studio-source .studio-file-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+@media(max-width:600px) { .studio-source .studio-file-grid { grid-template-columns:minmax(0,1fr); } }

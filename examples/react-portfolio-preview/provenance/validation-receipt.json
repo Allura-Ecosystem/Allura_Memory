@@ -1,0 +1,38 @@
+{
+  "recorded_at": "2026-10-22T05:39:34.582175+00:00",
+  "scope": "Local standalone package validation before parent clean-export testing; not a browser or backend verification.",
+  "runtime": {
+    "bun": "1.3.14",
+    "node": "24.19.0"
+  },
+  "checks": [
+    {
+      "command": "bun install --ignore-scripts",
+      "exit_code": 0,
+      "result": "279 packages installed; local bun.lock generated. Network escalation was approved after sandbox network refusal."
+    },
+    {
+      "command": "bun run test",
+      "exit_code": 0,
+      "result": "4 suites / 26 tests passed: walkthrough11, commerce3, graphmodel9, forcemodel3."
+    },
+    {
+      "command": "bun run typecheck:walkthrough",
+      "exit_code": 0,
+      "result": "Scoped strict TypeScript passed."
+    },
+    {
+      "command": "bun run build",
+      "exit_code": 0,
+      "result": "Vite5.4.21 built successfully. Existing client-directive/sourcemap, CSS compatibility and >500kBchunk warnings remain. MainJS2435.76kB; gzip668.72kB."
+    },
+    {
+      "command": "Source-copy manifest verification",
+      "exit_code": 0,
+      "result": "170 SHA-256 copies match; no source symlinks outside dependencies."
+    }
+  ],
+  "browser": "Unconfirmed; tool access denied; no alternate mechanism attempted.",
+  "clean_export": "Parent-owned, pending; local success is not yet a clean-export result.",
+  "production": "No production build or backend behavior changed; this example build is a portfolio asset."
+}

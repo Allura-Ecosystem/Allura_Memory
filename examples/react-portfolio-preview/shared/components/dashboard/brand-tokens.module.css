@@ -1,0 +1,27 @@
+/* Shared Allura brand authority. Theme does not convey authentication or access. */
+.theme {
+  --allura-blue: #0d47a1;
+  --allura-orange: #ff4d1f;
+  --allura-green: #148a4b;
+  --allura-ink: #0f1720;
+  --allura-cream: #f7f3ee;
+  --surface-ground: var(--allura-cream);
+  --surface-paper: #fffdf8;
+  --surface-text: var(--allura-ink);
+  --surface-muted: #58616d;
+  --surface-border: #d9d3ca;
+  --surface-control-border: #58616d;
+  --allura-border: var(--surface-border);
+  --surface-quiet: #efeae1;
+  --surface-blue-soft: #e4ecf9;
+  --surface-warning-soft: #ffe6dc;
+  --surface-warning-text: #a63312;
+  --surface-success-soft: #e2f2e8;
+  --surface-success-text: #0a542c;
+  --surface-radius: 8px;
+  --dashboard-text-primary: var(--surface-text);
+  --dashboard-text-secondary: var(--surface-muted);
+  --surface-font-body: var(--sans, "IBM Plex Sans", Arial, sans-serif);
+  --surface-font-display: "Aeonik", var(--surface-font-body);
+  color-scheme: light;
+}

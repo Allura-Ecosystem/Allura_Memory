@@ -1,0 +1,860 @@
+{
+  "algorithm": "sha256",
+  "note": "Source copies made during packaging; entries with normalization retain original source_sha256 and destination sha256. Other entries are byte-identical copies. Configuration and documentation are recorded separately.",
+  "files": [
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/apps-preview.css",
+      "destination": "apps-preview.css",
+      "sha256": "a7604d297e374c8ea58dd8799a852df3fefff467d0da250a1beee1e633c9cf18"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/apps-preview.tsx",
+      "destination": "apps-preview.tsx",
+      "sha256": "972f384afddd90d69468e94677526ce68bb804bd321186077ec13011fe50544e"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/audit-operations.tsx",
+      "destination": "audit-operations.tsx",
+      "sha256": "81c59e0d8ba34f32232d4b86d7f8250cb5a4e80f5a33a5fe8474bbac544ef2f6"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/connections-force-model.test.ts",
+      "destination": "connections-force-model.test.ts",
+      "sha256": "7b1b9e8250758c71e1c0527f7798df87ab5303097b18c5d41c07e34e308f711d"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/connections-force-model.ts",
+      "destination": "connections-force-model.ts",
+      "sha256": "5ae56d3a190ec56a7244a1cdc19f5f0998bcf5cdc969e3fa327477e4c936be66"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/connections-graph-model.test.ts",
+      "destination": "connections-graph-model.test.ts",
+      "sha256": "410028dde0a43c79dfad3ec631ff6961a65f974b9e18fd0517519a53b0aee892"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/connections-graph-model.ts",
+      "destination": "connections-graph-model.ts",
+      "sha256": "e3ad72c0770154e8fdc0915d1a4d26e3a09ec0b76f05f049dfe2d1bd42d0bdd5"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/connections-graph.css",
+      "destination": "connections-graph.css",
+      "sha256": "eb7943e099dc44657be501ac7cbdfc21bc95bc845c8f0abbd78458edcd15d610"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/connections-graph.tsx",
+      "destination": "connections-graph.tsx",
+      "sha256": "0bec5f8e078d506a763a6f171f2f29ecd335dfc63669e0134d0db0b3b8252ee9"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/connections-preview.tsx",
+      "destination": "connections-preview.tsx",
+      "sha256": "5190d5747f3d014b789617d7712c6edcd9089200c43fe400c6e1b6ceb8883b10"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/connections-three.tsx",
+      "destination": "connections-three.tsx",
+      "sha256": "7a145d2e86ce1c8c15ff36288b47b59f48353ac74b2a7f2b50a79db82e8551d1",
+      "source_sha256": "09b98283024727cf59e557fb661540b524e3525d0485352bc8a442a4391a01b5",
+      "normalization": "Removed trailing whitespace only for Git diff validation."
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/files-connections.css",
+      "destination": "files-connections.css",
+      "sha256": "3f004b0e339e5d9513ee7ff067db10dc917b98d3c03c2a8f51a7ac2e29f30175"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/files-preview.tsx",
+      "destination": "files-preview.tsx",
+      "sha256": "3e86cae4cb56f8a10ca1a0d9bebf4bcbdb091d56efafbec15c0f1b7ef48c64a8"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/files-state.tsx",
+      "destination": "files-state.tsx",
+      "sha256": "2de9f55b7ccc8454ff11f8fcef0ec0cb4705fb45f6e8f07eba3d54e10faeadfd"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/index.html",
+      "destination": "index.html",
+      "sha256": "65f46d34384a0eb9f7c919c266167261f519e86f77344a0c3e6d7d3fc48995dc"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/link.tsx",
+      "destination": "link.tsx",
+      "sha256": "0f8b6791680fa51aac2783963ef9f5c3b8cf5897389faee158c2144a7d640bc9"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/main.tsx",
+      "destination": "main.tsx",
+      "sha256": "31d66e70c52a5f1cb6672475e7036c16b77edf73ab24e066f23ead0050cdd896"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/modern-experience.css",
+      "destination": "modern-experience.css",
+      "sha256": "38688cde475ea7e0648c466facb235e29c1c110c18be154f28fb45082cb1e162"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/organization-preview.tsx",
+      "destination": "organization-preview.tsx",
+      "sha256": "58ca473e3e0d50365d0d437b3edb9c57c373d596412b61f8df8bb8991074d791"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/organization-state.tsx",
+      "destination": "organization-state.tsx",
+      "sha256": "fbef229ea15ded48033d40357cb91b0de258e3850552dd0b0bf00de2c7c2bba7"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/organization.css",
+      "destination": "organization.css",
+      "sha256": "cd4262ef022d39db0ff3ac72e3d3455763e85861a9cdbdc9a87249eae56e2477"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/preview-shell.tsx",
+      "destination": "preview-shell.tsx",
+      "sha256": "0478a254fdbb01e1868d6e34dd27f43de4268b671f5cdb3f86074b0b340d511c"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/preview-work-state.tsx",
+      "destination": "preview-work-state.tsx",
+      "sha256": "2fac6e8a6cfab436e05942ce21ec2346dde287c02a77796a29cd8bacb239a07c"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/reset.css",
+      "destination": "reset.css",
+      "sha256": "36d5274bd168fd7563d586879ee808fe590db37ec028f9b85f04ffd2f21399bb"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/review-walkthrough.css",
+      "destination": "review-walkthrough.css",
+      "sha256": "b0cc797a635da9701ec64a67129c9aec915ee1a67f95341cecaa0be06adfeb3d"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/review-walkthrough.test.tsx",
+      "destination": "review-walkthrough.test.tsx",
+      "sha256": "c3e28bb67222ee5b2c256696c005aa4fcda918f5d25d1d1144b26064e80a39c8"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/review-walkthrough.tsx",
+      "destination": "review-walkthrough.tsx",
+      "sha256": "cea3eccbd42379b66b244f09e4bfa34c09e14185034258d47819d8df838b8d08"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/security-trust.tsx",
+      "destination": "security-trust.tsx",
+      "sha256": "95493a8edaeeda30bd3dc6582f971ff7e6d766737d67b65b303f4c62c507eb04"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/ecommerce/commerce-samples.test.ts",
+      "destination": "studio-adapters/ecommerce/commerce-samples.test.ts",
+      "sha256": "cd5df853eb525ce95da56a632edb265ad4861689f9d9c47bb6ca96a78b9fc21b"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/ecommerce/commerce-samples.ts",
+      "destination": "studio-adapters/ecommerce/commerce-samples.ts",
+      "sha256": "dda7e8638e2746ccb13b4d165608d54c20d4fb390eb8f9e6b8e8a2138b541489"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/ecommerce/inventory.tsx",
+      "destination": "studio-adapters/ecommerce/inventory.tsx",
+      "sha256": "5889445bc4f9c661239a7e3946326c47df6cf48b0fbce33b0244005ec0047604"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/ecommerce/kpi-strip.tsx",
+      "destination": "studio-adapters/ecommerce/kpi-strip.tsx",
+      "sha256": "6956d56351a4a60443b324fafc9e95d06b2dd824531003ce049ead906264796f",
+      "source_sha256": "1823acd26edf08eee5e58a609e687fbae2c96680565b45756cc8611764532d88",
+      "normalization": "Removed trailing whitespace only for Git diff validation."
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/ecommerce/provenance.json",
+      "destination": "studio-adapters/ecommerce/provenance.json",
+      "sha256": "3db5ea1e92eab48b4cc9269360ba7fe02003bd26542efc2bb317945444ff5928"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/ecommerce/recent-orders.tsx",
+      "destination": "studio-adapters/ecommerce/recent-orders.tsx",
+      "sha256": "107dbf73005e6d2ab62d6d3dfe204860d065c2101aa40db04d8e9b3b1a660123"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/ecommerce/store-traffic.tsx",
+      "destination": "studio-adapters/ecommerce/store-traffic.tsx",
+      "sha256": "bccd80c6fdf44391afd476e17048a2d70a36266a89ea82dc155803d0f3ecbb75"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/ecommerce/top-products.tsx",
+      "destination": "studio-adapters/ecommerce/top-products.tsx",
+      "sha256": "b257afec8d762ab28373687acf63d72389e33d8f6954b115aba3b7a9b4596020"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/files/README.md",
+      "destination": "studio-adapters/files/README.md",
+      "sha256": "0864640aac6e2e6b7c0f08e29969b774e1b9630fd054996e354d474a627126d4"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/files/file-grid-view.tsx",
+      "destination": "studio-adapters/files/file-grid-view.tsx",
+      "sha256": "db4a23fc2f418c3619e56bb04316390f2b6560eeb5d7c0961688d0829c469453"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/files/file-list-view.tsx",
+      "destination": "studio-adapters/files/file-list-view.tsx",
+      "sha256": "b5f44babf292ab3bf4227c131cbf8bbc8f92c3d3f2d6b8d31141d117cd41a7d5"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/files/folders-section.tsx",
+      "destination": "studio-adapters/files/folders-section.tsx",
+      "sha256": "96881aa5017eb9e9d65c710481354cb33ee46a3adfc4e7d0fda0f045584a0852"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/kanban/kanban-column.tsx",
+      "destination": "studio-adapters/kanban/kanban-column.tsx",
+      "sha256": "063c74e0097da615bb52d7e4934d780de1aa750a9575aed20a34cd87314f2ace"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/kanban/kanban.css",
+      "destination": "studio-adapters/kanban/kanban.css",
+      "sha256": "56662f43799407f5e1619990e4ecea99de1391fcdd1c0a533c49aef0e87f7c2e"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/kanban/kanban.tsx",
+      "destination": "studio-adapters/kanban/kanban.tsx",
+      "sha256": "afbf3d00ea9d897f32b5e5a3b0f3209efb68cd457a69f725396c71e6c2c7f726"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-adapters/kanban/task-card.tsx",
+      "destination": "studio-adapters/kanban/task-card.tsx",
+      "sha256": "db8cfb455e7705b99b5d96f7e5ad361e405f1409b2e57202c91aa99d59f1759b"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/LICENSE",
+      "destination": "studio-baseui/LICENSE",
+      "sha256": "d4f2f6115637639342e10780a8c4ebf4ea54239662aa362554ede12fe1d0beaa"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/_components/customer-reviews.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/_components/customer-reviews.tsx",
+      "sha256": "73c4a55630cdf4df58f9fe84634613e078929f1e95b8b52fdefb4c142643feed"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/_components/inventory.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/_components/inventory.tsx",
+      "sha256": "a3fad6f10a320fce2e70249cd3a180d98395997cbe3e507376d50502993b8195"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/_components/kpi-strip.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/_components/kpi-strip.tsx",
+      "sha256": "b93b970be2197455be1ef6a54eb329c2a5cd1eb3ecea07ce6ef94c401a877480"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders-table/columns.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders-table/columns.tsx",
+      "sha256": "c2b9a4dca1651c108c02de523dceb7f7beca7ada3d0f4d13aa71026d36c7de64"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders-table/data.json",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders-table/data.json",
+      "sha256": "ddfc3a5f8ade1f0085f2a0cbe8cbbd9dd560603b6557c5474043c3884cb826fb"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders-table/formatters.ts",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders-table/formatters.ts",
+      "sha256": "c038ccf72e6263b123d9a83436978a91dace187734107414353efc5766ad53b4"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders-table/schema.ts",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders-table/schema.ts",
+      "sha256": "449999b7ea21ac6f91ca47a2836870fc2f90af2d80aadbddedc8e8cc3b0128fd"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders.tsx",
+      "sha256": "18c6ca96fd4e85bb4b57284f397b68aea625fafad0e7103d262ac880da3da03b"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/_components/store-traffic.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/_components/store-traffic.tsx",
+      "sha256": "f35d1e50bc8953ea236b34f304052e605856fe44eb92c266096a548e4de13a72"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/_components/top-products.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/_components/top-products.tsx",
+      "sha256": "bf8332add37a6fbce463f4b213efe56bedd46cfb6f8b4285865dcac54221de62"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/_components/traffic-sources.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/_components/traffic-sources.tsx",
+      "sha256": "76d261af4514c80a38515d933810739fda043b631d01d3cf8da59f412c993b55"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/ecommerce/page.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/ecommerce/page.tsx",
+      "sha256": "940d743dffa8f23141558dcf140349638526dfed52ae7fca5e253fcf243e1c3e"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/file-manager/_components/data.ts",
+      "destination": "studio-baseui/app/(main)/dashboard/file-manager/_components/data.ts",
+      "sha256": "c302c20dc81909d2a0fa49d56df7da809de230674aff17dfb9a4dd1d5e0e057d"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/file-manager/_components/file-actions.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/file-manager/_components/file-actions.tsx",
+      "sha256": "cbf83e6620ed80687de13c00ae4ffb89c523350d721ec4cb1dc3a9365dc13780"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/file-manager/_components/file-grid-view.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/file-manager/_components/file-grid-view.tsx",
+      "sha256": "f14e05dd19d339a415b3c447a1c9ad690a212044931337f80d8232c4d6253d45"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/file-manager/_components/file-list-view.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/file-manager/_components/file-list-view.tsx",
+      "sha256": "42f62fb509aac5a9061fb54d52b983db78354b56740ecc59edcae13a47aadb90"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/file-manager/_components/file-manager-toolbar.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/file-manager/_components/file-manager-toolbar.tsx",
+      "sha256": "e2d1c7ca6f45911fd447bdac88aaddff3b909d8b950ddce1c625dfd6f7771678"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/file-manager/_components/folders-section.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/file-manager/_components/folders-section.tsx",
+      "sha256": "b172d7def276b6f6cd6e49264c90c4d53e3e4e7d9510b5d8040d05a878481acb"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/file-manager/page.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/file-manager/page.tsx",
+      "sha256": "b0eb7ff0014d4ab8bf52ade7edaba9977037db3ca42476b4105a482bdfd70ad1"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/kanban/_components/data.ts",
+      "destination": "studio-baseui/app/(main)/dashboard/kanban/_components/data.ts",
+      "sha256": "6e38ee42ffd154d4c6ff129593c0a1410e7ed49022a2da7611a22422448befe3"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/kanban/_components/kanban-column.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/kanban/_components/kanban-column.tsx",
+      "sha256": "8f8004258645e93d62964d76936c8faaacbb6987c7f9335237af6fd4bb86e774"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/kanban/_components/kanban.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/kanban/_components/kanban.tsx",
+      "sha256": "77017e59c4da097ae5c94c975e09a6b2557a27dd5a2c774d2245b9cfc715ca56"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/kanban/_components/sortable-task-card.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/kanban/_components/sortable-task-card.tsx",
+      "sha256": "4e510e852bebed3e47c774a488e02ecd41fb07bf69b590e3c31c28697bc350a5"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/kanban/_components/task-card.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/kanban/_components/task-card.tsx",
+      "sha256": "a7807ba9170760c44a7de1d83efce8a3c361c25ce4da17886e7b6f09aaa52658"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/kanban/_components/types.ts",
+      "destination": "studio-baseui/app/(main)/dashboard/kanban/_components/types.ts",
+      "sha256": "01890141324da5cda8f4cbe846728bc04b68b1749c0fe569325cd1425c75bfb5"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/kanban/_components/utils.ts",
+      "destination": "studio-baseui/app/(main)/dashboard/kanban/_components/utils.ts",
+      "sha256": "e6d64440530596a4066927ef7ba8bd7c8f908c849d85262337923ea699f11acb"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/app/(main)/dashboard/kanban/page.tsx",
+      "destination": "studio-baseui/app/(main)/dashboard/kanban/page.tsx",
+      "sha256": "9b1ec4440bdefb02ce90b259f5bf55493f706d55dbba014e5e40575bbe73756e"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/accordion.tsx",
+      "destination": "studio-baseui/components/ui/accordion.tsx",
+      "sha256": "5a66fe64decfda2159cf0cee2e1aac5b7c66ec1e70d3dc54789fb471f3b44843"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/alert-dialog.tsx",
+      "destination": "studio-baseui/components/ui/alert-dialog.tsx",
+      "sha256": "a25cee87dfc49cbd0045e6e34a2afb7268b1fbc9ea9e3f8d998c7930d7c1395a"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/alert.tsx",
+      "destination": "studio-baseui/components/ui/alert.tsx",
+      "sha256": "e76db9b5ba8d7d2576493056069499b7c2bd83ac75b04ed57c89e11ada1f1b25"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/aspect-ratio.tsx",
+      "destination": "studio-baseui/components/ui/aspect-ratio.tsx",
+      "sha256": "ed42561680a7a92fa434706d3a2eceeb7d50ad0e6d9fd4f900bb8e51996348e4"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/attachment.tsx",
+      "destination": "studio-baseui/components/ui/attachment.tsx",
+      "sha256": "e109046eea88fb9fc64a368bb39099f8b905350b3181501999c52c9253d60526"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/avatar.tsx",
+      "destination": "studio-baseui/components/ui/avatar.tsx",
+      "sha256": "c50288d000875a64f6f6396f6b2e6344933199efc4b9445c29ebe2d24ace0695"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/badge.tsx",
+      "destination": "studio-baseui/components/ui/badge.tsx",
+      "sha256": "32c636eceb16237740ddb0c133c34cb76161b6b687edfb4f384628d18297d84b"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/breadcrumb.tsx",
+      "destination": "studio-baseui/components/ui/breadcrumb.tsx",
+      "sha256": "bdba45bc0c051ba1a180db4202d2795502543fd433a855ed08152d6c99b3fd55"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/bubble.tsx",
+      "destination": "studio-baseui/components/ui/bubble.tsx",
+      "sha256": "8a49caf5161681aeb9d01aba9f77e69d6c67b7d38bc59eebfc6b1609a6e43188"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/button-group.tsx",
+      "destination": "studio-baseui/components/ui/button-group.tsx",
+      "sha256": "27be2519de6a99071300cd4bad81ea5a4cd20009dec4464f2d01fe46a60b4630"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/button.tsx",
+      "destination": "studio-baseui/components/ui/button.tsx",
+      "sha256": "42c2eb43698bec820f4ec3bbe095d2174436cad661b2d2da9973fca23568d9aa"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/calendar.tsx",
+      "destination": "studio-baseui/components/ui/calendar.tsx",
+      "sha256": "d50d2bdd4abab81246fdfcfaa8272007f3c032ace39d5866b9d142e9ceb77377"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/card.tsx",
+      "destination": "studio-baseui/components/ui/card.tsx",
+      "sha256": "50e46b9075aa67d84f97b24e4da3002d985b1903110794f5cf4d27b596cc5e65"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/carousel.tsx",
+      "destination": "studio-baseui/components/ui/carousel.tsx",
+      "sha256": "2c99d9ee9ff7122f37e96291cffe27b55ea03fbde2a83529c4aaa77aa2214cb1"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/chart.tsx",
+      "destination": "studio-baseui/components/ui/chart.tsx",
+      "sha256": "18f6b8c870f6845fba2ed28fdab64b74fd62357e9e72bd3add7d16b22106ffab"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/checkbox.tsx",
+      "destination": "studio-baseui/components/ui/checkbox.tsx",
+      "sha256": "57d6f16f800f0269a5f1937f9c01b0f79a852e7076d3c428f8ba366ca4b04036"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/code-block.tsx",
+      "destination": "studio-baseui/components/ui/code-block.tsx",
+      "sha256": "011af3b34bb455f132883674ea27d235ae8f2e3d93cfe717ef87c9d53d3dd72d"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/collapsible.tsx",
+      "destination": "studio-baseui/components/ui/collapsible.tsx",
+      "sha256": "ead4349ff7b01d696ef89294a81d18ee1d3f732321398896462c834ab9b9e065"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/combobox.tsx",
+      "destination": "studio-baseui/components/ui/combobox.tsx",
+      "sha256": "1f5884363a01471feb93fa8e7e26b08827a3d9143b994db3f461f935ce63185d"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/command.tsx",
+      "destination": "studio-baseui/components/ui/command.tsx",
+      "sha256": "bbaba1d5ab336a0d10c76a5b7359a634e975548e617b12dbe5180d5286628ee8"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/context-menu.tsx",
+      "destination": "studio-baseui/components/ui/context-menu.tsx",
+      "sha256": "11c17a6bce76311dd7a9e59ed430896a33d721f699d0aaabf7290a7a798a1caa"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/dialog.tsx",
+      "destination": "studio-baseui/components/ui/dialog.tsx",
+      "sha256": "18e8e05b120c192384b904486f15d12af5f58c7f1749a332b0d46aeeb8e6ae14"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/direction.tsx",
+      "destination": "studio-baseui/components/ui/direction.tsx",
+      "sha256": "661ff5b9c0dc26edde1226bfedc0ab50976d84f8bae42ca83a38dc3b478fd4d4"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/drawer.tsx",
+      "destination": "studio-baseui/components/ui/drawer.tsx",
+      "sha256": "844a0ed5f80ecc6807256d7b50e6912b7298b962cf127f5ade8d3deb87b176ac"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/dropdown-menu.tsx",
+      "destination": "studio-baseui/components/ui/dropdown-menu.tsx",
+      "sha256": "6e420bfef45e35485b9a18baa65abeb9023fd7768a4ff4c671a614a81c54f09c"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/empty.tsx",
+      "destination": "studio-baseui/components/ui/empty.tsx",
+      "sha256": "18bd70d5497dc6be80baeada400ce1baf2ae7b1ffa17f7f1004feed5f04f545e"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/field.tsx",
+      "destination": "studio-baseui/components/ui/field.tsx",
+      "sha256": "71028279bc2dacc7a7929df847ea31e9d6d70646b32e028cdde3b2b65cb10fac"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/hover-card.tsx",
+      "destination": "studio-baseui/components/ui/hover-card.tsx",
+      "sha256": "bf1f331c8da431f5f81e8799cd36901765560f9769a1214bde76283bda5cdc60"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/input-group.tsx",
+      "destination": "studio-baseui/components/ui/input-group.tsx",
+      "sha256": "3f6091231997065c0a720a13501387d265b61ada2fa74f39c7e90559d02b7b0a"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/input-otp.tsx",
+      "destination": "studio-baseui/components/ui/input-otp.tsx",
+      "sha256": "a50220d9bfb0a1ff7fb3b659329f0979fbba142c5bc86ed2b36a0210f681f417"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/input.tsx",
+      "destination": "studio-baseui/components/ui/input.tsx",
+      "sha256": "5c0ad01791dd6cfb1fe612ae96c670e996117a4f22671ed83159938c3a2fd275"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/item.tsx",
+      "destination": "studio-baseui/components/ui/item.tsx",
+      "sha256": "4fbba59410d8bc1a64a92b6c04639f3d7571977c6308b223b8d3df3aa08d785a"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/kbd.tsx",
+      "destination": "studio-baseui/components/ui/kbd.tsx",
+      "sha256": "e473e5a54b265540b0079b4b4c8393d939280a5af8243643c554757451afb9ef"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/label.tsx",
+      "destination": "studio-baseui/components/ui/label.tsx",
+      "sha256": "872e8e4d907a9e3197bdd3feffc422fa6f941a819cda71ed9e6e4b06ced94d14"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/marker.tsx",
+      "destination": "studio-baseui/components/ui/marker.tsx",
+      "sha256": "0566aa0a5886ee1ea4e2375b9d0b93e6a6df2fa2e2c2faae09e59f630bf247fd"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/menubar.tsx",
+      "destination": "studio-baseui/components/ui/menubar.tsx",
+      "sha256": "6fc598b0b154b5e50e61922d31f01ce82635cf6e619a3ff908a4bee6f95cf6a2"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/message-scroller.tsx",
+      "destination": "studio-baseui/components/ui/message-scroller.tsx",
+      "sha256": "6f6021dee9879dd1d6bd01be50207c96a52fca57f1c6802370e1a39a76c17b65"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/message.tsx",
+      "destination": "studio-baseui/components/ui/message.tsx",
+      "sha256": "561c8944b973fb38a29aa036189007690192863fda7a115b2dfb10938e20cbcc"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/native-select.tsx",
+      "destination": "studio-baseui/components/ui/native-select.tsx",
+      "sha256": "8e17e83d2229412e72d5a9c6b56e1a63b100a1306a2aa8a1b7f6cd731b132a4b"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/navigation-menu.tsx",
+      "destination": "studio-baseui/components/ui/navigation-menu.tsx",
+      "sha256": "08adb370623db5ce4cfaf9779dd3b9ac897f2f4df285e29120a2a244d7742104"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/pagination.tsx",
+      "destination": "studio-baseui/components/ui/pagination.tsx",
+      "sha256": "897e244f0657c006b2b8bf3b33373ae012f2dfa42d43592c7d516068a8eeb565"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/popover.tsx",
+      "destination": "studio-baseui/components/ui/popover.tsx",
+      "sha256": "ccee11e29669fe47d17ff855d6e513447e05da0f69d8cf1b6f93e2bf2065675c"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/progress.tsx",
+      "destination": "studio-baseui/components/ui/progress.tsx",
+      "sha256": "5129f4dc5211be1a0369bc3ef2bff11a68617588462e3ad56266ff1c53e6196f"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/questionnaire.tsx",
+      "destination": "studio-baseui/components/ui/questionnaire.tsx",
+      "sha256": "d4a0a7c957fbe38f76662b65b71f476781b03194eaee6339c728d8c5f32daaf3"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/radio-group.tsx",
+      "destination": "studio-baseui/components/ui/radio-group.tsx",
+      "sha256": "413e04409a0bdaed019738fec2aa0e408611b85386de2132e92a0518f48d62dc"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/resizable.tsx",
+      "destination": "studio-baseui/components/ui/resizable.tsx",
+      "sha256": "9887d159502f94fe749d1b797ee48abf106e2635f539991e95df3e1d4730e94c"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/scroll-area.tsx",
+      "destination": "studio-baseui/components/ui/scroll-area.tsx",
+      "sha256": "0cf59e00bf2a606b21813b1b81ac055f82cf8f676537f4bc54e659b02b8fbe95"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/select.tsx",
+      "destination": "studio-baseui/components/ui/select.tsx",
+      "sha256": "ef15c842c906123223ae8c88554dfa37d4814f372148e06befc37464c3164f92"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/separator.tsx",
+      "destination": "studio-baseui/components/ui/separator.tsx",
+      "sha256": "463f9ac316a929ae0edaf1b84a97b118cb2669d795483b43a6b1b777396453b8"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/sheet.tsx",
+      "destination": "studio-baseui/components/ui/sheet.tsx",
+      "sha256": "6f9497666ae2ebf094add16c6d6e00f53b2c90fad43eee8d86584e057c7eeb5b"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/sidebar.tsx",
+      "destination": "studio-baseui/components/ui/sidebar.tsx",
+      "sha256": "73432bf191f420e70b4f27205098fd23cd9b701542ec13c80c1aa90b3184131a"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/skeleton.tsx",
+      "destination": "studio-baseui/components/ui/skeleton.tsx",
+      "sha256": "47aa473f1907f497f167b1fec94e4059f9613a4d3169709f9bd9ba1ef5e8accb"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/slider.tsx",
+      "destination": "studio-baseui/components/ui/slider.tsx",
+      "sha256": "287b78e82857a60576664e1c4087b5794f6a6c13f754bed227b2935d42fcf933"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/spinner.tsx",
+      "destination": "studio-baseui/components/ui/spinner.tsx",
+      "sha256": "226791cffc38cd612822767f7db07beeba0976acd07a23cd68d2522d31281e77"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/switch.tsx",
+      "destination": "studio-baseui/components/ui/switch.tsx",
+      "sha256": "281f69619cab42a18bef6127e3a52ac5ebd0bf19367e6b60e68c9ee666103d19"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/table.tsx",
+      "destination": "studio-baseui/components/ui/table.tsx",
+      "sha256": "213b27961717f1d54b6d483ff1559d1b065e6219aa62d7d7ef5ddde6723743bb"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/tabs.tsx",
+      "destination": "studio-baseui/components/ui/tabs.tsx",
+      "sha256": "4268ff49e450834ba9a7bae5f51f8fd5b023dd6167f0e744eb111908ca9e377b"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/textarea.tsx",
+      "destination": "studio-baseui/components/ui/textarea.tsx",
+      "sha256": "d3cfaf6d5a4506fd6072ab96a2bc3639f772517e28f0ddef2e2e2d4b100ff1dc"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/toast.tsx",
+      "destination": "studio-baseui/components/ui/toast.tsx",
+      "sha256": "7d445ec366b051d4b01f570d839815d856d2fe0590f3681d0e39a1cf2a9a0f7e"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/toggle-group.tsx",
+      "destination": "studio-baseui/components/ui/toggle-group.tsx",
+      "sha256": "35e7fc519653c1bd3a8f0ff71775ea27f806c2b5693ed0df138f4ff7240cd8ee"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/toggle.tsx",
+      "destination": "studio-baseui/components/ui/toggle.tsx",
+      "sha256": "0643bc7e27cd8986c565c24681fe17410a18127d24a1889420ac57fb4e314783"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/tooltip.tsx",
+      "destination": "studio-baseui/components/ui/tooltip.tsx",
+      "sha256": "a6a5382e3cbf3e1977eaa659e28a9e2047eb1ed8327cf0388c427305f61c747c"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/components/ui/trace.tsx",
+      "destination": "studio-baseui/components/ui/trace.tsx",
+      "sha256": "b921a9988986d903ba398d34325dfd3e75b9df335e9a7ce9ebac5d7e9e0bec45"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/lib/cn.ts",
+      "destination": "studio-baseui/lib/cn.ts",
+      "sha256": "00708463d307471ed1a3ac36642e9c00a766730d7be61e2351f283a580017ea6"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/lib/utils.ts",
+      "destination": "studio-baseui/lib/utils.ts",
+      "sha256": "9d0029d1d6deccb2bfe3088c4c49ab00638cb7d99afa3072a0fd83156ff8e8c4"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-baseui/provenance.json",
+      "destination": "studio-baseui/provenance.json",
+      "sha256": "e004c4aecc24ee2f641641092423c6f327fc434cfdfa1b4fe7b8290b44cfda39"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-brand.css",
+      "destination": "studio-brand.css",
+      "sha256": "67869ccd9ad05cf876e3177c3e661a11953647781aa8490b49e5c5b45634fd2f"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ecommerce-preview.tsx",
+      "destination": "studio-ecommerce-preview.tsx",
+      "sha256": "b29f61d6c644266ce43f6fbd20369677b25b2b57fc17579ada27a8d309da9a8e"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ecommerce.css",
+      "destination": "studio-ecommerce.css",
+      "sha256": "ff740a2cfd425293784797fe210a2b525295858feffba80aa15675eaba8ec91f"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-tailwind.input.css",
+      "destination": "studio-tailwind.input.css",
+      "sha256": "7c80f8f22dc8370b7cef06fd5c9d82935a3ff949ee4a355075c7bba692efebb2"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ui/LICENSE",
+      "destination": "studio-ui/LICENSE",
+      "sha256": "d4f2f6115637639342e10780a8c4ebf4ea54239662aa362554ede12fe1d0beaa"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ui/avatar.tsx",
+      "destination": "studio-ui/avatar.tsx",
+      "sha256": "36575145896c568972e3922f4263f04c980e803ab70e91cdf4dca99d6da2e905"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ui/badge.tsx",
+      "destination": "studio-ui/badge.tsx",
+      "sha256": "3c92c3f72ec945e4235893e42ecd5150a3fa617edd9568adf4335442d0486e7e"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ui/button.tsx",
+      "destination": "studio-ui/button.tsx",
+      "sha256": "ab225fce5f11ab69dbc4a451397dc27c17678a312682d7d614920318f1ea49fa"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ui/cn.ts",
+      "destination": "studio-ui/cn.ts",
+      "sha256": "ce673c725a3b02f15d0b840df0a1662ccb9fbd2db9fe453c27e7989d746b4125"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ui/input.tsx",
+      "destination": "studio-ui/input.tsx",
+      "sha256": "f78126aef05076cc35d4806b53bc1155fd61a9478b519b6aa827074be9a6e1cd"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ui/provenance.json",
+      "destination": "studio-ui/provenance.json",
+      "sha256": "f06fa3601ff45db19dbb280f69ea3fd6fc94d9021872821e5c17c8a43fa5c78d"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ui/table.tsx",
+      "destination": "studio-ui/table.tsx",
+      "sha256": "d468fddbe7c4edca4bffc08c6323b98467f3b4d99250bad4fb8e4e9b2b769d8d"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ui/textarea.tsx",
+      "destination": "studio-ui/textarea.tsx",
+      "sha256": "d001ee5b86ddf37cc5540a7260a7bb47eb0f093572132c74ca01e614f2974770"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-ui.css",
+      "destination": "studio-ui.css",
+      "sha256": "3be39981611db1bc6f170c50d28da6ec196bae89c1c9c990acd77810bc0641e5"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/studio-utilities.css",
+      "destination": "studio-utilities.css",
+      "sha256": "eb8bd302fb8f7f4f558d98b3b33e477a6a3ac7574eb88b46f33b24b0792d29a4"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/third-party/react-force-graph/LICENSE",
+      "destination": "third-party/react-force-graph/LICENSE",
+      "sha256": "5b6dc9ce44c7b73620b191c567339212bd00537af46fdedaf98304c34214cc9c"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/third-party/react-force-graph/PROVENANCE.md",
+      "destination": "third-party/react-force-graph/PROVENANCE.md",
+      "sha256": "868ce2d495f418cdbb6a09306d477a785a87ad03f24e77f7a353b184f97c7828"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/third-party/react-force-graph/THIRD-PARTY-NOTICES.txt",
+      "destination": "third-party/react-force-graph/THIRD-PARTY-NOTICES.txt",
+      "sha256": "81510066147b134b35b0a9fc4e863d656685fb6d91e32928bccbbe710c0963a1"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/visual-fixture/work-board.tsx",
+      "destination": "work-board.tsx",
+      "sha256": "ee6300ae0103140f800ece4438a78d636fab00a5618edd6ff1965f8f134365ac"
+    },
+    {
+      "source": "src/components/dashboard/access-denied.tsx",
+      "destination": "shared/components/dashboard/access-denied.tsx",
+      "sha256": "efa8830ff2eb5a59f8e39cb3449e3a2c5abe3cf46e21625811aecb01e0314606"
+    },
+    {
+      "source": "src/components/dashboard/access-denied.module.css",
+      "destination": "shared/components/dashboard/access-denied.module.css",
+      "sha256": "3588473ba994b8c2dd4795a1e1088c6d45a4e98bd2313dd6f133494401395284"
+    },
+    {
+      "source": "src/components/dashboard/brand-tokens.module.css",
+      "destination": "shared/components/dashboard/brand-tokens.module.css",
+      "sha256": "149237b2e4dd449036c7de82851cb3eb3260ec83827135d830f0da35c85bc012"
+    },
+    {
+      "source": "src/components/dashboard/knowledge-graph.tsx",
+      "destination": "shared/components/dashboard/knowledge-graph.tsx",
+      "sha256": "604f7c9ff73533b548140c073db771c492b182d66c5e728a4747bd63e957fa76"
+    },
+    {
+      "source": "src/components/dashboard/knowledge-graph.module.css",
+      "destination": "shared/components/dashboard/knowledge-graph.module.css",
+      "sha256": "1708544453daeac85e5c1ea89866da7545a4d7f03a51fe8ca505d5e5cdb56c0f"
+    },
+    {
+      "source": "src/lib/dashboard/read-model.ts",
+      "destination": "shared/lib/dashboard/read-model.ts",
+      "sha256": "0e43c579ae9e1a4be3f1a400041d70fcc9699e6f60cdb0ba023d30ab32f124d0"
+    },
+    {
+      "source": "public/brand/allura-lettermark-al-figma.png",
+      "destination": "public/brand/allura-lettermark-al-figma.png",
+      "sha256": "3efad65702375e9eea2cd48586f3aae89d338720186e372ee50fa11d47262156"
+    },
+    {
+      "source": "public/brand/allura-wordmark-runtime.png",
+      "destination": "public/brand/allura-wordmark-runtime.png",
+      "sha256": "80e15b6aafec00c06876171ddd33d94ee777d3b346353984398b84b10bde16da"
+    },
+    {
+      "source": "LICENSE",
+      "destination": "LICENSE",
+      "sha256": "d1c8ef82ddbece59d0c214e2e272b9f84440d76a2050e38ad388ddfc7a2ccb3c"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/studio-baseui-preview-receipt.json",
+      "destination": "provenance/history/studio-baseui-preview-receipt.json",
+      "sha256": "d7b0e4e28b3de9fc83a392ff0f095f9d3f39858da37b4cac0b4dd17284dbc544"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/studio-commerce-preview-receipt.json",
+      "destination": "provenance/history/studio-commerce-preview-receipt.json",
+      "sha256": "412004f2ad2bf84782c022a0fea921eab0e54f544c151d7b7fa96d8879776131"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/connections-3d-preview-receipt.json",
+      "destination": "provenance/history/connections-3d-preview-receipt.json",
+      "sha256": "e977d7d5eeb99529f3f7b7cbcb5a5417a228aa86c2181816388bdbf6cfc778e8"
+    },
+    {
+      "source": "artifacts/enterprise-dashboard/react-force-graph-preview-receipt.json",
+      "destination": "provenance/history/react-force-graph-preview-receipt.json",
+      "sha256": "7d6aa6fe000566086064ea1380c4c3f1913aa7b4443bb44280508c6f8244f102"
+    }
+  ]
+}

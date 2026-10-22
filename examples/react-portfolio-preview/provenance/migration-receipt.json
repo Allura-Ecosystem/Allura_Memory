@@ -1,0 +1,118 @@
+{
+  "recorded_at": "2026-10-22T05:37:43.664473+00:00",
+  "source": "artifacts/enterprise-dashboard/visual-fixture",
+  "destination": "examples/react-portfolio-preview",
+  "purpose": "Self-contained source packaging for Git review; no application behavior changes.",
+  "source_baseline_commit": "28d90e84364d1f99e67df4f8a4ebdaafb6fcf0d9",
+  "source_worktree_note": "Includes uncommitted local walkthrough changes; the commit identifier alone does not reproduce the original ignored fixture.",
+  "copied_file_count": 170,
+  "manifest": "source-copy-manifest.json",
+  "shared_copies": [
+    {
+      "source": "src/components/dashboard/access-denied.tsx",
+      "destination": "shared/components/dashboard/access-denied.tsx",
+      "sha256": "efa8830ff2eb5a59f8e39cb3449e3a2c5abe3cf46e21625811aecb01e0314606"
+    },
+    {
+      "source": "src/components/dashboard/access-denied.module.css",
+      "destination": "shared/components/dashboard/access-denied.module.css",
+      "sha256": "3588473ba994b8c2dd4795a1e1088c6d45a4e98bd2313dd6f133494401395284"
+    },
+    {
+      "source": "src/components/dashboard/brand-tokens.module.css",
+      "destination": "shared/components/dashboard/brand-tokens.module.css",
+      "sha256": "149237b2e4dd449036c7de82851cb3eb3260ec83827135d830f0da35c85bc012"
+    },
+    {
+      "source": "src/components/dashboard/knowledge-graph.tsx",
+      "destination": "shared/components/dashboard/knowledge-graph.tsx",
+      "sha256": "604f7c9ff73533b548140c073db771c492b182d66c5e728a4747bd63e957fa76"
+    },
+    {
+      "source": "src/components/dashboard/knowledge-graph.module.css",
+      "destination": "shared/components/dashboard/knowledge-graph.module.css",
+      "sha256": "1708544453daeac85e5c1ea89866da7545a4d7f03a51fe8ca505d5e5cdb56c0f"
+    },
+    {
+      "source": "src/lib/dashboard/read-model.ts",
+      "destination": "shared/lib/dashboard/read-model.ts",
+      "sha256": "0e43c579ae9e1a4be3f1a400041d70fcc9699e6f60cdb0ba023d30ab32f124d0"
+    }
+  ],
+  "brand_asset_copies": [
+    {
+      "source": "public/brand/allura-lettermark-al-figma.png",
+      "destination": "public/brand/allura-lettermark-al-figma.png",
+      "sha256": "3efad65702375e9eea2cd48586f3aae89d338720186e372ee50fa11d47262156"
+    },
+    {
+      "source": "public/brand/allura-wordmark-runtime.png",
+      "destination": "public/brand/allura-wordmark-runtime.png",
+      "sha256": "80e15b6aafec00c06876171ddd33d94ee777d3b346353984398b84b10bde16da"
+    }
+  ],
+  "exclusions": [
+    "node_modules",
+    "package-lock.json",
+    "original package.json",
+    "original Vite configuration"
+  ],
+  "configuration_changes": [
+    "Local Vite aliases replace references to repository src/public.",
+    "Standalone exact-version package manifest and Bun lockfile.",
+    "Relocatable Vitest configuration and scoped walkthrough TypeScript check."
+  ],
+  "license_note": "Existing Allura MIT license and vendored Studio MIT notices/provenance are copied unchanged. Brand assets remain approved Allura project assets; no new license is asserted.",
+  "browser_validation": "Unconfirmed; prior browser tool access to the local preview was denied. No alternate browser mechanism was attempted.",
+  "portable_html": "Existing portable single-file HTML is unchanged.",
+  "package_files": [
+    {
+      "path": "package.json",
+      "sha256": "cc9e1d69ad8c30e2196ddcb267310867cb32aaf8e6e296c911f4f48e7fd462f8"
+    },
+    {
+      "path": "bun.lock",
+      "sha256": "2075a994edbaca1f011f647342e1b7da0abf933b42bbf16e39b0ae9cc96c02d0"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "5296678f5e6239940b0956621fc8166e7e7271b6d7fb5e1212805a9473aab0e0"
+    },
+    {
+      "path": "vitest.config.ts",
+      "sha256": "4e9d1211699c558cd3d48173b4d34143c15a6447dee5b3d0c8f2c4725c1050eb"
+    },
+    {
+      "path": "tsconfig.walkthrough.json",
+      "sha256": "96a4b263e6d33a055cceccb4389453afdda4ca06376651d7fffc209233632184"
+    },
+    {
+      "path": "README.md",
+      "sha256": "54b73515ac287769e13a8f52f902780153f535a897d68b2391dbdecfd01d7f67"
+    },
+    {
+      "path": "PREVIEW-SCOPE.md",
+      "sha256": "e40360950ed0354773b624ba0989189e9191bdf44cbd5309c48b3341c65890a8"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "ed05d0a2ee67a19f6319d2e33ba49de701b30fb7d172ece3a909d0fbbbcc9e48"
+    }
+  ],
+  "original_three_resolution": {
+    "importer": "artifacts/enterprise-dashboard/visual-fixture/connections-three.tsx",
+    "resolved": "artifacts/enterprise-dashboard/visual-fixture/node_modules/three/build/three.cjs",
+    "version": "0.186.1",
+    "method": "Node createRequire(importer).resolve(three), adjacent package.json read"
+  },
+  "normalizations": [
+    {
+      "file": "connections-three.tsx",
+      "change": "Trailing whitespace only; original and destination hashes preserved in source-copy manifest."
+    },
+    {
+      "file": "studio-adapters/ecommerce/kpi-strip.tsx",
+      "change": "Trailing whitespace only; original and destination hashes preserved in source-copy manifest."
+    }
+  ]
+}

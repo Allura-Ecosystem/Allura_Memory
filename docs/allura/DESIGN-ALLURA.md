@@ -936,3 +936,13 @@ async function readJson<T>(path: string, init?: RequestInit): Promise<{ data: T;
 - [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) — system topology and deployment
 - [DATA-DICTIONARY.md](./DATA-DICTIONARY.md) — canonical field and entity definitions
 - [BLUEPRINT.md](./BLUEPRINT.md#0-brand-identity) — visual identity, wireframes, and design rules
+
+### Portfolio preview: guided review walkthrough — 2026-10-22
+
+Sabir requested updating the walkthrough inside the React preview. Keep the existing `#review` route and Home entry, with a source → proposed change → independent review → outcome journey. Read the source title, owner, workspace, version and text from the existing handbook fixture rather than maintaining a second policy example.
+
+The runnable Git source is preserved under `examples/react-portfolio-preview/`, with its own dependency lock, test configuration and local copies of the shared presentation components. The earlier `artifacts/enterprise-dashboard/visual-fixture/` remains a historical local source location. Follow the tracked preview's README for installation and validation; generated bundles and dependencies remain excluded from Git.
+
+The author and reviewer are explicitly fictional and distinct. A decision and a written rationale are required; do not preselect approval or prefill a claim that evidence was checked. Approval, rejection and an evidence request need distinct outcomes and next actions. Revising a proposal clears the prior decision, while a full restart resets all walkthrough input. Hold walkthrough state above the conditional route so visiting Company Knowledge and returning does not discard it; reload still resets the preview.
+
+Retain semantic step progress, stage-heading focus, visible keyboard focus, readable source/proposal text, responsive controls and Allura's existing palette. Connections, Files, Work Board and Store overview links are optional exploration destinations. The walkthrough does not create shared tasks, attach evidence files, update the source document, enforce real reviewer permissions or issue a durable receipt. The broader policy → task → file → review journey remains a separate proposed slice. Build and component-test evidence must remain distinct from browser verification and Sabir's acceptance.

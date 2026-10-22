@@ -470,3 +470,9 @@ Before marking any story `Done`:
 - [ ] Notion work item updated (status, decision log, evidence links)
 - [ ] Validation evidence collected (tests pass, typecheck clean, review approved)
 - [ ] Brain outcome logged (`allura-brain_memory_add` with `group_id=allura-system`)
+
+### Guided review walkthrough
+
+Sabir's 2026-10-22 walkthrough update is scoped to the React preview at `#review`, reached from Home's guided-walkthrough entry. Follow the [walkthrough design contract](../docs/allura/DESIGN-ALLURA.md#portfolio-preview-guided-review-walkthrough--2026-10-22): inspect the existing sample source, propose a change, make an explicit fictional review decision with rationale, and inspect the corresponding outcome. Keep drafts across preview navigation, clear prior decisions on revision, and fully reset on restart. Every outcome remains an illustrative local result; do not claim that the source was updated, a shared task was created, permission was granted or a durable approval receipt was issued. This scoped update does not complete the separately proposed cross-resource guided journey.
+
+Use the tracked runnable source in `examples/react-portfolio-preview/` and its committed dependency lock for this demo. Preserve the existing licensed Studio source and provenance. Validate the packaged preview independently of the dirty production application; do not treat a local ignored fixture or generated single-file HTML as a substitute for the tracked source.

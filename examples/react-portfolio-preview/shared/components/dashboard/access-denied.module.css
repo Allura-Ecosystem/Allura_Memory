@@ -1,0 +1,15 @@
+.page { box-sizing: border-box; display: flex; flex-direction: column; align-items: flex-start; min-height: 100vh; padding: clamp(24px, 5vw, 72px); background: var(--surface-ground); color: var(--surface-text); font-family: var(--surface-font-body); }
+.page * { box-sizing: border-box; }
+.brand { display: block; width: 168px; padding: 8px; }
+.brand img { display: block; width: 152px; min-width: 120px; height: auto; }
+.message { width: 100%; max-width: 640px; margin-block: auto; padding-block: 64px; }
+.eyebrow { color: var(--surface-muted); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.message h1 { margin: 16px 0 24px; font-family: var(--surface-font-display); font-size: clamp(36px, 5vw, 64px); font-weight: 600; line-height: 1.08; letter-spacing: -.045em; }
+.message p { line-height: 1.7; font-size: 16px; max-width: 540px; }
+.message .eyebrow { font-size: 12px; }
+.message .guidance { color: var(--surface-muted); font-size: 14px; margin-top: 20px; }
+.returnLink { display: inline-flex; align-items: center; justify-content: center; gap: 24px; min-height: 44px; max-width: 100%; margin-top: 24px; padding: 12px 18px; border: 1px solid var(--allura-blue); border-radius: var(--surface-radius); background: var(--allura-blue); color: var(--surface-paper); font-size: 14px; text-decoration: none; }
+.returnLink:hover { background: var(--surface-blue-soft); color: var(--allura-blue); }
+.page a:focus-visible { outline: 3px solid var(--allura-blue); outline-offset: 4px; }
+.footer { margin: 0; color: var(--surface-muted); font-size: 12px; }
+@media (max-width: 480px) { .page { padding: 24px; } .brand { width: 136px; } .brand img { width: 120px; } .message { padding-block: 48px; } }
