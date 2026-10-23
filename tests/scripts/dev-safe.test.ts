@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { parse } from "yaml"
 import { spawnSync } from "node:child_process"
+import { createServer, type Server } from "node:net"
 import {
   chmodSync,
   cpSync,
@@ -22,11 +23,16 @@ import {
   assertSafeWorktree,
   buildEnvironment,
   inspectExecutable,
+  inspectLocalDockerEndpoint,
   readPortConfiguration,
 } from "../../scripts/dev-safe/environment"
 
 const root = "/worktrees/allura-memory"
-const tools = { runtime: "/opt/bun/bin/bun", docker: "/usr/bin/docker" }
+const tools = {
+  runtime: "/opt/bun/bin/bun",
+  docker: "/usr/bin/docker",
+  dockerEndpoint: "unix:///var/run/docker.sock",
+}
 const bunCandidate = (process.env.PATH ?? "")
   .split(delimiter)
   .map((directory) => join(directory, "bun"))
@@ -34,15 +40,31 @@ const bunCandidate = (process.env.PATH ?? "")
 const bunExecutable = inspectExecutable(bunCandidate, "test Bun runtime")
 const bunVersion = spawnSync(bunExecutable, ["--version"], { encoding: "utf8" }).stdout.trim()
 const temporaryRoots: string[] = []
+const socketServers: Server[] = []
 
 afterEach(() => {
   delete process.env.OPENAI_API_KEY
   delete process.env.ALLURA_MCP_HTTP_PORT
   delete process.env.NODE_OPTIONS
+  delete process.env.DOCKER_HOST
+  delete process.env.DOCKER_CONTEXT
+  delete process.env.DOCKER_TLS_VERIFY
+  delete process.env.DOCKER_CERT_PATH
+  delete process.env.ALLURA_DEV_SAFE_DOCKER_ENDPOINT
+  for (const server of socketServers.splice(0)) server.close()
   for (const temporaryRoot of temporaryRoots.splice(0)) {
     rmSync(temporaryRoot, { recursive: true, force: true })
   }
 })
+
+async function unixSocket(path: string): Promise<void> {
+  const server = createServer()
+  socketServers.push(server)
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(path, resolve)
+  })
+}
 
 function linkedWorktree(): string {
   const temporaryRoot = mkdtempSync(join(tmpdir(), "allura-dev-safe-"))
@@ -51,7 +73,14 @@ function linkedWorktree(): string {
   return temporaryRoot
 }
 
-function launcherFixture(): { root: string; dockerLog: string; dockerEnvironmentLog: string; path: string } {
+function launcherFixture(): {
+  root: string
+  dockerLog: string
+  dockerEnvironmentLog: string
+  dockerSocket: string
+  daemonFailure: string
+  path: string
+} {
   const temporaryRoot = linkedWorktree()
   mkdirSync(join(temporaryRoot, "scripts"))
   cpSync(join(process.cwd(), "scripts/dev-safe"), join(temporaryRoot, "scripts/dev-safe"), {
@@ -73,17 +102,21 @@ function launcherFixture(): { root: string; dockerLog: string; dockerEnvironment
   const toolsDirectory = join(temporaryRoot, "tools")
   const dockerLog = join(temporaryRoot, "docker.log")
   const dockerEnvironmentLog = join(temporaryRoot, "docker-environment.log")
+  const dockerSocket = join(temporaryRoot, "docker.sock")
+  const daemonFailure = join(temporaryRoot, "daemon-unreachable")
   mkdirSync(toolsDirectory)
   const docker = join(toolsDirectory, "docker")
   writeFileSync(
     docker,
-    `#!/bin/sh\nprintf '%s\\n' "$*" >> '${dockerLog}'\nprintf 'OPENAI_API_KEY=%s\\nDOCKER_HOST=%s\\nALLURA_MCP_HTTP_PORT=%s\\n' "\${OPENAI_API_KEY-unset}" "\${DOCKER_HOST-unset}" "\${ALLURA_MCP_HTTP_PORT-unset}" >> '${dockerEnvironmentLog}'\nprintf '2.30.0\\n'\n`
+    `#!/bin/sh\nprintf '%s\\n' "$*" >> '${dockerLog}'\nprintf 'OPENAI_API_KEY=%s\\nDOCKER_HOST=%s\\nDOCKER_CONTEXT=%s\\nDOCKER_TLS_VERIFY=%s\\nDOCKER_CERT_PATH=%s\\nALLURA_MCP_HTTP_PORT=%s\\n' "\${OPENAI_API_KEY-unset}" "\${DOCKER_HOST-unset}" "\${DOCKER_CONTEXT-unset}" "\${DOCKER_TLS_VERIFY-unset}" "\${DOCKER_CERT_PATH-unset}" "\${ALLURA_MCP_HTTP_PORT-unset}" >> '${dockerEnvironmentLog}'\nif [ "$3" = version ] && [ -f '${daemonFailure}' ]; then printf 'daemon unavailable\\n' >&2; exit 42; fi\nprintf '2.30.0\\n'\n`
   )
   chmodSync(docker, 0o755)
   return {
     root: temporaryRoot,
     dockerLog,
     dockerEnvironmentLog,
+    dockerSocket,
+    daemonFailure,
     path: [toolsDirectory, dirname(bunExecutable), "/usr/bin", "/bin"].join(":"),
   }
 }
@@ -185,11 +218,92 @@ describe("fixed dev-safe command plans", () => {
   })
 })
 
+describe("local Docker endpoint boundary", () => {
+  it("uses the verified default engine socket when no explicit endpoint is selected", async () => {
+    const temporaryRoot = linkedWorktree()
+    const defaultSocket = join(temporaryRoot, "default.sock")
+    const desktopSocket = join(temporaryRoot, "desktop.sock")
+    await unixSocket(defaultSocket)
+
+    expect(
+      inspectLocalDockerEndpoint(undefined, {
+        defaultSocket,
+        desktopSocket,
+        currentUid: process.getuid!(),
+        defaultOwnerUid: process.getuid!(),
+      })
+    ).toBe(`unix://${defaultSocket}`)
+  })
+
+  it("accepts the explicit verified Docker Desktop socket", async () => {
+    const temporaryRoot = linkedWorktree()
+    const defaultSocket = join(temporaryRoot, "default.sock")
+    const desktopSocket = join(temporaryRoot, "desktop.sock")
+    await unixSocket(desktopSocket)
+
+    expect(
+      inspectLocalDockerEndpoint(`unix://${desktopSocket}`, {
+        defaultSocket,
+        desktopSocket,
+        currentUid: process.getuid!(),
+        defaultOwnerUid: 0,
+      })
+    ).toBe(`unix://${desktopSocket}`)
+  })
+
+  it.each(["tcp://127.0.0.1:2375", "ssh://production.example", "unix:///tmp/unapproved-docker.sock"])(
+    "rejects remote or unapproved endpoint %s",
+    async (endpoint) => {
+      const temporaryRoot = linkedWorktree()
+      const defaultSocket = join(temporaryRoot, "default.sock")
+      const desktopSocket = join(temporaryRoot, "desktop.sock")
+      await unixSocket(desktopSocket)
+
+      expect(() =>
+        inspectLocalDockerEndpoint(endpoint, {
+          defaultSocket,
+          desktopSocket,
+          currentUid: process.getuid!(),
+          defaultOwnerUid: 0,
+        })
+      ).toThrow(/approved local Unix socket/)
+    }
+  )
+
+  it("rejects a regular file and an endpoint with the wrong owner", async () => {
+    const temporaryRoot = linkedWorktree()
+    const defaultSocket = join(temporaryRoot, "default.sock")
+    const desktopSocket = join(temporaryRoot, "desktop.sock")
+    writeFileSync(desktopSocket, "not a socket")
+    const policy = {
+      defaultSocket,
+      desktopSocket,
+      currentUid: process.getuid!(),
+      defaultOwnerUid: 0,
+    }
+
+    expect(() => inspectLocalDockerEndpoint(`unix://${desktopSocket}`, policy)).toThrow(/not a Unix socket/)
+    rmSync(desktopSocket)
+    await unixSocket(desktopSocket)
+    expect(() =>
+      inspectLocalDockerEndpoint(`unix://${desktopSocket}`, {
+        ...policy,
+        currentUid: process.getuid!() + 1,
+      })
+    ).toThrow(/not owned by the current user/)
+  })
+})
+
 describe("explicit child environment", () => {
   it("reconstructs safe values without ambient secrets or phantom MCP settings", () => {
     process.env.OPENAI_API_KEY = "ambient-secret"
     process.env.ALLURA_MCP_HTTP_PORT = "65530"
     process.env.NODE_OPTIONS = "--require=/tmp/ambient-hook.js"
+    process.env.DOCKER_HOST = "ssh://production.example"
+    process.env.DOCKER_CONTEXT = "production"
+    process.env.DOCKER_TLS_VERIFY = "1"
+    process.env.DOCKER_CERT_PATH = "/tmp/production-certs"
+    process.env.ALLURA_DEV_SAFE_DOCKER_ENDPOINT = "ssh://production.example"
 
     const environment = buildEnvironment(root, "dev", tools, {
       dashboard: 45678,
@@ -213,6 +327,10 @@ describe("explicit child environment", () => {
       "ALLURA_BRAIN_URL",
       "NODE_OPTIONS",
       "DOCKER_HOST",
+      "DOCKER_CONTEXT",
+      "DOCKER_TLS_VERIFY",
+      "DOCKER_CERT_PATH",
+      "ALLURA_DEV_SAFE_DOCKER_ENDPOINT",
       "COMPOSE_FILE",
     ]) {
       expect(environment).not.toHaveProperty(key)
@@ -335,9 +453,17 @@ describe("package aliases", () => {
 })
 
 describe("launcher entrypoint", () => {
-  it("doctor inspects the selected Bun runtime and Compose plugin without service access", () => {
+  it("doctor verifies the selected daemon and Compose plugin without service access", async () => {
     const fixture = launcherFixture()
-    const result = spawnSync(bunExecutable, ["--no-env-file", "scripts/dev-safe/index.ts", "doctor"], {
+    await unixSocket(fixture.dockerSocket)
+    writeFileSync(
+      join(fixture.root, "doctor.ts"),
+      [
+        'import { main } from "./scripts/dev-safe/index.ts"',
+        `process.exitCode = await main({ dockerEndpointPolicy: { defaultSocket: ${JSON.stringify(fixture.dockerSocket)}, desktopSocket: ${JSON.stringify(join(fixture.root, "desktop.sock"))}, currentUid: ${process.getuid!()}, defaultOwnerUid: ${process.getuid!()} } })`,
+      ].join("\n")
+    )
+    const result = spawnSync(bunExecutable, ["--no-env-file", "doctor.ts", "doctor"], {
       cwd: fixture.root,
       env: {
         HOME: "/ambient/home",
@@ -345,18 +471,54 @@ describe("launcher entrypoint", () => {
         PATH: fixture.path,
         OPENAI_API_KEY: "ambient-secret",
         DOCKER_HOST: "ssh://production.example",
+        DOCKER_CONTEXT: "production",
+        DOCKER_TLS_VERIFY: "1",
+        DOCKER_CERT_PATH: "/tmp/production-certs",
       },
       encoding: "utf8",
     })
 
     expect(result.status, result.stderr).toBe(0)
     expect(result.stdout).toContain(`Bun runtime: ${bunVersion}`)
+    expect(result.stdout).toContain(`Docker daemon: 2.30.0 (unix://${fixture.dockerSocket})`)
     expect(result.stdout).toContain("Docker Compose plugin: 2.30.0")
     expect(readFileSync(fixture.dockerLog, "utf8").trim()).toBe(
-      "--host unix:///var/run/docker.sock compose version --short"
+      [
+        `--host unix://${fixture.dockerSocket} version --format {{.Server.Version}}`,
+        `--host unix://${fixture.dockerSocket} compose version --short`,
+      ].join("\n")
     )
     expect(readFileSync(fixture.dockerEnvironmentLog, "utf8").trim()).toBe(
-      "OPENAI_API_KEY=unset\nDOCKER_HOST=unset\nALLURA_MCP_HTTP_PORT=unset"
+      [
+        "OPENAI_API_KEY=unset\nDOCKER_HOST=unset\nDOCKER_CONTEXT=unset\nDOCKER_TLS_VERIFY=unset\nDOCKER_CERT_PATH=unset\nALLURA_MCP_HTTP_PORT=unset",
+        "OPENAI_API_KEY=unset\nDOCKER_HOST=unset\nDOCKER_CONTEXT=unset\nDOCKER_TLS_VERIFY=unset\nDOCKER_CERT_PATH=unset\nALLURA_MCP_HTTP_PORT=unset",
+      ].join("\n")
+    )
+  })
+
+  it("doctor fails before claiming readiness when the selected daemon is unreachable", async () => {
+    const fixture = launcherFixture()
+    await unixSocket(fixture.dockerSocket)
+    writeFileSync(fixture.daemonFailure, "fail")
+    writeFileSync(
+      join(fixture.root, "doctor.ts"),
+      [
+        'import { main } from "./scripts/dev-safe/index.ts"',
+        `process.exitCode = await main({ dockerEndpointPolicy: { defaultSocket: ${JSON.stringify(fixture.dockerSocket)}, desktopSocket: ${JSON.stringify(join(fixture.root, "desktop.sock"))}, currentUid: ${process.getuid!()}, defaultOwnerUid: ${process.getuid!()} } })`,
+      ].join("\n")
+    )
+
+    const result = spawnSync(bunExecutable, ["--no-env-file", "doctor.ts", "doctor"], {
+      cwd: fixture.root,
+      env: { HOME: "/ambient/home", NODE_ENV: "test", PATH: fixture.path },
+      encoding: "utf8",
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain("failed (42): daemon unavailable")
+    expect(result.stdout).not.toContain("Daemon reachability verified")
+    expect(readFileSync(fixture.dockerLog, "utf8").trim()).toBe(
+      `--host unix://${fixture.dockerSocket} version --format {{.Server.Version}}`
     )
   })
 })

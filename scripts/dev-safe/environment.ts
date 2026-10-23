@@ -1,4 +1,5 @@
 import { accessSync, constants, lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs"
+import { userInfo } from "node:os"
 import { delimiter, dirname, isAbsolute, join, relative } from "node:path"
 
 import type { DevSafePorts, DevSafeTools } from "./commands"
@@ -17,6 +18,55 @@ export function inspectExecutable(candidate: string | undefined, label: string):
     throw new Error(`${label} is not executable: ${candidate}`)
   }
   return resolved
+}
+
+export interface LocalDockerEndpointPolicy {
+  defaultSocket: string
+  desktopSocket: string
+  currentUid: number
+  defaultOwnerUid: number
+}
+
+function localDockerEndpointPolicy(): LocalDockerEndpointPolicy {
+  const account = userInfo()
+  return {
+    defaultSocket: "/var/run/docker.sock",
+    desktopSocket: join(account.homedir, ".docker", "desktop", "docker.sock"),
+    currentUid: account.uid,
+    defaultOwnerUid: 0,
+  }
+}
+
+/** Accept only a verified local engine socket; never resolve Docker contexts or remote transports. */
+export function inspectLocalDockerEndpoint(
+  candidate: string | undefined,
+  policy: LocalDockerEndpointPolicy = localDockerEndpointPolicy()
+): string {
+  const endpoint = candidate || `unix://${policy.defaultSocket}`
+  const owners = new Map([
+    [`unix://${policy.defaultSocket}`, policy.defaultOwnerUid],
+    [`unix://${policy.desktopSocket}`, policy.currentUid],
+  ])
+  const expectedOwner = owners.get(endpoint)
+  if (expectedOwner === undefined) {
+    throw new Error("Docker endpoint must be an approved local Unix socket")
+  }
+
+  const socketPath = endpoint.slice("unix://".length)
+  let socket
+  try {
+    socket = lstatSync(socketPath)
+  } catch {
+    throw new Error(`Docker endpoint is unavailable: ${socketPath}`)
+  }
+  if (!socket.isSocket()) {
+    throw new Error(`Docker endpoint is not a Unix socket: ${socketPath}`)
+  }
+  if (socket.uid !== expectedOwner) {
+    const ownership = endpoint === `unix://${policy.desktopSocket}` ? "the current user" : `uid ${expectedOwner}`
+    throw new Error(`Docker endpoint is not owned by ${ownership}: ${socketPath}`)
+  }
+  return endpoint
 }
 
 const REQUIRED_LOCAL_FILES = [
