@@ -2,81 +2,138 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allura.dev/schemas/canonical_proposals.schema.json",
   "title": "Canonical Proposal",
-  "description": "HITL (Human-in-the-Loop) promotion queue entry in PostgreSQL. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to Neo4j as InsightHead/Insight nodes.",
+  "description": "Complete DB-row-to-JSON serialization contract for the current committed PostgreSQL canonical_proposals table using the repository's default node-postgres text parsers followed by JSON.stringify/parse. It is an offline export/inspection boundary, not the curator route DTO or a proposal-create request schema; workspace authorization remains enforced by application checks and RLS.",
   "type": "object",
-  "required": ["id", "group_id", "content", "score", "status", "created_at"],
+  "required": [
+    "id",
+    "group_id",
+    "content",
+    "score",
+    "reasoning",
+    "tier",
+    "status",
+    "trace_ref",
+    "created_at",
+    "decided_at",
+    "decided_by",
+    "rationale",
+    "witness_hash",
+    "notion_page_id",
+    "notion_synced_at",
+    "approved_memory_id",
+    "workspace_id",
+    "proposal_version"
+  ],
   "properties": {
     "id": {
       "type": "string",
       "format": "uuid",
-      "description": "Primary key. Auto-generated via gen_random_uuid()."
+      "description": "PostgreSQL UUID primary key, defaulted by gen_random_uuid()."
     },
     "group_id": {
       "type": "string",
-      "pattern": "^allura-[a-z0-9-]+$",
-      "description": "Tenant namespace. CHECK constraint: must match ^allura-."
+      "maxLength": 255,
+      "pattern": "^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+      "description": "Tenant namespace. Migration 19 enforces the strict format check."
     },
     "content": {
       "type": "string",
-      "description": "The proposed insight content text."
+      "description": "NOT NULL proposed insight content."
     },
     "score": {
-      "type": "number",
-      "minimum": 0.0,
-      "maximum": 1.0,
-      "description": "Curator confidence score (0.00–1.00)."
+      "type": "string",
+      "pattern": "^(?:0(?:\\.[0-9]{1,3})?|1(?:\\.0{1,3})?)$",
+      "description": "DECIMAL(4,3) curator confidence returned by the default pg NUMERIC parser as a decimal string; the database check limits it to 0 through 1."
     },
     "reasoning": {
-      "type": "string",
-      "description": "Curator engine's reasoning for the score."
+      "anyOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ],
+      "description": "Nullable curator-engine reasoning for the score."
     },
     "tier": {
       "type": "string",
       "enum": ["emerging", "adoption", "mainstream"],
-      "description": "Confidence tier."
+      "description": "Confidence tier enforced by a database CHECK."
     },
     "status": {
       "type": "string",
       "enum": ["pending", "approved", "rejected"],
-      "description": "Lifecycle status. Default: pending."
+      "description": "Lifecycle status enforced by a database CHECK; default pending."
     },
     "trace_ref": {
-      "type": "integer",
-      "description": "Foreign key to events.id (the originating trace event). ON DELETE SET NULL."
+      "anyOf": [
+        { "type": "string", "pattern": "^-?[0-9]+$" },
+        { "type": "null" }
+      ],
+      "description": "Nullable BIGINT events.id reference returned by pg as a precision-safe decimal string."
     },
     "created_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Proposal creation timestamp. DEFAULT NOW()."
+      "description": "NOT NULL TIMESTAMPTZ parsed by pg as Date and emitted by JSON serialization as an ISO date-time string."
     },
     "decided_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "Timestamp when the proposal was approved or rejected."
+      "anyOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ],
+      "description": "Nullable decision TIMESTAMPTZ serialized from pg Date to an ISO date-time string."
     },
     "decided_by": {
-      "type": "string",
-      "description": "Identifier of the person or system that made the decision (e.g., curator-cli, sabir)."
+      "anyOf": [
+        { "type": "string", "maxLength": 255 },
+        { "type": "null" }
+      ],
+      "description": "Nullable decision principal."
     },
     "rationale": {
-      "description": "Human-provided rationale for the decision.",
       "anyOf": [
         { "type": "string" },
         { "type": "null" }
-      ]
+      ],
+      "description": "Nullable human-provided decision rationale."
     },
     "witness_hash": {
-      "type": "string",
-      "description": "SHAKE-256 hash (64-byte output) of the decision payload for audit trail integrity."
+      "anyOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ],
+      "description": "Nullable SHAKE-256 decision witness text; migrations do not impose a format CHECK."
     },
     "notion_page_id": {
-      "type": "string",
-      "description": "Notion page ID after sync."
+      "anyOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ],
+      "description": "Nullable Notion page identifier."
     },
     "notion_synced_at": {
+      "anyOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ],
+      "description": "Nullable Notion sync TIMESTAMPTZ serialized from pg Date to an ISO date-time string."
+    },
+    "approved_memory_id": {
+      "anyOf": [
+        { "type": "string", "format": "uuid" },
+        { "type": "null" }
+      ],
+      "description": "Application-produced invariant: successful current approval stores a deterministic UUID, while pending/rejected rows use NULL. The physical PostgreSQL column is unconstrained TEXT, not a database UUID guarantee."
+    },
+    "workspace_id": {
+      "description": "Stored workspace scope added by migration 39. SQL NULL represents a quarantined legacy row; current app writes must persist a non-empty server-resolved value enforced by restrictive RLS.",
+      "anyOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "null" }
+      ]
+    },
+    "proposal_version": {
       "type": "string",
-      "format": "date-time",
-      "description": "Timestamp when the proposal was synced to Notion."
+      "pattern": "^[1-9][0-9]*$",
+      "description": "Application serialization invariant for the BIGINT revision: a positive decimal string preserves precision for review and receipt consumers. Migrations provide NOT NULL/default/increment behavior but do not add a positive-value CHECK."
     }
   },
   "additionalProperties": false

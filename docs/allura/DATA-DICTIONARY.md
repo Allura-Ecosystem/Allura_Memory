@@ -120,32 +120,34 @@ API data rules: every record includes `group_id`; unknown source state renders a
 
 The append-only execution evidence log. Producers record operation and decision evidence here; the exact count and event types depend on the operation and must be verified rather than assumed to be exactly one row. Historical rows are permanent. No UPDATE or DELETE, ever. Every operation carries the RuVix identity envelope: `group_id`, `agent_id`, and (when available) `session_id`. Workspace-governed producers additionally persist `workspace_id`; legacy rows remain unscoped and are explicitly unavailable to workspace watchdog ingestion and to `allura_app` workspace-scoped reads/writes.
 
-Columns below match `json-schema/event.schema.json` and the migrations in `docker/postgres-init/` (`00-traces.sql`, `10-brooks-tracking.sql`, `17-schema-version.sql`, `19-group-id-check-constraints.sql`). `halted_at` / `halt_ttl_ms` are NOT event columns — they belong to the budget enforcer entity (see Budget Enforcer section).
+The complete DB-row-to-JSON contract in `json-schema/event.schema.json` covers every physical column committed by `00-traces.sql`, `05-evidence-confidence.sql`, `10-brooks-tracking.sql`, `17-schema-version.sql`, `19-group-id-check-constraints.sql`, and workspace migrations 39–40. It describes a complete row after the repository's default `pg` text parsers and JSON serialization: every column key is present, SQL `NULL` becomes JSON `null`, `BIGINT` becomes a precision-safe decimal string, `NUMERIC` remains a decimal string, and `TIMESTAMPTZ` becomes an ISO date-time string. This is an offline export/inspection contract, not a route DTO or event-create request model. Current workspace-governed writes still require a non-null server-resolved workspace through application checks and restrictive RLS. `halted_at` / `halt_ttl_ms` are NOT event columns — they belong to the budget enforcer entity (see Budget Enforcer section).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `id` | bigserial | Yes | Auto-increment primary key; migration 39 additionally exposes `(group_id, workspace_id, id)` as the scoped composite key for receipt provenance. |
+| `id` | bigserial (JSON: decimal string) | Yes | Auto-increment primary key; migration 39 additionally exposes `(group_id, workspace_id, id)` as the scoped composite key for receipt provenance. |
 | `group_id` | varchar(255) | Yes | Tenant namespace. CHECK constraint: `^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$` (migration 19) |
 | `workspace_id` | text | No (legacy) / Yes (workspace-governed) | Durable workspace scope for workspace-governed events. `(group_id, workspace_id)` references `workspaces`; no default backfill is assigned to legacy NULL rows. |
 | `event_type` | varchar(100) | Yes | Operation type — see values below |
 | `agent_id` | varchar(255) | Yes | Identifier of the agent or user who triggered the event |
 | `workflow_id` | varchar(255) | No | Optional grouping for multi-step workflows (run/process id) |
 | `step_id` | varchar(255) | No | Step identifier within a multi-step workflow |
-| `parent_event_id` | bigint | No | FK to a parent event row, for causal chaining |
+| `parent_event_id` | bigint (JSON: decimal string or null) | No | FK to a parent event row, for causal chaining |
 | `session_id` | varchar(255) | No | Session identifier for identity scoping and audit correlation (nullable; added in migration 10) |
 | `runtime` | varchar(50) | No | Originating runtime. Default `unknown` |
-| `status` | varchar(50) | Yes | One of `pending` / `completed` / `failed` / `cancelled`. Default `completed` |
+| `status` | varchar(50) | Yes | One of `pending` / `completed` / `failed` / `cancelled`. Default `pending` |
 | `metadata` | jsonb | No | Event-specific payload — see Metadata Payloads section |
 | `outcome` | jsonb | No | Structured result/outcome of the operation |
 | `error_message` | text | No | Error detail when `status = failed` |
 | `error_code` | varchar(50) | No | Machine-readable error code when `status = failed` |
+| `evidence_ref` | varchar(500) | No | External evidence reference added by migration 05. |
+| `confidence` | decimal(4,3) (JSON: decimal string or null) | No | Promotion confidence added by migration 05. CHECK: `confidence >= 0 AND confidence <= 1`. |
 | `schema_version` | integer | Yes | Event schema version. Default 1 (migration 17) |
 | `created_at` | timestamptz | Yes | Logical event timestamp. DEFAULT NOW(). Immutable. |
 | `inserted_at` | timestamptz | Yes | Physical insert timestamp. DEFAULT NOW(). Immutable. |
 
 **Workspace RLS:** Migrations 39 and 40 preserve every heterogeneous pre-existing `events` policy and add `workspace_scope_restrictive_policy`. PostgreSQL ANDs this restrictive `allura_app` tenant/workspace predicate with the permissive policy set, so an A-scoped app transaction cannot read or write same-group workspace B events without erasing predicates owned by earlier migrations.
 
-**`event_type` values**
+**Known emitted `event_type` vocabulary (not a database enum)**
 
 | Value | Description |
 |-------|-------------|
@@ -278,23 +280,23 @@ See `docs/guides/portal-devices-and-profiles.md` for navigation, lifecycle contr
 
 ## PostgreSQL: `canonical_proposals`
 
-**Legacy JSON Schema:** [`json-schema/canonical_proposals.schema.json`](../../json-schema/canonical_proposals.schema.json) omits the migration-38/39 workspace, version and promoted-memory fields. Use the physical contract below with migrations 38–40; the JSON Schema requires a separately validated update before serving as the complete current contract.
+**Complete DB-row-to-JSON Schema:** [`json-schema/canonical_proposals.schema.json`](../../json-schema/canonical_proposals.schema.json) covers every physical column committed through migration 40, including migration 13 witness evidence, migration 15 Notion sync fields, migration 20 score precision, migration 38 approved memory identity, and migrations 39–40 workspace/version fields. It describes a complete row after the repository's default `pg` text parsers and JSON serialization: every column key is present, SQL `NULL` becomes JSON `null`, `BIGINT` and `NUMERIC` become decimal strings, and `TIMESTAMPTZ` becomes an ISO date-time string. This is an offline export/inspection contract, not the curator route DTO or a proposal-create request model. The nullable `workspace_id` representation exists only for quarantined legacy rows; current app writes require a non-null server-resolved workspace through application checks and restrictive RLS.
 
 The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to PostgreSQL semantic tables as `graph_memories` rows.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `id` | uuid | Yes | Primary key. Auto-generated via `gen_random_uuid()`. |
-| `group_id` | varchar(255) | Yes | Tenant namespace. CHECK constraint: must match `^allura-`. |
+| `group_id` | varchar(255) | Yes | Tenant namespace. CHECK constraint: `^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$` (migration 19). |
 | `workspace_id` | text | Current app rows | Server-resolved workspace; nullable only for quarantined legacy rows. Same-scope workspace FK and restrictive app-role RLS apply (migrations 39/40). |
-| `proposal_version` | bigint | Yes | Default `1`; trigger increments when content, score, tier, status, trace reference or rationale changes. Serialize as a decimal string in review/receipt contracts to preserve integer precision. |
-| `approved_memory_id` | text | Conditional | Result of successful approval; null before approval. Current approval derives a deterministic memory ID from tenant and proposal ID and stores it with the atomic transition. This field has no same-scope memory FK in migrations 38–40; the approval service supplies the relationship. |
+| `proposal_version` | bigint (JSON: positive decimal string) | Yes | Default `1`; trigger increments when content, score, tier, status, trace reference or rationale changes. Positivity is an application serialization invariant used by current review/receipt consumers; migrations do not add a positive-value CHECK. |
+| `approved_memory_id` | text (JSON: UUID or null) | Yes (nullable before approval) | Result of successful current approval; null before approval. The current approval application derives a deterministic UUID from tenant and proposal ID. The physical column has neither a UUID CHECK/type nor a same-scope memory FK; UUID shape is an application-produced serialization invariant, not a database constraint. |
 | `content` | text | Yes | The proposed insight content text. |
-| `score` | numeric(3,2) | Yes | Curator confidence score (0.00–1.00). CHECK: `score >= 0.0 AND score <= 1.0`. |
+| `score` | decimal(4,3) (JSON: decimal string) | Yes | Curator confidence score (0.000–1.000) after migration 20. CHECK: `score >= 0.0 AND score <= 1.0`. |
 | `reasoning` | text | No | Curator engine's reasoning for the score. |
 | `tier` | varchar(20) | Yes | Confidence tier. CHECK: one of `emerging`, `adoption`, `mainstream`. |
 | `status` | varchar(20) | Yes | Lifecycle status. DEFAULT `pending`. CHECK: one of `pending`, `approved`, `rejected`. |
-| `trace_ref` | bigint | No | Foreign key to `events.id` (the originating trace event). ON DELETE SET NULL. |
+| `trace_ref` | bigint (JSON: decimal string or null) | No | Foreign key to `events.id` (the originating trace event). ON DELETE SET NULL. |
 | `created_at` | timestamptz | Yes | Proposal creation timestamp. DEFAULT NOW(). |
 | `decided_at` | timestamptz | No | Timestamp when the proposal was approved or rejected. |
 | `decided_by` | varchar(255) | No | Authenticated human decision principal for the current governed flow. Legacy system labels do not prove human approval. |
