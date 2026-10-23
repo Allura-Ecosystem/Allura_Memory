@@ -90,6 +90,7 @@ memory-bank/index.meta.json
 
 # Temporary files
 .tmp/
+.dev-safe-home/
 memory-bank/ingestion.meta.json
 package-lock.json
 board-configs/private/

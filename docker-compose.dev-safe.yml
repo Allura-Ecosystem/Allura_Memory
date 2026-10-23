@@ -1,0 +1,31 @@
+# Disposable development PostgreSQL. Invoke only through scripts/dev-safe/index.ts.
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: docker/portfolio-postgres/Dockerfile
+    environment:
+      POSTGRES_DB: allura_dev
+      POSTGRES_USER: allura
+      POSTGRES_PASSWORD: allura-dev-local-only
+    ports:
+      - target: 5432
+        published: "7002"
+        host_ip: 127.0.0.1
+        protocol: tcp
+    tmpfs:
+      - /var/lib/postgresql/data:size=512m
+    mem_limit: 768m
+    cpus: 1
+    pids_limit: 128
+    restart: "no"
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=40"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "allura", "-d", "allura_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+networks:
+  default:
+    internal: true
