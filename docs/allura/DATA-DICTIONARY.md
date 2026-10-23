@@ -134,7 +134,7 @@ The complete DB-row-to-JSON contract in `json-schema/event.schema.json` covers e
 | `parent_event_id` | bigint (JSON: decimal string or null) | No | FK to a parent event row, for causal chaining |
 | `session_id` | varchar(255) | No | Session identifier for identity scoping and audit correlation (nullable; added in migration 10) |
 | `runtime` | varchar(50) | No | Originating runtime. Default `unknown` |
-| `status` | varchar(50) | Yes | One of `pending` / `completed` / `failed` / `cancelled`. Default `completed` |
+| `status` | varchar(50) | Yes | One of `pending` / `completed` / `failed` / `cancelled`. Default `pending` |
 | `metadata` | jsonb | No | Event-specific payload — see Metadata Payloads section |
 | `outcome` | jsonb | No | Structured result/outcome of the operation |
 | `error_message` | text | No | Error detail when `status = failed` |
