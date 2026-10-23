@@ -1,6 +1,11 @@
 # Owner-Operated Desktop Authority
 
-**Status:** Approved by platform owner Sabir Asheed on 2026-10-14  
+> [!NOTE]
+> **AI-Assisted Documentation**
+> Portions of this document were drafted with the assistance of an AI language model.
+> Defer to current code, server-verifiable grants, canonical decisions, and explicit human approval; this policy document does not provision access or prove implementation.
+
+**Status:** Approved by platform owner Sabir Asheed on 2026-10-14
 **Applies to:** Allura desktop clients, MCP credentials, agent prompts, and memory-routing policy
 
 ## Decision
