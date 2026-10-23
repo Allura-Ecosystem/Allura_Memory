@@ -30,3 +30,15 @@ describe("tracked documentation template symlinks", () => {
     })
   }
 })
+
+// These optional, host-specific AionUI dependencies have no approved source
+// targets. The owner authorized their retirement with recoverable link copies.
+describe("retired unavailable AionUI integrations", () => {
+  for (const skillName of ["aionui-skills", "cron", "office-cli"] as const) {
+    it(`${skillName} is absent rather than a dangling symlink`, async () => {
+      await expect(
+        lstat(path.join(REPOSITORY_ROOT, ".opencode/skills", skillName)),
+      ).rejects.toMatchObject({ code: "ENOENT" })
+    })
+  }
+})
