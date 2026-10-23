@@ -221,6 +221,13 @@ describe("Governance MCP Tools (Story 9.1)", () => {
       expect(check.pass).toBe(false)
     })
 
+    it.each(["truncate_events", "drop_events", "events_truncate", "events_drop"])(
+      "blocks destructive machine action %s without structured context",
+      (action) => {
+        expect(evaluateAppendOnlyEventsInvariant(action, {}).pass).toBe(false)
+      },
+    )
+
     it("blocks a protected target even when another resource field is unrelated", () => {
       const check = evaluateAppendOnlyEventsInvariant("delete", {
         resource: "git.repository",

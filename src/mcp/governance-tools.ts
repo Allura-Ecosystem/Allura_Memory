@@ -345,7 +345,7 @@ export function evaluateAppendOnlyEventsInvariant(
   )
   const isAppendOnlySafeOperation = /^(read|select|query|list|get|insert|append)$/.test(operation)
   const structuredEventsViolation = targetsEventsRows && !isAppendOnlySafeOperation
-  const isLegacyDirectEventsMutation = /^(?:(?:update|delete|mutate|overwrite)_events(?:_rows?)?(?:_directly)?|events_(?:update|delete|mutate|overwrite)(?:_directly)?)$/i.test(action.trim())
+  const isLegacyDirectEventsMutation = /^(?:(?:update|delete|truncate|drop|mutate|overwrite)_events(?:_rows?)?(?:_directly)?|events_(?:update|delete|truncate|drop|mutate|overwrite)(?:_directly)?)$/i.test(action.trim())
   const isExplicitSqlEventsMutation = actionAttemptsDirectEventsMutation(action)
   const attemptsDirectEventsMutation =
     structuredEventsViolation || isLegacyDirectEventsMutation || isExplicitSqlEventsMutation
