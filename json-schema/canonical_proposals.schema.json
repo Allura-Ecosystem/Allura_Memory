@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allura.dev/schemas/canonical_proposals.schema.json",
   "title": "Canonical Proposal",
-  "description": "HITL (Human-in-the-Loop) promotion queue entry in PostgreSQL. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to Neo4j as InsightHead/Insight nodes.",
+  "description": "Legacy partial serialization contract for the PostgreSQL HITL promotion queue. Current approval writes immutable semantic content to PostgreSQL graph_memories; this schema includes proposal_version but does not yet cover every physical workspace and promoted-memory column.",
   "type": "object",
   "required": ["id", "group_id", "content", "score", "status", "proposal_version", "created_at"],
   "properties": {

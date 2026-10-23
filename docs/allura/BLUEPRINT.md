@@ -607,7 +607,7 @@ Represents a project that agents contribute to and memories relate to. See [DATA
 
 ### Promotion Decision
 
-**Approved specification, 2026-10-18 (Sabir, current chat):** an approval must bind the proposal version the human reviewed. A changed version requires rejection without a new approval and a refreshed review (DOC-06). This is an implementation gap in the inspected route/service. Score and tier assist review; tier is a category, not a percentage. The existing service has no score cutoff at approval, and this repair authorizes no new automatic or numeric approval gate.
+**Approved specification, 2026-10-18 (Sabir, current chat):** an approval must bind the proposal version the human reviewed. A changed version requires rejection without a new approval and a refreshed review (DOC-06). The current source candidate implements that route/service check and retires the legacy knowledge-promotion mutation entrypoints before database or remote-client access. This is source-only evidence: the production human-proof issuer, valid-human live fixtures, migration `072` live state, independent acceptance, and release remain unresolved. Score and tier assist review; tier is a category, not a percentage. The existing service has no score cutoff at approval, and this repair authorizes no new automatic or numeric approval gate.
 
 Scoring may produce a pending proposal; it never grants approval. `src/lib/curator/auto-promote.ts` retains the legacy mode setting for compatibility but requires curator/HITL approval for both values. Approval is a scoped human decision executed through `approveProposal`, with actor separation, evidence checks, transactionality and idempotency. A `pending` response is not semantic promotion.
 
@@ -722,9 +722,9 @@ Historical producer/consumer mappings are retained below for compatibility. The 
 | `memory_restore` | `memory_restore` tool | Dashboard, retrieval layer | A soft-deleted memory was restored |
 | `memory_update` | `memory_update` tool | Dashboard, retrieval layer | Append-only versioned update (SUPERSEDES chain) |
 | `proposal_created` | Curator engine (trigger) | Dashboard, Notion sync worker | A canonical proposal was created for HITL review |
-| `proposal_approved` | Curator approve CLI / API | Dashboard, Notion sync worker (`notion-projection-sync`), audit export | A proposal was approved and promoted to PostgreSQL semantic tables |
+| `proposal_approved` | Authenticated curator approval API; historical rows may name legacy producers | Dashboard, Notion sync worker (`notion-projection-sync`), audit export | A proposal was approved and promoted to PostgreSQL semantic tables; the current curator CLI fails closed |
 | `proposal_rejected` | Curator reject CLI / API | Dashboard, Notion sync worker, audit export | A proposal was rejected |
-| `knowledge_promotion` | Knowledge promotion path | Dashboard, audit export | Insight promoted via knowledge-promotion.ts |
+| `knowledge_promotion` | Historical legacy knowledge-promotion path | Dashboard, audit export | Compatibility event vocabulary; current `knowledge-promotion.ts` mutation entrypoints fail closed before database or remote access |
 | `notion_sync_pending` | Curator approve flow | Notion sync worker (`notion-sync-worker.ts`) | Proposal queued for Notion page creation |
 | `tool_approved` | MCP catalog governance | Notion sync worker (`notion-projection-sync`) | MCP tool approved through catalog governance |
 | `tool_denied` | MCP catalog governance | Notion sync worker (`notion-projection-sync`) | MCP tool denied through catalog governance |
@@ -787,9 +787,9 @@ graph LR
 | Historical queue producer | `promotion_queued` | Compatibility vocabulary, not source-verified current emission |
 | Historical promotion-failure producer | `promotion_failed` | Compatibility vocabulary; not emitted by the inspected atomic approval service |
 | Curator engine | `proposal_created` (via trigger) | `src/curator/index.ts` |
-| Curator approve CLI/API | `proposal_approved` | `src/curator/approve-cli.ts`, `src/app/api/curator/approve/` |
+| Authenticated curator approval API | `proposal_approved` | `src/app/api/curator/approve/`; `src/curator/approve-cli.ts` is fail closed |
 | Curator reject CLI/API | `proposal_rejected` | `src/app/api/curator/reject/` |
-| Knowledge promotion | `knowledge_promotion` | `src/lib/memory/knowledge-promotion.ts` |
+| Historical knowledge promotion | `knowledge_promotion` | Compatibility rows only; mutation exports in `src/lib/memory/knowledge-promotion.ts` are retired while read helpers remain available |
 | Notion sync queue | `notion_sync_pending` | `src/curator/notion-sync.ts` |
 | MCP catalog governance | `tool_approved`, `tool_denied` | `supabase/migrations/20260423_mcp_catalog_governance.sql` |
 | Agent runtime | `session_start`, `session_end`, `execution_succeeded`, `execution_failed`, `execution_blocked` | `src/agents/` |

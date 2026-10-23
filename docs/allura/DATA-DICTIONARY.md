@@ -278,7 +278,7 @@ See `docs/guides/portal-devices-and-profiles.md` for navigation, lifecycle contr
 
 ## PostgreSQL: `canonical_proposals`
 
-**Legacy JSON Schema:** [`json-schema/canonical_proposals.schema.json`](../../json-schema/canonical_proposals.schema.json) omits the migration-38/39 workspace, version and promoted-memory fields. Use the physical contract below with migrations 38–40; the JSON Schema requires a separately validated update before serving as the complete current contract.
+**Legacy partial JSON Schema:** [`json-schema/canonical_proposals.schema.json`](../../json-schema/canonical_proposals.schema.json) includes the review-facing `proposal_version` but still omits the migration-38/39 workspace and promoted-memory fields. Use the physical contract below with migrations 38–40; the JSON Schema requires a separately validated update before serving as the complete current contract.
 
 The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to PostgreSQL semantic tables as `graph_memories` rows.
 

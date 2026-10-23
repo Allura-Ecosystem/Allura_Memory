@@ -77,6 +77,8 @@ export default defineConfig({
       "src/lib/memory/relationships/*.test.ts",
       "src/lib/memory/__tests__/approval-audit.test.ts",
       "src/lib/memory/__tests__/hitl-promotion-lock-policy.test.ts",
+      // Legacy projection mutations are retired before DB/remote access; reads remain available.
+      "src/lib/memory/__tests__/knowledge-promotion-approval-guard.test.ts",
       "src/lib/memory/traceable-memory.test.ts",
       "src/lib/memory/approve-proposal.test.ts",
       "src/lib/memory/curator-proposal-queue.test.ts",

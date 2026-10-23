@@ -58,6 +58,13 @@ export const KNOWLEDGE_HUB_DATA_SOURCE_ID = '9efeb76c-809b-440e-a76d-6a6e17bc8e7
 /** Curator Proposals data source ID in Notion */
 export const CURATOR_PROPOSALS_DATA_SOURCE_ID = '42894678-aedb-4c90-9371-6494a9fe5270';
 
+const RETIRED_MUTATION_ERROR =
+  'Legacy knowledge-promotion mutations are retired; use the canonical approval service';
+
+async function rejectRetiredMutation(): Promise<void> {
+  throw new Error(RETIRED_MUTATION_ERROR);
+}
+
 /** Tier to Knowledge Hub Category mapping */
 const TIER_TO_CATEGORY: Record<string, KnowledgeInsight['category']> = {
   emerging: 'Research',
@@ -581,6 +588,8 @@ export async function promoteToKnowledgeHub(
   params: KnowledgeHubPromotionParams,
   mcpClient: NotionMCPClient
 ): Promise<{ success: boolean; pageId?: string; pageUrl?: string; error?: string }> {
+  await rejectRetiredMutation();
+
   // Validate input with Zod
   const parsed = KnowledgeHubPromotionParamsSchema.safeParse(params);
   if (!parsed.success) {
@@ -753,6 +762,8 @@ function buildKnowledgeHubContent(params: {
  * @returns Memory node ID
  */
 export async function promoteToNeo4j(insight: KnowledgeInsight): Promise<string> {
+  await rejectRetiredMutation();
+
   console.log('[knowledge-promotion] Promoting insight to knowledge graph:', {
     id: insight.id,
     topic: insight.topic,
@@ -846,6 +857,8 @@ export async function linkInsightToAgent(
   groupId: string,
   workspaceId: string,
 ): Promise<void> {
+  await rejectRetiredMutation();
+
   console.log('[knowledge-promotion] Linking insight to agent:', {
     agent_id: agentId,
     insight_id: insightId,
@@ -915,6 +928,8 @@ export async function updateNotionWithNeo4jId(
   approvedBy: string,
   mcpClient: NotionMCPClient
 ): Promise<void> {
+  await rejectRetiredMutation();
+
   console.log('[knowledge-promotion] Updating Notion Knowledge Hub:', {
     notion_page_id: notionPageId,
     neo4j_id: neo4jId,
@@ -957,6 +972,8 @@ export async function updateApprovalQueueItem(
   approvedBy: string,
   mcpClient: NotionMCPClient
 ): Promise<void> {
+  await rejectRetiredMutation();
+
   console.log('[knowledge-promotion] Updating Approval Queue item:', {
     notion_page_id: notionPageId,
     neo4j_id: neo4jId,
@@ -1006,6 +1023,8 @@ export async function logPromotionEvent(
   notionPageId: string,
   status: 'approved' | 'promoted' | 'rejected' | 'failed'
 ): Promise<EventRecord> {
+  await rejectRetiredMutation();
+
   console.log('[knowledge-promotion] Logging promotion event:', {
     group_id: groupId,
     agent_id: agentId,
@@ -1061,6 +1080,8 @@ export async function processApprovedInsights(
   batchSize: number = 10,
   mcpClient?: NotionMCPClient
 ): Promise<PromotionResult[]> {
+  await rejectRetiredMutation();
+
   console.log('[knowledge-promotion] Processing approved insights for group:', groupId);
 
   // Step 1: Query approved items from PostgreSQL
@@ -1223,6 +1244,8 @@ export async function promoteSingleInsight(
   approvedBy: string,
   mcpClient?: NotionMCPClient
 ): Promise<PromotionResult> {
+  await rejectRetiredMutation();
+
   console.log('[knowledge-promotion] Promoting single insight:', proposalId);
 
   // Step 1: Query the approved proposal from PostgreSQL

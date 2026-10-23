@@ -1,11 +1,10 @@
 /**
- * Knowledge promotion approval guard tests.
+ * Regression coverage for the retired legacy knowledge-promotion mutations.
  *
- * These tests prove that promotion cannot proceed unless a matching
- * PostgreSQL approval audit event exists first.
- *
- * Neo4j is sunset — promoteToNeo4j now writes directly to PostgreSQL
- * (graph_memories table) instead of calling createInsight.
+ * An approval event is not an authority-bearing receipt: it cannot be replayed
+ * with caller-selected content, workspace, identity, or projection targets.
+ * Read-only lookup helpers remain available while every legacy mutation fails
+ * before database, credential, or remote-client access.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -18,145 +17,180 @@ vi.mock("../../db/tenant-transaction", () => ({
   withWorkspaceTransaction: vi.fn(),
 }))
 
+vi.mock("../../postgres/queries/insert-trace", () => ({
+  insertEvent: vi.fn(),
+}))
+
 import { withWorkspaceTransaction } from "../../db/tenant-transaction"
 import { getPool } from "../../postgres/connection"
+import { insertEvent } from "../../postgres/queries/insert-trace"
 import {
   type KnowledgeInsight,
+  type NotionMCPClient,
   linkInsightToAgent,
+  logPromotionEvent,
+  processApprovedInsights,
+  promoteSingleInsight,
+  promoteToKnowledgeHub,
   promoteToNeo4j,
+  queryApprovedInsightById,
   queryApprovedInsights,
+  queryKnowledgeHubBySourceId,
+  updateApprovalQueueItem,
+  updateNotionWithNeo4jId,
 } from "../knowledge-promotion"
 
-const mockGetPool = getPool as unknown as ReturnType<typeof vi.fn>
-const mockWithWorkspaceTransaction = withWorkspaceTransaction as unknown as ReturnType<typeof vi.fn>
-
-function createApprovalPool(rows: Array<{ id: number }> = [{ id: 42 }]) {
-  return {
-    query: vi.fn(async () => ({ rows, rowCount: rows.length })),
-  }
-}
+const mockGetPool = vi.mocked(getPool)
+const mockWithWorkspaceTransaction = vi.mocked(withWorkspaceTransaction)
+const mockInsertEvent = vi.mocked(insertEvent)
+const RETIRED_ERROR = "Legacy knowledge-promotion mutations are retired; use the canonical approval service"
 
 const APPROVED_INSIGHT: KnowledgeInsight = {
   id: "trace-001",
-  proposal_id: "prop-001",
-  topic: "Approval Guard",
+  proposal_id: "proposal-with-a-real-approval-event",
+  topic: "Approval replay",
   category: "Decision",
-  content: "Promotions require a prior approval audit event.",
-  source: "brooks-architect",
-  confidence: 0.92,
+  content: "caller-substituted content",
+  source: "automated-caller",
+  confidence: 0.99,
   group_id: "allura-system",
-  workspace_id: "workspace-a",
-  notion_page_id: "notion-page-001",
-  postgres_trace_id: "trace-001",
+  workspace_id: "caller-selected-workspace",
+  notion_page_id: "caller-selected-page",
+  postgres_trace_id: "caller-selected-trace",
 }
 
-describe("promoteToNeo4j approval guard", () => {
+function createNotionClient(): NotionMCPClient {
+  return {
+    createPages: vi.fn(async () => [{ pageId: "created", pageUrl: "https://example.invalid/created" }]),
+    updatePage: vi.fn(async () => ({ success: true })),
+    search: vi.fn(async () => []),
+    fetch: vi.fn(async () => ({ pageId: "page", title: "title" })),
+  }
+}
+
+describe("retired legacy knowledge-promotion mutations", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetPool.mockReturnValue(createApprovalPool())
-    mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) =>
-      callback({ query: vi.fn(async () => ({ rows: [], rowCount: 1 })) })
-    )
+    mockGetPool.mockReturnValue({
+      query: vi.fn(async () => ({ rows: [{ id: 42 }], rowCount: 1 })),
+    } as never)
   })
 
-  it("writes a promoted memory through the app-role workspace transaction", async () => {
-    const appClient = { query: vi.fn(async () => ({ rows: [], rowCount: 1 })) }
-    mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(appClient))
-
-    await promoteToNeo4j(APPROVED_INSIGHT)
-
-    expect(mockWithWorkspaceTransaction).toHaveBeenCalledWith(
-      {
-        tenantId: "allura-system",
-        workspaceId: "workspace-a",
-        principalId: "brooks-architect",
-      },
-      expect.any(Function)
-    )
-    expect(appClient.query).toHaveBeenCalledWith(
-      expect.stringMatching(/INSERT INTO graph_memories[\s\S]*workspace_id[\s\S]*workspace_scope_state/),
-      expect.arrayContaining(["allura-system", "workspace-a", "workspace_scoped"])
-    )
-  })
-
-  it("queries approved proposals inside an explicit workspace boundary", async () => {
-    const appClient = { query: vi.fn(async () => ({ rows: [], rowCount: 0 })) }
-    mockGetPool.mockReturnValue({ query: vi.fn(async () => ({ rows: [], rowCount: 0 })) })
-    mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(appClient))
-    await (queryApprovedInsights as unknown as (
-      groupId: string,
-      workspaceId: string,
-      principalId: string,
-      limit: number,
-    ) => Promise<unknown>)("allura-system", "workspace-a", "agent-a", 10)
-    expect(mockWithWorkspaceTransaction).toHaveBeenCalledWith(
-      { tenantId: "allura-system", workspaceId: "workspace-a", principalId: "agent-a" },
-      expect.any(Function),
-    )
-    expect(appClient.query).toHaveBeenCalledWith(
-      expect.stringMatching(/WHERE group_id = \$1[\s\S]*workspace_id = \$2/),
-      ["allura-system", "workspace-a", 10],
-    )
-  })
-
-  it("links an agent through the app-role workspace transaction", async () => {
-    const appClient = { query: vi.fn(async (_sql: string) => ({ rows: [], rowCount: 1 })) }
-    mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(appClient))
-    await (linkInsightToAgent as unknown as (
-      agentId: string,
-      insightId: string,
-      confidence: number,
-      groupId: string,
-      workspaceId: string,
-    ) => Promise<void>)("agent-a", "memory-a", 0.9, "allura-system", "workspace-a")
-    expect(mockWithWorkspaceTransaction).toHaveBeenCalledWith(
-      { tenantId: "allura-system", workspaceId: "workspace-a", principalId: "agent-a" },
-      expect.any(Function),
-    )
-    const sql = appClient.query.mock.calls.map(([statement]) => String(statement)).join("\n")
-    expect(sql).toContain("workspace_id")
-    expect(sql).toContain("workspace_scope_state")
-  })
-
-  it("requires approval before creating an insight", async () => {
-    const pool = createApprovalPool()
-    mockGetPool.mockReturnValue(pool)
-
-    await promoteToNeo4j(APPROVED_INSIGHT)
-
-    // The first query must be the approval check
-    expect(pool.query).toHaveBeenCalledWith(
-      expect.stringContaining("metadata->>'proposal_id' = $3"),
-      ["allura-system", "proposal_approved", "prop-001"]
-    )
-    // The owner-backed pool performs only the approval read. The write must
-    // cross the restricted app-role workspace transaction boundary.
-    expect(pool.query).toHaveBeenCalledTimes(1)
-    expect(mockWithWorkspaceTransaction).toHaveBeenCalledTimes(1)
-  })
-
-  it("does not create an insight when approval is missing", async () => {
-    // Approval pool returns empty rows (no approval event found)
-    mockGetPool.mockReturnValue(createApprovalPool([]))
-
-    await expect(promoteToNeo4j(APPROVED_INSIGHT)).rejects.toThrow(
-      "Approval required before promotion"
-    )
-
-    // Only the approval check query should have been made, no INSERT
-    expect(mockGetPool).toHaveBeenCalledTimes(1)
-  })
-
-  it("requires an explicit proposal_id instead of falling back to insight id", async () => {
-    const missingProposalId = {
-      ...APPROVED_INSIGHT,
-      proposal_id: undefined,
-    } as unknown as KnowledgeInsight
-
-    await expect(promoteToNeo4j(missingProposalId)).rejects.toThrow(
-      "Proposal ID is required for promotion approval"
-    )
+  it("rejects approval-event replay with arbitrary content before database access", async () => {
+    await expect(promoteToNeo4j(APPROVED_INSIGHT)).rejects.toThrow(RETIRED_ERROR)
 
     expect(mockGetPool).not.toHaveBeenCalled()
+    expect(mockWithWorkspaceTransaction).not.toHaveBeenCalled()
+  })
+
+  it("rejects approval-event replay into a caller-selected workspace before database access", async () => {
+    await expect(
+      promoteToNeo4j({ ...APPROVED_INSIGHT, workspace_id: "another-workspace" }),
+    ).rejects.toThrow(RETIRED_ERROR)
+
+    expect(mockGetPool).not.toHaveBeenCalled()
+    expect(mockWithWorkspaceTransaction).not.toHaveBeenCalled()
+  })
+
+  it("fails closed at batch and single-item entrypoints before approved-proposal reads", async () => {
+    const notion = createNotionClient()
+
+    await expect(
+      processApprovedInsights("allura-system", "workspace-a", "automated-caller", 10, notion),
+    ).rejects.toThrow(RETIRED_ERROR)
+    await expect(
+      promoteSingleInsight(
+        "00000000-0000-4000-8000-000000000001",
+        "allura-system",
+        "workspace-a",
+        "automated-caller",
+        "claimed-approver",
+        notion,
+      ),
+    ).rejects.toThrow(RETIRED_ERROR)
+
+    expect(mockGetPool).not.toHaveBeenCalled()
+    expect(mockWithWorkspaceTransaction).not.toHaveBeenCalled()
+    expect(notion.search).not.toHaveBeenCalled()
+    expect(notion.createPages).not.toHaveBeenCalled()
+    expect(notion.updatePage).not.toHaveBeenCalled()
+  })
+
+  it("fails closed at every direct legacy mutation helper before local or remote access", async () => {
+    const notion = createNotionClient()
+    const hubParams = {
+      content: "caller-substituted content",
+      topic: "Approval replay",
+      category: "Decision" as const,
+      confidence: 0.99,
+      source: "automated-caller",
+      group_id: "allura-system",
+      postgres_trace_id: "trace-001",
+      neo4j_id: "memory-001",
+      tier: "emerging",
+    }
+
+    await expect(promoteToKnowledgeHub(hubParams, notion)).rejects.toThrow(RETIRED_ERROR)
+    await expect(
+      linkInsightToAgent("agent", "memory-001", 0.99, "allura-system", "workspace-a"),
+    ).rejects.toThrow(RETIRED_ERROR)
+    await expect(updateNotionWithNeo4jId("page", "memory-001", "reviewer", notion)).rejects.toThrow(
+      RETIRED_ERROR,
+    )
+    await expect(updateApprovalQueueItem("page", "memory-001", "reviewer", notion)).rejects.toThrow(
+      RETIRED_ERROR,
+    )
+    await expect(
+      logPromotionEvent("allura-system", "agent", "memory-001", "memory-001", "page", "promoted"),
+    ).rejects.toThrow(RETIRED_ERROR)
+
+    expect(mockGetPool).not.toHaveBeenCalled()
+    expect(mockWithWorkspaceTransaction).not.toHaveBeenCalled()
+    expect(mockInsertEvent).not.toHaveBeenCalled()
+    expect(notion.search).not.toHaveBeenCalled()
+    expect(notion.createPages).not.toHaveBeenCalled()
+    expect(notion.updatePage).not.toHaveBeenCalled()
+  })
+})
+
+describe("preserved legacy knowledge-promotion reads", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("keeps approved-proposal lookups available inside the requested workspace boundary", async () => {
+    const appClient = { query: vi.fn(async () => ({ rows: [], rowCount: 0 })) }
+    mockWithWorkspaceTransaction.mockImplementation(async (_scope, callback) => callback(appClient as never))
+
+    await expect(queryApprovedInsights("allura-system", "workspace-a", "reader", 10)).resolves.toEqual([])
+    await expect(
+      queryApprovedInsightById(
+        "00000000-0000-4000-8000-000000000001",
+        "allura-system",
+        "workspace-a",
+        "reader",
+      ),
+    ).resolves.toBeNull()
+
+    expect(mockWithWorkspaceTransaction).toHaveBeenNthCalledWith(
+      1,
+      { tenantId: "allura-system", workspaceId: "workspace-a", principalId: "reader" },
+      expect.any(Function),
+    )
+    expect(mockWithWorkspaceTransaction).toHaveBeenNthCalledWith(
+      2,
+      { tenantId: "allura-system", workspaceId: "workspace-a", principalId: "reader" },
+      expect.any(Function),
+    )
+  })
+
+  it("keeps Knowledge Hub lookup available without invoking mutation methods", async () => {
+    const notion = createNotionClient()
+
+    await expect(queryKnowledgeHubBySourceId("memory-001", notion)).resolves.toBeNull()
+
+    expect(notion.search).toHaveBeenCalledTimes(1)
+    expect(notion.createPages).not.toHaveBeenCalled()
+    expect(notion.updatePage).not.toHaveBeenCalled()
   })
 })

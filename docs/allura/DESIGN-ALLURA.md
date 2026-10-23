@@ -494,7 +494,7 @@ For approval, send a stable `Idempotency-Key` header. The current implementation
 
 **Decision evidence:** retain the accepted pre-transition version as `reviewed_proposal_version` in the immutable decision evidence, distinct from current `proposal_version`, which records the post-transition version. The current source candidate adds this nullable field for new approval receipts. Historical immutable receipt JSON is not rewritten; read responses project `reviewed_proposal_version: null` when the stored historical evidence has no such field.
 
-**Current source boundary:** the browser submits the exact version loaded for review; the route and service require its canonical positive-decimal string, preserve replay-first semantics for the same authenticated actor, and reject stale new approvals before writes. CLI, evaluation and legacy batch entrypoints cannot manufacture human approval. This is a reviewed source candidate only: production acceptance remains blocked on authorized verification that migration identity `072` is free and that the required columns/constraints exist in the live database, plus a separately approved production human-proof issuer/topology. No deployment or release is claimed.
+**Current source boundary:** the browser submits the exact version loaded for review; the route and service require its canonical positive-decimal string, preserve replay-first semantics for the same authenticated actor, and reject stale new approvals before writes. CLI and evaluation entrypoints cannot manufacture human approval. The exported legacy knowledge-promotion mutations now fail closed before proposal/event reads, workspace transactions, audit writes, or remote-client calls; their read-only lookup helpers remain available. Registered unit coverage exercises arbitrary-content and caller-selected-workspace approval-event replay. This is a reviewed source candidate only: production acceptance remains blocked on authorized verification that migration identity `072` is free and that the required columns/constraints exist in the live database, a valid-human live fixture, independent acceptance, and a separately approved production human-proof issuer/topology. No deployment or release is claimed.
 
 **Current response:** `200 OK` returns the persisted `GovernanceReceipt` directly, including receipt ID, tenant/workspace, proposal/post-transition version, actor, policy, evidence identity, memory identity and decision-time outbox state. Data Dictionary owns the complete receipt shape and the intended reviewed-version extension. The original approval receipt is immutable and remains `queued` after later delivery. A separate delivery observation must include read-back matching the authorized destination, remote page/record, and intended source revision/content before showing Notion `synced` (DOC-07); neither local outbox `delivered` nor a successful approval response proves it.
 
@@ -735,13 +735,13 @@ stateDiagram-v2
 2. Dashboard calls `GET /api/curator/proposals?status=pending`
 3. Proposals display with confidence badge, reasoning, and source evidence
 4. Curator reviews the exact proposal version, summary, evidence links, and confidence score
-5. Curator approves: `POST /api/curator/approve` with `decision: "approve"`, rationale and the reviewed `expected_proposal_version`; DOC-06 requires conflict/re-review if the version changed (not yet implemented)
+5. Curator approves: `POST /api/curator/approve` with `decision: "approve"`, rationale and the reviewed `expected_proposal_version`; the current source candidate enforces DOC-06 conflict/re-review if the version changed
 6. System promotes approved insight to PostgreSQL semantic tables as an immutable content row within the atomic approval transaction
 7. Audit event `proposal_approved` written to PostgreSQL with curator ID and timestamp
 8. Curator rejects: `POST /api/curator/reject` with rationale
 9. System archives rejected proposal; audit event `proposal_rejected` written
 
-**Postcondition:** A valid decision transitions the proposal to `approved` (promoted to PostgreSQL semantic tables) or `rejected` (retained in PG) with audit evidence. A stale-review approval must leave it undecided and require new review under DOC-06; that implementation/acceptance gap blocks this use case from being called verified.
+**Postcondition:** A valid decision transitions the proposal to `approved` (promoted to PostgreSQL semantic tables) or `rejected` (retained in PG) with audit evidence. A stale-review approval must leave it undecided and require new review under DOC-06. The source candidate implements that behavior and retires alternate legacy promotion mutations, but the held issuer, valid-human live fixture, migration `072`, independent acceptance and release gates block this use case from being called verified.
 
 **Requirements:** DS-F10–DS-F13, DS-F17
 
