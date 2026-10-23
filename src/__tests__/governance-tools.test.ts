@@ -228,6 +228,18 @@ describe("Governance MCP Tools (Story 9.1)", () => {
       },
     )
 
+    it.each([
+      "governance_apply_policy_override_truncate_events",
+      "prefix_truncate_events",
+      "governance_apply_policy_override_delete_events",
+    ])("blocks prefixed destructive machine action %s", (action) => {
+      expect(evaluateAppendOnlyEventsInvariant(action, {}).pass).toBe(false)
+    })
+
+    it("allows the near-miss delete_event_subscriptions machine action", () => {
+      expect(evaluateAppendOnlyEventsInvariant("delete_event_subscriptions", {}).pass).toBe(true)
+    })
+
     it("blocks a protected target even when another resource field is unrelated", () => {
       const check = evaluateAppendOnlyEventsInvariant("delete", {
         resource: "git.repository",

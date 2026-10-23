@@ -311,7 +311,7 @@ export async function governance_check_gate(
 }
 
 function actionAttemptsDirectEventsMutation(action: string): boolean {
-  const tokens = new Set(action.toLowerCase().match(/[a-z0-9_]+/g) ?? [])
+  const tokens = new Set(action.toLowerCase().match(/[a-z0-9]+/g) ?? [])
   const destructiveTokens = new Set(["update", "delete", "truncate", "drop", "mutate", "overwrite"])
   return tokens.has("events") && [...destructiveTokens].some((token) => tokens.has(token))
 }
