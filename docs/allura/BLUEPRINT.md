@@ -678,9 +678,8 @@ Canonical service ports. **The 3000–3999 band is banned** (Next.js/React defau
 | Service | Port | Tier |
 | ------- | ---- | ---- |
 | Allura Control Center UI (Next.js) | 4001 | UI (4000+) |
-| Isolated development dashboard (Next.js) | 4002 | UI (4000+) — proposed; pending PR acceptance; inactive |
+| Isolated development dashboard (Next.js) | 4002 | UI (4000+) — local loopback only |
 | Allura Control Center API (FastAPI) | 6001 | API (6000+) |
-| Disposable development PostgreSQL host port | 7002 | aux (7000+) — proposed; pending PR acceptance; inactive |
 | MCP HTTP gateway | 5888 | infra (exempt) |
 | PostgreSQL | 5432 | infra (exempt) — IGraphAdapter graph ops run here (AD-29, AD-49) |
 | RuVector PG | 5433 | infra (exempt) — native extension port (not yet active; see AD-45, RK-21) |

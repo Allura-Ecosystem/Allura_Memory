@@ -1,4 +1,4 @@
-# Disposable development PostgreSQL. Invoke only through scripts/dev-safe/index.ts.
+# Disposable local application and PostgreSQL. Invoke only through scripts/dev-safe/index.ts.
 services:
   postgres:
     build:
@@ -8,11 +8,8 @@ services:
       POSTGRES_DB: allura_dev
       POSTGRES_USER: allura
       POSTGRES_PASSWORD: allura-dev-local-only
-    ports:
-      - target: 5432
-        published: "7002"
-        host_ip: 127.0.0.1
-        protocol: tcp
+    networks:
+      - backend
     tmpfs:
       - /var/lib/postgresql/data:size=512m
     mem_limit: 768m
@@ -26,6 +23,48 @@ services:
       timeout: 3s
       retries: 20
       start_period: 20s
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/dev-safe/Dockerfile
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      ALLURA_DASHBOARD_PORT: "4002"
+      ALLURA_DEV_AUTH_ENABLED: "true"
+      ALLURA_DEV_AUTH_GROUP_ID: allura-system
+      ALLURA_DEV_AUTH_WORKSPACE_ID: workspace-allura
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: allura_dev
+      POSTGRES_USER: allura
+      POSTGRES_PASSWORD: allura-dev-local-only
+      POSTGRES_APP_USER: allura_app
+      POSTGRES_APP_PASSWORD: change-me-in-production
+    ports:
+      - target: 4002
+        published: "${ALLURA_DEV_SAFE_DASHBOARD_PORT:?set ALLURA_DEV_SAFE_DASHBOARD_PORT}"
+        host_ip: 127.0.0.1
+        protocol: tcp
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1536m
+    cpus: 2
+    pids_limit: 256
+    restart: "no"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:4002/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+
 networks:
-  default:
+  frontend: {}
+  backend:
     internal: true

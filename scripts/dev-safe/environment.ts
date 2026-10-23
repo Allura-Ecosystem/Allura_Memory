@@ -140,11 +140,12 @@ const REQUIRED_LOCAL_FILES = [
   "docker-compose.dev-safe.yml",
   "docker/portfolio-postgres/Dockerfile",
   "docker/portfolio-postgres/Dockerfile.dockerignore",
+  "docker/dev-safe/Dockerfile",
+  "docker/dev-safe/Dockerfile.dockerignore",
 ] as const
 
 const COMMAND_REQUIRED_LOCAL_FILES: Readonly<Record<string, readonly string[]>> = {
   doctor: ["node_modules/next/dist/bin/next", "node_modules/vitest/vitest.mjs", "node_modules/typescript/bin/tsc"],
-  dev: ["node_modules/next/dist/bin/next"],
   typecheck: ["node_modules/typescript/bin/tsc"],
   "test:launcher": ["node_modules/vitest/vitest.mjs"],
   "test:unit": ["node_modules/vitest/vitest.mjs"],
@@ -162,13 +163,13 @@ export function assertLocalPrerequisites(root: string, command: string): void {
   }
 }
 
-/** Service startup remains closed until AD-45 records the chosen host ports. */
+/** Service startup requires an explicit operator activation signal. */
 export function assertActivationAllowed(
   command: string,
   environment: Readonly<Record<string, string | undefined>>
 ): void {
-  if (["dev", "db-up"].includes(command) && environment.ALLURA_DEV_SAFE_PORTS_APPROVED !== "true") {
-    throw new Error("Dev-safe port decision is pending; do not activate services before AD-45 approval")
+  if (["dev", "db-up"].includes(command) && environment.ALLURA_DEV_SAFE_ACTIVATE !== "true") {
+    throw new Error("Dev-safe service activation requires ALLURA_DEV_SAFE_ACTIVATE=true")
   }
 }
 
@@ -185,24 +186,19 @@ function parseHostPort(name: string, value: string | undefined): number | undefi
   return port
 }
 
-const PROPOSED_DEV_SAFE_PORTS = {
+const REGISTERED_DEV_SAFE_PORTS = {
   ALLURA_DEV_SAFE_DASHBOARD_PORT: 4002,
-  ALLURA_DEV_SAFE_POSTGRES_PORT: 7002,
 } as const
 
-/** Require explicit values matching the pending AD-45 registration proposal. */
+/** Require an explicit value matching the registered AD-45 dashboard allocation. */
 export function readPortConfiguration(environment: Readonly<Record<string, string | undefined>>): DevSafePorts {
   const dashboard = parseHostPort("ALLURA_DEV_SAFE_DASHBOARD_PORT", environment.ALLURA_DEV_SAFE_DASHBOARD_PORT)
-  const postgres = parseHostPort("ALLURA_DEV_SAFE_POSTGRES_PORT", environment.ALLURA_DEV_SAFE_POSTGRES_PORT)
-  if (dashboard !== undefined && dashboard !== PROPOSED_DEV_SAFE_PORTS.ALLURA_DEV_SAFE_DASHBOARD_PORT) {
-    throw new Error("ALLURA_DEV_SAFE_DASHBOARD_PORT must match the proposed AD-45 allocation 4002")
-  }
-  if (postgres !== undefined && postgres !== PROPOSED_DEV_SAFE_PORTS.ALLURA_DEV_SAFE_POSTGRES_PORT) {
-    throw new Error("ALLURA_DEV_SAFE_POSTGRES_PORT must match the proposed AD-45 allocation 7002")
+
+  if (dashboard !== undefined && dashboard !== REGISTERED_DEV_SAFE_PORTS.ALLURA_DEV_SAFE_DASHBOARD_PORT) {
+    throw new Error("ALLURA_DEV_SAFE_DASHBOARD_PORT must match the registered AD-45 allocation 4002")
   }
   return {
     ...(dashboard === undefined ? {} : { dashboard }),
-    ...(postgres === undefined ? {} : { postgres }),
   }
 }
 
@@ -251,7 +247,7 @@ export function buildEnvironment(
   ports: DevSafePorts
 ): DevSafeEnvironment {
   const unit = command === "test:unit" || command === "test:launcher"
-  const developmentServer = command === "dev"
+
   const environment: DevSafeEnvironment = {
     HOME: join(root, ".dev-safe-home"),
     PATH: executablePath(tools),
@@ -259,24 +255,11 @@ export function buildEnvironment(
     NEXT_TELEMETRY_DISABLED: "1",
   }
 
-  if (ports.postgres !== undefined) {
-    environment.ALLURA_DEV_SAFE_POSTGRES_PORT = String(ports.postgres)
-  }
+
   if (ports.dashboard !== undefined) {
     environment.ALLURA_DEV_SAFE_DASHBOARD_PORT = String(ports.dashboard)
   }
-  if (developmentServer) {
-    Object.assign(environment, {
-      ALLURA_DASHBOARD_PORT: String(ports.dashboard),
-      POSTGRES_HOST: "127.0.0.1",
-      POSTGRES_PORT: String(ports.postgres),
-      POSTGRES_DB: "allura_dev",
-      POSTGRES_USER: "allura",
-      POSTGRES_PASSWORD: "allura-dev-local-only",
-      POSTGRES_APP_USER: "allura_app",
-      POSTGRES_APP_PASSWORD: "change-me-in-production",
-    })
-  }
+  if (command === "dev") environment.ALLURA_DASHBOARD_PORT = String(ports.dashboard)
 
   return environment
 }
