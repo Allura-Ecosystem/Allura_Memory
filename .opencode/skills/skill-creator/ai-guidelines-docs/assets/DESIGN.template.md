@@ -1,1 +1,1 @@
-../../../templates/DESIGN.template.md
+../../../../templates/DESIGN.template.md

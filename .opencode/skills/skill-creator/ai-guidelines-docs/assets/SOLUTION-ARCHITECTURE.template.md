@@ -1,1 +1,1 @@
-../../../templates/SOLUTION-ARCHITECTURE.template.md
+../../../../templates/SOLUTION-ARCHITECTURE.template.md
