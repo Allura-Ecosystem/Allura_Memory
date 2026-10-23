@@ -164,6 +164,40 @@ describe("RuVector Embedding Service — generateEmbedding", () => {
     expect(result).toBeNull();
   });
 
+  it("should keep the timeout active while reading a stalled response body", async () => {
+    vi.useFakeTimers();
+    let signal: AbortSignal | undefined;
+    let rejectBody: (reason?: unknown) => void = () => undefined;
+
+    mockFetch.mockImplementationOnce(
+      (_url: string, options: { signal: AbortSignal }) => {
+        signal = options.signal;
+        return Promise.resolve({
+          ok: true,
+          json: vi.fn(
+            () => new Promise<never>((_resolve, reject) => {
+              rejectBody = reject;
+            })
+          ),
+          text: vi.fn(),
+        });
+      }
+    );
+
+    const pending = generateEmbedding("test", 25);
+    await Promise.resolve();
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(25);
+
+    try {
+      expect(signal?.aborted).toBe(true);
+    } finally {
+      rejectBody(new DOMException("The user aborted a request.", "AbortError"));
+      await pending;
+      vi.useRealTimers();
+    }
+  });
+
   it("should return null when fetch response JSON parsing fails", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
