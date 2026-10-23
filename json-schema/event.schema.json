@@ -2,21 +2,44 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allura.dev/schemas/event.schema.json",
   "title": "Event",
-  "description": "Stored-row contract for an append-only episodic memory event in PostgreSQL. This is not an event-create request schema; workspace authorization for new writes is enforced by the application role and RLS.",
+  "description": "Complete DB-row-to-JSON serialization contract for the current committed PostgreSQL events table using the repository's default node-postgres text parsers followed by JSON.stringify/parse. It is an offline export/inspection boundary, not a runtime route DTO or event-create request schema; workspace authorization for new writes remains enforced by application checks and RLS.",
   "type": "object",
-  "required": ["group_id", "workspace_id", "event_type", "agent_id", "status", "created_at"],
+  "required": [
+    "id",
+    "group_id",
+    "workspace_id",
+    "event_type",
+    "created_at",
+    "agent_id",
+    "workflow_id",
+    "step_id",
+    "parent_event_id",
+    "metadata",
+    "outcome",
+    "status",
+    "error_message",
+    "error_code",
+    "inserted_at",
+    "evidence_ref",
+    "confidence",
+    "runtime",
+    "session_id",
+    "schema_version"
+  ],
   "properties": {
     "id": {
-      "type": "integer",
-      "description": "Auto-increment primary key (BIGSERIAL)"
+      "type": "string",
+      "pattern": "^-?[0-9]+$",
+      "description": "BIGSERIAL primary key returned by the default pg INT8 text parser as a precision-safe decimal string."
     },
     "group_id": {
       "type": "string",
+      "maxLength": 255,
       "pattern": "^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-      "description": "Tenant namespace. Migration 19 enforces strict CHECK: ^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+      "description": "Tenant namespace. Migration 19 enforces the strict format check."
     },
     "workspace_id": {
-      "description": "Stored workspace scope added by migration 39. NULL represents a quarantined legacy row; workspace-governed writes must persist a non-empty value and are enforced by restrictive RLS.",
+      "description": "Stored workspace scope added by migration 39. SQL NULL represents a quarantined legacy row; workspace-governed writes must persist a non-empty value and are enforced by restrictive RLS.",
       "anyOf": [
         { "type": "string", "minLength": 1 },
         { "type": "null" }
@@ -24,104 +47,103 @@
     },
     "event_type": {
       "type": "string",
-      "enum": [
-        "memory_add",
-        "memory_search",
-        "memory_get",
-        "memory_list",
-        "memory_delete",
-        "memory_promoted",
-        "memory_restore",
-        "memory_update",
-        "memory_promote",
-        "promotion_failed",
-        "promotion_queued",
-        "proposal_created",
-        "proposal_decided",
-        "proposal_approved",
-        "proposal_rejected",
-        "notion_sync_pending",
-        "debug:root_cause_found",
-        "debug:hypothesis_tested",
-        "debug:fix_implemented",
-        "neo4j_unavailable",
-        "tool_approved",
-        "tool_denied",
-        "request_trace",
-        "session_start",
-        "session_end",
-        "health_check",
-        "auto_curated",
-        "sync_contract",
-        "kernel_rule",
-        "control_plane_rule",
-        "governance_gate_checked",
-        "WATCHDOG_HEARTBEAT",
-        "BLOCKER",
-        "ARCHITECTURE_DECISION",
-        "TASK_COMPLETE",
-        "BUILD_COMPLETE"
-      ],
-      "description": "Operation type. No DB-level enum constraint (VARCHAR(100) + non-empty CHECK only) — this enum reflects actual emitted values in src/lib/events/event-types.ts and all call sites."
-    },
-    "agent_id": {
-      "type": "string",
-      "description": "Identifier of the agent or user who triggered the event"
-    },
-    "workflow_id": {
-      "type": "string",
-      "description": "Optional grouping for multi-step workflows"
-    },
-    "session_id": {
-      "type": "string",
-      "description": "Session identifier for identity scoping and audit correlation. Added by migration 10 (brooks-tracking). NULL allowed (nullable column)."
-    },
-    "step_id": {
-      "type": "string",
-      "description": "Optional step identifier within a workflow"
-    },
-    "parent_event_id": {
-      "type": "integer",
-      "description": "FK to events.id for parent-child execution chain linking"
-    },
-    "runtime": {
-      "type": "string",
-      "description": "Runtime platform: claude-code, copilot, openclaw, opencode. Added by migration 10 (brooks-tracking). Default: 'unknown'."
-    },
-    "schema_version": {
-      "type": "integer",
-      "description": "Schema version for the event record. Added by migration 17. Default: 1."
-    },
-    "status": {
-      "type": "string",
-      "enum": ["completed", "failed", "pending", "cancelled"],
-      "description": "Operation status. DB CHECK constraint (chk_events_valid_status) enforces exactly these four values."
-    },
-    "metadata": {
-      "type": "object",
-      "description": "Event-specific payload (JSONB). Default: '{}'."
-    },
-    "outcome": {
-      "type": "object",
-      "description": "Structured outcome payload (JSONB). Default: '{}'."
-    },
-    "error_message": {
-      "type": "string",
-      "description": "Error description. Populated only on failure."
-    },
-    "error_code": {
-      "type": "string",
-      "description": "Error code. Populated only on failure."
+      "maxLength": 100,
+      "pattern": ".*\\S.*",
+      "description": "Operation type. PostgreSQL enforces non-empty VARCHAR(100), not a closed enum; emitted vocabulary is documented separately."
     },
     "created_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Write timestamp (TIMESTAMPTZ). DEFAULT NOW(). Immutable — append-only invariant."
+      "description": "TIMESTAMPTZ parsed by pg as Date and emitted by JSON serialization as an ISO date-time string."
+    },
+    "agent_id": {
+      "type": "string",
+      "maxLength": 255,
+      "pattern": ".*\\S.*",
+      "description": "Identifier of the agent or user who triggered the event."
+    },
+    "workflow_id": {
+      "anyOf": [
+        { "type": "string", "maxLength": 255 },
+        { "type": "null" }
+      ],
+      "description": "Nullable workflow grouping identifier."
+    },
+    "step_id": {
+      "anyOf": [
+        { "type": "string", "maxLength": 255 },
+        { "type": "null" }
+      ],
+      "description": "Nullable step identifier within a workflow."
+    },
+    "parent_event_id": {
+      "anyOf": [
+        { "type": "string", "pattern": "^-?[0-9]+$" },
+        { "type": "null" }
+      ],
+      "description": "Nullable BIGINT parent reference returned by pg as a precision-safe decimal string."
+    },
+    "metadata": {
+      "description": "Nullable JSONB event payload. JSONB permits any JSON value; SQL NULL and JSON null both serialize as JSON null."
+    },
+    "outcome": {
+      "description": "Nullable JSONB outcome payload. JSONB permits any JSON value; SQL NULL and JSON null both serialize as JSON null."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "failed", "pending", "cancelled"],
+      "description": "Operation status enforced by chk_events_valid_status."
+    },
+    "error_message": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ],
+      "description": "Nullable error description."
+    },
+    "error_code": {
+      "anyOf": [
+        { "type": "string", "maxLength": 50 },
+        { "type": "null" }
+      ],
+      "description": "Nullable machine-readable error code."
     },
     "inserted_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Audit insertion timestamp (TIMESTAMPTZ). DEFAULT NOW()."
+      "description": "TIMESTAMPTZ audit insertion time serialized from pg Date to an ISO date-time string."
+    },
+    "evidence_ref": {
+      "anyOf": [
+        { "type": "string", "maxLength": 500 },
+        { "type": "null" }
+      ],
+      "description": "Nullable evidence source reference added by migration 05."
+    },
+    "confidence": {
+      "anyOf": [
+        { "type": "string", "pattern": "^(?:0(?:\\.[0-9]{1,3})?|1(?:\\.0{1,3})?)$" },
+        { "type": "null" }
+      ],
+      "description": "Nullable DECIMAL(4,3) confidence returned by the default pg NUMERIC parser as a decimal string."
+    },
+    "runtime": {
+      "anyOf": [
+        { "type": "string", "maxLength": 50 },
+        { "type": "null" }
+      ],
+      "description": "Nullable runtime label added by migration 10; default unknown does not make the physical column NOT NULL."
+    },
+    "session_id": {
+      "anyOf": [
+        { "type": "string", "maxLength": 255 },
+        { "type": "null" }
+      ],
+      "description": "Nullable session identifier added by migration 10."
+    },
+    "schema_version": {
+      "type": "integer",
+      "description": "NOT NULL INTEGER event schema version added by migration 17; default 1."
     }
   },
   "additionalProperties": false

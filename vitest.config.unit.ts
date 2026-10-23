@@ -113,7 +113,7 @@ export default defineConfig({
       "src/__tests__/curator-proposals-route.test.ts",
       "src/__tests__/curator-reject-route.test.ts",
       "src/__tests__/contract-validation.test.ts",
-      // Committed migration 38-40 JSON stored-row contract parity (no live DB).
+      // Complete committed DB-row JSON serialization contracts (offline pg parsers; no live DB).
       "src/__tests__/schema-contract-parity.test.ts",
       // DW-2 — executable regression coverage for the canonical-docs shell guard.
       "src/__tests__/docs-backend-residue-guard.test.ts",
