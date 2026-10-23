@@ -12,6 +12,7 @@ services:
       NODE_ENV: production
       ALLURA_DEV_AUTH_ENABLED: "false"
       ALLURA_DASHBOARD_PORT: "3200"
+      ALLURA_MCP_BASE_URL: "http://allura-memory-mcp:3201"
       POSTGRES_HOST: knowledge-postgres
       POSTGRES_PORT: "5432"
       POSTGRES_DB: ${POSTGRES_DB}
