@@ -145,6 +145,13 @@ function requireVerifiedWorkspaceScope(request: { group_id: GroupId; scope?: Sco
   return scope as ScopeTuple & { workspace_id: string; agent_id: string }
 }
 
+class ExistingProposalStateError extends Error {
+  constructor(status: string) {
+    super(`Existing promotion proposal is ${status}; the queued response cannot represent this decision. No new proposal or approval was created.`)
+    this.name = "ExistingProposalStateError"
+  }
+}
+
 /**
  * 1. memory_add
  *
@@ -1170,14 +1177,21 @@ export async function memory_update(request: MemoryUpdateRequest): Promise<Memor
  */
 export async function memory_promote(request: MemoryPromoteRequest): Promise<MemoryPromoteResponse> {
   const groupId = validateGroupId(request.group_id)
+  const scope = requireVerifiedWorkspaceScope(request)
   const queuedAt = new Date().toISOString()
 
   const { pg, neo4j: neo4jDriver } = await getConnections()
   const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
 
-  // 1. Check if already canonical in graph layer — fails loudly (no silent fallback)
-  const canonicalResult = await graphAdapter.checkCanonical({ id: request.id, group_id: groupId })
-  if (canonicalResult.isCanonical) {
+  // A canonical hit is scoped to the authenticated workspace and principal.
+  // Graph failures propagate: promotion must never infer "not canonical" from an outage.
+  const canonicalResult = await graphAdapter.getMemory({
+    id: request.id,
+    group_id: groupId,
+    workspace_id: scope.workspace_id,
+    principal_id: scope.agent_id,
+  })
+  if (canonicalResult.node) {
     return {
       id: request.id,
       proposal_id: "",
@@ -1187,131 +1201,88 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
     }
   }
 
-  // 2. Check for existing pending proposal (idempotency)
-  const existingProposal = await tenantPgQuery<{ id: string }>(
-    groupId, request.curator_id ?? request.user_id, pg,
-    `SELECT id FROM canonical_proposals
-     WHERE group_id = $1
-       AND status = 'pending'
-       AND content LIKE '%' || $2 || '%'
-     LIMIT 1`,
-    [groupId, request.id],
-    request.scope?.workspace_id
-  )
-  if (existingProposal.rows.length > 0) {
-    return {
-      id: request.id,
-      proposal_id: existingProposal.rows[0].id,
-      status: "queued",
-      queued_at: queuedAt,
-      meta: baseMeta(["postgres"]),
-    }
-  }
-
-  // 3. Dedup: check for near-duplicate proposals using text similarity
-  const dedupThreshold = getDedupThreshold()
-  const dedupChecker = createProposalDedupChecker(undefined, dedupThreshold)
-
-  // 4. Fetch memory content from PG
-  const memoryRow = await tenantPgQuery<{ id: string; content: string; event_id: string }>(
-    groupId, request.curator_id ?? request.user_id, pg,
+  const memoryRow = await tenantPgQuery<{ id: string; content: string; provenance: string | null; event_id: string }>(
+    groupId, scope.agent_id, pg,
     `SELECT metadata->>'memory_id' AS id,
             metadata->>'content' AS content,
+            metadata->>'source' AS provenance,
             id AS event_id
      FROM events
      WHERE group_id = $1
        AND event_type = 'memory_add'
        AND metadata->>'memory_id' = $2
+       AND workspace_id = $3
      ORDER BY created_at DESC
      LIMIT 1`,
-    [groupId, request.id],
-    request.scope?.workspace_id
+    [groupId, request.id, scope.workspace_id],
+    scope.workspace_id
   )
+  if (memoryRow.rows.length === 0) throw new MemoryNotFoundError(request.id)
 
-  if (memoryRow.rows.length === 0) {
-    throw new MemoryNotFoundError(request.id)
+  const { content, event_id, provenance } = memoryRow.rows[0]
+  type SourceProposal = { id: string; status: string; group_id: string; workspace_id: string; trace_ref: string }
+
+  const readSourceProposal = async (): Promise<SourceProposal | undefined> => {
+    const result = await tenantPgQuery<SourceProposal>(groupId, scope.agent_id, pg,
+      `SELECT id, status, group_id, workspace_id, trace_ref
+       FROM canonical_proposals
+       WHERE group_id = $1 AND workspace_id = $2 AND trace_ref = $3
+       LIMIT 1`,
+      [groupId, scope.workspace_id, event_id], scope.workspace_id)
+    const row = result.rows[0]
+    if (row && (row.group_id !== groupId || row.workspace_id !== scope.workspace_id || String(row.trace_ref) !== String(event_id))) {
+      throw new Error("Scoped proposal winner did not match the authenticated source")
+    }
+    return row
   }
 
-  const { content, event_id } = memoryRow.rows[0]
+  const queuedSourceProposal = (row: SourceProposal): MemoryPromoteResponse => {
+    if (row.status !== "pending") throw new ExistingProposalStateError(row.status)
+    return { id: request.id, proposal_id: row.id, status: "queued", queued_at: queuedAt, meta: baseMeta(["postgres"]) }
+  }
 
-  // 4. Score content
+  const existingProposal = await readSourceProposal()
+  if (existingProposal) return queuedSourceProposal(existingProposal)
+
   const scoreResult = await curatorScore({
     content,
-    source: "conversation",
+    source: provenance === "manual" ? "manually_added" : "conversation",
     usageCount: 0,
     daysSinceCreated: 0,
   })
 
-  // 4b. Dedup: check for near-duplicate proposals before inserting
+  const proposalId = randomUUID()
   try {
-    const dedupRows = await tenantPgQuery<{
-      id: string
-      content: string
-      score: number
-      status: string
-      created_at: string
-    }>(groupId, request.curator_id ?? request.user_id, pg,
-      `SELECT id, content, score, status, created_at
-       FROM canonical_proposals
-       WHERE group_id = $1
-         AND status IN ('pending', 'approved')
-       ORDER BY created_at DESC
-       LIMIT 100`,
-      [groupId],
-      request.scope?.workspace_id
+    await tenantPgQuery(
+      groupId, scope.agent_id, pg,
+      `INSERT INTO canonical_proposals
+         (id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9)`,
+      [proposalId, groupId, scope.workspace_id, content, scoreResult.confidence, scoreResult.reasoning, scoreResult.tier, event_id, queuedAt],
+      scope.workspace_id
     )
+  } catch (error) {
+    const conflict = error as { code?: string; constraint?: string } | null
+    if (conflict?.code !== "23505" || conflict.constraint !== "idx_canonical_proposals_trace_ref_unique") throw error
 
-    const dedupCandidates: ProposalCandidate[] = dedupRows.rows.map((row) => ({
-      id: row.id,
-      content: row.content,
-      score: Number(row.score),
-      status: row.status,
-      created_at: row.created_at,
-    }))
-
-    const dedupResult = dedupChecker.checkProposals(content, dedupCandidates)
-
-    if (dedupResult.isDuplicate && dedupResult.existingProposal) {
-      console.warn(
-        `[dedup] Skipping duplicate promote proposal for group_id=${groupId}: ` +
-          `similarity=${dedupResult.similarity.toFixed(4)} threshold=${dedupResult.threshold} ` +
-          `existing_proposal_id=${dedupResult.existingProposal.id} ` +
-          `content_preview="${content.slice(0, 80)}..."`
-      )
-
-      return {
-        id: request.id,
-        proposal_id: dedupResult.existingProposal.id,
-        status: "queued",
-        queued_at: queuedAt,
-        meta: baseMeta(["postgres"]),
-      }
-    }
-  } catch (dedupErr) {
-    console.warn("[dedup] Proposal dedup check failed in memory_promote, proceeding with insert:", dedupErr)
+    // The failed insert transaction rolled back. Read the exact scoped winner
+    // once; never retry insertion or infer a human decision.
+    const winner = await readSourceProposal()
+    if (!winner) throw error
+    return queuedSourceProposal(winner)
   }
 
-  // 5. Insert proposal
-  const proposalId = randomUUID()
+  // Queueing is the terminal action in every promotion mode. Approval, receipts,
+  // and semantic writes remain exclusively human-owned curator actions.
   await tenantPgQuery(
-    groupId, request.curator_id ?? request.user_id, pg,
-    `INSERT INTO canonical_proposals
-       (id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9)`,
-    [proposalId, groupId, request.scope?.workspace_id ?? null, content, scoreResult.confidence, scoreResult.reasoning, scoreResult.tier, event_id, queuedAt],
-    request.scope?.workspace_id
-  )
-
-  // 6. Append audit event
-  await tenantPgQuery(
-    groupId, request.curator_id ?? request.user_id, pg,
+    groupId, scope.agent_id, pg,
     `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata, created_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [
       groupId,
-      request.scope?.workspace_id ?? null,
+      scope.workspace_id,
       "memory_promote_requested",
-      request.curator_id ?? request.user_id,
+      scope.agent_id,
       "completed",
       JSON.stringify({
         memory_id: request.id,
@@ -1321,7 +1292,7 @@ export async function memory_promote(request: MemoryPromoteRequest): Promise<Mem
       }),
       queuedAt,
     ],
-    request.scope?.workspace_id
+    scope.workspace_id
   )
 
   return {
