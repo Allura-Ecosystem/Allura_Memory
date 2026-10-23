@@ -117,6 +117,8 @@ function shouldAutoPromote(category: string, score: number, content: string, gro
 }
 
 async function main() {
+  throw new Error("Legacy approval entrypoint is disabled; automated promotion cannot create human approval evidence");
+  /* c8 ignore start -- retained read/classification implementation is unreachable until separately redesigned */
   const pool = new Pool({
     host: process.env.POSTGRES_HOST || "localhost",
     port: parseInt(process.env.POSTGRES_PORT || "5432"),
@@ -234,6 +236,7 @@ async function main() {
   appendDailyLog(logMessage);
 
   await pool.end();
+  /* c8 ignore stop */
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

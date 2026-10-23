@@ -88,13 +88,16 @@ function maybeFail(point: PromotionFailurePoint, requested?: PromotionFailurePoi
   if (requested === point) throw new PromotionDecisionError("FAILURE_INJECTED", `Injected failure after ${point} write`);
 }
 
-function parseReceipt(value: unknown): GovernanceReceipt {
+function parseReceipt(value: unknown, authenticatedActorId: string): GovernanceReceipt {
   if (!value || typeof value !== "object") throw new Error("Stored approval receipt is malformed");
   const receipt = value as GovernanceReceipt;
   if (!receipt.id || receipt.action !== "approve" || !receipt.proposal_id || !receipt.memory_id || !receipt.source_event_id) {
     throw new Error("Stored approval receipt is incomplete");
   }
-  return receipt;
+  if (!receipt.actor_id || receipt.actor_id !== authenticatedActorId) {
+    throw new PromotionDecisionError("IDEMPOTENCY_CONFLICT", "Idempotency replay belongs to a different approval actor");
+  }
+  return { ...receipt, reviewed_proposal_version: receipt.reviewed_proposal_version ?? null };
 }
 
 function setLocal(name: string, value: string): string {
@@ -115,6 +118,9 @@ export async function approveProposal(input: ApproveProposalInput): Promise<Gove
   if (!proposalId || !workspaceId || !rationale || !idempotencyKey) throw new Error("proposalId, workspaceId, rationale, and idempotencyKey are required");
   if (!/^[1-9][0-9]*$/.test(expectedProposalVersion)) {
     throw new PromotionDecisionError("INVALID_EXPECTED_PROPOSAL_VERSION", "expectedProposalVersion must be a positive decimal string");
+  }
+  if (input.principal.authMethod === "service_identity" || input.principal.authMethod === "dev_local") {
+    throw new PrincipalAuthError("ROLE_INSUFFICIENT", "Approval requires an authenticated human principal; service and local identities cannot approve");
   }
 
   const client = await input.pool.connect();
@@ -156,7 +162,7 @@ export async function approveProposal(input: ApproveProposalInput): Promise<Gove
         throw new PromotionDecisionError("IDEMPOTENCY_CONFLICT", "Idempotency key is already bound to a different proposal");
       }
       await client.query("COMMIT");
-      return parseReceipt(replay.rows[0].result);
+      return parseReceipt(replay.rows[0].result, input.principal.principalId);
     }
     if (String(proposal.proposal_version) !== expectedProposalVersion) {
       throw new PromotionDecisionError(
@@ -234,7 +240,7 @@ export async function approveProposal(input: ApproveProposalInput): Promise<Gove
         "policy://allura/curator-decision", "25.2a/v1", memoryId, sourceEvent.id, witnessHash,
         JSON.stringify(evidenceReferences)],
     );
-    const receipt = parseReceipt(receiptResult.rows[0]);
+    const receipt = parseReceipt(receiptResult.rows[0], input.principal.principalId);
     await client.query(`SELECT app.finalize_governance_receipt_evidence($1,$2::uuid[])`, [receipt.id,evidenceIds]);
     maybeFail("receipt", input.failAt);
 
@@ -261,7 +267,7 @@ export async function approveProposal(input: ApproveProposalInput): Promise<Gove
           [resolvedGroupId,workspaceId,idempotencyKey],
         );
         await client.query("COMMIT");
-        if (replay.rows[0]?.proposal_id === proposalId) return parseReceipt(replay.rows[0].result);
+        if (replay.rows[0]?.proposal_id === proposalId) return parseReceipt(replay.rows[0].result, input.principal.principalId);
         throw new PromotionDecisionError("IDEMPOTENCY_CONFLICT", "Idempotency key is already bound to a different proposal");
       } catch (raceError) {
         await client.query("ROLLBACK").catch(() => undefined);

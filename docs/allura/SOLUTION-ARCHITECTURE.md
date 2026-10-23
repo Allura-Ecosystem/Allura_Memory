@@ -101,9 +101,9 @@ sequenceDiagram
     Client->>Capture: Capture evidence with resolved scope
     Capture->>PG: Append event and queue eligible content as pending proposal
     Capture-->>Client: Episodic / pending result
-    Reviewer->>Approval: Intended approval: reviewed version, rationale, idempotency key
+    Reviewer->>Approval: Approval: browser-loaded version, rationale, idempotency key
     Approval->>PG: Lock scope and validate evidence and actor separation
-    Note over Approval,PG: Reviewed-version comparison is specified but not implemented (DOC-06)
+    Note over Approval,PG: Current source compares the locked version and binds actor replay (DOC-06)
     Approval->>PG: Atomic memory + proposal + audit + outbox + receipt + replay record
     Approval-->>Reviewer: Durable governance receipt after commit
     Client->>Capture: Search within the same authorized scope
@@ -111,11 +111,11 @@ sequenceDiagram
     Capture-->>Client: Results or explicit unknown/degraded/error state
 ```
 
-**Implemented boundary, inspected 2026-10-18:** `src/lib/memory/approve-proposal.ts` requires curator/admin authority plus `review:approve`, validates the same-scope source event, and rejects requester self-approval. A failed approval transaction rolls back its durable writes. Replaying the same scoped key and proposal returns the original stored receipt, even if the retry supplies different rationale/evidence; binding that key to another proposal conflicts. The CLI delegates to this same service (`src/curator/approve-cli.ts`). Neither score nor the legacy `auto` configuration substitutes for human approval (`src/lib/curator/auto-promote.ts`). This is source evidence, not a new live acceptance receipt.
+**Implemented source boundary, inspected 2026-10-23:** `src/lib/memory/approve-proposal.ts` requires curator/admin authority plus `review:approve`, rejects known service identities, validates same-scope source evidence and requester separation, compares the browser-loaded reviewed version before new writes, and binds successful replay to the original authenticated actor. A failed approval transaction rolls back its durable writes. The CLI is read-only/fail-closed for approval, and evaluation/legacy batch paths cannot synthesize human review evidence. This is source evidence, not a live acceptance, deployment or release receipt.
 
 **Approved specification gaps (Sabir, 2026-10-18, current chat):**
 
-- **DOC-06 — stale review:** a new approval compares the reviewed proposal version with the locked current version. A mismatch fails without approval writes and requires refreshed human review. The inspected route/service supplies no expected reviewed version, so current locking alone does not satisfy this contract. A replay of an already committed same scoped operation returns its original immutable receipt rather than making another decision.
+- **DOC-06 — stale review:** the current source candidate compares the browser-loaded reviewed proposal version with the locked current version. A mismatch fails without approval writes and requires refreshed human review. A same-actor replay of an already committed scoped operation returns its original immutable receipt rather than making another decision; wrong-actor or actorless historical replay fails closed. Production acceptance still requires authorized verification that migration identity `072` is unoccupied and its columns/constraints are present, plus the separately approved production human-proof issuer/topology.
 - **DOC-07 — projection truth:** preserve the original decision receipt, including its decision-time outbox state. Current projection status is a separate read model. Local outbox `delivered` is not remote `synced`; use `synced` only after confirmed Notion delivery with destination/record/read-back evidence. `promotion-outbox-worker.ts` emits `canonical_memory_promoted`, while the Notion worker consumes `notion_sync_pending`; the verified end-to-end handoff is missing.
 
 ### 3.4.0 Current RuVector Readiness Boundary

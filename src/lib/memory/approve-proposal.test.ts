@@ -9,7 +9,7 @@ const principal = createPrincipalContext({
   tenantIds: ["allura-reviewed-version"],
   roles: ["curator"],
   scopes: ["review:approve"],
-  authMethod: "service_identity",
+  authMethod: "web_session",
   sessionId: "reviewed-version-test",
 });
 
@@ -121,5 +121,40 @@ describe("approveProposal reviewed-version guard", () => {
     const statements = client.query.mock.calls.map(([sql]) => String(sql));
     expect(statements.at(-1)).toBe("COMMIT");
     expect(statements.some((sql) => /^\s*(INSERT|UPDATE)\b/.test(sql))).toBe(false);
+  });
+
+  it("projects a historical replay with no reviewed version as explicit null without mutating stored JSON", async () => {
+    const historical = { ...receipt } as Record<string, unknown>;
+    delete historical.reviewed_proposal_version;
+    const { pool } = mockPool(async (sql) => {
+      if (sql.includes("FROM canonical_proposals")) return { rows: [proposal("4", "approved")] };
+      if (sql.includes("FROM promotion_idempotency")) return { rows: [{ proposal_id: "proposal-1", result: historical }] };
+      return { rows: [] };
+    });
+
+    await expect(approveProposal(input(pool, "3"))).resolves.toMatchObject({ reviewed_proposal_version: null });
+    expect(historical).not.toHaveProperty("reviewed_proposal_version");
+  });
+
+  it("rejects replay when the stored receipt belongs to another or missing actor", async () => {
+    for (const stored of [{ ...receipt, actor_id: "another-curator" }, { ...receipt, actor_id: undefined }]) {
+      const { pool } = mockPool(async (sql) => {
+        if (sql.includes("FROM canonical_proposals")) return { rows: [proposal("4", "approved")] };
+        if (sql.includes("FROM promotion_idempotency")) return { rows: [{ proposal_id: "proposal-1", result: stored }] };
+        return { rows: [] };
+      });
+      await expect(approveProposal(input(pool, "3"))).rejects.toMatchObject({ code: "IDEMPOTENCY_CONFLICT" });
+    }
+  });
+
+  it("rejects known nonhuman principals before opening a database connection", async () => {
+    for (const authMethod of ["service_identity", "dev_local"] as const) {
+      const connect = vi.fn();
+      await expect(approveProposal({
+        ...input({ connect } as unknown as Pool),
+        principal: createPrincipalContext({ ...principal, authMethod, sessionId: `nonhuman-${authMethod}` }),
+      })).rejects.toMatchObject({ reasonCode: "ROLE_INSUFFICIENT" });
+      expect(connect).not.toHaveBeenCalled();
+    }
   });
 });

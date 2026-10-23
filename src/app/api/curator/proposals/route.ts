@@ -54,6 +54,7 @@ type ReceiptRow = {
   outbox_state: string;
   evidence_request_id: string | null;
   evidence_references: unknown;
+  reviewed_proposal_version: string | null;
   occurred_at: string;
 };
 
@@ -128,7 +129,8 @@ export async function GET(request: NextRequest) {
         db.query<ReceiptRow>(
           `SELECT DISTINCT ON (proposal_id)
                   id, proposal_id, action, actor_id, actor_role, rationale, policy_reference, policy_version,
-                  memory_id, result_ref, outbox_state, evidence_request_id, evidence_references, occurred_at
+                  memory_id, result_ref, outbox_state, evidence_request_id, evidence_references,
+                  reviewed_proposal_version, occurred_at
              FROM governance_receipts
             WHERE group_id = $1 AND workspace_id = $2 AND proposal_id = ANY($3::uuid[])
             ORDER BY proposal_id, occurred_at DESC, id DESC`,

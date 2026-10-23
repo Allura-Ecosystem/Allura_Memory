@@ -112,6 +112,7 @@ function parseArgs(): { execute: boolean; groupId: string } {
 
 async function main(): Promise<void> {
   const { execute, groupId } = parseArgs()
+  if (execute) throw new Error("Legacy approval entrypoint is disabled; use the authenticated browser human-review flow")
 
   try {
     validateGroupId(groupId)

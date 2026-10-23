@@ -21,15 +21,15 @@ const limit = limitArg >= 0 ? parseInt(process.argv[limitArg + 1] ?? "999") : 99
 const CURATOR_ID = "batch-approve-script";
 const RATIONALE = "Phase 6 backlog clearance — E2E pipeline validation";
 
-const pool = new Pool({
-  host: process.env.POSTGRES_HOST || "localhost",
-  port: parseInt(process.env.POSTGRES_PORT || "5432"),
-  database: process.env.POSTGRES_DB || "memory",
-  user: process.env.POSTGRES_USER || "ronin4life",
-  password: process.env.POSTGRES_PASSWORD,
-});
-
 async function main() {
+  if (!isDryRun) throw new Error("Legacy approval entrypoint is disabled; use the authenticated browser human-review flow");
+  const pool = new Pool({
+    host: process.env.POSTGRES_HOST || "localhost",
+    port: parseInt(process.env.POSTGRES_PORT || "5432"),
+    database: process.env.POSTGRES_DB || "memory",
+    user: process.env.POSTGRES_USER || "ronin4life",
+    password: process.env.POSTGRES_PASSWORD,
+  });
   console.log(`[batch-approve] mode=${isDryRun ? "DRY-RUN" : "LIVE"} limit=${limit}`);
 
   const { rows: proposals } = await pool.query(

@@ -18,7 +18,7 @@
  * missing audit, changed fixture) must move the metric below threshold, or the
  * lane is inert and must not be reported as measured.
  */
-import { Client, Pool } from "pg";
+import { Client } from "pg";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
@@ -33,11 +33,9 @@ import {
   type PolicyContext,
 } from "@/control-plane/policy";
 import type { ProofClaims } from "@/control-plane/proof";
-import { createPrincipalContext } from "@/lib/auth/principal-context";
 import { compareReceipts } from "@/lib/harness/receipt";
 import { runScenario } from "@/lib/harness/runner";
 import { loadScenario } from "@/lib/harness/scenario";
-import { approveProposal } from "@/lib/memory/approve-proposal";
 import { retrieveKnowledge } from "@/lib/memory/retrieval-layer";
 import { CANONICAL_HTTP_TOOL_NAMES } from "@/mcp/http-tool-catalog";
 import type { CaseOutcome, LaneConfig } from "../runner";
@@ -231,96 +229,17 @@ async function execCrossTenantIsolation(caseItem: unknown): Promise<CaseOutcome>
 }
 
 // ── promotion_correctness ────────────────────────────────────────────────────
-// Exercises the atomic approveProposal path: seed a pending proposal + trace
-// event, approve, and verify exactly one graph memory and an approved status.
-// Falsifiable: the reject path must create zero memories.
+// The harness has no human-proof fixture contract, so it must not manufacture
+// an approver or write approval fixtures. Report an honest inconclusive result.
 async function execPromotionCorrectness(caseItem: unknown): Promise<CaseOutcome> {
   const c = caseItem as Record<string, unknown>;
   const id = String(c.id ?? "unknown");
-  const expectedOutcome = String(c.expected_outcome ?? "approved");
-  const expectedMemoryCount = Number(c.expected_memory_count ?? 1);
-  const client = appClient();
-  await client.connect();
-  try {
-    await beginScoped(client);
-    // Seed a trace event (requester) and a pending proposal.
-    const ev = await client.query<{ id: string }>(
-      `INSERT INTO events (group_id, workspace_id, event_type, agent_id, status, metadata)
-       VALUES ($1,$2,'memory_add','eval-requester','completed','{}'::jsonb) RETURNING id::text`,
-      [GROUP_ID, WORKSPACE_ID],
-    );
-    const traceRef = ev.rows[0].id;
-    const prop = await client.query<{ id: string; proposal_version: string }>(
-      `INSERT INTO canonical_proposals (group_id, workspace_id, content, score, tier, status, trace_ref)
-       VALUES ($1,$2,$3,0.9,'emerging','pending',$4) RETURNING id::text, proposal_version::text`,
-      [GROUP_ID, WORKSPACE_ID, `promotion probe ${id}`, traceRef],
-    );
-    const proposalId = prop.rows[0].id;
-    await client.query("COMMIT");
-
-    if (expectedOutcome === "approved") {
-      const approver = createPrincipalContext({
-        principalId: "eval-approver",
-        workspaceId: WORKSPACE_ID,
-        tenantIds: [GROUP_ID],
-        roles: ["curator"],
-        scopes: ["review:approve"],
-        authMethod: "service_identity",
-        sessionId: "eval-session",
-      });
-      const receipt = await approveProposal({
-        principal: approver,
-        workspaceId: WORKSPACE_ID,
-        proposalId,
-        expectedProposalVersion: prop.rows[0].proposal_version,
-        rationale: "measured promotion correctness",
-        idempotencyKey: `eval-promo-${id}-${Date.now()}`,
-        pool: appClientPool(),
-      });
-      const memoryId = receipt.memory_id;
-      const count = await countGraphMemories(memoryId);
-      const passed = count === expectedMemoryCount;
-      return { id, passed, observed: { value: passed ? 1 : 0, memoryCount: count, receiptId: receipt.id }, detail: passed ? "exactly one canonical memory" : `memory count ${count}` };
-    }
-    // Reject path: no memory must be created.
-    const count = await countGraphMemories(`eval-promo-${id}`);
-    const passed = count === expectedMemoryCount; // expected 0
-    return { id, passed, observed: { value: passed ? 1 : 0, memoryCount: count }, detail: passed ? "reject created zero memories" : `memory count ${count}` };
-  } catch (err) {
-    await client.query("ROLLBACK").catch(() => undefined);
-    return { id, passed: false, detail: `promotion failed: ${err instanceof Error ? err.message : String(err)}` };
-  } finally {
-    await client.end();
-  }
-}
-
-function appClientPool(): Pool {
-  // approveProposal expects a pg.Pool; build a minimal one from the app role.
-  return new Pool({
-    host: process.env.POSTGRES_HOST ?? "127.0.0.1",
-    port: Number.parseInt(process.env.POSTGRES_PORT ?? "5432", 10),
-    database: process.env.POSTGRES_DB ?? "memory",
-    user: process.env.POSTGRES_APP_USER,
-    password: process.env.POSTGRES_APP_PASSWORD,
-    max: 1,
-  });
-}
-
-async function countGraphMemories(memoryId: string | null): Promise<number> {
-  if (!memoryId) return 0;
-  const client = appClient();
-  await client.connect();
-  try {
-    await beginScoped(client);
-    const res = await client.query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM graph_memories WHERE id = $1`,
-      [memoryId],
-    );
-    await client.query("COMMIT");
-    return Number(res.rows[0]?.count ?? 0);
-  } finally {
-    await client.end();
-  }
+  return {
+    id,
+    passed: false,
+    observed: { value: 0, status: "inconclusive" },
+    detail: "inconclusive: no explicit test-only human-reviewed fixture contract is configured; no writes performed",
+  };
 }
 
 // ── audit_completeness ───────────────────────────────────────────────────────

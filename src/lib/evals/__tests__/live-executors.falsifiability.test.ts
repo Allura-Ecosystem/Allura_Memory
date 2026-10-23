@@ -77,3 +77,15 @@ describeLive("measured evaluation falsifiability", () => {
     expect(outcome.passed).toBe(false);
   });
 });
+
+describe("promotion correctness human-review boundary", () => {
+  it("returns an inconclusive failure before opening PostgreSQL when no test-only human-reviewed fixture exists", async () => {
+    const outcome = await liveExecutor(
+      lane("promotion_correctness"),
+      {},
+      { id: "no-human-fixture", expected_outcome: "approved", expected_memory_count: 1 },
+    );
+    expect(outcome.passed).toBe(false);
+    expect(outcome.detail).toMatch(/human-reviewed fixture|inconclusive/i);
+  });
+});

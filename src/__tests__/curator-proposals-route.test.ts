@@ -26,6 +26,7 @@ vi.mock("@/lib/db/tenant-transaction", () => ({ withWorkspaceTransaction: withWo
 vi.mock("@/lib/observability/sentry", () => ({ captureException: vi.fn() }))
 
 import { GET } from "@/app/api/curator/proposals/route"
+import { ProposalResponseSchema } from "@/components/curator/types"
 
 function makeRequest(query = ""): NextRequest {
   return new NextRequest(new URL(`/api/curator/proposals${query}`, "http://localhost:3100"))
@@ -48,8 +49,10 @@ function seedReadRows() {
       }] }
     }
     if (sql.includes("FROM governance_receipts")) {
+      const selectedReviewedVersion = sql.includes("reviewed_proposal_version")
       return { rows: [{
-        id: "receipt-1", proposal_id: "proposal-1", action: "approve", reviewed_proposal_version: "2", actor_id: "curator-alice",
+        id: "receipt-1", proposal_id: "proposal-1", action: "approve",
+        ...(selectedReviewedVersion ? { reviewed_proposal_version: "2" } : {}), actor_id: "curator-alice",
         actor_role: "curator", rationale: "Evidence is sufficient", policy_reference: "policy://allura/curator-decision",
         policy_version: "25.2a/v1", memory_id: "memory-1", result_ref: null, outbox_state: "queued",
         evidence_request_id: null, evidence_references: ["event:42"], occurred_at: "2026-06-06T00:05:00.000Z",
@@ -84,7 +87,35 @@ describe("GET /api/curator/proposals", () => {
       evidence: [expect.objectContaining({ id: "evidence-1", state: "satisfied" })],
       decision_receipt: expect.objectContaining({ id: "receipt-1", action: "approve", actor_id: "curator-alice" }),
     })
+    expect(() => ProposalResponseSchema.parse(body)).not.toThrow()
+    const receiptQuery = queryMock.mock.calls.find(([sql]) => String(sql).includes("FROM governance_receipts"))
+    expect(String(receiptQuery?.[0])).toContain("reviewed_proposal_version")
     expect(queryMock.mock.calls.some(([sql]) => String(sql).includes("FROM events"))).toBe(false)
+  })
+
+  it("projects historical receipt versions as an explicit null accepted by the production response schema", async () => {
+    queryMock.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM canonical_proposals")) return { rows: [{
+        id: "proposal-1", group_id: "allura-test", workspace_id: "workspace-test", content: "Historical",
+        score: "0.91", reasoning: "Historical receipt", tier: "mainstream", status: "approved",
+        trace_ref: 42, proposal_version: "2", created_at: "2026-06-06T00:00:00.000Z",
+      }] }
+      if (sql.includes("FROM evidence_requests")) return { rows: [] }
+      if (sql.includes("FROM governance_receipts")) return { rows: [{
+        id: "receipt-old", proposal_id: "proposal-1", action: "approve", reviewed_proposal_version: null,
+        actor_id: "curator-alice", actor_role: "curator", rationale: "Historical approval",
+        policy_reference: "policy://allura/curator-decision", policy_version: "25.2a/v1", memory_id: "memory-1",
+        result_ref: null, outbox_state: "queued", evidence_request_id: null, evidence_references: ["event:42"],
+        occurred_at: "2026-06-06T00:05:00.000Z",
+      }] }
+      throw new Error(`unexpected query: ${sql}`)
+    })
+
+    const response = await GET(makeRequest("?status=approved"))
+    const parsed = ProposalResponseSchema.parse(await response.json())
+
+    expect(response.status).toBe(200)
+    expect(parsed.proposals[0]?.decision_receipt?.reviewed_proposal_version).toBeNull()
   })
 
   it("rejects forged tenant or workspace selectors before opening a transaction", async () => {

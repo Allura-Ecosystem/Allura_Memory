@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import type { Pool } from "pg"
 
 const { approveProposal, getAppPool, withWorkspaceTransaction } = vi.hoisted(() => ({
   approveProposal: vi.fn(), getAppPool: vi.fn(), withWorkspaceTransaction: vi.fn(),
@@ -42,18 +41,16 @@ describe("curator approval CLI adapter", () => {
   })
 
   it("fails closed without --auto-approve and verifies actor authority before mutation", async () => {
-    await expect(processProposal(proposal, scope, principal as never, false)).resolves.toMatchObject({ status: "skipped", reason: expect.stringContaining("--auto-approve") })
+    await expect(processProposal(proposal, scope, principal as never, false)).resolves.toMatchObject({ status: "skipped", reason: expect.stringMatching(/read-only|browser human-review/i) })
     await expect(processProposal(proposal, scope, { ...principal, principalId: "spoofed" } as never, true)).rejects.toThrow(/verified actor/i)
     expect(approveProposal).not.toHaveBeenCalled()
   })
 
-  it("uses the app pool and exact verified workspace for explicit auto approval", async () => {
-    const appPool = {} as Pool
-    getAppPool.mockReturnValue(appPool)
-    await expect(processProposal(proposal, scope, principal as never, true)).resolves.toMatchObject({ action: "approve" })
-    expect(approveProposal).toHaveBeenCalledWith(expect.objectContaining({
-      pool: appPool, groupId: scope.tenantId, workspaceId: scope.workspaceId,
-      principal, proposalId: proposal.id, expectedProposalVersion: "4",
-    }))
+  it("fails closed for --auto-approve because the CLI has no human-reviewed-version transport", async () => {
+    await expect(processProposal(proposal, scope, principal as never, true)).resolves.toMatchObject({
+      status: "skipped", reason: expect.stringMatching(/human review|disabled/i),
+    })
+    expect(getAppPool).not.toHaveBeenCalled()
+    expect(approveProposal).not.toHaveBeenCalled()
   })
 })

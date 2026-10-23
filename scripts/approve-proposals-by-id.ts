@@ -63,6 +63,7 @@ function witnessHash(p: PendingProposal, groupId: string, decision: string, deci
 
 async function main(): Promise<void> {
   const { execute, groupId, decidedBy, idPrefixes } = parseArgs()
+  if (execute) throw new Error("Legacy approval entrypoint is disabled; use the authenticated browser human-review flow")
 
   if (!decidedBy) {
     console.error("[ERROR] --decided-by=<human-approver> is required (HITL provenance). Refusing to run.")

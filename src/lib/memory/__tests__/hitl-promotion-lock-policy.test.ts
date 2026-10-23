@@ -67,29 +67,21 @@ describe("HITL Promotion Lock policy", () => {
     }
   })
 
-  it("curator approval entrypoints must log approval audit before graph writes", () => {
+  it("human approval delegates to the atomic service while legacy batch approval fails closed", () => {
     const route = readRepoFile("src/app/api/curator/approve/route.ts")
     const batchScript = readRepoFile("scripts/batch-approve-proposals.ts")
 
-    for (const source of [batchScript]) {
-      const auditIndex = source.indexOf("await logApprovalEvent")
-      const graphWriteIndex = source.indexOf("await createInsight")
-
-      expect(auditIndex).toBeGreaterThanOrEqual(0)
-      expect(graphWriteIndex).toBeGreaterThanOrEqual(0)
-      expect(auditIndex).toBeLessThan(graphWriteIndex)
-      expect(source).toContain('decision: "approved"')
-      expect(source).toContain("memory_id:")
-    }
-
-    const routeAuditIndex = route.indexOf("await logApprovalEvent")
-    const routePromotionQueueIndex = route.indexOf("await enqueuePromotionSync")
+    const disabledIndex = batchScript.indexOf("Legacy approval entrypoint is disabled")
+    const poolIndex = batchScript.indexOf("new Pool")
+    const graphWriteIndex = batchScript.indexOf("await createInsight")
+    expect(disabledIndex).toBeGreaterThanOrEqual(0)
+    expect(poolIndex).toBeGreaterThan(disabledIndex)
+    expect(graphWriteIndex).toBeGreaterThan(poolIndex)
 
     expect(route).not.toContain("await createInsight")
-    expect(routeAuditIndex).toBeGreaterThanOrEqual(0)
-    expect(routePromotionQueueIndex).toBeGreaterThanOrEqual(0)
-    expect(routeAuditIndex).toBeLessThan(routePromotionQueueIndex)
-    expect(route).toContain('decision: "approved"')
-    expect(route).toContain("memory_id:")
+    expect(route).not.toContain("await enqueuePromotionSync")
+    expect(route).toContain("await approveProposal({")
+    expect(route).toContain("expectedProposalVersion,")
+    expect(route).toContain("principal,")
   })
 })

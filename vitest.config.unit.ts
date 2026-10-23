@@ -76,9 +76,12 @@ export default defineConfig({
       "src/lib/memory/writer.test.ts",
       "src/lib/memory/relationships/*.test.ts",
       "src/lib/memory/__tests__/approval-audit.test.ts",
+      "src/lib/memory/__tests__/hitl-promotion-lock-policy.test.ts",
       "src/lib/memory/traceable-memory.test.ts",
       "src/lib/memory/approve-proposal.test.ts",
       "src/lib/memory/curator-proposal-queue.test.ts",
+      "src/lib/memory/legacy-approval-entrypoints.test.ts",
+      "src/lib/db/migration-identity.test.ts",
       // Promotion outbox transaction regression (mocked transport; no live database).
       "src/lib/memory/promotion-outbox-worker.test.ts",
       "src/lib/memory/governance-receipt-writer.test.ts",

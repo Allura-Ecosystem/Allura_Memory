@@ -42,8 +42,7 @@ function requiredText(value: unknown, field: string): string {
 }
 
 function requiredProposalVersion(value: unknown): string {
-  const version = typeof value === "bigint" || typeof value === "number" ? String(value) : value
-  if (typeof version === "string" && /^[1-9][0-9]*$/.test(version)) return version
+  if (typeof value === "string" && /^[1-9][0-9]*$/.test(value)) return value
   throw new Error("Curator proposal queue row is missing valid proposal_version")
 }
 

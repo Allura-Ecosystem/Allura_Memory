@@ -67,6 +67,20 @@ describe("curator proposal queue", () => {
     expect(item?.score).toBe(0)
   })
 
+  it("preserves exact versions above Number.MAX_SAFE_INTEGER only when PostgreSQL returns canonical text", () => {
+    const base = {
+      id: "prop-large", group_id: "allura-system", content: "Large version", score: 0.9,
+      reasoning: "Exact bigint text", tier: "mainstream", status: "pending", trace_ref: "trace-large",
+      created_at: "2026-05-24T11:00:00.000Z",
+    }
+    expect(formatCuratorProposalQueue([{ ...base, proposal_version: "9007199254740993" }], "allura-system")[0]?.proposalVersion)
+      .toBe("9007199254740993")
+    expect(() => formatCuratorProposalQueue([{ ...base, proposal_version: 9007199254740993 }], "allura-system"))
+      .toThrow(/proposal_version/i)
+    expect(() => formatCuratorProposalQueue([{ ...base, proposal_version: 4n }], "allura-system"))
+      .toThrow(/proposal_version/i)
+  })
+
   it("queries pending proposals by validated group_id without promotion side effects", async () => {
     const query = vi.fn(async (_sql: string, _params: unknown[]) => ({
       rows: [

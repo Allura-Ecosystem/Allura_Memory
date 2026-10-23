@@ -1,13 +1,12 @@
 #!/usr/bin/env bun
 /** Workspace-authoritative curator approval CLI. */
-import { closePool, getAppPool } from "../lib/postgres/connection"
+import { closePool } from "../lib/postgres/connection"
 import { withWorkspaceTransaction } from "../lib/db/tenant-transaction"
 import type { ResolvedWorkspaceScope } from "../lib/db/workspace-scope"
 import { resolveWorkspaceScope } from "../lib/db/workspace-scope"
 import { validateToken } from "../lib/guard/validate-token"
 import { validateGroupId } from "../lib/validation/group-id"
 import { createPrincipalContext, type PrincipalContext } from "../lib/auth/principal-context"
-import { approveProposal, type GovernanceReceipt } from "../lib/memory/approve-proposal"
 
 export interface PendingProposal {
   id: string; group_id: string; workspace_id: string; content: string; score: string;
@@ -53,29 +52,23 @@ export async function processProposal(
   scope: ResolvedWorkspaceScope,
   principal: PrincipalContext,
   autoApprove: boolean,
-): Promise<GovernanceReceipt | SkippedApprovalResult> {
+): Promise<SkippedApprovalResult> {
   assertAuthority(scope, principal)
   if (proposal.group_id !== scope.tenantId || proposal.workspace_id !== scope.workspaceId) {
     throw new Error("Proposal is outside verified CLI workspace scope")
   }
-  if (!autoApprove) {
-    return { proposal_id: proposal.id, status: "skipped", reason: "noninteractive approval requires explicit --auto-approve" }
+  return {
+    proposal_id: proposal.id,
+    status: "skipped",
+    reason: autoApprove
+      ? "noninteractive --auto-approve is disabled: this CLI has no human-reviewed-version transport"
+      : "read-only listing; approval requires the browser human-review flow",
   }
-  return approveProposal({
-    principal,
-    groupId: scope.tenantId,
-    workspaceId: scope.workspaceId,
-    proposalId: proposal.id,
-    expectedProposalVersion: proposal.proposal_version,
-    rationale: proposal.reasoning?.trim() || "Approved by curator CLI",
-    idempotencyKey: `curator-cli:${proposal.id}:${scope.principalId}`,
-    pool: getAppPool(),
-  })
 }
 
 async function runApproveCLI(): Promise<void> {
   const args = parseArgs()
-  if (!args.autoApprove) throw new Error("noninteractive CLI refuses approval without explicit --auto-approve")
+  if (args.autoApprove) throw new Error("--auto-approve is disabled: use the browser human-review flow")
   const validation = await validateToken(process.env.ALLURA_CURATOR_TOKEN ?? null)
   if (!validation.ok) throw new Error(`valid ALLURA_CURATOR_TOKEN is required (${validation.reason})`)
   const scope = resolveWorkspaceScope(validation.token)
@@ -89,8 +82,8 @@ async function runApproveCLI(): Promise<void> {
     sessionId: `curator-cli:${Date.now()}`, credentialId: validation.token.id,
   })
   const proposals = await getPendingProposals(scope)
-  for (const proposal of proposals) await processProposal(proposal, scope, principal, true)
-  console.log(`[Curator Approve] ${proposals.length} proposal(s) approved in ${scope.workspaceId}`)
+  for (const proposal of proposals) await processProposal(proposal, scope, principal, false)
+  console.log(`[Curator Approve] ${proposals.length} pending proposal(s) listed; no approvals performed`)
 }
 
 if (process.argv[1]?.includes("approve-cli.ts")) {

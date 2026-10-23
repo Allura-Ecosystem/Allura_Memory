@@ -532,6 +532,8 @@ async function gate12_secondAgentReuse(): Promise<void> {
 // ── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
+  throw new Error("Legacy approval entrypoint is disabled; this gate directly approved proposals without a reviewed-version artifact");
+  /* c8 ignore start -- historical gate retained for non-execution reference */
   console.log("╔══════════════════════════════════════════════════════════════╗");
   console.log("║   Allura Memory — E2E Validation Gate                     ║");
   console.log("║   Reference: docs/archive/allura/VALIDATION-GATE.md       ║");
@@ -596,6 +598,7 @@ async function main() {
 
   // Exit code
   process.exit(hardGatesPassed ? 0 : 1);
+  /* c8 ignore stop */
 }
 
 main().catch((error) => {
