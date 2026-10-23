@@ -69,10 +69,21 @@ function parseHostPort(name: string, value: string | undefined): number | undefi
   return port
 }
 
-/** Read explicit port choices without inventing or claiming defaults. */
+const PROPOSED_DEV_SAFE_PORTS = {
+  ALLURA_DEV_SAFE_DASHBOARD_PORT: 4002,
+  ALLURA_DEV_SAFE_POSTGRES_PORT: 7002,
+} as const
+
+/** Require explicit values matching the pending AD-45 registration proposal. */
 export function readPortConfiguration(environment: Readonly<Record<string, string | undefined>>): DevSafePorts {
   const dashboard = parseHostPort("ALLURA_DEV_SAFE_DASHBOARD_PORT", environment.ALLURA_DEV_SAFE_DASHBOARD_PORT)
   const postgres = parseHostPort("ALLURA_DEV_SAFE_POSTGRES_PORT", environment.ALLURA_DEV_SAFE_POSTGRES_PORT)
+  if (dashboard !== undefined && dashboard !== PROPOSED_DEV_SAFE_PORTS.ALLURA_DEV_SAFE_DASHBOARD_PORT) {
+    throw new Error("ALLURA_DEV_SAFE_DASHBOARD_PORT must match the proposed AD-45 allocation 4002")
+  }
+  if (postgres !== undefined && postgres !== PROPOSED_DEV_SAFE_PORTS.ALLURA_DEV_SAFE_POSTGRES_PORT) {
+    throw new Error("ALLURA_DEV_SAFE_POSTGRES_PORT must match the proposed AD-45 allocation 7002")
+  }
   return {
     ...(dashboard === undefined ? {} : { dashboard }),
     ...(postgres === undefined ? {} : { postgres }),

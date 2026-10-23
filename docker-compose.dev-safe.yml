@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: allura-dev-local-only
     ports:
       - target: 5432
-        published: "${ALLURA_DEV_SAFE_POSTGRES_PORT:?set an AD-45-approved host port}"
+        published: "7002"
         host_ip: 127.0.0.1
         protocol: tcp
     tmpfs:

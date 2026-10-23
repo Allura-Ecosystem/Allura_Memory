@@ -235,15 +235,30 @@ describe("explicit child environment", () => {
 })
 
 describe("port configuration", () => {
-  it("has no defaults and validates only explicitly supplied host ports", () => {
+  it("has no defaults and accepts the proposed AD-45 allocation only", () => {
     expect(readPortConfiguration({})).toEqual({})
     expect(
       readPortConfiguration({
-        ALLURA_DEV_SAFE_DASHBOARD_PORT: "45678",
-        ALLURA_DEV_SAFE_POSTGRES_PORT: "45679",
+        ALLURA_DEV_SAFE_DASHBOARD_PORT: "4002",
+        ALLURA_DEV_SAFE_POSTGRES_PORT: "7002",
       })
-    ).toEqual({ dashboard: 45678, postgres: 45679 })
-    expect(() => readPortConfiguration({ ALLURA_DEV_SAFE_DASHBOARD_PORT: "3100" })).toThrow(/banned 3000-3999 band/)
+    ).toEqual({ dashboard: 4002, postgres: 7002 })
+  })
+
+  it.each([
+    ["ALLURA_DEV_SAFE_DASHBOARD_PORT", "3100", /banned 3000-3999 band/],
+    ["ALLURA_DEV_SAFE_DASHBOARD_PORT", "4001", /must match the proposed AD-45 allocation 4002/],
+    ["ALLURA_DEV_SAFE_DASHBOARD_PORT", "4003", /must match the proposed AD-45 allocation 4002/],
+    ["ALLURA_DEV_SAFE_POSTGRES_PORT", "5432", /must match the proposed AD-45 allocation 7002/],
+    ["ALLURA_DEV_SAFE_POSTGRES_PORT", "5433", /must match the proposed AD-45 allocation 7002/],
+    ["ALLURA_DEV_SAFE_POSTGRES_PORT", "5888", /must match the proposed AD-45 allocation 7002/],
+    ["ALLURA_DEV_SAFE_POSTGRES_PORT", "7001", /must match the proposed AD-45 allocation 7002/],
+    ["ALLURA_DEV_SAFE_POSTGRES_PORT", "7003", /must match the proposed AD-45 allocation 7002/],
+  ])("rejects wrong or reserved %s=%s", (name, value, message) => {
+    expect(() => readPortConfiguration({ [name]: value })).toThrow(message)
+  })
+
+  it("still rejects malformed ports before allocation matching", () => {
     expect(() => readPortConfiguration({ ALLURA_DEV_SAFE_POSTGRES_PORT: "not-a-port" })).toThrow(/valid TCP port/)
   })
 })
@@ -347,7 +362,7 @@ describe("launcher entrypoint", () => {
 })
 
 describe("compose and build-context boundary", () => {
-  it("publishes only configurable loopback PostgreSQL on an internal network", () => {
+  it("publishes only registered port 7002 on loopback and an internal network", () => {
     const text = readFileSync(join(process.cwd(), "docker-compose.dev-safe.yml"), "utf8")
     const config = parse(text)
     expect(Object.keys(config.services)).toEqual(["postgres"])
@@ -357,7 +372,7 @@ describe("compose and build-context boundary", () => {
       ports: [
         {
           target: 5432,
-          published: "${ALLURA_DEV_SAFE_POSTGRES_PORT:?set an AD-45-approved host port}",
+          published: "7002",
           host_ip: "127.0.0.1",
           protocol: "tcp",
         },
@@ -372,8 +387,35 @@ describe("compose and build-context boundary", () => {
     expect(config.services.postgres).not.toHaveProperty("image")
     expect(config).not.toHaveProperty("volumes")
     expect(config.networks).toEqual({ default: { internal: true } })
-    expect(text).not.toMatch(/\b(?:4100|55432)\b/)
     expect(text).not.toContain("ALLURA_MCP_HTTP_PORT")
+  })
+
+  it("records the inactive proposal in canonical docs and root Compose metadata", () => {
+    const blueprint = readFileSync(join(process.cwd(), "docs/allura/BLUEPRINT.md"), "utf8")
+    expect(blueprint).toContain(
+      "| Isolated development dashboard (Next.js) | 4002 | UI (4000+) — proposed; pending PR acceptance; inactive |"
+    )
+    expect(blueprint).toContain(
+      "| Disposable development PostgreSQL host port | 7002 | aux (7000+) — proposed; pending PR acceptance; inactive |"
+    )
+
+    const rootCompose = parse(readFileSync(join(process.cwd(), "docker-compose.yml"), "utf8"))
+    expect(rootCompose["x-allura-port-registry"]).toEqual({
+      isolated_dev_dashboard: {
+        host_port: 4002,
+        tier: "ui",
+        status: "proposed-pending-pr-acceptance",
+        activation: "inactive",
+      },
+      disposable_dev_postgres: {
+        host_port: 7002,
+        container_port: 5432,
+        tier: "auxiliary",
+        status: "proposed-pending-pr-acceptance",
+        activation: "inactive",
+      },
+    })
+    expect(Object.keys(rootCompose.services)).toEqual(["postgres", "mcp"])
   })
 
   it("sends only database initialization inputs to the PostgreSQL build", () => {

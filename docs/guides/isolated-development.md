@@ -1,9 +1,10 @@
 # Isolated development
 
-This lane is source-complete but **not approved for service activation yet**. AD-45
-requires the dashboard and published PostgreSQL host ports to be chosen and added
-to the canonical port registry before either service starts. The launcher has no
-port defaults and does not treat a locally free port as approval.
+This lane is source-complete but **not approved for service activation yet**. The
+AD-45 registration proposal assigns dashboard host port `4002` and disposable
+PostgreSQL host port `7002` (container port `5432`). The proposal is pending PR
+acceptance, so both allocations remain inactive. The launcher has no port defaults
+and does not treat a locally free port or the proposal itself as approval.
 
 Use a durable linked Git worktree rather than a primary checkout. Do not copy any
 production dotenv file, credentials, database snapshot, or secret into it. The
@@ -39,20 +40,20 @@ They do not call the host Docker CLI or daemon.
 
 ## Port decision and activation gate
 
-Before activation, update `docs/allura/BLUEPRINT.md` and the applicable canonical
-Compose registry under AD-45. After that decision is reviewed, provide both
-chosen numeric values explicitly:
+The pending registration is recorded in `docs/allura/BLUEPRINT.md` and metadata
+in root `docker-compose.yml`; that metadata does not add a service. Only after the
+registration PR is accepted may an operator provide all three values explicitly:
 
-- `ALLURA_DEV_SAFE_DASHBOARD_PORT`: approved dashboard host port, outside the
-  banned 3000-3999 band.
-- `ALLURA_DEV_SAFE_POSTGRES_PORT`: approved disposable PostgreSQL host port,
-  outside the banned 3000-3999 band.
+- `ALLURA_DEV_SAFE_DASHBOARD_PORT=4002`: registered dashboard host port.
+- `ALLURA_DEV_SAFE_POSTGRES_PORT=7002`: registered disposable PostgreSQL host
+  port; the container still listens on `5432`.
 - `ALLURA_DEV_SAFE_PORTS_APPROVED=true`: operator acknowledgment that the port
   registry decision has landed. This flag is a fail-closed reminder, not proof
   of governance by itself.
 
-Until then, `dev` and `db-up` refuse to run. No value in this guide is a proposed
-or reserved default.
+The launcher rejects any other supplied ports, including existing/reserved
+allocations. Until PR acceptance and explicit operator acknowledgment, `dev` and
+`db-up` refuse to run. The two registered values are required inputs, not defaults.
 
 After approval, commands remain fixed and accept no forwarded flags:
 
