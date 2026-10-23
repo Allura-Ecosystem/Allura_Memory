@@ -81,10 +81,10 @@ export async function generateEmbedding(text: string, timeoutMs: number = REQUES
   const model = getModel();
   const url = `${baseUrl}/v1/embeddings`;
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+  try {
     // Build headers — add Authorization bearer if API key is configured
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     const apiKey = process.env.RUVECTOR_EMBEDDING_API_KEY;
@@ -106,8 +106,6 @@ export async function generateEmbedding(text: string, timeoutMs: number = REQUES
       body: JSON.stringify(body),
       signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
@@ -132,6 +130,8 @@ export async function generateEmbedding(text: string, timeoutMs: number = REQUES
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`[RuVector Embedding] Failed to generate embedding: ${message}`);
     return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

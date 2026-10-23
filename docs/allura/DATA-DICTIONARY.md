@@ -2,14 +2,52 @@
 
 > [!NOTE]
 > **AI-Assisted Documentation**
-> Portions of this document were drafted with the assistance of an AI language model (GitHub Copilot).
+> Portions were drafted with GitHub Copilot assistance; Codex prepared the 2026-10-20 development-readiness additions.
 > Content has not yet been fully reviewed - this is a working design reference, not a final specification.
 > AI-generated content may contain inaccuracies or omissions.
-> When in doubt, defer to the source code, JSON schemas, and team consensus.
+> Code and schemas evidence implementation; approved product decisions establish intent. Record disagreement for the owning decision rather than silently changing either.
 
-This document describes Allura's PostgreSQL-only governed memory data model. PostgreSQL holds append-only episodic evidence, canonical proposals, pgvector retrieval, promoted graph tables, receipts, and outbox state. PostgreSQL (graph_memories) is sunset under AD-50; legacy naming is retained only where it describes a historical migration or compatibility record.
+**Integration evidence boundary — 2026-10-21:** This revision consolidates specifications and source-local assessments from `28d90e843` plus the dirty-file snapshot identified in the [source manifest](../reference/development-readiness-20261021/source-manifest.json), onto main base `c720aca2e` (PR #169 content head `51e421ca0`). Dashboard, Cloudflare authentication and preview implementation changes are excluded. Their “implemented” or test-count statements below are dated source-local observations, not verification of this branch, current main or deployment. Missing local receipts remain [unavailable supporting evidence](../reference/development-readiness-20261021/unavailable-evidence.md). [Story packets](../reference/development-readiness-20261021/story-packets.md) operationalize the canonical gates without approving proposed decisions.
 
+This document describes Allura's PostgreSQL-only governed memory data model. PostgreSQL holds append-only episodic evidence, canonical proposals, pgvector retrieval, promoted graph tables, receipts, and outbox state. Historical: Neo4j is sunset under AD-50; legacy naming is retained only where it describes a historical migration or compatibility record.
+
+
+**Approved intended authentication migration (source-local implementation):** [Cloudflare Access identity contract](#cloudflare-access-identity-contract). The approved provider change is Cloudflare Access under [AD-69](RISKS-AND-DECISIONS.md#AD-69-cloudflare-access-replaces-clerk); the provider implementation remains a separate unmerged source-local change and is not current-main or deployment evidence.
+
+## Bounded memory journey data contract
+
+**Reviewed 2026-10-18; claim state:** specified with source-inspected implementation evidence. Sabir approved the DOC-06 stale-review rejection and DOC-07 confirmed remote sync/immutable receipt contracts in the current session on 2026-10-18. These are approved intended behavior; the implementation gaps below remain open. No schema migration or product-code change is made by this documentation repair.
+
+**Publication authority (DOC-01):** Sabir approved GitHub’s six versioned engineering specifications as the engineering source of truth on 2026-10-18. Notion holds private planning and approvals and links to those specifications; it is not a competing engineering specification.
+
+| Entity | Identity and scope | Ownership / lifecycle | Relationship and evidence |
+|---|---|---|---|
+| `events` | Event ID plus tenant/workspace for governed provenance | Producer appends; historical rows never updated/deleted | Source evidence for proposal; authenticated actor recorded |
+| `canonical_proposals` | Proposal ID, tenant, workspace, proposal version | Curator workflow row: pending → approved/rejected | `trace_ref` resolves a same-scope event; approved memory ID identifies promoted content |
+| `graph_memories` | Memory ID with tenant/workspace authority | Human-approved content version; new content uses new row | Current retrieval excludes deprecated/superseded versions; not a second database |
+| `graph_supersedes` | Newer ID, prior ID and authorized scope | Intended immutable lineage | Links two content versions; restore mismatch tracked as DOC-03 |
+| `governance_receipts` | Durable receipt ID, proposal/version, actor, scope | Decision evidence; cannot be replaced by a UI toast or persona approval | References source event, approved memory, policy and outbox state |
+| `promotion_idempotency` | Tenant + workspace + idempotency key | Stores approval replay result | Same key/same proposal replays receipt; same key/another proposal conflicts |
+| `promotion_outbox` | UUID plus tenant/workspace/proposal | Worker-owned local delivery state | Current worker delivery appends a local event; it does not prove remote Notion sync (DOC-07) |
+
+Evidence: `src/lib/memory/approve-proposal.ts` and the detailed tables below. Approval locks the proposal and commits semantic row, workflow transition, event, outbox, receipt and replay record together. This approval-specific guarantee must not be generalized to capture retries without transport evidence. Actors and scopes come from authenticated authority; a well-formed `group_id` string alone grants no access.
+
+Logical graph vocabulary below describes mapping concepts, not extra physical columns. Physical table sections own persistence. The exact capture/review/retrieval behavior belongs to Design; acceptance evidence belongs to Requirements Matrix.
 ---
+
+## Enterprise dashboard read DTOs — 2026-10-19
+
+These DTOs describe the source-local bounded read slice (not included in this integration) (`src/lib/dashboard/read-model.ts`); they add no persistence schema.
+
+| DTO | Identity / data | Scope and lifecycle |
+|---|---|---|
+| `LibraryMemory` | Record ID, content, memory type, creation time, source table, nullable version/provenance | Approved current `graph_memories` or retained `allura_memories`, selected explicitly; missing metadata stays unknown |
+| `MemoryPage` | Items, query, kind, page, page size, `hasMore`, `pageLimitReached` | 50 records, literal content query bounded to 300 characters, pages 1–10000; a capped page asks for a narrower query |
+| `KnowledgeNode` | Store-qualified ID (`memory:` or `structural:`), record ID, kind, label, content, nullable version/provenance, active/superseded/null lifecycle | At most 50 authorized endpoints; source qualification prevents identifier collisions |
+| `KnowledgeEdge` | ID, source/target node IDs, relationship type, creation time, source table | At most 100 stored `graph_supersedes` or `graph_structural_edges` relationships; both endpoints must resolve in the same authorized scope |
+| `KnowledgeGraph` | Nodes, edges, limits/truncation and optional focused node ID | Workspace view or bounded one-hop neighborhood; inaccessible and missing focus both return empty |
+
+Current search excludes superseded content. Graph lineage may include a prior nondeleted version only when a same-scope nondeleted replacement proves the supersession; its lifecycle is explicitly labeled. Unresolvable or ambiguous legacy structural endpoints are omitted, not guessed. No embedding vector, model, similarity score, verified state or operational health is inferred from memory presence. The DTO does not prove installed migrations or live RLS behavior.
 
 ## Table of Contents
 
@@ -20,13 +58,15 @@ This document describes Allura's PostgreSQL-only governed memory data model. Pos
 - [Environment Variables](#environment-variables)
 - [RuVix Governance Artifacts](#ruvix-governance-artifacts)
 - [RunRecord (AD-35)](#runrecord-ad-35)
-- [Neo4j: Memory](#neo4j-memory)
-- [Neo4j: Agent](#neo4j-agent)
-- [Neo4j: Team](#neo4j-team)
-- [Neo4j: Project](#neo4j-project)
-- [Neo4j: Relationships](#neo4j-relationships)
+- [Logical graph: Memory](#logical-graph-memory)
+- [Logical graph: Agent](#logical-graph-agent)
+- [Logical graph: Team](#logical-graph-team)
+- [Logical graph: Project](#logical-graph-project)
+- [Logical graph: Relationships](#logical-graph-relationships)
 - [Memory Command Center Adapter Contracts](#memory-command-center-adapter-contracts)
 - [Metadata Payloads](#metadata-payloads)
+- [Proposed development contracts](#proposed-development-contracts--2026-10-20)
+
 
 ---
 
@@ -70,7 +110,7 @@ This document describes Allura's PostgreSQL-only governed memory data model. Pos
 | `hash` | `string` | Yes | Chain hash when available. |
 | `prev_hash` | `string` | Yes | Previous chain hash when available. |
 
-API data rules: every record includes `group_id`; unknown source state renders as unknown, not zero; no fabricated counts; export/copy actions are read-only formatting operations over existing records and must not mutate PostgreSQL or PostgreSQL (graph_memories).
+API data rules: every record includes `group_id`; unknown source state renders as unknown, not zero; no fabricated counts; export/copy actions are read-only formatting operations over existing records and must not mutate the durable memory stores.
 
 ---
 
@@ -78,7 +118,7 @@ API data rules: every record includes `group_id`; unknown source state renders a
 
 **JSON Schema:** [`json-schema/event.schema.json`](../../json-schema/event.schema.json)
 
-The primary and only append-only log. Every memory operation — add, search, get, list, delete, promotion — produces one row. Rows are permanent. No UPDATE or DELETE, ever. Every operation carries the RuVix identity envelope: `group_id`, `agent_id`, and (when available) `session_id`. Workspace-governed producers additionally persist `workspace_id`; legacy rows remain unscoped and are explicitly unavailable to workspace watchdog ingestion and to `allura_app` workspace-scoped reads/writes.
+The append-only execution evidence log. Producers record operation and decision evidence here; the exact count and event types depend on the operation and must be verified rather than assumed to be exactly one row. Historical rows are permanent. No UPDATE or DELETE, ever. Every operation carries the RuVix identity envelope: `group_id`, `agent_id`, and (when available) `session_id`. Workspace-governed producers additionally persist `workspace_id`; legacy rows remain unscoped and are explicitly unavailable to workspace watchdog ingestion and to `allura_app` workspace-scoped reads/writes.
 
 Columns below match `json-schema/event.schema.json` and the migrations in `docker/postgres-init/` (`00-traces.sql`, `10-brooks-tracking.sql`, `17-schema-version.sql`, `19-group-id-check-constraints.sql`). `halted_at` / `halt_ttl_ms` are NOT event columns — they belong to the budget enforcer entity (see Budget Enforcer section).
 
@@ -114,16 +154,16 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `memory_get` | A single memory was fetched by ID |
 | `memory_list` | All memories for a user were listed |
 | `memory_delete` | A memory was soft-deleted |
-| `memory_promoted` | A memory was successfully promoted to `graph_memories` |
-| `promotion_failed` | `graph_memories` write failed — episodic record retained |
-| `promotion_queued` | SOC2 mode — memory queued for human approval |
+| `memory_promoted` | Historical completed-promotion event vocabulary; current atomic approval returns GovernanceReceipt |
+| `promotion_failed` | Historical promotion-failure vocabulary; not an episodic-only success path for current atomic approval |
+| `promotion_queued` | Historical queue event vocabulary; current human approval applies in both mode settings |
 | `proposal_created` | A canonical proposal was created for HITL review |
 | `proposal_approved` | A proposal was approved and promoted to `graph_memories` |
 | `notion_sync_pending` | A proposal is queued for Notion page creation |
 | `debug:root_cause_found` | Phase 1 complete — root cause identified with evidence (POL-006) |
 | `debug:hypothesis_tested` | Phase 3 — a single hypothesis was minimally tested |
 | `debug:fix_implemented` | Phase 4 — fix shipped after root cause confirmed (requires prior `debug:root_cause_found`) |
-| `graph_memories_unavailable` | Graph backend was unreachable — system degraded gracefully (event name retained for back-compat; PostgreSQL (graph_memories) retired Epic 23) |
+| `neo4j_unavailable` | Historical compatibility event in `json-schema/event.schema.json`; it does not identify an active backend |
 | `tool_approved` | MCP tool was approved through catalog governance |
 | `tool_denied` | MCP tool was denied through catalog governance |
 | `request_trace` | HTTP request traced by TraceMiddleware (Story 1.2) |
@@ -131,8 +171,8 @@ Columns below match `json-schema/event.schema.json` and the migrations in `docke
 | `health_check` | System health check performed |
 | `memory_restore` | A soft-deleted memory was restored within the recovery window |
 | `memory_update` | Append-only versioned update (SUPERSEDES chain created) |
-| `memory_promote` | Request promotion to PostgreSQL (graph_memories) (creates proposal) |
-| `sync_contract` | Sync contract mapping applied on curator approve or auto-promote — user_id→Agent, group_id→Project relationships wired |
+| `memory_promote` | Request promotion to PostgreSQL semantic tables (creates proposal) |
+| `sync_contract` | Sync contract mapping applied on curator approval — user_id→Agent, group_id→Project relationships wired |
 | `control_plane_rule` | RuVix control plane rule evaluation or rule-anchored audit event |
 | `kernel_rule` | DEPRECATED — pre-2026-08-20 name for `control_plane_rule`. Retained because the events table is append-only and historical rows can never be migrated. Do not emit; readers must still accept it. |
 | `proposal_decided` | A curator proposal received a decision (approve or reject) |
@@ -238,14 +278,17 @@ See `docs/guides/portal-devices-and-profiles.md` for navigation, lifecycle contr
 
 ## PostgreSQL: `canonical_proposals`
 
-**JSON Schema:** [`json-schema/canonical_proposals.schema.json`](../../json-schema/canonical_proposals.schema.json)
+**Legacy JSON Schema:** [`json-schema/canonical_proposals.schema.json`](../../json-schema/canonical_proposals.schema.json) omits the migration-38/39 workspace, version and promoted-memory fields. Use the physical contract below with migrations 38–40; the JSON Schema requires a separately validated update before serving as the complete current contract.
 
-The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to PostgreSQL (graph_memories) as InsightHead/Insight nodes.
+The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to PostgreSQL semantic tables as `graph_memories` rows.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `id` | uuid | Yes | Primary key. Auto-generated via `gen_random_uuid()`. |
 | `group_id` | varchar(255) | Yes | Tenant namespace. CHECK constraint: must match `^allura-`. |
+| `workspace_id` | text | Current app rows | Server-resolved workspace; nullable only for quarantined legacy rows. Same-scope workspace FK and restrictive app-role RLS apply (migrations 39/40). |
+| `proposal_version` | bigint | Yes | Default `1`; trigger increments when content, score, tier, status, trace reference or rationale changes. Serialize as a decimal string in review/receipt contracts to preserve integer precision. |
+| `approved_memory_id` | text | Conditional | Result of successful approval; null before approval. Current approval derives a deterministic memory ID from tenant and proposal ID and stores it with the atomic transition. This field has no same-scope memory FK in migrations 38–40; the approval service supplies the relationship. |
 | `content` | text | Yes | The proposed insight content text. |
 | `score` | numeric(3,2) | Yes | Curator confidence score (0.00–1.00). CHECK: `score >= 0.0 AND score <= 1.0`. |
 | `reasoning` | text | No | Curator engine's reasoning for the score. |
@@ -254,7 +297,7 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 | `trace_ref` | bigint | No | Foreign key to `events.id` (the originating trace event). ON DELETE SET NULL. |
 | `created_at` | timestamptz | Yes | Proposal creation timestamp. DEFAULT NOW(). |
 | `decided_at` | timestamptz | No | Timestamp when the proposal was approved or rejected. |
-| `decided_by` | varchar(255) | No | Identifier of the person or system that made the decision (e.g., `curator-cli`, `sabir`). |
+| `decided_by` | varchar(255) | No | Authenticated human decision principal for the current governed flow. Legacy system labels do not prove human approval. |
 | `rationale` | text | No | Human-provided rationale for the decision. |
 | `witness_hash` | text | No | SHAKE-256 hash (64-byte output) of the decision payload for audit trail integrity. Indexed. |
 | `notion_page_id` | text | No | Notion page ID after sync. Indexed (partial, WHERE NOT NULL). |
@@ -266,14 +309,14 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 |-------|-------------|
 | `emerging` | Low confidence (0.0–0.5). Needs more evidence before promotion. |
 | `adoption` | Medium confidence (0.5–0.75). Worth tracking but not yet mainstream. |
-| `mainstream` | High confidence (0.75–1.0). Strong signal, ready for promotion. |
+| `mainstream` | High confidence (0.75–1.0). Strong signal for review; score alone never authorizes promotion. |
 
 **`status` values**
 
 | Value | Description |
 |-------|-------------|
 | `pending` | Awaiting human review and decision. |
-| `approved` | Human approved. Promoted to PostgreSQL (graph_memories) as InsightHead/Insight. |
+| `approved` | Human approved. Promoted to PostgreSQL semantic tables as a `graph_memories` row. |
 | `rejected` | Human rejected. Not promoted. Retained for audit trail. |
 
 **Indexes**
@@ -307,13 +350,59 @@ The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curato
 
 ---
 
+## PostgreSQL: approval replay and delivery (migrations 38–40)
+
+The following are current physical tables, source-inspected on 2026-10-18. They share restrictive workspace RLS for `allura_app`: both `app.current_group_id` and `app.current_workspace_id` must match, and rows must be `workspace_scoped`. Workspace existence is enforced by `(group_id, workspace_id)` → `workspaces` with `ON DELETE RESTRICT`. These checks do not create authority; trusted services derive the scope from the authenticated principal.
+
+### `promotion_idempotency`
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `id` | uuid | Yes | Primary key added by migration 40; default `gen_random_uuid()`. |
+| `group_id` / `workspace_id` | text | Current rows | Authorized scope; `group_id` matches `^allura-[a-z0-9-]+$`. |
+| `workspace_scope_state` | text | Yes | `workspace_scoped` with non-null workspace or `legacy_quarantined` with null workspace; default for new rows is scoped. |
+| `idempotency_key` | text | Yes | Nonblank client operation key; unique with tenant and workspace (`promotion_idempotency_scope_key`). |
+| `proposal_id` | uuid | Yes | FK to `canonical_proposals(id)` with `ON DELETE CASCADE`. Current FK is not composite; the approval service binds proposal and replay scope. |
+| `result` | jsonb | Yes | Original complete `GovernanceReceipt`, including its decision-time state. |
+| `created_at` | timestamptz | Yes | `NOW()` when the replay record is committed. |
+
+**Current behavior:** only successful approval commits this row, atomically with its decision. Same tenant/workspace/key and proposal returns the stored result without amending rationale/evidence; another proposal under that key conflicts. Concurrent attempts are serialized by the proposal lock and the scoped unique key; a uniqueness race rolls back the losing transaction before reading the winning result. A new key cannot decide an already-decided proposal again. Failed or uncommitted approval creates no successful replay record. No expiry/cleanup schedule is defined here, and the FK cascade is not authorization to erase decision evidence.
+
+**Approved intended extension (DOC-06):** a new approval must bind the exact version the reviewer saw. `expected_proposal_version` is a positive decimal-string request precondition, compared with the locked `proposal_version` before any approval writes. A mismatch returns conflict with no new approval; the reviewer reloads and reviews again. Durable decision evidence must retain `reviewed_proposal_version` independently of the post-transition `proposal_version`. Neither the request precondition nor this reviewed-version evidence field is implemented by the inspected API/service/schema. Successful retries still return the original immutable receipt; replay is not a new decision or a way to approve changed content.
+
+### `promotion_outbox`
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `id` | uuid | Yes | Job primary key; default `gen_random_uuid()`. |
+| `group_id` / `workspace_id` | text | Current rows | Authorized scope, with the same scope-state rules as the replay table. |
+| `workspace_scope_state` | text | Yes | Scoped current rows; legacy null-workspace rows are quarantined. |
+| `proposal_id` | uuid | Yes | FK to `canonical_proposals(id)` with `ON DELETE CASCADE`; unique `(group_id, workspace_id, proposal_id)` allows one job per scoped proposal. |
+| `memory_id` | text | Yes | Approved memory identity; set from the same atomic decision, not a separate memory FK in migrations 38–40. |
+| `event_type` | text | Yes | Default `canonical_memory_promoted`. |
+| `payload` | jsonb | Yes | Approval identifiers and scope; producer/worker must not infer broader transfer authority. |
+| `status` | text | Yes | `pending`, `processing`, `delivered`, or `failed`; default `pending`. These are local job states. |
+| `attempts` | integer | Yes | Nonnegative failure count; default `0`. |
+| `available_at` | timestamptz | Yes | Scheduling timestamp, default `NOW()`; see worker gap below. |
+| `delivered_at` | timestamptz | No | Local delivery timestamp, not remote Notion confirmation. |
+| `last_error` | text | No | Last worker failure summary. |
+| `created_at` | timestamptz | Yes | Job creation time, default `NOW()`. |
+
+**Inspected worker state machine:** `pending`/`failed` → `processing` → `delivered` occurs in one scoped transaction. That transaction appends `canonical_memory_promoted` and marks local delivery; it makes no Notion call. Failure rolls the claim/event/delivery back, then a separate scoped transaction increments attempts and sets `pending` or `failed` at the configured attempt limit. Defaults are 50 rows per batch and 5 attempts. The worker orders by `available_at` but does not filter `available_at <= NOW()`; therefore a configured delay is not currently enforced. Claiming uses a conditional status update to avoid duplicate local delivery by competing workers. No reset of exhausted jobs or retention deletion is authorized by this description.
+
+**Approved remote-delivery contract (DOC-07):** show remote Notion `synced` only after confirmed delivery to the authorized destination, with read-back evidence matching the authorized remote destination, page/record identity, and intended source revision/content linked to the decision. A page ID or HTTP success alone is insufficient. A local event, queued job, timeout, or `delivered` flag is insufficient. The immutable approval receipt remains the decision-time snapshot; a separate delivery observation reports later `queued`, `synced`, `failed`, or `unknown` state and its evidence. Bind the delivery identity to the tenant/workspace, source decision, source revision/content and authorized destination. Reusing it for the same delivery must return/reconcile the existing result; conflicting source or destination must fail. Preserve that identity across retries; an ambiguous remote result remains unknown until read-back reconciliation, never automatically retry as a new page. These are intended delivery-service rules; no current remote idempotency implementation is claimed. Destination authority and delivery evidence must be checked independently of promotion authority.
+
+**Implementation gap:** `src/lib/memory/promotion-outbox-worker.ts` emits `canonical_memory_promoted`, while `src/curator/notion-sync-worker.ts` consumes `notion_sync_pending`. No connection between those event types is established by this path. A current remote-delivery observation/read model and confirmed remote replay/reconciliation contract require implementation and verification before this projection story is Ready. Neither migration history nor the `synced` receipt enum proves remote persistence.
+
+---
+
 ## PostgreSQL: workspace evidence lifecycle (migration 39)
 
 ### `evidence_requests`
 `id` UUID PK; non-null `group_id`, `workspace_id`, `proposal_id`, `requested_by`, `reason`, `state` (`requested|satisfied|reopened|cancelled`), timestamps/resolver, and JSONB-array `evidence_references`. FKs bind both `(group_id, workspace_id)` to `workspaces` and `(group_id, workspace_id, proposal_id)` to `canonical_proposals`; cross-workspace proposal references are rejected. Index: `evidence_requests_scope_proposal_state_idx`.
 
 ### `governance_receipts`
-Immutable scoped receipt: UUID `id`, scope, required proposal identity/version and evidence-request identity, action, server-issued actor/role, nonblank rationale and policy reference/version, `memory_id`, `result_ref`, source event/witness, immutable non-empty JSONB-array evidence references, SHA-256 `evidence_identity_hash` over the complete sorted unique reference array, database-issued occurrence time, and truthful `outbox_state` (`not_enqueued|queued|synced|failed|not_applicable`; Migration-38 `delivered` maps to `synced`). Reordering the same full evidence set retains replay identity; changing any member changes it. When `source_event_id` is non-null, the `governance_receipts_source_event_scope_fkey` binds `(group_id, workspace_id, source_event_id)` to the event's composite scoped identity, rejecting cross-workspace and cross-tenant provenance forgery. The `NOT VALID` upgrade constraints preserve pre-existing data without a workspace backfill while enforcing every new write. Index: `governance_receipts_scope_proposal_occurred_idx`; update/delete trigger rejects mutation.
+Immutable scoped receipt: UUID `id`, scope, required proposal identity/version and conditional evidence-request identity, action, server-issued actor/role, nonblank rationale and policy reference/version, `memory_id`, `result_ref`, source event/witness, immutable non-empty JSONB-array evidence references, SHA-256 `evidence_identity_hash` over the complete sorted unique reference array, database-issued occurrence time, and decision-time `outbox_state` (`not_enqueued|queued|synced|failed|not_applicable`). The current approval writes `queued`; the receipt never changes as delivery progresses. Local outbox `delivered` must not be relabeled as remote `synced` (DOC-07). Reordering the same full evidence set retains its hash; changing any member changes that hash. This evidence hash is distinct from the approval idempotency key: an existing scoped key/proposal returns its original receipt even if a retry supplies different evidence. When `source_event_id` is non-null, the `governance_receipts_source_event_scope_fkey` binds `(group_id, workspace_id, source_event_id)` to the event's composite scoped identity, rejecting cross-workspace and cross-tenant provenance forgery. The `NOT VALID` upgrade constraints preserve pre-existing data without a workspace backfill while enforcing every new write. Index: `governance_receipts_scope_proposal_occurred_idx`; update/delete trigger rejects mutation.
 
 ### `semantic_projections`
 Derived, rebuildable scoped index: UUID `id`, source kind/id, projection version, independent source-revision and Markdown content hashes, non-empty JSONB-array `source_refs` (canonical source table/row relationships), redaction policy version, governed Markdown, optional vector/model, build state/failure, and generated time. Deterministic unique key includes scope, source identity, projection version, both hashes, **source_refs**, and redaction policy. Index: `semantic_projections_scope_source_generated_idx`.
@@ -325,15 +414,15 @@ All three tables have forced workspace RLS for `allura_app`, using both transact
 ## PostgreSQL: Graph Adapter Tables
 
 **Migrations:** `21-graph-adapter-tables.sql`, `24-graph-structural-context.sql`
-**ADR:** AD-29 — Graph Adapter Pattern for PostgreSQL (graph_memories) → RuVector Migration
+**ADR:** AD-29 — Graph Adapter Pattern (historical Neo4j → PostgreSQL migration)
 
-These tables replace PostgreSQL (graph_memories) nodes and relationships when `GRAPH_BACKEND=ruvector`. They implement the adjacency list pattern to replicate SUPERSEDES and structural context operations via PostgreSQL.
+These tables persist semantic memory and graph relationships when `GRAPH_BACKEND=ruvector`. They implement the adjacency list pattern to replicate SUPERSEDES and structural context operations via PostgreSQL.
 
 ### `graph_memories`
 
 **Migrations:** `21-graph-adapter-tables.sql`, `40-workspace-subgraph-forward-upgrade.sql`
 
-Stores canonical (promoted) memory nodes equivalent to PostgreSQL (graph_memories)'s Memory label. Used by the RuVectorGraphAdapter when `GRAPH_BACKEND=ruvector`. Soft-deletes are marked via `deprecated=true`; restored memories set `restored_at`.
+Stores canonical (promoted) memory content. Used by the RuVectorGraphAdapter when `GRAPH_BACKEND=ruvector`. Soft-deletes are marked via `deprecated=true`; restored memories set `restored_at`.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -353,7 +442,7 @@ Stores canonical (promoted) memory nodes equivalent to PostgreSQL (graph_memorie
 | `created_at` | TIMESTAMPTZ | Yes | Node creation timestamp. Default: `NOW()` |
 | `content_tsv` | tsvector | Yes | Generated tsvector for full-text search (stored) |
 
-**Comments:** `graph_memories` stores canonical memory nodes replacing PostgreSQL (graph_memories) Memory label. Slice C of the 2-Store RuVector Migration.
+**Comments:** `graph_memories` stores canonical semantic memory rows. Content changes create a new version; lifecycle flags do not overwrite historical content.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -373,7 +462,9 @@ Stores canonical (promoted) memory nodes equivalent to PostgreSQL (graph_memorie
 
 **Migration:** `21-graph-adapter-tables.sql`
 
-Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:SUPERSEDES]->(superseded_id)` in PostgreSQL (graph_memories). Append-only: new rows on version update, deletes only for restore.
+**Scope extension:** workspace migration 40 adds `workspace_id` and `workspace_scope_state`. The table below retains its base migration fields; current governed lineage must bind tenant and workspace, and legacy unscoped rows are not current application knowledge.
+
+Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:SUPERSEDES]->(superseded_id)` in PostgreSQL. Intended lineage is append-only. The existing restore implementation deletes lineage edges; see DOC-03 in Risks & Decisions before implementing restore behavior.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -382,7 +473,7 @@ Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:
 | `group_id` | TEXT | Yes | Tenant namespace. CHECK: `^allura-[a-z0-9-]+$` |
 | `created_at` | TIMESTAMPTZ | Yes | Relationship timestamp. Default: `NOW()` |
 
-**Comments:** `graph_supersedes` is the SUPERSEDES adjacency table replacing PostgreSQL (graph_memories) SUPERSEDES relationships.
+**Comments:** `graph_supersedes` is the SUPERSEDES adjacency table linking immutable content versions.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -403,7 +494,7 @@ Adjacency table for SUPERSEDES relationships. Each row represents `(newer_id)-[:
 
 **Migration:** `24-graph-structural-context.sql`
 
-Structural context nodes replacing PostgreSQL (graph_memories) labeled nodes (Agent, Project, Task, Decision, etc.). Uses JSONB `props` field to store arbitrary node properties. Used when `GRAPH_BACKEND=ruvector` for non-Memory nodes.
+Structural context nodes with typed labels (Agent, Project, Task, Decision, etc.). Uses JSONB `props` field to store arbitrary node properties. Used when `GRAPH_BACKEND=ruvector` for non-Memory nodes.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -414,7 +505,7 @@ Structural context nodes replacing PostgreSQL (graph_memories) labeled nodes (Ag
 | `created_at` | TIMESTAMPTZ | Yes | Node creation timestamp. Default: `NOW()` |
 | `updated_at` | TIMESTAMPTZ | No | Last update timestamp |
 
-**Comments:** `graph_structural_nodes` stores structural context nodes replacing PostgreSQL (graph_memories) labeled nodes. Slice C of the 2-Store RuVector Migration.
+**Comments:** `graph_structural_nodes` stores structural context nodes with typed labels and JSON properties.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -429,7 +520,7 @@ Structural context nodes replacing PostgreSQL (graph_memories) labeled nodes (Ag
 
 **Migration:** `24-graph-structural-context.sql`
 
-Structural context edges replacing PostgreSQL (graph_memories) relationships (CONTRIBUTED, LEARNED, `AUTHORED_BY`, `RELATES_TO`, etc.). Stores directed relationships between structural nodes.
+Structural context edges representing relationships (CONTRIBUTED, LEARNED, `AUTHORED_BY`, `RELATES_TO`, etc.). Stores directed relationships between structural nodes.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -440,7 +531,7 @@ Structural context edges replacing PostgreSQL (graph_memories) relationships (CO
 | `props` | JSONB | No | Relationship properties |
 | `created_at` | TIMESTAMPTZ | Yes | Edge creation timestamp. Default: `NOW()` |
 
-**Comments:** `graph_structural_edges` stores structural context edges replacing PostgreSQL (graph_memories) relationships.
+**Comments:** `graph_structural_edges` stores directed structural context relationships.
 
 **Indexes:**
 | Index | Type | Purpose |
@@ -458,27 +549,15 @@ Structural context edges replacing PostgreSQL (graph_memories) relationships (CO
 
 ### `GRAPH_BACKEND`
 
-**Migrations:** `21-graph-adapter-tables.sql`, `24-graph-structural-context.sql`
-**ADR:** AD-49 — GRAPH_BACKEND Configuration Flag
+**Implementation evidence, inspected 2026-10-18:** `src/lib/graph-adapter/factory.ts`.
 
-Controls which graph backend adapter is active for memory and structural operations.
+| Value | Implementation | Claim state |
+|---|---|---|
+| `ruvector` | `RuVectorGraphAdapter`, PostgreSQL graph tables | Implemented default; deployed health is separately verified |
+| `ruvector-crate` | `RuvectorCrateGraphAdapter`, opt-in native addon requiring module path, storage path and embedder | Implemented option; no release or full native readiness claim |
+| `neo4j` | Historical retired selector | Rejected by the factory; not a fallback |
 
-| Value | Description | Status |
-|-------|-------------|--------|
-| `PostgreSQL (graph_memories)` | PostgreSQL (graph_memories) backend (legacy, retired Epic 23) | **Retired** |
-| `ruvector` | PostgreSQL graph adapter tables (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) | **Default** |
-| `ruvector-crate` | Native RuVector extension with HNSW and GNN support (not yet implemented) | Planned |
-
-**Current default:** `ruvector` (sole backend since Epic 23; `PostgreSQL (graph_memories)` retired)
-
-**Adapter selection behavior:**
-- `PostgreSQL (graph_memories)`: Uses `PostgreSQL (graph_memories)GraphAdapter` in `src/lib/graph-adapter/ruvector-adapter.ts`
-- `ruvector`: Uses `RuVectorGraphAdapter` in `src/lib/graph-adapter/ruvector-adapter.ts`
-- `ruvector-crate`: Will use `RuVectorCrateGraphAdapter` (Slice E+)
-
-**Runtime detection:** `RuVixGateReceipt.ruvector_status.graph_backend` reports the active adapter.
-
-**Cross-references:** AD-49, `src/lib/graph-adapter/types.ts#IGraphAdapter`
+`ruvector` names Allura's PostgreSQL graph adapter. It does not prove a native RuVector PostgreSQL extension is installed. Graph storage and vector retrieval are separate responsibilities even when both use PostgreSQL. See AD-49/AD-50.
 
 ---
 
@@ -544,8 +623,8 @@ directly.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `PROMOTION_MODE` | enum | Yes | Governs semantic promotion behavior: `soc2` or `auto` |
-| `AUTO_APPROVAL_THRESHOLD` | float | Yes | Auto-promotion cutoff from `0.0` to `1.0`; default `0.85` |
+| `PROMOTION_MODE` | enum | Yes | Compatibility values `soc2` and `auto`; both require curator/HITL approval (`src/lib/curator/auto-promote.ts`) |
+| `AUTO_APPROVAL_THRESHOLD` | float | Yes | Legacy name for the proposal-eligibility score threshold, `0.0` to `1.0`, default `0.85` in `src/mcp/canonical-tools.ts`; it cannot authorize promotion |
 
 ### `Rule`
 
@@ -584,21 +663,21 @@ directly.
 
 | Value | Description | When Active |
 |-------|-------------|-------------|
-| `pgvector_bridge` | PG backend only, PostgreSQL (graph_memories) pending cutover | Current baseline |
+| `pgvector_bridge` | PostgreSQL vector retrieval bridge | Historical baseline; obtain current health receipt |
 | `ruvector_graph` | Graph adapter tables active (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) | Slice C+ |
-| `full_ruvector` | Native RuVector extension active, PostgreSQL (graph_memories) fully replaced | Slice E+ |
+| `full_ruvector` | Native RuVector capabilities proven by deployment-specific evidence | Requires separate verification |
 
 **RuVector native status fields (`ruvector_status` when native mode active):**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `graph_backend` | string | Yes | Target graph adapter: `PostgreSQL (graph_memories)` (legacy), `ruvector` (PG tables), `ruvector-crate` (native extension) |
+| `graph_backend` | string | Yes | Graph adapter: `ruvector` (PG tables) or `ruvector-crate` (opt-in native addon) |
 | `native_extension_version` | string | Yes | RuVector extension version string |
 | `hnsw_index_status` | string | Yes | HNSW index state: `disabled`, `creating`, `created`, `optimizing` |
 | `gnn_enabled` | boolean | Yes | Graph neural network processing enabled |
-| `dual_read_mode` | boolean | Yes | True when both PostgreSQL (graph_memories) and RuVector backends are queried |
+| `dual_read_mode` | boolean | Yes | Historical migration signal; not authority to enable a retired backend |
 
-**Current readiness baseline (TALON, 2026-06-02):** `vector_extension_version=0.8.2`, `ruvector_function_count=0`, `allura_memories_count≈3392`, `runtime_readiness=pgvector_bridge`.
+**Historical readiness observation (TALON, 2026-06-02; not current live proof):** `vector_extension_version=0.8.2`, `ruvector_function_count=0`, `allura_memories_count≈3392`, `runtime_readiness=pgvector_bridge`.
 
 **Cross-references:** AD-29, AD-49, RK-32, `21-graph-adapter-tables.sql`, `24-graph-structural-context.sql`
 
@@ -661,7 +740,7 @@ idempotency guarantees, and product APIs remain required.
 
 **Persistence direction:** PostgreSQL owns run records, pinned definitions,
 runtime state, and append-only run events. Do not double-write operational run
-state to PostgreSQL (graph_memories). PostgreSQL (graph_memories) may receive approved semantic relationships after the
+state to PostgreSQL semantic tables. PostgreSQL semantic tables may receive approved semantic relationships after the
 operational contracts stabilize.
 
 ### `DashboardClaim`
@@ -703,7 +782,7 @@ events append-only invariant (POL-002) holds as the trail. Migration: `docker/po
 |-------|------|----------|-------------|
 | `id` | string (uuid) | Yes | Surrogate key |
 | `group_id` | string | Yes | Org tenant boundary; `^allura-[a-z0-9-]+$` (POL-001) |
-| `user_id` | string | Yes | Stable identity (Clerk user id or email) |
+| `user_id` | string | Yes | Stable Allura principal ID; preserve existing IDs when changing providers (AD-69); never derive authority from email |
 | `email` | string | No | Display email |
 | `role` | enum | Yes | `admin` \| `curator` \| `viewer` |
 | `invited_by` | string | No | user_id of the admin who added them |
@@ -772,11 +851,11 @@ dashboard adapters must map that durable record rather than publish a second rec
 | `status` | enum | Yes | `fresh`, `stale`, `unknown`, `not_live` |
 | `message` | string | Yes | Plain-language freshness explanation |
 
-## Neo4j: `Memory`
+## Logical graph: `Memory`
 
 **JSON Schema:** [`json-schema/memory.schema.json`](../../json-schema/memory.schema.json)
 
-Curated, promoted knowledge. Created via `MERGE`. Never edited after creation. Versioned via `SUPERSEDES` relationships.
+Logical memory vocabulary retained for existing consumers. This property list is not the physical `graph_memories` schema; use the PostgreSQL table section for persistence fields. Approved content versions are inserted through the approval service and linked through `graph_supersedes`. Mapping of legacy properties must be explicit at the adapter boundary.
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -847,11 +926,11 @@ Curated, promoted knowledge. Created via `MERGE`. Never edited after creation. V
 
 ---
 
-## Neo4j: `Agent`
+## Logical graph: `Agent`
 
 **JSON Schema:** [`json-schema/agent.schema.json`](../../json-schema/agent.schema.json)
 
-Structural context node representing an AI agent in the team. Agents are members of Teams, contribute to Projects, and author Memory nodes. Seeded via `scripts/neo4j-seed-agents.cypher`.
+Structural context node representing an AI agent in the team. Agents are members of Teams, contribute to Projects, and author Memory nodes. Persisted through `graph_structural_nodes`; relationships use `graph_structural_edges`. Historical Cypher seed scripts are not the current provisioning contract.
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -914,11 +993,11 @@ Structural context node representing an AI agent in the team. Agents are members
 
 ---
 
-## Neo4j: `Team`
+## Logical graph: `Team`
 
 **JSON Schema:** [`json-schema/team.schema.json`](../../json-schema/team.schema.json)
 
-Structural context node representing a team of agents. Seeded via `scripts/neo4j-seed-agents.cypher`.
+Structural context node representing a team of agents. Persisted through `graph_structural_nodes`; relationships use `graph_structural_edges`. Historical Cypher seed scripts are not the current provisioning contract.
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -930,11 +1009,11 @@ Structural context node representing a team of agents. Seeded via `scripts/neo4j
 
 ---
 
-## Neo4j: `Project`
+## Logical graph: `Project`
 
 **JSON Schema:** [`json-schema/project.schema.json`](../../json-schema/project.schema.json)
 
-Structural context node representing a project that agents contribute to and memories relate to. Seeded via `scripts/neo4j-seed-agents.cypher`.
+Structural context node representing a project that agents contribute to and memories relate to. Persisted through `graph_structural_nodes`; relationships use `graph_structural_edges`. Historical Cypher seed scripts are not the current provisioning contract.
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -955,7 +1034,7 @@ Structural context node representing a project that agents contribute to and mem
 
 ---
 
-## Neo4j: Relationships
+## Logical graph: Relationships
 
 | Relationship | Pattern | Cardinality | Description |
 |---|---|---|---|
@@ -971,9 +1050,9 @@ Structural context node representing a project that agents contribute to and mem
 | `APPROVES_PROMOTION` | `(a:Agent)-[:APPROVES_PROMOTION]->(b:Agent)` | One-to-one | Auditor approves promotion back to Curator. |
 
 **SUPERSEDES invariants:**
-- A node with `deprecated: true` MUST have exactly one incoming `SUPERSEDES` edge
-- A node with `deprecated: false` MUST have zero incoming `SUPERSEDES` edges (it is the head)
-- The chain is traversable: `MATCH (head)-[:SUPERSEDES*]->(ancestor)` retrieves full lineage
+- A superseded content version has an incoming `graph_supersedes` edge from its replacement in the same authorized scope.
+- A soft-deleted memory can be deprecated without a replacement; `deprecated` alone does not prove supersession.
+- Current retrieval excludes deprecated and superseded rows; lineage traversal preserves prior content. Restore semantics remain unresolved (DOC-03).
 
 **AUTHORED_BY invariants:**
 - Every Memory node SHOULD have at least one `AUTHORED_BY` edge to an Agent
@@ -1002,6 +1081,8 @@ Structural context node representing a project that agents contribute to and mem
 
 ## Metadata Payloads
 
+**Historical compatibility examples:** legacy `neo4j_id` and related payload names are retained here as wire/history vocabulary, not as active storage instructions. Historical compatibility evidence: `neo4j_id` still appears in `src/lib/memory/knowledge-promotion.ts`; individual examples require producer verification before reuse. Current approval output is the durable `GovernanceReceipt`, not these examples. No identifier rename is implied by this documentation repair.
+
 The `metadata` JSONB column in `events` carries event-specific data. Shapes by `event_type`:
 
 ### `memory_add`
@@ -1012,7 +1093,7 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
   "user_id": "user-123",
   "score": 0.91,
   "stored": "both",           // "episodic" | "both" | "episodic+pending"
-  "PostgreSQL (graph_memories)_id": "uuid",         // present if promoted
+  "neo4j_id": "uuid",         // historical compatibility key, not current backend
   "pending_review": false     // true if SOC2 mode queued
 }
 ```
@@ -1034,7 +1115,7 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
 {
   "memory_id": "uuid",
   "user_id": "user-123",
-  "PostgreSQL (graph_memories)_deprecated": true    // false if memory was episodic-only
+  "neo4j_deprecated": true    // historical compatibility example; producer verification required
 }
 ```
 
@@ -1043,7 +1124,7 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
 ```jsonc
 {
   "source_event_id": "12345",
-  "PostgreSQL (graph_memories)_id": "uuid",
+  "neo4j_id": "uuid",         // historical compatibility key
   "score": 0.91,
   "user_id": "user-123",
   "mode": "auto"              // "auto" | "manual"
@@ -1056,19 +1137,19 @@ The `metadata` JSONB column in `events` carries event-specific data. Shapes by `
 {
   "source_event_id": "12345",
   "score": 0.91,
-  "error": "PostgreSQL (graph_memories) connection timeout",
+  "error": "PostgreSQL semantic tables connection timeout",
   "fallback": "episodic_only"
 }
 ```
 
 ### `proposal_approved`
 
-Emitted when a curator approves a proposal and promotes it to PostgreSQL (graph_memories).
+Emitted when a curator approves a proposal and promotes it to PostgreSQL semantic tables.
 
 ```jsonc
 {
   "proposal_id": "uuid",          // canonical_proposals.id
-  "memory_id": "uuid",           // PostgreSQL (graph_memories) InsightHead insight_id
+  "memory_id": "uuid",           // semantic memory identity (legacy InsightHead terminology)
   "score": "0.85",               // Curator confidence score
   "tier": "mainstream",          // Confidence tier
   "rationale": "High specificity" // Optional human rationale
@@ -1090,7 +1171,7 @@ Emitted by trigger when a new proposal is inserted into `canonical_proposals`.
 
 ### `notion_sync_pending`
 
-Emitted after approval to queue Notion page creation. Picked up by the notion-sync-worker.
+**Legacy Notion worker input:** `src/curator/notion-sync-worker.ts` consumes this event vocabulary. The current atomic approval outbox emits `canonical_memory_promoted`, not this event; the bridge is an implementation gap under DOC-07. This payload is not proof of remote delivery or an approved transfer destination.
 
 ```jsonc
 {
@@ -1112,7 +1193,7 @@ Emitted after approval to queue Notion page creation. Picked up by the notion-sy
 
 ## Retrieval Gateway Contract
 
-The retrieval gateway enforces typed contracts at the boundary between agent reads and the dual stores. All agent reads MUST pass through `POST /api/memory/retrieval` (AD-19). Source: `src/lib/retrieval/contract.ts`.
+The retrieval gateway enforces typed contracts between agent reads and the logical evidence and semantic knowledge layers in the default PostgreSQL architecture. Agent reads use authenticated governed interfaces, including canonical MCP `memory_search`; this section specifies the `POST /api/memory/retrieval` contract (AD-19), not an exclusive transport requirement. Source: `src/lib/retrieval/contract.ts`.
 
 ### SearchRequest
 
@@ -1209,7 +1290,8 @@ are intentionally excluded until their owning stories are implemented and review
 |---|---|---|---|
 | `id` | UUID | Yes | Immutable receipt identity. |
 | `group_id` / `workspace_id` | string | Yes | Server-derived scope. |
-| `proposal_id` / `proposal_version` | UUID / string | Yes | Exact proposal revision decided. |
+| `proposal_id` / `proposal_version` | UUID / string | Yes | Proposal identity and post-transition version recorded by current approval. The trigger increments the version on approval; this is not proof of which revision the human reviewed. |
+| `reviewed_proposal_version` | positive decimal string | Intended for new approvals; not implemented | DOC-06: exact pre-transition version accepted from the reviewer’s `expected_proposal_version`, checked against the locked proposal and retained as immutable decision evidence. No current receipt column is claimed. |
 | `evidence_request_id` | UUID | Conditional | Compatibility pointer to the first canonical evidence request; required for `request_evidence`. Complete membership is authoritative in `governance_receipt_evidence_requests`. |
 | `evidence_identity_hash` | SHA-256 | Yes | Hash of the complete sorted, unique `evidence_references` array. |
 | `actor_id` / `actor_role` | string | Yes | Server-issued authenticated reviewer identity (`curator | admin`). |
@@ -1218,7 +1300,7 @@ are intentionally excluded until their owning stories are implemented and review
 | `policy_reference` / `policy_version` | string | Yes | Governing policy identity. |
 | `memory_id` | string \| null | No | Resulting promoted `graph_memories.id` when applicable. |
 | `result_ref` | string \| null | No | Optional durable result identity for non-memory outcomes. |
-| `outbox_state` | `not_enqueued \| queued \| synced \| failed \| not_applicable` | Yes | State derived from the durable outbox, never caller supplied. |
+| `outbox_state` | `not_enqueued \| queued \| synced \| failed \| not_applicable` | Yes | Immutable decision-time snapshot; current approval writes `queued`. Later delivery belongs to a separate observation. `synced` requires confirmed remote delivery; local `delivered` is insufficient (DOC-07). |
 | `source_event_id` | bigint | Yes (current) | Same-scope authoritative source event; composite FK prevents cross-workspace provenance. |
 | `witness_hash` | string \| null | No | Decision witness hash copied from the locked proposal transition. |
 | `evidence_references` | string[] | Yes | Canonically sorted immutable source identities; not the relational authority for evidence-request membership. |
@@ -1449,8 +1531,8 @@ The sync contract (`src/lib/graph-adapter/sync-contract-mappings.ts`) provides d
 
 | Mapping | Source Key | Target Node | Used By |
 |---------|-----------|------------|----------|
-| `user_id → Agent` | `user_id` (e.g., `fowler`, `woz-builder`) | Agent node `name` property | Curator approve, auto-promote |
-| `group_id → Project` | `group_id` (e.g., `allura-system`) | Project node `name` property | Curator approve, auto-promote |
+| `user_id → Agent` | `user_id` (e.g., `fowler`, `woz-builder`) | Agent node `name` property | Curator approval |
+| `group_id → Project` | `group_id` (e.g., `allura-system`) | Project node `name` property | Curator approval |
 
 ### Event Log
 
@@ -1565,3 +1647,122 @@ Matchers are evaluated from most specific to most general. A single inventory re
 3. `workflow_reference` — workflow/action reference matches.
 4. `publisher` — publisher matches.
 5. `indicator` — fallback for credential/install-hook/action indicators that do not map to a dedicated type.
+
+## Proposed development contracts — 2026-10-20
+
+**AI-assisted logical contract proposals only.** No table, field, JSON schema, endpoint or migration below is implemented by this documentation change. These types must receive the [AD-65–AD-68 decisions](RISKS-AND-DECISIONS.md#development-readiness-decisions--2026-10-20), schema review and same-story JSON schemas under `json-schema/` before schema/API implementation. Missing schema counterparts are an explicit readiness gate, not evidence that a current schema contains these fields. [Design](DESIGN-ALLURA.md#development-readiness-design--2026-10-20) owns validation/replay/failure semantics; [traceability](REQUIREMENTS-MATRIX.md#development-readiness-traceability--2026-10-20) owns acceptance. Existing DOC-06/DOC-07 definitions above remain authoritative.
+
+### `CaptureReceiptV1` and capture replay binding — Proposed
+
+| Field | Type / required | Meaning |
+|---|---|---|
+| `contract_version` | literal `capture-v1`; yes | Algorithm/shape version; not the semantic-memory version |
+| `receipt_id` | UUID string; yes | Immutable capture receipt identity |
+| `group_id` | tenant string; yes | Verified authorized tenant matching `^allura-[a-z0-9-]+$` |
+| `workspace_id` | nonempty string; yes | Effective verified workspace, never inferred from null/default |
+| `principal_id` | nonempty string; yes | Authenticated executing principal; never a persona label or caller assertion |
+| `operation_kind` | literal `memory_add`; yes | Separates capture keys from approval/correction keys |
+| `idempotency_key` | constrained string; yes | Task-stable operation key; same value for retry/read-back |
+| `request_digest` | 64 lowercase hexadecimal characters; yes | SHA-256 of versioned canonical accepted request plus effective scope/actor |
+| `memory_id` | canonical memory ID string; yes | Stable memory identity produced once |
+| `event_id` | positive decimal string; yes | PostgreSQL `events.id` BIGSERIAL (`00-traces.sql`) serialized without JS precision loss |
+| `committed_at` | RFC3339 UTC timestamp; yes | Durable transaction time, not a client timestamp |
+| `capture_state` | literal `committed`; yes | Success at capture boundary only; no promotion/delivery assertion |
+
+Logical replay binding contains the same scope/principal/kind/key plus digest and immutable receipt reference/result. Proposed uniqueness is `(group_id, workspace_id, principal_id, operation_kind, idempotency_key)`; conflicting payload produces no new write. Key syntax/digest metadata allowlist and compatibility plan remain AD-65 decisions. No TTL or deletion rule is adopted. Storage table names, indexes, grants and receipt-reader schema must be chosen in the reviewed migration/story; do not reuse `promotion_idempotency` without a separately reviewed compatibility decision.
+
+### `IndexIntentV1` and `VectorScopeV1` — Proposed
+
+| Field | Type / required | Meaning |
+|---|---|---|
+| `intent_id` | UUID; yes | Stable index-work identity; scoped source uniqueness prevents retry duplication |
+| `group_id`, `workspace_id`, `principal_id` | strings; yes | Source authority; worker reauthorizes permitted action, not just possession of strings |
+| `source_event_id`, `memory_id`, `content_digest` | strings; yes | Exact captured source and content identity |
+| `embedding_model`, `model_revision` | strings; yes before success | Provider/model provenance; unknown is not invented |
+| `dimensions`, `index_version` | positive integer/string; yes before success | Validation and compatibility checks |
+| `status` | `queued`, `processing`, `retry_wait`, `succeeded`, `failed`; yes | Mutable work-state projection, separate from immutable evidence |
+| `attempt`, `available_at`, `last_error_code` | nonnegative integer / timestamp / nullable bounded code | Retry eligibility and safe error; raw provider payload excluded |
+
+`VectorScopeV1` names the internal verified tenant/workspace/principal/action capability, not a public serializable authorization DTO. Current bridge `userId` must not be mistaken for authenticated principal: its historical use is the tenant key. New scoped vector rows require non-null workspace; migration 40's legacy-quarantined rows remain excluded absent explicit migration authority. Table/lease/dedupe/claim details remain AD-66 decisions. Embedding intent success means an eligible scoped index row is confirmed, not that current-answer quality or native RuVector readiness is proven.
+
+### `SemanticCorrectionV1` — Proposed
+
+| Field | Type / required | Meaning |
+|---|---|---|
+| `base_memory_id` | memory ID string; yes | Visible scoped immutable base |
+| `expected_base_version` | positive decimal string; yes | Version the requester used; checked again at approval against current head |
+| `content`, `rationale` | nonempty strings; yes | Proposed replacement and evidence-based reason |
+| `evidence_refs` | array of scoped evidence identities; yes | Existing evidence access/eligibility checks apply; empty-array eligibility needs review |
+| `idempotency_key` | constrained string; request | Task-stable submission operation key, distinct from later approval key |
+| `request_digest` | digest string; server-derived storage | Canonical validated submission plus effective authority; never trusted caller input |
+| `proposal_id`, `submission_receipt_id` | UUID strings; response | Pending correction and append-only submission proof |
+| `status` | literal `pending_review`; response | Human decision still required |
+
+Effective authority binds the proposal to tenant/workspace/requester and base head. Proposed new-version approval inserts an immutable semantic row and `graph_supersedes` edge atomically with audit/decision/outbox/replay; it never overwrites old content or deletes history. Required proposal/schema fields and semantic-head uniqueness implementation remain AD-67 decisions. `expected_proposal_version` and `reviewed_proposal_version` are the distinct DOC-06 fields already specified in the [approval replay contract](#promotion_idempotency); base version is not a substitute for proposal review version.
+
+### `RemoteDeliveryObservationV1` — Proposed implementation of DOC-07
+
+| Field | Type / required | Meaning |
+|---|---|---|
+| `observation_id`, `delivery_id` | UUID strings; yes | Append-only observation ID and stable operation identity |
+| `group_id`, `workspace_id` | strings; yes | Authorized source scope |
+| `decision_receipt_id`, `source_revision`, `source_digest` | strings; yes | Exact immutable decision and projected source |
+| `destination_ref` | authorized opaque reference; yes | Approved destination/transfer binding, not credentials or page content |
+| `status` | `queued`, `synced`, `failed`, `unknown`; yes | Current observation; local delivery alone cannot produce synced |
+| `remote_record_id` | string; required for synced | Confirmed destination page/record |
+| `readback_digest`, `observed_at`, `observer_principal_id` | digest / timestamp / string; required for synced | Scoped verification against intended remote revision/content and executing observer |
+| `error_code`, `correlation_id` | nullable bounded strings | Safe failure/reconciliation reference |
+
+The stable delivery binding uniquely identifies source decision/revision/digest and authorized destination; altered source/destination conflicts. Observations append rather than edit decision evidence. Retry policy, access-controlled delivery-read route, digest normalization across Notion block representation and JSON-schema/storage names require AD-68 review. A remote digest must derive from normalized read-back content, not the outbound payload. Preserve the original `GovernanceReceipt.outbox_state`; it is never updated to reflect this read model.
+
+### `OperationObservationV1` and `RetrievalEvaluationV1` — Proposed
+
+`OperationObservationV1` carries `operation`, `stage`, `outcome` (`succeeded|failed|partial|unknown`), bounded `reason_code`, `correlation_id`, authorized scope reference, `started_at`, `duration_ms` and optional durable receipt reference. A success is bound to one stated boundary. Logs redact content/secrets and do not expose foreign-scope identifiers; high-cardinality identifiers are not metric labels. Storage/retention and external error-reporting destinations need existing approved policy or an explicit decision.
+
+`RetrievalEvaluationV1` carries `evaluation_id`, source/corpus/fixture digests, as-of time, authorized tenant/workspace, query-label-set revision, relevant record IDs, current/history intent, mode/status filters, attempted/used stores, fallback reason, provider/model/index versions, sample count, warm/cold condition, timeout counts and per-stage latencies. Aggregate results include precision/recall@k, MRR, current-answer/freshness error rate and p50/p95. Raw query/content is not placed in general telemetry. Fixture access and holdout ownership must be explicit; approved-only, lexical-only and federated results must be distinguishable. No metric automatically approves knowledge or establishes compliance.
+
+## Cloudflare Access identity contract
+
+[AD-69](RISKS-AND-DECISIONS.md#AD-69-cloudflare-access-replaces-clerk) replaces the external identity provider without a database schema migration. Existing `AuthUser`, memberships, workspaces, principals and historical events retain their field identities. [Design](DESIGN-ALLURA.md#cloudflare-access-security-contract) owns failure behavior and validation; the runtime Zod schemas must match this bounded configuration contract.
+
+| Configuration | Type | Meaning |
+|---|---|---|
+| `ALLURA_CF_ACCESS_ISSUER` | HTTPS team origin string | Explicit trusted `https://<team>.cloudflareaccess.com` issuer; no arbitrary URL/path/query/userinfo or token-supplied authority |
+| `ALLURA_CF_ACCESS_AUD` | nonempty string | Exact protected human application's AUD; machine authorization remains separate |
+| `ALLURA_CF_ACCESS_BINDINGS` | server-only JSON array | Explicit identities and existing resource authorization bindings; no default binding or grant |
+
+| Binding field | Type / required | Meaning |
+|---|---|---|
+| `subject` | nonempty string / yes | Verified Access JWT sub under the configured issuer; duplicate/ambiguous subjects deny |
+| `userId` | nonempty stable string / yes | Existing Allura principal/membership user_id, retained across provider migration |
+| `groupId` | authorized allura-* tenant / yes | Scope selector for active membership lookup, never a new tenant grant |
+| `workspaceId` | nonempty string / yes | Explicit workspace binding; verify group ownership and current lock state |
+
+JWT identity requires issuer/AUD, `exp`, `iat`, `type: "app"`, nonempty human `sub` and `email`; no role/tenant/workspace claim is accepted as an Allura grant. The role is read from active `memberships` and the stable ID is copied from the explicit binding. Token/service secrets are not fields of this configuration DTO. A future persistent identity-binding table needs its own reviewed migration, not silent provisioning by the authentication resolver.
+
+New device-approval evidence uses `auth_method: "cloudflare_access"`; device recovery uses `sign_in_required` alongside existing retry/re-pair actions. Historical provider values remain historical; no event-row rewriting is authorized. Audit sanitizers continue to reject legacy token names and now reject Access JWTs, authorization cookies and service-token secrets. Local DevAuth configuration is retained solely for explicitly enabled nonproduction development.
+
+## First-use terminology and evidence interpretation — 2026-10-20
+
+These display terms explain the existing bounded journey; they introduce no new table, persisted status or schema field.
+
+| Reader-facing term | Evidence required / interpretation |
+|---|---|
+| Saved evidence | A successful governed capture receipt and record identity; storage alone does not establish human approval |
+| Proposal | A candidate in the governed proposal lifecycle; a save does not guarantee proposal eligibility or creation |
+| Approved knowledge | An authorized independent human decision and canonical materialization; a score or storage backend label is insufficient |
+| Source/provenance | The actual returned or inspected source reference; preserve unknown rather than inventing origin |
+| Review state | The explicitly returned lifecycle/decision state; distinguish current state from the earlier save receipt's pending flag |
+| First-use receipt | A sanitized evaluation artifact naming source revision, endpoint category, separate client sessions, exact saved/retrieved identity, checks and limitations; it is not a human approval receipt |
+
+The [first-use guide](../user-guide/getting-started.md), [communication brief](../reference/reddit-remediation/brief.md#shared-vocabulary), and [UX acceptance](REQUIREMENTS-MATRIX.md#proposed-documentation-and-first-use-acceptance--2026-10-20) consume these terms. Endpoint omissions remain implementation/evidence gaps, not permission to fabricate a field.
+
+### Search response metadata alignment
+
+[AD-70](RISKS-AND-DECISIONS.md#ad-70-bounded-candidate-eligibility-for-fresh-evidence-search) aligns the TypeScript `MemoryResponseMeta.stores_attempted` declaration with the existing runtime schema's accepted store labels, including its historical compatibility vocabulary; it adds no wire field or database schema. In repaired explicit all-mode, attempted sources reflect actual calls, used sources reflect available returned candidates, and unavailable-source warnings set `degraded: true`. A successful empty search can remain nondegraded. These fields describe that request, not service-wide health, review approval, corpus completeness or deployed-revision proof. Local implementation and final review evidence are tracked in the [first-use receipt](../reference/reddit-remediation/first-use-evidence.md).
+
+### Fresh-initialization dimension boundary
+
+Knuth's [source-order review](../reference/reddit-remediation/clean-install-db-contract.md#fresh-init-embedding-mismatch) found that the current client requests 1024 dimensions and the bridge uses `allura_memories.embedding`, while init22 changes that original column to `vector(4096)`; init20's separate `embedding_1024` column is not the bridge target. This predicts a fresh-initialization mismatch if the scripts complete; it is not an observation of the deployed schema or a completed clean install. Older 768-dimensional descriptions are not evidence of this path's current contract.
+
+[AD-71](RISKS-AND-DECISIONS.md#ad-71-guarded-isolated-first-use-evaluation-preparation) permits preparing a guarded trial-only empty-table alignment, with actual target/type/index and finite 1024-value provider response checks still required. The correction is not automatically applied and does not authorize altering existing data or shared migrations. Provider success, initialized column compatibility and authenticated retrieval remain separate checks.

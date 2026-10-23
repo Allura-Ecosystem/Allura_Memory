@@ -1,0 +1,47 @@
+{
+  "source_checkout_revision": "28d90e84364d1f99e67df4f8a4ebdaafb6fcf0d9",
+  "integration_base_revision": "c720aca2ed09ac7d51776dacf3ed6f5867587fac",
+  "source_state": "dirty working-tree snapshot; excludes runtime/product changes",
+  "tenant": "allura-system",
+  "memory_receipt": null,
+  "files": [
+    {
+      "path": "docs/allura/BLUEPRINT.md",
+      "sha256": "d1cc0e12adc41b7664bde7050fa20977fe9cdba1a1fe31a3c3dbf2933e3ed78d"
+    },
+    {
+      "path": "docs/allura/SOLUTION-ARCHITECTURE.md",
+      "sha256": "eb093caa982b71e70a6ed41aa174ab0313a003dffc2375ae1f226c72f2e9399e"
+    },
+    {
+      "path": "docs/allura/DESIGN-ALLURA.md",
+      "sha256": "2ce661220503089e7ecc02fc563efce0e9f55481bc6a47efc552be2126c3faa2"
+    },
+    {
+      "path": "docs/allura/REQUIREMENTS-MATRIX.md",
+      "sha256": "6a0080ca537f617fe037da676164597c143ef0d5d06e8a2f7865f182ffc93204"
+    },
+    {
+      "path": "docs/allura/RISKS-AND-DECISIONS.md",
+      "sha256": "101a785434c2f80544a0ced1ea175660614a63ae770e2998c9e3464c136f1894"
+    },
+    {
+      "path": "docs/allura/DATA-DICTIONARY.md",
+      "sha256": "93c8bedc9124106b55fc2513476ef2e1d5735fe05322c016d3819840eaf1b5db"
+    },
+    {
+      "path": "guidelines/AI-GUIDELINES.md",
+      "sha256": "ef98fd1b95efc519dc9d6dc1ed91aa06bf832f996bb1cc40eeb9ca12fb060363"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "sha256": "31154cb3e3d8062bde9634336406371edd68a5388d7967a49d9fc3356dede90c"
+    },
+    {
+      "path": "docs/archive/allura/backend-adversarial-review-2026-10-20.md",
+      "sha256": "280017305889d74a0ef69799dfdcb6ff5a97538e3ee58acd4c4005062cad7533"
+    }
+  ],
+  "selected_diff_sha256": "47a4bb6a36dc70c8cac43972bc324056106b09c9ae6b88f7a00d9293d6fd5ab1",
+  "content_source_revision": "51e421ca065337ab3e6a5f804dc970447d5eed15"
+}

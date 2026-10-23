@@ -1,5 +1,8 @@
 # AI Guidelines: Repository Documentation Standards
 
+> [!NOTE]
+> **AI-Assisted Documentation** — updated with Codex assistance on 2026-10-21; human review remains required.
+
 > [!IMPORTANT]
 > This document provides guidelines for using AI assistance (e.g., GitHub Copilot) effectively within this repository. It captures the documentation patterns, required artifacts, and quality standards that every contributor — human or AI-assisted — must follow.
 
@@ -31,7 +34,7 @@
 - [7. Extra Document Prevention Rules](#7-extra-document-prevention-rules)
 - [8. Templates](#8-templates)
 - [9. Review & Maintenance](#9-review--maintenance)
-- [10. Skill & Workflow Integration (BMad / Allura / Team RAM)](#10-skill--workflow-integration-bmad--allura--team-ram)
+- [10. Workflow Authority](#10-workflow-authority)
 
 ---
 
@@ -265,13 +268,18 @@ Remove this notice only after a full human review has been completed and signed 
 
 ### Accuracy & Source of Truth
 
-| If a conflict exists between… | Defer to… |
-|-------------------------------|-----------|
-| A document and the JSON schema | JSON schema |
-| A document and the Go model | Go model |
-| Two canonical documents | The Blueprint, then team consensus |
-| A canonical document and a non-canonical note | The canonical document |
-| An AI suggestion and any of the above | The source of truth |
+Separate **intended → specified → implemented → verified → released** claims. A working HTML interaction establishes only the behavior demonstrated in that preview. A screenshot, passing build, persona verdict, or Brain receipt does not establish production behavior or human approval.
+
+| Question or disagreement | Authority and required action |
+|--------------------------|-------------------------------|
+| What should Allura do? | Approved product decisions and the owning canonical specification establish intent. |
+| What does the implementation currently accept or persist? | Inspect current schemas, code, and runtime evidence; identify the version and scope. |
+| Specification and implementation disagree | Record the discrepancy, impact, decision owner, and evidence. Do not rewrite intent merely to bless the implementation. |
+| Two canonical documents disagree | Identify the owning document and product intent; obtain the unresolved decision before implementing the affected story. |
+| Canonical document and supporting evidence disagree | Evidence may expose a defect or stale statement; resolve it in the owning document. A screenshot or template is not a competing specification. |
+| AI suggestion introduces a product, data, security, or design rule | Treat it as a proposal until the responsible owner decides. |
+
+Correctness-affecting uncertainty blocks the affected story; unrelated bounded work may continue. Readiness must be **Ready**, **Needs a decision**, or **Blocked**, with a specific reason. Keep the six canonical documents authoritative in their respective domains; see [the current design contract](../docs/allura/DESIGN-ALLURA.md) and [open decisions](../docs/allura/RISKS-AND-DECISIONS.md).
 
 ### Cross-Referencing
 
@@ -411,62 +419,160 @@ To start a new document, copy the relevant template and replace all `<!-- placeh
 
 ---
 
-## 10. Skill & Workflow Integration (BMad / Allura / Team RAM)
+## 10. Workflow Authority
 
-### Architecture Principle
+The repository-owned `allura-dev-story` and `allura-code-review` wrappers implement these gates. Read the [development handoff packets](../docs/reference/development-readiness-20261021/story-packets.md) and [readiness matrix](../docs/allura/REQUIREMENTS-MATRIX.md#development-slices-and-handoff-gates) before selecting a story. A wrapper, generated command or installed methodology is not an independent source of authority.
 
-**Allura decides. Team RAM owns. BMad provides methods. AI-GUIDELINES constrains docs. RuVix validates. Brain remembers.**
 
-BMad skills are **workflow primitives** — reusable method engines for PRD creation, story development, code review, and retrospectives. They are not the operating system. Allura wrapper skills govern *when and how* BMad workflows run for this project.
+`AI-GUIDELINES.md` is the sole repository workflow authority. Team RAM roles
+implement its requirements; no external methodology, installed workflow engine,
+or generated command surface governs work in this repository.
 
-### Skill Layering
+For every substantive change:
 
-| Layer | Purpose | Examples |
-|-------|---------|----------|
-| **Allura Core** | Governance, memory, routing, validation | `allura-team-ram`, `allura-memory-skill`, `allura-kanban-board` |
-| **Allura Wrappers** | Project-specific gates around BMad methods | `allura-dev-story`, `allura-code-review`, `allura-architecture`, `allura-product-intake`, `allura-retrospective` |
-| **BMad Primitives** | Reusable workflow engines | `bmad-dev-story`, `bmad-code-review`, `bmad-create-prd`, `bmad-create-architecture`, `bmad-retrospective` |
-| **Domain Skills** | Specialized tools | `frontend-craft`, `allura-graph-debug`, `allura-health-observability`, `varlock`, `context7` |
+1. Load the relevant local source and identify documentation impact.
+2. Search Allura Brain using `group_id=allura-system` when prior decisions or
+   operational context can affect the work; disclose unavailable tools.
+3. Assign one accountable Team RAM owner and preserve complete handoff context.
+4. Keep the Notion Work Board as the human source of truth for work-item status.
+5. Collect test, review, and live-behavior evidence appropriate to the change.
+6. Update the canonical six documentation artifacts in the same PR when a schema
+   or API contract changes.
+7. Write one concise governed outcome trace with evidence, unresolved hazards,
+   owner, and next action when memory tools are available.
 
-### Routing Rule
+Temporary local evidence may live in `.opencode/work-items/`; it is not a
+second planning authority and must not override the Notion board, source code,
+or the canonical documentation set. Migrated work items retain their original
+content as evidence, not as executable workflow instructions. Historical records
+in `docs/archive/bmad-legacy/` are non-operative and remain unchanged.
 
-For Allura Memory repo work, **always route through the `allura-*` wrapper** before invoking the raw `bmad-*` skill. The wrapper enforces:
 
-1. **Scout hydration** — load local context and search Allura Brain with `group_id=allura-system`
-2. **Documentation impact check** — verify whether the change touches any of the six canonical docs
-3. **Team RAM owner assignment** — assign the correct role (Brooks, Woz, Pike, Fowler, etc.)
-4. **BMad workflow execution** — invoke the underlying method skill
-5. **Notion board update** — update the work item status when relevant
-6. **Validation evidence** — collect test results, review approvals, and proof receipts
-7. **Brain outcome log** — write the result to Allura Brain with `group_id=allura-system`
+## 11. Allura Dashboard and Portfolio Preview
 
-### BMad Skill Demotion
+**Source-local evidence boundary:** The preview and authentication observations in this section came from the separate dirty checkout at `28d90e843`; their implementation and ignored receipts are not included in this integration. Preserve the intended design constraints, but refresh source, artifacts and checks before claiming implementation on main. See [unavailable evidence](../docs/reference/development-readiness-20261021/unavailable-evidence.md).
 
-The following BMad skills are **demoted to generic fallback** for this repo. For Allura Memory work, prefer the matching `allura-*` wrapper:
 
-| BMad Skill | Allura Wrapper | Status |
-|------------|---------------|--------|
-| `bmad-dev-story` | `allura-dev-story` | Preferred: Allura wrapper |
-| `bmad-code-review` | `allura-code-review` | Preferred: Allura wrapper |
-| `bmad-create-architecture` | `allura-architecture` | Preferred: Allura wrapper |
-| `bmad-create-prd` | `allura-product-intake` | Preferred: Allura wrapper |
-| `bmad-retrospective` | `allura-retrospective` | Preferred: Allura wrapper |
-| `bmad-party-mode` | `party-mode` / `team-ram-cowork` | Preferred: Allura-native |
-| `bmad-sprint-status` | `allura-kanban-board` / Notion | Preferred: Notion source of truth |
-| `bmad-sprint-planning` | `allura-kanban-board` / Notion | Preferred: Notion source of truth |
-| `bmad-quick-dev` | `allura-dev-story` or direct Woz route | Preferred: Allura wrapper |
-| `bmad-document-project` | `carloss-guidelines` + Allura docs gate | Preferred: Allura-native |
+### Scope and claims
 
-BMad skills are **not deleted**. They remain available as generic workflow engines for non-Allura projects. The demotion is project-scoped, not global.
+Sabir's current reference is the **local React/Vite portfolio preview**, with Store overview at [`http://127.0.0.1:4008/index.html#ecommerce`](http://127.0.0.1:4008/index.html#ecommerce). Its source lives in `artifacts/enterprise-dashboard/visual-fixture/`. It uses fictional people, records, stores, and local interaction state; shared sample records survive navigation and reset on reload. It does not establish sign-in, server authorization, persistent storage, real uploads, live memory retrieval, a connected Shopify store, or production readiness. Work-board sample review does not approve knowledge, complete an operating security control, or make a lending decision.
 
-### Validation Checklist (per story)
+The portable single-file HTML is a separate delivery artifact. The [2026-10-20 commerce receipt — source-local receipt unavailable](../docs/reference/development-readiness-20261021/unavailable-evidence.md) records that it predates the final tablet grid correction and awaits repackaging because a local governance hook could not load. Its recorded digest identifies that older HTML, not the corrected React build. Use the React reference for this update; do not describe the portable file as current or carry the React review over to it. Repackaging and artifact verification remain outstanding.
 
-Before marking any story `Done`:
+Keep the portfolio label visible. Approved positioning is: **SOC 2 readiness is a goal; no compliance or audit claim.** Do not infer certification, a completed examination, or operating control effectiveness from populated sample screens. Record an unavailable capability explicitly rather than fabricate metrics, success, permissions, or evidence.
 
-- [ ] Scout context loaded (local files + Allura Brain search)
-- [ ] Documentation impact checked (does this touch any of the six canonical docs?)
-- [ ] Team RAM owner assigned (who reviews? who builds? who validates?)
-- [ ] BMad workflow executed (story spec → implementation → review)
-- [ ] Notion work item updated (status, decision log, evidence links)
-- [ ] Validation evidence collected (tests pass, typecheck clean, review approved)
-- [ ] Brain outcome logged (`allura-brain_memory_add` with `group_id=allura-system`)
+This scope governs the preview, not the production contracts in the canonical six documents. Do not start backend, credential, deployment, or dependency migration work merely because a template contains corresponding UI.
+
+### Reuse the selected Studio source before building
+
+Sabir selected [Studio Admin Base UI](https://github.com/arhamkhnz/next-shadcn-admin-dashboard-baseui). The preview's current source pin is `62b1b3e3c4af7a1abf055298b01b4af020bd0f8b`; it is not a claim about the upstream latest release.
+
+- Inspect the existing upstream page and local component implementations first. Use its actual page/widget compositions for available patterns such as Kanban, File Manager, and e-commerce. Reusing only buttons while recreating an available page does not satisfy this direction.
+- Keep imported source, license, revision, source hashes, and explicit adapter changes traceable. Retain the MIT notice in distributed HTML. Record compatibility changes rather than silently replacing component APIs or upgrading dependencies.
+- Keep feature adapters separate from shared components and domain state. Existing task, file, person, team, app, and review providers own local sample relationships; copied page fixtures must not create a second contradictory data set.
+- Keep UI source reuse distinct from framework or backend adoption. A template's role screens and charts are not working authorization or a connector.
+- Make every visible action work within preview scope, disable it with an explanation, or omit it. Inspect Base UI form semantics: submit controls must explicitly submit their form.
+- Before an upstream update, compare changes and preserve local contracts and evidence. A source pin does not authorize an automatic upgrade.
+
+Implementation evidence is [source provenance — source-local receipt unavailable](../docs/reference/development-readiness-20261021/unavailable-evidence.md) and the [Studio preview receipt — source-local receipt unavailable](../docs/reference/development-readiness-20261021/unavailable-evidence.md). These support the [canonical design](../docs/allura/DESIGN-ALLURA.md#portfolio-preview-studio-source-reuse-and-shared-journeys); they are not alternative specifications. Existing Profiles, People, Teams, and Roles were retained as preview components, not claimed as migrated Studio Base UI pages.
+
+### Store overview: preserve the implemented React behavior
+
+`studio-ecommerce-preview.tsx` composes five actual adapted Studio widgets from `studio-adapters/ecommerce/`: **KpiStrip**, **StoreTraffic**, **TopProducts**, **Inventory**, and **RecentOrders**. Keep their [commerce provenance — source-local receipt unavailable](../docs/reference/development-readiness-20261021/unavailable-evidence.md), source pin and MIT attribution with the implementation. This is component reuse within Allura's preview, not adoption of the entire template or its backend.
+
+- Orders support search by order number or sample customer, status filters, numeric total/date sorting and pagination of five rows per page. Search and filter changes reset the page, and unmatched queries have an explicit empty state.
+- Product and order selections open factual sample details. Preserve keyboard selection, visible focus and return to the opening control when closing details. Missing customer contacts, item-level order details and individual product stock counts remain labeled as absent; do not invent them or connect orders to products without source data.
+- Keep the summary period, chart periods and fictional-data notice visible. The 34 sample orders are an illustrative subset, not the complete ledger behind the 379-order monthly summary. Product shares derive from the sample sales values; the October sales comparison derives from September. Revenue and profit use the same dollar scale, an explicit legend and a monthly data table.
+- Preserve Allura Cream, Ink, Blue and Orange, readable chart labels and responsive grid widths. The phone orders table scrolls inside its labeled, keyboard-focusable region rather than widening the page. Preserve the existing CSS reduced-motion rules. Explicitly disabling commerce chart animation remains an open implementation requirement; do not describe it as already implemented.
+- Keep the sample Shopify journey separate. Store values are fixed fictional examples; connecting or importing examples does not populate these charts. No account is contacted, and there are no payment, refund, fulfillment or customer-contact actions.
+
+The [commerce receipt — source-local receipt unavailable](../docs/reference/development-readiness-20261021/unavailable-evidence.md) records build, strict TypeScript, three sample-integrity tests, focused lint, search/filter/sort/pagination checks, keyboard/focus checks, and desktop 1440px/tablet 820px/phone 390px checks. It records Munari's scoped review of the corrected direct React build and explicitly excludes the older portable HTML. These are recorded results for that candidate, not proof that every later edit passes or an accessibility certification. When changing this surface, attach fresh checks to the actual candidate and identify which artifact was reviewed.
+
+**Validation clarification — 2026-10-21:** The current commerce `Area`, `Bar`, `Line` and `Pie` components do not explicitly disable animation; the installed Recharts browser defaults enable it. The CSS reduced-motion rule suppresses CSS animations and transitions, but does not establish that Recharts' JavaScript animation is disabled. The historical receipt's disabled-chart-animation claim is therefore not corroborated by the current source. Keep that gap open until the actual widgets and reduced-motion behavior are verified. The [current documentation-validation receipt — source-local receipt unavailable](../docs/reference/development-readiness-20261021/unavailable-evidence.md) records the checked source, build, tests and browser actions.
+
+### Allura branding applies to every surface
+
+| Semantic role | Required brand value |
+|---------------|----------------------|
+| Primary workspace ground | Allura Cream `#F7F3EE`, dominant across screens |
+| Text, headings, structure | Allura Ink `#0F1720` |
+| Knowledge, links, primary actions | Allura Blue `#0D47A1` |
+| Review and selected-item emphasis | Allura Orange `#FF4D1F`; graph selection also has a contrasting Ink outline |
+| Supported verified/approved state | Allura Green `#148A4B`, only with real supporting data |
+
+Apply shared semantic tokens to navigation, graphs, inspectors, tables, forms, administration, mobile and access-denied states. Use the supplied official compact **AL icon** in the dashboard shell; preserve its proportions and clear space. Never redraw or generate a logo. Use Aeonik for display when available, otherwise a neutral sans-serif; IBM Plex Mono is for code and technical labels only. Keep rounded forms, outline icons, restrained borders and generous spacing; no dark-template substitution, gradients, glow, glass, shadows, or decorative card grids. Functional file/folder cards may follow the selected Studio layout.
+
+Graph memory nodes are Blue on Cream. Label nodes and relationship types, and show status in words as well as color. Graph proximity does not prove embedding similarity. Check contrast for actual text/control combinations; do not assume the palette alone guarantees accessibility. See [brand authority](../docs/allura/BLUEPRINT.md#0-brand-identity).
+
+### Design for a nontechnical employee
+
+Lead with familiar tasks: **Company Knowledge**, **Files**, **Work Board**, **Apps**, **People & teams**, and **Store overview**. Give technical details a contextual or advanced location. Explain search settings as whether documents can be found; do not make employees understand embeddings, vector dimensions, or plugin plumbing before using the workspace.
+
+Show ownership, team or shared-space scope, source and version where useful. Distinguish a team filter from permission enforcement. An Administrator demonstration must not imply automatic access to every department's information. A sample role selector demonstrates controls; it does not authenticate or impersonate the selected person.
+
+Keep one coherent journey across views: a file opens its linked task, the task opens its source file, and task owners link to profiles. App-originated tasks retain app/source attribution. Changing task evidence invalidates the earlier sample review; Done uses the existing independent-review rule, including through drag actions. Preserve these contracts when adapting template layouts.
+
+### Connections graph uses the shared sample records
+
+Sabir requested **Connections** in the preview navigation on 2026-10-20. Use `#graph` for this relationship view; keep Shopify setup at `#connections` under **Connected tools**. Preserve prior sample-knowledge graph deep links rather than reinterpreting their IDs as file/task/person/app records.
+
+Derive nodes and edges from the existing local providers. Use stable namespaced resource IDs and only explicit ownership, assignment, attachment and app-origin references. Do not infer relationships from matching titles, team names or visual proximity. An item with no relationships needs an honest empty state. File renames, task links and app settings must appear consistently in the graph and original views; resets must not leave stale links. Keep captured evidence versions distinct from current item/app versions.
+
+Provide Graph/List, search/type filtering, readable relationship labels, keyboard-accessible selection, a useful inspector and links to original items. Original File, Work, Profile and Apps views may link back to the focused graph item. Apply the same Allura branding and portfolio-only boundaries. See the [Connections design contract](../docs/allura/DESIGN-ALLURA.md#portfolio-preview-connections-graph--2026-10-20).
+
+Sabir's subsequent approved direction adds an animated 3D network and profile-style scorecards to Connections. Keep the 3D exception scoped to this graph, with pause, reduced-motion handling and accessible alternatives. Shared fictional vendor/contact records may add explicit account-owner and vendor-contact relationships. The Gabriel/COO example supplies a business title, not an access grant; scorecards must not invent ratings or private contact details. Follow the [3D and scorecard direction](../docs/allura/DESIGN-ALLURA.md#approved-direction-3d-network-and-scorecards) and record implementation verification separately.
+
+For the approved graph-engine migration, reuse the `vasturiano/react-force-graph` React 3D package, preserve its license and pinned provenance, and keep Allura's shared model and scorecards separate from engine-owned mutable layout objects. Library adoption alone proves neither accessibility nor performance at scale; verify the preview's actual interaction and packaging.
+
+### Apps and connectors
+
+Mortgage and Bumblebee use the common shell and shared work/file concepts, while retaining separate domain behavior. Show employee work in Apps; show versions, access impact, compatibility, update failure and restore in administration. A template is not evidence of a production plugin SDK, secure isolation, or safe migrations. Follow the [existing Apps contract](../docs/allura/DESIGN-ALLURA.md#portfolio-preview-apps-and-update-management-2026-10-19).
+
+The Shopify connection is a labeled sample setup/access-review/import/pause/disconnect journey. It requests no real credentials and contacts no store. Store overview charts are fixed fictional examples and are **not populated by the sample connector**. Keep simulated read-only product/inventory scope separate from customer, order, payment, or write access; any real integration needs a separately specified and authorized contract.
+
+### Proposed next UX slices — not implemented or production-approved
+
+The following are recommendations from the current conversation, recorded for follow-up rather than silently promoted to product requirements:
+
+1. **Search everything:** a common entry to knowledge, files, tasks, people, and app records; current preview document search remains literal/local, not cross-resource or generated-answer search.
+2. **My day:** assigned work, requests waiting for review and upcoming deadlines; a distinct personal view is not yet demonstrated.
+3. **Inbox:** mentions, review requests and connector issues, each with a next action; real notifications are not implemented.
+4. **Sharing details:** ownership, audience and an access-request journey; role demonstrations do not enforce real permissions.
+5. **Guided demo:** find a policy → inspect the source → create a task → attach a file → request review → see the outcome. Existing partial interactions do not establish a complete guided journey.
+
+After the approved reliability work below, the suggested feature order is Search + My day, then that bounded end-to-end journey. Before building a slice, state its purpose, governing sources, data/behavior contract, relevant design reference, testable acceptance and named builder/reviewers. Sabir owns product intent and acceptance; Brooks coordinates architectural coherence; Durham reviews fidelity; implementation review is independent of the builder. A role verdict is not human sign-off.
+
+### Approved reliability priorities — 2026-10-20
+
+Sabir approved recording the adversarial review's priorities: **reproducibility, crash containment, then bounded data loading before additional features**. This adopts the documentation and acceptance direction; it does not mean the fixes have shipped. [Design](../docs/allura/DESIGN-ALLURA.md#approved-preview-reliability-direction--2026-10-20), [acceptance](../docs/allura/REQUIREMENTS-MATRIX.md#preview-reliability-acceptance--2026-10-20) and [open risks](../docs/allura/RISKS-AND-DECISIONS.md#preview-reliability-risks--2026-10-20) carry the contract.
+
+- **Reproduce from source control.** Maintained application source, adapters, dependencies, lockfiles and regression tests must have a tracked application home. Ignored `artifacts/` is for generated evidence and outputs, not the only copy of maintained code. Preserve source provenance and licenses; inventory imports, fonts, public assets and build/package scripts. Prove a clean checkout builds and runs named critical suites without cached files, an old bundle or undocumented local paths. Missing required suites must fail rather than pass with zero tests.
+- **Contain bad input and screen failures.** Validate URL parameters and external records before lookup or render. Record indexes must be finite integers in range; malformed or missing IDs produce a recoverable state. Provide screen-level error containment so a failed feature does not remove navigation or silently discard shared work. Test fractional, negative, oversized and non-numeric inputs and a deliberate render failure; navigation to another screen must still work.
+- **Bound work as data grows.** Index graph adjacency/degrees once per relevant data change, cache stable layout and avoid full-edge rescans on every search keystroke. List view must not pay for graphical layout. Bound graph expansion and provide an accessible bounded list; avoid unnecessary animation/label work in paused or hidden views. Split heavy feature loading where measurement justifies it. Five visible table rows do not establish bounded fetching: real datasets need server-enforced page limits, filtering and sorting.
+- **Measure before claiming scale.** Record browser responsiveness, CPU, memory, asset sizes, device/network conditions and fixture density. Include 100, 500, 2,000 and 5,000 graph nodes and a 100,000-order backend fixture; these are test sizes, not promised capacity. Agree latency/memory/load budgets before acceptance. Isolated CPU layout timings exclude React/DOM/WebGL and are not browser or service SLOs.
+- **Keep the production boundary explicit.** Browser state and the role chooser remain demonstrations. Real accounts need server-issued identity/scope, durable writes, conflict handling and safe replay. Test competing edits, interrupted saves/retries, duplicate/out-of-order connector events, revocation and recovery before connecting real data. Reuse [DEV acceptance](../docs/allura/REQUIREMENTS-MATRIX.md#acceptance-evidence-and-use-case-index); new concurrency, retry, schema and permission semantics retain their existing decision gates.
+
+The observed fractional-record crash, untracked source/tests and expensive graph layout remain open until current-revision evidence closes them. Earlier responsive/Munari checks and this documentation update do not establish remediation.
+
+### Validation and handoff
+
+For material preview changes, build the React candidate being delivered, run appropriate focused type/lint checks and inspect its affected journey in a browser. When delivering a portable HTML export, package and verify that artifact separately; React checks do not establish export parity. Verify desktop, tablet and phone layouts, keyboard/focus behavior, readable chart/graph labels, control contrast and intentional table/board scrolling without page overflow. Capture affected views and relevant graph, inspector, administration or access-denied states when changed. Re-test state transitions and shared references after adapter changes; screenshots alone cannot prove behavior.
+
+Save evidence outside `docs/allura/`; record source revision, changed files, exact checks, screenshot paths, delivered artifact identity and digest or build manifest, limitations and remaining decisions. Associate each receipt with the React build or HTML export actually checked. If packaging is blocked, report the corrected React candidate and older export separately, preserving the blocker and outstanding export verification. Distinguish source inspection, automated checks and browser-tested actions. Report a pending or failed operation accurately. Do not claim release, production security, complete journey verification or human acceptance from preview evidence.
+
+## 12. Reliability and Backend Adversarial Review
+
+Sabir requested a backend-wide adversarial assessment on 2026-10-20 alongside the preview review. Inspect executable boundaries and callers, not only screens or architecture prose. Record commit plus dirty-file hashes, entrypoints, feature flags, tested paths and exclusions. Broad coverage is not proof that every path is safe.
+
+| Boundary | Failure scenarios and evidence |
+|---|---|
+| Web, server actions and MCP ingress | Unauthenticated/foreign-scope access, actor impersonation, revoked membership, alternate routes, malformed/oversized/slow bodies. A role check alone does not establish resource scope. |
+| Capture, approval and semantic lineage | Failure before/after commit, lost acknowledgement, same-operation retry, changed payload, concurrent approvals/corrections and partial projection. Preserve append-only history and human approval; distinguish approved contracts from unresolved decisions. |
+| Retrieval and graph | Unrelated/no-answer queries, current versus superseded content, cross-workspace negatives, all modes, empty indexes, provider failures, excessive limits and high-cardinality input. Verify relevance, scope and measured latency, not just status codes. |
+| Workers and delivery | Duplicate delivery, competing workers, crash after claim/side effect, lease expiry, retry eligibility/backoff, poison items, cancellation, queue/concurrency bounds and shutdown. Local acknowledgement does not establish remote persistence. |
+| Database and infrastructure | Restricted roles/RLS, pooled-scope reuse, query deadlines, rollback, connection exhaustion, migration compatibility and authorized disposable restore/restart drills. A backup command succeeding does not prove recoverability. |
+| Operations and build | Secret-safe diagnostics, truthful partial/error states, health-data exposure, tracked source, reproducible tooling, required-suite discovery and verified backup contents/selection. |
+
+Each finding names severity, exact source/caller, trigger, affected scope, expected/observed behavior, reproduction class (source-only, mocked/offline, disposable integration or live) and uncertainty. Distinguish application-layer failure from deployed exploitation, existing open risks from new findings, and repair direction from completed fixes. Trace material findings into the existing Requirements Matrix and Risks & Decisions; detailed reports/probes stay outside the canonical six.
+
+Use read-only inspection and bounded hermetic probes by default. Review authorization does not permit production load, actual foreign-tenant reads, destructive fault injection, credential changes, deployment or semantic promotion. Existing action-specific gates apply to later tests and fixes. Documentation validation checks consistency and traceability; it does not close application findings.

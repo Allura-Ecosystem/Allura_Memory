@@ -1,3 +1,16 @@
+# Bumblebee supply-chain integration
+
+For operators and engineers evaluating Allura's optional developer-endpoint inventory integration. Bumblebee is separate from the memory service's first-use task. **Start with [architecture and data flow](architecture.md)** if you need this module; otherwise use [Getting started with Allura Memory](../../user-guide/getting-started.md).
+
+The module wraps the pinned upstream scanner and applies a scoped ingestion and evidence workflow. Review the [transport/auth contract](transport.md), [state model](state-model.md), and [security notes](security.md) before making operational claims. The code's “snapshot promotion” is not a substitute for human approval of canonical memory knowledge.
+
+The detailed notes below contain historical Epic 26 test and approval counts. They describe their recorded revision and are not current passing tests, a deployment receipt or compliance certification. Source is in [the Bumblebee library](../../../src/lib/bumblebee/).
+
+*AI-assisted editorial revision, 2026-10-20; upstream attribution and detailed historical notes retained.*
+
+<details>
+<summary>Specialist implementation and historical delivery notes</summary>
+
 # Bumblebee Plugin — Supply-Chain Threat Intelligence
 
 > **AI-Assisted Documentation** — prepared with AI assistance and grounded in the pinned upstream source, repository authority, and live code review (Epic 26, Story 26.7, all 19 ACs approved 2026-08-29).
@@ -84,8 +97,8 @@ Supply-chain security requires knowing what packages are installed across develo
 | API routes | `src/app/api/plugins/bumblebee/{runs,ingest}/` |
 | Curator UI surfaces | `src/components/bumblebee/surfaces.tsx` |
 | Tests | `src/lib/bumblebee/__tests__/` (17 test files) |
-| Planning docs | `_bmad/bmm/planning/epic-26-*.md` |
-| Sprint status | `_bmad/bmm/stories/sprint-status.yaml` (Epic 26 = done) |
+| Planning docs | `.opencode/work-items/planning-artifacts/epic-26-*.md` |
+| Sprint status | `.opencode/work-items/implementation-artifacts/sprint-status.yaml` (local evidence; Notion remains authoritative) |
 
 ## Source Files at a Glance
 
@@ -132,3 +145,5 @@ The pin is enforced in code at `upstream-contract.ts` → `BUMBLEBEE_UPSTREAM_PI
 - [Upstream Pin & Schema](./upstream-pin.md) — scanner version, ecosystem allowlists, compatibility restrictions
 - [State & Promotion](./state-model.md) — snapshot truth, staleness, profile separation
 - [Security & Privacy](./security.md) — sanitization, RLS, fail-closed patterns, secret canaries
+
+</details>

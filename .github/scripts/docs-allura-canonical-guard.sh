@@ -19,28 +19,34 @@ is_allowed_file() {
     REQUIREMENTS-MATRIX.md) return 0 ;;
     RISKS-AND-DECISIONS.md) return 0 ;;
     DATA-DICTIONARY.md) return 0 ;;
-    DESIGN-*.md) return 0 ;;
-    index.md) return 0 ;;
+    DESIGN-ALLURA.md) return 0 ;;
     *) return 1 ;;
   esac
 }
 
 echo "docs-allura-canonical-guard: checking docs/allura canonical surface"
 
+for required in BLUEPRINT.md SOLUTION-ARCHITECTURE.md DESIGN-ALLURA.md REQUIREMENTS-MATRIX.md RISKS-AND-DECISIONS.md DATA-DICTIONARY.md; do
+  if [[ ! -f "$DOCS_DIR/$required" ]]; then
+    echo "ERROR: missing canonical document: docs/allura/$required"
+    status=1
+  fi
+done
+
 while IFS= read -r path; do
   rel="${path#"$DOCS_DIR/"}"
   if [[ "$rel" == */* ]]; then
     top="${rel%%/*}"
     echo "ERROR: docs/allura contains nested non-canonical path: $rel"
-    echo "       Move execution artifacts to _bmad/ or docs/archive/allura/."
+    echo "       Move execution artifacts to .opencode/work-items/ or docs/archive/allura/."
     status=1
     continue
   fi
 
   if ! is_allowed_file "$rel"; then
     echo "ERROR: non-canonical docs/allura file: $rel"
-    echo "       Allowed: BLUEPRINT.md, SOLUTION-ARCHITECTURE.md, DESIGN-*.md, REQUIREMENTS-MATRIX.md, RISKS-AND-DECISIONS.md, DATA-DICTIONARY.md, index.md."
-    echo "       Move PRDs, epics, reports, gates, benchmarks, and runbooks to _bmad/ or docs/archive/allura/."
+    echo "       Allowed: BLUEPRINT.md, SOLUTION-ARCHITECTURE.md, DESIGN-ALLURA.md, REQUIREMENTS-MATRIX.md, RISKS-AND-DECISIONS.md, DATA-DICTIONARY.md."
+    echo "       Move PRDs, epics, reports, gates, benchmarks, and runbooks to .opencode/work-items/ or docs/archive/allura/."
     status=1
   fi
 done < <(find "$DOCS_DIR" -mindepth 1 -type f | sort)

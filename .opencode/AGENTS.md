@@ -379,7 +379,7 @@ bun test                          # all unit tests (vitest run)
 bun run test:unit                 # unit lane only (no DB)
 bun run test:integration          # mocked services + contracts
 bun run test:curator              # curator pipeline tests
-bun run test:e2e                  # RUN_E2E_TESTS=true, requires live PG + Neo4j
+bun run test:e2e                  # RUN_E2E_TESTS=true, requires live PostgreSQL
 bun run test:all                  # typecheck + lint + unit + e2e + mcp browser
 bun run test:watch                # watch mode
 
@@ -388,7 +388,7 @@ bun vitest run src/lib/postgres/connection.test.ts
 bun vitest run -t "should build connection config"
 
 # Brain stack (Docker)
-bun run brain:up          # start PG + Neo4j + MCP containers
+bun run brain:up          # start the configured PostgreSQL + MCP stack
 bun run brain:down        # stop stack
 bun run brain:status      # health check
 bun run brain:recover     # restart in dependency order
@@ -417,18 +417,18 @@ bun run validate:tokens           # token compliance
 
 ## Architecture
 
-Allura is a **dual-database AI memory engine** exposed via MCP — a self-hosted, compliance-grade alternative to mem0.
+Allura is a **PostgreSQL-backed AI memory engine** exposed via MCP — a self-hosted, compliance-grade alternative to mem0.
 
 ### Data Layers
 
 | Layer    | Store          | Port | Role |
 |----------|----------------|------|------|
 | Episodic | PostgreSQL 16  | 5432 | Append-only execution traces. **Never mutate historical rows.** |
-| Semantic | RuVector (PG)  | 5432 | Versioned knowledge graph via `IGraphAdapter` (AD-49 cutover complete 2026-07-12). `GRAPH_BACKEND=ruvector` is the production default. Neo4j 5.26 remains as fallback (`GRAPH_BACKEND=neo4j`). |
+| Semantic | RuVector (PG)  | 5432 | Versioned knowledge graph via `IGraphAdapter` (AD-49 cutover complete 2026-07-12). `GRAPH_BACKEND=ruvector` is the production default. The retired Neo4j selector is rejected; `ruvector-crate` is opt-in. |
 | Vector   | RuVector (PG)  | 5432 | 768d embeddings (nomic-embed-text). Hybrid search: vector ANN + BM25 RRF. |
 | MCP      | Allura Brain   | 5888 | Streamable HTTP (SSE + JSON-RPC). `memory_search`, `memory_add`, `audit_*`, `governance_*`. |
 
-> **RuVector Graph Cutover (AD-49, 2026-07-12):** The semantic/knowledge-graph layer now runs on PostgreSQL tables (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) behind the `IGraphAdapter` seam. `GRAPH_BACKEND=ruvector` is the default. Neo4j 5.26 remains available as a read-only fallback for one release. Runtime label: `ruvector_graph` (upgraded from `pgvector_bridge`). See `docs/allura/RISKS-AND-DECISIONS.md` AD-49, RK-32, RK-21.
+> **RuVector Graph Cutover (AD-49, 2026-07-12):** The semantic/knowledge-graph layer now runs on PostgreSQL tables (`graph_memories`, `graph_supersedes`, `graph_structural_nodes`, `graph_structural_edges`) behind the `IGraphAdapter` seam. `GRAPH_BACKEND=ruvector` is the default. Neo4j was retired under AD-50; the factory rejects its selector. Runtime label: `ruvector_graph` (upgraded from `pgvector_bridge`). See `docs/allura/RISKS-AND-DECISIONS.md` AD-49, RK-32, RK-21.
 
 ### Dashboard (Next.js 16)
 
@@ -438,7 +438,7 @@ API routes under `src/app/api/`: agents, audit, curator, dreams, evidence, execu
 
 ### Key Subsystems
 
-- **Curator** (`src/curator/`): HITL promotion pipeline — scores traces, queues proposals, requires human approval before semantic-graph writes (Neo4j or RuVector via `IGraphAdapter`).
+- **Curator** (`src/curator/`): HITL promotion pipeline — scores traces, queues proposals, and requires human approval. The current `approveProposal` transaction inserts an initial version-1 `graph_memories` row; it has no prior-version input and does not insert a `graph_supersedes` edge. Version updates require a separately specified and verified lineage workflow.
 - **Control Plane** (`src/control-plane/`): RuVix proof-gated mutation layer.
 - **Process Engine** (`src/lib/process-engine/`): Workflow execution with checkpoint resume, revision pinning.
 - **Budget / Circuit Breaker** (`src/lib/budget/`, `src/lib/circuit-breaker/`): Hard limits and automatic shutdown for agent runaway prevention.
@@ -458,27 +458,26 @@ API routes under `src/app/api/`: agents, audit, curator, dreams, evidence, execu
 
 ### Graph Backend (`IGraphAdapter` — AD-29, AD-49)
 
-The semantic/knowledge-graph layer is backed by the `IGraphAdapter` seam (`src/lib/graph-adapter/types.ts`). Three implementations:
+The semantic/knowledge-graph layer is backed by the `IGraphAdapter` seam (`src/lib/graph-adapter/types.ts`). The current factory exposes two selections:
 
 | Adapter | `GRAPH_BACKEND` | Status | Storage |
 |---------|-----------------|--------|---------|
-| `Neo4jGraphAdapter` | `neo4j` | Fallback (was default pre-2026-07-12) | Neo4j 5.26 (port 7687) |
 | `RuVectorGraphAdapter` | `ruvector` | **Production default** (AD-49 cutover) | PG tables on 5432 |
-| `RuvectorCrateGraphAdapter` | `ruvector-crate` | Opt-in spike (Path B, 13/16 methods) | Rust crate via `.node` addon |
+| `RuvectorCrateGraphAdapter` | `ruvector-crate` | Opt-in; requires explicit native-addon configuration and validation | Rust crate via `.node` addon |
 
 - **Factory:** `src/lib/graph-adapter/factory.ts` — `getGraphBackend()` returns `ruvector` by default
-- **Dual-read:** `GRAPH_DUAL_READ=true` wraps both Neo4j + RuVector, compares results, logs divergence (safety net for cutover)
-- **Parity test:** `src/lib/graph-adapter/__tests__/adapter-parity.test.ts` — 14/14 pass
-- **Live-DB E2E:** `src/lib/graph-adapter/__tests__/adapter-live-db-e2e.test.ts` — 14/14 pass (gated on `RUN_E2E_TESTS=true`)
-- **Crate adapter:** `src/lib/graph-adapter/ruvector-crate-adapter.ts` — 13/16 methods, 3 throw unsupported (G1: no `updateNode`, B3: no atomicity). Upstream issues filed: [ruvnet/RuVector#666](https://github.com/ruvnet/RuVector/issues/666), [#667](https://github.com/ruvnet/RuVector/issues/667), [#668](https://github.com/ruvnet/RuVector/issues/668)
+- **Retired selection:** Neo4j was retired under AD-50. `GRAPH_BACKEND=neo4j` is rejected by the factory; the historical dual-read flag does not enable a supported fallback.
+- **Historical parity receipt:** 14/14 was reported for the 2026-07 cutover; this is not current-revision verification.
+- **Live-DB E2E:** Run the applicable current tests only with authorized infrastructure; the historical 14/14 cutover receipt is not a new live result.
+- **Crate adapter:** `src/lib/graph-adapter/ruvector-crate-adapter.ts` — opt-in; the factory requires the native addon path, storage path and embedder. Verify its current capability contract and deployment separately from the PostgreSQL default.
 
 ## Non-Negotiable Invariants
 
-- **`group_id` on every DB read/write** — pattern `^allura-[a-z0-9-]+$`. Missing it causes CHECK constraint failure.
+- **`group_id` on every DB read/write** — CHECK constraints validate the `^allura-[a-z0-9-]+$` namespace format. Authenticated scope checks on every read/write and applicable workspace RLS enforce access; a valid group name alone grants no tenant authority.
 - **PostgreSQL traces are append-only** — no UPDATE/DELETE on trace rows, ever.
-- **Semantic graph versioning via `SUPERSEDES`** — `(v2)-[:SUPERSEDES]->(v1:deprecated)`, never edit existing nodes. Applies to both Neo4j and RuVector graph adapters via `IGraphAdapter`.
+- **Immutable semantic versioning contract** — a version update must create a new `graph_memories` row and its `graph_supersedes` edge; never overwrite a prior semantic version. This contract does not mean the current initial-approval transaction implements version updates.
 - **HITL required for promotion** — agents cannot autonomously promote to the semantic graph; route through `curator:approve`.
-- **`GRAPH_BACKEND=ruvector` is the production default** — Neo4j is fallback only (`GRAPH_BACKEND=neo4j`). Do not flip back without AD-49 governance.
+- **`GRAPH_BACKEND=ruvector` is the production default** — `ruvector-crate` is opt-in. The retired Neo4j selector is rejected; no fallback is available.
 - **`allura-*` tenant namespace** — `roninclaw-*` group_ids are deprecated; flag any occurrence as drift.
 - **Allura Brain is the memory surface** — all memories go to Brain (`allura-brain__memory_*`), never to local file banks.
 - **Verify before presenting** — never claim code works without testing the endpoint and confirming real data returns.
@@ -507,7 +506,7 @@ The semantic/knowledge-graph layer is backed by the `IGraphAdapter` seam (`src/l
 
 ## Port Allocation (AD-45)
 
-3000–3999 band is **banned**. UI: 4000+ · API: 6000+ · Tools: 7000+. Infra exempt (PG 5432, Neo4j 7687 fallback, Brain MCP 5888). RuVector graph adapter runs on PG 5432 (AD-29, AD-49).
+3000–3999 band is **banned**. UI: 4000+ · API: 6000+ · Tools: 7000+. Infra exempt (PG 5432, Brain MCP 5888). Historical Neo4j ports are retired under AD-50. RuVector graph adapter runs on PG 5432 (AD-29, AD-49).
 
 ## MCP Integration
 

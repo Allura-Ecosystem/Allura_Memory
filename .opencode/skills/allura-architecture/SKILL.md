@@ -6,6 +6,10 @@ globs: ["src/**", "docs/allura/**", "guidelines/**"]
 
 # Allura Architecture — Governed Architecture Creation
 
+> [!NOTE]
+> **AI-Assisted Documentation** — workflow corrections follow the existing project authority contract; full human document review remains pending.
+
+
 > **Allura-governed architecture decisions.** Enforces Brooks gate, Brain search for prior decisions, canonical doc impact checks, and ADR logging to Allura Brain.
 
 ## When to Use
@@ -118,20 +122,14 @@ Collect and verify:
 
 Log the architecture decision to Allura Brain:
 
-```
-allura-brain_memory_add({
-  group_id: "allura-system",
-  user_id: "brooks-architect",
-  content: "ADR_CREATED: AD-{number} {decision title}; rationale={...}; alternatives={...}; consequences={...}",
-  metadata: {
-    source: "conversation",
-    agent_id: "brooks-architect",
-    confidence: 0.9,
-    adr_id: "AD-{number}",
-    decision_type: "architecture"
-  }
-})
-```
+Use the [shared governed memory contract](../allura-memory-skill/SKILL.md).
+Discover the actual host schema, omit persona identity assertions and unsupported
+metadata, and append one verified outcome only within authorized scope. Preserve
+one server-supported idempotency key across retries; verify destination, principal,
+record, content and receipt by read-back. If that contract cannot be met, report
+the unmet gate and retain sanitized task evidence without claiming a Brain write.
+Do not autonomously promote the result. Ordinary workflow execution grants no
+production, configuration, tenant-transfer or semantic-promotion authority.
 
 ## ADR Template
 
@@ -164,20 +162,19 @@ Every architecture decision must follow this structure:
 
 | Failure | Response |
 |---------|----------|
-| Allura Brain unavailable | Warn and continue with local context only. Never pretend hydration happened. |
+| Brain operation unavailable or pending | Report the observed operation/layer; continue independent local work without claiming successful hydration. |
 | Duplicate ADR found | Reference existing ADR. Do not create a duplicate. |
 | Brooks unavailable | Architecture decision is Proposed, not Decided. Requires Brooks approval to become Decided. |
 | Canonical doc impact | Plan doc update in same PR. Architecture decisions always impact RISKS-AND-DECISIONS.md. |
 
 ## Reflection
 
-At the end of every `allura-architecture` execution, emit:
+End every substantive final reply with this rendered Markdown footer. Fill fields
+from actual evidence; no write or promotion is implied by reporting them.
 
-```
-📝 Reflection
-├─ Action Taken: Architecture decision AD-{number} — {title}
-├─ Principle Applied: Conceptual Integrity (Brooks)
-├─ Event Logged: ADR_CREATED
-├─ Neo4j Promoted: {Yes/No — only if promotion criteria met}
-└─ Confidence: {High/Medium/Low}
-```
+**📝 Reflection**\
+├─ **Action Taken:** Actual work and scope.\
+├─ **Principle Applied:** The selected role's relevant judgment.\
+├─ **Event Logged:** None, pending/unconfirmed, or verified event and receipt.\
+├─ **Semantic Promotion:** None, pending/unconfirmed, or human-approved verified promotion.\
+└─ **Confidence:** High/Medium/Low, with evidence and material limitations.

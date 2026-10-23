@@ -50,7 +50,10 @@ tsconfig.tsbuildinfo
 .opencode/mcp.json
 
 # Legacy / retired artifacts (never re-add)
-_bmad-output/
+# Durable Team RAM work items are tracked; other generated output is transient.
+.opencode/work-items/*
+!.opencode/work-items/planning-artifacts/
+!.opencode/work-items/implementation-artifacts/
 /workspaces/
 artifacts/
 .impeccable/
@@ -121,7 +124,3 @@ brand-audit-results.json
 
 # Build artifacts
 allura-app/dist/
-.bmad-loop/runs/
-.bmad-loop/cache/
-.bmad-loop/policy.toml
-_bmad/render/

@@ -1,0 +1,34 @@
+# Dockerfile-specific allowlist; overrides the unrelated primary image context.
+**
+!package.json
+!bun.lock
+!tsconfig.json
+!packages/
+!packages/**/
+!packages/**/package.json
+!packages/**/src/**
+!packages/sdk/dist/**
+!src/
+!src/**
+!scripts/
+!scripts/first-use-local-fixture.ts
+# Final exclusions apply after all source exceptions, including nested paths.
+**/node_modules
+**/node_modules/**
+**/.env*
+**/*.env
+**/.git
+**/.git/**
+**/.allura
+**/.allura/**
+**/secrets
+**/secrets/**
+**/private-fixtures
+**/private-fixtures/**
+**/*.pem
+**/*.key
+**/*.log
+**/*.tmp
+**/__tests__/**
+**/*.test.ts
+**/*.test.tsx

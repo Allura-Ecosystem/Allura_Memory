@@ -32,6 +32,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: static-analysis
     timeout-minutes: 10
+    env:
+      # Public CI-only test-signing key; never use for production credentials.
+      ALLURA_MCP_TOKEN_SECRET: ci-test-token-secret-0123456789abcdef
     steps:
       - uses: actions/checkout@v4
 

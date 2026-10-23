@@ -95,14 +95,14 @@ export function parseEpicFile(filePath: string): {
 }
 
 /**
- * Find all epic files in the _bmad-output/planning-artifacts directory
+ * Find current epic files in the Team RAM work-items directory.
  */
 export function findEpicFiles(baseDir: string): string[] {
-  const epicDir = path.join(baseDir, 'docs', 'planning-artifacts');
+  const epicDir = path.join(baseDir, '.opencode', 'work-items', 'planning-artifacts');
 
   if (!fs.existsSync(epicDir)) {
-    // Also check _bmad-output for archived epics
-    const archivedDir = path.join(baseDir, 'archive', 'bmad-output', 'planning-artifacts');
+    // Read historical epics only when no current work-items directory exists.
+    const archivedDir = path.join(baseDir, 'docs', 'archive', 'bmad-legacy', 'bmm', 'planning');
     if (fs.existsSync(archivedDir)) {
       return fs.readdirSync(archivedDir)
         .filter(f => f.startsWith('epic-') && f.endsWith('.md'))

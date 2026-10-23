@@ -69,6 +69,9 @@ const DEFAULT_LIMIT = 10
 /** Default minimum similarity threshold */
 const DEFAULT_THRESHOLD = 0.5
 
+/** Query embedding is optional for retrieval; leave most of the request budget for bounded SQL fallbacks. */
+const RETRIEVAL_EMBEDDING_TIMEOUT_MS = 5_000
+
 /** Table name for memories */
 const MEMORIES_TABLE = "allura_memories"
 
@@ -326,7 +329,7 @@ export async function retrieveMemories(params: RetrieveMemoriesParams): Promise<
   // Attempt to generate query embedding for vector search
   let queryEmbedding: number[] | null = null
   if (searchMode !== "text") {
-    queryEmbedding = await generateEmbedding(query)
+    queryEmbedding = await generateEmbedding(query, RETRIEVAL_EMBEDDING_TIMEOUT_MS)
     if (queryEmbedding === null) {
       console.info(`[RuVector Bridge] Query embedding generation failed for session — falling back to text-only search`)
     }

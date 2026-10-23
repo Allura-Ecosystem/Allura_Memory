@@ -387,16 +387,21 @@ export async function memory_add(request: MemoryAddRequest): Promise<MemoryAddRe
 /**
  * 2. memory_search
  *
- * Search memories with RuVector as primary backend.
- * Priority: RuVector (episodic hybrid: vector + BM25) → Neo4j (semantic) → PostgreSQL (traces).
- * Results merged by relevance score with source attribution.
+ * Search approved knowledge by default. Explicit all-mode collects bounded
+ * RuVector, graph and raw-event candidates before selecting the final results.
  */
 export async function memory_search(request: MemorySearchRequest): Promise<MemorySearchResponse> {
   // Validate
   const groupId = validateGroupId(request.group_id)
+  const retrievalStatus = request.status || "approved" // Default: approved-only retrieval
+  const includeAllEvidence = retrievalStatus === "all"
+  if (includeAllEvidence && request.limit !== undefined && (
+    typeof request.limit !== "number" || !Number.isFinite(request.limit) || request.limit < 1 || request.limit > 100
+  )) {
+    throw new Error("limit must be a finite number between 1 and 100")
+  }
   const limit = Math.floor(request.limit || 10)
   const startTime = Date.now()
-  const retrievalStatus = request.status || "approved" // Default: approved-only retrieval
 
   // Scope was injected from a verified MCP principal at the transport boundary.
   const scope = requireVerifiedWorkspaceScope(request)
@@ -411,6 +416,7 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
   }
 
   const storesUsed: Array<"postgres" | "neo4j" | "ruvector" | "graph"> = []
+  const storesAttempted: MemoryResponseMeta["stores_attempted"] = []
   const warnings: string[] = []
   let searchMeta = baseMeta([])
 
@@ -426,14 +432,15 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
   }> = []
   let ruvectorTrajectoryId: string | undefined
 
+  storesAttempted.push("ruvector")
   try {
     const ruvectorResult = await searchWithFeedback(groupId, request.query, {
-      limit: request.limit ?? 10,
+      limit: includeAllEvidence ? limit : request.limit ?? 10,
       threshold: 0.3, // Lower threshold for recall
     })
 
     ruvectorTrajectoryId = ruvectorResult.trajectoryId
-    ruvectorResults = ruvectorResult.memories.map((m) => ({
+    ruvectorResults = ruvectorResult.memories.slice(0, includeAllEvidence ? limit : undefined).map((m) => ({
       id: m.id as MemoryId,
       content: m.content as MemoryContent,
       score: m.score as ConfidenceScore,
@@ -453,7 +460,7 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
     warnings.push(`ruvector_unavailable: ${msg}`)
   }
 
-  // ── STEP 2: Fallback 1 — Neo4j (semantic full-text) ───────────────────────────
+  // ── STEP 2: Graph candidates (independent budget in explicit all-mode) ──────
   let semanticResults: Array<{
     id: MemoryId
     content: string
@@ -465,7 +472,8 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
     tags: string[]
   }> = []
 
-  if (ruvectorResults.length < limit) {
+  if (includeAllEvidence || ruvectorResults.length < limit) {
+    storesAttempted.push("graph")
     try {
       const { pg, neo4j: neo4jDriver } = await getConnections()
       const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
@@ -474,10 +482,10 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
         group_id: groupId,
         workspace_id: scope.workspace_id,
         principal_id: scope.agent_id,
-        limit: limit - ruvectorResults.length,
+        limit: includeAllEvidence ? limit : limit - ruvectorResults.length,
       })
 
-      semanticResults = graphResults.map((item) => ({
+      semanticResults = graphResults.slice(0, includeAllEvidence ? limit : undefined).map((item) => ({
         id: item.id,
         content: item.content,
         score: item.score,
@@ -497,7 +505,7 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
     }
   }
 
-  // ── STEP 3: Fallback 2 — PostgreSQL (episodic traces without embeddings) ──────
+  // ── STEP 3: Raw events remain eligible even when other stores fill capacity ─
   let episodicResults: Array<{
     id: MemoryId
     content: MemoryContent
@@ -509,7 +517,8 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
   }> = []
 
   const totalSoFar = ruvectorResults.length + semanticResults.length
-  if (totalSoFar < limit) {
+  if (includeAllEvidence || totalSoFar < limit) {
+    storesAttempted.push("postgres")
     try {
       const { pg } = await getConnections()
       const result = await tenantPgQuery<EpisodicMemoryRow>(
@@ -525,11 +534,11 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
         AND metadata->>'content' ILIKE '%' || $3 || '%'
       ORDER BY created_at DESC
       LIMIT $4`,
-        [groupId, request.user_id || null, request.query, limit - totalSoFar],
+        [groupId, request.user_id || null, request.query, includeAllEvidence ? limit : limit - totalSoFar],
         scope.workspace_id
       )
 
-      episodicResults = result.rows.map((row) => ({
+      episodicResults = result.rows.slice(0, includeAllEvidence ? limit : undefined).map((row) => ({
         id: toMemoryId(row.id),
         content: row.content,
         score: 0.5, // Episodic without embedding scores lower
@@ -570,15 +579,50 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
     source: "episodic" as const, // RuVector stores episodic memories
   }))
 
-  // Combine, dedupe by ID, sort by score
-  const seen = new Set<string>()
-  const combined = [...ruvector, ...semantic, ...episodic]
-    .filter((item) => {
-      if (seen.has(item.id)) return false
-      seen.add(item.id)
-      return true
-    })
-    .sort((a, b) => b.score - a.score)
+  // AD-70: confidence is not query relevance. Literal priority is internal;
+  // returned scores retain their source values and never bypass min_score.
+  const normalizedQuery = includeAllEvidence ? request.query.trim().toLowerCase() : ""
+  const literalRank = (content: string): number => {
+    if (!normalizedQuery) return 0
+    const normalizedContent = content.trim().toLowerCase()
+    if (normalizedContent === normalizedQuery) return 2
+    return normalizedContent.includes(normalizedQuery) ? 1 : 0
+  }
+  const candidates = [
+    ...ruvector.map((memory) => ({ memory, store: "ruvector" as const })),
+    ...semantic.map((memory) => ({ memory, store: "graph" as const })),
+    ...episodic.map((memory) => ({ memory, store: "postgres" as const })),
+  ]
+  const byId = new Map<string, (typeof candidates)[number]>()
+  for (const candidate of candidates) {
+    if (includeAllEvidence && request.min_score !== undefined && candidate.memory.score < request.min_score) continue
+    const previous = byId.get(candidate.memory.id)
+    if (!previous) {
+      byId.set(candidate.memory.id, candidate)
+      continue
+    }
+    if (!includeAllEvidence) continue
+    const rankDifference = literalRank(candidate.memory.content) - literalRank(previous.memory.content)
+    const sameContent = candidate.memory.content === previous.memory.content
+    if (sameContent && candidate.store === "postgres" && previous.store === "ruvector") {
+      // Enrich the already-scored result; raw metadata must not erase its score.
+      // PG owns metadata after this first/newest event, preventing older overwrites.
+      byId.set(candidate.memory.id, {
+        ...candidate,
+        memory: {
+          ...previous.memory,
+          provenance: candidate.memory.provenance,
+          created_at: candidate.memory.created_at,
+          tags: candidate.memory.tags,
+        },
+      })
+    } else if (rankDifference > 0) {
+      byId.set(candidate.memory.id, candidate)
+    }
+  }
+  const combined = [...byId.values()]
+    .map(({ memory }) => memory)
+    .sort((a, b) => literalRank(b.content) - literalRank(a.content) || b.score - a.score)
     .slice(0, limit)
 
   const latency = Date.now() - startTime
@@ -586,6 +630,8 @@ export async function memory_search(request: MemorySearchRequest): Promise<Memor
   // Build final metadata
   searchMeta = {
     ...searchMeta,
+    // This function's warnings are exclusively failed source attempts.
+    ...(includeAllEvidence ? { degraded: warnings.length > 0, stores_attempted: storesAttempted } : {}),
     stores_used: storesUsed.length > 0 ? storesUsed : ([] as Array<"postgres" | "neo4j" | "ruvector">),
     ...(warnings.length > 0 ? { warnings } : {}),
     ...(ruvectorTrajectoryId !== undefined
