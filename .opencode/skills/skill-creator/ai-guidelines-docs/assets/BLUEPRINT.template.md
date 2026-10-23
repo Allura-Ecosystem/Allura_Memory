@@ -1,1 +1,1 @@
-../../../templates/BLUEPRINT.template.md
+../../../../templates/BLUEPRINT.template.md

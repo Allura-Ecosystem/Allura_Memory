@@ -1,1 +1,1 @@
-../../../templates/REQUIREMENTS-MATRIX.template.md
+../../../../templates/REQUIREMENTS-MATRIX.template.md
