@@ -1,1 +1,1 @@
-../../../templates/RISKS-AND-DECISIONS.template.md
+../../../../templates/RISKS-AND-DECISIONS.template.md
