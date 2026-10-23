@@ -104,6 +104,8 @@ export default defineConfig({
       "src/__tests__/auth-roles.test.ts",
       "src/__tests__/cors-middleware.test.ts",
       "src/__tests__/graph-route.test.ts",
+      // Append-only governance regression coverage; live-DB cases remain explicitly gated.
+      "src/__tests__/governance-tools.test.ts",
       "src/__tests__/health-metrics.test.ts",
       "src/__tests__/health-metrics-scope.test.ts",
       "src/__tests__/health-probes.test.ts",
