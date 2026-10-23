@@ -182,6 +182,8 @@ export default defineConfig({
       "src/lib/auth/__tests__/principal-context.test.ts",
       "src/lib/auth/__tests__/mcp-legacy-route.test.ts",
       "src/lib/memory/memory-add-workspace-scope.test.ts",
+      // memory_promote is hermetic here: graph and tenant-query boundaries are mocked.
+      "src/lib/memory/memory-promote-contract.test.ts",
       "src/lib/auth/__tests__/dev-auth-production-guard.test.ts",
       "src/lib/auth/__tests__/principal-audit.test.ts",
       "src/lib/auth/__tests__/budget-scope.test.ts",
