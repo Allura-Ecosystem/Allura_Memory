@@ -274,10 +274,10 @@ describe("package aliases", () => {
     expect(config).not.toContain("dotenv")
   })
 
-  it("shows that unsafe plain bun run loads synthetic dotenv before its script", () => {
+  it("shows that a plain Bun package script loads synthetic dotenv", () => {
     const fixtureRoot = linkedWorktree()
-    writeFileSync(join(fixtureRoot, ".env"), "DEV_SAFE_SYNTHETIC_MARKER=loaded-by-outer-bun\n")
-    writeFileSync(join(fixtureRoot, "package.json"), JSON.stringify({ scripts: { "unsafe-probe": "node probe.cjs" } }))
+    writeFileSync(join(fixtureRoot, ".env"), "DEV_SAFE_SYNTHETIC_MARKER=loaded-by-plain-bun\n")
+    writeFileSync(join(fixtureRoot, "package.json"), JSON.stringify({ scripts: { "unsafe-probe": "bun probe.cjs" } }))
     writeFileSync(join(fixtureRoot, "probe.cjs"), "console.log(process.env.DEV_SAFE_SYNTHETIC_MARKER ?? 'unset')\n")
 
     const result = spawnSync(bunExecutable, ["run", "unsafe-probe"], {
@@ -291,7 +291,7 @@ describe("package aliases", () => {
     })
 
     expect(result.status, result.stderr).toBe(0)
-    expect(result.stdout).toContain("loaded-by-outer-bun")
+    expect(result.stdout).toContain("loaded-by-plain-bun")
   })
 
   it("keeps synthetic dotenv out when the documented outer test command starts Vitest", () => {
