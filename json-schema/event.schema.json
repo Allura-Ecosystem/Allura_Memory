@@ -2,9 +2,9 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allura.dev/schemas/event.schema.json",
   "title": "Event",
-  "description": "Append-only episodic memory event in PostgreSQL",
+  "description": "Stored-row contract for an append-only episodic memory event in PostgreSQL. This is not an event-create request schema; workspace authorization for new writes is enforced by the application role and RLS.",
   "type": "object",
-  "required": ["group_id", "event_type", "agent_id", "status", "created_at"],
+  "required": ["group_id", "workspace_id", "event_type", "agent_id", "status", "created_at"],
   "properties": {
     "id": {
       "type": "integer",
@@ -14,6 +14,13 @@
       "type": "string",
       "pattern": "^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
       "description": "Tenant namespace. Migration 19 enforces strict CHECK: ^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+    },
+    "workspace_id": {
+      "description": "Stored workspace scope added by migration 39. NULL represents a quarantined legacy row; workspace-governed writes must persist a non-empty value and are enforced by restrictive RLS.",
+      "anyOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "null" }
+      ]
     },
     "event_type": {
       "type": "string",

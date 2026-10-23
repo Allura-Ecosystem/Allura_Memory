@@ -120,7 +120,7 @@ API data rules: every record includes `group_id`; unknown source state renders a
 
 The append-only execution evidence log. Producers record operation and decision evidence here; the exact count and event types depend on the operation and must be verified rather than assumed to be exactly one row. Historical rows are permanent. No UPDATE or DELETE, ever. Every operation carries the RuVix identity envelope: `group_id`, `agent_id`, and (when available) `session_id`. Workspace-governed producers additionally persist `workspace_id`; legacy rows remain unscoped and are explicitly unavailable to workspace watchdog ingestion and to `allura_app` workspace-scoped reads/writes.
 
-Columns below match `json-schema/event.schema.json` and the migrations in `docker/postgres-init/` (`00-traces.sql`, `10-brooks-tracking.sql`, `17-schema-version.sql`, `19-group-id-check-constraints.sql`). `halted_at` / `halt_ttl_ms` are NOT event columns — they belong to the budget enforcer entity (see Budget Enforcer section).
+Columns below match the stored-row contract in `json-schema/event.schema.json` and the migrations in `docker/postgres-init/` (`00-traces.sql`, `10-brooks-tracking.sql`, `17-schema-version.sql`, `19-group-id-check-constraints.sql`, and workspace migrations 39–40). The schema requires the `workspace_id` column to be represented, but accepts `null` only to describe quarantined legacy rows. It is not an event-create request model: current workspace-governed writes require a non-null server-resolved workspace through application checks and restrictive RLS. `halted_at` / `halt_ttl_ms` are NOT event columns — they belong to the budget enforcer entity (see Budget Enforcer section).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -278,17 +278,17 @@ See `docs/guides/portal-devices-and-profiles.md` for navigation, lifecycle contr
 
 ## PostgreSQL: `canonical_proposals`
 
-**Legacy JSON Schema:** [`json-schema/canonical_proposals.schema.json`](../../json-schema/canonical_proposals.schema.json) omits the migration-38/39 workspace, version and promoted-memory fields. Use the physical contract below with migrations 38–40; the JSON Schema requires a separately validated update before serving as the complete current contract.
+**Stored-row JSON Schema:** [`json-schema/canonical_proposals.schema.json`](../../json-schema/canonical_proposals.schema.json) reflects the committed migration 38–40 physical columns, including workspace quarantine, proposal version and approved memory identity. It is not a proposal-create request model. The nullable `workspace_id` representation exists only for quarantined legacy rows; current app writes require a non-null server-resolved workspace through application checks and restrictive RLS.
 
 The HITL (Human-in-the-Loop) promotion queue. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to PostgreSQL semantic tables as `graph_memories` rows.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `id` | uuid | Yes | Primary key. Auto-generated via `gen_random_uuid()`. |
-| `group_id` | varchar(255) | Yes | Tenant namespace. CHECK constraint: must match `^allura-`. |
+| `group_id` | varchar(255) | Yes | Tenant namespace. CHECK constraint: `^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$` (migration 19). |
 | `workspace_id` | text | Current app rows | Server-resolved workspace; nullable only for quarantined legacy rows. Same-scope workspace FK and restrictive app-role RLS apply (migrations 39/40). |
-| `proposal_version` | bigint | Yes | Default `1`; trigger increments when content, score, tier, status, trace reference or rationale changes. Serialize as a decimal string in review/receipt contracts to preserve integer precision. |
-| `approved_memory_id` | text | Conditional | Result of successful approval; null before approval. Current approval derives a deterministic memory ID from tenant and proposal ID and stores it with the atomic transition. This field has no same-scope memory FK in migrations 38–40; the approval service supplies the relationship. |
+| `proposal_version` | bigint (JSON: positive decimal string) | Yes | Default `1`; trigger increments when content, score, tier, status, trace reference or rationale changes. The stored-row JSON contract serializes it as a decimal string to preserve integer precision, matching current review/receipt consumers. |
+| `approved_memory_id` | text (JSON: UUID or null) | Yes (nullable before approval) | Result of successful approval; null before approval. Current approval derives a deterministic UUID from tenant and proposal ID and stores it with the atomic transition. This field has no same-scope memory FK in migrations 38–40; the approval service supplies the relationship. |
 | `content` | text | Yes | The proposed insight content text. |
 | `score` | numeric(3,2) | Yes | Curator confidence score (0.00–1.00). CHECK: `score >= 0.0 AND score <= 1.0`. |
 | `reasoning` | text | No | Curator engine's reasoning for the score. |

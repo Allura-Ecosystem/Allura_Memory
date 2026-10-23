@@ -2,9 +2,9 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allura.dev/schemas/canonical_proposals.schema.json",
   "title": "Canonical Proposal",
-  "description": "HITL (Human-in-the-Loop) promotion queue entry in PostgreSQL. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to Neo4j as InsightHead/Insight nodes.",
+  "description": "Stored-row contract for a HITL (Human-in-the-Loop) promotion queue entry in PostgreSQL. This is not a proposal-create request schema; workspace authorization for new writes is enforced by the application role and RLS. Approved proposals become PostgreSQL graph_memories rows.",
   "type": "object",
-  "required": ["id", "group_id", "content", "score", "status", "created_at"],
+  "required": ["id", "group_id", "workspace_id", "proposal_version", "approved_memory_id", "content", "score", "tier", "status", "created_at"],
   "properties": {
     "id": {
       "type": "string",
@@ -13,8 +13,27 @@
     },
     "group_id": {
       "type": "string",
-      "pattern": "^allura-[a-z0-9-]+$",
-      "description": "Tenant namespace. CHECK constraint: must match ^allura-."
+      "pattern": "^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+      "description": "Tenant namespace. Migration 19 enforces strict CHECK: ^allura-[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+    },
+    "workspace_id": {
+      "description": "Stored workspace scope added by migration 39. NULL represents a quarantined legacy row; current app writes must persist a non-empty value and are enforced by restrictive RLS.",
+      "anyOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "null" }
+      ]
+    },
+    "proposal_version": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$",
+      "description": "BIGINT proposal revision serialized as a positive decimal string so JavaScript consumers do not lose integer precision. Added by migration 39; default 1 and incremented by trigger on governed proposal changes."
+    },
+    "approved_memory_id": {
+      "description": "Deterministic UUID of the graph_memories row created by successful approval, or NULL before approval. Added by migration 38.",
+      "anyOf": [
+        { "type": "string", "format": "uuid" },
+        { "type": "null" }
+      ]
     },
     "content": {
       "type": "string",
