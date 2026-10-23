@@ -10,6 +10,7 @@
  * - Both return JSON with timestamp for observability
  */
 
+import { resolveMcpBaseUrl } from "@/lib/config/mcp-url";
 import { isPoolHealthy } from "@/lib/postgres/connection";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ export interface LivenessResult {
 // ── Dependency Check Timeout ──────────────────────────────────────────────────
 
 const DEPENDENCY_CHECK_TIMEOUT_MS = 4500; // 4.5s to leave margin under 5s total
+const MCP_READINESS_ERROR = "MCP readiness check failed";
 
 /**
  * Run a dependency check with a timeout.
@@ -45,15 +47,17 @@ async function checkWithTimeout(
   name: string,
   checkFn: () => Promise<boolean>,
   timeoutMs: number = DEPENDENCY_CHECK_TIMEOUT_MS,
+  publicError?: string,
 ): Promise<DependencyCheck> {
   const start = Date.now();
+  let timer: ReturnType<typeof setTimeout> | undefined;
 
   try {
     const result = await Promise.race([
       checkFn(),
-      new Promise<boolean>((_resolve, reject) =>
-        setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs),
-      ),
+      new Promise<boolean>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs);
+      }),
     ]);
 
     return {
@@ -66,8 +70,10 @@ async function checkWithTimeout(
       name,
       healthy: false,
       latencyMs: Date.now() - start,
-      error: error instanceof Error ? error.message : String(error),
+      error: publicError ?? (error instanceof Error ? error.message : String(error)),
     };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -99,16 +105,18 @@ async function isMcpHealthy(): Promise<boolean> {
     return true;
   }
 
-  const baseUrl = process.env.ALLURA_MCP_BASE_URL;
-  if (!baseUrl) {
-    return false;
-  }
+  const baseUrl = resolveMcpBaseUrl();
 
   const response = await fetch(new URL("/ready", baseUrl), {
+    redirect: "error",
+    cache: "no-store",
     signal: AbortSignal.timeout(DEPENDENCY_CHECK_TIMEOUT_MS),
   });
 
-  return response.ok;
+  if (!response.ok) return false;
+
+  const body: unknown = await response.json();
+  return typeof body === "object" && body !== null && "ready" in body && body.ready === true;
 }
 
 /**
@@ -121,11 +129,11 @@ async function isMcpHealthy(): Promise<boolean> {
 export async function checkReadiness(): Promise<ReadinessResult> {
   const checks: Record<string, DependencyCheck> = {};
 
-  // Check PostgreSQL (required)
-  checks.postgres = await checkWithTimeout("postgres", isPoolHealthy);
-
-  // Check MCP server initialization or configured HTTP gateway (required)
-  checks.mcp = await checkWithTimeout("mcp", isMcpHealthy);
+  // Parallel checks keep the whole probe within the dependency timeout budget.
+  [checks.postgres, checks.mcp] = await Promise.all([
+    checkWithTimeout("postgres", isPoolHealthy),
+    checkWithTimeout("mcp", isMcpHealthy, DEPENDENCY_CHECK_TIMEOUT_MS, MCP_READINESS_ERROR),
+  ]);
 
   // Ready if PostgreSQL and MCP are healthy
   const ready = checks.postgres.healthy && checks.mcp.healthy;
