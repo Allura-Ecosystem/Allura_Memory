@@ -8,7 +8,9 @@ import {
   assertSafeWorktree,
   buildEnvironment,
   inspectExecutable,
+  inspectLocalDockerEndpoint,
   readPortConfiguration,
+  type LocalDockerEndpointPolicy,
 } from "./environment"
 
 const root = resolve(import.meta.dir, "../..")
@@ -39,10 +41,14 @@ function pinnedRuntime(): string {
   return parsed.packageManager
 }
 
-async function main(): Promise<number> {
+export async function main(options: { dockerEndpointPolicy?: LocalDockerEndpointPolicy } = {}): Promise<number> {
   const runtime = inspectExecutable(process.execPath, "selected Bun runtime")
   const docker = inspectExecutable(Bun.which("docker") ?? undefined, "Docker CLI")
-  const tools = { runtime, docker }
+  const dockerEndpoint = inspectLocalDockerEndpoint(
+    process.env.ALLURA_DEV_SAFE_DOCKER_ENDPOINT,
+    options.dockerEndpointPolicy
+  )
+  const tools = { runtime, docker, dockerEndpoint }
   const args = process.argv.slice(2)
   const command = args[0] ?? ""
   const ports = readPortConfiguration(process.env)
@@ -60,8 +66,15 @@ async function main(): Promise<number> {
   }
 
   if (plan.name === "doctor") {
+    const serverVersion = execute(
+      [docker, "--host", dockerEndpoint, "version", "--format", "{{.Server.Version}}"],
+      environment
+    )
+    if (!serverVersion) {
+      throw new Error("Selected Docker daemon did not report a server version")
+    }
     const composeVersion = execute(
-      [docker, "--host", "unix:///var/run/docker.sock", "compose", "version", "--short"],
+      [docker, "--host", dockerEndpoint, "compose", "version", "--short"],
       environment
     )
     const major = Number(/^v?(\d+)\./.exec(composeVersion)?.[1])
@@ -69,8 +82,9 @@ async function main(): Promise<number> {
       throw new Error(`Docker Compose v2+ plugin required; found ${composeVersion || "unknown"}`)
     }
     console.log(`Bun runtime: ${runtimeVersion} (${runtime})`)
+    console.log(`Docker daemon: ${serverVersion} (${dockerEndpoint})`)
     console.log(`Docker Compose plugin: ${composeVersion} (${docker})`)
-    console.log("No services queried or changed. Service activation remains gated by AD-45.")
+    console.log("Daemon reachability verified read-only; no services queried or changed.")
     return 0
   }
 
@@ -97,11 +111,13 @@ async function main(): Promise<number> {
   }
 }
 
-main()
-  .then((exitCode) => {
-    process.exitCode = exitCode
-  })
-  .catch((error: unknown) => {
-    console.error(`dev-safe: ${error instanceof Error ? error.message : "preflight failed"}`)
-    process.exitCode = 1
-  })
+if (import.meta.main) {
+  main()
+    .then((exitCode) => {
+      process.exitCode = exitCode
+    })
+    .catch((error: unknown) => {
+      console.error(`dev-safe: ${error instanceof Error ? error.message : "preflight failed"}`)
+      process.exitCode = 1
+    })
+}

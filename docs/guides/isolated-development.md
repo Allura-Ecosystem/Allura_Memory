@@ -28,7 +28,8 @@ Vitest configuration also disables Vite env-file discovery and starts Bun test
 workers with `--no-env-file`.
 
 `doctor` inspects the exact Bun and Docker executables selected by the launcher,
-verifies the pinned Bun version, and checks for a Compose plugin through
+verifies the pinned Bun version, makes a read-only `docker version` call to prove
+that the selected daemon is reachable, and checks for a Compose plugin through
 `docker compose version --short`. It does not query the daemon for projects,
 containers, images, networks, volumes, or service status, and it does not start
 or stop anything. All launcher commands also require the installed Next.js,
@@ -55,7 +56,21 @@ The launcher rejects any other supplied ports, including existing/reserved
 allocations. Until PR acceptance and explicit operator acknowledgment, `dev` and
 `db-up` refuse to run. The two registered values are required inputs, not defaults.
 
-After approval, commands remain fixed and accept no forwarded flags:
+After approval, commands remain fixed and accept no forwarded flags. The launcher
+defaults to the root-owned `unix:///var/run/docker.sock`. On Docker Desktop for
+Linux, select the current account's Desktop socket explicitly, for example:
+
+```sh
+ALLURA_DEV_SAFE_DOCKER_ENDPOINT="unix://$HOME/.docker/desktop/docker.sock" \
+  bun --no-env-file run dev:safe doctor
+```
+
+Only those two exact local Unix endpoints are allowed. The launcher verifies that
+the path is a socket and that its owner matches the endpoint policy. The Desktop
+path comes from the current numeric UID's system account record, not ambient
+`HOME`. User-owned parent symlinks are rejected; root-owned compatibility links
+such as `/var/run` to `/run` remain valid. It ignores ambient `DOCKER_HOST`, Docker
+context, and Docker TLS configuration; remote and other Unix endpoints fail closed.
 
 ```sh
 bun --no-env-file run dev:safe doctor
@@ -70,7 +85,7 @@ bun --no-env-file run dev:safe db-down
 
 `status`, `db-up`, and `db-down` require the PostgreSQL port variable because the
 Compose file deliberately has no fallback. The launcher fixes the Compose
-project directory, file, local Docker socket, and `/dev/null` env
+project directory, file, selected verified local Docker socket, and `/dev/null` env
 file. It never invokes `brain:*`, the root Compose stack, the portfolio stack,
 or an MCP service. It derives a stable project name from the linked worktree's
 absolute path, so containers, images and networks are not shared with another
@@ -105,4 +120,7 @@ executable locations instead of merging the ambient shell environment, but
 repository code and installed dependencies still execute with the worktree
 user's permissions. The lane does not provide network isolation for the host,
 does not start or configure Allura Brain/MCP, and must never receive production
-data or credentials.
+data or credentials. Socket checks are a preflight rather than an atomic open:
+another process with the same UID could replace a checked path component between
+validation and Docker CLI use. Preventing that residual TOCTOU requires an OS-level
+descriptor handoff or sandbox boundary that the Docker CLI interface does not offer.

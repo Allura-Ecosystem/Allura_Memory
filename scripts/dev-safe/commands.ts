@@ -4,6 +4,7 @@ import { join, resolve } from "node:path"
 export interface DevSafeTools {
   runtime: string
   docker: string
+  dockerEndpoint: string
 }
 
 export interface DevSafePorts {
@@ -26,7 +27,7 @@ function composeCommand(root: string, tools: DevSafeTools): string[] {
   return [
     tools.docker,
     "--host",
-    "unix:///var/run/docker.sock",
+    tools.dockerEndpoint,
     "compose",
     "--project-name",
     devSafeProjectName(root),

@@ -1,5 +1,6 @@
+import { spawnSync } from "node:child_process"
 import { accessSync, constants, lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs"
-import { delimiter, dirname, isAbsolute, join, relative } from "node:path"
+import { delimiter, dirname, isAbsolute, join, normalize, relative } from "node:path"
 
 import type { DevSafePorts, DevSafeTools } from "./commands"
 
@@ -17,6 +18,121 @@ export function inspectExecutable(candidate: string | undefined, label: string):
     throw new Error(`${label} is not executable: ${candidate}`)
   }
   return resolved
+}
+
+export interface LocalDockerEndpointPolicy {
+  defaultSocket: string
+  desktopSocket: string
+  currentUid: number
+  defaultOwnerUid: number
+}
+
+function currentAccount(): { homedir: string; uid: number } {
+  const uid = process.getuid?.()
+  if (!Number.isSafeInteger(uid) || uid === undefined || uid < 0) {
+    throw new Error("Current Unix account could not be determined")
+  }
+
+  let result
+  try {
+    result = spawnSync("/usr/bin/getent", ["passwd", String(uid)], {
+      encoding: "utf8",
+      env: { LANG: "C", LC_ALL: "C", NODE_ENV: "production" },
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 2_000,
+    })
+  } catch {
+    throw new Error("Current Unix account could not be resolved")
+  }
+  if (result.status !== 0 || result.error) {
+    throw new Error("Current Unix account could not be resolved")
+  }
+
+  const record = result.stdout.endsWith("\n") ? result.stdout.slice(0, -1) : result.stdout
+  if (!record || record.includes("\n") || record.includes("\r")) {
+    throw new Error("Current Unix account lookup returned an ambiguous record")
+  }
+  const fields = record.split(":")
+  if (fields.length !== 7 || fields[2] !== String(uid)) {
+    throw new Error("Current Unix account lookup returned an invalid record")
+  }
+  const homedir = fields[5]
+  if (!homedir || !isAbsolute(homedir) || normalize(homedir) !== homedir) {
+    throw new Error("Current Unix account lookup returned an invalid home directory")
+  }
+  return { homedir, uid }
+}
+
+function localDockerEndpointPolicy(): LocalDockerEndpointPolicy {
+  const account = currentAccount()
+  return {
+    defaultSocket: "/var/run/docker.sock",
+    desktopSocket: join(account.homedir, ".docker", "desktop", "docker.sock"),
+    currentUid: account.uid,
+    defaultOwnerUid: 0,
+  }
+}
+
+function inspectSocketParents(socketPath: string): void {
+  const parents: string[] = []
+  for (let current = dirname(socketPath); ; current = dirname(current)) {
+    parents.push(current)
+    if (dirname(current) === current) break
+  }
+
+  for (const parent of parents.reverse()) {
+    let entry
+    try {
+      entry = lstatSync(parent)
+    } catch {
+      throw new Error(`Docker endpoint parent is unavailable: ${parent}`)
+    }
+    if (entry.isSymbolicLink()) {
+      if (entry.uid !== 0) {
+        throw new Error(`Docker endpoint has an untrusted parent symlink: ${parent}`)
+      }
+      try {
+        if (!statSync(parent).isDirectory()) throw new Error("not a directory")
+      } catch {
+        throw new Error(`Docker endpoint parent is unavailable: ${parent}`)
+      }
+    } else if (!entry.isDirectory()) {
+      throw new Error(`Docker endpoint parent is not a directory: ${parent}`)
+    }
+  }
+}
+
+/** Accept only a verified local engine socket; never resolve Docker contexts or remote transports. */
+export function inspectLocalDockerEndpoint(
+  candidate: string | undefined,
+  policy: LocalDockerEndpointPolicy = localDockerEndpointPolicy()
+): string {
+  const endpoint = candidate || `unix://${policy.defaultSocket}`
+  const owners = new Map([
+    [`unix://${policy.defaultSocket}`, policy.defaultOwnerUid],
+    [`unix://${policy.desktopSocket}`, policy.currentUid],
+  ])
+  const expectedOwner = owners.get(endpoint)
+  if (expectedOwner === undefined) {
+    throw new Error("Docker endpoint must be an approved local Unix socket")
+  }
+
+  const socketPath = endpoint.slice("unix://".length)
+  inspectSocketParents(socketPath)
+  let socket
+  try {
+    socket = lstatSync(socketPath)
+  } catch {
+    throw new Error(`Docker endpoint is unavailable: ${socketPath}`)
+  }
+  if (!socket.isSocket()) {
+    throw new Error(`Docker endpoint is not a Unix socket: ${socketPath}`)
+  }
+  if (socket.uid !== expectedOwner) {
+    const ownership = endpoint === `unix://${policy.desktopSocket}` ? "the current user" : `uid ${expectedOwner}`
+    throw new Error(`Docker endpoint is not owned by ${ownership}: ${socketPath}`)
+  }
+  return endpoint
 }
 
 const REQUIRED_LOCAL_FILES = [
