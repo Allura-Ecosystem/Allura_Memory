@@ -11,7 +11,7 @@ import { approveProposal, type GovernanceReceipt } from "../lib/memory/approve-p
 
 export interface PendingProposal {
   id: string; group_id: string; workspace_id: string; content: string; score: string;
-  reasoning: string | null; tier: string; created_at: string; trace_ref: number | null;
+  reasoning: string | null; tier: string; created_at: string; trace_ref: number | null; proposal_version: string;
 }
 interface SkippedApprovalResult { proposal_id: string; status: "skipped"; reason: string }
 export interface CLIArgs { autoApprove: boolean; groupId: string; workspaceId: string }
@@ -29,7 +29,7 @@ export function parseArgs(argv = process.argv.slice(2)): CLIArgs {
 export async function getPendingProposals(scope: ResolvedWorkspaceScope): Promise<PendingProposal[]> {
   return withWorkspaceTransaction(scope, async (db) => {
     const result = await db.query<PendingProposal>(
-      `SELECT id,group_id,workspace_id,content,score,reasoning,tier,created_at,trace_ref
+      `SELECT id,group_id,workspace_id,content,score,reasoning,tier,created_at,trace_ref,proposal_version::text
        FROM canonical_proposals
        WHERE group_id = $1 AND workspace_id = $2 AND status='pending'
        ORDER BY score DESC,created_at ASC`,
@@ -66,6 +66,7 @@ export async function processProposal(
     groupId: scope.tenantId,
     workspaceId: scope.workspaceId,
     proposalId: proposal.id,
+    expectedProposalVersion: proposal.proposal_version,
     rationale: proposal.reasoning?.trim() || "Approved by curator CLI",
     idempotencyKey: `curator-cli:${proposal.id}:${scope.principalId}`,
     pool: getAppPool(),

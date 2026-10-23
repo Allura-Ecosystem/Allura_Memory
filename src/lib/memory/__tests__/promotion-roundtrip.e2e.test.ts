@@ -60,6 +60,7 @@ describeLive("Story 24.4 AC-10: approved-only retrieval round-trip", () => {
       principal,
       workspaceId: WORKSPACE_ID,
       proposalId,
+      expectedProposalVersion: "1",
       rationale: "Approved for round-trip retrieval proof.",
       idempotencyKey: `roundtrip-${proposalId}`,
       pool,

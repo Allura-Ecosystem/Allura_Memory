@@ -37,7 +37,7 @@ function seedReadRows() {
       return { rows: [{
         id: "proposal-1", group_id: "allura-test", workspace_id: "workspace-test",
         content: "Promote this memory", score: "0.91", reasoning: "Evidence is sufficient",
-        tier: "mainstream", status: "approved", trace_ref: 42, created_at: "2026-06-06T00:00:00.000Z",
+        tier: "mainstream", status: "approved", trace_ref: 42, proposal_version: "3", created_at: "2026-06-06T00:00:00.000Z",
       }] }
     }
     if (sql.includes("FROM evidence_requests")) {
@@ -49,7 +49,7 @@ function seedReadRows() {
     }
     if (sql.includes("FROM governance_receipts")) {
       return { rows: [{
-        id: "receipt-1", proposal_id: "proposal-1", action: "approve", actor_id: "curator-alice",
+        id: "receipt-1", proposal_id: "proposal-1", action: "approve", reviewed_proposal_version: "2", actor_id: "curator-alice",
         actor_role: "curator", rationale: "Evidence is sufficient", policy_reference: "policy://allura/curator-decision",
         policy_version: "25.2a/v1", memory_id: "memory-1", result_ref: null, outbox_state: "queued",
         evidence_request_id: null, evidence_references: ["event:42"], occurred_at: "2026-06-06T00:05:00.000Z",
@@ -80,6 +80,7 @@ describe("GET /api/curator/proposals", () => {
     )
     expect(body.proposals[0]).toMatchObject({
       id: "proposal-1",
+      proposal_version: "3",
       evidence: [expect.objectContaining({ id: "evidence-1", state: "satisfied" })],
       decision_receipt: expect.objectContaining({ id: "receipt-1", action: "approve", actor_id: "curator-alice" }),
     })

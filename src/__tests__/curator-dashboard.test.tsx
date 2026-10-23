@@ -26,6 +26,7 @@ const proposal = {
   tier: "adoption",
   status: "pending",
   trace_ref: 42,
+  proposal_version: "3",
   created_at: "2026-08-30T10:00:00.000Z",
   evidence: [
     {
@@ -58,6 +59,7 @@ const issue = {
 const receipt = {
   id: "99999999-8888-4777-8666-555555555555",
   proposal_id: proposal.id,
+  reviewed_proposal_version: "3",
   action: "approve",
   actor_id: user.id,
   actor_role: "curator",
@@ -136,6 +138,7 @@ describe("brand-locked curator command center", () => {
     expect(JSON.parse(String(post?.[1]?.body))).toEqual({
       proposal_id: proposal.id,
       group_id: user.groupId,
+      expected_proposal_version: "3",
       decision: "approve",
       rationale: "Evidence and policy support promotion.",
     })

@@ -25,6 +25,7 @@ vi.mock("@/lib/memory/governance-receipt-writer", () => ({ writeGovernanceReceip
 vi.mock("@/lib/observability/sentry", () => ({ captureException: vi.fn() }));
 
 import { POST } from "@/app/api/curator/approve/route";
+import { PromotionDecisionError } from "@/lib/memory/approve-proposal";
 
 const persistedReceipt = {
   id: "receipt-1", group_id: "allura-test", workspace_id: "workspace-test", proposal_id: "proposal-1",
@@ -37,7 +38,7 @@ const persistedReceipt = {
 function request(decision: string, extra: Record<string, unknown> = {}) {
   return new NextRequest("http://localhost/api/curator/approve", {
     method: "POST", headers: { "idempotency-key": "http-replay-key" },
-    body: JSON.stringify({ proposal_id: "proposal-1", group_id: "allura-test", decision, rationale: "Approved", ...extra }),
+    body: JSON.stringify({ proposal_id: "proposal-1", group_id: "allura-test", expected_proposal_version: "1", decision, rationale: "Approved", ...extra }),
   });
 }
 
@@ -55,7 +56,7 @@ describe("curator decision route", () => {
     expect(approveProposalMock).toHaveBeenCalledOnce();
     expect(approveProposalMock).toHaveBeenCalledWith(expect.objectContaining({
       groupId: "allura-test", workspaceId: "workspace-test", proposalId: "proposal-1",
-      rationale: "Approved", idempotencyKey: "http-replay-key", pool: appPool,
+      expectedProposalVersion: "1", rationale: "Approved", idempotencyKey: "http-replay-key", pool: appPool,
       principal: expect.objectContaining({ principalId: "curator-1", tenantIds: ["allura-test"] }),
     }));
     expect(queryMock).not.toHaveBeenCalled();
@@ -75,6 +76,26 @@ describe("curator decision route", () => {
     }));
     expect(response.status).toBe(400);
     expect(approveProposalMock).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, null, "", "0", "01", "1.0", 1])(
+    "rejects a missing or malformed reviewed proposal version (%s) before invoking authority",
+    async (expectedProposalVersion) => {
+      const response = await POST(request("approve", { expected_proposal_version: expectedProposalVersion }));
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ code: "INVALID_EXPECTED_PROPOSAL_VERSION" });
+      expect(approveProposalMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("maps a stale human-reviewed version to a 409 conflict", async () => {
+    approveProposalMock.mockRejectedValue(new PromotionDecisionError(
+      "PROPOSAL_VERSION_CONFLICT",
+      "Proposal changed since human review; reload and review the current version",
+    ));
+    const response = await POST(request("approve", { expected_proposal_version: "3" }));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ code: "PROPOSAL_VERSION_CONFLICT" });
   });
 
   it("keeps reject semantics separate and issues the validated persisted receipt", async () => {

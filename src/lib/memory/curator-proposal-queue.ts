@@ -10,6 +10,7 @@ export interface RawCuratorProposal {
   tier?: unknown
   status?: unknown
   trace_ref?: unknown
+  proposal_version?: unknown
   created_at?: unknown
 }
 
@@ -22,6 +23,7 @@ export interface CuratorProposalQueueItem {
   tier: string
   status: string
   traceRef: string
+  proposalVersion: string
   createdAt: string
   readOnly: true
 }
@@ -37,6 +39,12 @@ function text(value: unknown, fallback: string): string {
 function requiredText(value: unknown, field: string): string {
   if (typeof value === "string" && value.length > 0) return value
   throw new Error(`Curator proposal queue row is missing required ${field}`)
+}
+
+function requiredProposalVersion(value: unknown): string {
+  const version = typeof value === "bigint" || typeof value === "number" ? String(value) : value
+  if (typeof version === "string" && /^[1-9][0-9]*$/.test(version)) return version
+  throw new Error("Curator proposal queue row is missing valid proposal_version")
 }
 
 function score(value: unknown): number {
@@ -89,6 +97,7 @@ export function formatCuratorProposalQueue(
       tier: requiredText(proposal.tier, "tier"),
       status: requiredText(proposal.status, "status"),
       traceRef: requiredText(proposal.trace_ref, "trace_ref"),
+      proposalVersion: requiredProposalVersion(proposal.proposal_version),
       createdAt: iso(proposal.created_at),
       readOnly: true,
     }
@@ -104,7 +113,7 @@ export async function getScopedCuratorProposalQueue(
   const safeLimit = Math.max(1, Math.min(100, Math.trunc(limit)))
 
   const result = await pool.query(
-    `SELECT id, group_id, content, score, reasoning, tier, status, trace_ref, created_at
+    `SELECT id, group_id, content, score, reasoning, tier, status, trace_ref, proposal_version::text, created_at
      FROM canonical_proposals
      WHERE group_id = $1
        AND status = $2

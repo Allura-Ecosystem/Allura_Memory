@@ -17,6 +17,7 @@ describe("curator proposal queue", () => {
         tier: "mainstream",
         status: "pending",
         trace_ref: "trace-123",
+        proposal_version: "4",
         created_at: "2026-05-24T09:00:00.000Z",
       },
     ], "allura-system")
@@ -31,6 +32,7 @@ describe("curator proposal queue", () => {
         tier: "mainstream",
         status: "pending",
         traceRef: "trace-123",
+        proposalVersion: "4",
         createdAt: "2026-05-24T09:00:00.000Z",
         readOnly: true,
       },
@@ -57,6 +59,7 @@ describe("curator proposal queue", () => {
         tier: "emerging",
         status: "pending",
         trace_ref: "trace-zero",
+        proposal_version: "1",
         created_at: "2026-05-24T11:00:00.000Z",
       },
     ], "allura-system")
@@ -76,6 +79,7 @@ describe("curator proposal queue", () => {
           tier: "emerging",
           status: "pending",
           trace_ref: "trace-queue",
+          proposal_version: "7",
           created_at: "2026-05-24T10:00:00.000Z",
         },
       ],
@@ -84,6 +88,7 @@ describe("curator proposal queue", () => {
     const queue = await getScopedCuratorProposalQueue("allura-system", { query }, 10)
 
     expect(queue[0]?.proposalId).toBe("prop-003")
+    expect(queue[0]?.proposalVersion).toBe("7")
     expect(queue[0]?.readOnly).toBe(true)
     expect(query).toHaveBeenCalledOnce()
     const [sql, params] = query.mock.calls[0]!

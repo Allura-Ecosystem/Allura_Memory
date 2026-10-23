@@ -34,6 +34,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "decision must be 'approve', 'reject', or 'request_evidence'" }, { status: 400 });
     }
     if (!rationale) return NextResponse.json({ error: "rationale is required for curator decisions" }, { status: 400 });
+    const expectedProposalVersion = body.expected_proposal_version;
+    if (decision === "approve" && (typeof expectedProposalVersion !== "string" || !/^[1-9][0-9]*$/.test(expectedProposalVersion))) {
+      return NextResponse.json({
+        code: "INVALID_EXPECTED_PROPOSAL_VERSION",
+        error: "expected_proposal_version must be a positive decimal string",
+      }, { status: 400 });
+    }
 
     const user = roleCheck.user;
     let groupId: string;
@@ -62,6 +69,7 @@ export async function POST(request: NextRequest) {
         groupId,
         workspaceId,
         proposalId,
+        expectedProposalVersion,
         rationale,
         idempotencyKey,
         evidenceRequestIds: Array.isArray(body.evidence_request_ids) ? body.evidence_request_ids : [],
@@ -133,8 +141,10 @@ export async function POST(request: NextRequest) {
     if (error instanceof DecisionRouteError) return NextResponse.json({ error: error.message }, { status: error.status });
     if (error instanceof PrincipalAuthError) return NextResponse.json(error.toErrorPayload(), { status: error.httpStatus });
     if (error instanceof PromotionDecisionError) {
-      const status = error.code === "NOT_FOUND" ? 404 : error.code === "ALREADY_DECIDED" ? 409 : error.code === "UNAUTHORIZED" ? 403 : 400;
-      return NextResponse.json({ error: error.message }, { status });
+      const status = error.code === "NOT_FOUND" ? 404
+        : error.code === "ALREADY_DECIDED" || error.code === "PROPOSAL_VERSION_CONFLICT" ? 409
+          : error.code === "UNAUTHORIZED" ? 403 : 400;
+      return NextResponse.json({ code: error.code, error: error.message }, { status });
     }
     if (error instanceof SegregationOfDutiesError) return NextResponse.json({ error: error.message }, { status: 403 });
     captureException(error, { tags: { route: "/api/curator/approve", method: "POST" } });

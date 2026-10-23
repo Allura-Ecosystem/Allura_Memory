@@ -24,6 +24,7 @@ type ProposalRow = {
   tier: string;
   status: "pending" | "approved" | "rejected";
   trace_ref: string | number | null;
+  proposal_version: string;
   created_at: string;
 };
 
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
       }
       proposalParams.push(limit);
       const proposalResult = await db.query<ProposalRow>(
-        `SELECT id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref, created_at
+        `SELECT id, group_id, workspace_id, content, score, reasoning, tier, status, trace_ref, proposal_version::text, created_at
            FROM canonical_proposals
           WHERE ${conditions.join(" AND ")}
           ORDER BY score DESC, created_at DESC

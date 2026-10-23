@@ -4,7 +4,7 @@
   "title": "Canonical Proposal",
   "description": "HITL (Human-in-the-Loop) promotion queue entry in PostgreSQL. Proposals are scored by the curator engine and stored here pending human approval. Once approved, they are promoted to Neo4j as InsightHead/Insight nodes.",
   "type": "object",
-  "required": ["id", "group_id", "content", "score", "status", "created_at"],
+  "required": ["id", "group_id", "content", "score", "status", "proposal_version", "created_at"],
   "properties": {
     "id": {
       "type": "string",
@@ -43,6 +43,11 @@
     "trace_ref": {
       "type": "integer",
       "description": "Foreign key to events.id (the originating trace event). ON DELETE SET NULL."
+    },
+    "proposal_version": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$",
+      "description": "Material proposal revision serialized as a positive decimal string for exact human-review binding."
     },
     "created_at": {
       "type": "string",

@@ -10,6 +10,7 @@ export interface ApproveProposalInput {
   groupId?: string;
   workspaceId: string;
   proposalId: string;
+  expectedProposalVersion: string;
   rationale: string;
   idempotencyKey: string;
   evidenceRequestIds?: string[];
@@ -24,6 +25,7 @@ export interface GovernanceReceipt {
   workspace_id: string;
   proposal_id: string;
   proposal_version: string;
+  reviewed_proposal_version: string | null;
   evidence_request_id: string | null;
   evidence_identity_hash: string;
   action: "approve" | "reject" | "request_evidence";
@@ -57,7 +59,7 @@ type ProposalRow = {
 
 export class PromotionDecisionError extends Error {
   constructor(
-    readonly code: "NOT_FOUND" | "ALREADY_DECIDED" | "UNAUTHORIZED" | "INVALID_EVIDENCE" | "IDEMPOTENCY_CONFLICT" | "FAILURE_INJECTED",
+    readonly code: "NOT_FOUND" | "ALREADY_DECIDED" | "UNAUTHORIZED" | "INVALID_EVIDENCE" | "INVALID_EXPECTED_PROPOSAL_VERSION" | "PROPOSAL_VERSION_CONFLICT" | "IDEMPOTENCY_CONFLICT" | "FAILURE_INJECTED",
     message: string,
   ) {
     super(message);
@@ -109,7 +111,11 @@ export async function approveProposal(input: ApproveProposalInput): Promise<Gove
   const requestedGroupId = input.groupId ? validateGroupId(input.groupId) : undefined;
   const rationale = String(input.rationale ?? "").trim();
   const idempotencyKey = String(input.idempotencyKey ?? "").trim();
+  const expectedProposalVersion = typeof input.expectedProposalVersion === "string" ? input.expectedProposalVersion.trim() : "";
   if (!proposalId || !workspaceId || !rationale || !idempotencyKey) throw new Error("proposalId, workspaceId, rationale, and idempotencyKey are required");
+  if (!/^[1-9][0-9]*$/.test(expectedProposalVersion)) {
+    throw new PromotionDecisionError("INVALID_EXPECTED_PROPOSAL_VERSION", "expectedProposalVersion must be a positive decimal string");
+  }
 
   const client = await input.pool.connect();
   let resolvedGroupId: string | undefined;
@@ -151,6 +157,12 @@ export async function approveProposal(input: ApproveProposalInput): Promise<Gove
       }
       await client.query("COMMIT");
       return parseReceipt(replay.rows[0].result);
+    }
+    if (String(proposal.proposal_version) !== expectedProposalVersion) {
+      throw new PromotionDecisionError(
+        "PROPOSAL_VERSION_CONFLICT",
+        "Proposal changed since human review; reload and review the current version",
+      );
     }
     if (proposal.status !== "pending") throw new PromotionDecisionError("ALREADY_DECIDED", `Proposal is already ${proposal.status}`);
     if (proposal.trace_ref === null || proposal.trace_ref === undefined) {
@@ -212,12 +224,12 @@ export async function approveProposal(input: ApproveProposalInput): Promise<Gove
     const evidenceIdentityHash = createHash("sha256").update(JSON.stringify(evidenceReferences)).digest("hex");
     const receiptResult = await client.query<GovernanceReceipt>(
       `INSERT INTO governance_receipts (
-         group_id,workspace_id,proposal_id,proposal_version,evidence_identity_hash,evidence_request_id,
+         group_id,workspace_id,proposal_id,proposal_version,reviewed_proposal_version,evidence_identity_hash,evidence_request_id,
          action,actor_id,actor_role,rationale,policy_reference,policy_version,memory_id,outbox_state,
          source_event_id,witness_hash,evidence_references)
-       VALUES ($1,$2,$3,$4,$5,$6,'approve',$7,$8,$9,$10,$11,$12,'queued',$13,$14,$15::jsonb)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'approve',$8,$9,$10,$11,$12,$13,'queued',$14,$15,$16::jsonb)
        RETURNING *`,
-      [groupId, workspaceId, proposal.id, String(transition.rows[0].proposal_version), evidenceIdentityHash,
+      [groupId, workspaceId, proposal.id, String(transition.rows[0].proposal_version), expectedProposalVersion, evidenceIdentityHash,
         evidenceIds[0] ?? null, input.principal.principalId, actorRole, rationale,
         "policy://allura/curator-decision", "25.2a/v1", memoryId, sourceEvent.id, witnessHash,
         JSON.stringify(evidenceReferences)],

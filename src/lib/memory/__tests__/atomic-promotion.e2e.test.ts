@@ -64,6 +64,7 @@ describeLive("Story 24.4 atomic approval (live PostgreSQL)", () => {
       principal,
       workspaceId: WORKSPACE_ID,
       proposalId,
+      expectedProposalVersion: "1",
       rationale: "Approved after curator review.",
       idempotencyKey: `atomic-${proposalId}`,
       pool,
@@ -78,14 +79,14 @@ describeLive("Story 24.4 atomic approval (live PostgreSQL)", () => {
       pool.query("SELECT id, deprecated FROM graph_memories WHERE id = $1 AND group_id = $2", [result.memory_id, GROUP_ID]),
       pool.query("SELECT id FROM events WHERE group_id = $1 AND event_type = 'proposal_approved' AND metadata->>'proposal_id' = $2", [GROUP_ID, proposalId]),
       pool.query("SELECT id, status FROM promotion_outbox WHERE group_id = $1 AND proposal_id = $2", [GROUP_ID, proposalId]),
-      pool.query("SELECT action, source_event_id, memory_id FROM governance_receipts WHERE group_id=$1 AND workspace_id=$2 AND proposal_id=$3", [GROUP_ID, WORKSPACE_ID, proposalId]),
+      pool.query("SELECT action, source_event_id, memory_id, reviewed_proposal_version FROM governance_receipts WHERE group_id=$1 AND workspace_id=$2 AND proposal_id=$3", [GROUP_ID, WORKSPACE_ID, proposalId]),
     ]);
 
     expect(proposal.rows).toEqual([{ status: "approved", decided_by: principal.principalId }]);
     expect(memory.rows).toEqual([{ id: result.memory_id, deprecated: false }]);
     expect(audit.rows).toHaveLength(1);
     expect(outbox.rows).toEqual([{ id: expect.any(String), status: expect.stringMatching(/^(pending|delivered)$/) }]);
-    expect(receipts.rows).toEqual([{ action: "approve", source_event_id: result.source_event_id, memory_id: result.memory_id }]);
+    expect(receipts.rows).toEqual([{ action: "approve", source_event_id: result.source_event_id, memory_id: result.memory_id, reviewed_proposal_version: "1" }]);
   });
 
   it("rolls back every durable write at each injected boundary", async () => {
@@ -95,6 +96,7 @@ describeLive("Story 24.4 atomic approval (live PostgreSQL)", () => {
         principal,
         workspaceId: WORKSPACE_ID,
         proposalId,
+        expectedProposalVersion: "1",
         rationale: "Rollback proof.",
         idempotencyKey: `rollback-${failAt}-${proposalId}`,
         pool,
@@ -119,8 +121,8 @@ describeLive("Story 24.4 atomic approval (live PostgreSQL)", () => {
   it("replays the original result for one idempotency key without duplicate records", async () => {
     const proposalId = await insertPendingProposal();
     const key = `replay-${proposalId}`;
-    const first = await approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId, rationale: "Replay proof.", idempotencyKey: key, pool });
-    const replay = await approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId, rationale: "Ignored on replay.", idempotencyKey: key, pool });
+    const first = await approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId, expectedProposalVersion: "1", rationale: "Replay proof.", idempotencyKey: key, pool });
+    const replay = await approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId, expectedProposalVersion: "1", rationale: "Ignored on replay.", idempotencyKey: key, pool });
     expect(replay).toEqual(JSON.parse(JSON.stringify(first)));
 
     const [memories, audits, outbox] = await Promise.all([
@@ -137,8 +139,8 @@ describeLive("Story 24.4 atomic approval (live PostgreSQL)", () => {
     const firstProposalId = await insertPendingProposal();
     const secondProposalId = await insertPendingProposal();
     const key = `proposal-bound-${randomUUID()}`;
-    await approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId: firstProposalId, rationale: "First proposal.", idempotencyKey: key, pool });
-    await expect(approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId: secondProposalId, rationale: "Second proposal.", idempotencyKey: key, pool }))
+    await approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId: firstProposalId, expectedProposalVersion: "1", rationale: "First proposal.", idempotencyKey: key, pool });
+    await expect(approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId: secondProposalId, expectedProposalVersion: "1", rationale: "Second proposal.", idempotencyKey: key, pool }))
       .rejects.toMatchObject({ code: "IDEMPOTENCY_CONFLICT" });
   });
 
@@ -146,7 +148,7 @@ describeLive("Story 24.4 atomic approval (live PostgreSQL)", () => {
     const ids = [await insertPendingProposal(), await insertPendingProposal()];
     const key = `concurrent-cross-proposal-${randomUUID()}`;
     const attempts = await Promise.allSettled(ids.map((proposalId) => approveProposal({
-      principal, groupId: GROUP_ID, workspaceId: WORKSPACE_ID, proposalId,
+      principal, groupId: GROUP_ID, workspaceId: WORKSPACE_ID, proposalId, expectedProposalVersion: "1",
       rationale: "Concurrent proposal-bound key proof.", idempotencyKey: key, pool,
     })));
     expect(attempts.filter((attempt) => attempt.status === "fulfilled")).toHaveLength(1);
@@ -165,7 +167,7 @@ describeLive("Story 24.4 atomic approval (live PostgreSQL)", () => {
       );
     }
     const receipt = await approveProposal({
-      principal, workspaceId: WORKSPACE_ID, proposalId, rationale: "All evidence reviewed.",
+      principal, workspaceId: WORKSPACE_ID, proposalId, expectedProposalVersion: "1", rationale: "All evidence reviewed.",
       idempotencyKey: `multi-evidence-${proposalId}`, evidenceRequestIds: [...evidenceIds].reverse(), pool,
     });
     const links = await pool.query(
@@ -188,8 +190,8 @@ describeLive("Story 24.4 atomic approval (live PostgreSQL)", () => {
   it("allows one concurrent approval and leaves no duplicate canonical result", async () => {
     const proposalId = await insertPendingProposal();
     const attempts = await Promise.allSettled([
-      approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId, rationale: "Concurrent approval A.", idempotencyKey: `concurrent-a-${proposalId}`, pool }),
-      approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId, rationale: "Concurrent approval B.", idempotencyKey: `concurrent-b-${proposalId}`, pool }),
+      approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId, expectedProposalVersion: "1", rationale: "Concurrent approval A.", idempotencyKey: `concurrent-a-${proposalId}`, pool }),
+      approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId, expectedProposalVersion: "1", rationale: "Concurrent approval B.", idempotencyKey: `concurrent-b-${proposalId}`, pool }),
     ]);
     expect(attempts.filter((attempt) => attempt.status === "fulfilled")).toHaveLength(1);
     expect(attempts.filter((attempt) => attempt.status === "rejected")).toHaveLength(1);

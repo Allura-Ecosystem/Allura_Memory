@@ -52,7 +52,7 @@ describeLive("Story 24.4 AC-9: outbox worker delivery and retry", () => {
        VALUES ($1, $2, $3, $4, 0.91, 'outbox test', 'mainstream', 'pending', $5)`,
       [id, GROUP_ID, WORKSPACE_ID, "Outbox worker delivers projection event after commit.", source.rows[0]!.id],
     );
-    const result = await approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId: id, rationale: "Outbox delivery test.", idempotencyKey: `outbox-${id}`, pool });
+    const result = await approveProposal({ principal, workspaceId: WORKSPACE_ID, proposalId: id, expectedProposalVersion: "1", rationale: "Outbox delivery test.", idempotencyKey: `outbox-${id}`, pool });
     return { proposalId: id, memoryId: result.memory_id! };
   }
 

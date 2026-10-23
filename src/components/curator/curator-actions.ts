@@ -11,6 +11,7 @@ export async function postCuratorDecision(input: {
     body: JSON.stringify({
       proposal_id: input.proposal.id,
       group_id: input.proposal.group_id,
+      expected_proposal_version: input.proposal.proposal_version,
       decision: input.decision,
       rationale: input.rationale,
     }),

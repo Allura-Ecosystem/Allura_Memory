@@ -18,7 +18,7 @@ const principal = {
 const proposal = {
   id: "00000000-0000-4000-8000-000000000001", group_id: "allura-cli", workspace_id: "workspace-a",
   content: "governed", score: "0.9", reasoning: "approved", tier: "mainstream",
-  created_at: new Date().toISOString(), trace_ref: 1,
+  created_at: new Date().toISOString(), trace_ref: 1, proposal_version: "4",
 }
 
 describe("curator approval CLI adapter", () => {
@@ -53,7 +53,7 @@ describe("curator approval CLI adapter", () => {
     await expect(processProposal(proposal, scope, principal as never, true)).resolves.toMatchObject({ action: "approve" })
     expect(approveProposal).toHaveBeenCalledWith(expect.objectContaining({
       pool: appPool, groupId: scope.tenantId, workspaceId: scope.workspaceId,
-      principal, proposalId: proposal.id,
+      principal, proposalId: proposal.id, expectedProposalVersion: "4",
     }))
   })
 })

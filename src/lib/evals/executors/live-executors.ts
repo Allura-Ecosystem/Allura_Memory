@@ -250,9 +250,9 @@ async function execPromotionCorrectness(caseItem: unknown): Promise<CaseOutcome>
       [GROUP_ID, WORKSPACE_ID],
     );
     const traceRef = ev.rows[0].id;
-    const prop = await client.query<{ id: string }>(
+    const prop = await client.query<{ id: string; proposal_version: string }>(
       `INSERT INTO canonical_proposals (group_id, workspace_id, content, score, tier, status, trace_ref)
-       VALUES ($1,$2,$3,0.9,'emerging','pending',$4) RETURNING id::text`,
+       VALUES ($1,$2,$3,0.9,'emerging','pending',$4) RETURNING id::text, proposal_version::text`,
       [GROUP_ID, WORKSPACE_ID, `promotion probe ${id}`, traceRef],
     );
     const proposalId = prop.rows[0].id;
@@ -272,6 +272,7 @@ async function execPromotionCorrectness(caseItem: unknown): Promise<CaseOutcome>
         principal: approver,
         workspaceId: WORKSPACE_ID,
         proposalId,
+        expectedProposalVersion: prop.rows[0].proposal_version,
         rationale: "measured promotion correctness",
         idempotencyKey: `eval-promo-${id}-${Date.now()}`,
         pool: appClientPool(),
