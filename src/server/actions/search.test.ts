@@ -7,7 +7,7 @@
  * RuVector failure.
  */
 
-import { describe, expect, it, vi, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 // ── Hoisted mock state (must be defined before vi.mock factory runs) ──────────
 

@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   clearAuthConfig,
+  type PermissionProfile,
   updatePermissionProfile,
   validatePermissionProfile,
-  type PermissionProfile,
 } from "@/lib/auth";
 import { PATCH } from "@/app/api/permission-profiles/[id]/route";
 

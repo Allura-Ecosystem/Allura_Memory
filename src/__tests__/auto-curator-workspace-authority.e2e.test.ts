@@ -4,26 +4,27 @@ import { randomUUID } from "node:crypto";
 
 type AutoCuratorModule = typeof import("@/lib/curator/auto-curator");
 
-const describeLive = process.env.RUN_E2E_TESTS === "true" && process.env.POSTGRES_PASSWORD
-  ? describe
-  : describe.skip;
+import { requireDisposableFixture } from "../../tests/fixtures/disposable-postgres";
+import { closePool } from "@/lib/postgres/connection";
+
 const groupId = `allura-autocurator-${randomUUID().slice(0, 8)}`;
 const workspaceA = `workspace-auto-a-${randomUUID().slice(0, 8)}`;
 const workspaceB = `workspace-auto-b-${randomUUID().slice(0, 8)}`;
 const scopeA = { tenantId: groupId, workspaceId: workspaceA, principalId: "auto-curator-live-test" };
 
-/** Uses the fresh disposable live-lane database; every fixture is UUID-namespaced and removed. */
-describeLive("auto-curator workspace authority", () => {
+/** Uses the fresh disposable live-lane database; every fixture is UUID-namespaced and retained. */
+describe("auto-curator workspace authority", () => {
   let owner: Pool;
   let curator: AutoCuratorModule;
+  let assertEnvironment: () => void;
 
   beforeAll(async () => {
-    // Keep all DB-owning modules out of skipped-suite collection. Vitest still
-    // evaluates describe.skip callbacks, so live dependencies load only here.
+    assertEnvironment = await requireDisposableFixture("src/__tests__/auto-curator-workspace-authority.e2e.test.ts");
     const [{ getOwnerPool }, autoCurator] = await Promise.all([
       import("@/lib/postgres/connection"),
       import("@/lib/curator/auto-curator"),
     ]);
+    assertEnvironment();
     owner = getOwnerPool();
     curator = autoCurator;
     await owner.query(
@@ -48,14 +49,10 @@ describeLive("auto-curator workspace authority", () => {
     );
   });
 
-  afterAll(async () => {
-    await owner.query("DELETE FROM events WHERE group_id = $1", [groupId]);
-    await owner.query("DELETE FROM canonical_proposals WHERE group_id = $1", [groupId]);
-    await owner.query("DELETE FROM allura_memories WHERE group_id = $1", [groupId]);
-    await owner.query("DELETE FROM workspaces WHERE group_id = $1", [groupId]);
-  });
+  afterAll(async () => { await closePool(); });
 
   it("does not let a same-group workspace-B event appear in or influence workspace-A candidate, proposal, or evidence", async () => {
+    assertEnvironment();
     const analysis = await curator.autoCurate(scopeA, { windowHours: 24 });
     expect(analysis.events_analyzed).toBe(2);
     expect(analysis.candidates).toHaveLength(1);

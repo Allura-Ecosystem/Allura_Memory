@@ -1,8 +1,8 @@
 "use client"
 
 import type { ReactElement } from "react"
-import type { GraphNode, GraphEdge } from "@/lib/graph/types"
-import { CATEGORY_STYLES, EDGE_STYLES, STATUS_COLORS, RISK_COLORS } from "@/lib/graph/types"
+import type { GraphEdge, GraphNode } from "@/lib/graph/types"
+import { CATEGORY_STYLES, EDGE_STYLES, RISK_COLORS, STATUS_COLORS } from "@/lib/graph/types"
 
 interface Props {
   node: GraphNode | null

@@ -8,4 +8,8 @@ Use the current [Design document](../../allura/DESIGN-ALLURA.md) and [open decis
 
 For the memory service's first-use task, use [Getting started](../../user-guide/getting-started.md). The [remediation brief](../../reference/reddit-remediation/brief.md) explains why the memory journey and a portfolio dashboard specimen have separate purposes.
 
+The two historical generated JavaScript exports are preserved byte-for-byte and classified separately from maintained source lint. Every package lint entrypoint first runs `validate:generated-exports`: it verifies the exact inventory in `scripts/ci/historical-generated-exports.json`, compiles the scripts without executing them, checks the pinned HTML consumer and refuses additional scripts. Other source lint rules remain unchanged. No matching generator was recovered within the inspected local provenance scope; this classification does not claim reproducible regeneration.
+
+An integrity failure requires restoring unintended changes or independently reviewing recovered source, regenerated output and the inventory update. Never refresh hashes automatically or broaden the exception. Parsing and integrity do not prove rendering: the historical browser smoke is separate and requires the export's SRI-pinned React 18.3.1 dependencies. Neither check establishes current product acceptance.
+
 *AI-Assisted Documentation: editorial revision, 2026-10-20. Original design-export provenance retained; no new design approval is asserted.*

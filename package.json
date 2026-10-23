@@ -29,9 +29,9 @@
     "start": "next start -p ${ALLURA_DASHBOARD_PORT:-3100}",
     "build": "next build",
     "typecheck": "tsc --noEmit",
-    "lint:eslint": "eslint .",
-    "lint:ci": "bash scripts/ci/lint-changed.sh",
-    "lint:eslint:fix": "eslint . --fix",
+    "lint:eslint": "bun run validate:generated-exports && eslint .",
+    "lint:ci": "bun run validate:generated-exports && bash scripts/ci/lint-changed.sh",
+    "lint:eslint:fix": "bun run validate:generated-exports && eslint . --fix",
     "prettier": "prettier --check \"**/*.{js,ts,md}\"",
     "prettier:fix": "prettier --write \"**/*.{js,ts,md}\"",
     "format": "prettier --write \"**/*.{ts,md}\"",
@@ -49,7 +49,7 @@
     "benchmark:db": "bun scripts/benchmark.js --events=1000 --batch=100",
     "eval:portfolio": "bun src/lib/evals/cli.ts",
     "docs": "bun scripts/generate-docs.js",
-    "lint": "bun run typecheck",
+    "lint": "bun run lint:eslint",
     "mcp": "bun src/mcp/memory-server-canonical.ts",
     "mcp:canonical": "bun src/mcp/memory-server-canonical.ts",
     "mcp:dev": "bun --watch src/mcp/memory-server-canonical.ts",
@@ -119,7 +119,9 @@
     "dashboard:browser": "bun scripts/agent-browser-dashboard.ts",
     "portfolio:up": "bun scripts/portfolio-demo.ts up",
     "portfolio:dev": "bun scripts/portfolio-demo.ts dev",
-    "portfolio:down": "docker compose --env-file .env.portfolio -f docker-compose.portfolio.yml down"
+    "portfolio:down": "docker compose --env-file .env.portfolio -f docker-compose.portfolio.yml down",
+    "validate:generated-exports": "node scripts/ci/validate-generated-exports.mjs",
+    "ci:disposable-fixtures": "bun scripts/ci/run-disposable-fixtures.ts"
   },
   "engines": {
     "node": ">=20.0.0"

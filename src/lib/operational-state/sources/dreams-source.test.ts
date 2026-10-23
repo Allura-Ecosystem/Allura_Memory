@@ -13,9 +13,9 @@ vi.mock("@/lib/postgres/connection", () => ({
 import { getPool } from "@/lib/postgres/connection"
 import { resolveOperationalSurface } from "../index"
 import {
+  type DreamsSnapshot,
   isDreamsEmpty,
   readDreams,
-  type DreamsSnapshot,
 } from "./dreams-source"
 
 const getPoolMock = getPool as unknown as ReturnType<typeof vi.fn>

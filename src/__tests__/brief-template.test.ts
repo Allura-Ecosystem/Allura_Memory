@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { readFileSync, existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
 describe("Story 20.2 — Delegate Task Brief Template", () => {

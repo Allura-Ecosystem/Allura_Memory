@@ -80,6 +80,37 @@ function seedParams(overrides: Partial<{
   }
 }
 
+describe("ruvector-crate binding loader", () => {
+  it("loads the fake binding synchronously using an adapter-relative path", async () => {
+    const adapter = new RuvectorCrateGraphAdapter({
+      modulePath: "./__tests__/fixtures/fake-ruvector-graph-node.cjs",
+      storagePath: ":memory:", embed,
+    })
+    expect(adapter).toBeInstanceOf(RuvectorCrateGraphAdapter)
+    await expect(adapter.isHealthy()).resolves.toBe(true)
+  })
+
+  it("defers a missing native binding failure until construction and preserves its cause", () => {
+    // Importing the adapter above needs no native binary. Only construction loads it.
+    expect(() => new RuvectorCrateGraphAdapter({
+      modulePath: fileURLToPath(new URL("./fixtures/absent-native-binding.node", import.meta.url)),
+      storagePath: ":memory:", embed,
+    })).toThrowError(expect.objectContaining({
+      name: "GraphAdapterUnavailableError", operation: "load",
+      cause: expect.objectContaining({ code: "MODULE_NOT_FOUND" }),
+    }))
+  })
+
+  it("rejects a loaded module that lacks GraphDatabase.open", () => {
+    // An inert built-in supplies a real module with the wrong binding shape.
+    expect(() => new RuvectorCrateGraphAdapter({ modulePath: "node:path", storagePath: ":memory:", embed }))
+      .toThrowError(expect.objectContaining({
+        name: "GraphAdapterUnavailableError", operation: "load",
+        cause: expect.objectContaining({ message: "module at node:path does not export GraphDatabase.open" }),
+      }))
+  })
+})
+
 describe("ruvector-crate adapter — subset parity (Option A)", () => {
   let adapter: RuvectorCrateGraphAdapter
 

@@ -37,8 +37,8 @@ import { cleanupMemoryState } from "./cleanup"
 // explicit dev-local principal.
 import { randomUUID } from "node:crypto"
 import {
-  authenticateServiceTransport,
   type AuthenticatedTransportPrincipal,
+  authenticateServiceTransport,
 } from "@/lib/auth/mcp-authenticator"
 import { emitAuthAudit } from "@/lib/auth/principal-audit"
 import {

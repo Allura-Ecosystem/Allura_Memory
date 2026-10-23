@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   findOrphanedGroupIds,
   findSimilarGroupIds,
@@ -7,9 +7,14 @@ import {
   getPostgresGroupIdStats,
 } from "./group-governance";
 import { closePool, getPool } from "../postgres/connection";
-import { type EventInsert, insertEvent } from "../postgres/queries/insert-trace";
+import { insertEvent } from "../postgres/queries/insert-trace";
 
-const TEST_GROUP_PREFIX = "allura-governance-%";
+import { freshFixtureScope, requireDisposableFixture } from "../../../tests/fixtures/disposable-postgres";
+let guard: Promise<() => void> | undefined;
+async function requireLiveFixture(): Promise<void> {
+  guard ??= requireDisposableFixture("src/lib/validation/group-governance.test.ts");
+  (await guard)();
+}
 
 async function insertGraphMemory(id: string, groupId: string, content: string): Promise<void> {
   await getPool().query(
@@ -20,53 +25,30 @@ async function insertGraphMemory(id: string, groupId: string, content: string): 
   );
 }
 
-async function cleanupTestData(): Promise<void> {
-  const pool = getPool();
-  await pool.query("DELETE FROM graph_memories WHERE group_id LIKE $1", [TEST_GROUP_PREFIX]);
-  await pool.query("DELETE FROM events WHERE group_id LIKE $1", [TEST_GROUP_PREFIX]);
-}
-
-// E2E gating: skip unless RUN_E2E_TESTS=true (requires live PostgreSQL)
-const describeE2E = process.env.RUN_E2E_TESTS === "true" ? describe : describe.skip;
-
-describeE2E("group-governance", () => {
-  const testProject1 = "allura-governance-test-1";
-  const testProject2 = "allura-governance-test-2";
-  const testProject3 = "allura-governance-similar"; // Similar to allura-governance-test-*
-  const testOrphan = "allura-governance-orphan";
+describe("group-governance", () => {
+  let prefix: string;
+  let testProject1: string;
+  let testProject2: string;
   const testAgentId = "governance-agent";
-
-  beforeAll(async () => {
-    // Configure PostgreSQL
-    process.env.POSTGRES_HOST = process.env.POSTGRES_HOST || "localhost";
-    process.env.POSTGRES_PORT = process.env.POSTGRES_PORT || "5432";
-    process.env.POSTGRES_DB = process.env.POSTGRES_DB || "memory";
-    process.env.POSTGRES_USER = process.env.POSTGRES_USER || "allura";
-    process.env.POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD || "allura";
-
-    await cleanupTestData();
+  beforeEach(() => {
+    prefix = freshFixtureScope().groupId;
+    testProject1 = `${prefix}-1`;
+    testProject2 = `${prefix}-2`;
   });
-
-  afterAll(async () => {
-    await cleanupTestData();
-    await closePool();
-  });
-
-  beforeEach(async () => {
-    await cleanupTestData();
-  });
+  afterAll(async () => { await closePool(); });
 
   // =========================================================================
   // getPostgresGroupIdStats Tests
   // =========================================================================
 
   describe("getPostgresGroupIdStats", () => {
+    beforeEach(requireLiveFixture);
     it("should return empty stats for no data", async () => {
       const report = await getPostgresGroupIdStats();
 
       // Find our test groups (should not exist yet)
       const testGroups = report.groups.filter((g) =>
-        g.group_id.startsWith("allura-governance-")
+        g.group_id.startsWith(prefix)
       );
       expect(testGroups.length).toBe(0);
     });
@@ -115,19 +97,20 @@ describeE2E("group-governance", () => {
   // =========================================================================
 
   describe("getGraphGroupIdStats", () => {
+    beforeEach(requireLiveFixture);
     it("should return empty stats for no data", async () => {
       const report = await getGraphGroupIdStats();
 
       const testGroups = report.groups.filter((g) =>
-        g.group_id.startsWith("governance-")
+        g.group_id.startsWith(prefix)
       );
       expect(testGroups.length).toBe(0);
     });
 
     it("should return stats for existing groups", async () => {
       // Seed canonical graph memory in PostgreSQL.
-      await insertGraphMemory("gov-insight-1", testProject1, "Test insight for governance");
-      await insertGraphMemory("gov-insight-2", testProject2, "Another test insight");
+      await insertGraphMemory(`${prefix}-insight-1`, testProject1, "Test insight for governance");
+      await insertGraphMemory(`${prefix}-insight-2`, testProject2, "Another test insight");
 
       const report = await getGraphGroupIdStats();
 
@@ -205,6 +188,7 @@ describeE2E("group-governance", () => {
   // =========================================================================
 
   describe("findOrphanedGroupIds", () => {
+    beforeEach(requireLiveFixture);
     it("should return empty array when no orphans exist", async () => {
       // Insert a recent event
       await insertEvent({
@@ -232,6 +216,7 @@ describeE2E("group-governance", () => {
   // =========================================================================
 
   describe("generateGroupIdGovernanceReport", () => {
+    beforeEach(requireLiveFixture);
     beforeEach(async () => {
       // Create some test data
       await insertEvent({
@@ -240,7 +225,7 @@ describeE2E("group-governance", () => {
         agent_id: testAgentId,
       });
 
-      await insertGraphMemory("gov-report-insight", testProject1, "Test insight");
+      await insertGraphMemory(`${prefix}-report`, testProject1, "Test insight");
     });
 
     it("should generate comprehensive report", async () => {
@@ -300,18 +285,19 @@ describeE2E("group-governance", () => {
   // =========================================================================
 
   describe("integration", () => {
+    beforeEach(requireLiveFixture);
     it("should detect similar groups across databases", async () => {
       // Create similar group names in both databases with unique insight IDs
-      const timestamp = Date.now();
+
       await insertEvent({
-        group_id: "allura-governance-similar-1",
+        group_id: testProject1,
         event_type: "test",
         agent_id: testAgentId,
       });
 
       await insertGraphMemory(
-        `test-similar-insight-${timestamp}`,
-        "allura-governance-similar-2",
+        `${prefix}-similar`,
+        testProject2,
         "Test",
       );
 
@@ -323,18 +309,20 @@ describeE2E("group-governance", () => {
         ...report.graph.groups.map((g) => g.group_id),
       ];
 
-      expect(allGroups).toContain("allura-governance-similar-1");
-      expect(allGroups).toContain("allura-governance-similar-2");
+      expect(allGroups).toContain(testProject1);
+      expect(allGroups).toContain(testProject2);
     });
 
     it("should identify valid vs invalid groups", async () => {
+      await insertEvent({ group_id: testProject1, event_type: "valid-group-fixture", agent_id: testAgentId });
       const report = await generateGroupIdGovernanceReport();
 
       // All our test groups should be valid
       const testGroups = report.postgres.groups.filter((g) =>
-        g.group_id.startsWith("allura-governance-")
+        g.group_id.startsWith(prefix)
       );
 
+      expect(testGroups).toHaveLength(1);
       testGroups.forEach((g) => {
         expect(g.is_valid).toBe(true);
       });

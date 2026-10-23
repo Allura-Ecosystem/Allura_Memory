@@ -18,7 +18,7 @@ import type { ReactElement } from "react"
 import { Handle, Position } from "@xyflow/react"
 import type { Node, NodeProps } from "@xyflow/react"
 import type { NodeStatus, RiskLevel } from "@/lib/graph/types"
-import { CATEGORY_STYLES, STATUS_COLORS, RISK_COLORS } from "@/lib/graph/types"
+import { CATEGORY_STYLES, RISK_COLORS, STATUS_COLORS } from "@/lib/graph/types"
 import type { NodeCategory } from "@/lib/graph/types"
 
 // The data payload attached to each React Flow node.

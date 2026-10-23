@@ -1,49 +1,39 @@
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { createPrincipalContext } from "@/lib/auth/principal-context";
-import { getAppPool, getPool } from "@/lib/postgres/connection";
 import { withTenantTransaction } from "@/lib/db/tenant-transaction";
+import { closePool, getAppPool, getPool } from "@/lib/postgres/connection";
+import { freshFixtureScope, requireDisposableFixture } from "../../../../tests/fixtures/disposable-postgres";
 import { approveProposal } from "../approve-proposal";
 
-const GROUP_ID = "allura-atomic-promotion-e2e";
-const WORKSPACE_ID = "workspace-atomic-promotion-e2e";
-const principal = createPrincipalContext({
-  principalId: "curator-atomic-e2e",
-  tenantIds: [GROUP_ID],
-  roles: ["curator"],
-  scopes: ["review:approve"],
-  authMethod: "service_identity",
-  sessionId: "atomic-promotion-e2e",
-});
 
-const describeLive = process.env.POSTGRES_PASSWORD ? describe : describe.skip;
+let GROUP_ID: string;
+let WORKSPACE_ID: string;
+let principal: ReturnType<typeof createPrincipalContext>;
 
-describeLive("Story 24.4 atomic approval (live PostgreSQL)", () => {
-  const pool = getPool();
-  const proposalIds: string[] = [];
-
+describe("Story 24.4 atomic approval (live PostgreSQL)", () => {
+  let pool: ReturnType<typeof getPool>;
+  let assertEnvironment: () => void;
   beforeAll(async () => {
-    await pool.query(`INSERT INTO workspaces(workspace_id,group_id,name,created_by) VALUES($1,$2,$3,$4) ON CONFLICT(workspace_id) DO NOTHING`, [WORKSPACE_ID, GROUP_ID, "Atomic promotion", principal.principalId]);
+    assertEnvironment = await requireDisposableFixture("src/lib/memory/__tests__/atomic-promotion.e2e.test.ts");
+    pool = getPool();
   });
-
-
-  afterEach(async () => {
-    if (proposalIds.length === 0) return;
-    await pool.query("BEGIN");
-    await pool.query("SET LOCAL session_replication_role='replica'");
-    await pool.query("DELETE FROM governance_receipts WHERE group_id = $1", [GROUP_ID]);
-    await pool.query("DELETE FROM promotion_idempotency WHERE group_id = $1", [GROUP_ID]);
-    await pool.query("DELETE FROM promotion_outbox WHERE group_id = $1", [GROUP_ID]);
-    await pool.query("DELETE FROM graph_memories WHERE group_id = $1", [GROUP_ID]);
-    await pool.query("DELETE FROM canonical_proposals WHERE group_id = $1", [GROUP_ID]);
-    await pool.query("DELETE FROM events WHERE group_id = $1", [GROUP_ID]);
-    await pool.query("COMMIT");
-    proposalIds.length = 0;
+  beforeEach(async () => {
+    assertEnvironment();
+    const scope = freshFixtureScope();
+    GROUP_ID = scope.groupId;
+    WORKSPACE_ID = scope.workspaceId;
+    principal = createPrincipalContext({
+      principalId: scope.principalId, tenantIds: [GROUP_ID], roles: ["curator"],
+      scopes: ["review:approve"], authMethod: "service_identity", sessionId: scope.sessionId,
+    });
+    await pool.query(`INSERT INTO workspaces(workspace_id,group_id,name,created_by) VALUES($1,$2,$3,$4)`,
+      [WORKSPACE_ID, GROUP_ID, "Isolated promotion fixture", principal.principalId]);
   });
+  afterAll(async () => { await closePool(); });
 
   async function insertPendingProposal(): Promise<string> {
     const id = randomUUID();
-    proposalIds.push(id);
     const source = await pool.query<{ id: number }>(
       `INSERT INTO events(group_id,workspace_id,event_type,agent_id,status,metadata)
        VALUES($1,$2,'proposal_source','requester-atomic-e2e','completed','{}') RETURNING id`,

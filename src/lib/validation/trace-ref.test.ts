@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   createArtifactTraceRef,
   createEventTraceRef,
@@ -14,25 +14,19 @@ import {
   validateTraceRefs,
   verifyTraceRefExists,
 } from "./trace-ref";
-import { closePool, getPool } from "../postgres/connection";
-import { type EventInsert, insertEvent } from "../postgres/queries/insert-trace";
+import { closePool } from "../postgres/connection";
+import { insertEvent } from "../postgres/queries/insert-trace";
 
-// E2E gating: tests that need live PostgreSQL are gated behind RUN_E2E_TESTS=true
-const describeE2E = process.env.RUN_E2E_TESTS === "true" ? describe : describe.skip;
+import { freshFixtureScope, requireDisposableFixture } from "../../../tests/fixtures/disposable-postgres";
+
+let guard: Promise<() => void> | undefined;
+async function requireLiveFixture(): Promise<void> {
+  guard ??= requireDisposableFixture("src/lib/validation/trace-ref.test.ts");
+  (await guard)();
+}
 
 describe("trace-ref validation", () => {
-  beforeAll(async () => {
-    // Configure PostgreSQL
-    process.env.POSTGRES_HOST = process.env.POSTGRES_HOST || "localhost";
-    process.env.POSTGRES_PORT = process.env.POSTGRES_PORT || "5432";
-    process.env.POSTGRES_DB = process.env.POSTGRES_DB || "memory";
-    process.env.POSTGRES_USER = process.env.POSTGRES_USER || "ronin4life";
-    process.env.POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD || "KaminaTHC*";
-  });
-
-  afterAll(async () => {
-    await closePool();
-  });
+  afterAll(async () => { await closePool(); });
 
   // =========================================================================
   // parseTraceRef Tests
@@ -142,17 +136,11 @@ describe("trace-ref validation", () => {
   // verifyTraceRefExists Tests
   // =========================================================================
 
-  describeE2E("verifyTraceRefExists", () => {
-    const testGroupId = "allura-trace-ref-test";
-
-    beforeAll(async () => {
-      const pool = getPool();
-      await pool.query("DELETE FROM events WHERE group_id = $1", [testGroupId]);
-    });
-
-    afterAll(async () => {
-      const pool = getPool();
-      await pool.query("DELETE FROM events WHERE group_id = $1", [testGroupId]);
+  describe("verifyTraceRefExists", () => {
+    let testGroupId: string;
+    beforeEach(async () => {
+      await requireLiveFixture();
+      testGroupId = freshFixtureScope().groupId;
     });
 
     it("should return exists=true for existing event", async () => {
@@ -198,17 +186,11 @@ describe("trace-ref validation", () => {
   // validateTraceRefs Tests
   // =========================================================================
 
-  describeE2E("validateTraceRefs", () => {
-    const testGroupId = "allura-batch-trace-ref-test";
-
-    beforeAll(async () => {
-      const pool = getPool();
-      await pool.query("DELETE FROM events WHERE group_id = $1", [testGroupId]);
-    });
-
-    afterAll(async () => {
-      const pool = getPool();
-      await pool.query("DELETE FROM events WHERE group_id = $1", [testGroupId]);
+  describe("validateTraceRefs", () => {
+    let testGroupId: string;
+    beforeEach(async () => {
+      await requireLiveFixture();
+      testGroupId = freshFixtureScope().groupId;
     });
 
     it("should validate multiple trace_refs", async () => {

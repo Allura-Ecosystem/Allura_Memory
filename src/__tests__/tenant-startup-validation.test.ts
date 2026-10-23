@@ -45,11 +45,11 @@ vi.mock("@/lib/neo4j/connection", () => ({
 // ── Import after mocks ─────────────────────────────────────────────────────────
 
 import {
-  resolveDefaultGroupId,
-  validateTenantAtStartup,
-  resolveAndValidateStartupTenant,
-  TenantValidationError,
   DEFAULT_FALLBACK_GROUP_ID,
+  resolveAndValidateStartupTenant,
+  resolveDefaultGroupId,
+  TenantValidationError,
+  validateTenantAtStartup,
 } from "@/lib/config/tenant-validator";
 import { bootstrapMemoryServer } from "@/mcp/startup";
 

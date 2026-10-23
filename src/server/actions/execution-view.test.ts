@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 // Mock the postgres connection before importing the module under test
 vi.mock("@/lib/postgres/connection", () => ({
@@ -20,9 +20,9 @@ import { getPool } from "@/lib/postgres/connection"
 import { listTenantAgents } from "@/lib/agents/tenant-roster"
 import { getExecutionOverview } from "./execution-view"
 import {
-  TEAM_RAM_AGENTS,
   type AgentStatus,
   type ExecutionOverview,
+  TEAM_RAM_AGENTS,
 } from "./execution-view.types"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

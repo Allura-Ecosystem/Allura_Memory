@@ -2,9 +2,11 @@
 set -Eeuo pipefail
 
 base_sha="${CI_LINT_BASE_SHA:-}"
+report_path=""
 for arg in "$@"; do
   case "$arg" in
     --base=*) base_sha="${arg#*=}" ;;
+    --report=*) report_path="${arg#*=}" ;;
     *) printf 'Unknown argument: %s\n' "$arg" >&2; exit 64 ;;
   esac
 done
@@ -31,4 +33,8 @@ fi
 
 printf 'Linting %s changed JavaScript/TypeScript file(s) against base %s.\n' \
   "${#changed_files[@]}" "$base_sha"
-bun eslint --no-warn-ignored "${changed_files[@]}"
+report_args=()
+if [[ -n "$report_path" ]]; then
+  report_args=(--format=json --output-file "$report_path")
+fi
+bun eslint --no-warn-ignored "${report_args[@]}" "${changed_files[@]}"

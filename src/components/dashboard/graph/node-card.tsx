@@ -1,7 +1,7 @@
 "use client"
 
 import { memo } from "react"
-import { Handle, Position, type Node, type NodeProps } from "@xyflow/react"
+import { Handle, type Node, type NodeProps, Position } from "@xyflow/react"
 
 export type EntityType = "agent" | "project" | "insight" | "memory" | "event" | "system" | "person" | "org"
 

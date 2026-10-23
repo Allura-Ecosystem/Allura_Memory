@@ -11,13 +11,13 @@ import { config } from "dotenv"
 import { defineConfig } from "vitest/config"
 import path from "node:path"
 
-config()
+if (process.env.ALLURA_FIXTURE_RUNNER !== "1") config()
 
 export default defineConfig({
   test: {
     environment: "node",
     pool: "forks",
-    passWithNoTests: true,
+    passWithNoTests: false,
     include: [
       "src/__tests__/e2e-integration.test.ts",
       "src/__tests__/curator-pipeline.e2e.test.ts",

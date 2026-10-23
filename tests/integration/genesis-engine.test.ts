@@ -11,12 +11,14 @@
  *   bun run test:integration
  *   bun vitest run tests/integration/genesis-engine.test.ts
  *
- * Gating: tests skip gracefully when the DB is unavailable.
+ * Live case requires the trusted disposable runner; pure detection remains independent.
  *
  * Reference: docs/allura/BLUEPRINT.md (Genesis Engine)
  */
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
+import { randomBytes, randomUUID } from "node:crypto";
+import { genesisMutationDigest, issueGenesisPolicyEvidence } from "@/control-plane/genesis-policy-evidence";
 import {
   type DetectionWindow,
   detectPatterns,
@@ -24,25 +26,13 @@ import {
   type TrajectoryPoint,
 } from "@/lib/genesis/pattern-detector";
 import { generateProposals } from "@/lib/genesis/proposal-generator";
-import { getPool } from "@/lib/postgres/connection";
-import { recordTrajectory } from "@/lib/sona/trajectory-engine";
+import { closePool, getPool } from "@/lib/postgres/connection";
+import { freshFixtureScope, requireDisposableFixture } from "../fixtures/disposable-postgres";
 
-// ── DB availability probe ────────────────────────────────────────────────────
-
-async function isDbAvailable(): Promise<boolean> {
-  try {
-    const pool = getPool();
-    await pool.query("SELECT 1");
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-let dbAvailable = false;
-
-const TEST_GROUP_ID = "allura-genesis-test";
-const TEST_AGENT_ID = "genesis-test-agent";
+const scope = freshFixtureScope();
+const TEST_GROUP_ID = scope.groupId;
+const TEST_AGENT_ID = scope.principalId;
+let restoreSecret: (() => void) | undefined;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -70,51 +60,24 @@ async function countProposals(): Promise<number> {
   return result.rows[0]?.total ?? 0;
 }
 
-/** Clean up test rows so the suite is idempotent. */
-async function cleanup(): Promise<void> {
-  const pool = getPool();
-  // pattern_proposals is append-only via trigger — but the test cleanup
-  // bypasses the trigger by using a session_replication_role override OR
-  // we simply truncate via a DO block that drops/recreates triggers.
-  // Simpler: use a raw DELETE with the trigger temporarily disabled.
-  await pool.query("SET session_replication_role = 'replica'");
-  try {
-    await pool.query(
-      `DELETE FROM pattern_proposals WHERE group_id = $1`,
-      [TEST_GROUP_ID]
-    );
-    await pool.query(
-      `DELETE FROM agent_trajectories WHERE group_id = $1`,
-      [TEST_GROUP_ID]
-    );
-  } finally {
-    await pool.query("SET session_replication_role = 'origin'")
-  }
-}
-
-// ── Suite ─────────────────────────────────────────────────────────────────────
-
+// The hook only closes acquired resources; rows survive for the owned service lifetime.
 describe("Genesis Engine — Integration (Story 2.2)", () => {
-  beforeAll(async () => {
-    dbAvailable = await isDbAvailable();
-    if (!dbAvailable) {
-      console.warn(
-        "[genesis-engine integration] DB unavailable — tests will be skipped. " +
-          "Start the Brain stack with: bun run brain:up"
-      );
-      return;
-    }
-    await cleanup();
-  }, 30_000);
-
   afterAll(async () => {
-    if (dbAvailable) {
-      await cleanup();
-    }
-  }, 30_000);
+    try { await closePool(); } finally { restoreSecret?.(); }
+  });
 
   it("inserts repeated trajectories, detects patterns, and verifies a proposal is generated", async () => {
-    if (!dbAvailable) return;
+
+    const assertEnvironment = await requireDisposableFixture("tests/integration/genesis-engine.test.ts");
+    assertEnvironment();
+    const previousSecret = process.env.RUVIX_CONTROL_PLANE_SECRET;
+    process.env.RUVIX_CONTROL_PLANE_SECRET = randomBytes(32).toString("hex");
+    restoreSecret = () => {
+      if (previousSecret === undefined) delete process.env.RUVIX_CONTROL_PLANE_SECRET;
+      else process.env.RUVIX_CONTROL_PLANE_SECRET = previousSecret;
+    };
+    await getPool().query(`INSERT INTO tenants(group_id,name,owner_agent_id) VALUES($1,$2,$3)`,
+      [TEST_GROUP_ID, "Isolated Genesis fixture", TEST_AGENT_ID]);
 
     // ── 1. Insert 12 trajectories of the same task_type (high-frequency: 12 ≥ 10) ──
     for (let i = 0; i < 12; i++) {
@@ -149,7 +112,33 @@ describe("Genesis Engine — Integration (Story 2.2)", () => {
     expect(seqPatterns.length).toBeGreaterThanOrEqual(1);
 
     // ── 3. Generate proposals through the controlPlane syscall_mutate path ──
-    const result = await generateProposals(TEST_GROUP_ID, detected);
+    const before = await countProposals();
+    const missingEvidence = await generateProposals(TEST_GROUP_ID, [detected[0]!]);
+    expect(missingEvidence.recorded).toBe(0);
+    expect(await countProposals()).toBe(before);
+    const batchResults = [];
+    for (const pattern of detected) {
+      const mutation = { group_id: TEST_GROUP_ID, pattern_description: pattern.pattern_description,
+        pattern_type: pattern.pattern_type, frequency: pattern.frequency, suggested_skill: pattern.suggested_skill,
+        confidence: Math.max(0, Math.min(1, pattern.confidence)), status: "proposed" };
+      const policyEvidence = issueGenesisPolicyEvidence({
+        actor: TEST_AGENT_ID, groupId: TEST_GROUP_ID, approvalRef: randomUUID(), target: "pg:pattern_proposals",
+        mutationDigest: genesisMutationDigest("pg:pattern_proposals", mutation),
+        projectManifest: { name: "Isolated Genesis evidence", sourcesOfTruth: [
+          { type: "local", id: scope.sessionId, name: "Synthetic fixture source", required: true },
+        ], infrastructureTargets: [] },
+        sourceOfTruthReads: [{ type: "local", id: scope.sessionId, timestamp: Date.now(), summary: "Synthetic fixture source verified" }],
+      });
+      const beforeAltered = await countProposals();
+      const altered = await generateProposals(TEST_GROUP_ID, [{ ...pattern, frequency: pattern.frequency + 1 }], { policyEvidence });
+      expect(altered.recorded).toBe(0);
+      expect(await countProposals()).toBe(beforeAltered);
+      // Each signed claim binds one exact mutation and can be consumed only once.
+      batchResults.push(await generateProposals(TEST_GROUP_ID, [pattern], { policyEvidence }));
+    }
+    const result = { recorded: batchResults.reduce((sum, batch) => sum + batch.recorded, 0) };
+    expect(batchResults.every(batch => batch.failed === 0)).toBe(true);
+    expect(result.recorded).toBe(detected.length);
     expect(result.recorded).toBeGreaterThan(0);
 
     // ── 4. Verify pattern_proposals rows were persisted ──
@@ -172,7 +161,6 @@ describe("Genesis Engine — Integration (Story 2.2)", () => {
   }, 60_000);
 
   it("detectPatterns works on a synthetic window without touching the DB", async () => {
-    if (!dbAvailable) return;
 
     const points: TrajectoryPoint[] = [];
     for (let i = 0; i < 15; i++) {

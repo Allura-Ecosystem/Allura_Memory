@@ -11,7 +11,7 @@
 
 import type { Pool } from "pg"
 import { RuVectorGraphAdapter } from "./ruvector-adapter"
-import { RuvectorCrateGraphAdapter, type Embedder } from "./ruvector-crate-adapter"
+import { type Embedder, RuvectorCrateGraphAdapter } from "./ruvector-crate-adapter"
 import type { IGraphAdapter } from "./types"
 
 export type GraphBackend = "ruvector" | "ruvector-crate"

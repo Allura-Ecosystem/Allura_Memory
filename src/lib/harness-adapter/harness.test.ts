@@ -12,7 +12,7 @@
  * false so the fs check does not contaminate the result.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { HarnessAdapter } from "./types"
 
 // ── Module-level fs mock ──────────────────────────────────────────────────────

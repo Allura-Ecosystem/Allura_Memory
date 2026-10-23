@@ -29,18 +29,22 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - name: Install locked dependencies
-        run: bun install --frozen-lockfile
+        run: bash scripts/ci/install-locked.sh
       - name: Typecheck
         run: |
           bun run ci:evidence run \
             --lane=static \
             --name=typecheck \
-            --artifact-dir="artifacts/ci/${GITHUB_SHA}/static" \
+            --artifact-dir="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/static" \
             -- bun run typecheck
       - name: ESLint
         if: ${{ always() }}
@@ -50,7 +54,7 @@ jobs:
           bun run ci:evidence run \
             --lane=static \
             --name=eslint-changed-files \
-            --artifact-dir="artifacts/ci/${GITHUB_SHA}/static" \
+            --artifact-dir="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/static" \
             -- bun run lint:ci --base="${CI_LINT_BASE_SHA}"
       # Story 24.11a AC-6 — blocking route-authority gate.
       # Fails the job when a route handler under src/app is absent from
@@ -64,16 +68,16 @@ jobs:
           bun run ci:evidence run \
             --lane=static \
             --name=route-scope-manifest \
-            --artifact-dir="artifacts/ci/${GITHUB_SHA}/static" \
-            --artifact="artifacts/ci/${GITHUB_SHA}/static/route-scope-manifest.json" \
+            --artifact-dir="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/static" \
+            --artifact="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/static/route-scope-manifest.json" \
             -- bun run validate:route-scope-manifest \
-              --json="artifacts/ci/${GITHUB_SHA}/static/route-scope-manifest.json"
+              --json="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/static/route-scope-manifest.json"
       - name: Upload static evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: epic-24-evidence-static-${{ github.sha }}
-          path: artifacts/ci/${{ github.sha }}/static
+          name: epic-24-evidence-static-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/ci/${{ github.sha }}/${{ github.run_id }}-${{ github.run_attempt }}/static
           if-no-files-found: warn
           retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
@@ -87,28 +91,33 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - name: Install locked dependencies
-        run: bun install --frozen-lockfile
+        run: bash scripts/ci/install-locked.sh
       - name: Run unit tests
         run: |
           bun run ci:evidence run \
             --lane=unit \
             --name=unit-tests \
-            --artifact-dir="artifacts/ci/${GITHUB_SHA}/unit" \
-            --artifact="artifacts/ci/${GITHUB_SHA}/unit/unit-tests.json" \
-            --require-vitest-results="artifacts/ci/${GITHUB_SHA}/unit/unit-tests.json" \
+            --artifact-dir="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/unit" \
+            --artifact="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/unit/unit-tests.json" \
+            --require-vitest-results="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/unit/unit-tests.json" \
+            --required-suites=scripts/ci/required-suites.json \
             -- bun vitest run --config vitest.config.unit.ts --reporter=json \
-              --outputFile="artifacts/ci/${GITHUB_SHA}/unit/unit-tests.json"
+              --outputFile="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/unit/unit-tests.json"
       - name: Upload unit evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: epic-24-evidence-unit-${{ github.sha }}
-          path: artifacts/ci/${{ github.sha }}/unit
+          name: epic-24-evidence-unit-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/ci/${{ github.sha }}/${{ github.run_id }}-${{ github.run_attempt }}/unit
           if-no-files-found: warn
           retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
@@ -119,25 +128,29 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - name: Install locked dependencies
-        run: bun install --frozen-lockfile
+        run: bash scripts/ci/install-locked.sh
       - name: Build
         run: |
           bun run ci:evidence run \
             --lane=build \
             --name=production-build \
-            --artifact-dir="artifacts/ci/${GITHUB_SHA}/build" \
+            --artifact-dir="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/build" \
             -- bun run build
       - name: Upload build evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: epic-24-evidence-build-${{ github.sha }}
-          path: artifacts/ci/${{ github.sha }}/build
+          name: epic-24-evidence-build-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/ci/${{ github.sha }}/${{ github.run_id }}-${{ github.run_attempt }}/build
           if-no-files-found: warn
           retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
@@ -177,31 +190,35 @@ jobs:
           fetch-depth: 0
       - name: Fetch pinned historical upgrade baseline
         run: git fetch --no-tags origin dcd2bb25c8b56678451aa7846f2ead1328d3d4b5
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - name: Install locked dependencies
-        run: bun install --frozen-lockfile
+        run: bash scripts/ci/install-locked.sh
       - name: Apply migrations and run live database tests
         run: |
           bun run ci:evidence run \
             --lane=live-db \
             --name=live-postgresql-integration \
-            --artifact-dir="artifacts/ci/${GITHUB_SHA}/live-db" \
-            --artifact="artifacts/ci/${GITHUB_SHA}/live-db/migration.log" \
-            --artifact="artifacts/ci/${GITHUB_SHA}/live-db/live-db-tests.json" \
-            --artifact="artifacts/ci/${GITHUB_SHA}/live-db/postgres-server-version.txt" \
-            --postgres-server-version-file="artifacts/ci/${GITHUB_SHA}/live-db/postgres-server-version.txt" \
-            --require-vitest-results="artifacts/ci/${GITHUB_SHA}/live-db/live-db-tests.json" \
+            --artifact-dir="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/live-db" \
+            --artifact="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/live-db/migration.log" \
+            --artifact="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/live-db/live-db-tests.json" \
+            --artifact="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/live-db/postgres-server-version.txt" \
+            --postgres-server-version-file="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/live-db/postgres-server-version.txt" \
+            --require-vitest-results="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/live-db/live-db-tests.json" \
             -- bash scripts/ci/run-live-db-tests.sh \
-              --artifact-dir="artifacts/ci/${GITHUB_SHA}/live-db"
+              --artifact-dir="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/live-db"
       - name: Upload live database evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: epic-24-evidence-live-db-${{ github.sha }}
-          path: artifacts/ci/${{ github.sha }}/live-db
+          name: epic-24-evidence-live-db-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/ci/${{ github.sha }}/${{ github.run_id }}-${{ github.run_attempt }}/live-db
           if-no-files-found: warn
           retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
@@ -242,33 +259,37 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - name: Install locked dependencies
-        run: bun install --frozen-lockfile
+        run: bash scripts/ci/install-locked.sh
       - name: Run complete benchmark baseline
         run: |
           bun run ci:evidence run \
             --lane=benchmark \
             --name=benchmark-baseline \
-            --artifact-dir="artifacts/ci/${GITHUB_SHA}/benchmark" \
-            --artifact="artifacts/ci/${GITHUB_SHA}/benchmark/benchmark-results.json" \
-            --artifact="artifacts/ci/${GITHUB_SHA}/benchmark/gateway.log" \
-            --artifact="artifacts/ci/${GITHUB_SHA}/benchmark/database/migration.log" \
-            --artifact="artifacts/ci/${GITHUB_SHA}/benchmark/database/postgres-server-version.txt" \
-            --postgres-server-version-file="artifacts/ci/${GITHUB_SHA}/benchmark/database/postgres-server-version.txt" \
-            --require-benchmark-results="artifacts/ci/${GITHUB_SHA}/benchmark/benchmark-results.json" \
+            --artifact-dir="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/benchmark" \
+            --artifact="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/benchmark/benchmark-results.json" \
+            --artifact="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/benchmark/gateway.log" \
+            --artifact="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/benchmark/database/migration.log" \
+            --artifact="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/benchmark/database/postgres-server-version.txt" \
+            --postgres-server-version-file="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/benchmark/database/postgres-server-version.txt" \
+            --require-benchmark-results="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/benchmark/benchmark-results.json" \
             --expected-benchmark-ids=retrieval-quality,curation-accuracy,governance-integrity,latency-profile,audit-completeness \
             -- bash scripts/ci/run-benchmark.sh \
-              --artifact-dir="artifacts/ci/${GITHUB_SHA}/benchmark"
+              --artifact-dir="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/benchmark"
       - name: Upload benchmark evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: epic-24-evidence-benchmark-${{ github.sha }}
-          path: artifacts/ci/${{ github.sha }}/benchmark
+          name: epic-24-evidence-benchmark-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/ci/${{ github.sha }}/${{ github.run_id }}-${{ github.run_attempt }}/benchmark
           if-no-files-found: warn
           retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
@@ -301,12 +322,16 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - name: Install locked dependencies
-        run: bun install --frozen-lockfile
+        run: bash scripts/ci/install-locked.sh
       - name: Apply migrations
         run: |
           PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
@@ -321,18 +346,18 @@ jobs:
           bun run ci:evidence run \
             --lane=eval \
             --name=portfolio-evaluation \
-            --artifact-dir="artifacts/ci/${GITHUB_SHA}/eval" \
-            --artifact="artifacts/ci/${GITHUB_SHA}/eval/portfolio.json" \
-            --artifact="artifacts/ci/${GITHUB_SHA}/eval/portfolio.md" \
+            --artifact-dir="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/eval" \
+            --artifact="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/eval/portfolio.json" \
+            --artifact="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/eval/portfolio.md" \
             -- bun run eval:portfolio --live \
-              --json="artifacts/ci/${GITHUB_SHA}/eval/portfolio.json" \
-              --md="artifacts/ci/${GITHUB_SHA}/eval/portfolio.md"
+              --json="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/eval/portfolio.json" \
+              --md="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/eval/portfolio.md"
       - name: Upload evaluation evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: epic-24-evidence-eval-${{ github.sha }}
-          path: artifacts/ci/${{ github.sha }}/eval
+          name: epic-24-evidence-eval-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/ci/${{ github.sha }}/${{ github.run_id }}-${{ github.run_attempt }}/eval
           if-no-files-found: warn
           retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
@@ -345,6 +370,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
@@ -352,21 +381,21 @@ jobs:
       - name: Download lane evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: epic-24-evidence-*-${{ github.sha }}
+          pattern: epic-24-evidence-*-${{ github.sha }}-${{ github.run_attempt }}
           path: artifacts/download
       - name: Aggregate and validate the SHA-bound manifest
         if: ${{ always() }}
         run: |
           bun run ci:evidence aggregate \
             --input-dir=artifacts/download \
-            --output="artifacts/ci/${GITHUB_SHA}/evidence/evidence-manifest.json" \
+            --output="artifacts/ci/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/evidence/evidence-manifest.json" \
             --schema=docs/portfolio/evidence-schema.json \
             --expected-lanes=static,unit,build,live-db,benchmark,eval
       - name: Upload aggregate evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: epic-24-evidence-manifest-${{ github.sha }}
-          path: artifacts/ci/${{ github.sha }}/evidence
+          name: epic-24-evidence-manifest-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/ci/${{ github.sha }}/${{ github.run_id }}-${{ github.run_attempt }}/evidence
           if-no-files-found: error
           retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}

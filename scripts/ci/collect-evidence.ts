@@ -1,7 +1,11 @@
 #!/usr/bin/env bun
 
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises"
+import { spawn, spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
+import { mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises"
 import { dirname, relative, resolve } from "node:path"
+
+import { readRequiredLane, type RequiredLane, validateRequiredSuiteReport } from "./required-suites"
 
 export type CommandStatus = "passed" | "failed"
 export type LaneStatus = CommandStatus | "missing"
@@ -102,17 +106,52 @@ function repoRelative(path: string): string {
 }
 
 function gitSha(): string {
-  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA
-  const result = Bun.spawnSync(["git", "rev-parse", "HEAD"], { stdout: "pipe", stderr: "ignore" })
-  if (result.exitCode !== 0) throw new Error("unable to resolve commit SHA")
-  return result.stdout.toString().trim()
+  const sha = gitOutput(["rev-parse", "HEAD"]).trim()
+  if (process.env.GITHUB_SHA && process.env.GITHUB_SHA !== sha) throw new Error("GITHUB_SHA differs from checked-out HEAD")
+  return sha
+}
+
+function gitOutput(args: string[]): string {
+  const result = spawnSync("git", args, { encoding: "utf8" })
+  if (result.status !== 0) throw new Error(`git ${args[0]} failed`)
+  return result.stdout
+}
+
+function digest(value: string | Uint8Array): string {
+  return createHash("sha256").update(value).digest("hex")
+}
+
+function runtimeVersion(runtime: string): string {
+  const result = spawnSync(runtime, ["--version"], { encoding: "utf8" })
+  if (result.status !== 0) throw new Error(`unable to read ${runtime} version`)
+  return result.stdout.trim().replace(/^v/, "")
+}
+
+async function sourceIdentity(): Promise<Record<string, string>> {
+  const untracked = gitOutput(["ls-files", "--others", "--exclude-standard", "-z"]).split("\0").filter(Boolean).sort()
+  const untrackedDigests = await Promise.all(untracked.map(async (path) => [path, digest(await readFile(path))]))
+  return {
+    commit_sha: gitSha(),
+    diff_sha256: digest(gitOutput(["diff", "--binary", "HEAD"])),
+    untracked_sha256: digest(JSON.stringify(untrackedDigests)),
+    lock_sha256: digest(await readFile("bun.lock")),
+  }
+}
+
+async function runChild(command: string[]): Promise<number> {
+  return new Promise((resolveExit, reject) => {
+    const child = spawn(command[0], command.slice(1), { stdio: "inherit", env: process.env })
+    child.once("error", reject)
+    child.once("close", (code) => resolveExit(code ?? 128))
+  })
 }
 
 function runUrl(): string | null {
-  if (process.env.CI_RUN_URL) return process.env.CI_RUN_URL
   const repository = process.env.GITHUB_REPOSITORY
   const runId = process.env.GITHUB_RUN_ID
-  return repository && runId ? `https://github.com/${repository}/actions/runs/${runId}` : null
+  const base = process.env.CI_RUN_URL || (repository && runId ? `https://github.com/${repository}/actions/runs/${runId}` : null)
+  const attempt = process.env.GITHUB_RUN_ATTEMPT
+  return base && attempt ? `${base.replace(/\/attempts\/\d+$/, "")}/attempts/${attempt}` : base
 }
 
 async function readJson(path: string): Promise<unknown> {
@@ -130,15 +169,19 @@ export function validateVitestReport(report: unknown): string | null {
   const passed = nonNegativeInteger(object.numPassedTests)
   const failed = nonNegativeInteger(object.numFailedTests)
   const pending = nonNegativeInteger(object.numPendingTests)
-  if (total === null || passed === null || failed === null || pending === null) {
+  const todo = nonNegativeInteger(object.numTodoTests ?? 0)
+  if (total === null || passed === null || failed === null || pending === null || todo === null) {
     return "Vitest report must contain non-negative integer total/passed/failed/pending counters"
   }
-  if (total !== passed + failed + pending) {
+  if (total !== passed + failed + pending + todo) {
     return `Vitest report counters are inconsistent: total=${total}, passed=${passed}, failed=${failed}, pending=${pending}`
   }
   if (total === 0) return "Vitest report contains zero tests"
   if (failed > 0) return `Vitest report declares ${failed} failed test(s)`
   if (passed === 0) return `Vitest report contains zero passed tests (${pending} pending/skipped)`
+  if (object.success === false || (typeof object.numFailedTestSuites === "number" && object.numFailedTestSuites > 0)) {
+    return "Vitest report declares unsuccessful collection or failed suites"
+  }
   return null
 }
 
@@ -199,12 +242,17 @@ async function readPostgresServerVersion(path: string): Promise<string> {
   return `PostgreSQL ${value}`
 }
 
-async function validateRequiredOutput(args: ParsedArgs): Promise<string | null> {
+async function validateRequiredOutput(args: ParsedArgs, startedAt: number, requiredLane?: RequiredLane): Promise<string | null> {
   const vitestPath = option(args, "require-vitest-results", false)
   if (vitestPath) {
     try {
-      const error = validateVitestReport(await readJson(vitestPath))
+      const report = await readJson(vitestPath)
+      const error = validateVitestReport(report)
       if (error) return `${vitestPath}: ${error}`
+      if (requiredLane) {
+        const suiteError = validateRequiredSuiteReport(report, requiredLane.suites, process.cwd(), startedAt, Date.now())
+        if (suiteError) return suiteError
+      }
     } catch (error) {
       return `unable to validate Vitest report ${vitestPath}: ${error instanceof Error ? error.message : String(error)}`
     }
@@ -226,67 +274,139 @@ export async function recordCommand(args: ParsedArgs): Promise<number> {
   const lane = option(args, "lane")!
   const name = option(args, "name")!
   const artifactDir = resolve(process.cwd(), option(args, "artifact-dir")!)
+  repoRelative(artifactDir)
   const declaredArtifacts = (args.options.get("artifact") ?? []).map(repoRelative)
+  const manifestPath = option(args, "required-suites", false)
+  const vitestPath = option(args, "require-vitest-results", false)
   if (args.passthrough.length === 0) throw new Error("run requires a command after --")
+  if (manifestPath && !vitestPath) throw new Error("--required-suites requires --require-vitest-results")
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(name)) throw new Error("command name must be a safe artifact filename")
+  const fragmentPath = resolve(artifactDir, "evidence-fragment.json")
+  let priorFragment: LaneEvidence | undefined
+  try {
+    priorFragment = await readJson(fragmentPath) as LaneEvidence
+    if (priorFragment.kind !== "lane-fragment" || priorFragment.commit_sha !== gitSha()
+      || priorFragment.lane !== lane || priorFragment.run_url !== runUrl()) {
+      throw new Error("existing fragment identity does not match this command")
+    }
+    if (priorFragment.commands.some((command) => command.name === name)) throw new Error("duplicate command; use a fresh attempt directory")
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+  }
+  if (manifestPath) {
+    try {
+      await stat(resolve(artifactDir, `${name}-required-suites.json`))
+      throw new Error("required-suite evidence already exists; use a fresh attempt directory")
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+    }
+  }
   await mkdir(artifactDir, { recursive: true })
 
-  const startedAt = new Date().toISOString()
+  const startedAtMs = Date.now()
+  const startedAt = new Date(startedAtMs).toISOString()
   const started = performance.now()
-  let exitStatus = 127
+  const errors: string[] = []
+  let requiredLane: RequiredLane | undefined
+  let identity: Record<string, string> | undefined
+  const requiredSources: Record<string, string> = {}
+  let manifestDigest: string | undefined
   try {
-    const child = Bun.spawn(args.passthrough, { stdin: "inherit", stdout: "inherit", stderr: "inherit", env: process.env })
-    exitStatus = await child.exited
+    // Reusing a prior report must fail before launching the child; never certify it.
+    if (vitestPath) {
+      repoRelative(vitestPath)
+      try {
+        await stat(vitestPath)
+        throw new Error("Vitest output already exists; use a fresh attempt directory")
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+      }
+    }
+    if (manifestPath) {
+      const contents = await readFile(manifestPath, "utf8")
+      manifestDigest = digest(contents)
+      requiredLane = readRequiredLane(JSON.parse(contents), lane)
+      for (const path of [requiredLane.config, ...requiredLane.suites.map((suite) => suite.file)]) {
+        const resolved = await realpath(path)
+        repoRelative(resolved)
+        if (!(await stat(resolved)).isFile()) throw new Error(`required source is not a file: ${path}`)
+        requiredSources[path] = digest(await readFile(resolved))
+      }
+      identity = await sourceIdentity()
+    }
   } catch (error) {
-    process.stderr.write(`[ci-evidence] command spawn failed: ${error instanceof Error ? error.message : String(error)}\n`)
+    errors.push(`preflight: ${error instanceof Error ? error.message : String(error)}`)
   }
 
+  let exitStatus = errors.length > 0 ? 66 : 127
+  if (errors.length === 0) {
+    try {
+      exitStatus = await runChild(args.passthrough)
+    } catch (error) {
+      errors.push(`command spawn failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+  const childExitStatus = exitStatus
   let serverVersion: string | null = null
-  let serverVersionError: string | null = null
-  const existingArtifacts = await existingDeclaredArtifacts(declaredArtifacts)
   const serverVersionPath = option(args, "postgres-server-version-file", false)
   if (serverVersionPath) {
-    try {
-      serverVersion = await readPostgresServerVersion(serverVersionPath)
-    } catch (error) {
-      serverVersionError = `unable to read PostgreSQL server version: ${error instanceof Error ? error.message : String(error)}`
-    }
+    try { serverVersion = await readPostgresServerVersion(serverVersionPath) }
+    catch (error) { errors.push(`unable to read PostgreSQL server version: ${String(error)}`) }
   }
   if (exitStatus === 0) {
-    const validationErrors: string[] = []
-    const outputError = await validateRequiredOutput(args)
-    if (outputError) validationErrors.push(outputError)
+    const outputError = await validateRequiredOutput(args, startedAtMs, requiredLane)
+    if (outputError) errors.push(outputError)
     const missingArtifacts = await missingDeclaredArtifacts(declaredArtifacts)
-    if (missingArtifacts.length > 0) validationErrors.push(`declared artifacts are missing or not files: ${missingArtifacts.join(", ")}`)
-    if (serverVersionError) validationErrors.push(serverVersionError)
-    if (validationErrors.length > 0) {
-      process.stderr.write(`[ci-evidence] ${validationErrors.join("; ")}\n`)
-      exitStatus = 66
+    if (missingArtifacts.length > 0) errors.push(`declared artifacts are missing or not files: ${missingArtifacts.join(", ")}`)
+    if (identity) {
+      try {
+        if (JSON.stringify(identity) !== JSON.stringify(await sourceIdentity())) errors.push("source identity changed during required-suite execution")
+        if (digest(await readFile(manifestPath!)) !== manifestDigest) errors.push("required-suite manifest changed during execution")
+        for (const [path, originalDigest] of Object.entries(requiredSources)) {
+          if (digest(await readFile(path)) !== originalDigest) errors.push(`required source changed during execution: ${path}`)
+        }
+      } catch (error) { errors.push(`unable to revalidate source identity: ${String(error)}`) }
     }
+    if (errors.length > 0) exitStatus = 66
+  }
+  if (errors.length > 0) process.stderr.write(`[ci-evidence] ${errors.join("; ")}\n`)
+
+  const existingArtifacts = await existingDeclaredArtifacts(declaredArtifacts)
+  if (manifestPath) {
+    const evidencePath = resolve(artifactDir, `${name}-required-suites.json`)
+    repoRelative(evidencePath)
+    let reportDigest: string | null = null
+    try { reportDigest = digest(await readFile(vitestPath!)) } catch {}
+    const evidence = {
+      scope: "hermetic required-suite execution, not live beta acceptance",
+      source: identity ?? null,
+      manifest_sha256: manifestDigest ?? null,
+      required_source_sha256: requiredSources,
+      report_sha256: reportDigest,
+      lane,
+      command: args.passthrough,
+      started_at: startedAt,
+      child_exit_status: childExitStatus,
+      exit_status: exitStatus,
+      status: exitStatus === 0 ? "passed" : "failed",
+      errors,
+      required_files: requiredLane?.suites.map((suite) => ({ file: suite.file, required_assertions: suite.requiredAssertions.length })) ?? [],
+    }
+    await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8")
+    existingArtifacts.push(repoRelative(evidencePath))
   }
 
-  const fragmentPath = resolve(artifactDir, "evidence-fragment.json")
-  let fragment: LaneEvidence = {
+  const fragment: LaneEvidence = priorFragment ?? {
     schema_version: "1.0.0",
     kind: "lane-fragment",
     commit_sha: gitSha(),
     run_url: runUrl(),
     lane,
     status: "passed",
-    environment: { bun: Bun.version, node: process.version, postgresql: serverVersion },
+    environment: { bun: runtimeVersion("bun"), node: `v${runtimeVersion("node")}`, postgresql: serverVersion },
     commands: [],
   }
-
-  try {
-    const prior = (await readJson(fragmentPath)) as LaneEvidence
-    if (prior.kind !== "lane-fragment" || prior.commit_sha !== fragment.commit_sha || prior.lane !== lane) {
-      throw new Error("existing fragment identity does not match this command")
-    }
-    fragment = prior
-    if (serverVersion) fragment.environment.postgresql = serverVersion
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
-  }
-
+  if (serverVersion) fragment.environment.postgresql = serverVersion
   const status: CommandStatus = exitStatus === 0 ? "passed" : "failed"
   fragment.commands.push({
     name,
@@ -368,7 +488,23 @@ export function buildEvidenceManifest(args: {
   bunVersion: string
   nodeVersion: string
 }): EvidenceManifest {
-  const byLane = new Map(args.fragments.filter((entry) => entry.commit_sha === args.commitSha).map((entry) => [entry.lane, entry]))
+  if (args.expectedLanes.length === 0 || new Set(args.expectedLanes).size !== args.expectedLanes.length) {
+    throw new Error("expected lanes must be nonempty and unique")
+  }
+  const current = args.fragments.filter((entry) => entry.commit_sha === args.commitSha)
+  const byLane = new Map<string, LaneEvidence>()
+  for (const fragment of current) {
+    if (!args.expectedLanes.includes(fragment.lane)) throw new Error(`unexpected evidence lane ${fragment.lane}`)
+    if (byLane.has(fragment.lane)) throw new Error(`duplicate evidence lane ${fragment.lane}`)
+    if (args.runUrl !== null && fragment.run_url !== args.runUrl) throw new Error(`stale run/attempt for lane ${fragment.lane}`)
+    if (fragment.commands.length === 0) throw new Error(`empty command evidence for lane ${fragment.lane}`)
+    if (new Set(fragment.commands.map((command) => command.name)).size !== fragment.commands.length) {
+      throw new Error(`duplicate command evidence for lane ${fragment.lane}`)
+    }
+    const status = fragment.status === "passed" && fragment.commands.every((command) => command.status === "passed" && command.exit_status === 0)
+      ? "passed" : "failed"
+    byLane.set(fragment.lane, { ...fragment, status })
+  }
   const missingLanes = args.expectedLanes.filter((lane) => !byLane.has(lane))
   const lanes: EvidenceManifest["lanes"] = args.expectedLanes.map((lane) => {
     const fragment = byLane.get(lane)
@@ -411,8 +547,8 @@ export async function aggregateEvidence(args: ParsedArgs): Promise<number> {
     commitSha: sha,
     generatedAt: new Date().toISOString(),
     runUrl: runUrl(),
-    bunVersion: Bun.version,
-    nodeVersion: process.version,
+    bunVersion: runtimeVersion("bun"),
+    nodeVersion: `v${runtimeVersion("node")}`,
   })
   const errors = validateAgainstSchema(manifest, await readJson(schemaPath))
   if (errors.length > 0) throw new Error(`evidence manifest failed schema validation:\n${errors.join("\n")}`)

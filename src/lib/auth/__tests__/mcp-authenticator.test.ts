@@ -13,9 +13,9 @@ import { hashToken, prefixOf } from "@/lib/mcp-token/hash";
 
 describe("McpAuthenticator device credential binding", () => {
   it("does not publicly export the default authenticator issuer", async () => {
-    const module = await import("../mcp-authenticator");
+    const authenticatorModule = await import("../mcp-authenticator");
 
-    expect(module).not.toHaveProperty("createDefaultAuthenticator");
+    expect(authenticatorModule).not.toHaveProperty("createDefaultAuthenticator");
   });
 
   it("resolves FromEnvironment to raw, non-capability configuration", async () => {

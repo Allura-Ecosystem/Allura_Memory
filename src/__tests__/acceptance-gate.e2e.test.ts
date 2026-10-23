@@ -863,7 +863,7 @@ describe.skipIf(!runLive)("10-point acceptance gate (live PG+Neo4j)", () => {
     )
     expect(wiFetch.rows.length).toBe(1)
 
-    let current = wiFetch.rows[0] as { id: string; status: string; updated_at_token: string }
+    const current = wiFetch.rows[0] as { id: string; status: string; updated_at_token: string }
 
     // backlog → ready
     let transitioned = await transitionWorkItem(pool, {

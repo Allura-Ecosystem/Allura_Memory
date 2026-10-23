@@ -23,6 +23,9 @@ on:
 # Integration tests get mocked DB env vars.
 # E2E tests get live PostgreSQL + Neo4j service containers.
 
+env:
+  BUN_VERSION: "1.3.14"
+
 jobs:
   # ── Credential Leak Scan (Story 29.17 / AC-25) ───────────────────────────
   credential-leak-scan:
@@ -32,12 +35,16 @@ jobs:
       PUPPETEER_SKIP_DOWNLOAD: "true"
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
       - name: Install dependencies
-        run: bun install
+        run: bash scripts/ci/install-locked.sh
       - name: Scan device-pairing credential artifacts
         run: bun run scan:credentials
 
@@ -62,12 +69,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
       - name: Install dependencies
-        run: bun install
+        run: bash scripts/ci/install-locked.sh
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Wait for PostgreSQL
@@ -103,12 +114,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
       - name: Install dependencies
-        run: bun install
+        run: bash scripts/ci/install-locked.sh
       - name: Type check
         run: bun run typecheck
 
@@ -117,22 +132,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
       - name: Install dependencies
-        run: bun install
+        run: bash scripts/ci/install-locked.sh
       - name: Lint
-        run: bun run lint
+        run: bun run lint:eslint --no-fix
       - name: Git-exec choke point (GIT-EXEC-001)
+        if: ${{ !cancelled() }}
         run: bun run validate:git-exec
       - name: Vendored native addon checksum gate (AD-50 / RK-16)
+        if: ${{ !cancelled() }}
         run: bun run validate:vendor
       # Story 24.11a AC-6 — route-scope manifest is the single source of route
       # authority. Blocking: an undeclared route handler, or a manifest entry
       # weaker than the role its handler enforces, fails this job.
       - name: Route-scope manifest authority (AD-42 / Story 24.11a)
+        if: ${{ !cancelled() }}
         run: bun run validate:route-scope-manifest --json=artifacts/ci/route-scope-manifest.json
       - name: Upload route-scope manifest coverage
         if: ${{ always() }}
@@ -153,14 +175,34 @@ jobs:
       ALLURA_MCP_TOKEN_SECRET: ci-test-token-secret-0123456789abcdef
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
       - name: Install dependencies
-        run: bun install
-      - name: Run unit tests
-        run: bun run test:unit
+        run: bash scripts/ci/install-locked.sh
+      - name: Run unit tests and verify required suites
+        run: |
+          bun run ci:evidence run \
+            --lane=unit --name=unit-tests \
+            --artifact-dir="artifacts/ci/main-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/unit" \
+            --artifact="artifacts/ci/main-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/unit/unit-tests.json" \
+            --require-vitest-results="artifacts/ci/main-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/unit/unit-tests.json" \
+            --required-suites=scripts/ci/required-suites.json \
+            -- bun run test:unit --reporter=default --reporter=json \
+              --outputFile="artifacts/ci/main-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/unit/unit-tests.json"
+      - name: Upload unit execution evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-unit-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/ci/main-${{ github.run_id }}-${{ github.run_attempt }}/unit
+          if-no-files-found: error
+          retention-days: 14
 
   # ── Portfolio Evaluation (Story 24.6) ─────────────────────────────────────
   # Deterministic offline regression gate. Executes every lane declared in
@@ -170,12 +212,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
       - name: Install dependencies
-        run: bun install
+        run: bash scripts/ci/install-locked.sh
       - name: Run portfolio evaluation suite
         run: bun run eval:portfolio --json=artifacts/ci/eval/portfolio.json --md=artifacts/ci/eval/portfolio.md
       - name: Upload evaluation artifact
@@ -194,12 +240,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
       - name: Install dependencies
-        run: bun install
+        run: bash scripts/ci/install-locked.sh
       - name: Run curator tests
         run: bun run test:curator
 
@@ -210,12 +260,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
       - name: Install dependencies
-        run: bun install
+        run: bash scripts/ci/install-locked.sh
       - name: Run integration tests
         run: bun run test:integration
         env:
@@ -265,12 +319,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
       - name: Install dependencies
-        run: bun install
+        run: bash scripts/ci/install-locked.sh
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Wait for PostgreSQL
@@ -312,12 +370,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
       - name: Install dependencies
-        run: bun install
+        run: bash scripts/ci/install-locked.sh
       - name: Build
         run: bun run build
       - name: Check MCP server builds

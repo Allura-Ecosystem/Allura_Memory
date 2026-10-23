@@ -6,7 +6,7 @@
  * We normalize these into our NodeCategory union.
  */
 
-import type { GraphEdge, GraphNode, NodeCategory, EdgeRelationship } from "./types"
+import type { EdgeRelationship, GraphEdge, GraphNode, NodeCategory } from "./types"
 
 interface ApiNode {
   id: string

@@ -18,7 +18,7 @@ if (typeof window !== "undefined") {
 }
 
 import { memory_search } from "@/mcp/canonical-tools";
-import type { MemorySearchResult, GroupId } from "@/lib/memory/canonical-contracts";
+import type { GroupId, MemorySearchResult } from "@/lib/memory/canonical-contracts";
 import { validateGroupId } from "@/lib/validation/group-id";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

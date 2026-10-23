@@ -372,7 +372,7 @@ bun run start             # production server
 
 # Type checking & lint
 bun run typecheck         # tsc --noEmit
-bun run lint              # alias for typecheck
+bun run lint              # ESLint; typecheck runs separately
 
 # Tests (6 lane configs)
 bun test                          # all unit tests (vitest run)

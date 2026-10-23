@@ -10,17 +10,17 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { writeFileSync, mkdtempSync } from "fs";
+import { mkdtempSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { stringify as stringifyYaml } from "yaml";
 
 import {
+  getAllowedGroupIds,
+  getDefaultGroupId,
+  isAgentAllowedGroupId,
   loadRegistry,
   reloadRegistry,
-  getDefaultGroupId,
-  getAllowedGroupIds,
-  isAgentAllowedGroupId,
 } from "@/lib/config/group-id-registry";
 
 // Helper: write a YAML registry to a temp file

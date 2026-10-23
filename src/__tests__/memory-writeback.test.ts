@@ -44,10 +44,10 @@ vi.mock("@/mcp/canonical-tools", () => ({
 // ── Import after mocks ─────────────────────────────────────────────────────────
 
 import {
-  writeTaskOutcome,
   buildTaskOutcomeContent,
   buildTaskOutcomeMetadata,
   memory_writeback_tool,
+  writeTaskOutcome,
 } from "@/lib/memory/memory-writeback";
 import type { TaskOutcomeParams } from "@/lib/memory/memory-writeback";
 import { GroupIdValidationError } from "@/lib/validation/group-id";

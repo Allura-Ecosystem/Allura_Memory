@@ -10,8 +10,8 @@
  *  - useToast hook: shorthand methods
  */
 
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
-import { render, screen, fireEvent, act, cleanup, within } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { useToastStore } from "@/store/toast"
 import type { Toast } from "@/store/toast"
 

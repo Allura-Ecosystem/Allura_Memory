@@ -13,7 +13,7 @@
 
 import type { BenchmarkContext, BenchmarkResult } from "../lib/types"
 import { RETRIEVAL_CORPUS, RETRIEVAL_QUERIES } from "../lib/dataset"
-import { seedCorpus, searchKeys } from "../lib/seed"
+import { searchKeys, seedCorpus } from "../lib/seed"
 import { mean, precisionAtK, recallAtK, reciprocalRank, round } from "../lib/metrics"
 import { gated, statusFromMetrics } from "../lib/metric-builder"
 

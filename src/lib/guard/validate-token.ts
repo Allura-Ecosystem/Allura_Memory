@@ -1,5 +1,5 @@
 import { prefixOf, verifyToken } from "@/lib/mcp-token/hash";
-import { findByPrefix, touchLastUsed, type McpTokenRecord } from "@/lib/mcp-token/repository";
+import { findByPrefix, type McpTokenRecord, touchLastUsed } from "@/lib/mcp-token/repository";
 
 // Bumblebee step 1: validate a presented bearer token.
 // Lookup by prefix, then constant-time hash verify; reject revoked/expired tokens.

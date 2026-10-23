@@ -2,8 +2,8 @@ import { z } from "zod";
 
 import {
   CANONICAL_ROLE_IDS,
-  type PermissionProfile,
   type PermissionPrincipalKind,
+  type PermissionProfile,
   type RoleId,
 } from "./types";
 

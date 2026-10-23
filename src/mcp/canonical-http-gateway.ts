@@ -99,9 +99,9 @@ const HTTP_HOST = process.env.ALLURA_MCP_HTTP_HOST;
 // AC-1: production startup throws when no supported auth configuration exists.
 
 import {
+  type AuthenticatedTransportPrincipal,
   createHttpAuthenticator,
   type McpAuthenticator,
-  type AuthenticatedTransportPrincipal,
   resolveHttpAuthConfig,
   resolveRequestCorrelationId,
 } from "@/lib/auth/mcp-authenticator";

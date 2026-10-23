@@ -19,7 +19,7 @@ if (typeof window !== "undefined") {
 }
 
 import type { Pool } from "pg"
-import type { WorkItemPriority, WorkItemStatus, StoredWorkItem } from "./types"
+import type { StoredWorkItem, WorkItemPriority, WorkItemStatus } from "./types"
 
 // ── Valid transitions ─────────────────────────────────────────────────────────
 

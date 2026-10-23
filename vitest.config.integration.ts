@@ -11,13 +11,13 @@ import { config } from "dotenv"
 import { defineConfig } from "vitest/config"
 import path from "node:path"
 
-config()
+if (process.env.ALLURA_FIXTURE_RUNNER !== "1") config()
 
 export default defineConfig({
   test: {
     environment: "node",
     pool: "forks",
-    passWithNoTests: true,
+    passWithNoTests: false,
     include: [
       // Search with mocked services
       "src/__tests__/memory-search-ruvector.test.ts",

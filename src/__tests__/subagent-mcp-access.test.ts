@@ -11,15 +11,15 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { readFileSync, existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
 // Import the canonical tools to verify they're exported and callable
 import { memory_add, memory_search } from "@/mcp/canonical-tools";
-import { validateGroupId, GroupIdValidationError } from "@/lib/validation/group-id";
+import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
 import {
-  getDefaultGroupId,
   getAllowedGroupIds,
+  getDefaultGroupId,
   isAgentAllowedGroupId,
 } from "@/lib/config/group-id-registry";
 

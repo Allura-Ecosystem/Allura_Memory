@@ -41,8 +41,8 @@ vi.mock("@/mcp/canonical-tools", () => ({
 // ── Import after mocks ─────────────────────────────────────────────────────────
 
 import {
-  getMemoryBrief,
   categorizeMemory,
+  getMemoryBrief,
   memory_brief_tool,
 } from "@/lib/memory/memory-brief";
 import type { MemorySearchResult } from "@/lib/memory/canonical-contracts";

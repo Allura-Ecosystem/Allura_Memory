@@ -48,8 +48,8 @@ import {
 } from "./device-limit";
 import {
   generateAuthorizationCode,
-  hashAuthorizationCode,
   generateCompletionNonce,
+  hashAuthorizationCode,
 } from "./authorization-code";
 
 /** Completion nonce TTL: 60 seconds (§4.2 step 11, §8.2). */

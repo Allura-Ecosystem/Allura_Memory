@@ -23,8 +23,8 @@ vi.mock("@/lib/mcp-token/repository", () => repository);
 
 import {
   authenticateServiceTransport,
-  createLegacyTokenPrincipal,
   createHttpAuthenticator,
+  createLegacyTokenPrincipal,
   extractBearerToken,
   type McpAuthenticator,
   type McpCredentialRecord,
@@ -271,7 +271,7 @@ describe("AC-6: stdio/service mode requires explicit identity and tenant allowli
   });
 
   it("does not let public service configuration mint write authority", async () => {
-    const module = await import("@/lib/auth/mcp-authenticator");
+    const authenticatorModule = await import("@/lib/auth/mcp-authenticator");
     const config = resolveServiceAuthConfig({
       ALLURA_MCP_SERVICE_PRINCIPAL_ID: "svc-memory",
       ALLURA_MCP_SERVICE_WORKSPACE_ID: "workspace-governance",
@@ -280,8 +280,8 @@ describe("AC-6: stdio/service mode requires explicit identity and tenant allowli
     });
 
     expect(config).not.toHaveProperty("prepareMemoryAdd");
-    expect(module).not.toHaveProperty("createServicePrincipal");
-    expect(module).not.toHaveProperty("McpAuthenticator");
+    expect(authenticatorModule).not.toHaveProperty("createServicePrincipal");
+    expect(authenticatorModule).not.toHaveProperty("McpAuthenticator");
     expect(authenticateServiceTransport).toBeTypeOf("function");
   });
 });

@@ -20,7 +20,7 @@
  *
  * Zero dependencies (Node >= 18, ESM).
  */
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 

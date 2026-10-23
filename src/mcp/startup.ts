@@ -1,5 +1,5 @@
 import { getConnections } from "./canonical-tools/connection";
-import { isRuVectorEnabled, getRuVectorPool } from "@/lib/ruvector/connection";
+import { getRuVectorPool, isRuVectorEnabled } from "@/lib/ruvector/connection";
 import { warmupEmbedding } from "@/lib/ruvector/embedding-service";
 import { resetBudgetState } from "./canonical-tools/budget-circuit";
 import { resolveAndValidateStartupTenant } from "@/lib/config/tenant-validator";

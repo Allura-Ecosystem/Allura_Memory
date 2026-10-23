@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
 import { captureException } from "@/lib/observability/sentry"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
-import { readTeams, isTeamsEmpty } from "@/lib/operational-state/sources/teams-source"
+import { isTeamsEmpty, readTeams } from "@/lib/operational-state/sources/teams-source"
 import type { TeamsSnapshot } from "@/lib/operational-state/sources/teams-source"
 import type { SourceOutcome } from "@/lib/operational-state"
 

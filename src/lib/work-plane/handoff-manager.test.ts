@@ -12,10 +12,10 @@
 import { describe, expect, it, vi } from "vitest"
 import type { Pool, QueryResult } from "pg"
 import {
+  acknowledgeHandoff,
   createHandoff,
   getHandoff,
   listPendingHandoffs,
-  acknowledgeHandoff,
   rejectHandoff,
 } from "./handoff-manager"
 

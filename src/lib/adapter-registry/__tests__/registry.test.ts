@@ -19,26 +19,26 @@
  * - prohibited_actions
  */
 
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import type {
   AdapterDeclaration,
   AdapterRegistry,
+  DegradationBehavior,
+  EvidencePolicy,
+  MemoryScope,
   ReadPolicy,
   WritePolicy,
-  MemoryScope,
-  EvidencePolicy,
-  DegradationBehavior,
 } from "@/lib/adapter-registry/types"
 import { AdapterRegistryError } from "@/lib/adapter-registry/types"
 import {
-  createAdapterRegistry,
   addAdapter,
+  createAdapterRegistry,
+  createDefaultRegistry,
   getAdapter,
   getAdapterByRoute,
   getAdaptersByRoute,
-  validateRegistry,
   seedDefaultAdapters,
-  createDefaultRegistry,
+  validateRegistry,
 } from "@/lib/adapter-registry/registry"
 
 describe("Adapter Registry - Story 0", () => {

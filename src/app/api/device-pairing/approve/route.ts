@@ -32,9 +32,9 @@ import {
   type PrincipalContext,
 } from "@/lib/auth/principal-context";
 import {
-  approveEnrollment,
-  ApprovalError,
   APPROVAL_ERROR_STATUS,
+  ApprovalError,
+  approveEnrollment,
 } from "@/lib/device-pairing/approval-service";
 
 const requestSchema = z.object({

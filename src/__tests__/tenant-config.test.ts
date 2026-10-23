@@ -33,11 +33,11 @@ vi.mock("@/lib/postgres/connection", () => ({
 // ── Import after mocks ─────────────────────────────────────────────────────────
 
 import {
-  parseTenantConfig,
-  getTenantConfig,
-  getEffectiveScoreThreshold,
-  resolveScoreThreshold,
   DEFAULT_TENANT_CONFIG,
+  getEffectiveScoreThreshold,
+  getTenantConfig,
+  parseTenantConfig,
+  resolveScoreThreshold,
 } from "@/lib/config/tenant-config";
 import { GroupIdValidationError } from "@/lib/validation/group-id";
 

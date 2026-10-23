@@ -5,33 +5,33 @@
  * ZERO divergence compared to direct PostgreSQL reads.
  *
  * Strategy:
- * 1. Seed N test memories via memory_add (through coordinator)
+ * 1. Seed N workspace-scoped episodic event fixtures through the owner setup connection
  * 2. Read each back via memory_get (through coordinator/MCP)
  * 3. Read the same memories via direct PostgreSQL query
- * 4. Compare every field: id, content, score, source, provenance, user_id, created_at
+ * 4. Compare the seven public response fields, including episodic score/source normalization
  * 5. Assert 0 divergence across all reads
  *
- * E2E-gated: only runs when RUN_E2E_TESTS=true
+ * Requires a trusted disposable integration-lane child; absence fails before connecting.
  *
  * Reference: docs/allura/BLUEPRINT.md (F-003: Approval Audit Flow)
  */
 
-import { config } from "dotenv"
-import { Pool } from "pg"
+import type { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { randomUUID } from "crypto"
+import { freshFixtureScope, requireDisposableFixture } from "../../tests/fixtures/disposable-postgres"
+import { closePool, getPool } from "../lib/postgres/connection"
+import { toMemoryId, validateGroupId } from "../mcp/canonical-tools/validation-utils"
 
-config()
 
 // ── E2E Gate ──────────────────────────────────────────────────────────────
 
-const shouldRunE2E = process.env.RUN_E2E_TESTS === "true"
 const E2E_TIMEOUT = 120_000 // 2 minutes for 1000 reads
 
 // ── Test Configuration ────────────────────────────────────────────────────
 
-const RUN_ID = randomUUID().slice(0, 8)
-const TEST_GROUP_ID = `allura-parity-${RUN_ID}` as const
+const scope = freshFixtureScope()
+const RUN_ID = scope.sessionId
+const TEST_GROUP_ID = validateGroupId(scope.groupId)
 const TEST_USER_ID = "parity-test-user"
 const SEED_COUNT = 100 // Seed 100 memories, read each 10x = 1000 reads
 
@@ -76,46 +76,23 @@ function valuesMatch(a: unknown, b: unknown): boolean {
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 
-describe.skipIf(!shouldRunE2E)("Parity: MCP passthrough vs direct PG", () => {
+describe("Parity: MCP passthrough vs direct PG", () => {
   let pgPool: Pool
   const seededMemoryIds: string[] = []
 
+  let assertEnvironment: () => void
   beforeAll(async () => {
-    if (!process.env.POSTGRES_PASSWORD) {
-      throw new Error("POSTGRES_PASSWORD environment variable is required for E2E tests")
-    }
-
-    const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL
-    if (databaseUrl) {
-      pgPool = new Pool({ connectionString: databaseUrl })
-    } else {
-      pgPool = new Pool({
-        host: process.env.POSTGRES_HOST || "localhost",
-        port: parseInt(process.env.POSTGRES_PORT || "5432", 10),
-        database: process.env.POSTGRES_DB || "memory",
-        user: process.env.POSTGRES_USER || "ronin4life",
-        password: process.env.POSTGRES_PASSWORD,
-        connectionTimeoutMillis: 10000,
-        idleTimeoutMillis: 30000,
-        max: 10,
-      })
-    }
-
-    // Verify connection
-    await pgPool.query("SELECT 1")
+    assertEnvironment = await requireDisposableFixture("src/__tests__/parity-test.test.ts")
+    pgPool = getPool()
+    await pgPool.query(`INSERT INTO workspaces(workspace_id,group_id,name) VALUES($1,$2,'Parity fixture')`,
+      [scope.workspaceId, TEST_GROUP_ID])
   }, E2E_TIMEOUT)
-
-  afterAll(async () => {
-    // Cleanup: remove test data
-    if (pgPool) {
-      await pgPool.query("DELETE FROM events WHERE group_id = $1", [TEST_GROUP_ID])
-      await pgPool.end()
-    }
-  }, E2E_TIMEOUT)
+  afterAll(async () => { await closePool() }, E2E_TIMEOUT)
 
   it(
     "should have 0 divergence across 1000 reads",
     async () => {
+      assertEnvironment()
       // ── Phase 1: Seed memories ────────────────────────────────────────
       for (let i = 0; i < SEED_COUNT; i++) {
         const memoryId = `mem-parity-${RUN_ID}-${i.toString().padStart(3, "0")}`
@@ -123,8 +100,8 @@ describe.skipIf(!shouldRunE2E)("Parity: MCP passthrough vs direct PG", () => {
         const createdAt = new Date().toISOString()
 
         await pgPool.query(
-          `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
+          `INSERT INTO events (group_id, event_type, agent_id, status, metadata, created_at, workspace_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
           [
             TEST_GROUP_ID,
             "memory_add",
@@ -138,6 +115,7 @@ describe.skipIf(!shouldRunE2E)("Parity: MCP passthrough vs direct PG", () => {
               score: 0.75 + (i * 0.002), // Vary scores slightly
             }),
             createdAt,
+            scope.workspaceId,
           ]
         )
 
@@ -149,40 +127,23 @@ describe.skipIf(!shouldRunE2E)("Parity: MCP passthrough vs direct PG", () => {
       // ── Phase 2: Read via MCP coordinator (memory_get) ─────────────────
       // Import dynamically to ensure E2E gate is respected
       const { memory_get } = await import("@/mcp/canonical-tools")
+      assertEnvironment()
 
       const mcpResults: Map<string, Record<string, unknown>> = new Map()
 
       for (const memoryId of seededMemoryIds) {
         // Read each memory 10 times to reach 1000 total reads
         for (let read = 0; read < 10; read++) {
-          try {
-            const response = await memory_get({
-              id: memoryId as any,
-              group_id: TEST_GROUP_ID as any,
-            })
-
-            mcpResults.set(`${memoryId}:${read}`, {
-              id: response.id,
-              content: response.content,
-              score: response.score,
-              source: response.source,
-              provenance: response.provenance,
-              user_id: response.user_id,
-              created_at: response.created_at,
-            })
-          } catch {
-            // Memory might not be found via MCP if not in Neo4j
-            // Record as null for divergence tracking
-            mcpResults.set(`${memoryId}:${read}`, {
-              id: null,
-              content: null,
-              score: null,
-              source: null,
-              provenance: null,
-              user_id: null,
-              created_at: null,
-            })
-          }
+          const response = await memory_get({
+            id: toMemoryId(memoryId), group_id: TEST_GROUP_ID,
+            scope: { group_id: TEST_GROUP_ID, workspace_id: scope.workspaceId, agent_id: scope.principalId },
+          })
+          expect(response.id).toBe(memoryId)
+          expect(response.source).toBe("episodic")
+          mcpResults.set(`${memoryId}:${read}`, {
+            id: response.id, content: response.content, score: response.score, source: response.source,
+            provenance: response.provenance, user_id: response.user_id, created_at: response.created_at,
+          })
         }
       }
 
@@ -195,8 +156,8 @@ describe.skipIf(!shouldRunE2E)("Parity: MCP passthrough vs direct PG", () => {
         const pgRow = await pgPool.query(
           `SELECT metadata->>'memory_id' AS id,
                   metadata->>'content' AS content,
-                  metadata->>'score' AS score,
-                  metadata->>'source' AS source,
+                  0.5::float8 AS score,
+                  'episodic'::text AS source,
                   metadata->>'source' AS provenance,
                   metadata->>'user_id' AS user_id,
                   created_at
@@ -204,12 +165,14 @@ describe.skipIf(!shouldRunE2E)("Parity: MCP passthrough vs direct PG", () => {
            WHERE group_id = $1
              AND event_type = 'memory_add'
              AND metadata->>'memory_id' = $2
+             AND workspace_id = $3
            ORDER BY created_at DESC
            LIMIT 1`,
-          [TEST_GROUP_ID, memoryId]
+          [TEST_GROUP_ID, memoryId, scope.workspaceId]
         )
 
-        if (pgRow.rows.length > 0) {
+        expect(pgRow.rows).toHaveLength(1)
+        {
           const row = pgRow.rows[0]
           for (let read = 0; read < 10; read++) {
             pgResults.set(`${memoryId}:${read}`, {
@@ -225,6 +188,7 @@ describe.skipIf(!shouldRunE2E)("Parity: MCP passthrough vs direct PG", () => {
         }
       }
 
+      expect(pgResults.size).toBe(SEED_COUNT * 10)
       // ── Phase 4: Compare field-by-field ────────────────────────────────
       const divergences: FieldDivergence[] = []
       const fieldsToCompare = ["id", "content", "score", "source", "provenance", "user_id", "created_at"]
@@ -235,7 +199,9 @@ describe.skipIf(!shouldRunE2E)("Parity: MCP passthrough vs direct PG", () => {
           const mcpData = mcpResults.get(key)
           const pgData = pgResults.get(key)
 
-          if (!mcpData || !pgData) continue
+          expect(mcpData).toBeDefined()
+          expect(pgData).toBeDefined()
+          if (!mcpData || !pgData) throw new Error(`Missing parity observation: ${key}`)
 
           for (const field of fieldsToCompare) {
             const mcpVal = mcpData[field]

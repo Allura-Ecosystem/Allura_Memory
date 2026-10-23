@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react"
 import { CATEGORY_STYLES, EDGE_STYLES } from "@/lib/graph/types"
-import type { NodeCategory, EdgeRelationship } from "@/lib/graph/types"
+import type { EdgeRelationship, NodeCategory } from "@/lib/graph/types"
 
 const VISIBLE_CATEGORIES: NodeCategory[] = [
   "platform", "security", "memory", "agent", "policy", "audit", "ops",

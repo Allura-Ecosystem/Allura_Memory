@@ -14,10 +14,10 @@ vi.mock("@/lib/device-pairing/config", () => ({
 }));
 
 import {
-  getDeviceLimit,
   acquireDeviceCountLock,
   countApprovedDevices,
   deviceLimitLockKey,
+  getDeviceLimit,
 } from "@/lib/device-pairing/device-limit";
 
 function makeMockClient() {

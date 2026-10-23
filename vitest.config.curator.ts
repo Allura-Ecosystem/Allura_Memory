@@ -14,7 +14,7 @@ export default defineConfig({
   test: {
     environment: "node",
     pool: "forks",
-    passWithNoTests: true,
+    passWithNoTests: false,
     include: [
       "src/__tests__/auto-curator*.test.ts",
       "src/__tests__/curator-approve.test.ts",

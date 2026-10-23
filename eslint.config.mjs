@@ -9,6 +9,9 @@ import typescriptEslint from "typescript-eslint"
 import * as fs from "fs"
 
 const eslintIgnore = [
+  // Immutable historical exports: every lint entrypoint first validates their inventory.
+  "docs/design/command-center/project/support.js",
+  "docs/design/command-center/project/_ds/allura-design-system-d83f547a-10de-4c68-9b53-504f3a74662a/_ds_bundle.js",
   ".git/",
   ".next/",
   ".worktrees/",

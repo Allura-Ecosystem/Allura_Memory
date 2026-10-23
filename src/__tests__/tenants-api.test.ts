@@ -23,7 +23,7 @@ delete process.env.CLERK_SECRET_KEY;
 
 // ── Mutable mock state ────────────────────────────────────────────────────────
 
-let mockAuthResult: {
+const mockAuthResult: {
   allowed: boolean;
   authenticated: boolean;
   reason?: string;
@@ -72,7 +72,7 @@ vi.mock("@/lib/postgres/connection", () => ({
 
 // ── Import after mocks ─────────────────────────────────────────────────────────
 
-import { POST, GET } from "@/app/api/tenants/route";
+import { GET, POST } from "@/app/api/tenants/route";
 import { GET as GET_SINGLE, PATCH } from "@/app/api/tenants/[group_id]/route";
 import { requireRole } from "@/lib/auth/api-auth";
 

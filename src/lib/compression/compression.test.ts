@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import { ContextCompressor } from "./index.js"
 import { applyStructuralLayer } from "./layers/structural.js"
 import { applySummarizationLayer } from "./layers/summarize.js"

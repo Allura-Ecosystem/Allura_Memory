@@ -3,70 +3,31 @@
  * Tests the complete Unified Knowledge System with live services
  * 
  * Prerequisites:
- * - PostgreSQL accessible via DATABASE_URL or POSTGRES_* env vars
+ * - PostgreSQL target supplied by the trusted disposable fixture runner
  * - Environment variables set (see .env.production.example)
  * 
  * Run with: bun run test:e2e
  */
 
-import { config } from "dotenv";
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-// Load environment variables from .env file
-config();
-
-// Skip E2E tests unless explicitly enabled
-const shouldRunE2E = process.env.RUN_E2E_TESTS === "true";
+import { freshFixtureScope, requireDisposableFixture } from "../../tests/fixtures/disposable-postgres";
+import { closePool, getPool } from "../lib/postgres/connection";
 
 const E2E_TIMEOUT = 30000; // 30 seconds for integration tests
 
-describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
+describe("E2E Integration Tests", () => {
   let pgPool: Pool;
 
+  let assertEnvironment: () => void;
+  let scope: ReturnType<typeof freshFixtureScope>;
   beforeAll(async () => {
-    if (!process.env.POSTGRES_PASSWORD) {
-      throw new Error("POSTGRES_PASSWORD environment variable is required");
-    }
-
-    // Initialize PostgreSQL connection. Prefer a full connection string when provided.
-    const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-    if (databaseUrl) {
-      pgPool = new Pool({ connectionString: databaseUrl });
-    } else {
-      pgPool = new Pool({
-        host: process.env.POSTGRES_HOST || "localhost",
-        port: parseInt(process.env.POSTGRES_PORT || "5432", 10),
-        database: process.env.POSTGRES_DB || "memory",
-        user: process.env.POSTGRES_USER || "ronin4life",
-        password: process.env.POSTGRES_PASSWORD,
-        connectionTimeoutMillis: 10000,
-        idleTimeoutMillis: 30000,
-        max: 10,
-      });
-    }
-
-    await pgPool.query("SELECT 1");
+    assertEnvironment = await requireDisposableFixture("src/__tests__/e2e-integration.test.ts");
+    pgPool = getPool();
   }, E2E_TIMEOUT);
-
-  async function cleanupTestData(): Promise<void> {
-    // Keep this order: dependent records must go before their parent rows.
-    await pgPool.query("DELETE FROM outcomes WHERE event_id IN (SELECT id FROM events WHERE metadata->>'test_run' IS NOT NULL)");
-    await pgPool.query("DELETE FROM events WHERE metadata->>'test_run' IS NOT NULL");
-    await pgPool.query("DELETE FROM sync_drift_log WHERE design_id LIKE 'test_%'");
-    await pgPool.query("DELETE FROM design_sync_status WHERE design_id LIKE 'test_%'");
-    await pgPool.query("DELETE FROM canonical_proposals WHERE content LIKE 'e2e:%'");
-    await pgPool.query("DELETE FROM graph_memories WHERE id LIKE 'e2e-%'");
-  }
-
-  afterAll(async () => {
-    await cleanupTestData();
-    await pgPool?.end();
-  });
-
-  beforeEach(async () => {
-    await cleanupTestData();
-  });
+  beforeEach(() => { assertEnvironment(); scope = freshFixtureScope(); });
+  afterAll(async () => { await closePool(); });
 
   describe("PostgreSQL Connection", () => {
     it("should connect to PostgreSQL", async () => {
@@ -120,12 +81,12 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
       await pgPool.query(
         `INSERT INTO graph_memories (id, group_id, content, score, provenance, version, workspace_scope_state)
          VALUES ($1, $2, $3, $4, $5, $6, 'legacy_quarantined')`,
-        ["e2e-graph-memory", "allura-e2e-graph", "e2e: graph memory", 0.85, "manual", 1],
+        [scope.sessionId, scope.groupId, "e2e: graph memory", 0.85, "manual", 1],
       );
 
       const result = await pgPool.query(
         "SELECT content FROM graph_memories WHERE id = $1 AND group_id = $2 AND deprecated = false",
-        ["e2e-graph-memory", "allura-e2e-graph"],
+        [scope.sessionId, scope.groupId],
       );
       expect(result.rows).toEqual([{ content: "e2e: graph memory" }]);
     });
@@ -138,7 +99,7 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id
       `, [
-        "allura-e2e-insert",
+        scope.groupId,
         "test_event",
         "test_agent",
         "test_workflow",
@@ -154,7 +115,7 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
         RETURNING id
       `, [
         eventResult.rows[0].id,
-        "allura-e2e-insert",
+        scope.groupId,
         "test_outcome",
         JSON.stringify({ key: "value" }),
         0.95
@@ -169,7 +130,7 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
         INSERT INTO events (group_id, event_type, agent_id, workflow_id, metadata, status)
         VALUES ($1, $2, $3, $4, $5, $6)
       `, [
-        "allura-e2e-query",
+        scope.groupId,
         "test_query",
         "test_agent",
         "test_workflow",
@@ -180,10 +141,10 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
       // Query by group_id
       const result = await pgPool.query(`
         SELECT * FROM events WHERE group_id = $1
-      `, ["allura-e2e-query"]);
+      `, [scope.groupId]);
 
       expect(result.rows.length).toBeGreaterThan(0);
-      expect(result.rows[0].group_id).toBe("allura-e2e-query");
+      expect(result.rows[0].group_id).toBe(scope.groupId);
     });
   });
 
@@ -194,7 +155,7 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
          VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, status`,
         [
-          "allura-e2e-proposal",
+          scope.groupId,
           "e2e: proposal verifies the governed promotion queue",
           0.85,
           "E2E integration coverage",
@@ -215,7 +176,7 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
       
       const breaker = createCircuitBreaker({
         name: "test-breaker",
-        groupId: "test-group",
+        groupId: scope.groupId,
         errorThreshold: 3,
       });
 
@@ -239,7 +200,7 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
         INSERT INTO events (group_id, event_type, agent_id, workflow_id, metadata, status)
         VALUES ($1, $2, $3, $4, $5, $6)
       `, [
-        "allura-e2e-extract",
+        scope.groupId,
         "test_extract",
         "test_agent",
         "test_workflow",
@@ -250,7 +211,7 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
       // For E2E, we verify the database is queryable
       const result = await pgPool.query(`
         SELECT * FROM events WHERE group_id = $1
-      `, ["allura-e2e-extract"]);
+      `, [scope.groupId]);
 
       expect(result.rows.length).toBeGreaterThan(0);
     });
@@ -265,8 +226,8 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
           gen_random_uuid(), $1, $2, $3, $4, $5, NOW(), 'synced'
         )
       `, [
-        "test_drift_design",
-        "allura-e2e-drift",
+        scope.sessionId,
+        scope.groupId,
         "test_page_id",
         "https://notion.so/test",
         1
@@ -275,7 +236,7 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
       // Verify sync status exists
       const result = await pgPool.query(`
         SELECT * FROM design_sync_status WHERE design_id = $1
-      `, ["test_drift_design"]);
+      `, [scope.sessionId]);
 
       expect(result.rows.length).toBe(1);
       expect(result.rows[0].status).toBe("synced");
@@ -300,7 +261,7 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
           INSERT INTO events (group_id, event_type, agent_id, workflow_id, metadata, status)
           VALUES ($1, $2, $3, $4, $5, $6)
         `, [
-          `allura-e2e-perf-${i}`,
+          scope.groupId,
           "perf_test",
           "test_agent",
           "test_workflow",
@@ -317,10 +278,11 @@ describe.skipIf(!shouldRunE2E)("E2E Integration Tests", () => {
       const start = Date.now();
       const result = await pgPool.query(
         `INSERT INTO graph_memories (id, group_id, content, score, provenance, version, workspace_scope_state)
-         SELECT 'e2e-graph-perf-' || series, 'allura-e2e-perf',
+         SELECT $1 || series, $2,
                 'e2e: graph performance row ' || series, 0.5, 'manual', 1, 'legacy_quarantined'
          FROM generate_series(1, 100) AS series
          RETURNING id`,
+        [scope.sessionId, scope.groupId],
       );
 
       expect(result.rowCount).toBe(100);

@@ -481,17 +481,15 @@ export class BudgetEnforcer {
    * Create an execution loop wrapper that enforces budget limits
    */
   wrapExecutionLoop(sessionId: SessionId, loop: ExecutionLoop): ExecutionLoop {
-    const self = this;
-
     return {
       shouldContinue: (): boolean => {
         // First check if halted
-        if (self.isHalted(sessionId)) {
+        if (this.isHalted(sessionId)) {
           return false;
         }
 
         // Check budget limits
-        if (!self.canContinue(sessionId)) {
+        if (!this.canContinue(sessionId)) {
           return false;
         }
 
@@ -499,13 +497,13 @@ export class BudgetEnforcer {
         return loop.shouldContinue();
       },
 
-      halt(reason: HaltReason): void {
-        self.haltSession(sessionId, reason);
+      halt: (reason: HaltReason): void => {
+        this.haltSession(sessionId, reason);
         loop.halt(reason);
       },
 
-      getCurrentStep(): number {
-        return self.monitor.getSessionState(sessionId)?.currentStep ?? loop.getCurrentStep();
+      getCurrentStep: (): number => {
+        return this.monitor.getSessionState(sessionId)?.currentStep ?? loop.getCurrentStep();
       },
     };
   }

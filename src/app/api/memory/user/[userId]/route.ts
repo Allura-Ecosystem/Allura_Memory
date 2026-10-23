@@ -24,7 +24,7 @@ import { withPermission } from "@/lib/auth/api-auth"
 import { getPool } from "@/lib/postgres/connection"
 import { memory_delete } from "@/mcp/canonical-tools"
 import type { GroupId, MemoryId } from "@/lib/memory/canonical-contracts"
-import { validateGroupId, GroupIdValidationError } from "@/lib/validation/group-id"
+import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
 
 // ── DELETE /api/memory/user/[userId] ─────────────────────────────────────────
 

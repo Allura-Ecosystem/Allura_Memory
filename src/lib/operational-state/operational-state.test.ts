@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { resolveOperationalSurface, isAuthoritative, type OperationalSource } from "./index"
+import { isAuthoritative, type OperationalSource, resolveOperationalSurface } from "./index"
 
 const source: OperationalSource = { id: "curator-queue", systemOfRecord: "allura-brain" }
 const NOW = Date.parse("2026-06-12T00:00:00.000Z")

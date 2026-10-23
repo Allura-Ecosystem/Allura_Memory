@@ -11,13 +11,13 @@
  * - Duplicate routes should be rejected
  */
 
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import type { AdapterDeclaration } from "@/lib/adapter-registry/types"
 import {
-  createAdapterRegistry,
   addAdapter,
-  validateRegistry,
+  createAdapterRegistry,
   seedDefaultAdapters,
+  validateRegistry,
 } from "@/lib/adapter-registry/registry"
 
 describe("Adapter Registry - Pike Review Findings", () => {

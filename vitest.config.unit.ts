@@ -17,8 +17,9 @@ export default defineConfig({
   test: {
     environment: "node",
     pool: "forks",
-    passWithNoTests: true,
+    passWithNoTests: false,
     include: [
+      "scripts/ci/disposable-fixtures.test.ts",
       // ── Pure unit tests (no DB, no external services) ──────────────────
       // Benchmark harness metric math (Precision@K, Recall@K, MRR, percentiles)
       "src/__benchmarks__/**/*.test.ts",
@@ -78,6 +79,7 @@ export default defineConfig({
       "src/lib/memory/__tests__/approval-audit.test.ts",
       "src/lib/memory/traceable-memory.test.ts",
       "src/lib/memory/approve-proposal.test.ts",
+      "src/lib/memory/promotion-outbox-worker.test.ts",
       "src/lib/memory/governance-receipt-writer.test.ts",
       "src/lib/memory/retrieval-authority.test.ts",
       "src/lib/memory/proposal-semantic-projection.test.ts",
@@ -169,6 +171,7 @@ export default defineConfig({
       "src/server/**/*.test.ts",
       // Script-level guardrail tests (GIT-EXEC-001)
       "tests/scripts/**/*.test.ts",
+      "scripts/ci/**/*.test.ts",
       // Allura Hosted — Guard gateway + MCP token (pure logic, no DB)
       "src/lib/guard/**/*.test.ts",
       "src/lib/mcp-token/**/*.test.ts",
@@ -223,6 +226,8 @@ export default defineConfig({
       // Graph adapter — ruvector-crate subset parity (fake fixture by default;
       // real binding opt-in via RUVECTOR_TEST_BINDING_PATH — no DB either way)
       "src/lib/graph-adapter/__tests__/ruvector-crate-adapter.subset.test.ts",
+      // Mocked tenant transaction: no live database, required authority regression.
+      "src/lib/graph-adapter/__tests__/ruvector-workspace-authority.test.ts",
       // Coherence Monitor (Story 2.1) — pure detectors + monitor with mocked deps
       "src/__tests__/coherence-monitor.test.ts",
       // Coherence Monitor API routes (Story 2.1) — mocked auth/pool
@@ -254,7 +259,6 @@ export default defineConfig({
       "src/lib/validation/group-governance.test.ts",
       "src/lib/validation/trace-ref.test.ts",
       "src/lib/agents/agent-manifest.test.ts",
-      "src/lib/memory/__tests__/approval-audit.test.ts",
       // ── DB-backed Story 24.4 / workspace E2Es — use test:live-db ──
       "src/__tests__/curator-approve.test.ts",
       "src/__tests__/curator-reject.test.ts",

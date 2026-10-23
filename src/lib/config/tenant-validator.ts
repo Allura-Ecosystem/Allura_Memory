@@ -16,7 +16,7 @@ if (typeof window !== "undefined") {
 }
 
 import { getPool } from "@/lib/postgres/connection";
-import { validateGroupId, GroupIdValidationError } from "@/lib/validation/group-id";
+import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id";
 
 export const DEFAULT_FALLBACK_GROUP_ID = "allura-system";
 

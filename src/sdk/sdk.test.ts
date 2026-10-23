@@ -8,7 +8,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AlluraClient, AlluraSDKError, MemoryClient } from "./index"
-import { validateGroupId, requireField } from "./validation"
+import { requireField, validateGroupId } from "./validation"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

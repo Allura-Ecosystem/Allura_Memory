@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactElement, ReactNode } from "react"
-import type { NodeCategory, EdgeRelationship, NodeStatus, RiskLevel } from "@/lib/graph/types"
+import type { EdgeRelationship, NodeCategory, NodeStatus, RiskLevel } from "@/lib/graph/types"
 import { CATEGORY_STYLES } from "@/lib/graph/types"
 
 export interface GraphFilters {

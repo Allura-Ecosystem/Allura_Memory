@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { forbiddenResponse, requireRole, unauthorizedResponse } from "@/lib/auth/api-auth"
 import { captureException } from "@/lib/observability/sentry"
 import { GroupIdValidationError, validateGroupId } from "@/lib/validation/group-id"
-import { readDreams, isDreamsEmpty } from "@/lib/operational-state/sources/dreams-source"
+import { isDreamsEmpty, readDreams } from "@/lib/operational-state/sources/dreams-source"
 import type { DreamsSnapshot } from "@/lib/operational-state/sources/dreams-source"
 import type { SourceOutcome } from "@/lib/operational-state"
 

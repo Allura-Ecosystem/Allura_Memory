@@ -10,7 +10,7 @@
  * - Manual construction of registry.adapters array
  */
 
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import { createAdapterRegistry, validateRegistry } from "@/lib/adapter-registry/registry"
 
 describe("Adapter Registry - Malformed Registry Data (Pike Blocker)", () => {

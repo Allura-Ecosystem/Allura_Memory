@@ -62,6 +62,7 @@
  *      AD-50 (vendored native addon provenance + Option A verdict).
  */
 
+import { createRequire } from "node:module"
 import type { ConfidenceScore, GroupId, MemoryId, MemoryProvenance } from "@/lib/memory/canonical-contracts"
 import type {
   CanonicalCheckResult,
@@ -146,10 +147,10 @@ const NODE_LABEL = "Memory"
  */
 function loadNativeBinding(modulePath: string): NativeBinding {
   try {
-    // Bun supports require() for N-API addons. Path comes from
+    // Keep loading synchronous and lazy for N-API addons. Path comes from
     // RUVECTOR_GRAPH_NODE_PATH (or the factory) — never a bare package name.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require(modulePath) as Partial<NativeBinding>
+    const loadModule = createRequire(import.meta.url)
+    const mod = loadModule(modulePath) as Partial<NativeBinding>
     if (!mod || typeof mod.GraphDatabase?.open !== "function") {
       throw new Error(`module at ${modulePath} does not export GraphDatabase.open`)
     }

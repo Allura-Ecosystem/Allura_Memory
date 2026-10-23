@@ -7,21 +7,21 @@
 import type { ReactElement } from "react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
-  ReactFlow,
   Background,
-  Controls,
-  MiniMap,
-  useNodesState,
-  useEdgesState,
-  type Node,
-  type Edge,
-  type NodeTypes,
   BackgroundVariant,
+  Controls,
+  type Edge,
   MarkerType,
+  MiniMap,
+  type Node,
+  type NodeTypes,
+  ReactFlow,
+  useEdgesState,
+  useNodesState,
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 
-import type { GraphNode, GraphEdge } from "@/lib/graph/types"
+import type { GraphEdge, GraphNode } from "@/lib/graph/types"
 import { CATEGORY_STYLES, EDGE_STYLES } from "@/lib/graph/types"
 import type { GraphNodeData } from "./graph-node-card"
 import { GraphNodeCard } from "./graph-node-card"

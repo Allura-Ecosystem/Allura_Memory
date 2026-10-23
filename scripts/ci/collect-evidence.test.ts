@@ -1,18 +1,18 @@
+import { describe, expect, it } from "vitest"
+
 import { randomUUID } from "node:crypto"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 
-import { describe, expect, it } from "vitest"
-
 import {
   buildEvidenceManifest,
+  type EvidenceManifest,
+  type LaneEvidence,
   parseArgs,
   recordCommand,
   REQUIRED_BENCHMARK_IDS,
-  validateBenchmarkReport,
   validateAgainstSchema,
+  validateBenchmarkReport,
   validateVitestReport,
-  type EvidenceManifest,
-  type LaneEvidence,
 } from "./collect-evidence"
 import schema from "../../docs/portfolio/evidence-schema.json"
 
@@ -113,6 +113,44 @@ describe("CI evidence schema validation", () => {
 })
 
 describe("required output trust boundaries", () => {
+  it.each(["duplicate-lane", "duplicate-command", "duplicate-expected", "unexpected-lane", "stale-run", "stale-attempt", "empty-commands"])("rejects %s evidence during aggregation", (mode) => {
+    const current = fragment("unit", "passed")
+    current.run_url = "https://github.com/example/allura/actions/runs/1/attempts/2"
+    const fragments = [current]
+    if (mode === "duplicate-lane") {
+      const failed = fragment("unit", "failed")
+      failed.run_url = current.run_url
+      fragments.unshift(failed)
+    }
+    if (mode === "duplicate-command") current.commands.push(current.commands[0])
+    if (mode === "unexpected-lane") current.lane = "surprise"
+    if (mode === "stale-run") current.run_url = "https://github.com/example/allura/actions/runs/0/attempts/2"
+    if (mode === "stale-attempt") current.run_url = "https://github.com/example/allura/actions/runs/1/attempts/1"
+    if (mode === "empty-commands") current.commands = []
+    expect(() => buildEvidenceManifest({
+      expectedLanes: mode === "duplicate-expected" ? ["unit", "unit"] : ["unit"], fragments,
+      commitSha: current.commit_sha, generatedAt: "2026-10-22T12:00:00.000Z",
+      runUrl: "https://github.com/example/allura/actions/runs/1/attempts/2", bunVersion: "1.3.14", nodeVersion: "v24.19.0",
+    })).toThrow()
+  })
+
+  it("fails a claimed passing lane containing a failed child and retains schema compatibility", () => {
+    const current = fragment("unit", "passed")
+    current.commands[0].exit_status = 7
+    const aggregate = buildEvidenceManifest({
+      expectedLanes: ["unit"], fragments: [current], commitSha: current.commit_sha,
+      generatedAt: "2026-10-22T12:00:00.000Z", runUrl: null, bunVersion: "1.3.14", nodeVersion: "v24.19.0",
+    })
+    expect(aggregate.status).toBe("failed")
+    expect(validateAgainstSchema(aggregate, schema)).toEqual([])
+  })
+
+  it("counts Vitest todo separately from pending and rejects collection failure", () => {
+    const report = { numTotalTests: 2, numPassedTests: 1, numFailedTests: 0, numPendingTests: 0, numTodoTests: 1 }
+    expect(validateVitestReport(report)).toBeNull()
+    expect(validateVitestReport({ ...report, numFailedTestSuites: 1, success: false })).toContain("collection")
+  })
+
   it("accepts Vitest output only when at least one test executed", () => {
     expect(validateVitestReport({
       numTotalTests: 3,

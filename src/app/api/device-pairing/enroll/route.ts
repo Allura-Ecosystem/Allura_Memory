@@ -18,9 +18,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPool } from "@/lib/postgres/connection";
 import {
-  EnrollmentValidationError,
   createEnrollment,
   type EnrollmentInput,
+  EnrollmentValidationError,
 } from "@/lib/device-pairing/enrollment-service";
 
 const requestSchema = z.object({

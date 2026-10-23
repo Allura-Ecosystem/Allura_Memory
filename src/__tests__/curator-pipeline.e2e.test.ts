@@ -1,379 +1,166 @@
-/**
- * Curator Pipeline E2E Tests
- * Proves the full curator pipeline: memory_add → score → canonical_proposals → approve → Neo4j Insight
- *
- * Prerequisites:
- * - PostgreSQL accessible via DATABASE_URL or POSTGRES_* env vars
- * - Neo4j accessible via NEO4J_URI or NEO4J_* env vars
- * - Environment variables set (see .env.production.example)
- *
- * Run with: RUN_E2E_TESTS=true bun vitest run src/__tests__/curator-pipeline.e2e.test.ts
+/** Real PostgreSQL approval paths on a runner-owned disposable fixture.
+ * Direct handler calls start after trusted middleware; they do not prove HTTP authentication.
+ * Approved second-revision semantics remain an explicit failing requirement below.
  */
-
-import { config } from "dotenv";
-import { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { randomUUID } from "crypto";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
+import { NextRequest } from "next/server";
 import { autoPromoteProposal, isAutoPromoteEnabled } from "../lib/curator/auto-promote";
 import { curatorScore } from "../lib/curator/score";
-import { memory_add, resetConnections } from "../mcp/canonical-tools";
-import {
-  authenticateServiceTransport,
-} from "../lib/auth/mcp-authenticator";
+import { authenticateServiceTransport } from "../lib/auth/mcp-authenticator";
+import { createPrincipalContext } from "../lib/auth/principal-context";
+import { closePool, getAppPool, getPool } from "../lib/postgres/connection";
+import { approveProposal, type GovernanceReceipt } from "../lib/memory/approve-proposal";
+import { freshFixtureScope, requireDisposableFixture } from "../../tests/fixtures/disposable-postgres";
 
-// Neo4j is sunset — mock the old insert-insight module locally
-const createInsight = vi.fn(async (_payload: Record<string, unknown>) => ({
-  id: `neo4j-stub-${randomUUID().slice(0, 8)}`,
-  insight_id: _payload.insight_id as string,
-  version: 1,
-  status: "active",
-  group_id: _payload.group_id as string,
-}));
-const createInsightVersion = vi.fn(async (
-  _insightId: string,
-  _content: string,
-  _confidence: number,
-  _groupId: string,
-) => ({
-  id: `neo4j-stub-${randomUUID().slice(0, 8)}`,
-  insight_id: _insightId,
-  version: 2,
-  status: "active",
-  group_id: _groupId,
-}));
-class InsightConflictError extends Error {
-  constructor(message = "Insight conflict") {
-    super(message);
-    this.name = "InsightConflictError";
-  }
+const E2E_TIMEOUT = 30_000;
+const changedEnvironment = ["PROMOTION_MODE", "AUTO_APPROVAL_THRESHOLD", "ALLURA_MCP_SERVICE_PRINCIPAL_ID", "ALLURA_MCP_SERVICE_WORKSPACE_ID", "ALLURA_MCP_SERVICE_TENANTS", "ALLURA_MCP_SERVICE_SCOPES"] as const;
+const originalEnvironment = Object.fromEntries(changedEnvironment.map(key => [key, process.env[key]]));
+let guard: Promise<() => void> | undefined;
+async function prepareCase() {
+  guard ??= requireDisposableFixture("src/__tests__/curator-pipeline.e2e.test.ts");
+  const assertEnvironment = await guard;
+  assertEnvironment();
+  const scope = freshFixtureScope();
+  const owner = getPool();
+  await owner.query("INSERT INTO workspaces(workspace_id,group_id,name) VALUES($1,$2,'Curator fixture')", [scope.workspaceId, scope.groupId]);
+  return { ...scope, owner, assertEnvironment };
+}
+type Case = Awaited<ReturnType<typeof prepareCase>>;
+
+async function seedProposal(test: Case) {
+  test.assertEnvironment();
+  const id = randomUUID();
+  const source = await test.owner.query(
+    "INSERT INTO events(group_id,workspace_id,event_type,agent_id,status,metadata) VALUES($1,$2,'proposal_source',$3,'completed','{}') RETURNING id",
+    [test.groupId, test.workspaceId, test.principalId],
+  );
+  await test.owner.query(
+    "INSERT INTO canonical_proposals(id,group_id,workspace_id,content,score,reasoning,tier,status,trace_ref) VALUES($1,$2,$3,'Original fixture insight',0.95,'fixture','mainstream','pending',$4)",
+    [id, test.groupId, test.workspaceId, source.rows[0].id],
+  );
+  return id;
 }
 
-// Load environment variables from .env file
-config();
-
-// Skip E2E tests unless explicitly enabled
-const shouldRunE2E = process.env.RUN_E2E_TESTS === "true";
-
-const E2E_TIMEOUT = 30000; // 30 seconds for integration tests
-
-// Per-run isolation: unique group_id so parallel runs never collide
-const RUN_ID = randomUUID().slice(0, 8);
-const GROUP_ID = `allura-curator-e2e-${RUN_ID}` as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-/** Use the configured stdio production issuer, never a synthetic verifier. */
-async function preparePipelineMemoryAdd() {
-  process.env.ALLURA_MCP_SERVICE_PRINCIPAL_ID = "curator-pipeline-test";
-  process.env.ALLURA_MCP_SERVICE_WORKSPACE_ID = `ws-${GROUP_ID}`;
-  process.env.ALLURA_MCP_SERVICE_TENANTS = GROUP_ID;
+async function captureProposal(test: Case) {
+  process.env.PROMOTION_MODE = "soc2";
+  process.env.ALLURA_MCP_SERVICE_PRINCIPAL_ID = test.principalId;
+  process.env.ALLURA_MCP_SERVICE_WORKSPACE_ID = test.workspaceId;
+  process.env.ALLURA_MCP_SERVICE_TENANTS = test.groupId;
   process.env.ALLURA_MCP_SERVICE_SCOPES = "memory:write";
-  const principal = authenticateServiceTransport(`curator-pipeline-session-${RUN_ID}`);
-
-  return principal.prepareMemoryAdd({
-    group_id: GROUP_ID,
-    user_id: "curator-pipeline-test",
-    content: `I always prefer explicit return types and strict null checks in TypeScript [pipeline:${RUN_ID}]`,
-    metadata: { source: "conversation" },
-  }).request;
+  // Canonical connection imports fill undefined dotenv values. Guard first, then recheck.
+  const { memory_add } = await import("../mcp/canonical-tools");
+  test.assertEnvironment();
+  const principal = authenticateServiceTransport(test.sessionId);
+  const request = principal.prepareMemoryAdd({ group_id: test.groupId, user_id: test.principalId,
+    content: `I always prefer explicit return types and strict null checks in TypeScript [pipeline:${test.sessionId}]`,
+    metadata: { source: "conversation" }, threshold: 0.5 }).request;
+  const response = await memory_add(request);
+  expect(response.stored).toBe("episodic");
+  expect(response.pending_review).toBe(true);
+  const proposals = await test.owner.query(
+    `SELECT p.* FROM canonical_proposals p JOIN events e ON e.id=p.trace_ref
+     AND e.group_id=p.group_id AND e.workspace_id=p.workspace_id
+     WHERE p.group_id=$1 AND p.workspace_id=$2 AND e.event_type='memory_add' AND e.metadata->>'memory_id'=$3`,
+    [test.groupId, test.workspaceId, response.id],
+  );
+  expect(proposals.rows).toHaveLength(1);
+  expect(proposals.rows[0].status).toBe("pending");
+  expect(Number(proposals.rows[0].score)).toBeGreaterThan(0);
+  return proposals.rows[0].id as string;
 }
 
-describe.skipIf(!shouldRunE2E)("Curator Pipeline E2E", () => {
-  let pgPool: Pool;
+async function approve(test: Case, proposalId: string) {
+  test.assertEnvironment();
+  return approveProposal({
+    principal: createPrincipalContext({ principalId: `reviewer-${test.sessionId}`, tenantIds: [test.groupId], roles: ["curator"],
+      scopes: ["review:approve"], authMethod: "service_identity", sessionId: `review-${test.sessionId}` }),
+    groupId: test.groupId, workspaceId: test.workspaceId, proposalId, rationale: "Reviewed fixture evidence",
+    idempotencyKey: `fixture-${proposalId}`, pool: getAppPool(),
+  });
+}
 
-  beforeAll(async () => {
-    // Verify required environment variables
-    if (!process.env.POSTGRES_PASSWORD) {
-      throw new Error("POSTGRES_PASSWORD environment variable is required");
-    }
+async function verifyApproval(test: Case, receipt: GovernanceReceipt) {
+  const canonical = await test.owner.query("SELECT id,content,group_id,workspace_id,version,deprecated FROM graph_memories WHERE id=$1 AND group_id=$2 AND workspace_id=$3", [receipt.memory_id, test.groupId, test.workspaceId]);
+  expect(canonical.rows).toHaveLength(1);
+  expect(canonical.rows[0]).toMatchObject({ id: receipt.memory_id, group_id: test.groupId, workspace_id: test.workspaceId, version: 1, deprecated: false });
+  expect(canonical.rows[0].content).toBeTruthy();
+  const proposal = await test.owner.query("SELECT status,approved_memory_id,decided_by FROM canonical_proposals WHERE id=$1 AND group_id=$2 AND workspace_id=$3", [receipt.proposal_id, test.groupId, test.workspaceId]);
+  expect(proposal.rows).toEqual([expect.objectContaining({ status: "approved", approved_memory_id: receipt.memory_id, decided_by: receipt.actor_id })]);
+  const durable = await test.owner.query("SELECT id,action,memory_id FROM governance_receipts WHERE id=$1 AND group_id=$2 AND workspace_id=$3", [receipt.id, test.groupId, test.workspaceId]);
+  expect(durable.rows).toEqual([{ id: receipt.id, action: "approve", memory_id: receipt.memory_id }]);
+  const outbox = await test.owner.query("SELECT memory_id FROM promotion_outbox WHERE proposal_id=$1 AND group_id=$2 AND workspace_id=$3", [receipt.proposal_id, test.groupId, test.workspaceId]);
+  expect(outbox.rows).toEqual([{ memory_id: receipt.memory_id }]);
+}
 
-    // Initialize PostgreSQL connection
-    const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-    if (databaseUrl) {
-      pgPool = new Pool({ connectionString: databaseUrl });
-    } else {
-      pgPool = new Pool({
-        host: process.env.POSTGRES_HOST || "localhost",
-        port: parseInt(process.env.POSTGRES_PORT || "5432", 10),
-        database: process.env.POSTGRES_DB || "memory",
-        user: process.env.POSTGRES_USER || "ronin4life",
-        password: process.env.POSTGRES_PASSWORD,
-        connectionTimeoutMillis: 10000,
-        idleTimeoutMillis: 30000,
-        max: 10,
-      });
-    }
+describe("Curator Pipeline E2E", () => {
+  afterEach(() => { for (const key of changedEnvironment) {
+    if (originalEnvironment[key] === undefined) delete process.env[key];
+    else process.env[key] = originalEnvironment[key];
+  } });
+  afterAll(async () => { await closePool(); });
 
-    // Verify connections are live
-    await pgPool.query("SELECT 1");
-
-    // Seed the workspace required by workspace_scope_restrictive_policy (migration 39)
-    const WORKSPACE_ID = `ws-${GROUP_ID}`;
-    await pgPool.query(
-      `INSERT INTO workspaces (workspace_id, group_id, name) VALUES ($1, $2, 'curator-pipeline-e2e')
-       ON CONFLICT (workspace_id, group_id) DO NOTHING`,
-      [WORKSPACE_ID, GROUP_ID],
-    );
-
-    // Reset canonical-tools internal connection cache so it picks up the
-    // current env vars (important when running after other test suites)
-    resetConnections();
+  // Restored from the historical skip: verified issuer request and numeric PG score conversion.
+  it("memory_add (SOC2 mode) queues proposal in canonical_proposals", async () => {
+    await captureProposal(await prepareCase());
   }, E2E_TIMEOUT);
 
-  afterAll(async () => {
-    // Clean up PostgreSQL test data keyed by GROUP_ID
-    await pgPool?.query("DELETE FROM canonical_proposals WHERE group_id = $1", [GROUP_ID]);
-    await pgPool?.query("DELETE FROM events WHERE group_id = $1", [GROUP_ID]);
-
-    // Close connections
-    await pgPool?.end();
-    resetConnections();
+  it("curatorScore scores content correctly", async () => {
+    const score = await curatorScore({ content: "I always use TypeScript with strict mode", source: "conversation", usageCount: 3, daysSinceCreated: 1 });
+    expect(score.confidence).toBeGreaterThanOrEqual(0.6);
+    expect(["emerging", "adoption", "mainstream"]).toContain(score.tier);
+    expect(typeof score.reasoning).toBe("string");
+    expect(score.reasoning.length).toBeGreaterThan(0);
   }, E2E_TIMEOUT);
 
-  // ── Test 1 ────────────────────────────────────────────────────────────────
+  it("approveProposal writes the initial canonical record and durable evidence (Postgres-only)", async () => {
+    const test = await prepareCase();
+    await verifyApproval(test, await approve(test, await seedProposal(test)));
+  }, E2E_TIMEOUT);
 
-  // Pre-Phase-4 baseline — tracked in docs/deferred/pre-existing-failures.md
-  // Reason: row.score is returned as string from PG, needs parseFloat or column type fix
-  it.skip(
-    "memory_add (SOC2 mode) queues proposal in canonical_proposals",
-    async () => {
-      process.env.PROMOTION_MODE = "soc2";
-      // Threshold low enough that this content always qualifies
-      process.env.AUTO_APPROVAL_THRESHOLD = "0.5";
-      resetConnections();
+  it("createInsight second call SUPERSEDES first version", async () => {
+    await prepareCase();
+    throw new Error("OPEN BETA REQUIREMENT: approved second-revision semantics need content/predecessor-bound approval; approveProposal currently supports initial promotion only. Existing storage-lineage coverage is not equivalent.");
+  }, E2E_TIMEOUT);
 
-      const response = await memory_add({
-        group_id: GROUP_ID,
-        user_id: "test-user",
-        content: `I always prefer TypeScript with strict mode and explicit return types [run:${RUN_ID}]`,
-        metadata: { source: "conversation" },
-        scope: { group_id: GROUP_ID, workspace_id: `ws-${GROUP_ID}`, agent_id: "curator-pipeline-test" } as any,
-      });
+  it("full pipeline — memory_add → proposal → approveProposal → PostgreSQL", async () => {
+    const test = await prepareCase();
+    await verifyApproval(test, await approve(test, await captureProposal(test)));
+  }, E2E_TIMEOUT);
 
-      expect(response.stored).toBe("episodic");
-      expect(response.pending_review).toBe(true);
+  it("autoPromoteProposal — does not bypass HITL approval", async () => {
+    const test = await prepareCase();
+    process.env.PROMOTION_MODE = "auto";
+    process.env.AUTO_APPROVAL_THRESHOLD = "0.5";
+    expect(isAutoPromoteEnabled()).toBe(false);
+    const proposalId = await seedProposal(test);
+    expect(await autoPromoteProposal(proposalId, test.groupId)).toBeNull();
+    const result = await test.owner.query("SELECT status,decided_by FROM canonical_proposals WHERE id=$1 AND group_id=$2 AND workspace_id=$3", [proposalId, test.groupId, test.workspaceId]);
+    expect(result.rows).toEqual([{ status: "pending", decided_by: null }]);
+  }, E2E_TIMEOUT);
 
-      // Row should exist in canonical_proposals
-      const result = await pgPool.query(
-        "SELECT * FROM canonical_proposals WHERE group_id = $1 ORDER BY created_at DESC LIMIT 1",
-        [GROUP_ID]
-      );
-
-      expect(result.rows.length).toBeGreaterThan(0);
-      const row = result.rows[0];
-      expect(row.status).toBe("pending");
-      expect(row.score).toBeGreaterThan(0);
-    },
-    E2E_TIMEOUT
-  );
-
-  // ── Test 2 ────────────────────────────────────────────────────────────────
-
-  it(
-    "curatorScore scores content correctly",
-    async () => {
-      const score = await curatorScore({
-        content: "I always use TypeScript with strict mode",
-        source: "conversation",
-        usageCount: 3,
-        daysSinceCreated: 1,
-      });
-
-      // Should be well above the emerging threshold (0.6)
-      expect(score.confidence).toBeGreaterThanOrEqual(0.6);
-
-      // Tier must be one of the three canonical values
-      const validTiers = ["emerging", "adoption", "mainstream"] as const;
-      expect(validTiers).toContain(score.tier);
-
-      // Reasoning must be a meaningful string
-      expect(typeof score.reasoning).toBe("string");
-      expect(score.reasoning.length).toBeGreaterThan(0);
-    },
-    E2E_TIMEOUT
-  );
-
-  // ── Test 3 ────────────────────────────────────────────────────────────────
-
-  it(
-    "createInsight writes Insight record (Postgres-only)",
-    async () => {
-      const insightId = `ins-e2e-${RUN_ID}`;
-
-      const record = await createInsight({
-        insight_id: insightId,
-        group_id: GROUP_ID,
-        content: "Test insight for E2E pipeline",
-        confidence: 0.85,
-        topic_key: "test.insight",
-        source_type: "promotion",
-        created_by: "brooks",
-        metadata: { test_run: RUN_ID },
-      });
-
-      // Returned record must have the expected shape
-      expect(record.id).toBeDefined();
-      expect(record.insight_id).toBe(insightId);
-      expect(record.version).toBe(1);
-      expect(record.status).toBe("active");
-      expect(record.group_id).toBe(GROUP_ID);
-    },
-    E2E_TIMEOUT
-  );
-
-  // ── Test 4 ────────────────────────────────────────────────────────────────
-
-  it(
-    "createInsight second call SUPERSEDES first version",
-    async () => {
-      const insightId = `ins-v2-${RUN_ID}`;
-
-      // Version 1
-      await createInsight({
-        insight_id: insightId,
-        group_id: GROUP_ID,
-        content: "Original content v1",
-        confidence: 0.75,
-        topic_key: "test.insight",
-        source_type: "promotion",
-        created_by: "brooks",
-        metadata: { test_run: RUN_ID },
-      });
-
-      // Version 2 — supersedes version 1
-      const v2 = await createInsightVersion(insightId, "Updated content v2", 0.9, GROUP_ID);
-
-      expect(v2.version).toBe(2);
-      expect(v2.status).toBe("active");
-    },
-    E2E_TIMEOUT
-  );
-
-  // ── Test 5 ────────────────────────────────────────────────────────────────
-
-  it(
-    "full pipeline — memory_add → proposal → createInsight → Neo4j",
-    async () => {
-      process.env.PROMOTION_MODE = "soc2";
-      process.env.AUTO_APPROVAL_THRESHOLD = "0.5";
-      resetConnections();
-
-      // Step 1: Add a high-confidence memory — should queue a proposal
-      await memory_add(await preparePipelineMemoryAdd());
-
-      // Step 2: Fetch the proposal from canonical_proposals
-      const proposalResult = await pgPool.query(
-        `SELECT * FROM canonical_proposals WHERE group_id = $1 ORDER BY created_at DESC LIMIT 1`,
-        [GROUP_ID]
-      );
-
-      expect(proposalResult.rows.length).toBeGreaterThan(0);
-      const proposal = proposalResult.rows[0];
-      expect(proposal.status).toBe("pending");
-
-      // Step 3: Promote proposal to Neo4j as an Insight
-      const insightId = `ins-pipeline-${RUN_ID}`;
-      const record = await createInsight({
-        insight_id: insightId,
-        group_id: GROUP_ID,
-        content: proposal.content as string,
-        confidence: parseFloat(proposal.score as string),
-        topic_key: "test.insight",
-        source_type: "promotion",
-        source_ref: proposal.id as string,
-        created_by: "test-curator",
-        metadata: { test_run: RUN_ID, proposal_id: proposal.id },
-      });
-
-      expect(record.insight_id).toBe(insightId);
-      expect(record.status).toBe("active");
-
-      // Step 4: Approve the proposal in PG (curator sign-off)
-      await pgPool.query(
-        `UPDATE canonical_proposals
-            SET status = 'approved',
-                decided_at = NOW(),
-                decided_by = 'test-curator'
-          WHERE id = $1`,
-        [proposal.id]
-      );
-
-      // Step 5: Verify the proposal is now approved
-      const approved = await pgPool.query(
-        "SELECT * FROM canonical_proposals WHERE id = $1",
-        [proposal.id]
-      );
-      expect(approved.rows[0].status).toBe("approved");
-    },
-    E2E_TIMEOUT
-  );
-
-  // ── Test 6: Deprecated auto-promote compatibility shim ─────────────────────
-
-  it(
-    "autoPromoteProposal — does not bypass HITL approval",
-    async () => {
-      const savedMode = process.env.PROMOTION_MODE;
-      process.env.PROMOTION_MODE = "auto";
-      process.env.AUTO_APPROVAL_THRESHOLD = "0.5";
-
-      expect(isAutoPromoteEnabled()).toBe(false);
-
-      // Seed a pending proposal with a high score
-      const proposalId = randomUUID();
-      await pgPool.query(
-        `INSERT INTO canonical_proposals (id, group_id, content, score, reasoning, tier, status, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW())`,
-        [
-          proposalId,
-          GROUP_ID,
-          `Auto-promote test — I always prefer explicit return types [auto:${RUN_ID}]`,
-          "0.88",
-          "High specificity",
-          "mainstream",
-        ]
-      );
-
-      const result = await autoPromoteProposal(proposalId, GROUP_ID, "auto-promote-test");
-      expect(result).toBeNull();
-
-      // Verify proposal remains pending for HITL review
-      const row = await pgPool.query(
-        "SELECT status, decided_by FROM canonical_proposals WHERE id = $1",
-        [proposalId]
-      );
-      expect(row.rows[0].status).toBe("pending");
-      expect(row.rows[0].decided_by).toBeNull();
-
-      process.env.PROMOTION_MODE = savedMode;
-    },
-    E2E_TIMEOUT
-  );
-
-  // ── Test 7: Reject path ────────────────────────────────────────────────────
-
-  it(
-    "reject path — sets status=rejected in PG",
-    async () => {
-      const rejectId = randomUUID();
-      await pgPool.query(
-        `INSERT INTO canonical_proposals (id, group_id, content, score, reasoning, tier, status, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW())`,
-        [rejectId, GROUP_ID, `Maybe consider this approach [rej:${RUN_ID}]`, "0.52", "Vague", "emerging"]
-      );
-
-      await pgPool.query(
-        `UPDATE canonical_proposals
-         SET status = 'rejected', decided_at = NOW(), decided_by = 'test-curator', rationale = 'Too vague'
-         WHERE id = $1`,
-        [rejectId]
-      );
-
-      const row = await pgPool.query(
-        "SELECT status, rationale FROM canonical_proposals WHERE id = $1",
-        [rejectId]
-      );
-      expect(row.rows[0].status).toBe("rejected");
-      expect(row.rows[0].rationale).toBe("Too vague");
-    },
-    E2E_TIMEOUT
-  );
+  it("reject path — sets status=rejected in PG", async () => {
+    const test = await prepareCase();
+    const proposalId = await seedProposal(test);
+    const { POST } = await import("../app/api/curator/approve/route");
+    test.assertEnvironment();
+    // Trusted post-middleware fixture headers; actual handler enforces role, scope and self-review.
+    const request = (actor?: string) => new NextRequest("http://fixture.invalid/api/curator/approve", { method: "POST",
+      headers: { "content-type": "application/json", "x-allura-role": "curator", ...(actor ? {
+        "x-allura-user-id": actor, "x-allura-session-id": test.sessionId,
+        "x-allura-group-id": test.groupId, "x-allura-workspace-id": test.workspaceId } : {}) },
+      body: JSON.stringify({ proposal_id: proposalId, group_id: test.groupId, decision: "reject", rationale: "Too vague" }) });
+    expect((await POST(request())).status).toBe(401);
+    expect((await POST(request(test.principalId))).status).toBe(403);
+    const stillPending = await test.owner.query("SELECT status FROM canonical_proposals WHERE id=$1", [proposalId]);
+    expect(stillPending.rows).toEqual([{ status: "pending" }]);
+    const rejected = await POST(request(`reviewer-${test.sessionId}`));
+    expect(rejected.status).toBe(200);
+    const receipt = await rejected.json();
+    expect(receipt.action).toBe("reject");
+    const result = await test.owner.query("SELECT status,rationale FROM canonical_proposals WHERE id=$1 AND group_id=$2 AND workspace_id=$3", [proposalId, test.groupId, test.workspaceId]);
+    expect(result.rows).toEqual([{ status: "rejected", rationale: "Too vague" }]);
+    const durable = await test.owner.query("SELECT action FROM governance_receipts WHERE id=$1 AND group_id=$2 AND workspace_id=$3", [receipt.id, test.groupId, test.workspaceId]);
+    expect(durable.rows).toEqual([{ action: "reject" }]);
+  }, E2E_TIMEOUT);
 });

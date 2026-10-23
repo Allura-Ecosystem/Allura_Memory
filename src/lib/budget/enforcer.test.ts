@@ -210,6 +210,52 @@ describe("BudgetEnforcer", () => {
   });
 
   describe("execution loop wrapper", () => {
+    it("keeps detached wrapper calls bound to the enforcer and forwards halt with the loop receiver", () => {
+      enforcer.startSession(sessionId);
+      const loop = {
+        running: true,
+        receivedReason: undefined as HaltReason | undefined,
+        shouldContinue() { return this.running; },
+        halt(reason: HaltReason) { this.receivedReason = reason; this.running = false; },
+        getCurrentStep() { return 7; },
+      };
+      const { shouldContinue, halt } = enforcer.wrapExecutionLoop(sessionId, loop);
+      expect(shouldContinue()).toBe(true);
+      const reason: HaltReason = { type: "critical_error", error: "stop requested" };
+
+      expect(halt(reason)).toBeUndefined();
+
+      expect(loop.receivedReason).toBe(reason);
+      expect(loop.running).toBe(false);
+      expect(enforcer.isHalted(sessionId)).toBe(true);
+      expect(enforcer.getSessionState(sessionId)?.haltReason).toBe(reason);
+      expect(shouldContinue()).toBe(false);
+    });
+
+    it("reads the monitored step, including zero, without calling the fallback", () => {
+      enforcer.startSession(sessionId);
+      const loop = { shouldContinue: vi.fn(), halt: vi.fn(), getCurrentStep: vi.fn(() => 99) };
+      const { getCurrentStep } = enforcer.wrapExecutionLoop(sessionId, loop);
+
+      expect(getCurrentStep()).toBe(0);
+      enforcer.getMonitor().incrementStep(sessionId);
+      expect(getCurrentStep()).toBe(1);
+      expect(loop.getCurrentStep).not.toHaveBeenCalled();
+    });
+
+    it("uses the original loop receiver for the step fallback when no session exists", () => {
+      const loop = {
+        step: 7,
+        shouldContinue: vi.fn(),
+        halt: vi.fn(),
+        getCurrentStep() { return this.step; },
+      };
+      const { getCurrentStep } = enforcer.wrapExecutionLoop(sessionId, loop);
+      expect(getCurrentStep()).toBe(7);
+      loop.step = 8;
+      expect(getCurrentStep()).toBe(8);
+    });
+
     it("should wrap execution loop with budget checks", async () => {
       enforcer.startSession(sessionId);
 

@@ -4,11 +4,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   bindCompletionNonce,
+  type CompletionNonceBinding,
   generateAuthorizationCode,
   generateCompletionNonce,
   hashAuthorizationCode,
   verifyCompletionNonceBinding,
-  type CompletionNonceBinding,
 } from "../authorization-code";
 
 describe("Story 29.3 Authorization Code + Completion Nonce", () => {

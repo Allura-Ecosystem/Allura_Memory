@@ -1,4 +1,4 @@
-import { BoardConfigSchema, type BoardConfig } from "./schema"
+import { type BoardConfig, BoardConfigSchema } from "./schema"
 import { BOARD_EXAMPLES } from "./examples"
 
 export interface BoardRegistry {
