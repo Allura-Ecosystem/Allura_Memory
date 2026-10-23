@@ -66,7 +66,7 @@ Legitimate Sabir access to Xterra must use a separate Xterra-authorized profile 
 - destructive deletion or irreversible mutation
 - token minting, rotation, revocation, or scope expansion
 - governance-policy changes after this approved baseline
-- canonical promotion when a mandatory-review category applies
+- every canonical promotion: independent human approval is mandatory in all modes; no score, owner delegation, or service principal substitutes for that approval
 - bulk export or external sharing
 - contracts, money movement, regulated claims, or production release
 - any content-specific Xterra boundary transfer
@@ -108,7 +108,7 @@ Every write uses a task-scoped idempotency key. Success requires read-after-writ
 - Forged owner names, localhost requests, expired/revoked credentials, replayed approvals, and destination tampering fail closed.
 - A newly created non-Xterra tenant is inaccessible until explicitly enrolled.
 - Xterra access fails from every non-Xterra owner-desktop route, including search, cache, embeddings, promotion, exports, and content-bearing audit views.
-- Destructive actions, policy changes, token changes, external sharing, and mandatory-review content still invoke their separate gates.
+- Destructive actions, policy changes, token changes, external sharing, and every canonical promotion still invoke their separate gates; canonical promotion always requires independent human approval.
 - Retried append-only writes are idempotent and produce one verifiable receipt.
 
 ## Rejected designs
