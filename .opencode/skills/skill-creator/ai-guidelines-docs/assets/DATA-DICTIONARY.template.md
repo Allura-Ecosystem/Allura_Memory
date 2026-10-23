@@ -1,1 +1,1 @@
-../../../templates/DATA-DICTIONARY.template.md
+../../../../templates/DATA-DICTIONARY.template.md

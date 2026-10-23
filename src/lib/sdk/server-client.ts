@@ -12,18 +12,19 @@
  *   const result = await client.memory.add({ ... });
  *
  * Environment variables:
- *   ALLURA_MCP_BASE_URL   — Base URL of the MCP HTTP gateway (default: http://localhost:3201)
+ *   ALLURA_MCP_BASE_URL   — HTTP(S) origin of the MCP gateway (required in production)
  *   ALLURA_MCP_AUTH_TOKEN — Bearer token for authentication (default: empty = dev mode)
  *   ALLURA_MCP_TIMEOUT_MS — Request timeout in milliseconds (default: 5000)
  *   ALLURA_MCP_RETRIES    — Number of retry attempts (default: 3)
  */
 
+import { resolveMcpBaseUrl } from "@/lib/config/mcp-url";
 import { AlluraClient } from "./index";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface ServerClientConfig {
-  /** Override base URL (defaults to ALLURA_MCP_BASE_URL env var or http://localhost:3201) */
+  /** Override gateway origin (production requires this or ALLURA_MCP_BASE_URL) */
   baseUrl?: string;
   /** Override auth token (defaults to ALLURA_MCP_AUTH_TOKEN env var or empty) */
   authToken?: string;
@@ -46,7 +47,7 @@ if (typeof window !== "undefined") {
  *
  * This is the primary way to get an SDK client in API routes, server
  * actions, and the MCP gateway. The client is configured with:
- * - Base URL from ALLURA_MCP_BASE_URL (or http://localhost:3201)
+ * - Validated origin from ALLURA_MCP_BASE_URL (loopback default outside production only)
  * - Auth token from ALLURA_MCP_AUTH_TOKEN (or empty for dev mode)
  * - Timeout from ALLURA_MCP_TIMEOUT_MS (or 5000ms)
  * - Retries from ALLURA_MCP_RETRIES (or 3)
@@ -55,9 +56,7 @@ if (typeof window !== "undefined") {
  * @returns Configured AlluraClient instance
  */
 export function createServerClient(overrides?: ServerClientConfig): AlluraClient {
-  const baseUrl = overrides?.baseUrl
-    ?? process.env.ALLURA_MCP_BASE_URL
-    ?? "http://localhost:3201";
+  const baseUrl = resolveMcpBaseUrl(overrides?.baseUrl);
 
   const authToken = overrides?.authToken
     ?? process.env.ALLURA_MCP_AUTH_TOKEN
