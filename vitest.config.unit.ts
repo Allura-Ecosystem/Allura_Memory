@@ -78,6 +78,8 @@ export default defineConfig({
       "src/lib/memory/__tests__/approval-audit.test.ts",
       "src/lib/memory/traceable-memory.test.ts",
       "src/lib/memory/approve-proposal.test.ts",
+      // Promotion outbox transaction regression (mocked transport; no live database).
+      "src/lib/memory/promotion-outbox-worker.test.ts",
       "src/lib/memory/governance-receipt-writer.test.ts",
       "src/lib/memory/retrieval-authority.test.ts",
       "src/lib/memory/proposal-semantic-projection.test.ts",
@@ -102,6 +104,8 @@ export default defineConfig({
       "src/__tests__/auth-roles.test.ts",
       "src/__tests__/cors-middleware.test.ts",
       "src/__tests__/graph-route.test.ts",
+      // Append-only governance regression coverage; live-DB cases remain explicitly gated.
+      "src/__tests__/governance-tools.test.ts",
       "src/__tests__/health-metrics.test.ts",
       "src/__tests__/health-metrics-scope.test.ts",
       "src/__tests__/health-probes.test.ts",
