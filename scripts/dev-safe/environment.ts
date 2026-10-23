@@ -1,6 +1,6 @@
+import { spawnSync } from "node:child_process"
 import { accessSync, constants, lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs"
-import { userInfo } from "node:os"
-import { delimiter, dirname, isAbsolute, join, relative } from "node:path"
+import { delimiter, dirname, isAbsolute, join, normalize, relative } from "node:path"
 
 import type { DevSafePorts, DevSafeTools } from "./commands"
 
@@ -27,13 +27,78 @@ export interface LocalDockerEndpointPolicy {
   defaultOwnerUid: number
 }
 
+function currentAccount(): { homedir: string; uid: number } {
+  const uid = process.getuid?.()
+  if (!Number.isSafeInteger(uid) || uid === undefined || uid < 0) {
+    throw new Error("Current Unix account could not be determined")
+  }
+
+  let result
+  try {
+    result = spawnSync("/usr/bin/getent", ["passwd", String(uid)], {
+      encoding: "utf8",
+      env: { LANG: "C", LC_ALL: "C", NODE_ENV: "production" },
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 2_000,
+    })
+  } catch {
+    throw new Error("Current Unix account could not be resolved")
+  }
+  if (result.status !== 0 || result.error) {
+    throw new Error("Current Unix account could not be resolved")
+  }
+
+  const record = result.stdout.endsWith("\n") ? result.stdout.slice(0, -1) : result.stdout
+  if (!record || record.includes("\n") || record.includes("\r")) {
+    throw new Error("Current Unix account lookup returned an ambiguous record")
+  }
+  const fields = record.split(":")
+  if (fields.length !== 7 || fields[2] !== String(uid)) {
+    throw new Error("Current Unix account lookup returned an invalid record")
+  }
+  const homedir = fields[5]
+  if (!homedir || !isAbsolute(homedir) || normalize(homedir) !== homedir) {
+    throw new Error("Current Unix account lookup returned an invalid home directory")
+  }
+  return { homedir, uid }
+}
+
 function localDockerEndpointPolicy(): LocalDockerEndpointPolicy {
-  const account = userInfo()
+  const account = currentAccount()
   return {
     defaultSocket: "/var/run/docker.sock",
     desktopSocket: join(account.homedir, ".docker", "desktop", "docker.sock"),
     currentUid: account.uid,
     defaultOwnerUid: 0,
+  }
+}
+
+function inspectSocketParents(socketPath: string): void {
+  const parents: string[] = []
+  for (let current = dirname(socketPath); ; current = dirname(current)) {
+    parents.push(current)
+    if (dirname(current) === current) break
+  }
+
+  for (const parent of parents.reverse()) {
+    let entry
+    try {
+      entry = lstatSync(parent)
+    } catch {
+      throw new Error(`Docker endpoint parent is unavailable: ${parent}`)
+    }
+    if (entry.isSymbolicLink()) {
+      if (entry.uid !== 0) {
+        throw new Error(`Docker endpoint has an untrusted parent symlink: ${parent}`)
+      }
+      try {
+        if (!statSync(parent).isDirectory()) throw new Error("not a directory")
+      } catch {
+        throw new Error(`Docker endpoint parent is unavailable: ${parent}`)
+      }
+    } else if (!entry.isDirectory()) {
+      throw new Error(`Docker endpoint parent is not a directory: ${parent}`)
+    }
   }
 }
 
@@ -53,6 +118,7 @@ export function inspectLocalDockerEndpoint(
   }
 
   const socketPath = endpoint.slice("unix://".length)
+  inspectSocketParents(socketPath)
   let socket
   try {
     socket = lstatSync(socketPath)

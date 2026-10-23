@@ -66,9 +66,11 @@ ALLURA_DEV_SAFE_DOCKER_ENDPOINT="unix://$HOME/.docker/desktop/docker.sock" \
 ```
 
 Only those two exact local Unix endpoints are allowed. The launcher verifies that
-the path is a socket and that its owner matches the endpoint policy. It ignores
-ambient `DOCKER_HOST`, Docker context, and Docker TLS configuration; remote and
-other Unix endpoints fail closed.
+the path is a socket and that its owner matches the endpoint policy. The Desktop
+path comes from the current numeric UID's system account record, not ambient
+`HOME`. User-owned parent symlinks are rejected; root-owned compatibility links
+such as `/var/run` to `/run` remain valid. It ignores ambient `DOCKER_HOST`, Docker
+context, and Docker TLS configuration; remote and other Unix endpoints fail closed.
 
 ```sh
 bun --no-env-file run dev:safe doctor
@@ -118,4 +120,7 @@ executable locations instead of merging the ambient shell environment, but
 repository code and installed dependencies still execute with the worktree
 user's permissions. The lane does not provide network isolation for the host,
 does not start or configure Allura Brain/MCP, and must never receive production
-data or credentials.
+data or credentials. Socket checks are a preflight rather than an atomic open:
+another process with the same UID could replace a checked path component between
+validation and Docker CLI use. Preventing that residual TOCTOU requires an OS-level
+descriptor handoff or sandbox boundary that the Docker CLI interface does not offer.

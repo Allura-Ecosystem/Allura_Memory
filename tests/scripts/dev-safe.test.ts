@@ -292,6 +292,36 @@ describe("local Docker endpoint boundary", () => {
       })
     ).toThrow(/not owned by the current user/)
   })
+
+  it("rejects a Desktop socket reached through a user-owned parent symlink", async () => {
+    const temporaryRoot = linkedWorktree()
+    const realParent = join(temporaryRoot, "real-desktop")
+    const linkedParent = join(temporaryRoot, "linked-desktop")
+    mkdirSync(realParent)
+    symlinkSync(realParent, linkedParent, "dir")
+    const desktopSocket = join(linkedParent, "docker.sock")
+    await unixSocket(join(realParent, "docker.sock"))
+
+    expect(() =>
+      inspectLocalDockerEndpoint(`unix://${desktopSocket}`, {
+        defaultSocket: join(temporaryRoot, "default.sock"),
+        desktopSocket,
+        currentUid: process.getuid!(),
+        defaultOwnerUid: 0,
+      })
+    ).toThrow(/untrusted parent symlink/)
+  })
+
+  it("does not reject the root-owned /var/run compatibility symlink", () => {
+    expect(() =>
+      inspectLocalDockerEndpoint("unix:///var/run/dev-safe-missing.sock", {
+        defaultSocket: "/var/run/dev-safe-missing.sock",
+        desktopSocket: "/home/dev-safe-missing/.docker/desktop/docker.sock",
+        currentUid: process.getuid!(),
+        defaultOwnerUid: 0,
+      })
+    ).toThrow(/Docker endpoint is unavailable/)
+  })
 })
 
 describe("explicit child environment", () => {
@@ -453,6 +483,38 @@ describe("package aliases", () => {
 })
 
 describe("launcher entrypoint", () => {
+  it("rejects an owned socket under spoofed HOME through the production default policy", async () => {
+    const fixture = launcherFixture()
+    const spoofedHome = join(fixture.root, "spoofed-home")
+    const spoofedDesktop = join(spoofedHome, ".docker", "desktop")
+    mkdirSync(spoofedDesktop, { recursive: true })
+    const spoofedSocket = join(spoofedDesktop, "docker.sock")
+    const pathLookupMarker = join(fixture.root, "path-getent-ran")
+    const pathLookup = join(fixture.root, "tools", "getent")
+    writeFileSync(
+      pathLookup,
+      `#!/bin/sh\ntouch '${pathLookupMarker}'\nprintf 'spoof:x:${process.getuid!()}:0::${spoofedHome}:/bin/sh\\n'\n`
+    )
+    chmodSync(pathLookup, 0o755)
+    await unixSocket(spoofedSocket)
+
+    const result = spawnSync(bunExecutable, ["--no-env-file", "scripts/dev-safe/index.ts", "doctor"], {
+      cwd: fixture.root,
+      env: {
+        HOME: spoofedHome,
+        NODE_ENV: "test",
+        PATH: fixture.path,
+        ALLURA_DEV_SAFE_DOCKER_ENDPOINT: `unix://${spoofedSocket}`,
+      },
+      encoding: "utf8",
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain("Docker endpoint must be an approved local Unix socket")
+    expect(existsSync(pathLookupMarker)).toBe(false)
+    expect(existsSync(fixture.dockerLog)).toBe(false)
+  })
+
   it("doctor verifies the selected daemon and Compose plugin without service access", async () => {
     const fixture = launcherFixture()
     await unixSocket(fixture.dockerSocket)
