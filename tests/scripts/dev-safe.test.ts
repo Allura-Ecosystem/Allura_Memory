@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { parse } from "yaml"
-import { spawnSync } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { createServer, type Server } from "node:net"
 import {
   chmodSync,
@@ -16,7 +16,7 @@ import {
 import { tmpdir } from "node:os"
 import { delimiter, dirname, join } from "node:path"
 
-import { createDatabaseReadinessPlan, createPlan, devSafeProjectName } from "../../scripts/dev-safe/commands"
+import { createPlan, devSafeProjectName } from "../../scripts/dev-safe/commands"
 import {
   assertActivationAllowed,
   assertLocalPrerequisites,
@@ -91,6 +91,8 @@ function launcherFixture(): {
     "docker-compose.dev-safe.yml",
     "docker/portfolio-postgres/Dockerfile",
     "docker/portfolio-postgres/Dockerfile.dockerignore",
+    "docker/dev-safe/Dockerfile",
+    "docker/dev-safe/Dockerfile.dockerignore",
     "node_modules/next/dist/bin/next",
     "node_modules/vitest/vitest.mjs",
     "node_modules/typescript/bin/tsc",
@@ -121,19 +123,86 @@ function launcherFixture(): {
   }
 }
 
-describe("fixed dev-safe command plans", () => {
-  const plan = (name: string) => createPlan(root, [name], tools, { dashboard: 45678, postgres: 45679 })
+function dockerIntegrationFixture(): {
+  root: string
+  dockerLog: string
+  reachedBuild: string
+  path: string
+} {
+  const temporaryRoot = mkdtempSync(join(tmpdir(), "allura-dev-safe-docker-it-"))
+  temporaryRoots.push(temporaryRoot)
+  expect(spawnSync("git", ["init", "--quiet", temporaryRoot]).status).toBe(0)
+  mkdirSync(join(temporaryRoot, "tests/scripts"), { recursive: true })
+  mkdirSync(join(temporaryRoot, "scripts/dev-safe"), { recursive: true })
+  cpSync(
+    join(process.cwd(), "tests/scripts/dev-safe-docker.integration.sh"),
+    join(temporaryRoot, "tests/scripts/dev-safe-docker.integration.sh")
+  )
+  cpSync(
+    join(process.cwd(), "scripts/dev-safe/inspect-docker-endpoint.ts"),
+    join(temporaryRoot, "scripts/dev-safe/inspect-docker-endpoint.ts")
+  )
+  cpSync(
+    join(process.cwd(), "scripts/dev-safe/environment.ts"),
+    join(temporaryRoot, "scripts/dev-safe/environment.ts")
+  )
+  const toolsDirectory = join(temporaryRoot, "tools")
+  const dockerLog = join(temporaryRoot, "docker.log")
+  const reachedBuild = join(temporaryRoot, "reached-build")
+  mkdirSync(toolsDirectory)
+  const docker = join(toolsDirectory, "docker")
+  writeFileSync(
+    docker,
+    [
+      "#!/bin/sh",
+      `printf '%s\\n' "$*" >> '${dockerLog}'`,
+      "if [ \"$3 $4\" = \"image inspect\" ]; then exit 1; fi",
+      `if printf '%s' "$*" | grep -q 'compose .* build app'; then touch '${reachedBuild}'; sleep 30; fi`,
+      "exit 0",
+      "",
+    ].join("\n")
+  )
+  chmodSync(docker, 0o755)
+  return {
+    root: temporaryRoot,
+    dockerLog,
+    reachedBuild,
+    path: [toolsDirectory, dirname(bunExecutable), "/usr/bin", "/bin"].join(delimiter),
+  }
+}
 
-  it("uses the inspected runtime executable for the loopback dashboard", () => {
+async function waitForPath(path: string): Promise<void> {
+  const deadline = Date.now() + 5_000
+  while (!existsSync(path)) {
+    if (Date.now() >= deadline) throw new Error(`timed out waiting for ${path}`)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+}
+
+describe("fixed dev-safe command plans", () => {
+  const plan = (name: string) => createPlan(root, [name], tools, { dashboard: 45678 })
+
+  it("starts the app and its private database through the inspected Docker endpoint", () => {
     expect(plan("dev").argv).toEqual([
-      tools.runtime,
-      `${root}/node_modules/next/dist/bin/next`,
-      "dev",
-      "--webpack",
-      "--hostname",
-      "127.0.0.1",
-      "--port",
-      "45678",
+      tools.docker,
+      "--host",
+      tools.dockerEndpoint,
+      "compose",
+      "--project-name",
+      devSafeProjectName(root),
+      "--project-directory",
+      root,
+      "--env-file",
+      "/dev/null",
+      "--file",
+      `${root}/docker-compose.dev-safe.yml`,
+      "up",
+      "--detach",
+      "--build",
+      "--wait",
+      "--wait-timeout",
+      "180",
+      "app",
     ])
   })
 
@@ -141,7 +210,7 @@ describe("fixed dev-safe command plans", () => {
     expect(() => plan("brain:down")).toThrow(/Unknown command/)
     expect(() => createPlan(root, ["dev", "--port", "4001"], tools, {})).toThrow(/Exactly one command/)
     expect(() => createPlan(root, ["dev"], tools, {})).toThrow(/ALLURA_DEV_SAFE_DASHBOARD_PORT/)
-    expect(() => createPlan(root, ["dev"], tools, { dashboard: 45678 })).toThrow(/ALLURA_DEV_SAFE_POSTGRES_PORT/)
+    expect(() => createPlan(root, ["dev"], tools, { dashboard: 45678 })).not.toThrow()
   })
 
   it.each(["status", "db-up", "db-down"])(
@@ -190,32 +259,6 @@ describe("fixed dev-safe command plans", () => {
     ])
   })
 
-  it("checks the isolated PostgreSQL service before starting the dashboard", () => {
-    expect(createDatabaseReadinessPlan(root, tools, { postgres: 45679 })).toEqual([
-      tools.docker,
-      "--host",
-      "unix:///var/run/docker.sock",
-      "compose",
-      "--project-name",
-      devSafeProjectName(root),
-      "--project-directory",
-      root,
-      "--env-file",
-      "/dev/null",
-      "--file",
-      `${root}/docker-compose.dev-safe.yml`,
-      "exec",
-      "--no-TTY",
-      "postgres",
-      "pg_isready",
-      "-h",
-      "127.0.0.1",
-      "-U",
-      "allura",
-      "-d",
-      "allura_dev",
-    ])
-  })
 })
 
 describe("local Docker endpoint boundary", () => {
@@ -337,19 +380,13 @@ describe("explicit child environment", () => {
 
     const environment = buildEnvironment(root, "dev", tools, {
       dashboard: 45678,
-      postgres: 45679,
     })
 
     expect(environment).toMatchObject({
       HOME: `${root}/.dev-safe-home`,
       NODE_ENV: "development",
       ALLURA_DASHBOARD_PORT: "45678",
-      ALLURA_DEV_SAFE_POSTGRES_PORT: "45679",
-      POSTGRES_HOST: "127.0.0.1",
-      POSTGRES_PORT: "45679",
-      POSTGRES_DB: "allura_dev",
-      POSTGRES_USER: "allura",
-      POSTGRES_PASSWORD: "allura-dev-local-only",
+      ALLURA_DEV_SAFE_DASHBOARD_PORT: "45678",
     })
     for (const key of [
       "OPENAI_API_KEY",
@@ -383,31 +420,25 @@ describe("explicit child environment", () => {
 })
 
 describe("port configuration", () => {
-  it("has no defaults and accepts the proposed AD-45 allocation only", () => {
+  it("has no defaults and accepts the registered AD-45 allocation only", () => {
     expect(readPortConfiguration({})).toEqual({})
     expect(
       readPortConfiguration({
         ALLURA_DEV_SAFE_DASHBOARD_PORT: "4002",
-        ALLURA_DEV_SAFE_POSTGRES_PORT: "7002",
       })
-    ).toEqual({ dashboard: 4002, postgres: 7002 })
+    ).toEqual({ dashboard: 4002 })
   })
 
   it.each([
     ["ALLURA_DEV_SAFE_DASHBOARD_PORT", "3100", /banned 3000-3999 band/],
-    ["ALLURA_DEV_SAFE_DASHBOARD_PORT", "4001", /must match the proposed AD-45 allocation 4002/],
-    ["ALLURA_DEV_SAFE_DASHBOARD_PORT", "4003", /must match the proposed AD-45 allocation 4002/],
-    ["ALLURA_DEV_SAFE_POSTGRES_PORT", "5432", /must match the proposed AD-45 allocation 7002/],
-    ["ALLURA_DEV_SAFE_POSTGRES_PORT", "5433", /must match the proposed AD-45 allocation 7002/],
-    ["ALLURA_DEV_SAFE_POSTGRES_PORT", "5888", /must match the proposed AD-45 allocation 7002/],
-    ["ALLURA_DEV_SAFE_POSTGRES_PORT", "7001", /must match the proposed AD-45 allocation 7002/],
-    ["ALLURA_DEV_SAFE_POSTGRES_PORT", "7003", /must match the proposed AD-45 allocation 7002/],
+    ["ALLURA_DEV_SAFE_DASHBOARD_PORT", "4001", /must match the registered AD-45 allocation 4002/],
+    ["ALLURA_DEV_SAFE_DASHBOARD_PORT", "4003", /must match the registered AD-45 allocation 4002/],
   ])("rejects wrong or reserved %s=%s", (name, value, message) => {
     expect(() => readPortConfiguration({ [name]: value })).toThrow(message)
   })
 
   it("still rejects malformed ports before allocation matching", () => {
-    expect(() => readPortConfiguration({ ALLURA_DEV_SAFE_POSTGRES_PORT: "not-a-port" })).toThrow(/valid TCP port/)
+    expect(() => readPortConfiguration({ ALLURA_DEV_SAFE_DASHBOARD_PORT: "not-a-port" })).toThrow(/valid TCP port/)
   })
 })
 
@@ -418,6 +449,7 @@ describe("package aliases", () => {
     expect(packageJson.scripts["test:dev-safe"]).toBe(
       "bun --no-env-file node_modules/vitest/vitest.mjs run --config tests/scripts/vitest.config.dev-safe.ts tests/scripts/dev-safe.test.ts"
     )
+    expect(packageJson.scripts["test:dev-safe:docker"]).toBe("bash tests/scripts/dev-safe-docker.integration.sh")
     const config = readFileSync(join(process.cwd(), "tests/scripts/vitest.config.dev-safe.ts"), "utf8")
     expect(config).not.toContain("dotenv")
   })
@@ -585,22 +617,117 @@ describe("launcher entrypoint", () => {
   })
 })
 
+describe("Docker integration harness safety", () => {
+  it("refuses a pre-existing sentinel byte-identically without invoking Docker", () => {
+    const fixture = dockerIntegrationFixture()
+    const sentinel = join(fixture.root, ".claude/mcp.json")
+    const original = Buffer.from([0, 1, 2, 10, 255])
+    mkdirSync(dirname(sentinel), { recursive: true })
+    writeFileSync(sentinel, original)
+
+    const result = spawnSync("bash", ["tests/scripts/dev-safe-docker.integration.sh"], {
+      cwd: fixture.root,
+      env: { HOME: "/ambient/home", NODE_ENV: "test", PATH: fixture.path, ALLURA_DEV_SAFE_DOCKER_ENDPOINT: "ssh://host" },
+      encoding: "utf8",
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain("refusing to overwrite existing private-path probe target")
+    expect(readFileSync(sentinel)).toEqual(original)
+    expect(existsSync(fixture.dockerLog)).toBe(false)
+  })
+
+  it("rejects a malicious endpoint before Docker, mutation, or cleanup", () => {
+    const fixture = dockerIntegrationFixture()
+    const result = spawnSync("bash", ["tests/scripts/dev-safe-docker.integration.sh"], {
+      cwd: fixture.root,
+      env: {
+        HOME: "/ambient/home",
+        NODE_ENV: "test",
+        PATH: fixture.path,
+        ALLURA_DEV_SAFE_DOCKER_ENDPOINT: "ssh://production.example",
+      },
+      encoding: "utf8",
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain("Docker endpoint must be an approved local Unix socket")
+    expect(existsSync(fixture.dockerLog)).toBe(false)
+    for (const path of [
+      ".claude/mcp.json",
+      ".opencode/mcp.json",
+      "board-configs/private/dev-safe-probe.json",
+      ".dev-safe-context-probe.key",
+      ".dev-safe-context-probe.pem",
+    ]) {
+      expect(existsSync(join(fixture.root, path))).toBe(false)
+    }
+  })
+
+  it("on interruption cleans only files, directories, and Docker resources owned by this invocation", async () => {
+    const fixture = dockerIntegrationFixture()
+    const preExistingDirectory = join(fixture.root, ".claude")
+    const unrelated = join(preExistingDirectory, "keep.bin")
+    mkdirSync(preExistingDirectory)
+    writeFileSync(unrelated, Buffer.from([9, 8, 7, 0, 6]))
+    writeFileSync(
+      join(fixture.root, "scripts/dev-safe/inspect-docker-endpoint.ts"),
+      `console.log(${JSON.stringify(join(fixture.root, "tools/docker"))} + "\\tunix:///fixture/docker.sock")\n`
+    )
+
+    const child = spawn("bash", ["tests/scripts/dev-safe-docker.integration.sh"], {
+      cwd: fixture.root,
+      detached: true,
+      env: { HOME: "/ambient/home", NODE_ENV: "test", PATH: fixture.path, ALLURA_DEV_SAFE_DOCKER_ENDPOINT: "unix:///fixture/docker.sock" },
+      stdio: ["ignore", "ignore", "pipe"] as const,
+    })
+    const stderr: Buffer[] = []
+    child.stderr.on("data", (chunk) => stderr.push(chunk))
+    await waitForPath(fixture.reachedBuild)
+    process.kill(-child.pid!, "SIGTERM")
+    const status = await new Promise<number | null>((resolve, reject) => {
+      child.once("error", reject)
+      child.once("exit", (code) => resolve(code))
+    })
+
+    expect(status, Buffer.concat(stderr).toString()).not.toBe(0)
+    expect(readFileSync(unrelated)).toEqual(Buffer.from([9, 8, 7, 0, 6]))
+    expect(existsSync(preExistingDirectory)).toBe(true)
+    for (const path of [
+      ".claude/mcp.json",
+      ".opencode/mcp.json",
+      "board-configs/private/dev-safe-probe.json",
+      ".dev-safe-context-probe.key",
+      ".dev-safe-context-probe.pem",
+      ".opencode",
+      "board-configs/private",
+      "board-configs",
+    ]) {
+      expect(existsSync(join(fixture.root, path))).toBe(false)
+    }
+    const dockerCalls = readFileSync(fixture.dockerLog, "utf8")
+    const project = /--project-name (allura-dev-safe-it-[^ ]+)/.exec(dockerCalls)?.[1]
+    expect(project).toBeTruthy()
+    expect(dockerCalls).toContain(`--project-name ${project} `)
+    const cleanupCalls = dockerCalls
+      .trim()
+      .split("\n")
+      .filter((line) => (line.includes(" compose ") && line.includes(" down ")) || line.includes(" image rm "))
+    expect(cleanupCalls).toEqual([`--host unix:///fixture/docker.sock image rm ${project}-app`])
+    expect(cleanupCalls.join("\n")).not.toContain(`${project}-postgres`)
+    expect(dockerCalls).not.toContain("keep.bin")
+  }, 10_000)
+})
+
 describe("compose and build-context boundary", () => {
-  it("publishes only registered port 7002 on loopback and an internal network", () => {
+  it("publishes only the app on loopback and keeps PostgreSQL on a private internal network", () => {
     const text = readFileSync(join(process.cwd(), "docker-compose.dev-safe.yml"), "utf8")
     const config = parse(text)
-    expect(Object.keys(config.services)).toEqual(["postgres"])
+    expect(Object.keys(config.services)).toEqual(["postgres", "app"])
     expect(config).not.toHaveProperty("name")
     expect(config.services.postgres).toMatchObject({
       build: { context: ".", dockerfile: "docker/portfolio-postgres/Dockerfile" },
-      ports: [
-        {
-          target: 5432,
-          published: "7002",
-          host_ip: "127.0.0.1",
-          protocol: "tcp",
-        },
-      ],
+      networks: ["backend"],
       tmpfs: ["/var/lib/postgresql/data:size=512m"],
       mem_limit: "768m",
       cpus: 1,
@@ -609,34 +736,43 @@ describe("compose and build-context boundary", () => {
     })
     expect(config.services.postgres).not.toHaveProperty("volumes")
     expect(config.services.postgres).not.toHaveProperty("image")
+    expect(config.services.postgres).not.toHaveProperty("ports")
+    expect(config.services.app).toMatchObject({
+      build: { context: ".", dockerfile: "docker/dev-safe/Dockerfile" },
+      ports: [{ target: 4002, published: "${ALLURA_DEV_SAFE_DASHBOARD_PORT:?set ALLURA_DEV_SAFE_DASHBOARD_PORT}", host_ip: "127.0.0.1", protocol: "tcp" }],
+      networks: ["frontend", "backend"],
+      depends_on: { postgres: { condition: "service_healthy" } },
+      environment: {
+        NODE_ENV: "development",
+        POSTGRES_HOST: "postgres",
+        POSTGRES_PORT: "5432",
+        POSTGRES_DB: "allura_dev",
+        POSTGRES_USER: "allura_app",
+        POSTGRES_PASSWORD: "change-me-in-production",
+        POSTGRES_APP_USER: "allura_app",
+        POSTGRES_APP_PASSWORD: "change-me-in-production",
+      },
+    })
+    expect(Object.values(config.services.app.environment)).not.toContain("allura-dev-local-only")
     expect(config).not.toHaveProperty("volumes")
-    expect(config.networks).toEqual({ default: { internal: true } })
+    expect(config.networks).toEqual({ frontend: {}, backend: { internal: true } })
     expect(text).not.toContain("ALLURA_MCP_HTTP_PORT")
   })
 
-  it("records the inactive proposal in canonical docs and root Compose metadata", () => {
+  it("records the accepted dashboard port and no unpublished database port", () => {
     const blueprint = readFileSync(join(process.cwd(), "docs/allura/BLUEPRINT.md"), "utf8")
     expect(blueprint).toContain(
-      "| Isolated development dashboard (Next.js) | 4002 | UI (4000+) — proposed; pending PR acceptance; inactive |"
+      "| Isolated development dashboard (Next.js) | 4002 | UI (4000+) — local loopback only |"
     )
-    expect(blueprint).toContain(
-      "| Disposable development PostgreSQL host port | 7002 | aux (7000+) — proposed; pending PR acceptance; inactive |"
-    )
+    expect(blueprint).not.toContain("Disposable development PostgreSQL host port")
 
     const rootCompose = parse(readFileSync(join(process.cwd(), "docker-compose.yml"), "utf8"))
     expect(rootCompose["x-allura-port-registry"]).toEqual({
       isolated_dev_dashboard: {
         host_port: 4002,
         tier: "ui",
-        status: "proposed-pending-pr-acceptance",
-        activation: "inactive",
-      },
-      disposable_dev_postgres: {
-        host_port: 7002,
-        container_port: 5432,
-        tier: "auxiliary",
-        status: "proposed-pending-pr-acceptance",
-        activation: "inactive",
+        status: "registered",
+        activation: "explicit-launcher-gate",
       },
     })
     expect(Object.keys(rootCompose.services)).toEqual(["postgres", "mcp"])
@@ -655,6 +791,36 @@ describe("compose and build-context boundary", () => {
       "!docker/portfolio-postgres/99-portfolio-demo-workspace.sql",
     ])
   })
+
+  it("pins the app runtime and installs the frozen lockfile without browser downloads", () => {
+    const dockerfile = readFileSync(join(process.cwd(), "docker/dev-safe/Dockerfile"), "utf8")
+    expect(dockerfile).toContain(
+      "FROM oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4"
+    )
+    expect(dockerfile).toContain("ENV PUPPETEER_SKIP_DOWNLOAD=true")
+    expect(dockerfile).toContain("RUN bun install --frozen-lockfile")
+  })
+
+  it("allowlists only application build inputs and excludes private credential paths", () => {
+    const ignore = readFileSync(join(process.cwd(), "docker/dev-safe/Dockerfile.dockerignore"), "utf8")
+    const rules = ignore.trim().split("\n")
+    expect(rules[0]).toBe("**")
+    expect(rules).toEqual(expect.arrayContaining([
+      "!package.json",
+      "!bun.lock",
+      "!next.config.ts",
+      "!tsconfig.json",
+      "!src/",
+      "!src/**",
+      "!public/",
+      "!public/**",
+      "!packages/",
+      "!packages/**",
+    ]))
+    for (const privatePath of [".claude/mcp.json", ".opencode/mcp.json", "board-configs/private/", "*.pem", "*.key"]) {
+      expect(rules).not.toContain(`!${privatePath}`)
+    }
+  })
 })
 
 describe("runtime and activation gates", () => {
@@ -667,12 +833,12 @@ describe("runtime and activation gates", () => {
     expect(inspectExecutable(executable, "test tool")).toBe(executable)
   })
 
-  it("keeps service activation gated until the port decision is recorded", () => {
-    expect(() => assertActivationAllowed("dev", {})).toThrow(/port decision is pending/)
-    expect(() => assertActivationAllowed("db-up", { ALLURA_DEV_SAFE_PORTS_APPROVED: "false" })).toThrow(
-      /port decision is pending/
+  it("keeps service activation behind an explicit operator signal", () => {
+    expect(() => assertActivationAllowed("dev", {})).toThrow(/ALLURA_DEV_SAFE_ACTIVATE=true/)
+    expect(() => assertActivationAllowed("db-up", { ALLURA_DEV_SAFE_ACTIVATE: "false" })).toThrow(
+      /ALLURA_DEV_SAFE_ACTIVATE=true/
     )
-    expect(() => assertActivationAllowed("dev", { ALLURA_DEV_SAFE_PORTS_APPROVED: "true" })).not.toThrow()
+    expect(() => assertActivationAllowed("dev", { ALLURA_DEV_SAFE_ACTIVATE: "true" })).not.toThrow()
     expect(() => assertActivationAllowed("typecheck", {})).not.toThrow()
   })
 
@@ -685,6 +851,8 @@ describe("runtime and activation gates", () => {
       "docker-compose.dev-safe.yml",
       "docker/portfolio-postgres/Dockerfile",
       "docker/portfolio-postgres/Dockerfile.dockerignore",
+      "docker/dev-safe/Dockerfile",
+      "docker/dev-safe/Dockerfile.dockerignore",
       "node_modules/next/dist/bin/next",
       "node_modules/vitest/vitest.mjs",
       "node_modules/typescript/bin/tsc",
@@ -697,12 +865,12 @@ describe("runtime and activation gates", () => {
 
     rmSync(join(temporaryRoot, "node_modules"), { recursive: true })
     expect(() => assertLocalPrerequisites(temporaryRoot, "db-down")).not.toThrow()
-    expect(() => assertLocalPrerequisites(temporaryRoot, "dev")).toThrow(/node_modules\/next/)
+    expect(() => assertLocalPrerequisites(temporaryRoot, "dev")).not.toThrow()
   })
 })
 
 describe("worktree preflight", () => {
-  it("accepts examples and rejects dotenv files without reading their contents", () => {
+  it("accepts examples and rejects private credential paths without reading their contents", () => {
     const temporaryRoot = linkedWorktree()
     writeFileSync(join(temporaryRoot, ".env.development.example"), "PUBLIC_FIXTURE")
     expect(() => assertSafeWorktree(temporaryRoot)).not.toThrow()
@@ -714,6 +882,20 @@ describe("worktree preflight", () => {
       assertSafeWorktree(temporaryRoot)
     } catch (error) {
       expect(String(error)).not.toContain("PRIVATE_SENTINEL")
+    }
+
+    rmSync(join(temporaryRoot, "nested/.env.local"))
+    for (const privatePath of [".claude/mcp.json", ".opencode/mcp.json", "board-configs/private/config.json", "nested/client.pem", "nested/client.key"]) {
+      const absolute = join(temporaryRoot, privatePath)
+      mkdirSync(dirname(absolute), { recursive: true })
+      writeFileSync(absolute, "PRIVATE_SENTINEL")
+      expect(() => assertSafeWorktree(temporaryRoot)).toThrow(/Private credential path refused/)
+      try {
+        assertSafeWorktree(temporaryRoot)
+      } catch (error) {
+        expect(String(error)).not.toContain("PRIVATE_SENTINEL")
+      }
+      rmSync(absolute)
     }
   })
 })

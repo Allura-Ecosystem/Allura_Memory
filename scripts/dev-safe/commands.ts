@@ -9,7 +9,6 @@ export interface DevSafeTools {
 
 export interface DevSafePorts {
   dashboard?: number
-  postgres?: number
 }
 
 export interface CommandPlan {
@@ -40,26 +39,6 @@ function composeCommand(root: string, tools: DevSafeTools): string[] {
   ]
 }
 
-/** Verify the already-started disposable database; never start it as a side effect of dev. */
-export function createDatabaseReadinessPlan(root: string, tools: DevSafeTools, ports: DevSafePorts): string[] {
-  if (ports.postgres === undefined) {
-    throw new Error("ALLURA_DEV_SAFE_POSTGRES_PORT is required for database readiness")
-  }
-  return [
-    ...composeCommand(root, tools),
-    "exec",
-    "--no-TTY",
-    "postgres",
-    "pg_isready",
-    "-h",
-    "127.0.0.1",
-    "-U",
-    "allura",
-    "-d",
-    "allura_dev",
-  ]
-}
-
 /** Build fixed argv only; callers cannot forward flags or invoke a shell. */
 export function createPlan(root: string, args: string[], tools: DevSafeTools, ports: DevSafePorts): CommandPlan {
   if (args.length !== 1) {
@@ -87,22 +66,12 @@ export function createPlan(root: string, args: string[], tools: DevSafeTools, po
   }
 
   if (ports.dashboard !== undefined) {
-    plans.dev = runtime(
-      "next/dist/bin/next",
-      "dev",
-      "--webpack",
-      "--hostname",
-      "127.0.0.1",
-      "--port",
-      String(ports.dashboard)
-    )
+    plans.dev = [...compose, "up", "--detach", "--build", "--wait", "--wait-timeout", "180", "app"]
   }
   if (name === "dev" && ports.dashboard === undefined) {
     throw new Error("ALLURA_DEV_SAFE_DASHBOARD_PORT is required for dev")
   }
-  if (["dev", "status", "db-up", "db-down"].includes(name) && ports.postgres === undefined) {
-    throw new Error(`ALLURA_DEV_SAFE_POSTGRES_PORT is required for ${name}`)
-  }
+
   if (!Object.hasOwn(plans, name)) {
     throw new Error(`Unknown command. Choose: ${Object.keys(plans).join(", ")}, dev`)
   }

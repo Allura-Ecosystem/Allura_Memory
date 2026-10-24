@@ -1,10 +1,9 @@
 # Isolated development
 
-This lane is source-complete but **not approved for service activation yet**. The
-AD-45 registration proposal assigns dashboard host port `4002` and disposable
-PostgreSQL host port `7002` (container port `5432`). The proposal is pending PR
-acceptance, so both allocations remain inactive. The launcher has no port defaults
-and does not treat a locally free port or the proposal itself as approval.
+AD-45 registers dashboard host port `4002` for this lane. PostgreSQL is not
+published to the host: the app reaches `postgres:5432` on a private internal
+Compose network. The launcher has no port default and requires an explicit
+activation signal; a locally free port is not authorization to choose another one.
 
 Use a durable linked Git worktree rather than a primary checkout. Do not copy any
 production dotenv file, credentials, database snapshot, or secret into it. The
@@ -39,24 +38,20 @@ install the pinned lockfile with `bun install --frozen-lockfile` first.
 The focused tests execute the real launcher against a stub Docker executable.
 They do not call the host Docker CLI or daemon.
 
-## Port decision and activation gate
+## Registered port and activation gate
 
-The pending registration is recorded in `docs/allura/BLUEPRINT.md` and metadata
-in root `docker-compose.yml`; that metadata does not add a service. Only after the
-registration PR is accepted may an operator provide all three values explicitly:
+The registration is recorded in `docs/allura/BLUEPRINT.md` and metadata in root
+`docker-compose.yml`; that metadata does not add a service. An operator must
+provide both values explicitly:
 
 - `ALLURA_DEV_SAFE_DASHBOARD_PORT=4002`: registered dashboard host port.
-- `ALLURA_DEV_SAFE_POSTGRES_PORT=7002`: registered disposable PostgreSQL host
-  port; the container still listens on `5432`.
-- `ALLURA_DEV_SAFE_PORTS_APPROVED=true`: operator acknowledgment that the port
-  registry decision has landed. This flag is a fail-closed reminder, not proof
-  of governance by itself.
+- `ALLURA_DEV_SAFE_ACTIVATE=true`: fail-closed acknowledgment to start the
+  task-owned disposable services. It is not a production or governance approval.
 
-The launcher rejects any other supplied ports, including existing/reserved
-allocations. Until PR acceptance and explicit operator acknowledgment, `dev` and
-`db-up` refuse to run. The two registered values are required inputs, not defaults.
+The launcher rejects any other supplied dashboard port. Without explicit operator
+activation, `dev` and `db-up` refuse to run. PostgreSQL has no host port input.
 
-After approval, commands remain fixed and accept no forwarded flags. The launcher
+For activation, commands remain fixed and accept no forwarded flags. The launcher
 defaults to the root-owned `unix:///var/run/docker.sock`. On Docker Desktop for
 Linux, select the current account's Desktop socket explicitly, for example:
 
@@ -83,27 +78,26 @@ bun --no-env-file run dev:safe test:unit
 bun --no-env-file run dev:safe db-down
 ```
 
-`status`, `db-up`, and `db-down` require the PostgreSQL port variable because the
-Compose file deliberately has no fallback. The launcher fixes the Compose
+`dev` requires the dashboard port because the Compose file deliberately has no
+fallback. The launcher fixes the Compose
 project directory, file, selected verified local Docker socket, and `/dev/null` env
 file. It never invokes `brain:*`, the root Compose stack, the portfolio stack,
 or an MCP service. It derives a stable project name from the linked worktree's
 absolute path, so containers, images and networks are not shared with another
 dev-safe worktree. The Compose file declares no named or bind-mounted volumes.
 
-`dev` does not start PostgreSQL. It first runs `pg_isready` inside that exact
-worktree-scoped Compose service and refuses to launch Next.js unless `db-up`
-already completed and the disposable database is accepting connections.
+`dev` builds and starts both the app and PostgreSQL in the exact worktree-scoped
+Compose project. Compose waits for PostgreSQL health before starting the app and
+waits for the app health check before returning. `db-up` remains available for a
+database-only schema inspection; `db-down` removes the entire disposable project.
 
 ## What is isolated
 
-- The dashboard listener binds to `127.0.0.1` on the approved configured port.
-- PostgreSQL publishes only to `127.0.0.1` on the approved configured port. Its
-  container port remains the standard internal PostgreSQL port.
-- The database container joins a dedicated Compose network marked
-  `internal: true`, so the container network has no external route.
-- Host loopback binding and container-network isolation are different controls:
-  the internal network does not cancel the intentional host-loopback publication.
+- Only the app publishes a host listener, bound to `127.0.0.1:4002`.
+- PostgreSQL has no host publication and joins only the `backend` network, which
+  is marked `internal: true` and has no external route.
+- The app joins `backend` to reach PostgreSQL and a separate `frontend` network
+  for its loopback-published listener.
 - Database state uses tmpfs and is lost when the container is removed. Resource
   caps bound memory, CPU, and process count.
 - The PostgreSQL build uses the repository root as context because the existing
@@ -111,6 +105,8 @@ already completed and the disposable database is accepting connections.
   ignore file sends only `docker/postgres-init/**` and the public portfolio
   workspace fixture; repository state, dotenv files, Git data, build output, and
   local caches stay out of the build context.
+- The app image pins Bun `1.3.14`, installs the frozen lockfile, and receives no
+  dotenv files, ambient credentials, production endpoint, bind mount, or volume.
 
 ## Limits
 
