@@ -59,6 +59,16 @@
 # =============================================================================
 # =============================================================================
 
+# AD-45 allocation metadata only. Extension fields do not create or modify
+# services. The isolated-development dashboard is activated only through the
+# separate fail-closed dev-safe launcher.
+x-allura-port-registry:
+  isolated_dev_dashboard:
+    host_port: 4002
+    tier: ui
+    status: registered
+    activation: explicit-launcher-gate
+
 services:
   # PostgreSQL 16 — Primary database (events, traces, pgvector embeddings)
   # Temporary image tag: pgvector:pg16. Verify extversion at runtime before HNSW migration.

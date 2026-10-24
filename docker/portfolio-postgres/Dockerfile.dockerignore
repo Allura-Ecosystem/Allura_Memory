@@ -1,0 +1,8 @@
+**
+!docker/
+docker/*
+!docker/postgres-init/
+!docker/postgres-init/**
+!docker/portfolio-postgres/
+docker/portfolio-postgres/*
+!docker/portfolio-postgres/99-portfolio-demo-workspace.sql
