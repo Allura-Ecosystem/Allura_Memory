@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { parse } from "yaml"
-import { spawnSync } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { createServer, type Server } from "node:net"
 import {
   chmodSync,
@@ -120,6 +120,62 @@ function launcherFixture(): {
     dockerSocket,
     daemonFailure,
     path: [toolsDirectory, dirname(bunExecutable), "/usr/bin", "/bin"].join(":"),
+  }
+}
+
+function dockerIntegrationFixture(): {
+  root: string
+  dockerLog: string
+  reachedBuild: string
+  path: string
+} {
+  const temporaryRoot = mkdtempSync(join(tmpdir(), "allura-dev-safe-docker-it-"))
+  temporaryRoots.push(temporaryRoot)
+  expect(spawnSync("git", ["init", "--quiet", temporaryRoot]).status).toBe(0)
+  mkdirSync(join(temporaryRoot, "tests/scripts"), { recursive: true })
+  mkdirSync(join(temporaryRoot, "scripts/dev-safe"), { recursive: true })
+  cpSync(
+    join(process.cwd(), "tests/scripts/dev-safe-docker.integration.sh"),
+    join(temporaryRoot, "tests/scripts/dev-safe-docker.integration.sh")
+  )
+  cpSync(
+    join(process.cwd(), "scripts/dev-safe/inspect-docker-endpoint.ts"),
+    join(temporaryRoot, "scripts/dev-safe/inspect-docker-endpoint.ts")
+  )
+  cpSync(
+    join(process.cwd(), "scripts/dev-safe/environment.ts"),
+    join(temporaryRoot, "scripts/dev-safe/environment.ts")
+  )
+  const toolsDirectory = join(temporaryRoot, "tools")
+  const dockerLog = join(temporaryRoot, "docker.log")
+  const reachedBuild = join(temporaryRoot, "reached-build")
+  mkdirSync(toolsDirectory)
+  const docker = join(toolsDirectory, "docker")
+  writeFileSync(
+    docker,
+    [
+      "#!/bin/sh",
+      `printf '%s\\n' "$*" >> '${dockerLog}'`,
+      "if [ \"$3 $4\" = \"image inspect\" ]; then exit 1; fi",
+      `if printf '%s' "$*" | grep -q 'compose .* build app'; then touch '${reachedBuild}'; sleep 30; fi`,
+      "exit 0",
+      "",
+    ].join("\n")
+  )
+  chmodSync(docker, 0o755)
+  return {
+    root: temporaryRoot,
+    dockerLog,
+    reachedBuild,
+    path: [toolsDirectory, dirname(bunExecutable), "/usr/bin", "/bin"].join(delimiter),
+  }
+}
+
+async function waitForPath(path: string): Promise<void> {
+  const deadline = Date.now() + 5_000
+  while (!existsSync(path)) {
+    if (Date.now() >= deadline) throw new Error(`timed out waiting for ${path}`)
+    await new Promise((resolve) => setTimeout(resolve, 20))
   }
 }
 
@@ -559,6 +615,108 @@ describe("launcher entrypoint", () => {
       `--host unix://${fixture.dockerSocket} version --format {{.Server.Version}}`
     )
   })
+})
+
+describe("Docker integration harness safety", () => {
+  it("refuses a pre-existing sentinel byte-identically without invoking Docker", () => {
+    const fixture = dockerIntegrationFixture()
+    const sentinel = join(fixture.root, ".claude/mcp.json")
+    const original = Buffer.from([0, 1, 2, 10, 255])
+    mkdirSync(dirname(sentinel), { recursive: true })
+    writeFileSync(sentinel, original)
+
+    const result = spawnSync("bash", ["tests/scripts/dev-safe-docker.integration.sh"], {
+      cwd: fixture.root,
+      env: { HOME: "/ambient/home", NODE_ENV: "test", PATH: fixture.path, ALLURA_DEV_SAFE_DOCKER_ENDPOINT: "ssh://host" },
+      encoding: "utf8",
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain("refusing to overwrite existing private-path probe target")
+    expect(readFileSync(sentinel)).toEqual(original)
+    expect(existsSync(fixture.dockerLog)).toBe(false)
+  })
+
+  it("rejects a malicious endpoint before Docker, mutation, or cleanup", () => {
+    const fixture = dockerIntegrationFixture()
+    const result = spawnSync("bash", ["tests/scripts/dev-safe-docker.integration.sh"], {
+      cwd: fixture.root,
+      env: {
+        HOME: "/ambient/home",
+        NODE_ENV: "test",
+        PATH: fixture.path,
+        ALLURA_DEV_SAFE_DOCKER_ENDPOINT: "ssh://production.example",
+      },
+      encoding: "utf8",
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain("Docker endpoint must be an approved local Unix socket")
+    expect(existsSync(fixture.dockerLog)).toBe(false)
+    for (const path of [
+      ".claude/mcp.json",
+      ".opencode/mcp.json",
+      "board-configs/private/dev-safe-probe.json",
+      ".dev-safe-context-probe.key",
+      ".dev-safe-context-probe.pem",
+    ]) {
+      expect(existsSync(join(fixture.root, path))).toBe(false)
+    }
+  })
+
+  it("on interruption cleans only files, directories, and Docker resources owned by this invocation", async () => {
+    const fixture = dockerIntegrationFixture()
+    const preExistingDirectory = join(fixture.root, ".claude")
+    const unrelated = join(preExistingDirectory, "keep.bin")
+    mkdirSync(preExistingDirectory)
+    writeFileSync(unrelated, Buffer.from([9, 8, 7, 0, 6]))
+    writeFileSync(
+      join(fixture.root, "scripts/dev-safe/inspect-docker-endpoint.ts"),
+      `console.log(${JSON.stringify(join(fixture.root, "tools/docker"))} + "\\tunix:///fixture/docker.sock")\n`
+    )
+
+    const child = spawn("bash", ["tests/scripts/dev-safe-docker.integration.sh"], {
+      cwd: fixture.root,
+      detached: true,
+      env: { HOME: "/ambient/home", NODE_ENV: "test", PATH: fixture.path, ALLURA_DEV_SAFE_DOCKER_ENDPOINT: "unix:///fixture/docker.sock" },
+      stdio: ["ignore", "ignore", "pipe"] as const,
+    })
+    const stderr: Buffer[] = []
+    child.stderr.on("data", (chunk) => stderr.push(chunk))
+    await waitForPath(fixture.reachedBuild)
+    process.kill(-child.pid!, "SIGTERM")
+    const status = await new Promise<number | null>((resolve, reject) => {
+      child.once("error", reject)
+      child.once("exit", (code) => resolve(code))
+    })
+
+    expect(status, Buffer.concat(stderr).toString()).not.toBe(0)
+    expect(readFileSync(unrelated)).toEqual(Buffer.from([9, 8, 7, 0, 6]))
+    expect(existsSync(preExistingDirectory)).toBe(true)
+    for (const path of [
+      ".claude/mcp.json",
+      ".opencode/mcp.json",
+      "board-configs/private/dev-safe-probe.json",
+      ".dev-safe-context-probe.key",
+      ".dev-safe-context-probe.pem",
+      ".opencode",
+      "board-configs/private",
+      "board-configs",
+    ]) {
+      expect(existsSync(join(fixture.root, path))).toBe(false)
+    }
+    const dockerCalls = readFileSync(fixture.dockerLog, "utf8")
+    const project = /--project-name (allura-dev-safe-it-[^ ]+)/.exec(dockerCalls)?.[1]
+    expect(project).toBeTruthy()
+    expect(dockerCalls).toContain(`--project-name ${project} `)
+    const cleanupCalls = dockerCalls
+      .trim()
+      .split("\n")
+      .filter((line) => (line.includes(" compose ") && line.includes(" down ")) || line.includes(" image rm "))
+    expect(cleanupCalls).toEqual([`--host unix:///fixture/docker.sock image rm ${project}-app`])
+    expect(cleanupCalls.join("\n")).not.toContain(`${project}-postgres`)
+    expect(dockerCalls).not.toContain("keep.bin")
+  }, 10_000)
 })
 
 describe("compose and build-context boundary", () => {
