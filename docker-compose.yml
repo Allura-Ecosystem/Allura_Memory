@@ -60,21 +60,14 @@
 # =============================================================================
 
 # AD-45 allocation metadata only. Extension fields do not create or modify
-# services. These isolated-development allocations remain inactive until this
-# proposal is accepted through PR review and an operator passes the separate
-# dev-safe activation acknowledgment.
+# services. The isolated-development dashboard is activated only through the
+# separate fail-closed dev-safe launcher.
 x-allura-port-registry:
   isolated_dev_dashboard:
     host_port: 4002
     tier: ui
-    status: proposed-pending-pr-acceptance
-    activation: inactive
-  disposable_dev_postgres:
-    host_port: 7002
-    container_port: 5432
-    tier: auxiliary
-    status: proposed-pending-pr-acceptance
-    activation: inactive
+    status: registered
+    activation: explicit-launcher-gate
 
 services:
   # PostgreSQL 16 — Primary database (events, traces, pgvector embeddings)

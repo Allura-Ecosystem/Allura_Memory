@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
-import { createDatabaseReadinessPlan, createPlan } from "./commands"
+import { createPlan } from "./commands"
 import {
   assertActivationAllowed,
   assertLocalPrerequisites,
@@ -88,9 +88,6 @@ export async function main(options: { dockerEndpointPolicy?: LocalDockerEndpoint
     return 0
   }
 
-  if (plan.name === "dev") {
-    execute(createDatabaseReadinessPlan(root, tools, ports), environment)
-  }
 
   const child = Bun.spawn(plan.argv, {
     cwd: root,
