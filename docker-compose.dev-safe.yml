@@ -38,8 +38,10 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       POSTGRES_DB: allura_dev
-      POSTGRES_USER: allura
-      POSTGRES_PASSWORD: allura-dev-local-only
+      # Every application pool, including legacy getPool() call sites, receives
+      # only the RLS-bound role. Bootstrap ownership stays in the postgres service.
+      POSTGRES_USER: allura_app
+      POSTGRES_PASSWORD: change-me-in-production
       POSTGRES_APP_USER: allura_app
       POSTGRES_APP_PASSWORD: change-me-in-production
     ports:

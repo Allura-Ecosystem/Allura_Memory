@@ -393,6 +393,7 @@ describe("package aliases", () => {
     expect(packageJson.scripts["test:dev-safe"]).toBe(
       "bun --no-env-file node_modules/vitest/vitest.mjs run --config tests/scripts/vitest.config.dev-safe.ts tests/scripts/dev-safe.test.ts"
     )
+    expect(packageJson.scripts["test:dev-safe:docker"]).toBe("bash tests/scripts/dev-safe-docker.integration.sh")
     const config = readFileSync(join(process.cwd(), "tests/scripts/vitest.config.dev-safe.ts"), "utf8")
     expect(config).not.toContain("dotenv")
   })
@@ -588,12 +589,13 @@ describe("compose and build-context boundary", () => {
         POSTGRES_HOST: "postgres",
         POSTGRES_PORT: "5432",
         POSTGRES_DB: "allura_dev",
-        POSTGRES_USER: "allura",
-        POSTGRES_PASSWORD: "allura-dev-local-only",
+        POSTGRES_USER: "allura_app",
+        POSTGRES_PASSWORD: "change-me-in-production",
         POSTGRES_APP_USER: "allura_app",
         POSTGRES_APP_PASSWORD: "change-me-in-production",
       },
     })
+    expect(Object.values(config.services.app.environment)).not.toContain("allura-dev-local-only")
     expect(config).not.toHaveProperty("volumes")
     expect(config.networks).toEqual({ frontend: {}, backend: { internal: true } })
     expect(text).not.toContain("ALLURA_MCP_HTTP_PORT")
@@ -639,6 +641,27 @@ describe("compose and build-context boundary", () => {
     )
     expect(dockerfile).toContain("ENV PUPPETEER_SKIP_DOWNLOAD=true")
     expect(dockerfile).toContain("RUN bun install --frozen-lockfile")
+  })
+
+  it("allowlists only application build inputs and excludes private credential paths", () => {
+    const ignore = readFileSync(join(process.cwd(), "docker/dev-safe/Dockerfile.dockerignore"), "utf8")
+    const rules = ignore.trim().split("\n")
+    expect(rules[0]).toBe("**")
+    expect(rules).toEqual(expect.arrayContaining([
+      "!package.json",
+      "!bun.lock",
+      "!next.config.ts",
+      "!tsconfig.json",
+      "!src/",
+      "!src/**",
+      "!public/",
+      "!public/**",
+      "!packages/",
+      "!packages/**",
+    ]))
+    for (const privatePath of [".claude/mcp.json", ".opencode/mcp.json", "board-configs/private/", "*.pem", "*.key"]) {
+      expect(rules).not.toContain(`!${privatePath}`)
+    }
   })
 })
 
@@ -689,7 +712,7 @@ describe("runtime and activation gates", () => {
 })
 
 describe("worktree preflight", () => {
-  it("accepts examples and rejects dotenv files without reading their contents", () => {
+  it("accepts examples and rejects private credential paths without reading their contents", () => {
     const temporaryRoot = linkedWorktree()
     writeFileSync(join(temporaryRoot, ".env.development.example"), "PUBLIC_FIXTURE")
     expect(() => assertSafeWorktree(temporaryRoot)).not.toThrow()
@@ -701,6 +724,20 @@ describe("worktree preflight", () => {
       assertSafeWorktree(temporaryRoot)
     } catch (error) {
       expect(String(error)).not.toContain("PRIVATE_SENTINEL")
+    }
+
+    rmSync(join(temporaryRoot, "nested/.env.local"))
+    for (const privatePath of [".claude/mcp.json", ".opencode/mcp.json", "board-configs/private/config.json", "nested/client.pem", "nested/client.key"]) {
+      const absolute = join(temporaryRoot, privatePath)
+      mkdirSync(dirname(absolute), { recursive: true })
+      writeFileSync(absolute, "PRIVATE_SENTINEL")
+      expect(() => assertSafeWorktree(temporaryRoot)).toThrow(/Private credential path refused/)
+      try {
+        assertSafeWorktree(temporaryRoot)
+      } catch (error) {
+        expect(String(error)).not.toContain("PRIVATE_SENTINEL")
+      }
+      rmSync(absolute)
     }
   })
 })

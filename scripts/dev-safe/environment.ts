@@ -202,7 +202,7 @@ export function readPortConfiguration(environment: Readonly<Record<string, strin
   }
 }
 
-/** Refuse dotenv files by name without opening their potentially secret contents. */
+/** Refuse known private credential paths by name without opening their contents. */
 export function assertSafeWorktree(root: string): void {
   const gitPath = join(root, ".git")
   let linked = false
@@ -219,8 +219,18 @@ export function assertSafeWorktree(root: string): void {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       if ([".git", ".next", "node_modules"].includes(entry.name)) continue
       const entryPath = join(directory, entry.name)
+      const relativePath = relative(root, entryPath).replaceAll("\\", "/")
       if (/^\.env(?:\.|$)/.test(entry.name) && !entry.name.endsWith(".example")) {
-        throw new Error(`Environment file refused: ${relative(root, entryPath)}; do not copy production env`)
+        throw new Error(`Environment file refused: ${relativePath}; do not copy production env`)
+      }
+      if (
+        relativePath === ".claude/mcp.json" ||
+        relativePath === ".opencode/mcp.json" ||
+        relativePath === "board-configs/private" ||
+        relativePath.startsWith("board-configs/private/") ||
+        /\.(?:pem|key)$/i.test(entry.name)
+      ) {
+        throw new Error(`Private credential path refused: ${relativePath}`)
       }
       if (entry.isDirectory()) inspect(entryPath)
     }
