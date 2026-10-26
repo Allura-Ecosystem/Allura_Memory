@@ -1,6 +1,8 @@
 import { authenticateHuman, authenticateMachine, requireSameOrigin, type HumanConfig, type Identity, type MachineCredential } from './authentication.ts';
 import { resolveAuthority, AuthorityError, type Action, type Authority, type AuthorityStore, type Scope } from './authority.ts';
 import { AccessError } from './access.ts';
+import { DecisionError } from './decisions.ts';
+import { ProposalError } from './proposals.ts';
 
 type Limits = { bodyBytes: number; responseBytes: number; targetChars: number; concurrency: number; timeoutMs: number };
 const ceilings: Limits = { bodyBytes: 65536, responseBytes: 131072, targetChars: 2048, concurrency: 16, timeoutMs: 5000 };
@@ -105,6 +107,7 @@ export function createGateway(options: Options): (request: Request) => Promise<R
     catch (error) {
       if (error instanceof AuthorityError) { return response(error.code === 'unauthenticated' ? 401 : error.code === 'invalid' ? 400 : 403, { outcome: error.code }); }
       if (error instanceof AccessError) { return response(error.code === 'conflict' ? 409 : error.code === 'invalid' ? 400 : error.code === 'forbidden' ? 403 : 503, { outcome: error.code === 'unavailable' ? 'unknown' : error.code }); }
+      if (error instanceof DecisionError || error instanceof ProposalError) { return response(error.code === 'conflict' ? 409 : error.code === 'invalid' ? 400 : error.code === 'forbidden' ? 403 : error.code === 'not_found' ? 404 : 503, {outcome:error.code}); }
       if (error instanceof GatewayError) { return response(error.status, { outcome: error.outcome }); }
       // Arbitrary service exceptions may occur after a commit: never infer rollback.
       return response(503, { outcome: 'unknown' });
