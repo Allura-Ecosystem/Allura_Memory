@@ -11,6 +11,15 @@ const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions:
   'machine credentials remain separate and action ceilings apply',
   'forged in-process identity cannot mint authority',
   'human mutations require same-origin and login targets stay local',
+] }, { requiredFile: './tests/gateway.test.ts', minAssertions: 29, requiredCases: [
+  'gateway authenticates before body and never trusts forged headers',
+  'gateway bounds streamed body rejects malformed JSON and cross-site',
+  'gateway rechecks revocation before disclosure and redacts service errors',
+  'post-commit revocation returns unknown rather than a false no-write denial',
+  'gateway retains admission while timed-out work is unresolved',
+  'gateway machine route cannot consume browser identity',
+  'chunked and stalled streams are cancelled within finite budgets',
+  'real loopback HTTP preserves authenticated scope and coarse liveness',
 ] }];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');

@@ -3,6 +3,7 @@ import { SQL } from 'bun';
 import { generateKeyPairSync, sign, randomBytes, randomUUID, createHash } from 'node:crypto';
 import { migrate, DatabaseStore, scopedTransaction, appendEvent, readEvents } from '../src/persistence.ts';
 import { authenticateHuman, authenticateMachine } from '../src/authentication.ts';
+import { createEvidenceGateway } from '../src/evidence-api.ts';
 
 const target = process.env.ALLURA_DISPOSABLE_DB_URL;
 if (!target || new URL(target).hostname !== '127.0.0.1' || process.env.ALLURA_DISPOSABLE_DB !== 'owned-test-container') { throw new Error('Requires owned disposable test runner'); }
@@ -167,7 +168,31 @@ test('database machine binding revocation and ceilings remain current', async ()
   const id = await appendEvent(app, machine, scope, { content: 'machine evidence' });
   expect(id).toMatch(/^[0-9a-f-]{36}$/);
   await expect(readEvents(app, machine, scope)).rejects.toThrow('forbidden');
+  await owner`UPDATE allura.machine_credentials SET actions=ARRAY[]::text[] WHERE principal_id=${machineId}`;
+  await expect(appendEvent(app, machine, scope, { content: 'removed action' })).rejects.toThrow('forbidden');
+  await owner`UPDATE allura.machine_credentials SET actions=ARRAY['memory:capture'] WHERE principal_id=${machineId}`;
   await owner`UPDATE allura.machine_credentials SET revoked=true WHERE principal_id=${machineId}`;
   await expect(appendEvent(app, machine, scope, { content: 'revoked' })).rejects.toThrow('forbidden');
   await expect(authenticateMachine(token, d => new DatabaseStore(app).lookupMachine(d))).rejects.toThrow('unauthenticated');
+});
+
+test('real HTTP evidence read enforces database scope and revocation', async () => {
+  const gateway = createEvidenceGateway(app, config, 'https://app.example.invalid');
+  const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: gateway });
+  const token = `${data}.${sign('RSA-SHA256', Buffer.from(data), privateKey).toString('base64url')}`;
+  const headers = { 'Cf-Access-Jwt-Assertion': token };
+  const path = `/api/evidence?group_id=${groupId}&workspace_id=${workspaceId}`;
+  try {
+    const result = await fetch(new URL(path, server.url), { headers });
+    expect(result.status).toBe(200);
+    const body = await result.text();
+    expect(body).toContain('HR evidence'); expect(body).not.toContain('foreign sentinel'); expect(body).not.toContain('Sales evidence');
+    expect((await fetch(new URL(path, server.url))).status).toBe(401);
+    expect((await fetch(new URL(path.replace(groupId, foreignGroup), server.url), { headers })).status).toBe(403);
+    await owner`UPDATE allura.workspace_grants SET active=false WHERE principal_id=${principal}`;
+    expect((await fetch(new URL(path, server.url), { headers })).status).toBe(403);
+  } finally {
+    await owner`UPDATE allura.workspace_grants SET active=true WHERE principal_id=${principal}`;
+    await server.stop(true);
+  }
 });

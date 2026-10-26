@@ -4,28 +4,40 @@ import { resolveAuthority, AuthorityError, type AuthorityStore, type AuthorityRe
 import { type Identity, type MachineCredential } from './authentication.ts';
 
 export async function migrate(owner: SQL): Promise<'applied' | 'unchanged'> {
-  const source = await Bun.file(new URL('../migrations/001-authority.sql', import.meta.url)).text();
-  const digest = createHash('sha256').update(source).digest('hex');
+  const migrations = await Promise.all(['001-authority.sql', '002-access.sql'].map(async (file, index) => {
+    const source = await Bun.file(new URL(`../migrations/${file}`, import.meta.url)).text();
+    return { version: index + 1, source, digest: createHash('sha256').update(source).digest('hex') };
+  }));
   return owner.begin(async tx => {
     await tx`SELECT pg_advisory_xact_lock(20861026)`;
     await tx.unsafe('CREATE SCHEMA IF NOT EXISTS allura; REVOKE ALL ON SCHEMA allura FROM PUBLIC; CREATE TABLE IF NOT EXISTS allura.schema_migrations(version integer PRIMARY KEY, digest text NOT NULL, applied_at timestamptz NOT NULL DEFAULT clock_timestamp())');
-    const existing = await tx`SELECT digest FROM allura.schema_migrations WHERE version=1`;
-    if (existing.length) {
-      if (existing[0].digest !== digest) { throw new Error('migration checksum mismatch'); }
-      return 'unchanged';
+    let applied = false;
+    for (const { version, source, digest } of migrations) {
+      const existing = await tx`SELECT digest FROM allura.schema_migrations WHERE version=${version}`;
+      if (existing.length) {
+        if (existing[0].digest !== digest) { throw new Error('migration checksum mismatch'); }
+      } else {
+        await tx.unsafe(source);
+        await tx`INSERT INTO allura.schema_migrations(version,digest) VALUES(${version},${digest})`;
+        applied = true;
+      }
     }
-    await tx.unsafe(source);
-    await tx`INSERT INTO allura.schema_migrations(version,digest) VALUES(1,${digest})`;
-    return 'applied';
+    return applied ? 'applied' : 'unchanged';
   });
 }
 
 export class DatabaseStore implements AuthorityStore {
   constructor(private readonly sql: SQL) {}
+  async resolveMember(identity: Identity, groupId: string): Promise<{ principalId: string; groupId: string; active: boolean } | null> {
+    if (identity.kind !== 'human') { return null; }
+    const [row] = await this.sql`SELECT allura.resolve_member(${identity.issuer},${identity.subject},${groupId}) AS member`;
+    return row?.member ?? null;
+  }
   async resolve(identity: Identity, scope: Scope): Promise<AuthorityRecord | null> {
     const human = identity.kind === 'human';
-    const [row] = await this.sql`SELECT allura.resolve_authority(${human ? identity.issuer : ''},${human ? identity.subject : ''},${identity.kind},${human ? '' : identity.principalId},${human ? '' : identity.credentialDigest},${scope.groupId},${scope.workspaceId}) AS authority`;
-    return (row?.authority ?? null) as AuthorityRecord | null;
+    const [row] = await this.sql`SELECT allura.resolve_authority(${human ? identity.issuer : ''},${human ? identity.subject : ''},${identity.kind},${human ? '' : identity.principalId},${human ? '' : identity.credentialDigest},${scope.groupId},${scope.workspaceId}) AS authority, allura.lookup_machine(${human ? '' : identity.credentialDigest}) AS credential`;
+    if (!row?.authority) { return null; }
+    return { ...row.authority, ...(human ? {} : { credentialActions: row.credential?.actions ?? [] }) } as AuthorityRecord;
   }
   async lookupMachine(digest: string): Promise<MachineCredential | null> {
     const [row] = await this.sql`SELECT allura.lookup_machine(${digest}) AS credential`;

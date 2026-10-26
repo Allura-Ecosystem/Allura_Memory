@@ -76,7 +76,8 @@ test('machine credentials remain separate and action ceilings apply', async () =
   const machine = await authenticateMachine(token, lookup, now);
   expect(seen).toBe(createHash('sha256').update(token).digest('hex'));
   expect(machine.kind).toBe('service');
-  expect((await resolveAuthority(machine, selector, 'memory:read', store({ ...record, kind: 'service' }))).action).toBe('memory:read');
+  expect((await resolveAuthority(machine, selector, 'memory:read', store({ ...record, kind: 'service', credentialActions: ['memory:read'] }))).action).toBe('memory:read');
+  await expect(resolveAuthority(machine, selector, 'memory:read', store({ ...record, kind: 'service', credentialActions: [] }))).rejects.toThrow('forbidden');
   await expect(resolveAuthority(machine, selector, 'memory:capture', store({ ...record, kind: 'service' }))).rejects.toThrow('forbidden');
   await expect(resolveAuthority(machine, selector, 'review:approve', store({ ...record, kind: 'service', reviewApprove: true }))).rejects.toThrow('forbidden');
   await expect(authenticateMachine(token, async () => ({ ...credential, revoked: true }), now)).rejects.toThrow('unauthenticated');
