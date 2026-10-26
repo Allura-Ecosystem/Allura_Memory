@@ -7,6 +7,8 @@ operationalStatus: unknown
 
 # Fresh rebuild — Epic 1 onward
 
+Direct-build controlling update (2026-10-26): baseline `9e3df50891f99b4ed9e0f6e33f9082a68f2ef9ce` is committed. Local Epic 1 contract/foundation acceptance is recorded in `../implementation-artifacts/epic-1-retro-2026-10-26.md`; next implementation is 2.1. The user removed independent DEVELOPMENT review and delegated ordinary local design/schema choices. Direct tests/self-checks and concise retrospectives replace stale reviewer gates below; product independent authorized HUMAN promotion remains unchanged. Follow `../../guidelines/ALLURA-BMAD.md` controlling correction. Optional/deferred adoption, production, deployment and remote push remain excluded. Historical planning-state columns below describe the reset snapshot, not current operational status.
+
 The user's sequencing correction supersedes every retain-original-numbering instruction. Execute Epic 1, then Epic 2, in the order below. Within an epic select the lowest unfinished ready story. Never jump over a prerequisite or decision gate: prepare the blocking decision in its owning story. Historical completion does not transfer to the rebuild. This catalog is delivery planning, not an Allura status ledger.
 
 [PRD](prds/prd-Allura_Memory-2026-10-25/prd.md), [architecture](architecture.md), [readiness](readiness.md), [Correct Course](sprint-change-proposal-2026-10-26.md), [entrypoint](../../guidelines/ALLURA-BMAD.md).

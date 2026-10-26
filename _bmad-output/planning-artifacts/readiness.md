@@ -7,6 +7,8 @@ operationalStatus: unknown
 
 # Current readiness
 
+Direct-build update: Epic 1 is locally accepted as foundation/contracts only; see `../implementation-artifacts/epic-1-retro-2026-10-26.md`, `contracts/authority-v1.md` and `contracts/persistence-v1.md`. Baseline is committed; next is 2.1. Current user instruction authorizes direct implementation/self-checks and ordinary local design/disposable tests, not independent development review. Reset snapshot tables below are historical. Product and deployment acceptance remain outstanding; operational status unknown.
+
 The user approved a fresh sequential rebuild beginning Epic 1, then Epic 2. The [catalog](epics.md) is the only active delivery sequence. Old numbering and repair instructions are superseded, not combined with this verdict. No routine reapproval of direction or numbering is required.
 
 ## Exact current Epic 1 state

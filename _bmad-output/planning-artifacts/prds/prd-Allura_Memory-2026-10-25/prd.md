@@ -14,6 +14,8 @@ reviewEvidence: ./prd-review-20261025T040936Z/validation-report.md
 
 # PRD: Allura Memory
 
+Direct-build execution update (2026-10-26): clean baseline `9e3df50891f99b4ed9e0f6e33f9082a68f2ef9ce` verified. The user delegated ordinary engineering/schema/UX design and removed independent DEVELOPMENT review. Direct self-checks, real tests/fixes and retrospectives now govern local build; product independent authorized HUMAN approval remains required. Epic 1 local contracts/foundation acceptance is in `../../../implementation-artifacts/epic-1-retro-2026-10-26.md`; detailed new contracts are `../../contracts/authority-v1.md` and `../../contracts/persistence-v1.md`; next is 2.1. This overrides historical pending-baseline/reviewer/generic-decision execution limits below, not product invariants, optional/deferred adoption or production/deployment authority. No live status claim.
+
 > [!CAUTION]
 > **Approved sequential fresh rebuild — 2026-10-26.** Start at Epic 1, then Epic 2 in dependency order under the [current catalog](../../epics.md). The user explicitly supersedes old numbering instructions. The local `foundation/` scaffold is verified under Story 1.1; no memory product feature or whole Epic 1 completion follows. Purge/docs/foundation remain uncommitted until the parent reconciles and commits the baseline. Legacy repair STOP stays intact; scoped rebuild execution is already approved. Unresolved AD/DOC/ENT/schema choices gate their affected stories; release remains separate. See [Correct Course](../../sprint-change-proposal-2026-10-26.md) and [readiness](../../readiness.md).
 

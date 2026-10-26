@@ -6,6 +6,8 @@ updated: 2026-10-26
 
 # Architecture Spine — Allura Memory
 
+Direct-build update: committed baseline verified; locally accepted detailed contracts now live in `contracts/authority-v1.md` and `contracts/persistence-v1.md`, without restoring deleted specs. Epic 1 evidence/retrospective is in `../implementation-artifacts/epic-1-retro-2026-10-26.md`; next is 2.1. User delegated bounded local design and removed independent development review; direct self-checks/tests replace stale execution limits below. Product independent human promotion and production boundaries remain binding.
+
 The [Epic 1–14 catalog](epics.md) replaces all legacy delivery numbering. Story 1.1's local `foundation/` package is verified; memory services, schema, auth, UI and release are not implemented by that scaffold. Epic 1 remains incomplete. Next is [1.2](stories/1.2-authority-and-service-contracts.md). Parent owns the pending clean baseline commit; no clean Git claim is made here. Legacy repair STOP stays intact; the user already approved scoped rebuild execution and sequencing.
 
 Sources: [PRD](prds/prd-Allura_Memory-2026-10-25/prd.md), [Blueprint](../../docs/allura/BLUEPRINT.md), [Design](../../docs/allura/DESIGN-ALLURA.md), [Requirements Matrix](../../docs/allura/REQUIREMENTS-MATRIX.md), [Risks and Decisions](../../docs/allura/RISKS-AND-DECISIONS.md). Former detailed Solution Architecture/Data Dictionary were purged. Retained table/DTO names are context, not silently approved DDL. [Adapter mappings](../../guidelines/ALLURA-BMAD.md#missing-input-mapping) disclose missing inputs.
