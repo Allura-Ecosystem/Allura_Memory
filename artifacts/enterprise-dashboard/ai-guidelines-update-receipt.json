@@ -1,0 +1,49 @@
+{
+  "recorded_at": "2026-10-19T20:45:10.344809+00:00",
+  "requested_by": "Sabir in current session",
+  "scope": "Update repository AI guidelines to reflect dashboard source reuse, branding, preview boundaries, and proposed follow-up UX; no app implementation or production release",
+  "files": [
+    {
+      "path": "guidelines/AI-GUIDELINES.md",
+      "sha256": "b14261c2cb01157d13b583b393de7de552a4f24b883ef43e86a8751fa45675e4"
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "4b8179c39f910b4a7e5f5f2ba26bc4b8235f8bca5b1e8095f430d5ef8c75e021"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "sha256": "2d6ecac76163619d235f7227c82af2e272c0f33129f44abcc077289775fb2a73"
+    },
+    {
+      "path": "docs/allura/DESIGN-ALLURA.md",
+      "sha256": "89a142d7c6fec0c5a5e980159a45ee951c0e99b8949e6ba0f9edfd2196cfd60b"
+    },
+    {
+      "path": ".github/scripts/docs-backend-residue-guard.sh",
+      "sha256": "b52e9fc178cc874bd59c60cb220a8d0929ba7553d8bed9cb69d10f4359bc4aa5"
+    },
+    {
+      "path": "src/__tests__/docs-backend-residue-guard.test.ts",
+      "sha256": "81fb7702c0a4298b8300960dee18ce2ec25c6ba28053ee596fa6b20a1d397823"
+    }
+  ],
+  "validation": {
+    "canonical_six": "passed",
+    "active_doc_and_runtime_backend_residue": "passed, now includes AI guidelines/Claude/Copilot entry points",
+    "guard_tests": "66 passed using focused Vitest configuration; initial sandbox subprocess denial resolved by authorized elevated execution",
+    "changed_section_anchors": "8 checked, all resolved",
+    "diff_whitespace": "passed",
+    "independent_ai_review": "Coherence review: restore Bun-only rule (resolved), remove DESIGN wildcard ambiguity (resolved); no other blockers",
+    "human_document_review": "not claimed"
+  },
+  "brain": {
+    "search_group": "allura-system",
+    "trajectory_id": "41d6170f-3dd3-4c3f-8a4f-cf2e83d0b7ff",
+    "outcome_persistence": "local receipt only; memory_add schema lacks server idempotency-key support required by project, so no remote write attempted"
+  },
+  "remaining": [
+    "Proposed UX slices remain unbuilt; production security and Shopify remain separate contracts.",
+    "No Notion publication, commit, merge, source promotion, or release performed."
+  ]
+}

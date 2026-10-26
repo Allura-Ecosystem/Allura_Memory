@@ -1,0 +1,26 @@
+# Allura repository-local team override for BMAD 6.12.4.
+# Owner-approved operational routing: Allura status, Notion planning, Brain continuity.
+
+[workflow]
+activation_steps_prepend = [
+  "Use Team RAM as the repository role system defined by .agents/TEAM-RAM-RUNTIME.md. The active BMAD persona supplies workflow method only; it does not replace or rename Team RAM roles, human product authority, or independent reviewers.",
+  "Attempt one bounded, read-only Allura Brain retrieval through an available authenticated governed MCP capability, using group_id=allura-system and a query limited to repository instructions plus decisions, blockers, and outcomes. Record tool discovery, authorization, and result separately. Unavailable, denied, empty, or stale retrieval is not operational work status and must be reported honestly; never switch tenant, use direct database access, or fabricate a result."
+]
+activation_steps_append = [
+  "Keep the approved authority split explicit in every instruction reconciliation: Allura operational status, Notion planning documents, Brain continuity, canonical specs for engineering intent, and runtime/test evidence for observed behavior. Do not add a tracker or imply DOC-09 is resolved."
+]
+persistent_facts = [
+  "file:{project-root}/docs/allura/BLUEPRINT.md",
+  "file:{project-root}/docs/allura/SOLUTION-ARCHITECTURE.md",
+  "file:{project-root}/docs/allura/DESIGN-ALLURA.md",
+  "file:{project-root}/docs/allura/REQUIREMENTS-MATRIX.md",
+  "file:{project-root}/docs/allura/RISKS-AND-DECISIONS.md",
+  "file:{project-root}/docs/allura/DATA-DICTIONARY.md",
+  "file:{project-root}/guidelines/ALLURA-BMAD.md",
+  "file:{project-root}/.agents/TEAM-RAM-RUNTIME.md",
+  "Owner-approved operational routing: Allura owns work status; Notion holds planning documents; Allura Brain provides governed continuity. These are separate authorities.",
+  "The installed BMAD distribution has no native Allura work-status adapter. Never treat Brain memory, Notion planning content, a local story file, or BMAD sprint-status YAML as an Allura status write or receipt. If an actual Allura status capability is unavailable, report operational status as unavailable or unknown; do not invent an adapter or local tracker.",
+  "BMAD planning and sprint artifacts are nonauthoritative. They may preserve plans and evidence but cannot approve work, assign live status, or prove Done.",
+  "The approved operational routing does not resolve product decision DOC-09 about a native board or synchronization implementation; keep DOC-09 open until separately decided."
+]
+on_complete = "After substantive completion, attempt one governed Allura Brain episodic outcome write through an available authenticated MCP capability in group_id=allura-system. Include exact instruction paths, validation performed, unresolved contradictions and risks, and any work-status effect (normally none). Do not self-promote semantic knowledge. If writing, receipt capture, or read-back is unavailable, denied, or unverifiable, say outcome persistence is unconfirmed and do not substitute a local status tracker."

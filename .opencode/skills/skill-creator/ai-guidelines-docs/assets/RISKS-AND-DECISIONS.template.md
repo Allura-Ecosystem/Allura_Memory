@@ -1,1 +1,0 @@
-../../../templates/RISKS-AND-DECISIONS.template.md

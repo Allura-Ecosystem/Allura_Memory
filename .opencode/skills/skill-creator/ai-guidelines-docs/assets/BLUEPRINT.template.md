@@ -1,1 +1,0 @@
-../../../templates/BLUEPRINT.template.md

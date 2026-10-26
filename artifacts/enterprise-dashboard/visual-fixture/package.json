@@ -1,0 +1,9 @@
+{
+  "name": "allura-portfolio-preview-dependencies",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pinned graph renderer for the local fictional-data portfolio preview only.",
+  "dependencies": {
+    "react-force-graph-3d": "1.29.2"
+  }
+}

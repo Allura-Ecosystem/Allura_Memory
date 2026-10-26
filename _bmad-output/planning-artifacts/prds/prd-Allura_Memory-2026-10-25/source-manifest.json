@@ -1,0 +1,197 @@
+{
+  "manifest_version": 1,
+  "generated_at": "2026-10-25T13:24:20Z",
+  "project": "Allura_Memory",
+  "workspace": "_bmad-output/planning-artifacts/prds/prd-Allura_Memory-2026-10-25",
+  "head_revision": "fcf4a33f025f69a5bc3fd120e974dd079dc65c52",
+  "branch": "dev/allura-beta",
+  "source_snapshot": {
+    "dirty_worktree": true,
+    "meaning": "Hashes bind the exact local bytes read for this targeted draft. HEAD alone cannot reproduce modified or untracked inputs. The snapshot is not merged, accepted, verified, deployed, or released."
+  },
+  "protected_sources": [
+    {
+      "path": "docs/allura/BLUEPRINT.md",
+      "role": "canonical specification",
+      "before_sha256": "e0f908166c8dcc5ff4b6e80594a16a70025571bfe3f709e8d52ec65bb055fbce",
+      "after_sha256": "e0f908166c8dcc5ff4b6e80594a16a70025571bfe3f709e8d52ec65bb055fbce",
+      "changed_by_update": false
+    },
+    {
+      "path": "docs/allura/SOLUTION-ARCHITECTURE.md",
+      "role": "canonical specification",
+      "before_sha256": "4d5fca0fffed472df0aeadbf1351620bf6bafe9518a0c09e18fba84fd7868687",
+      "after_sha256": "4d5fca0fffed472df0aeadbf1351620bf6bafe9518a0c09e18fba84fd7868687",
+      "changed_by_update": false
+    },
+    {
+      "path": "docs/allura/DESIGN-ALLURA.md",
+      "role": "canonical specification",
+      "before_sha256": "86b45a90ea654c745ba251fd9b78c31b5b141b0c1a039e54c5a4939f0851bf19",
+      "after_sha256": "86b45a90ea654c745ba251fd9b78c31b5b141b0c1a039e54c5a4939f0851bf19",
+      "changed_by_update": false
+    },
+    {
+      "path": "docs/allura/REQUIREMENTS-MATRIX.md",
+      "role": "canonical specification",
+      "before_sha256": "c26f6b09c8bc55cc0ed64a19b8e77b523fa48d51ccb9619c28721e8b21c75576",
+      "after_sha256": "c26f6b09c8bc55cc0ed64a19b8e77b523fa48d51ccb9619c28721e8b21c75576",
+      "changed_by_update": false
+    },
+    {
+      "path": "docs/allura/RISKS-AND-DECISIONS.md",
+      "role": "canonical specification",
+      "before_sha256": "6462b001bc0a43359a6f210363afb289e342d0fae00fd6769b57c5d7273d2236",
+      "after_sha256": "6462b001bc0a43359a6f210363afb289e342d0fae00fd6769b57c5d7273d2236",
+      "changed_by_update": false
+    },
+    {
+      "path": "docs/allura/DATA-DICTIONARY.md",
+      "role": "canonical specification",
+      "before_sha256": "151bfcaa6524d0a3c3556e210315141ca163c2f6858f44bb2ad6b7532e78c0b9",
+      "after_sha256": "151bfcaa6524d0a3c3556e210315141ca163c2f6858f44bb2ad6b7532e78c0b9",
+      "changed_by_update": false
+    },
+    {
+      "path": "guidelines/ALLURA-BMAD.md",
+      "role": "repository methodology authority",
+      "before_sha256": "8fc0a9212acfaa582134349574b72c7e98bcc200006f35aac969e01e469497d5",
+      "after_sha256": "8fc0a9212acfaa582134349574b72c7e98bcc200006f35aac969e01e469497d5",
+      "changed_by_update": false
+    },
+    {
+      "path": ".agents/TEAM-RAM-RUNTIME.md",
+      "role": "repository runtime and routing authority",
+      "before_sha256": "afdc59fbc924afad32ce5b0c62a803f90fb1f45753e1c71c1be4bf4ec75afc43",
+      "after_sha256": "afdc59fbc924afad32ce5b0c62a803f90fb1f45753e1c71c1be4bf4ec75afc43",
+      "changed_by_update": false
+    },
+    {
+      "path": ".claude/skills/bmad-prd/SKILL.md",
+      "role": "installed PRD workflow",
+      "before_sha256": "eafebb3fbebc4e276a055ca9916e20e36e95dca03f819eeeaaf80a3a9c16f07b",
+      "after_sha256": "eafebb3fbebc4e276a055ca9916e20e36e95dca03f819eeeaaf80a3a9c16f07b",
+      "changed_by_update": false
+    },
+    {
+      "path": ".claude/skills/bmad-prd/customize.toml",
+      "role": "installed PRD default customization",
+      "before_sha256": "d23707fe7ff5f5060a05b5b8bda3f170b9b1d9be61e409e9f7ae91f83572db6a",
+      "after_sha256": "d23707fe7ff5f5060a05b5b8bda3f170b9b1d9be61e409e9f7ae91f83572db6a",
+      "changed_by_update": false
+    }
+  ],
+  "artifacts": {
+    "historical_prd_input": {
+      "former_path": "_bmad-output/planning-artifacts/prd.md",
+      "path": "_bmad-output/planning-artifacts/prds/prd-Allura_Memory-2026-10-25/inputs/prd-before-update.md",
+      "sha256": "b1db0967a7ae36f1dd1e65469d85794c7fb0507e29743545270bffa38828d9c7",
+      "byte_identity_preserved": true
+    },
+    "updated_prd": {
+      "path": "_bmad-output/planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "sha256": "b1fc7ca689dd165edd78a5d5854b14283b2492a4886b72f35d7eb2fc39370e73",
+      "status": "updated-draft-unapproved"
+    },
+    "review_bundle": {
+      "former_path": "_bmad-output/planning-artifacts/prd-review-20261025T040936Z",
+      "path": "_bmad-output/planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd-review-20261025T040936Z",
+      "files": [
+        {"name": "review-governance.md", "before_sha256": "1be97862ed3f895763896f970f9cf1a81ff9ddd8beb4a0a7edf88bc40a2cc20f", "after_sha256": "1be97862ed3f895763896f970f9cf1a81ff9ddd8beb4a0a7edf88bc40a2cc20f"},
+        {"name": "review-jobs.md", "before_sha256": "4f0706ace28559e39fdfd8ce70e620b5788824686a9ee1de6cdeb81201a6a1b8", "after_sha256": "4f0706ace28559e39fdfd8ce70e620b5788824686a9ee1de6cdeb81201a6a1b8"},
+        {"name": "review-notion.md", "before_sha256": "935ee7e51785369da41c9acffce2ffe7505f8e1da402612258624fdb505be742", "after_sha256": "935ee7e51785369da41c9acffce2ffe7505f8e1da402612258624fdb505be742"},
+        {"name": "review-rubric.md", "before_sha256": "3b6c84db03586ad46bada728c667fd1dac6556a8b1f5ce2c2a9f2181552cb489", "after_sha256": "3b6c84db03586ad46bada728c667fd1dac6556a8b1f5ce2c2a9f2181552cb489"},
+        {"name": "scope.md", "before_sha256": "33fe777a047fa54da8f8ef488277a854678c1a9be92fa16eb44c044e2ff95090", "after_sha256": "33fe777a047fa54da8f8ef488277a854678c1a9be92fa16eb44c044e2ff95090"},
+        {"name": "source-sha256.txt", "before_sha256": "af3893538819c9a1dcf4a65fdeeba5a51c6ff1153d4aa3a1266b608b1cdd04ff", "after_sha256": "af3893538819c9a1dcf4a65fdeeba5a51c6ff1153d4aa3a1266b608b1cdd04ff"},
+        {"name": "validation-report.html", "before_sha256": "a50c1f685be10fb924e7d1972b7b8aafb9099b17397b606d0a8b921f542cbd87", "after_sha256": "a50c1f685be10fb924e7d1972b7b8aafb9099b17397b606d0a8b921f542cbd87"},
+        {"name": "validation-report.md", "before_sha256": "3a5c9b5fe05ac0ccce92f0d09b3941d6e30670ccacf2165ae63fc6ef0252fd15", "after_sha256": "3a5c9b5fe05ac0ccce92f0d09b3941d6e30670ccacf2165ae63fc6ef0252fd15"},
+        {"name": "verification.json", "before_sha256": "71edd2277e899328074afe013a7687bc535c81dec01482756b6f1bd55a15aad3", "after_sha256": "71edd2277e899328074afe013a7687bc535c81dec01482756b6f1bd55a15aad3"}
+      ],
+      "all_bytes_preserved": true,
+      "historical_path_citations_preserved": true
+    },
+    "inbound_reference_repairs": [
+      {
+        "path": "_bmad-output/planning-artifacts/epics.md",
+        "change": "inputDocuments PRD path only",
+        "after_sha256": "1706814c8d66edfb074ef3bf70e50826a3150f65cbd9a40b4e676a8ab43d7d0c"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-00.md",
+        "change": "PRD link target only",
+        "before_sha256": "c85fe92c0a8e55e8ebbe6070cd5ad90744c4cae72fa54ae86602ba4089a7101f",
+        "after_sha256": "e59ba7c797a43b972ed95b5ba6bc6d46f87d18e28ab0c82b9ba93b7aee3652be"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-01.md",
+        "change": "PRD link target only",
+        "before_sha256": "873fd55652effcb5eb59bcfc7326c941739b8d27119f009a234cb25945d4f66d",
+        "after_sha256": "4e54bb715fa6ad273c63a5f177ed9b6bcca68cdc54bb72e8678b4ebcec5b4e01"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-02.md",
+        "change": "PRD link target only",
+        "before_sha256": "5df0718f11ba57959823c90073c4b1bd06054ef01a092bfe967b9705fddb8d72",
+        "after_sha256": "31dd5a8985cb597265b4d4b949a4da849deb7e5e60f893da672bfab6d75e3738"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-03.md",
+        "change": "PRD link target only",
+        "before_sha256": "7c37d55e82fc1295ed001f28f9c88bae9bc2b2e6fec5356d9a847f868c476d9c",
+        "after_sha256": "3f20103cc47cad5ca5497f5fa24aae059836a44fcd8adfed4f4b8fafaef2fae7"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-04.md",
+        "change": "PRD link target only",
+        "before_sha256": "02cef8929bc83b58697629127d7a04209872e69d11c565844786740bf593b008",
+        "after_sha256": "18f45393989ffcdd6feb649498929e8d1bb52d6091c40e0dfb36a587ffc560f9"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-05A.md",
+        "change": "PRD link target only",
+        "before_sha256": "b237417eac120273848b0bbe22e6cae0daa8501d87d47e085f71e673b268d5f1",
+        "after_sha256": "a046b832073794dcb28287acc595e7f9bd6a48b55441dd0f6b70c7011428b00a"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-05B.md",
+        "change": "PRD link target only",
+        "before_sha256": "55c8f50d79b77c14a357b14906cdb17ebd60d9c3edd7c62d2e148ca177458aea",
+        "after_sha256": "119bf767d7191d50ccd36e97b39a790538ba2fe2372e2d9c0da6d2e3f5795843"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-06.md",
+        "change": "PRD link target only",
+        "before_sha256": "4446807e3a9f215ed16be48393d94d03b101c32b684f0484d7f3bae07741612d",
+        "after_sha256": "cfe24eec84e9c3877876f5d48f7c922f86692d5a694eb4bb9417040f5eec13de"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-07.md",
+        "change": "PRD link target only",
+        "before_sha256": "b01a3b8687f565abd8afeeeda62f3903acd0dc6faff83e9b44f97aecfac0011c",
+        "after_sha256": "bb69fd6ff9ac4772d2995b22302f44b540aa2f2455ecd967d4fa8d6e4672a55a"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-08.md",
+        "change": "PRD link target only",
+        "before_sha256": "36295fd588bd6d7dcee75da3fd842271be99748a10724a0c2c44d7d5077b928e",
+        "after_sha256": "b641582f8972c1091a7539dd33b81c319be33fe3805feeedd0e6c537a78f8ab3"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-09.md",
+        "change": "PRD link target only",
+        "before_sha256": "42fa6201df7794544986a815034941726de78b639c1233d323982a11ad514ec4",
+        "after_sha256": "276689588a9b0188f227f9efd4060e49815d16024568726d15e0f3376787eac7"
+      },
+      {
+        "path": "_bmad-output/implementation-artifacts/stories/DEV-10.md",
+        "change": "PRD link target only",
+        "before_sha256": "e87c7bf20c1fe3195e0617844d7ec0be19c9e867bdeb75adfdf0079adc8abece",
+        "after_sha256": "4d94194d0759793e1992455146cb063e333014f3a07248854bf086fcfec0bd93"
+      }
+    ]
+  },
+  "exclusions": [
+    "No schema, migration, code, configuration, database, Notion, Brain, operational-status, canonical-document, commit, push, or deployment write was authorized or performed.",
+    "Product tests were not run; only documentation and integrity checks are permitted for this task."
+  ]
+}

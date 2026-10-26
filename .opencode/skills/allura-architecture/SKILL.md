@@ -99,13 +99,13 @@ Execute architecture creation with Allura context loaded:
    - Owner
    - References
 
-### Step 6: Notion Board Update (Gate 5)
+### Step 6: Operational Status and Planning Documents (Gate 5)
 
 After architecture decision:
 
-1. Update Notion work item with decision status
-2. Add ADR reference to Decision Log
-3. Update Handoff Context with architecture outcome
+1. Read/update the related Allura work item only through an actual supported status capability; if unavailable, report status unknown and any intended transition unperformed.
+2. Maintain the ADR reference and decision context in Notion only as separately authorized planning-document updates.
+3. Do not infer operational status from Notion, Brain, the ADR, or local files.
 
 ### Step 7: Validation Evidence (Gate 6)
 

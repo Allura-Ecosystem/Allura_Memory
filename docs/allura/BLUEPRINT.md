@@ -189,7 +189,7 @@ Historical cutover rationale: retire the separate Neo4j service and its cross-st
 
 ### Agent Factory Delivery Boundary
 
-The Allura Agent Factory follows `guidelines/AI-GUIDELINES.md` as its authoring and packaging authority while Allura remains the governance and memory authority. Factory modules, validators, and CI workflows live in this canonical repository so GitHub can execute the gates that protect them. A module is shippable only after structural validation, roster and tenant consistency checks, live tenant-isolation smoke evidence, and explicit packaging of a named team.
+The Allura Agent Factory follows `guidelines/ALLURA-BMAD.md` as its repository workflow contract while Allura remains the governance and memory authority. Factory modules, validators, and CI workflows live in this canonical repository so GitHub can execute the gates that protect them. A module is shippable only after structural validation, roster and tenant consistency checks, live tenant-isolation smoke evidence, and explicit packaging of a named team.
 
 Factory CI does not imply native RuVector or an upstream governance package exists. Those claims remain blocked until native extension, smoke-test, and package source artifacts are present and independently verified.
 
@@ -291,7 +291,7 @@ Every page must show active `group_id`, source of truth, freshness, degraded sta
 | B27 | Agents must retrieve approved knowledge through a controlled retrieval layer |
 | B28 | All reads/writes must pass through controlled APIs with project-level access and audit |
 | B29 | The full loop from agent execution to knowledge reuse must be demonstrably end-to-end |
-| B30 | Team RAM agents must follow `guidelines/AI-GUIDELINES.md` and Allura Brain memory through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth |
+| B30 | Team RAM agents must follow `guidelines/ALLURA-BMAD.md` and governed Allura Brain continuity through a documented workflow, preserving `.opencode/agent/` as the live agent source of truth; owner-approved operational routing gives Allura work status, Notion planning documents, and Allura Brain governed continuity, without resolving DOC-09 native board/synchronization implementation |
 | B31 | Teams must be able to define evidence-gated orchestration runs that map familiar work ceremonies to governed Allura receipts without exposing internal agent-routing details |
 | B32 | Supply-chain threat intelligence must preserve source provenance, tenant/workspace scope, evidence freshness, and human authority while remaining read-only toward inventoried endpoints and external enforcement systems |
 

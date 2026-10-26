@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 /mnt/projects/git/Allura-Ecosystem/Allura_Memory
+
+ ✓ src/__tests__/docs-backend-residue-guard.test.ts (66 tests) 4156ms
+
+ Test Files  1 passed (1)
+      Tests  66 passed (66)
+   Start at  16:43:43
+   Duration  4.39s (transform 33ms, setup 0ms, collect 33ms, tests 4.16s, environment 0ms, prepare 71ms)
+

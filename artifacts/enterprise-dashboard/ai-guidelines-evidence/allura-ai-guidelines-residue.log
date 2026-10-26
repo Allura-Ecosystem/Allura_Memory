@@ -1,0 +1,2 @@
+docs-backend-residue-guard: checking active docs + runtime surfaces + 0 local Notion snapshot inputs
+docs-backend-residue-guard: OK — no backend/approval contract drift or corrupted identifiers in scanned surfaces; inline, titled, and reference-style internal links resolve (fenced code stripped; multi-line inline links unchecked)

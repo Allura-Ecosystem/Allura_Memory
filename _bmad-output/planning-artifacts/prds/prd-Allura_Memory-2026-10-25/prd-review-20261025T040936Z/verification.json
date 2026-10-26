@@ -1,0 +1,75 @@
+{
+  "checked_at": "2026-10-25T04:21:22.951678+00:00",
+  "grade": "Fair",
+  "finding_counts": {
+    "critical": 0,
+    "high": 4,
+    "medium": 8,
+    "low": 3
+  },
+  "dimension_verdict_counts": {
+    "strong": 3,
+    "adequate": 1,
+    "thin": 3,
+    "broken": 0
+  },
+  "source_integrity": [
+    {
+      "path": "_bmad-output/planning-artifacts/prd.md",
+      "unchanged": true
+    },
+    {
+      "path": "docs/allura/BLUEPRINT.md",
+      "unchanged": true
+    },
+    {
+      "path": "docs/allura/SOLUTION-ARCHITECTURE.md",
+      "unchanged": true
+    },
+    {
+      "path": "docs/allura/DESIGN-ALLURA.md",
+      "unchanged": true
+    },
+    {
+      "path": "docs/allura/REQUIREMENTS-MATRIX.md",
+      "unchanged": true
+    },
+    {
+      "path": "docs/allura/RISKS-AND-DECISIONS.md",
+      "unchanged": true
+    },
+    {
+      "path": "docs/allura/DATA-DICTIONARY.md",
+      "unchanged": true
+    },
+    {
+      "path": "guidelines/ALLURA-BMAD.md",
+      "unchanged": true
+    },
+    {
+      "path": ".agents/TEAM-RAM-RUNTIME.md",
+      "unchanged": true
+    }
+  ],
+  "html": {
+    "dimensions": 7,
+    "reviewers": 3,
+    "thin_sections_open": 3,
+    "scripts": 0,
+    "template_placeholders": false
+  },
+  "git_diff_check_exit_code": 0,
+  "product_tests_run": false,
+  "remote_writes_performed": false,
+  "brain_trace": "not_written_unresolved_write_hold",
+  "artifacts": {
+    "validation-report.md": {
+      "bytes": 77541,
+      "sha256": "3a5c9b5fe05ac0ccce92f0d09b3941d6e30670ccacf2165ae63fc6ef0252fd15"
+    },
+    "validation-report.html": {
+      "bytes": 95306,
+      "sha256": "a50c1f685be10fb924e7d1972b7b8aafb9099b17397b606d0a8b921f542cbd87"
+    }
+  }
+}

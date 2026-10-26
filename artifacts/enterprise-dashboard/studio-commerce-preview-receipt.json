@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-20",
+  "scope": "React/Vite fictional-data portfolio preview only",
+  "request": "Use Studio Admin React ecommerce in the existing Allura Store overview",
+  "upstream": "https://github.com/arhamkhnz/next-shadcn-admin-dashboard-baseui",
+  "revision": "62b1b3e3c4af7a1abf055298b01b4af020bd0f8b",
+  "reuse": "Five adapted Studio widgets: KPI strip, Store Traffic, Top Products, Inventory, Recent Orders. Not adoption of the whole template or backend.",
+  "delivery": "/home/ronin704/ChatGPT/Allura memory/output/Allura-dashboard-preview.html",
+  "sha256": "185daed936eca58f04f88e78629a667b57cfc1f755243e4b5908cf082cf35872",
+  "bytes": 4329412,
+  "changes": [
+    "Added actual Studio Recent Orders composition using installed TanStack v8",
+    "Search by order/customer, status filters, numeric/date sorting, five rows per page, order details",
+    "Product details with actual sample sales and derived rounded shares",
+    "Opaque Ink profit bars, explicit legend and accessible monthly data table",
+    "October sales comparison derives from September +6.1%",
+    "Keyboard selection and close return preserve focus"
+  ],
+  "validation": [
+    "Vite production build passed",
+    "Strict TypeScript passed",
+    "Three sample-integrity tests passed",
+    "Focused ESLint passed (Rand evidence)",
+    "Search Emma returns2, order14550 returns1, unmatched search returns0",
+    "Unpaid filter10 records; descending numeric sort and next page verified",
+    "Product/order keyboard Enter retains focus; Close returns opener",
+    "Desktop1440/tablet820/phone390: body scrollWidth equals clientWidth",
+    "Reduced-motion selected detail animation/transition both0s; chart animation disabled",
+    "Shopify journey link renders Connected tools with no-connection demonstration notice",
+    "Portable HTML embeds scripts/styles; output and both served aliases identical; MIT notices retained"
+  ],
+  "screenshots": "artifacts/enterprise-dashboard/screenshots/studio-commerce",
+  "limitations": [
+    "No store connected, no backend, no payment/refund/fulfillment actions",
+    "34 illustrative order records are not the complete379-order monthly ledger",
+    "Item-level details, customer contacts and product stock counts are absent and labeled",
+    "Phone order table scrolls horizontally inside its region",
+    "Large self-contained portfolio bundle; Vite chunk-size warning remains",
+    "Targeted accessibility review only, not certification; SOC2readiness aspiration only"
+  ],
+  "coordination": {
+    "lead": "Kotler",
+    "implementation": "Rand",
+    "independent_review": "Munari: corrected direct Vite candidate passes scoped ecommerce review at index.html#ecommerce. Source, provenance, arithmetic, desktop/tablet/phone screenshots and parent behavioral/keyboard evidence reviewed. Portable HTML excluded because packaging is blocked and its tablet defect remains."
+  },
+  "delivery_status": {
+    "corrected_react_build": "http://127.0.0.1:4008/index.html#ecommerce",
+    "portable_html": "Contains interactions but predates the final tablet grid correction. The SHA256 above identifies that older portable artifact.",
+    "packaging_blocker": "PreToolUse hook cannot load /home/ronin704/.codex/plugins/cache/allura-ecosystem/team-ram-coding/0.6.2/hooks/governance-preflight.py. Packaging attempted twice and blocked. No hook bypass attempted.",
+    "corrected_layout_evidence": "Direct index build at820px: grid529px, KPI529px, orders529px; search380x44px. At390px all five grid children335px, search301x44px.",
+    "screenshot_note": "tablet-overview, tablet-orders, phone-orders, desktop-search and desktop-overview show the corrected direct-index build; earlier screenshots show the portable build before grid correction."
+  },
+  "brain": {
+    "group_id": "allura-system",
+    "search_trajectory": "b1f58cc0-ecec-4cf7-975a-c604cd7a4637",
+    "results": "Historical, not relied on for current preview truth",
+    "write": "Not attempted; exposed write schema lacks required server idempotency parameter"
+  }
+}

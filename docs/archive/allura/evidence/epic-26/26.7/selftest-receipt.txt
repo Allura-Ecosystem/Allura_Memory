@@ -1,3 +1,0 @@
-=== ./bumblebee selftest ===
-selftest OK (5 findings in 2ms)
-=== exit: 0 ===

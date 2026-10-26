@@ -1,6 +1,6 @@
 ---
 name: allura-retrospective
-description: "Allura-governed retrospective. Loads allura-team-ram gates with Brooks gate, Brain outcome logging, and Notion board update. Use when running retrospectives in the Allura Memory repo."
+description: "Allura-governed retrospective. Loads allura-team-ram gates with Brooks gate, Brain outcome logging, Allura status reconciliation, and Notion planning-document handling. Use when running retrospectives in the Allura Memory repo."
 globs: ["src/**", "docs/allura/**", "guidelines/**"]
 ---
 
@@ -10,7 +10,7 @@ globs: ["src/**", "docs/allura/**", "guidelines/**"]
 > **AI-Assisted Documentation** — workflow corrections follow the existing project authority contract; full human document review remains pending.
 
 
-> **Allura-governed retrospectives.** Enforces Brooks gate, Brain outcome logging, Notion board update, and canonical doc impact checks.
+> **Allura-governed retrospectives.** Enforces Brooks gate, Brain outcome logging, Allura status reconciliation, Notion planning-document handling, and canonical doc impact checks.
 
 ## When to Use
 
@@ -52,12 +52,12 @@ Load `allura-team-ram` skill. This provides:
 2. Search Allura Brain:
    - group_id: "allura-system"
    - query: "retrospective {epic} lessons outcomes blockers"
-3. Check Notion board for epic/story completion status
+3. Read epic/story completion status through an actual supported Allura capability; if unavailable, stop because completion cannot be established.
 4. Verify: every story in the epic is Done (or Ronin approved partial retro)
 5. Synthesize: what was accomplished, what was blocked, what was learned
 ```
 
-**Critical:** Do not run retrospective until all stories in the epic are `Done` in Notion.
+**Critical:** Do not run retrospective until all stories in the epic are verified `Done` in Allura through an actual supported status capability, unless Ronin explicitly authorizes a partial retrospective.
 
 ### Step 3: Documentation Impact Check (Gate 2)
 
@@ -102,20 +102,19 @@ Execute retrospective with Allura context loaded:
 - Everyone contributes with specific examples
 - Action items must be achievable with clear ownership
 
-### Step 6: Notion Board Update (Gate 5)
+### Step 6: Operational Status and Planning Documents (Gate 5)
 
 After retrospective:
 
-1. Update Notion epic status
-2. Create action items as new work items
-3. Link retrospective findings to Decision Log
-4. Update Handoff Context with lessons learned
+1. Update Allura epic/action-item status only through an actual supported capability and existing authorization; otherwise report intended changes unperformed.
+2. Maintain retrospective findings, decisions and handoff context in Notion only as separately authorized planning documents.
+3. Do not use Brain, Notion or local artifacts as a substitute operational tracker.
 
 ### Step 7: Validation Evidence (Gate 6)
 
 Collect and verify:
 
-- [ ] All stories in the epic are `Done` in Notion
+- [ ] All stories in the epic are verified `Done` in Allura through an actual supported capability, or a partial retrospective was explicitly authorized
 - [ ] Lessons extracted are specific and actionable
 - [ ] Action items have clear ownership and timeline
 - [ ] At least one `RK-##` entry created in `RISKS-AND-DECISIONS.md`
