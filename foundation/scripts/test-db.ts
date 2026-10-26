@@ -36,7 +36,7 @@ try {
   }
   if (!server) { throw new Error('Disposable TCP readiness exhausted'); }
   console.log(JSON.stringify({ image, server, target: 'isolated-loopback-disposable', container: name }));
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 90000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 90000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -87,6 +87,13 @@ try {
     'concurrent decision replay and independent competing reviewers have one atomic winner',
     'terminated approval connection leaves no partial state and same key can recover',
     'lost HTTP approval response reconciles without repeating semantic mutation',
+    'correction submission is pending retry safe and never directly replaces the head',
+    'correction approval appends immutable version and lineage with one current head',
+    'competing corrections require explicit refresh and new human reviewed version',
+    'correction denies foreign base invalid version and unauthorised actor without writes',
+    'supersedes failure rolls back new semantic receipt intent and head change',
+    'correction submission receipt failure rolls back evidence proposal and base binding',
+    'real correction HTTP exposes exact base for fresh independent review',
   ];
   const missing = required.filter(name => !output.includes(`(pass) ${name} [`));
   console.log(JSON.stringify({ lane: 'restricted-postgres', pass, fail, skip, assertions, missing, exit: result.exitCode }));

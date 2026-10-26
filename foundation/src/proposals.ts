@@ -5,7 +5,7 @@ import { scopedTransaction } from './persistence.ts';
 export class ProposalError extends Error {
   constructor(public readonly code:'invalid'|'forbidden'|'not_found'|'conflict'|'unknown'){super(code);this.name='ProposalError';}
 }
-export type Proposal={id:string;version:number;currentVersion?:number;state:'pending'|'needs_evidence'|'approved'|'rejected';requesterId:string;producerId:string;summary:string;confidence:number;confidenceOrigin:'submitter'|'unscored';assertionKind:'observation'|'inference';evidenceIds:string[]};
+export type Proposal={id:string;version:number;currentVersion?:number;state:'pending'|'needs_evidence'|'approved'|'rejected';requesterId:string;producerId:string;summary:string;confidence:number;confidenceOrigin:'submitter'|'unscored';assertionKind:'observation'|'inference';evidenceIds:string[];correction?:{baseMemoryId:string;expectedBaseVersion:string;knowledgeId:string;baseContent:string;rationale:string;currentHeadId:string}|null};
 const validId=(scope:Scope,id:unknown):id is string=>typeof id==='string'&&validScope({...scope,workspaceId:id});
 function validate(scope:Scope,input:Record<string,unknown>):void {
   if(!input||Array.isArray(input)||Object.keys(input).some(k=>!['summary','confidence','assertionKind','evidenceIds','proposalId','expectedVersion'].includes(k))||
@@ -50,7 +50,8 @@ export async function getProposal(sql:SQL,identity:Identity,scope:Scope,id:strin
     const [row]=await tx`SELECT v.*,s.state,s.current_version FROM allura.proposal_versions v JOIN allura.proposal_state s ON s.group_id=v.group_id AND s.workspace_id=v.workspace_id AND s.id=v.proposal_id WHERE v.group_id=${scope.groupId} AND v.workspace_id=${scope.workspaceId}::uuid AND v.proposal_id=${id}::uuid AND v.version=coalesce(${version??null}::integer,s.current_version)`;
     if(!row){throw new ProposalError('not_found');}
     const links=await tx`SELECT event_id FROM allura.proposal_evidence WHERE group_id=${scope.groupId} AND workspace_id=${scope.workspaceId}::uuid AND proposal_id=${id}::uuid AND version=${row.version} ORDER BY event_id`;
-    return {id,version:row.version,currentVersion:row.current_version,state:row.state,requesterId:row.requester_id,producerId:row.producer_id,summary:row.summary,confidence:row.confidence,confidenceOrigin:row.confidence_origin,assertionKind:row.assertion_kind,evidenceIds:links.map((x:{event_id:string})=>x.event_id)} as Proposal;
+    const [context]=await tx`SELECT allura.correction_context(${scope.groupId},${scope.workspaceId}::uuid,${id}::uuid,${row.version}) AS correction`;
+    return {id,version:row.version,currentVersion:row.current_version,state:row.state,requesterId:row.requester_id,producerId:row.producer_id,summary:row.summary,confidence:row.confidence,confidenceOrigin:row.confidence_origin,assertionKind:row.assertion_kind,evidenceIds:links.map((x:{event_id:string})=>x.event_id),correction:context.correction} as Proposal;
   }));
 }
 export async function getProposalEvidence(sql:SQL,identity:Identity,scope:Scope,id:string,version:number,eventId:string):Promise<{id:string;actorId:string;payload:Record<string,unknown>;createdAt:string}>{
