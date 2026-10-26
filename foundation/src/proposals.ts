@@ -5,7 +5,7 @@ import { scopedTransaction } from './persistence.ts';
 export class ProposalError extends Error {
   constructor(public readonly code:'invalid'|'forbidden'|'not_found'|'conflict'|'unknown'){super(code);this.name='ProposalError';}
 }
-export type Proposal={id:string;version:number;currentVersion?:number;state:'pending'|'needs_evidence'|'approved'|'rejected';requesterId:string;producerId:string;summary:string;confidence:number;confidenceOrigin:'submitter'|'unscored';assertionKind:'observation'|'inference';evidenceIds:string[];correction?:{baseMemoryId:string;expectedBaseVersion:string;knowledgeId:string;baseContent:string;rationale:string;currentHeadId:string}|null};
+export type Proposal={id:string;version:number;currentVersion?:number;state:'pending'|'needs_evidence'|'approved'|'rejected';requesterId:string;producerId:string;summary:string;confidence:number;confidenceOrigin:'submitter'|'unscored';assertionKind:'observation'|'inference';evidenceIds:string[];correction?:{baseMemoryId:string;expectedBaseVersion:string;knowledgeId:string;baseContent:string;rationale:string;currentHeadId:string;headLifecycle:'current'|'deprecated';headRevision:number;restoration:{sourceMemoryId:string;expectedHeadRevision:number}|null}|null};
 const validId=(scope:Scope,id:unknown):id is string=>typeof id==='string'&&validScope({...scope,workspaceId:id});
 function validate(scope:Scope,input:Record<string,unknown>):void {
   if(!input||Array.isArray(input)||Object.keys(input).some(k=>!['summary','confidence','assertionKind','evidenceIds','proposalId','expectedVersion'].includes(k))||

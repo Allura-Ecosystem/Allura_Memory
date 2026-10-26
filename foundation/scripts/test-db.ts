@@ -36,7 +36,7 @@ try {
   }
   if (!server) { throw new Error('Disposable TCP readiness exhausted'); }
   console.log(JSON.stringify({ image, server, target: 'isolated-loopback-disposable', container: name }));
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 90000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 90000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -94,6 +94,19 @@ try {
     'supersedes failure rolls back new semantic receipt intent and head change',
     'correction submission receipt failure rolls back evidence proposal and base binding',
     'real correction HTTP exposes exact base for fresh independent review',
+    'governed deletion is replay safe while immutable history remains visible',
+    'lifecycle authority foreign identifiers and stale heads fail without mutation',
+    'lifecycle receipt failure rolls back tombstone event and head state',
+    'exact text duplicate approvals preserve provenance and append scoped equivalence',
+    'concurrent first duplicate roots and delete retries serialize without double effects',
+    'real foreign semantic ids never leak through delete restore history or equivalence',
+    'restoration copies exact history into pending proposal with current permission and replay',
+    'independent restoration appends new version and preserves deletion and supersedes',
+    'competing restoration exact head revision has one winner and no stale resurrection',
+    'restoration hidden source machine approval and revoked authority never change head',
+    'restoration late decision failure rolls back head version lineage and receipt',
+    'restore historical ancestor creates fresh lineage and rejects original producer approval',
+    'real HTTP deletion history restoration and review preserve current authority',
   ];
   const missing = required.filter(name => !output.includes(`(pass) ${name} [`));
   console.log(JSON.stringify({ lane: 'restricted-postgres', pass, fail, skip, assertions, missing, exit: result.exitCode }));
