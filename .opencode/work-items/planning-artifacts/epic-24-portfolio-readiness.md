@@ -1,128 +1,79 @@
-# Epic 24: Agentic AI Framework and Harness Portfolio Readiness
+# Epic 24 — Agentic AI Framework and Harness Portfolio Readiness
 
-**Date:** 2026-08-15
-**Status:** Ready for development
-**Owner:** Sabir
-**group_id:** allura-system
+> [!NOTE]
+> **Historical contract plus active forward plan.** Original 24.1–24.10, 24.11a, and 24.12 and their dated evidence are retained. Stories 24.13–24.15 are new **PLANNED requirements** authorized for this reconstruction; they are not historical work, implementation approval, live status, or acceptance.
 
-## Goal
+## Outcome
 
-Turn Allura Memory into a defensible principal-engineer portfolio case study by proving that it is a reusable, governed memory and deterministic execution harness for enterprise AI agents.
+Provide a reproducible, governed memory and deterministic execution harness whose claims can be verified from exact-revision evidence. Preserve historical acceptance/open items while assigning current technical preparation to one original-numbered owner per DEV draft.
 
-The finished portfolio must demonstrate working controls and reproducible evidence, not only architecture claims. A reviewer must be able to install the project, run an agent scenario, observe policy enforcement, attempt an unauthorized operation, replay the run, execute evaluations, and inspect an audit receipt.
+## Historical story register
 
-## Product Position
-
-> Allura Memory is an MCP-native governed memory and deterministic execution harness for enterprise AI agents. It separates raw episodic evidence from human-approved canonical knowledge, enforces policy at runtime boundaries, and produces replayable evaluation evidence.
-
-## Why This Epic Changed
-
-The previous plan prioritized a benchmark dashboard, public deployment, and portfolio copy. Those are useful presentation layers, but they cannot compensate for unverified identity, tenant isolation, governance atomicity, reproducibility, or CI evidence. This revision puts the trust boundary and harness proof first. Presentation is the final gate.
-
-## Scope
-
-### In scope
-
-- A reproducible CI baseline and machine-readable evidence manifest.
-- Authenticated principals with server-derived tenant, user, and role authority.
-- Database-enforced tenant isolation and an immutable event ledger.
-- Atomic, concurrency-safe human-governed promotion.
-- A declarative scenario harness with deterministic replay and fault injection.
-- Offline evaluations, adversarial cases, performance thresholds, and regression gates.
-- A coherent SDK/CLI path and a ten-minute quickstart.
-- Canonical documentation synchronized with the implemented PostgreSQL/RuVector architecture.
-- Three reference integrations and a concise portfolio demonstration.
-
-### Out of scope
-
-- Claims of bank production approval, certification, penetration testing, SLA, or real enterprise adoption.
-- A general-purpose autonomous-agent runtime or model-hosting platform.
-- A public multi-tenant SaaS launch.
-- A dashboard as a release blocker. A dashboard may be added after the evidence API and artifact format are stable.
-- Fabricated benchmark results, usage metrics, customer outcomes, or compliance status.
-
-## Delivery Gates
-
-| Gate | Stories | Question answered | Exit evidence |
-|---|---|---|---|
-| A — Truthful baseline | 24.1, 24.10 | Can a reviewer reproduce the current state? | Green CI lanes, evidence manifest, no unverified README claims |
-| B — Trust boundary | 24.2–24.4 | Does authority come from trusted identity and remain enforced through persistence? | Auth adversarial suite, RLS isolation matrix, immutable-ledger proof, atomic promotion concurrency test |
-| C — Framework and harness | 24.5–24.7 | Can another team define, run, replay, evaluate, and integrate an agent workflow? | Scenario schema, deterministic replay receipt, evaluation report, SDK/CLI quickstart |
-| D — Enterprise portfolio | 24.8–24.9 | Can a principal-engineer reviewer understand the standards, tradeoffs, evidence, and limitations? | Canonical doc guard, threat model, reference integrations, recorded demo script, evidence-indexed README |
-
-No later gate may be represented as complete until all earlier gates have passed.
-
-## Stories
-
-| Story | Title | Priority | Depends on | Principal-engineer signal |
-|---|---|---|---|---|
-| 24.1 | CI and Evidence Baseline | P0 | None | Measurable platform quality and honest claims |
-| 24.2 | Authenticated Principal Context | P0 | 24.1 | Runtime policy hooks and regulated identity controls |
-| 24.3 | Database-Enforced Tenant Isolation and Immutable Ledger | P0 | 24.2 | Defense in depth and audit integrity |
-| 24.4 | Atomic Human-Governed Promotion | P0 | 24.3 | Safe memory lifecycle and concurrency correctness |
-| 24.5 | Deterministic Scenario Harness | P0 | 24.2; integrates 24.4 fixtures | Reusable orchestration, simulation, replay, fault injection |
-| 24.6 | Evaluation and Regression Gates | P0 | 24.4, 24.5 | Offline evaluation, benchmarks, continuous measurement |
-| 24.7 | SDK, CLI, and Ten-Minute Developer Path | P1 | 24.5, 24.6 | Platform adoption and developer ergonomics |
-| 24.8 | Enterprise Documentation Truth Pack | P0 | 24.2–24.7 | Standards, threat modeling, audit and risk communication |
-| 24.9 | Reference Integrations and Portfolio Demonstration | P1 | 24.8 | Reuse, architectural leadership, adoption evidence |
-| 24.10 | CI Gate Integrity and Branch Protection | P0 | 24.1 | Enforceable quality gates; green means green |
-
-## Cross-Epic Acceptance Criteria
-
-- [ ] A fresh clone follows documented commands without undocumented local state.
-- [ ] CI publishes a versioned evidence manifest containing commit SHA, tool versions, test results, benchmark results, and scenario results.
-- [ ] Production HTTP requests without a verified principal fail closed.
-- [ ] Tenant, user, and role authority are derived from the verified principal; request parameters cannot elevate them.
-- [ ] Database policy blocks cross-tenant reads and writes even if application filtering is omitted.
-- [ ] The event ledger rejects update and delete operations at the database boundary.
-- [ ] Promotion, proposal transition, version linkage, and audit receipt commit or roll back together.
-- [ ] The same scenario can be replayed from its recorded definition revision with identical control-flow and policy outcomes.
-- [ ] Security, retrieval, governance, replay, and performance regressions fail CI at documented thresholds.
-- [ ] A new developer can run a reference scenario, replay it, and inspect its evidence within the documented ten-minute path.
-- [ ] Active canonical documentation describes PostgreSQL/RuVector only and passes a backend-residue documentation guard.
-- [ ] The portfolio clearly distinguishes implemented, measured, planned, and explicitly unsupported capabilities.
-
-## Evidence Contract
-
-Every completed story must produce:
-
-1. The exact command used for validation.
-2. A machine-readable artifact where applicable.
-3. Commit SHA and environment/tool versions.
-4. Pass/fail thresholds declared before the run.
-5. A link from `docs/portfolio/evidence-index.md`.
-6. A completed Dev Agent Record and File List in the story.
-
-Screenshots, prose claims, and manually edited result tables are supporting material, not acceptance evidence.
-
-## Definition of Portfolio-Ready
-
-The epic is complete when a reviewer can perform this sequence from documented commands:
-
-1. Start the supported local stack.
-2. Authenticate as a scoped principal.
-3. Execute a multi-step reference agent scenario.
-4. Observe episodic evidence and a human-governed promotion.
-5. Attempt and observe rejection of a forged cross-tenant or elevated-role request.
-6. Inject a deterministic tool failure and resume from a checkpoint.
-7. Replay the recorded run and compare it with the original receipt.
-8. Run the evaluation suite against a committed baseline.
-9. Inspect the audit and architecture evidence linked from the portfolio README.
-
-## Risks and Guardrails
-
-| Risk | Guardrail |
-|---|---|
-| Existing tests validate application checks but not database enforcement | Require live-database adversarial tests for RLS and ledger immutability |
-| CI passes while evidence is stale | Generate artifacts during the run and bind them to commit SHA |
-| Replay is described as deterministic without controlling nondeterminism | Record definition revision, tool fixtures, clock, seed, model/config fingerprint, and side-effect keys |
-| Documentation overstates compliance or adoption | Add claim classification and unsupported-capabilities sections |
-| Scope drifts toward dashboard work | Dashboard remains optional until Gates A–C pass |
-| One oversized story becomes impossible to review | Each story owns one architectural boundary and has explicit out-of-scope items |
-
-## Change Log
-
-| Date | Change | Author |
+| Story | Original contract | Historical evidence / current limit |
 |---|---|---|
-| 2026-08-03 | Original presentation-oriented epic created | Gilliam |
-| 2026-08-15 | Reframed around agent-framework trust, deterministic harness, evaluation evidence, and principal-engineer portfolio requirements | Codex using BMAD conventions |
+| 24.1 | CI and Evidence Baseline | Source-local historical implementation record; current CI/release acceptance unverified. |
+| 24.2 | Authenticated Principal Context | Dated evidence only; current identity/runtime proof required. |
+| 24.3 | Database-Enforced Tenant Isolation and Immutable Ledger | Dated restricted-role/RLS intent; no current live-DB acceptance from this rewrite. |
+| 24.4 | Atomic Human-Governed Promotion | 2026-08 review/retro evidence with overclaim concerns; current exact-version behavior remains open. |
+| 24.5 | Deterministic Scenario Harness | Dated acceptance with explicit `assertions`, `initial_state`, and cleanup evidence conflict. |
+| 24.6 | Evaluation and Regression Gates | Dated acceptance; current human-reviewed datasets, thresholds, isolation, timeout, and CI evidence unverified. |
+| 24.7 | SDK, CLI, and Ten-Minute Developer Path | `accepted-with-open-items`; clean-machine/cold-cache claim unverified. |
+| 24.8 | Enterprise Documentation Truth Pack | Dated acceptance; current canonical consistency must be rechecked. |
+| 24.9 | Reference Integrations and Portfolio Demonstration | Dated acceptance with initial-state/cleanup open items; no current clean-checkout demo. |
+| 24.10 | CI Gate Integrity and Branch Protection | **Conflicted:** top-level `done`, unchecked ACs, later `pending`; current GitHub evidence required. |
+| 24.11a | Fail-Closed Web Authority and Manifest as Single Source | Dated story-level evidence; current route inventory/enforcement unverified. |
+| 24.12 | Effective-Tenant Authority Seam | Additive seam historically recorded; story migrated no application route, so caller adoption remains open. |
+
+The 2026-08-29 retrospective recorded `accepted-with-open-items`, historical test/scenario/build counts, and a human decision that twelve stories were done. It also retained contradictory/reopened language and open obligations. Both facts remain evidence; neither is present operational truth.
+
+## New planned stories
+
+| Story | Planned outcome | Primary supporting DEV acceptance draft | Decision/authority boundary |
+|---|---|---|---|
+| 24.13 | **Retry-safe capture:** one server-bound operation identity/digest yields one durable event/receipt/index intent; same replay returns the original outcome, changed payload conflicts, ambiguous commit stays unknown pending reconciliation. | [DEV-03](../../../_bmad-output/implementation-artifacts/stories/DEV-03.md) | **PLANNED;** blocked on AD-65 and normal API/schema approval. |
+| 24.14 | **Immutable corrections:** authorized correction creates one immutable successor/current semantic head while preserving prior content, edges, and same-scope lineage. | [DEV-05A](../../../_bmad-output/implementation-artifacts/stories/DEV-05A.md) | **PLANNED;** blocked on AD-67; DOC-03 restore and DOC-05 duplicate handling remain outside this story. |
+| 24.15 | **Optional remote projection:** independently authorized projection reports delivery separately; `synced` requires destination read-back and immutable decision receipts never mutate. | [DEV-06](../../../_bmad-output/implementation-artifacts/stories/DEV-06.md) | **PLANNED and optional;** only if no source/ownership collision exists; DOC-07 specification is approved, but AD-68 delivery details, transfer authority, destination, and runtime evidence remain open. |
+
+## Primary DEV ownership crosswalk
+
+| Numbered owner | Supporting draft | Use |
+|---|---|---|
+| 24.10 | [DEV-02 — Reproducible authoritative CI](../../../_bmad-output/implementation-artifacts/stories/DEV-02.md) | Current acceptance detail for pinned runtime/install, real lint, separate typecheck, nonzero discovery, exact-head CI. |
+| 24.13 | [DEV-03](../../../_bmad-output/implementation-artifacts/stories/DEV-03.md) | Retry-safe capture. |
+| 24.3 | [DEV-04 — Workspace-authorized vector seam](../../../_bmad-output/implementation-artifacts/stories/DEV-04.md) | Extend original isolation contract through vector/lexical/current/history paths; AD-66 and deployed role/RLS evidence gated. |
+| 24.14 | [DEV-05A](../../../_bmad-output/implementation-artifacts/stories/DEV-05A.md) | Immutable correction/current head. |
+| 24.4 | [DEV-05B — Bind approval to reviewed proposal version](../../../_bmad-output/implementation-artifacts/stories/DEV-05B.md) | DOC-06 is approved specification; PR 181 is open, so implementation/merge/runtime acceptance is not claimed. |
+| 24.15 | [DEV-06](../../../_bmad-output/implementation-artifacts/stories/DEV-06.md) | Optional projection. |
+| 24.6 | [DEV-08 — Labeled retrieval baseline](../../../_bmad-output/implementation-artifacts/stories/DEV-08.md) | Human-reviewed fixtures, mode-separated metrics, isolation/timeout/fallback; labels/baseline/budgets remain gated. |
+| 24.7 | [DEV-09 — Consumer compatibility and capability claims](../../../_bmad-output/implementation-artifacts/stories/DEV-09.md) | Packed consumers and truthful capability table. **Repository-retirement gates are separate** and require exact target authorization/recovery/integration; this story does not authorize cleanup. |
+
+DEV-00/01/07/10 have primary ownership in 13.5/13.1/13.2/16.3 respectively. Linking these drafts avoids duplicating their detailed acceptance text.
+
+## Current remaining work and next actions
+
+1. **Truth/preservation first:** complete 13.5 and 13.1 inventory so useful source-local work is reconciled before any cleanup or compatibility decision.
+2. **CI:** resolve 24.10 conflict with live required-context inventory and exact-head evidence; run pinned install, real lint, separate typecheck, and nonzero required tests.
+3. **Scope:** accept AD-66 and prove 24.3 with restricted-role/RLS, pooled isolation, vector/lexical denial, current/history filtering, and zero foreign-scope results.
+4. **Reviewed version:** carry DOC-06 through 24.4 implementation, final-diff review, merge, stale-review no-write, committed replay receipt, and live acceptance. PR 181 being open is evidence, not closure.
+5. **Capture/correction:** decide AD-65/67; implement 24.13/24.14 only afterward; prove atomic rollback, concurrency, one current head, preserved history, and ambiguity handling.
+6. **Evaluation/consumers:** establish human label/budget authority for 24.6; prove packed ESM/CJS/types/CLI compatibility and evidence-class capability claims for 24.7.
+7. **Projection only if selected:** collision-check source ownership, name destination/transfer authority, then implement 24.15 with destination read-back and separate projection status. Core governed memory correctness does not silently depend on enabling projection.
+8. **Independent acceptance:** bind test counts, outputs, review, and deployed evidence to final bytes/revision; planning approval or historical counts are insufficient.
+
+## Exit gates
+
+- Missing/forged/revoked authority fails closed; database and retrieval paths preserve tenant/workspace isolation.
+- Capture replay/conflict/unknown semantics and exact-version independent-human review are executable and atomic.
+- Corrections preserve immutable lineage and one current same-scope head.
+- CI and evaluation evidence are reproducible and nonzero; SDK/CLI consumers remain compatible.
+- If projection is enabled, destination read-back proves delivery without rewriting decision receipts.
+- Retirement/cleanup, production rollout, and release remain separately authorized gates.
+
+## Evidence sources
+
+- `.opencode/work-items/implementation-artifacts/24-*.md`
+- `.opencode/work-items/implementation-artifacts/epic-24-retro-2026-08-29.md`
+- `docs/retrospectives/epic-24-retrospective-2026-08-22.md`
+- Supporting DEV drafts linked above
+
+No application, schema, migration, configuration, status, Brain, Notion, commit, push, deployment, cleanup, or release is authorized by this plan.
