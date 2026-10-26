@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "package": {
     "name": "bmad-method",
     "version": "6.12.4",
@@ -1128,38 +1128,8 @@
           "hashSource": "official-6.12.4"
         },
         {
-          "path": "bmad-architecture.md",
-          "sha256": "ca7438055d057aea5c3a14df967b10de63d0260216c131ca5e67d64a3b07c7af",
-          "hashSource": "official-6.12.4"
-        },
-        {
           "path": "bmad-brainstorming.md",
           "sha256": "78fe9693c0ced11c3157562246f68ff023196e52578a41d87234f0d26443db1d",
-          "hashSource": "official-6.12.4"
-        },
-        {
-          "path": "bmad-build-auto.md",
-          "sha256": "937c5986df09c4882ab02dc517485c3055e158bd7bf17549c587036962fa782d",
-          "hashSource": "official-6.12.4"
-        },
-        {
-          "path": "bmad-build.md",
-          "sha256": "fd15093dc6418079d54081cd821667c306edb61b1b689c561b68e0e8886a9acb",
-          "hashSource": "official-6.12.4"
-        },
-        {
-          "path": "bmad-code-review.md",
-          "sha256": "b56e21f05bc7c352bb80bb6907f329016016b71172f280905a69a5d38b2c9a87",
-          "hashSource": "official-6.12.4"
-        },
-        {
-          "path": "bmad-correct-course.md",
-          "sha256": "4e6da00c6287248dc39916c7e0c90a7e53bc7cda5cbabd1f18e5f17ec54bf7eb",
-          "hashSource": "official-6.12.4"
-        },
-        {
-          "path": "bmad-create-epics-and-stories.md",
-          "sha256": "aa3a5b57f872ab08f2674f0a58c1bdd0d8f505ddbf827ec82c2fd08a16eaf470",
           "hashSource": "official-6.12.4"
         },
         {
@@ -1188,23 +1158,8 @@
           "hashSource": "official-6.12.4"
         },
         {
-          "path": "bmad-prd.md",
-          "sha256": "43e0c46dec2784812577e42d1a973e588ff76d5e5ebb971efc612bcd1846f5ad",
-          "hashSource": "official-6.12.4"
-        },
-        {
           "path": "bmad-prfaq.md",
           "sha256": "eff13244345435b380bf9da309c894a91f21a121b64251a80ca6697a963a0e6c",
-          "hashSource": "official-6.12.4"
-        },
-        {
-          "path": "bmad-product-brief.md",
-          "sha256": "a17e7f7abf4a63c08680ec17989a97f02d375c1d11146960c2bfcc7c81f82029",
-          "hashSource": "official-6.12.4"
-        },
-        {
-          "path": "bmad-project-context.md",
-          "sha256": "30dbd9209edb53c008e8a3933e0d501a4d7b02942cf6fc9e7f6e62373e062cb1",
           "hashSource": "official-6.12.4"
         },
         {
@@ -1212,24 +1167,10 @@
           "sha256": "e8fe8f4f64726ca58decdc98a4d77e6a6995721c2b64ec280ba51aa227bde0b2",
           "hashSource": "official-6.12.4"
         },
-        {
-          "path": "bmad-retrospective.md",
-          "sha256": "4bce690ebb49d119f2a0e5fc671e945f1666c98f3fdb717ba00535d8e8eb451c",
-          "hashSource": "official-6.12.4"
-        },
-        {
-          "path": "bmad-review.md",
-          "sha256": "9b91f40d0c12fd7398b409652b294c208e51b53e5a68655dead368f6b914e844",
-          "hashSource": "official-6.12.4"
-        },
+
         {
           "path": "bmad-spec.md",
           "sha256": "5ffd810d5c3e5a1e0f44264d4534537764a84480c2ec620419ee6598649d247f",
-          "hashSource": "official-6.12.4"
-        },
-        {
-          "path": "bmad-sprint-planning.md",
-          "sha256": "919abad7970e971b8d2e04d344ec95884db91ceb5b7f25db4b90cb1a32f27b8c",
           "hashSource": "official-6.12.4"
         },
         {
@@ -1241,6 +1182,71 @@
           "path": "bmad-walkthrough.md",
           "sha256": "4452cb1417b5a6461f78a30e08a503743bab3116b6789ee16c0b4aad0408db69",
           "hashSource": "official-6.12.4"
+        }
+      ]
+    },
+    "approvedOpencodeAdapters": {
+      "root": ".opencode/commands",
+      "files": [
+        {
+          "path": "bmad-architecture.md",
+          "sha256": "1d7a93d0d1fb94d521e2e89432e372f30168a24de064cf85095773ec1045776b",
+          "hashSource": "approved-manifest:fresh-build-correct-course/candidate-manifest.json"
+        },
+        {
+          "path": "bmad-build-auto.md",
+          "sha256": "a9b5543897e46f28b12b1db1cf0fd828778078c4998996b87dbf2c852c93a7a4",
+          "hashSource": "approved-manifest:fresh-build-epic1-reset/candidate-manifest.json"
+        },
+        {
+          "path": "bmad-build.md",
+          "sha256": "74a3fc1572169865534b8ab3d7a650fc3a061f6fe00a9ca33e53e6beb0b0d64b",
+          "hashSource": "approved-manifest:fresh-build-epic1-reset/candidate-manifest.json"
+        },
+        {
+          "path": "bmad-code-review.md",
+          "sha256": "a286b531dfbb153317b8b4ab8bab3673275e8de91a59bea32644140ee78fda7a",
+          "hashSource": "approved-manifest:fresh-build-correct-course/candidate-manifest.json"
+        },
+        {
+          "path": "bmad-correct-course.md",
+          "sha256": "730f30fe3cfd829c966f2118f385efadc5f84e5ba448010553afb4e0028bf8f7",
+          "hashSource": "approved-manifest:fresh-build-epic1-reset/candidate-manifest.json"
+        },
+        {
+          "path": "bmad-create-epics-and-stories.md",
+          "sha256": "787a3fe2a6f769b8e0bb9f966021e5c32b4d6ba5d5d81c1b1fcd0732b1f95003",
+          "hashSource": "approved-manifest:fresh-build-epic1-reset/candidate-manifest.json"
+        },
+        {
+          "path": "bmad-prd.md",
+          "sha256": "cfd05243e3a0a40238d346f95d861071f15a6e52bc7c863219711d8d6f1bd7bf",
+          "hashSource": "approved-manifest:fresh-build-correct-course/candidate-manifest.json"
+        },
+        {
+          "path": "bmad-product-brief.md",
+          "sha256": "d4560cc9cac60c5f38e23eddf9b21f794cb96e3fb62d35a4abacd195d2b0d53d",
+          "hashSource": "approved-manifest:fresh-build-correct-course/candidate-manifest.json"
+        },
+        {
+          "path": "bmad-project-context.md",
+          "sha256": "6236c78da1914af6c432b2e1803963469085138f7d2a3383c3290eee388ebf7e",
+          "hashSource": "approved-manifest:fresh-build-correct-course/candidate-manifest.json"
+        },
+        {
+          "path": "bmad-retrospective.md",
+          "sha256": "c57a4fe8a11f154191318919096f065e8c1d4e09d05794b56ae1d4ddea728dd7",
+          "hashSource": "approved-manifest:fresh-build-correct-course/candidate-manifest.json"
+        },
+        {
+          "path": "bmad-review.md",
+          "sha256": "dc3692a4d807e55306fc6097cd5f36a436b9f3527716fab004958c6729128c54",
+          "hashSource": "approved-manifest:fresh-build-correct-course/candidate-manifest.json"
+        },
+        {
+          "path": "bmad-sprint-planning.md",
+          "sha256": "3a2af0c5ae5932e7a556daa67773f4840e8081a148dfdd6dc95bef920ca90f43",
+          "hashSource": "approved-manifest:fresh-build-correct-course/candidate-manifest.json"
         }
       ]
     },

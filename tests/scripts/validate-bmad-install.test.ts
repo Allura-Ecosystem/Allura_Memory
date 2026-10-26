@@ -70,6 +70,18 @@ afterEach(() => {
 });
 
 describe("BMAD repository-local integrity gate", () => {
+  test("keeps approved repository adapters separate from vendor OpenCode commands", () => {
+    const parsed = JSON.parse(readFileSync(registry, "utf8"));
+    const vendorPaths = parsed.inventory.opencodeCommands.files.map((entry: { path: string }) => entry.path);
+    const approvedAdapters = parsed.inventory.approvedOpencodeAdapters.files;
+
+    expect(parsed.schemaVersion).toBe(2);
+    expect(approvedAdapters).toHaveLength(12);
+    expect(approvedAdapters.every((entry: { hashSource: string }) => entry.hashSource.startsWith("approved-manifest:"))).toBe(true);
+    expect(vendorPaths).not.toContain("bmad-build.md");
+    expect(vendorPaths).toContain("bmad-help.md");
+  });
+
   test("accepts the pinned local install and approved routing fixture", () => {
     const result = runValidator(freshFixture());
     expect(result.output).toContain("BMAD_INTEGRITY_OK");
@@ -114,6 +126,24 @@ describe("BMAD repository-local integrity gate", () => {
     append(root, ".agents/skills/bmad-help/SKILL.md", "\nTAMPERED\n");
     const result = runValidator(root);
     expect(result.output).toContain("HASH_MISMATCH .agents/skills/bmad-help/SKILL.md");
+    expect(result.exitCode).toBe(1);
+  });
+
+  test("rejects a tampered vendor OpenCode command", () => {
+    const root = freshFixture();
+    expect(runValidator(root).exitCode).toBe(0);
+    append(root, ".opencode/commands/bmad-help.md", "\nTAMPERED VENDOR COMMAND\n");
+    const result = runValidator(root);
+    expect(result.output).toContain("HASH_MISMATCH .opencode/commands/bmad-help.md");
+    expect(result.exitCode).toBe(1);
+  });
+
+  test("rejects a tampered approved OpenCode adapter", () => {
+    const root = freshFixture();
+    expect(runValidator(root).exitCode).toBe(0);
+    append(root, ".opencode/commands/bmad-build.md", "\nTAMPERED APPROVED ADAPTER\n");
+    const result = runValidator(root);
+    expect(result.output).toContain("HASH_MISMATCH .opencode/commands/bmad-build.md");
     expect(result.exitCode).toBe(1);
   });
 

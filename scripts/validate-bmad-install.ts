@@ -41,6 +41,10 @@ interface Registry {
       root: string;
       files: HashedFile[];
     };
+    approvedOpencodeAdapters: {
+      root: string;
+      files: HashedFile[];
+    };
     runtime: {
       root: string;
       files: HashedFile[];
@@ -152,9 +156,23 @@ export function validate(root: string, registry: Registry): string[] {
 
   const commands = registry.inventory.opencodeCommands;
   const commandsRoot = safePath(root, commands.root);
-  const expectedCommands = new Set(commands.files.map((entry) => entry.path));
+  const approvedAdapters = registry.inventory.approvedOpencodeAdapters;
+  const approvedAdaptersRoot = safePath(root, approvedAdapters.root);
+  const commandEntries = [...commands.files, ...approvedAdapters.files];
+  const expectedCommands = new Set(commandEntries.map((entry) => entry.path));
+  if (commands.root !== approvedAdapters.root) {
+    add("REGISTRY_CLASSIFICATION_INVALID", "OpenCode command roots differ");
+  }
+  if (expectedCommands.size !== commandEntries.length) {
+    add("REGISTRY_CLASSIFICATION_INVALID", "OpenCode vendor and approved adapter paths overlap");
+  }
   for (const entry of commands.files) {
     checkHashed(commandsRoot, entry, `${commands.root}/`);
+  }
+  for (const entry of approvedAdapters.files) {
+    checkHashed(approvedAdaptersRoot, entry, `${approvedAdapters.root}/`);
+  }
+  for (const entry of commandEntries) {
     const commandPath = safePath(commandsRoot, entry.path);
     if (!isRegularFile(commandPath)) continue;
     const text = readFileSync(commandPath, "utf8");
@@ -249,7 +267,7 @@ function main(): void {
     process.exit(2);
   }
 
-  if (registry.schemaVersion !== 1) {
+  if (registry.schemaVersion !== 2) {
     console.error(`REGISTRY_INVALID unsupported schemaVersion ${String(registry.schemaVersion)}`);
     process.exit(2);
   }
@@ -264,7 +282,8 @@ function main(): void {
   console.log(
     `BMAD_INTEGRITY_OK version=${registry.package.version}`
     + ` skills=${registry.inventory.sharedSkills.files.length}`
-    + ` commands=${registry.inventory.opencodeCommands.files.length}`
+    + ` commands=${registry.inventory.opencodeCommands.files.length + registry.inventory.approvedOpencodeAdapters.files.length}`
+    + ` approvedAdapters=${registry.inventory.approvedOpencodeAdapters.files.length}`
     + ` runtime=${registry.inventory.runtime.files.length}`
     + ` custom=${registry.customization.expectedFiles.length}`,
   );
