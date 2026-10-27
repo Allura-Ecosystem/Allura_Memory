@@ -36,7 +36,7 @@ try {
   }
   if (!server) { throw new Error('Disposable TCP readiness exhausted'); }
   console.log(JSON.stringify({ image, server, target: 'isolated-loopback-disposable', container: name }));
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -44,6 +44,18 @@ try {
   const skip = Number(output.match(/\b(\d+) skip\b/)?.[1] ?? 0);
   const assertions = Number(output.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   const required = [
+    'real device HTTP enrollment enforces human CSRF scope proof and current MCP revocation',
+    'device expiry requires human reauthentication and duplicate tokens cannot create partial authority',
+    'device deferred commit failure and preaborted commands leave no authority or receipts',
+    'device enrollment needs explicit current admin approval and proof then returns secret free replay receipts',
+    'device enrollment rejects foreign owners expired proofs stale approvers and machine callers',
+    'device rotation revocation and replay never reactivate an old credential generation',
+    'device concurrent exchanges rotations and enrollment cap have one bounded durable outcome',
+    'device audit failure rolls back exchange and rotation without credential leaks',
+    'device current authority intersects owner role and never gains human or admin powers',
+    'device owner binding membership grant and current generation fail closed on reused identity',
+    'device linkage and baseline helpers are private and RLS sees owner attenuation',
+    'device transaction locks owner authority until completion then revocation denies',
     'migration is repeatable and checksum drift fails',
     'restricted login is not owner superuser or RLS bypass',
     'authorized append persists exact actor and scoped evidence',

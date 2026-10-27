@@ -44,7 +44,7 @@ export async function accessCommand(sql: SQL, identity: Identity, groupId: strin
     const message = error instanceof Error ? error.message : '';
     if (message === 'forbidden' || message === 'conflict' || message === 'invalid') { throw new AccessError(message); }
     // Never return SQL detail, constraint names, values or hidden identifiers.
-    const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+    const code = error && typeof error === 'object' ? String('errno' in error ? error.errno : 'code' in error ? error.code : '') : '';
     if (code.startsWith('22') || code.startsWith('23')) { throw new AccessError('invalid'); }
     throw new AccessError('unavailable');
   }

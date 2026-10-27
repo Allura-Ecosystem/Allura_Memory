@@ -84,7 +84,7 @@ test('packed recovery backs up and restores without a source checkout or git pro
    const destination=await createRecoveryTarget();targets.push(destination);await restoreRecovery(destination,manifestPath);const restored=new SQL(await recoveryConnection(destination));connections.push(restored);const [row]=await restored.unsafe('SELECT value FROM public.package_witness');
    console.log(JSON.stringify({marker:row.value,migrations:manifest.migrations.length,releaseProvenance:true}));
   }finally{for(const connection of connections){await connection.close();}for(const target of targets.reverse()){await closeRecoveryTarget(target);}await rm(output,{recursive:true,force:true});}
- `],{PATH:environment.PATH!,HOME:directory,TMPDIR:tmpdir(),DOCKER_HOST:dockerHost});expect(result.exit).toBe(0);expect(JSON.parse(result.stdout)).toEqual({marker:'packed archive selected exactly',migrations:12,releaseProvenance:true});
+ `],{PATH:environment.PATH!,HOME:directory,TMPDIR:tmpdir(),DOCKER_HOST:dockerHost});expect(result.exit).toBe(0);expect(JSON.parse(result.stdout)).toEqual({marker:'packed archive selected exactly',migrations:14,releaseProvenance:true});
 },120000);
 test('packed core refuses tampered source before database work and never prints injected credentials',async()=>{
  const path=join(directory,'src/core-api.ts');expect((await stat(path)).isSymbolicLink()).toBe(false);await writeFile(path,(await readFile(path,'utf8'))+'\n// deliberate integrity fault\n');const denied=await run([process.execPath,'src/core-server.ts','config.json']);expect(denied.exit).toBe(1);expect(denied.stdout).not.toContain('listening');expect(denied.stderr).not.toContain(environment.ALLURA_DATABASE_URL!);expect(denied.stderr).not.toContain(environment.ALLURA_CURSOR_KEY!);

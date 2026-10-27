@@ -9,7 +9,8 @@ import {createReviewRoutes} from './review-api.ts';
 import {createRetrievalRoutes} from './retrieval-api.ts';
 import {createOperationsRoutes} from './operations-api.ts';
 import {createMcpRoutes} from './mcp-api.ts';
+import {createDeviceRoutes} from './device-api.ts';
 export function createCoreGateway(sql:SQL,human:HumanConfig,origin:string,cursorKey:Uint8Array,provider:Embedder):(request:Request)=>Promise<Response>{
  const store=new DatabaseStore(sql);
- return createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes:[...createAccessRoutes(sql),...createEvidenceRoutes(sql),...createReviewRoutes(sql),...createRetrievalRoutes(sql,cursorKey,provider),...createOperationsRoutes(sql,provider),...createMcpRoutes(sql,cursorKey,provider)]});
+ return createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes:[...createAccessRoutes(sql),...createEvidenceRoutes(sql),...createReviewRoutes(sql),...createRetrievalRoutes(sql,cursorKey,provider),...createOperationsRoutes(sql,provider),...createMcpRoutes(sql,cursorKey,provider),...createDeviceRoutes(sql)]});
 }
