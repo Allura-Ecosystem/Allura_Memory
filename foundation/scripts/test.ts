@@ -54,6 +54,10 @@ const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions:
 ] },{requiredFile:'./tests/device-secret-store.test.ts',minAssertions:20,requiredCases:[
  'real isolated Linux Secret Service persists scoped secrets without plaintext fallback',
  'real store serializes same profile mutations and releases its lock on process death',
+]},{requiredFile:'./tests/dashboard-contract.test.ts',minAssertions:70,requiredCases:[
+ 'dashboard contract pins retained visual sources without granting preview authority',
+ 'dashboard navigation rejects malformed identifiers ambiguous targets and preview role injection',
+ 'dashboard outcomes never infer success from transport failure or pending work',
 ]}];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');
