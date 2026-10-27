@@ -14,7 +14,7 @@ export type IndexQuery={query:string;mode:'vector'|'text'|'hybrid';limit:number;
 export type IndexHit={id:string;knowledgeId:string;version:number;lifecycle:'current'|'superseded'|'deprecated';content:string;contentTruncated:boolean;score:number;scoreKind:'cosine_similarity'|'lexical_rank'|'reciprocal_rank_fusion'};
 export type IndexResult={results:IndexHit[];attempted:string[];used:string[];degraded:boolean;reason:'vector_unavailable'|'index_incomplete'|null;candidateTruncated:boolean};
 type Candidate={id:string;knowledge_id:string;version:number;lifecycle:IndexHit['lifecycle'];content:string;embedding:number[]|null;lexical:number};
-async function nativeSearch(rows:Candidate[],query:number[],limit:number):Promise<{id:string;score:number}[]>{
+export async function nativeSearch(rows:readonly {id:string;embedding:number[]|null}[],query:number[],limit:number):Promise<{id:string;score:number}[]>{
   const directory=await mkdtemp(join(tmpdir(),'allura-scoped-vector-'));
   try{
     const db=new VectorDb({dimensions:EMBEDDING.dimensions,distanceMetric:'Cosine',storagePath:join(directory,'index.db')});

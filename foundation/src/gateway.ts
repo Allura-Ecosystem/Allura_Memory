@@ -7,7 +7,7 @@ import { ProposalError } from './proposals.ts';
 type Limits = { bodyBytes: number; responseBytes: number; targetChars: number; concurrency: number; timeoutMs: number };
 const ceilings: Limits = { bodyBytes: 65536, responseBytes: 131072, targetChars: 2048, concurrency: 16, timeoutMs: 5000 };
 type Context = Readonly<{ identity: Identity; authority: Authority; scope: Scope; body: Record<string, unknown> | null; signal: AbortSignal }>;
-export type Route = Readonly<{ path: string; method: 'GET' | 'POST'; identity: 'human' | 'machine'; action: Action; additionalActions?: (body:Record<string,unknown>|null)=>readonly Action[]; handle: (context: Context) => Promise<unknown> }>;
+export type Route = Readonly<{ path: string; method: 'GET' | 'POST'; identity: 'human' | 'machine'; action: Action; additionalActions?: (body:Record<string,unknown>|null,context:Context)=>readonly Action[]|Promise<readonly Action[]>; handle: (context: Context) => Promise<unknown> }>;
 type Options = { human: HumanConfig; origin: string; store: AuthorityStore; machineLookup: (digest: string) => Promise<MachineCredential | null>; routes: readonly Route[]; limits?: Partial<Limits> };
 class GatewayError extends Error { constructor(readonly status: number, readonly outcome: string) { super(outcome); } }
 const response = (status: number, body: unknown): Response => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
@@ -89,9 +89,10 @@ export function createGateway(options: Options): (request: Request) => Promise<R
       const body = route.method === 'POST' ? await readObject(request, limits.bodyBytes, abort.signal) : null;
       if (abort.signal.aborted) { throw new GatewayError(504, 'unknown'); }
       await resolveAuthority(identity, scope, route.action, options.store);
-      const additional=route.additionalActions?.(body)??[];
+      const context=Object.freeze({identity,authority,scope,body,signal:abort.signal});
+      const additional=await route.additionalActions?.(body,context)??[];
       for(const action of additional){await resolveAuthority(identity,scope,action,options.store);}
-      const result = await route.handle(Object.freeze({ identity, authority, scope, body, signal: abort.signal }));
+      const result = await route.handle(context);
       try { await resolveAuthority(identity, scope, route.action, options.store);for(const action of additional){await resolveAuthority(identity,scope,action,options.store);} }
       catch (error) { if (route.method === 'POST') { throw new GatewayError(503, 'unknown'); } throw error; }
       if (abort.signal.aborted) { throw new GatewayError(504, 'unknown'); }

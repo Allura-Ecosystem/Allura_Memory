@@ -20,6 +20,11 @@ const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions:
   'gateway machine route cannot consume browser identity',
   'chunked and stalled streams are cancelled within finite budgets',
   'real loopback HTTP preserves authenticated scope and coarse liveness',
+] }, {requiredFile:'./tests/retrieval-policy.test.ts',minAssertions:27,requiredCases:[
+  'all-mode finite limits normalize before retrieval',
+  'full semantic and vector batches never evict exact fresh evidence by confidence',
+  'same-ID metadata enrichment preserves vector score and latest durable metadata',
+  'explicit confidence filtering occurs before enrichment and never invents confidence',
 ] }];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');
