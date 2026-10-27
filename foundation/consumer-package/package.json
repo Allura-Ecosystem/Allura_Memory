@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {"node": "24.19.0", "bun": "1.3.14"},
-  "exports": {".": {"types": "./dist/consumer-client.d.ts", "import": "./dist/consumer-client.js"}},
+  "exports": {".": {"types": "./dist/consumer-client.d.ts", "import": "./dist/consumer-client.js"}, "./device": {"types": "./dist/device-client.d.ts", "import": "./dist/device-client.js"}},
   "bin": {"allura-memory": "./dist/consumer-cli.js", "allura-memory-mcp": "./dist/consumer-mcp.js"},
   "files": ["dist", "README.md"],
   "dependencies": {"@modelcontextprotocol/sdk": "1.32.2"}

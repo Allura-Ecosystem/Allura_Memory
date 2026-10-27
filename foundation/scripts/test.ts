@@ -51,7 +51,10 @@ const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions:
  'device contract denies authority injection and privileged action ceilings',
  'device contract rejects malformed identifiers versions labels and keys',
  'device proofs require canonical independent 256 bit secrets without error disclosure',
-] }];
+] },{requiredFile:'./tests/device-secret-store.test.ts',minAssertions:20,requiredCases:[
+ 'real isolated Linux Secret Service persists scoped secrets without plaintext fallback',
+ 'real store serializes same profile mutations and releases its lock on process death',
+]}];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');
 }

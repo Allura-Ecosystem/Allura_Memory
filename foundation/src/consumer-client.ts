@@ -5,7 +5,7 @@ import {CONSUMER_VERSION,CONSUMER_CONTRACT,type MemoryTool} from './consumer-con
 export {DISCLOSURE,CONSUMER_VERSION,CONSUMER_CONTRACT} from './consumer-contract.js';
 export type Outcome='invalid'|'unauthenticated'|'forbidden'|'not_found'|'conflict'|'unavailable'|'unknown';
 export class ConsumerError extends Error{constructor(readonly outcome:Outcome){super(outcome);this.name='ConsumerError';}}
-export type ConsumerOptions={endpoint:string;groupId:string;workspaceId:string;token:()=>Promise<string>;allowLoopback?:boolean;timeoutMs?:number};
+export type ConsumerOptions={endpoint:string;groupId:string;workspaceId:string;token:()=>Promise<string>;allowLoopback?:boolean;timeoutMs?:number;terminalDenial?:boolean};
 export type AddInput={content:string;idempotency_key:string;trace_type?:'run'|'tool'|'failure'|'cron'|'conversation';threshold?:number|null;metadata?:{source?:string;source_id?:string;tags?:string[]}};
 export type SearchInput={query:string;status?:'approved'|'all';limit?:number;history?:boolean;min_score?:number};
 export type GetInput={id:string;kind?:'semantic'|'receipt';history?:boolean};
@@ -16,12 +16,12 @@ const outcomes=new Set<Outcome>(['invalid','unauthenticated','forbidden','not_fo
 function sanitized(error:unknown):ConsumerError{return error instanceof ConsumerError?error:new ConsumerError('unknown');}
 export class AlluraClient{
  readonly #client=new Client({name:'allura-consumer',version:CONSUMER_VERSION},{capabilities:{}});
- readonly #url:URL;readonly #token:()=>Promise<string>;readonly #timeout:number;#ready=false;#closed=false;
+ readonly #url:URL;readonly #token:()=>Promise<string>;readonly #timeout:number;readonly #terminalDenial:boolean;#ready=false;#closed=false;
  constructor(options:ConsumerOptions){
   try{
    const url=new URL(options.endpoint);if(url.username||url.password||url.search||url.hash||url.pathname!=='/mcp'||(url.protocol!=='https:'&&!(options.allowLoopback===true&&url.protocol==='http:'&&['127.0.0.1','[::1]'].includes(url.hostname)))||!/^allura-[a-z0-9][a-z0-9-]{0,79}$/.test(options.groupId)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(options.workspaceId)||typeof options.token!=='function'){throw new Error();}
    this.#timeout=options.timeoutMs??6000;if(!Number.isSafeInteger(this.#timeout)||this.#timeout<20||this.#timeout>10000){throw new Error();}
-   url.searchParams.set('group_id',options.groupId);url.searchParams.set('workspace_id',options.workspaceId);this.#url=url;this.#token=options.token;
+   url.searchParams.set('group_id',options.groupId);url.searchParams.set('workspace_id',options.workspaceId);this.#url=url;this.#token=options.token;this.#terminalDenial=options.terminalDenial===true;
   }catch{throw new ConsumerError('invalid');}
  }
  async #fetch(input:string|URL|Request,init?:RequestInit):Promise<Response>{
@@ -34,7 +34,7 @@ export class AlluraClient{
    abort.signal.throwIfAborted();const token=await this.#token();abort.signal.throwIfAborted();if(typeof token!=='string'||!/^[-A-Za-z0-9._~+/=]{24,512}$/.test(token)){throw new ConsumerError('unauthenticated');}
    const headers=new Headers(init?.headers);headers.set('Authorization',`Bearer ${token}`);
    const response=await fetch(target,{...init,headers,signal:abort.signal,redirect:'error'});
-   if(response.status===401||response.status===403){void response.body?.cancel();throw new ConsumerError(response.status===401?'unauthenticated':'forbidden');}
+   if(response.status===401||response.status===403){if(this.#terminalDenial){this.#closed=true;this.#ready=false;}void response.body?.cancel();throw new ConsumerError(response.status===401?'unauthenticated':'forbidden');}
    if(response.status===429){void response.body?.cancel();throw new ConsumerError('unavailable');}
    const reader=response.body?.getReader(),chunks:Uint8Array[]=[];let size=0;
    if(reader){const stop=()=>{void reader.cancel().catch(()=>{});};abort.signal.addEventListener('abort',stop,{once:true});try{while(true){abort.signal.throwIfAborted();const part=await reader.read();if(part.done){break;}size+=part.value.byteLength;if(size>131072){stop();throw new ConsumerError('unknown');}chunks.push(part.value);}abort.signal.throwIfAborted();}finally{abort.signal.removeEventListener('abort',stop);reader.releaseLock();}}
@@ -53,7 +53,7 @@ export class AlluraClient{
   try{const result=await this.#client.callTool({name,arguments:args},undefined,{timeout:this.#timeout+100,maxTotalTimeout:this.#timeout+100,...(signal?{signal}:{})}) as CallToolResult;
    if(result.isError){const first=result.content[0];let outcome:Outcome='unknown';if(first?.type==='text'){try{const parsed=JSON.parse(first.text) as {outcome:Outcome};if(outcomes.has(parsed.outcome)){outcome=parsed.outcome;}}catch{/* Do not surface arbitrary server text. */}}throw new ConsumerError(outcome);}
    if(result.structuredContent?.contract!==CONSUMER_CONTRACT){throw new ConsumerError('unknown');}return result;
-  }catch(error){throw sanitized(error);}
+  }catch(error){const safe=sanitized(error);if(this.#terminalDenial&&['unauthenticated','forbidden'].includes(safe.outcome)){this.#closed=true;this.#ready=false;}throw safe;}
  }
  async #data(name:MemoryTool,args:Record<string,unknown>,signal?:AbortSignal):Promise<Record<string,unknown>>{const result=await this.invoke(name,args,signal);const data=result.structuredContent?.data;if(!data||typeof data!=='object'||Array.isArray(data)){throw new ConsumerError('unknown');}return data as Record<string,unknown>;}
  add(input:AddInput,signal?:AbortSignal){return this.#data('memory_add',input,signal);}
