@@ -12,8 +12,9 @@ export type GraphNode={id:string;kind:'semantic'|'evidence';content:string;conte
 export type GraphEdge={from:string;to:string;relation:'supersedes'|'exact_text'|'evidence'};
 const idValid=(scope:Scope,id:unknown):id is string=>typeof id==='string'&&validScope({...scope,workspaceId:id});
 const item=(row:MemoryRow,full=false):MemoryItem=>({id:row.id,knowledgeId:row.knowledge_id,version:row.version,content:full?row.content:row.content.slice(0,1000),contentTruncated:!full&&row.content.length>1000,lifecycle:row.lifecycle,headRevision:row.head_revision,createdAt:row.created_at});
-export async function auditRead(tx:TransactionSQL,scope:Scope,operation:'get'|'list'|'graph'|'search',count:number,history:boolean):Promise<void>{
+export async function auditRead(tx:TransactionSQL,scope:Scope,operation:'get'|'list'|'graph'|'search',count:number,history:boolean,outcome:'succeeded'|'failed'|'partial'|'unknown'='succeeded',reason:'fallback'|'unavailable'|null=null):Promise<void>{
   await tx`INSERT INTO allura.read_audit(group_id,workspace_id,actor_id,operation,item_count,history) VALUES(${scope.groupId},${scope.workspaceId}::uuid,current_setting('allura.principal')::uuid,${operation},${count},${history})`;
+  await tx`SELECT allura.observe_retrieval(${scope.groupId},${scope.workspaceId}::uuid,${outcome},${reason})`;
 }
 export function createRetrievalService(sql:SQL,cursorKey:Uint8Array){
   if(cursorKey.byteLength<32){throw new Error('cursor key must have at least32 bytes');}const key=Buffer.from(cursorKey);

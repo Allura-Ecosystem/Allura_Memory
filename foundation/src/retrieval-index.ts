@@ -16,20 +16,23 @@ export type IndexQuery={query:string;mode:'vector'|'text'|'hybrid';limit:number;
 export type IndexHit={id:string;knowledgeId:string;version:number;lifecycle:'current'|'superseded'|'deprecated';content:string;contentTruncated:boolean;score:number;scoreKind:'cosine_similarity'|'lexical_rank'|'reciprocal_rank_fusion'};
 export type IndexResult={results:IndexHit[];attempted:string[];used:string[];degraded:boolean;reason:'vector_unavailable'|'index_incomplete'|null;candidateTruncated:boolean;vectorPolicy:typeof VECTOR_RETRIEVAL_POLICY};
 type Candidate={id:string;knowledge_id:string;version:number;lifecycle:IndexHit['lifecycle'];content:string;embedding:number[]|null;lexical:number};
-export async function nativeSearch(rows:readonly {id:string;embedding:number[]|null;content?:string}[],query:number[],limit:number,literalQuery=''):Promise<{id:string;score:number}[]>{
+export async function nativeSearch(rows:readonly {id:string;embedding:number[]|null;content?:string}[],query:number[],limit:number,literalQuery='',signal?:AbortSignal):Promise<{id:string;score:number}[]>{
+  signal?.throwIfAborted();
   const directory=await mkdtemp(join(tmpdir(),'allura-scoped-vector-'));
   try{
+    signal?.throwIfAborted();
     const db=new VectorDb({dimensions:EMBEDDING.dimensions,distanceMetric:'Cosine',storagePath:join(directory,'index.db')});
     const entries=rows.filter(row=>row.embedding!==null).map(row=>{validateVector(row.embedding!);return {id:row.id,vector:Float32Array.from(row.embedding!)};});
     if(!entries.length){return [];}
     await db.insertBatch(entries);
+    signal?.throwIfAborted();
     const literal=literalQuery.trim().toLowerCase(),exact=new Set(literal?rows.filter(row=>row.content?.toLowerCase().includes(literal)).map(row=>row.id):[]);
     return (await db.search({vector:Float32Array.from(query),k:Math.min(entries.length,limit)})).map(row=>({id:row.id,score:Math.max(0,Math.min(1,1-row.score))})).filter(row=>row.score>=VECTOR_RETRIEVAL_POLICY.minimumSimilarity||exact.has(row.id));
   }finally{await rm(directory,{recursive:true,force:true});}
 }
-export async function searchIndex(sql:SQL,identity:Identity,scope:Scope,input:IndexQuery,provider:Embedder):Promise<IndexResult>{
+export async function searchIndex(sql:SQL,identity:Identity,scope:Scope,input:IndexQuery,provider:Embedder,signal?:AbortSignal):Promise<IndexResult>{
   if(!input||Object.keys(input).some(k=>!['query','mode','limit','history'].includes(k))||(input.history!==undefined&&typeof input.history!=='boolean')||typeof input.query!=='string'||!input.query.trim()||Buffer.byteLength(input.query)>2000||input.query.includes('\u0000')||!['vector','text','hybrid'].includes(input.mode)||!Number.isSafeInteger(input.limit)||input.limit<1||input.limit>10){throw new DecisionError('invalid');}
-  validateModel(provider);
+  signal?.throwIfAborted();validateModel(provider);
   return scopedTransaction(sql,identity,scope,'memory:read',async tx=>{
     // Both paths use the exact same RLS-filtered semantic candidate set.
     const selected=await tx`SELECT v.id,v.knowledge_id,v.version,CASE WHEN h.current_version_id=v.id THEN h.lifecycle ELSE 'superseded' END AS lifecycle,v.content,x.embedding,ts_rank_cd(to_tsvector('english',v.content),plainto_tsquery('english',${input.query})) AS lexical
@@ -41,11 +44,11 @@ export async function searchIndex(sql:SQL,identity:Identity,scope:Scope,input:In
     let vectors:{id:string;score:number}[]=[];
     if(input.mode!=='text'){
       result.attempted.push('vector');
-      try{const vector=await boundedIndexWork(provider.embed(input.query));validateVector(vector);vectors=await boundedIndexWork(nativeSearch(rows,vector,Math.max(input.limit,20),input.query));result.used.push('vector');
+      try{vectors=await boundedIndexWork(async workSignal=>{const vector=await provider.embed(input.query,workSignal);workSignal.throwIfAborted();validateVector(vector);return nativeSearch(rows,vector,Math.max(input.limit,20),input.query,workSignal);},signal);result.used.push('vector');
         if(rows.some(x=>x.embedding===null)){result.degraded=true;result.reason='index_incomplete';}
       }catch{result.degraded=true;result.reason='vector_unavailable';}
     }
-    const useText=input.mode!=='vector'||result.degraded;
+    signal?.throwIfAborted();const useText=input.mode!=='vector'||result.degraded;
     if(useText){result.attempted.push('text');result.used.push('text');}
     const scores=new Map<string,{score:number;kind:IndexHit['scoreKind']}>();
     if(input.mode==='hybrid'&&result.used.includes('vector')){
@@ -61,7 +64,7 @@ export async function searchIndex(sql:SQL,identity:Identity,scope:Scope,input:In
     });
     const stillCurrent=await tx`SELECT v.id,CASE WHEN h.current_version_id=v.id THEN h.lifecycle ELSE 'superseded' END AS lifecycle FROM allura.semantic_versions v JOIN allura.semantic_heads h ON h.group_id=v.group_id AND h.workspace_id=v.workspace_id AND h.knowledge_id=v.knowledge_id WHERE v.group_id=${scope.groupId} AND v.workspace_id=${scope.workspaceId}::uuid AND (${input.history??false} OR(h.current_version_id=v.id AND h.lifecycle='current')) AND v.id IN (SELECT value::uuid FROM jsonb_array_elements_text(${result.results.map(x=>x.id)}::jsonb))` as {id:string;lifecycle:IndexHit['lifecycle']}[];
     const visible=new Map(stillCurrent.map(row=>[row.id,row.lifecycle]));result.results=result.results.filter(row=>visible.has(row.id)).map(row=>({...row,lifecycle:visible.get(row.id)!}));
-    await auditRead(tx,scope,'search',result.results.length,input.history??false);
+    await auditRead(tx,scope,'search',result.results.length,input.history??false,result.degraded?'partial':'succeeded',result.degraded?'fallback':null);
     // scopedTransaction also re-resolves authority after asynchronous work.
     return result;
   });

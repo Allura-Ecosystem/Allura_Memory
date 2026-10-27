@@ -25,6 +25,10 @@ const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions:
   'full semantic and vector batches never evict exact fresh evidence by confidence',
   'same-ID metadata enrichment preserves vector score and latest durable metadata',
   'explicit confidence filtering occurs before enrichment and never invents confidence',
+] }, {requiredFile:'./tests/work-budget.test.ts',minAssertions:18,requiredCases:[
+  'work budget admits lazily and retains timed out slots until real settlement',
+  'work budget cancellation never starts pre-aborted work and signals admitted work',
+  'work budget validates finite ceilings and accounts for synchronous rejection',
 ] }];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');

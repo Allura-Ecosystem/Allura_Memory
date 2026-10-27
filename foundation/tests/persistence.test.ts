@@ -30,7 +30,7 @@ beforeAll(async () => {
   await owner`INSERT INTO allura.principals(id,kind) VALUES (${principal},'human')`;
   await owner`INSERT INTO allura.identity_bindings(issuer,subject,identity_kind,principal_id) VALUES (${config.issuer},'subject','human',${principal})`;
   await owner`INSERT INTO allura.tenants(group_id) VALUES (${groupId}),(${foreignGroup})`;
-  await owner`INSERT INTO allura.memberships(group_id,principal_id,org_admin) VALUES (${groupId},${principal},true)`;
+  await owner`INSERT INTO allura.memberships(group_id,principal_id,org_admin) VALUES (${groupId},${principal},true),(${foreignGroup},${principal},false)`;
   for (const ws of [workspaceId, sales]) {
     await owner`INSERT INTO allura.workspaces(group_id,id,display_name,created_by) VALUES (${groupId},${ws},'Synthetic',${principal})`;
     await owner`INSERT INTO allura.workspace_grants(group_id,workspace_id,principal_id,role,issuer) VALUES (${groupId},${ws},${principal},'workspace_admin',${principal})`;

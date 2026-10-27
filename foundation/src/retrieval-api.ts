@@ -23,7 +23,7 @@ export function createRetrievalGateway(sql:SQL,human:HumanConfig,origin:string,c
       {path:prefix+'/search',method:'POST',identity,action:'memory:read',additionalActions:async(body,c)=>{
         if(body?.status!=='all'){return [];}
         try{await resolveAuthority(c.identity,c.scope,'evidence:read',store);return ['evidence:read'];}catch(error){if(error instanceof AuthorityError&&error.code==='forbidden'){return [];}throw error;}
-      },handle:async c=>Object.hasOwn(c.body!,'status')?searchFederated(sql,c.identity,c.scope,c.body as unknown as FederatedQuery,embedder):searchIndex(sql,c.identity,c.scope,c.body as unknown as IndexQuery,embedder)},
+      },handle:async c=>Object.hasOwn(c.body!,'status')?searchFederated(sql,c.identity,c.scope,c.body as unknown as FederatedQuery,embedder,c.signal):searchIndex(sql,c.identity,c.scope,c.body as unknown as IndexQuery,embedder,c.signal)},
     );
   }
   return createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes});

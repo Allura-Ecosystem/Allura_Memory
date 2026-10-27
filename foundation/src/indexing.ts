@@ -22,7 +22,7 @@ export async function captureIndex(sql:SQL,identity:Identity,scope:Scope,kind:'e
     });
     if(claim.state!=='claimed'){return {state:claim.state};}
     let vector:number[]=[];let success=false;
-    try{vector=await boundedIndexWork(provider.embed(claim.content!));validateVector(vector);success=true;}catch{success=false;}
+    try{vector=await boundedIndexWork(signal=>provider.embed(claim.content!,signal));validateVector(vector);success=true;}catch{success=false;}
     return await scopedTransaction(sql,identity,scope,'proposal:write',async tx=>{
       const [row]=await tx`SELECT allura.finish_index(${scope.groupId},${scope.workspaceId}::uuid,${kind},${sourceId}::uuid,${claim.leaseId!}::uuid,${vector}::jsonb,${success}) AS state`;return {state:row.state as string};
     });

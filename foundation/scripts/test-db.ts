@@ -36,7 +36,7 @@ try {
   }
   if (!server) { throw new Error('Disposable TCP readiness exhausted'); }
   console.log(JSON.stringify({ image, server, target: 'isolated-loopback-disposable', container: name }));
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 90000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 90000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -132,6 +132,12 @@ try {
     'evaluation metrics distinguish ranking from no answer and reject empty telemetry',
     'fixed additional paraphrases and no answer probes exercise measured vector policy',
     'evaluation reports injected provider timeout and fallback separately from healthy latency',
+    'scoped health probes real providers and reports durable pending then indexed freshness',
+    'health and observation reads deny org viewer foreign locked and revoked contexts before probes',
+    'operational observations are append only scoped redacted and honestly label fallback',
+    'health HTTP reports provider failure and unknown timeout without exposing secrets',
+    'promotion observations require committed independent decisions and disappear on rollback',
+    'saturated provider admission reports unknown readiness without invoking a probe',
   ];
   const missing = required.filter(name => !output.includes(`(pass) ${name} [`));
   console.log(JSON.stringify({ lane: 'restricted-postgres', pass, fail, skip, assertions, missing, exit: result.exitCode }));
