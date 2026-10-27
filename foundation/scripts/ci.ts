@@ -17,7 +17,7 @@ const commands:Record<CiLane,string[]>={install:['bun','run','install:frozen'],t
 const receipts:LaneReceipt[]=[];let outcome:'failed'|'succeeded'='failed',counts:{tests:number;assertions:number}|undefined;
 try{
  for(const lane of CI_LANES){
-  const result=Bun.spawnSync(commands[lane],{cwd:root,stdout:'pipe',stderr:'pipe',timeout:600000});const raw=Buffer.concat([result.stdout,result.stderr]),logPath=join(output,lane+'.log');await writeFile(logPath,raw);
+  const result=Bun.spawnSync(commands[lane],{cwd:root,stdout:'pipe',stderr:'pipe',timeout:600000,env:{...process.env,...(lane==='database'?{ALLURA_UI_EVIDENCE:join(output,'browser')}:{})}});const raw=Buffer.concat([result.stdout,result.stderr]),logPath=join(output,lane+'.log');await writeFile(logPath,raw);
   let exit=result.exitCode,totals={tests:0,assertions:0};if(exit===0&&(lane==='unit'||lane==='database')){try{totals=summarizeTests(lane,raw.toString());}catch{exit=1;}}
   receipts.push({...identity,lane,exit,logSha256:hash(raw),...totals});console.log(JSON.stringify({lane,exit,...totals,logPath}));
   if(lane==='install'&&exit!==0){break;}

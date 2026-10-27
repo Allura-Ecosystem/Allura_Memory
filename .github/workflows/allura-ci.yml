@@ -28,6 +28,9 @@ jobs:
           bun-version: 1.3.14
       - name: Install real isolated Linux Secret Service test prerequisites
         run: sudo apt-get update && sudo apt-get install --yes libsecret-tools gnome-keyring dbus-daemon libglib2.0-bin util-linux
+      - name: Install pinned real browser test prerequisites
+        working-directory: foundation
+        run: bun install --frozen-lockfile --ignore-scripts && node node_modules/@playwright/test/cli.js install --with-deps chromium
       - name: Execute this source and attempt only
         id: execute
         working-directory: foundation

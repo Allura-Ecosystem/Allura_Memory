@@ -1,0 +1,1 @@
+.composer{margin-block:28px;padding:24px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}.composer label{margin-block:16px}.composer .toolbar{align-items:center}.composer input,.composer textarea,.composer select{max-width:100%}.composer p{overflow-wrap:anywhere}.composer pre{max-height:320px}@media(max-width:760px){.composer{padding:16px}}

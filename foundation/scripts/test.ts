@@ -58,6 +58,13 @@ const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions:
  'dashboard contract pins retained visual sources without granting preview authority',
  'dashboard navigation rejects malformed identifiers ambiguous targets and preview role injection',
  'dashboard outcomes never infer success from transport failure or pending work',
+]},{requiredFile:'./tests/dashboard-transport.test.ts',minAssertions:36,requiredCases:[
+ 'dashboard transport never redirects retries or accepts secret-bearing foreign targets',
+ 'dashboard transport clears denied state aborts old scope and discards late replies',
+ 'dashboard transport bounds content timeout and request cardinality without leaking response bodies',
+]},{requiredFile:'./tests/dashboard-view.test.ts',minAssertions:28,requiredCases:[
+ 'dashboard presentation binds current context and rejects malformed scope or response shapes',
+ 'dashboard search matches federated fields and honestly labels partial failed truncated responses',
 ]}];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');

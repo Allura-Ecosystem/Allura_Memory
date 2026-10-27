@@ -4,6 +4,8 @@ import {fileURLToPath} from 'node:url';
 import {parseCoreConfig} from './core-config.ts';
 import {verifyCoreRelease} from './core-release.ts';
 import {createCoreGateway} from './core-api.ts';
+import {createDashboardHandler} from './dashboard-server.ts';
+import {join} from 'node:path';
 import {loadLocalEmbedder} from './embedding.ts';
 const root=fileURLToPath(new URL('..',import.meta.url));
 async function main(){
@@ -15,7 +17,7 @@ async function main(){
   const roles=await sql`SELECT current_user AS name,r.rolsuper,r.rolbypassrls,r.rolcreatedb,r.rolcreaterole,r.rolreplication,r.rolinherit,EXISTS(SELECT 1 FROM pg_auth_members m WHERE m.member=r.oid) AS memberships,EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='allura' AND c.relowner=r.oid) AS owns FROM pg_roles r WHERE rolname=current_user`;
   const role=roles[0];if(!role||role.name!=='allura_app'||role.rolsuper||role.rolbypassrls||role.rolcreatedb||role.rolcreaterole||role.rolreplication||role.rolinherit||role.memberships||role.owns){throw new Error();}
   const schema=await sql`SELECT to_regclass('allura.events') IS NOT NULL AND to_regclass('allura.semantic_versions') IS NOT NULL AND to_regclass('allura.source_vectors') IS NOT NULL AND to_regclass('allura.operation_observations') IS NOT NULL AS ready`;if(!schema[0]?.ready){throw new Error();}
-  const provider=await loadLocalEmbedder(),handler=createCoreGateway(sql,config.human,config.origin,config.cursorKey,provider);
+  const provider=await loadLocalEmbedder(),handler=await createDashboardHandler(createCoreGateway(sql,config.human,config.origin,config.cursorKey,provider),join(root,'dashboard'));
   const server=Bun.serve({hostname:config.host,port:config.port,maxRequestBodySize:65536,idleTimeout:10,fetch:handler,error:()=>Response.json({outcome:'unavailable'},{status:503})});clearTimeout(deadline);
   console.log(JSON.stringify({event:'listening',host:config.host,port:server.port,contract:release.contract,sourceHead:release.sourceHead,sourceDirty:release.sourceDirty}));
   let stopping=false;const stop=async()=>{if(stopping){return;}stopping=true;const limit=setTimeout(()=>process.exit(1),5000);try{await server.stop();await sql!.close();clearTimeout(limit);process.exit(0);}catch{process.exit(1);}};

@@ -3,6 +3,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
+import {buildDashboard} from './build-dashboard.ts';
 const root=fileURLToPath(new URL('..',import.meta.url));
 export async function packCore(destination?:string):Promise<{tarball:string;sha256:string;receipt:string}>{
  const parent=resolve(destination??tmpdir());await mkdir(parent,{recursive:true});const output=await mkdtemp(join(parent,'allura-core-artifact-')),stage=await mkdtemp(join(tmpdir(),'allura-core-stage-'));
@@ -11,6 +12,7 @@ export async function packCore(destination?:string):Promise<{tarball:string;sha2
  try{
   const inputs:Record<string,string>={};const files=['bun.lock','scripts/check-toolchain.ts','scripts/prepare-model.ts','core-package/README.md',...(await readdir(join(root,'src'))).filter(n=>/^[a-z-]+\.ts$/.test(n)).map(n=>'src/'+n),...(await readdir(join(root,'migrations'))).filter(n=>/^\d{3}-[a-z-]+\.sql$/.test(n)).map(n=>'migrations/'+n)];
   for(const file of files){const target=file==='core-package/README.md'?'README.md':file;await mkdir(join(stage,target,'..'),{recursive:true});await copyFile(join(root,file),join(stage,target));inputs[target]=hash(await readFile(join(stage,target)));}
+  await buildDashboard(join(stage,'dashboard'));for(const file of await readdir(join(stage,'dashboard'))){inputs['dashboard/'+file]=hash(await readFile(join(stage,'dashboard',file)));}
   const original=JSON.parse(await readFile(join(root,'package.json'),'utf8'));const manifest={...original,scripts:{'check:toolchain':'bun scripts/check-toolchain.ts','install:frozen':'bun run check:toolchain && bun install --frozen-lockfile --ignore-scripts','prepare:model':'bun scripts/prepare-model.ts','init:empty':'bun src/core-init.ts','start':'bun src/core-server.ts'}};
   await writeFile(join(stage,'package.json'),JSON.stringify(manifest,null,2));inputs['package.json']=hash(await readFile(join(stage,'package.json')));
   const provenance={contract:'allura-core-release-v1',version:'0.1.0-dev.1',sourceHead:run(['git','rev-parse','HEAD']),sourceDirty:!!run(['git','status','--porcelain']),sourcePackageSha256:hash(await readFile(join(root,'package.json'))),packScriptSha256:hash(await readFile(fileURLToPath(import.meta.url))),inputs};

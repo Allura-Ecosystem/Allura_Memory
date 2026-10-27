@@ -86,6 +86,13 @@ test('packed recovery backs up and restores without a source checkout or git pro
   }finally{for(const connection of connections){await connection.close();}for(const target of targets.reverse()){await closeRecoveryTarget(target);}await rm(output,{recursive:true,force:true});}
  `],{PATH:environment.PATH!,HOME:directory,TMPDIR:tmpdir(),DOCKER_HOST:dockerHost});expect(result.exit).toBe(0);expect(JSON.parse(result.stdout)).toEqual({marker:'packed archive selected exactly',migrations:14,releaseProvenance:true});
 },120000);
+test('packed dashboard serves integrity bound browser assets without granting anonymous content',async()=>{
+ await start();try{const base=new URL('/dashboard',endpoint),shell=await fetch(base);expect(shell.status).toBe(200);expect(shell.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");expect(shell.headers.get('cache-control')).toBe('no-store');const html=await shell.text();expect(html).toContain('/assets/app.js');expect(html).not.toContain(f.scope.groupId);
+ const release=JSON.parse(await readFile(join(directory,'release.json'),'utf8'));for(const name of ['app.js','app.css','allura-lettermark.png']){const response=await fetch(new URL('/assets/'+name,endpoint));expect(response.status).toBe(200);expect(createHash('sha256').update(new Uint8Array(await response.arrayBuffer())).digest('hex')).toBe(release.inputs['dashboard/'+name]);}
+ const context=new URL('/api/dashboard/context',endpoint);context.searchParams.set('group_id',f.scope.groupId);context.searchParams.set('workspace_id',f.scope.workspaceId);expect((await fetch(context)).status).toBe(401);expect((await fetch(context,{headers:{'Cf-Access-Jwt-Assertion':f.jwt('reviewer')}})).status).toBe(200);
+ }finally{await stop();}
+ const path=join(directory,'dashboard/app.js'),original=await readFile(path);try{await writeFile(path,Buffer.concat([original,Buffer.from('\n/* tampered UI */')]));const denied=await run([process.execPath,'src/core-server.ts','config.json']);expect(denied.exit).toBe(1);expect(denied.stdout).not.toContain('listening');}finally{await writeFile(path,original);}
+},60000);
 test('packed core refuses tampered source before database work and never prints injected credentials',async()=>{
  const path=join(directory,'src/core-api.ts');expect((await stat(path)).isSymbolicLink()).toBe(false);await writeFile(path,(await readFile(path,'utf8'))+'\n// deliberate integrity fault\n');const denied=await run([process.execPath,'src/core-server.ts','config.json']);expect(denied.exit).toBe(1);expect(denied.stdout).not.toContain('listening');expect(denied.stderr).not.toContain(environment.ALLURA_DATABASE_URL!);expect(denied.stderr).not.toContain(environment.ALLURA_CURSOR_KEY!);
 });
