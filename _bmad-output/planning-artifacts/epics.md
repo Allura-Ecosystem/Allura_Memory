@@ -15,6 +15,8 @@ The user's sequencing correction supersedes every retain-original-numbering inst
 
 ## Sequence and dependency rule
 
+Approved Correct Course,2026-10-27 after admission13: [local continuation decision](sprint-change-proposal-2026-10-27.md) creates a specific exception to the prior-epic closure rule below. Local6.5 is verified;6.5/Epic6 remain OPEN for hosted CI, deployed journey, actual human witness, operational rollback and final release acceptance. These deployment-only gaps no longer block currently approved dependency-ready LOCAL stories. Optional7 is not adopted and is not a core prerequisite; next is8.1, using locally verified2/6 contracts. Preserve all other functional/local acceptance gates, protected UX/interactive graph, and optional/deferred boundaries. Request scoped staging authorization when the locally testable approved product is ready; no push/production/deployment authority is implied.
+
 Every epic requires closure of the preceding numbered epic before its execution, in addition to the functional dependencies below. Optional/deferred entries preserve the roadmap, not a promise to implement unaccepted scope. If a gate remains open, stop at that entry; changing scope or order requires a specific correct-course decision, not silently skipping to a larger number. Core delivery can be accepted at Epic 6 without claiming the optional roadmap complete.
 
 | Epic | Outcome | Functional prerequisites | Planning state |

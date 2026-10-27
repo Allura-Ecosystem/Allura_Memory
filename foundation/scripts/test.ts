@@ -46,6 +46,11 @@ const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions:
   'recovery readiness expires with sanitized failure and stops retrying',
   'recovery readiness aborts a hung probe and never accepts its late success',
   'recovery readiness rejects invalid budgets before invoking a probe',
+] }, {requiredFile:'./tests/device-contract.test.ts',minAssertions:100,requiredCases:[
+ 'device commands preserve bounded typed immutable snapshots',
+ 'device contract denies authority injection and privileged action ceilings',
+ 'device contract rejects malformed identifiers versions labels and keys',
+ 'device proofs require canonical independent 256 bit secrets without error disclosure',
 ] }];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');

@@ -1,5 +1,7 @@
 # Epic 6 local retrospective — partial, not release closure
 
+Subsequent approved decision2026-10-27 after admission13: [Correct Course](../planning-artifacts/sprint-change-proposal-2026-10-27.md) explicitly defers deployment-only6.5 acceptance and authorizes currently approved dependency-ready LOCAL continuation, next8.1. This supersedes the waiting condition in the historical paragraphs below, not the open release requirements or prohibition on unauthorized deployment. This remains a partial retrospective, not Epic6 closure; optional7/deferred12–14 stay unadopted.
+
 Scope: direct build through the locally exercised Story6.5 rehearsal. Brooks owns delivery/architecture; Woz guidance applied in the sole writer. No independent developer reviewer ran. Product independent authorized human semantic approval is unchanged. Story6.5 and Epic6 remain open pending authorized deployed acceptance; this is not the final deployed retrospective or permission to begin the next epic.
 
 ## Evidence and useful results

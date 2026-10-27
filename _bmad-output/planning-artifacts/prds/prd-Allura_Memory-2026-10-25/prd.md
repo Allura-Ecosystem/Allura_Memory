@@ -188,6 +188,8 @@ The core boundary is the minimum governed journey in §1.2, the five-tool surfac
 
 ### Fresh-build preparation order — not live backlog status
 
+Controlling approved sequencing decision2026-10-27: [Correct Course](../../sprint-change-proposal-2026-10-27.md) defers6.5 deployment-only acceptance without marking6.5/Epic6 complete. Continue remaining currently approved dependency-ready LOCAL scope; next8.1. Unadopted optional7 and deferred12–14 stay excluded; no optional adoption follows. Preserve hosted CI/deployed journey/actual human witness/operational rollback as open release requirements and request specific staging authority once the locally testable product is ready. This changes sequencing, not PRD requirements or production/publication permissions.
+
 The [Epic 1–14 catalog](../../epics.md) is the sole active sequence: foundation/contracts → authority/persistence → capture/proposals → review/versioning/correction → retrieval/graph → core acceptance → optional projection → devices → operator UI → bounded plugins → memory experiments → deferred runs → work plane → desktop. Execute in numbered dependency order. Story 1.1 is locally verified; 1.2 is the lowest unfinished story, ready for contract preparation. Parent commits the reconciled baseline before development continuation. Critical unresolved decisions block their affected stories, not the already approved rebuild direction. Stable FR/NFR/BP/GM/DS/DEV-AC/DOC/AD/ENT identifiers are unchanged; legacy delivery maps live only in private recovery. No operational transition is implied.
 
 ### Later or separately gated
