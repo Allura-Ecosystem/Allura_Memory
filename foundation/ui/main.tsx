@@ -17,7 +17,7 @@ type Session=DashboardSession;
 const text=(value:unknown)=>typeof value==='string'||typeof value==='number'?String(value):'Not observed';
 function object(value:unknown):Row{if(!value||typeof value!=='object'||Array.isArray(value)){throw new DashboardError('unknown');}return value as Row;}
 function rows(value:unknown):Row[]{if(!Array.isArray(value)){throw new DashboardError('unknown');}return value.map(object);}
-function Json({value}:{value:unknown}){return <pre>{JSON.stringify(value,null,2)}</pre>;}
+function Json({value}:{value:unknown}){return <pre tabIndex={0} role="region" aria-label="Structured service data">{JSON.stringify(value,null,2)}</pre>;}
 class Boundary extends Component<{children:ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true};}render(){return this.state.failed?<section role="alert"><h2>This view could not be shown</h2><p>No success is inferred. Return Home or refresh the current view.</p></section>:this.props.children;}}
 
 function App(){
