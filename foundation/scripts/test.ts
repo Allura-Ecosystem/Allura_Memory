@@ -1,5 +1,8 @@
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
-const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions: 19, requiredCases: [
+const suites = [{requiredFile:'./tests/dashboard-graph.test.ts',minAssertions:30,requiredCases:[
+ 'graph presentation rejects malformed duplicate dangling and unbounded source shapes',
+ 'graph filters and deterministic layout preserve visible endpoints and finite work',
+]},{ requiredFile: './tests/transform-text.test.ts', minAssertions: 19, requiredCases: [
   'trims valid text and transforms it exactly once',
   'rejects invalid input before invoking the transform',
   'propagates the original transform error without retry',
