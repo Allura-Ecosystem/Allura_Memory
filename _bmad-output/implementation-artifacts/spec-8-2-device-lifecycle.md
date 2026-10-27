@@ -2,7 +2,7 @@
 title: '8.2 Device enrollment, current owner authority and credential lifecycle'
 type: feature
 created: 2026-10-27
-status: in-progress
+status: done
 route: dispatch
 baseline_commit: 2a2a0a3360f3930d7b9edc82fd6ed065b782f824
 ---
@@ -25,7 +25,7 @@ Implement [accepted8.1](spec-8-1-device-contract.md) against restricted PostgreS
 - [x] Given an authorized enrollment+admin approval+owner verifier exchange, commit one complete device/credential/grant/link/audit/receipt set; pending/expired/changed payload/foreign approvals never mint authority.8.1 cap8 and bounded deadline/actions hold under concurrency.
 - [x] Given exact retries/competing exchanges/rotation/revocation, stable receipts and one winner; all old generations remain invalid, even on replay; audit/commit faults roll everything back.
 - [x] Given actual signed HTTP, auth before body, CSRF/scope/privacy/limits and no secret logs/errors/receipts hold; service/machine cannot invoke human enrollment functions.
-- [ ] Nonzero required tests, typecheck/lint/full native PostgreSQL/packed recovery and exact clean-source CI pass. Only then locally accept8.2; never infer8.3 platform or6.5 deployment acceptance.
+- [x] Nonzero required tests, typecheck/lint/full native PostgreSQL/packed recovery and exact clean-source CI pass. Only then locally accept8.2; never infer8.3 platform or6.5 deployment acceptance.
 
 ## Scope of current slice
 
@@ -33,4 +33,8 @@ Admission14 supplied013 authority-link boundary; admission15 implemented014 life
 
 Admission15 red lifecycle import and HTTP404 ran before respective implementation. First full service run exposed SQL record-variable/table-alias collision in list, corrected by distinct aliases. Additional duplicate-token regression exposed Bun SQL errors use errno=23505, not generic code=ERR_POSTGRES_SERVER_ERROR; both device and existing access handlers corrected, no raw errors exposed. Focused actual disposable PostgreSQL runs exercised the fix and deferred COMMIT rollback. `admission15-http-full.log` passed169/1441; expanded HTTP rotation/reconnection test then `admission15-device-final-full.log` (`bun run check:all`) exit0 at2026-10-27T13:54:00-04:00:169tests/1445assertions, unit42/376, restricted DB127/1069, typecheck/lint and required discovery green. Native model, packed core/consumer and14-migration recovery remain exercised.
 
-Actual HTTP witness enrolls via signed owner/admin, completes with proof, restarts server, authenticates device through real MCP SDK, captures evidence without promotion, rotates and rejects old token, reconnects replacement and revokes it. Schema tests cover stale/foreign/machine/expiry/ceiling, exact replay, quota concurrency, competing exchange/rotation, private tables/helpers and immediate/deferred audit faults. No actual OS secure-store/client acceptance (8.3), deployed witness or human onboarding claim. Tests use synthetic signed identities/disposable resources. Exact clean-source CI remains the final open8.2 gate before local acceptance.
+Actual HTTP witness enrolls via signed owner/admin, completes with proof, restarts server, authenticates device through real MCP SDK, captures evidence without promotion, rotates and rejects old token, reconnects replacement and revokes it. Schema tests cover stale/foreign/machine/expiry/ceiling, exact replay, quota concurrency, competing exchange/rotation, private tables/helpers and immediate/deferred audit faults. No actual OS secure-store/client acceptance (8.3), deployed witness or human onboarding claim. Tests use synthetic signed identities/disposable resources.
+
+## Exact local acceptance
+
+Implementation `3159501aaf852bb957772350f6c5f95eac28c307` committed after full staged-diff direct self-check (`admission15-device-candidate.diff`), no independent reviewer. Fresh clean-source six-lane CI `admission15-exact-ci.log` exit0 at2026-10-27T13:57:39-04:00; manifest `admission15-ci-attempts/allura-ci-mr2xjs/attempt.json` passed169tests/1445assertions (unit42/376, DB127/1069). All six lane raw hashes/source/invocation verified. Tested archives and original clean-source receipts copied/rehashed under Operations `releases/3159501aaf852bb957772350f6c5f95eac28c307/`; core SHA256 `586e9c25129c8007a6d39e3ab8bcb54f6fb81485360ecf1eb250fc86b146a0f4`. These are private local artifacts, not published/deployed.8.2 locally accepted; next8.3 actual platform secure-store/client witness, preserving open6.5 release gates.
