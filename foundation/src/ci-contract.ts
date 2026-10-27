@@ -1,6 +1,6 @@
 export const CI_LANES=['install','typecheck','lint','unit','model','database'] as const;
 export type CiLane=typeof CI_LANES[number];
-export const UNIT_FILES=['./tests/transform-text.test.ts','./tests/authority.test.ts','./tests/gateway.test.ts','./tests/retrieval-policy.test.ts','./tests/work-budget.test.ts','./tests/consumer-client.test.ts','./tests/ci-contract.test.ts'] as const;
+export const UNIT_FILES=['./tests/transform-text.test.ts','./tests/authority.test.ts','./tests/gateway.test.ts','./tests/retrieval-policy.test.ts','./tests/work-budget.test.ts','./tests/consumer-client.test.ts','./tests/ci-contract.test.ts','./tests/core-config.test.ts'] as const;
 export type AttemptIdentity={sourceSha:string;lockSha256:string;invocation:string;runId:string;attempt:number;mode:'local'|'github'};
 export type LaneReceipt=AttemptIdentity&{lane:CiLane;exit:number;logSha256:string;tests:number;assertions:number};
 const digest=(value:unknown,length:number)=>typeof value==='string'&&value.length===length&&/^[a-f0-9]+$/.test(value);

@@ -3,8 +3,7 @@ import { createHash, generateKeyPairSync, randomBytes, randomUUID, sign } from '
 import { authenticateHuman, authenticateMachine, type Identity } from '../src/authentication.ts';
 import { DatabaseStore, migrate } from '../src/persistence.ts';
 
-export async function fixture(groupId:string) {
-  const target=process.env.ALLURA_DISPOSABLE_DB_URL;
+export async function fixture(groupId:string,target=process.env.ALLURA_DISPOSABLE_DB_URL) {
   if(!target||new URL(target).hostname!=='127.0.0.1'||process.env.ALLURA_DISPOSABLE_DB!=='owned-test-container'){throw new Error('Requires owned disposable runner');}
   const owner=new SQL(target,{max:4});await migrate(owner);
   const password=randomBytes(32).toString('hex');await owner.unsafe(`ALTER ROLE allura_app LOGIN PASSWORD '${password}'`);
@@ -36,5 +35,5 @@ export async function fixture(groupId:string) {
   const token=randomBytes(32).toString('base64url'),digest=createHash('sha256').update(token).digest('hex');
   await owner`INSERT INTO allura.machine_credentials(principal_id,digest,group_id,workspace_id,actions,expires_at) VALUES (${ids.machine},decode(${digest},'hex'),${groupId},${workspaceId},ARRAY['memory:capture','memory:read','proposal:write','review:read'],clock_timestamp()+interval '1 hour')`;
   identities.machine=await authenticateMachine(token,d=>new DatabaseStore(app).lookupMachine(d));
-  return {owner,app,scope,foreignWorkspace,ids,identities,humanConfig,jwt,close:async()=>{await app.close();await owner.close();}};
+  return {owner,app,appUrl:url.toString(),scope,foreignWorkspace,ids,identities,humanConfig,jwt,close:async()=>{await app.close();await owner.close();}};
 }

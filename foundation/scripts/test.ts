@@ -38,6 +38,9 @@ const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions:
   'CI rejects malformed or mismatched source and dirty checkouts',
   'CI accepts only complete same-source same-attempt successful nonzero lanes',
   'CI test summaries require exact unit discovery and reject failure skip duplicates and empty assertions',
+] }, {requiredFile:'./tests/core-config.test.ts',minAssertions:18,requiredCases:[
+  'core configuration binds loopback restricted login explicit origin and public RSA keys',
+  'core configuration rejects missing secrets owner credentials remote databases and silent defaults',
 ] }];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');
