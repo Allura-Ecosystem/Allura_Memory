@@ -1,0 +1,22 @@
+---
+title: '5.1 Scoped derived vector indexing and equivalent lexical fallback'
+status: done
+created: 2026-10-26
+baseline_commit: 7bad4f97fce9e58c2bb304742b46be63d751fc72
+---
+
+# Delegated AD-66 local contract
+
+PostgreSQL remains authority. Derived vectors bind immutable event/semantic ID, full UTF-8 SHA256, model/revision/dimensions/index version. No production or legacy-null migration. Actual native @ruvector/core0.1.33, local CPU @huggingface/transformers3.8.1, public Xenova/all-MiniLM-L6-v2 revision751bff37182d3f1213fa05d7196b954e230abad9, q8, mean pooling/L2-normalized384 dimensions. Tokenizer's pinned truncation behavior is an explicit embedding limit, not full-document understanding. Public model downloaded only by explicit prepare-model script; application inference offline, never provider/API credentials. Real model/numeric witness required, not a fabricated embedding substitute.
+
+`captureIndex(sql, authenticatedIdentity, scope, sourceKind, sourceId, embedder)` is trusted internal service, not public raw scope capability. Resolve current proposal:write + memory:read; semantic sources approved immutable versions, raw source only original author or separately evidence:read authorized actor. Existing machine credentials cannot gain broad raw access. Job uniqueness(scope,sourceKind,sourceId,indexVersion),30-second leased claim, random fencing token, max3 attempts, bounded retry delay; finish/failure reauthorizes and checks lease. Raw capture/immutable intent never rewritten. Index ready only after actual vector persistence in same fenced completion transaction.
+
+Vectors in restricted PostgreSQL projection; RuVector native query index built from only authorized candidate rows in owned temporary directory, never a shared scope-free index. Explicit cosine distance converted to bounded similarity; never conflate score with governance confidence. Search current approved semantic data first; full approved|all, history, graph and AD-70 fresh evidence acceptance belong5.2/5.3. Scope denial never invokes embedding/fallback. Operational embedding/native failure may use exactly the same authorized lexical candidate scope, with attempted/used/degraded reason. Candidate and result limits explicit; after awaited work recheck current authority before disclosure. No learned-relevance claim until5.4 measurements.
+
+Planned code: embedding.ts, prepare-model.ts,009-index.sql,indexing.ts,retrieval-index.ts and required DB/native/model tests. Tests: actual pinned offline inference; nonzero finite vector/dimensions/model mismatch; tenant/workspace/auth negatives and source digest; lease replay/concurrency/stale worker/failure; real native versus lexical scoped fallback and denial no fallback. Story not done until these run. No UI/deployment claim.
+
+## Implemented local acceptance
+
+All planned modules implemented. `drainIndexBatch` explicitly selects at most8 currently eligible same-scope intents/sources, respects lease/backoff/max3 terminal failure and runs sequentially under current authority; no daemon or global worker credential invented. Original capture evidence/intent remains immutable. Completion is fenced by exact lease/actor/current permission and SHA256. No raw-vector read through viewer memory:read. Real second-workspace indexed sentinel is findable by an authorized caller and absent from native, text and degraded fallback in the first workspace. Deletion during asynchronous retrieval is removed before disclosure. Revocation during indexing prevents vector publication. Concurrent indexing calls invoke provider once; stale lease completion fails. Native temporary DB cleanup is finally-bound to an owned scratch path, never default shared ruvector.db.
+
+`admission5-drain-red.log` exit1 before exported batch implementation; sparse-vector regression red in `admission5-sparse-red.log`, fixed TS sparse slots and SQL NULL elements. Final `bun run check:all` exit0 in `admission5-index-final.log`:88 tests/651 assertions, zero fail/skip, typecheck/ESLint; required DB70/517. Model inference and native RuVector are real required tests, not mocks. Existing model-preparation evidence in admission4-model-preparation.log. NPM postinstall hooks remained disabled; local inference/native bindings exercised successfully. Model/tokenizer revision pinned,512-token truncation disclosed. This is bounded local indexing/retrieval seam acceptance, not5.2 public retrieval or5.4 relevance evaluation, not deployment.
