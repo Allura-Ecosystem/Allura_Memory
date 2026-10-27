@@ -1,0 +1,30 @@
+---
+title: '6.2 Versioned consumer contracts and packed acceptance'
+status: in-progress
+created: 2026-10-26
+baseline_commit: 8ebebc402304577d5ac398929fbac694243794a9
+---
+
+# Scope and inventory before compatibility decisions
+
+Current approved core is MCP/API-first with five public memory tools. Implement fresh typed SDK/CLI/MCP/API consumers against accepted contracts, not a legacy-code restoration. User removed independent developer review; actual runtime authorization and independent human semantic approval remain mandatory. No publish, deployment, production credentials, access-policy changes or remote consumer reconfiguration authorized.
+
+Inventory evidence at2026-10-26 admission7:
+- This beta checkout has private @allura/local-foundation0.0.0, Bun1.3.14/Node24.19.0; actual raw HTTP gateways, no packed SDK/CLI/MCP implementation yet. Existing tests are direct/local consumer evidence only.
+- Native configured allura_brain tool descriptors were read (memory_add/search/get/list/delete). They are separately configured consumer contracts, NOT proof the deployed backend works. One bounded governed recall failed this admission. Endpoint/user configuration remains https://mcp.faithmeats.org/mcp; no LAN or credential inspection attempted. Exact deployed revision/package versions remain insufficient telemetry; do not claim compatibility or migrate them.
+- Observed legacy add advertises content, optional group_id/user_id/metadata/threshold and no required idempotency key; rebuilt capture requires explicit operation key and transport-bound current workspace/principal. Legacy search advertises include_global and user_id; those cannot bypass current tenant/workspace authorization. Legacy list advertises required user_id, offset/sort and default50; rebuilt semantic list uses signed principal/scope/history/page-size-bound cursors and maximum20. Legacy get advertises either episodic or semantic store; current rebuilt get is semantic with explicit history; capture receipts have a separate guarded own-capture path. Legacy delete advertises id/group_id/user_id and stale Neo4j text; Neo4j is retired, not a current dependency. Rebuilt soft deletion requires exact head revision/reason/operation key/current memory:delete. These are incompatible contracts, not safe aliases.
+- Related local checkout presence is not installed/deployed-client telemetry. No global Hermes/Cowork/plugin profile was read or changed. Older document filenames/claims remain historical evidence, not a current release receipt.
+
+Decision: produce an explicitly versioned fresh prerelease contract, with migration guidance and rejected legacy selectors, not silently reinterpret existing client calls or overwrite the public tunnel. Existing separately deployed consumers remain unchanged until target/revision-specific migration approval. Installed/deployed inventory gap blocks a compatibility claim/rollout, not authorized local fresh implementation.
+
+# Bounded implementation contract
+
+Use one composed gateway admission budget (not nested independently admitted per-factory routers), server-derived identities/current scope, existing human same-origin checks and machine bearer authentication. Public methods: memory_add→durable capture only; memory_search→current scoped approved default or explicitly unapproved all-mode; memory_get/list→semantic current/history; memory_delete→exact-revision append-only soft deletion. Explain evidence/semantic identifier differences and separate capture receipt lookup. Reject legacy user_id/include_global/threshold authority fields instead of silently stripping them. No approval/grant capability in machine public five tools. Pending proposals/review remain separately authorized human flows.
+
+SDK/CLI request bodies cannot supply actor/authentication or override configured scope; credentials injected out of band, never arguments/logs. HTTPS only except explicitly opted-in owned loopback fixture. No automatic write retries or regenerated operation keys. Failed/lost responses may mean unknown, not rollback; original key allows exact replay. Bound body/response/timeout/concurrency and propagate abort. CLI stdout is machine-readable JSON; diagnostics/first-use disclosures stderr; no token/value dumps. State exact storage destination, append-only capture vs pending proposal vs independently approved semantic, optional projection not configured and local-vs-deployed distinction.
+
+Pack real ESM SDK declarations, CLI and stdio MCP bridge; unpack/install into a clean scratch consumer and exercise without source-relative imports. MCP bridge uses configured server endpoint/scope/credential, never direct database access. Server tools must advertise bounded concrete schemas/allowlists and preserve status/score/provenance and exact receipts. Protocol transport/initialization/list/call/error behavior must be exercised by an actual SDK client, not handwritten pretend responses. Current npm metadata reports @modelcontextprotocol/sdk1.32.2 supporting Node>=18; exact dependency install and API inspection remain next, not yet an adoption/working claim. Retain application runtime pins1.3.14/24.19.0 until actual consumer tests establish compatibility.
+
+Required acceptance: packed clean install and real HTTP SDK/CLI/MCP invocation with restricted disposable DB and native embeddings, five-tool contracts, idempotent capture replay, independent human approval→second-machine exact approved record reuse, denied/foreign/stale/current-credential negative cases, bounded streams/deadlines, redacted errors, no source-module fallback. Test discovery/lint/typecheck/whole existing suite must pass. No real installed-agent/production compatibility, independent review, UI or deployment claims from local packing.
+
+Next concrete implementation: extract existing service route registration into one authenticated gateway; add machine capture/delete routes mapped directly to capture/deleteMemory; implement typed versioned transport client and packed CLI; then official SDK MCP transport with real protocol-client acceptance. Inventory/schema findings above must shape schemas before publishing a new API contract.
