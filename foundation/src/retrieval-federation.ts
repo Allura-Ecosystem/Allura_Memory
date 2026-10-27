@@ -5,19 +5,19 @@ import {scopedTransaction} from './persistence.ts';
 import {DecisionError} from './decisions.ts';
 import {EMBEDDING,boundedIndexWork,validateVector,type Embedder} from './embedding.ts';
 import {validateModel} from './indexing.ts';
-import {nativeSearch} from './retrieval-index.ts';
+import {nativeSearch,VECTOR_RETRIEVAL_POLICY} from './retrieval-index.ts';
 import {normalizeAllLimit,mergeCandidates,type RetrievalCandidate} from './retrieval-policy.ts';
 import {auditRead} from './retrieval.ts';
 export type FederatedQuery={query:string;status:'approved'|'all';limit?:number;min_score?:number;history?:boolean};
 export type FederatedHit={id:string;kind:'semantic'|'evidence';approval:'approved'|'unapproved';content:string;contentTruncated:boolean;score:number;scoreKind:string;confidence:number|null;createdAt:string;knowledgeId?:string;version?:number;lifecycle?:string};
-export type FederatedResult={results:FederatedHit[];outcome:'succeeded'|'partial'|'failed';degraded:boolean;paths:{path:'semantic'|'vector'|'events';state:'succeeded'|'failed'|'skipped'}[];storesAttempted:string[];storesUsed:string[];candidateTruncated:boolean;confidenceFilter:'known_only'|null};
+export type FederatedResult={results:FederatedHit[];outcome:'succeeded'|'partial'|'failed';degraded:boolean;paths:{path:'semantic'|'vector'|'events';state:'succeeded'|'failed'|'skipped'}[];storesAttempted:string[];storesUsed:string[];candidateTruncated:boolean;confidenceFilter:'known_only'|null;vectorPolicy:typeof VECTOR_RETRIEVAL_POLICY};
 type Row={id:string;content:string;created_at:Date;metadata:Record<string,unknown>;embedding?:number[];lexical?:number};
 const candidate=(row:Row,source:RetrievalCandidate['source'],score:number,scoreKind:string):RetrievalCandidate=>({id:row.id,content:row.content,source,score,scoreKind,confidence:null,createdAt:row.created_at.toISOString(),metadata:row.metadata});
 export async function searchFederated(sql:SQL,identity:Identity,scope:Scope,input:FederatedQuery,provider:Embedder):Promise<FederatedResult>{
  if(!input||Array.isArray(input)||Object.keys(input).some(k=>!['query','status','limit','min_score','history'].includes(k))||typeof input.query!=='string'||Buffer.byteLength(input.query)>2000||/\u0000|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(input.query)||!['approved','all'].includes(input.status)||(input.history!==undefined&&typeof input.history!=='boolean')||(input.min_score!==undefined&&(typeof input.min_score!=='number'||!Number.isFinite(input.min_score)||input.min_score<0||input.min_score>1))){throw new DecisionError('invalid');}
  const limit=normalizeAllLimit(input.limit),query=input.query.trim(),history=input.history??false,all=input.status==='all';validateModel(provider);
  return scopedTransaction(sql,identity,scope,'memory:read',async tx=>{
-  const result:FederatedResult={results:[],outcome:'succeeded',degraded:false,paths:[],storesAttempted:['postgres'],storesUsed:[],candidateTruncated:false,confidenceFilter:input.min_score===undefined?null:'known_only'};
+  const result:FederatedResult={results:[],outcome:'succeeded',degraded:false,paths:[],storesAttempted:['postgres'],storesUsed:[],candidateTruncated:false,confidenceFilter:input.min_score===undefined?null:'known_only',vectorPolicy:VECTOR_RETRIEVAL_POLICY};
   const batches:RetrievalCandidate[][]=[];
   const [initial]=await tx`SELECT allura.additional_action(${scope.groupId},${scope.workspaceId}::uuid,'evidence:read') AS evidence`;
   const attempt=async(path:'semantic'|'vector'|'events',work:(save:SavepointSQL)=>Promise<RetrievalCandidate[]>)=>{
@@ -38,7 +38,7 @@ export async function searchFederated(sql:SQL,identity:Identity,scope:Scope,inpu
     AND v.model_id=${EMBEDDING.model} AND v.model_revision=${EMBEDDING.revision} AND v.dimensions=${EMBEDDING.dimensions} AND v.index_version=${EMBEDDING.indexVersion} ORDER BY p.created_at DESC,p.id LIMIT 257` as Row[];
    const events=all?await save`SELECT * FROM allura.retrieval_event_vectors(${scope.groupId},${scope.workspaceId}::uuid,257)` as Row[]:[];
    result.candidateTruncated ||= semantics.length>256||events.length>256;const rows=[...semantics.slice(0,256),...events.slice(0,256)];
-   const hits=await boundedIndexWork((async()=>{const vector=await provider.embed(query);validateVector(vector);return nativeSearch(rows.map(row=>({id:row.id,embedding:row.embedding!})),vector,limit);})());
+   const hits=await boundedIndexWork((async()=>{const vector=await provider.embed(query);validateVector(vector);return nativeSearch(rows.map(row=>({id:row.id,embedding:row.embedding!,content:row.content})),vector,limit,query);})());
    const byId=new Map(rows.map(row=>[row.id,row]));return hits.map(hit=>candidate(byId.get(hit.id)!,'vector',hit.score,'cosine_similarity'));
   });}else{result.paths.push({path:'vector',state:'skipped'});}
   if(all){await attempt('events',async save=>{const rows=await save`SELECT * FROM allura.retrieval_events(${scope.groupId},${scope.workspaceId}::uuid,${query},${limit+1})` as Row[];result.candidateTruncated ||= rows.length>limit;return rows.slice(0,limit).map(row=>candidate(row,'event',0,'unscored'));});}

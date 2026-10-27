@@ -36,7 +36,7 @@ try {
   }
   if (!server) { throw new Error('Disposable TCP readiness exhausted'); }
   console.log(JSON.stringify({ image, server, target: 'isolated-loopback-disposable', container: name }));
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 90000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 90000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -128,6 +128,10 @@ try {
     'fresh evidence native and fallback paths isolate actual foreign indexed scopes',
     'federation timeouts preserve fallback and grant changes serialize with retrieval',
     'bounded source selection preserves trimmed Unicode exact evidence priority',
+    'versioned live retrieval evaluation reports mode labeled quality latency freshness and isolation',
+    'evaluation metrics distinguish ranking from no answer and reject empty telemetry',
+    'fixed additional paraphrases and no answer probes exercise measured vector policy',
+    'evaluation reports injected provider timeout and fallback separately from healthy latency',
   ];
   const missing = required.filter(name => !output.includes(`(pass) ${name} [`));
   console.log(JSON.stringify({ lane: 'restricted-postgres', pass, fail, skip, assertions, missing, exit: result.exitCode }));

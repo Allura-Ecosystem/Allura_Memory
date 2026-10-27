@@ -1,0 +1,25 @@
+{
+  "version": "retrieval-evaluation-v1",
+  "labelStatus": "delegated-engineering-fixture-not-independently-human-rated",
+  "documents": {
+    "old": "Iris release gates require blue badges.",
+    "current": "Iris release gates require green badges.",
+    "deprecated": "Withdrawn refund policy offers fourteen days for returns.",
+    "cat": "Domestic cats are small feline mammals often kept as household pets.",
+    "foreign": "Foreign confidential quokka launch code is amber-harbor.",
+    "fresh": "Fresh unapproved field observation: silver-heron landed."
+  },
+  "cases": [
+    {"id":"current-policy","query":"Iris release gates require green badges.","mode":"vector","expected":["current"],"history":false,"category":"current"},
+    {"id":"stale-contradiction","query":"Iris release gates require blue badges.","mode":"hybrid","expected":["current"],"history":false,"category":"current"},
+    {"id":"historical-policy","query":"Iris release gates require blue badges.","mode":"vector","expected":["old"],"history":true,"category":"history"},
+    {"id":"deprecated-history","query":"Withdrawn refund policy offers fourteen days for returns.","mode":"text","expected":["deprecated"],"history":true,"category":"history"},
+    {"id":"deprecated-current","query":"Withdrawn refund policy offers fourteen days for returns.","mode":"text","expected":[],"history":false,"category":"no-answer"},
+    {"id":"semantic-paraphrase","query":"What animal is a feline household pet?","mode":"vector","expected":["cat"],"history":false,"category":"current"},
+    {"id":"no-answer-vector","query":"How does a pulsar magnetosphere emit gamma rays?","mode":"vector","expected":[],"history":false,"category":"no-answer"},
+    {"id":"no-answer-hybrid","query":"How does a pulsar magnetosphere emit gamma rays?","mode":"hybrid","expected":[],"history":false,"category":"no-answer"},
+    {"id":"foreign-scope","query":"Foreign confidential quokka launch code is amber-harbor.","mode":"vector","expected":[],"history":false,"category":"foreign"},
+    {"id":"fresh-all","query":"Fresh unapproved field observation: silver-heron landed.","mode":"all","expected":["fresh"],"history":false,"category":"fresh"},
+    {"id":"fresh-approved","query":"Fresh unapproved field observation: silver-heron landed.","mode":"approved","expected":[],"history":false,"category":"no-answer"}
+  ]
+}

@@ -10,18 +10,21 @@ import {DecisionError} from './decisions.ts';
 import {EMBEDDING,type Embedder,validateVector,boundedIndexWork} from './embedding.ts';
 import {validateModel} from './indexing.ts';
 import {auditRead} from './retrieval.ts';
+// Measured local conformance policy, not confidence or general relevance.
+export const VECTOR_RETRIEVAL_POLICY=Object.freeze({version:'cosine-floor-v1',minimumSimilarity:0.5,literalMatchException:true});
 export type IndexQuery={query:string;mode:'vector'|'text'|'hybrid';limit:number;history?:boolean};
 export type IndexHit={id:string;knowledgeId:string;version:number;lifecycle:'current'|'superseded'|'deprecated';content:string;contentTruncated:boolean;score:number;scoreKind:'cosine_similarity'|'lexical_rank'|'reciprocal_rank_fusion'};
-export type IndexResult={results:IndexHit[];attempted:string[];used:string[];degraded:boolean;reason:'vector_unavailable'|'index_incomplete'|null;candidateTruncated:boolean};
+export type IndexResult={results:IndexHit[];attempted:string[];used:string[];degraded:boolean;reason:'vector_unavailable'|'index_incomplete'|null;candidateTruncated:boolean;vectorPolicy:typeof VECTOR_RETRIEVAL_POLICY};
 type Candidate={id:string;knowledge_id:string;version:number;lifecycle:IndexHit['lifecycle'];content:string;embedding:number[]|null;lexical:number};
-export async function nativeSearch(rows:readonly {id:string;embedding:number[]|null}[],query:number[],limit:number):Promise<{id:string;score:number}[]>{
+export async function nativeSearch(rows:readonly {id:string;embedding:number[]|null;content?:string}[],query:number[],limit:number,literalQuery=''):Promise<{id:string;score:number}[]>{
   const directory=await mkdtemp(join(tmpdir(),'allura-scoped-vector-'));
   try{
     const db=new VectorDb({dimensions:EMBEDDING.dimensions,distanceMetric:'Cosine',storagePath:join(directory,'index.db')});
     const entries=rows.filter(row=>row.embedding!==null).map(row=>{validateVector(row.embedding!);return {id:row.id,vector:Float32Array.from(row.embedding!)};});
     if(!entries.length){return [];}
     await db.insertBatch(entries);
-    return (await db.search({vector:Float32Array.from(query),k:Math.min(entries.length,limit)})).map(row=>({id:row.id,score:Math.max(0,Math.min(1,1-row.score))}));
+    const literal=literalQuery.trim().toLowerCase(),exact=new Set(literal?rows.filter(row=>row.content?.toLowerCase().includes(literal)).map(row=>row.id):[]);
+    return (await db.search({vector:Float32Array.from(query),k:Math.min(entries.length,limit)})).map(row=>({id:row.id,score:Math.max(0,Math.min(1,1-row.score))})).filter(row=>row.score>=VECTOR_RETRIEVAL_POLICY.minimumSimilarity||exact.has(row.id));
   }finally{await rm(directory,{recursive:true,force:true});}
 }
 export async function searchIndex(sql:SQL,identity:Identity,scope:Scope,input:IndexQuery,provider:Embedder):Promise<IndexResult>{
@@ -34,11 +37,11 @@ export async function searchIndex(sql:SQL,identity:Identity,scope:Scope,input:In
       LEFT JOIN allura.source_vectors x ON x.group_id=v.group_id AND x.workspace_id=v.workspace_id AND x.source_kind='semantic' AND x.source_id=v.id AND x.index_version=${EMBEDDING.indexVersion} AND x.model_id=${EMBEDDING.model} AND x.model_revision=${EMBEDDING.revision} AND x.dimensions=${EMBEDDING.dimensions}
       WHERE v.group_id=${scope.groupId} AND v.workspace_id=${scope.workspaceId}::uuid AND (${input.history??false} OR (h.current_version_id=v.id AND h.lifecycle='current')) ORDER BY v.created_at DESC,v.id LIMIT 257` as Candidate[];
     const rows=selected.slice(0,256),lexical=rows.filter(x=>x.lexical>0).sort((a,b)=>b.lexical-a.lexical||a.id.localeCompare(b.id));
-    const result:IndexResult={results:[],attempted:[],used:[],degraded:false,reason:null,candidateTruncated:selected.length>256};
+    const result:IndexResult={results:[],attempted:[],used:[],degraded:false,reason:null,candidateTruncated:selected.length>256,vectorPolicy:VECTOR_RETRIEVAL_POLICY};
     let vectors:{id:string;score:number}[]=[];
     if(input.mode!=='text'){
       result.attempted.push('vector');
-      try{const vector=await boundedIndexWork(provider.embed(input.query));validateVector(vector);vectors=await boundedIndexWork(nativeSearch(rows,vector,Math.max(input.limit,20)));result.used.push('vector');
+      try{const vector=await boundedIndexWork(provider.embed(input.query));validateVector(vector);vectors=await boundedIndexWork(nativeSearch(rows,vector,Math.max(input.limit,20),input.query));result.used.push('vector');
         if(rows.some(x=>x.embedding===null)){result.degraded=true;result.reason='index_incomplete';}
       }catch{result.degraded=true;result.reason='vector_unavailable';}
     }
