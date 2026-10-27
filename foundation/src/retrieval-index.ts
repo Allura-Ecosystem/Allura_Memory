@@ -9,10 +9,11 @@ import {scopedTransaction} from './persistence.ts';
 import {DecisionError} from './decisions.ts';
 import {EMBEDDING,type Embedder,validateVector,boundedIndexWork} from './embedding.ts';
 import {validateModel} from './indexing.ts';
-export type IndexQuery={query:string;mode:'vector'|'text'|'hybrid';limit:number};
-export type IndexHit={id:string;knowledgeId:string;content:string;contentTruncated:boolean;score:number;scoreKind:'cosine_similarity'|'lexical_rank'|'reciprocal_rank_fusion'};
+import {auditRead} from './retrieval.ts';
+export type IndexQuery={query:string;mode:'vector'|'text'|'hybrid';limit:number;history?:boolean};
+export type IndexHit={id:string;knowledgeId:string;version:number;lifecycle:'current'|'superseded'|'deprecated';content:string;contentTruncated:boolean;score:number;scoreKind:'cosine_similarity'|'lexical_rank'|'reciprocal_rank_fusion'};
 export type IndexResult={results:IndexHit[];attempted:string[];used:string[];degraded:boolean;reason:'vector_unavailable'|'index_incomplete'|null;candidateTruncated:boolean};
-type Candidate={id:string;knowledge_id:string;content:string;embedding:number[]|null;lexical:number};
+type Candidate={id:string;knowledge_id:string;version:number;lifecycle:IndexHit['lifecycle'];content:string;embedding:number[]|null;lexical:number};
 async function nativeSearch(rows:Candidate[],query:number[],limit:number):Promise<{id:string;score:number}[]>{
   const directory=await mkdtemp(join(tmpdir(),'allura-scoped-vector-'));
   try{
@@ -24,14 +25,14 @@ async function nativeSearch(rows:Candidate[],query:number[],limit:number):Promis
   }finally{await rm(directory,{recursive:true,force:true});}
 }
 export async function searchIndex(sql:SQL,identity:Identity,scope:Scope,input:IndexQuery,provider:Embedder):Promise<IndexResult>{
-  if(!input||Object.keys(input).some(k=>!['query','mode','limit'].includes(k))||typeof input.query!=='string'||!input.query.trim()||Buffer.byteLength(input.query)>2000||input.query.includes('\u0000')||!['vector','text','hybrid'].includes(input.mode)||!Number.isSafeInteger(input.limit)||input.limit<1||input.limit>10){throw new DecisionError('invalid');}
+  if(!input||Object.keys(input).some(k=>!['query','mode','limit','history'].includes(k))||(input.history!==undefined&&typeof input.history!=='boolean')||typeof input.query!=='string'||!input.query.trim()||Buffer.byteLength(input.query)>2000||input.query.includes('\u0000')||!['vector','text','hybrid'].includes(input.mode)||!Number.isSafeInteger(input.limit)||input.limit<1||input.limit>10){throw new DecisionError('invalid');}
   validateModel(provider);
   return scopedTransaction(sql,identity,scope,'memory:read',async tx=>{
-    // Both paths use this exact RLS-filtered current semantic candidate set.
-    const selected=await tx`SELECT v.id,v.knowledge_id,v.content,x.embedding,ts_rank_cd(to_tsvector('english',v.content),plainto_tsquery('english',${input.query})) AS lexical
-      FROM allura.semantic_versions v JOIN allura.semantic_heads h ON h.group_id=v.group_id AND h.workspace_id=v.workspace_id AND h.current_version_id=v.id AND h.lifecycle='current'
+    // Both paths use the exact same RLS-filtered semantic candidate set.
+    const selected=await tx`SELECT v.id,v.knowledge_id,v.version,CASE WHEN h.current_version_id=v.id THEN h.lifecycle ELSE 'superseded' END AS lifecycle,v.content,x.embedding,ts_rank_cd(to_tsvector('english',v.content),plainto_tsquery('english',${input.query})) AS lexical
+      FROM allura.semantic_versions v JOIN allura.semantic_heads h ON h.group_id=v.group_id AND h.workspace_id=v.workspace_id AND h.knowledge_id=v.knowledge_id
       LEFT JOIN allura.source_vectors x ON x.group_id=v.group_id AND x.workspace_id=v.workspace_id AND x.source_kind='semantic' AND x.source_id=v.id AND x.index_version=${EMBEDDING.indexVersion} AND x.model_id=${EMBEDDING.model} AND x.model_revision=${EMBEDDING.revision} AND x.dimensions=${EMBEDDING.dimensions}
-      WHERE v.group_id=${scope.groupId} AND v.workspace_id=${scope.workspaceId}::uuid ORDER BY v.created_at DESC,v.id LIMIT 257` as Candidate[];
+      WHERE v.group_id=${scope.groupId} AND v.workspace_id=${scope.workspaceId}::uuid AND (${input.history??false} OR (h.current_version_id=v.id AND h.lifecycle='current')) ORDER BY v.created_at DESC,v.id LIMIT 257` as Candidate[];
     const rows=selected.slice(0,256),lexical=rows.filter(x=>x.lexical>0).sort((a,b)=>b.lexical-a.lexical||a.id.localeCompare(b.id));
     const result:IndexResult={results:[],attempted:[],used:[],degraded:false,reason:null,candidateTruncated:selected.length>256};
     let vectors:{id:string;score:number}[]=[];
@@ -53,10 +54,11 @@ export async function searchIndex(sql:SQL,identity:Identity,scope:Scope,input:In
     }
     const byId=new Map(rows.map(x=>[x.id,x]));
     result.results=[...scores.entries()].sort((a,b)=>b[1].score-a[1].score||a[0].localeCompare(b[0])).slice(0,input.limit).map(([id,value])=>{
-      const row=byId.get(id)!;return {id,knowledgeId:row.knowledge_id,content:row.content.slice(0,1000),contentTruncated:row.content.length>1000,score:value.score,scoreKind:value.kind};
+      const row=byId.get(id)!;return {id,knowledgeId:row.knowledge_id,version:row.version,lifecycle:row.lifecycle,content:row.content.slice(0,1000),contentTruncated:row.content.length>1000,score:value.score,scoreKind:value.kind};
     });
-    const stillCurrent=await tx`SELECT v.id FROM allura.semantic_versions v JOIN allura.semantic_heads h ON h.group_id=v.group_id AND h.workspace_id=v.workspace_id AND h.current_version_id=v.id AND h.lifecycle='current' WHERE v.group_id=${scope.groupId} AND v.workspace_id=${scope.workspaceId}::uuid AND v.id IN (SELECT value::uuid FROM jsonb_array_elements_text(${result.results.map(x=>x.id)}::jsonb))`;
-    const visible=new Set(stillCurrent.map((row:{id:string})=>row.id));result.results=result.results.filter(row=>visible.has(row.id));
+    const stillCurrent=await tx`SELECT v.id,CASE WHEN h.current_version_id=v.id THEN h.lifecycle ELSE 'superseded' END AS lifecycle FROM allura.semantic_versions v JOIN allura.semantic_heads h ON h.group_id=v.group_id AND h.workspace_id=v.workspace_id AND h.knowledge_id=v.knowledge_id WHERE v.group_id=${scope.groupId} AND v.workspace_id=${scope.workspaceId}::uuid AND (${input.history??false} OR(h.current_version_id=v.id AND h.lifecycle='current')) AND v.id IN (SELECT value::uuid FROM jsonb_array_elements_text(${result.results.map(x=>x.id)}::jsonb))` as {id:string;lifecycle:IndexHit['lifecycle']}[];
+    const visible=new Map(stillCurrent.map(row=>[row.id,row.lifecycle]));result.results=result.results.filter(row=>visible.has(row.id)).map(row=>({...row,lifecycle:visible.get(row.id)!}));
+    await auditRead(tx,scope,'search',result.results.length,input.history??false);
     // scopedTransaction also re-resolves authority after asynchronous work.
     return result;
   });

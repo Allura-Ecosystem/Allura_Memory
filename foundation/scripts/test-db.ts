@@ -36,7 +36,7 @@ try {
   }
   if (!server) { throw new Error('Disposable TCP readiness exhausted'); }
   console.log(JSON.stringify({ image, server, target: 'isolated-loopback-disposable', container: name }));
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 90000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 90000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -114,6 +114,12 @@ try {
     'index lease fencing concurrency retries and batch drain persist actual vectors',
     'index revocation after embedding cannot publish and search rechecks lifecycle',
     'indexed foreign workspace sentinel is excluded from native and fallback paths',
+    'semantic get and list distinguish current history and inaccessible identifiers',
+    'signed pagination binds principal scope filters and rejects malformed cursors',
+    'graph authorizes both endpoints and raw provenance independently',
+    'real retrieval HTTP provides signed authorized reuse and no-store graph responses',
+    'history search labels stale knowledge while read audits never store content',
+    'foreign tenant and workspace graph metadata and cursors remain isolated',
   ];
   const missing = required.filter(name => !output.includes(`(pass) ${name} [`));
   console.log(JSON.stringify({ lane: 'restricted-postgres', pass, fail, skip, assertions, missing, exit: result.exitCode }));

@@ -46,6 +46,9 @@ test('gateway rechecks revocation before disclosure and redacts service errors',
   current = row;
   const error = await gateway(new Request(`${origin}/error${query}`, { headers }));
   expect(error.status).toBe(503); expect(await error.text()).not.toContain('private');
+  current=row;
+  const extra=createGateway({human:config,origin,store:live,machineLookup:async()=>null,routes:[{path:'/graph',method:'POST',identity:'human',action:'memory:read',additionalActions:()=>['evidence:read'],handle:async()=>{current={...row,role:'viewer'};return {rawEvidence:'must not escape'};}}]});
+  const restricted=await extra(new Request(`${origin}/graph${query}`,{method:'POST',headers,body:'{}'}));expect(restricted.status).toBe(503);expect(await restricted.text()).not.toContain('rawEvidence');
 });
 
 test('post-commit revocation returns unknown rather than a false no-write denial', async () => {
