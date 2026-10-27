@@ -86,6 +86,15 @@ test('index revocation after embedding cannot publish and search rechecks lifecy
   const result=await searchIndex(f.app,f.identities.viewer,f.scope,{query:'feline',mode:'vector',limit:5},deleting);expect(result.results).toEqual([]);
 });
 
+test('index cancellation avoids pre-aborted claims and never publishes late provider success',async()=>{
+ const source=JSON.parse(await capture(f.app,f.identities.machine,f.scope,{idempotency_key:'cancel-index',content:'Cancelled indexing evidence'})).event_id;let calls=0;
+ const before=await f.owner`SELECT state,attempts FROM allura.index_jobs WHERE group_id=${f.scope.groupId} AND source_id=${source}`;
+ const pre=new AbortController();pre.abort(new Error('fixture_cancelled'));const provider:Embedder={identity:EMBEDDING,embed:async text=>{calls++;return embedder.embed(text);}};
+ await expect(captureIndex(f.app,f.identities.machine,f.scope,'event',source,provider,pre.signal)).rejects.toThrow('fixture_cancelled');await expect(drainIndexBatch(f.app,f.identities.machine,f.scope,provider,1,pre.signal)).rejects.toThrow('fixture_cancelled');expect(calls).toBe(0);expect(await f.owner`SELECT state,attempts FROM allura.index_jobs WHERE group_id=${f.scope.groupId} AND source_id=${source}`).toEqual(before);
+ const active=new AbortController(),late:Embedder={identity:EMBEDDING,embed:async text=>{const vector=await embedder.embed(text);active.abort(new Error('fixture_cancelled'));return vector;}};
+ expect((await captureIndex(f.app,f.identities.machine,f.scope,'event',source,late,active.signal)).state).toBe('retry_wait');expect(await f.owner`SELECT source_id FROM allura.source_vectors WHERE group_id=${f.scope.groupId} AND source_id=${source}`).toHaveLength(0);
+});
+
 test('indexed foreign workspace sentinel is excluded from native and fallback paths',async()=>{
   const foreign={...f.scope,workspaceId:f.foreignWorkspace};
   for(const name of ['author','reviewer'] as const){await f.owner`INSERT INTO allura.workspace_grants(group_id,workspace_id,principal_id,role,review_approve,issuer) VALUES(${f.scope.groupId},${foreign.workspaceId},${f.ids[name]},${name==='author'?'workspace_admin':'curator'},${name==='reviewer'},${f.ids.author})`;}

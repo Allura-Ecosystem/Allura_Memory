@@ -4,7 +4,7 @@ import { DecisionError,decideProposal } from './decisions.ts';
 import { submitCorrection } from './corrections.ts';
 import { submitRestoration } from './restoration.ts';
 import { deleteMemory,knowledgeHistory } from './lifecycle.ts';
-import { getProposal,getProposalEvidence } from './proposals.ts';
+import { getProposal,getProposalEvidence,submitProposal } from './proposals.ts';
 import { DatabaseStore } from './persistence.ts';
 import { createGateway,type Route } from './gateway.ts';
 export function createReviewGateway(sql:SQL,human:HumanConfig,origin:string):(request:Request)=>Promise<Response>{
@@ -12,6 +12,7 @@ export function createReviewGateway(sql:SQL,human:HumanConfig,origin:string):(re
   return createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes:createReviewRoutes(sql)});
 }
 export function createReviewRoutes(sql:SQL):Route[]{return [
+    {path:'/api/review/submit',method:'POST',identity:'human',action:'proposal:write',handle:async({identity,scope,body})=>submitProposal(sql,identity,scope,body!)},
     {path:'/api/review/restoration',method:'POST',identity:'human',action:'proposal:write',handle:async({identity,scope,body})=>JSON.parse(await submitRestoration(sql,identity,scope,body!))},
     {path:'/api/memory/delete',method:'POST',identity:'human',action:'memory:delete',handle:async({identity,scope,body})=>JSON.parse(await deleteMemory(sql,identity,scope,body!))},
     {path:'/api/memory/history',method:'POST',identity:'human',action:'memory:read',handle:async({identity,scope,body})=>{

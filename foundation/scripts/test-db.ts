@@ -157,6 +157,8 @@ try {
     'packed core refuses occupied initialization elevated runtime roles and missing offline model',
     'packed core refuses tampered source before database work and never prints injected credentials',
     'packed recovery backs up and restores without a source checkout or git provenance fallback',
+    'packed DOC-J01 through DOC-J06 journey preserves review atomicity replay provenance and current retrieval',
+    'index cancellation avoids pre-aborted claims and never publishes late provider success',
   ];
   const missing = required.filter(name => !output.includes(`(pass) ${name} [`));
   console.log(JSON.stringify({ lane: 'restricted-postgres', pass, fail, skip, assertions, missing, exit: result.exitCode }));

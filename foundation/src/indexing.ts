@@ -7,22 +7,22 @@ import {EMBEDDING,type Embedder,validateVector,boundedIndexWork} from './embeddi
 export function validateModel(provider:Embedder):void{
   if(Object.entries(EMBEDDING).some(([key,value])=>provider.identity[key as keyof typeof EMBEDDING]!==value)){throw new Error('invalid_model');}
 }
-export async function drainIndexBatch(sql:SQL,identity:Identity,scope:Scope,provider:Embedder,limit=8):Promise<{kind:'event'|'semantic';id:string;state:string}[]>{
+export async function drainIndexBatch(sql:SQL,identity:Identity,scope:Scope,provider:Embedder,limit=8,signal?:AbortSignal):Promise<{kind:'event'|'semantic';id:string;state:string}[]>{
   if(!Number.isSafeInteger(limit)||limit<1||limit>8){throw new DecisionError('invalid');}validateModel(provider);
-  const candidates=await scopedTransaction(sql,identity,scope,'proposal:write',async tx=>await tx`SELECT * FROM allura.index_candidates(${scope.groupId},${scope.workspaceId}::uuid,${limit})` as {kind:'event'|'semantic';id:string}[]);
+  signal?.throwIfAborted();const candidates=await scopedTransaction(sql,identity,scope,'proposal:write',async tx=>await tx`SELECT * FROM allura.index_candidates(${scope.groupId},${scope.workspaceId}::uuid,${limit})` as {kind:'event'|'semantic';id:string}[]);
   const results:{kind:'event'|'semantic';id:string;state:string}[]=[];
-  for(const source of candidates){results.push({...source,...await captureIndex(sql,identity,scope,source.kind,source.id,provider)});}
+  for(const source of candidates){signal?.throwIfAborted();results.push({...source,...await captureIndex(sql,identity,scope,source.kind,source.id,provider,signal)});}
   return results;
 }
-export async function captureIndex(sql:SQL,identity:Identity,scope:Scope,kind:'event'|'semantic',sourceId:string,provider:Embedder):Promise<{state:string}>{
+export async function captureIndex(sql:SQL,identity:Identity,scope:Scope,kind:'event'|'semantic',sourceId:string,provider:Embedder,signal?:AbortSignal):Promise<{state:string}>{
   if(!['event','semantic'].includes(kind)||!validScope({...scope,workspaceId:sourceId})){throw new DecisionError('invalid');}validateModel(provider);
-  try{
+  signal?.throwIfAborted();try{
     const claim=await scopedTransaction(sql,identity,scope,'proposal:write',async tx=>{
       const [row]=await tx`SELECT allura.claim_index(${scope.groupId},${scope.workspaceId}::uuid,${kind},${sourceId}::uuid) AS claim`;return row.claim as {state:string;leaseId?:string;content?:string};
     });
     if(claim.state!=='claimed'){return {state:claim.state};}
     let vector:number[]=[];let success=false;
-    try{vector=await boundedIndexWork(signal=>provider.embed(claim.content!,signal));validateVector(vector);success=true;}catch{success=false;}
+    try{vector=await boundedIndexWork(workSignal=>provider.embed(claim.content!,workSignal),signal);validateVector(vector);success=true;}catch{success=false;}
     return await scopedTransaction(sql,identity,scope,'proposal:write',async tx=>{
       const [row]=await tx`SELECT allura.finish_index(${scope.groupId},${scope.workspaceId}::uuid,${kind},${sourceId}::uuid,${claim.leaseId!}::uuid,${vector}::jsonb,${success}) AS state`;return {state:row.state as string};
     });
