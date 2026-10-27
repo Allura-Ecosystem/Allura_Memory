@@ -1,5 +1,6 @@
 import {SQL} from 'bun';
 import {randomBytes,randomUUID} from 'node:crypto';
+import {waitForRecoveryReady} from './recovery-readiness.ts';
 export const RECOVERY_IMAGE='postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea';
 export type RecoveryTarget=Readonly<{id:string}>;
 type RecordState={name:string;volume:string;network:string;containerId:string;networkId:string;url:string;id:string};
@@ -12,7 +13,13 @@ function verify(target:RecoveryTarget):RecordState{
  const mounts=JSON.parse(docker(['inspect','--format','{{json .Mounts}}',value.name])) as {Type:string;Name:string;Destination:string}[],networks=JSON.parse(docker(['inspect','--format','{{json .NetworkSettings.Networks}}',value.name])) as Record<string,unknown>;
  if(mounts.length!==1||mounts[0]?.Type!=='volume'||mounts[0]?.Name!==value.volume||mounts[0]?.Destination!=='/var/lib/postgresql/data'||Object.keys(networks).length!==1||!Object.hasOwn(networks,value.network)||docker(['inspect','--format','{{.HostConfig.Memory}} {{.HostConfig.NanoCpus}} {{.HostConfig.PidsLimit}} {{.HostConfig.Privileged}}',value.name])!==`${2*1024*1024*1024} ${1000000000} 128 false`){throw new Error('recovery_target_denied');}return value;
 }
-async function ready(value:RecordState):Promise<void>{for(let i=0;i<60;i++){const sql=new SQL(value.url,{connectionTimeout:1,max:1});try{await sql`SELECT 1`;return;}catch{await Bun.sleep(100);}finally{await sql.close();}}throw new Error('recovery_startup_failed');}
+async function ready(value:RecordState):Promise<void>{
+ await waitForRecoveryReady(async signal=>{
+  const sql=new SQL(value.url,{connectionTimeout:1,max:1}),query=sql`SELECT 1`,cancel=()=>{query.cancel();};
+  signal.addEventListener('abort',cancel,{once:true});
+  try{signal.throwIfAborted();await query;}finally{signal.removeEventListener('abort',cancel);await sql.close({timeout:0});}
+ });
+}
 export async function createRecoveryTarget():Promise<RecoveryTarget>{
  const id=randomUUID(),name=`allura-recovery-${id}`,volume=`${name}-data`,network=`${name}-net`,password=randomBytes(32).toString('hex');
  const value:RecordState={id,name,volume,network,containerId:'',networkId:'',url:''};let volumeCreated=false;

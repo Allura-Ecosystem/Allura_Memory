@@ -41,6 +41,11 @@ const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions:
 ] }, {requiredFile:'./tests/core-config.test.ts',minAssertions:18,requiredCases:[
   'core configuration binds loopback restricted login explicit origin and public RSA keys',
   'core configuration rejects missing secrets owner credentials remote databases and silent defaults',
+] }, {requiredFile:'./tests/recovery-readiness.test.ts',minAssertions:14,requiredCases:[
+  'recovery readiness permits more than sixty fast refusals inside its wall-clock budget',
+  'recovery readiness expires with sanitized failure and stops retrying',
+  'recovery readiness aborts a hung probe and never accepts its late success',
+  'recovery readiness rejects invalid budgets before invoking a probe',
 ] }];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');
