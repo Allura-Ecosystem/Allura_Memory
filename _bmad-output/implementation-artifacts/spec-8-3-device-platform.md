@@ -2,7 +2,7 @@
 title: '8.3 Real Linux secure-store and client lifecycle witness'
 type: feature
 created: 2026-10-27
-status: in-progress
+status: done
 route: dispatch
 baseline_commit: 4e0ace5dbf4ffe8851fa929645ae892958e25ae9
 ---
@@ -18,7 +18,7 @@ Tests MUST use isolated owned HOME/XDG directories, private bus socket under scr
 - [x] `foundation/tests/device-secret-store.test.ts`: actual private DBus+GNOME Keyring, write/read/delete across adapter/process restart, scoped isolation, missing bus/invalid scope/oversized values, concurrent distinct slots and locked/missing store failures. Mandatory platform discovery/CI prerequisites, no skips.
 - [x] Durable client adapter consumes that store, pre-stores pending exchange/rotation secrets, reconciles public receipts, connects real MCP SDK and stops on current401/403. Human session remains separate and ephemeral; no bearer-to-human conversion.
 - [x] Real combined restricted PostgreSQL+HTTP+OS-store witness: enroll/admin approve/exchange, client restart, capture evidence-only, replacement rotation, demotion/removal/lock/revoke/expiry, foreign scope and concurrent attempts. No plaintext synthetic credentials in owned keyring files/client argv/captured output.
-- [ ] Full gates and exact-source CI; actual concise Epic8 retrospective before9. Do not close8.3/Epic8 from adapter-only tests.
+- [x] Full gates and exact-source CI; actual concise Epic8 retrospective before9. Do not close8.3/Epic8 from adapter-only tests.
 
 ## Current handoff
 
@@ -29,3 +29,7 @@ Tests MUST use isolated owned HOME/XDG directories, private bus socket under scr
 `foundation/src/device-client.ts` exports PersistentDevice through packed consumer `./device`; real installed Node processes exercise it. Same-profile mutations use a kernel lock, independent profiles do not contend, process death releases it. Atomic secure-store reads remain lock-free so concurrent MCP initialization does not collide with itself; stale generations still fail at the server. All begin/complete/rotate/revoke payloads are pre-stored and explicitly replayed after response loss; no automatic reset/retry. Expired/abandoned enrollment requires an explicit fresh profile/current human enrollment, not a local clear masquerading as remote revocation. Read the packed README for host dependencies, exact calls and same-OS-user boundary.
 
 Admission16 TDD/raw logs in direct-build Operations: store/client red tests, focused actual disposable PostgreSQL checks, full1 failure caused by file-URL/path test mismatch, full2 passing, then induced cross-profile lock failure and corrected full3. Original `flock 3 command` treated3 as a filename; final inherited `/proc/self/fd/3` targets the verified private slot inode. Verified empty generated foundation/3 was removed, not ignored. Final `admission16-full3.log`: `bun run check:all` exit0 at2026-10-27T14:45:21-04:00,172tests/1506assertions (unit44/397 DB128/1109), typecheck/lint and required discovery pass. Admission17 verified all15 checkpoint hashes and read the complete staged diff in `admission17-device-candidate.diff`, no independent reviewer. Exact clean-source CI and Epic8 retrospective remain the final gate; do not claim hosted/deployed/human/Windows/macOS acceptance.
+
+## Exact local acceptance — supersedes the pending gate above
+
+Clean runtime `77d4079a0912e642dbfc9db39c34c59fe741ee12`: `ALLURA_CI_OUTPUT=<Operations>/admission17-ci-attempts bun run ci 77d4079a0912e642dbfc9db39c34c59fe741ee12`, exit0 at2026-10-27T15:02:48-04:00;172tests/1506assertions. `admission17-exact-ci.log` and `admission17-ci-attempts/allura-ci-BU3I9j/attempt.json`: all six same-invocation source/exits/log digests verified, native model and frozen install included. Both extracted artifact receipts bind that exact clean SHA; archives copied and rehashed under Operations `releases/77d4079a0912e642dbfc9db39c34c59fe741ee12/` (consumer subdirectory). [Epic8 retrospective](epic-8-retro-2026-10-27.md) records local acceptance, actual faults/fixes and deployment/platform limits. This does not close6.5/Epic6 or imply a deployed/actual-human witness.
