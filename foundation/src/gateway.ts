@@ -3,10 +3,13 @@ import { resolveAuthority, AuthorityError, type Action, type Authority, type Aut
 import { AccessError } from './access.ts';
 import { DecisionError } from './decisions.ts';
 import { ProposalError } from './proposals.ts';
+import { CaptureError } from './capture.ts';
 
 type Limits = { bodyBytes: number; responseBytes: number; targetChars: number; concurrency: number; timeoutMs: number };
 const ceilings: Limits = { bodyBytes: 65536, responseBytes: 131072, targetChars: 2048, concurrency: 16, timeoutMs: 5000 };
-type Context = Readonly<{ identity: Identity; authority: Authority; scope: Scope; body: Record<string, unknown> | null; signal: AbortSignal }>;
+type Context = Readonly<{ identity: Identity; authority: Authority; scope: Scope; body: Record<string, unknown> | null; signal: AbortSignal; request:Request }>;
+// Only trusted in-process routes can create this envelope, not parsed user JSON.
+export class GatewayReply {constructor(readonly status:number,readonly body:unknown){if(![200,202,400,405,406,415].includes(status)){throw new Error('invalid response status');}}}
 export type Route = Readonly<{ path: string; method: 'GET' | 'POST'; identity: 'human' | 'machine'; action: Action; additionalActions?: (body:Record<string,unknown>|null,context:Context)=>readonly Action[]|Promise<readonly Action[]>; handle: (context: Context) => Promise<unknown> }>;
 type Options = { human: HumanConfig; origin: string; store: AuthorityStore; machineLookup: (digest: string) => Promise<MachineCredential | null>; routes: readonly Route[]; limits?: Partial<Limits> };
 class GatewayError extends Error { constructor(readonly status: number, readonly outcome: string) { super(outcome); } }
@@ -89,16 +92,17 @@ export function createGateway(options: Options): (request: Request) => Promise<R
       const body = route.method === 'POST' ? await readObject(request, limits.bodyBytes, abort.signal) : null;
       if (abort.signal.aborted) { throw new GatewayError(504, 'unknown'); }
       await resolveAuthority(identity, scope, route.action, options.store);
-      const context=Object.freeze({identity,authority,scope,body,signal:abort.signal});
+      const context=Object.freeze({identity,authority,scope,body,signal:abort.signal,request});
       const additional=await route.additionalActions?.(body,context)??[];
       for(const action of additional){await resolveAuthority(identity,scope,action,options.store);}
       const result = await route.handle(context);
       try { await resolveAuthority(identity, scope, route.action, options.store);for(const action of additional){await resolveAuthority(identity,scope,action,options.store);} }
       catch (error) { if (route.method === 'POST') { throw new GatewayError(503, 'unknown'); } throw error; }
       if (abort.signal.aborted) { throw new GatewayError(504, 'unknown'); }
-      const encoded = JSON.stringify(result);
+      const status=result instanceof GatewayReply?result.status:200;
+      const encoded = JSON.stringify(result instanceof GatewayReply?result.body:result);
       if (encoded === undefined || Buffer.byteLength(encoded) > limits.responseBytes) { throw new GatewayError(503, 'unknown'); }
-      return new Response(encoded, { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
+      return new Response(status===202?null:encoded, { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
     })();
     // Do not free admission on timeout until actual service work settles.
     const tracked = work.finally(() => { active--; request.signal.removeEventListener('abort', clientAbort); });
@@ -110,7 +114,7 @@ export function createGateway(options: Options): (request: Request) => Promise<R
     catch (error) {
       if (error instanceof AuthorityError) { return response(error.code === 'unauthenticated' ? 401 : error.code === 'invalid' ? 400 : 403, { outcome: error.code }); }
       if (error instanceof AccessError) { return response(error.code === 'conflict' ? 409 : error.code === 'invalid' ? 400 : error.code === 'forbidden' ? 403 : 503, { outcome: error.code === 'unavailable' ? 'unknown' : error.code }); }
-      if (error instanceof DecisionError || error instanceof ProposalError) { return response(error.code === 'conflict' ? 409 : error.code === 'invalid' ? 400 : error.code === 'forbidden' ? 403 : error.code === 'not_found' ? 404 : 503, {outcome:error.code}); }
+      if (error instanceof DecisionError || error instanceof ProposalError || error instanceof CaptureError) { return response(error.code === 'conflict' ? 409 : error.code === 'invalid' ? 400 : error.code === 'forbidden' ? 403 : error.code === 'not_found' ? 404 : 503, {outcome:error.code}); }
       if (error instanceof GatewayError) { return response(error.status, { outcome: error.outcome }); }
       // Arbitrary service exceptions may occur after a commit: never infer rollback.
       return response(503, { outcome: 'unknown' });

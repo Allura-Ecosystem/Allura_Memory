@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@huggingface/transformers": "3.8.1",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@ruvector/core": "0.1.33"
   }
 }

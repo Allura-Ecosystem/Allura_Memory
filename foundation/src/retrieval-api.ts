@@ -9,6 +9,9 @@ import {type Embedder} from './embedding.ts';
 import {searchFederated,type FederatedQuery} from './retrieval-federation.ts';
 import {resolveAuthority,AuthorityError} from './authority.ts';
 export function createRetrievalGateway(sql:SQL,human:HumanConfig,origin:string,cursorKey:Uint8Array,embedder:Embedder):(request:Request)=>Promise<Response>{
+  const store=new DatabaseStore(sql);return createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes:createRetrievalRoutes(sql,cursorKey,embedder)});
+}
+export function createRetrievalRoutes(sql:SQL,cursorKey:Uint8Array,embedder:Embedder):Route[]{
   const store=new DatabaseStore(sql),service=createRetrievalService(sql,cursorKey);
   const routes:Route[]=[];
   for(const identity of ['human','machine'] as const){
@@ -26,5 +29,5 @@ export function createRetrievalGateway(sql:SQL,human:HumanConfig,origin:string,c
       },handle:async c=>Object.hasOwn(c.body!,'status')?searchFederated(sql,c.identity,c.scope,c.body as unknown as FederatedQuery,embedder,c.signal):searchIndex(sql,c.identity,c.scope,c.body as unknown as IndexQuery,embedder,c.signal)},
     );
   }
-  return createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes});
+  return routes;
 }

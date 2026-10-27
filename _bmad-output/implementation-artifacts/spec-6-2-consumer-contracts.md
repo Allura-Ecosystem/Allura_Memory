@@ -1,6 +1,6 @@
 ---
 title: '6.2 Versioned consumer contracts and packed acceptance'
-status: in-progress
+status: done
 created: 2026-10-26
 baseline_commit: 8ebebc402304577d5ac398929fbac694243794a9
 ---
@@ -28,3 +28,15 @@ Pack real ESM SDK declarations, CLI and stdio MCP bridge; unpack/install into a 
 Required acceptance: packed clean install and real HTTP SDK/CLI/MCP invocation with restricted disposable DB and native embeddings, five-tool contracts, idempotent capture replay, independent human approval→second-machine exact approved record reuse, denied/foreign/stale/current-credential negative cases, bounded streams/deadlines, redacted errors, no source-module fallback. Test discovery/lint/typecheck/whole existing suite must pass. No real installed-agent/production compatibility, independent review, UI or deployment claims from local packing.
 
 Next concrete implementation: extract existing service route registration into one authenticated gateway; add machine capture/delete routes mapped directly to capture/deleteMemory; implement typed versioned transport client and packed CLI; then official SDK MCP transport with real protocol-client acceptance. Inventory/schema findings above must shape schemas before publishing a new API contract.
+
+## Implementation reconciliation — admission8
+
+Current resume HEAD43712a12f0938b20ba27fb7da0c235dff53e771e; original baseline preserved. Direct source check found two bounded defects in this candidate spec: FR-A1 and accepted capture-v1 explicitly prohibit an alternate REST capture endpoint, and accepted threshold is a non-authoritative proposal hint, not an authority field. Therefore capture/delete are bound MCP tools on authenticated POST /mcp, not a new generic REST add route. SDK/CLI/stdio bridge all call this official MCP transport. Existing human review/read/operations APIs share one core gateway admission. Threshold remains accepted as a hint with no promotion power. `memory_get(kind=receipt)` satisfies own exact capture receipt read-back; semantic remains default. No legacy rollout or product security changes are implied.
+
+## Local acceptance — admission9, 2026-10-27
+
+Implemented `foundation/src/{core-api,mcp-api,consumer-client,consumer-cli,consumer-mcp}.ts`, concrete five-tool contracts and private packed0.1.0-dev.1 with declarations. `scripts/pack-consumer.ts` creates unique artifact directories, input/build-script/tarball hashes and source revision/dirty evidence; never overwrites existing artifacts. Tests install into a clean consumer, perform frozen reinstall and declaration checking, run actual pinned Node24.19.0/Bun1.3.14 SDK/CLI and official stdio/HTTP clients, not source-relative imports. CLI runtime discovery uses the real Node executable while retaining scrubbed child environment; no profile/global changes.
+
+Candidate assumption corrected without weakening access: accepted001 authority migration forbids machine workspace_admin grants. Consequently machine five-tool deletion denies; signed human `/mcp/human` shares the same implementation, current-authority and same-origin admission, and supports exact-revision soft deletion/replay/conflict. Human approval remains separate. First-use/tool/package disclosures state this explicitly. Tests assert the database human-grant guard itself, machine denial, actual signed-human MCP deletion and subsequent second-machine disappearance/revocation. No new role/permission/migration was introduced.
+
+Red evidence: admission9-hardening-red.log exposed null-status coercion and overwritten caller artifact; admission9-abort-red.log exposed missing connect cancellation. Fixed and exercised. Added shared MCP/API admission exhaustion with stalled body cancellation, enum-array/null rejection, actual stalled HTTP abort, oversized packed CLI/stdio framing and redacted failures. Discovery requires these cases. `bun run check:all` exit0 at2026-10-27T05:37:55-04:00,132tests/1005assertions, DB103/802, zero failed/skipped/missing; independent lint/typecheck pass. Raw evidence: Operations/direct-build-20261026/admission9-story6.2-final.log. No independent development review, publication, installed-agent compatibility, browser/interactive graph or deployment claim. Proceed6.3; local consumer acceptance is not complete product/release acceptance.

@@ -29,6 +29,11 @@ const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions:
   'work budget admits lazily and retains timed out slots until real settlement',
   'work budget cancellation never starts pre-aborted work and signals admitted work',
   'work budget validates finite ceilings and accounts for synchronous rejection',
+] }, {requiredFile:'./tests/consumer-client.test.ts',minAssertions:17,requiredCases:[
+  'consumer rejects insecure redirected credential-bearing and malformed endpoint configuration',
+  'consumer bounds stalled credentials and oversized replies with redacted errors',
+  'consumer never follows redirects or retries an ambiguous request',
+  'consumer abort cancels actual stalled HTTP response without retry or credential output',
 ] }];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');

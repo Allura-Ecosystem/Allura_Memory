@@ -6,10 +6,12 @@ import { submitRestoration } from './restoration.ts';
 import { deleteMemory,knowledgeHistory } from './lifecycle.ts';
 import { getProposal,getProposalEvidence } from './proposals.ts';
 import { DatabaseStore } from './persistence.ts';
-import { createGateway } from './gateway.ts';
+import { createGateway,type Route } from './gateway.ts';
 export function createReviewGateway(sql:SQL,human:HumanConfig,origin:string):(request:Request)=>Promise<Response>{
   const store=new DatabaseStore(sql);
-  return createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes:[
+  return createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes:createReviewRoutes(sql)});
+}
+export function createReviewRoutes(sql:SQL):Route[]{return [
     {path:'/api/review/restoration',method:'POST',identity:'human',action:'proposal:write',handle:async({identity,scope,body})=>JSON.parse(await submitRestoration(sql,identity,scope,body!))},
     {path:'/api/memory/delete',method:'POST',identity:'human',action:'memory:delete',handle:async({identity,scope,body})=>JSON.parse(await deleteMemory(sql,identity,scope,body!))},
     {path:'/api/memory/history',method:'POST',identity:'human',action:'memory:read',handle:async({identity,scope,body})=>{
@@ -26,5 +28,5 @@ export function createReviewGateway(sql:SQL,human:HumanConfig,origin:string):(re
       if(!body||Object.keys(body).some(k=>!['proposalId','version','eventId'].includes(k))||typeof body.proposalId!=='string'||typeof body.version!=='number'||typeof body.eventId!=='string'){throw new DecisionError('invalid');}
       return getProposalEvidence(sql,identity,scope,body.proposalId,body.version,body.eventId);
     }},
-  ]});
+  ];
 }
