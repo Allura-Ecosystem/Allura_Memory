@@ -16,7 +16,8 @@
     "typecheck": "bun run check:toolchain && node node_modules/typescript/bin/tsc --project tsconfig.json --noEmit",
     "lint": "bun run check:toolchain && node node_modules/eslint/bin/eslint.js src tests scripts eslint.config.mjs --max-warnings 0",
     "check": "bun run test && bun run typecheck && bun run lint",
-    "check:all": "bun run check && bun run test:db"
+    "check:all": "bun run check && bun run test:db",
+    "ci": "bun scripts/ci.ts"
   },
   "devDependencies": {
     "@types/bun": "1.3.14",

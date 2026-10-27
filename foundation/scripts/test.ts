@@ -34,6 +34,10 @@ const suites = [{ requiredFile: './tests/transform-text.test.ts', minAssertions:
   'consumer bounds stalled credentials and oversized replies with redacted errors',
   'consumer never follows redirects or retries an ambiguous request',
   'consumer abort cancels actual stalled HTTP response without retry or credential output',
+] }, {requiredFile:'./tests/ci-contract.test.ts',minAssertions:30,requiredCases:[
+  'CI rejects malformed or mismatched source and dirty checkouts',
+  'CI accepts only complete same-source same-attempt successful nonzero lanes',
+  'CI test summaries require exact unit discovery and reject failure skip duplicates and empty assertions',
 ] }];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');
