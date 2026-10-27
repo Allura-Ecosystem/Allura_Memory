@@ -1,6 +1,6 @@
 ---
 title: '6.4 Isolated core release and verified recovery'
-status: in-progress
+status: done
 created: 2026-10-27
 baseline_commit: 866c7c6334004f95583fd5bd3dbe7a3892208154
 ---
@@ -30,3 +30,9 @@ Admission11 executed recovery concurrency red, fixed per-target admission and de
 `admission11-full1.log`: `bun run --cwd foundation check:all`, exit0 at10:40:33 EDT,146 tests/1113 assertions; restricted DB112/859; no failures/skips/missing named cases, lint/typecheck passed. Required discovery includes configuration, six recovery cases and three clean packaged release cases. Native runtime boundary arrived before the local implementation commit/exact clean-source CI receipt. That final acceptance remains pending; hosted CI remains unexecuted. The subsequent documentation edits did not change tested runtime code.
 
 Qualification: same Linux host, clean isolated install directories/disposable resources and synthetic signed identities, not another physical machine/production rollout or independently human-rated usefulness. Hashes prove integrity only, not artifact authenticity, confidentiality or dependency/model-cache signatures. Startup checks schema presence; exact migration digests are enforced by initializer/recovery. Role creation/login setup can outlive a failed subsequent phase; discard the explicitly owned fresh fixture rather than assuming whole-procedure rollback. Five-second graceful shutdown is bounded and unknown writes require receipt recovery. Ephemeral PostgreSQL bindings must be rediscovered after restart. The backup capability API is process-owned and cannot attach to an existing deployment; no scheduled production backup policy is implied. These limitations are documented, not bypassed.
+
+### Admission12 exact-source closure
+
+Direct final-diff self-check found that shipped recovery still expected a Git checkout. Added a real extracted-package backup/restore regression: first failed on scrubbed Docker context, then on `recovery_source_unavailable`. The fixture now passes only the observed local Unix Docker socket, not unrelated credentials; packaged recovery uses its verified release manifest and actual shipped hashes, with a strictly bounded source-checkout path only for development. The new case is required by DB discovery. This is a repaired acceptance gap, not independent review.
+
+Implementation commit `3a5e9c96b4cc8015bdb571a1a920f693e633ffca` passed clean exact-source `bun run ci 3a5e9c96b4cc8015bdb571a1a920f693e633ffca`, exit0 at11:09:23 EDT:147 tests/1117 assertions (unit34/254, restricted DB113/863). All six same-attempt lane log hashes verified against `admission12-ci-attempts/allura-ci-TLrj6Q/attempt.json` in the external direct-build Operations receipts. Installed-package recovery, clean initialization, authentication, native model, server/database restart and all negatives actually ran. Copied the exact tested archive/receipt to `releases/3a5e9c96b4cc8015bdb571a1a920f693e633ffca/` there; SHA256 `c8c96d56546978f0fc58b9562e3095835311ab3cc4d2a56f14b2df7d2e76d4d1`. No new archive was substituted for tested bytes. Final read-only Docker inventories showed no remaining recovery-labelled containers/volumes/networks. Story6.4 locally accepted; Story6.5 deployed/hosted acceptance remains separate and unauthorized. The closure edit changes only this evidence document, not the tested runtime.
