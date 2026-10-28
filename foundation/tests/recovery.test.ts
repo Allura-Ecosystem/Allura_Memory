@@ -14,7 +14,8 @@ import {drainIndexBatch} from '../src/indexing.ts';
 import {loadLocalEmbedder} from '../src/embedding.ts';
 import {searchIndex} from '../src/retrieval-index.ts';
 import {createCoreGateway} from '../src/core-api.ts';
-import {randomBytes} from 'node:crypto';
+import {createHash,randomBytes} from 'node:crypto';
+import {RecoveryProcessError} from '../src/recovery-diagnostics.ts';
 let source:RecoveryTarget,first:RecoveryTarget,second:RecoveryTarget,root:string,f:Awaited<ReturnType<typeof fixture>>,one:string,two:string,event1:string,event2:string;
 let captureReceipt:string,semanticId:string;
 async function canonical(sql:SQL){const result:Record<string,string>={};for(const table of ['events','capture_receipts','semantic_versions','semantic_heads','decision_receipts','semantic_provenance','source_vectors','proposal_audit','operation_observations','read_audit']){result[table]=(await sql.unsafe(`SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text AS data FROM allura.${table} t`))[0].data;}return result;}
@@ -52,6 +53,18 @@ test('restore hashes actual archive and rejects missing corrupt traversal and in
  await writeFile(modified,JSON.stringify({...manifest,embedding:{...manifest.embedding,dimensions:1024}}));await expect(restoreRecovery(target,modified)).rejects.toThrow('recovery_manifest');
  await rm(archive);await expect(restoreRecovery(target,one)).rejects.toThrow('recovery_integrity');
  const sql=new SQL(await recoveryConnection(target));try{expect((await sql`SELECT count(*)::integer AS n FROM pg_namespace WHERE nspname='allura'`)[0].n).toBe(0);}finally{await sql.close();}
+ }finally{await closeRecoveryTarget(target);}
+},60000);
+test('actual restore child failure retains bounded redacted diagnostics and no restored schema',async()=>{
+ const target=await createRecoveryTarget(),directory=await mkdtemp(join(root,'child-failure-'));
+ try{
+  const payload='not-a-pg-archive synthetic-private-archive-value',manifest=JSON.parse(await readFile(two,'utf8'));
+  manifest.archive={file:'archive.dump',bytes:Buffer.byteLength(payload),sha256:createHash('sha256').update(payload).digest('hex')};
+  await writeFile(join(directory,'archive.dump'),payload);await writeFile(join(directory,'manifest.json'),JSON.stringify(manifest));
+  let failure:unknown;try{await restoreRecovery(target,join(directory,'manifest.json'));}catch(error){failure=error;}
+  expect(failure).toBeInstanceOf(RecoveryProcessError);const error=failure as RecoveryProcessError;expect(error.message).toBe('recovery_restore_failed');expect(error.diagnostic.exit).not.toBe(0);expect(error.diagnostic.phase).toBe('restore');expect(error.diagnostic.stderr.bytes).toBeGreaterThan(0);expect(error.diagnostic.stderr.retainedBytes).toBeLessThanOrEqual(8192);expect(JSON.stringify(error)).not.toContain('synthetic-private');
+  console.log(JSON.stringify({recoveryFailureWitness:error.diagnostic}));
+  const sql=new SQL(await recoveryConnection(target));try{expect((await sql`SELECT count(*)::integer AS n FROM pg_namespace WHERE nspname='allura'`)[0].n).toBe(0);}finally{await sql.close();}
  }finally{await closeRecoveryTarget(target);}
 },60000);
 test('backup deadline removes partial output and emits no successful manifest',async()=>{

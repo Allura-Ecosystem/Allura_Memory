@@ -44,6 +44,8 @@ try {
   const skip = Number(output.match(/\b(\d+) skip\b/)?.[1] ?? 0);
   const assertions = Number(output.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   const required = [
+    'actual restore child failure retains bounded redacted diagnostics and no restored schema',
+    'experiment multi change handoff persists only the selected replacement with separate receipts',
     'experiment cancelled transaction rolls back pending evidence and leaves no claimed receipt',
     'experiment host bounds admission cancellation and retained work without late submission',
     'experiment submission consumes issued frozen evidence and preserves independent exact proposal review',

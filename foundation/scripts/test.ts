@@ -1,5 +1,8 @@
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
-const suites = [{requiredFile:'./tests/memory-experiment.test.ts',minAssertions:130,requiredCases:[
+const suites = [{requiredFile:'./tests/recovery-diagnostics.test.ts',minAssertions:23,requiredCases:[
+ 'recovery diagnostic bounds retained stderr and exposes only allowlisted hints',
+ 'recovery process diagnostics distinguish exit signal and stream failure without guessing cause',
+]},{requiredFile:'./tests/memory-experiment.test.ts',minAssertions:130,requiredCases:[
  'experiment disposable lifecycle preserves base through checkpoints forks tombstones and rollback',
  'experiment exports only exact review required candidates and denies tamper stale bases and replay',
  'experiment rejects forged identities foreign owners and revoked current access',

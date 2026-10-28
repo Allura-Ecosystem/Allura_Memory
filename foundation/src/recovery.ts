@@ -8,6 +8,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {EMBEDDING} from './embedding.ts';
 import {verifyCoreRelease} from './core-release.ts';
 import {recoveryConnection,startRecoveryDump,startRecoveryRestore,type RecoveryTarget} from './recovery-target.ts';
+import {collectRecoveryDiagnostic,RecoveryProcessError,type RecoveryDiagnostic} from './recovery-diagnostics.ts';
 const root=fileURLToPath(new URL('..',import.meta.url)),MAX=256*1024*1024;
 type Migration={version:number;digest:string};
 type Manifest={format:'allura-recovery-v1';id:string;sourceTarget:string;createdAt:string;archive:{file:'archive.dump';bytes:number;sha256:string};source:{head:string;dirty:boolean;inputs:Record<string,string>};migrations:Migration[];embedding:typeof EMBEDDING};
@@ -32,10 +33,10 @@ export async function backupRecovery(target:RecoveryTarget,parent:string,options
   await tx.unsafe("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY; SET LOCAL idle_in_transaction_session_timeout='65000'");
   const expected=await migrations(),actual=await tx`SELECT version,digest FROM allura.schema_migrations ORDER BY version`;if(JSON.stringify(actual.map((r:Migration)=>({version:r.version,digest:r.digest})))!==JSON.stringify(expected)){throw new Error('recovery_schema');}
   const [snapshot]=await tx`SELECT pg_export_snapshot() AS id`;await mkdir(parent,{recursive:true});directory=await mkdtemp(join(parent,'backup-'));await chmod(directory,0o700);const output=await open(join(directory,'archive.dump'),'wx',0o600);
-  let process:ReturnType<typeof startRecoveryDump>|undefined,stderr:Promise<void>=Promise.resolve(),bytes=0;const digest=createHash('sha256');
-  try{process=startRecoveryDump(target,timeoutMs,snapshot.id);stderr=drain(process.stderr).catch(()=>{});
+  let process:ReturnType<typeof startRecoveryDump>|undefined,stderr:Promise<RecoveryDiagnostic>|undefined,bytes=0;const digest=createHash('sha256'),started=performance.now();
+  try{process=startRecoveryDump(target,timeoutMs,snapshot.id);stderr=collectRecoveryDiagnostic(process.stderr);
    for await(const chunk of process.stdout){options.signal?.throwIfAborted();bytes+=chunk.byteLength;if(bytes>MAX){throw new Error('recovery_size');}digest.update(chunk);await output.writeFile(chunk);}
-   if(await process.exited!==0||bytes===0){throw new Error('recovery_dump_failed');}await stderr;options.signal?.throwIfAborted();await output.sync();
+   const exit=await process.exited,diagnostic=await stderr;if(exit!==0||bytes===0||diagnostic.readFailed){throw new RecoveryProcessError('dump',exit,process.signalCode,Math.round(performance.now()-started),diagnostic);}options.signal?.throwIfAborted();await output.sync();
    const manifest:Manifest={format:'allura-recovery-v1',id:randomUUID(),sourceTarget:target.id,createdAt:new Date().toISOString(),archive:{file:'archive.dump',bytes,sha256:digest.digest('hex')},source:await provenance(),migrations:expected,embedding:EMBEDDING};
    const manifestPath=join(directory,'manifest.json');await writeFile(manifestPath,JSON.stringify(manifest,null,2),{flag:'wx',mode:0o600});return manifestPath;
   }finally{process?.kill();await process?.exited;await stderr;await output.close();}
@@ -67,7 +68,7 @@ async function restoreVerified(target:RecoveryTarget,manifestPath:string):Promis
    if(Object.values(state).some(value=>value!==0)){throw new Error('recovery_target_not_empty');}
    const [role]=await sql`SELECT rolsuper,rolbypassrls,rolcanlogin FROM pg_roles WHERE rolname='allura_app'`;if(role){throw new Error('recovery_target_not_empty');}
    await sql.unsafe('CREATE ROLE allura_app NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS');
-   const process=startRecoveryRestore(target,snapshot);const [, ,exit]=await Promise.all([drain(process.stdout),drain(process.stderr),process.exited]);if(exit!==0){throw new Error('recovery_restore_failed');}
+   const started=performance.now(),process=startRecoveryRestore(target,snapshot);const [,diagnostic,exit]=await Promise.all([drain(process.stdout),collectRecoveryDiagnostic(process.stderr),process.exited]);if(exit!==0||diagnostic.readFailed){throw new RecoveryProcessError('restore',exit,process.signalCode,Math.round(performance.now()-started),diagnostic);}
    const restored=await sql`SELECT version,digest FROM allura.schema_migrations ORDER BY version`;if(JSON.stringify(restored.map((r:Migration)=>({version:r.version,digest:r.digest})))!==JSON.stringify(manifest.migrations)){throw new Error('recovery_schema');}
   }finally{await sql.close();}
  }finally{await rm(stage,{recursive:true,force:true});}

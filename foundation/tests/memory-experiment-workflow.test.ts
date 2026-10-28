@@ -34,6 +34,23 @@ test('experiment workflow binds every engine operation to exact owner and curren
   expect(await counts()).toEqual(before);expect((await workflow.engine.view(f.identities.machine,f.scope,workflow.branch.branchId)).records).toHaveLength(1);
  }finally{workflow.engine.destroy();}
 });
+test('experiment multi change handoff persists only the selected replacement with separate receipts',async()=>{
+ const first=await initial('First independent source'),second=await initial('Second independent source'),w=await openMemoryExperiment(f.app,f.identities.machine,f.scope,[first.semantic_version_id,second.semantic_version_id],60000);
+ try{
+  await w.engine.execute(f.identities.machine,f.scope,{kind:'put',branchId:w.branch.branchId,expectedRevision:0,operationKey:'first',memoryId:first.semantic_version_id,content:'Selected first hypothesis'});
+  await w.engine.execute(f.identities.machine,f.scope,{kind:'put',branchId:w.branch.branchId,expectedRevision:1,operationKey:'second',memoryId:second.semantic_version_id,content:'Unselected private second hypothesis'});
+  const candidate=await w.engine.candidate(f.identities.machine,f.scope,{branchId:w.branch.branchId,expectedRevision:2,operationKey:'pair',memoryIds:[first.semantic_version_id,second.semantic_version_id],rationale:'Only a selected change is submitted'}),key=randomUUID(),before=await counts();expect(candidate.changes).toHaveLength(2);
+  const receipt=await w.submit(candidate,first.semantic_version_id,key),r=JSON.parse(receipt),after=await counts();expect(after.proposal_versions).toBe(before.proposal_versions!+1);expect(after.semantic_versions).toBe(before.semantic_versions);
+  const [witness]=await f.owner`SELECT payload FROM allura.events WHERE group_id=${f.scope.groupId} AND payload->'metadata'->>'source_id'=${candidate.candidateDigest}`;
+  expect(JSON.parse(witness.payload.content).change.memoryId).toBe(first.semantic_version_id);expect(witness.payload.content).not.toContain(second.semantic_version_id);expect(witness.payload.content).not.toContain('Unselected private second hypothesis');
+  await expect(w.submit(candidate,second.semantic_version_id,key)).rejects.toThrow('conflict');expect(await counts()).toEqual(after);expect(await w.submit(candidate,first.semantic_version_id,key)).toBe(receipt);expect(await counts()).toEqual(after);
+  const secondKey=randomUUID(),secondReceipt=JSON.parse(await w.submit(candidate,second.semantic_version_id,secondKey));expect(secondReceipt.proposal_id).not.toBe(r.proposal_id);expect((await getProposal(f.app,f.identities.reviewer,f.scope,secondReceipt.proposal_id)).summary).toBe('Unselected private second hypothesis');
+  const p1=await getProposal(f.app,f.identities.reviewer,f.scope,r.proposal_id),p2=await getProposal(f.app,f.identities.reviewer,f.scope,secondReceipt.proposal_id);expect(p1.state).toBe('pending');expect(p2.state).toBe('pending');
+  await decideProposal(f.app,f.identities.reviewer,f.scope,{proposalId:p1.id,reviewedProposalVersion:1,operationKey:randomUUID(),decision:'reject',rationale:'First hypothesis rejected independently',evidenceIds:p1.evidenceIds});
+  const approved=JSON.parse(await decideProposal(f.app,f.identities.reviewer,f.scope,{proposalId:p2.id,reviewedProposalVersion:1,operationKey:randomUUID(),decision:'approve',rationale:'Second hypothesis independently approved',evidenceIds:p2.evidenceIds}));expect(approved.knowledge_id).toBe(second.knowledge_id);
+  expect((await f.owner`SELECT current_version_id FROM allura.semantic_heads WHERE group_id=${f.scope.groupId} AND knowledge_id=${first.knowledge_id}`)[0].current_version_id).toBe(first.semantic_version_id);expect((await counts()).semantic_versions).toBe(before.semantic_versions!+1);
+ }finally{w.engine.destroy();}
+});
 test('experiment host bounds admission cancellation and retained work without late submission',async()=>{
  const base=await initial(),host=createMemoryExperimentHost(f.app,{capacity:1,timeoutMs:500});
  let release!:()=>void,started!:()=>void;const entered=new Promise<void>(r=>{started=r;}),held=new Promise<void>(r=>{release=r;});let late:unknown;
