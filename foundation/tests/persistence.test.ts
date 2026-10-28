@@ -109,19 +109,21 @@ test('rollback leaves no partial events and reused pool clears scope', async () 
 });
 
 test('current revocation membership lock binding and role are enforced', async () => {
-  const transitions: [string,string][] = [
-    ['UPDATE allura.principals SET active=false','UPDATE allura.principals SET active=true'],
-    ['UPDATE allura.memberships SET active=false','UPDATE allura.memberships SET active=true'],
-    ['UPDATE allura.workspace_grants SET active=false','UPDATE allura.workspace_grants SET active=true'],
-    ['UPDATE allura.workspaces SET locked=true','UPDATE allura.workspaces SET locked=false'],
-    ['UPDATE allura.identity_bindings SET active=false','UPDATE allura.identity_bindings SET active=true'],
-    ["UPDATE allura.workspace_grants SET role='viewer'","UPDATE allura.workspace_grants SET role='workspace_admin'"],
+  const transitions: [string,string,string,string[]][] = [
+    ['UPDATE allura.principals SET active=false','UPDATE allura.principals SET active=true',' WHERE id=$1',[principal]],
+    ['UPDATE allura.memberships SET active=false','UPDATE allura.memberships SET active=true',' WHERE group_id=$1 AND principal_id=$2',[groupId,principal]],
+    ['UPDATE allura.workspace_grants SET active=false','UPDATE allura.workspace_grants SET active=true',' WHERE group_id=$1 AND principal_id=$2',[groupId,principal]],
+    ['UPDATE allura.workspaces SET locked=true','UPDATE allura.workspaces SET locked=false',' WHERE group_id=$1',[groupId]],
+    ['UPDATE allura.identity_bindings SET active=false','UPDATE allura.identity_bindings SET active=true',' WHERE principal_id=$1',[principal]],
+    ["UPDATE allura.workspace_grants SET role='viewer'","UPDATE allura.workspace_grants SET role='workspace_admin'",' WHERE group_id=$1 AND principal_id=$2',[groupId,principal]],
   ];
-  for (const [deny, restore] of transitions) {
-    await owner.unsafe(deny);
+  const unrelated=await owner`SELECT group_id,workspace_id,principal_id,role,active FROM allura.workspace_grants WHERE principal_id<>${principal}::uuid ORDER BY group_id,workspace_id,principal_id`;
+  for (const [deny, restore, clause, parameters] of transitions) {
+    await owner.unsafe(deny+clause,parameters);
     try { await expect(readEvents(app, identity, scope)).rejects.toThrow('forbidden'); }
-    finally { await owner.unsafe(restore); }
+    finally { await owner.unsafe(restore+clause,parameters); }
   }
+  expect(await owner`SELECT group_id,workspace_id,principal_id,role,active FROM allura.workspace_grants WHERE principal_id<>${principal}::uuid ORDER BY group_id,workspace_id,principal_id`).toEqual(unrelated);
   expect(await readEvents(app, identity, scope)).toHaveLength(1);
 });
 
