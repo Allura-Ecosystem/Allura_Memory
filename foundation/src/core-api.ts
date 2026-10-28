@@ -13,7 +13,10 @@ import {createDeviceRoutes} from './device-api.ts';
 import {createDashboardRoutes} from './dashboard-api.ts';
 import {createProjectionRoutes} from './projection-api.ts';
 import {type ProjectionTransport} from './projection-delivery.ts';
-export function createCoreGateway(sql:SQL,human:HumanConfig,origin:string,cursorKey:Uint8Array,provider:Embedder,projection?:ProjectionTransport):(request:Request)=>Promise<Response>{
+import {createBumblebeeConfigurationRoutes} from './bumblebee-configuration-api.ts';
+import {createBumblebeeScannerGateway,type BumblebeeScannerOptions} from './bumblebee-lease-api.ts';
+export function createCoreGateway(sql:SQL,human:HumanConfig,origin:string,cursorKey:Uint8Array,provider:Embedder,projection?:ProjectionTransport,scannerOptions?:BumblebeeScannerOptions):(request:Request)=>Promise<Response>{
  const store=new DatabaseStore(sql);
- return createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes:[...createAccessRoutes(sql),...createEvidenceRoutes(sql),...createReviewRoutes(sql),...createRetrievalRoutes(sql,cursorKey,provider),...createOperationsRoutes(sql,provider,scope=>projection?.configured(scope)??false),...createMcpRoutes(sql,cursorKey,provider),...createDeviceRoutes(sql),...createDashboardRoutes(sql),...createProjectionRoutes(sql,projection)]});
+ const normal=createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes:[...createAccessRoutes(sql),...createEvidenceRoutes(sql),...createReviewRoutes(sql),...createRetrievalRoutes(sql,cursorKey,provider),...createOperationsRoutes(sql,provider,scope=>projection?.configured(scope)??false),...createMcpRoutes(sql,cursorKey,provider),...createDeviceRoutes(sql),...createDashboardRoutes(sql),...createProjectionRoutes(sql,projection),...createBumblebeeConfigurationRoutes(sql,scannerOptions?{redaction:{key:scannerOptions.redactionKey,revision:scannerOptions.redactionKeyRevision}}:{})]}),scanner=scannerOptions?createBumblebeeScannerGateway(sql,scannerOptions):undefined;
+ return request=>scanner&&['/api/bumblebee/lease','/api/bumblebee/ingest'].includes(new URL(request.url).pathname)?scanner(request):normal(request);
 }

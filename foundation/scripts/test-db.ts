@@ -36,7 +36,7 @@ try {
   }
   if (!server) { throw new Error('Disposable TCP readiness exhausted'); }
   console.log(JSON.stringify({ image, server, target: 'isolated-loopback-disposable', container: name }));
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/projection-delivery.test.ts', './tests/projection-browser.test.ts', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/bumblebee-persistence.test.ts', './tests/bumblebee-leases.test.ts', './tests/bumblebee-configuration.test.ts', './tests/projection-delivery.test.ts', './tests/projection-browser.test.ts', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -44,6 +44,27 @@ try {
   const skip = Number(output.match(/\b(\d+) skip\b/)?.[1] ?? 0);
   const assertions = Number(output.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   const required = [
+    'packed core leases actual pinned scanner evidence over verified TLS without executing package scripts',
+    'Bumblebee inventory bounds projection honestly and never merges changed root populations',
+    'Bumblebee real HTTPS ingest returns durable receipts and authenticated read back with strict bounded ingress',
+    'Bumblebee durable ingest atomically accepts sanitized evidence and exact concurrent replay',
+    'Bumblebee incomplete late empty and foreign populations preserve exact current inventory boundaries',
+    'Bumblebee durable ingest denies exclusive audience revoked authority and rejected catalog before body',
+    'Bumblebee durable fault boundaries roll back evidence heads alerts simulations and receipts',
+    'Bumblebee real HTTPS delivers bound credentials with certificate verification and no proxy trust',
+    'Bumblebee lease current authority locks bound revocation and cancelled reads cannot mint leases',
+    'Bumblebee runner issuance is explicit source bound hash only and one time with safe replay',
+    'Bumblebee leases serialize monotonic generations and exact credential scoped replay without plaintext',
+    'Bumblebee leases recheck owner source catalog revocation and expiry before replay',
+    'Bumblebee lease and enrollment deferred audit faults roll back counters credentials and immutable history',
+    'Bumblebee lease HTTP authenticates before body rejects mixed audiences and cancels bounded reads',
+    'Bumblebee configuration binds human source revision evidence and exact concurrent replay',
+    'Bumblebee configuration rejects implicit machine foreign and revoked authority before disclosure',
+    'Bumblebee catalog approval pins normalized provenance stable entries and explicit source binding',
+    'Bumblebee catalog rejects malformed provenance time authority and executable metadata',
+    'Bumblebee configuration audit failures roll back and private immutable tables reject direct writes',
+    'Bumblebee catalog audit rollback preserves old trust and exact immutable history',
+    'Bumblebee configuration HTTP authenticates before payload and binds CSRF scope and strict commands',
     'projection real transport requires independent fresh read back not successful PATCH response',
     'projection delayed write and fresh process restart reconcile without a second mutation',
     'projection conflict redirect overflow malformed rate limits and cancellation never permit blind writes',

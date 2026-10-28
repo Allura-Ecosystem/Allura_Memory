@@ -1,5 +1,24 @@
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
-const suites = [{requiredFile:'./tests/projection-contract.test.ts',minAssertions:88,requiredCases:[
+const suites = [{requiredFile:'./tests/bumblebee-wire.test.ts',minAssertions:77,requiredCases:[
+ 'Bumblebee wire validates the pinned upstream package golden identity',
+ 'Bumblebee wire accepts observed finding and summary shapes with exact identity parity',
+ 'Bumblebee wire rejects malformed unknown and malicious record data without echoes',
+ 'Bumblebee wire enforces bytes lines records nesting and duplicate JSON keys',
+ 'Bumblebee wire accepts exact total byte ceiling and rejects Unicode byte overflow',
+ 'Bumblebee wire uses Go UTF8 ordering for lifecycle identity fields',
+]},{requiredFile:'./tests/bumblebee-ingestion.test.ts',minAssertions:235,requiredCases:[
+ 'Bumblebee ingestion prepares an empty complete population without claiming durable acceptance',
+ 'Bumblebee ingestion checks gateway authority and lease bindings before reading body',
+ 'Bumblebee ingestion rejects mixed runs duplicate IDs wrong population and incomplete streams',
+ 'Bumblebee ingestion preserves partial error late and stale evidence without retiring inventory',
+ 'Bumblebee ingestion computes scoped verified exposure and fixed simulated proposals from packages',
+ 'Bumblebee ingestion rejects unbound expired invalidated or foreign catalogs and fabricated findings',
+ 'Bumblebee ingestion distinguishes exact and conflicting replay and deduplicates across runs',
+ 'Bumblebee ingestion rechecks revocation and expiry and keeps transport uncertainty unknown',
+ 'Bumblebee ingestion preserves safe partial summary detail and rejects oversized correlation work',
+ 'Bumblebee ingestion defends snapshot drift replay revocation and key ownership',
+ 'Bumblebee ingestion uses server generation not scanner clocks for freshness ordering',
+]},{requiredFile:'./tests/projection-contract.test.ts',minAssertions:88,requiredCases:[
  'projection destination parsing rejects authority injection and implicit remote targets',
  'projection digest binds exact scoped source destination revision and content without normalization',
  'projection read back verifies actual content and exact target rather than remote acknowledgement',

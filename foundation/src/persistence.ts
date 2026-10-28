@@ -4,7 +4,7 @@ import { resolveAuthority, AuthorityError, type AuthorityStore, type AuthorityRe
 import { type Identity, type MachineCredential } from './authentication.ts';
 
 export async function migrate(owner: SQL): Promise<'applied' | 'unchanged'> {
-  const migrations = await Promise.all(['001-authority.sql', '002-access.sql', '003-capture.sql', '004-proposals.sql', '005-decisions.sql', '006-corrections.sql', '007-lifecycle.sql', '008-restoration.sql', '009-index.sql', '010-retrieval.sql', '011-federation.sql', '012-operations.sql', '013-device-authority.sql', '014-device-lifecycle.sql', '015-projection.sql'].map(async (file, index) => {
+  const migrations = await Promise.all(['001-authority.sql', '002-access.sql', '003-capture.sql', '004-proposals.sql', '005-decisions.sql', '006-corrections.sql', '007-lifecycle.sql', '008-restoration.sql', '009-index.sql', '010-retrieval.sql', '011-federation.sql', '012-operations.sql', '013-device-authority.sql', '014-device-lifecycle.sql', '015-projection.sql', '016-bumblebee-configuration.sql', '017-bumblebee-leases.sql', '018-bumblebee-ingestion.sql'].map(async (file, index) => {
     const source = await Bun.file(new URL(`../migrations/${file}`, import.meta.url)).text();
     return { version: index + 1, source, digest: createHash('sha256').update(source).digest('hex') };
   }));

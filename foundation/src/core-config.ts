@@ -1,15 +1,22 @@
-import {createPublicKey} from 'node:crypto';
+import {createPublicKey,timingSafeEqual} from 'node:crypto';
+import {isAbsolute,normalize} from 'node:path';
+import {type BumblebeeScannerOptions} from './bumblebee-lease-api.ts';
 import {type HumanConfig} from './authentication.ts';
-export type CoreConfig={host:'127.0.0.1';port:number;origin:string;human:HumanConfig;databaseUrl:string;cursorKey:Uint8Array};
+export type CoreConfig={host:'127.0.0.1';port:number;origin:string;human:HumanConfig;databaseUrl:string;cursorKey:Uint8Array;scanner?:BumblebeeScannerOptions;tls?:Readonly<{certificateFile:string;privateKeyFile:string}>};
 export function parseCoreConfig(raw:unknown,environment:Readonly<Record<string,string|undefined>>):CoreConfig{
  try{
   if(!raw||typeof raw!=='object'||Array.isArray(raw)){throw new Error();}const input=raw as Record<string,unknown>;
-  if(Object.keys(input).length!==5||Object.keys(input).some(k=>!['origin','issuer','audience','port','keys'].includes(k))||typeof input.origin!=='string'||typeof input.issuer!=='string'||typeof input.audience!=='string'||!input.audience.trim()||input.audience.length>1024||!Number.isSafeInteger(input.port)||(input.port as number)<0||(input.port as number)>65535||!/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(input.issuer)){throw new Error();}
+  if(Object.keys(input).length<5||Object.keys(input).length>7||Object.keys(input).some(k=>!['origin','issuer','audience','port','keys','scanner','tls'].includes(k))||typeof input.origin!=='string'||typeof input.issuer!=='string'||typeof input.audience!=='string'||!input.audience.trim()||input.audience.length>1024||!Number.isSafeInteger(input.port)||(input.port as number)<0||(input.port as number)>65535||!/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(input.issuer)){throw new Error();}
   const origin=new URL(input.origin);if(origin.protocol!=='https:'||origin.origin!==input.origin||origin.username||origin.password||new URL(input.issuer).origin!==input.issuer){throw new Error();}
   if(!Array.isArray(input.keys)||input.keys.length<1||input.keys.length>8){throw new Error();}const keys=new Map<string,ReturnType<typeof createPublicKey>>();
   for(const entry of input.keys){if(!entry||typeof entry!=='object'||Object.keys(entry).length!==2||typeof entry.kid!=='string'||entry.kid.length<1||entry.kid.length>128||keys.has(entry.kid)||typeof entry.pem!=='string'||entry.pem.length>8192||!entry.pem.startsWith('-----BEGIN PUBLIC KEY-----')||!entry.pem.trimEnd().endsWith('-----END PUBLIC KEY-----')){throw new Error();}const key=createPublicKey(entry.pem);if(key.type!=='public'||key.asymmetricKeyType!=='rsa'||(key.asymmetricKeyDetails?.modulusLength??0)<2048){throw new Error();}keys.set(entry.kid,key);}
   const supplied=environment.ALLURA_DATABASE_URL;if(!supplied){throw new Error();}const database=new URL(supplied);if(!['postgres:','postgresql:'].includes(database.protocol)||!['127.0.0.1','[::1]'].includes(database.hostname)||database.username!=='allura_app'||!database.password||database.search||database.hash||!/^\/[a-z][a-z0-9_]{0,62}$/.test(database.pathname)){throw new Error();}
   const encoded=environment.ALLURA_CURSOR_KEY;if(!encoded){throw new Error();}const cursorKey=Buffer.from(encoded,'base64url');if(cursorKey.byteLength!==32||cursorKey.toString('base64url')!==encoded){throw new Error();}
-  return {host:'127.0.0.1',port:input.port as number,origin:input.origin,human:{issuer:input.issuer,audience:input.audience,keys},databaseUrl:supplied,cursorKey};
+  let tls:CoreConfig['tls'],scanner:CoreConfig['scanner'];
+  if(Object.hasOwn(input,'tls')){const t=input.tls as Record<string,unknown>;if(!t||typeof t!=='object'||Array.isArray(t)||Object.keys(t).length!==2||Object.keys(t).some(k=>!['certificateFile','privateKeyFile'].includes(k))){throw new Error();}for(const v of Object.values(t)){if(typeof v!=='string'||v.length>4096||v.includes('\0')||!isAbsolute(v)||normalize(v)!==v){throw new Error();}}tls={certificateFile:t.certificateFile as string,privateKeyFile:t.privateKeyFile as string};}
+  if(Object.hasOwn(input,'scanner')){const s=input.scanner as Record<string,unknown>;if(!tls||!s||typeof s!=='object'||Array.isArray(s)||Object.keys(s).length!==2||Object.keys(s).some(k=>!['leaseKeyRevision','redactionKeyRevision'].includes(k))||Object.values(s).some(v=>typeof v!=='string'||!/^[-a-zA-Z0-9._:]{1,64}$/.test(v))){throw new Error();}
+   const key=(name:string)=>{const text=environment[name];if(!text){throw new Error();}const bytes=Buffer.from(text,'base64url');if(bytes.length!==32||bytes.toString('base64url')!==text||timingSafeEqual(bytes,cursorKey)){throw new Error();}return bytes;},leaseKey=key('ALLURA_BUMBLEBEE_LEASE_KEY'),redactionKey=key('ALLURA_BUMBLEBEE_REDACTION_KEY');if(timingSafeEqual(leaseKey,redactionKey)){throw new Error();}scanner={leaseKey,redactionKey,keyRevision:s.leaseKeyRevision as string,redactionKeyRevision:s.redactionKeyRevision as string};
+  }
+  return {host:'127.0.0.1',port:input.port as number,origin:input.origin,human:{issuer:input.issuer,audience:input.audience,keys},databaseUrl:supplied,cursorKey,...(tls?{tls}:{}),...(scanner?{scanner}:{})};
  }catch{throw new Error('core_configuration_invalid');}
 }
