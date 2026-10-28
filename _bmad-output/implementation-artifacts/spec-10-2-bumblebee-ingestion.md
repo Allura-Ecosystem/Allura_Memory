@@ -2,7 +2,7 @@
 title: Story10.2 authenticated leased scanner evidence
 created: 2026-10-28
 type: feature
-status: in-progress
+status: done
 route: dispatch
 baseline_commit: 1158c1ce9ce67a44ff605229acb4c696cd1394a5
 context: []
@@ -40,7 +40,7 @@ Preserve contracts/bumblebee-v1.md, REQ-BMB-006–016, AD-57/60/63, current expl
 - [x] TDD exclusive runner/ingest credential issuance, leased current owner/source/catalog checks and server generation/replay.
 - [x] Persist sanitized batch/records/decisions/current head/alerts/simulations atomically; negative scope/redaction/concurrency/fault tests.
 - [x] Actual bounded pinned runner→HTTPS receiver→restricted PostgreSQL→installed/headless read-back and failure witnesses (owned Linux-amd64 npm project and pypi user-package baseline fixtures; explicit compatibility limits below).
-- [ ] Current full and exact-source gates/direct self-check, close only locally exercised10.2 criteria.
+- [x] Current full and exact-source gates/direct self-check, close only locally exercised10.2 criteria.
 
 ## Design Notes
 Ordinary design is delegated. Source/catalog configuration uses existing signed-human workspace:grants:manage, never organization inheritance. Enroll a source without a catalog first; approve a scoped catalog revision for that source; explicitly revise source to bind it. This eliminates circular absent-source catalog authority. Human operation keys are exact replay identities, not general automation permissions. Source owner binding follows the exact authenticated actor/issuer/subject of each immutable revision. Disabled and revised heads do not erase history. Catalog source URLs remain provenance declarations, not network fetches; feed allowlist stays empty. Source fingerprints adopt candidate scoped HMAC root recipe when runner binding is implemented, never raw paths.
@@ -69,4 +69,6 @@ Human issue/revoke routes are composed into existing configuration/core routes a
 Admission29 preflight verified six owned hashes/branch/worktree/STOP. Actual Brooks/Woz and native renderer loaded; missing old runtime maps to guidelines/ALLURA-BMAD.md. Brain recall failed; no repair. Explicit direct-build authority replaces vendor reviewer/routine approval detours; vendor bodies unchanged. Parallel handoff read; both candidates already READY. Pure10 candidate imported on28; canonical registered full check on29 passed, raw admission29-candidate-full.log. Candidate11 remains outside canonical. This specification is implementation context, not live Allura task status.
 
 ## Verification
+Local10.2 acceptance —2026-10-28: runtime/source commit b52ea3c54bc9f694700416bc4d3ecbc62ec8558d. Admission34 full check exit0:254tests/2905assertions,0fail/skip,617browser assertions/10scenarios, typecheck/lint passed. A fresh plain git-archive export of that exact commit (private scratch index, no new branch/worktree, protected parent README excluded unchanged) reran six local CI lanes: install/typecheck/lint/unit/model/database all exit0,254tests/2905assertions. This is a separate execution of tests, NOT independent developer review or hosted CI. Exact attempt: Operations/direct-build-20261026/releases/b52ea3c54bc9f694700416bc4d3ecbc62ec8558d/allura-ci-xOnZ1A/attempt.json. Installed fixture journeys run inside its database lane. Exact-source package: allura-core-artifact-q4EZiS/allura-core-0.1.0-dev.1.tar.gz under the same release directory, SHA2560af68324e36136e49cac0468d7a8e1b6255247149ca7ab52b4b66ea85ce879cf; verified tarball digest,93 declared input hashes, sourceDirty:false and exact sourceHead. Raw full/CI/pack logs and exported source manifest are admission34-story-full.log, admission34-exact-ci.log, admission34-pack.log, admission34-export.json. All10.2 matrix rows are locally exercised;10.3 module lifecycle/UI, Epic10 retro and actual production/human/external release acceptance remain open. No root README publication, external transfer, deployment or policy expansion occurred. Chronological notes above preserve prior incomplete states, not current acceptance.
+
 Use test-first focused suites, strict current discovery, restricted disposable PostgreSQL faults/revocation/concurrency, typecheck/lint and full `bun run check:all`. Actual HTTPS/runner and eventual UI behavior need their own evidence, never fixture-port DTO claims. Keep raw logs under Operations/direct-build-20261026/admission29-*.log.
