@@ -1,5 +1,20 @@
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
-const suites = [{requiredFile:'./tests/memory-experiment-contract.test.ts',minAssertions:26,requiredCases:[
+const suites = [{requiredFile:'./tests/memory-experiment.test.ts',minAssertions:130,requiredCases:[
+ 'experiment disposable lifecycle preserves base through checkpoints forks tombstones and rollback',
+ 'experiment exports only exact review required candidates and denies tamper stale bases and replay',
+ 'experiment rejects forged identities foreign owners and revoked current access',
+ 'experiment operation keys survive rollback and disposal and checkpoints cannot cross branches',
+ 'experiment expiry clips fork lifetime and idle expiry prevents resurrection',
+ 'experiment rejects malformed payloads without invoking accessors or changing revision',
+ 'experiment quarantines poisoned descendants and cleanup survives exhausted operation quota',
+ 'experiment caps branches checkpoints payload bytes and lifetime without partial effects',
+ 'experiment rechecks after async reads rejects concurrent admission and snapshots caller commands',
+ 'experiment quarantine reaches descendants through a disposed intermediate fork',
+ 'experiment views label hypothetical content without claiming a canonical version',
+ 'experiment compares fixed RAM Durham fixtures deterministically without self reward or promotion',
+ 'experiment fails closed on source failures late teardown and candidate shape poisoning',
+ 'experiment snapshot binds immutable scoped bytes and rejects authority injection',
+]},{requiredFile:'./tests/memory-experiment-contract.test.ts',minAssertions:26,requiredCases:[
  'experiment contract preserves exact immutable scope version text and digest',
  'experiment contract rejects foreign duplicate malformed and authority bearing data',
  'experiment contract rejects accessors sparse arrays and finite budget excess',
