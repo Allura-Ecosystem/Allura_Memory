@@ -1,5 +1,9 @@
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
-const suites = [{requiredFile:'./tests/bumblebee-wire.test.ts',minAssertions:77,requiredCases:[
+const suites = [{requiredFile:'./tests/memory-experiment-contract.test.ts',minAssertions:26,requiredCases:[
+ 'experiment contract preserves exact immutable scope version text and digest',
+ 'experiment contract rejects foreign duplicate malformed and authority bearing data',
+ 'experiment contract rejects accessors sparse arrays and finite budget excess',
+]},{requiredFile:'./tests/bumblebee-wire.test.ts',minAssertions:77,requiredCases:[
  'Bumblebee wire validates the pinned upstream package golden identity',
  'Bumblebee wire accepts observed finding and summary shapes with exact identity parity',
  'Bumblebee wire rejects malformed unknown and malicious record data without echoes',
