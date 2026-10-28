@@ -91,7 +91,7 @@ test('packed recovery backs up and restores without a source checkout or git pro
    const destination=await createRecoveryTarget();targets.push(destination);await restoreRecovery(destination,manifestPath);const restored=new SQL(await recoveryConnection(destination));connections.push(restored);const [row]=await restored.unsafe('SELECT value FROM public.package_witness');
    console.log(JSON.stringify({marker:row.value,migrations:manifest.migrations.length,releaseProvenance:true}));
   }finally{for(const connection of connections){await connection.close();}for(const target of targets.reverse()){await closeRecoveryTarget(target);}await rm(output,{recursive:true,force:true});}
- `],{PATH:environment.PATH!,HOME:directory,TMPDIR:tmpdir(),DOCKER_HOST:dockerHost});expect(result.exit).toBe(0);expect(JSON.parse(result.stdout)).toEqual({marker:'packed archive selected exactly',migrations:18,releaseProvenance:true});
+ `],{PATH:environment.PATH!,HOME:directory,TMPDIR:tmpdir(),DOCKER_HOST:dockerHost});expect(result.exit).toBe(0);expect(JSON.parse(result.stdout)).toEqual({marker:'packed archive selected exactly',migrations:19,releaseProvenance:true});
 },120000);
 test('packed dashboard serves integrity bound browser assets without granting anonymous content',async()=>{
  await start();try{const base=new URL('/dashboard',endpoint),shell=await fetch(base);expect(shell.status).toBe(200);expect(shell.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");expect(shell.headers.get('cache-control')).toBe('no-store');const html=await shell.text();expect(html).toContain('/assets/app.js');expect(html).not.toContain(f.scope.groupId);

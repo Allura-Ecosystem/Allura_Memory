@@ -1,8 +1,8 @@
 import {type Scope} from './authority.ts';
 import {viewOutcome,type DashboardState} from './dashboard-contract.ts';
 export class DashboardError extends Error{constructor(readonly code:DashboardState){super(`dashboard_${code}`);this.name='DashboardError';}}
-const getRoutes=new Set(['/api/dashboard/context','/api/health','/api/evidence','/api/projection/configuration']);
-const postRoutes=new Set(['/api/dashboard/proposals','/api/memory/list','/api/memory/get','/api/memory/search','/api/memory/graph','/api/memory/history','/api/memory/delete','/api/review/proposal','/api/review/evidence','/api/review/submit','/api/review/correction','/api/review/restoration','/api/review/decision','/api/operations','/api/access','/api/devices/command','/api/index/drain','/api/projection/authorize','/api/projection/process','/api/projection/revoke']);
+const getRoutes=new Set(['/api/apps','/api/dashboard/context','/api/health','/api/evidence','/api/projection/configuration']);
+const postRoutes=new Set(['/api/apps/configure','/api/apps/view','/api/dashboard/proposals','/api/memory/list','/api/memory/get','/api/memory/search','/api/memory/graph','/api/memory/history','/api/memory/delete','/api/review/proposal','/api/review/evidence','/api/review/submit','/api/review/correction','/api/review/restoration','/api/review/decision','/api/operations','/api/access','/api/devices/command','/api/index/drain','/api/projection/authorize','/api/projection/process','/api/projection/revoke']);
 function checkedScope(scope:Scope):Scope{if(!scope||typeof scope.groupId!=='string'||!/^allura-[a-z0-9][a-z0-9-]{0,79}$/.test(scope.groupId)||typeof scope.workspaceId!=='string'||! /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(scope.workspaceId)){throw new DashboardError('invalid');}return Object.freeze({groupId:scope.groupId,workspaceId:scope.workspaceId});}
 // No auth headers, token source, localStorage or retries. Browser-managed same-origin
 // HttpOnly identity only. Server authority, not this routing scope, decides access.

@@ -27,9 +27,9 @@ export function routineEligible(input:BumblebeeSource,value:unknown,generation:n
  return v.profile===s.profile&&v.status==='complete'&&!v.timedOut&&v.suppressed===0&&v.diagnostics===0&&v.packageCount===v.receivedPackages&&v.findingCount===v.receivedFindings&&(v.findingCount===0||s.catalogRevisionId!==null)&&JSON.stringify(roots)===JSON.stringify(s.roots.map(r=>r.digest))&&generation>currentGeneration;
 }
 const modules=Object.freeze({bumblebee:Object.freeze(['evidence:read','health:read']), 'memory-review':Object.freeze(['review:read'])});
-export type ModuleDescriptor=Readonly<{id:keyof typeof modules;version:'1.0.0';core:'allura-core-v1';dependencies:readonly string[];capabilities:readonly string[];enabled:true}>;
+export type ModuleDescriptor=Readonly<{id:keyof typeof modules;version:'1.0.0'|'1.0.1';core:'allura-core-v1';dependencies:readonly string[];capabilities:readonly string[];enabled:true}>;
 function moduleDescriptor(value:unknown):ModuleDescriptor{
- const v=object(value,['id','version','core','dependencies','capabilities','enabled']);valid(typeof v.id==='string'&&Object.hasOwn(modules,v.id));valid(v.version==='1.0.0'&&v.core==='allura-core-v1'&&v.enabled===true);dense(v.dependencies,0,0);
+ const v=object(value,['id','version','core','dependencies','capabilities','enabled']);valid(typeof v.id==='string'&&Object.hasOwn(modules,v.id));valid((v.version==='1.0.0'||v.version==='1.0.1')&&v.core==='allura-core-v1'&&v.enabled===true);dense(v.dependencies,0,0);
  const id=v.id as keyof typeof modules,caps=dense(v.capabilities,1,2);valid(caps.every(c=>typeof c==='string'&&modules[id].includes(c))&&new Set(caps).size===caps.length);valid(caps.length===modules[id].length);
  return Object.freeze({id,version:v.version,core:v.core,dependencies:Object.freeze([]),capabilities:Object.freeze([...(caps as string[])].sort()),enabled:true});
 }

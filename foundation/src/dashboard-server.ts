@@ -11,7 +11,7 @@ export async function createDashboardHandler(api:(request:Request)=>Promise<Resp
   const url=new URL(request.url);if(request.url.length>2048){return new Response(null,{status:414,headers});}
   if(request.method==='GET'){
    const asset=assets.get(url.pathname);if(asset){return new Response(new Uint8Array(asset.bytes).buffer,{headers:{...headers,'Content-Type':asset.type}});}
-   if(DASHBOARD_ROUTES.some(route=>route.path===url.pathname)||url.pathname==='/dashboard/search'){return new Response(html,{headers:{...headers,'Content-Type':'text/html; charset=utf-8'}});}
+   if(DASHBOARD_ROUTES.some(route=>route.path===url.pathname)||['/dashboard/search','/dashboard/apps/bumblebee','/dashboard/apps/memory-review'].includes(url.pathname)){return new Response(html,{headers:{...headers,'Content-Type':'text/html; charset=utf-8'}});}
   }
   return api(request);
  };
