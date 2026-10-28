@@ -1,5 +1,16 @@
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
-const suites = [{requiredFile:'./tests/dashboard-graph.test.ts',minAssertions:30,requiredCases:[
+const suites = [{requiredFile:'./tests/projection-contract.test.ts',minAssertions:88,requiredCases:[
+ 'projection destination parsing rejects authority injection and implicit remote targets',
+ 'projection digest binds exact scoped source destination revision and content without normalization',
+ 'projection read back verifies actual content and exact target rather than remote acknowledgement',
+ 'projection claim policy never rewrites ambiguous work or bypasses due authority and attempt ceilings',
+]},{requiredFile:'./tests/bumblebee-contract.test.ts',minAssertions:140,requiredCases:[
+ 'Bumblebee source canonicalization preserves immutable bounded populations',
+ 'Bumblebee source rejects scope command schema drift and malformed inputs without disclosure',
+ 'Bumblebee lease commands and credential routes never cross audiences',
+ 'Bumblebee routine eligibility never retires inventory from incomplete or foreign populations',
+ 'Bumblebee data only modules fail independently without expanding capability',
+]},{requiredFile:'./tests/dashboard-graph.test.ts',minAssertions:30,requiredCases:[
  'graph presentation rejects malformed duplicate dangling and unbounded source shapes',
  'graph filters and deterministic layout preserve visible endpoints and finite work',
 ]},{ requiredFile: './tests/transform-text.test.ts', minAssertions: 19, requiredCases: [

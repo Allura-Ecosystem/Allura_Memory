@@ -1,0 +1,42 @@
+{
+  "repository": "https://github.com/perplexityai/bumblebee",
+  "tag": "v0.1.2",
+  "annotatedTag": "59f4ba1cece7b86a02651a7c140c27bf66823fbe",
+  "commit": "cc57710eeaf685e7b89924a36c8583cad0a378fe",
+  "schema": "0.1.0",
+  "wireScannerVersion": "v0.1.2",
+  "source": {
+    "url": "https://codeload.github.com/perplexityai/bumblebee/tar.gz/cc57710eeaf685e7b89924a36c8583cad0a378fe",
+    "sha256": "91278026b7ce79048231de789b59203c68e1204e7cd414a518891d38324aa405"
+  },
+  "license": {
+    "spdx": "Apache-2.0",
+    "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "url": "https://raw.githubusercontent.com/perplexityai/bumblebee/cc57710eeaf685e7b89924a36c8583cad0a378fe/LICENSE",
+    "noticePresent": false,
+    "redistribution": "Preserve upstream license and attribution; no scanner bytes vendored here."
+  },
+  "linuxAmd64": {
+    "url": "https://github.com/perplexityai/bumblebee/releases/download/v0.1.2/bumblebee_0.1.2_linux_amd64.tar.gz",
+    "archiveSha256": "53b080cf3ddb692b0c4e5492ef4785b4c54daf1624fcd0fcba3958116a0be8d9",
+    "binarySha256": "3b46f98ab8fa6345a5d39c7483ff37c51b2ee7699aabe51f2a54133f357f6c7a",
+    "goVersion": "go1.25.11",
+    "buildTime": "2026-06-18T15:03:13Z",
+    "checksumsSha256": "6e484673b1f27589b6ac0fed9d6e7c5e0f855b46d17f4bdecad2d223e8b17edc"
+  },
+  "compatibility": {
+    "ecosystems": ["npm", "pypi"],
+    "profiles": ["baseline", "project"],
+    "explicitRootsOnly": true,
+    "findingsOnly": false,
+    "allUsers": false,
+    "externalAdvisoryFeeds": [],
+    "knownDrift": "Source supports agent-skill but package schema omits it; rejected. Compiled default version is 0.1.1; exact official binary emits v0.1.2."
+  },
+  "verification": {
+    "observedAt": "2026-10-27",
+    "method": "Official annotated tag resolved; source and release bytes hashed; release API and checksums matched; source/license inspected; exact binary version and embedded selftest passed locally.",
+    "selftestFindings": 5,
+    "limits": "No independent reproducible build or attestation verification; no deployed scan, source enrollment, or leased HTTPS receiver acceptance. Other release architectures untested."
+  }
+}

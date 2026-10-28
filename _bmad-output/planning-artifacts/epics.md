@@ -15,6 +15,10 @@ The user's sequencing correction supersedes every retain-original-numbering inst
 
 ## Sequence and dependency rule
 
+Controlling scope addition2026-10-27 during admission24: Sabir explicitly requested “Do epic 7”. [Applied local7 decision](sprint-change-proposal-2026-10-27-local-7.md) adopts7.1–7.3 for LOCAL build/tests. Preserve/checkpoint current owned10.1, then prioritize7.1→7.2→7.3 before remaining10/11. Older optional7-unadopted statements below are historical and superseded only for local scope. Actual external destination/data-transfer/credential/grant/deployment authority is NOT supplied. Keep external7 and6/9 release acceptance open without blocking independent authorized local continuation. Deferred12–14 remain excluded.
+
+Controlling amendment after admission23,2026-10-27: Sabir explicitly selected “Continue local Epics 10–11; keep release checks open”. [Applied Correct Course](sprint-change-proposal-2026-10-27-local-10-11.md) supersedes the6.5-only restriction below and admission23's stop-before10/11. Execute dependency-ready LOCAL10 then11, starting10.1;9.4/Epic9 and6.5/Epic6 remain OPEN for actual human tasks, deployed visual/journey acceptance, hosted CI and operational recovery. Functional/upstream/provenance/license/security gates remain; no push/deployment/production/grants or optional7/deferred12–14/unapproved upstream adoption. The verified local9 operator/curator surface supplies local dependencies, not human release acceptance.
+
 Approved Correct Course,2026-10-27 after admission13: [local continuation decision](sprint-change-proposal-2026-10-27.md) creates a specific exception to the prior-epic closure rule below. Local6.5 is verified;6.5/Epic6 remain OPEN for hosted CI, deployed journey, actual human witness, operational rollback and final release acceptance. These deployment-only gaps no longer block currently approved dependency-ready LOCAL stories. Optional7 is not adopted and is not a core prerequisite; next is8.1, using locally verified2/6 contracts. Preserve all other functional/local acceptance gates, protected UX/interactive graph, and optional/deferred boundaries. Request scoped staging authorization when the locally testable approved product is ready; no push/production/deployment authority is implied.
 
 Every epic requires closure of the preceding numbered epic before its execution, in addition to the functional dependencies below. Optional/deferred entries preserve the roadmap, not a promise to implement unaccepted scope. If a gate remains open, stop at that entry; changing scope or order requires a specific correct-course decision, not silently skipping to a larger number. Core delivery can be accepted at Epic 6 without claiming the optional roadmap complete.
@@ -27,7 +31,7 @@ Every epic requires closure of the preceding numbered epic before its execution,
 | 4 | Independent review, immutable versions and corrections | 3 evidence/proposals; 2 authority/transactions | Not implemented; AD-67 and affected DOC gates |
 | 5 | Authorized retrieval, graph provenance and evaluation | 4 semantic lifecycle; 2 scoped storage; 3 raw evidence | Not implemented; AD-66 gate |
 | 6 | Core operations, consumer contracts and self-hosted acceptance | 2–5 complete core journey | Not implemented; deployment evidence gates |
-| 7 | Optional confirmed external projection | 4 immutable decisions/outbox; 6 operational truth | Optional; transfer and AD-68 details gated |
+| 7 | Confirmed external projection (local scope adopted) | 4 immutable decisions/outbox; 6 operational truth | LOCAL7.1–7.3 authorized; real transfer/release remains gated |
 | 8 | Device pairing and persistent client authentication | 2 principal/membership; 6 client contracts | Not implemented; real secure-store evidence required |
 | 9 | Governed Memory Command Center and interactive graph | 4 decisions, 5 graph/search, 6 health, 7 projection observations, 8 device evidence | Optional UI; DOC-02/ENT acceptance gates |
 | 10 | Bumblebee and bounded capability modules | 2 isolation; 3 evidence; 4 review; 6 operations; 9 module surface | Retained bounded integration; no enforcement authority |
@@ -104,7 +108,7 @@ Sources: FR-D1/D3/D5/F1/F2, NFR-3/5/7/8, AD-68/71, DEV-AC06–08/11/12, BE-AC02/
 
 Acceptance: local versus hosted versus deployed evidence separated; explicit resource/credential/target authority; no product release by successful build alone. Whole-product/optional roadmap completion is not claimed at this core gate.
 
-## Epic 7 — Optional confirmed external projection
+## Epic 7 — Confirmed external projection (local scope adopted)
 
 Sources: FR-D2, DOC-07, DOC-J09, DEV-AC05, BE-AC06, AD-68 delivery details.
 
@@ -112,7 +116,7 @@ Sources: FR-D2, DOC-07, DOC-J09, DEV-AC05, BE-AC06, AD-68 delivery details.
 - 7.2 Implement durable eligible handoff plus separate delivery observation; immutable decision receipts never change.
 - 7.3 Exercise authorized destination read-back, timeout reconciliation, digest/source/destination conflict, revocation and due-attempt discipline.
 
-Acceptance: `synced` only after matching destination read-back; local HTTP/outbox success is not sync. Unknown remains unknown until reconciled; no duplicate remote writes from blind retry. Optional roadmap gate, not a core prerequisite.
+Acceptance: `synced` only after matching destination read-back; local HTTP/outbox success is not sync. Unknown remains unknown until reconciled; no duplicate remote writes from blind retry. Local disposable destination fixtures exercise behavior but do not close actual external acceptance. This adopted extension remains separately releasable, not a core prerequisite.
 
 ## Epic 8 — Device pairing and persistent client authentication
 

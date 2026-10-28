@@ -32,6 +32,8 @@ Red-first findings fixed: graph button accessible name omitted visible lifecycle
 
 ## Frozen candidate / release boundary
 
+Subsequent approved sequencing amendment after admission23: [local10–11 Correct Course](../planning-artifacts/sprint-change-proposal-2026-10-27-local-10-11.md) supersedes the stop-before10/11 conclusion below. Local9.4 result accepted for that continuation; this story remains in-progress for external release/human acceptance. No missing acceptance is relabeled performed.
+
 Runtime `0c274294ba57123b1167a0b103f3943e3e7781f1` contains the owned14-path implementation. Fresh exact six-lane CI passed at2026-10-27T19:32:07-04:00,194tests/1767assertions plus579 Chromium assertions/9 scenarios. Source, lock, invocation and six log digests verified in Operations `releases/0c274294ba57123b1167a0b103f3943e3e7781f1/allura-ci-9MUisw/attempt.json`.27 enumerated route/viewport combinations and28 axe scans were read/aggregated, zero reported violations; forced-colors manual incompletes retained.
 
 Actual `bun scripts/pack-core.ts` produced the clean-source archive with SHA256 `4c0952f220f9ba95010280ab31c4cab1e0042497ae590ad3b662f14cc178d87d`; archive bytes and all74 shipped input hashes verified. [Release acceptance packet](release-acceptance-2026-10-27.md) binds exact paths, unperformed human tasks, use instructions, authority/onboarding owners and evidence-preserving operational rollback requirements. [Partial retrospective](epic-9-local-retro-2026-10-27.md) rejects FULL Epic9 acceptance while recognizing verified local behavior; no independent developer review occurred.

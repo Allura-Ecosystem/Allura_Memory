@@ -1,5 +1,7 @@
 # Correct Course — defer deployment-only6.5 gate, continue approved local scope
 
+Historical decision retained. The later [explicit local10–11 amendment](sprint-change-proposal-2026-10-27-local-10-11.md) supersedes this document's6.5-only restriction after admission23; all release/security requirements remain open and unchanged.
+
 Approved by Sabir in the current direct-build instruction after admission13 (2026-10-27); Batch application of that explicit decision, not a new request for approval. Brooks architecture/integration, Woz implementation in the existing sole writer. Actual installed `bmad-correct-course/SKILL.md` and checklist read; customization resolver returned empty prepend/append/facts/on_complete, config resolved Allura_Memory/Sabir/English/intermediate. No vendor changes or invented workflow. No independent developer review.
 
 ## 1. Issue and evidence

@@ -46,6 +46,8 @@ Epic8 requested exact retained design/human protocol followed by governed UI and
 
 ## Next owners and acceptance verdict
 
+Subsequent owner decision after admission23: Sabir approved [dependency-ready LOCAL10 then11](../planning-artifacts/sprint-change-proposal-2026-10-27-local-10-11.md), keeping release checks open. This resolves the local sequencing boundary below; the full Epic9 rejected/incomplete acceptance verdict remains accurate.
+
 Sabir: authorize an isolated staging target, allowed hosted push/CI scope separately, identity/onboarding and independent participants, or provide a specific new Correct Course decision for local10/11 continuation while retaining9's release requirements. Brooks: bind that authority to exact bytes, retain unmet requirements and stop rather than infer approval. Woz: execute only the authorized target/flows and fix demonstrated defects with retesting. These are proposed release actions, not actions already performed or a new board.
 
 Verdict: rejected for full Epic9 acceptance because declared9.4 human/deployed/rollback/hosted criteria are unmet. Local implementation and automated evidence are verified; rejection is not an invented code-review blocker. Epic10/11 prerequisites remain as cataloged. Optional7 and deferred12–14 were not adopted. The existing Correct Course exception explicitly covers6.5, not a blanket waiver of later gates. No whole-product completion claim or acceptance override.

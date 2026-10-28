@@ -49,6 +49,8 @@ Release acceptance requires exact hosted CI, deployed DOC-J01–07, actual indep
 
 ## Scope remaining / sequencing boundary
 
+Subsequent controlling approval: Sabir selected local10–11 continuation after admission23. [Correct Course](../planning-artifacts/sprint-change-proposal-2026-10-27-local-10-11.md) supersedes the stop-before10/11 recommendation below, not this packet's unperformed release checks. The frozen0c274294 candidate remains historical local release evidence, not evidence for later code.
+
 Local core/device/operator behavior is exercised, not the whole roadmap.9.4/Epic9 cannot close from this packet. The catalog's6.5 exception is explicitly limited to that release-only gate; it does not silently waive9.4. Epic10 bounded Bumblebee/module work awaits the current9 closure/module-surface dependency and its own upstream/provenance gates. Epic11 experiments await9 curator acceptance and their own limits/provenance decisions. Neither is falsely reported implemented, optional-excluded, or product-adopted. Optional7 and deferred12–14 remain unadopted.
 
 Next authorized action is Sabir's scoped staging/hosted/onboarding/participant decision, or a specific new Correct Course instruction permitting later dependency-ready LOCAL10/11 work while retaining9's release requirements. This is a consequential boundary, not an ordinary engineering question or independent developer-review gate.
