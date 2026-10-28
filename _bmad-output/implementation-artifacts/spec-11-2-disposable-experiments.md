@@ -2,7 +2,7 @@
 title: Story11.2 disposable experiments and fixed fixture comparison
 type: feature
 created: 2026-10-28
-status: in-progress
+status: done
 route: dispatch
 baseline_commit: 77468faea480c6d0d742fd905946fe13e6c07946
 context: []
@@ -35,8 +35,8 @@ Same exact scope/current branded identity, owner-bound finite engine, immutable 
 ## Tasks & Acceptance
 - [x] Missing-module red then byte-identical engine import; registered finite mechanics/negative tests pass.
 - [x] Direct code self-check and additional concrete defects/tests if found; no independent development review.
-- [ ] Full canonical composite check and fail-closed registry proof in disposable copy; source/fixture/witness hashes retained.
-- [ ] Exact-source release verification before story acceptance, with clear local-only limits.11.3 remains pending.
+- [x] Full canonical composite check and fail-closed registry proof in disposable copy; source/fixture/witness hashes retained.
+- [x] Exact-source release verification before story acceptance, with clear local-only limits.11.3 remains pending.
 
 ## Design Notes
 Use accepted11.1 ceilings and replay-denial semantics, not canonical receipt replay. Timer-driven/reference cleanup is not secure erase. Trusted adapter promise cancellation/process-wide admission belongs to11.3 integration before transport exposure; no public route here. Fixture phrases/token overlap are synthetic diagnostic algorithms, not adopted upstream or a general retrieval benchmark. Preserve independent human approval and actual future transactional current-head checks.
@@ -48,3 +48,5 @@ Admission39 integration: complete313-line engine and398-line candidate tests rea
 
 ## Verification
 `bun test tests/memory-experiment.test.ts` red/green; `bun run check:all` actual canonical registered unit/model/restricted DB/browser/type/lint. Disposable registry-negative test must exit nonzero when a required case is absent. Fresh exact git-source six-lane CI/package verification before acceptance; future11.3 must separately prove governed proposal/durable/browser behavior.
+
+Admission40 LOCAL acceptance: preflight full exit0. `admission40-registry-probe.py` copied source to private scratch and renamed one required test only there:14passed/130assertions with runnerExit0, registry EXIT1 and exact missingCases; canonical test unchanged. Direct source/self-check plus minimal registry diff checked; implementation committed150780e4a83183c8ee7953edda9053f1ac5bdb8b. `verify-export-admission40.py` exact archive/private index all six CI lanes exit0,278tests/3197assertions; receipt `releases/150780e4a83183c8ee7953edda9053f1ac5bdb8b/allura-ci-UiRYM5/attempt.json`. Pack exited0,99input hashes/clean-source binding/tar SHA25603790bc9a82322d5072abfa098f6c57e15f17be3a0de8774772504b38b5c5a35 verified at15:27:57-04:00. Package under same release root `allura-core-artifact-kaLnOd/allura-core-0.1.0-dev.1.tar.gz`; raw admission40-exact-ci.log/admission40-pack.log/export manifest in Operations. No hosted CI, deployment, real-data or11.3 acceptance inferred. No independent reviewer ran.
