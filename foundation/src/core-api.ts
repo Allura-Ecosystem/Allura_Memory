@@ -11,7 +11,9 @@ import {createOperationsRoutes} from './operations-api.ts';
 import {createMcpRoutes} from './mcp-api.ts';
 import {createDeviceRoutes} from './device-api.ts';
 import {createDashboardRoutes} from './dashboard-api.ts';
-export function createCoreGateway(sql:SQL,human:HumanConfig,origin:string,cursorKey:Uint8Array,provider:Embedder):(request:Request)=>Promise<Response>{
+import {createProjectionRoutes} from './projection-api.ts';
+import {type ProjectionTransport} from './projection-delivery.ts';
+export function createCoreGateway(sql:SQL,human:HumanConfig,origin:string,cursorKey:Uint8Array,provider:Embedder,projection?:ProjectionTransport):(request:Request)=>Promise<Response>{
  const store=new DatabaseStore(sql);
- return createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes:[...createAccessRoutes(sql),...createEvidenceRoutes(sql),...createReviewRoutes(sql),...createRetrievalRoutes(sql,cursorKey,provider),...createOperationsRoutes(sql,provider),...createMcpRoutes(sql,cursorKey,provider),...createDeviceRoutes(sql),...createDashboardRoutes(sql)]});
+ return createGateway({human,origin,store,machineLookup:d=>store.lookupMachine(d),routes:[...createAccessRoutes(sql),...createEvidenceRoutes(sql),...createReviewRoutes(sql),...createRetrievalRoutes(sql,cursorKey,provider),...createOperationsRoutes(sql,provider,scope=>projection?.configured(scope)??false),...createMcpRoutes(sql,cursorKey,provider),...createDeviceRoutes(sql),...createDashboardRoutes(sql),...createProjectionRoutes(sql,projection)]});
 }

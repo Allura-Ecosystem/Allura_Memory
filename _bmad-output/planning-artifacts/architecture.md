@@ -84,6 +84,8 @@ PostgreSQL and RuVector are retained architecture direction, not installed-beta 
 
 ## Architecture-to-sequence map
 
+Approved2026-10-28 [parallel candidate exception](sprint-change-proposal-2026-10-28-parallel-10-11.md): parent-created10/11 plain-export workers own disjoint new candidate modules; one canonical writer owns shared schema/transports/UI and verified integration.11 candidate experiments need not wait for10 closure. Actual contracts, dependencies and acceptance remain mandatory; no second durable authority, upstream adoption or production capability follows. Finish7.3/local7 retrospective and finalize10.1 before integrating dependent work; preserve exact candidate base/hash evidence.
+
 Controlling scope addition: [LOCAL7 adoption](sprint-change-proposal-2026-10-27-local-7.md) preserves checkpointed10.1 then prioritizes7.1–7.3 before remaining10/11. Existing semantic_intents/immutable decisions supply durable source evidence; separate authorized transfer/delivery observations cannot mutate receipts or canonical knowledge. Only local disposable destination fixtures are authorized; actual external read/write/credentials/grants and release remain gated. Earlier optional7-unadopted prose is historical, not the current local scope.
 
 Controlling amendment after admission23: [approved local10–11 continuation](sprint-change-proposal-2026-10-27-local-10-11.md) extends the earlier6.5-only exception across9.4 external release acceptance. Use locally tested9 operator/curator contracts for dependency-ready LOCAL10 then11; retain both epics' release requirements and every upstream/provenance/license/isolation/capability gate. No new authority plane, upstream adoption or deployment is implied.

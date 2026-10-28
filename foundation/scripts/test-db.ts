@@ -36,7 +36,7 @@ try {
   }
   if (!server) { throw new Error('Disposable TCP readiness exhausted'); }
   console.log(JSON.stringify({ image, server, target: 'isolated-loopback-disposable', container: name }));
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/projection-delivery.test.ts', './tests/projection-browser.test.ts', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -44,6 +44,12 @@ try {
   const skip = Number(output.match(/\b(\d+) skip\b/)?.[1] ?? 0);
   const assertions = Number(output.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   const required = [
+    'projection real transport requires independent fresh read back not successful PATCH response',
+    'projection delayed write and fresh process restart reconcile without a second mutation',
+    'projection conflict redirect overflow malformed rate limits and cancellation never permit blind writes',
+    'projection durable prewrite crash revocation and concurrent workers do not duplicate remote mutation',
+    'projection HTTP scopes CSRF transfer inputs and observation reads never accept a supplied sync claim',
+    'browser projection authorizes exact transfer reads real sync and preserves unknown revoked observations',
     'projection transfer atomically binds approved source explicit destination and immutable replay',
     'projection rejects unapproved foreign changed source and nonhuman or implicit transfer authority',
     'projection bounded claims fence concurrent workers and durable write marker forbids blind retry',

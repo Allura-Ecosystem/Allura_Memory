@@ -30,4 +30,6 @@ Keep retained Allura shell/branding and real interactive graph. Employees see ta
 
 ## Cross-Story Dependencies
 
+Approved2026-10-28 parallel amendment supersedes serial candidate preparation: parent-created `allura-candidate-epic10` owns new scanner candidate modules, `allura-candidate-epic11` owns separate experiment candidate modules, and the existing worker alone integrates into beta. Follow the [applied decision](../planning-artifacts/sprint-change-proposal-2026-10-28-parallel-10-11.md). Do not duplicate candidate modules or touch active exports. Finalize10.1 before accepting dependent10.2; shared persistence/gateway/UI/discovery and actual integrated tests remain canonical ownership.11 preparation may proceed early; retrospectives and each story's real acceptance remain required.
+
 10.1 binds executable input boundaries and provenance before10.2 transport/storage.10.2 establishes actual evidence before10.3 presentation/acceptance. Existing locally tested authority, capture/proposals, current human review, operation budgets and operator/curator contracts supply dependencies; their external release acceptance is not fabricated. A concise actual retrospective precedes11. Legacy requirements specify intent, not proof restored implementations exist.

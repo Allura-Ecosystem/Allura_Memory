@@ -1,8 +1,8 @@
 import {type Scope} from './authority.ts';
 import {viewOutcome,type DashboardState} from './dashboard-contract.ts';
 export class DashboardError extends Error{constructor(readonly code:DashboardState){super(`dashboard_${code}`);this.name='DashboardError';}}
-const getRoutes=new Set(['/api/dashboard/context','/api/health','/api/evidence']);
-const postRoutes=new Set(['/api/dashboard/proposals','/api/memory/list','/api/memory/get','/api/memory/search','/api/memory/graph','/api/memory/history','/api/memory/delete','/api/review/proposal','/api/review/evidence','/api/review/submit','/api/review/correction','/api/review/restoration','/api/review/decision','/api/operations','/api/access','/api/devices/command','/api/index/drain']);
+const getRoutes=new Set(['/api/dashboard/context','/api/health','/api/evidence','/api/projection/configuration']);
+const postRoutes=new Set(['/api/dashboard/proposals','/api/memory/list','/api/memory/get','/api/memory/search','/api/memory/graph','/api/memory/history','/api/memory/delete','/api/review/proposal','/api/review/evidence','/api/review/submit','/api/review/correction','/api/review/restoration','/api/review/decision','/api/operations','/api/access','/api/devices/command','/api/index/drain','/api/projection/authorize','/api/projection/process','/api/projection/revoke']);
 function checkedScope(scope:Scope):Scope{if(!scope||typeof scope.groupId!=='string'||!/^allura-[a-z0-9][a-z0-9-]{0,79}$/.test(scope.groupId)||typeof scope.workspaceId!=='string'||! /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(scope.workspaceId)){throw new DashboardError('invalid');}return Object.freeze({groupId:scope.groupId,workspaceId:scope.workspaceId});}
 // No auth headers, token source, localStorage or retries. Browser-managed same-origin
 // HttpOnly identity only. Server authority, not this routing scope, decides access.
@@ -20,7 +20,7 @@ export class DashboardTransport{
  close():void{if(!this.#closed){this.#closed=true;this.#reset('closed');}}
  async request(path:string,body?:Record<string,unknown>):Promise<unknown>{
   if(this.#closed){throw new DashboardError('stale');}if(this.#denied){throw new DashboardError('denied');}
-  const get=getRoutes.has(path);if((!get&&!postRoutes.has(path))||(get&&body!==undefined)){throw new DashboardError('invalid');}
+  const get=getRoutes.has(path)||/^\/api\/projection\/delivery\?id=[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(path);if((!get&&!postRoutes.has(path))||(get&&body!==undefined)){throw new DashboardError('invalid');}
   let payload:string|undefined;try{if(!get){if(body!==undefined&&(!body||Array.isArray(body)||typeof body!=='object')){throw new Error();}payload=JSON.stringify(body??{});if(new TextEncoder().encode(payload).length>65536){throw new Error();}}}catch{throw new DashboardError('invalid');}
   if(this.#active.size>=8){throw new DashboardError('unavailable');}
   const epoch=this.#epoch,url=new URL(path,this.#origin);url.searchParams.set('group_id',this.#scope.groupId);url.searchParams.set('workspace_id',this.#scope.workspaceId);
