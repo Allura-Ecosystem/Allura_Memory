@@ -2,7 +2,7 @@
 title: Story10.1 pinned Bumblebee evidence and capability contract
 type: feature
 created: 2026-10-27
-status: in-progress
+status: done
 route: dispatch
 baseline_commit: 714e24303de3785ff8fa327b95397fe9b6b6acbb
 context: []
@@ -40,10 +40,10 @@ Always preserve REQ-BMB-001–016, REQ-MOD-001–006, AD-57/60, FR-F4 and indepe
 
 ## Tasks & Acceptance
 
-- [ ] Inspect official pinned source/license/mode and record exact hashes/schema drift; given tag v0.1.2, resolving its annotated tag must equal the approved commit.
-- [ ] Implement test-first contract primitives and required discovery; given each matrix input, actual tests must exercise its defined behavior and redacted failure.
-- [ ] Define concrete10.2 source/catalog/lease/sanitized batch/current-inventory/alert persistence and transaction contract with scope-qualified keys and no authority expansion.
-- [ ] Direct self-check, all current type/lint/test lanes and local evidence; given passing tests, accept only10.1 contract scope, not receiver/runner/module UI or production.
+- [x] Inspect official pinned source/license/mode and record exact hashes/schema drift; given tag v0.1.2, resolving its annotated tag must equal the approved commit.
+- [x] Implement test-first contract primitives and required discovery; given each matrix input, actual tests must exercise its defined behavior and redacted failure.
+- [x] Define concrete10.2 source/catalog/lease/sanitized batch/current-inventory/alert persistence and transaction contract with scope-qualified keys and no authority expansion.
+- [x] Direct self-check, all current type/lint/test lanes and local evidence; given passing tests, accept only10.1 contract scope, not receiver/runner/module UI or production.
 
 ## Design Notes
 
@@ -58,3 +58,8 @@ Native Brooks/Woz guidance loaded; existing sole worker implements per explicit 
 ## Verification
 
 `bun test tests/bumblebee-contract.test.ts` red then green; `bun run check:all` nonzero current full suite; source/archive hash verification and no protected/vendor changes. Real scanner leased HTTPS acceptance belongs10.2/10.3, not this contract story.
+
+## Local contract acceptance —2026-10-28
+Retained code/provenance from413b7a951f5c119bb16fd74d2c5d586f778e586d was directly rechecked against the six matrix rows and contracts/bumblebee-v1.md. Exact normalized source/population, scoped authority/credential separation, catalog approval/digest, immutable lease/replay, append-only redacted transaction, completeness and module boundaries are specified. No server authentication inferred from route classification or gateway DTOs. Official source/license/binary inspection and selftest evidence remain in admission24-upstream; no reproducible-build claim.
+
+Focused rerun `bun test tests/bumblebee-contract.test.ts` exit0:5tests/147assertions, no failures, Operations/direct-build-20261026/admission28-contract-final.log. Current full and exact-source six-lane local CI at2f03d0c5b01f98c4d44c30a8401b40f24267170d passed216/2176 plus617browser/10scenarios (see Epic7 local retro for raw receipt paths). No independent developer review.10.1 accepted as contract scope only after Epic7 local retro;10.2 transport/database/runner and10.3 module lifecycle/UX remain open. Candidate hashes are verified separately, not accepted by this closure.
