@@ -253,6 +253,11 @@ export class MemoryExperimentEngine {
   }
   /** Authenticity/freshness check inside the issuing process only. Never approval or submission. */
   async verifyCandidate(identity: Identity, requestedScope: Scope, input: unknown): Promise<true> {
+    await this.verifiedCandidate(identity, requestedScope, input);
+    return true;
+  }
+  /** Returns the frozen issued object, never caller-owned references after asynchronous checks. */
+  async verifiedCandidate(identity: Identity, requestedScope: Scope, input: unknown): Promise<ProposalCandidate> {
     return this.#run(async () => {
       const scope = parseScope(requestedScope);
       const owner = await this.#authorize(identity, scope, true);
@@ -264,7 +269,7 @@ export class MemoryExperimentEngine {
       await this.#currentBase(identity, scope, branch);
       if (await this.#authorize(identity, scope, true) !== owner) { throw new AuthorityError('forbidden'); }
       this.#get(branch.meta.branchId, scope, owner);
-      return true as const;
+      return branch.candidate;
     });
   }
   async execute(identity: Identity, requestedScope: Scope, input: unknown): Promise<ExperimentResult> {

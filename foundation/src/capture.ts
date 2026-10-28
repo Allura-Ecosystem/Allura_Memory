@@ -1,4 +1,4 @@
-import { type SQL } from 'bun';
+import { type SQL, type TransactionSQL } from 'bun';
 import { createHash, randomUUID } from 'node:crypto';
 import { type Identity, isAuthenticated } from './authentication.ts';
 import { AuthorityError, type Scope, validScope } from './authority.ts';
@@ -41,12 +41,11 @@ function canonical(value:unknown):string {
 export function captureDigest(scope:Scope,principal:string,input:CaptureInput):string {
   return createHash('sha256').update(canonical(['capture-v1','memory_add',scope.groupId,scope.workspaceId,principal,input.content,input.trace_type,input.threshold,input.metadata])).digest('hex');
 }
-export async function capture(sql:SQL,identity:Identity,scope:Scope,request:unknown):Promise<string> {
+/** Trusted transaction composition only; never exposed as a caller-owned SQL interface. */
+export async function captureInTransaction(tx:TransactionSQL,identity:Identity,scope:Scope,request:unknown):Promise<string> {
   if(!isAuthenticated(identity)){throw new AuthorityError('unauthenticated');}
   if(identity.kind==='human'){throw new AuthorityError('forbidden');}
   const input=normalizeCapture(request);
-  try {
-    return await scopedTransaction(sql,identity,scope,'memory:capture',async tx=>{
       const principal=identity.principalId, digest=captureDigest(scope,principal,input);
       const lock=JSON.stringify([scope.groupId,scope.workspaceId,principal,'memory_add',input.idempotency_key]);
       await tx`SELECT pg_advisory_xact_lock(hashtextextended(${lock},31002))`;
@@ -62,7 +61,13 @@ export async function capture(sql:SQL,identity:Identity,scope:Scope,request:unkn
       await tx`INSERT INTO allura.capture_replay(group_id,workspace_id,principal_id,operation_kind,operation_key,digest,receipt_id,event_id) VALUES (${scope.groupId},${scope.workspaceId}::uuid,${principal}::uuid,'memory_add',${input.idempotency_key},${digest},${receiptId}::uuid,${event}::uuid)`;
       await tx`INSERT INTO allura.index_intents(group_id,workspace_id,id,receipt_id,event_id,principal_id) VALUES (${scope.groupId},${scope.workspaceId}::uuid,${intent}::uuid,${receiptId}::uuid,${event}::uuid,${principal}::uuid)`;
       return receipt;
-    });
+}
+export async function capture(sql:SQL,identity:Identity,scope:Scope,request:unknown):Promise<string> {
+  if(!isAuthenticated(identity)){throw new AuthorityError('unauthenticated');}
+  if(identity.kind==='human'){throw new AuthorityError('forbidden');}
+  const input=normalizeCapture(request);
+  try {
+    return await scopedTransaction(sql,identity,scope,'memory:capture',tx=>captureInTransaction(tx,identity,scope,input));
   } catch(error) {
     if(error instanceof CaptureError||error instanceof AuthorityError){throw error;}
     // A disconnected COMMIT cannot be safely classified as rollback.
