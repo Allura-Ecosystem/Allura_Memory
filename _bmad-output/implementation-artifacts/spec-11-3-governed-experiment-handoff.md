@@ -2,7 +2,7 @@
 title: Story11.3 governed experiment proposal handoff and bounded crew workflows
 type: feature
 created: 2026-10-28
-status: in-progress
+status: done
 route: dispatch
 baseline_commit: b41548732a94e533d33ce35b5af6b51702a92596
 context: []
@@ -39,7 +39,7 @@ PostgreSQL sole durable authority, exact scope/current grant/credential checks, 
 - [x] Restricted snapshot and immutable candidate resolution, finite trusted workflow/current-authority/expiry behavior.
 - [x] Transactional captured experiment evidence+selected pending correction and exact durable replay; malformed/foreign/revoked/stale/expiry/rollback/independence tests.
 - [x] Bounded RAM/Durham workflows plus actual curator browser flow; all named negative cases exercised, no human witness inferred.
-- [ ] Full registered checks, exact-source local CI/package evidence, direct self-check and concise Epic11 retrospective; list external release gates honestly.
+- [x] Full registered checks, exact-source local CI/package evidence, direct self-check and concise Epic11 retrospective; list external release gates honestly.
 
 ## Design Notes
 One selected replacement/call, at most16 branch changes but <=30 original evidence IDs for submission so experiment capture plus correction provenance remain within existing32 total evidence ceiling. Explicit capture permission additional to proposal permission. Atomically capture with stable derived operation key and submitCorrection under same restricted SQL transaction; no partial event on failed proposal. Original captured content contains only selected change and bound candidate identity/digests, not unrelated branch contents. Issued immutable return resolves caller-mutation race. Exact receipt reconciliation after process death must use existing actor-scoped durable correction receipt; no digest-only branch re-import. No new upstream. Initial snapshot IDs must be current; retained immutable versions may outlive advancing head, while final SQL still locks/checks current head. Trusted DB adapter timeout is inherited from scopedTransaction; wrapper admits one submission at a time and checks deadline before committing, never claims hostile-code isolation.
@@ -57,3 +57,21 @@ Two bounded RAM/Durham synthetic flows run through the host factory, checkpoint/
 Test-first missing-module/red then restricted disposable DB and full `bun run check:all`. Preserve existing capture/correction/decision/engine tests and no-skip required-case discovery; inject deferred failure and verify all relevant counts/head/receipt binding. Browser fixtures are automated local evidence only. No claim of actual human tasks or deployment.
 
 Admission41 logs under Operations/direct-build-20261026: preflight-full EXIT0; identity-red EXIT1 (unexpected successful foreign-owner create), identity-green EXIT0; browser-first EXIT1 (actual horizontal overflow), browser-green EXIT0; host-red missing export EXIT1, host-first EXIT1 (test used nonexistent stale code and unscoped witness count), existing DecisionError contract and exact candidate query corrected. workflow-full EXIT0 with744 browser assertions/13scenarios, typecheck/lint/nonzero discovery; added cancellation regression then cancel-green EXIT0, final-typecheck/final-lint EXIT0. Eight workflow tests and one browser journey are required by the registered DB runner, alongside accepted contract/engine and independent-decision/security regressions. Exact committed-source final totals and acceptance follow below when verified.
+
+## Admission42 final LOCAL acceptance / original matrix traceability
+Final tested runtime `1a7545ca86d404e1f9f82e9acddb8cbb0c499b81`, incorporating original11.3 runtime `47dcbb43c41e1664814302ea92da31a4b3d047e4`. All27 experiment cases were programmatically matched to actual passing unit/database log entries, not merely discovered: three contract,14 engine,nine restricted workflow,one actual browser journey. Sources: [workflow cases](../../foundation/tests/memory-experiment-workflow.test.ts), [engine cases](../../foundation/tests/memory-experiment.test.ts), [browser witness](../../foundation/tests/memory-experiment-browser.test.ts).
+
+| Original matrix obligation | Exercised evidence |
+|---|---|
+| Visible exact-scope immutable snapshot | contract strict-parser suite; workflow exact-owner/current provenance authority; foreign/unknown source denial |
+| Fork/checkpoint/edit and selected immutable packet | engine lifecycle/fork/checkpoint/rollback suite; frozen-issued-packet mutation regression; pending handoff preserves semantic counts |
+| Tombstone/multi-change selected-only handoff | tombstone rejected; new two-change SQL test captures only selected content/ID, changed selection on same key conflicts, separate receipt required, independent reject/approve affects only selected knowledge |
+| Forged/revoked/expired/source drift/stale/key conflict | registered engine poisoning/quarantine and source-failure tests; workflow identity/provenance revoke, stale current head, expiry and durable replay tests |
+| Deferred failure/lost acknowledgement | deferred receipt fault and precommit cancellation roll back actual rows; actor-scoped durable receipt read survives engine destroy; no automatic retry or unknown-as-success |
+| Independent exact human review | workflow machine/org/unentitled human denial and proposal-version conflict; existing decision evidence-actor/role-switch regressions; actual curator request-evidence/reject/revoked-approve/fresh-approve controls |
+| Bounded RAM/Durham workflows | real host-factory checkpoint/edit/diff/candidate/submit/dispose in browser fixture; busy/timeout/cancel/retained-admission and terminal disposal tests |
+| Browser/keyboard/receipts/retained graph | real HTTPS signed synthetic human controls, focus containment and phone overflow assertion; existing interactive graph and full surface regressions remain registered |
+
+Exact `bun run ci 1a7545ca86d404e1f9f82e9acddb8cbb0c499b81` in clean plain archive/private index: all six lanes EXIT0,291tests/3345assertions,0fail/skip,744browser assertions/13scenarios. Receipt `releases/1a7545ca86d404e1f9f82e9acddb8cbb0c499b81/allura-ci-uEuskh/attempt.json`, raw lane logs alongside; `admission42-exact-ci.log`, `admission42-export.json`. Pack verifies101input hashes/clean source binding and SHA2562930749e2e5a4245a3cfa965301b088233bc06d0e49cba7d1f3e1f423abcd3bc; archive `allura-core-artifact-VpuzKz/allura-core-0.1.0-dev.1.tar.gz` under that release root. Canonical full before final diagnostic-only assertions:291/3343, EXIT0; final typecheck/lint and focused diagnostics passed. Direct staged diff self-check, no independent developer review. [Epic11 retrospective](epic-11-local-retro-2026-10-28.md) records declared local accepted-with-open-items and disposition **EXPERIMENT**, not adoption.
+
+Recovery authority also required investigating retained admission42 preflight failure. Historical restore child exit/stderr were discarded; underlying cause remains unverified despite unchanged-source parent rerun and current successful restores. Added bounded allowlisted diagnostics and real malformed-archive child regression, not a fabricated root-cause repair. See retrospective riskR1. This known reliability risk plus hosted/deployed/human/operational/real-transfer and manual-accessibility gates remain OPEN; no whole-product readiness, upstream adoption or production use follows from this local story acceptance.
