@@ -9,6 +9,8 @@ baseline_commit: 21147f0e6c73c51cd4c6aba7a3b6396b80a55719
 
 ## Intent and boundaries
 
+Approved delivery clarification, 2026-10-30: [team MCP Correct Course](../planning-artifacts/sprint-change-proposal-2026-10-30-team-mcp.md) separates actual named-client rollout from this operator-surface acceptance. Reconcile subsequent hosted/staging receipts against exact revisions and environments, without relabeling legacy MCP, synthetic identities or a healthy tunnel as human/operator acceptance. Retain actual-human tasks, deployed visual/accessibility checks and applicable operational recovery requirements; status remains in-progress. General dashboard acceptance does not block unrelated authorized client engineering, but necessary human authentication and independent semantic decisions remain mandatory. No protected UI redesign or new policy grant is authorized by this clarification.
+
 Exercise the actual9.2/9.3 interface across approved routes, identities and viewports, while keeping automated self-check separate from independent authorized humans and deployed acceptance. Existing9.1 task protocol is controlling. No independent developer-review agents, invented witnesses or deployment permission. No source/brand redesign, production credentials, optional modules or new policy grants.
 
 ## Existing evidence / code map

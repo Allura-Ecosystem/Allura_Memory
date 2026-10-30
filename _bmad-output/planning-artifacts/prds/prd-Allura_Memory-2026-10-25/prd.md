@@ -182,6 +182,10 @@ No numeric product SLO, retrieval-quality, latency, scale, commercial, or compli
 
 ## 6. Scope and preparation order
 
+### Internal Faith Meats beta delivery — approved 2026-10-30
+
+[Team MCP Correct Course](../../sprint-change-proposal-2026-10-30-team-mcp.md) clarifies a private deployment/use milestone for Sabir, Gabe and Sam. Cloudflare protects remote application access; verified SSH is an operator deployment path. Existing ChatGPT Desktop, Claude Desktop and Gilliam/Hermes clients are integration targets, not authorization to build the deferred Allura desktop product. Routine authorized MCP use does not require general dashboard acceptance; actions requiring independent human authorization retain that requirement. This milestone does not close final core/operator acceptance or authorize public source-history publication. Preserve FR/NFR identities, five-tool semantics and current scoped authority. Legacy-service success is not fresh-beta acceptance; installed-client compatibility and exact build evidence are required before cutover.
+
 ### Core boundary being specified
 
 The core boundary is the minimum governed journey in §1.2, the five-tool surface in §3, authenticated scope, append-only evidence, independent review, immutable semantic versions/receipts/lineage, controlled retrieval, and truthful outcomes. This section is scope, not current implementation or release status.

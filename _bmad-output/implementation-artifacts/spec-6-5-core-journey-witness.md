@@ -9,6 +9,10 @@ baseline_commit: d8f9865991430d1119892068fcc576e69f3ccc3b
 
 # Intent and controlling authority
 
+## Approved delivery clarification — 2026-10-30
+
+[Internal-team MCP Correct Course](../planning-artifacts/sprint-change-proposal-2026-10-30-team-mcp.md) was approved for bounded execution. Reconcile later exact private hosted candidate receipts and isolated staging/rollback observations individually rather than repeating completed gates from stale prose. Credit only the build/environment each receipt actually verifies. Named-client team rollout is a distinct witness: legacy endpoint calls and synthetic humans cannot satisfy it. Real-human core journey and remaining operational acceptance stay open; this story remains in-progress. Dashboard-specific tasks remain in 9.4, without removing human authentication prerequisites from actions that genuinely require them. No release closure, broad production mutation or silently incompatible endpoint replacement follows.
+
 Brooks owns architecture/delivery; Woz implementation guidance is loaded in the existing sole writer, through the installed rendered BMAD build route. Direct self-checks replace independent developer review under Sabir's current explicit methodology. Current user authorization includes local code/tests/disposable resources/local beta commits, NOT publication/deployment/production credentials or access-policy changes. A complete local rehearsal is useful preparation, never a substitute for the actual authorized deployed witness required by the catalog. No new framework, worker, board or independent-review ceremony.
 
 ## Boundaries
