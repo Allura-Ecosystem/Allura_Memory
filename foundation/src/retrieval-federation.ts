@@ -3,7 +3,7 @@ import {type Identity} from './authentication.ts';
 import {type Scope,AuthorityError} from './authority.ts';
 import {scopedTransaction} from './persistence.ts';
 import {DecisionError} from './decisions.ts';
-import {EMBEDDING,boundedIndexWork,validateVector,type Embedder} from './embedding.ts';
+import {boundedIndexWork,validateVector,type Embedder} from './embedding.ts';
 import {validateModel} from './indexing.ts';
 import {nativeSearch,VECTOR_RETRIEVAL_POLICY} from './retrieval-index.ts';
 import {normalizeAllLimit,mergeCandidates,type RetrievalCandidate} from './retrieval-policy.ts';
@@ -35,8 +35,8 @@ export async function searchFederated(sql:SQL,identity:Identity,scope:Scope,inpu
     JOIN allura.semantic_heads h ON h.group_id=p.group_id AND h.workspace_id=p.workspace_id AND h.knowledge_id=p.knowledge_id
     JOIN allura.source_vectors v ON v.group_id=p.group_id AND v.workspace_id=p.workspace_id AND v.source_kind='semantic' AND v.source_id=p.id
     WHERE p.group_id=${scope.groupId} AND p.workspace_id=${scope.workspaceId}::uuid AND (${history} OR (h.current_version_id=p.id AND h.lifecycle='current'))
-    AND v.model_id=${EMBEDDING.model} AND v.model_revision=${EMBEDDING.revision} AND v.dimensions=${EMBEDDING.dimensions} AND v.index_version=${EMBEDDING.indexVersion} ORDER BY p.created_at DESC,p.id LIMIT 257` as Row[];
-   const events=all?await save`SELECT * FROM allura.retrieval_event_vectors(${scope.groupId},${scope.workspaceId}::uuid,257)` as Row[]:[];
+    AND v.model_id=${provider.identity.model} AND v.model_revision=${provider.identity.revision} AND v.dimensions=${provider.identity.dimensions} AND v.index_version=${provider.identity.indexVersion} ORDER BY p.created_at DESC,p.id LIMIT 257` as Row[];
+   const events=all?await save`SELECT * FROM allura.retrieval_event_vectors(${scope.groupId},${scope.workspaceId}::uuid,257,${provider.identity.indexVersion})` as Row[]:[];
    result.candidateTruncated ||= semantics.length>256||events.length>256;const rows=[...semantics.slice(0,256),...events.slice(0,256)];
    const hits=await boundedIndexWork(async workSignal=>{const vector=await provider.embed(query,workSignal);workSignal.throwIfAborted();validateVector(vector);return nativeSearch(rows.map(row=>({id:row.id,embedding:row.embedding!,content:row.content})),vector,limit,query,workSignal);},signal);
    const byId=new Map(rows.map(row=>[row.id,row]));return hits.map(hit=>candidate(byId.get(hit.id)!,'vector',hit.score,'cosine_similarity'));

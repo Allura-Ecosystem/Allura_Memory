@@ -1,5 +1,46 @@
 import {test,expect} from 'bun:test';
 import {AlluraClient,ConsumerError} from '../src/consumer-client.ts';
+import {MEMORY_TOOLS,DISCLOSURE,CONSUMER_CONTRACT} from '../src/consumer-contract.ts';
+import {Server} from '@modelcontextprotocol/sdk/server/index.js';
+import {WebStandardStreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import {CallToolRequestSchema} from '@modelcontextprotocol/sdk/types.js';
+// Controlled MCP peer: this proves SDK classification, not server authorization.
+test('consumer keeps empty success structured errors and unknown tool transport distinct',async()=>{
+ let mode='empty',calls=0;
+ const host=Bun.serve({hostname:'127.0.0.1',port:0,fetch:async request=>{
+  if(request.method!=='POST'){return new Response(null,{status:405});}
+  const peer=new Server({name:'controlled-outcome-peer',version:'1'},{capabilities:{tools:{}}});
+  peer.setRequestHandler(CallToolRequestSchema,async()=>{
+   calls++;
+   if(mode==='empty'){return {content:[{type:'text',text:'empty fixture'}],structuredContent:{contract:CONSUMER_CONTRACT,data:{results:[],outcome:'succeeded',degraded:false}}};}
+   if(mode==='malformed'){return {isError:true,content:[{type:'text',text:'PRIVATE_PEER_DETAIL'}]};}
+   return {isError:true,content:[{type:'text',text:JSON.stringify({outcome:mode,detail:'PRIVATE_PEER_DETAIL'})}]};
+  });
+  const transport=new WebStandardStreamableHTTPServerTransport({enableJsonResponse:true});
+  try{await peer.connect(transport);const response=await transport.handleRequest(request);return new Response(response.status===202?null:await response.text(),{status:response.status,headers:response.headers});}
+  finally{await peer.close();}
+ }});
+ const client=new AlluraClient({endpoint:`http://127.0.0.1:${host.port}/mcp`,groupId:'allura-fixture',workspaceId:'11111111-1111-4111-8111-111111111111',token:async()=> 'x'.repeat(64),allowLoopback:true});
+ try{
+  await client.connect();expect(await client.search({query:'fixture'})).toEqual({results:[],outcome:'succeeded',degraded:false});
+  for(mode of ['not_found','invalid','conflict','unavailable','forbidden','unauthenticated','unknown','malformed']){
+   const outcome=mode==='malformed'?'unknown':mode;
+   await expect(client.search({query:'fixture'})).rejects.toMatchObject({name:'ConsumerError',outcome,message:outcome});
+  }
+  expect(calls).toBe(9);
+  await host.stop(true);
+  await expect(client.search({query:'fixture'})).rejects.toMatchObject({outcome:'unknown',message:'unknown'});
+  expect(calls).toBe(9);
+ }finally{await client.close();await host.stop(true);}
+});
+test('consumer advertised guidance identifies preview limits and exact typed readback without new tools',()=>{
+ expect(MEMORY_TOOLS.map(tool=>tool.name).sort()).toEqual(['memory_add','memory_delete','memory_get','memory_list','memory_search']);
+ const search=MEMORY_TOOLS.find(tool=>tool.name==='memory_search')!,get=MEMORY_TOOLS.find(tool=>tool.name==='memory_get')!;
+ expect(search.description).toContain('contentTruncated');expect(search.description).toContain('kind');
+ expect(search.description).toContain('no full evidence');expect(get.description).toContain('receipt_id as id');expect(get.description).toContain('event_id');
+ expect(get.inputSchema.properties?.kind).toEqual({type:'string',enum:['semantic','receipt']});
+ expect(DISCLOSURE).toContain('not live indexing status');
+});
 const scope={groupId:'allura-fixture',workspaceId:'11111111-1111-4111-8111-111111111111'},token=async()=> 'x'.repeat(64);
 test('consumer rejects insecure redirected credential-bearing and malformed endpoint configuration',()=>{
  for(const endpoint of ['http://example.com/mcp','https://user:pass@example.com/mcp','https://example.com/mcp?user_id=bad','https://example.com/mcp#secret','https://example.com/wrong']){expect(()=>new AlluraClient({endpoint,...scope,token})).toThrow('invalid');}

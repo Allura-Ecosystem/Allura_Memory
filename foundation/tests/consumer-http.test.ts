@@ -8,6 +8,8 @@ import {loadLocalEmbedder} from '../src/embedding.ts';
 import {createCoreGateway} from '../src/core-api.ts';
 import {submitProposal} from '../src/proposals.ts';
 import {captureIndex} from '../src/indexing.ts';
+import {AlluraClient} from '../src/consumer-client.ts';
+import {MEMORY_TOOLS} from '../src/consumer-contract.ts';
 let f:Awaited<ReturnType<typeof fixture>>,server:ReturnType<typeof Bun.serve>,token:string,client:Client,endpoint:URL;
 const data=(result:unknown)=>JSON.parse(((result as CallToolResult).content[0] as TextContent).text) as Record<string,unknown>;
 beforeAll(async()=>{
@@ -47,4 +49,38 @@ test('composed gateway shares admission across MCP and API and cancels stalled b
  try{let status=0;for(let attempt=0;attempt<30&&status!==429;attempt++){await Bun.sleep(10);status=(await handler(new Request(endpoint.href,{headers:{Authorization:`Bearer ${token}`}}))).status;}expect(status).toBe(429);}
  finally{for(const controller of controllers){controller.abort();}await Promise.all(pending);}
  expect((await handler(new Request(endpoint.href,{headers:{Authorization:`Bearer ${token}`}}))).status).toBe(405);
+});
+test('real consumer readback distinguishes receipt evidence preview empty search and denied followup',async()=>{
+ const sdk=new AlluraClient({endpoint:new URL('/mcp',endpoint).href,...f.scope,token:async()=>token,allowLoopback:true});
+ await sdk.connect();
+ try{
+  const tools=(await client.listTools()).tools;expect(tools).toHaveLength(5);
+  for(const expected of MEMORY_TOOLS){expect(tools.find(tool=>tool.name===expected.name)?.description).toBe(expected.description);}
+  const content='Copper lily readback evidence '+ 'Exact source requires governed read access. '.repeat(12),args={content,idempotency_key:'consumer-typed-readback'};
+  const receipt=await sdk.add(args);expect(await sdk.add(args)).toEqual(receipt);expect(receipt.event_id).not.toBe(receipt.receipt_id);
+  expect(receipt).toMatchObject({persistence:'succeeded',proposal:'not_generated',promotion:'not_requested'});
+  expect(await sdk.get({id:String(receipt.receipt_id),kind:'receipt'})).toEqual(receipt);
+  const empty=await sdk.search({query:content});expect(empty).toMatchObject({results:[],outcome:'succeeded',degraded:false});
+  const evidence=await sdk.search({query:content,status:'all'});expect(evidence).toMatchObject({outcome:'succeeded',degraded:false});
+  const hit=(evidence.results as Record<string,unknown>[]).find(row=>row.id===receipt.event_id);
+  expect(hit).toMatchObject({kind:'evidence',approval:'unapproved',content:content.slice(0,256),contentTruncated:true});
+  for(const id of [String(receipt.event_id),String(receipt.receipt_id),randomUUID()]){await expect(sdk.get({id})).rejects.toMatchObject({outcome:'not_found',message:'not_found'});}
+  await expect(sdk.get({id:String(receipt.event_id),kind:'receipt'})).rejects.toMatchObject({outcome:'not_found'});
+  await expect(sdk.invoke('memory_get',{id:receipt.event_id,kind:'evidence'})).rejects.toMatchObject({outcome:'invalid'});
+  const otherPrincipal=randomUUID(),otherToken=randomBytes(32).toString('hex'),digest=createHash('sha256').update(otherToken).digest('hex');
+  await f.owner`INSERT INTO allura.principals(id,kind) VALUES(${otherPrincipal}::uuid,'service')`;
+  await f.owner`INSERT INTO allura.memberships(group_id,principal_id) VALUES(${f.scope.groupId},${otherPrincipal}::uuid)`;
+  await f.owner`INSERT INTO allura.workspace_grants(group_id,workspace_id,principal_id,role,issuer) VALUES(${f.scope.groupId},${f.scope.workspaceId}::uuid,${otherPrincipal}::uuid,'viewer',${f.ids.author}::uuid)`;
+  await f.owner`INSERT INTO allura.machine_credentials(principal_id,digest,group_id,workspace_id,actions,expires_at) VALUES(${otherPrincipal}::uuid,decode(${digest},'hex'),${f.scope.groupId},${f.scope.workspaceId}::uuid,ARRAY['memory:read'],clock_timestamp()+interval '1 hour')`;
+  const other=new AlluraClient({endpoint:new URL('/mcp',endpoint).href,...f.scope,token:async()=>otherToken,allowLoopback:true,terminalDenial:true});
+  try{
+   await other.connect();
+   for(const id of [String(receipt.receipt_id),randomUUID()]){await expect(other.get({id,kind:'receipt'})).rejects.toMatchObject({outcome:'not_found',message:'not_found'});}
+   expect((await other.search({query:content})).results).toEqual([]);
+   await f.owner`UPDATE allura.workspace_grants SET active=false WHERE group_id=${f.scope.groupId} AND workspace_id=${f.scope.workspaceId}::uuid AND principal_id=${otherPrincipal}::uuid`;
+   await expect(other.get({id:String(receipt.receipt_id),kind:'receipt'})).rejects.toMatchObject({outcome:'forbidden',message:'forbidden'});
+   await expect(other.search({query:content})).rejects.toMatchObject({outcome:'invalid'});
+  }finally{await other.close();}
+  expect(await sdk.get({id:String(receipt.receipt_id),kind:'receipt'})).toEqual(receipt);
+ }finally{await sdk.close();}
 });

@@ -12,6 +12,31 @@ CLI: allura-memory memory_add < request.json (likewise memory_search/get/list/de
 
 MCP stdio: configure the installed allura-memory-mcp executable with the same environment. It proxies the same five tools through official MCP transport; it cannot approve semantic memory or grant access. No runtime agent configuration is changed by installation. Human approval uses the separately authenticated same-origin server review API, not machine tools.
 
+## Read-back: match the identifier to the result kind
+
+Capture confirms durable evidence, not approved knowledge. Keep the response's `event_id` and `receipt_id` separately; neither is a semantic-version ID.
+
+| What you have | Supported follow-up | What it proves |
+| --- | --- | --- |
+| Your capture response's `receipt_id` | `await client.get({id: receipt.receipt_id, kind: 'receipt'})` | The exact capture-time receipt, not the source text, current indexing health or approval. |
+| A search hit with `kind: 'semantic'` | `await client.get({id: hit.id})` | The exact authorized semantic version under the current/history policy. Use `history: true` explicitly when reading authorized historical versions. |
+| A search hit with `kind: 'evidence'` / capture `event_id` | Inspect `kind`, `approval` and `contentTruncated`; retain the source reference | A bounded evidence preview. These five tools do not expose a full evidence reader. Do not pass this ID to default get or invent `kind: 'evidence'`. |
+
+For tool calls the request field is `id`, not `receipt_id`: `memory_get({id: capture.receipt_id, kind: 'receipt'})`. An evidence event or receipt ID sent to default semantic get returns `not_found`; this alone does not prove data loss. Receipt lookup is limited to the caller's own capture receipts and does not grant access to another principal's receipt. A receipt's `indexing` value is immutable capture-time state, not a live status probe.
+
+`await client.search({query, status: 'all'})` explicitly includes eligible evidence as well as semantic results. Evidence content is limited to a 256-character preview; `contentTruncated: true` means omitted source text, not a retrieval failure. A match does not imply approval. A successful default search may return no results immediately after capture because no approved semantic version exists yet. Do not claim the full source was read from a truncated preview; request the source through an independently authorized path when the task needs it.
+
+## Distinguish empty results from errors
+
+Read the successful response's `outcome` and degradation information before interpreting `results`. A successful, non-degraded empty result means no eligible match for that request, not that the service failed or evidence was erased. The SDK throws `ConsumerError` for tool errors and transport uncertainty; inspect its sanitized `outcome` rather than converting every exception to `[]`:
+
+- `not_found`: no disclosable record for that exact identifier/kind/current authority; check the identifier class without probing other principals.
+- `forbidden` / `unauthenticated`: access was denied; do not broaden scope or switch credentials automatically.
+- `invalid`, `conflict`, or `unavailable`: the request or service could not complete normally; these are not empty successful searches.
+- `unknown`: transport, timeout or unrecognized response leaves the result uncertain. For writes, reconcile explicitly using the original key and unchanged payload, never a replacement key or automatic retry.
+
+`terminalDenial: true` closes an AlluraClient session after a current authorization denial; later calls on that closed session return `invalid`. PersistentDevice connections enable this behavior. Do not interpret a closed-session error as another server search result. None of these distinctions adds an approval capability, full evidence reader, automatic capture or live-agent tool refresh.
+
 ## Persistent Linux device SDK
 
 Import `PersistentDevice` from `@allura/memory-consumer/device`. This is a Node/Bun SDK, not a browser credential store, a desktop shell or an installed agent configuration. Supported/tested platform: Linux Secret Service with libsecret `secret-tool`, GNOME Keyring, local Unix D-Bus and util-linux `flock`; binaries are `/usr/bin/secret-tool`, `/usr/bin/flock`, `/usr/bin/cat`. A logged-in local session must supply its own `DBUS_SESSION_BUS_ADDRESS` and owner-only `XDG_RUNTIME_DIR`. Missing/locked stores fail closed. No macOS/Windows support, no vault discovery and no plaintext fallback. A host running only the core server does not need these client dependencies. CI creates a private bus/keyring with synthetic keys, not a user's existing vault.

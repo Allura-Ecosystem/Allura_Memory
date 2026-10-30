@@ -84,7 +84,9 @@ const suites = [{requiredFile:'./tests/recovery-diagnostics.test.ts',minAssertio
   'work budget admits lazily and retains timed out slots until real settlement',
   'work budget cancellation never starts pre-aborted work and signals admitted work',
   'work budget validates finite ceilings and accounts for synchronous rejection',
-] }, {requiredFile:'./tests/consumer-client.test.ts',minAssertions:17,requiredCases:[
+] }, {requiredFile:'./tests/consumer-client.test.ts',minAssertions:40,requiredCases:[
+  'consumer keeps empty success structured errors and unknown tool transport distinct',
+  'consumer advertised guidance identifies preview limits and exact typed readback without new tools',
   'consumer rejects insecure redirected credential-bearing and malformed endpoint configuration',
   'consumer bounds stalled credentials and oversized replies with redacted errors',
   'consumer never follows redirects or retries an ambiguous request',
@@ -92,10 +94,36 @@ const suites = [{requiredFile:'./tests/recovery-diagnostics.test.ts',minAssertio
 ] }, {requiredFile:'./tests/ci-contract.test.ts',minAssertions:30,requiredCases:[
   'CI rejects malformed or mismatched source and dirty checkouts',
   'CI accepts only complete same-source same-attempt successful nonzero lanes',
+  'CI strict runner includes embedding and agent drain suites with named cases and assertion floors',
   'CI test summaries require exact unit discovery and reject failure skip duplicates and empty assertions',
 ] }, {requiredFile:'./tests/core-config.test.ts',minAssertions:18,requiredCases:[
   'core configuration binds loopback restricted login explicit origin and public RSA keys',
   'core configuration rejects missing secrets owner credentials remote databases and silent defaults',
+ ] }, {requiredFile:'./tests/machine-only.test.ts',minAssertions:60,requiredCases:[
+ 'explicit machine-only configuration needs no human credentials and permits only canonical numeric loopback origins',
+ 'machine-only transport matches its declared local origin and rejects explicit null mode',
+ 'assembled local runtime denies human API dashboard assets and MCP without touching database',
+ 'machine-only denies human routes before inspecting credentials or content',
+ 'real loopback machine-only HTTP preserves opaque token scope grant and revocation checks',
+] }, {requiredFile:'./tests/openai-embedding.test.ts',minAssertions:60,requiredCases:[
+ 'model validation allows only the two complete distinct identities',
+ 'OpenAI rejects wrong model dimensions norm malformed numeric data and hostile HTTP without echoes',
+ 'OpenAI cancels actual stalled HTTP bodies and its own deadline with sanitized failures',
+ 'OpenAI has no credential or network fallback and the default factory keeps exact local MiniLM',
+ 'OpenAI uses the native pinned request and validates the response on real loopback HTTP',
+ 'OpenAI configuration is explicit strict and requires only the Allura key',
+] }, {requiredFile:'./tests/embedding-identity.test.ts',minAssertions:57,requiredCases:[
+ 'index publishing and all retrieval paths bind the selected identity without default reinterpretation',
+ 'aborted embedding work never publishes a successful vector after late settlement',
+ 'append only migration widens only complete model contracts and preserves old function identities',
+ 'core startup selects the configured factory and advertises sanitized model identity',
+] }, {requiredFile:'./tests/agent-index-drain.test.ts',minAssertions:88,requiredCases:[
+ 'agent drain accepts only one scoped candidate with current machine authority',
+ 'agent drain requires both credential actions and current grants before candidate work',
+ 'agent drain rejects invalid expired revoked mixed and foreign credentials',
+ 'agent drain rejects body overrides and leaves human routes disabled',
+ 'agent drain preserves empty and denied claims without embedding or promotion',
+ 'agent drain rechecks read authority before disclosing completed work',
 ] }, {requiredFile:'./tests/recovery-readiness.test.ts',minAssertions:14,requiredCases:[
   'recovery readiness permits more than sixty fast refusals inside its wall-clock budget',
   'recovery readiness expires with sanitized failure and stops retrying',

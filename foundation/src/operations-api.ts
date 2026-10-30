@@ -16,9 +16,9 @@ export function createOperationsRoutes(sql:SQL,provider:Embedder,projectionConfi
   {path:prefix+'/health',method:'GET',identity,action:'health:read',handle:context=>scopedHealth(sql,context.identity,context.scope,provider,context.signal,projectionConfigured(context.scope))},
   {path:prefix+'/operations',method:'POST',identity,action:'audit:read',handle:context=>listOperations(sql,context.identity,context.scope,context.body!)},
  );}
- routes.push({path:'/api/index/drain',method:'POST',identity:'human',action:'proposal:write',handle:async context=>{
+ for(const identity of ['human','machine'] as const){routes.push({path:identity==='human'?'/api/index/drain':'/api/agent/index/drain',method:'POST',identity,action:'proposal:write',additionalActions:()=>identity==='machine'?['memory:read']:[],handle:async context=>{
   if(!context.body||Object.keys(context.body).length!==0){throw new DecisionError('invalid');}
   return {jobs:await drainIndexBatch(sql,context.identity,context.scope,provider,1,context.signal)};
- }});
+ }});}
  return routes;
 }

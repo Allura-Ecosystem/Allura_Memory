@@ -15,7 +15,7 @@ type Context = Readonly<{ identity: Identity; authority: Authority; scope: Scope
 // Only trusted in-process routes can create this envelope, not parsed user JSON.
 export class GatewayReply {constructor(readonly status:number,readonly body:unknown){if(![200,202,400,405,406,415].includes(status)){throw new Error('invalid response status');}}}
 export type Route = Readonly<{ path: string; method: 'GET' | 'POST'; identity: 'human' | 'machine'; action: Action; additionalActions?: (body:Record<string,unknown>|null,context:Context)=>readonly Action[]|Promise<readonly Action[]>; handle: (context: Context) => Promise<unknown> }>;
-type Options = { human: HumanConfig; origin: string; store: AuthorityStore; machineLookup: (digest: string) => Promise<MachineCredential | null>; routes: readonly Route[]; limits?: Partial<Limits> };
+type Options = { mode?: 'human'|'machine-only'; human?: HumanConfig; origin: string; store: AuthorityStore; machineLookup: (digest: string) => Promise<MachineCredential | null>; routes: readonly Route[]; limits?: Partial<Limits> };
 class GatewayError extends Error { constructor(readonly status: number, readonly outcome: string) { super(outcome); } }
 const response = (status: number, body: unknown): Response => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
 function cookieToken(request: Request): string | undefined {
@@ -53,6 +53,7 @@ async function readObject(request: Request, limit: number, signal: AbortSignal):
   } finally { signal.removeEventListener('abort', cancel); reader.releaseLock(); }
 }
 export function createGateway(options: Options): (request: Request) => Promise<Response> {
+  if ((options.mode !== undefined && options.mode !== 'human' && options.mode !== 'machine-only') || (options.mode === 'machine-only' ? options.human !== undefined : options.human === undefined)) { throw new Error('invalid runtime mode'); }
   const limits = { ...ceilings, ...options.limits };
   for (const key of Object.keys(ceilings) as (keyof Limits)[]) {
     if (!Number.isSafeInteger(limits[key]) || limits[key] < 1 || limits[key] > ceilings[key]) { throw new Error('invalid ingress budget'); }
@@ -69,7 +70,7 @@ export function createGateway(options: Options): (request: Request) => Promise<R
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health/live') { return response(200, { status: 'up' }); }
     const route = routes.get(`${request.method} ${url.pathname}`);
-    if (!route) { return response(404, { outcome: 'not_found' }); }
+    if (!route || (options.mode === 'machine-only' && route.identity === 'human')) { return response(404, { outcome: 'not_found' }); }
     if (active >= limits.concurrency) { return response(429, { outcome: 'unavailable' }); }
     active++;
     const abort = new AbortController();
@@ -82,7 +83,7 @@ export function createGateway(options: Options): (request: Request) => Promise<R
       if (route.identity === 'human') {
         const assertion = request.headers.get('Cf-Access-Jwt-Assertion') ?? undefined;
         const cookie = cookieToken(request);
-        identity = authenticateHuman({ ...(assertion === undefined ? {} : { assertion }), ...(cookie === undefined ? {} : { cookie }) }, options.human);
+        identity = authenticateHuman({ ...(assertion === undefined ? {} : { assertion }), ...(cookie === undefined ? {} : { cookie }) }, options.human!);
         if (request.method !== 'GET') { requireSameOrigin(options.origin, request.headers.get('Origin'), request.headers.get('Sec-Fetch-Site')); }
       } else {
         const authorization = request.headers.get('Authorization');

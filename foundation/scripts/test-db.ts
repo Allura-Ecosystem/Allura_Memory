@@ -216,6 +216,7 @@ try {
     'promotion observations require committed independent decisions and disappear on rollback',
     'saturated provider admission reports unknown readiness without invoking a probe',
     'real MCP initialization and five tools preserve capture replay independent approval and second session reuse',
+    'real consumer readback distinguishes receipt evidence preview empty search and denied followup',
     'MCP boundary rejects authority overrides foreign scope and alternate REST capture',
     'clean packed SDK declarations Node and Bun clients execute real receipt replay without source imports',
     'packed CLI and actual stdio MCP client share governed remote contracts and redact credentials',

@@ -13,7 +13,22 @@ test('CI accepts only complete same-source same-attempt successful nonzero lanes
  expect(()=>validateAttempt(identity,receipts().slice(1))).toThrow();expect(()=>validateAttempt(identity,[...receipts(),receipts()[0]!])).toThrow();
  for(const change of [{exit:1},{logSha256:''},{tests:0},{assertions:0}]){const rows=receipts();Object.assign(rows.find(r=>r.lane==='unit')!,change);expect(()=>validateAttempt(identity,rows)).toThrow();}
 });
+test('CI strict runner includes embedding and agent drain suites with named cases and assertion floors',async()=>{
+ const runner=await Bun.file(new URL('../scripts/test.ts',import.meta.url)).text();
+ const manifest=[...runner.matchAll(/requiredFile:\s*'([^']+)'/g)].map(match=>match[1]);
+ expect(manifest).toEqual([...UNIT_FILES]);
+ for(const file of ['./tests/openai-embedding.test.ts','./tests/embedding-identity.test.ts','./tests/agent-index-drain.test.ts']){
+  expect(UNIT_FILES as readonly string[]).toContain(file);
+  const section=runner.slice(runner.indexOf("requiredFile:'"+file+"'" )).split('requiredFile:')[1]??'';
+  expect(section).toMatch(/minAssertions:\s*[1-9]\d*/);
+  const source=await Bun.file(new URL('../'+file,import.meta.url)).text();
+  for(const match of source.matchAll(/test\('([^']+)'/g)){expect(section).toContain("'"+match[1]+"'");}
+  const rows=UNIT_FILES.map(requiredFile=>({requiredFile,pass:1,fail:0,skip:0,assertions:2,missingCases:[],runnerExit:0}));
+  expect(()=>summarizeTests('unit',rows.filter(row=>row.requiredFile!==file).map(row=>JSON.stringify(row)).join('\n'))).toThrow();
+ }
+});
 test('CI test summaries require exact unit discovery and reject failure skip duplicates and empty assertions',()=>{
+ expect(UNIT_FILES).toContain('./tests/machine-only.test.ts');
  const rows=UNIT_FILES.map(requiredFile=>({requiredFile,pass:1,fail:0,skip:0,assertions:2,missingCases:[],runnerExit:0}));const log=(values:unknown[])=>values.map(r=>JSON.stringify(r)).join('\n');
  expect(summarizeTests('unit',log(rows))).toEqual({tests:UNIT_FILES.length,assertions:UNIT_FILES.length*2});
  for(const change of [{fail:1},{skip:1},{assertions:0},{pass:0},{missingCases:['lost']},{runnerExit:1}]){expect(()=>summarizeTests('unit',log([{...rows[0],...change},...rows.slice(1)]))).toThrow();}
