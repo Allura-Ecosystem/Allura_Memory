@@ -1,2 +1,5 @@
 # Private machine-local Allura routing; credentials remain in the approved vault.
 /.allura/tenant.json
+
+# Regenerable BMAD workflow snapshots; authored specs stay tracked.
+/_bmad/render/

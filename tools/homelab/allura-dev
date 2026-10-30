@@ -1,0 +1,24 @@
+#!/bin/sh
+# Local development checks only. Never starts or deploys the live service.
+set -eu
+ROOT=/home/sabira/Allura_Memory-beta-local
+TOOLS=/home/sabira/.local/share/allura-toolchain
+export PATH="$TOOLS/bun-linux-x64-baseline:$TOOLS/node-v24.19.0-linux-x64/bin:$PATH"
+usage() {
+  printf '%s\n' 'Usage: allura-dev --where | --help | run <check|check:all|test|test:db|typecheck|lint|check:toolchain>'
+}
+case "${1:-}" in
+  ''|--help|-h) [ "$#" -le 1 ] || { usage >&2; exit 2; }; usage; exit 0 ;;
+  --where) [ "$#" -eq 1 ] || { usage >&2; exit 2; } ;;
+  run)
+    [ "$#" -eq 2 ] || { usage >&2; exit 2; }
+    case "$2" in check|check:all|test|test:db|typecheck|lint|check:toolchain) ;; *) usage >&2; exit 2 ;; esac ;;
+  *) usage >&2; exit 2 ;;
+esac
+[ -d "$ROOT/foundation" ] || { printf '%s\n' 'Active development checkout missing; no fallback.' >&2; exit 1; }
+[ "$(git -C "$ROOT" rev-parse --show-toplevel)" = "$ROOT" ] || { printf '%s\n' 'Development checkout identity mismatch.' >&2; exit 1; }
+cd "$ROOT/foundation"
+if [ "$1" = --where ]; then pwd -P; exit 0; fi
+[ -x "$TOOLS/bun-linux-x64-baseline/bun" ] && [ -x "$TOOLS/node-v24.19.0-linux-x64/bin/node" ] || { printf '%s\n' 'Pinned development toolchain missing; no fallback.' >&2; exit 1; }
+printf 'Development: %s (branch %s)\n' "$ROOT" "$(git branch --show-current)" >&2
+exec "$TOOLS/bun-linux-x64-baseline/bun" "$@"
