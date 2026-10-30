@@ -13,6 +13,10 @@ test('CI accepts only complete same-source same-attempt successful nonzero lanes
  expect(()=>validateAttempt(identity,receipts().slice(1))).toThrow();expect(()=>validateAttempt(identity,[...receipts(),receipts()[0]!])).toThrow();
  for(const change of [{exit:1},{logSha256:''},{tests:0},{assertions:0}]){const rows=receipts();Object.assign(rows.find(r=>r.lane==='unit')!,change);expect(()=>validateAttempt(identity,rows)).toThrow();}
 });
+test('CI schedules model preparation before offline inference lanes',()=>{
+ expect(CI_LANES.indexOf('install')).toBeLessThan(CI_LANES.indexOf('model'));
+ for(const lane of ['unit','database'] as const){expect(CI_LANES.indexOf('model')).toBeLessThan(CI_LANES.indexOf(lane));}
+});
 test('CI strict runner includes embedding and agent drain suites with named cases and assertion floors',async()=>{
  const runner=await Bun.file(new URL('../scripts/test.ts',import.meta.url)).text();
  const manifest=[...runner.matchAll(/requiredFile:\s*'([^']+)'/g)].map(match=>match[1]);

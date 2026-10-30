@@ -91,9 +91,10 @@ const suites = [{requiredFile:'./tests/recovery-diagnostics.test.ts',minAssertio
   'consumer bounds stalled credentials and oversized replies with redacted errors',
   'consumer never follows redirects or retries an ambiguous request',
   'consumer abort cancels actual stalled HTTP response without retry or credential output',
-] }, {requiredFile:'./tests/ci-contract.test.ts',minAssertions:30,requiredCases:[
+] }, {requiredFile:'./tests/ci-contract.test.ts',minAssertions:63,requiredCases:[
   'CI rejects malformed or mismatched source and dirty checkouts',
   'CI accepts only complete same-source same-attempt successful nonzero lanes',
+  'CI schedules model preparation before offline inference lanes',
   'CI strict runner includes embedding and agent drain suites with named cases and assertion floors',
   'CI test summaries require exact unit discovery and reject failure skip duplicates and empty assertions',
 ] }, {requiredFile:'./tests/core-config.test.ts',minAssertions:18,requiredCases:[
