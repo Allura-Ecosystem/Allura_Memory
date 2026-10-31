@@ -67,7 +67,7 @@ The current implementation lives in [`foundation/`](foundation/). It uses TypeSc
 
 Use the rebuilt source that includes `foundation/core-package/` and `foundation/consumer-package/`. An older published snapshot may not have these directories. Do not mix the rebuilt clients with the older hosted service.
 
-**Toolchain:** Git, **Bun 1.3.14**, and **Node.js 24.19.0**. The project checks these exact runtime versions. Linux is the tested platform for the packaged runtime and secure-store client. Some unit tests use Linux Secret Service, `secret-tool`, GNOME Keyring, D-Bus, and `flock`; see the [client prerequisites](foundation/consumer-package/README.md#persistent-linux-device-sdk).
+**Toolchain:** Git, **Bun 1.3.14**, and **Node.js 24.19.0**. The project checks these exact runtime versions. Linux is the tested platform for the packaged runtime and secure-store client. Some unit tests require Linux Secret Service, `secret-tool`, GNOME Keyring, D-Bus, `flock`, and `/usr/bin/gdbus`. On Ubuntu, `gdbus` is supplied by `libglib2.0-bin`; package names differ across distributions. The tests create their own private D-Bus session, keyring, runtime directory and environment, so they need these installed executables—not a logged-in desktop session or access to your existing keyring. The [persistent-client prerequisites](foundation/consumer-package/README.md#persistent-linux-device-sdk) describe the separate session setup for real client use.
 
 Clone the rebuild branch, then enter its source directory:
 
@@ -75,12 +75,13 @@ Clone the rebuild branch, then enter its source directory:
 git clone --branch beta https://github.com/Allura-Ecosystem/Allura_Memory.git
 cd Allura_Memory/foundation
 bun run install:frozen
+bun scripts/prepare-model.ts # Explicit public model download and CPU inference
 bun run check
 ```
 
-Already have the repository? Run the last two commands from its `foundation/` directory.
+Already have the repository? Run the last three commands from its `foundation/` directory; model preparation is needed if the pinned model files are not present in this checkout’s `foundation/node_modules/.cache/allura-models`. The pinned model identity is defined in [`foundation/src/embedding.ts`](foundation/src/embedding.ts). A cache belonging to another tool or checkout does not automatically satisfy this requirement; if this checkout’s cache is removed when rebuilding `node_modules`, prepare it again.
 
-`install:frozen` installs the locked dependencies without package lifecycle scripts. `check` runs unit tests, TypeScript checks, and linting. These commands validate code; they do not start the app.
+`install:frozen` installs the locked dependencies without package lifecycle scripts. The separate `prepare-model.ts` step downloads the pinned public MiniLM model, exercises CPU inference, and refuses nonempty `HF_TOKEN` and `HF_ACCESS_TOKEN` environment variables. Unit tests require that prepared native model and the Linux keyring prerequisites above; inference during checks is offline and does not download missing model files. `check` runs unit tests, TypeScript checks, and linting. These commands validate code; they do not start the app.
 
 ### Run the full local checks
 
