@@ -51,7 +51,7 @@ Paths below are relative to the canonical repository unless absolute. Citations 
 
 **Success signal:** a real restricted-role test drives `start → prepare → paused_approval → independent run approval → fresh-process resume → local handoff receipt`, proves a single receipt for each committed effect, verifies current revocation and fault rollback, and observes no semantic-version, memory-proposal, projection or work-item mutation. This is run-conformance evidence only, not completion of Epics 12–14.
 
-### Smallest useful definition: `local-evidence-handoff`, revision 1
+### Smallest useful definition: `local-evidence-handoff`, revision 2
 
 Use one trusted built-in **data-only** definition, no user definition upload:
 
@@ -71,7 +71,7 @@ type Sha256 = string;
 type Instant = string;
 type RunScope = Readonly<{ groupId: string; workspaceId: UUID }>;
 type DefinitionRef = Readonly<{
-  id: 'local-evidence-handoff'; revision: 1; digest: Sha256;
+  id: 'local-evidence-handoff'; revision: 1 | 2; digest: Sha256;
 }>;
 type RunPolicyV1 = Readonly<{
   version: 'run-policy-v1';
@@ -83,7 +83,7 @@ type RunPolicyV1 = Readonly<{
   maxRunAgeMs: 86400000; approvalTtlMs: 86400000;
 }>;
 type RunDefinitionV1 = Readonly<{
-  version: 'run-definition-v1'; id: 'local-evidence-handoff'; revision: 1;
+  version: 'run-definition-v1'; id: 'local-evidence-handoff'; revision: 1 | 2;
   engineContract: 'run-engine-v1'; handlerBundleDigest: Sha256;
   policy: RunPolicyV1;
   steps: readonly [
@@ -93,7 +93,7 @@ type RunDefinitionV1 = Readonly<{
   ];
 }>;
 type StartRunV1 = Readonly<{
-  operationKey: string; definitionId: 'local-evidence-handoff'; definitionRevision: 1;
+  operationKey: string; definitionId: 'local-evidence-handoff'; definitionRevision: 1 | 2;
   goal: string; reviewerPrincipalId: UUID;
   artifact: { text: string; expectedSha256: Sha256; sourceRevision: string | null };
 }>;
@@ -177,6 +177,19 @@ type RunInspectionV1 = Readonly<{
 `leaseId` is internal execution data and omitted from public inspection; public steps expose the other fields. Immutable identity/binding snapshots (issuer/subject) needed for current owner/reviewer checks remain private DB columns, not returned DTOs. `sourceRevision` is provenance supplied by the requester, not a verified build claim. `goal` and decision rationale are 1–1000 UTF-8 bytes after nonempty validation, preserved exactly. Input artifact text is 1–16384 UTF-8 bytes, preserved exactly. The journal reference is a structured logical reference, **not a filesystem path or second authoritative journal**.
 
 ### Definition and digest rules
+
+#### Adopted two-revision transition for preparation
+
+Parent technical disposition under the existing delegated engineering authority, after committed admission slice `2856bbd1143535782fc12d1193520a84aa070726`: revision 1 is immutable admission-only provenance; literal revision 2 is the preparation-capable shipped definition. This resolves the earlier literal-revision-1 DTO restriction without weakening the new-behavior/new-revision rule. Schema/envelope names ending `V1` remain version 1; definition revision is a separate field. Earlier 12.1 evidence hashes identify the pre-amendment Git revision, not these amended bytes. This is a technical design decision, not a new Sabir quotation or runtime verification.
+
+- New admissions after the additive upgrade require literal definitionRevision 2. Accept revision 1 only to reconcile an already committed original start receipt with the same scoped actor/operation key and exact original input. An absent legacy operation or attempted new revision-1 start returns conflict without creating a run. Unsupported revisions and malformed input remain invalid. No caller-uploaded definitions or general version registry.
+- Legacy receipt reconciliation is a read of historical admission, not execution under changed code. After current owner authority, retrieve the original scoped record/definition/receipt through guarded SQL; recheck both original participants' current grants, memberships, human identities and exact original bindings. Match submitted input to the original recorded request using its stored immutable revision-1 definition digest, not a newly computed admission-source hash. Changed input conflicts; revoked original participants deny; return the original receipt text unchanged. Never authorize replay using only a replacement reviewer named in a changed request.
+- Advancing a revision-1 run never executes a handler, measures a new effect or creates approval. Under current authority and exact command/revision binding, record truthful blocked/definition_drift through the existing journal/state contract; do not rewrite immutable definition/input/start receipt or relabel it revision 2. An unconfirmed operation remains unknown, never a fabricated blocked receipt.
+- Revision 2 pins actual shipped preparation/coordination implementation bytes together with its declaration/policy. Enforce those bytes before claim and completion. No fixed old digest, omitted executor file or mutable same-revision definition. This slice still does not implement decision/resume/handoff; a named future handler is not proof it exists. Later behavior additions must honor the same immutable revision and provenance rules.
+- Migration 026 may extend revision checks and guarded functions additively; migrations 001–025 and existing immutable rows remain byte-preserved. New revision-2 starts must work in a workspace already holding revision-1 admissions. Fresh empty scopes alone are insufficient upgrade evidence.
+- Required upgrade evidence: create a genuine revision-1 admission using the pinned pre-upgrade production code and migrations on an owned disposable target, apply the real additive upgrade, then prove current-authorized byte-identical legacy replay, changed-input conflict, revocation/binding denial, new revision-1 refusal, revision-1 advance blocking with no effect/request, and independent revision-2 admission/preparation in the same populated workspace. Preserve old immutable row values across the upgrade. Do not fabricate old receipt rows, disable constraints, use a live DB, or downgrade shared test state to obtain this witness.
+
+The already-observed prepare-route RED remains valid. Add a genuine upgrade/revision RED before implementing this transition. The draft preparation spec records the source of this resolution; no additional product or external-system permission follows.
 
 - The running process supplies only the shipped definition. Start selects its literal ID/revision, never caller policy/handlers. On first use, store its scoped immutable definition; a matching ID/revision with different bytes is a conflict, not an update. New behavior needs a new revision; existing runs keep their exact revision [S6,S8].
 - Database-normalized `jsonb::text` UTF-8 SHA-256 is the authoritative digest for definition, policy, input and command envelopes; compute and persist in SQL using the existing `encode(sha256(convert_to(...,'UTF8')),'hex')` pattern [S18]. Do not compare a JavaScript JSON.stringify digest to PostgreSQL's serialization. Artifact hash uses **raw UTF-8 text bytes**, not JSON normalization. Add fixed cross-boundary test vectors.

@@ -16,9 +16,10 @@ import {searchIndex} from '../src/retrieval-index.ts';
 import {createCoreGateway} from '../src/core-api.ts';
 import {createHash,randomBytes} from 'node:crypto';
 import {RecoveryProcessError} from '../src/recovery-diagnostics.ts';
+import {startRun,advanceRun} from '../src/runs.ts';
 let source:RecoveryTarget,first:RecoveryTarget,second:RecoveryTarget,root:string,f:Awaited<ReturnType<typeof fixture>>,one:string,two:string,event1:string,event2:string;
 let captureReceipt:string,semanticId:string;
-async function canonical(sql:SQL){const result:Record<string,string>={};for(const table of ['events','capture_receipts','semantic_versions','semantic_heads','decision_receipts','semantic_provenance','source_vectors','proposal_audit','operation_observations','read_audit']){result[table]=(await sql.unsafe(`SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text AS data FROM allura.${table} t`))[0].data;}return result;}
+async function canonical(sql:SQL){const result:Record<string,string>={};for(const table of ['events','capture_receipts','semantic_versions','semantic_heads','decision_receipts','semantic_provenance','source_vectors','proposal_audit','operation_observations','read_audit','run_definitions','run_records','run_state','run_steps','run_journal','run_operation_receipts','run_effect_receipts','run_approval_requests']){result[table]=(await sql.unsafe(`SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text AS data FROM allura.${table} t`))[0].data;}return result;}
 beforeAll(async()=>{root=await mkdtemp(join(tmpdir(),'allura-recovery-evidence-'));source=await createRecoveryTarget();f=await fixture('allura-recovery',await recoveryConnection(source));},60000);
 afterAll(async()=>{await f?.app.close();await f?.owner.close();for(const target of [second,first,source]){if(target){await closeRecoveryTarget(target);}}if(root){await rm(root,{recursive:true,force:true});}},60000);
 test('recovery targets reject forged capabilities and preserve data through actual database restart',async()=>{
@@ -28,16 +29,25 @@ test('recovery targets reject forged capabilities and preserve data through actu
 },60000);
 test('one streaming backup exceeds old buffer limits and two same-day manifests restore exact chosen evidence',async()=>{
  const proposal=await submitProposal(f.app,f.identities.machine,f.scope,{summary:'Approved violet recovery knowledge',assertionKind:'observation',evidenceIds:[event1]});semanticId=JSON.parse(await decideProposal(f.app,f.identities.reviewer,f.scope,{proposalId:proposal.id,reviewedProposalVersion:1,decision:'approve',rationale:'Independent recovery fixture approval',evidenceIds:[event1],operationKey:'recovery-approve'})).semantic_version_id;
+ await f.owner`UPDATE allura.workspace_grants SET role='workspace_admin' WHERE group_id=${f.scope.groupId} AND principal_id=${f.ids.reviewer}::uuid`;
+ const runInput={operationKey:'recovery-run-start',definitionId:'local-evidence-handoff',definitionRevision:2,goal:'Restore exact paused evidence',reviewerPrincipalId:f.ids.reviewer,artifact:{text:'Synthetic recovery 🧠\r\n',expectedSha256:createHash('sha256').update('Synthetic recovery 🧠\r\n').digest('hex'),sourceRevision:null}};
+ const runStart=await startRun(f.app,f.identities.author,f.scope,runInput),runCommand={runId:JSON.parse(runStart).runId,expectedRevision:1,operationKey:'recovery-run-advance'};
+ const runAdvance=await advanceRun(f.app,f.identities.author,f.scope,runCommand);
+ expect((await f.owner`SELECT phase FROM allura.run_state WHERE run_id=${runCommand.runId}::uuid`)[0].phase).toBe('paused_approval');
+ expect(await f.owner`SELECT id FROM allura.run_effect_receipts WHERE run_id=${runCommand.runId}::uuid`).toHaveLength(1);
  const provider=await loadLocalEmbedder();expect((await drainIndexBatch(f.app,f.identities.machine,f.scope,provider)).every(row=>row.state==='succeeded')).toBe(true);const firstState=await canonical(f.owner);
  // Random hexadecimal bytes resist repetition/compression; archive is explicitly uncompressed.
  await f.owner.unsafe('CREATE TABLE public.recovery_padding(payload text NOT NULL)');
  await f.owner.unsafe("INSERT INTO public.recovery_padding SELECT string_agg(md5(random()::text),'') FROM generate_series(1,400000)");
- one=await backupRecovery(source,root);const manifest=JSON.parse(await readFile(one,'utf8'));expect(manifest.archive.bytes).toBeGreaterThan(10*1024*1024);expect(manifest.migrations).toHaveLength(25);expect(manifest.embedding.dimensions).toBe(384);
+ one=await backupRecovery(source,root);const manifest=JSON.parse(await readFile(one,'utf8'));expect(manifest.archive.bytes).toBeGreaterThan(10*1024*1024);expect(manifest.migrations).toHaveLength(26);expect(manifest.embedding.dimensions).toBe(384);
  event2=await appendEvent(f.app,f.identities.machine!,f.scope,{content:'second recovery evidence'});const secondState=await canonical(f.owner);two=await backupRecovery(source,root);expect(two).not.toBe(one);
  first=await createRecoveryTarget();await restoreRecovery(first,one);const db1=new SQL(await recoveryConnection(first));try{expect(await canonical(db1)).toEqual(firstState);expect(await migrate(db1)).toBe('unchanged');expect((await db1`SELECT id FROM allura.events WHERE kind='capture' ORDER BY id`).map((r:{id:string})=>r.id)).toEqual([event1]);expect((await db1`SELECT length(payload) AS n FROM public.recovery_padding`)[0].n).toBe(12800000);}finally{await db1.close();}
  second=await createRecoveryTarget();await restoreRecovery(second,two);const db2=new SQL(await recoveryConnection(second));try{expect(await canonical(db2)).toEqual(secondState);expect((await db2`SELECT count(*)::integer AS n FROM allura.events WHERE kind='capture'`)[0].n).toBe(2);expect((await db2`SELECT count(*)::integer AS n FROM allura.events WHERE id=${event2}::uuid`)[0].n).toBe(1);
  const password=randomBytes(32).toString('hex');await db2.unsafe(`ALTER ROLE allura_app LOGIN PASSWORD '${password}'`);const url=new URL(await recoveryConnection(second));url.username='allura_app';url.password=password;const app=new SQL(url.href);let server:ReturnType<typeof Bun.serve>|undefined;
  try{const [role]=await app`SELECT current_user,rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user`;expect(role).toMatchObject({current_user:'allura_app',rolsuper:false,rolbypassrls:false});expect(await readCaptureReceipt(app,f.identities.machine,f.scope,JSON.parse(captureReceipt).receipt_id)).toBe(captureReceipt);
+ expect(await startRun(app,f.identities.author,f.scope,runInput)).toBe(runStart);expect(await advanceRun(app,f.identities.author,f.scope,runCommand)).toBe(runAdvance);
+ expect(await db2`SELECT id FROM allura.run_effect_receipts WHERE run_id=${runCommand.runId}::uuid`).toHaveLength(1);
+ expect((await db2`SELECT phase FROM allura.run_state WHERE run_id=${runCommand.runId}::uuid`)[0].phase).toBe('paused_approval');
  const found=await searchIndex(app,f.identities.machine,f.scope,{query:'violet recovery',mode:'vector',limit:10},provider);expect(found.used).toContain('vector');expect(found.results[0]?.id).toBe(semanticId);expect(found.degraded).toBe(false);
  server=Bun.serve({hostname:'127.0.0.1',port:0,fetch:createCoreGateway(app,f.humanConfig,'https://recovery.invalid',randomBytes(32),provider)});const endpoint=`http://127.0.0.1:${server.port}/api/memory/get?group_id=${f.scope.groupId}&workspace_id=${f.scope.workspaceId}`;
  const response=await fetch(endpoint,{method:'POST',headers:{'Cf-Access-Jwt-Assertion':f.jwt('viewer'),Origin:'https://recovery.invalid','Sec-Fetch-Site':'same-origin','content-type':'application/json'},body:JSON.stringify({id:semanticId})});expect(response.status).toBe(200);expect((await response.json() as {id:string}).id).toBe(semanticId);

@@ -12,7 +12,7 @@ beforeAll(async () => {
 afterAll(async () => { await f?.close(); });
 function requestInput() {
   const text = 'Synthetic HTTP artifact';
-  return { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 1, goal: 'Synthetic HTTP goal', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
+  return { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 2, goal: 'Synthetic HTTP goal', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
 }
 const provider = { identity: EMBEDDING, embed: async (): Promise<number[]> => { throw new Error('Run admission must not embed'); } };
 function gatewayFor(origin: string) { return createCoreGateway(f.app, f.humanConfig, origin, new Uint8Array(32).fill(7), provider); }
@@ -48,7 +48,7 @@ test('run HTTP strict selectors and input reject overrides without disclosure', 
   for (const query of [`group_id=${f.scope.groupId}&workspace_id=${f.scope.workspaceId}&actor=forged`, `group_id=${f.scope.groupId}&workspace_id=${f.scope.workspaceId}&group_id=${f.scope.groupId}`, `group_id=${f.scope.groupId}`, `group_id=${f.scope.groupId}&workspace_id=wrong`]) {
     expect((await gateway(requestFor(origin, v, {}, query))).status).toBe(400);
   }
-  for (const value of [{ ...v, outcome: 'succeeded' }, { ...v, artifact: { ...v.artifact, passed: true } }, { ...v, definitionRevision: 2 }, { ...v, goal: '\0' }]) {
+  for (const value of [{ ...v, outcome: 'succeeded' }, { ...v, artifact: { ...v.artifact, passed: true } }, { ...v, definitionRevision: 3 }, { ...v, goal: '\0' }]) {
     const reply = await gateway(requestFor(origin, value)); expect(reply.status).toBe(400); expect(await reply.json()).toEqual({ outcome: 'invalid' });
   }
   const missing = await gateway(requestFor(origin, { ...v, reviewerPrincipalId: randomUUID() }));
@@ -72,10 +72,61 @@ test('run lost committed HTTP start response reconciles the original admission',
   expect(await f.owner`SELECT id FROM allura.run_operation_receipts WHERE group_id=${f.scope.groupId} AND operation_key=${v.operationKey}`).toHaveLength(1);
 });
 
+test('run lost committed preparation response reconciles without another effect', async () => {
+  const origin = 'https://runs.invalid', gateway = gatewayFor(origin), input = requestInput();
+  const admitted = await (await gateway(requestFor(origin, input))).json() as { runId: string };
+  const command = { runId: admitted.runId, expectedRevision: 1, operationKey: randomUUID() };
+  const request = (origin: string) => { const req = requestFor(origin, command, { Origin: 'https://runs.invalid' }); return new Request(req.url.replace('/start?', '/advance?'), req); };
+  const first = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: async req => { const reply = await gateway(req); expect(reply.status).toBe(200); first.stop(true); return reply; } });
+  try { await expect(fetch(request(first.url.origin))).rejects.toThrow(); } finally { first.stop(true); }
+  const [original] = await f.owner`SELECT receipt_text FROM allura.run_operation_receipts WHERE run_id=${command.runId}::uuid AND command='advance'`;
+  const effects = await f.owner`SELECT receipt_text FROM allura.run_effect_receipts WHERE run_id=${command.runId}::uuid`;
+  expect(effects).toHaveLength(1);
+  const retry = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: req => gateway(req) });
+  try { const response = await fetch(request(retry.url.origin)); expect(response.status).toBe(200); expect(await response.json()).toEqual(JSON.parse(original.receipt_text)); } finally { retry.stop(true); }
+  expect(await f.owner`SELECT receipt_text FROM allura.run_effect_receipts WHERE run_id=${command.runId}::uuid`).toEqual(effects);
+  expect((await f.owner`SELECT attempts FROM allura.run_steps WHERE run_id=${command.runId}::uuid AND step_id='prepare'`)[0].attempts).toBe(1);
+  for (const path of ['decide','resume','handoff','cancel']) { const req = request(origin); expect((await gateway(new Request(req.url.replace('/advance?', `/${path}?`), req))).status).toBe(404); }
+});
+
+test('run prepare persists measured artifact evidence and pauses for independent approval', async () => {
+  const origin = 'https://runs.invalid', gateway = gatewayFor(origin), input = requestInput();
+  input.artifact.text = 'Claimed tests passed — unverified\r\nCafe\u0301 🧠';
+  input.artifact.expectedSha256 = createHash('sha256').update(Buffer.from(input.artifact.text, 'utf8')).digest('hex');
+  const start = await gateway(requestFor(origin, input));
+  expect(start.status).toBe(200);
+  const admitted = await start.json() as { runId: string; acceptedRevision: number };
+  const command = { runId: admitted.runId, expectedRevision: admitted.acceptedRevision, operationKey: randomUUID() };
+  const advanceRequest = requestFor(origin, command);
+  const response = await gateway(new Request(advanceRequest.url.replace('/api/runs/start?', '/api/runs/advance?'), advanceRequest));
+  // This assertion must fail on the missing production route, not absent SQL.
+  expect(response.status).toBe(200);
+  const receipt = await response.json() as { command: string; runId: string; phaseAtAcceptance: string };
+  expect(receipt.command).toBe('advance'); expect(receipt.runId).toBe(admitted.runId);
+  expect(receipt.phaseAtAcceptance).toBe('running');
+  const [state] = await f.owner`SELECT phase,outcome,reason,next_step_id,checkpoint_seq FROM allura.run_state WHERE group_id=${f.scope.groupId} AND workspace_id=${f.scope.workspaceId}::uuid AND run_id=${admitted.runId}::uuid`;
+  expect(state.phase).toBe('paused_approval'); expect(state.outcome).toBeNull();
+  expect(state.reason).toBe('approval_required'); expect(state.next_step_id).toBe('review');
+  const effects = await f.owner`SELECT receipt_text FROM allura.run_effect_receipts WHERE group_id=${f.scope.groupId} AND workspace_id=${f.scope.workspaceId}::uuid AND run_id=${admitted.runId}::uuid`;
+  expect(effects).toHaveLength(1);
+  const effect = JSON.parse(effects[0].receipt_text);
+  expect(effect.stepId).toBe('prepare'); expect(effect.artifactSha256).toBe(input.artifact.expectedSha256);
+  expect(effect.artifactBytes).toBe(Buffer.byteLength(input.artifact.text, 'utf8'));
+  expect(effect.measuredGates).toEqual([{ id: 'artifact_nonempty', passed: true }, { id: 'artifact_digest_match', passed: true }]);
+  expect(effect.approvalDecisionId).toBeNull(); expect(effect.preparedReceiptId).toBeNull();
+  const approvals = await f.owner`SELECT id FROM allura.run_approval_requests WHERE group_id=${f.scope.groupId} AND workspace_id=${f.scope.workspaceId}::uuid AND run_id=${admitted.runId}::uuid`;
+  expect(approvals).toHaveLength(1);
+  const journal = await f.owner`SELECT kind,seq FROM allura.run_journal WHERE group_id=${f.scope.groupId} AND workspace_id=${f.scope.workspaceId}::uuid AND run_id=${admitted.runId}::uuid ORDER BY seq`;
+  expect(journal.map((row: { kind: string }) => row.kind)).toEqual(['started', 'claimed', 'effect_committed', 'approval_requested']);
+  expect(state.checkpoint_seq).toBe(journal.at(-1)!.seq);
+  const [handoff] = await f.owner`SELECT state,attempts FROM allura.run_steps WHERE group_id=${f.scope.groupId} AND workspace_id=${f.scope.workspaceId}::uuid AND run_id=${admitted.runId}::uuid AND step_id='handoff'`;
+  expect(handoff.state).toBe('pending'); expect(handoff.attempts).toBe(0);
+});
+
 test('run HTTP start persists one immutable scoped admission receipt', async () => {
   const gateway = createCoreGateway(f.app, f.humanConfig, 'https://runs.invalid', new Uint8Array(32).fill(7), { identity: EMBEDDING, embed: async () => { throw new Error('Run admission must not embed'); } });
   const text = 'Synthetic run artifact\r\nCafe\u0301 🧠';
-  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 1, goal: 'Preserve synthetic evidence', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
+  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 2, goal: 'Preserve synthetic evidence', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
   const response = await gateway(new Request(`https://runs.invalid/api/runs/start?group_id=${f.scope.groupId}&workspace_id=${f.scope.workspaceId}`, { method: 'POST', headers: { 'Cf-Access-Jwt-Assertion': f.jwt('author'), Origin: 'https://runs.invalid', 'Sec-Fetch-Site': 'same-origin', 'Content-Type': 'application/json' }, body: JSON.stringify(input) }));
   expect(response.status).toBe(200);
   const receipt = await response.json() as { version: string; command: string; actorPrincipalId: string; operationKey: string; phaseAtAcceptance: string; acceptedRevision: number; journalSeq: number; runId: string };

@@ -39,10 +39,25 @@ try {
   // Focused behavioral gate uses this same owned DB; no alternate target or
   // selection override. Full canonical discovery still runs on every GREEN.
   const runCases = [
+    'run prepare SQL state and measurement constraints reject nullable forged evidence',
+    'run prepare retry due time and attempt exhaustion cannot reset through new keys',
+    'run prepare aborted work retains admission until real rollback and rejects excess leases',
+    'run prepare terminated backend reports unknown and leaves no partial effect',
+    'run prepare fresh processes recover an expired claim and fence killed execution',
+    'run prepare actual source drift blocks both claim and completion',
+    'run prepare owner and reviewer revocation serialize both finish orders',
+    'run prepare mismatch records raw measurements without success or approval',
+    'run prepare concurrent replay commits one bound approval and immutable effect',
+    'run prepare current participant loss denies claims finishes and receipt replay',
+    'run prepare strict command and stale fence reject caller asserted completion',
+    'run prepare insert update and deferred faults preserve atomic effect boundaries',
+    'run lost committed preparation response reconciles without another effect',
+    'run real revision upgrade preserves legacy admission and admits revision two in the same workspace',
     'run HTTP authenticates before body and preserves mixed identity CSRF denial',
     'run HTTP strict selectors and input reject overrides without disclosure',
     'run lost committed HTTP start response reconciles the original admission',
     'run HTTP start persists one immutable scoped admission receipt',
+    'run prepare persists measured artifact evidence and pauses for independent approval',
     'run authority denies foreign machines self review and current revocation',
     'run restricted tables and pooled contexts preserve immutable scoped evidence',
     'run start owner and reviewer revocation serialize in both database orders',
@@ -52,7 +67,7 @@ try {
     'run start replay requires original owner and reviewer bindings',
     'run same key concurrency yields one receipt and changed payload conflicts',
   ];
-  const runs = Bun.spawnSync([process.execPath, 'test', './tests/runs-http.test.ts', './tests/runs.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
+  const runs = Bun.spawnSync([process.execPath, 'test', './tests/run-upgrade.test.ts', './tests/runs-http.test.ts', './tests/runs.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
   const runsOutput = runs.stderr.toString();
   process.stdout.write(runs.stdout); process.stderr.write(runsOutput);
   const runsPass = Number(runsOutput.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -88,7 +103,7 @@ try {
   const focusedAssertions = Number(focusedOutput.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   console.log(JSON.stringify({ lane: 'client-authority', pass: focusedPass, assertions: focusedAssertions, exit: focused.exitCode }));
   if (focused.exitCode !== 0 || focusedPass < 1 || focusedAssertions < 1 || /\b[1-9]\d* (?:skip|fail)\b/.test(focusedOutput)) { throw new Error('Required client authority lane failed'); }
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/runs-http.test.ts', './tests/runs.test.ts', './tests/selected-consent-browser.test.ts', './tests/selected-client.test.ts', './tests/memory-shares.test.ts', './tests/oauth-consent-browser.test.ts', './tests/oauth-contract.test.ts', './tests/oauth-http.test.ts', './tests/client-authority.test.ts', './tests/memory-experiment-browser.test.ts', './tests/memory-experiment-workflow.test.ts', './tests/app-modules.test.ts', './tests/bumblebee-persistence.test.ts', './tests/bumblebee-leases.test.ts', './tests/bumblebee-configuration.test.ts', './tests/projection-delivery.test.ts', './tests/projection-browser.test.ts', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/run-upgrade.test.ts', './tests/runs-http.test.ts', './tests/runs.test.ts', './tests/selected-consent-browser.test.ts', './tests/selected-client.test.ts', './tests/memory-shares.test.ts', './tests/oauth-consent-browser.test.ts', './tests/oauth-contract.test.ts', './tests/oauth-http.test.ts', './tests/client-authority.test.ts', './tests/memory-experiment-browser.test.ts', './tests/memory-experiment-workflow.test.ts', './tests/app-modules.test.ts', './tests/bumblebee-persistence.test.ts', './tests/bumblebee-leases.test.ts', './tests/bumblebee-configuration.test.ts', './tests/projection-delivery.test.ts', './tests/projection-browser.test.ts', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
