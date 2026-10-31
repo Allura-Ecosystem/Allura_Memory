@@ -21,7 +21,7 @@ test('CI strict runner includes embedding and agent drain suites with named case
  const runner=await Bun.file(new URL('../scripts/test.ts',import.meta.url)).text();
  const manifest=[...runner.matchAll(/requiredFile:\s*'([^']+)'/g)].map(match=>match[1]);
  expect(manifest).toEqual([...UNIT_FILES]);
- for(const file of ['./tests/test-runner.test.ts','./tests/selected-consent-transport.test.ts','./tests/openai-embedding.test.ts','./tests/embedding-identity.test.ts','./tests/agent-index-drain.test.ts']){
+ for(const file of ['./tests/run-contract.test.ts','./tests/test-runner.test.ts','./tests/selected-consent-transport.test.ts','./tests/openai-embedding.test.ts','./tests/embedding-identity.test.ts','./tests/agent-index-drain.test.ts']){
   expect(UNIT_FILES as readonly string[]).toContain(file);
   const section=runner.slice(runner.indexOf("requiredFile:'"+file+"'" )).split('requiredFile:')[1]??'';
   expect(section).toMatch(/minAssertions:\s*[1-9]\d*/);

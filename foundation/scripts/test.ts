@@ -3,7 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readBunReport } from '../src/test-runner.ts';
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
-const suites = [{requiredFile:'./tests/selected-consent-transport.test.ts',minAssertions:259,requiredCases:[
+const suites = [{requiredFile:'./tests/run-contract.test.ts',minAssertions:72,requiredCases:[
+ 'run contract rejects authority policy and executable input overrides',
+ 'run start input preserves exact bounded UTF8 bytes and immutable copies',
+ 'run start definition pins owned source and fixed data only policy',
+]},{requiredFile:'./tests/selected-consent-transport.test.ts',minAssertions:259,requiredCases:[
  'selected consent transport freezes exact display uses same origin and blocks duplicate decisions',
  'selected consent transport denies malformed scope context and display without disclosure or recovery',
  'selected consent transport bounds malformed oversized denied and lost responses with no retry',
