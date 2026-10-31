@@ -97,7 +97,9 @@ const suites = [{requiredFile:'./tests/recovery-diagnostics.test.ts',minAssertio
   'CI schedules model preparation before offline inference lanes',
   'CI strict runner includes embedding and agent drain suites with named cases and assertion floors',
   'CI test summaries require exact unit discovery and reject failure skip duplicates and empty assertions',
-] }, {requiredFile:'./tests/core-config.test.ts',minAssertions:18,requiredCases:[
+] }, {requiredFile:'./tests/core-config.test.ts',minAssertions:73,requiredCases:[
+  'OAuth configuration explicitly binds a separate loopback issuer fixed public client and human consent origin',
+  'OAuth configuration rejects ambiguous registration unsafe URLs and privilege fields without weakening human mode',
   'core configuration binds loopback restricted login explicit origin and public RSA keys',
   'core configuration rejects missing secrets owner credentials remote databases and silent defaults',
  ] }, {requiredFile:'./tests/machine-only.test.ts',minAssertions:60,requiredCases:[

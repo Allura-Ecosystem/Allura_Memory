@@ -3,12 +3,13 @@ import {isAbsolute,normalize} from 'node:path';
 import {type BumblebeeScannerOptions} from './bumblebee-lease-api.ts';
 import {type HumanConfig} from './authentication.ts';
 export type EmbeddingConfig=Readonly<{provider:'openai';model:'text-embedding-3-small';dimensions:384}>;
-export type CoreConfig={host:'127.0.0.1';port:number;origin:string;mode:'human'|'machine-only';human:HumanConfig|undefined;databaseUrl:string;cursorKey:Uint8Array;embedding?:EmbeddingConfig;scanner?:BumblebeeScannerOptions;tls?:Readonly<{certificateFile:string;privateKeyFile:string}>};
+export type OAuthConfig=Readonly<{host:'127.0.0.1';port:number;issuer:string;resource:string;consentOrigin:string;client:Readonly<{clientId:string;name:string;redirectUris:readonly string[];actions:readonly string[]}>}>;
+export type CoreConfig={oauth?:OAuthConfig;host:'127.0.0.1';port:number;origin:string;mode:'human'|'machine-only';human:HumanConfig|undefined;databaseUrl:string;cursorKey:Uint8Array;embedding?:EmbeddingConfig;scanner?:BumblebeeScannerOptions;tls?:Readonly<{certificateFile:string;privateKeyFile:string}>};
 export function parseCoreConfig(raw:unknown,environment:Readonly<Record<string,string|undefined>>):CoreConfig{
  try{
   if(!raw||typeof raw!=='object'||Array.isArray(raw)){throw new Error();}const input=raw as Record<string,unknown>;
   const mode=Object.hasOwn(input,'mode')?input.mode:'human';if(!['human','machine-only'].includes(mode as string)||!Number.isSafeInteger(input.port)||(input.port as number)<0||(input.port as number)>65535||typeof input.origin!=='string'){throw new Error();}
-  const machineOnly=mode==='machine-only',allowed=machineOnly?['mode','origin','port','tls','scanner','embedding']:['mode','origin','issuer','audience','port','keys','scanner','tls','embedding'];
+  const machineOnly=mode==='machine-only',allowed=machineOnly?['mode','origin','port','tls','scanner','embedding']:['mode','origin','issuer','audience','port','keys','scanner','tls','embedding','oauth'];
   if(Object.keys(input).some(k=>!allowed.includes(k))){throw new Error();}
   const origin=new URL(input.origin);if(origin.origin!==input.origin||origin.username||origin.password){throw new Error();}
   let human:HumanConfig|undefined;
@@ -29,6 +30,18 @@ export function parseCoreConfig(raw:unknown,environment:Readonly<Record<string,s
   }
   let embedding:EmbeddingConfig|undefined;
   if(Object.hasOwn(input,'embedding')){const e=input.embedding as Record<string,unknown>;if(!e||typeof e!=='object'||Array.isArray(e)||Object.keys(e).length!==3||e.provider!=='openai'||e.model!=='text-embedding-3-small'||e.dimensions!==384||!environment.ALLURA_OPENAI_API_KEY||!/^[\x21-\x7e]{1,4096}$/.test(environment.ALLURA_OPENAI_API_KEY)){throw new Error();}embedding={provider:'openai',model:'text-embedding-3-small',dimensions:384};}
-  return {host:'127.0.0.1',port:input.port as number,origin:input.origin,mode:mode as CoreConfig['mode'],human,databaseUrl:supplied,cursorKey,...(embedding?{embedding}:{}),...(tls?{tls}:{}),...(scanner?{scanner}:{})};
+  let oauth:OAuthConfig|undefined;
+  if(Object.hasOwn(input,'oauth')){
+   const o=input.oauth as Record<string,unknown>;
+   if(!o||typeof o!=='object'||Array.isArray(o)||Object.keys(o).length!==5||Object.keys(o).some(k=>!['port','issuer','resource','consentOrigin','client'].includes(k))||!Number.isSafeInteger(o.port)||(o.port as number)<1||(o.port as number)>65535||o.port===input.port||o.issuer!==`http://127.0.0.1:${o.port}`||o.resource!==`${input.origin}/mcp`||o.consentOrigin!==input.origin){throw new Error();}
+   const c=o.client as Record<string,unknown>;
+   if(!c||typeof c!=='object'||Array.isArray(c)||Object.keys(c).length!==4||Object.keys(c).some(k=>!['clientId','name','redirectUris','actions'].includes(k))||typeof c.clientId!=='string'||!/^[-a-zA-Z0-9._:]{1,128}$/.test(c.clientId)||typeof c.name!=='string'||!c.name.trim()||c.name.length>128||/[\x00-\x1f\x7f]/.test(c.name)){throw new Error();}
+   if(!Array.isArray(c.redirectUris)||c.redirectUris.length<1||c.redirectUris.length>8||new Set(c.redirectUris).size!==c.redirectUris.length){throw new Error();}
+   for(const uri of c.redirectUris){if(typeof uri!=='string'||uri.length>2048||uri.includes('#')||/[\x00-\x20\\]/.test(uri)){throw new Error();}const u=new URL(uri);if(u.href!==uri||u.username||u.password||!(u.protocol==='https:'||(u.protocol==='http:'&&u.hostname==='127.0.0.1'&&u.port))||u.search){throw new Error();}}
+   const ceiling=['memory:read','memory:capture','evidence:read','proposal:write','review:read','memory:delete','audit:read','health:read'];
+   if(!Array.isArray(c.actions)||c.actions.length<1||c.actions.length>ceiling.length||new Set(c.actions).size!==c.actions.length||c.actions.some(v=>!ceiling.includes(v))){throw new Error();}
+   oauth=Object.freeze({host:'127.0.0.1',port:o.port as number,issuer:o.issuer as string,resource:o.resource as string,consentOrigin:o.consentOrigin as string,client:Object.freeze({clientId:c.clientId,name:c.name,redirectUris:Object.freeze([...c.redirectUris]) as readonly string[],actions:Object.freeze([...c.actions]) as readonly string[]})});
+  }
+  return {host:'127.0.0.1',port:input.port as number,origin:input.origin,mode:mode as CoreConfig['mode'],human,databaseUrl:supplied,cursorKey,...(oauth?{oauth}:{}),...(embedding?{embedding}:{}),...(tls?{tls}:{}),...(scanner?{scanner}:{})};
  }catch{throw new Error('core_configuration_invalid');}
 }
