@@ -7,6 +7,16 @@ operationalStatus: unknown
 
 # Current readiness
 
+## Controlling bounded readiness amendment — 2026-10-31
+
+[All-14 local scope is approved](sprint-change-proposal-2026-10-31-all-14-local.md). [Story 12.1 contract](contracts/durable-runs-v1.md) is adopted as detailed local design, with a [precise first implementation handoff](../implementation-artifacts/spec-12-1-durable-run-contract.md). This is documentation readiness only: no product tests run, runtime implemented, story closed or Allura status transition recorded by this amendment. Existing reset-era frontmatter/tables/next-1.2 statements below are historical; preserve actual Epics 1–11 implementation and evidence rather than rebuilding them.
+
+The clean admission HEAD is `7f3b9065d30a78f8d4b20a17392cafd8bf9c02b4` on `local/beta-machine-only`. Parent released the compiler freeze; six candidate executable anchors match and migrations remain 001–024. Parent inspects/commits these documentation bytes and admits the sole Woz writer to the exact HTTP start RED. Recheck the active direct-build STOP and source/migration inventory before build execution; no STOP is removed. The broader local passing-work authority remains unchanged.
+
+Owner choices no longer block on board or OS questions: Allura PostgreSQL sole writable live status, Notion planning only, no two-way synchronization; Linux-first remote-connected shell to existing Allura, no assumed local runtime supervision. Story 13.1 transaction/revision/conflict/receipt contracts and Story 14.1 secure connection/update/framework/package contracts remain separate gates. The tunnel is untouched and is not a local-work prerequisite. Brain/status outages do not block local work; no remote retry/repair or remote-governance pass is claimed.
+
+Actual 6.5/9.4, hosted/deployed/release, platform and human acceptance remain open. Documentation validation cannot close them. Product tests, DB/service/network/credential actions, independent developer review and live-status reconciliation are unperformed in this docs-only task; operational status stays unknown.
+
 Direct-build update: Epic 1 is locally accepted as foundation/contracts only; see `../implementation-artifacts/epic-1-retro-2026-10-26.md`, `contracts/authority-v1.md` and `contracts/persistence-v1.md`. Baseline is committed; next is 2.1. Current user instruction authorizes direct implementation/self-checks and ordinary local design/disposable tests, not independent development review. Reset snapshot tables below are historical. Product and deployment acceptance remain outstanding; operational status unknown.
 
 The user approved a fresh sequential rebuild beginning Epic 1, then Epic 2. The [catalog](epics.md) is the only active delivery sequence. Old numbering and repair instructions are superseded, not combined with this verdict. No routine reapproval of direction or numbering is required.

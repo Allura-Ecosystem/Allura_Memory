@@ -11,6 +11,16 @@ sourceRevision: fcf4a33f025f69a5bc3fd120e974dd079dc65c52
 
 # Product Brief: Allura Memory
 
+## Controlling product-scope amendment — 2026-10-31
+
+Sabir approved local development across the existing 14 epics; see [applied Correct Course](sprint-change-proposal-2026-10-31-all-14-local.md). This supersedes older deferred 12–14/reset-state/next-story wording below only where conflicting. Preserve actual Epics 1–11 implementation/evidence and all separate release/human gates; no story or product completion follows.
+
+The first adopted run use case is an operator's durable evidence handoff: check supplied local artifact integrity, persist an exact independent human run-approval pause, survive loss of the requesting process, then resume to one PostgreSQL-local handoff receipt. [12.1 detailed design](contracts/durable-runs-v1.md) separates immutable definition/policy/evidence from runtime state and requires current authorization, bounded attempts and truthful outcomes. Ordinary defaults are adopted under delegated engineering authority, not quoted user choices. No arbitrary execution, network effect or semantic promotion is included.
+
+Owner product choices: **Allura owns live status; Notion is planning only**—native Allura PostgreSQL is the sole writable operational authority, no two-way board sync. Detailed work-item conflict/transaction contracts remain Story 13.1. **Linux first, connecting to the existing Allura server**—a remote-connected shell, no assumed local runtime supervisor; exact security/update/package/framework choices remain Story 14.1. Older DOC-09 undecided wording now applies only to those remaining mechanics, not board ownership or direction.
+
+The core memory boundary and independent authorized human semantic promotion remain unchanged. Existing external/deployed/platform/actual-human acceptance stays open; operational status is unknown. No tunnel work, live credentials/grants/data/server changes, deployment or public push is authorized by this amendment.
+
 > **Approved sequential rebuild, not product acceptance.** Execute Epic 1, then Epic 2 under the current catalog. Story 1.1's local foundation is verified; Epic 1 and the product are incomplete. Parent owns the pending clean baseline commit; legacy repair STOP stays intact. Retain BMAD/UX and unresolved decisions without historical delivery claims. See [Correct Course](sprint-change-proposal-2026-10-26.md).
 >
 > **Owner-approved operational routing:** Allura owns work status; Notion holds planning documents; Allura Brain provides governed continuity. No native Allura BMAD tracker adapter or actual status capability was available for this draft, so operational status remains unknown. This routing does not resolve product decision DOC-09.
