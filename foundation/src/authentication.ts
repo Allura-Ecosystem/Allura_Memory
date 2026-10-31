@@ -5,6 +5,7 @@ type HumanIdentity = Readonly<{ kind: 'human'; issuer: string; subject: string; 
 export type MachineCredential = Readonly<{
   kind: Exclude<PrincipalKind, 'human'>; principalId: string; groupId: string;
   workspaceId: string; actions: readonly string[]; expiresAt: number; revoked: boolean;
+  selected?: true; oauthClientId?: string; oauthResource?: string;
 }>;
 type MachineIdentity = MachineCredential & Readonly<{ credentialDigest: string }>;
 export type Identity = HumanIdentity | MachineIdentity;

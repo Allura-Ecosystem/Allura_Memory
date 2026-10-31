@@ -4,7 +4,7 @@ import { resolveAuthority, AuthorityError, type AuthorityStore, type AuthorityRe
 import { type Identity, type MachineCredential } from './authentication.ts';
 
 export async function migrate(owner: SQL): Promise<'applied' | 'unchanged'> {
-  const migrations = await Promise.all(['001-authority.sql', '002-access.sql', '003-capture.sql', '004-proposals.sql', '005-decisions.sql', '006-corrections.sql', '007-lifecycle.sql', '008-restoration.sql', '009-index.sql', '010-retrieval.sql', '011-federation.sql', '012-operations.sql', '013-device-authority.sql', '014-device-lifecycle.sql', '015-projection.sql', '016-bumblebee-configuration.sql', '017-bumblebee-leases.sql', '018-bumblebee-ingestion.sql', '019-app-modules.sql', '020-embedding-providers.sql', '021-client-authority.sql', '022-client-oauth.sql', '023-selected-version-sharing.sql'].map(async (file, index) => {
+  const migrations = await Promise.all(['001-authority.sql', '002-access.sql', '003-capture.sql', '004-proposals.sql', '005-decisions.sql', '006-corrections.sql', '007-lifecycle.sql', '008-restoration.sql', '009-index.sql', '010-retrieval.sql', '011-federation.sql', '012-operations.sql', '013-device-authority.sql', '014-device-lifecycle.sql', '015-projection.sql', '016-bumblebee-configuration.sql', '017-bumblebee-leases.sql', '018-bumblebee-ingestion.sql', '019-app-modules.sql', '020-embedding-providers.sql', '021-client-authority.sql', '022-client-oauth.sql', '023-selected-version-sharing.sql', '024-selected-client.sql'].map(async (file, index) => {
     const source = await Bun.file(new URL(`../migrations/${file}`, import.meta.url)).text();
     return { version: index + 1, source, digest: createHash('sha256').update(source).digest('hex') };
   }));
@@ -28,6 +28,11 @@ export async function migrate(owner: SQL): Promise<'applied' | 'unchanged'> {
 
 export class DatabaseStore implements AuthorityStore {
   constructor(private readonly sql: SQL) {}
+  async selectedConnect(identity: Identity, scope: Scope): Promise<boolean> {
+    if(identity.kind==='human'||identity.selected!==true){return false;}
+    const [row]=await this.sql`SELECT allura.selected_lookup(${identity.credentialDigest},${identity.oauthResource??''}) AS credential`;const c=row?.credential;
+    return !!c && c.revoked===false && c.principalId===identity.principalId && c.oauthClientId===identity.oauthClientId && c.groupId===scope.groupId && c.workspaceId===scope.workspaceId;
+  }
   async resolveMember(identity: Identity, groupId: string): Promise<{ principalId: string; groupId: string; active: boolean } | null> {
     if (identity.kind !== 'human') { return null; }
     const [row] = await this.sql`SELECT allura.resolve_member(${identity.issuer},${identity.subject},${groupId}) AS member`;
@@ -40,7 +45,7 @@ export class DatabaseStore implements AuthorityStore {
     return { ...row.authority, ...(human ? {} : { credentialActions: row.credential?.actions ?? [] }) } as AuthorityRecord;
   }
   async lookupMachine(digest: string): Promise<MachineCredential | null> {
-    const [row] = await this.sql`SELECT allura.lookup_machine(${digest}) AS credential`;
+    const [row] = await this.sql`SELECT CASE WHEN allura.selected_lookup(${digest},'') IS NOT NULL THEN allura.selected_lookup(${digest},'') ELSE allura.lookup_machine(${digest}) END AS credential`;
     return (row?.credential ?? null) as MachineCredential | null;
   }
 }

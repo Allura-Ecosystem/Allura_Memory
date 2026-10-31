@@ -8,7 +8,7 @@ export class ConsumerError extends Error{constructor(readonly outcome:Outcome){s
 export type ConsumerOptions={endpoint:string;groupId:string;workspaceId:string;token:()=>Promise<string>;allowLoopback?:boolean;timeoutMs?:number;terminalDenial?:boolean};
 export type AddInput={content:string;idempotency_key:string;trace_type?:'run'|'tool'|'failure'|'cron'|'conversation';threshold?:number|null;metadata?:{source?:string;source_id?:string;tags?:string[]}};
 export type SearchInput={query:string;status?:'approved'|'all';limit?:number;history?:boolean;min_score?:number};
-export type GetInput={id:string;kind?:'semantic'|'receipt';history?:boolean};
+export type GetInput={id:string;kind?:'semantic'|'receipt'|'selected';history?:boolean};
 export type ListInput={limit?:number;history?:boolean;cursor?:string};
 export type DeleteInput={memoryId:string;expectedHeadRevision:number;reason:string;operationKey:string};
 let activeFetches=0;

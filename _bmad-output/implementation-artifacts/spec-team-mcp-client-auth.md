@@ -48,7 +48,11 @@ Never impersonate a machine using a human JWT, distribute Troy credentials, weak
 
 </frozen-after-approval>
 
-## Current continuation — selected-version approval
+## Current continuation — selected client backend
+
+Human selected-version sharing is locally verified and committed as d4bc73f954624626c2c58e0494d15a51065e1a3a (parent385 tests/5033 Bun assertions). Next bounded dependency is `spec-team-mcp-selected-client.md` and `selected-client-v1.md`: separate selected-only self-consent/client capability and explicit selected mode on existing memory_get. It creates no workspace grant and leaves existing default reads/owner consent untouched. Member browser UI and actual installed-client/hosted/human acceptance remain following gates; this broader draft is not closed.
+
+## Prior continuation — selected-version approval
 
 Sabir explicitly approved reviewed-version-only sharing: each recipient separately, read-only first slice, new approval for later versions and no implicit related content. Owner access remains unchanged. Local owner authority, OAuth foundation, discovery and browser consent are committed through ace4f3fcf8c772cf8705944ba17bd8d36316a83a. The next dependency is `spec-team-mcp-selected-version-sharing.md` and its `selected-version-sharing-v1.md` contract. It deliberately implements human approve/revoke/exact-read before member MCP; it does not close this broader draft. SSH is no longer a task or blocker under the user's later epics-only correction. The older gates, code map and implementation notes below are original planning evidence, not current implementation claims.
 

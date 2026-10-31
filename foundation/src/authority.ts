@@ -8,7 +8,7 @@ export class AuthorityError extends Error {
 }
 export type PrincipalKind = 'human' | 'service' | 'device' | 'worker';
 export type Scope = Readonly<{ groupId: string; workspaceId: string }>;
-export const actions = ['memory:read', 'evidence:read', 'memory:capture', 'proposal:write', 'review:read', 'review:approve', 'memory:delete', 'audit:read', 'health:read', 'workspace:grants:manage', 'tenant:member'] as const;
+export const actions = ['memory:read', 'evidence:read', 'memory:capture', 'proposal:write', 'review:read', 'review:approve', 'memory:delete', 'audit:read', 'health:read', 'workspace:grants:manage', 'tenant:member', 'mcp:connect'] as const;
 export type Action = typeof actions[number];
 const roleActions: Readonly<Record<string, readonly Action[]>> = Object.freeze({
   viewer: ['memory:read'],
@@ -24,6 +24,7 @@ export type AuthorityRecord = Scope & {
 export interface AuthorityStore {
   // Implementations read CURRENT server-owned binding/membership/grant state.
   resolve(identity: Identity, scope: Scope): Promise<AuthorityRecord | null>;
+  selectedConnect?(identity: Identity, scope: Scope): Promise<boolean>;
   resolveMember?(identity: Identity, groupId: string): Promise<{ principalId: string; groupId: string; active: boolean } | null>;
 }
 export type Authority = Scope & Readonly<{ principalId: string; kind: PrincipalKind; action: Action }>;
@@ -42,6 +43,12 @@ export function allowedRoleAction(role: string, reviewApprove: boolean, kind: Pr
 export async function resolveAuthority(identity: Identity, scope: Scope, action: string, store: AuthorityStore): Promise<Authority> {
   if (!isAuthenticated(identity) || identity.expiresAt <= Math.floor(Date.now() / 1000)) { throw new AuthorityError('unauthenticated'); }
   if (!validScope(scope)) { throw new AuthorityError('invalid'); }
+  if (identity.kind !== 'human' && identity.selected === true) {
+    if(action !== 'mcp:connect' || identity.groupId !== scope.groupId || identity.workspaceId !== scope.workspaceId || identity.actions.length !== 1 || identity.actions[0] !== 'memory:selected:read' || !store.selectedConnect){throw new AuthorityError('forbidden');}
+    try{if(!await store.selectedConnect(identity,scope)){throw new Error();}}catch{throw new AuthorityError('forbidden');}
+    const authority:Authority=Object.freeze({...scope,principalId:identity.principalId,kind:identity.kind,action});issued.add(authority);return authority;
+  }
+  if(action === 'mcp:connect'){return resolveAuthority(identity,scope,'memory:read',store);}
   // Admission to access-control commands only. Not a workspace/content grant.
   // Each command independently locks and validates its required authority.
   if (action === 'tenant:member') {

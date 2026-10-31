@@ -15,6 +15,7 @@ test('OAuth configuration explicitly binds a separate loopback issuer fixed publ
  const oauth={port:18443,issuer:'http://127.0.0.1:18443',resource:'https://core.invalid/mcp',consentOrigin:config.origin,client:{clientId:'synthetic-desktop',name:'Synthetic desktop',redirectUris:['http://127.0.0.1:18444/callback'],actions:['memory:read','memory:capture']}};
  expect(parseCoreConfig({...config,oauth},environment)).toMatchObject({oauth:{...oauth,host:'127.0.0.1'}});
  expect(parseCoreConfig(config,environment)).not.toHaveProperty('oauth');
+ for(const actions of [['memory:selected:read'],['memory:read','memory:selected:read']]){expect(parseCoreConfig({...config,oauth:{...oauth,client:{...oauth.client,actions}}},environment).oauth?.client.actions).toEqual(actions);}
 });
 test('OAuth configuration rejects ambiguous registration unsafe URLs and privilege fields without weakening human mode',()=>{
  const oauth={port:18443,issuer:'http://127.0.0.1:18443',resource:'https://core.invalid/mcp',consentOrigin:config.origin,client:{clientId:'synthetic-desktop',name:'Synthetic desktop',redirectUris:['http://127.0.0.1:18444/callback'],actions:['memory:read','memory:capture']}};

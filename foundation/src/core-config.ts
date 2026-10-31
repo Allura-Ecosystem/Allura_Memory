@@ -38,7 +38,7 @@ export function parseCoreConfig(raw:unknown,environment:Readonly<Record<string,s
    if(!c||typeof c!=='object'||Array.isArray(c)||Object.keys(c).length!==4||Object.keys(c).some(k=>!['clientId','name','redirectUris','actions'].includes(k))||typeof c.clientId!=='string'||!/^[-a-zA-Z0-9._:]{1,128}$/.test(c.clientId)||typeof c.name!=='string'||!c.name.trim()||c.name.length>128||/[\x00-\x1f\x7f]/.test(c.name)){throw new Error();}
    if(!Array.isArray(c.redirectUris)||c.redirectUris.length<1||c.redirectUris.length>8||new Set(c.redirectUris).size!==c.redirectUris.length){throw new Error();}
    for(const uri of c.redirectUris){if(typeof uri!=='string'||uri.length>2048||uri.includes('#')||/[\x00-\x20\\]/.test(uri)){throw new Error();}const u=new URL(uri);if(u.href!==uri||u.username||u.password||!(u.protocol==='https:'||(u.protocol==='http:'&&u.hostname==='127.0.0.1'&&u.port))||u.search){throw new Error();}}
-   const ceiling=['memory:read','memory:capture','evidence:read','proposal:write','review:read','memory:delete','audit:read','health:read'];
+   const ceiling=['memory:read','memory:capture','evidence:read','proposal:write','review:read','memory:delete','audit:read','health:read','memory:selected:read'];
    if(!Array.isArray(c.actions)||c.actions.length<1||c.actions.length>ceiling.length||new Set(c.actions).size!==c.actions.length||c.actions.some(v=>!ceiling.includes(v))){throw new Error();}
    oauth=Object.freeze({host:'127.0.0.1',port:o.port as number,issuer:o.issuer as string,resource:o.resource as string,consentOrigin:o.consentOrigin as string,client:Object.freeze({clientId:c.clientId,name:c.name,redirectUris:Object.freeze([...c.redirectUris]) as readonly string[],actions:Object.freeze([...c.actions]) as readonly string[]})});
   }

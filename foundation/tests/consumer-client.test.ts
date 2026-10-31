@@ -38,7 +38,7 @@ test('consumer advertised guidance identifies preview limits and exact typed rea
  const search=MEMORY_TOOLS.find(tool=>tool.name==='memory_search')!,get=MEMORY_TOOLS.find(tool=>tool.name==='memory_get')!;
  expect(search.description).toContain('contentTruncated');expect(search.description).toContain('kind');
  expect(search.description).toContain('no full evidence');expect(get.description).toContain('receipt_id as id');expect(get.description).toContain('event_id');
- expect(get.inputSchema.properties?.kind).toEqual({type:'string',enum:['semantic','receipt']});
+ expect(get.inputSchema.properties?.kind).toEqual({type:'string',enum:['semantic','receipt','selected']});
  expect(DISCLOSURE).toContain('not live indexing status');
 });
 const scope={groupId:'allura-fixture',workspaceId:'11111111-1111-4111-8111-111111111111'},token=async()=> 'x'.repeat(64);
