@@ -7,6 +7,7 @@ import {type Embedder} from './embedding.ts';
 import {DatabaseStore} from './persistence.ts';
 import {createGateway} from './gateway.ts';
 import {createAccessRoutes} from './access-api.ts';
+import {createMemoryShareRoutes} from './memory-shares-api.ts';
 import {createEvidenceRoutes} from './evidence-api.ts';
 import {createReviewRoutes} from './review-api.ts';
 import {createRetrievalRoutes} from './retrieval-api.ts';
@@ -22,7 +23,7 @@ import {createBumblebeeScannerGateway,type BumblebeeScannerOptions} from './bumb
 export function createCoreGateway(sql:SQL,human:HumanConfig|undefined,origin:string,cursorKey:Uint8Array,provider:Embedder,projection?:ProjectionTransport,scannerOptions?:BumblebeeScannerOptions,mode:'human'|'machine-only'='human',oauth?:LocalOAuthProvider):(request:Request)=>Promise<Response>{
  if(oauth&&(mode==='machine-only'||!human)){throw new Error('invalid runtime mode');}
  const store=new DatabaseStore(sql);
- const normal=createGateway({mode,...(human?{human}:{}),origin,store,machineLookup:async d=>{const [row]=await sql`SELECT coalesce(allura.oauth_lookup(${d},${oauth?.config.resource??''}),allura.lookup_machine(${d})) AS credential`;return row?.credential??null;},routes:[...(oauth?createOAuthConsentRoutes(oauth):[]),...createAccessRoutes(sql),...createEvidenceRoutes(sql),...createReviewRoutes(sql),...createRetrievalRoutes(sql,cursorKey,provider),...createOperationsRoutes(sql,provider,scope=>projection?.configured(scope)??false),...createMcpRoutes(sql,cursorKey,provider),...createDeviceRoutes(sql),...createDashboardRoutes(sql),...createProjectionRoutes(sql,projection),...createAppModulesRoutes(sql),...createBumblebeeConfigurationRoutes(sql,scannerOptions?{redaction:{key:scannerOptions.redactionKey,revision:scannerOptions.redactionKeyRevision}}:{})]}),scanner=scannerOptions?createBumblebeeScannerGateway(sql,scannerOptions):undefined;
+ const normal=createGateway({mode,...(human?{human}:{}),origin,store,machineLookup:async d=>{const [row]=await sql`SELECT coalesce(allura.oauth_lookup(${d},${oauth?.config.resource??''}),allura.lookup_machine(${d})) AS credential`;return row?.credential??null;},routes:[...(oauth?createOAuthConsentRoutes(oauth):[]),...createMemoryShareRoutes(sql),...createAccessRoutes(sql),...createEvidenceRoutes(sql),...createReviewRoutes(sql),...createRetrievalRoutes(sql,cursorKey,provider),...createOperationsRoutes(sql,provider,scope=>projection?.configured(scope)??false),...createMcpRoutes(sql,cursorKey,provider),...createDeviceRoutes(sql),...createDashboardRoutes(sql),...createProjectionRoutes(sql,projection),...createAppModulesRoutes(sql),...createBumblebeeConfigurationRoutes(sql,scannerOptions?{redaction:{key:scannerOptions.redactionKey,revision:scannerOptions.redactionKeyRevision}}:{})]}),scanner=scannerOptions?createBumblebeeScannerGateway(sql,scannerOptions):undefined;
  const resource=oauth?oauthResource(oauth,normal):normal;
  return async request=>{const reply=await (scanner&&['/api/bumblebee/lease','/api/bumblebee/ingest'].includes(new URL(request.url).pathname)?scanner(request):resource(request));if(new URL(request.url).pathname==='/api/oauth/consent'){reply.headers.set('Referrer-Policy','no-referrer');}return reply;};
 }

@@ -50,7 +50,7 @@ try {
   const focusedAssertions = Number(focusedOutput.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   console.log(JSON.stringify({ lane: 'client-authority', pass: focusedPass, assertions: focusedAssertions, exit: focused.exitCode }));
   if (focused.exitCode !== 0 || focusedPass < 1 || focusedAssertions < 1 || /\b[1-9]\d* (?:skip|fail)\b/.test(focusedOutput)) { throw new Error('Required client authority lane failed'); }
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/oauth-consent-browser.test.ts', './tests/oauth-contract.test.ts', './tests/oauth-http.test.ts', './tests/client-authority.test.ts', './tests/memory-experiment-browser.test.ts', './tests/memory-experiment-workflow.test.ts', './tests/app-modules.test.ts', './tests/bumblebee-persistence.test.ts', './tests/bumblebee-leases.test.ts', './tests/bumblebee-configuration.test.ts', './tests/projection-delivery.test.ts', './tests/projection-browser.test.ts', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/memory-shares.test.ts', './tests/oauth-consent-browser.test.ts', './tests/oauth-contract.test.ts', './tests/oauth-http.test.ts', './tests/client-authority.test.ts', './tests/memory-experiment-browser.test.ts', './tests/memory-experiment-workflow.test.ts', './tests/app-modules.test.ts', './tests/bumblebee-persistence.test.ts', './tests/bumblebee-leases.test.ts', './tests/bumblebee-configuration.test.ts', './tests/projection-delivery.test.ts', './tests/projection-browser.test.ts', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -58,6 +58,24 @@ try {
   const skip = Number(output.match(/\b(\d+) skip\b/)?.[1] ?? 0);
   const assertions = Number(output.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   const required = [
+    'selected sharing human approval discloses only the exact version to recipient A',
+    'selected sharing historical replay never resurrects revocation and explicit revisions govern reapproval',
+    'selected sharing restricted SQL validates exact commands and never accepts extra authority claims',
+    'selected sharing history returns only the approved immutable version and never successor neighbor or foreign scope',
+    'selected sharing rechecks issuer recipient binding membership grants and workspace without cached authority',
+    'selected sharing current administrator can revoke after original issuer or recipient loses authority',
+    'selected sharing HTTP rejects forged machine mixed CSRF malformed and unauthorized commands without effects',
+    'selected sharing grants no existing HTTP retrieval review administration capture or OAuth surface',
+    'selected sharing restricted SQL preserves RLS federation own capture and private append only boundaries',
+    'selected sharing deferred audit and receipt failures roll back mutations and suppress read disclosure',
+    'selected sharing read first holds locks through audit before share revocation',
+    'selected sharing revoke first blocks the reader then denies without disclosure',
+    'selected sharing issuer demotion orders both read first and demotion first',
+    'selected sharing recipient binding loss orders both read first and loss first',
+    'selected sharing absent revoke stays not found for every supplied revision',
+    'selected sharing concurrent creation replay and competing revisions have one durable effect per operation',
+    'selected sharing exact original issuer binding cannot be replaced by another active human',
+
     'OAuth browser real back navigation discards private consent without resubmission',
     'OAuth browser lost display or decision responses clear private state and never retry or navigate',
     'OAuth browser display bindings reject tamper swapped session cross site replay and expiry without issuance',

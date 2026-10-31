@@ -48,7 +48,11 @@ Never impersonate a machine using a human JWT, distribute Troy credentials, weak
 
 </frozen-after-approval>
 
-## Remaining integration gates
+## Current continuation — selected-version approval
+
+Sabir explicitly approved reviewed-version-only sharing: each recipient separately, read-only first slice, new approval for later versions and no implicit related content. Owner access remains unchanged. Local owner authority, OAuth foundation, discovery and browser consent are committed through ace4f3fcf8c772cf8705944ba17bd8d36316a83a. The next dependency is `spec-team-mcp-selected-version-sharing.md` and its `selected-version-sharing-v1.md` contract. It deliberately implements human approve/revoke/exact-read before member MCP; it does not close this broader draft. SSH is no longer a task or blocker under the user's later epics-only correction. The older gates, code map and implementation notes below are original planning evidence, not current implementation claims.
+
+## Remaining integration gates (historical initial plan)
 
 Sabir explicitly continued the goal after correcting the owner/member policy. The first dependency-ready local build is specified in `spec-team-mcp-owner-client-authority.md` and is active with one Woz source writer. It implements owner-linked authority without adding public routes or issuing live OAuth tokens, so those later integration gates do not block this slice. Do not repeat the rejected uniform restricted-member approval question. Exact OAuth issuance/metadata topology, member content-sharing enforcement and genuine installed-client/deployment evidence remain required before rollout; no fabricated consent, broad live grant or guard weakening follows from continuation.
 

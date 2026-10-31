@@ -97,7 +97,7 @@ test('OAuth consent binds the signed display session exact scope and one use non
   const post=(body:unknown,head=headers,url=p.consent)=>fetch(url,{method:'POST',headers:head,body:JSON.stringify(body)}),approved={...shown,decision:'approve'};
   expect((await post(approved,{...headers,Origin:'https://foreign.invalid'})).status).toBe(403);
   expect((await post(approved,{...headers,'Sec-Fetch-Site':'cross-site'})).status).toBe(403);
-  expect((await post(approved,{...headers,Authorization:'Bearer '+randomBytes(32).toString('base64url')})).status).toBe(400);
+  expect((await post(approved,{...headers,Authorization:'Bearer '+randomBytes(32).toString('base64url')})).status).toBe(401);
   for(const swap of [{clientId:'other'},{redirectUri:'https://foreign.invalid/cb'},{actions:['review:approve']},{nonce:randomBytes(32).toString('base64url')},{workspaceId:h.f.foreignWorkspace}]){expect((await post({...approved,...swap})).status).toBeGreaterThanOrEqual(400);}
   expect((await post(approved,h.humanHeaders('reviewer'))).status).toBe(403);
   expect((await fetch(p.consent,{headers})).status).toBe(403);

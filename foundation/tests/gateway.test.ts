@@ -24,6 +24,32 @@ test('gateway authenticates before body and never trusts forged headers', async 
   expect((await gateway(new Request(`${origin}/missing`))).status).toBe(404);
 });
 
+test('gateway rejects mixed identity on human routes before authority body or handler work', async () => {
+  let authorityCalls = 0, machineCalls = 0, handlerCalls = 0;
+  const gateway = createGateway({ human: config, origin, store: { resolve: async () => { authorityCalls++; return row; } }, machineLookup: async () => { machineCalls++; return null; }, routes: [
+    { path: '/human', method: 'GET', identity: 'human', action: 'memory:read', handle: async () => { handlerCalls++; return {}; } },
+    { path: '/human', method: 'POST', identity: 'human', action: 'memory:capture', handle: async () => { handlerCalls++; return {}; } },
+  ] });
+  for (const identityHeaders of [{ 'Cf-Access-Jwt-Assertion': jwt }, { Cookie: `CF_Authorization=${jwt}` }]) {
+    const humanHeaders = { ...identityHeaders, Origin: origin, 'Sec-Fetch-Site': 'same-origin', 'Content-Type': 'application/json' };
+    expect((await gateway(new Request(`${origin}/human${query}`, { method: 'POST', headers: humanHeaders, body: '{}' }))).status).toBe(200);
+    authorityCalls = 0; handlerCalls = 0;
+    for (const authorization of ['Bearer synthetic-machine-credential', 'Basic unsupported', '']) {
+      for (const body of ['{}', '{']) {
+        const request = new Request(`${origin}/human${query}`, { method: 'POST', headers: { ...humanHeaders, Authorization: authorization }, body });
+        const result = await gateway(request);
+        expect(result.status).toBe(401);
+        expect(await result.json()).toEqual({ outcome: 'unauthenticated' });
+        expect(request.bodyUsed).toBe(false);
+      }
+      const result = await gateway(new Request(`${origin}/human${query}`, { headers: { ...humanHeaders, Authorization: authorization } }));
+      expect(result.status).toBe(401);
+      expect(await result.json()).toEqual({ outcome: 'unauthenticated' });
+    }
+    expect(authorityCalls).toBe(0); expect(machineCalls).toBe(0); expect(handlerCalls).toBe(0);
+  }
+});
+
 test('gateway bounds streamed body rejects malformed JSON and cross-site', async () => {
   let calls = 0;
   const gateway = createGateway({ human: config, origin, store, machineLookup: async () => null, limits: { bodyBytes: 32 }, routes: [{ path: '/mutate', method: 'POST', identity: 'human', action: 'memory:capture', handle: async () => { calls++; return { ok: true }; } }] });
