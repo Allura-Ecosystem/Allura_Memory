@@ -1,3 +1,7 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { readBunReport } from '../src/test-runner.ts';
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
 const suites = [{requiredFile:'./tests/selected-consent-transport.test.ts',minAssertions:259,requiredCases:[
  'selected consent transport freezes exact display uses same origin and blocks duplicate decisions',
@@ -170,6 +174,24 @@ const suites = [{requiredFile:'./tests/selected-consent-transport.test.ts',minAs
 ]},{requiredFile:'./tests/dashboard-view.test.ts',minAssertions:28,requiredCases:[
  'dashboard presentation binds current context and rejects malformed scope or response shapes',
  'dashboard search matches federated fields and honestly labels partial failed truncated responses',
+]},{requiredFile:'./tests/test-runner.test.ts',minAssertions:929,requiredCases:[
+ 'required runner accepts real Bun passes with optional timing at every exact floor',
+ 'required runner ignores captured timed and untimed console identities',
+ 'required runner rejects a positive below floor second suite despite surplus first suite assertions',
+ 'required runner accepts above floor assertions in every suite',
+ 'required runner rejects missing renamed and colliding required case names',
+ 'required runner rejects a missing file before launching that suite',
+ 'required runner rejects skipped cases even when all required names pass',
+ 'required runner rejects failed cases even when all required names pass',
+ 'required runner rejects nonzero child exit after all required cases pass',
+ 'required runner rejects empty files and zero assertion passes',
+ 'required runner preserves numeric suffixes and XML special names through native reports',
+ 'required runner rejects missing malformed ambiguous and unexpected native report structure',
+ 'required runner rejects malformed XML encoding and external declarations',
+ 'required runner bounds native report bytes before parsing and accepts the exact ceiling',
+ 'required runner counts only passed native cases and rejects duplicate identities',
+ 'required runner rejects non XML whitespace instead of normalizing malformed reports',
+ 'required runner refuses caller selection overrides before executing fixtures',
 ]}];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');
@@ -178,7 +200,10 @@ for (const { requiredFile, requiredCases, minAssertions } of suites) {
 if (!(await Bun.file(requiredFile).exists())) {
   throw new Error(`Required test file missing: ${requiredFile}`);
 }
-const result = Bun.spawnSync([process.execPath, 'test', requiredFile], {
+const reportDirectory = await mkdtemp(join(tmpdir(), 'allura-bun-report-'));
+const reportPath = join(reportDirectory, 'results.xml');
+try {
+const result = Bun.spawnSync([process.execPath, 'test', '--only-failures', '--reporter=junit', `--reporter-outfile=${reportPath}`, requiredFile], {
   stdout: 'pipe',
   stderr: 'pipe',
   env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
@@ -187,13 +212,19 @@ const stdout = result.stdout.toString();
 const stderr = result.stderr.toString();
 process.stdout.write(stdout);
 process.stderr.write(stderr);
-const pass = Number(stderr.match(/\b(\d+) pass\b/)?.[1] ?? 0);
-const fail = Number(stderr.match(/\b(\d+) fail\b/)?.[1] ?? 0);
-const skip = Number(stderr.match(/\b(\d+) skip\b/)?.[1] ?? 0);
-const assertions = Number(stderr.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
-const missingCases = requiredCases.filter((name) => !stderr.includes(`(pass) ${name} [`));
+let report;
+let invalidReport = false;
+try { report = await readBunReport(reportPath, requiredFile); }
+catch {
+  invalidReport = true;
+  report = { pass: 0, fail: 0, skip: 0, assertions: 0, passedCases: new Set<string>() };
+}
+const { pass, fail, skip, assertions, passedCases } = report;
+const missingCases = requiredCases.filter((name) => !passedCases.has(name));
 console.log(JSON.stringify({ requiredFile, requiredCases, missingCases, pass, fail, skip, assertions, runnerExit: result.exitCode }));
+if (invalidReport) { throw new Error(`Required test lane failed: ${requiredFile}; invalid native report`); }
 if (result.exitCode !== 0 || pass < requiredCases.length || fail !== 0 || skip !== 0 || assertions < minAssertions || missingCases.length > 0) {
   throw new Error(`Required test lane failed: ${requiredFile}; require all cases, assertion floor, no failures or skips`);
 }
+} finally { await rm(reportDirectory, { recursive: true, force: true }); }
 }
