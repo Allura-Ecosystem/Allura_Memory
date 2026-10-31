@@ -1,5 +1,14 @@
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
-const suites = [{requiredFile:'./tests/recovery-diagnostics.test.ts',minAssertions:23,requiredCases:[
+const suites = [{requiredFile:'./tests/oauth-consent-transport.test.ts',minAssertions:183,requiredCases:[
+ 'OAuth consent transport freezes exact display uses same origin and blocks duplicate decisions',
+ 'OAuth consent transport denies malformed scope context and display without disclosure or recovery',
+ 'OAuth consent transport bounds malformed oversized denied and lost responses with no retry',
+ 'OAuth consent transport aborts late display and decision responses after closure',
+ 'OAuth consent callback validation rejects arbitrary ambiguous and malformed destinations',
+ 'OAuth consent navigation accepts only one exact transaction and no fragment or extra field',
+ 'OAuth consent transport bounds verification and rejects late context after close',
+ 'OAuth consent transport bounds stalled streams and never retries a consumed display',
+]},{requiredFile:'./tests/recovery-diagnostics.test.ts',minAssertions:23,requiredCases:[
  'recovery diagnostic bounds retained stderr and exposes only allowlisted hints',
  'recovery process diagnostics distinguish exit signal and stream failure without guessing cause',
 ]},{requiredFile:'./tests/memory-experiment.test.ts',minAssertions:130,requiredCases:[

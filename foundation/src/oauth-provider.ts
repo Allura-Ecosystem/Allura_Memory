@@ -18,7 +18,7 @@ export class LocalOAuthProvider implements OAuthServerProvider{
   if(client.client_id!==this.config.client.clientId||!this.config.client.redirectUris.includes(params.redirectUri)||params.resource?.href!==this.config.resource||!/^[A-Za-z0-9_-]{43}$/.test(params.codeChallenge)||!params.scopes?.length||new Set(params.scopes).size!==params.scopes.length||params.scopes.some(s=>!this.config.client.actions.includes(s))||(params.state!==undefined&&!/^[\x21-\x7e]{1,512}$/.test(params.state))){throw new InvalidRequestError('invalid_request');}
   const transaction=oauthSecret(),input={clientId:client.client_id,redirectUri:params.redirectUri,resource:this.config.resource,actions:params.scopes,challenge:params.codeChallenge,state:params.state??null};
   try{await this.sql`SELECT allura.oauth_begin(${oauthDigest(transaction)},${input}::jsonb)`;}catch{throw new InvalidRequestError('invalid_request');}
-  const target=new URL('/api/oauth/consent',this.config.consentOrigin);target.searchParams.set('transaction',transaction);response.redirect(302,target.href);
+  const target=new URL('/dashboard/oauth/consent',this.config.consentOrigin);target.searchParams.set('transaction',transaction);response.redirect(302,target.href);
  }
  async challengeForAuthorizationCode(client:OAuthClientInformationFull,code:string):Promise<string>{
   if(!/^[A-Za-z0-9_-]{43}$/.test(code)){throw new InvalidGrantError('invalid_grant');}

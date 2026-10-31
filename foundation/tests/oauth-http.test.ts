@@ -66,8 +66,10 @@ test('OAuth isolated core SDK discovers issuer exchanges tokens and closes its s
   expect(authorize!.searchParams.get('resource')).toBe(oauth.resource);expect(authorize!.searchParams.get('state')).toBe(state);expect(authorize!.searchParams.get('scope')).toBe(oauth.client.actions.join(' '));
   expect(verifier).toMatch(/^[A-Za-z0-9._~-]{43,128}$/);expect(authorize!.searchParams.get('code_challenge_method')).toBe('S256');expect(authorize!.searchParams.get('code_challenge')).toBe(createHash('sha256').update(verifier!).digest('base64url'));
   const pending=await mappedFetch(authorize!);expect(pending.status).toBe(302);
-  const consent=new URL(pending.headers.get('location')!);expect(consent.origin).toBe(oauth.consentOrigin);expect(consent.pathname).toBe('/api/oauth/consent');expect(consent.searchParams.has('code')).toBe(false);
-  consent.searchParams.set('group_id',f.scope.groupId);consent.searchParams.set('workspace_id',f.scope.workspaceId);
+  const consent=new URL(pending.headers.get('location')!);expect(consent.origin).toBe(oauth.consentOrigin);expect(consent.pathname).toBe('/dashboard/oauth/consent');expect(consent.searchParams.has('code')).toBe(false);
+  // Retain the lower-level signed JSON protocol test; oauth-consent-browser.test.ts
+  // exercises the actual issuer redirect through the browser and SDK exchange.
+  consent.pathname='/api/oauth/consent';consent.searchParams.set('group_id',f.scope.groupId);consent.searchParams.set('workspace_id',f.scope.workspaceId);
   const assertion=f.jwt('author'),headers={'Cf-Access-Jwt-Assertion':assertion,Origin:oauth.consentOrigin,'Sec-Fetch-Site':'same-origin','content-type':'application/json'};
   const display=await mappedFetch(consent,{headers});expect(display.status).toBe(200);const shown=await display.json() as Record<string,unknown>;expect(shown).toMatchObject({clientId:oauth.client.clientId,redirectUri:oauth.client.redirectUris[0],actions:oauth.client.actions,groupId:f.scope.groupId,workspaceId:f.scope.workspaceId});
   const approved=await mappedFetch(consent,{method:'POST',headers,body:JSON.stringify({...shown,decision:'approve'})});expect(approved.status).toBe(200);const callback=new URL((await approved.json() as {redirect:string}).redirect);expect(callback.origin+callback.pathname).toBe(oauth.client.redirectUris[0]!);expect(callback.searchParams.get('state')).toBe(state);expect(callback.searchParams.get('code')).toMatch(/^[A-Za-z0-9_-]{43}$/);

@@ -5,6 +5,16 @@ import {createCoreGateway} from '../src/core-api.ts';
 import {loadLocalEmbedder} from '../src/embedding.ts';
 import {submitProposal} from '../src/proposals.ts';
 import {capture} from '../src/capture.ts';
+import {createDashboardHandler} from '../src/dashboard-server.ts';
+import {buildDashboard} from '../scripts/build-dashboard.ts';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+test('OAuth consent page serves only neutral GET HTML with unchanged dashboard security headers',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'allura-consent-shell-'));try{await buildDashboard(dir);const absent=async()=>Response.json({outcome:'not_found'},{status:404}),human=await createDashboardHandler(absent,dir),machine=await createDashboardHandler(absent,dir,'machine-only'),url='https://core.invalid/dashboard/oauth/consent?transaction='+'t'.repeat(43);
+ const response=await human(new Request(url));expect(response.status).toBe(200);const ordinary=await human(new Request('https://core.invalid/dashboard'));for(const key of ['cache-control','referrer-policy','content-security-policy','x-content-type-options']){expect(response.headers.get(key)).toBe(ordinary.headers.get(key));}expect(response.headers.get('cache-control')).toBe('no-store');expect(response.headers.get('referrer-policy')).toBe('no-referrer');expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8');const html=await response.text();expect(html).not.toContain('t'.repeat(43));expect(html).not.toContain('nonce');expect(html).toBe(await ordinary.text());for(const method of ['POST','PUT','DELETE','PATCH','OPTIONS','HEAD']){expect((await human(new Request(url,{method}))).status).toBe(404);}expect((await machine(new Request(url))).status).toBe(404);
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
 test('dashboard HTTP derives current presentation scope without granting organization content access',async()=>{
  const f=await fixture(`allura-dashboard-${randomUUID()}`),provider=await loadLocalEmbedder(),origin='https://dashboard.invalid';const server=Bun.serve({hostname:'127.0.0.1',port:0,fetch:createCoreGateway(f.app,f.humanConfig,origin,randomBytes(32),provider)});
  const url=(path:string,workspace=f.scope.workspaceId)=>`http://127.0.0.1:${server.port}/api/dashboard/${path}?group_id=${f.scope.groupId}&workspace_id=${workspace}`;
