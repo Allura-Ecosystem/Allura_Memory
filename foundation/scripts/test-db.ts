@@ -38,11 +38,27 @@ try {
   console.log(JSON.stringify({ image, server, target: 'isolated-loopback-disposable', container: name }));
   // Focused behavioral gate uses this same owned DB; no alternate target or
   // selection override. Full canonical discovery still runs on every GREEN.
-  const oauth = Bun.spawnSync([process.execPath, 'test', './tests/oauth-consent-browser.test.ts', './tests/oauth-contract.test.ts', './tests/oauth-http.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 300000 });
+  const oauth = Bun.spawnSync([process.execPath, 'test', './tests/selected-consent-browser.test.ts', './tests/oauth-consent-browser.test.ts', './tests/oauth-contract.test.ts', './tests/oauth-http.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 300000 });
+  const selectedBrowserCases = [
+    'selected browser SDK discovery approves grantless exact consent and reads only the approved version',
+    'selected browser denies absent invalid expired mixed bearer no share and foreign scope before display',
+    'selected browser display bindings reject tamper swapped session cross site replay and expiry without issuance',
+    'selected browser rechecks share issuer recipient and workspace loss for approval and cancellation',
+    'selected browser real back navigation discards private consent without resubmission',
+    'selected browser history restoration clears private request and cannot resurrect a decision',
+    'selected browser duplicate display tabs and competing decisions have one effective approval',
+    'selected browser lost display or decision responses clear private state and never retry or navigate',
+    'selected browser exact request wraps at desktop and phone with readable named controls',
+    'selected browser disabled APIs deny private consent and machine only mode has no dashboard',
+    'selected browser delayed real responses cannot resurrect state after lifecycle discard',
+    'selected browser malformed navigation remains neutral without requesting private display',
+    'selected browser dialog dismissal preserves consent while explicit cancellation issues no credential',
+  ];
   const oauthOutput = oauth.stderr.toString();process.stdout.write(oauth.stdout);process.stderr.write(oauthOutput);
   const oauthPass = Number(oauthOutput.match(/\b(\d+) pass\b/)?.[1] ?? 0), oauthAssertions = Number(oauthOutput.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
-  console.log(JSON.stringify({lane:'oauth',pass:oauthPass,assertions:oauthAssertions,exit:oauth.exitCode}));
-  if(oauth.exitCode !== 0 || oauthPass < 1 || oauthAssertions < 1 || /\b[1-9]\d* (?:skip|fail)\b/.test(oauthOutput)){throw new Error('Required OAuth lane failed');}
+  const oauthMissing=selectedBrowserCases.filter(name=>!oauthOutput.includes(`(pass) ${name} [`));
+  console.log(JSON.stringify({lane:'oauth',pass:oauthPass,assertions:oauthAssertions,missing:oauthMissing,exit:oauth.exitCode}));
+  if(oauthMissing.length || oauth.exitCode !== 0 || oauthPass < 1 || oauthAssertions < 1 || /\b[1-9]\d* (?:skip|fail)\b/.test(oauthOutput)){throw new Error('Required OAuth lane failed');}
   const focused = Bun.spawnSync([process.execPath, 'test', './tests/client-authority.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
   const focusedOutput = focused.stderr.toString();
   process.stdout.write(focused.stdout); process.stderr.write(focusedOutput);
@@ -50,7 +66,7 @@ try {
   const focusedAssertions = Number(focusedOutput.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   console.log(JSON.stringify({ lane: 'client-authority', pass: focusedPass, assertions: focusedAssertions, exit: focused.exitCode }));
   if (focused.exitCode !== 0 || focusedPass < 1 || focusedAssertions < 1 || /\b[1-9]\d* (?:skip|fail)\b/.test(focusedOutput)) { throw new Error('Required client authority lane failed'); }
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/selected-client.test.ts', './tests/memory-shares.test.ts', './tests/oauth-consent-browser.test.ts', './tests/oauth-contract.test.ts', './tests/oauth-http.test.ts', './tests/client-authority.test.ts', './tests/memory-experiment-browser.test.ts', './tests/memory-experiment-workflow.test.ts', './tests/app-modules.test.ts', './tests/bumblebee-persistence.test.ts', './tests/bumblebee-leases.test.ts', './tests/bumblebee-configuration.test.ts', './tests/projection-delivery.test.ts', './tests/projection-browser.test.ts', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/selected-consent-browser.test.ts', './tests/selected-client.test.ts', './tests/memory-shares.test.ts', './tests/oauth-consent-browser.test.ts', './tests/oauth-contract.test.ts', './tests/oauth-http.test.ts', './tests/client-authority.test.ts', './tests/memory-experiment-browser.test.ts', './tests/memory-experiment-workflow.test.ts', './tests/app-modules.test.ts', './tests/bumblebee-persistence.test.ts', './tests/bumblebee-leases.test.ts', './tests/bumblebee-configuration.test.ts', './tests/projection-delivery.test.ts', './tests/projection-browser.test.ts', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -58,6 +74,20 @@ try {
   const skip = Number(output.match(/\b(\d+) skip\b/)?.[1] ?? 0);
   const assertions = Number(output.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   const required = [
+    'selected browser SDK discovery approves grantless exact consent and reads only the approved version',
+    'selected browser denies absent invalid expired mixed bearer no share and foreign scope before display',
+    'selected browser display bindings reject tamper swapped session cross site replay and expiry without issuance',
+    'selected browser rechecks share issuer recipient and workspace loss for approval and cancellation',
+    'selected browser real back navigation discards private consent without resubmission',
+    'selected browser history restoration clears private request and cannot resurrect a decision',
+    'selected browser duplicate display tabs and competing decisions have one effective approval',
+    'selected browser lost display or decision responses clear private state and never retry or navigate',
+    'selected browser exact request wraps at desktop and phone with readable named controls',
+    'selected browser disabled APIs deny private consent and machine only mode has no dashboard',
+    'selected browser delayed real responses cannot resurrect state after lifecycle discard',
+    'selected browser malformed navigation remains neutral without requesting private display',
+    'selected browser dialog dismissal preserves consent while explicit cancellation issues no credential',
+    'selected consent page serves only neutral GET HTML with unchanged dashboard security headers',
     'selected client rejects malformed exact UUID before database casts',
     'selected client original issuer and recipient bindings cannot be substituted by alternate active bindings',
     'selected client read first serializes issuer recipient connection and RFC token loss at the real audit boundary',

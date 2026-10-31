@@ -1,5 +1,15 @@
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
-const suites = [{requiredFile:'./tests/oauth-consent-transport.test.ts',minAssertions:183,requiredCases:[
+const suites = [{requiredFile:'./tests/selected-consent-transport.test.ts',minAssertions:259,requiredCases:[
+ 'selected consent transport freezes exact display uses same origin and blocks duplicate decisions',
+ 'selected consent transport denies malformed scope context and display without disclosure or recovery',
+ 'selected consent transport bounds malformed oversized denied and lost responses with no retry',
+ 'selected consent transport aborts late display and decision responses after closure',
+ 'selected consent callback validation rejects arbitrary ambiguous and malformed destinations',
+ 'selected consent rejects every missing or wrongly typed frozen field and decision envelope',
+ 'selected consent timeout wins over abort ignoring fetch and duplicate display without late disclosure',
+ 'selected consent navigation accepts only one exact transaction and no fragment or extra field',
+ 'selected consent transport bounds stalled streams and never retries a consumed display',
+]},{requiredFile:'./tests/oauth-consent-transport.test.ts',minAssertions:183,requiredCases:[
  'OAuth consent transport freezes exact display uses same origin and blocks duplicate decisions',
  'OAuth consent transport denies malformed scope context and display without disclosure or recovery',
  'OAuth consent transport bounds malformed oversized denied and lost responses with no retry',

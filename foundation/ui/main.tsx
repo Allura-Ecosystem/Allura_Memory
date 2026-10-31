@@ -2,6 +2,7 @@ import {Component,useEffect,useRef,useState,type ReactNode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Confirm} from './controls.tsx';
 import {OAuthConsent} from './oauth-consent.tsx';
+import {SelectedConsent} from './selected-consent.tsx';
 import {ProposalComposer} from './proposal-composer.tsx';
 import {AccessPanel} from './access-panel.tsx';
 import {DeviceApproval} from './device-approval.tsx';
@@ -98,4 +99,4 @@ function App(){
   </Boundary>}
  </main><footer>Allura · Governed memory · No synthetic records in this interface. Deployed and actual-human acceptance remain separate.</footer></div></div>;
 }
-const root=document.getElementById('root');if(root){createRoot(root).render(window.location.pathname==='/dashboard/oauth/consent'?<OAuthConsent/>:<App/>);}
+const root=document.getElementById('root');if(root){createRoot(root).render(window.location.pathname==='/dashboard/oauth/selected-consent'?<SelectedConsent/>:window.location.pathname==='/dashboard/oauth/consent'?<OAuthConsent/>:<App/>);}

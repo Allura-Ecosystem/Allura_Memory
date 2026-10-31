@@ -48,9 +48,11 @@ Never impersonate a machine using a human JWT, distribute Troy credentials, weak
 
 </frozen-after-approval>
 
-## Current continuation — selected client backend
+## Current evidence — selected-member browser consent
 
-Human selected-version sharing is locally verified and committed as d4bc73f954624626c2c58e0494d15a51065e1a3a (parent385 tests/5033 Bun assertions). Next bounded dependency is `spec-team-mcp-selected-client.md` and `selected-client-v1.md`: separate selected-only self-consent/client capability and explicit selected mode on existing memory_get. It creates no workspace grant and leaves existing default reads/owner consent untouched. Member browser UI and actual installed-client/hosted/human acceptance remain following gates; this broader draft is not closed.
+Selected-member backend is committed as1538f460cf950337824a8de23f740e464cdb521c (parent401 tests/5681 Bun assertions). The following browser slice in `spec-team-mcp-selected-browser.md` and `selected-consent-ui/` is now independently verified locally: parent424 unique tests/6029 Bun assertions plus1081 separately counted browser assertions. It adds a separate page/transport over existing selected GET/POST, with no new authority or workspace grant. Owner flow and explicit selected-only reads are preserved. Parent evidence: `reports/allura-team-mcp/parent-selected-browser-20261031T043302Z/` under the active Troy profile. Actual installed-client/hosted/human acceptance and6.5/9.4 remain open; this broader draft is not closed.
+
+Prior selected backend dependency followed reviewed-version sharing commitd4bc73f954624626c2c58e0494d15a51065e1a3a (parent385/5033). Its completed contract/spec remain preserved.
 
 ## Prior continuation — selected-version approval
 

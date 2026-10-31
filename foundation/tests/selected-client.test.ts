@@ -28,7 +28,7 @@ async function setup(selectedOnly=false){
   const verifier=randomBytes(32).toString('base64url'),state=randomBytes(24).toString('base64url');
   const query={client_id:config.client.clientId,redirect_uri:config.client.redirectUris[0]!,response_type:'code',code_challenge_method:'S256',code_challenge:createHash('sha256').update(verifier).digest('base64url'),resource:config.resource,scope:'memory:selected:read',state};
   const reply=await fetch(config.issuer+'/authorize?'+new URLSearchParams(query),{redirect:'manual'});expect(reply.status).toBe(302);
-  const consent=new URL(reply.headers.get('location')!);expect(consent.origin).toBe(config.consentOrigin);expect(consent.pathname).toBe('/api/oauth/selected-consent');consent.protocol='http:';consent.host=new URL(base).host;for(const [k,v] of selector){consent.searchParams.set(k,v);}return {consent,verifier,state};
+  const consent=new URL(reply.headers.get('location')!);expect(consent.origin).toBe(config.consentOrigin);expect(consent.pathname).toBe('/dashboard/oauth/selected-consent');consent.pathname='/api/oauth/selected-consent';consent.protocol='http:';consent.host=new URL(base).host;for(const [k,v] of selector){consent.searchParams.set(k,v);}return {consent,verifier,state};
  };
  return {f,config,provider,base,selector,headers,post,begin,close:async()=>{await core.stop(true);await stopOAuthHttp(issuer);await f.close();}};
 }
@@ -86,7 +86,7 @@ test('selected client SDK discovers without a token exchanges PKCE and reads exa
   expect(witness[0]).toEqual({path:'/mcp',status:401,authenticated:false});
   for(const path of ['/.well-known/oauth-protected-resource/mcp','/.well-known/oauth-authorization-server']){expect(witness.some(r=>r.path===path&&r.status===200)).toBe(true);}
   expect(authorize).toBeInstanceOf(URL);expect(authorize!.searchParams.get('scope')).toBe('memory:selected:read');expect(verifier).toMatch(/^[A-Za-z0-9._~-]{43,128}$/);expect(authorize!.searchParams.get('code_challenge')).toBe(createHash('sha256').update(verifier!).digest('base64url'));
-  const pending=await mappedFetch(authorize!);expect(pending.status).toBe(302);const consent=new URL(pending.headers.get('location')!);expect(consent.pathname).toBe('/api/oauth/selected-consent');for(const [k,v] of h.selector){consent.searchParams.set(k,v);}
+  const pending=await mappedFetch(authorize!);expect(pending.status).toBe(302);const consent=new URL(pending.headers.get('location')!);expect(consent.pathname).toBe('/dashboard/oauth/selected-consent');consent.pathname='/api/oauth/selected-consent';for(const [k,v] of h.selector){consent.searchParams.set(k,v);}
   const headers=h.headers('viewer'),display=await mappedFetch(consent,{headers});expect(display.status).toBe(200);const shown=await display.json() as Record<string,unknown>;
   const approved=await mappedFetch(consent,{method:'POST',headers,body:JSON.stringify({...shown,decision:'approve'})});expect(approved.status).toBe(200);const callback=new URL((await approved.json() as {redirect:string}).redirect);expect(callback.searchParams.get('state')).toBe(state);
   await transport.finishAuth(callback.searchParams.get('code')!);expect(tokens?.scope).toBe('memory:selected:read');expect(tokens).not.toHaveProperty('refresh_token');

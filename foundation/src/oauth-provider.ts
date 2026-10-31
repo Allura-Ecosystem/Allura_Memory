@@ -20,7 +20,7 @@ export class LocalOAuthProvider implements OAuthServerProvider{
   const selected=params.scopes.includes('memory:selected:read');
   if(selected&&params.scopes.length!==1){throw new InvalidRequestError('invalid_request');}
   try{if(selected){await this.sql`SELECT allura.selected_begin(${oauthDigest(transaction)},${input}::jsonb)`;}else{await this.sql`SELECT allura.oauth_begin(${oauthDigest(transaction)},${input}::jsonb)`;}}catch{throw new InvalidRequestError('invalid_request');}
-  const target=new URL(selected?'/api/oauth/selected-consent':'/dashboard/oauth/consent',this.config.consentOrigin);target.searchParams.set('transaction',transaction);response.redirect(302,target.href);
+  const target=new URL(selected?'/dashboard/oauth/selected-consent':'/dashboard/oauth/consent',this.config.consentOrigin);target.searchParams.set('transaction',transaction);response.redirect(302,target.href);
  }
  async challengeForAuthorizationCode(client:OAuthClientInformationFull,code:string):Promise<string>{
   if(!/^[A-Za-z0-9_-]{43}$/.test(code)){throw new InvalidGrantError('invalid_grant');}
