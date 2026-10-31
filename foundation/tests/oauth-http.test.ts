@@ -5,10 +5,13 @@ import {tmpdir} from 'node:os';
 import {randomBytes,createHash} from 'node:crypto';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import {type OAuthClientProvider,UnauthorizedError} from '@modelcontextprotocol/sdk/client/auth.js';
+import {type OAuthTokens} from '@modelcontextprotocol/sdk/shared/auth.js';
+import {type FetchLike} from '@modelcontextprotocol/sdk/shared/transport.js';
 import {packCore} from '../scripts/pack-core.ts';
 import {fixture} from './lifecycle-fixture.ts';
 
-test('OAuth isolated core lifecycle binds honest metadata and closes its separate listener',async()=>{
+test('OAuth isolated core SDK discovers issuer exchanges tokens and closes its separate listener',async()=>{
  const f=await fixture(`allura-oauth-${randomBytes(8).toString('hex')}`),directory=await mkdtemp(join(tmpdir(),'allura-oauth-core-'));
  let child:ReturnType<typeof Bun.spawn>|undefined;
  const reservation=Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response(null,{status:404})});const port=reservation.port!;await reservation.stop(true);
@@ -30,17 +33,48 @@ test('OAuth isolated core lifecycle binds honest metadata and closes its separat
   expect(response!.headers.get('cache-control')).toBe('no-store');expect(response!.headers.get('referrer-policy')).toBe('no-referrer');
   expect((await fetch(`${oauth.issuer}/register`,{method:'POST'})).status).toBe(404);
   expect(await readFile(join(directory,'config.json'),'utf8')).not.toContain(f.appUrl);
-  const verifier=randomBytes(32).toString('base64url'),challenge=createHash('sha256').update(verifier).digest('base64url'),state=randomBytes(24).toString('base64url');
-  const authorize=new URL('/authorize',oauth.issuer);authorize.search=new URLSearchParams({client_id:oauth.client.clientId,redirect_uri:oauth.client.redirectUris[0]!,response_type:'code',code_challenge_method:'S256',code_challenge:challenge,resource:oauth.resource,scope:oauth.client.actions.join(' '),state}).toString();
-  const pending=await fetch(authorize,{redirect:'manual'});expect(pending.status).toBe(302);
+  const core=`http://127.0.0.1:${JSON.parse(text.split('\n')[0]!).port}`,state=randomBytes(24).toString('base64url');
+  let verifier:string|undefined,authorize:URL|undefined,savedTokens:OAuthTokens|undefined;
+  const authProvider:OAuthClientProvider={
+   redirectUrl:oauth.client.redirectUris[0]!,
+   clientMetadata:{redirect_uris:oauth.client.redirectUris,token_endpoint_auth_method:'none',grant_types:['authorization_code'],response_types:['code']},
+   clientInformation:()=>({client_id:oauth.client.clientId,issuer:oauth.issuer}),
+   state:()=>state,tokens:()=>savedTokens,saveTokens:tokens=>{savedTokens=tokens;},
+   saveCodeVerifier:value=>{verifier=value;},codeVerifier:()=>{if(!verifier){throw new Error('missing SDK verifier');}return verifier;},
+   redirectToAuthorization:url=>{authorize=url;}
+  };
+  const witness:{origin:string;path:string;method:string;status:number;authenticated:boolean;challenge:boolean}[]=[];
+  // This maps transport only. SDK discovery/resource validation and every
+  // response body still come from the real owned HTTP servers.
+  const mappedFetch:FetchLike=async(input,init)=>{
+   const request=new Request(input.toString(),init),logical=new URL(request.url),target=new URL(request.url);
+   if(logical.username||logical.password||logical.hash){throw new Error('unowned OAuth test destination');}
+   if(logical.origin===new URL(oauth.resource).origin){target.protocol='http:';target.host=new URL(core).host;}
+   else if(logical.origin!==oauth.issuer){throw new Error('unowned OAuth test destination');}
+   const response=await fetch(new Request(target.href,request),{redirect:'manual'});
+   witness.push({origin:logical.origin,path:logical.pathname,method:request.method,status:response.status,authenticated:request.headers.has('authorization'),challenge:response.headers.get('www-authenticate')===`Bearer resource_metadata="${oauth.consentOrigin}/.well-known/oauth-protected-resource/mcp"`});
+   return response;
+  };
+  for(const url of ['https://foreign.invalid/mcp','http://core.invalid/mcp',core+'/mcp',oauth.issuer.replace('127.0.0.1','localhost')+'/token','https://core.invalid@foreign.invalid/mcp']){await expect(mappedFetch(url)).rejects.toThrow('unowned OAuth test destination');}
+  expect(witness).toEqual([]);expect(await authProvider.tokens()).toBeUndefined();
+  const initial=new Client({name:'synthetic-oauth-discovery',version:'1.0'}),transport=new StreamableHTTPClientTransport(new URL(oauth.resource),{authProvider,fetch:mappedFetch});
+  try{await expect(initial.connect(transport)).rejects.toBeInstanceOf(UnauthorizedError);}finally{await initial.close();}
+  expect(witness[0]).toEqual({origin:oauth.consentOrigin,path:'/mcp',method:'POST',status:401,authenticated:false,challenge:true});
+  expect(witness.some(r=>r.origin===oauth.consentOrigin&&r.path==='/.well-known/oauth-protected-resource/mcp'&&r.method==='GET'&&r.status===200)).toBe(true);
+  expect(witness.some(r=>r.origin===oauth.issuer&&r.path==='/.well-known/oauth-authorization-server'&&r.method==='GET'&&r.status===200)).toBe(true);
+  expect(authorize).toBeInstanceOf(URL);expect(authorize!.origin+authorize!.pathname).toBe(oauth.issuer+'/authorize');
+  expect(authorize!.searchParams.get('resource')).toBe(oauth.resource);expect(authorize!.searchParams.get('state')).toBe(state);expect(authorize!.searchParams.get('scope')).toBe(oauth.client.actions.join(' '));
+  expect(verifier).toMatch(/^[A-Za-z0-9._~-]{43,128}$/);expect(authorize!.searchParams.get('code_challenge_method')).toBe('S256');expect(authorize!.searchParams.get('code_challenge')).toBe(createHash('sha256').update(verifier!).digest('base64url'));
+  const pending=await mappedFetch(authorize!);expect(pending.status).toBe(302);
   const consent=new URL(pending.headers.get('location')!);expect(consent.origin).toBe(oauth.consentOrigin);expect(consent.pathname).toBe('/api/oauth/consent');expect(consent.searchParams.has('code')).toBe(false);
-  const core=`http://127.0.0.1:${JSON.parse(text.split('\n')[0]!).port}`;consent.host=new URL(core).host;consent.protocol='http:';consent.searchParams.set('group_id',f.scope.groupId);consent.searchParams.set('workspace_id',f.scope.workspaceId);
+  consent.searchParams.set('group_id',f.scope.groupId);consent.searchParams.set('workspace_id',f.scope.workspaceId);
   const assertion=f.jwt('author'),headers={'Cf-Access-Jwt-Assertion':assertion,Origin:oauth.consentOrigin,'Sec-Fetch-Site':'same-origin','content-type':'application/json'};
-  const display=await fetch(consent,{headers});expect(display.status).toBe(200);const shown=await display.json() as Record<string,unknown>;expect(shown).toMatchObject({clientId:oauth.client.clientId,redirectUri:oauth.client.redirectUris[0],actions:oauth.client.actions,groupId:f.scope.groupId,workspaceId:f.scope.workspaceId});
-  const approved=await fetch(consent,{method:'POST',headers,body:JSON.stringify({...shown,decision:'approve'})});expect(approved.status).toBe(200);const callback=new URL((await approved.json() as {redirect:string}).redirect);expect(callback.origin+callback.pathname).toBe(oauth.client.redirectUris[0]!);expect(callback.searchParams.get('state')).toBe(state);expect(callback.searchParams.get('code')).toMatch(/^[A-Za-z0-9_-]{43}$/);
-  const exchanged=await fetch(`${oauth.issuer}/token`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'authorization_code',client_id:oauth.client.clientId,code:callback.searchParams.get('code')!,code_verifier:verifier,redirect_uri:oauth.client.redirectUris[0]!,resource:oauth.resource})});expect(exchanged.status).toBe(200);
-  const tokens=await exchanged.json() as {access_token:string;token_type:string;expires_in:number;scope:string};expect(tokens).toMatchObject({token_type:'Bearer',expires_in:900,scope:oauth.client.actions.join(' ')});expect(tokens.access_token).toMatch(/^[A-Za-z0-9_-]{43}$/);expect(tokens).not.toHaveProperty('refresh_token');
-  const client=new Client({name:'synthetic-oauth-test',version:'1.0'});try{await client.connect(new StreamableHTTPClientTransport(new URL('/mcp',core),{requestInit:{headers:{Authorization:`Bearer ${tokens.access_token}`}}}));expect((await client.listTools()).tools.map(t=>t.name).sort()).toEqual(['memory_add','memory_delete','memory_get','memory_list','memory_search']);const captured=await client.callTool({name:'memory_add',arguments:{content:'OAuth synthetic evidence',idempotency_key:'oauth-capture',threshold:1}});expect(captured.isError).not.toBe(true);const receipt=(captured.structuredContent as {data:{receipt_id:string;event_id:string}}).data;const read=await client.callTool({name:'memory_get',arguments:{kind:'receipt',id:receipt.receipt_id}});expect((read.structuredContent as {data:unknown}).data).toEqual(receipt);
+  const display=await mappedFetch(consent,{headers});expect(display.status).toBe(200);const shown=await display.json() as Record<string,unknown>;expect(shown).toMatchObject({clientId:oauth.client.clientId,redirectUri:oauth.client.redirectUris[0],actions:oauth.client.actions,groupId:f.scope.groupId,workspaceId:f.scope.workspaceId});
+  const approved=await mappedFetch(consent,{method:'POST',headers,body:JSON.stringify({...shown,decision:'approve'})});expect(approved.status).toBe(200);const callback=new URL((await approved.json() as {redirect:string}).redirect);expect(callback.origin+callback.pathname).toBe(oauth.client.redirectUris[0]!);expect(callback.searchParams.get('state')).toBe(state);expect(callback.searchParams.get('code')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  await transport.finishAuth(callback.searchParams.get('code')!);
+  const tokens=(await authProvider.tokens())!;expect(tokens).toMatchObject({issuer:oauth.issuer,token_type:'Bearer',expires_in:900,scope:oauth.client.actions.join(' ')});expect(tokens.access_token).toMatch(/^[A-Za-z0-9_-]{43}$/);expect(tokens).not.toHaveProperty('refresh_token');
+  expect(witness.some(r=>r.origin===oauth.issuer&&r.path==='/token'&&r.method==='POST'&&r.status===200)).toBe(true);
+  const client=new Client({name:'synthetic-oauth-test',version:'1.0'});try{await client.connect(new StreamableHTTPClientTransport(new URL(oauth.resource),{authProvider,fetch:mappedFetch}));expect((await client.listTools()).tools.map(t=>t.name).sort()).toEqual(['memory_add','memory_delete','memory_get','memory_list','memory_search']);const captured=await client.callTool({name:'memory_add',arguments:{content:'OAuth synthetic evidence',idempotency_key:'oauth-capture',threshold:1}});expect(captured.isError).not.toBe(true);const receipt=(captured.structuredContent as {data:{receipt_id:string;event_id:string}}).data;const read=await client.callTool({name:'memory_get',arguments:{kind:'receipt',id:receipt.receipt_id}});expect((read.structuredContent as {data:unknown}).data).toEqual(receipt);
    const query='?'+new URLSearchParams({group_id:f.scope.groupId,workspace_id:f.scope.workspaceId}),post=(path:string,body:unknown,actor:'author'|'reviewer'='author')=>fetch(core+path+query,{method:'POST',headers:{...headers,'Cf-Access-Jwt-Assertion':f.jwt(actor)},body:JSON.stringify(body)});
    const proposalResponse=await post('/api/review/submit',{summary:'OAuth synthetic approved knowledge',assertionKind:'observation',evidenceIds:[receipt.event_id]});expect(proposalResponse.status).toBe(200);const proposal=await proposalResponse.json() as {id:string};
    const decision={proposalId:proposal.id,reviewedProposalVersion:1,decision:'approve',rationale:'Independent synthetic approval',evidenceIds:[receipt.event_id],operationKey:'oauth-independent-review'};

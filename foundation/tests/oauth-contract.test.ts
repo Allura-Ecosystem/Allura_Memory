@@ -21,6 +21,47 @@ async function setup(){
  const mcp=(token:string,query='')=>fetch(base+'/mcp'+query,{method:'POST',headers:{Authorization:`Bearer ${token}`,'content-type':'application/json',accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})});
  return {f,config,provider,base,form,begin,approve,issue,mcp,humanHeaders,close:async()=>{await core.stop(true);await stopOAuthHttp(server);await f.close();}};
 }
+test('OAuth discovery metadata is exact anonymous configuration bound and GET only',async()=>{
+ const h=await setup();try{
+  const path='/.well-known/oauth-protected-resource/mcp';
+  for(const headers of [{},{Host:'foreign.invalid','X-Forwarded-Host':'foreign.invalid','X-Forwarded-Proto':'http',Forwarded:'host=foreign.invalid;proto=http'}]){
+   const response=await fetch(h.base+path,{headers});expect(response.status).toBe(200);
+   expect(response.headers.get('cache-control')).toBe('no-store');expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+   expect(await response.json()).toEqual({resource:h.config.resource,authorization_servers:[h.config.issuer],scopes_supported:h.config.client.actions,bearer_methods_supported:['header']});
+  }
+  for(const method of ['POST','PUT','DELETE','HEAD','OPTIONS']){const response=await fetch(h.base+path,{method});expect(response.status).toBe(404);expect(response.headers.has('www-authenticate')).toBe(false);}
+  expect((await fetch(h.base+'/.well-known/oauth-protected-resource')).status).toBe(404);
+ }finally{await h.close();}
+});
+test('OAuth discovery challenges preserve gateway and wrapper authentication denials without trusting forwarded hosts',async()=>{
+ const h=await setup();try{
+  const {token}=await h.issue(),challenge=`Bearer resource_metadata="${new URL(h.config.resource).origin}/.well-known/oauth-protected-resource/mcp"`;
+  const hostile={Host:'foreign.invalid','X-Forwarded-Host':'foreign.invalid','X-Forwarded-Proto':'http',Forwarded:'host=foreign.invalid;proto=http'};
+  for(const method of ['GET','POST']){
+   for(const credentials of [{},{Authorization:'Bearer '+randomBytes(32).toString('base64url')},{Authorization:`Bearer ${token}`,Cookie:'CF_Authorization='+h.f.jwt('author')},{Authorization:`Bearer ${token}`,'Cf-Access-Jwt-Assertion':h.f.jwt('author')}]){
+    const response=await fetch(h.base+'/mcp',{method,headers:{...hostile,...credentials}});
+    expect(response.status).toBe(401);expect(await response.text()).toBe('{"outcome":"unauthenticated"}');expect(response.headers.get('cache-control')).toBe('no-store');expect(response.headers.get('www-authenticate')).toBe(challenge);
+   }
+  }
+  // A bound but expired credential reaches the wrapper verification catch,
+  // not the missing/unknown-token gateway path above.
+  await h.f.owner`UPDATE allura.machine_credentials SET expires_at=clock_timestamp()-interval '1 second' WHERE digest=decode(${createHash('sha256').update(token).digest('hex')},'hex')`;
+  expect(await h.provider.isOAuthToken(token)).toBe(true);await expect(h.provider.verifyAccessToken(token)).rejects.toThrow();
+  for(const method of ['GET','POST']){const response=await fetch(h.base+'/mcp',{method,headers:{...hostile,Authorization:`Bearer ${token}`}});expect(response.status).toBe(401);expect(await response.text()).toBe('{"outcome":"unauthenticated"}');expect(response.headers.get('cache-control')).toBe('no-store');expect(response.headers.get('www-authenticate')).toBe(challenge);}
+ }finally{await h.close();}
+});
+test('OAuth discovery stays absent when disabled and never decorates scope conflicts or human routes',async()=>{
+ const h=await setup();try{
+  const disabled=createCoreGateway(h.f.app,h.f.humanConfig,h.config.consentOrigin,randomBytes(32),await loadLocalEmbedder());
+  for(const path of ['/.well-known/oauth-protected-resource/mcp','/mcp']){for(const method of ['GET','POST']){const response=await disabled(new Request(h.base+path,{method}));expect(response.status).toBe(path==='/mcp'?401:404);expect(response.headers.has('www-authenticate')).toBe(false);expect(await response.json()).toEqual({outcome:path==='/mcp'?'unauthenticated':'not_found'});}}
+  const {token}=await h.issue();
+  for(const method of ['GET','POST']){for(const query of ['?workspace_id='+h.f.foreignWorkspace,'?group_id=foreign','?group_id='+h.f.scope.groupId+'&group_id='+h.f.scope.groupId]){const response=await fetch(h.base+'/mcp'+query,{method,headers:{Authorization:`Bearer ${token}`}});expect(response.status).toBe(403);expect(await response.json()).toEqual({outcome:'forbidden'});expect(response.headers.has('www-authenticate')).toBe(false);}}
+  for(const path of ['/api/oauth/consent','/api/oauth/connections/revoke','/api/review/decision']){const response=await fetch(h.base+path,{method:path.endsWith('consent')?'GET':'POST',headers:{Authorization:`Bearer ${token}`}});expect(response.status).toBe(401);expect(await response.json()).toEqual({outcome:'unauthenticated'});expect(response.headers.has('www-authenticate')).toBe(false);}
+  const malformed=await fetch(h.base+'/mcp',{method:'POST',headers:{Authorization:`Bearer ${token}`,'content-type':'application/json'},body:'not-json'});expect(malformed.status).toBe(400);expect(await malformed.json()).toEqual({outcome:'invalid'});expect(malformed.headers.has('www-authenticate')).toBe(false);
+  const success=await h.mcp(token);expect(success.status).toBe(200);expect(success.headers.has('www-authenticate')).toBe(false);
+  for(const method of ['PUT','DELETE','OPTIONS']){const response=await fetch(h.base+'/mcp',{method});expect(response.status).toBe(404);expect(response.headers.has('www-authenticate')).toBe(false);}
+ }finally{await h.close();}
+});
 test('OAuth protocol rejects ambiguous fields exact callback mismatch and unsafe diagnostics before state creation',async()=>{
  const h=await setup();try{const {query}=await h.begin(),before=Number((await h.f.owner`SELECT count(*) AS n FROM allura.oauth_transactions`)[0].n);
  const bad=[{...query,redirect_uri:'http://127.0.0.1:18445/callback'},{...query,code_challenge_method:'plain'},{...query,code_challenge:''},{...query,resource:'https://foreign.invalid/mcp'},{...query,scope:'review:approve'},{...query,scope:'memory:read memory:read'},{...query,code_challenge:'x'.repeat(44)},{...query,state:'x'.repeat(513)},{...query,scope:'memory:read',workspace_id:h.f.scope.workspaceId}];

@@ -58,6 +58,9 @@ try {
   const skip = Number(output.match(/\b(\d+) skip\b/)?.[1] ?? 0);
   const assertions = Number(output.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   const required = [
+    'OAuth discovery metadata is exact anonymous configuration bound and GET only',
+    'OAuth discovery challenges preserve gateway and wrapper authentication denials without trusting forwarded hosts',
+    'OAuth discovery stays absent when disabled and never decorates scope conflicts or human routes',
     'OAuth exchange serializes with an in flight owner revocation before creating any connection',
     'OAuth pending requests are bounded and expired state is cleaned without background work',
     'OAuth HTTP parser failures return bounded safe JSON without internal diagnostic spill',
@@ -71,7 +74,7 @@ try {
     'OAuth resource binding cannot fall back to legacy explicit scope after resource mismatch',
     'OAuth protocol rejects ambiguous fields exact callback mismatch and unsafe diagnostics before state creation',
     'OAuth token revocation is registration bound nonenumerating and immediately denies MCP',
-    'OAuth isolated core lifecycle binds honest metadata and closes its separate listener',
+    'OAuth isolated core SDK discovers issuer exchanges tokens and closes its separate listener',
     'client current and authenticated actions intersect delegation credential and owner',
     'client authentication denies revoked or missing linkage without legacy fallback',
     'client SQL context and event RLS independently enforce delegation action narrowing',
