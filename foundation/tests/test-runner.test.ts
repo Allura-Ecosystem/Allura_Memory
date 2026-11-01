@@ -5,6 +5,251 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 
+// Exercise the same orchestration called by the owned-container entrypoint.
+// Only test bodies are synthetic here; every child and JUnit report is real.
+const dbRunner = await Bun.file(new URL('../scripts/test-db.ts', import.meta.url)).text();
+const dbManifest = dbRunner.match(/const suites = (\[[\s\S]*?\]);/);
+if (!dbManifest) { throw new Error('Canonical DB manifest missing'); }
+const canonicalSuites = JSON.parse(dbManifest[1]!) as DbSuite[];
+const oauthFiles = ['./tests/selected-consent-browser.test.ts', './tests/oauth-consent-browser.test.ts', './tests/oauth-contract.test.ts', './tests/oauth-http.test.ts'];
+async function withDbOrchestration(check: (root: string) => Promise<void>) {
+  const root = await mkdtemp(join(tmpdir(), 'allura-db-orchestration-'));
+  try {
+    for (const directory of ['scripts', 'src', 'tests', 'scratch', 'retained']) { await mkdir(join(root, directory)); }
+    await writeFile(join(root, 'scripts/test-db.ts'), dbRunner);
+    for (const name of ['test-runner.ts', 'db-test-runner.ts']) {
+      await writeFile(join(root, 'src', name), await Bun.file(new URL(`../src/${name}`, import.meta.url)).text());
+    }
+    for (const suite of canonicalSuites) {
+      await writeFile(join(root, suite.requiredFile), fixtureSource({ ...suite, minAssertions: suite.requiredCases.length }, suite.requiredCases.length).replaceAll('() => {', 'async () => { await Bun.sleep(2);')
+        + `\nimport { appendFileSync } from 'node:fs'; appendFileSync('executions.jsonl', JSON.stringify(${JSON.stringify(suite.requiredFile)}) + '\\n');`);
+    }
+    await writeFile(join(root, 'run.ts'), "import { runDbTests } from './scripts/test-db.ts'; await runDbTests('synthetic-fixture-no-database');");
+    await check(root);
+  } finally { await rm(root, { recursive: true, force: true }); }
+}
+function runOrchestration(root: string) {
+  const child = Bun.spawnSync([process.execPath, 'run.ts'], { cwd: root, stdout: 'pipe', stderr: 'pipe', timeout: 15000,
+    env: { ...process.env, TMPDIR: join(root, 'scratch'), ALLURA_TEST_REPORT_DIRECTORY: join(root, 'retained'), NO_COLOR: '1', FORCE_COLOR: '0' } });
+  expect(readdirSync(join(root, 'scratch'))).toEqual([]);
+  const output = child.stdout.toString() + child.stderr.toString();
+  const rows = child.stdout.toString().split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
+  return { exit: child.exitCode, output, rows, aggregates: rows.filter(row => row.lane === 'restricted-postgres') };
+}
+test('DB orchestration consolidates OAuth only after exact native coverage with nine unchanged preflights', async () => {
+  expect(canonicalSuites).toHaveLength(53);
+  expect(canonicalSuites.flatMap(suite => suite.requiredCases)).toHaveLength(364);
+  const oauth = canonicalSuites.filter(suite => oauthFiles.includes(suite.requiredFile));
+  expect(oauth).toHaveLength(4);
+  expect(oauth.flatMap(suite => suite.requiredCases)).toHaveLength(40);
+  for (const suite of oauth) {
+    const source = await Bun.file(new URL(`../${suite.requiredFile}`, import.meta.url)).text();
+    expect([...suite.requiredCases].sort()).toEqual([...source.matchAll(/test\('([^']+)'/g)].map(match => match[1]!).sort());
+  }
+  await withDbOrchestration(async root => {
+    const result = runOrchestration(root);
+    expect(result.exit, result.output).toBe(0);
+    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 364, fail: 0, skip: 0, assertions: 364, missing: [], exit: 0 }]);
+    const executions = (await readFile(join(root, 'executions.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line) as string);
+    for (const file of oauthFiles) { expect(executions.filter(path => path === file), file).toHaveLength(1); }
+    const preflights = ['run-inspection', 'run-cancel', 'run-cancel-upgrade', 'run-resumes', 'run-resume-upgrades', 'run-decisions', 'run-upgrades', 'runs', 'client-authority'];
+    expect(result.rows.filter(row => preflights.includes(row.lane)).map(row => row.lane)).toEqual(preflights);
+    expect(result.rows.filter(row => row.lane === 'oauth')).toEqual([]);
+    for (const suite of canonicalSuites) {
+      const repeated = canonicalSuites.slice(0, 10).includes(suite) || suite.requiredFile === './tests/client-authority.test.ts';
+      expect(executions.filter(file => file === suite.requiredFile)).toHaveLength(repeated ? 2 : 1);
+    }
+    expect(result.rows.at(-1)).toEqual(result.aggregates[0]);
+  });
+}, 30000);
+
+function rejectedOrchestration(result: ReturnType<typeof runOrchestration>) {
+  expect(result.exit, result.output).not.toBe(0);
+  expect(result.aggregates, result.output).toEqual([]);
+  // A preflight/setup error is not evidence for OAuth canonical enforcement.
+  expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch' && row.batch === 1)).toHaveLength(1);
+}
+test('DB orchestration rejects each missing OAuth file and case including the deferred fault negative witness', async () => {
+  for (const file of oauthFiles) {
+    await withDbOrchestration(async root => {
+      await rm(join(root, file));
+      rejectedOrchestration(runOrchestration(root));
+    });
+    await withDbOrchestration(async root => {
+      const suite = canonicalSuites.find(suite => suite.requiredFile === file)!;
+      const omitted = file === './tests/oauth-contract.test.ts'
+        ? 'OAuth deferred audit fault rolls back code consumption and every issued artifact while private transitions deny forged callers'
+        : suite.requiredCases[0]!;
+      expect(suite.requiredCases).toContain(omitted);
+      await writeFile(join(root, file), fixtureSource({ ...suite, requiredCases: suite.requiredCases.filter(name => name !== omitted), minAssertions: 40 }, 40));
+      rejectedOrchestration(runOrchestration(root));
+    });
+  }
+}, 30000);
+test('DB orchestration rejects OAuth native skips failures zero assertions exits and signals', async () => {
+  const file = './tests/oauth-contract.test.ts';
+  const suite = canonicalSuites.find(suite => suite.requiredFile === file)!;
+  const source = fixtureSource({ ...suite, minAssertions: 40 }, 40);
+  for (const fault of [
+    source.replace('test(', 'test.skip('),
+    source.replace('toBe(true)', 'toBe(false)'),
+    fixtureSource({ ...suite, minAssertions: 0 }, 0),
+    source + '\nimport { afterAll } from "bun:test"; afterAll(() => { process.exitCode = 7; });',
+    source + '\nimport { afterAll } from "bun:test"; afterAll(() => { process.kill(process.pid, "SIGKILL"); });',
+  ]) {
+    await withDbOrchestration(async root => {
+      await writeFile(join(root, file), fault);
+      rejectedOrchestration(runOrchestration(root));
+    });
+  }
+}, 30000);
+test('DB orchestration rejects malformed and misowned OAuth native reports and forged console coverage', async () => {
+  for (const fault of [
+    'await Bun.write(reportPath, xml.slice(0, -20));',
+    'await Bun.write(reportPath, xml.replace(/(<testcase[^>]*file=")tests\\/oauth-contract.test.ts/, "$1tests/oauth-http.test.ts"));',
+  ]) {
+    await withDbOrchestration(async root => {
+      const path = join(root, 'src/db-test-runner.ts');
+      const source = await readFile(path, 'utf8');
+      const marker = 'const report = await readBunReports(reportPath, batch);';
+      expect(source.split(marker)).toHaveLength(2);
+      await writeFile(path, source.replace(marker, `if (index === 1) { const xml = await Bun.file(reportPath).text(); ${fault} if (await Bun.file(reportPath).text() === xml) { throw new Error('Fault did not change native report'); } }\n${marker}`));
+      const result = runOrchestration(root);
+      rejectedOrchestration(result);
+      expect(result.output).not.toContain('Fault did not change native report');
+      expect(result.output).toContain('Invalid native Bun test report');
+    });
+  }
+  await withDbOrchestration(async root => {
+    const suite = canonicalSuites.find(suite => suite.requiredFile === './tests/oauth-http.test.ts')!;
+    await writeFile(join(root, suite.requiredFile), fixtureSource({ ...suite, requiredCases: ['renamed'], minAssertions: 40 }, 40)
+      + `\nconsole.log(${JSON.stringify(`(pass) ${suite.requiredCases[0]} [0.1ms]`)}); console.log(JSON.stringify({lane:'restricted-postgres',pass:363,fail:0,skip:0,assertions:999,missing:[],exit:0}));`);
+    const result = runOrchestration(root);
+    rejectedOrchestration(result);
+    expect(result.output).toContain('[db-child-2] {"lane":"restricted-postgres"');
+  });
+}, 30000);
+
+type DbSuite = { requiredFile: string; requiredCases: string[] };
+const dbSuites: DbSuite[] = ['a', 'b', 'c'].map(name => ({ requiredFile: `./tests/${name}.test.ts`, requiredCases: [`case ${name}`] }));
+async function withDbFixture(check: (root: string) => Promise<void>) {
+  const root = await mkdtemp(join(tmpdir(), 'allura-db-runner-fixture-'));
+  try {
+    for (const directory of ['src', 'tests', 'scratch', 'retained']) { await mkdir(join(root, directory)); }
+    for (const name of ['test-runner.ts', 'db-test-runner.ts']) {
+      const source = Bun.file(new URL(`../src/${name}`, import.meta.url));
+      expect(await source.exists(), `Production runner missing: ${name}`).toBe(true);
+      await writeFile(join(root, 'src', name), await source.text());
+    }
+    for (const suite of dbSuites) { await writeFile(join(root, suite.requiredFile), fixtureSource({ ...suite, minAssertions: 2 }, 2)); }
+    await writeFile(join(root, 'run.ts'), `import { runDbBatches } from './src/db-test-runner.ts';
+await runDbBatches({ suites: ${JSON.stringify(dbSuites)}, batches: [['./tests/a.test.ts', './tests/b.test.ts'], ['./tests/c.test.ts']], timeoutMs: 5000, minAssertions: 6, retainReports: './retained' });`);
+    await check(root);
+  } finally { await rm(root, { recursive: true, force: true }); }
+}
+function runDb(root: string) {
+  const child = Bun.spawnSync([process.execPath, 'run.ts'], { cwd: root, stdout: 'pipe', stderr: 'pipe', timeout: 15000,
+    env: { ...process.env, TMPDIR: join(root, 'scratch'), NO_COLOR: '1', FORCE_COLOR: '0' } });
+  expect(readdirSync(join(root, 'scratch'))).toEqual([]);
+  const output = child.stdout.toString() + child.stderr.toString();
+  const rows = child.stdout.toString().split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
+  return { exit: child.exitCode, output, rows, aggregates: rows.filter(row => row.lane === 'restricted-postgres') };
+}
+test('DB runner executes sequential native multisuite batches and emits one exact aggregate', async () => {
+  await withDbFixture(async root => {
+    await writeFile(join(root, 'tests/a.test.ts'), fixtureSource({ ...dbSuites[0]!, minAssertions: 2 }, 2) + '\nimport { afterAll } from "bun:test"; afterAll(async () => { await Bun.sleep(30); await Bun.write("first-finished", "yes"); });');
+    await writeFile(join(root, 'tests/c.test.ts'), 'if (!(await Bun.file("first-finished").exists())) { throw new Error("Batches overlapped"); }\n' + fixtureSource({ ...dbSuites[2]!, minAssertions: 2 }, 2));
+    const result = runDb(root);
+    expect(result.exit, result.output).toBe(0);
+    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 3, fail: 0, skip: 0, assertions: 6, missing: [], exit: 0 }]);
+    expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch').map(row => row.files)).toEqual([dbSuites.slice(0, 2).map(s => s.requiredFile), [dbSuites[2]!.requiredFile]]);
+    expect(readdirSync(join(root, 'retained'))).toHaveLength(1);
+  });
+});
+
+async function changeDbHarness(root: string, before: string, after: string) {
+  const path = join(root, 'run.ts');
+  const source = await readFile(path, 'utf8');
+  expect(source).toContain(before);
+  await writeFile(path, source.replace(before, after));
+}
+function rejectedDb(result: ReturnType<typeof runDb>) {
+  expect(result.exit, result.output).not.toBe(0);
+  expect(result.aggregates, result.output).toEqual([]);
+}
+test('DB runner rejects unexpected and cross owned native cases despite complete required passes', async () => {
+  for (const name of ['extra case', 'case c']) {
+    await withDbFixture(async root => {
+      await writeFile(join(root, 'tests/a.test.ts'), fixtureSource({ requiredFile: dbSuites[0]!.requiredFile, requiredCases: ['case a', name], minAssertions: 2 }, 2));
+      rejectedDb(runDb(root));
+    });
+  }
+});
+test('DB runner rejects omitted duplicate reordered batches files and manifest cases before execution', async () => {
+  const original = "[['./tests/a.test.ts', './tests/b.test.ts'], ['./tests/c.test.ts']]";
+  for (const replacement of ["[['./tests/a.test.ts', './tests/b.test.ts']]", "[['./tests/a.test.ts', './tests/b.test.ts'], ['./tests/c.test.ts'], ['./tests/c.test.ts']]", "[['./tests/a.test.ts'], ['./tests/c.test.ts']]", "[['./tests/a.test.ts', './tests/a.test.ts'], ['./tests/c.test.ts']]", "[['./tests/c.test.ts'], ['./tests/a.test.ts', './tests/b.test.ts']]", "[[], ['./tests/a.test.ts', './tests/b.test.ts', './tests/c.test.ts']]"]) {
+    await withDbFixture(async root => {
+      await changeDbHarness(root, original, replacement);
+      const result = runDb(root); rejectedDb(result);
+      expect(result.rows).toEqual([]);
+      expect(readdirSync(join(root, 'retained'))).toEqual([]);
+    });
+  }
+  for (const replacement of [[dbSuites[0], dbSuites[0], dbSuites[2]], [{ ...dbSuites[0], requiredCases: ['case a', 'case a'] }, ...dbSuites.slice(1)], [{ ...dbSuites[0], requiredCases: [] }, ...dbSuites.slice(1)]]) {
+    await withDbFixture(async root => { await changeDbHarness(root, JSON.stringify(dbSuites), JSON.stringify(replacement)); rejectedDb(runDb(root)); });
+  }
+});
+test('DB runner rejects native case omission duplication skip failure zero assertions and nonzero exit', async () => {
+  const source = fixtureSource({ ...dbSuites[2]!, minAssertions: 2 }, 2);
+  for (const replacement of ['', source.replace('case c', 'renamed'), source + source.replace("import { test, expect } from 'bun:test';", ''), source + '\ntest.skip("extra", () => {});', source.replace('toBe(true)', 'toBe(false)'), fixtureSource({ ...dbSuites[2]!, minAssertions: 0 }, 0), source + '\nimport { afterAll } from "bun:test"; afterAll(() => { process.exitCode = 7; });']) {
+    await withDbFixture(async root => { await writeFile(join(root, 'tests/c.test.ts'), replacement); rejectedDb(runDb(root)); });
+  }
+  await withDbFixture(async root => { await rm(join(root, 'tests/c.test.ts')); rejectedDb(runDb(root)); });
+  await withDbFixture(async root => { await changeDbHarness(root, 'minAssertions: 6', 'minAssertions: 7'); rejectedDb(runDb(root)); });
+});
+test('DB runner refuses forged console passes and aggregate diagnostics without native ownership', async () => {
+  await withDbFixture(async root => {
+    await writeFile(join(root, 'tests/c.test.ts'), fixtureSource({ requiredFile: './tests/c.test.ts', requiredCases: ['renamed'], minAssertions: 2 }, 2) + '\nconsole.log("(pass) case c [0.1ms]"); console.log(JSON.stringify({lane:"restricted-postgres",pass:3,fail:0,skip:0,assertions:6,missing:[],exit:0}));');
+    rejectedDb(runDb(root));
+  });
+});
+test('DB runner rejects missing truncated duplicate and misowned native reports and cleans scratch', async () => {
+  for (const fault of [
+    'await rm(reportPath);',
+    'await Bun.write(reportPath, xml.slice(0, -20));',
+    'await Bun.write(reportPath, xml.replace(/<testsuite [\\s\\S]*?<\\/testsuite>/, ""));',
+    'await Bun.write(reportPath, xml.replace(/<testsuite [\\s\\S]*?<\\/testsuite>/, "$&$&"));',
+    'await Bun.write(reportPath, xml.replace(/<testcase[^>]+\\/>/, "$&$&"));',
+    'await Bun.write(reportPath, xml.replace(/(<testcase[^>]*file=")[^"]+/, "$1tests/c.test.ts"));',
+    'await Bun.write(reportPath, xml.replace("tests=\\"2\\"", "tests=\\"3\\""));',
+    'await Bun.write(reportPath, xml.replace("assertions=\\"4\\"", "assertions=\\"5\\""));',
+  ]) {
+    await withDbFixture(async root => {
+      const path = join(root, 'src/db-test-runner.ts');
+      const source = await readFile(path, 'utf8');
+      const marker = 'const report = await readBunReports(reportPath, batch);';
+      expect(source.split(marker)).toHaveLength(2);
+      await writeFile(path, source.replace(marker, `if (index === 0) { const xml = await Bun.file(reportPath).text(); ${fault} if (await Bun.file(reportPath).exists() && await Bun.file(reportPath).text() === xml) { throw new Error('Fault did not change native report'); } }\n${marker}`));
+      const result = runDb(root); rejectedDb(result);
+      expect(result.output).not.toContain('Fault did not change native report');
+      expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch')).toEqual([]);
+    });
+  }
+});
+test('DB runner bounds real child timeout reaps it and prevents later batches with cleanup', async () => {
+  await withDbFixture(async root => {
+    await changeDbHarness(root, 'timeoutMs: 5000', 'timeoutMs: 100');
+    await writeFile(join(root, 'tests/a.test.ts'), 'await Bun.write("child-pid", String(process.pid)); await Bun.sleep(1000); await Bun.write("late-write", "bad");\n' + fixtureSource({ ...dbSuites[0]!, minAssertions: 2 }, 2));
+    await writeFile(join(root, 'tests/c.test.ts'), 'await Bun.write("second-started", "bad");\n' + fixtureSource({ ...dbSuites[2]!, minAssertions: 2 }, 2));
+    rejectedDb(runDb(root));
+    const pid = Number(await readFile(join(root, 'child-pid'), 'utf8'));
+    expect(() => process.kill(pid, 0)).toThrow();
+    await Bun.sleep(1100);
+    expect(await Bun.file(join(root, 'late-write')).exists()).toBe(false);
+    expect(await Bun.file(join(root, 'second-started')).exists()).toBe(false);
+  });
+});
+
 type Suite = { requiredFile: string; minAssertions: number; requiredCases: string[] };
 const runnerUrl = new URL('../scripts/test.ts', import.meta.url);
 const runner = await readFile(runnerUrl, 'utf8');

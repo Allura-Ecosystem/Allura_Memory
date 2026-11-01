@@ -64,6 +64,10 @@ function count(node: Element, key: string): number {
   return number;
 }
 export async function readBunReport(path: string, requiredFile: string) {
+  return (await readBunReports(path, [requiredFile])).suites[0]!;
+}
+
+export async function readBunReports(path: string, requiredFiles: string[]) {
   const maxBytes = 1024 * 1024;
   const handle = await open(path, 'r');
   let xml: string;
@@ -83,10 +87,14 @@ export async function readBunReport(path: string, requiredFile: string) {
   } finally { await handle.close(); }
   valid(!/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u.test(xml));
   const root = parse(xml);
-  valid(root.tag === 'testsuites' && root.attrs.name === 'bun test' && root.children.length === 1);
-  const suite = root.children[0]!;
-  const file = requiredFile.replace(/^\.\//, '');
-  valid(suite.tag === 'testsuite' && suite.attrs.file === file && suite.attrs.name === file);
+  const files = requiredFiles.map(file => file.replace(/^\.\//, ''));
+  valid(files.length > 0 && new Set(files).size === files.length);
+  valid(root.tag === 'testsuites' && root.attrs.name === 'bun test' && root.children.length === files.length);
+  const seenFiles = new Set<string>();
+  const suites = root.children.map(suite => {
+  const file = suite.attrs.file!;
+  valid(suite.tag === 'testsuite' && files.includes(file) && !seenFiles.has(file) && suite.attrs.name === file);
+  seenFiles.add(file);
   const passedCases = new Set<string>();
   const seen = new Set<string>();
   let pass = 0, fail = 0, skip = 0, assertions = 0;
@@ -104,8 +112,10 @@ export async function readBunReport(path: string, requiredFile: string) {
       else { valid(outcome.tag === 'skipped'); skip++; }
     }
   }
-  for (const node of [root, suite]) {
-    valid(count(node, 'tests') === pass + fail + skip && count(node, 'assertions') === assertions && count(node, 'failures') === fail && count(node, 'skipped') === skip);
-  }
-  return { passedCases, pass, fail, skip, assertions };
+  valid(count(suite, 'tests') === pass + fail + skip && count(suite, 'assertions') === assertions && count(suite, 'failures') === fail && count(suite, 'skipped') === skip);
+  return { file, passedCases, pass, fail, skip, assertions };
+  });
+  const totals = suites.reduce((sum, row) => ({ pass: sum.pass + row.pass, fail: sum.fail + row.fail, skip: sum.skip + row.skip, assertions: sum.assertions + row.assertions }), { pass: 0, fail: 0, skip: 0, assertions: 0 });
+  valid(count(root, 'tests') === totals.pass + totals.fail + totals.skip && count(root, 'assertions') === totals.assertions && count(root, 'failures') === totals.fail && count(root, 'skipped') === totals.skip);
+  return { ...totals, suites };
 }

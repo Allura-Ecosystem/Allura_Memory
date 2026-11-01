@@ -18,7 +18,7 @@ async function setup(mode: 'ready' | 'prepare' | 'paused' | 'approved' | 'admitt
   await f.owner`INSERT INTO allura.workspaces(group_id,id,display_name,created_by) VALUES(${scope.groupId},${scope.workspaceId}::uuid,'Cancel fixture',${f.ids.author}::uuid) ON CONFLICT DO NOTHING`;
   for (const id of [f.ids.author,f.ids.reviewer,f.ids.curator]) { await f.owner`INSERT INTO allura.workspace_grants(group_id,workspace_id,principal_id,role,issuer) VALUES(${scope.groupId},${scope.workspaceId}::uuid,${id}::uuid,'workspace_admin',${f.ids.author}::uuid) ON CONFLICT DO NOTHING`; }
   const text = 'Private cancellation artifact 🧠';
-  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 5, goal: 'Exact stop', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
+  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 6, goal: 'Exact stop', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
   const start = await startRun(f.app,f.identities.author,scope,input), runId = JSON.parse(start).runId as string;
   const advanceCommand = { runId,expectedRevision:1,operationKey:randomUUID() };
   let advance: string | undefined, decision: string | undefined, decisionCommand: object | undefined, resume: string | undefined, resumeCommand: RunCommandV1 | undefined, claim: PreparationClaim | undefined;

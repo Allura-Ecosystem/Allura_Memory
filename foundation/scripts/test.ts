@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { readBunReport } from '../src/test-runner.ts';
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
 const suites = [{requiredFile:'./tests/run-contract.test.ts',minAssertions:72,requiredCases:[
+ 'run revision six admission preserves historical parser revisions',
  'run contract rejects authority policy and executable input overrides',
  'run start input preserves exact bounded UTF8 bytes and immutable copies',
  'run start definition pins owned source and fixed data only policy',
@@ -120,6 +121,7 @@ const suites = [{requiredFile:'./tests/run-contract.test.ts',minAssertions:72,re
   'consumer never follows redirects or retries an ambiguous request',
   'consumer abort cancels actual stalled HTTP response without retry or credential output',
 ] }, {requiredFile:'./tests/ci-contract.test.ts',minAssertions:63,requiredCases:[
+ 'CI database aggregation ignores preflights and batch diagnostics and requires one final native aggregate',
   'CI rejects malformed or mismatched source and dirty checkouts',
   'CI accepts only complete same-source same-attempt successful nonzero lanes',
   'CI schedules model preparation before offline inference lanes',
@@ -179,7 +181,18 @@ const suites = [{requiredFile:'./tests/run-contract.test.ts',minAssertions:72,re
 ]},{requiredFile:'./tests/dashboard-view.test.ts',minAssertions:28,requiredCases:[
  'dashboard presentation binds current context and rejects malformed scope or response shapes',
  'dashboard search matches federated fields and honestly labels partial failed truncated responses',
-]},{requiredFile:'./tests/test-runner.test.ts',minAssertions:929,requiredCases:[
+]},{requiredFile:'./tests/test-runner.test.ts',minAssertions:1142,requiredCases:[
+ 'DB orchestration consolidates OAuth only after exact native coverage with nine unchanged preflights',
+ 'DB orchestration rejects each missing OAuth file and case including the deferred fault negative witness',
+ 'DB orchestration rejects OAuth native skips failures zero assertions exits and signals',
+ 'DB orchestration rejects malformed and misowned OAuth native reports and forged console coverage',
+ 'DB runner executes sequential native multisuite batches and emits one exact aggregate',
+ 'DB runner rejects unexpected and cross owned native cases despite complete required passes',
+ 'DB runner rejects omitted duplicate reordered batches files and manifest cases before execution',
+ 'DB runner rejects native case omission duplication skip failure zero assertions and nonzero exit',
+ 'DB runner refuses forged console passes and aggregate diagnostics without native ownership',
+ 'DB runner rejects missing truncated duplicate and misowned native reports and cleans scratch',
+ 'DB runner bounds real child timeout reaps it and prevents later batches with cleanup',
  'required runner accepts real Bun passes with optional timing at every exact floor',
  'required runner ignores captured timed and untimed console identities',
  'required runner rejects a positive below floor second suite despite surplus first suite assertions',

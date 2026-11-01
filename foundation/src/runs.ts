@@ -2,9 +2,31 @@ import { type SQL } from 'bun';
 import { isAuthenticated, type Identity } from './authentication.ts';
 import { AuthorityError, type Scope } from './authority.ts';
 import { scopedTransaction } from './persistence.ts';
-import { parseStartRun, parseRunCommand, parseRunDecision, runDefinition, RunError } from './run-contract.ts';
+import { parseStartRun, parseRunCommand, parseRunDecision, parseRunInspection, type RunInspection, runDefinition, RunError } from './run-contract.ts';
 import { randomUUID } from 'node:crypto';
 import { finishPreparation, finishHandoff, type PreparationClaim } from './run-execution.ts';
+
+export async function inspectRun(sql: SQL, identity: Identity, scope: Scope, query: URLSearchParams, signal?: AbortSignal) {
+  if (!isAuthenticated(identity)) { throw new AuthorityError('unauthenticated'); }
+  if (identity.kind !== 'human') { throw new RunError('forbidden'); }
+  try {
+    signal?.throwIfAborted();
+    const input = parseRunInspection(query);
+    if (query.get('group_id') !== scope.groupId || query.get('workspace_id') !== scope.workspaceId) { throw new RunError('invalid'); }
+    return await scopedTransaction(sql, identity, scope, 'audit:read', async tx => {
+      signal?.throwIfAborted();
+      const definition = await runDefinition().catch(() => null);
+      const [row] = await tx`SELECT allura.inspect_run(${scope.groupId},${scope.workspaceId}::uuid,${input.runId}::uuid,${input.afterSeq}::bigint,${input.limit}::integer,${definition}::jsonb) AS inspection`;
+      signal?.throwIfAborted();
+      return row.inspection as RunInspection;
+    });
+  } catch (error) {
+    if (error instanceof AuthorityError || error instanceof RunError) { throw error; }
+    const message = error instanceof Error ? error.message : '';
+    if (message === 'invalid' || message === 'forbidden' || message === 'not_found' || message === 'unavailable') { throw new RunError(message); }
+    throw new RunError('unknown');
+  }
+}
 
 export async function cancelRun(sql: SQL, identity: Identity, scope: Scope, value: unknown, signal?: AbortSignal): Promise<string> {
   if (!isAuthenticated(identity)) { throw new AuthorityError('unauthenticated'); }

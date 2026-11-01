@@ -13,6 +13,17 @@ test('CI accepts only complete same-source same-attempt successful nonzero lanes
  expect(()=>validateAttempt(identity,receipts().slice(1))).toThrow();expect(()=>validateAttempt(identity,[...receipts(),receipts()[0]!])).toThrow();
  for(const change of [{exit:1},{logSha256:''},{tests:0},{assertions:0}]){const rows=receipts();Object.assign(rows.find(r=>r.lane==='unit')!,change);expect(()=>validateAttempt(identity,rows)).toThrow();}
 });
+test('CI database aggregation ignores preflights and batch diagnostics and requires one final native aggregate', () => {
+ const log = (rows: unknown[]) => rows.map(row => JSON.stringify(row)).join('\n');
+ const batches = [{ lane: 'restricted-postgres-batch', batch: 1, pass: 83, fail: 0, skip: 0, assertions: 100, missing: [], exit: 0 }, { lane: 'restricted-postgres-batch', batch: 2, pass: 280, fail: 0, skip: 0, assertions: 200, missing: [], exit: 0 }];
+ const preflight = { lane: 'run-inspection', pass: 10, fail: 0, skip: 0, assertions: 99, missing: [], exit: 0 };
+ const aggregate = { lane: 'restricted-postgres', pass: 363, fail: 0, skip: 0, assertions: 300, missing: [], exit: 0 };
+ expect(summarizeTests('database', log([preflight, ...batches, aggregate]))).toEqual({tests: 363, assertions: 300});
+ for (const rows of [[preflight, ...batches], [batches[0]], [...batches, aggregate, aggregate], [...batches, {...aggregate, exit: 1}], [...batches, {...aggregate, fail: 1}], [...batches, {...aggregate, skip: 1}], [...batches, {...aggregate, assertions: 0}], [...batches, {...aggregate, pass: 0}], [...batches, {...aggregate, missing: ['case']}], [...batches, {...aggregate, pass: 1.5}]]) {
+  expect(() => summarizeTests('database', log(rows))).toThrow();
+ }
+});
+
 test('CI schedules model preparation before offline inference lanes',()=>{
  expect(CI_LANES.indexOf('install')).toBeLessThan(CI_LANES.indexOf('model'));
  for(const lane of ['unit','database'] as const){expect(CI_LANES.indexOf('model')).toBeLessThan(CI_LANES.indexOf(lane));}

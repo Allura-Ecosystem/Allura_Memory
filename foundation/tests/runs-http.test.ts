@@ -12,13 +12,30 @@ beforeAll(async () => {
 afterAll(async () => { await f?.close(); });
 function requestInput() {
   const text = 'Synthetic HTTP artifact';
-  return { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 5, goal: 'Synthetic HTTP goal', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
+  return { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 6, goal: 'Synthetic HTTP goal', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
 }
 const provider = { identity: EMBEDDING, embed: async (): Promise<number[]> => { throw new Error('Run admission must not embed'); } };
 function gatewayFor(origin: string) { return createCoreGateway(f.app, f.humanConfig, origin, new Uint8Array(32).fill(7), provider); }
 function requestFor(origin: string, body: unknown, headers: Record<string, string> = {}, query = `group_id=${f.scope.groupId}&workspace_id=${f.scope.workspaceId}`) {
   return new Request(`${origin}/api/runs/start?${query}`, { method: 'POST', headers: { 'Cf-Access-Jwt-Assertion': f.jwt('author'), Origin: origin, 'Sec-Fetch-Site': 'same-origin', 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
 }
+
+test('run HTTP inspection returns pinned scoped evidence without mutation', async () => {
+  const origin = 'https://runs.invalid', gateway = gatewayFor(origin);
+  const start = await gateway(requestFor(origin, requestInput())); expect(start.status).toBe(200);
+  const { runId } = await start.json() as { runId: string };
+  const tables = ['run_definitions','run_records','run_state','run_steps','run_journal','run_operation_receipts','run_effect_receipts','run_approval_requests','run_approval_decisions','run_handoff_links'];
+  const snapshot = () => Promise.all(tables.map(async table => [...await f.owner.unsafe(`SELECT to_jsonb(t)::text AS row FROM allura.${table} t ORDER BY 1`)]));
+  const before = await snapshot();
+  const response = await gateway(new Request(`${origin}/api/runs/inspect?group_id=${f.scope.groupId}&workspace_id=${f.scope.workspaceId}&run_id=${runId}`, { headers: { 'Cf-Access-Jwt-Assertion': f.jwt('author') } }));
+  // First RED is real signed GET404, before new SQL or imports.
+  expect(response.status).toBe(200);
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  const inspection = await response.json() as { record: { runId: string }; runtime: { phase: string }; journal: { seq: number }[]; hasMore: boolean; afterSeq: number };
+  expect(inspection.record.runId).toBe(runId); expect(inspection.runtime.phase).toBe('ready');
+  expect(inspection.journal.map(j => j.seq)).toEqual([1]); expect(inspection.hasMore).toBe(false); expect(inspection.afterSeq).toBe(1);
+  expect(await snapshot()).toEqual(before);
+});
 
 test('run HTTP cancellation persists one immutable stop receipt without an effect', async () => {
   const origin = 'https://runs.invalid', gateway = gatewayFor(origin);
@@ -67,7 +84,7 @@ test('run HTTP strict selectors and input reject overrides without disclosure', 
   for (const query of [`group_id=${f.scope.groupId}&workspace_id=${f.scope.workspaceId}&actor=forged`, `group_id=${f.scope.groupId}&workspace_id=${f.scope.workspaceId}&group_id=${f.scope.groupId}`, `group_id=${f.scope.groupId}`, `group_id=${f.scope.groupId}&workspace_id=wrong`]) {
     expect((await gateway(requestFor(origin, v, {}, query))).status).toBe(400);
   }
-  for (const value of [{ ...v, outcome: 'succeeded' }, { ...v, artifact: { ...v.artifact, passed: true } }, { ...v, definitionRevision: 6 }, { ...v, goal: '\0' }]) {
+  for (const value of [{ ...v, outcome: 'succeeded' }, { ...v, artifact: { ...v.artifact, passed: true } }, { ...v, definitionRevision: 7 }, { ...v, goal: '\0' }]) {
     const reply = await gateway(requestFor(origin, value)); expect(reply.status).toBe(400); expect(await reply.json()).toEqual({ outcome: 'invalid' });
   }
   const missing = await gateway(requestFor(origin, { ...v, reviewerPrincipalId: randomUUID() }));
@@ -190,7 +207,7 @@ test('run HTTP starts pauses approves and resumes one durable local handoff', as
 test('run HTTP start persists one immutable scoped admission receipt', async () => {
   const gateway = createCoreGateway(f.app, f.humanConfig, 'https://runs.invalid', new Uint8Array(32).fill(7), { identity: EMBEDDING, embed: async () => { throw new Error('Run admission must not embed'); } });
   const text = 'Synthetic run artifact\r\nCafe\u0301 🧠';
-  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 5, goal: 'Preserve synthetic evidence', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
+  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 6, goal: 'Preserve synthetic evidence', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
   const response = await gateway(new Request(`https://runs.invalid/api/runs/start?group_id=${f.scope.groupId}&workspace_id=${f.scope.workspaceId}`, { method: 'POST', headers: { 'Cf-Access-Jwt-Assertion': f.jwt('author'), Origin: 'https://runs.invalid', 'Sec-Fetch-Site': 'same-origin', 'Content-Type': 'application/json' }, body: JSON.stringify(input) }));
   expect(response.status).toBe(200);
   const receipt = await response.json() as { version: string; command: string; actorPrincipalId: string; operationKey: string; phaseAtAcceptance: string; acceptedRevision: number; journalSeq: number; runId: string };
