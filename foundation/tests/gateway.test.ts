@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { generateKeyPairSync, sign } from 'node:crypto';
-import { createGateway, SerializedJsonReply } from '../src/gateway.ts';
+import { createGateway, SerializedJsonReply, GatewayReply } from '../src/gateway.ts';
 import type { AuthorityRecord, AuthorityStore } from '../src/authority.ts';
 const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const config = { issuer: 'https://fixture.cloudflareaccess.com', audience: 'fixture', keys: new Map([['key', publicKey]]) };
@@ -189,4 +189,25 @@ test('real loopback HTTP preserves authenticated scope and coarse liveness', asy
     expect(foreign.status).toBe(403);
     expect(await (await fetch(new URL('/health/live',server.url))).json()).toEqual({ status: 'up' });
   } finally { await server.stop(true); }
+});
+
+test('gateway serialized replies preserve exact 201 bytes without widening status or admission authority',async()=>{
+ const raw=' { "accepted": true }\n';
+ const reply=(status:unknown)=>Reflect.construct(SerializedJsonReply,[raw,status]) as SerializedJsonReply;
+ const routes=[
+  {path:'/created',handle:async()=>reply(201)},
+  {path:'/default',handle:async()=>new SerializedJsonReply(raw)},
+  {path:'/plain',handle:async()=>({status:201,body:raw})},
+  {path:'/accepted',handle:async()=>new GatewayReply(202,{ignored:true})},
+  {path:'/large',handle:async()=>Reflect.construct(SerializedJsonReply,['x'.repeat(131073),201]) as SerializedJsonReply},
+ ].map(r=>({...r,method:'GET' as const,identity:'human' as const,action:'memory:read' as const}));
+ const send=createGateway({human:config,origin,store,machineLookup:async()=>null,routes});
+ const created=await send(new Request(`${origin}/created${query}`,{headers}));
+ expect(created.status).toBe(201);expect(await created.text()).toBe(raw);expect(created.headers.get('cache-control')).toBe('no-store');expect(created.headers.get('x-content-type-options')).toBe('nosniff');
+ const normal=await send(new Request(`${origin}/default${query}`,{headers}));expect(normal.status).toBe(200);expect(await normal.text()).toBe(raw);
+ const plain=await send(new Request(`${origin}/plain${query}`,{headers}));expect(plain.status).toBe(200);expect(await plain.json()).toEqual({status:201,body:raw});
+ const accepted=await send(new Request(`${origin}/accepted${query}`,{headers}));expect(accepted.status).toBe(202);expect(await accepted.text()).toBe('');
+ for(const status of [199,202,400,500,'201',null,NaN]){expect(()=>reply(status)).toThrow();}
+ expect((await send(new Request(`${origin}/large${query}`,{headers}))).status).toBe(503);
+ const mixed=new Request(`${origin}/created${query}`,{headers:{...headers,Authorization:'Bearer synthetic'}});expect((await send(mixed)).status).toBe(401);
 });

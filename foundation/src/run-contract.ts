@@ -4,7 +4,7 @@ export class RunError extends Error {
   constructor(readonly code: 'invalid' | 'forbidden' | 'not_found' | 'conflict' | 'unavailable' | 'unknown') { super(`run_${code}`); }
 }
 export type StartRunV1 = Readonly<{
-  operationKey: string; definitionId: 'local-evidence-handoff'; definitionRevision: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  operationKey: string; definitionId: 'local-evidence-handoff'; definitionRevision: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   goal: string; reviewerPrincipalId: string;
   artifact: Readonly<{ text: string; expectedSha256: string; sourceRevision: string | null }>;
 }>;
@@ -21,7 +21,7 @@ export function parseStartRun(value: unknown): StartRunV1 {
   const v = object(value, ['operationKey', 'definitionId', 'definitionRevision', 'goal', 'reviewerPrincipalId', 'artifact']);
   const a = object(v.artifact, ['text', 'expectedSha256', 'sourceRevision']);
   check(typeof v.operationKey === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(v.operationKey));
-  check(v.definitionId === 'local-evidence-handoff' && (v.definitionRevision === 1 || v.definitionRevision === 2 || v.definitionRevision === 3 || v.definitionRevision === 4 || v.definitionRevision === 5 || v.definitionRevision === 6 || v.definitionRevision === 7 || v.definitionRevision === 8));
+  check(v.definitionId === 'local-evidence-handoff' && (v.definitionRevision === 1 || v.definitionRevision === 2 || v.definitionRevision === 3 || v.definitionRevision === 4 || v.definitionRevision === 5 || v.definitionRevision === 6 || v.definitionRevision === 7 || v.definitionRevision === 8 || v.definitionRevision === 9));
   check(text(v.goal, 1000) && !!v.goal.trim() && text(a.text, 16384));
   check(typeof v.reviewerPrincipalId === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(v.reviewerPrincipalId));
   check(typeof a.expectedSha256 === 'string' && /^[a-f0-9]{64}$/.test(a.expectedSha256));
@@ -79,12 +79,12 @@ export function parseRunInspection(query: URLSearchParams): RunInspectionSelecto
 // Pin actual coordination, API, executor AND SQL bytes; no caller registry.
 export async function runDefinition() {
   const hash = createHash('sha256');
-  for (const file of ['run-contract.ts', 'runs.ts', 'runs-api.ts', 'gateway.ts', 'run-execution.ts', '../migrations/025-durable-runs.sql', '../migrations/026-run-prepare.sql', '../migrations/027-run-decision.sql', '../migrations/028-run-resume.sql', '../migrations/029-run-cancel.sql', '../migrations/030-run-inspection.sql', '../migrations/031-run-prepare-expiry.sql', '../migrations/033-work-plane-http-run8.sql']) {
+  for (const file of ['run-contract.ts', 'runs.ts', 'runs-api.ts', 'gateway.ts', 'run-execution.ts', '../migrations/025-durable-runs.sql', '../migrations/026-run-prepare.sql', '../migrations/027-run-decision.sql', '../migrations/028-run-resume.sql', '../migrations/029-run-cancel.sql', '../migrations/030-run-inspection.sql', '../migrations/031-run-prepare-expiry.sql', '../migrations/033-work-plane-http-run8.sql', '../migrations/035-work-plane-create.sql']) {
     const bytes = await Bun.file(new URL(file, import.meta.url)).arrayBuffer();
     hash.update(`${file}\0${bytes.byteLength}\0`).update(new Uint8Array(bytes));
   }
   return {
-    version: 'run-definition-v1', id: 'local-evidence-handoff', revision: 8,
+    version: 'run-definition-v1', id: 'local-evidence-handoff', revision: 9,
     engineContract: 'run-engine-v1', handlerBundleDigest: hash.digest('hex'),
     policy: { version: 'run-policy-v1', allowedHandlers: ['local-artifact-check-v1', 'local-handoff-receipt-v1'], approvalStep: 'review', independentReviewer: true, gates: ['artifact_nonempty', 'artifact_digest_match'], maxAttemptsPerEffect: 3, leaseMs: 10000, stepDeadlineMs: 2000, maxArtifactBytes: 16384, maxJournalRows: 128, maxRunAgeMs: 86400000, approvalTtlMs: 86400000 },
     steps: [{ id: 'prepare', kind: 'local', handler: 'local-artifact-check-v1' }, { id: 'review', kind: 'approval', dependsOn: 'prepare' }, { id: 'handoff', kind: 'local', handler: 'local-handoff-receipt-v1', dependsOn: 'review' }],

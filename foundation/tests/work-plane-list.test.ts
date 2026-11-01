@@ -8,9 +8,8 @@ import {parseWorkList,workListBinding,signWorkListCursor,workGraph} from '../src
 import {listWorkItems} from '../src/work-plane.ts';
 import {createWorkRoutes} from '../src/work-plane-api.ts';
 import {createGateway} from '../src/gateway.ts';
-import {DatabaseStore,scopedTransaction,migrate} from '../src/persistence.ts';
+import {DatabaseStore,scopedTransaction} from '../src/persistence.ts';
 import {authenticateMachine,authenticateHuman} from '../src/authentication.ts';
-import {runDefinition} from '../src/run-contract.ts';
 import {fixture} from './lifecycle-fixture.ts';
 import {createCoreGateway} from '../src/core-api.ts';
 import {EMBEDDING} from '../src/embedding.ts';
@@ -18,11 +17,13 @@ const origin='https://work.invalid',project='Project:Alpha',token='2026-01-02T03
 const key=new Uint8Array(32).fill(7),provider={identity:EMBEDDING,embed:async():Promise<number[]>=>{throw new Error('work must not embed');}};
 type Fixture=Awaited<ReturnType<typeof fixture>>;
 async function setup(){
+ const setupStarted=performance.now();
  const f=await fixture(`allura-work-list-${randomUUID()}`);
  await f.owner`INSERT INTO allura.work_authority VALUES(true,'synthetic-owner') ON CONFLICT DO NOTHING`;
  await f.owner`INSERT INTO allura.work_projects VALUES(${f.scope.groupId},${f.scope.workspaceId},${project},'synthetic-owner',true)`;
  for(const n of ['author','reviewer'] as const){await f.owner`INSERT INTO allura.work_entitlements VALUES(${f.scope.groupId},${f.scope.workspaceId},${f.ids[n]},'work:read',true)`;}
  for(const [id,t] of [['é/tie',token],['a+tie',token],['Newest','2026-01-02T03:04:05.123457Z']]){await f.owner`INSERT INTO allura.work_items(group_id,workspace_id,project_id,id,title,status,created_at,updated_at) VALUES(${f.scope.groupId},${f.scope.workspaceId},${project},${id},${id},'ready',${t}::timestamptz,${t}::timestamptz)`;}
+ recordSnapshotPhase({phase:'setup',ms:performance.now()-setupStarted});
  return f;
 }
 function gateway(f:Fixture){return createCoreGateway(f.app,f.humanConfig,origin,key,provider,undefined,undefined,'human',undefined,'work-plane-compatibility-v1');}
@@ -31,7 +32,23 @@ function request(f:Fixture,changes:Record<string,string>={},path='/api/work-item
  if(path!=='/api/work-items'){query.delete('project_id');query.delete('limit');}
  return new Request(`${origin}${path}?${query}`,{headers:{'Cf-Access-Jwt-Assertion':f.jwt(who),'X-Allura-Work-Contract':'work-plane-compatibility-v1'}});
 }
-async function snapshot(f:Fixture){return Promise.all(['work_items','work_events','work_receipts','events','semantic_versions','run_journal','run_operation_receipts'].map(async t=>[...await f.owner.unsafe(`SELECT to_jsonb(t)::text AS row FROM allura.${t} t ORDER BY 1`)]));}
+// Fixed whole-table observations at the existing quiescent comparison boundaries.
+// One statement gives one consistent observation, unlike the former pool waves.
+const snapshotTables=['work_items','work_events','work_receipts','events','semantic_versions','run_journal','run_operation_receipts'] as const;
+type Snapshot={row:string}[][];
+function recordSnapshotPhase(...samples:{phase:string;ms:number;tables?:{table:string;rows:number;bytes:number}[]}[]){console.log(JSON.stringify({workSnapshotPhases:{suite:'list',samples}}));}
+async function snapshot(f:Fixture):Promise<Snapshot>{
+ const started=performance.now();
+ const rows=await f.owner.unsafe<{table_index:number;row:string}[]>(snapshotTables.map((table,index)=>`SELECT ${index} AS table_index,to_jsonb(t)::text AS row FROM allura.${table} t`).join(' UNION ALL ')+' ORDER BY table_index,row');
+ const fetched=performance.now(),result:Snapshot=snapshotTables.map(()=>[]);
+ for(const {table_index,row} of rows){result[table_index]!.push({row});}
+ const tables=result.map((rows,index)=>({table:snapshotTables[index]!,rows:rows.length,bytes:rows.reduce((n,{row})=>n+Buffer.byteLength(row),0)}));
+ recordSnapshotPhase({phase:'snapshot-fetch',ms:fetched-started},{phase:'snapshot-reconstruct-and-measure',ms:performance.now()-fetched,tables});
+ return result;
+}
+function compareSnapshot(actual:Snapshot,expected:Snapshot){
+ const started=performance.now();try{expect(actual).toEqual(expected);}finally{recordSnapshotPhase({phase:'snapshot-compare',ms:performance.now()-started});}
+}
 type Page={work_items:{id:string;created_at:string;updated_at:string;status:string;project_id:string}[];has_more:boolean;next_cursor:string|null};
 async function page(send:(r:Request)=>Promise<Response>,req:Request):Promise<Page>{const r=await send(req);expect(r.status).toBe(200);return await r.json() as Page;}
 async function outcome(r:Response,status:number,code:string){expect(r.status).toBe(status);expect(await r.json()).toEqual({outcome:code});expect(r.headers.get('cache-control')).toBe('no-store');}
@@ -49,7 +66,7 @@ test('work list signed HTTP returns scoped ordered items and an authenticated ne
   expect(response.status).toBe(200);expect(response.headers.get('cache-control')).toBe('no-store');
   const page=await response.json() as {work_items:{id:string;updated_at:string}[];has_more:boolean;next_cursor:string};
   expect(page.work_items.map(x=>x.id)).toEqual(['Newest','é/tie']);expect(page.work_items[1]!.updated_at).toBe(token);expect(page.has_more).toBe(true);expect(page.next_cursor.length).toBeGreaterThan(40);
-  expect(Object.keys(page).sort()).toEqual(['has_more','next_cursor','work_items']);expect(await snapshot(f)).toEqual(before);
+  expect(Object.keys(page).sort()).toEqual(['has_more','next_cursor','work_items']);compareSnapshot(await snapshot(f),before);
  }finally{await f.close();}
 });
 
@@ -78,7 +95,7 @@ test('work list strict selectors versions malformed encoding and unsupported lan
   const missing=request(f);missing.headers.delete('X-Allura-Work-Contract');await outcome(await send(missing),400,'invalid');
   await outcome(await send(request(f,{lane_id:'valid opaque lane'})),404,'not_found');await outcome(await send(request(f,{lane_id:'valid',project_id:'missing'})),404,'not_found');
   const get=request(f);get.headers.set('Content-Length','65537');get.headers.set('Content-Type','not-json');expect((await send(get)).status).toBe(200);expect(get.bodyUsed).toBe(false);
-  expect(await snapshot(f)).toEqual(before);
+  compareSnapshot(await snapshot(f),before);
  }finally{await f.close();}
 });
 test('work list cursor binds principal scope project filters mapping and expiry without disclosure',async()=>{
@@ -131,7 +148,7 @@ test('work list current read entitlement original binding and authenticated mach
    await expect(listWorkItems(f.app,identity,f.scope,new URL(request(f).url).search,key,principal)).rejects.toThrow('forbidden');
    const req=request(f);req.headers.delete('Cf-Access-Jwt-Assertion');req.headers.set('Authorization','Bearer '+secret);await outcome(await send(req),401,'unauthenticated');
   }
-  await f.owner`UPDATE allura.work_entitlements SET active=false WHERE principal_id=${f.ids.author}`;await outcome(await send(request(f)),403,'forbidden');expect(await snapshot(f)).toEqual(before);
+  await f.owner`UPDATE allura.work_entitlements SET active=false WHERE principal_id=${f.ids.author}`;await outcome(await send(request(f)),403,'forbidden');compareSnapshot(await snapshot(f),before);
  }finally{await f.close();}
 });
 function latch(){let release!:()=>void;const promise=new Promise<void>(r=>{release=r;});return {promise,release};}
@@ -153,7 +170,7 @@ test('work list authority entitlement and mapping revocation serialize in both a
      reading=gateway({...f,app})(request(f));await waitFor(f,ap,gp,table+' read reached data after authority');
      revoking=rev.unsafe(disable).then(()=>undefined);await waitFor(f,rp,ap,table+' '+order);go.release();await holding;await revoking;
     }
-    await outcome(await reading,table==='work_projects'?404:403,table==='work_projects'?'not_found':'forbidden');expect(await snapshot(f)).toEqual(before);
+    await outcome(await reading,table==='work_projects'?404:403,table==='work_projects'?'not_found':'forbidden');compareSnapshot(await snapshot(f),before);
    }finally{go.release();await holding;await reading;await revoking;await f.owner.unsafe(enable);await app.close();await rev.close();await gate.close();}
   }}
   for(const map of [false,true]){
@@ -161,7 +178,7 @@ test('work list authority entitlement and mapping revocation serialize in both a
    await outcome(await createGateway({human:f.humanConfig,origin,store:new DatabaseStore(f.app),machineLookup:async()=>null,routes})(request(f)),map?404:403,map?'not_found':'forbidden');
    await f.owner`UPDATE allura.work_projects SET active=true WHERE group_id=${f.scope.groupId}`;await f.owner`UPDATE allura.work_entitlements SET active=true WHERE principal_id=${f.ids.author}`;
   }
-  expect(await snapshot(f)).toEqual(before);
+  compareSnapshot(await snapshot(f),before);
  }finally{await f.close();}
 },20000);
 
@@ -182,7 +199,7 @@ test('work list restricted SQL foreign projects and pooled reuse cannot disclose
   expect(await page(send,request(f,{workspace_id:f.foreignWorkspace,project_id:'B'}))).toEqual({work_items:[],has_more:false,next_cursor:null});
   expect((await app`SELECT nullif(current_setting('allura.principal',true),'') AS principal`)[0].principal).toBeNull();
   await expect(Promise.resolve(app`SELECT allura.list_work_items(${f.scope.groupId},${f.scope.workspaceId}::uuid,${project},NULL,2,NULL,NULL)`)).rejects.toThrow('forbidden');
-  expect((await send(request(f))).status).toBe(200);expect(await snapshot(f)).toEqual(before);
+  expect((await send(request(f))).status).toBe(200);compareSnapshot(await snapshot(f),before);
  }finally{await app.close();await f.close();}
 });
 test('work list concurrent transitions and inserts preserve honest current page semantics without history writes',async()=>{
@@ -193,7 +210,7 @@ test('work list concurrent transitions and inserts preserve honest current page 
   expect((await send(transition)).status).toBe(200);
   await insert(f,'Later-new','2026-01-03T00:00:00.000001Z');await insert(f,'older-new','2026-01-01T00:00:00.000001Z');
   const before=await snapshot(f),second=await page(send,request(f,{status:'ready',cursor:first.next_cursor!}));expect(second.work_items.map(x=>x.id)).toEqual(['older-new']);expect(second.has_more).toBe(false);expect(second.next_cursor).toBeNull();
-  expect((await page(send,request(f,{status:'ready'}))).work_items[0]!.id).toBe('Later-new');expect(await snapshot(f)).toEqual(before);
+  expect((await page(send,request(f,{status:'ready'}))).work_items[0]!.id).toBe('Later-new');compareSnapshot(await snapshot(f),before);
   expect((await f.owner`SELECT count(*)::int AS n FROM allura.work_receipts WHERE group_id=${f.scope.groupId}`)[0].n).toBe(1);
  }finally{await f.close();}
 });
@@ -223,7 +240,7 @@ test('work list response target and service failure bounds never masquerade as a
   const started=performance.now(),pending=Array.from({length:16},()=>bounded(request(f,{limit:'1'})));
   try{await entered.promise;await outcome(await bounded(request(f,{limit:'1'})),429,'unavailable');const responses=await Promise.all(pending);for(const response of responses){await outcome(response,503,'unknown');}expect(performance.now()-started).toBeGreaterThanOrEqual(4900);expect(performance.now()-started).toBeLessThan(6500);await outcome(await bounded(request(f,{limit:'1'})),429,'unavailable');}finally{release.release();await Promise.all(pending);}
   for(let n=0;n<100;n++){const response=await bounded(request(f,{limit:'1'}));if(response.status===200){break;}expect(response.status).toBe(429);await Bun.sleep(5);}
-  expect((await bounded(request(f,{limit:'1'}))).status).toBe(200);expect(await snapshot(f)).toEqual(before);
+  expect((await bounded(request(f,{limit:'1'}))).status).toBe(200);compareSnapshot(await snapshot(f),before);
  }finally{await f.close();}
 },10000);
 
@@ -241,7 +258,14 @@ test('work list additive migration preserves accepted history and the exact revi
   const oldWork=await import(join(exported,'foundation/src/work-plane.ts')) as typeof import('../src/work-plane.ts');
   const oldRuns=await import(join(exported,'foundation/src/runs.ts')) as typeof import('../src/runs.ts');
   const oldContract=await import(join(exported,'foundation/src/run-contract.ts')) as typeof import('../src/run-contract.ts');
-  const currentRuns=await import('../src/runs.ts');
+  const targetPin='502578872b72cabbe474ffcf74cef77d47a96f41',targetExport=join(exported,'historical034');
+  expect(Bun.spawnSync(['mkdir','-p',targetExport]).exitCode).toBe(0);
+  const targetArchive=Bun.spawnSync(['git','archive',targetPin,'foundation'],{cwd:root});expect(targetArchive.exitCode).toBe(0);expect(Bun.spawnSync(['tar','-x','-C',targetExport],{stdin:targetArchive.stdout}).exitCode).toBe(0);
+  const targetFiles=Bun.spawnSync(['git','ls-tree','-r','--name-only',targetPin,'foundation'],{cwd:root});expect(targetFiles.exitCode).toBe(0);
+  for(const path of targetFiles.stdout.toString().trim().split('\n')){const original=Bun.spawnSync(['git','show',`${targetPin}:${path}`],{cwd:root});expect(original.exitCode).toBe(0);const bytes=Buffer.from(await Bun.file(join(targetExport,path)).arrayBuffer());expect(bytes.equals(original.stdout)).toBe(true);hashes['historical034/'+path]=createHash('sha256').update(bytes).digest('hex');}
+  await symlink(join(root,'foundation/node_modules'),join(targetExport,'foundation/node_modules'));
+  const currentRuns=await import(join(targetExport,'foundation/src/runs.ts')) as typeof import('../src/runs.ts');
+  const historicalContract=await import(join(targetExport,'foundation/src/run-contract.ts')) as typeof import('../src/run-contract.ts'),historicalPersistence=await import(join(targetExport,'foundation/src/persistence.ts')) as typeof import('../src/persistence.ts'),historicalAuth=await import(join(targetExport,'foundation/src/authentication.ts')) as typeof import('../src/authentication.ts'),historicalCore=await import(join(targetExport,'foundation/src/core-api.ts')) as typeof import('../src/core-api.ts');
   f=await oldFixture.fixture('allura-list-upgrade-'+randomUUID(),url.toString());const fx=f;
   expect((await f.owner`SELECT count(*)::int AS n FROM allura.schema_migrations`)[0].n).toBe(33);
   await f.owner`INSERT INTO allura.work_authority VALUES(true,'synthetic-owner')`;
@@ -255,18 +279,19 @@ test('work list additive migration preserves accepted history and the exact revi
   const started=await oldRuns.startRun(f.app,f.identities.author,f.scope,input),runId=JSON.parse(started).runId,advance={runId,expectedRevision:1,operationKey:randomUUID()},paused=await oldRuns.advanceRun(f.app,f.identities.author,f.scope,advance);
   const tables=['work_items','work_events','work_receipts','events','semantic_versions','proposal_state','run_definitions','run_records','run_state','run_steps','run_journal','run_operation_receipts','run_effect_receipts','run_approval_requests','run_approval_decisions','run_handoff_links'];
   const snap=()=>Promise.all(tables.map(async t=>[...await fx.owner.unsafe(`SELECT to_jsonb(t)::text AS row FROM allura.${t} t ORDER BY 1`)]));
-  const before=await snap(),definition=await oldContract.runDefinition();expect(definition).toEqual(await runDefinition());
+  const before=await snap(),definition=await oldContract.runDefinition();expect(definition).toEqual(await historicalContract.runDefinition());
   expect(JSON.stringify(definition)).toContain('fdb1a89fa08178acc34f17cf3fd30eec76cda240fc003377f6dfcdf37e7b6d84');
-  await migrate(f.owner);expect((await f.owner`SELECT count(*)::int AS n FROM allura.schema_migrations`)[0].n).toBe(34);expect(await snap()).toEqual(before);
+  await historicalPersistence.migrate(f.owner);expect((await f.owner`SELECT count(*)::int AS n FROM allura.schema_migrations`)[0].n).toBe(34);expect(await snap()).toEqual(before);
   expect(await oldWork.transitionWorkItem(f.app,f.identities.author,f.scope,'old-item',command)).toBe(accepted);
-  const identity=authenticateHuman({assertion:f.jwt('author')},f.humanConfig),reviewer=authenticateHuman({assertion:f.jwt('reviewer')},f.humanConfig);
+  const identity=historicalAuth.authenticateHuman({assertion:f.jwt('author')},f.humanConfig),reviewer=historicalAuth.authenticateHuman({assertion:f.jwt('reviewer')},f.humanConfig);
   expect(await currentRuns.startRun(f.app,identity,f.scope,input)).toBe(started);expect(await currentRuns.advanceRun(f.app,identity,f.scope,advance)).toBe(paused);
-  const p=await page(gateway(f),request(f));expect(p.work_items.map(x=>x.id)).toEqual(['old-item']);expect(p.work_items[0]!.updated_at).toBe(JSON.parse(accepted).work_item.updated_at);expect(await snap()).toEqual(before);
+  const historicalGateway=historicalCore.createCoreGateway(f.app,f.humanConfig,origin,key,provider,undefined,undefined,'human',undefined,'work-plane-compatibility-v1');
+  const p=await page(historicalGateway,request(f));expect(p.work_items.map(x=>x.id)).toEqual(['old-item']);expect(p.work_items[0]!.updated_at).toBe(JSON.parse(accepted).work_item.updated_at);expect(await snap()).toEqual(before);
   const approval=JSON.parse((await f.owner`SELECT request_text FROM allura.run_approval_requests WHERE run_id=${runId}::uuid`)[0].request_text);
   await currentRuns.decideRun(f.app,reviewer,f.scope,{runId,expectedRevision:3,operationKey:randomUUID(),approvalRequestId:approval.id,reviewedEvidenceDigest:approval.evidenceDigest,decision:'approve',rationale:'Current exact review'});
   await currentRuns.resumeRun(f.app,identity,f.scope,{runId,expectedRevision:4,operationKey:randomUUID()});
   const view=await currentRuns.inspectRun(f.app,identity,f.scope,new URLSearchParams({group_id:f.scope.groupId,workspace_id:f.scope.workspaceId,run_id:runId}));expect(view.completionVerified).toBe(true);expect(view.doctor).not.toContain('definition_drift');
-  console.log(JSON.stringify({workListAdditiveUpgrade:{pin,archiveSha256:createHash('sha256').update(archive.stdout).digest('hex'),hashes,definition,tables,beforeSha256:createHash('sha256').update(JSON.stringify(before)).digest('hex'),oldPausedReceiptSha256:createHash('sha256').update(paused).digest('hex'),currentRevisionEightExecutable:true}}));
+  console.log(JSON.stringify({workListAdditiveUpgrade:{pin,archiveSha256:createHash('sha256').update(archive.stdout).digest('hex'),hashes,definition,tables,beforeSha256:createHash('sha256').update(JSON.stringify(before)).digest('hex'),oldPausedReceiptSha256:createHash('sha256').update(paused).digest('hex'),historical034RevisionEightExecutable:true,targetPin}}));
  }finally{
   await f?.close();try{if(created){await admin.unsafe(`DROP DATABASE ${database} WITH (FORCE)`);expect(await admin`SELECT datname FROM pg_database WHERE datname=${database}`).toHaveLength(0);}}finally{await admin.close();}
   for(const [p,h] of Object.entries(hashes)){expect(createHash('sha256').update(new Uint8Array(await Bun.file(join(exported,p)).arrayBuffer())).digest('hex')).toBe(h);}

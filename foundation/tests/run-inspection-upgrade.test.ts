@@ -90,7 +90,7 @@ test('run revision six inspection preserves genuine revision five histories and 
       expect(await f.owner`SELECT id FROM allura.run_effect_receipts WHERE run_id=${h.runId}::uuid AND step_id=${h.mode==='valid-prepare'?'prepare':'handoff'}`).toHaveLength(0);
       console.log(JSON.stringify({revisionFiveOriginalWorker:{pin,mode:h.mode,validBeforeAndAfter:true}}));
     }
-    const fresh=await current.startRun(f.app,identity,f.scope,{...base,operationKey:randomUUID(),definitionRevision:8});expect(JSON.parse(fresh).phaseAtAcceptance).toBe('ready');
+    const fresh=await current.startRun(f.app,identity,f.scope,{...base,operationKey:randomUUID(),definitionRevision:9});expect(JSON.parse(fresh).phaseAtAcceptance).toBe('ready');
     await expect(current.startRun(f.app,identity,f.scope,{...base,operationKey:randomUUID()})).rejects.toThrow('conflict');
     const [timing]=await f.owner`SELECT greatest(0,ceil(extract(epoch FROM(max(due_at)-clock_timestamp()))*1000))::int AS ms FROM allura.run_steps WHERE group_id=${f.scope.groupId}`;
     await Bun.sleep(timing.ms+10);

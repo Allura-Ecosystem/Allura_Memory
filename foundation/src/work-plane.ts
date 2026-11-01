@@ -2,7 +2,7 @@ import { type SQL, type TransactionSQL } from 'bun';
 import { isAuthenticated, type Identity } from './authentication.ts';
 import { AuthorityError, type Scope } from './authority.ts';
 import { scopedTransaction } from './persistence.ts';
-import { parseWorkTransition, workText, WorkPlaneError, parseWorkList, workListBinding, readWorkListCursor, signWorkListCursor } from './work-plane-contract.ts';
+import { parseWorkTransition, workText, WorkPlaneError, parseWorkList, workListBinding, readWorkListCursor, signWorkListCursor, parseWorkCreate } from './work-plane-contract.ts';
 
 export async function authorizeWorkProject(sql:SQL,identity:Identity,scope:Scope,project:string,principalId:string):Promise<string>{
  human(identity);
@@ -71,6 +71,25 @@ async function disclose(sql:SQL,identity:Identity,scope:Scope,id:string,write:bo
     await tx`SELECT allura.work_guard(${scope.groupId},${scope.workspaceId}::uuid,${write})`;
     await tx`SELECT allura.work_map(${scope.groupId},${scope.workspaceId}::uuid,${id})`;
   });
+}
+export async function createWorkItem(sql:SQL,identity:Identity,scope:Scope,value:unknown,principalId:string):Promise<Readonly<{status:201;body:string}>> {
+ human(identity);
+ try{
+  // Own the complete bounded input before the first asynchronous boundary.
+  const input=parseWorkCreate(value);
+  if(input.group_id!==scope.groupId||input.workspace_id!==scope.workspaceId){throw new WorkPlaneError('invalid');}
+  const result=await scopedTransaction(sql,identity,scope,'memory:read',async tx=>{
+   await originalPrincipal(tx,principalId);
+   const [row]=await tx`SELECT * FROM allura.create_work_item(${scope.groupId},${scope.workspaceId}::uuid,${input}::jsonb)`;
+   await tx.unsafe('SET CONSTRAINTS ALL IMMEDIATE');
+   await tx`SELECT allura.work_guard(${scope.groupId},${scope.workspaceId}::uuid,true)`;
+   if(row.http_status!==201||typeof row.response_text!=='string'){throw new WorkPlaneError('failed');}
+   return Object.freeze({status:201 as const,body:row.response_text as string});
+  });
+  const id=(JSON.parse(result.body) as {work_item:{id:string}}).work_item.id;
+  await disclose(sql,identity,scope,id,true,principalId);
+  return result;
+ }catch(error){return failure(error);}
 }
 export async function transitionWorkItem(sql:SQL,identity:Identity,scope:Scope,id:string,value:unknown,principalId?:string):Promise<string> {
   human(identity);

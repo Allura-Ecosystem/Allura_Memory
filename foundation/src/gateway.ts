@@ -18,7 +18,7 @@ const ceilings: Limits = { bodyBytes: 65536, responseBytes: 131072, targetChars:
 type Context = Readonly<{ identity: Identity; authority: Authority; scope: Scope; body: Record<string, unknown> | null; signal: AbortSignal; request:Request; params: Readonly<Record<string,string>> }>;
 // Only trusted in-process routes can create this envelope, not parsed user JSON.
 export class GatewayReply {constructor(readonly status:number,readonly body:unknown){if(![200,202,400,405,406,415].includes(status)){throw new Error('invalid response status');}}}
-export class SerializedJsonReply { constructor(readonly body:string) {} }
+export class SerializedJsonReply { constructor(readonly body:string,readonly status:200|201=200) {if(status!==200&&status!==201){throw new Error('invalid response status');}} }
 export type Route = Readonly<{ dynamic?:boolean; parseBody?:(text:string)=>Record<string,unknown>; admission?:(context:Context)=>Promise<void>; disclosure?:(context:Context)=>Promise<void>; timeoutStatus?:503; path: string; method: 'GET' | 'POST'; identity: 'human' | 'machine'; action: Action; additionalActions?: (body:Record<string,unknown>|null,context:Context)=>readonly Action[]|Promise<readonly Action[]>; handle: (context: Context) => Promise<unknown> }>;
 type Options = { mode?: 'human'|'machine-only'; human?: HumanConfig; origin: string; store: AuthorityStore; machineLookup: (digest: string) => Promise<MachineCredential | null>; routes: readonly Route[]; limits?: Partial<Limits> };
 class GatewayError extends Error { constructor(readonly status: number, readonly outcome: string) { super(outcome); } }
@@ -123,7 +123,7 @@ export function createGateway(options: Options): (request: Request) => Promise<R
       try { await recheck();await route.disclosure?.(context);for(const action of additional){await resolveAuthority(identity,scope,action,options.store);} }
       catch (error) { if (route.method === 'POST' && !route.disclosure) { throw new GatewayError(503, 'unknown'); } throw error; }
       if (abort.signal.aborted) { throw new GatewayError(504, 'unknown'); }
-      const status=result instanceof GatewayReply?result.status:200;
+      const status=result instanceof GatewayReply||result instanceof SerializedJsonReply?result.status:200;
       const encoded = result instanceof SerializedJsonReply?result.body:JSON.stringify(result instanceof GatewayReply?result.body:result);
       if (encoded === undefined || Buffer.byteLength(encoded) > limits.responseBytes) { throw new GatewayError(503, 'unknown'); }
       return new Response(status===202?null:encoded, { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });

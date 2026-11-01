@@ -42,17 +42,17 @@ const upgradeFile = './tests/run-upgrade.test.ts';
 const upgradeSuite = canonicalSuites.find(suite => suite.requiredFile === upgradeFile)!;
 const retainedPreflights = ['run-inspection', 'run-cancel', 'run-cancel-upgrade', 'run-resumes', 'run-resume-upgrades', 'run-decisions', 'runs', 'client-authority'];
 test('DB orchestration executes every canonical case once in three exact native batches without preflights', async () => {
-  expect(canonicalSuites).toHaveLength(61);
-  expect(canonicalSuites.flatMap(suite => suite.requiredCases)).toHaveLength(413);
+  expect(canonicalSuites).toHaveLength(63);
+  expect(canonicalSuites.flatMap(suite => suite.requiredCases)).toHaveLength(428);
   const retention = canonicalSuites.filter(suite => suite.requiredFile === retentionFile);
   expect(retention).toEqual([{ requiredFile: retentionFile, requiredCases: [
     'run retained total saturation admits one final concurrent start and preserves scoped history',
     'run journal admission exhaustion preserves reserved handoff completion through row 128',
     'run journal exhaustion preserves reserved cancellation after an abandoned boundary claim',
   ] }]);
-  expect(canonicalSuites.at(-7)).toEqual(retention[0]!);
-  expect(canonicalSuites.slice(-6,-3).map(suite => suite.requiredFile)).toEqual(['./tests/run-age.test.ts','./tests/run-age-upgrade.test.ts','./tests/work-plane.test.ts']);
-  for (const suite of canonicalSuites.slice(-6)) {
+  expect(canonicalSuites.at(-9)).toEqual(retention[0]!);
+  expect(canonicalSuites.slice(-8,-5).map(suite => suite.requiredFile)).toEqual(['./tests/run-age.test.ts','./tests/run-age-upgrade.test.ts','./tests/work-plane.test.ts']);
+  for (const suite of canonicalSuites.slice(-8)) {
     const source = await Bun.file(new URL(`../${suite.requiredFile}`, import.meta.url)).text();
     expect([...source.matchAll(/test\('([^']+)'/g)].map(match => match[1]!)).toEqual(suite.requiredCases);
   }
@@ -76,7 +76,7 @@ test('DB orchestration executes every canonical case once in three exact native 
   await withDbOrchestration(async root => {
     const result = runOrchestration(root);
     expect(result.exit, result.output).toBe(0);
-    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 413, fail: 0, skip: 0, assertions: 413, missing: [], exit: 0 }]);
+    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 428, fail: 0, skip: 0, assertions: 428, missing: [], exit: 0 }]);
     const executions = (await readFile(join(root, 'executions.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line) as string);
     for (const file of [...oauthFiles, upgradeFile]) { expect(executions.filter(path => path === file), file).toHaveLength(1); }
     expect(upgradeSuite.requiredCases).toHaveLength(6);
@@ -89,7 +89,7 @@ test('DB orchestration executes every canonical case once in three exact native 
     }
     const batches = result.rows.filter(row => row.lane === 'restricted-postgres-batch');
     expect(batches.map(row => row.files)).toEqual([canonicalSuites.slice(0, 11), canonicalSuites.slice(11, 42), canonicalSuites.slice(42)].map(batch => batch.map(suite => suite.requiredFile)));
-    expect(batches.map(row => [row.batch, row.files.length, row.pass])).toEqual([[1, 11, 87], [2, 31, 235], [3, 19, 91]]);
+    expect(batches.map(row => [row.batch, row.files.length, row.pass])).toEqual([[1, 11, 87], [2, 31, 235], [3, 21, 106]]);
     expect(batches.every(row => row.timeoutMs === 240000)).toBe(true);
     expect(readdirSync(join(root, 'retained', readdirSync(join(root, 'retained'))[0]!)).sort()).toEqual(['batch-1.xml', 'batch-2.xml', 'batch-3.xml']);
     expect(result.rows.at(-1)).toEqual(result.aggregates[0]);
@@ -218,7 +218,7 @@ test('DB orchestration requires exact retention journal native ownership once at
 
 
 test('DB orchestration requires every run age and genuine six upgrade case with exact native ownership', async () => {
-  for (const suite of canonicalSuites.slice(-6,-4)) {
+  for (const suite of canonicalSuites.slice(-8,-6)) {
     const size = suite.requiredCases.length;
     const source = fixtureSource({ ...suite, minAssertions: size }, size);
     const reject = (result: ReturnType<typeof runOrchestration>) => {

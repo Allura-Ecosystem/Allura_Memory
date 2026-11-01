@@ -34,9 +34,9 @@ test('run real revision upgrade preserves legacy admission and admits current re
     await migrate(f.owner);
     const identity = authenticateHuman({ assertion: f.jwt('author') }, f.humanConfig);
     // Required RED: current revision-one-only production boundary rejects this.
-    const next = await startRun(f.app, identity, f.scope, { ...input, operationKey: randomUUID(), definitionRevision: 8 });
+    const next = await startRun(f.app, identity, f.scope, { ...input, operationKey: randomUUID(), definitionRevision: 9 });
     expect(JSON.parse(next).phaseAtAcceptance).toBe('ready');
-    expect((await f.owner`SELECT count(*)::int AS n FROM allura.schema_migrations`)[0].n).toBe(34);
+    expect((await f.owner`SELECT count(*)::int AS n FROM allura.schema_migrations`)[0].n).toBe(35);
     expect(await startRun(f.app, identity, f.scope, input)).toBe(oldReceipt);
     await expect(startRun(f.app, identity, f.scope, { ...input, operationKey: randomUUID() })).rejects.toThrow('run_conflict');
     for (const changed of [{ ...input, goal: input.goal + ' ' }, { ...input, reviewerPrincipalId: f.ids.author }, { ...input, definitionRevision: 2 }]) {
@@ -210,7 +210,7 @@ test('run revision three upgrade preserves genuine paused revision two evidence 
     await migrate(f.owner);
     const identity = authenticateHuman({ assertion: f.jwt('author') }, f.humanConfig);
     // Revision3 must fail through the existing parser, not a missing import.
-    const fresh = await startRun(f.app, identity, f.scope, { ...input, operationKey: randomUUID(), definitionRevision: 8 });
+    const fresh = await startRun(f.app, identity, f.scope, { ...input, operationKey: randomUUID(), definitionRevision: 9 });
     expect(JSON.parse(fresh).phaseAtAcceptance).toBe('ready');
     expect(await startRun(f.app, identity, f.scope, input)).toBe(start);
     expect(await advanceRun(f.app, identity, f.scope, command)).toBe(advance);

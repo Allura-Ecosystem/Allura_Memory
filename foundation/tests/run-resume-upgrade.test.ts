@@ -64,7 +64,7 @@ test('run revision four upgrade preserves genuine revision three decisions and r
     await migrate(f.owner);
     const identity = authenticateHuman({ assertion: f.jwt('author') }, f.humanConfig), reviewer = authenticateHuman({ assertion: f.jwt('reviewer') }, f.humanConfig);
     // Required RED: actual current parser rejects revision4, not a new import.
-    const fresh = await current.startRun(f.app,identity,f.scope,{ ...input, operationKey: randomUUID(), definitionRevision: 8 });
+    const fresh = await current.startRun(f.app,identity,f.scope,{ ...input, operationKey: randomUUID(), definitionRevision: 9 });
     expect(JSON.parse(fresh).phaseAtAcceptance).toBe('ready');
     for (const h of history) {
       expect(await current.startRun(f.app,identity,f.scope,h.v)).toBe(h.start);

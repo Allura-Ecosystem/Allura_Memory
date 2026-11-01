@@ -117,6 +117,7 @@ const suites = [{requiredFile:'./tests/core-release-integrity.test.ts',minAssert
   'gateway machine route cannot consume browser identity',
   'chunked and stalled streams are cancelled within finite budgets',
   'real loopback HTTP preserves authenticated scope and coarse liveness',
+    "gateway serialized replies preserve exact 201 bytes without widening status or admission authority",
 ] }, {requiredFile:'./tests/retrieval-policy.test.ts',minAssertions:27,requiredCases:[
   'all-mode finite limits normalize before retrieval',
   'full semantic and vector batches never evict exact fresh evidence by confidence',
@@ -250,14 +251,18 @@ const suites = [{requiredFile:'./tests/core-release-integrity.test.ts',minAssert
     "work plane contract enforces exact UTF8 id reason and operation key boundaries without normalization",
     "work list contract preserves exact selectors limits statuses and opaque identifiers",
     "work list contract rejects duplicate malformed and unsupported selector values without normalization",
-    "work list cursor contract enforces canonical authenticated binding tuple and finite expiry"
+    "work list cursor contract enforces canonical authenticated binding tuple and finite expiry",
+    "work create contract preserves exact defaults opaque projects and immutable bounded criteria",
+    "work create contract rejects authority overrides unsafe data and unsupported field shapes",
   ]
 },{
   requiredFile: './tests/work-plane-http-contract.test.ts',
   "minAssertions": 60,
   "requiredCases": [
     "work HTTP flat parser preserves exact strings whitespace and optional nulls",
-    "work HTTP flat parser rejects decoded duplicates overrides malformed primitives and bounds"
+    "work HTTP flat parser rejects decoded duplicates overrides malformed primitives and bounds",
+    "work create HTTP parser preserves nested JSON data and rejects decoded duplicate keys at every depth",
+    "work create HTTP parser enforces exact numeric Unicode depth and byte boundaries",
   ]
 }];
 if (process.argv.length !== 2) {

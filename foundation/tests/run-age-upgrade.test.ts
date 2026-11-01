@@ -63,7 +63,7 @@ test('run revision seven expiry repair preserves genuine revision six histories 
     const semantics = async () => Promise.all(['events','semantic_versions','proposal_state'].map(async t => [...await fx.owner.unsafe(`SELECT to_jsonb(t)::text AS row FROM allura.${t} t ORDER BY 1`)]));
     const semanticBefore = await semantics();
     const before=await snapshot();await migrate(f.owner);expect(await snapshot()).toEqual(before);
-    expect((await f.owner`SELECT count(*)::int AS n FROM allura.schema_migrations`)[0].n).toBe(34);
+    expect((await f.owner`SELECT count(*)::int AS n FROM allura.schema_migrations`)[0].n).toBe(35);
     console.log(JSON.stringify({revisionSixMigration:{pin,tables,before,after:await snapshot()}}));
     const identity=authenticateHuman({assertion:f.jwt('author')},f.humanConfig),reviewer=authenticateHuman({assertion:f.jwt('reviewer')},f.humanConfig),canceller=authenticateHuman({assertion:f.jwt('curator')},f.humanConfig);
     for(const h of history) {
@@ -96,7 +96,7 @@ test('run revision seven expiry repair preserves genuine revision six histories 
       console.log(JSON.stringify({revisionSixOriginalWorker:{pin,mode:h.mode,validBeforeAndAfter:true}}));
     }
     // Current full tracer in the same populated workspace, with no old evidence rewrite.
-    const freshInput={...base,operationKey:randomUUID(),definitionRevision:8};
+    const freshInput={...base,operationKey:randomUUID(),definitionRevision:9};
     const fresh=await current.startRun(f.app,identity,f.scope,freshInput);expect(JSON.parse(fresh).phaseAtAcceptance).toBe('ready');
     const freshId=JSON.parse(fresh).runId as string;
     await current.advanceRun(f.app,identity,f.scope,{runId:freshId,expectedRevision:1,operationKey:randomUUID()});
@@ -104,9 +104,9 @@ test('run revision seven expiry repair preserves genuine revision six histories 
     await current.decideRun(f.app,reviewer,f.scope,{runId:freshId,expectedRevision:3,operationKey:randomUUID(),approvalRequestId:approval.id,reviewedEvidenceDigest:approval.evidenceDigest,decision:'approve',rationale:'Current7 exact approval'});
     await current.resumeRun(f.app,identity,f.scope,{runId:freshId,expectedRevision:4,operationKey:randomUUID()});
     const currentView=await current.inspectRun(f.app,canceller,f.scope,new URLSearchParams({group_id:fx.scope.groupId,workspace_id:fx.scope.workspaceId,run_id:freshId}));
-    expect(currentView.record.definition.revision).toBe(8);expect(currentView.completionVerified).toBe(true);expect(currentView.doctor).not.toContain('definition_drift');
+    expect(currentView.record.definition.revision).toBe(9);expect(currentView.completionVerified).toBe(true);expect(currentView.doctor).not.toContain('definition_drift');
     expect(currentView.effects).toHaveLength(2);expect(currentView.runtime.outcome).toBe('succeeded');
-    console.log(JSON.stringify({revisionSevenTracer:currentView}));
+    console.log(JSON.stringify({revisionNineTracer:currentView}));
     const ready=history.find(h=>h.mode==='ready')!,paused=history.find(h=>h.mode==='paused')!,approved=history.find(h=>h.mode==='approved')!;
     const blocked=await current.advanceRun(f.app,identity,f.scope,ready.advanceCommand);expect(JSON.parse(blocked).phaseAtAcceptance).toBe('blocked');
     expect((await f.owner`SELECT reason FROM allura.run_state WHERE run_id=${ready.runId}::uuid`)[0].reason).toBe('definition_drift');

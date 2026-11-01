@@ -724,6 +724,31 @@ export async function runDbTests(url: string) {
     "work list response target and service failure bounds never masquerade as a complete board",
     "work list additive migration preserves accepted history and the exact revision eight run bundle"
   ]
+},
+{
+  "requiredFile": "./tests/work-plane-create.test.ts",
+  "requiredCases": [
+    "work create signed HTTP returns 201 with one server assigned item event and receipt",
+    "work create exact replay keeps original 201 bytes while current GET and list show later state",
+    "work create concurrent same key accepts one item and changed content conflicts",
+    "work create and transition share one actor key namespace in both attributable orders",
+    "work create strict nested criteria selectors defaults and unsupported references fail closed",
+    "work create current human entitlements original binding and mixed identity precede body work",
+    "work create authority entitlement and mapping revocation serialize in both attributable orders",
+    "work create restricted SQL pooled contexts and foreign projects cannot bypass authority",
+    "work create item event receipt and deferred faults roll back every new row",
+    "work create lost committed HTTP response reconciles in a fresh process with the same key",
+    "work create retained item and operation capacity races preserve replay at saturation",
+    "work create request response admission and timeout bounds retain honest unknown outcomes",
+    "work create additive schema preserves accepted transition history and exact 200 replay",
+    "work create service SQL and wire canonical digests preserve bounded nested data"
+  ]
+},
+{
+  "requiredFile": "./tests/run-create-upgrade.test.ts",
+  "requiredCases": [
+    "run revision nine create upgrade preserves genuine revision eight histories and refuses old execution"
+  ]
 }
 ];
   const batches = [suites.slice(0, 11), suites.slice(11, 42), suites.slice(42)].map(batch => batch.map(suite => suite.requiredFile));

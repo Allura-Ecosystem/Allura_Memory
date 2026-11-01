@@ -31,6 +31,7 @@ beforeAll(async()=>{
  const migration='migrations/033-work-plane-http-run8.sql',release=await verifyCoreRelease(directory),migrationBytes=await readFile(new URL('../'+migration,import.meta.url));
  expect(release.inputs[migration]).toBe(createHash('sha256').update(migrationBytes).digest('hex'));expect(await readFile(join(directory,migration))).toEqual(migrationBytes);
  const listMigration='migrations/034-work-plane-list.sql',listBytes=await readFile(new URL('../'+listMigration,import.meta.url));expect(release.inputs[listMigration]).toBe(createHash('sha256').update(listBytes).digest('hex'));expect(await readFile(join(directory,listMigration))).toEqual(listBytes);
+ const createMigration='migrations/035-work-plane-create.sql',createBytes=await readFile(new URL('../'+createMigration,import.meta.url));expect(release.inputs[createMigration]).toBe(createHash('sha256').update(createBytes).digest('hex'));expect(await readFile(join(directory,createMigration))).toEqual(createBytes);
  environment={PATH:[dirname(node.stdout.toString().trim()),dirname(process.execPath),process.env.PATH].join(':'),HOME:directory,TMPDIR:tmpdir(),BUN_INSTALL_CACHE_DIR:join(tmpdir(),'allura-core-dependency-cache')};
  const offlineCache=process.env.ALLURA_TEST_OFFLINE_PACKAGE_CACHE;
  if(offlineCache){
@@ -125,7 +126,7 @@ test('packed recovery backs up and restores without a source checkout or git pro
    const destination=await createRecoveryTarget();targets.push(destination);await restoreRecovery(destination,manifestPath);const restored=new SQL(await recoveryConnection(destination));connections.push(restored);const [row]=await restored.unsafe('SELECT value FROM public.package_witness');
    console.log(JSON.stringify({marker:row.value,migrations:manifest.migrations.length,releaseProvenance:true}));
   }finally{for(const connection of connections){await connection.close();}for(const target of targets.reverse()){await closeRecoveryTarget(target);}await rm(output,{recursive:true,force:true});}
- `],{PATH:environment.PATH!,HOME:directory,TMPDIR:tmpdir(),DOCKER_HOST:dockerHost});expect(result.exit).toBe(0);expect(JSON.parse(result.stdout)).toEqual({marker:'packed archive selected exactly',migrations:34,releaseProvenance:true});
+ `],{PATH:environment.PATH!,HOME:directory,TMPDIR:tmpdir(),DOCKER_HOST:dockerHost});expect(result.exit).toBe(0);expect(JSON.parse(result.stdout)).toEqual({marker:'packed archive selected exactly',migrations:35,releaseProvenance:true});
 },120000);
 test('packed dashboard serves integrity bound browser assets without granting anonymous content',async()=>{
  await start();try{const base=new URL('/dashboard',endpoint),shell=await fetch(base);expect(shell.status).toBe(200);expect(shell.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");expect(shell.headers.get('cache-control')).toBe('no-store');const html=await shell.text();expect(html).toContain('/assets/app.js');expect(html).not.toContain(f.scope.groupId);
@@ -136,6 +137,7 @@ test('packed dashboard serves integrity bound browser assets without granting an
  const workUrl=()=>{const u=new URL('/api/work-items',endpoint);u.search=new URLSearchParams({group_id:f.scope.groupId,workspace_id:f.scope.workspaceId,project_id:'packed-project',limit:'1'}).toString();return u;};
  try{
   await start();expect((await fetch(workUrl(),{headers:{'Cf-Access-Jwt-Assertion':f.jwt('author'),'X-Allura-Work-Contract':'work-plane-compatibility-v1'}})).status).toBe(404);await stop();
+  await start();const disabledCreate=workUrl();disabledCreate.searchParams.delete('project_id');disabledCreate.searchParams.delete('limit');expect((await fetch(disabledCreate,{method:'POST',headers:{'Cf-Access-Jwt-Assertion':f.jwt('author')}})).status).toBe(404);await stop();
   await f.owner`INSERT INTO allura.work_authority VALUES(true,'packed-owner')`;
   await f.owner`INSERT INTO allura.work_projects VALUES(${f.scope.groupId},${f.scope.workspaceId},'packed-project','packed-owner',true)`;
   await f.owner`INSERT INTO allura.work_entitlements VALUES(${f.scope.groupId},${f.scope.workspaceId},${f.ids.author},'work:read',true)`;
@@ -146,6 +148,12 @@ test('packed dashboard serves integrity bound browser assets without granting an
   const first=await fetch(workUrl(),{headers});expect(first.status).toBe(200);expect(first.headers.get('cache-control')).toBe('no-store');const p=await first.json() as {work_items:{id:string;updated_at:string}[];has_more:boolean;next_cursor:string};expect(p.work_items.map(x=>x.id)).toEqual(['packed/a']);expect(p.work_items[0]!.updated_at).toBe('2026-01-02T03:04:05.123456Z');expect(p.has_more).toBe(true);
   const u=workUrl();u.searchParams.set('cursor',p.next_cursor);const last=await fetch(u,{headers});expect(last.status).toBe(200);const end=await last.json() as typeof p;expect(end.work_items.map(x=>x.id)).toEqual(['packed+é']);expect(end.has_more).toBe(false);expect(end.next_cursor).toBeNull();
   expect((await f.owner`SELECT count(*)::int AS n FROM allura.work_receipts WHERE group_id=${f.scope.groupId}`)[0].n).toBe(0);
+  await f.owner`INSERT INTO allura.work_entitlements VALUES(${f.scope.groupId},${f.scope.workspaceId},${f.ids.author},'work:write',true)`;
+  const createUrl=workUrl();createUrl.searchParams.delete('project_id');createUrl.searchParams.delete('limit');const createBody={group_id:f.scope.groupId,workspace_id:f.scope.workspaceId,project_id:'packed-project',operation_key:'packed-create',title:'Packed creation 🧠'},writeHeaders={...headers,'Content-Type':'application/json',Origin:'https://core.invalid','Sec-Fetch-Site':'same-origin'};
+  const create=()=>fetch(createUrl,{method:'POST',headers:writeHeaders,body:JSON.stringify(createBody)}),createdReply=await create();expect(createdReply.status).toBe(201);const createdRaw=await createdReply.text(),created=JSON.parse(createdRaw).work_item;
+  const replay=await create();expect(replay.status).toBe(201);expect(await replay.text()).toBe(createdRaw);
+  const transitionUrl=new URL(createUrl);transitionUrl.pathname+='/'+created.id+'/transition';const transition=await fetch(transitionUrl,{method:'POST',headers:writeHeaders,body:JSON.stringify({group_id:f.scope.groupId,workspace_id:f.scope.workspaceId,actor_id:f.ids.author,operation_key:'packed-created-ready',expected_updated_at:created.updated_at,to_status:'ready'})});expect(transition.status).toBe(200);const current=await transition.json() as {work_item:unknown};
+  const itemUrl=new URL(createUrl);itemUrl.pathname+='/'+created.id;const item=await fetch(itemUrl,{headers});expect(item.status).toBe(200);expect(await item.json()).toEqual({work_item:current.work_item});const after=await create();expect(after.status).toBe(201);expect(await after.text()).toBe(createdRaw);
  }finally{await stop();await writeFile(configPath,originalConfig);}
  const path=join(directory,'dashboard/app.js'),original=await readFile(path);try{await writeFile(path,Buffer.concat([original,Buffer.from('\n/* tampered UI */')]));const denied=await run([process.execPath,'src/core-server.ts','config.json']);expect(denied.exit).toBe(1);expect(denied.stdout).not.toContain('listening');}finally{await writeFile(path,original);}
 },60000);
@@ -190,6 +198,9 @@ test('packed core leases actual pinned scanner evidence over verified TLS withou
 test('packed core refuses tampered source before database work and never prints injected credentials',async()=>{
  const migration='migrations/033-work-plane-http-run8.sql',migrationPath=join(directory,migration),original=await readFile(migrationPath),manifestPath=join(directory,'release.json'),manifestBytes=await readFile(manifestPath),release=await verifyCoreRelease(directory);
  try{await writeFile(migrationPath,Buffer.concat([original,Buffer.from('\n-- deliberate migration integrity fault\n')]));await expect(verifyCoreRelease(directory)).rejects.toThrow('core_release_integrity');const denied=await run([process.execPath,'src/core-server.ts','config.json']);expect(denied.exit).toBe(1);expect(denied.stdout).not.toContain('listening');}finally{await writeFile(migrationPath,original);}
+ expect(await verifyCoreRelease(directory)).toEqual(release);
+ const createPath=join(directory,'migrations/035-work-plane-create.sql'),createOriginal=await readFile(createPath);
+ try{await writeFile(createPath,Buffer.concat([createOriginal,Buffer.from('\n-- create integrity fault\n')]));await expect(verifyCoreRelease(directory)).rejects.toThrow('core_release_integrity');await rm(createPath);await expect(verifyCoreRelease(directory)).rejects.toThrow('core_release_integrity');}finally{await writeFile(createPath,createOriginal);}
  expect(await verifyCoreRelease(directory)).toEqual(release);
  const listPath=join(directory,'migrations/034-work-plane-list.sql'),listOriginal=await readFile(listPath);
  try{await writeFile(listPath,Buffer.concat([listOriginal,Buffer.from('\n-- list integrity fault\n')]));await expect(verifyCoreRelease(directory)).rejects.toThrow('core_release_integrity');await rm(listPath);await expect(verifyCoreRelease(directory)).rejects.toThrow('core_release_integrity');}finally{await writeFile(listPath,listOriginal);}

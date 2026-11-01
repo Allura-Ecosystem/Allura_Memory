@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {parseWorkList,workListBinding,signWorkListCursor,readWorkListCursor,parseWorkTransition,workGraph,workText,workToken,workContract} from '../src/work-plane-contract.ts';
+import {parseWorkCreate,parseWorkList,workListBinding,signWorkListCursor,readWorkListCursor,parseWorkTransition,workGraph,workText,workToken,workContract} from '../src/work-plane-contract.ts';
 import {createHmac} from 'node:crypto';
 const listQuery=(v:Record<string,string>={})=>new URLSearchParams({group_id:'allura-fixture',workspace_id:'10000000-0000-4000-8000-000000000001',project_id:' Project+é%2F ',...v}).toString();
 const base={contract:workContract,command:'transition',group_id:'allura-fixture',workspace_id:'10000000-0000-4000-8000-000000000001',actor_id:'10000000-0000-4000-8000-000000000002',operation_key:'Case:Keep._-9',expected_updated_at:'2024-02-29T23:59:59.123456Z',to_status:'in_progress'} as const;
@@ -50,4 +50,25 @@ test('work list cursor contract enforces canonical authenticated binding tuple a
  const payload={b:binding,t:now,c:last.created_at,i:last.id};
  for(const body of [JSON.stringify({...payload,extra:true}),JSON.stringify({...payload,c:'2026-02-30T00:00:00.000000Z'}),JSON.stringify(payload).replace('"t":1000000','"t":1000000,"t":1000000'),JSON.stringify({...payload,i:'\0'}),JSON.stringify({...payload,t:now+0.1})]){expect(()=>readWorkListCursor(mac(Buffer.from(body).toString('base64url')),key,binding,now)).toThrow('invalid');}
  const parts=cursor.split('.'),sig=parts[1]!,alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_',alias=sig.slice(0,-1)+alphabet[alphabet.indexOf(sig.at(-1)!)+1];expect(()=>readWorkListCursor(parts[0]+'.'+alias,key,binding,now)).toThrow('invalid');
+});
+
+const createBase={contract:workContract,command:'create',group_id:base.group_id,workspace_id:base.workspace_id,actor_id:base.actor_id,operation_key:'create:one',project_id:' Project+é%2F ',title:' Exact 🧠 '} as const;
+test('work create contract preserves exact defaults opaque projects and immutable bounded criteria',()=>{
+ const parsed=parseWorkCreate(createBase);expect(parsed).toEqual({...createBase,description:null,priority:'medium',owner_id:null,lane_id:null,acceptance_criteria:[]});expect(Object.isFrozen(parsed)).toBe(true);
+ const nested=[{x:[1,true,null,'é','é'],__proto__:null}],input={...createBase,acceptance_criteria:nested},copy=parseWorkCreate(input);nested[0]!.x[0]=2;expect(copy.acceptance_criteria).toEqual([{x:[1,true,null,'é','é']}]);expect(Object.isFrozen(copy.acceptance_criteria)).toBe(true);expect(Object.isFrozen(copy.acceptance_criteria[0])).toBe(true);
+ const special=JSON.parse('[{"__proto__":{"polluted":true},"constructor":{"prototype":1},"prototype":2}]');expect(parseWorkCreate({...createBase,acceptance_criteria:special}).acceptance_criteria).toEqual(special);expect(Object.hasOwn(Object.prototype,'polluted')).toBe(false);
+ for(const project_id of [' x ','é'.repeat(128)]){expect(parseWorkCreate({...createBase,project_id}).project_id).toBe(project_id);}
+ for(const priority of ['critical','high','medium','low']){expect<string>(parseWorkCreate({...createBase,priority}).priority).toBe(priority);}
+ expect(parseWorkCreate({...createBase,title:'é'.repeat(256),description:'é'.repeat(4096),acceptance_criteria:Array(32).fill(null)}).acceptance_criteria).toHaveLength(32);
+ let deep:unknown=0;for(let n=0;n<8;n++){deep=[deep];}expect<unknown>(parseWorkCreate({...createBase,acceptance_criteria:deep}).acceptance_criteria).toEqual(deep);expect(()=>parseWorkCreate({...createBase,acceptance_criteria:[deep]})).toThrow('invalid');
+ for(const n of [0,-0,1,0.1,Number.MAX_SAFE_INTEGER,Number.MIN_VALUE]){expect(parseWorkCreate({...createBase,acceptance_criteria:[n]}).acceptance_criteria[0]).toBe(Object.is(n,-0)?0:n);}
+});
+test('work create contract rejects authority overrides unsafe data and unsupported field shapes',()=>{
+ for(const k of Object.keys(createBase)){const v:Record<string,unknown>={...createBase};delete v[k];expect(()=>parseWorkCreate(v)).toThrow('invalid');}
+ for(const k of ['id','team_id','status','created_at','updated_at','completed_at','latest_receipt_id','linked_run_id','blocker','request_digest','authority_instance_id','expected_updated_at']){expect(()=>parseWorkCreate({...createBase,[k]:null})).toThrow('invalid');}
+ const cycle:unknown[]=[];cycle.push(cycle);let reads=0;const accessor=Object.defineProperty({},'x',{enumerable:true,get(){reads++;return 'private';}});
+ const extra=Object.assign([1],{extra:true}),sparse=Array(2),symbol=Object.assign({}, {[Symbol('x')]:1});
+ for(const data of [cycle,[accessor],[new Date()],[undefined],[()=>1],[1n],[Symbol('x')],sparse,extra,[symbol],[NaN],[Infinity],[Number.MAX_SAFE_INTEGER+1],['\0'],['\ud800']]){expect(()=>parseWorkCreate({...createBase,acceptance_criteria:data})).toThrow('invalid');}expect(reads).toBe(0);
+ const top=Object.defineProperty({...createBase},'description',{get(){reads++;return 'private';}});expect(()=>parseWorkCreate(top)).toThrow('invalid');expect(reads).toBe(0);
+ for(const v of [null,JSON.stringify(createBase),Object.create(createBase),{...createBase,title:''},{...createBase,title:'line\n'},{...createBase,title:'é'.repeat(257)},{...createBase,description:undefined},{...createBase,owner_id:undefined},{...createBase,lane_id:0},{...createBase,priority:null},{...createBase,acceptance_criteria:null},{...createBase,acceptance_criteria:Array(33).fill(0)},{...createBase,acceptance_criteria:['x'.repeat(16384)]}]){expect(()=>parseWorkCreate(v)).toThrow('invalid');}
 });
