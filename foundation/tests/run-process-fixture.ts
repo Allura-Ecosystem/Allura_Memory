@@ -20,7 +20,10 @@ if (input.removeExecutor === true) {
 const identity = auth.authenticateHuman({ assertion: input.assertion }, { issuer: input.issuer, audience: 'fixture', keys: new Map([['key', createPublicKey(input.publicKey)]]) });
 const sql = new SQL(input.url, { max: 1 });
 try {
-  if (input.mode === 'resume') {
+  if (input.mode === 'cancel') {
+    const receipt = await runs.cancelRun(sql, identity, input.scope, input.command);
+    console.log(JSON.stringify({ receipt }));
+  } else if (input.mode === 'resume') {
     const receipt = await runs.resumeRun(sql, identity, input.scope, input.command);
     console.log(JSON.stringify({ receipt }));
     if (input.hold) { await Bun.sleep(30000); }

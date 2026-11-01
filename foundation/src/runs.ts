@@ -6,6 +6,26 @@ import { parseStartRun, parseRunCommand, parseRunDecision, runDefinition, RunErr
 import { randomUUID } from 'node:crypto';
 import { finishPreparation, finishHandoff, type PreparationClaim } from './run-execution.ts';
 
+export async function cancelRun(sql: SQL, identity: Identity, scope: Scope, value: unknown, signal?: AbortSignal): Promise<string> {
+  if (!isAuthenticated(identity)) { throw new AuthorityError('unauthenticated'); }
+  if (identity.kind !== 'human') { throw new RunError('forbidden'); }
+  try {
+    signal?.throwIfAborted();
+    const input = parseRunCommand(value);
+    return await scopedTransaction(sql, identity, scope, 'workspace:grants:manage', async tx => {
+      signal?.throwIfAborted();
+      const [row] = await tx`SELECT allura.cancel_run(${scope.groupId},${scope.workspaceId}::uuid,${input}::jsonb) AS receipt`;
+      signal?.throwIfAborted();
+      return row.receipt as string;
+    });
+  } catch (error) {
+    if (error instanceof AuthorityError || error instanceof RunError) { throw error; }
+    const message = error instanceof Error ? error.message : '';
+    if (message === 'invalid' || message === 'forbidden' || message === 'not_found' || message === 'conflict' || message === 'unavailable') { throw new RunError(message); }
+    throw new RunError('unknown');
+  }
+}
+
 export async function resumeRun(sql: SQL, identity: Identity, scope: Scope, value: unknown, signal?: AbortSignal): Promise<string> {
   if (!isAuthenticated(identity)) { throw new AuthorityError('unauthenticated'); }
   if (identity.kind !== 'human') { throw new RunError('forbidden'); }

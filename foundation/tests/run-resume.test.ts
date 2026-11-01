@@ -47,7 +47,7 @@ async function prepared(decision: 'approve' | 'reject' | null = 'approve', scope
   await f.owner`INSERT INTO allura.workspaces(group_id,id,display_name,created_by) VALUES(${scope.groupId},${scope.workspaceId}::uuid,'Resume fixture',${f.ids.author}::uuid)`;
   for (const id of [f.ids.author,f.ids.reviewer]) { await f.owner`INSERT INTO allura.workspace_grants(group_id,workspace_id,principal_id,role,issuer) VALUES(${scope.groupId},${scope.workspaceId}::uuid,${id}::uuid,'workspace_admin',${f.ids.author}::uuid)`; }
   const text = 'Private resume artifact 🧠\r\n';
-  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 4, goal: 'Private handoff', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
+  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 5, goal: 'Private handoff', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
   const start = await startRun(f.app,f.identities.author,scope,input), runId = JSON.parse(start).runId as string;
   const advanceCommand = { runId,expectedRevision:1,operationKey:randomUUID() }, advance = await advanceRun(f.app,f.identities.author,scope,advanceCommand);
   const a = JSON.parse((await f.owner`SELECT request_text FROM allura.run_approval_requests WHERE run_id=${runId}::uuid`)[0].request_text);

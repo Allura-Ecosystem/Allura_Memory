@@ -38,6 +38,10 @@ The parent's bounded resume amendment admits only literal revision4 and preserve
 
 Resume admission/resumed event, handoff claim and atomic local completion are separate transactions. Claims bind the committed resume receipt; no replacement public key or approval renewal. The handoff links exact preparation/request/approving decision using scoped FKs and finishes terminal succeeded only after live authority, approval, pin, fence and database expiry checks. Force deferred constraints before the final expiry guard. Evidence and parent acceptance remain separate; no full-story closure follows.
 
+## Revision5 cancellation disposition
+
+New admission uses literal5 and actual025–029 source pin. Historical1–4 receipts use original stored digests and appropriate current authority; old4 handoff claims return NULL unchanged, even expired, and old valid-lease workers cannot finish. Cancellation is control-plane termination by any current scoped human administrator, not original-participant authorization or handler availability. Shared actor/key lock and strict envelope give exact immutable replay after current canceller recheck. One transaction advances runtime revision once and all three fences, clears leases/invocations/due, preserves completed evidence and records failed/cancelled for known zero effects or partial/cancelled after preparation. Terminal success conflicts unchanged; unknown acknowledgement reconciles without guessing absence. No semantic/work-item mutation or full-story closure.
+
 ## UX & Interaction Patterns
 
 The initial implementation needs authenticated API evidence, not a new UI. Future inspection must preserve exact provenance, no-store disclosure and distinct denied, stale, unavailable, partial and unknown states. No board or desktop design decision is reopened by run work.
