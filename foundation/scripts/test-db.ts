@@ -102,6 +102,7 @@ export async function runDbTests(url: string) {
     "requiredFile": "./tests/run-upgrade.test.ts",
     "requiredCases": [
       "run revision three upgrade preserves genuine paused revision two evidence and refuses old execution",
+      "run revision one owned export cleanup survives extraction verification and callback failures",
       "run revision two owned export cleanup survives extraction verification and callback failures",
       "run expired revision two claim replays exact receipt without changing complete history",
       "run still-valid revision two claim original worker is blocked by revision guard after upgrade",

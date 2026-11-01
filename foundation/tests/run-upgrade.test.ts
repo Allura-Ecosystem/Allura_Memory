@@ -12,23 +12,7 @@ import { startRun, advanceRun, decideRun } from '../src/runs.ts';
 test('run real revision upgrade preserves legacy admission and admits current revision in the same workspace', async () => {
   const target = process.env.ALLURA_DISPOSABLE_DB_URL;
   if (!target || new URL(target).hostname !== '127.0.0.1' || process.env.ALLURA_DISPOSABLE_DB !== 'owned-test-container') { throw new Error('Requires owned disposable runner'); }
-  const pin = '2856bbd1143535782fc12d1193520a84aa070726';
-  const root = new URL('../../', import.meta.url).pathname;
-  const exported = await mkdtemp(join(tmpdir(), 'allura-run-upgrade-'));
-  const archive = Bun.spawnSync(['git', 'archive', pin, 'foundation'], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
-  expect(archive.exitCode).toBe(0);
-  const extract = Bun.spawnSync(['tar', '-x', '-C', exported], { stdin: archive.stdout, stdout: 'pipe', stderr: 'pipe' });
-  expect(extract.exitCode).toBe(0);
-  await symlink(join(root, 'foundation/node_modules'), join(exported, 'foundation/node_modules'));
-  const sourceFiles = Bun.spawnSync(['git', 'ls-tree', '-r', '--name-only', pin, 'foundation'], { cwd: root }).stdout.toString().trim().split('\n');
-  async function verifySource() {
-    for (const path of sourceFiles) {
-      const original = Bun.spawnSync(['git', 'show', `${pin}:${path}`], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
-      if (original.exitCode !== 0 || !Buffer.from(await Bun.file(join(exported, path)).arrayBuffer()).equals(original.stdout)) { throw new Error(`Legacy source mismatch: ${path}`); }
-    }
-  }
-  await verifySource();
-  console.log(JSON.stringify({ legacySource: pin, export: exported, archiveSha256: createHash('sha256').update(archive.stdout).digest('hex'), sourceFiles: sourceFiles.length }));
+  await withRevisionOneSource(async exported => {
   const admin = new SQL(target, { max: 1 });
   const database = `run_upgrade_${randomUUID().replaceAll('-', '')}`;
   await admin.unsafe(`CREATE DATABASE ${database}`);
@@ -89,7 +73,115 @@ test('run real revision upgrade preserves legacy admission and admits current re
     await admin.unsafe(`DROP DATABASE ${database} WITH (FORCE)`);
     expect(await admin`SELECT datname FROM pg_database WHERE datname=${database}`).toHaveLength(0);
     await admin.close();
+  }
+  });
+}, 15000);
+
+// This helper is also exercised without a database so allocation failures cannot
+// be hidden behind fixture setup. Only the exact newly allocated path is owned.
+async function withRevisionOneSource(work: (exported: string) => Promise<void>, options: { fault?: 'extract' | 'verify' | 'remove' | undefined; allocated?: (exported: string) => void } = {}) {
+  const pin = '2856bbd1143535782fc12d1193520a84aa070726', root = new URL('../../', import.meta.url).pathname;
+  const exported = await mkdtemp(join(tmpdir(), 'allura-run-upgrade-'));
+  let extracted = false;
+  const failures: unknown[] = [];
+  const hashes: Record<string, string> = {};
+  async function verifySource() {
+    const tree = Bun.spawnSync(['git', 'ls-tree', '-r', '--name-only', pin, 'foundation'], { cwd: root });
+    expect(tree.exitCode).toBe(0);
+    const paths = tree.stdout.toString().trim().split('\n');
+    expect(paths.length).toBeGreaterThan(0);
+    for (const path of paths) {
+      const original = Bun.spawnSync(['git', 'show', `${pin}:${path}`], { cwd: root });
+      expect(original.exitCode).toBe(0);
+      const bytes = Buffer.from(await Bun.file(join(exported, path)).arrayBuffer());
+      hashes[path] = createHash('sha256').update(bytes).digest('hex');
+      if (!bytes.equals(original.stdout)) { throw new Error(`Legacy source mismatch: ${path}`); }
+    }
+  }
+  try {
+    options.allocated?.(exported);
+    const archive = Bun.spawnSync(['git', 'archive', pin, 'foundation'], { cwd: root });
+    expect(archive.exitCode).toBe(0);
+    console.log(JSON.stringify({ revisionOneExport: exported, pin, archiveSha256: createHash('sha256').update(archive.stdout).digest('hex') }));
+    const extract = Bun.spawnSync(['tar', '-x', '-C', exported], { stdin: options.fault === 'extract' ? Buffer.from('owned corrupt archive probe') : archive.stdout });
+    console.log(JSON.stringify({ revisionOneExtraction: exported, exit: extract.exitCode, stderr: extract.stderr.toString() }));
+    if (extract.exitCode !== 0) { throw new Error('Legacy extraction failed'); }
+    extracted = true;
+    await symlink(join(root, 'foundation/node_modules'), join(exported, 'foundation/node_modules'));
+    expect((await lstat(join(exported, 'foundation/node_modules'))).isSymbolicLink()).toBe(true);
+    if (options.fault === 'verify') { await appendFile(join(exported, 'foundation/src/runs.ts'), '\n// owned verification-failure probe\n'); }
     await verifySource();
+    console.log(JSON.stringify({ revisionOneSourceVerified: exported, hashes }));
+    await work(exported);
+  } catch (error) { failures.push(error); }
+  finally {
+    try {
+      if (extracted) { await verifySource(); }
+    } catch (error) { failures.push(error); }
+    finally {
+      // Preserve provenance before deletion, including a failed initial check.
+      console.log(JSON.stringify({ revisionOneSourceBeforeCleanup: exported, extracted, hashes, failures: failures.map(String) }));
+      try {
+        // rm unlinks the dependency symlink; it does not traverse its target.
+        await rm(exported, { recursive: options.fault !== 'remove', force: true });
+        await expect(lstat(exported)).rejects.toHaveProperty('code', 'ENOENT');
+        console.log(JSON.stringify({ revisionOneExportRemoved: exported }));
+      } catch (error) { failures.push(error); console.log(JSON.stringify({ revisionOneCleanupFailed: exported, error: String(error) })); }
+    }
+  }
+  // A secondary verification/deletion failure must not replace the first error.
+  if (failures.length) { throw failures[0]; }
+}
+
+test('run revision one owned export cleanup survives extraction verification and callback failures', async () => {
+  const owned: string[] = [], observations: { fault: string; exported: string; exists: boolean }[] = [];
+  const dependency = new URL('../node_modules/typescript/package.json', import.meta.url);
+  const before = createHash('sha256').update(Buffer.from(await Bun.file(dependency).arrayBuffer())).digest('hex');
+  try {
+    for (const fault of ['success', 'extract', 'verify', 'callback'] as const) {
+      let exported = '', calls = 0;
+      const primary = new Error('Owned revision one callback failure');
+      const run = withRevisionOneSource(async path => {
+        calls++;
+        expect(path).toBe(exported);
+        expect(await Bun.file(join(path, 'foundation/src/runs.ts')).exists()).toBe(true);
+        if (fault === 'callback') { throw primary; }
+      }, { allocated: path => { exported = path; owned.push(path); }, fault: fault === 'extract' || fault === 'verify' ? fault : undefined });
+      if (fault === 'success') { await run; }
+      else if (fault === 'callback') { await expect(run).rejects.toBe(primary); }
+      else { await expect(run).rejects.toThrow(fault === 'extract' ? 'Legacy extraction failed' : 'Legacy source mismatch'); }
+      expect(calls).toBe(fault === 'extract' || fault === 'verify' ? 0 : 1);
+      expect(exported).not.toBe('');
+      const exists = await lstat(exported).then(() => true, error => { if (error.code !== 'ENOENT') { throw error; } return false; });
+      observations.push({ fault, exported, exists });
+      console.log(JSON.stringify({ revisionOneCleanupObservation: exported, fault, exists }));
+    }
+    expect(observations.map(({ fault, exists }) => ({ fault, exists }))).toEqual(['success', 'extract', 'verify', 'callback'].map(fault => ({ fault, exists: false })));
+    for (const fault of ['allocated', 'callback-drift', 'post-verify', 'remove', 'callback-remove'] as const) {
+      let exported = '', calls = 0;
+      const primary = new Error(`Owned ${fault} failure`);
+      const run = withRevisionOneSource(async path => {
+        calls++;
+        if (fault === 'callback-drift' || fault === 'post-verify') { await appendFile(join(path, 'foundation/src/runs.ts'), '\n// owned post-callback drift probe\n'); }
+        if (fault === 'callback-drift' || fault === 'callback-remove') { throw primary; }
+      }, { allocated: path => { exported = path; owned.push(path); if (fault === 'allocated') { throw primary; } }, fault: fault === 'remove' || fault === 'callback-remove' ? 'remove' : undefined });
+      if (fault === 'post-verify') { await expect(run).rejects.toThrow('Legacy source mismatch'); }
+      else if (fault === 'remove') { const error = await run.then(() => undefined, error => error); expect(error).toHaveProperty('path', exported); }
+      else { await expect(run).rejects.toBe(primary); }
+      expect(calls).toBe(fault === 'allocated' ? 0 : 1);
+      if (fault === 'remove' || fault === 'callback-remove') {
+        // A deliberately nonrecursive real rm fails on the owned nonempty tree.
+        expect((await lstat(exported)).isDirectory()).toBe(true);
+        console.log(JSON.stringify({ revisionOneCleanupDenialObserved: exported, fault }));
+        await rm(exported, { recursive: true, force: true });
+      }
+      await expect(lstat(exported)).rejects.toHaveProperty('code', 'ENOENT');
+      console.log(JSON.stringify({ revisionOneFailurePreserved: exported, fault, removed: true }));
+    }
+  } finally {
+    // RED can leak; preserve the readback above before removing only these paths.
+    for (const exported of owned) { await rm(exported, { recursive: true, force: true }); await expect(lstat(exported)).rejects.toHaveProperty('code', 'ENOENT'); }
+    expect(createHash('sha256').update(Buffer.from(await Bun.file(dependency).arrayBuffer())).digest('hex')).toBe(before);
   }
 }, 15000);
 

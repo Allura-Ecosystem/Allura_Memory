@@ -43,7 +43,7 @@ const upgradeSuite = canonicalSuites.find(suite => suite.requiredFile === upgrad
 const retainedPreflights = ['run-inspection', 'run-cancel', 'run-cancel-upgrade', 'run-resumes', 'run-resume-upgrades', 'run-decisions', 'runs', 'client-authority'];
 test('DB orchestration executes every canonical case once in three exact native batches without preflights', async () => {
   expect(canonicalSuites).toHaveLength(57);
-  expect(canonicalSuites.flatMap(suite => suite.requiredCases)).toHaveLength(374);
+  expect(canonicalSuites.flatMap(suite => suite.requiredCases)).toHaveLength(375);
   const retention = canonicalSuites.filter(suite => suite.requiredFile === retentionFile);
   expect(retention).toEqual([{ requiredFile: retentionFile, requiredCases: [
     'run retained total saturation admits one final concurrent start and preserves scoped history',
@@ -76,10 +76,10 @@ test('DB orchestration executes every canonical case once in three exact native 
   await withDbOrchestration(async root => {
     const result = runOrchestration(root);
     expect(result.exit, result.output).toBe(0);
-    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 374, fail: 0, skip: 0, assertions: 374, missing: [], exit: 0 }]);
+    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 375, fail: 0, skip: 0, assertions: 375, missing: [], exit: 0 }]);
     const executions = (await readFile(join(root, 'executions.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line) as string);
     for (const file of [...oauthFiles, upgradeFile]) { expect(executions.filter(path => path === file), file).toHaveLength(1); }
-    expect(upgradeSuite.requiredCases).toHaveLength(5);
+    expect(upgradeSuite.requiredCases).toHaveLength(6);
     const upgradeSource = await Bun.file(new URL(`../${upgradeFile}`, import.meta.url)).text();
     expect([...upgradeSource.matchAll(/test\('([^']+)'/g)].map(match => match[1]!).sort()).toEqual([...upgradeSuite.requiredCases].sort());
     expect(result.rows.filter(row => retainedPreflights.includes(row.lane))).toEqual([]);
@@ -89,7 +89,7 @@ test('DB orchestration executes every canonical case once in three exact native 
     }
     const batches = result.rows.filter(row => row.lane === 'restricted-postgres-batch');
     expect(batches.map(row => row.files)).toEqual([canonicalSuites.slice(0, 11), canonicalSuites.slice(11, 42), canonicalSuites.slice(42)].map(batch => batch.map(suite => suite.requiredFile)));
-    expect(batches.map(row => [row.batch, row.files.length, row.pass])).toEqual([[1, 11, 86], [2, 31, 235], [3, 15, 53]]);
+    expect(batches.map(row => [row.batch, row.files.length, row.pass])).toEqual([[1, 11, 87], [2, 31, 235], [3, 15, 53]]);
     expect(batches.every(row => row.timeoutMs === 240000)).toBe(true);
     expect(readdirSync(join(root, 'retained', readdirSync(join(root, 'retained'))[0]!)).sort()).toEqual(['batch-1.xml', 'batch-2.xml', 'batch-3.xml']);
     expect(result.rows.at(-1)).toEqual(result.aggregates[0]);
