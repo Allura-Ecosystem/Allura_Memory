@@ -1,4 +1,43 @@
 import { validScope } from './authority.ts';
+import {createHash,createHmac,timingSafeEqual} from 'node:crypto';
+
+export type WorkList={group_id:string;workspace_id:string;project_id:string;status:WorkStatus|null;lane_id:string|null;limit:number;cursor:string|null};
+export function parseWorkList(raw:string):WorkList {
+ const invalid=():never=>{throw new WorkPlaneError('invalid');};
+ if(typeof raw!=='string'||raw.length>2048){return invalid();}
+ // Validate every encoded component before URLSearchParams can replace invalid
+ // UTF8. Form-query '+' means space; literal plus must arrive as %2B.
+ try{for(const pair of raw.replace(/^\?/, '').split('&')){for(const part of pair.split('=')){decodeURIComponent(part.replaceAll('+',' '));}}}catch{return invalid();}
+ const query=new URLSearchParams(raw),values:Record<string,string>=Object.create(null);
+ for(const [k,v] of query){if(!['group_id','workspace_id','project_id','status','lane_id','limit','cursor'].includes(k)||Object.hasOwn(values,k)||!workText(v,k==='cursor'?1024:256)){return invalid();}values[k]=v;}
+ if(!values.group_id||!values.workspace_id||!validScope({groupId:values.group_id,workspaceId:values.workspace_id})||!values.project_id){return invalid();}
+ if(values.status!==undefined&&!Object.hasOwn(workGraph,values.status)){return invalid();}
+ if(values.limit!==undefined&&!/^(?:[1-9]|[1-9][0-9]|100)$/.test(values.limit)){return invalid();}
+ return Object.freeze({group_id:values.group_id,workspace_id:values.workspace_id,project_id:values.project_id,status:(values.status??null) as WorkStatus|null,lane_id:values.lane_id??null,limit:values.limit===undefined?100:Number(values.limit),cursor:values.cursor??null});
+}
+const cursorDomain='allura-work-list-cursor-v1';
+export function workListBinding(v:WorkList,principal:string,mapping:string):string {
+ return createHash('sha256').update(JSON.stringify([workContract,principal,v.group_id,v.workspace_id,v.project_id,mapping,v.status,v.lane_id,v.limit])).digest('base64url');
+}
+type WorkPosition={created_at:string;id:string};
+export function signWorkListCursor(key:Uint8Array,binding:string,last:WorkPosition,now=Date.now()):string {
+ if(!workToken(last.created_at)||!workText(last.id,256)||!Number.isSafeInteger(now)||now<0||!Number.isSafeInteger(now+900000)){throw new WorkPlaneError('invalid');}
+ const payload=Buffer.from(JSON.stringify({b:binding,t:now,c:last.created_at,i:last.id})).toString('base64url');
+ return payload+'.'+createHmac('sha256',key).update(cursorDomain+'\0'+payload).digest('base64url');
+}
+export function readWorkListCursor(token:string,key:Uint8Array,binding:string,now=Date.now()):WorkPosition {
+ const invalid=():never=>{throw new WorkPlaneError('invalid');};
+ if(typeof token!=='string'||token.length>1024||!Number.isSafeInteger(now)||!/^[-_A-Za-z0-9]+\.[-_A-Za-z0-9]{43}$/.test(token)){return invalid();}
+ const [payload,mac]=token.split('.') as [string,string];
+ const decoded=Buffer.from(payload,'base64url'),signature=Buffer.from(mac,'base64url');
+ if(decoded.toString('base64url')!==payload||signature.toString('base64url')!==mac||signature.length!==32||!timingSafeEqual(signature,createHmac('sha256',key).update(cursorDomain+'\0'+payload).digest())){return invalid();}
+ let v:Record<string,unknown>;
+ try{v=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(decoded));}catch{return invalid();}
+ if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).sort().join(',')!=='b,c,i,t'||v.b!==binding||typeof v.t!=='number'||!Number.isSafeInteger(v.t)||v.t<0||v.t>now||now-v.t>=900000||!workToken(v.c)||!workText(v.i,256)){return invalid();}
+ // Canonical encoding also rejects duplicate JSON fields and spelling aliases.
+ if(JSON.stringify({b:v.b,t:v.t,c:v.c,i:v.i})!==decoded.toString('utf8')){return invalid();}
+ return {created_at:v.c,id:v.i};
+}
 export const workContract = 'work-plane-compatibility-v1' as const;
 export const workGraph = Object.freeze({backlog:['ready','cancelled'],ready:['in_progress','backlog','cancelled'],in_progress:['in_review','blocked','done','cancelled'],in_review:['in_progress','done','cancelled'],blocked:['in_progress','cancelled'],done:[],cancelled:[]} as const);
 export type WorkStatus = keyof typeof workGraph;

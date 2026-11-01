@@ -170,7 +170,7 @@ test('work HTTP exact signed expiry and postcommit revocation deny disclosure wi
   const unbound=request(f,undefined,body(f),{'Cf-Access-Jwt-Assertion':jwt('unbound',Math.floor(Date.now()/1000)+60)});await outcome(await send(unbound),403,'forbidden');expect(unbound.bodyUsed).toBe(false);await empty(f);
   for(const type of ['entitlement','expiry'] as const){
    const exp=Math.floor(Date.now()/1000)+2;
-   const routes=createWorkRoutes(f.app).map(route=>({...route,handle:async(c:Parameters<typeof route.handle>[0])=>{
+   const routes=createWorkRoutes(f.app,new Uint8Array(32).fill(7)).map(route=>({...route,handle:async(c:Parameters<typeof route.handle>[0])=>{
     const result=await route.handle(c);
     if(type==='entitlement'){await f.owner`UPDATE allura.work_entitlements SET active=false WHERE principal_id=${f.ids.author} AND action='work:read'`;}
     else{await Bun.sleep(Math.max(0,exp*1000-Date.now()+10));}
@@ -262,7 +262,7 @@ function request(f:Fixture,path=`/api/work-items/${encodeURIComponent(item)}/tra
 test('work HTTP service refuses original principal binding drift even when restored before disclosure',async()=>{
  const f=await setup();
  try{
-  const routes=createWorkRoutes(f.app).map(route=>({...route,handle:async (c:Parameters<typeof route.handle>[0])=>{
+  const routes=createWorkRoutes(f.app,new Uint8Array(32).fill(7)).map(route=>({...route,handle:async (c:Parameters<typeof route.handle>[0])=>{
    await f.owner`UPDATE allura.identity_bindings SET principal_id=${f.ids.reviewer} WHERE issuer=${f.humanConfig.issuer} AND subject=${f.scope.groupId+':author'}`;
    try{return await route.handle(c);}finally{await f.owner`UPDATE allura.identity_bindings SET principal_id=${f.ids.author} WHERE issuer=${f.humanConfig.issuer} AND subject=${f.scope.groupId+':author'}`;}
   }}));
@@ -281,7 +281,7 @@ test('work plane signed HTTP transition preserves opaque ID receipt bytes and cu
   const control=await send(request(f,'/api/dashboard/context',null));expect(control.status).toBe(200);expect((await control.json() as {principalId:string}).principalId).toBe(f.ids.author);
   expect((await send(request(f,'/api/dashboard/context',null,{'Cf-Access-Jwt-Assertion':f.jwt('org')}))).status).toBe(403);
   expect((await send(request(f,'/api/work-items/<encoded-id>',null))).status).toBe(404);
-  expect((await send(request(f,'/api/work-items',null))).status).toBe(404);
+  expect((await send(request(f,'/api/work-items',null))).status).toBe(400);
   const reply=await send(request(f));expect(reply.status).toBe(200);
   const raw=await reply.text(),accepted=JSON.parse(raw);
   expect(accepted.work_item.id).toBe(item);expect(accepted.operation_receipt.before_updated_at).toBe(token);

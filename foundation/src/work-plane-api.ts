@@ -1,7 +1,7 @@
 import { type SQL } from 'bun';
 import { type Route, SerializedJsonReply } from './gateway.ts';
-import { authorizeWorkScope, readWorkItem, transitionWorkItem } from './work-plane.ts';
-import { parseWorkTransition, workContract, workText, WorkPlaneError } from './work-plane-contract.ts';
+import { authorizeWorkScope, readWorkItem, transitionWorkItem, authorizeWorkProject, listWorkItems } from './work-plane.ts';
+import { parseWorkTransition, workContract, workText, WorkPlaneError, parseWorkList } from './work-plane-contract.ts';
 
 // Fixed flat wire grammar: scan decoded keys before constructing an object.
 // The gateway owns byte bounds, fatal UTF8 decoding and authenticated admission.
@@ -25,8 +25,15 @@ export function parseWorkBody(text:string):Record<string,unknown>{
  parseWorkTransition({...value,contract:workContract,command:'transition'});
  return value;
 }
-export function createWorkRoutes(sql:SQL):Route[]{
- return (['GET','POST'] as const).map(method=>{
+export function createWorkRoutes(sql:SQL,cursorKey:Uint8Array):Route[]{
+ const guard:NonNullable<Route['admission']>=async c=>{
+  if(c.request.headers.get('X-Allura-Work-Contract')!==workContract){throw new WorkPlaneError('invalid');}
+  const v=parseWorkList(new URL(c.request.url).search);
+  await authorizeWorkProject(sql,c.identity,c.scope,v.project_id,c.authority.principalId);
+  if(v.lane_id!==null){throw new WorkPlaneError('not_found');}
+ };
+ const list:Route={path:'/api/work-items',method:'GET',identity:'human',action:'memory:read',timeoutStatus:503,admission:guard,disclosure:guard,handle:async c=>new SerializedJsonReply(await listWorkItems(sql,c.identity,c.scope,new URL(c.request.url).search,cursorKey,c.authority.principalId))};
+ return [list,...(['GET','POST'] as const).map((method):Route=>{
   const write=method==='POST';
   const guard:NonNullable<Route['admission']>=async c=>{
    const query=new URL(c.request.url).searchParams;
@@ -42,5 +49,5 @@ export function createWorkRoutes(sql:SQL):Route[]{
    }
    return new SerializedJsonReply(await readWorkItem(sql,c.identity,c.scope,c.params.id!,c.authority.principalId));
   }};
- });
+ })];
 }

@@ -709,7 +709,22 @@ export async function runDbTests(url: string) {
     "requiredCases": [
       "run revision eight HTTP upgrade preserves genuine revision seven histories and refuses old execution"
     ]
-  }
+  },
+{
+  "requiredFile": "./tests/work-plane-list.test.ts",
+  "requiredCases": [
+    "work list signed HTTP returns scoped ordered items and an authenticated next cursor",
+    "work list empty mapped project filters exact microseconds and stable ties remain bounded",
+    "work list strict selectors versions malformed encoding and unsupported lanes fail closed",
+    "work list cursor binds principal scope project filters mapping and expiry without disclosure",
+    "work list current read entitlement original binding and authenticated machine denials remain enforced",
+    "work list authority entitlement and mapping revocation serialize in both attributable orders",
+    "work list restricted SQL foreign projects and pooled reuse cannot disclose or write state",
+    "work list concurrent transitions and inserts preserve honest current page semantics without history writes",
+    "work list response target and service failure bounds never masquerade as a complete board",
+    "work list additive migration preserves accepted history and the exact revision eight run bundle"
+  ]
+}
 ];
   const batches = [suites.slice(0, 11), suites.slice(11, 42), suites.slice(42)].map(batch => batch.map(suite => suite.requiredFile));
   await runDbBatches({ suites, batches, timeoutMs: 240000, minAssertions: 40,

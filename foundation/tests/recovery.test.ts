@@ -17,7 +17,7 @@ import {createCoreGateway} from '../src/core-api.ts';
 import {createHash,randomBytes} from 'node:crypto';
 import {RecoveryProcessError} from '../src/recovery-diagnostics.ts';
 import {startRun,advanceRun,decideRun,resumeRun,cancelRun} from '../src/runs.ts';
-import {transitionWorkItem,readWorkItem} from '../src/work-plane.ts';
+import {transitionWorkItem,readWorkItem,listWorkItems} from '../src/work-plane.ts';
 let source:RecoveryTarget,first:RecoveryTarget,second:RecoveryTarget,root:string,f:Awaited<ReturnType<typeof fixture>>,one:string,two:string,event1:string,event2:string;
 let captureReceipt:string,semanticId:string;
 async function canonical(sql:SQL){const result:Record<string,string>={};for(const table of ['events','capture_receipts','semantic_versions','semantic_heads','decision_receipts','semantic_provenance','source_vectors','proposal_audit','operation_observations','read_audit','run_definitions','run_records','run_state','run_steps','run_journal','run_operation_receipts','run_effect_receipts','run_approval_requests','run_approval_decisions','run_handoff_links','work_authority','work_entitlements','work_projects','work_items','work_events','work_receipts']){result[table]=(await sql.unsafe(`SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text AS data FROM allura.${table} t`))[0].data;}return result;}
@@ -64,7 +64,7 @@ test('one streaming backup exceeds old buffer limits and two same-day manifests 
  // Random hexadecimal bytes resist repetition/compression; archive is explicitly uncompressed.
  await f.owner.unsafe('CREATE TABLE public.recovery_padding(payload text NOT NULL)');
  await f.owner.unsafe("INSERT INTO public.recovery_padding SELECT string_agg(md5(random()::text),'') FROM generate_series(1,400000)");
- one=await backupRecovery(source,root);const manifest=JSON.parse(await readFile(one,'utf8'));expect(manifest.archive.bytes).toBeGreaterThan(10*1024*1024);expect(manifest.migrations).toHaveLength(33);expect(manifest.migrations[32]).toEqual({version:33,digest:createHash('sha256').update(await readFile(new URL('../migrations/033-work-plane-http-run8.sql',import.meta.url))).digest('hex')});expect(manifest.embedding.dimensions).toBe(384);
+ one=await backupRecovery(source,root);const manifest=JSON.parse(await readFile(one,'utf8'));expect(manifest.archive.bytes).toBeGreaterThan(10*1024*1024);expect(manifest.migrations).toHaveLength(34);expect(manifest.migrations[32]).toEqual({version:33,digest:createHash('sha256').update(await readFile(new URL('../migrations/033-work-plane-http-run8.sql',import.meta.url))).digest('hex')});expect(manifest.migrations[33]).toEqual({version:34,digest:createHash('sha256').update(await readFile(new URL('../migrations/034-work-plane-list.sql',import.meta.url))).digest('hex')});expect(manifest.embedding.dimensions).toBe(384);
  event2=await appendEvent(f.app,f.identities.machine!,f.scope,{content:'second recovery evidence'});const secondState=await canonical(f.owner);two=await backupRecovery(source,root);expect(two).not.toBe(one);
  first=await createRecoveryTarget();await restoreRecovery(first,one);const db1=new SQL(await recoveryConnection(first));try{expect(await canonical(db1)).toEqual(firstState);expect(await migrate(db1)).toBe('unchanged');expect((await db1`SELECT id FROM allura.events WHERE kind='capture' ORDER BY id`).map((r:{id:string})=>r.id)).toEqual([event1]);expect((await db1`SELECT length(payload) AS n FROM public.recovery_padding`)[0].n).toBe(12800000);}finally{await db1.close();}
  second=await createRecoveryTarget();await restoreRecovery(second,two);const db2=new SQL(await recoveryConnection(second));try{expect(await canonical(db2)).toEqual(secondState);expect((await db2`SELECT count(*)::integer AS n FROM allura.events WHERE kind='capture'`)[0].n).toBe(2);expect((await db2`SELECT count(*)::integer AS n FROM allura.events WHERE id=${event2}::uuid`)[0].n).toBe(1);
@@ -73,6 +73,7 @@ test('one streaming backup exceeds old buffer limits and two same-day manifests 
  const beforeReplay=await canonical(db2);
  expect(await transitionWorkItem(app,f.identities.author,f.scope,'Work:é/Restore',workInput)).toBe(workReceipt);
  expect(await readWorkItem(app,f.identities.author,f.scope,'Work:é/Restore')).toBe(workCurrent);
+ const restoredList=JSON.parse(await listWorkItems(app,f.identities.author,f.scope,new URLSearchParams({group_id:f.scope.groupId,workspace_id:f.scope.workspaceId,project_id:'Project:recovery'}).toString(),new Uint8Array(32).fill(7),f.ids.author));expect(restoredList).toEqual({work_items:[JSON.parse(workCurrent).work_item],has_more:false,next_cursor:null});
  expect(await canonical(db2)).toEqual(beforeReplay);
  expect(await cancelRun(app,f.identities.author,f.scope,cancelCommand)).toBe(cancelReceipt);
  expect(await canonical(db2)).toEqual(beforeReplay);
@@ -97,7 +98,7 @@ test('one streaming backup exceeds old buffer limits and two same-day manifests 
 },180000);
 test('restore hashes actual archive and rejects missing corrupt traversal and incompatible evidence before target writes',async()=>{
  const target=await createRecoveryTarget();try{const manifest=JSON.parse(await readFile(one,'utf8')),directory=join(one,'..'),archive=join(directory,manifest.archive.file);
- const migrationFault=join(directory,'migration-fault.json');for(const migrations of [manifest.migrations.slice(0,32),manifest.migrations.map((row:{version:number;digest:string})=>row.version===33?{...row,digest:'0'.repeat(64)}:row)]){await writeFile(migrationFault,JSON.stringify({...manifest,migrations}));await expect(restoreRecovery(target,migrationFault)).rejects.toThrow('recovery_manifest');}
+ const migrationFault=join(directory,'migration-fault.json');for(const migrations of [manifest.migrations.slice(0,33),manifest.migrations.map((row:{version:number;digest:string})=>row.version===34?{...row,digest:'0'.repeat(64)}:row),manifest.migrations.slice(0,32),manifest.migrations.map((row:{version:number;digest:string})=>row.version===33?{...row,digest:'0'.repeat(64)}:row)]){await writeFile(migrationFault,JSON.stringify({...manifest,migrations}));await expect(restoreRecovery(target,migrationFault)).rejects.toThrow('recovery_manifest');}
  const untouched=new SQL(await recoveryConnection(target));try{expect((await untouched`SELECT count(*)::integer AS n FROM pg_namespace WHERE nspname='allura'`)[0].n).toBe(0);}finally{await untouched.close();}
  await chmod(archive,0o600);await writeFile(archive,'corrupt archive');
  await expect(restoreRecovery(target,one)).rejects.toThrow('recovery_integrity');

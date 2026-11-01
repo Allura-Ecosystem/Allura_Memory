@@ -247,7 +247,10 @@ const suites = [{requiredFile:'./tests/core-release-integrity.test.ts',minAssert
   "requiredCases": [
     "work plane contract preserves the exact retained graph and six digit Gregorian tokens",
     "work plane contract rejects unsupported fields primitives accessors and raw duplicate key JSON",
-    "work plane contract enforces exact UTF8 id reason and operation key boundaries without normalization"
+    "work plane contract enforces exact UTF8 id reason and operation key boundaries without normalization",
+    "work list contract preserves exact selectors limits statuses and opaque identifiers",
+    "work list contract rejects duplicate malformed and unsupported selector values without normalization",
+    "work list cursor contract enforces canonical authenticated binding tuple and finite expiry"
   ]
 },{
   requiredFile: './tests/work-plane-http-contract.test.ts',

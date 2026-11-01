@@ -63,7 +63,7 @@ test('run revision seven expiry repair preserves genuine revision six histories 
     const semantics = async () => Promise.all(['events','semantic_versions','proposal_state'].map(async t => [...await fx.owner.unsafe(`SELECT to_jsonb(t)::text AS row FROM allura.${t} t ORDER BY 1`)]));
     const semanticBefore = await semantics();
     const before=await snapshot();await migrate(f.owner);expect(await snapshot()).toEqual(before);
-    expect((await f.owner`SELECT count(*)::int AS n FROM allura.schema_migrations`)[0].n).toBe(33);
+    expect((await f.owner`SELECT count(*)::int AS n FROM allura.schema_migrations`)[0].n).toBe(34);
     console.log(JSON.stringify({revisionSixMigration:{pin,tables,before,after:await snapshot()}}));
     const identity=authenticateHuman({assertion:f.jwt('author')},f.humanConfig),reviewer=authenticateHuman({assertion:f.jwt('reviewer')},f.humanConfig),canceller=authenticateHuman({assertion:f.jwt('curator')},f.humanConfig);
     for(const h of history) {

@@ -36,7 +36,7 @@ test('run real revision upgrade preserves legacy admission and admits current re
     // Required RED: current revision-one-only production boundary rejects this.
     const next = await startRun(f.app, identity, f.scope, { ...input, operationKey: randomUUID(), definitionRevision: 8 });
     expect(JSON.parse(next).phaseAtAcceptance).toBe('ready');
-    expect((await f.owner`SELECT count(*)::int AS n FROM allura.schema_migrations`)[0].n).toBe(33);
+    expect((await f.owner`SELECT count(*)::int AS n FROM allura.schema_migrations`)[0].n).toBe(34);
     expect(await startRun(f.app, identity, f.scope, input)).toBe(oldReceipt);
     await expect(startRun(f.app, identity, f.scope, { ...input, operationKey: randomUUID() })).rejects.toThrow('run_conflict');
     for (const changed of [{ ...input, goal: input.goal + ' ' }, { ...input, reviewerPrincipalId: f.ids.author }, { ...input, definitionRevision: 2 }]) {
