@@ -20,7 +20,27 @@ if (input.removeExecutor === true) {
 const identity = auth.authenticateHuman({ assertion: input.assertion }, { issuer: input.issuer, audience: 'fixture', keys: new Map([['key', createPublicKey(input.publicKey)]]) });
 const sql = new SQL(input.url, { max: 1 });
 try {
-  if (input.mode === 'cancel') {
+  if (input.mode === 'quota-prepare' || input.mode === 'quota-handoff') {
+    // Same max-one connection supplies both the reported PID and real claim.
+    // The parent holds the real workspace admission lock and observes this PID
+    // waiting on it before releasing either independently authenticated child.
+    await sql`SET statement_timeout='5s'`;
+    const [backend] = await sql`SELECT pg_backend_pid() AS pid`;
+    console.log(JSON.stringify({ pid: backend.pid, processPid: process.pid }));
+    const definition = await contract.runDefinition();
+    try {
+      const result = await persistence.scopedTransaction(sql, identity, input.scope, 'workspace:grants:manage', async tx => {
+        if (input.mode === 'quota-prepare') {
+          return (await tx`SELECT allura.claim_run_prepare(${input.scope.groupId},${input.scope.workspaceId}::uuid,${input.command}::jsonb,${definition}::jsonb,${randomUUID()}::uuid) AS result`)[0].result;
+        }
+        return { claim: (await tx`SELECT allura.claim_run_handoff(${input.scope.groupId},${input.scope.workspaceId}::uuid,${input.command.runId}::uuid,${input.operationReceiptId}::uuid,${definition}::jsonb,${randomUUID()}::uuid) AS claim`)[0].claim };
+      });
+      console.log(JSON.stringify({ result }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      console.log(JSON.stringify({ refused: ['unavailable','conflict','forbidden'].includes(message) ? message : 'unknown' }));
+    }
+  } else if (input.mode === 'cancel') {
     const receipt = await runs.cancelRun(sql, identity, input.scope, input.command);
     console.log(JSON.stringify({ receipt }));
   } else if (input.mode === 'resume') {

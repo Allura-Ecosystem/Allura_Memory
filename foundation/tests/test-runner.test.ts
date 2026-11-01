@@ -36,9 +36,19 @@ function runOrchestration(root: string) {
   const rows = child.stdout.toString().split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
   return { exit: child.exitCode, output, rows, aggregates: rows.filter(row => row.lane === 'restricted-postgres') };
 }
-test('DB orchestration consolidates OAuth only after exact native coverage with nine unchanged preflights', async () => {
-  expect(canonicalSuites).toHaveLength(53);
-  expect(canonicalSuites.flatMap(suite => suite.requiredCases)).toHaveLength(364);
+const upgradeFile = './tests/run-upgrade.test.ts';
+const upgradeSuite = canonicalSuites.find(suite => suite.requiredFile === upgradeFile)!;
+const retainedPreflights = ['run-inspection', 'run-cancel', 'run-cancel-upgrade', 'run-resumes', 'run-resume-upgrades', 'run-decisions', 'runs', 'client-authority'];
+test('DB orchestration consolidates OAuth and upgrades only after exact native coverage with eight unchanged preflights', async () => {
+  expect(canonicalSuites).toHaveLength(54);
+  expect(canonicalSuites.flatMap(suite => suite.requiredCases)).toHaveLength(366);
+  const limits = canonicalSuites.filter(suite => suite.requiredFile === './tests/run-limits.test.ts');
+  expect(limits).toEqual([{ requiredFile: './tests/run-limits.test.ts', requiredCases: [
+    'run handoff retry exhaustion preserves partial truth and cannot reset through new keys',
+    'run separate processes contend for the last workspace lease without exceeding four',
+  ] }]);
+  const limitsSource = await Bun.file(new URL('./run-limits.test.ts', import.meta.url)).text();
+  expect([...limitsSource.matchAll(/test\('([^']+)'/g)].map(match => match[1]!)).toEqual(limits[0]!.requiredCases);
   const oauth = canonicalSuites.filter(suite => oauthFiles.includes(suite.requiredFile));
   expect(oauth).toHaveLength(4);
   expect(oauth.flatMap(suite => suite.requiredCases)).toHaveLength(40);
@@ -49,18 +59,88 @@ test('DB orchestration consolidates OAuth only after exact native coverage with 
   await withDbOrchestration(async root => {
     const result = runOrchestration(root);
     expect(result.exit, result.output).toBe(0);
-    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 364, fail: 0, skip: 0, assertions: 364, missing: [], exit: 0 }]);
+    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 366, fail: 0, skip: 0, assertions: 366, missing: [], exit: 0 }]);
     const executions = (await readFile(join(root, 'executions.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line) as string);
-    for (const file of oauthFiles) { expect(executions.filter(path => path === file), file).toHaveLength(1); }
-    const preflights = ['run-inspection', 'run-cancel', 'run-cancel-upgrade', 'run-resumes', 'run-resume-upgrades', 'run-decisions', 'run-upgrades', 'runs', 'client-authority'];
-    expect(result.rows.filter(row => preflights.includes(row.lane)).map(row => row.lane)).toEqual(preflights);
-    expect(result.rows.filter(row => row.lane === 'oauth')).toEqual([]);
+    for (const file of [...oauthFiles, upgradeFile]) { expect(executions.filter(path => path === file), file).toHaveLength(1); }
+    expect(upgradeSuite.requiredCases).toHaveLength(5);
+    const upgradeSource = await Bun.file(new URL(`../${upgradeFile}`, import.meta.url)).text();
+    expect([...upgradeSource.matchAll(/test\('([^']+)'/g)].map(match => match[1]!).sort()).toEqual([...upgradeSuite.requiredCases].sort());
+    expect(result.rows.filter(row => retainedPreflights.includes(row.lane)).map(row => row.lane)).toEqual(retainedPreflights);
+    expect(result.rows.filter(row => ['oauth', 'run-upgrades'].includes(row.lane))).toEqual([]);
     for (const suite of canonicalSuites) {
-      const repeated = canonicalSuites.slice(0, 10).includes(suite) || suite.requiredFile === './tests/client-authority.test.ts';
+      const repeated = (canonicalSuites.slice(1, 11).includes(suite) && suite.requiredFile !== upgradeFile) || suite.requiredFile === './tests/client-authority.test.ts';
       expect(executions.filter(file => file === suite.requiredFile)).toHaveLength(repeated ? 2 : 1);
     }
     expect(result.rows.at(-1)).toEqual(result.aggregates[0]);
   });
+}, 30000);
+
+// All eight unrelated preflights must finish before any upgrade rejection is
+// credited. Batch one failures can occur before a native batch receipt exists.
+function rejectedUpgrade(result: ReturnType<typeof runOrchestration>) {
+  expect(result.exit, result.output).not.toBe(0);
+  expect(result.aggregates, result.output).toEqual([]);
+  expect(result.rows.filter(row => retainedPreflights.includes(row.lane)).map(row => row.lane), result.output).toEqual(retainedPreflights);
+  expect(result.rows.filter(row => row.lane === 'database-timing' && row.phase === 'preflights'), result.output).toHaveLength(1);
+  expect(result.rows.filter(row => row.lane === 'run-upgrades'), result.output).toEqual([]);
+  expect(result.output).toMatch(/Required canonical database batches failed|Invalid native Bun test report|ENOENT/);
+  expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch' && row.batch === 2)).toEqual([]);
+}
+test('DB orchestration rejects every omitted upgrade case and missing file in canonical enforcement', async () => {
+  const results: ReturnType<typeof runOrchestration>[] = [];
+  for (const omitted of [null, ...upgradeSuite.requiredCases]) {
+    await withDbOrchestration(async root => {
+      if (omitted === null) { await rm(join(root, upgradeFile)); }
+      else {
+        await writeFile(join(root, upgradeFile), fixtureSource({ ...upgradeSuite, requiredCases: upgradeSuite.requiredCases.filter(name => name !== omitted), minAssertions: 5 }, 5));
+      }
+      results.push(runOrchestration(root));
+    });
+  }
+  for (const result of results) { rejectedUpgrade(result); }
+}, 30000);
+test('DB orchestration rejects upgrade native skips failures zero assertions exits and signals canonically', async () => {
+  const source = fixtureSource({ ...upgradeSuite, minAssertions: 5 }, 5);
+  const results: ReturnType<typeof runOrchestration>[] = [];
+  for (const fault of [
+    source.replace('test(', 'test.skip('),
+    source.replace('toBe(true)', 'toBe(false)'),
+    fixtureSource({ ...upgradeSuite, minAssertions: 0 }, 0),
+    source + '\nimport { afterAll } from "bun:test"; afterAll(() => { process.exitCode = 7; });',
+    source + '\nimport { afterAll } from "bun:test"; afterAll(() => { process.kill(process.pid, "SIGKILL"); });',
+  ]) {
+    await withDbOrchestration(async root => {
+      await writeFile(join(root, upgradeFile), fault);
+      results.push(runOrchestration(root));
+    });
+  }
+  for (const result of results) { rejectedUpgrade(result); }
+}, 30000);
+test('DB orchestration rejects malformed misowned upgrade native reports and forged console coverage canonically', async () => {
+  const results: ReturnType<typeof runOrchestration>[] = [];
+  for (const fault of [
+    'await Bun.write(reportPath, xml.slice(0, -20));',
+    'await Bun.write(reportPath, xml.replace(/(<testcase[^>]*file=")tests\\/run-upgrade.test.ts/, "$1tests/run-decision.test.ts"));',
+  ]) {
+    await withDbOrchestration(async root => {
+      const path = join(root, 'src/db-test-runner.ts');
+      const source = await readFile(path, 'utf8');
+      const marker = 'const report = await readBunReports(reportPath, batch);';
+      expect(source.split(marker)).toHaveLength(2);
+      await writeFile(path, source.replace(marker, `if (index === 0) { const xml = await Bun.file(reportPath).text(); ${fault} if (await Bun.file(reportPath).text() === xml) { throw new Error('Fault did not change native report'); } }\n${marker}`));
+      const result = runOrchestration(root);
+      expect(result.output).not.toContain('Fault did not change native report');
+      expect(result.output).toContain('Invalid native Bun test report');
+      results.push(result);
+    });
+  }
+  await withDbOrchestration(async root => {
+    await writeFile(join(root, upgradeFile), fixtureSource({ ...upgradeSuite, requiredCases: ['renamed upgrade'], minAssertions: 5 }, 5)
+      + `\nconsole.log(${JSON.stringify(`(pass) ${upgradeSuite.requiredCases[0]} [0.1ms]`)}); console.log(JSON.stringify({lane:'restricted-postgres',pass:366,fail:0,skip:0,assertions:999,missing:[],exit:0}));`);
+    results.push(runOrchestration(root));
+  });
+  for (const result of results) { rejectedUpgrade(result); }
+  expect(results.at(-1)!.output).toContain('[db-child-1] {"lane":"restricted-postgres"');
 }, 30000);
 
 function rejectedOrchestration(result: ReturnType<typeof runOrchestration>) {

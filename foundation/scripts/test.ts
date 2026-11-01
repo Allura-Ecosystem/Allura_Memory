@@ -182,7 +182,10 @@ const suites = [{requiredFile:'./tests/run-contract.test.ts',minAssertions:72,re
  'dashboard presentation binds current context and rejects malformed scope or response shapes',
  'dashboard search matches federated fields and honestly labels partial failed truncated responses',
 ]},{requiredFile:'./tests/test-runner.test.ts',minAssertions:1142,requiredCases:[
- 'DB orchestration consolidates OAuth only after exact native coverage with nine unchanged preflights',
+ 'DB orchestration consolidates OAuth and upgrades only after exact native coverage with eight unchanged preflights',
+ 'DB orchestration rejects every omitted upgrade case and missing file in canonical enforcement',
+ 'DB orchestration rejects upgrade native skips failures zero assertions exits and signals canonically',
+ 'DB orchestration rejects malformed misowned upgrade native reports and forged console coverage canonically',
  'DB orchestration rejects each missing OAuth file and case including the deferred fault negative witness',
  'DB orchestration rejects OAuth native skips failures zero assertions exits and signals',
  'DB orchestration rejects malformed and misowned OAuth native reports and forged console coverage',

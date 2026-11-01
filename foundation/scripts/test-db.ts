@@ -95,22 +95,8 @@ export async function runDbTests(url: string) {
   const decisionMissing = decisionCases.filter(name => !decisionOutput.includes(`(pass) ${name} [`));
   console.log(JSON.stringify({ lane: 'run-decisions', pass: decisionPass, assertions: decisionAssertions, missing: decisionMissing, exit: decisions.exitCode }));
   if (decisions.exitCode !== 0 || decisionPass < decisionCases.length || decisionAssertions < 1 || decisionMissing.length || /\b[1-9]\d* (?:skip|fail)\b/.test(decisionOutput)) { throw new Error('Required run decision lane failed'); }
-  // Genuine upgrade expiry waits for the original ten-second lease plus backoff.
-  // Keep it in a separately bounded required preflight; do not raise the existing
-  // runs timeout or omit any case from the full canonical database inventory.
-  const upgradeCases = [
-    'run revision three upgrade preserves genuine paused revision two evidence and refuses old execution',
-    'run revision two owned export cleanup survives extraction verification and callback failures',
-    'run expired revision two claim replays exact receipt without changing complete history',
-    'run still-valid revision two claim original worker is blocked by revision guard after upgrade',
-    'run real revision upgrade preserves legacy admission and admits current revision in the same workspace',
-  ];
-  const upgrades = Bun.spawnSync([process.execPath, 'test', './tests/run-upgrade.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 30000 });
-  const upgradeOutput = upgrades.stderr.toString(); process.stdout.write(upgrades.stdout); process.stderr.write(upgradeOutput);
-  const upgradePass = Number(upgradeOutput.match(/\b(\d+) pass\b/)?.[1] ?? 0), upgradeAssertions = Number(upgradeOutput.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
-  const upgradeMissing = upgradeCases.filter(name => !upgradeOutput.includes(`(pass) ${name} [`));
-  console.log(JSON.stringify({ lane: 'run-upgrades', pass: upgradePass, assertions: upgradeAssertions, missing: upgradeMissing, exit: upgrades.exitCode }));
-  if (upgrades.exitCode !== 0 || upgradePass < upgradeCases.length || upgradeAssertions < 1 || upgradeMissing.length || /\b[1-9]\d* (?:skip|fail)\b/.test(upgradeOutput)) { throw new Error('Required run upgrade lane failed'); }
+  // Upgrade witnesses execute once under exact native canonical ownership.
+  // Their genuine lease/backoff waits and per-case bounds remain unchanged.
   const runCases = [
     'run HTTP inspection returns pinned scoped evidence without mutation',
     'run HTTP cancellation persists one immutable stop receipt without an effect',
@@ -164,6 +150,13 @@ export async function runDbTests(url: string) {
   console.log(JSON.stringify({ lane: 'database-timing', phase: 'preflights', durationMs: performance.now() - preflightsStarted }));
   // Exact canonical ownership, partitioned once in the original file order.
   const suites = [
+  {
+    "requiredFile": "./tests/run-limits.test.ts",
+    "requiredCases": [
+      "run handoff retry exhaustion preserves partial truth and cannot reset through new keys",
+      "run separate processes contend for the last workspace lease without exceeding four"
+    ]
+  },
   {
     "requiredFile": "./tests/run-inspection.test.ts",
     "requiredCases": [
