@@ -107,6 +107,7 @@ const suites = [{requiredFile:'./tests/core-release-integrity.test.ts',minAssert
   'human mutations require same-origin and login targets stay local',
 ] }, { requiredFile: './tests/gateway.test.ts', minAssertions: 29, requiredCases: [
   'gateway authenticates before body and never trusts forged headers',
+  'gateway rejects mixed identity on human routes before authority body or handler work',
   'gateway bounds streamed body rejects malformed JSON and cross-site',
   'gateway strictly decodes raw UTF8 and preserves split multibyte replacement characters',
   'gateway rechecks revocation before disclosure and redacts service errors',
