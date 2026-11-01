@@ -32,6 +32,12 @@ Restricted runtime SQL requires forced row-level security, fixed-search-path gua
 
 Current owner/reviewer bindings and grants are locked and revalidated before operation replay or effects. Locks cannot span a human pause or executor lifetime. Operation receipts remain separate from fresh inspection. Local effect identity belongs to run/step/effect slot, not attempt or lease. Fences prevent a stale executor from committing after cancellation or replacement.
 
+## Revision4 continuation disposition
+
+The parent's bounded resume amendment admits only literal revision4 and preserves historical1–3. Actual coordinator/API/gateway/executor/contract and025–028 bytes form the pin. Exact old start/advance/decision receipts remain historical under current original participants; they cannot execute changed code. Owner resume of old approved ready/handoff blocks definition_drift without effect; other old states conflict unchanged.
+
+Resume admission/resumed event, handoff claim and atomic local completion are separate transactions. Claims bind the committed resume receipt; no replacement public key or approval renewal. The handoff links exact preparation/request/approving decision using scoped FKs and finishes terminal succeeded only after live authority, approval, pin, fence and database expiry checks. Force deferred constraints before the final expiry guard. Evidence and parent acceptance remain separate; no full-story closure follows.
+
 ## UX & Interaction Patterns
 
 The initial implementation needs authenticated API evidence, not a new UI. Future inspection must preserve exact provenance, no-store disclosure and distinct denied, stale, unavailable, partial and unknown states. No board or desktop design decision is reopened by run work.

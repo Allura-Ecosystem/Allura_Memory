@@ -20,7 +20,23 @@ if (input.removeExecutor === true) {
 const identity = auth.authenticateHuman({ assertion: input.assertion }, { issuer: input.issuer, audience: 'fixture', keys: new Map([['key', createPublicKey(input.publicKey)]]) });
 const sql = new SQL(input.url, { max: 1 });
 try {
-  if (input.mode === 'decide') {
+  if (input.mode === 'resume') {
+    const receipt = await runs.resumeRun(sql, identity, input.scope, input.command);
+    console.log(JSON.stringify({ receipt }));
+    if (input.hold) { await Bun.sleep(30000); }
+  } else if (input.mode === 'resume-admit' || input.mode === 'handoff-claim') {
+    const receipt = await persistence.scopedTransaction(sql, identity, input.scope, 'workspace:grants:manage', async tx => (await tx`SELECT allura.resume_run(${input.scope.groupId},${input.scope.workspaceId}::uuid,${input.command}::jsonb,${await contract.runDefinition()}::jsonb) AS receipt`)[0].receipt as string);
+    let claim = null;
+    if (input.mode === 'handoff-claim') {
+      const op = JSON.parse(receipt);
+      claim = await persistence.scopedTransaction(sql, identity, input.scope, 'workspace:grants:manage', async tx => (await tx`SELECT allura.claim_run_handoff(${input.scope.groupId},${input.scope.workspaceId}::uuid,${op.runId}::uuid,${op.id}::uuid,${await contract.runDefinition()}::jsonb,${randomUUID()}::uuid) AS claim`)[0].claim);
+    }
+    console.log(JSON.stringify({ receipt, claim }));
+    if (input.hold) { await Bun.sleep(30000); }
+  } else if (input.mode === 'handoff-finish') {
+    await execution.finishHandoff(sql, identity, input.scope, input.claim);
+    console.log(JSON.stringify({ finished: true }));
+  } else if (input.mode === 'decide') {
     const receipt = await runs.decideRun(sql, identity, input.scope, input.command);
     console.log(JSON.stringify({ receipt }));
     if (input.hold) { await Bun.sleep(30000); }

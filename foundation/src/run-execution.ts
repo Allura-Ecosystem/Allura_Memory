@@ -9,6 +9,19 @@ export type PreparationClaim = Readonly<{ runId: string; leaseId: string; invoca
 const budget = createWorkBudget({ capacity: 2, timeoutMs: 2000 });
 // No handler runs before its claim transaction commits. Measurement and every
 // effect/checkpoint write are one guarded PostgreSQL-local transaction.
+export async function finishHandoff(sql: SQL, identity: Identity, scope: Scope, claim: PreparationClaim, external?: AbortSignal): Promise<void> {
+  await budget.run(async signal => {
+    signal.throwIfAborted();
+    await scopedTransaction(sql, identity, scope, 'workspace:grants:manage', async tx => {
+      signal.throwIfAborted();
+      const definition = await runDefinition().catch(() => null);
+      await tx`SELECT allura.finish_run_handoff(${scope.groupId},${scope.workspaceId}::uuid,${claim.runId}::uuid,${claim.leaseId}::uuid,${claim.invocationId}::uuid,${claim.fence},${claim.operationReceiptId}::uuid,${definition}::jsonb)`;
+      await tx.unsafe('SET CONSTRAINTS ALL IMMEDIATE');
+      signal.throwIfAborted();
+    });
+  }, external);
+}
+
 export async function finishPreparation(sql: SQL, identity: Identity, scope: Scope, claim: PreparationClaim, external?: AbortSignal): Promise<void> {
   await budget.run(async signal => {
     signal.throwIfAborted();

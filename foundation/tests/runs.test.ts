@@ -326,7 +326,7 @@ beforeAll(async () => {
 afterAll(async () => { await f?.close(); });
 function input() {
   const text = 'Synthetic exact run artifact\r\nCafe\u0301 🧠';
-  return { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 3, goal: 'Synthetic run goal', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
+  return { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 4, goal: 'Synthetic run goal', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
 }
 async function counts() {
   return Promise.all(['run_definitions', 'run_records', 'run_state', 'run_steps', 'run_journal', 'run_operation_receipts', 'run_effect_receipts', 'run_approval_requests', 'events', 'semantic_versions', 'proposal_state'].map(async table => (await f.owner.unsafe(`SELECT count(*)::int AS n FROM allura.${table} WHERE group_id=$1`, [f.scope.groupId]))[0].n));
